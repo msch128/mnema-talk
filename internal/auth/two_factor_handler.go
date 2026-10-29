@@ -113,7 +113,7 @@ func (h *Handler) twoFactorSetup(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	httpx.WriteJSON(w, http.StatusOK, TwoFactorSetup{Secret: totpEncoding.EncodeToString(secret), OtpauthURI: otpauthURI(secret, u.Username)})
+	httpx.WriteJSON(w, http.StatusOK, TwoFactorSetup{Secret: totpEncoding.EncodeToString(secret), OtpauthURI: otpauthURI(secret, u.Username, h.Names.Get(r.Context()))})
 	return nil
 }
 

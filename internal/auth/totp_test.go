@@ -54,7 +54,7 @@ func TestCodesAreNormalisedAndShapesTold(t *testing.T) {
 
 func TestOtpauthURICarriesWhatAppsNeed(t *testing.T) {
 	secret := []byte("12345678901234567890")
-	u, err := url.Parse(otpauthURI(secret, "max"))
+	u, err := url.Parse(otpauthURI(secret, "max", "Mnema Talk"))
 	if err != nil || u.Scheme != "otpauth" || u.Host != "totp" {
 		t.Fatalf("%v %v", u, err)
 	}

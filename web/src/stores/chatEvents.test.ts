@@ -6,6 +6,7 @@ import { useToastStore } from './toast'
 import { useVoiceStore } from './voice'
 import { useEmojiStore } from './emoji'
 import { usePermissionsStore } from './permissions'
+import { useOnboardingStore } from './onboarding'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import type { CommunityEvent } from '../types/domain'
 
@@ -24,6 +25,15 @@ function makeEvent(overrides: Partial<CommunityEvent> = {}): CommunityEvent {
 }
 
 beforeEach(() => { setActivePinia(createPinia()) })
+
+describe('community_updated', () => {
+  it('re-reads the onboarding record so the new name shows everywhere', () => {
+    const chat = useChatStore()
+    const reload = vi.spyOn(useOnboardingStore(), 'reload').mockResolvedValue()
+    chat.handleWSEvent({ type: 'community_updated', payload: { community_name: 'Lantern Fox' } })
+    expect(reload).toHaveBeenCalledOnce()
+  })
+})
 
 describe('community event socket events', () => {
   it('adds a new event and replaces a changed one on event_update', () => {

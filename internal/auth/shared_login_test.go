@@ -18,15 +18,15 @@ func sharedLoginRequest(path, address string) *http.Request {
 
 func TestSharedLoginPreservesVerifiedVersionAndUser(t *testing.T) {
 	h := newLoginHandler()
-	want := &User{ID: uuid.New(), Username: "Herzog", Role: RoleAdmin}
+	want := &User{ID: uuid.New(), Username: "cool_guy", Role: RoleAdmin}
 	h.verify = func(_ context.Context, username, password string) (*User, int, error) {
-		if username != "Herzog" || password != testPassword {
+		if username != "cool_guy" || password != testPassword {
 			t.Fatal("credential check received changed credentials")
 		}
 		return want, 37, nil
 	}
 	u, version, retry, err := h.verifyLogin(sharedLoginRequest("/api/auth/login", "192.0.2.1:1234"),
-		LoginRequest{Username: " Herzog ", Password: testPassword})
+		LoginRequest{Username: " cool_guy ", Password: testPassword})
 	if err != nil || retry != 0 || version != 37 || u != want {
 		t.Fatalf("verified identity/version was not preserved: version=%d retry=%v err=%v", version, retry, err)
 	}
@@ -35,7 +35,7 @@ func TestSharedLoginPreservesVerifiedVersionAndUser(t *testing.T) {
 func TestSharedLoginCannotEscapeBrowserAddressLockout(t *testing.T) {
 	h := newLoginHandler()
 	for i := 0; i < 10; i++ {
-		if code := postLogin(h, "192.0.2.7", "Herzog", "wrong"); code != http.StatusUnauthorized {
+		if code := postLogin(h, "192.0.2.7", "cool_guy", "wrong"); code != http.StatusUnauthorized {
 			t.Fatalf("wrong browser password status=%d", code)
 		}
 	}
@@ -45,7 +45,7 @@ func TestSharedLoginCannotEscapeBrowserAddressLockout(t *testing.T) {
 		return nil, 0, errors.New("must not verify locked address")
 	}
 	u, version, retry, err := h.verifyLogin(sharedLoginRequest("/api/auth/login", "192.0.2.7:5678"),
-		LoginRequest{Username: "herzog", Password: testPassword})
+		LoginRequest{Username: "cool_guy", Password: testPassword})
 	if called || u != nil || version != 0 || retry <= 0 || err != nil {
 		t.Fatal("alternate transport escaped shared address/account lockout")
 	}
@@ -55,26 +55,26 @@ func TestSharedLoginFailuresAlsoLockBrowser(t *testing.T) {
 	h := newLoginHandler()
 	for i := 0; i < 10; i++ {
 		_, _, retry, err := h.verifyLogin(sharedLoginRequest("/api/auth/login", "192.0.2.9:5678"),
-			LoginRequest{Username: "Herzog", Password: "wrong"})
+			LoginRequest{Username: "cool_guy", Password: "wrong"})
 		if !errors.Is(err, ErrInvalidCredentials) || retry != 0 {
 			t.Fatalf("unexpected failed verification: retry=%v err=%v", retry, err)
 		}
 	}
-	if code := postLogin(h, "192.0.2.9", "Herzog", testPassword); code != http.StatusTooManyRequests {
+	if code := postLogin(h, "192.0.2.9", "cool_guy", testPassword); code != http.StatusTooManyRequests {
 		t.Fatalf("browser escaped shared lockout: %d", code)
 	}
 }
 
 func TestSharedLoginVerificationFailureDoesNotClearFailures(t *testing.T) {
 	h := newLoginHandler()
-	key := "192.0.2.11|herzog"
+	key := "192.0.2.11|cool_guy"
 	h.loginFailures.RecordFailures(key, 9)
 	failure := errors.New("credential store unavailable")
 	h.verify = func(context.Context, string, string) (*User, int, error) {
 		return nil, 0, failure
 	}
 	u, version, retry, err := h.verifyLogin(sharedLoginRequest("/api/auth/login", "192.0.2.11:5678"),
-		LoginRequest{Username: "Herzog", Password: testPassword})
+		LoginRequest{Username: "cool_guy", Password: testPassword})
 	if u != nil || version != 0 || retry != 0 || !errors.Is(err, failure) {
 		t.Fatal("credential failure incorrectly produced a login")
 	}

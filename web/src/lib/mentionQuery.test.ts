@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { findMentionQuery, suggestMentions, applyMention } from './mentionQuery'
 
 const members = [
-  userFixture({ id: '1', username: 'herzog', display_name: 'Herzog' }),
+  userFixture({ id: '1', username: 'cool_guy', display_name: 'Cool Guy' }),
   userFixture({ id: '2', username: 'max', display_name: 'Max Mustermann' }),
   userFixture({ id: '3', username: 'moritz', display_name: 'Moritz' }),
   userFixture({ id: '4', username: 'anna', display_name: 'Anna Herz' })
@@ -25,12 +25,13 @@ describe('findMentionQuery', () => {
 describe('suggestMentions', () => {
   it('ranks prefix matches first, then word and substring matches, then groups', () => {
     const got = suggestMentions('her', members).map(i => i.username)
-    expect(got).toEqual(['herzog', 'anna', 'here'])
+    expect(got).toEqual(['anna', 'here'])
+    expect(suggestMentions('coo', members).map(i => i.username)).toEqual(['cool_guy'])
     expect(suggestMentions('m', members, { selfId: '2' }).map(i => i.username)).toEqual(['moritz'])
   })
   it('offers @here and @all for an empty query, never the reader', () => {
     const got = suggestMentions('', members, { selfId: '1' }).map(i => i.username)
-    expect(got).not.toContain('herzog')
+    expect(got).not.toContain('cool_guy')
     expect(got.slice(-2)).toEqual(['here', 'all'])
   })
   it('matches a later word of the display name', () => {
@@ -40,9 +41,9 @@ describe('suggestMentions', () => {
 
 describe('applyMention', () => {
   it('splices the name in and places the caret after it', () => {
-    expect(applyMention('hi @he', 3, 6, 'herzog')).toEqual({ text: 'hi @herzog ', caret: 11 })
-    expect(applyMention('hi @he there', 3, 6, 'herzog')).toEqual({ text: 'hi @herzog there', caret: 10 })
-    expect(applyMention('@hezog', 0, 3, 'herzog')).toEqual({ text: '@herzog ', caret: 8 })
+    expect(applyMention('hi @he', 3, 6, 'cool_guy')).toEqual({ text: 'hi @cool_guy ', caret: 13 })
+    expect(applyMention('hi @he there', 3, 6, 'cool_guy')).toEqual({ text: 'hi @cool_guy there', caret: 12 })
+    expect(applyMention('@hezog', 0, 3, 'cool_guy')).toEqual({ text: '@cool_guy ', caret: 10 })
   })
 })
 

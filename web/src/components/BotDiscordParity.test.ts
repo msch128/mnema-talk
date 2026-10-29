@@ -29,7 +29,7 @@ const role = (n: number, overrides: Partial<Role> = {}): Role => ({
 })
 const sharedBotRole = role(1, { name: 'Bot', hoist: true, managed: true })
 const everyone = role(0, { name: '@everyone', is_everyone: true })
-const owner = userFixture({ id: fixtureId(1), username: 'herzog', display_name: 'Herzog', role: 'admin' })
+const owner = userFixture({ id: fixtureId(1), username: 'cool_guy', display_name: 'Mnema', role: 'admin' })
 const helper: Member = { ...userFixture({ id: fixtureId(2), username: 'bot-a1b2c3', display_name: 'Helper' }), is_bot: true, added_by: owner.id }
 const sleeper: Member = { ...userFixture({ id: fixtureId(3), username: 'bot-d4e5f6', display_name: 'Sleeper' }), is_bot: true }
 const helperRole = role(2, { name: 'Helper', managed: true, bot_user_id: helper.id })
@@ -85,7 +85,7 @@ describe('bot activities', () => {
     const w = mount(MemberList)
     expect(w.get('[data-member="bot-a1b2c3"] [data-testid="member-activity"]').text()).toBe('Listening to jazz')
     expect(w.get('[data-member="bot-a1b2c3"]').attributes('data-status')).toBe('dnd')
-    expect(w.find('[data-member="herzog"] [data-testid="member-activity"]').exists()).toBe(false)
+    expect(w.find('[data-member="cool_guy"] [data-testid="member-activity"]').exists()).toBe(false)
     expect(w.find('[data-member="bot-d4e5f6"] [data-testid="member-activity"]').exists()).toBe(false)
   })
 

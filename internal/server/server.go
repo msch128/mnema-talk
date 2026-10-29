@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
+	"github.com/msch128/mnema-talk/internal/community"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -41,6 +42,8 @@ type Deps struct {
 	Perms *perm.Service
 	// Version is the build version reported by /api/health.
 	Version string
+	// Names serves the community name; nil builds one from DB.
+	Names *community.Names
 	// Updates is the release checker (nil when UPDATE_CHECK_ENABLED=false;
 	// then nothing is ever requested from GitHub). The caller runs its loop.
 	Updates *update.Checker
@@ -125,6 +128,9 @@ func NewRouter(d Deps) (*Router, error) {
 		parent = context.Background()
 	}
 	ctx, cancel := context.WithCancel(parent)
+	if d.Names == nil && d.DB != nil {
+		d.Names = community.New(d.DB, cfg.PublicURL)
+	}
 
 	c := &components{d: d, cfg: cfg, ctx: ctx, trusted: trusted}
 	c.newCore()

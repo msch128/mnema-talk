@@ -133,7 +133,7 @@ env -i PATH="$PATH" HOME="$HOME" \
   PORT="$APP_PORT" BIND_ADDR=127.0.0.1 \
   PUBLIC_URL="http://127.0.0.1:$APP_PORT" \
   JWT_SECRET="$JWT_SECRET" \
-  ADMIN_USERNAME=Herzog ADMIN_INITIAL_PASSWORD="$ADMIN_PASSWORD" \
+  ADMIN_USERNAME=cool_guy ADMIN_INITIAL_PASSWORD="$ADMIN_PASSWORD" \
   DATABASE_URL="postgres://mnema:mnema@127.0.0.1:$PG_PORT/mnema_e2e?sslmode=disable" \
   S3_ENDPOINT="http://127.0.0.1:$S3_PORT" S3_BUCKET=mnema-e2e \
   S3_ACCESS_KEY="$S3_KEY" S3_SECRET_KEY="$S3_SECRET" S3_FORCE_PATH_STYLE=true \
@@ -154,5 +154,5 @@ curl -fsS "http://127.0.0.1:$APP_PORT/api/health" >/dev/null
 
 echo "==> running playwright"
 cd e2e
-E2E_BASE_URL="http://127.0.0.1:$APP_PORT" E2E_ADMIN_USER=Herzog E2E_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+E2E_BASE_URL="http://127.0.0.1:$APP_PORT" E2E_ADMIN_USER=cool_guy E2E_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
   npx playwright test ${E2E_ONLY:---project=chromium}

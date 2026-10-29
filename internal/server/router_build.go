@@ -120,6 +120,7 @@ func (c *components) newCore() {
 
 	c.authH = auth.NewHandler(c.sessions, c.pub)
 	c.authH.Live = hub
+	c.authH.Names = d.Names
 	c.authH.Perms = c.permSvc
 	c.authH.Audit = c.auditLog
 	c.authH.Lifetime = c.ctx
@@ -137,6 +138,7 @@ func (c *components) newCore() {
 	c.newChat()
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
+	c.onboardH.Names, c.onboardH.Events = d.Names, c.pub
 	c.newImport()
 	if d.Store != nil {
 		c.chatH.Objects = d.Store
@@ -256,7 +258,7 @@ func (c *components) newPush() error {
 			client = ssrf.NewClient(ssrf.NewDialer(&ssrf.Policy{}), 10*time.Second)
 		}
 		svc := &push.Service{
-			DB: c.d.DB, Perms: c.permSvc, Previews: h.PreviewsAllowed, Burst: c.d.PushBurst,
+			DB: c.d.DB, Names: c.d.Names, Perms: c.permSvc, Previews: h.PreviewsAllowed, Burst: c.d.PushBurst,
 			Sender: &push.Sender{Keys: keys, Subject: push.Subject(cfg.PushVAPIDSubject, cfg.PublicURL), HTTP: client},
 		}
 		c.addTap(svc.Observe)
@@ -282,6 +284,7 @@ func (c *components) newSystem() error {
 		storage:  d.StorageReady,
 		hasStore: d.Store != nil,
 		version:  d.Version,
+		names:    d.Names,
 		started:  time.Now(),
 		updates:  d.Updates,
 		mail:     c.mail,

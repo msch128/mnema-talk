@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -41,13 +42,21 @@ func TestAccountMailsShareOneLanguage(t *testing.T) {
 	} {
 		loc := mailLocale(tc.stored, tc.header)
 		for name, body := range map[string]string{
-			"verify": h.verifyMail("a@example.org", loc, "mia", "tok").Body,
-			"reset":  h.resetMail("a@example.org", loc, "mia", "tok").Body,
-			"alert":  alertMail("a@example.org", loc, "mia").Body,
+			"verify": h.verifyMail(context.Background(), "a@example.org", loc, "mia", "tok").Body,
+			"reset":  h.resetMail(context.Background(), "a@example.org", loc, "mia", "tok").Body,
+			"alert":  h.alertMail(context.Background(), "a@example.org", loc, "mia").Body,
 		} {
 			if !strings.HasPrefix(body, tc.marker) {
 				t.Errorf("%s mail for stored=%q header=%q starts %q, want %q", name, tc.stored, tc.header, body[:8], tc.marker)
 			}
 		}
+	}
+}
+
+// The mails call the service by the community's name, not by the product's.
+func TestMailsUseTheCommunityName(t *testing.T) {
+	m := TestMail("a@example.org", "en", "Lantern Fox")
+	if m.FromName != "Lantern Fox" || !strings.Contains(m.Subject, "Lantern Fox") {
+		t.Fatalf("test mail = %+v", m)
 	}
 }

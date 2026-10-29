@@ -4,7 +4,7 @@ import { apiFetch, responseString, bounds } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from './fixtures'
 
-const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 

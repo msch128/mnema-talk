@@ -11,6 +11,8 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   const list = ref<string[]>([])
   // False until the first answer: a feature is only "missing" once the list is known.
   const loaded = ref(false)
+  // What the server calls itself; empty until the answer (or on an older server).
+  const communityName = ref('')
   const names = computed(() => new Set(list.value))
   let pending: Promise<void> | null = null
 
@@ -23,6 +25,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     pending ??= api('/api/health', { decode: decodeServerHealth }).then(
       health => {
         list.value = health.features ?? []
+        communityName.value = health.community_name?.trim() ?? ''
         loaded.value = true
       },
       () => {
@@ -34,7 +37,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   }
 
   return {
-    list, loaded, has, load,
+    list, loaded, communityName, has, load,
     dm: computed(() => has('dm')),
     dmV2: computed(() => has('dm.v2')),
     blocks: computed(() => has('blocks')),

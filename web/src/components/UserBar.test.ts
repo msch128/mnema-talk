@@ -24,7 +24,7 @@ function setup() {
   const voice = useVoiceStore()
   const chat = useChatStore()
   const auth = useAuthStore()
-  auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Herzog', role: 'admin', locale: 'de' })
+  auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'admin', locale: 'de' })
   chat.categories = [categoryFixture({ created_at: '2026-01-01T00:00:00Z',  id: "00000000-0000-4000-8000-0000000003f2", name: 'Kat', channels: [channelFixture({ topic: '', created_at: '2026-01-01T00:00:00Z', sort_order: 0, category_id: null,  id: "00000000-0000-4000-8000-0000000003f3", name: 'Lounge', type: 'voice' })] })]
   return { voice, chat, auth, w: mount(UserBar) }
 }

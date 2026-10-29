@@ -103,16 +103,19 @@ describe('channel row draft marker', () => {
   })
 })
 
-describe('server header subtitle', () => {
-  it('names the community once the Owner has set a name, and says "private community" before', async () => {
+describe('server header name', () => {
+  it('is the product until the server names itself, then the Owner\'s community name', async () => {
     const header = mount(SidebarServerMenu)
-    expect(header.find('button[aria-controls="server-menu"]').text()).toContain('Private Community')
+    const button = () => header.find('button[aria-controls="server-menu"]')
+    expect(button().text()).toContain('Mnema Talk')
+    useServerFeaturesStore().communityName = 'talk.example.org'
+    await nextTick()
+    expect(button().text()).toContain('talk.example.org')
     useOnboardingStore().state = onboardingStateFixture({ community_name: 'Mnema Testgemeinschaft' })
     await nextTick()
-    const text = header.find('button[aria-controls="server-menu"]').text()
-    expect(text).toContain('Mnema Talk')
-    expect(text).toContain('Mnema Testgemeinschaft')
-    expect(text).not.toContain('Private Community')
+    expect(button().text()).toContain('Mnema Testgemeinschaft')
+    expect(button().text()).not.toContain('talk.example.org')
+    expect(button().text()).toContain('Private Community')
   })
 })
 

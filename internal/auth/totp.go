@@ -16,11 +16,10 @@ import (
 // TOTP as RFC 6238 defines it, in the profile every authenticator app
 // supports: HMAC-SHA1, 6 digits, 30 second steps.
 const (
-	totpDigits     = 6
-	totpPeriod     = 30
-	totpSecretLen  = 20
-	totpSkewSteps  = 1
-	totpIssuerName = "Mnema Talk"
+	totpDigits    = 6
+	totpPeriod    = 30
+	totpSecretLen = 20
+	totpSkewSteps = 1
 )
 
 var totpEncoding = base32.StdEncoding.WithPadding(base32.NoPadding)
@@ -65,12 +64,14 @@ func matchTOTP(secret []byte, input string, now time.Time) (step int64, ok bool)
 	return step, ok
 }
 
-// otpauthURI is what authenticator apps read from the QR code.
-func otpauthURI(secret []byte, username string) string {
-	label := url.PathEscape(totpIssuerName + ":" + username)
+// otpauthURI is what authenticator apps read from the QR code. issuer is the
+// community's name; a colon would split the label, so it is dropped.
+func otpauthURI(secret []byte, username, issuer string) string {
+	issuer = strings.TrimSpace(strings.ReplaceAll(issuer, ":", " "))
+	label := url.PathEscape(issuer + ":" + username)
 	q := url.Values{}
 	q.Set("secret", totpEncoding.EncodeToString(secret))
-	q.Set("issuer", totpIssuerName)
+	q.Set("issuer", issuer)
 	q.Set("algorithm", "SHA1")
 	q.Set("digits", fmt.Sprint(totpDigits))
 	q.Set("period", fmt.Sprint(totpPeriod))

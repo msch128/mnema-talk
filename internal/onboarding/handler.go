@@ -14,7 +14,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/community"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -23,6 +25,10 @@ import (
 type Handler struct {
 	DB    *db.Pool
 	Perms *perm.Service
+	// Names caches the community name; it is dropped when the Owner saves the
+	// settings. Events then tells open clients. Both are optional.
+	Names  *community.Names
+	Events events.Publisher
 
 	previewPerIP *httpx.RateLimiter
 	// previewPerSite caps a whole IPv6 /48 (or one IPv4 address) together, so

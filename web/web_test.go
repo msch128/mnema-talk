@@ -1,6 +1,8 @@
 package web
 
 import (
+	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +19,7 @@ func TestServesPrecompressedAssets(t *testing.T) {
 		"assets/df.wasm.gz":    {Data: []byte("gzip")},
 		"assets/model.tgz":     {Data: []byte("tgz")},
 		"assets/plain-only.js": {Data: []byte("js")},
-	})
+	}, nil)
 
 	cases := []struct {
 		path, accept, wantBody, wantEncoding string
@@ -61,7 +63,7 @@ func TestDoesNotServeAPIDocsPageStatically(t *testing.T) {
 	h := newHandler(fstest.MapFS{
 		"index.html":    {Data: []byte("<html>app")},
 		"api-docs.html": {Data: []byte("<html>docs")},
-	})
+	}, nil)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api-docs.html", nil))
 	if body, _ := io.ReadAll(rec.Body); string(body) != "<html>app" {
@@ -70,7 +72,7 @@ func TestDoesNotServeAPIDocsPageStatically(t *testing.T) {
 }
 
 func TestMissingAssetIs404(t *testing.T) {
-	h := newHandler(fstest.MapFS{"index.html": {Data: []byte("<html>app")}})
+	h := newHandler(fstest.MapFS{"index.html": {Data: []byte("<html>app")}}, nil)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/assets/main-old.css", nil))
 	if rec.Code != http.StatusNotFound {
@@ -89,7 +91,7 @@ func TestServiceWorkerAndManifestAreRevalidatedAndTyped(t *testing.T) {
 		"sw.js":                {Data: []byte("self")},
 		"manifest.webmanifest": {Data: []byte(`{"name":"Mnema Talk"}`)},
 		"favicon.svg":          {Data: []byte("<svg/>")},
-	})
+	}, nil)
 	cases := []struct{ path, wantType, wantCache string }{
 		{"/sw.js", "text/javascript", "no-cache"},
 		{"/manifest.webmanifest", "application/manifest+json", "no-cache"},
@@ -107,5 +109,33 @@ func TestServiceWorkerAndManifestAreRevalidatedAndTyped(t *testing.T) {
 		if got := rec.Header().Get("Cache-Control"); got != c.wantCache {
 			t.Errorf("%s: Cache-Control %q, want %q", c.path, got, c.wantCache)
 		}
+	}
+}
+
+func TestPageAndManifestCarryTheCommunityName(t *testing.T) {
+	h := newHandler(fstest.MapFS{
+		"index.html":           {Data: []byte(`<title>Mnema Talk</title><meta name="apple-mobile-web-app-title" content="Mnema" />`)},
+		"manifest.webmanifest": {Data: []byte(`{"name":"Mnema Talk","short_name":"Mnema","start_url":"/"}`)},
+	}, func(context.Context) string { return `Lantern & Fox Studio Berlin` })
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	for _, want := range []string{`<title>Lantern &amp; Fox Studio Berlin</title>`, `content="Lantern &amp; Fox Studio Berlin"`} {
+		if !strings.Contains(rec.Body.String(), want) {
+			t.Errorf("page lacks %s: %s", want, rec.Body)
+		}
+	}
+
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/manifest.webmanifest", nil))
+	var doc map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatal(err)
+	}
+	if doc["name"] != "Lantern & Fox Studio Berlin" || doc["short_name"] != "Lantern & Fo" || doc["start_url"] != "/" {
+		t.Errorf("manifest = %v", doc)
+	}
+	if got := rec.Header().Get("Content-Type"); got != "application/manifest+json" {
+		t.Errorf("Content-Type %q", got)
 	}
 }

@@ -271,7 +271,7 @@ func (h *Handler) sendVerification(ctx context.Context, id uuid.UUID, lang strin
 	if err != nil {
 		return err
 	}
-	if err := h.sendMail(ctx, h.verifyMail(st.Address, mailLocale(st.Locale, lang), st.Username, token)); err != nil {
+	if err := h.sendMail(ctx, h.verifyMail(ctx, st.Address, mailLocale(st.Locale, lang), st.Username, token)); err != nil {
 		return httpx.ErrUnavailable("the confirmation e-mail could not be sent")
 	}
 	return nil

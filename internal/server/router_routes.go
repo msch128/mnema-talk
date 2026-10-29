@@ -32,7 +32,7 @@ func (c *components) buildHandler() http.Handler {
 	if index == nil {
 		index = web.IndexHTML()
 	}
-	r.Handle("/*", newSharePages(web.Handler(), index, cfg.PublicURL, c.onboardH))
+	r.Handle("/*", newSharePages(web.Handler(c.d.Names.Get), index, cfg.PublicURL, c.onboardH, c.d.Names))
 	return r
 }
 

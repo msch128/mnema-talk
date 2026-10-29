@@ -2,7 +2,7 @@ import { test, expect } from './fixtures'
 import type { Page } from '@playwright/test'
 import { apiFetch, responseString, suiteMember } from './helpers'
 
-const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
@@ -15,7 +15,7 @@ const TWO = `laut-${suffix}`
 async function signIn(page: Page, username: string, password: string) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+  await expect(dialog.getByTestId('login-heading')).toBeVisible()
   await dialog.getByLabel('Benutzername').fill(username)
   await dialog.getByLabel('Passwort').fill(password)
   await dialog.getByRole('button', { name: 'Anmelden' }).click()
@@ -105,7 +105,7 @@ test('notification levels, timed mutes, category badges and mark all read', asyn
     expect((await settings(member)).categories.some((c) => c.category_id === categoryId && c.level === 'mute')).toBe(true)
 
     // Mark everything read from the server menu: no badges, no count in the title.
-    await member.getByRole('button', { name: 'Mnema Talk' }).click()
+    await member.locator('button[aria-controls="server-menu"]').click()
     await member.getByRole('menuitem', { name: 'Alle als gelesen markieren' }).click()
     await expect(member.getByTestId('channel-mentions')).toHaveCount(0)
     await expect(member.getByTestId('channel-unread')).toHaveCount(0)
