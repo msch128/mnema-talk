@@ -121,7 +121,7 @@ func askMissing(p *prompter, o Options) (Options, error) {
 		}
 	}
 	if o.AdminUsername == "" {
-		if o.AdminUsername, err = p.ask("User name of the Owner account", DefaultAdminUsername); err != nil {
+		if o.AdminUsername, err = p.askAdminUsername(DefaultAdminUsername); err != nil {
 			return o, err
 		}
 	}

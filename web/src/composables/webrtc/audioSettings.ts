@@ -46,7 +46,9 @@ export function recoverFilter(cx: Cx, ctx: AudioContext, model: NoiseModel, test
  */
 export function recoverContext(cx: Cx, ctx: AudioContext) {
   const { voice, st } = cx
-  if (st.audioContext !== ctx || st.contextStalled) return
+  if (st.audioContext !== ctx) return
+  restoreWhenRunning(cx, ctx)
+  if (st.contextStalled) return
   console.warn('[WebRTC] The audio context did not start; sending the microphone around it')
   st.contextStalled = true
   const model = aiModel(voice.noiseMode)
@@ -56,6 +58,23 @@ export function recoverContext(cx: Cx, ctx: AudioContext) {
     if (st.audioContext !== ctx) return
     reapplyDegradedFilter(cx, false)
   }, 0)
+}
+
+// A context that only waited for a gesture runs eventually, and the call then
+// gets its AI filter and input volume back. The rebuilt call's own context is
+// watched the same way.
+function restoreWhenRunning(cx: Cx, ctx: AudioContext) {
+  const { voice, st } = cx
+  const onChange = () => {
+    if (st.audioContext !== ctx) { ctx.removeEventListener('statechange', onChange); return }
+    if (ctx.state !== 'running') return
+    ctx.removeEventListener('statechange', onChange)
+    st.contextStalled = false
+    const model = aiModel(voice.noiseMode)
+    if (model && st.failedAIModel === model) st.failedAIModel = null
+    reapplyDegradedFilter(cx, false)
+  }
+  ctx.addEventListener('statechange', onChange)
 }
 
 // Applies changed input settings (device, AGC, noise suppression, echo

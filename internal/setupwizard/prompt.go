@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"golang.org/x/term"
+
+	"github.com/msch128/mnema-talk/internal/auth"
 )
 
 // errNoInput is returned when a question gets no answer because the input
@@ -74,6 +76,21 @@ func (p *prompter) askPublicURL(def string) (string, error) {
 			return u, nil
 		}
 		fmt.Fprintln(p.out, "  "+err.Error())
+	}
+}
+
+// askAdminUsername asks until the answer is a name the server can seed.
+func (p *prompter) askAdminUsername(def string) (string, error) {
+	for {
+		a, err := p.ask("User name of the Owner account", def)
+		if err != nil {
+			return "", err
+		}
+		if err := auth.ValidateAdminSeed(a, ""); err == nil {
+			return a, nil
+		} else {
+			fmt.Fprintln(p.out, "  "+err.Error())
+		}
 	}
 }
 

@@ -69,6 +69,25 @@ func TestSetupRefusesAnOwnerNameTheServerCannotSeed(t *testing.T) {
 	}
 }
 
+func TestInteractiveSetupAsksAgainForAnOwnerNameTheServerCannotSeed(t *testing.T) {
+	dir := t.TempDir()
+	answers := strings.Join([]string{
+		"https://talk.example.org",
+		"Max Mustermann", // rejected, asked again
+		"max",
+		"en", "", "",
+	}, "\n") + "\n"
+	out, err := runSetup(t, answers, "--dir", dir, "--compose-template", repoCompose, "--skip-preflight")
+	if err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, ".env"))
+	env, _ := godotenv.Unmarshal(string(raw))
+	if env["ADMIN_USERNAME"] != "max" || strings.Count(out, "User name of the Owner account") != 2 {
+		t.Errorf("ADMIN_USERNAME=%q, output:\n%s", env["ADMIN_USERNAME"], out)
+	}
+}
+
 func TestNonInteractiveNeedsThePublicURL(t *testing.T) {
 	if _, err := runSetup(t, "", "-y", "--dir", t.TempDir()); err == nil || !strings.Contains(err.Error(), "--public-url") {
 		t.Fatalf("err = %v", err)

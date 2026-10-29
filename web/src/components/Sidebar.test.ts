@@ -593,7 +593,17 @@ describe('Sidebar administrative lifecycle and navigation', () => {
     joinVoiceChannel.mockImplementationOnce(async (id: string) => { await new Promise(r => setTimeout(r, 5)); voice.setChannel(id) })
     const watch = vi.spyOn(voice, 'watchScreen')
     await nextTick(); await wrapper.find('[data-voice-user]').trigger('click'); await flush()
-    expect(watch).toHaveBeenCalledWith('viewer')
+    await vi.waitFor(() => expect(watch).toHaveBeenCalledWith('viewer'))
+  })
+  it('does not watch a screen when the join was refused', async () => {
+    await mountSidebar({ role: 'user' }); vi.spyOn(chat, 'selectChannel').mockResolvedValue()
+    voice.channelUsers.lounge = { viewer: voiceUserFixture({ id: 'viewer', username: 'viewer' }) }
+    voice.mediaState.viewer = { channel_id: 'lounge', screen: true, camera: false }
+    joinVoiceChannel.mockResolvedValueOnce(undefined)
+    const watch = vi.spyOn(voice, 'watchScreen')
+    await nextTick(); await wrapper.find('[data-voice-user]').trigger('click'); await flush()
+    await vi.waitFor(() => expect(joinVoiceChannel).toHaveBeenCalledWith('lounge')); await flush()
+    expect(watch).not.toHaveBeenCalled()
   })
   it('does not watch a screen when the switch to its Talk is cancelled', async () => {
     await mountSidebar({ role: 'user' }); vi.spyOn(chat, 'selectChannel').mockResolvedValue()
