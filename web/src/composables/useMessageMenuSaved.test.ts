@@ -51,7 +51,7 @@ describe('the save item of the message menu', () => {
     const first = required(m.itemsFor(msg).find(i => i.label === 'Save message'))
     await required(first.action)()
     expect(apiMock).toHaveBeenLastCalledWith('/api/me/saved/m1', expect.objectContaining({ method: 'PUT' }))
-    expect(useToastStore().toasts.at(-1)).toMatchObject({ type: 'success', text: 'Message saved.' })
+    expect(useToastStore().toasts.at(-1)).toMatchObject({ type: 'success', text: 'Saved – find it under Saved messages', action: { label: 'View' } })
 
     apiMock.mockResolvedValueOnce(null)
     const second = required(m.itemsFor(msg).find(i => i.label === 'Remove from saved'))

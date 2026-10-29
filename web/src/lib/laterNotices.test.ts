@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { noticeReminderDue, noticeScheduledFailed } from './laterNotices'
+import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { setLocale, t } from '../i18n'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
@@ -19,6 +20,20 @@ describe('reminder and scheduled message notices', () => {
   it('names the message a reminder is about when it is still visible', () => {
     noticeReminderDue(entry('call mum'))
     expect(useToastStore().toasts.at(-1)?.text).toBe(t('later.reminderDueWith', { text: 'call mum' }))
+  })
+
+  it('offers to open the message of a reminder and lands on it', async () => {
+    const go = vi.spyOn(useChatStore(), 'goToMessage').mockImplementation(() => undefined)
+    noticeReminderDue(entry('call mum'))
+    const action = useToastStore().toasts.at(-1)?.action
+    expect(action?.label).toBe(t('later.openMessage'))
+    await action?.onClick()
+    expect(go).toHaveBeenCalledWith({ id: fixtureId(40), channel_id: fixtureId(2) })
+  })
+
+  it('has nothing to open when the message is gone', () => {
+    noticeReminderDue(entry(null))
+    expect(useToastStore().toasts.at(-1)?.action).toBeNull()
   })
 
   it('falls back to a plain notice when the message is gone or the reminder unknown', () => {

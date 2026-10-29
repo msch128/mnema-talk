@@ -34,6 +34,14 @@ function keep<T extends { id: string }>(list: Ref<T[]>, entry: T): T {
   return entry
 }
 
+/** Moves a reminder to a later time: the new one is made first, so a failure never loses it. */
+async function snoozeReminder(list: Ref<LaterReminder[]>, id: string, messageId: string, at: Date) {
+  const next = keep(list, await postReminder(messageId, at))
+  await deleteReminder(id)
+  list.value = without(list.value, id)
+  return next
+}
+
 // Bumped by reset(): a list asked for before must not fill the next account's store.
 let generation = 0
 
@@ -85,6 +93,8 @@ export const useLaterStore = defineStore('later', () => {
     reminders.value = without(reminders.value, id)
   }
 
+  const snooze = (id: string, messageId: string, at: Date) => snoozeReminder(reminders, id, messageId, at)
+
   async function schedule(channelId: string, content: string, at: Date, options: ScheduleOptions = {}) {
     return keep(scheduled, await postScheduled(channelId, content, at, options))
   }
@@ -120,6 +130,6 @@ export const useLaterStore = defineStore('later', () => {
 
   return {
     reminders, scheduled, loading, failed, loaded, dueCount, failedCount, attention,
-    load, remind, cancelReminder, schedule, updateScheduled, removeScheduled, onReminderEvent, onScheduledEvent, reset
+    load, remind, snooze, cancelReminder, schedule, updateScheduled, removeScheduled, onReminderEvent, onScheduledEvent, reset
   }
 })

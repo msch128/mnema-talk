@@ -106,7 +106,10 @@ no accounts on someone else's platform.
 - **Saved messages and forwarding.** Keep a private list of up to 1,000
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the
-  reader may already see.
+  reader may already see. A saved message carries a small bookmark (click it to
+  take the message off again), and the header's bookmark button opens *Saved &
+  reminders*: your saved messages, searchable and sortable by channel, next to
+  your reminders and scheduled messages.
 - **Status that clears itself.** Set a custom status with **Clear after** one
   hour, tonight, tomorrow morning, never or a date and time of your own. Your
   device works out the time in your time zone; the server clears the status

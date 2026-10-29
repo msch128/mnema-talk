@@ -6,7 +6,7 @@ import type { Message } from '../types/domain'
 // and reactions. Keyboard and context-menu handling stay with the list
 // (bound on this component, they land on the row element).
 import { ref, computed } from 'vue'
-import { MessageSquare, Pencil, Smile, Reply, MoreHorizontal, Pin } from '@lucide/vue'
+import { MessageSquare, Pencil, Smile, Reply, MoreHorizontal, Pin, Bookmark } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import { isRemovedMessage, shownName } from '../lib/deletedUser'
 import MarkdownContent from './MarkdownContent.vue'
@@ -23,9 +23,14 @@ import { formatTime, PICKER_ANCHOR } from '../composables/useMessageActions'
 import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
 import { hasDraft, threadDraftKey } from '../lib/drafts'
+import { useSavedStore } from '../stores/saved'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { toggleSavedMessage } from '../lib/savedActions'
 
 const permissions = usePermissionsStore()
 const authStore = useAuthStore()
+const savedStore = useSavedStore()
+const features = useServerFeaturesStore()
 
 const props = defineProps({
   msg: { type: Object as PropType<Message>, required: true },
@@ -48,6 +53,9 @@ const editText = defineModel<string>('editText', { type: String, default: '' })
 const emit = defineEmits<{ reply: []; edit: []; save: []; 'cancel-edit': []; more: [event: MouseEvent]; react: [emoji: string]; 'toggle-picker': [id: string]; 'close-picker': []; 'open-thread': []; 'open-profile': []; 'open-image': [src: string]; jump: [] }>()
 
 const row = ref<HTMLElement | null>(null)
+// The message is in the member's private saved list: a mark that stays, and the hover bar's button toggles it.
+const canSave = computed(() => features.has('saved'))
+const isSaved = computed(() => canSave.value && savedStore.isSaved(props.msg.id))
 // An unsent reply in this message's thread, like the Draft marker of a channel.
 const threadDraft = computed(() => hasDraft(authStore.user?.id, threadDraftKey(props.msg.id)))
 
@@ -110,6 +118,20 @@ defineExpose({ el: row })
         <Reply class="w-4 h-4" />
       </button>
 
+      <!-- Save / remove from saved -->
+      <button
+        v-if="canSave"
+        type="button"
+        data-testid="save-toggle"
+        :aria-pressed="isSaved ? 'true' : 'false'"
+        @click.stop="toggleSavedMessage(msg)"
+        :class="['btn btn-icon btn-sm max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center hover:text-mnema-accent', isSaved ? 'text-mnema-accent' : '']"
+        v-tooltip="isSaved ? $t('saved.removeFromSaved') : $t('saved.save')"
+        :aria-label="isSaved ? $t('saved.removeFromSaved') : $t('saved.save')"
+      >
+        <Bookmark :class="['w-4 h-4', isSaved ? 'fill-current' : '']" />
+      </button>
+
       <!-- Edit Message (if author) -->
       <button
         v-if="isOwn && !msg.poll"
@@ -168,6 +190,15 @@ defineExpose({ el: row })
         <span class="text-xs text-mnema-tertiary shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
         <span v-if="msg.is_edited" class="text-xs text-mnema-tertiary italic shrink-0">{{ $t('chat.edited') }}</span>
         <Pin v-if="msg.is_pinned" data-testid="pinned" class="w-3.5 h-3.5 shrink-0 text-mnema-accent" :aria-label="$t('moderation.pinned')" role="img" />
+        <button
+          v-if="isSaved"
+          type="button"
+          data-testid="saved-mark"
+          class="focus-ring -m-1 shrink-0 self-center rounded-sm p-1 text-mnema-accent max-md:-m-3 max-md:p-3"
+          :aria-label="$t('saved.markLabel')"
+          v-tooltip="$t('saved.markLabel')"
+          @click.stop="toggleSavedMessage(msg)"
+        ><Bookmark class="h-3.5 w-3.5 fill-current" /></button>
       </div>
 
       <!-- Inline Message Editor -->
@@ -201,6 +232,16 @@ defineExpose({ el: row })
       <span v-if="grouped && msg.is_pinned && !editing" data-testid="pinned" class="flex items-center gap-1 text-xs text-mnema-accent">
         <Pin class="w-3.5 h-3.5" />{{ $t('moderation.pinned') }}
       </span>
+
+      <button
+        v-if="grouped && isSaved && !editing"
+        type="button"
+        data-testid="saved-mark"
+        class="focus-ring flex items-center gap-1 rounded-sm text-xs text-mnema-accent"
+        :aria-label="$t('saved.markLabel')"
+        v-tooltip="$t('saved.markLabel')"
+        @click.stop="toggleSavedMessage(msg)"
+      ><Bookmark class="h-3.5 w-3.5 fill-current" />{{ $t('saved.markShort') }}</button>
 
       <!-- Media Attachments (Images, Clips, Documents) -->
       <MessageAttachments :attachments="msg.attachments" @open-image="emit('open-image', $event)" />
