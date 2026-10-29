@@ -2926,6 +2926,7 @@
     "noUpcoming": "Keine bevorstehenden Veranstaltungen geplant.",
     "noPast": "Keine vergangenen Veranstaltungen.",
     "whatAreEvents": "Veranstaltungen sind Treffen mit festem Termin in einem Talk oder Kanal, mit Startzeit und Zusagen. Mitglieder mit dem Recht „Events verwalten“ können eine anlegen.",
+    "loadFailed": "Veranstaltungen konnten nicht geladen werden. Versuche es erneut.",
     "loadMorePast": "Ältere Veranstaltungen anzeigen",
     "create": "Veranstaltung erstellen",
     "createTitle": "Community-Veranstaltung erstellen",

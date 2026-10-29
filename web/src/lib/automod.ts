@@ -42,7 +42,7 @@ export interface RuleForm {
 // The names migration 0066 gave the built-in rules. They are stored in English;
 // a rule still carrying one is shown with the title of its kind in the UI language.
 const SEEDED_NAMES: Record<AutomodKind, string> = {
-  words: 'Blocked words', links: 'Links', mentions: 'Mention spam', new_account: 'New accounts', raid: 'Raid protection'
+  words: 'Blocked words', links: 'Links', mentions: 'Mention spam', new_account: 'New accounts', raid: 'Raid protection' // i18n-ignore: stored English names of the seeded rules, compared not shown
 }
 
 /** The name to show: built-in rules read in the UI language, custom names stay as written. */

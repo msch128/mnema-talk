@@ -2,6 +2,7 @@
 // first), kept current by live updates.
 import { ref, type Ref } from 'vue'
 import { api } from '../lib/api'
+import { t } from '../i18n'
 import { arrayDecoder } from '../types/validation'
 import { isCommunityeventsCommunityEvent, type CommunityeventsCommunityEvent as CommunityEvent } from '../types/rest'
 
@@ -47,7 +48,7 @@ export function usePastEvents(enabled: Readonly<Ref<boolean>>, error: Ref<string
       loaded.value = true
     } catch (err) {
       if (mine !== generation) return
-      error.value = err instanceof Error ? err.message : 'Failed to load events'
+      error.value = err instanceof Error ? err.message : t('events.loadFailed')
     } finally {
       if (mine === generation) loading.value = false
     }
