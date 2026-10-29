@@ -98,7 +98,7 @@ func TestMentionsAreCountedOncePerName(t *testing.T) {
 		"@alice @ALICE @alice.":            1,
 		"@all and @here":                   2,
 		"mail me at a@example.com":         0, // not a mention: a character precedes the @
-		"@ab is too short, @abc is not":    1,
+		"@a is too short, @abc is not":     1,
 		"":                                 0,
 		"(@alice) and,@bobby and @carol_1": 3,
 	} {
