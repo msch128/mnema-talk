@@ -15,32 +15,11 @@ install" part for you.
 
 ## Ports
 
-What to open, assuming the default settings and a reverse proxy on the same
-network:
-
-| Port | Protocol | Service | Forward from the internet? |
-|---|---|---|---|
-| 443 (and 80 for certificates) | TCP | Reverse proxy (HTTPS, WebSocket) | Yes |
-| 50000–50050 | UDP | App: voice, video and screen share (`WEBRTC_UDP_PORT_MIN/MAX`) | Yes |
-| 3479 | UDP + TCP | App: built-in TURN relay for members whose network blocks the UDP range (`WEBRTC_BUILTIN_TURN_PORT`) | Yes |
-| 3478 | UDP + TCP | coturn, only with the `turn` profile | Yes, if you run coturn |
-| 49152–49200 | UDP | coturn relay ports, only with the `turn` profile | Yes, if you run coturn |
-| 8080 | TCP | App HTTP (`PORT`), reached by the proxy | No, proxy only |
-| 5432 | TCP | PostgreSQL | No, Docker network only |
-| 8333 | TCP | SeaweedFS S3 API | No, Docker network only |
-
-- The compose file publishes `8080/tcp` on `127.0.0.1` only (set
-  `PUBLISH_ADDR=0.0.0.0` in `.env` to reach it from the network). Don't forward
-  it from the router.
-- If you change `WEBRTC_UDP_PORT_MIN/MAX`, forward the new range; Docker
-  publishes the same range.
-- Users behind strict firewalls that block UDP can only join voice through
-  TURN. The app has a relay of its own on 3479 (UDP and TCP; forward both) that
-  runs while no external TURN is configured, see
-  [operations.md](operations.md#built-in-turn-relay). coturn (`WEBRTC_TURN_URLS`)
-  keeps 3478 and can run beside it. Compose publishes 3479 in any case; the
-  forward is only needed while the relay runs, and a port clash is solved with
-  `WEBRTC_BUILTIN_TURN_PORT`.
+The full reference, with every inbound port, every outbound connection and what
+must stay closed, is [ports.md](ports.md). In short, with the default settings
+forward TCP 443 to the reverse proxy, **UDP 50000-50050** for voice and video
+and **UDP and TCP 3479** for the built-in TURN relay. Do not forward 8080
+(published on `127.0.0.1` only), PostgreSQL or SeaweedFS.
 
 ## Fresh install
 
@@ -83,7 +62,7 @@ curl -fsS http://127.0.0.1:8080/api/health
 
 Sign in as the Owner (`ADMIN_USERNAME`, default `admin`) and create invite
 codes. Put a reverse proxy with TLS in front, forward the voice UDP range
-(see [Ports](#ports)) and set up [backups](operations.md#backups-and-restore)
+(see [Network ports](ports.md)) and set up [backups](operations.md#backups-and-restore)
 before inviting anyone. CI runs exactly these steps against the image it just
 built (`scripts/fresh-install-check.sh`).
 

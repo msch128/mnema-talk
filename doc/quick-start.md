@@ -10,8 +10,11 @@ image tags and the details behind these steps:
 1. A host name that points to your server, e.g. `chat.example.com`.
 2. A reverse proxy with a TLS certificate in front of port 8080 (Synology and
    Unraid bring one; on a VPS Caddy is the shortest way).
-3. The voice ports forwarded to the server: **UDP 50000-50050**, plus TCP 443
-   for the proxy. The proxy does not carry voice.
+3. The ports forwarded to the server: **TCP 443** for the proxy, **UDP
+   50000-50050** for voice and video (the proxy does not carry them) and
+   **UDP and TCP 3479** for the built-in TURN relay, which lets members behind
+   firewalls that block UDP join calls. Every port, what it is for and the
+   outbound connections: [Network ports](ports.md).
 
 Nothing else is required. `PUBLIC_URL` is the one address you set; allowed
 origins, `Secure` cookies and the links in e-mails follow from it, and the
@@ -81,7 +84,7 @@ ADMIN_INITIAL_PASSWORD=...  # the Owner's first password, 14+ characters
    `localhost`, port 8080. In Custom Header press Create > WebSocket (it adds the
    `Upgrade` and `Connection` headers). Get the certificate under Control Panel >
    Security > Certificate (Let's Encrypt).
-4. **Router and firewall.** Forward TCP 443 and **UDP 50000-50050** to the NAS.
+4. **Router and firewall.** Forward TCP 443, **UDP 50000-50050** and **UDP and TCP 3479** to the NAS.
    Allow both in Control Panel > Security > Firewall if it is on.
 5. Open `https://chat.example.com`, sign in as the Owner, then
    [check the result](#check-the-result). The Status tab's *Reverse proxy* item
@@ -116,7 +119,7 @@ between DSM versions.
    with WebSockets on. Set `PUBLISH_ADDR=0.0.0.0` in `.env` when the proxy
    runs in another container or on another machine, and list its address in
    `TRUSTED_PROXY_CIDRS` (the Status tab names it).
-4. **Router.** Forward TCP 443 and **UDP 50000-50050** to the Unraid server.
+4. **Router.** Forward TCP 443, **UDP 50000-50050** and **UDP and TCP 3479** to the Unraid server.
 5. [Check the result](#check-the-result).
 
 **Update.** After a backup: `cd /mnt/user/appdata/mnema-talk && docker compose pull && docker compose up -d`.
@@ -145,7 +148,8 @@ before you enable it.
 
    Then `sudo systemctl reload caddy`. Point the DNS A record of
    `chat.example.com` at the server before this step.
-4. **Firewall.** `sudo ufw allow 80,443/tcp && sudo ufw allow 50000:50050/udp`.
+4. **Firewall.** `sudo ufw allow 80,443/tcp && sudo ufw allow 50000:50050/udp && sudo ufw allow 3479`
+   (`3479` without a protocol opens UDP and TCP).
    Cloud providers have a second firewall (security group) with the same ports.
    On a VPS the public IP is on the machine itself, so voice needs nothing more.
 5. [Check the result](#check-the-result).

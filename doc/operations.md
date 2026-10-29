@@ -3,7 +3,8 @@
 Running Mnema Talk with `docker compose`: configuration, reverse proxy, TURN,
 storage, backups, monitoring and troubleshooting. For the update procedure
 see [upgrade.md](upgrade.md); for the security model see
-[SECURITY.md](../SECURITY.md).
+[SECURITY.md](../SECURITY.md). Which ports to forward and which outbound
+connections the server makes: [ports.md](ports.md).
 
 ## Configuration reference
 
@@ -188,7 +189,8 @@ logs at 3 x 10 MB.
 
 Terminate TLS in a reverse proxy and forward HTTP and WebSocket traffic
 (`/api/ws`) to the app's port. Voice and video do **not** go through the
-proxy; they use the UDP range directly.
+proxy; they use the UDP range directly (and, for members behind a UDP block,
+the built-in TURN port). All ports: [ports.md](ports.md).
 
 Caddy (passes `X-Forwarded-For` and WebSocket upgrades by default):
 
