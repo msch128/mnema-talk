@@ -89,3 +89,32 @@ func abs(v int) int {
 	}
 	return v
 }
+
+func TestSemiTransparentEdgesStayLightInsteadOfSnappingDark(t *testing.T) {
+	// A white sprite with an antialiased rim: alpha 130 must not be matched
+	// premultiplied (a dark grey) against the palette.
+	img := image.NewNRGBA(image.Rect(0, 0, 6, 1))
+	white := color.NRGBA{255, 255, 255, 255}
+	img.SetNRGBA(0, 0, color.NRGBA{255, 255, 255, 60})
+	img.SetNRGBA(1, 0, color.NRGBA{255, 255, 255, 130})
+	img.SetNRGBA(5, 0, color.NRGBA{128, 128, 128, 255}) // a mid grey the rim could snap to
+	for x := 2; x < 5; x++ {
+		img.SetNRGBA(x, 0, white)
+	}
+	data, err := EncodeGIF(&gif.GIF{Delay: []int{3}}, []Frame{{Img: img}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := gif.DecodeAll(bytes.NewReader(data))
+	if err != nil || len(out.Image) != 1 {
+		t.Fatalf("%v %v", out, err)
+	}
+	f := out.Image[0]
+	if _, _, _, a := f.At(0, 0).RGBA(); a != 0 {
+		t.Errorf("alpha 60 pixel stayed visible")
+	}
+	r, g, b, a := f.At(1, 0).RGBA()
+	if a == 0 || r>>8 < 240 || g>>8 < 240 || b>>8 < 240 {
+		t.Errorf("alpha 130 rim = %d,%d,%d alpha %d, want opaque white", r>>8, g>>8, b>>8, a>>8)
+	}
+}
