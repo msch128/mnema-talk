@@ -1,11 +1,10 @@
-import { useToastStore } from '../../stores/toast'
 import { createVoiceGate } from '../../lib/levelMeter'
-import { t } from '../../i18n'
 import { gamingMicLease } from '../../lib/gamingMicLease'
 import { useVoiceStore } from '../../stores/voice'
 import type { Cx, RtcState } from './state'
 import { calculateRMSLevel, setNodeGain } from './audioMath'
 import { teardownMicPipeline } from './micPipeline'
+import { resetNoAudioWatch, watchRawSilence } from './rawSilence'
 
 /** Input volume: the gaming microphone lease follows push-to-talk. */
 export function setGamingPttLease(st: RtcState, pressed: boolean): void {
@@ -46,28 +45,6 @@ function releaseStalledGamingLease(cx: Cx, tick: SpeakingTick) {
     setGamingPttLease(st, false)
   }
   tick.lastGamingTick = now
-}
-
-function shouldSkipNoAudioWatch(voice: Cx['voice'], level: number): boolean {
-  if (!voice.warnNoAudioDetected || level >= 1) return true
-  return voice.isMuted || voice.isMicTesting
-}
-
-// Warns (at most every two minutes) when an unmuted mic has been silent for 15 s.
-function watchForNoAudio(cx: Cx, level: number) {
-  const { voice, st } = cx
-  if (shouldSkipNoAudioWatch(voice, level)) {
-    st.unmutedZeroAudioStartTime = 0
-    return
-  }
-  if (!st.unmutedZeroAudioStartTime) {
-    st.unmutedZeroAudioStartTime = Date.now()
-    return
-  }
-  if (Date.now() - st.unmutedZeroAudioStartTime <= 15000) return
-  if (Date.now() - st.lastNoAudioWarningToastTime <= 120000) return
-  useToastStore().info(t('audio.noAudioDetectedToast'))
-  st.lastNoAudioWarningToastTime = Date.now()
 }
 
 // Mic testing in a call: channel transmission is muted and the loopback is gated.
@@ -116,7 +93,7 @@ function speakingTick(cx: Cx, tick: SpeakingTick) {
   if (voice.showAudioSettings) {
     voice.currentInputLevel = level
   }
-  watchForNoAudio(cx, level)
+  watchRawSilence(cx)
 
   if (voice.isMicTesting) gateMicTestLoopback(cx, tick, level)
   else if (voice.isMuted) stopTransmitting(cx)
@@ -150,6 +127,7 @@ export function cleanupVoiceAudio(cx: Cx) {
   const { voice, st } = cx
   st.failedAIModel = null
   st.contextStalled = false
+  resetNoAudioWatch(st)
   if (st.speakingInterval) {
     clearInterval(st.speakingInterval)
     st.speakingInterval = null

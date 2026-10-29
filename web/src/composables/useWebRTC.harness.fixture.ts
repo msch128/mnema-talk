@@ -121,7 +121,9 @@ export class FakeAudioContext {
   static gains: FakeGain[] = []
   static instances: FakeAudioContext[] = []
   static sample = 150
-  static analysers: Array<{ fftSize: number; connect: () => void; getByteTimeDomainData: ReturnType<typeof vi.fn> }> = []
+  /** What the raw capture tap reads (float samples); 0 is digital silence. */
+  static rawSample = 0.05
+  static analysers: Array<{ fftSize: number; connect: () => void; getByteTimeDomainData: ReturnType<typeof vi.fn>; getFloatTimeDomainData: ReturnType<typeof vi.fn> }> = []
   constructor() {
     this.state = 'running'
     this.currentTime = 0
@@ -154,7 +156,7 @@ export class FakeAudioContext {
   }
   createAnalyser() {
     this.ensureActive()
-    const analyser = { fftSize: 256, connect() {}, getByteTimeDomainData: vi.fn((buffer: Uint8Array) => buffer.fill(FakeAudioContext.sample)) }
+    const analyser = { fftSize: 256, connect() {}, getByteTimeDomainData: vi.fn((buffer: Uint8Array) => buffer.fill(FakeAudioContext.sample)), getFloatTimeDomainData: vi.fn((buffer: Float32Array) => buffer.fill(FakeAudioContext.rawSample)) }
     FakeAudioContext.analysers.push(analyser)
     return analyser
   }
@@ -318,6 +320,7 @@ export function installHarness() {
     FakeAudioContext.gains = []
     FakeAudioContext.instances = []
     FakeAudioContext.sample = 150
+    FakeAudioContext.rawSample = 0.05
     FakeAudioContext.analysers = []
     FakePC.instances = []
     micRequests = []
