@@ -55,6 +55,22 @@ func ComposeGIF(g *gif.GIF, cfg image.Config, shape func(image.Image) *image.NRG
 	return out
 }
 
+// hardAlpha returns a copy of img whose pixels are fully opaque (alpha >= 128)
+// or fully transparent with a zeroed colour.
+func hardAlpha(img *image.NRGBA) *image.NRGBA {
+	out := image.NewNRGBA(img.Rect)
+	for y := img.Rect.Min.Y; y < img.Rect.Max.Y; y++ {
+		src := img.Pix[(y-img.Rect.Min.Y)*img.Stride:]
+		dst := out.Pix[(y-img.Rect.Min.Y)*out.Stride:]
+		for i := 0; i < img.Rect.Dx()*4; i += 4 {
+			if src[i+3] >= 128 {
+				dst[i], dst[i+1], dst[i+2], dst[i+3] = src[i], src[i+1], src[i+2], 255
+			}
+		}
+	}
+	return out
+}
+
 // EncodeGIF writes frames as a new animation with the timing and loop count
 // of the original g. Every frame gets a palette of its own colours: the
 // composed canvas mixes pixels from earlier frames and scaling blends new
@@ -63,8 +79,12 @@ func EncodeGIF(g *gif.GIF, frames []Frame) ([]byte, error) {
 	b := frames[0].Img.Bounds()
 	res := &gif.GIF{LoopCount: g.LoopCount, Config: image.Config{Width: b.Dx(), Height: b.Dy()}}
 	for i, f := range frames {
-		p := image.NewPaletted(b, adaptivePalette(f.Img))
-		xdraw.FloydSteinberg.Draw(p, b, f.Img, b.Min)
+		// A GIF pixel is opaque or see-through. Deciding that before the palette
+		// is built keeps the dithering, which compares premultiplied colours,
+		// from snapping antialiased edges to dark entries.
+		img := hardAlpha(f.Img)
+		p := image.NewPaletted(b, adaptivePalette(img))
+		xdraw.FloydSteinberg.Draw(p, b, img, b.Min)
 		res.Image = append(res.Image, p)
 		res.Delay = append(res.Delay, g.Delay[i])
 		// Every frame is a complete picture: clear before the next one.

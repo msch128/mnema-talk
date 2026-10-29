@@ -37,7 +37,17 @@ func DecodeJSON(r *http.Request, dst any) error {
 	}
 	// More() would not see a stray closing brace or bracket after the value.
 	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
-		return ErrInvalidInput("request body must contain a single JSON object")
+		var maxErr *http.MaxBytesError
+		var syntaxErr *json.SyntaxError
+		if errors.As(err, &maxErr) {
+			return ErrPayloadTooLarge("request body too large")
+		}
+		if err == nil || errors.As(err, &syntaxErr) {
+			return ErrInvalidInput("request body must contain a single JSON object")
+		}
+		// A read error that is not the client's fault in the body itself
+		// (reset connection, short read) is not trailing data.
+		return ErrInvalidInput("invalid JSON body")
 	}
 	return nil
 }

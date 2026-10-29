@@ -3520,12 +3520,14 @@ export const decodeMediaOrphans = decoder("media.Orphans", isMediaOrphans)
 export type MediaPruneResult = {
   cutoff_days: number
   pruned_count: number
+  skipped?: number
 }
 
 export function isMediaPruneResult(value: unknown): value is MediaPruneResult {
   return isRecord(value)
     && (hasOwn(value, "cutoff_days") && isInteger(value["cutoff_days"]))
     && (hasOwn(value, "pruned_count") && isInteger(value["pruned_count"]))
+    && (!hasOwn(value, "skipped") || isInteger(value["skipped"]))
 }
 
 export const decodeMediaPruneResult = decoder("media.PruneResult", isMediaPruneResult)

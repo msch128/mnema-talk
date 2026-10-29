@@ -142,6 +142,21 @@ func TestEventStatusChangesFollowTheTransitions(t *testing.T) {
 	wantStatus(t, "revive", patch(open.ID, map[string]any{"status": "scheduled"}), http.StatusConflict)
 }
 
+// Cancelling and moving the end into the past in one PATCH must not save the
+// edit and then fail the cancel with a conflict.
+func TestPatchCancelWithAPastEndCancelsAndKeepsTheEdit(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	ev := a.coverEventAt(admin, time.Now().Add(-time.Hour), nil)
+	end := time.Now().Add(-30 * time.Minute).UTC().Truncate(time.Second)
+	res := admin.patch("/api/events/"+ev.ID.String(), map[string]any{"status": "cancelled", "end_time": end.Format(time.RFC3339)})
+	wantStatus(t, "cancel with past end", res, http.StatusOK)
+	got := a.getEvent(admin, ev.ID)
+	if got.Status != communityevents.StatusCancelled || got.EndTime == nil || !got.EndTime.Equal(end) {
+		t.Fatalf("event after PATCH: status %s end %v, want cancelled with the new end", got.Status, got.EndTime)
+	}
+}
+
 func TestEventCreateTreatsAnEmptyLocationAsNone(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
