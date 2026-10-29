@@ -176,19 +176,17 @@ const (
 	tagCancel       rune = 0xE007F
 )
 
-func isDisallowedEmojiRune(r rune) bool {
-	switch {
-	case unicode.IsSpace(r), unicode.IsControl(r):
-		return true
-	case r == '<', r == '>':
-		return true
-	case unicode.Is(unicode.Cf, r):
-		// Invisible and bidi formatting characters spoof the pill; only the
-		// joiner and the tag characters of emoji sequences are real emoji parts.
-		return r != zeroWidthJoiner && (r < tagSpace || r > tagCancel)
-	default:
-		return false
-	}
+// isUnsafeEmojiRune is true for whitespace, control characters and angle
+// brackets, which no reaction token holds, not even one stored earlier.
+func isUnsafeEmojiRune(r rune) bool {
+	return unicode.IsSpace(r) || unicode.IsControl(r) || r == '<' || r == '>'
+}
+
+// isInvisibleEmojiRune is true for invisible and bidi formatting characters,
+// which spoof the pill; only the joiner and the tag characters of emoji
+// sequences are real emoji parts.
+func isInvisibleEmojiRune(r rune) bool {
+	return unicode.Is(unicode.Cf, r) && r != zeroWidthJoiner && (r < tagSpace || r > tagCancel)
 }
 
 func validEmojiLength(emoji string) bool {
@@ -201,6 +199,17 @@ func validEmojiLength(emoji string) bool {
 // ValidateEmoji accepts a short, printable, whitespace-free reaction token
 // without invisible or bidi formatting characters, or the token of a custom emoji (<:name:id>).
 func ValidateEmoji(emoji string) (string, error) {
+	return validateEmoji(emoji, true)
+}
+
+// validateReactionRef is ValidateEmoji without the formatting-character rule,
+// for the toggle and the delete route: a reaction stored before that rule must
+// stay removable by its owner. Adding re-checks the strict rule.
+func validateReactionRef(emoji string) (string, error) {
+	return validateEmoji(emoji, false)
+}
+
+func validateEmoji(emoji string, strict bool) (string, error) {
 	emoji = strings.TrimSpace(emoji)
 	if emojitext.IsToken(emoji) {
 		return emoji, nil
@@ -209,7 +218,7 @@ func ValidateEmoji(emoji string) (string, error) {
 		return "", httpx.ErrInvalidInput("invalid emoji")
 	}
 	for _, r := range emoji {
-		if isDisallowedEmojiRune(r) {
+		if isUnsafeEmojiRune(r) || (strict && isInvisibleEmojiRune(r)) {
 			return "", httpx.ErrInvalidInput("invalid emoji")
 		}
 	}

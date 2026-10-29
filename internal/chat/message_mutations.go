@@ -227,6 +227,9 @@ func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 		if !canAdd {
 			return httpx.ErrForbidden("missing permission: add reactions")
 		}
+		if _, err := ValidateEmoji(emoji); err != nil {
+			return err
+		}
 		return addReaction(ctx, tx, messageID, userID, emoji)
 	})
 	if err != nil {
