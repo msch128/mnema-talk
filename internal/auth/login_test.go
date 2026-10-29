@@ -49,6 +49,18 @@ func postLogin(h *Handler, ip, username, password string) int {
 	return rec.Code
 }
 
+// Registration allows two characters, so the login lookup must too.
+func TestLoginLookupAcceptsEveryNameAnAccountCanHold(t *testing.T) {
+	for _, name := range []string{"ab", "abc", "Legacy-Name", strings.Repeat("a", 32)} {
+		if err := validateUsername(name); err != nil {
+			t.Errorf("validateUsername(%q) = %v", name, err)
+		}
+	}
+	if err := validateUsername("a"); err == nil {
+		t.Error("a one-character name can never match an account")
+	}
+}
+
 func TestLoginRejectsImplausibleUsernamesWithoutTracking(t *testing.T) {
 	h := newLoginHandler()
 	for _, name := range []string{strings.Repeat("a", 1<<20), strings.Repeat("b", 33), "has space", "\u00fc-umlaut", ""} {

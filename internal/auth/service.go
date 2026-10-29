@@ -34,7 +34,7 @@ const (
 
 // usernamePattern is the lookup shape: every name an account can hold, legacy
 // ones included (login, mentions and URLs accept all of them).
-var usernamePattern = regexp.MustCompile(`^[A-Za-z0-9_.-]{3,32}$`)
+var usernamePattern = regexp.MustCompile(`^[A-Za-z0-9_.-]{2,32}$`)
 
 // newUsernamePattern is the rule for names chosen from now on: lowercase
 // letters, digits, '_' and '.', 2-32 characters. Dot placement is checked in
@@ -220,7 +220,7 @@ func checkReservedUsername(username string) error {
 // ADMIN_USERNAME of a running install must keep booting.
 func validateExistingUsername(username string) error {
 	if !usernamePattern.MatchString(username) {
-		return httpx.ErrInvalidInput("username must be 3-32 characters: letters, digits, '_', '.', '-'")
+		return httpx.ErrInvalidInput("username must be 2-32 characters: letters, digits, '_', '.', '-'")
 	}
 	return checkReservedUsername(username)
 }
