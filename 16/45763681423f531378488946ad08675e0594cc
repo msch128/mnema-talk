@@ -1,0 +1,63 @@
+web/src/components/AdminDashboard.test.ts
+  s_28915fd19e1e49::t_487bce4e3dccdf 428
+web/src/components/AdminDashboard.vue
+  s_28915fd19e1e49::t_c1aea494985b47 5-6,16,50-51,144
+web/src/components/AdminEditDialogs.test.ts
+  s_28915fd19e1e49::t_3fe6e72587f83c 1,12-13,16-17,28,31,43,59-71
+web/src/components/AdminEditDialogs.vue
+  s_28915fd19e1e49::t_ae2e1461b1b832 11-12,15-16,18,24
+web/src/components/AdminLayoutTab.test.ts
+  s_0cae4a4d7ab7c3::t_38aea1eb81345e 94,114,162,164-165,167-170,201,210,245,374,378,381
+web/src/components/AdminLayoutTab.vue
+  s_28915fd19e1e49::t_2cc3c75d39016f 3-5,21-22,29-33,51,54,65,135,143-145,156-160,172-174,176,182-196,204-222,284,377,379-388
+web/src/components/AdminLayoutToolbar.vue
+  s_4c6a19030e223f::t_0d0e5bc72c3fa2 2,4,6,8
+web/src/components/AdminOnboardingTab.vue
+  s_731038fe4fc0d1::t_abc36b1de38149 6,15,17,34-41,44-70,73-76,79-84,86-100,102,119,124,133-134,142-143,146,153,161,169,171,175
+web/src/components/UnsavedChangesBar.vue
+  s_731038fe4fc0d1::t_aacbd374052b5a 14-15,22,36
+web/src/composables/draftGuard.ts
+  s_731038fe4fc0d1::t_3f08e7c4b9d4a7 49-56
+web/src/composables/useSettingsDraft.ts
+  s_731038fe4fc0d1::t_f7863a01689cfc 8,129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1645763681423f531378488946ad08675e0594cc",
+  "prompts": {},
+  "sessions": {
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_28915fd19e1e49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-arrow-edit-f0518ce8535c51ee",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_731038fe4fc0d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-saved-later-006f0c1510ca4d15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
