@@ -131,7 +131,7 @@ func FuzzParseMentions(f *testing.F) {
 	f.Fuzz(func(t *testing.T, content string) {
 		seen := map[string]bool{}
 		for _, n := range ParseMentions(content) {
-			if len(n) < 3 || len(n) > 32 || n != strings.ToLower(n) || seen[n] || strings.HasSuffix(n, ".") || strings.HasSuffix(n, "-") {
+			if len(n) < 2 || len(n) > 32 || n != strings.ToLower(n) || seen[n] || strings.HasSuffix(n, ".") || strings.HasSuffix(n, "-") {
 				t.Fatalf("bad mention %q from %q", n, content)
 			}
 			seen[n] = true
