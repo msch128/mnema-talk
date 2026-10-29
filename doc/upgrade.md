@@ -132,6 +132,14 @@ until the new release has passed your application checks.
 
 Update with the procedure above and take the backup first. Nothing in `.env` has to change.
 
+The in-app privacy policy is now version 1.7 (the version is shown on the
+page; members are not asked to accept it again). It describes the TURN relay
+built into the server as part of your instance (IP address and port seen,
+encrypted media it cannot read, nothing stored persistently) while it is
+offered, and it names the external TURN servers from `WEBRTC_TURN_URLS`, which
+earlier versions never listed. `GET /api/legal` gains the field `builtin_turn`.
+If you publish your own copy of the policy, update it to match.
+
 Migration 0077 drops `native_session_families`, `native_access_tokens`,
 `native_refresh_tokens` and `native_ciphertext_events` (added by 0015 and 0016).
 They belonged to a native client transport that was never mounted in a release;
