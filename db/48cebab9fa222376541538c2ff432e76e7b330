@@ -1,0 +1,173 @@
+SECURITY.md
+  s_6f62c78e3c93c5::t_6557139295aa49 228-235,953-954
+api/openapi.json
+  s_2d22d157720d46::t_e48c06ccf746e4 239-242,6310-6313,7246-7249,12853-13061,26462-26568
+doc/roles-and-permissions.md
+  s_6f62c78e3c93c5::t_2f93f0aa7dd08c 266-297,357
+internal/audit/classes_test.go
+  s_3e68b8fa0e1785::t_737fc09b93752f 37
+internal/audit/routes.go
+  s_6f62c78e3c93c5::t_c47a7799fc922b 119-120
+internal/audit/snapshot.go
+  s_6f62c78e3c93c5::t_958297c80a022d 42-43
+internal/auth/password_reset.go
+  s_5b748b0295d2f4::t_e6115fdb9bf974 23-25,58
+internal/community/name.go
+  s_3255aa8302478d::t_dde92a403e5c6c 32,57-75,77,80-81,84-86,90
+internal/db/migrations/0079_community_icon.sql
+  s_3255aa8302478d::t_3ad1697c54dcc9 1-7
+internal/imgproc/icon.go
+  s_65ba608539a14a::t_fc14dd4d2e5310 1-40
+internal/imgproc/picture_test.go
+  s_06fcde5dbef956::t_57919eb7a5a26d 147-186
+internal/imgproc/sizes.go
+  s_65ba608539a14a::t_5fd4141dad75d8 19-27
+internal/onboarding/handler.go
+  s_3255aa8302478d::t_41a7300175f5cc 21,33-35,37,51-52,60
+internal/onboarding/icon.go
+  s_06fcde5dbef956::t_f59d3b9a17bd61 1-353
+internal/onboarding/settings.go
+  s_3255aa8302478d::t_024c65c4c23624 49-52,75,79,148
+internal/server/community_icon_integration_test.go
+  s_2d22d157720d46::t_5a98ffbafded37 1-255
+internal/server/health.go
+  s_6f62c78e3c93c5::t_cc5e47c4161443 31-35,142
+internal/server/router_build.go
+  s_6f62c78e3c93c5::t_b0419d55c563f8 149
+internal/server/router_routes.go
+  s_3255aa8302478d::t_3c1a824b183354 12,36,151-154
+internal/server/sharepage.go
+  s_6f62c78e3c93c5::t_0adb5341ede69b 109,133-143,160,202
+internal/server/sharepage_integration_test.go
+  s_06fcde5dbef956::t_2e22a67db5a54f 133-161
+web/src/components/AdminOnboardingTab.test.ts
+  s_5b748b0295d2f4::t_2c7b99fe202ede 10,157-219
+web/src/components/AdminOnboardingTab.vue
+  s_1feb8007450481::t_34785d82ea609a 7,15-16,43-46,104-143,159-178
+web/src/components/LoginModal.test.ts
+  s_2d22d157720d46::t_de6df5166b00cd 163-170
+web/src/components/LoginModal.vue
+  s_5b748b0295d2f4::t_d72f06bc593b5f 14,53-55,85,150-151
+web/src/components/SidebarServerMenu.vue
+  s_6df204337666d5::t_de0eb583ecc2c4 13,30-31,122,124
+web/src/composables/useCommunityIcon.ts
+  s_6df204337666d5::t_aea87acc1c65ea 1-9
+web/src/i18n/de.json
+  s_4470fe4f4a10ca::t_e3171b8e5bdf87 1657-1666,2453-2455
+web/src/i18n/en.json
+  s_4470fe4f4a10ca::t_ee1c8fe77fcb9c 1657-1666,2453-2455
+web/src/lib/communityIcon.ts
+  s_6df204337666d5::t_a8edaf6d667a6e 1-33
+web/src/stores/chat/events.ts
+  s_6df204337666d5::t_d4a670c4aa5dd0 12,180-184
+web/src/stores/chatEvents.test.ts
+  s_e7d8df1dbb402e::t_2dfaaf41d3126a 10,39-57
+web/src/stores/serverFeatures.ts
+  s_6df204337666d5::t_e091e8456ab023 5,17-18,26-31,38,50
+web/src/types/events.ts
+  s_6df204337666d5::t_9975b5d90bfec8 154
+web/src/types/noticeEvents.ts
+  s_6df204337666d5::t_ddb7879238907e 26-27
+web/src/types/rest.ts
+  s_2d22d157720d46::t_0807dbd8f5bc86 120,127,3737,3749,4269,4279
+web/web.go
+  s_3e68b8fa0e1785::t_c6a198dd3a85db 14,31-38,41,43-45,83,91-92,95-110,132-134,149-150,162-183,246
+web/web_test.go
+  s_06fcde5dbef956::t_68764c7f16d716 142-184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db48cebab9fa222376541538c2ff432e76e7b330",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_1feb8007450481": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2334e28a6d0ab14c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2d22d157720d46": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-format-help-1c4cc049037c526d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3255aa8302478d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-gaming-ui-52e3f2038ee574d1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3e68b8fa0e1785": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-reactions-7d1b14603defb791",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4470fe4f4a10ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3c3476dc587ab846",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_65ba608539a14a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a83c210d97e86a798",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6df204337666d5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abd5e36ee770470d7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e7d8df1dbb402e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-app-66e452174912e1a3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
