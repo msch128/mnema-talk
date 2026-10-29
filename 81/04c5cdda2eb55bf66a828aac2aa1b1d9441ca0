@@ -1,0 +1,87 @@
+e2e/tests/a11y.spec.ts
+  s_06fcde5dbef956::t_81a6e05888528a 25
+e2e/tests/account-delete.spec.ts
+  s_06fcde5dbef956::t_7b0649a74706fd 18,56
+e2e/tests/audit.spec.ts
+  s_06fcde5dbef956::t_7709c8ff22dade 15
+e2e/tests/coherence.spec.ts
+  s_06fcde5dbef956::t_ae6b62ad0fc578 17
+e2e/tests/csp.spec.ts
+  s_06fcde5dbef956::t_41016abf3502a6 22
+e2e/tests/dm-polish.spec.ts
+  s_06fcde5dbef956::t_a5df4531dc9016 20
+e2e/tests/dm.spec.ts
+  s_06fcde5dbef956::t_8b4ec7eca327f3 20
+e2e/tests/drafts.spec.ts
+  s_06fcde5dbef956::t_6db385595ec0d9 16,63
+e2e/tests/forward.spec.ts
+  s_06fcde5dbef956::t_d06dff9b56714e 18
+e2e/tests/layout.spec.ts
+  s_06fcde5dbef956::t_3c0f69a288a561 36
+e2e/tests/mentions.spec.ts
+  s_06fcde5dbef956::t_057ad425c5d1b0 18
+e2e/tests/message-moderation.spec.ts
+  s_06fcde5dbef956::t_c26ca36c85f051 15
+e2e/tests/moderation.spec.ts
+  s_06fcde5dbef956::t_2ba46b3966b529 15
+e2e/tests/notifications.spec.ts
+  s_06fcde5dbef956::t_ad17feeb7b17ac 18,108
+e2e/tests/polls.spec.ts
+  s_06fcde5dbef956::t_c76cbc432aabc6 14
+e2e/tests/push.spec.ts
+  s_06fcde5dbef956::t_f24a4b900c368a 46
+e2e/tests/pwa.spec.ts
+  s_06fcde5dbef956::t_f952b766609e6c 24-25
+e2e/tests/roles.spec.ts
+  s_06fcde5dbef956::t_9898b3e9b04aa0 23
+e2e/tests/saved.spec.ts
+  s_06fcde5dbef956::t_6565b25576a373 16
+e2e/tests/slash-builtins.spec.ts
+  s_06fcde5dbef956::t_9b132ded787161 17,67
+e2e/tests/small-1-2.spec.ts
+  s_06fcde5dbef956::t_803f1dbd0e126c 18
+e2e/tests/smoke.spec.ts
+  s_06fcde5dbef956::t_482704b3579f7d 28
+e2e/tests/speaking-urls.spec.ts
+  s_06fcde5dbef956::t_a7d6719611d23b 21
+e2e/tests/two-factor.spec.ts
+  s_06fcde5dbef956::t_6c0080fa81bee8 36
+e2e/tests/ui-events-polish.spec.ts
+  s_06fcde5dbef956::t_024224bc6ae294 20
+e2e/tests/unread-jump.spec.ts
+  s_06fcde5dbef956::t_002efaf0965e72 18
+e2e/tests/upload-limit.spec.ts
+  s_06fcde5dbef956::t_6b90c104259ef2 14
+internal/server/bot_role_integration_test.go
+  s_06fcde5dbef956::t_94c713f916d4e9 135
+internal/server/version_integration_test.go
+  s_06fcde5dbef956::t_24ddb84ec751f7 42-43
+e2e/tests/onboarding.spec.ts
+  s_863e1f0a5fe207::t_9e124ab5e9e2e1 15,128-133,136
+internal/server/account_export_integration_test.go
+  s_863e1f0a5fe207::t_45cd76e071eed3 12,175-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8104c5cdda2eb55bf66a828aac2aa1b1d9441ca0",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_863e1f0a5fe207": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-naming-c8fa258a3ebe9b41",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

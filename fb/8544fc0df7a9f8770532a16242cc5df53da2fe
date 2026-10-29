@@ -1,0 +1,140 @@
+internal/onboarding/handler.go
+  s_06fcde5dbef956::t_b3d208e2d34f28 17,19,28-31
+internal/server/system_mail.go
+  s_06fcde5dbef956::t_77dce33919a081 76
+web/src/types/noticeEvents.ts
+  s_06fcde5dbef956::t_b3d208e2d34f28 26
+internal/mailer/mailer_test.go
+  s_06fcde5dbef956::t_4b917dd5f38f82 366-384
+internal/auth/mail_content.go
+  s_06fcde5dbef956::t_77dce33919a081 47-53,56-59,62-65,68-71
+  s_06fcde5dbef956::t_8bcd8647e0308f 4
+web/web_test.go
+  s_06fcde5dbef956::t_01c5fc4352bf96 94,117
+  s_06fcde5dbef956::t_4c9e5001371e4a 22,66,75,114-116,118-140
+  s_06fcde5dbef956::t_9c2490761f6385 4-5,141
+web/src/types/events.ts
+  s_06fcde5dbef956::t_407bdb0e87b970 154,391
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_f9cddf8b27b7b0 58-59
+web/src/composables/useCommunityName.ts
+  s_06fcde5dbef956::t_53f78881b4325e 11,13,16
+  s_06fcde5dbef956::t_13c72e3ac667b4 1-10,12,14-15,17
+web/src/components/SidebarServerMenu.vue
+  s_06fcde5dbef956::t_13c72e3ac667b4 12,27-30,115,121,124
+internal/auth/email_handler.go
+  s_06fcde5dbef956::t_77dce33919a081 274
+internal/push/handler.go
+  s_06fcde5dbef956::t_5308b1af8f05ac 322
+internal/mailer/compose.go
+  s_06fcde5dbef956::t_77dce33919a081 20
+api/openapi.json
+  s_06fcde5dbef956::t_c8c18e66e028e0 239,241-242,7005-7008
+  s_06fcde5dbef956::t_1e0d05047803a7 240
+web/handler_edges_test.go
+  s_06fcde5dbef956::t_4c9e5001371e4a 23,30
+web/src/composables/useTitleBadge.test.ts
+  s_06fcde5dbef956::t_95cbb31a72e530 6
+  s_06fcde5dbef956::t_39c8993eb4394e 5,41-53
+internal/server/health_test.go
+  s_06fcde5dbef956::t_9089d477184ef0 25,63,95,101
+internal/server/router_build.go
+  s_06fcde5dbef956::t_b3d208e2d34f28 141
+  s_06fcde5dbef956::t_2d0c7902c564cd 123,261,287
+internal/auth/mail_locale_test.go
+  s_06fcde5dbef956::t_872bb8a9be9f54 4,45-47,55-60
+  s_06fcde5dbef956::t_90d51cd0f796df 61-62
+internal/auth/password_reset.go
+  s_06fcde5dbef956::t_77dce33919a081 118
+  s_06fcde5dbef956::t_aade80635c7833 20-22,54-55
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_13c72e3ac667b4 14-15,28,40
+internal/auth/two_factor_failures.go
+  s_06fcde5dbef956::t_77dce33919a081 115
+internal/mailer/mailer.go
+  s_06fcde5dbef956::t_77dce33919a081 35-49
+internal/server/health.go
+  s_06fcde5dbef956::t_9089d477184ef0 10,27-29,128,137,143-147
+  s_06fcde5dbef956::t_2dd65bc4ae5a1f 30
+internal/auth/totp.go
+  s_06fcde5dbef956::t_8025271a066b79 19-22
+  s_06fcde5dbef956::t_7a9f209d33f5ce 67-71,74
+internal/push/event_reminder.go
+  s_06fcde5dbef956::t_b33b1f867b5dd4 44
+internal/events/types.go
+  s_06fcde5dbef956::t_f9cddf8b27b7b0 85-87
+web/src/composables/useTitleBadge.ts
+  s_06fcde5dbef956::t_13c72e3ac667b4 1-3,6,10-14,19-20
+internal/community/name_test.go
+  s_06fcde5dbef956::t_947548be3fb346 1-35
+internal/push/payload.go
+  s_06fcde5dbef956::t_b33b1f867b5dd4 188-189
+web/src/stores/chatEvents.test.ts
+  s_06fcde5dbef956::t_95cbb31a72e530 9,29-36
+  s_06fcde5dbef956::t_6f94e5e326eaeb 37
+internal/server/server.go
+  s_06fcde5dbef956::t_9089d477184ef0 45-46
+  s_06fcde5dbef956::t_5f6a17c576388d 14,128-130
+internal/push/payload_test.go
+  s_06fcde5dbef956::t_5308b1af8f05ac 145,149
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_13c72e3ac667b4 178-179
+  s_06fcde5dbef956::t_916c1507881897 11
+web/web.go
+  s_06fcde5dbef956::t_5f6a17c576388d 5-6,8-9,25-29,32,34,61,64-74,81-114,143,152,156,175-176,181,190
+internal/auth/totp_test.go
+  s_06fcde5dbef956::t_5308b1af8f05ac 57
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_2dd65bc4ae5a1f 120,126,4141,4150
+internal/onboarding/settings.go
+  s_06fcde5dbef956::t_b3d208e2d34f28 144-151
+  s_06fcde5dbef956::t_86ef30402153d3 12
+web/src/components/LoginModal.test.ts
+  s_06fcde5dbef956::t_95cbb31a72e530 155-162
+internal/community/name.go
+  s_06fcde5dbef956::t_947548be3fb346 1-86
+internal/push/service.go
+  s_06fcde5dbef956::t_5308b1af8f05ac 14
+  s_06fcde5dbef956::t_b33b1f867b5dd4 53-55
+web/src/components/LoginModal.vue
+  s_06fcde5dbef956::t_13c72e3ac667b4 48
+  s_06fcde5dbef956::t_56be8b9a986627 13,49-51,77-79,149
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_4c9e5001371e4a 31
+internal/auth/handler.go
+  s_06fcde5dbef956::t_33727b99cfc651 14,33-35
+internal/auth/two_factor_handler.go
+  s_06fcde5dbef956::t_6e10ca54ef8fed 116
+internal/server/system.go
+  s_06fcde5dbef956::t_fe728212b80405 13,47
+web/src/components/SidebarNotifications.test.ts
+  s_06fcde5dbef956::t_c331fa0223b149 100-101,103-107,110-112
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_105178641d59a5 122
+internal/server/community_name_integration_test.go
+  s_863e1f0a5fe207::t_2d9063fa499ca6 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fb8544fc0df7a9f8770532a16242cc5df53da2fe",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_863e1f0a5fe207": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-naming-c8fa258a3ebe9b41",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
