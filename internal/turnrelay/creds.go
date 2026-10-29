@@ -43,11 +43,6 @@ func (a *authority) mint(user uuid.UUID, now time.Time, ttl time.Duration) (user
 	return username, a.password(username), expires
 }
 
-// verify reports whether password belongs to username under this authority.
-func (a *authority) verify(username, password string) bool {
-	return hmac.Equal([]byte(a.password(username)), []byte(password))
-}
-
 var (
 	errMalformed = errors.New("malformed username")
 	errExpired   = errors.New("credential expired")

@@ -439,8 +439,10 @@ nothing else:
   `WEBRTC_TURN_SECRET`. They are valid for 12 hours (a running call cannot
   renew them, so this is deliberately longer than a long call). Starting or
   refreshing a session re-checks that the account is neither disabled nor
-  banned and that the member may still join voice, so a removed member loses
-  the relay at the next refresh (within 10 minutes), not after 12 hours. If
+  banned and that the member may still join voice (only for requests that
+  passed the integrity check, never for forged ones; answers are reused for a
+  few seconds), so a removed member loses the relay at the next refresh
+  (within 10 minutes), not after 12 hours. If
   that check cannot be made (database down), new sessions are refused but
   running ones are kept.
 - Limits: 4 sessions per member and 256 in total, 120 allocation attempts a

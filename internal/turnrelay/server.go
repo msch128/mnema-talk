@@ -24,12 +24,6 @@ const CredentialTTL = 12 * time.Hour
 // Realm is the TURN realm.
 const Realm = "mnema-talk"
 
-// RFC 5766 method numbers of the requests that start or extend an allocation.
-const (
-	methodAllocate = 0x003
-	methodRefresh  = 0x004
-)
-
 // Start binds the relay. It fails only when it cannot listen at all or the
 // SFU has no fixed media ports; a single transport that cannot bind is
 // reported in Status and the other keeps running.
@@ -56,7 +50,7 @@ func Start(opts Options) (*Server, error) {
 	}
 	s := &Server{
 		opts: opts, limits: opts.Limits.withDefaults(), auth: auth,
-		guards: map[*guard]struct{}{}, byPort: map[int]*guard{}, byClient: map[string]*guard{}, perUser: map[uuid.UUID]int{},
+		guards: map[*guard]struct{}{}, byPort: map[int]*guard{}, byClient: map[string]*guard{}, perUser: map[uuid.UUID]int{}, verdicts: map[uuid.UUID]verdict{},
 	}
 	s.allocLimit = newRateLimiter(s.limits.AllocationsPerMinute, s.limits.AllocationBurst, 4096)
 	s.failLimit = newRateLimiter(s.limits.FailuresPerMinute, s.limits.FailureBurst, 4096)
@@ -169,13 +163,6 @@ func (s *Server) debug(msg string, args ...any) { slog.Debug(msg, args...) }
 // valid for CredentialTTL.
 func (s *Server) Credentials(user uuid.UUID) (username, password string, expires time.Time) {
 	return s.auth.mint(user, s.now(), CredentialTTL)
-}
-
-// VerifyCredential reports whether password is the one this relay minted for
-// username (tests and diagnostics; the TURN exchange itself proves it through
-// message integrity).
-func (s *Server) VerifyCredential(username, password string) bool {
-	return s.auth.verify(username, password)
 }
 
 // URLs lists the turn: URLs of the transports that are listening, for host.

@@ -118,9 +118,10 @@ type Server struct {
 	byClient map[string]*guard
 	perUser  map[uuid.UUID]int
 
-	check atomic.Pointer[RelayCheck]
-	total int // live and in-flight allocations, under mu
-	tcp   *limitedListener
+	check    atomic.Pointer[RelayCheck]
+	verdicts map[uuid.UUID]verdict
+	total    int // live and in-flight allocations, under mu
+	tcp      *limitedListener
 
 	probe  atomic.Value // string
 	stop   context.CancelFunc

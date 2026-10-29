@@ -28,6 +28,13 @@ func (g *generator) AllocatePacketConn(conf turn.AllocateListenerConfig) (net.Pa
 	if err != nil {
 		return nil, nil, err
 	}
+	// The request has passed the integrity check by now, so the lookup is not
+	// spent on a forger. A failed lookup refuses the new allocation.
+	if ok, err := s.mayJoin(user); err != nil || !ok {
+		metrics.TURNEvents.With("forbidden").Inc()
+		s.debug("turn: member may not join voice", "user", user, "err", err)
+		return nil, nil, errors.New("turn: not allowed")
+	}
 	if !s.acquire(user) {
 		return nil, nil, errors.New("turn: allocation quota reached")
 	}
