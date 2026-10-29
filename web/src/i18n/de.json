@@ -1544,7 +1544,28 @@
     "noInvitesHint": "Erstelle oben eine und teile ihren Link.",
     "showSpent": "{count} verbrauchte oder abgelaufene anzeigen",
     "hideSpent": "Verbrauchte und abgelaufene ausblenden",
-    "noMediaHint": "Hochgeladene Bilder und Dateien erscheinen hier."
+    "noMediaHint": "Hochgeladene Bilder und Dateien erscheinen hier.",
+    "editInvite": {
+      "title": "Einladung {code} bearbeiten",
+      "expiry": "Läuft ab",
+      "keep": "Beibehalten",
+      "custom": "Eigene",
+      "customDate": "Ablaufdatum und -uhrzeit",
+      "customUses": "Maximale Nutzungen",
+      "expiryPreset": {
+        "min30": "30 Min.",
+        "hour1": "1 Stunde",
+        "hour6": "6 Stunden",
+        "hour12": "12 Stunden",
+        "day": "1 Tag",
+        "week": "7 Tage"
+      },
+      "expiryInvalid": "Wähle ein Datum in der Zukunft, höchstens ein Jahr voraus.",
+      "usesInvalid": "Gib eine ganze Zahl von mindestens den bisherigen {used} Nutzungen bis {max} ein.",
+      "usesHint": "Bisher {used} genutzt. Das Limit kann nicht darunter liegen.",
+      "saved": "Einladung aktualisiert.",
+      "edit": "Einladung bearbeiten"
+    }
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -2200,6 +2221,7 @@
       },
       "invite": {
         "create": "Einladung erstellt",
+        "update": "Einladung bearbeitet",
         "revoke": "Einladung widerrufen"
       },
       "webhook": {

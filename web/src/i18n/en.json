@@ -1544,7 +1544,28 @@
     "noInvitesHint": "Create one above and share its link.",
     "showSpent": "Show {count} used up or expired",
     "hideSpent": "Hide used up and expired",
-    "noMediaHint": "Uploaded images and files show up here."
+    "noMediaHint": "Uploaded images and files show up here.",
+    "editInvite": {
+      "title": "Edit invite {code}",
+      "expiry": "Expires",
+      "keep": "Keep",
+      "custom": "Custom",
+      "customDate": "Expiry date and time",
+      "customUses": "Maximum uses",
+      "expiryPreset": {
+        "min30": "30 min",
+        "hour1": "1 hour",
+        "hour6": "6 hours",
+        "hour12": "12 hours",
+        "day": "1 day",
+        "week": "7 days"
+      },
+      "expiryInvalid": "Choose a date in the future, within one year.",
+      "usesInvalid": "Enter a whole number from at least the {used} uses so far up to {max}.",
+      "usesHint": "{used} used so far. The limit cannot be lower than that.",
+      "saved": "Invite updated.",
+      "edit": "Edit invite"
+    }
   },
   "profile": {
     "addedBy": "Added by {name}",
@@ -2200,6 +2221,7 @@
       },
       "invite": {
         "create": "Invite created",
+        "update": "Invite edited",
         "revoke": "Invite revoked"
       },
       "webhook": {
