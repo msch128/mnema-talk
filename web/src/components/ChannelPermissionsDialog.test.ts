@@ -26,7 +26,7 @@ const role = (n: number, overrides: Partial<Role> = {}): Role => ({
 const everyone = role(0, { id: fixtureId(19), name: '@everyone', is_everyone: true })
 const max = userFixture({ id: fixtureId(7), username: 'max', display_name: 'Max' })
 const boss = userFixture({ id: fixtureId(8), username: 'boss', display_name: 'Boss' })
-const owner = userFixture({ id: fixtureId(9), username: 'admin', role: 'admin' })
+const owner = userFixture({ id: fixtureId(9), username: 'cool_guy', role: 'admin' })
 const toastTexts = () => useToastStore().toasts.map(t => t.text)
 
 function setup(props: { kind: 'channel' | 'category' } = { kind: 'channel' }, existing: unknown[] = [], isOwner = false) {

@@ -317,7 +317,7 @@ version or `:latest`). CI runs those exact steps.
 
 Building from source is for development; see [Development](#development).
 
-Open `PUBLIC_URL`, sign in as the Owner (default username `Admin`, set with
+Open `PUBLIC_URL`, sign in as the Owner (default username `cool_guy`, set with
 `ADMIN_USERNAME`) and create invite codes for your members.
 `ADMIN_INITIAL_PASSWORD` only creates the account on the first start; remove
 it from `.env` afterwards.

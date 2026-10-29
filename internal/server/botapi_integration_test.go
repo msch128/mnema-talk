@@ -419,7 +419,7 @@ func TestBotAPIMembersNeedTheIntent(t *testing.T) {
 			t.Fatal("a bot is a member, flagged as one")
 		}
 	}
-	if !names["Admin"] || !names["max"] || !names["stranger"] || len(list) != 4 {
+	if !names["Cool_Guy"] || !names["max"] || !names["stranger"] || len(list) != 4 {
 		t.Fatalf("members: %s", res.body)
 	}
 	wantStatus(t, "one member", f.client.get(bot.BasePath+"/members/"+max.user.ID.String()), http.StatusOK)

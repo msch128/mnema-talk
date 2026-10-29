@@ -35,8 +35,8 @@ func TestDeviceCookieDoesNotSurviveCredentialEvents(t *testing.T) {
 		return h.isKnownDevice(r, account)
 	}
 
-	c := issue(admin.ID, "admin")
-	if !known(c, "admin") {
+	c := issue(admin.ID, "cool_guy")
+	if !known(c, "cool_guy") {
 		t.Fatal("fresh cookie must be known")
 	}
 	if known(c, "member") {
@@ -48,11 +48,11 @@ func TestDeviceCookieDoesNotSurviveCredentialEvents(t *testing.T) {
 		acct string
 		do   func() error
 	}{
-		{"password change", admin.ID, "admin", func() error {
+		{"password change", admin.ID, "cool_guy", func() error {
 			_, err := ChangePassword(ctx, p, admin.ID, testPassword, "another-long-password")
 			return err
 		}},
-		{"log out everywhere", admin.ID, "admin", func() error { return RevokeSessions(ctx, p, admin.ID) }},
+		{"log out everywhere", admin.ID, "cool_guy", func() error { return RevokeSessions(ctx, p, admin.ID) }},
 		{"admin reset", member.ID, "member", func() error { _, err := ResetPassword(ctx, p, member.ID); return err }},
 		{"admin sets password", member.ID, "member", func() error { return SetPassword(ctx, p, member.ID, "chosen-password-1") }},
 		{"disable", member.ID, "member", func() error { return SetDisabled(ctx, p, member.ID, true) }},
@@ -73,11 +73,11 @@ func TestDeviceCookieDoesNotSurviveCredentialEvents(t *testing.T) {
 	if err := SetDisabled(ctx, p, member.ID, false); err != nil {
 		t.Fatal(err)
 	}
-	if known(c, "admin") {
+	if known(c, "cool_guy") {
 		t.Fatal("the original cookie survived the whole sequence")
 	}
 	// A cookie issued after the events works again.
-	if !known(issue(admin.ID, "admin"), "admin") {
+	if !known(issue(admin.ID, "cool_guy"), "cool_guy") {
 		t.Fatal("a new cookie must be known")
 	}
 }

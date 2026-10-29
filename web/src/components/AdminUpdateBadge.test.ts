@@ -33,7 +33,7 @@ afterEach(() => {
 describe('admin update badge', () => {
   it('shows a dot on the server menu and a badge on its admin console entry', async () => {
     const auth = useAuthStore()
-    auth.user = userFixture({ bio: '', status_text: '', locale: 'en', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Admin', role: 'admin' })
+    auth.user = userFixture({ bio: '', status_text: '', locale: 'en', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'admin' })
     useAppVersionStore().setAdminUpdate(available)
     usePermissionsStore().info = null
     w = mount(SidebarServerMenu, { attachTo: document.body })
@@ -55,7 +55,7 @@ describe('admin update badge', () => {
   it('admins fetch the update status on connect and every 30 minutes; members never', async () => {
     vi.useFakeTimers()
     const auth = useAuthStore()
-    auth.user = userFixture({ bio: '', status_text: '', locale: 'en', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Admin', role: 'admin' })
+    auth.user = userFixture({ bio: '', status_text: '', locale: 'en', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'admin' })
     useChatStore().handleWSEvent({ type: 'server_info', payload: { version: '0.3.0' } })
     await flushPromises()
     expect(fetch).toHaveBeenCalledTimes(1)
@@ -65,7 +65,7 @@ describe('admin update badge', () => {
     await flushPromises()
     expect(fetch).toHaveBeenCalledTimes(2)
 
-    auth.user = userFixture({ bio: '', status_text: '', locale: 'en', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Admin', role: 'user' })
+    auth.user = userFixture({ bio: '', status_text: '', locale: 'en', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'user' })
     vi.advanceTimersByTime(ADMIN_UPDATE_POLL_MS)
     await flushPromises()
     expect(fetch).toHaveBeenCalledTimes(2)

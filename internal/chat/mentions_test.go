@@ -55,15 +55,15 @@ func TestMatchRoles(t *testing.T) {
 
 func TestParseMentions(t *testing.T) {
 	cases := map[string][]string{
-		"hey @Admin, schau":        {"admin"},
-		"@all and @here!":          {"all", "here"},
-		"satzende @max.":           {"max"},
-		"(@max) @max @MAX":         {"max"},
-		"mail@max.de":              nil,
-		"@ab is too short":         nil,
-		"`@max` counts anyway":     {"max"},
-		"a.b@max and x-@moritz":    nil,
-		"@admin.dev is a username": {"admin.dev"},
+		"hey @Cool_Guy, schau":        {"cool_guy"},
+		"@all and @here!":           {"all", "here"},
+		"satzende @max.":            {"max"},
+		"(@max) @max @MAX":          {"max"},
+		"mail@max.de":               nil,
+		"@ab is too short":          nil,
+		"`@max` counts anyway":      {"max"},
+		"a.b@max and x-@moritz":     nil,
+		"@cool_guy.dev is a username": {"cool_guy.dev"},
 	}
 	for in, want := range cases {
 		if got := ParseMentions(in); !slices.Equal(got, want) {

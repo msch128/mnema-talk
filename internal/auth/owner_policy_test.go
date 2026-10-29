@@ -21,13 +21,13 @@ func TestOwnerPasswordPolicy(t *testing.T) {
 	if err := ValidatePasswordFor("user", short); err != nil {
 		t.Errorf("member rejected 12 characters: %v", err)
 	}
-	if err := ValidateAdminSeed("Admin", short); err == nil {
+	if err := ValidateAdminSeed("Cool_Guy", short); err == nil {
 		t.Error("seeded owner password of 12 characters accepted")
 	}
-	if err := ValidateAdminSeed("Admin", long); err != nil {
+	if err := ValidateAdminSeed("Cool_Guy", long); err != nil {
 		t.Errorf("seeded owner password of 14 characters rejected: %v", err)
 	}
-	if err := ValidateAdminSeed("Admin", ""); err != nil {
+	if err := ValidateAdminSeed("Cool_Guy", ""); err != nil {
 		t.Errorf("empty seed password (generated) rejected: %v", err)
 	}
 }

@@ -68,7 +68,7 @@ func TestAdminDisablesAndEnablesUsers(t *testing.T) {
 		t.Fatal("re-enabled user cannot log in")
 	}
 
-	self := "/api/admin/users/" + listUsers(t, admin)["Admin"].ID.String()
+	self := "/api/admin/users/" + listUsers(t, admin)["Cool_Guy"].ID.String()
 	if res := admin.post(self+"/disable", nil); res.status != http.StatusBadRequest {
 		t.Fatalf("admin disabled themselves: %d", res.status)
 	}
@@ -250,7 +250,7 @@ func TestAdminSetsChosenPassword(t *testing.T) {
 	if c := a.login("max", "chosen-by-admin-123"); c.get("/api/auth/me").status != http.StatusOK {
 		t.Fatal("chosen password does not work")
 	}
-	self := "/api/admin/users/" + listUsers(t, admin)["Admin"].ID.String() + "/password"
+	self := "/api/admin/users/" + listUsers(t, admin)["Cool_Guy"].ID.String() + "/password"
 	if res := admin.post(self, map[string]string{"password": "chosen-by-admin-123", "current_password": ownerPassword}); res.status != http.StatusBadRequest {
 		t.Fatalf("admin changed own password via member route: %d", res.status)
 	}

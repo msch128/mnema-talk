@@ -18,7 +18,7 @@ vi.mock('../lib/api', async (importOriginal) => ({
 }))
 
 const entry = (id: number, action: string, extra: Record<string, unknown> = {}) => ({
-  id, created_at: '2026-01-01T10:00:00Z', actor_id: '00000000-0000-4000-8000-000000000001', actor_name: 'Admin',
+  id, created_at: '2026-01-01T10:00:00Z', actor_id: '00000000-0000-4000-8000-000000000001', actor_name: 'Mnema',
   action, target_type: 'role', target_id: 'r1', target_name: 'Mods', details: { changes: { name: { from: 'a', to: 'b' } } }, request_id: 'req-1', ...extra
 })
 const page = (entries: unknown[], next_before: number | null = null) => ({ entries, next_before })

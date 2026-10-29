@@ -72,7 +72,7 @@ func TestAuditLogRecordsAdminActionsWithoutSecrets(t *testing.T) {
 		}
 	}
 	upd := byAction["role.update"]
-	if upd.ActorName != "Admin" || upd.ActorID == nil || upd.TargetID != role.String() || upd.RequestID == "" {
+	if upd.ActorName != "Cool_Guy" || upd.ActorID == nil || upd.TargetID != role.String() || upd.RequestID == "" {
 		t.Errorf("update entry %+v", upd)
 	}
 	changes, _ := upd.Details["changes"].(map[string]any)

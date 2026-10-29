@@ -17,7 +17,7 @@ func TestUnlockCommandQueuesAndReports(t *testing.T) {
 	testutil.Reset(t, pool)
 	startupEnv(t, pool)
 	ctx := context.Background()
-	if _, err := pool.Exec(ctx, `INSERT INTO users (username, display_name, password_hash, role) VALUES ('Admin', 'Admin', 'x', 'admin')`); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO users (username, display_name, password_hash, role) VALUES ('Mnema', 'Mnema', 'x', 'admin')`); err != nil {
 		t.Fatal(err)
 	}
 	old := unlockWait
@@ -30,7 +30,7 @@ func TestUnlockCommandQueuesAndReports(t *testing.T) {
 	}
 	// Nobody applies the request: it stays queued.
 	var out bytes.Buffer
-	if err := unlockCommand(ctx, []string{"admin"}, &out); err != nil || !strings.Contains(out.String(), "queued") {
+	if err := unlockCommand(ctx, []string{"cool_guy"}, &out); err != nil || !strings.Contains(out.String(), "queued") {
 		t.Fatalf("queued: %v %q", err, out.String())
 	}
 	// A server applies (deletes) the request while the command waits.
@@ -51,7 +51,7 @@ func TestUnlockCommandQueuesAndReports(t *testing.T) {
 		_, _ = pool.Exec(ctx, `DELETE FROM login_unlock_requests`)
 	}()
 	out.Reset()
-	if err := unlockCommand(ctx, []string{"Admin"}, &out); err != nil || !strings.Contains(out.String(), "cleared for Admin") {
+	if err := unlockCommand(ctx, []string{"Cool_Guy"}, &out); err != nil || !strings.Contains(out.String(), "cleared for Cool_Guy") {
 		t.Fatalf("one: %v %q", err, out.String())
 	}
 }

@@ -27,9 +27,9 @@ const Harness = defineComponent({
 
 beforeEach(() => {
   setActivePinia(createPinia())
-  useAuthStore().user = userFixture({ id: 'me', username: 'hera' })
+  useAuthStore().user = userFixture({ id: 'me', username: 'cool_guy' })
   useChatStore().members = [
-    userFixture({ id: 'me', username: 'hera', display_name: 'Hera' }),
+    userFixture({ id: 'me', username: 'cool_guy', display_name: 'Cool Guy' }),
     userFixture({ id: 'u2', username: 'max', display_name: 'Max' }),
     userFixture({ id: 'u3', username: 'moritz', display_name: 'Moritz' })
   ]

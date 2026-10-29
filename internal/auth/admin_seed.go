@@ -34,7 +34,7 @@ func hasAdminUser(ctx context.Context, p *db.Pool) (bool, error) {
 }
 
 func checkAdminUsernameAvailable(ctx context.Context, p *db.Pool, username string) error {
-	// Usernames are unique case-insensitively: "admin" blocks "Admin".
+	// Usernames are unique case-insensitively: "cool_guy" blocks "Cool_Guy".
 	var holder string
 	err := p.QueryRow(ctx, `SELECT username FROM users WHERE LOWER(username) = LOWER($1)`, username).Scan(&holder)
 	if err == nil {

@@ -4,7 +4,7 @@ import { apiFetch, responseString } from './helpers'
 
 // Offline banner and keyboard order of the main layout (1.1 coherence items).
 
-const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Admin'
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Cool_Guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 

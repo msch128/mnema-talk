@@ -40,10 +40,10 @@ func authFixture(t *testing.T) (*db.Pool, *User, *User) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	ctx := context.Background()
-	if err := EnsureAdminUser(ctx, p, "Admin", testPassword, true); err != nil {
+	if err := EnsureAdminUser(ctx, p, "Cool_Guy", testPassword, true); err != nil {
 		t.Fatal(err)
 	}
-	admin, _, err := Login(ctx, p, "Admin", testPassword)
+	admin, _, err := Login(ctx, p, "Cool_Guy", testPassword)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestAuthDatabaseCancellationPropagates(t *testing.T) {
 		name, query string
 		call        func(*db.Pool) error
 	}{
-		{"seed admin lookup", "SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin')", func(p *db.Pool) error { return EnsureAdminUser(ctx, p, "Admin", testPassword, true) }},
+		{"seed admin lookup", "SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin')", func(p *db.Pool) error { return EnsureAdminUser(ctx, p, "Cool_Guy", testPassword, true) }},
 		{"login", "FROM users WHERE LOWER(username)", func(p *db.Pool) error { _, _, e := Login(ctx, p, member.Username, testPassword); return e }},
 		{"register invite precheck", "SELECT EXISTS (SELECT 1 FROM invites", func(p *db.Pool) error {
 			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite-k7x2")

@@ -21,7 +21,7 @@ beforeEach(() => {
   setActivePinia(createPinia())
   vi.stubGlobal('fetch', vi.fn((url, init) => Promise.resolve({
     status: 200, ok: true,
-    json: () => Promise.resolve(userFixture({ display_name: 'Admin', role: 'admin', locale: JSON.parse(String(init?.body)).locale }))
+    json: () => Promise.resolve(userFixture({ display_name: 'Mnema', role: 'admin', locale: JSON.parse(String(init?.body)).locale }))
   })))
 })
 afterEach(() => {
@@ -33,7 +33,7 @@ afterEach(() => {
 describe('verified app line', () => {
   async function openMenu() {
     const auth = useAuthStore()
-    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Admin', role: 'user', locale: 'de' })
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'user', locale: 'de' })
     w = mount(UserBar, { attachTo: document.body })
     await w.find('[data-testid="account-menu-button"]')!.trigger('click')
   }
@@ -54,7 +54,7 @@ describe('verified app line', () => {
 describe('settings entry', () => {
   it('opens the settings dialog from the menu, one entry instead of separate audio and app dialogs', async () => {
     const auth = useAuthStore()
-    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Admin', role: 'user', locale: 'de' })
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'user', locale: 'de' })
     w = mount(UserBar, { attachTo: document.body })
     await w.find('[data-testid="account-menu-button"]')!.trigger('click')
     expect(w.find('[data-testid="menu-settings"]').text()).toBe('Einstellungen')
@@ -69,7 +69,7 @@ describe('settings entry', () => {
 describe('account menu language switcher', () => {
   it('switches the language, stores it and confirms with a toast', async () => {
     const auth = useAuthStore()
-    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Admin', role: 'admin', locale: 'de' })
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'admin', locale: 'de' })
     w = mount(UserBar, { attachTo: document.body })
     await w.find('[data-testid="account-menu-button"]')!.trigger('click')
     const trigger = w.find('[data-lang-trigger]')!
@@ -91,7 +91,7 @@ describe('account menu language switcher', () => {
 
   it('closes on Escape and returns focus to the ⋯ button', async () => {
     const auth = useAuthStore()
-    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Admin', role: 'user', locale: 'de' })
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member',  id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'user', locale: 'de' })
     w = mount(UserBar, { attachTo: document.body })
     const btn = w.find('[data-testid="account-menu-button"]')!
     await btn.trigger('click')
