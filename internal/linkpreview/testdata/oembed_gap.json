@@ -1,0 +1,1 @@
+{"version":"1.0","type":"rich","title":"Other title","author_name":"A. Writer","author_url":"/writer","provider_name":"Example Blog","thumbnail_url":"/thumb.png","html":"<script>alert(1)</script><iframe src=\"https://evil.example\"></iframe>"}

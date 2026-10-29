@@ -47,15 +47,48 @@ const (
 // host that drips its answer is cut off here. Tests shorten it.
 var fetchTimeout = 6 * time.Second
 
-// Preview is what a link card shows.
+// Preview is what a link card shows. Everything but URL and Title is
+// optional; the client shows what is there.
 type Preview struct {
 	URL         string `json:"url"`
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty" binding:"optional"`
-	SiteName    string `json:"site_name,omitempty" binding:"optional"`
+	// SiteName is the provider ("YouTube", "Steam", the page's og:site_name).
+	SiteName string `json:"site_name,omitempty" binding:"optional"`
+	// Author is the channel, creator or publisher; AuthorURL links to it.
+	Author    string `json:"author,omitempty" binding:"optional"`
+	AuthorURL string `json:"author_url,omitempty" binding:"optional"`
 	// Image is the original absolute image URL; clients load it through the
 	// image proxy because the CSP only allows same-origin images.
 	Image string `json:"image,omitempty" binding:"optional"`
+	// Compact asks for a small thumbnail beside the text (a square avatar or
+	// a "summary" card) instead of a wide image above it.
+	Compact bool `json:"compact,omitempty" binding:"optional"`
+	// Color is the page's theme colour as #rrggbb, for a card accent.
+	Color string `json:"color,omitempty" binding:"optional"`
+	// Fields are short labelled facts such as a price.
+	Fields []Field `json:"fields,omitempty" binding:"optional"`
+	// Embed is set for videos the client may play inline after a click.
+	Embed *Embed `json:"embed,omitempty" binding:"optional"`
+
+	// oembed is the discovered oEmbed endpoint of the page (not sent).
+	oembed string
+}
+
+// Field is one labelled fact of a card. Key is stable ("price",
+// "recommendations") so clients can translate Name.
+type Field struct {
+	Key   string `json:"key,omitempty" binding:"optional"`
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// Embed is a player the client may load in a sandboxed iframe once the member
+// clicks play. URL is always built by the server from the link's video id for
+// a fixed set of providers, never taken from the fetched page.
+type Embed struct {
+	Provider string `json:"provider" enums:"youtube,vimeo"`
+	URL      string `json:"url"`
 }
 
 var (
@@ -231,6 +264,19 @@ func (f *Fetcher) Preview(ctx context.Context, raw string) (*Preview, error) {
 }
 
 func (f *Fetcher) fetchPreview(ctx context.Context, u *url.URL) (*Preview, error) {
+	// Providers whose pages are not enough on their own are asked first; any
+	// of them falling through leaves the generic page path below.
+	vid := recognizeVideo(u)
+	if vid != nil {
+		if p, err := f.videoPreview(ctx, u, vid); p != nil || err != nil {
+			return p, err
+		}
+	}
+	if app := steamAppID(u); app != "" {
+		if p, err := f.steamPreview(ctx, u, app); p != nil || err != nil {
+			return p, err
+		}
+	}
 	body, ctype, final, err := f.get(ctx, u, "text/html,application/xhtml+xml", maxPageBytes)
 	if err != nil {
 		return nil, err
@@ -239,12 +285,20 @@ func (f *Fetcher) fetchPreview(ctx context.Context, u *url.URL) (*Preview, error
 		return nil, ErrNoPreview
 	}
 	p := parseHTML(body, ctype, final)
+	if vid != nil {
+		p.Embed, p.Compact = vid.embed(), false
+	}
+	if err := f.enrichFromOEmbed(ctx, p, final); err != nil {
+		return nil, err
+	}
 	if p.Title == "" {
 		return nil, ErrNoPreview
 	}
 	p.URL = u.String()
 	return p, nil
 }
+
+func isBusy(err error) bool { return errors.Is(err, errBusy) }
 
 // imageTypes are the formats the proxy passes through, detected by sniffing.
 var imageTypes = map[string]bool{"image/png": true, "image/jpeg": true, "image/gif": true, "image/webp": true}
