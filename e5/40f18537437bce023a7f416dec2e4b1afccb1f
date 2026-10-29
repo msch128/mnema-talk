@@ -4,6 +4,7 @@ web/src/lib/media/guard.ts
   s_06fcde5dbef956::t_437d45b885fcee 223
   s_06fcde5dbef956::t_ff6644e9b49201 179,197,199-200,227,252
   s_06fcde5dbef956::t_dd3a9e4878a37a 160,166
+  s_06fcde5dbef956::t_a249d72512d36a 163,178,209-212,215
 ---
 {
   "schema_version": "authorship/3.0.0",
