@@ -26,8 +26,8 @@ func (c *Client) readPump() {
 
 	var budget eventBudget
 	for {
-		messageType, message, err := c.conn.ReadMessage()
-		if err != nil || !c.dispatchFrame(&budget, messageType, message) {
+		_, message, err := c.conn.ReadMessage()
+		if err != nil || !c.dispatchFrame(&budget, message) {
 			return
 		}
 	}
@@ -35,10 +35,7 @@ func (c *Client) readPump() {
 
 // dispatchFrame routes one received frame. It reports false when the
 // connection must end.
-func (c *Client) dispatchFrame(budget *eventBudget, messageType int, message []byte) bool {
-	if c.rejectNativeBinary(messageType) {
-		return false
-	}
+func (c *Client) dispatchFrame(budget *eventBudget, message []byte) bool {
 	// Per-connection flood guard: excess events are dropped.
 	now := time.Now()
 	if !budget.allowFrame(now) {
@@ -58,13 +55,6 @@ func (c *Client) dispatchFrame(budget *eventBudget, messageType int, message []b
 		Payload json.RawMessage `json:"payload"`
 	}
 	if err := json.Unmarshal(message, &ev); err != nil {
-		return true
-	}
-	if !c.commandsAllowed() {
-		c.hub.terminateNativeClient(c)
-		return false
-	}
-	if c.handleNativeControl(ev.Type, message) {
 		return true
 	}
 	if budget.allowEvent(ev.Type, len(ev.Payload), now) && c.userAllowsEvent(ev.Type, len(ev.Payload), now) {
@@ -121,20 +111,12 @@ func (c *Client) writePump() {
 
 // writeQueued sends one queued message; false ends the connection.
 func (c *Client) writeQueued(msg []byte) bool {
-	if !c.commandsAllowed() {
-		c.hub.terminateNativeClient(c)
-		return false
-	}
-	_ = c.conn.SetWriteDeadline(c.leaseWriteDeadline(time.Now().Add(writeWait)))
+	_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 	return c.conn.WriteMessage(websocket.TextMessage, msg) == nil
 }
 
 // writePing sends a keep-alive ping; false ends the connection.
 func (c *Client) writePing() bool {
-	if !c.commandsAllowed() {
-		c.hub.terminateNativeClient(c)
-		return false
-	}
 	_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 	return c.conn.WriteMessage(websocket.PingMessage, nil) == nil
 }
@@ -144,11 +126,8 @@ func (c *Client) writePing() bool {
 // session id (single sign-out) and the token's own expiry. It closes the socket
 // and reports false when the session is gone. A database error keeps the socket
 // for a few rounds and then closes it, since the session can no longer be
-// proven alive. Native connections have their own lease and are not checked.
+// proven alive.
 func (c *Client) sessionStillValid() bool {
-	if c.hasNativeLease() {
-		return true
-	}
 	if c.sessionExpired(time.Now()) {
 		c.writeSessionRevokedClose()
 		return false
@@ -179,9 +158,9 @@ func (c *Client) sessionExpired(now time.Time) bool {
 }
 
 // sessionExpiry returns a channel that fires at the session token's expiry, and
-// a stop function. Without an expiry (native, in-memory) it never fires.
+// a stop function. Without an expiry (in-memory) it never fires.
 func (c *Client) sessionExpiry() (<-chan time.Time, func()) {
-	if c.sessionExp.IsZero() || c.hasNativeLease() {
+	if c.sessionExp.IsZero() {
 		return nil, func() {}
 	}
 	t := time.NewTimer(time.Until(c.sessionExp))

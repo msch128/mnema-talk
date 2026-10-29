@@ -25,13 +25,12 @@ type Client struct {
 	// would not know what to do with the messages of a conversation.
 	dmAware bool
 	// sessionID and sessionExp identify the browser session behind the
-	// connection (empty for native connections and in-memory clients).
+	// connection (empty for in-memory clients).
 	sessionID  string
 	sessionExp time.Time
 	// revalidateFails counts consecutive revalidation database errors.
 	revalidateFails int
-	nativeSession
-	closeOnce sync.Once
+	closeOnce       sync.Once
 	// closing is set by the first deliver that finds the buffer full, so a
 	// slow client's later events don't each start another close.
 	closing atomic.Bool
@@ -97,7 +96,6 @@ func (c *Client) close() {
 func (c *Client) shutdown() {
 	c.doneOnce.Do(func() {
 		c.closed.Store(true)
-		c.cancelNativeSession()
 		if c.done != nil {
 			close(c.done)
 		}
@@ -174,9 +172,6 @@ func (c *Client) allowTyping(chID uuid.UUID, now time.Time) bool {
 func (c *Client) speakingChanged(active bool, now time.Time) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if !c.commandsAllowed() {
-		return false
-	}
 	if active == c.speaking {
 		return false
 	}

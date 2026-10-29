@@ -16,7 +16,7 @@ import (
 )
 
 type disconnectRecorder struct {
-	nativePasswordObserver
+	LiveControl
 	users []uuid.UUID
 }
 
@@ -24,7 +24,7 @@ func (d *disconnectRecorder) DisconnectUser(id uuid.UUID) { d.users = append(d.u
 
 func confirmResetRequest(t *testing.T, h *Handler, token string) *httptest.ResponseRecorder {
 	t.Helper()
-	body := `{"token":"` + token + `","new_password":"` + nativeNextPassword + `"}`
+	body := `{"token":"` + token + `","new_password":"synthetic-new-password"}`
 	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
 	w := httptest.NewRecorder()
 	httpx.Handle(h.confirmPasswordReset).ServeHTTP(w, r)

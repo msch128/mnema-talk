@@ -86,4 +86,19 @@ describe('ICE servers', () => {
     await Promise.all([refreshA, refreshB])
     expect(iceServers()[0]?.username).toBe('cred-2')
   })
+
+  it('knows a relay is on offer only when the server lists a TURN URL', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ice_servers: [{ urls: ['stun:stun.example.com:3478'] }] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => config('cred-1') })
+    vi.stubGlobal('fetch', fetchMock)
+    const { relayOffered, loadIceServers } = await import('./iceServers')
+
+    expect(relayOffered()).toBe(false)
+    await loadIceServers()
+    expect(relayOffered()).toBe(false)
+    vi.advanceTimersByTime(61 * 60 * 1000)
+    await loadIceServers()
+    expect(relayOffered()).toBe(true)
+  })
 })

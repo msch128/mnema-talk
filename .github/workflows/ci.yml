@@ -57,7 +57,6 @@ jobs:
       - name: gitleaks
         run: |
           set -euo pipefail
-          node scripts/check-native-test-vectors.mjs
           "$RUNNER_TEMP/gitleaks" dir --no-banner --redact --exit-code 1 --config .gitleaks.toml .
           "$RUNNER_TEMP/gitleaks" git --no-banner --redact --exit-code 1 --config .gitleaks.toml .
 
@@ -293,8 +292,8 @@ jobs:
           set -euo pipefail
           case "$SHARD" in
             server) pkgs='./internal/server' ;;
-            realtime) pkgs='./internal/nativepreview ./internal/bot ./internal/chat' ;;
-            rest) pkgs="$(go list ./... | grep -v -E '/internal/(server|nativepreview|bot|chat)$' | tr '\n' ' ')" ;;
+            realtime) pkgs='./internal/bot ./internal/chat' ;;
+            rest) pkgs="$(go list ./... | grep -v -E '/internal/(server|bot|chat)$' | tr '\n' ' ')" ;;
           esac
           make coverage-go-profile GO_PKGS="$pkgs" COVERAGE_OUT="coverage-$SHARD.out"
 

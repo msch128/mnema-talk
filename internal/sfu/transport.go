@@ -49,13 +49,40 @@ func openUDPMux(port, portMin, portMax uint16, announceIPs []string) (ice.UDPMux
 
 func buildUDPMuxOptions(announceIPs []string) []ice.UDPMuxFromPortOption {
 	var options []ice.UDPMuxFromPortOption
-	if onlyLoopbackAnnouncements(announceIPs) {
-		options = append(options, ice.UDPMuxFromPortWithIPFilter(func(ip net.IP) bool { return ip.IsLoopback() }))
+	if filter := announceIPFilter(announceIPs); filter != nil {
+		options = append(options, ice.UDPMuxFromPortWithIPFilter(filter))
 	}
 	if announcesLoopback(announceIPs) {
 		options = append(options, ice.UDPMuxFromPortWithLoopback())
 	}
 	return options
+}
+
+// announceIPFilter says which local addresses may become candidates when
+// announced addresses are set, or nil when nothing is announced. The
+// announced addresses are IPv4 only and replace every IPv4 host address, but
+// Pion leaves an IPv6 address alone when no rule matches its family, so the
+// container's own unique-local (Docker with IPv6) or loopback address would be
+// offered to browsers unchanged. Browsers cannot reach those; the pairs only
+// delay the connection. Global IPv6 addresses stay, as on a host-networked
+// server that really is reachable over IPv6.
+func announceIPFilter(announceIPs []string) func(net.IP) bool {
+	if len(announceIPs) == 0 {
+		return nil
+	}
+	if onlyLoopbackAnnouncements(announceIPs) {
+		return func(ip net.IP) bool { return ip.IsLoopback() }
+	}
+	loopback := announcesLoopback(announceIPs)
+	return func(ip net.IP) bool {
+		if ip.To4() != nil {
+			return true
+		}
+		if ip.IsLoopback() {
+			return loopback
+		}
+		return ip.IsGlobalUnicast() && !ip.IsPrivate()
+	}
 }
 
 func onlyLoopbackAnnouncements(ips []string) bool {

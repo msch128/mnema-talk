@@ -16,6 +16,11 @@ export function iceServers() {
   return servers
 }
 
+/** True when the server offers a TURN relay, which carries media where UDP to the server is blocked. */
+export function relayOffered() {
+  return servers.some(server => [server.urls].flat().some(url => /^turns?:/i.test(url)))
+}
+
 // Loaded on a voice join rather than at import time, and again when the last
 // one is older than MAX_AGE_MS.
 export function loadIceServers() {

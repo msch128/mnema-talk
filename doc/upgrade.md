@@ -126,6 +126,18 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 1.2.x → next release
+
+Update with the procedure above and take the backup first. Nothing in `.env` has to change.
+
+Migration 0077 drops `native_session_families`, `native_access_tokens`,
+`native_refresh_tokens` and `native_ciphertext_events` (added by 0015 and 0016).
+They belonged to a native client transport that was never mounted in a release;
+nothing wrote to them, and the server no longer reads or deletes from them. No
+web, desktop or bot client is affected, and the event `native_access_renewed`,
+which the server never sent, is removed from the event registry. A rollback to
+an older image needs the restore of the pre-update backup (see "Rollback" above).
+
 ### 1.1.x → 1.2.0
 
 Update with the procedure above and take the backup first. 1.2.0 only adds, apart from raising the security floor (see "Calls and the

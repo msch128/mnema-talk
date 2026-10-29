@@ -22,7 +22,7 @@ func confirmReset(c *client, token, password string) response {
 }
 
 // settle waits until the background mail work of the app is done.
-func (a *app) settle() { a.router.PreviewDeps().Accounts.DrainMail() }
+func (a *app) settle() { a.router.accounts.DrainMail() }
 
 func TestPasswordResetByMailSetsANewPasswordOnce(t *testing.T) {
 	a, ms := mailApp(t)

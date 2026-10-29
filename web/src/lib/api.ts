@@ -1,6 +1,5 @@
-import { platform } from './platform'
-// The browser client retains same-origin cookies. A separately constructed native
-// client can inject transport without sharing unauthorized listeners or credentials.
+// The browser client retains same-origin cookies. A separately constructed client
+// can inject its own transport without sharing unauthorized listeners or credentials.
 // Response JSON stays unknown until an explicit runtime decoder accepts it.
 import { t } from '../i18n'
 import { formatDetailMessage } from './errorDetails'
@@ -60,7 +59,7 @@ export function errorMessage(code: unknown, serverMessage?: unknown): string {
 export type UnauthorizedHandler = (error: ApiError) => void
 
 /** Requests expose no direct transport headers, cookie or credential options.
- * Path and payload remain caller input; a native adapter must independently
+ * Path and payload remain caller input; a transport must independently
  * enforce its fixed endpoint registry, body schemas and broker capabilities. */
 export interface ApiRequest {
   readonly method: string
@@ -109,7 +108,7 @@ function isValidApiReply(response: unknown): response is ApiReply {
   return isRecord(response) && isValidReplyStatus(response['status'])
 }
 
-/** Sends one request; anything but a well-formed reply is a network error (a native or browser abort passes through). */
+/** Sends one request; anything but a well-formed reply is a network error (an abort passes through). */
 async function sendRequest(transport: ApiTransport, path: string, operation: ApiRequest): Promise<ApiReply> {
   let response: ApiReply
   try {
@@ -166,7 +165,7 @@ function handleUnauthorizedNotification(
   }
 }
 
-/** Construct once for a native session owner. Transport is immutable and every
+/** Construct once per session owner. Transport is immutable and every
  * client owns its listeners; choosing a profile never replaces global fetch. */
 export function createApiClient(transport: ApiTransport): ApiClient {
   const unauthorizedHandlers = new Set<{ readonly handler: UnauthorizedHandler }>()
@@ -219,10 +218,7 @@ const browserTransport: ApiTransport = async (path, { method, json, form, signal
   return { status: response.status, body: response.status === 204 ? null : await response.json().catch(() => null) }
 }
 
-const browserClient = createApiClient(async (path, request) => {
-  const native = platform.apiTransport()
-  return native ? native(path, request) : browserTransport(path, request)
-})
+const browserClient = createApiClient(browserTransport)
 export const api: ApiCall = browserClient.api
 export const onUnauthorized = browserClient.onUnauthorized
 export const onRulesRequired = browserClient.onRulesRequired
