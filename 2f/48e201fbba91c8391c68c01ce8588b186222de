@@ -132,6 +132,8 @@ internal/server/server.go
   s_06fcde5dbef956::t_895097adc7e7d6 27,40-42
 web/src/lib/operatorWarnings.ts
   s_8c12f50b80ade8::t_11db44c6affef8 23-24
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_46fb7e0ee63857 851
 ---
 {
   "schema_version": "authorship/3.0.0",
