@@ -1,0 +1,37 @@
+web/src/components/DesktopSelector.test.ts
+  s_06fcde5dbef956::t_bd9337a0cea220 20
+web/src/components/DesktopSelector.vue
+  s_06fcde5dbef956::t_4b59e645de3ccb 5,16
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_32164113316617 1890-1921
+web/src/lib/hostError.test.ts
+  s_06fcde5dbef956::t_75cb678209137a 1-75
+web/src/i18n/de.json
+  s_3043ef48954715::t_60f6d4201aaca8 1890-1921
+web/src/lib/hostError.ts
+  s_3043ef48954715::t_4c873a184e59f6 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "49408e112a333beebe489b66e12d7948c0e194a1",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3043ef48954715": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-drill-ports-b192b464b6201a17",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
