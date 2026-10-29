@@ -1,0 +1,23 @@
+web/src/composables/webrtc/peer.ts
+  s_06fcde5dbef956::t_ef426293d4b18d 1,126,215
+web/src/lib/media/dbg.ts
+  s_06fcde5dbef956::t_28333e3bd820a8 2-3
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_038916caea4c73 1,200
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0c048bde9dade024006bdf5175df30373ea7c3af",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
