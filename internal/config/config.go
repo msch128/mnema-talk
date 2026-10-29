@@ -127,6 +127,23 @@ func (c *Config) WebRTCReachabilityWarning() string {
 	return "WEBRTC_NAT_1TO1_IP and WEBRTC_TURN_URLS are empty: browsers are told the container's own address, so voice and video will likely fail for members outside this host; set WEBRTC_NAT_1TO1_IP to the public (and LAN) address"
 }
 
+// WebRTCRelayNotice says what members whose network blocks UDP can expect, or
+// returns "" when a TURN relay offers them a TCP or TLS path. Direct media
+// needs UDP to the announced address; only TURN over TCP (turn:...?transport=tcp)
+// or TLS (turns:...) crosses a network that drops UDP.
+func (c *Config) WebRTCRelayNotice() string {
+	if len(c.WebRTCTURNURLs) == 0 {
+		return "WEBRTC_TURN_URLS is empty: members whose network blocks UDP (strict firewalls, some VPNs, Opera) cannot join voice; see the TURN section of doc/operations.md"
+	}
+	for _, u := range c.WebRTCTURNURLs {
+		u = strings.ToLower(u)
+		if strings.HasPrefix(u, "turns:") || strings.Contains(u, "transport=tcp") {
+			return ""
+		}
+	}
+	return "WEBRTC_TURN_URLS has no TCP or TLS URL (turn:...?transport=tcp or turns:...): members whose network blocks UDP still cannot join voice"
+}
+
 // InsecurePublicURLWarning explains the cost of a production-like deployment
 // whose PUBLIC_URL is not https://, or returns "". Session cookies then lose
 // Secure and the __Host- prefix while HSTS is still sent, so a network

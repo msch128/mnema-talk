@@ -9,7 +9,7 @@ import type { SubscribeRequest, ServerEventPayloads } from '../../types/events'
 import { loadIceServers } from './iceServers'
 import { isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
 import { resumeRemoteAudio as resumeRemotePlayback } from './remoteAudio'
-import { closeMediaRoom, openMediaRoom, resetMediaAnnouncements } from './mediaRoom'
+import { closeMediaRoom, mediaConnectionAnnounced, openMediaRoom, resetMediaAnnouncements } from './mediaRoom'
 import type { Cx } from './state'
 import { aiModel } from './audioMath'
 import { stopCamera } from './camera'
@@ -204,7 +204,11 @@ function handleKicked(cx: Cx, payload: ServerEventPayloads['voice_kicked']) {
   if (lobbyRefused(cx, payload)) return
   if (!voice.currentChannelId) return
   if (payload.channel_id !== voice.currentChannelId) return
+  // The browser already explained a failed media connection; the server's
+  // notice for the same loss would only repeat it.
+  const explained = payload.reason === 'connection_lost' && mediaConnectionAnnounced()
   endCall(cx, { notifyServer: false })
+  if (explained) return
   useToastStore().info(t(KICK_NOTICE[payload.reason ?? ''] ?? 'voice.kicked'))
 }
 
