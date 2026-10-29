@@ -1,0 +1,61 @@
+web/src/components/LinkPreviewCard.test.ts
+  s_06fcde5dbef956::t_9cea399e0a6a2f 13-39,44,47,51-57,68-71,73-154
+web/web.go
+  s_06fcde5dbef956::t_407bdb0e87b970 43-52
+web/src/lib/videoEmbed.test.ts
+  s_06fcde5dbef956::t_9cea399e0a6a2f 1-48
+web/src/lib/videoEmbed.ts
+  s_06fcde5dbef956::t_1a637019b28e3e 1-37
+SECURITY.md
+  s_5aa38e778cf1ac::t_fd0565ac6b73e1 911-947
+internal/httpx/middleware.go
+  s_c42e191206b59f::t_fa402fe169c645 180-183,194
+internal/httpx/middleware_test.go
+  s_c42e191206b59f::t_5005966f41daca 161-171
+web/src/components/LinkPreviewCard.vue
+  s_2156e9735076ff::t_c5fe538ce2990d 3-4,6-7,18-22,36-76,84,86-89,91-93,95-109,111-116,119-129,131-171
+web/src/i18n/de.json
+  s_2156e9735076ff::t_58beb978bf5d81 593-602
+web/src/i18n/en.json
+  s_2156e9735076ff::t_3b2492d7c1156e 593-602
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa26416f31e090be03893c92efd0cb0ca0092efb",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2156e9735076ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adel-native-server-78d153cdff05b628",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5aa38e778cf1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-builtin-turn-725a019b5a1e641a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_c42e191206b59f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-onboarding-ops-e64fb94d611ccb23",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
