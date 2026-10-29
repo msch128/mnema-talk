@@ -147,6 +147,7 @@ API break.
 router; switch with `WEBRTC_BUILTIN_TURN=auto|on|off`; external coturn keeps
 working and turns the built-in relay off automatically.**
 
+- **Ports.** Every port and outbound connection is listed in [Network ports](ports.md).
 - **Built-in TURN relay.** The server can relay media for members whose
   network blocks UDP, without a second service. `WEBRTC_BUILTIN_TURN`
   (`auto` by default) runs it only while `WEBRTC_TURN_URLS` is empty, so an

@@ -348,12 +348,18 @@ chat.example.com {
 }
 ```
 
-Voice and video bypass the proxy: forward the UDP range
-`WEBRTC_UDP_PORT_MIN`-`WEBRTC_UDP_PORT_MAX` (default `50000-50050/udp`) to the
-host and set `WEBRTC_NAT_1TO1_IP` to your public IP when the server is behind
-NAT. Users on networks that block UDP use the server's built-in TURN relay:
-forward port 3479 on UDP and TCP as well (only needed while the relay runs). Ports,
-proxy settings, TURN and troubleshooting:
+**Ports to forward** (the full list, with outbound connections and what stays
+closed, is [doc/ports.md](doc/ports.md)):
+
+- **TCP 443** to the reverse proxy: the web app and API. The proxy forwards to
+  the app on port 8080, which is not published beyond `127.0.0.1`.
+- **UDP 50000-50050** (`WEBRTC_UDP_PORT_MIN`-`WEBRTC_UDP_PORT_MAX`) to the
+  host: voice, video and screen share bypass the proxy. Set
+  `WEBRTC_NAT_1TO1_IP` to your public IP when the server is behind NAT.
+- **UDP and TCP 3479** (`WEBRTC_BUILTIN_TURN_PORT`): the built-in TURN relay for
+  members on networks that block UDP. Needed only while the relay runs.
+
+Proxy settings, TURN and troubleshooting:
 [doc/operations.md](doc/operations.md) and [doc/deployment.md](doc/deployment.md).
 
 ### Upgrades and backups
@@ -410,7 +416,8 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 | Components, data flow, capacity | [doc/architecture.md](doc/architecture.md) |
 | Configuration, reverse proxy, TURN, backups, metrics and alerts, troubleshooting | [doc/operations.md](doc/operations.md) |
 | Quick start per platform (Synology, Unraid, VPS), setup assistant | [doc/quick-start.md](doc/quick-start.md) |
-| Ports, image tags, platforms, updating | [doc/deployment.md](doc/deployment.md) |
+| Network ports and outbound connections | [doc/ports.md](doc/ports.md) |
+| Image tags, platforms, updating | [doc/deployment.md](doc/deployment.md) |
 | Upgrade notes per version, rollback | [doc/upgrade.md](doc/upgrade.md) |
 | Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |
 | Product vocabulary (en/de) used in the UI and docs | [doc/glossary.md](doc/glossary.md) |
