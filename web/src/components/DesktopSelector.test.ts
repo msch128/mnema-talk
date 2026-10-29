@@ -60,3 +60,46 @@ it.each([false, true])('ignores a desktop open that finishes after the selector 
   await flushPromises()
   expect(wrapper.find('[role="alert"]').exists()).toBe(false)
 })
+async function failedSelector(sent: string) {
+  calls.open.mockRejectedValue(sent)
+  const wrapper = mount(DesktopSelector); await flushPromises()
+  wrapper.get('input').element.value = 'community.example.invalid'
+  await wrapper.get('form').trigger('submit'); await flushPromises()
+  return wrapper
+}
+const sentError = 'Unable to reach the instance using trusted HTTPS. (bad protocol version)'
+
+it('copies the shown error and the host code, and confirms briefly', async () => {
+  vi.useFakeTimers()
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  vi.stubGlobal('navigator', { clipboard: { writeText } })
+  const wrapper = await failedSelector(sentError)
+  const shown = wrapper.get('[data-testid="connect-error"]').text()
+  const copy = wrapper.get('[data-testid="copy-error"]')
+  expect(copy.text()).toBe('Kopieren')
+  await copy.trigger('click'); await flushPromises()
+  expect(writeText).toHaveBeenCalledExactlyOnceWith(`${shown}\n${sentError}`)
+  expect(copy.text()).toBe('Kopiert')
+  await vi.advanceTimersByTimeAsync(2100)
+  expect(copy.text()).toBe('Kopieren')
+  wrapper.unmount(); vi.useRealTimers()
+})
+it('falls back to execCommand when the clipboard is refused', async () => {
+  vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } })
+  const exec = vi.fn().mockReturnValue(true)
+  Object.defineProperty(document, 'execCommand', { value: exec, configurable: true })
+  const wrapper = await failedSelector(sentError)
+  await wrapper.get('[data-testid="copy-error"]').trigger('click'); await flushPromises()
+  expect(exec).toHaveBeenCalledWith('copy')
+  expect(document.querySelector('textarea')).toBeNull()
+  expect(wrapper.get('[data-testid="copy-error"]').text()).toBe('Kopiert')
+  wrapper.unmount()
+})
+it('shows no confirmation when both ways of copying fail', async () => {
+  vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } })
+  Object.defineProperty(document, 'execCommand', { value: vi.fn().mockReturnValue(false), configurable: true })
+  const wrapper = await failedSelector(sentError)
+  await wrapper.get('[data-testid="copy-error"]').trigger('click'); await flushPromises()
+  expect(wrapper.get('[data-testid="copy-error"]').text()).toBe('Kopieren')
+  wrapper.unmount()
+})
