@@ -1,0 +1,29 @@
+web/src/components/ThreadSidebar.test.ts
+  s_58ecb9dda7416a::t_897df671fe8eb3 708-719
+web/src/components/ThreadSidebar.vue
+  s_46a6db8f9e8231::t_48559acf56fdf2 167-169,171-173,178,183,228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2c9a043e07690b5109cafb21ff36ecbc0b8ab103",
+  "prompts": {},
+  "sessions": {
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_58ecb9dda7416a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-unread-sound-3a7f288cf9b01ab5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
