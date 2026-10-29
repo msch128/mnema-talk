@@ -95,16 +95,12 @@ describe('the status dialog', () => {
     expect(setStatusText).toHaveBeenCalledWith(me.id, 'Lunch', at)
   })
 
-  it('refuses "today" when the day is over, and keeps the dialog open', async () => {
+  it('does not offer "today" once the day is over', async () => {
     vi.setSystemTime(new Date(2026, 9, 24, 23, 59, 30))
     open(['status.expiry'])
     await input().setValue('Lunch')
-    await expiryChoice('today').trigger('click')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
-    expect(setStatusText).not.toHaveBeenCalled()
-    expect(wrapper.get('[data-testid="status-error"]').text()).toBe('Pick a time in the future.')
-    expect(wrapper.emitted('close')).toBeUndefined()
+    expect(wrapper.find('[data-expiry="today"]').exists()).toBe(false)
+    expect(wrapper.find('[data-expiry="hour"]').exists()).toBe(true)
   })
 
   it('clears the status with the Clear button, and only offers it when there is one', async () => {

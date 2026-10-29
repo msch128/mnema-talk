@@ -37,6 +37,8 @@ const emojiButton = ref<HTMLButtonElement | null>(null)
 const chars = (s: string) => Array.from(s)
 const count = computed(() => chars(text.value).length)
 const canExpire = computed(() => features.has('status.expiry') && text.value.trim() !== '')
+// A choice whose moment has passed ("today" at 23:59:30) is not offered.
+const choices = EXPIRY_CHOICES.filter(c => c === 'never' || isFuture(expiryTime(c, new Date()), new Date()))
 const until = computed(() => authStore.user?.status_expires_at)
 
 function limit() {
@@ -138,7 +140,7 @@ function clear() {
           <p id="status-expiry-label" class="text-sm font-medium text-mnema-body-ink">{{ $t('profile.clearAfter') }}</p>
           <div class="flex flex-wrap gap-2">
             <button
-              v-for="c in EXPIRY_CHOICES"
+              v-for="c in choices"
               :key="c"
               type="button"
               role="radio"
