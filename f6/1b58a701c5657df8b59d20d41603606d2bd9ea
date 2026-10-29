@@ -1,0 +1,49 @@
+cmd/server/main.go
+  s_30e74ceb0962ca::t_aba4c8da24bad7 9,14,40-43,49-81
+cmd/server/main_process_test.go
+  s_30e74ceb0962ca::t_8b794105f3b16b 15,24,27,30-40
+internal/config/config_env.go
+  s_524065e4c1d78a::t_76efce7541eada 19-22,34-35,38,41-47,49
+internal/config/required.go
+  s_ecf7b9e687a24d::t_e6c9e2caffabb6 1-128
+internal/config/required_test.go
+  s_30e74ceb0962ca::t_da6a29f5450ee1 1-67
+internal/setupwizard/check.go
+  s_ecf7b9e687a24d::t_b645e2893abf1c 1-33
+internal/setupwizard/options.go
+  s_ecf7b9e687a24d::t_6e4693201bf610 67-68
+internal/setupwizard/run.go
+  s_ecf7b9e687a24d::t_b9c8b1811aa7ea 10,52-53,67,108-110,139-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f61b58a701c5657df8b59d20d41603606d2bd9ea",
+  "prompts": {},
+  "sessions": {
+    "s_30e74ceb0962ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae5e20c7f981d1793",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_524065e4c1d78a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abfa07ecf4d340a57",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ecf7b9e687a24d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-setup-e379f010794b742e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
