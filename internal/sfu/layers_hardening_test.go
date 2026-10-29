@@ -350,3 +350,34 @@ func TestScreenMembershipErrorsAreNotLayerErrors(t *testing.T) {
 		t.Fatalf("SetScreenLayers without layers = %v", err)
 	}
 }
+
+// A layer that sends nothing is asked for its keyframe again from the viewer's
+// receiver reports, whatever the viewer's choice: the first ask can come before
+// the sender has started the layer, and no packet of it arrives to trigger more.
+func TestSilentLayerKeyframeIsAskedAgain(t *testing.T) {
+	clock := useFakeClock(t)
+	rig := newLayerRig(t, "video/VP8", 2)
+	vt, _ := rig.viewer(1)
+	if !rig.asked(1) {
+		t.Fatal("a new viewer did not ask for a keyframe of its layer")
+	}
+
+	clock.advance(keyframeRetry / 2)
+	vt.observeReport(0, 0)
+	if rig.asked(1) {
+		t.Fatal("asked again before the retry time")
+	}
+
+	clock.advance(keyframeRetry)
+	vt.observeReport(0, 0)
+	if !rig.asked(1) {
+		t.Fatal("a silent layer was not asked again")
+	}
+
+	rig.pkt(1, 1, 1, vp8Payload(true, true, 1, true, 1, 'k'))
+	clock.advance(2 * keyframeRetry)
+	vt.observeReport(0, 0)
+	if rig.asked(1) {
+		t.Fatal("asked again after the switch happened")
+	}
+}

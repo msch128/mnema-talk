@@ -136,6 +136,21 @@ func (vt *viewerTrack) chosenLayer() int {
 	return vt.pref
 }
 
+// retryKeyframe asks again for the keyframe a switch is waiting for. The ask in
+// write only happens while packets of the target layer arrive; a layer the
+// sender has not (re)started, or that sends nothing because its encoder is
+// starved, would otherwise be asked once, before it could answer. The viewer's
+// receiver reports come regardless of the media, so they drive the retry.
+func (vt *viewerTrack) retryKeyframe(now time.Time) {
+	vt.mu.Lock()
+	ask := vt.keyframeDueLocked(now)
+	eff := vt.eff
+	vt.mu.Unlock()
+	if ask {
+		vt.group.requestKeyframe(eff)
+	}
+}
+
 // observeReport gives a receiver report of the viewer to the automatic choice.
 func (vt *viewerTrack) observeReport(loss float64, rtt time.Duration) {
 	vt.observeReportWithBandwidth(loss, rtt, 0)
@@ -145,6 +160,7 @@ func (vt *viewerTrack) observeReport(loss float64, rtt time.Duration) {
 // the viewer's connection in bits per second (zero when unknown).
 func (vt *viewerTrack) observeReportWithBandwidth(loss float64, rtt time.Duration, bandwidth int) {
 	now := layerNow()
+	vt.retryKeyframe(now)
 	vt.mu.Lock()
 	if vt.ad == nil || vt.closed {
 		vt.mu.Unlock()
