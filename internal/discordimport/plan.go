@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -41,6 +42,12 @@ type Inputs struct {
 	Grantable perm.Set
 	// ExistingRoles are the names of the roles that exist now.
 	ExistingRoles []string
+	// Mappable are the existing roles a Discord role may be mapped onto; they
+	// feed the same-name suggestion.
+	Mappable []RoleChoice
+	// RoleMap maps Discord role ids onto existing roles (already validated):
+	// nothing is created for them.
+	RoleMap map[string]RoleChoice
 	// ServerName is the community name (empty when none is set).
 	ServerName string
 	Caps       Capabilities
@@ -53,7 +60,7 @@ func BuildPlan(t *Template, in Inputs) *Plan {
 		Code: t.Code, TemplateName: strings.TrimSpace(t.Name), SourceName: strings.TrimSpace(t.Guild.Name),
 		ServerName: in.ServerName, Skipped: []string{},
 	}
-	b := &builder{plan: p, in: in, roleBySrc: map[string]*PlanRole{}, dropped: map[string]bool{}}
+	b := &builder{plan: p, in: in, roleBySrc: map[string]*PlanRole{}, mappedBySrc: map[string]RoleChoice{}, dropped: map[string]bool{}}
 	b.roles(t.Guild.Roles)
 	b.structure(t.Guild.Channels)
 	b.finish()
@@ -65,7 +72,9 @@ type builder struct {
 	in        Inputs
 	everyone  string
 	roleBySrc map[string]*PlanRole
-	dropped   map[string]bool
+	// mappedBySrc are the Discord roles mapped onto existing roles.
+	mappedBySrc map[string]RoleChoice
+	dropped     map[string]bool
 }
 
 // roles plans the roles. Discord orders by position (higher is more
@@ -87,8 +96,20 @@ func (b *builder) roles(src []SrcRole) {
 		taken[strings.ToLower(strings.TrimSpace(n))] = true
 	}
 	b.plan.Roles = make([]PlanRole, 0, len(order))
+	b.plan.MappedRoles = []PlanMappedRole{}
+	b.plan.MappableRoles = append([]RoleChoice{}, b.in.Mappable...)
+	suggest := suggestions(b.in.Mappable)
 	for _, i := range order {
+		if to, ok := b.in.RoleMap[string(src[i].ID)]; ok {
+			b.mappedBySrc[string(src[i].ID)] = to
+			b.plan.MappedRoles = append(b.plan.MappedRoles, PlanMappedRole{
+				SourceID: string(src[i].ID), SourceName: strings.TrimSpace(src[i].Name), RoleID: to.ID, RoleName: to.Name})
+			continue
+		}
 		pr := b.role(src[i], taken)
+		if s, ok := suggest[strings.ToLower(strings.TrimSpace(src[i].Name))]; ok {
+			pr.SuggestedRoleID = &s.ID
+		}
 		b.plan.Roles = append(b.plan.Roles, pr)
 	}
 	slices.Reverse(b.plan.Roles)
@@ -316,6 +337,9 @@ func (b *builder) overwrites(src []SrcOverwrite) []PlanOverwrite {
 			po.Everyone, po.RoleName = true, "@everyone"
 		case role != nil:
 			po.RoleName = role.Name
+		case b.mappedBySrc[string(o.ID)].ID != uuid.Nil:
+			to := b.mappedBySrc[string(o.ID)]
+			po.RoleName, po.MappedRoleID = to.Name, &to.ID
 		default:
 			continue
 		}

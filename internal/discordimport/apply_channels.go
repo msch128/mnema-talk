@@ -67,7 +67,7 @@ func insertChannels(ctx context.Context, tx pgx.Tx, plan *Plan, c *created) erro
 }
 
 // insertOverwrites stores the overwrites of the new categories and channels,
-// all pointing at the new roles or at @everyone (on the new objects only).
+// pointing at the new roles, at the existing roles they were mapped onto or at @everyone (on the new objects only).
 func insertOverwrites(ctx context.Context, tx pgx.Tx, plan *Plan, c *created) error {
 	var everyone uuid.UUID
 	if err := tx.QueryRow(ctx, `SELECT id FROM roles WHERE is_everyone`).Scan(&everyone); err != nil {
@@ -78,8 +78,11 @@ func insertOverwrites(ctx context.Context, tx pgx.Tx, plan *Plan, c *created) er
 	var allow, deny []int64
 	add := func(ch, cat *uuid.UUID, o PlanOverwrite) {
 		role, ok := c.roleBySrc[o.RoleSourceID]
-		if o.Everyone {
+		switch {
+		case o.Everyone:
 			role, ok = everyone, true
+		case o.MappedRoleID != nil:
+			role, ok = *o.MappedRoleID, true
 		}
 		if !ok {
 			return

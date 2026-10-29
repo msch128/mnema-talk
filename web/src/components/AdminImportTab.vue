@@ -7,7 +7,8 @@ import { Download, Undo2 } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
 import { confirm } from '../lib/confirm'
 import { previewImport, listImports, importDetail, undoImport } from '../lib/discordImport'
-import type { DiscordimportPlan, DiscordimportRecord, DiscordimportCounts } from '../types/rest'
+import type { RoleMap } from '../lib/discordImport'
+import type { DiscordimportPlan, DiscordimportPlanRole, DiscordimportRecord, DiscordimportCounts } from '../types/rest'
 import DiscordImportPreview from './DiscordImportPreview.vue'
 import DiscordImportConfirm from './DiscordImportConfirm.vue'
 import EmptyState from './EmptyState.vue'
@@ -20,6 +21,11 @@ const link = ref('')
 const plan = ref<DiscordimportPlan | null>(null)
 // The link the preview was made for: the import repeats exactly this one.
 const previewed = ref('')
+// The Discord roles to choose for, the choices, and the choices the shown plan
+// was made with: changing a choice re-plans when the import is reviewed.
+const sourceRoles = ref<DiscordimportPlanRole[]>([])
+const roleMap = ref<RoleMap>({})
+const plannedMap = ref<RoleMap>({})
 const busy = ref(false)
 const confirming = ref(false)
 const imports = ref<DiscordimportRecord[]>([])
@@ -44,19 +50,55 @@ async function loadHistory() {
   }
 }
 
+// A role with an existing role of the same name starts out joined to it.
+function suggestedMap(roles: DiscordimportPlanRole[]): RoleMap {
+  const out: RoleMap = {}
+  for (const r of roles) {
+    if (r.suggested_role_id) out[r.source_id] = r.suggested_role_id
+  }
+  return out
+}
+
+function sameMap(a: RoleMap, b: RoleMap): boolean {
+  const keys = Object.keys(a)
+  return keys.length === Object.keys(b).length && keys.every(k => a[k] === b[k])
+}
+
 async function preview() {
   const value = link.value.trim()
   if (!value || busy.value) return
   busy.value = true
   plan.value = null
   try {
-    plan.value = await previewImport(value)
+    const first = await previewImport(value)
+    const picks = suggestedMap(first.roles)
+    plan.value = Object.keys(picks).length ? await previewImport(value, picks) : first
+    sourceRoles.value = first.roles
+    roleMap.value = plannedMap.value = picks
     previewed.value = value
   } catch (e) {
     toasts.error(caughtErrorMessage(e, t('discordImport.previewFailed')))
   } finally {
     busy.value = false
   }
+}
+
+// Plans again with the chosen roles, then asks for the confirmations.
+async function review() {
+  if (busy.value) return
+  if (!sameMap(roleMap.value, plannedMap.value)) {
+    busy.value = true
+    try {
+      plan.value = await previewImport(previewed.value, roleMap.value)
+      plannedMap.value = { ...roleMap.value }
+    } catch (e) {
+      toasts.error(caughtErrorMessage(e, t('discordImport.previewFailed')))
+      return
+    } finally {
+      busy.value = false
+    }
+  }
+  confirming.value = true
 }
 
 async function onImported(record: DiscordimportRecord) {
@@ -138,14 +180,15 @@ onMounted(() => { void loadHistory() })
     </form>
 
     <template v-if="plan">
-      <DiscordImportPreview :plan="plan" />
-      <button type="button" class="btn btn-primary" data-testid="import-review" @click="confirming = true">{{ $t('discordImport.review') }}</button>
+      <DiscordImportPreview v-model:role-map="roleMap" :plan="plan" :roles="sourceRoles" />
+      <button type="button" class="btn btn-primary" :disabled="busy" data-testid="import-review" @click="review">{{ $t('discordImport.review') }}</button>
     </template>
 
     <DiscordImportConfirm
       v-if="plan && confirming"
       :plan="plan"
       :template="previewed"
+      :role-map="plannedMap"
       @close="confirming = false"
       @done="onImported"
       @stale="onStale"
