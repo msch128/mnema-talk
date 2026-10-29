@@ -407,7 +407,7 @@ Every successful mutating request below `/api/admin` is recorded by one
 middleware that works from a route table (`internal/audit/routes.go`), so a
 handler cannot forget it: roles (create, edit, delete, reorder, assignment),
 channel and category overwrites, channels and categories (create, edit,
-delete, duplicate, layout), invites (created, revoked), members (disable,
+delete, duplicate, layout), invites (created, changed, revoked), members (disable,
 enable, end sessions, status line, password set or reset, login unlock, Talk
 kick), incoming and outgoing webhooks (create, edit, regenerate or rotate,
 delete), media pruning and deletion, and self-update. A test walks the router
