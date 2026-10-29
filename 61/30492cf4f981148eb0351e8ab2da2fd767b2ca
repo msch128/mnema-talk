@@ -1,0 +1,101 @@
+doc/deployment.md
+  s_65ba608539a14a::t_9d646967998acb 28,32,48,98,152,169,171,175,177,179,181
+README.md
+  s_6f62c78e3c93c5::t_3b0d41f9a12a84 328
+scripts/check-onboarding-docs.mjs
+  s_3255aa8302478d::t_aeaed2ab767f99 1-154
+scripts/check-onboarding-docs.test.mjs
+  s_3255aa8302478d::t_cffc3456f18fed 1-58
+.env.example
+  s_3255aa8302478d::t_ac7003d7a6184b 278-280
+docker-compose.yml
+  s_3255aa8302478d::t_f6830cfdee4261 18-19
+scripts/onboarding_wizard_check.py
+  s_fc0f81897b6653::t_ef1a07d2514fca 147-149
+  s_fc0f81897b6653::t_794382ffb8b626 144-146
+  s_fc0f81897b6653::t_8b8023c8174afd 150-152
+  s_fc0f81897b6653::t_4d55f9a0f59ab4 1-143,153-166
+scripts/doc-blocks.mjs
+  s_06fcde5dbef956::t_6aa64d7912c436 1-67
+doc/quick-start.md
+  s_dbdfffe0fa33da::t_b5976276b104df 43,57,71,142,151,180
+scripts/onboarding-proxy-check.sh
+  s_fc0f81897b6653::t_e2da77075dc2ba 82,159
+  s_0f71275af3a9d5::t_c87880289904e0 1-81,83-158,160-172
+doc/operations.md
+  s_b10e722bc60c79::t_d640f8304410ba 197,206,622,631,774-816
+doc/upgrade.md
+  s_3255aa8302478d::t_d1d57ec02f03ea 29,35,108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6130492cf4f981148eb0351e8ab2da2fd767b2ca",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0f71275af3a9d5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aupdater-dockerhub-0045479572fc8370",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3255aa8302478d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-gaming-ui-52e3f2038ee574d1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_65ba608539a14a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a83c210d97e86a798",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b10e722bc60c79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-docs-e9d2378f61bc75a7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dbdfffe0fa33da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-voice-takeover-a0aadf43d700b47c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fc0f81897b6653": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-tests-fc20e0fa5cecb986",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
