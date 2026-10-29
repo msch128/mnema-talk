@@ -174,9 +174,11 @@ type Room struct {
 }
 
 type SFU struct {
-	load  *peerLoad
-	apiMu sync.RWMutex
-	api   *webrtc.API
+	// announcers tracks the KeepAnnounceCurrent loops (tests wait for them).
+	announcers sync.WaitGroup
+	load       *peerLoad
+	apiMu      sync.RWMutex
+	api        *webrtc.API
 	// announced are the addresses offered to browsers (see SetAnnouncedIPs).
 	announced []string
 	portMin   uint16

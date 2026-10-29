@@ -35,8 +35,18 @@ const (
 	videoClockRate = 90000
 )
 
-// layerNow is the clock of timestamp rewriting; tests replace it.
-var layerNow = time.Now
+// layerClock replaces the clock of timestamp rewriting in tests. It is atomic
+// because media goroutines of earlier tests may still read the clock while a
+// later test installs its own.
+var layerClock atomic.Pointer[func() time.Time]
+
+// layerNow is the clock of timestamp rewriting.
+func layerNow() time.Time {
+	if now := layerClock.Load(); now != nil {
+		return (*now)()
+	}
+	return time.Now()
+}
 
 // Layer describes one encoding of a screen share as its sender declares it.
 // The SFU only relays this to the viewers so they can label their choices.
