@@ -10,8 +10,12 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/version"
 )
+
+// DefaultAdminUsername is the Owner name the server seeds when none is set.
+const DefaultAdminUsername = "admin"
 
 // ImageRepository is the published image.
 const ImageRepository = "ghcr.io/msch128/mnema-talk"
@@ -81,6 +85,14 @@ func (o Options) normalize() (Options, error) {
 	}
 	if o.Language != "en" && o.Language != "de" {
 		return o, fmt.Errorf("language must be en or de, got %q", o.Language)
+	}
+	if o.AdminUsername == "" {
+		o.AdminUsername = DefaultAdminUsername
+	}
+	// The server refuses to boot with a name it cannot seed, and a newline
+	// would add lines to the .env.
+	if err := auth.ValidateAdminSeed(o.AdminUsername, ""); err != nil {
+		return o, fmt.Errorf("--admin-username: %w", err)
 	}
 	if o.Dir == "" {
 		o.Dir = "."

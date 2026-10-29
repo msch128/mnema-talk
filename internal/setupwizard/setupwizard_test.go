@@ -146,6 +146,34 @@ func TestRenderComposeDropsTheBuildSection(t *testing.T) {
 	}
 }
 
+// The app container only sees what the compose file lists, so every value the
+// wizard writes must be referenced there.
+func TestComposePassesEveryVariableTheWizardWrites(t *testing.T) {
+	o, err := Options{PublicURL: "https://chat.example.com", AutoUpdate: true, SMTP: SMTP{Host: "smtp.example.org", From: "a@example.org"}}.normalize()
+	if err != nil {
+		t.Fatal(err)
+	}
+	env, err := godotenv.Unmarshal(RenderEnv(o, NewSecrets(), fixedNow))
+	if err != nil {
+		t.Fatal(err)
+	}
+	compose := string(repoTemplate(t))
+	for key := range env {
+		if key == "COMPOSE_PROFILES" { // read by docker compose itself
+			continue
+		}
+		if !strings.Contains(compose, "${"+key) {
+			t.Errorf("docker-compose.yml never references %s", key)
+		}
+	}
+}
+
+func TestUpdaterOutlivesItsSwapWait(t *testing.T) {
+	if !strings.Contains(string(repoTemplate(t)), "stop_grace_period: 3m") {
+		t.Error("the updater needs a stop grace period above its 2 minute swap wait")
+	}
+}
+
 func TestWriteCreatesPrivateFilesAndNeverOverwrites(t *testing.T) {
 	dir := t.TempDir()
 	o := Options{Dir: filepath.Join(dir, "mnema"), PublicURL: "https://chat.example.com"}
