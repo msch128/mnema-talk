@@ -1,0 +1,73 @@
+internal/auth/service_accounts.go
+  s_06fcde5dbef956::t_c4bfe43801232a 19,69-73,75,78,82,89,91
+api/openapi.json
+  s_06fcde5dbef956::t_4d84c3b5f1abde 651
+internal/mention/mention_test.go
+  s_06fcde5dbef956::t_4d84c3b5f1abde 16-23
+  s_06fcde5dbef956::t_00d77517ac93f3 10
+internal/auth/token_test.go
+  s_06fcde5dbef956::t_c4bfe43801232a 78,83,90-104
+  s_06fcde5dbef956::t_081dd5e29dc607 105
+internal/mention/mention.go
+  s_06fcde5dbef956::t_c4bfe43801232a 14,19-21
+internal/auth/handler_account.go
+  s_06fcde5dbef956::t_c4bfe43801232a 118-119
+internal/auth/admin_seed.go
+  s_06fcde5dbef956::t_e4ab71bb83b0ce 19
+internal/auth/paths_integration_test.go
+  s_06fcde5dbef956::t_5c807e30141991 492,530
+internal/auth/service.go
+  s_06fcde5dbef956::t_b640f4ef947b2d 35-36,39-43,196-203,205-207,209-212,219-227
+internal/nativepreview/native_registration_preview_integration_test.go
+  s_06fcde5dbef956::t_5750e56ebf6bb5 96,102,115,119,127,132,136,145,151,157,162,170,178,182,185,217,220,234,247
+internal/server/moderation_integration_test.go
+  s_06fcde5dbef956::t_dc381c0b719e06 485,498
+web/src/components/LoginModal.username.test.ts
+  s_06fcde5dbef956::t_ba0b9810f2af56 1-39
+internal/server/username_rules_integration_test.go
+  s_5aa38e778cf1ac::t_6efb47fe8562d0 1-68
+web/src/components/LoginModal.vue
+  s_9ed06b2303269d::t_0bac82754d5ef6 15,86,90,172-175,179
+web/src/i18n/de.json
+  s_9ed06b2303269d::t_d3b64cae2a87c5 110,206
+web/src/i18n/en.json
+  s_9ed06b2303269d::t_64732380677f10 110,206
+web/src/lib/markdown/mentions.ts
+  s_9ed06b2303269d::t_0da011ce765ba8 16,23,30
+web/src/lib/username.test.ts
+  s_9ed06b2303269d::t_159ffa8c605cbf 1-13
+web/src/lib/username.ts
+  s_9ed06b2303269d::t_936bbdb4a73065 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "24b5de3198ee25f0ec46457708e5eef49add759c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5aa38e778cf1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-builtin-turn-725a019b5a1e641a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_9ed06b2303269d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-username-rules-e27d9d8ac20722b1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
