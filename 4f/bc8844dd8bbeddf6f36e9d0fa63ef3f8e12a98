@@ -1,0 +1,25 @@
+README.md
+  s_0cae4a4d7ab7c3::t_170396014e7c2a 217
+doc/deployment.md
+  s_0cae4a4d7ab7c3::t_14f20ab338129b 76-77
+doc/moderation.md
+  s_0cae4a4d7ab7c3::t_36a5fe79403152 232
+doc/operations.md
+  s_0cae4a4d7ab7c3::t_9b22eb5276618d 293
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4fbc8844dd8bbeddf6f36e9d0fa63ef3f8e12a98",
+  "prompts": {},
+  "sessions": {
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
