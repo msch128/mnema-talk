@@ -16,7 +16,7 @@ import (
 
 // Register creates a regular user, consuming one use of a valid invite code.
 func Register(ctx context.Context, p *db.Pool, username, displayName, password, inviteCode string) (*User, error) {
-	displayName, inviteCode, err := cleanRegistration(username, displayName, password, inviteCode)
+	username, displayName, inviteCode, err := cleanRegistration(username, displayName, password, inviteCode)
 	if err != nil {
 		return nil, err
 	}
@@ -66,27 +66,29 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 	return user, nil
 }
 
-// cleanRegistration validates the sign-up fields and returns the display name
-// (defaulted from the username) and invite code (trimmed) to use.
-func cleanRegistration(username, displayName, password, inviteCode string) (string, string, error) {
+// cleanRegistration validates the sign-up fields and returns the username
+// (normalised), display name (defaulted from the username) and invite code
+// (trimmed) to use.
+func cleanRegistration(username, displayName, password, inviteCode string) (string, string, string, error) {
+	username = NormalizeUsername(username)
 	if err := ValidateUsername(username); err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	if err := ValidatePassword(password); err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	displayName, err := httpx.CleanText("display_name", displayName, MaxDisplayNameLen, false)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	if displayName == "" {
 		displayName = defaultDisplayName(username)
 	}
 	inviteCode = strings.TrimSpace(inviteCode)
 	if inviteCode == "" || len(inviteCode) > maxInviteCodeChars {
-		return "", "", ErrInvalidInvite
+		return "", "", "", ErrInvalidInvite
 	}
-	return displayName, inviteCode, nil
+	return username, displayName, inviteCode, nil
 }
 
 // claimInvite locks the invite, checks that it is still usable and returns its

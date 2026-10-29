@@ -107,7 +107,7 @@
       "wrongPassword": "Das aktuelle Passwort ist falsch",
       "passwordMin": "Das Passwort muss mindestens {count} Zeichen haben",
       "passwordMax": "Das Passwort ist zu lang",
-      "usernameFormat": "Benutzername: 3–32 Zeichen, nur Buchstaben, Ziffern, _ . oder -",
+      "usernameFormat": "Benutzername: 2–32 Zeichen, nur Kleinbuchstaben, Ziffern, _ und .; kein . am Anfang oder Ende, nie zwei . hintereinander",
       "fieldMax": "{field}: höchstens {count} Zeichen",
       "fileTooBig": "Die Datei ist größer als {size} MB",
       "missingPermission": "Dafür fehlt dir die Berechtigung.",
@@ -203,6 +203,7 @@
     "subtitleRegister": "Dem Treffpunkt beitreten",
     "username": "Benutzername",
     "usernamePlaceholder": "z. B. herzog",
+    "usernameHint": "2–32 Zeichen: a–z, 0–9, _ und .; Leerzeichen werden zu _, Großbuchstaben zu Kleinbuchstaben.",
     "displayName": "Anzeigename",
     "displayNamePlaceholder": "z. B. Herzog",
     "password": "Passwort",
@@ -592,6 +593,16 @@
     "searchProblemDate": "Das Datum „{value}“ nach {filter}: ist nicht lesbar. Nutze JJJJ-MM-TT, heute oder gestern.",
     "searchProblemOption": "„{value}“ ist kein Wert für {filter}:. Wähle einen von: {options}.",
     "searchProblemEmpty": "{filter}: braucht einen Wert."
+  },
+  "linkPreview": {
+    "play": "Video abspielen: {title}",
+    "playerTitle": "Videoplayer: {title}",
+    "authorBy": "von {name}",
+    "field": {
+      "price": "Preis",
+      "recommendations": "Empfehlungen"
+    },
+    "playerBlocked": "Diese App spielt keine Videos direkt ab. Der Link öffnet sich im Browser."
   },
   "thread": {
     "title": "Thread",

@@ -8,12 +8,15 @@
 # The compose file fixes its container names, so stop any Mnema stack running on
 # this machine first (CI runs on an empty runner).
 # Usage: scripts/fresh-install-check.sh [image]   (default mnema-talk:local)
-#   FRESH_PORT=58091  host port for the app
+#   FRESH_PORT=<port>  host port for the app
 set -euo pipefail
 
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 IMAGE="${1:-mnema-talk:local}"
-PORT="${FRESH_PORT:-58091}"
+source "$(cd "$(dirname "$0")" && pwd)/free-port.sh"
+PORT="${FRESH_PORT:-$(free_port)}"
+UDP_MIN="${FRESH_UDP_PORT:-$(free_port_range 11)}"
+UDP_MAX=$((UDP_MIN + 10))
 PROJECT="mnema-fresh-$(openssl rand -hex 6)"
 DIR="$(mktemp -d)"
 BASE="http://127.0.0.1:$PORT"
@@ -54,8 +57,8 @@ set_env S3_SECRET_KEY "$(openssl rand -hex 16)"
 set_env ADMIN_INITIAL_PASSWORD "$ADMIN_PASSWORD"
 set_env UPDATE_CHECK_ENABLED false
 set_env LINK_PREVIEWS_ENABLED false
-set_env WEBRTC_UDP_PORT_MIN 58120
-set_env WEBRTC_UDP_PORT_MAX 58130
+set_env WEBRTC_UDP_PORT_MIN "$UDP_MIN"
+set_env WEBRTC_UDP_PORT_MAX "$UDP_MAX"
 set_env WEBRTC_NAT_1TO1_IP 127.0.0.1
 
 # The guide's start commands (--pull never: the image under test is local).

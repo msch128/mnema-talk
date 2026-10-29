@@ -27,7 +27,7 @@ func (h *Handler) Mount(r chi.Router) {
 // exhaustion answers 429 so clients can retry instead of caching no preview.
 //
 // @Summary Link card for a URL
-// @Description Only mounted when LINK_PREVIEWS is enabled. Answers 204 when the page has no card or may not be fetched. Extra rate limit (120 per minute).
+// @Description Only mounted when LINK_PREVIEWS is enabled. Reads Open Graph and Twitter card tags, the theme colour and oEmbed; YouTube and Vimeo links use the provider's oEmbed, Steam store links add price and recommendations. `embed` is set for YouTube and Vimeo videos only, with a fixed player address. Answers 204 when the page has no card or may not be fetched. Extra rate limit (120 per minute).
 // @ID getLinkPreview
 // @Tags Media
 // @Produce json

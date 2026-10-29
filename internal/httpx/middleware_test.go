@@ -158,6 +158,17 @@ func TestSecurityHeaders(t *testing.T) {
 			t.Errorf("SPA CSP lacks %s", want)
 		}
 	}
+	// Only the two video players may be framed, by exact origin: no wildcard,
+	// no scheme-only source, no 'self'-less fallback to default-src.
+	frameSrc := ""
+	for _, d := range strings.Split(SPAContentSecurityPolicy, "; ") {
+		if strings.HasPrefix(d, "frame-src ") {
+			frameSrc = d
+		}
+	}
+	if frameSrc != "frame-src https://www.youtube-nocookie.com https://player.vimeo.com" {
+		t.Errorf("SPA CSP frame-src = %q", frameSrc)
+	}
 	if !strings.Contains(SPAContentSecurityPolicy, "script-src 'self' 'wasm-unsafe-eval';") {
 		t.Error("SPA CSP must allow WebAssembly compilation for the noise filter")
 	}

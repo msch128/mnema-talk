@@ -489,7 +489,7 @@ func TestAuthHashEntropyFailuresPreserveAccounts(t *testing.T) {
 		call      func() error
 	}{
 		{"register", 0, func() error {
-			_, err := Register(ctx, p, "entropy-member", "", testPassword, "member-invite-k7x2")
+			_, err := Register(ctx, p, "entropy_member", "", testPassword, "member-invite-k7x2")
 			return err
 		}},
 		{"change password", 0, func() error {
@@ -527,7 +527,7 @@ func TestAuthHashEntropyFailuresPreserveAccounts(t *testing.T) {
 		}
 	}()
 	var exists bool
-	if err := p.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE username IN ('entropy-member','entropy-admin'))`).Scan(&exists); err != nil || exists {
+	if err := p.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE username IN ('entropy_member','entropy-admin'))`).Scan(&exists); err != nil || exists {
 		t.Fatalf("failed hash created account: exists=%v err=%v", exists, err)
 	}
 }

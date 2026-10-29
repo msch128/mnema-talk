@@ -16,7 +16,7 @@ import (
 // the Owner password policy (longer than for other accounts). An empty password is allowed here: outside
 // production one is then generated on first start.
 func ValidateAdminSeed(username, password string) error {
-	if err := ValidateUsername(username); err != nil {
+	if err := validateExistingUsername(username); err != nil {
 		return fmt.Errorf("ADMIN_USERNAME %q is invalid: %w", username, err)
 	}
 	if password != "" {

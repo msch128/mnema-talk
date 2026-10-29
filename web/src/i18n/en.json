@@ -107,7 +107,7 @@
       "wrongPassword": "The current password is wrong",
       "passwordMin": "The password needs at least {count} characters",
       "passwordMax": "The password is too long",
-      "usernameFormat": "Username: 3–32 characters, letters, digits, _ . or - only",
+      "usernameFormat": "Username: 2–32 characters, lowercase letters, digits, _ and . only; no . at the start or end, no two . in a row",
       "fieldMax": "{field}: at most {count} characters",
       "fileTooBig": "The file is larger than {size} MB",
       "missingPermission": "You don’t have permission to do that.",
@@ -203,6 +203,7 @@
     "subtitleRegister": "Join the community",
     "username": "Username",
     "usernamePlaceholder": "e.g. herzog",
+    "usernameHint": "2–32 characters: a–z, 0–9, _ and .; spaces become _, capitals become lowercase.",
     "displayName": "Display name",
     "displayNamePlaceholder": "e.g. Herzog",
     "password": "Password",
@@ -592,6 +593,16 @@
     "searchProblemDate": "Can’t read the date “{value}” after {filter}:. Use YYYY-MM-DD, today or yesterday.",
     "searchProblemOption": "“{value}” is not a value for {filter}:. Choose one of: {options}.",
     "searchProblemEmpty": "{filter}: needs a value."
+  },
+  "linkPreview": {
+    "play": "Play video: {title}",
+    "playerTitle": "Video player: {title}",
+    "authorBy": "by {name}",
+    "field": {
+      "price": "Price",
+      "recommendations": "Recommendations"
+    },
+    "playerBlocked": "This app plays no videos inline. The link opens in your browser."
   },
   "thread": {
     "title": "Thread",

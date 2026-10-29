@@ -114,8 +114,8 @@ func (h *Handler) logoutAll(w http.ResponseWriter, r *http.Request) error {
 
 // RegisterRequest is the body of POST /api/auth/register.
 type RegisterRequest struct {
-	// Username must be unique; "all" and "here" are reserved.
-	Username string `json:"username" pattern:"^[A-Za-z0-9_.-]{3,32}$"`
+	// Username: 2-32 characters, lowercase letters, digits, '_' and '.', no leading, trailing or repeated '.'. Spaces become '_' and capitals lower-case before checking. Unique regardless of case; "all" and "here" are reserved. Accounts created before this rule keep their names.
+	Username string `json:"username"`
 	// DisplayName defaults to the username.
 	DisplayName string `json:"display_name" maxLength:"24" binding:"optional"`
 	// Password needs 10 characters at least and 72 bytes at most.
