@@ -74,11 +74,11 @@ func TestHashingQueueDepthIsBounded(t *testing.T) {
 func TestLoginAnswers503WithRetryAfterWhenBusy(t *testing.T) {
 	h := newLoginHandler()
 	h.verify = func(context.Context, string, string) (*User, int, error) { return nil, 0, ErrServerBusy }
-	rec := postLoginWith(h, "203.0.113.5", "Herzog", "whatever-password")
+	rec := postLoginWith(h, "203.0.113.5", "Admin", "whatever-password")
 	if rec.Code != http.StatusServiceUnavailable || rec.Header().Get("Retry-After") == "" {
 		t.Fatalf("got %d retry-after %q, want 503 with Retry-After", rec.Code, rec.Header().Get("Retry-After"))
 	}
-	if locked, _ := h.loginFailures.IsLockedOut("203.0.113.5|herzog"); locked || h.loginFailures.Len() != 0 {
+	if locked, _ := h.loginFailures.IsLockedOut("203.0.113.5|admin"); locked || h.loginFailures.Len() != 0 {
 		t.Fatal("a busy server must not count as a failed login")
 	}
 }

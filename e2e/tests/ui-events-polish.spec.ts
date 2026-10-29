@@ -6,7 +6,7 @@ import { apiFetch, responseString } from './helpers'
 // Events and forum on a phone: the event cards keep their size and show who
 // is going, and the forum has the way back to the channel list.
 
-const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Admin'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 

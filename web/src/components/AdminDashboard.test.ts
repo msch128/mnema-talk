@@ -17,8 +17,8 @@ import { setLocale } from '../i18n'
 const mockUsers = [
   { bio: '', status_text: '', locale: 'en', created_at: '2026-01-01T00:00:00Z',
     id: "00000000-0000-4000-8000-0000000003fa",
-    username: 'herzog',
-    display_name: 'Herzog',
+    username: 'admin',
+    display_name: 'Admin',
     role: 'admin',
     disabled: false,
     last_seen_at: '2026-10-01T12:00:00Z',
@@ -106,7 +106,7 @@ let wrapper: VueWrapper
 
 async function createWrapper() {
   const auth = useAuthStore()
-  auth.user = userFixture({ bio: '', status_text: '', locale: 'en', created_at: '2026-01-01T00:00:00Z',  id: "00000000-0000-4000-8000-0000000003fa", username: 'herzog', display_name: 'Herzog', role: 'admin' })
+  auth.user = userFixture({ bio: '', status_text: '', locale: 'en', created_at: '2026-01-01T00:00:00Z',  id: "00000000-0000-4000-8000-0000000003fa", username: 'admin', display_name: 'Admin', role: 'admin' })
   wrapper = mount(AdminDashboard, {
     attachTo: document.body
   })
@@ -181,8 +181,8 @@ describe('AdminDashboard - Users Tab', () => {
 
     // Admin user row
     const adminRow = rows[0]!
-    expect(adminRow!.find('[data-testid="user-username"]')!.text()).toContain('@herzog')
-    expect(adminRow!.find('[data-testid="user-displayname"]')!.text()).toBe('Herzog')
+    expect(adminRow!.find('[data-testid="user-username"]')!.text()).toContain('@admin')
+    expect(adminRow!.find('[data-testid="user-displayname"]')!.text()).toBe('Admin')
     expect(adminRow!.find('[data-testid="user-role"]')!.text()).toBe('Owner')
     expect(adminRow!.find('[data-testid="user-status"]')!.text()).toBe('Active')
 

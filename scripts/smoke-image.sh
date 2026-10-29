@@ -37,7 +37,7 @@ JWT_SECRET=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 16)
 S3_ACCESS_KEY=smoke$(openssl rand -hex 4)
 S3_SECRET_KEY=$(openssl rand -hex 16)
-ADMIN_USERNAME=Herzog
+ADMIN_USERNAME=Admin
 ADMIN_INITIAL_PASSWORD=$ADMIN_PASSWORD
 UPDATE_CHECK_ENABLED=false
 LINK_PREVIEWS_ENABLED=false
@@ -127,7 +127,7 @@ echo
 echo "==> admin login"
 # Same-origin request: the CSRF check needs a matching Origin header.
 curl -fsS -c "$COOKIES" -H "Origin: $BASE" -H 'Content-Type: application/json' \
-  --data "{\"username\":\"Herzog\",\"password\":\"$ADMIN_PASSWORD\"}" \
+  --data "{\"username\":\"Admin\",\"password\":\"$ADMIN_PASSWORD\"}" \
   "$BASE/api/auth/login" >/dev/null
 me="$(curl -fsS -b "$COOKIES" "$BASE/api/auth/me")"
 case "$me" in

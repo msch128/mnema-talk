@@ -9,7 +9,7 @@ enforcement points listed below.
 ## The Owner
 
 The Owner is the one account with `users.role = 'admin'`: the account that
-`ADMIN_USERNAME` (default `Herzog`) seeds on the first start. The database value
+`ADMIN_USERNAME` (default `Admin`) seeds on the first start. The database value
 and the `role` field of the API stay `admin` for compatibility; the interface
 calls it Owner.
 
@@ -255,6 +255,14 @@ preview* returns to the role editor.
 
 The Owner and Administrators can write rules, a welcome text and a community
 name (admin console, *Welcome & rules*; `GET|PUT /api/admin/onboarding`, audited).
+The community name is what the server calls itself everywhere: the browser tab,
+the name of the installed app (web app manifest), the header of the sidebar,
+the sign-in screen, invite links, e-mails (subject, text and sender display name),
+authenticator-app entries, the title of a test push and the server's tile and
+window title in the desktop clients. While it is empty the host of `PUBLIC_URL`
+stands in. It is public: `GET /api/health` and `GET /api/auth/options` carry
+`community_name` (clients treat it as optional), and a change reaches open
+sessions through the `community_updated` event.
 While rules exist, a member who has not accepted the current version
 (`rules_pending` in `GET /api/permissions`, `GET /api/auth/me` and
 `GET /api/onboarding`) loses what a timeout takes: *Send messages*, *Attach

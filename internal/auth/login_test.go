@@ -25,15 +25,15 @@ var (
 )
 
 // newLoginHandler returns a handler whose credential check accepts only
-// "Herzog" with testPassword, without a database.
+// "Admin" with testPassword, without a database.
 func newLoginHandler() *Handler {
 	loginTestGen = 0
 	h := NewHandler(&Sessions{Secret: strings.Repeat("s", 32), TTL: time.Hour}, nil)
 	h.generation = func(context.Context, string) (uuid.UUID, int, error) { return loginTestUID, loginTestGen, nil }
 	h.twoFactor = func(context.Context, uuid.UUID) (bool, error) { return false, nil }
 	h.verify = func(_ context.Context, username, password string) (*User, int, error) {
-		if strings.EqualFold(username, "Herzog") && password == testPassword {
-			return &User{ID: loginTestUID, Username: "Herzog", Role: RoleAdmin}, 0, nil
+		if strings.EqualFold(username, "Admin") && password == testPassword {
+			return &User{ID: loginTestUID, Username: "Admin", Role: RoleAdmin}, 0, nil
 		}
 		return nil, 0, ErrInvalidCredentials
 	}
@@ -81,9 +81,9 @@ func tripAccountCapFrom(t *testing.T, h *Handler, prefix string) {
 	// 100 wrong guesses spread over 20 addresses: below every per-address
 	// limit, but enough to trip the account-wide cap.
 	for i := 0; i < 100; i++ {
-		postLogin(h, fmt.Sprintf("%s.%d", prefix, i%20), "Herzog", "wrong-guess")
+		postLogin(h, fmt.Sprintf("%s.%d", prefix, i%20), "Admin", "wrong-guess")
 	}
-	if locked, _ := h.accountFailures.IsLockedOut("herzog"); !locked {
+	if locked, _ := h.accountFailures.IsLockedOut("admin"); !locked {
 		t.Fatal("account lockout did not trigger")
 	}
 }
@@ -91,7 +91,7 @@ func tripAccountCapFrom(t *testing.T, h *Handler, prefix string) {
 func TestAccountCapTricklesUnknownDevicesAndKeepsKnownOnes(t *testing.T) {
 	h := newLoginHandler()
 	// The owner signed in from a browser (cookie) before the attack.
-	first := postLoginWith(h, "192.0.2.50", "Herzog", testPassword)
+	first := postLoginWith(h, "192.0.2.50", "Admin", testPassword)
 	if first.Code != http.StatusOK {
 		t.Fatalf("first login: %d", first.Code)
 	}
@@ -114,29 +114,29 @@ func TestAccountCapTricklesUnknownDevicesAndKeepsKnownOnes(t *testing.T) {
 	// Each unknown address gets a burst of 2, and the whole account a ceiling
 	// of 20 checks, however many addresses guess.
 	for i := 0; i < 50; i++ {
-		postLoginWith(h, fmt.Sprintf("203.0.113.%d", i), "Herzog", "guess")
+		postLoginWith(h, fmt.Sprintf("203.0.113.%d", i), "Admin", "guess")
 	}
 	if evaluated != 20 {
 		t.Fatalf("passwords evaluated for unknown devices: %d, want the account ceiling of 20", evaluated)
 	}
-	if code := postLoginWith(h, "203.0.113.200", "Herzog", testPassword).Code; code != http.StatusTooManyRequests {
+	if code := postLoginWith(h, "203.0.113.200", "Admin", testPassword).Code; code != http.StatusTooManyRequests {
 		t.Fatalf("owner on a new device once the trickle is spent: got %d, want 429", code)
 	}
 	// A known device bypasses the trickle.
-	if code := postLoginWith(h, "203.0.113.201", "Herzog", testPassword, device).Code; code != http.StatusOK {
+	if code := postLoginWith(h, "203.0.113.201", "Admin", testPassword, device).Code; code != http.StatusOK {
 		t.Fatalf("known browser: got %d, want 200", code)
 	}
 	tripAccountCapFrom(t, h, "198.51.101")
 	// A forged cookie does not make a device known.
 	forged := &http.Cookie{Name: device.Name, Value: "9999999999.AAAA"}
-	postLoginWith(h, "198.18.0.1", "Herzog", "guess-two", forged)
-	if code := postLoginWith(h, "198.18.0.1", "Herzog", testPassword, forged).Code; code != http.StatusTooManyRequests {
+	postLoginWith(h, "198.18.0.1", "Admin", "guess-two", forged)
+	if code := postLoginWith(h, "198.18.0.1", "Admin", testPassword, forged).Code; code != http.StatusTooManyRequests {
 		t.Fatalf("forged cookie: got %d, want 429", code)
 	}
 	// The real cookie is honoured from any address, any number of times.
 	for i := 0; i < 3; i++ {
 		tripAccountCapFrom(t, h, fmt.Sprintf("198.51.%d", 110+i))
-		if code := postLoginWith(h, "192.0.2.77", "Herzog", testPassword, device).Code; code != http.StatusOK {
+		if code := postLoginWith(h, "192.0.2.77", "Admin", testPassword, device).Code; code != http.StatusOK {
 			t.Fatalf("known browser during account cap: got %d, want 200", code)
 		}
 	}
@@ -146,21 +146,21 @@ func TestKnownDeviceCookieExpiresAndIsPerAccount(t *testing.T) {
 	s := &Sessions{Secret: strings.Repeat("s", 32)}
 	uid := uuid.New()
 	w := httptest.NewRecorder()
-	s.markDevice(w, "herzog", uid, 3)
+	s.markDevice(w, "admin", uid, 3)
 	c := w.Result().Cookies()[0]
 	req := func(v string) *http.Request {
 		r := httptest.NewRequest(http.MethodGet, "/", nil)
 		r.AddCookie(&http.Cookie{Name: c.Name, Value: v})
 		return r
 	}
-	if gotID, gen, ok := s.deviceClaims(req(c.Value), "herzog"); !ok || gotID != uid || gen != 3 {
+	if gotID, gen, ok := s.deviceClaims(req(c.Value), "admin"); !ok || gotID != uid || gen != 3 {
 		t.Fatalf("claims: %v %d %v", gotID, gen, ok)
 	}
 	if _, _, ok := s.deviceClaims(req(c.Value), "other"); ok {
 		t.Fatal("cookie must be valid for its own account only")
 	}
 	exp := time.Now().Add(-time.Hour).Unix()
-	expired := uid.String() + ".3." + strconv.FormatInt(exp, 10) + "." + s.deviceMAC("herzog", uid, 3, exp)
+	expired := uid.String() + ".3." + strconv.FormatInt(exp, 10) + "." + s.deviceMAC("admin", uid, 3, exp)
 	// Tampering with the user id or generation breaks the MAC.
 	parts := strings.Split(c.Value, ".")
 	other := uuid.New().String() + "." + strings.Join(parts[1:], ".")
@@ -168,11 +168,11 @@ func TestKnownDeviceCookieExpiresAndIsPerAccount(t *testing.T) {
 	for name, v := range map[string]string{"expired": expired, "other user": other, "other generation": bumped,
 		"malformed": "nodot", "non-numeric": "x.y.z.w", "bad uuid": "u.3." + parts[2] + "." + parts[3],
 		"bad generation": parts[0] + ".g." + parts[2] + "." + parts[3]} {
-		if _, _, ok := s.deviceClaims(req(v), "herzog"); ok {
+		if _, _, ok := s.deviceClaims(req(v), "admin"); ok {
 			t.Fatalf("%s cookie accepted", name)
 		}
 	}
-	if _, _, ok := s.deviceClaims(httptest.NewRequest(http.MethodGet, "/", nil), "herzog"); ok {
+	if _, _, ok := s.deviceClaims(httptest.NewRequest(http.MethodGet, "/", nil), "admin"); ok {
 		t.Fatal("missing cookie accepted")
 	}
 }
@@ -182,7 +182,7 @@ func TestKnownDeviceCookieExpiresAndIsPerAccount(t *testing.T) {
 // when it belongs to another user id.
 func TestDeviceCookieIsRetiredByANewGeneration(t *testing.T) {
 	h := newLoginHandler()
-	first := postLoginWith(h, "192.0.2.50", "Herzog", testPassword)
+	first := postLoginWith(h, "192.0.2.50", "Admin", testPassword)
 	var device *http.Cookie
 	for _, c := range first.Result().Cookies() {
 		if strings.HasPrefix(c.Name, "mnema_dev_") {
@@ -195,7 +195,7 @@ func TestDeviceCookieIsRetiredByANewGeneration(t *testing.T) {
 	known := func() bool {
 		r := httptest.NewRequest(http.MethodGet, "/", nil)
 		r.AddCookie(device)
-		return h.isKnownDevice(r, "herzog")
+		return h.isKnownDevice(r, "admin")
 	}
 	if !known() {
 		t.Fatal("fresh cookie not known")
@@ -219,7 +219,7 @@ func TestDeviceCookieIsRetiredByANewGeneration(t *testing.T) {
 
 	// Under the cap, the retired cookie gets no bypass.
 	h = newLoginHandler()
-	first = postLoginWith(h, "192.0.2.50", "Herzog", testPassword)
+	first = postLoginWith(h, "192.0.2.50", "Admin", testPassword)
 	for _, c := range first.Result().Cookies() {
 		if strings.HasPrefix(c.Name, "mnema_dev_") {
 			device = c
@@ -229,20 +229,20 @@ func TestDeviceCookieIsRetiredByANewGeneration(t *testing.T) {
 	loginTestGen = 1
 	defer func() { loginTestGen = 0 }()
 	for i := 0; i < 3; i++ { // spend the unknown-device trickle first
-		postLoginWith(h, "203.0.113.5", "Herzog", "guess", device)
+		postLoginWith(h, "203.0.113.5", "Admin", "guess", device)
 	}
-	if code := postLoginWith(h, "203.0.113.5", "Herzog", testPassword, device).Code; code != http.StatusTooManyRequests {
+	if code := postLoginWith(h, "203.0.113.5", "Admin", testPassword, device).Code; code != http.StatusTooManyRequests {
 		t.Fatalf("retired cookie during the cap: got %d, want 429", code)
 	}
 }
 
 func TestAccountCapStillCountsWrongGuessesOfKnownDevices(t *testing.T) {
 	h := newLoginHandler()
-	if postLoginWith(h, "192.0.2.50", "Herzog", testPassword).Code != http.StatusOK {
+	if postLoginWith(h, "192.0.2.50", "Admin", testPassword).Code != http.StatusOK {
 		t.Fatal("login")
 	}
 	tripAccountCap(t, h)
-	if code := postLogin(h, "192.0.2.50", "herzog", "wrong-guess"); code != http.StatusTooManyRequests {
+	if code := postLogin(h, "192.0.2.50", "admin", "wrong-guess"); code != http.StatusTooManyRequests {
 		t.Fatalf("wrong password from a known device during the cap: got %d, want 429", code)
 	}
 }
@@ -250,13 +250,13 @@ func TestAccountCapStillCountsWrongGuessesOfKnownDevices(t *testing.T) {
 func TestAccountUnderAttackTightensPerAddressLockout(t *testing.T) {
 	h := newLoginHandler()
 	for i := 0; i < 100; i++ {
-		postLogin(h, fmt.Sprintf("198.51.100.%d", i%20), "Herzog", "wrong-guess")
+		postLogin(h, fmt.Sprintf("198.51.100.%d", i%20), "Admin", "wrong-guess")
 	}
 	// A fresh address gets far fewer than 10 guesses while the account is under attack.
 	for i := 0; i < 4; i++ {
-		postLogin(h, "203.0.113.50", "Herzog", "wrong-guess")
+		postLogin(h, "203.0.113.50", "Admin", "wrong-guess")
 	}
-	if code := postLogin(h, "203.0.113.50", "Herzog", testPassword); code != http.StatusTooManyRequests {
+	if code := postLogin(h, "203.0.113.50", "Admin", testPassword); code != http.StatusTooManyRequests {
 		t.Fatalf("attacking address not locked after 4 guesses under attack: %d", code)
 	}
 }
@@ -264,23 +264,23 @@ func TestAccountUnderAttackTightensPerAddressLockout(t *testing.T) {
 func TestPerAddressLockoutAppliesAndResets(t *testing.T) {
 	h := newLoginHandler()
 	for i := 0; i < 10; i++ {
-		postLogin(h, "203.0.113.5", "Herzog", "wrong-guess")
+		postLogin(h, "203.0.113.5", "Admin", "wrong-guess")
 	}
-	if code := postLogin(h, "203.0.113.5", "Herzog", testPassword); code != http.StatusTooManyRequests {
+	if code := postLogin(h, "203.0.113.5", "Admin", testPassword); code != http.StatusTooManyRequests {
 		t.Fatalf("attacker address not locked: %d", code)
 	}
-	if code := postLogin(h, "198.51.100.7", "Herzog", testPassword); code != http.StatusOK {
+	if code := postLogin(h, "198.51.100.7", "Admin", testPassword); code != http.StatusOK {
 		t.Fatalf("owner locked out from another address: %d", code)
 	}
 
 	// Success clears the address's failures.
 	for i := 0; i < 9; i++ {
-		postLogin(h, "192.0.2.8", "Herzog", "wrong-guess")
+		postLogin(h, "192.0.2.8", "Admin", "wrong-guess")
 	}
-	if code := postLogin(h, "192.0.2.8", "Herzog", testPassword); code != http.StatusOK {
+	if code := postLogin(h, "192.0.2.8", "Admin", testPassword); code != http.StatusOK {
 		t.Fatalf("login before the threshold: %d", code)
 	}
-	if code := postLogin(h, "192.0.2.8", "Herzog", "wrong-guess"); code != http.StatusUnauthorized {
+	if code := postLogin(h, "192.0.2.8", "Admin", "wrong-guess"); code != http.StatusUnauthorized {
 		t.Fatalf("failures not reset by success: %d", code)
 	}
 }
@@ -288,12 +288,12 @@ func TestPerAddressLockoutAppliesAndResets(t *testing.T) {
 func TestPerAddressLockoutGroupsIPv6Slash64(t *testing.T) {
 	h := newLoginHandler()
 	for i := 0; i < 10; i++ {
-		postLogin(h, fmt.Sprintf("[2001:db8:1:2::%x]", i+1), "Herzog", "wrong-guess")
+		postLogin(h, fmt.Sprintf("[2001:db8:1:2::%x]", i+1), "Admin", "wrong-guess")
 	}
-	if code := postLogin(h, "[2001:db8:1:2:ffff::1]", "Herzog", testPassword); code != http.StatusTooManyRequests {
+	if code := postLogin(h, "[2001:db8:1:2:ffff::1]", "Admin", testPassword); code != http.StatusTooManyRequests {
 		t.Fatalf("rotating within one /64 escaped the lockout: %d", code)
 	}
-	if code := postLogin(h, "[2001:db8:1:3::1]", "Herzog", testPassword); code != http.StatusOK {
+	if code := postLogin(h, "[2001:db8:1:3::1]", "Admin", testPassword); code != http.StatusOK {
 		t.Fatalf("another /64 must not be locked: %d", code)
 	}
 }

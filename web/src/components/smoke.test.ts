@@ -36,24 +36,24 @@ vi.mock('../composables/useWebRTC', () => ({
 const RAW_KEY = /\b(common|chat|admin|profile|legal|talk|mention|emoji|activity|audio|voice|stats|login|channel|sidebar|thread|members|account|connection|errors|menu|role|presence|user|media|resize|app)\.[A-Za-z][A-Za-z.]*\b/
 
 const msg = (id: string, extra: Partial<Message> = {}) => (messageFixture({
-  id, channel_id: 'c1', user_id: 'u1', display_name: 'Herzog', username: 'herzog', content: 'Hello **world**',
+  id, channel_id: 'c1', user_id: 'u1', display_name: 'Admin', username: 'admin', content: 'Hello **world**',
   created_at: '2026-01-01T10:00:00Z', attachments: [], reactions: [{ emoji: '👍', count: 1, users: ['u1'] }], ...extra
 }))
 
 function seed() {
   const auth = useAuthStore()
-  auth.user = userFixture({ id: 'u1', username: 'herzog', display_name: 'Herzog', role: 'admin', locale: 'de' })
+  auth.user = userFixture({ id: 'u1', username: 'admin', display_name: 'Admin', role: 'admin', locale: 'de' })
   const chat = useChatStore()
   chat.categories = [categoryFixture({ id: 'cat', name: 'Lobby', channels: [channelFixture({ id: 'c1', name: 'lobby', type: 'text', topic: 'Hi' }), channelFixture({ id: 'v1', name: 'Lounge', type: 'voice' })] })]
   chat.activeChannel = requireValue(requireValue(chat.categories[0]).channels[0])
-  chat.members = [userFixture({ id: 'u1', username: 'herzog', display_name: 'Herzog', role: 'admin' }), userFixture({ id: 'u2', username: 'zoe', display_name: 'Zoe', role: 'user' })]
+  chat.members = [userFixture({ id: 'u1', username: 'admin', display_name: 'Admin', role: 'admin' }), userFixture({ id: 'u2', username: 'zoe', display_name: 'Zoe', role: 'user' })]
   chat.presenceById = { u1: 'online' }
-  chat.messages = [msg('m1', { reply_count: 2, is_edited: true }), msg('m2', { reply_to_id: 'm1', reply_to: { deleted: false, id: 'm1', content: 'x', display_name: 'Herzog' } })]
+  chat.messages = [msg('m1', { reply_count: 2, is_edited: true }), msg('m2', { reply_to_id: 'm1', reply_to: { deleted: false, id: 'm1', content: 'x', display_name: 'Admin' } })]
   chat.activeThread = msg('m1')
   chat.threadReplies = [msg('r1')]
   const voice = useVoiceStore()
   voice.setChannel('v1')
-  voice.channelUsers = { v1: { u1: voiceUserFixture({ id: 'u1', display_name: 'Herzog', username: 'herzog', role: 'admin' }) } }
+  voice.channelUsers = { v1: { u1: voiceUserFixture({ id: 'u1', display_name: 'Admin', username: 'admin', role: 'admin' }) } }
   return { auth, chat, voice }
 }
 
@@ -63,7 +63,7 @@ const views = {
   CreateChannelModal: () => mount(CreateChannelModal, { attachTo: document.body }),
   ConnectionStatsModal: () => mount(ConnectionStatsModal, { attachTo: document.body }),
   AdminDashboard: () => mount(AdminDashboard, { attachTo: document.body }),
-  UserProfileModal: () => mount(UserProfileModal, { attachTo: document.body, props: { user: userFixture({ id: 'u1', username: 'herzog', display_name: 'Herzog', role: 'admin' }) } }),
+  UserProfileModal: () => mount(UserProfileModal, { attachTo: document.body, props: { user: userFixture({ id: 'u1', username: 'admin', display_name: 'Admin', role: 'admin' }) } }),
   SettingsDialog: () => mount(SettingsDialog, { attachTo: document.body }),
   ChatArea: () => mount(ChatArea, { attachTo: document.body }),
   ThreadSidebar: () => mount(ThreadSidebar, { attachTo: document.body }),

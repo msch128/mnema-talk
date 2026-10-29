@@ -3,7 +3,7 @@ import { test, expect } from './fixtures'
 import { request } from '@playwright/test'
 import { apiFetch, responseString, responseUserId, suiteMember } from './helpers'
 
-const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Admin'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 

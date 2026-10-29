@@ -80,7 +80,7 @@ func TestUsernamePolicy(t *testing.T) {
 			t.Errorf("username %q accepted", bad)
 		}
 	}
-	for _, good := range []string{"Herzog", "max_m", "a.b-c"} {
+	for _, good := range []string{"Admin", "max_m", "a.b-c"} {
 		if err := ValidateUsername(good); err != nil {
 			t.Errorf("username %q rejected: %v", good, err)
 		}

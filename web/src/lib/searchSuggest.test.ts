@@ -61,8 +61,8 @@ describe('suggestions for days and members', () => {
   })
 
   it('shows the username as a detail only when it differs from the name shown', () => {
-    const same = { members: [{ id: 'u', username: 'Herzog', display_name: 'Herzog' }], channels: [] }
-    expect(valueItems('from', same, '')).toEqual([{ value: 'Herzog', label: 'Herzog', detail: undefined }])
+    const same = { members: [{ id: 'u', username: 'Admin', display_name: 'Admin' }], channels: [] }
+    expect(valueItems('from', same, '')).toEqual([{ value: 'Admin', label: 'Admin', detail: undefined }])
     expect(valueItems('from', lookup, 'ada')[0]).toMatchObject({ label: 'Ada Lovelace', detail: '@ada' })
   })
 

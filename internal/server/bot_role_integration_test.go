@@ -176,7 +176,7 @@ func TestMemberListShowsBotsAndNotWebhookAuthors(t *testing.T) {
 			found = &m
 		case m.ID == off.UserID:
 			t.Fatal("a disabled bot is listed")
-		case m.Username == "Herzog":
+		case m.Username == "Admin":
 		default:
 			t.Fatalf("unexpected member %q (webhook author?)", m.Username)
 		}

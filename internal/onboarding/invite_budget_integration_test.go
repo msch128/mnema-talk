@@ -22,10 +22,10 @@ const seededCode = "k7Rm2xQv9pLw"
 func seedInvite(t *testing.T, p *db.Pool) {
 	t.Helper()
 	ctx := context.Background()
-	if err := auth.EnsureAdminUser(ctx, p, "Herzog", "owner-password-123", true); err != nil {
+	if err := auth.EnsureAdminUser(ctx, p, "Admin", "owner-password-123", true); err != nil {
 		t.Fatal(err)
 	}
-	owner, _, err := auth.Login(ctx, p, "Herzog", "owner-password-123")
+	owner, _, err := auth.Login(ctx, p, "Admin", "owner-password-123")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +107,7 @@ func TestInvitePreviewTreatsWeakLegacyCodesAsUnknown(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	seedInvite(t, p)
-	owner, _, err := auth.Login(context.Background(), p, "Herzog", "owner-password-123")
+	owner, _, err := auth.Login(context.Background(), p, "Admin", "owner-password-123")
 	if err != nil {
 		t.Fatal(err)
 	}

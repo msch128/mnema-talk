@@ -86,7 +86,7 @@ func (r *envReader) textSettings() *Config {
 		PublicURL:            normalizeURL(r.get("PUBLIC_URL", "http://localhost:8080")),
 		TrustedProxies:       SplitList(r.get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
 		JWTSecret:            r.get("JWT_SECRET", ""),
-		AdminUsername:        r.get("ADMIN_USERNAME", "Herzog"),
+		AdminUsername:        r.get("ADMIN_USERNAME", "Admin"),
 		InitialLanguage:      strings.ToLower(r.get("INITIAL_LANGUAGE", "de")),
 		AdminInitialPassword: r.get("ADMIN_INITIAL_PASSWORD", ""),
 		DatabaseURL:          r.get("DATABASE_URL", ""),

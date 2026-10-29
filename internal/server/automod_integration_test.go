@@ -300,7 +300,7 @@ func TestLinkFilterAndMentionSpam(t *testing.T) {
 	wantStatus(t, "other domain", f.say(f.member, f.general, "see https://evil.test/x"), http.StatusBadRequest)
 	wantStatus(t, "two mentions", f.say(f.member, f.general, "@moddy @deputy hi"), http.StatusCreated)
 	wantStatus(t, "same mention repeated", f.say(f.member, f.general, "@moddy @moddy @moddy"), http.StatusCreated)
-	wantStatus(t, "three distinct mentions", f.say(f.member, f.general, "@moddy @deputy @Herzog hi"), http.StatusBadRequest)
+	wantStatus(t, "three distinct mentions", f.say(f.member, f.general, "@moddy @deputy @Admin hi"), http.StatusBadRequest)
 
 	// Switching the mode takes effect at once (the compiled rules reload).
 	body := map[string]any{"kind": "links", "name": "Links", "enabled": true, "action": "block", "config": map[string]any{"mode": "block_all"}}

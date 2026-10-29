@@ -101,7 +101,7 @@ func TestEditToEmptyOnlyWithAttachment(t *testing.T) {
 		t.Fatalf("empty edit of a text message: %d %s", res.status, res.body)
 	}
 
-	up := admin.upload("/api/channels/"+ch.String()+"/upload", "file", "a.png", "image/png", pngBytes, map[string]string{"content": "caption @Herzog"})
+	up := admin.upload("/api/channels/"+ch.String()+"/upload", "file", "a.png", "image/png", pngBytes, map[string]string{"content": "caption @Admin"})
 	if up.status != http.StatusCreated {
 		t.Fatalf("upload: %d %s", up.status, up.body)
 	}

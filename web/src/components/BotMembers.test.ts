@@ -32,7 +32,7 @@ const role = (n: number, overrides: Partial<Role> = {}): Role => ({
 })
 const botRole = role(1, { name: 'Bot', hoist: true, managed: true })
 const everyone = role(0, { name: '@everyone', is_everyone: true })
-const owner = userFixture({ id: fixtureId(1), username: 'herzog', display_name: 'Herzog', role: 'admin' })
+const owner = userFixture({ id: fixtureId(1), username: 'admin', display_name: 'Admin', role: 'admin' })
 const helper: Member = { ...userFixture({ id: fixtureId(2), username: 'bot-a1b2c3', display_name: 'Helper' }), is_bot: true, added_by: owner.id }
 const sleeper: Member = { ...userFixture({ id: fixtureId(3), username: 'bot-d4e5f6', display_name: 'Sleeper' }), is_bot: true }
 
@@ -71,7 +71,7 @@ describe('bots in the member list', () => {
     expect(group.find('[data-testid="bot-badge"]').exists()).toBe(true)
     const offline = w.get('[data-member="bot-d4e5f6"]')
     expect(offline.find('[data-testid="bot-badge"]').exists()).toBe(true)
-    expect(w.get('[data-member="herzog"]').find('[data-testid="bot-badge"]').exists()).toBe(false)
+    expect(w.get('[data-member="admin"]').find('[data-testid="bot-badge"]').exists()).toBe(false)
   })
 
   it('lists bots among the others when the Bot role is not hoisted', async () => {
@@ -85,7 +85,7 @@ describe('bots in the member list', () => {
 
 describe('the BOT tag elsewhere', () => {
   it('shows in mention suggestions, reply previews and the audit log', async () => {
-    const mention = mount(MentionSuggestions, { props: { items: [{ username: helper.username, display_name: 'Helper', user: helper }, { username: 'herzog', display_name: 'Herzog', user: owner }] } })
+    const mention = mount(MentionSuggestions, { props: { items: [{ username: helper.username, display_name: 'Helper', user: helper }, { username: 'admin', display_name: 'Admin', user: owner }] } })
     expect(mention.findAll('[data-testid="bot-badge"]')).toHaveLength(1)
 
     const reply = (extra: Record<string, unknown>) => mount(ReplyPreview, { props: { reply: { id: fixtureId(9), deleted: false, user_id: helper.id, username: helper.username, display_name: 'Helper', content: 'hi', ...extra } } })
@@ -96,8 +96,8 @@ describe('the BOT tag elsewhere', () => {
     useChatStore().members = [owner, helper]
     apiMock.mockResolvedValue({
       entries: [
-        { id: 2, created_at: '2026-01-01T10:00:00Z', actor_id: helper.id, actor_name: 'Helper', action: 'message.delete', target_type: 'user', target_id: owner.id, target_name: 'Herzog', details: {}, request_id: 'r' },
-        { id: 1, created_at: '2026-01-01T09:00:00Z', actor_id: owner.id, actor_name: 'Herzog', action: 'role.update', target_type: 'role', target_id: 'x', target_name: 'Mods', details: {}, request_id: 'r' }
+        { id: 2, created_at: '2026-01-01T10:00:00Z', actor_id: helper.id, actor_name: 'Helper', action: 'message.delete', target_type: 'user', target_id: owner.id, target_name: 'Admin', details: {}, request_id: 'r' },
+        { id: 1, created_at: '2026-01-01T09:00:00Z', actor_id: owner.id, actor_name: 'Admin', action: 'role.update', target_type: 'role', target_id: 'x', target_name: 'Mods', details: {}, request_id: 'r' }
       ],
       next_before: null
     })
@@ -125,7 +125,7 @@ describe('the profile of a bot', () => {
     expect(w.find('[data-testid="bot-badge"]').exists()).toBe(true)
     expect(w.get('[data-testid="profile-roles"]').text()).toContain('Bot')
     expect(w.get('[data-testid="profile-roles"]').find('[role="img"]').exists()).toBe(true)
-    expect(w.get('[data-testid="profile-added-by"]').text()).toBe('Added by Herzog')
+    expect(w.get('[data-testid="profile-added-by"]').text()).toBe('Added by Admin')
     expect(w.find('[data-testid="profile-edit-roles"]').exists()).toBe(false)
     expect(w.find('[data-testid="profile-moderation"]').exists()).toBe(false)
     w.unmount()

@@ -199,12 +199,12 @@
     "explain": "This app was checked against a signature pinned in the desktop client. The server cannot change it."
   },
   "login": {
-    "subtitleLogin": "Sign in to Mnema Talk",
+    "subtitleLogin": "Sign in to {name}",
     "subtitleRegister": "Join the community",
     "username": "Username",
-    "usernamePlaceholder": "e.g. herzog",
+    "usernamePlaceholder": "e.g. admin",
     "displayName": "Display name",
-    "displayNamePlaceholder": "e.g. Herzog",
+    "displayNamePlaceholder": "e.g. Admin",
     "password": "Password",
     "inviteCode": "Invite code",
     "inviteCodePlaceholder": "Enter your invite code",
@@ -1422,8 +1422,8 @@
     "onboarding": {
       "hint": "Shown to new members. Once rules exist, members have to accept them before they can post, react, upload or join a Talk. You are never asked.",
       "name": "Community name",
-      "namePlaceholder": "Mnema Talk",
-      "nameHint": "Appears on invite links, before anyone has signed in.",
+      "namePlaceholder": "chat.example.org",
+      "nameHint": "Your community’s name: shown in the browser tab, on the installed app, in e-mails, in notifications and on invite links. Leave it empty to use this server’s address.",
       "welcome": "Welcome text",
       "rules": "Rules",
       "preview": "Preview",

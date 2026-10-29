@@ -80,7 +80,7 @@ JWT_SECRET=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 16)
 S3_ACCESS_KEY=drill$(openssl rand -hex 4)
 S3_SECRET_KEY=$(openssl rand -hex 16)
-ADMIN_USERNAME=Herzog
+ADMIN_USERNAME=Admin
 ADMIN_INITIAL_PASSWORD=$ADMIN_PASSWORD
 UPDATE_CHECK_ENABLED=false
 LINK_PREVIEWS_ENABLED=false
@@ -157,26 +157,26 @@ OLD_VERSION="$(health_version)"
 echo "previous release reports version $OLD_VERSION"
 
 echo "==> seeding users, channels, messages and an upload"
-login Herzog "$ADMIN_PASSWORD"
+login Admin "$ADMIN_PASSWORD"
 for person in alice bob; do
-  code="$(post_json Herzog /api/admin/invites '{"max_uses":1}' | jq -r '.code')"
+  code="$(post_json Admin /api/admin/invites '{"max_uses":1}' | jq -r '.code')"
   [ -n "$code" ] && [ "$code" != null ] || { echo "no invite code for $person" >&2; exit 1; }
   pw="ALICE_PASSWORD"; [ "$person" = bob ] && pw="BOB_PASSWORD"
-  post_json Herzog /api/auth/register "{\"username\":\"$person\",\"password\":\"${!pw}\",\"invite_code\":\"$code\"}" >/dev/null
+  post_json Admin /api/auth/register "{\"username\":\"$person\",\"password\":\"${!pw}\",\"invite_code\":\"$code\"}" >/dev/null
 done
 login alice "$ALICE_PASSWORD"
 login bob "$BOB_PASSWORD"
 
-CATEGORY="$(post_json Herzog /api/admin/categories '{"name":"Projects"}' | jq -r '.id')"
-GENERAL="$(api Herzog "$BASE/api/channels" | jq -r '[.categories[].channels[], .uncategorized[]] | map(select(.type == "text")) | first | .id')"
-PROJECTS="$(post_json Herzog /api/admin/channels "{\"name\":\"upgrade-notes\",\"type\":\"text\",\"category_id\":\"$CATEGORY\"}" | jq -r '.id')"
-VOICE="$(post_json Herzog /api/admin/channels '{"name":"hangout","type":"voice"}' | jq -r '.id')"
+CATEGORY="$(post_json Admin /api/admin/categories '{"name":"Projects"}' | jq -r '.id')"
+GENERAL="$(api Admin "$BASE/api/channels" | jq -r '[.categories[].channels[], .uncategorized[]] | map(select(.type == "text")) | first | .id')"
+PROJECTS="$(post_json Admin /api/admin/channels "{\"name\":\"upgrade-notes\",\"type\":\"text\",\"category_id\":\"$CATEGORY\"}" | jq -r '.id')"
+VOICE="$(post_json Admin /api/admin/channels '{"name":"hangout","type":"voice"}' | jq -r '.id')"
 for id in "$CATEGORY" "$GENERAL" "$PROJECTS" "$VOICE"; do
   [ -n "$id" ] && [ "$id" != null ] || { echo "seeding a channel or category failed" >&2; exit 1; }
 done
 
 TAG="$(openssl rand -hex 4)"
-post_message Herzog "$GENERAL" "welcome-$TAG"
+post_message Admin "$GENERAL" "welcome-$TAG"
 post_message alice "$GENERAL" "alice-hello-$TAG"
 post_message bob "$GENERAL" "bob-hello-$TAG"
 post_message alice "$PROJECTS" "alice-plan-$TAG"
@@ -190,9 +190,9 @@ MEDIA_URL="$(api alice -F "file=@$DEPLOY/payload.bin;filename=notes.bin;type=app
 [ -n "$MEDIA_URL" ] && [ "$MEDIA_URL" != null ] || { echo "upload returned no attachment" >&2; exit 1; }
 echo "==> seeding roles, overwrites, a webhook, a bot and notification settings (from $FROM_VERSION)"
 seed_integration_data
-GENERAL_BEFORE="$(messages Herzog "$GENERAL" | sort)"
-PROJECTS_BEFORE="$(messages Herzog "$PROJECTS" | sort)"
-CHANNELS_BEFORE="$(api Herzog "$BASE/api/channels" | jq -S '[.categories[].channels[], .uncategorized[]] | map({id, name, type}) | sort_by(.id)')"
+GENERAL_BEFORE="$(messages Admin "$GENERAL" | sort)"
+PROJECTS_BEFORE="$(messages Admin "$PROJECTS" | sort)"
+CHANNELS_BEFORE="$(api Admin "$BASE/api/channels" | jq -S '[.categories[].channels[], .uncategorized[]] | map({id, name, type}) | sort_by(.id)')"
 
 echo "==> switching the stack to $NEW_IMAGE"
 sed -i.bak "s|^MNEMA_IMAGE=.*|MNEMA_IMAGE=$NEW_IMAGE|" .env && rm -f .env.bak
@@ -204,7 +204,7 @@ NEW_VERSION="$(health_version)"
 echo "now running $NEW_VERSION (was $OLD_VERSION)"
 LATEST_MIGRATION="$(find "$ROOT/internal/db/migrations" -name '*.sql' -exec basename {} \; | sort | tail -n 1)"
 # The old sessions still work: the secrets and the database are the same.
-SYSTEM="$(api Herzog "$BASE/api/admin/system")"
+SYSTEM="$(api Admin "$BASE/api/admin/system")"
 [ "$(jq -r '.health.database.latest_migration' <<<"$SYSTEM")" = "$LATEST_MIGRATION" ] ||
   { echo "latest migration is not $LATEST_MIGRATION: $(jq -c '.health.database' <<<"$SYSTEM")" >&2; exit 1; }
 [ "$(jq -r '.health.database.pending_migrations' <<<"$SYSTEM")" = 0 ] || { echo "migrations are pending" >&2; exit 1; }
@@ -218,14 +218,14 @@ for person in alice bob; do
   [ "$(api "$person" "$BASE/api/auth/me" | jq -r '.username // .user.username')" = "$person" ] ||
     { echo "$person's session did not survive the upgrade" >&2; exit 1; }
 done
-login Herzog "$ADMIN_PASSWORD"
+login Admin "$ADMIN_PASSWORD"
 login alice "$ALICE_PASSWORD"
 login bob "$BOB_PASSWORD"
 
 echo "==> data intact"
 [ "$(messages alice "$GENERAL" | sort)" = "$GENERAL_BEFORE" ] || { echo "messages of #general changed" >&2; exit 1; }
 [ "$(messages bob "$PROJECTS" | sort)" = "$PROJECTS_BEFORE" ] || { echo "messages of the project channel changed" >&2; exit 1; }
-[ "$(api Herzog "$BASE/api/channels" | jq -S '[.categories[].channels[], .uncategorized[]] | map({id, name, type}) | sort_by(.id)')" = "$CHANNELS_BEFORE" ] ||
+[ "$(api Admin "$BASE/api/channels" | jq -S '[.categories[].channels[], .uncategorized[]] | map({id, name, type}) | sort_by(.id)')" = "$CHANNELS_BEFORE" ] ||
   { echo "the channel list changed" >&2; exit 1; }
 api bob "$BASE$MEDIA_URL" -o "$DEPLOY/after.bin"
 cmp -s "$DEPLOY/payload.bin" "$DEPLOY/after.bin" || { echo "the upload differs after the upgrade" >&2; exit 1; }

@@ -170,7 +170,7 @@ func TestAnExportHoldsOnlyTheMembersOwnData(t *testing.T) {
 
 	// Nothing of anybody else, anywhere in the archive.
 	for name, body := range files {
-		for _, other := range []string{"bob", "Herzog", "secret plan", bob.user.ID.String(), admin.user.ID.String()} {
+		for _, other := range []string{"bob", "Admin", "secret plan", bob.user.ID.String(), admin.user.ID.String()} {
 			if strings.Contains(strings.ToLower(body), strings.ToLower(other)) {
 				t.Errorf("%s names or quotes another member: %q", name, other)
 			}

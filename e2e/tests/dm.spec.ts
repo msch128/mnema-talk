@@ -6,7 +6,7 @@ import { apiFetch, responseString, responseUserId, suiteMember } from './helpers
 // members sit in separate browser contexts; every UI string is German (the
 // suite's locale).
 
-const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Admin'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 

@@ -199,12 +199,12 @@
     "explain": "Diese App wurde gegen eine im Desktop-Client festgelegte Signatur geprüft. Der Server kann sie nicht verändern."
   },
   "login": {
-    "subtitleLogin": "Anmelden bei Mnema Talk",
+    "subtitleLogin": "Anmelden bei {name}",
     "subtitleRegister": "Dem Treffpunkt beitreten",
     "username": "Benutzername",
-    "usernamePlaceholder": "z. B. herzog",
+    "usernamePlaceholder": "z. B. admin",
     "displayName": "Anzeigename",
-    "displayNamePlaceholder": "z. B. Herzog",
+    "displayNamePlaceholder": "z. B. Admin",
     "password": "Passwort",
     "inviteCode": "Einladungscode",
     "inviteCodePlaceholder": "Einladungscode eingeben",
@@ -1422,8 +1422,8 @@
     "onboarding": {
       "hint": "Wird neuen Mitgliedern gezeigt. Sobald es Regeln gibt, müssen Mitglieder sie akzeptieren, bevor sie schreiben, reagieren, hochladen oder einem Talk beitreten können. Du wirst nie gefragt.",
       "name": "Name der Community",
-      "namePlaceholder": "Mnema Talk",
-      "nameHint": "Erscheint auf Einladungslinks, bevor sich jemand angemeldet hat.",
+      "namePlaceholder": "chat.example.org",
+      "nameHint": "Der Name deiner Community: erscheint im Browser-Tab, in der installierten App, in E-Mails, in Benachrichtigungen und auf Einladungslinks. Leer lassen, um die Adresse dieses Servers zu verwenden.",
       "welcome": "Willkommenstext",
       "rules": "Regeln",
       "preview": "Vorschau",

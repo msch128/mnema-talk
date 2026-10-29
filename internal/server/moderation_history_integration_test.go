@@ -205,7 +205,7 @@ func TestTheTimelineGathersWhatModeratorsAndAutomodDidAboutAMember(t *testing.T)
 				t.Errorf("ban: %+v", e)
 			}
 		case "roles":
-			if e.Actor != "Herzog" || len(e.AddedRoles) != 1 || e.AddedRoles[0] != "regulars" {
+			if e.Actor != "Admin" || len(e.AddedRoles) != 1 || e.AddedRoles[0] != "regulars" {
 				t.Errorf("roles: %+v", e)
 			}
 		case "report":
