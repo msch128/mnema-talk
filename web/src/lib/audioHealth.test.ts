@@ -107,6 +107,67 @@ describe('watching a filter deliver frames', () => {
   })
 })
 
+describe('ending a watch', () => {
+  it('stops a context watch by hand, once', () => {
+    const onStall = vi.fn()
+    const stop = watchContextStart(asContext(context()), undefined, onStall)
+    stop()
+    stop()
+    vi.advanceTimersByTime(CONTEXT_START_MS * 2)
+    expect(onStall).not.toHaveBeenCalled()
+  })
+
+  it('ignores a context state change that is not running', () => {
+    const onStall = vi.fn()
+    const ctx = context()
+    watchContextStart(asContext(ctx), undefined, onStall)
+    ctx.dispatchEvent(new Event('statechange'))
+    vi.advanceTimersByTime(CONTEXT_START_MS)
+    expect(onStall).toHaveBeenCalledOnce()
+  })
+
+  it('stops a frame watch by hand, also while it still waits for the context', () => {
+    const onStall = vi.fn()
+    const waiting = context()
+    watchFilterFrames(asContext(waiting), {}, undefined, onStall)()
+    waiting.run()
+    const running = context()
+    running.run()
+    const stop = watchFilterFrames(asContext(running), {}, undefined, onStall)
+    stop()
+    stop()
+    vi.advanceTimersByTime(FILTER_FRAMES_MS * 2)
+    expect(onStall).not.toHaveBeenCalled()
+  })
+
+  it('ignores a state change that is not running while it waits, and an abort while it waits', () => {
+    const onStall = vi.fn()
+    const ctx = context()
+    const controller = new AbortController()
+    watchFilterFrames(asContext(ctx), {}, controller.signal, onStall)
+    ctx.dispatchEvent(new Event('statechange'))
+    controller.abort()
+    ctx.run()
+    vi.advanceTimersByTime(FILTER_FRAMES_MS * 2)
+    expect(onStall).not.toHaveBeenCalled()
+  })
+
+  it('stays quiet when the context closed or the page is left before the frames were due', () => {
+    const onStall = vi.fn()
+    const closing = context()
+    closing.run()
+    watchFilterFrames(asContext(closing), {}, undefined, onStall)
+    closing.state = 'closed'
+    vi.advanceTimersByTime(FILTER_FRAMES_MS * 2)
+    const leaving = context()
+    leaving.run()
+    watchFilterFrames(asContext(leaving), {}, undefined, onStall)
+    pageEvent('pagehide', false)
+    vi.advanceTimersByTime(FILTER_FRAMES_MS * 2)
+    expect(onStall).not.toHaveBeenCalled()
+  })
+})
+
 describe('leaving the page', () => {
   it('runs the callback for a real leave only, not for the back/forward cache', () => {
     const callback = vi.fn()
