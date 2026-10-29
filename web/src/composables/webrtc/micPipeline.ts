@@ -212,7 +212,8 @@ async function applyNoiseFilter(cx: Cx, ctx: AudioContext, stream: MediaStream, 
 function applyInputVolume(cx: Cx, ctx: AudioContext, stream: MediaStream, sendStream: MediaStream) {
   const { voice, st } = cx
   const inputVolume = Number(voice.inputVolume ?? 100)
-  if (inputVolume === 100) return sendStream
+  // Nothing routed through a context that never started is heard.
+  if (inputVolume === 100 || st.contextStalled) return sendStream
   try {
     const gain = ctx.createGain()
     setNodeGain(gain, inputVolume / 100, ctx.currentTime)
@@ -335,7 +336,7 @@ export async function setupMicPipeline(cx: Cx, stream: MediaStream): Promise<Med
   const filtered = await applyNoiseFilter(cx, ctx, stream, controller)
   if (filtered.aborted) return null
   const volumed = applyInputVolume(cx, ctx, stream, filtered.sendStream)
-  const routed = volumed === stream ? routeCapture(cx, ctx, stream) : null
+  const routed = volumed === stream && !cx.st.contextStalled ? routeCapture(cx, ctx, stream) : null
   const sendStream = applyGamingLease(cx, ctx, stream, routed?.sendStream ?? volumed)
   if (!sendStream) return null
   attachMeter(cx, ctx, stream, filtered.meterSource ?? routed?.meterSource ?? null)

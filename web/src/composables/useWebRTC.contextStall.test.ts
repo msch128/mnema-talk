@@ -1,4 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
+import { toRaw } from 'vue'
 import { present } from '../media-test.fixture'
 import { t } from '../i18n'
 import { useToastStore } from '../stores/toast'
@@ -21,12 +22,16 @@ class StalledContext extends FakeAudioContext {
 const toasts = (key: string) => useToastStore().toasts.filter(toast => toast.text === t(key))
 const node = (): SuppressorDouble => ({ connect: vi.fn(), disconnect: vi.fn(), destroy: vi.fn() })
 
-async function stalledCall(mode: 'ai' | 'browser' = 'browser') {
+const captures: MediaStream[] = []
+
+async function stalledCall(mode: 'ai' | 'browser' = 'browser', inputVolume = 100) {
   vi.useFakeTimers()
   vi.stubGlobal('AudioContext', StalledContext)
-  vi.mocked(navigator.mediaDevices.getUserMedia).mockImplementation(async () => fakeStream())
+  captures.length = 0
+  vi.mocked(navigator.mediaDevices.getUserMedia).mockImplementation(async () => { const stream = fakeStream(); captures.push(stream); return stream })
   const call = setup()
   call.voice.noiseMode = mode
+  call.voice.inputVolume = inputVolume
   call.voice.warnNoAudioDetected = false
   call.voice.hangoverMs = 0
   call.voice.autoSensitivity = false
@@ -44,7 +49,15 @@ describe('an audio context that never starts rendering', () => {
     await vi.advanceTimersByTimeAsync(200)
     expect(toasts('audio.engineStalled')).toHaveLength(1)
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(2)
-    expect(voice.localAudioStream).not.toBeNull()
+    // The capture itself is sent: a stream made inside the dead context would be silent.
+    expect(toRaw(voice.localAudioStream)).toBe(captures[1])
+  })
+
+  it('does not route the capture through the context for an input volume either', async () => {
+    const { voice } = await stalledCall('browser', 50)
+    await vi.advanceTimersByTimeAsync(3100)
+    await vi.advanceTimersByTimeAsync(100)
+    expect(toRaw(voice.localAudioStream)).toBe(captures[1])
   })
 
   it('does not drop the AI filter for later calls and says so once per page load', async () => {
