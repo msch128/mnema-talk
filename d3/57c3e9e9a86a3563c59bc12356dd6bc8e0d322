@@ -1,0 +1,79 @@
+internal/auth/moderation.go
+  s_0cae4a4d7ab7c3::t_3ba15f23ce964b 126-132,138-139
+internal/auth/presets_test.go
+  s_e516df595aeaf4::t_02103156367baf 1-49
+internal/automod/presets_test.go
+  s_e516df595aeaf4::t_c05e7bf8e30930 1-33
+internal/chat/presets_test.go
+  s_e516df595aeaf4::t_0c5abde7454959 1-28
+internal/chat/seed_layout_test.go
+  s_afb3377f9f37f8::t_b15155bf765dac 26-45
+internal/poll/presets_test.go
+  s_e516df595aeaf4::t_d8566bdefd4a70 1-23
+internal/testutil/presets/presets.go
+  s_0cae4a4d7ab7c3::t_af60e3389535b8 1-59
+web/src/components/AdminInvitesTab.vue
+  s_731038fe4fc0d1::t_315dd76dd3f324 12,107-111
+web/src/components/EditInviteDialog.vue
+  s_17ef7810e0243d::t_170adfcb04ffb2 12,25-27
+web/src/components/SlowModePicker.vue
+  s_0cae4a4d7ab7c3::t_7b6acf2125697f 6,14
+web/src/lib/automod.ts
+  s_0cae4a4d7ab7c3::t_0028be892192ed 5,13-16
+web/src/lib/moderation.ts
+  s_0cae4a4d7ab7c3::t_e7bb32acb3ba1d 6,44
+web/src/lib/presets.json
+  s_0cae4a4d7ab7c3::t_0b714cba513142 1-13
+web/src/lib/presets.test.ts
+  s_afb3377f9f37f8::t_9d856f0eff9ca9 1-90
+web/src/lib/presets.ts
+  s_17ef7810e0243d::t_ec0248d17964ca 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d357c3e9e9a86a3563c59bc12356dd6bc8e0d322",
+  "prompts": {},
+  "sessions": {
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_731038fe4fc0d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-saved-later-006f0c1510ca4d15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
