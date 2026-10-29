@@ -1,0 +1,23 @@
+internal/server/sharepage.go
+  s_06fcde5dbef956::t_8a4ac99a51a8a5 16,104-105,126,147,187-189
+internal/server/sharepage_test.go
+  s_06fcde5dbef956::t_963b6949e867f6 18-28
+web/web.go
+  s_06fcde5dbef956::t_82b03a18208882 81-85,100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b5e8ca9a7afa964ff79b2ad943cfe67a6aba0d71",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
