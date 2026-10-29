@@ -12,6 +12,7 @@ const snapshot = ref<GamingSnapshot | null>(null)
 const labels = computed(() => ({ overlay: t('gaming.overlay'), mute: t('gaming.mute'), deafen: t('gaming.deafen'), ptt: t('gaming.ptt') }))
 const editing = ref(settingsOnly)
 const draft = ref<GamingSettings | null>(null)
+const gameList = ref<InstanceType<typeof GamingGameList> | null>(null)
 const error = ref(false)
 // The last other app in front, offered by the host only when asked, for the person to confirm.
 const candidate = ref<string | null>(null)
@@ -49,6 +50,7 @@ function bind(key: 'overlay' | 'mute' | 'deafen' | 'ptt', event: KeyboardEvent) 
 }
 async function save() {
   if (!draft.value) return
+  if (gameList.value && !gameList.value.add()) return
   try { await platform.invoke('desktop_gaming_settings', { settings: draft.value }); editing.value = settingsOnly; error.value = false }
   catch { error.value = true }
 }
@@ -112,7 +114,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
         <h3 id="gaming-group-games" class="settings-label">{{ $t('gaming.groupGames') }}</h3>
         <p class="settings-help">{{ $t('gaming.gamesHint') }}</p>
         <div class="settings-card">
-          <GamingGameList v-model="draft.games" />
+          <GamingGameList ref="gameList" v-model="draft.games" />
           <div class="settings-sub">
             <div v-if="candidate" class="flex flex-wrap items-center gap-2" role="group" :aria-label="$t('gaming.addLast')">
               <span class="min-w-0 flex-1 truncate text-sm">{{ $t('gaming.addLastConfirm', { name: candidate }) }}</span>

@@ -148,5 +148,13 @@ describe('native gaming surfaces', () => {
       for (let i = 0; i < 40; i++) await addGame(w, `G${i}.exe`)
       expect(gameNames(w)).toHaveLength(32); expect(w.get('[role="alert"]').text()).toContain('32')
     })
+    it('saves a name that was typed but not added yet', async () => {
+      const w = await settings(); await w.get('.game-input').setValue('Typed.exe')
+      expect(await saved(w)).toEqual(['Wow.exe', 'Typed.exe'])
+    })
+    it('blocks Save with the message when the pending name is invalid', async () => {
+      const w = await settings(); await w.get('.game-input').setValue('nope')
+      expect(await saved(w)).toBeUndefined(); expect(w.get('[role="alert"]').text()).toContain('Game.exe')
+    })
   })
 })

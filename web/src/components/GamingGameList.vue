@@ -12,12 +12,16 @@ const example = 'Game.exe'
 const draft = ref('')
 const problem = ref<GameNameProblem | null>(null)
 
-function add() {
+// Returns false when the typed text is not a valid entry (the problem is shown).
+function add(): boolean {
   const result = checkGameName(draft.value, props.modelValue)
-  if ('problem' in result) { problem.value = result.problem === 'empty' ? null : result.problem; return }
+  if ('problem' in result) { problem.value = result.problem === 'empty' ? null : result.problem; return result.problem === 'empty' }
   emit('update:modelValue', [...props.modelValue, result.name])
   draft.value = ''; problem.value = null
+  return true
 }
+// Save adds what is still typed, so it is not lost.
+defineExpose({ add })
 function remove(name: string) { emit('update:modelValue', props.modelValue.filter(item => item !== name)) }
 </script>
 
@@ -43,7 +47,7 @@ function remove(name: string) { emit('update:modelValue', props.modelValue.filte
           :aria-invalid="problem ? 'true' : undefined"
           :aria-describedby="problem ? `${id}-problem` : undefined"
           class="game-input w-full rounded-md border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
-          @keydown.enter.prevent="add"
+          @keydown.enter.prevent="add()"
           @input="problem = null"
         />
         <p v-if="problem" :id="`${id}-problem`" role="alert" class="field-error mt-1.5!">{{ $t(`gaming.problem.${problem}`, { max: 32 }) }}</p>
