@@ -93,6 +93,12 @@ ADMIN_INITIAL_PASSWORD=...  # the Owner's first password, 14+ characters
    ([ports](ports.md)). In Custom Header press Create > WebSocket (it adds the
    `Upgrade` and `Connection` headers). Get the certificate under Control Panel >
    Security > Certificate (Let's Encrypt).
+
+   Web Station (Web service portal) lists only literal ports: it does not
+   resolve `${PUBLISH_ADDR:-127.0.0.1}:${PORT:-8080}:8080`. If you prefer it to
+   the reverse proxy above, edit that line in `docker-compose.yml` to a literal
+   such as `"127.0.0.1:8080:8080"`, and re-apply the edit after each compose
+   update from a new release.
 4. **Router and firewall.** Forward TCP 443, **UDP 50000-50050** and **UDP and TCP 3479** to the NAS.
    Allow both in Control Panel > Security > Firewall if it is on.
 5. Open `https://chat.example.com`, sign in as the Owner, then
