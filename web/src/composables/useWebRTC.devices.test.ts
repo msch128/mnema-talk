@@ -99,6 +99,27 @@ describe('webcam', () => {
     }
   })
 
+  it('prefers the chosen camera without requiring it, and restarts a running camera on a new choice', async () => {
+    const { rtc, voice } = await joined()
+    voice.selectedCameraDeviceId = 'cam-2'
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockImplementationOnce(async () => fakeStream(['video']))
+    await rtc.startCamera()
+    expect(present(present(vi.mocked(navigator.mediaDevices.getUserMedia).mock.calls.at(-1))[0]).video).toMatchObject({ deviceId: { ideal: 'cam-2' } })
+
+    voice.selectedCameraDeviceId = 'cam-3'
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockImplementationOnce(async () => fakeStream(['video']))
+    await rtc.restartCamera()
+    expect(present(present(vi.mocked(navigator.mediaDevices.getUserMedia).mock.calls.at(-1))[0]).video).toMatchObject({ deviceId: { ideal: 'cam-3' } })
+    expect(voice.isCameraOn).toBe(true)
+
+    // A stopped camera is not started by a changed choice; it uses it next time.
+    rtc.stopCamera()
+    const calls = vi.mocked(navigator.mediaDevices.getUserMedia).mock.calls.length
+    await rtc.restartCamera()
+    expect(vi.mocked(navigator.mediaDevices.getUserMedia).mock.calls.length).toBe(calls)
+    expect(voice.isCameraOn).toBe(false)
+  })
+
   it('does not start a camera outside a call', async () => {
     const { rtc, voice } = setup()
     await rtc.startCamera()

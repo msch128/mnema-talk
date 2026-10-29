@@ -9,6 +9,8 @@ interface MenuItemBase {
   shortcut?: string
   subtitle?: string
   disabled?: boolean
+  /** Why the row is unavailable; shown as a tooltip, and the row stays reachable by keyboard. */
+  disabledReason?: string
   danger?: boolean
   keepOpen?: boolean
   action?: () => void
@@ -31,6 +33,7 @@ export type ContextMenuItem =
   | (MenuItemBase & { type: 'label'; label: string })
   | (MenuItemBase & { type: 'slider'; label: string; value: number; min?: number; max?: number; step?: number; onInput?: (value: number) => void })
   | (MenuItemBase & { type: 'radio' | 'checkbox'; label: string; checked?: boolean })
+  | (MenuItemBase & { type: 'meter'; label: string; value: number; threshold?: number })
   | (MenuItemBase & { type: 'info'; label: string; value?: string | number | null })
   | MenuSubmenu
 
