@@ -22,7 +22,7 @@ func TestHealthCachesThePing(t *testing.T) {
 		pings.Add(1)
 		return nil
 	}}
-	h := health(hc, "1.2.3")
+	h := health(hc, "1.2.3", nil)
 
 	var wg sync.WaitGroup
 	for range 50 {
@@ -60,7 +60,7 @@ func TestHealthRechecksAfterTTL(t *testing.T) {
 		}
 		return nil
 	}}
-	h := health(hc, "")
+	h := health(hc, "", nil)
 	get := func() int {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
@@ -92,13 +92,13 @@ func TestHealthReportsStorageOutage(t *testing.T) {
 	storageErr := errors.New("s3 down")
 	hc := &healthCheck{ttl: 0, ping: func(context.Context) error { return nil }, storage: func() error { return storageErr }}
 	rec := httptest.NewRecorder()
-	health(hc, "").ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
+	health(hc, "", nil).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
 	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), "storage") {
 		t.Fatalf("status %d body %s", rec.Code, rec.Body)
 	}
 	storageErr = nil
 	rec = httptest.NewRecorder()
-	health(hc, "").ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
+	health(hc, "", nil).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("storage back: status %d", rec.Code)
 	}

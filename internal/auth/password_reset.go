@@ -17,6 +17,9 @@ type AuthOptions struct {
 	// PasswordReset is true when members can reset a forgotten password by
 	// e-mail (the server can send mail). It does not say who has an address.
 	PasswordReset bool `json:"password_reset"`
+	// CommunityName is what the sign-in screen calls the community: the Owner's
+	// name for it, else the host. Public, like the rest of this answer.
+	CommunityName string `json:"community_name" binding:"optional"`
 }
 
 // PasswordResetRequest is the body of POST /api/auth/password-reset/request.
@@ -48,8 +51,8 @@ func addressKey(email string) string {
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Router /api/auth/options [get]
-func (h *Handler) authOptions(w http.ResponseWriter, _ *http.Request) error {
-	httpx.WriteJSON(w, http.StatusOK, AuthOptions{PasswordReset: h.mailEnabled()})
+func (h *Handler) authOptions(w http.ResponseWriter, r *http.Request) error {
+	httpx.WriteJSON(w, http.StatusOK, AuthOptions{PasswordReset: h.mailEnabled(), CommunityName: h.Names.Get(r.Context())})
 	return nil
 }
 
@@ -112,7 +115,7 @@ func (h *Handler) sendReset(ctx context.Context, email, lang string) {
 		return
 	}
 	// A failed send leaves the token; it expires unused.
-	_ = h.sendMail(ctx, h.resetMail(stored, mailLocale(locale, lang), username, token))
+	_ = h.sendMail(ctx, h.resetMail(ctx, stored, mailLocale(locale, lang), username, token))
 }
 
 // confirmPasswordReset handles POST /api/auth/password-reset/confirm.

@@ -66,7 +66,7 @@ describe('renderMarkdown – formatting', () => {
   })
 
   it('highlights mentions but not e-mail addresses', () => {
-    expect(dom(renderMarkdown('hi @Herzog')).querySelector<HTMLElement>('.md-mention')?.textContent).toBe('@Herzog')
+    expect(dom(renderMarkdown('hi @cool_guy')).querySelector<HTMLElement>('.md-mention')?.textContent).toBe('@cool_guy')
     expect(dom(renderMarkdown('mail an a@example.com')).querySelector<HTMLElement>('.md-mention')).toBeNull()
   })
 
@@ -91,15 +91,15 @@ describe('links with mention-like or formatting characters', () => {
 })
 
 describe('mentions with known members', () => {
-  const known = new Set(['max', 'herzog'])
+  const known = new Set(['max', 'cool_guy'])
   it('highlights only members and @all/@here, marks the reader', () => {
-    const html = renderMarkdown('@max, @nobody, @all and @herzog.', { known, me: 'Herzog' })
+    const html = renderMarkdown('@max, @nobody, @all and @cool_guy.', { known, me: 'cool_guy' })
     const d = dom(html)
     const names = [...d.querySelectorAll<HTMLElement>('.md-mention')].map(e => e.dataset.mention)
-    expect(names).toEqual(['max', 'all', 'herzog'])
+    expect(names).toEqual(['max', 'all', 'cool_guy'])
     expect(d.querySelector<HTMLElement>('[data-mention="all"]')?.classList.contains('md-mention-group')).toBe(true)
-    expect(d.querySelector<HTMLElement>('[data-mention="herzog"]')?.classList.contains('md-mention-me')).toBe(true)
-    expect(d.textContent).toBe('@max, @nobody, @all and @herzog.')
+    expect(d.querySelector<HTMLElement>('[data-mention="cool_guy"]')?.classList.contains('md-mention-me')).toBe(true)
+    expect(d.textContent).toBe('@max, @nobody, @all and @cool_guy.')
   })
 })
 

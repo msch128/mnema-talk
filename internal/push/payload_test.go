@@ -142,11 +142,11 @@ func TestPushTextIsCleanedAndBounded(t *testing.T) {
 }
 
 func TestTestPushHasNoChannel(t *testing.T) {
-	p := testPayload("en", time.UnixMilli(5))
+	p := testPayload("en", "Mnema Talk", time.UnixMilli(5))
 	if p.Type != "test" || p.Body != "Push works on this device." || p.ChannelID != nil || p.Tag != "test" {
 		t.Fatalf("%+v", p)
 	}
-	if testPayload("de", time.UnixMilli(5)).Body != "Push funktioniert auf diesem Gerät." {
+	if testPayload("de", "Mnema Talk", time.UnixMilli(5)).Body != "Push funktioniert auf diesem Gerät." {
 		t.Fatal("German test text")
 	}
 }

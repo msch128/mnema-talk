@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/community"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -46,6 +47,7 @@ type systemHandler struct {
 
 	// mail is nil when SMTP is not configured.
 	mail          *mailer.Mailer
+	names         *community.Names
 	testMailLimit *httpx.RateLimiter
 
 	selfMu sync.Mutex

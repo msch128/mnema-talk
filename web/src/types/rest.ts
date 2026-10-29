@@ -117,11 +117,13 @@ export function isAuthAdminUser(value: unknown): value is AuthAdminUser {
 export const decodeAuthAdminUser = decoder("auth.AdminUser", isAuthAdminUser)
 
 export type AuthAuthOptions = {
+  community_name?: string
   password_reset: boolean
 }
 
 export function isAuthAuthOptions(value: unknown): value is AuthAuthOptions {
   return isRecord(value)
+    && (!hasOwn(value, "community_name") || isString(value["community_name"]))
     && (hasOwn(value, "password_reset") && typeof value["password_reset"] === 'boolean')
 }
 
@@ -4176,6 +4178,7 @@ export function isServerDatabaseStatus(value: unknown): value is ServerDatabaseS
 export const decodeServerDatabaseStatus = decoder("server.DatabaseStatus", isServerDatabaseStatus)
 
 export type ServerHealth = {
+  community_name?: string
   features?: Array<string>
   status: "ok"
   version: string
@@ -4184,6 +4187,7 @@ export type ServerHealth = {
 
 export function isServerHealth(value: unknown): value is ServerHealth {
   return isRecord(value)
+    && (!hasOwn(value, "community_name") || isString(value["community_name"]))
     && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
     && (hasOwn(value, "status") && (value["status"] === "ok"))
     && (hasOwn(value, "version") && isString(value["version"]))

@@ -23,6 +23,7 @@ function isModerationNotice(payload: Record<string, unknown>): boolean {
 export const NOTICE_EVENT_CHECKS: [string, (payload: Record<string, unknown>) => boolean][] = [
   ['moderation_notice', isModerationNotice],
   ['forum_tags_changed', payload => isIdentifier(payload['channel_id']) && onlyFields(payload, ['channel_id'])],
+  ['community_updated', payload => isString(payload['community_name'], 120) && onlyFields(payload, ['community_name'])],
   ['event_delete', payload => isIdentifier(payload['id'])],
   ['event_reminder', payload => isIdentifier(payload['event_id']) && isString(payload['title'], 100)
     && isTimestamp(payload['start_time']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))]

@@ -41,7 +41,7 @@ func (s *Service) SendEventReminder(ctx context.Context, userID uuid.UUID, event
 			body = "Starts in 15 minutes"
 		}
 		// The title of an event in a private Talk may be private too.
-		shown := "Mnema Talk"
+		shown := s.Names.Get(ctx)
 		if preview {
 			shown = title
 		}

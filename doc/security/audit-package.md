@@ -772,7 +772,7 @@ make up                               # docker compose up -d (app, postgres, sea
 curl -s http://127.0.0.1:8080/api/health
 ```
 
-Sign in as the Owner (`Herzog` by default, password from
+Sign in as the Owner (`admin` by default, password from
 `ADMIN_INITIAL_PASSWORD`), create invite codes and register more accounts to test
 roles and cross-account cases. A published image can be used instead of building
 (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:<version>`); [deployment](../deployment.md#fresh-install)

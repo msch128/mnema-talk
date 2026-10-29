@@ -119,6 +119,7 @@ const examples: Record<ServerEventType, unknown[]> = {
     { event_id: id, title: 'Game Night', start_time: FIXTURE_TIMESTAMP },
     { event_id: id, title: 'Talk Event', start_time: FIXTURE_TIMESTAMP, channel_id: id }
   ],
+  community_updated: [{ community_name: 'Lantern Fox' }, { community_name: '' }],
 }
 
 describe('WebSocket runtime event contracts', () => {

@@ -32,6 +32,21 @@ type Message struct {
 	To      string
 	Subject string
 	Body    string
+	// FromName is the sender's display name, normally the community's. It
+	// replaces the configured one only when that is empty or the product
+	// default, so an operator's own choice in SMTP_FROM stays in force.
+	FromName string
+}
+
+// defaultFromName is the display name an operator gets by copying the example.
+const defaultFromName = "Mnema Talk"
+
+// sender is the From address of msg.
+func (m *Mailer) sender(msg Message) string {
+	if msg.FromName == "" || (m.from.Name != "" && m.from.Name != defaultFromName) {
+		return m.from.String()
+	}
+	return (&mail.Address{Name: msg.FromName, Address: m.from.Address}).String()
 }
 
 // SendError says at which stage a delivery failed.

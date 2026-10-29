@@ -73,7 +73,7 @@ func (h *systemHandler) sendTestMail(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 	locale := owner.Locale
-	if err := h.mail.Send(r.Context(), auth.TestMail(to, locale)); err != nil {
+	if err := h.mail.Send(r.Context(), auth.TestMail(to, locale, h.names.Get(r.Context()))); err != nil {
 		var se *mailer.SendError
 		if errors.As(err, &se) {
 			return httpx.ErrUnavailable(se.Error())

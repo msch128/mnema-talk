@@ -137,30 +137,30 @@ func TestLoginFailureLimiterEscalates(t *testing.T) {
 
 	fail := func(n int) {
 		for i := 0; i < n; i++ {
-			l.RecordFailure("Herzog")
+			l.RecordFailure("cool_guy")
 		}
 	}
 	fail(2)
-	if locked, _ := l.IsLockedOut("herzog"); locked {
+	if locked, _ := l.IsLockedOut("cool_guy"); locked {
 		t.Fatal("locked before threshold")
 	}
 	fail(1)
-	locked, remaining := l.IsLockedOut("HERZOG")
+	locked, remaining := l.IsLockedOut("COOL_GUY")
 	if !locked || remaining != time.Minute {
 		t.Fatalf("first lockout: locked=%v remaining=%v", locked, remaining)
 	}
 
 	now = now.Add(time.Minute)
-	if locked, _ := l.IsLockedOut("herzog"); locked {
+	if locked, _ := l.IsLockedOut("cool_guy"); locked {
 		t.Fatal("first lockout did not expire")
 	}
 	fail(3)
-	if _, remaining := l.IsLockedOut("herzog"); remaining != 5*time.Minute {
+	if _, remaining := l.IsLockedOut("cool_guy"); remaining != 5*time.Minute {
 		t.Fatalf("second lockout should escalate to 5m, got %v", remaining)
 	}
 
-	l.ResetFailures("herzog")
-	if locked, _ := l.IsLockedOut("herzog"); locked {
+	l.ResetFailures("cool_guy")
+	if locked, _ := l.IsLockedOut("cool_guy"); locked {
 		t.Fatal("reset did not clear lockout")
 	}
 }

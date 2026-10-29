@@ -55,7 +55,8 @@
     "ForumTagsChanged": "forum_tags_changed",
     "EventUpdate": "event_update",
     "EventDelete": "event_delete",
-    "EventReminder": "event_reminder"
+    "EventReminder": "event_reminder",
+    "CommunityUpdated": "community_updated"
   },
   "client": {
     "ClientPing": "ping",

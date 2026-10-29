@@ -75,7 +75,7 @@ docker compose up -d --wait        # pulls the images, returns once everything i
 curl -fsS http://127.0.0.1:8080/api/health
 ```
 
-Sign in as the Owner (`ADMIN_USERNAME`, default `Herzog`) and create invite
+Sign in as the Owner (`ADMIN_USERNAME`, default `admin`) and create invite
 codes. Put a reverse proxy with TLS in front, forward the voice UDP range
 (see [Ports](#ports)) and set up [backups](operations.md#backups-and-restore)
 before inviting anyone. CI runs exactly these steps against the image it just

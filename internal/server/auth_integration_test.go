@@ -29,7 +29,7 @@ func TestSessionCookieIsHttpOnlyAndBodyHasNoToken(t *testing.T) {
 	a.seedAdmin()
 
 	c := a.anon()
-	res := c.post("/api/auth/login", map[string]string{"username": "herzog", "password": "admin-password-123"})
+	res := c.post("/api/auth/login", map[string]string{"username": "cool_guy", "password": "admin-password-123"})
 	if res.status != http.StatusOK {
 		t.Fatalf("login: %d %s", res.status, res.body)
 	}
@@ -58,7 +58,7 @@ func TestLoginFailuresDoNotRevealAccounts(t *testing.T) {
 	a := newApp(t, false)
 	a.seedAdmin()
 	c := a.anon()
-	wrongPass := c.post("/api/auth/login", map[string]string{"username": "Herzog", "password": "nope-nope-nope"})
+	wrongPass := c.post("/api/auth/login", map[string]string{"username": "cool_guy", "password": "nope-nope-nope"})
 	noUser := c.post("/api/auth/login", map[string]string{"username": "ghost", "password": "nope-nope-nope"})
 	if wrongPass.status != http.StatusUnauthorized || noUser.status != http.StatusUnauthorized {
 		t.Fatalf("statuses %d / %d", wrongPass.status, noUser.status)
@@ -73,10 +73,10 @@ func TestLoginLockoutAfterRepeatedFailures(t *testing.T) {
 	a.seedAdmin()
 	c := a.anon()
 	for i := 0; i < 10; i++ {
-		c.post("/api/auth/login", map[string]string{"username": "Herzog", "password": "wrong-password"})
+		c.post("/api/auth/login", map[string]string{"username": "cool_guy", "password": "wrong-password"})
 	}
 	// Even the correct password is refused while locked.
-	res := c.post("/api/auth/login", map[string]string{"username": "Herzog", "password": "admin-password-123"})
+	res := c.post("/api/auth/login", map[string]string{"username": "cool_guy", "password": "admin-password-123"})
 	if res.status != http.StatusTooManyRequests || res.header.Get("Retry-After") == "" {
 		t.Fatalf("expected 429 with Retry-After, got %d", res.status)
 	}
@@ -90,7 +90,7 @@ func TestFailedLoginsFromOneClientDoNotLockOutOthers(t *testing.T) {
 	a.seedAdmin()
 	attacker := a.anon()
 	from := func(ip string) map[string]string { return map[string]string{"X-Forwarded-For": ip} }
-	body := func(pw string) any { return map[string]string{"username": "Herzog", "password": pw} }
+	body := func(pw string) any { return map[string]string{"username": "cool_guy", "password": pw} }
 	for i := 0; i < 10; i++ {
 		attacker.do(http.MethodPost, "/api/auth/login", body("wrong-password"), from("203.0.113.5"))
 	}
@@ -157,8 +157,8 @@ func TestRegistrationRequiresValidInvite(t *testing.T) {
 func TestLogoutEverywhereRevokesAllSessions(t *testing.T) {
 	a := newApp(t, false)
 	a.seedAdmin()
-	laptop := a.login("Herzog", "admin-password-123")
-	phone := a.login("Herzog", "admin-password-123")
+	laptop := a.login("cool_guy", "admin-password-123")
+	phone := a.login("cool_guy", "admin-password-123")
 
 	if res := laptop.post("/api/auth/logout-all", nil); res.status != http.StatusNoContent {
 		t.Fatalf("logout-all: %d %s", res.status, res.body)
@@ -176,8 +176,8 @@ func TestLogoutEverywhereRevokesAllSessions(t *testing.T) {
 func TestPasswordChangeRevokesOtherSessions(t *testing.T) {
 	a := newApp(t, false)
 	a.seedAdmin()
-	laptop := a.login("Herzog", "admin-password-123")
-	phone := a.login("Herzog", "admin-password-123")
+	laptop := a.login("cool_guy", "admin-password-123")
+	phone := a.login("cool_guy", "admin-password-123")
 
 	res := laptop.put("/api/auth/password", map[string]string{"current_password": "admin-password-123", "new_password": "a-brand-new-password"})
 	if res.status != http.StatusNoContent {

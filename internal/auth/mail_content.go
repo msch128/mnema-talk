@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -20,8 +21,6 @@ const (
 func (h *Handler) link(path, token string) string {
 	return strings.TrimRight(h.PublicURL, "/") + path + "#token=" + token
 }
-
-const serviceName = "Mnema Talk"
 
 // mailJSON holds the subject and body templates by language (see mailLocale).
 // A subject takes the service name; a body takes the username, the service
@@ -45,22 +44,29 @@ func mailText(locale, key string) string {
 	return mailTexts["en"][key]
 }
 
-func (h *Handler) verifyMail(to, locale, username, token string) mailer.Message {
-	return mailer.Message{To: to, Subject: fmt.Sprintf(mailText(locale, "verify.subject"), serviceName),
-		Body: fmt.Sprintf(mailText(locale, "verify.body"), username, serviceName, h.link(verifyPath, token))}
+// The mails call the service by the community's name (see package community):
+// subject, body and the sender's display name.
+
+func (h *Handler) verifyMail(ctx context.Context, to, locale, username, token string) mailer.Message {
+	name := h.Names.Get(ctx)
+	return mailer.Message{To: to, FromName: name, Subject: fmt.Sprintf(mailText(locale, "verify.subject"), name),
+		Body: fmt.Sprintf(mailText(locale, "verify.body"), username, name, h.link(verifyPath, token))}
 }
 
-func (h *Handler) resetMail(to, locale, username, token string) mailer.Message {
-	return mailer.Message{To: to, Subject: fmt.Sprintf(mailText(locale, "reset.subject"), serviceName),
-		Body: fmt.Sprintf(mailText(locale, "reset.body"), username, serviceName, h.link(resetPath, token))}
+func (h *Handler) resetMail(ctx context.Context, to, locale, username, token string) mailer.Message {
+	name := h.Names.Get(ctx)
+	return mailer.Message{To: to, FromName: name, Subject: fmt.Sprintf(mailText(locale, "reset.subject"), name),
+		Body: fmt.Sprintf(mailText(locale, "reset.body"), username, name, h.link(resetPath, token))}
 }
 
-func alertMail(to, locale, username string) mailer.Message {
-	return mailer.Message{To: to, Subject: fmt.Sprintf(mailText(locale, "alert.subject"), serviceName),
-		Body: fmt.Sprintf(mailText(locale, "alert.body"), username, serviceName)}
+func (h *Handler) alertMail(ctx context.Context, to, locale, username string) mailer.Message {
+	name := h.Names.Get(ctx)
+	return mailer.Message{To: to, FromName: name, Subject: fmt.Sprintf(mailText(locale, "alert.subject"), name),
+		Body: fmt.Sprintf(mailText(locale, "alert.body"), username, name)}
 }
 
-// TestMail is the message the Owner's "send a test mail" action sends.
-func TestMail(to, locale string) mailer.Message {
-	return mailer.Message{To: to, Subject: fmt.Sprintf(mailText(locale, "test.subject"), serviceName), Body: mailText(locale, "test.body")}
+// TestMail is the message the Owner's "send a test mail" action sends; name
+// is the community's.
+func TestMail(to, locale, name string) mailer.Message {
+	return mailer.Message{To: to, FromName: name, Subject: fmt.Sprintf(mailText(locale, "test.subject"), name), Body: mailText(locale, "test.body")}
 }

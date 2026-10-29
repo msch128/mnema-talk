@@ -39,8 +39,8 @@ func TestServerVersionIsAnnounced(t *testing.T) {
 	}
 	var health map[string]any
 	res.decode(t, &health)
-	if health["status"] != "ok" || health["version"] != "0.4.0" || health["web_client_api"] != float64(1) || len(health) != 4 {
-		t.Fatalf("health = %v, want status, version, public web-client compatibility and the feature list only", health)
+	if health["status"] != "ok" || health["version"] != "0.4.0" || health["web_client_api"] != float64(1) || health["community_name"] == "" || len(health) != 5 {
+		t.Fatalf("health = %v, want status, version, public web-client compatibility, the community name and the feature list only", health)
 	}
 	features, _ := health["features"].([]any)
 	if len(features) != len(Features) || features[0] != "blocks" {

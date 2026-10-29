@@ -104,7 +104,7 @@ JWT_SECRET=$(openssl rand -hex 32)
 POSTGRES_PASSWORD=$(openssl rand -hex 16)
 S3_ACCESS_KEY=drill$(openssl rand -hex 4)
 S3_SECRET_KEY=$(openssl rand -hex 16)
-ADMIN_USERNAME=Herzog
+ADMIN_USERNAME=cool_guy
 ADMIN_INITIAL_PASSWORD=$ADMIN_PASSWORD
 UPDATE_CHECK_ENABLED=false
 LINK_PREVIEWS_ENABLED=false
@@ -121,7 +121,7 @@ ENV
   login() {
     rm -f "$COOKIES"
     curl -fsS -c "$COOKIES" -H "Origin: $BASE" -H 'Content-Type: application/json' \
-      --data "{\"username\":\"Herzog\",\"password\":\"$ADMIN_PASSWORD\"}" "$BASE/api/auth/login" >/dev/null
+      --data "{\"username\":\"cool_guy\",\"password\":\"$ADMIN_PASSWORD\"}" "$BASE/api/auth/login" >/dev/null
   }
   api() { curl -fsS -b "$COOKIES" -H "Origin: $BASE" "$@"; }
   guard_refuses() {

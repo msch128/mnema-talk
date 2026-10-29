@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test'
 import { apiFetch, responseString } from './helpers'
 import { test, expect } from './fixtures'
 
-const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
@@ -22,7 +22,7 @@ async function expectNoViolations(page: Page, where: string) {
 async function signIn(page: Page) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+  await expect(dialog.getByTestId('login-heading')).toBeVisible()
   await expectNoViolations(page, 'the sign-in dialog')
   await dialog.getByLabel('Benutzername').fill(ADMIN_USER)
   await dialog.getByLabel('Passwort').fill(ADMIN_PASSWORD)

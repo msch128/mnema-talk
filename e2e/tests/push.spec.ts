@@ -14,7 +14,7 @@ import { apiFetch, responseString } from './helpers'
 // denied; the full browser in its new headless mode honours the grant.
 test.use({ channel: 'chromium' })
 
-const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
+const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
@@ -43,7 +43,7 @@ async function signedInContext(browser: Browser, permissions: string[] = []): Pr
 async function signIn(page: Page) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('heading', { name: 'Mnema Talk' })).toBeVisible()
+  await expect(dialog.getByTestId('login-heading')).toBeVisible()
   await dialog.getByLabel('Benutzername').fill(ADMIN_USER)
   await dialog.getByLabel('Passwort').fill(ADMIN_PASSWORD)
   await dialog.getByRole('button', { name: 'Anmelden' }).click()

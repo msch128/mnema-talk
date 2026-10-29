@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/community"
 	"github.com/msch128/mnema-talk/internal/onboarding"
 )
 
@@ -38,17 +39,18 @@ type sharePages struct {
 	index     []byte
 	publicURL string // PUBLIC_URL without trailing slash; "" leaves the absolute tags out
 	onboard   *onboarding.Handler
+	names     *community.Names // the page title: the community name, else the host
 
 	mu       sync.Mutex
 	rootName string
 	rootAt   time.Time
 }
 
-func newSharePages(next http.Handler, index []byte, publicURL string, onboard *onboarding.Handler) http.Handler {
+func newSharePages(next http.Handler, index []byte, publicURL string, onboard *onboarding.Handler, names *community.Names) http.Handler {
 	if index == nil || onboard == nil {
 		return next
 	}
-	return &sharePages{next: next, index: index, publicURL: strings.TrimRight(publicURL, "/"), onboard: onboard}
+	return &sharePages{next: next, index: index, publicURL: strings.TrimRight(publicURL, "/"), onboard: onboard, names: names}
 }
 
 func (s *sharePages) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -98,9 +100,8 @@ func (s *sharePages) communityName(ctx context.Context) string {
 
 func (s *sharePages) rootTags(ctx context.Context) pageTags {
 	name := strings.TrimSpace(s.communityName(ctx))
-	t := pageTags{title: shareProduct, description: shareTagline, url: s.abs("/"), image: s.abs(shareIcon)}
+	t := pageTags{title: s.names.Get(ctx), description: shareTagline, url: s.abs("/"), image: s.abs(shareIcon)}
 	if name != "" {
-		t.title = name
 		t.description = "Join " + name + " on " + shareProduct + ". " + shareTagline
 	}
 	return t

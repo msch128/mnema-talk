@@ -8,6 +8,7 @@ import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
 import { useEventsStore } from '../events'
+import { useOnboardingStore } from '../onboarding'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
@@ -175,6 +176,8 @@ const HANDLERS: Handlers = {
     voiceStore.serverScreenLayers = p?.screen_layers ?? 0
     versions.followAdminUpdates(() => authStore.isAdmin)
   },
+  // The Owner renamed the community: the header, tab title and login follow.
+  community_updated: () => { void useOnboardingStore().reload() },
   // An admin started an update: the server restarts in a moment.
   system_update: (_cx, p) => useAppVersionStore().setUpdating(p?.version),
   presence_snapshot: onPresenceSnapshot,

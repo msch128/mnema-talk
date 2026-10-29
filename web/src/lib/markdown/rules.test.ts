@@ -64,7 +64,7 @@ describe('preview links', () => {
 })
 
 describe('mention rules', () => {
-  const known = new Set(['max', 'herzog'])
+  const known = new Set(['max', 'cool_guy'])
 
   it('keep the trailing dot or dash outside the pill', () => {
     expect(renderMarkdown('hi @max.', { known })).toBe('hi <span class="md-mention" data-mention="max" role="button" tabindex="0">@max</span>.')

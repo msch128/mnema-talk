@@ -74,7 +74,7 @@ echo
 echo "==> Owner sign-in"
 COOKIES="$DIR/cookies"
 curl -fsS -c "$COOKIES" -H "Origin: $BASE" -H 'Content-Type: application/json' \
-  --data "{\"username\":\"Herzog\",\"password\":\"$ADMIN_PASSWORD\"}" \
+  --data "{\"username\":\"admin\",\"password\":\"$ADMIN_PASSWORD\"}" \
   "$BASE/api/auth/login" >/dev/null
 case "$(curl -fsS -b "$COOKIES" "$BASE/api/auth/me")" in
   *'"role":"admin"'*) ;;

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -170,8 +171,9 @@ func TestAnExportHoldsOnlyTheMembersOwnData(t *testing.T) {
 
 	// Nothing of anybody else, anywhere in the archive.
 	for name, body := range files {
-		for _, other := range []string{"bob", "Herzog", "secret plan", bob.user.ID.String(), admin.user.ID.String()} {
-			if strings.Contains(strings.ToLower(body), strings.ToLower(other)) {
+		for _, other := range []string{"bob", "cool_guy", "secret plan", bob.user.ID.String(), admin.user.ID.String()} {
+			// Whole words: "Admin" must not match "administrative".
+			if regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(other) + `\b`).MatchString(body) {
 				t.Errorf("%s names or quotes another member: %q", name, other)
 			}
 		}

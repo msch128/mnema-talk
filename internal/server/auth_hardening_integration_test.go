@@ -47,7 +47,7 @@ func TestLogoutAllClosesOpenWebSockets(t *testing.T) {
 func TestChangePasswordClosesWebSocketsAndKeepsSession(t *testing.T) {
 	a := newApp(t, true)
 	admin := a.seedAdmin()
-	other := a.login("Herzog", "admin-password-123")
+	other := a.login("cool_guy", "admin-password-123")
 	ws, _, err := other.dialWS(a.origin())
 	if err != nil {
 		t.Fatal(err)
@@ -83,7 +83,7 @@ func TestAuthenticateRequestReturnsTokenVersion(t *testing.T) {
 		return r
 	}
 	u, tv, err := sessions.AuthenticateRequest(req())
-	if err != nil || u.Username != "Herzog" || tv != 0 {
+	if err != nil || u.Username != "cool_guy" || tv != 0 {
 		t.Fatalf("got %v, %d, %v", u, tv, err)
 	}
 	if res := admin.put("/api/auth/password", map[string]string{"current_password": "admin-password-123", "new_password": "new-admin-password-456"}); res.status != http.StatusNoContent {
@@ -92,7 +92,7 @@ func TestAuthenticateRequestReturnsTokenVersion(t *testing.T) {
 	if _, tv, err := sessions.AuthenticateRequest(req()); err != nil || tv != 1 {
 		t.Fatalf("after password change: tv=%d err=%v", tv, err)
 	}
-	if u, err := sessions.Authenticate(req()); err != nil || u.Username != "Herzog" {
+	if u, err := sessions.Authenticate(req()); err != nil || u.Username != "cool_guy" {
 		t.Fatalf("Authenticate: %v %v", u, err)
 	}
 }
@@ -105,8 +105,8 @@ func TestEnsureAdminUserValidatesAndUsesAuthHashing(t *testing.T) {
 		{"x", "", "ADMIN_USERNAME"},
 		{"all", "", "ADMIN_USERNAME"},
 		{strings.Repeat("a", 40), "", "ADMIN_USERNAME"},
-		{"Herzog", "short", "ADMIN_INITIAL_PASSWORD"},
-		{"Herzog", strings.Repeat("p", 73), "ADMIN_INITIAL_PASSWORD"},
+		{"cool_guy", "short", "ADMIN_INITIAL_PASSWORD"},
+		{"cool_guy", strings.Repeat("p", 73), "ADMIN_INITIAL_PASSWORD"},
 	} {
 		if err := auth.EnsureAdminUser(ctx, a.db, tc.user, tc.pass, false); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("EnsureAdminUser(%q): %v, want an error naming %s", tc.user, err, tc.want)
@@ -114,28 +114,28 @@ func TestEnsureAdminUserValidatesAndUsesAuthHashing(t *testing.T) {
 	}
 
 	// Production never generates (and so never logs) a password.
-	if err := auth.EnsureAdminUser(ctx, a.db, "Herzog", "", true); err == nil || !strings.Contains(err.Error(), "ADMIN_INITIAL_PASSWORD") {
+	if err := auth.EnsureAdminUser(ctx, a.db, "cool_guy", "", true); err == nil || !strings.Contains(err.Error(), "ADMIN_INITIAL_PASSWORD") {
 		t.Errorf("empty password in production: %v, want an error naming ADMIN_INITIAL_PASSWORD", err)
 	}
 
-	if err := auth.EnsureAdminUser(ctx, a.db, "Herzog", "admin-password-123", false); err != nil {
+	if err := auth.EnsureAdminUser(ctx, a.db, "cool_guy", "admin-password-123", false); err != nil {
 		t.Fatal(err)
 	}
 	var hash, display string
-	if err := a.db.QueryRow(ctx, `SELECT password_hash, display_name FROM users WHERE username = 'Herzog'`).Scan(&hash, &display); err != nil {
+	if err := a.db.QueryRow(ctx, `SELECT password_hash, display_name FROM users WHERE username = 'cool_guy'`).Scan(&hash, &display); err != nil {
 		t.Fatal(err)
 	}
 	if cost, _ := bcrypt.Cost([]byte(hash)); cost != auth.PasswordCost() {
 		t.Errorf("admin hash cost %d, want auth's %d", cost, auth.PasswordCost())
 	}
-	if display != "Herzog" {
+	if display != "cool_guy" {
 		t.Errorf("display name %q", display)
 	}
 	// Idempotent, and settings no longer matter once the admin exists.
 	if err := auth.EnsureAdminUser(ctx, a.db, "x", "short", false); err != nil {
 		t.Fatalf("existing admin: %v", err)
 	}
-	if err := auth.EnsureAdminUser(ctx, a.db, "Herzog", "", true); err != nil {
+	if err := auth.EnsureAdminUser(ctx, a.db, "cool_guy", "", true); err != nil {
 		t.Fatalf("existing admin, production, empty password: %v", err)
 	}
 }
@@ -144,10 +144,10 @@ func TestEnsureAdminUserRefusesCaseInsensitiveClash(t *testing.T) {
 	a := newApp(t, false)
 	ctx := context.Background()
 	hash, _ := auth.HashPassword("member-password-1")
-	if _, err := a.db.Exec(ctx, `INSERT INTO users (username, display_name, password_hash, role) VALUES ('herzog', 'herzog', $1, 'user')`, hash); err != nil {
+	if _, err := a.db.Exec(ctx, `INSERT INTO users (username, display_name, password_hash, role) VALUES ('cool_guy', 'cool_guy', $1, 'user')`, hash); err != nil {
 		t.Fatal(err)
 	}
-	err := auth.EnsureAdminUser(ctx, a.db, "Herzog", "admin-password-123", false)
+	err := auth.EnsureAdminUser(ctx, a.db, "cool_guy", "admin-password-123", false)
 	if err == nil || !strings.Contains(err.Error(), "taken") {
 		t.Fatalf("got %v, want a 'taken' error", err)
 	}
