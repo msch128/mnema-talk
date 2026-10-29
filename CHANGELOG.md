@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.1.0](https://github.com/msch128/mnema-talk/compare/v2.0.0...v2.1.0) (2026-10-29)
+
+
+### Features
+
+* **admin:** show the status checks in the display language ([#512](https://github.com/msch128/mnema-talk/issues/512)) ([b80419a](https://github.com/msch128/mnema-talk/commit/b80419aa69d665b55e23b80bb4a55e8683597554))
+* **import:** connect Discord roles to existing roles ([#515](https://github.com/msch128/mnema-talk/issues/515)) ([2b1ac1e](https://github.com/msch128/mnema-talk/commit/2b1ac1eb18844df70dd00b50b598b7d8afb56a75))
+* **invites:** edit the expiry and use limit of an existing invite ([#511](https://github.com/msch128/mnema-talk/issues/511)) ([720ba1c](https://github.com/msch128/mnema-talk/commit/720ba1c68713e47304100d22038d03705000cde0))
+* **web:** auto-growing composer, paste and drag-and-drop for files ([#509](https://github.com/msch128/mnema-talk/issues/509)) ([26292e3](https://github.com/msch128/mnema-talk/commit/26292e3b99a1f11a90765931bf891916adb842a8))
+* **web:** copy button and selectable text for connect errors and alerts ([#514](https://github.com/msch128/mnema-talk/issues/514)) ([edb4df1](https://github.com/msch128/mnema-talk/commit/edb4df19238a346a8ab83ff16c80ab7cda058123))
+* **web:** translate the desktop client's TLS version error ([#513](https://github.com/msch128/mnema-talk/issues/513)) ([66eb95f](https://github.com/msch128/mnema-talk/commit/66eb95fd337794a7dfd5e755b687cc2cd8e71629))
+
+
+### Bug Fixes
+
+* **voice:** warn about a silent microphone from the raw capture, once, and let it be dismissed ([#510](https://github.com/msch128/mnema-talk/issues/510)) ([d0dde93](https://github.com/msch128/mnema-talk/commit/d0dde93211c7cbee7e8e6138d022f786825f7116))
+
+
+### Documentation
+
+* note that Synology Web Station needs a literal port ([#517](https://github.com/msch128/mnema-talk/issues/517)) ([436fd62](https://github.com/msch128/mnema-talk/commit/436fd62fe7ec8372f8abd65d18654c3c99942a92))
+* one-click updates and the app port for the Synology guide ([#516](https://github.com/msch128/mnema-talk/issues/516)) ([8638dbf](https://github.com/msch128/mnema-talk/commit/8638dbf0fac40c8239420ecd07c6c787b424dc5d))
+
 ## [2.0.0](https://github.com/msch128/mnema-talk/compare/v1.5.1...v2.0.0) (2026-10-29)
 
 
