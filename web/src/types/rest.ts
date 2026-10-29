@@ -603,6 +603,19 @@ export function isAuthTwoFactorSetupRequest(value: unknown): value is AuthTwoFac
 
 export const decodeAuthTwoFactorSetupRequest = decoder("auth.TwoFactorSetupRequest", isAuthTwoFactorSetupRequest)
 
+export type AuthUpdateInviteRequest = {
+  expires_at?: string | null
+  max_uses?: number | null
+}
+
+export function isAuthUpdateInviteRequest(value: unknown): value is AuthUpdateInviteRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "expires_at") || (isTimestamp(value["expires_at"]) || value["expires_at"] === null))
+    && (!hasOwn(value, "max_uses") || ((isInteger(value["max_uses"]) && value["max_uses"] >= 0 && value["max_uses"] <= 1000) || value["max_uses"] === null))
+}
+
+export const decodeAuthUpdateInviteRequest = decoder("auth.UpdateInviteRequest", isAuthUpdateInviteRequest)
+
 export type AuthUpdateProfileRequest = {
   bio?: string
   display_name?: string
