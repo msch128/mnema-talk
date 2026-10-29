@@ -18,12 +18,19 @@ import (
 type CreateForumTagRequest struct {
 	Name  string `json:"name" minLength:"1" maxLength:"20"`
 	Emoji string `json:"emoji,omitempty" binding:"optional" maxLength:"32"`
+	// Color is a palette name (gray, red, orange, yellow, green, teal, blue, purple, pink); omitted means none.
+	Color string `json:"color,omitempty" binding:"optional" enums:"gray,red,orange,yellow,green,teal,blue,purple,pink"`
+	// Moderated: only members with Manage messages apply or remove the tag.
+	Moderated bool `json:"moderated,omitempty" binding:"optional"`
 }
 
 // UpdateForumTagRequest is the body of PATCH /api/channels/{channelID}/tags/{tagID}.
 type UpdateForumTagRequest struct {
 	Name  *string `json:"name,omitempty" binding:"optional" minLength:"1" maxLength:"20"`
 	Emoji *string `json:"emoji,omitempty" binding:"optional" maxLength:"32"`
+	// Color is a palette name; an empty string clears it.
+	Color     *string `json:"color,omitempty" binding:"optional" enums:",gray,red,orange,yellow,green,teal,blue,purple,pink"`
+	Moderated *bool   `json:"moderated,omitempty" binding:"optional"`
 }
 
 // CreatePostRequest is the body of POST /api/channels/{channelID}/posts.
@@ -38,6 +45,8 @@ type UpdatePostRequest struct {
 	Title    *string      `json:"title,omitempty" binding:"optional" minLength:"1" maxLength:"100"`
 	TagIDs   *[]uuid.UUID `json:"tag_ids,omitempty" binding:"optional"`
 	IsLocked *bool        `json:"is_locked,omitempty" binding:"optional"`
+	// IsResolved marks the post as solved (author or Manage messages) or reopens it.
+	IsResolved *bool `json:"is_resolved,omitempty" binding:"optional"`
 }
 
 func (h *Handler) mountForum(r chi.Router) {
@@ -48,6 +57,7 @@ func (h *Handler) mountForum(r chi.Router) {
 	r.Get("/channels/{channelID}/posts", httpx.Handle(h.listForumPosts))
 	r.Post("/channels/{channelID}/posts", httpx.Handle(h.createForumPost))
 	r.Patch("/channels/{channelID}/posts/{messageID}", httpx.Handle(h.updateForumPost))
+	h.mountForumExtras(r)
 }
 
 func (h *Handler) requireForumChannel(r *http.Request, chID uuid.UUID) (*ChannelInfo, error) {
@@ -64,7 +74,7 @@ func (h *Handler) requireForumChannel(r *http.Request, chID uuid.UUID) (*Channel
 // listForumPosts handles GET /api/channels/{channelID}/posts.
 //
 // @Summary List forum posts
-// @Description Root posts in a forum channel, ordered by latest activity or creation. Supports tag filtering and pagination. Requires View channel.
+// @Description Root posts in a forum channel, ordered by latest activity or creation. Supports tag filtering, text search and pagination. Pinned posts come first and only on the first page (no before); the pages behind it hold unpinned posts. Requires View channel.
 // @ID listForumPosts
 // @Tags Channels
 // @Produce json
@@ -72,6 +82,7 @@ func (h *Handler) requireForumChannel(r *http.Request, chID uuid.UUID) (*Channel
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param sort query string false "Sort order: 'latest_activity' (default; 'activity' is accepted as an alias) or 'newest' ('creation' is accepted as an alias). Other values are rejected." Enums(latest_activity, newest)
 // @Param tag_id query string false "Filter by tag ID." Format(uuid)
+// @Param q query string false "Keep posts whose title, first message or a reply contains this text (at most 100 characters)."
 // @Param limit query int false "Page size." default(50)
 // @Param before query string false "Posts older than this post." Format(uuid)
 // @Param before_activity query string false "With latest_activity order and before: the last_activity_at the client saw for the before post. Paging then continues exactly behind that position even when the post has got or lost a reply since." Format(date-time)
@@ -116,7 +127,7 @@ func (h *Handler) listForumPosts(w http.ResponseWriter, r *http.Request) error {
 		}
 		q.BeforeActivity = &at
 	}
-	posts, err := ListForumPosts(r.Context(), h.DB, chID, sortMode, tagID, q)
+	posts, err := ListForumPostsFiltered(r.Context(), h.DB, chID, PostFilter{Sort: sortMode, TagID: tagID, Search: r.URL.Query().Get("q")}, q)
 	if err != nil {
 		return err
 	}
@@ -158,7 +169,11 @@ func (h *Handler) createForumPost(w http.ResponseWriter, r *http.Request) error 
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	postID, err := CreateForumPost(ctx, h.DB, h.Online, chID, user.ID, req.Title, req.Content, req.TagIDs)
+	canManage, err := h.canManageMessages(r, user, chID)
+	if err != nil {
+		return err
+	}
+	postID, err := CreateForumPost(ctx, h.DB, h.Online, chID, user.ID, canManage, req.Title, req.Content, req.TagIDs)
 	if err != nil {
 		return err
 	}
@@ -168,7 +183,7 @@ func (h *Handler) createForumPost(w http.ResponseWriter, r *http.Request) error 
 // updateForumPost handles PATCH /api/channels/{channelID}/posts/{messageID}.
 //
 // @Summary Update a forum post
-// @Description Updates a post's title, tags or lock status. Author or Manage messages for title/tags; Manage messages for lock status.
+// @Description Updates a post's title, tags, solved mark or lock status. The author or Manage messages for title, tags and the solved mark (not on a locked post, unless Manage messages); Manage messages for lock status and for applying or removing moderated tags. A forum that requires a tag refuses a post without one.
 // @ID updateForumPost
 // @Tags Messages
 // @Accept json
@@ -211,7 +226,8 @@ func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	msg, err := UpdateForumPost(ctx, h.DB, chID, msgID, user.ID, canManage, req.Title, req.TagIDs, req.IsLocked)
+	msg, err := UpdateForumPost(ctx, h.DB, chID, msgID, PostActor{ID: user.ID, CanManage: canManage},
+		PostPatch{Title: req.Title, TagIDs: req.TagIDs, IsLocked: req.IsLocked, IsResolved: req.IsResolved})
 	if err != nil {
 		return err
 	}
@@ -229,7 +245,7 @@ func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error 
 // either.
 func (h *Handler) postEditContext(r *http.Request, chID, msgID uuid.UUID, canManage bool, req UpdatePostRequest) (ctx context.Context, before *Message, err error) {
 	ctx = r.Context()
-	if !canManage && (req.Title != nil || req.TagIDs != nil) {
+	if !canManage && (req.Title != nil || req.TagIDs != nil || req.IsResolved != nil) {
 		if ctx, err = h.sendContext(r, chID, perm.SendMessages); err != nil {
 			return nil, nil, err
 		}
@@ -243,10 +259,15 @@ func (h *Handler) postEditContext(r *http.Request, chID, msgID uuid.UUID, canMan
 // canManageMessages says whether user holds Manage messages in the channel (the
 // Owner does when there is no permission service).
 func (h *Handler) canManageMessages(r *http.Request, user *auth.User, chID uuid.UUID) (bool, error) {
-	if h.Perms == nil {
+	return CanManageMessages(r.Context(), h.Perms, user, chID)
+}
+
+// CanManageMessages is canManageMessages for callers outside the chat handler.
+func CanManageMessages(ctx context.Context, perms *perm.Service, user *auth.User, chID uuid.UUID) (bool, error) {
+	if perms == nil {
 		return user.Role == "admin", nil
 	}
-	p, err := h.Perms.Channel(r.Context(), user.Subject(), chID)
+	p, err := perms.Channel(ctx, user.Subject(), chID)
 	if err != nil {
 		return false, err
 	}
@@ -269,10 +290,24 @@ func (h *Handler) auditForumPost(ctx context.Context, chID uuid.UUID, msg, befor
 			details["previous_is_locked"] = before.IsLocked
 		}
 	}
+	if req.IsResolved != nil {
+		details["is_resolved"] = msg.IsResolved
+	}
 	if req.TagIDs != nil {
 		details["tag_ids"] = *req.TagIDs
+		if before != nil {
+			details["previous_tag_ids"] = tagIDsOf(before.Tags)
+		}
 	}
 	h.Audit.RecordOrLog(ctx, audit.Entry{
 		Action: "forum.post_update", TargetType: "message", TargetID: msg.ID.String(), ChannelID: &chID, Details: details,
 	})
+}
+
+func tagIDsOf(tags []ForumTag) []uuid.UUID {
+	ids := make([]uuid.UUID, len(tags))
+	for i, t := range tags {
+		ids[i] = t.ID
+	}
+	return ids
 }

@@ -9,8 +9,10 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -20,13 +22,16 @@ import (
 const maxFieldBytes = 64 << 10
 
 // uploadFields are an upload form's text fields.
-var uploadFields = map[string]bool{"content": true, "parent_id": true, "reply_to_id": true}
+// title and tag_ids (a comma-separated list) make the message a forum post.
+var uploadFields = map[string]bool{"content": true, "parent_id": true, "reply_to_id": true, "title": true, "tag_ids": true}
 
 // uploadTarget is a validated caption and thread/reply target.
 type uploadTarget struct {
 	content   string
 	parentID  *uuid.UUID
 	replyToID *uuid.UUID
+	// post is set when the upload starts a forum post.
+	post *chat.PreparedPost
 }
 
 // storedUpload is a file already written to object storage.
@@ -152,7 +157,53 @@ func (h *Handler) validateTarget(ctx context.Context, chID uuid.UUID, fields map
 	if err := chat.ValidateTarget(ctx, h.DB, chID, t.parentID, t.replyToID); err != nil {
 		return nil, err
 	}
+	if fields["title"] != "" || fields["tag_ids"] != "" {
+		if t.post, err = h.prepareUploadPost(ctx, chID, t, fields); err != nil {
+			return nil, err
+		}
+	}
 	return t, nil
+}
+
+// prepareUploadPost checks the title and tags of an upload that starts a forum
+// post, by the rules of a post made from text.
+func (h *Handler) prepareUploadPost(ctx context.Context, chID uuid.UUID, t *uploadTarget, fields map[string]string) (*chat.PreparedPost, error) {
+	if t.parentID != nil || t.replyToID != nil {
+		return nil, httpx.ErrInvalidInput("a reply has no title or tags")
+	}
+	ch, err := chat.LoadChannel(ctx, h.DB, chID)
+	if err != nil {
+		return nil, err
+	}
+	if ch.Type != chat.ChannelTypeForum {
+		return nil, httpx.ErrInvalidInput("channel is not a forum channel")
+	}
+	tagIDs, err := parseTagIDs(fields["tag_ids"])
+	if err != nil {
+		return nil, err
+	}
+	canManage, err := chat.CanManageMessages(ctx, h.Perms, auth.UserFrom(ctx), chID)
+	if err != nil {
+		return nil, err
+	}
+	return chat.PreparePost(ctx, h.DB, chID, canManage, fields["title"], tagIDs)
+}
+
+// parseTagIDs reads a comma-separated list of tag ids.
+func parseTagIDs(raw string) ([]uuid.UUID, error) {
+	if raw == "" {
+		return nil, nil
+	}
+	parts := strings.Split(raw, ",")
+	ids := make([]uuid.UUID, 0, len(parts))
+	for _, part := range parts {
+		id, err := uuid.Parse(strings.TrimSpace(part))
+		if err != nil {
+			return nil, httpx.ErrInvalidInput("invalid tag_ids")
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
 }
 
 // storePart sniffs the file's type from its first bytes, then streams it to

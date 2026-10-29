@@ -87,6 +87,8 @@ type Message struct {
 	Title *string `json:"title,omitempty" binding:"optional" maxLength:"100"`
 	// IsLocked marks a forum post as locked: only moderators can post replies.
 	IsLocked bool `json:"is_locked,omitempty" binding:"optional"`
+	// IsResolved marks a forum post as solved or answered.
+	IsResolved bool `json:"is_resolved,omitempty" binding:"optional"`
 	// Tags are the forum tags attached to a forum post (up to 5 tags).
 	Tags []ForumTag `json:"tags,omitempty" binding:"optional"`
 	// LastActivityAt is the timestamp of the latest reply in the thread, or the post's creation time.

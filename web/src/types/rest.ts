@@ -1422,13 +1422,17 @@ export function isChatCreateDMRequest(value: unknown): value is ChatCreateDMRequ
 export const decodeChatCreateDMRequest = decoder("chat.CreateDMRequest", isChatCreateDMRequest)
 
 export type ChatCreateForumTagRequest = {
+  color?: "gray" | "red" | "orange" | "yellow" | "green" | "teal" | "blue" | "purple" | "pink"
   emoji?: string
+  moderated?: boolean
   name: string
 }
 
 export function isChatCreateForumTagRequest(value: unknown): value is ChatCreateForumTagRequest {
   return isRecord(value)
+    && (!hasOwn(value, "color") || (value["color"] === "gray" || value["color"] === "red" || value["color"] === "orange" || value["color"] === "yellow" || value["color"] === "green" || value["color"] === "teal" || value["color"] === "blue" || value["color"] === "purple" || value["color"] === "pink"))
     && (!hasOwn(value, "emoji") || isString(value["emoji"], 32))
+    && (!hasOwn(value, "moderated") || typeof value["moderated"] === 'boolean')
     && (hasOwn(value, "name") && isString(value["name"], 20))
 }
 
@@ -1711,21 +1715,40 @@ export function isChatFollowedThreads(value: unknown): value is ChatFollowedThre
 
 export const decodeChatFollowedThreads = decoder("chat.FollowedThreads", isChatFollowedThreads)
 
+export type ChatForumSettings = {
+  guidelines: string
+  require_tag: boolean
+}
+
+export function isChatForumSettings(value: unknown): value is ChatForumSettings {
+  return isRecord(value)
+    && (hasOwn(value, "guidelines") && isString(value["guidelines"], 1000))
+    && (hasOwn(value, "require_tag") && typeof value["require_tag"] === 'boolean')
+}
+
+export const decodeChatForumSettings = decoder("chat.ForumSettings", isChatForumSettings)
+
 export type ChatForumTag = {
   channel_id: string
+  color?: "gray" | "red" | "orange" | "yellow" | "green" | "teal" | "blue" | "purple" | "pink"
   created_at: string
   emoji?: string
   id: string
+  moderated: boolean
   name: string
+  position: number
 }
 
 export function isChatForumTag(value: unknown): value is ChatForumTag {
   return isRecord(value)
     && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (!hasOwn(value, "color") || (value["color"] === "gray" || value["color"] === "red" || value["color"] === "orange" || value["color"] === "yellow" || value["color"] === "green" || value["color"] === "teal" || value["color"] === "blue" || value["color"] === "purple" || value["color"] === "pink"))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (!hasOwn(value, "emoji") || isString(value["emoji"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "moderated") && typeof value["moderated"] === 'boolean')
     && (hasOwn(value, "name") && isString(value["name"], 20))
+    && (hasOwn(value, "position") && isInteger(value["position"]))
 }
 
 export const decodeChatForumTag = decoder("chat.ForumTag", isChatForumTag)
@@ -1985,6 +2008,7 @@ export type ChatMessage = {
   is_edited: boolean
   is_locked?: boolean
   is_pinned: boolean
+  is_resolved?: boolean
   is_webhook?: boolean
   last_activity_at?: string
   mention_roles?: Array<string>
@@ -2020,6 +2044,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "is_edited") && typeof value["is_edited"] === 'boolean')
     && (!hasOwn(value, "is_locked") || typeof value["is_locked"] === 'boolean')
     && (hasOwn(value, "is_pinned") && typeof value["is_pinned"] === 'boolean')
+    && (!hasOwn(value, "is_resolved") || typeof value["is_resolved"] === 'boolean')
     && (!hasOwn(value, "is_webhook") || typeof value["is_webhook"] === 'boolean')
     && (!hasOwn(value, "last_activity_at") || isTimestamp(value["last_activity_at"]))
     && (!hasOwn(value, "mention_roles") || isArrayOf(value["mention_roles"], item => isIdentifier(item)))
@@ -2133,6 +2158,17 @@ export function isChatPollOption(value: unknown): value is ChatPollOption {
 
 export const decodeChatPollOption = decoder("chat.PollOption", isChatPollOption)
 
+export type ChatPostRead = {
+  previous_read_at: string
+}
+
+export function isChatPostRead(value: unknown): value is ChatPostRead {
+  return isRecord(value)
+    && (hasOwn(value, "previous_read_at") && isTimestamp(value["previous_read_at"]))
+}
+
+export const decodeChatPostRead = decoder("chat.PostRead", isChatPostRead)
+
 export type ChatPrivacy = {
   dm_policy: "everyone" | "nobody"
 }
@@ -2227,6 +2263,17 @@ export function isChatRenamedCategory(value: unknown): value is ChatRenamedCateg
 }
 
 export const decodeChatRenamedCategory = decoder("chat.RenamedCategory", isChatRenamedCategory)
+
+export type ChatReorderForumTagsRequest = {
+  tag_ids: Array<string>
+}
+
+export function isChatReorderForumTagsRequest(value: unknown): value is ChatReorderForumTagsRequest {
+  return isRecord(value)
+    && (hasOwn(value, "tag_ids") && isArrayOf(value["tag_ids"], item => isIdentifier(item)))
+}
+
+export const decodeChatReorderForumTagsRequest = decoder("chat.ReorderForumTagsRequest", isChatReorderForumTagsRequest)
 
 export type ChatReplyPreview = {
   avatar_url?: string
@@ -2635,6 +2682,17 @@ export function isChatThreadFollow(value: unknown): value is ChatThreadFollow {
 
 export const decodeChatThreadFollow = decoder("chat.ThreadFollow", isChatThreadFollow)
 
+export type ChatUnreadForumPosts = {
+  post_ids: Array<string>
+}
+
+export function isChatUnreadForumPosts(value: unknown): value is ChatUnreadForumPosts {
+  return isRecord(value)
+    && (hasOwn(value, "post_ids") && isArrayOf(value["post_ids"], item => isIdentifier(item)))
+}
+
+export const decodeChatUnreadForumPosts = decoder("chat.UnreadForumPosts", isChatUnreadForumPosts)
+
 export type ChatUpdateChannelRequest = {
   is_lobby?: boolean
   is_stage?: boolean
@@ -2656,14 +2714,31 @@ export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateC
 
 export const decodeChatUpdateChannelRequest = decoder("chat.UpdateChannelRequest", isChatUpdateChannelRequest)
 
+export type ChatUpdateForumSettingsRequest = {
+  guidelines?: string
+  require_tag?: boolean
+}
+
+export function isChatUpdateForumSettingsRequest(value: unknown): value is ChatUpdateForumSettingsRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "guidelines") || isString(value["guidelines"], 1000))
+    && (!hasOwn(value, "require_tag") || typeof value["require_tag"] === 'boolean')
+}
+
+export const decodeChatUpdateForumSettingsRequest = decoder("chat.UpdateForumSettingsRequest", isChatUpdateForumSettingsRequest)
+
 export type ChatUpdateForumTagRequest = {
+  color?: "" | "gray" | "red" | "orange" | "yellow" | "green" | "teal" | "blue" | "purple" | "pink"
   emoji?: string
+  moderated?: boolean
   name?: string
 }
 
 export function isChatUpdateForumTagRequest(value: unknown): value is ChatUpdateForumTagRequest {
   return isRecord(value)
+    && (!hasOwn(value, "color") || (value["color"] === "" || value["color"] === "gray" || value["color"] === "red" || value["color"] === "orange" || value["color"] === "yellow" || value["color"] === "green" || value["color"] === "teal" || value["color"] === "blue" || value["color"] === "purple" || value["color"] === "pink"))
     && (!hasOwn(value, "emoji") || isString(value["emoji"], 32))
+    && (!hasOwn(value, "moderated") || typeof value["moderated"] === 'boolean')
     && (!hasOwn(value, "name") || isString(value["name"], 20))
 }
 
@@ -2671,6 +2746,7 @@ export const decodeChatUpdateForumTagRequest = decoder("chat.UpdateForumTagReque
 
 export type ChatUpdatePostRequest = {
   is_locked?: boolean
+  is_resolved?: boolean
   tag_ids?: Array<string>
   title?: string
 }
@@ -2678,6 +2754,7 @@ export type ChatUpdatePostRequest = {
 export function isChatUpdatePostRequest(value: unknown): value is ChatUpdatePostRequest {
   return isRecord(value)
     && (!hasOwn(value, "is_locked") || typeof value["is_locked"] === 'boolean')
+    && (!hasOwn(value, "is_resolved") || typeof value["is_resolved"] === 'boolean')
     && (!hasOwn(value, "tag_ids") || isArrayOf(value["tag_ids"], item => isString(item)))
     && (!hasOwn(value, "title") || isString(value["title"], 100))
 }
