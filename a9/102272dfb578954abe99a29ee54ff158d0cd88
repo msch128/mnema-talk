@@ -1,0 +1,19 @@
+e2e/tests/admin-defaults.spec.ts
+  s_46a6db8f9e8231::t_c2e31e8e0eb685 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9102272dfb578954abe99a29ee54ff158d0cd88",
+  "prompts": {},
+  "sessions": {
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
