@@ -9,6 +9,7 @@ import { arrayDecoder } from '../types/validation'
 import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
+import { INVITE_CREATE_HOURS } from '../lib/presets'
 import EmptyState from './EmptyState.vue'
 import EditInviteDialog from './EditInviteDialog.vue'
 
@@ -107,8 +108,12 @@ const live = computed(() => invites.value.filter(i => !spent(i)))
 const spentCount = computed(() => invites.value.length - live.value.length)
 const visible = computed(() => (showSpent.value ? [...live.value, ...invites.value.filter(spent)] : live.value))
 
-// Ready-made validity, in days; '' is no expiry.
-const PRESETS: readonly { key: string; days: number | '' }[] = [{ key: 'day', days: 1 }, { key: 'week', days: 7 }, { key: 'never', days: '' }]
+// Ready-made validity, in days (the shared presets are hours); '' is no expiry.
+const DAY_KEYS: Readonly<Record<number, string>> = { 1: 'day', 7: 'week' }
+const PRESETS: readonly { key: string; days: number | '' }[] = [
+  ...INVITE_CREATE_HOURS.map(hours => ({ key: DAY_KEYS[hours / 24] ?? `d${hours / 24}`, days: hours / 24 })),
+  { key: 'never', days: '' }
+]
 // Neither a use limit nor an expiry: anyone with the link can join, always.
 const openForever = computed(() => !newInviteUses.value && !newInviteDays.value)
 

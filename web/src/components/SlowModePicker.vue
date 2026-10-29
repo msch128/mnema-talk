@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { customSeconds, durationLabel } from '../lib/moderation'
 import type { CustomUnit } from '../lib/moderation'
 import { t } from '../i18n'
+import { SLOW_MODE_PRESETS } from '../lib/presets'
 
 // Slow mode of a channel: ready-made presets plus a free value in seconds,
 // minutes or hours, at most 24 hours (the server validates the same bound).
@@ -10,7 +11,7 @@ const model = defineModel<number>({ required: true })
 const valid = defineModel<boolean>('valid', { default: true })
 
 const MAX_SECONDS = 86400
-const PRESETS = [0, 10, 30, 60, 300, 1800, 86400] as const
+const PRESETS = SLOW_MODE_PRESETS
 const UNITS: readonly CustomUnit[] = ['seconds', 'minutes', 'hours']
 
 function split(seconds: number): { amount: string; unit: CustomUnit } {
