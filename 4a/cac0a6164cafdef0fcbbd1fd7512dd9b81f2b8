@@ -1,0 +1,27 @@
+web/src/components/ConnectionStatsModal.vue
+  s_45fff186c97845::t_0ec35f410f3072 54
+web/src/i18n/de.json
+  s_45fff186c97845::t_03e5b25dee1b18 792
+web/src/i18n/en.json
+  s_45fff186c97845::t_620641459c4483 792
+web/src/lib/rtcFlowRows.ts
+  s_45fff186c97845::t_2240ef7e361a33 42,44
+web/src/lib/rtcFlows.test.ts
+  s_45fff186c97845::t_7fd6e5aee4f2f6 119-121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4acac0a6164cafdef0fcbbd1fd7512dd9b81f2b8",
+  "prompts": {},
+  "sessions": {
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
