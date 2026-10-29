@@ -49,6 +49,7 @@ function sessionAlive(): boolean {
 
 function endSession() {
   ended = true
+  unsaved = false
   state.value = { uid: null, items: {} }
 }
 
@@ -120,12 +121,18 @@ function read(uid: string): Items {
   }
 }
 
+// True while this tab holds drafts that storage does not: the last write failed
+// (storage full or restricted) although reads still work.
+let unsaved = false
+
 function write(uid: string, items: Items) {
   try {
     if (Object.keys(items).length === 0) localStorage.removeItem(storageKey(uid))
     else localStorage.setItem(storageKey(uid), JSON.stringify(items))
+    unsaved = false
   } catch {
     // Storage blocked or full: drafts then live only until the page closes.
+    unsaved = true
   }
 }
 
@@ -138,7 +145,8 @@ function current(uid: string): Items {
 /**
  * The account's drafts as storage holds them now, so a change made here never
  * drops (or revives) a draft another tab saved (or sent) since this tab last
- * looked. Without readable storage this tab's own snapshot is all there is.
+ * looked. Without readable storage, or after a write storage refused, this tab's
+ * own snapshot is the better base: storage holds older drafts than it does.
  */
 function fresh(uid: string): Items {
   try {
@@ -146,6 +154,7 @@ function fresh(uid: string): Items {
   } catch {
     return { ...current(uid) }
   }
+  if (unsaved && state.value.uid === uid) return { ...current(uid) }
   return read(uid)
 }
 
@@ -224,6 +233,7 @@ export function beginDraftSession(uid: string) {
 
 /** Sign-out and account deletion: every account's drafts leave this browser. */
 export function clearAllDrafts() {
+  unsaved = false
   state.value = { uid: null, items: {} }
   const hadSession = session !== null || !!storedSession()
   session = null

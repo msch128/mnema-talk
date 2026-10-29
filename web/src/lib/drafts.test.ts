@@ -71,6 +71,14 @@ describe('drafts', () => {
     expect(getDraft('u3', 'c:a')).toBeNull()
   })
 
+  it('keeps earlier drafts in memory when storage reads work but writes fail', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota') })
+    setDraft('u1', 'c:one', { text: 'A', reply: null })
+    setDraft('u1', 'c:two', { text: 'B', reply: null })
+    expect(getDraft('u1', 'c:one')?.text).toBe('A')
+    expect(getDraft('u1', 'c:two')?.text).toBe('B')
+  })
+
   it('works in memory when storage is blocked', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })

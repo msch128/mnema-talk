@@ -95,7 +95,11 @@ export async function fetchMessages(cx: Cx, channelId: string) {
 export async function refreshLatest(cx: Cx, channelId: string) {
   const { cs } = cx
   if (!cs.messages.value.length) return fetchMessages(cx, channelId)
+  if (cs.hasMoreAfter.value) return false
   const gen = cs.windowGen
+  // Live messages that arrive while the page is in flight are newer than what
+  // it can hold: hold them like a window load does and join them afterwards.
+  cs.isLoadingWindow.value = true
   try {
     const data = await api(messagesUrl(channelId), { decode: decodeMessages })
     if (gen !== cs.windowGen || cs.activeChannel.value?.id !== channelId || cs.hasMoreAfter.value) return false
@@ -106,6 +110,12 @@ export async function refreshLatest(cx: Cx, channelId: string) {
   } catch (e) {
     console.error('Failed to refresh messages:', e)
     return false
+  } finally {
+    if (gen === cs.windowGen) {
+      cs.isLoadingWindow.value = false
+      // Messages held during a refresh that did not replace the window belong to it as it is.
+      if (!cs.hasMoreAfter.value) flushPendingLive(cx)
+    }
   }
 }
 
