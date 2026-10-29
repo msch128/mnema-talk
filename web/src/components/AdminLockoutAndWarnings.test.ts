@@ -95,6 +95,7 @@ describe('operator warnings in the system tab', () => {
     ['webrtc_reachability', 'Voice may not work', 'nobody-can-join-voice'],
     ['webrtc_udp_mux_disabled', '51 ports', 'voice-webrtc'],
     ['voice_unavailable', 'Voice is disabled', 'nobody-can-join-voice'],
+    ['turn_unavailable', 'Built-in TURN relay is not fully running', 'built-in-turn-relay'],
     ['insecure_public_url', 'PUBLIC_URL is not https', 'public_url-and-secure-cookies'],
     ['something_new', 'Server warning: something_new', 'operations.md'],
   ])('explains %s with a doc link', async (code, text, anchor) => {

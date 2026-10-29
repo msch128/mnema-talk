@@ -4143,6 +4143,33 @@ export function isServerBackupStatus(value: unknown): value is ServerBackupStatu
 
 export const decodeServerBackupStatus = decoder("server.BackupStatus", isServerBackupStatus)
 
+export type ServerBuiltinTURNHealth = {
+  active: boolean
+  allocations: number
+  enabled: boolean
+  host: string
+  mode: "auto" | "on" | "off"
+  port: number
+  reachability: "reachable" | "unreachable" | "unknown"
+  tcp: boolean
+  udp: boolean
+}
+
+export function isServerBuiltinTURNHealth(value: unknown): value is ServerBuiltinTURNHealth {
+  return isRecord(value)
+    && (hasOwn(value, "active") && typeof value["active"] === 'boolean')
+    && (hasOwn(value, "allocations") && isInteger(value["allocations"]))
+    && (hasOwn(value, "enabled") && typeof value["enabled"] === 'boolean')
+    && (hasOwn(value, "host") && isString(value["host"]))
+    && (hasOwn(value, "mode") && (value["mode"] === "auto" || value["mode"] === "on" || value["mode"] === "off"))
+    && (hasOwn(value, "port") && isInteger(value["port"]))
+    && (hasOwn(value, "reachability") && (value["reachability"] === "reachable" || value["reachability"] === "unreachable" || value["reachability"] === "unknown"))
+    && (hasOwn(value, "tcp") && typeof value["tcp"] === 'boolean')
+    && (hasOwn(value, "udp") && typeof value["udp"] === 'boolean')
+}
+
+export const decodeServerBuiltinTURNHealth = decoder("server.BuiltinTURNHealth", isServerBuiltinTURNHealth)
+
 export type ServerDatabaseHealth = {
   applied_migrations: number
   latest_migration: string
@@ -4646,6 +4673,7 @@ export function isServerUpdateStatus(value: unknown): value is ServerUpdateStatu
 export const decodeServerUpdateStatus = decoder("server.UpdateStatus", isServerUpdateStatus)
 
 export type ServerVoiceHealth = {
+  builtin_turn: ServerBuiltinTURNHealth
   cameras: number
   enabled: boolean
   media_connections: number
@@ -4660,6 +4688,7 @@ export type ServerVoiceHealth = {
 
 export function isServerVoiceHealth(value: unknown): value is ServerVoiceHealth {
   return isRecord(value)
+    && (hasOwn(value, "builtin_turn") && isServerBuiltinTURNHealth(value["builtin_turn"]))
     && (hasOwn(value, "cameras") && isInteger(value["cameras"]))
     && (hasOwn(value, "enabled") && typeof value["enabled"] === 'boolean')
     && (hasOwn(value, "media_connections") && isInteger(value["media_connections"]))

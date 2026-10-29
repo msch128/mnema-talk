@@ -81,34 +81,36 @@ func (r *envReader) port(key string, def uint16) uint16 {
 // textSettings reads every setting that cannot be malformed.
 func (r *envReader) textSettings() *Config {
 	return &Config{
-		BindAddr:             r.get("BIND_ADDR", ""),
-		AppEnv:               strings.ToLower(r.get("APP_ENV", "development")),
-		LogLevel:             strings.ToLower(r.get("LOG_LEVEL", "")),
-		PublicURL:            normalizeURL(r.get("PUBLIC_URL", "http://localhost:8080")),
-		TrustedProxies:       SplitList(r.get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
-		JWTSecret:            r.get("JWT_SECRET", ""),
-		AdminUsername:        r.get("ADMIN_USERNAME", "admin"),
-		InitialLanguage:      strings.ToLower(r.get("INITIAL_LANGUAGE", "de")),
-		AdminInitialPassword: r.get("ADMIN_INITIAL_PASSWORD", ""),
-		DatabaseURL:          r.get("DATABASE_URL", ""),
-		S3Endpoint:           r.get("S3_ENDPOINT", "http://localhost:8333"),
-		S3Region:             r.get("S3_REGION", "us-east-1"),
-		S3Bucket:             r.get("S3_BUCKET", "mnema-media"),
-		S3AccessKey:          r.get("S3_ACCESS_KEY", ""),
-		S3SecretKey:          r.get("S3_SECRET_KEY", ""),
-		UpdaterURL:           r.get("UPDATER_URL", ""),
-		UpdaterToken:         r.get("UPDATER_TOKEN", ""),
-		AppImage:             r.get("MNEMA_IMAGE", ""),
-		WebRTCTURNURLs:       SplitList(r.get("WEBRTC_TURN_URLS", "")),
-		WebRTCTURNSecret:     r.get("WEBRTC_TURN_SECRET", ""),
-		MetricsToken:         r.get("METRICS_TOKEN", ""),
-		WebRTCAnnounce:       SplitList(r.get("WEBRTC_NAT_1TO1_IP", "")),
-		WebRTCSTUNURLs:       SplitList(r.get("WEBRTC_STUN_URLS", "")),
-		WebRTCDetectSTUN:     SplitList(r.get("WEBRTC_DETECT_STUN_URLS", strings.Join(stunprobe.DefaultServers, ","))),
-		LegalOperatorName:    r.get("LEGAL_OPERATOR_NAME", "Community Operator"),
-		LegalOperatorEmail:   r.get("LEGAL_OPERATOR_EMAIL", "admin@example.com"),
-		LegalOperatorCountry: r.get("LEGAL_OPERATOR_COUNTRY", ""),
-		LegalProjectNotice:   r.get("LEGAL_PROJECT_NOTICE", ""),
+		BindAddr:              r.get("BIND_ADDR", ""),
+		AppEnv:                strings.ToLower(r.get("APP_ENV", "development")),
+		LogLevel:              strings.ToLower(r.get("LOG_LEVEL", "")),
+		PublicURL:             normalizeURL(r.get("PUBLIC_URL", "http://localhost:8080")),
+		TrustedProxies:        SplitList(r.get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
+		JWTSecret:             r.get("JWT_SECRET", ""),
+		AdminUsername:         r.get("ADMIN_USERNAME", "admin"),
+		InitialLanguage:       strings.ToLower(r.get("INITIAL_LANGUAGE", "de")),
+		AdminInitialPassword:  r.get("ADMIN_INITIAL_PASSWORD", ""),
+		DatabaseURL:           r.get("DATABASE_URL", ""),
+		S3Endpoint:            r.get("S3_ENDPOINT", "http://localhost:8333"),
+		S3Region:              r.get("S3_REGION", "us-east-1"),
+		S3Bucket:              r.get("S3_BUCKET", "mnema-media"),
+		S3AccessKey:           r.get("S3_ACCESS_KEY", ""),
+		S3SecretKey:           r.get("S3_SECRET_KEY", ""),
+		UpdaterURL:            r.get("UPDATER_URL", ""),
+		UpdaterToken:          r.get("UPDATER_TOKEN", ""),
+		AppImage:              r.get("MNEMA_IMAGE", ""),
+		WebRTCTURNURLs:        SplitList(r.get("WEBRTC_TURN_URLS", "")),
+		WebRTCTURNSecret:      r.get("WEBRTC_TURN_SECRET", ""),
+		WebRTCBuiltinTURN:     strings.ToLower(r.get("WEBRTC_BUILTIN_TURN", BuiltinTURNAuto)),
+		WebRTCBuiltinTURNHost: r.get("WEBRTC_BUILTIN_TURN_HOST", ""),
+		MetricsToken:          r.get("METRICS_TOKEN", ""),
+		WebRTCAnnounce:        SplitList(r.get("WEBRTC_NAT_1TO1_IP", "")),
+		WebRTCSTUNURLs:        SplitList(r.get("WEBRTC_STUN_URLS", "")),
+		WebRTCDetectSTUN:      SplitList(r.get("WEBRTC_DETECT_STUN_URLS", strings.Join(stunprobe.DefaultServers, ","))),
+		LegalOperatorName:     r.get("LEGAL_OPERATOR_NAME", "Community Operator"),
+		LegalOperatorEmail:    r.get("LEGAL_OPERATOR_EMAIL", "admin@example.com"),
+		LegalOperatorCountry:  r.get("LEGAL_OPERATOR_COUNTRY", ""),
+		LegalProjectNotice:    r.get("LEGAL_PROJECT_NOTICE", ""),
 	}
 }
 
@@ -132,6 +134,7 @@ func (r *envReader) numericSettings(cfg *Config) (portMin, portMax uint16) {
 	if m := cfg.WebRTCUDPMuxPort; m != 0 && (m < portMin || m > portMax) {
 		r.fail(fmt.Errorf("WEBRTC_UDP_MUX_PORT must be 0 or inside WEBRTC_UDP_PORT_MIN/MAX"))
 	}
+	cfg.WebRTCBuiltinTURNPort = r.port("WEBRTC_BUILTIN_TURN_PORT", 3479)
 	cfg.Port = strconv.Itoa(int(r.port("PORT", 8080)))
 	cfg.S3ForcePathStyle = r.bool("S3_FORCE_PATH_STYLE", true)
 	cfg.LinkPreviews = r.bool("LINK_PREVIEWS_ENABLED", true)

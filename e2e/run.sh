@@ -13,6 +13,8 @@
 #                         `initdb`/`pg_ctl`/`createdb` (E2E_PG_BIN, default: from
 #                         PATH) and `weed` on PATH
 #   E2E_WEBRTC_UDP_MUX_PORT=0    test legacy per-peer ports instead of the shared UDP port
+#   E2E_TURN_PORT=...     port of the built-in TURN relay (default: a free one; the server
+#                         runs it with WEBRTC_BUILTIN_TURN=on for relay-call.spec.ts)
 # Runs do not collide: the compose project is unique per run (mnema-e2e-<pid>) and
 # the Postgres, S3, app and WebRTC UDP ports are free ports picked at start, so
 # several runs (other worktrees, other agents) can go at the same time. Pin any
@@ -46,6 +48,16 @@ APP_PORT="${E2E_APP_PORT:-$(free_port tcp)}"
 UDP_MIN="${E2E_UDP_PORT:-$(free_port udp)}"
 if [ "$UDP_MIN" -gt 65480 ]; then UDP_MIN=50100; fi
 UDP_MAX=$((UDP_MIN + 50))
+# The built-in TURN relay (relay-call.spec.ts) needs a port that is free for
+# both UDP and TCP; the kernel hands out the TCP one and the UDP side is checked.
+TURN_PORT="${E2E_TURN_PORT:-}"
+if [ -z "$TURN_PORT" ]; then
+  for _ in $(seq 1 20); do
+    candidate="$(free_port tcp)"
+    if python3 -c "import socket,sys; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.bind(('127.0.0.1',int(sys.argv[1])))" "$candidate" 2>/dev/null; then TURN_PORT="$candidate"; break; fi
+  done
+  [ -n "$TURN_PORT" ] || { echo "no port free for TURN over UDP and TCP" >&2; exit 1; }
+fi
 PROJECT="${E2E_PROJECT:-mnema-e2e-$$}"
 BIN="$ROOT/bin/mnema-talk-e2e"
 LOG="${E2E_LOG:-$ROOT/e2e/server.log}"
@@ -103,7 +115,7 @@ if [ "${E2E_INSTALL_BROWSER:-0}" = "1" ]; then
   (cd e2e && npx playwright install ${DEPS[@]+"${DEPS[@]}"} ${E2E_BROWSERS:-chromium})
 fi
 
-echo "==> project $PROJECT: postgres :$PG_PORT, s3 :$S3_PORT, app :$APP_PORT, udp :$UDP_MIN-$UDP_MAX"
+echo "==> project $PROJECT: postgres :$PG_PORT, s3 :$S3_PORT, app :$APP_PORT, udp :$UDP_MIN-$UDP_MAX, turn :$TURN_PORT"
 if [ "${E2E_NO_DOCKER:-0}" = "1" ]; then
   echo "==> starting local postgres + seaweedfs"
   LOCAL_DIR="$(mktemp -d)"
@@ -142,6 +154,7 @@ env -i PATH="$PATH" HOME="$HOME" \
   WEBRTC_UDP_PORT_MIN="$UDP_MIN" WEBRTC_UDP_PORT_MAX="$UDP_MAX" \
   WEBRTC_UDP_MUX_PORT="${E2E_WEBRTC_UDP_MUX_PORT:-}" \
   WEBRTC_NAT_1TO1_IP=127.0.0.1 \
+  WEBRTC_BUILTIN_TURN=on WEBRTC_BUILTIN_TURN_PORT="$TURN_PORT" \
   "$BIN" >"$LOG" 2>&1 &
 SERVER_PID=$!
 

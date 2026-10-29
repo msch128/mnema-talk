@@ -48,12 +48,19 @@ func newClient(t *testing.T) *client {
 // newClientWith builds a loopback client whose transport the test may adjust.
 func newClientWith(t *testing.T, adjust func(*webrtc.SettingEngine)) *client {
 	t.Helper()
+	return newClientConfig(t, adjust, webrtc.Configuration{})
+}
+
+// newClientConfig is newClientWith with the peer connection's configuration
+// (ICE servers, transport policy) chosen by the test.
+func newClientConfig(t *testing.T, adjust func(*webrtc.SettingEngine), cfg webrtc.Configuration) *client {
+	t.Helper()
 	settings := webrtc.SettingEngine{}
 	settings.SetIncludeLoopbackCandidate(true)
 	settings.SetIPFilter(func(ip net.IP) bool { return ip.IsLoopback() })
 	settings.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
 	adjust(&settings)
-	pc, err := webrtc.NewAPI(webrtc.WithSettingEngine(settings)).NewPeerConnection(webrtc.Configuration{})
+	pc, err := webrtc.NewAPI(webrtc.WithSettingEngine(settings)).NewPeerConnection(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

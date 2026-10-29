@@ -32,6 +32,15 @@ services:
       # PUBLISH_ADDR=0.0.0.0 (or a LAN address) to reach the app directly.
       - "${PUBLISH_ADDR:-127.0.0.1}:${PORT:-8080}:8080"
       - "${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}:${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}/udp"
+      # The TURN relay built into the app (WEBRTC_BUILTIN_TURN, default auto:
+      # it runs while WEBRTC_TURN_URLS is empty). It lets members whose network
+      # blocks the UDP range above reach voice through one port, UDP and TCP.
+      # Forward this port in your router like the range above.
+      # Port 3479 (UDP and TCP), not coturn's 3478, so both can run on one host.
+      # With WEBRTC_TURN_URLS set, "auto" keeps the relay off; TURN_PUBLISH_ADDR=127.0.0.1
+      # also stops Docker from publishing the port.
+      - "${TURN_PUBLISH_ADDR:-0.0.0.0}:${WEBRTC_BUILTIN_TURN_PORT:-3479}:${WEBRTC_BUILTIN_TURN_PORT:-3479}/udp"
+      - "${TURN_PUBLISH_ADDR:-0.0.0.0}:${WEBRTC_BUILTIN_TURN_PORT:-3479}:${WEBRTC_BUILTIN_TURN_PORT:-3479}/tcp"
     environment:
       - PORT=8080
       - APP_ENV=${APP_ENV:-production}
@@ -96,6 +105,9 @@ services:
       - WEBRTC_STUN_URLS=${WEBRTC_STUN_URLS:-}
       - WEBRTC_TURN_URLS=${WEBRTC_TURN_URLS:-}
       - WEBRTC_TURN_SECRET=${WEBRTC_TURN_SECRET:-}
+      - WEBRTC_BUILTIN_TURN=${WEBRTC_BUILTIN_TURN:-auto}
+      - WEBRTC_BUILTIN_TURN_PORT=${WEBRTC_BUILTIN_TURN_PORT:-3479}
+      - WEBRTC_BUILTIN_TURN_HOST=${WEBRTC_BUILTIN_TURN_HOST:-}
       - METRICS_TOKEN=${METRICS_TOKEN:-}
       # Outgoing e-mail (confirm an address, reset a password). Empty SMTP_HOST =
       # the server sends no e-mail. SMTP_PASSWORD_FILE needs the file mounted.
@@ -271,6 +283,11 @@ services:
   # ==========================================================
   # Optional TURN Relay: coturn (profile: turn)
   # ==========================================================
+  # The app has a TURN relay of its own (WEBRTC_BUILTIN_TURN) that needs
+  # nothing but the forwarded port. coturn is the alternative for operators who
+  # want a separate relay process or public relay ports; set WEBRTC_TURN_URLS
+  # for it (the built-in relay then stays off under "auto") and move the app's
+  # relay port, see the comment on the app's ports above.
   # Enable with: docker compose --profile turn up -d
   # Router port forward required: 3478 UDP/TCP (TCP serves browsers that may
   # not use UDP, e.g. Opera with its VPN or WebRTC protection); 49152-49200 UDP

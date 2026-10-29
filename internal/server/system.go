@@ -19,6 +19,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/setupcheck"
 	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/msch128/mnema-talk/internal/turnrelay"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/version"
 	"github.com/msch128/mnema-talk/internal/ws"
@@ -33,7 +34,8 @@ type systemHandler struct {
 	db       *db.Pool
 	hub      *ws.Hub
 	sfu      *sfu.SFU
-	storage  func() error // nil: not checked
+	turn     *turnrelay.Server // nil: the built-in TURN relay is not running
+	storage  func() error      // nil: not checked
 	hasStore bool
 	version  string
 	started  time.Time
@@ -122,10 +124,41 @@ type VoiceHealth struct {
 	Cameras          int `json:"cameras"`
 	// WebSocketConnections are open realtime connections; OnlineUsers the
 	// distinct users behind them.
-	WebSocketConnections int  `json:"websocket_connections"`
-	OnlineUsers          int  `json:"online_users"`
-	TURNConfigured       bool `json:"turn_configured"`
-	STUNConfigured       bool `json:"stun_configured"`
+	WebSocketConnections int `json:"websocket_connections"`
+	OnlineUsers          int `json:"online_users"`
+	// TURNConfigured is true when members are offered any TURN relay: the
+	// external one (WEBRTC_TURN_URLS) or the one built into the server.
+	TURNConfigured bool `json:"turn_configured"`
+	STUNConfigured bool `json:"stun_configured"`
+	// BuiltinTURN reports the TURN relay built into the server.
+	BuiltinTURN BuiltinTURNHealth `json:"builtin_turn"`
+}
+
+// BuiltinTURNHealth reports the TURN relay built into the server
+// (WEBRTC_BUILTIN_TURN).
+type BuiltinTURNHealth struct {
+	// Mode is the setting: auto (on while no external TURN is configured),
+	// on or off.
+	Mode string `json:"mode" enums:"auto,on,off"`
+	// Enabled is whether the setting asks for the relay now; Active whether it
+	// is running and offered to members.
+	Enabled bool `json:"enabled"`
+	Active  bool `json:"active"`
+	// Port is the UDP and TCP port it is configured to listen on.
+	Port int `json:"port"`
+	// UDP and TCP say which transports are listening; one can fail to bind
+	// while the other works.
+	UDP bool `json:"udp"`
+	TCP bool `json:"tcp"`
+	// Allocations are the relayed sessions open now.
+	Allocations int `json:"allocations"`
+	// Host is the name members are told to reach the relay at (from
+	// PUBLIC_URL); empty when none is known.
+	Host string `json:"host"`
+	// Reachability is a best-effort self-test from this machine to Host:Port:
+	// reachable, unreachable (also what a router without NAT loopback shows
+	// for a forwarded port) or unknown (not run, or nothing to test).
+	Reachability string `json:"reachability" enums:"reachable,unreachable,unknown"`
 }
 
 // RuntimeHealth reports process resources.
@@ -285,9 +318,32 @@ func (h *systemHandler) voiceHealth() VoiceHealth {
 		v.Rooms, v.Participants = st.VoiceRooms, st.VoiceParticipants
 		v.WebSocketConnections, v.OnlineUsers = st.Connections, st.OnlineUsers
 	}
-	v.TURNConfigured = len(h.cfg.WebRTCTURNURLs) > 0
+	v.BuiltinTURN = h.builtinTURNHealth()
+	v.TURNConfigured = len(h.cfg.WebRTCTURNURLs) > 0 || v.BuiltinTURN.Active
 	v.STUNConfigured = len(h.cfg.WebRTCSTUNURLs) > 0
 	return v
+}
+
+func (h *systemHandler) builtinTURNHealth() BuiltinTURNHealth {
+	b := BuiltinTURNHealth{
+		Mode:         h.cfg.WebRTCBuiltinTURN,
+		Enabled:      h.cfg.BuiltinTURNEnabled(),
+		Port:         int(h.cfg.WebRTCBuiltinTURNPort),
+		Host:         h.cfg.TURNPublicHost(),
+		Reachability: "unknown",
+	}
+	if b.Mode == "" {
+		b.Mode = config.BuiltinTURNAuto
+	}
+	if h.turn == nil {
+		return b
+	}
+	st := h.turn.Status()
+	b.Active, b.UDP, b.TCP, b.Allocations = true, st.UDP, st.TCP, st.Allocations
+	if st.Probe != "" {
+		b.Reachability = st.Probe
+	}
+	return b
 }
 
 func (h *systemHandler) runtimeHealth() RuntimeHealth {

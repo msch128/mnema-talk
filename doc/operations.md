@@ -100,6 +100,9 @@ General rules:
 | `WEBRTC_TURN_URLS` | empty | Optional TURN URLs, e.g. `turn:turn.example.com:3478?transport=udp,turn:turn.example.com:3478?transport=tcp`. |
 | `WEBRTC_TURN_SECRET` | empty | Shared secret with coturn (`use-auth-secret`). At least 16 characters when `WEBRTC_TURN_URLS` is set; no placeholder in production. |
 | `WEBRTC_TURN_REALM` | compose: `turn.example.com` | Read by the coturn container only, not by the app. |
+| `WEBRTC_BUILTIN_TURN` | `auto` | The TURN relay built into the server: `auto` runs it only while `WEBRTC_TURN_URLS` is empty, `on` always, `off` never. See [Built-in TURN relay](#built-in-turn-relay). |
+| `WEBRTC_BUILTIN_TURN_HOST` | empty | Host name or IP members are told to reach the built-in relay at; empty = the host of `PUBLIC_URL`. |
+| `WEBRTC_BUILTIN_TURN_PORT` | `3479` | UDP and TCP port of the built-in relay. With `on` it must lie outside the media range. Compose publishes it on `TURN_PUBLISH_ADDR` (default all addresses). |
 
 ### Outgoing e-mail
 
@@ -372,13 +375,93 @@ installed app only (iOS 16.4 or newer: Share > Add to Home Screen).
   and no outgoing request. Behind a reverse proxy, pass `/sw.js` and
   `/manifest.webmanifest` through unchanged and do not cache `/sw.js`.
 
+## Built-in TURN relay
+
+Needed only for members whose network blocks the UDP range: strict
+firewalls, some VPNs, carrier networks, Opera with its VPN or WebRTC
+protection on. The server has a TURN relay of its own for them, so a plain
+install needs no second service. They connect to one port, over UDP or TCP,
+and the relay hands their media to the voice server on the same machine.
+
+**When it runs.** `WEBRTC_BUILTIN_TURN` switches it:
+
+| Value | Meaning |
+|---|---|
+| `auto` (default) | Runs while `WEBRTC_TURN_URLS` is empty. As soon as you configure an external TURN server (coturn), the built-in relay stays off, so an installation that already has one behaves exactly as before. |
+| `on` | Always runs. With `WEBRTC_TURN_URLS` set too, members are offered both servers and the browser takes whichever connects (the server logs this at startup). |
+| `off` | Never runs. |
+
+**What to forward.** The relay port (`WEBRTC_BUILTIN_TURN_PORT`, default
+`3479`) on **both UDP and TCP** to the host, besides the media range
+(`50000-50050/udp`). It needs no relay port range of its own. Compose
+publishes the port; `TURN_PUBLISH_ADDR` narrows the address it is published on
+(default all). Members are given `turn:<host of PUBLIC_URL>:<port>`, so that
+name must resolve to the server itself from the outside, not to a CDN or tunnel
+that only forwards HTTP: set `WEBRTC_BUILTIN_TURN_HOST` to a name that does
+otherwise. Behind `localhost` or a loopback `PUBLIC_URL` the first
+`WEBRTC_NAT_1TO1_IP` entry is used.
+
+**Next to coturn.** The default 3479 is not coturn's 3478, so an external
+coturn (profile `turn`, host networking) and the built-in relay can run on one
+host. With `WEBRTC_TURN_URLS` set, `auto` keeps the built-in relay off; to try
+it next to coturn set `WEBRTC_BUILTIN_TURN=on` and forward 3479 as well:
+members are offered both servers and the browser takes whichever connects.
+`TURN_PUBLISH_ADDR=127.0.0.1` stops Docker from publishing the port.
+
+**If the port cannot be bound** (taken, or the container lacks the port), the
+server logs a warning, keeps running without the relay (or with the one
+transport that did bind) and shows *Built-in TURN relay is not fully running*
+under Admin > System. Voice itself is unaffected. Admin > System also shows
+whether the relay is listening, how many sessions it relays and a best-effort
+test of the public name and port: the server sends one UDP request to
+`<host>:<port>` from inside. *Not reachable from here* is a hint, not proof: a
+router without NAT loopback fails it although the forward works, and a pass
+says nothing about a firewall in front of your router. Test from outside
+(a phone on mobile data) when in doubt.
+
+**What it can and cannot do.** The relay is a bridge to the voice server and
+nothing else:
+
+- It forwards only to the voice server's own media sockets: its addresses
+  (the announced `WEBRTC_NAT_1TO1_IP` and the machine's own) and its media
+  ports. A request to relay to any other address or port is refused when the
+  permission is asked for, and the relayed socket itself drops every datagram
+  that does not go to, or come from, those media ports. It cannot reach your
+  LAN, other containers, the host's other services or the internet.
+- It only relays UDP. TCP allocations (RFC 6062) are refused.
+- Credentials are minted by `GET /api/webrtc/config` for the signed-in member
+  and only for members who may join a Talk. They are TURN REST style
+  (`<expiry>:<member id>` plus an HMAC), signed with a random secret generated
+  at every start, so they stop working at a restart and are not
+  `WEBRTC_TURN_SECRET`. They are valid for 12 hours (a running call cannot
+  renew them, so this is deliberately longer than a long call). Starting or
+  refreshing a session re-checks that the member may still join voice.
+- Limits: 4 sessions per member and 256 in total, 120 allocation attempts a
+  minute per address (burst 60), an address with many failed logins is refused
+  for a while, 4 MiB/s per session towards the voice server, sessions that
+  carry nothing for 2 minutes or outlive their credential are closed, and TCP
+  connections are capped per address and idle-timed.
+- Refused attempts are counted in `mnema_turn_events_total{event}`
+  (`auth_failed`, `forbidden`, `rate_limited`, `quota_user`, `quota_total`,
+  `peer_denied`, `packet_blocked`, `throttled`) and logged at debug level
+  (`LOG_LEVEL=debug`). `mnema_turn_allocations` is the live sessions,
+  `mnema_turn_relayed_bytes_total{direction}` the traffic.
+
+The built-in relay is your own server, so the privacy policy does not list it;
+an external TURN server from `WEBRTC_TURN_URLS` is still listed.
+
 ## TURN (coturn)
 
-Needed only for members whose network blocks the UDP range (strict
-firewalls, some VPNs, Opera with its VPN or WebRTC protection on). Without it
-those members get no voice: their browser tells them "No media connection" and
-the server log shows `sfu ice failed` for them. At startup the server logs
-`webrtc relay: ...` when no TURN URL is set, or none that works over TCP or TLS.
+The alternative to the [built-in relay](#built-in-turn-relay), for operators
+who want a separate relay process or public relay ports. Needed only for
+members whose network blocks the UDP range (strict firewalls, some VPNs, Opera
+with its VPN or WebRTC protection on). Without any relay those members get no
+voice: their browser tells them "No media connection" and the server log shows
+`sfu ice failed` for them. At startup the server logs `webrtc relay: ...` when
+no relay is on offer, or none that works over TCP or TLS. Setting
+`WEBRTC_TURN_URLS` switches the built-in relay off under
+`WEBRTC_BUILTIN_TURN=auto`. coturn runs with host networking on port 3478;
+the built-in relay uses 3479, so the two do not collide.
 
 1. In `.env`:
    ```sh
@@ -787,6 +870,9 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_sfu_ice_transitions_total{state}` | counter | `connected`, `failed`, `disconnected` ICE transitions. A rising `failed` share means clients cannot reach the UDP port or TURN. |
 | `mnema_sfu_ingress_dropped_total{reason}` | counter | Publisher packets dropped over the ingress limit: `rate` (a sender above its budget) or `closed` (the peer was already closing). |
 | `mnema_sfu_peer_joins_total` | counter | Media connections created. |
+| `mnema_turn_events_total{event}` | counter | The built-in TURN relay: `allocation`, `relay_opened` and the refused attempts `auth_failed`, `forbidden`, `rate_limited`, `quota_user`, `quota_total`, `peer_denied`, `packet_blocked`, `throttled`. A steady climb of `peer_denied` or `packet_blocked` means someone is probing the relay; it cannot get anywhere. |
+| `mnema_turn_allocations` | gauge | Sessions relayed by the built-in TURN relay right now. |
+| `mnema_turn_relayed_bytes_total{direction}` | counter | Bytes the relay forwarded, `to_sfu` and `from_sfu`. |
 | `mnema_db_connections_total\|acquired\|idle\|max` | gauge | Database pool. `mnema_db_acquires_total`, `..._waited_total`, `..._canceled_total`, `mnema_db_acquire_seconds_total` count acquisitions, those that had to wait, those abandoned and the time spent. |
 | `mnema_storage_up` | gauge | 1 when object storage answers (the same check as `/api/health`), else 0. |
 | `mnema_s3_operations_total{op,result}` | counter | Object storage calls (`upload`, `get`, `delete`, `list`) by `ok`/`error`. |
@@ -927,7 +1013,9 @@ Otherwise sign in from a browser you used before, or wait.
    and the browsers' own connection diagnostics (`webrtc client diag`).
    Revert to the default afterwards.
 5. **UDP blocked on the member's side** (company network, VPN, Opera's VPN or
-   WebRTC protection): only TURN over TCP helps, see [TURN](#turn-coturn).
+   WebRTC protection): only TURN over TCP helps. The server's own relay does
+   it (see [Built-in TURN relay](#built-in-turn-relay); forward its port on UDP
+   and TCP), or use [coturn](#turn-coturn).
    The affected member sees "No media connection" in the app; the log has
    `webrtc client diag` at warn level with `"ice":"failed"` and the candidate
    types the browser gathered (no `relay` entry means no TURN was on offer).

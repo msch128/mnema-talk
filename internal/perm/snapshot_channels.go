@@ -155,6 +155,22 @@ func (s *Snapshot) ViewableChannels(sub Subject) []uuid.UUID {
 	return out
 }
 
+// MayConnectAnywhere reports whether sub may join a Talk somewhere: they can
+// view and connect to at least one channel (an Administrator can to all of
+// them). It says nothing about a particular Talk; it gates what any Talk
+// needs first, such as a relay credential for voice.
+func (s *Snapshot) MayConnectAnywhere(sub Subject) bool {
+	if s.Global(sub).Has(Administrator) {
+		return true
+	}
+	for ch := range s.channelCat {
+		if s.Channel(sub, ch).Has(ViewChannel | Connect) {
+			return true
+		}
+	}
+	return false
+}
+
 // HiddenChannels lists the channels sub may not view: the complement of
 // ViewableChannels within the channels the snapshot knows.
 func (s *Snapshot) HiddenChannels(sub Subject) []uuid.UUID {

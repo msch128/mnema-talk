@@ -99,7 +99,7 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 	authed.Group(func(j chi.Router) {
 		j.Use(httpx.MaxBody(httpx.DefaultMaxBody))
 		c.authH.MountAuthenticated(j)
-		j.Get("/webrtc/config", webrtcConfig(c.cfg))
+		j.Get("/webrtc/config", webrtcConfig(c.cfg, c.d.TURN))
 		if c.cfg.APIDocs {
 			j.Get("/openapi.json", openAPISpec)
 		}

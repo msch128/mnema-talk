@@ -1169,6 +1169,15 @@
       "connections": "WebSocket-Verbindungen",
       "onlineUsers": "{count} online",
       "turn": "TURN eingerichtet",
+      "builtinTurn": "Eingebautes TURN",
+      "builtinTurnOff": "Aus",
+      "builtinTurnDown": "Läuft nicht",
+      "builtinTurnActive": "Port {port} ({transports}), {count} vermittelt, {reach}",
+      "turnReach": {
+        "reachable": "von hier erreichbar",
+        "unreachable": "von hier nicht erreichbar, Portweiterleitung prüfen",
+        "unknown": "nicht getestet"
+      },
       "yes": "Ja",
       "no": "Nein",
       "uptime": "Laufzeit",
@@ -1276,6 +1285,10 @@
         "insecure_public_url": {
           "title": "PUBLIC_URL ist nicht https",
           "body": "Sitzungs-Cookies werden ohne Secure-Flag und ohne __Host--Präfix gesendet; wer im Netzwerkpfad sitzt, kann sie lesen oder ersetzen. Setze PUBLIC_URL auf die https://-Adresse, die alle öffnen, hinter einem Reverse Proxy, der TLS beendet."
+        },
+        "turn_unavailable": {
+          "title": "Eingebautes TURN-Relay läuft nicht vollständig",
+          "body": "Das im Server eingebaute TURN-Relay konnte Port {port} (UDP oder TCP) nicht belegen, daher bekommen Mitglieder hinter strengen Firewalls womöglich keine Sprache. Gib den Port frei, wähle mit WEBRTC_BUILTIN_TURN_PORT einen anderen oder schalte das Relay mit WEBRTC_BUILTIN_TURN=off ab."
         },
         "voice_unavailable": {
           "title": "Sprache ist deaktiviert",

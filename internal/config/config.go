@@ -56,6 +56,15 @@ type Config struct {
 	// use-auth-secret / static-auth-secret = WebRTCTURNSecret).
 	WebRTCTURNURLs   []string
 	WebRTCTURNSecret string
+	// WebRTCBuiltinTURN switches the TURN relay built into the server
+	// (WEBRTC_BUILTIN_TURN): "auto" (default) runs it only while no external
+	// TURN is configured (WEBRTC_TURN_URLS empty), "on" always, "off" never.
+	// WebRTCBuiltinTURNPort is the UDP and TCP port it listens on.
+	// WebRTCBuiltinTURNHost (WEBRTC_BUILTIN_TURN_HOST) overrides the host name
+	// members are told to reach it at; empty = the host of PUBLIC_URL.
+	WebRTCBuiltinTURN     string
+	WebRTCBuiltinTURNPort uint16
+	WebRTCBuiltinTURNHost string
 	// MetricsToken enables GET /api/metrics for Prometheus (Bearer token);
 	// empty keeps the endpoint off.
 	MetricsToken string
@@ -160,8 +169,18 @@ func (c *Config) SelfUpdateConfigured() bool { return c.UpdaterToken != "" && c.
 // WEBRTC_NAT_1TO1_IP the SFU announces the container's own (Docker bridge)
 // address, which no browser elsewhere can reach, and without TURN there is
 // no fallback either.
+//
+// The built-in TURN relay reaches the SFU through the server's own address, so
+// while it runs the announced address is no longer the only way in.
 func (c *Config) WebRTCReachabilityWarning() string {
-	if !c.IsProduction() || len(c.WebRTCAnnounce) > 0 || len(c.WebRTCTURNURLs) > 0 {
+	return c.WebRTCReachabilityWarningWith(c.BuiltinTURNEnabled())
+}
+
+// WebRTCReachabilityWarningWith is WebRTCReachabilityWarning for a known state
+// of the built-in TURN relay: builtinRunning is whether it is actually
+// listening, not only whether the settings ask for it.
+func (c *Config) WebRTCReachabilityWarningWith(builtinRunning bool) string {
+	if !c.IsProduction() || len(c.WebRTCAnnounce) > 0 || len(c.WebRTCTURNURLs) > 0 || builtinRunning {
 		return ""
 	}
 	return "WEBRTC_NAT_1TO1_IP and WEBRTC_TURN_URLS are empty: browsers are told the container's own address, so voice and video will likely fail for members outside this host; set WEBRTC_NAT_1TO1_IP to the public (and LAN) address"
@@ -171,7 +190,17 @@ func (c *Config) WebRTCReachabilityWarning() string {
 // returns "" when a TURN relay offers them a TCP or TLS path. Direct media
 // needs UDP to the announced address; only TURN over TCP (turn:...?transport=tcp)
 // or TLS (turns:...) crosses a network that drops UDP.
-func (c *Config) WebRTCRelayNotice() string {
+//
+// It looks at WEBRTC_TURN_URLS only; WebRTCRelayNoticeWith knows about the
+// relay built into the server.
+func (c *Config) WebRTCRelayNotice() string { return c.WebRTCRelayNoticeWith(false) }
+
+// WebRTCRelayNoticeWith is WebRTCRelayNotice when the built-in TURN relay is
+// listening over TCP (builtinTCP): that is a TCP path of its own.
+func (c *Config) WebRTCRelayNoticeWith(builtinTCP bool) string {
+	if builtinTCP {
+		return ""
+	}
 	if len(c.WebRTCTURNURLs) == 0 {
 		return "WEBRTC_TURN_URLS is empty: members whose network blocks UDP (strict firewalls, some VPNs, Opera) cannot join voice; see the TURN section of doc/operations.md"
 	}

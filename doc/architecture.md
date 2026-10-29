@@ -323,7 +323,12 @@ waiting for the next round.
 ## Data flow: voice, cameras and screen share
 
 Signaling runs over the existing WebSocket; media goes over UDP straight to
-the SFU (`WEBRTC_UDP_PORT_MIN`–`MAX`), or through TURN when configured.
+the SFU (`WEBRTC_UDP_PORT_MIN`–`MAX`), or through TURN when configured: the
+relay built into the server ([`internal/turnrelay`](../internal/turnrelay/doc.go),
+`WEBRTC_BUILTIN_TURN`) or an external one. The built-in relay opens its relayed
+sockets on the server itself and forwards only to the SFU's own media sockets
+(translating the announced `WEBRTC_NAT_1TO1_IP` address to the local socket and
+back), so it needs no public relay ports and cannot reach anything else.
 
 1. **Join.** Clicking a voice channel sends `voice_join`. The hub
    ([`voice.go`](../internal/ws/voice.go)) leaves any previous room, calls

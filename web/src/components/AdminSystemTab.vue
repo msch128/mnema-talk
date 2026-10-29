@@ -9,6 +9,7 @@ import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { t, locale } from '../i18n'
 import { describeWarning } from '../lib/operatorWarnings'
+import { builtinTurnText } from './adminSystemWarnings'
 import SelfUpdateDialog from './SelfUpdateDialog.vue'
 import AdminOpsPanel from './AdminOpsPanel.vue'
 import AdminUploadLimit from './AdminUploadLimit.vue'
@@ -133,6 +134,8 @@ defineExpose({ refresh, status })
 const warnings = computed(() => (status.value?.warnings || []).map(w => ({ code: w.code, ...describeWarning(w.code, w.value) })))
 
 const health = computed(() => status.value?.health || null)
+
+const builtinTurnLabel = computed(() => builtinTurnText(health.value?.voice.builtin_turn))
 const upd = computed(() => status.value?.update || null)
 
 function formatBytes(bytes: number) {
@@ -351,6 +354,8 @@ onMounted(refresh)
           <dd class="text-mnema-text tabular-nums">{{ health.voice.websocket_connections }} ({{ $t('admin.system.onlineUsers', { count: health.voice.online_users }) }})</dd>
           <dt class="text-mnema-tertiary">{{ $t('admin.system.turn') }}</dt>
           <dd class="text-mnema-text">{{ health.voice.turn_configured ? $t('admin.system.yes') : $t('admin.system.no') }}</dd>
+          <dt class="text-mnema-tertiary">{{ $t('admin.system.builtinTurn') }}</dt>
+          <dd class="text-mnema-text" data-testid="system-builtin-turn">{{ builtinTurnLabel }}</dd>
         </dl>
       </div>
 

@@ -24,7 +24,7 @@ func TestPublicConfigurationEmptyListsAndSTUN(t *testing.T) {
 		t.Fatal(rec.Body.String())
 	}
 	rec = httptest.NewRecorder()
-	webrtcConfig(&config.Config{WebRTCSTUNURLs: []string{"stun:stun.example.test"}}).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/webrtc/config", nil))
+	webrtcConfig(&config.Config{WebRTCSTUNURLs: []string{"stun:stun.example.test"}}, nil).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/webrtc/config", nil))
 	if !strings.Contains(rec.Body.String(), "stun:stun.example.test") || rec.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal(rec.Body.String())
 	}

@@ -110,6 +110,9 @@ func (c *components) newCore() {
 	}
 	c.permSvc.SetUploadCeiling(cfg.MaxUploadMB)
 	hub.SetPermissions(c.permSvc)
+	if d.TURN != nil {
+		d.TURN.SetMayRelay(c.mayJoinVoice)
+	}
 	c.pub = hub
 	if d.Events != nil {
 		c.pub = d.Events
@@ -272,6 +275,19 @@ func (c *components) newPush() error {
 	return nil
 }
 
+// mayJoinVoice is what the built-in TURN relay asks before it hands out or
+// honours credentials: the member could join a Talk right now. A failed
+// permission lookup says no.
+func (c *components) mayJoinVoice(user uuid.UUID) bool {
+	ctx, cancel := context.WithTimeout(c.ctx, 2*time.Second)
+	defer cancel()
+	snap, err := c.permSvc.Snapshot(ctx)
+	if err != nil {
+		return false
+	}
+	return snap.MayConnectAnywhere(perm.Subject{ID: user}) && !snap.RulesPending(user)
+}
+
 // newSystem builds the admin System tab's handler, its ops sampler and, when
 // configured, the self-update client.
 func (c *components) newSystem() error {
@@ -281,6 +297,7 @@ func (c *components) newSystem() error {
 		db:       d.DB,
 		hub:      c.hub,
 		sfu:      d.SFU,
+		turn:     d.TURN,
 		storage:  d.StorageReady,
 		hasStore: d.Store != nil,
 		version:  d.Version,
