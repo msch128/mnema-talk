@@ -40,6 +40,15 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  # Backfill: mirror an existing release to Docker Hub. Only the
+  # dockerhub-mirror job runs on dispatch; every other job needs the
+  # workflow_run context (release-please) or its output and is skipped.
+  workflow_dispatch:
+    inputs:
+      mirror_version:
+        description: Released version to mirror to Docker Hub, for example 2.0.0
+        required: true
+        type: string
 
 permissions: {}
 
@@ -298,17 +307,28 @@ jobs:
   # mirror never fails a release. Once configured, a digest mismatch fails it.
   dockerhub-mirror:
     needs: [release-please, image]
-    if: needs.release-please.outputs.release_created == 'true'
+    # After a release: the image job built and signed it. On dispatch (main
+    # only): the version named in the input, which is verified below.
+    # !cancelled() lets the job run when release-please and image were skipped.
+    if: >-
+      !cancelled() && (
+        (github.event_name == 'workflow_run' &&
+          needs.release-please.outputs.release_created == 'true' &&
+          needs.image.result == 'success') ||
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
+      contents: read # gh release view, dispatch only
       packages: read # pull from GHCR
       id-token: write # keyless cosign signature (Sigstore)
     env:
       SOURCE: ghcr.io/msch128/mnema-talk
-      DIGEST: ${{ needs.image.outputs.digest }}
-      VERSION: ${{ needs.release-please.outputs.version }}
+      VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.mirror_version || needs.release-please.outputs.version }}
+      IMAGE_DIGEST: ${{ needs.image.outputs.digest }}
       NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Is the Docker Hub mirror configured?
         id: cfg
@@ -325,9 +345,10 @@ jobs:
           case "$NAMESPACE" in
             *[!a-z0-9_-]*) echo "::error::DOCKERHUB_NAMESPACE must be a lowercase Docker Hub namespace"; exit 1 ;;
           esac
-          case "$DIGEST" in
-            sha256:*) ;; *) echo "::error::the image job gave no digest"; exit 1 ;;
-          esac
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::version must look like 2.0.0"
+            exit 1
+          fi
           echo "enabled=true" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -346,30 +367,70 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        if: steps.cfg.outputs.enabled == 'true'
+
+      # After a release the digest comes from the image job. On dispatch it is
+      # resolved from the GHCR tag and only used once cosign shows that this
+      # repository's release workflow signed it, so nothing else can be
+      # mirrored under our name.
+      - name: Resolve and verify the source image
+        if: steps.cfg.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            digest=$(docker buildx imagetools inspect "$SOURCE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)
+          else
+            digest=$IMAGE_DIGEST
+          fi
+          case "$digest" in
+            sha256:*) ;; *) echo "::error::no digest for $SOURCE:$VERSION"; exit 1 ;;
+          esac
+          cosign verify "$SOURCE@$digest" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@' >/dev/null
+          echo "DIGEST=$digest" >> "$GITHUB_ENV"
+
+      # A release gets all four tags. A backfill moves latest and the
+      # major/minor aliases only when it is the newest release; an older
+      # version gets just its own tag.
+      - name: Decide the tags
+        if: steps.cfg.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          tags=$VERSION
+          newest=true
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+            [ "$(printf '%s\n%s\n' "${latest#v}" "$VERSION" | sort -V | tail -n 1)" = "$VERSION" ] || newest=false
+          fi
+          if [ "$newest" = true ]; then
+            tags="$tags ${VERSION%.*} ${VERSION%%.*} latest"
+          else
+            echo "::notice::$VERSION is older than $latest; only the exact tag is mirrored."
+          fi
+          echo "TAGS=$tags" >> "$GITHUB_ENV"
+
       - name: Copy the image by digest
         if: steps.cfg.outputs.enabled == 'true'
         run: |
           set -euo pipefail
           target="docker.io/$NAMESPACE/mnema-talk"
-          major=${VERSION%%.*}
-          minor=${VERSION%.*}
-          docker buildx imagetools create \
-            --tag "$target:$VERSION" --tag "$target:$minor" --tag "$target:$major" --tag "$target:latest" \
-            "$SOURCE@$DIGEST"
-          for tag in "$VERSION" "$minor" "$major" latest; do
+          args=()
+          for tag in $TAGS; do args+=(--tag "$target:$tag"); done
+          docker buildx imagetools create "${args[@]}" "$SOURCE@$DIGEST"
+          for tag in $TAGS; do
             got=$(docker buildx imagetools inspect "$target:$tag" --format '{{json .Manifest}}' | jq -r .digest)
             if [ "$got" != "$DIGEST" ]; then
               echo "::error::$target:$tag has digest $got, expected $DIGEST"
               exit 1
             fi
           done
-          echo "Mirrored $SOURCE@$DIGEST to $target (:$VERSION, :$minor, :$major, :latest)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Mirrored $SOURCE@$DIGEST to $target (tags: $TAGS)" >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        if: steps.cfg.outputs.enabled == 'true'
-
-      # Same keyless identity as the GHCR signature, so the one documented
-      # `cosign verify` command works for both registries.
+      # Same keyless identity as the GHCR signature (this workflow, on main),
+      # so the one documented `cosign verify` command works for both
+      # registries, also for a backfill.
       - name: Sign the Docker Hub image and check it
         if: steps.cfg.outputs.enabled == 'true'
         run: |

@@ -208,7 +208,11 @@ branch) was waived when it landed there and is not reported again.
    job then copies that exact image (same digest, no rebuild) to
    `docker.io/<namespace>/mnema-talk` as `:X.Y.Z`, `:X.Y`, `:X` and `:latest`,
    checks the digests and signs it the same way. Without them the job is
-   skipped with a notice and the release is not affected. The version and commit are baked into the binary
+   skipped with a notice and the release is not affected. To mirror an
+   existing release, run the Release workflow by hand on `main` (`workflow_dispatch`)
+   with `mirror_version` set to the version, for example `2.0.0`. Only the mirror job runs: it
+   resolves the GHCR digest of that version, mirrors it only if cosign shows that
+   this workflow signed it, and moves `:X.Y`, `:X` and `:latest` only when it is the newest release. The version and commit are baked into the binary
    (`internal/version`, via the `VERSION`/`REVISION` build args) and the same
    version into the web app, so the app can tell browsers when a newer
    version is running.
