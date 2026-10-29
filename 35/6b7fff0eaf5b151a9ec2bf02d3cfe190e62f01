@@ -1,0 +1,37 @@
+web/src/components/ChatComposer.vue
+  s_2d22d157720d46::t_d6a24eb28947e6 200
+web/src/components/MarkdownHelp.test.ts
+  s_5b748b0295d2f4::t_b999dc1ba44bcc 5-6,9-12,15-19,22-26,32-46,51,55-62,65-67,69-70,73,81-82,88
+web/src/components/MarkdownHelp.vue
+  s_5b748b0295d2f4::t_c9156cb313ee4b 2-5,7-8,11,14-46,49,53-54,56,58,61-71,74-89,91,95,111,115,117,119-120,122-127,131-158
+web/src/components/ThreadComposer.vue
+  s_2d22d157720d46::t_834856e707f822 8,104-105
+web/src/i18n/de.json
+  s_2d22d157720d46::t_221d69998d3ba3 448-455
+web/src/i18n/en.json
+  s_2d22d157720d46::t_9084f4f8e5fd45 448-455
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "356b7fff0eaf5b151a9ec2bf02d3cfe190e62f01",
+  "prompts": {},
+  "sessions": {
+    "s_2d22d157720d46": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-format-help-1c4cc049037c526d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
