@@ -55,12 +55,12 @@ func TestMatchRoles(t *testing.T) {
 
 func TestParseMentions(t *testing.T) {
 	cases := map[string][]string{
-		"hey @cool_guy, schau":        {"cool_guy"},
+		"hey @Cool_Guy, schau":        {"cool_guy"},
 		"@all and @here!":             {"all", "here"},
 		"satzende @max.":              {"max"},
 		"(@max) @max @MAX":            {"max"},
 		"mail@max.de":                 nil,
-		"@ab is too short":            nil,
+		"@a is too short":             nil,
 		"`@max` counts anyway":        {"max"},
 		"a.b@max and x-@moritz":       nil,
 		"@cool_guy.dev is a username": {"cool_guy.dev"},

@@ -75,14 +75,30 @@ func TestPasswordPolicy(t *testing.T) {
 }
 
 func TestUsernamePolicy(t *testing.T) {
-	for _, bad := range []string{"ab", "has space", "<script>", strings.Repeat("a", 33), "\u00fcnï"} {
+	for _, bad := range []string{"a", "Herzog", "has space", "<script>", strings.Repeat("a", 33), "\u00fcnï", ".ab", "ab.", "a..b", "a-b", "all", "here"} {
 		if ValidateUsername(bad) == nil {
 			t.Errorf("username %q accepted", bad)
 		}
 	}
-	for _, good := range []string{"cool_guy", "max_m", "a.b-c"} {
+	for _, good := range []string{"ab", "max_m", "a.b", "a_1", strings.Repeat("a", 32), "_x"} {
 		if err := ValidateUsername(good); err != nil {
 			t.Errorf("username %q rejected: %v", good, err)
+		}
+	}
+}
+
+func TestNormalizeUsername(t *testing.T) {
+	for in, want := range map[string]string{"Max Mustermann": "max_mustermann", "  Herzog ": "cool_guy", "a b  c": "a_b__c", "ok.name": "ok.name"} {
+		if got := NormalizeUsername(in); got != want {
+			t.Errorf("NormalizeUsername(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestLegacyUsernamesStayValid(t *testing.T) {
+	for _, legacy := range []string{"Herzog", "a.b-c", "bot-0123456789ab", "x..y", "Abc"} {
+		if err := validateExistingUsername(legacy); err != nil {
+			t.Errorf("legacy username %q rejected: %v", legacy, err)
 		}
 	}
 }

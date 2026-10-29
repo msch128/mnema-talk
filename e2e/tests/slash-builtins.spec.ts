@@ -9,7 +9,7 @@ if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2
 const STAMP = Date.now().toString(36)
 const CHANNEL = `slash-${STAMP}`
 // A member of this spec alone: the kick signs them out everywhere, which must not touch the shared suite member.
-const KICKED = { username: `kickee-${STAMP}`, password: 'kickee-password-123' }
+const KICKED = { username: `kickee_${STAMP}`, password: 'kickee-password-123' }
 
 async function signIn(page: Page, username: string, password: string) {
   await page.goto('/')
@@ -80,7 +80,7 @@ test('a member without the permission is not offered the moderation commands', a
   const channel = await apiFetch(page, 'POST', '/api/admin/channels', { name: `slash-menu-${STAMP}`, type: 'text' })
   const channelId = responseString(channel, 'id')
   const invite = await apiFetch(page, 'POST', '/api/admin/invites', { max_uses: 1 })
-  const username = `plain-${STAMP}`
+  const username = `plain_${STAMP}`
   const ctx = await page.context().browser()!.newContext()
   const plain = await ctx.newPage()
   try {
