@@ -1,0 +1,35 @@
+web/src/components/DesktopGamingOverlay.test.ts
+  s_ecf7b9e687a24d::t_aa6cadff52a367 3,19-23,28,36-37,61-62,83,91,116-151
+web/src/components/DesktopGamingOverlay.vue
+  s_3255aa8302478d::t_0209366dbb21b1 6-7,71,86-127,134-138
+web/src/i18n/de.json
+  s_3255aa8302478d::t_ec6cb4a9f31419 2169,2179-2193
+web/src/i18n/en.json
+  s_3255aa8302478d::t_1da5d68bd50da2 2169,2179-2193
+web/src/lib/gameList.ts
+  s_3255aa8302478d::t_ed431a9eb1cdb3 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "09da0019439acd2c9105fc6e9a64a1953f7f72e1",
+  "prompts": {},
+  "sessions": {
+    "s_3255aa8302478d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-gaming-ui-52e3f2038ee574d1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ecf7b9e687a24d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-setup-e379f010794b742e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
