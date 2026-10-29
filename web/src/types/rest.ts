@@ -3412,8 +3412,42 @@ export function isLaterUpdateScheduledRequest(value: unknown): value is LaterUpd
 
 export const decodeLaterUpdateScheduledRequest = decoder("later.UpdateScheduledRequest", isLaterUpdateScheduledRequest)
 
+export type LinkpreviewEmbed = {
+  provider: "youtube" | "vimeo"
+  url: string
+}
+
+export function isLinkpreviewEmbed(value: unknown): value is LinkpreviewEmbed {
+  return isRecord(value)
+    && (hasOwn(value, "provider") && (value["provider"] === "youtube" || value["provider"] === "vimeo"))
+    && (hasOwn(value, "url") && isString(value["url"]))
+}
+
+export const decodeLinkpreviewEmbed = decoder("linkpreview.Embed", isLinkpreviewEmbed)
+
+export type LinkpreviewField = {
+  key?: string
+  name: string
+  value: string
+}
+
+export function isLinkpreviewField(value: unknown): value is LinkpreviewField {
+  return isRecord(value)
+    && (!hasOwn(value, "key") || isString(value["key"]))
+    && (hasOwn(value, "name") && isString(value["name"]))
+    && (hasOwn(value, "value") && isString(value["value"]))
+}
+
+export const decodeLinkpreviewField = decoder("linkpreview.Field", isLinkpreviewField)
+
 export type LinkpreviewPreview = {
+  author?: string
+  author_url?: string
+  color?: string
+  compact?: boolean
   description?: string
+  embed?: LinkpreviewEmbed
+  fields?: Array<LinkpreviewField>
   image?: string
   site_name?: string
   title: string
@@ -3422,7 +3456,13 @@ export type LinkpreviewPreview = {
 
 export function isLinkpreviewPreview(value: unknown): value is LinkpreviewPreview {
   return isRecord(value)
+    && (!hasOwn(value, "author") || isString(value["author"]))
+    && (!hasOwn(value, "author_url") || isString(value["author_url"]))
+    && (!hasOwn(value, "color") || isString(value["color"]))
+    && (!hasOwn(value, "compact") || typeof value["compact"] === 'boolean')
     && (!hasOwn(value, "description") || isString(value["description"]))
+    && (!hasOwn(value, "embed") || isLinkpreviewEmbed(value["embed"]))
+    && (!hasOwn(value, "fields") || isArrayOf(value["fields"], item => isLinkpreviewField(item)))
     && (!hasOwn(value, "image") || isString(value["image"]))
     && (!hasOwn(value, "site_name") || isString(value["site_name"]))
     && (hasOwn(value, "title") && isString(value["title"]))
