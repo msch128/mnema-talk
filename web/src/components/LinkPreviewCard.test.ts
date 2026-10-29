@@ -1,12 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import LinkPreviewCard from './LinkPreviewCard.vue'
+import { setLocale } from '../i18n'
+import { resetMediaStatus } from '../lib/mediaStatus'
 import { fetchLinkPreview } from '../lib/linkPreview'
 import type { LinkPreview } from '../types/domain'
 
 vi.mock('../lib/linkPreview', () => ({ fetchLinkPreview: vi.fn() }))
 enableAutoUnmount(afterEach)
-beforeEach(() => vi.mocked(fetchLinkPreview).mockReset())
+afterEach(() => vi.unstubAllGlobals())
+beforeEach(() => {
+  setLocale('en')
+  resetMediaStatus()
+  vi.mocked(fetchLinkPreview).mockReset()
+})
 
 const full: LinkPreview = { url: 'https://www.example.org/article', title: 'Article title', description: 'Description', image: 'https://example.org/image.png?q=one two', site_name: 'Publisher' }
 
@@ -57,8 +64,12 @@ describe('LinkPreviewCard', () => {
     expect(w.get('[data-testid="link-preview-provider"]').text()).toBe('Publisher')
     expect(w.find('p').text()).toBe('Description')
     expect(w.find('img').attributes('src')).toBe(`/api/link-preview/image?url=${encodeURIComponent(full.image ?? '')}`)
+    // Taken down at its source (410): the card says so instead of a broken image.
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response('', { status: 410 }))))
     await w.find('img').trigger('error')
+    await flushPromises()
     expect(w.find('img').exists()).toBe(false)
+    expect(w.get('[data-testid="link-preview-media"]').text()).toBe('This image was deleted')
     expect(w.text()).toContain('Article title')
   })
 

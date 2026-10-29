@@ -8,6 +8,7 @@ import type { MediaAttachment, Message } from '../types/domain'
 // files keep the card with the file name and size.
 import { computed } from 'vue'
 import { FileText, Maximize2 } from '@lucide/vue'
+import AttachmentImage from './AttachmentImage.vue'
 import { formatFileSize } from '../lib/fileSize'
 import { locale } from '../i18n'
 import { openViewer, viewerMessageFrom } from '../composables/useMediaViewer'
@@ -30,6 +31,7 @@ const STYLES = {
     bareImage: 'w-fit max-w-md',
     imageButton: 'block max-w-full rounded-lg overflow-hidden',
     image: 'block h-auto max-h-80 min-h-24 w-auto max-w-full object-cover cursor-pointer hover:opacity-95 transition',
+    gone: 'h-40 w-72 max-w-full',
     video: 'max-h-80 w-full rounded-t',
     footer: 'p-2.5 flex items-center justify-between text-sm bg-mnema-raised border-t border-mnema-hairline',
     name: 'flex items-center gap-2 truncate',
@@ -44,6 +46,7 @@ const STYLES = {
     bareImage: '',
     imageButton: 'block w-full',
     image: 'max-h-40 w-full object-cover cursor-pointer hover:opacity-90 transition',
+    gone: 'h-24 w-full',
     video: 'max-h-40 w-full',
     footer: 'p-1.5 flex items-center justify-between text-xs bg-mnema-raised border-t border-mnema-hairline',
     name: 'flex items-center gap-1.5 truncate',
@@ -58,6 +61,7 @@ const STYLES = {
     bareImage: '',
     imageButton: 'block w-full',
     image: 'max-h-48 w-full object-cover cursor-pointer hover:opacity-90 transition',
+    gone: 'h-28 w-full',
     video: 'max-h-48 w-full',
     footer: 'p-2 flex items-center justify-between text-xs',
     name: 'flex items-center gap-1.5 truncate',
@@ -98,17 +102,20 @@ const sizeText = (att: MediaAttachment) => formatFileSize(att.size_bytes, locale
     <div v-if="mosaic.length" :class="[s.gallery, 'flex flex-col gap-0.5 overflow-hidden rounded-lg']" :data-gallery="mosaic.length">
       <div v-for="(row, r) in rows" :key="r" :class="[row.rowClass, 'flex gap-0.5']" data-gallery-row>
         <div v-for="(cell, ci) in row.cells" :key="cell[0]!.id" :style="{ flex: `${row.weights[ci]} 1 0%` }" :class="[cell.length > 1 ? 'flex flex-col gap-0.5' : 'flex', 'min-w-0']" :data-stack="cell.length > 1 || undefined">
-          <button
+          <AttachmentImage
             v-for="att in cell"
             :key="att.id"
-            type="button"
+            :attachment="att"
             data-gallery-cell
-            :class="[GALLERY_CELL.button, 'min-h-0 min-w-0 flex-1']"
-            @click="openImage(att)"
+            :button-class="[GALLERY_CELL.button, 'min-h-0 min-w-0 flex-1']"
+            :image-class="GALLERY_CELL.image"
+            placeholder-class="min-h-0 min-w-0 flex-1"
+            compact
+            decoding="async"
+            @open="openImage(att)"
           >
-            <img :src="att.url" :alt="att.original_filename" :title="att.original_filename" :class="GALLERY_CELL.image" loading="lazy" decoding="async" />
             <span :class="GALLERY_CELL.chip" aria-hidden="true"><Maximize2 class="h-3.5 w-3.5" /></span>
-          </button>
+          </AttachmentImage>
         </div>
       </div>
     </div>
@@ -118,16 +125,16 @@ const sizeText = (att: MediaAttachment) => formatFileSize(att.size_bytes, locale
       :data-attachment="kind(att)"
       :class="bare(att) ? s.bareImage : s.card"
     >
-      <!-- The image's alt text (file name) names the button. -->
-      <button
+      <AttachmentImage
         v-if="kind(att) === 'image'"
-        type="button"
-        :class="[s.imageButton, 'group relative focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent']"
-        @click="openImage(att)"
+        :attachment="att"
+        :button-class="[s.imageButton, 'group relative']"
+        :image-class="s.image"
+        :placeholder-class="s.gone"
+        @open="openImage(att)"
       >
-        <img :src="att.url" :alt="att.original_filename" :title="att.original_filename" :class="s.image" loading="lazy" />
         <span :class="GALLERY_CELL.chip" aria-hidden="true"><Maximize2 class="h-3.5 w-3.5" /></span>
-      </button>
+      </AttachmentImage>
       <video v-else-if="kind(att) === 'video'" :src="att.url" controls :class="s.video"></video>
       <div v-if="!bare(att)" :class="s.footer">
         <div :class="s.name">
