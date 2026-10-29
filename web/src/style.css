@@ -385,3 +385,12 @@
   /* A tap is not a hover: tooltips would stick after it. */
   .mnema-tooltip { display: none; }
 }
+
+/* The app is not selectable as a whole, but what went wrong is: error banners
+   and toasts carry technical detail that people paste into a report. */
+[role='alert'],
+[role='status'],
+[data-toast] {
+  user-select: text;
+  -webkit-user-select: text;
+}

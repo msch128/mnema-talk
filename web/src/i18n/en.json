@@ -1970,6 +1970,8 @@
     "summary": "{voice} in Talks · {messages} messages"
   },
   "nativeDesktop": {
+    "copy": "Copy",
+    "copied": "Copied",
     "connectError": "This server is unavailable or does not support this DEV build.",
     "dev": "DEV development build",
     "connectCommunity": "Connect to your community.",

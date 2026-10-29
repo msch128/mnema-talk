@@ -1970,6 +1970,8 @@
     "summary": "{voice} im Talk · {messages} Nachrichten"
   },
   "nativeDesktop": {
+    "copy": "Kopieren",
+    "copied": "Kopiert",
     "connectError": "Dieser Server ist nicht erreichbar oder unterstützt diese DEV-Version nicht.",
     "dev": "DEV-Entwicklungsversion",
     "connectCommunity": "Mit deiner Community verbinden.",
