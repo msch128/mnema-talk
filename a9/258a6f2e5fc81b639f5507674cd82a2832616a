@@ -1,0 +1,35 @@
+doc/operations.md
+  s_06fcde5dbef956::t_cc10851a2b001f 613,625-636
+  s_06fcde5dbef956::t_d5da3d8091a327 637
+doc/quick-start.md
+  s_06fcde5dbef956::t_98c8f4b932a95a 51-52
+doc/ports.md
+  s_06fcde5dbef956::t_98c8f4b932a95a 94
+doc/deployment.md
+  s_06fcde5dbef956::t_98c8f4b932a95a 44-45
+.github/workflows/release.yml
+  s_06fcde5dbef956::t_18d49452df87ec 30-31,226-227,291-381
+  s_06fcde5dbef956::t_b9c2b89b31d36e 382
+doc/upgrade.md
+  s_06fcde5dbef956::t_98c8f4b932a95a 73-74
+doc/development.md
+  s_06fcde5dbef956::t_cc10851a2b001f 205-211
+README.md
+  s_06fcde5dbef956::t_cc10851a2b001f 249-250,322-324
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9258a6f2e5fc81b639f5507674cd82a2832616a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
