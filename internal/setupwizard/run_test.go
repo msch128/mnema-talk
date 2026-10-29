@@ -44,6 +44,31 @@ func TestNonInteractiveSetupWritesBothFiles(t *testing.T) {
 	}
 }
 
+func TestSummaryNamesTheOwnerTheServerSeeds(t *testing.T) {
+	dir := t.TempDir()
+	out, err := runSetup(t, "", "-y", "--dir", dir, "--public-url", "chat.example.com", "--compose-template", repoCompose)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, ".env"))
+	env, _ := godotenv.Unmarshal(string(raw))
+	if env["ADMIN_USERNAME"] != "admin" || !strings.Contains(out, "user      admin\n") {
+		t.Errorf("ADMIN_USERNAME=%q, summary:\n%s", env["ADMIN_USERNAME"], out)
+	}
+}
+
+func TestSetupRefusesAnOwnerNameTheServerCannotSeed(t *testing.T) {
+	for _, name := range []string{"Max Mustermann", "x", "a\nB=c"} {
+		dir := t.TempDir()
+		if _, err := runSetup(t, "", "-y", "--dir", dir, "--public-url", "chat.example.com", "--compose-template", repoCompose, "--admin-username", name); err == nil || !strings.Contains(err.Error(), "admin-username") {
+			t.Errorf("name %q: err = %v", name, err)
+		}
+		if _, err := os.Stat(filepath.Join(dir, ".env")); err == nil {
+			t.Errorf("name %q: .env was written", name)
+		}
+	}
+}
+
 func TestNonInteractiveNeedsThePublicURL(t *testing.T) {
 	if _, err := runSetup(t, "", "-y", "--dir", t.TempDir()); err == nil || !strings.Contains(err.Error(), "--public-url") {
 		t.Fatalf("err = %v", err)

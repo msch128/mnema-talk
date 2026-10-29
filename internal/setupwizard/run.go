@@ -121,7 +121,7 @@ func askMissing(p *prompter, o Options) (Options, error) {
 		}
 	}
 	if o.AdminUsername == "" {
-		if o.AdminUsername, err = p.ask("User name of the Owner account", "admin"); err != nil {
+		if o.AdminUsername, err = p.ask("User name of the Owner account", DefaultAdminUsername); err != nil {
 			return o, err
 		}
 	}
@@ -148,11 +148,7 @@ func printSummary(out io.Writer, o Options, g Generated, findings []Finding) {
 		fmt.Fprintf(out, "  %s %s: %s\n", marks[f.Level], f.Title, f.Detail)
 	}
 	fmt.Fprintf(out, "\nWritten:\n  %s   (secrets inside, mode 600)\n  %s\n", g.EnvPath, g.ComposePath)
-	user := o.AdminUsername
-	if user == "" {
-		user = "Herzog"
-	}
-	fmt.Fprintf(out, "\nOwner sign-in after the first start:\n  user      %s\n  password  %s\n  (also in .env as ADMIN_INITIAL_PASSWORD; delete that line after signing in)\n", user, g.Secrets.AdminPassword)
+	fmt.Fprintf(out, "\nOwner sign-in after the first start:\n  user      %s\n  password  %s\n  (also in .env as ADMIN_INITIAL_PASSWORD; delete that line after signing in)\n", o.AdminUsername, g.Secrets.AdminPassword)
 	fmt.Fprint(out, "\nNext, in the directory with the two files:\n  docker compose up -d --wait\n")
 	if strings.HasPrefix(o.PublicURL, "https://") {
 		fmt.Fprintf(out, "\nPut a reverse proxy with TLS in front: %s -> http://127.0.0.1:8080 (WebSocket enabled).\n", o.PublicURL)
