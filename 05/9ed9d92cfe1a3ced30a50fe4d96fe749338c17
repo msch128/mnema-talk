@@ -1,0 +1,125 @@
+internal/setupcheck/setupcheck_test.go
+  s_06fcde5dbef956::t_9779d0c65cad76 1-270
+internal/sfu/announce_detected_test.go
+  s_06fcde5dbef956::t_187bd3f1a9d191 1-44
+internal/config/public_url_test.go
+  s_06fcde5dbef956::t_36a2f2da880417 1-88
+internal/stunprobe/stunprobe.go
+  s_06fcde5dbef956::t_b091da8bb45c0d 1-176
+internal/setupwizard/generate.go
+  s_06fcde5dbef956::t_5887a8f19f4cba 1-98
+scripts/smoke-image.sh
+  s_06fcde5dbef956::t_7dee2ac2020944 81-89
+internal/config/config_env.go
+  s_06fcde5dbef956::t_5a1c1fe8f6be43 9,107,148-149
+internal/config/config.go
+  s_06fcde5dbef956::t_5a1c1fe8f6be43 7,100-110,119-141
+  s_06fcde5dbef956::t_00ff0e6af36471 142
+web/src/components/AdminStatusTab.vue
+  s_06fcde5dbef956::t_6832e3ab81c816 44-50,77-104
+  s_06fcde5dbef956::t_2f73dd091057e6 105-106
+internal/stunprobe/stunprobe_test.go
+  s_06fcde5dbef956::t_b091da8bb45c0d 1-142
+api/openapi.json
+  s_06fcde5dbef956::t_37bf9818a7ed77 7159-7165,7187,7821-7860
+cmd/server/main.go
+  s_06fcde5dbef956::t_6083788b6448fc 22,24,42-44,88-89,96,98,140,142-145,149,162,178-182
+cmd/server/setup_checks.go
+  s_06fcde5dbef956::t_49b91c9a72bcef 1-66
+internal/server/admin_status.go
+  s_06fcde5dbef956::t_5ee1d841ff5ce4 7,13,28-30,81,85,109-110,120-149
+internal/server/admin_status_setup_integration_test.go
+  s_06fcde5dbef956::t_07063e6decf8a7 1-65
+internal/server/admin_status_setup_test.go
+  s_06fcde5dbef956::t_020f5570c6b545 1-25
+internal/server/router_build.go
+  s_06fcde5dbef956::t_8403ecc05a5964 296
+internal/server/server.go
+  s_06fcde5dbef956::t_03103ab18c1a02 24,59-61
+internal/server/system.go
+  s_06fcde5dbef956::t_ae83416a2eeeb9 19,44-45
+internal/setupcheck/announce.go
+  s_06fcde5dbef956::t_6c32fb1aafe868 1-75
+internal/setupcheck/clock.go
+  s_06fcde5dbef956::t_ce5b16ecf68ec8 1-75
+internal/setupcheck/log.go
+  s_06fcde5dbef956::t_50825b83472920 1-24
+internal/setupcheck/setupcheck.go
+  s_06fcde5dbef956::t_e4c22a30340a79 1-373
+internal/setupwizard/envfile.go
+  s_06fcde5dbef956::t_0917a28af8bfbf 1-121
+internal/setupwizard/preflight.go
+  s_06fcde5dbef956::t_f65d00c0d090cd 1-141
+internal/setupwizard/prompt.go
+  s_06fcde5dbef956::t_a1a09b44981f74 1-107
+internal/sfu/announce.go
+  s_06fcde5dbef956::t_10059cb887d0bf 114-143
+web/src/components/AdminStatusTab.test.ts
+  s_06fcde5dbef956::t_5078362a9cf5f0 68,247-287
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_47a176756ab0f2 1302-1321
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_06ebc0266ba4cb 1302-1321
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_e3f9a0e79f352d 4231,4245,4627-4651
+.env.example
+  s_3043ef48954715::t_b0470bd15b4866 7-11,27-29,180-185,187-194,250-253
+Dockerfile
+  s_3043ef48954715::t_92096a736c02d8 87-90
+cmd/server/setup.go
+  s_06fcde5dbef956::t_265de63716475c 1-14
+docker-compose.yml
+  s_3043ef48954715::t_bb0f79ffaa3e00 70-71,91-93
+go.mod
+  s_5aa38e778cf1ac::t_58a96a7e3c43c8 33
+internal/setupwizard/dir.go
+  s_06fcde5dbef956::t_6bd37403509249 1-12
+internal/setupwizard/options.go
+  s_06fcde5dbef956::t_17a23f56272db6 1-126
+internal/setupwizard/run.go
+  s_2156e9735076ff::t_99fc155d096eb9 1-161
+internal/setupwizard/run_test.go
+  s_5aa38e778cf1ac::t_dd6dcee68bd1c6 1-109
+internal/setupwizard/setupwizard_test.go
+  s_06fcde5dbef956::t_50800afa47a117 1-252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "059ed9d92cfe1a3ced30a50fe4d96fe749338c17",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2156e9735076ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adel-native-server-78d153cdff05b628",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3043ef48954715": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-drill-ports-b192b464b6201a17",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5aa38e778cf1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-builtin-turn-725a019b5a1e641a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
