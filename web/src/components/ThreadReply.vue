@@ -24,7 +24,7 @@ const props = defineProps({
   canReact: { type: Boolean, default: false },
   highlighted: { type: Boolean, default: false }
 })
-const emit = defineEmits<{ reply: []; jump: []; 'edit-step': [step: -1 | 1, event: KeyboardEvent]; keydown: [event: KeyboardEvent]; 'open-image': [src: string] }>()
+const emit = defineEmits<{ reply: []; jump: []; 'edit-step': [step: -1 | 1, event: KeyboardEvent]; keydown: [event: KeyboardEvent] }>()
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
@@ -147,7 +147,7 @@ const { pickerId, editingId, editText } = props.actions
         <MessageEmbeds v-if="editingId !== reply.id" :embeds="reply.embeds ?? []" />
 
         <!-- Reply Attachments -->
-        <MessageAttachments :attachments="reply.attachments" variant="reply" @open-image="emit('open-image', $event)" />
+        <MessageAttachments :attachments="reply.attachments" variant="reply" :message="reply" />
 
         <!-- Reaction badges -->
         <ReactionBar

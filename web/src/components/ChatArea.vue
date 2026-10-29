@@ -10,7 +10,6 @@ import ChatHeader from './ChatHeader.vue'
 import ChannelAutoDeleteNote from './ChannelAutoDeleteNote.vue'
 import ChatComposer from './ChatComposer.vue'
 import FileDropOverlay from './FileDropOverlay.vue'
-import ImageLightbox from './ImageLightbox.vue'
 import ContextMenu from './ContextMenu.vue'
 import EphemeralNotes from './EphemeralNotes.vue'
 import PinNotices from './PinNotices.vue'
@@ -18,6 +17,7 @@ import MessageRow from './MessageRow.vue'
 import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useMessageActions } from '../composables/useMessageActions'
 import { useDmChat } from '../composables/useDmChat'
+import { viewerState } from '../composables/useMediaViewer'
 import { toggleSavedMessage, useMessageMenu } from '../composables/useMessageMenu'
 import { useOwnMessageNav } from '../composables/useOwnMessageNav'
 import { useMessageScroll } from '../composables/useMessageScroll'
@@ -71,7 +71,6 @@ const messageContainer = ref<HTMLElement | null>(null)
 const composer = ref<InstanceType<typeof ChatComposer> | null>(null)
 const textAreaEl = computed(() => composer.value?.textArea ?? null)
 const isSending = ref(false)
-const selectedImage = ref<string | null>(null)
 // Message the composer is currently replying to.
 const replyingTo = ref<DraftReply | null>(null)
 // Text and reply target stay with their channel while another one is open.
@@ -158,7 +157,7 @@ useEscapeMarksRead({
     menu.close()
     return true
   },
-  occupied: () => !!(selectedImage.value || editingMessageId.value || replyingTo.value),
+  occupied: () => !!(viewerState.open || editingMessageId.value || replyingTo.value),
   draft: () => inputMessage.value,
   markAllRead
 })
@@ -318,7 +317,6 @@ const groupedIds = computed(() => {
         @close-picker="actions.closePicker()"
         @open-thread="chatStore.openThread(msg)"
         @open-profile="chatStore.openUserProfile(msg)"
-        @open-image="selectedImage = $event"
         @jump="jumpToReplied(msg)"
       />
       </template>
@@ -386,7 +384,6 @@ const groupedIds = computed(() => {
 
     <FileDropOverlay @files="composer?.attachFiles($event)" />
     <!-- Image lightbox -->
-    <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
 
     <!-- Message context menu -->
     <ContextMenu

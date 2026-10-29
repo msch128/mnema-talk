@@ -60,6 +60,25 @@
     "openProfile": "Eigenes Profil öffnen",
     "deleted": "Gelöschtes Mitglied"
   },
+  "viewer": {
+    "label": "Medienansicht",
+    "announce": "{name}, {n} von {total}",
+    "counter": "{n} / {total}",
+    "previous": "Voriges Bild",
+    "next": "Nächstes Bild",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "zoomReset": "Zoom zurücksetzen",
+    "download": "Herunterladen",
+    "copyLink": "Link kopieren",
+    "linkCopied": "Link kopiert",
+    "jumpToMessage": "Zur Nachricht",
+    "openOriginal": "Original öffnen",
+    "inChannel": "in {channel}",
+    "dimensions": "{w} × {h} px",
+    "image": "Bild",
+    "zoomLevel": "Zoom {percent} %"
+  },
   "media": {
     "sizeB": "{size} B",
     "sizeKb": "{size} KB",

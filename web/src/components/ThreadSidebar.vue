@@ -9,7 +9,6 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
 import { updateForumPost } from '../lib/forumApi'
 import ThreadRootCard from './ThreadRootCard.vue'
-import ImageLightbox from './ImageLightbox.vue'
 import ThreadReply from './ThreadReply.vue'
 import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useBlocksStore } from '../stores/blocks'
@@ -56,7 +55,6 @@ const followed = computed(() => !!chatStore.activeThread && chatStore.followedTh
 const replyInput = ref('')
 const repliesContainer = ref<HTMLElement | null>(null)
 const isSending = ref(false)
-const selectedImage = ref<string | null>(null)
 
 // Editing, deleting, reactions and uploads
 const actions = useMessageActions({ container: repliesContainer, deleteTitle: 'thread.deleteTitle' })
@@ -299,7 +297,6 @@ async function handleFileUpload(e: Event) {
         :can-react="canReact"
         :highlighted="highlightedId === chatStore.activeThread.id"
         @reply="startReply"
-        @open-image="selectedImage = $event"
         @keydown="onRootKeydown"
       />
 
@@ -339,7 +336,6 @@ async function handleFileUpload(e: Event) {
         @reply="startReply(reply)"
         @jump="jumpToReplied(reply)"
         @edit-step="(step, e) => ownNav.step(step, e, reply)"
-        @open-image="selectedImage = $event"
       />
       </template>
     </div>
@@ -365,6 +361,5 @@ async function handleFileUpload(e: Event) {
     <FileDropOverlay @files="composer?.attachFiles($event)" />
 
     <!-- Image lightbox -->
-    <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
   </aside>
 </template>

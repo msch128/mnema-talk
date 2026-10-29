@@ -35,6 +35,7 @@ import LegalModal from './components/LegalModal.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
 import ToastHost from './components/ToastHost.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
+import MediaViewer from './components/MediaViewer.vue'
 import WelcomeFlow from './components/WelcomeFlow.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
 import SkipLinks from './components/SkipLinks.vue'
@@ -374,6 +375,7 @@ onMounted(async () => {
     <!-- Before the confirm host: its "Discard changes?" must open above the Talk settings. -->
     <TalkSettingsHost />
     <ConfirmDialog />
+    <MediaViewer />
     <ModerationDialog />
     <MessageModerationDialog />
     <EditHistoryDialog />

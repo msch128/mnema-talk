@@ -45,7 +45,7 @@ const props = defineProps({
   tabStop: { type: Boolean, default: true }
 })
 const editText = defineModel<string>('editText', { type: String, default: '' })
-const emit = defineEmits<{ reply: []; edit: []; save: []; 'cancel-edit': []; 'edit-step': [step: -1 | 1, event: KeyboardEvent]; more: [event: MouseEvent]; react: [emoji: string]; 'toggle-picker': [id: string]; 'close-picker': []; 'open-thread': []; 'open-profile': []; 'open-image': [src: string]; jump: [] }>()
+const emit = defineEmits<{ reply: []; edit: []; save: []; 'cancel-edit': []; 'edit-step': [step: -1 | 1, event: KeyboardEvent]; more: [event: MouseEvent]; react: [emoji: string]; 'toggle-picker': [id: string]; 'close-picker': []; 'open-thread': []; 'open-profile': []; jump: [] }>()
 
 const row = ref<HTMLElement | null>(null)
 // An unsent reply in this message's thread, like the Draft marker of a channel.
@@ -204,7 +204,7 @@ defineExpose({ el: row })
       </span>
 
       <!-- Media Attachments (Images, Clips, Documents) -->
-      <MessageAttachments :attachments="msg.attachments" @open-image="emit('open-image', $event)" />
+      <MessageAttachments :attachments="msg.attachments" :message="msg" />
 
       <!-- Thread counter -->
       <div v-if="msg.reply_count > 0 || threadDraft" class="mt-2">
