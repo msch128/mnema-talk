@@ -556,6 +556,7 @@
     "attachMediaOnly": "Only images and videos can be attached.",
     "attachSkipped": "Only images and videos were attached. Other files were skipped.",
     "attachFirstOnly": "A message carries one file. The first one was attached.",
+    "attachOneSkipped": "A message carries one file: the first image or video was attached, the other files were skipped.",
     "dropFiles": "Drop to attach",
     "messageRemoved": "Message removed",
     "searchSyntaxTip": "Tip: “exact phrase” finds a phrase, -word leaves a word out.",

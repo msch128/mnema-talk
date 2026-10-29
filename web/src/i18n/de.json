@@ -556,6 +556,7 @@
     "attachMediaOnly": "Es lassen sich nur Bilder und Videos anhängen.",
     "attachSkipped": "Nur Bilder und Videos wurden angehängt. Andere Dateien wurden übersprungen.",
     "attachFirstOnly": "Eine Nachricht trägt eine Datei. Die erste wurde angehängt.",
+    "attachOneSkipped": "Eine Nachricht trägt eine Datei: Das erste Bild oder Video wurde angehängt, die anderen Dateien wurden übersprungen.",
     "dropFiles": "Zum Anhängen hier ablegen",
     "messageRemoved": "Nachricht entfernt",
     "searchSyntaxTip": "Tipp: „genaue Wendung“ sucht eine Wendung, -Wort schließt ein Wort aus.",
