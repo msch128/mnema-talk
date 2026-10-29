@@ -1,0 +1,42 @@
+name: TURN probe
+
+# Manual check from outside the LAN that the built-in TURN relay answers over
+# UDP and TCP. A GitHub-hosted runner is not behind our NAT, so it sees what a
+# remote user sees. The target is the repository secret TURN_PROBE_HOST only:
+# it is masked before any use and the probe never prints it or its addresses.
+# The probe sends a STUN Binding and an unauthenticated TURN Allocate request
+# per transport; a STUN answer (including 401 with REALM and NONCE) is a pass.
+on:
+  workflow_dispatch:
+    inputs:
+      port:
+        description: Relay port (UDP and TCP)
+        required: false
+        default: "3479"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Self-test against a local responder
+        run: python3 scripts/turn-probe.py --self-test
+
+      - name: Probe the relay over UDP and TCP
+        env:
+          TURN_PROBE_HOST: ${{ secrets.TURN_PROBE_HOST }}
+          TURN_PROBE_PORT: ${{ inputs.port }}
+        run: |
+          if [ -z "$TURN_PROBE_HOST" ]; then
+            echo "::error::Repository secret TURN_PROBE_HOST is not set"
+            exit 2
+          fi
+          echo "::add-mask::$TURN_PROBE_HOST"
+          python3 scripts/turn-probe.py
