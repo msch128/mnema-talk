@@ -6,11 +6,6 @@ import { decodeChatMessage, decodeChatStartTalkResponse } from '../types/rest'
 import { decodeChannel } from '../types/domain'
 import type { Channel, Message } from '../types/domain'
 
-/** A lobby opens a temporary Talk for whoever joins it. */
-export function isLobby(channel: Channel | null | undefined): boolean {
-  return channel?.is_lobby === true
-}
-
 export function isTempTalk(channel: Channel | null | undefined): boolean {
   return channel?.is_temp === true
 }
