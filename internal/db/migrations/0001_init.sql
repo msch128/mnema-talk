@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 
--- 2. Registration Invites (Only created by Admin 'Admin')
+-- 2. Registration Invites (Only created by Admin 'Herzog')
 CREATE TABLE IF NOT EXISTS invites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(64) NOT NULL UNIQUE,
