@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/msch128/mnema-talk/compare/v2.1.0...v2.1.1) (2026-10-29)
+
+
+### Documentation
+
+* README facts for 2.1.0 (composer, mic notice, invite edit, role mapping) ([#519](https://github.com/msch128/mnema-talk/issues/519)) ([7c85b9e](https://github.com/msch128/mnema-talk/commit/7c85b9eb9f65a079c72aa8bd512fd7a0f0eda3b3))
+
 ## [2.1.0](https://github.com/msch128/mnema-talk/compare/v2.0.0...v2.1.0) (2026-10-29)
 
 
