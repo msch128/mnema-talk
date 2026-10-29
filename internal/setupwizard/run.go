@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -158,4 +159,13 @@ func printSummary(out io.Writer, o Options, g Generated, findings []Finding) {
 	}
 	fmt.Fprint(out, "Forward UDP 50000-50050 to this host for voice. Open the admin console, Status tab: the setup checks name anything still missing.\n")
 	fmt.Fprint(out, "Update later: docker compose pull && docker compose up -d\n")
+}
+
+// defaultDir is /out when the image is run with a mount there (the documented
+// docker run command), else the current directory.
+func defaultDir() string {
+	if fi, err := os.Stat("/out"); err == nil && fi.IsDir() {
+		return "/out"
+	}
+	return "."
 }

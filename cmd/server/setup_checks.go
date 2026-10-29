@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/config"
-	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/setupcheck"
 )
@@ -21,9 +20,9 @@ const clockRecheck = 6 * time.Hour
 // startSetupChecks measures the clock in the background (CLOCK_CHECK_ENABLED)
 // and logs the setup checks once shortly after the start; the admin status
 // page evaluates the same checks on every request.
-func startSetupChecks(ctx context.Context, cfg *config.Config, rt *setupcheck.Runtime, pool *db.Pool, store *lazyStore) {
+func startSetupChecks(ctx context.Context, cfg *config.Config, rt *setupcheck.Runtime, ping func(context.Context) error, storageReady func() error) {
 	if cfg.ClockCheck {
-		go watchClock(ctx, rt, clockRecheck)
+		go watchClock(ctx, rt, setupcheck.DefaultNTPServers, clockRecheck)
 	}
 	go func() {
 		select {
@@ -35,9 +34,9 @@ func startSetupChecks(ctx context.Context, cfg *config.Config, rt *setupcheck.Ru
 			Cfg:               cfg,
 			Runtime:           rt,
 			Warnings:          opwarn.Default.List(),
-			DBReachable:       pool.Ping(ctx) == nil,
+			DBReachable:       ping(ctx) == nil,
 			StorageConfigured: true,
-			StorageErr:        store.Ready(),
+			StorageErr:        storageReady(),
 		}
 		setupcheck.Log(slog.Default(), setupcheck.Run(in))
 	}()
@@ -45,12 +44,12 @@ func startSetupChecks(ctx context.Context, cfg *config.Config, rt *setupcheck.Ru
 
 // watchClock records the clock skew now and then every interval. A failed
 // measurement (no NTP server reachable) leaves the check out of the list.
-func watchClock(ctx context.Context, rt *setupcheck.Runtime, every time.Duration) {
+func watchClock(ctx context.Context, rt *setupcheck.Runtime, servers []string, every time.Duration) {
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {
 		mctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		skew, err := setupcheck.MeasureClockSkew(mctx, setupcheck.DefaultNTPServers, 3*time.Second)
+		skew, err := setupcheck.MeasureClockSkew(mctx, servers, 3*time.Second)
 		cancel()
 		if err != nil {
 			slog.Debug("clock check: no NTP answer", "err", err)

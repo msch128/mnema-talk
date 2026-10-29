@@ -107,3 +107,21 @@ func TestSetupUsageErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestSetupWritesToTheCurrentDirectoryByDefault(t *testing.T) {
+	if fi, err := os.Stat("/out"); err == nil && fi.IsDir() {
+		t.Skip("/out exists on this machine and is the default")
+	}
+	template, err := filepath.Abs(repoCompose)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if _, err := runSetup(t, "", "-y", "--public-url", "https://chat.example.com", "--compose-template", template, "--skip-preflight"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".env")); err != nil {
+		t.Fatal(err)
+	}
+}

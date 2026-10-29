@@ -32,14 +32,17 @@ type Probe struct {
 	Skew     func(ctx context.Context) (time.Duration, error)
 }
 
-// DefaultProbe asks the real network.
-func DefaultProbe() Probe {
+// DefaultProbe asks the real network with the default STUN and NTP servers.
+func DefaultProbe() Probe { return NewProbe(stunprobe.DefaultServers, setupcheck.DefaultNTPServers) }
+
+// NewProbe asks the real network, using the given STUN and NTP servers.
+func NewProbe(stunServers, ntpServers []string) Probe {
 	return Probe{
 		Resolve: func(ctx context.Context, host string) ([]netip.Addr, error) {
 			return net.DefaultResolver.LookupNetIP(ctx, "ip4", host)
 		},
 		PublicIP: func(ctx context.Context) (netip.Addr, error) {
-			ip, _, err := stunprobe.Detect(ctx, stunprobe.DefaultServers, stunprobe.DefaultTimeout)
+			ip, _, err := stunprobe.Detect(ctx, stunServers, stunprobe.DefaultTimeout)
 			return ip, err
 		},
 		Dial: func(ctx context.Context, addr string) error {
@@ -51,7 +54,7 @@ func DefaultProbe() Probe {
 			return err
 		},
 		Skew: func(ctx context.Context) (time.Duration, error) {
-			return setupcheck.MeasureClockSkew(ctx, setupcheck.DefaultNTPServers, 3*time.Second)
+			return setupcheck.MeasureClockSkew(ctx, ntpServers, 3*time.Second)
 		},
 	}
 }
