@@ -1,0 +1,21 @@
+web/src/components/StatusDialog.test.ts
+  s_82e9d48cb7fc7f::t_405fb4aba859d1 98,102-103
+web/src/components/StatusDialog.vue
+  s_82e9d48cb7fc7f::t_c1e01ab06a5aec 40-41,143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1c39e12bee2913829001711e2a8289beee441a92",
+  "prompts": {},
+  "sessions": {
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
