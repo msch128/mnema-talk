@@ -9,7 +9,9 @@ const base: DiscordimportPlan = {
   code: 'AbCdEf123456', template_name: '', source_name: 'Source', server_name: '',
   categories: [{ source_id: '1', name: 'Empty', overwrites: [] }],
   channels: [],
-  roles: [{ source_id: '5', name: 'Plain', source_name: 'Plain', color: 0, hoist: false, mentionable: false, permissions: 0, permission_keys: [], dropped: [], administrator_dropped: false }],
+  roles: [{ source_id: '5', name: 'Plain', source_name: 'Plain', color: 0, hoist: false, mentionable: false, permissions: 0, permission_keys: [], dropped: [], administrator_dropped: false, suggested_role_id: null }],
+  mapped_roles: [],
+  mappable_roles: [],
   everyone: { permission_keys: [], dropped: [], applied: false },
   skipped: [], dropped_bits: [], administrator_dropped: false,
   counts: { categories: 1, channels: 0, roles: 1 }, hash: 'h'

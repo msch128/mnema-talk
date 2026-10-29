@@ -39,7 +39,7 @@ func TestADatabaseFailureWhileImportingLeavesNothingBehind(t *testing.T) {
 
 			restore := w.breakTable(table)
 			_, err := w.im.Apply(ctx, w.admin, "adm", applyReq(plan))
-			_, previewErr := w.im.Preview(ctx, w.admin, "AbCdEf123456")
+			_, previewErr := w.im.Preview(ctx, w.admin, "AbCdEf123456", nil)
 			restore()
 
 			if err == nil {

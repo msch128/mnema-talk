@@ -3382,7 +3382,8 @@
       "working": "Importiert …",
       "failed": "Der Import ist fehlgeschlagen.",
       "stale": "Die Vorlage oder dieser Server hat sich seit der Vorschau geändert. Bitte die Vorschau neu laden.",
-      "done": "Importiert: {summary}. Unten lässt sich das rückgängig machen."
+      "done": "Importiert: {summary}. Unten lässt sich das rückgängig machen.",
+      "step2Mapped": "{source} wird nicht angelegt. Die Kanaleinstellungen gehen an {name}, dessen Rechte sich nicht ändern."
     },
     "undo": {
       "title": "Diesen Import rückgängig machen?",
@@ -3395,6 +3396,15 @@
       "failed": "Der Import konnte nicht rückgängig gemacht werden.",
       "done": "Import rückgängig gemacht. Entfernt: {summary}.",
       "keptRoles": " {kept} Rolle(n) bleiben, weil du sie nicht mehr verwalten kannst."
+    },
+    "map": {
+      "hint": "Gibt es schon eine passende Rolle, etwa Admin oder Bot? Verbinde sie, statt ein Duplikat anzulegen. Rechte und Einstellungen der Rolle bleiben genau wie sie sind.",
+      "label": "Was mit der Discord-Rolle {name} geschehen soll",
+      "create": "Neue Rolle anlegen",
+      "group": "Mit bestehender Rolle verbinden",
+      "keeps": "Wird nicht angelegt. Die Kanaleinstellungen gelten für {name}, deren eigene Rechte bleiben unverändert.",
+      "sameName": "Hier gibt es bereits eine Rolle namens {name}.",
+      "sameNameUsed": "Mit {name} verbunden, weil die Namen übereinstimmen."
     }
   },
   "settings": {

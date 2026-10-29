@@ -57,23 +57,17 @@ func (im *Importer) fetcher() *Fetcher {
 
 var errNotAdmin = httpx.ErrForbidden("only the Owner and Administrators can import a server")
 
-// inputs reads the facts a plan depends on. It reads through q, so the same
-// call serves the preview (the pool) and the apply (inside the lock).
-func (im *Importer) inputs(ctx context.Context, q db.Querier, actor perm.Set) (Inputs, error) {
-	in := Inputs{Grantable: grantable(actor), Caps: im.caps()}
-	rows, err := q.Query(ctx, `SELECT name FROM roles`)
-	if err != nil {
-		return in, fmt.Errorf("read roles: %w", err)
+// inputs reads the facts a plan depends on. The roles come from snap and the
+// rest through q, so the same call serves the preview (the pool) and the
+// apply (inside the lock). A role_map that is not allowed fails here.
+func (im *Importer) inputs(ctx context.Context, q db.Querier, snap *perm.Snapshot, sub perm.Subject, tpl *Template, roleMap map[string]string) (Inputs, error) {
+	actor := snap.Global(sub)
+	in := Inputs{Grantable: grantable(actor), Caps: im.caps(), Mappable: mappableRoles(snap, sub)}
+	for _, r := range snap.Roles() {
+		in.ExistingRoles = append(in.ExistingRoles, r.Name)
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var n string
-		if err := rows.Scan(&n); err != nil {
-			return in, err
-		}
-		in.ExistingRoles = append(in.ExistingRoles, n)
-	}
-	if err := rows.Err(); err != nil {
+	var err error
+	if in.RoleMap, err = resolveRoleMap(tpl, snap, sub, roleMap); err != nil {
 		return in, err
 	}
 	if err := q.QueryRow(ctx, `SELECT community_name FROM instance_settings`).Scan(&in.ServerName); err != nil && !errors.Is(err, pgx.ErrNoRows) {
@@ -84,7 +78,7 @@ func (im *Importer) inputs(ctx context.Context, q db.Querier, actor perm.Set) (I
 
 // Preview fetches the template and returns what importing it would create.
 // It writes nothing.
-func (im *Importer) Preview(ctx context.Context, sub perm.Subject, link string) (*Plan, error) {
+func (im *Importer) Preview(ctx context.Context, sub perm.Subject, link string, roleMap map[string]string) (*Plan, error) {
 	code, err := ParseCode(link)
 	if err != nil {
 		return nil, err
@@ -100,7 +94,11 @@ func (im *Importer) Preview(ctx context.Context, sub perm.Subject, link string) 
 	if err != nil {
 		return nil, err
 	}
-	in, err := im.inputs(ctx, im.DB, actor)
+	snap, err := im.Perms.Snapshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	in, err := im.inputs(ctx, im.DB, snap, sub, tpl, roleMap)
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +116,10 @@ type ApplyRequest struct {
 	ConfirmRoles bool `json:"confirm_roles"`
 	// ConfirmText is the server name or IMPORT.
 	ConfirmText string `json:"confirm_text" maxLength:"100"`
+	// RoleMap maps Discord role ids onto existing role ids; those roles are
+	// not created and keep their own permissions. It must be the map the
+	// preview was made with.
+	RoleMap map[string]string `json:"role_map,omitempty" binding:"optional"`
 }
 
 // confirmed checks the confirmation flags; Apply runs it before the download
@@ -177,7 +179,7 @@ func (im *Importer) Apply(ctx context.Context, sub perm.Subject, actorName strin
 		if !actor.Has(perm.Administrator) {
 			return errNotAdmin
 		}
-		in, err := im.inputs(ctx, tx, actor)
+		in, err := im.inputs(ctx, tx, snap, sub, tpl, req.RoleMap)
 		if err != nil {
 			return err
 		}
@@ -228,7 +230,7 @@ func (im *Importer) insertPlan(ctx context.Context, tx pgx.Tx, plan *Plan, sub p
 		Action: "import.discord", TargetType: "import", TargetID: rec.ID.String(), TargetName: plan.TemplateName,
 		Details: map[string]any{
 			"template": plan.Code, "categories": plan.Counts.Categories, "channels": plan.Counts.Channels,
-			"roles": plan.Counts.Roles, "administrator_dropped": plan.AdministratorDropped,
+			"roles": plan.Counts.Roles, "mapped_roles": len(plan.MappedRoles), "administrator_dropped": plan.AdministratorDropped,
 		},
 	})
 	if err != nil {

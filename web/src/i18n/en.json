@@ -3382,7 +3382,8 @@
       "working": "Importing…",
       "failed": "The import failed.",
       "stale": "The template or this server changed since the preview. Preview it again.",
-      "done": "Imported {summary}. You can undo it below."
+      "done": "Imported {summary}. You can undo it below.",
+      "step2Mapped": "{source} is not created. Its channel settings go to {name}, whose permissions do not change."
     },
     "undo": {
       "title": "Undo this import?",
@@ -3395,6 +3396,15 @@
       "failed": "The import could not be undone.",
       "done": "Import undone. Removed {summary}.",
       "keptRoles": " {kept} role(s) stay because you can no longer manage them."
+    },
+    "map": {
+      "hint": "Already have a matching role, like Admin or Bot? Connect it instead of creating a duplicate. Its permissions and settings stay exactly as they are.",
+      "label": "What to do with the Discord role {name}",
+      "create": "Create as a new role",
+      "group": "Connect to an existing role",
+      "keeps": "Not created. Its channel settings are applied to {name}, whose own permissions stay as they are.",
+      "sameName": "A role named {name} already exists here.",
+      "sameNameUsed": "Connected to {name} because the names match."
     }
   },
   "settings": {
