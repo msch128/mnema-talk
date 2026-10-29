@@ -25,6 +25,11 @@ const (
 	TURNUnavailable = "turn_unavailable"
 )
 
+// Codes lists every stable warning code.
+func Codes() []string {
+	return []string{TrustedProxyBroad, ProxyNotTrusted, WebRTCReachability, WebRTCUDPMuxDisabled, VoiceUnavailable, InsecurePublicURL, TURNUnavailable}
+}
+
 // MaxWarnings bounds the registry; further new codes are dropped.
 const MaxWarnings = 32
 

@@ -8076,12 +8076,16 @@
       },
       "setupcheck.Check": {
         "properties": {
+          "code": {
+            "description": "Code names the outcome (\"public_url.local\"): clients translate by it and\nfill in Params. Absent when the server has no code for the outcome.",
+            "type": "string"
+          },
           "detail": {
-            "description": "Detail says what was found, in one sentence.",
+            "description": "Detail says what was found, in one sentence, in English; the fallback\nfor clients that do not know the Code.",
             "type": "string"
           },
           "fix": {
-            "description": "Fix names the variable to set and the value to use; empty when ok.",
+            "description": "Fix names the variable to set and the value to use, in English; empty when ok.",
             "type": "string"
           },
           "id": {
@@ -8092,6 +8096,13 @@
           "level": {
             "$ref": "#/components/schemas/setupcheck.Level",
             "description": "Level is ok (green), warn (amber) or fail (red)."
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Params are the values the message names (ports, variable values), by name.",
+            "type": "object"
           }
         },
         "required": [

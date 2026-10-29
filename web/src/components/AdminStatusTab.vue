@@ -8,6 +8,7 @@ import { decodeOperatorStatus } from '../types/domain'
 import { useToastStore } from '../stores/toast'
 import { SOURCE_URL } from '../lib/thirdParty'
 import { describeWarning } from '../lib/operatorWarnings'
+import { describeCheck } from '../lib/setupChecks'
 import { t, locale } from '../i18n'
 
 const toasts = useToastStore()
@@ -42,7 +43,7 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 const warnings = computed(() => (status.value?.warnings || []).map(w => ({ ...w, ...describeWarning(w.code, w.value) })))
-const setup = computed(() => status.value?.setup || [])
+const setup = computed(() => (status.value?.setup || []).map(c => ({ ...c, ...describeCheck(c) })))
 const setupAttention = computed(() => setup.value.filter(c => c.level !== 'ok').length)
 // Red items first, then amber, then green; the server order is kept within a level.
 const LEVEL_RANK = { fail: 0, warn: 1, ok: 2 } as const

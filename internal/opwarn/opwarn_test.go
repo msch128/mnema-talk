@@ -54,3 +54,13 @@ func TestNilRegistryAndDefault(t *testing.T) {
 		t.Fatal("default empty")
 	}
 }
+
+func TestCodesAreUnique(t *testing.T) {
+	seen := map[string]bool{}
+	for _, c := range Codes() {
+		if c == "" || seen[c] {
+			t.Errorf("code %q is empty or listed twice", c)
+		}
+		seen[c] = true
+	}
+}
