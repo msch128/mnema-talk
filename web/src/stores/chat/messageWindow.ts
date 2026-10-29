@@ -64,6 +64,9 @@ export function showToast(text: string) {
   useToastStore().info(text)
 }
 
+// Per chat state: refreshes in flight for the current window generation.
+const refreshesInFlight = new WeakMap<ChatState, { gen: number; n: number }>()
+
 /** Loads the newest page of a channel and replaces the window. */
 export async function fetchMessages(cx: Cx, channelId: string) {
   const { cs } = cx
@@ -99,6 +102,9 @@ export async function refreshLatest(cx: Cx, channelId: string) {
   const gen = cs.windowGen
   // Live messages that arrive while the page is in flight are newer than what
   // it can hold: hold them like a window load does and join them afterwards.
+  // Overlapping refreshes (quick reconnects) keep holding until the last one ends.
+  const held = refreshesInFlight.get(cs)
+  refreshesInFlight.set(cs, { gen, n: held?.gen === gen ? held.n + 1 : 1 })
   cs.isLoadingWindow.value = true
   try {
     const data = await api(messagesUrl(channelId), { decode: decodeMessages })
@@ -111,7 +117,10 @@ export async function refreshLatest(cx: Cx, channelId: string) {
     console.error('Failed to refresh messages:', e)
     return false
   } finally {
-    if (gen === cs.windowGen) {
+    const now = refreshesInFlight.get(cs)
+    const left = now?.gen === gen ? now.n - 1 : 0
+    if (now?.gen === gen) refreshesInFlight.set(cs, { gen, n: left })
+    if (gen === cs.windowGen && left === 0) {
       cs.isLoadingWindow.value = false
       // Messages held during a refresh that did not replace the window belong to it as it is.
       if (!cs.hasMoreAfter.value) flushPendingLive(cx)
