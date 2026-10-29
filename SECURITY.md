@@ -223,7 +223,7 @@ web bundle. Release images are signed with cosign. The sections below give the
 details and the limits.
 
 - **Invite-only.** There is no public registration. Only the Owner
-  (configurable, default `cool_guy`) and members whose role holds *Manage
+  (configurable, default `admin`) and members whose role holds *Manage
   invites* can create invite codes.
 - **Invite preview (the one public read).** `GET /api/invites/{code}` needs no
   session so an invite link can show the community's name before sign-up. It

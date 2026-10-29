@@ -79,7 +79,7 @@ services:
       - AUDIT_RETENTION_DAYS=${AUDIT_RETENTION_DAYS:-0}
       # 0 = keep the earlier versions of edited messages (moderator edit history).
       - EDIT_HISTORY_RETENTION_DAYS=${EDIT_HISTORY_RETENTION_DAYS:-0}
-      - ADMIN_USERNAME=${ADMIN_USERNAME:-cool_guy}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_INITIAL_PASSWORD=${ADMIN_INITIAL_PASSWORD:-}
       - WEBRTC_UDP_PORT_MIN=${WEBRTC_UDP_PORT_MIN:-50000}
       - WEBRTC_UDP_PORT_MAX=${WEBRTC_UDP_PORT_MAX:-50050}

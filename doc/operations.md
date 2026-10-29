@@ -45,7 +45,7 @@ General rules:
 | `JWT_SECRET` | none | Signs session cookies. In production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). In development an empty value means a random per-process secret (sessions reset on restart). Changing it logs everyone out. |
 | `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. An upper bound: a session that is not used for the inactivity limit (see "Sessions and inactivity sign-out") ends earlier. |
 | `INITIAL_LANGUAGE` | `de` | `de` or `en`: the language of the default categories and channels ("Text channels", "Voice hangouts", #general, #media, Lounge, Gaming 4K) on a brand-new installation. Used only when the database is still untouched (one account, no messages, the seeded names); an existing installation is never renamed. Any other value is rejected at startup. |
-| `ADMIN_USERNAME` | `cool_guy` | The Owner account (all-powerful, cannot be restricted by anyone; see [roles-and-permissions.md](roles-and-permissions.md)), created on first start when none exists. |
+| `ADMIN_USERNAME` | `admin` | The Owner account (all-powerful, cannot be restricted by anyone; see [roles-and-permissions.md](roles-and-permissions.md)), created on first start when none exists. |
 | `ADMIN_INITIAL_PASSWORD` | empty | Only used for that first start, and required then in production. In development, empty = a random password is generated and logged **once**. A placeholder value is rejected. |
 
 ### Database
