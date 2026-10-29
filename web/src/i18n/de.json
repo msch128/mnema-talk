@@ -789,6 +789,7 @@
       "sending": "Sendet",
       "pausedSilent": "Pausiert (Sprachgate: still)",
       "pausedPtt": "Pausiert (Push-to-Talk nicht gedrückt)",
+      "pausedTest": "Pausiert (Mikrofontest läuft)",
       "muted": "Stumm, es wird nichts gesendet",
       "none": "Kein Mikrofon"
     },

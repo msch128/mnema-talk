@@ -51,7 +51,7 @@ const rows = computed<[string, string | number, string?][]>(() => {
   return [
     [t('stats.codec'), dash(s?.codec)],
     [t('stats.sendRecv'), s?.sendKbps != null ? `${s.sendKbps} / ${s.recvKbps} kbit/s` : '–'],
-    [t('stats.mic.title'), s ? micStatus(s.micState, voiceStore.isMuted, voiceStore.inputMode) : '–'],
+    [t('stats.mic.title'), s ? micStatus(s.micState, voiceStore.isMuted, voiceStore.inputMode, voiceStore.isMicTesting) : '–'],
     ...flowRows(s),
     [t('stats.receivedVideo'), s?.videoIn.length ? s.videoIn.map(v => `${v.width}×${v.height} · ${t('talk.quality.fps', { fps: v.fps })}`).join(', ') : '–'],
     [t('stats.localCandidate'), dash(s?.localCandidate)],

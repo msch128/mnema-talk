@@ -39,8 +39,9 @@ function flowValue(flow: Flow): string {
 }
 
 /** Why the microphone line may stand still: muted, push-to-talk idle, or a silent voice gate. */
-export function micStatus(state: MicState, muted: boolean, inputMode: string): string {
+export function micStatus(state: MicState, muted: boolean, inputMode: string, testing = false): string {
   if (muted) return t('stats.mic.muted')
+  if (testing) return t('stats.mic.pausedTest')
   if (state === 'none') return t('stats.mic.none')
   if (state === 'sending') return t('stats.mic.sending')
   return t(inputMode === 'ptt' ? 'stats.mic.pausedPtt' : 'stats.mic.pausedSilent')

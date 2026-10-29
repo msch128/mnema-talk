@@ -789,6 +789,7 @@
       "sending": "Sending",
       "pausedSilent": "Paused (voice gate: silent)",
       "pausedPtt": "Paused (push-to-talk not pressed)",
+      "pausedTest": "Paused (mic test running)",
       "muted": "Muted, nothing is sent",
       "none": "No microphone"
     },

@@ -116,5 +116,8 @@ describe('panel lines', () => {
     expect(micStatus('paused', false, 'ptt')).toBe('Paused (push-to-talk not pressed)')
     expect(micStatus('paused', true, 'activity')).toBe('Muted, nothing is sent')
     expect(micStatus('none', false, 'activity')).toBe('No microphone')
+    expect(micStatus('paused', false, 'activity', true)).toBe('Paused (mic test running)')
+    expect(micStatus('paused', false, 'ptt', true)).toBe('Paused (mic test running)')
+    expect(micStatus('paused', true, 'activity', true)).toBe('Muted, nothing is sent')
   })
 })
