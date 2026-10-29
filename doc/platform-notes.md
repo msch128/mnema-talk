@@ -11,6 +11,7 @@ Container Manager on DSM 7.2 or later.
    `/volume1/docker/mnema-talk`). Run the setup assistant over SSH (Control
    Panel > Terminal & SNMP > enable SSH; log in as an administrator):
 
+   <!-- test:setup-synology -->
    ```sh
    cd /volume1/docker/mnema-talk
    sudo docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
@@ -70,6 +71,7 @@ button and the admin update check do.
 1. **Files.** Open the Unraid terminal and run the assistant in an appdata
    folder:
 
+   <!-- test:setup-unraid -->
    ```sh
    mkdir -p /mnt/user/appdata/mnema-talk && cd /mnt/user/appdata/mnema-talk
    docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup

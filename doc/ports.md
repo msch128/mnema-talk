@@ -50,8 +50,8 @@ it is a different machine); give that machine a fixed address first.
 | mnema-relay-tcp | TCP | 3479 | the server's LAN IP | 3479 |
 
 Never forward 8080, 5432 or 8333. A router that asks for a single "protocol:
-TCP/UDP" entry can use "both" for 3479. A Fritz!Box calls the page Internet >
-Permit Access > Port Sharing; menu names vary by firmware. On a VPS create the
+TCP/UDP" entry can use "both" for 3479. For example, a Fritz!Box calls the page Internet >
+Permit Access > Port Sharing; menu names vary by model and firmware. On a VPS create the
 same ports in the host firewall and in the provider's security group
 ([platform notes](platform-notes.md#plain-vps)). Check the result with
 [Test my connection](troubleshooting-voice.md#rung-4-test-my-connection).

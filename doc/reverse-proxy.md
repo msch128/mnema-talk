@@ -23,15 +23,9 @@ public IPv4 address, and TCP 443 (and 80, see below) must reach the proxy.
 ## Caddy (VPS or Linux box)
 
 Caddy is the shortest way: it requests and renews a Let's Encrypt certificate
-without any further setup. On Debian or Ubuntu install it from its official
-package source ([caddyserver.com/docs/install](https://caddyserver.com/docs/install#debian-ubuntu-raspbian)):
-
-```sh
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update && sudo apt install caddy
-```
+without any further setup. Install it by following the official page for your
+system, [caddyserver.com/docs/install](https://caddyserver.com/docs/install)
+(on Debian and Ubuntu it is a few `apt` commands that add Caddy's package source).
 
 Put this in `/etc/caddy/Caddyfile` (replace the example):
 

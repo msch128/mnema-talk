@@ -48,12 +48,12 @@ with the preserved `postgres-data` volume. PostgreSQL 18 has a separate
 The preserved PostgreSQL 17 database reflects the upgrade's cutover, so writes
 made afterward on PostgreSQL 18 are not in that rollback.
 
+<!-- test:allow-old-version -->
 ```sh
 set -e
-OLD=X.Y.Z                                  # the version you ran before, from the saved .env line
 docker compose stop app postgres
 cp docker-compose.yml.bak docker-compose.yml
-sed -i "s|^MNEMA_IMAGE=.*|MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:$OLD|" .env
+sed -i "s|^MNEMA_IMAGE=.*|MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.4.4|" .env # the saved old version
 docker compose pull app
 docker compose up -d --wait postgres seaweedfs
 # If the preserved volume is unavailable or a backup rollback is required,

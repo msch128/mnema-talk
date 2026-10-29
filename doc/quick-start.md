@@ -60,8 +60,9 @@ share one address between many customers (CGNAT, or DS-Lite on some cable and
 fibre lines); ports you forward on such a line never receive anything from the
 internet. Test it in a minute:
 
-1. Open your router's status page and read its WAN or internet IP address. On a
-   Fritz!Box, look under Internet > Online Monitor; menu names vary by firmware.
+1. Open your router's status page and read its WAN or internet IP address. As an
+   example, a Fritz!Box shows it under Internet > Online Monitor; menu names
+   vary by model and firmware.
 2. On any computer in your home network run `curl -4 https://ifconfig.me`.
 3. If the two addresses differ, or the router's address starts with `10.`,
    `192.168.`, `172.16.` to `172.31.` or `100.64.` to `100.127.`, you are behind
@@ -102,6 +103,7 @@ The setup assistant asks a few questions, explains each one, generates every
 secret and writes a complete `.env` and `docker-compose.yml`. Run it in an empty
 folder (on a Synology or Unraid NAS: [platform notes](platform-notes.md)):
 
+<!-- test:setup-vps -->
 ```sh
 mkdir mnema-talk && cd mnema-talk
 docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
@@ -125,6 +127,7 @@ would not fit an existing database.
 No terminal (scripts, NAS web UI)? Pass everything as flags and see
 `setup --help` for the rest:
 
+<!-- test:setup-flags -->
 ```sh
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk \
   setup --non-interactive --public-url https://chat.example.com --admin-username admin --language en
