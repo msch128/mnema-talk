@@ -10,8 +10,15 @@ const suffix = Date.now().toString(36)
 const VOICE_CHANNEL = `Stage ${suffix}`
 
 
-// A shared "screen" is an animated canvas. Each member's has its own size, so
-// the stage's resolution tells whose share it shows.
+// A shared "screen" is an animated canvas. A's is 16:9 and B's 4:3, so the
+// stage's aspect ratio tells whose share it shows (or a camera, which is 16:9
+// like A's). The size is no sign: the SFU hands a viewer on automatic quality
+// a lower simulcast layer, and a loaded sender scales down, whenever it sees fit.
+// Both are small enough to go out as one layer (see planScreenLayers): this
+// spec is about the stage, and on a two-core runner the encoders of a layered
+// share starve each other, so that no picture reaches the viewer for seconds.
+const WIDE = '1.78'
+const FOUR_THREE = '1.33'
 const fakeDisplayMedia = ([width, height]: [number, number]) => {
   MediaDevices.prototype.getDisplayMedia = async () => {
     const canvas = document.createElement('canvas')
@@ -42,20 +49,20 @@ async function shot(page: Page, name: string) {
   if (process.env.E2E_SHOT_DIR) await page.screenshot({ path: `${process.env.E2E_SHOT_DIR}/${name}.png` })
 }
 
-// Size of what the stage video decodes ('' while nothing plays).
-const stageSize = (page: Page) => page.evaluate(() => {
+// Aspect ratio of what the stage video decodes ('' while nothing plays).
+const stageAspect = (page: Page) => page.evaluate(() => {
   const v = document.querySelector<HTMLVideoElement>('[data-testid="stage"] video')
-  return v && v.videoWidth && !v.paused ? `${v.videoWidth}x${v.videoHeight}` : ''
+  return v && v.videoWidth && !v.paused ? (v.videoWidth / v.videoHeight).toFixed(2) : ''
 })
 
 // Two members (A: the admin, B: a new member) in a new Talk. Their shared
-// "screens" are 640x360 (A) and 800x450 (B).
+// "screens" are 640x360 (A) and 480x360 (B).
 async function twoMembers(browser: Browser, tag: string) {
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   await aCtx.addInitScript(trackPeerConnections)
   await aCtx.addInitScript(fakeDisplayMedia, [640, 360] as [number, number])
-  await bCtx.addInitScript(fakeDisplayMedia, [800, 450] as [number, number])
+  await bCtx.addInitScript(fakeDisplayMedia, [480, 360] as [number, number])
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
   for (const [name, page] of [['a', a], ['b', b]] as const) {
@@ -113,7 +120,7 @@ test('two members share their screens and switch the stage both ways', async ({ 
   await a.getByRole('button', { name: 'Bildschirm teilen' }).first().click()
   const aStage = a.getByTestId('stage')
   await expect(aStage).toHaveAttribute('data-stage-source', 'own')
-  await expect.poll(() => stageSize(a)).toBe('640x360')
+  await expect.poll(() => stageAspect(a)).toBe(WIDE)
 
   // B shares too: A is offered B's share as a card and watches it.
   await b.getByRole('button', { name: 'Bildschirm teilen' }).first().click()
@@ -124,7 +131,7 @@ test('two members share their screens and switch the stage both ways', async ({ 
 
   // B's share takes the stage once its frames arrive; A's own is a card now.
   await expect(aStage).toHaveAttribute('data-stage-source', bId, { timeout: 20_000 })
-  await expect.poll(() => stageSize(a), { timeout: 20_000 }).toBe('800x450')
+  await expect.poll(() => stageAspect(a), { timeout: 20_000 }).toBe(FOUR_THREE)
   const ownCard = a.locator('[data-screen-card="own"]')
   await expect(ownCard).toContainText('Eigener Bildschirm')
   await expect(aStage.getByRole('button', { name: 'Nicht mehr ansehen' })).toBeVisible()
@@ -133,19 +140,19 @@ test('two members share their screens and switch the stage both ways', async ({ 
   // Back to A's own share; B's stays received as a card.
   await ownCard.getByRole('button', { name: 'Auf die Bühne' }).click()
   await expect(aStage).toHaveAttribute('data-stage-source', 'own')
-  await expect.poll(() => stageSize(a)).toBe('640x360')
+  await expect.poll(() => stageAspect(a)).toBe(WIDE)
   await expect(bCard.getByRole('button', { name: 'Auf die Bühne' })).toBeVisible()
   await shot(a, 'stage-own')
 
   // And to B's again.
   await bCard.getByRole('button', { name: 'Auf die Bühne' }).click()
   await expect(aStage).toHaveAttribute('data-stage-source', bId)
-  await expect.poll(() => stageSize(a)).toBe('800x450')
+  await expect.poll(() => stageAspect(a)).toBe(FOUR_THREE)
 
   // B stops sharing: A's stage falls back to A's own share.
   await b.getByRole('button', { name: 'Teilen beenden' }).first().click()
   await expect(aStage).toHaveAttribute('data-stage-source', 'own', { timeout: 20_000 })
-  await expect.poll(() => stageSize(a)).toBe('640x360')
+  await expect.poll(() => stageAspect(a)).toBe(WIDE)
   await expect(a.getByTestId('screen-card')).toHaveCount(0)
 
   await close()
@@ -178,7 +185,7 @@ test('a camera goes on the stage, switches with a screen share and back to the g
   // A click puts it on the stage, a second click takes it off: the grid again.
   await clickTile()
   await expect(aStage).toHaveAttribute('data-stage-source', `camera:${bId}`)
-  await expect.poll(() => stageSize(a)).not.toBe('')
+  await expect.poll(() => stageAspect(a)).not.toBe('')
   await expect(aStage.getByTestId('viewer-stream-volume-slider')).toHaveCount(0)
   await expect(bTileAction).toHaveAttribute('aria-pressed', 'true')
   await shot(a, 'stage-camera')
@@ -190,22 +197,22 @@ test('a camera goes on the stage, switches with a screen share and back to the g
   const bCard = a.locator(`[data-screen-card="${bId}"]`)
   await bCard.getByRole('button', { name: 'Ansehen' }).click()
   await expect(aStage).toHaveAttribute('data-stage-source', bId, { timeout: 20_000 })
-  await expect.poll(() => stageSize(a), { timeout: 20_000 }).toBe('800x450')
+  await expect.poll(() => stageAspect(a), { timeout: 20_000 }).toBe(FOUR_THREE)
   await clickTile()
   await expect(aStage).toHaveAttribute('data-stage-source', `camera:${bId}`)
-  await expect.poll(() => stageSize(a)).not.toBe('800x450')
+  await expect.poll(() => stageAspect(a)).not.toBe(FOUR_THREE)
 
   // The card switches back to the screen, the tile to the camera again.
   await bCard.getByRole('button', { name: 'Auf die Bühne' }).click()
   await expect(aStage).toHaveAttribute('data-stage-source', bId)
-  await expect.poll(() => stageSize(a)).toBe('800x450')
+  await expect.poll(() => stageAspect(a)).toBe(FOUR_THREE)
   await clickTile()
   await expect(aStage).toHaveAttribute('data-stage-source', `camera:${bId}`)
 
   // X takes the camera off the stage: B's screen share is back.
   await aStage.getByTestId('stage-unfocus-camera').click()
   await expect(aStage).toHaveAttribute('data-stage-source', bId)
-  await expect.poll(() => stageSize(a)).toBe('800x450')
+  await expect.poll(() => stageAspect(a)).toBe(FOUR_THREE)
 
   // B's camera stops while on the stage: the stage falls back to the screen.
   await clickTile()
