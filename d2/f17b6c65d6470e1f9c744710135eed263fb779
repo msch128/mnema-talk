@@ -1,0 +1,21 @@
+web/src/components/MarkdownHelp.vue
+  s_46a6db8f9e8231::t_a724faa89113dc 11,49-51,77-79,143,148,150,152-153,156
+web/src/composables/useComposerAssist.ts
+  s_46a6db8f9e8231::t_90254fa3f1c39a 16-17,21,136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d2f17b6c65d6470e1f9c744710135eed263fb779",
+  "prompts": {},
+  "sessions": {
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
