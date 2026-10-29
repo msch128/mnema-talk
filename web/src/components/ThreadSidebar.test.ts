@@ -705,4 +705,16 @@ describe('ThreadSidebar closing', () => {
     key(w.find('[data-reply-id="r1"]'), { key: 'Escape' })
     expect(chat.activeThread).toBeNull()
   })
+
+  it('Escape closes the thread while the focus is still outside the panel, but not under a dialog', () => {
+    const chat = setup()
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    document.body.append(dialog)
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(chat.activeThread).not.toBeNull()
+    dialog.remove()
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(chat.activeThread).toBeNull()
+  })
 })

@@ -164,18 +164,23 @@ function onReplyKeydown(e: KeyboardEvent, msg: Message, { editable = true } = {}
   })
 }
 
-// Escape closes the panel once nothing inside has used it: an edit, a reply,
-// a suggestion list, a picker or the lightbox take the key first.
+// Escape closes the panel wherever the focus is (after opening a post it is
+// still on the card), once nothing else has used the key: an edit, a reply, a
+// suggestion list, a picker, the lightbox, an open dialog or menu.
 function onEscape(e: KeyboardEvent) {
-  if (e.defaultPrevented || e.isComposing || selectedImage.value || activeReactionPickerMsgId.value) return
+  if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return
+  if (selectedImage.value || activeReactionPickerMsgId.value) return
+  if (document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')) return
   chatStore.closeThread()
 }
 
 onMounted(() => {
+  document.addEventListener('keydown', onEscape)
   scrollToBottom()
 })
 
 onUnmounted(() => {
+  document.removeEventListener('keydown', onEscape)
   clearTimeout(highlightTimer)
 })
 
@@ -220,10 +225,7 @@ async function handleFileUpload(e: Event) {
 </script>
 
 <template>
-  <aside
-    class="relative w-full min-w-0 bg-mnema-canvas border-l border-mnema-hairline flex flex-col h-full select-none"
-    @keydown.esc="onEscape"
-  >
+  <aside class="relative w-full min-w-0 bg-mnema-canvas border-l border-mnema-hairline flex flex-col h-full select-none">
     <!-- Thread Header -->
     <header class="h-12 pl-4 pr-2 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-2 shrink-0">
       <div class="flex items-center gap-2 min-w-0">
