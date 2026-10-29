@@ -56,6 +56,20 @@ describe('two-factor reset by the Owner', () => {
     })
   })
 
+  it('does not require a code while the second-factor state is unknown', async () => {
+    apiMock.mockImplementation((path) => (path === '/api/users/me/account' ? Promise.reject(new Error('down')) : Promise.resolve(undefined)))
+    const w = mount(AdminResetTwoFactorDialog, { props: { user: alice } })
+    await flushPromises()
+    expect(w.get('[data-testid="privacy-code"]').attributes('required')).toBeUndefined()
+  })
+
+  it('requires the code once the Owner is known to have a second factor', async () => {
+    answer(true)
+    const w = mount(AdminResetTwoFactorDialog, { props: { user: alice } })
+    await flushPromises()
+    expect(w.get('[data-testid="privacy-code"]').attributes('required')).toBeDefined()
+  })
+
   it('shows the refusal in the dialog and stays open', async () => {
     answer(false, () => Promise.reject(new Error('Wrong password.')))
     const w = mount(AdminResetTwoFactorDialog, { props: { user: alice } })

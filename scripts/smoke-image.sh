@@ -13,9 +13,9 @@ cd "$(dirname "$0")/.."
 
 IMAGE="${1:-mnema-talk:local}"
 source "$(pwd)/scripts/free-port.sh"
-PORT="${SMOKE_PORT:-$(free_port)}"
 UDP_MIN="${SMOKE_UDP_PORT:-$(free_port_range 11)}"
 UDP_MAX=$((UDP_MIN + 10))
+PORT="${SMOKE_PORT:-$(free_port "$UDP_MIN-$UDP_MAX")}"
 PROJECT="mnema-smoke-$(openssl rand -hex 8)"
 export COMPOSE_PROFILES=""
 OVERRIDE_FILE="$(mktemp)"

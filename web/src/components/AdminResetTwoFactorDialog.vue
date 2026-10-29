@@ -20,7 +20,7 @@ const ownerPassword = ref('')
 const ownerCode = ref('')
 const error = ref('')
 const busy = ref(false)
-const needsCode = useOwnerNeedsCode()
+const { needsCode, known: codeKnown } = useOwnerNeedsCode()
 
 async function submit() {
   error.value = ''
@@ -49,7 +49,7 @@ async function submit() {
     <form class="p-6 space-y-4" @submit.prevent="submit">
       <p class="text-sm text-mnema-muted">{{ $t('admin.resetTwoFactorBody') }}</p>
       <p class="text-sm text-mnema-muted">{{ $t('admin.confirmOwnerPrompt') }}</p>
-      <IdentityFields v-model:password="ownerPassword" v-model:code="ownerCode" :needs-code="needsCode" />
+      <IdentityFields v-model:password="ownerPassword" v-model:code="ownerCode" :needs-code="needsCode" :code-required="codeKnown" />
       <div v-if="error" role="alert" class="rounded-sm border border-mnema-danger/30 bg-mnema-danger/10 p-1.5 text-sm text-mnema-danger" data-testid="owner-confirm-error">{{ error }}</div>
       <div class="flex justify-end gap-2 pt-2">
         <button type="button" class="btn btn-secondary" @click="emit('close')">{{ $t('common.cancel') }}</button>
