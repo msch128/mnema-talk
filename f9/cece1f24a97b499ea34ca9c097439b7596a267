@@ -1,0 +1,40 @@
+internal/config/config.go
+  s_06fcde5dbef956::t_a9115e841c00c6 139-144
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_a9115e841c00c6 4222-4223,4238-4239
+api/openapi.json
+  s_06fcde5dbef956::t_a9115e841c00c6 7130-7136,7177-7178
+internal/config/public_url_test.go
+  s_06fcde5dbef956::t_348739695370e2 89-115
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_a9115e841c00c6 894-898
+web/src/components/LegalModal.test.ts
+  s_06fcde5dbef956::t_348739695370e2 7,20-21,36,45-46
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_a9115e841c00c6 894-898
+internal/server/public.go
+  s_06fcde5dbef956::t_a9115e841c00c6 23,39-46,89-90
+web/src/components/LegalModal.vue
+  s_06fcde5dbef956::t_a9115e841c00c6 29-30,49-50,173-178
+  s_06fcde5dbef956::t_9037cdb0559fe0 179
+.env.example
+  s_06fcde5dbef956::t_eadeb0b16785c0 189-190,253-254
+doc/upgrade.md
+  s_06fcde5dbef956::t_a00be6d7b612a1 154-155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f9cece1f24a97b499ea34ca9c097439b7596a267",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
