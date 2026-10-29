@@ -1,0 +1,37 @@
+SECURITY.md
+  s_06fcde5dbef956::t_dd1b89ea0d8cf8 226
+.env.example
+  s_06fcde5dbef956::t_dd1b89ea0d8cf8 63
+AGENTS.md
+  s_06fcde5dbef956::t_dd1b89ea0d8cf8 46
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_dd1b89ea0d8cf8 12
+docker-compose.yml
+  s_06fcde5dbef956::t_dd1b89ea0d8cf8 82
+doc/operations.md
+  s_06fcde5dbef956::t_dd1b89ea0d8cf8 48
+doc/deployment.md
+  s_06fcde5dbef956::t_dd1b89ea0d8cf8 69
+doc/security/audit-package.md
+  s_06fcde5dbef956::t_dd1b89ea0d8cf8 775
+README.md
+  s_06fcde5dbef956::t_dd1b89ea0d8cf8 320
+internal/config/config_env.go
+  s_06fcde5dbef956::t_dd1b89ea0d8cf8 89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0da4004a7a61c5dc6531f45096e1bd708f46f379",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
