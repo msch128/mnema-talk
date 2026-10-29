@@ -47,6 +47,10 @@ and a `feat:` release the minor, so `:X.Y` receives only fixes. There is no
 
 ### The "Update now" button
 
+The button belongs to the `autoupdate` [Compose profile](deployment.md#optional-parts-compose-profiles):
+optional services that start only when enabled.
+
+
 Admin > **System** shows the running version, the newest release with its notes
 and, when a newer one exists, a dot on the server menu and a badge on "Admin
 console" (the server asks GitHub every 30 minutes; `UPDATE_CHECK_ENABLED=false`

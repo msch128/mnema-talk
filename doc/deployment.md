@@ -89,6 +89,25 @@ built (`scripts/fresh-install-check.sh`).
 - Check what your host can carry: [capacity](architecture.md#capacity).
 - Browsers that can join Talks: [README](../README.md#supported-browsers).
 
+## Optional parts (Compose profiles)
+
+A *profile* is a group of optional services in `docker-compose.yml` that start
+only when you enable them. Without profiles you get the app, PostgreSQL and
+SeaweedFS. To enable one:
+
+- put `COMPOSE_PROFILES=autoupdate` (several: `autoupdate,turn`) in the `.env`
+  next to the compose file; this also works in Synology Container Manager, or
+- start with `docker compose --profile autoupdate up -d`.
+
+| Profile | Starts | You want it when | Ports it opens | Extra `.env` settings |
+|---|---|---|---|---|
+| `autoupdate` | `updater` and `recreator` (they hold the Docker socket) | You want an "Update now" button in Admin > System | None (internal network; outbound HTTPS to `ghcr.io` and Sigstore) | `UPDATER_TOKEN` (`openssl rand -hex 32`, 32+ characters), a released `MNEMA_IMAGE` |
+| `turn` | `coturn`, an external TURN server on host networking | You prefer a separate relay process or public relay ports; the built-in relay on port 3479 needs no profile | 3478 UDP and TCP, 49152-49200 UDP | `WEBRTC_TURN_URLS`, `WEBRTC_TURN_SECRET` (16+ characters), optionally `WEBRTC_TURN_REALM` ([coturn](operations.md#turn-coturn)) |
+
+The setup assistant can enable `autoupdate` for you (it asks, or pass
+`--auto-update`). Read the sidecar's [threat model](../SECURITY.md#self-update-sidecar)
+first. After changing profiles run `docker compose up -d`.
+
 ## Running a released image
 
 Instead of building on the server, use a published image: set `MNEMA_IMAGE`

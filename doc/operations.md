@@ -7,6 +7,37 @@ to all this? Start with the [quick start](quick-start.md); for the security mode
 [SECURITY.md](../SECURITY.md). Which ports to forward and which outbound
 connections the server makes: [ports.md](ports.md).
 
+## Settings at a glance
+
+Everything is configured in `.env` next to `docker-compose.yml`; the
+[setup assistant](quick-start.md#step-1-make-the-files) writes it. The server
+checks the required settings at startup and, if any is missing or still a
+placeholder, logs "Mnema Talk cannot start – fix these settings in .env:" with
+the complete list and stops.
+
+**Required**
+
+| Setting | What it is | Example | How to get it |
+|---|---|---|---|
+| `PUBLIC_URL` | The address members type into their browser | `https://chat.example.com` | You choose it (your domain) |
+| `JWT_SECRET` | Secret that signs sessions, 32+ characters | (random) | `openssl rand -hex 32` |
+| `POSTGRES_PASSWORD` | Database password | (random) | `openssl rand -hex 16` |
+| `S3_ACCESS_KEY` | Media storage user name | `mnema` | Any letters and digits |
+| `S3_SECRET_KEY` | Media storage password, 8+ characters | (random) | `openssl rand -hex 16` |
+| `ADMIN_INITIAL_PASSWORD` | The Owner's first password, 14+ characters; first start only | (random) | `openssl rand -base64 18`; delete the line after signing in |
+
+**Usually worth setting**
+
+| Setting | Why |
+|---|---|
+| `MNEMA_IMAGE` | Which released image to run (`:X.Y` or `:latest`; [updating](updating.md)) |
+| `TRUSTED_PROXY_CIDRS` | Address of a reverse proxy in Docker or on another machine (the Status tab names it) |
+| `WEBRTC_NAT_1TO1_IP` | Only if the server finds no public address itself, or LAN members need the LAN address too |
+| `SMTP_*` | E-mail for password resets (optional) |
+| `COMPOSE_PROFILES` | Optional parts: `autoupdate`, `turn` ([profiles](deployment.md#optional-parts-compose-profiles)) |
+
+Everything else has a default; the next section lists every variable.
+
 ## Configuration reference
 
 All settings are environment variables, read and validated in

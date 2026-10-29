@@ -9,6 +9,36 @@ install stalls. Words you do not know are in the
 [glossary](glossary.md#voice-and-network-terms). Stuck? Jump to
 [If something is red](#if-something-is-red).
 
+## What you'll set up
+
+About ten minutes for the server, plus DNS, certificate and router time.
+
+- **Three containers that Compose runs for you**: the app (web, API and voice),
+  PostgreSQL (database) and SeaweedFS (media storage); optionally an updater.
+  In front of them you add a **reverse proxy** for HTTPS.
+- **Three ports** open to the internet: TCP 443 (the site), UDP 50000-50050
+  (voice) and port 3479 on UDP and TCP (relay for strict networks).
+- **Six required settings** in `.env`. The setup assistant generates all of
+  them except your address; by hand you must set each one.
+- **Optional parts** (the "Update now" button, an external TURN server) are
+  switched on with [Compose profiles](deployment.md#optional-parts-compose-profiles).
+
+The required settings:
+
+| Setting | What it is | Example | How to get it |
+|---|---|---|---|
+| `PUBLIC_URL` | The address members type into their browser | `https://chat.example.com` | You choose it (your domain) |
+| `JWT_SECRET` | Secret that signs sessions, 32+ characters | (random) | `openssl rand -hex 32` |
+| `POSTGRES_PASSWORD` | Database password | (random) | `openssl rand -hex 16` |
+| `S3_ACCESS_KEY` | Media storage user name | `mnema` | Any letters and digits |
+| `S3_SECRET_KEY` | Media storage password, 8+ characters | (random) | `openssl rand -hex 16` |
+| `ADMIN_INITIAL_PASSWORD` | The Owner's first password, 14+ characters; first start only | (random) | `openssl rand -base64 18`; delete the line after signing in |
+
+Anything missing or still a placeholder stops the server at startup. The log
+(`docker compose logs app`) then says "Mnema Talk cannot start – fix these
+settings in .env:" and lists them all. Every other setting has a default; the
+full list is in [Settings at a glance](operations.md#settings-at-a-glance).
+
 ## What you need
 
 - **A machine that runs Docker with Compose**: a Synology or Unraid NAS, a

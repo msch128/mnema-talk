@@ -5,6 +5,21 @@ proxy, and each layer can look fine while the one above it is broken. Never
 test only from inside your own network: nearly every voice problem is invisible
 from there. Terms are in the [glossary](glossary.md#voice-and-network-terms).
 
+## The container will not start
+
+If `docker compose ps` shows the app restarting, read `docker compose logs app`.
+A missing or placeholder required setting is reported all at once:
+
+```
+Mnema Talk cannot start – fix these settings in .env:
+  ...
+```
+
+Fix every listed line in `.env` (the six required settings are in
+[Settings at a glance](operations.md#settings-at-a-glance)) and run
+`docker compose up -d`. Other startup messages are explained under
+[The app does not start](operations.md#the-app-does-not-start).
+
 ## The ladder
 
 Check each rung in order and stop at the first one that fails.
