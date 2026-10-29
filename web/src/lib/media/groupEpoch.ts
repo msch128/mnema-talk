@@ -15,6 +15,7 @@ import { safetyCode } from './verify'
 import { CONFLICT_MS, type MediaStep } from './groupParams'
 import { credentialIdentity, sameBytes, wipeConsumed, treeMembers, leafIdentities, frameVerifiers } from './groupTree'
 import { GroupBase } from './groupBase'
+import { vetAdds } from './groupAdds'
 import { commitMessage, dropAbsent, retainedPrevious, type AddProposal, type CommitResult, type SealedCommit } from './groupEpochCommit'
 
 type EpochMaterial = {
@@ -335,9 +336,22 @@ export abstract class GroupEpoch extends GroupBase {
     if (!this.state) return []
     const proposals = this.proposalsFor(others, treeMembers(this.state))
     if (!proposals.length) return []
-    const wires = await this.commit(proposals)
-    if (wires.length) this.keepAdded(proposals)
+    // One bad package would fail a whole batch again and again as it stays pending: try each alone, drop the failing.
+    const vetted = proposals.length > 1 ? await vetAdds(this.state, this.cs, proposals) : null
+    for (const trial of vetted?.trials ?? []) this.wipeRejected(trial)
+    if (vetted) this.dropPackages(vetted.dropped)
+    const usable = vetted ? vetted.usable : proposals
+    if (!usable.length) return []
+    const wires = await this.commit(usable)
+    if (wires.length || usable.length === 1) this.dropPackages(usable)
     return wires
+  }
+
+  private dropPackages(proposals: readonly AddProposal[]): void {
+    for (const proposal of proposals) {
+      const id = credentialIdentity(proposal.add.keyPackage.leafNode.credential)
+      if (id && this.pending.get(id) === proposal.add.keyPackage) this.pending.delete(id)
+    }
   }
 
   private proposalsFor(others: readonly string[], members: Map<string, number>): AddProposal[] {
@@ -348,13 +362,6 @@ export abstract class GroupEpoch extends GroupBase {
       proposals.push({ proposalType: 'add', add: { keyPackage } })
     }
     return proposals
-  }
-
-  private keepAdded(proposals: readonly AddProposal[]): void {
-    for (const proposal of proposals) {
-      const id = credentialIdentity(proposal.add.keyPackage.leafNode.credential)
-      if (id) this.pending.delete(id)
-    }
   }
 
   protected async commitRemoves(others: readonly string[]): Promise<Uint8Array[]> {
