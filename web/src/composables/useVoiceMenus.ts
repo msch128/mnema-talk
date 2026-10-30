@@ -2,6 +2,7 @@
 // screen share. Each builds ContextMenu items from the voice store and
 // applies a choice through the same paths as the audio settings dialog, so
 // the AI filter, the push-to-talk gate and the silence watcher keep working.
+import { pttKeyLabel } from '../lib/pttKey'
 import { ref } from 'vue'
 import { Sliders, Video, VideoOff } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
@@ -110,7 +111,7 @@ function micItems(cx: MenuContext): ContextMenuItem[] {
   items.push(
     { type: 'separator' },
     { id: 'mic-noise', type: 'checkbox', label: t('audio.noise'), checked: voice.noiseCancelling, keepOpen: true, action: toggleNoise },
-    { id: 'mic-ptt', type: 'checkbox', label: t('audio.ptt'), checked: ptt, keepOpen: true, ...(ptt ? { shortcut: voice.pttKey } : {}), action: togglePtt },
+    { id: 'mic-ptt', type: 'checkbox', label: t('audio.ptt'), checked: ptt, keepOpen: true, ...(ptt && voice.pttKey ? { shortcut: pttKeyLabel(voice.pttKey) } : {}), action: togglePtt },
     ...settingsItems(cx)
   )
   return items
