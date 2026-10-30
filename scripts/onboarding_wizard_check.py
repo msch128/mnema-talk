@@ -153,6 +153,8 @@ def main():
                 again = run(cmd, d, check=False)
                 if again.returncode == 0 or open(os.path.join(d, ".env")).read() != before:
                     errs.append("a second run overwrote or accepted an existing .env")
+                elif "already exists and was left alone" not in again.stdout + again.stderr:
+                    errs.append("the refusal of a second run does not say the .env was left alone: " + again.stderr.strip()[:200])
             failures += ["%s: %s" % (label, e) for e in errs]
         finally:
             if subprocess.run(["rm", "-rf", d]).returncode != 0:

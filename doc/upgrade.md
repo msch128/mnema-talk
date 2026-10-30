@@ -27,6 +27,7 @@ Replace the version and paths with yours.
 ```sh
 cd /path/to/mnema-talk
 NEW=$(curl -fsSL https://api.github.com/repos/msch128/mnema-talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')  # or set a version
+[ -n "$NEW" ] || { echo "could not read the latest version; set NEW=x.y.z yourself" >&2; false; }
 
 # 1. Back up database, media and .env (see operations.md, "Backups")
 BACKUP_DIR=/path/to/backups ./scripts/backup.sh

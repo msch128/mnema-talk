@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Static onboarding checks: the docs must keep matching the product. No network.
-//   F1  command blocks do not pin a release older than the current minor
+//   F1  command blocks do not name a release below a fixed floor (stale 1.x/0.x tags)
 //   F4  every setup check code the server can send is listed in the docs
 //   F5  doc/ports.md lists exactly the inbound ports docker-compose.yml publishes
 // Usage: node scripts/check-onboarding-docs.mjs
@@ -31,15 +31,20 @@ function fencedBlocks(text) {
   return out
 }
 
-const older = (maj, min, cur) => Number(maj) < cur.major || (Number(maj) === cur.major && Number(min) < cur.minor)
+// Oldest release a command may still name. A fixed floor, not version.txt: a
+// release PR (which only bumps version.txt and cannot edit the docs) must
+// never turn this check red. Raise it by hand when an old line is retired.
+export const DOC_VERSION_FLOOR = { major: 2, minor: 0 }
 
-export function staleVersions(file, text, cur) {
+const older = (maj, min, floor) => Number(maj) < floor.major || (Number(maj) === floor.major && Number(min) < floor.minor)
+
+export function staleVersions(file, text, floor = DOC_VERSION_FLOOR) {
   const problems = []
   const scan = (lineNo, line) => {
     for (const re of [IMAGE_TAG, VERSION_VAR]) {
       for (const m of line.matchAll(re)) {
-        if (older(m[1], m[2], cur)) {
-          problems.push(`${file}:${lineNo}: "${m[0]}" is older than the current release ${cur.text}; use :latest, :${cur.major}.${cur.minor} or compute the version (mark a deliberate old example with <!-- test:allow-old-version --> above its fence)`)
+        if (older(m[1], m[2], floor)) {
+          problems.push(`${file}:${lineNo}: "${m[0]}" is older than the oldest release the docs may name (${floor.major}.${floor.minor}); use :latest, a current :X.Y or compute the version (mark a deliberate old example with <!-- test:allow-old-version --> above its fence)`)
         }
       }
     }
@@ -56,10 +61,8 @@ export function staleVersions(file, text, cur) {
 }
 
 function checkVersions() {
-  const [major, minor] = read('version.txt').trim().split('.').map(Number)
-  const cur = { major, minor, text: read('version.txt').trim() }
   const files = ['README.md', 'docker-compose.yml', '.env.example', ...readdirSync(join(root, 'doc')).filter((f) => f.endsWith('.md')).map((f) => `doc/${f}`)]
-  return files.flatMap((f) => staleVersions(f, read(f), cur))
+  return files.flatMap((f) => staleVersions(f, read(f)))
 }
 
 // ---- F4: setup check codes in the docs -------------------------------------

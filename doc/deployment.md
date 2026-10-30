@@ -30,6 +30,7 @@ The commands install the latest release; to pin another, set `VERSION` yourself.
 ```sh
 mkdir mnema-talk && cd mnema-talk
 VERSION=$(curl -fsSL https://api.github.com/repos/msch128/mnema-talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+[ -n "$VERSION" ] || { echo "could not read the latest version; set VERSION=x.y.z yourself" >&2; false; }
 base=https://raw.githubusercontent.com/msch128/mnema-talk/v$VERSION
 curl -fsSLO "$base/docker-compose.yml"
 curl -fsSL "$base/.env.example" -o .env
