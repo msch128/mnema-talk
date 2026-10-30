@@ -1,0 +1,21 @@
+web/src/composables/useWebRTC.takeover.test.ts
+  s_dbdfffe0fa33da::t_5d216546394998 114-115,119,126
+web/src/composables/webrtc/session.ts
+  s_dbdfffe0fa33da::t_8d2c5176db8bbe 214-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3982fa9f39286c2244000d2378326b017ce2ad5d",
+  "prompts": {},
+  "sessions": {
+    "s_dbdfffe0fa33da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-voice-takeover-a0aadf43d700b47c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
