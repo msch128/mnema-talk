@@ -1,0 +1,21 @@
+web/src/lib/pageVisibility.test.ts
+  s_2de5838cb2797c::t_02c6cb61bd861b 2,79-88
+web/src/lib/pageVisibility.ts
+  s_2de5838cb2797c::t_4d6a88820673e5 106-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9dbd291b05432f77197fd6df749972b74be63546",
+  "prompts": {},
+  "sessions": {
+    "s_2de5838cb2797c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aperf-idle-a1f825253ff37314",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
