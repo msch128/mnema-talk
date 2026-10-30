@@ -18,7 +18,7 @@ async function signIn(page: Page) {
 }
 
 const row = (page: Page) => page.locator('[data-channel-type="voice"]', { hasText: CHANNEL })
-const question = (page: Page) => page.getByRole('dialog').filter({ hasText: 'Talk hier übernehmen?' })
+const question = (page: Page) => page.getByRole('alertdialog').filter({ hasText: 'Talk hier übernehmen?' })
 const moved = (page: Page) => page.getByText('Dein Gespräch wurde auf ein anderes Gerät verschoben.')
 const peerCount = (page: Page) => page.evaluate(() => window.__pcs.length)
 
