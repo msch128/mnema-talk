@@ -73,8 +73,9 @@ built (`scripts/fresh-install-check.sh`).
 - Create the first invite: Admin console → Invites. Members register with that
   code; there is no public registration.
 - Set the community name and the rules new members accept (Admin console →
-  Welcome & rules). *Admin* > *Sign-in & messages* has the switch for direct
-  messages (on by default).
+  Welcome & rules). The switch for direct messages (on by default) and the
+  sign-out after inactivity are on their own page, Admin console → Sign-in &
+  messages.
 - Give moderators their rights through roles: *Manage reports* (the Reports
   tab) and *Kick members* are off for @everyone and for every role until you
   grant them ([roles](roles-and-permissions.md)).

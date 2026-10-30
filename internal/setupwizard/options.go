@@ -21,7 +21,7 @@ const DefaultAdminUsername = "admin"
 
 // DefaultLanguage is the documented default of INITIAL_LANGUAGE (doc/operations.md,
 // .env.example and the server itself): the wizard asks with the same one.
-const DefaultLanguage = "de"
+const DefaultLanguage = "en"
 
 // LocalURL is PUBLIC_URL of a trial on one computer.
 const LocalURL = "http://localhost:8080"

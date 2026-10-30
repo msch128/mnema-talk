@@ -213,7 +213,7 @@ no accounts on someone else's platform.
   it in **Admin > Reports**, which needs the permission *Manage reports*; for a
   direct message this copy is the only part of it they can read. The author is
   not told.
-- **The Owner can switch direct messages off** for the community under
+- **The Owner and Administrators can switch direct messages off** for the community under
   **Admin > Sign-in & messages**: nothing new can then be started or written, and
   existing conversations stay readable. A 1.0.x server has none of this, and
   the web app hides it there.

@@ -19,6 +19,8 @@ const newInviteUses = ref<string | number>('')
 // A week is the default: an invite that never runs out is a choice, not what an empty form gives.
 const DEFAULT_DAYS = 7
 const HOURS_PER_DAY = 24
+// The server accepts invites up to 8760 hours (a year) ahead.
+const MAX_DAYS = 365
 const newInviteDays = ref<string | number>(DEFAULT_DAYS)
 const copiedCode = ref('')
 const creating = ref(false)
@@ -43,7 +45,7 @@ async function createInvite() {
   try {
     const body: CreateInviteRequest = {}
     if (newInviteUses.value) body.max_uses = parseInt(String(newInviteUses.value), 10)
-    if (newInviteDays.value) body.expires_in_hours = parseInt(String(newInviteDays.value), 10) * HOURS_PER_DAY
+    if (newInviteDays.value) body.expires_in_hours = Math.min(parseInt(String(newInviteDays.value), 10), MAX_DAYS) * HOURS_PER_DAY
     await api('/api/admin/invites', { method: 'POST', json: body })
     newInviteUses.value = ''
     newInviteDays.value = DEFAULT_DAYS
@@ -142,6 +144,7 @@ onMounted(loadInvites)
           v-model="newInviteDays"
           type="number"
           min="1"
+          :max="MAX_DAYS"
           :placeholder="$t('admin.validDaysPlaceholder')"
           class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition"
         />

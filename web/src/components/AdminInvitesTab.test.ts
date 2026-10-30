@@ -102,6 +102,17 @@ describe('AdminInvitesTab', () => {
     expect(w.find('[data-testid="invite-open-forever"]').exists()).toBe(false)
   })
 
+  it('caps the validity at a year, as the server does', async () => {
+    apiMock.mockResolvedValueOnce([])
+    const w = mount(AdminInvitesTab)
+    await flushPromises()
+    await w.get('#invite-days').setValue('900')
+    apiMock.mockResolvedValueOnce({}).mockResolvedValueOnce([])
+    await submit(w).trigger('submit')
+    await flushPromises()
+    expect(apiMock).toHaveBeenNthCalledWith(2, '/api/admin/invites', { method: 'POST', json: { expires_in_hours: 8760 } })
+  })
+
   it('creates a week-long invite from the untouched form', async () => {
     apiMock.mockResolvedValueOnce([])
     const w = mount(AdminInvitesTab)
