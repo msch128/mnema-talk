@@ -140,3 +140,39 @@ describe('EmojiPicker and trigger', () => {
     expect(button.attributes('aria-expanded')).toBe('false')
   })
 })
+
+describe('EmojiPicker search keys', () => {
+  async function open() {
+    wrapper = mount(EmojiPicker, { attachTo: document.body })
+    await vi.waitFor(() => expect(document.querySelector('synthetic-emoji-picker')).not.toBeNull())
+    return requireValue(document.querySelector<HTMLElement>('synthetic-emoji-picker'))
+  }
+
+  it('clears a search with the first Escape and closes with the second', async () => {
+    const picker = await open()
+    const input = requireValue(picker.shadowRoot?.querySelector('input'))
+    input.value = 'tada'
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(input.value).toBe('')
+    expect(wrapper.emitted('close')).toBeUndefined()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(wrapper.emitted('close')).toEqual([['escape']])
+  })
+
+  it('keeps typed letters from reaching shortcuts of the page, but not modified keys', async () => {
+    const picker = await open()
+    const seen = vi.fn()
+    document.addEventListener('keydown', seen)
+    const input = requireValue(picker.shadowRoot?.querySelector('input'))
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', bubbles: true, composed: true }))
+    expect(seen).not.toHaveBeenCalled()
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, composed: true }))
+    expect(seen).toHaveBeenCalledOnce()
+    document.removeEventListener('keydown', seen)
+  })
+
+  it('shows the preview footer', async () => {
+    await open()
+    expect(wrapper.find('[data-testid="emoji-preview"]').exists()).toBe(true)
+  })
+})

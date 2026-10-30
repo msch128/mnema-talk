@@ -89,7 +89,10 @@ test('every quick reaction and the picker reach the other member of a Talk', asy
   const picker = b.getByTestId('emoji-picker').locator('emoji-picker')
   await picker.locator('input[type="search"]').fill('partying')
   await expect(picker.getByRole('option').first()).toBeVisible()
-  await picker.getByRole('option').first().click()
+  // The footer names the emoji under the pointer; Enter in the search picks the first result.
+  await picker.getByRole('option').first().hover()
+  await expect(b.getByTestId('emoji-preview-code')).toHaveText(':partying_face:')
+  await picker.locator('input[type="search"]').press('Enter')
   await expect(floating(a, '🥳').first()).toBeVisible()
 
   // The same picker lists the community's custom emoji; one is found by name and shown as its picture.
@@ -98,9 +101,21 @@ test('every quick reaction and the picker reach the other member of a Talk', asy
   const custom = b.getByTestId('emoji-picker').locator('emoji-picker')
   await custom.locator('input[type="search"]').fill(EMOJI)
   await expect(custom.getByRole('option').first()).toBeVisible()
+  await custom.getByRole('option').first().hover()
+  await expect(b.getByTestId('emoji-preview-code')).toHaveText(`:${EMOJI}:`)
   await custom.getByRole('option').first().click()
   await expect(a.getByTestId('talk-reaction').locator('img').first()).toBeVisible()
   await expect(b.getByTestId('talk-reaction').locator('img').first()).toBeVisible()
+
+  // Escape clears the search first and closes the picker second.
+  await b.getByTestId('talk-react').click()
+  await b.getByTestId('reaction-more').click()
+  const last = b.getByTestId('emoji-picker').locator('emoji-picker').locator('input[type="search"]')
+  await last.fill('tada')
+  await b.keyboard.press('Escape')
+  await expect(last).toHaveValue('')
+  await b.keyboard.press('Escape')
+  await expect(b.getByTestId('emoji-picker')).toHaveCount(0)
 
   await leaveTalks([a, b])
   await apiFetch(a, 'DELETE', `/api/admin/channels/${talkId}`)

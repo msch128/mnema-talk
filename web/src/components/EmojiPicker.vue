@@ -8,6 +8,7 @@ import { locale } from '../i18n'
 import { styleEmojiPicker } from '../lib/emojiPickerSheet'
 import { useDismissable } from '../composables/useDismissable'
 import { emojiImage, emojiToken } from '../lib/customEmoji'
+import { enhanceEmojiPicker, type EmojiPreview } from '../lib/emojiPickerExtras'
 import { prefersReducedMotion, useEmojiStore } from '../stores/emoji'
 
 const emit = defineEmits<{ pick: [emoji: string]; close: [reason?: 'outside' | 'escape'] }>()
@@ -48,6 +49,9 @@ function keepInViewport() {
 }
 const loading = ref(true)
 let picker: PickerElement | null = null
+let extras: ReturnType<typeof enhanceEmojiPicker> | null = null
+// The emoji under the pointer or the keyboard focus, with its :shortcode:.
+const preview = ref<EmojiPreview | null>(null)
 
 async function create() {
   const lang = locale.value === 'en' ? 'en' : 'de'
@@ -73,7 +77,8 @@ async function create() {
     if (custom) emit('pick', props.shortcode ? `:${custom.name}:` : emojiToken(custom))
   })
   syncCustomEmoji()
-  host.value.appendChild(picker)
+  host.value.prepend(picker)
+  extras = enhanceEmojiPicker(picker, value => { preview.value = value })
   styleEmojiPicker(picker)
   loading.value = false
   keepInViewport()
@@ -82,9 +87,21 @@ async function create() {
 }
 
 // Presses on the picker or on its trigger don't close it; Escape does.
-useDismissable(() => [host.value, props.trigger], (_event, reason) => emit('close', reason))
+// Escape first clears a search, a second press closes.
+useDismissable(() => [host.value, props.trigger], (_event, reason) => emit('close', reason), { escape: false })
+function onEscape(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || e.isComposing) return
+  e.preventDefault()
+  e.stopPropagation()
+  if (!extras?.clearSearch()) emit('close', 'escape')
+}
+// Typing in the search is not a shortcut for the page behind it.
+function keepTyping(e: KeyboardEvent) {
+  if (!e.ctrlKey && !e.metaKey && !e.altKey) e.stopPropagation()
+}
 
 onMounted(() => {
+  window.addEventListener('keydown', onEscape, true)
   keepInViewport()
   window.addEventListener('resize', keepInViewport)
   create().catch(err => {
@@ -93,6 +110,9 @@ onMounted(() => {
   })
 })
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onEscape, true)
+  extras?.detach()
+  extras = null
   window.removeEventListener('resize', keepInViewport)
   picker?.remove()
   picker = null
@@ -106,9 +126,22 @@ onBeforeUnmount(() => {
     role="dialog"
     :aria-label="$t('emoji.suggestTitle')"
     class="z-40 overflow-hidden rounded-xl bg-mnema-elevated shadow-popover pop-in"
+    @keydown="keepTyping"
   >
     <div v-if="loading" class="flex h-[377px] w-[340px] max-w-[calc(100vw-16px)] items-center justify-center text-sm text-mnema-tertiary">
       {{ $t('emoji.loading') }}
+    </div>
+    <div
+      v-if="!loading"
+      data-testid="emoji-preview"
+      aria-live="off"
+      class="flex h-11 items-center gap-2 border-t border-mnema-hairline px-3 text-sm text-mnema-muted"
+    >
+      <template v-if="preview">
+        <img v-if="preview.src" :src="preview.src" alt="" class="h-7 w-7 object-contain">
+        <span v-else class="text-2xl leading-none" aria-hidden="true">{{ preview.glyph }}</span>
+        <span class="truncate font-mono" data-testid="emoji-preview-code">{{ preview.code }}</span>
+      </template>
     </div>
   </div>
 </template>
