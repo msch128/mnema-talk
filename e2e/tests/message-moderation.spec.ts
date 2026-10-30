@@ -48,15 +48,25 @@ test('slow mode, pinning, deleting with a reason and clearing a member are visib
     await composer.fill('one')
     await composer.press('Enter')
     await expect(member.getByText('one', { exact: true })).toBeVisible()
+    // The wait is shown before a second message is tried: on the composer, with the send button held.
+    await expect(member.getByTestId('composer-limit')).toHaveText(/Langsammodus: Du kannst in 0:0\d wieder schreiben/)
     await composer.fill('zu schnell')
+    await expect(member.getByRole('button', { name: 'Senden' })).toBeDisabled()
     await composer.press('Enter')
-    await expect(member.getByText(/Langsammodus: bitte warte noch/)).toBeVisible()
+    await expect(member.getByText('zu schnell', { exact: true })).toHaveCount(0)
+    await expect(member.getByTestId('composer-limit')).toHaveCount(0, { timeout: 7000 })
     await composer.fill('')
-    await member.waitForTimeout(5200)
     await composer.fill('two')
     await composer.press('Enter')
     await expect(member.getByText('two', { exact: true })).toBeVisible()
     expect((await apiFetch(mod, 'PATCH', `/api/admin/channels/${channelId}`, { slow_mode_seconds: 0 })).status).toBe(200)
+
+    // A message past the limit is counted before it is sent, not refused afterwards.
+    await composer.fill('a'.repeat(4001))
+    await expect(member.getByTestId('composer-limit')).toHaveText('1 Zeichen zu viel (höchstens 4000)')
+    await expect(member.getByRole('button', { name: 'Senden' })).toBeDisabled()
+    await composer.fill('')
+    await expect(member.getByTestId('composer-limit')).toHaveCount(0)
 
     // Pinning shows a marker to everybody.
     await mod.getByText('two', { exact: true }).click({ button: 'right' })

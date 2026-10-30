@@ -2,6 +2,7 @@
 // localized text the user should see. Anything not listed here falls back to
 // the generic text of its error code plus the server message (see api.ts).
 import { t } from '../i18n'
+import { durationLabel } from './moderation'
 
 const FIELDS = new Set(['content', 'bio', 'display_name', 'topic'])
 // "name" is the one shared word for a name everywhere in the UI.
@@ -77,6 +78,7 @@ const PATTERNS: readonly ErrorPattern[] = [
   [/^password must be at most/, () => t('errors.detail.passwordMax')],
   [/^username must be/, () => t('errors.detail.usernameFormat')],
   [/^(\w+) must be at most (\d+) characters$/, (field = '', n = '') => t('errors.detail.fieldMax', { field: fieldLabel(field), count: n })],
+  [/^too many requests: retry in (\d+) s/, n => t('errors.detail.rateWait', { time: durationLabel(Number(n)) })],
   [/^slow mode: wait (\d+) s/, n => t('errors.detail.slowMode', { seconds: n })],
   [/^Your message was not sent: it breaks the (?:server|community) rule "(.*)" \(automod\)\./, rule => t('errors.detail.automodSend', { rule })],
   [/^Your edit was not saved: it breaks the (?:server|community) rule "(.*)" \(automod\)\./, rule => t('errors.detail.automodEdit', { rule })],

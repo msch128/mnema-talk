@@ -8,6 +8,7 @@ describe('server reasons reach the user in their language', () => {
   it.each([
     ['CONFLICT', 'a channel can keep at most 50 pinned messages; unpin one first', /50 angeheftete/],
     ['CONFLICT', 'the poll has ended', /Umfrage ist beendet/],
+    ['RATE_LIMITED', 'too many requests: retry in 90 s', /etwas viel\. Versuche es in 90 s noch einmal/],
     ['CONFLICT', 'the limit of 100 custom emoji is reached', /100 eigenen Emojis/],
     ['CONFLICT', 'an account can use push on at most 10 devices; remove one first', /10 Geräten/],
     ['CONFLICT', 'an emoji with this name already exists', /Emoji mit diesem Namen/],

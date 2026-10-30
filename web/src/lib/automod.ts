@@ -2,6 +2,7 @@
 // editor, and the conversion between a rule and the lines of its form.
 import type { AutomodRule, AutomodRuleInput, AutomodSettings } from '../types/rest'
 import { locale, t } from '../i18n'
+import { ACCOUNT_AGE_SECONDS, RAID_RESTRICTION_SECONDS, RAID_WINDOW_SECONDS, RULE_TIMEOUT_SECONDS } from './presets'
 
 export type AutomodKind = AutomodRule['kind']
 
@@ -9,10 +10,10 @@ export type AutomodKind = AutomodRule['kind']
 export const AUTOMOD_KINDS: readonly AutomodKind[] = ['words', 'links', 'mentions', 'new_account', 'raid']
 
 /** Ready-made choices, in seconds. */
-export const ACCOUNT_AGES = [60, 300, 600, 1800, 3600, 21600, 86400, 259200, 604800, 2592000] as const
-export const RAID_WINDOWS = [5, 10, 30, 60, 300, 600] as const
-export const RAID_RESTRICTIONS = [60, 300, 600, 1800, 3600, 21600, 86400] as const
-export const RULE_TIMEOUTS = [0, 60, 300, 600, 3600, 86400, 604800] as const
+export const ACCOUNT_AGES = ACCOUNT_AGE_SECONDS
+export const RAID_WINDOWS = RAID_WINDOW_SECONDS
+export const RAID_RESTRICTIONS = RAID_RESTRICTION_SECONDS
+export const RULE_TIMEOUTS = RULE_TIMEOUT_SECONDS
 
 export const MAX_RULE_NAME = 60
 export const MAX_WORDS = 200

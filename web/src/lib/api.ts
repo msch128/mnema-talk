@@ -11,10 +11,17 @@ const CODES = new Set([
 ])
 
 export class ApiError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string) {
+  /** `retryAfter` is the wait in seconds that the server's sentence names (slow mode, rate limits), if it does. */
+  constructor(readonly status: number, readonly code: string, message: string, readonly retryAfter: number | null = null, readonly slowMode = false) {
     super(message)
     this.name = 'ApiError'
   }
+}
+
+/** Seconds a 429 sentence asks to wait ("slow mode: wait 7 s ...", "too many requests: retry in 7 s"), or null. */
+export function waitSeconds(message: unknown): number | null {
+  const match = typeof message === 'string' ? /^(?:slow mode: wait|too many requests: retry in) (\d+) s/.exec(message) : null
+  return match ? Number(match[1]) : null
 }
 
 export function isApiError(error: unknown): error is ApiError {
@@ -133,7 +140,7 @@ function serverFailure(status: number, body: unknown, path: string, method: stri
     ? serverError['code'] : 'INTERNAL_ERROR'
   // Sign-in and the other account writes talk about attempts (reads like /api/auth/me do not); everything else about requests.
   if (code === 'RATE_LIMITED' && method !== 'GET' && path.startsWith('/api/auth/')) return new ApiError(status, code, t('errors.rateLimitedAttempts'))
-  return new ApiError(status, code, errorMessage(code, serverError?.['message']))
+  return new ApiError(status, code, errorMessage(code, serverError?.['message']), waitSeconds(serverError?.['message']), String(serverError?.['message'] ?? '').startsWith('slow mode:'))
 }
 
 export interface ApiClient {

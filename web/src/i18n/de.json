@@ -135,6 +135,7 @@
       "fileTooBig": "Die Datei ist größer als {size} MB",
       "missingPermission": "Dafür fehlt dir die Berechtigung.",
       "slowMode": "Langsammodus: bitte warte noch {seconds} s",
+      "rateWait": "Das war gerade etwas viel. Versuche es in {time} noch einmal.",
       "linkInvalid": "Dieser Link ist ungültig oder abgelaufen.",
       "emailInvalid": "Gib eine gültige E-Mail-Adresse ein.",
       "emailInUse": "Ein anderes Konto hat diese Adresse bereits bestätigt.",
@@ -580,6 +581,13 @@
     "copiedLink": "Link kopiert",
     "moreActions": "Weitere Aktionen",
     "readOnly": "Du darfst in diesem Kanal nicht schreiben.",
+    "timedOut": "Du bist in einer Auszeit und kannst gerade nicht schreiben.",
+    "uploadMax": "Datei oder Bild hochladen (bis {size} MB)",
+    "limits": {
+      "slowWait": "Langsammodus: Du kannst in {time} wieder schreiben",
+      "charsLeft": "Noch {count} Zeichen",
+      "tooLong": "{count} Zeichen zu viel (höchstens {max})"
+    },
     "noAttach": "Du darfst hier keine Dateien anhängen.",
     "attachMediaOnly": "Es lassen sich nur Bilder und Videos anhängen.",
     "attachSkipped": "Nur Bilder und Videos wurden angehängt. Andere Dateien wurden übersprungen.",
