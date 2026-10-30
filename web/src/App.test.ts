@@ -98,6 +98,16 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(navOpen.value).toBe(false)
   })
+  it('closes only the drawer when Escape is pressed with a thread open too', async () => {
+    const { chat } = await mountApp()
+    const { navOpen } = useCompactLayout()
+    chat.activeThread = messageFixture({ id: 't1' })
+    await flushPromises()
+    navOpen.value = true
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(navOpen.value).toBe(false)
+    expect(chat.activeThread).not.toBeNull()
+  })
   it('gives a thread the whole screen on a phone and keeps the member list on a desktop', async () => {
     const { isCompact } = useCompactLayout()
     const { chat } = await mountApp()

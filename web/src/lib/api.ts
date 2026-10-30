@@ -127,12 +127,12 @@ async function sendRequest(transport: ApiTransport, path: string, operation: Api
 }
 
 /** The error a non-2xx reply stands for, from the server's {error: {code, message}} body. */
-function serverFailure(status: number, body: unknown, path: string) {
+function serverFailure(status: number, body: unknown, path: string, method: string) {
   const serverError = isRecord(body) && isRecord(body['error']) ? body['error'] : null
   const code = typeof serverError?.['code'] === 'string' && serverError['code'].length <= 64
     ? serverError['code'] : 'INTERNAL_ERROR'
-  // Sign-in and the account routes talk about attempts; everything else about requests.
-  if (code === 'RATE_LIMITED' && path.startsWith('/api/auth/')) return new ApiError(status, code, t('errors.rateLimitedAttempts'))
+  // Sign-in and the other account writes talk about attempts (reads like /api/auth/me do not); everything else about requests.
+  if (code === 'RATE_LIMITED' && method !== 'GET' && path.startsWith('/api/auth/')) return new ApiError(status, code, t('errors.rateLimitedAttempts'))
   return new ApiError(status, code, errorMessage(code, serverError?.['message']))
 }
 
@@ -200,7 +200,7 @@ export function createApiClient(transport: ApiTransport): ApiClient {
     if (response.status === 204) return decode ? decode(null) : null
     const body = response.body
     if (response.status < 200 || response.status >= 300) {
-      const error = serverFailure(response.status, body, path)
+      const error = serverFailure(response.status, body, path, operation.method)
       handleUnauthorizedNotification(path, response.status, error, shouldNotifyUnauthorized, unauthorizedHandlers, requestUnauthorizedHandlers)
       if (error.code === 'RULES_NOT_ACCEPTED') for (const { handler } of [...rulesHandlers]) handler()
       throw error

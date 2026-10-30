@@ -358,5 +358,6 @@ describe('rate limit wording', () => {
     const { api: call } = createApiClient(limited)
     expect((await apiFailure(call('/api/channels'))).message).toBe('Zu viele Anfragen – bitte kurz warten')
     expect((await apiFailure(call('/api/auth/login', { method: 'POST', json: {} }))).message).toMatch(/Versuche/)
+    expect((await apiFailure(call('/api/auth/me'))).message).toBe('Zu viele Anfragen – bitte kurz warten')
   })
 })
