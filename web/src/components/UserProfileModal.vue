@@ -16,6 +16,7 @@ import { t, locale } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import TalkOverviewDialog from './TalkOverviewDialog.vue'
 import PresenceDot from './PresenceDot.vue'
+import MediaImage from './MediaImage.vue'
 import ProfileAvatar from './ProfileAvatar.vue'
 import ProfileBannerControls from './ProfileBannerControls.vue'
 import ProfileBio from './ProfileBio.vue'
@@ -148,13 +149,18 @@ function handleMention() {
       <!-- Top banner -->
       <div class="h-28 shrink-0 bg-linear-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
         <!-- The member's banner, or the default pattern -->
-        <img
+        <!-- A banner that was deleted from storage falls back to the default pattern. -->
+        <MediaImage
           v-if="profileUser.banner_url"
           :src="profileUser.banner_url"
           alt=""
           class="absolute inset-0 h-full w-full object-cover pointer-events-none"
           data-testid="profile-banner"
-        />
+        >
+          <template #fallback>
+            <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] bg-size-[12px_12px] pointer-events-none" data-testid="profile-banner-default"></div>
+          </template>
+        </MediaImage>
         <div v-else class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] bg-size-[12px_12px] pointer-events-none"></div>
 
         <ProfileBannerControls v-if="isSelf && features.profileBanner" :has-banner="!!profileUser.banner_url" />

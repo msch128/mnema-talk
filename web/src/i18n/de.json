@@ -79,6 +79,9 @@
     "zoomLevel": "Zoom {percent} %"
   },
   "media": {
+    "imageDeleted": "Dieses Bild wurde gelöscht",
+    "imageFailed": "Das Bild konnte nicht geladen werden",
+    "retry": "Erneut versuchen",
     "sizeB": "{size} B",
     "sizeKb": "{size} KB",
     "sizeMb": "{size} MB",

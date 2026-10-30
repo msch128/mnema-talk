@@ -1,12 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import LinkPreviewCard from './LinkPreviewCard.vue'
+import { setLocale } from '../i18n'
+import { resetMediaStatus } from '../lib/mediaStatus'
 import { fetchLinkPreview } from '../lib/linkPreview'
 import type { LinkPreview } from '../types/domain'
 
 vi.mock('../lib/linkPreview', () => ({ fetchLinkPreview: vi.fn() }))
 enableAutoUnmount(afterEach)
-beforeEach(() => vi.mocked(fetchLinkPreview).mockReset())
+afterEach(() => vi.unstubAllGlobals())
+beforeEach(() => {
+  setLocale('en')
+  resetMediaStatus()
+  vi.mocked(fetchLinkPreview).mockReset()
+})
 
 const full: LinkPreview = { url: 'https://www.example.org/article', title: 'Article title', description: 'Description', image: 'https://example.org/image.png?q=one two', site_name: 'Publisher' }
 
@@ -57,8 +64,12 @@ describe('LinkPreviewCard', () => {
     expect(w.get('[data-testid="link-preview-provider"]').text()).toBe('Publisher')
     expect(w.find('p').text()).toBe('Description')
     expect(w.find('img').attributes('src')).toBe(`/api/link-preview/image?url=${encodeURIComponent(full.image ?? '')}`)
+    // Taken down at its source (410): the card says so instead of a broken image.
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response('', { status: 410 }))))
     await w.find('img').trigger('error')
+    await flushPromises()
     expect(w.find('img').exists()).toBe(false)
+    expect(w.get('[data-testid="link-preview-media"]').text()).toBe('This image was deleted')
     expect(w.text()).toContain('Article title')
   })
 
@@ -145,6 +156,25 @@ describe('LinkPreviewCard', () => {
     expect(w.find('[data-testid="link-preview-author"] a').exists()).toBe(false)
     expect(w.get('[data-testid="link-preview-author"]').text()).toBe('Eve')
     expect(w.get('[data-testid="link-preview-title"]').attributes('href')).toBe('https://example.org/safe')
+  })
+
+  it('leaves the picture out, without a box, when the proxy has no usable image', async () => {
+    const w = await mounted(full)
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response('', { status: 404 }))))
+    await w.find('img').trigger('error')
+    await flushPromises()
+    expect(w.find('img').exists()).toBe(false)
+    expect(w.find('[data-media-placeholder]').exists()).toBe(false)
+    expect(w.find('[data-testid="link-preview-media"]').exists()).toBe(false)
+    expect(w.text()).toContain('Article title')
+  })
+
+  it('offers a retry when the proxy could not fetch the image right now', async () => {
+    const w = await mounted(full)
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response('', { status: 503 }))))
+    await w.find('img').trigger('error')
+    await flushPromises()
+    expect(w.get('[data-media-placeholder="failed"]').exists()).toBe(true)
   })
 
   it('puts a small thumbnail beside the text for compact cards', async () => {

@@ -199,6 +199,21 @@ func (f *Fetcher) parse(raw string) (*url.URL, error) {
 	return u, nil
 }
 
+// statusError is an answer other than 200 from the address fetched. 404 and
+// 410 say it was taken down, other 4xx that it will not be served to us;
+// timeouts, 429 and 5xx pass.
+type statusError struct{ code int }
+
+func (e statusError) Error() string { return fmt.Sprintf("fetch: status %d", e.code) }
+
+// gone: the address was taken down.
+func (e statusError) gone() bool { return e.code == http.StatusNotFound || e.code == http.StatusGone }
+
+// refused: a definitive answer that is not "gone".
+func (e statusError) refused() bool {
+	return e.code >= 400 && e.code < 500 && !e.gone() && e.code != http.StatusRequestTimeout && e.code != http.StatusTooManyRequests
+}
+
 // get fetches u and returns at most limit bytes of the body.
 func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int64) ([]byte, string, *url.URL, error) {
 	host := strings.ToLower(u.Hostname())
@@ -230,7 +245,7 @@ func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int6
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return nil, "", nil, fmt.Errorf("fetch: status %d", res.StatusCode)
+		return nil, "", nil, statusError{res.StatusCode}
 	}
 	body, err := io.ReadAll(io.LimitReader(res.Body, limit))
 	if err != nil {

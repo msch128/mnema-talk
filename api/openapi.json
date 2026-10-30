@@ -28526,7 +28526,17 @@
                 }
               }
             },
-            "description": "NOT_FOUND: the resource, or the route, does not exist."
+            "description": "NOT_FOUND: the address has no usable image, or the route does not exist."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "The image was taken down (the address answered 404 or 410). The error code is NOT_FOUND."
           },
           "429": {
             "content": {
@@ -28555,6 +28565,16 @@
               }
             },
             "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: the image could not be fetched right now; try again."
           }
         },
         "security": [
