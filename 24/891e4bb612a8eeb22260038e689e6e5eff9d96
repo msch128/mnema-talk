@@ -1,0 +1,198 @@
+internal/textcut/textcut_test.go
+  s_06fcde5dbef956::t_7809b3eadf66d1 36
+  s_06fcde5dbef956::t_01ffd976aec4af 33-35
+  s_06fcde5dbef956::t_c676b9f015f168 37-39
+  s_28915fd19e1e49::t_3d9e5be3c31872 1-32,40-73
+e2e/tests/bot-members.spec.ts
+  s_58ecb9dda7416a::t_d042f1dd51de60 71,80
+internal/audit/audit.go
+  s_28915fd19e1e49::t_b5f93807f4fb1d 25,162
+internal/auth/service_accounts.go
+  s_28915fd19e1e49::t_4cb14202b78559 15,240
+internal/discordimport/plan.go
+  s_28915fd19e1e49::t_7b72e79d3d35c2 18,163
+internal/gateway/presence.go
+  s_28915fd19e1e49::t_9db379c7184b86 11-12,136
+internal/httpx/request.go
+  s_82e9d48cb7fc7f::t_6316c0cb2e2072 17-18,144-148,150-152,154,156,159,171
+internal/httpx/request_test.go
+  s_0cae4a4d7ab7c3::t_91fc324831ca0a 337-387
+internal/later/visibility.go
+  s_28915fd19e1e49::t_3f551722584dd6 15,61
+internal/linkpreview/linkpreview_html.go
+  s_28915fd19e1e49::t_c3945391d9ea8f 16-17,224
+internal/onboarding/sharepage.go
+  s_28915fd19e1e49::t_055a40a11e3915 13,70-72,74
+internal/push/payload.go
+  s_28915fd19e1e49::t_5f34c0cf6aef45 14,184
+internal/textcut/textcut.go
+  s_0f71275af3a9d5::t_9ac74e3fee8875 1-106
+web/src/components/AdminBotsTab.vue
+  s_731038fe4fc0d1::t_8349879e6f3ff9 87
+web/src/components/AdminOnboardingTab.test.ts
+  s_06fcde5dbef956::t_5e92b0533c061c 108,111-120
+web/src/components/AdminOnboardingTab.vue
+  s_06fcde5dbef956::t_d764c1be8ec54e 2,50,115,125,134
+web/src/components/AdminReportDetail.vue
+  s_731038fe4fc0d1::t_6afce9f3d5ebcd 168
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_9d7d6d19b14171 63,78,135,139,151,166,242,270,332,335,343,347,350,359,379,385
+web/src/components/AdminRolesTab.vue
+  s_731038fe4fc0d1::t_efcf1b256304d9 329
+web/src/components/AutomodRuleDialog.vue
+  s_731038fe4fc0d1::t_fb764a669524ec 71
+web/src/components/BotDetailPanel.vue
+  s_731038fe4fc0d1::t_c7d7fd3fb0b007 107
+web/src/components/BotDiscordParity.test.ts
+  s_06fcde5dbef956::t_95c087ad119075 129
+web/src/components/BotMembers.test.ts
+  s_06fcde5dbef956::t_3313bae3393fbd 165,170
+web/src/components/BotTokensPanel.vue
+  s_731038fe4fc0d1::t_7b6f6ad94f631e 104
+web/src/components/CreateForumPostModal.vue
+  s_06fcde5dbef956::t_7b8717a4b4600e 2,31,33,87,94,140,146
+web/src/components/EditNameDialog.test.ts
+  s_06fcde5dbef956::t_270a7350e8c018 112
+web/src/components/EditNameDialog.vue
+  s_06fcde5dbef956::t_2c128803b4413f 2,86,100,107
+web/src/components/EventEditDialog.test.ts
+  s_06fcde5dbef956::t_303c379edd1131 119,208,219,239,261
+web/src/components/EventEditDialog.vue
+  s_731038fe4fc0d1::t_57e5191876d57e 174,190,266
+web/src/components/ForwardDialog.vue
+  s_731038fe4fc0d1::t_127138d57e4b33 117
+web/src/components/IncomingWebhooksPanel.vue
+  s_731038fe4fc0d1::t_baabb135b26d6b 178,204
+web/src/components/ManageForumTagsModal.vue
+  s_06fcde5dbef956::t_da7256daea65e8 2,35,75,132,139,179,185
+web/src/components/MessageModerationDialog.vue
+  s_731038fe4fc0d1::t_05d71611cbf1ae 121
+web/src/components/ModerationDialog.vue
+  s_731038fe4fc0d1::t_f73ee92556dcc3 152
+web/src/components/OutgoingWebhooksPanel.vue
+  s_731038fe4fc0d1::t_d033ad323a844d 186
+web/src/components/PollDialog.vue
+  s_731038fe4fc0d1::t_b6af20c1210f40 84,99
+web/src/components/ProfileBio.vue
+  s_06fcde5dbef956::t_c6d421e6789b3b 2,113,123,128
+web/src/components/ProfileModerationTab.vue
+  s_731038fe4fc0d1::t_9b9c482ca562be 129,141
+web/src/components/ProfileStatus.vue
+  s_06fcde5dbef956::t_91ef1245ae5f8d 2,109,115
+web/src/components/ReportDialog.vue
+  s_06fcde5dbef956::t_6601b9c5e1dc39 2,79-80
+web/src/components/SavedMessages.vue
+  s_731038fe4fc0d1::t_9d657fea1c457e 158
+web/src/components/ScheduledItem.vue
+  s_731038fe4fc0d1::t_792e45653097ce 127
+web/src/components/TalkSettingsDialog.vue
+  s_731038fe4fc0d1::t_303a27f573601b 84
+web/src/components/WelcomeProfileStep.vue
+  s_731038fe4fc0d1::t_55675dcb4fdded 80,89
+web/src/composables/useMessageActions.ts
+  s_06fcde5dbef956::t_cd47a63234106c 17,32
+web/src/composables/useMessageMenu.ts
+  s_0cae4a4d7ab7c3::t_e6ebdccf75621b 27,150
+web/src/directives/maxChars.test.ts
+  s_06fcde5dbef956::t_b7ef3b2e91b34f 1-54
+web/src/directives/maxChars.ts
+  s_06fcde5dbef956::t_cb0af814ce074d 1-57
+web/src/lib/drafts.ts
+  s_82e9d48cb7fc7f::t_9423ba431fa88e 2,106,185
+web/src/lib/textLength.test.ts
+  s_82e9d48cb7fc7f::t_6777a6a757ec96 1-55
+web/src/lib/textLength.ts
+  s_3d15a6983fd807::t_ff6d3e54a106bc 1-66
+web/src/main.ts
+  s_731038fe4fc0d1::t_34286d05534df9 18,34
+web/src/test-setup.ts
+  s_731038fe4fc0d1::t_83857a3daaca7f 1,6,31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "24891e4bb612a8eeb22260038e689e6e5eff9d96",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0f71275af3a9d5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aupdater-dockerhub-0045479572fc8370",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_28915fd19e1e49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-arrow-edit-f0518ce8535c51ee",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3d15a6983fd807": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-stats-packets-a99b089a927db102",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_58ecb9dda7416a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-unread-sound-3a7f288cf9b01ab5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_731038fe4fc0d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-saved-later-006f0c1510ca4d15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
