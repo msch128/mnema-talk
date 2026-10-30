@@ -1,0 +1,40 @@
+e2e/tests/stream-quality-live.spec.ts
+  h_0ff4f4713441f4 1-109
+web/src/components/ScreenShareModal.test.ts
+  h_0ff4f4713441f4 168-184
+web/src/components/ScreenShareModal.vue
+  h_0ff4f4713441f4 14-15,30-31,42,47,79,85-86
+web/src/composables/useStreamQuality.test.ts
+  h_0ff4f4713441f4 7,122-158
+web/src/composables/useStreamQuality.ts
+  h_0ff4f4713441f4 6,9,146-171,207-208
+web/src/composables/useWebRTC.layers.test.ts
+  h_0ff4f4713441f4 289,353,359-414
+web/src/composables/webrtc/screen.ts
+  h_0ff4f4713441f4 111-113,164,246
+web/src/composables/webrtc/senders.ts
+  h_0ff4f4713441f4 71,73-75,78,83-85
+web/src/i18n/de.json
+  h_0ff4f4713441f4 1161-1166
+web/src/i18n/en.json
+  h_0ff4f4713441f4 1161-1166
+web/src/lib/streamQuality.ts
+  h_0ff4f4713441f4 5-6,15-17,62-63,145-147
+web/src/stores/voice.ts
+  h_0ff4f4713441f4 27
+web/src/stores/voice/room.ts
+  h_0ff4f4713441f4 218
+web/src/stores/voice/state.ts
+  h_0ff4f4713441f4 76-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4fd5b6fd12502a9193ebc914d63545537e1fda53",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
