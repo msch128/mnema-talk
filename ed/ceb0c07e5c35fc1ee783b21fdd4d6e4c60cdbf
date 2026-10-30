@@ -1,0 +1,153 @@
+e2e/tests/context-menus.spec.ts
+  s_ecf7b9e687a24d::t_503e0ad44e15c5 1-79
+web/src/components/ContextMenu.test.ts
+  s_524065e4c1d78a::t_01abb37fa5cc3b 226-228
+web/src/components/ContextMenu.vue
+  s_2d22d157720d46::t_19b536af6e073f 8,17-18,29-30,45,101,107-112,281-286,291,299,302-308,313,371
+web/src/components/ContextMenuBehaviour.test.ts
+  s_524065e4c1d78a::t_7997b2c9f5e7b8 1-131
+web/src/components/ContextMenuRow.vue
+  s_5b748b0295d2f4::t_c4fe9bc51b0ec2 57-80,104-105
+web/src/components/TalkControlBar.vue
+  s_5b748b0295d2f4::t_c223a2e413ed0b 18-19,46-47,116,168,181,196,209,293-297
+web/src/components/TriggerMenu.vue
+  s_5b748b0295d2f4::t_98bf619c269d6e 1-22,24-25
+  s_5b748b0295d2f4::t_5ef0858643ee7d 23
+web/src/components/UserBar.vue
+  s_5b748b0295d2f4::t_535e48295459a9 14-15,22-23,107,119,125-126
+web/src/components/VoiceStatusPanel.vue
+  s_5b748b0295d2f4::t_3317d0cdec06d2 10-11,16-17,70,76
+web/src/components/menuTypes.ts
+  s_5b748b0295d2f4::t_9b81865fd7c24e 12-13,36
+web/src/composables/useContextMenuTrigger.test.ts
+  s_5b748b0295d2f4::t_3f1765aa1253e5 1-93,106-115
+  s_06fcde5dbef956::t_3d4d5e4f04c114 94-105
+web/src/composables/useContextMenuTrigger.ts
+  s_5b748b0295d2f4::t_7ffe5f8d7d788a 1-32,36,39-46,48-57,60-98
+  s_06fcde5dbef956::t_a3f0266d5a03a6 33-35,37-38,47,58-59
+web/src/composables/useStreamQuality.ts
+  s_6f62c78e3c93c5::t_c60788d201ea79 196,231
+  s_06fcde5dbef956::t_3bdf947bff5555 6,9,146-171,207-208
+web/src/composables/useVoiceMenus.test.ts
+  s_ecf7b9e687a24d::t_cb5c6305b2be20 1-233
+web/src/composables/useVoiceMenus.ts
+  s_fb29f048bd6d02::t_3c1f2c2322870c 1-180
+web/src/composables/useWebRTC.devices.test.ts
+  s_a99f3952ca8129::t_47207e95c12c06 102-122
+web/src/composables/useWebRTC.ts
+  s_6f62c78e3c93c5::t_853c436ea29b6b 14,76
+web/src/composables/webrtc/camera.ts
+  s_6f62c78e3c93c5::t_40eb6a30d9394c 53-54,94-100
+web/src/i18n/de.json
+  s_5b748b0295d2f4::t_18523fa304a0ca 3614-3621
+  s_5b748b0295d2f4::t_94bfceeeab8845 1113-1118
+web/src/i18n/en.json
+  s_5b748b0295d2f4::t_307e121d8e268b 3614-3621
+  s_5b748b0295d2f4::t_76592bdf02e73c 1113-1118
+web/src/lib/menuKeys.ts
+  s_fc0f81897b6653::t_8324dcb3c64057 1-29
+web/src/stores/voiceSettings.ts
+  s_6f62c78e3c93c5::t_ea665cc5a6232e 88,91,118
+web/src/components/TriggerMenu.test.ts
+  s_06fcde5dbef956::t_bde269ce8deb5d 1-50
+e2e/tests/stream-quality-live.spec.ts
+  s_06fcde5dbef956::t_41b7a0355c94eb 1-109
+web/src/composables/useStreamQuality.test.ts
+  s_06fcde5dbef956::t_cea185cd156715 7,122-158
+web/src/composables/useWebRTC.layers.test.ts
+  s_06fcde5dbef956::t_67bf33e0b8d94f 289,353,359-408
+web/node_modules
+  s_5b748b0295d2f4::t_a34110ad1d73ec 1
+web/src/composables/webrtc/screen.ts
+  s_5b748b0295d2f4::t_74d239ebe25d63 162,244
+web/src/composables/webrtc/senders.ts
+  s_5b748b0295d2f4::t_00bbb3076ccb15 71,73-75,78,83-84
+web/src/lib/streamQuality.ts
+  s_5b748b0295d2f4::t_8624b4c9b933f0 5-6,15-17,62-63,145-147
+web/src/stores/voice.ts
+  s_5b748b0295d2f4::t_f93ead8a6e72d2 25
+web/src/stores/voice/room.ts
+  s_5b748b0295d2f4::t_a93b4f6133f721 194
+web/src/stores/voice/state.ts
+  s_5b748b0295d2f4::t_b456a5dc9775e0 75-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "edceb0c07e5c35fc1ee783b21fdd4d6e4c60cdbf",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2d22d157720d46": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-format-help-1c4cc049037c526d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_524065e4c1d78a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abfa07ecf4d340a57",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_a99f3952ca8129": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa5a7e4c33fc4f955",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ecf7b9e687a24d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-setup-e379f010794b742e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fc0f81897b6653": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-tests-fc20e0fa5cecb986",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
