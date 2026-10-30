@@ -1,0 +1,21 @@
+web/src/composables/useVoiceMenus.test.ts
+  s_61e7f03250bd0b::t_30a8d9bb63eadc 137-144
+web/src/composables/useVoiceMenus.ts
+  s_61e7f03250bd0b::t_6048aecc29a2ec 5,114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c7b29c095fb21fe2d4277e05b725136d264d478e",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
