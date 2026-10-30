@@ -1382,6 +1382,7 @@
         "storage": "Objektspeicher",
         "database": "Datenbank",
         "clock": "Serveruhr",
+        "network": "Internetanschluss",
         "reverse_proxy": "Reverse-Proxy"
       },
       "checkMsg": {
@@ -1412,14 +1413,28 @@
             "detail": "Ausgehende E-Mail ist eingerichtet ({host})."
           }
         },
+        "network": {
+          "address_mismatch": {
+            "detail": "Die eigene Adresse dieses Hosts {local} weicht von der Adresse {public} ab, die das Internet sieht; sein Verkehr verlässt das Netz also über ein anderes Gateway, und die Ankündigung von {public} kann falsch sein.",
+            "fix": "Ist dieser Host von außen unter {local} erreichbar, setze WEBRTC_NAT_1TO1_IP={local}; steht ein Router oder Gateway davor, leite die Sprach-Ports dort weiter."
+          },
+          "cgnat": {
+            "detail": "Dieser Heimanschluss hat keine eigene öffentliche IPv4-Adresse (die Adresse {address} liegt im Carrier-Grade-NAT-Bereich 100.64.0.0/10); Port-Weiterleitung kann daher nicht funktionieren, und Mitglieder außerhalb deines Netzes erreichen die Sprache nicht.",
+            "fix": "Heimanschluss ohne eigene öffentliche IPv4 - Port-Weiterleitung kann nicht funktionieren. Möglichkeiten: beim Internetanbieter eine öffentliche IPv4-Adresse anfragen, Mnema Talk auf einem VPS betreiben oder ein externes Relay nutzen (WEBRTC_TURN_URLS und WEBRTC_TURN_SECRET). Siehe „Can I host at home?“ in doc/operations.md."
+          },
+          "no_ipv4": {
+            "detail": "Es wurde keine öffentliche IPv4-Adresse gefunden, IPv6 funktioniert aber: Das sieht nach einem Anschluss ohne eigene öffentliche IPv4 aus (DS-Lite); Port-Weiterleitung kann nicht funktionieren, und Mitglieder außerhalb deines Netzes erreichen die Sprache über IPv4 nicht.",
+            "fix": "Heimanschluss ohne eigene öffentliche IPv4 - Port-Weiterleitung kann nicht funktionieren. Möglichkeiten: beim Internetanbieter eine öffentliche IPv4-Adresse anfragen, Mnema Talk auf einem VPS betreiben oder ein externes Relay nutzen (WEBRTC_TURN_URLS und WEBRTC_TURN_SECRET). Siehe „Can I host at home?“ in doc/operations.md."
+          }
+        },
         "public_url": {
           "insecure": {
             "detail": "PUBLIC_URL ist ein einfaches http://, daher verlieren Sitzungs-Cookies das Secure-Flag und das Präfix __Host-.",
             "fix": "Stelle einen Reverse-Proxy mit TLS davor und setze PUBLIC_URL=https://chat.example.com (in einem vertrauenswürdigen LAN kannst du das überspringen)."
           },
           "local": {
-            "detail": "PUBLIC_URL ist {public_url} und nur auf diesem Rechner erreichbar; Einladungslinks, E-Mails und die Origin-Prüfung des Browsers nutzen sie.",
-            "fix": "Setze in der .env PUBLIC_URL=https://chat.example.com (die Adresse, die Mitglieder in den Browser tippen) und führe docker compose up -d aus."
+            "detail": "PUBLIC_URL ist {public_url} und nur auf diesem Rechner erreichbar; Einladungslinks, E-Mails und die Origin-Prüfung des Browsers nutzen sie. Zum Ausprobieren auf diesem Rechner ist das in Ordnung, andere können aber nicht beitreten.",
+            "fix": "Um andere einzuladen, setze in der .env PUBLIC_URL=https://chat.example.com (die Adresse, die Mitglieder in den Browser tippen) und führe docker compose up -d aus."
           },
           "ok": {
             "detail": "PUBLIC_URL ist {public_url}."
@@ -1457,8 +1472,8 @@
         },
         "turn": {
           "builtin_failed": {
-            "detail": "Das eingebaute TURN-Relay konnte Port {port} nicht belegen: Mitglieder in Netzen, die UDP blockieren, können nicht an der Sprache teilnehmen.",
-            "fix": "Gib Port {port} (UDP und TCP) frei oder wähle mit WEBRTC_BUILTIN_TURN_PORT einen anderen und führe danach docker compose up -d aus."
+            "detail": "Das eingebaute TURN-Relay konnte Port {port} nicht belegen: vermutlich nutzt ihn ein anderes Programm auf diesem Host, daher können Mitglieder in Netzen, die UDP blockieren, nicht an der Sprache teilnehmen.",
+            "fix": "Beende, was Port {port} (UDP und TCP) belegt, oder wähle mit WEBRTC_BUILTIN_TURN_PORT einen anderen Port (und leite diesen weiter) und führe danach docker compose up -d aus."
           },
           "builtin_failed_external": {
             "detail": "Für Mitglieder hinter strengen Firewalls ist ein TURN-Relay eingerichtet; das eingebaute Relay konnte nicht starten."
@@ -1525,7 +1540,7 @@
           },
           "unavailable": {
             "detail": "Die Sprach-Engine ist nicht gestartet, daher haben Talks weder Ton noch Video.",
-            "fix": "Gib die UDP-Ports {port_min}-{port_max} auf dem Host frei (oder ändere WEBRTC_UDP_PORT_MIN und WEBRTC_UDP_PORT_MAX) und starte neu; die Ursache steht im Log."
+            "fix": "Vielleicht belegt ein anderes Programm die UDP-Ports {port_min}-{port_max} auf dem Host: beende es oder ändere WEBRTC_UDP_PORT_MIN und WEBRTC_UDP_PORT_MAX und starte neu; die Ursache steht im Log."
           }
         }
       }

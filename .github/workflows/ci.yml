@@ -593,6 +593,12 @@ jobs:
         name: Fresh install (doc/deployment.md)
         run: scripts/fresh-install-check.sh mnema-talk:ci
 
+      # The same on the "try it on this computer" path: PUBLIC_URL is
+      # http://localhost:<port> and nothing about voice is configured.
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Fresh install (localhost trial)
+        run: FRESH_PUBLIC_HOST=localhost scripts/fresh-install-check.sh mnema-talk:ci
+
       # scripts/backup.sh and restore.sh (--verify and --yes) end to end:
       # seeded message and upload come back, later changes are gone.
       - if: ${{ needs.changes.outputs.code == 'true' }}

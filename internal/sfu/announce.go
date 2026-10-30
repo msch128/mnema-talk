@@ -117,8 +117,9 @@ func (s *SFU) refreshAnnounce(ctx context.Context, entries []string) {
 // KeepAnnounceDetected repeats an address detection (a STUN probe for the
 // public IP) every interval and switches the SFU to the result when it
 // changed, which follows a home connection whose address is reassigned. A
-// failed detection keeps the current address.
-func (s *SFU) KeepAnnounceDetected(ctx context.Context, every time.Duration, detect func(context.Context) (string, error)) {
+// failed detection keeps the current address. extra (the host's LAN
+// addresses) is announced after the detected one.
+func (s *SFU) KeepAnnounceDetected(ctx context.Context, every time.Duration, extra []string, detect func(context.Context) (string, error)) {
 	go func() {
 		t := time.NewTicker(every)
 		defer t.Stop()
@@ -133,7 +134,7 @@ func (s *SFU) KeepAnnounceDetected(ctx context.Context, every time.Duration, det
 				slog.Warn("webrtc announce: public address detection failed, keeping current addresses", "err", err)
 				continue
 			}
-			if ips := []string{ip}; !slices.Equal(ips, s.AnnouncedIPs()) {
+			if ips := append([]string{ip}, extra...); !slices.Equal(ips, s.AnnouncedIPs()) {
 				if err := s.SetAnnouncedIPs(ips); err != nil {
 					slog.Warn("webrtc announce: update failed", "err", err)
 					continue

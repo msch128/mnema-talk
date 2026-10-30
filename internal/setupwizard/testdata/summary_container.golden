@@ -1,0 +1,25 @@
+
+Written:
+  /srv/mnema/.env   (secrets inside, mode 600)
+  /srv/mnema/docker-compose.yml
+
+Owner account for the first sign-in:
+  user      admin
+  password  example-password
+  (also in .env as ADMIN_INITIAL_PASSWORD)
+
+What to do next:
+  1. Start it on the machine that runs Docker, in the folder you mounted as /out (it holds the two files). This assistant ran inside a container and cannot start it for you:
+       cd <that folder>
+       docker compose up -d --wait
+  2. Put HTTPS in front: set up a reverse proxy (Caddy, nginx, Nginx Proxy Manager, DSM) that forwards https://chat.example.com to http://127.0.0.1:8080 with WebSocket support. It carries the web page and chat only, not voice.
+  3. Open https://chat.example.com in your browser.
+  4. Sign in as "admin" with the password above.
+  5. Change the password (your profile settings, Password), then delete the ADMIN_INITIAL_PASSWORD line from .env.
+  6. Forward these three ports from your router to this machine (never 8080) and allow them in its firewall:
+       443/tcp                the web page, to the reverse proxy
+       50000-50050/udp        voice and video
+       3479/udp and 3479/tcp  relay for members behind strict firewalls
+  7. Check it from outside: open Admin > Status and press "Test my connection", best from a phone on mobile data instead of your Wi-Fi. From a shell: docker compose exec app mnema-talk doctor
+
+Update later: docker compose pull && docker compose up -d

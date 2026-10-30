@@ -20,8 +20,8 @@ type message struct{ detail, fix string }
 // translation for each (web/src/i18n/statusCodes.test.ts).
 var messages = map[string]message{
 	"public_url.local": {
-		"PUBLIC_URL is {public_url}, which only this machine can open; invite links, e-mails and browser origin checks use it.",
-		"Set PUBLIC_URL=https://chat.example.com (the address members type into their browser) in .env and run docker compose up -d.",
+		"PUBLIC_URL is {public_url}, which only this machine can open; invite links, e-mails and browser origin checks use it. That is fine for trying Mnema Talk on this computer, but nobody else can join.",
+		"To invite others, set PUBLIC_URL=https://chat.example.com (the address members type into their browser) in .env and run docker compose up -d.",
 	},
 	"public_url.origin_mismatch": {
 		"You opened this page at {origin} but PUBLIC_URL is {public_url}.",
@@ -56,7 +56,7 @@ var messages = map[string]message{
 
 	"voice_udp.unavailable": {
 		"The voice engine did not start, so Talks have no audio or video.",
-		"Free UDP ports {port_min}-{port_max} on the host (or change WEBRTC_UDP_PORT_MIN and WEBRTC_UDP_PORT_MAX) and restart; the log names the cause.",
+		"Another program may be using UDP ports {port_min}-{port_max} on the host: stop it or change WEBRTC_UDP_PORT_MIN and WEBRTC_UDP_PORT_MAX, then restart; the log names the cause.",
 	},
 	"voice_udp.mux_disabled": {
 		"WEBRTC_UDP_MUX_PORT=0 gives every media peer its own port, which caps how many people can be in calls.",
@@ -66,8 +66,8 @@ var messages = map[string]message{
 
 	"turn.builtin_failed_external": {"A TURN relay is configured for members behind strict firewalls; the built-in relay could not start.", ""},
 	"turn.builtin_failed": {
-		"The built-in TURN relay could not listen on port {port}: members on networks that block UDP cannot join voice.",
-		"Free port {port} (UDP and TCP) or pick another with WEBRTC_BUILTIN_TURN_PORT, then run docker compose up -d.",
+		"The built-in TURN relay could not listen on port {port}: another program on this host is probably using it, so members on networks that block UDP cannot join voice.",
+		"Stop whatever uses port {port} (UDP and TCP) or pick another port with WEBRTC_BUILTIN_TURN_PORT (and forward that one), then run docker compose up -d.",
 	},
 	"turn.voice_unavailable": {
 		"The built-in TURN relay is not running because voice is unavailable: members on networks that block UDP cannot join voice.",
@@ -113,6 +113,19 @@ var messages = map[string]message{
 		"Turn on time synchronization (NTP) on the host; on a Synology: Control Panel > Regional Options > Time > Synchronize with an NTP server.",
 	},
 
+	"network.cgnat": {
+		"This home connection has no public IPv4 address of its own (the address {address} is in the carrier-grade NAT range 100.64.0.0/10), so port forwarding cannot work and members outside your network cannot reach voice.",
+		noPublicIPv4Fix,
+	},
+	"network.no_ipv4": {
+		"No public IPv4 address was found but IPv6 works: this looks like a connection without its own public IPv4 (DS-Lite), so port forwarding cannot work and members outside your network cannot reach voice over IPv4.",
+		noPublicIPv4Fix,
+	},
+	"network.address_mismatch": {
+		"This host's own address {local} differs from the address {public} the internet sees, so its traffic leaves through another gateway and announcing {public} may be wrong.",
+		"If this host is reachable from outside on {local}, set WEBRTC_NAT_1TO1_IP={local}; if a router or gateway sits in front, forward the voice ports there.",
+	},
+
 	"reverse_proxy.not_trusted": {
 		"Requests arrive with X-Forwarded-For from a proxy that is not trusted, so every member looks like one address to rate limits and the login lockout.",
 		"Set TRUSTED_PROXY_CIDRS=<address of your reverse proxy> in .env (its container IP, the Docker bridge gateway or its LAN address; never a whole private range).",
@@ -123,6 +136,8 @@ var messages = map[string]message{
 	},
 	"reverse_proxy.ok": {"No proxy header problems seen.", ""},
 }
+
+const noPublicIPv4Fix = "Home connection without own public IPv4 - port forwarding cannot work. Options: ask the internet provider for a public IPv4 address, run Mnema Talk on a VPS, or use an external relay (WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET). See \"Can I host at home?\" in doc/operations.md."
 
 const voiceAddressFix = "Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address or dynamic-DNS name> in .env (add the LAN address after a comma for members on the same network), then docker compose up -d."
 

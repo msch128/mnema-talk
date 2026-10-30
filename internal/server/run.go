@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/portconflict"
 )
 
 // Run starts the HTTP server and blocks until ctx is cancelled, then shuts
@@ -32,7 +33,7 @@ func Run(ctx context.Context, cfg *config.Config, handler http.Handler) error {
 	go func() {
 		slog.Info("listening", "addr", srv.Addr, "public_url", cfg.PublicURL)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errCh <- fmt.Errorf("http server: %w", err)
+			errCh <- fmt.Errorf("http server: %w", portconflict.Wrap(err, cfg.Port, "TCP", "PORT"))
 		}
 		close(errCh)
 	}()

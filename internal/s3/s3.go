@@ -50,6 +50,26 @@ func New(ctx context.Context, cfg *config.Config) (*Client, error) {
 	return c, nil
 }
 
+// CheckBucket reports whether the configured bucket exists and the credentials
+// work, with a single HEAD request. Unlike New it never creates the bucket.
+func CheckBucket(ctx context.Context, cfg *config.Config) error {
+	awsCfg, err := awsconfig.LoadDefaultConfig(ctx,
+		awsconfig.WithRegion(cfg.S3Region),
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKey, cfg.S3SecretKey, "")),
+	)
+	if err != nil {
+		return fmt.Errorf("load s3 config: %w", err)
+	}
+	client := s3svc.NewFromConfig(awsCfg, func(o *s3svc.Options) {
+		if cfg.S3Endpoint != "" {
+			o.BaseEndpoint = aws.String(cfg.S3Endpoint)
+		}
+		o.UsePathStyle = cfg.S3ForcePathStyle
+	})
+	_, err = client.HeadBucket(ctx, &s3svc.HeadBucketInput{Bucket: aws.String(cfg.S3Bucket)})
+	return err
+}
+
 // bucketAPI is the part of the S3 client ensureBucket needs (tests fake it).
 type bucketAPI interface {
 	HeadBucket(ctx context.Context, in *s3svc.HeadBucketInput, opts ...func(*s3svc.Options)) (*s3svc.HeadBucketOutput, error)
