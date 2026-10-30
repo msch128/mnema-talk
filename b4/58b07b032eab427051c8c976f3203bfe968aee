@@ -1,0 +1,35 @@
+web/src/components/MediaViewer.test.ts
+  s_06fcde5dbef956::t_6e2a8eb2e5024d 118,121,181-219
+web/src/components/MediaViewerDialog.vue
+  s_06fcde5dbef956::t_8595dff1be7b55 78-80,94,96-97,155,196-197
+web/src/composables/useComposerKeys.ts
+  s_0cae4a4d7ab7c3::t_d9c16d5765adbe 38
+web/src/composables/useMediaViewer.ts
+  s_0cae4a4d7ab7c3::t_2fba3b82a2d294 20-21,69
+web/src/composables/useZoomPan.ts
+  s_0cae4a4d7ab7c3::t_ab85332e99224f 66,73-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b458b07b032eab427051c8c976f3203bfe968aee",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
