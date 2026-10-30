@@ -13,11 +13,12 @@ import { useEmojiShortcodes } from '../lib/emojiShortcodes'
 import { useEmojiStore } from '../stores/emoji'
 import type { CustomEmoji } from '../lib/customEmoji'
 
-/** Inserts text at the caret (e.g. an emoji) and keeps focus. */
-async function insertAtCaret(el: HTMLTextAreaElement | null, model: Ref<string>, str: string) {
+/** Inserts text at the caret (e.g. an emoji) and keeps focus. A block starts on a line of its own. */
+async function insertAtCaret(el: HTMLTextAreaElement | null, model: Ref<string>, text: string, { block = false }: { block?: boolean } = {}) {
   const value = model.value || ''
   const start = el ? el.selectionStart ?? value.length : value.length
   const end = el ? el.selectionEnd ?? value.length : value.length
+  const str = block && start > 0 && value[start - 1] !== '\n' ? `\n${text}` : text
   model.value = value.slice(0, start) + str + value.slice(end)
   await nextTick()
   if (el) {
@@ -132,7 +133,7 @@ export function useComposerAssist(textarea: Ref<HTMLTextAreaElement | null>, mod
     return true
   }
 
-  const insertText = (str: string) => insertAtCaret(textarea.value, model, str)
+  const insertText = (str: string, options?: { block?: boolean }) => insertAtCaret(textarea.value, model, str, options)
 
   return { suggestions, active, open, onInput, onKeydown, pick, close, insertText }
 }

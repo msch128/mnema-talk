@@ -5,6 +5,7 @@ import { computed, ref } from 'vue'
 import { Plus, ArrowUp } from '@lucide/vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import EmojiButton from './EmojiButton.vue'
+import MarkdownHelp from './MarkdownHelp.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import { useDraftModel } from '../composables/useDraftModel'
 import { useAutoGrow } from '../composables/useAutoGrow'
@@ -99,6 +100,8 @@ function handleKeyDown(e: KeyboardEvent) {
         rows="1"
         class="bg-transparent flex-1 min-w-0 resize-none outline-hidden text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
       ></textarea>
+
+      <MarkdownHelp :disabled="!canSend" @insert="assist.insertText" />
 
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 
