@@ -58,6 +58,8 @@ test('a member turns on two-factor sign-in and then needs the code to sign in', 
     // Turn it on: password, QR code and key, first code, recovery codes.
     await m.getByTestId('account-menu-button').click()
     await m.getByTestId('menu-settings').click()
+    // The dialog opens on the section visited last (Sound first); two-factor is under Sign-in.
+    await m.getByTestId('settings-tab-signin').click()
     await m.getByTestId('two-factor-start').click()
     await m.getByTestId('two-factor-password').fill(PASSWORD)
     await m.getByTestId('two-factor-continue').click()
