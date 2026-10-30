@@ -4,6 +4,17 @@ import { useVoiceStore } from '../stores/voice'
 import { applyOutputDevice } from './audioOutput'
 
 let sharedAudioContext: AudioContext | null = null
+// The longest effect is about a second. A running context keeps the audio
+// device (and its thread) awake, so it sleeps again once the tones are over.
+const SUSPEND_AFTER_MS = 3000
+let suspendTimer: ReturnType<typeof setTimeout> | undefined
+
+function suspendWhenQuiet(ctx: AudioContext) {
+  clearTimeout(suspendTimer)
+  suspendTimer = setTimeout(() => {
+    if (ctx.state === 'running') ctx.suspend().catch((err) => { console.debug?.('soundEffects: failed to suspend AudioContext', err) })
+  }, SUSPEND_AFTER_MS)
+}
 
 function getAudioContext(outputDeviceId: string = '') {
   if (typeof window === 'undefined') return null
@@ -224,6 +235,7 @@ export function playSoundEffect(name: SoundEvent, overrideVolume: number | null 
   const masterGain = createMasterGain(ctx, masterVol, now)
   if (!masterGain) return
   playEffectTones(ctx, masterGain, name, now)
+  suspendWhenQuiet(ctx)
 }
 
 /**

@@ -1,5 +1,6 @@
 import { useAuthStore } from '../auth'
 import { syncServerClock } from '../../lib/clock'
+import { pageHidden } from '../../lib/pageVisibility'
 import { playSoundEffect } from '../../lib/soundEffects'
 import type { UserUpdate } from '../../types/domain'
 import type { VoiceRooms, VoiceSnapshot, VoiceStateUpdate, MuteState, SpeakingState } from '../../types/events'
@@ -85,6 +86,7 @@ function onUserLeft(cs: VoiceState, channel_id: string, user_id: string, myId: s
   const inActiveRoom = leavesCurrentRoom || !cs.currentChannelId.value
   if (inActiveRoom) {
     delete cs.speakingUsers.value[user_id]
+    if (hiddenSpeaking.has(cs)) delete hiddenSpeaking.get(cs)?.[user_id]
     removeUserVideoStream(cs, user_id)
   }
   // Publication snapshots cover every room. Only retire the publication
@@ -145,9 +147,29 @@ export function isSpeaking(cs: VoiceState, userId: string | null) {
   return !st.muted && !st.deafened
 }
 
+// Who speaks, kept up to date while the page is hidden without touching what
+// is rendered; the rings get it when the page is shown again.
+const hiddenSpeaking = new WeakMap<VoiceState, Record<string, boolean>>()
+
+export function syncSpeakingVisibility(cs: VoiceState, hidden: boolean) {
+  if (hidden) {
+    hiddenSpeaking.set(cs, { ...cs.speakingUsers.value })
+    return
+  }
+  const kept = hiddenSpeaking.get(cs)
+  hiddenSpeaking.delete(cs)
+  if (kept) cs.speakingUsers.value = kept
+}
+
 export function handleSpeakingEvent(cs: VoiceState, event: SpeakingState) {
   const { user_id, active } = event || {}
   if (!user_id) return
+  const kept = pageHidden.value ? hiddenSpeaking.get(cs) : undefined
+  if (kept) {
+    if (active) kept[user_id] = true
+    else delete kept[user_id]
+    return
+  }
   if (active) {
     if (!cs.speakingUsers.value[user_id]) {
       cs.speakingUsers.value = { ...cs.speakingUsers.value, [user_id]: true }
@@ -174,6 +196,7 @@ export function setChannel(cs: VoiceState, channelId: string | null) {
     cs.screenFit.value = {}
     cs.layersWanted.value = null
     cs.speakingUsers.value = {}
+    if (hiddenSpeaking.has(cs)) hiddenSpeaking.set(cs, {})
   }
   if (channelId) {
     if (prev !== channelId) {
@@ -211,6 +234,7 @@ export function disconnect(cs: VoiceState) {
   cs.layersWanted.value = null
   cs.userVideoStreams.value = {}
   cs.speakingUsers.value = {}
+  if (hiddenSpeaking.has(cs)) hiddenSpeaking.set(cs, {})
   cs.talkReactions.value = []
   cs.subscriptionSink = null
   cs.activeView.value = 'chat'

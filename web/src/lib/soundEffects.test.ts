@@ -46,6 +46,7 @@ class MockAudioContext {
     return filter
   })
   resume = vi.fn(async () => {})
+  suspend = vi.fn(async () => { this.state = 'suspended' })
   constructor() { MockAudioContext.instances.push(this) }
 }
 import { present } from '../media-test.fixture'
@@ -134,6 +135,23 @@ describe('sound playback lifecycle and browser failures', () => {
     playSoundEffect('mute')
     await Promise.resolve()
     expect(ctx.resume).toHaveBeenCalledOnce()
+  })
+  it('lets the audio device sleep again once the tones are over', () => {
+    vi.useFakeTimers()
+    try {
+      playSoundEffect('join')
+      const ctx = context()
+      vi.advanceTimersByTime(2999)
+      expect(ctx.suspend).not.toHaveBeenCalled()
+      playSoundEffect('leave')
+      vi.advanceTimersByTime(2999)
+      expect(ctx.suspend).not.toHaveBeenCalled()
+      vi.advanceTimersByTime(1)
+      expect(ctx.suspend).toHaveBeenCalledOnce()
+      expect(ctx.state).toBe('suspended')
+    } finally {
+      vi.useRealTimers()
+    }
   })
   it('recreates a closed context and uses the legacy constructor when necessary', () => {
     playSoundEffect('join')

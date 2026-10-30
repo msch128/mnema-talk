@@ -10,7 +10,7 @@ import type { ModerationAutomodList } from '../types/rest'
 import { AUTOMOD_KINDS, ruleLabel, ruleSummary } from '../lib/automod'
 import type { AutomodKind } from '../lib/automod'
 import { confirm } from '../lib/confirm'
-import { now } from '../lib/clock'
+import { now, useServerClock } from '../lib/clock'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
 import AutomodRuleDialog from './AutomodRuleDialog.vue'
@@ -18,6 +18,7 @@ import EmptyState from './EmptyState.vue'
 import { useReloadOnActivate } from '../composables/useReloadOnActivate'
 
 const toasts = useToastStore()
+useServerClock()
 const state = ref<ModerationAutomodList | null>(null)
 const failed = ref(false)
 const editing = ref<{ rule: AutomodRule | null; kind: AutomodKind } | null>(null)

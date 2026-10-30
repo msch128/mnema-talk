@@ -6,6 +6,7 @@ import { usePermissionsStore } from '../permissions'
 import { useBlocksStore } from '../blocks'
 import { useServerFeaturesStore } from '../serverFeatures'
 import { installGlobalSearch, uninstallGlobalSearch } from '../../lib/globalSearch'
+import { visibleInterval } from '../../lib/pageVisibility'
 import type { Cx } from './state'
 import { fetchChannels } from './channels'
 import { fetchDms } from './dms'
@@ -19,6 +20,8 @@ import { loadNotifyPreview } from '../../lib/notifyPreview'
 import { openThread } from './threads'
 
 const PING_INTERVAL_MS = 5000
+// A hidden tab only needs to learn that the socket died before the next push is missed; the server pings every 30 s itself.
+const PING_HIDDEN_INTERVAL_MS = 30000
 // A socket that answered no ping for this long is dead, even if the browser still reports it open.
 const PONG_TIMEOUT_MS = 15000
 
@@ -27,7 +30,7 @@ function startPingHeartbeat(cx: Cx, session: SocketSession) {
   stopPingHeartbeat(cx)
   cs.lastPongAt = Date.now()
   cs.lastPingAt = 0
-  cs.pingTimer = setInterval(() => {
+  cs.stopPing = visibleInterval(() => {
     // Judge the last ping actually sent: throttled timers (hidden tab, sleep) stretch the gap between ticks.
     if (cs.lastPingAt > cs.lastPongAt && Date.now() - cs.lastPingAt > PONG_TIMEOUT_MS) {
       // Close handshakes never finish on a half-open connection: drop the socket and reconnect now.
@@ -42,15 +45,13 @@ function startPingHeartbeat(cx: Cx, session: SocketSession) {
     // Keep the oldest unanswered ping as the reference so the wait keeps growing until a pong arrives.
     if (cs.lastPingAt <= cs.lastPongAt) cs.lastPingAt = now
     sendWSEvent(cx, 'ping', { t: now })
-  }, PING_INTERVAL_MS)
+  }, PING_INTERVAL_MS, { hiddenMs: PING_HIDDEN_INTERVAL_MS, catchUp: false })
 }
 
 function stopPingHeartbeat(cx: Cx) {
   const { cs } = cx
-  if (cs.pingTimer) {
-    clearInterval(cs.pingTimer)
-    cs.pingTimer = undefined
-  }
+  cs.stopPing?.()
+  cs.stopPing = undefined
 }
 
 // Refresh after every socket opens, including the first one: the initial
