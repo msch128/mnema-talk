@@ -113,6 +113,8 @@ function pickColor(value: number) {
   draft.hex = roleColorCss(value)
 }
 function typeColor() {
+  // An emptied box means "no colour".
+  if (draft.hex.trim() === '') draft.color = 0
   const parsed = parseRoleColor(draft.hex)
   if (parsed !== null) draft.color = parsed
 }

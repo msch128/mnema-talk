@@ -350,4 +350,13 @@ describe('keys and in-flight edits', () => {
     expect(api.draft.lobby).toBe(true)
     expect(api.changed.value).toEqual(['lobby'])
   })
+
+  it('commits a key that was not part of the changes from the draft, never as undefined', async () => {
+    const { api } = setup({ save: async ({ commit }) => { commit(['limit']) } })
+    api.draft.name = 'A'
+    await api.save()
+    expect(api.draft.limit).toBe(0)
+    api.reset()
+    expect(api.draft.limit).toBe(0)
+  })
 })

@@ -411,6 +411,23 @@ describe('AdminRolesTab unsaved edits', () => {
     expect(w.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeDefined()
   })
 
+  it('treats an emptied colour box as "no colour" and saves that colour', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    const hex = w.get<HTMLInputElement>('input[placeholder="#rrggbb"]')
+    await hex.setValue('#ff0000')
+    apiMock.mockClear()
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    await hex.setValue('')
+    expect(w.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeUndefined()
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    const patch = apiMock.mock.calls.filter(([, o]) => o?.method === 'PATCH').pop()
+    expect((patch?.[1]?.json as { color: number }).color).toBe(0)
+  })
+
   it('narrows the permission list by what is typed', async () => {
     const w = setup()
     await flushPromises()

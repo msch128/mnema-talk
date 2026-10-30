@@ -96,7 +96,7 @@ export function useSettingsDraft<T extends object>(options: SettingsDraftOptions
   }, { deep: true })
 
   function commit(keys: (keyof T)[], sent: Partial<T>, values: Partial<T> = {}) {
-    for (const k of keys) saved[k] = copy(k in values ? values[k] : sent[k]) as T[keyof T]
+    for (const k of keys) saved[k] = copy(k in values ? values[k] : k in sent ? sent[k] : draft[k]) as T[keyof T]
     refreshSavedKeys()
   }
 
