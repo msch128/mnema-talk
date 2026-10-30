@@ -75,6 +75,8 @@ async function world(browser: import('@playwright/test').Browser): Promise<World
 }
 
 async function cleanUp(w: World) {
+  // A failed spec must not leave its members in a Talk (the server keeps them listed for a grace period and the next spec's join then fails).
+  for (const page of [w.owner, w.callee, w.calleeTab]) await page.getByRole('button', { name: 'Verlassen' }).first().click({ timeout: 2_000 }).catch(() => {})
   for (const ctx of w.contexts) await ctx.close()
 }
 
