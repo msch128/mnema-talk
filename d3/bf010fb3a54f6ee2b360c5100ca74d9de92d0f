@@ -1,0 +1,35 @@
+web/src/components/ChatArea.vue
+  s_a23126de6abd07::t_debf4b80280d69 208,383
+web/src/components/ChatComposer.vue
+  s_a23126de6abd07::t_7a76460c9817f5 43,244
+web/src/composables/useComposerLimits.test.ts
+  s_a23126de6abd07::t_87de92143655c4 52,54-56
+web/src/composables/useComposerLimits.ts
+  s_82e9d48cb7fc7f::t_73b10ad93007b1 55
+web/src/lib/api.ts
+  s_82e9d48cb7fc7f::t_b32b05f6c2922a 15,139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d3bf010fb3a54f6ee2b360c5100ca74d9de92d0f",
+  "prompts": {},
+  "sessions": {
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_a23126de6abd07": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a48eb609883c41cb7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
