@@ -1,0 +1,85 @@
+e2e/tests/message-moderation.spec.ts
+  s_e516df595aeaf4::t_18aa5cebfe09aa 51-52,54,56-57,64-70
+internal/auth/moderation.go
+  s_e516df595aeaf4::t_a537e98cf30c7c 126-132,138-139
+internal/auth/presets_test.go
+  s_e516df595aeaf4::t_7434da2434c2ef 1-49
+internal/automod/presets_test.go
+  s_e516df595aeaf4::t_3ca5e80eb5cf98 1-33
+internal/chat/presets_test.go
+  s_e516df595aeaf4::t_06675b6a048dba 1-28
+internal/chat/seed_layout_test.go
+  s_e516df595aeaf4::t_14676d8b2a40a7 26-45
+internal/httpx/ratelimit.go
+  s_e516df595aeaf4::t_26dd837c532867 180-182
+internal/httpx/ratelimit_test.go
+  s_e516df595aeaf4::t_059dc3c0ff426a 4,262-278
+internal/poll/presets_test.go
+  s_e516df595aeaf4::t_dd75644172c204 1-23
+internal/testutil/presets/presets.go
+  s_e516df595aeaf4::t_917bcb82bf8632 1-59
+web/src/components/AdminInvitesTab.vue
+  s_e516df595aeaf4::t_a7965baef7446f 12,111-116
+web/src/components/ChatArea.vue
+  s_e516df595aeaf4::t_6b83c77ef23770 21-22,59,68,167,180,183,193,203,206,377,382
+web/src/components/ChatComposer.vue
+  s_e516df595aeaf4::t_9028cbb59e7626 9-10,39-41,43,47-49,163-164,214,244,249-255
+web/src/components/ChatComposerLimits.test.ts
+  s_e516df595aeaf4::t_d37744f1d9544b 1-47
+web/src/components/EditInviteDialog.vue
+  s_e516df595aeaf4::t_f2f11e8e7bfd4f 13,27-29
+web/src/components/SidebarChannelRow.vue
+  s_e516df595aeaf4::t_23581e371f355b 8,12,45,48-49,148-153
+web/src/components/SidebarChannelRowLock.test.ts
+  s_e516df595aeaf4::t_0b873370d28304 1-40
+web/src/components/SlowModePicker.vue
+  s_e516df595aeaf4::t_f5b7b286590a37 6,14
+web/src/composables/useChannelWrite.test.ts
+  s_e516df595aeaf4::t_3d4beaf57a115e 1-52
+web/src/composables/useChannelWrite.ts
+  s_e516df595aeaf4::t_3bca25b571c212 1-31
+web/src/composables/useComposerLimits.test.ts
+  s_e516df595aeaf4::t_5647ef5cd91e3d 1-79
+web/src/composables/useComposerLimits.ts
+  s_e516df595aeaf4::t_119421dc839913 1-91
+web/src/i18n/de.json
+  s_e516df595aeaf4::t_55ba9c5b0fbdf7 138,584-590
+web/src/i18n/en.json
+  s_e516df595aeaf4::t_ba7d7623d8b974 138,584-590
+web/src/lib/api.ts
+  s_e516df595aeaf4::t_87f812ae3fb93d 14-15,21-26,143
+web/src/lib/automod.ts
+  s_e516df595aeaf4::t_832166449f187a 5,13-16
+web/src/lib/composerLimits.test.ts
+  s_e516df595aeaf4::t_5226372aa870e2 1-40
+web/src/lib/composerLimits.ts
+  s_e516df595aeaf4::t_d7dde794123c8d 1-26
+web/src/lib/errorDetails.test.ts
+  s_e516df595aeaf4::t_9aa69a2375a460 11
+web/src/lib/errorDetails.ts
+  s_e516df595aeaf4::t_ecd19019108e8d 5,81
+web/src/lib/moderation.ts
+  s_e516df595aeaf4::t_87be5b9a7026b6 6,44
+web/src/lib/presets.json
+  s_e516df595aeaf4::t_0c612efa85ae24 1-13
+web/src/lib/presets.test.ts
+  s_e516df595aeaf4::t_3a0c82c9643cc3 1-91
+web/src/lib/presets.ts
+  s_e516df595aeaf4::t_2fee09353757f2 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b88dc9a898468e2df34cbf89865fd63d43e90959",
+  "prompts": {},
+  "sessions": {
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
