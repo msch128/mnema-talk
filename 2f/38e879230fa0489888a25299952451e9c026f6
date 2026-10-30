@@ -1,0 +1,169 @@
+web/src/components/LaterList.vue
+  s_06fcde5dbef956::t_5e76145fb6acfb 1-132
+web/src/components/SavedLaterPanel.vue
+  s_06fcde5dbef956::t_d5d8b4509a4abf 1-156
+README.md
+  s_731038fe4fc0d1::t_60fecf750fcc78 109-112
+doc/architecture.md
+  s_731038fe4fc0d1::t_7716fa2a66bc24 718-720
+doc/glossary.md
+  s_731038fe4fc0d1::t_c65c0d8da5e961 34
+e2e/tests/saved-ux.spec.ts
+  s_ed05b7d59456d3::t_d824494c492528 1-75
+e2e/tests/saved.spec.ts
+  s_ed05b7d59456d3::t_22f9cb1bcad177 62,85
+web/src/components/ChatHeader.test.ts
+  s_17ef7810e0243d::t_0ec36fb42d6a06 17,80,94,103
+web/src/components/ChatHeader.vue
+  s_1a92838c482d40::t_f6b709948e8c54 5,13,32,38,54,109,169,189
+web/src/components/MessageRow.vue
+  s_731038fe4fc0d1::t_52b505a9836327 9,26-28,32-33,56-58,121-134,193-201,236-245
+web/src/components/MessageRowSaved.test.ts
+  s_3d15a6983fd807::t_8482bd6b0dbbe7 1-67
+web/src/components/SavedEntry.vue
+  s_82e9d48cb7fc7f::t_bfd80dd557be8c 1-148
+web/src/components/SavedLaterPanel.test.ts
+  s_e516df595aeaf4::t_18cc434666400d 1-191
+web/src/components/SavedLaterPanelLater.test.ts
+  s_82e9d48cb7fc7f::t_e53f394f365ca4 6,40,42,44-45,59,66,113,154
+web/src/components/SavedLaterPanelSaved.test.ts
+  s_ed05b7d59456d3::t_ba8b8d1a103359 6,9,12,23-24,29-38,40,45-47,50,56,58,64-66,72-73,76-81,83-84,87-90,93-95,101-102,105-106,117,128-129,133,139,144,147,156,165-206
+web/src/components/SavedList.vue
+  s_731038fe4fc0d1::t_acd24507315577 1-142
+web/src/composables/useMessageMenu.ts
+  s_0cae4a4d7ab7c3::t_03e61a496b6004 18,29-30
+web/src/composables/useMessageMenuSaved.test.ts
+  s_0dfc723326fc69::t_30048feba512d0 54
+web/src/i18n/de.json
+  s_731038fe4fc0d1::t_2528426e8707b8 2026,2072-2079,2089,2095-2120,3640,3649-3657
+web/src/i18n/en.json
+  s_731038fe4fc0d1::t_876a4eaabc6777 2026,2072-2079,2085,2089,2095-2120,3640,3649-3657
+web/src/lib/laterNotices.test.ts
+  s_45fff186c97845::t_9ec3bb8357d12d 1,4,25-38
+web/src/lib/laterNotices.ts
+  s_f8b5fe59428337::t_5be8e7154c9abe 5,8,14-23
+web/src/lib/savedActions.test.ts
+  s_45fff186c97845::t_e33847cfd2b928 1-58
+web/src/lib/savedActions.ts
+  s_17ef7810e0243d::t_5dd1ada094fc97 1-32
+web/src/lib/savedGroups.ts
+  s_731038fe4fc0d1::t_edb8b6ba7b7bc8 1-55
+web/src/lib/savedPanel.ts
+  s_17ef7810e0243d::t_9960c91fc59ccf 1-21
+web/src/stores/later.ts
+  s_fb29f048bd6d02::t_4ae80e4ab2fc7b 37-44,96-97,133
+web/src/stores/saved.ts
+  s_731038fe4fc0d1::t_eb0686fe35b018 15-25,65-66,70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f38e879230fa0489888a25299952451e9c026f6",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0dfc723326fc69": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aci-secretscan-scope-eead97415a6d3132",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_1a92838c482d40": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-talk-limit-f9c615740774e6fb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3d15a6983fd807": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-stats-packets-a99b089a927db102",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_731038fe4fc0d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-saved-later-006f0c1510ca4d15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ed05b7d59456d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a843a0ef992e8c6d6",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f8b5fe59428337": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-i18n-d461c25d928b7cff",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

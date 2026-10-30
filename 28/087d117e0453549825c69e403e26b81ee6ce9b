@@ -1,0 +1,37 @@
+web/src/components/LaterList.vue
+  s_06fcde5dbef956::t_ca4c7c00b2cf33 57-59
+web/src/components/SavedLaterPanel.test.ts
+  s_06fcde5dbef956::t_de1a9c90e003a8 7-8,148-173
+web/src/components/SavedLaterPanelSaved.test.ts
+  s_06fcde5dbef956::t_a40f42321c3e84 11,188-199
+web/src/components/SavedList.vue
+  s_06fcde5dbef956::t_9994b442832a37 56-58,66
+web/src/composables/useMessageMenuSaved.test.ts
+  s_06fcde5dbef956::t_41b408f01a0efb 54,60
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_18f792f32dba44 2079-2080,2090,2121-2122
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_d7dc9e1ce205d9 2079-2080,2090,2121-2122
+web/src/lib/savedActions.test.ts
+  s_06fcde5dbef956::t_b4aed59ee193dd 41-42,48,50-53
+web/src/lib/savedActions.ts
+  s_06fcde5dbef956::t_ce39390c5a163d 12-19,27,29-33
+web/src/stores/later.ts
+  s_06fcde5dbef956::t_eaca34f6d7e3ad 8,38-42,45-50,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "28087d117e0453549825c69e403e26b81ee6ce9b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
