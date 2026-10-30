@@ -193,7 +193,12 @@ func StartStagedSweep(ctx context.Context, p *db.Pool, store Store) {
 	if store == nil {
 		return
 	}
-	go runPeriodically(ctx, time.Minute, stagedSweepInterval, func(ctx context.Context) {
+	go runPeriodically(ctx, time.Minute, stagedSweepInterval, stagedSweepTask(p, store))
+}
+
+// stagedSweepTask is one sweep, logged, apart from its timer.
+func stagedSweepTask(p *db.Pool, store Store) func(context.Context) {
+	return func(ctx context.Context) {
 		n, err := SweepStaged(ctx, p, store, stagedTimeout)
 		if err != nil {
 			slog.Warn("staged attachment sweep failed", "err", err)
@@ -202,5 +207,5 @@ func StartStagedSweep(ctx context.Context, p *db.Pool, store Store) {
 		if n > 0 {
 			slog.Info("removed unsent attachments", "count", n)
 		}
-	})
+	}
 }
