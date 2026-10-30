@@ -7309,6 +7309,10 @@
             "description": "AddressDetection is true when the server may ask public STUN servers\nfor its own address at startup (WEBRTC_AUTO_ANNOUNCE); ClockCheck is\ntrue when it compares its clock with NTP servers (CLOCK_CHECK_ENABLED).\nBoth reveal only the server's IP address.",
             "type": "boolean"
           },
+          "builtin_turn": {
+            "description": "BuiltinTURN is true when the TURN relay inside the server process is\noffered to members (WEBRTC_BUILTIN_TURN); the policy then describes it\nas part of this server. TURNServers lists the external ones.",
+            "type": "boolean"
+          },
           "clock_check": {
             "type": "boolean"
           },
@@ -7353,6 +7357,7 @@
         },
         "required": [
           "address_detection",
+          "builtin_turn",
           "clock_check",
           "legal_version",
           "media_retention_days",

@@ -85,9 +85,10 @@ function loadAudioProcessingSettings() {
   const outputVolume = ref(parseInt(readItem('mnema_output_volume') || '100', 10))
   const selectedInputDeviceId = ref(readItem('mnema_input_dev') || '')
   const selectedOutputDeviceId = ref(readItem('mnema_output_dev') || '')
+  const selectedCameraDeviceId = ref(readItem('mnema_camera_dev') || '')
   return {
     noiseMode, noiseCancelling, autoGainControl, echoCancellation,
-    inputVolume, outputVolume, selectedInputDeviceId, selectedOutputDeviceId
+    inputVolume, outputVolume, selectedInputDeviceId, selectedOutputDeviceId, selectedCameraDeviceId
   }
 }
 
@@ -114,6 +115,7 @@ function persistVoiceSettings(
   writeItem('mnema_output_volume', String(audio.outputVolume.value))
   writeItem('mnema_input_dev', audio.selectedInputDeviceId.value)
   writeItem('mnema_output_dev', audio.selectedOutputDeviceId.value)
+  writeItem('mnema_camera_dev', audio.selectedCameraDeviceId.value)
 }
 
 export function useVoiceSettings() {

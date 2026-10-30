@@ -865,6 +865,11 @@
       "stunTitle": "STUN-Server:",
       "stunBefore": " Zum Aufbau der Sprachverbindung fragt Ihr Browser folgende STUN-Server nach Ihrer öffentlichen Adresse: ",
       "stunAfter": ". Dabei wird Ihre IP-Adresse an den jeweiligen Betreiber dieser Server übermittelt; Inhalte von Gesprächen oder Nachrichten werden nicht übertragen.",
+      "turnTitle": "Externe TURN-Server:",
+      "turnBefore": " Blockiert Ihr Netzwerk die direkte Medienverbindung, kann Ihr Browser sie über folgende, vom Betreiber eingerichtete TURN-Server weiterleiten: ",
+      "turnAfter": ". Der Betreiber dieser Server erhält dabei Ihre IP-Adresse und den Port und leitet die verschlüsselten Medien weiter, die der Server nicht lesen kann; Inhalte von Gesprächen oder Nachrichten werden nicht übertragen.",
+      "builtinTurnTitle": "Integriertes Relay (TURN):",
+      "builtinTurn": " Mitglieder in restriktiven Netzwerken erreichen Sprache und Video über ein Relay, das innerhalb dieses Servers läuft. Es ist Teil dieses Servers und wird vom Betreiber dieser Instanz betrieben, nicht von einem Dritten, und leitet Medien ausschließlich an den eigenen Medienserver des Servers weiter. Das Relay sieht Ihre IP-Adresse und den Port und leitet die verschlüsselten Medien (DTLS-SRTP) weiter, die es nicht lesen kann. Es verwendet kurzlebige, an Ihr Konto gebundene Zugangsdaten und speichert nichts dauerhaft: Es führt nur betriebliche Zähler (aktive Sitzungen, abgewiesene Versuche, Datenmengen) ohne IP-Adressen oder Kontonamen und schreibt IP-Adressen und Konto-IDs nur dann ins Protokoll, wenn der Betreiber die Debug-Protokollierung einschaltet. Zweck und Rechtsgrundlage entsprechen dem oben beschriebenen Sprachdienst (Vertrag, Art. 6 Abs. 1 lit. b DSGVO).",
       "noStun": "Es werden keine externen STUN- oder TURN-Server von Drittanbietern verwendet.",
       "updateCheckTitle": "Update-Prüfung:",
       "updateCheck": " Der Server fragt etwa alle 30 Minuten bei GitHub (api.github.com, GitHub Inc., USA) nach, ob eine neue Version von Mnema Talk erschienen ist. Dabei sieht GitHub nur die IP-Adresse des Servers; Daten von Nutzerinnen und Nutzern werden nicht übertragen. Der Betreiber kann die Prüfung abschalten.",
@@ -2174,7 +2179,7 @@
     "mute": "Stummschalten",
     "deafen": "Ton aus",
     "ptt": "Push-to-Talk",
-    "games": "Zusätzliche Spiele-EXEs (eine pro Zeile)",
+    "games": "Zusätzliche Spiele",
     "error": "Nicht übernommen. Verbindung prüfen und unterschiedliche unterstützte Tasten wählen.",
     "enabled": "Gaming-Overlay und Sidepeek aktivieren",
     "opacity": "Deckkraft des Sidepeek-Hintergrunds",
@@ -2184,7 +2189,21 @@
     "addLastNone": "Noch keine andere App im Vordergrund. Wechsle zum Spiel und öffne das Overlay erneut.",
     "addConfirm": "Hinzufügen",
     "addCancel": "Abbrechen",
-    "addFailed": "Diese App konnte nicht hinzugefügt werden."
+    "addFailed": "Diese App konnte nicht hinzugefügt werden.",
+    "groupGeneral": "Allgemein",
+    "enabledHint": "Overlay und Sidepeek zeigen, solange du in einem Spiel und in einem Talk bist.",
+    "opacityHint": "Wie durchsichtig der Sidepeek-Hintergrund ist.",
+    "groupShortcuts": "Tastenkürzel",
+    "shortcutsHelp": "Feld anklicken und die gewünschten Tasten drücken. Jedes Kürzel muss anders sein.",
+    "groupGames": "Spiele",
+    "gamesEmpty": "Noch keine zusätzlichen Spiele.",
+    "addGame": "Hinzufügen",
+    "removeGame": "{name} entfernen",
+    "problem": {
+      "invalid": "Gib einen Dateinamen wie Game.exe ein: nur Buchstaben, Ziffern, Leerzeichen und - _ . !",
+      "duplicate": "Dieses Spiel steht schon in der Liste.",
+      "full": "Die Liste fasst höchstens {max} Spiele."
+    }
   },
   "perm": {
     "administrator": {
@@ -3587,5 +3606,13 @@
       "audio": "Audio"
     },
     "privacyEmpty": "Auf diesem Server gibt es hier nichts einzustellen."
+  },
+  "ctxMenu": {
+    "systemDefault": "Systemstandard",
+    "namesNeedAccess": "Gerätenamen erscheinen, sobald der Browser den Zugriff erlaubt hat.",
+    "outputFallback": "Lautsprecher {id} …",
+    "cameraFallback": "Kamera {id} …",
+    "cameraDevice": "Kamera",
+    "noShareSound": "Diese Übertragung hat keinen Ton zum Stummschalten."
   }
 }

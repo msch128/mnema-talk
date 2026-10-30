@@ -5,6 +5,7 @@ import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import ContextMenuRow from './ContextMenuRow.vue'
 import { placeNear, pointBox, type AnchorBox } from '../lib/floatingPosition'
+import { rowTarget, typeAhead } from '../lib/menuKeys'
 
 // Context menu. Items: { label, icon, shortcut, action, danger, disabled },
 // { type: 'separator' }, { type: 'label', label }, { type: 'slider', ... },
@@ -13,7 +14,8 @@ import { placeNear, pointBox, type AnchorBox } from '../lib/floatingPosition'
 // { type: 'info', label, value } (a read-only line),
 // { type: 'submenu', id, label, icon, value, items, onOpen, onClose }: opens
 // a nested menu to the side (hover, click, ArrowRight; ArrowLeft or Escape
-// go back). keepOpen on an item leaves the menu open after choosing it.
+// go back). { type: 'meter', label, value, threshold } is a live level bar.
+// disabledReason on a disabled item shows as its tooltip. keepOpen on an item leaves the menu open after choosing it.
 // Position either with x/y (viewport px) or with `anchor` (an element or a
 // { left, top, right, bottom } rect), which is what keyboard openers use.
 const props = defineProps({
@@ -24,8 +26,8 @@ const props = defineProps({
   items: { type: Array as PropType<ContextMenuItem[]>, default: () => [] },
   minWidth: { type: Number, default: 180 },
   ariaLabel: { type: String, default: '' },
-  // Where the menu is attached: the page, or the element in full screen.
-  teleportTo: { type: [String, Object] as PropType<string | HTMLElement>, default: 'body' }
+  // Where the menu is attached: the page, or the element in full screen (which is the default there).
+  teleportTo: { type: [String, Object] as PropType<string | HTMLElement>, default: undefined }
 })
 
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; close: []; select: [item: ContextMenuItem] }>()
@@ -40,6 +42,7 @@ const openSub = ref<MenuItemId | null>(null)
 let subClose: (() => void) | null = null
 const subFlip = ref(false)
 const subShift = ref(0)
+const subShiftX = ref(0)
 let hoverTimer: ReturnType<typeof setTimeout> | undefined
 
 // What the menu belongs to: the anchor's box, or the point it was asked at.
@@ -95,12 +98,18 @@ function triggerOf(id: MenuItemId) {
 function placeSubmenu() {
   subFlip.value = false
   subShift.value = 0
+  subShiftX.value = 0
   nextTick(() => {
     const panel = subPanel()
     if (!panel) return
     const pad = 8
     const r = panel.getBoundingClientRect()
-    if (r.right > window.innerWidth - pad) subFlip.value = true
+    if (r.right > window.innerWidth - pad) {
+      // To the left of its row when that fits; on a narrow screen neither side does, and it overlaps its parent.
+      const row = panel.parentElement?.getBoundingClientRect()
+      if (row && row.left - 6 - r.width >= pad) subFlip.value = true
+      else subShiftX.value = -Math.min(r.left - pad, r.right - (window.innerWidth - pad))
+    }
     if (r.bottom > window.innerHeight - pad) subShift.value = -Math.min(r.top - pad, r.bottom - (window.innerHeight - pad))
   })
 }
@@ -254,34 +263,6 @@ function handleRowKey(e: KeyboardEvent, panel: HTMLElement | null, cur: number):
   return true
 }
 
-function rowTarget(key: string, cur: number): number | null {
-  if (key === 'ArrowDown') return cur < 0 ? 0 : cur + 1
-  if (key === 'ArrowUp') return cur < 0 ? -1 : cur - 1
-  if (key === 'Home') return 0
-  if (key === 'End') return -1
-  return null
-}
-
-function isPrintableCharKey(e: KeyboardEvent): boolean {
-  if (e.ctrlKey || e.metaKey || e.altKey) return false
-  if (e.key.length !== 1) return false
-  return /\S/.test(e.key)
-}
-
-// Type-ahead: next row whose label starts with the typed letter.
-function typeAhead(e: KeyboardEvent, list: HTMLElement[], cur: number) {
-  if (!isPrintableCharKey(e)) return
-  const ch = e.key.toLowerCase()
-  const n = list.length
-  for (let k = 1; k <= n; k++) {
-    const el = list[(Math.max(cur, -1) + k) % n]
-    if (el?.textContent?.trim().toLowerCase().startsWith(ch)) {
-      el.focus()
-      break
-    }
-  }
-}
-
 // The menu itself, or the opener's button (the anchor): its own click toggles the
 // menu, so a press on it must not also close the menu first (it would reopen).
 function isOwnTarget(target: EventTarget | null): boolean {
@@ -297,10 +278,17 @@ function handleOutsideDismiss(e: Event) {
 }
 
 const handleScrollDismiss = (e: Event) => { if (!settling) handleOutsideDismiss(e) }
+// The window lost focus (another app, a tab switch): the menu would hang there unattended.
+function handleWindowBlur() {
+  if (!props.modelValue) return
+  opener = null
+  close()
+}
 onMounted(() => {
   document.addEventListener('mousedown', handleOutsideDismiss, true)
   document.addEventListener('contextmenu', handleOutsideDismiss, true)
   window.addEventListener('scroll', handleScrollDismiss, true)
+  window.addEventListener('blur', handleWindowBlur)
 })
 
 onUnmounted(() => {
@@ -308,13 +296,21 @@ onUnmounted(() => {
   document.removeEventListener('mousedown', handleOutsideDismiss, true)
   document.removeEventListener('contextmenu', handleOutsideDismiss, true)
   window.removeEventListener('scroll', handleScrollDismiss, true)
+  window.removeEventListener('blur', handleWindowBlur)
 })
+
+function host(): string | HTMLElement {
+  if (props.teleportTo) return props.teleportTo
+  // Only the full-screen element is drawn in full screen; a menu on the page behind it would not show.
+  const full = typeof document === 'undefined' ? null : document.fullscreenElement
+  return full instanceof HTMLElement && full !== document.documentElement ? full : 'body'
+}
 
 const panelClass = 'p-2 rounded-xl bg-mnema-elevated border border-mnema-border shadow-lg text-sm text-mnema-muted font-sans'
 </script>
 
 <template>
-  <Teleport :to="teleportTo">
+  <Teleport :to="host()">
     <div
       v-if="modelValue"
       ref="menuEl"
@@ -372,7 +368,7 @@ const panelClass = 'p-2 rounded-xl bg-mnema-elevated border border-mnema-border 
             data-submenu-panel
             :data-submenu="item.id"
             :aria-label="item.label"
-            :style="{ top: `${subShift - 6}px`, minWidth: `${item.minWidth || 180}px` }"
+            :style="{ top: `${subShift - 6}px`, minWidth: `${item.minWidth || 180}px`, transform: subShiftX ? `translateX(${subShiftX}px)` : undefined }"
             :class="['absolute z-50', subFlip ? 'right-full mr-1.5' : 'left-full ml-1.5', panelClass]"
             @mouseenter="cancelHoverClose"
           >

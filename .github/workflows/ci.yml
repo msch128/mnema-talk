@@ -544,6 +544,14 @@ jobs:
           cache-from: type=gha,scope=image
           cache-to: type=gha,scope=image,mode=max
 
+      # The updater hands the daemon docker.io/... for a Docker Hub install
+      # (imageverify.DaemonRepository); the container's own short name must find it.
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        run: |
+          # No network: an empty local image tagged the way the updater tags.
+          printf 'FROM scratch\nLABEL probe=1\n' | docker build --tag docker.io/msch128/mnema-talk:ci-probe -
+          docker image inspect msch128/mnema-talk:ci-probe --format '{{.Id}}'
+
   # The required check `docker`: smoke test, install, backup, PostgreSQL
   # upgrade and image scan against the amd64 image from that cache.
   docker:

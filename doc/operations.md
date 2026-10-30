@@ -149,7 +149,7 @@ behind it and so uses the stored language or the default.
 | `MNEMA_IMAGE` | compose: `mnema-talk:local` | Image the `app` service runs; the app reads it to tell whether a re-pull can reach the latest release. See the tag table in the [deployment guide](deployment.md#updates). |
 | `UPDATER_TOKEN` | empty | Turns on "Update now" through the updater sidecar (profile `autoupdate`). At least 32 characters of letters, digits and `._~+/=-`, no placeholder. Empty = feature off, `UPDATER_URL` ignored. |
 | `UPDATER_URL` | `http://mnema-updater:8080` | Where the app reaches the sidecar: `http(s)` without credentials, query or fragment. |
-| `UPDATER_IMAGE_REPOSITORY`, `UPDATER_CERT_IDENTITY_REGEXP`, `UPDATER_CERT_ISSUER`, `UPDATER_SOURCE_URL`, `UPDATER_TRUSTED_ROOT` | empty = this project's release images and workflow | Read by the updater sidecar only, for a fork that publishes its own signed images: the image repository it may pull from, an anchored (`^...$`) pattern for the signing workflow's identity, its OIDC issuer, the repository URL recorded in the build provenance and (optional) a mounted `trusted_root.json`. See [verifying a release image](#verifying-a-release-image). |
+| `UPDATER_IMAGE_REPOSITORY`, `UPDATER_CERT_IDENTITY_REGEXP`, `UPDATER_CERT_ISSUER`, `UPDATER_SOURCE_URL`, `UPDATER_TRUSTED_ROOT` | empty = this project's release images (GHCR and the Docker Hub mirror) and workflow | Read by the updater sidecar only, for a fork that publishes its own signed images: the one image repository it may pull from (setting it drops the built-in Docker Hub mirror), an anchored (`^...$`) pattern for the signing workflow's identity, its OIDC issuer, the repository URL recorded in the build provenance and (optional) a mounted `trusted_root.json`. See [verifying a release image](#verifying-a-release-image). |
 
 ### Legal and privacy page
 
@@ -460,8 +460,14 @@ nothing else:
   (`LOG_LEVEL=debug`). `mnema_turn_allocations` is the live sessions,
   `mnema_turn_relayed_bytes_total{direction}` the traffic.
 
-The built-in relay is your own server, so the privacy policy does not list it;
-an external TURN server from `WEBRTC_TURN_URLS` is still listed.
+The built-in relay is part of your server, run by you and not a third party.
+The privacy policy (version 1.7 and later) describes it as such while it is
+offered: it sees the member's IP address and port, forwards encrypted media it
+cannot read only to the server's own SFU, uses short-lived credentials, stores
+nothing persistently and keeps only operational counters. IP addresses and
+account IDs reach the log only at `LOG_LEVEL=debug`, so name that in your own
+records if you run debug logging. An external TURN server from
+`WEBRTC_TURN_URLS` is listed separately by its configured address.
 
 ## TURN (coturn)
 
@@ -502,7 +508,9 @@ shorter lifetime would cut relayed calls. The web app fetches a fresh
 credential on a voice join when its copy is older than an hour. A credential
 therefore outlives a sign-out for up to 12 hours but can only use the relay,
 within the quotas above.
-Configured TURN servers are listed in the privacy policy.
+Configured TURN servers are listed in the privacy policy by their address; the
+policy describes the operator of such a server as a recipient of the member's
+IP address and port, so list the provider in your own records if it is not you.
 
 **Networks that block more than UDP.** `transport=tcp` on port 3478 passes
 firewalls that drop UDP but allow other ports. Some company networks only allow
@@ -652,6 +660,14 @@ shows that the update was refused, and the updater's log (`docker compose logs
 updater`) has the reason. Details and limits are in
 [SECURITY.md](../SECURITY.md#self-update-sidecar).
 
+- By default the updater trusts exactly two repositories:
+  `ghcr.io/msch128/mnema-talk` and its Docker Hub mirror `docker.io/msch128/mnema-talk`
+  (`msch128/mnema-talk` and `index.docker.io/...` name the same repository).
+  It updates from the registry the running app image names, so an install with
+  `MNEMA_IMAGE=msch128/mnema-talk:latest` stays on Docker Hub. Signature
+  identity, issuer and provenance source are the same for both; any other
+  namespace is refused. With `UPDATER_IMAGE_REPOSITORY` set, only that
+  repository is trusted.
 - The updater needs outbound HTTPS to the image registry and to Sigstore's
   TUF mirror (`tuf-repo-cdn.sigstore.dev`); it has its own network for that. An
   installation that cannot reach the mirror can mount a `trusted_root.json`

@@ -15,6 +15,8 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useWebRTC } from '../composables/useWebRTC'
 import { useMenuState } from '../composables/useNavMenus'
 import ContextMenu from './ContextMenu.vue'
+import TriggerMenu from './TriggerMenu.vue'
+import { useVoiceMenus } from '../composables/useVoiceMenus'
 import TalkReactButton from './TalkReactButton.vue'
 import { useStage } from '../composables/useStage'
 import { blockedButton } from './talkButtons'
@@ -41,6 +43,8 @@ const speakHint = computed(() => (stage.isStage.value && !stage.iAmSpeaker.value
 const videoHint = computed(() => (stage.isStage.value && !stage.iAmSpeaker.value ? t('stage.noPower') : t('talk.noVideo')))
 const reactOpen = ref(false)
 const { leaveVoiceChannel, startScreenShare, stopScreenShare, applyAudioSettings, toggleCamera } = useWebRTC()
+// Right click or long press: device and quick-setting menus of the call buttons.
+const menus = useVoiceMenus({ fullscreen: () => props.fullscreen })
 
 function toggleScreenShare() {
   if (voiceStore.isScreenSharing) stopScreenShare()
@@ -109,7 +113,7 @@ function onFocusIn(e: FocusEvent) {
 function onFocusOut(e: FocusEvent) {
   if (!(e.currentTarget instanceof Node && e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget))) keyboardFocus.value = false
 }
-const pinned = computed(() => hovered.value || keyboardFocus.value || more.state.open || reactOpen.value)
+const pinned = computed(() => hovered.value || keyboardFocus.value || more.state.open || menus.mic.menu.state.open || menus.output.menu.state.open || menus.camera.menu.state.open || menus.share.menu.state.open || reactOpen.value)
 watch(pinned, v => emit('update:pinned', v), { immediate: true })
 
 // A tap on the hidden bar only brings it back: no invisible button fires.
@@ -161,6 +165,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       :aria-pressed="voiceStore.isMuted ? 'true' : 'false'"
       :disabled="!canSpeak"
       v-tooltip="!canSpeak ? speakHint : voiceStore.isMuted ? t('voice.unmute') : t('voice.mute')"
+      v-bind="menus.mic.on"
       @click="voiceStore.toggleMute"
     >
       <MicOff v-if="voiceStore.isMuted" class="w-5 h-5" aria-hidden="true" />
@@ -173,6 +178,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       :class="[icon, voiceStore.isDeafened ? danger : neutral]"
       :aria-pressed="voiceStore.isDeafened ? 'true' : 'false'"
       v-tooltip="voiceStore.isDeafened ? t('voice.undeafen') : t('voice.deafen')"
+      v-bind="menus.output.on"
       @click="voiceStore.toggleDeafen"
     >
       <HeadphoneOff v-if="voiceStore.isDeafened" class="w-5 h-5" aria-hidden="true" />
@@ -187,6 +193,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       :aria-pressed="voiceStore.isCameraOn ? 'true' : 'false'"
       :disabled="!canVideo && !voiceStore.isCameraOn"
       v-tooltip="!canVideo ? videoHint : voiceStore.isCameraOn ? t('talk.stopCamera') : t('talk.startCamera')"
+      v-bind="menus.camera.on"
       @click="toggleCamera"
     >
       <Video v-if="voiceStore.isCameraOn" class="w-5 h-5" aria-hidden="true" />
@@ -199,6 +206,7 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       :aria-pressed="voiceStore.isScreenSharing ? 'true' : 'false'"
       :disabled="!canVideo && !voiceStore.isScreenSharing"
       v-tooltip="!canVideo ? videoHint : voiceStore.isScreenSharing ? t('voice.stopShare') : t('voice.share')"
+      v-bind="menus.share.on"
       @click="toggleScreenShare"
     >
       <Monitor class="w-5 h-5" aria-hidden="true" />
@@ -281,6 +289,11 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       <PhoneOff class="w-5 h-5" aria-hidden="true" />
       <span v-if="!compact">{{ t('voice.leave') }}</span>
     </button>
+
+    <TriggerMenu :trigger="menus.mic" :aria-label="t('audio.inputDevice')" :min-width="260" />
+    <TriggerMenu :trigger="menus.output" :aria-label="t('audio.outputDevice')" :min-width="260" />
+    <TriggerMenu :trigger="menus.camera" :aria-label="t('talk.camera')" :min-width="240" />
+    <TriggerMenu :trigger="menus.share" :aria-label="t('talk.quality.title')" :min-width="260" />
 
     <ContextMenu
       v-model="more.state.open"

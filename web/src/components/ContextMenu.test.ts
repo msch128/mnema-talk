@@ -223,7 +223,9 @@ describe('ContextMenu submenu and lifecycle', () => {
 
 it('flips overflowing submenus, shifts them upward and resets placement on a new submenu', async () => {
   const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-    return this.hasAttribute('data-submenu-panel') ? new DOMRect(window.innerWidth - 20, window.innerHeight - 20, 100, 100) : new DOMRect(0, 0, 50, 50)
+    if (this.hasAttribute('data-submenu-panel')) return new DOMRect(window.innerWidth - 20, window.innerHeight - 20, 100, 100)
+    // The row of the submenu sits far enough from the left edge for the submenu to open on its left.
+    return this.classList.contains('relative') ? new DOMRect(300, 0, 50, 50) : new DOMRect(0, 0, 50, 50)
   })
   try {
     await openMenu({ anchor: {}, items: [

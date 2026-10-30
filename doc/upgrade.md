@@ -70,7 +70,7 @@ docker compose logs --since 10m app | grep -E 'migration applied|"level":"(WARN|
 Then open the app: other open tabs show a reload notice; voice calls
 reconnect after the reload. Admin → System shows the new version.
 
-The same image is also published on Docker Hub as `docker.io/msch128/mnema-talk` (same digest and signature, see [Verifying a release image](operations.md#verifying-a-release-image)); GHCR stays the primary reference used in this guide.
+The same image is also published on Docker Hub as `docker.io/msch128/mnema-talk` (same digest and signature, see [Verifying a release image](operations.md#verifying-a-release-image)); GHCR stays the primary reference used in this guide. With `MNEMA_IMAGE=msch128/mnema-talk:<tag>` "Update now" works too and pulls from Docker Hub.
 
 If you follow a minor line instead (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.4`),
 step 4 is unnecessary within that line: `docker compose pull app && docker
@@ -131,6 +131,14 @@ until the new release has passed your application checks.
 ### 1.2.x → next release
 
 Update with the procedure above and take the backup first. Nothing in `.env` has to change.
+
+The in-app privacy policy is now version 1.7 (the version is shown on the
+page; members are not asked to accept it again). It describes the TURN relay
+built into the server as part of your instance (IP address and port seen,
+encrypted media it cannot read, nothing stored persistently) while it is
+offered, and it names the external TURN servers from `WEBRTC_TURN_URLS`, which
+earlier versions never listed. `GET /api/legal` gains the field `builtin_turn`.
+If you publish your own copy of the policy, update it to match.
 
 Migration 0077 drops `native_session_families`, `native_access_tokens`,
 `native_refresh_tokens` and `native_ciphertext_events` (added by 0015 and 0016).

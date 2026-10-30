@@ -7,10 +7,14 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useWebRTC } from '../composables/useWebRTC'
 import { pingTone, PING_CLASS } from '../lib/ping'
+import TriggerMenu from './TriggerMenu.vue'
+import { useVoiceMenus } from '../composables/useVoiceMenus'
 
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const { leaveVoiceChannel, startScreenShare, stopScreenShare } = useWebRTC()
+// Right click or long press on the share button while sharing: stream quality.
+const { share } = useVoiceMenus()
 
 const channelName = computed(
   () => chatStore.allChannels.find(c => c.id === voiceStore.currentChannelId)?.name || ''
@@ -63,11 +67,13 @@ const ib = barIconButton
       v-tooltip="voiceStore.isScreenSharing ? $t('voice.stopShare') : $t('voice.share')"
       :aria-pressed="voiceStore.isScreenSharing ? 'true' : 'false'"
       :class="[ib, 'vp-narrow-hide', voiceStore.isScreenSharing ? 'bg-mnema-accent text-mnema-accent-ink' : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text']"
+      v-bind="share.on"
       @click="toggleScreenShare"
     >
       <MonitorOff v-if="voiceStore.isScreenSharing" class="h-[18px] w-[18px]" />
       <Monitor v-else class="h-[18px] w-[18px]" />
     </button>
+    <TriggerMenu :trigger="share" :aria-label="$t('talk.quality.title')" :min-width="260" />
     <button
       v-if="voiceStore.isScreenSharing"
       type="button"

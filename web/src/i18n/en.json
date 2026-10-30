@@ -867,6 +867,11 @@
       "stunAfter": ". Your IP address is sent to the operator of each of these servers; no conversation or message content is transmitted.",
       "updateCheckTitle": "Update check:",
       "updateCheck": " About every 30 minutes the server asks GitHub (api.github.com, GitHub Inc., USA) whether a new version of Mnema Talk was released. GitHub only sees the server’s IP address; no user data is sent. The operator can turn the check off.",
+      "turnTitle": "External TURN servers:",
+      "turnBefore": " If your network blocks the direct media connection, your browser can relay it through the following TURN servers configured by the operator: ",
+      "turnAfter": ". The operator of each of these servers receives your IP address and port and passes on the encrypted media, which the server cannot read; no conversation or message content is transmitted.",
+      "builtinTurnTitle": "Built-in relay (TURN):",
+      "builtinTurn": " Members on restrictive networks can reach voice and video through a relay that runs inside this server. It is part of this server and operated by the operator of this instance, not by a third party, and it forwards media only to the server’s own media server. The relay sees your IP address and port and passes on the encrypted media (DTLS-SRTP), which it cannot read. It uses short-lived credentials tied to your account and stores nothing persistently: it keeps only operational counters (active sessions, refused attempts, traffic totals) without IP addresses or account names, and writes IP addresses and account IDs to the log only when the operator turns on debug logging. Purpose and legal basis are those of the voice service above (contract, Art. 6 (1) (b) GDPR).",
       "noStun": "No external STUN or TURN servers from third parties are used.",
       "dataHeading": "Categories & retention",
       "colCategory": "Data category",
@@ -2174,7 +2179,7 @@
     "mute": "Mute",
     "deafen": "Deafen",
     "ptt": "Push to talk",
-    "games": "Additional game executables (one per line)",
+    "games": "Additional games",
     "error": "Unable to apply. Check the connection and choose different supported shortcuts.",
     "enabled": "Enable gaming overlay and sidepeek",
     "opacity": "Sidepeek background opacity",
@@ -2184,7 +2189,21 @@
     "addLastNone": "No other app was in front yet. Switch to the game, then open the overlay again.",
     "addConfirm": "Add",
     "addCancel": "Cancel",
-    "addFailed": "Could not add this app."
+    "addFailed": "Could not add this app.",
+    "groupGeneral": "General",
+    "enabledHint": "Show the overlay and the sidepeek while you are in a game and in a Talk.",
+    "opacityHint": "How see-through the sidepeek background is.",
+    "groupShortcuts": "Shortcuts",
+    "shortcutsHelp": "Click a field and press the keys you want. Each shortcut must be different.",
+    "groupGames": "Games",
+    "gamesEmpty": "No extra games yet.",
+    "addGame": "Add",
+    "removeGame": "Remove {name}",
+    "problem": {
+      "invalid": "Enter a file name like Game.exe: letters, digits, spaces and - _ . ! only.",
+      "duplicate": "This game is already in the list.",
+      "full": "The list holds at most {max} games."
+    }
   },
   "perm": {
     "administrator": {
@@ -3587,5 +3606,13 @@
       "audio": "Audio"
     },
     "privacyEmpty": "There is nothing to set here on this server."
+  },
+  "ctxMenu": {
+    "systemDefault": "System default",
+    "namesNeedAccess": "Device names appear once the browser has allowed access.",
+    "outputFallback": "Speaker {id}…",
+    "cameraFallback": "Camera {id}…",
+    "cameraDevice": "Camera",
+    "noShareSound": "This share has no sound to mute."
   }
 }
