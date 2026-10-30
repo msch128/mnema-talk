@@ -1,0 +1,114 @@
+e2e/tests/notification-links.spec.ts
+  h_0ff4f4713441f4 1-101
+internal/push/event_reminder.go
+  h_0ff4f4713441f4 55
+internal/push/locales/texts.json
+  h_0ff4f4713441f4 8,30
+internal/push/payload.go
+  h_0ff4f4713441f4 33-36,125,130-138,157-159
+internal/push/payload_test.go
+  h_0ff4f4713441f4 228-240
+web/src/App.test.ts
+  h_0ff4f4713441f4 17,96-110
+web/src/App.vue
+  h_0ff4f4713441f4 31-32,76,111,364
+web/src/components/AudioMicCheck.vue
+  h_0ff4f4713441f4 49
+web/src/components/AudioOutputSection.vue
+  h_0ff4f4713441f4 47
+web/src/components/AudioProcessingSection.vue
+  h_0ff4f4713441f4 48
+web/src/components/EventsModal.test.ts
+  h_0ff4f4713441f4 178-226
+web/src/components/EventsModal.vue
+  h_0ff4f4713441f4 20,36-48,50,52
+web/src/components/PushSection.vue
+  h_0ff4f4713441f4 31
+web/src/components/SettingsDialog.test.ts
+  h_0ff4f4713441f4 233-258
+web/src/components/SettingsDialog.vue
+  h_0ff4f4713441f4 5,8,25-27,44,47-62,91,126
+web/src/components/SidebarEventsEntry.test.ts
+  h_0ff4f4713441f4 8,52-54,57-60
+web/src/components/SidebarEventsEntry.vue
+  h_0ff4f4713441f4 2,6,24
+web/src/components/ToastHost.test.ts
+  h_0ff4f4713441f4 38-49
+web/src/components/ToastHost.vue
+  h_0ff4f4713441f4 17-18,46-58
+web/src/composables/appRoutingApply.test.ts
+  h_0ff4f4713441f4 5,41,177-202
+web/src/composables/appRoutingApply.ts
+  h_0ff4f4713441f4 10-11,26-27,219-222,273-274
+web/src/composables/useAppRouting.test.ts
+  h_0ff4f4713441f4 1,3-5,51-90
+web/src/composables/useAppRouting.ts
+  h_0ff4f4713441f4 11-12,37-39,70-89,93,142
+web/src/composables/usePushBridge.test.ts
+  h_0ff4f4713441f4 9,15,23,35-63
+web/src/composables/usePushBridge.ts
+  h_0ff4f4713441f4 7,10-19,30-31
+web/src/composables/useWebRTC.audio.test.ts
+  h_0ff4f4713441f4 6,460-470,476
+web/src/composables/webrtc/audioNotice.ts
+  h_0ff4f4713441f4 2-3,7-16,18,21
+web/src/composables/webrtc/audioSettings.ts
+  h_0ff4f4713441f4 9,32,56,102,141
+web/src/composables/webrtc/micPipeline.ts
+  h_0ff4f4713441f4 11,88,179
+web/src/composables/webrtc/rawSilence.ts
+  h_0ff4f4713441f4 4,61
+web/src/composables/webrtc/session.ts
+  h_0ff4f4713441f4 11,59
+web/src/i18n/de.json
+  h_0ff4f4713441f4 577,790,2217-2220,2973-2977
+web/src/i18n/en.json
+  h_0ff4f4713441f4 577,790,2217-2220,2973-2977
+web/src/lib/eventsDialog.ts
+  h_0ff4f4713441f4 1-19
+web/src/lib/laterNotices.test.ts
+  h_0ff4f4713441f4 1,7-10,26,60-101
+web/src/lib/laterNotices.ts
+  h_0ff4f4713441f4 3,5-10,16-28,31-33,35,39-41
+web/src/lib/router.test.ts
+  h_0ff4f4713441f4 10-14
+web/src/lib/router.ts
+  h_0ff4f4713441f4 9-10,70
+web/src/lib/settingsDialog.test.ts
+  h_0ff4f4713441f4 1,4,41-95
+web/src/lib/settingsDialog.ts
+  h_0ff4f4713441f4 16-18,22-28,35-41,43-64
+web/src/lib/webPush.test.ts
+  h_0ff4f4713441f4 31,282-297
+web/src/lib/webPush.ts
+  h_0ff4f4713441f4 202-210,214-219
+web/src/stores/chat/notifications.ts
+  h_0ff4f4713441f4 41-43
+web/src/stores/chatNotificationBody.test.ts
+  h_0ff4f4713441f4 3-6,43-79
+web/src/stores/events.test.ts
+  h_0ff4f4713441f4 4-5,179-194
+web/src/stores/events.ts
+  h_0ff4f4713441f4 19-25,137-140
+web/src/stores/later.test.ts
+  h_0ff4f4713441f4 92
+web/src/stores/toast.test.ts
+  h_0ff4f4713441f4 41,45,47-49,51-52
+web/src/stores/toast.ts
+  h_0ff4f4713441f4 6,8,11-12,55,61-62
+web/src/sw/push.test.ts
+  h_0ff4f4713441f4 8,46,65-71,157,162-174
+web/src/sw/push.ts
+  h_0ff4f4713441f4 17-18,22-27,109,131,166,177-178,180-182
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "00e7ab81fca7e6cf0c51e5b4c835df8036dc0d61",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
