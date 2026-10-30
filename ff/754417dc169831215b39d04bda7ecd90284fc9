@@ -1,0 +1,55 @@
+api/openapi.json
+  s_fb29f048bd6d02::t_fa0ae58abe8cf0 27003
+doc/talks.md
+  s_fb29f048bd6d02::t_96efccd5366d59 60-70
+e2e/tests/dm-call.spec.ts
+  s_fb29f048bd6d02::t_8646f969393824 44,74
+internal/chat/dm_calls_integration_test.go
+  s_fb29f048bd6d02::t_3bcb5b5b7c0aff 12,181-257
+internal/chat/talks.go
+  s_fb29f048bd6d02::t_029d84ebea70a4 114-170
+internal/chat/talks_handler.go
+  s_fb29f048bd6d02::t_53dcf781cad17e 105,129
+internal/chat/talks_manager.go
+  s_fb29f048bd6d02::t_0cb48addb394e7 126-148,150-152
+internal/db/migrations/0079_dm_talk.sql
+  s_fb29f048bd6d02::t_f49826cf1f0872 1-9
+internal/perm/permtest/permtest.go
+  s_fb29f048bd6d02::t_491cf04f03edd7 217-233
+internal/perm/snapshot.go
+  s_fb29f048bd6d02::t_125173c73c6c70 82-85
+internal/perm/snapshot_build.go
+  s_fb29f048bd6d02::t_536ec05292116c 30-31,48-50
+internal/perm/snapshot_channels.go
+  s_fb29f048bd6d02::t_a4a01d11bd2140 80-82
+internal/perm/snapshot_dm.go
+  s_fb29f048bd6d02::t_b5eb27c7c375c1 37-38
+internal/perm/snapshot_dm_test.go
+  s_fb29f048bd6d02::t_c1a7972c2df6e0 80-116
+internal/perm/snapshot_load.go
+  s_fb29f048bd6d02::t_945b0e5892962b 28,129,150-152
+internal/server/dm_call_integration_test.go
+  s_fb29f048bd6d02::t_0c26954ffd292d 16-17,77-92
+web/src/components/DmTalkActions.vue
+  s_fb29f048bd6d02::t_bc53ca9ed5c72d 3
+web/src/components/TalkInvite.test.ts
+  s_fb29f048bd6d02::t_f7f29c884b1130 110,112,117
+web/src/composables/useDmCall.ts
+  s_fb29f048bd6d02::t_aaab498b13585f 4,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff754417dc169831215b39d04bda7ecd90284fc9",
+  "prompts": {},
+  "sessions": {
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
