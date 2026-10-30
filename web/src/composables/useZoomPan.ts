@@ -9,6 +9,13 @@ export const MAX_SCALE = 8
 const STEP = 1.5
 const DOUBLE_CLICK_SCALE = 2.5
 
+// A point of the stage, measured from its middle.
+function fromMiddle(stage: HTMLElement | null, e: { clientX: number; clientY: number }) {
+  const r = stage?.getBoundingClientRect()
+  if (!r) return { cx: 0, cy: 0 }
+  return { cx: e.clientX - r.left - r.width / 2, cy: e.clientY - r.top - r.height / 2 }
+}
+
 export function useZoomPan(stage: Ref<HTMLElement | null>) {
   const scale = ref(1)
   const x = ref(0)
@@ -39,23 +46,17 @@ export function useZoomPan(stage: Ref<HTMLElement | null>) {
     scale.value = clamped
   }
 
-  function fromMiddle(e: { clientX: number; clientY: number }) {
-    const r = stage.value?.getBoundingClientRect()
-    if (!r) return { cx: 0, cy: 0 }
-    return { cx: e.clientX - r.left - r.width / 2, cy: e.clientY - r.top - r.height / 2 }
-  }
-
   const zoomIn = () => zoomTo(scale.value * STEP)
   const zoomOut = () => zoomTo(scale.value / STEP)
 
   function onWheel(e: WheelEvent) {
-    const { cx, cy } = fromMiddle(e)
+    const { cx, cy } = fromMiddle(stage.value, e)
     zoomTo(scale.value * Math.exp(-e.deltaY * 0.0015), cx, cy)
   }
 
   function onDoubleClick(e: MouseEvent) {
     if (zoomed.value) return reset()
-    const { cx, cy } = fromMiddle(e)
+    const { cx, cy } = fromMiddle(stage.value, e)
     zoomTo(DOUBLE_CLICK_SCALE, cx, cy)
   }
 
