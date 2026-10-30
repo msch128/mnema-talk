@@ -1,0 +1,31 @@
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_1806bb6cbb4136 83
+web/src/components/ChatAreaOwnEdit.test.ts
+  s_06fcde5dbef956::t_1ffc241228d275 105-111,150-159
+web/src/composables/useMessageActions.test.ts
+  s_06fcde5dbef956::t_ac079df33a279b 127,129-134,136-138
+web/src/composables/useMessageActions.ts
+  s_06fcde5dbef956::t_9d487da99978ef 107,113-114,138,160,199-205,209
+web/src/composables/useOwnMessageNav.ts
+  s_06fcde5dbef956::t_223351bed1e80e 11,41,46-47,62,73
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_20bd0853883a69 482
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_2773379e0e3c5c 482
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "836e074a9482618fc76160ed21ac511f97177da7",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

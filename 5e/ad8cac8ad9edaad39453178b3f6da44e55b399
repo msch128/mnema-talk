@@ -1,0 +1,105 @@
+web/src/composables/useOwnMessageNav.ts
+  s_06fcde5dbef956::t_0323c7e8ff880b 1-95
+e2e/tests/arrow-edit.spec.ts
+  s_3d15a6983fd807::t_dbc0eada5ddfa8 1-74
+web/src/components/ChatArea.vue
+  s_fc0029b3681126::t_da117b3db62895 22,83,314,383
+web/src/components/ChatAreaOwnEdit.test.ts
+  s_afb3377f9f37f8::t_80cae04253bd31 1-219
+web/src/components/ChatComposer.vue
+  s_1a92838c482d40::t_0ff64d162a4f81 39,96
+web/src/components/MessageEditor.vue
+  s_1a92838c482d40::t_9f53211c122f78 4,7,15-16,20,39-43,55-57,66
+web/src/components/MessageRow.vue
+  s_1a92838c482d40::t_a424aa0624f172 48,181
+web/src/components/ThreadComposer.vue
+  s_1a92838c482d40::t_4f74c928892424 26,41
+web/src/components/ThreadReply.vue
+  s_1a92838c482d40::t_e83ce7f70c790f 27,142
+web/src/components/ThreadSidebar.vue
+  s_1a92838c482d40::t_76057c53115b00 19,92,326,347
+web/src/composables/useComposerKeys.ts
+  s_1a92838c482d40::t_e294ff47f10e6b 12-13,22,25
+web/src/composables/useMessageActions.ts
+  s_28915fd19e1e49::t_6708eb4230133c 181,184,187,190,194-199,201
+web/src/composables/useMessageMenu.test.ts
+  s_4c6a19030e223f::t_96ea0941e8262a 22
+web/src/composables/useMessageMenuLater.test.ts
+  s_4c6a19030e223f::t_3b7feea6bb7754 20
+web/src/composables/useMessageMenuSaved.test.ts
+  s_4c6a19030e223f::t_2aa0ae3dc7531d 28
+web/src/composables/useMessageModerationMenu.test.ts
+  s_2de5838cb2797c::t_021160bb8e8967 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ead8cac8ad9edaad39453178b3f6da44e55b399",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_1a92838c482d40": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-talk-limit-f9c615740774e6fb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_28915fd19e1e49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-arrow-edit-f0518ce8535c51ee",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2de5838cb2797c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aperf-idle-a1f825253ff37314",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3d15a6983fd807": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-stats-packets-a99b089a927db102",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fc0029b3681126": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-forum-close-472189c9bd464366",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
