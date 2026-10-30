@@ -13,7 +13,10 @@ import (
 
 const (
 	MaxMessageLen = 4000
-	maxEmojiBytes = 32
+	maxEmojiBytes = 64
+	// maxEmojiRunes bounds one emoji sequence: the longest real ones (a kiss or
+	// a family with skin tones, a subdivision flag) have 11 code points or fewer.
+	maxEmojiRunes = 16
 )
 
 type MediaAttachment struct {
@@ -193,7 +196,7 @@ func validEmojiLength(emoji string) bool {
 	if emoji == "" || len(emoji) > maxEmojiBytes {
 		return false
 	}
-	return utf8.ValidString(emoji)
+	return utf8.ValidString(emoji) && utf8.RuneCountInString(emoji) <= maxEmojiRunes
 }
 
 // ValidateEmoji accepts a short, printable, whitespace-free reaction token

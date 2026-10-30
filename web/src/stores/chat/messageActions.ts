@@ -2,6 +2,7 @@ import type { CreateMessageRequest } from '../../types/domain'
 import { decodeMessage, decodeReactionResult } from '../../types/domain'
 import { api, isApiError } from '../../lib/api'
 import { encodeShortcodes } from '../../lib/customEmoji'
+import { resolveReaction } from '../../lib/reactionEmoji'
 import { t } from '../../i18n'
 import { useEmojiStore } from '../emoji'
 import { assertCommunity, type Cx } from './state'
@@ -106,7 +107,9 @@ export async function setPinned(cx: Cx, channelId: string, messageId: string, pi
 export async function toggleReaction(cx: Cx, messageId: string, emoji: string) {
   const { cs } = cx
   const community = cs.communityGeneration
-  const data = await api(`/api/messages/${messageId}/reactions`, { method: 'POST', json: { emoji }, decode: decodeReactionResult })
+  const pending = resolveReaction(emoji, useEmojiStore().byName)
+  const resolved = typeof pending === 'string' ? pending : await pending
+  const data = await api(`/api/messages/${messageId}/reactions`, { method: 'POST', json: { emoji: resolved }, decode: decodeReactionResult })
   assertCommunity(cx, community)
   applyToMessage(cx, messageId, m => { m.reactions = data.reactions || [] })
   return data.reactions
