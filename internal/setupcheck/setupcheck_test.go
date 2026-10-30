@@ -76,7 +76,7 @@ func TestEveryProblemNamesTheVariableToSet(t *testing.T) {
 		level Level
 		fix   string
 	}{
-		PublicURL:    {Fail, "PUBLIC_URL="},
+		PublicURL:    {Warn, "PUBLIC_URL="}, // a trial on this computer is legitimate: amber, not red
 		VoiceAddress: {Fail, "WEBRTC_NAT_1TO1_IP="},
 		Turn:         {Warn, "WEBRTC_BUILTIN_TURN=off"},
 		Mail:         {Warn, "SMTP_HOST"},
@@ -229,7 +229,7 @@ func TestResolveAnnouncement(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			cfg := prodConfig(t, tc.env)
-			got := ResolveAnnouncement(context.Background(), cfg, tc.detect)
+			got := ResolveAnnouncement(context.Background(), cfg, tc.detect, Host{})
 			if strings.Join(got.Entries, ",") != tc.entries || got.Source != tc.source || !strings.Contains(got.DetectErr, tc.errPart) || (tc.errPart == "" && got.DetectErr != "") {
 				t.Fatalf("got %+v, want entries %q source %s err %q", got, tc.entries, tc.source, tc.errPart)
 			}

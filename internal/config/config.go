@@ -107,6 +107,10 @@ type Config struct {
 	// WebRTCAnnounce lists the IPs or host names announced to browsers for
 	// media (WEBRTC_NAT_1TO1_IP, comma-separated).
 	WebRTCAnnounce []string
+	// WebRTCLANIPs (WEBRTC_LAN_IP, comma-separated IPv4 addresses) are the
+	// host's LAN addresses announced next to the automatically found public
+	// address, so members on the same network reach voice without NAT loopback.
+	WebRTCLANIPs []string
 	// WebRTCAutoAnnounce (WEBRTC_AUTO_ANNOUNCE, default true) lets a
 	// production server find its public IPv4 address with a STUN request when
 	// WEBRTC_NAT_1TO1_IP is empty. WebRTCDetectSTUN lists the STUN servers

@@ -58,6 +58,9 @@ type Generated struct {
 	Secrets              Secrets
 }
 
+// Dir is the directory the files were written to.
+func (g Generated) Dir() string { return filepath.Dir(g.EnvPath) }
+
 // Write creates .env (mode 0600) and docker-compose.yml in o.Dir. Existing
 // files are never replaced without Force: a new .env holds new secrets, and
 // a database or object store created with the old ones would refuse them.

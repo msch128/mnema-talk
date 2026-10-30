@@ -36,6 +36,7 @@ const (
 	Database     = "database"
 	Clock        = "clock"
 	ReverseProxy = "reverse_proxy"
+	Network      = "network"
 )
 
 // Check is one line of the setup list.
@@ -71,6 +72,9 @@ type Runtime struct {
 	announceSource string
 	announceIPs    []string
 	detectErr      string
+	networkCode    string
+	networkLevel   Level
+	networkParams  Params
 	skew           time.Duration
 	clockMeasured  bool
 }
@@ -80,6 +84,14 @@ type Runtime struct {
 func (r *Runtime) SetAnnounce(source string, ips []string, detectErr string) {
 	r.mu.Lock()
 	r.announceSource, r.announceIPs, r.detectErr = source, append([]string(nil), ips...), detectErr
+	r.mu.Unlock()
+}
+
+// SetNetwork records that the connection cannot take port forwarding (CGNAT,
+// no IPv4, a different gateway); code is a network.* code, see ClassifyNetwork.
+func (r *Runtime) SetNetwork(code string, level Level, p Params) {
+	r.mu.Lock()
+	r.networkCode, r.networkLevel, r.networkParams = code, level, p
 	r.mu.Unlock()
 }
 
@@ -97,6 +109,9 @@ type runtimeSnapshot struct {
 	detectErr     string
 	skew          time.Duration
 	clockMeasured bool
+	networkCode   string
+	networkLevel  Level
+	networkParams Params
 }
 
 func (r *Runtime) snapshot() runtimeSnapshot {
@@ -105,7 +120,7 @@ func (r *Runtime) snapshot() runtimeSnapshot {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	s := runtimeSnapshot{source: r.announceSource, ips: r.announceIPs, detectErr: r.detectErr, skew: r.skew, clockMeasured: r.clockMeasured}
+	s := runtimeSnapshot{source: r.announceSource, ips: r.announceIPs, detectErr: r.detectErr, skew: r.skew, clockMeasured: r.clockMeasured, networkCode: r.networkCode, networkLevel: r.networkLevel, networkParams: r.networkParams}
 	if s.source == "" {
 		s.source = SourceNone
 	}
@@ -151,7 +166,18 @@ func Run(in Input) []Check {
 	if c, ok := clockCheck(rt); ok {
 		checks = append(checks, c)
 	}
+	if rt.networkCode != "" {
+		checks = append(checks, networkCheck(rt.networkCode, rt.networkLevel, cloneParams(rt.networkParams)))
+	}
 	return append(checks, proxyCheck(has))
+}
+
+func cloneParams(p Params) Params {
+	out := make(Params, len(p))
+	for k, v := range p {
+		out[k] = v
+	}
+	return out
 }
 
 // Worst returns the most severe level in the list (ok for an empty list).
@@ -181,7 +207,7 @@ func publicURLCheck(in Input, has map[string]bool) Check {
 	p := Params{"public_url": cfg.PublicURL, "origin": in.RequestOrigin}
 	switch {
 	case cfg.IsProduction() && cfg.PublicURLIsLocal():
-		return newCheck(PublicURL, "public_url.local", Fail, p)
+		return newCheck(PublicURL, "public_url.local", Warn, p)
 	case in.RequestOrigin != "" && !sameOrigin(in.RequestOrigin, cfg.PublicURL):
 		return newCheck(PublicURL, "public_url.origin_mismatch", Warn, p)
 	case cfg.InsecurePublicURLWarning() != "" || has[opwarn.InsecurePublicURL]:

@@ -30,6 +30,7 @@ const (
 	attrMappedAddress  = 0x0001
 	attrXORMapped      = 0x0020
 	familyIPv4         = 0x01
+	familyIPv6         = 0x02
 )
 
 // Detect asks the servers in order and returns the first public IPv4 address
@@ -37,6 +38,17 @@ const (
 // "host:port", "stun:host:port" and "stun:host" (port 3478). Each server gets
 // at most perServer; ctx bounds the whole probe.
 func Detect(ctx context.Context, servers []string, perServer time.Duration) (netip.Addr, string, error) {
+	return detect(ctx, servers, perServer, false)
+}
+
+// Detect6 is Detect over IPv6: it returns the first global IPv6 address a
+// server reports. Only the setup checks use it, to tell a connection without a
+// public IPv4 address (IPv6 works, IPv4 does not) from one with a broken STUN.
+func Detect6(ctx context.Context, servers []string, perServer time.Duration) (netip.Addr, string, error) {
+	return detect(ctx, servers, perServer, true)
+}
+
+func detect(ctx context.Context, servers []string, perServer time.Duration, v6 bool) (netip.Addr, string, error) {
 	if perServer <= 0 {
 		perServer = DefaultTimeout
 	}
@@ -45,7 +57,7 @@ func Detect(ctx context.Context, servers []string, perServer time.Duration) (net
 		if ctx.Err() != nil {
 			break
 		}
-		addr, err := query(ctx, s, perServer)
+		addr, err := query(ctx, s, perServer, v6)
 		if err == nil {
 			return addr, s, nil
 		}
@@ -69,11 +81,15 @@ func hostPort(entry string) string {
 	return e
 }
 
-func query(ctx context.Context, server string, timeout time.Duration) (netip.Addr, error) {
+func query(ctx context.Context, server string, timeout time.Duration, v6 bool) (netip.Addr, error) {
 	qctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	var d net.Dialer
-	conn, err := d.DialContext(qctx, "udp4", hostPort(server))
+	network := "udp4"
+	if v6 {
+		network = "udp6"
+	}
+	conn, err := d.DialContext(qctx, network, hostPort(server))
 	if err != nil {
 		return netip.Addr{}, err
 	}
@@ -96,7 +112,7 @@ func query(ctx context.Context, server string, timeout time.Duration) (netip.Add
 			}
 			return netip.Addr{}, err
 		}
-		addr, err := parseResponse(buf[:n], txid)
+		addr, err := parseResponse(buf[:n], txid, v6)
 		if err != nil {
 			return netip.Addr{}, err
 		}
@@ -114,9 +130,9 @@ func bindingRequest() (req []byte, txid [12]byte) {
 	return req, txid
 }
 
-// parseResponse extracts the reported IPv4 address from a binding success
-// response for the given transaction.
-func parseResponse(b []byte, txid [12]byte) (netip.Addr, error) {
+// parseResponse extracts the reported address (IPv4, or IPv6 with v6) from a
+// binding success response for the given transaction.
+func parseResponse(b []byte, txid [12]byte, v6 bool) (netip.Addr, error) {
 	if len(b) < headerLen || binary.BigEndian.Uint16(b) != typeBindingSuccess ||
 		binary.BigEndian.Uint32(b[4:]) != magicCookie || string(b[8:20]) != string(txid[:]) {
 		return netip.Addr{}, errors.New("not a binding success response")
@@ -134,11 +150,11 @@ func parseResponse(b []byte, txid [12]byte) (netip.Addr, error) {
 		val := b[p+4 : p+4+l]
 		switch typ {
 		case attrXORMapped:
-			if a, ok := decodeAddress(val, true); ok {
+			if a, ok := decodeAddress(val, true, txid, v6); ok {
 				return checkPublic(a)
 			}
 		case attrMappedAddress:
-			if a, ok := decodeAddress(val, false); ok {
+			if a, ok := decodeAddress(val, false, txid, v6); ok {
 				mapped = a
 			}
 		}
@@ -147,11 +163,17 @@ func parseResponse(b []byte, txid [12]byte) (netip.Addr, error) {
 	if mapped.IsValid() {
 		return checkPublic(mapped)
 	}
-	return netip.Addr{}, errors.New("no IPv4 address in response")
+	return netip.Addr{}, errors.New("no address of the asked family in response")
 }
 
-func decodeAddress(v []byte, xor bool) (netip.Addr, bool) {
-	if len(v) < 8 || v[1] != familyIPv4 {
+func decodeAddress(v []byte, xor bool, txid [12]byte, v6 bool) (netip.Addr, bool) {
+	if len(v) < 8 {
+		return netip.Addr{}, false
+	}
+	if v6 {
+		return decodeIPv6(v, xor, txid)
+	}
+	if v[1] != familyIPv4 {
 		return netip.Addr{}, false
 	}
 	var ip [4]byte
@@ -164,6 +186,25 @@ func decodeAddress(v []byte, xor bool) (netip.Addr, bool) {
 		}
 	}
 	return netip.AddrFrom4(ip), true
+}
+
+// decodeIPv6 reads an IPv6 (XOR-)MAPPED-ADDRESS; the XOR key is the magic
+// cookie followed by the transaction id.
+func decodeIPv6(v []byte, xor bool, txid [12]byte) (netip.Addr, bool) {
+	if len(v) < 20 || v[1] != familyIPv6 {
+		return netip.Addr{}, false
+	}
+	var ip [16]byte
+	copy(ip[:], v[4:20])
+	if xor {
+		var key [16]byte
+		binary.BigEndian.PutUint32(key[:4], magicCookie)
+		copy(key[4:], txid[:])
+		for i := range ip {
+			ip[i] ^= key[i]
+		}
+	}
+	return netip.AddrFrom16(ip), true
 }
 
 // checkPublic rejects addresses that cannot be reached from the internet: a

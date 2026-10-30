@@ -19,7 +19,7 @@ func TestAnnounceDetectedFollowsTheDetectedAddressAndSurvivesFailure(t *testing.
 	t.Cleanup(cancel)
 
 	var step atomic.Int32
-	s.KeepAnnounceDetected(ctx, 5*time.Millisecond, func(context.Context) (string, error) {
+	s.KeepAnnounceDetected(ctx, 5*time.Millisecond, nil, func(context.Context) (string, error) {
 		switch step.Load() {
 		case 0:
 			return "198.51.100.1", nil
@@ -41,4 +41,21 @@ func TestAnnounceDetectedFollowsTheDetectedAddressAndSurvivesFailure(t *testing.
 	if !slices.Equal(s.AnnouncedIPs(), []string{"198.51.100.9"}) {
 		t.Fatalf("failed detection discarded the working address: %v", s.AnnouncedIPs())
 	}
+}
+
+func TestAnnounceDetectedKeepsTheLANAddressBehindTheNewPublicOne(t *testing.T) {
+	s, err := NewSFU(0, 0, []string{"198.51.100.1", "192.168.1.20"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	s.KeepAnnounceDetected(ctx, 5*time.Millisecond, []string{"192.168.1.20"}, func(context.Context) (string, error) {
+		return "198.51.100.9", nil
+	})
+	waitSFUCondition(t, "public address replaced, LAN address kept", func() bool {
+		return slices.Equal(s.AnnouncedIPs(), []string{"198.51.100.9", "192.168.1.20"})
+	})
 }

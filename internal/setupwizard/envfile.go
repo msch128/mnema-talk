@@ -28,8 +28,8 @@ func NewSecrets() Secrets {
 // publishAddr is what the compose file publishes the app port on. Behind a
 // TLS reverse proxy on the same host loopback is enough and keeps plain HTTP
 // off the network; without TLS the app is reached directly.
-func publishAddr(publicURL string) string {
-	if strings.HasPrefix(publicURL, "https://") {
+func publishAddr(o Options) string {
+	if strings.HasPrefix(o.PublicURL, "https://") || o.IsLocal() {
 		return "127.0.0.1"
 	}
 	return "0.0.0.0"
@@ -63,13 +63,28 @@ func RenderEnv(o Options, s Secrets, now time.Time) string {
 	w("ADMIN_INITIAL_PASSWORD=%s", s.AdminPassword)
 	w("")
 	w("# --- Network ---")
-	w("PUBLISH_ADDR=%s", publishAddr(o.PublicURL))
+	w("PUBLISH_ADDR=%s", publishAddr(o))
+	if o.AppPort() != defaultAppPort {
+		w("PORT=%s", o.AppPort())
+	}
+	if o.IsLocal() {
+		w("# A trial on this computer: voice and the relay stay on it as well.")
+		w("WEBRTC_PUBLISH_ADDR=127.0.0.1")
+		w("TURN_PUBLISH_ADDR=127.0.0.1")
+	}
 	w("# Reverse proxy not on this host? Name its address (never a whole range):")
 	w("# TRUSTED_PROXY_CIDRS=172.17.0.1")
 	w("# Voice: the public IPv4 address is found at startup with a STUN request.")
 	w("# Pin it (or give a dynamic-DNS name) if that is wrong or you want no lookup:")
 	w("# WEBRTC_NAT_1TO1_IP=203.0.113.7")
 	w("# WEBRTC_AUTO_ANNOUNCE=false")
+	w("# This host's address in your own network, announced next to the public one so")
+	w("# members at home reach voice although the router cannot loop back to itself:")
+	if o.LANIP != "" {
+		w("WEBRTC_LAN_IP=%s", o.LANIP)
+	} else {
+		w("# WEBRTC_LAN_IP=192.168.1.20")
+	}
 	w("# Members behind networks that block UDP connect through the built-in TURN relay")
 	w("# on port 3479 (UDP and TCP; forward it like the voice ports). It is off while")
 	w("# WEBRTC_TURN_URLS names an external TURN server. Switch it: auto (default), on, off.")

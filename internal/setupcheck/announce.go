@@ -24,6 +24,12 @@ type Announcement struct {
 	// DetectErr is why the automatic detection found nothing; "" when it
 	// was not tried or succeeded.
 	DetectErr string
+	// DetectedIP is the public IPv4 address STUN reported; invalid when no
+	// request was made or it failed.
+	DetectedIP netip.Addr
+	// LAN are the host's LAN addresses announced after the public one (already
+	// part of Entries); the periodic re-detection keeps them.
+	LAN []string
 }
 
 // detectTimeout bounds the wait for each STUN server at startup.
@@ -33,8 +39,25 @@ const detectTimeout = 2 * time.Second
 // explicit WEBRTC_NAT_1TO1_IP always wins and is left alone. Only a
 // production-like server without one looks further: an IPv4 address in
 // PUBLIC_URL is announced as it is, and, unless WEBRTC_AUTO_ANNOUNCE=false,
-// the public address is found with a STUN request and added.
-func ResolveAnnouncement(ctx context.Context, cfg *config.Config, detect Detector) Announcement {
+// the public address is found with a STUN request and added. A PUBLIC_URL on
+// this machine (a trial on one computer) announces 127.0.0.1. Once a public
+// address is announced, the host's LAN address follows it (see LANAnnounce),
+// so members in the LAN do not depend on NAT loopback.
+func ResolveAnnouncement(ctx context.Context, cfg *config.Config, detect Detector, host Host) Announcement {
+	a := resolvePublic(ctx, cfg, detect)
+	if a.Source == SourceEnv || a.Source == SourceNone || len(a.Entries) == 0 {
+		return a
+	}
+	for _, lan := range LANAnnounce(cfg, host) {
+		if !slices.Contains(a.Entries, lan) {
+			a.Entries = append(a.Entries, lan)
+			a.LAN = append(a.LAN, lan)
+		}
+	}
+	return a
+}
+
+func resolvePublic(ctx context.Context, cfg *config.Config, detect Detector) Announcement {
 	if len(cfg.WebRTCAnnounce) > 0 {
 		return Announcement{Entries: cfg.WebRTCAnnounce, Source: SourceEnv}
 	}
@@ -42,6 +65,11 @@ func ResolveAnnouncement(ctx context.Context, cfg *config.Config, detect Detecto
 		return Announcement{Source: SourceNone}
 	}
 	a := Announcement{Source: SourceNone}
+	if cfg.PublicURLIsLocal() {
+		// A trial on one computer: the browser reaches the published UDP port
+		// on this machine's loopback; no address needs to be looked up.
+		return Announcement{Entries: []string{"127.0.0.1"}, Source: SourcePublicURL}
+	}
 	if ip, ok := cfg.PublicIPv4(); ok {
 		a.Entries, a.Source = []string{ip.String()}, SourcePublicURL
 		if !ip.IsPrivate() {
@@ -62,6 +90,7 @@ func ResolveAnnouncement(ctx context.Context, cfg *config.Config, detect Detecto
 		a.Entries = append(a.Entries, s)
 	}
 	a.Source = SourceDetected
+	a.DetectedIP = ip
 	return a
 }
 

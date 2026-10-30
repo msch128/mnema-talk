@@ -1,0 +1,19 @@
+
+Written:
+  /srv/mnema/.env   (secrets inside, mode 600)
+  /srv/mnema/docker-compose.yml
+
+Owner account for the first sign-in:
+  user      admin
+  password  example-password
+  (also in .env as ADMIN_INITIAL_PASSWORD)
+
+What to do next:
+  1. Start it, in the folder with the two files:
+       docker compose up -d --wait
+  2. Open http://192.168.1.20:8080 in your browser.
+  3. Sign in as "admin" with the password above.
+  4. Change the password (your profile settings, Password), then delete the ADMIN_INITIAL_PASSWORD line from .env.
+  5. This address is plain http://, so it works inside your network only and browsers block the microphone on it from other computers. For members elsewhere use an https:// address and the three port forwards (doc/operations.md).
+
+Update later: docker compose pull && docker compose up -d
