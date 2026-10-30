@@ -1,0 +1,62 @@
+doc/architecture.md
+  h_0ff4f4713441f4 629,638-639
+e2e/tests/unread-jump.spec.ts
+  h_0ff4f4713441f4 2,25-28,62-73,75-76,91-108
+internal/bot/rest_faults_integration_test.go
+  h_0ff4f4713441f4 251-253
+internal/chat/post.go
+  h_0ff4f4713441f4 184,189-211
+internal/chat/readstate.go
+  h_0ff4f4713441f4 106-108,118-130,132,143,150-152
+internal/server/channel_access_integration_test.go
+  h_0ff4f4713441f4 124-126,237-238
+internal/server/read_after_send_integration_test.go
+  h_0ff4f4713441f4 1-83
+internal/server/readstate_integration_test.go
+  h_0ff4f4713441f4 80-85
+internal/server/voice_chat_integration_test.go
+  h_0ff4f4713441f4 115-117
+web/src/components/AudioOutputSection.test.ts
+  h_0ff4f4713441f4 1-46
+web/src/components/AudioOutputSection.vue
+  h_0ff4f4713441f4 5-6,24-33,111-135
+web/src/composables/useFirstUnreadJump.send.test.ts
+  h_0ff4f4713441f4 1-96
+web/src/i18n/de.json
+  h_0ff4f4713441f4 762-766
+web/src/i18n/en.json
+  h_0ff4f4713441f4 762-766
+web/src/lib/messageSound.test.ts
+  h_0ff4f4713441f4 1-56
+web/src/lib/messageSound.ts
+  h_0ff4f4713441f4 1-46
+web/src/lib/soundEffects.test.ts
+  h_0ff4f4713441f4 206-242
+web/src/lib/soundEffects.ts
+  h_0ff4f4713441f4 102,142-147,194,212-214,221-241
+web/src/main.ts
+  h_0ff4f4713441f4 16,37
+web/src/stores/chat/events.ts
+  h_0ff4f4713441f4 23,141-142
+web/src/stores/chat/messageActions.ts
+  h_0ff4f4713441f4 1,34-48,64,85
+web/src/stores/chat/messageSound.ts
+  h_0ff4f4713441f4 1-50
+web/src/stores/chat/notifications.ts
+  h_0ff4f4713441f4 56,76-78,87
+web/src/stores/chatMessageSound.test.ts
+  h_0ff4f4713441f4 1-90
+web/src/stores/voiceSettings.ts
+  h_0ff4f4713441f4 5,74,77,113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6246db5ab32774ad17f3a0a3570433020ac942b1",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
