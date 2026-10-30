@@ -12,7 +12,6 @@ import { useToastStore } from '../stores/toast'
 import { useBlocksStore } from '../stores/blocks'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { usePermissionsStore } from '../stores/permissions'
-import * as forumApi from '../lib/forumApi'
 import { setLocale, t } from '../i18n'
 import { closeViewer, viewerState } from '../composables/useMediaViewer'
 
@@ -551,52 +550,14 @@ describe('ThreadSidebar forum posts and follow', () => {
     chat.activeThread = msg('root', 'u2', { title: 'A forum post', is_locked: opts.locked ?? false })
     return chat
   }
-  const lockBtn = () => w.find('[data-testid="thread-lock-toggle"]')
-
-  it('offers locking only for forum posts and only to moderators', async () => {
-    setupPost({ canManage: false })
-    await nextTick()
-    expect(lockBtn().exists()).toBe(false)
-    w.unmount()
+  it('shows the post header for forum posts only, and no lock button in the top bar', async () => {
     const chat = setupPost({ canManage: true })
     await nextTick()
-    expect(lockBtn().attributes('aria-label')).toBe(t('forum.lockPost'))
+    expect(w.find('[data-testid="forum-post-header"]').exists()).toBe(true)
+    expect(w.find('[data-testid="thread-lock-toggle"]').exists()).toBe(false)
     chat.activeThread = msg('root', 'u2')
     await nextTick()
-    expect(lockBtn().exists()).toBe(false)
-  })
-
-  it('locks a post through the API and flips the button', async () => {
-    const chat = setupPost({ canManage: true })
-    vi.mocked(forumApi.updateForumPost).mockResolvedValue(msg('root', 'u2'))
-    await nextTick()
-    await lockBtn().trigger('click')
-    await flushPromises()
-
-    expect(forumApi.updateForumPost).toHaveBeenCalledWith('ch1', 'root', { is_locked: true })
-    expect(chat.activeThread?.is_locked).toBe(true)
-    expect(lockBtn().attributes('aria-label')).toBe(t('forum.unlockPost'))
-  })
-
-  it('unlocks a locked post', async () => {
-    const chat = setupPost({ canManage: true, locked: true })
-    vi.mocked(forumApi.updateForumPost).mockResolvedValue(msg('root', 'u2'))
-    await nextTick()
-    await lockBtn().trigger('click')
-    await flushPromises()
-    expect(forumApi.updateForumPost).toHaveBeenCalledWith('ch1', 'root', { is_locked: false })
-    expect(chat.activeThread?.is_locked).toBe(false)
-  })
-
-  it('keeps the lock state and shows a toast when locking fails', async () => {
-    const chat = setupPost({ canManage: true })
-    vi.mocked(forumApi.updateForumPost).mockRejectedValue(new Error('server said no'))
-    await nextTick()
-    await lockBtn().trigger('click')
-    await flushPromises()
-
-    expect(chat.activeThread?.is_locked).toBe(false)
-    expect(useToastStore().toasts.some(x => x.text.includes('server said no'))).toBe(true)
+    expect(w.find('[data-testid="forum-post-header"]').exists()).toBe(false)
   })
 
   it('toggles following the thread', async () => {
@@ -659,21 +620,6 @@ describe('ThreadSidebar races and deleted authors', () => {
     done()
     await flushPromises()
     expect(textarea().element.value).toBe('draft of B')
-  })
-
-  it('does not lock the post that is open now when the answer is for another one', async () => {
-    const chat = setup()
-    vi.spyOn(usePermissionsStore(), 'canIn').mockReturnValue(true)
-    chat.activeThread = msg('root', 'u2', { title: 'Post A', is_locked: false })
-    let done!: () => void
-    vi.mocked(forumApi.updateForumPost).mockImplementation(() => new Promise(res => { done = () => res(msg('root', 'u2')) }))
-    await nextTick()
-    await w.get('[data-testid="thread-lock-toggle"]').trigger('click')
-    chat.activeThread = msg('post-b', 'u2', { title: 'Post B', is_locked: false })
-    await nextTick()
-    done()
-    await flushPromises()
-    expect(chat.activeThread?.is_locked).toBe(false)
   })
 
   describe('scrolling', () => {

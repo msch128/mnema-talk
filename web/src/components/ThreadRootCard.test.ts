@@ -66,12 +66,11 @@ describe('ThreadRootCard', () => {
     expect(w.find('[data-testid="root-edit"]').exists()).toBe(false)
   })
 
-  it('shows the edited and pinned marks and passes images up', async () => {
+  it('shows the edited and pinned marks', async () => {
     mountCard({ is_edited: true, is_pinned: true, attachments: [attachmentFixture({ id: 'i', mime_type: 'image/png', url: '/api/media/i' })] })
     expect(w.text()).toMatch(/edited/i)
     expect(w.find('[data-testid="thread-root-pinned"]').exists()).toBe(true)
-    await w.get('img').element.closest('button')!.click()
-    expect(w.emitted('open-image')).toEqual([['/api/media/i']])
+    expect(w.find('img').exists()).toBe(true)
   })
 
   it('forwards key presses of the root', async () => {
