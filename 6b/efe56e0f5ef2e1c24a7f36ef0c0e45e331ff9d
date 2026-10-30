@@ -1,0 +1,59 @@
+api/openapi.json
+  s_e516df595aeaf4::t_ad4ee1d5154cac 28529-28539,28568-28577
+internal/linkpreview/handler.go
+  s_e516df595aeaf4::t_042625d477281a 70-71,75,86-91,93-95
+internal/linkpreview/handler_test.go
+  s_e516df595aeaf4::t_76ad49a08b7e11 11,272-307
+internal/linkpreview/linkpreview.go
+  s_e516df595aeaf4::t_68d93c2e831f4c 202-216,248
+web/src/components/AttachmentImage.vue
+  s_e516df595aeaf4::t_3a40b30bca31ec 1-47
+web/src/components/EmojiGlyph.vue
+  s_e516df595aeaf4::t_98037f689ffadb 7,21,31-36
+web/src/components/LinkPreviewCard.test.ts
+  s_e516df595aeaf4::t_dd6e0e319f69bb 4-5,11-16,67-68,70,72,161-179
+web/src/components/LinkPreviewCard.vue
+  s_e516df595aeaf4::t_46429a4e3c3ffb 6-7,41-48,127-140,162,170,179,181-187
+web/src/components/MediaImage.vue
+  s_e516df595aeaf4::t_32793a17f944fb 1-36
+web/src/components/MediaPlaceholder.test.ts
+  s_e516df595aeaf4::t_12ef2897bf3e03 1-176
+web/src/components/MediaPlaceholder.vue
+  s_e516df595aeaf4::t_076d95027c2191 1-44
+web/src/components/MessageAttachments.vue
+  s_e516df595aeaf4::t_b6daf28aa1638c 11,34,49,64,105,108,110-115,118,128,130-134,137
+web/src/components/ParticipantTile.vue
+  s_e516df595aeaf4::t_529f8a95f9a467 13,145,152-154
+web/src/components/ProfileAvatar.vue
+  s_e516df595aeaf4::t_d9fb92b19e28ff 15,87,92-96
+web/src/components/UserAvatar.vue
+  s_e516df595aeaf4::t_1892bb0c627a0b 6,76-78,82-85
+web/src/components/UserProfileModal.vue
+  s_e516df595aeaf4::t_bdc75a6c8ad535 19,152-153,159-163
+web/src/composables/useMediaImage.ts
+  s_e516df595aeaf4::t_89ec73788365cc 1-41
+web/src/i18n/de.json
+  s_e516df595aeaf4::t_ba2cd8abd90a28 82-84
+web/src/i18n/en.json
+  s_e516df595aeaf4::t_70e5d18182f10c 82-84
+web/src/lib/mediaStatus.test.ts
+  s_e516df595aeaf4::t_758711ab099f3b 1-58
+web/src/lib/mediaStatus.ts
+  s_e516df595aeaf4::t_460e04dfe99312 1-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6befe56e0f5ef2e1c24a7f36ef0c0e45e331ff9d",
+  "prompts": {},
+  "sessions": {
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
