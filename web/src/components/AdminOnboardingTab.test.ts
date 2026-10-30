@@ -159,9 +159,9 @@ describe('AdminOnboardingTab', () => {
     const saveOff = () => w.find('[data-testid="onboarding-save"]').attributes('disabled') !== undefined
     await w.find('#onb-name').setValue('  Home ')
     expect(saveOff()).toBe(true)
-    await w.find('[data-testid="inactivity-days"]').setValue('9')
+    await w.find('#onb-welcome').setValue('Hi there')
     expect(saveOff()).toBe(false)
-    await w.find('[data-testid="inactivity-days"]').setValue('7')
+    await w.find('#onb-welcome').setValue('Hi')
     expect(saveOff()).toBe(true)
     await w.find('[data-testid="reaccept"]').setValue(true)
     expect(saveOff()).toBe(false)

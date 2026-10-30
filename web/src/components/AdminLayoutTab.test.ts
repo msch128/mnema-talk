@@ -85,7 +85,7 @@ describe('layout editing recovery and unsaved order', () => {
     await flushPromises()
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ categoryId: fixtureId(30), name: 'ideas' }))
     expect(cat(w, 30).text()).toContain('ideas')
-    expect(w.text()).toContain('Unsaved changes')
+    expect(w.text()).toContain('You have unsaved changes')
   })
 
   it('reorders categories and uncategorized channels in both directions and exercises native drag events', async () => {
