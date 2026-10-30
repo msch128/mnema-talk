@@ -10,12 +10,16 @@
 // The marker can be indented (a block inside a list item); the block is
 // returned dedented. The CI proxy matrix and setup assistant checks run the
 // blocks as they stand, so editing a documented command changes what CI tests.
-// Names used: caddy, nginx (doc/operations.md); setup-synology, setup-unraid,
-// setup-vps, setup-flags (doc/quick-start.md); allow-old-version marks a block
+// Names used: caddy, nginx; setup-synology, setup-unraid,
+// setup-vps, setup-flags; allow-old-version marks a block
 // that deliberately names an old release (scripts/check-onboarding-docs.mjs).
 //
-// CLI: node scripts/doc-blocks.mjs <file.md> <name>   prints the block's text
-import { readFileSync } from 'node:fs'
+// A name is looked up in README.md and every doc/*.md, so a block can move
+// between docs without touching the checks; it must match exactly one block.
+//
+// CLI: node scripts/doc-blocks.mjs <name>   prints the block's text
+import { readFileSync, readdirSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const MARKER = /^\s*<!--\s*test:([a-z0-9-]+)\s*-->\s*$/
@@ -52,14 +56,28 @@ export function markedBlock(text, file, name) {
   return found[0].body
 }
 
+// docFiles lists README.md and doc/*.md relative to the repository root.
+export function docFiles(root = resolve(dirname(fileURLToPath(import.meta.url)), '..')) {
+  return ['README.md', ...readdirSync(join(root, 'doc')).filter((f) => f.endsWith('.md')).sort().map((f) => `doc/${f}`)].map((f) => ({ file: f, path: join(root, f) }))
+}
+
+// findBlock returns the text of the one block called name across all docs.
+export function findBlock(name, files = docFiles()) {
+  const found = files.flatMap(({ file, path }) => markedBlocks(readFileSync(path, 'utf8')).filter((b) => b.name === name).map((b) => ({ ...b, file })))
+  if (found.length !== 1) {
+    throw new Error(`expected exactly one "<!-- test:${name} -->" block in README.md and doc/*.md, found ${found.length}` + found.map((b) => ` (${b.file}:${b.line})`).join(''))
+  }
+  return found[0].body
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const [file, name] = process.argv.slice(2)
-  if (!file || !name) {
-    console.error('usage: node scripts/doc-blocks.mjs <file.md> <name>')
+  const name = process.argv[2]
+  if (!name) {
+    console.error('usage: node scripts/doc-blocks.mjs <name>')
     process.exit(2)
   }
   try {
-    process.stdout.write(markedBlock(readFileSync(file, 'utf8'), file, name))
+    process.stdout.write(findBlock(name))
   } catch (e) {
     console.error(e.message)
     process.exit(1)

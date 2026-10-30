@@ -3,7 +3,7 @@
 would type them, and checks the files it writes.
 
 The commands are read from the doc blocks marked <!-- test:setup-synology -->,
-setup-unraid, setup-vps and setup-flags in doc/quick-start.md (see
+setup-unraid, setup-vps and setup-flags in README.md or doc/*.md (see
 scripts/doc-blocks.mjs). Only what cannot work in CI is rewritten: the published
 image becomes the image under test, sudo and -it are dropped, and the flags that
 make the run non-interactive and offline are added when the block lacks them.
@@ -32,8 +32,7 @@ SMTP_FLAGS = ("--smtp-host smtp.example.com --smtp-port 587 --smtp-tls starttls 
 
 
 def block(name):
-    out = subprocess.run(["node", os.path.join(ROOT, "scripts/doc-blocks.mjs"),
-                          os.path.join(ROOT, "doc/quick-start.md"), name],
+    out = subprocess.run(["node", os.path.join(ROOT, "scripts/doc-blocks.mjs"), name],
                          capture_output=True, text=True)
     if out.returncode != 0:
         sys.exit(out.stderr.strip() or "cannot read doc block " + name)

@@ -4,9 +4,10 @@
 //   F4  every setup check code the server can send is listed in the docs
 //   F5  doc/ports.md lists exactly the inbound ports docker-compose.yml publishes
 // Usage: node scripts/check-onboarding-docs.mjs
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { docFiles } from './doc-blocks.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(join(root, p), 'utf8')
@@ -69,13 +70,13 @@ function checkVersions() {
 
 export function missingCodes(codes, docs) {
   return codes.filter((c) => !docs.some((d) => d.includes('`' + c + '`'))).map(
-    (c) => `setup check code "${c}" is not in a docs table: add a row \`${c}\` to "Setup checks" in doc/operations.md (or doc/troubleshooting-voice.md)`,
+    (c) => `setup check code "${c}" is not in a docs table: add a row \`${c}\` to the "Check codes" table in doc/operations.md (or a table in doc/troubleshooting-voice.md)`,
   )
 }
 
 function checkCodes() {
   const codes = JSON.parse(read('api/status-codes.json')).setup_checks
-  const docs = ['doc/operations.md', 'doc/troubleshooting-voice.md'].filter((f) => existsSync(join(root, f))).map(read)
+  const docs = docFiles(root).map((f) => read(f.file))
   return missingCodes(codes, docs)
 }
 

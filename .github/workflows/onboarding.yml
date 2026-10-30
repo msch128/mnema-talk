@@ -3,9 +3,9 @@ name: Onboarding
 # The newcomer path, tested against the docs themselves. Runs on pull requests
 # that touch the docs, the compose file, the setup assistant or the setup
 # checks (and on main). The docs are the test input:
-#   - the `docker run ... setup` lines of doc/quick-start.md are executed and
+#   - the `docker run ... setup` lines of the quick-start docs are executed and
 #     the generated .env and docker-compose.yml are checked;
-#   - the Caddy and nginx snippets of doc/operations.md run in front of the
+#   - the Caddy and nginx snippets of the operations doc run in front of the
 #     app: HTTPS, the /api/ws upgrade and the Status tab's proxy warning.
 # Blocks are found by the markers described in scripts/doc-blocks.mjs. The
 # static checks (stale versions, setup check codes, ports) run in ci.yml.
@@ -81,7 +81,7 @@ jobs:
 
       - run: docker load -i "$RUNNER_TEMP/mnema-talk.tar"
 
-      # Synology, Unraid, VPS and flag lines of doc/quick-start.md, then
+      # Synology, Unraid, VPS and flag lines from the docs, then
       # .env keys and secrets, `docker compose config`, no overwrite.
       - name: Setup assistant command lines from the docs
         run: python3 scripts/onboarding_wizard_check.py mnema-talk:ci

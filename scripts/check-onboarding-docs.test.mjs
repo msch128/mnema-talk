@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { markedBlock, markedBlocks } from './doc-blocks.mjs'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { docFiles, findBlock, markedBlock, markedBlocks } from './doc-blocks.mjs'
 import { comparePorts, composePorts, docPorts, missingCodes, staleVersions } from './check-onboarding-docs.mjs'
 
 const cur = { major: 2, minor: 0 }
@@ -64,4 +67,15 @@ test('marked blocks are found, dedented and need exactly one match', () => {
   assert.equal(markedBlock(md, 'f.md', 'x'), 'echo a\n  echo b\n')
   assert.throws(() => markedBlock(md, 'f.md', 'y'), /exactly one/)
   assert.equal(markedBlocks('<!-- test:a -->\nno fence here\n').length, 0)
+})
+
+test('a block is found in any doc and must be unique across all of them', () => {
+  const root = mkdtempSync(join(tmpdir(), 'docs-'))
+  mkdirSync(join(root, 'doc'))
+  writeFileSync(join(root, 'README.md'), '')
+  writeFileSync(join(root, 'doc', 'a.md'), '<!-- test:x -->\n```sh\none\n```\n')
+  assert.equal(findBlock('x', docFiles(root)), 'one\n')
+  writeFileSync(join(root, 'doc', 'b.md'), '<!-- test:x -->\n```sh\ntwo\n```\n')
+  assert.throws(() => findBlock('x', docFiles(root)), /found 2.*doc\/a\.md.*doc\/b\.md/)
+  assert.throws(() => findBlock('missing', docFiles(root)), /found 0/)
 })

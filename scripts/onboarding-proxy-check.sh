@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Proxy matrix: the app behind Caddy or nginx, configured with the exact
-# snippets from doc/operations.md (the blocks marked <!-- test:caddy --> and
+# snippets from the docs (the blocks marked <!-- test:caddy --> and
 # <!-- test:nginx -->, read by scripts/doc-blocks.mjs). Only what a CI run
 # cannot share with a real host is rewritten: the host name of the app, a
 # self-signed certificate, and the nginx certificate paths.
@@ -82,7 +82,7 @@ echo "==> app up"
 "${COMPOSE[@]}" up -d --wait --wait-timeout 240
 
 # ---- the proxy: the documented snippet, run as a container next to the app --
-snippet="$(node "$SRC/scripts/doc-blocks.mjs" "$SRC/doc/operations.md" "$PROXY")"
+snippet="$(node "$SRC/scripts/doc-blocks.mjs" "$PROXY")"
 grep -q 'app-host:8080' <<<"$snippet" || fail "the $PROXY snippet no longer forwards to app-host:8080; update scripts/onboarding-proxy-check.sh"
 snippet="${snippet//app-host:8080/app:8080}"   # the app's service name on the compose network
 
