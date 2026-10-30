@@ -1,0 +1,21 @@
+web/src/lib/pttKey.test.ts
+  s_82e9d48cb7fc7f::t_c103ca4ba748a0 14-16
+web/src/lib/pttKey.ts
+  s_82e9d48cb7fc7f::t_78e01c8e720d40 25-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bd42388ef704fc926fe57f8894bb61e0f4b91b07",
+  "prompts": {},
+  "sessions": {
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
