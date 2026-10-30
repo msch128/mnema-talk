@@ -80,3 +80,35 @@ export function visibleInterval(fn: () => void, ms: number, options: VisibleInte
     timer = undefined
   }
 }
+
+function pipActive(): boolean {
+  return typeof document !== 'undefined' && !!document.pictureInPictureElement
+}
+
+/**
+ * True when nobody can see video: the page is hidden and no Picture-in-Picture
+ * window is showing it (PiP is used exactly when the tab is in the background).
+ */
+export function videoUnseen(): boolean {
+  return pageHidden.value && !pipActive()
+}
+
+/** Calls fn when videoUnseen() changes: on hiding or showing the page and on entering or leaving Picture-in-Picture. */
+export function onVideoSeenChange(fn: (unseen: boolean) => void): () => void {
+  let last = videoUnseen()
+  const check = () => {
+    const next = videoUnseen()
+    if (next === last) return
+    last = next
+    fn(next)
+  }
+  const stop = onVisibilityChange(check)
+  // These bubble from the video element; the page state is already updated by then.
+  document.addEventListener('enterpictureinpicture', check, true)
+  document.addEventListener('leavepictureinpicture', check, true)
+  return () => {
+    stop()
+    document.removeEventListener('enterpictureinpicture', check, true)
+    document.removeEventListener('leavepictureinpicture', check, true)
+  }
+}

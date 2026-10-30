@@ -3,7 +3,7 @@ import { watch, computed } from 'vue'
 import type { SubscribeRequest } from '../../types/events'
 import { HIDDEN_CAMERAS_KEY, ALL_CAMERAS_OFF_KEY, HIDE_NO_VIDEO_KEY, myUserId } from './state'
 import type { VoiceState } from './state'
-import { pageHidden } from '../../lib/pageVisibility'
+import { videoUnseen } from '../../lib/pageVisibility'
 
 // A camera on the stage: mine, or one I receive and have not hidden.
 export function cameraStreamOf(cs: VoiceState, userId: string | null) {
@@ -90,7 +90,7 @@ export function toggleHideNoVideo(cs: VoiceState) {
 // Sends every stored choice; right after joining and after a reconnect.
 export function resendSubscriptions(cs: VoiceState) {
   // A page that is hidden joins without video; setVideoPaused(false) asks for it.
-  const hidden = pageHidden.value
+  const hidden = videoUnseen()
   if (cs.allCamerasOff.value || hidden) emitSubscription(cs, { kind: 'camera', all: true, on: false })
   for (const id of Object.keys(cs.hiddenCameras.value)) {
     emitSubscription(cs, { kind: 'camera', user_id: id, on: false })
