@@ -890,7 +890,8 @@ here.
 | `voice_address.missing_detect_failed` | As above, and automatic detection failed (the check names the error): set `WEBRTC_NAT_1TO1_IP`. |
 | `voice_address.missing_turn_only` | As `voice_address.missing`, and only the TURN relay can carry voice. |
 | `voice_address.missing_detect_failed_turn_only` | Detection failed and only the TURN relay can carry voice: set `WEBRTC_NAT_1TO1_IP`. |
-| `voice_udp.ok` | Voice listens on the named UDP port; forward it from the router (it cannot be tested from inside). |
+| `voice_udp.unconfirmed` | Neutral: *Listening – not yet confirmed from outside*. Voice listens on the named UDP port, but no member from outside the network has connected since the server started. Forward the port and run *Test my connection* from a phone on mobile data. |
+| `voice_udp.confirmed` | A member from outside connected (the item shows when): the voice port is reachable from outside. |
 | `voice_udp.unavailable` | The voice engine did not start: free the UDP range (or change `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX`); the log names the cause. |
 | `voice_udp.mux_disabled` | `WEBRTC_UDP_MUX_PORT=0` gives each peer its own port and caps the callers: remove it. |
 | `turn.builtin_ok` | The built-in TURN relay serves members behind strict firewalls; forward its port (UDP and TCP). |
@@ -898,7 +899,7 @@ here.
 | `turn.builtin_failed_external` | The built-in relay could not start, but an external TURN relay is configured. |
 | `turn.builtin_off_external` | The built-in relay is off and an external TURN relay is configured. |
 | `turn.voice_unavailable` | The relay is not running because the voice engine is down: fix `voice_udp.unavailable` first. |
-| `turn.unreachable` | The relay runs but its port did not answer from the server (a router without NAT loopback also causes this): forward the port and test from mobile data. |
+| `turn.unreachable` | Neutral: the server could not verify its relay port from the inside (a router without NAT loopback also causes this). Run *Test my connection* from mobile data; if it fails, forward the port. |
 | `turn.external_ok` | An external TURN relay is configured. |
 | `turn.none` | No TURN relay: members on networks that block UDP cannot join (optional; see the *TURN relay* row above). |
 | `mail.ok` | Outgoing mail is configured. |
@@ -913,6 +914,9 @@ here.
 | `reverse_proxy.ok` | No proxy header problems seen. |
 | `reverse_proxy.not_trusted` | Requests carry `X-Forwarded-For` from a proxy that is not trusted: set `TRUSTED_PROXY_CIDRS` to the proxy's own address. |
 | `reverse_proxy.broad` | `TRUSTED_PROXY_CIDRS` covers a wide range: list only the proxy's address. |
+| `websocket.ok` | A browser opened `/api/ws` and it upgraded (the item shows when). |
+| `websocket.unchecked` | Neutral: no browser has opened the live connection since the server started; reload the Status tab. |
+| `websocket.failing` | Browsers keep opening `/api/ws` without the upgrade headers: enable WebSocket in the reverse proxy (`Upgrade: websocket`, `Connection: Upgrade`). |
 | `network.cgnat` | The WAN address is in `100.64.0.0/10` (carrier-grade NAT): port forwarding cannot work. See [Can I host at home?](#can-i-host-at-home). |
 | `network.no_ipv4` | No public IPv4 while IPv6 works (DS-Lite): port forwarding over IPv4 cannot work. See [Can I host at home?](#can-i-host-at-home). |
 | `network.address_mismatch` | The host's own address differs from the one the internet sees: set `WEBRTC_NAT_1TO1_IP` to the host address if it is reachable from outside, or forward the voice ports on the gateway in front. |
