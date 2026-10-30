@@ -20,7 +20,7 @@ describe('automatic away', () => {
   let sent: string[]
   const idleMessages = () => sent.map(s => JSON.parse(s) as { type: string; payload: { idle: boolean } }).filter(m => m.type === 'presence_idle').map(m => m.payload.idle)
   const isIdle = () => idleMessages().at(-1) === true
-  const speak = (active: boolean) => cx.voiceStore.handleSpeakingEvent({ user_id: me.id, active })
+  const speak = (active: boolean) => cx.voiceStore.handleSpeakingEvent({ channel_id: fixtureId(9), user_id: me.id, active })
 
   beforeEach(() => {
     vi.useFakeTimers()
