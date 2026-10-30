@@ -57,7 +57,7 @@ no accounts on someone else's platform.
   **Join** in the Talk's header. Reading needs *View channels*, writing
   *Send messages*; *Connect* is not required.
 - **Create-a-Talk lobbies, Stages and live reactions.** Joining a lobby opens a
-  temporary Talk ("Talk 1", "Talk 2", ...) that you lead; it disappears when it
+  temporary Talk named after the lobby ("Lobby 1", "Lobby 2", ...) that you lead; it disappears when it
   is empty. *Start a Talk* in a direct message opens one and invites the
   conversation. A Talk can be a **Stage**: only members with talk power speak,
   others raise a hand and a member with *Manage stage* accepts it. Members in a
