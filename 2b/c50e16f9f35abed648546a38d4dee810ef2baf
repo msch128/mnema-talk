@@ -1,0 +1,71 @@
+api/openapi.json
+  s_e516df595aeaf4::t_11f4281f9d9259 6340-6403,13382-13550
+doc/deployment.md
+  s_e516df595aeaf4::t_39c05504956952 74-82
+e2e/tests/fixtures.ts
+  s_e516df595aeaf4::t_5280486918b0fd 138-157,235
+e2e/tests/owner-first-run.spec.ts
+  s_e516df595aeaf4::t_a88ebaaf1eacfa 1-96
+internal/audit/routes.go
+  s_e516df595aeaf4::t_9636ac54c0595d 120
+internal/onboarding/firstrun.go
+  s_e516df595aeaf4::t_4e0768a9b88bf4 1-271
+internal/onboarding/firstrun_test.go
+  s_e516df595aeaf4::t_ff0a8e079335ee 1-77
+internal/onboarding/handler.go
+  s_e516df595aeaf4::t_226b6d62046c54 69-71
+internal/server/first_run_integration_test.go
+  s_e516df595aeaf4::t_dec248f6317732 1-128
+web/src/App.test.ts
+  s_e516df595aeaf4::t_8a5ec7e45619db 13,342-354
+web/src/App.vue
+  s_e516df595aeaf4::t_354044ad5e6e05 31,128-129
+web/src/components/AdminDashboard.vue
+  s_e516df595aeaf4::t_1dc0a191a97042 7,18,137-143
+web/src/components/AdminDashboardChecklist.test.ts
+  s_e516df595aeaf4::t_fa41d4d21bd533 1-50
+web/src/components/ChatHeader.test.ts
+  s_e516df595aeaf4::t_66eaf733ccccaf 7-9,12,124-150
+web/src/components/ChatHeader.vue
+  s_e516df595aeaf4::t_40d467bdc77a63 11,17,78,293-297
+web/src/components/FirstRunCard.test.ts
+  s_e516df595aeaf4::t_151942e00dc7f6 1-136
+web/src/components/FirstRunCard.vue
+  s_e516df595aeaf4::t_ef0841116e16b5 1-92
+web/src/components/SidebarServerMenu.test.ts
+  s_e516df595aeaf4::t_01d0f5b7789731 1-64
+web/src/components/SidebarServerMenu.vue
+  s_e516df595aeaf4::t_623087cef43ab9 3,7-9,25-37,172-175
+web/src/composables/useFirstRunShown.ts
+  s_e516df595aeaf4::t_38feedfaa98392 1-16
+web/src/i18n/de.json
+  s_e516df595aeaf4::t_c9d3abfffe880e 2871-2917
+web/src/i18n/en.json
+  s_e516df595aeaf4::t_fb17280e5a8def 2871-2917
+web/src/lib/adminRequest.ts
+  s_e516df595aeaf4::t_bef686505edfe9 1-17
+web/src/stores/chat/reset.ts
+  s_e516df595aeaf4::t_a85b72debf98a6 10,19,25
+web/src/stores/firstRun.test.ts
+  s_e516df595aeaf4::t_25113763c49d08 1-98
+web/src/stores/firstRun.ts
+  s_e516df595aeaf4::t_4cb85a640408e6 1-72
+web/src/types/rest.ts
+  s_e516df595aeaf4::t_ef166116b8add8 3746-3788
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2bc50e16f9f35abed648546a38d4dee810ef2baf",
+  "prompts": {},
+  "sessions": {
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
