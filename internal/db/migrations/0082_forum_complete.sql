@@ -1,4 +1,4 @@
--- Migration 0079: forum channels, the rest of the way.
+-- Migration 0082: forum channels, the rest of the way.
 --
 --  * forum_tags: a colour (a name from a fixed palette, '' = none), a manual
 --    position and a moderated flag (only members with Manage messages apply or
