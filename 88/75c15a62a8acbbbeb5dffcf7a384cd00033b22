@@ -1,0 +1,19 @@
+e2e/tests/talk-reactions.spec.ts
+  s_06fcde5dbef956::t_bc822b8e5dba83 89,96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8875c15a62a8acbbbeb5dffcf7a384cd00033b22",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

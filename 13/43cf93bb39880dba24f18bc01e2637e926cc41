@@ -1,0 +1,31 @@
+e2e/tests/talk-reactions.spec.ts
+  s_6f111b828bba31::t_69b364003b2636 1-108
+internal/ws/reactions_integration_test.go
+  s_fc0f81897b6653::t_dead8123b7860a 1-42
+web/src/components/TalkReactButton.test.ts
+  s_6f111b828bba31::t_18f3bb858f96f4 5-7,10-12,45-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1343cf93bb39880dba24f18bc01e2637e926cc41",
+  "prompts": {},
+  "sessions": {
+    "s_6f111b828bba31": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8e716a453eda91a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fc0f81897b6653": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-tests-fc20e0fa5cecb986",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

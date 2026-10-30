@@ -1,0 +1,41 @@
+internal/chat/emoji_reaction_integration_test.go
+  s_06fcde5dbef956::t_09bec551cedd2f 1-46
+internal/chat/emoji_reaction_test.go
+  s_06fcde5dbef956::t_1c1dd8afac8a4f 1-70
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_ec67ac055671ec 16-19,199
+web/src/composables/useStage.ts
+  s_06fcde5dbef956::t_32ac08354e1840 7,13,23,57
+web/src/lib/reactionEmoji.test.ts
+  s_06fcde5dbef956::t_8902f3e25eba5a 1-29
+web/src/lib/reactionEmoji.ts
+  s_06fcde5dbef956::t_8ff1db93ded125 1-32
+web/src/stores/chat/messageActions.ts
+  s_06fcde5dbef956::t_286f65edb63b42 5,110-112
+internal/ws/reactions_test.go
+  s_3e68b8fa0e1785::t_04f5f9239dd56e 131-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b5b9f646b43aec3e7381742258879e3c62b2351e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3e68b8fa0e1785": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-reactions-7d1b14603defb791",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

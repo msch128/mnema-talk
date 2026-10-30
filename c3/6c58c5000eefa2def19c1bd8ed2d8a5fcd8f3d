@@ -1,0 +1,23 @@
+web/src/components/EmojiPicker.vue
+  s_3e68b8fa0e1785::t_86358b35247feb 9,91-92,99,108
+web/src/composables/useDismissable.test.ts
+  s_3e68b8fa0e1785::t_66b37d2a415bb4 5,23-43
+web/src/composables/useDismissable.ts
+  s_3e68b8fa0e1785::t_b43fe92c4b84b4 23-34,54-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c36c58c5000eefa2def19c1bd8ed2d8a5fcd8f3d",
+  "prompts": {},
+  "sessions": {
+    "s_3e68b8fa0e1785": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-reactions-7d1b14603defb791",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
