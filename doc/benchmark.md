@@ -139,7 +139,7 @@ values afterwards, so there is no leak.
   several Talks at once, mixed chat and voice at the same time, large
   attachments, and many members signing in at once.
 - Push notifications reached the one real member who was online while the
-  messages were sent (24 deliveries per run).
+  messages were sent (24 deliveries in each chat run).
 
 ## Reproduce
 
