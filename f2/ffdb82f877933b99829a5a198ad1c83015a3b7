@@ -1,0 +1,141 @@
+README.md
+  s_3e68b8fa0e1785::t_de0cfa3b994e2f 90-94
+e2e/tests/attachments.spec.ts
+  s_06fcde5dbef956::t_a1dcd37e69ffc5 1-85
+e2e/tests/composer-grow-paste.spec.ts
+  s_06fcde5dbef956::t_eb8de4add85cbd 34,64-65,70-71,73,80-81
+web/src/components/AttachmentTray.test.ts
+  s_bf24ce51cd8f95::t_d7ed107749a0df 1-68
+web/src/components/ChatArea.test.ts
+  s_0cae4a4d7ab7c3::t_c757aad6e66425 292,327
+web/src/components/ChatArea.vue
+  s_0cae4a4d7ab7c3::t_c8d9badc2bb971 72,74,166,181-182,184-187
+web/src/components/ChatAreaAttachments.test.ts
+  s_0cae4a4d7ab7c3::t_12af3aa97c5c5f 1-212
+web/src/components/ChatComposer.vue
+  s_46a6db8f9e8231::t_60e7673255f826 15,26,57-59,79-80,88,90,101,124,129,154-155,165,233
+web/src/components/ThreadComposer.vue
+  s_0cae4a4d7ab7c3::t_63b8ae3a1118f8 7,14-15,39-45,55,60,77-78,84,118
+web/src/components/ThreadSidebar.test.ts
+  s_46a6db8f9e8231::t_af46d7ef87b630 16,21-30,165-170,172,192,205,231,233-234,237,239-241,243,330,338
+web/src/components/ThreadSidebar.vue
+  s_0cae4a4d7ab7c3::t_251afd025d978f 59,61,188-189,199,202-205
+web/src/composables/attachmentTrayState.ts
+  s_bf24ce51cd8f95::t_70350a67791fbc 1-33
+web/src/composables/useAttachmentTray.test.ts
+  s_0cae4a4d7ab7c3::t_24ca019b6388ea 1-219
+web/src/composables/useAttachmentTray.ts
+  s_46a6db8f9e8231::t_29d8ba10267136 1-216
+web/src/composables/useComposerFiles.test.ts
+  s_0cae4a4d7ab7c3::t_807542b5e1b05e 1,16-18,28-29,33,37,41,44-45,47-48,51-58,62,64,68-69,71
+web/src/composables/useComposerFiles.ts
+  s_0cae4a4d7ab7c3::t_ef578717cd20fd 1,6-7,9,19,22,30-37
+web/src/composables/useMessageActions.test.ts
+  s_ed05b7d59456d3::t_8e324cb82d9432 122
+web/src/composables/useMessageActions.ts
+  s_0cae4a4d7ab7c3::t_58ae73421cddc1 1-2
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_312cac704c9875 593-614
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_d5e59e47a0e53a 593-614
+web/src/lib/api.ts
+  s_58ecb9dda7416a::t_3ec0bfd63cf202 6,77-78,95,158,162-163,237-238
+web/src/lib/attachmentTray.test.ts
+  s_bf24ce51cd8f95::t_6d96fc415b3f32 1-53
+web/src/lib/attachmentTray.ts
+  s_17ef7810e0243d::t_b72214b286f94e 1-63
+web/src/lib/attachmentsApi.ts
+  s_17ef7810e0243d::t_2e9c90ac539043 1-28
+web/src/lib/composerFiles.test.ts
+  s_0cae4a4d7ab7c3::t_7310ba85f08fd5 2
+web/src/lib/composerFiles.ts
+  s_0cae4a4d7ab7c3::t_84e7f7bc570840 1
+web/src/lib/xhrUpload.test.ts
+  s_0cae4a4d7ab7c3::t_fea1c84ba570c4 1-80
+web/src/lib/xhrUpload.ts
+  s_58ecb9dda7416a::t_7e388f6cbb2464 1-45
+web/src/stores/chat/messageActions.ts
+  s_0cae4a4d7ab7c3::t_e5c2e3a2c69f24 49-50,53,57
+web/src/stores/chat/reset.ts
+  s_bf24ce51cd8f95::t_fc4f78af0e1273 13,29
+web/src/stores/chat/threads.ts
+  s_0cae4a4d7ab7c3::t_2568055492fba2 64,67
+web/src/test-setup.ts
+  s_bf24ce51cd8f95::t_395927069061f7 5,37-41
+web/src/types/domain.ts
+  s_17ef7810e0243d::t_28f03cd1b444d9 44
+web/src/types/rest.ts
+  s_0cae4a4d7ab7c3::t_1d9c17938a23cd 1438,1446
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f2ffdb82f877933b99829a5a198ad1c83015a3b7",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3e68b8fa0e1785": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-reactions-7d1b14603defb791",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_58ecb9dda7416a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-unread-sound-3a7f288cf9b01ab5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ed05b7d59456d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a843a0ef992e8c6d6",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
