@@ -1,0 +1,241 @@
+web/src/components/AudioOutputSection.vue
+  s_731038fe4fc0d1::t_6a3a22f9ec529a 47
+web/src/i18n/de.json
+  s_82e9d48cb7fc7f::t_2955eb181ad005 573,771,2199-2200,2907-2911
+web/src/components/EventsModal.vue
+  s_e516df595aeaf4::t_583d0ea2035fbd 36-38,40-47,49,51
+  s_ed05b7d59456d3::t_5079aea2258ac5 20,39
+web/src/composables/webrtc/session.ts
+  s_afb3377f9f37f8::t_b0734c4c85634b 10,57
+web/src/lib/settingsDialog.test.ts
+  s_2de5838cb2797c::t_a8af259f509910 1-2,3,5-6,8,9-10,46-52,54-55,56-93
+web/src/stores/events.ts
+  s_0cae4a4d7ab7c3::t_a151325179e872 19-25,137-140
+web/src/components/SettingsDialog.test.ts
+  s_28915fd19e1e49::t_5d9a03b6b49b14 233-258
+web/src/stores/later.test.ts
+  s_ed05b7d59456d3::t_28c4ec9b076f23 92
+web/src/composables/usePushBridge.ts
+  s_17ef7810e0243d::t_f01d55cd4b87e1 7,10-19,30-31
+internal/push/locales/texts.json
+  s_82e9d48cb7fc7f::t_8c95ef98100f7f 8,30
+web/src/sw/push.ts
+  s_17ef7810e0243d::t_2d84fe401938fd 17-18,22-27,109,131,166,177-178,180-182
+web/src/components/SidebarEventsEntry.vue
+  s_e516df595aeaf4::t_d45c1181a770a7 2,6,24
+web/src/stores/events.test.ts
+  s_4c6a19030e223f::t_81483ec53adf47 4-5,179-194
+web/src/composables/useAppRouting.test.ts
+  s_ed05b7d59456d3::t_3867e5457cda92 1,3-5,51-90
+web/src/lib/webPush.ts
+  s_17ef7810e0243d::t_77250424a7b3c2 202-210,214-219
+web/src/components/ToastHost.test.ts
+  s_2de5838cb2797c::t_4cacdf8f3ba808 38-49
+web/src/App.vue
+  s_06fcde5dbef956::t_d8903bec8e6d61 74,361
+  s_0cae4a4d7ab7c3::t_3bdc9daeee0ad3 109
+  s_e516df595aeaf4::t_da86cfa2263b6b 31-32
+e2e/tests/notification-links.spec.ts
+  s_46a6db8f9e8231::t_c94e74f7200cef 1-101
+web/src/lib/router.ts
+  s_28915fd19e1e49::t_a75f5d13c1e0bc 9-10,70
+web/src/composables/appRoutingApply.ts
+  s_ed05b7d59456d3::t_c8320bc7d1447b 10-11,26-27,219-222,273-274
+web/src/components/ToastHost.vue
+  s_28915fd19e1e49::t_ddf9d9a4c29f07 17-18,46-58
+web/src/composables/webrtc/audioSettings.ts
+  s_0cae4a4d7ab7c3::t_7eae77c1c04b2e 9,32,56,102,141
+web/src/composables/useWebRTC.audio.test.ts
+  s_2de5838cb2797c::t_21232aa1ecb079 6,460-470,476
+web/src/lib/webPush.test.ts
+  s_46a6db8f9e8231::t_ffa61c58ae649d 31,282-297
+web/src/composables/useAppRouting.ts
+  s_e516df595aeaf4::t_aab46d00e47a57 11-12,36-38,69-88,92,141
+web/src/lib/router.test.ts
+  s_ed05b7d59456d3::t_3a00fcb13d92e8 10-14
+web/src/components/SettingsDialog.vue
+  s_06fcde5dbef956::t_76b2b9cf4380c6 5,25-27,44,47-62,91,126
+web/src/composables/webrtc/micPipeline.ts
+  s_0cae4a4d7ab7c3::t_2af38a892e5620 11,88,179
+web/src/components/AudioProcessingSection.vue
+  s_731038fe4fc0d1::t_25c3e09f8ed1e9 48
+web/src/stores/toast.ts
+  s_28915fd19e1e49::t_af6abf1b3e7f32 6,8,55,61
+  s_e516df595aeaf4::t_35e261a09f82fe 11-12,62
+web/src/composables/usePushBridge.test.ts
+  s_46a6db8f9e8231::t_8effaae712ed49 9,15,23,35-63
+web/src/composables/webrtc/audioNotice.ts
+  s_0cae4a4d7ab7c3::t_39d48f21bf4083 2-3,7-16,18,21
+internal/push/payload.go
+  s_56bbddf21b1b48::t_24ad4a4a38fce8 32-35,124,129-137,156-158
+web/src/stores/chatNotificationBody.test.ts
+  s_3d15a6983fd807::t_d2e4a55300d123 3-6,43-79
+web/src/lib/laterNotices.test.ts
+  s_afb3377f9f37f8::t_e6d55e3fdffafc 7-12,28,62-117
+web/src/i18n/en.json
+  s_82e9d48cb7fc7f::t_29ef799ef4ffef 573,771,2199-2200,2907-2911
+web/src/composables/webrtc/rawSilence.ts
+  s_afb3377f9f37f8::t_952cf3b6d053b7 4,61
+web/src/lib/settingsDialog.ts
+  s_0f71275af3a9d5::t_e117f779a82ff5 16-18,22-28,35,40,43-64
+web/src/sw/push.test.ts
+  s_ed05b7d59456d3::t_e53a936f2a12ce 8,46,65-71,157,162-174
+web/src/components/PushSection.vue
+  s_731038fe4fc0d1::t_c58cbdb780658d 31
+web/src/lib/eventsDialog.ts
+  s_ed05b7d59456d3::t_4b9a9779eb32d2 1-13
+web/src/lib/laterNotices.ts
+  s_82e9d48cb7fc7f::t_1535a3176fa5ed 3-5,7-10,16-28,40-41
+web/src/stores/chat/notifications.ts
+  s_82e9d48cb7fc7f::t_44700c6d0a30c9 41-43
+internal/push/payload_test.go
+  s_82e9d48cb7fc7f::t_41630543d1a48e 205,229-240
+internal/push/event_reminder.go
+  s_17ef7810e0243d::t_8998d0219d9e9f 55
+web/src/composables/appRoutingApply.test.ts
+  s_ed05b7d59456d3::t_e5069a85577351 5,41,177-202
+web/src/App.test.ts
+  s_61e7f03250bd0b::t_dda9fc36c2ce28 16,95-109
+web/src/components/EventsModal.test.ts
+  s_61e7f03250bd0b::t_de1d57c8225841 178-197
+web/src/components/SidebarEventsEntry.test.ts
+  s_61e7f03250bd0b::t_91eac70f230bab 8,52-54,57-60
+web/src/stores/toast.test.ts
+  s_61e7f03250bd0b::t_1b9c1f14aea03f 41,45,47-49,51-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7af6891fb84db36c3c9ee1fe74d1a2e318f54cac",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0f71275af3a9d5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aupdater-dockerhub-0045479572fc8370",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_28915fd19e1e49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-arrow-edit-f0518ce8535c51ee",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2de5838cb2797c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aperf-idle-a1f825253ff37314",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3d15a6983fd807": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-stats-packets-a99b089a927db102",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_56bbddf21b1b48": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae4a068d006211c61",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_731038fe4fc0d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-saved-later-006f0c1510ca4d15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ed05b7d59456d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a843a0ef992e8c6d6",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
