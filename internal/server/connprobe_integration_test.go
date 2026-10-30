@@ -209,12 +209,12 @@ func TestConnectionProbeLimitsLiveTestsPerMember(t *testing.T) {
 	a := appWithVoice(t, &setupcheck.Runtime{}, false)
 	member := a.register(a.seedAdmin(), "pat")
 	offer := browserOffer(t)
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		if res := member.post("/api/webrtc/probe", map[string]string{"sdp": offer}); res.status != http.StatusOK {
 			t.Fatalf("probe %d: %d %s", i, res.status, res.body)
 		}
 	}
 	if res := member.post("/api/webrtc/probe", map[string]string{"sdp": offer}); res.status != http.StatusTooManyRequests {
-		t.Fatalf("third live probe: %d", res.status)
+		t.Fatalf("fourth live probe: %d", res.status)
 	}
 }

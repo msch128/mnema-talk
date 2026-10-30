@@ -125,12 +125,12 @@ func runDoctor(ctx context.Context, cfg *config.Config, p doctorProbes, out io.W
 	return nil
 }
 
-// withoutProxy drops the reverse proxy check: it looks at live requests and
-// only the running server can judge it.
+// withoutProxy drops the reverse proxy and WebSocket checks: they look at live
+// requests and only the running server can judge them.
 func withoutProxy(checks []setupcheck.Check) []setupcheck.Check {
 	out := checks[:0:0]
 	for _, c := range checks {
-		if c.ID != setupcheck.ReverseProxy {
+		if c.ID != setupcheck.ReverseProxy && c.ID != setupcheck.WebSocket {
 			out = append(out, c)
 		}
 	}

@@ -25,8 +25,9 @@ const (
 	probeLinger = 5 * time.Second
 	// maxProbes bounds the test connections alive at once.
 	maxProbes = 8
-	// maxProbesPerMember keeps one member from taking every slot.
-	maxProbesPerMember = 2
+	// maxProbesPerMember keeps one member from taking every slot; it covers the
+	// three paths of one test (direct, relay over UDP, relay over TCP).
+	maxProbesPerMember = 3
 	// maxProbeOfferBytes bounds the offer SDP a browser may send.
 	maxProbeOfferBytes = 16 << 10
 )
@@ -148,6 +149,13 @@ func (s *SFU) watchProbe(pc *webrtc.PeerConnection, owner string) {
 			s.iceSeen.connected(pair)
 			time.AfterFunc(probeLinger, closeProbe)
 		case webrtc.ICEConnectionStateFailed, webrtc.ICEConnectionStateClosed:
+			closeProbe()
+		}
+	})
+	// The browser closes its end once it has read its statistics; the slot
+	// is free again then, not after the linger.
+	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
+		if state == webrtc.PeerConnectionStateClosed || state == webrtc.PeerConnectionStateFailed {
 			closeProbe()
 		}
 	})

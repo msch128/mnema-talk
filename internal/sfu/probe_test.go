@@ -140,7 +140,7 @@ func TestProbeIsCappedGloballyAndPerMemberAndNeverOnAClosedSFU(t *testing.T) {
 		}
 	}
 	if _, err := s.Probe(ctx, "a", offer); !errors.Is(err, ErrProbeBusy) {
-		t.Fatalf("a third probe of one member: %v, want ErrProbeBusy", err)
+		t.Fatalf("one probe over the member cap: %v, want ErrProbeBusy", err)
 	}
 	if _, err := s.Probe(ctx, "b", offer); err != nil {
 		t.Fatalf("another member was refused: %v", err)
@@ -162,5 +162,43 @@ func TestProbeIsCappedGloballyAndPerMemberAndNeverOnAClosedSFU(t *testing.T) {
 	_ = s.Close()
 	if _, err := s.Probe(ctx, "d", offer); !IsClosed(err) {
 		t.Fatalf("a closed SFU: %v", err)
+	}
+}
+
+func TestProbeSlotIsFreedWhenTheBrowserHangsUp(t *testing.T) {
+	server, client := newLoopbackSFU(t), newLoopbackSFU(t)
+	pc, offer := dataChannelOffer(t, client)
+	connected := make(chan struct{})
+	pc.OnConnectionStateChange(func(s webrtc.PeerConnectionState) {
+		if s == webrtc.PeerConnectionStateConnected {
+			close(connected)
+		}
+	})
+	answer, err := server.Probe(context.Background(), "m", offer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := pc.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: answer}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-connected:
+	case <-time.After(15 * time.Second):
+		t.Fatal("the probe never connected")
+	}
+	_ = pc.Close() // what the browser does once it has read its statistics
+
+	deadline := time.Now().Add(probeLinger - time.Second)
+	for {
+		server.probeMu.Lock()
+		held := server.probesBy["m"]
+		server.probeMu.Unlock()
+		if held == 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("the slot was still held %v after the browser hung up", probeLinger-time.Second)
+		}
+		time.Sleep(50 * time.Millisecond)
 	}
 }
