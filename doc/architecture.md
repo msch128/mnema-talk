@@ -618,20 +618,28 @@ qualified capacity guarantee.
 
 The scenarios of [`loadtest/host-run.sh`](../loadtest/host-run.sh) run on the
 server host itself, without browsers (see "On the host" in
-[`loadtest/README.md`](../loadtest/README.md)). The cells are filled from the
-`<scenario>.json` results of a run on the reference host; until then they
-read "to be measured". CPU is the app process in cores, averaged over the
-steady phase; memory is its peak resident set. The generator runs on the same
-host, so its own CPU is part of what the host spends.
+[`loadtest/README.md`](../loadtest/README.md)). The figures are from one run
+on the reference host (a 4-core x86-64 home NAS with 16 GB, server 2.2.0, other
+members online: one), so read them as orders of magnitude. CPU is the app
+process in cores, averaged over the steady phase; memory is its peak resident
+set. The generator runs on the same host, so its own CPU (0.5 to 1 core in the
+voice scenarios) is part of what the host spends.
 
 | Scenario | Load | Server CPU (cores) | Server memory (peak) | Result |
 |----------|------|--------------------|----------------------|--------|
-| Chat, 100 sessions | 10 writers x 0.2 msg/s, typing, reactions, edits | to be measured | to be measured | delivery p50/p95/p99, loss: to be measured |
-| Chat, 300 sessions | 30 writers x 0.2 msg/s | to be measured | to be measured | to be measured |
-| Chat, 1000 sessions | 100 writers x 0.2 msg/s | to be measured | to be measured | to be measured |
-| Voice, direct | 1 screen (1500 kbit/s) to 99 members | to be measured | to be measured | received kbit/s per member, loss, freezes: to be measured |
-| Voice, through the built-in TURN relay | 1 screen and 3 speakers to 100 members | to be measured | to be measured | members through the relay, loss, freezes: to be measured |
-| Voice, mixed | 1 screen, 10 cameras (300 kbit/s), 3 speakers, 100 members watching all | to be measured | to be measured | received kbit/s per member, loss, freezes: to be measured |
+| Chat, 100 sessions | 10 writers x 0.2 msg/s, typing, reactions, edits | 0.02 | 47 MB | messages p50/p95/p99 12/18/26 ms, no loss |
+| Chat, 300 sessions | 30 writers x 0.2 msg/s | 0.09 | 62 MB | messages p50/p95/p99 14/21/44 ms, no loss |
+| Chat, 1000 sessions | 100 writers x 0.2 msg/s | 0.67 | 102 MB | messages p50/p95/p99 33/84/115 ms, no loss (2.36 million deliveries) |
+| Voice, direct | 1 screen (1500 kbit/s) to 99 members | 0.56 | 312 MB | 1585 kbit/s per member, 0.00 % loss, no freezes, first video p95 374 ms |
+| Voice, through the built-in TURN relay | 1 screen and 3 speakers to 100 members | 1.61 | 312 MB | all 100 members through the relay, 0.00 % loss, one member froze for 12.6 s once (one connection flap) |
+| Voice, mixed | 1 screen, 10 cameras (300 kbit/s), 3 speakers, 100 members watching all | 1.87 | 1044 MB | does not hold: 82 % screen and 34 % camera packet loss, members received 200 kbit/s of the screen (audio loss 0.3 %) |
+
+What the host comfortably carries: chat for 1000 sessions, and one screen to
+about 100 members directly or through the relay. Watching all of 10 cameras plus
+a screen with 100 members (about 450 Mbit/s of media out of one 4-core host that
+also runs the generator) is beyond it; the memory limit of 1 GB is reached there
+too. The limit in that scenario is the shared host, not a leak: goroutines and
+heap return to their start values afterwards.
 
 The measurements above are reproducible with `make load-test` (see
 [`loadtest/README.md`](../loadtest/README.md)): one sharer, real browsers and
