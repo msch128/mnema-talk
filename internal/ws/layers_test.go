@@ -356,3 +356,19 @@ func TestSubscribeWithFit(t *testing.T) {
 		}
 	}
 }
+
+// A subscription that carries only a fit (what an Auto viewer sends on
+// watching and after a reconnect) still subscribes.
+func TestSubscribeWithFitAloneStillWatches(t *testing.T) {
+	h, voiceSFU := newSFUHub(t)
+	ch := voiceCh()
+	sharer := testClient(h, auth.User{ID: uuid.New(), Username: "sharer"})
+	viewer := testClient(h, auth.User{ID: uuid.New(), Username: "viewer"})
+	h.joinVoice(sharer, ch)
+	h.joinVoice(viewer, ch)
+	startShare(t, voiceSFU, ch.ID, sharer, sharer, viewer)
+
+	payload, _ := json.Marshal(map[string]any{"kind": "screen", "user_id": sharer.User.ID, "on": true, "fit": 1})
+	viewer.handle("webrtc_subscribe", payload)
+	expectViewers(t, sharer, ch.ID, sharer.User.ID, viewer.User.ID)
+}

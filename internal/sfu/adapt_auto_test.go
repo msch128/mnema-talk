@@ -247,3 +247,12 @@ func TestAutoAfterAPickClimbsToWhatThePictureCanUseWithoutTheLongWait(t *testing
 		t.Fatalf("wants layer %d after %v of quiet", got, adaptGrace+adaptClimbFor)
 	}
 }
+
+func TestAStallNeverMovesAutoAboveWhatThePictureCanUse(t *testing.T) {
+	a := newAdapter(epoch, 2)
+	a.best = 2
+	a.layer = 2
+	if a.stalledTo(epoch.Add(time.Minute), 0) || a.layer != 2 {
+		t.Fatalf("a stall moved a small picture to layer %d", a.layer)
+	}
+}

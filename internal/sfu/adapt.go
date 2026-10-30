@@ -210,7 +210,7 @@ func (a *adapter) recentPLIs(now time.Time) int {
 // stalledTo moves the viewer to layer to after nothing reached it for
 // adaptStall although that layer delivers. It reports whether the layer changed.
 func (a *adapter) stalledTo(now time.Time, to int) bool {
-	to = min(to, a.floor)
+	to = max(min(to, a.floor), a.top())
 	if to == a.layer {
 		return false
 	}

@@ -70,10 +70,6 @@ func (c *Client) handleSubscribe(payload json.RawMessage) {
 		return
 	}
 	c.applySubscriptionQuality(room, req)
-	if req.hasFit && !req.hasQuality {
-		// Only the size of the viewer's picture changed: nothing to renegotiate.
-		return
-	}
 	if err := room.Subscribe(c.User.ID, req.publisher, req.kind, req.all, req.on); err != nil {
 		slog.Debug("sfu subscribe rejected", "user", c.User.ID, "err", err)
 	}
