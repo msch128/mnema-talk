@@ -1,0 +1,48 @@
+api/openapi.json
+  h_0ff4f4713441f4 2412-2419,2421,23396-23673,24147,26666
+cmd/server/main.go
+  h_0ff4f4713441f4 137
+doc/architecture.md
+  h_0ff4f4713441f4 62-69,72-73
+internal/auth/account_export_data.go
+  h_0ff4f4713441f4 193
+internal/auth/account_export_uploads_integration_test.go
+  h_0ff4f4713441f4 1-46
+internal/chat/attachments.go
+  h_0ff4f4713441f4 1-66
+internal/chat/handler_messages.go
+  h_0ff4f4713441f4 8,77,100-108,115,118,125-130,133-134,274-279
+internal/chat/messages.go
+  h_0ff4f4713441f4 96
+internal/chat/moderation.go
+  h_0ff4f4713441f4 273-274
+internal/chat/reports.go
+  h_0ff4f4713441f4 104
+internal/db/migrations/0081_staged_attachments.sql
+  h_0ff4f4713441f4 1-10
+internal/media/handler.go
+  h_0ff4f4713441f4 100,112
+internal/media/handler_upload.go
+  h_0ff4f4713441f4 139
+internal/media/serve.go
+  h_0ff4f4713441f4 33-34,36-37,44-47
+internal/media/staging.go
+  h_0ff4f4713441f4 1-206
+internal/server/attachments_integration_test.go
+  h_0ff4f4713441f4 1-253
+internal/server/server.go
+  h_0ff4f4713441f4 167
+web/src/types/rest.ts
+  h_0ff4f4713441f4 1438,1446
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c5bc59b54012ef25819f95991e724603df1b1b14",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
