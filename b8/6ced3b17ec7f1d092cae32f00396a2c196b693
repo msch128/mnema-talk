@@ -1,0 +1,23 @@
+internal/onboarding/handler.go
+  s_e7d8df1dbb402e::t_d3b0f4dac71fc6 49-50
+internal/onboarding/icon.go
+  s_e7d8df1dbb402e::t_0de98b3442fd82 85-92,110,113,121,143-146
+internal/onboarding/icon_integration_test.go
+  s_e7d8df1dbb402e::t_625c37b0c8f273 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b86ced3b17ec7f1d092cae32f00396a2c196b693",
+  "prompts": {},
+  "sessions": {
+    "s_e7d8df1dbb402e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-app-66e452174912e1a3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
