@@ -1,0 +1,23 @@
+web/src/stores/chat/presence.test.ts
+  s_19c6eb08b5cf90::t_08fc9673e2c5c2 68,70-71,74-75,86-87,95-97,100,105-108,111,113-117,120-121
+web/src/stores/chat/presence.ts
+  s_19c6eb08b5cf90::t_05ba01e975554c 10,12,15-16,20,24-28,125-136
+web/src/stores/chat/state.ts
+  s_19c6eb08b5cf90::t_a98363c997f4c6 163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "452c74fb397c2aacaf7787ea7c0744f976832400",
+  "prompts": {},
+  "sessions": {
+    "s_19c6eb08b5cf90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-away-79f22d6bb131083c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
