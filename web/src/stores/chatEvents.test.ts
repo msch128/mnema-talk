@@ -7,7 +7,7 @@ import { useVoiceStore } from './voice'
 import { useEmojiStore } from './emoji'
 import { usePermissionsStore } from './permissions'
 import { useOnboardingStore } from './onboarding'
-import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
+import { fixtureId, FIXTURE_TIMESTAMP, channelFixture, messageFixture } from '../test-fixtures.fixture'
 import type { CommunityEvent } from '../types/domain'
 
 function makeEvent(overrides: Partial<CommunityEvent> = {}): CommunityEvent {
@@ -71,6 +71,36 @@ describe('community event socket events', () => {
     expect(chat.forumTagsSignal).toEqual({ channelId: fixtureId(5), seq: 1 })
     chat.handleWSEvent({ type: 'forum_tags_changed', payload: { channel_id: fixtureId(5) } })
     expect(chat.forumTagsSignal?.seq).toBe(2)
+  })
+})
+
+describe('forum posts signal', () => {
+  const forum = fixtureId(5)
+  function open() {
+    const chat = useChatStore()
+    chat.activeChannel = channelFixture({ id: forum, type: 'forum' })
+    return chat
+  }
+
+  it('is bumped by a new post or reply, a retitled post, a deleted message and a pin in the open forum', () => {
+    const chat = open()
+    expect(chat.forumPostsSignal).toBeNull()
+    chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: fixtureId(6), channel_id: forum, title: 'Post' }) })
+    expect(chat.forumPostsSignal).toEqual({ channelId: forum, seq: 1 })
+    chat.handleWSEvent({ type: 'message_update', payload: messageFixture({ id: fixtureId(6), channel_id: forum, title: 'Renamed' }) })
+    expect(chat.forumPostsSignal?.seq).toBe(2)
+    chat.handleWSEvent({ type: 'message_delete', payload: { id: fixtureId(6), channel_id: forum, parent_id: null } })
+    expect(chat.forumPostsSignal?.seq).toBe(3)
+    chat.handleWSEvent({ type: 'pins_changed', payload: { channel_id: forum, message_id: fixtureId(6), pinned: true, actor_id: fixtureId(1), actor_name: 'a' } })
+    expect(chat.forumPostsSignal?.seq).toBe(4)
+  })
+
+  it('ignores a reply edit and anything in another channel', () => {
+    const chat = open()
+    chat.handleWSEvent({ type: 'message_update', payload: messageFixture({ id: fixtureId(7), channel_id: forum }) })
+    expect(chat.forumPostsSignal).toBeNull()
+    chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: fixtureId(8), channel_id: fixtureId(9) }) })
+    expect(chat.forumPostsSignal).toBeNull()
   })
 })
 

@@ -104,6 +104,7 @@ export function resetCommunityState(cx: Cx) {
   cs.mediaHandshakeHandler = null
   cs.forumTagsChangedHandler = null
   cs.forumTagsSignal.value = null
+  cs.forumPostsSignal.value = null
   const version = useAppVersionStore()
   version.followAdminUpdates(() => false)
   version.setServerVersion('')

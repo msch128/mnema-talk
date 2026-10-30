@@ -42,6 +42,8 @@ function channelState() {
     // Pinned messages: bumped when the pins of a channel changed, so an open pinned list refetches; plus the notes about new pins.
     pinsSignal: ref<{ channelId: string; seq: number } | null>(null),
     forumTagsSignal: ref<{ channelId: string; seq: number } | null>(null),
+    // Bumped when a post of a forum or a reply to one was created, changed or deleted, so an open forum list refreshes.
+    forumPostsSignal: ref<{ channelId: string; seq: number } | null>(null),
     pinNotices: ref<PinNotice[]>([]),
     pinNoticeSeq: 0,
     threadReplies: ref<Message[]>([]),

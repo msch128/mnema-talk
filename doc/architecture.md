@@ -107,7 +107,7 @@ the object through the app.
 Forum channels (`channels.type = 'forum'`, 1.2) are structured discussion spaces. Instead of an unthreaded message stream, a forum channel holds posts displayed as cards, each with an associated thread.
 
 - **Post model**: A post reuses the existing thread model. It is a root message (`parent_id IS NULL`) in a forum channel with a required `title` (1..100 characters), an initial body (1..4000 characters), and up to 5 optional tags. Replies to the post form the thread (`messages.parent_id`).
-- **Tags**: Each forum channel can define up to 20 admin-curated tags (`forum_tags`, name <= 20 characters, optional emoji <= 32 characters). Posts associate with tags via `forum_post_tags`.
+- **Tags**: Each forum channel can define up to 20 admin-curated tags (`forum_tags`, name <= 20 characters, optional emoji <= 32 characters, a palette colour, a position and a moderated flag). Posts associate with tags via `forum_post_tags`. Per-forum rules (a tag is required, guidelines) live in `forum_settings`; a post's solved mark is `messages.is_resolved`; per-member read markers of posts are `forum_post_reads`.
 - **Permissions**: *View channels* gates reading posts and tags; *Send messages* gates creating posts and posting replies in threads. Moderation (*Manage messages*) allows locking posts (`messages.is_locked = TRUE`), which restricts replies to moderators only, and editing tags on other members' posts.
 - **Search and Unread**: Because posts are root messages, unread tracking, mentions, search indexing, and thread follows integrate seamlessly without a secondary store.
 

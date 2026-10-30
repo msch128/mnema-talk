@@ -1,5 +1,5 @@
 import type { OnboardingState } from './types/rest'
-import type { Channel, Message, User, VoiceUser, Category, ReadState, MediaAttachment } from './types/domain'
+import type { Channel, ForumTag, Message, User, VoiceUser, Category, ReadState, MediaAttachment } from './types/domain'
 
 export const FIXTURE_TIMESTAMP = '2026-01-01T00:00:00Z'
 
@@ -52,6 +52,10 @@ export function messageFixture(overrides: Partial<Message> = {}): Message {
     updated_at: FIXTURE_TIMESTAMP,
     ...overrides,
   }
+}
+
+export function forumTagFixture(overrides: Partial<ForumTag> = {}): ForumTag {
+  return { id: fixtureId(7), channel_id: fixtureId(2), name: 'help', position: 1, moderated: false, created_at: FIXTURE_TIMESTAMP, ...overrides }
 }
 
 export function voiceUserFixture(overrides: Partial<VoiceUser> = {}): VoiceUser {
