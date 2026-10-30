@@ -1,0 +1,113 @@
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_8668c53b3f02b6 211-215
+.gitignore
+  s_06fcde5dbef956::t_645ec0b17fd9dd 100
+AGENTS.md
+  s_06fcde5dbef956::t_7003580d9a7a6d 105
+Makefile
+  s_06fcde5dbef956::t_14ac608df5f969 6,71-75,175-190
+doc/architecture.md
+  s_06fcde5dbef956::t_9ab00a3e7e662f 611-630
+doc/development.md
+  s_06fcde5dbef956::t_20e673c6a51a0c 60-61
+loadtest/README.md
+  s_06fcde5dbef956::t_ceef2f84770620 8-12,32,37-39,148-367
+loadtest/host-run.sh
+  s_06fcde5dbef956::t_69efba8e7e946a 1-447
+loadtest/viewer/cmd/chat/config.go
+  s_06fcde5dbef956::t_9f68042e9b3841 1-105
+loadtest/viewer/cmd/chat/config_test.go
+  s_06fcde5dbef956::t_30f82f0d757346 1-55
+loadtest/viewer/cmd/chat/frames_test.go
+  s_06fcde5dbef956::t_bf91df19fc790d 1-87
+loadtest/viewer/cmd/chat/main.go
+  s_06fcde5dbef956::t_43f33ae811c4c9 1-178
+loadtest/viewer/cmd/chat/rest.go
+  s_06fcde5dbef956::t_d6a8347d8b2936 1-107
+loadtest/viewer/cmd/chat/result.go
+  s_06fcde5dbef956::t_75f253a436f432 1-155
+loadtest/viewer/cmd/chat/run.go
+  s_06fcde5dbef956::t_d7847b2ea508b5 1-115
+loadtest/viewer/cmd/chat/session.go
+  s_06fcde5dbef956::t_7755dccf4f27ae 1-262
+loadtest/viewer/cmd/chat/thresholds.go
+  s_06fcde5dbef956::t_720aa4e51a6e98 1-77
+loadtest/viewer/cmd/chat/thresholds_test.go
+  s_06fcde5dbef956::t_3e8f4aa1ec0da5 1-126
+loadtest/viewer/cmd/chat/tracker.go
+  s_06fcde5dbef956::t_c3f0b806d51100 1-130
+loadtest/viewer/cmd/chat/tracker_test.go
+  s_06fcde5dbef956::t_94ed42f0f1fcac 1-98
+loadtest/viewer/cmd/chat/writer.go
+  s_06fcde5dbef956::t_277c562d2af637 1-115
+loadtest/viewer/cmd/mint/main.go
+  s_06fcde5dbef956::t_5e2318e44206c0 1-120
+loadtest/viewer/cmd/mint/main_test.go
+  s_06fcde5dbef956::t_c71cec9014bdcf 1-52
+loadtest/viewer/internal/lt/checks.go
+  s_06fcde5dbef956::t_c88993eeaa84b1 1-33
+loadtest/viewer/internal/lt/cpu_other.go
+  s_06fcde5dbef956::t_09b1e17a2c09e4 1-6
+loadtest/viewer/internal/lt/cpu_unix.go
+  s_06fcde5dbef956::t_d845a676d29b9d 1-12
+loadtest/viewer/internal/lt/env.go
+  s_06fcde5dbef956::t_0e1643e8e23137 1-35
+loadtest/viewer/internal/lt/generator.go
+  s_06fcde5dbef956::t_88809874d1162b 1-25
+loadtest/viewer/internal/lt/latency.go
+  s_06fcde5dbef956::t_8a7a8087bbf405 1-106
+loadtest/viewer/internal/lt/latency_test.go
+  s_06fcde5dbef956::t_b4a3f643016543 1-83
+loadtest/viewer/internal/lt/metrics.go
+  s_06fcde5dbef956::t_a8775a2f2daa50 1-194
+loadtest/viewer/internal/lt/metrics_test.go
+  s_06fcde5dbef956::t_96607b595053bc 1-123
+loadtest/viewer/internal/lt/server.go
+  s_06fcde5dbef956::t_117b6126b43c36 1-118
+loadtest/viewer/internal/lt/tokens.go
+  s_06fcde5dbef956::t_451cef1eea92dc 1-61
+loadtest/viewer/main.go
+  s_06fcde5dbef956::t_3e17692ab2e95a 39-59,69,74,108-109,113-134,139-151,156,158,160-162,167-168,173-198,200-219,227,230,243-249,253-262,265,267-270,272,276-277,280-282,289-297,299-303
+loadtest/viewer/member.go
+  s_06fcde5dbef956::t_a64fdd9b740054 11,15,37-38,62-67
+loadtest/viewer/publish.go
+  s_06fcde5dbef956::t_d3c8cd7518f98e 1-188
+loadtest/viewer/relay.go
+  s_06fcde5dbef956::t_b9d4f8c99e7606 1-110
+loadtest/viewer/relay_test.go
+  s_06fcde5dbef956::t_b7eb3cf0b43fe4 1-47
+loadtest/viewer/report.go
+  s_06fcde5dbef956::t_17a8a9e3311d73 90-122
+loadtest/viewer/session.go
+  s_06fcde5dbef956::t_1e3e8e07c91a59 4,13,19,21,24,66-67,74-76,86-88,92-103,125-128,167-168,173-177,190,194-195
+loadtest/viewer/summary.go
+  s_06fcde5dbef956::t_f02a40c43ffd3a 5,8-9,13-32,57-69,108,124,134-157,160,162,165,168-170,174,177,181,183,191-201
+loadtest/viewer/synth.go
+  s_06fcde5dbef956::t_5bad18dbf6983c 1-137
+loadtest/viewer/synth_test.go
+  s_06fcde5dbef956::t_73f39ce39b5bf3 1-119
+loadtest/viewer/trackstats.go
+  s_06fcde5dbef956::t_9fa572da155a7c 1-240
+loadtest/viewer/trackstats_test.go
+  s_06fcde5dbef956::t_af1cc1ff699d44 1-100
+loadtest/viewer/voicecheck.go
+  s_06fcde5dbef956::t_d9026addd895a1 1-156
+loadtest/viewer/voicecheck_test.go
+  s_06fcde5dbef956::t_fc846ca64c53f6 1-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "563d42a03b98a4e63c3846bcb92ebca0f18d6b6b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
