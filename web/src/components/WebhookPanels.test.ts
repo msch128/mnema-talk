@@ -227,6 +227,35 @@ describe('IncomingWebhooksPanel', () => {
     expect(w.find('[data-testid="webhook-settings"]').exists()).toBe(false)
   })
 
+  it('renames a webhook in the same draft, refuses an empty name and shows a refused save inline', async () => {
+    useChatStore().members = [{ ...userFixtureForMember(), display_name: '' }]
+    const w = await mountPanel([hook(1, { created_by: fixtureId(7) })])
+    await w.find('button[aria-label="Settings of Hook 1"]').trigger('click')
+    // Without a display name the username stands in.
+    expect(w.find('[data-testid="incoming-audit"]').text()).toBe('Created by max')
+    const name = w.find('[data-testid="incoming-edit-name"]')
+    const save = () => w.find('[data-testid="unsaved-save"]').attributes('disabled')
+    await name.setValue('   ')
+    expect(w.find('[data-testid="webhook-settings"]').text()).toContain('A bot needs a name.')
+    expect(save()).toBeDefined()
+    await name.setValue('  Deploys ')
+    apiMock.mockRejectedValueOnce(new Error('name taken'))
+    await w.find('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="unsaved-error"]').text()).toBe('name taken')
+    expect(save()).toBeUndefined()
+    apiMock.mockResolvedValueOnce(hook(1, { name: 'Deploys' }))
+    await w.find('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    expect(apiMock).toHaveBeenLastCalledWith(`/api/admin/webhooks/${hook(1).id}`, expect.objectContaining({ method: 'PATCH', json: { name: 'Deploys' } }))
+  })
+
+  it('names a creator who left as an unknown member', async () => {
+    const w = await mountPanel([hook(1, { created_by: fixtureId(99) })])
+    await w.find('button[aria-label="Settings of Hook 1"]').trigger('click')
+    expect(w.find('[data-testid="incoming-audit"]').text()).toBe('Created by an unknown member')
+  })
+
   it('asks before another webhook replaces settings with unsaved edits', async () => {
     const w = await mountPanel()
     await w.find('button[aria-label="Settings of Hook 1"]').trigger('click')
