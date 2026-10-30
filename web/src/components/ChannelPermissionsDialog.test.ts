@@ -10,6 +10,7 @@ import { useToastStore } from '../stores/toast'
 import { PERMISSION_BITS } from '../lib/permissions'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
+import { pendingConfirm } from '../lib/confirm'
 import type { Role } from '../types/domain'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -81,7 +82,7 @@ describe('ChannelPermissionsDialog', () => {
     await w.find('[data-permission="speak"] [data-state="allow"]').trigger('click')
     await w.find('[data-entry="role:' + fixtureId(22) + '"] button[aria-pressed]').trigger('click')
     await w.find('[data-permission="speak"] [data-state="deny"]').trigger('click')
-    await w.findAll('button').find(b => b.text() === 'Save permissions')!.trigger('click')
+    await w.find('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenLastCalledWith(`/api/admin/channels/${channel.id}/overwrites`, {
       method: 'PUT',
@@ -97,16 +98,18 @@ describe('ChannelPermissionsDialog', () => {
     await w.find('[aria-label="Remove Staff"]').trigger('click')
     await w.find('[aria-label="Remove Max"]').trigger('click')
     expect(w.text()).toContain('No special permissions here.')
-    await w.findAll('button').find(b => b.text() === 'Save permissions')!.trigger('click')
+    await w.find('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenLastCalledWith(expect.anything(), { method: 'PUT', json: { overwrites: [] } })
     // an entry that was added but left empty is not sent
     const again = setup()
     await flushPromises()
     await select(again, 'Add a role').setValue(everyone.id)
-    await again.findAll('button').find(b => b.text() === 'Save permissions')!.trigger('click')
+    await again.find('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
-    expect(apiMock).toHaveBeenLastCalledWith(expect.anything(), { method: 'PUT', json: { overwrites: [] } })
+    // an empty entry is no change: Save stays off and nothing is sent
+    expect(again.find('[data-testid="unsaved-save"]').attributes('disabled')).toBeDefined()
+    expect(apiMock.mock.calls.filter(([, o]) => o?.method === 'PUT')).toHaveLength(1)
   })
 
   it('makes a channel private with one click, also over an existing entry', async () => {
@@ -157,16 +160,16 @@ describe('ChannelPermissionsDialog', () => {
     const w = mount(ChannelPermissionsDialog, { props: { kind: 'channel', target: channel } })
     await flushPromises()
     expect(toastTexts()).toContain('gone')
-    expect(w.findAll('button').find(b => b.text() === 'Save permissions')!.attributes('disabled')).toBeDefined()
+    expect(w.find('[data-testid="unsaved-save"]').attributes('disabled')).toBeDefined()
     const ok = setup()
     await flushPromises()
     apiMock.mockRejectedValueOnce(new Error('refused'))
-    await ok.findAll('button').find(b => b.text() === 'Save permissions')!.trigger('click')
+    await select(ok, 'Add a role').setValue(everyone.id)
+    await ok.find('[data-permission="speak"] [data-state="deny"]').trigger('click')
+    await ok.find('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
-    expect(toastTexts()).toContain('refused')
+    expect(ok.find('[data-testid="unsaved-error"]').text()).toContain('refused')
     expect(ok.emitted('close')).toBeUndefined()
-    await ok.findAll('button').find(b => b.text() === 'Cancel')!.trigger('click')
-    expect(ok.emitted('close')).toHaveLength(1)
     void failing
   })
 
@@ -208,5 +211,33 @@ describe('ChannelPermissionsDialog', () => {
     useChatStore().members = [max, userFixture({ id: fixtureId(13), username: 'lee', display_name: '' })]
     await flushPromises()
     expect(select(w, 'Add a member').findAll('option').map(o => o.text())).toEqual(['Add a member', 'Max', 'lee'])
+  })
+
+  it('has Save off until the permissions differ, and stores nothing before Save', async () => {
+    const w = setup({ kind: 'channel' }, [{ type: 'role', id: everyone.id, allow: 0, deny: PERMISSION_BITS.speak }])
+    await flushPromises()
+    const save = () => w.find<HTMLButtonElement>('[data-testid="unsaved-save"]').element
+    expect(save().disabled).toBe(true)
+    await w.find('[data-permission="speak"] [data-state="allow"]').trigger('click')
+    expect(save().disabled).toBe(false)
+    await w.find('[data-permission="speak"] [data-state="deny"]').trigger('click')
+    expect(save().disabled).toBe(true)
+    expect(apiMock.mock.calls.some(([, o]) => o?.method === 'PUT')).toBe(false)
+  })
+
+  it('asks before Esc, the close button or the scrim drop edited permissions', async () => {
+    const w = setup()
+    await flushPromises()
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    expect(w.emitted('close')).toHaveLength(1)
+    await select(w, 'Add a role').setValue(fixtureId(22))
+    await w.find('[data-permission="speak"] [data-state="deny"]').trigger('click')
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(w.emitted('close')).toHaveLength(1)
   })
 })

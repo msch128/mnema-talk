@@ -381,3 +381,22 @@ describe('AudioSettingsPanel as a section of the settings', () => {
     expect(mockStopMicTest).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('AudioSettingsPanel saves at once', () => {
+  it('says "Saved" whenever a control stored a setting', async () => {
+    vi.useFakeTimers()
+    localStorage.clear()
+    setActivePinia(createPinia())
+    const voice = useVoiceStore()
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
+    const indicator = () => wrapper.find('[data-testid="saved-indicator"]').text()
+    expect(indicator()).toBe('')
+    voice.saveSettings()
+    await nextTick()
+    expect(indicator()).toBe(t('draft.saved'))
+    await vi.advanceTimersByTimeAsync(2500)
+    expect(indicator()).toBe('')
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+})

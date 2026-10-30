@@ -1138,7 +1138,6 @@
     "lobby": "Talk-Lobby („Talk erstellen“)",
     "lobbyHint": "Wer diesem Talk beitritt, bekommt einen neuen Talk und leitet ihn. Niemand bleibt in der Lobby, und der neue Talk übernimmt Rechte und Limit der Lobby.",
     "lobbyOpens": "Öffnet beim Beitreten einen neuen Talk",
-    "lobbySaved": "Lobby-Einstellung gespeichert.",
     "followsLobby": "Dieser Talk übernimmt die Rechte seiner Lobby. Ändere sie in der Lobby.",
     "presetsTitle": "Wer beitreten darf",
     "presetEveryone": "Alle",
@@ -1149,6 +1148,9 @@
     "presetLimit": "Limit",
     "presetLimitHint": "Höchstens so viele Mitglieder gleichzeitig. 0 heißt kein Limit.",
     "limitLabel": "Mitgliederlimit",
+    "rolesRequired": "Wähle mindestens eine Rolle oder wechsle zu „Alle“.",
+    "limitInvalid": "Gib eine ganze Zahl von 0 bis 999 ein.",
+    "nameRequired": "Ein Talk braucht einen Namen.",
     "presetApply": "Übernehmen",
     "presetApplied": "Talk aktualisiert.",
     "inviteFrom": "{name} lädt dich in einen Talk ein",
@@ -2614,11 +2616,6 @@
       "empty": "Diese Rolle sieht keine Kanäle, die du siehst.",
       "exit": "Vorschau beenden"
     },
-    "unsavedTitle": "Ungespeicherte Änderungen verwerfen?",
-    "unsavedBody": "Diese Rolle hat Änderungen, die nicht gespeichert sind. Beim Wechsel zu einer anderen Rolle gehen sie verloren.",
-    "discard": "Verwerfen",
-    "keepEditing": "Weiter bearbeiten",
-    "unsaved": "Ungespeicherte Änderungen",
     "searchPermissions": "Berechtigungen suchen",
     "noPermissionMatch": "Keine Berechtigung passt."
   },
@@ -2674,7 +2671,6 @@
     "loadFailed": "Die Webhooks konnten nicht geladen werden. Versuche es erneut.",
     "emptyIncoming": "In diesem Kanal gibt es noch keine eingehenden Webhooks.",
     "emptyOutgoing": "Noch keine ausgehenden Webhooks.",
-    "rename": "{name} umbenennen",
     "avatar": "Bild festlegen",
     "avatarFor": "Bild von {name}",
     "regenerate": "Neue URL erzeugen",
@@ -2689,8 +2685,10 @@
     "url": "Ziel-URL",
     "eventsLabel": "Ereignisse",
     "edit": "{name} bearbeiten",
-    "switchOff": "{name} ausschalten",
-    "switchOn": "{name} einschalten",
+    "saved": "Webhook gespeichert.",
+    "urlRequired": "Gib die URL ein, die die Ereignisse erhalten soll.",
+    "eventsRequired": "Wähle mindestens ein Ereignis.",
+    "enabledLabel": "Ereignisse an diese URL senden",
     "test": "Testereignis an {name} senden",
     "deliveries": "Letzte Zustellungen von {name}",
     "rotateFor": "Neues Geheimnis für {name}",
@@ -2909,6 +2907,7 @@
     "deleteTitle": "Bot {name} löschen?",
     "deleteBody": "Alle Tokens funktionieren sofort nicht mehr und seine Befehle verschwinden. Nachrichten, die er geschrieben hat, bleiben.",
     "deleted": "Bot gelöscht.",
+    "saved": "Bot gespeichert.",
     "intents": {
       "title": "Erlaubte Intents",
       "hint": "Worum der Bot beim Verbinden mit dem Gateway bitten darf. Ohne Intent bekommt er solche Ereignisse nicht.",
@@ -2936,8 +2935,6 @@
       "empty": "Es gibt noch keine Rollen. Lege eine im Tab Rollen an.",
       "power": "Gibt dem Bot Administratorrechte. Nur der Owner darf diese Rolle vergeben.",
       "powerSelected": "Eine gewählte Rolle gibt dem Bot Administratorrechte. Vergib das nur an ein Programm, dem du voll vertraust.",
-      "save": "Rollen speichern",
-      "saved": "Rollen gespeichert.",
       "managedOwn": "Verwaltet: Das ist die eigene Rolle des Bots, sie lässt sich nicht wegnehmen."
     },
     "access": {
@@ -3337,7 +3334,7 @@
     "deleteTitle": "Regel „{name}“ löschen?",
     "deleteBody": "Sie wirkt sofort nicht mehr. Die Einträge, die sie schon unter Meldungen angelegt hat, bleiben.",
     "delete": "Regel löschen",
-    "toggle": "Regel „{name}“ ist an",
+    "off": "Aus",
     "edit": "„{name}“ bearbeiten",
     "deleteRule": "„{name}“ löschen",
     "raidOn": "Ein Raid wird bis {time} gebremst. Neue Mitglieder sind eingeschränkt.",
@@ -3613,6 +3610,19 @@
       "sameName": "Hier gibt es bereits eine Rolle namens {name}.",
       "sameNameUsed": "Mit {name} verbunden, weil die Namen übereinstimmen."
     }
+  },
+  "draft": {
+    "unsaved": "Ungespeicherte Änderungen",
+    "reset": "Zurücksetzen",
+    "saving": "Speichern …",
+    "saved": "Gespeichert",
+    "saveFailed": "Die Änderungen konnten nicht gespeichert werden.",
+    "partialFailed": "Ein Teil der Änderungen wurde gespeichert, der Rest nicht: {message}",
+    "discardTitle": "Änderungen verwerfen?",
+    "discardBody": "Du hast Änderungen, die nicht gespeichert sind. Schließt du jetzt, gehen sie verloren.",
+    "discard": "Verwerfen",
+    "keepEditing": "Weiter bearbeiten",
+    "shortcut": "Speichern mit {keys}"
   },
   "settings": {
     "title": "Einstellungen",

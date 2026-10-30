@@ -448,11 +448,13 @@ describe('Direct messages in the privacy settings', () => {
     expect(w.text()).toContain('Who can send me direct messages')
     const toggle = w.get('[data-testid="dm-mute-all"]')
     expect(toggle.attributes('aria-checked')).toBe('false')
+    expect(w.get('[data-testid="saved-indicator"]').text()).toBe('')
     await toggle.trigger('click')
     await flushPromises()
     expect(puts()).toEqual([['/api/users/me/dm-settings', { mute_all: true, list_collapsed: false }]])
     expect(chat.dmSettings.mute_all).toBe(true)
     expect(toggle.attributes('aria-checked')).toBe('true')
+    expect(w.get('[data-testid="saved-indicator"]').text()).toBe('Saved')
 
     http.handle = (url, o) => { if (o?.method === 'PUT') throw new Error('offline'); return url === '/api/users/me/privacy' ? { dm_policy: 'everyone' } : [] }
     await toggle.trigger('click')
