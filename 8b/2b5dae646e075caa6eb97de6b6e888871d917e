@@ -1,0 +1,27 @@
+doc/upgrade.md
+  s_06fcde5dbef956::t_bf237ea952e989 222-224
+web/src/components/ForumSettingsForm.test.ts
+  s_06fcde5dbef956::t_e59e0b1efa20d6 40-46
+web/src/components/ForumSettingsForm.vue
+  s_06fcde5dbef956::t_daae811a0740cd 29-30,32-37
+web/src/composables/useForumPosts.test.ts
+  s_06fcde5dbef956::t_20fa53299ee129 171-186
+web/src/composables/useForumPosts.ts
+  s_06fcde5dbef956::t_ca7262b29bcb45 88-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8b2b5dae646e075caa6eb97de6b6e888871d917e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
