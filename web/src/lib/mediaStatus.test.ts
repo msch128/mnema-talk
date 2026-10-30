@@ -34,7 +34,9 @@ describe('classifyMediaFailure', () => {
 
   it('treats a 404 of the link preview proxy as a failure, only its 410 as gone', async () => {
     vi.stubGlobal('fetch', answer(404))
-    expect(await classifyMediaFailure('/api/link-preview/image?url=x')).toBe('failed')
+    expect(await classifyMediaFailure('/api/link-preview/image?url=x')).toBe('none')
+    vi.stubGlobal('fetch', answer(503))
+    expect(await classifyMediaFailure('/api/link-preview/image?url=z')).toBe('failed')
     vi.stubGlobal('fetch', answer(410))
     expect(await classifyMediaFailure('/api/link-preview/image?url=y')).toBe('gone')
   })

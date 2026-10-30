@@ -4,10 +4,10 @@
 import { computed, ref, watch, type MaybeRefOrGetter, toValue } from 'vue'
 import { classifyMediaFailure, knownGone } from '../lib/mediaStatus'
 
-export type MediaState = 'ok' | 'gone' | 'failed'
+export type MediaState = 'ok' | 'gone' | 'failed' | 'none'
 
 export function useMediaImage(src: MaybeRefOrGetter<string | null | undefined>, deleted: MaybeRefOrGetter<boolean> = false) {
-  const failure = ref<'gone' | 'failed' | null>(null)
+  const failure = ref<'gone' | 'failed' | 'none' | null>(null)
   const attempt = ref(0)
   // The address the failure belongs to: a late answer for an earlier picture is dropped.
   let asked = ''

@@ -38,7 +38,8 @@ const href = computed(() => safeHttpUrl(preview.value?.url) || props.url)
 const authorHref = computed(() => safeHttpUrl(preview.value?.author_url))
 const accent = computed(() => safeColor(preview.value?.color))
 const embedSrc = computed(() => (playerBlocked.value ? null : playerSrc(preview.value?.embed)))
-const showImage = computed(() => !!preview.value?.image)
+// A picture the proxy has nothing usable for ('none') is left out, as before.
+const showImage = computed(() => !!preview.value?.image && imageState.value !== 'none')
 // The picture comes through the server; one that was taken down at its source
 // is a box saying so, one that could not be fetched right now offers to retry.
 const { state: imageState, attempt: imageAttempt, onError: imageError, retry: retryImage } =

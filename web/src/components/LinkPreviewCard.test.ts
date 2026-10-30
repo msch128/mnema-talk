@@ -158,6 +158,25 @@ describe('LinkPreviewCard', () => {
     expect(w.get('[data-testid="link-preview-title"]').attributes('href')).toBe('https://example.org/safe')
   })
 
+  it('leaves the picture out, without a box, when the proxy has no usable image', async () => {
+    const w = await mounted(full)
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response('', { status: 404 }))))
+    await w.find('img').trigger('error')
+    await flushPromises()
+    expect(w.find('img').exists()).toBe(false)
+    expect(w.find('[data-media-placeholder]').exists()).toBe(false)
+    expect(w.find('[data-testid="link-preview-media"]').exists()).toBe(false)
+    expect(w.text()).toContain('Article title')
+  })
+
+  it('offers a retry when the proxy could not fetch the image right now', async () => {
+    const w = await mounted(full)
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response('', { status: 503 }))))
+    await w.find('img').trigger('error')
+    await flushPromises()
+    expect(w.get('[data-media-placeholder="failed"]').exists()).toBe(true)
+  })
+
   it('puts a small thumbnail beside the text for compact cards', async () => {
     const w = await mounted({ ...full, compact: true })
     expect(w.find('[data-testid="link-preview-media"]').exists()).toBe(false)

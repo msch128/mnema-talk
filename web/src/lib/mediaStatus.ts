@@ -5,7 +5,9 @@
 // mean the picture is gone for good; anything else (no network, 5xx, 429, an
 // expired session) may pass, and the member can try again.
 
-export type MediaFailure = 'gone' | 'failed'
+// 'none': the link preview proxy has no usable picture for that address (a
+// hotlink block, not a picture, too large) and never will; nothing to show.
+export type MediaFailure = 'gone' | 'failed' | 'none'
 
 // What is gone stays gone: a list of avatars shows one member many times and
 // must not ask for each. Bounded so a long session does not grow it.
@@ -25,8 +27,9 @@ async function ask(url: string): Promise<MediaFailure> {
     void response.body?.cancel().catch(() => undefined)
     // The link preview proxy says 404 for "no usable image" (hotlink block,
     // not a picture, too large): only its 410 means taken down.
-    const goneStatus = url.startsWith('/api/link-preview/') ? response.status === 410 : response.status === 404 || response.status === 410
-    if (!goneStatus) return 'failed'
+    const proxied = url.startsWith('/api/link-preview/')
+    if (proxied && response.status === 404) return 'none'
+    if (!(proxied ? response.status === 410 : response.status === 404 || response.status === 410)) return 'failed'
     if (gone.size >= GONE_MAX) gone.clear()
     gone.add(url)
     return 'gone'

@@ -8,7 +8,7 @@ import type { PropType } from 'vue'
 import { ImageOff, RotateCw } from '@lucide/vue'
 
 defineProps({
-  state: { type: String as PropType<'gone' | 'failed'>, required: true },
+  state: { type: String as PropType<'gone' | 'failed' | 'none'>, required: true },
   compact: { type: Boolean, default: false }
 })
 const emit = defineEmits<{ retry: [] }>()
@@ -27,7 +27,7 @@ const emit = defineEmits<{ retry: [] }>()
     <span v-if="!compact" class="text-sm text-mnema-muted">{{ $t('media.imageDeleted') }}</span>
   </div>
   <button
-    v-else
+    v-else-if="state === 'failed'"
     type="button"
     data-media-placeholder="failed"
     :aria-label="compact ? `${$t('media.imageFailed')}. ${$t('media.retry')}` : undefined"
