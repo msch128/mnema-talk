@@ -1,0 +1,41 @@
+internal/sfu/adapt.go
+  s_06fcde5dbef956::t_8beab63dddd81d 213
+internal/sfu/adapt_auto_test.go
+  s_06fcde5dbef956::t_c4cc45532ad2df 250-258
+internal/ws/layers_test.go
+  s_45fff186c97845::t_76b47bd185b9ed 359-374
+web/src/stores/voiceStoreBehaviour.test.ts
+  s_35a77b7a1d3d9b::t_c4dacdc579dff7 284-294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d1b1bbc05d5324257e57deaf0755f33897ce2afb",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_35a77b7a1d3d9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acf7bea421bd6be22",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
