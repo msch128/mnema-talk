@@ -1,0 +1,162 @@
+doc/settings-ux.md
+  h_0ff4f4713441f4 1-64
+e2e/tests/bots.spec.ts
+  h_0ff4f4713441f4 78
+e2e/tests/roles.spec.ts
+  h_0ff4f4713441f4 68
+e2e/tests/talk-settings.spec.ts
+  h_0ff4f4713441f4 1-114
+web/src/App.vue
+  h_0ff4f4713441f4 370-371
+web/src/components/AccountDirectMessages.vue
+  h_0ff4f4713441f4 7,9,15,22,31-35
+web/src/components/AccountDmPolicy.vue
+  h_0ff4f4713441f4 13,37
+web/src/components/AdminAutomod.test.ts
+  h_0ff4f4713441f4 74-75,78-80,158,182
+web/src/components/AdminAutomodTab.vue
+  h_0ff4f4713441f4 10,87
+web/src/components/AdminBotsTab.test.ts
+  h_0ff4f4713441f4 96,106-120
+web/src/components/AdminBotsTab.vue
+  h_0ff4f4713441f4 23,48,63-68,103,122
+web/src/components/AdminDashboard.test.ts
+  h_0ff4f4713441f4 428
+web/src/components/AdminDashboard.vue
+  h_0ff4f4713441f4 5-6,16,50-51,144
+web/src/components/AdminEditDialogs.test.ts
+  h_0ff4f4713441f4 1-72
+web/src/components/AdminEditDialogs.vue
+  h_0ff4f4713441f4 4-6,8,11-12,15-16,18,20-29,36-54,56
+web/src/components/AdminLayoutTab.test.ts
+  h_0ff4f4713441f4 10,94,114,116-117,162-167,169-170,201,210,245,266-267,279-280,374,378,381
+web/src/components/AdminLayoutTab.vue
+  h_0ff4f4713441f4 3-5,21-22,29-33,51,54,65,135,143-145,156-160,172-174,176,182-196,204-222,284,377,379-388
+web/src/components/AdminLayoutToolbar.vue
+  h_0ff4f4713441f4 2,4,6,8
+web/src/components/AdminOnboardingTab.test.ts
+  h_0ff4f4713441f4 104-106,108,159-183
+web/src/components/AdminOnboardingTab.vue
+  h_0ff4f4713441f4 6,15,17,34-41,44-70,73-76,79-84,86-100,102,119,124,133-134,142-143,146,153,161,169,171,175
+web/src/components/AdminRolesTab.test.ts
+  h_0ff4f4713441f4 81,104,123,141,143-144,154,156,242,272,328,332,334-335,337-364,390-430
+web/src/components/AdminRolesTab.vue
+  h_0ff4f4713441f4 2-4,6,13,15,23-24,38,48,57,71,136,215
+web/src/components/AdminUploadLimit.test.ts
+  h_0ff4f4713441f4 22-24,31-33,36-38,43,45,47-51,56-68,77,83,89,91-92
+web/src/components/AdminUploadLimit.vue
+  h_0ff4f4713441f4 4,8,11,20-31,33,37,47-62
+web/src/components/AudioSettingsPanel.test.ts
+  h_0ff4f4713441f4 384-402
+web/src/components/AudioSettingsPanel.vue
+  h_0ff4f4713441f4 3-4,7,9,16-18,36
+web/src/components/AutomodRuleDialog.test.ts
+  h_0ff4f4713441f4 8,151,153,159-160,162-174,177-204
+web/src/components/AutomodRuleDialog.vue
+  h_0ff4f4713441f4 6-7,13-14,21,33-69,80-83,91-93,214-215
+web/src/components/BaseDialog.vue
+  h_0ff4f4713441f4 24-26,33-43
+web/src/components/BotDetailPanel.test.ts
+  h_0ff4f4713441f4 7,53,55-76,78-88,91,96,100-110,112-115,117,120,122-126,168-175,178-179,182-194
+web/src/components/BotDetailPanel.vue
+  h_0ff4f4713441f4 2-5,12,17,36,38-61,63-64,67-68,96,102-103,113,116,122,130-133
+web/src/components/BotDiscordParity.test.ts
+  h_0ff4f4713441f4 16,133,147
+web/src/components/BotMembers.test.ts
+  h_0ff4f4713441f4 176
+web/src/components/BotRolesPanel.test.ts
+  h_0ff4f4713441f4 32-39,42,46,50,58-59,61-62,65,68,73
+web/src/components/BotRolesPanel.vue
+  h_0ff4f4713441f4 5,17-18
+web/src/components/ChannelAutoDelete.test.ts
+  h_0ff4f4713441f4 2,39-40,42,45,47-48,51,55,57,59,61-64,66-68
+web/src/components/ChannelAutoDeleteField.vue
+  h_0ff4f4713441f4 3,5-8,17-25
+web/src/components/ChannelPermissionsDialog.test.ts
+  h_0ff4f4713441f4 13,85,101,108,110-112,163,167-169,171,215-242
+web/src/components/ChannelPermissionsDialog.vue
+  h_0ff4f4713441f4 9,21,36-58,97,104,108,119,121,129-130,147,150,199-200
+web/src/components/ChannelWebhooksDialog.vue
+  h_0ff4f4713441f4 7,19-25,29,42-43
+web/src/components/DmPolish.test.ts
+  h_0ff4f4713441f4 451,457
+web/src/components/EditInviteDialog.test.ts
+  h_0ff4f4713441f4 11,32,145-187
+web/src/components/EditInviteDialog.vue
+  h_0ff4f4713441f4 5-6,9-10,14,32,34-35,46-48,50-51,54,60-63,68-70,72-96,102-107,115-117,122-125,127-128,134-137,139-140,145
+web/src/components/EditNameDialog.test.ts
+  h_0ff4f4713441f4 11,13,27-28,32,81,83-84,86,108,126,128,130,132-188
+web/src/components/EditNameDialog.vue
+  h_0ff4f4713441f4 5-6,12-14,19-21,36-41,44-87,89,92,94-96,99,101,104-124,128-133,135-150,152-176,178,181-183,185
+web/src/components/IncomingWebhookEditor.vue
+  h_0ff4f4713441f4 1-74
+web/src/components/IncomingWebhooksPanel.vue
+  h_0ff4f4713441f4 6,15,31,33-34,36-38,41-42,173,176,190
+web/src/components/MemberRolesDialog.test.ts
+  h_0ff4f4713441f4 12,65,76-77,79,91,107-118,120-121,123-130
+web/src/components/MemberRolesDialog.vue
+  h_0ff4f4713441f4 6-8,15,41-49,54-58,60,64-65,74,81-82
+web/src/components/NotificationSettingsDialog.test.ts
+  h_0ff4f4713441f4 110-124
+web/src/components/NotificationSettingsDialog.vue
+  h_0ff4f4713441f4 5,10-11,18,35-37,116-117
+web/src/components/OutgoingWebhookForm.vue
+  h_0ff4f4713441f4 1-108
+web/src/components/OutgoingWebhooksPanel.vue
+  h_0ff4f4713441f4 5,8,14,28-29,48-52,55-59,152
+web/src/components/PushSection.test.ts
+  h_0ff4f4713441f4 199,204
+web/src/components/PushSection.vue
+  h_0ff4f4713441f4 6-7,15-20,79,81
+web/src/components/RoleEditor.vue
+  h_0ff4f4713441f4 1-196
+web/src/components/SavedIndicator.vue
+  h_0ff4f4713441f4 1-16
+web/src/components/Sidebar.test.ts
+  h_0ff4f4713441f4 606,608
+web/src/components/TalkAccessPresets.vue
+  h_0ff4f4713441f4 2-6,9,11-15,17-19,21,26,30-48,50-51,53-67
+web/src/components/TalkSettingsDialog.test.ts
+  h_0ff4f4713441f4 13,60,72,77,86,93,102,117,119,133,145,151-155,159-311,319,342
+web/src/components/TalkSettingsDialog.vue
+  h_0ff4f4713441f4 3-5,7-15,23,25-31,45,47-52,54-57,59,61-62,64,67,69-113,115,117-118,124-131,133-139,141-154
+web/src/components/UnsavedChangesBar.vue
+  h_0ff4f4713441f4 1-45
+web/src/components/WebhookPanels.test.ts
+  h_0ff4f4713441f4 85,90-94,96,98-100,132,134-141,143,147,205,215-222,224,230-241,322,343,351-355,357-359,364-372,386,388-402,404-420,534-557
+web/src/composables/draftGuard.ts
+  h_0ff4f4713441f4 1-80
+web/src/composables/usePreferenceSave.ts
+  h_0ff4f4713441f4 1-34
+web/src/composables/usePushSettings.ts
+  h_0ff4f4713441f4 58-59,63,66
+web/src/composables/useSettingsDraft.test.ts
+  h_0ff4f4713441f4 1-362
+web/src/composables/useSettingsDraft.ts
+  h_0ff4f4713441f4 1-143
+web/src/i18n/de.json
+  h_0ff4f4713441f4 1151-1153,2688-2691,2910,3337,3614-3626
+web/src/i18n/en.json
+  h_0ff4f4713441f4 1151-1153,2688-2691,2910,3337,3614-3626
+web/src/lib/autoDelete.ts
+  h_0ff4f4713441f4 2-4,6-16
+web/src/lib/automod.test.ts
+  h_0ff4f4713441f4 3,38
+web/src/lib/roleSave.test.ts
+  h_0ff4f4713441f4 2,4
+web/src/lib/roleSave.ts
+  h_0ff4f4713441f4 1
+web/src/lib/talks.ts
+  h_0ff4f4713441f4 76-77,80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "be8780f17d5c53e4315bf4ce2e02a9a8689252ed",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
