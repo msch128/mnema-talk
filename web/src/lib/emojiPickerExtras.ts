@@ -25,15 +25,8 @@ function searchField(picker: HTMLElement): HTMLInputElement | null {
   return picker.shadowRoot?.querySelector<HTMLInputElement>('input[type="search"], input') ?? null
 }
 
-/** The shortcode of a standard emoji: the picker's own data first, then our table. */
+/** The shortcode of a standard emoji: our (English) table first, as it is what is typed in a message; the picker's own data, which follows the display language, for what the table lacks. */
 export async function shortcodeOf(picker: PickerLike, glyph: string): Promise<string> {
-  try {
-    const found = await picker.database?.getEmojiByUnicodeOrName(glyph)
-    const code = found?.shortcodes?.[0]
-    if (code) return `:${code}:`
-  } catch {
-    // The table below answers.
-  }
   try {
     const bare = glyph.replace(VARIATION_SELECTOR, '')
     const names = Object.entries(await loadEmojiShortcodes()).filter(([, value]) => value.replace(VARIATION_SELECTOR, '') === bare)
@@ -41,7 +34,13 @@ export async function shortcodeOf(picker: PickerLike, glyph: string): Promise<st
     const best = names.find(([name]) => /^[a-z]/.test(name)) ?? names[0]
     if (best) return `:${best[0]}:`
   } catch {
-    // No table, no shortcode.
+    // The picker's data answers.
+  }
+  try {
+    const code = (await picker.database?.getEmojiByUnicodeOrName(glyph))?.shortcodes?.[0]
+    if (code) return `:${code}:`
+  } catch {
+    // No shortcode.
   }
   return ''
 }

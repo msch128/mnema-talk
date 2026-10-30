@@ -25,13 +25,13 @@ const over = (el: FakePicker, id: string) => root(el).getElementById(id)?.dispat
 afterEach(() => { document.body.innerHTML = '' })
 
 describe('shortcodeOf', () => {
-  it('prefers the picker data and falls back to our table', async () => {
+  it('prefers our English table and falls back to the picker data', async () => {
     const el = picker()
-    expect(await shortcodeOf(el, '🎉')).toBe(':tada:')
-    el.database = { getEmojiByUnicodeOrName: async () => ({ shortcodes: ['partying_face', 'party_face'] }) }
+    el.database = { getEmojiByUnicodeOrName: async () => ({ shortcodes: ['partygesicht'] }) }
     expect(await shortcodeOf(el, '🥳')).toBe(':partying_face:')
+    expect(await shortcodeOf(el, '🧿🧿')).toBe(':partygesicht:')
     el.database = { getEmojiByUnicodeOrName: async () => { throw new Error('closed') } }
-    expect(await shortcodeOf(el, '🥳')).toBe(':partying_face:')
+    expect(await shortcodeOf(el, '🧿🧿')).toBe('')
   })
 
   it('has no shortcode for a text that is no emoji', async () => {
@@ -130,10 +130,10 @@ describe('enhanceEmojiPicker edge cases', () => {
     expect(seen.every(p => p?.code !== ':tada:')).toBe(true)
   })
 
-  it('gives an unnamed shortcode when the data knows none', async () => {
+  it('gives no shortcode when neither the table nor the data knows one', async () => {
     const el = picker()
     el.database = { getEmojiByUnicodeOrName: async () => ({}) }
-    expect(await shortcodeOf(el, '🎉')).toBe(':tada:')
+    expect(await shortcodeOf(el, '🧿🧿')).toBe('')
   })
 })
 
