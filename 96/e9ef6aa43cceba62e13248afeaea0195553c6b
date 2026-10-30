@@ -1,0 +1,21 @@
+e2e/tests/notification-links.spec.ts
+  s_bf24ce51cd8f95::t_690144a7503732 36,39-41
+e2e/tests/ptt-hint.spec.ts
+  s_bf24ce51cd8f95::t_f77efadbd4ab71 36,38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "96e9ef6aa43cceba62e13248afeaea0195553c6b",
+  "prompts": {},
+  "sessions": {
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
