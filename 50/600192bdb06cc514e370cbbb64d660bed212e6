@@ -1,0 +1,27 @@
+web/src/lib/pageVisibility.ts
+  s_2de5838cb2797c::t_17d0bb3bc74996 83-114
+web/src/stores/voice.ts
+  s_2de5838cb2797c::t_ffb493b0b2ca1e 3,8,142-144
+web/src/stores/voice/cameras.ts
+  s_2de5838cb2797c::t_36e4177e7cf0d7 6,93
+web/src/stores/voice/room.ts
+  s_2de5838cb2797c::t_a07998b92eb243 89,150-163,166-172
+web/src/stores/voiceStoreBehaviour.test.ts
+  s_2de5838cb2797c::t_017bbaed534543 319,322-324,326,341-373
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "50600192bdb06cc514e370cbbb64d660bed212e6",
+  "prompts": {},
+  "sessions": {
+    "s_2de5838cb2797c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aperf-idle-a1f825253ff37314",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
