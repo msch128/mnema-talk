@@ -1,0 +1,56 @@
+web/src/composables/useStreamQuality.test.ts
+  s_06fcde5dbef956::t_cea185cd156715 7,122-158
+web/src/composables/useWebRTC.layers.test.ts
+  s_06fcde5dbef956::t_67bf33e0b8d94f 289,353,359-414
+web/src/i18n/de.json
+  s_5b748b0295d2f4::t_94bfceeeab8845 1113-1118
+web/src/composables/webrtc/senders.ts
+  s_5b748b0295d2f4::t_00bbb3076ccb15 71,73-75,78,83
+  s_06fcde5dbef956::t_57128092b681e6 84-85
+web/src/stores/voice/room.ts
+  s_5b748b0295d2f4::t_a93b4f6133f721 194
+web/src/i18n/en.json
+  s_5b748b0295d2f4::t_76592bdf02e73c 1113-1118
+web/src/composables/useStreamQuality.ts
+  s_06fcde5dbef956::t_3bdf947bff5555 6,9,146-171,207-208
+e2e/tests/stream-quality-live.spec.ts
+  s_06fcde5dbef956::t_41b7a0355c94eb 1-109
+web/src/components/ScreenShareModal.vue
+  h_0ff4f4713441f4 14,79,85
+  s_06fcde5dbef956::t_17cd82f96cfb61 15,30-31,42,47,86
+web/src/stores/voice/state.ts
+  s_5b748b0295d2f4::t_b456a5dc9775e0 75-76
+web/src/lib/streamQuality.ts
+  s_5b748b0295d2f4::t_8624b4c9b933f0 5-6,15-17,62-63,145-147
+web/src/stores/voice.ts
+  s_5b748b0295d2f4::t_f93ead8a6e72d2 25
+web/src/composables/webrtc/screen.ts
+  s_5b748b0295d2f4::t_74d239ebe25d63 113,164,246
+  s_06fcde5dbef956::t_8ee1e606aa3bd1 111-112
+web/src/components/ScreenShareModal.test.ts
+  s_06fcde5dbef956::t_172dc6bacdd5f8 168-184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7d7033eb6c631301d7c364dc7ef8458ceaed20b2",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
