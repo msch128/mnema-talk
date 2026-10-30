@@ -1,0 +1,25 @@
+web/src/components/EmojiGlyph.vue
+  s_fb29f048bd6d02::t_58abc0811c34a4 32-35
+web/src/components/MediaPlaceholder.test.ts
+  s_fb29f048bd6d02::t_11260c51455443 122-144
+web/src/lib/mediaStatus.test.ts
+  s_fb29f048bd6d02::t_6f6b7072f1a012 35-48
+web/src/lib/mediaStatus.ts
+  s_fb29f048bd6d02::t_fe4f8c2b1a9a5a 24-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9b23add9fef46de111f04a082a476c4b16ae91e0",
+  "prompts": {},
+  "sessions": {
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
