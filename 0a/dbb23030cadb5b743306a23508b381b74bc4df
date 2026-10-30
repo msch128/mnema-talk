@@ -1,0 +1,55 @@
+e2e/tests/arrow-edit.spec.ts
+  s_57fa886a85f9f6::t_31197a5213f4f5 1-74
+web/src/components/ChatArea.vue
+  s_57fa886a85f9f6::t_80c7b21d76c665 22,83,314,383
+web/src/components/ChatAreaOwnEdit.test.ts
+  s_57fa886a85f9f6::t_1508adf9524f3a 1-246
+web/src/components/ChatComposer.vue
+  s_57fa886a85f9f6::t_76232ad647dcef 39,96
+web/src/components/MessageEditor.vue
+  s_57fa886a85f9f6::t_14c45ae7b856a1 4,7,15-16,20,39-43,55-57,66
+web/src/components/MessageRow.vue
+  s_57fa886a85f9f6::t_917d62c12d0663 48,181
+web/src/components/ThreadComposer.vue
+  s_57fa886a85f9f6::t_336b7174bfefa0 26,41
+web/src/components/ThreadReply.vue
+  s_57fa886a85f9f6::t_1ab039d756abcc 27,142
+web/src/components/ThreadSidebar.vue
+  s_57fa886a85f9f6::t_dcb74ae11a7255 19,92,326,347
+web/src/composables/useComposerKeys.ts
+  s_57fa886a85f9f6::t_387a037d3d2016 12-13,22,25
+web/src/composables/useMessageActions.test.ts
+  s_57fa886a85f9f6::t_0e15fff39e65cf 127,129-134,136-138
+web/src/composables/useMessageActions.ts
+  s_57fa886a85f9f6::t_905efc9a6a977f 107,113-114,138,160,183,186,189,192-204,209
+web/src/composables/useMessageMenu.test.ts
+  s_57fa886a85f9f6::t_e50c29132f0326 22
+web/src/composables/useMessageMenuLater.test.ts
+  s_57fa886a85f9f6::t_10a828d6fff493 20
+web/src/composables/useMessageMenuSaved.test.ts
+  s_57fa886a85f9f6::t_210fba3f9bb358 28
+web/src/composables/useMessageModerationMenu.test.ts
+  s_57fa886a85f9f6::t_42efb239dab620 27
+web/src/composables/useOwnMessageNav.ts
+  s_57fa886a85f9f6::t_b37f8965efe1b6 1-98
+web/src/i18n/de.json
+  s_57fa886a85f9f6::t_a027308e9b62f2 482
+web/src/i18n/en.json
+  s_57fa886a85f9f6::t_3acc9c4a432b91 482
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0adbb23030cadb5b743306a23508b381b74bc4df",
+  "prompts": {},
+  "sessions": {
+    "s_57fa886a85f9f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4edefc50d802f9c0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
