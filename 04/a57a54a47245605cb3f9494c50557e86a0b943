@@ -1,0 +1,21 @@
+web/src/composables/useScreenFit.test.ts
+  s_45fff186c97845::t_d943e1ae213178 91-155
+web/src/composables/useScreenFit.ts
+  s_45fff186c97845::t_c920b9a98199e2 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "04a57a54a47245605cb3f9494c50557e86a0b943",
+  "prompts": {},
+  "sessions": {
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
