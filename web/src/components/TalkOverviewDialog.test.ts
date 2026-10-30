@@ -57,6 +57,7 @@ describe('the Talk overview of a profile', () => {
     await wrapper.get('[data-testid="talk-overview-join"]').trigger('click')
     await flushPromises()
     expect(joinVoiceChannel).toHaveBeenCalledWith(talk.id)
+    expect(wrapper.emitted('joined')).toHaveLength(1)
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
 

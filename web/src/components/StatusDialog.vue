@@ -27,7 +27,11 @@ const features = useServerFeaturesStore()
 
 const hadStatus = !!authStore.user?.status_text
 const text = ref(authStore.user?.status_text ?? '')
-const expiry = ref<ExpiryChoice>('never')
+// Editing a status that has an expiry keeps it unless another choice is made.
+type Choice = ExpiryChoice | 'keep'
+const kept = authStore.user?.status_text && authStore.user.status_expires_at ? new Date(authStore.user.status_expires_at) : null
+const keepable = kept !== null && isFuture(kept, new Date())
+const expiry = ref<Choice>(keepable ? 'keep' : 'never')
 const error = ref('')
 const saving = ref(false)
 const pickerOpen = ref(false)
@@ -38,7 +42,7 @@ const chars = (s: string) => Array.from(s)
 const count = computed(() => chars(text.value).length)
 const canExpire = computed(() => features.has('status.expiry') && text.value.trim() !== '')
 // A choice whose moment has passed ("today" at 23:59:30) is not offered.
-const choices = EXPIRY_CHOICES.filter(c => c === 'never' || isFuture(expiryTime(c, new Date()), new Date()))
+const choices: Choice[] = [...(keepable ? ['keep' as const] : []), ...EXPIRY_CHOICES.filter(c => c === 'never' || isFuture(expiryTime(c, new Date()), new Date()))]
 const until = computed(() => authStore.user?.status_expires_at)
 
 function limit() {
@@ -79,7 +83,7 @@ async function send(next: string, expiresAt: Date | null) {
 function save() {
   error.value = ''
   const next = text.value.trim()
-  const at = next && canExpire.value ? expiryTime(expiry.value, new Date()) : null
+  const at = next && canExpire.value ? (expiry.value === 'keep' ? kept : expiryTime(expiry.value, new Date())) : null
   if (at && !isFuture(at, new Date())) {
     error.value = t('profile.expiryPast')
     return
@@ -150,7 +154,7 @@ function clear() {
               @click="expiry = c"
             >{{ $t(`profile.expiry.${c}`) }}</button>
           </div>
-          <p v-if="until && hadStatus" class="field-hint">{{ $t('profile.clearsAt', { time: dateTime(until, locale) }) }}</p>
+          <p v-if="keepable && until" class="field-hint">{{ $t('profile.clearsAt', { time: dateTime(until, locale) }) }}</p>
         </div>
 
         <p v-if="error" role="alert" data-testid="status-error" class="field-error">{{ error }}</p>

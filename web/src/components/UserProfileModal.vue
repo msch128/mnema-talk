@@ -290,5 +290,5 @@ function handleMention() {
     </div>
     </template>
   </BaseDialog>
-  <TalkOverviewDialog v-if="talkOverviewId" :channel-id="talkOverviewId" @close="talkOverviewId = null" @select="openParticipant" />
+  <TalkOverviewDialog v-if="talkOverviewId" :channel-id="talkOverviewId" @close="talkOverviewId = null" @joined="emit('close')" @select="openParticipant" />
 </template>

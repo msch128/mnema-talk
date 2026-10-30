@@ -1838,6 +1838,7 @@
     "passwordLink": "Password and account in settings",
     "clearAfter": "Clear after",
     "expiry": {
+      "keep": "Keep current",
       "never": "Don’t clear",
       "min30": "30 minutes",
       "hour": "1 hour",

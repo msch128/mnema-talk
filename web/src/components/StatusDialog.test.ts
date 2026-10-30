@@ -103,6 +103,27 @@ describe('the status dialog', () => {
     expect(wrapper.find('[data-expiry="hour"]').exists()).toBe(true)
   })
 
+  it('keeps the current expiry when editing a status that has one', async () => {
+    const at = new Date(2026, 9, 24, 18, 0).toISOString()
+    open(['status.expiry'], userFixture({ status_text: 'Busy', status_expires_at: at }))
+    expect(wrapper.get('[data-expiry="keep"]').attributes('aria-checked')).toBe('true')
+    await input().setValue('Busier')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(setStatusText).toHaveBeenCalledWith(me.id, 'Busier', new Date(at))
+    wrapper.unmount()
+    open(['status.expiry'], userFixture({ status_text: 'Busy', status_expires_at: at }))
+    await expiryChoice('never').trigger('click')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(setStatusText).toHaveBeenLastCalledWith(me.id, 'Busy', null)
+  })
+
+  it('offers no "keep" without an expiry', () => {
+    open(['status.expiry'], userFixture({ status_text: 'Busy' }))
+    expect(wrapper.find('[data-expiry="keep"]').exists()).toBe(false)
+  })
+
   it('clears the status with the Clear button, and only offers it when there is one', async () => {
     open([])
     expect(wrapper.find('[data-testid="status-clear"]').exists()).toBe(false)

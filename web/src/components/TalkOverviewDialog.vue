@@ -16,7 +16,7 @@ import BaseDialog from './BaseDialog.vue'
 import TalkParticipantList from './TalkParticipantList.vue'
 
 const props = defineProps({ channelId: { type: String, required: true } })
-const emit = defineEmits<{ close: []; select: [user: TalkParticipant] }>()
+const emit = defineEmits<{ close: []; joined: []; select: [user: TalkParticipant] }>()
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
@@ -34,7 +34,10 @@ const { join: joinTalk } = useTalkJoin(() => props.channelId, () => {
   navigate(chatStore.linkTo(props.channelId))
 })
 async function join() {
-  if (await joinTalk()) emit('close')
+  if (await joinTalk()) {
+    emit('joined')
+    emit('close')
+  }
 }
 </script>
 

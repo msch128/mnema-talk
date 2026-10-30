@@ -1838,6 +1838,7 @@
     "passwordLink": "Passwort und Konto in den Einstellungen",
     "clearAfter": "Löschen nach",
     "expiry": {
+      "keep": "Beibehalten",
       "never": "Nicht löschen",
       "min30": "30 Minuten",
       "hour": "1 Stunde",
