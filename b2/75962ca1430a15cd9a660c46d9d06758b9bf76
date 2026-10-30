@@ -1,0 +1,57 @@
+doc/moderation.md
+  s_afb3377f9f37f8::t_2afe0b9d024bef 553
+doc/operations.md
+  s_afb3377f9f37f8::t_4b7f887931b2a4 950
+e2e/tests/forum-close.spec.ts
+  s_afb3377f9f37f8::t_6035567a2c116e 1-67
+internal/httpx/ratelimit.go
+  s_afb3377f9f37f8::t_2f60ce45014e2b 154-170
+internal/server/api_limits_test.go
+  s_afb3377f9f37f8::t_54d795bc9db155 1-57
+internal/server/router_build.go
+  s_afb3377f9f37f8::t_c4507c3a5e222c 50-60,102
+internal/server/router_routes.go
+  s_afb3377f9f37f8::t_aacd63e6bc3066 97
+internal/server/server.go
+  s_afb3377f9f37f8::t_a28e648f67e4ce 164-165
+web/src/App.test.ts
+  s_afb3377f9f37f8::t_fb2db1ab83247f 101-110
+web/src/components/ThreadSidebar.test.ts
+  s_afb3377f9f37f8::t_e8198d4a3f580a 327,329,331-335,340,342,347,355,357,691-720
+web/src/components/ThreadSidebar.vue
+  s_afb3377f9f37f8::t_c049290b43191a 169-178,180,185,275-277,279-280
+web/src/composables/appRoutingApply.test.ts
+  s_afb3377f9f37f8::t_b0cbdcba43e963 106-118
+web/src/composables/appRoutingApply.ts
+  s_afb3377f9f37f8::t_5569ae27212a9e 71-75
+web/src/composables/useAppRouting.test.ts
+  s_afb3377f9f37f8::t_de6a4593802572 38-42
+web/src/lib/api.test.ts
+  s_afb3377f9f37f8::t_f39da8aa09ef9c 110,316-363
+web/src/lib/api.ts
+  s_afb3377f9f37f8::t_a33a4ebef8bd3f 83-84,130,134-135,177-194,199,203
+web/src/lib/forumApi.ts
+  s_afb3377f9f37f8::t_544e1d86416f96 56
+web/src/stores/chat/threads.ts
+  s_afb3377f9f37f8::t_56cb65e4934875 41
+web/src/stores/toast.test.ts
+  s_afb3377f9f37f8::t_0cc911fbf6bda5 24-40
+web/src/stores/toast.ts
+  s_afb3377f9f37f8::t_2fc81b1f680261 55-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b275962ca1430a15cd9a660c46d9d06758b9bf76",
+  "prompts": {},
+  "sessions": {
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
