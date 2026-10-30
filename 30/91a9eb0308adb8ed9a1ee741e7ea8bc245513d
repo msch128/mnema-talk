@@ -1,0 +1,19 @@
+web/src/composables/useZoomPan.ts
+  s_61e7f03250bd0b::t_5723512d60a0f1 12-18,53,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3091a9eb0308adb8ed9a1ee741e7ea8bc245513d",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
