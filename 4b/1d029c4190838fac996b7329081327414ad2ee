@@ -1,0 +1,99 @@
+SECURITY.md
+  s_61e7f03250bd0b::t_7dd04da5ee0a66 228-235,953-954
+api/openapi.json
+  s_61e7f03250bd0b::t_3a4c19da9245e0 239-242,6581-6584,7542-7545,13168-13376,27728-27834
+doc/roles-and-permissions.md
+  s_61e7f03250bd0b::t_7a6958bac654b9 266-297,357
+internal/audit/classes_test.go
+  s_61e7f03250bd0b::t_bb047ba5d04d5f 37
+internal/audit/routes.go
+  s_61e7f03250bd0b::t_f2bffe34e4ae0e 119-120
+internal/audit/snapshot.go
+  s_61e7f03250bd0b::t_86d95ec3369f33 42-43
+internal/auth/password_reset.go
+  s_61e7f03250bd0b::t_02043b4e2dda04 23-25,58
+internal/community/name.go
+  s_61e7f03250bd0b::t_25a570cc76a156 32,57-75,77,80-81,84-86,90
+internal/db/migrations/0080_community_icon.sql
+  s_61e7f03250bd0b::t_7d8d0d889e6c2a 1-7
+internal/imgproc/icon.go
+  s_61e7f03250bd0b::t_fd78cef1643536 1-40
+internal/imgproc/picture_test.go
+  s_61e7f03250bd0b::t_d771f8e2673ffe 147-186
+internal/imgproc/sizes.go
+  s_61e7f03250bd0b::t_bc589a5fb37f84 19-27
+internal/onboarding/handler.go
+  s_61e7f03250bd0b::t_04260819d07130 21,33-35,37,49-50,60
+internal/onboarding/icon.go
+  s_61e7f03250bd0b::t_32a3b390c74a56 1-362
+internal/onboarding/icon_integration_test.go
+  s_61e7f03250bd0b::t_a7a50f6cfb485b 1-52
+internal/onboarding/settings.go
+  s_61e7f03250bd0b::t_a1c2fb24dffdb5 49-52,75,79,148
+internal/server/community_icon_integration_test.go
+  s_61e7f03250bd0b::t_e7e88bdf45e5b1 1-255
+internal/server/health.go
+  s_61e7f03250bd0b::t_31ff512afac531 31-35,142
+internal/server/router_build.go
+  s_61e7f03250bd0b::t_26174eb9b990a5 161
+internal/server/router_routes.go
+  s_61e7f03250bd0b::t_20b0d9387b3291 12,36,152-155
+internal/server/sharepage.go
+  s_61e7f03250bd0b::t_41a0a3d689f9b0 109,133-143,160,202
+internal/server/sharepage_integration_test.go
+  s_61e7f03250bd0b::t_db011c07ee4c04 133-161
+web/src/components/AdminOnboardingTab.test.ts
+  s_61e7f03250bd0b::t_c99c37e7a03bca 10,190-252
+web/src/components/AdminOnboardingTab.vue
+  s_61e7f03250bd0b::t_21d813a2fda124 14,17-19,32,38-45,103,110-143,163-182
+web/src/components/LoginModal.test.ts
+  s_61e7f03250bd0b::t_fcf485b1a36d77 163-170
+web/src/components/LoginModal.vue
+  s_61e7f03250bd0b::t_c1067e3e9be5d8 14,53-55,85,150-151
+web/src/components/SidebarServerMenu.vue
+  s_61e7f03250bd0b::t_681c81466e49b7 16,46-47,138,140
+web/src/components/SidebarServerMenuIcon.test.ts
+  s_61e7f03250bd0b::t_aac3e4acbe143e 1-42
+web/src/composables/useCommunityIcon.ts
+  s_61e7f03250bd0b::t_451bafcca948e2 1-9
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_61d79b43346a37 1887-1896,2742-2744
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_07eaf5e12e101c 1887-1896,2742-2744
+web/src/lib/communityIcon.test.ts
+  s_61e7f03250bd0b::t_fc35f22f7cffa3 1-41
+web/src/lib/communityIcon.ts
+  s_61e7f03250bd0b::t_422844a02c688c 1-33
+web/src/stores/chat/events.ts
+  s_61e7f03250bd0b::t_e4de5bc87c954b 12,192-196
+web/src/stores/chatEvents.test.ts
+  s_61e7f03250bd0b::t_4e2df0605c2d18 10,39-57
+web/src/stores/serverFeatures.ts
+  s_61e7f03250bd0b::t_536974c3868988 5,17-18,26-31,38,50
+web/src/types/events.ts
+  s_61e7f03250bd0b::t_3394f01da2e55a 140
+web/src/types/noticeEvents.ts
+  s_61e7f03250bd0b::t_12d304805ecdd5 26-27
+web/src/types/rest.ts
+  s_61e7f03250bd0b::t_b02c26595055b8 120,127,3886,3898,4440,4450
+web/web.go
+  s_61e7f03250bd0b::t_503c5a7a65b73f 14,31-38,41,43-45,83,91-92,95-110,132-134,149-150,162-183,246
+web/web_test.go
+  s_61e7f03250bd0b::t_3b6641c8bdfed6 142-184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4b1d029c4190838fac996b7329081327414ad2ee",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
