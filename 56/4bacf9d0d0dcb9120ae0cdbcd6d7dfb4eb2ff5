@@ -1,0 +1,52 @@
+web/src/App.vue
+  h_0ff4f4713441f4 39,380
+web/src/components/ChatArea.test.ts
+  h_0ff4f4713441f4 270,739,742
+web/src/components/ChatArea.vue
+  h_0ff4f4713441f4 20,160
+web/src/components/MediaViewer.test.ts
+  h_0ff4f4713441f4 1-241
+web/src/components/MediaViewer.vue
+  h_0ff4f4713441f4 2-3,5-6,10
+web/src/components/MediaViewerDialog.vue
+  h_0ff4f4713441f4 1-203
+web/src/components/MessageAttachments.test.ts
+  h_0ff4f4713441f4 4-5,9-10,16-20,50-52,84-142
+web/src/components/MessageAttachments.vue
+  h_0ff4f4713441f4 3-8,10,13-15,20-22,28,42,56,75-92,98-114,116,125-126,129
+web/src/components/MessagePresentation.test.ts
+  h_0ff4f4713441f4 7,50-53
+web/src/components/MessageRow.vue
+  h_0ff4f4713441f4 48,207
+web/src/components/ThreadReply.vue
+  h_0ff4f4713441f4 27,150
+web/src/components/ThreadRootCard.vue
+  h_0ff4f4713441f4 113
+web/src/components/ThreadSidebar.test.ts
+  h_0ff4f4713441f4 17,112-123,388
+web/src/components/ThreadSidebar.vue
+  h_0ff4f4713441f4 169,172
+web/src/composables/useComposerKeys.ts
+  h_0ff4f4713441f4 41
+web/src/composables/useMediaViewer.ts
+  h_0ff4f4713441f4 1-73
+web/src/composables/useZoomPan.ts
+  h_0ff4f4713441f4 1-94
+web/src/i18n/de.json
+  h_0ff4f4713441f4 63-80
+web/src/i18n/en.json
+  h_0ff4f4713441f4 63-80
+web/src/lib/galleryLayout.ts
+  h_0ff4f4713441f4 1-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "564bacf9d0d0dcb9120ae0cdbcd6d7dfb4eb2ff5",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
