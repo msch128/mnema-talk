@@ -1,0 +1,40 @@
+e2e/tests/stats-packets.spec.ts
+  h_0ff4f4713441f4 1-69
+web/src/components/ActivityAndConnectionStats.test.ts
+  h_0ff4f4713441f4 92-93,99
+web/src/components/ConnectionStatsModal.vue
+  h_0ff4f4713441f4 6,49,54-55,150
+web/src/composables/webrtc/state.ts
+  h_0ff4f4713441f4 191-201
+web/src/composables/webrtc/statsPolling.test.ts
+  h_0ff4f4713441f4 1-133
+web/src/composables/webrtc/statsPolling.ts
+  h_0ff4f4713441f4 4,7,12,19-20,23-24,26,28,30,34-52,60,71,73,84-85,95-98,106-108,111-114,120-131
+web/src/i18n/de.json
+  h_0ff4f4713441f4 801-821
+web/src/i18n/en.json
+  h_0ff4f4713441f4 801-821
+web/src/lib/mediaStats.ts
+  h_0ff4f4713441f4 8-9
+web/src/lib/rtcFlowRows.ts
+  h_0ff4f4713441f4 1-65
+web/src/lib/rtcFlows.test.ts
+  h_0ff4f4713441f4 1-123
+web/src/lib/rtcFlows.ts
+  h_0ff4f4713441f4 1-82
+web/src/lib/rtcStats.test.ts
+  h_0ff4f4713441f4 67,76
+web/src/lib/rtcStats.ts
+  h_0ff4f4713441f4 5-6,8-10,76,79,81,155,158,161-162,164-165,171-172,182-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f255fc39e825e87379f033f98d5bc62fc8bf7f67",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
