@@ -1,0 +1,45 @@
+e2e/tests/stats-packets.spec.ts
+  s_06fcde5dbef956::t_76060ab88ee825 1-69
+web/src/components/ActivityAndConnectionStats.test.ts
+  s_06fcde5dbef956::t_fb790d78b7692c 92-93,99
+web/src/components/ConnectionStatsModal.vue
+  s_06fcde5dbef956::t_6feec1ce9a46d8 6,49,54-55,150
+web/src/composables/webrtc/state.ts
+  s_06fcde5dbef956::t_9efdb943b627a1 191-201
+web/src/composables/webrtc/statsPolling.test.ts
+  s_06fcde5dbef956::t_da63c5b7ccab47 1-133
+web/src/composables/webrtc/statsPolling.ts
+  s_06fcde5dbef956::t_b222b6aed65b8c 4,7,12,19-20,23-24,26,28,30,34-52,60,71,73,84-85,95-98,106-108,111-114,120-131
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_51afb4bc62f162 801-821
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_b074b73b9f0e89 801-821
+web/src/lib/mediaStats.ts
+  s_06fcde5dbef956::t_e1253f0581a091 8-9
+web/src/lib/rtcFlowRows.ts
+  s_06fcde5dbef956::t_ec7e68527b01b4 1-65
+web/src/lib/rtcFlows.test.ts
+  s_06fcde5dbef956::t_f97c025efabd87 1-123
+web/src/lib/rtcFlows.ts
+  s_06fcde5dbef956::t_402fc01a63902b 1-82
+web/src/lib/rtcStats.test.ts
+  s_06fcde5dbef956::t_59233040cc3235 67,76
+web/src/lib/rtcStats.ts
+  s_06fcde5dbef956::t_10edbdc96e34d6 5-6,8-10,76,79,81,155,158,161-162,164-165,171-172,182-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "49478c3c60cbf1f4847b42f11005401d7353be9e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
