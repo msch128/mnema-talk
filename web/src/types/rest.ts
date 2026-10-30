@@ -1435,6 +1435,7 @@ export function isChatCreateForumTagRequest(value: unknown): value is ChatCreate
 export const decodeChatCreateForumTagRequest = decoder("chat.CreateForumTagRequest", isChatCreateForumTagRequest)
 
 export type ChatCreateMessageRequest = {
+  attachment_ids?: Array<string>
   content: string
   parent_id?: string | null
   reply_to_id?: string | null
@@ -1442,6 +1443,7 @@ export type ChatCreateMessageRequest = {
 
 export function isChatCreateMessageRequest(value: unknown): value is ChatCreateMessageRequest {
   return isRecord(value)
+    && (!hasOwn(value, "attachment_ids") || isArrayOf(value["attachment_ids"], item => isIdentifier(item)))
     && (hasOwn(value, "content") && isString(value["content"], 4000))
     && (!hasOwn(value, "parent_id") || (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
     && (!hasOwn(value, "reply_to_id") || (isIdentifier(value["reply_to_id"]) || value["reply_to_id"] === null))
