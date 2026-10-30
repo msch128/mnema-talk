@@ -1,0 +1,103 @@
+web/src/App.vue
+  s_bf24ce51cd8f95::t_115eaf42d38a8e 32-33,116,350
+web/src/components/AccountMenu.test.ts
+  s_0cae4a4d7ab7c3::t_94dabc6e68023f 13,70-86
+web/src/components/AccountMenu.vue
+  s_46a6db8f9e8231::t_a812ebd25b8660 7,14,178-182
+web/src/components/AppSettingsPanel.test.ts
+  s_0cae4a4d7ab7c3::t_f69eaea22790aa 11-13,65-81
+web/src/components/AppSettingsPanel.vue
+  s_bf24ce51cd8f95::t_4991b9725c2382 2-7,10-17,22-27
+web/src/components/ChatArea.test.ts
+  s_4c6a19030e223f::t_6cc89f26168a0f 485
+web/src/components/ChatArea.vue
+  s_bf24ce51cd8f95::t_1cfe9a2ea8a3ec 261
+web/src/components/ChatAreaDm.test.ts
+  s_bf24ce51cd8f95::t_3359dc28daf65c 74-81
+web/src/components/DmTalkActions.vue
+  s_bf24ce51cd8f95::t_13cc01f43fda08 2,6,74
+web/src/components/MessagePresentation.test.ts
+  s_ba0662248deca2::t_2300b99afe3b89 39-41,45,47,63
+web/src/components/MessageRow.vue
+  s_ba0662248deca2::t_c209a61c318807 108,113-123
+web/src/components/PresenceMenu.test.ts
+  s_0cae4a4d7ab7c3::t_b8bb022177bdab 171-181
+web/src/components/ShortcutsDialog.test.ts
+  s_bf24ce51cd8f95::t_65dd1fe729b7bf 1-64
+web/src/components/ShortcutsDialog.vue
+  s_bf24ce51cd8f95::t_93ee69850bc252 1-47
+web/src/components/Sidebar.menus.test.ts
+  s_4c6a19030e223f::t_333198f2598b32 206,225
+web/src/components/TalkInvite.test.ts
+  s_bf24ce51cd8f95::t_b97c53eb1dc1cc 109-116
+web/src/components/ThreadSidebar.test.ts
+  s_0cae4a4d7ab7c3::t_8cdb6eda2969ab 110-119
+web/src/components/ThreadSidebar.vue
+  s_bf24ce51cd8f95::t_d8447bed1636ad 228
+web/src/composables/useMessageMenu.test.ts
+  s_4c6a19030e223f::t_2f389c1e01e53b 65,83,87
+web/src/composables/useMessageMenu.ts
+  s_bf24ce51cd8f95::t_b19de2fa933cca 81,83
+web/src/composables/useMuteMenu.test.ts
+  s_bf24ce51cd8f95::t_ef1dc438943454 5-6,59-75,84-86
+web/src/composables/useMuteMenu.ts
+  s_bf24ce51cd8f95::t_4d2983528ef858 49-65,67
+web/src/i18n/de.json
+  s_0cae4a4d7ab7c3::t_3d6b0e50c10b89 48-49,73-74,319-320,600-602,632-633,3597-3643
+web/src/i18n/en.json
+  s_0cae4a4d7ab7c3::t_3e925277a9eb97 48-49,73-74,319-320,600-602,632-633,3183,3597-3643
+web/src/lib/shortcuts.ts
+  s_bf24ce51cd8f95::t_774e03ad03040f 1-76
+web/src/lib/shortcutsDialog.test.ts
+  s_bf24ce51cd8f95::t_97a8ee9b6f5b63 1-73
+web/src/lib/shortcutsDialog.ts
+  s_bf24ce51cd8f95::t_d683306369688d 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "460f51c9bbf85476caaa8c0f0d3a000b9ca69fbe",
+  "prompts": {},
+  "sessions": {
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ba0662248deca2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-desktop-uploads-c294f35d64e7fce5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
