@@ -14,6 +14,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { usePermissionsStore } from '../stores/permissions'
 import * as forumApi from '../lib/forumApi'
 import { setLocale, t } from '../i18n'
+import { closeViewer, viewerState } from '../composables/useMediaViewer'
 
 vi.mock('../lib/forumApi', () => ({ updateForumPost: vi.fn() }))
 
@@ -108,6 +109,18 @@ describe('ThreadSidebar keyboard', () => {
 })
 
 describe('ThreadSidebar content', () => {
+  it('opens the viewer with all images of a reply and the clicked index', async () => {
+    const chat = setup()
+    const img = (id: string) => ({ id, url: `/m/${id}`, mime_type: 'image/png', is_deleted: false, original_filename: `${id}.png`, size_bytes: 10 })
+    chat.threadReplies = [msg('r1', 'u2', { attachments: [img('a'), img('b'), img('c')] })]
+    await nextTick()
+    await w.findAll('[data-reply-id="r1"] [data-gallery-cell]')[1]!.trigger('click')
+    expect(viewerState.items.map(i => i.src)).toEqual(['/m/a', '/m/b', '/m/c'])
+    expect(viewerState.index).toBe(1)
+    expect(viewerState.message?.id).toBe('r1')
+    closeViewer()
+  })
+
   it('plays videos in the root and in replies', async () => {
     const chat = setup()
     const video = { id: 'v', url: '/m/v', mime_type: 'video/mp4', is_deleted: false, original_filename: 'clip.mp4', size_bytes: 10 }
@@ -250,11 +263,9 @@ describe('ThreadSidebar replies', () => {
 
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import MessageEditor from './MessageEditor.vue'
-import MessageAttachments from './MessageAttachments.vue'
 import ReactionBar from './ReactionBar.vue'
 import ReactionPalette from './ReactionPalette.vue'
 import UserAvatar from './UserAvatar.vue'
-import ImageLightbox from './ImageLightbox.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import EmojiButton from './EmojiButton.vue'
 import { pendingConfirm } from '../lib/confirm'
@@ -374,7 +385,7 @@ describe('ThreadSidebar complete interactions', () => {
     expect(w.findComponent(MessageEditor).exists()).toBe(false)
   })
 
-  it('opens profile avatars, attachment lightboxes and root/reply reaction palettes', async () => {
+  it('opens profile avatars and root/reply reaction palettes', async () => {
     const chat = setup()
     const profile = vi.spyOn(chat, 'openUserProfile').mockResolvedValue(undefined)
     const react = vi.spyOn(chat, 'toggleReaction').mockResolvedValue([])
@@ -383,13 +394,6 @@ describe('ThreadSidebar complete interactions', () => {
     expect(profile).toHaveBeenCalledWith(expect.objectContaining({ id: 'root' }))
     await w.find('[data-reply-id=root] [data-testid=author-name]').trigger('click')
     expect(profile).toHaveBeenCalledTimes(5)
-    for (const attachment of w.findAllComponents(MessageAttachments)) {
-      attachment.vm.$emit('open-image', '/test-image')
-      await nextTick()
-      expect(w.findComponent(ImageLightbox).props('src')).toBe('/test-image')
-      w.findComponent(ImageLightbox).vm.$emit('close')
-      await nextTick()
-    }
     for (const bar of w.findAllComponents(ReactionBar)) {
       bar.vm.$emit('toggle', '👍')
       bar.vm.$emit('toggle-picker')

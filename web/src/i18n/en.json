@@ -60,6 +60,24 @@
     "openProfile": "Open your profile",
     "deleted": "Deleted member"
   },
+  "viewer": {
+    "label": "Media viewer",
+    "announce": "{name}, {n} of {total}",
+    "counter": "{n} / {total}",
+    "previous": "Previous image",
+    "next": "Next image",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "download": "Download",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "jumpToMessage": "Go to message",
+    "openOriginal": "Open original",
+    "inChannel": "in {channel}",
+    "dimensions": "{w} × {h} px",
+    "zoomLevel": "Zoom {percent}%"
+  },
   "media": {
     "sizeB": "{size} B",
     "sizeKb": "{size} KB",
@@ -489,8 +507,6 @@
     "viewingOlder": "You’re viewing older messages",
     "jumpToEnd": "Jump to latest",
     "jumpToFirstUnread": "Jump to first unread",
-    "enlargedImage": "Enlarged image",
-    "openOriginal": "Open original",
     "attachment": "Attachment",
     "unknownUser": "Unknown",
     "message": "Message",

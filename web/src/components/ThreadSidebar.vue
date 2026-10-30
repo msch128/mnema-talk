@@ -9,7 +9,6 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
 import { updateForumPost } from '../lib/forumApi'
 import ThreadRootCard from './ThreadRootCard.vue'
-import ImageLightbox from './ImageLightbox.vue'
 import ThreadReply from './ThreadReply.vue'
 import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useBlocksStore } from '../stores/blocks'
@@ -56,7 +55,6 @@ const followed = computed(() => !!chatStore.activeThread && chatStore.followedTh
 const replyInput = ref('')
 const repliesContainer = ref<HTMLElement | null>(null)
 const isSending = ref(false)
-const selectedImage = ref<string | null>(null)
 
 // Editing, deleting, reactions and uploads
 const actions = useMessageActions({ container: repliesContainer, deleteTitle: 'thread.deleteTitle' })
@@ -168,10 +166,10 @@ function onReplyKeydown(e: KeyboardEvent, msg: Message, { editable = true } = {}
 
 // Escape closes the panel wherever the focus is (after opening a post it is
 // still on the card), once nothing else has used the key: an edit, a reply, a
-// suggestion list, a picker, the lightbox, an open dialog or menu.
+// suggestion list, a picker, an open dialog (the media viewer is one) or menu.
 function onEscape(e: KeyboardEvent) {
   if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return
-  if (selectedImage.value || activeReactionPickerMsgId.value) return
+  if (activeReactionPickerMsgId.value) return
   if (document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')) return
   chatStore.closeThread()
 }
@@ -299,7 +297,6 @@ async function handleFileUpload(e: Event) {
         :can-react="canReact"
         :highlighted="highlightedId === chatStore.activeThread.id"
         @reply="startReply"
-        @open-image="selectedImage = $event"
         @keydown="onRootKeydown"
       />
 
@@ -339,7 +336,6 @@ async function handleFileUpload(e: Event) {
         @reply="startReply(reply)"
         @jump="jumpToReplied(reply)"
         @edit-step="(step, e) => ownNav.step(step, e, reply)"
-        @open-image="selectedImage = $event"
       />
       </template>
     </div>
@@ -364,7 +360,5 @@ async function handleFileUpload(e: Event) {
     />
     <FileDropOverlay @files="composer?.attachFiles($event)" />
 
-    <!-- Image lightbox -->
-    <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
   </aside>
 </template>

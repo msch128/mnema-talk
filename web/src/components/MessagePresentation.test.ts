@@ -4,7 +4,7 @@ import { enableAutoUnmount, mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import MessageRow from './MessageRow.vue'
 import MessageEditor from './MessageEditor.vue'
-import MessageAttachments from './MessageAttachments.vue'
+import { closeViewer, viewerState } from '../composables/useMediaViewer'
 import ReactionBar from './ReactionBar.vue'
 import ReactionPalette from './ReactionPalette.vue'
 import ReplyPreview from './ReplyPreview.vue'
@@ -47,11 +47,13 @@ describe('MessageRow presentation and event contract', () => {
     await w.findComponent(UserAvatar).trigger('click')
     expect(w.emitted('open-profile')).toHaveLength(2)
     w.findComponent(ReplyPreview).vm.$emit('jump')
-    w.findComponent(MessageAttachments).vm.$emit('open-image', image.url)
+    await w.find('[data-attachment="image"] button').trigger('click')
+    expect(viewerState.items.map(i => i.src)).toEqual([image.url])
+    expect(viewerState.message?.id).toBe(msg.id)
+    closeViewer()
     w.findComponent(ReactionPalette).vm.$emit('pick', '🎉')
     w.findComponent(ReactionPalette).vm.$emit('close')
     expect(w.emitted('jump')).toHaveLength(1)
-    expect(w.emitted('open-image')).toEqual([[image.url]])
     expect(w.emitted('react')).toEqual([['🎉']])
     expect(w.emitted('close-picker')).toHaveLength(1)
     const thread = w.findAll('button').find(b => b.text().includes(t('chat.openThread')))

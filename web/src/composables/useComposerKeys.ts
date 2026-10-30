@@ -38,7 +38,7 @@ interface EscapeMarksRead {
   composer: Ref<HTMLTextAreaElement | null>
   /** Closes an open menu; returns true when one was open (it keeps the key). */
   closeMenu: () => boolean
-  /** True while something else owns Escape: a lightbox, an editor, a reply in the composer. */
+  /** True while something else owns Escape: the media viewer, an editor, a reply in the composer. */
   occupied: () => boolean
   draft: () => string
   markAllRead: () => boolean
