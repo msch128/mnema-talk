@@ -1,0 +1,21 @@
+web/src/composables/useVoiceMenus.test.ts
+  s_bf24ce51cd8f95::t_fb6dae642c085a 137-144
+web/src/composables/useVoiceMenus.ts
+  s_bf24ce51cd8f95::t_57e91ccc649402 5,114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "addba379ccbd246d6a8367ddecd24bc405cbb673",
+  "prompts": {},
+  "sessions": {
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
