@@ -1,0 +1,91 @@
+e2e/tests/status-message.spec.ts
+  s_7e9329d487a94d::t_a9c81298082d96 1-61
+web/src/App.vue
+  s_5b748b0295d2f4::t_66b59c6f1254c3 34-35,68,345-347
+web/src/components/PresenceMenu.test.ts
+  s_5b748b0295d2f4::t_d21eeac89a8287 12,35,99,102-103
+web/src/components/PresenceMenu.vue
+  s_5b748b0295d2f4::t_2a164ef76cf12b 14,44,46-47
+web/src/components/ProfileAvatar.vue
+  s_30e74ceb0962ca::t_d4c5eb2988cc46 79,136
+web/src/components/ProfileBannerControls.vue
+  s_30e74ceb0962ca::t_1511bbf5fa164f 60
+web/src/components/ProfileBio.vue
+  s_0cce296f386122::t_f8e958ceaeef01 7,79-80,105-106,108,110,113,115-116,118,120,122,125-133,135
+web/src/components/ProfileStatus.vue
+  s_0cce296f386122::t_61f503d3369b05 10,14-15,20,26,28,34-38,48,61-62,83,87
+web/src/components/StatusDialog.test.ts
+  s_fc0029b3681126::t_afaf627623a24f 5-6,9,17,19-20,22-23,37,40-48,50,52-62,66-67,70-74,76-79,82-88,90-92,95,98-99,101-102,106-116,118-120,123-132,135-140,143-159
+web/src/components/StatusDialog.vue
+  s_5b748b0295d2f4::t_ded3c95f666a0f 1-167
+web/src/components/UserProfileModal.test.ts
+  s_fc0029b3681126::t_23c9614f9f7920 6,28,160,162-173,176,179,198-199,205-208
+web/src/components/UserProfileModal.vue
+  s_0cce296f386122::t_c127e5ac4a14a4 135,163,167,226-228,232-235,240-241,263-264,270
+web/src/composables/useStatusEditor.ts
+  s_8895e592af2d2b::t_d7b7b47af4ebe7 1-13
+web/src/i18n/de.json
+  s_0cce296f386122::t_318cc0f1d231c9 1820-1821,1823-1825,1830-1831,3646,3655-3658
+web/src/i18n/en.json
+  s_0cce296f386122::t_77170c7e505727 1820-1821,1823-1825,1830-1831,3646,3655-3658
+web/src/lib/statusExpiry.test.ts
+  s_8895e592af2d2b::t_129ad83076d34a 2,4,9,11-12,15-19,22-23,26-27,29
+web/src/lib/statusExpiry.ts
+  s_8895e592af2d2b::t_c2e16ab631a0d6 4,6,8-10,13-15,17-18,22-23,25-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cf963979a30aa194e7267cc5b9a58e0634dc225a",
+  "prompts": {},
+  "sessions": {
+    "s_0cce296f386122": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a61be4c53699d370e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_30e74ceb0962ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae5e20c7f981d1793",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7e9329d487a94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-status-profile-6b773a73ee58ea30",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8895e592af2d2b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-newcomer-audit-5cf650531cfbcba0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fc0029b3681126": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-forum-close-472189c9bd464366",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

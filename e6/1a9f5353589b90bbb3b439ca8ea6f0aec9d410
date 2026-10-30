@@ -1,0 +1,65 @@
+web/src/components/TalkOverviewDialog.test.ts
+  s_19c6eb08b5cf90::t_dbca47527defe6 1-98
+web/src/components/TalkOverviewDialog.vue
+  s_19c6eb08b5cf90::t_e77baf354e8070 1-61
+web/src/components/TalkParticipantList.vue
+  s_7e9329d487a94d::t_38249887984bfd 1-66
+web/src/components/TalkParticipants.vue
+  s_7e9329d487a94d::t_a6cba5991d7451 8,46,63,67-71
+web/src/components/UserProfileModal.test.ts
+  s_ed05b7d59456d3::t_b5e86866a0a2eb 241,308-309,313,317-328
+web/src/components/UserProfileModal.vue
+  s_56bbddf21b1b48::t_bc007a8baad363 17,105-107,114-120,249-256,258-265,267-268,293
+web/src/i18n/de.json
+  s_afb3377f9f37f8::t_249d5bd581059e 1159-1161,1831-1835
+web/src/i18n/en.json
+  s_afb3377f9f37f8::t_1ac5491711b93c 1159-1161,1831-1835
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e61a9f5353589b90bbb3b439ca8ea6f0aec9d410",
+  "prompts": {},
+  "sessions": {
+    "s_19c6eb08b5cf90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-away-79f22d6bb131083c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_56bbddf21b1b48": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae4a068d006211c61",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7e9329d487a94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-status-profile-6b773a73ee58ea30",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ed05b7d59456d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a843a0ef992e8c6d6",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
