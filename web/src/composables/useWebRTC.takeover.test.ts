@@ -111,15 +111,19 @@ describe('leaving here', () => {
 describe('the session whose call was taken over', () => {
   it('ends its call quietly, offers to come back, and does not reconnect', async () => {
     const { rtc, sent, voice, chat } = setup()
+    const me = userFixture()
+    useAuthStore().user = me
     const join = rtc.joinVoiceChannel('ch-1')
     await grantMic()
     await join
+    voice.channelUsers = { 'ch-1': { [me.id]: voiceUserFixture({ id: me.id }) } }
     sent.length = 0
 
     chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1', reason: 'voice_taken_over' } })
 
     expect(voice.currentChannelId).toBeNull()
     expect(sent.some(e => e.type === 'voice_leave')).toBe(false)
+    expect(Object.keys(voice.channelUsers['ch-1'] ?? {})).toContain(me.id)
     expect(voiceSession.recent()).toBeNull()
     const toast = present(useToastStore().toasts.at(-1))
     expect(toast.text).toBe(t('voice.takenOver'))
