@@ -1069,6 +1069,7 @@
       "auto": "Auto",
       "autoHint": "Adjusts to your connection",
       "autoNow": "Currently {name}",
+      "autoWith": "Auto ({name})",
       "source": "Source",
       "switching": "Switching…"
     },

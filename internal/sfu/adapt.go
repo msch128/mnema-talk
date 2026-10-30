@@ -1,10 +1,6 @@
 package sfu
 
-import (
-	"time"
-
-	"github.com/pion/rtcp"
-)
+import "time"
 
 // A viewer who left the choice to the server ("auto") gets the best layer its
 // connection carries. The SFU judges that from what the viewer reports about
@@ -12,7 +8,8 @@ import (
 // RTCP receiver reports (every second or so), and how often it asks for a new
 // keyframe. Nothing is estimated from the media, which the SFU cannot read.
 //
-// It starts on the best layer. Trouble moves it down one layer at a time; it
+// It starts on the best layer the viewer's picture can use (see setBest: the
+// viewer says how large it shows the share) and never goes above it. Trouble moves it down one layer at a time; it
 // moves up again, one layer at a time, only after a long stretch without
 // trouble, and a move up that goes wrong makes the next one wait twice as
 // long, so a link that can carry the lower layer but not the higher one does
@@ -51,7 +48,7 @@ const (
 	// failed attempt.
 	adaptProbe = 8 * time.Second
 	// adaptBackoffMax caps the wait between attempts after failures.
-	adaptBackoffMax = 2 * time.Minute
+	adaptBackoffMax = 5 * time.Minute
 	// adaptPLIs keyframe requests within adaptPLIWindow count as trouble
 	// (the viewer cannot decode what it gets).
 	adaptPLIs      = 3
@@ -77,6 +74,16 @@ const (
 	// so it never proves that a better layer fits; after this time the
 	// viewer tries it once more (a failed try backs off as any other).
 	adaptCapHold = time.Minute
+	// adaptRising: an estimate that grew by more than this since the last
+	// report is still ramping up, which is not a limit of the link. The
+	// estimate of an app-limited stream stays close to 1.5 times what is
+	// sent, so after a move up it takes seconds to catch up with the better
+	// layer; judging it before would send every attempt back down.
+	adaptRising = 1.02
+	// adaptClimbFor is how long a viewer that may use a better layer than it
+	// has (it enlarged the picture, or made it fullscreen) waits between
+	// steps while it has had no trouble.
+	adaptClimbFor = 4 * time.Second
 )
 
 // adapter decides the layer of one automatic viewer from its reports. It has no
@@ -85,6 +92,12 @@ type adapter struct {
 	// layer is the layer chosen now and floor the worst one allowed (the
 	// lowest-quality layer the share has).
 	layer, floor int
+	// best is the best layer the viewer's picture can use (0 is the best the
+	// share has): a small tile does not need the source, so the layer never
+	// goes above it. climbing is set while the viewer is below a best that
+	// has just been raised and has had no trouble since.
+	best     int
+	climbing bool
 
 	graceUntil time.Time
 	// holdUntil is when a move up may be tried at the earliest.
@@ -100,6 +113,8 @@ type adapter struct {
 	// bwLow and bwHigh count consecutive reports with the estimate below the
 	// layer's bitrate times adaptBWDown / above the better layer's times adaptBWUp.
 	bwLow, bwHigh int
+	// lastEst is the estimate of the previous report.
+	lastEst int
 	// capUntil: until then a bandwidth limit that moved the viewer down is remembered.
 	capUntil time.Time
 	// narrowed is set when the last move down was caused by the estimate.
@@ -118,53 +133,45 @@ func newAdapter(now time.Time, floor int) *adapter {
 	return &adapter{floor: floor, cleanSince: now, graceUntil: now.Add(adaptGrace), backoff: adaptCleanFor}
 }
 
-// bwSample is what is known about bandwidth at the time of a report, in bits
-// per second. Zero means unknown.
-type bwSample struct {
-	// est is the estimate for the viewer's connection, cur the bitrate of the
-	// layer it receives and next the one of the next better layer.
-	est, cur, next int
-}
-
-// setBandwidth records the sample the next observe takes into account.
-func (a *adapter) setBandwidth(est, cur, next int) {
-	a.bw = bwSample{est: est, cur: cur, next: next}
-}
-
-// bandwidthTrouble counts the report in the streaks and reports whether the
-// estimate has been below the current layer's bitrate for long enough.
-func (a *adapter) bandwidthTrouble() bool {
-	bw := a.bw
-	a.bw = bwSample{}
-	if bw.est <= 0 || bw.cur <= 0 {
-		a.bwLow, a.bwHigh = 0, 0
-		return false
-	}
-	if float64(bw.est) < float64(bw.cur)*adaptBWDown {
-		a.bwLow++
-	} else {
-		a.bwLow = 0
-	}
-	if bw.next > 0 && float64(bw.est) > float64(bw.next)*adaptBWUp {
-		a.bwHigh++
-	} else {
-		a.bwHigh = 0
-	}
-	return a.bwLow >= adaptBWSamples
-}
-
-// bandwidthAllowsUp reports whether a move up is not held back by a remembered
-// bandwidth limit.
-func (a *adapter) bandwidthAllowsUp(now time.Time) bool {
-	return !now.Before(a.capUntil) || a.bwHigh >= adaptBWSamples
-}
-
 // setFloor changes the worst layer allowed; the layer follows if it is below it.
 func (a *adapter) setFloor(floor int) {
 	a.floor = floor
 	if a.layer > floor {
 		a.layer = floor
 	}
+	a.layer = max(a.layer, a.top())
+}
+
+// top is the best layer allowed: the viewer's best, but never worse than the floor.
+func (a *adapter) top() int {
+	return min(a.best, a.floor)
+}
+
+// setBest limits the layer to what the viewer's picture can use. A viewer
+// that sat on the old limit climbs on from there without waiting for a clean
+// stretch (it is not held back by trouble); one that is pushed below the new
+// limit moves down at once. It reports whether the layer changed.
+func (a *adapter) setBest(now time.Time, best int) bool {
+	best = max(best, 0)
+	if best == a.best {
+		return false
+	}
+	raised := best < a.best
+	atLimit := a.layer <= a.top()
+	a.best = best
+	if a.layer < a.top() {
+		a.layer = a.top()
+		a.graceUntil = now.Add(adaptGrace)
+		a.climbing = false
+		a.probeEnd = time.Time{}
+		return true
+	}
+	if raised && atLimit {
+		a.climbing = true
+		a.holdUntil = time.Time{}
+		a.cleanSince = now.Add(-adaptCleanFor)
+	}
+	return false
 }
 
 // keyframeRequested records a keyframe request of the viewer in constant time.
@@ -203,11 +210,12 @@ func (a *adapter) recentPLIs(now time.Time) int {
 // stalledTo moves the viewer to layer to after nothing reached it for
 // adaptStall although that layer delivers. It reports whether the layer changed.
 func (a *adapter) stalledTo(now time.Time, to int) bool {
-	to = min(to, a.floor)
+	to = max(min(to, a.floor), a.top())
 	if to == a.layer {
 		return false
 	}
 	a.layer = to
+	a.climbing = false
 	a.graceUntil = now.Add(adaptGrace)
 	a.holdUntil = now.Add(a.backoff)
 	a.cleanSince = now
@@ -296,17 +304,19 @@ func (a *adapter) stepDown(now time.Time, narrow bool) bool {
 		return false
 	}
 	failedProbe := now.Before(a.probeEnd)
+	a.climbing = false
 	a.layer++
 	a.graceUntil = now.Add(adaptGrace)
 	a.highStreak = 0
 	a.bwLow, a.bwHigh = 0, 0
-	if narrow {
-		a.capUntil = now.Add(adaptCapHold)
-		a.narrowed = true
-	}
 	a.resetPLIs()
 	if failedProbe {
 		a.backoff = min(a.backoff*2, adaptBackoffMax)
+	}
+	if narrow {
+		// A limit that was met again and again is remembered for longer.
+		a.capUntil = now.Add(max(adaptCapHold, a.backoff))
+		a.narrowed = true
 	}
 	a.holdUntil = now.Add(a.backoff)
 	a.probeEnd = time.Time{}
@@ -314,13 +324,21 @@ func (a *adapter) stepDown(now time.Time, narrow bool) bool {
 }
 
 func (a *adapter) canStepUp(now time.Time) bool {
-	if a.layer <= 0 || now.Before(a.holdUntil) {
+	if a.layer <= a.top() || now.Before(a.holdUntil) {
 		return false
 	}
-	if now.Sub(a.cleanSince) < adaptCleanFor {
+	if now.Sub(a.cleanSince) < a.cleanWait() {
 		return false
 	}
 	return a.bandwidthAllowsUp(now)
+}
+
+// cleanWait is how long a viewer has to be clean before it tries a better layer.
+func (a *adapter) cleanWait() time.Duration {
+	if a.climbing {
+		return adaptClimbFor
+	}
+	return adaptCleanFor
 }
 
 // tryStepUp moves the viewer to the next better layer once it has been clean
@@ -337,6 +355,10 @@ func (a *adapter) tryStepUp(now time.Time) bool {
 		a.graceUntil = now.Add(adaptGrace)
 		a.probeEnd = now.Add(adaptProbe)
 		a.holdUntil = now.Add(a.backoff)
+		if a.climbing {
+			a.holdUntil = now.Add(adaptClimbFor)
+			a.climbing = a.layer > a.top()
+		}
 		a.cleanSince = now
 		return true
 	}
@@ -360,36 +382,4 @@ func (a *adapter) recordRTT(rtt time.Duration) bool {
 		lowest = min(lowest, v)
 	}
 	return rtt-lowest > adaptRTTRise
-}
-
-// receiverReportOf extracts what the adapter needs from a viewer's receiver
-// report for the stream with the given SSRC: the loss fraction and the round
-// trip time (zero when it cannot be told). ok is false when the report says
-// nothing about that stream.
-func receiverReportOf(rr *rtcp.ReceiverReport, ssrc uint32, now time.Time) (loss float64, rtt time.Duration, ok bool) {
-	for _, r := range rr.Reports {
-		if r.SSRC != ssrc {
-			continue
-		}
-		loss = float64(r.FractionLost) / 256
-		if r.LastSenderReport != 0 {
-			// Both are in 1/65536 seconds, on the 32 middle bits of the NTP time.
-			elapsed := ntpMiddle32(now) - r.LastSenderReport - r.Delay
-			// A wrapped or implausible value (a clock step, a stale report) is no measurement.
-			if secs := time.Duration(elapsed) * time.Second / 65536; elapsed < 1<<31 && secs < 10*time.Second {
-				rtt = secs
-			}
-		}
-		return loss, rtt, true
-	}
-	return 0, 0, false
-}
-
-// ntpMiddle32 is the middle 32 bits of the NTP timestamp of t, the unit of
-// the LSR and DLSR fields of a report block.
-func ntpMiddle32(t time.Time) uint32 {
-	const ntpEpochOffset = 2208988800 // seconds between 1900 and 1970
-	secs := uint64(t.Unix()) + ntpEpochOffset
-	frac := uint64(t.Nanosecond()) << 32 / 1_000_000_000
-	return uint32((secs<<32 | frac) >> 16)
 }

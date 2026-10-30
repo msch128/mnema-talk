@@ -24,7 +24,7 @@ const (
 	// bweInitialBitrate starts high so a fresh connection does not look
 	// slow while the estimate ramps up; the estimate falls on its own the
 	// moment the feedback shows queues building.
-	bweInitialBitrate = 12_000_000
+	bweInitialBitrate = 20_000_000
 	bweMinBitrate     = 150_000
 	bweMaxBitrate     = 60_000_000
 	// bweMinFeedback is how many feedback packets (about one every 50 to

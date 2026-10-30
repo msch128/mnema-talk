@@ -33,6 +33,9 @@ type viewerTrack struct {
 	// for, eff the layer that exists nearest to it and cur the layer being
 	// forwarded (-1 before the first keyframe).
 	pref, want, eff, cur int
+	// fit is the best layer the viewer's picture can use (0 is the best the
+	// share has), which automatic never exceeds.
+	fit int
 	// ad chooses the layer of a viewer who left it to the server (pref < 0).
 	ad         *adapter
 	closed     bool
@@ -95,7 +98,11 @@ func (vt *viewerTrack) setPref(pref int) {
 	case vt.ad == nil:
 		// Automatic carries on from the layer chosen so far.
 		vt.ad = newAdapter(layerNow(), vt.group.floor())
-		vt.ad.layer = min(vt.want, vt.ad.floor)
+		vt.ad.best = vt.fit
+		vt.ad.layer = max(min(vt.want, vt.ad.floor), vt.ad.top())
+		// Back to automatic from a worse layer than the picture can use: climb
+		// at the pace of an enlarged picture, not after a long clean stretch.
+		vt.ad.climbing = vt.ad.layer > vt.ad.top()
 	}
 	vt.want = vt.chosenLayer()
 	vt.wantA.Store(int32(vt.want))
@@ -104,6 +111,28 @@ func (vt *viewerTrack) setPref(pref int) {
 	vt.retarget()
 	vt.group.refreshWanted()
 	vt.report(true)
+}
+
+// setFit tells the track how good a layer the viewer's picture can use: the
+// best layer whose size is not more than the picture shows. Automatic stays
+// at or below it, which saves the bandwidth of a small tile, and climbs when
+// the picture grows.
+func (vt *viewerTrack) setFit(fit int) {
+	fit = max(fit, 0)
+	vt.mu.Lock()
+	vt.fit = fit
+	changed := false
+	if vt.ad != nil && !vt.closed {
+		vt.ad.setFloor(vt.group.floor())
+		changed = vt.ad.setBest(layerNow(), fit)
+		vt.want = vt.ad.layer
+		vt.wantA.Store(int32(vt.want))
+	}
+	vt.mu.Unlock()
+	if changed {
+		vt.retarget()
+	}
+	vt.group.refreshWanted()
 }
 
 // chosenLayer is the layer the viewer's choice stands for: the one it picked,

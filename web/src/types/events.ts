@@ -159,9 +159,9 @@ export type ServerEvent = EventUnion<ServerEventPayloads>
 export type ServerEventType = keyof ServerEventPayloads
 
 export type SubscribeRequest =
-  | { kind: 'camera'; user_id: string; on: boolean; all?: false; quality?: never }
-  | { kind: 'screen'; user_id: string; on: boolean; all?: false; quality?: 'auto' | number }
-  | { kind: 'camera'; all: true; on: boolean; user_id?: never; quality?: never }
+  | { kind: 'camera'; user_id: string; on: boolean; all?: false; quality?: never; fit?: never }
+  | { kind: 'screen'; user_id: string; on: boolean; all?: false; quality?: 'auto' | number; fit?: number }
+  | { kind: 'camera'; all: true; on: boolean; user_id?: never; quality?: never; fit?: never }
 
 export interface ClientEventPayloads {
   ping: { t: number }
