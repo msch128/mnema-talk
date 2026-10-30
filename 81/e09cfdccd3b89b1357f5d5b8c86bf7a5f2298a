@@ -1,0 +1,19 @@
+web/src/directives/maxChars.test.ts
+  s_61e7f03250bd0b::t_3b11ed316a437f 54-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "81e09cfdccd3b89b1357f5d5b8c86bf7a5f2298a",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
