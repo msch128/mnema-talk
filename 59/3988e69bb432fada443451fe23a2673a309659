@@ -1,0 +1,21 @@
+internal/httpx/request.go
+  s_afb3377f9f37f8::t_69b08c5c379664 150-151
+internal/httpx/request_test.go
+  s_afb3377f9f37f8::t_3c3a668744b5ff 388-396
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "593988e69bb432fada443451fe23a2673a309659",
+  "prompts": {},
+  "sessions": {
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
