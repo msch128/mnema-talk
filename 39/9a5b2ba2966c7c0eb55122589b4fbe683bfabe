@@ -1,0 +1,21 @@
+web/src/composables/useScreenFit.test.ts
+  s_61e7f03250bd0b::t_0a0f60f19fd6a7 91-155
+web/src/composables/useScreenFit.ts
+  s_61e7f03250bd0b::t_4ccc3516624dc7 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "399a5b2ba2966c7c0eb55122589b4fbe683bfabe",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
