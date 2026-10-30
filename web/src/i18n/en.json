@@ -1213,7 +1213,9 @@
     "inviteIn": "You’re here",
     "inviteUnavailable": "Not available to you",
     "inviteEnded": "No longer available",
-    "moveForControls": "Move the mouse to show the controls"
+    "moveForControls": "Move the mouse to show the controls",
+    "sharingScreen": "Sharing screen",
+    "cameraOn": "Camera on"
   },
   "admin": {
     "signedInAs": "Signed in as {name} (Owner)",
@@ -1868,8 +1870,6 @@
     "passwordTooShort": "The new password needs at least {count} characters.",
     "passwordMismatch": "The two passwords don’t match.",
     "passwordChanged": "Password changed",
-    "activity": "In a Talk",
-    "inVoice": "In the Talk:",
     "notInVoice": "Not in a Talk right now",
     "membership": "Membership",
     "memberSince": "Member since",
@@ -1900,16 +1900,23 @@
     "passwordLink": "Password and account in settings",
     "clearAfter": "Clear after",
     "expiry": {
+      "keep": "Keep current",
+      "never": "Don’t clear",
+      "min30": "30 minutes",
       "hour": "1 hour",
-      "tonight": "Tonight (23:59)",
-      "tomorrow": "Tomorrow morning (08:00)",
-      "never": "Never",
-      "custom": "Pick date and time…"
+      "hours4": "4 hours",
+      "today": "Today",
+      "week": "This week"
     },
     "expiryPast": "Pick a time in the future.",
     "clearsAt": "Clears {time}",
     "moderationTitle": "Moderation",
-    "rolesTitle": "Roles"
+    "rolesTitle": "Roles",
+    "account": "Account",
+    "inTalk": "In {name}",
+    "inTalkHidden": "In a Talk",
+    "talkCannotJoin": "You can’t join this Talk.",
+    "talkHidden": "This Talk isn’t available to you."
   },
   "nav": {
     "channelNotFound": "That channel doesn’t exist anymore.",
@@ -3872,5 +3879,10 @@
     },
     "docs": "Troubleshooting voice",
     "failed": "The test could not run."
+  },
+  "statusEditor": {
+    "subtitle": "Shown next to your name for everyone to see.",
+    "hint": "Say what you are up to. Up to 32 characters.",
+    "clear": "Clear status"
   }
 }

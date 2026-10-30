@@ -3,6 +3,7 @@ import type { ApiOptions } from '../lib/api'
 import { userFixture, channelFixture, categoryFixture, voiceUserFixture, requireValue } from '../test-fixtures.fixture'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { useStatusEditor } from '../composables/useStatusEditor'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick, defineComponent, h } from 'vue'
 import UserProfileModal from './UserProfileModal.vue'
@@ -24,6 +25,7 @@ let auth: ReturnType<typeof useAuthStore>
 let chat: ReturnType<typeof useChatStore>
 
 beforeEach(() => {
+  useStatusEditor().hide()
   setLocale('de')
   mockApi.mockReset()
   setActivePinia(createPinia())
@@ -155,15 +157,26 @@ describe('UserProfileModal account interactions', () => {
     expect(wrapper.find('[data-testid="profile-password-link"]').exists()).toBe(false)
   })
 
-  it('edits and trims the status line', async () => {
+  it('opens the status dialog from one\'s own profile and closes the profile', async () => {
     openSelf()
-    chat.selectedUserProfile = { ...stub }
+    expect(useStatusEditor().open.value).toBe(false)
+    await wrapper.get('[data-testid="profile-status-edit"]').trigger('click')
+    expect(useStatusEditor().open.value).toBe(true)
+    expect(wrapper.emitted('close')).toEqual([[]])
+    expect(wrapper.find('[data-testid="profile-status-input"]').exists()).toBe(false)
+  })
+
+  it('lets an administrator edit and trim another member status inline', async () => {
+    auth.user = userFixture({ role: 'admin' })
+    const other = userFixture({ ...stub, status_text: 'Busy' })
+    chat.selectedUserProfile = other
+    wrapper = mount(UserProfileModal, { attachTo: document.body, props: { user: other } })
     await wrapper.get('[data-testid="profile-status-edit"]').trigger('click')
     await wrapper.get('[data-testid="profile-status-input"]').setValue('  Available later  ')
-    mockApi.mockResolvedValue(userFixture({ ...stub, status_text: 'Available later' }))
+    mockApi.mockResolvedValue({ ...other, status_text: 'Available later' })
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(mockApi).toHaveBeenCalledWith('/api/users/me/status', expect.objectContaining({ json: { status_text: 'Available later' } }))
+    expect(mockApi).toHaveBeenCalledWith(`/api/admin/users/${other.id}/status`, expect.objectContaining({ json: { status_text: 'Available later' } }))
     expect(chat.selectedUserProfile?.status_text).toBe('Available later')
     expect(wrapper.find('[data-testid="profile-status-input"]').exists()).toBe(false)
   })
@@ -180,29 +193,19 @@ describe('UserProfileModal account interactions', () => {
     expect(chat.selectedUserProfile?.status_text).toBe('')
   })
 
-  it.each([new Error('Status request failed'), false])('retains status text after failure (%s)', async error => {
-    openSelf()
-    await wrapper.get('[data-testid="profile-status-edit"]').trigger('click')
-    await wrapper.get('[data-testid="profile-status-input"]').setValue('Retry this status')
-    mockApi.mockRejectedValue(error)
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
-    expect(wrapper.get<HTMLInputElement>('[data-testid="profile-status-input"]').element.value).toBe('Retry this status')
-    expect(saveButton().attributes('disabled')).toBeUndefined()
-  })
-
   it('forwards Escape dismissal from the enclosing dialog', async () => {
     openSelf()
-    await wrapper.get('[data-testid="profile-status-edit"]').trigger('click')
-    wrapper.get('[data-testid="profile-status-input"]').element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    await wrapper.get('[data-testid="profile-bio-edit"]').trigger('click')
+    wrapper.get('#profile-bio').element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
     await nextTick()
     expect(wrapper.emitted('close')).toEqual([[]])
     expect(mockApi).not.toHaveBeenCalled()
   })
 
-  it('cancels the local status input on Escape when rendered without the enclosing focus trap', async () => {
-    auth.user = userFixture({ ...stub })
-    wrapper = mount(UserProfileModal, { attachTo: document.body, global: { stubs: {
+  it('cancels the inline status input of another member on Escape', async () => {
+    auth.user = userFixture({ role: 'admin' })
+    const other = userFixture({ ...stub, status_text: 'Busy' })
+    wrapper = mount(UserProfileModal, { attachTo: document.body, props: { user: other }, global: { stubs: {
       BaseDialog: defineComponent({ setup(_, { slots }) { return () => h('div', slots.default?.({ titleId: 'profile-unit-title' })) } })
     } } })
     await wrapper.get('[data-testid="profile-status-edit"]').trigger('click')
@@ -235,7 +238,7 @@ describe('UserProfileModal account interactions', () => {
     chat.uncategorized = [channel]
     voice.channelUsers = { unrelated: { another: voiceUserFixture() }, [channel.id]: { [stub.id]: voiceUserFixture({ ...stub }) } }
     wrapper = mount(UserProfileModal, { attachTo: document.body })
-    expect(wrapper.text()).toContain('#Lobby')
+    expect(wrapper.get('[data-testid="profile-talk-open"]').text()).toContain('Im Talk Lobby')
     expect(wrapper.find(`[aria-label="${t('profile.adminHint')}"]`).exists()).toBe(true)
   })
 
@@ -302,15 +305,27 @@ describe('UserProfileModal account interactions', () => {
     chat.categories = [categoryFixture({ channels: [channel] })]
     voice.channelUsers = { [channel.id]: { [stub.id]: voiceUserFixture({ ...stub }) } }
     wrapper = mount(UserProfileModal, { attachTo: document.body })
-    expect(wrapper.text()).toContain('#Workshop')
+    expect(wrapper.get('[data-testid="profile-talk"]').text()).toContain('Im Talk Workshop')
+    expect(wrapper.text()).not.toContain('Gerade in keinem Talk')
     expect(wrapper.get('[role="img"]').attributes('aria-label')).toBe(t('presence.focus'))
   })
 
-  it('falls back to a generic name for a voice channel absent from the channel hierarchy', () => {
+  it('names no Talk the viewer cannot see, and does not open it', () => {
     auth.user = userFixture({ ...stub })
     useVoiceStore().channelUsers = { unknown: { [stub.id]: voiceUserFixture({ ...stub }) } }
     wrapper = mount(UserProfileModal, { attachTo: document.body })
-    expect(wrapper.text()).toContain(`#${t('profile.talk')}`)
+    expect(wrapper.get('[data-testid="profile-talk"]').text()).toBe(t('profile.inTalkHidden'))
+    expect(wrapper.find('[data-testid="profile-talk-open"]').exists()).toBe(false)
+  })
+
+  it('opens the participants of the Talk from its single line', async () => {
+    auth.user = userFixture({ ...stub })
+    const channel = channelFixture({ type: 'voice', name: 'Workshop' })
+    chat.categories = [categoryFixture({ channels: [channel] })]
+    useVoiceStore().channelUsers = { [channel.id]: { [stub.id]: voiceUserFixture({ ...stub }) } }
+    wrapper = mount(UserProfileModal, { attachTo: document.body })
+    await wrapper.get('[data-testid="profile-talk-open"]').trigger('click')
+    expect(wrapper.findComponent({ name: 'TalkOverviewDialog' }).props('channelId')).toBe(channel.id)
   })
 
   it('uses the original join date when formatting rejects an invalid timestamp', () => {

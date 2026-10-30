@@ -1213,7 +1213,9 @@
     "inviteIn": "Du bist dabei",
     "inviteUnavailable": "Für dich nicht verfügbar",
     "inviteEnded": "Nicht mehr verfügbar",
-    "moveForControls": "Bewege die Maus, um die Steuerung zu zeigen"
+    "moveForControls": "Bewege die Maus, um die Steuerung zu zeigen",
+    "sharingScreen": "Teilt den Bildschirm",
+    "cameraOn": "Kamera an"
   },
   "admin": {
     "signedInAs": "Angemeldet als {name} (Owner)",
@@ -1868,8 +1870,6 @@
     "passwordTooShort": "Das neue Passwort braucht mindestens {count} Zeichen.",
     "passwordMismatch": "Die beiden Passwörter stimmen nicht überein.",
     "passwordChanged": "Passwort geändert",
-    "activity": "Im Talk",
-    "inVoice": "Im Talk:",
     "notInVoice": "Gerade in keinem Talk",
     "membership": "Mitgliedschaft",
     "memberSince": "Mitglied seit",
@@ -1900,16 +1900,23 @@
     "passwordLink": "Passwort und Konto in den Einstellungen",
     "clearAfter": "Löschen nach",
     "expiry": {
+      "keep": "Beibehalten",
+      "never": "Nicht löschen",
+      "min30": "30 Minuten",
       "hour": "1 Stunde",
-      "tonight": "Heute Nacht (23:59)",
-      "tomorrow": "Morgen früh (08:00)",
-      "never": "Nie",
-      "custom": "Datum und Uhrzeit wählen …"
+      "hours4": "4 Stunden",
+      "today": "Heute",
+      "week": "Diese Woche"
     },
     "expiryPast": "Wähle einen Zeitpunkt in der Zukunft.",
     "clearsAt": "Wird gelöscht: {time}",
     "moderationTitle": "Moderation",
-    "rolesTitle": "Rollen"
+    "rolesTitle": "Rollen",
+    "account": "Konto",
+    "inTalk": "Im Talk {name}",
+    "inTalkHidden": "In einem Talk",
+    "talkCannotJoin": "Du kannst diesem Talk nicht beitreten.",
+    "talkHidden": "Dieser Talk ist für dich nicht verfügbar."
   },
   "nav": {
     "channelNotFound": "Diesen Kanal gibt es nicht mehr.",
@@ -3872,5 +3879,10 @@
     },
     "docs": "Sprache: Fehlersuche",
     "failed": "Der Test konnte nicht laufen."
+  },
+  "statusEditor": {
+    "subtitle": "Wird allen neben deinem Namen angezeigt.",
+    "hint": "Sag, was du gerade machst. Bis zu 32 Zeichen.",
+    "clear": "Status löschen"
   }
 }
