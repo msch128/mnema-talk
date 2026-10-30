@@ -134,6 +134,7 @@ func runWithContext(ctx context.Context) error {
 	}, 2*time.Second, time.Minute)
 	media.StartRetentionWorker(ctx, pool, store, cfg.MediaRetentionDays)
 	media.StartOrphanScan(ctx, pool, store)
+	media.StartStagedSweep(ctx, pool, store)
 
 	setup := &setupcheck.Runtime{}
 	voice, closeVoice, err := startVoice(ctx, cfg, setup)

@@ -101,7 +101,7 @@ var reportMessagesSQL = fmt.Sprintf(`
 	)
 	SELECT m.id, m.user_id, u.username, COALESCE(m.author_name, u.display_name), m.content, m.parent_id, m.created_at,
 	       COALESCE((SELECT jsonb_agg(jsonb_build_object('filename', md.original_filename, 'mime_type', md.mime_type, 'size_bytes', md.size_bytes)
-	                                 ORDER BY md.created_at) FROM media md WHERE md.message_id = m.id), '[]'::jsonb)
+	                                 ORDER BY md.position, md.created_at) FROM media md WHERE md.message_id = m.id), '[]'::jsonb)
 	FROM picked JOIN messages m ON m.id = picked.id JOIN users u ON u.id = m.user_id
 	ORDER BY m.created_at, m.id`, ReportContextBefore, ReportContextAfter)
 

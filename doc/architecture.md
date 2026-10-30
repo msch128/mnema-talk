@@ -59,12 +59,18 @@ in PostgreSQL; uploads, avatars and profile banners live in S3-compatible object
 
 ## Data flow: chat
 
-1. The browser sends `POST /api/channels/{id}/messages` (or `/upload` for an
-   attachment). The request passes the CSRF origin check, the session check
+1. The browser sends `POST /api/channels/{id}/messages` (or `/upload` for a
+   single attachment in one request). Files for a message with several
+   attachments are staged first: `POST /api/channels/{id}/attachments` stores
+   one file as a media row with `staged = TRUE` and no message, visible only to
+   its uploader; the message then lists up to 10 ids in `attachment_ids`, which
+   are claimed in the message's transaction in that order (`media.position`),
+   at most 100 MB together. A staged file nobody sends is deleted after six
+   hours by [`media.SweepStaged`](../internal/media/staging.go). The request passes the CSRF origin check, the session check
    and the per-user rate limit.
 2. [`chat.InsertMessage`](../internal/chat/post.go) stores the message and its
-   mentions in one transaction (an upload's media row joins the same
-   transaction).
+   mentions in one transaction (an upload's media row, or the claim of the
+   staged files, joins the same transaction).
 3. [`chat.PublishMessage`](../internal/chat/post.go) loads the stored message,
    broadcasts `message_create` through the `events.Publisher` and answers 201.
 4. The hub writes the event to every open WebSocket; the

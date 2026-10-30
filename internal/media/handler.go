@@ -97,6 +97,7 @@ func (h *Handler) requireStore(next http.Handler) http.Handler {
 func (h *Handler) MountUploads(r chi.Router) {
 	r = r.With(h.requireStore)
 	r.Post("/channels/{channelID}/upload", httpx.Handle(h.upload))
+	r.Post("/channels/{channelID}/attachments", httpx.Handle(h.stageAttachment))
 	// An avatar is parsed in memory (at most 5 MB), never spilled to /tmp:
 	// its body gets a tighter cap than file uploads.
 	r.With(httpx.MaxBody(MaxAvatarBytes+1<<20)).Post("/users/me/avatar", httpx.Handle(h.uploadAvatar))
@@ -108,6 +109,7 @@ func (h *Handler) MountUploads(r chi.Router) {
 // Mount registers authenticated media serving.
 func (h *Handler) Mount(r chi.Router) {
 	r.With(h.requireStore).Get("/media/{id}", httpx.Handle(h.serve))
+	r.With(h.requireStore).Delete("/channels/{channelID}/attachments/{id}", httpx.Handle(h.unstageAttachment))
 }
 
 // MountAdmin registers the storage dashboard (Owner only). Pruning is

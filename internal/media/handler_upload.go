@@ -136,7 +136,7 @@ func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user 
 // upload handles POST /api/channels/{channelID}/upload.
 //
 // @Summary Post a message with an attachment
-// @Description multipart/form-data. Creates a message carrying the file and broadcasts message_create. Works in text and voice channels. Stricter rate limit (30 per minute).
+// @Description multipart/form-data. Creates a message carrying the file and broadcasts message_create. Works in text and voice channels. Stricter per-member upload rate limit.
 // @ID uploadFile
 // @Tags Media
 // @Accept mpfd

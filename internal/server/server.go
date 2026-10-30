@@ -164,7 +164,7 @@ func NewRouter(d Deps) (*Router, error) {
 	c.perUser = httpx.NewRateLimiter(apiWritesPerMinute, time.Minute).Named("api_user")
 	c.readsPerUser = httpx.NewRateLimiter(apiReadsPerMinute, time.Minute).Named("api_user_read")
 	c.previewsPerUser = httpx.NewRateLimiter(120, time.Minute).Named("link_preview")
-	c.uploadsPerUser = httpx.NewRateLimiter(30, time.Minute).Named("upload")
+	c.uploadsPerUser = httpx.NewRateLimiter(60, time.Minute).Named("upload")
 	c.newModeration()
 
 	return &Router{

@@ -270,7 +270,8 @@ func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, 
 func loadDeletedAttachments(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) (map[uuid.UUID][]map[string]any, []string, error) {
 	media, err := tx.Query(ctx, `
 		SELECT message_id, id, original_filename, mime_type, size_bytes, s3_key FROM media
-		WHERE message_id = ANY($1) OR message_id IN (SELECT id FROM messages WHERE parent_id = ANY($1))`, ids)
+		WHERE message_id = ANY($1) OR message_id IN (SELECT id FROM messages WHERE parent_id = ANY($1))
+		ORDER BY position, created_at`, ids)
 	if err != nil {
 		return nil, nil, fmt.Errorf("select attachments: %w", err)
 	}
