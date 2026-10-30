@@ -182,7 +182,7 @@ describe('Sidebar context menus', () => {
     expect(menuLabels()).toEqual(['Kanal erstellen', 'Kategorie erstellen'])
     await choose('Kanal erstellen')
     expect(document.body.textContent).toContain('Neuen Kanal erstellen')
-    expect(q<HTMLSelectElement>('#channel-category').value).toBe('')
+    expect(q<HTMLSelectElement>('#channel-category').value).toBe('text') // no category named: the first one, never above all of them
   })
 
   it('the empty tail below the last channel is part of the empty list area', async () => {
@@ -203,7 +203,7 @@ describe('Sidebar context menus', () => {
   it('category menu: everyone can collapse and expand all', async () => {
     await mountSidebar({ role: 'user' })
     await contextMenu(headerOf('voice'))
-    expect(menuLabels()).toEqual(['Alle als gelesen markieren', 'Standard des Servers verwenden', 'Alle Nachrichten', 'Nur Erwähnungen', 'Nichts', 'Stummschalten für …', 'Alle einklappen', 'Alle ausklappen'])
+    expect(menuLabels()).toEqual(['Alle als gelesen markieren', 'Standard der Community verwenden', 'Alle Nachrichten', 'Nur Erwähnungen', 'Nichts', 'Stummschalten für …', 'Alle einklappen', 'Alle ausklappen'])
     expect(menuItems().find(b => (b.textContent ?? '').includes('Alle ausklappen'))!.disabled).toBe(true)
     await choose('Alle einklappen')
     expect(JSON.parse(requireValue(localStorage.getItem(COLLAPSED_KEY)))).toEqual(['text', 'voice', 'empty'])
@@ -222,13 +222,13 @@ describe('Sidebar context menus', () => {
     await mountSidebar()
     await contextMenu(headerOf('voice'))
     expect(menuLabels()).toEqual([
-      'Alle als gelesen markieren', 'Standard des Servers verwenden', 'Alle Nachrichten', 'Nur Erwähnungen', 'Nichts', 'Stummschalten für …', 'Alle einklappen', 'Alle ausklappen',
+      'Alle als gelesen markieren', 'Standard der Community verwenden', 'Alle Nachrichten', 'Nur Erwähnungen', 'Nichts', 'Stummschalten für …', 'Alle einklappen', 'Alle ausklappen',
       'Rechte …', 'Kanal erstellen', 'Kategorie erstellen', 'Kategorie bearbeiten', 'Kategorie löschen'
     ])
     await choose('Kanal erstellen')
     // The category is preselected; a voice-only category suggests a voice channel.
     expect(q<HTMLSelectElement>('#channel-category').value).toBe('voice')
-    expect(q('[aria-pressed="true"]').textContent).toContain('Talk (Sprache)')
+    expect(q('[aria-pressed="true"]').textContent).toContain('Talk')
   })
 
   it('creates a category right below the one whose menu was used', async () => {

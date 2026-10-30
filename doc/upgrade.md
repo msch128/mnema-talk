@@ -408,7 +408,7 @@ them under **Admin > Automod** and change or delete what does not suit you:
 | Links | **off** (block-list mode, empty list) |
 
 The Owner and Administrators are never checked. The effect you may notice: a
-member who joined a few minutes ago gets "it breaks the server rule" when
+member who joined a few minutes ago gets "it breaks the community rule" when
 posting a link, and a burst of invitations used at once (a party of more than 10
 within 10 seconds) is held back for 10 minutes; delete or loosen the rule if
 that does not suit your community. Nothing changes for existing messages.

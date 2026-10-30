@@ -59,19 +59,19 @@ describe('CreateChannelModal', () => {
 
   it('keeps voice channel names as typed', async () => {
     const w = mountModal({ initialType: 'voice' })
-    expect(typeButton(w, 'Talk (voice)').attributes('aria-pressed')).toBe('true')
+    expect(typeButton(w, 'Talk').attributes('aria-pressed')).toBe('true')
     await w.find<HTMLInputElement>('#channel-name')!.setValue('Lounge & Bar')
     expect(w.find<HTMLInputElement>('#channel-name')!.element.value).toBe('Lounge & Bar')
     await w.find('form')!.trigger('submit')
     await flushPromises()
-    expect(chat.createChannel).toHaveBeenCalledWith({ categoryId: null, name: 'Lounge & Bar', type: 'voice', topic: '' })
+    expect(chat.createChannel).toHaveBeenCalledWith({ categoryId: '00000000-0000-4000-8000-0000000003ea', name: 'Lounge & Bar', type: 'voice', topic: '' })
   })
 
   it('switches the channel type', async () => {
     const w = mountModal()
-    expect(typeButton(w, 'Channel').attributes('aria-pressed')).toBe('true')
-    await typeButton(w, 'Talk (voice)').trigger('click')
-    expect(typeButton(w, 'Talk (voice)').attributes('aria-pressed')).toBe('true')
+    expect(typeButton(w, 'Text channel').attributes('aria-pressed')).toBe('true')
+    await typeButton(w, 'Talk').trigger('click')
+    expect(typeButton(w, 'Talk').attributes('aria-pressed')).toBe('true')
     expect(w.text()).toContain('Any title for the Talk.')
   })
 
@@ -115,7 +115,7 @@ describe('CreateChannelModal', () => {
   it('slugs a Talk title when the type changes to text', async () => {
     const w = mountModal({ initialType: 'voice' })
     await w.find<HTMLInputElement>('#channel-name')!.setValue('My Voice')
-    await typeButton(w, 'Channel').trigger('click')
+    await typeButton(w, 'Text channel').trigger('click')
     expect(w.find<HTMLInputElement>('#channel-name')!.element.value).toBe('my-voice')
   })
 
@@ -125,6 +125,23 @@ describe('CreateChannelModal', () => {
     expect(w.text()).toContain('Lowercase letters, digits and hyphens.')
   })
 
+  it('preselects the category of the open channel, else the first one', async () => {
+    chat.activeChannel = channelFixture({ id: '00000000-0000-4000-8000-0000000003ee', category_id: '00000000-0000-4000-8000-0000000003eb' })
+    expect(mountModal().find<HTMLInputElement>('#channel-category')!.element.value).toBe('00000000-0000-4000-8000-0000000003eb')
+    wrapper.unmount()
+    chat.activeChannel = channelFixture({ id: '00000000-0000-4000-8000-0000000003ee', category_id: null })
+    expect(mountModal().find<HTMLInputElement>('#channel-category')!.element.value).toBe('00000000-0000-4000-8000-0000000003ea')
+    wrapper.unmount()
+    expect(mountModal({ initialCategoryId: '00000000-0000-4000-8000-0000000003eb' }).find<HTMLInputElement>('#channel-category')!.element.value).toBe('00000000-0000-4000-8000-0000000003eb')
+  })
+
+  it('shows the type names in full', () => {
+    const w = mountModal()
+    expect(w.findAll('fieldset .truncate')).toHaveLength(0)
+    expect(w.get('fieldset').text()).toContain('Text channel')
+    expect(w.get('fieldset').text()).toContain('Voice, video, screen share')
+  })
+
   it('ignores an empty inline category', async () => {
     const w = mountModal()
     await typeButton(w, '+ New category').trigger('click')
@@ -132,7 +149,7 @@ describe('CreateChannelModal', () => {
     await w.find('form')!.trigger('submit')
     await flushPromises()
     expect(chat.createCategory).not.toHaveBeenCalled()
-    expect(vi.mocked(chat.createChannel).mock.calls[0]![0]!.categoryId).toBeNull()
+    expect(vi.mocked(chat.createChannel).mock.calls[0]![0]!.categoryId).toBe('00000000-0000-4000-8000-0000000003ea')
   })
 
   it('refuses a name that slugifies to nothing', async () => {
@@ -176,7 +193,7 @@ describe('CreateChannelModal', () => {
     await w.find('form')!.trigger('submit')
     await flushPromises()
     expect(chat.createChannel).toHaveBeenCalledWith({
-      categoryId: null,
+      categoryId: '00000000-0000-4000-8000-0000000003ea',
       name: 'discussions',
       type: 'forum',
       topic: ''
@@ -186,7 +203,7 @@ describe('CreateChannelModal', () => {
 
 it('switches back to existing categories and text type, and forwards shell close', async () => {
   const w = mountModal({ initialType: 'voice' })
-  await typeButton(w, 'Channel').trigger('click')
+  await typeButton(w, 'Text channel').trigger('click')
   await typeButton(w, '+ New category').trigger('click')
   await typeButton(w, 'Choose existing').trigger('click')
   expect(w.get('#channel-category').element.tagName).toBe('SELECT')

@@ -114,7 +114,7 @@ func (r *envReader) textSettings() *Config {
 		TrustedProxies:        SplitList(r.get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
 		JWTSecret:             r.get("JWT_SECRET", ""),
 		AdminUsername:         r.get("ADMIN_USERNAME", "admin"),
-		InitialLanguage:       strings.ToLower(r.get("INITIAL_LANGUAGE", "de")),
+		InitialLanguage:       strings.ToLower(r.get("INITIAL_LANGUAGE", "en")),
 		AdminInitialPassword:  r.get("ADMIN_INITIAL_PASSWORD", ""),
 		DatabaseURL:           r.get("DATABASE_URL", ""),
 		S3Endpoint:            r.get("S3_ENDPOINT", "http://localhost:8333"),

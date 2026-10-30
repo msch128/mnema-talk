@@ -57,7 +57,7 @@ describe('AdminOnboardingTab', () => {
     await flushPromises()
     expect(apiMock).toHaveBeenLastCalledWith('/api/admin/onboarding', {
       method: 'PUT', decode: expect.any(Function),
-      json: { community_name: 'Home', welcome_text: 'Hi', rules_text: 'Be kinder', start_channel_id: CH_TEXT, require_reacceptance: true, session_inactivity_days: 7 }
+      json: { community_name: 'Home', welcome_text: 'Hi', rules_text: 'Be kinder', start_channel_id: CH_TEXT, require_reacceptance: true }
     })
     expect(useToastStore().toasts.length).toBe(1)
     expect(w.find('[data-testid="reaccept"]').exists()).toBe(true)
@@ -115,22 +115,19 @@ describe('AdminOnboardingTab', () => {
     expect(w.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeDefined()
   })
 
-  it('sets the inactivity sign-out and refuses days outside 1 to 365', async () => {
+  it('has a heading, leaves DMs and sign-out to the System page and sends neither', async () => {
     const w = await mountTab()
-    expect(w.find<HTMLInputElement>('[data-testid="inactivity-days"]').element.value).toBe('7')
-    for (const bad of ['0', '366']) {
-      await w.find('[data-testid="inactivity-days"]').setValue(bad)
-      expect(w.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeDefined()
-      expect(w.find('[role="alert"]').text()).toContain('1 to 365')
-    }
-    await w.find('[data-testid="inactivity-days"]').setValue('30')
-    apiMock.mockResolvedValue({ ...settings, session_inactivity_days: 30 })
-    await w.find('form').trigger('submit')
+    expect(w.get('h3').text()).toBe('Welcome & rules')
+    expect(w.find('[data-testid="dm-switch"]').exists()).toBe(false)
+    expect(w.find('[data-testid="inactivity-setting"]').exists()).toBe(false)
+    expect(w.get<HTMLInputElement>('#onb-name').attributes('placeholder')).toBe(window.location.hostname)
+    await w.get('#onb-name').setValue('Home 2')
+    apiMock.mockResolvedValue({ ...settings, community_name: 'Home 2' })
+    await w.get('form').trigger('submit')
     await flushPromises()
-    expect(apiMock).toHaveBeenLastCalledWith('/api/admin/onboarding', expect.objectContaining({
-      json: expect.objectContaining({ session_inactivity_days: 30 })
-    }))
-    expect(w.find<HTMLInputElement>('[data-testid="inactivity-days"]').element.value).toBe('30')
+    const body = (apiMock.mock.lastCall![1] as { json: Record<string, unknown> }).json
+    expect(body).not.toHaveProperty('session_inactivity_days')
+    expect(body).not.toHaveProperty('direct_messages_enabled')
   })
 
   it('offers a retry when the first load fails', async () => {
@@ -162,9 +159,9 @@ describe('AdminOnboardingTab', () => {
     const saveOff = () => w.find('[data-testid="onboarding-save"]').attributes('disabled') !== undefined
     await w.find('#onb-name').setValue('  Home ')
     expect(saveOff()).toBe(true)
-    await w.find('[data-testid="inactivity-days"]').setValue('9')
+    await w.find('#onb-welcome').setValue('Hi there')
     expect(saveOff()).toBe(false)
-    await w.find('[data-testid="inactivity-days"]').setValue('7')
+    await w.find('#onb-welcome').setValue('Hi')
     expect(saveOff()).toBe(true)
     await w.find('[data-testid="reaccept"]').setValue(true)
     expect(saveOff()).toBe(false)

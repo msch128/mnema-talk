@@ -36,7 +36,7 @@ server.
   --public-url URL        the address members open, e.g. https://chat.example.com
   --local                 just try it on this computer: PUBLIC_URL=http://localhost:8080,
                           nothing reachable from outside (no domain, certificate or router)
-  --language en|de        language of the default channel names (default de, as INITIAL_LANGUAGE)
+  --language en|de        language of the default channel names (default en, as INITIAL_LANGUAGE)
   --lan-ip IP             this machine's address in your network (WEBRTC_LAN_IP), so members
                           at home reach voice without NAT loopback
   --admin-username NAME   the Owner's user name

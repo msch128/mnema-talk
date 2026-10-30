@@ -52,7 +52,7 @@ The same image is also published on Docker Hub as `docker.io/msch128/mnema-talk`
 | `POSTGRES_PASSWORD` | `openssl rand -hex 16` (compose builds `DATABASE_URL` from it) |
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY` | Any letters and digits (secret: at least 8 characters) |
 | `ADMIN_INITIAL_PASSWORD` | The Owner's password, at least 14 characters; remove it after the first start |
-| `INITIAL_LANGUAGE` | Optional, `de` (default) or `en`: the language of the default category and channel names. Only the first start uses it. |
+| `INITIAL_LANGUAGE` | Optional, `en` (default) or `de`: the language of the default category and channel names. Only the first start uses it. |
 
 Then start and check it (the admin Status tab's
 [setup checks](operations.md#setup-checks) list anything still missing):
@@ -74,8 +74,9 @@ built (`scripts/fresh-install-check.sh`).
 - Create the first invite: Admin console → Invites. Members register with that
   code; there is no public registration.
 - Set the community name and the rules new members accept (Admin console →
-  Welcome & rules). The same page has the Owner's switch for direct messages
-  (on by default).
+  Welcome & rules). The switch for direct messages (on by default) and the
+  sign-out after inactivity are on their own page, Admin console → Sign-in &
+  messages.
 - Give moderators their rights through roles: *Manage reports* (the Reports
   tab) and *Kick members* are off for @everyone and for every role until you
   grant them ([roles](roles-and-permissions.md)).

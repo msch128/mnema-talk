@@ -16,7 +16,12 @@ const toasts = useToastStore()
 
 const invites = ref<Invite[]>([])
 const newInviteUses = ref<string | number>('')
-const newInviteHours = ref<string | number>('')
+// A week is the default: an invite that never runs out is a choice, not what an empty form gives.
+const DEFAULT_DAYS = 7
+const HOURS_PER_DAY = 24
+// The server accepts invites up to 8760 hours (a year) ahead.
+const MAX_DAYS = 365
+const newInviteDays = ref<string | number>(DEFAULT_DAYS)
 const copiedCode = ref('')
 const creating = ref(false)
 const editing = ref<Invite | null>(null)
@@ -40,10 +45,10 @@ async function createInvite() {
   try {
     const body: CreateInviteRequest = {}
     if (newInviteUses.value) body.max_uses = parseInt(String(newInviteUses.value), 10)
-    if (newInviteHours.value) body.expires_in_hours = parseInt(String(newInviteHours.value), 10)
+    if (newInviteDays.value) body.expires_in_hours = Math.min(parseInt(String(newInviteDays.value), 10), MAX_DAYS) * HOURS_PER_DAY
     await api('/api/admin/invites', { method: 'POST', json: body })
     newInviteUses.value = ''
-    newInviteHours.value = ''
+    newInviteDays.value = DEFAULT_DAYS
     toasts.success(t('admin.inviteCreated'))
   } catch (e) {
     showError(e)
@@ -102,8 +107,10 @@ const live = computed(() => invites.value.filter(i => !spent(i)))
 const spentCount = computed(() => invites.value.length - live.value.length)
 const visible = computed(() => (showSpent.value ? [...live.value, ...invites.value.filter(spent)] : live.value))
 
-// Ready-made validity, in hours; '' is no expiry.
-const PRESETS: readonly { key: string; hours: number | '' }[] = [{ key: 'day', hours: 24 }, { key: 'week', hours: 168 }, { key: 'never', hours: '' }]
+// Ready-made validity, in days; '' is no expiry.
+const PRESETS: readonly { key: string; days: number | '' }[] = [{ key: 'day', days: 1 }, { key: 'week', days: 7 }, { key: 'never', days: '' }]
+// Neither a use limit nor an expiry: anyone with the link can join, always.
+const openForever = computed(() => !newInviteUses.value && !newInviteDays.value)
 
 onMounted(loadInvites)
 </script>
@@ -131,22 +138,24 @@ onMounted(loadInvites)
         />
       </div>
       <div class="block min-w-0 flex-1 basis-48 space-y-1">
-        <label for="invite-hours" class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('admin.validHoursLabel') }}</label>
+        <label for="invite-days" class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('admin.validDaysLabel') }}</label>
         <input
-          id="invite-hours"
-          v-model="newInviteHours"
+          id="invite-days"
+          v-model="newInviteDays"
           type="number"
           min="1"
-          :placeholder="$t('admin.validHoursPlaceholder')"
+          :max="MAX_DAYS"
+          :placeholder="$t('admin.validDaysPlaceholder')"
           class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-sm text-mnema-text placeholder-mnema-tertiary outline-hidden focus:border-mnema-accent transition"
         />
         <div class="flex flex-wrap gap-1.5 pt-1" role="group" :aria-label="$t('admin.presets')">
-          <button v-for="preset in PRESETS" :key="preset.key" type="button" class="chip" :aria-pressed="String(newInviteHours) === String(preset.hours) ? 'true' : 'false'" :data-preset="preset.key" @click="newInviteHours = preset.hours">{{ $t(`admin.preset.${preset.key}`) }}</button>
+          <button v-for="preset in PRESETS" :key="preset.key" type="button" class="chip" :aria-pressed="String(newInviteDays) === String(preset.days) ? 'true' : 'false'" :data-preset="preset.key" @click="newInviteDays = preset.days">{{ $t(`admin.preset.${preset.key}`) }}</button>
         </div>
       </div>
       <button type="submit" :disabled="creating" class="btn btn-primary sm:mt-6">
         {{ $t('admin.createInvite') }}
       </button>
+      <p v-if="openForever" class="basis-full text-xs text-mnema-danger" role="status" data-testid="invite-open-forever">{{ $t('admin.openForeverWarning') }}</p>
     </form>
 
     <div class="bg-mnema-surface rounded-lg border border-mnema-hairline overflow-hidden divide-y divide-mnema-hairline">
@@ -155,7 +164,7 @@ onMounted(loadInvites)
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0 flex-1 basis-64">
           <span class="font-mono bg-mnema-elevated border border-mnema-border px-2 py-0.5 rounded-sm text-mnema-text font-semibold break-all">{{ inv.code }}</span>
           <span v-if="inv.weak" class="text-mnema-danger cursor-help" data-testid="invite-weak" :title="$t('admin.weakInviteHint')">{{ $t('admin.weakInvite') }}</span>
-          <span class="text-mnema-muted whitespace-nowrap">{{ $t('admin.uses', { used: inv.uses_count, max: inv.max_uses ?? '∞' }) }}</span>
+          <span class="text-mnema-muted whitespace-nowrap">{{ inv.max_uses == null ? $t('admin.usesUnlimited', { used: inv.uses_count }) : $t('admin.uses', { used: inv.uses_count, max: inv.max_uses }) }}</span>
           <span class="text-mnema-tertiary">{{ inviteStatus(inv) }}</span>
         </div>
         <div class="flex items-center gap-3 shrink-0 ml-auto">

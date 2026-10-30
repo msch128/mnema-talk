@@ -5,6 +5,7 @@ import { nextTick } from 'vue'
 import type { ApiOptions } from '../lib/api'
 import AdminLayoutTab from './AdminLayoutTab.vue'
 import BaseDialog from './BaseDialog.vue'
+import CreateChannelModal from './CreateChannelModal.vue'
 import { useChatStore } from '../stores/chat'
 import { categoryFixture, channelFixture, fixtureId, userFixture } from '../test-fixtures.fixture'
 import { tree, errors } from './adminTestkit.fixture'
@@ -65,6 +66,28 @@ describe('layout editing recovery and unsaved order', () => {
   async function dirty(w: VueWrapper) {
     await cat(w).find('[data-testid="move-down-channel"]').trigger('click')
   }
+  it('creates a channel from the header button and from a category, keeping an unsaved order', async () => {
+    const w = await openLayout()
+    const chat = useChatStore()
+    chat.categories = tree().categories
+    const create = vi.spyOn(chat, 'createChannel').mockResolvedValue(
+      channelFixture({ id: fixtureId(50), name: 'ideas', category_id: fixtureId(30) }),
+    )
+    await w.get('[data-testid="layout-add-channel"]').trigger('click')
+    expect(w.find('#channel-name').exists()).toBe(true)
+    await w.findComponent(CreateChannelModal).vm.$emit('close')
+    expect(w.find('#channel-name').exists()).toBe(false)
+    await dirty(w)
+    await cat(w, 30).get('[data-testid="add-channel-category"]').trigger('click')
+    expect(w.get<HTMLSelectElement>('#channel-category').element.value).toBe(fixtureId(30))
+    await w.get('#channel-name').setValue('ideas')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ categoryId: fixtureId(30), name: 'ideas' }))
+    expect(cat(w, 30).text()).toContain('ideas')
+    expect(w.text()).toContain('You have unsaved changes')
+  })
+
   it('reorders categories and uncategorized channels in both directions and exercises native drag events', async () => {
     const w = await openLayout()
     await cat(w).find('[data-testid="move-down-category"]').trigger('click')
