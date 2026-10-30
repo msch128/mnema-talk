@@ -1,0 +1,51 @@
+web/src/components/ThreadSidebar.test.ts
+  s_ba0662248deca2::t_1379b9c9c2703b 327,329,331-335,340,342,347,355,357,691-708
+web/src/components/ThreadSidebar.vue
+  s_fc0029b3681126::t_da1973ee7bbe08 167-173,223-226,271-273,275-276
+web/src/composables/appRoutingApply.test.ts
+  s_524065e4c1d78a::t_5bc5a7107a0112 106-118
+web/src/composables/appRoutingApply.ts
+  s_fc0029b3681126::t_dc503e21379646 71-75
+web/src/composables/useAppRouting.test.ts
+  s_06fcde5dbef956::t_bc2357af6e0a5e 38-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66f5a7161636ab57b6b7c434afc56072e159f7c2",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_524065e4c1d78a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abfa07ecf4d340a57",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ba0662248deca2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-desktop-uploads-c294f35d64e7fce5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fc0029b3681126": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-forum-close-472189c9bd464366",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
