@@ -1,0 +1,43 @@
+.github/workflows/ci.yml
+  s_cf5b2fa6f87060::t_61a22931150b0c 547-554
+doc/operations.md
+  s_cf5b2fa6f87060::t_c390f58335fedb 152,663-670
+doc/ports.md
+  s_cf5b2fa6f87060::t_5a66eb71963464 94
+doc/quick-start.md
+  s_cf5b2fa6f87060::t_782677858d1784 125-126,131-135
+doc/upgrade.md
+  s_cf5b2fa6f87060::t_575f096a8a73d2 73
+internal/imageverify/flow_test.go
+  s_cf5b2fa6f87060::t_4dad9904872106 208-230
+internal/imageverify/policy.go
+  s_cf5b2fa6f87060::t_21bfb30f4a57d6 28,30-31,39-44,52-56,69,75-81,95-146
+internal/imageverify/verifier.go
+  s_cf5b2fa6f87060::t_128c58c4eb7f6d 114-116,123-124
+internal/imageverify/verifier_test.go
+  s_cf5b2fa6f87060::t_497cfa00201ce7 224-302
+internal/updaterd/errors_test.go
+  s_cf5b2fa6f87060::t_d419807c0c3e17 214-244
+internal/updaterd/run.go
+  s_cf5b2fa6f87060::t_f576237b249ae3 70-76,86-87,154
+internal/updaterd/server.go
+  s_cf5b2fa6f87060::t_082abfb4d4ed67 183-184,188
+internal/updaterd/updaterd_test.go
+  s_cf5b2fa6f87060::t_afc5c38a9a5728 148-158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "247d2c9e645f4bdd36184ed0bb96666862cd213d",
+  "prompts": {},
+  "sessions": {
+    "s_cf5b2fa6f87060": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa4a385df44c9d339",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
