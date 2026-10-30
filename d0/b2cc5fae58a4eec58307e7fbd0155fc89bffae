@@ -1,0 +1,21 @@
+internal/setupwizard/prereq_test.go
+  s_ecf7b9e687a24d::t_63f9c983f16051 400-418
+internal/setupwizard/run.go
+  s_ecf7b9e687a24d::t_01122a8a55b199 147-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d0b2cc5fae58a4eec58307e7fbd0155fc89bffae",
+  "prompts": {},
+  "sessions": {
+    "s_ecf7b9e687a24d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-setup-e379f010794b742e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
