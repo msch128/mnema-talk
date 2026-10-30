@@ -1,0 +1,21 @@
+web/src/components/ConnectionTest.test.ts
+  s_0cae4a4d7ab7c3::t_ab4c1be3b46824 90-137
+web/src/lib/connectionTestApi.test.ts
+  s_0cae4a4d7ab7c3::t_88decb3776dab6 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9a5f1119c8e136845f0b4b30d63b29152ae48e2e",
+  "prompts": {},
+  "sessions": {
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
