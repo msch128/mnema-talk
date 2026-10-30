@@ -1,0 +1,22 @@
+web/src/lib/presence.ts
+  h_0ff4f4713441f4 17-19
+web/src/stores/chat/presence.test.ts
+  h_0ff4f4713441f4 1-137
+web/src/stores/chat/presence.ts
+  h_0ff4f4713441f4 1,5,10-16,20,24-28,44-52,125-136
+web/src/stores/chat/reset.ts
+  h_0ff4f4713441f4 90
+web/src/stores/chat/state.ts
+  h_0ff4f4713441f4 163,167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2336fefde3499fe3d462d7f232822df4a7bc221f",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
