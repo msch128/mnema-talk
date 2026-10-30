@@ -1,0 +1,21 @@
+web/src/composables/useContextMenuTrigger.test.ts
+  s_06fcde5dbef956::t_3d4d5e4f04c114 94-105
+web/src/composables/useContextMenuTrigger.ts
+  s_06fcde5dbef956::t_a3f0266d5a03a6 33-35,37-38,47,58-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7edc90fcd1d54b737111ec1b46bce25661dc015f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
