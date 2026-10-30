@@ -1,0 +1,35 @@
+web/src/components/AdminOnboardingTab.vue
+  s_06fcde5dbef956::t_767baf49ec2c89 81
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_7043e3d35fbc3a 390-413
+web/src/components/AutomodRuleDialog.vue
+  s_06fcde5dbef956::t_02ecdee042a119 65
+web/src/components/BotDetailPanel.test.ts
+  s_06fcde5dbef956::t_bb754335ea9e6b 183-195
+web/src/components/EditNameDialog.vue
+  s_06fcde5dbef956::t_3e1f88f5801887 13,115-116
+web/src/components/RoleEditor.vue
+  s_06fcde5dbef956::t_d18dfd70819434 79-80
+web/src/composables/draftGuard.ts
+  s_06fcde5dbef956::t_9d818e0cbf78e4 52-57,60-68,75
+web/src/composables/useSettingsDraft.test.ts
+  s_06fcde5dbef956::t_2badb2daad44ba 291-353
+web/src/composables/useSettingsDraft.ts
+  s_06fcde5dbef956::t_8547b6652d1bca 38-43,98-99,111-112,115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "373211bc91927314f0eebe84f102fb9fb3a02734",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
