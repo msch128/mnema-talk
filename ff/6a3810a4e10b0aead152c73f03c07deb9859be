@@ -1,0 +1,19 @@
+e2e/tests/dm-call.spec.ts
+  s_fb29f048bd6d02::t_0baabee4ea0f8a 78-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff6a3810a4e10b0aead152c73f03c07deb9859be",
+  "prompts": {},
+  "sessions": {
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
