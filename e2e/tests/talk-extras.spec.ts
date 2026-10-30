@@ -327,9 +327,14 @@ test('the streamer picks the stream quality, the viewer sets the stream volume',
     const enc = sender.getParameters().encodings?.[0] || {}
     let frameHeight = 0
     // A stats call that never answers must fail the poll, not hang the page.
-    const stats = await Promise.race([sender.getStats(), new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getStats timed out')), 5_000))])
-    for (const s of stats.values()) {
-      if (s.type === 'outbound-rtp' && s.frameHeight) frameHeight = Math.max(frameHeight, s.frameHeight)
+    // Every layer's line counts: the best one is switched off while the viewer
+    // (on Auto, with a small stage) only needs a smaller one.
+    const senders = window.__pcs.flatMap(pc => pc.getSenders()).filter(s => s.track?.kind === 'video')
+    for (const one of senders) {
+      const stats = await Promise.race([one.getStats(), new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getStats timed out')), 5_000))])
+      for (const s of stats.values()) {
+        if (s.type === 'outbound-rtp' && s.frameHeight) frameHeight = Math.max(frameHeight, s.frameHeight)
+      }
     }
     const settings = sender.track.getSettings()
     return { maxFramerate: enc.maxFramerate, maxBitrate: enc.maxBitrate, scale: enc.scaleResolutionDownBy ?? 1, frameHeight, height: settings.height }
