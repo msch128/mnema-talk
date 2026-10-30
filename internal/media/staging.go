@@ -33,7 +33,7 @@ const (
 // stageAttachment handles POST /api/channels/{channelID}/attachments.
 //
 // @Summary Upload an attachment for a message
-// @Description multipart/form-data with the file in field 'file'. Stores the file as a staged attachment without posting a message; send the returned id in attachment_ids of POST /api/channels/{channelID}/messages (up to 10 per message). Needs the same permissions as an upload. A staged file is visible only to its uploader and is deleted automatically after six hours if no message claims it. A member holds at most 30 unsent files. Same rate limit and size limits as the upload endpoint.
+// @Description multipart/form-data with the file in field 'file'. Stores the file as a staged attachment without posting a message; send the returned id in attachment_ids of POST /api/channels/{channelID}/messages (up to 10 per message). Needs the same permissions as an upload. A staged file is visible only to its uploader and is deleted automatically after six hours if no message claims it. A member holds at most 30 unsent files. Same stricter per-member upload rate limit and size limits as the upload endpoint.
 // @ID stageAttachment
 // @Tags Media
 // @Accept mpfd
@@ -66,9 +66,6 @@ func (h *Handler) stageAttachment(w http.ResponseWriter, r *http.Request) error 
 	if _, err := chat.ChannelForMessages(ctx, h.DB, chID); err != nil {
 		return err
 	}
-	if err := h.checkStagedRoom(ctx, user.ID); err != nil {
-		return err
-	}
 	req, err := h.prepareUploadRequest(w, r, user)
 	if err != nil {
 		return err
@@ -91,25 +88,33 @@ func (h *Handler) stageAttachment(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-func (h *Handler) checkStagedRoom(ctx context.Context, userID uuid.UUID) error {
-	var n int
-	if err := h.DB.QueryRow(ctx, `SELECT count(*) FROM media WHERE uploader_id = $1 AND staged`, userID).Scan(&n); err != nil {
-		return fmt.Errorf("count staged attachments: %w", err)
-	}
-	if n >= maxStagedPerMember {
-		return httpx.ErrInvalidInput(fmt.Sprintf("too many unsent files (at most %d); send or remove some first", maxStagedPerMember))
-	}
-	return nil
-}
-
+// insertStaged records the file, unless the member already holds
+// maxStagedPerMember unsent ones. The count and the insert run under a lock
+// of the member's, so parallel uploads cannot slip past the cap together.
 func (h *Handler) insertStaged(ctx context.Context, chID, userID uuid.UUID, in *storedUpload) error {
-	_, err := h.DB.Exec(ctx, `
-		INSERT INTO media (id, uploader_id, channel_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes, staged)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE)`,
-		in.id, userID, chID, h.Bucket, in.key, in.filename, in.mime, in.size)
+	err := pgx.BeginFunc(ctx, h.DB, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "staged:"+userID.String()); err != nil {
+			return fmt.Errorf("lock staged uploads: %w", err)
+		}
+		var n int
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM media WHERE uploader_id = $1 AND staged`, userID).Scan(&n); err != nil {
+			return fmt.Errorf("count staged attachments: %w", err)
+		}
+		if n >= maxStagedPerMember {
+			return httpx.ErrInvalidInput(fmt.Sprintf("too many unsent files (at most %d); send or remove some first", maxStagedPerMember))
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO media (id, uploader_id, channel_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes, staged)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE)`,
+			in.id, userID, chID, h.Bucket, in.key, in.filename, in.mime, in.size)
+		return err
+	})
 	if err != nil {
-		// The object must not outlive a failed DB write.
+		// The object must not outlive a failed DB write or a refused file.
 		h.discard(ctx, in.key)
+		if _, refused := httpx.AsAPIError(err); refused {
+			return err
+		}
 		return fmt.Errorf("record staged upload: %w", err)
 	}
 	return nil
