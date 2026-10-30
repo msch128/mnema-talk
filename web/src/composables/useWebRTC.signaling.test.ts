@@ -98,7 +98,7 @@ describe('kicked from voice', () => {
     await join
     const pc = present(FakePC.instances.at(-1))
 
-    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1', tab: expect.any(String) } })
+    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1' } })
     expect(voice.currentChannelId).toBeNull()
     expect(pc.closed).toBe(true)
     expect(present(mic.getTracks()[0]).stop).toHaveBeenCalled()
@@ -199,7 +199,7 @@ describe('kicked from voice', () => {
     const join = rtc.joinVoiceChannel('ch-2')
     await grantMic()
     await join
-    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1', tab: expect.any(String) } })
+    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1' } })
     expect(voice.currentChannelId).toBe('ch-2')
   })
 })
