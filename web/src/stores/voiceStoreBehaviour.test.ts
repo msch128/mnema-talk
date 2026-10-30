@@ -338,6 +338,22 @@ describe('subscription replay and stale media arrivals', () => {
     expect(sink).not.toHaveBeenCalled()
   })
 
+  it('does not bring the speakers of a room left while hidden back when the page is shown', () => {
+    const voice = useVoiceStore()
+    const visibility = (state: 'visible' | 'hidden') => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+      document.dispatchEvent(new Event('visibilitychange'))
+    }
+    for (const leave of [() => voice.setChannel('other-room'), () => voice.disconnect()]) {
+      voice.setChannel('room')
+      voice.handleSpeakingEvent({ channel_id: 'room', user_id: 'talker', active: true })
+      visibility('hidden')
+      leave()
+      visibility('visible')
+      expect(voice.speakingUsers).toEqual({})
+    }
+  })
+
   it('keeps video while Picture-in-Picture shows it in a hidden page', () => {
     const voice = useVoiceStore()
     const sink = vi.fn()
