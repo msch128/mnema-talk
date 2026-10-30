@@ -8,13 +8,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/msch128/mnema-talk/loadtest/viewer/internal/lt"
 	"github.com/pion/webrtc/v4"
 )
 
-type token struct {
-	ID    string `json:"id"`
-	Token string `json:"token"`
-}
+type token = lt.Token
 
 // quality is the layer this member asks for (QUALITY), nil to leave it to the
 // server.
@@ -36,6 +34,8 @@ func (m *member) quality() any {
 type member struct {
 	id    string
 	index int
+	role  pubRole
+	api   *webrtc.API
 
 	conn    *websocket.Conn
 	pc      *webrtc.PeerConnection
@@ -58,6 +58,12 @@ type member struct {
 	maxStallMs                  atomic.Int64
 
 	failed atomic.Value // string
+
+	// Published media (synthetic, see publish.go) and received tracks.
+	pubOnce sync.Once
+	sentB   atomic.Int64
+	trackMu sync.Mutex
+	tracks  []*trackStats
 
 	// Remote candidates that arrive before the offer is applied, and local
 	// candidates gathered before the answer is on its way, are queued:

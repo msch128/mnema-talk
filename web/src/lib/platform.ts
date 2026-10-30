@@ -37,6 +37,8 @@ export interface Platform {
   requestNotificationPermission(): Promise<NotifyPermission>
   /** Shows an OS notification; clicking it runs `onClick`. */
   notify(n: OsNotification): void
+  /** Withdraws the toast of a conversation or channel, if it is still up (a call that stopped ringing). */
+  closeNotification(channelId: string): void
   /** Count on the taskbar/dock/app icon; 0 clears it. */
   setBadge(count: number): void
   /**
@@ -96,6 +98,7 @@ export const browserPlatform: Platform = {
   refreshNotificationPermission: () => notifier().refreshPermission(),
   requestNotificationPermission: () => notifier().requestPermission(),
   notify: n => notifier().notify(n),
+  closeNotification: channelId => notifier().close?.(channelId),
   setBadge: count => notifier().setBadge(count),
   reportUnread: counts => unreadReporter()?.reportUnread?.(counts),
   supportsUnreadReport: () => unreadReporter()?.reportUnread !== undefined,

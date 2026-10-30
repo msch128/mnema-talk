@@ -224,9 +224,10 @@ func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webr
 	if info.group != nil {
 		r.mu.RLock()
 		pref := r.subs[peer.ID].screenQuality(info.SenderID)
+		fit := r.subs[peer.ID].screenFit(info.SenderID)
 		r.mu.RUnlock()
 		var err error
-		vt, err = info.group.newViewer(peer.ID, pref, trackID, info.SenderID.String())
+		vt, err = info.group.newViewer(peer.ID, pref, fit, trackID, info.SenderID.String())
 		if err != nil {
 			return nil, nil, err
 		}

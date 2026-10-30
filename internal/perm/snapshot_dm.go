@@ -34,6 +34,8 @@ func (s *Snapshot) addDMs(rows []dmMemberRow, enabled bool) {
 
 type dmMemberRow struct{ Channel, User uuid.UUID }
 
+type dmTalkRow struct{ Talk, DM uuid.UUID }
+
 // KnowsDM reports whether the snapshot has seen the conversation.
 func (s *Snapshot) KnowsDM(ch uuid.UUID) bool { _, ok := s.dms[ch]; return ok }
 

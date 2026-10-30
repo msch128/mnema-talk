@@ -1477,7 +1477,29 @@ export function isChatCreateReportRequest(value: unknown): value is ChatCreateRe
 
 export const decodeChatCreateReportRequest = decoder("chat.CreateReportRequest", isChatCreateReportRequest)
 
+export type ChatDMCall = {
+  caller_id: string
+  message_id: string
+  ring_seconds: number
+  ringing: boolean
+  talk_id: string
+  talk_name: string
+}
+
+export function isChatDMCall(value: unknown): value is ChatDMCall {
+  return isRecord(value)
+    && (hasOwn(value, "caller_id") && isIdentifier(value["caller_id"]))
+    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+    && (hasOwn(value, "ring_seconds") && isInteger(value["ring_seconds"]))
+    && (hasOwn(value, "ringing") && typeof value["ringing"] === 'boolean')
+    && (hasOwn(value, "talk_id") && isIdentifier(value["talk_id"]))
+    && (hasOwn(value, "talk_name") && isString(value["talk_name"]))
+}
+
+export const decodeChatDMCall = decoder("chat.DMCall", isChatDMCall)
+
 export type ChatDMLastMessage = {
+  call?: "invite" | "missed"
   has_attachment: boolean
   has_poll: boolean
   text: string
@@ -1486,6 +1508,7 @@ export type ChatDMLastMessage = {
 
 export function isChatDMLastMessage(value: unknown): value is ChatDMLastMessage {
   return isRecord(value)
+    && (!hasOwn(value, "call") || (value["call"] === "invite" || value["call"] === "missed"))
     && (hasOwn(value, "has_attachment") && typeof value["has_attachment"] === 'boolean')
     && (hasOwn(value, "has_poll") && typeof value["has_poll"] === 'boolean')
     && (hasOwn(value, "text") && isString(value["text"]))
@@ -1536,6 +1559,7 @@ export function isChatDeleteMessageRequest(value: unknown): value is ChatDeleteM
 export const decodeChatDeleteMessageRequest = decoder("chat.DeleteMessageRequest", isChatDeleteMessageRequest)
 
 export type ChatDirectMessage = {
+  call?: ChatDMCall
   can_send: boolean
   created_at: string
   favourite_position: number | null
@@ -1553,6 +1577,7 @@ export type ChatDirectMessage = {
 
 export function isChatDirectMessage(value: unknown): value is ChatDirectMessage {
   return isRecord(value)
+    && (!hasOwn(value, "call") || isChatDMCall(value["call"]))
     && (hasOwn(value, "can_send") && typeof value["can_send"] === 'boolean')
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "favourite_position") && (isInteger(value["favourite_position"]) || value["favourite_position"] === null))
@@ -1583,6 +1608,7 @@ export const decodeChatEditMessageRequest = decoder("chat.EditMessageRequest", i
 
 export type ChatEmbed = {
   author?: ChatEmbedAuthor
+  call?: "missed"
   color?: number
   description?: string
   fields?: Array<ChatEmbedField>
@@ -1598,6 +1624,7 @@ export type ChatEmbed = {
 export function isChatEmbed(value: unknown): value is ChatEmbed {
   return isRecord(value)
     && (!hasOwn(value, "author") || isChatEmbedAuthor(value["author"]))
+    && (!hasOwn(value, "call") || (value["call"] === "missed"))
     && (!hasOwn(value, "color") || (isInteger(value["color"]) && value["color"] >= 0 && value["color"] <= 16777215))
     && (!hasOwn(value, "description") || isString(value["description"], 4096))
     && (!hasOwn(value, "fields") || isArrayOf(value["fields"], item => isChatEmbedField(item)))
@@ -3716,6 +3743,49 @@ export function isOnboardingAcceptInput(value: unknown): value is OnboardingAcce
 
 export const decodeOnboardingAcceptInput = decoder("onboarding.AcceptInput", isOnboardingAcceptInput)
 
+export type OnboardingFirstRun = {
+  complete: boolean
+  hidden: boolean
+  steps: Array<OnboardingFirstRunStep>
+}
+
+export function isOnboardingFirstRun(value: unknown): value is OnboardingFirstRun {
+  return isRecord(value)
+    && (hasOwn(value, "complete") && typeof value["complete"] === 'boolean')
+    && (hasOwn(value, "hidden") && typeof value["hidden"] === 'boolean')
+    && (hasOwn(value, "steps") && isArrayOf(value["steps"], item => isOnboardingFirstRunStep(item)))
+}
+
+export const decodeOnboardingFirstRun = decoder("onboarding.FirstRun", isOnboardingFirstRun)
+
+export type OnboardingFirstRunInput = {
+  hidden?: boolean | null
+  visited?: Array<string>
+}
+
+export function isOnboardingFirstRunInput(value: unknown): value is OnboardingFirstRunInput {
+  return isRecord(value)
+    && (!hasOwn(value, "hidden") || (typeof value["hidden"] === 'boolean' || value["hidden"] === null))
+    && (!hasOwn(value, "visited") || isArrayOf(value["visited"], item => isString(item)))
+}
+
+export const decodeOnboardingFirstRunInput = decoder("onboarding.FirstRunInput", isOnboardingFirstRunInput)
+
+export type OnboardingFirstRunStep = {
+  done: boolean
+  id: string
+  optional: boolean
+}
+
+export function isOnboardingFirstRunStep(value: unknown): value is OnboardingFirstRunStep {
+  return isRecord(value)
+    && (hasOwn(value, "done") && typeof value["done"] === 'boolean')
+    && (hasOwn(value, "id") && isString(value["id"]))
+    && (hasOwn(value, "optional") && typeof value["optional"] === 'boolean')
+}
+
+export const decodeOnboardingFirstRunStep = decoder("onboarding.FirstRunStep", isOnboardingFirstRunStep)
+
 export type OnboardingInvitePreview = {
   community_name?: string
   expires_at?: string
@@ -4224,6 +4294,28 @@ export function isServerBuiltinTURNHealth(value: unknown): value is ServerBuilti
 }
 
 export const decodeServerBuiltinTURNHealth = decoder("server.BuiltinTURNHealth", isServerBuiltinTURNHealth)
+
+export type ServerConnectionProbeAnswer = {
+  sdp: string
+}
+
+export function isServerConnectionProbeAnswer(value: unknown): value is ServerConnectionProbeAnswer {
+  return isRecord(value)
+    && (hasOwn(value, "sdp") && isString(value["sdp"]))
+}
+
+export const decodeServerConnectionProbeAnswer = decoder("server.ConnectionProbeAnswer", isServerConnectionProbeAnswer)
+
+export type ServerConnectionProbeRequest = {
+  sdp: string
+}
+
+export function isServerConnectionProbeRequest(value: unknown): value is ServerConnectionProbeRequest {
+  return isRecord(value)
+    && (hasOwn(value, "sdp") && isString(value["sdp"], 16384))
+}
+
+export const decodeServerConnectionProbeRequest = decoder("server.ConnectionProbeRequest", isServerConnectionProbeRequest)
 
 export type ServerDatabaseHealth = {
   applied_migrations: number
@@ -4760,6 +4852,17 @@ export function isServerVoiceHealth(value: unknown): value is ServerVoiceHealth 
 
 export const decodeServerVoiceHealth = decoder("server.VoiceHealth", isServerVoiceHealth)
 
+export type ServerWebSocketReport = {
+  connected: boolean
+}
+
+export function isServerWebSocketReport(value: unknown): value is ServerWebSocketReport {
+  return isRecord(value)
+    && (hasOwn(value, "connected") && typeof value["connected"] === 'boolean')
+}
+
+export const decodeServerWebSocketReport = decoder("server.WebSocketReport", isServerWebSocketReport)
+
 export type SetupcheckCheck = {
   code?: string
   detail: string
@@ -4781,10 +4884,10 @@ export function isSetupcheckCheck(value: unknown): value is SetupcheckCheck {
 
 export const decodeSetupcheckCheck = decoder("setupcheck.Check", isSetupcheckCheck)
 
-export type SetupcheckLevel = "ok" | "warn" | "fail"
+export type SetupcheckLevel = "ok" | "warn" | "fail" | "info"
 
 export function isSetupcheckLevel(value: unknown): value is SetupcheckLevel {
-  return (value === "ok" || value === "warn" || value === "fail")
+  return (value === "ok" || value === "warn" || value === "fail" || value === "info")
 }
 
 export const decodeSetupcheckLevel = decoder("setupcheck.Level", isSetupcheckLevel)

@@ -77,7 +77,12 @@ func TestUnreadAndMentionCounts(t *testing.T) {
 		t.Fatalf("mark unread from %s: unread=%d, want 4", first, got.UnreadCount)
 	}
 
-	// The admin's own messages never count for the admin.
+	// The admin's own messages never count for the admin, and writing after
+	// max's first message read it; only what max posts afterwards is unread.
+	if got := admin.readState(t, ch); got.UnreadCount != 0 {
+		t.Fatalf("admin unread=%d after answering max, want 0", got.UnreadCount)
+	}
+	postMessage(t, max, ch, map[string]any{"content": "and one more"})
 	if got := admin.readState(t, ch); got.UnreadCount != 1 {
 		t.Fatalf("admin unread=%d, want 1 (max's message)", got.UnreadCount)
 	}

@@ -21,14 +21,35 @@ describe('toast store', () => {
     expect(toasts.toasts).toHaveLength(0)
   })
 
-  it('keeps errors and toasts with an action until dismissed', () => {
+  it('shows the same error once while it is on screen', () => {
+    const toasts = useToastStore()
+    const first = toasts.error('Zu viele Anfragen')
+    expect(toasts.error('Zu viele Anfragen')).toBe(first)
+    toasts.error('Zu viele Anfragen')
+    expect(toasts.toasts).toHaveLength(1)
+    toasts.error('Etwas anderes')
+    expect(toasts.toasts).toHaveLength(2)
+  })
+
+  it('shows an identical error again when it carries an action', () => {
+    const toasts = useToastStore()
+    toasts.error('Zu viele Anfragen')
+    toasts.error('Zu viele Anfragen', { action: { label: 'Erneut versuchen', onClick() {} } })
+    expect(toasts.toasts).toHaveLength(2)
+  })
+
+  it('keeps errors until dismissed and toasts with an action for 20 seconds', () => {
     const toasts = useToastStore()
     const e = toasts.error('boom')
     toasts.info('retry?', { action: { label: 'Erneut versuchen', onClick() {} } })
-    vi.advanceTimersByTime(60000)
+    vi.advanceTimersByTime(19000)
     expect(toasts.toasts).toHaveLength(2)
-    toasts.dismiss(required(e))
+    vi.advanceTimersByTime(2000)
     expect(toasts.toasts).toHaveLength(1)
+    vi.advanceTimersByTime(60000)
+    expect(toasts.toasts).toHaveLength(1)
+    toasts.dismiss(required(e))
+    expect(toasts.toasts).toHaveLength(0)
   })
 
   it('lets a toast with an action dismiss itself after an explicit duration (undo)', () => {

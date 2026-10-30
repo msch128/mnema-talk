@@ -81,7 +81,7 @@ async function submit() {
           id="poll-question"
           v-model="draft.question"
           type="text"
-          :maxlength="POLL_MAX_QUESTION"
+          v-max-chars="POLL_MAX_QUESTION"
           :placeholder="$t('poll.questionPlaceholder')"
           class="h-11 w-full rounded-lg border border-mnema-border bg-mnema-canvas px-4 text-base text-mnema-text"
           autocomplete="off"
@@ -96,7 +96,7 @@ async function submit() {
             <input
               v-model="draft.options[i]"
               type="text"
-              :maxlength="POLL_MAX_LABEL"
+              v-max-chars="POLL_MAX_LABEL"
               :aria-label="$t('poll.answerN', { n: i + 1 })"
               :placeholder="$t('poll.answerN', { n: i + 1 })"
               data-testid="poll-answer"

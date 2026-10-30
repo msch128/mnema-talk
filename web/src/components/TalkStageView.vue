@@ -7,6 +7,7 @@ import { Maximize2, Minimize2, MonitorOff, PictureInPicture2, Video, Volume2, Vo
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
 import { fitAspect } from '../lib/talkLayout'
+import { useScreenFit } from '../composables/useScreenFit'
 import ScreenViewers from './ScreenViewers.vue'
 import StreamQualityMenu from './StreamQualityMenu.vue'
 import ScreenLayerMenu from './ScreenLayerMenu.vue'
@@ -44,6 +45,7 @@ const { stopScreenShare } = useWebRTC()
 const videoContainer = ref<HTMLElement | null>(null)
 const screenVideoEl = ref<HTMLVideoElement | null>(null)
 defineExpose({ container: videoContainer })
+useScreenFit(() => (props.ownOnStage || props.cameraOnStage ? null : props.stageUserId), videoContainer)
 
 // Actual resolution of the shared screen as decoded by the browser.
 const videoResolution = ref('')

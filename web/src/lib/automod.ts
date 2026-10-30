@@ -2,6 +2,7 @@
 // editor, and the conversion between a rule and the lines of its form.
 import type { AutomodRule, AutomodRuleInput, AutomodSettings } from '../types/rest'
 import { locale, t } from '../i18n'
+import presets from './presets.json'
 
 export type AutomodKind = AutomodRule['kind']
 
@@ -9,10 +10,10 @@ export type AutomodKind = AutomodRule['kind']
 export const AUTOMOD_KINDS: readonly AutomodKind[] = ['words', 'links', 'mentions', 'new_account', 'raid']
 
 /** Ready-made choices, in seconds. */
-export const ACCOUNT_AGES = [60, 300, 600, 1800, 3600, 21600, 86400, 259200, 604800, 2592000] as const
-export const RAID_WINDOWS = [5, 10, 30, 60, 300, 600] as const
-export const RAID_RESTRICTIONS = [60, 300, 600, 1800, 3600, 21600, 86400] as const
-export const RULE_TIMEOUTS = [0, 60, 300, 600, 3600, 86400, 604800] as const
+export const ACCOUNT_AGES = presets.automodAccountAges
+export const RAID_WINDOWS = presets.automodRaidWindows
+export const RAID_RESTRICTIONS = presets.automodRaidRestrictions
+export const RULE_TIMEOUTS = presets.automodRuleTimeouts
 
 export const MAX_RULE_NAME = 60
 export const MAX_WORDS = 200
@@ -104,11 +105,6 @@ export function inputFromForm(f: RuleForm): AutomodRuleInput {
     timeout_seconds: f.kind === 'raid' ? 0 : f.timeoutSeconds,
     config: settingsOf(f), exempt_roles: f.exemptRoles, exempt_channels: f.exemptChannels
   }
-}
-
-/** The same rule with another on/off state, as the body that replaces it. */
-export function toggled(rule: AutomodRule): AutomodRuleInput {
-  return inputFromForm({ ...formFromRule(rule), enabled: !rule.enabled })
 }
 
 /** What the form still lacks, as a translated sentence; '' when it can be saved. */

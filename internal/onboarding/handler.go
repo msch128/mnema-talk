@@ -66,4 +66,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	admin := r.With(auth.RequirePerm(h.Perms, perm.Administrator))
 	admin.Get("/onboarding", httpx.Handle(h.getSettings))
 	admin.Put("/onboarding", httpx.Handle(h.putSettings))
+	owner := r.With(auth.RequireOwner)
+	owner.Get("/first-run", httpx.Handle(h.getFirstRun))
+	owner.Put("/first-run", httpx.Handle(h.putFirstRun))
 }

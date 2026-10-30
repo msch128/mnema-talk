@@ -9,11 +9,15 @@ import { locale } from '../i18n'
 import { dateTime } from '../lib/time'
 import MarkdownContent from './MarkdownContent.vue'
 import TalkInviteCard from './TalkInviteCard.vue'
+import CallMissedNote from './CallMissedNote.vue'
 
 defineProps({
   embeds: { type: Array as PropType<ChatEmbed[]>, default: () => [] },
   /** Who wrote the message, for Talk invitations. */
-  author: { type: String, default: '' }
+  author: { type: String, default: '' },
+  authorId: { type: String, default: '' },
+  /** The conversation the message is in, for a missed call's "Call back". */
+  channelId: { type: String, default: '' }
 })
 
 function accent(color: number): string {
@@ -37,6 +41,7 @@ function when(timestamp: string): string {
   <div v-if="embeds.length" class="mt-2 space-y-2" data-testid="embeds">
     <template v-for="(embed, i) in embeds" :key="i">
     <TalkInviteCard v-if="embed.talk_id" :talk-id="embed.talk_id" :title="embed.title ?? ''" :from="author" />
+    <CallMissedNote v-else-if="embed.call === 'missed'" :from="author" :from-id="authorId" :conversation-id="channelId" />
     <article
       v-else
       data-testid="embed"

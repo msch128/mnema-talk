@@ -19,7 +19,7 @@ function makeActions({ own = true, canDelete = true } = {}) {
     isOwn: vi.fn(() => own),
     canDelete: vi.fn(() => canDelete),
     startEdit: vi.fn(),
-    deleteMessage: vi.fn(async () => {}),
+    deleteMessage: vi.fn(async () => true),
     closePicker: vi.fn()
   }
 }
@@ -62,7 +62,7 @@ describe('useMessageMenu items', () => {
   it('offers edit and delete on own messages', () => {
     const menu = useMessageMenu({ actions: makeActions(), reply: vi.fn() })
     expect(labels(menu.itemsFor(msg))).toEqual([
-      'Reply', 'Add reaction', 'Open thread', 'Edit message', '—',
+      'Reply in channel', 'Add reaction', 'Reply in thread', 'Edit message', '—',
       'Copy text', 'Copy link', 'Mark unread', '—', 'Delete message'
     ])
   })
@@ -80,11 +80,11 @@ describe('useMessageMenu items', () => {
     const reply = vi.fn()
     chat.openThread = vi.fn(async () => {})
     const items = useMessageMenu({ actions, reply }).itemsFor(msg)
-    item(items, 'Reply').action()
+    item(items, 'Reply in channel').action()
     expect(reply).toHaveBeenCalledWith(msg)
     item(items, 'Add reaction').action()
     expect(actions.pickerId.value).toBe('m1')
-    item(items, 'Open thread').action()
+    item(items, 'Reply in thread').action()
     expect(chat.openThread).toHaveBeenCalledWith(msg)
     item(items, 'Edit message').action()
     expect(actions.startEdit).toHaveBeenCalledWith(msg)

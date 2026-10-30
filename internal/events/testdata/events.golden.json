@@ -46,6 +46,8 @@
     "DMMemberAdded": "dm_member_added",
     "DMMemberRemoved": "dm_member_removed",
     "DMPrefsUpdated": "dm_prefs_updated",
+    "DMCallRing": "dm_call_ring",
+    "DMCallEnd": "dm_call_end",
     "TalkLeader": "talk_leader",
     "TalkMoved": "talk_moved",
     "StageHand": "stage_hand",

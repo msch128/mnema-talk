@@ -9,6 +9,8 @@ interface ComposerKeys {
   replying: () => boolean
   cancelReply: () => void
   send: () => void
+  /** ArrowUp that no suggestion list took: the owner may use it to edit the last message. */
+  arrowUp?: (e: KeyboardEvent) => void
 }
 
 /** A key that belongs to an IME: Safari reports the confirming Enter after compositionend, as keyCode 229. */
@@ -17,9 +19,10 @@ export function isImeKey(e: KeyboardEvent) {
 }
 
 /** Escape leaves a reply; Enter sends, Shift+Enter breaks the line. */
-export function handleComposerKeydown(e: KeyboardEvent, { consumers, replying, cancelReply, send }: ComposerKeys) {
+export function handleComposerKeydown(e: KeyboardEvent, { consumers, replying, cancelReply, send, arrowUp }: ComposerKeys) {
   if (isImeKey(e)) return
   if (consumers.some(consume => consume(e))) return
+  if (e.key === 'ArrowUp') arrowUp?.(e)
   if (e.key === 'Escape' && replying()) {
     e.preventDefault()
     cancelReply()
@@ -35,7 +38,7 @@ interface EscapeMarksRead {
   composer: Ref<HTMLTextAreaElement | null>
   /** Closes an open menu; returns true when one was open (it keeps the key). */
   closeMenu: () => boolean
-  /** True while something else owns Escape: a lightbox, an editor, a reply in the composer. */
+  /** True while something else owns Escape: the media viewer, an editor, a reply in the composer. */
   occupied: () => boolean
   draft: () => string
   markAllRead: () => boolean

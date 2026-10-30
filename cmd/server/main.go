@@ -4,10 +4,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/netip"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -17,6 +22,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/opwarn"
+	"github.com/msch128/mnema-talk/internal/portconflict"
 	"github.com/msch128/mnema-talk/internal/s3"
 	"github.com/msch128/mnema-talk/internal/server"
 	"github.com/msch128/mnema-talk/internal/setupcheck"
@@ -29,9 +35,49 @@ import (
 
 func main() {
 	if err := run(); err != nil {
+		if errors.Is(err, errDoctorRed) {
+			os.Exit(1)
+		}
+		var ce *config.ConfigError
+		if errors.As(err, &ce) {
+			os.Exit(reportConfigError(os.Stderr, ce, isServerStart(os.Args)))
+		}
 		slog.Error("fatal", "err", err)
 		os.Exit(1)
 	}
+}
+
+// configErrorDelay is how long a server that refuses to start for its settings
+// waits before it exits. Compose restarts the container (restart:
+// unless-stopped); without the pause it would loop in milliseconds and bury
+// the message in repeats. A test sets it to zero.
+var configErrorDelay = 5 * time.Second
+
+// isServerStart reports whether the command line starts the server rather than
+// one of the subcommands (setup, doctor, unlock, reset-2fa).
+func isServerStart(args []string) bool {
+	if len(args) < 2 || strings.HasPrefix(args[1], "-") {
+		return true
+	}
+	switch args[1] {
+	case "setup", "doctor", "unlock", "reset-2fa":
+		return false
+	}
+	return true
+}
+
+// reportConfigError prints the list of settings to fix as plain text, the
+// first thing in the container log, and returns the exit status. A server
+// start pauses first so a restart loop stays readable. Nothing listens in the
+// meantime: a "config error" web page would be an unauthenticated surface and
+// a half-alive process every health check has to special-case.
+func reportConfigError(w io.Writer, ce *config.ConfigError, server bool) int {
+	fmt.Fprintln(w, ce.Error())
+	if server {
+		fmt.Fprintf(w, "\nEdit .env, then run: docker compose up -d   (the full list of settings: doc/operations.md; check an .env with: docker compose run --rm app mnema-talk doctor)\nThis container exits now and is restarted by Docker; the message above repeats until the settings are fixed.\n")
+		time.Sleep(configErrorDelay)
+	}
+	return config.ExitCode
 }
 
 func run() error {
@@ -42,6 +88,9 @@ func run() error {
 	}
 	if len(os.Args) > 1 && os.Args[1] == "setup" {
 		return setupCommand(ctx, os.Args[2:], os.Stdin, os.Stdout)
+	}
+	if len(os.Args) > 1 && os.Args[1] == "doctor" {
+		return doctorCommand(ctx, os.Args[2:], os.Stdout)
 	}
 	if len(os.Args) > 1 && os.Args[1] == "reset-2fa" {
 		return reset2faCommand(ctx, os.Args[2:], os.Stdout)
@@ -148,7 +197,9 @@ func startVoice(ctx context.Context, cfg *config.Config, setup *setupcheck.Runti
 	// Addresses browsers send media to: typically the public IP (or a
 	// dynamic-DNS name for it) plus the LAN IP. Without WEBRTC_NAT_1TO1_IP a
 	// production server works them out itself.
-	ann := setupcheck.ResolveAnnouncement(ctx, cfg, stunprobe.Detect)
+	host := setupcheck.SystemHost()
+	ann := setupcheck.ResolveAnnouncement(ctx, cfg, stunprobe.Detect, host)
+	setupcheck.JudgeNetwork(ctx, cfg, ann, host, stunprobe.Detect6, setup)
 	announce, err := sfu.ResolveAnnounce(ctx, ann.Entries)
 	if err != nil {
 		return nil, nil, err
@@ -156,10 +207,15 @@ func startVoice(ctx context.Context, cfg *config.Config, setup *setupcheck.Runti
 	setup.SetAnnounce(ann.Source, announce, ann.DetectErr)
 	voice, err := sfu.NewSFU(cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax, announce, cfg.WebRTCSTUNURLs, sfu.WithUDPMuxPort(cfg.WebRTCUDPMuxPort))
 	if err != nil {
-		slog.Warn("webrtc sfu unavailable, voice disabled", "err", err)
+		slog.Warn("webrtc sfu unavailable, voice disabled", "err", portconflict.Wrap(err, fmt.Sprintf("%d-%d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax), "UDP", "WEBRTC_UDP_PORT_MIN and WEBRTC_UDP_PORT_MAX (and the router forward)"))
 		opwarn.Raise(opwarn.VoiceUnavailable, 0)
 		return nil, func() {}, nil
 	}
+	voice.SetICEConnectedHandler(func(ev sfu.ICEConnected) {
+		if provesOutsideReach(ev, voice.AnnouncedIPs()) {
+			setup.RecordICEConnected(ev.Remote, time.Now())
+		}
+	})
 	closeVoice := func() {
 		if err := voice.Close(); err != nil {
 			slog.Warn("close SFU", "err", err)
@@ -180,7 +236,7 @@ func startVoice(ctx context.Context, cfg *config.Config, setup *setupcheck.Runti
 	}
 	voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
 	if ann.Source == setupcheck.SourceDetected {
-		voice.KeepAnnounceDetected(ctx, 10*time.Minute, func(ctx context.Context) (string, error) {
+		voice.KeepAnnounceDetected(ctx, 10*time.Minute, ann.LAN, func(ctx context.Context) (string, error) {
 			return setupcheck.DetectPublicIP(ctx, cfg)
 		})
 	}
@@ -208,7 +264,7 @@ func startTURN(cfg *config.Config, voice *sfu.SFU) (*turnrelay.Server, func()) {
 	})
 	if err != nil {
 		slog.Warn("built-in TURN relay unavailable, continuing without it: members behind strict firewalls may get no voice",
-			"port", port, "err", err)
+			"port", port, "err", portconflict.Wrap(err, strconv.Itoa(port), "UDP/TCP", "WEBRTC_BUILTIN_TURN_PORT"))
 		opwarn.Raise(opwarn.TURNUnavailable, port)
 		if cfg.WebRTCReachabilityWarningWith(false) != "" {
 			opwarn.Raise(opwarn.WebRTCReachability, 0)
@@ -217,7 +273,7 @@ func startTURN(cfg *config.Config, voice *sfu.SFU) (*turnrelay.Server, func()) {
 	}
 	st := relay.Status()
 	if !st.UDP || !st.TCP {
-		slog.Warn("built-in TURN relay could not listen on every transport",
+		slog.Warn("built-in TURN relay could not listen on every transport"+turnConflictHint(st, port),
 			"port", port, "udp", st.UDP, "tcp", st.TCP, "udp_error", st.UDPError, "tcp_error", st.TCPErr)
 		opwarn.Raise(opwarn.TURNUnavailable, port)
 	}
@@ -230,6 +286,15 @@ func startTURN(cfg *config.Config, voice *sfu.SFU) (*turnrelay.Server, func()) {
 			slog.Warn("close built-in TURN relay", "err", err)
 		}
 	}
+}
+
+// turnConflictHint names the port conflict when a relay transport failed
+// because another program holds the port.
+func turnConflictHint(st turnrelay.Status, port int) string {
+	if portconflict.InUseText(st.UDPError) || portconflict.InUseText(st.TCPErr) {
+		return ": " + portconflict.Hint(strconv.Itoa(port), "UDP/TCP", "WEBRTC_BUILTIN_TURN_PORT")
+	}
+	return ""
 }
 
 // turnTarget tells the relay where the SFU's media sockets are.
@@ -266,4 +331,21 @@ func logLevel(cfg *config.Config) slog.Level {
 		return slog.LevelInfo
 	}
 	return slog.LevelDebug
+}
+
+// provesOutsideReach says whether a finished ICE connection shows that the
+// voice port is reachable from outside. A relayed connection does not: the
+// built-in TURN relay's own address is the server's public one. Neither does a
+// peer-reflexive remote at one of the server's own announced addresses, which
+// is the relay seen from the server.
+func provesOutsideReach(ev sfu.ICEConnected, announced []string) bool {
+	if ev.RemoteType == "relay" {
+		return false
+	}
+	for _, a := range announced {
+		if ip, err := netip.ParseAddr(a); err == nil && ip == ev.Remote {
+			return false
+		}
+	}
+	return true
 }

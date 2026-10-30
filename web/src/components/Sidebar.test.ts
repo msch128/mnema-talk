@@ -49,6 +49,7 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
+import { usePermissionsStore } from '../stores/permissions'
 import { navigate } from '../lib/router'
 import { applyLayoutPayload } from '../lib/channelLayout'
 
@@ -223,6 +224,54 @@ describe('Sidebar basics', () => {
     await flushPromises()
     expect(joinVoiceChannel).toHaveBeenCalledWith('lounge')
     expect(voice.activeView).toBe('voice')
+  })
+
+  describe('a Talk with a user limit', () => {
+    const fill = (limit: number, people: number) => {
+      requireValue(chat.categories[1]!.channels[0]).user_limit = limit
+      voice.channelUsers = { lounge: Object.fromEntries(Array.from({ length: people }, (_, i) => [`u${i}`, voiceUserFixture({ id: `u${i}`, username: `user${i}` })])) }
+    }
+
+    it('shows N/limit, and a warning once the Talk is full', async () => {
+      await mountSidebar({ role: 'user' })
+      fill(3, 2)
+      await flushPromises()
+      const seats = itemOf('lounge').get('[data-testid="sidebar-talk-seats"]')
+      expect(seats.text()).toBe('2/3')
+      expect(seats.attributes('data-full')).toBeUndefined()
+      fill(3, 3)
+      await flushPromises()
+      expect(seats.text()).toBe('3/3')
+      expect(seats.attributes('data-full')).toBe('true')
+    })
+
+    it('shows no counter without a limit', async () => {
+      await mountSidebar({ role: 'user' })
+      fill(0, 2)
+      await flushPromises()
+      expect(itemOf('lounge').find('[data-testid="sidebar-talk-seats"]').exists()).toBe(false)
+    })
+
+    it('says the Talk is full instead of joining it', async () => {
+      await mountSidebar({ role: 'user' })
+      fill(2, 2)
+      await flushPromises()
+      await rowOf('lounge').trigger('click')
+      await flushPromises()
+      expect(joinVoiceChannel).not.toHaveBeenCalled()
+      expect(toasts.toasts.map(toast => toast.text)).toEqual(['Dieser Talk ist voll (2/2)'])
+    })
+
+    it('lets a member with Disconnect members join and shows 3/2', async () => {
+      await mountSidebar({ role: 'user' })
+      vi.spyOn(usePermissionsStore(), 'canIn').mockImplementation((_id, key) => key === 'disconnect_members')
+      fill(2, 3)
+      await flushPromises()
+      expect(itemOf('lounge').get('[data-testid="sidebar-talk-seats"]').text()).toBe('3/2')
+      await rowOf('lounge').trigger('click')
+      await flushPromises()
+      expect(joinVoiceChannel).toHaveBeenCalledWith('lounge')
+    })
   })
 
   it('opens a Talk\'s chat from its row without joining the Talk', async () => {
@@ -554,9 +603,9 @@ describe('Sidebar administrative lifecycle and navigation', () => {
   it('opens category and channel editors and closes their dialogs', async () => {
     await mountSidebar()
     await contextMenu(rowOf('general')); await choose('Kanal bearbeiten'); expect(q<HTMLInputElement>('#edit-name').value).toBe('general')
-    await wrapper.findAll('button').find(b => b.text() === 'Abbrechen')!.trigger('click'); expect(document.querySelector('#edit-name')).toBeNull()
+    await wrapper.find('[data-dialog-close]').trigger('click'); await flushPromises(); expect(document.querySelector('#edit-name')).toBeNull()
     await contextMenu(headerOf('text')); await choose('Kategorie bearbeiten'); expect(q<HTMLInputElement>('#edit-name').value).toBe('Text')
-    await wrapper.findAll('button').find(b => b.text() === 'Abbrechen')!.trigger('click')
+    await wrapper.find('[data-dialog-close]').trigger('click'); await flushPromises()
   })
   it('the category plus suggests voice only for voice-only categories and closes the create modal', async () => {
     await mountSidebar()

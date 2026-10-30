@@ -100,14 +100,27 @@ describe('Talk controls on a phone', () => {
     w.unmount()
   })
 
-  it('keep hiding on a wide screen, where hover brings them back and no hint is shown', async () => {
+  it('keep hiding on a wide screen with others, and say that the mouse brings them back', async () => {
     layout.compact.value = false
-    connectedWith([])
+    connectedWith(['alice'])
     const w = mount(VoiceStage, { props: { channelId: 'v1' }, attachTo: document.body })
     await nextTick()
     vi.advanceTimersByTime(3100)
     await nextTick()
     expect(bar(w).attributes('data-visible')).toBe('false')
+    expect(w.get('[data-testid="talk-tap-hint"]').text()).toBe('Move the mouse to show the controls')
+    w.unmount()
+    layout.compact.value = true
+  })
+
+  it('stay on a wide screen while alone in the call', async () => {
+    layout.compact.value = false
+    connectedWith([])
+    const w = mount(VoiceStage, { props: { channelId: 'v1' }, attachTo: document.body })
+    await nextTick()
+    vi.advanceTimersByTime(10_000)
+    await nextTick()
+    expect(bar(w).attributes('data-visible')).toBe('true')
     expect(w.find('[data-testid="talk-tap-hint"]').exists()).toBe(false)
     w.unmount()
     layout.compact.value = true

@@ -6,7 +6,7 @@ import type { User } from '../types/domain'
 import { computed } from 'vue'
 import { Headphones, MessageSquare } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
-import { now, secondsSince, totalParts } from '../lib/clock'
+import { now, secondsSince, totalParts, useServerClock } from '../lib/clock'
 import { t, locale } from '../i18n'
 
 const props = defineProps({
@@ -16,6 +16,8 @@ const props = defineProps({
 })
 
 const voiceStore = useVoiceStore()
+// The running part only moves while the member is in a call.
+useServerClock(() => !!voiceStore.joinedAtOf(props.user.id ?? ''))
 
 const voiceSeconds = computed(() => {
   const running = voiceStore.joinedAtOf(props.user.id ?? '')

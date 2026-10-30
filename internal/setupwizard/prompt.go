@@ -29,6 +29,15 @@ func newPrompter(in io.Reader, out io.Writer) *prompter {
 	return &prompter{in: bufio.NewReader(in), out: out, rawIn: in}
 }
 
+// explain prints a short paragraph under the numbered heading of a question:
+// what it is, why it matters, and an example.
+func (p *prompter) explain(heading string, lines ...string) {
+	fmt.Fprintf(p.out, "\n%s\n", heading)
+	for _, l := range lines {
+		fmt.Fprintf(p.out, "    %s\n", l)
+	}
+}
+
 // ask prints the question with its default in brackets and returns the
 // answer, or the default for an empty line.
 func (p *prompter) ask(question, def string) (string, error) {
@@ -67,7 +76,7 @@ func (p *prompter) askSecret(question string) (string, error) {
 // askRequiredURL asks until the answer is a usable public URL.
 func (p *prompter) askPublicURL(def string) (string, error) {
 	for {
-		a, err := p.ask("Public address members will open, e.g. https://chat.example.com", def)
+		a, err := p.ask("Public address", def)
 		if err != nil {
 			return "", err
 		}
@@ -97,7 +106,7 @@ func (p *prompter) askAdminUsername(def string) (string, error) {
 // askMail collects the SMTP settings; an empty host skips mail.
 func (p *prompter) askMail() (SMTP, error) {
 	var s SMTP
-	yes, err := p.askYes("Set up outgoing e-mail now? (password reset, address confirmation; can be added later)")
+	yes, err := p.askYes("Set up outgoing e-mail now?")
 	if err != nil || !yes {
 		return s, err
 	}

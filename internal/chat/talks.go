@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -19,26 +20,40 @@ import (
 // database side; talks_manager.go keeps the live state (leader, grace).
 
 const (
-	// TalkNamePrefix names a temporary Talk: "Talk 1", "Talk 2", ...
-	TalkNamePrefix = "Talk "
 	// MaxTempTalksPerLobby caps the temporary Talks one lobby has open.
 	MaxTempTalksPerLobby = 50
 )
 
 var (
-	errNotLobby       = httpx.ErrConflict("this Talk is not a lobby")
-	errTooManyTalks   = httpx.ErrConflict("too many open Talks for this lobby")
-	errNotTempTalk    = httpx.ErrNotFound("Talk not found")
-	errNotTalkLeader  = httpx.ErrForbidden("only the Talk leader can change this Talk")
-	errNoTalkLobby    = httpx.ErrConflict("this community has no Talk lobby you can use")
-	tempTalkNameRegex = regexp.MustCompile(`^` + TalkNamePrefix + `([0-9]+)$`)
+	errNotLobby      = httpx.ErrConflict("this Talk is not a lobby")
+	errTooManyTalks  = httpx.ErrConflict("too many open Talks for this lobby")
+	errCannotConnect = httpx.ErrForbidden("you may not join Talks in this community")
+	errNotTempTalk   = httpx.ErrNotFound("Talk not found")
+	errNotTalkLeader = httpx.ErrForbidden("only the Talk leader can change this Talk")
 )
 
-// lowestFreeTalkNumber is the smallest n ≥ 1 for which no name is "Talk n".
-func lowestFreeTalkNumber(names []string) int {
+// tempTalkNumberDigits is the room a temporary Talk's number may take in the
+// name, so the base is cut the same way for every number. Numbers run across
+// the whole category, so lobbies sharing a long prefix can pass the per-lobby
+// cap; three digits cover a category far beyond that.
+const tempTalkNumberDigits = 3
+
+// tempTalkBase is the lobby name as the stem of its temporary Talks' names,
+// cut on a rune boundary so "<base> <n>" fits MaxChannelNameLen.
+func tempTalkBase(lobbyName string) string {
+	room := MaxChannelNameLen - 1 - tempTalkNumberDigits
+	if r := []rune(strings.TrimSpace(lobbyName)); len(r) > room {
+		return strings.TrimSpace(string(r[:room]))
+	}
+	return strings.TrimSpace(lobbyName)
+}
+
+// lowestFreeTalkNumber is the smallest n ≥ 1 for which no name is "<base> n".
+func lowestFreeTalkNumber(base string, names []string) int {
+	re := regexp.MustCompile(`^` + regexp.QuoteMeta(base) + ` ([0-9]+)$`)
 	used := map[int]bool{}
 	for _, name := range names {
-		if m := tempTalkNameRegex.FindStringSubmatch(name); m != nil {
+		if m := re.FindStringSubmatch(name); m != nil {
 			if n, err := strconv.Atoi(m[1]); err == nil {
 				used[n] = true
 			}
@@ -97,7 +112,7 @@ func OpenTempTalk(ctx context.Context, p *db.Pool, lobbyID, creator uuid.UUID) (
 		if err := checkLobby(ctx, tx, lobby); err != nil {
 			return err
 		}
-		lobby.Name, err = nextTalkName(ctx, tx, lobby.CategoryID)
+		lobby.Name, err = nextTalkName(ctx, tx, lobby.Name, lobby.CategoryID)
 		if err != nil {
 			return err
 		}
@@ -110,6 +125,58 @@ func OpenTempTalk(ctx context.Context, p *db.Pool, lobbyID, creator uuid.UUID) (
 		return nil, err
 	}
 	return ch, nil
+}
+
+// OpenDMTalk creates a temporary Talk that belongs to the conversation dm, with
+// creator as its leader. It has no lobby and no overwrites: the permission
+// snapshot lets only the conversation's members see and join it (dm_id), so a
+// community needs no setup for calls in conversations. It is uncategorized and
+// goes with the conversation.
+func OpenDMTalk(ctx context.Context, p *db.Pool, dm, creator uuid.UUID) (*Channel, error) {
+	var ch *Channel
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if err := lockChannelLayout(ctx, tx); err != nil {
+			return err
+		}
+		name, err := nextDMTalkName(ctx, tx, dm)
+		if err != nil {
+			return err
+		}
+		id := uuid.New()
+		ch = &Channel{Slug: TempTalkSlug(id), PreviousSlugs: []string{}, IsTemp: true, LeaderID: &creator}
+		err = tx.QueryRow(ctx, `
+			INSERT INTO channels (id, category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds, dm_id, is_temp, leader_id, slug)
+			VALUES ($1, NULL, $2, 'voice', '', 0, 0, 0, $3, TRUE, $4, $5)
+			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`, id, name, dm, creator, ch.Slug).
+			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
+		if err != nil {
+			return fmt.Errorf("open conversation Talk: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ch, nil
+}
+
+// IsDMTalk reports whether the channel is a Talk that belongs to a
+// conversation. Nothing about such a Talk is audited: who called whom, and when,
+// is as private as the conversation (not even the Owner reads it).
+func IsDMTalk(ctx context.Context, q db.Querier, id uuid.UUID) bool {
+	var is bool
+	err := q.QueryRow(ctx, `SELECT dm_id IS NOT NULL FROM channels WHERE id = $1`, id).Scan(&is)
+	return err == nil && is
+}
+
+// nextDMTalkName is "Talk n" for the lowest n the conversation's open Talks do not use.
+func nextDMTalkName(ctx context.Context, tx pgx.Tx, dm uuid.UUID) (string, error) {
+	var names []string
+	err := tx.QueryRow(ctx, `SELECT COALESCE(array_agg(name), '{}') FROM channels WHERE dm_id = $1`, dm).Scan(&names)
+	if err != nil {
+		return "", fmt.Errorf("list conversation Talks: %w", err)
+	}
+	return fitTalkName("Talk", lowestFreeTalkNumber("Talk", names)), nil
 }
 
 // checkLobby refuses a channel that is no lobby or has too many open Talks.
@@ -130,9 +197,10 @@ func checkLobby(ctx context.Context, tx pgx.Tx, lobby *Channel) error {
 	return nil
 }
 
-// nextTalkName is "Talk n" for the lowest n no temporary Talk of the category
-// uses.
-func nextTalkName(ctx context.Context, tx pgx.Tx, category *uuid.UUID) (string, error) {
+// nextTalkName is "<lobby name> n" for the lowest n no temporary Talk of the
+// category uses under that name. Talks opened before a rename keep their
+// names; the numbering of the new name starts afresh.
+func nextTalkName(ctx context.Context, tx pgx.Tx, lobbyName string, category *uuid.UUID) (string, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT name FROM channels
 		WHERE is_temp AND category_id IS NOT DISTINCT FROM $1`, category)
@@ -151,7 +219,18 @@ func nextTalkName(ctx context.Context, tx pgx.Tx, category *uuid.UUID) (string, 
 	if err := rows.Err(); err != nil {
 		return "", err
 	}
-	return TalkNamePrefix + strconv.Itoa(lowestFreeTalkNumber(names)), nil
+	base := tempTalkBase(lobbyName)
+	return fitTalkName(base, lowestFreeTalkNumber(base, names)), nil
+}
+
+// fitTalkName is "<base> n", with the base cut further in the unlikely case
+// that n has more digits than tempTalkNumberDigits reserves.
+func fitTalkName(base string, n int) string {
+	num := strconv.Itoa(n)
+	if r := []rune(base); len(r)+1+len(num) > MaxChannelNameLen {
+		base = strings.TrimSpace(string(r[:MaxChannelNameLen-1-len(num)]))
+	}
+	return base + " " + num
 }
 
 func markTemp(ctx context.Context, tx pgx.Tx, ch *Channel, lobby, creator uuid.UUID) error {
@@ -182,29 +261,4 @@ func TalkLeader(ctx context.Context, q db.Querier, id uuid.UUID) (leader *uuid.U
 		return nil, false, fmt.Errorf("load Talk leader: %w", err)
 	}
 	return leader, true, nil
-}
-
-// FirstLobbyFor returns the first lobby (in sidebar order) that usable
-// accepts, or errNoTalkLobby.
-func FirstLobbyFor(ctx context.Context, p *db.Pool, usable func(id uuid.UUID) bool) (uuid.UUID, error) {
-	rows, err := p.Query(ctx, `
-		SELECT ch.id FROM channels ch LEFT JOIN categories c ON c.id = ch.category_id
-		WHERE ch.is_lobby ORDER BY c.sort_order NULLS FIRST, ch.sort_order, ch.created_at`)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("list lobbies: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return uuid.Nil, err
-		}
-		if usable(id) {
-			return id, nil
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return uuid.Nil, err
-	}
-	return uuid.Nil, errNoTalkLobby
 }

@@ -23,3 +23,23 @@ func TestEverySeedLanguageNamesTheSameCategoriesAndChannels(t *testing.T) {
 		}
 	}
 }
+
+// The seeded names are written through the same validation as a name typed by
+// hand, so a language file can never seed a name the rename route would refuse.
+func TestSeedLayoutNamesPassChannelValidation(t *testing.T) {
+	for lang, l := range seedLayouts {
+		for key, name := range l.Categories {
+			if _, err := validateOptionalName(&name); err != nil {
+				t.Errorf("%s: category %q: %v", lang, key, err)
+			}
+		}
+		for key, c := range l.Channels {
+			if _, err := validateOptionalName(&c.Name); err != nil {
+				t.Errorf("%s: channel %q name: %v", lang, key, err)
+			}
+			if _, err := validateOptionalTopic(&c.Topic); err != nil {
+				t.Errorf("%s: channel %q topic: %v", lang, key, err)
+			}
+		}
+	}
+}

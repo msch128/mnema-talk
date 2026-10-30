@@ -5,6 +5,7 @@
 @import './styles/buttons.css';
 @import './styles/surfaces.css';
 @import './styles/settings.css';
+@import './styles/calls.css';
 
 /* Dark is a class on an ancestor (the emoji picker element carries it), as in Tailwind 3. */
 @custom-variant dark (&:is(.dark *));

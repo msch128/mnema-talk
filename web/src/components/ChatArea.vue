@@ -10,7 +10,6 @@ import ChatHeader from './ChatHeader.vue'
 import ChannelAutoDeleteNote from './ChannelAutoDeleteNote.vue'
 import ChatComposer from './ChatComposer.vue'
 import FileDropOverlay from './FileDropOverlay.vue'
-import ImageLightbox from './ImageLightbox.vue'
 import ContextMenu from './ContextMenu.vue'
 import EphemeralNotes from './EphemeralNotes.vue'
 import PinNotices from './PinNotices.vue'
@@ -18,7 +17,11 @@ import MessageRow from './MessageRow.vue'
 import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useMessageActions } from '../composables/useMessageActions'
 import { useDmChat } from '../composables/useDmChat'
+import { viewerState } from '../composables/useMediaViewer'
+import { useChannelLimits } from '../composables/useComposerLimits'
+import { useChannelWrite } from '../composables/useChannelWrite'
 import { toggleSavedMessage, useMessageMenu } from '../composables/useMessageMenu'
+import { useOwnMessageNav } from '../composables/useOwnMessageNav'
 import { useMessageScroll } from '../composables/useMessageScroll'
 import { useUnreadDivider } from '../composables/useUnreadDivider'
 import { useRovingMessages } from '../composables/useRovingMessages'
@@ -30,7 +33,6 @@ import { useEscapeMarksRead } from '../composables/useComposerKeys'
 import { continuationIds } from '../lib/messageGrouping'
 import { typingLine } from '../lib/chatLogic'
 import { useToastStore } from '../stores/toast'
-import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
 
 // panel: the voice channel's chat under its Talk (VoiceChatPanel): a compact
@@ -44,8 +46,6 @@ const chatStore = useChatStore()
 const authStore = useAuthStore()
 const serverFeatures = useServerFeaturesStore()
 const toasts = useToastStore()
-const permissions = usePermissionsStore()
-
 const blocks = useBlocksStore()
 // A conversation sits in the channel slot: its words, and the server's own answer to "may I write".
 const dmChat = useDmChat()
@@ -56,33 +56,25 @@ const channelIcon = computed(() => {
 })
 const welcomeText = computed(() => (dmChat.isDm.value ? dmChat.welcome.value : t(props.panel ? 'talk.chatWelcome' : 'chat.welcome', { channel: channelName.value })))
 const beginningText = computed(() => (dmChat.isDm.value ? dmChat.beginning.value : t(props.panel ? 'talk.chatBeginning' : 'chat.beginning', { channel: channelName.value })))
-// What the member may do here; the server decides, this only hides what would fail.
-const canIn = (key: 'send_messages' | 'attach_files' | 'add_reactions') => permissions.canIn(chatStore.activeChannel?.id ?? '', key)
-const canSend = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : canIn('send_messages')))
-const canAttach = computed(() => canSend.value && (dmChat.isDm.value || canIn('attach_files')))
-const canReact = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : canIn('add_reactions')))
-const placeholder = computed(() => {
-  if (dmChat.isDm.value) return dmChat.placeholder.value
-  return canSend.value ? t(props.panel ? 'talk.chatPlaceholder' : 'chat.placeholder', { channel: channelName.value }) : t('chat.readOnly')
-})
+const { canSend, canAttach, canReact, placeholder } = useChannelWrite(dmChat, () => props.panel)
 
 const inputMessage = ref('')
 const messageContainer = ref<HTMLElement | null>(null)
 const composer = ref<InstanceType<typeof ChatComposer> | null>(null)
 const textAreaEl = computed(() => composer.value?.textArea ?? null)
 const isSending = ref(false)
-const selectedImage = ref<string | null>(null)
 // Message the composer is currently replying to.
 const replyingTo = ref<DraftReply | null>(null)
+const limits = useChannelLimits(() => inputMessage.value)
 // Text and reply target stay with their channel while another one is open.
 useDraftSlot(() => (chatStore.activeChannel ? channelDraftKey(chatStore.activeChannel.id) : null), inputMessage, replyingTo)
 
 // Editing, deleting, reactions and uploads
 const actions = useMessageActions({ container: messageContainer })
 const { editingId: editingMessageId, pickerId: activeReactionPickerMsgId, isUploading } = actions
+const ownNav = useOwnMessageNav({ messages: () => chatStore.messages || [], actions, container: messageContainer, composer: () => composer.value, toNewest: () => (chatStore.hasMoreAfter ? chatStore.jumpToLatest() : undefined) })
 const menu = useMessageMenu({ actions, reply: startReply })
 const contextMenu = menu.state
-
 const {
   showUnreadPill, highlightedId, messageRows, scrollToBottom, scrollToBottomNow,
   handleScroll, resetUnreadPill
@@ -90,7 +82,6 @@ const {
 const { stopId } = useRovingMessages(messageContainer, () => (chatStore.messages || []).map(m => m.id))
 const { dividerSince, dividerBeforeId, dividerLabel, markAllRead } = useUnreadDivider()
 const { showJumpToUnread, jumpToFirstUnread } = useFirstUnreadJump({ container: messageContainer, since: dividerSince, dividerBeforeId })
-
 const typingText = computed(() => {
   const line = typingLine(chatStore.typingByChannel[chatStore.activeChannel?.id ?? ''])
   return line ? t(line.key, line.params) : ''
@@ -159,13 +150,12 @@ useEscapeMarksRead({
     menu.close()
     return true
   },
-  occupied: () => !!(selectedImage.value || editingMessageId.value || replyingTo.value),
+  occupied: () => !!(viewerState.open || editingMessageId.value || replyingTo.value),
   draft: () => inputMessage.value,
   markAllRead
 })
 
 onMounted(() => composer.value?.focus())
-
 // After sending while viewing older history, jump to the present.
 async function revealOwnMessage() {
   if (chatStore.hasMoreAfter) await chatStore.jumpToLatest()
@@ -174,7 +164,7 @@ async function revealOwnMessage() {
 
 function isSendBlocked(text: string): boolean {
   if (!text || !canSend.value) return true
-  return isUploading.value || isSending.value
+  return isUploading.value || isSending.value || !!limits.hint.value?.blocks
 }
 
 // The composer refs belong to whichever channel is open now, so a send that
@@ -187,8 +177,10 @@ async function handleSend() {
 
   isSending.value = true
   const sentIn = chatStore.activeChannel?.id
+  const slow = limits.rule()
   try {
     await chatStore.sendMessage(text, null, replyingTo.value?.id || null)
+    limits.sent(sentIn, slow)
     if (stillIn(sentIn)) {
       inputMessage.value = ''
       replyingTo.value = null
@@ -198,6 +190,7 @@ async function handleSend() {
       setDraft(authStore.user.id, channelDraftKey(sentIn), null)
     }
   } catch (err) {
+    limits.refused(sentIn, err)
     toasts.error(dmChat.sendError(err, t('chat.sendFailed')))
   } finally {
     isSending.value = false
@@ -207,8 +200,10 @@ async function handleSend() {
 async function handleFileUpload(e: Event) {
   const replyId = replyingTo.value?.id || null
   const uploadedIn = chatStore.activeChannel?.id
+  const slow = limits.rule()
   const ok = await actions.upload(e.target as HTMLInputElement, (file: File) => chatStore.uploadMedia(file, '', null, replyId))
   if (!ok) return
+  limits.sent(uploadedIn, slow)
   if (!stillIn(uploadedIn)) return
   replyingTo.value = null
   await revealOwnMessage()
@@ -258,7 +253,7 @@ const groupedIds = computed(() => {
       <!-- Empty State -->
       <div v-else-if="!chatStore.messages?.length" class="h-full flex flex-col items-center justify-center text-center p-8">
         <div class="w-12 h-12 rounded-full border border-dashed border-mnema-border-strong flex items-center justify-center mb-3 text-mnema-accent bg-mnema-surface/50">
-          <Hash class="w-5 h-5 opacity-80" />
+          <component :is="channelIcon" class="w-5 h-5 opacity-80" />
         </div>
         <p class="font-semibold text-lg text-mnema-text">{{ welcomeText }}</p>
         <p class="text-sm text-mnema-tertiary mt-1 max-w-sm">
@@ -313,13 +308,13 @@ const groupedIds = computed(() => {
         @edit="actions.startEdit(msg)"
         @save="actions.saveEdit(msg)"
         @cancel-edit="actions.cancelEdit()"
+        @edit-step="(step, e) => ownNav.step(step, e, msg)"
         @more="menu.openFromButton($event, msg)"
         @react="actions.toggleReaction(msg.id, $event)"
         @toggle-picker="actions.togglePicker($event)"
         @close-picker="actions.closePicker()"
         @open-thread="chatStore.openThread(msg)"
         @open-profile="chatStore.openUserProfile(msg)"
-        @open-image="selectedImage = $event"
         @jump="jumpToReplied(msg)"
       />
       </template>
@@ -379,14 +374,15 @@ const groupedIds = computed(() => {
       :uploading="isUploading"
       :sending="isSending"
       :typing-text="typingText"
+      :limit="limits.hint.value"
       @send="handleSend"
       @cancel-reply="cancelReply"
+      @arrow-up="ownNav.fromComposerKey($event, inputMessage)"
       @file="handleFileUpload"
+      @posted="limits.sent(chatStore.activeChannel?.id)"
     />
 
     <FileDropOverlay @files="composer?.attachFiles($event)" />
-    <!-- Image lightbox -->
-    <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
 
     <!-- Message context menu -->
     <ContextMenu

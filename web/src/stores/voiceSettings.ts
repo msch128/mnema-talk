@@ -2,6 +2,7 @@
 // noise handling, volumes, devices and sound effects. Built inside the voice store.
 import { computed, ref, watch } from 'vue'
 import { readItem, readJson, writeItem, writeJson } from '../lib/voicePlayback'
+import { normalizeMessageSoundMode, type MessageSoundMode } from '../lib/messageSound'
 
 export type InputMode = 'activity' | 'ptt'
 export type NoiseMode = 'ai' | 'ai-lite' | 'browser' | 'off'
@@ -17,7 +18,8 @@ export const SOUND_EVENTS = [
   'deafen',
   'undeafen',
   'ptt_start',
-  'ptt_stop'
+  'ptt_stop',
+  'call_ring'
 ] as const
 export type SoundEvent = typeof SOUND_EVENTS[number]
 
@@ -32,7 +34,8 @@ function defaultSoundEvents() {
     deafen: true,
     undeafen: true,
     ptt_start: true,
-    ptt_stop: true
+    ptt_stop: true,
+    call_ring: true
   }
 }
 
@@ -53,7 +56,10 @@ function savedNoiseMode(): NoiseMode {
 
 function loadVoiceInputSettings() {
   const inputMode = ref<InputMode>(readItem('mnema_input_mode') === 'ptt' ? 'ptt' : 'activity')
-  const pttKey = ref(readItem('mnema_ptt_key') || 'Space')
+  // No key until the member picks one (a default would collide with typing). A
+  // push-to-talk setup from before that never stored a key keeps the old
+  // Space; a stored empty key stays empty.
+  const pttKey = ref(readItem('mnema_ptt_key') ?? (inputMode.value === 'ptt' ? 'Space' : ''))
   const autoSensitivity = ref(readItem('mnema_auto_sens') === 'true')
   const sensitivityThreshold = ref(parseInt(readItem('mnema_sens_threshold') || '30', 10))
   const hangoverMs = ref(parseInt(readItem('mnema_hangover_ms') || '250', 10))
@@ -70,9 +76,10 @@ function loadFeedbackSettings() {
     ...defaultSoundEvents(),
     ...readJson('mnema_sound_events')
   })
+  const messageSounds = ref<MessageSoundMode>(normalizeMessageSoundMode(readItem('mnema_message_sounds')))
   return {
     warnNoAudioDetected, warnSwitchChannel, qosHighPriority,
-    soundEffectsEnabled, soundEffectsVolume, soundEvents
+    soundEffectsEnabled, soundEffectsVolume, soundEvents, messageSounds
   }
 }
 
@@ -108,6 +115,7 @@ function persistVoiceSettings(
   writeItem('mnema_sounds_enabled', String(feedback.soundEffectsEnabled.value))
   writeItem('mnema_sounds_volume', String(feedback.soundEffectsVolume.value))
   writeJson('mnema_sound_events', feedback.soundEvents.value)
+  writeItem('mnema_message_sounds', feedback.messageSounds.value)
   writeItem('mnema_noise', audio.noiseMode.value)
   writeItem('mnema_agc', String(audio.autoGainControl.value))
   writeItem('mnema_echo', String(audio.echoCancellation.value))

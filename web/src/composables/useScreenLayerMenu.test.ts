@@ -64,6 +64,21 @@ describe('the viewer quality menu', () => {
     expect(radios(menu.menuItems())[0]?.subtitle).toBe(t('talk.layers.autoHint'))
   })
 
+  it('names what Auto chose on the button, "Auto (1080p)"', () => {
+    const { voice } = watching()
+    const menu = useScreenLayerMenu(() => 'anna')
+    voice.handleScreenQuality({ channel_id: 'v1', user_id: 'anna', layer: 1, auto: true })
+    expect(menu.buttonLabel.value).toBe(t('talk.layers.autoWith', { name: '1080p' }))
+    // The source is named by what it is, not by "Source".
+    voice.handleScreenQuality({ channel_id: 'v1', user_id: 'anna', layer: 0, auto: true })
+    expect(menu.buttonLabel.value).toBe(t('talk.layers.autoWith', { name: '2160p60' }))
+    expect(radios(menu.menuItems())[0]?.subtitle).toBe(t('talk.layers.autoNow', { name: '2160p60' }))
+    // A chosen layer is just named.
+    voice.setScreenChoice('anna', 1)
+    voice.handleScreenQuality({ channel_id: 'v1', user_id: 'anna', layer: 1, auto: false })
+    expect(menu.buttonLabel.value).toBe('1080p')
+  })
+
   it('applies a choice, labels the button with it and marks the layer', () => {
     const { voice, sent } = watching()
     const menu = useScreenLayerMenu(() => 'anna')

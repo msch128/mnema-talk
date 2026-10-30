@@ -208,6 +208,11 @@ jobs:
         name: Unit tests
         run: go test -race -count=1 ./...
 
+      # The load-test tools are a module of their own (loadtest/viewer).
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Load-test tools
+        run: make test-loadtest
+
       # Mutation fuzzing of the parsers (search, mentions, durations, URL guard,
       # versions) for 1 s each on top of the seed corpora that `go test` ran.
       - if: ${{ needs.changes.outputs.code == 'true' }}
@@ -226,6 +231,15 @@ jobs:
       # network access.
       - name: Docs links
         run: node scripts/check-doc-links.mjs
+
+      # Newcomer path stays true (no network): no stale release in a command
+      # block, every setup check code in a docs table, doc/ports.md equal to
+      # the ports docker-compose.yml publishes. The setup assistant and proxy
+      # checks that need the image run in onboarding.yml.
+      - name: Onboarding docs
+        run: |
+          node --test scripts/check-onboarding-docs.test.mjs
+          node scripts/check-onboarding-docs.mjs
 
       # Fails on <<<<<<<, ======= or >>>>>>> at the start of a line in any
       # tracked text file (docs, code, JSON).
@@ -592,6 +606,12 @@ jobs:
       - if: ${{ needs.changes.outputs.code == 'true' }}
         name: Fresh install (doc/deployment.md)
         run: scripts/fresh-install-check.sh mnema-talk:ci
+
+      # The same on the "try it on this computer" path: PUBLIC_URL is
+      # http://localhost:<port> and nothing about voice is configured.
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: Fresh install (localhost trial)
+        run: FRESH_PUBLIC_HOST=localhost scripts/fresh-install-check.sh mnema-talk:ci
 
       # scripts/backup.sh and restore.sh (--verify and --yes) end to end:
       # seeded message and upload come back, later changes are gone.

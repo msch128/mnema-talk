@@ -82,10 +82,12 @@ func (h *Handler) updateTalk(w http.ResponseWriter, r *http.Request) error {
 	if err := FillTalkFields(r.Context(), h.DB, ch); err != nil {
 		return err
 	}
-	h.Audit.RecordOrLog(r.Context(), audit.Entry{
-		Action: "channel.update", TargetType: "channel", TargetID: id.String(), TargetName: ch.Name,
-		ChannelID: &id, Details: map[string]any{"temporary": true, "user_limit": ch.UserLimit},
-	})
+	if !IsDMTalk(r.Context(), h.DB, id) {
+		h.Audit.RecordOrLog(r.Context(), audit.Entry{
+			Action: "channel.update", TargetType: "channel", TargetID: id.String(), TargetName: ch.Name,
+			ChannelID: &id, Details: map[string]any{"temporary": true, "user_limit": ch.UserLimit},
+		})
+	}
 	h.channelsChanged()
 	httpx.WriteJSON(w, http.StatusOK, ch)
 	return nil
@@ -99,21 +101,10 @@ type StartTalkResponse struct {
 	Message *Message `json:"message"`
 }
 
-// usableLobby reports whether the caller may see and join the lobby.
-func (h *Handler) usableLobby(r *http.Request) func(uuid.UUID) bool {
-	return func(id uuid.UUID) bool {
-		if h.Perms == nil {
-			return true
-		}
-		p, err := h.channelPerms(r, id)
-		return err == nil && p.Has(perm.ViewChannel|perm.Connect)
-	}
-}
-
 // startDMTalk handles POST /api/dms/{id}/talk.
 //
 // @Summary Start a Talk from a direct message conversation
-// @Description Opens a temporary Talk from the first Create-a-Talk lobby the caller can see and join (in sidebar order), makes the caller its leader, and posts an invitation card into the conversation; the other members join with the card's Join button, which runs the ordinary permission checks. The caller joins the Talk like any other (WebSocket voice_join). 409 when the community has no lobby the caller can use, or the lobby has 50 Talks open. Counts against the caller's limit of 5 new Talks per 10 minutes (429). Broadcasts channels_changed and message_create.
+// @Description Opens a temporary Talk that belongs to the conversation (no Create-a-Talk lobby is needed): only the conversation's members can see or join it, the Owner included, and it is removed when it is empty. The caller leads it. An invitation card is posted into the conversation and the other members are rung (dm_call_ring). The caller joins the Talk like any other (WebSocket voice_join). Counts against the caller's limit of 5 new Talks per 10 minutes (429). Broadcasts channels_changed and message_create.
 // @ID startDMTalk
 // @Tags Channels
 // @Produce json
@@ -123,7 +114,6 @@ func (h *Handler) usableLobby(r *http.Request) func(uuid.UUID) bool {
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: the caller cannot send in this conversation (not a member, blocked), or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the conversation does not exist or the caller is not in it."
-// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: no lobby the caller can use, or too many open Talks."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests, or too many new Talks."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
@@ -137,12 +127,17 @@ func (h *Handler) startDMTalk(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	lobby, err := FirstLobbyFor(ctx, h.DB, h.usableLobby(r))
-	if err != nil {
-		return err
-	}
 	user := auth.UserFrom(ctx)
-	talk, err := h.Talks.Open(ctx, user.ID, lobby)
+	if h.Perms != nil {
+		global, err := h.Perms.Global(ctx, user.Subject())
+		if err != nil {
+			return err
+		}
+		if !global.Has(perm.Connect) {
+			return errCannotConnect
+		}
+	}
+	talk, err := h.Talks.OpenForDM(ctx, user.ID, dm)
 	if err != nil {
 		return err
 	}
@@ -151,6 +146,7 @@ func (h *Handler) startDMTalk(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.Events.BroadcastChannel(dm, events.MessageCreate, msg)
+	h.Calls.Begin(dm, talk.ID, user.ID, msg.ID, inviteName(msg))
 	httpx.WriteJSON(w, http.StatusCreated, StartTalkResponse{ChannelID: talk.ID, Message: msg})
 	return nil
 }

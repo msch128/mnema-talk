@@ -151,7 +151,8 @@ func (m *TalkManager) hasPendingLocked(ch uuid.UUID) bool {
 // remove deletes a temporary Talk and records that the system did it.
 func (m *TalkManager) remove(ctx context.Context, ch uuid.UUID, reason string) error {
 	var name string
-	err := m.DB.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1 AND is_temp`, ch).Scan(&name)
+	var private bool
+	err := m.DB.QueryRow(ctx, `SELECT name, dm_id IS NOT NULL FROM channels WHERE id = $1 AND is_temp`, ch).Scan(&name, &private)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil // already gone, or not temporary: nothing to remove
 	}
@@ -170,11 +171,13 @@ func (m *TalkManager) remove(ctx context.Context, ch uuid.UUID, reason string) e
 			slog.Warn("talks: delete media objects", "count", len(keys), "err", err)
 		}
 	}
-	m.Audit.RecordOrLog(ctx, audit.Entry{
-		ActorName: "system", Action: "channel.delete", TargetType: "channel",
-		TargetID: ch.String(), TargetName: name,
-		Details: map[string]any{"temporary": true, "reason": reason},
-	})
+	if !private {
+		m.Audit.RecordOrLog(ctx, audit.Entry{
+			ActorName: "system", Action: "channel.delete", TargetType: "channel",
+			TargetID: ch.String(), TargetName: name,
+			Details: map[string]any{"temporary": true, "reason": reason},
+		})
+	}
 	m.structureChanged()
 	return nil
 }

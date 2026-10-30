@@ -35,6 +35,18 @@ describe('ToastHost', () => {
     expect(toasts.toasts).toHaveLength(0)
   })
 
+  it('offers a second, quieter action next to the main one', async () => {
+    const toasts = useToastStore()
+    const calls: string[] = []
+    toasts.info('No sound', { action: { label: 'Open', onClick: () => { calls.push('open') } }, secondary: { label: 'Stop', onClick: () => { calls.push('stop') } } })
+    const w = mount(ToastHost)
+    const buttons = w.findAll('[data-toast] button')
+    expect(buttons.map(b => b.text()).slice(0, 2)).toEqual(['Open', 'Stop'])
+    await requireValue(buttons[1]).trigger('click')
+    expect(calls).toEqual(['stop'])
+    expect(toasts.toasts).toHaveLength(0)
+  })
+
   it('keeps a persistent warning dismissible without running its action', async () => {
     const toasts = useToastStore()
     let muted = false

@@ -12,6 +12,7 @@ import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
 import PresenceDot from './PresenceDot.vue'
+import MediaImage from './MediaImage.vue'
 import { initialOf } from '../lib/initial'
 
 // The top of a profile: the large avatar (changeable on one's own profile),
@@ -76,19 +77,23 @@ async function removeAvatar() {
 </script>
 
 <template>
-  <div class="flex justify-between items-end -mt-12 mb-3">
+  <div class="-mt-12 mb-4 flex items-end justify-between gap-3">
     <!-- Large Avatar with overlap -->
     <div class="relative group">
       <div
         class="w-20 h-20 rounded-full border-4 border-mnema-surface shadow-xl bg-mnema-canvas overflow-hidden flex items-center justify-center relative cursor-pointer"
         @click="isSelf ? triggerAvatarUpload() : null"
       >
-        <img
+        <MediaImage
           v-if="profileUser.avatar_url"
           :src="profileUser.avatar_url"
           :alt="profileUser.display_name || $t('user.avatar')"
           class="w-full h-full object-cover"
-        />
+        >
+          <template #fallback>
+            <span class="text-2xl font-bold text-mnema-mint">{{ initialOf(profileUser.display_name || profileUser.username) }}</span>
+          </template>
+        </MediaImage>
         <span v-else class="text-2xl font-bold text-mnema-mint">
           {{ initialOf(profileUser.display_name || profileUser.username) }}
         </span>
@@ -133,7 +138,7 @@ async function removeAvatar() {
     </div>
 
     <!-- Action Buttons in Top Right -->
-    <div class="flex items-center gap-2">
+    <div class="flex min-w-0 flex-wrap items-center justify-end gap-2">
       <button
         v-if="!isSelf"
         @click="emit('mention')"

@@ -9,13 +9,13 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
 import { updateForumPost } from '../lib/forumApi'
 import ThreadRootCard from './ThreadRootCard.vue'
-import ImageLightbox from './ImageLightbox.vue'
 import ThreadReply from './ThreadReply.vue'
 import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useBlocksStore } from '../stores/blocks'
 import { useDmChat } from '../composables/useDmChat'
 import ThreadComposer from './ThreadComposer.vue'
 import FileDropOverlay from './FileDropOverlay.vue'
+import { useOwnMessageNav } from '../composables/useOwnMessageNav'
 import { useMessageActions } from '../composables/useMessageActions'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { useDraftSlot } from '../composables/useDraftSlot'
@@ -55,7 +55,6 @@ const followed = computed(() => !!chatStore.activeThread && chatStore.followedTh
 const replyInput = ref('')
 const repliesContainer = ref<HTMLElement | null>(null)
 const isSending = ref(false)
-const selectedImage = ref<string | null>(null)
 
 // Editing, deleting, reactions and uploads
 const actions = useMessageActions({ container: repliesContainer, deleteTitle: 'thread.deleteTitle' })
@@ -88,6 +87,7 @@ const replyingTo = ref<DraftReply | null>(null)
 // Each thread keeps its own reply text and target.
 useDraftSlot(() => (chatStore.activeThread ? threadDraftKey(chatStore.activeThread.id) : null), replyInput, replyingTo)
 const composer = ref<InstanceType<typeof ThreadComposer> | null>(null)
+const ownNav = useOwnMessageNav({ messages: () => chatStore.threadReplies, actions, container: repliesContainer, composer: () => composer.value })
 const highlightedId = ref<string | null>(null)
 let highlightTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -164,11 +164,23 @@ function onReplyKeydown(e: KeyboardEvent, msg: Message, { editable = true } = {}
   })
 }
 
+// Escape closes the panel wherever the focus is (after opening a post it is
+// still on the card), once nothing else has used the key: an edit, a reply, a
+// suggestion list, a picker, an open dialog (the media viewer is one) or menu.
+function onEscape(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return
+  if (activeReactionPickerMsgId.value) return
+  if (document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')) return
+  chatStore.closeThread()
+}
+
 onMounted(() => {
+  document.addEventListener('keydown', onEscape)
   scrollToBottom()
 })
 
 onUnmounted(() => {
+  document.removeEventListener('keydown', onEscape)
   clearTimeout(highlightTimer)
 })
 
@@ -225,6 +237,7 @@ async function handleFileUpload(e: Event) {
               #{{ chatStore.activeChannel?.name || '' }}
             </span>
           </div>
+          <p v-if="!chatStore.activeThread?.title" data-testid="thread-hint" class="truncate text-xs leading-4 text-mnema-tertiary">{{ $t('thread.hint') }}</p>
         </div>
       </div>
 
@@ -258,9 +271,12 @@ async function handleFileUpload(e: Event) {
       </button>
 
       <button
-        @click="chatStore.closeThread"
+        type="button"
+        data-testid="thread-close"
+        @click="chatStore.closeThread()"
         class="btn btn-icon w-8 h-8 shrink-0"
-        v-tooltip="$t('thread.close')"
+        :aria-label="$t('thread.close')"
+        v-tooltip="{ text: $t('thread.close'), shortcut: 'Esc' }"
       >
         <X class="w-5 h-5" />
       </button>
@@ -282,7 +298,6 @@ async function handleFileUpload(e: Event) {
         :can-react="canReact"
         :highlighted="highlightedId === chatStore.activeThread.id"
         @reply="startReply"
-        @open-image="selectedImage = $event"
         @keydown="onRootKeydown"
       />
 
@@ -321,7 +336,7 @@ async function handleFileUpload(e: Event) {
         @keydown="onReplyKeydown($event, reply)"
         @reply="startReply(reply)"
         @jump="jumpToReplied(reply)"
-        @open-image="selectedImage = $event"
+        @edit-step="(step, e) => ownNav.step(step, e, reply)"
       />
       </template>
     </div>
@@ -341,11 +356,10 @@ async function handleFileUpload(e: Event) {
       :sending="isSending"
       @send="handleSendReply"
       @cancel-reply="cancelReply"
+      @arrow-up="ownNav.fromComposerKey($event, replyInput)"
       @file="handleFileUpload"
     />
     <FileDropOverlay @files="composer?.attachFiles($event)" />
 
-    <!-- Image lightbox -->
-    <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
   </aside>
 </template>

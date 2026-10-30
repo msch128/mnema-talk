@@ -135,6 +135,26 @@ export async function showWelcomeFlow(context: BrowserContext): Promise<void> {
   await context.unroute(ONBOARDING_STATE)
 }
 
+// The Owner's "Get started" list sits under the channel header and would shift
+// the page under test the same way, so contexts see it as closed; the first-run
+// spec opts back in with showFirstRun.
+const FIRST_RUN = '**/api/admin/first-run'
+
+async function hideFirstRun(context: BrowserContext): Promise<void> {
+  await context.route(FIRST_RUN, async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback()
+    const response = await route.fetch()
+    const state: unknown = await response.json().catch(() => null)
+    if (typeof state !== 'object' || state === null) return route.fulfill({ response })
+    return route.fulfill({ response, json: { ...state, hidden: true } })
+  })
+}
+
+/** Lets the Owner's checklist appear in this context, as it does on a first run. */
+export async function showFirstRun(context: BrowserContext): Promise<void> {
+  await context.unroute(FIRST_RUN)
+}
+
 // Firefox has no context-level media grants (its fake devices need none, see
 // firefoxUserPrefs in playwright.config.ts) and rejects the names outright.
 function grantable(browser: Browser, options: Parameters<Browser['newContext']>[0]): Parameters<Browser['newContext']>[0] {
@@ -212,6 +232,7 @@ function counted(browser: Browser): Browser {
     countApiRequests(context)
     await watchCsp(context)
     await hideWelcomeFlow(context)
+    await hideFirstRun(context)
     explainNavigationFailures(context)
     return context
   }

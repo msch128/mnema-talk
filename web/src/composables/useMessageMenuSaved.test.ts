@@ -25,7 +25,7 @@ const labels = (items: ContextMenuItem[]) => items.map(i => i.type === 'separato
 function menu() {
   const actions = {
     ...useMessageActions(), pickerId: ref<string | null>(null),
-    isOwn: vi.fn(() => false), canDelete: vi.fn(() => false), startEdit: vi.fn(), deleteMessage: vi.fn(async () => {}), closePicker: vi.fn()
+    isOwn: vi.fn(() => false), canDelete: vi.fn(() => false), startEdit: vi.fn(), deleteMessage: vi.fn(async () => true), closePicker: vi.fn()
   }
   return useMessageMenu({ actions, reply: vi.fn() })
 }
@@ -51,13 +51,13 @@ describe('the save item of the message menu', () => {
     const first = required(m.itemsFor(msg).find(i => i.label === 'Save message'))
     await required(first.action)()
     expect(apiMock).toHaveBeenLastCalledWith('/api/me/saved/m1', expect.objectContaining({ method: 'PUT' }))
-    expect(useToastStore().toasts.at(-1)).toMatchObject({ type: 'success', text: 'Message saved.' })
+    expect(useToastStore().toasts.at(-1)).toMatchObject({ type: 'success', text: 'Saved – find it under Saved & reminders', action: { label: 'View' } })
 
     apiMock.mockResolvedValueOnce(null)
     const second = required(m.itemsFor(msg).find(i => i.label === 'Remove from saved'))
     await required(second.action)()
     expect(apiMock).toHaveBeenLastCalledWith('/api/me/saved/m1', expect.objectContaining({ method: 'DELETE' }))
-    expect(useToastStore().toasts.at(-1)).toMatchObject({ type: 'success', text: 'Removed from your saved messages.' })
+    expect(useToastStore().toasts.at(-1)).toMatchObject({ type: 'success', text: 'Removed from your saved messages.', action: { label: 'Undo' } })
     expect(labels(m.itemsFor(msg))).toContain('Save message')
   })
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/textcut"
 )
 
 // Entry is one thing that happened.
@@ -158,9 +159,5 @@ func (l *Log) RunRetention(ctx context.Context, days int, every time.Duration) {
 }
 
 func clip(s string, n int) string {
-	r := []rune(s)
-	if len(r) <= n {
-		return s
-	}
-	return string(r[:n])
+	return textcut.Runes(s, n)
 }

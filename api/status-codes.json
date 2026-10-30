@@ -15,6 +15,9 @@
     "database.unreachable",
     "mail.none",
     "mail.ok",
+    "network.address_mismatch",
+    "network.cgnat",
+    "network.no_ipv4",
     "public_url.insecure",
     "public_url.local",
     "public_url.ok",
@@ -41,8 +44,12 @@
     "voice_address.missing_detect_failed",
     "voice_address.missing_detect_failed_turn_only",
     "voice_address.missing_turn_only",
+    "voice_udp.confirmed",
     "voice_udp.mux_disabled",
-    "voice_udp.ok",
-    "voice_udp.unavailable"
+    "voice_udp.unavailable",
+    "voice_udp.unconfirmed",
+    "websocket.failing",
+    "websocket.ok",
+    "websocket.unchecked"
   ]
 }

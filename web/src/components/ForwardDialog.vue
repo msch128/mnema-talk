@@ -114,7 +114,7 @@ async function send() {
           v-model="comment"
           data-testid="forward-comment"
           rows="2"
-          :maxlength="COMMENT_MAX"
+          v-max-chars="COMMENT_MAX"
           :aria-label="$t('forward.comment')"
           :placeholder="$t('forward.comment')"
           class="resize-none rounded-md border border-mnema-border bg-mnema-surface px-2.5 py-1.5 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:border-mnema-accent focus:outline-hidden"

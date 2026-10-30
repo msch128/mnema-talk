@@ -101,7 +101,7 @@ onMounted(load)
     <form class="flex flex-wrap items-end gap-2" @submit.prevent="issue">
       <label class="min-w-0 flex-1 stack-1">
         <span class="text-xs text-mnema-tertiary">{{ $t('bots.tokens.name') }}</span>
-        <input v-model="name" type="text" maxlength="32" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" :placeholder="$t('bots.tokens.namePlaceholder')" />
+        <input v-model="name" type="text" v-max-chars="32" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" :placeholder="$t('bots.tokens.namePlaceholder')" />
       </label>
       <label class="stack-1">
         <span class="text-xs text-mnema-tertiary">{{ $t('bots.tokens.expiry') }}</span>

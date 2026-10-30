@@ -14,7 +14,8 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | The single all-powerful account | Owner | Owner | admin, cool_guy (in docs) | Not translated; one per community. |
 | Role or permission with all rights | Administrator | Administrator | Admin as a noun for a person | "Admin console" / "Admin-Bereich" stays as the name of the area. |
 | Voice room | Talk | Talk | voice channel, Sprachkanal, call, Anruf, Raum | "Talk" is the Mnema product term in both languages. The create dialog may say "Talk (voice)" / "Talk (Sprache)". Verbs: join a Talk / einem Talk beitreten, leave. |
-| Lobby that opens Talks | Talk lobby | Talk-Lobby | Create-a-Talk room, Warteraum | A Talk marked as a lobby: joining it opens a temporary Talk ("Talk 1", "Talk 2", ...) instead of a seat. Shown as "Create a Talk" / „Talk erstellen“ in the sidebar when named so. |
+| Ring a member to a Talk | call (verb: “is calling you”; noun only as “missed call”) | anrufen: „ruft dich an“ (no noun) | Anruf, Telefonat | What “Start a Talk” does in a direct message: the others see an incoming-call card until they join, it stops, or it times out. The room stays a Talk. |
+| Lobby that opens Talks | Talk lobby | Talk-Lobby | Create-a-Talk room, Warteraum | A Talk marked as a lobby: joining it opens a temporary Talk named after the lobby ("<lobby> 1", "<lobby> 2", ...) instead of a seat. Shown as "Create a Talk" / „Talk erstellen“ in the sidebar when named so. |
 | Who may rename and limit a temporary Talk | Talk leader | Talk-Leitung | host, owner, Talk-Admin | The member who opened a temporary Talk, then the member who has been in it longest. Tooltip "Talk leader" / „Talk-Leitung“. |
 | Text room | channel | Kanal | | Group of rooms: category / Kategorie. |
 | Structured discussion room | forum channel | Forum-Kanal | | A channel of posts as cards with threads and tags. |
@@ -31,7 +32,7 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | Disable an account (no record) | disable | deaktivieren | sperren | "Konto deaktivieren / aktivieren". |
 | Brute-force lock | sign-in lock | Anmeldesperre | Login-Sperre | |
 | Pin | pin / unpin | anheften / Anheftung aufheben | lösen | "Angeheftete Nachrichten". "Pinned by {name}" / „Angeheftet von {name}“. |
-| Keep a message for yourself | save / remove from saved | speichern / aus Gespeichert entfernen | merken, favorisieren, lesezeichen | Private list: "Saved messages" / „Gespeicherte Nachrichten“. A message you can no longer see is "no longer available" / „nicht mehr verfügbar“. |
+| Keep a message for yourself | save / remove from saved | speichern / aus Gespeichert entfernen | merken, favorisieren, lesezeichen | Private list: "Saved messages" / „Gespeicherte Nachrichten“. A message you can no longer see is "no longer available" / „nicht mehr verfügbar“. One header button opens the panel "Saved & reminders" / „Gespeichert & Erinnerungen“ with the tabs "Saved" / „Gespeichert“ and "Later" / „Später“. |
 | Send a message on to another place | forward | weiterleiten | teilen, senden an | "Forward…" / „Weiterleiten …“; the quote is "Forwarded" / „Weitergeleitet“. |
 | Private conversation | direct message | Direktnachricht | DM, private message, Privatnachricht | A conversation of two to ten members that is not a channel. "Group direct message" / „Gruppen-Direktnachricht“ for three or more. A conversation has no call of its own: "Start a Talk" opens a temporary Talk and posts an invitation (see [Talks](talks.md)). |
 | Poll | poll | Umfrage | Abstimmung (only for the act of voting) | |

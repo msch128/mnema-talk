@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Admin dashboard: categories and channels, their order (drag or arrows),
-// renames and deletes. The order is edited locally and saved in one go.
-import { ref, onMounted } from 'vue'
+// renames and deletes. The order is a draft: it is edited locally and saved in
+// one go with the shared unsaved-changes bar. Renames and deletes are actions.
+import { computed, ref, onMounted } from 'vue'
 import { FolderTree } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import type { Channel, Category, ChannelHierarchy } from '../types/domain'
@@ -17,20 +18,28 @@ import AdminChannelRow from './AdminChannelRow.vue'
 import AdminCategoryHeader from './AdminCategoryHeader.vue'
 import AdminLayoutToolbar from './AdminLayoutToolbar.vue'
 import AdminEditDialogs from './AdminEditDialogs.vue'
+import CreateChannelModal from './CreateChannelModal.vue'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import { onSaveShortcut, useLeaveGuard } from '../composables/draftGuard'
+import { useLayoutDrag } from '../composables/useLayoutDrag'
 
 const chatStore = useChatStore()
 const toasts = useToastStore()
 
 // { uncategorized, categories[].channels } as in lib/channelLayout.
 const layout = ref<ChannelHierarchy>({ uncategorized: [], categories: [] })
-const hasLayoutChanges = ref(false)
+// The order as last saved or loaded; the draft is dirty only while it differs from it.
+const orderOf = (l: ChannelHierarchy) => JSON.stringify(toLayoutPayload(l))
+const savedOrder = ref(orderOf(layout.value))
+const hasLayoutChanges = computed(() => orderOf(layout.value) !== savedOrder.value)
+useLeaveGuard(hasLayoutChanges)
 const isSavingLayout = ref(false)
 const isCreatingCategory = ref(false)
 const editingCategory = ref<Category | null>(null)
 const editingChannel = ref<Channel | null>(null)
 const newCategoryName = ref('')
-const draggedCategoryId = ref<string | null>(null)
-const draggedChannelId = ref<string | null>(null)
+// The create-channel dialog; categoryId preselects its category ('' lets the dialog pick).
+const creatingChannel = ref<{ categoryId: string } | null>(null)
 
 function showError(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
@@ -41,10 +50,10 @@ function showError(e: unknown) {
 // `patch` applies one server-side change to the local layout. It runs instead
 // of the reload whenever an unsaved reorder exists (also one started while
 // the reload was in flight), so that reorder is never thrown away.
-async function loadChannelsData(patch?: () => void) {
+async function loadChannelsData(patch?: () => void, force = false) {
   try {
     const data = await api('/api/channels', { decode: decodeChannelHierarchy })
-    if (hasLayoutChanges.value) {
+    if (hasLayoutChanges.value && !force) {
       patch?.()
       return
     }
@@ -55,7 +64,7 @@ async function loadChannelsData(patch?: () => void) {
         channels: (cat.channels || []).map(ch => ({ ...ch }))
       }))
     }
-    hasLayoutChanges.value = false
+    savedOrder.value = orderOf(layout.value)
   } catch (e) {
     patch?.()
     showError(e)
@@ -74,7 +83,6 @@ async function syncAfterEdit(patch: () => void) {
 function reorder(next: ChannelHierarchy) {
   if (next === layout.value) return
   layout.value = next
-  hasLayoutChanges.value = true
 }
 
 function moveCategoryBy(cat: Category, direction: number) {
@@ -88,45 +96,10 @@ function moveChannelBy(categoryId: string | null, channel: Channel, direction: n
   if (from) reorder(moveChannel(layout.value, channel.id, categoryId, from.index + direction))
 }
 
-// Only one kind of drag is ever in progress; a drag cancelled with Escape or
-// dropped outside ends in dragend, which forgets it.
-function onDragEnd() {
-  draggedCategoryId.value = null
-  draggedChannelId.value = null
-}
-
-function onCategoryDragStart(e: DragEvent, cat: Category) {
-  draggedChannelId.value = null
-  draggedCategoryId.value = cat.id
-  if (e?.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move'
-  }
-}
-
-function onCategoryDrop(e: DragEvent, targetIndex: number) {
-  const id = draggedCategoryId.value
-  draggedCategoryId.value = null
-  if (id !== null) reorder(moveCategory(layout.value, id, targetIndex))
-}
-
-function onChannelDragStart(e: DragEvent, channel: Channel) {
-  draggedCategoryId.value = null
-  draggedChannelId.value = channel.id
-  if (e?.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move'
-  }
-}
-
-// The dropped channel takes the target's place (or goes last for a drop on
-// the category's list itself).
-function onChannelDrop(e: DragEvent, targetCategoryId: string | null, targetIndex: number) {
-  const id = draggedChannelId.value
-  draggedChannelId.value = null
-  if (id !== null) reorder(moveChannel(layout.value, id, targetCategoryId, targetIndex))
-}
+const { onDragEnd, onCategoryDragStart, onCategoryDrop, onChannelDragStart, onChannelDrop } = useLayoutDrag(() => layout.value, reorder)
 
 async function saveLayout() {
-  if (isSavingLayout.value) return
+  if (isSavingLayout.value || !hasLayoutChanges.value) return
   isSavingLayout.value = true
   const sent = layout.value
   try {
@@ -134,9 +107,9 @@ async function saveLayout() {
       method: 'PUT',
       json: toLayoutPayload(sent)
     })
-    // A reorder made while the request ran replaced the layout; it is still
-    // unsaved and the reload below must not throw it away.
-    if (layout.value === sent) hasLayoutChanges.value = false
+    // The server holds what was sent. A reorder made while the request ran
+    // differs from it, stays unsaved and the reload below must not throw it away.
+    savedOrder.value = orderOf(sent)
     toasts.success(t('admin.layoutSaved'))
     await chatStore.fetchChannels()
     await loadChannelsData()
@@ -145,6 +118,11 @@ async function saveLayout() {
   } finally {
     isSavingLayout.value = false
   }
+}
+
+// Throws the unsaved order away and shows the saved one again.
+function resetLayout() {
+  void loadChannelsData(undefined, true)
 }
 
 // ---- Editing ----
@@ -158,23 +136,29 @@ function closeEdit() {
   editingChannel.value = null
 }
 
-async function saveCategoryEdit(name: string) {
-  if (!editingCategory.value) return
-  const id = editingCategory.value.id
+// A refused rename reaches the dialog (it shows it inline and keeps the draft);
+// a reload that fails after the rename went through is only reported.
+async function afterEdit(patch: () => void) {
   try {
-    await api(`/api/admin/categories/${id}`, {
-      method: 'PATCH',
-      json: { name }
-    })
-    toasts.success(t('admin.categoryUpdated'))
-    closeEdit()
-    await syncAfterEdit(() => {
-      const cat = layout.value.categories.find(c => c.id === id)
-      if (cat) cat.name = name
-    })
+    await syncAfterEdit(patch)
   } catch (e) {
     showError(e)
   }
+}
+
+async function saveCategoryEdit(name: string) {
+  if (!editingCategory.value) return
+  const id = editingCategory.value.id
+  await api(`/api/admin/categories/${id}`, {
+    method: 'PATCH',
+    json: { name }
+  })
+  toasts.success(t('admin.categoryUpdated'))
+  closeEdit()
+  await afterEdit(() => {
+    const cat = layout.value.categories.find(c => c.id === id)
+    if (cat) cat.name = name
+  })
 }
 
 function openEditChannel(channel: Channel) {
@@ -184,25 +168,25 @@ function openEditChannel(channel: Channel) {
 async function saveChannelEdit(fields: { name: string; topic: string }) {
   if (!editingChannel.value) return
   const id = editingChannel.value.id
-  try {
-    const updated = await api(`/api/admin/channels/${id}`, {
-      method: 'PATCH',
-      json: fields,
-      decode: decodeChannel
-    })
-    toasts.success(t('admin.channelUpdated'))
-    closeEdit()
-    await syncAfterEdit(() => {
-      const ch = locateChannel(layout.value, id)?.channel
-      // Name and topic only: category and position stay as reordered.
-      if (ch) {
-        ch.name = updated?.name ?? fields.name
-        ch.topic = updated?.topic ?? fields.topic
-      }
-    })
-  } catch (e) {
-    showError(e)
-  }
+  const updated = await api(`/api/admin/channels/${id}`, {
+    method: 'PATCH',
+    json: fields,
+    decode: decodeChannel
+  })
+  toasts.success(t('admin.channelUpdated'))
+  closeEdit()
+  await afterEdit(() => {
+    const ch = locateChannel(layout.value, id)?.channel
+    // Name and topic only: category and position stay as reordered.
+    if (ch) {
+      ch.name = updated?.name ?? fields.name
+      ch.topic = updated?.topic ?? fields.topic
+    }
+  })
+}
+
+function submitEdit(fields: { name: string; topic: string }) {
+  return editingCategory.value ? saveCategoryEdit(fields.name) : saveChannelEdit(fields)
 }
 
 async function deleteCategory(cat: Category) {
@@ -239,6 +223,15 @@ async function deleteChannel(channel: Channel) {
   }
 }
 
+// The new channel is already on the server; an unsaved reorder keeps its order and gets the row appended.
+async function onChannelCreated(channel: Channel) {
+  await syncAfterEdit(() => {
+    const target = channel.category_id ? layout.value.categories.find(c => c.id === channel.category_id) : null
+    if (target) target.channels = [...(target.channels ?? []), { ...channel }]
+    else layout.value = { ...layout.value, uncategorized: [...layout.value.uncategorized, { ...channel }] }
+  })
+}
+
 async function createCategory() {
   if (isCreatingCategory.value || !newCategoryName.value.trim()) return
   isCreatingCategory.value = true
@@ -264,7 +257,7 @@ onMounted(() => loadChannelsData())
 </script>
 
 <template>
-  <section class="space-y-4">
+  <section class="space-y-4" @keydown="onSaveShortcut($event, saveLayout)">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-2">
         <h3 class="text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider flex items-center gap-2">
@@ -275,25 +268,10 @@ onMounted(() => loadChannelsData())
 
       <AdminLayoutToolbar
         v-model:new-category-name="newCategoryName"
-        :saving="isSavingLayout"
         :creating="isCreatingCategory"
-        :changed="hasLayoutChanges"
         @create="createCategory"
-        @save="saveLayout"
+        @add-channel="creatingChannel = { categoryId: '' }"
       />
-    </div>
-
-    <!-- Unsaved banner notice -->
-    <div v-if="hasLayoutChanges" class="p-3 rounded-lg bg-mnema-accent/10 border border-mnema-accent/30 text-xs text-mnema-mint flex items-center justify-between gap-3">
-      <span>{{ $t('admin.hasUnsavedLayout') }}</span>
-      <button
-        type="button"
-        :disabled="isSavingLayout"
-        class="btn btn-primary btn-sm shrink-0"
-        @click="saveLayout"
-      >
-        {{ $t('admin.saveLayout') }}
-      </button>
     </div>
 
     <!-- Uncategorized Channels -->
@@ -338,6 +316,7 @@ onMounted(() => loadChannelsData())
           :index="catIdx"
           :count="layout.categories.length"
           @move="moveCategoryBy(cat, $event)"
+          @add-channel="creatingChannel = { categoryId: cat.id }"
           @rename="openEditCategory(cat)"
           @delete="deleteCategory(cat)"
         />
@@ -369,13 +348,29 @@ onMounted(() => loadChannelsData())
       </div>
     </div>
 
+    <CreateChannelModal
+      v-if="creatingChannel"
+      :initial-category-id="creatingChannel.categoryId"
+      @close="creatingChannel = null"
+      @created="onChannelCreated"
+    />
+
     <AdminEditDialogs
       v-if="editingCategory || editingChannel"
       :category="editingCategory"
       :channel="editingChannel"
+      :submit="submitEdit"
       @close="closeEdit"
-      @save-category="saveCategoryEdit"
-      @save-channel="saveChannelEdit"
+    />
+
+    <UnsavedChangesBar
+      sticky
+      save-testid="save-layout-button"
+      :dirty="hasLayoutChanges"
+      :can-save="hasLayoutChanges && !isSavingLayout"
+      :saving="isSavingLayout"
+      @save="saveLayout"
+      @reset="resetLayout"
     />
   </section>
 </template>

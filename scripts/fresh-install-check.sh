@@ -9,6 +9,9 @@
 # this machine first (CI runs on an empty runner).
 # Usage: scripts/fresh-install-check.sh [image]   (default mnema-talk:local)
 #   FRESH_PORT=<port>  host port for the app
+#   FRESH_PUBLIC_HOST=localhost  the "try it on this computer" path: PUBLIC_URL is
+#     http://localhost:<port>, WEBRTC_NAT_1TO1_IP stays empty (the server announces
+#     127.0.0.1 itself) and the log must say so
 set -euo pipefail
 
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
@@ -20,6 +23,8 @@ PORT="${FRESH_PORT:-$(free_port "$UDP_MIN-$UDP_MAX")}"
 PROJECT="mnema-fresh-$(openssl rand -hex 6)"
 DIR="$(mktemp -d)"
 BASE="http://127.0.0.1:$PORT"
+PUBLIC_HOST="${FRESH_PUBLIC_HOST:-127.0.0.1}"
+PUBLIC="http://$PUBLIC_HOST:$PORT"
 ADMIN_PASSWORD="fresh-$(openssl rand -hex 10)"
 
 cleanup() {
@@ -49,7 +54,7 @@ set_env() { # name value
 }
 set_env MNEMA_IMAGE "$IMAGE"
 set_env PORT "$PORT"
-set_env PUBLIC_URL "$BASE"
+set_env PUBLIC_URL "$PUBLIC"
 set_env JWT_SECRET "$(openssl rand -hex 32)"
 set_env POSTGRES_PASSWORD "$(openssl rand -hex 16)"
 set_env S3_ACCESS_KEY "fresh$(openssl rand -hex 4)"
@@ -59,7 +64,12 @@ set_env UPDATE_CHECK_ENABLED false
 set_env LINK_PREVIEWS_ENABLED false
 set_env WEBRTC_UDP_PORT_MIN "$UDP_MIN"
 set_env WEBRTC_UDP_PORT_MAX "$UDP_MAX"
-set_env WEBRTC_NAT_1TO1_IP 127.0.0.1
+if [ "$PUBLIC_HOST" = localhost ]; then
+  # Nothing pinned: a trial on one computer must work with the defaults.
+  sed '/^WEBRTC_NAT_1TO1_IP=/d' "$DIR/.env" >"$DIR/.env.tmp" && mv "$DIR/.env.tmp" "$DIR/.env"
+else
+  set_env WEBRTC_NAT_1TO1_IP 127.0.0.1
+fi
 
 # The guide's start commands (--pull never: the image under test is local).
 cd "$DIR"
@@ -73,12 +83,23 @@ echo
 
 echo "==> Owner sign-in"
 COOKIES="$DIR/cookies"
-curl -fsS -c "$COOKIES" -H "Origin: $BASE" -H 'Content-Type: application/json' \
+curl -fsS -c "$COOKIES" -H "Origin: $PUBLIC" -H 'Content-Type: application/json' \
   --data "{\"username\":\"admin\",\"password\":\"$ADMIN_PASSWORD\"}" \
   "$BASE/api/auth/login" >/dev/null
 case "$(curl -fsS -b "$COOKIES" "$BASE/api/auth/me")" in
   *'"role":"admin"'*) ;;
   *) echo "the Owner is not signed in" >&2; exit 1 ;;
 esac
+
+if [ "$PUBLIC_HOST" = localhost ]; then
+  echo "==> the server announces 127.0.0.1 for a trial on this computer"
+  docker compose -p "$PROJECT" logs --no-color app | grep '"webrtc announce"' | grep -q '127.0.0.1' \
+    || { echo "the log does not show 127.0.0.1 as the announced voice address" >&2; exit 1; }
+fi
+
+# mnema-talk doctor: the Status tab's checks for SSH-only operators; it exits
+# non-zero only on a red check, and a healthy fresh install has none.
+echo "==> mnema-talk doctor"
+docker compose -p "$PROJECT" exec -T app mnema-talk doctor
 
 echo "==> fresh install check passed"

@@ -149,3 +149,32 @@ func (r *Room) SetScreenQuality(viewer, publisher uuid.UUID, layer int) error {
 	}
 	return nil
 }
+
+// SetScreenFit tells the SFU the best layer of publisher's screen share that
+// viewer's picture can use (0 is the best the share has, larger is smaller).
+// A viewer on automatic never gets a better layer than that, so a small tile
+// costs a small stream, and climbs when the picture grows.
+func (r *Room) SetScreenFit(viewer, publisher uuid.UUID, layer int) error {
+	if layer < 0 || layer >= maxLayers {
+		return ErrInvalidLayers
+	}
+	r.mu.Lock()
+	if r.peers[viewer] == nil {
+		r.mu.Unlock()
+		return ErrNotInRoom
+	}
+	if viewer == publisher {
+		r.mu.Unlock()
+		return ErrInvalidLayers
+	}
+	r.subsLocked(viewer).setScreenFit(publisher, layer)
+	g := r.groups[publisher]
+	r.mu.Unlock()
+	if g == nil {
+		return nil
+	}
+	if vt := g.viewerFor(viewer); vt != nil {
+		vt.setFit(layer)
+	}
+	return nil
+}

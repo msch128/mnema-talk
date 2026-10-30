@@ -21,7 +21,7 @@ func turnCheck(in Input, has map[string]bool) Check {
 	case builtin && !in.TURNRunning:
 		return newCheck(Turn, "turn.builtin_off_external", OK, p)
 	case builtin && in.TURNProbe == "unreachable":
-		return newCheck(Turn, "turn.unreachable", Warn, p)
+		return newCheck(Turn, "turn.unreachable", Info, p)
 	case builtin:
 		return newCheck(Turn, "turn.builtin_ok", OK, p)
 	case external:

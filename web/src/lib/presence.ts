@@ -14,6 +14,9 @@ export const STATUSES: readonly Presence[] = [...CHOOSABLE, 'offline']
 /** Idle time after which an "online" user shows as away. */
 export const IDLE_AFTER_MS = 10 * 60 * 1000
 
+/** While in a Talk, speaking or pressing push-to-talk re-arms the idle timer at most this often. */
+export const VOICE_ACTIVITY_THROTTLE_MS = 30 * 1000
+
 export function normalizeStatus(s: unknown): Presence {
   return STATUSES.find(status => status === s) || 'offline'
 }

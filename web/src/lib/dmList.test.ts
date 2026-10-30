@@ -44,12 +44,25 @@ describe('dmPreview', () => {
     const poll = { ...pair, last_message: { user_id: ada.id, text: 'Lunch?', has_attachment: false, has_poll: true } }
     expect(dmPreview(poll, me)).toMatchObject({ kind: 'poll', text: '' })
   })
+
+  it('names the card of a call and the record of a missed one, whatever else the message has', () => {
+    const invite = { ...pair, last_message: { user_id: ada.id, text: '', has_attachment: false, has_poll: false, call: 'invite' as const } }
+    expect(dmPreview(invite, me)).toMatchObject({ kind: 'call', text: '' })
+    const missed = { ...pair, last_message: { user_id: me, text: '', has_attachment: false, has_poll: false, call: 'missed' as const } }
+    expect(dmPreview(missed, me)).toMatchObject({ kind: 'missedCall', sender: 'me' })
+  })
 })
 
 describe('lastMessageOf', () => {
   it('summarises a message the way the server does', () => {
     expect(lastMessageOf(messageFixture({ user_id: ada.id, content: 'x'.repeat(300) }))).toMatchObject({ user_id: ada.id, has_attachment: false, has_poll: false })
     expect(lastMessageOf(messageFixture({ content: 'x'.repeat(300) })).text).toHaveLength(200)
+  })
+
+  it('knows the card of a call and the record of a missed one', () => {
+    expect(lastMessageOf(messageFixture({ embeds: [{ title: 'Talk 1', talk_id: ada.id }] })).call).toBe('invite')
+    expect(lastMessageOf(messageFixture({ embeds: [{ title: 'Talk 1', call: 'missed' }] })).call).toBe('missed')
+    expect(lastMessageOf(messageFixture({ embeds: [{ title: 'News' }] }))).not.toHaveProperty('call')
   })
 })
 

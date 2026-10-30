@@ -28,6 +28,9 @@ type Subscriptions struct {
 	// quality is the layer chosen per publisher's screen share; absent means
 	// automatic.
 	quality map[uuid.UUID]int8
+	// fit is the best layer the viewer's picture of a screen share can use;
+	// absent means the best the share has.
+	fit map[uuid.UUID]int8
 }
 
 // screenQuality is the layer chosen for publisher's screen share, -1 for
@@ -57,6 +60,30 @@ func (s *Subscriptions) setScreenQuality(publisher uuid.UUID, layer int) {
 		s.quality = map[uuid.UUID]int8{}
 	}
 	s.quality[publisher] = int8(layer)
+}
+
+// screenFit is the best layer of publisher's screen share the viewer can use.
+func (s *Subscriptions) screenFit(publisher uuid.UUID) int {
+	if s == nil {
+		return 0
+	}
+	return int(s.fit[publisher])
+}
+
+// setScreenFit remembers the best layer of a screen share the viewer's
+// picture can use.
+func (s *Subscriptions) setScreenFit(publisher uuid.UUID, layer int) {
+	if layer <= 0 {
+		delete(s.fit, publisher)
+		return
+	}
+	if _, ok := s.fit[publisher]; !ok && len(s.fit) >= maxScreenSubs {
+		return
+	}
+	if s.fit == nil {
+		s.fit = map[uuid.UUID]int8{}
+	}
+	s.fit[publisher] = int8(min(layer, maxLayers-1))
 }
 
 // Wants reports whether a track of the given kind and source published by

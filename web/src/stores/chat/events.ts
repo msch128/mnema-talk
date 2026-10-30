@@ -16,10 +16,12 @@ import type { Cx } from './state'
 import { fetchChannels } from './channels'
 import { fetchDms, isDm, noteDmMessage, noteDmMessageChanged, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
 import { onDmPrefsUpdated } from './dmPrefs'
+import { onDmCallEnd, onDmCallRing } from './dmCalls'
 import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, updateUserEverywhere } from './members'
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
 import { onThreadFollowUpdated } from './threadFollow'
 import { messageMentionsMe, messageMentionsMeDirectly, triggerBrowserNotification } from './notifications'
+import { playMessageSoundFor } from './messageSound'
 import { fetchReadState, isReadingActiveChannel } from './readState'
 import { notificationLevel, refreshNotifications } from './notifySettings'
 import { applyPoll } from './polls'
@@ -137,7 +139,8 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   handleIncomingMessageReadState(cx, { channelId: p.channel_id, isOwn, isCurrentChannel, isMention, isThreadReply: !!p.parent_id })
   if (!isOwn && p.channel_id) {
     // Everything somebody writes in a conversation is addressed to me.
-    triggerBrowserNotification(cx, p, isMention || isDm(cx, p.channel_id))
+    const osNotified = triggerBrowserNotification(cx, p, isMention || isDm(cx, p.channel_id))
+    playMessageSoundFor(cx, p, isMention, osNotified)
   }
 }
 
@@ -202,6 +205,8 @@ const HANDLERS: Handlers = {
   dm_member_added: (cx, p) => { if (p) onDmMemberAdded(cx, p) },
   dm_member_removed: (cx, p) => { if (p) onDmMemberRemoved(cx, p) },
   dm_prefs_updated: (cx, p) => { if (p) onDmPrefsUpdated(cx, p) },
+  dm_call_ring: (cx, p) => { if (p) onDmCallRing(cx, p) },
+  dm_call_end: (cx, p) => { if (p) onDmCallEnd(cx, p) },
   roles_changed: cx => {
     const permissions = usePermissionsStore()
     permissions.loadRoles()

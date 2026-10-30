@@ -2,10 +2,10 @@
 // "Settings": everything a member sets for themselves in one dialog, one
 // section at a time instead of one long scroll. Sections: sign-in security,
 // sessions, privacy, data and account, push and app, audio.
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 import { Database, KeyRound, Laptop, Shield, Sliders, Smartphone } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
-import { SETTINGS_TABS, settingsTab, type SettingsTab } from '../lib/settingsDialog'
+import { SETTINGS_TABS, focusSettingsField, rememberSettingsTab, settingsField, settingsFieldTarget, settingsTab, type SettingsTab } from '../lib/settingsDialog'
 import { platform } from '../lib/platform'
 import { t } from '../i18n'
 import { useAccountStore } from '../stores/account'
@@ -22,6 +22,9 @@ import AudioSettingsPanel from './AudioSettingsPanel.vue'
 const account = useAccountStore()
 const loadError = ref('')
 const nav = ref<HTMLElement | null>(null)
+// The dialog's own first focus goes to the requested field when it is already rendered.
+const initialFocus = (root: HTMLElement) => (settingsField.value ? settingsFieldTarget(root, settingsField.value) : null)
+const panel = ref<HTMLElement | null>(null)
 
 const ICONS: Record<SettingsTab, Component> = { signin: KeyRound, sessions: Laptop, privacy: Shield, data: Database, app: Smartphone, audio: Sliders }
 // Only these need the loaded account (e-mail, two-factor state).
@@ -30,15 +33,32 @@ const NEEDS_ACCOUNT: ReadonlySet<SettingsTab> = new Set(['signin', 'data'])
 // The installed desktop client has its own notifications and no install step.
 const visible = computed(() => SETTINGS_TABS.filter(tab => tab !== 'app' || !platform.isTrustedDesktop()))
 const groups = computed(() => [
-  { id: 'account', tabs: visible.value.filter(tab => !['app', 'audio'].includes(tab)) },
-  { id: 'device', tabs: visible.value.filter(tab => ['app', 'audio'].includes(tab)) }
+  { id: 'device', tabs: visible.value.filter(tab => ['app', 'audio'].includes(tab)) },
+  { id: 'account', tabs: visible.value.filter(tab => !['app', 'audio'].includes(tab)) }
 ])
-const active = computed<SettingsTab>(() => (visible.value.includes(settingsTab.value) ? settingsTab.value : 'signin'))
+const active = computed<SettingsTab>(() => (visible.value.includes(settingsTab.value) ? settingsTab.value : SETTINGS_TABS[0]))
 const waiting = computed(() => NEEDS_ACCOUNT.has(active.value) && !account.info)
 
 function select(tab: SettingsTab) {
-  settingsTab.value = tab
+  rememberSettingsTab(tab)
+  settingsField.value = null
 }
+
+// A notice or menu may ask for one field: once its section has rendered (the
+// audio devices fill in late), scroll to it and put the cursor there.
+const FIELD_TRIES = 10
+const FIELD_RETRY_MS = 50
+async function revealField() {
+  const field = settingsField.value
+  if (!field || waiting.value) return
+  // The dialog places its own first focus a tick after it opens; this comes after it.
+  for (let i = 0; i < FIELD_TRIES && settingsField.value === field; i++) {
+    await new Promise(resolve => setTimeout(resolve, i === 0 ? 0 : FIELD_RETRY_MS))
+    if (panel.value && focusSettingsField(panel.value, field)) break
+  }
+  if (settingsField.value === field) settingsField.value = null
+}
+watch([settingsField, active, waiting], () => { void revealField() }, { flush: 'post', immediate: true })
 
 // Arrow keys move through the sections; Tab leaves the list for the content.
 function onNavKey(e: KeyboardEvent) {
@@ -68,7 +88,7 @@ onBeforeUnmount(() => account.close())
 </script>
 
 <template>
-  <BaseDialog :title="$t('settings.title')" :subtitle="$t('settings.subtitle')" panel-class="max-w-3xl md:h-[min(46rem,calc(100vh-4rem))]" sheet @close="account.close()">
+  <BaseDialog :title="$t('settings.title')" :subtitle="$t('settings.subtitle')" panel-class="max-w-3xl md:h-[min(46rem,calc(100vh-4rem))]" sheet :initial-focus="initialFocus" @close="account.close()">
     <div class="flex min-h-0 flex-1 max-md:flex-col" data-testid="settings-dialog">
       <nav
         ref="nav"
@@ -103,6 +123,7 @@ onBeforeUnmount(() => account.close())
 
       <div
         :id="`settings-panel-${active}`"
+        ref="panel"
         role="tabpanel"
         tabindex="0"
         :aria-labelledby="`settings-tab-${active}`"

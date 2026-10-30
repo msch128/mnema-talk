@@ -13,6 +13,8 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
+
+	"github.com/msch128/mnema-talk/internal/textcut"
 )
 
 // utf8Reader decodes body to UTF-8 using the charset of the Content-Type
@@ -219,6 +221,5 @@ func clip(s string, max int) string {
 	if utf8.RuneCountInString(s) <= max {
 		return s
 	}
-	r := []rune(s)
-	return string(r[:max-1]) + "…"
+	return textcut.Runes(s, max-1) + "…"
 }

@@ -71,14 +71,13 @@ describe('AdminAutomodTab', () => {
     expect(again.find('[data-add="raid"]').exists()).toBe(true)
   })
 
-  it('switches a rule off with the whole rule in the body', async () => {
+  it('has no switch in the list: on/off is edited in the rule like every other field', async () => {
+    rules = [rule(1, { enabled: false })]
     const w = mount(AdminAutomodTab, { global })
     await flushPromises()
-    await w.get('[data-rule] [data-testid="rule-toggle"]').trigger('click')
-    await flushPromises()
-    const put = http.calls.find(c => c.options?.method === 'PUT')
-    expect(put?.url).toBe(`/api/admin/automod/rules/${fixtureId(1)}`)
-    expect(put?.options?.json).toMatchObject({ kind: 'mentions', enabled: false, action: 'block', config: { max_mentions: 10 } })
+    expect(w.find('[data-testid="rule-toggle"]').exists()).toBe(false)
+    expect(w.get('[data-rule] [data-testid="rule-off"]').text()).toBe('Off')
+    expect(http.calls.some(c => c.options?.method === 'PUT')).toBe(false)
   })
 
   it('deletes a rule only after the confirmation', async () => {
@@ -156,7 +155,7 @@ describe('AutomodRuleDialog', () => {
     const w = await openNew('mentions')
     await w.get('[data-testid="am-name"]').setValue('  ')
     expect(w.get('[data-testid="am-problem"]').text()).toBe('Give the rule a name.')
-    expect(w.get('[data-testid="am-save"]').attributes('disabled')).toBeDefined()
+    expect(w.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeDefined()
     await w.get('[data-testid="automod-form"]').trigger('submit')
     expect(http.calls.some(c => c.options?.method === 'POST')).toBe(false)
   })
@@ -180,7 +179,7 @@ describe('AutomodRuleDialog', () => {
     http.handle = (url, o) => { if (o?.method === 'POST') throw new ApiError(409, 'CONFLICT', 'at most 25 automod rules'); return { rules } }
     await w.get('[data-testid="automod-form"]').trigger('submit')
     await flushPromises()
-    expect(useToastStore().toasts.at(-1)?.text).toContain('at most 25 automod rules')
+    expect(w.get('[data-testid="unsaved-error"]').text()).toContain('at most 25 automod rules')
     expect(w.find('[data-testid="automod-form"]').exists()).toBe(true)
   })
 

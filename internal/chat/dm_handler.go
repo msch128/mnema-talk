@@ -73,6 +73,7 @@ func (h *Handler) listDMs(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.markCanSend(r, dms)
+	h.markCalls(dms)
 	if dms == nil {
 		dms = []DirectMessage{}
 	}
@@ -90,6 +91,13 @@ func (h *Handler) markCanSend(r *http.Request, dms []DirectMessage) {
 	}
 	for i := range dms {
 		dms[i].CanSend = can
+	}
+}
+
+// markCalls fills Call from the calls that are going on.
+func (h *Handler) markCalls(dms []DirectMessage) {
+	for i := range dms {
+		dms[i].Call = h.Calls.Active(dms[i].ID)
 	}
 }
 
@@ -132,6 +140,7 @@ func (h *Handler) loadDM(r *http.Request, id uuid.UUID) (DirectMessage, error) {
 		return DirectMessage{}, errDMNotFound
 	}
 	h.markCanSend(r, dms)
+	h.markCalls(dms)
 	return dms[0], nil
 }
 
@@ -295,9 +304,16 @@ func (h *Handler) leaveDM(w http.ResponseWriter, r *http.Request) error {
 	if who := chi.URLParam(r, "user"); who != "@me" && who != user.ID.String() {
 		return httpx.ErrInvalidInput("you can only remove yourself: use @me")
 	}
+	talks, err := dmAndTalkIDs(r.Context(), h.DB, id)
+	if err != nil {
+		return err
+	}
 	remaining, keys, err := LeaveDM(r.Context(), h.DB, id, user.ID)
 	if err != nil {
 		return err
+	}
+	if len(remaining) == 0 {
+		h.closeVoiceRooms(talks)
 	}
 	h.Perms.Invalidate()
 	h.deleteObjects(r.Context(), keys)
@@ -307,6 +323,15 @@ func (h *Handler) leaveDM(w http.ResponseWriter, r *http.Request) error {
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// closeVoiceRooms empties the live rooms of Talks that were deleted.
+func (h *Handler) closeVoiceRooms(ids []uuid.UUID) {
+	if v := h.voiceRooms(); v != nil {
+		for _, id := range ids {
+			v.CloseVoiceChannel(id)
+		}
+	}
 }
 
 // Privacy is the caller's choice about who may start direct messages with them.

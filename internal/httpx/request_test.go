@@ -334,3 +334,63 @@ func TestDecodeOptionalJSON(t *testing.T) {
 		t.Error("unknown field accepted")
 	}
 }
+
+func TestCleanTextCountsCharactersNotBytes(t *testing.T) {
+	const (
+		family = "👨‍👩‍👧‍👦" // 7 runes, 25 bytes
+		accent = "é"      // 2 runes, 3 bytes
+	)
+	cases := []struct {
+		name string
+		in   string
+		max  int
+		ok   bool
+	}{
+		{"cjk at the limit", "你好世界你好世界", 8, true},
+		{"cjk over the limit", "你好世界你好世界", 7, false},
+		{"emoji at the limit", strings.Repeat("😂", 24), 24, true},
+		{"emoji over the limit", strings.Repeat("😂", 25), 24, false},
+		{"zwj family within the limit", family, 7, true},
+		{"zwj family over the limit", family, 6, false},
+		{"combining marks count as runes", strings.Repeat(accent, 12), 24, true},
+		{"combining marks over", strings.Repeat(accent, 13), 24, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := CleanText("name", c.in, c.max, true)
+			if (err == nil) != c.ok {
+				t.Fatalf("CleanText(%q, %d) err = %v, want ok=%v", c.in, c.max, err, c.ok)
+			}
+			_, err = CleanName("name", c.in, c.max, true)
+			if (err == nil) != c.ok {
+				t.Fatalf("CleanName(%q, %d) err = %v, want ok=%v", c.in, c.max, err, c.ok)
+			}
+		})
+	}
+}
+
+func TestSanitizeFilenameTruncationKeepsCharacters(t *testing.T) {
+	const family = "👨‍👩‍👧‍👦"
+	name := "a" + family + ".txt"
+	// Room for "a" and part of the family only: the cut drops the whole sequence.
+	got := SanitizeFilename(name, 1+len("👨")+len("‍")+2)
+	if got != "a" {
+		t.Errorf("cut inside a ZWJ sequence = %q, want %q", got, "a")
+	}
+	if got := SanitizeFilename(name, 255); got != name {
+		t.Errorf("a short name changed: %q", got)
+	}
+	cjk := strings.Repeat("文", 100)
+	if got := SanitizeFilename(cjk, 255); len(got) > 255 || !utf8.ValidString(got) || len(got) != 255 {
+		t.Errorf("cjk name cut to %d bytes", len(got))
+	}
+}
+
+func TestSanitizeFilenameDropsOnlyInvalidBytes(t *testing.T) {
+	if got := SanitizeFilename("Bericht\xe4.pdf", 255); got != "Bericht.pdf" {
+		t.Errorf("got %q, want %q", got, "Bericht.pdf")
+	}
+	if got := SanitizeFilename("\xff\xfe", 255); got != "" {
+		t.Errorf("only bad bytes left %q, want empty", got)
+	}
+}

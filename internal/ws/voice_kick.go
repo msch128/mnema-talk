@@ -75,6 +75,16 @@ func (h *Hub) KickFromVoice(userID uuid.UUID) bool {
 	return kicked
 }
 
+// VoiceMembers lists who is in the voice room of a channel now.
+func (h *Hub) VoiceMembers(chID uuid.UUID) []uuid.UUID {
+	room := h.voiceSnapshot()[chID]
+	out := make([]uuid.UUID, 0, len(room))
+	for id := range room {
+		out = append(out, id)
+	}
+	return out
+}
+
 // CloseVoiceChannel empties a voice room that no longer exists (its channel
 // was deleted): every member is disconnected from it and told so, lingering
 // presence ends and the SFU room is closed.

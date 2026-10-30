@@ -14,7 +14,9 @@ import { usePermissionsStore } from '../stores/permissions'
 import { activityText } from '../lib/presence'
 import { t, locale } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
+import TalkOverviewDialog from './TalkOverviewDialog.vue'
 import PresenceDot from './PresenceDot.vue'
+import MediaImage from './MediaImage.vue'
 import ProfileAvatar from './ProfileAvatar.vue'
 import ProfileBannerControls from './ProfileBannerControls.vue'
 import ProfileBio from './ProfileBio.vue'
@@ -101,13 +103,22 @@ const voiceHangout = computed(() => {
         ...chatStore.categories.flatMap(c => c.channels || []),
         ...chatStore.uncategorized
       ]
-      return allChannels.find(c => c.id === chId) || { id: chId, name: t('profile.talk') }
+      const channel = allChannels.find(c => c.id === chId)
+      // A Talk the viewer cannot see is neither named nor opened.
+      return { id: chId, name: channel?.name ?? '', visible: !!channel }
     }
   }
   return null
 })
 
 // Formatted join date
+// The participants overview of the Talk this member is in.
+const talkOverviewId = ref<string | null>(null)
+function openParticipant(user: Partial<ProfileUser>) {
+  talkOverviewId.value = null
+  chatStore.openUserProfile(user as ProfileUser)
+}
+
 const memberSinceFormatted = computed(() => {
   const dateStr = profileUser.value.created_at
   if (!dateStr) return t('profile.unknown')
@@ -132,19 +143,24 @@ function handleMention() {
 </script>
 
 <template>
-  <BaseDialog panel-class="max-w-sm select-none bg-mnema-surface" initial-focus="[data-dialog-close]" @close="emit('close')">
+  <BaseDialog panel-class="max-w-md select-none bg-mnema-surface" initial-focus="[data-dialog-close]" @close="emit('close')">
     <template #default="{ titleId }">
     <div class="flex min-h-0 flex-col overflow-y-auto">
       <!-- Top banner -->
       <div class="h-28 shrink-0 bg-linear-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
         <!-- The member's banner, or the default pattern -->
-        <img
+        <!-- A banner that was deleted from storage falls back to the default pattern. -->
+        <MediaImage
           v-if="profileUser.banner_url"
           :src="profileUser.banner_url"
           alt=""
           class="absolute inset-0 h-full w-full object-cover pointer-events-none"
           data-testid="profile-banner"
-        />
+        >
+          <template #fallback>
+            <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] bg-size-[12px_12px] pointer-events-none" data-testid="profile-banner-default"></div>
+          </template>
+        </MediaImage>
         <div v-else class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] bg-size-[12px_12px] pointer-events-none"></div>
 
         <ProfileBannerControls v-if="isSelf && features.profileBanner" :has-banner="!!profileUser.banner_url" />
@@ -160,11 +176,11 @@ function handleMention() {
       </div>
 
       <!-- Profile Header (Avatar overlap & badges) -->
-      <div class="px-5 pb-5 pt-0 relative bg-mnema-surface">
+      <div class="relative bg-mnema-surface px-6 pb-6 pt-0 max-md:px-5">
         <ProfileAvatar :profile-user="profileUser" :is-self="!!isSelf" :live-status="liveStatus" :can-message="showMessage" @mention="handleMention" @message="handleMessage" />
 
         <!-- Name & Badges -->
-        <div class="bg-mnema-canvas/70 border border-mnema-hairline rounded-xl p-3.5 shadow-inner">
+        <div>
           <div class="flex items-center justify-between">
             <div>
               <h2 :id="titleId" class="text-lg font-bold text-mnema-text leading-tight flex items-center gap-1.5">
@@ -223,56 +239,52 @@ function handleMention() {
 
           <ProfileModerationTab v-if="hasModerationTab" v-show="tab === 'moderation'" class="mt-3" :user-id="profileId" @strikes="strikes = $event" />
 
-          <div v-show="tab === 'profile' || !hasModerationTab">
-          <ProfileMemberActions v-if="!isSelf" :profile-user="profileUser" :is-bot="isBot" />
-          <ProfileStatus :profile-user="profileUser" :is-self="!!isSelf" />
-
-          <!-- Divider -->
-          <div class="h-px bg-mnema-hairline my-3"></div>
+          <ProfileMemberActions v-if="!isSelf" v-show="tab === 'profile' || !hasModerationTab" :profile-user="profileUser" :is-bot="isBot" />
+          <div v-show="tab === 'profile' || !hasModerationTab" class="mt-5 divide-y divide-mnema-hairline [&>*]:py-4 [&>:first-child]:pt-0 [&>:last-child]:pb-0">
+          <ProfileStatus :profile-user="profileUser" :is-self="!!isSelf" @close="emit('close')" />
 
           <ProfileBio :profile-user="profileUser" :is-self="!!isSelf" />
 
-          <div v-if="isSelf" class="mb-3">
-            <button type="button" data-testid="profile-password-link" class="flex items-center gap-1 text-xs text-mnema-accent hover:underline" @click="openSecurity">
-              <KeyRound class="w-3.5 h-3.5" /><span>{{ $t('profile.passwordLink') }}</span>
+          <div v-if="isSelf" data-testid="profile-account">
+            <div class="mb-2 text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('profile.account') }}</div>
+            <button type="button" data-testid="profile-password-link" class="flex min-h-8 items-center gap-1.5 text-sm text-mnema-accent hover:underline max-md:min-h-11" @click="openSecurity">
+              <KeyRound class="w-4 h-4" /><span>{{ $t('profile.passwordLink') }}</span>
             </button>
           </div>
 
-          <!-- Divider -->
-          <div class="h-px bg-mnema-hairline my-3"></div>
-
-          <!-- Voice activity -->
-          <div class="mb-3">
-            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">{{ $t('profile.activity') }}</div>
-            <div 
-              v-if="voiceHangout" 
-              class="flex items-center gap-2 p-2 rounded-lg bg-mnema-accent/10 border border-mnema-accent/25 text-mnema-accent text-sm"
+          <!-- Voice activity: one line; a Talk the viewer may see opens its participants -->
+          <div data-testid="profile-talk">
+            <button
+              v-if="voiceHangout?.visible"
+              type="button"
+              data-testid="profile-talk-open"
+              class="flex w-full items-center gap-2.5 rounded-lg border border-mnema-accent/25 bg-mnema-accent/10 px-3 py-2 text-left text-sm text-mnema-accent transition-colors hover:bg-mnema-accent/15 max-md:min-h-11"
+              @click="talkOverviewId = voiceHangout.id"
             >
-              <Volume2 class="w-4 h-4 shrink-0" />
-              <div class="truncate">
-                <span class="font-medium">{{ $t('profile.inVoice') }}</span>
-                <span class="font-bold ml-1 text-mnema-text">#{{ voiceHangout.name }}</span>
-              </div>
-              <VoiceTimer :since="voiceStore.joinedAtOf(profileUser.id ?? null)" class="ml-auto text-xs" />
+              <span class="relative flex h-2 w-2 shrink-0" aria-hidden="true"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-mnema-accent opacity-60 motion-reduce:animate-none"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-mnema-accent"></span></span>
+              <Volume2 class="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span class="min-w-0 flex-1 truncate font-medium text-mnema-text">{{ $t('profile.inTalk', { name: voiceHangout.name }) }}</span>
+              <VoiceTimer :since="voiceStore.joinedAtOf(profileUser.id ?? null)" class="shrink-0 text-xs text-mnema-tertiary" />
+            </button>
+            <div v-else-if="voiceHangout" class="flex items-center gap-2.5 rounded-lg border border-mnema-hairline bg-mnema-raised/60 px-3 py-2 text-sm text-mnema-muted">
+              <Volume2 class="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>{{ $t('profile.inTalkHidden') }}</span>
             </div>
-            <div 
-              v-else 
-              class="flex items-center gap-2 p-2 rounded-lg bg-mnema-raised/60 border border-mnema-hairline text-mnema-muted text-sm"
-            >
-              <span class="w-2 h-2 rounded-full bg-mnema-tertiary"></span>
+            <div v-else class="flex items-center gap-2.5 rounded-lg border border-mnema-hairline bg-mnema-raised/60 px-3 py-2 text-sm text-mnema-muted">
+              <span class="h-2 w-2 rounded-full bg-mnema-tertiary"></span>
               <span>{{ $t('profile.notInVoice') }}</span>
             </div>
           </div>
 
           <!-- Totals: time in Talks and messages sent -->
-          <div class="mb-3">
-            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">{{ $t('activity.title') }}</div>
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-2">{{ $t('activity.title') }}</div>
             <ActivityStats :user="profileUser" variant="full" />
           </div>
 
           <!-- Membership -->
           <div>
-            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">{{ $t('profile.membership') }}</div>
+            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-2">{{ $t('profile.membership') }}</div>
             <div class="flex items-center gap-2 text-sm text-mnema-muted">
               <Calendar class="w-4 h-4 text-mnema-tertiary" />
               <span>{{ $t('profile.memberSince') }} <strong class="text-mnema-text font-medium">{{ memberSinceFormatted }}</strong></span>
@@ -284,4 +296,5 @@ function handleMention() {
     </div>
     </template>
   </BaseDialog>
+  <TalkOverviewDialog v-if="talkOverviewId" :channel-id="talkOverviewId" @close="talkOverviewId = null" @joined="emit('close')" @select="openParticipant" />
 </template>

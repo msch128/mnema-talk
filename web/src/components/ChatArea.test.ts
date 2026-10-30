@@ -267,7 +267,7 @@ describe('ChatArea message actions', () => {
 // stay real, with network-facing methods controlled per scenario.
 import MessageRow from './MessageRow.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
-import ImageLightbox from './ImageLightbox.vue'
+import { closeViewer, openViewer } from '../composables/useMediaViewer'
 import ContextMenu from './ContextMenu.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import EmojiButton from './EmojiButton.vue'
@@ -410,13 +410,10 @@ describe('ChatArea composer, replies and lifecycle', () => {
     await nextTick()
     expect(row.props('pickerId')).toBe('c')
     row.vm.$emit('close-picker')
-    row.vm.$emit('open-image', '/media/test-image')
     await flushPromises()
     expect(reaction).toHaveBeenCalledWith('c', '👍')
     expect(profile).toHaveBeenCalledWith(expect.objectContaining({ id: 'c' }))
     expect(thread).toHaveBeenCalledWith(expect.objectContaining({ id: 'c' }))
-    expect(w.findComponent(ImageLightbox).props('src')).toBe('/media/test-image')
-    w.findComponent(ImageLightbox).vm.$emit('close')
     row.vm.$emit('jump')
     await nextTick()
     expect(useToastStore().toasts.at(-1)?.text).toBe(t('chat.messageNotFound'))
@@ -482,7 +479,7 @@ describe('ChatArea notification settings and presentation', () => {
       await w.find('[aria-haspopup=menu]').trigger('click')
       await nextTick()
       const menu = w.findComponent(ContextMenu)
-      const label = level === 'inherit' ? t('notifications.inheritChannel') : t(`notifications.${level}`)
+      const label = level === 'inherit' ? t('notifications.inherit', { level: t('notifications.all') }) : t(`notifications.${level}`)
       const item = requireValue(requireValue(menu.props('items')).find(item => item.label === label))
       expect(item).toMatchObject({ type: 'radio', checked: true })
       item.action?.()
@@ -739,9 +736,10 @@ describe('ChatArea Escape guards', () => {
     const used = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
     used.preventDefault()
     composer().element.dispatchEvent(used)
-    rowComponent('a').vm.$emit('open-image', '/image')
+    openViewer({ items: [{ src: '/image', name: 'image.png' }], index: 0 })
     await nextTick()
     key(composer(), { key: 'Escape' })
+    closeViewer()
     await nextTick()
     rowComponent('c').vm.$emit('edit')
     await nextTick()

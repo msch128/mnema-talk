@@ -45,8 +45,8 @@
     "hint": {
       "online": "Reachable for everyone",
       "away": "Away from the keyboard",
-      "dnd": "No notifications",
-      "focus": "No notifications, heads down"
+      "dnd": "No pop-ups or push messages. Others see Do not disturb.",
+      "focus": "Just as quiet. Others see that you are concentrating."
     },
     "activity": {
       "playing": "Playing {name}",
@@ -60,7 +60,28 @@
     "openProfile": "Open your profile",
     "deleted": "Deleted member"
   },
+  "viewer": {
+    "label": "Media viewer",
+    "announce": "{name}, {n} of {total}",
+    "counter": "{n} / {total}",
+    "previous": "Previous image",
+    "next": "Next image",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "download": "Download",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "jumpToMessage": "Go to message",
+    "openOriginal": "Open original",
+    "inChannel": "in {channel}",
+    "dimensions": "{w} × {h} px",
+    "zoomLevel": "Zoom {percent}%"
+  },
   "media": {
+    "imageDeleted": "This image was deleted",
+    "imageFailed": "The image could not be loaded",
+    "retry": "Try again",
     "sizeB": "{size} B",
     "sizeKb": "{size} KB",
     "sizeMb": "{size} MB",
@@ -70,7 +91,8 @@
     "adminConsole": "Admin console",
     "legal": "Legal & privacy",
     "rules": "Community rules",
-    "notificationSettings": "Notification settings"
+    "notificationSettings": "Notification settings",
+    "shortcuts": "Keyboard shortcuts"
   },
   "account": {
     "menu": "Account menu",
@@ -83,6 +105,7 @@
   },
   "errors": {
     "unknown": "Unknown error",
+    "rateLimitedAttempts": "Too many attempts – wait a moment",
     "network": "Can’t reach the server",
     "code": {
       "INVALID_CREDENTIALS": "Wrong username or password",
@@ -92,7 +115,7 @@
       "CONFLICT": "That already exists",
       "PAYLOAD_TOO_LARGE": "The file is too large",
       "UNSUPPORTED_MEDIA_TYPE": "This file type isn’t supported",
-      "RATE_LIMITED": "Too many attempts – wait a moment",
+      "RATE_LIMITED": "Too many requests – wait a moment",
       "RULES_NOT_ACCEPTED": "Accept the community rules first",
       "UNAVAILABLE": "The service isn’t available right now",
       "INTERNAL_ERROR": "Internal server error",
@@ -112,6 +135,7 @@
       "fileTooBig": "The file is larger than {size} MB",
       "missingPermission": "You don’t have permission to do that.",
       "slowMode": "Slow mode: wait {seconds} s before posting again",
+      "rateWait": "That was a lot at once. Try again in {time}.",
       "linkInvalid": "This link is invalid or has expired.",
       "emailInvalid": "Enter a valid e-mail address.",
       "emailInUse": "Another account has already confirmed this address.",
@@ -167,8 +191,8 @@
       "usernameReserved": "This username is reserved.",
       "pollAlreadyVoted": "You already voted in this anonymous poll. A vote there can’t be changed.",
       "pollNoWithdraw": "A vote in an anonymous poll can’t be withdrawn.",
-      "automodSend": "Your message wasn’t sent: it breaks the server rule “{rule}”. The moderators can see this.",
-      "automodEdit": "Your edit wasn’t saved: it breaks the server rule “{rule}”. The moderators can see this."
+      "automodSend": "Your message wasn’t sent: it breaks the community rule “{rule}”. The moderators can see this.",
+      "automodEdit": "Your edit wasn’t saved: it breaks the community rule “{rule}”. The moderators can see this."
     },
     "field": {
       "content": "Message",
@@ -292,8 +316,6 @@
     "granted": "Notifications are enabled.",
     "denied": "Notifications are blocked in the browser.",
     "channelSettings": "Notifications for this channel",
-    "inheritChannel": "Use category default",
-    "inheritCategory": "Use server default",
     "muteChannel": "Mute for…",
     "muteCategory": "Mute for…",
     "mute_15m": "For 15 minutes",
@@ -308,16 +330,17 @@
     "bellMentions": "Mentions only",
     "bellNothing": "Muted",
     "serverTitle": "Notification settings",
-    "serverSubtitle": "What may notify you on this server. Channels and categories can override it.",
+    "serverSubtitle": "What may notify you in this community. Channels and categories can override it.",
     "serverDefault": "Default for all channels",
     "serverDefaultHint": "Used wherever a channel or its category has no setting of its own. Messages addressed to you by name still get through when you choose Nothing.",
-    "muteServer": "Mute server",
+    "muteServer": "Mute community",
     "muteServerStatus": "Muted until {time}",
     "muteServerForever": "Muted until you turn it back on",
     "unmuteServer": "Turn notifications back on",
     "suppressEveryone": "Suppress @all and @here",
     "suppressEveryoneHint": "Announcements to everyone no longer notify you or count as mentions.",
-    "serverSaveFailed": "Couldn’t save the notification settings. Try again."
+    "serverSaveFailed": "Couldn’t save the notification settings. Try again.",
+    "inherit": "Use my default ({level})"
   },
   "welcome": {
     "progress": "Step {current} of {total}",
@@ -358,10 +381,10 @@
     "createTitle": "Create a new channel",
     "creating": "Creating…",
     "type": "Type",
-    "typeText": "Channel",
+    "typeText": "Text channel",
     "typeTextHint": "Messages and files",
-    "typeVoice": "Talk (voice)",
-    "typeVoiceHint": "Talk, chat and share your screen",
+    "typeVoice": "Talk",
+    "typeVoiceHint": "Voice, video, screen share",
     "typeForum": "Forum",
     "typeForumHint": "Discussions with posts and tags",
     "category": "Category",
@@ -479,7 +502,7 @@
     "embedImage": "Image",
     "embedThumbnail": "Thumbnail",
     "edited": "(edited)",
-    "editHint": "Enter saves · Esc cancels",
+    "editHint": "Enter saves · Esc cancels · empty text deletes",
     "replies": {
       "one": "{count} reply",
       "other": "{count} replies"
@@ -488,8 +511,6 @@
     "viewingOlder": "You’re viewing older messages",
     "jumpToEnd": "Jump to latest",
     "jumpToFirstUnread": "Jump to first unread",
-    "enlargedImage": "Enlarged image",
-    "openOriginal": "Open original",
     "attachment": "Attachment",
     "unknownUser": "Unknown",
     "message": "Message",
@@ -553,6 +574,7 @@
     "inThread": "in thread",
     "searchPinned": "Pinned",
     "notifyNoText": "New message",
+    "notifyThread": "Thread",
     "searchFilterUnsupported": "This server doesn’t support this filter yet. Remove it or search without it.",
     "copyText": "Copy text",
     "copiedText": "Text copied",
@@ -560,6 +582,13 @@
     "copiedLink": "Link copied",
     "moreActions": "More actions",
     "readOnly": "You can’t write in this channel.",
+    "timedOut": "You are timed out and can’t write right now.",
+    "uploadMax": "Upload a file or image (up to {size} MB)",
+    "limits": {
+      "slowWait": "Slow mode: you can write again in {time}",
+      "charsLeft": "{count} characters left",
+      "tooLong": "{count} characters too many (at most {max})"
+    },
     "noAttach": "You can’t attach files here.",
     "attachMediaOnly": "Only images and videos can be attached.",
     "attachSkipped": "Only images and videos were attached. Other files were skipped.",
@@ -605,7 +634,9 @@
     "searchProblemChannel": "No channel “{value}” found. Check the name after {filter}:.",
     "searchProblemDate": "Can’t read the date “{value}” after {filter}:. Use YYYY-MM-DD, today or yesterday.",
     "searchProblemOption": "“{value}” is not a value for {filter}:. Choose one of: {options}.",
-    "searchProblemEmpty": "{filter}: needs a value."
+    "searchProblemEmpty": "{filter}: needs a value.",
+    "replyInChannel": "Reply in channel",
+    "replyInThread": "Reply in thread"
   },
   "linkPreview": {
     "play": "Play video: {title}",
@@ -635,7 +666,8 @@
     "placeholder": "Reply in thread…",
     "upload": "Share a file or image in the thread",
     "sendFailed": "Couldn’t send the reply. Try again.",
-    "commandHint": "Commands and polls start in the channel. Here this text is sent as a reply."
+    "commandHint": "Commands and polls start in the channel. Here this text is sent as a reply.",
+    "hint": "Replies here stay out of the main chat."
   },
   "voice": {
     "mute": "Mute",
@@ -678,6 +710,11 @@
     "noMediaConnectionRelay": "No media connection. Your network seems to block the relay as well. Try another network or turn off a VPN, or ask the server’s operator.",
     "mediaUnavailable": "The Talk could not set up its media connection. Try joining again.",
     "joinedElsewhere": "You joined this Talk from another window or device.",
+    "takeoverTitle": "Take over this Talk here?",
+    "takeoverPrompt": "You are in “{channel}” on another device. Take over here? Your call moves to this device.",
+    "takeoverConfirm": "Take over here",
+    "takenOver": "Your call moved to another device.",
+    "takenOverBack": "Back here",
     "mediaUnsupported": "This browser cannot protect the media of a Talk, so it cannot join. Use Chrome or Edge 137+, Safari 17+ or Firefox 129+.",
     "mediaUnprotected": "This browser cannot protect the Talk. Microphone, camera and screen stay off.",
     "mediaRekeyed": "The media keys of this Talk were reset by someone in it or by the server. The Talk sets up new keys by itself.",
@@ -688,27 +725,27 @@
   "audio": {
     "settings": "Audio settings",
     "subtitle": "Input and room acoustics",
-    "groupInput": "Input",
-    "groupInputHelp": "Which microphone you use and how speaking is triggered.",
+    "groupInput": "How you speak",
+    "groupInputHelp": "Speak freely, or hold a key whenever you want to be heard.",
     "groupMeter": "Check your microphone",
-    "groupMeterHelp": "Say a few words. The bar shows what your microphone hears; above the white mark you are transmitting.",
+    "groupMeterHelp": "Pick your microphone, press the button and say a few words. If the bar moves, you are done.",
     "groupOutput": "Output",
     "groupOutputHelp": "What you hear the others on, how loud, and with which sounds.",
     "groupProcessing": "Noise filter and echo",
     "groupProcessingHelp": "Removes background noise from your microphone before others hear it.",
-    "advanced": "Advanced",
-    "advancedHelp": "Rarely needed: gain control, network priority, warnings and individual sounds.",
+    "advanced": "Fine-tune",
+    "advancedHelp": "Rarely needed: input volume, sensitivity, gain control, network priority, warnings and individual sounds.",
     "levelLabel": "Microphone level",
-    "inputMode": "Input mode",
+    "inputMode": "Speaking mode",
     "activity": "Voice activity",
-    "activityHint": "The mic opens above a set level",
+    "activityHint": "The microphone opens when you speak",
     "ptt": "Push to talk",
     "pttHint": "Hold a key to speak",
     "pttKey": "Push-to-talk key",
     "pressKey": "Press a key…",
-    "pttKeyHint": "Click the button, then press the key you want, for example Space or Ctrl.",
+    "pttKeyHint": "Pick a key you do not type with, such as F8 or `. In the browser it works while this window is in front, and not while you type in a text box. The desktop app has its own key that also works over games; you set it in its overlay settings.",
     "sensitivity": "Input sensitivity",
-    "auto": "Detect automatically",
+    "auto": "Adjust automatically",
     "level": "Level {level} % · Peak {peak} %",
     "threshold": "Threshold {value} %",
     "adviceTitle": "Tip for shared rooms",
@@ -726,12 +763,12 @@
     "deviceFallback": "Microphone {id}…",
     "liveNote": "Changes apply right away",
     "done": "Done",
-    "noiseMode_ai": "AI filter",
-    "noiseMode_ai-lite": "AI light",
+    "noiseMode_ai": "Strong",
+    "noiseMode_ai-lite": "Light",
     "noiseMode_browser": "Browser",
     "noiseMode_off": "Off",
-    "noiseHint_ai": "DeepFilterNet3 removes typing, clicks, fans and background noise at full audio quality. It runs entirely in your browser; your audio never leaves your device for it. One-time download of about 10 MB.",
-    "noiseHint_ai-lite": "A smaller AI model for slower computers. Filters about as well, but voices sound a little duller.",
+    "noiseHint_ai": "Recommended. Removes typing, clicks, fans and background noise at full audio quality. It runs entirely in your browser; your audio never leaves your device for it. One-time download of about 10 MB.",
+    "noiseHint_ai-lite": "Like Strong, but lighter on your computer. Filters about as well, but voices sound a little duller.",
     "noiseHint_browser": "Your browser’s noise suppression dampens steady sounds such as fans or hum. Uses less CPU.",
     "noiseHint_off": "No filter. For studio microphones or when you share music.",
     "filterDegraded": "The AI filter is overloaded or unavailable. Browser noise suppression is used for this Talk.",
@@ -740,7 +777,7 @@
     "micTest": "Mic test",
     "micTestStart": "Let’s check",
     "micTestStop": "Stop testing",
-    "micTestHint": "This test stays local and is not transmitted to others. You hear your own voice with your current noise gate and filter applied. While testing, you are muted to others in the Talk.",
+    "micTestHint": "This test stays local and is not transmitted to others. You hear your own voice with your current filter applied. While testing, you are muted to others in the Talk.",
     "micTestActiveBadge": "Active (muted to others)",
     "qosTitle": "Network priority for voice and video",
     "qosHint": "Gives voice and video priority on your network to reduce stutter when the connection is busy.",
@@ -750,6 +787,7 @@
     "noAudioDetectedToast": "No sound is coming from your microphone. Check your input device and system permission.",
     "micHardwareMutedToast": "Your microphone seems to be muted by a hardware switch or the system.",
     "noAudioDismiss": "Do not warn again in this call",
+    "openSettings": "Open audio settings",
     "switchChannelWarningTitle": "Confirm switching Talks",
     "switchChannelWarningHint": "Asks for confirmation before moving to a different Talk.",
     "switchChannelTitle": "Switch Talk?",
@@ -759,6 +797,11 @@
     "soundsHint": "Plays audio cues when joining, leaving, muting, and deafening.",
     "soundsVolume": "Sound effects volume",
     "soundsTest": "Test sound",
+    "messageSounds": "Message sounds",
+    "messageSounds_all": "All messages",
+    "messageSounds_mentions": "Mentions & direct messages",
+    "messageSounds_off": "Off",
+    "messageSoundsHint": "A quiet sound for new messages. It stays silent for your own messages, the conversation you are reading, do not disturb and focus, and when a system notification already plays its own sound.",
     "soundsCustomTitle": "Individual sounds",
     "sound_join": "Channel joined",
     "sound_leave": "Channel left",
@@ -774,7 +817,20 @@
     "outputDevice": "Output device",
     "outputDeviceUnsupported": "This browser can’t pick an output device; the system default is used.",
     "outputVolume": "Output volume",
-    "perUserVolumeHint": "Make single people louder or quieter with a right-click on their name or tile."
+    "perUserVolumeHint": "Make single people louder or quieter with a right-click on their name or tile.",
+    "sound_call_ring": "Incoming call ringtone",
+    "defaultOutput": "System default speakers",
+    "micHeard": "We hear you. Your microphone works.",
+    "pttKeyChoose": "Choose a key",
+    "pttKeyNone": "No key chosen yet. Push to talk does nothing until you pick one.",
+    "pttKeyHeld": "Key held: you are transmitting",
+    "pttKeyIdle": "Hold {key} to try it",
+    "pttFirstUse": "Push to talk is on: hold {key} to speak. It works while this window is in front and you are not typing in a text box. The desktop app also works over games.",
+    "pttFirstUseNoKey": "Push to talk is on, but no key is chosen yet, so nobody can hear you.",
+    "pttFirstUseAction": "Choose a key",
+    "inputVolumeHint": "How loud your microphone is before the filter. Leave it at 100 % unless people say you are too quiet.",
+    "sensitivityHint": "How loud you must be before the microphone opens. Lower it if your voice gets cut off, raise it if background noise gets through.",
+    "pttKeyIdleTest": "Start the microphone test, then hold {key} to try it"
   },
   "stats": {
     "title": "Connection status",
@@ -792,7 +848,27 @@
     "details": "Details",
     "codec": "Audio codec",
     "sendRecv": "Send / receive",
-    "packets": "Packets sent / received",
+    "mic": {
+      "title": "Microphone",
+      "sending": "Sending",
+      "pausedSilent": "Paused (voice gate: silent)",
+      "pausedPtt": "Paused (push-to-talk not pressed)",
+      "pausedTest": "Paused (mic test running)",
+      "muted": "Muted, nothing is sent",
+      "none": "No microphone"
+    },
+    "flow": {
+      "packets": {
+        "one": "{n} packet",
+        "other": "{n} packets"
+      },
+      "mic": "Audio sent",
+      "camera": "Camera sent",
+      "screen": "Screen sent",
+      "screenAudio": "Screen sound sent",
+      "audioIn": "Audio received",
+      "videoIn": "Video data received"
+    },
     "receivedVideo": "Video received",
     "localCandidate": "Local candidate",
     "remoteCandidate": "Server candidate",
@@ -985,6 +1061,10 @@
     "dismiss": "Dismiss {name}’s hand"
   },
   "talk": {
+    "seats": "Seats taken of the user limit",
+    "seatsFull": "This Talk is full",
+    "seatsOver": "More people than the limit (allowed for moderators)",
+    "fullToast": "This Talk is full ({count}/{limit})",
     "react": "React",
     "participants": {
       "one": "{count} participant",
@@ -1065,6 +1145,7 @@
       "auto": "Auto",
       "autoHint": "Adjusts to your connection",
       "autoNow": "Currently {name}",
+      "autoWith": "Auto ({name})",
       "source": "Source",
       "switching": "Switching…"
     },
@@ -1110,7 +1191,12 @@
       "changeSource": "Change screen",
       "estimatedBitrate": "Estimated bitrate: ~{bitrate}",
       "motionPriority": "Motion priority: smoother video under load",
-      "detailPriority": "Detail priority: text and code remain sharp"
+      "detailPriority": "Detail priority: text and code remain sharp",
+      "optimize": "Optimise for",
+      "optimize_motion": "Motion",
+      "optimize_detail": "Clarity",
+      "restartNeeded": "Your browser applied this only partly while streaming. Restart the stream to apply it fully.",
+      "restartStream": "Restart stream"
     },
     "controls": "Talk controls",
     "tapForControls": "Tap the screen to show the controls",
@@ -1128,7 +1214,6 @@
     "lobby": "Create-a-Talk lobby",
     "lobbyHint": "Joining this Talk opens a new Talk for the member, who leads it. Nobody stays in the lobby, and the new Talk follows the lobby’s permissions and limit.",
     "lobbyOpens": "Opens a new Talk when you join",
-    "lobbySaved": "Lobby setting saved.",
     "followsLobby": "This Talk follows its lobby’s permissions. Change them in the lobby.",
     "presetsTitle": "Who can join",
     "presetEveryone": "Everyone",
@@ -1139,12 +1224,19 @@
     "presetLimit": "Limit",
     "presetLimitHint": "At most this many members at once. 0 means no limit.",
     "limitLabel": "Member limit",
+    "rolesRequired": "Choose at least one role, or switch to Everyone.",
+    "limitInvalid": "Enter a whole number from 0 to 999.",
+    "nameRequired": "A Talk needs a name.",
     "presetApply": "Apply",
     "presetApplied": "Talk updated.",
     "inviteFrom": "{name} invites you to a Talk",
     "inviteGeneric": "You’re invited to a Talk",
     "inviteIn": "You’re here",
-    "inviteUnavailable": "Not available to you"
+    "inviteUnavailable": "Not available to you",
+    "inviteEnded": "No longer available",
+    "moveForControls": "Move the mouse to show the controls",
+    "sharingScreen": "Sharing screen",
+    "cameraOn": "Camera on"
   },
   "admin": {
     "signedInAs": "Signed in as {name} (Owner)",
@@ -1160,6 +1252,7 @@
       "bans": "Bans",
       "bots": "Bots",
       "onboarding": "Welcome & rules",
+      "access": "Sign-in & messages",
       "emoji": "Emoji",
       "reports": "Reports",
       "automod": "Automod",
@@ -1367,7 +1460,8 @@
       "level": {
         "ok": "OK",
         "warn": "Attention",
-        "fail": "Fix needed"
+        "fail": "Fix needed",
+        "info": "Not verified"
       },
       "check": {
         "public_url": "Public address",
@@ -1378,7 +1472,9 @@
         "storage": "Object storage",
         "database": "Database",
         "clock": "Server clock",
-        "reverse_proxy": "Reverse proxy"
+        "network": "Internet connection",
+        "reverse_proxy": "Reverse proxy",
+        "websocket": "WebSocket"
       },
       "checkMsg": {
         "clock": {
@@ -1408,14 +1504,28 @@
             "detail": "Outgoing mail is configured ({host})."
           }
         },
+        "network": {
+          "address_mismatch": {
+            "detail": "This host’s own address {local} differs from the address {public} the internet sees, so its traffic leaves through another gateway and announcing {public} may be wrong.",
+            "fix": "If this host is reachable from outside on {local}, set WEBRTC_NAT_1TO1_IP={local}; if a router or gateway sits in front, forward the voice ports there."
+          },
+          "cgnat": {
+            "detail": "This home connection has no public IPv4 address of its own (the address {address} is in the carrier-grade NAT range 100.64.0.0/10), so port forwarding cannot work and members outside your network cannot reach voice.",
+            "fix": "Home connection without own public IPv4 - port forwarding cannot work. Options: ask the internet provider for a public IPv4 address, run Mnema Talk on a VPS, or use an external relay (WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET). See “Can I host at home?” in doc/operations.md."
+          },
+          "no_ipv4": {
+            "detail": "No public IPv4 address was found but IPv6 works: this looks like a connection without its own public IPv4 (DS-Lite), so port forwarding cannot work and members outside your network cannot reach voice over IPv4.",
+            "fix": "Home connection without own public IPv4 - port forwarding cannot work. Options: ask the internet provider for a public IPv4 address, run Mnema Talk on a VPS, or use an external relay (WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET). See “Can I host at home?” in doc/operations.md."
+          }
+        },
         "public_url": {
           "insecure": {
             "detail": "PUBLIC_URL is plain http://, so session cookies lose the Secure flag and the __Host- prefix.",
             "fix": "Put a reverse proxy with TLS in front and set PUBLIC_URL=https://chat.example.com (skip this on a trusted LAN)."
           },
           "local": {
-            "detail": "PUBLIC_URL is {public_url}, which only this machine can open; invite links, e-mails and browser origin checks use it.",
-            "fix": "Set PUBLIC_URL=https://chat.example.com (the address members type into their browser) in .env and run docker compose up -d."
+            "detail": "PUBLIC_URL is {public_url}, which only this machine can open; invite links, e-mails and browser origin checks use it. That is fine for trying Mnema Talk on this computer, but nobody else can join.",
+            "fix": "To invite others, set PUBLIC_URL=https://chat.example.com (the address members type into their browser) in .env and run docker compose up -d."
           },
           "ok": {
             "detail": "PUBLIC_URL is {public_url}."
@@ -1453,8 +1563,8 @@
         },
         "turn": {
           "builtin_failed": {
-            "detail": "The built-in TURN relay could not listen on port {port}: members on networks that block UDP cannot join voice.",
-            "fix": "Free port {port} (UDP and TCP) or pick another with WEBRTC_BUILTIN_TURN_PORT, then run docker compose up -d."
+            "detail": "The built-in TURN relay could not listen on port {port}: another program on this host is probably using it, so members on networks that block UDP cannot join voice.",
+            "fix": "Stop whatever uses port {port} (UDP and TCP) or pick another port with WEBRTC_BUILTIN_TURN_PORT (and forward that one), then run docker compose up -d."
           },
           "builtin_failed_external": {
             "detail": "A TURN relay is configured for members behind strict firewalls; the built-in relay could not start."
@@ -1473,8 +1583,8 @@
             "fix": "Optional: remove WEBRTC_BUILTIN_TURN=off to use the built-in relay (forward port {port}, UDP and TCP), or set WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET for an external one."
           },
           "unreachable": {
-            "detail": "The built-in TURN relay runs, but port {port} did not answer from this server; a router without NAT loopback causes this although the forward works.",
-            "fix": "Forward port {port} (UDP and TCP) to this server and test from a phone on mobile data; set WEBRTC_BUILTIN_TURN_HOST if members must reach it under another name."
+            "detail": "The built-in TURN relay runs, but this server could not verify port {port} from the inside; a router without NAT loopback causes this although the forward works.",
+            "fix": "Open Test my connection from a phone on mobile data to check the relay from outside; if it fails, forward port {port} (UDP and TCP) to this server, or set WEBRTC_BUILTIN_TURN_HOST if members must reach it under another name."
           },
           "voice_unavailable": {
             "detail": "The built-in TURN relay is not running because voice is unavailable: members on networks that block UDP cannot join voice.",
@@ -1512,16 +1622,33 @@
           }
         },
         "voice_udp": {
+          "unconfirmed": {
+            "detail": "Listening – not yet confirmed from outside. Voice listens on UDP {port}, but no member from outside this network has connected since the server started, so the router forward is unproven.",
+            "fix": "Forward UDP {port_min}-{port_max} from the router to this host, then open Test my connection from a phone on mobile data (Wi-Fi off); this turns green once it works."
+          },
+          "confirmed": {
+            "detail": "Confirmed: a member from outside connected ({time}). Voice listens on UDP {port}."
+          },
           "mux_disabled": {
             "detail": "WEBRTC_UDP_MUX_PORT=0 gives every media peer its own port, which caps how many people can be in calls.",
             "fix": "Remove WEBRTC_UDP_MUX_PORT (or set it to {port_min}) so all peers share one UDP port."
           },
-          "ok": {
-            "detail": "Voice listens on UDP {port}. Forward that port from the router to this host; it cannot be tested from inside."
-          },
           "unavailable": {
             "detail": "The voice engine did not start, so Talks have no audio or video.",
-            "fix": "Free UDP ports {port_min}-{port_max} on the host (or change WEBRTC_UDP_PORT_MIN and WEBRTC_UDP_PORT_MAX) and restart; the log names the cause."
+            "fix": "Another program may be using UDP ports {port_min}-{port_max} on the host: stop it or change WEBRTC_UDP_PORT_MIN and WEBRTC_UDP_PORT_MAX, then restart; the log names the cause."
+          }
+        },
+        "websocket": {
+          "ok": {
+            "detail": "WebSocket via proxy OK: a browser opened /api/ws and it upgraded ({time})."
+          },
+          "unchecked": {
+            "detail": "Not checked yet: no browser has opened the live connection (/api/ws) since the server started.",
+            "fix": "Reload this page; if it stays unchecked, enable WebSocket in your reverse proxy."
+          },
+          "failing": {
+            "detail": "Browsers tried to open /api/ws {count} times without a WebSocket upgrade (last {time}); the reverse proxy most likely does not pass WebSocket connections, so the app shows “Connection lost”.",
+            "fix": "Enable WebSocket in your reverse proxy: it must pass the headers Upgrade: websocket and Connection: Upgrade. Nginx Proxy Manager: switch on Websockets Support. nginx: proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection upgrade; proxy_http_version 1.1. Caddy and Traefik do this by default."
           }
         }
       }
@@ -1568,6 +1695,7 @@
     "channelsLayout": "Channels & layout",
     "saveLayout": "Save layout",
     "layoutSaved": "Layout saved successfully",
+    "addChannelTo": "Add channel to {name}",
     "hasUnsavedLayout": "Unsaved changes to channel order.",
     "moveUp": "Move up",
     "moveDown": "Move down",
@@ -1651,7 +1779,7 @@
       "hint": "Shown to new members. Once rules exist, members have to accept them before they can post, react, upload or join a Talk. You are never asked.",
       "name": "Community name",
       "namePlaceholder": "Mnema Talk",
-      "nameHint": "Appears on invite links, before anyone has signed in.",
+      "nameHint": "Appears on invite links, before anyone has signed in. Left empty, the address ({host}) is shown.",
       "welcome": "Welcome text",
       "rules": "Rules",
       "preview": "Preview",
@@ -1696,10 +1824,15 @@
       "signedIn": "Signed in as {name}",
       "openReports": "{count} open"
     },
+    "access": {
+      "saved": "Saved."
+    },
     "maxUsesLabel": "Uses",
     "maxUsesPlaceholder": "Unlimited",
-    "validHoursLabel": "Valid for (hours)",
-    "validHoursPlaceholder": "No expiry",
+    "validDaysLabel": "Valid for (days)",
+    "validDaysPlaceholder": "No expiry",
+    "openForeverWarning": "Anyone with this link can join, at any time. Set a number of uses or an expiry.",
+    "usesUnlimited": "Uses: {used}, no limit",
     "presets": "Validity presets",
     "preset": {
       "day": "1 day",
@@ -1758,8 +1891,6 @@
     "passwordTooShort": "The new password needs at least {count} characters.",
     "passwordMismatch": "The two passwords don’t match.",
     "passwordChanged": "Password changed",
-    "activity": "In a Talk",
-    "inVoice": "In the Talk:",
     "notInVoice": "Not in a Talk right now",
     "membership": "Membership",
     "memberSince": "Member since",
@@ -1790,16 +1921,23 @@
     "passwordLink": "Password and account in settings",
     "clearAfter": "Clear after",
     "expiry": {
+      "keep": "Keep current",
+      "never": "Don’t clear",
+      "min30": "30 minutes",
       "hour": "1 hour",
-      "tonight": "Tonight (23:59)",
-      "tomorrow": "Tomorrow morning (08:00)",
-      "never": "Never",
-      "custom": "Pick date and time…"
+      "hours4": "4 hours",
+      "today": "Today",
+      "week": "This week"
     },
     "expiryPast": "Pick a time in the future.",
     "clearsAt": "Clears {time}",
     "moderationTitle": "Moderation",
-    "rolesTitle": "Roles"
+    "rolesTitle": "Roles",
+    "account": "Account",
+    "inTalk": "In {name}",
+    "inTalkHidden": "In a Talk",
+    "talkCannotJoin": "You can’t join this Talk.",
+    "talkHidden": "This Talk isn’t available to you."
   },
   "nav": {
     "channelNotFound": "That channel doesn’t exist anymore.",
@@ -2023,11 +2161,10 @@
     "title": "Reminders and scheduled",
     "reminders": "Reminders",
     "scheduled": "Scheduled messages",
-    "empty": "Nothing here. Use “Remind me” on a message, or “Send later” next to the send button.",
+    "empty": "Messages you schedule with “Send later”, next to the send button, wait here too.",
     "failed": "Couldn’t load your reminders and scheduled messages. Try again.",
     "due": "Due",
     "unavailable": "A message you can no longer see",
-    "dismiss": "Dismiss",
     "cancel": "Cancel reminder",
     "edit": "Edit",
     "delete": "Delete",
@@ -2069,24 +2206,60 @@
     "reminderFailed": "Couldn’t set the reminder. Try again.",
     "scheduleFailed": "Couldn’t schedule the message. Try again.",
     "reminderDue": "Reminder: a message is waiting for you.",
-    "reminderDueWith": "Reminder: {text}",
-    "scheduledFailed": "A scheduled message wasn’t sent"
+    "scheduledFailed": "A scheduled message wasn’t sent",
+    "emptyTitle": "No reminders",
+    "emptyBody": "Choose “Remind me” on a message to come back to it at a time you pick. You get a notification then.",
+    "done": "Done",
+    "snooze": "Snooze",
+    "snoozed": "Snoozed. We’ll remind you on {time}.",
+    "snoozeFailed": "Couldn’t snooze the reminder. Try again.",
+    "openMessage": "Open",
+    "snoozeNotCleared": "Snoozed to {time}, but the old reminder couldn’t be removed and may show up once more.",
+    "reminderDueChannel": "Reminder: {author} in #{channel}: {text}",
+    "reminderDueDm": "Reminder: {author} wrote to you: {text}",
+    "reminderTitle": "Reminder"
   },
   "saved": {
     "title": "Saved messages",
     "empty": "Nothing saved yet. Save a message from its menu to keep it here, just for you.",
     "failed": "Couldn’t load your saved messages. Try again.",
-    "unavailable": "This message is no longer available.",
+    "unavailable": "This message isn’t available any more.",
     "save": "Save message",
     "removeFromSaved": "Remove from saved",
     "remove": "Remove",
-    "added": "Message saved.",
+    "added": "Saved – find it under Saved & reminders",
     "removed": "Removed from your saved messages.",
     "saveFailed": "Couldn’t save the message. Try again.",
     "removeFailed": "Couldn’t remove the message. Try again.",
     "editNote": "Edit note",
     "saveNote": "Save note",
-    "notePlaceholder": "Note (only you see it)"
+    "notePlaceholder": "Private note (only you see it)",
+    "view": "View",
+    "unavailableHint": "It was deleted, or you can’t see its channel now. Your note is kept until you remove it.",
+    "addNote": "Add a private note",
+    "noteLabel": "Private note",
+    "noteHint": "Only you see this note.",
+    "openMessage": "Open the message",
+    "savedAt": "Saved {time}",
+    "markLabel": "Saved – click to remove from your saved messages",
+    "markShort": "Saved",
+    "search": "Search saved messages",
+    "searchLoaded": "The search covers the messages loaded so far.",
+    "noMatches": "No saved message matches “{query}”.",
+    "sortLabel": "Order of saved messages",
+    "sortRecent": "Recent",
+    "sortChannel": "By channel",
+    "groupGone": "No longer available",
+    "groupOther": "Other",
+    "emptyTitle": "Nothing saved yet",
+    "emptyBody": "Save a message to keep it for yourself. Saved messages are private bookmarks: nobody else sees them, and the author isn’t told.",
+    "emptyExample": "For example the address someone posted, a link to read on Friday, or an answer you want to find again.",
+    "emptyHow": "Open a message’s ⋯ menu and choose “Save message”, or press S on a selected message.",
+    "hintTitle": "Saved. It lives here.",
+    "hintBody": "Your saved messages are under this bookmark, together with your reminders. Only you can see them.",
+    "hintDismiss": "Got it",
+    "searchPlaceholder": "Search saved",
+    "undo": "Undo"
   },
   "mentions": {
     "inbox": "Mentions",
@@ -2589,11 +2762,6 @@
       "empty": "This role sees no channels you can see.",
       "exit": "Exit preview"
     },
-    "unsavedTitle": "Discard unsaved changes?",
-    "unsavedBody": "This role has changes you have not saved. Switching to another role drops them.",
-    "discard": "Discard",
-    "keepEditing": "Keep editing",
-    "unsaved": "Unsaved changes",
     "searchPermissions": "Search permissions",
     "noPermissionMatch": "No permission matches."
   },
@@ -2649,7 +2817,6 @@
     "loadFailed": "Couldn’t load the webhooks. Try again.",
     "emptyIncoming": "No incoming webhooks in this channel yet.",
     "emptyOutgoing": "No outgoing webhooks yet.",
-    "rename": "Rename {name}",
     "avatar": "Set picture",
     "avatarFor": "Picture of {name}",
     "regenerate": "Make a new URL",
@@ -2664,8 +2831,10 @@
     "url": "Target URL",
     "eventsLabel": "Events",
     "edit": "Edit {name}",
-    "switchOff": "Switch off {name}",
-    "switchOn": "Switch on {name}",
+    "saved": "Webhook saved.",
+    "urlRequired": "Enter the URL that should receive the events.",
+    "eventsRequired": "Choose at least one event.",
+    "enabledLabel": "Send events to this URL",
     "test": "Send a test event to {name}",
     "deliveries": "Recent deliveries of {name}",
     "rotateFor": "New secret for {name}",
@@ -2703,12 +2872,60 @@
       "allow_identity_override": "Allow posts to set their own username"
     }
   },
+  "firstRun": {
+    "label": "Get started",
+    "title": "Get started with {name}",
+    "progress": "{done} of {total} done",
+    "allSet": "Your community is ready",
+    "allSetHint": "Everything you needed is done. You can reopen this list from the server menu.",
+    "finish": "Done",
+    "hide": "Hide the checklist. The server menu brings it back.",
+    "reopen": "Get started checklist",
+    "done": "Done",
+    "todo": "Still to do",
+    "optional": "optional",
+    "inviteCopied": "Invite link copied. It works for 7 days and {count} people.",
+    "inviteCreated": "Invite created. Copy the link to share it.",
+    "step": {
+      "name": {
+        "label": "Name your community",
+        "hint": "It shows in the header, on the sign-in page and on invite links. Until you name it, it is called by its address.",
+        "action": "Name it"
+      },
+      "invite": {
+        "label": "Invite people",
+        "hint": "Creates an invite link for 7 days and copies it.",
+        "action": "Create invite"
+      },
+      "channels": {
+        "label": "Review your channels",
+        "hint": "Rename, reorder or add the channels and categories that came with the community.",
+        "action": "Review"
+      },
+      "voice": {
+        "label": "Set up voice",
+        "hint": "Choose a Talk as the lobby for quick Talks and calls.",
+        "action": "Set up"
+      },
+      "status": {
+        "label": "Check your connection",
+        "hint": "The status page tests whether voice reaches your members from outside.",
+        "action": "Check"
+      },
+      "roles_rules": {
+        "label": "Roles and rules",
+        "hint": "Write rules new members accept, and give people roles.",
+        "action": "Open"
+      }
+    }
+  },
   "events": {
     "events": "Events",
     "upcoming": "Upcoming",
     "past": "Past",
     "noUpcoming": "No upcoming events scheduled.",
     "noPast": "No past events.",
+    "whatAreEvents": "Events are dated gatherings in a Talk or channel, with a start time and sign-ups. Members with the “Manage events” permission can create one.",
     "loadMorePast": "Show older events",
     "create": "Create event",
     "createTitle": "Create community event",
@@ -2753,7 +2970,11 @@
       "one": "{count} interested",
       "other": "{count} interested"
     },
-    "reminderToast": "Reminder: “{title}” is starting in 15 minutes!",
+    "reminderToast": {
+      "one": "Reminder: “{title}” is starting in {count} minute!",
+      "other": "Reminder: “{title}” is starting in {count} minutes!"
+    },
+    "reminderOpen": "Show event",
     "save": "Save changes",
     "details": "Details",
     "participants": "Responses",
@@ -2884,6 +3105,7 @@
     "deleteTitle": "Delete bot {name}?",
     "deleteBody": "All its tokens stop working at once and its commands disappear. Messages it posted stay.",
     "deleted": "Bot deleted.",
+    "saved": "Bot saved.",
     "intents": {
       "title": "Allowed intents",
       "hint": "What the bot is allowed to ask for when it connects to the gateway. Without an intent it receives no such events.",
@@ -2911,8 +3133,6 @@
       "empty": "There are no roles yet. Create one in the Roles tab.",
       "power": "Gives the bot administrator power. Only the Owner may assign this role.",
       "powerSelected": "A selected role gives the bot administrator power. Only hand this to a program you fully trust.",
-      "save": "Save roles",
-      "saved": "Roles saved.",
       "managedOwn": "Managed: this is the bot’s own role and it cannot be taken away."
     },
     "access": {
@@ -3191,9 +3411,8 @@
       "failed": "Couldn’t save the setting. Try again.",
       "loadFailed": "Couldn’t load the setting. Try again."
     },
-    "startTalk": "Start a Talk",
+    "startTalk": "Call (starts a Talk)",
     "startTalkFailed": "Couldn’t start a Talk.",
-    "noTalkLobby": "This community has no Talk lobby you can use yet. An admin can turn a Talk into one in its settings.",
     "talkInvited": "Invitation sent.",
     "inviteToTalk": "Invite to my Talk",
     "inviteTalkFailed": "Couldn’t send the invitation.",
@@ -3226,7 +3445,9 @@
       "title": "Direct messages",
       "muteAll": "Mute all direct messages",
       "muteAllHint": "No sound, no notification and no highlight for any conversation. Unread messages are still counted. A conversation you mute or unmute yourself keeps its own setting."
-    }
+    },
+    "previewCall": "Talk invitation",
+    "previewMissedCall": "Missed call"
   },
   "blocks": {
     "title": "Blocked members",
@@ -3312,7 +3533,7 @@
     "deleteTitle": "Delete the rule “{name}”?",
     "deleteBody": "It stops working at once. The entries it already made in Reports stay.",
     "delete": "Delete rule",
-    "toggle": "Rule “{name}” is on",
+    "off": "Off",
     "edit": "Edit “{name}”",
     "deleteRule": "Delete “{name}”",
     "raidOn": "A raid is being held back until {time}. Newcomers are restricted.",
@@ -3589,6 +3810,19 @@
       "sameNameUsed": "Connected to {name} because the names match."
     }
   },
+  "draft": {
+    "unsaved": "You have unsaved changes",
+    "reset": "Reset",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "saveFailed": "Could not save your changes.",
+    "partialFailed": "Some changes were saved, the rest was not: {message}",
+    "discardTitle": "Discard changes?",
+    "discardBody": "You have changes that are not saved. Closing now drops them.",
+    "discard": "Discard",
+    "keepEditing": "Keep editing",
+    "shortcut": "Save with {keys}"
+  },
   "settings": {
     "title": "Settings",
     "subtitle": "Your account and this device. Only you see this.",
@@ -3601,11 +3835,13 @@
       "signin": "Sign-in",
       "sessions": "Sessions",
       "privacy": "Privacy",
-      "data": "Data & account",
-      "app": "Push & app",
-      "audio": "Audio"
+      "data": "Export & delete",
+      "app": "Notifications & install",
+      "audio": "Sound & microphone"
     },
-    "privacyEmpty": "There is nothing to set here on this server."
+    "privacyEmpty": "There is nothing to set here on this server.",
+    "notifyLink": "Choose what notifies you",
+    "notifyLinkHint": "Which messages notify you is set for the whole server and per channel (the bell in its header). Push below only delivers them to this device."
   },
   "ctxMenu": {
     "systemDefault": "System default",
@@ -3614,5 +3850,159 @@
     "cameraFallback": "Camera {id}…",
     "cameraDevice": "Camera",
     "noShareSound": "This share has no sound to mute."
+  },
+  "call": {
+    "isCalling": "is calling you",
+    "incomingLabel": "Incoming call from {name}",
+    "directMessage": "Direct message",
+    "inGroup": "Group direct message · {name}",
+    "dismiss": "Dismiss",
+    "openChat": "Open the conversation",
+    "calling": "Calling {name}…",
+    "callingHint": "They see it wherever they are in Mnema.",
+    "hasNotJoined": "{name} hasn’t joined",
+    "nobodyJoined": "Nobody has joined yet",
+    "waitingHint": "You’re still in the Talk. They can join from the conversation.",
+    "hangUp": "Hang up",
+    "gone": "This call has ended.",
+    "notifyTitle": "{name} is calling you",
+    "notifyBody": "Direct message · Click to join",
+    "missedTitle": "Missed call from {name}",
+    "missedBody": "Direct message",
+    "missedFrom": "Missed call from {name}",
+    "missedMine": "Nobody answered your call",
+    "callBack": "Call back",
+    "stateRinging": "Incoming call",
+    "stateCalling": "Calling…",
+    "stateActive": "In a call",
+    "joinRunning": "Join this Talk"
+  },
+  "panel": {
+    "title": "Saved & reminders",
+    "tooltip": "Saved & reminders – your private bookmarks and messages to come back to",
+    "tooltipSaved": "Saved messages – your private bookmarks",
+    "tooltipLater": "Reminders (Later) – messages you want to come back to at a set time",
+    "tabSaved": "Saved",
+    "tabLater": "Later",
+    "descSaved": "Your private bookmarks. Nobody else sees them.",
+    "descLater": "Messages you want to come back to at a set time, and messages scheduled to send."
+  },
+  "connectionTest": {
+    "title": "Test my connection",
+    "intro": "Checks from this device whether voice can reach the server: directly over UDP and through the built-in relay. It needs no microphone and does not join a Talk.",
+    "run": "Run the test",
+    "running": "Testing…",
+    "again": "Run it again",
+    "step": {
+      "candidates": "Looking for addresses…",
+      "direct": "Trying the direct route…",
+      "relayUdp": "Trying the relay over UDP…",
+      "relayTcp": "Trying the relay over TCP…"
+    },
+    "addresses": "Addresses found: {host} local, {srflx} public, {relay} relay",
+    "path": {
+      "direct": "Direct (UDP to the voice port)",
+      "relayUdp": "Relay over UDP",
+      "relayTcp": "Relay over TCP"
+    },
+    "outcome": {
+      "ok": "Works",
+      "fail": "Does not work",
+      "unavailable": "Not offered"
+    },
+    "verdict": {
+      "direct": "Direct connection works",
+      "relay_only": "Only the relay works (direct UDP blocked or not forwarded)",
+      "none": "Nothing works",
+      "inconclusive": "Test not finished"
+    },
+    "cause": {
+      "ok": {
+        "text": "This device reached the voice port directly over UDP."
+      },
+      "same_network": {
+        "text": "This device seems to be on the same network as the server, so this says little about the way in from outside.",
+        "fix": "Run the test again from a phone on mobile data (Wi-Fi off)."
+      },
+      "udp_not_forwarded": {
+        "text": "The relay answers, but direct UDP to the voice port does not arrive. Most likely the router does not forward the voice ports, a firewall blocks them, or the announced address is wrong.",
+        "fix": "Forward the voice UDP ports (50000-50050 by default) from the router to the server, open them in the host firewall, and check WEBRTC_NAT_1TO1_IP."
+      },
+      "udp_blocked": {
+        "text": "Only the relay over TCP works: this network blocks UDP. That is common in company networks and with some VPNs.",
+        "fix": "Calls work through the relay. For better quality try another network or switch off the VPN."
+      },
+      "voice_off": {
+        "text": "The voice engine of the server is not running.",
+        "fix": "An administrator should open Admin > Status and fix the Voice port item; the server log names the cause."
+      },
+      "no_relay_offered": {
+        "text": "Direct UDP does not work and the server offers no TURN relay as a fallback.",
+        "fix": "Turn the built-in relay on (remove WEBRTC_BUILTIN_TURN=off), forward its port 3479 (UDP and TCP) and forward the voice UDP ports."
+      },
+      "only_local_addresses": {
+        "text": "This device found only local addresses: neither the STUN nor the relay servers answered. A firewall, a VPN or a browser privacy setting blocks UDP and the relay ports.",
+        "fix": "Try another network or switch off the VPN or WebRTC protection. On the server, forward port 3479 (UDP and TCP)."
+      },
+      "relay_unreachable": {
+        "text": "The relay did not answer on any route, and direct UDP does not work either.",
+        "fix": "Forward the relay port (3479 by default) for UDP and TCP to the server and check that Admin > Status shows the TURN relay as running."
+      },
+      "limited": {
+        "text": "Too many tests in a row.",
+        "fix": "Wait a few minutes and run the test again."
+      }
+    },
+    "docs": "Troubleshooting voice",
+    "failed": "The test could not run."
+  },
+  "statusEditor": {
+    "subtitle": "Shown next to your name for everyone to see.",
+    "hint": "Say what you are up to. Up to 32 characters.",
+    "clear": "Clear status"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "subtitle": "Everything you can do without the mouse. Open this list with ? or Ctrl/Cmd + /.",
+    "or": "or",
+    "notSet": "not set",
+    "group": {
+      "general": "Everywhere",
+      "messages": "On a message",
+      "composer": "Writing",
+      "talk": "In a Talk",
+      "sidebar": "Channel list"
+    },
+    "groupHint": {
+      "messages": "Tab to a message first. The letters work on the selected message, not while you type.",
+      "sidebar": "For administrators, on a selected channel or category."
+    },
+    "general": {
+      "search": "Search messages, or jump to a channel or conversation",
+      "shortcuts": "Show this list",
+      "escape": "Close the open menu or dialog; in a channel, mark it as read"
+    },
+    "messages": {
+      "move": "Previous or next message",
+      "reply": "Reply in channel",
+      "edit": "Edit your own message",
+      "save": "Save or unsave the message",
+      "menu": "Open the message menu"
+    },
+    "composer": {
+      "send": "Send the message",
+      "newline": "New line",
+      "mention": "Mention someone or a role",
+      "command": "Start a command",
+      "emoji": "Find an emoji by name",
+      "cancelReply": "Cancel the reply you are writing"
+    },
+    "talk": {
+      "fullscreen": "Full screen for the stage",
+      "ptt": "Push to talk (your own key, while this window is in front)"
+    },
+    "sidebar": {
+      "reorder": "Move it up or down"
+    }
   }
 }

@@ -28,7 +28,7 @@ vi.mock('./pwa', () => ({
 }))
 
 import {
-  currentSubscription, deviceLabel, enablePush, endpointFingerprint, listenForOpenRequests, loadConfig, parseOpenRequest,
+  currentSubscription, deviceLabel, enablePush, endpointFingerprint, listenForOpenRequests, loadConfig, parseOpenEvent, parseOpenRequest,
   pushAvailability, pushOnThisDevice, refreshPushState, releaseThisDevice, removeDevice, sendTestPush, setPreview, thisDevice,
 } from './webPush'
 
@@ -277,6 +277,22 @@ describe('a click on a notification reaches the page', () => {
     expect(open).toHaveBeenCalledTimes(1)
     stop()
     expect(navigator.serviceWorker.removeEventListener).toHaveBeenCalledWith('message', handler)
+  })
+
+  it('reads a clicked event reminder, and passes it on separately from messages', () => {
+    const event = '44444444-4444-4444-8444-444444444444'
+    expect(parseOpenEvent({ type: 'mnema:open-event', event_id: event })).toBe(event)
+    for (const bad of [null, 'x', {}, { type: 'mnema:open-event', event_id: '../x' }, { type: 'mnema:open-message', event_id: event }]) {
+      expect(parseOpenEvent(bad)).toBeNull()
+    }
+    const open = vi.fn()
+    const openEvent = vi.fn()
+    listenForOpenRequests(open, openEvent)
+    const add = vi.mocked(navigator.serviceWorker.addEventListener)
+    const handler = add.mock.calls.at(-1)![1] as (e: MessageEvent) => void
+    handler(new MessageEvent('message', { data: { type: 'mnema:open-event', event_id: event } }))
+    expect(openEvent).toHaveBeenCalledWith(event)
+    expect(open).not.toHaveBeenCalled()
   })
 
   it('is a no-op in a browser without service workers', () => {

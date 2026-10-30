@@ -3,15 +3,20 @@ import type { MaybeRefOrGetter } from 'vue'
 import { toValue } from 'vue'
 import { useAutoHide } from './useAutoHide'
 import { useCompactLayout } from './useCompactLayout'
+import { readItem, writeItem } from '../lib/voicePlayback'
+
+const HINT_KEY = 'mnema_talk_controls_hint'
+/** How many times the "move the mouse" hint is shown before the member knows. */
+export const MOVE_HINT_SESSIONS = 3
 
 /**
  * The Talk's floating controls (call bar, stage overlays) fade out after 3 s
  * without activity in the Talk view; never in a preview, never while a menu
  * from them is open or the pointer or keyboard focus is on them.
  *
- * On a phone only a tap brings hidden controls back, so alone in the call (when
- * there is nothing to look at but the bar) they stay, and while hidden a hint
- * says how to get them back.
+ * Alone in the call there is nothing to look at but the bar, so it stays. With
+ * others, a hint says how to get hidden controls back: a tap on a phone, and on
+ * a desktop a few times (until it is known) that moving the mouse does.
  */
 export function useTalkControls({ connected, others, menuOpen }: {
   connected: MaybeRefOrGetter<boolean>
@@ -24,13 +29,25 @@ export function useTalkControls({ connected, others, menuOpen }: {
   const overlayHover = ref(false)
   const qualityMenuOpen = ref(false)
   const { isCompact } = useCompactLayout()
-  const aloneOnPhone = computed(() => isCompact.value && toValue(others) <= 1)
+  const alone = computed(() => toValue(others) <= 1)
   const controls = useAutoHide({
-    enabled: () => toValue(connected) && !aloneOnPhone.value,
+    enabled: () => toValue(connected) && !alone.value,
     pinned: () => barPinned.value || overlayHover.value || qualityMenuOpen.value || toValue(menuOpen)
   })
   const controlsShown = computed(() => controls.visible.value)
-  const showTapHint = computed(() => isCompact.value && toValue(connected) && !controlsShown.value)
+  const hiding = computed(() => toValue(connected) && !controlsShown.value)
+  const showTapHint = computed(() => isCompact.value && hiding.value)
+  // Counted once per page load, when the hint first appears.
+  const hintSessions = Number.parseInt(readItem(HINT_KEY) ?? '0', 10) || 0
+  let counted = false
+  const showMoveHint = computed(() => {
+    if (isCompact.value || !hiding.value || hintSessions >= MOVE_HINT_SESSIONS) return false
+    if (!counted) {
+      counted = true
+      writeItem(HINT_KEY, String(hintSessions + 1))
+    }
+    return true
+  })
 
   // A tap on a tile while the controls are hidden only brings them back: it
   // must not also open the profile under them. Pointerdown (capture) notes
@@ -47,5 +64,5 @@ export function useTalkControls({ connected, others, menuOpen }: {
       e.stopPropagation()
     }
   }
-  return { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, onActivity: () => controls.show(), onTapStart, onTapCapture }
+  return { barPinned, overlayHover, qualityMenuOpen, controlsShown, showTapHint, showMoveHint, onActivity: () => controls.show(), onTapStart, onTapCapture }
 }

@@ -4,6 +4,7 @@
 import { computed } from 'vue'
 import { emojiImage, parseEmojiToken } from '../lib/customEmoji'
 import { prefersReducedMotion, useEmojiStore } from '../stores/emoji'
+import MediaImage from './MediaImage.vue'
 
 const props = defineProps({
   value: { type: String, required: true }
@@ -17,7 +18,7 @@ const image = computed(() => {
 </script>
 
 <template>
-  <img
+  <MediaImage
     v-if="image"
     :src="image.src"
     :alt="image.alt"
@@ -27,6 +28,12 @@ const image = computed(() => {
     loading="lazy"
     decoding="async"
   >
+    <!-- The emoji's picture is gone from storage: its name, as for a deleted emoji. -->
+    <template #fallback="{ state, retry }">
+      <span v-if="state === 'gone'" :title="$t('media.imageDeleted')">:{{ token?.name }}:</span>
+      <button v-else type="button" class="cursor-pointer" :title="$t('media.retry')" @click.stop.prevent="retry">:{{ token?.name }}:</button>
+    </template>
+  </MediaImage>
   <span v-else-if="token">:{{ token.name }}:</span>
   <span v-else>{{ value }}</span>
 </template>
