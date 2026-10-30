@@ -24,7 +24,8 @@ export async function toggleSavedMessage(msg: Pick<Message, 'id'>): Promise<void
   const was = saved.isSaved(msg.id)
   try {
     if (was) {
-      const note = saved.items.find(e => e.message_id === msg.id)?.note ?? ''
+      // The list may not be loaded: saving an already saved message changes nothing and answers with its note.
+      const note = saved.items.find(e => e.message_id === msg.id)?.note ?? (await saved.save(msg.id)).note
       await saved.remove(msg.id)
       // The private note goes with the save: Undo puts both back.
       toasts.success(t('saved.removed'), {

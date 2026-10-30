@@ -53,6 +53,18 @@ describe('saving a message', () => {
     expect(useSavedStore().isSaved(msg.id)).toBe(true)
   })
 
+  it('keeps the note for Undo even when the saved list was never loaded', async () => {
+    apiMock.mockImplementation(async (path, options) => {
+      if (path.startsWith('/api/me/saved?')) return { items: [], has_more: false }
+      return options?.method === 'DELETE' ? null : { ...saved, note: 'for Friday' }
+    })
+    useSavedStore().onUpdated({ message_id: msg.id, saved: true })
+    await vi.waitFor(() => expect(useSavedStore().isSaved(msg.id)).toBe(true))
+    await toggleSavedMessage(msg)
+    await useToastStore().toasts.at(-1)?.action?.onClick()
+    expect(apiMock).toHaveBeenLastCalledWith(`/api/me/saved/${msg.id}`, expect.objectContaining({ method: 'PUT', json: { note: 'for Friday' } }))
+  })
+
   it('tells the member when saving fails and shows no hint', async () => {
     apiMock.mockRejectedValue(null)
     await toggleSavedMessage(msg)
