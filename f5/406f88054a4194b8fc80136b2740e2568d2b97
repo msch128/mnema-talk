@@ -1,0 +1,25 @@
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_339d852f45f757 93,394,397,400,410,412-416,418-423,425,428-429,431,440-441
+internal/ws/voice_takeover_test.go
+  s_06fcde5dbef956::t_e0fd0297b4ae2f 260-282
+web/src/composables/useWebRTC.takeover.test.ts
+  s_06fcde5dbef956::t_b486b2651d7892 9,155-164
+web/src/composables/webrtc/session.ts
+  s_06fcde5dbef956::t_2cd4a698360fca 110-115,153,184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f5406f88054a4194b8fc80136b2740e2568d2b97",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

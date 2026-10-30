@@ -1,0 +1,694 @@
+api/openapi.json
+  s_cf5b2fa6f87060::t_c135f49f5664b6 7312-7315,7360
+doc/operations.md
+  s_cf5b2fa6f87060::t_34284bfef9e78f 465-472,513-515
+  s_cf5b2fa6f87060::t_c390f58335fedb 154,698-705
+  s_57fa886a85f9f6::t_04ab6d3daab9f0 98-99,525-557,809,818,824-841,1104-1111,1153-1172
+doc/upgrade.md
+  s_cf5b2fa6f87060::t_027c690f94a065 135-142
+  s_cf5b2fa6f87060::t_575f096a8a73d2 73
+internal/server/public.go
+  s_cf5b2fa6f87060::t_dcd49cb034817b 24,45-51,96
+internal/server/public_turn_test.go
+  s_cf5b2fa6f87060::t_f788db2373bf60 11,174-206
+web/src/components/LegalModal.test.ts
+  s_cf5b2fa6f87060::t_e9b0c19a8f43b6 7,18,36,48-68
+web/src/components/LegalModal.vue
+  s_cf5b2fa6f87060::t_c080cfc92defa4 26-27,50-51,167-173
+web/src/i18n/de.json
+  s_cf5b2fa6f87060::t_300c0509b68148 899-903
+  s_cf5b2fa6f87060::t_2c012ccf9f6ccd 2235,2245-2259
+  s_cf5b2fa6f87060::t_901c755d27e919 3670-3677
+  s_57fa886a85f9f6::t_6eb9230a48cecf 1019-1022
+  s_57fa886a85f9f6::t_2a347036969822 1419,1450-1463,1470-1471,1509-1510,1577
+  s_57fa886a85f9f6::t_a027308e9b62f2 483
+  s_57fa886a85f9f6::t_6ab0385ecd5e1d 1103
+  s_57fa886a85f9f6::t_fd8f1f637019b4 768-772
+  s_06fcde5dbef956::t_5247e2e03d7548 1177-1179,2714-2717,2936,3363,3640-3652
+  s_06fcde5dbef956::t_26698d7ba4b4e3 682-686
+web/src/i18n/en.json
+  s_cf5b2fa6f87060::t_8b44870911a707 901-905
+  s_cf5b2fa6f87060::t_31e740383e0eb0 2235,2245-2259
+  s_cf5b2fa6f87060::t_aed9e6eacc5405 3670-3677
+  s_57fa886a85f9f6::t_fef37113779176 1019-1022
+  s_57fa886a85f9f6::t_a0ccf435cb29fe 1419,1450-1463,1470-1471,1509-1510,1577
+  s_57fa886a85f9f6::t_3acc9c4a432b91 483
+  s_57fa886a85f9f6::t_bd981c8c965f53 1103
+  s_57fa886a85f9f6::t_716bab0fcaf7b2 768-772
+  s_06fcde5dbef956::t_37fbcf0458da45 1177-1179,2714-2717,2936,3363,3640-3652
+  s_06fcde5dbef956::t_8dedf95aa3b59d 682-686
+web/src/types/rest.ts
+  s_cf5b2fa6f87060::t_c1615cadbd3428 4311,4328
+.github/workflows/ci.yml
+  s_cf5b2fa6f87060::t_61a22931150b0c 547-554
+  s_57fa886a85f9f6::t_dc08744bb063b0 596-601
+doc/ports.md
+  s_cf5b2fa6f87060::t_5a66eb71963464 94
+doc/quick-start.md
+  s_cf5b2fa6f87060::t_782677858d1784 125-126,131-135
+internal/imageverify/flow_test.go
+  s_cf5b2fa6f87060::t_4dad9904872106 208-230
+internal/imageverify/policy.go
+  s_cf5b2fa6f87060::t_21bfb30f4a57d6 28,30-31,39-44,52-56,69,75-81,95-146
+internal/imageverify/verifier.go
+  s_cf5b2fa6f87060::t_128c58c4eb7f6d 114-116,123-124
+internal/imageverify/verifier_test.go
+  s_cf5b2fa6f87060::t_497cfa00201ce7 224-302
+internal/updaterd/errors_test.go
+  s_cf5b2fa6f87060::t_d419807c0c3e17 214-244
+internal/updaterd/run.go
+  s_cf5b2fa6f87060::t_f576237b249ae3 70-76,86-87,154
+internal/updaterd/server.go
+  s_cf5b2fa6f87060::t_082abfb4d4ed67 183-184,188
+internal/updaterd/updaterd_test.go
+  s_cf5b2fa6f87060::t_afc5c38a9a5728 148-158
+web/src/components/DesktopGamingOverlay.test.ts
+  s_cf5b2fa6f87060::t_f7196f9ff73c33 3,19-23,28,36-37,61-62,83,91,116-159
+web/src/components/DesktopGamingOverlay.vue
+  s_cf5b2fa6f87060::t_21a8b425cffb4a 6-7,15,53,73,88-129,136-140
+web/src/components/GamingGameList.vue
+  s_cf5b2fa6f87060::t_9bf2a3c23aadfb 1-64
+web/src/lib/gameList.ts
+  s_cf5b2fa6f87060::t_31715c2e4d5c4d 1-26
+e2e/tests/talk-reactions.spec.ts
+  s_cf5b2fa6f87060::t_62bcac8a097102 1-127
+internal/chat/emoji_reaction_integration_test.go
+  s_cf5b2fa6f87060::t_5e9dce816f6a26 1-46
+internal/chat/emoji_reaction_test.go
+  s_cf5b2fa6f87060::t_31a2943c48634d 1-70
+internal/chat/message_types.go
+  s_cf5b2fa6f87060::t_db5737069b1253 16-19,199
+internal/ws/reactions_integration_test.go
+  s_cf5b2fa6f87060::t_aa0d81be0eac59 1-42
+internal/ws/reactions_test.go
+  s_cf5b2fa6f87060::t_319e2427616ca8 131-148
+web/src/components/EmojiPicker.test.ts
+  s_cf5b2fa6f87060::t_c2a85fb2fe040a 143-178
+web/src/components/EmojiPicker.vue
+  s_cf5b2fa6f87060::t_c8dd29cdee2a27 9,11,52-54,80-81,90,92-96,99,108-110,124,129-140
+web/src/components/TalkReactButton.test.ts
+  s_cf5b2fa6f87060::t_4d40802daf9672 5-7,10-12,45-80
+web/src/composables/useDismissable.test.ts
+  s_cf5b2fa6f87060::t_d9bda6e077261c 5,23-43
+web/src/composables/useDismissable.ts
+  s_cf5b2fa6f87060::t_5b03d1976d0fac 23-36,56-61
+web/src/composables/useStage.ts
+  s_cf5b2fa6f87060::t_3de514aa389e98 7,13,23,57
+web/src/lib/emojiPickerExtras.test.ts
+  s_cf5b2fa6f87060::t_cdb6995dd4f299 1-156
+web/src/lib/emojiPickerExtras.ts
+  s_cf5b2fa6f87060::t_c9ee206ad8efa3 1-111
+web/src/lib/reactionEmoji.test.ts
+  s_cf5b2fa6f87060::t_88faf3a730da93 1-29
+web/src/lib/reactionEmoji.ts
+  s_cf5b2fa6f87060::t_c3b93f5fb58504 1-32
+web/src/stores/chat/messageActions.ts
+  s_cf5b2fa6f87060::t_ba0d72ee527d7c 5,127-129
+  s_57fa886a85f9f6::t_f2418bf941bf2a 1,34-48,64,85
+e2e/tests/context-menus.spec.ts
+  s_cf5b2fa6f87060::t_db759168caa6c2 1-79
+web/src/components/ContextMenu.test.ts
+  s_cf5b2fa6f87060::t_1d2e85681df9ee 226-228
+web/src/components/ContextMenu.vue
+  s_cf5b2fa6f87060::t_1117506b4b0d18 8,17-18,29-30,45,101,107-112,281-286,291,299,302-308,313,371
+web/src/components/ContextMenuBehaviour.test.ts
+  s_cf5b2fa6f87060::t_56179fdbe0cf5d 1-131
+web/src/components/ContextMenuRow.vue
+  s_cf5b2fa6f87060::t_6c256cb6282b06 57-80,104-105
+web/src/components/TalkControlBar.vue
+  s_cf5b2fa6f87060::t_e1f3fa282d330d 18-19,46-47,116,168,181,196,209,293-297
+web/src/components/TriggerMenu.test.ts
+  s_cf5b2fa6f87060::t_61a6bc5e7038a0 1-50
+web/src/components/TriggerMenu.vue
+  s_cf5b2fa6f87060::t_fc9e1039f3a74b 1-25
+web/src/components/UserBar.vue
+  s_cf5b2fa6f87060::t_d8299ccb789d5b 14-15,22-23,107,119,125-126
+web/src/components/VoiceStatusPanel.vue
+  s_cf5b2fa6f87060::t_a7160a407e1751 10-11,16-17,70,76
+web/src/components/menuTypes.ts
+  s_cf5b2fa6f87060::t_365c1fea0d1369 12-13,36
+web/src/composables/useContextMenuTrigger.test.ts
+  s_cf5b2fa6f87060::t_f4aa0afd398718 1-115
+web/src/composables/useContextMenuTrigger.ts
+  s_cf5b2fa6f87060::t_2ff47649fb1f4f 1-98
+web/src/composables/useStreamQuality.ts
+  s_cf5b2fa6f87060::t_5232771faa68bb 169,202
+web/src/composables/useVoiceMenus.test.ts
+  s_cf5b2fa6f87060::t_a1382d7528b582 1-233
+web/src/composables/useVoiceMenus.ts
+  s_cf5b2fa6f87060::t_935cd57ba57a29 1-180
+web/src/composables/useWebRTC.devices.test.ts
+  s_cf5b2fa6f87060::t_b81ec5255d69c6 102-122
+web/src/composables/useWebRTC.ts
+  s_cf5b2fa6f87060::t_d67c4436d62ff2 14,76
+web/src/composables/webrtc/camera.ts
+  s_cf5b2fa6f87060::t_1299604d6856fe 53-54,94-100
+web/src/lib/menuKeys.ts
+  s_cf5b2fa6f87060::t_531fdd2d692750 1-29
+web/src/stores/voiceSettings.ts
+  s_cf5b2fa6f87060::t_be6fef26de0935 90,93,121
+  s_57fa886a85f9f6::t_ad49e6893d6f89 5,74,77,113
+doc/talks.md
+  s_57fa886a85f9f6::t_85310f97de85b6 88-91
+  s_57fa886a85f9f6::t_a5b21f2019d850 19-23
+  s_2d22d157720d46::t_74534d8922d71b 149-159
+e2e/tests/talk-user-limit.spec.ts
+  s_57fa886a85f9f6::t_75ae8ca74717c7 1-62
+internal/ws/voice_join.go
+  s_57fa886a85f9f6::t_0cc37c85309c2b 218,224,246-256
+  s_06fcde5dbef956::t_44b2af40b22d3b 18-20,22-61,65,68,72-76,83,89-93,97-128,141,150,301-305,310,312,319,333-334
+internal/ws/voice_limit_test.go
+  s_57fa886a85f9f6::t_dc81ac29243445 1-82
+web/src/components/Sidebar.test.ts
+  s_57fa886a85f9f6::t_0fa3ad072eb403 52,229-276
+  s_06fcde5dbef956::t_09ab85b89aced4 606,608
+web/src/components/Sidebar.vue
+  s_57fa886a85f9f6::t_11061057145760 24,189-190
+web/src/components/SidebarChannelRow.vue
+  s_57fa886a85f9f6::t_511f319c2b8c5c 13,73-75,185-191
+web/src/components/SidebarChannelRowTalks.test.ts
+  s_57fa886a85f9f6::t_004ef515c90d83 7-9,84-117
+web/src/lib/talks.ts
+  s_57fa886a85f9f6::t_883cae71d0806f 7-9,30-61
+  s_06fcde5dbef956::t_1c71cec5c68818 76-77,80
+README.md
+  s_57fa886a85f9f6::t_b4056131a07fda 60
+doc/glossary.md
+  s_57fa886a85f9f6::t_ab309e221e5b23 17
+e2e/tests/talk-lobby.spec.ts
+  s_57fa886a85f9f6::t_46c076924504b4 52-53,56,65
+internal/chat/talks.go
+  s_57fa886a85f9f6::t_0449c9ac354c9c 9,28-32,35-53,56,115,148-151,170-181
+internal/chat/talks_integration_test.go
+  s_57fa886a85f9f6::t_fb262ae27a1d87 130-131,157-158,297
+internal/chat/talks_naming_integration_test.go
+  s_57fa886a85f9f6::t_99588c1e7e8bd5 1-69
+internal/chat/talks_naming_test.go
+  s_57fa886a85f9f6::t_b102ae366ab071 1-57
+.env.example
+  s_57fa886a85f9f6::t_8a19a5f823c487 187-194,228-230
+api/status-codes.json
+  s_57fa886a85f9f6::t_3465d5d740f246 18-20
+cmd/server/doctor.go
+  s_57fa886a85f9f6::t_129c1d23dc3c97 1-182
+cmd/server/doctor_test.go
+  s_57fa886a85f9f6::t_b3e9d22b496692 1-132
+cmd/server/main.go
+  s_57fa886a85f9f6::t_fa985c90cb99d1 7,9,13-14,24,37-43,49-81,91-93,199-201,209,233,261,270,285-293
+cmd/server/main_process_test.go
+  s_57fa886a85f9f6::t_2755bc8b994b7b 15,24,27,30-40
+cmd/server/onboarding_integration_test.go
+  s_57fa886a85f9f6::t_faaad2dc992ee9 1-67
+docker-compose.yml
+  s_57fa886a85f9f6::t_3e10a6a36c1dd1 34-35,103-104
+internal/config/config.go
+  s_57fa886a85f9f6::t_90ea1a4c4fe2e6 110-113
+internal/config/config_env.go
+  s_57fa886a85f9f6::t_ea62606a1426be 19-22,34-35,38,41-47,49,134
+internal/config/config_validate.go
+  s_57fa886a85f9f6::t_cbec7d4f08402d 7,127-129,133-144
+internal/config/required.go
+  s_57fa886a85f9f6::t_0be841eda942ee 1-128
+internal/config/required_test.go
+  s_57fa886a85f9f6::t_2d3a47831fcaff 1-67
+internal/portconflict/portconflict.go
+  s_57fa886a85f9f6::t_13553a9301ef37 1-42
+internal/portconflict/portconflict_test.go
+  s_57fa886a85f9f6::t_798ab22a6ab580 1-50
+internal/s3/s3.go
+  s_57fa886a85f9f6::t_91383283bb440a 53-72
+internal/server/run.go
+  s_57fa886a85f9f6::t_fb602c054c458a 13,36
+internal/setupcheck/announce.go
+  s_57fa886a85f9f6::t_bbdbf210aa70a3 27-32,42-60,68-72,93
+internal/setupcheck/messages.go
+  s_57fa886a85f9f6::t_5e35a659e31f65 23-24,59,69-70,116-128,140-141
+internal/setupcheck/network.go
+  s_57fa886a85f9f6::t_b019693b23c7de 1-144
+internal/setupcheck/network_test.go
+  s_57fa886a85f9f6::t_ba9207f0bf400b 1-216
+internal/setupcheck/report.go
+  s_57fa886a85f9f6::t_c04794dc1b6342 1-30
+internal/setupcheck/setupcheck.go
+  s_57fa886a85f9f6::t_fe0d458564f89a 39,75-77,90-97,112-114,123,169-171,175-182,210
+internal/setupcheck/setupcheck_test.go
+  s_57fa886a85f9f6::t_ca8d7b9828cefc 79,232
+internal/setupwizard/check.go
+  s_57fa886a85f9f6::t_447436296407c0 1-33
+internal/setupwizard/envfile.go
+  s_57fa886a85f9f6::t_804bacdd7f8870 31-32,66-74,81-87
+internal/setupwizard/generate.go
+  s_57fa886a85f9f6::t_9b77b25e4704f9 61-63
+internal/setupwizard/options.go
+  s_57fa886a85f9f6::t_85e9c477d1a87f 10,15,22-31,61-70,97-99,109,125-127,131-158
+internal/setupwizard/preflight.go
+  s_57fa886a85f9f6::t_906446edcdbb08 33-44,71-77,81-83,89-92,94-97,101,124,148,150
+internal/setupwizard/prereq.go
+  s_57fa886a85f9f6::t_e156dc23244d9f 1-119
+internal/setupwizard/prereq_test.go
+  s_57fa886a85f9f6::t_5b3100e849fb60 1-399
+internal/setupwizard/prompt.go
+  s_57fa886a85f9f6::t_5aefaf4145f86c 32-40,79,109
+internal/setupwizard/questions.go
+  s_57fa886a85f9f6::t_920726f83c9055 1-138
+internal/setupwizard/run.go
+  s_57fa886a85f9f6::t_21bcad5847f970 10,22-23,28-33,37-41,48-50,52-53,55,64-67,106-110,112-113,115,134-135,139-159,162-164,166
+internal/setupwizard/run_test.go
+  s_57fa886a85f9f6::t_b8f09ac0775bdc 37,75,79,101,106
+internal/setupwizard/setupwizard_test.go
+  s_57fa886a85f9f6::t_587439e5749a26 70,246,258,263-266
+internal/setupwizard/start.go
+  s_57fa886a85f9f6::t_2f53914c6e0f3a 1-70
+internal/setupwizard/summary.go
+  s_57fa886a85f9f6::t_82fae2fff832ae 1-101
+internal/setupwizard/summary_test.go
+  s_57fa886a85f9f6::t_044c712af094d4 1-103
+internal/setupwizard/testdata/summary_container.golden
+  s_57fa886a85f9f6::t_29407344937122 1-25
+internal/setupwizard/testdata/summary_https.golden
+  s_57fa886a85f9f6::t_58c7e3efa20fe5 1-24
+internal/setupwizard/testdata/summary_lan_http.golden
+  s_57fa886a85f9f6::t_f5191e6bc29e00 1-19
+internal/setupwizard/testdata/summary_local.golden
+  s_57fa886a85f9f6::t_706173f2fbe1c2 1-19
+internal/sfu/announce.go
+  s_57fa886a85f9f6::t_f95c58f78aa99a 120-122,137
+internal/sfu/announce_detected_test.go
+  s_57fa886a85f9f6::t_5c72429ffb2c59 22,45-61
+internal/stunprobe/stunprobe.go
+  s_57fa886a85f9f6::t_694d35e685d9a9 33,41-51,60,84,88-92,115,133-135,153,157,166,169-176,191-209
+internal/stunprobe/stunprobe_test.go
+  s_57fa886a85f9f6::t_f007b8555c3340 143-195
+scripts/fresh-install-check.sh
+  s_57fa886a85f9f6::t_44e6842ba98fe8 12-14,26-27,57,67-72,86,94-104
+e2e/tests/arrow-edit.spec.ts
+  s_57fa886a85f9f6::t_31197a5213f4f5 1-74
+web/src/components/ChatArea.vue
+  s_57fa886a85f9f6::t_80c7b21d76c665 22,83,314,383
+web/src/components/ChatAreaOwnEdit.test.ts
+  s_57fa886a85f9f6::t_1508adf9524f3a 1-246
+web/src/components/ChatComposer.vue
+  s_57fa886a85f9f6::t_76232ad647dcef 39,96
+web/src/components/MessageEditor.vue
+  s_57fa886a85f9f6::t_14c45ae7b856a1 4,7,15-16,20,39-43,55-57,66
+web/src/components/MessageRow.vue
+  s_57fa886a85f9f6::t_917d62c12d0663 48,181
+web/src/components/ThreadComposer.vue
+  s_57fa886a85f9f6::t_336b7174bfefa0 26,41
+web/src/components/ThreadReply.vue
+  s_57fa886a85f9f6::t_1ab039d756abcc 27,142
+web/src/components/ThreadSidebar.vue
+  s_57fa886a85f9f6::t_dcb74ae11a7255 19,92,341,362
+web/src/composables/useComposerKeys.ts
+  s_57fa886a85f9f6::t_387a037d3d2016 12-13,22,25
+web/src/composables/useMessageActions.test.ts
+  s_57fa886a85f9f6::t_0e15fff39e65cf 127,129-134,136-138
+web/src/composables/useMessageActions.ts
+  s_57fa886a85f9f6::t_905efc9a6a977f 107,113-114,138,160,183,186,189,192-204,209
+web/src/composables/useMessageMenu.test.ts
+  s_57fa886a85f9f6::t_e50c29132f0326 22
+web/src/composables/useMessageMenuLater.test.ts
+  s_57fa886a85f9f6::t_10a828d6fff493 20
+web/src/composables/useMessageMenuSaved.test.ts
+  s_57fa886a85f9f6::t_210fba3f9bb358 28
+web/src/composables/useMessageModerationMenu.test.ts
+  s_57fa886a85f9f6::t_42efb239dab620 27
+web/src/composables/useOwnMessageNav.ts
+  s_57fa886a85f9f6::t_b37f8965efe1b6 1-98
+doc/architecture.md
+  s_57fa886a85f9f6::t_5fc5d1e8441bb6 403,407-420
+  s_57fa886a85f9f6::t_bf2dbc809a9ae1 629,638-639
+e2e/tests/screen-layers.spec.ts
+  s_57fa886a85f9f6::t_ac28ad42011a2f 10,126-130,171,174-176,178-180,204,210,219-228
+internal/sfu/adapt.go
+  s_57fa886a85f9f6::t_6ea04bb09067b2 3,11-12,51,77-86,95-100,116-117,136-142,145-147,150-156,159-167,169-172,174,213,218,307,316-320,327,330,336-343,358-361
+internal/sfu/adapt_auto_test.go
+  s_57fa886a85f9f6::t_7944ec75e8dfec 1-258
+internal/sfu/adapt_bw.go
+  s_57fa886a85f9f6::t_ba1f09de2111d0 1-46
+internal/sfu/adapt_report.go
+  s_57fa886a85f9f6::t_4d79198a4fb664 1-39
+internal/sfu/bwe.go
+  s_57fa886a85f9f6::t_50657be547eefc 27
+internal/sfu/layer_viewers.go
+  s_57fa886a85f9f6::t_e062841665866e 25-27,32,35-36
+internal/sfu/layers_test.go
+  s_57fa886a85f9f6::t_35d6c6da871984 104,594
+internal/sfu/room_signal.go
+  s_57fa886a85f9f6::t_a8fb2abaecf407 227,230
+internal/sfu/screen.go
+  s_57fa886a85f9f6::t_ca9600f9197ad7 152-180
+internal/sfu/subscriptions.go
+  s_57fa886a85f9f6::t_13c959c4d5824c 31-33,64-87
+internal/sfu/viewer_track.go
+  s_57fa886a85f9f6::t_c6a330a065d686 36-38,101-105,116-137
+internal/ws/layers_test.go
+  s_57fa886a85f9f6::t_f5e5f9637f3d8f 336-374
+internal/ws/signal.go
+  s_57fa886a85f9f6::t_e2a9246c5d9fb2 48-52,88-91,100,121-132,159-162,174-175
+web/src/components/TalkStageView.vue
+  s_57fa886a85f9f6::t_9a24615a4b12a3 10,48
+web/src/composables/useScreenFit.test.ts
+  s_57fa886a85f9f6::t_3633ace5214c33 1-105
+web/src/composables/useScreenFit.ts
+  s_57fa886a85f9f6::t_38eeaaf48a4ba4 1-50
+web/src/composables/useScreenLayerMenu.test.ts
+  s_57fa886a85f9f6::t_2797cd1a7b1c35 67-81
+web/src/composables/useScreenLayerMenu.ts
+  s_57fa886a85f9f6::t_cabb51296e3951 17-18,23,77-82,85-88,104
+web/src/lib/screenLayers.test.ts
+  s_57fa886a85f9f6::t_2b9b62140de979 2,80-113
+web/src/lib/screenLayers.ts
+  s_57fa886a85f9f6::t_5cd8ed5d35d966 103-120
+web/src/stores/voice.ts
+  s_57fa886a85f9f6::t_ee9dee0452175f 5,107
+web/src/stores/voice/cameras.ts
+  s_57fa886a85f9f6::t_0fdcb43a6c4172 103-105
+web/src/stores/voice/room.ts
+  s_57fa886a85f9f6::t_a990033b44b8d4 174,210
+web/src/stores/voice/screens.ts
+  s_57fa886a85f9f6::t_af0657ef96661c 73,150-159
+web/src/stores/voice/state.ts
+  s_57fa886a85f9f6::t_53a85eed5982e3 51
+web/src/stores/voiceStoreBehaviour.test.ts
+  s_57fa886a85f9f6::t_14617b0a7abf8d 284-294
+web/src/types/events.ts
+  s_57fa886a85f9f6::t_3ff86a7bd4ce6a 162-164
+  s_dbdfffe0fa33da::t_49524c627dc9ae 140,169,384
+web/src/lib/presence.ts
+  s_06fcde5dbef956::t_9e68e327b6f5c6 17-19
+web/src/stores/chat/presence.test.ts
+  s_06fcde5dbef956::t_937abab473b291 1-22,24-137
+web/src/stores/chat/presence.ts
+  s_06fcde5dbef956::t_c5cce525e601b5 1,5,10-16,20,24-28,44-52,125-136
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_affa2a8ba6e9b1 90
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_e7c2439e67ab2a 163,167
+e2e/tests/unread-jump.spec.ts
+  s_57fa886a85f9f6::t_a0f8c016db75b7 2,25-28,62-73,75-76,91-108
+internal/chat/post.go
+  s_57fa886a85f9f6::t_664b61721ea410 184,189-193,195-199,201-204,210-211
+internal/chat/readstate.go
+  s_57fa886a85f9f6::t_02ab5024313820 106
+internal/server/read_after_send_integration_test.go
+  s_57fa886a85f9f6::t_5dd34ba85535dc 1-83
+internal/server/readstate_integration_test.go
+  s_57fa886a85f9f6::t_adf0189856d4a9 80-85
+web/src/components/AudioOutputSection.test.ts
+  s_57fa886a85f9f6::t_122cd1241bce1f 1-46
+web/src/components/AudioOutputSection.vue
+  s_57fa886a85f9f6::t_87b7b43b66e6f9 5-6,24-33,111-135
+web/src/composables/useFirstUnreadJump.send.test.ts
+  s_57fa886a85f9f6::t_6457d8d2110fcd 1-96
+web/src/lib/messageSound.test.ts
+  s_57fa886a85f9f6::t_0f7250274b589a 1-56
+web/src/lib/messageSound.ts
+  s_57fa886a85f9f6::t_ff2c933cae3ff1 1-46
+web/src/lib/soundEffects.test.ts
+  s_57fa886a85f9f6::t_d16085c7a7fbf6 206-242
+web/src/lib/soundEffects.ts
+  s_57fa886a85f9f6::t_b929e420014a6b 102,142-147,194,212-214,221-241
+web/src/main.ts
+  s_57fa886a85f9f6::t_6e45c661acbdaa 16,37
+web/src/stores/chat/events.ts
+  s_57fa886a85f9f6::t_944616cf281546 23,141-142
+web/src/stores/chat/messageSound.ts
+  s_57fa886a85f9f6::t_48cbcba1e42792 1-50
+web/src/stores/chat/notifications.ts
+  s_57fa886a85f9f6::t_c05d73cedea276 56,76-78,87
+web/src/stores/chatMessageSound.test.ts
+  s_57fa886a85f9f6::t_505ad1342e7917 1-90
+doc/settings-ux.md
+  s_06fcde5dbef956::t_501cbef30b3c97 1-64
+e2e/tests/talk-settings.spec.ts
+  s_06fcde5dbef956::t_d5c92a786e3918 1-114
+web/src/App.vue
+  s_06fcde5dbef956::t_44e7de616b2f69 374-375
+web/src/components/AccountDirectMessages.vue
+  s_06fcde5dbef956::t_99cc25263f9342 7,9,15,22,31-35
+web/src/components/AccountDmPolicy.vue
+  s_06fcde5dbef956::t_628ef72900d017 13,37
+web/src/components/AdminAutomod.test.ts
+  s_06fcde5dbef956::t_48e7a72aca5a76 74-75,78-80,158,182
+web/src/components/AdminAutomodTab.vue
+  s_06fcde5dbef956::t_ab18b02e362a5f 10,87
+web/src/components/AdminBotsTab.test.ts
+  s_06fcde5dbef956::t_27948b23a4e0ce 96,106-120
+web/src/components/AdminBotsTab.vue
+  s_06fcde5dbef956::t_80749981ffa335 23,48,63-68,103,122
+web/src/components/AdminDashboard.test.ts
+  s_06fcde5dbef956::t_af2156b880f3c0 428
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_393907930bb144 5-6,16,50-51,144
+web/src/components/AdminEditDialogs.test.ts
+  s_06fcde5dbef956::t_fffde5be750bf8 1-72
+web/src/components/AdminEditDialogs.vue
+  s_06fcde5dbef956::t_8a75b27199848a 4-6,8,11-12,15-16,18,20-29,36-54,56
+web/src/components/AdminLayoutTab.test.ts
+  s_06fcde5dbef956::t_ca84a8a4aa4938 10,94,114,116-117,162-167,169-170,201,210,245,266-267,279-280,374,378,381
+web/src/components/AdminLayoutTab.vue
+  s_06fcde5dbef956::t_31e4c87e368ce8 3-5,21-22,29-33,51,54,65,135,143-145,156-160,172-174,176,182-196,204-222,284,377,379-388
+web/src/components/AdminLayoutToolbar.vue
+  s_06fcde5dbef956::t_f48f4a1267a9a1 2,4,6,8
+web/src/components/AdminOnboardingTab.test.ts
+  s_06fcde5dbef956::t_4606d8d49debf8 104-106,108,159-183
+web/src/components/AdminOnboardingTab.vue
+  s_06fcde5dbef956::t_df988160a96895 6,15,17,34-41,44-70,73-76,79-84,86-100,102,119,124,133-134,142-143,146,153,161,169,171,175
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_3d23c82edce061 81,104,123,141,143-144,154,156,242,272,328,332,334-335,337-364,390-413
+web/src/components/AdminRolesTab.vue
+  s_06fcde5dbef956::t_2d02d933f62e9c 2-4,6,13,15,23-24,38,48,57,71,136,215
+web/src/components/AdminUploadLimit.test.ts
+  s_06fcde5dbef956::t_4a417355a185de 22-24,31-33,36-38,43,45,47-51,56-68,77,83,89,91-92
+web/src/components/AdminUploadLimit.vue
+  s_06fcde5dbef956::t_d0c53777c3b18d 4,8,11,20-31,33,37,47-62
+web/src/components/AudioSettingsPanel.test.ts
+  s_06fcde5dbef956::t_1d5d387d49c0da 384-402
+web/src/components/AudioSettingsPanel.vue
+  s_06fcde5dbef956::t_53ae5f0c1af8bf 3-4,7,9,16-18,36
+web/src/components/AutomodRuleDialog.test.ts
+  s_06fcde5dbef956::t_3adb981a75ebb8 8,151,153,159-160,162-174,177-204
+web/src/components/AutomodRuleDialog.vue
+  s_06fcde5dbef956::t_29dccfd9abc8ce 6-7,13-14,21,33-69,80-83,91-93,214-215
+web/src/components/BaseDialog.vue
+  s_06fcde5dbef956::t_e1fdea25e68089 24-26,33-43
+web/src/components/BotDetailPanel.test.ts
+  s_06fcde5dbef956::t_8e4c31b8a6c57a 7,53,55-76,78-88,91,96,100-110,112-115,117,120,122-126,168-175,178-179,182-194
+web/src/components/BotDetailPanel.vue
+  s_06fcde5dbef956::t_498ca7da7ca4a7 2-5,12,17,36,38-61,63-64,67-68,96,102-103,113,116,122,130-133
+web/src/components/BotDiscordParity.test.ts
+  s_06fcde5dbef956::t_3ed0b6e8a93c82 16,133,147
+web/src/components/BotMembers.test.ts
+  s_06fcde5dbef956::t_733880a28194f5 176
+web/src/components/BotRolesPanel.test.ts
+  s_06fcde5dbef956::t_f1403649472c2c 32-39,42,46,50,58-59,61-62,65,68,73
+web/src/components/BotRolesPanel.vue
+  s_06fcde5dbef956::t_33a018067721c2 5,17-18
+web/src/components/ChannelAutoDelete.test.ts
+  s_06fcde5dbef956::t_b2f4f3e054ada4 2,39-40,42,45,47-48,51,55,57,59,61-64,66-68
+web/src/components/ChannelAutoDeleteField.vue
+  s_06fcde5dbef956::t_46baa94a5e2d15 3,5-8,17-25
+web/src/components/ChannelPermissionsDialog.test.ts
+  s_06fcde5dbef956::t_a0cf8fd5b7fddd 13,85,101,108,110-112,163,167-169,171,215-242
+web/src/components/ChannelPermissionsDialog.vue
+  s_06fcde5dbef956::t_de6ebfc3becf17 9,21,36-58,97,104,108,119,121,129-130,147,150,199-200
+web/src/components/ChannelWebhooksDialog.vue
+  s_06fcde5dbef956::t_6efcc17cf11f87 7,19-25,29,42-43
+web/src/components/DmPolish.test.ts
+  s_06fcde5dbef956::t_c572845d912560 451,457
+web/src/components/EditInviteDialog.test.ts
+  s_06fcde5dbef956::t_94053d4cf3f316 11,32,145-187
+web/src/components/EditInviteDialog.vue
+  s_06fcde5dbef956::t_1214e3a272c034 5-6,9-10,14,32,34-35,46-48,50-51,54,60-63,68-70,72-96,102-107,115-117,122-125,127-128,134-137,139-140,145
+web/src/components/EditNameDialog.test.ts
+  s_06fcde5dbef956::t_3c2a8b40f287ed 11,13,27-28,32,81,83-84,86,108,126,128,130,132-188
+web/src/components/EditNameDialog.vue
+  s_06fcde5dbef956::t_3751d389c5c54d 5-6,12-14,19-21,36-41,44-87,89,92,94-96,99,101,104-124,128-133,135-150,152-176,178,181-183,185
+web/src/components/IncomingWebhookEditor.vue
+  s_06fcde5dbef956::t_37d7b0ea262377 1-74
+web/src/components/IncomingWebhooksPanel.vue
+  s_06fcde5dbef956::t_951c3f8e92777a 6,15,31,33-34,36-38,41-42,173,176,190
+web/src/components/MemberRolesDialog.test.ts
+  s_06fcde5dbef956::t_cee18e240ce0f0 12,65,76-77,79,91,107-118,120-121,123-130
+web/src/components/MemberRolesDialog.vue
+  s_06fcde5dbef956::t_f1491b093f9ff5 6-8,15,41-49,54-58,60,64-65,74,81-82
+web/src/components/NotificationSettingsDialog.test.ts
+  s_06fcde5dbef956::t_b22e36de266239 110-124
+web/src/components/NotificationSettingsDialog.vue
+  s_06fcde5dbef956::t_c3c02528b65818 5,10-11,18,35-37,116-117
+web/src/components/OutgoingWebhookForm.vue
+  s_06fcde5dbef956::t_80fa723daf1a93 1-108
+web/src/components/OutgoingWebhooksPanel.vue
+  s_06fcde5dbef956::t_4270625e36f11d 5,8,14,28-29,48-52,55-59,152
+web/src/components/PushSection.test.ts
+  s_06fcde5dbef956::t_8c3fc164d229da 199,204
+web/src/components/PushSection.vue
+  s_06fcde5dbef956::t_da46a0f622e9d7 6-7,15-20,79,81
+web/src/components/RoleEditor.vue
+  s_06fcde5dbef956::t_b606eea0b61434 1-115,118-196
+web/src/components/SavedIndicator.vue
+  s_06fcde5dbef956::t_c81392aa3a352b 1-16
+web/src/components/TalkAccessPresets.vue
+  s_06fcde5dbef956::t_e56485aca8440b 2-6,9,11-15,17-19,21,26,30-48,50-51,53-67
+web/src/components/TalkSettingsDialog.test.ts
+  s_06fcde5dbef956::t_e1c849ab5da9df 13,60,72,77,86,93,102,117,119,133,145,151-155,159-311,319,342
+web/src/components/TalkSettingsDialog.vue
+  s_06fcde5dbef956::t_5e3a8e2688bd8e 3-5,7-15,23,25-31,45,47-52,54-57,59,61-62,64,67,69-113,115,117-118,124-131,133-139,141-154
+web/src/components/UnsavedChangesBar.vue
+  s_06fcde5dbef956::t_dbe49b24ff036e 1-45
+web/src/components/WebhookPanels.test.ts
+  s_06fcde5dbef956::t_64eb2028b9ae2b 85,90-94,96,98-100,132,134-141,143,147,205,215-222,224,230-241,322,343,351-355,357-359,364-372,386,388-402,404-420,534-557
+web/src/composables/draftGuard.ts
+  s_06fcde5dbef956::t_3ff0f0fe15ad40 1-80
+web/src/composables/usePreferenceSave.ts
+  s_06fcde5dbef956::t_f3e455a6a045f5 1-34
+web/src/composables/usePushSettings.ts
+  s_06fcde5dbef956::t_dca88fb30c44e0 58-59,63,66
+web/src/composables/useSettingsDraft.test.ts
+  s_06fcde5dbef956::t_1a63078a30f8a5 1-352,362
+web/src/composables/useSettingsDraft.ts
+  s_06fcde5dbef956::t_889045174eb9d0 1-98,100-143
+web/src/lib/autoDelete.ts
+  s_06fcde5dbef956::t_f469de072d8f31 2-4,6-16
+web/src/lib/automod.test.ts
+  s_06fcde5dbef956::t_ca8db8f8d1ece6 3,38
+web/src/lib/roleSave.test.ts
+  s_06fcde5dbef956::t_bee8ba52e08d80 2,4
+web/src/lib/roleSave.ts
+  s_06fcde5dbef956::t_b3c756c654ba76 1
+e2e/tests/voice-takeover.spec.ts
+  s_7e9329d487a94d::t_071b9deedc6880 1-72
+internal/ws/client.go
+  s_6f62c78e3c93c5::t_4634f7be236fb0 60-62,219,227-240
+internal/ws/handle.go
+  s_06fcde5dbef956::t_319e9aa9411f91 23-24,41,107,109,125-132
+internal/ws/hub.go
+  s_3255aa8302478d::t_25a438cbb43664 8,109-111
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_8c5eaffdd248ee 77
+internal/ws/voice_takeover_integration_test.go
+  s_06fcde5dbef956::t_970e09e4a57a73 1-77
+internal/ws/voice_takeover_test.go
+  s_0f71275af3a9d5::t_0d71fa93d6fd00 1-201
+web/src/composables/useWebRTC.takeover.test.ts
+  s_4470fe4f4a10ca::t_79102a6c60a747 1-135
+web/src/composables/webrtc/session.ts
+  s_6f111b828bba31::t_73effcf2114dc8 14,103-109,111-116,119,143,173-174,233-236,250
+web/src/composables/webrtc/takeover.ts
+  s_6f111b828bba31::t_e4570b41ca7942 1-48
+web/src/types/events.test.ts
+  s_65ba608539a14a::t_b13f466c70f110 80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "73a8100ca793dc74133ce3f7a25eb0c2bd00a53f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0f71275af3a9d5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aupdater-dockerhub-0045479572fc8370",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2d22d157720d46": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-format-help-1c4cc049037c526d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3255aa8302478d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-gaming-ui-52e3f2038ee574d1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4470fe4f4a10ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3c3476dc587ab846",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_57fa886a85f9f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4edefc50d802f9c0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_65ba608539a14a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a83c210d97e86a798",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f111b828bba31": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8e716a453eda91a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7e9329d487a94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-status-profile-6b773a73ee58ea30",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_cf5b2fa6f87060": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa4a385df44c9d339",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_dbdfffe0fa33da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-voice-takeover-a0aadf43d700b47c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
