@@ -1,0 +1,33 @@
+README.md
+  s_06fcde5dbef956::t_2d076b58edcbbf 60
+doc/glossary.md
+  s_06fcde5dbef956::t_026e0d221f9823 17
+doc/talks.md
+  s_06fcde5dbef956::t_ced7aaee938e33 19-23
+e2e/tests/talk-lobby.spec.ts
+  s_06fcde5dbef956::t_46f7aa2c0a7d0e 52-53,56,61,65
+internal/chat/talks.go
+  s_06fcde5dbef956::t_b6d9b6d140d815 9,28-32,35-53,56,115,148-151,170-181
+internal/chat/talks_integration_test.go
+  s_06fcde5dbef956::t_ea45ac2167648d 130-131,157-158,297
+internal/chat/talks_naming_integration_test.go
+  s_06fcde5dbef956::t_ab486c6f576f01 1-69
+internal/chat/talks_naming_test.go
+  s_06fcde5dbef956::t_ebb7640fb15521 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ffa75362ccdee5243d872b25ddfa524af1842469",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
