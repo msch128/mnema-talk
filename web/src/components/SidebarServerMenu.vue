@@ -5,6 +5,8 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useOnboardingStore } from '../stores/onboarding'
 import { useAppVersionStore } from '../stores/appVersion'
 import { useFirstRunStore } from '../stores/firstRun'
+import { useChatStore } from '../stores/chat'
+import { useVoiceStore } from '../stores/voice'
 import { rulesOpen } from '../lib/communityRules'
 import { notifyDialogOpen } from '../lib/notifyDialog'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
@@ -22,7 +24,17 @@ const features = useServerFeaturesStore()
 const onboarding = useOnboardingStore()
 // The Owner's closed checklist comes back from here.
 const firstRun = useFirstRunStore()
-const reopenChecklist = () => { void firstRun.setHidden(false) }
+// The list shows under a text channel: from a Talk or a DM, the first text channel is opened.
+const chat = useChatStore()
+const voice = useVoiceStore()
+function reopenChecklist() {
+  void firstRun.setHidden(false)
+  if (chat.activeChannel?.type === 'text' && voice.activeView !== 'voice') return
+  const text = chat.allChannels.find(c => c.type === 'text')
+  if (!text) return
+  chat.selectChannel(text)
+  voice.activeView = 'chat'
+}
 // Only people who may open the console see that a new release is out.
 const versionStore = useAppVersionStore()
 const updateHint = computed(() => permissions.canOpenAdmin && versionStore.adminUpdateAvailable)
