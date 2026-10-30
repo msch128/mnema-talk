@@ -1,0 +1,57 @@
+api/openapi.json
+  s_06fcde5dbef956::t_f9b46321e529dc 35357
+doc/talks.md
+  s_06fcde5dbef956::t_cded9ce3ee4a00 196-206
+e2e/tests/voice-takeover.spec.ts
+  s_06fcde5dbef956::t_c1820396a9c5f3 1-72
+internal/ws/client.go
+  s_06fcde5dbef956::t_b6cf36071af52b 60-66,223,231-256
+internal/ws/handle.go
+  s_06fcde5dbef956::t_e379a485a019b0 23-25,42,108,110-113,129-136
+internal/ws/hub.go
+  s_06fcde5dbef956::t_18454e72edd278 8,114-118
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_894993a48a5263 74,80
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_9d28910800b738 5,19-21,23-63,67,70,74-78,85,91-99,103-135,148,157,308-312,317-320,322,329,343-344,393-442
+internal/ws/voice_takeover_integration_test.go
+  s_06fcde5dbef956::t_a9ec778f877d0c 1-110
+internal/ws/voice_takeover_test.go
+  s_06fcde5dbef956::t_c983180dc82c5f 1-282
+web/src/composables/useWebRTC.devices.test.ts
+  s_06fcde5dbef956::t_82e893df033639 277
+web/src/composables/useWebRTC.micPipeline.test.ts
+  s_06fcde5dbef956::t_abd8f88dbb940d 399,460
+web/src/composables/useWebRTC.signaling.test.ts
+  s_06fcde5dbef956::t_729eda88369b22 21,101,202
+web/src/composables/useWebRTC.takeover.test.ts
+  s_06fcde5dbef956::t_149dda50d8e940 1-164
+web/src/composables/webrtc/session.ts
+  s_06fcde5dbef956::t_dcfea713b5d0fc 4,15,104-119,121-126,129,153,183-184,215,220-229,254-257,271
+web/src/composables/webrtc/takeover.ts
+  s_06fcde5dbef956::t_84e1ddd454ae37 1-48
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_e58b7e80066620 701-705
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_672d332ebab65e 701-705
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_e9b75908ab268f 87
+web/src/types/events.ts
+  s_06fcde5dbef956::t_0b264efa296477 126,155,362
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7dbb1c06019d41de11d46396d79c544059388a48",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
