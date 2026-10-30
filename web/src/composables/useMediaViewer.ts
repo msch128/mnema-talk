@@ -17,6 +17,8 @@ export interface ViewerItem {
 export interface ViewerMessage {
   id: string
   channelId: string
+  /** Set for a thread reply: the jump goes to its thread. */
+  parentId?: string
   channelName?: string
   senderName: string
   senderAvatarUrl?: string
@@ -64,6 +66,7 @@ export function viewerMessageFrom(msg: Message, channelName?: string): ViewerMes
     channelId: msg.channel_id,
     senderName: shownName(msg),
     sentAt: msg.created_at,
+    ...(msg.parent_id ? { parentId: msg.parent_id } : {}),
     ...(channelName ? { channelName } : {}),
     ...(msg.avatar_url ? { senderAvatarUrl: msg.avatar_url } : {})
   }

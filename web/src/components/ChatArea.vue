@@ -383,7 +383,6 @@ const groupedIds = computed(() => {
     />
 
     <FileDropOverlay @files="composer?.attachFiles($event)" />
-    <!-- Image lightbox -->
 
     <!-- Message context menu -->
     <ContextMenu

@@ -76,7 +76,6 @@
     "openOriginal": "Open original",
     "inChannel": "in {channel}",
     "dimensions": "{w} × {h} px",
-    "image": "Image",
     "zoomLevel": "Zoom {percent}%"
   },
   "media": {
@@ -508,8 +507,6 @@
     "viewingOlder": "You’re viewing older messages",
     "jumpToEnd": "Jump to latest",
     "jumpToFirstUnread": "Jump to first unread",
-    "enlargedImage": "Enlarged image",
-    "openOriginal": "Open original",
     "attachment": "Attachment",
     "unknownUser": "Unknown",
     "message": "Message",

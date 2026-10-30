@@ -26,7 +26,6 @@ const index = computed(() => viewerState.index)
 const item = computed(() => items.value[index.value])
 const message = computed(() => viewerState.message)
 const total = computed(() => items.value.length)
-const isVideo = computed(() => item.value?.mimeType?.startsWith('video/') === true)
 const canPrev = computed(() => index.value > 0)
 const canNext = computed(() => index.value < total.value - 1)
 
@@ -76,9 +75,9 @@ function onKeydown(e: KeyboardEvent) {
   switch (e.key) {
     case 'ArrowLeft': return handled(() => go(-1))
     case 'ArrowRight': return handled(() => go(1))
-    case '+': case '=': return isVideo.value ? undefined : handled(zoom.zoomIn)
-    case '-': return isVideo.value ? undefined : handled(zoom.zoomOut)
-    case '0': return isVideo.value ? undefined : handled(zoom.reset)
+    case '+': case '=': return handled(zoom.zoomIn)
+    case '-': return handled(zoom.zoomOut)
+    case '0': return handled(zoom.reset)
   }
 }
 
@@ -92,9 +91,10 @@ function onBackdrop(e: MouseEvent) {
 const copyLink = () => copyToClipboard(absoluteUrl.value, t('viewer.linkCopied'))
 async function jump() {
   if (!message.value) return
-  const id = message.value.id
+  const { id, channelId, parentId } = message.value
   closeViewer()
-  await chat.jumpToMessage(id)
+  // A reply is found through its thread, like a search result.
+  chat.goToMessage({ id, channel_id: channelId, ...(parentId ? { parent_id: parentId } : {}) })
 }
 
 const btn = 'flex h-9 w-9 items-center justify-center rounded-md text-mnema-text hover:bg-mnema-hover focus-visible:outline-2 focus-visible:outline-mnema-accent disabled:opacity-30 disabled:hover:bg-transparent'
@@ -152,7 +152,7 @@ const textBtn = 'flex h-9 items-center gap-2 rounded-md px-2.5 text-sm text-mnem
       class="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
       :class="zoom.zoomed.value ? (zoom.dragging.value ? 'cursor-grabbing' : 'cursor-grab') : ''"
       data-testid="viewer-stage"
-      @wheel.prevent="!isVideo && zoom.onWheel($event)"
+      @wheel.prevent="zoom.onWheel"
       @pointerdown="zoom.onPointerDown"
       @pointermove="zoom.onPointerMove"
       @pointerup="zoom.onPointerEnd"
@@ -167,16 +167,7 @@ const textBtn = 'flex h-9 items-center gap-2 rounded-md px-2.5 text-sm text-mnem
         data-testid="viewer-prev"
         @click.stop="go(-1)"
       ><ChevronLeft class="h-6 w-6" /></button>
-      <video
-        v-if="isVideo"
-        :key="item.src"
-        :src="item.src"
-        controls
-        class="max-h-full max-w-[90vw] rounded-lg"
-        @click.stop
-      ></video>
       <img
-        v-else
         :key="item.src"
         :src="item.src"
         :alt="item.name"
@@ -202,8 +193,8 @@ const textBtn = 'flex h-9 items-center gap-2 rounded-md px-2.5 text-sm text-mnem
 
     <footer class="flex items-center justify-center gap-3 px-4 py-3">
       <span v-if="total > 1" class="font-mono text-sm text-mnema-secondary" data-testid="viewer-counter">{{ counter }}</span>
-      <div v-if="!isVideo" class="flex items-center gap-1" role="group" :aria-label="$t('viewer.zoomLevel', { percent: zoomPercent })">
-        <button type="button" :class="btn" :aria-label="$t('viewer.zoomOut')" v-tooltip="$t('viewer.zoomOut')" :disabled="!zoom.zoomed.value" data-testid="viewer-zoom-out" @click="zoom.zoomOut"><Minus class="h-4 w-4" /></button>
+      <div class="flex items-center gap-1" role="group" :aria-label="$t('viewer.zoomLevel', { percent: zoomPercent })">
+        <button type="button" :class="btn" :aria-label="$t('viewer.zoomOut')" v-tooltip="$t('viewer.zoomOut')" data-testid="viewer-zoom-out" @click="zoom.zoomOut"><Minus class="h-4 w-4" /></button>
         <button type="button" class="h-9 min-w-14 rounded-md px-2 font-mono text-xs text-mnema-secondary hover:bg-mnema-hover" :aria-label="$t('viewer.zoomReset')" data-testid="viewer-zoom-reset" @click="zoom.reset">{{ zoomPercent }}%</button>
         <button type="button" :class="btn" :aria-label="$t('viewer.zoomIn')" v-tooltip="$t('viewer.zoomIn')" data-testid="viewer-zoom-in" @click="zoom.zoomIn"><Plus class="h-4 w-4" /></button>
       </div>

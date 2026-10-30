@@ -115,10 +115,10 @@ describe('MediaViewer', () => {
   })
 
   it('jumps to the message and closes', async () => {
-    const jump = vi.spyOn(useChatStore(), 'jumpToMessage').mockResolvedValue(true)
+    const jump = vi.spyOn(useChatStore(), 'goToMessage').mockImplementation(() => undefined)
     await show({ items, index: 0, message })
     await tid('viewer-jump').trigger('click')
-    expect(jump).toHaveBeenCalledWith('m1')
+    expect(jump).toHaveBeenCalledWith({ id: 'm1', channel_id: 'c1' })
     expect(viewerState.open).toBe(false)
   })
 
@@ -178,6 +178,45 @@ describe('MediaViewer', () => {
     expect(img.attributes('style')).not.toContain('scale(1)')
   })
 
+  it('jumps to a thread reply through its thread', async () => {
+    const jump = vi.spyOn(useChatStore(), 'goToMessage').mockImplementation(() => undefined)
+    await show({ items, index: 0, message: { ...message, id: 'reply1', parentId: 'root1' } })
+    await tid('viewer-jump').trigger('click')
+    expect(jump).toHaveBeenCalledWith({ id: 'reply1', channel_id: 'c1', parent_id: 'root1' })
+  })
+
+  it('keeps a click on a zoomed picture, and a double-click still resets', async () => {
+    await show({ items, index: 0 })
+    await tid('viewer-image').trigger('dblclick')
+    const capture = vi.fn()
+    ;(tid('viewer-stage').element as HTMLElement).setPointerCapture = capture
+    const ev = (type: string) => new PointerEvent(type, { bubbles: true, clientX: 10, pointerId: 1, button: 0 })
+    tid('viewer-image').element.dispatchEvent(ev('pointerdown'))
+    tid('viewer-image').element.dispatchEvent(ev('pointerup'))
+    await tid('viewer-image').trigger('click')
+    expect(capture).not.toHaveBeenCalled()
+    expect(viewerState.open).toBe(true)
+    await tid('viewer-image').trigger('dblclick')
+    expect(tid('viewer-image').attributes('style')).toContain('scale(1)')
+  })
+
+  it('captures the pointer only once a drag starts', async () => {
+    await show({ items, index: 0 })
+    await tid('viewer-image').trigger('dblclick')
+    const capture = vi.fn()
+    ;(tid('viewer-stage').element as HTMLElement).setPointerCapture = capture
+    const ev = (type: string, x: number) => new PointerEvent(type, { bubbles: true, clientX: x, pointerId: 1, button: 0 })
+    tid('viewer-image').element.dispatchEvent(ev('pointerdown', 0))
+    expect(capture).not.toHaveBeenCalled()
+    tid('viewer-stage').element.dispatchEvent(ev('pointermove', 30))
+    expect(capture).toHaveBeenCalledWith(1)
+  })
+
+  it('keeps the zoom-out button usable (a no-op) at the smallest size', async () => {
+    await show({ items, index: 0 })
+    expect(tid('viewer-zoom-out').attributes('disabled')).toBeUndefined()
+  })
+
   it('does not close when a drag ends on the backdrop', async () => {
     await show({ items, index: 0 })
     await tid('viewer-image').trigger('dblclick')
@@ -187,12 +226,6 @@ describe('MediaViewer', () => {
     tid('viewer-stage').element.dispatchEvent(ev('pointerup', 50))
     await tid('viewer-stage').trigger('click')
     expect(viewerState.open).toBe(true)
-  })
-
-  it('plays videos with controls and no zoom', async () => {
-    await show({ items: [{ src: '/m/v', name: 'v.mp4', mimeType: 'video/mp4' }], index: 0 })
-    expect(w.get('video').attributes('controls')).toBeDefined()
-    expect(w.find('[data-testid="viewer-zoom-in"]').exists()).toBe(false)
   })
 })
 

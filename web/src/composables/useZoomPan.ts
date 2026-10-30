@@ -63,15 +63,20 @@ export function useZoomPan(stage: Ref<HTMLElement | null>) {
     moved = false
     if (!zoomed.value || e.button !== 0 || (e.target as HTMLElement).closest('button, video')) return
     start = { px: e.clientX, py: e.clientY, x: x.value, y: y.value, id: e.pointerId }
-    dragging.value = true
-    ;stage.value?.setPointerCapture?.(e.pointerId)
+    // Not captured yet: a click that never moves must still reach the picture it hit.
   }
 
   function onPointerMove(e: PointerEvent) {
     if (!start || e.pointerId !== start.id) return
     const dx = e.clientX - start.px
     const dy = e.clientY - start.py
-    if (Math.abs(dx) + Math.abs(dy) > 3) moved = true
+    if (!moved && Math.abs(dx) + Math.abs(dy) > 3) {
+      // A drag: from here on the stage follows the pointer wherever it goes.
+      moved = true
+      dragging.value = true
+      stage.value?.setPointerCapture?.(e.pointerId)
+    }
+    if (!moved) return
     x.value = start.x + dx
     y.value = start.y + dy
   }

@@ -360,6 +360,5 @@ async function handleFileUpload(e: Event) {
     />
     <FileDropOverlay @files="composer?.attachFiles($event)" />
 
-    <!-- Image lightbox -->
   </aside>
 </template>
