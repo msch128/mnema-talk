@@ -1,0 +1,14 @@
+web/src/composables/useWebRTC.signaling.test.ts
+  h_0ff4f4713441f4 101,202
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3dd0bb585a32aec1a9ba70679a7dbf9de728c279",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
