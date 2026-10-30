@@ -180,4 +180,17 @@ describe('BotDetailPanel', () => {
     await flushPromises()
     expect(apiMock.mock.calls.filter(([p]) => p.endsWith('/access')).length).toBe(before + 1)
   })
+
+  it('keeps Enter in the token name for creating a token and does not save the bot', async () => {
+    const w = await mountPanel()
+    await w.get('[data-testid="bot-name"]').setValue('Ping')
+    apiMock.mockClear()
+    await w.get('[data-testid="bot-tokens"] input[type="text"]').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(patches()).toEqual([])
+    // Enter in the bot's own name field still saves, and so does Ctrl+S anywhere in the panel.
+    await w.get('[data-testid="bot-name"]').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(patches()).toEqual([{ name: 'Ping' }])
+  })
 })

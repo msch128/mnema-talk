@@ -288,3 +288,66 @@ describe('Enter in a one-line field', () => {
     expect(save).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('keys and in-flight edits', () => {
+  it('does not take Enter from a search box or from a form nested in the container', () => {
+    const { api } = setup()
+    api.draft.name = 'A'
+    const container = document.createElement('div')
+    const search = document.createElement('input')
+    search.type = 'search'
+    const nested = document.createElement('form')
+    const inner = document.createElement('input')
+    nested.append(inner)
+    container.append(search, nested)
+    const press = (target: HTMLElement) => {
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'target', { value: target })
+      Object.defineProperty(event, 'currentTarget', { value: container })
+      api.onKeydown(event)
+      return event.defaultPrevented
+    }
+    expect(press(search)).toBe(false)
+    expect(press(inner)).toBe(false)
+  })
+
+  it('ignores Ctrl+S from a dialog opened inside the form', () => {
+    const { api, save } = setup()
+    api.draft.name = 'A'
+    const form = document.createElement('section')
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    const input = document.createElement('input')
+    dialog.append(input)
+    form.append(dialog)
+    const event = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, cancelable: true })
+    Object.defineProperty(event, 'target', { value: input })
+    Object.defineProperty(event, 'currentTarget', { value: form })
+    api.onKeydown(event)
+    expect(event.defaultPrevented).toBe(false)
+    expect(save).not.toHaveBeenCalled()
+  })
+
+  it('keeps an edit made while the save runs unsaved', async () => {
+    let release = () => {}
+    const { api } = setup({ save: () => new Promise<void>(resolve => { release = resolve }) })
+    api.draft.name = 'A'
+    const running = api.save()
+    await nextTick()
+    api.draft.name = 'B'
+    release()
+    await running
+    expect(api.draft.name).toBe('B')
+    expect(api.changed.value).toEqual(['name'])
+    api.reset()
+    expect(api.draft.name).toBe('A')
+  })
+
+  it('lets save override what counts as stored', async () => {
+    const { api } = setup({ save: async ({ commit }) => { commit(['lobby'], { lobby: false }) } })
+    api.draft.lobby = true
+    await api.save()
+    expect(api.draft.lobby).toBe(true)
+    expect(api.changed.value).toEqual(['lobby'])
+  })
+})

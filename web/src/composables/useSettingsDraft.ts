@@ -35,8 +35,12 @@ export interface SaveContext<T> {
   changes: Partial<T>
   changed: (keyof T)[]
   draft: T
-  /** Marks fields as saved as soon as they are, so a later failure leaves only the rest changed. */
-  commit: (keys: (keyof T)[]) => void
+  /**
+   * Marks fields as saved as soon as they are, so a later failure leaves only the rest changed.
+   * What was sent counts as saved: an edit made while the save ran stays unsaved.
+   * `values` overrides what the server stored instead (a one-off box it cleared).
+   */
+  commit: (keys: (keyof T)[], values?: Partial<T>) => void
 }
 
 export interface SettingsDraftOptions<T extends object> {
@@ -91,8 +95,8 @@ export function useSettingsDraft<T extends object>(options: SettingsDraftOptions
     for (const k of untouched) draft[k] = copy(next[k])
   }, { deep: true })
 
-  function commit(keys: (keyof T)[]) {
-    for (const k of keys) saved[k] = copy(draft[k])
+  function commit(keys: (keyof T)[], sent: Partial<T>, values: Partial<T> = {}) {
+    for (const k of keys) saved[k] = copy(k in values ? values[k] : sent[k]) as T[keyof T]
     refreshSavedKeys()
   }
 
@@ -104,10 +108,11 @@ export function useSettingsDraft<T extends object>(options: SettingsDraftOptions
     saving.value = true
     error.value = ''
     let wrote = false
-    const track = (ks: (keyof T)[]) => { wrote = wrote || ks.length > 0; commit(ks) }
+    const done = new Set<keyof T>()
+    const track = (ks: (keyof T)[], values?: Partial<T>) => { wrote = wrote || ks.length > 0; ks.forEach(k => done.add(k)); commit(ks, changes, values) }
     try {
       await options.save({ changes, changed: keys, draft, commit: track })
-      commit(keys)
+      commit(keys.filter(k => !done.has(k)), changes)
     } catch (e) {
       const message = caughtErrorMessage(e, t('draft.saveFailed'))
       error.value = wrote ? t('draft.partialFailed', { message }) : message

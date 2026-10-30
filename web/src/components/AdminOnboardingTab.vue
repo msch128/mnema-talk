@@ -78,8 +78,8 @@ const form = useSettingsDraft<CommunityForm>({
       decode: decodeOnboardingSettings
     })
     // The box is a one-off request: it is cleared once the rules were re-announced.
+    commit(changed, { reaccept: false })
     draft.reaccept = false
-    commit(changed)
   },
   saved: async () => {
     toasts.success(t('admin.onboarding.saved'))

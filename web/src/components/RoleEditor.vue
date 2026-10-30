@@ -76,7 +76,8 @@ const form = useSettingsDraft<RoleForm>({
     // @everyone has only its permissions (and, for the Owner, the limit).
     name: value => (isEveryone.value ? '' : normalise.text(value)),
     color: value => (isEveryone.value ? 0 : value),
-    hex: () => '',
+    // Typed text counts as the colour it means; an empty box is "no colour", unreadable text is its own value.
+    hex: value => parseRoleColor(value) ?? (value.trim() === '' ? 0 : `invalid:${value.trim()}`),
     hoist: value => (isEveryone.value ? false : value),
     // Only the Owner may send the limit.
     upload: value => {

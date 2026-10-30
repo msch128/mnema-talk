@@ -387,6 +387,30 @@ describe('AdminRolesTab unsaved edits', () => {
     expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Bottom')
   })
 
+  it('does not save the role when Enter is pressed in the permission search', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    await w.get('input[maxlength="32"]').setValue('Renamed')
+    apiMock.mockClear()
+    await w.get('[data-testid="role-permission-search"]').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(apiMock.mock.calls.some(([, o]) => o?.method === 'PATCH')).toBe(false)
+  })
+
+  it('restores the colour box on Reset and ignores how a colour is spelled', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    const hex = w.get<HTMLInputElement>('input[placeholder="#rrggbb"]')
+    const before = hex.element.value
+    await hex.setValue('#12345')
+    await w.get('[data-testid="unsaved-reset"]').trigger('click')
+    expect(hex.element.value).toBe(before)
+    expect(w.find('[data-testid="role-color-invalid"]').exists()).toBe(false)
+    expect(w.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeDefined()
+  })
+
   it('narrows the permission list by what is typed', async () => {
     const w = setup()
     await flushPromises()

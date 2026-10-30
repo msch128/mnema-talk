@@ -49,23 +49,30 @@ export function useLeaveGuard(dirty: Ref<boolean>) {
 
 /** Ctrl/Cmd+S runs `save` and keeps the browser's own "save page" away. */
 export function onSaveShortcut(e: KeyboardEvent, save: () => unknown) {
-  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
-    e.preventDefault()
-    void save()
-  }
+  if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 's') return
+  // A dialog opened from inside the form (a rename) has its own Save.
+  const dialog = e.target instanceof Element ? e.target.closest('[role="dialog"],[role="alertdialog"]') : null
+  if (dialog && !(e.currentTarget instanceof Node && dialog.contains(e.currentTarget))) return
+  e.preventDefault()
+  void save()
 }
 
-const ONE_LINE_TYPES = new Set(['text', 'number', 'search', 'url', 'email'])
-/** A single-line text field: Enter there means "done". */
-export function isOneLineField(target: EventTarget | null): boolean {
-  return target instanceof HTMLInputElement && ONE_LINE_TYPES.has(target.type)
+const ONE_LINE_TYPES = new Set(['text', 'number', 'url', 'email'])
+/**
+ * A single-line field of this form: Enter there means "done". Search boxes, and fields of
+ * another form inside it (their own Enter creates or filters), are not.
+ */
+export function isOneLineField(target: EventTarget | null, container: EventTarget | null = null): boolean {
+  if (!(target instanceof HTMLInputElement) || !ONE_LINE_TYPES.has(target.type)) return false
+  const form = target.closest('form')
+  return !form || form === container || !(container instanceof Element && container.contains(form))
 }
 
 /** The keys of a form: Ctrl/Cmd+S saves, and so does Enter in a one-line field (a form with several fields has no implicit submit). */
 export function saveKeys(save: () => unknown) {
   return (e: KeyboardEvent) => {
     onSaveShortcut(e, save)
-    if (e.key === 'Enter' && !e.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && isOneLineField(e.target)) {
+    if (e.key === 'Enter' && !e.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && isOneLineField(e.target, e.currentTarget) && !e.defaultPrevented) {
       e.preventDefault()
       void save()
     }

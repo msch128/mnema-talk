@@ -62,7 +62,7 @@ const draft = useSettingsDraft<RuleForm>({
   }
 })
 const form = computed(() => draft.draft)
-if (isNew) Object.assign(draft.draft, defaults)
+if (isNew) Object.assign(draft.draft, JSON.parse(JSON.stringify(defaults)))
 
 // What the member changed from what they were given (for a new rule: from the defaults).
 const edited = computed(() => (isNew ? JSON.stringify({ ...draft.draft }) !== JSON.stringify(defaults) : draft.dirty.value))

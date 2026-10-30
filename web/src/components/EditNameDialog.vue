@@ -10,6 +10,7 @@ import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { nextSortOrder } from '../lib/channelLayout'
 import { confirmAutoDelete } from '../lib/autoDelete'
+import { saveKeys } from '../composables/draftGuard'
 import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
@@ -111,12 +112,8 @@ async function submit() {
 
 const guard = () => isCreate.value || form.guard()
 
-function onKeydown(e: KeyboardEvent) {
-  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
-    e.preventDefault()
-    void submit()
-  }
-}
+// Ctrl/Cmd+S and Enter go through submit, so the auto-delete confirmation still runs.
+const onKeydown = saveKeys(submit)
 
 const title = computed(() => {
   if (isCreate.value) return t('sidebar.createCategory')
