@@ -1,0 +1,31 @@
+web/src/components/StatusDialog.test.ts
+  s_6f62c78e3c93c5::t_e8d3cf1da379b0 106-126
+web/src/components/StatusDialog.vue
+  s_6f62c78e3c93c5::t_3c0b2766fb8ad9 30-34,45,86,157
+web/src/components/TalkOverviewDialog.test.ts
+  s_6f62c78e3c93c5::t_0490d041e86f69 60
+web/src/components/TalkOverviewDialog.vue
+  s_6f62c78e3c93c5::t_84b155a489a09e 19,37-40
+web/src/components/UserProfileModal.vue
+  s_6f62c78e3c93c5::t_a9149128001b47 293
+web/src/i18n/de.json
+  s_6f62c78e3c93c5::t_86a1a4289d1300 1780
+web/src/i18n/en.json
+  s_6f62c78e3c93c5::t_806ff0c0a42bcb 1780
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a35b4bb690319c5805ceb779098d839c069ab43f",
+  "prompts": {},
+  "sessions": {
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
