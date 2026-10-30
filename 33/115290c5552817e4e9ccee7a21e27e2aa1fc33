@@ -1,0 +1,51 @@
+scripts/english-only-allowlist.txt
+  s_afb3377f9f37f8::t_2e102e953b719d 17-19
+web/package.json
+  s_afb3377f9f37f8::t_d15f3201b29c2e 12-13
+web/scripts/check-i18n.test.ts
+  s_afb3377f9f37f8::t_cf7e2db6a3d18a 1-83
+web/scripts/check-i18n.ts
+  s_afb3377f9f37f8::t_ee476db1f01453 1-315
+web/src/i18n/de.json
+  s_afb3377f9f37f8::t_d5d6215d45dcb4 2947
+web/src/i18n/en.json
+  s_afb3377f9f37f8::t_8278f669df3028 2947
+web/src/lib/api.ts
+  s_afb3377f9f37f8::t_5f7f6613cca420 147
+web/src/lib/automod.ts
+  s_afb3377f9f37f8::t_1a25afe0ce4314 45
+web/src/lib/crypto/stateStore.ts
+  s_afb3377f9f37f8::t_c6ca4de6004567 22
+web/src/lib/native/trustedSocket.ts
+  s_afb3377f9f37f8::t_627021be14c72e 61
+web/src/lib/pttKey.ts
+  s_afb3377f9f37f8::t_1491b73cb08d89 21
+web/src/lib/thirdParty.ts
+  s_afb3377f9f37f8::t_00cf42693eb639 70
+web/src/stores/events.test.ts
+  s_afb3377f9f37f8::t_70b74495b57ac6 8,268
+web/src/stores/events.ts
+  s_afb3377f9f37f8::t_9b6ab32ac88f9e 105
+web/src/stores/eventsPast.ts
+  s_afb3377f9f37f8::t_3472c2f7686442 5,51
+web/src/types/events.ts
+  s_afb3377f9f37f8::t_a4e44d6018d727 376
+web/src/types/validation.ts
+  s_afb3377f9f37f8::t_e7b50e62ede75f 52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "33115290c5552817e4e9ccee7a21e27e2aa1fc33",
+  "prompts": {},
+  "sessions": {
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
