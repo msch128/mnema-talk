@@ -5,6 +5,7 @@ import type { ClientLike, PushScope } from './push'
 const CHANNEL = '11111111-1111-4111-8111-111111111111'
 const MESSAGE = '22222222-2222-4222-8222-222222222222'
 const ROOT = '33333333-3333-4333-8333-333333333333'
+const EVENT = '44444444-4444-4444-8444-444444444444'
 
 const payload = (over: Record<string, unknown> = {}) => ({
   v: 1, type: 'message', title: 'Alice (#general)', body: 'Hello', tag: CHANNEL, ts: 1_700_000_000_000,
@@ -42,7 +43,7 @@ describe('reading a push', () => {
   it('accepts the server payload and normalises the ids', () => {
     expect(parsePush(payload({ parent_id: ROOT.toUpperCase(), mention: true }))).toEqual({
       type: 'message', title: 'Alice (#general)', body: 'Hello', tag: CHANNEL, timestamp: 1_700_000_000_000,
-      channelId: CHANNEL, channelSlug: null, messageId: MESSAGE, parentId: ROOT, mention: true,
+      channelId: CHANNEL, channelSlug: null, messageId: MESSAGE, parentId: ROOT, eventId: null, mention: true,
     })
   })
 
@@ -61,7 +62,13 @@ describe('reading a push', () => {
   it('tags the notification with the channel so the page\'s own one replaces it', () => {
     const options = notificationOptions(parsePush(payload())!)
     expect(options).toMatchObject({ body: 'Hello', tag: CHANNEL, renotify: true, icon: '/pwa-icon-192.png', badge: '/pwa-badge-96.png' })
-    expect(options['data']).toEqual({ channel_id: CHANNEL, channel_slug: null, message_id: MESSAGE, parent_id: null })
+    expect(options['data']).toEqual({ channel_id: CHANNEL, channel_slug: null, message_id: MESSAGE, parent_id: null, event_id: null })
+  })
+
+  it('reads the event of a reminder and keeps it in the click data', () => {
+    const parsed = parsePush(payload({ type: 'event', channel_id: CHANNEL, message_id: undefined, event_id: EVENT.toUpperCase(), title: 'Game night', body: 'Starts in 15 minutes' }))
+    expect(parsed).toMatchObject({ type: 'event', title: 'Game night', eventId: EVENT, messageId: null })
+    expect(notificationOptions(parsed!)['data']).toMatchObject({ event_id: EVENT, channel_id: CHANNEL })
   })
 })
 
@@ -147,9 +154,22 @@ describe('a notification is clicked', () => {
     expect(openTarget({ channel_id: CHANNEL, message_id: MESSAGE, parent_id: ROOT }).message).toEqual({
       type: 'mnema:open-message', channel_id: CHANNEL, message_id: MESSAGE, parent_id: ROOT,
     })
-    for (const odd of [undefined, null, 'x', {}, { channel_id: '../x', message_id: MESSAGE }]) {
+    for (const odd of [undefined, null, 'x', {}, { channel_id: '../x', message_id: MESSAGE }, { event_id: '../x' }]) {
       expect(openTarget(odd)).toEqual({ url: '/', message: null })
     }
+  })
+
+  it('an event reminder opens the event: by message to an open app, by address to a closed one', async () => {
+    const data = { channel_id: CHANNEL, event_id: EVENT }
+    expect(openTarget(data)).toEqual({ url: `/?event=${EVENT}`, message: { type: 'mnema:open-event', event_id: EVENT } })
+    const open = client('visible')
+    const { scope: s } = scope({ windows: [open], waiting: 0 })
+    await onNotificationClick(s, click(data))
+    expect(open.focus).toHaveBeenCalled()
+    expect(open.postMessage).toHaveBeenCalledWith({ type: 'mnema:open-event', event_id: EVENT })
+    const closed = scope({ windows: [], waiting: 0 })
+    await onNotificationClick(closed.scope, click(data))
+    expect(closed.scope.clients.openWindow).toHaveBeenCalledWith(`/?event=${EVENT}`)
   })
 
   it('focuses the app on screen and tells it which message to show', async () => {

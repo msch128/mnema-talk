@@ -44,6 +44,7 @@ function previewMessageSound() {
         <select
           v-if="outputSelectable"
           id="audio-output-device"
+          data-settings-field="output-device"
           v-model="voiceStore.selectedOutputDeviceId"
           data-testid="output-device"
           class="w-full rounded-md border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"

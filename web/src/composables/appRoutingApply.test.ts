@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { applyRoute, type RoutingContext } from './appRoutingApply'
 import { parseRoute } from '../lib/router'
+import { settingsTab } from '../lib/settingsDialog'
 
 const navigate = vi.hoisted(() => vi.fn())
 const fetchForumPosts = vi.hoisted(() => vi.fn())
@@ -37,6 +38,7 @@ function makeCtx() {
     chatStore,
     voiceStore: { activeView: 'chat', currentChannelId: null },
     toasts,
+    account: { dialogOpen: false, open: vi.fn(), close: vi.fn() },
     showAdminModal: ref(false),
     adminTab: ref('users'),
     previewVoiceChannelId: ref<string | null>(null),
@@ -170,5 +172,31 @@ describe('forum post addresses', () => {
     await applyRoute(ctx, parseRoute('/c/ideas/p/no-id'))
     expect(toasts.error).toHaveBeenCalledTimes(2)
     expect(navigate).toHaveBeenLastCalledWith('/c/ideas', { replace: true })
+  })
+})
+
+describe('the settings dialog address', () => {
+  it('opens the dialog on the section the address names, and on the first for an unknown one', async () => {
+    const { ctx } = makeCtx()
+    await applyRoute(ctx, parseRoute('/settings/audio'))
+    expect(settingsTab.value).toBe('audio')
+    expect(ctx.account.open).toHaveBeenCalledTimes(1)
+    await applyRoute(ctx, parseRoute('/settings/nonsense'))
+    expect(settingsTab.value).toBe('signin')
+  })
+
+  it('moves an open dialog to another section without reopening it', async () => {
+    const { ctx } = makeCtx()
+    ctx.account.dialogOpen = true
+    await applyRoute(ctx, parseRoute('/settings/privacy'))
+    expect(settingsTab.value).toBe('privacy')
+    expect(ctx.account.open).not.toHaveBeenCalled()
+  })
+
+  it('closes the dialog when the address leads elsewhere, as Back does', async () => {
+    const { ctx } = makeCtx()
+    ctx.account.dialogOpen = true
+    await applyRoute(ctx, parseRoute('/c/general'))
+    expect(ctx.account.close).toHaveBeenCalledTimes(1)
   })
 })

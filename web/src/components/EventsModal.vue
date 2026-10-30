@@ -17,6 +17,7 @@ import { caughtErrorMessage } from '../lib/api'
 import { locale, t } from '../i18n'
 import type { CommunityEvent } from '../types/domain'
 
+const props = defineProps<{ focusEventId?: string | null; focusSeq?: number }>()
 const emit = defineEmits<{
   close: []
 }>()
@@ -32,9 +33,23 @@ const selectedEvent = ref<CommunityEvent | null>(null)
 const editingEvent = ref<CommunityEvent | null>(null)
 const creatingEvent = ref(false)
 
-onMounted(() => {
+// A reminder points at one event: once the list is in, show it (an event that already started is in the past list).
+async function showWanted(wanted: string | null | undefined) {
+  // An event being written or edited is not replaced by a reminder's detail view.
+  if (!wanted || editingEvent.value || creatingEvent.value) return
+  await eventsStore.load()
+  let found = eventsStore.events.find(e => e.id === wanted)
+  if (!found) {
+    await eventsStore.loadPast()
+    found = eventsStore.pastEvents.find(e => e.id === wanted)
+  }
+  if (found && !editingEvent.value && !creatingEvent.value) selectedEvent.value = found
+}
+onMounted(async () => {
   void eventsStore.load()
+  await showWanted(props.focusEventId)
 })
+watch(() => [props.focusEventId, props.focusSeq], () => { void showWanted(props.focusEventId) })
 
 watch(activeTab, tab => {
   if (tab === 'past' && !eventsStore.pastLoaded) void eventsStore.loadPast()

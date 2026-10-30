@@ -46,6 +46,7 @@ async function handleDeviceChange() {
         <label for="audio-input-device" class="settings-row-title block">{{ $t('audio.inputDevice') }}</label>
         <select
           id="audio-input-device"
+          data-settings-field="input-device"
           v-model="voiceStore.selectedInputDeviceId"
           class="w-full rounded-md border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
           @change="handleDeviceChange"

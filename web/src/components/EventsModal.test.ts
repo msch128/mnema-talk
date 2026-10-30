@@ -175,4 +175,53 @@ describe('EventsModal', () => {
 
     expect(rsvpSpy).toHaveBeenCalledWith(fixtureId(1), 'going')
   })
+
+  it('shows the event a reminder names, also when asked again for another one while open', async () => {
+    const store = useEventsStore()
+    const a = makeEvent({ id: fixtureId(1), title: 'Game Night' })
+    const b = makeEvent({ id: fixtureId(2), title: 'Movie Evening' })
+    vi.spyOn(store, 'load').mockImplementation(async () => { store.events = [a, b] })
+    wrapper = mount(EventsModal, { attachTo: document.body, props: { focusEventId: a.id } })
+    await vi.waitFor(() => expect(wrapper.findComponent({ name: 'EventDetailModal' }).props('event')).toMatchObject({ id: a.id }))
+    await wrapper.setProps({ focusEventId: b.id })
+    await vi.waitFor(() => expect(wrapper.findComponent({ name: 'EventDetailModal' }).props('event')).toMatchObject({ id: b.id }))
+  })
+
+  it('looks in the past events for one that already started', async () => {
+    const store = useEventsStore()
+    const gone = makeEvent({ id: fixtureId(3), title: 'Old Quiz', status: 'completed' })
+    vi.spyOn(store, 'load').mockImplementation(async () => { store.events = [] })
+    vi.spyOn(store, 'loadPast').mockImplementation(async () => { store.events = [gone] })
+    wrapper = mount(EventsModal, { attachTo: document.body, props: { focusEventId: gone.id } })
+    await vi.waitFor(() => expect(wrapper.findComponent({ name: 'EventDetailModal' }).exists()).toBe(true))
+  })
+
+  it('shows the same event again when asked again after going back to the list', async () => {
+    const store = useEventsStore()
+    const a = makeEvent({ id: fixtureId(1), title: 'Game Night' })
+    vi.spyOn(store, 'load').mockImplementation(async () => { store.events = [a] })
+    wrapper = mount(EventsModal, { attachTo: document.body, props: { focusEventId: a.id, focusSeq: 1 } })
+    await vi.waitFor(() => expect(wrapper.findComponent({ name: 'EventDetailModal' }).exists()).toBe(true))
+    wrapper.findComponent({ name: 'EventDetailModal' }).vm.$emit('close')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findComponent({ name: 'EventDetailModal' }).exists()).toBe(false)
+    await wrapper.setProps({ focusSeq: 2 })
+    await vi.waitFor(() => expect(wrapper.findComponent({ name: 'EventDetailModal' }).exists()).toBe(true))
+  })
+
+  it('does not replace an event that is being created by a reminder', async () => {
+    const store = useEventsStore()
+    const a = makeEvent({ id: fixtureId(1), title: 'Game Night' })
+    vi.spyOn(store, 'load').mockImplementation(async () => { store.events = [a] })
+    usePermissionsStore().info = makePermsInfo(Number.MAX_SAFE_INTEGER)
+    wrapper = mount(EventsModal, { attachTo: document.body })
+    const create = wrapper.findAll('button').find(b => /create|new event|plus/i.test(b.text()) || b.attributes('data-testid')?.includes('create'))
+    expect(create).toBeDefined()
+    await create?.trigger('click')
+    await wrapper.setProps({ focusEventId: a.id, focusSeq: 1 })
+    await wrapper.vm.$nextTick()
+    await new Promise(resolve => setTimeout(resolve, 20))
+    expect(wrapper.findComponent({ name: 'EventDetailModal' }).exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'EventEditDialog' }).exists()).toBe(true)
+  })
 })

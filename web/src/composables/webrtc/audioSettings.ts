@@ -6,7 +6,7 @@ import type { Cx } from './state'
 import { micErrorKey, requestMicrophone, setupMicPipeline, teardownMicPipeline } from './micPipeline'
 import { startMicTest } from './micTest'
 import { aiModel } from './audioMath'
-import { noticeOnce } from './audioNotice'
+import { noticeOnce, withAudioSettings } from './audioNotice'
 import { activeAudioTrack, applyQos } from './senders'
 import { startSpeakingDetection, stopSpeakingDetection } from './voiceAudio'
 
@@ -29,7 +29,7 @@ export function recoverFilter(cx: Cx, ctx: AudioContext, model: NoiseModel, test
   const { st } = cx
   if (targetAudioContext(st, test) !== ctx || st.failedAIModel === model) return
   st.failedAIModel = model
-  useToastStore().info(t('audio.filterDegraded'))
+  useToastStore().info(t('audio.filterDegraded'), withAudioSettings('noise'))
   // Allow the current setup to finish before acquiring the native fallback.
   // The old downstream mute/gate remains active throughout this transition.
   setTimeout(() => {
@@ -53,7 +53,7 @@ export function recoverContext(cx: Cx, ctx: AudioContext) {
   st.contextStalled = true
   const model = aiModel(voice.noiseMode)
   if (model) st.failedAIModel = model
-  noticeOnce('audio.engineStalled')
+  noticeOnce('audio.engineStalled', 'output-device')
   setTimeout(() => {
     if (st.audioContext !== ctx) return
     reapplyDegradedFilter(cx, false)
@@ -99,7 +99,7 @@ async function acquireMicrophone(cx: Cx): Promise<MediaStream | null> {
   } catch (err) {
     console.warn('Could not switch microphone:', err)
     // The running microphone stays; the user learns the new one was not applied.
-    useToastStore().error(t(micErrorKey(err)))
+    useToastStore().error(t(micErrorKey(err)), withAudioSettings('input-device'))
     return null
   }
 }
@@ -138,7 +138,7 @@ function dropMicrophone(cx: Cx) {
   voice.localAudioStream = null
   voice.currentInputLevel = 0
   st.audioSender?.replaceTrack(null).catch(() => {})
-  useToastStore().error(t('voice.micLost'))
+  useToastStore().error(t('voice.micLost'), withAudioSettings('input-device'))
 }
 
 async function swapMicrophone(cx: Cx) {

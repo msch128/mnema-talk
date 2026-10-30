@@ -8,6 +8,7 @@ import { mediaCall } from '../../lib/media/api'
 import { t } from '../../i18n'
 import type { SubscribeRequest, ServerEventPayloads } from '../../types/events'
 import { loadIceServers } from './iceServers'
+import { withAudioSettings } from './audioNotice'
 import { isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
 import { resumeRemoteAudio as resumeRemotePlayback } from './remoteAudio'
 import { closeMediaRoom, mediaConnectionAnnounced, openMediaRoom, resetMediaAnnouncements } from './mediaRoom'
@@ -55,7 +56,7 @@ async function captureMicrophone(cx: Cx): Promise<MediaStream | null> {
   } catch (err) {
     console.warn('Microphone access denied or unavailable:', err)
     // The join goes on listen-only; say why instead of leaving the user mute.
-    useToastStore().error(t(micErrorKey(err)))
+    useToastStore().error(t(micErrorKey(err)), withAudioSettings('input-device'))
     return null
   }
 }

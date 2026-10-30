@@ -8,7 +8,7 @@ import { platform } from '../../lib/platform'
 import { applyOutput } from './remoteAudio'
 import type { Cx } from './state'
 import { aiModel, setNodeGain } from './audioMath'
-import { noticeOnce } from './audioNotice'
+import { noticeOnce, withAudioSettings } from './audioNotice'
 import { attachRawTap, detachRawTap } from './rawSilence'
 
 export async function refreshAudioDevices(cx: Cx) {
@@ -85,7 +85,7 @@ export async function requestMicrophone(cx: Cx): Promise<MediaStream> {
     if (!voice.selectedInputDeviceId || (name !== 'NotFoundError' && name !== 'OverconstrainedError')) throw err
     const stream = await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints(cx, false) })
     voice.selectedInputDeviceId = ''
-    useToastStore().info(t('voice.micDeviceReset'))
+    useToastStore().info(t('voice.micDeviceReset'), withAudioSettings('input-device'))
     return stream
   }
 }
@@ -176,7 +176,7 @@ async function applyNoiseFilter(cx: Cx, ctx: AudioContext, stream: MediaStream, 
   if (!model || model === st.failedAIModel) return stage
   if (!isNoiseSuppressionSupported()) {
     // Said once; the capture then asks the browser for its own suppression.
-    noticeOnce('audio.filterUnsupported')
+    noticeOnce('audio.filterUnsupported', 'noise')
     return stage
   }
   const node = await createNoiseSuppressorNode(ctx, model, { signal: controller.signal, onFailure: () => cx.hooks.filterFailed(ctx, model) })

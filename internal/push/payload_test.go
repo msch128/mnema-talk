@@ -225,3 +225,16 @@ func TestPushForACallInAGroupOfMessagesStaysOneBurst(t *testing.T) {
 		t.Fatalf("title %q body %q", p.Title, p.Body)
 	}
 }
+
+func TestPushTitleSaysWhenTheMessageIsAThreadReply(t *testing.T) {
+	root := uuid.New()
+	n := notice()
+	n.ParentID = &root
+	if got := build(n, "en", true).Title; got != "Alice (#general, Thread)" {
+		t.Fatalf("channel thread reply titled %q", got)
+	}
+	n.DM = true
+	if got := build(n, "de", true).Title; got != "Alice (Thread)" {
+		t.Fatalf("conversation thread reply titled %q", got)
+	}
+}

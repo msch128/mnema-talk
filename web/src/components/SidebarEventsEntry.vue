@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted } from 'vue'
 import { Calendar } from '@lucide/vue'
 import { useEventsStore } from '../stores/events'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import EventsModal from './EventsModal.vue'
+import { openEvents } from '../lib/eventsDialog'
 
 const features = useServerFeaturesStore()
 const eventsStore = useEventsStore()
-const showModal = ref(false)
 
 onMounted(() => {
   if (features.events) {
@@ -22,7 +21,7 @@ onMounted(() => {
       type="button"
       class="group flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-sm font-medium text-mnema-secondary hover:bg-mnema-hover hover:text-mnema-text transition-colors cursor-pointer"
       :aria-label="$t('events.events')"
-      @click="showModal = true"
+      @click="openEvents()"
     >
       <div class="flex items-center gap-2 min-w-0">
         <Calendar class="w-4 h-4 shrink-0 text-mnema-tertiary group-hover:text-mnema-text" />
@@ -36,6 +35,5 @@ onMounted(() => {
       </span>
     </button>
 
-    <EventsModal v-if="showModal" @close="showModal = false" />
   </div>
 </template>

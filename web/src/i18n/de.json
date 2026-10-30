@@ -574,6 +574,7 @@
     "inThread": "im Thread",
     "searchPinned": "Angeheftet",
     "notifyNoText": "Neue Nachricht",
+    "notifyThread": "Thread",
     "searchFilterUnsupported": "Dieser Server unterstützt diesen Filter noch nicht. Entferne ihn oder suche ohne ihn.",
     "copyText": "Text kopieren",
     "copiedText": "Text kopiert",
@@ -786,6 +787,7 @@
     "noAudioDetectedToast": "Von deinem Mikrofon kommt kein Ton. Prüfe dein Eingabegerät und die Systemberechtigung.",
     "micHardwareMutedToast": "Dein Mikrofon scheint per Hardware-Schalter oder vom System stummgeschaltet zu sein.",
     "noAudioDismiss": "In diesem Gespräch nicht mehr warnen",
+    "openSettings": "Audioeinstellungen öffnen",
     "switchChannelWarningTitle": "Bestätigung beim Talk-Wechsel",
     "switchChannelWarningHint": "Fragt nach einer Bestätigung, bevor du in einen anderen Talk wechselst.",
     "switchChannelTitle": "Talk wechseln?",
@@ -2204,7 +2206,6 @@
     "reminderFailed": "Die Erinnerung ließ sich nicht setzen. Versuche es erneut.",
     "scheduleFailed": "Die Nachricht ließ sich nicht planen. Versuche es erneut.",
     "reminderDue": "Erinnerung: Eine Nachricht wartet auf dich.",
-    "reminderDueWith": "Erinnerung: {text}",
     "scheduledFailed": "Eine geplante Nachricht wurde nicht gesendet",
     "emptyTitle": "Keine Erinnerungen",
     "emptyBody": "Wähle „Erinnere mich“ an einer Nachricht, um zu einer Zeit deiner Wahl darauf zurückzukommen. Du wirst dann benachrichtigt.",
@@ -2213,7 +2214,10 @@
     "snoozed": "Verschoben. Wir erinnern dich am {time}.",
     "snoozeFailed": "Die Erinnerung konnte nicht verschoben werden. Versuche es erneut.",
     "openMessage": "Öffnen",
-    "snoozeNotCleared": "Verschoben auf {time}, aber die alte Erinnerung konnte nicht entfernt werden und erscheint evtl. noch einmal."
+    "snoozeNotCleared": "Verschoben auf {time}, aber die alte Erinnerung konnte nicht entfernt werden und erscheint evtl. noch einmal.",
+    "reminderDueChannel": "Erinnerung: {author} in #{channel}: {text}",
+    "reminderDueDm": "Erinnerung: {author} hat dir geschrieben: {text}",
+    "reminderTitle": "Erinnerung"
   },
   "saved": {
     "title": "Gespeicherte Nachrichten",
@@ -2966,7 +2970,11 @@
       "one": "{count} Vielleicht",
       "other": "{count} Vielleicht"
     },
-    "reminderToast": "Erinnerung: „{title}“ beginnt in 15 Minuten!",
+    "reminderToast": {
+      "one": "Erinnerung: „{title}“ beginnt in {count} Minute!",
+      "other": "Erinnerung: „{title}“ beginnt in {count} Minuten!"
+    },
+    "reminderOpen": "Veranstaltung anzeigen",
     "save": "Änderungen speichern",
     "details": "Details",
     "participants": "Rückmeldungen",

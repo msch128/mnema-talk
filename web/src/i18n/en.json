@@ -574,6 +574,7 @@
     "inThread": "in thread",
     "searchPinned": "Pinned",
     "notifyNoText": "New message",
+    "notifyThread": "Thread",
     "searchFilterUnsupported": "This server doesn’t support this filter yet. Remove it or search without it.",
     "copyText": "Copy text",
     "copiedText": "Text copied",
@@ -786,6 +787,7 @@
     "noAudioDetectedToast": "No sound is coming from your microphone. Check your input device and system permission.",
     "micHardwareMutedToast": "Your microphone seems to be muted by a hardware switch or the system.",
     "noAudioDismiss": "Do not warn again in this call",
+    "openSettings": "Open audio settings",
     "switchChannelWarningTitle": "Confirm switching Talks",
     "switchChannelWarningHint": "Asks for confirmation before moving to a different Talk.",
     "switchChannelTitle": "Switch Talk?",
@@ -2204,7 +2206,6 @@
     "reminderFailed": "Couldn’t set the reminder. Try again.",
     "scheduleFailed": "Couldn’t schedule the message. Try again.",
     "reminderDue": "Reminder: a message is waiting for you.",
-    "reminderDueWith": "Reminder: {text}",
     "scheduledFailed": "A scheduled message wasn’t sent",
     "emptyTitle": "No reminders",
     "emptyBody": "Choose “Remind me” on a message to come back to it at a time you pick. You get a notification then.",
@@ -2213,7 +2214,10 @@
     "snoozed": "Snoozed. We’ll remind you on {time}.",
     "snoozeFailed": "Couldn’t snooze the reminder. Try again.",
     "openMessage": "Open",
-    "snoozeNotCleared": "Snoozed to {time}, but the old reminder couldn’t be removed and may show up once more."
+    "snoozeNotCleared": "Snoozed to {time}, but the old reminder couldn’t be removed and may show up once more.",
+    "reminderDueChannel": "Reminder: {author} in #{channel}: {text}",
+    "reminderDueDm": "Reminder: {author} wrote to you: {text}",
+    "reminderTitle": "Reminder"
   },
   "saved": {
     "title": "Saved messages",
@@ -2966,7 +2970,11 @@
       "one": "{count} interested",
       "other": "{count} interested"
     },
-    "reminderToast": "Reminder: “{title}” is starting in 15 minutes!",
+    "reminderToast": {
+      "one": "Reminder: “{title}” is starting in {count} minute!",
+      "other": "Reminder: “{title}” is starting in {count} minutes!"
+    },
+    "reminderOpen": "Show event",
     "save": "Save changes",
     "details": "Details",
     "participants": "Responses",

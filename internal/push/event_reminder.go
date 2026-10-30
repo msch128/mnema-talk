@@ -52,6 +52,7 @@ func (s *Service) SendEventReminder(ctx context.Context, userID uuid.UUID, event
 			Body:      body,
 			Tag:       fmt.Sprintf("event:%s", eventID),
 			ChannelID: channelID,
+			EventID:   &eventID,
 			Timestamp: startTime.UnixMilli(),
 		}
 	})

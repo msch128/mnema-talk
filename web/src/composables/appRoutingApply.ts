@@ -7,6 +7,8 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
 import { navigate, resolveRoute, targetOf } from '../lib/router'
+import { isSettingsTab, settingsTab } from '../lib/settingsDialog'
+import type { useAccountStore } from '../stores/account'
 import { pathDms } from '../lib/dm'
 import { channelPath, postPath, postShortId, isUuid, textPath, talkPath } from '../lib/routePaths'
 import { fetchForumPosts } from '../lib/forumApi'
@@ -21,6 +23,8 @@ export interface RoutingContext {
   chatStore: ReturnType<typeof useChatStore>
   voiceStore: ReturnType<typeof useVoiceStore>
   toasts: ReturnType<typeof useToastStore>
+  /** The settings dialog (/settings/:tab) is open while its dialogOpen is set. */
+  account: Pick<ReturnType<typeof useAccountStore>, 'dialogOpen' | 'open' | 'close'>
   showAdminModal: Ref<boolean>
   adminTab: Ref<string>
   previewVoiceChannelId: Ref<string | null>
@@ -212,6 +216,10 @@ async function dispatchRoute(ctx: RoutingContext, route: TargetRoute, previousVo
   } else if (route.view === 'admin') {
     ctx.adminTab.value = route.tab || 'users'
     ctx.showAdminModal.value = true
+  } else if (route.view === 'settings') {
+    const tab = isSettingsTab(route.tab) ? route.tab : 'signin'
+    settingsTab.value = tab
+    if (!ctx.account.dialogOpen) ctx.account.open()
   } else if (route.view === 'root') {
     applyRootRoute(ctx)
   }
@@ -262,6 +270,8 @@ export async function applyRoute(ctx: RoutingContext, route: Route): Promise<boo
   const gen = ++ctx.routeGen
   const superseded = () => !ctx.alive() || gen !== ctx.routeGen
 
+  // Any other address leaves the settings dialog (Back from /settings/audio closes it).
+  if (route.view !== 'settings' && ctx.account.dialogOpen) ctx.account.close()
   if (!(await admitRoute(ctx, route, superseded))) return false
   if (!ctx.chatStore.allChannels.length) return false
   if (handleRouteRedirect(ctx, route)) return true

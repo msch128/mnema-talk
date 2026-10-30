@@ -14,6 +14,7 @@ import { requestAdminTab, adminTabRequest } from './lib/adminRequest'
 import { channelFixture, categoryFixture, messageFixture, userFixture, requireValue } from './test-fixtures.fixture'
 import App from './App.vue'
 import { useCompactLayout } from './composables/useCompactLayout'
+import { openEvents, closeEvents } from './lib/eventsDialog'
 
 const rtc = vi.hoisted(() => ({ resumeVoiceSession: vi.fn(async () => false), resumeRemoteAudio: vi.fn(), leaveVoiceChannel: vi.fn(), rejoinAfterReconnect: vi.fn() }))
 vi.mock('./composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
@@ -91,6 +92,21 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     chat.categories = [categoryFixture({ channels })]
     await go('/v/v2/chat')
     expect(chat.activeChannel?.id).toBe('v2')
+  })
+  it('shows an event reminder on a phone even with the channel drawer closed', async () => {
+    const { w } = await mountApp()
+    const { isCompact, navOpen } = useCompactLayout()
+    isCompact.value = true
+    navOpen.value = false
+    useServerFeaturesStore().list = ['events']
+    openEvents('44444444-4444-4444-8444-444444444444')
+    await flushPromises()
+    // Drawn by the app itself, not inside the sidebar that is off-screen.
+    const modal = w.findComponent({ name: 'EventsModal' })
+    expect(modal.exists()).toBe(true)
+    expect(w.findComponent({ name: 'Sidebar' }).findComponent({ name: 'EventsModal' }).exists()).toBe(false)
+    expect(modal.props('focusEventId')).toBe('44444444-4444-4444-8444-444444444444')
+    closeEvents()
   })
   it('closes the channel drawer on a phone with Escape', async () => {
     await mountApp()

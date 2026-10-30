@@ -230,3 +230,29 @@ describe('SettingsDialog sections', () => {
     w.unmount()
   })
 })
+
+describe('SettingsDialog jump targets', () => {
+  it('puts the cursor on the field a notice asked for, in the section it asked for', async () => {
+    apiMock.mockImplementation(async () => ({ sessions: [] }))
+    const { openSettings, settingsField } = await import('../lib/settingsDialog')
+    openSettings('audio', { field: 'input-device' })
+    const w = mount(SettingsDialog, { attachTo: document.body, global: { directives: { tooltip: {} } } })
+    await flushPromises()
+    await vi.waitFor(() => expect(settingsField.value).toBeNull())
+    expect(w.get('[data-testid="settings-tab-audio"]').attributes('aria-selected')).toBe('true')
+    const field = document.querySelector('[data-settings-field="input-device"]')
+    expect(field).not.toBeNull()
+    expect(document.activeElement).toBe(field)
+    w.unmount()
+  })
+
+  it('forgets the requested field when the person picks a section themselves', async () => {
+    apiMock.mockImplementation(async () => ({ sessions: [] }))
+    const { openSettings, settingsField } = await import('../lib/settingsDialog')
+    const w = await open(none)
+    openSettings('signin', { field: 'noise' })
+    await w.get('[data-testid="settings-tab-sessions"]').trigger('click')
+    expect(settingsField.value).toBeNull()
+    w.unmount()
+  })
+})

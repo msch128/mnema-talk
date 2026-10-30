@@ -1,6 +1,7 @@
 import { t } from '../../i18n'
 import { useToastStore } from '../../stores/toast'
 import type { Cx, RtcState } from './state'
+import { withAudioSettings } from './audioNotice'
 
 // Digital silence is all-zero samples. Anything above -100 dBFS is a live
 // capture, however quiet the room is.
@@ -57,7 +58,7 @@ function warn(cx: Cx, cause: Cause) {
   if (st.noAudioWarned) return
   st.noAudioWarned = true
   useToastStore().info(t(cause === 'hardware' ? 'audio.micHardwareMutedToast' : 'audio.noAudioDetectedToast'), {
-    action: { label: t('audio.noAudioDismiss'), onClick: () => { st.noAudioDismissed = true } }
+    ...withAudioSettings('input-device', { secondary: { label: t('audio.noAudioDismiss'), onClick: () => { st.noAudioDismissed = true } } })
   })
 }
 

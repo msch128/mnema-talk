@@ -30,8 +30,10 @@ type Payload struct {
 	ChannelSlug string     `json:"channel_slug,omitempty"`
 	MessageID   *uuid.UUID `json:"message_id,omitempty"`
 	ParentID    *uuid.UUID `json:"parent_id,omitempty"`
-	Mention     bool       `json:"mention,omitempty"`
-	Timestamp   int64      `json:"ts"`
+	// EventID is the community event of an event reminder; a click opens it.
+	EventID   *uuid.UUID `json:"event_id,omitempty"`
+	Mention   bool       `json:"mention,omitempty"`
+	Timestamp int64      `json:"ts"`
 }
 
 // Payload types.
@@ -120,9 +122,18 @@ func build(n Notice, locale string, preview bool) Payload {
 		}
 		return p
 	}
-	p.Title = sender + " (#" + channel + ")"
+	p.Title = sender + " (#" + channel + threadSuffix(n, locale) + ")"
 	p.Body = line
 	return p
+}
+
+// threadSuffix says that a message is a reply in a thread, so the title does
+// not suggest it was written in the channel itself.
+func threadSuffix(n Notice, locale string) string {
+	if n.ParentID == nil {
+		return ""
+	}
+	return ", " + text(locale, "thread")
 }
 
 // buildDM composes the push of a direct message: the sender's name, never a
@@ -143,6 +154,9 @@ func buildDM(p Payload, n Notice, sender, locale, line string, preview bool) Pay
 		return p
 	}
 	p.Title, p.Body = sender, line
+	if n.ParentID != nil {
+		p.Title = sender + " (" + text(locale, "thread") + ")"
+	}
 	return p
 }
 

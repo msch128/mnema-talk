@@ -14,7 +14,15 @@ export interface PushMessage {
   channelSlug: string | null
   messageId: string | null
   parentId: string | null
+  /** The community event a reminder is about. */
+  eventId: string | null
   mention: boolean
+}
+
+/** What a click on a reminder of an event carries to the app. */
+export interface OpenEvent {
+  type: 'mnema:open-event'
+  event_id: string
 }
 
 /** What a click carries from the notification to the app. */
@@ -98,6 +106,7 @@ export function parsePush(raw: unknown): PushMessage | null {
     channelSlug: slug(p['channel_slug']),
     messageId: id(p['message_id']),
     parentId: id(p['parent_id']),
+    eventId: id(p['event_id']),
     mention: p['mention'] === true,
   }
 }
@@ -119,7 +128,7 @@ export function notificationOptions(message: PushMessage): Record<string, unknow
     icon: '/pwa-icon-192.png',
     badge: '/pwa-badge-96.png',
     timestamp: message.timestamp,
-    data: { channel_id: message.channelId, channel_slug: message.channelSlug, message_id: message.messageId, parent_id: message.parentId },
+    data: { channel_id: message.channelId, channel_slug: message.channelSlug, message_id: message.messageId, parent_id: message.parentId, event_id: message.eventId },
   }
 }
 
@@ -154,7 +163,7 @@ export async function onPush(scope: PushScope, event: PushEventLike): Promise<vo
   const message = parsePush(readPayload(event))
   const quiet = message?.type === 'message' && await appIsOnScreen(scope)
   if (quiet && !isWebKit(scope)) return
-  const shown = message ?? { type: 'message' as const, title: 'Mnema Talk', body: '', tag: 'mnema', timestamp: Date.now(), channelId: null, channelSlug: null, messageId: null, parentId: null, mention: false }
+  const shown = message ?? { type: 'message' as const, title: 'Mnema Talk', body: '', tag: 'mnema', timestamp: Date.now(), channelId: null, channelSlug: null, messageId: null, parentId: null, eventId: null, mention: false }
   const options = notificationOptions(shown)
   await scope.registration.showNotification(shown.title, quiet ? { ...options, silent: true, renotify: false } : options)
   if (quiet) {
@@ -165,9 +174,12 @@ export async function onPush(scope: PushScope, event: PushEventLike): Promise<vo
   await updateBadge(scope)
 }
 
-/** Where a click leads: the message in its channel (a thread reply opens at its root). */
-export function openTarget(data: unknown): { url: string, message: OpenMessage | null } {
+/** Where a click leads: the message in its channel (a thread reply opens at its root), or the event of a reminder. */
+export function openTarget(data: unknown): { url: string, message: OpenMessage | OpenEvent | null } {
   const d = typeof data === 'object' && data !== null ? data as Record<string, unknown> : {}
+  const event = id(d['event_id'])
+  // A reminder of an event opens the event; a closed app reads the address.
+  if (event) return { url: `/?event=${event}`, message: { type: 'mnema:open-event', event_id: event } }
   const channel = id(d['channel_id'])
   const message = id(d['message_id'])
   if (!channel || !message) return { url: '/', message: null }

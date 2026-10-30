@@ -3,11 +3,13 @@ import { ref } from 'vue'
 
 export type ToastType = 'info' | 'success' | 'error'
 export interface ToastAction { label: string; onClick: () => void | Promise<void> }
-export interface ToastOptions { detail?: string; action?: ToastAction | null; duration?: number }
+export interface ToastOptions { detail?: string; action?: ToastAction | null; secondary?: ToastAction | null; duration?: number }
 export interface ToastInput extends ToastOptions { type?: ToastType; text?: string }
-export interface Toast { id: number; type: ToastType; text: string; detail: string; action: ToastAction | null }
+export interface Toast { id: number; type: ToastType; text: string; detail: string; action: ToastAction | null; secondary: ToastAction | null }
 
 const AUTO_DISMISS_MS = 5000
+// A notice with a button needs time to be acted on, but must not stay forever.
+const ACTION_DISMISS_MS = 20_000
 const MAX_VISIBLE = 4
 const MIN_RESUME_MS = 1000
 
@@ -50,15 +52,14 @@ export const useToastStore = defineStore('toast', () => {
   }
 
   /** push({ type, text, detail, action: { label, onClick }, duration }) → id */
-  function push({ type = 'info', text, detail = '', action = null, duration }: ToastInput = {}) {
+  function push({ type = 'info', text, detail = '', action = null, secondary = null, duration }: ToastInput = {}) {
     if (!text) return null
     // The same error shown already is not shown again: a burst of refused requests is one message.
     const same = type === 'error' && !action && toasts.value.find(t => t.type === 'error' && !t.action && t.text === text && t.detail === detail)
     if (same) return same.id
     const id = ++seq
-    toasts.value = [...toasts.value, { id, type, text, detail, action }].slice(-MAX_VISIBLE)
-    const sticky = type === 'error' || !!action
-    const ms = duration ?? (sticky ? 0 : AUTO_DISMISS_MS)
+    toasts.value = [...toasts.value, { id, type, text, detail, action, secondary }].slice(-MAX_VISIBLE)
+    const ms = duration ?? (type === 'error' ? 0 : action ? ACTION_DISMISS_MS : AUTO_DISMISS_MS)
     if (ms > 0) arm(id, ms)
     // Drop timers of toasts that fell off the stack.
     for (const tid of [...timers.keys()]) {

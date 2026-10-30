@@ -28,7 +28,7 @@ function created(value: string): string {
 </script>
 
 <template>
-  <section class="space-y-2" data-testid="push-section">
+  <section class="space-y-2" data-testid="push-section" data-settings-field="push">
     <h3 class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">{{ $t('push.title') }}</h3>
     <div class="rounded-lg bg-mnema-surface border border-mnema-hairline p-3.5 space-y-3">
       <p v-if="loading" class="text-xs text-mnema-tertiary" data-testid="push-loading">{{ $t('push.loading') }}</p>

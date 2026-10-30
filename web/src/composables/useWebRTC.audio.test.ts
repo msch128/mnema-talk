@@ -3,6 +3,7 @@ import { TestStream, present } from '../media-test.fixture'
 import { nextTick } from 'vue'
 import { t } from '../i18n'
 import { useToastStore } from '../stores/toast'
+import { settingsField, settingsTab } from '../lib/settingsDialog'
 import { installHarness, FakeAudioContext, FakePC, attachedStream, audioElements, fakeStream, fakeTrack, grantMic, joined, negotiate, remoteStreamFor, setup, streamOf } from './useWebRTC.harness.fixture'
 import { suppressor } from './useWebRTC.noiseSuppressor.fixture'
 
@@ -456,12 +457,23 @@ describe('voice activity, loopback and window lifecycle', () => {
       expect(toasts.info).toHaveBeenCalledTimes(1)
     })
 
+    it('offers to open the audio settings on the input device', async () => {
+      const { toasts } = await watched()
+      FakeAudioContext.rawSample = 0
+      await vi.advanceTimersByTimeAsync(16_000)
+      const options = vi.mocked(toasts.info).mock.calls[0]?.[1]
+      expect(present(options?.action).label).toBe(t('audio.openSettings'))
+      await present(options?.action).onClick()
+      expect(settingsTab.value).toBe('audio')
+      expect(settingsField.value).toBe('input-device')
+    })
+
     it('stays off for the rest of the call once dismissed, and with the setting off', async () => {
       const { voice, toasts } = await watched()
       FakeAudioContext.rawSample = 0
       await vi.advanceTimersByTimeAsync(16_000)
       const options = vi.mocked(toasts.info).mock.calls[0]?.[1]
-      await present(options?.action).onClick()
+      await present(options?.secondary).onClick()
       await vi.advanceTimersByTimeAsync(400_000)
       expect(toasts.info).toHaveBeenCalledTimes(1)
       voice.warnNoAudioDetected = false

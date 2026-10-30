@@ -38,7 +38,9 @@ function buildNotificationTitle(cx: Cx, msg: Message): string {
   const channel = cx.cs.allChannels.value.find(c => c.id === msg.channel_id)
   const channelName = channel ? `#${channel.name}` : ''
   const sender = msg.display_name || msg.username || ''
-  return channelName ? `${sender} (${channelName})` : sender
+  // A reply in a thread says so, like the push does.
+  const place = [channelName, msg.parent_id ? t('chat.notifyThread') : ''].filter(Boolean).join(', ')
+  return place ? `${sender} (${place})` : sender
 }
 
 const NOTIFICATION_BODY_LEN = 140

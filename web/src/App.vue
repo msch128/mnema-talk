@@ -28,6 +28,8 @@ import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import { openSettings } from './lib/settingsDialog'
 import { notifyDialogOpen } from './lib/notifyDialog'
+import EventsModal from './components/EventsModal.vue'
+import { closeEvents, eventsRequest } from './lib/eventsDialog'
 import NotificationSettingsDialog from './components/NotificationSettingsDialog.vue'
 import ShortcutsDialog from './components/ShortcutsDialog.vue'
 import { shortcutsOpen, useShortcutsKey } from './lib/shortcutsDialog'
@@ -71,6 +73,7 @@ useTitleBadge()
 const voiceStore = useVoiceStore()
 const accountStore = useAccountStore()
 const statusEditor = useStatusEditor()
+const serverFeatures = useServerFeaturesStore()
 // A link from an account e-mail (confirm address, reset password) takes over the
 // page, signed in or not; the token is read here once and then removed from the URL.
 const recovery = recoveryFromLocation(window.location.pathname, window.location.hash)
@@ -105,7 +108,7 @@ const { isCompact, navOpen, closeNav } = useCompactLayout()
 if (isCompact.value) chatStore.showMemberList = false
 watch(() => [chatStore.activeChannel?.id, voiceStore.currentChannelId, voiceStore.activeView], closeNav)
 // The Talk bar asks for the audio settings with this flag; they live in the settings dialog.
-watch(() => voiceStore.showAudioSettings, open => { if (open) openSettings('audio') })
+watch(() => voiceStore.showAudioSettings, open => { if (open && !accountStore.dialogOpen) openSettings('audio') })
 watch(() => chatStore.activeThread, thread => { if (thread && isCompact.value) chatStore.showMemberList = false })
 // A Talk needs the width: below 1100 px the member list starts closed (the header button opens it).
 watch(() => voiceStore.activeView, view => { if (view === 'voice' && window.innerWidth < 1100) chatStore.showMemberList = false })
@@ -358,6 +361,7 @@ onMounted(async () => {
 
       <!-- Settings: account, privacy, push and app, audio -->
       <SettingsDialog v-if="accountStore.dialogOpen" />
+      <EventsModal v-if="eventsRequest && authStore.isAuthenticated && serverFeatures.events" :focus-event-id="eventsRequest.eventId" :focus-seq="eventsRequest.seq" @close="closeEvents" />
       <NotificationSettingsDialog v-if="notifyDialogOpen" @close="notifyDialogOpen = false" />
       <ShortcutsDialog v-if="shortcutsOpen" @close="shortcutsOpen = false" />
 
