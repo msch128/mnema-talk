@@ -65,9 +65,9 @@ test('invites start at a week, channels are created from the layout page and the
     await expect(page.getByTestId('save-layout-button')).toBeVisible()
     await page.getByRole('dialog').first().locator('[data-dialog-close]').click()
     const confirm = page.getByRole('alertdialog').or(page.getByRole('dialog').last())
-    await expect(confirm.getByRole('button', { name: 'Änderungen verwerfen' })).toBeVisible()
+    await expect(confirm.getByRole('button', { name: 'Verwerfen' })).toBeVisible()
     await shot(page, 'after-discard-layout')
-    await confirm.getByRole('button', { name: 'Änderungen verwerfen' }).click()
+    await confirm.getByRole('button', { name: 'Verwerfen' }).click()
     await expect(page.locator('[data-testid="save-layout-button"]')).toHaveCount(0)
 
     // Direct messages and sign-out live on System.
