@@ -1,0 +1,21 @@
+web/src/composables/useWebRTC.takeover.test.ts
+  s_61e7f03250bd0b::t_893597848119e3 114-115,119,126
+web/src/composables/webrtc/session.ts
+  s_61e7f03250bd0b::t_b31f4083b8f1c8 215-220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "873ee33aad7b8117341d14ea4cb253aaf9adbe6b",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
