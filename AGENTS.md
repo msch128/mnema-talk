@@ -102,7 +102,7 @@ mnema-talk/
 ├── doc/                     # Architecture, operations, upgrade, glossary, roles, webhooks, desktop docs; doc/images has the README screenshots
 ├── desktop-trust/           # Public trust anchor and signed trust statement for the desktop client
 ├── e2e/                     # Playwright browser tests (`make e2e`)
-├── loadtest/                # Voice/screen-share load test (`make load-test`), see loadtest/README.md
+├── loadtest/                # Voice/screen-share load test (`make load-test`), chat and voice capacity test for the server host (`make load-test-host`), see loadtest/README.md
 ├── web/                     # Vue 3 + Pinia + Vite + Tailwind CSS 4 SPA (shared UI classes in web/src/styles); web.go embeds web/dist
 │   └── src/lib/             # Shared client modules: native/ (desktop IPC) and dfn/ (DeepFilterNet3)
 ├── scripts/git-hooks/       # pre-commit (gitleaks + gofmt); `make install-hooks`

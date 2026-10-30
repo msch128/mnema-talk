@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test fuzz-smoke test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-go-profile coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check onboarding-check english-check
+.PHONY: help dev web build run test test-loadtest load-test-host fuzz-smoke test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-go-profile coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check onboarding-check english-check
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -67,6 +67,11 @@ run: build ## Build and run the binary (reads .env)
 
 test: ## Go unit tests (race detector)
 	go test -race -count=1 $(GO_PKGS)
+
+test-loadtest: ## Format check, vet and unit tests of the load-test tools (loadtest/viewer, own module)
+	@out="$$(gofmt -l loadtest/viewer)"; \
+	if [ -n "$$out" ]; then echo "gofmt needed on:"; echo "$$out"; exit 1; fi
+	cd loadtest/viewer && go vet ./... && go test -race -count=1 ./...
 
 fuzz-smoke: ## Run every Go fuzz target for a few seconds (FUZZTIME=5s); FUZZTIME=60s for a longer run
 	scripts/fuzz-smoke.sh
@@ -166,6 +171,22 @@ e2e: ## Browser smoke test (Playwright + Chromium) against the real binary; need
 
 load-test: ## Load test (PROFILE=smoke|full|join|reload|long) against a throwaway stack or BASE_URL; needs Docker, see loadtest/README.md
 	loadtest/run.sh
+
+# Static binaries and the script for the server host itself (no Go, Node or
+# Python needed there): bin/loadtest-host/mnema-loadtest-linux-{amd64,arm64}.tar.gz
+load-test-host: ## Build the load-test tools for the server host (linux amd64 + arm64) into bin/loadtest-host/, see loadtest/README.md
+	rm -rf bin/loadtest-host
+	for arch in amd64 arm64; do \
+		d=bin/loadtest-host/mnema-loadtest-linux-$$arch; \
+		mkdir -p $$d/bin; \
+		(cd loadtest/viewer && \
+			CGO_ENABLED=0 GOOS=linux GOARCH=$$arch go build -trimpath -ldflags='-s -w' -o ../../$$d/bin/loadtest-voice . && \
+			CGO_ENABLED=0 GOOS=linux GOARCH=$$arch go build -trimpath -ldflags='-s -w' -o ../../$$d/bin/loadtest-chat ./cmd/chat && \
+			CGO_ENABLED=0 GOOS=linux GOARCH=$$arch go build -trimpath -ldflags='-s -w' -o ../../$$d/bin/loadtest-mint ./cmd/mint) || exit 1; \
+		cp loadtest/host-run.sh $$d/; \
+		tar -C bin/loadtest-host -czf $$d.tar.gz mnema-loadtest-linux-$$arch; \
+	done
+	@ls -l bin/loadtest-host/*.tar.gz
 
 smoke: docker ## Start the built image with the production compose file and check health + admin login
 	scripts/smoke-image.sh mnema-talk:local
