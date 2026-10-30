@@ -1,0 +1,93 @@
+api/openapi.json
+  s_06fcde5dbef956::t_dbb85ec94c4180 6340-6403,13382-13550
+e2e/tests/fixtures.ts
+  s_46a6db8f9e8231::t_f44e88e979859c 138-157,235
+e2e/tests/owner-first-run.spec.ts
+  s_46a6db8f9e8231::t_9bedaef88cbcd6 1-96
+internal/onboarding/firstrun.go
+  s_0cae4a4d7ab7c3::t_0d87b025010c6d 1-271
+internal/onboarding/firstrun_test.go
+  s_06fcde5dbef956::t_eb0b8a2e591311 1-77
+internal/onboarding/handler.go
+  s_06fcde5dbef956::t_2e7868fa8467d6 69-71
+internal/server/first_run_integration_test.go
+  s_06fcde5dbef956::t_bf6faf7357bcd6 1-128
+web/src/App.test.ts
+  s_0cae4a4d7ab7c3::t_c7530bdde3f93f 13,342-354
+web/src/App.vue
+  s_46a6db8f9e8231::t_e79065a0478300 31,125-130
+web/src/components/AdminDashboard.vue
+  s_46a6db8f9e8231::t_57746096c0c6c7 7,18,137-143
+web/src/components/AdminDashboardChecklist.test.ts
+  s_46a6db8f9e8231::t_aa45642fbb4e78 1-50
+web/src/components/ChatHeader.vue
+  s_46a6db8f9e8231::t_a0fd4086e1fc60 11,17,78,293-297
+web/src/components/FirstRunCard.test.ts
+  s_ed05b7d59456d3::t_2e35cf3a6e3027 1-136
+web/src/components/FirstRunCard.vue
+  s_0cae4a4d7ab7c3::t_7918eb9434469d 1-92
+web/src/components/SidebarServerMenu.test.ts
+  s_17ef7810e0243d::t_0b536d77722223 1-45
+web/src/components/SidebarServerMenu.vue
+  s_46a6db8f9e8231::t_2cd8f220c9b8a3 3,7,23-25,160-163
+web/src/composables/useFirstRunShown.ts
+  s_0cae4a4d7ab7c3::t_51895d8934a6c9 1-16
+web/src/lib/adminRequest.ts
+  s_46a6db8f9e8231::t_5159be5591c42c 1-8
+web/src/stores/chat/reset.ts
+  s_0cae4a4d7ab7c3::t_9714b0d9c3542b 10,19,25
+web/src/stores/firstRun.test.ts
+  s_ed05b7d59456d3::t_97536f7c5d944a 1-98
+web/src/stores/firstRun.ts
+  s_0cae4a4d7ab7c3::t_c8fe22996db6c4 1-72
+web/src/types/rest.ts
+  s_0cae4a4d7ab7c3::t_2a45a68cb4fbe5 3746-3788
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "85acb7048564c732ce8054eb85c43011cee1d81a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ed05b7d59456d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a843a0ef992e8c6d6",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
