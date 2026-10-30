@@ -1,0 +1,19 @@
+e2e/tests/notification-links.spec.ts
+  s_e516df595aeaf4::t_2544d42a932368 36,39-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2bf15dbee679abcecbb82b37106ac05acae238b2",
+  "prompts": {},
+  "sessions": {
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
