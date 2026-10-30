@@ -89,6 +89,54 @@ describe('enhanceEmojiPicker', () => {
   })
 })
 
+describe('enhanceEmojiPicker edge cases', () => {
+  it('shows nothing for things that are no emoji, and ignores other keys', async () => {
+    const el = picker()
+    const root = el.shadowRoot as ShadowRoot
+    root.innerHTML += '<button class="emoji" id="blank"> </button><button class="emoji" id="noname"><img src="http://x/a.png" alt=""></button><span id="plain">x</span>'
+    const onPreview = vi.fn()
+    enhanceEmojiPicker(el, onPreview)
+    for (const id of ['blank', 'noname', 'plain']) over(el, id)
+    await new Promise(resolve => setTimeout(resolve, 20))
+    expect(onPreview).not.toHaveBeenCalled()
+    const input = root.querySelector('input') as HTMLInputElement
+    const clicked = vi.fn()
+    root.getElementById('tada')?.addEventListener('click', clicked)
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, composed: true }))
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, composed: true }))
+    expect(clicked).not.toHaveBeenCalled()
+    input.dispatchEvent(new Event('keydown', { bubbles: true, composed: true }))
+  })
+
+  it('does nothing on Enter without a result and works without a shadow root', () => {
+    const el = picker()
+    const root = el.shadowRoot as ShadowRoot
+    root.querySelectorAll('.emoji').forEach(node => node.remove())
+    enhanceEmojiPicker(el, () => undefined)
+    expect(() => root.querySelector('input')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }))).not.toThrow()
+    const bare = new FakePicker()
+    const extras = enhanceEmojiPicker(bare, () => undefined)
+    expect(extras.clearSearch()).toBe(false)
+    expect(() => extras.detach()).not.toThrow()
+  })
+
+  it('ignores a preview that a newer hover has replaced', async () => {
+    const el = picker()
+    const seen: (EmojiPreview | null)[] = []
+    enhanceEmojiPicker(el, p => seen.push(p))
+    over(el, 'tada')
+    over(el, 'custom')
+    await vi.waitFor(() => expect(seen.at(-1)?.code).toBe(':party:'))
+    expect(seen.every(p => p?.code !== ':tada:')).toBe(true)
+  })
+
+  it('gives an unnamed shortcode when the data knows none', async () => {
+    const el = picker()
+    el.database = { getEmojiByUnicodeOrName: async () => ({}) }
+    expect(await shortcodeOf(el, '🎉')).toBe(':tada:')
+  })
+})
+
 describe('typing in the search', () => {
   it('counts as typing for the shortcut handlers, even retargeted to the host', () => {
     const el = picker()

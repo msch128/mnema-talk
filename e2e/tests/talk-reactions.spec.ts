@@ -83,11 +83,11 @@ test('every quick reaction and the picker reach the other member of a Talk', asy
     await expect(floating(to, emoji).first(), `quick reaction ${emoji}`).toBeVisible()
   }
 
-  // The full picker: search, then a standard emoji.
+  // The full picker (German data, as the UI): search, then a standard emoji.
   await b.getByTestId('talk-react').click()
   await b.getByTestId('reaction-more').click()
   const picker = b.getByTestId('emoji-picker').locator('emoji-picker')
-  await picker.locator('input[type="search"]').fill('partying')
+  await picker.locator('input[type="search"]').fill('Partygesicht')
   await expect(picker.getByRole('option').first()).toBeVisible()
   // The footer names the emoji under the pointer; Enter in the search picks the first result.
   await picker.getByRole('option').first().hover()
