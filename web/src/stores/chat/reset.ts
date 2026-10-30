@@ -87,6 +87,7 @@ export function resetCommunityState(cx: Cx) {
   clearTimeout(cs.idleTimer)
   cs.isIdle = false
   cs.lastActivityAt = 0
+  cs.lastVoiceActivityAt = 0
   cs.reconnectDelay = 1000
   cs.reconnectCount.value = 0
   cs.nextRetryAt.value = 0
