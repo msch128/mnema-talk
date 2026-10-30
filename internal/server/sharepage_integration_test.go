@@ -130,3 +130,32 @@ func metaContent(t *testing.T, page, selector string) string {
 	k := strings.Index(rest[j+9:], `"`)
 	return html.UnescapeString(rest[j+9 : j+9+k])
 }
+
+func TestLinkPreviewUsesTheCommunityIconWhenSet(t *testing.T) {
+	a, admin := newSharePageApp(t)
+	setCommunity(t, admin, "Owls", "Welcome.", "")
+	code := newInvite(t, admin)
+
+	if page := string(a.anon().get("/").body); !strings.Contains(page, "/pwa-icon-512.png") || strings.Contains(page, "/api/community/icon") {
+		t.Errorf("without an icon the Mnema icon stays:\n%s", page)
+	}
+	res := putIcon(admin, "owl.png", "image/png", bannerPNG(t, 300, 300))
+	if res.status != http.StatusOK {
+		t.Fatalf("set icon: %d %s", res.status, res.body)
+	}
+	var set struct {
+		Icon string `json:"community_icon"`
+	}
+	res.decode(t, &set)
+	want := `property="og:image" content="` + a.origin() + `/api/community/icon?size=512&amp;v=` + set.Icon + `"`
+	for _, path := range []string{"/", "/invite/" + code} {
+		page := string(a.anon().get(path).body)
+		if !strings.Contains(page, want) || strings.Contains(page, "/pwa-icon-512.png") {
+			t.Errorf("%s: og:image should be the community icon:\n%s", path, page)
+		}
+	}
+	// A code that does not work gets the generic page, and no icon with it.
+	if page := string(a.anon().get("/invite/unknowncode1234").body); strings.Contains(page, "/api/community/icon") {
+		t.Errorf("an unusable invite reveals nothing:\n%s", page)
+	}
+}

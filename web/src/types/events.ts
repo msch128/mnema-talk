@@ -137,7 +137,7 @@ export interface ServerEventPayloads {
   event_update: CommunityeventsCommunityEvent
   event_delete: { id: string }
   event_reminder: { event_id: string; title: string; start_time: string; channel_id?: string }
-  community_updated: { community_name: string } // the Owner renamed the community
+  community_updated: { community_name: string; community_icon?: string } // the Owner renamed the community or changed its icon (community_icon: the new version, '' when removed)
 }
 
 export type EventUnion<Payloads> = { [K in keyof Payloads]: { type: K; payload: Payloads[K] } }[keyof Payloads]

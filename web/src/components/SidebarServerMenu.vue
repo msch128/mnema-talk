@@ -13,6 +13,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
 import { useDismissable } from '../composables/useDismissable'
 import { useCommunityName } from '../composables/useCommunityName'
+import { useCommunityIcon } from '../composables/useCommunityIcon'
 
 // The server header (48px, aligned with the channel header) and its dropdown:
 // admin console, creating channels and categories, the legal notices.
@@ -42,6 +43,8 @@ const showRules = () => { rulesOpen.value = true }
 const showNotifications = () => { notifyDialogOpen.value = true }
 // The header carries the community's own name (Admin > Welcome & rules).
 const serverName = useCommunityName()
+// The icon the Owner picked replaces the letter mark.
+const icon = useCommunityIcon()
 const subtitle = computed(() => t('sidebar.subtitle'))
 const mark = computed(() => Array.from(serverName.value)[0]?.toUpperCase() ?? 'M')
 
@@ -132,8 +135,9 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       @click="toggleMenu"
       @keydown="onMenuButtonKeydown"
     >
+      <img v-if="icon" :src="icon" alt="" class="w-7 h-7 rounded-md object-cover shrink-0" data-testid="server-icon" />
       <!-- Mnema Forest Mark -->
-      <span class="w-7 h-7 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-sm shadow-xs shrink-0">
+      <span v-else class="w-7 h-7 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-sm shadow-xs shrink-0">
         {{ mark }}
       </span>
       <span class="flex flex-col min-w-0 flex-1">

@@ -106,7 +106,7 @@ func (s *sharePages) rootTags(ctx context.Context) pageTags {
 	if name != "" {
 		t.description = "Join " + name + " on " + shareProduct + ". " + shareTagline
 	}
-	return t
+	return s.withIcon(ctx, t)
 }
 
 func (s *sharePages) inviteTags(r *http.Request, code string) pageTags {
@@ -130,6 +130,17 @@ func (s *sharePages) inviteTags(r *http.Request, code string) pageTags {
 		t.description = "You have been invited to join " + name + "."
 	}
 	t.url = s.abs(r.URL.Path)
+	return s.withIcon(r.Context(), t)
+}
+
+// withIcon puts the community icon, when the Owner set one, in place of the
+// Mnema icon: in the preview image and in the tab icon of the page. It is as
+// public as the name it goes with.
+func (s *sharePages) withIcon(ctx context.Context, t pageTags) pageTags {
+	if v := s.names.Icon(ctx); v != "" {
+		t.icon = v
+		t.image = s.abs(web.IconURL(v, 512))
+	}
 	return t
 }
 
@@ -146,6 +157,7 @@ type pageTags struct {
 	url, image         string // absolute, or empty
 	appName            string // home-screen label; empty keeps the built one
 	noindex            bool
+	icon               string // version of the community icon; empty keeps the Mnema icon
 }
 
 var (
@@ -187,5 +199,6 @@ func (t pageTags) apply(index []byte) []byte {
 	if t.appName != "" {
 		out = web.SetAppTitle(out, t.appName)
 	}
+	out = web.SetIcon(out, t.icon)
 	return bytes.Replace(out, headClose, []byte(b.String()+"  </head>"), 1)
 }

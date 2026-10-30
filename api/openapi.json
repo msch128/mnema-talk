@@ -236,6 +236,10 @@
       },
       "auth.AuthOptions": {
         "properties": {
+          "community_icon": {
+            "description": "CommunityIcon is the version of the community icon (GET\n/api/community/icon), left out while the Owner set none. Public as well.",
+            "type": "string"
+          },
           "community_name": {
             "description": "CommunityName is what the sign-in screen calls the community: the Owner's\nname for it, else the host. Public, like the rest of this answer.",
             "type": "string"
@@ -6574,6 +6578,10 @@
       },
       "onboarding.Settings": {
         "properties": {
+          "community_icon": {
+            "description": "CommunityIcon is the version of the community icon (GET\n/api/community/icon), empty while none is set. It changes with every\nupload. Set with PUT /api/admin/community/icon, not with the settings.",
+            "type": "string"
+          },
           "community_name": {
             "maxLength": 60,
             "type": "string"
@@ -7531,6 +7539,10 @@
       },
       "server.Health": {
         "properties": {
+          "community_icon": {
+            "description": "CommunityIcon is the version of the community icon the Owner set, left\nout while there is none. GET /api/community/icon serves it (public); the\nversion changes with every upload, so a client refetches when it differs\nfrom the one it has.",
+            "type": "string"
+          },
           "community_name": {
             "description": "CommunityName is what this server calls itself: the name the Owner set\nin the welcome settings, else the host it is served from. It is public\non purpose, so a client can label a server before anyone signs in.",
             "type": "string"
@@ -13150,6 +13162,215 @@
         "summary": "Create a webhook",
         "tags": [
           "Webhooks"
+        ]
+      }
+    },
+    "/api/admin/community/icon": {
+      "delete": {
+        "description": "Owner and Administrators only; audited. Deletes the icon and its files; the Mnema icon shows again. Succeeds when there is none. Broadcasts community_updated.",
+        "operationId": "deleteCommunityIcon",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/onboarding.Settings"
+                }
+              }
+            },
+            "description": "Settings, without community_icon."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may change it, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove the community icon",
+        "tags": [
+          "Onboarding"
+        ]
+      },
+      "put": {
+        "description": "Owner and Administrators only; audited. multipart/form-data with an image in field 'icon' (PNG, JPEG, GIF or WebP, at most 5 MB, at least 128x128 pixels; SVG and animations are rejected). The server never stores the upload: it decodes it, crops the centre square and writes new 512x512 and 128x128 PNG files, so metadata such as EXIF is gone. Replaces the previous icon. Broadcasts community_updated.",
+        "operationId": "setCommunityIcon",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "icon": {
+                    "description": "Image file, at most 5 MB.",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "icon"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Image file, at most 5 MB.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/onboarding.Settings"
+                }
+              }
+            },
+            "description": "Settings, with the new community_icon version."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): no file, too small or too large in pixels, animated, or the picture cannot be read."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may change it, or cross-origin request rejected."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE: body or file exceeds the limit."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the community icon",
+        "tags": [
+          "Onboarding"
         ]
       }
     },
@@ -27501,6 +27722,113 @@
         "summary": "Disconnect a member from a Talk",
         "tags": [
           "Channels"
+        ]
+      }
+    },
+    "/api/community/icon": {
+      "get": {
+        "description": "The icon the Owner set for the community, a square PNG. Public (no session): the community name next to it is public too, also on an invite-only server. `size` is 128 or 512 (default). 404 (NOT_FOUND) while no icon is set. The `community_icon` field of GET /api/health holds the current version; a request with `v` equal to it is cacheable for a year (immutable), any other is revalidated with ETag and Last-Modified after 5 minutes.",
+        "operationId": "getCommunityIcon",
+        "parameters": [
+          {
+            "description": "Edge in pixels.",
+            "in": "query",
+            "name": "size",
+            "schema": {
+              "default": 512,
+              "enum": [
+                128,
+                512
+              ],
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Version from GET /api/health (community_icon).",
+            "in": "query",
+            "name": "v",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "PNG."
+          },
+          "304": {
+            "description": "Not modified (If-None-Match, If-Modified-Since)."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): size is not 128 or 512."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no icon is set."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [],
+        "summary": "Community icon",
+        "tags": [
+          "Onboarding"
         ]
       }
     },

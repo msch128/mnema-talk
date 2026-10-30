@@ -7,6 +7,7 @@ import AdminOnboardingTab from './AdminOnboardingTab.vue'
 import { setLocale } from '../i18n'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../lib/api', async (importOriginal) => ({
@@ -185,5 +186,68 @@ describe('AdminOnboardingTab', () => {
     await w.find('#onb-start').setValue(CH_TEXT)
     expect(apiMock).not.toHaveBeenCalled()
     expect(w.find('[data-testid="unsaved-status"]').text()).toBe('You have unsaved changes')
+  })
+
+  describe('community icon', () => {
+    async function choose(w: Awaited<ReturnType<typeof mountTab>>, file: File) {
+      const input = w.get<HTMLInputElement>('[data-testid="community-icon-input"]')
+      Object.defineProperty(input.element, 'files', { configurable: true, value: [file] })
+      await input.trigger('change')
+      await flushPromises()
+    }
+
+    it('offers an upload while there is none and previews the stored icon otherwise', async () => {
+      let w = await mountTab()
+      expect(w.find('[data-testid="community-icon-preview"]').exists()).toBe(false)
+      expect(w.find('[data-testid="community-icon-remove"]').exists()).toBe(false)
+      expect(w.get('[data-testid="community-icon-change"]').text()).toBe('Upload icon')
+
+      w = await mountTab({ ...settings, community_icon: 'v1' })
+      expect(w.get('[data-testid="community-icon-preview"]').attributes('src')).toBe('/api/community/icon?size=128&v=v1')
+      expect(w.get('[data-testid="community-icon-change"]').text()).toBe('Change icon')
+      expect(w.find('[data-testid="community-icon-remove"]').exists()).toBe(true)
+    })
+
+    it('uploads the picture as multipart without touching unsaved text', async () => {
+      const w = await mountTab()
+      await w.find('#onb-name').setValue('Unsaved')
+      apiMock.mockResolvedValue({ ...settings, community_icon: 'v2' })
+      await choose(w, new File(['png'], 'logo.png', { type: 'image/png' }))
+      const [path, options] = apiMock.mock.lastCall as [string, ApiOptions]
+      expect(path).toBe('/api/admin/community/icon')
+      expect(options.method).toBe('PUT')
+      expect((options.form as FormData).get('icon')).toBeInstanceOf(File)
+      expect(w.get('[data-testid="community-icon-preview"]').attributes('src')).toBe('/api/community/icon?size=128&v=v2')
+      expect(w.find<HTMLInputElement>('#onb-name').element.value).toBe('Unsaved')
+      expect(useServerFeaturesStore().communityIcon).toBe('v2')
+      expect(useToastStore().toasts.length).toBe(1)
+    })
+
+    it('refuses a picture over the limit before any request', async () => {
+      const w = await mountTab()
+      apiMock.mockClear()
+      await choose(w, new File([new Uint8Array(6 * 1024 * 1024)], 'big.png', { type: 'image/png' }))
+      expect(apiMock).not.toHaveBeenCalled()
+      expect(useToastStore().toasts[0]?.text).toContain('5 MB')
+    })
+
+    it('reports a refused upload and keeps the icon', async () => {
+      const w = await mountTab({ ...settings, community_icon: 'v1' })
+      apiMock.mockRejectedValue(new Error('rejected'))
+      await choose(w, new File(['x'], 'logo.png', { type: 'image/png' }))
+      expect(w.get('[data-testid="community-icon-preview"]').attributes('src')).toBe('/api/community/icon?size=128&v=v1')
+      expect(useToastStore().toasts.length).toBe(1)
+    })
+
+    it('removes the icon', async () => {
+      const w = await mountTab({ ...settings, community_icon: 'v1' })
+      useServerFeaturesStore().setCommunityIcon('v1')
+      apiMock.mockResolvedValue({ ...settings })
+      await w.get('[data-testid="community-icon-remove"]').trigger('click')
+      await flushPromises()
+      expect(apiMock).toHaveBeenLastCalledWith('/api/admin/community/icon', { method: 'DELETE', decode: expect.any(Function) })
+      expect(w.find('[data-testid="community-icon-preview"]').exists()).toBe(false)
+      expect(useServerFeaturesStore().communityIcon).toBe('')
+    })
   })
 })
