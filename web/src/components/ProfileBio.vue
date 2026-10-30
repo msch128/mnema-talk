@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { charCount } from '../lib/textLength'
 import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import { computed, ref } from 'vue'
 import { Edit3, Loader2, Save } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
+import FormField from './FormField.vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
@@ -75,8 +77,8 @@ async function saveProfile() {
 </script>
 
 <template>
-  <div class="mb-3">
-    <div class="flex items-center justify-between mb-1">
+  <div>
+    <div class="mb-2 flex min-h-6 items-center justify-between">
       <span class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('profile.about') }}</span>
       <button
         v-if="canEditProfile && !isEditingBio"
@@ -101,51 +103,37 @@ async function saveProfile() {
     </div>
 
     <!-- Edit Mode (Own Profile) -->
-    <div v-else class="space-y-2 mt-1">
-      <div>
-        <label for="profile-displayname" class="text-xs text-mnema-tertiary block mb-0.5">{{ $t('profile.displayName') }}</label>
-        <p class="mb-1 text-xs text-mnema-tertiary">{{ $t('profile.displayNameHint', { username: profileUser.username, count: 24 }) }}</p>
+    <form v-else class="space-y-4" @submit.prevent="saveProfile">
+      <FormField v-slot="{ id, describedby }" input-id="profile-displayname" :label="$t('profile.displayName')" :hint="$t('profile.displayNameHint', { username: profileUser.username, count: 24 })">
         <input
-          id="profile-displayname"
+          :id="id"
           v-model="editDisplayName"
+          :aria-describedby="describedby"
           type="text"
-          maxlength="24"
-          class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent"
+          v-max-chars="24"
+          class="w-full rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text max-md:min-h-11"
         />
-      </div>
-      <div>
-        <label for="profile-bio" class="text-xs text-mnema-tertiary block mb-0.5">{{ $t('profile.bioLabel', { count: 250 }) }}</label>
+      </FormField>
+      <FormField v-slot="{ id }" input-id="profile-bio" :label="$t('profile.bioLabel', { count: 250 })">
         <textarea
-          id="profile-bio"
+          :id="id"
           v-model="editBio"
-          rows="3"
-          maxlength="250"
-          class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-hidden focus:border-mnema-accent resize-none"
+          rows="4"
+          v-max-chars="250"
+          class="w-full resize-none rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
           :placeholder="$t('profile.bioPlaceholder')"
         ></textarea>
-        <div class="flex justify-between items-center text-xs text-mnema-tertiary mt-0.5">
-          <span>{{ editBio.length }} / 250</span>
-          <div class="flex items-center gap-1.5">
-            <button
-              type="button"
-              @click="cancelEditBio"
-              class="btn btn-ghost btn-sm"
-            >
-              {{ $t('common.cancel') }}
-            </button>
-            <button
-              @click="saveProfile"
-              :disabled="isSavingProfile"
-              class="btn btn-primary btn-sm flex items-center gap-1"
-            >
-              <Loader2 v-if="isSavingProfile" class="w-3.5 h-3.5 animate-spin" />
-              <Save v-else class="w-3.5 h-3.5" />
-              <span>{{ $t('common.save') }}</span>
-            </button>
-          </div>
-        </div>
+        <p class="text-right text-xs tabular-nums text-mnema-tertiary">{{ charCount(editBio) }} / 250</p>
+      </FormField>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" class="btn btn-ghost btn-sm max-md:min-h-11" @click="cancelEditBio">{{ $t('common.cancel') }}</button>
+        <button type="submit" :disabled="isSavingProfile" class="btn btn-primary btn-sm flex items-center gap-1 max-md:min-h-11">
+          <Loader2 v-if="isSavingProfile" class="w-3.5 h-3.5 animate-spin" />
+          <Save v-else class="w-3.5 h-3.5" />
+          <span>{{ $t('common.save') }}</span>
+        </button>
       </div>
-    </div>
+    </form>
 
     <div v-if="profileSaveError" role="alert" class="mt-2 p-1.5 rounded-sm bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-1.5">
       <span>{{ profileSaveError }}</span>

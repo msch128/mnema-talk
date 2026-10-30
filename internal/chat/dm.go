@@ -94,6 +94,10 @@ type DirectMessage struct {
 	// LastMessage is the latest message the caller can see, for a preview
 	// (absent: none yet). Messages of members the caller blocked are left out.
 	LastMessage *DMLastMessage `json:"last_message,omitempty" binding:"optional"`
+	// Call is the call going on in the conversation (absent: none). It rings
+	// for the members who have not joined while Ringing is true. Events
+	// dm_call_ring and dm_call_end keep it current.
+	Call *DMCall `json:"call,omitempty" binding:"optional"`
 }
 
 // DMLastMessage is the preview of a conversation's latest message.
@@ -103,6 +107,9 @@ type DMLastMessage struct {
 	Text          string `json:"text"`
 	HasAttachment bool   `json:"has_attachment"`
 	HasPoll       bool   `json:"has_poll"`
+	// Call is "invite" when the message is the card of a call and "missed"
+	// when it records a call nobody answered; absent for any other message.
+	Call string `json:"call,omitempty" binding:"optional" enums:"invite,missed"`
 }
 
 // forOthers drops what is the caller's own, for the events that tell the
@@ -127,7 +134,7 @@ const dmSelect = `
 	           SELECT 1 FROM message_mentions mm WHERE mm.message_id = um.id AND mm.user_id = $1)),
 	       cr.last_read_at, COALESCE(cr.notify_level, 'inherit'), cr.muted_until, NOW(),
 	       me.hidden_at IS NOT NULL, me.favourite_pos, usr.dm_mute_all,
-	       lm.user_id, COALESCE(lm.text, ''), COALESCE(lm.has_media, FALSE), COALESCE(lm.has_poll, FALSE)
+	       lm.user_id, COALESCE(lm.text, ''), COALESCE(lm.has_media, FALSE), COALESCE(lm.has_poll, FALSE), COALESCE(lm.call_kind, '')
 	FROM channels c
 	JOIN dm_members me ON me.channel_id = c.id AND me.user_id = $1
 	JOIN users usr ON usr.id = me.user_id
@@ -135,7 +142,8 @@ const dmSelect = `
 	LEFT JOIN LATERAL (
 	    SELECT m.user_id, left(m.content, 200) AS text,
 	           EXISTS (SELECT 1 FROM media md WHERE md.message_id = m.id) AS has_media,
-	           EXISTS (SELECT 1 FROM polls pl WHERE pl.message_id = m.id) AS has_poll
+	           EXISTS (SELECT 1 FROM polls pl WHERE pl.message_id = m.id) AS has_poll,
+	           CASE WHEN m.embeds->0->>'call' = 'missed' THEN 'missed' WHEN m.embeds->0->>'talk_id' IS NOT NULL THEN 'invite' END AS call_kind
 	    FROM messages m
 	    WHERE m.channel_id = c.id AND NOT EXISTS (
 	        SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id)
@@ -146,7 +154,7 @@ const dmSelect = `
 	LEFT JOIN messages orig ON orig.id = um.reply_to_id
 	WHERE c.type = 'dm' AND ($2::uuid IS NULL OR c.id = $2)
 	GROUP BY c.id, me.joined_at, me.hidden_at, me.favourite_pos, usr.dm_mute_all, cr.last_read_at, cr.notify_level,
-	         cr.muted_until, lm.user_id, lm.text, lm.has_media, lm.has_poll`
+	         cr.muted_until, lm.user_id, lm.text, lm.has_media, lm.has_poll, lm.call_kind`
 
 // ListDMs returns the caller's conversations, the most recently active first.
 // With only set, just that conversation (nil result: the caller is not in it).
@@ -173,7 +181,7 @@ func scanDM(row pgx.CollectableRow) (DirectMessage, error) {
 	var lastUser *uuid.UUID
 	err := row.Scan(&d.ID, &d.Group, &d.CreatedAt, &d.LastMessageAt, &d.UnreadCount, &d.MentionCount,
 		&d.LastReadAt, &level.Level, &level.MutedUntil, &now, &d.Hidden, &pos, &muteAll,
-		&lastUser, &last.Text, &last.HasAttachment, &last.HasPoll)
+		&lastUser, &last.Text, &last.HasAttachment, &last.HasPoll, &last.Call)
 	server := NotifySetting{}
 	if muteAll {
 		server.Level = NotifyMute

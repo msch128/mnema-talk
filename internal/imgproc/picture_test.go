@@ -144,3 +144,43 @@ func TestGIFFramesCountsWithoutDecoding(t *testing.T) {
 		t.Fatalf("short data: %d", n)
 	}
 }
+
+func TestIconIsCroppedSquareAndDrawnAtTwoSizes(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		data []byte
+	}{
+		{"wide png", pngOf(t, 900, 300)},
+		{"tall png", pngOf(t, 200, 700)},
+		{"small png", pngOf(t, 128, 128)},
+		{"single frame gif", gifOf(t, 300, 300, 1)},
+	} {
+		icon, err := ProcessIcon(c.data)
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if got := sizeOf(t, icon.Large); got != image.Pt(IconLargeEdge, IconLargeEdge) {
+			t.Errorf("%s large: %v", c.name, got)
+		}
+		if got := sizeOf(t, icon.Small); got != image.Pt(IconSmallEdge, IconSmallEdge) {
+			t.Errorf("%s small: %v", c.name, got)
+		}
+		if !bytes.HasPrefix(icon.Large, []byte("\x89PNG")) || !bytes.HasPrefix(icon.Small, []byte("\x89PNG")) {
+			t.Errorf("%s: icons are PNGs", c.name)
+		}
+	}
+}
+
+func TestIconRejectsWhatItCannotBe(t *testing.T) {
+	for name, data := range map[string][]byte{
+		"too small":    pngOf(t, 100, 100),
+		"too large":    pngOf(t, 9000, 200),
+		"animated gif": gifOf(t, 300, 300, 3),
+		"svg":          []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`),
+		"text":         []byte("not an image"),
+	} {
+		if _, err := ProcessIcon(data); !errors.Is(err, ErrImage) {
+			t.Errorf("%s: %v, want ErrImage", name, err)
+		}
+	}
+}

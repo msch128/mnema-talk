@@ -333,3 +333,42 @@ func TestUnsendableAnnouncementsAreDropped(t *testing.T) {
 		t.Fatalf("layers must be an array: %s", raw)
 	}
 }
+
+func TestSubscribeWithFit(t *testing.T) {
+	viewer, sharer := uuid.New(), uuid.New()
+	parse := func(body string) (subscribeRequest, bool) {
+		return parseSubscribe(json.RawMessage(body), viewer)
+	}
+	id := sharer.String()
+	if req, ok := parse(`{"kind":"screen","user_id":"` + id + `","on":true,"fit":2}`); !ok || !req.hasFit || req.fit != 2 || req.hasQuality {
+		t.Errorf("screen with fit: %+v ok=%v", req, ok)
+	}
+	if req, ok := parse(`{"kind":"screen","user_id":"` + id + `","on":true}`); !ok || req.hasFit {
+		t.Errorf("screen without fit: %+v ok=%v", req, ok)
+	}
+	for _, body := range []string{
+		`{"kind":"screen","user_id":"` + id + `","on":true,"fit":3}`,
+		`{"kind":"screen","user_id":"` + id + `","on":true,"fit":-1}`,
+		`{"kind":"camera","user_id":"` + id + `","on":true,"fit":1}`,
+	} {
+		if _, ok := parse(body); ok {
+			t.Errorf("accepted %s", body)
+		}
+	}
+}
+
+// A subscription that carries only a fit (what an Auto viewer sends on
+// watching and after a reconnect) still subscribes.
+func TestSubscribeWithFitAloneStillWatches(t *testing.T) {
+	h, voiceSFU := newSFUHub(t)
+	ch := voiceCh()
+	sharer := testClient(h, auth.User{ID: uuid.New(), Username: "sharer"})
+	viewer := testClient(h, auth.User{ID: uuid.New(), Username: "viewer"})
+	h.joinVoice(sharer, ch)
+	h.joinVoice(viewer, ch)
+	startShare(t, voiceSFU, ch.ID, sharer, sharer, viewer)
+
+	payload, _ := json.Marshal(map[string]any{"kind": "screen", "user_id": sharer.User.ID, "on": true, "fit": 1})
+	viewer.handle("webrtc_subscribe", payload)
+	expectViewers(t, sharer, ch.ID, sharer.User.ID, viewer.User.ID)
+}

@@ -57,7 +57,7 @@ async function remove() {
 </script>
 
 <template>
-  <div class="absolute bottom-2.5 left-3 z-10 flex items-center gap-1.5" data-testid="profile-banner-controls">
+  <div class="absolute left-3 top-3 z-10 flex items-center gap-1.5" data-testid="profile-banner-controls">
     <button
       type="button"
       :class="pill"

@@ -4,8 +4,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import AutomodRuleDialog from './AutomodRuleDialog.vue'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
-import { useToastStore } from '../stores/toast'
 import { i18nPlugin, setLocale } from '../i18n'
+import { pendingConfirm } from '../lib/confirm'
 import { tooltip } from '../directives/tooltip'
 import { fixtureId } from '../test-fixtures.fixture'
 import type { ApiOptions } from '../lib/api'
@@ -148,16 +148,58 @@ describe('AutomodRuleDialog', () => {
     const w = open({ kind: 'mentions' })
     await w.get('[data-testid="automod-form"]').trigger('submit')
     await flushPromises()
-    expect(useToastStore().toasts.at(-1)?.text).toBe('boom')
+    expect(w.get('[data-testid="unsaved-error"]').text()).toBe('boom')
     expect(w.emitted('close')).toBeUndefined()
-    expect(w.get('[data-testid="am-save"]').attributes('disabled')).toBeUndefined()
+    expect(w.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeUndefined()
     w.unmount()
   })
 
   it('closes on cancel', async () => {
     const w = open({ kind: 'words' })
-    await w.findAll('button').find(b => b.text() === 'Cancel')!.trigger('click')
+    await w.get('[data-dialog-close]').trigger('click')
+    await flushPromises()
     expect(w.emitted('close')).toHaveLength(1)
+    expect(pendingConfirm.value).toBeNull()
     w.unmount()
+  })
+
+  it('asks before closing a rule with edits and keeps the dialog on "keep editing"', async () => {
+    const w = open({ kind: 'words' })
+    await w.get('[data-testid="am-words"]').setValue('spam')
+    await w.get('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(w.emitted('close')).toBeUndefined()
+    w.unmount()
+  })
+
+  describe('editing a saved rule', () => {
+    const save = (w: ReturnType<typeof open>) => w.get('[data-testid="unsaved-save"]')
+
+    it('keeps Save off until something really changed, ignoring spacing and order', async () => {
+      const w = open({ rule: ruleOf({ config: { mode: 'allow_list', domains: ['a.com', 'b.com'] }, exempt_roles: [fixtureId(60)] }) })
+      expect(save(w).attributes('disabled')).toBeDefined()
+      await w.get('[data-testid="am-name"]').setValue('  Links ')
+      await w.get('[data-testid="am-domains"]').setValue('b.com\n a.com \n')
+      expect(save(w).attributes('disabled')).toBeDefined()
+      await w.get('[data-testid="am-enabled"]').trigger('click')
+      expect(save(w).attributes('disabled')).toBeUndefined()
+      await w.get('[data-testid="am-enabled"]').trigger('click')
+      expect(save(w).attributes('disabled')).toBeDefined()
+      expect(http.calls).toHaveLength(0)
+      w.unmount()
+    })
+
+    it('treats the in-form switch as part of the draft and sends it on Save', async () => {
+      const w = open({ rule: ruleOf() })
+      await w.get('[data-testid="am-enabled"]').trigger('click')
+      expect(http.calls).toHaveLength(0)
+      await save(w).trigger('click')
+      await flushPromises()
+      expect(lastCall()?.options?.json).toMatchObject({ enabled: false })
+      w.unmount()
+    })
   })
 })

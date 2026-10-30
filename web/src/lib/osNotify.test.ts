@@ -41,6 +41,18 @@ describe('browser adapter', () => {
     expect(await browserNotify.requestPermission()).toBe('unsupported')
   })
 
+  it('keeps the toast of a call until it is used, and withdraws it by channel', () => {
+    browserNotify.notify({ ...toast(), call: true })
+    const shown = Fixture.made[0]
+    expect(shown?.options).toMatchObject({ tag: 'c1', requireInteraction: true })
+    browserNotify.close?.('c1')
+    expect(shown?.close).toHaveBeenCalledOnce()
+    browserNotify.close?.('c1')
+    expect(shown?.close).toHaveBeenCalledOnce()
+    browserNotify.notify(toast())
+    expect(Fixture.made[1]?.options.requireInteraction).toBe(false)
+  })
+
   it('reads and requests the permission, falling back to the current one on failure', async () => {
     expect(browserNotify.permission()).toBe('default')
     expect(await browserNotify.requestPermission()).toBe('granted')
@@ -128,6 +140,38 @@ describe('host adapter', () => {
     expect(opens).toHaveLength(1)
     expect(host.invoke).toHaveBeenCalledWith('desktop_notify', { title: 'Anna (#music)', body: 'hello', channelId: 'c1', messageId: 'm1' })
     expect(host.invoke).toHaveBeenCalledWith('desktop_notify', expect.objectContaining({ messageId: 'm2' }))
+  })
+
+  it('shows a call as a call only on a host that announced it, and passes the button used', async () => {
+    let announced = false
+    const adapter = createHostNotify(() => announced)
+    const onClick = vi.fn()
+    adapter.notify({ ...toast(onClick), call: true })
+    await settle()
+    expect(host.invoke).toHaveBeenCalledWith('desktop_notify', { title: 'Anna (#music)', body: 'hello', channelId: 'c1', messageId: 'm1' })
+    adapter.close?.('c1')
+    expect(host.invoke).not.toHaveBeenCalledWith('desktop_notify_close', expect.anything())
+
+    announced = true
+    adapter.notify({ ...toast(onClick), messageId: 'm2', call: true })
+    adapter.notify({ ...toast(), messageId: 'm3' })
+    await settle()
+    expect(host.invoke).toHaveBeenCalledWith('desktop_notify', { title: 'Anna (#music)', body: 'hello', channelId: 'c1', messageId: 'm2', kind: 'call' })
+    expect(host.invoke).toHaveBeenCalledWith('desktop_notify', { title: 'Anna (#music)', body: 'hello', channelId: 'c1', messageId: 'm3' })
+    adapter.close?.('c1')
+    expect(host.invoke).toHaveBeenCalledWith('desktop_notify_close', { channelId: 'c1' })
+
+    host.channels[0]?.onmessage?.({ channel_id: 'c1', message_id: 'm2', action: 'join' })
+    expect(onClick).toHaveBeenCalledWith('join')
+  })
+
+  it('treats any other action as a plain click', async () => {
+    const adapter = createHostNotify()
+    const onClick = vi.fn()
+    adapter.notify(toast(onClick))
+    await settle()
+    host.channels[0]?.onmessage?.({ channel_id: 'c1', message_id: 'm1', action: 'something' })
+    expect(onClick).toHaveBeenCalledWith(undefined)
   })
 
   it('runs the handler of the toast the host reports, once', async () => {

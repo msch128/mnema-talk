@@ -70,7 +70,7 @@ export function removeRemoteScreen(cs: VoiceState, userId: string, stream?: Medi
 // What I chose and receive of a share ends with my watching it; the layers it
 // has stay known until it ends.
 function forgetScreenQuality(cs: VoiceState, userId: string, withLayers = true) {
-  for (const ref of withLayers ? [cs.screenLayers, cs.receivedLayer, cs.screenChoice] as const : [cs.receivedLayer, cs.screenChoice] as const) {
+  for (const ref of withLayers ? [cs.screenLayers, cs.receivedLayer, cs.screenChoice, cs.screenFit] as const : [cs.receivedLayer, cs.screenChoice, cs.screenFit] as const) {
     if (!(userId in ref.value)) continue
     const next = { ...ref.value }
     delete next[userId]
@@ -145,6 +145,16 @@ export function setScreenChoice(cs: VoiceState, userId: string | null, choice: n
   if (!userId || !cs.watchedScreens.value[userId]) return
   cs.screenChoice.value = { ...cs.screenChoice.value, [userId]: choice }
   emitSubscription(cs, { kind: 'screen', user_id: userId, on: true, quality: choice })
+}
+
+/**
+ * Tells the server the best layer of userId's share my picture of it can use
+ * (see fitLayer). Automatic stays at or below it; a chosen layer is not affected.
+ */
+export function setScreenFit(cs: VoiceState, userId: string | null, fit: number) {
+  if (!userId || !cs.watchedScreens.value[userId] || cs.screenFit.value[userId] === fit) return
+  cs.screenFit.value = { ...cs.screenFit.value, [userId]: fit }
+  emitSubscription(cs, { kind: 'screen', user_id: userId, on: true, fit })
 }
 
 /** Who watches userId's screen share (my own too): user IDs, [] for nobody. */

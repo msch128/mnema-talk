@@ -272,6 +272,58 @@ describe('AudioSettingsPanel mic test lifecycle', () => {
   })
 })
 
+describe('AudioSettingsPanel first check and push to talk', () => {
+  beforeEach(() => { localStorage.clear(); setActivePinia(createPinia()); vi.clearAllMocks() })
+
+  it('puts the microphone, the level bar and the test first, and the jargon behind Fine-tune', () => {
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
+    const headings = wrapper.findAll('h3').map(h => h.text())
+    expect(headings[0]).toBe(t('audio.groupMeter'))
+    const first = wrapper.get('section')
+    expect(first.find('#audio-input-device').exists()).toBe(true)
+    expect(first.find('[role="meter"]').exists()).toBe(true)
+    expect(first.find('[data-testid="mic-test-toggle"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="audio-advanced"]').find('[data-testid="input-volume"]').exists()).toBe(true)
+    expect(first.text()).not.toMatch(/Schwelle \d+ %/)
+    wrapper.unmount()
+  })
+
+  it('confirms once the test hears the member', async () => {
+    const voice = useVoiceStore(); voice.autoSensitivity = false; voice.sensitivityThreshold = 30
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
+    expect(wrapper.find('[data-testid="mic-heard"]').exists()).toBe(false)
+    voice.isMicTesting = true; voice.currentInputLevel = 10; await nextTick()
+    expect(wrapper.find('[data-testid="mic-heard"]').exists()).toBe(false)
+    voice.currentInputLevel = 60; await nextTick()
+    voice.currentInputLevel = 0; await nextTick()
+    expect(wrapper.get('[data-testid="mic-heard"]').text()).toBe(t('audio.micHeard'))
+    voice.isMicTesting = false; await nextTick()
+    expect(wrapper.find('[data-testid="mic-heard"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('puts the focus on the key button when push to talk asks for a key, so the next key is heard', async () => {
+    const wrapper = mount(AudioSettingsPanel, { ...mountOpts, attachTo: document.body })
+    await requireValue(wrapper.findAll('button').find(b => b.text().includes('Push-to-Talk'))).trigger('click')
+    await nextTick()
+    expect(document.activeElement).toBe(wrapper.get('[data-testid="ptt-key-button"]').element)
+    wrapper.unmount()
+  })
+
+  it('lights the key line while the push-to-talk key is held', async () => {
+    const voice = useVoiceStore(); voice.inputMode = 'ptt'; voice.pttKey = 'F8'
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
+    // The key listens during the microphone test (or a Talk) only, and says so.
+    expect(wrapper.get('[data-testid="ptt-key-state"]').text()).toBe(t('audio.pttKeyIdleTest', { key: 'F8' }))
+    voice.isMicTesting = true; await nextTick()
+    expect(wrapper.get('[data-testid="ptt-key-state"]').text()).toBe(t('audio.pttKeyIdle', { key: 'F8' }))
+    voice.isPttPressed = true; await nextTick()
+    expect(wrapper.get('[data-testid="ptt-key-state"]').text()).toBe(t('audio.pttKeyHeld'))
+    expect(wrapper.text()).toContain(t('audio.pttKeyHint'))
+    wrapper.unmount()
+  })
+})
+
 describe('AudioSettingsPanel preference interactions', () => {
   beforeEach(() => { localStorage.clear(); setActivePinia(createPinia()); vi.clearAllMocks() })
   it('switches input mode, records code or key, ignores keys while not recording, changes manual sensitivity', async () => {
@@ -279,10 +331,15 @@ describe('AudioSettingsPanel preference interactions', () => {
     const wrapper = mount(AudioSettingsPanel, mountOpts)
     const ptt = requireValue(wrapper.findAll('button').find(b => b.text().includes('Push-to-Talk')))
     await ptt.trigger('click'); expect(voice.inputMode).toBe('ptt')
-    const record = requireValue(wrapper.findAll('button').find(b => b.text() === voice.pttKey))
-    const previous = voice.pttKey
-    await record.trigger('keydown', { key: 'q', code: 'KeyQ' }); expect(voice.pttKey).toBe(previous)
-    await record.trigger('click'); await record.trigger('keydown', { key: 'q', code: 'KeyQ' }); expect(voice.pttKey).toBe('KeyQ')
+    const record = wrapper.get('[data-testid="ptt-key-button"]')
+    // No key yet: choosing push to talk asks for one at once, and says so until it is set.
+    expect(voice.pttKey).toBe('')
+    expect(record.text()).toBe(t('audio.pressKey'))
+    expect(wrapper.text()).toContain(t('audio.pttKeyNone'))
+    await record.trigger('keydown', { key: 'q', code: 'KeyQ' }); expect(voice.pttKey).toBe('KeyQ')
+    expect(record.text()).toBe('Q')
+    await record.trigger('click'); await record.trigger('keydown', { key: 'F', code: 'KeyF' }); expect(voice.pttKey).toBe('KeyF')
+    await record.trigger('keydown', { key: 'z', code: 'KeyZ' }); expect(voice.pttKey).toBe('KeyF')
     await record.trigger('click'); await record.trigger('keydown', { key: 'x', code: '' }); expect(voice.pttKey).toBe('x')
     await requireValue(wrapper.findAll('button').find(b => b.text().includes(t('audio.activity')))).trigger('click')
     await wrapper.get(`input[aria-label="${t('audio.sensitivity')}"]`).setValue(70); expect(voice.sensitivityThreshold).toBe(70)
@@ -291,10 +348,10 @@ describe('AudioSettingsPanel preference interactions', () => {
     wrapper.unmount()
   })
   it('lets Tab and lone modifiers through, cancels recording on Escape and blur, and rolls the noise mode with the arrows', async () => {
-    const voice = useVoiceStore(); voice.inputMode = 'ptt'
+    const voice = useVoiceStore(); voice.inputMode = 'ptt'; voice.pttKey = 'KeyV'
     const wrapper = mount(AudioSettingsPanel, { ...mountOpts, attachTo: document.body })
     const previous = voice.pttKey
-    const record = requireValue(wrapper.findAll('button').find(b => b.text() === previous))
+    const record = wrapper.get('[data-testid="ptt-key-button"]')
     await record.trigger('click')
     await record.trigger('keydown', { key: 'Tab', code: 'Tab' }); expect(voice.pttKey).toBe(previous)
     await record.trigger('keydown', { key: 'Shift', code: 'ShiftLeft' }); expect(voice.pttKey).toBe(previous)
@@ -379,5 +436,24 @@ describe('AudioSettingsPanel as a section of the settings', () => {
     wrapper.unmount()
     expect(voice.showAudioSettings).toBe(false)
     expect(mockStopMicTest).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('AudioSettingsPanel saves at once', () => {
+  it('says "Saved" whenever a control stored a setting', async () => {
+    vi.useFakeTimers()
+    localStorage.clear()
+    setActivePinia(createPinia())
+    const voice = useVoiceStore()
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
+    const indicator = () => wrapper.find('[data-testid="saved-indicator"]').text()
+    expect(indicator()).toBe('')
+    voice.saveSettings()
+    await nextTick()
+    expect(indicator()).toBe(t('draft.saved'))
+    await vi.advanceTimersByTimeAsync(2500)
+    expect(indicator()).toBe('')
+    wrapper.unmount()
+    vi.useRealTimers()
   })
 })

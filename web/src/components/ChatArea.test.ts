@@ -248,26 +248,13 @@ describe('ChatArea message actions', () => {
     expect(w.find<HTMLVideoElement>('[data-msg-id="v"] video').exists()).toBe(true)
   })
 
-  it('clears the file input after a failed upload', async () => {
-    const chat = setup()
-    vi.spyOn(chat, 'uploadMedia').mockRejectedValue(new Error('zu groß'))
-    const input = w.find<HTMLInputElement>('input[type="file"]').element
-    const file = new File(['x'], 'a.png', { type: 'image/png' })
-    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
-    let value = 'C:\\fakepath\\a.png'
-    Object.defineProperty(input, 'value', { configurable: true, get: () => value, set: v => { value = v } })
-    input.dispatchEvent(new Event('change'))
-    await flushPromises()
-    expect(chat.uploadMedia).toHaveBeenCalled()
-    expect(value).toBe('')
-  })
 })
 
 // Exercise the panel through its public UI and child component events; stores
 // stay real, with network-facing methods controlled per scenario.
 import MessageRow from './MessageRow.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
-import ImageLightbox from './ImageLightbox.vue'
+import { closeViewer, openViewer } from '../composables/useMediaViewer'
 import ContextMenu from './ContextMenu.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import EmojiButton from './EmojiButton.vue'
@@ -302,7 +289,7 @@ describe('ChatArea composer, replies and lifecycle', () => {
     key(composer(), { key: 'Enter' })
     key(composer(), { key: 'Enter' })
     expect(send).toHaveBeenCalledTimes(1)
-    expect(send).toHaveBeenCalledWith('hello', null, null)
+    expect(send).toHaveBeenCalledWith('hello', null, null, [])
     finish(null)
     await flushPromises()
     expect(composer().element.value).toBe('')
@@ -337,31 +324,8 @@ describe('ChatArea composer, replies and lifecycle', () => {
     await composer().setValue('reply')
     key(composer(), { key: 'Enter' })
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('reply', null, 'a')
+    expect(send).toHaveBeenCalledWith('reply', null, 'a', [])
     expect(latest).toHaveBeenCalledTimes(1)
-    expect(w.findComponent(ReplyComposerBar).exists()).toBe(false)
-  })
-
-  it('uploads with the selected reply, blocks sends during upload and invokes the attachment picker', async () => {
-    const chat = setup()
-    const send = vi.spyOn(chat, 'sendMessage').mockResolvedValue(null)
-    let complete!: (value: ReturnType<typeof messageFixture>) => void
-    const upload = vi.spyOn(chat, 'uploadMedia').mockImplementation(() => new Promise(resolve => { complete = resolve }))
-    rowComponent('b').vm.$emit('reply')
-    await nextTick()
-    const input = w.find<HTMLInputElement>('input[type=file]').element
-    const pick = vi.spyOn(input, 'click').mockImplementation(() => {})
-    const button = requireValue(w.findAll<HTMLElement>('button').find(b => b.find('svg.lucide-plus').exists()))
-    await button.trigger('click')
-    expect(pick).toHaveBeenCalledTimes(1)
-    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['x'], 'image.png', { type: 'image/png' })] })
-    input.dispatchEvent(new Event('change'))
-    await composer().setValue('draft')
-    key(composer(), { key: 'Enter' })
-    expect(send).not.toHaveBeenCalled()
-    expect(upload).toHaveBeenCalledWith(expect.any(File), '', null, 'b')
-    complete(messageFixture())
-    await flushPromises()
     expect(w.findComponent(ReplyComposerBar).exists()).toBe(false)
   })
 
@@ -410,13 +374,10 @@ describe('ChatArea composer, replies and lifecycle', () => {
     await nextTick()
     expect(row.props('pickerId')).toBe('c')
     row.vm.$emit('close-picker')
-    row.vm.$emit('open-image', '/media/test-image')
     await flushPromises()
     expect(reaction).toHaveBeenCalledWith('c', '👍')
     expect(profile).toHaveBeenCalledWith(expect.objectContaining({ id: 'c' }))
     expect(thread).toHaveBeenCalledWith(expect.objectContaining({ id: 'c' }))
-    expect(w.findComponent(ImageLightbox).props('src')).toBe('/media/test-image')
-    w.findComponent(ImageLightbox).vm.$emit('close')
     row.vm.$emit('jump')
     await nextTick()
     expect(useToastStore().toasts.at(-1)?.text).toBe(t('chat.messageNotFound'))
@@ -482,7 +443,7 @@ describe('ChatArea notification settings and presentation', () => {
       await w.find('[aria-haspopup=menu]').trigger('click')
       await nextTick()
       const menu = w.findComponent(ContextMenu)
-      const label = level === 'inherit' ? t('notifications.inheritChannel') : t(`notifications.${level}`)
+      const label = level === 'inherit' ? t('notifications.inherit', { level: t('notifications.all') }) : t(`notifications.${level}`)
       const item = requireValue(requireValue(menu.props('items')).find(item => item.label === label))
       expect(item).toMatchObject({ type: 'radio', checked: true })
       item.action?.()
@@ -739,9 +700,10 @@ describe('ChatArea Escape guards', () => {
     const used = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
     used.preventDefault()
     composer().element.dispatchEvent(used)
-    rowComponent('a').vm.$emit('open-image', '/image')
+    openViewer({ items: [{ src: '/image', name: 'image.png' }], index: 0 })
     await nextTick()
     key(composer(), { key: 'Escape' })
+    closeViewer()
     await nextTick()
     rowComponent('c').vm.$emit('edit')
     await nextTick()

@@ -32,8 +32,8 @@ func TestBulkDeleteReportsDatabaseDrift(t *testing.T) {
 		"message query":       {map[string]string{"messages": `SELECT id FROM public.messages`}, "select messages"},
 		"message decoding":    {map[string]string{"messages": `SELECT id,parent_id,channel_id,user_id,NULL::text content,created_at FROM public.messages`}, "select messages"},
 		"attachment query":    {map[string]string{"media": `SELECT id FROM public.media`}, "select attachments"},
-		"attachment decoding": {map[string]string{"media": `SELECT message_id,id,NULL::text original_filename,mime_type,size_bytes,s3_key FROM public.media`}, ""},
-		"attachment stream":   {map[string]string{"media": `SELECT message_id,id,original_filename,mime_type,1/(size_bytes-size_bytes) size_bytes,s3_key FROM public.media`}, "division by zero"},
+		"attachment decoding": {map[string]string{"media": `SELECT message_id,id,NULL::text original_filename,mime_type,size_bytes,s3_key,0::smallint position,NOW() created_at FROM public.media`}, ""},
+		"attachment stream":   {map[string]string{"media": `SELECT message_id,id,original_filename,mime_type,1/(size_bytes-size_bytes) size_bytes,s3_key,0::smallint position,NOW() created_at FROM public.media`}, "division by zero"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			err := run(tc.views)

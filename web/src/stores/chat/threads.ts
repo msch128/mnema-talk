@@ -38,7 +38,7 @@ export async function openThread(cx: Cx, msg: Message | ThreadRoot | string) {
   cs.threadReplies.value = []
   cs.isThreadLoading.value = true
   try {
-    const data = await api(`/api/messages/${id}/thread`, { decode: decodeThread })
+    const data = await api(`/api/messages/${id}/thread`, { decode: decodeThread, dedupe: true })
     if (!isThreadActive(cs, id, gen)) return
     cs.activeThread.value = data.root
     cs.threadReplies.value = mergeLiveReplies(data.replies, cs.threadReplies.value)
@@ -61,10 +61,10 @@ export function closeThread(cx: Cx) {
   cs.isThreadLoading.value = false
 }
 
-export async function sendThreadReply(cx: Cx, content: string, replyToId: string | null = null) {
+export async function sendThreadReply(cx: Cx, content: string, replyToId: string | null = null, attachmentIds: readonly string[] = []) {
   const { cs } = cx
   if (!cs.activeThread.value) return null
-  return sendMessage(cx, content, cs.activeThread.value.id, replyToId)
+  return sendMessage(cx, content, cs.activeThread.value.id, replyToId, attachmentIds)
 }
 
 export async function uploadThreadMedia(cx: Cx, file: File, content = '', replyToId: string | null = null) {

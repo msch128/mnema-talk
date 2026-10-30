@@ -68,14 +68,21 @@ export function applyScreenQuality(cx: Cx) {
   const quality = { ...voice.screenQuality }
   st.qualityChain = st.qualityChain.then(async () => {
     if (!track || track !== st.localScreenStream.value?.getVideoTracks()[0]) return
+    // A capture that cannot be constrained live (some engines limit it) is scaled by the encoder instead; the menu then offers a restart.
     try {
-      await track.applyConstraints?.(trackConstraints(quality))
+      if (typeof track.applyConstraints !== 'function') throw new Error('applyConstraints unsupported')
+      await track.applyConstraints(trackConstraints(quality))
+      voice.screenQualityNeedsRestart = false
     } catch (err) {
       console.debug('[WebRTC] Could not constrain the shared screen:', err)
+      voice.screenQualityNeedsRestart = true
     }
     if ('contentHint' in track) track.contentHint = streamTuning(quality).contentHint
     if (st.screenSender && track === st.localScreenStream.value?.getVideoTracks()[0]) {
       await tuneSender(st.screenSender, screenSenderParams(cx))
+      // Viewers get a fresh picture at the new size instead of waiting for the next key frame. The server
+      // asks for the sharer's own screen on screenshare_start; webrtc_request_keyframe is for videos the sender watches.
+      cx.chat.sendWSEvent('webrtc_screenshare_start', {})
     }
   }).catch(() => {})
   return st.qualityChain

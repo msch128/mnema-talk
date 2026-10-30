@@ -263,6 +263,38 @@ window title in the desktop clients. While it is empty the host of `PUBLIC_URL`
 stands in. It is public: `GET /api/health` and `GET /api/auth/options` carry
 `community_name` (clients treat it as optional), and a change reaches open
 sessions through the `community_updated` event.
+
+### Community icon
+
+The Owner and Administrators (the same who may change the name) can upload an
+icon for the community (admin console, *Welcome & rules*;
+`PUT|DELETE /api/admin/community/icon`, audited as `settings.community_icon` and
+`settings.community_icon_remove`). The server decodes the picture (PNG, JPEG,
+GIF without animation or WebP, at most 5 MB, at least 128x128 pixels; SVG is
+refused), crops the centre square and writes it again as two PNGs of 512x512 and
+128x128 pixels, so metadata is gone. The files live in object storage under
+`community/icon/<version>/`; `instance_settings.community_icon_version` names
+the current one (migration `0080`).
+
+The icon is public, on the same footing as the community name, and it stays so
+on an invite-only server: `GET /api/community/icon` (optional `?size=128|512`,
+default 512) needs no session and answers 404 while none is set. The name next
+to it is already readable without signing in (`GET /api/health`,
+`GET /api/auth/options`, the sign-in page, link previews), and a community
+icon is meant to be seen; it shows nothing about members or content. The
+route has its own per-address rate limit. It carries an `ETag`, a
+`Last-Modified` and `Cache-Control: public, max-age=300, must-revalidate`; a
+request whose `v` parameter equals the current version is `immutable` for a
+year. Clients learn the version from the optional `community_icon` field of
+`GET /api/health` and `GET /api/auth/options` (left out while there is none)
+and from `community_updated` (`community_icon`, empty after removal), and
+refetch when it differs from the one they have.
+
+The web app uses it as the tab icon, home-screen icon and manifest icons (the
+server writes them into `index.html` and the manifest, so installed apps and
+tabs follow), in the sidebar header and on the sign-in screen. The root page and
+working invite pages use it as `og:image` in link previews; without an icon the
+Mnema icon stays.
 While rules exist, a member who has not accepted the current version
 (`rules_pending` in `GET /api/permissions`, `GET /api/auth/me` and
 `GET /api/onboarding`) loses what a timeout takes: *Send messages*, *Attach
@@ -322,6 +354,7 @@ minute is only a backstop for edits made directly in the database) and then:
   viewable channel, their permissions there, plus the catalog of bits.
 - `GET|PUT /api/admin/upload-limit` (Owner): the global upload limit and the ceiling.
 - `GET|PUT /api/admin/onboarding` (Owner, Administrators): community name, welcome text, rules, start channel.
+- `PUT|DELETE /api/admin/community/icon` (Owner, Administrators): the community icon. `GET /api/community/icon` (public): the icon, 404 while none is set.
 - `GET /api/onboarding`, `POST /api/onboarding/accept`, `PUT /api/onboarding/tips`: a member's view of them and their acceptance and dismissed tips.
 - `GET /api/invites/{code}` (public): the invite preview.
 - `GET /api/roles`: all roles (visible to every member; they colour names).

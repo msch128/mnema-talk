@@ -149,7 +149,7 @@ const inputClass = 'w-full bg-mnema-canvas border border-mnema-border-field roun
             v-model="reason"
             type="text"
             data-testid="reason"
-            :maxlength="MAX_REASON_LENGTH"
+            v-max-chars="MAX_REASON_LENGTH"
             :placeholder="$t('moderation.reasonPlaceholder')"
             :class="inputClass"
           />

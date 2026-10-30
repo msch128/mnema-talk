@@ -26,12 +26,12 @@ and **UDP and TCP 3479** for the built-in TURN relay. Do not forward 8080
 
 A new host needs Docker with Compose and nothing else: the compose file and
 `.env.example` of the release are the whole deployment (no clone, no build).
-Replace `X.Y.Z` with the version to install (the newest is on the
-[releases page](https://github.com/msch128/mnema-talk/releases)).
+The commands install the latest release; to pin another, set `VERSION` yourself.
 
 ```sh
 mkdir mnema-talk && cd mnema-talk
-VERSION=X.Y.Z
+VERSION=$(curl -fsSL https://api.github.com/repos/msch128/mnema-talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+[ -n "$VERSION" ] || { echo "could not read the latest version; set VERSION=x.y.z yourself" >&2; false; }
 base=https://raw.githubusercontent.com/msch128/mnema-talk/v$VERSION
 curl -fsSLO "$base/docker-compose.yml"
 curl -fsSL "$base/.env.example" -o .env
@@ -53,7 +53,7 @@ The same image is also published on Docker Hub as `docker.io/msch128/mnema-talk`
 | `POSTGRES_PASSWORD` | `openssl rand -hex 16` (compose builds `DATABASE_URL` from it) |
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY` | Any letters and digits (secret: at least 8 characters) |
 | `ADMIN_INITIAL_PASSWORD` | The Owner's password, at least 14 characters; remove it after the first start |
-| `INITIAL_LANGUAGE` | Optional, `de` (default) or `en`: the language of the default category and channel names. Only the first start uses it. |
+| `INITIAL_LANGUAGE` | Optional, `en` (default) or `de`: the language of the default category and channel names. Only the first start uses it. |
 
 Then start and check it (the admin Status tab's
 [setup checks](operations.md#setup-checks) list anything still missing):
@@ -72,11 +72,21 @@ built (`scripts/fresh-install-check.sh`).
 
 ### After the first start
 
+The Owner's first sign-in shows a **Get started** list under the channel header:
+name the community, invite people (a button creates and copies a 7-day link),
+review the channels, set up voice, check the status page and, optionally, write
+rules. The steps tick themselves from what exists on the server, or once you
+have opened the channels or status page. Close the list with the cross; the
+server menu brings it back (**Get started checklist**). A community that
+already had members when the Owner first looked starts with it closed. The
+state is kept per Owner (`GET`/`PUT /api/admin/first-run`).
+
 - Create the first invite: Admin console → Invites. Members register with that
   code; there is no public registration.
 - Set the community name and the rules new members accept (Admin console →
-  Welcome & rules). The same page has the Owner's switch for direct messages
-  (on by default).
+  Welcome & rules). The switch for direct messages (on by default) and the
+  sign-out after inactivity are on their own page, Admin console → Sign-in &
+  messages.
 - Give moderators their rights through roles: *Manage reports* (the Reports
   tab) and *Kick members* are off for @everyone and for every role until you
   grant them ([roles](roles-and-permissions.md)).

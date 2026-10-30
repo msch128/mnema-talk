@@ -31,7 +31,7 @@ const fileTransfer = (page: Page, name: string) => page.evaluateHandle(async (fi
   return transfer
 }, name)
 
-test('the composer grows with its text and takes pasted and dropped images', async ({ browser }) => {
+test('the composer grows with its text and stages pasted and dropped images', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1400, height: VIEWPORT_HEIGHT } })
   const page = await context.newPage()
   try {
@@ -61,21 +61,24 @@ test('the composer grows with its text and takes pasted and dropped images', asy
     })
     await expect(page.locator('.msg-list img')).toHaveCount(0)
 
-    // A pasted image goes out like one chosen with the button.
+    // A pasted image waits in the tray above the composer; nothing is sent.
+    const tray = page.getByTestId('attachment-tray')
     const pasted = await fileTransfer(page, 'pasted.png')
     await composer.evaluate((el, transfer) => {
       el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }))
     }, pasted)
-    await expect(page.locator('.msg-list img')).toHaveCount(1)
+    await expect(tray.locator('li')).toHaveCount(1)
+    await expect(page.locator('.msg-list img')).toHaveCount(0)
 
-    // A dropped image shows the calm veil while dragged and attaches on drop.
+    // A dropped image shows the calm veil while dragged and joins the tray on drop.
     const dropped = await fileTransfer(page, 'dropped.png')
     const chat = page.locator('#main-content')
     await chat.dispatchEvent('dragenter', { dataTransfer: dropped })
     await expect(page.getByTestId('file-drop-overlay')).toBeVisible()
     await chat.dispatchEvent('drop', { dataTransfer: dropped })
     await expect(page.getByTestId('file-drop-overlay')).toBeHidden()
-    await expect(page.locator('.msg-list img')).toHaveCount(2)
+    await expect(tray.locator('li')).toHaveCount(2)
+    await expect(page.locator('.msg-list img')).toHaveCount(0)
   } finally {
     await context.close()
   }

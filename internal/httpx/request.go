@@ -14,6 +14,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+
+	"github.com/msch128/mnema-talk/internal/textcut"
 )
 
 // DefaultMaxBody is the global request body ceiling; upload routes override it.
@@ -139,16 +141,21 @@ func isInvisibleRune(r rune) bool {
 }
 
 // SanitizeFilename strips path components, control characters and leading
-// dots so the name is safe as a Content-Disposition base name. It returns ""
-// when nothing usable remains. Adopted from mnema.xyz.
+// dots so the name is safe as a Content-Disposition base name. Invisible
+// characters go too, except the joiners an emoji sequence or a script needs
+// (see stripInvisible), so a file named after a family emoji keeps it. It
+// returns "" when nothing usable remains. The name is cut to maxLen bytes at a
+// character boundary. Adopted from mnema.xyz.
 func SanitizeFilename(name string, maxLen int) string {
+	// A legacy-encoded name loses only its bad bytes, not the whole name.
+	name = strings.ToValidUTF8(name, "")
 	name = stripPathComponents(name)
-	name = filterFilenameRunes(name)
+	name = stripInvisible(filterFilenameRunes(name))
 	name = strings.TrimSpace(strings.TrimLeft(name, "."))
-	if name == "" || !utf8.ValidString(name) {
+	if name == "" {
 		return ""
 	}
-	return truncateRuneBoundary(name, maxLen)
+	return textcut.Bytes(name, maxLen)
 }
 
 func stripPathComponents(name string) string {
@@ -160,7 +167,7 @@ func stripPathComponents(name string) string {
 }
 
 func isForbiddenFilenameRune(r rune) bool {
-	return r < 0x20 || r == 0x7f || r == '"' || isInvisibleRune(r)
+	return r < 0x20 || r == 0x7f || r == '"'
 }
 
 func filterFilenameRunes(name string) string {
@@ -170,16 +177,4 @@ func filterFilenameRunes(name string) string {
 		}
 		return r
 	}, name)
-}
-
-func truncateRuneBoundary(name string, maxLen int) string {
-	if maxLen <= 0 || len(name) <= maxLen {
-		return name
-	}
-	// Cut on a rune boundary so the result stays valid UTF-8.
-	cut := maxLen
-	for cut > 0 && !utf8.RuneStart(name[cut]) {
-		cut--
-	}
-	return name[:cut]
 }

@@ -5,6 +5,7 @@ import {
   deleteReminder, deleteScheduled, fetchReminders, fetchScheduled, patchScheduled, postReminder, postScheduled,
   type ScheduleOptions
 } from '../lib/laterApi'
+import { isApiError } from '../lib/api'
 import { noticeReminderDue, noticeScheduledFailed } from '../lib/laterNotices'
 
 export type { ScheduleOptions }
@@ -32,6 +33,23 @@ function attentionCounts(reminders: Ref<LaterReminder[]>, scheduled: Ref<LaterSc
 function keep<T extends { id: string }>(list: Ref<T[]>, entry: T): T {
   list.value = withEntry(list.value, entry)
   return entry
+}
+
+/**
+ * Moves a reminder to a later time: the new one is made first, so a failure never loses it.
+ * An old one already gone counts as removed; when it cannot be removed it is dropped from
+ * the list and `cleanupFailed` says so, instead of reporting a failure that a retry would duplicate.
+ */
+async function snoozeReminder(list: Ref<LaterReminder[]>, id: string, messageId: string, at: Date) {
+  const next = keep(list, await postReminder(messageId, at))
+  let cleanupFailed = false
+  try {
+    await deleteReminder(id)
+  } catch (error) {
+    cleanupFailed = !(isApiError(error) && error.status === 404)
+  }
+  list.value = without(list.value, id)
+  return { next, cleanupFailed }
 }
 
 // Bumped by reset(): a list asked for before must not fill the next account's store.
@@ -85,6 +103,8 @@ export const useLaterStore = defineStore('later', () => {
     reminders.value = without(reminders.value, id)
   }
 
+  const snooze = (id: string, messageId: string, at: Date) => snoozeReminder(reminders, id, messageId, at)
+
   async function schedule(channelId: string, content: string, at: Date, options: ScheduleOptions = {}) {
     return keep(scheduled, await postScheduled(channelId, content, at, options))
   }
@@ -120,6 +140,6 @@ export const useLaterStore = defineStore('later', () => {
 
   return {
     reminders, scheduled, loading, failed, loaded, dueCount, failedCount, attention,
-    load, remind, cancelReminder, schedule, updateScheduled, removeScheduled, onReminderEvent, onScheduledEvent, reset
+    load, remind, snooze, cancelReminder, schedule, updateScheduled, removeScheduled, onReminderEvent, onScheduledEvent, reset
   }
 })

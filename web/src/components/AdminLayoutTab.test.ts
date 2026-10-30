@@ -5,9 +5,10 @@ import { nextTick } from 'vue'
 import type { ApiOptions } from '../lib/api'
 import AdminLayoutTab from './AdminLayoutTab.vue'
 import BaseDialog from './BaseDialog.vue'
+import CreateChannelModal from './CreateChannelModal.vue'
 import { useChatStore } from '../stores/chat'
 import { categoryFixture, channelFixture, fixtureId, userFixture } from '../test-fixtures.fixture'
-import { tree, errors, button } from './adminTestkit.fixture'
+import { tree, errors } from './adminTestkit.fixture'
 import { useAuthStore } from '../stores/auth'
 import { setLocale } from '../i18n'
 import { useToastStore } from '../stores/toast'
@@ -65,6 +66,28 @@ describe('layout editing recovery and unsaved order', () => {
   async function dirty(w: VueWrapper) {
     await cat(w).find('[data-testid="move-down-channel"]').trigger('click')
   }
+  it('creates a channel from the header button and from a category, keeping an unsaved order', async () => {
+    const w = await openLayout()
+    const chat = useChatStore()
+    chat.categories = tree().categories
+    const create = vi.spyOn(chat, 'createChannel').mockResolvedValue(
+      channelFixture({ id: fixtureId(50), name: 'ideas', category_id: fixtureId(30) }),
+    )
+    await w.get('[data-testid="layout-add-channel"]').trigger('click')
+    expect(w.find('#channel-name').exists()).toBe(true)
+    await w.findComponent(CreateChannelModal).vm.$emit('close')
+    expect(w.find('#channel-name').exists()).toBe(false)
+    await dirty(w)
+    await cat(w, 30).get('[data-testid="add-channel-category"]').trigger('click')
+    expect(w.get<HTMLSelectElement>('#channel-category').element.value).toBe(fixtureId(30))
+    await w.get('#channel-name').setValue('ideas')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ categoryId: fixtureId(30), name: 'ideas' }))
+    expect(cat(w, 30).text()).toContain('ideas')
+    expect(w.text()).toContain('You have unsaved changes')
+  })
+
   it('reorders categories and uncategorized channels in both directions and exercises native drag events', async () => {
     const w = await openLayout()
     await cat(w).find('[data-testid="move-down-category"]').trigger('click')
@@ -91,10 +114,7 @@ describe('layout editing recovery and unsaved order', () => {
     await ch(w, 11).trigger('dragover')
     await ch(w, 11).trigger('dragstart')
     await ch(w, 11).trigger('dragend')
-    await w
-      .findAll('button')
-      .find((b) => b.text() === 'Save layout')!
-      .trigger('click')
+    await w.find('[data-testid="save-layout-button"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(
       '/api/admin/layout',
@@ -114,9 +134,10 @@ describe('layout editing recovery and unsaved order', () => {
     await w.find('form').trigger('submit')
     await flushPromises()
     expect(cat(w).text()).toContain('Renamed')
-    expect(w.text()).toContain('Unsaved changes')
+    expect(w.text()).toContain('You have unsaved changes')
     await cat(w).find('[data-testid="rename-category"]').trigger('click')
-    await button(w, 'Cancel').trigger('click')
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
     expect(w.find('form').exists()).toBe(false)
     await cat(w).find('[data-testid="rename-category"]').trigger('click')
     w.findComponent(BaseDialog).vm.$emit('close')
@@ -161,9 +182,15 @@ describe('layout editing recovery and unsaved order', () => {
       apiMock.mockRejectedValueOnce(new Error('edit denied'))
       await w.find('form').trigger('submit')
       await flushPromises()
-      expect(errors()).toContain('edit denied')
+      expect(w.find('[data-testid="unsaved-error"]').text()).toContain('edit denied')
       expect(w.find('form').exists()).toBe(true)
-      await button(w, 'Cancel').trigger('click')
+      // The refused rename stays unsaved, so closing asks first.
+      confirmMock.mockResolvedValueOnce(false)
+      await w.find('[data-dialog-close]').trigger('click')
+      await flushPromises()
+      expect(w.find('form').exists()).toBe(true)
+      await w.find('[data-dialog-close]').trigger('click')
+      await flushPromises()
       expect(w.find('form').exists()).toBe(false)
       await item.find(`[data-testid="rename-${kind}"]`).trigger('click')
       w.findComponent(BaseDialog).vm.$emit('close')
@@ -194,7 +221,7 @@ describe('layout editing recovery and unsaved order', () => {
     await ch(w, 10).find('[data-testid="delete-channel"]').trigger('click')
     await flushPromises()
     expect(ch(w, 10).exists()).toBe(false)
-    expect(w.text()).toContain('Unsaved changes')
+    expect(w.text()).toContain('You have unsaved changes')
   })
   it('reports a save failure and preserves the unsaved layout', async () => {
     const w = await openLayout()
@@ -203,7 +230,7 @@ describe('layout editing recovery and unsaved order', () => {
     await w.find('[data-testid="save-layout-button"]').trigger('click')
     await flushPromises()
     expect(errors()).toContain('save denied')
-    expect(w.text()).toContain('Unsaved changes')
+    expect(w.text()).toContain('You have unsaved changes')
     expect(
       w.find('[data-testid="save-layout-button"]').attributes('disabled'),
     ).toBeUndefined()
@@ -238,7 +265,7 @@ describe('layout editing recovery and unsaved order', () => {
     resolveReload(tree())
     await flushPromises()
     expect(cat(w).text()).toContain('new name')
-    expect(w.text()).toContain('Unsaved changes')
+    expect(w.text()).toContain('You have unsaved changes')
   })
   it('handles initial loading failures', async () => {
     apiMock.mockRejectedValue(new Error('layout offline'))
@@ -259,7 +286,8 @@ describe('layout defensive stale action handling', () => {
     await flushPromises()
     await w.find('[data-testid="rename-category"]').trigger('click')
     expect(w.find('form input').element).toHaveProperty('value', '')
-    await button(w, 'Cancel').trigger('click')
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
     await w
       .find(
         `[data-testid="channel-item-${fixtureId(21)}"] [data-testid="rename-channel"]`,
@@ -271,7 +299,8 @@ describe('layout defensive stale action handling', () => {
       'value',
       'new topic',
     )
-    await button(w, 'Cancel').trigger('click')
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
   })
   it.each(['category', 'channel'] as const)(
     'safely ignores a successful %s rename after concurrent removal',
@@ -365,14 +394,14 @@ describe('layout save and create races', () => {
     release()
     await flushPromises()
     expect(calls.filter(c => c.path === '/api/admin/layout')).toHaveLength(1)
-    expect(w.text()).toContain('Unsaved changes')
+    expect(w.text()).toContain('You have unsaved changes')
     expect(w.findAll('[data-testid^="category-item-"]')[0]!.attributes('data-testid')).toBe(`category-item-${fixtureId(20)}`)
   })
 
-  it('sends one save for a double click on the banner button', async () => {
+  it('sends one save for a double click on the Save button', async () => {
     const { w, calls, release } = await open()
     await w.find('[data-testid^="category-item-"] [data-testid="move-down-category"]').trigger('click')
-    const banner = w.findAll('button').find(b => b.text() === 'Save layout' && b.classes().includes('btn-primary'))!
+    const banner = w.find('[data-testid="save-layout-button"]')
     await banner.trigger('click')
     await banner.trigger('click')
     release()

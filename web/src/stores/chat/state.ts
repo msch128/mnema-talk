@@ -42,6 +42,8 @@ function channelState() {
     // Pinned messages: bumped when the pins of a channel changed, so an open pinned list refetches; plus the notes about new pins.
     pinsSignal: ref<{ channelId: string; seq: number } | null>(null),
     forumTagsSignal: ref<{ channelId: string; seq: number } | null>(null),
+    // Bumped when a post of a forum or a reply to one was created, changed or deleted, so an open forum list refreshes.
+    forumPostsSignal: ref<{ channelId: string; seq: number } | null>(null),
     pinNotices: ref<PinNotice[]>([]),
     pinNoticeSeq: 0,
     threadReplies: ref<Message[]>([]),
@@ -115,7 +117,7 @@ function socketState() {
   return {
     socketGeneration: 0,
     reconnectCheckSeq: 0,
-    pingTimer: undefined as Timer | undefined,
+    stopPing: undefined as (() => void) | undefined,
     lastPongAt: 0,
     lastPingAt: 0,
     reconnectTimer: undefined as Timer | undefined,
@@ -160,10 +162,11 @@ function syncState(markRead: (channelId: string) => void) {
     reconnectAttempt: ref(0),
     nextRetryAt: ref(0),
 
-    // After IDLE_AFTER_MS without input the server shows "online" as "away".
+    // After IDLE_AFTER_MS without input (speaking, push-to-talk, a shared screen or the camera in a Talk count as input, see presence.ts) the server shows "online" as "away".
     isIdle: false,
     idleTimer: undefined as Timer | undefined,
     lastActivityAt: 0,
+    lastVoiceActivityAt: 0,
     suppressAutoReadFor: null as string | null,
     markReadThrottled: createKeyedThrottle(markRead, MARK_READ_INTERVAL_MS)
   }

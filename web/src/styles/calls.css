@@ -1,0 +1,65 @@
+/* Calls of direct messages: the incoming call card, the caller's strip and the
+   phone mark in the conversation list. Calm: one soft pulse and a thin bar that
+   runs out with the ring; with reduced motion all of it stands still. */
+
+@keyframes mnema-call-pulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+
+@keyframes mnema-call-ring {
+  0%, 55%, 100% { transform: rotate(0deg); }
+  10%, 30% { transform: rotate(-16deg); }
+  20%, 40% { transform: rotate(16deg); }
+}
+
+@keyframes mnema-call-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+.call-pulse::before,
+.call-pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid var(--color-mnema-accent);
+  animation: mnema-call-pulse 2.4s ease-out infinite;
+  pointer-events: none;
+}
+
+.call-pulse::after {
+  animation-delay: 1.2s;
+}
+
+.call-phone-ring {
+  animation: mnema-call-ring 2.2s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+
+.call-timer {
+  height: 2px;
+  background-color: var(--color-mnema-accent);
+  transform-origin: left center;
+  animation: mnema-call-timer linear forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .call-pulse::before,
+  .call-pulse::after,
+  .call-phone-ring {
+    animation: none;
+  }
+  .call-pulse::after {
+    display: none;
+  }
+  .call-pulse::before {
+    opacity: 0.35;
+    transform: scale(1.18);
+  }
+  .call-timer {
+    animation: none;
+    opacity: 0.5;
+  }
+}

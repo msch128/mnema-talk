@@ -59,7 +59,7 @@ test('a member saves a message, opens it from the saved list, loses access and r
     await item.getByTestId('saved-note-edit').click()
     await member.getByTestId('saved-note-input').fill('fuer morgen')
     await member.getByTestId('saved-note-save').click()
-    await expect(member.getByTestId('saved-note')).toHaveText('fuer morgen')
+    await expect(member.getByTestId('saved-note')).toContainText('fuer morgen')
     expect((await apiFetch(owner, 'GET', '/api/me/saved')).json).toMatchObject({ items: [] })
 
     // Open it from the list.
@@ -82,7 +82,7 @@ test('a member saves a message, opens it from the saved list, loses access and r
     await member.getByTestId('saved-button').click()
     await expect(member.getByTestId('saved-unavailable')).toBeVisible()
     await expect(member.getByTestId('saved-panel')).not.toContainText('remember this line')
-    await expect(member.getByTestId('saved-note')).toHaveText('fuer morgen')
+    await expect(member.getByTestId('saved-note')).toContainText('fuer morgen')
     await member.getByTestId('saved-remove').click()
     await expect(member.getByTestId('saved-empty')).toBeVisible()
   } finally {

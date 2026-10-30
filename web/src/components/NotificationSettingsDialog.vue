@@ -2,19 +2,20 @@
 // The member's server-wide notification default: all messages, only mentions
 // or nothing, a timed or open-ended mute of the whole server, and whether
 // @all and @here are ignored. Channels and categories can override all of it
-// (right-click them in the sidebar). Every choice is saved at once.
+// (right-click them in the sidebar). Every choice is saved at once and says "Saved".
 import { computed } from 'vue'
 import { BellOff, Bell } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import { useChatStore } from '../stores/chat'
-import { useToastStore } from '../stores/toast'
+import { usePreferenceSave } from '../composables/usePreferenceSave'
+import SavedIndicator from './SavedIndicator.vue'
 import { MUTE_DURATIONS, formatMuteEnd } from '../composables/useMuteMenu'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ close: [] }>()
 
 const chatStore = useChatStore()
-const toasts = useToastStore()
+const pref = usePreferenceSave()
 
 type ServerLevel = 'all' | 'mentions' | 'mute'
 const server = computed(() => chatStore.notifySettings.server)
@@ -31,8 +32,9 @@ const muteStatus = computed(() =>
 )
 
 async function save(level: ServerLevel, mutedUntil: string | null, suppress: boolean) {
-  const ok = await chatStore.setServerNotification(level, mutedUntil, suppress)
-  if (!ok) toasts.error(t('notifications.serverSaveFailed'))
+  await pref.run(async () => {
+    if (!await chatStore.setServerNotification(level, mutedUntil, suppress)) throw new Error(t('notifications.serverSaveFailed'))
+  })
 }
 
 function chooseLevel(level: ServerLevel) {
@@ -111,7 +113,8 @@ const rowClass = (on: boolean) => [
           ></button>
         </section>
       </div>
-      <footer class="px-6 py-3.5 border-t border-mnema-hairline bg-mnema-raised flex justify-end">
+      <footer class="px-6 py-3.5 border-t border-mnema-hairline bg-mnema-raised flex items-center justify-between gap-3">
+        <SavedIndicator :visible="pref.saved.value" />
         <button type="button" class="btn btn-primary" @click="emit('close')">{{ $t('common.close') }}</button>
       </footer>
     </div>

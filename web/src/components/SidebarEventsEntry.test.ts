@@ -5,6 +5,7 @@ import SidebarEventsEntry from './SidebarEventsEntry.vue'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useEventsStore } from '../stores/events'
 import { setLocale } from '../i18n'
+import { closeEvents, eventsRequest } from '../lib/eventsDialog'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 
 vi.mock('../lib/api', async importOriginal => ({
@@ -48,15 +49,15 @@ describe('SidebarEventsEntry', () => {
     expect(wrapper.text()).toContain('1')
   })
 
-  it('opens EventsModal on button click', async () => {
-    const features = useServerFeaturesStore()
-    features.list = ['events']
-
+  it('asks for the events list instead of drawing it inside the (phone) drawer', async () => {
+    useServerFeaturesStore().list = ['events']
+    closeEvents()
     const wrapper = mount(SidebarEventsEntry, { attachTo: document.body })
-    expect(wrapper.findComponent({ name: 'EventsModal' }).exists()).toBe(false)
-
     await wrapper.find('button').trigger('click')
-    expect(wrapper.findComponent({ name: 'EventsModal' }).exists()).toBe(true)
+    expect(eventsRequest.value).toMatchObject({ eventId: null })
+    expect(wrapper.findComponent({ name: 'EventsModal' }).exists()).toBe(false)
+    closeEvents()
+    wrapper.unmount()
   })
 
   it('loads the events on mount when the feature is enabled', () => {
@@ -70,16 +71,5 @@ describe('SidebarEventsEntry', () => {
     const load = vi.spyOn(useEventsStore(), 'load').mockResolvedValue()
     mount(SidebarEventsEntry)
     expect(load).not.toHaveBeenCalled()
-  })
-
-  it('closes the EventsModal again', async () => {
-    useServerFeaturesStore().list = ['events']
-    vi.spyOn(useEventsStore(), 'load').mockResolvedValue()
-    const wrapper = mount(SidebarEventsEntry, { attachTo: document.body })
-    await wrapper.find('button').trigger('click')
-    wrapper.findComponent({ name: 'EventsModal' }).vm.$emit('close')
-    await wrapper.vm.$nextTick()
-    expect(wrapper.findComponent({ name: 'EventsModal' }).exists()).toBe(false)
-    wrapper.unmount()
   })
 })

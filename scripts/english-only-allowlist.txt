@@ -14,6 +14,9 @@ path: internal/db/migrations/0001_init.sql | applied migration seeds the German 
 # Documentation of the vocabulary itself.
 path: doc/glossary.md | maps each product term to its German UI term
 
+# Test fixtures that need a German sample.
+path: web/scripts/check-i18n.test.ts | uses one German word as the fixture for the German-prose check
+
 # Third party and legal text.
 path: LICENSE | license text
 path: THIRD_PARTY_NOTICES.md | author names
@@ -42,6 +45,8 @@ path: web/src/components/UpdateBanner.test.ts | asserts German UI output
 path: web/src/components/UserBar.test.ts | asserts German UI output
 path: web/src/components/UserProfileModal.test.ts | asserts German UI output
 path: web/src/components/VoiceChatPanel.test.ts | asserts German UI output
+path: web/src/components/ConnectionTest.test.ts | asserts German UI output
+path: web/src/components/TalkOverviewDialog.test.ts | asserts German UI output
 path: web/src/composables/useChannelLayout.test.ts | asserts German UI output
 path: web/src/composables/useWebRTC.signaling.test.ts | asserts German UI output
 path: web/src/i18n/i18n.test.ts | asserts German UI output

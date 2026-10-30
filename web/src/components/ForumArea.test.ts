@@ -9,13 +9,19 @@ import { usePermissionsStore } from '../stores/permissions'
 import * as forumApi from '../lib/forumApi'
 import { openSearch } from '../lib/globalSearch'
 import type { ForumTag } from '../types/domain'
-import { channelFixture, messageFixture } from '../test-fixtures.fixture'
+import { channelFixture, messageFixture, forumTagFixture } from '../test-fixtures.fixture'
 
 vi.mock('../lib/globalSearch', () => ({ openSearch: vi.fn() }))
 vi.mock('../lib/forumApi', () => ({
   createForumPost: vi.fn(),
   fetchForumPosts: vi.fn(),
   fetchForumTags: vi.fn(),
+  fetchForumSettings: vi.fn(),
+  fetchUnreadForumPosts: vi.fn(),
+  updateForumSettings: vi.fn(),
+  reorderForumTags: vi.fn(),
+  createForumPostWithFile: vi.fn(),
+  uploadForumPostFile: vi.fn(),
   updateForumPost: vi.fn(),
   createForumTag: vi.fn(),
   updateForumTag: vi.fn(),
@@ -34,8 +40,8 @@ const mockChannel = channelFixture({
 })
 
 const mockTags: ForumTag[] = [
-  { id: 'tag-1', channel_id: 'forum-chan-1', name: 'discussion', emoji: '💬', created_at: '2026-01-01T00:00:00Z' },
-  { id: 'tag-2', channel_id: 'forum-chan-1', name: 'help', emoji: '❓', created_at: '2026-01-01T00:00:00Z' }
+  forumTagFixture({ id: 'tag-1', channel_id: 'forum-chan-1', name: 'discussion', emoji: '💬' }),
+  forumTagFixture({ id: 'tag-2', channel_id: 'forum-chan-1', name: 'help', emoji: '❓', position: 2 })
 ]
 
 const mockPosts = [
@@ -75,6 +81,8 @@ beforeEach(() => {
   vi.spyOn(permsStore, 'canIn').mockReturnValue(true)
   vi.mocked(forumApi.fetchForumTags).mockResolvedValue(mockTags)
   vi.mocked(forumApi.fetchForumPosts).mockResolvedValue(mockPosts)
+  vi.mocked(forumApi.fetchForumSettings).mockResolvedValue({ require_tag: false, guidelines: '' })
+  vi.mocked(forumApi.fetchUnreadForumPosts).mockResolvedValue([])
 })
 
 afterEach(() => {
@@ -240,8 +248,15 @@ describe('ForumArea', () => {
     await wrapper.findAll('[data-testid="filter-tag-pill"]')[0]!.trigger('click')
     await flushPromises()
 
-    expect(wrapper.find('[data-testid="forum-empty"]').text()).toContain('No posts match')
-    expect(wrapper.find('[data-testid="forum-empty"] button').exists()).toBe(false)
+    const empty = wrapper.find('[data-testid="forum-empty-filtered"]')
+    expect(empty.text()).toContain('No posts match')
+    expect(wrapper.find('[data-testid="forum-empty"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="new-post-btn"]').exists()).toBe(true)
+
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce(mockPosts)
+    await empty.find('button').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')).toHaveLength(2)
   })
 
   it('offers to start a post from the empty state', async () => {
@@ -356,5 +371,58 @@ describe('ForumArea', () => {
     expect(wrapper.find('[data-testid="open-nav"]').exists()).toBe(true)
     await wrapper.get('[data-testid="search-in-channel"]').trigger('click')
     expect(openSearch).toHaveBeenCalledWith('in:general-discussions ')
+  })
+
+  it('searches the forum after a pause in typing and sends the text as q', async () => {
+    vi.useFakeTimers()
+    try {
+      wrapper = mount(ForumArea, { attachTo: document.body })
+      await flushPromises()
+      vi.mocked(forumApi.fetchForumPosts).mockClear()
+      await wrapper.find('[data-testid="forum-search"]').setValue('roles')
+      expect(forumApi.fetchForumPosts).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(400)
+      expect(forumApi.fetchForumPosts).toHaveBeenCalledTimes(1)
+      expect(forumApi.fetchForumPosts).toHaveBeenCalledWith('forum-chan-1', { sort: 'activity', search: 'roles' })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('marks the unread posts the server names and clears the mark when the post is opened', async () => {
+    vi.mocked(forumApi.fetchUnreadForumPosts).mockResolvedValue(['post-2'])
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    const cards = wrapper.findAll('[data-testid="forum-post-card"]')
+    expect(cards[0]!.find('[data-testid="forum-post-unread"]').exists()).toBe(false)
+    expect(cards[1]!.find('[data-testid="forum-post-unread"]').exists()).toBe(true)
+
+    await cards[1]!.trigger('click')
+    expect(wrapper.findAll('[data-testid="forum-post-card"]')[1]!.find('[data-testid="forum-post-unread"]').exists()).toBe(false)
+  })
+
+  it('shows the guidelines in the empty state of a new forum', async () => {
+    vi.mocked(forumApi.fetchForumSettings).mockResolvedValue({ require_tag: false, guidelines: 'Be kind.' })
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([])
+    wrapper = mount(ForumArea, { attachTo: document.body })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="forum-empty"]').text()).toContain('Be kind.')
+  })
+
+  it('refreshes the list when the forum posts signal fires for this channel', async () => {
+    vi.useFakeTimers()
+    try {
+      wrapper = mount(ForumArea, { attachTo: document.body })
+      await flushPromises()
+      vi.mocked(forumApi.fetchForumPosts).mockClear()
+      chatStore.forumPostsSignal = { channelId: 'other', seq: 1 }
+      await vi.advanceTimersByTimeAsync(600)
+      expect(forumApi.fetchForumPosts).not.toHaveBeenCalled()
+      chatStore.forumPostsSignal = { channelId: 'forum-chan-1', seq: 2 }
+      await vi.advanceTimersByTimeAsync(600)
+      expect(forumApi.fetchForumPosts).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

@@ -45,7 +45,7 @@ async function toggleEcho() {
           </div>
           <p class="settings-hint mt-0.5">{{ $t(`audio.noiseHint_${voiceStore.noiseMode}`) }}</p>
         </div>
-        <div role="radiogroup" aria-labelledby="noise-mode-label" class="grid grid-cols-2 gap-1 rounded-xl border border-mnema-hairline bg-mnema-canvas p-1 sm:grid-cols-4">
+        <div role="radiogroup" aria-labelledby="noise-mode-label" data-settings-field="noise" class="grid grid-cols-2 gap-1 rounded-xl border border-mnema-hairline bg-mnema-canvas p-1 sm:grid-cols-4">
           <button
             v-for="(mode, i) in NOISE_MODES"
             :key="mode"

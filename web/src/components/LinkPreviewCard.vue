@@ -3,6 +3,8 @@ import type { LinkPreview } from '../types/domain'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Play } from '@lucide/vue'
 import { fetchLinkPreview } from '../lib/linkPreview'
+import { useMediaImage } from '../composables/useMediaImage'
+import MediaPlaceholder from './MediaPlaceholder.vue'
 import { t } from '../i18n'
 import { PLAYER_ALLOW, PLAYER_SANDBOX, playerSrc, safeColor, safeHttpUrl } from '../lib/videoEmbed'
 
@@ -14,7 +16,6 @@ const props = defineProps({
 })
 
 const preview = ref<LinkPreview | null>(null)
-const imageFailed = ref(false)
 // Third-party content loads only after this turns true by a click.
 const playing = ref(false)
 // The host page refused the player (the desktop apps load no third-party
@@ -37,7 +38,14 @@ const href = computed(() => safeHttpUrl(preview.value?.url) || props.url)
 const authorHref = computed(() => safeHttpUrl(preview.value?.author_url))
 const accent = computed(() => safeColor(preview.value?.color))
 const embedSrc = computed(() => (playerBlocked.value ? null : playerSrc(preview.value?.embed)))
-const showImage = computed(() => !!preview.value?.image && !imageFailed.value)
+// A picture the proxy has nothing usable for ('none') is left out, as before.
+const showImage = computed(() => !!preview.value?.image && imageState.value !== 'none')
+// The picture comes through the server; one that was taken down at its source
+// is a box saying so, one that could not be fetched right now offers to retry.
+const { state: imageState, attempt: imageAttempt, onError: imageError, retry: retryImage } =
+  useMediaImage(() => (preview.value?.image ? imageUrl(preview.value.image) : null))
+// The box stands in only for a picture that did not load.
+const placeholderState = computed(() => (imageState.value === 'gone' ? 'gone' : 'failed'))
 const compact = computed(() => !!preview.value?.compact && !embedSrc.value)
 // Fields carry a stable key: known ones are translated, others show the server's name.
 const fields = computed(() => (preview.value?.fields ?? []).map(f => ({
@@ -116,17 +124,20 @@ onMounted(async () => {
         </dl>
       </div>
 
-      <a
-        v-if="compact && showImage"
-        :href="href"
-        target="_blank"
-        rel="noopener noreferrer"
-        tabindex="-1"
-        aria-hidden="true"
-        class="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-mnema-surface"
-      >
-        <img :src="imageUrl(preview.image!)" alt="" class="h-full w-full object-cover" loading="lazy" @error="imageFailed = true" />
-      </a>
+      <template v-if="compact && showImage">
+        <a
+          v-if="imageState === 'ok'"
+          :href="href"
+          target="_blank"
+          rel="noopener noreferrer"
+          tabindex="-1"
+          aria-hidden="true"
+          class="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-mnema-surface"
+        >
+          <img :key="imageAttempt" :src="imageUrl(preview.image!)" alt="" class="h-full w-full object-cover" loading="lazy" @error="imageError" />
+        </a>
+        <MediaPlaceholder v-else :state="placeholderState" compact class="h-16 w-16 shrink-0 rounded-md" @retry="retryImage" />
+      </template>
     </div>
 
     <div v-if="embedSrc" class="relative aspect-video w-full bg-mnema-surface" data-testid="link-preview-media">
@@ -148,7 +159,7 @@ onMounted(async () => {
         data-testid="link-preview-play"
         @click="play"
       >
-        <img v-if="showImage" :src="imageUrl(preview.image!)" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy" @error="imageFailed = true" />
+        <img v-if="showImage && imageState === 'ok'" :key="imageAttempt" :src="imageUrl(preview.image!)" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy" @error="imageError" />
         <span class="relative flex h-12 w-12 items-center justify-center rounded-full bg-black/60 text-white transition group-hover:bg-black/75">
           <Play class="ml-0.5 h-5 w-5" fill="currentColor" aria-hidden="true" />
         </span>
@@ -156,7 +167,7 @@ onMounted(async () => {
     </div>
 
     <a
-      v-else-if="!compact && showImage"
+      v-else-if="!compact && showImage && imageState === 'ok'"
       :href="href"
       target="_blank"
       rel="noopener noreferrer"
@@ -165,8 +176,15 @@ onMounted(async () => {
       class="block h-44 w-full overflow-hidden bg-mnema-surface"
       data-testid="link-preview-media"
     >
-      <img :src="imageUrl(preview.image!)" alt="" class="h-full w-full object-cover" loading="lazy" @error="imageFailed = true" />
+      <img :key="imageAttempt" :src="imageUrl(preview.image!)" alt="" class="h-full w-full object-cover" loading="lazy" @error="imageError" />
     </a>
+    <MediaPlaceholder
+      v-else-if="!compact && showImage"
+      :state="placeholderState"
+      class="h-44 w-full rounded-none border-0 border-t border-mnema-border"
+      data-testid="link-preview-media"
+      @retry="retryImage"
+    />
     <p v-if="playerBlocked" class="px-3 pb-3 text-xs text-mnema-tertiary" data-testid="link-preview-blocked">{{ t('linkPreview.playerBlocked') }}</p>
   </article>
 </template>

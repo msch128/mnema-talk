@@ -2,20 +2,20 @@
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
-import { X, MessageSquare, Loader2, Bell, BellOff, Lock, Unlock } from '@lucide/vue'
+import { X, MessageSquare, Loader2, Bell, BellOff, Lock } from '@lucide/vue'
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
-import { updateForumPost } from '../lib/forumApi'
 import ThreadRootCard from './ThreadRootCard.vue'
-import ImageLightbox from './ImageLightbox.vue'
+import ForumPostHeader from './ForumPostHeader.vue'
 import ThreadReply from './ThreadReply.vue'
 import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useBlocksStore } from '../stores/blocks'
 import { useDmChat } from '../composables/useDmChat'
 import ThreadComposer from './ThreadComposer.vue'
 import FileDropOverlay from './FileDropOverlay.vue'
+import { useOwnMessageNav } from '../composables/useOwnMessageNav'
 import { useMessageActions } from '../composables/useMessageActions'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { useDraftSlot } from '../composables/useDraftSlot'
@@ -38,28 +38,14 @@ const canSend = computed(() => !isLockedForMe.value && (dmChat.isDm.value ? dmCh
 const canAttach = computed(() => canSend.value && (dmChat.isDm.value || permissions.canIn(threadChannel.value, 'attach_files')))
 const canReact = computed(() => (dmChat.isDm.value ? dmChat.canSend.value : permissions.canIn(threadChannel.value, 'add_reactions')))
 
-async function toggleLock() {
-  if (!chatStore.activeThread?.title || !canManageMessages.value) return
-  // The post that was asked: another one may be open when the answer arrives.
-  const thread = chatStore.activeThread
-  const newLock = !thread.is_locked
-  try {
-    await updateForumPost(threadChannel.value, thread.id, { is_locked: newLock })
-    if (chatStore.activeThread?.id === thread.id) chatStore.activeThread.is_locked = newLock
-  } catch (err) {
-    toasts.error(caughtErrorMessage(err, t('forum.lockFailed')))
-  }
-}
-
 const followed = computed(() => !!chatStore.activeThread && chatStore.followedThreads.has(chatStore.activeThread.id))
 const replyInput = ref('')
 const repliesContainer = ref<HTMLElement | null>(null)
 const isSending = ref(false)
-const selectedImage = ref<string | null>(null)
 
-// Editing, deleting, reactions and uploads
+// Editing, deleting and reactions
 const actions = useMessageActions({ container: repliesContainer, deleteTitle: 'thread.deleteTitle' })
-const { editingId: editingReplyId, pickerId: activeReactionPickerMsgId, isUploading } = actions
+const { editingId: editingReplyId, pickerId: activeReactionPickerMsgId } = actions
 
 function scrollToBottom() {
   nextTick(() => {
@@ -88,6 +74,7 @@ const replyingTo = ref<DraftReply | null>(null)
 // Each thread keeps its own reply text and target.
 useDraftSlot(() => (chatStore.activeThread ? threadDraftKey(chatStore.activeThread.id) : null), replyInput, replyingTo)
 const composer = ref<InstanceType<typeof ThreadComposer> | null>(null)
+const ownNav = useOwnMessageNav({ messages: () => chatStore.threadReplies, actions, container: repliesContainer, composer: () => composer.value })
 const highlightedId = ref<string | null>(null)
 let highlightTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -112,6 +99,12 @@ function flash(id: string) {
     highlightedId.value = id
     highlightTimer = setTimeout(() => { highlightedId.value = null }, 2000)
   })
+}
+
+// The first unread reply of a forum post.
+function jumpToReply(id: string) {
+  repliesContainer.value?.querySelector(`[data-reply-id="${id}"]`)?.scrollIntoView({ block: 'center' })
+  flash(id)
 }
 
 // Thread replies are fully loaded here, so jumps stay inside the panel.
@@ -164,17 +157,29 @@ function onReplyKeydown(e: KeyboardEvent, msg: Message, { editable = true } = {}
   })
 }
 
+// Escape closes the panel wherever the focus is (after opening a post it is
+// still on the card), once nothing else has used the key: an edit, a reply, a
+// suggestion list, a picker, an open dialog (the media viewer is one) or menu.
+function onEscape(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return
+  if (activeReactionPickerMsgId.value) return
+  if (document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')) return
+  chatStore.closeThread()
+}
+
 onMounted(() => {
+  document.addEventListener('keydown', onEscape)
   scrollToBottom()
 })
 
 onUnmounted(() => {
+  document.removeEventListener('keydown', onEscape)
   clearTimeout(highlightTimer)
 })
 
 function isReplyBlocked(text: string): boolean {
-  if (!text || !canSend.value) return true
-  return isSending.value || isUploading.value
+  if ((!text && !composer.value?.tray.count.value) || !canSend.value) return true
+  return isSending.value
 }
 
 async function handleSendReply() {
@@ -184,9 +189,13 @@ async function handleSendReply() {
   // The thread and target of this send: the reader may be elsewhere or typing on when it lands.
   const threadId = chatStore.activeThread?.id
   const target = replyingTo.value?.id || null
+  const files = composer.value?.tray.hold() ?? null
   isSending.value = true
   try {
-    await chatStore.sendThreadReply(text, target)
+    const ids = files && composer.value?.tray.count.value ? await files.prepare() : []
+    if (!ids) return
+    await chatStore.sendThreadReply(text, target, ids)
+    files?.clear()
     if (chatStore.activeThread?.id === threadId) {
       if (replyInput.value.trim() === text) replyInput.value = ''
       if ((replyingTo.value?.id || null) === target) replyingTo.value = null
@@ -200,15 +209,6 @@ async function handleSendReply() {
   } finally {
     isSending.value = false
   }
-}
-
-async function handleFileUpload(e: Event) {
-  const replyId = replyingTo.value?.id || null
-  const threadId = chatStore.activeThread?.id
-  const ok = await actions.upload(e.target as HTMLInputElement, (file: File) => chatStore.uploadThreadMedia(file, '', replyId))
-  if (!ok || chatStore.activeThread?.id !== threadId) return
-  if ((replyingTo.value?.id || null) === replyId) replyingTo.value = null
-  scrollToBottom()
 }
 </script>
 
@@ -225,22 +225,9 @@ async function handleFileUpload(e: Event) {
               #{{ chatStore.activeChannel?.name || '' }}
             </span>
           </div>
+          <p v-if="!chatStore.activeThread?.title" data-testid="thread-hint" class="truncate text-xs leading-4 text-mnema-tertiary">{{ $t('thread.hint') }}</p>
         </div>
       </div>
-
-      <button
-        v-if="chatStore.activeThread?.title && canManageMessages"
-        type="button"
-        data-testid="thread-lock-toggle"
-        :aria-label="chatStore.activeThread.is_locked ? $t('forum.unlockPost') : $t('forum.lockPost')"
-        class="w-8 h-8 flex items-center justify-center shrink-0 rounded-md hover:bg-mnema-surface transition"
-        :class="chatStore.activeThread.is_locked ? 'text-amber-400' : 'text-mnema-tertiary hover:text-mnema-text'"
-        v-tooltip="chatStore.activeThread.is_locked ? $t('forum.unlockPost') : $t('forum.lockPost')"
-        @click="toggleLock"
-      >
-        <Lock v-if="chatStore.activeThread.is_locked" class="w-[18px] h-[18px]" />
-        <Unlock v-else class="w-[18px] h-[18px]" />
-      </button>
 
       <button
         v-if="chatStore.activeThread && chatStore.followKnown"
@@ -258,13 +245,18 @@ async function handleFileUpload(e: Event) {
       </button>
 
       <button
-        @click="chatStore.closeThread"
+        type="button"
+        data-testid="thread-close"
+        @click="chatStore.closeThread()"
         class="btn btn-icon w-8 h-8 shrink-0"
-        v-tooltip="$t('thread.close')"
+        :aria-label="$t('thread.close')"
+        v-tooltip="{ text: $t('thread.close'), shortcut: 'Esc' }"
       >
         <X class="w-5 h-5" />
       </button>
     </header>
+
+    <ForumPostHeader v-if="chatStore.activeThread?.title" @jump="jumpToReply" />
 
     <!-- Scrollable Thread Content Area -->
     <div ref="repliesContainer" class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3">
@@ -282,7 +274,6 @@ async function handleFileUpload(e: Event) {
         :can-react="canReact"
         :highlighted="highlightedId === chatStore.activeThread.id"
         @reply="startReply"
-        @open-image="selectedImage = $event"
         @keydown="onRootKeydown"
       />
 
@@ -321,7 +312,7 @@ async function handleFileUpload(e: Event) {
         @keydown="onReplyKeydown($event, reply)"
         @reply="startReply(reply)"
         @jump="jumpToReplied(reply)"
-        @open-image="selectedImage = $event"
+        @edit-step="(step, e) => ownNav.step(step, e, reply)"
       />
       </template>
     </div>
@@ -337,15 +328,12 @@ async function handleFileUpload(e: Event) {
       :replying-to="replyingTo"
       :can-send="canSend"
       :can-attach="canAttach"
-      :uploading="isUploading"
       :sending="isSending"
       @send="handleSendReply"
       @cancel-reply="cancelReply"
-      @file="handleFileUpload"
+      @arrow-up="ownNav.fromComposerKey($event, replyInput)"
     />
     <FileDropOverlay @files="composer?.attachFiles($event)" />
 
-    <!-- Image lightbox -->
-    <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
   </aside>
 </template>

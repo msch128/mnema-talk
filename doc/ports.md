@@ -66,7 +66,7 @@ The addresses below are the defaults of `docker-compose.yml` and `.env.example`.
 | 443 | TCP | Internet | Your reverse proxy | Web app, API and WebSocket (`/api/ws`) over HTTPS | Required | Yes, to the proxy |
 | 80 | TCP | Internet | Your reverse proxy | Certificate issuance and the redirect to HTTPS | Only if the proxy needs it | Yes, to the proxy |
 | 8080 | TCP | Reverse proxy only | `PORT` (host side of the mapping; the container always listens on 8080), published on `PUBLISH_ADDR` (default `127.0.0.1`) | The app's HTTP server behind the proxy | Required | **No.** Loopback by default. Set `PUBLISH_ADDR=0.0.0.0` or a LAN address only when the proxy runs on another host, and then keep it off the router |
-| 50000-50050 | UDP | Internet | `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX` | Voice, video and screen share from browsers (ICE and SRTP) | Required for calls | Yes, the whole range |
+| 50000-50050 | UDP | Internet | `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX`, published on `WEBRTC_PUBLISH_ADDR` (default `0.0.0.0`; `127.0.0.1` keeps voice on this computer, as `setup --local` sets) | Voice, video and screen share from browsers (ICE and SRTP) | Required for calls | Yes, the whole range |
 | 3479 | UDP and TCP | Internet | `WEBRTC_BUILTIN_TURN_PORT`, narrowed with `TURN_PUBLISH_ADDR` | Built-in TURN relay for members behind firewalls that block UDP | Optional: only while the relay runs (`WEBRTC_BUILTIN_TURN=auto` with `WEBRTC_TURN_URLS` empty, or `on`) | Yes, both protocols, while the relay runs |
 | 3478 | UDP and TCP | Internet | Fixed in the `coturn` service | External coturn, only with `docker compose --profile turn` | Optional: only if you use coturn | Yes, only with coturn |
 | 49152-49200 | UDP | Internet | Fixed in the `coturn` service | coturn relay ports | Optional: only if you use coturn | Yes, only with coturn |
@@ -126,7 +126,7 @@ own connections (to your server, and to the STUN or TURN servers you list in
 | Webhook targets an admin configured | Public addresses; private ones only if listed in `WEBHOOK_ALLOW_PRIVATE_TARGETS` | When a webhook fires | Outgoing webhooks | Do not create webhooks |
 | `discord.com` | 443, TCP | Only when an admin starts a Discord structure import from a template link | Fetch the Discord template ([Import](import.md)) | Do not use the import |
 | `ghcr.io` | 443, TCP | When you pull or update the image | `docker compose pull` and the self-update sidecar pull `ghcr.io/msch128/mnema-talk` | Pin a tag and update by hand |
-| `docker.io`, `registry-1.docker.io` | 443, TCP | Only if you pull the Docker Hub mirror (`docker.io/msch128/mnema-talk`) instead of GHCR | `docker compose pull` | Use `ghcr.io` |
+| `registry-1.docker.io`, `auth.docker.io` | 443, TCP | Only if `MNEMA_IMAGE` is the Docker Hub mirror (`msch128/mnema-talk`) instead of GHCR | `docker compose pull` and the self-update sidecar pull `docker.io/msch128/mnema-talk`; the sidecar also reads the signature from there | Use `ghcr.io` |
 | `tuf-repo-cdn.sigstore.dev` | 443, TCP | Only with the `autoupdate` profile | The updater verifies the image signature through Sigstore before it pulls | `UPDATER_TRUSTED_ROOT` with a local `trusted_root.json` |
 | `raw.githubusercontent.com` | 443, TCP | Fresh install and manual upgrades | Download `docker-compose.yml` and `.env.example` of a release | Copy the files yourself |
 

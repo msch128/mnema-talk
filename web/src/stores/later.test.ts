@@ -89,7 +89,7 @@ describe('reminders and scheduled messages store', () => {
     await later.load({ reminders: true, scheduled: false })
     apiMock.mockResolvedValueOnce({ items: [reminder(1, { delivered_at: FIXTURE_TIMESTAMP })] })
     await later.onReminderEvent({ id: fixtureId(1), state: 'due' })
-    expect(toasts.toasts.at(-1)).toMatchObject({ type: 'info', text: t('later.reminderDueWith', { text: 'call mum' }) })
+    expect(toasts.toasts.at(-1)).toMatchObject({ type: 'info', text: t('later.reminderDueChannel', { author: 'Alice', channel: 'general', text: 'call mum' }) })
     expect(later.dueCount).toBe(1)
 
     apiMock.mockResolvedValueOnce({ items: [] })

@@ -145,3 +145,14 @@ func (failVerifier) Verify(context.Context, string) (*imageverify.Result, error)
 type errVerifier struct{ err error }
 
 func (e errVerifier) Verify(context.Context, string) (*imageverify.Result, error) { return nil, e.err }
+
+func TestConfigRepositoryOverrideDropsTheMirror(t *testing.T) {
+	env := map[string]string{"UPDATER_TOKEN": token, "UPDATER_IMAGE_REPOSITORY": "registry.example/team/mnema"}
+	cfg, err := ParseConfig(func(k string) string { return env[k] })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Policy.Repository != "registry.example/team/mnema" || cfg.Policy.Mirror != "" {
+		t.Fatalf("policy = %+v", cfg.Policy)
+	}
+}

@@ -77,6 +77,9 @@ func (s *Snapshot) Channel(sub Subject, ch uuid.UUID) Set {
 	if members, ok := s.dms[ch]; ok {
 		return s.dmPerms(sub, members) // membership only: not even the Owner gets in
 	}
+	if dm, ok := s.dmTalks[ch]; ok && !s.dms[dm][sub.ID] {
+		return 0 // a Talk of a conversation: its members only, not even the Owner
+	}
 	if s.IsOwner(sub) {
 		return All
 	}
@@ -141,9 +144,10 @@ func (s *Snapshot) CategoryVisible(sub Subject, cat uuid.UUID) bool {
 }
 
 // ViewableChannels lists the channels sub may view; nil means all of them
-// (the Owner and Administrators), so callers can skip filtering.
+// (the Owner and Administrators, as long as no Talk belongs to a conversation:
+// those are for their members only), so callers can skip filtering.
 func (s *Snapshot) ViewableChannels(sub Subject) []uuid.UUID {
-	if s.Global(sub).Has(Administrator) {
+	if s.Global(sub).Has(Administrator) && len(s.dmTalks) == 0 {
 		return nil
 	}
 	out := make([]uuid.UUID, 0, len(s.channelCat))
@@ -174,7 +178,7 @@ func (s *Snapshot) MayConnectAnywhere(sub Subject) bool {
 // HiddenChannels lists the channels sub may not view: the complement of
 // ViewableChannels within the channels the snapshot knows.
 func (s *Snapshot) HiddenChannels(sub Subject) []uuid.UUID {
-	if s.Global(sub).Has(Administrator) {
+	if s.Global(sub).Has(Administrator) && len(s.dmTalks) == 0 {
 		return nil
 	}
 	var out []uuid.UUID

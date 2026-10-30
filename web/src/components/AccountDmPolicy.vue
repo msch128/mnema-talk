@@ -10,6 +10,7 @@ import { t } from '../i18n'
 import RadioCard from './RadioCard.vue'
 
 const toasts = useToastStore()
+const emit = defineEmits<{ saved: [] }>()
 const policy = ref<ChatPrivacy['dm_policy']>('everyone')
 const loaded = ref(false)
 const failed = ref(false)
@@ -33,6 +34,7 @@ async function choose(next: ChatPrivacy['dm_policy']) {
   busy.value = true
   try {
     policy.value = (await api('/api/users/me/privacy', { method: 'PUT', json: { dm_policy: next }, decode: decodeChatPrivacy })).dm_policy
+    emit('saved')
   } catch {
     policy.value = before
     toasts.error(t('dm.policy.failed'))

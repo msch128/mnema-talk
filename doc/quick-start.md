@@ -30,13 +30,14 @@ The required settings:
 | `PUBLIC_URL` | The address members type into their browser | `https://chat.example.com` | You choose it (your domain) |
 | `JWT_SECRET` | Secret that signs sessions, 32+ characters | (random) | `openssl rand -hex 32` |
 | `POSTGRES_PASSWORD` | Database password | (random) | `openssl rand -hex 16` |
-| `S3_ACCESS_KEY` | Media storage user name | `mnema` | Any letters and digits |
+| `S3_ACCESS_KEY` | Media storage user name | `mnema` | Letters, digits and `. _ ~ + / = -` |
 | `S3_SECRET_KEY` | Media storage password, 8+ characters | (random) | `openssl rand -hex 16` |
 | `ADMIN_INITIAL_PASSWORD` | The Owner's first password, 14+ characters; first start only | (random) | `openssl rand -base64 18`; delete the line after signing in |
 
 Anything missing or still a placeholder stops the server at startup. The log
-(`docker compose logs app`) then says "Mnema Talk cannot start – fix these
-settings in .env:" and lists them all. Every other setting has a default; the
+(`docker compose logs app`) then says "Mnema Talk cannot start - fix these
+settings in .env:" and lists them all (`setup --check` shows the same list
+before you start). Every other setting has a default; the
 full list is in [Settings at a glance](operations.md#settings-at-a-glance).
 
 ## What you need
@@ -71,8 +72,9 @@ internet. Test it in a minute:
    [IPv6, DS-Lite and CGNAT](operations.md#ipv6-ds-lite-and-cgnat). The rest of
    this page works the same on a VPS.
 
-Mnema Talk also checks this itself: the setup assistant and Admin > Status warn
-when the address it finds for your network looks like CGNAT.
+Mnema Talk also checks this itself: the setup assistant and the *Internet
+connection* item in Admin > Status warn when the address it finds for your
+network is in the CGNAT range or no public IPv4 address can be found.
 
 ## How it fits together
 
@@ -110,19 +112,26 @@ docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mn
 ```
 
 `-it` lets it ask you questions; `--user` makes the files yours instead of
-root's; `-v` is the folder it writes to. It asks for:
+root's; `-v` is the folder it writes to. Each question comes with a plain-words
+explanation and an example. It asks:
 
+- whether you only want to try it on this computer (then no domain, certificate
+  or router is involved, see [below](#try-it-on-one-computer-first)),
 - the address members will open, e.g. `https://chat.example.com`,
 - the Owner's user name (the all-powerful first account, default `admin`),
-- the language of the default channel names, optionally mail settings, and
-  whether to enable the "Update now" button.
+- the language of the default channel names (`en` by default),
+- optionally this machine's address in your own network (such as
+  `192.168.1.20`; see [NAT loopback](glossary.md#voice-and-network-terms)),
+  mail settings, and whether to enable the "Update now" button.
 
-It then checks what it can from inside (does the name resolve to this network's
-public address, is the clock right) and prints a "what to do next" list. The
-Owner's first password is printed once and also stored as
-`ADMIN_INITIAL_PASSWORD` in `.env`; sign in as `admin` (or your user name), then
-delete that line. The assistant never overwrites an existing `.env`: new secrets
-would not fit an existing database.
+It then checks what it can see from where it runs: whether the name resolves to this network's public address, the clock, and whether a
+home connection has no public IPv4 address of its own (CGNAT or DS-Lite).
+Run directly on the host (not in the `docker run` container) it also checks
+Docker Compose and free ports. It ends with a numbered "What to do next" list. The Owner's first password is
+printed once and also stored as `ADMIN_INITIAL_PASSWORD` in `.env`; sign in as
+your Owner user name, change the password, then delete that line. The assistant
+never overwrites an existing `.env`: new secrets would not fit an existing
+database.
 
 No terminal (scripts, NAS web UI)? Pass everything as flags and see
 `setup --help` for the rest:
@@ -133,11 +142,16 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-
   setup --non-interactive --public-url https://chat.example.com --admin-username admin --language en
 ```
 
+`setup --help` lists the rest, among them `--local` (a trial on this computer),
+`--lan-ip` (this machine's LAN address), `--auto-update` and `--check`, which
+only reads the `.env` in the folder and lists every required setting that is
+missing or still a placeholder.
+
 ## Step 2: start it
 
 ```sh
 docker compose up -d --wait
-curl -fsS http://127.0.0.1:8080/api/health     # {"status":"ok","version":"..."}
+curl -fsS http://127.0.0.1:8080/api/health     # {"status":"ok","version":"...", ...}
 ```
 
 The first start pulls the images, which takes a few minutes. If the health call
@@ -189,10 +203,12 @@ look broken.
    port" reads "Listening – not yet confirmed from outside" until a member from
    outside your network has connected, then "Confirmed: a member from outside
    connected". Green on the inside is not proof that your router forwards UDP.
-4. **Test my connection.** In Admin > Status press the button. It runs in your
-   browser and tells you whether direct UDP works, only the relay works, or
-   nothing works. Run it from a network outside your home. Prefer a terminal?
-   `docker compose exec app mnema-talk doctor` prints the same checks with fixes.
+4. **Test my connection.** In Admin > Status (members find it under Settings >
+   Audio) press the button. It runs in your browser, needs no microphone and
+   tells you whether direct UDP works, only the relay works, or nothing works,
+   with the likely cause. Run it from a network outside your home. Prefer a
+   terminal? `docker compose exec app mnema-talk doctor` prints the server-side
+   checks with fixes.
 5. **A real call.** Create an invite (Admin console > Invites), open it on the
    phone on mobile data, join a Talk from your computer on Wi-Fi and speak.
    Expected: audio both ways within about two seconds.
@@ -213,16 +229,21 @@ below or the [voice troubleshooting guide](troubleshooting-voice.md).
 
 ## Step 6: invite people and set the basics
 
-Create invites, set the community name and rules, hand moderators their rights
-and set up backups before more people arrive:
+The Owner's first sign-in shows a **Get started** list under the channel header:
+name the community, invite people, review the channels, set up voice, check the
+status page and, optionally, write rules. Then hand moderators their rights and
+set up backups before more people arrive:
 [After the first start](deployment.md#after-the-first-start) and
 [Backups](operations.md#backups-and-restore).
 
 ## Try it on one computer first
 
-Want to look around before buying a domain? Run step 1 with the address
-`http://localhost:8080`, run step 2, open that address and sign in. Two browser
-tabs can join a Talk together. Plain `http://` works only on `localhost`: browsers
+Want to look around before buying a domain? Answer yes to "Just try it on this
+computer?" in step 1 (or run `setup --local`), which sets
+`PUBLIC_URL=http://localhost:8080` and publishes the voice and relay ports on
+this computer only. Run step 2,
+open that address and sign in. Two browser tabs, the second signed in with a
+second account (Admin > Invites), can join a Talk together. Plain `http://` works only on `localhost`: browsers
 block microphone and camera on any other `http://` address, so a LAN IP such as
 `http://192.168.1.20:8080` lets you read and write but not talk. Anyone else
 needs the HTTPS steps above.

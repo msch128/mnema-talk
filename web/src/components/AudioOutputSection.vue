@@ -2,6 +2,8 @@
 import { useVoiceStore } from '../stores/voice'
 import { canChooseOutputDevice } from '../lib/audioOutput'
 import { playSoundEffect } from '../lib/soundEffects'
+import { MESSAGE_SOUND_MODES, normalizeMessageSoundMode } from '../lib/messageSound'
+import { Play } from '@lucide/vue'
 
 // Output: where you hear the others, how loud, and the sound effects.
 const voiceStore = useVoiceStore()
@@ -19,6 +21,16 @@ function handleSoundsVolumeChange(e: Event) {
   voiceStore.soundEffectsVolume = parseInt((e.target as HTMLInputElement).value, 10)
   voiceStore.saveSettings()
 }
+
+function handleMessageSoundsChange(e: Event) {
+  voiceStore.messageSounds = normalizeMessageSoundMode((e.target as HTMLSelectElement).value)
+  voiceStore.saveSettings()
+}
+
+// Only on a click: never on its own.
+function previewMessageSound() {
+  playSoundEffect('message')
+}
 </script>
 
 <template>
@@ -32,11 +44,12 @@ function handleSoundsVolumeChange(e: Event) {
         <select
           v-if="outputSelectable"
           id="audio-output-device"
+          data-settings-field="output-device"
           v-model="voiceStore.selectedOutputDeviceId"
           data-testid="output-device"
           class="w-full rounded-md border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
         >
-          <option value="">{{ $t('audio.defaultDevice') }}</option>
+          <option value="">{{ $t('audio.defaultOutput') }}</option>
           <option
             v-for="dev in voiceStore.availableOutputDevices.filter(d => d.deviceId && d.deviceId !== 'default')"
             :key="dev.deviceId"
@@ -95,6 +108,31 @@ function handleSoundsVolumeChange(e: Event) {
             max="100"
             @input="handleSoundsVolumeChange"
           />
+        </div>
+
+        <div v-if="voiceStore.soundEffectsEnabled" class="stack-2">
+          <label for="audio-message-sounds" class="settings-row-title block">{{ $t('audio.messageSounds') }}</label>
+          <div class="flex items-center gap-2">
+            <select
+              id="audio-message-sounds"
+              :value="voiceStore.messageSounds"
+              data-testid="message-sounds"
+              class="min-w-0 flex-1 rounded-md border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
+              @change="handleMessageSoundsChange"
+            >
+              <option v-for="mode in MESSAGE_SOUND_MODES" :key="mode" :value="mode">{{ $t(`audio.messageSounds_${mode}`) }}</option>
+            </select>
+            <button
+              type="button"
+              class="btn btn-icon btn-sm shrink-0"
+              data-testid="message-sounds-preview"
+              :aria-label="$t('audio.soundsTest') + ': ' + $t('audio.messageSounds')"
+              @click="previewMessageSound"
+            >
+              <Play class="ml-0.5 h-3 w-3 fill-current" />
+            </button>
+          </div>
+          <p class="settings-hint">{{ $t('audio.messageSoundsHint') }}</p>
         </div>
       </div>
     </div>

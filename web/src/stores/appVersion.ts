@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { api } from '../lib/api'
+import { visibleInterval } from '../lib/pageVisibility'
 import { decodeUpdateStatus, type UpdateStatus } from '../types/domain'
 
 import { CLIENT_VERSION, isNewServerVersion, normalizeVersion } from '../lib/appVersion'
@@ -62,17 +63,18 @@ export const useAppVersionStore = defineStore('appVersion', () => {
 
   // The server checks GitHub every 30 minutes; reading its result is cheap,
   // so admins follow it at the same pace (and on every reconnect).
-  let poll: ReturnType<typeof setInterval> | null = null
+  let stopPoll: (() => void) | null = null
   function followAdminUpdates(isAdmin: () => boolean) {
     ++adminGeneration
-    if (poll !== null) clearInterval(poll)
-    poll = null
+    stopPoll?.()
+    stopPoll = null
     if (!isAdmin()) {
       setAdminUpdate(null)
       return
     }
     refreshAdminUpdate()
-    poll = setInterval(() => {
+    // Paused in a hidden tab; the first look after coming back is the catch-up.
+    stopPoll = visibleInterval(() => {
       if (isAdmin()) refreshAdminUpdate()
       else followAdminUpdates(isAdmin)
     }, ADMIN_UPDATE_POLL_MS)

@@ -28,13 +28,21 @@ import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import { openSettings } from './lib/settingsDialog'
 import { notifyDialogOpen } from './lib/notifyDialog'
+import EventsModal from './components/EventsModal.vue'
+import { closeEvents, eventsRequest } from './lib/eventsDialog'
 import NotificationSettingsDialog from './components/NotificationSettingsDialog.vue'
+import ShortcutsDialog from './components/ShortcutsDialog.vue'
+import { shortcutsOpen, useShortcutsKey } from './lib/shortcutsDialog'
 import ScreenShareModal from './components/ScreenShareModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
+import StatusDialog from './components/StatusDialog.vue'
+import { useStatusEditor } from './composables/useStatusEditor'
 import LegalModal from './components/LegalModal.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
 import ToastHost from './components/ToastHost.vue'
+import CallHost from './components/CallHost.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
+import MediaViewer from './components/MediaViewer.vue'
 import WelcomeFlow from './components/WelcomeFlow.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
 import SkipLinks from './components/SkipLinks.vue'
@@ -54,6 +62,7 @@ import { useAppRouting } from './composables/useAppRouting'
 import { useAppBadge } from './composables/useAppBadge'
 import { useCompactLayout } from './composables/useCompactLayout'
 import { usePushBridge } from './composables/usePushBridge'
+import { usePttHint } from './composables/usePttHint'
 import { useTitleBadge } from './composables/useTitleBadge'
 import { VOICE_CHAT_HEIGHT, STAGE_MIN_HEIGHT } from './lib/voiceChatPanel'
 
@@ -63,8 +72,9 @@ const chatStore = useChatStore()
 useTitleBadge()
 const voiceStore = useVoiceStore()
 const accountStore = useAccountStore()
-// A link from an account e-mail (confirm address, reset password) takes over the
-// page, signed in or not; the token is read here once and then removed from the URL.
+const statusEditor = useStatusEditor()
+const serverFeatures = useServerFeaturesStore()
+// An account e-mail link (confirm address, reset password) takes over the page; its token is read once, then removed from the URL.
 const recovery = recoveryFromLocation(window.location.pathname, window.location.hash)
 const leaveRecovery = () => window.location.assign('/')
 let alive = true
@@ -97,18 +107,23 @@ const { isCompact, navOpen, closeNav } = useCompactLayout()
 if (isCompact.value) chatStore.showMemberList = false
 watch(() => [chatStore.activeChannel?.id, voiceStore.currentChannelId, voiceStore.activeView], closeNav)
 // The Talk bar asks for the audio settings with this flag; they live in the settings dialog.
-watch(() => voiceStore.showAudioSettings, open => { if (open) openSettings('audio') })
+watch(() => voiceStore.showAudioSettings, open => { if (open && !accountStore.dialogOpen) openSettings('audio') })
 watch(() => chatStore.activeThread, thread => { if (thread && isCompact.value) chatStore.showMemberList = false })
 // A Talk needs the width: below 1100 px the member list starts closed (the header button opens it).
 watch(() => voiceStore.activeView, view => { if (view === 'voice' && window.innerWidth < 1100) chatStore.showMemberList = false })
+// Captured: runs before the panels' Escape handlers; preventDefault tells them the key is used.
 function onWindowKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && navOpen.value) closeNav()
+  if (event.key !== 'Escape' || !navOpen.value) return
+  event.preventDefault()
+  closeNav()
 }
-onMounted(() => window.addEventListener('keydown', onWindowKeydown))
-onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown))
+onMounted(() => window.addEventListener('keydown', onWindowKeydown, true))
+onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown, true))
 const routing = useAppRouting(() => alive)
 useAppBadge()
 usePushBridge()
+usePttHint()
+useShortcutsKey(() => !!authStore.user)
 const { showAdminModal, adminTab, voiceShowChat, voiceChannelId, applyRoute, syncCurrentStateToRoute, openAdmin, closeAdmin, onVoiceJoin } = routing
 
 // Avoids flashing the login dialog while the session cookie is being checked.
@@ -339,9 +354,12 @@ onMounted(async () => {
         @mention="(uname) => chatStore.insertMention(uname)"
       />
 
+      <StatusDialog v-if="statusEditor.open.value" @close="statusEditor.hide()" />
       <!-- Settings: account, privacy, push and app, audio -->
       <SettingsDialog v-if="accountStore.dialogOpen" />
+      <EventsModal v-if="eventsRequest && authStore.isAuthenticated && serverFeatures.events" :focus-event-id="eventsRequest.eventId" :focus-seq="eventsRequest.seq" @close="closeEvents" />
       <NotificationSettingsDialog v-if="notifyDialogOpen" @close="notifyDialogOpen = false" />
+      <ShortcutsDialog v-if="shortcutsOpen" @close="shortcutsOpen = false" />
 
       <!-- First run and re-acceptance of changed rules -->
       <WelcomeFlow />
@@ -367,13 +385,16 @@ onMounted(async () => {
     </template>
 
     <ToastHost />
+    <!-- Before the confirm host: its "Discard changes?" must open above the Talk settings. -->
+    <TalkSettingsHost />
+    <CallHost />
     <ConfirmDialog />
+    <MediaViewer />
     <ModerationDialog />
     <MessageModerationDialog />
     <EditHistoryDialog />
     <ReportDialog />
     <ForwardDialog />
     <LaterDialog />
-    <TalkSettingsHost />
   </div>
 </template>

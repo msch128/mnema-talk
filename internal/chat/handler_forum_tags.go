@@ -15,7 +15,7 @@ import (
 // listForumTags handles GET /api/channels/{channelID}/tags.
 //
 // @Summary List forum tags
-// @Description Admin-defined tags in a forum channel. Requires View channel.
+// @Description The tags of a forum channel in the forum's own order. Requires View channel.
 // @ID listForumTags
 // @Tags Channels
 // @Produce json
@@ -48,7 +48,7 @@ func (h *Handler) listForumTags(w http.ResponseWriter, r *http.Request) error {
 // createForumTag handles POST /api/channels/{channelID}/tags.
 //
 // @Summary Create a forum tag
-// @Description Adds a new tag to the forum channel (up to 20). Requires Manage channels.
+// @Description Adds a new tag at the end of the forum channel's tag order (up to 20). Requires Manage channels.
 // @ID createForumTag
 // @Tags Admin
 // @Accept json
@@ -81,7 +81,7 @@ func (h *Handler) createForumTag(w http.ResponseWriter, r *http.Request) error {
 	if err := h.screenTag(r, chID, req.Name, req.Emoji); err != nil {
 		return err
 	}
-	tag, err := CreateForumTag(r.Context(), h.DB, chID, req.Name, req.Emoji)
+	tag, err := CreateForumTagSpec(r.Context(), h.DB, chID, TagSpec{Name: req.Name, Emoji: req.Emoji, Color: req.Color, Moderated: req.Moderated})
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (h *Handler) createForumTag(w http.ResponseWriter, r *http.Request) error {
 // updateForumTag handles PATCH /api/channels/{channelID}/tags/{tagID}.
 //
 // @Summary Update a forum tag
-// @Description Updates tag name or emoji. Requires Manage channels.
+// @Description Updates a tag's name, emoji, colour or moderated flag (only the fields sent change; an empty colour or emoji clears it). Requires Manage channels.
 // @ID updateForumTag
 // @Tags Admin
 // @Accept json
@@ -131,7 +131,7 @@ func (h *Handler) updateForumTag(w http.ResponseWriter, r *http.Request) error {
 	if err := h.screenTag(r, chID, deref(req.Name), deref(req.Emoji)); err != nil {
 		return err
 	}
-	tag, before, err := UpdateForumTag(r.Context(), h.DB, chID, tagID, req.Name, req.Emoji)
+	tag, before, err := UpdateForumTag(r.Context(), h.DB, chID, tagID, TagPatch{Name: req.Name, Emoji: req.Emoji, Color: req.Color, Moderated: req.Moderated})
 	if err != nil {
 		return err
 	}
@@ -189,10 +189,12 @@ func (h *Handler) screenTag(r *http.Request, chID uuid.UUID, texts ...string) er
 
 // auditForumTag records a tag change; before is the tag as it was (updates only).
 func (h *Handler) auditForumTag(r *http.Request, action string, chID uuid.UUID, tag, before *ForumTag) {
-	details := map[string]any{"channel_id": chID, "name": tag.Name, "emoji": tag.Emoji}
+	details := map[string]any{"channel_id": chID, "name": tag.Name, "emoji": tag.Emoji, "color": tag.Color, "moderated": tag.Moderated}
 	if before != nil {
 		details["previous_name"] = before.Name
 		details["previous_emoji"] = before.Emoji
+		details["previous_color"] = before.Color
+		details["previous_moderated"] = before.Moderated
 	}
 	h.Audit.RecordOrLog(r.Context(), audit.Entry{
 		Action: action, TargetType: "forum_tag", TargetID: tag.ID.String(), TargetName: tag.Name,

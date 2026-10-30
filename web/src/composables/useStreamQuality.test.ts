@@ -4,6 +4,7 @@ import { defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
 import { useStreamQuality } from './useStreamQuality'
 import { useVoiceStore } from '../stores/voice'
+import { setLocale } from '../i18n'
 import { requireValue } from '../test-fixtures.fixture'
 import type { ContextMenuItem } from '../components/menuTypes'
 import type { MediaStat } from '../lib/mediaStats'
@@ -116,5 +117,42 @@ describe('stream quality menu and sampling', () => {
     wrapper.unmount()
     await vi.advanceTimersByTimeAsync(2000)
     expect(getStats).toHaveBeenCalledOnce()
+  })
+})
+
+describe('stream quality menu: optimise and restart', () => {
+  it('offers motion or clarity where tracks have a content hint, and keeps the other choices', () => {
+    Object.defineProperty(MediaStreamTrack.prototype, 'contentHint', { configurable: true, value: '', writable: true })
+    try {
+      setLocale('en')
+      const voice = useVoiceStore()
+      voice.setScreenQuality({ resolution: 720, fps: 15 })
+      const quality = useStreamQuality()
+      const optimize = submenu(quality.menuItems(), 'optimize')
+      expect(optimize.value).toBe('Clarity')
+      invoke(requireValue(optimize.items.find(i => i.id === 'optimize-motion')))
+      expect(voice.screenQuality).toEqual({ resolution: 720, fps: 15, optimize: 'motion' })
+      expect(submenu(quality.menuItems(), 'optimize').value).toBe('Motion')
+      // A preset takes both values and the encoder's default back.
+      quality.setMode('gaming')
+      expect(voice.screenQuality).toEqual({ resolution: 1440, fps: 60 })
+    } finally {
+      Reflect.deleteProperty(MediaStreamTrack.prototype, 'contentHint')
+    }
+  })
+
+  it('leaves the option out where the browser has no content hint', () => {
+    expect(useStreamQuality().menuItems().some(i => i.id === 'optimize')).toBe(false)
+  })
+
+  it('offers an explicit restart only when a change could not be applied live', () => {
+    const voice = useVoiceStore()
+    const restart = vi.fn()
+    const quality = useStreamQuality()
+    expect(quality.menuItems({ onChangeSource: restart }).some(i => i.id === 'restart-stream')).toBe(false)
+    voice.screenQualityNeedsRestart = true
+    const item = requireValue(quality.menuItems({ onChangeSource: restart }).find(i => i.id === 'restart-stream'))
+    invoke(item)
+    expect(restart).toHaveBeenCalledTimes(1)
   })
 })

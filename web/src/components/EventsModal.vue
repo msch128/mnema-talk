@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { Calendar, Check, HelpCircle, MapPin, Plus, Volume2 } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
+import EmptyState from './EmptyState.vue'
 import EventDetailModal from './EventDetailModal.vue'
 import EventEditDialog from './EventEditDialog.vue'
 import UserAvatar from './UserAvatar.vue'
@@ -16,6 +17,7 @@ import { caughtErrorMessage } from '../lib/api'
 import { locale, t } from '../i18n'
 import type { CommunityEvent } from '../types/domain'
 
+const props = defineProps<{ focusEventId?: string | null; focusSeq?: number }>()
 const emit = defineEmits<{
   close: []
 }>()
@@ -31,9 +33,23 @@ const selectedEvent = ref<CommunityEvent | null>(null)
 const editingEvent = ref<CommunityEvent | null>(null)
 const creatingEvent = ref(false)
 
-onMounted(() => {
+// A reminder points at one event: once the list is in, show it (an event that already started is in the past list).
+async function showWanted(wanted: string | null | undefined) {
+  // An event being written or edited is not replaced by a reminder's detail view.
+  if (!wanted || editingEvent.value || creatingEvent.value) return
+  await eventsStore.load()
+  let found = eventsStore.events.find(e => e.id === wanted)
+  if (!found) {
+    await eventsStore.loadPast()
+    found = eventsStore.pastEvents.find(e => e.id === wanted)
+  }
+  if (found && !editingEvent.value && !creatingEvent.value) selectedEvent.value = found
+}
+onMounted(async () => {
   void eventsStore.load()
+  await showWanted(props.focusEventId)
 })
+watch(() => [props.focusEventId, props.focusSeq], () => { void showWanted(props.focusEventId) })
 
 watch(activeTab, tab => {
   if (tab === 'past' && !eventsStore.pastLoaded) void eventsStore.loadPast()
@@ -152,9 +168,23 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
           {{ $t('common.loading') }}
         </div>
 
-        <div v-else-if="displayedEvents.length === 0" class="py-12 text-center text-sm text-mnema-tertiary italic">
-          {{ activeTab === 'upcoming' ? $t('events.noUpcoming') : $t('events.noPast') }}
-        </div>
+        <EmptyState
+          v-else-if="displayedEvents.length === 0"
+          :icon="Calendar"
+          :text="activeTab === 'upcoming' ? $t('events.noUpcoming') : $t('events.noPast')"
+          :hint="activeTab === 'upcoming' ? $t('events.whatAreEvents') : ''"
+        >
+          <button
+            v-if="activeTab === 'upcoming' && permissions.can('manage_events')"
+            type="button"
+            class="btn btn-primary btn-sm flex items-center gap-1"
+            data-testid="events-empty-create"
+            @click="creatingEvent = true"
+          >
+            <Plus class="w-3.5 h-3.5" />
+            <span>{{ $t('events.create') }}</span>
+          </button>
+        </EmptyState>
 
         <article
           v-for="event in displayedEvents"

@@ -67,6 +67,18 @@ describe('voice settings restored and persisted across sessions', () => {
     expect(restored.noiseMode).toBe('ai')
   })
 
+  it('keeps push to talk without a key empty over a reload, and keeps Space only for a setup that never stored a key', async () => {
+    const voice = useVoiceStore()
+    voice.inputMode = 'ptt'
+    voice.pttKey = ''
+    voice.saveSettings()
+    setActivePinia(createPinia())
+    expect(useVoiceStore()).toMatchObject({ inputMode: 'ptt', pttKey: '' })
+    localStorage.removeItem('mnema_ptt_key')
+    setActivePinia(createPinia())
+    expect(useVoiceStore().pttKey).toBe('Space')
+  })
+
   it('restores custom quality and defaults after corrupted JSON', () => {
     localStorage.setItem(SCREEN_QUALITY_STORAGE_KEY, JSON.stringify({ resolution: 'source', fps: 15, custom: true }))
     expect(useVoiceStore().screenQuality).toEqual({ resolution: 'source', fps: 15, custom: true })
@@ -279,6 +291,112 @@ describe('subscription replay and stale media arrivals', () => {
     voice.setSubscriptionSink(null)
     voice.setCameraHidden('hidden', false)
     expect(sink).toHaveBeenCalledTimes(2)
+  })
+
+  it('replays an Auto screen watch with its fit, still as a subscription', () => {
+    const voice = useVoiceStore()
+    const sink = vi.fn()
+    voice.setSubscriptionSink(sink)
+    voice.watchScreen('live')
+    voice.setScreenFit('live', 1)
+    sink.mockClear()
+    voice.resendSubscriptions()
+    expect(sink.mock.calls.map(([payload]) => payload)).toEqual([{ kind: 'screen', user_id: 'live', on: true, fit: 1 }])
+  })
+
+  it('switches video off at the server while the page is hidden and asks for it again when shown', async () => {
+    const voice = useVoiceStore()
+    const sink = vi.fn()
+    voice.setSubscriptionSink(sink)
+    voice.setChannel('room')
+    voice.watchScreen('live')
+    sink.mockClear()
+    const visibility = (state: 'visible' | 'hidden') => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+      document.dispatchEvent(new Event('visibilitychange'))
+    }
+    visibility('hidden')
+    expect(sink.mock.calls.map(([payload]) => payload)).toEqual([
+      { kind: 'camera', all: true, on: false }, { kind: 'screen', user_id: 'live', on: false },
+    ])
+    // A reconnect while hidden brings no video back.
+    sink.mockClear()
+    voice.resendSubscriptions()
+    expect(sink.mock.calls.map(([payload]) => payload)).toEqual([{ kind: 'camera', all: true, on: false }])
+    sink.mockClear()
+    visibility('visible')
+    expect(sink.mock.calls.map(([payload]) => payload)).toEqual([
+      { kind: 'camera', all: true, on: true }, { kind: 'screen', user_id: 'live', on: true },
+    ])
+    // Speaking is tracked while hidden but only rendered when the page is shown.
+    voice.handleSpeakingEvent({ channel_id: 'room', user_id: 'other', active: true })
+    visibility('hidden')
+    voice.handleSpeakingEvent({ channel_id: 'room', user_id: 'late', active: true })
+    voice.handleSpeakingEvent({ channel_id: 'room', user_id: 'other', active: false })
+    expect(voice.speakingUsers).toEqual({ other: true })
+    visibility('visible')
+    expect(voice.speakingUsers).toEqual({ late: true })
+    // Cameras the member switched off stay off, and a page hidden outside a call sends nothing.
+    voice.setAllCamerasOff(true)
+    sink.mockClear()
+    visibility('hidden')
+    visibility('visible')
+    expect(sink).toHaveBeenCalledWith({ kind: 'camera', all: true, on: false })
+    expect(sink).not.toHaveBeenCalledWith({ kind: 'camera', all: true, on: true })
+    voice.setChannel(null)
+    sink.mockClear()
+    visibility('hidden')
+    visibility('visible')
+    expect(sink).not.toHaveBeenCalled()
+  })
+
+  it('does not bring the speakers of a room left while hidden back when the page is shown', () => {
+    const voice = useVoiceStore()
+    const visibility = (state: 'visible' | 'hidden') => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+      document.dispatchEvent(new Event('visibilitychange'))
+    }
+    for (const leave of [() => voice.setChannel('other-room'), () => voice.disconnect()]) {
+      voice.setChannel('room')
+      voice.handleSpeakingEvent({ channel_id: 'room', user_id: 'talker', active: true })
+      visibility('hidden')
+      leave()
+      visibility('visible')
+      expect(voice.speakingUsers).toEqual({})
+    }
+  })
+
+  it('keeps video while Picture-in-Picture shows it in a hidden page', () => {
+    const voice = useVoiceStore()
+    const sink = vi.fn()
+    voice.setSubscriptionSink(sink)
+    voice.setChannel('room')
+    voice.watchScreen('live')
+    sink.mockClear()
+    const visibility = (state: 'visible' | 'hidden') => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+      document.dispatchEvent(new Event('visibilitychange'))
+    }
+    const pip = (element: Element | null, type: 'enterpictureinpicture' | 'leavepictureinpicture') => {
+      Object.defineProperty(document, 'pictureInPictureElement', { configurable: true, get: () => element })
+      document.dispatchEvent(new Event(type))
+    }
+    pip(document.createElement('video'), 'enterpictureinpicture')
+    visibility('hidden')
+    voice.resendSubscriptions()
+    expect(sink.mock.calls.map(([payload]) => payload)).toEqual([{ kind: 'screen', user_id: 'live', on: true }])
+    sink.mockClear()
+    pip(null, 'leavepictureinpicture')
+    expect(sink.mock.calls.map(([payload]) => payload)).toEqual([
+      { kind: 'camera', all: true, on: false }, { kind: 'screen', user_id: 'live', on: false },
+    ])
+    sink.mockClear()
+    pip(document.createElement('video'), 'enterpictureinpicture')
+    expect(sink.mock.calls.map(([payload]) => payload)).toEqual([
+      { kind: 'camera', all: true, on: true }, { kind: 'screen', user_id: 'live', on: true },
+    ])
+    pip(null, 'leavepictureinpicture')
+    visibility('visible')
   })
 
   it('ignores absent identities and unselected streams without changing current subscriptions', () => {

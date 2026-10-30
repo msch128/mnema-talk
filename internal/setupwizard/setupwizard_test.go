@@ -67,7 +67,7 @@ func TestGeneratedEnvIsAcceptedByTheServer(t *testing.T) {
 	if cfg.PublicURL != "https://chat.example.com" || strings.Join(cfg.AllowedOrigins, ",") != "https://chat.example.com" || !cfg.SecureCookies() {
 		t.Errorf("derived settings: %q %v %v", cfg.PublicURL, cfg.AllowedOrigins, cfg.SecureCookies())
 	}
-	if cfg.AdminUsername != "boss" || cfg.InitialLanguage != "en" || !cfg.SelfUpdateConfigured() {
+	if cfg.AdminUsername != "boss" || cfg.InitialLanguage != DefaultLanguage || !cfg.SelfUpdateConfigured() {
 		t.Errorf("admin %q language %q selfupdate %v", cfg.AdminUsername, cfg.InitialLanguage, cfg.SelfUpdateConfigured())
 	}
 }
@@ -243,13 +243,10 @@ func TestPreflightFindings(t *testing.T) {
 		return ""
 	}
 	all := Preflight(context.Background(), o, fakeProbe())
-	for _, title := range []string{"Public address", "DNS", "Web port", "Clock"} {
+	for _, title := range []string{"Public address", "DNS", "Web address", "Clock"} {
 		if level(all, title) != setupcheck.OK {
 			t.Errorf("%s = %s in %+v", title, level(all, title), all)
 		}
-	}
-	if level(all, "Voice ports") != LevelNote {
-		t.Error("the UDP reminder is missing")
 	}
 
 	p := fakeProbe()
@@ -258,10 +255,14 @@ func TestPreflightFindings(t *testing.T) {
 	p.Dial = func(context.Context, string) error { return errors.New("refused") }
 	p.Skew = func(context.Context) (time.Duration, error) { return -time.Minute, nil }
 	bad := Preflight(context.Background(), o, p)
-	for _, title := range []string{"Public address", "DNS", "Web port", "Clock"} {
+	for _, title := range []string{"Public address", "DNS", "Clock"} {
 		if level(bad, title) != setupcheck.Warn {
 			t.Errorf("%s = %s, want warn", title, level(bad, title))
 		}
+	}
+	// A stack that is not up yet is expected before the first start: a note, not a warning.
+	if level(bad, "Web address") != LevelNote {
+		t.Errorf("Web address = %s, want note", level(bad, "Web address"))
 	}
 
 	p = fakeProbe()

@@ -4,7 +4,7 @@ import { setLocale } from '../i18n'
 import LegalModal from './LegalModal.vue'
 import BaseDialog from './BaseDialog.vue'
 import type { ServerLegal } from '../types/rest'
-const legal: ServerLegal = { legal_version: '2.0', media_retention_days: 7, operator_country: 'Synthetic country', operator_email: 'operator@example.com', operator_name: 'Synthetic operator', project_notice: 'Synthetic notice', session_expiry_days: 10, stun_servers: ['stun:stun.example.com'], turn_servers: [], update_check: true, address_detection: true, clock_check: true }
+const legal: ServerLegal = { legal_version: '1.7', media_retention_days: 7, operator_country: 'Synthetic country', operator_email: 'operator@example.com', operator_name: 'Synthetic operator', project_notice: 'Synthetic notice', session_expiry_days: 10, stun_servers: ['stun:stun.example.com'], turn_servers: [], builtin_turn: false, update_check: true, address_detection: true, clock_check: true }
 let wrapper: ReturnType<typeof mount<typeof LegalModal>>
 beforeEach(() => { setLocale('en') })
 afterEach(() => { wrapper?.unmount(); vi.unstubAllGlobals(); setLocale('de') })
@@ -15,7 +15,7 @@ describe('LegalModal', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('Synthetic operator')
     expect(wrapper.text()).toContain('stun:stun.example.com')
-    expect(wrapper.text()).toContain('2.0')
+    expect(wrapper.text()).toContain('1.7')
     expect(wrapper.find('[data-testid="legal-update-check"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="legal-address-detection"]').text()).toContain('stun.cloudflare.com')
     expect(wrapper.find('[data-testid="legal-clock-check"]').text()).toContain('time.cloudflare.com')
@@ -33,7 +33,7 @@ describe('LegalModal', () => {
   it.each(['blank', 'unavailable', 'invalid', 'rejected'] as const)('keeps default policy when the response is %s', async mode => {
     const fetcher = vi.fn<typeof fetch>()
     if (mode === 'rejected') fetcher.mockRejectedValue(new Error('synthetic offline'))
-    else fetcher.mockResolvedValue(new Response(JSON.stringify(mode === 'blank' ? { ...legal, legal_version: '', media_retention_days: 0, session_expiry_days: 0, operator_name: '', operator_email: '', operator_country: '', project_notice: '', stun_servers: [], update_check: false, address_detection: false, clock_check: false } : {}), { status: mode === 'unavailable' ? 503 : 200 }))
+    else fetcher.mockResolvedValue(new Response(JSON.stringify(mode === 'blank' ? { ...legal, legal_version: '', media_retention_days: 0, session_expiry_days: 0, operator_name: '', operator_email: '', operator_country: '', project_notice: '', stun_servers: [], builtin_turn: false, update_check: false, address_detection: false, clock_check: false } : {}), { status: mode === 'unavailable' ? 503 : 200 }))
     vi.stubGlobal('fetch', fetcher)
     wrapper = mount(LegalModal)
     await flushPromises()
@@ -44,5 +44,26 @@ describe('LegalModal', () => {
     expect(wrapper.find('[data-testid="legal-update-check"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="legal-address-detection"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="legal-clock-check"]').exists()).toBe(false)
+  })
+  it.each([
+    { name: 'built-in relay only', turn: [] as string[], builtin: true, external: false, none: true },
+    { name: 'external TURN only', turn: ['turn:turn.example.test:3478'], builtin: false, external: true, none: false },
+    { name: 'both', turn: ['turn:turn.example.test:3478'], builtin: true, external: true, none: false },
+    { name: 'neither', turn: [] as string[], builtin: false, external: false, none: true }
+  ])('describes the TURN relays for $name', async ({ turn, builtin, external, none }) => {
+    for (const locale of ['en', 'de'] as const) {
+      setLocale(locale)
+      vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ ...legal, stun_servers: [], turn_servers: turn, builtin_turn: builtin }))))
+      wrapper = mount(LegalModal)
+      await flushPromises()
+      expect(wrapper.find('[data-testid="legal-builtin-turn"]').exists()).toBe(builtin)
+      expect(wrapper.find('[data-testid="legal-external-turn"]').exists()).toBe(external)
+      expect(wrapper.find('[data-testid="legal-no-stun"]').exists()).toBe(none)
+      if (external) expect(wrapper.find('[data-testid="legal-external-turn"]').text()).toContain('turn.example.test')
+      if (builtin) expect(wrapper.find('[data-testid="legal-builtin-turn"]').text()).toMatch(locale === 'en' ? /part of this server/ : /Teil dieses Servers/)
+      await wrapper.findAll('button[aria-pressed]')[2]!.trigger('click')
+      expect(wrapper.text()).not.toMatch(/coturn/i)
+      wrapper.unmount()
+    }
   })
 })

@@ -1,9 +1,11 @@
 import type { ApiOptions } from '../lib/api'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useEventsStore } from './events'
+import { minutesUntil, useEventsStore } from './events'
+import { eventsRequest } from '../lib/eventsDialog'
 import { useServerFeaturesStore } from './serverFeatures'
 import { useToastStore } from './toast'
+import { t } from '../i18n'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import type { CommunityEvent, RSVPItem } from '../types/domain'
 
@@ -175,6 +177,22 @@ describe('events store', () => {
     expect(toastSpy).toHaveBeenCalled()
   })
 
+  it('names the event and the minutes left in the reminder, and opens the event from it', () => {
+    const store = useEventsStore()
+    const now = Date.now()
+    store.handleEventReminder({ event_id: fixtureId(20), title: 'Game night', start_time: new Date(now + 15 * 60_000).toISOString() })
+    const toast = useToastStore().toasts.at(-1)
+    expect(toast?.text).toMatch(/Game night.*(15 minutes|15 Minuten)/)
+    void toast?.action?.onClick()
+    expect(eventsRequest.value).toMatchObject({ eventId: fixtureId(20) })
+  })
+
+  it('counts at least one minute, and falls back to the usual lead for an unreadable time', () => {
+    expect(minutesUntil('2026-01-01T00:00:00Z', Date.parse('2026-01-01T00:00:10Z'))).toBe(1)
+    expect(minutesUntil('2026-01-01T00:14:40Z', Date.parse('2026-01-01T00:00:00Z'))).toBe(15)
+    expect(minutesUntil('soon')).toBe(15)
+  })
+
   it('drops an event on event_delete', () => {
     const store = useEventsStore()
     const keep = makeEvent({ id: fixtureId(21) })
@@ -247,7 +265,7 @@ describe('past events', () => {
     apiMock.mockRejectedValueOnce('boom')
     const store = useEventsStore()
     await store.loadPast()
-    expect(store.error).toBe('Failed to load events')
+    expect(store.error).toBe(t('events.loadFailed'))
   })
 
   it('does nothing while the feature is off', async () => {

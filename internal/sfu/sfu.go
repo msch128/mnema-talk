@@ -171,6 +171,8 @@ type Room struct {
 	lastLayers map[uuid.UUID][]Layer
 	notifyMu   sync.Mutex
 	notifier   *mediaNotifier
+	// iceSeen hears of every connection that completed ICE; nil in tests.
+	iceSeen *iceObserver
 }
 
 type SFU struct {
@@ -198,4 +200,9 @@ type SFU struct {
 	rooms        map[uuid.UUID]*Room
 	roomsMu      sync.Mutex
 	notifier     *mediaNotifier
+	iceSeen      *iceObserver
+	// probes counts the live connection tests (see Probe).
+	probeMu  sync.Mutex
+	probes   int
+	probesBy map[string]int
 }

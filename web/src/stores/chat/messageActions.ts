@@ -1,7 +1,8 @@
-import type { CreateMessageRequest } from '../../types/domain'
+import type { CreateMessageRequest, Message } from '../../types/domain'
 import { decodeMessage, decodeReactionResult } from '../../types/domain'
 import { api, isApiError } from '../../lib/api'
 import { encodeShortcodes } from '../../lib/customEmoji'
+import { resolveReaction } from '../../lib/reactionEmoji'
 import { t } from '../../i18n'
 import { useEmojiStore } from '../emoji'
 import { assertCommunity, type Cx } from './state'
@@ -30,13 +31,30 @@ async function postWithReplyFallback<T>(replyToId: string | null, post: (replyTo
   }
 }
 
-export async function sendMessage(cx: Cx, content: string, parentId: string | null = null, replyToId: string | null = null) {
+// Writing a message means having read everything before it: the server moves
+// the marker to the message (and tells the other sessions); this does the same
+// here at once. The "new since" divider is dropped, so the "Jump to first
+// unread" pill goes, and only what others post afterwards counts again.
+// Thread replies are no channel messages and change nothing.
+function markReadBySending({ cs }: Cx, msg: Message) {
+  if (msg.parent_id) return
+  const prev = cs.readStates.value[msg.channel_id] || { channel_id: msg.channel_id, notify_level: 'all' as const, unread_count: 0, mention_count: 0, last_read_at: null }
+  cs.readStates.value = {
+    ...cs.readStates.value,
+    [msg.channel_id]: { ...prev, unread_count: 0, mention_count: 0, last_read_at: msg.created_at }
+  }
+  if (msg.channel_id === cs.activeChannel.value?.id) cs.activeChannelLastReadAt.value = msg.created_at
+}
+
+/** Posts a message; attachmentIds are files staged with the attachment tray, shown in that order. */
+export async function sendMessage(cx: Cx, content: string, parentId: string | null = null, replyToId: string | null = null, attachmentIds: readonly string[] = []) {
   const { cs } = cx
   const community = cs.communityGeneration
-  if (!cs.activeChannel.value || !content.trim()) return null
+  if (!cs.activeChannel.value || (!content.trim() && !attachmentIds.length)) return null
   const channelId = cs.activeChannel.value.id
   const msg = await postWithReplyFallback(replyToId, reply => {
     const json: CreateMessageRequest = { content: withEmojiTokens(content.trim()) }
+    if (attachmentIds.length) json.attachment_ids = [...attachmentIds]
     if (parentId) json.parent_id = parentId
     if (reply) json.reply_to_id = reply
     return api(`/api/channels/${channelId}/messages`, { method: 'POST', json, decode: decodeMessage })
@@ -45,6 +63,7 @@ export async function sendMessage(cx: Cx, content: string, parentId: string | nu
   // The WebSocket echo is de-duplicated by insertMessage / countReply.
   countReply(cx, msg)
   insertMessage(cx, msg)
+  markReadBySending(cx, msg)
   return msg
 }
 
@@ -65,6 +84,7 @@ export async function uploadMedia(cx: Cx, file: File, content = '', parentId: st
   assertCommunity(cx, community)
   countReply(cx, msg)
   insertMessage(cx, msg)
+  markReadBySending(cx, msg)
   return msg
 }
 
@@ -106,7 +126,9 @@ export async function setPinned(cx: Cx, channelId: string, messageId: string, pi
 export async function toggleReaction(cx: Cx, messageId: string, emoji: string) {
   const { cs } = cx
   const community = cs.communityGeneration
-  const data = await api(`/api/messages/${messageId}/reactions`, { method: 'POST', json: { emoji }, decode: decodeReactionResult })
+  const pending = resolveReaction(emoji, useEmojiStore().byName)
+  const resolved = typeof pending === 'string' ? pending : await pending
+  const data = await api(`/api/messages/${messageId}/reactions`, { method: 'POST', json: { emoji: resolved }, decode: decodeReactionResult })
   assertCommunity(cx, community)
   applyToMessage(cx, messageId, m => { m.reactions = data.reactions || [] })
   return data.reactions

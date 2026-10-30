@@ -16,8 +16,10 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	cfg := r.textSettings()
 	portMin, portMax := r.numericSettings(cfg)
 	cfg.SMTP = r.smtpSettings()
-	if r.err != nil {
-		return nil, r.err
+	problems := r.typedProblems()
+	problems = append(problems, RequiredProblems(lookup)...)
+	if len(problems) > 0 {
+		return nil, &ConfigError{Problems: problems}
 	}
 	for _, o := range SplitList(r.get("CORS_ALLOWED_ORIGINS", cfg.PublicURL)) {
 		cfg.AllowedOrigins = append(cfg.AllowedOrigins, normalizeURL(o))
@@ -29,17 +31,22 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 }
 
 // envReader reads typed settings from a lookup function. A malformed value
-// is remembered in err (the first one wins) and read as the zero value, so
-// the caller reads everything and checks err once.
+// is remembered in errs and read as the zero value, so
+// the caller reads everything and reports all of them at once.
 type envReader struct {
 	lookup func(string) (string, bool)
-	err    error
+	errs   []error
 }
 
-func (r *envReader) fail(err error) {
-	if r.err == nil {
-		r.err = err
+func (r *envReader) fail(err error) { r.errs = append(r.errs, err) }
+
+// typedProblems turns every malformed value read so far into a problem.
+func (r *envReader) typedProblems() []Problem {
+	ps := make([]Problem, 0, len(r.errs))
+	for _, err := range r.errs {
+		ps = append(ps, Problem{Text: err.Error()})
 	}
+	return ps
 }
 
 func (r *envReader) get(key, def string) string {
@@ -107,7 +114,7 @@ func (r *envReader) textSettings() *Config {
 		TrustedProxies:        SplitList(r.get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
 		JWTSecret:             r.get("JWT_SECRET", ""),
 		AdminUsername:         r.get("ADMIN_USERNAME", "admin"),
-		InitialLanguage:       strings.ToLower(r.get("INITIAL_LANGUAGE", "de")),
+		InitialLanguage:       strings.ToLower(r.get("INITIAL_LANGUAGE", "en")),
 		AdminInitialPassword:  r.get("ADMIN_INITIAL_PASSWORD", ""),
 		DatabaseURL:           r.get("DATABASE_URL", ""),
 		S3Endpoint:            r.get("S3_ENDPOINT", "http://localhost:8333"),
@@ -124,6 +131,7 @@ func (r *envReader) textSettings() *Config {
 		WebRTCBuiltinTURNHost: r.get("WEBRTC_BUILTIN_TURN_HOST", ""),
 		MetricsToken:          r.get("METRICS_TOKEN", ""),
 		WebRTCAnnounce:        SplitList(r.get("WEBRTC_NAT_1TO1_IP", "")),
+		WebRTCLANIPs:          SplitList(r.get("WEBRTC_LAN_IP", "")),
 		WebRTCSTUNURLs:        SplitList(r.get("WEBRTC_STUN_URLS", "")),
 		WebRTCDetectSTUN:      SplitList(r.get("WEBRTC_DETECT_STUN_URLS", strings.Join(stunprobe.DefaultServers, ","))),
 		LegalOperatorName:     r.get("LEGAL_OPERATOR_NAME", "Community Operator"),

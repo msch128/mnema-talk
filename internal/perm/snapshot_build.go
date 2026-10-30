@@ -27,7 +27,8 @@ type State struct {
 	Stages         map[uuid.UUID]bool
 	Categories     map[uuid.UUID]bool
 	DMs            map[uuid.UUID]map[uuid.UUID]bool
-	DMsDisabled    bool // the community's direct message switch is off
+	DMsDisabled    bool                    // the community's direct message switch is off
+	DMTalks        map[uuid.UUID]uuid.UUID // Talk -> the conversation it belongs to
 	ChannelOv      map[uuid.UUID]Scope
 	CategoryOv     map[uuid.UUID]Scope
 	GlobalUploadMB *int
@@ -44,6 +45,9 @@ func NewSnapshot(st State, loaded time.Time) *Snapshot {
 	s.roles, s.userRoles, s.owners, s.bots = st.Roles, st.UserRoles, st.Owners, st.Bots
 	s.channelCat, s.stages, s.categories, s.dms = st.ChannelCat, st.Stages, st.Categories, st.DMs
 	s.dmEnabled = !st.DMsDisabled
+	if st.DMTalks != nil {
+		s.dmTalks = st.DMTalks
+	}
 	s.channelOv, s.categoryOv = scopes(st.ChannelOv), scopes(st.CategoryOv)
 	s.globalUploadMB, s.timeouts = st.GlobalUploadMB, st.Timeouts
 	s.rulesVersion, s.rulesAccepted = st.RulesVersion, st.RulesAccepted

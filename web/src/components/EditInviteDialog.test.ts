@@ -8,6 +8,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import EditInviteDialog from './EditInviteDialog.vue'
 import { setLocale } from '../i18n'
 import { useToastStore } from '../stores/toast'
+import { pendingConfirm } from '../lib/confirm'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../lib/api', async (importOriginal) => ({
@@ -28,7 +29,7 @@ const open = (inv: Invite) => {
   return wrapper
 }
 const chip = (kind: 'expiry' | 'uses', key: string) => document.body.querySelector<HTMLButtonElement>(`[data-${kind}="${key}"]`)!
-const save = () => document.body.querySelector<HTMLButtonElement>('button[type="submit"]')!
+const save = () => document.body.querySelector<HTMLButtonElement>('[data-testid="unsaved-save"]')!
 const submit = async () => {
   document.body.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }))
   await flushPromises()
@@ -140,5 +141,48 @@ describe('EditInviteDialog', () => {
     await submit()
     expect(document.body.querySelector('[role="alert"]')!.textContent).toContain('already consumed')
     expect(wrapper.emitted('close')).toBeUndefined()
+  })
+
+  it('does not count a choice that keeps things as they are as a change', async () => {
+    open(invite({ expires_at: null, max_uses: 10 }))
+    chip('uses', '10').click()
+    await flushPromises()
+    expect(save().disabled).toBe(true)
+    chip('uses', '25').click()
+    await flushPromises()
+    expect(save().disabled).toBe(false)
+    chip('uses', 'keep').click()
+    await flushPromises()
+    expect(save().disabled).toBe(true)
+    expect(apiMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps Save off for a custom limit below the uses consumed and says why inline', async () => {
+    open(invite())
+    chip('uses', 'custom').click()
+    await flushPromises()
+    const input = document.body.querySelector<HTMLInputElement>('[data-testid="edit-invite-uses"]')!
+    input.value = '2'
+    input.dispatchEvent(new Event('input'))
+    await flushPromises()
+    expect(save().disabled).toBe(true)
+    expect(document.body.querySelector('[data-testid="edit-invite-uses-error"]')!.textContent).toContain('3 uses so far')
+  })
+
+  it('asks before closing with unsaved changes, and not without', async () => {
+    open(invite())
+    document.body.querySelector<HTMLButtonElement>('[data-dialog-close]')!.click()
+    await flushPromises()
+    expect(wrapper.emitted('close')).toHaveLength(1)
+    chip('uses', '50').click()
+    await flushPromises()
+    document.body.querySelector<HTMLButtonElement>('[data-dialog-close]')!.click()
+    await flushPromises()
+    expect(wrapper.emitted('close')).toHaveLength(1)
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(wrapper.emitted('close')).toHaveLength(2)
+    expect(apiMock).not.toHaveBeenCalled()
   })
 })

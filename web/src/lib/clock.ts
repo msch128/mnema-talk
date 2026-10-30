@@ -1,16 +1,53 @@
 // A shared one-second clock for the voice timers, corrected to the server's
-// time so everyone sees the same durations whatever their own clock says.
-import { ref } from 'vue'
+// time so everyone sees the same durations whatever their own clock says. It
+// ticks only while a component that shows it is mounted (useServerClock) and
+// the page is visible; a signed-in tab with no timer on screen wakes nothing.
+import { getCurrentInstance, onBeforeUnmount, ref, watch } from 'vue'
+import { visibleInterval } from './pageVisibility'
 
 /** Milliseconds to add to Date.now() to get the server's time. */
 export const serverOffset = ref(0)
-/** Current server time in ms, updated every second. */
+/** Current server time in ms, updated every second while someone watches it. */
 export const now = ref(Date.now())
 
 function tick() {
   now.value = Date.now() + serverOffset.value
 }
-if (typeof window !== 'undefined') setInterval(tick, 1000)
+
+let watchers = 0
+let stopTicking: (() => void) | null = null
+
+/** Starts the one-second tick for as long as the returned release is not called. */
+export function retainClock(): () => void {
+  if (watchers++ === 0) {
+    tick()
+    stopTicking = visibleInterval(tick, 1000)
+  }
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    if (--watchers === 0) {
+      stopTicking?.()
+      stopTicking = null
+    }
+  }
+}
+
+/** For a component that shows `now`: the clock runs while it is mounted and, if given, while `needed()` holds. */
+export function useServerClock(needed: () => boolean = () => true): void {
+  let release: (() => void) | null = null
+  const sync = (on: boolean) => {
+    if (on && !release) release = retainClock()
+    else if (!on && release) { release(); release = null }
+  }
+  if (getCurrentInstance()) {
+    watch(needed, sync, { immediate: true })
+    onBeforeUnmount(() => sync(false))
+  } else {
+    sync(needed())
+  }
+}
 
 /** Aligns the clock to a server timestamp (ISO string) received just now. */
 export function syncServerClock(serverNow: string): void {

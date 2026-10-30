@@ -12,10 +12,26 @@ import { useToastStore } from '../stores/toast'
 import { useBlocksStore } from '../stores/blocks'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { usePermissionsStore } from '../stores/permissions'
-import * as forumApi from '../lib/forumApi'
+import { stageAttachment } from '../lib/attachmentsApi'
 import { setLocale, t } from '../i18n'
+import { closeViewer, viewerState } from '../composables/useMediaViewer'
 
-vi.mock('../lib/forumApi', () => ({ updateForumPost: vi.fn() }))
+vi.mock('../lib/forumApi', () => ({
+  updateForumPost: vi.fn(),
+  markForumPostRead: vi.fn(async () => '2026-01-01T00:00:00Z'),
+  fetchForumTags: vi.fn(async () => []),
+  fetchForumSettings: vi.fn(async () => ({ require_tag: false, guidelines: '' }))
+}))
+vi.mock('../lib/attachmentsApi', () => ({ stageAttachment: vi.fn(), unstageAttachment: vi.fn(async () => undefined) }))
+
+const staged = (id: string) => ({ id, original_filename: 'a.png', mime_type: 'image/png', size_bytes: 1, url: `/api/media/${id}`, is_deleted: false })
+
+/** Picks files with the reply box's file button. */
+function pickFiles(files: File[]) {
+  const input = w.find<HTMLInputElement>('input[type="file"]').element
+  Object.defineProperty(input, 'files', { configurable: true, value: files })
+  input.dispatchEvent(new Event('change'))
+}
 
 let w!: ReturnType<typeof mount<typeof ThreadSidebar>>
 
@@ -65,7 +81,7 @@ describe('ThreadSidebar keyboard', () => {
     // The root card's reply button too.
     const root = w.find<HTMLElement>('[data-reply-id="root"]')
     expect(root.attributes('tabindex')).toBe('0')
-    expect(root.find<HTMLElement>('button.absolute').classes()).toContain('group-focus-within:flex')
+    expect(root.find<HTMLElement>('div.absolute.right-2').classes()).toContain('group-focus-within:flex')
   })
 
   it('arrows move between root and replies', () => {
@@ -107,7 +123,29 @@ describe('ThreadSidebar keyboard', () => {
   })
 })
 
+describe('ThreadSidebar header', () => {
+  it('says that replies here stay out of the main chat, but not for a forum post', async () => {
+    const chat = setup()
+    expect(w.get('[data-testid="thread-hint"]').text()).toBe(t('thread.hint'))
+    chat.activeThread = msg('post', 'u2', { title: 'A post' })
+    await nextTick()
+    expect(w.find('[data-testid="thread-hint"]').exists()).toBe(false)
+  })
+})
+
 describe('ThreadSidebar content', () => {
+  it('opens the viewer with all images of a reply and the clicked index', async () => {
+    const chat = setup()
+    const img = (id: string) => ({ id, url: `/m/${id}`, mime_type: 'image/png', is_deleted: false, original_filename: `${id}.png`, size_bytes: 10 })
+    chat.threadReplies = [msg('r1', 'u2', { attachments: [img('a'), img('b'), img('c')] })]
+    await nextTick()
+    await w.findAll('[data-reply-id="r1"] [data-gallery-cell]')[1]!.trigger('click')
+    expect(viewerState.items.map(i => i.src)).toEqual(['/m/a', '/m/b', '/m/c'])
+    expect(viewerState.index).toBe(1)
+    expect(viewerState.message?.id).toBe('r1')
+    closeViewer()
+  })
+
   it('plays videos in the root and in replies', async () => {
     const chat = setup()
     const video = { id: 'v', url: '/m/v', mime_type: 'video/mp4', is_deleted: false, original_filename: 'clip.mp4', size_bytes: 10 }
@@ -128,17 +166,14 @@ describe('ThreadSidebar content', () => {
     expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }))
   })
 
-  it('clears the file input after a failed upload', async () => {
-    const chat = setup()
-    vi.spyOn(chat, 'uploadThreadMedia').mockRejectedValue(new Error('nope'))
-    const input = w.find<HTMLInputElement>('input[type="file"]').element
-    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['x'], 'a.png', { type: 'image/png' })] })
-    let value = 'C:\\fakepath\\a.png'
-    Object.defineProperty(input, 'value', { configurable: true, get: () => value, set: v => { value = v } })
-    input.dispatchEvent(new Event('change'))
+  it('keeps a file whose upload failed in the reply tray and retries it', async () => {
+    setup()
+    vi.mocked(stageAttachment).mockRejectedValueOnce(new Error('nope')).mockResolvedValueOnce(staged('att1'))
+    pickFiles([new File(['x'], 'a.png', { type: 'image/png' })])
     await flushPromises()
-    expect(chat.uploadThreadMedia).toHaveBeenCalled()
-    expect(value).toBe('')
+    await w.find('[data-attachment-status="error"] button').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-attachment-status="ready"]').exists()).toBe(true)
   })
 })
 
@@ -158,7 +193,7 @@ describe('ThreadSidebar replies', () => {
     expect(send).not.toHaveBeenCalled()
     expect(key(textarea(), { key: 'Enter' }).defaultPrevented).toBe(true)
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('hello thread', null)
+    expect(send).toHaveBeenCalledWith('hello thread', null, [])
     expect(textarea().element.value).toBe('')
   })
 
@@ -171,13 +206,13 @@ describe('ThreadSidebar replies', () => {
     await textarea().setValue('genau')
     key(textarea(), { key: 'Enter' })
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('genau', 'r3')
+    expect(send).toHaveBeenCalledWith('genau', 'r3', [])
     expect(w.text()).not.toContain('Antwort an')
   })
 
   it('Escape in the composer cancels the reply target', async () => {
     setup()
-    await w.find<HTMLElement>('[data-reply-id="root"] button.absolute').trigger('click')
+    await w.find<HTMLElement>('[data-reply-id="root"] div.absolute.right-2 button:last-child').trigger('click')
     expect(w.text()).toContain('Antwort an')
     expect(key(textarea(), { key: 'Escape' }).defaultPrevented).toBe(true)
     await nextTick()
@@ -197,17 +232,19 @@ describe('ThreadSidebar replies', () => {
     expect(requireValue(useToastStore().toasts.at(-1)).text).toBe('zu lang')
   })
 
-  it('a successful upload clears the reply target', async () => {
+  it('sends the staged files with the reply and clears the reply target', async () => {
     const chat = setup()
-    const upload = vi.spyOn(chat, 'uploadThreadMedia').mockResolvedValue(messageFixture())
+    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(null)
+    vi.mocked(stageAttachment).mockResolvedValue(staged('att1'))
     key(w.find<HTMLElement>('[data-reply-id="r1"]'), { key: 'r' })
     await nextTick()
-    const input = w.find<HTMLInputElement>('input[type="file"]').element
-    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['x'], 'a.png', { type: 'image/png' })] })
-    input.dispatchEvent(new Event('change'))
+    pickFiles([new File(['x'], 'a.png', { type: 'image/png' })])
     await flushPromises()
-    expect(upload).toHaveBeenCalledWith(expect.any(File), '', 'r1')
+    key(replyComposer(), { key: 'Enter' })
+    await flushPromises()
+    expect(send).toHaveBeenCalledWith('', 'r1', ['att1'])
     expect(w.text()).not.toContain('Antwort an')
+    expect(w.find('[data-testid="attachment-tray"]').exists()).toBe(false)
   })
 
   it('jumps to the replied message, or says it is gone', async () => {
@@ -250,11 +287,9 @@ describe('ThreadSidebar replies', () => {
 
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import MessageEditor from './MessageEditor.vue'
-import MessageAttachments from './MessageAttachments.vue'
 import ReactionBar from './ReactionBar.vue'
 import ReactionPalette from './ReactionPalette.vue'
 import UserAvatar from './UserAvatar.vue'
-import ImageLightbox from './ImageLightbox.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import EmojiButton from './EmojiButton.vue'
 import { pendingConfirm } from '../lib/confirm'
@@ -296,7 +331,7 @@ describe('ThreadSidebar complete interactions', () => {
     expect(w.find('[data-reply-id=bare-reply]').text()).toContain(t('chat.edited'))
   })
 
-  it('guards concurrent sends and uploads while keeping the draft editable', async () => {
+  it('guards concurrent sends while keeping the draft editable', async () => {
     const chat = setup()
     let sent!: (message: null) => void
     const send = vi.spyOn(chat, 'sendThreadReply').mockImplementation(() => new Promise<null>(resolve => { sent = resolve }))
@@ -304,6 +339,7 @@ describe('ThreadSidebar complete interactions', () => {
     key(replyComposer(), { key: 'Enter' })
     key(replyComposer(), { key: 'Enter' })
     expect(send).toHaveBeenCalledTimes(1)
+    await replyComposer().setValue('keep')
     sent(null)
     await flushPromises()
     const input = w.find<HTMLInputElement>('input[type=file]').element
@@ -311,35 +347,31 @@ describe('ThreadSidebar complete interactions', () => {
     const uploadButton = requireValue(w.findAll('button').find(button => button.find('svg.lucide-plus').exists()))
     await uploadButton.trigger('click')
     expect(picker).toHaveBeenCalledTimes(1)
-    let uploaded!: (message: ReturnType<typeof messageFixture>) => void
-    vi.spyOn(chat, 'uploadThreadMedia').mockImplementation(() => new Promise(resolve => { uploaded = resolve }))
-    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['x'], 'image.png', { type: 'image/png' })] })
-    input.dispatchEvent(new Event('change'))
-    await replyComposer().setValue('keep')
-    key(replyComposer(), { key: 'Enter' })
-    expect(send).toHaveBeenCalledTimes(1)
-    uploaded(messageFixture())
-    await flushPromises()
     expect(replyComposer().element.value).toBe('keep')
   })
 
   it('cancels replies through the bar and row Escape, and cancels edits through root/reply Escape', async () => {
-    setup()
+    const chat = setup()
     const root = w.find('[data-reply-id=root]')
+    // With nothing to cancel the key is left to the panel, which closes.
     expect(key(root, { key: 'Escape' }).defaultPrevented).toBe(false)
-    key(root, { key: 'r' })
+    expect(chat.activeThread).toBeNull()
+    chat.activeThread = msg('root', 'u2')
+    chat.threadReplies = [msg('r1', 'u2'), msg('r2', 'me'), msg('r3', 'u2')]
+    await nextTick()
+    key(w.find('[data-reply-id=root]'), { key: 'r' })
     await nextTick()
     w.findComponent(ReplyComposerBar).vm.$emit('cancel')
     await nextTick()
     expect(w.findComponent(ReplyComposerBar).exists()).toBe(false)
-    key(root, { key: 'r' })
+    key(w.find('[data-reply-id=root]'), { key: 'r' })
     await nextTick()
-    key(root, { key: 'Escape' })
+    key(w.find('[data-reply-id=root]'), { key: 'Escape' })
     await nextTick()
     expect(w.findComponent(ReplyComposerBar).exists()).toBe(false)
     key(w.find('[data-reply-id=r2]'), { key: 'e' })
     await nextTick()
-    key(root, { key: 'Escape' })
+    key(w.find('[data-reply-id=root]'), { key: 'Escape' })
     await nextTick()
     expect(w.findComponent(MessageEditor).exists()).toBe(false)
     key(w.find('[data-reply-id=r2]'), { key: 'e' })
@@ -347,7 +379,9 @@ describe('ThreadSidebar complete interactions', () => {
     key(w.find('[data-reply-id=r1]'), { key: 'Escape' })
     await nextTick()
     expect(w.findComponent(MessageEditor).exists()).toBe(false)
+    expect(chat.activeThread).not.toBeNull()
     expect(key(w.find('[data-reply-id=r1]'), { key: 'Escape' }).defaultPrevented).toBe(false)
+    expect(chat.activeThread).toBeNull()
   })
 
   it('edits via the quick action, binds the editor, saves and cancels via child events', async () => {
@@ -367,7 +401,7 @@ describe('ThreadSidebar complete interactions', () => {
     expect(w.findComponent(MessageEditor).exists()).toBe(false)
   })
 
-  it('opens profile avatars, attachment lightboxes and root/reply reaction palettes', async () => {
+  it('opens profile avatars and root/reply reaction palettes', async () => {
     const chat = setup()
     const profile = vi.spyOn(chat, 'openUserProfile').mockResolvedValue(undefined)
     const react = vi.spyOn(chat, 'toggleReaction').mockResolvedValue([])
@@ -376,13 +410,6 @@ describe('ThreadSidebar complete interactions', () => {
     expect(profile).toHaveBeenCalledWith(expect.objectContaining({ id: 'root' }))
     await w.find('[data-reply-id=root] [data-testid=author-name]').trigger('click')
     expect(profile).toHaveBeenCalledTimes(5)
-    for (const attachment of w.findAllComponents(MessageAttachments)) {
-      attachment.vm.$emit('open-image', '/test-image')
-      await nextTick()
-      expect(w.findComponent(ImageLightbox).props('src')).toBe('/test-image')
-      w.findComponent(ImageLightbox).vm.$emit('close')
-      await nextTick()
-    }
     for (const bar of w.findAllComponents(ReactionBar)) {
       bar.vm.$emit('toggle', '👍')
       bar.vm.$emit('toggle-picker')
@@ -525,52 +552,14 @@ describe('ThreadSidebar forum posts and follow', () => {
     chat.activeThread = msg('root', 'u2', { title: 'A forum post', is_locked: opts.locked ?? false })
     return chat
   }
-  const lockBtn = () => w.find('[data-testid="thread-lock-toggle"]')
-
-  it('offers locking only for forum posts and only to moderators', async () => {
-    setupPost({ canManage: false })
-    await nextTick()
-    expect(lockBtn().exists()).toBe(false)
-    w.unmount()
+  it('shows the post header for forum posts only, and no lock button in the top bar', async () => {
     const chat = setupPost({ canManage: true })
     await nextTick()
-    expect(lockBtn().attributes('aria-label')).toBe(t('forum.lockPost'))
+    expect(w.find('[data-testid="forum-post-header"]').exists()).toBe(true)
+    expect(w.find('[data-testid="thread-lock-toggle"]').exists()).toBe(false)
     chat.activeThread = msg('root', 'u2')
     await nextTick()
-    expect(lockBtn().exists()).toBe(false)
-  })
-
-  it('locks a post through the API and flips the button', async () => {
-    const chat = setupPost({ canManage: true })
-    vi.mocked(forumApi.updateForumPost).mockResolvedValue(msg('root', 'u2'))
-    await nextTick()
-    await lockBtn().trigger('click')
-    await flushPromises()
-
-    expect(forumApi.updateForumPost).toHaveBeenCalledWith('ch1', 'root', { is_locked: true })
-    expect(chat.activeThread?.is_locked).toBe(true)
-    expect(lockBtn().attributes('aria-label')).toBe(t('forum.unlockPost'))
-  })
-
-  it('unlocks a locked post', async () => {
-    const chat = setupPost({ canManage: true, locked: true })
-    vi.mocked(forumApi.updateForumPost).mockResolvedValue(msg('root', 'u2'))
-    await nextTick()
-    await lockBtn().trigger('click')
-    await flushPromises()
-    expect(forumApi.updateForumPost).toHaveBeenCalledWith('ch1', 'root', { is_locked: false })
-    expect(chat.activeThread?.is_locked).toBe(false)
-  })
-
-  it('keeps the lock state and shows a toast when locking fails', async () => {
-    const chat = setupPost({ canManage: true })
-    vi.mocked(forumApi.updateForumPost).mockRejectedValue(new Error('server said no'))
-    await nextTick()
-    await lockBtn().trigger('click')
-    await flushPromises()
-
-    expect(chat.activeThread?.is_locked).toBe(false)
-    expect(useToastStore().toasts.some(x => x.text.includes('server said no'))).toBe(true)
+    expect(w.find('[data-testid="forum-post-header"]').exists()).toBe(false)
   })
 
   it('toggles following the thread', async () => {
@@ -635,21 +624,6 @@ describe('ThreadSidebar races and deleted authors', () => {
     expect(textarea().element.value).toBe('draft of B')
   })
 
-  it('does not lock the post that is open now when the answer is for another one', async () => {
-    const chat = setup()
-    vi.spyOn(usePermissionsStore(), 'canIn').mockReturnValue(true)
-    chat.activeThread = msg('root', 'u2', { title: 'Post A', is_locked: false })
-    let done!: () => void
-    vi.mocked(forumApi.updateForumPost).mockImplementation(() => new Promise(res => { done = () => res(msg('root', 'u2')) }))
-    await nextTick()
-    await w.get('[data-testid="thread-lock-toggle"]').trigger('click')
-    chat.activeThread = msg('post-b', 'u2', { title: 'Post B', is_locked: false })
-    await nextTick()
-    done()
-    await flushPromises()
-    expect(chat.activeThread?.is_locked).toBe(false)
-  })
-
   describe('scrolling', () => {
     async function geometry(scrollTop: number) {
       await flushPromises() // the scroll to the end after mounting
@@ -679,5 +653,35 @@ describe('ThreadSidebar races and deleted authors', () => {
       await flushPromises()
       expect(container.scrollTop).toBe(1000)
     })
+  })
+})
+
+describe('ThreadSidebar closing', () => {
+  it('the X button closes the thread', async () => {
+    const chat = setup()
+    await w.find('[data-testid="thread-close"]').trigger('click')
+    expect(chat.activeThread).toBeNull()
+  })
+
+  it('Escape closes the thread, unless something inside used the key', async () => {
+    const chat = setup()
+    const used = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    used.preventDefault()
+    w.find('[data-reply-id="r1"]').element.dispatchEvent(used)
+    expect(chat.activeThread).not.toBeNull()
+    key(w.find('[data-reply-id="r1"]'), { key: 'Escape' })
+    expect(chat.activeThread).toBeNull()
+  })
+
+  it('Escape closes the thread while the focus is still outside the panel, but not under a dialog', () => {
+    const chat = setup()
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    document.body.append(dialog)
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(chat.activeThread).not.toBeNull()
+    dialog.remove()
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(chat.activeThread).toBeNull()
   })
 })

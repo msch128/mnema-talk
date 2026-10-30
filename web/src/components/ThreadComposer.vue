@@ -4,11 +4,15 @@ import type { DraftReply } from '../lib/drafts'
 import { computed, ref } from 'vue'
 import { Plus, ArrowUp } from '@lucide/vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
+import AttachmentTray from './AttachmentTray.vue'
 import EmojiButton from './EmojiButton.vue'
+import MarkdownHelp from './MarkdownHelp.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import { useDraftModel } from '../composables/useDraftModel'
 import { useAutoGrow } from '../composables/useAutoGrow'
 import { useComposerFiles } from '../composables/useComposerFiles'
+import { useAttachmentTray } from '../composables/useAttachmentTray'
+import { useChatStore } from '../stores/chat'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { handleComposerKeydown } from '../composables/useComposerKeys'
 
@@ -19,10 +23,9 @@ const props = defineProps({
   replyingTo: { type: Object as PropType<DraftReply | null>, default: null },
   canSend: { type: Boolean, default: false },
   canAttach: { type: Boolean, default: false },
-  uploading: { type: Boolean, default: false },
   sending: { type: Boolean, default: false }
 })
-const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event] }>()
+const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; 'arrow-up': [event: KeyboardEvent] }>()
 
 const text = useDraftModel(() => props.modelValue, value => emit('update:modelValue', value))
 
@@ -33,22 +36,28 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const textAreaEl = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(textAreaEl, text)
 const { multiline } = useAutoGrow(textAreaEl, text)
-const { attachFiles, onPaste } = useComposerFiles({ fileInput, canAttach: () => props.canAttach, busy: () => props.uploading || props.sending })
-defineExpose({ attachFiles, focus: () => textAreaEl.value?.focus() })
+const chatStore = useChatStore()
+// The files of a reply wait in the thread's own tray and go out with the reply.
+const tray = useAttachmentTray(() => (chatStore.activeThread && chatStore.activeChannel
+  ? { slot: `thread:${chatStore.activeThread.id}`, channelId: chatStore.activeChannel.id }
+  : null))
+const { attachFiles, onPaste, onPick } = useComposerFiles({ add: tray.add, canAttach: () => props.canAttach, busy: () => props.sending })
+defineExpose({ tray, attachFiles, focus: () => textAreaEl.value?.focus() })
 
 function handleKeyDown(e: KeyboardEvent) {
-  handleComposerKeydown(e, { consumers: [assist.onKeydown], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send') })
+  handleComposerKeydown(e, { consumers: [assist.onKeydown, k => tray.onKeydown(k, text.value)], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send'), arrowUp: e => emit('arrow-up', e) })
 }
 </script>
 
 <template>
   <div class="px-4 pb-6 pt-1 shrink-0">
     <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="emit('cancel-reply')" />
+    <AttachmentTray :items="tray.items.value" @remove="tray.remove" @retry="tray.retry" @view="tray.view" />
     <div
       :class="[
         'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex gap-2 shadow-xs focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
         multiline ? 'items-end' : 'items-center',
-        replyingTo ? 'rounded-b-lg' : 'rounded-lg'
+        replyingTo || tray.count.value ? 'rounded-b-lg' : 'rounded-lg'
       ]"
     >
       <MentionSuggestions
@@ -65,14 +74,14 @@ function handleKeyDown(e: KeyboardEvent) {
         ref="fileInput"
         type="file"
         class="hidden"
-        @change="emit('file', $event)"
-        accept="image/*,video/*"
+        multiple
+        @change="onPick"
       />
 
       <button
         v-if="canAttach"
         @click="fileInput?.click()"
-        :disabled="uploading || sending"
+        :disabled="sending"
         class="w-8 h-8 flex items-center justify-center shrink-0 rounded-full text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-50"
         v-tooltip="$t('thread.upload')"
       >
@@ -100,11 +109,13 @@ function handleKeyDown(e: KeyboardEvent) {
         class="bg-transparent flex-1 min-w-0 resize-none outline-hidden text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
       ></textarea>
 
+      <MarkdownHelp :disabled="!canSend" @insert="assist.insertText" />
+
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 
       <button
         @click="emit('send')"
-        :disabled="!canSend || !text.trim() || uploading || sending"
+        :disabled="!canSend || (!text.trim() && !tray.count.value) || sending"
         class="btn btn-primary w-8 h-8 flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
         v-tooltip="$t('chat.send')"
       >

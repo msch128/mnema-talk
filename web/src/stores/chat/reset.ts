@@ -7,20 +7,26 @@ import { useSavedStore } from '../saved'
 import { useForwardQuotesStore } from '../forwardQuotes'
 import { useEventsStore } from '../events'
 import { useOnboardingStore } from '../onboarding'
+import { useFirstRunStore } from '../firstRun'
 import { useAccountStore } from '../account'
+import { useDmCallsStore } from '../dmCalls'
+import { clearAllTrays } from '../../composables/attachmentTrayState'
 import { emptyWindow } from '../../lib/messageWindow'
 import { emptyNotificationSettings, type Cx } from './state'
 import { resetWindow, setWindow } from './messageWindow'
 import { closeWebSocket } from './socket'
 import { closeThread } from './threads'
 
-/** Drops what the stores keep of the signed-in member: saved list, quotes, events, onboarding record, account dialog. */
+/** Drops what the stores keep of the signed-in member: saved list, quotes, events, onboarding record, first-run checklist, account dialog. */
 export function resetMemberStores() {
   useSavedStore().reset()
   useForwardQuotesStore().reset()
   useEventsStore().reset()
   useOnboardingStore().reset()
+  useFirstRunStore().reset()
   useAccountStore().reset()
+  useDmCallsStore().reset()
+  clearAllTrays()
 }
 
 /** Removes one ephemeral note. */
@@ -87,6 +93,7 @@ export function resetCommunityState(cx: Cx) {
   clearTimeout(cs.idleTimer)
   cs.isIdle = false
   cs.lastActivityAt = 0
+  cs.lastVoiceActivityAt = 0
   cs.reconnectDelay = 1000
   cs.reconnectCount.value = 0
   cs.nextRetryAt.value = 0
@@ -97,6 +104,7 @@ export function resetCommunityState(cx: Cx) {
   cs.mediaHandshakeHandler = null
   cs.forumTagsChangedHandler = null
   cs.forumTagsSignal.value = null
+  cs.forumPostsSignal.value = null
   const version = useAppVersionStore()
   version.followAdminUpdates(() => false)
   version.setServerVersion('')

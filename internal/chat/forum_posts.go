@@ -33,9 +33,29 @@ func forumSortNewest(mode string) (bool, error) {
 	return false, httpx.ErrInvalidInput("sort must be latest_activity or newest")
 }
 
+// PostFilter narrows and orders the post list of a forum.
+type PostFilter struct {
+	// Sort is "latest_activity" (default) or "newest".
+	Sort string
+	// TagID keeps the posts that carry this tag.
+	TagID *uuid.UUID
+	// Search keeps the posts whose title, first message or a reply contains the text.
+	Search string
+}
+
+// MaxPostSearchLen is the longest search text a list accepts.
+const MaxPostSearchLen = 100
+
 // ListForumPosts returns a page of root posts in channelID, ordered by latest activity or creation.
 func ListForumPosts(ctx context.Context, p *db.Pool, channelID uuid.UUID, sortMode string, tagID *uuid.UUID, q HistoryQuery) ([]Message, error) {
-	newest, err := forumSortNewest(sortMode)
+	return ListForumPostsFiltered(ctx, p, channelID, PostFilter{Sort: sortMode, TagID: tagID}, q)
+}
+
+// ListForumPostsFiltered is ListForumPosts with a search text. Pinned posts
+// come first and only on the first page (no Before); the pages behind it hold
+// the unpinned posts, so the cursor of the order never has to know about pins.
+func ListForumPostsFiltered(ctx context.Context, p *db.Pool, channelID uuid.UUID, f PostFilter, q HistoryQuery) ([]Message, error) {
+	newest, err := forumSortNewest(f.Sort)
 	if err != nil {
 		return nil, err
 	}
@@ -50,18 +70,59 @@ func ListForumPosts(ctx context.Context, p *db.Pool, channelID uuid.UUID, sortMo
 	if err := messageCursorExists(ctx, p, q.Before); err != nil {
 		return nil, err
 	}
-	whereClause := `WHERE m.channel_id = $1 AND m.parent_id IS NULL`
-	args := []any{channelID}
-
-	if tagID != nil {
-		args = append(args, *tagID)
-		whereClause += fmt.Sprintf(` AND EXISTS (SELECT 1 FROM forum_post_tags pt WHERE pt.message_id = m.id AND pt.tag_id = $%d)`, len(args))
+	whereClause, args, err := postFilterWhere(channelID, f)
+	if err != nil {
+		return nil, err
 	}
 
+	var pinned []Message
+	if q.Before == nil {
+		if pinned, err = listPinnedPosts(ctx, p, whereClause, args); err != nil {
+			return nil, err
+		}
+	}
+	whereClause += ` AND NOT m.is_pinned`
+
+	var page []Message
 	if newest {
-		return listPostsByCreation(ctx, p, whereClause, args, q.Before, limit)
+		page, err = listPostsByCreation(ctx, p, whereClause, args, q.Before, limit)
+	} else {
+		page, err = listPostsByActivity(ctx, p, whereClause, args, q, limit)
 	}
-	return listPostsByActivity(ctx, p, whereClause, args, q, limit)
+	if err != nil {
+		return nil, err
+	}
+	return append(pinned, page...), nil
+}
+
+// postFilterWhere is the WHERE clause (and its arguments) of the root posts of
+// channelID that match f.
+func postFilterWhere(channelID uuid.UUID, f PostFilter) (string, []any, error) {
+	where := `WHERE m.channel_id = $1 AND m.parent_id IS NULL`
+	args := []any{channelID}
+	if f.TagID != nil {
+		args = append(args, *f.TagID)
+		where += fmt.Sprintf(` AND EXISTS (SELECT 1 FROM forum_post_tags pt WHERE pt.message_id = m.id AND pt.tag_id = $%d)`, len(args))
+	}
+	if text := strings.TrimSpace(f.Search); text != "" {
+		clean, err := httpx.CleanText("q", text, MaxPostSearchLen, false)
+		if err != nil {
+			return "", nil, err
+		}
+		args = append(args, "%"+likeEscaper.Replace(clean)+"%")
+		n := len(args)
+		where += fmt.Sprintf(` AND (m.title ILIKE $%[1]d OR m.content ILIKE $%[1]d OR EXISTS (SELECT 1 FROM messages r WHERE r.parent_id = m.id AND r.content ILIKE $%[1]d))`, n)
+	}
+	return where, args, nil
+}
+
+// likeEscaper makes user text literal inside a LIKE pattern.
+var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+
+// listPinnedPosts returns the pinned posts matching where, most recently pinned first.
+func listPinnedPosts(ctx context.Context, p *db.Pool, where string, args []any) ([]Message, error) {
+	sql := messageSelect + " " + where + fmt.Sprintf(` AND m.is_pinned ORDER BY m.pinned_at DESC, m.id DESC LIMIT %d`, MaxPinsPerChannel)
+	return queryMessages(ctx, p, sql, args...)
 }
 
 func listPostsByCreation(ctx context.Context, p *db.Pool, where string, args []any, before *uuid.UUID, limit int) ([]Message, error) {
@@ -97,42 +158,89 @@ func listPostsByActivity(ctx context.Context, p *db.Pool, where string, args []a
 	return queryMessages(ctx, p, sql, args...)
 }
 
-// CreateForumPost creates a root post in channelID with title, message content, and tags.
-func CreateForumPost(ctx context.Context, p *db.Pool, online OnlineSource, channelID, userID uuid.UUID, title, content string, tagIDs []uuid.UUID) (uuid.UUID, error) {
+// PreparedPost is a forum post whose title and tags passed the forum's rules,
+// ready to be stored with its first message. A post made together with a file
+// (media package) is stored the same way as one made from text.
+type PreparedPost struct {
+	Title  string
+	TagIDs []uuid.UUID
+}
+
+// PreparePost validates a new post's title and tags in channelID. canManage says
+// whether the author holds Manage messages, which moderated tags need.
+func PreparePost(ctx context.Context, q db.Querier, channelID uuid.UUID, canManage bool, title string, tagIDs []uuid.UUID) (*PreparedPost, error) {
 	cleanTitle, err := CleanPostTitle(title)
 	if err != nil {
-		return uuid.Nil, err
+		return nil, err
 	}
-	validContent, err := ValidateContent(content, false)
-	if err != nil {
-		return uuid.Nil, err
+	if err := ValidatePostTags(ctx, q, channelID, tagIDs); err != nil {
+		return nil, err
 	}
-	if err := ValidatePostTags(ctx, p, channelID, tagIDs); err != nil {
-		return uuid.Nil, err
+	if err := checkTagRules(ctx, q, channelID, nil, tagIDs, canManage); err != nil {
+		return nil, err
 	}
+	return &PreparedPost{Title: cleanTitle, TagIDs: tagIDs}, nil
+}
 
-	id, err := InsertMessage(ctx, p, online, NewMessage{
-		ChannelID: channelID,
-		UserID:    userID,
-		Content:   validContent,
-		Title:     &cleanTitle,
-	}, func(tx pgx.Tx, messageID uuid.UUID) error {
-		for _, tagID := range tagIDs {
+// Store is the callback of InsertMessage that attaches the tags and makes the
+// author follow the new post.
+func (pp *PreparedPost) Store(ctx context.Context, userID uuid.UUID) func(tx pgx.Tx, messageID uuid.UUID) error {
+	return func(tx pgx.Tx, messageID uuid.UUID) error {
+		for _, tagID := range pp.TagIDs {
 			if _, err := tx.Exec(ctx, `INSERT INTO forum_post_tags (message_id, tag_id) VALUES ($1, $2)`, messageID, tagID); err != nil {
 				return postTagError(err)
 			}
 		}
 		return SetThreadFollow(ctx, tx, userID, messageID, true)
-	})
+	}
+}
+
+// CreateForumPost creates a root post in channelID with title, message content, and tags.
+// canManage says whether the author holds Manage messages, which moderated tags need.
+func CreateForumPost(ctx context.Context, p *db.Pool, online OnlineSource, channelID, userID uuid.UUID, canManage bool, title, content string, tagIDs []uuid.UUID) (uuid.UUID, error) {
+	validContent, err := ValidateContent(content, false)
 	if err != nil {
 		return uuid.Nil, err
 	}
-	return id, nil
+	post, err := PreparePost(ctx, p, channelID, canManage, title, tagIDs)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return InsertMessage(ctx, p, online, NewMessage{
+		ChannelID: channelID,
+		UserID:    userID,
+		Content:   validContent,
+		Title:     &post.Title,
+	}, post.Store(ctx, userID))
 }
 
-// UpdateForumPost updates a post's title, tags, or lock status.
-func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID, actorID uuid.UUID, canManage bool, title *string, tagIDs *[]uuid.UUID, isLocked *bool) (*Message, error) {
-	if title == nil && tagIDs == nil && isLocked == nil {
+// PostPatch is the set of changes an update of a post asks for; nil fields stay as they are.
+type PostPatch struct {
+	Title      *string
+	TagIDs     *[]uuid.UUID
+	IsLocked   *bool
+	IsResolved *bool
+}
+
+func (p PostPatch) empty() bool {
+	return p.Title == nil && p.TagIDs == nil && p.IsLocked == nil && p.IsResolved == nil
+}
+
+// editsPost is true when the patch changes what the post's author owns: title, tags or the solved mark.
+func (p PostPatch) editsPost() bool {
+	return p.Title != nil || p.TagIDs != nil || p.IsResolved != nil
+}
+
+// PostActor is who changes a post.
+type PostActor struct {
+	ID uuid.UUID
+	// CanManage: the actor holds Manage messages in the channel.
+	CanManage bool
+}
+
+// UpdateForumPost updates a post's title, tags, lock or solved status.
+func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID uuid.UUID, actor PostActor, patch PostPatch) (*Message, error) {
+	if patch.empty() {
 		return nil, httpx.ErrInvalidInput("no fields to update")
 	}
 	// A first check before the screening and tag lookups; the one under the
@@ -141,16 +249,16 @@ func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID, acto
 	if err != nil {
 		return nil, err
 	}
-	if err := checkPostUpdatePerms(actorID, authorID, canManage, locked, title, tagIDs, isLocked); err != nil {
+	if err := checkPostUpdatePerms(actor, authorID, locked, patch); err != nil {
 		return nil, err
 	}
-	cleanTitle, err := validatePostUpdates(ctx, p, channelID, title, tagIDs)
+	cleanTitle, err := validatePostUpdates(ctx, p, channelID, patch)
 	if err != nil {
 		return nil, err
 	}
 	var pending *automod.Pending
 	if cleanTitle != nil {
-		if pending, err = screenText(ctx, p, channelID, actorID, messageID, *cleanTitle); err != nil {
+		if pending, err = screenText(ctx, p, channelID, actor.ID, messageID, *cleanTitle); err != nil {
 			return nil, err
 		}
 	}
@@ -162,10 +270,10 @@ func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID, acto
 		if err != nil {
 			return err
 		}
-		if err := checkPostUpdatePerms(actorID, authorID, canManage, locked, title, tagIDs, isLocked); err != nil {
+		if err := checkPostUpdatePerms(actor, authorID, locked, patch); err != nil {
 			return err
 		}
-		return applyPostUpdate(ctx, tx, messageID, cleanTitle, isLocked, tagIDs)
+		return applyPostUpdate(ctx, tx, channelID, messageID, actor, cleanTitle, patch)
 	})
 	if err != nil {
 		return nil, err
@@ -192,58 +300,80 @@ func getForumPostAuthor(ctx context.Context, q db.Querier, channelID, messageID 
 	return authorID, locked, nil
 }
 
-func checkPostUpdatePerms(actorID, authorID uuid.UUID, canManage, locked bool, title *string, tagIDs *[]uuid.UUID, isLocked *bool) error {
-	if isLocked != nil && !canManage {
+func checkPostUpdatePerms(actor PostActor, authorID uuid.UUID, locked bool, patch PostPatch) error {
+	if patch.IsLocked != nil && !actor.CanManage {
 		return httpx.ErrForbidden("missing permission to lock or unlock posts")
 	}
-	if (title != nil || tagIDs != nil) && actorID != authorID && !canManage {
+	if patch.editsPost() && actor.ID != authorID && !actor.CanManage {
 		return httpx.ErrForbidden("missing permission to edit others' posts")
 	}
-	if (title != nil || tagIDs != nil) && locked && !canManage {
+	if patch.editsPost() && locked && !actor.CanManage {
 		return httpx.ErrForbidden("the post is locked")
 	}
 	return nil
 }
 
-func validatePostUpdates(ctx context.Context, p *db.Pool, channelID uuid.UUID, title *string, tagIDs *[]uuid.UUID) (*string, error) {
+func validatePostUpdates(ctx context.Context, p *db.Pool, channelID uuid.UUID, patch PostPatch) (*string, error) {
 	var cleanTitle *string
-	if title != nil {
-		c, err := CleanPostTitle(*title)
+	if patch.Title != nil {
+		c, err := CleanPostTitle(*patch.Title)
 		if err != nil {
 			return nil, err
 		}
 		cleanTitle = &c
 	}
-	if tagIDs != nil {
-		if err := ValidatePostTags(ctx, p, channelID, *tagIDs); err != nil {
+	if patch.TagIDs != nil {
+		if err := ValidatePostTags(ctx, p, channelID, *patch.TagIDs); err != nil {
 			return nil, err
 		}
 	}
 	return cleanTitle, nil
 }
 
-func applyPostUpdate(ctx context.Context, tx pgx.Tx, messageID uuid.UUID, cleanTitle *string, isLocked *bool, tagIDs *[]uuid.UUID) error {
-	if cleanTitle != nil || isLocked != nil {
+func applyPostUpdate(ctx context.Context, tx pgx.Tx, channelID, messageID uuid.UUID, actor PostActor, cleanTitle *string, patch PostPatch) error {
+	if cleanTitle != nil || patch.IsLocked != nil || patch.IsResolved != nil {
 		if _, err := tx.Exec(ctx, `
 			UPDATE messages SET
 				title = COALESCE($2, title),
-				is_locked = COALESCE($3, is_locked)
-			WHERE id = $1`, messageID, cleanTitle, isLocked); err != nil {
+				is_locked = COALESCE($3, is_locked),
+				is_resolved = COALESCE($4, is_resolved)
+			WHERE id = $1`, messageID, cleanTitle, patch.IsLocked, patch.IsResolved); err != nil {
 			return fmt.Errorf("update post: %w", err)
 		}
 	}
-	if tagIDs == nil {
+	if patch.TagIDs == nil {
 		return nil
+	}
+	return replacePostTags(ctx, tx, channelID, messageID, actor, *patch.TagIDs)
+}
+
+// replacePostTags sets the tags of a post to tagIDs after the moderated-tag and
+// required-tag rules, which see the tags the post has right now.
+func replacePostTags(ctx context.Context, tx pgx.Tx, channelID, messageID uuid.UUID, actor PostActor, tagIDs []uuid.UUID) error {
+	current, err := postTagIDs(ctx, tx, messageID)
+	if err != nil {
+		return err
+	}
+	if err := checkTagRules(ctx, tx, channelID, current, tagIDs, actor.CanManage); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM forum_post_tags WHERE message_id = $1`, messageID); err != nil {
 		return fmt.Errorf("delete post tags: %w", err)
 	}
-	for _, tagID := range *tagIDs {
+	for _, tagID := range tagIDs {
 		if _, err := tx.Exec(ctx, `INSERT INTO forum_post_tags (message_id, tag_id) VALUES ($1, $2)`, messageID, tagID); err != nil {
 			return postTagError(err)
 		}
 	}
 	return nil
+}
+
+func postTagIDs(ctx context.Context, q db.Querier, messageID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.Query(ctx, `SELECT tag_id FROM forum_post_tags WHERE message_id = $1`, messageID)
+	if err != nil {
+		return nil, fmt.Errorf("load post tags: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
 }
 
 // postTagError maps a refused tag insert: a tag deleted after ValidatePostTags

@@ -98,10 +98,12 @@ a little between DSM versions.
 
 ### Pinned or new minor line
 
-Run in the deployment folder. Replace `X.Y.Z` with the version to install.
+Run in the deployment folder. The first lines look up the newest release; set
+`NEW` yourself to install another.
 
 ```sh
-NEW=X.Y.Z
+NEW=$(curl -fsSL https://api.github.com/repos/msch128/mnema-talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')  # the newest release, or set a version
+[ -n "$NEW" ] || { echo "could not read the latest version; set NEW=x.y.z yourself" >&2; false; }
 
 # Note what runs now, for a rollback
 grep '^MNEMA_IMAGE=' .env
@@ -135,7 +137,9 @@ docker compose up -d       # add --profile turn / --profile autoupdate if you us
 
 (`sed -i` as written is for Linux; on macOS use `sed -i ''`.) The same image is
 also published on Docker Hub as `docker.io/msch128/mnema-talk` (same digest and
-signature); GHCR stays the primary reference.
+signature); GHCR stays the primary reference. With
+`MNEMA_IMAGE=msch128/mnema-talk:<tag>` "Update now" works too and pulls from
+Docker Hub.
 
 ## 3. Read the notes
 

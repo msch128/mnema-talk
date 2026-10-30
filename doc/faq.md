@@ -69,9 +69,11 @@ behind a firewall) and list the proxy in `TRUSTED_PROXY_CIDRS`
 
 Your router probably cannot send traffic from inside your network to your own
 public address and back (*NAT loopback* or *hairpin*). Tell the server its LAN
-address too, so devices at home connect to it directly:
-`WEBRTC_NAT_1TO1_IP=203.0.113.7,192.168.1.20` (public address first, then the
-server's LAN address), then `docker compose up -d`. The name of the site can also
+address too, so devices at home connect to it directly: set
+`WEBRTC_LAN_IP=192.168.1.20` (the server's address in your network; the setup
+assistant asks for it), or, with a fixed public address,
+`WEBRTC_NAT_1TO1_IP=203.0.113.7,192.168.1.20` (public address first). Then run
+`docker compose up -d`. The name of the site can also
 be answered with the LAN address inside your network (split-horizon DNS, often a
 "local DNS record" in the router).
 

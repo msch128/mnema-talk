@@ -68,7 +68,7 @@ test('a bot is a member: BOT tag and Bot role in the member list, locked role, o
     await page.locator('[data-role="Bot"] button[aria-pressed]').click()
     await expect(page.getByTestId('role-managed-note')).toBeVisible()
     await expect(page.locator('[data-role="Bot"]').getByTestId('role-managed-icon')).toBeVisible()
-    await expect(page.locator('input[maxlength="32"]')).toBeDisabled()
+    await expect(page.locator('input[data-max-chars="32"]')).toBeDisabled()
     await expect(page.getByRole('button', { name: /Rolle löschen|Delete role/ })).toHaveCount(0)
 
     // The bot has a managed role of its own, named after it: locked, in the bot roles list.
@@ -77,7 +77,7 @@ test('a bot is a member: BOT tag and Bot role in the member list, locked role, o
     await expect(own.getByTestId('role-managed-icon')).toBeVisible()
     await own.locator('button[aria-pressed]').click()
     await expect(page.getByTestId('role-managed-note')).toContainText(NAME)
-    await expect(page.locator('input[maxlength="32"]')).toBeDisabled()
+    await expect(page.locator('input[data-max-chars="32"]')).toBeDisabled()
     await expect(page.getByRole('button', { name: /Rolle löschen|Delete role/ })).toHaveCount(0)
 
     await page.goto('/admin/bots')

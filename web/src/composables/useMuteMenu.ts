@@ -46,9 +46,25 @@ function apply(target: NotifyTarget, level: NotifyLevel, until: string | null) {
   return chatStore.setCategoryNotificationLevel(target.id, level, until)
 }
 
+/** What "my default" means for a target right now: its category's setting for a channel in one, else the server-wide one. */
+function inheritedLevel(target: NotifyTarget): NotifyLevel {
+  const chatStore = useChatStore()
+  const { server } = chatStore.notifySettings
+  if (target.kind === 'channel' && target.inCategory !== false) {
+    const category = chatStore.categories.find(c => c.channels.some(ch => ch.id === target.id))
+    const level = category ? storedSetting({ kind: 'category', id: category.id }).level : 'inherit'
+    if (level !== 'inherit') return level
+  }
+  return server.level
+}
+
+function levelName(level: NotifyLevel): string {
+  if (level === 'mute') return t('notifications.bellNothing')
+  return t(level === 'mentions' ? 'notifications.mentions' : 'notifications.all')
+}
+
 function levelRows(target: NotifyTarget, current: NotifyLevel, muted_until: string | null): ContextMenuItem[] {
-  const fromCategory = target.kind === 'channel' && target.inCategory !== false
-  const inheritLabel = fromCategory ? t('notifications.inheritChannel') : t('notifications.inheritCategory')
+  const inheritLabel = t('notifications.inherit', { level: levelName(inheritedLevel(target)) })
   const rows: Array<[NotifyLevel, string]> = [
     ['inherit', inheritLabel], ['all', t('notifications.all')], ['mentions', t('notifications.mentions')], ['mute', t('notifications.nothing')]
   ]

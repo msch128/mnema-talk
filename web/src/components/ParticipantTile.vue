@@ -10,6 +10,7 @@ import type { AvatarUser } from './presentationTypes'
 import { ref, computed, watch, nextTick } from 'vue'
 import { MicOff, Eye, EyeOff, Monitor, X } from '@lucide/vue'
 import VoiceTimer from './VoiceTimer.vue'
+import MediaImage from './MediaImage.vue'
 import MuteMarks from './MuteMarks.vue'
 import TalkReactionFloat from './TalkReactionFloat.vue'
 import { initialOf } from '../lib/initial'
@@ -141,14 +142,16 @@ watch(() => props.stream, (stream) => {
             : ''
         ]"
       >
-        <img
+        <MediaImage
           v-if="user.avatar_url"
           :src="user.avatar_url"
           alt=""
           draggable="false"
           class="w-full h-full object-cover"
           loading="lazy"
-        />
+        >
+          <template #fallback><span class="tile-initial leading-none text-mnema-mint" aria-hidden="true">{{ initial }}</span></template>
+        </MediaImage>
         <span v-else class="tile-initial leading-none" aria-hidden="true">{{ initial }}</span>
       </div>
     </div>

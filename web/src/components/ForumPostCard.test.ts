@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import type { VueWrapper } from '@vue/test-utils'
 import ForumPostCard from './ForumPostCard.vue'
 import { setLocale } from '../i18n'
-import { messageFixture } from '../test-fixtures.fixture'
+import { messageFixture, attachmentFixture, forumTagFixture } from '../test-fixtures.fixture'
 import type { Message } from '../types/domain'
 
 let wrapper: VueWrapper
@@ -21,8 +21,7 @@ describe('ForumPostCard', () => {
   it('shows title, snippet, author, reply count and tags', () => {
     mountCard({
       display_name: 'Ada', reply_count: 4,
-      tags: [{ id: 't1', channel_id: 'c', name: 'help', emoji: '❓', created_at: '2026-01-01T00:00:00Z' },
-        { id: 't2', channel_id: 'c', name: 'plain', created_at: '2026-01-01T00:00:00Z' }]
+      tags: [forumTagFixture({ id: 't1', name: 'help', emoji: '❓' }), forumTagFixture({ id: 't2', name: 'plain', color: 'blue' })]
     })
     const text = wrapper.text()
     expect(text).toContain('Release plans')
@@ -55,11 +54,39 @@ describe('ForumPostCard', () => {
     expect(wrapper.text()).toContain('Locked')
   })
 
-  it('shows the last activity only when it differs from the creation time', async () => {
-    mountCard({ created_at: '2026-01-01T10:00:00Z', last_activity_at: '2026-01-01T10:00:00Z' })
-    expect(wrapper.text()).not.toContain('Last activity')
-    await wrapper.setProps({ post: messageFixture({ created_at: '2026-01-01T10:00:00Z', last_activity_at: '2026-02-03T10:00:00Z' }) })
-    expect(wrapper.text()).toContain('Feb')
+  it('names the last activity only for a post that has replies', async () => {
+    mountCard({ reply_count: 0, last_activity_at: '2026-02-03T10:00:00Z' })
+    expect(wrapper.text()).not.toContain('Active')
+    await wrapper.setProps({ post: messageFixture({ title: 'x', reply_count: 2, last_activity_at: '2026-02-03T10:00:00Z' }) })
+    expect(wrapper.text()).toContain('Active')
+  })
+
+  it('marks an unread post with a dot and in its label', () => {
+    mountCard()
+    expect(wrapper.find('[data-testid="forum-post-unread"]').exists()).toBe(false)
+    wrapper.unmount()
+    wrapper = mount(ForumPostCard, { props: { post: messageFixture({ title: 'Release plans' }), unread: true } })
+    expect(wrapper.find('[data-testid="forum-post-unread"]').exists()).toBe(true)
+    expect(wrapper.attributes('aria-label')).toBe('Release plans (Unread)')
+    expect(wrapper.attributes('data-unread')).toBe('true')
+  })
+
+  it('shows the pinned and solved marks', () => {
+    mountCard({ is_pinned: true, is_resolved: true })
+    expect(wrapper.find('[data-testid="forum-post-pinned"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="forum-post-solved"]').text()).toContain('Solved')
+  })
+
+  it('previews the first image of the first message, not a file or a deleted image', () => {
+    mountCard({ attachments: [
+      attachmentFixture({ id: 'f', mime_type: 'application/pdf', url: '/api/media/f' }),
+      attachmentFixture({ id: 'd', is_deleted: true, url: '/api/media/d' }),
+      attachmentFixture({ id: 'i', mime_type: 'image/png', url: '/api/media/i' })
+    ] })
+    expect(wrapper.get('[data-testid="forum-post-thumbnail"]').attributes('src')).toBe('/api/media/i')
+    wrapper.unmount()
+    mountCard({ attachments: [] })
+    expect(wrapper.find('[data-testid="forum-post-thumbnail"]').exists()).toBe(false)
   })
 
   it('renders no date when the creation time is missing', () => {

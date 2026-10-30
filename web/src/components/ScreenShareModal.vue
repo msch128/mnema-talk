@@ -11,7 +11,8 @@ import {
   STREAM_PRESETS,
   normalizeQuality,
   streamModeOf,
-  streamBitrate
+  streamBitrate,
+  streamTuning
 } from '../lib/streamQuality'
 import { t } from '../i18n'
 
@@ -26,6 +27,8 @@ const initialQuality = normalizeQuality(voiceStore.screenQuality)
 const selectedResolution = ref(initialQuality.resolution)
 const selectedFps = ref(initialQuality.fps)
 const customPicked = ref(voiceStore.screenQuality?.custom === true)
+// Motion or clarity chosen in the stream menu stays unless a preset replaces it.
+const selectedOptimize = ref(initialQuality.optimize)
 
 const currentMode = computed(() => {
   if (customPicked.value) return 'custom'
@@ -36,10 +39,12 @@ function applyPreset(mode: StreamMode) {
   if (mode === 'gaming') {
     selectedResolution.value = STREAM_PRESETS.gaming.resolution
     selectedFps.value = STREAM_PRESETS.gaming.fps
+    selectedOptimize.value = undefined
     customPicked.value = false
   } else if (mode === 'screen') {
     selectedResolution.value = STREAM_PRESETS.screen.resolution
     selectedFps.value = STREAM_PRESETS.screen.fps
+    selectedOptimize.value = undefined
     customPicked.value = false
   } else {
     customPicked.value = true
@@ -71,13 +76,14 @@ const estimatedBitrateDisplay = computed(() => {
   return `${mbps} Mbit/s`
 })
 
-const isMotionPriority = computed(() => selectedFps.value >= 60)
+const isMotionPriority = computed(() => streamTuning({ fps: selectedFps.value, optimize: selectedOptimize.value }).contentHint === 'motion')
 
 async function handleStart() {
   const q = {
     resolution: selectedResolution.value,
     fps: selectedFps.value,
-    custom: currentMode.value === 'custom'
+    custom: currentMode.value === 'custom',
+    ...(selectedOptimize.value ? { optimize: selectedOptimize.value } : {})
   }
   // setScreenQuality persists to localStorage automatically
   voiceStore.setScreenQuality(q)

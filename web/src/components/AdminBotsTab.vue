@@ -20,6 +20,7 @@ const toasts = useToastStore()
 const bots = ref<BotBot[]>([])
 const loaded = ref(false)
 const selectedId = ref<string | null>(null)
+const detail = ref<{ guard: () => Promise<boolean> } | null>(null)
 const newName = ref('')
 const busy = ref(false)
 
@@ -44,7 +45,7 @@ async function load() {
 
 async function create() {
   const name = newName.value.trim()
-  if (!name || busy.value) return
+  if (!name || busy.value || (detail.value && !(await detail.value.guard()))) return
   busy.value = true
   try {
     const bot = await api('/api/admin/bots', { method: 'POST', json: { name }, decode: decodeBotBot })
@@ -57,6 +58,12 @@ async function create() {
   } finally {
     busy.value = false
   }
+}
+
+// Another bot (or a new one) replaces the open detail: unsaved edits are asked about first.
+async function select(id: string) {
+  if (id === selectedId.value || (detail.value && !(await detail.value.guard()))) return
+  selectedId.value = id
 }
 
 function onUpdated(bot: BotBot) {
@@ -84,7 +91,7 @@ onMounted(async () => {
     <div class="grid gap-4 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
       <div class="space-y-3">
         <form class="flex gap-2" @submit.prevent="create">
-          <input v-model="newName" type="text" maxlength="24" class="min-w-0 flex-1 rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" :placeholder="$t('bots.namePlaceholder')" :aria-label="$t('common.name')" data-testid="bot-new-name" />
+          <input v-model="newName" type="text" v-max-chars="24" class="min-w-0 flex-1 rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" :placeholder="$t('bots.namePlaceholder')" :aria-label="$t('common.name')" data-testid="bot-new-name" />
           <button type="submit" :disabled="busy || !newName.trim()" class="btn btn-primary flex items-center gap-1.5" data-testid="bot-create">
             <Plus class="h-4 w-4" aria-hidden="true" />
             <span>{{ $t('bots.new') }}</span>
@@ -93,7 +100,7 @@ onMounted(async () => {
         <EmptyState v-if="loaded && !bots.length" :icon="Bot" :text="$t('bots.empty')" :hint="$t('bots.emptyHint')" class="rounded-lg border border-mnema-hairline bg-mnema-surface" />
         <ul v-if="bots.length" :aria-label="$t('bots.list')" class="overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
           <li v-for="bot in bots" :key="bot.id" :class="['border-b border-mnema-hairline last:border-b-0', selectedId === bot.id ? 'bg-mnema-accent-subtle' : '']" data-testid="bot-row">
-            <button type="button" class="flex w-full items-start gap-3 p-3 text-left" :aria-pressed="selectedId === bot.id" @click="selectedId = bot.id">
+            <button type="button" class="flex w-full items-start gap-3 p-3 text-left" :aria-pressed="selectedId === bot.id" @click="select(bot.id)">
               <img v-if="bot.avatar_url" :src="bot.avatar_url" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover" />
               <span v-else class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mnema-raised text-sm font-semibold text-mnema-muted" aria-hidden="true">{{ botInitial(bot.name) }}</span>
               <span class="min-w-0 flex-1 space-y-0.5">
@@ -112,7 +119,7 @@ onMounted(async () => {
         </ul>
       </div>
 
-      <BotDetailPanel v-if="selected" :key="selected.id" :bot="selected" @updated="onUpdated" @deleted="onDeleted" />
+      <BotDetailPanel v-if="selected" ref="detail" :key="selected.id" :bot="selected" @updated="onUpdated" @deleted="onDeleted" />
       <p v-else class="text-sm text-mnema-tertiary">{{ $t('bots.select') }}</p>
     </div>
   </section>

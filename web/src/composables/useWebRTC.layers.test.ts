@@ -282,12 +282,11 @@ describe('stream quality of my own share', () => {
 
   it('captures and sends a new share at 1080p and 30 fps', async () => {
     const { rtc, screen, voice } = await joined()
-    voice.setScreenQuality({ resolution: 720, fps: 15 })
     const { stream, track } = display4k()
     stubDisplayMedia(stream)
     await rtc.startScreenShare()
 
-    // Every new share starts at the default, whatever the last one used.
+    // The very first share starts at the default.
     expect(voice.screenQuality).toEqual({ resolution: 1080, fps: 30 })
     expect(present(present(vi.mocked(navigator.mediaDevices.getDisplayMedia).mock.calls[0])[0]).video).toEqual({ frameRate: { ideal: 30, max: 30 }, height: { max: 1080 } })
     const enc = present(lastParams(screen).encodings[0])
@@ -351,13 +350,68 @@ describe('stream quality of my own share', () => {
     expect(enc.maxBitrate).toBe(streamBitrate({ resolution: 720, fps: 15 }, { width: 3840, height: 2160 }))
   })
 
-  it('stopping resets the quality for the next share', async () => {
+  it('stopping keeps the last choice as the start of the next share', async () => {
     const { rtc, voice } = await joined()
     stubDisplayMedia(display4k().stream)
     await rtc.startScreenShare()
     voice.setScreenQuality({ resolution: 1440, fps: 60 })
     rtc.stopScreenShare()
-    expect(voice.screenQuality).toEqual({ resolution: 1080, fps: 30 })
+    expect(voice.screenQuality).toEqual({ resolution: 1440, fps: 60 })
+
+    const next = display4k()
+    stubDisplayMedia(next.stream)
+    await rtc.startScreenShare()
+    expect(present(present(vi.mocked(navigator.mediaDevices.getDisplayMedia).mock.calls.at(-1))[0]).video).toEqual({ frameRate: { ideal: 60, max: 60 }, height: { max: 1440 } })
+  })
+
+  it('changes quality and frame rate in a running share without picking the screen again', async () => {
+    const { rtc, screen, voice, sent } = await joined()
+    const { stream, track } = display4k({ scales: true })
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+    const picks = vi.mocked(navigator.mediaDevices.getDisplayMedia).mock.calls.length
+    const before = screen.setParameters.mock.calls.length
+    sent.length = 0
+
+    voice.setScreenQuality({ resolution: 720, fps: 60 })
+    await vi.waitFor(() => expect(track.applyConstraints).toHaveBeenLastCalledWith({ frameRate: { ideal: 60, max: 60 }, height: { max: 720 } }))
+    await vi.waitFor(() => expect(screen.setParameters.mock.calls.length).toBeGreaterThan(before))
+    const enc = present(lastParams(screen).encodings[0])
+    expect(enc.maxFramerate).toBe(60)
+    expect(enc.maxBitrate).toBe(streamBitrate({ resolution: 720, fps: 60 }, { width: 1280, height: 720 }))
+    expect(vi.mocked(navigator.mediaDevices.getDisplayMedia).mock.calls.length).toBe(picks)
+    expect(screen.track).toBe(track)
+    expect(track.stop).not.toHaveBeenCalled()
+    expect(voice.isScreenSharing).toBe(true)
+    // The viewers get a fresh picture at the new size (the server asks the sharer's own screen on screenshare_start).
+    expect(sent.some(e => e.type === 'webrtc_screenshare_start')).toBe(true)
+    expect(voice.screenQualityNeedsRestart).toBe(false)
+  })
+
+  it('switches between motion and clarity live and says so when the capture cannot be constrained', async () => {
+    const { rtc, voice } = await joined()
+    const { stream, track } = display4k()
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+    expect(track.contentHint).toBe('detail')
+
+    voice.setScreenQuality({ resolution: 1080, fps: 30, optimize: 'motion' })
+    await vi.waitFor(() => expect(track.contentHint).toBe('motion'))
+    expect(voice.screenQualityNeedsRestart).toBe(false)
+
+    track.applyConstraints = vi.fn(async () => { throw new Error('OverconstrainedError') })
+    voice.setScreenQuality({ resolution: 720, fps: 30, optimize: 'motion' })
+    await vi.waitFor(() => expect(voice.screenQualityNeedsRestart).toBe(true))
+    // The share itself keeps running; a restart is offered, never done silently.
+    expect(voice.isScreenSharing).toBe(true)
+    rtc.stopScreenShare()
+    expect(voice.screenQualityNeedsRestart).toBe(false)
+
+    // A capture picked anew was made at the chosen quality: nothing is left to restart.
+    voice.screenQualityNeedsRestart = true
+    stubDisplayMedia(display4k().stream)
+    await rtc.startScreenShare()
+    expect(voice.screenQualityNeedsRestart).toBe(false)
   })
 
   it('reports what the screen sender sends', async () => {

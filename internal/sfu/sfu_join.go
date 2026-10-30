@@ -63,6 +63,7 @@ func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDes
 			subs:         make(map[uuid.UUID]*Subscriptions),
 			lastMedia:    make(map[uuid.UUID]MediaState),
 			notifier:     s.notifier,
+			iceSeen:      s.iceSeen,
 			iceServers:   s.iceServers,
 			offerTimeout: s.offerTimeout,
 		}

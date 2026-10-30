@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/textcut"
 )
 
 // Register creates a regular user, consuming one use of a valid invite code.
@@ -236,11 +237,7 @@ func UpdateDisplayName(ctx context.Context, p *db.Pool, userID uuid.UUID, displa
 
 // defaultDisplayName is the username, cut to the display name limit.
 func defaultDisplayName(username string) string {
-	r := []rune(username)
-	if len(r) > MaxDisplayNameLen {
-		r = r[:MaxDisplayNameLen]
-	}
-	return string(r)
+	return textcut.Runes(username, MaxDisplayNameLen)
 }
 
 // SetPresence stores the presence userID chose.

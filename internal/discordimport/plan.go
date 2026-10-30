@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/textcut"
 )
 
 // Discord channel types the import knows.
@@ -159,7 +160,7 @@ func truncate(s string, max int) string {
 	if utf8.RuneCountInString(s) <= max {
 		return s
 	}
-	return strings.TrimSpace(string([]rune(s)[:max]))
+	return strings.TrimSpace(textcut.Runes(s, max))
 }
 
 // uniqueRoleName keeps a role's name unless it is reserved or an existing (or

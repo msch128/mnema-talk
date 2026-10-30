@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/mdplain"
+	"github.com/msch128/mnema-talk/internal/textcut"
 )
 
 // Payload is what the service worker receives (after the browser decrypted
@@ -29,8 +30,10 @@ type Payload struct {
 	ChannelSlug string     `json:"channel_slug,omitempty"`
 	MessageID   *uuid.UUID `json:"message_id,omitempty"`
 	ParentID    *uuid.UUID `json:"parent_id,omitempty"`
-	Mention     bool       `json:"mention,omitempty"`
-	Timestamp   int64      `json:"ts"`
+	// EventID is the community event of an event reminder; a click opens it.
+	EventID   *uuid.UUID `json:"event_id,omitempty"`
+	Mention   bool       `json:"mention,omitempty"`
+	Timestamp int64      `json:"ts"`
 }
 
 // Payload types.
@@ -85,7 +88,11 @@ type Notice struct {
 	Poll bool
 	// DM is set for a message of a direct message conversation: the push
 	// shows the sender and no channel name.
-	DM      bool
+	DM bool
+	// Call is "call" for the invitation card of a call and "missed" for the
+	// record of one nobody answered; the push then says so instead of showing
+	// an empty message.
+	Call    string
 	Mention bool
 	// Addressed is set when the message is meant for the member itself (see addressed); it decides about a mute.
 	Addressed bool
@@ -115,15 +122,29 @@ func build(n Notice, locale string, preview bool) Payload {
 		}
 		return p
 	}
-	p.Title = sender + " (#" + channel + ")"
+	p.Title = sender + " (#" + channel + threadSuffix(n, locale) + ")"
 	p.Body = line
 	return p
+}
+
+// threadSuffix says that a message is a reply in a thread, so the title does
+// not suggest it was written in the channel itself.
+func threadSuffix(n Notice, locale string) string {
+	if n.ParentID == nil {
+		return ""
+	}
+	return ", " + text(locale, "thread")
 }
 
 // buildDM composes the push of a direct message: the sender's name, never a
 // channel; a burst from possibly several people is titled by the kind of
 // conversation.
 func buildDM(p Payload, n Notice, sender, locale, line string, preview bool) Payload {
+	if n.Count <= 1 && n.Call != "" {
+		p.Title = fmt.Sprintf(text(locale, n.Call+"_title"), sender)
+		p.Body = text(locale, n.Call+"_body")
+		return p
+	}
 	if n.Count > 1 {
 		p.Title = text(locale, "dm")
 		p.Body = fmt.Sprintf(text(locale, "group"), n.Count)
@@ -133,6 +154,9 @@ func buildDM(p Payload, n Notice, sender, locale, line string, preview bool) Pay
 		return p
 	}
 	p.Title, p.Body = sender, line
+	if n.ParentID != nil {
+		p.Title = sender + " (" + text(locale, "thread") + ")"
+	}
 	return p
 }
 
@@ -180,8 +204,7 @@ func clean(s string, limit int) string {
 	if utf8.RuneCountInString(s) <= limit {
 		return s
 	}
-	runes := []rune(s)
-	return strings.TrimSpace(string(runes[:limit-1])) + "…"
+	return strings.TrimSpace(textcut.Runes(s, limit-1)) + "…"
 }
 
 // testPayload is what the test button sends.

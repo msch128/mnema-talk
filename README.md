@@ -57,7 +57,7 @@ no accounts on someone else's platform.
   **Join** in the Talk's header. Reading needs *View channels*, writing
   *Send messages*; *Connect* is not required.
 - **Create-a-Talk lobbies, Stages and live reactions.** Joining a lobby opens a
-  temporary Talk ("Talk 1", "Talk 2", ...) that you lead; it disappears when it
+  temporary Talk named after the lobby ("Lobby 1", "Lobby 2", ...) that you lead; it disappears when it
   is empty. *Start a Talk* in a direct message opens one and invites the
   conversation. A Talk can be a **Stage**: only members with talk power speak,
   others raise a hand and a member with *Manage stage* accepts it. Members in a
@@ -87,8 +87,11 @@ no accounts on someone else's platform.
   back), threads, reactions, emoji, @mentions, file and image attachments,
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.
-- **A composer that grows** with multi-line text. Paste (Ctrl/Cmd+V) or drag and
-  drop an image or video into a chat to attach it; a message carries one file.
+- **A composer that grows** with multi-line text. Paste (Ctrl/Cmd+V), drag and
+  drop or pick up to 10 files per message: they wait in a tray above the composer
+  (upload progress, remove, retry) and go out only when you send. Several images
+  show as a gallery; a viewer steps through them with file name, sender, time, size and
+  dimensions.
 - **Pinned messages** (with who pinned them and when), **polls**, **custom
   emoji** managed by the community (and `:shortcode` suggestions for standard emoji), **edit history** for moderators, **drafts**
   that survive a reload and a **jump to the first unread message**.
@@ -98,7 +101,7 @@ no accounts on someone else's platform.
   90 days; it is shown on the channel, audited, and never touches pinned
   messages or direct messages ([doc/moderation.md](doc/moderation.md#auto-delete)).
 - **Speaking addresses.** Channels, Talks, forum posts and conversations have readable web addresses (`/c/general`, `/v/lounge`, `/c/ideas/p/new-kitchen-0f3a9c1e`, `/dm/alice`) that survive renames; old links by id keep working ([doc/upgrade.md](doc/upgrade.md#speaking-urls)).
-- **Forum channels.** Structured discussions with posts as cards, up to 20 admin tags, tag filtering, sorting by latest activity, and moderation locks ([doc/forums.md](doc/forums.md)).
+- **Forum channels.** Structured discussions with posts as cards: coloured, ordered and moderator-only tags that authors can change afterwards, required tags and guidelines per forum, search, tag filter and sorting, pinned and solved posts, locks, unread markers with a jump to the first unread reply, and a first message with formatting and files ([doc/forums.md](doc/forums.md)).
 - **Community events.** Scheduled events with a description, a cover image, a
   location (a Talk or free text), RSVPs and a reminder 15 minutes before the
   start. Creating them needs the *Manage events* permission, which the seeded Moderator
@@ -106,7 +109,10 @@ no accounts on someone else's platform.
 - **Saved messages and forwarding.** Keep a private list of up to 1,000
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the
-  reader may already see.
+  reader may already see. A saved message carries a small bookmark (click it to
+  take the message off again), and the header's bookmark button opens *Saved &
+  reminders*: your saved messages, searchable and sortable by channel, next to
+  your reminders and scheduled messages.
 - **Status that clears itself.** Set a custom status with **Clear after** one
   hour, tonight, tomorrow morning, never or a date and time of your own. Your
   device works out the time in your time zone; the server clears the status
@@ -213,8 +219,8 @@ no accounts on someone else's platform.
   it in **Admin > Reports**, which needs the permission *Manage reports*; for a
   direct message this copy is the only part of it they can read. The author is
   not told.
-- **The Owner can switch direct messages off** for the community under
-  **Admin > Welcome & rules**: nothing new can then be started or written, and
+- **The Owner and Administrators can switch direct messages off** for the community under
+  **Admin > Sign-in & messages**: nothing new can then be started or written, and
   existing conversations stay readable. A 1.0.x server has none of this, and
   the web app hides it there.
 

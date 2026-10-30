@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { buildNotificationBody, messageMentionsMeDirectly } from './chat/notifications'
+import { buildNotificationBody, messageMentionsMeDirectly, triggerBrowserNotification } from './chat/notifications'
+import { platform } from '../lib/platform'
+import { vi } from 'vitest'
+import { notifyShowsText } from '../lib/notifyPreview'
 import type { Cx } from './chat/state'
 import { usePermissionsStore } from './permissions'
 import { setLocale } from '../i18n'
@@ -35,5 +38,42 @@ describe('what counts as addressed to me', () => {
     expect(messageMentionsMeDirectly(cx, messageFixture({ content: 'ok', reply_to: { id: 'x', user_id: 'me', content: '', deleted: false } as never }))).toBe(true)
     expect(messageMentionsMeDirectly(cx, messageFixture({ content: '@all hi', mentions: ['me'] }))).toBe(false)
     expect(messageMentionsMeDirectly(cx, messageFixture({ content: 'ping', mention_roles: ['r2'] }))).toBe(false)
+  })
+})
+
+describe('what an OS notification says and where its click leads', () => {
+  const channel = { id: 'ch1', name: 'general' }
+  const cx = {
+    authStore: { user: userFixture({ id: 'me', username: 'max', presence: 'online' }) },
+    cs: {
+      allChannels: { value: [channel] }, activeChannel: { value: null }, followKnown: { value: false }, followedThreads: { value: new Set() },
+      readStates: { value: {} }
+    },
+  } as unknown as Cx
+
+  beforeEach(() => { notifyShowsText.value = true })
+
+  function shown(msg: ReturnType<typeof messageFixture>) {
+    const notify = vi.spyOn(platform, 'notify').mockImplementation(() => {})
+    vi.spyOn(platform, 'notificationPermission').mockReturnValue('granted')
+    triggerBrowserNotification(cx, msg, true)
+    return notify.mock.calls[0]?.[0]
+  }
+
+  it('names who wrote and in which channel, and carries the message for the click', () => {
+    const n = shown(messageFixture({ id: 'm1', channel_id: 'ch1', display_name: 'Alice', content: 'hello @max' }))
+    expect(n).toMatchObject({ title: 'Alice (#general)', channelId: 'ch1', messageId: 'm1' })
+    expect(n?.body).toContain('hello')
+  })
+
+  it('shows no message text when the member or the operator turned it off', () => {
+    notifyShowsText.value = false
+    const n = shown(messageFixture({ id: 'm3', channel_id: 'ch1', display_name: 'Alice', content: 'secret' }))
+    expect(n?.body).not.toContain('secret')
+  })
+
+  it('says when it is a reply in a thread', () => {
+    const n = shown(messageFixture({ id: 'm2', channel_id: 'ch1', parent_id: 'root', display_name: 'Alice', content: 'sure' }))
+    expect(n?.title).toBe('Alice (#general, Thread)')
   })
 })

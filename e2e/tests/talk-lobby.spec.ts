@@ -49,20 +49,20 @@ test('joining a lobby opens a Talk, its leader hands over, and the empty Talk go
   }
   await b.reload()
 
-  // The admin joins the lobby and lands in a new Talk, not in the lobby.
-  const lobbyRow = (page: Page) => page.locator('[data-channel-type="voice"]', { hasText: LOBBY })
+  // The admin joins the lobby and lands in a new Talk named after it ("<lobby> 1"), not in the lobby.
+  const lobbyRow = (page: Page) => page.locator('[data-channel-type="voice"]', { hasText: LOBBY, hasNotText: new RegExp(`${LOBBY} \\d+`) })
   await lobbyRow(a).click()
   await expectTalkLive(a)
-  const talks = a.locator('[data-channel-type="voice"]', { hasText: /Talk \d+/ })
+  const talks = a.locator('[data-channel-type="voice"]', { hasText: new RegExp(`${LOBBY} \\d+`) })
   await expect(talks.first()).toBeVisible()
   await expect(lobbyRow(a).locator('xpath=..').locator('[data-voice-user]')).toHaveCount(0)
 
   // The first Talk shows its leader.
-  const firstTalk = a.locator('[data-channel-item]', { has: a.locator('[data-voice-user]') }).first()
+  const firstTalk = a.locator('[data-channel-item]', { has: a.locator('[data-voice-user]'), hasText: new RegExp(`${LOBBY} \\d+`) }).first()
   await expect(firstTalk.getByTestId('talk-leader-mark')).toBeVisible()
 
   // A second member joins that Talk; the admin leaves; the member leads now.
-  await b.locator('[data-channel-type="voice"]', { hasText: /Talk \d+/ }).first().click()
+  await b.locator('[data-channel-type="voice"]', { hasText: new RegExp(`${LOBBY} \\d+`) }).first().click()
   await expectTalkLive(b)
   await a.getByRole('button', { name: 'Verlassen' }).first().click()
   await expect(b.locator('[data-voice-user]').getByTestId('talk-leader-mark')).toBeVisible({ timeout: 15_000 })

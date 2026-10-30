@@ -76,6 +76,14 @@ until the new release has passed your application checks.
 
 Update with the procedure above and take the backup first. Nothing in `.env` has to change.
 
+The in-app privacy policy is now version 1.7 (the version is shown on the
+page; members are not asked to accept it again). It describes the TURN relay
+built into the server as part of your instance (IP address and port seen,
+encrypted media it cannot read, nothing stored persistently) while it is
+offered, and it names the external TURN servers from `WEBRTC_TURN_URLS`, which
+earlier versions never listed. `GET /api/legal` gains the field `builtin_turn`.
+If you publish your own copy of the policy, update it to match.
+
 Migration 0077 drops `native_session_families`, `native_access_tokens`,
 `native_refresh_tokens` and `native_ciphertext_events` (added by 0015 and 0016).
 They belonged to a native client transport that was never mounted in a release;
@@ -153,6 +161,9 @@ of the pre-update backup (see "Rollback" above).
 | 0074 | `dm_members.hidden_at` and `dm_members.favourite_pos`, `users.dm_mute_all` and `users.dm_list_collapsed`: member-local direct message list preferences (see [Direct message list](#direct-message-list-close-favourites-mute-all)). |
 | 0075 | `channels.slug` and `channel_slugs`: the speaking addresses of channels (see "Speaking URLs"). Every existing channel except a direct message gets its slug in the same migration. |
 | 0076 | `messages_channel_unread_idx`: covering index on `messages (channel_id, created_at) INCLUDE (user_id, parent_id, reply_to_id)` for the unread counts. Adds an index only; building it briefly slows message writes on a very large database. |
+| 0077 | Drops the unused native-client tables (`native_session_families`, `native_access_tokens`, `native_refresh_tokens`, `native_ciphertext_events`) of migrations 0015 and 0016. Nothing wrote them any more. |
+| 0078 | Drops the redundant index `idx_messages_channel_created`, covered by `messages_channel_unread_idx` (0076). |
+| 0082 | Forum rework: `forum_tags.color`, `forum_tags.position` (existing tags keep their name order) and `forum_tags.moderated`, `forum_settings` (require a tag, guidelines), `messages.is_resolved` and `forum_post_reads` (per-post read markers). Adds columns and tables only; existing rows keep the defaults. See [Forum channels](forums.md). |
 
 #### Speaking URLs
 
@@ -342,7 +353,7 @@ them under **Admin > Automod** and change or delete what does not suit you:
 | Links | **off** (block-list mode, empty list) |
 
 The Owner and Administrators are never checked. The effect you may notice: a
-member who joined a few minutes ago gets "it breaks the server rule" when
+member who joined a few minutes ago gets "it breaks the community rule" when
 posting a link, and a burst of invitations used at once (a party of more than 10
 within 10 seconds) is held back for 10 minutes; delete or loosen the rule if
 that does not suit your community. Nothing changes for existing messages.

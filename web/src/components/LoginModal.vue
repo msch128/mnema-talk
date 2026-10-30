@@ -11,6 +11,7 @@ import SecondFactorStep from './SecondFactorStep.vue'
 import PasswordInput from './PasswordInput.vue'
 import { useDialog } from '../composables/useDialog'
 import { useCommunityName } from '../composables/useCommunityName'
+import { communityIconUrl } from '../lib/communityIcon'
 import { t, locale, chooseLocale, SUPPORTED } from '../i18n'
 import type { InviteContext } from '../lib/inviteLink'
 import { normalizeUsername } from '../lib/username'
@@ -49,6 +50,9 @@ const isLoading = ref(false)
 const communityName = useCommunityName()
 // The sign-in options carry the server's own name for the pre-login heading.
 const optionsName = ref('')
+// The icon is as public as the name: it shows before anyone has signed in.
+const optionsIcon = ref('')
+const communityIcon = computed(() => communityIconUrl(optionsIcon.value, 128))
 const heading = computed(() => (props.invite?.valid && props.invite.communityName) || optionsName.value || communityName.value)
 const inviteDead = computed(() => props.invite?.valid === false)
 const expiry = computed(() => {
@@ -78,6 +82,7 @@ async function loadOptions() {
     const options = await api('/api/auth/options', { decode: decodeAuthAuthOptions })
     canResetPassword.value = options.password_reset
     optionsName.value = options.community_name?.trim() ?? ''
+    optionsIcon.value = options.community_icon ?? ''
     optionsLoaded.value = true
   } catch {
     // Offline or limited: the form works without the link.
@@ -142,7 +147,8 @@ async function handleSubmit() {
     >
       <!-- Brand & Title -->
       <div class="text-center space-y-2">
-        <div class="w-9 h-9 rounded-lg bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-bold text-base mx-auto shadow-xs">
+        <img v-if="communityIcon" :src="communityIcon" alt="" class="w-9 h-9 rounded-lg object-cover mx-auto shadow-xs" data-testid="login-icon" />
+        <div v-else class="w-9 h-9 rounded-lg bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-bold text-base mx-auto shadow-xs">
           M
         </div>
         <div>

@@ -25,6 +25,7 @@ func newSnapshot(now time.Time) *Snapshot {
 		channelCat: map[uuid.UUID]uuid.UUID{},
 		stages:     map[uuid.UUID]bool{},
 		dms:        map[uuid.UUID]map[uuid.UUID]bool{},
+		dmTalks:    map[uuid.UUID]uuid.UUID{},
 		dmEnabled:  true,
 		categories: map[uuid.UUID]bool{},
 		channelOv:  map[uuid.UUID]*scope{},
@@ -125,6 +126,7 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	bots := load(r, `SELECT user_id FROM bots`, pgx.RowTo[uuid.UUID])
 	cats := load(r, `SELECT id FROM categories`, pgx.RowTo[uuid.UUID])
 	chans := load(r, `SELECT id, category_id, is_stage FROM channels WHERE type <> 'dm'`, pgx.RowToStructByPos[channelRow])
+	dmTalks := load(r, `SELECT id, dm_id FROM channels WHERE dm_id IS NOT NULL`, pgx.RowToStructByPos[dmTalkRow])
 	dmRows := load(r, `SELECT channel_id, user_id FROM dm_members`, pgx.RowToStructByPos[dmMemberRow])
 	ows := load(r, `SELECT channel_id, category_id, role_id, user_id, allow, deny FROM permission_overwrites`, pgx.RowToStructByPos[overwriteRow])
 	if r.err != nil {
@@ -145,6 +147,9 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	}
 	s.addChannels(chans)
 	s.addDMs(dmRows, dmOn)
+	for _, t := range dmTalks {
+		s.dmTalks[t.Talk] = t.DM
+	}
 	s.addOverwrites(ows)
 	return nil
 }

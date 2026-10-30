@@ -165,7 +165,7 @@ onMounted(load)
       <!-- The way to close it stays in reach however long the copy is. -->
       <form v-if="isOpen" class="sticky bottom-0 -mx-6 -mb-6 space-y-2 border-t border-mnema-hairline bg-mnema-elevated px-6 py-3 max-md:-mx-4 max-md:-mb-4 max-md:px-4" data-testid="report-actions" @submit.prevent>
         <label for="report-resolution" class="block text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('reports.admin.resolutionNote') }}</label>
-        <textarea id="report-resolution" v-model="note" rows="1" :maxlength="REPORT_NOTE_MAX" data-testid="report-resolution" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"></textarea>
+        <textarea id="report-resolution" v-model="note" rows="1" v-max-chars="REPORT_NOTE_MAX" data-testid="report-resolution" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"></textarea>
         <div class="flex flex-wrap items-center gap-2">
           <button type="button" :disabled="busy" data-testid="report-resolve" class="btn btn-primary" @click="close('resolved')">{{ $t('reports.admin.resolve') }}</button>
           <button type="button" :disabled="busy" data-testid="report-dismiss" class="btn btn-secondary" @click="close('dismissed')">{{ $t('reports.admin.dismiss') }}</button>

@@ -2,8 +2,12 @@
 // value is measured by the browser; nothing here is estimated or invented.
 import { t } from '../i18n'
 import type { MediaStat } from './mediaStats'
+import { NO_LINES, micStream, summarizeFlows } from './rtcFlows'
+import type { FlowBytes, MicState, SendLines } from './rtcFlows'
 
-export interface RTCStatsSample { timestamp: number; bytesSent: number; bytesReceived: number }
+export interface RTCStatsSample { timestamp: number; bytesSent: number; bytesReceived: number; flows?: FlowBytes }
+/** What the caller knows about the connection that the report cannot say. */
+export interface StatsContext { lines?: SendLines; micState?: MicState }
 export interface ReceivedVideo { width: number; height: number; fps: number }
 interface AudioCounters { packetsReceived: number; packetsLost: number; jitter: number; bytesReceived: number; codecId: string | undefined }
 
@@ -69,15 +73,12 @@ function addInboundAudio(total: AudioCounters | null, s: MediaStat): AudioCounte
   return mergedAudio(total, s)
 }
 
-function audioStreams(byId: Map<string, MediaStat>) {
+function inboundAudio(byId: Map<string, MediaStat>) {
   let inAudio: AudioCounters | null = null
-  let outAudio: MediaStat | null = null
   for (const s of byId.values()) {
-    if (s.kind !== 'audio') continue
-    if (s.type === 'inbound-rtp') inAudio = addInboundAudio(inAudio, s)
-    else if (s.type === 'outbound-rtp') outAudio = s
+    if (s.kind === 'audio' && s.type === 'inbound-rtp') inAudio = addInboundAudio(inAudio, s)
   }
-  return { inAudio, outAudio }
+  return inAudio
 }
 
 function inboundPicture(s: MediaStat): ReceivedVideo | null {
@@ -151,21 +152,24 @@ function presentCipher(value: string | undefined): string | null {
   return value
 }
 
-export function summarizeStats(stats: Iterable<MediaStat>, prev: RTCStatsSample | null = null) {
+export function summarizeStats(stats: Iterable<MediaStat>, prev: RTCStatsSample | null = null, ctx: StatsContext = {}) {
   const byId = new Map<string, MediaStat>()
   for (const s of stats) byId.set(s.id, s)
-  return describeStats(byId, prev)
+  return describeStats(byId, prev, ctx)
 }
 
-function describeStats(byId: Map<string, MediaStat>, prev: RTCStatsSample | null) {
+function describeStats(byId: Map<string, MediaStat>, prev: RTCStatsSample | null, ctx: StatsContext) {
+  const lines = ctx.lines ?? NO_LINES
   const pair = selectedPair(byId)
-  const { inAudio, outAudio } = audioStreams(byId)
+  const inAudio = inboundAudio(byId)
+  const outAudio = micStream(byId.values(), lines)
   const codecStat = codecStatOf(byId, outAudio, inAudio)
   const transport = [...byId.values()].find(s => s.type === 'transport')
   const timestamp = pair?.timestamp ?? outAudio?.timestamp ?? Date.now()
   const bytesSent = pair?.bytesSent ?? outAudio?.bytesSent ?? 0
   const bytesReceived = pair?.bytesReceived ?? inAudio?.bytesReceived ?? 0
-  const sample = { timestamp, bytesSent, bytesReceived }
+  const counted = summarizeFlows(byId.values(), lines, prev?.flows ?? null, timestamp)
+  const sample = { timestamp, bytesSent, bytesReceived, flows: counted.sample }
   const received = inAudio?.packetsReceived ?? 0
   const lost = Math.max(0, inAudio?.packetsLost ?? 0)
   return {
@@ -175,6 +179,8 @@ function describeStats(byId: Map<string, MediaStat>, prev: RTCStatsSample | null
     packetsReceived: received,
     packetsLost: lost,
     packetsSent: outAudio?.packetsSent ?? 0,
+    flows: counted.flows,
+    micState: ctx.micState ?? 'none',
     lossPercent: lossPercent(received, lost),
     ...bitrates(prev, sample),
     codec: codecLabel(codecStat),

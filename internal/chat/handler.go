@@ -54,6 +54,9 @@ type Handler struct {
 	DMLimit *httpx.RateLimiter
 	// Talks runs the Create-a-Talk lobbies; nil switches the feature off.
 	Talks *TalkManager
+	// Calls rings the members of a conversation when a Talk is started or shared
+	// in it; nil means no ringing (the invitation card is still posted).
+	Calls *DMCalls
 	// TalkLimit caps Talk edits and invitations per member; nil means no cap.
 	TalkLimit *httpx.RateLimiter
 }

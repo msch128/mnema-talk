@@ -244,9 +244,9 @@ test('the Owner switches direct messages off and on again', async ({ browser }) 
     await expect(member.getByTestId('dm-new')).toBeVisible()
 
     // Off: nobody can start or write, the member sees it without reloading, history stays readable.
-    await owner.goto('/admin/onboarding')
+    await owner.goto('/admin/access')
     await owner.getByTestId('dm-enabled').uncheck()
-    await owner.getByTestId('onboarding-save').click()
+    await owner.getByTestId('access-save').click()
     await expect(owner.getByTestId('dm-enabled')).not.toBeChecked()
     await expect(composer).toBeDisabled()
     await expect(composer).toHaveAttribute('placeholder', 'Du kannst gerade keine Direktnachrichten schreiben.')
@@ -255,7 +255,7 @@ test('the Owner switches direct messages off and on again', async ({ browser }) 
 
     // On again.
     await owner.getByTestId('dm-enabled').check()
-    await owner.getByTestId('onboarding-save').click()
+    await owner.getByTestId('access-save').click()
     await expect(composer).toBeEnabled()
     await expect(member.getByTestId('dm-new')).toBeVisible()
   } finally {

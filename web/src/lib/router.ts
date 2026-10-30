@@ -6,6 +6,8 @@ import { dmPath, talkPath, textPath, type PathChannel, type PathDm } from './rou
 export type Route =
   | { view: 'root' }
   | { view: 'admin'; tab: string }
+  // The member's own settings dialog, on one section.
+  | { view: 'settings'; tab: string }
   // channelRef is what the address says: a slug, a former slug or (legacy links) an id.
   | { view: 'chat'; channelRef: string; messageId?: string; threadId?: string; postRef?: string }
   | { view: 'voice'; channelRef: string; showChat?: boolean; messageId?: string; watching: boolean }
@@ -65,6 +67,7 @@ export function parseRoute(pathname = (typeof window !== 'undefined' ? window.lo
   if (parts[0] === 'v' && parts[1]) return parseVoiceRoute(parts)
   if (parts[0] === 'dm' && parts[1]) return parseDmRoute(parts)
   if (parts[0] === 'admin') return { view: 'admin', tab: parts[1] || 'users' }
+  if (parts[0] === 'settings') return { view: 'settings', tab: parts[1] || 'signin' }
   return { view: 'root' }
 }
 

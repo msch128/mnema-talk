@@ -11,13 +11,15 @@ If `docker compose ps` shows the app restarting, read `docker compose logs app`.
 A missing or placeholder required setting is reported all at once:
 
 ```
-Mnema Talk cannot start – fix these settings in .env:
-  ...
+Mnema Talk cannot start - fix these settings in .env:
+  - ...
 ```
 
 Fix every listed line in `.env` (the six required settings are in
 [Settings at a glance](operations.md#settings-at-a-glance)) and run
-`docker compose up -d`. Other startup messages are explained under
+`docker compose up -d`. The app exits with status 78 in this case.
+Before the first start, `docker run --rm -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup --check`
+prints the same list for the `.env` in the current folder. Other startup messages are explained under
 [The app does not start](operations.md#the-app-does-not-start).
 
 ## The ladder
@@ -48,15 +50,19 @@ start. Every amber or red item says what to change. What the items mean:
 
 | Item | Plain meaning | Red or amber means |
 |---|---|---|
-| Public address | `PUBLIC_URL`: the address members type | It is `localhost`, plain `http://`, or not the address you opened (a proxy must pass `Host` and `X-Forwarded-Proto`) |
-| Voice address | The public IP the server tells browsers to send media to, and where it got it | It found none: set `WEBRTC_NAT_1TO1_IP`. If the address it found is private or in `100.64.0.0/10`, a CGNAT warning appears: see [Can I host at home?](quick-start.md#can-i-host-at-home) |
-| Voice port | The server listens for media on UDP 50000 | Red: the voice engine did not start (ports busy). Amber: `WEBRTC_UDP_MUX_PORT=0` caps callers. Reads "Listening – not yet confirmed from outside" until a member from outside your network has connected, then "Confirmed: a member from outside connected" |
-| TURN relay | The built-in relay for networks that block UDP | It could not bind port 3479, did not answer on it from the server (a router without NAT loopback also causes that although the forward works), or is off with no external TURN: members behind strict networks cannot join |
-| WebSocket | Your session reached the server through the proxy as a WebSocket | The proxy does not pass `Upgrade` and `Connection` |
+| Public address | `PUBLIC_URL`: the address members type | Amber: it is `localhost` (fine for a trial on one computer), plain `http://`, or not the address you opened (a proxy must pass `Host` and `X-Forwarded-Proto`) |
+| Voice address | The public IP the server tells browsers to send media to, and where it got it | Red: it found none and no TURN is set: set `WEBRTC_NAT_1TO1_IP`. Amber: none, but a TURN relay is set |
+| Voice port | The server listens for media on UDP 50000 | Red: the voice engine did not start (ports busy). Amber: `WEBRTC_UDP_MUX_PORT=0` caps callers. Grey "Listening – not yet confirmed from outside" until a member from outside your network has connected, then green "Confirmed: a member from outside connected" |
+| TURN relay | The built-in relay for networks that block UDP | Amber: it could not bind port 3479, or is off with no external TURN (members behind strict networks cannot join). Grey "Not verified": the server could not reach its own relay port from inside, which a router without NAT loopback also causes although the forward works; run Test my connection from a phone on mobile data |
+| Internet connection | Whether your line can receive forwarded ports | Shown only when there is a finding. Red: the WAN address is in `100.64.0.0/10` (CGNAT). Amber: no public IPv4 while IPv6 works (DS-Lite), or the host's own address differs from the one the internet sees. See [Can I host at home?](quick-start.md#can-i-host-at-home) |
+| WebSocket | Your browser's live connection through the proxy | Grey until a browser has connected; amber when browsers keep opening `/api/ws` without the upgrade headers: the proxy does not pass `Upgrade` and `Connection` |
 | Reverse proxy | Requests arrive from a trusted proxy | The proxy is not in `TRUSTED_PROXY_CIDRS`, or the setting is too broad |
 | Outgoing mail | SMTP is set | Optional |
 | Object storage, Database | The containers answer | A container is down or the secrets in `.env` do not match |
 | Server clock | The host clock is right | Turn on NTP |
+
+Each item has stable check codes, such as `voice_udp.unconfirmed` or
+`network.cgnat`, listed with their meaning in [operations.md](operations.md#test-my-connection).
 
 Green does not prove that your router forwards UDP: the server cannot test that
 from inside. Use rungs 4 and 5.
@@ -143,7 +149,7 @@ On Synology without a shell: Container Manager > Container > `mnema-talk` > Log.
 | Everyone shares one rate limit, or gets locked out together | The app sees the proxy's address instead of the visitors' | Put the proxy address named in Status > Reverse proxy into `TRUSTED_PROXY_CIDRS` |
 | No sound even on the same LAN | Microphone permission, wrong input device, a silent microphone | Browser site settings and the in-app audio settings; test two tabs on one computer to rule the network out |
 | Works on the LAN, not from outside | UDP 50000-50050 not forwarded, host firewall, wrong announced address | Forward the whole range to the host's LAN address, open the host firewall, check `webrtc announce` |
-| Works from outside, not on the LAN | The router has no NAT loopback | Add the server's LAN address after the public one: `WEBRTC_NAT_1TO1_IP=203.0.113.7,192.168.1.20`, or use split-horizon DNS |
+| Works from outside, not on the LAN | The router has no NAT loopback | Set `WEBRTC_LAN_IP=192.168.1.20` (the server's address in your network; the setup assistant asks for it), or list it after the public one: `WEBRTC_NAT_1TO1_IP=203.0.113.7,192.168.1.20`; or use split-horizon DNS |
 | Nobody outside ever connects, though ports are forwarded | CGNAT or DS-Lite: your line has no public IPv4 | [Can I host at home?](quick-start.md#can-i-host-at-home); move to a VPS |
 | Connects, then drops after seconds | Wrong announced address, or only part of the range forwarded | Check `webrtc announce`; forward the whole range |
 | One person cannot join, the others can | Their network blocks UDP (company, VPN, Opera VPN or WebRTC protection) | Forward 3479 on UDP **and** TCP, run the [probe](#probe-the-turn-relay-from-outside), try another network |

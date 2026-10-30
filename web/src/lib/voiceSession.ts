@@ -3,9 +3,13 @@
 // that heartbeat is younger than RESUME_WINDOW_MS. Leaving on purpose clears it.
 // The server keeps the user listed for the same window (ws.DefaultVoiceGrace).
 
+import { visibleInterval } from './pageVisibility'
+
 export const STORAGE_KEY = 'mnema.voice.session'
 export const RESUME_WINDOW_MS = 30_000
 const HEARTBEAT_MS = 5_000
+// Well inside RESUME_WINDOW_MS, and a hidden page stamps less often.
+const HIDDEN_HEARTBEAT_MS = 15_000
 
 function storage() {
   try {
@@ -71,14 +75,14 @@ export function recent(now = Date.now(), windowMs = RESUME_WINDOW_MS) {
   return fields.channelId
 }
 
-let heartbeat: ReturnType<typeof setInterval> | null = null
+let stopHeartbeat: (() => void) | null = null
 let onPageHide: (() => void) | null = null
 
 /** Starts remembering channelId until stop() or clear(). */
 export function track(channelId: string) {
   untrack()
   save(channelId)
-  heartbeat = setInterval(() => save(channelId), HEARTBEAT_MS)
+  stopHeartbeat = visibleInterval(() => save(channelId), HEARTBEAT_MS, { hiddenMs: HIDDEN_HEARTBEAT_MS, catchUp: false })
   // Stamp the exact moment the page goes away, so the window starts there.
   onPageHide = () => save(channelId)
   window.addEventListener('pagehide', onPageHide)
@@ -86,8 +90,8 @@ export function track(channelId: string) {
 
 /** Stops the heartbeat but keeps the last timestamp (e.g. connection loss). */
 export function untrack() {
-  if (heartbeat) clearInterval(heartbeat)
-  heartbeat = null
+  stopHeartbeat?.()
+  stopHeartbeat = null
   if (onPageHide) window.removeEventListener('pagehide', onPageHide)
   onPageHide = null
 }

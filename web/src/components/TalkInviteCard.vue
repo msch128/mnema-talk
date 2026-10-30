@@ -7,8 +7,7 @@ import { Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
-import { useWebRTC } from '../composables/useWebRTC'
-import { navigate } from '../lib/router'
+import { useDmCall } from '../composables/useDmCall'
 
 const props = defineProps({
   talkId: { type: String, required: true },
@@ -21,18 +20,14 @@ const props = defineProps({
 const chat = useChatStore()
 const voice = useVoiceStore()
 const permissions = usePermissionsStore()
-const { joinVoiceChannel } = useWebRTC()
+const call = useDmCall()
 
 const talk = computed(() => chat.allChannels.find(c => c.id === props.talkId && c.type === 'voice') ?? null)
 const canJoin = computed(() => !!talk.value && permissions.canIn(props.talkId, 'connect'))
 const inIt = computed(() => voice.currentChannelId === props.talkId)
 
 function join() {
-  if (!talk.value) return
-  void chat.selectChannel(talk.value)
-  void joinVoiceChannel(props.talkId)
-  voice.activeView = 'voice'
-  navigate(chat.linkTo(props.talkId))
+  void call.join(props.talkId)
 }
 </script>
 
@@ -45,6 +40,6 @@ function join() {
     </div>
     <span v-if="inIt" class="text-xs text-mnema-tertiary" data-testid="talk-invite-in">{{ $t('talk.inviteIn') }}</span>
     <button v-else-if="canJoin" type="button" class="btn btn-primary h-8 shrink-0" data-testid="talk-invite-join" @click="join">{{ $t('voice.join') }}</button>
-    <span v-else class="text-xs text-mnema-tertiary" data-testid="talk-invite-unavailable">{{ $t('talk.inviteUnavailable') }}</span>
+    <span v-else class="text-xs text-mnema-tertiary" data-testid="talk-invite-unavailable">{{ $t(talk ? 'talk.inviteUnavailable' : 'talk.inviteEnded') }}</span>
   </div>
 </template>

@@ -8,6 +8,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+
+	"github.com/msch128/mnema-talk/internal/textcut"
 )
 
 // OpPresenceUpdate is Discord's PRESENCE_UPDATE opcode: the bot sets its own
@@ -131,10 +133,7 @@ func cleanActivity(s string) string {
 		return r
 	}, s)
 	s = strings.Join(strings.Fields(s), " ")
-	if r := []rune(s); len(r) > MaxActivityLen {
-		s = strings.TrimSpace(string(r[:MaxActivityLen]))
-	}
-	return s
+	return strings.TrimSpace(textcut.Runes(s, MaxActivityLen))
 }
 
 // setPresence stores a bot's presence and reports it to OnStatus. A status

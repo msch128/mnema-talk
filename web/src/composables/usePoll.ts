@@ -11,6 +11,7 @@ import { useToastStore } from '../stores/toast'
 import { caughtErrorMessage } from '../lib/api'
 import { isEnded, nextSelection, remaining, votedFor } from '../lib/polls'
 import { t } from '../i18n'
+import { visibleInterval } from '../lib/pageVisibility'
 
 const TICK_MS = 15_000
 // setTimeout cannot wait longer than a signed 32-bit number of milliseconds.
@@ -18,7 +19,7 @@ const MAX_TIMEOUT_MS = 2 ** 31 - 1
 
 /** Keeps `now` current: a slow tick for the counter, and a timeout that flips the card the moment voting ends. */
 function useClock(now: Ref<number>, closesAt: () => string) {
-  let timer: ReturnType<typeof setInterval> | undefined
+  let stopTimer: (() => void) | undefined
   let flip: ReturnType<typeof setTimeout> | undefined
   function scheduleFlip() {
     clearTimeout(flip)
@@ -26,12 +27,12 @@ function useClock(now: Ref<number>, closesAt: () => string) {
     if (wait > 0 && wait < MAX_TIMEOUT_MS) flip = setTimeout(() => { now.value = Date.now() }, wait + 50)
   }
   onMounted(() => {
-    timer = setInterval(() => { now.value = Date.now() }, TICK_MS)
+    stopTimer = visibleInterval(() => { now.value = Date.now() }, TICK_MS)
     scheduleFlip()
   })
   watch(closesAt, scheduleFlip)
   onBeforeUnmount(() => {
-    clearInterval(timer)
+    stopTimer?.()
     clearTimeout(flip)
   })
 }

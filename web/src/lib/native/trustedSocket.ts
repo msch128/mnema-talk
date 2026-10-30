@@ -58,7 +58,7 @@ export class TrustedSocket {
   }
 
   send(data: string) {
-    if (this.readyState === 0) throw new DOMException('The socket is still connecting', 'InvalidStateError')
+    if (this.readyState === 0) throw new DOMException('The socket is still connecting', 'InvalidStateError') // i18n-ignore: DOMException mirrors the browser WebSocket API
     if (this.readyState !== 1 || this.id === null) return
     invoke('desktop_ws_send', { id: this.id, data }).catch(() => this.finish())
   }

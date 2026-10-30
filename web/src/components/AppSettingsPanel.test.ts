@@ -8,6 +8,9 @@ vi.mock('../lib/pwa', () => ({ installState: () => pwa.state, promptInstall: pwa
 
 import AppSettingsPanel from './AppSettingsPanel.vue'
 import { useToastStore } from '../stores/toast'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { useAccountStore } from '../stores/account'
+import { notifyDialogOpen } from '../lib/notifyDialog'
 
 let w: VueWrapper
 beforeEach(() => {
@@ -57,5 +60,22 @@ describe('installing the app from the settings', () => {
   it('points to the browser menu when it offers no install', () => {
     open('unavailable')
     expect(w.find('[data-testid="app-install-state"]').text()).toContain('does not offer to install')
+  })
+})
+
+describe('the way to what notifies you', () => {
+  it('leads from the settings to the notification settings, on servers that have them', async () => {
+    open('unavailable')
+    expect(w.find('[data-testid="notify-link"]').exists()).toBe(false)
+    w.unmount()
+    useServerFeaturesStore().list = ['notify.levels.v2']
+    open('unavailable')
+    const account = useAccountStore()
+    account.open()
+    notifyDialogOpen.value = false
+    await w.get('[data-testid="notify-link-open"]').trigger('click')
+    expect(account.dialogOpen).toBe(false)
+    expect(notifyDialogOpen.value).toBe(true)
+    notifyDialogOpen.value = false
   })
 })

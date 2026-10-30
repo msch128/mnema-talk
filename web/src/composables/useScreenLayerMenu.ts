@@ -14,11 +14,13 @@ interface LayerMenuOptions {
   choice: number | 'auto'
   receivedLayer?: number | undefined
   nameOf(index: number): string
+  /** What the layer really is ("2160p"), also for the source. */
+  sizeOf(index: number): string
   choose(next: number | 'auto'): void
 }
 
 function buildLayerMenuItems(opts: LayerMenuOptions): ContextMenuItem[] {
-  const showing = opts.receivedLayer !== undefined && opts.receivedLayer >= 0 ? opts.nameOf(opts.receivedLayer) : ''
+  const showing = opts.receivedLayer !== undefined && opts.receivedLayer >= 0 ? opts.sizeOf(opts.receivedLayer) : ''
   const items: ContextMenuItem[] = [
     { type: 'label', label: t('talk.layers.title') },
     {
@@ -72,10 +74,18 @@ export function useScreenLayerMenu(userId: () => string | null) {
     return index === 0 ? t('talk.layers.source') : layerName(layer)
   }
 
-  /** What the button says: "Auto", or the layer in use. */
+  function sizeOf(index: number): string {
+    const layer = layers.value[index]
+    return layer ? layerName(layer) : ''
+  }
+
+  /** What the button says: "Auto (1080p)" with what Auto chose, or the layer in use. */
   const buttonLabel = computed(() => {
     const now = received.value
-    if (choice.value === 'auto') return t('talk.layers.auto')
+    if (choice.value === 'auto') {
+      const name = now && now.layer >= 0 ? sizeOf(now.layer) : ''
+      return name ? t('talk.layers.autoWith', { name }) : t('talk.layers.auto')
+    }
     return nameOf(now && now.layer >= 0 ? now.layer : choice.value)
   })
 
@@ -91,6 +101,7 @@ export function useScreenLayerMenu(userId: () => string | null) {
       choice: choice.value,
       receivedLayer: now?.layer,
       nameOf,
+      sizeOf,
       choose
     })
   }

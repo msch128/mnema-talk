@@ -5,6 +5,7 @@ import type { ChatDMLastMessage, ChatDirectMessage } from '../types/rest'
 import { markdownToPlain } from './markdown'
 import { dmPeers, nameOf } from './dm'
 import { clockTimeOptions, startOfDay } from './time'
+import { callKindOf } from './callKind'
 
 /** Most conversations the server lets a member favourite. */
 export const DM_MAX_FAVOURITES = 25
@@ -27,11 +28,17 @@ export function lastMessageOf(msg: Message): ChatDMLastMessage {
     user_id: msg.user_id,
     text: (msg.content ?? '').slice(0, 200),
     has_attachment: (msg.attachments?.length ?? 0) > 0,
-    has_poll: msg.poll !== undefined
+    has_poll: msg.poll !== undefined,
+    ...callField(msg)
   }
 }
 
-export type PreviewKind = 'none' | 'text' | 'attachment' | 'poll'
+function callField(msg: Message): { call?: 'invite' | 'missed' } {
+  const call = callKindOf(msg)
+  return call ? { call } : {}
+}
+
+export type PreviewKind = 'none' | 'text' | 'attachment' | 'poll' | 'call' | 'missedCall'
 
 export interface DmPreview {
   kind: PreviewKind
@@ -41,11 +48,18 @@ export interface DmPreview {
   sender: 'me' | string
 }
 
+function previewKindOf(last: ChatDMLastMessage): PreviewKind {
+  if (last.call) return last.call === 'missed' ? 'missedCall' : 'call'
+  if (last.has_poll) return 'poll'
+  if (last.text.trim()) return 'text'
+  return last.has_attachment ? 'attachment' : 'none'
+}
+
 /** The last line of a row: who wrote, and what, in words that need no further translation but "You:". */
 export function dmPreview(dm: ChatDirectMessage, meId: string | null | undefined): DmPreview {
   const last = dm.last_message
   if (!last) return { kind: 'none', text: '', sender: '' }
-  const kind: PreviewKind = last.has_poll ? 'poll' : last.text.trim() ? 'text' : last.has_attachment ? 'attachment' : 'none'
+  const kind: PreviewKind = previewKindOf(last)
   const text = kind === 'text' ? markdownToPlain(last.text).replace(/\s+/g, ' ').trim().slice(0, PREVIEW_CHARS) : ''
   if (last.user_id === meId) return { kind, text, sender: 'me' }
   // In a pair the other member is obvious; a group names who spoke.

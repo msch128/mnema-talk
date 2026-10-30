@@ -116,7 +116,10 @@ var Routes = []Route{
 
 	{Method: "PUT", Pattern: "/upload-limit", Action: "settings.upload_limit", TargetType: "settings", Snapshot: ResSettings},
 
+	{Method: "PUT", Pattern: "/community/icon", Action: "settings.community_icon", TargetType: "settings", Snapshot: ResOnboarding, NoBody: true},
+	{Method: "DELETE", Pattern: "/community/icon", Action: "settings.community_icon_remove", TargetType: "settings", Snapshot: ResOnboarding},
 	{Method: "PUT", Pattern: "/onboarding", Action: "settings.onboarding", TargetType: "settings", Snapshot: ResOnboarding},
+	{Method: "PUT", Pattern: "/first-run", Skip: true}, // the Owner's own checklist state, not community data
 
 	{Method: "POST", Pattern: "/emoji", Action: "emoji.create", TargetType: "emoji", Snapshot: ResEmoji, NoBody: true},
 	{Method: "PATCH", Pattern: "/emoji/{id}", Action: "emoji.rename", TargetType: "emoji", IDParam: "id", Snapshot: ResEmoji},
@@ -141,6 +144,7 @@ var Routes = []Route{
 	{Method: "POST", Pattern: "/system/check", Skip: true},
 	{Method: "POST", Pattern: "/system/update", Action: "system.update", TargetType: "system"},
 	{Method: "POST", Pattern: "/system/mail/test", Action: "system.mail_test", TargetType: "system", NoBody: true},
+	{Method: "POST", Pattern: "/status/websocket", Skip: true},
 }
 
 // Match finds the route for a request below the admin prefix and its path

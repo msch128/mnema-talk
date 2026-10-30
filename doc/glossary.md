@@ -14,12 +14,13 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | The single all-powerful account | Owner | Owner | admin, cool_guy (in docs) | Not translated; one per community. |
 | Role or permission with all rights | Administrator | Administrator | Admin as a noun for a person | "Admin console" / "Admin-Bereich" stays as the name of the area. |
 | Voice room | Talk | Talk | voice channel, Sprachkanal, call, Anruf, Raum | "Talk" is the Mnema product term in both languages. The create dialog may say "Talk (voice)" / "Talk (Sprache)". Verbs: join a Talk / einem Talk beitreten, leave. |
-| Lobby that opens Talks | Talk lobby | Talk-Lobby | Create-a-Talk room, Warteraum | A Talk marked as a lobby: joining it opens a temporary Talk ("Talk 1", "Talk 2", ...) instead of a seat. Shown as "Create a Talk" / „Talk erstellen“ in the sidebar when named so. |
+| Ring a member to a Talk | call (verb: “is calling you”; noun only as “missed call”) | anrufen: „ruft dich an“ (no noun) | Anruf, Telefonat | What “Start a Talk” does in a direct message: the others see an incoming-call card until they join, it stops, or it times out. The room stays a Talk. |
+| Lobby that opens Talks | Talk lobby | Talk-Lobby | Create-a-Talk room, Warteraum | A Talk marked as a lobby: joining it opens a temporary Talk named after the lobby ("<lobby> 1", "<lobby> 2", ...) instead of a seat. Shown as "Create a Talk" / „Talk erstellen“ in the sidebar when named so. |
 | Who may rename and limit a temporary Talk | Talk leader | Talk-Leitung | host, owner, Talk-Admin | The member who opened a temporary Talk, then the member who has been in it longest. Tooltip "Talk leader" / „Talk-Leitung“. |
 | Text room | channel | Kanal | | Group of rooms: category / Kategorie. |
 | Structured discussion room | forum channel | Forum-Kanal | | A channel of posts as cards with threads and tags. |
 | Discussion starter in a forum | post | Beitrag | thread (for the root message) | A root message in a forum channel with a required title and initial message. |
-| Forum tag | tag | Tag | label, category | Up to 20 admin-defined tags per forum channel. |
+| Forum tag | tag | Tag | label, category | Up to 20 admin-defined tags per forum channel, with an optional colour; a moderated tag is applied by moderators only. |
 | Screen broadcast | screen share | Bildschirmübertragung | stream (as a noun for your own share) | A viewer watches a screen share / sieht eine Übertragung; "Nicht mehr ansehen" stops watching. |
 | Mute your own microphone | mute / unmute | stummschalten / Stummschaltung aufheben | | Deafen = "Ton aus". Only for audio. |
 | Silence notifications | mute notifications | Benachrichtigungen aus / stumm | | |
@@ -31,7 +32,7 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | Disable an account (no record) | disable | deaktivieren | sperren | "Konto deaktivieren / aktivieren". |
 | Brute-force lock | sign-in lock | Anmeldesperre | Login-Sperre | |
 | Pin | pin / unpin | anheften / Anheftung aufheben | lösen | "Angeheftete Nachrichten". "Pinned by {name}" / „Angeheftet von {name}“. |
-| Keep a message for yourself | save / remove from saved | speichern / aus Gespeichert entfernen | merken, favorisieren, lesezeichen | Private list: "Saved messages" / „Gespeicherte Nachrichten“. A message you can no longer see is "no longer available" / „nicht mehr verfügbar“. |
+| Keep a message for yourself | save / remove from saved | speichern / aus Gespeichert entfernen | merken, favorisieren, lesezeichen | Private list: "Saved messages" / „Gespeicherte Nachrichten“. A message you can no longer see is "no longer available" / „nicht mehr verfügbar“. One header button opens the panel "Saved & reminders" / „Gespeichert & Erinnerungen“ with the tabs "Saved" / „Gespeichert“ and "Later" / „Später“. |
 | Send a message on to another place | forward | weiterleiten | teilen, senden an | "Forward…" / „Weiterleiten …“; the quote is "Forwarded" / „Weitergeleitet“. |
 | Private conversation | direct message | Direktnachricht | DM, private message, Privatnachricht | A conversation of two to ten members that is not a channel. "Group direct message" / „Gruppen-Direktnachricht“ for three or more. A conversation has no call of its own: "Start a Talk" opens a temporary Talk and posts an invitation (see [Talks](talks.md)). |
 | Poll | poll | Umfrage | Abstimmung (only for the act of voting) | |
@@ -56,7 +57,7 @@ They are not interface strings, so there is no German column. Start with
 | UDP / TCP | The two ways data travels over a network. Web pages use TCP. Real-time media uses UDP because a late packet is worth less than a missing one. Routers and firewalls treat the two separately, so a port opened for TCP is not open for UDP. |
 | NAT | Network address translation: your home router shares one public address between all devices in the house and only lets traffic in that you forwarded on purpose. That is why a server at home needs port forwarding. |
 | Port forwarding | A router rule that sends incoming traffic on a port to one device inside your network. See [Network ports](ports.md#router-and-firewall-copy-paste-table). |
-| NAT loopback / hairpin | Reaching your own server from inside your home network through its public address. Some routers cannot do it; the symptom is "works from mobile data, not from the home Wi-Fi". The fix is to list the server's LAN address too: `WEBRTC_NAT_1TO1_IP=<public IP>,<LAN IP>`. |
+| NAT loopback / hairpin | Reaching your own server from inside your home network through its public address. Some routers cannot do it; the symptom is "works from mobile data, not from the home Wi-Fi". The fix is to tell the server its LAN address: `WEBRTC_LAN_IP=<LAN IP>`. |
 | CGNAT / DS-Lite | Your provider shares one public IPv4 address between many customers (carrier-grade NAT; DS-Lite is a common form). Your router then has no public address of its own, so forwarded ports never receive anything from outside. Hosting at home does not work; use a VPS. See [Can I host at home?](quick-start.md#can-i-host-at-home). |
 | STUN | A tiny service that tells a device its public address ("what do you see as my IP?"). The Mnema Talk server asks one (Google's or Cloudflare's by default) once at startup and every 10 minutes to find its own public IPv4 address, unless you set `WEBRTC_NAT_1TO1_IP`. |
 | TURN | A relay for members whose network blocks direct UDP, typically company networks, some VPNs and hotels. Their media goes to the relay over a single port and the relay hands it to the voice server. Mnema Talk has one built in (port 3479, UDP and TCP), on by default. |

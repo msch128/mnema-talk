@@ -14,8 +14,8 @@ function dismissPlain(toast: Toast) {
   if (toast.type !== 'error' && !toast.action) toastStore.dismiss(toast.id)
 }
 
-function runAction(toast: Toast) {
-  toast.action?.onClick?.()
+function runAction(toast: Toast, which: 'action' | 'secondary' = 'action') {
+  toast[which]?.onClick?.()
   toastStore.dismiss(toast.id)
 }
 </script>
@@ -43,12 +43,19 @@ function runAction(toast: Toast) {
         <div class="wrap-break-word text-mnema-text">{{ toast.text }}</div>
         <div v-if="toast.detail" class="wrap-break-word text-[13px] text-mnema-tertiary">{{ toast.detail }}</div>
       </div>
-      <button
-        v-if="toast.action"
-        type="button"
-        class="pointer-events-auto col-start-2 row-start-2 min-h-7 max-w-full justify-self-start wrap-break-word rounded-md bg-mnema-elevated px-3 py-1 text-left text-[13px] font-semibold text-mnema-text shadow-ring transition hover:bg-mnema-hover"
-        @click="runAction(toast)"
-      >{{ toast.action.label }}</button>
+      <div v-if="toast.action" class="col-start-2 row-start-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="pointer-events-auto min-h-7 max-w-full wrap-break-word rounded-md bg-mnema-elevated px-3 py-1 text-left text-[13px] font-semibold text-mnema-text shadow-ring transition hover:bg-mnema-hover"
+          @click="runAction(toast)"
+        >{{ toast.action.label }}</button>
+        <button
+          v-if="toast.secondary"
+          type="button"
+          class="pointer-events-auto min-h-7 max-w-full wrap-break-word rounded-md px-3 py-1 text-left text-[13px] text-mnema-muted transition hover:bg-mnema-hover hover:text-mnema-text"
+          @click="runAction(toast, 'secondary')"
+        >{{ toast.secondary.label }}</button>
+      </div>
       <button
         v-if="toast.type === 'error' || toast.action"
         type="button"

@@ -6,10 +6,13 @@ import { computed, ref } from 'vue'
 import { Plus, ArrowUp, ChartNoAxesColumn, ChevronDown, CalendarClock, Paperclip } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { usePermissionsStore } from '../stores/permissions'
+import type { ComposerHint } from '../composables/useComposerLimits'
 import { openLater } from '../lib/laterDialog'
 import { t } from '../i18n'
 import ContextMenu from './ContextMenu.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
+import AttachmentTray from './AttachmentTray.vue'
 import EmojiButton from './EmojiButton.vue'
 import MarkdownHelp from './MarkdownHelp.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
@@ -20,6 +23,7 @@ import { useCompactLayout } from '../composables/useCompactLayout'
 import { useDraftModel } from '../composables/useDraftModel'
 import { useAutoGrow } from '../composables/useAutoGrow'
 import { useComposerFiles } from '../composables/useComposerFiles'
+import { useAttachmentTray } from '../composables/useAttachmentTray'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { useSlashCommands } from '../composables/useSlashCommands'
 import { handleComposerKeydown } from '../composables/useComposerKeys'
@@ -32,21 +36,27 @@ const props = defineProps({
   canSend: { type: Boolean, default: false },
   canAttach: { type: Boolean, default: false },
   placeholder: { type: String, default: '' },
-  uploading: { type: Boolean, default: false },
   sending: { type: Boolean, default: false },
-  typingText: { type: String, default: '' }
+  typingText: { type: String, default: '' },
+  // What limits writing right now (slow mode wait, message length); null when nothing does.
+  limit: { type: Object as PropType<ComposerHint | null>, default: null }
 })
-const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event] }>()
+const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; 'arrow-up': [event: KeyboardEvent]; posted: [] }>()
 
 const chatStore = useChatStore()
 const features = useServerFeaturesStore()
+const permissions = usePermissionsStore()
+// The upload limit is told before a file is picked, not after it was refused.
+const uploadLabel = computed(() => (permissions.maxUploadMb ? t('chat.uploadMax', { size: permissions.maxUploadMb }) : t('chat.upload')))
 const text = useDraftModel(() => props.modelValue, value => emit('update:modelValue', value))
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const textAreaEl = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(textAreaEl, text)
 const { multiline } = useAutoGrow(textAreaEl, text)
-const { attachFiles, onPaste } = useComposerFiles({ fileInput, canAttach: () => props.canAttach, busy: () => props.uploading || props.sending })
+// Files wait in the tray and go out with the message; nothing is sent by attaching.
+const tray = useAttachmentTray(() => (chatStore.activeChannel ? { slot: chatStore.activeChannel.id, channelId: chatStore.activeChannel.id } : null))
+const { attachFiles, onPaste, onPick } = useComposerFiles({ add: tray.add, canAttach: () => props.canAttach, busy: () => props.sending })
 const pollOpen = ref(false)
 const slash = useSlashCommands(text, () => chatStore.activeChannel?.id, () => { pollOpen.value = true })
 // "Send later" sits in a small menu next to the send button.
@@ -66,6 +76,8 @@ const laterItem = computed<ContextMenuItem>(() => ({
   }
 }))
 const laterItems = computed(() => [laterItem.value])
+// A scheduled message is text only: files go out at once, with the message.
+const canScheduleLater = computed(() => !!text.value.trim() && !tray.count.value)
 
 // On a phone the composer has room for the text: file, poll and "send later"
 // share the one "+" button instead of three buttons of their own.
@@ -73,9 +85,9 @@ const { isCompact } = useCompactLayout()
 const plusButton = ref<HTMLElement | null>(null)
 const plusMenuOpen = ref(false)
 const plusItems = computed<ContextMenuItem[]>(() => [
-  ...(props.canAttach ? [{ label: t('chat.upload'), icon: Paperclip, disabled: props.uploading || props.sending, action: () => fileInput.value?.click() }] : []),
+  ...(props.canAttach ? [{ label: t('chat.upload'), icon: Paperclip, disabled: props.sending, action: () => fileInput.value?.click() }] : []),
   ...(props.canSend ? [{ label: t('poll.create'), icon: ChartNoAxesColumn, disabled: props.sending, action: () => { pollOpen.value = true } }] : []),
-  ...(laterEnabled.value ? [{ ...laterItem.value, disabled: !text.value.trim() || props.uploading || props.sending }] : [])
+  ...(laterEnabled.value ? [{ ...laterItem.value, disabled: !canScheduleLater.value || props.sending }] : [])
 ])
 // One combobox, two lists: the textarea points at whichever is open.
 const slashOpen = computed(() => slash.open.value && props.canSend)
@@ -86,14 +98,14 @@ function onPlus() {
   if (isCompact.value) plusMenuOpen.value = !plusMenuOpen.value
   else fileInput.value?.click()
 }
-defineExpose({ textArea: textAreaEl, attachFiles, focus: () => textAreaEl.value?.focus() })
+defineExpose({ textArea: textAreaEl, tray, attachFiles, focus: () => textAreaEl.value?.focus() })
 
 function handleComposerInput() {
   if (text.value.trim()) chatStore.sendTyping(chatStore.activeChannel?.id)
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  handleComposerKeydown(e, { consumers: [slash.onKeydown, assist.onKeydown], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send') })
+  handleComposerKeydown(e, { consumers: [slash.onKeydown, assist.onKeydown, k => tray.onKeydown(k, text.value)], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send'), arrowUp: e => emit('arrow-up', e) })
 }
 </script>
 
@@ -109,11 +121,12 @@ function handleKeyDown(e: KeyboardEvent) {
       @cancel="slash.cancel(); textAreaEl?.focus()"
     />
     <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="emit('cancel-reply')" />
+    <AttachmentTray :items="tray.items.value" @remove="tray.remove" @retry="tray.retry" @view="tray.view" />
     <div
       :class="[
         'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 max-md:py-1 max-md:pr-1 flex gap-1 sm:gap-2 shadow-xs field-focus-within transition',
         multiline ? 'items-end' : 'items-center',
-        replyingTo ? 'rounded-b-lg' : 'rounded-lg'
+        replyingTo || tray.count.value ? 'rounded-b-lg' : 'rounded-lg'
       ]"
     >
       <SlashSuggestions
@@ -138,8 +151,8 @@ function handleKeyDown(e: KeyboardEvent) {
         ref="fileInput"
         type="file"
         class="hidden"
-        @change="emit('file', $event)"
-        accept="image/*,video/*"
+        multiple
+        @change="onPick"
       />
 
       <!-- Attachment Button -->
@@ -149,12 +162,12 @@ function handleKeyDown(e: KeyboardEvent) {
         type="button"
         data-testid="composer-plus"
         @click="onPlus"
-        :disabled="isCompact ? false : uploading || sending"
+        :disabled="isCompact ? false : sending"
         :aria-haspopup="isCompact ? 'menu' : undefined"
         :aria-expanded="isCompact ? (plusMenuOpen ? 'true' : 'false') : undefined"
         class="focus-ring w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
-        v-tooltip="$t('chat.upload')"
-        :aria-label="$t('chat.upload')"
+        v-tooltip="uploadLabel"
+        :aria-label="uploadLabel"
       >
         <Plus class="w-5 h-5" />
       </button>
@@ -197,14 +210,14 @@ function handleKeyDown(e: KeyboardEvent) {
         class="bg-transparent flex-1 min-w-0 resize-none outline-hidden text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
       ></textarea>
 
-      <MarkdownHelp class="max-md:hidden" :disabled="!canSend" />
+      <MarkdownHelp :disabled="!canSend" @insert="assist.insertText" />
 
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 
       <!-- Send Button -->
       <button
         @click="emit('send')"
-        :disabled="!canSend || !text.trim() || uploading || sending"
+        :disabled="!canSend || (!text.trim() && !tray.count.value) || sending || !!limit?.blocks"
         class="btn btn-primary focus-ring w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
         v-tooltip="$t('chat.send')"
       >
@@ -217,7 +230,7 @@ function handleKeyDown(e: KeyboardEvent) {
           ref="laterButton"
           type="button"
           data-testid="send-later-button"
-          :disabled="!text.trim() || uploading || sending"
+          :disabled="!canScheduleLater || sending"
           class="focus-ring -ml-1 w-5 h-8 flex items-center justify-center shrink-0 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-50"
           aria-haspopup="menu"
           :aria-expanded="laterMenuOpen ? 'true' : 'false'"
@@ -234,12 +247,18 @@ function handleKeyDown(e: KeyboardEvent) {
     <PollDialog
       v-if="pollOpen && chatStore.activeChannel"
       :channel-id="chatStore.activeChannel.id"
+      @posted="emit('posted')"
       @close="pollOpen = false; textAreaEl?.focus()"
     />
 
     <!-- Who is typing (keeps its height so the layout doesn't jump) -->
-    <div class="h-5 px-1 pt-0.5 text-xs text-mnema-tertiary truncate" role="status" aria-live="polite" data-testid="typing-indicator">
-      {{ typingText }}
+    <div class="h-5 px-1 pt-0.5 flex items-center justify-between gap-3 text-xs text-mnema-tertiary">
+      <span class="truncate" role="status" aria-live="polite" data-testid="typing-indicator">{{ typingText }}</span>
+      <span
+        v-if="limit"
+        :class="['shrink-0 tabular-nums', limit.tone === 'warn' ? 'text-mnema-danger' : 'text-mnema-muted']"
+        data-testid="composer-limit"
+      >{{ limit.text }}</span>
     </div>
   </div>
 </template>

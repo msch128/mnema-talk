@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/mdplain"
+	"github.com/msch128/mnema-talk/internal/textcut"
 )
 
 // maxShareDescription is the longest description a link preview of an invite
@@ -66,9 +67,9 @@ func plainSnippet(markdown string, limit int) string {
 	if utf8.RuneCountInString(s) <= limit {
 		return s
 	}
-	cut := []rune(s)[:limit-1]
-	if i := strings.LastIndexByte(string(cut), ' '); i > limit/2 {
-		return strings.TrimRight(string(cut)[:i], " ,.;:-") + "…"
+	cut := textcut.Runes(s, limit-1)
+	if i := strings.LastIndexByte(cut, ' '); i > limit/2 {
+		return strings.TrimRight(cut[:i], " ,.;:-") + "…"
 	}
-	return strings.TrimRight(string(cut), " ,.;:-") + "…"
+	return strings.TrimRight(cut, " ,.;:-") + "…"
 }

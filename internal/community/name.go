@@ -29,6 +29,7 @@ type Names struct {
 
 	mu     sync.Mutex
 	name   string
+	icon   string
 	loaded time.Time
 }
 
@@ -53,22 +54,40 @@ func (n *Names) Get(ctx context.Context) string {
 	}
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	if !n.loaded.IsZero() && time.Since(n.loaded) < ttl {
-		return n.shown()
-	}
-	var name string
-	if n.q == nil {
-		n.name, n.loaded = "", time.Now()
-		return n.shown()
-	}
-	// A failed read keeps the last answer and is retried on the next call.
-	if err := n.q.QueryRow(ctx, `SELECT community_name FROM instance_settings`).Scan(&name); err == nil {
-		n.name, n.loaded = strings.TrimSpace(name), time.Now()
-	}
+	n.refresh(ctx)
 	return n.shown()
 }
 
-// Forget drops the cached name; call it after the setting changed.
+// Icon returns the version of the community icon the Owner set, or "" while
+// there is none. It changes with every upload, so it serves as a cache key.
+func (n *Names) Icon(ctx context.Context) string {
+	if n == nil {
+		return ""
+	}
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.refresh(ctx)
+	return n.icon
+}
+
+// refresh reloads the settings when the cached ones are older than ttl; the
+// caller holds the lock.
+func (n *Names) refresh(ctx context.Context) {
+	if !n.loaded.IsZero() && time.Since(n.loaded) < ttl {
+		return
+	}
+	if n.q == nil {
+		n.name, n.icon, n.loaded = "", "", time.Now()
+		return
+	}
+	// A failed read keeps the last answer and is retried on the next call.
+	var name, icon string
+	if err := n.q.QueryRow(ctx, `SELECT community_name, COALESCE(community_icon_version, '') FROM instance_settings`).Scan(&name, &icon); err == nil {
+		n.name, n.icon, n.loaded = strings.TrimSpace(name), icon, time.Now()
+	}
+}
+
+// Forget drops the cached name and icon; call it after the setting changed.
 func (n *Names) Forget() {
 	if n == nil {
 		return

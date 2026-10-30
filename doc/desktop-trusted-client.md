@@ -505,6 +505,29 @@ host:
   brings the window forward. Windows shows a dot as the taskbar overlay, macOS
   and Linux the count on the dock or launcher icon. This needs no
   `web_client_api` bump: the web app detects the capability.
+* **Incoming calls in toasts** (host capability `notify_call`, optional, on top
+  of `notify`). A Talk started in a direct message rings the other members (see
+  [Talks](talks.md#ringing)); the page then shows an incoming call card of its
+  own and, only while the window is hidden or without focus, a toast through
+  `desktop_notify` with the title "{name} is calling you" and the body "Direct
+  message · Click to join" (German: "{name} ruft dich an", "Direktnachricht ·
+  Klicken zum Beitreten"). A host that announces `notify_call` in the instance
+  window's `capabilities` additionally gets `kind: "call"` in the arguments of
+  `desktop_notify` and the command `desktop_notify_close` (`channelId`). For
+  `kind: "call"` the host may keep the toast on screen until it is used (Windows:
+  the incoming-call toast scenario; macOS: a time-sensitive notification;
+  Linux: urgency critical and a resident notification), offer a **Join** and a
+  **Dismiss** button next to the toast itself, and report the button in the
+  click event as `{channel_id, message_id, action: "join"}` (`action` is absent
+  for the toast itself and for Dismiss, which the host handles without telling
+  the page). A click of any kind still brings the window forward. The page
+  opens the conversation at the invitation for the toast, and joins the Talk as
+  well for `action: "join"`. `desktop_notify_close` withdraws the toast of that
+  channel when the call stopped ringing (answered on another device, cancelled,
+  timed out). The host treats the arguments like the other notification
+  arguments (flattened, truncated, plain identifiers, rate limited). A host
+  without the capability keeps showing the call as the ordinary toast, and a
+  click on it already opens the conversation. No `web_client_api` bump.
 * **Unread report** (host capability `unread`, 1.1; the multi-instance
   client). One window of the client now shows one server out of several, and
   the client lists them on a rail with an unread dot and a mention count each.

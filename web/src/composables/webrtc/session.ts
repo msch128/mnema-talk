@@ -1,16 +1,19 @@
 import * as voiceSession from '../../lib/voiceSession'
 import { preloadNoiseSuppressor } from '../../lib/noiseSuppressor'
 import { useToastStore } from '../../stores/toast'
+import { myUserId } from '../../stores/voice/state'
 import { useAuthStore } from '../../stores/auth'
 import { usePermissionsStore } from '../../stores/permissions'
 import { mediaCall } from '../../lib/media/api'
 import { t } from '../../i18n'
 import type { SubscribeRequest, ServerEventPayloads } from '../../types/events'
 import { loadIceServers } from './iceServers'
+import { withAudioSettings } from './audioNotice'
 import { isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
 import { resumeRemoteAudio as resumeRemotePlayback } from './remoteAudio'
 import { closeMediaRoom, mediaConnectionAnnounced, openMediaRoom, resetMediaAnnouncements } from './mediaRoom'
 import type { Cx } from './state'
+import { announceTakenOver, askTakeover } from './takeover'
 import { aiModel } from './audioMath'
 import { stopCamera } from './camera'
 import { micErrorKey, refreshAudioDevices, requestMicrophone, setupMicPipeline } from './micPipeline'
@@ -53,7 +56,7 @@ async function captureMicrophone(cx: Cx): Promise<MediaStream | null> {
   } catch (err) {
     console.warn('Microphone access denied or unavailable:', err)
     // The join goes on listen-only; say why instead of leaving the user mute.
-    useToastStore().error(t(micErrorKey(err)))
+    useToastStore().error(t(micErrorKey(err)), withAudioSettings('input-device'))
     return null
   }
 }
@@ -99,11 +102,32 @@ function sealingRefusal(): Promise<boolean> | null {
   })
 }
 
-export async function joinVoiceChannel(cx: Cx, channelId: string): Promise<void> {
+/**
+ * auto: a rejoin the user did not ask for (after a reload), never asks to take
+ * the call over. takeover: the user already agreed to move the call here.
+ */
+// This page's id for the server: the same across WebSocket reconnects, so it
+// can tell a takeover's victim resuming from the page that took over.
+let tabIdValue: string | null = null
+export function tabId(): string {
+  // randomUUID only exists in secure contexts; a trusted-LAN http:// install lacks it.
+  tabIdValue ??= globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)
+  return tabIdValue
+}
+
+export interface JoinOptions { auto?: boolean, takeover?: boolean }
+
+export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOptions = {}): Promise<void> {
   if (!canJoinVoiceChannel(cx, channelId)) return
+  let takeover = !!opts.takeover
+  const ask = opts.auto || takeover ? null : askTakeover(cx)
+  if (ask) {
+    if (!await ask) return
+    takeover = true
+  }
   if (isLobby(cx, channelId)) {
     registerSignalingHandlers(cx)
-    return joinViaLobby(cx, channelId, talkId => joinVoiceChannel(cx, talkId))
+    return joinViaLobby(cx, channelId, talkId => joinVoiceChannel(cx, talkId, { takeover }))
   }
   const refusal = sealingRefusal()
   if (refusal && await refusal) return
@@ -127,7 +151,7 @@ export async function joinVoiceChannel(cx: Cx, channelId: string): Promise<void>
   st.localAudioStream.value = sendStream
   voice.localAudioStream = sendStream
   setupPeerConnection(cx)
-  chat.sendWSEvent('voice_join', { channel_id: channelId })
+  chat.sendWSEvent('voice_join', takeover ? { channel_id: channelId, takeover: true, tab: tabId() } : { channel_id: channelId, tab: tabId() })
   openMediaRoom()
   attachSubscriptions(cx)
 
@@ -157,7 +181,8 @@ export function rejoinAfterReconnect(cx: Cx) {
   // The server keeps the roster across a short disconnect, so nobody else
   // joins or leaves and a handshake that was dropped is not sent again.
   setupPeerConnection(cx)
-  chat.sendWSEvent('voice_join', { channel_id: channelId })
+  // resume: the server refuses it when another device took the call over meanwhile.
+  chat.sendWSEvent('voice_join', { channel_id: channelId, resume: true, tab: tabId() })
   // After the join, so a package it produces is not dropped by the hub.
   mediaCall().resume()
   attachSubscriptions(cx)
@@ -187,9 +212,24 @@ function endCall(cx: Cx, { notifyServer }: { notifyServer: boolean }) {
   cleanupVoiceAudio(cx)
   stopScreenShare(cx)
   stopCamera(cx)
-  if (notifyServer) chat.sendWSEvent('voice_leave', {})
+  if (notifyServer) {
+    chat.sendWSEvent('voice_leave', {})
+    // Not when the server ended it (taken over): another device of mine is
+    // still listed in that Talk.
+    forgetOwnSeat(cx)
+  }
   voice.disconnect()
   voice.audioBlocked = false
+}
+
+// The roster keeps me until the server's voice_leave arrives; a join in that
+// window must not take my own just-ended seat for another device.
+function forgetOwnSeat({ voice }: Cx) {
+  const me = myUserId()
+  const room = voice.currentChannelId
+  if (!me || !room || !voice.channelUsers[room]) return
+  const others = Object.fromEntries(Object.entries(voice.channelUsers[room]).filter(([id]) => id !== me))
+  voice.channelUsers = { ...voice.channelUsers, [room]: others }
 }
 
 export function leaveVoiceChannel(cx: Cx) {
@@ -216,6 +256,10 @@ function handleKicked(cx: Cx, payload: ServerEventPayloads['voice_kicked']) {
   const explained = payload.reason === 'connection_lost' && mediaConnectionAnnounced()
   endCall(cx, { notifyServer: false })
   if (explained) return
+  if (payload.reason === 'voice_taken_over') {
+    announceTakenOver(payload.channel_id, id => { void joinVoiceChannel(cx, id, { takeover: true }) })
+    return
+  }
   useToastStore().info(t(KICK_NOTICE[payload.reason ?? ''] ?? 'voice.kicked'))
 }
 
@@ -229,7 +273,7 @@ export async function resumeVoiceSession(cx: Cx) {
     voiceSession.forget()
     return false
   }
-  await joinVoiceChannel(cx, channelId)
+  await joinVoiceChannel(cx, channelId, { auto: true })
   return true
 }
 

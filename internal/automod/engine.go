@@ -261,7 +261,7 @@ func (e *Engine) block(ctx context.Context, pend *Pending, r *compiled) error {
 	if pend.post.MessageID != uuid.Nil {
 		what = "Your edit was not saved"
 	}
-	return httpx.ErrInvalidInput(fmt.Sprintf("%s: it breaks the server rule %q (automod). The moderators can see this.", what, r.Name))
+	return httpx.ErrInvalidInput(fmt.Sprintf("%s: it breaks the community rule %q (automod). The moderators can see this.", what, r.Name))
 }
 
 // Commit records the flags of a message that is now stored as id.

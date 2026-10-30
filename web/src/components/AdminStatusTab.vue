@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Operator status tab: server version, updates, database, storage, backups, activity and warnings (GET /api/admin/status).
 import { ref, computed, onMounted } from 'vue'
-import { RefreshCw, CheckCircle2, XCircle, TriangleAlert, Database, HardDrive, ShieldCheck, Activity, Server } from '@lucide/vue'
+import { RefreshCw, CheckCircle2, XCircle, TriangleAlert, CircleHelp, Database, HardDrive, ShieldCheck, Activity, Server } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import type { OperatorStatus } from '../types/domain'
 import { decodeOperatorStatus } from '../types/domain'
@@ -10,8 +10,12 @@ import { SOURCE_URL } from '../lib/thirdParty'
 import { describeWarning } from '../lib/operatorWarnings'
 import { describeCheck } from '../lib/setupChecks'
 import { t, locale } from '../i18n'
+import { useChatStore } from '../stores/chat'
+import { reportWebSocket } from '../lib/wsReport'
+import ConnectionTest from './ConnectionTest.vue'
 
 const toasts = useToastStore()
+const chat = useChatStore()
 const status = ref<OperatorStatus | null>(null)
 const loading = ref(false)
 
@@ -44,11 +48,11 @@ function formatDate(iso: string | null | undefined): string {
 
 const warnings = computed(() => (status.value?.warnings || []).map(w => ({ ...w, ...describeWarning(w.code, w.value) })))
 const setup = computed(() => (status.value?.setup || []).map(c => ({ ...c, ...describeCheck(c) })))
-const setupAttention = computed(() => setup.value.filter(c => c.level !== 'ok').length)
-// Red items first, then amber, then green; the server order is kept within a level.
-const LEVEL_RANK = { fail: 0, warn: 1, ok: 2 } as const
+const setupAttention = computed(() => setup.value.filter(c => c.level === 'warn' || c.level === 'fail').length)
+// Red items first, then amber, then neutral (not verifiable from here), then green; the server order is kept within a level.
+const LEVEL_RANK = { fail: 0, warn: 1, info: 2, ok: 3 } as const
 const setupSorted = computed(() => [...setup.value].sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level]))
-const checkLabels = new Set(['public_url', 'voice_address', 'voice_udp', 'turn', 'mail', 'storage', 'database', 'clock', 'reverse_proxy'])
+const checkLabels = new Set(['public_url', 'voice_address', 'voice_udp', 'turn', 'mail', 'storage', 'database', 'clock', 'reverse_proxy', 'websocket'])
 const checkLabel = (id: string) => (checkLabels.has(id) ? t(`admin.operatorStatus.check.${id}`) : id)
 const db = computed(() => status.value?.database || null)
 const storage = computed(() => status.value?.storage || null)
@@ -57,7 +61,12 @@ const backup = computed(() => status.value?.backup || null)
 const upd = computed(() => status.value?.update || null)
 const autoDeploy = computed(() => status.value?.auto_deploy || null)
 
-onMounted(refresh)
+// Show the list at once, then again with the WebSocket item the report just fed.
+onMounted(async () => {
+  void refresh()
+  await reportWebSocket(() => chat.isConnected)
+  await refresh()
+})
 </script>
 
 <template>
@@ -92,6 +101,7 @@ onMounted(refresh)
           <div class="flex items-start gap-2.5">
             <XCircle v-if="c.level === 'fail'" class="w-4 h-4 mt-0.5 text-mnema-danger shrink-0" aria-hidden="true" />
             <TriangleAlert v-else-if="c.level === 'warn'" class="w-4 h-4 mt-0.5 text-mnema-warning shrink-0" aria-hidden="true" />
+            <CircleHelp v-else-if="c.level === 'info'" class="w-4 h-4 mt-0.5 text-mnema-tertiary shrink-0" aria-hidden="true" />
             <CheckCircle2 v-else class="w-4 h-4 mt-0.5 text-mnema-success shrink-0" aria-hidden="true" />
             <div class="min-w-0 space-y-1">
               <p class="font-medium text-mnema-text">
@@ -104,6 +114,10 @@ onMounted(refresh)
           </div>
         </li>
       </ul>
+    </div>
+
+    <div class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline" data-testid="status-connection-test">
+      <ConnectionTest />
     </div>
 
     <!-- Operator warnings -->

@@ -128,3 +128,21 @@ func TestLiveReactionNeedsAddReactions(t *testing.T) {
 		t.Fatalf("a member who may not react did: %v", got)
 	}
 }
+
+func TestLiveReactionRelaysLongEmojiSequences(t *testing.T) {
+	w := newPermWorld(t)
+	w.h.joinVoice(w.owner, w.public)
+	w.h.joinVoice(w.insider, w.public)
+	drainTypes(t, w.owner)
+	// Five per window is the allowance, so the owner sends the rest.
+	for i, e := range []string{"🥳", "👍🏽", "👨‍👩‍👧‍👦", "🏳️‍🌈", "🇩🇪", "1️⃣", "🧑🏽‍❤️‍💋‍🧑🏿"} {
+		sender := w.insider
+		if i >= reactionsPer {
+			sender = w.owner
+		}
+		reaction(t, sender, e)
+		if got := reactions(t, w.owner); len(got) != 1 || got[0] != e {
+			t.Fatalf("%q relayed as %v", e, got)
+		}
+	}
+}

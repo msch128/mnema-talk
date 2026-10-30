@@ -9,6 +9,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/onboarding"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/webhook"
 	"github.com/msch128/mnema-talk/web"
@@ -32,7 +33,7 @@ func (c *components) buildHandler() http.Handler {
 	if index == nil {
 		index = web.IndexHTML()
 	}
-	r.Handle("/*", newSharePages(web.Handler(c.d.Names.Get), index, cfg.PublicURL, c.onboardH, c.d.Names))
+	r.Handle("/*", newSharePages(web.HandlerWithIcon(c.d.Names.Get, c.d.Names.Icon), index, cfg.PublicURL, c.onboardH, c.d.Names))
 	return r
 }
 
@@ -94,12 +95,13 @@ func (c *components) mountBotAPI(b chi.Router) {
 
 // mountAuthenticated mounts everything that needs a signed-in member.
 func (c *components) mountAuthenticated(authed chi.Router) {
-	authed.Use(c.sessions.RequireUser, c.perUser.By(auth.UserKey))
+	authed.Use(c.sessions.RequireUser, httpx.BySafeMethod(c.readsPerUser.By(auth.UserKey), c.perUser.By(auth.UserKey)))
 
 	authed.Group(func(j chi.Router) {
 		j.Use(httpx.MaxBody(httpx.DefaultMaxBody))
 		c.authH.MountAuthenticated(j)
 		j.Get("/webrtc/config", webrtcConfig(c.cfg, c.d.TURN))
+		j.Post("/webrtc/probe", httpx.Handle(c.systemH.connectionProbe))
 		if c.cfg.APIDocs {
 			j.Get("/openapi.json", openAPISpec)
 		}
@@ -147,6 +149,10 @@ func (c *components) mountAdmin(adm chi.Router) {
 		c.webhookH.MountAdminUploads(u)
 		c.botH.MountAdminUploads(u)
 	})
+	adm.Group(func(u chi.Router) {
+		u.Use(httpx.MaxBody(onboarding.IconBodyLimit))
+		c.onboardH.MountAdminIconUploads(u)
+	})
 	adm.Group(c.mountAdminJSON)
 }
 
@@ -163,6 +169,8 @@ func (c *components) mountAdminJSON(adm chi.Router) {
 	c.botH.MountAdmin(adm)
 	c.mediaH.MountAdmin(adm)
 	c.emojiH.MountAdmin(adm)
-	adm.With(auth.RequirePerm(c.permSvc, perm.Administrator)).Get("/status", httpx.Handle(c.systemH.operatorStatus))
+	status := adm.With(auth.RequirePerm(c.permSvc, perm.Administrator))
+	status.Get("/status", httpx.Handle(c.systemH.operatorStatus))
+	status.Post("/status/websocket", httpx.Handle(c.systemH.reportWebSocket))
 	c.systemH.mountAdmin(adm)
 }

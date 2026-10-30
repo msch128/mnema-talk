@@ -1,12 +1,15 @@
 import type { ApiOptions } from '../lib/api'
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import AdminOpsPanel from './AdminOpsPanel.vue'
 import Sparkline from './Sparkline.vue'
 import { setLocale } from '../i18n'
 import { opsStatus, opsSample } from './opsStatus.fixture'
+
+// A panel left mounted would keep answering visibility changes in the next test.
+enableAutoUnmount(afterEach)
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../lib/api', async (importOriginal) => ({
@@ -116,14 +119,21 @@ describe('AdminOpsPanel', () => {
     await vi.advanceTimersByTimeAsync(10_000)
     expect(apiMock).toHaveBeenCalledTimes(2)
 
-    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
-    await vi.advanceTimersByTimeAsync(10_000)
+    const visibility = vi.spyOn(document, 'visibilityState', 'get')
+    visibility.mockReturnValue('hidden')
+    document.dispatchEvent(new Event('visibilitychange'))
+    await vi.advanceTimersByTimeAsync(60_000)
     expect(apiMock).toHaveBeenCalledTimes(2)
-    hidden.mockRestore()
+    // Coming back looks at once instead of waiting for the next tick.
+    visibility.mockReturnValue('visible')
+    document.dispatchEvent(new Event('visibilitychange'))
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledTimes(3)
+    visibility.mockRestore()
 
     w.unmount()
     await vi.advanceTimersByTimeAsync(30_000)
-    expect(apiMock).toHaveBeenCalledTimes(2)
+    expect(apiMock).toHaveBeenCalledTimes(3)
   })
 })
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import { Reply, Pin } from '@lucide/vue'
+import { Reply, Pin, Pencil } from '@lucide/vue'
 import type { Message } from '../types/domain'
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
@@ -14,6 +14,7 @@ import MarkdownContent from './MarkdownContent.vue'
 import MessageEmbeds from './MessageEmbeds.vue'
 import PollCard from './PollCard.vue'
 import MessageAttachments from './MessageAttachments.vue'
+import MessageEditor from './MessageEditor.vue'
 import ReactionBar from './ReactionBar.vue'
 
 const props = defineProps({
@@ -25,12 +26,11 @@ const props = defineProps({
 
 const emit = defineEmits<{
   reply: [root: ThreadRoot]
-  'open-image': [src: string]
   keydown: [event: KeyboardEvent, root: ThreadRoot]
 }>()
 
 const chatStore = useChatStore()
-const { pickerId } = props.actions
+const { pickerId, editingId, editText } = props.actions
 
 const formatDate = (dateStr?: string) => dateTime(dateStr, locale.value)
 </script>
@@ -46,31 +46,27 @@ const formatDate = (dateStr?: string) => dateTime(dateStr, locale.value)
       highlighted ? 'msg-flash' : ''
     ]"
   >
-    <!-- Reply to the thread's root message -->
-    <button
-      type="button"
-      @click.stop="emit('reply', root)"
-      class="btn btn-secondary btn-sm absolute right-2 top-2 hidden group-hover:flex group-focus-within:flex p-1"
-      v-tooltip="$t('chat.reply')"
-    >
-      <Reply class="w-3.5 h-3.5" />
-    </button>
-
-    <!-- Forum Post Header (title and tags) -->
-    <div v-if="root.title" class="mb-3">
-      <div v-if="root.tags?.length" class="flex items-center gap-1.5 flex-wrap mb-1.5">
-        <span
-          v-for="tag in root.tags"
-          :key="tag.id"
-          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-mnema-raised border border-mnema-hairline text-mnema-secondary"
-        >
-          <span v-if="tag.emoji">{{ tag.emoji }}</span>
-          <span>{{ tag.name }}</span>
-        </span>
-      </div>
-      <h2 class="text-base font-bold text-mnema-text break-words">
-        {{ root.title }}
-      </h2>
+    <!-- Reply to the thread's root message, and edit it when it is mine -->
+    <div class="absolute right-2 top-2 hidden items-center gap-1 group-hover:flex group-focus-within:flex">
+      <button
+        v-if="actions.isOwn(root as Message) && !root.poll && editingId !== root.id"
+        type="button"
+        data-testid="root-edit"
+        @click.stop="actions.startEdit(root as Message)"
+        class="btn btn-secondary btn-sm p-1"
+        v-tooltip="$t('thread.edit')"
+        :aria-label="$t('thread.edit')"
+      >
+        <Pencil class="w-3.5 h-3.5" />
+      </button>
+      <button
+        type="button"
+        @click.stop="emit('reply', root)"
+        class="btn btn-secondary btn-sm p-1"
+        v-tooltip="$t('chat.reply')"
+      >
+        <Reply class="w-3.5 h-3.5" />
+      </button>
     </div>
 
     <!-- Author & timestamp -->
@@ -97,7 +93,16 @@ const formatDate = (dateStr?: string) => dateTime(dateStr, locale.value)
       </div>
     </div>
 
-    <MarkdownContent v-if="root.content" :content="root.content" :mention-roles="root.mention_roles ?? []" />
+    <MessageEditor
+      v-if="editingId === root.id"
+      v-model="editText"
+      compact
+      :saving="actions.isSavingEdit.value"
+      :label="$t('thread.edit')"
+      @save="actions.saveEdit(root as Message)"
+      @cancel="actions.cancelEdit()"
+    />
+    <MarkdownContent v-else-if="root.content" :content="root.content" :mention-roles="root.mention_roles ?? []" />
     <p v-else-if="isRemovedMessage(root)" data-testid="message-removed" class="text-sm italic text-mnema-tertiary">{{ $t('chat.messageRemoved') }}</p>
     <MessageEmbeds :embeds="root.embeds ?? []" />
     <!-- A poll that started the thread keeps its options, votes and time left here -->
@@ -111,7 +116,7 @@ const formatDate = (dateStr?: string) => dateTime(dateStr, locale.value)
     <MessageAttachments
       :attachments="root.attachments ?? []"
       variant="root"
-      @open-image="emit('open-image', $event)"
+      :message="root as Message"
     />
     <!-- Root message reactions -->
     <ReactionBar
