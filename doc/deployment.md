@@ -25,11 +25,12 @@ and **UDP and TCP 3479** for the built-in TURN relay. Do not forward 8080
 
 A new host needs Docker with Compose and nothing else: the compose file and
 `.env.example` of the release are the whole deployment (no clone, no build).
-Replace `1.1.0` with the version to install.
+The commands install the latest release; to pin another, set `VERSION` yourself.
 
 ```sh
 mkdir mnema-talk && cd mnema-talk
-VERSION=1.1.0
+VERSION=$(curl -fsSL https://api.github.com/repos/msch128/mnema-talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+[ -n "$VERSION" ] || { echo "could not read the latest version; set VERSION=x.y.z yourself" >&2; false; }
 base=https://raw.githubusercontent.com/msch128/mnema-talk/v$VERSION
 curl -fsSLO "$base/docker-compose.yml"
 curl -fsSL "$base/.env.example" -o .env
@@ -45,7 +46,7 @@ The same image is also published on Docker Hub as `docker.io/msch128/mnema-talk`
 
 | Variable | Set it to |
 |---|---|
-| `MNEMA_IMAGE` | `ghcr.io/msch128/mnema-talk:1.1.0` (or `:1.1`, see [Updates](#updates)) |
+| `MNEMA_IMAGE` | `ghcr.io/msch128/mnema-talk:2.1.1` (or `:2.1`, see [Updates](#updates)) |
 | `PUBLIC_URL` | The `https://` address members open. An `http://` address starts, with a warning (see [operations.md](operations.md#public_url-and-secure-cookies)). |
 | `JWT_SECRET` | `openssl rand -hex 32` |
 | `POSTGRES_PASSWORD` | `openssl rand -hex 16` (compose builds `DATABASE_URL` from it) |
@@ -95,7 +96,7 @@ in `.env` (the compose file uses it for the `app` service) and start without
 
 ```sh
 # .env
-MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.1   # or :1.1.0 (pinned) or :latest
+MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:2.1   # or :2.1.1 (pinned) or :latest
 
 docker compose pull app && docker compose up -d
 ```
@@ -149,7 +150,7 @@ local image. An image that does not verify is refused and nothing changes
 ([how the check works](operations.md#verifying-a-release-image)). It is **off
 by default**; to enable it:
 
-1. Run a released image: `MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.1` (see
+1. Run a released image: `MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:2.1` (see
    below for the tag).
 2. Set `UPDATER_TOKEN` in `.env` (`openssl rand -hex 32`, at least 32
    characters).
@@ -166,19 +167,19 @@ tags. That decides what "update now" can reach:
 
 | `MNEMA_IMAGE` tag | Follows | Self-update |
 |---|---|---|
-| `:1.1` (major.minor) | all `1.1.x` patch releases | yes, until `1.2.0`; a new minor is a deliberate tag change (recommended) |
+| `:2.1` (major.minor) | all `2.1.x` patch releases | yes, until `2.2.0`; a new minor is a deliberate tag change (recommended) |
 | `:latest` | every release, breaking ones included | always |
-| `:1.1.0` or `@sha256:…` | nothing (pinned) | no; the System tab shows the manual steps |
+| `:2.1.1` or `@sha256:…` | nothing (pinned) | no; the System tab shows the manual steps |
 | `mnema-talk:local` (default) | built on the server | no; `git pull && docker compose up -d --build` |
 
 Pinned tags are the most predictable (you choose every version and can roll
-back by setting the old one); `:1.1` is the practical middle ground. Since
+back by setting the old one); `:2.1` is the practical middle ground. Since
 1.0.0, `fix:` releases bump the patch version and `feat:` releases the minor,
-so a `:1.1` image receives only fixes, and a new minor needs a deliberate tag
+so a `:2.1` image receives only fixes, and a new minor needs a deliberate tag
 change. There is no `:1` tag; the release pipeline publishes `X.Y.Z`, `X.Y`
-and `latest`. To roll back, set the previous version (e.g. `:1.0.1`) and run `docker compose pull
+and `latest`. To roll back, set the previous version (e.g. `:2.1.0`) and run `docker compose pull
 app && docker compose up -d app`; database migrations are forward-only, so
-going back from 1.1 to 1.0.x means restoring a backup taken before the
+going back from 2.1 to 2.0.x means restoring a backup taken before the
 update (see [Rollback](upgrade.md#rollback)); check the changelog before
 going back across any release that changed the schema.
 
