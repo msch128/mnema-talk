@@ -75,3 +75,36 @@ func TestVoiceJoinFrameWithTakeoverMovesVoiceBetweenSessions(t *testing.T) {
 		t.Fatal("presence did not move with the voice")
 	}
 }
+
+// A network flap: the new socket sends voice_join with resume before the old
+// socket of the same user was unregistered. Nobody took the call over, so the
+// resume succeeds and the stale socket is the one that gives way.
+func TestResumeFrameBeforeTheStaleSocketGoesSucceeds(t *testing.T) {
+	p := testutil.DB(t)
+	testutil.Reset(t, p)
+	var chID uuid.UUID
+	if err := p.QueryRow(context.Background(), `INSERT INTO channels (name, type) VALUES ('Talk', 'voice') RETURNING id`).Scan(&chID); err != nil {
+		t.Fatal(err)
+	}
+	h := NewHub(p, nil, newSeatTestSFU(t), nil)
+	h.SetPermissions(perm.NewService(p))
+	t.Cleanup(h.Close)
+	u := wsFixtureUser(t, p)
+	stale, fresh := testClient(h, u), testClient(h, u)
+	defer h.unregister(stale)
+	defer h.unregister(fresh)
+
+	stale.handle("voice_join", joinFrame(t, chID, false))
+	raw, err := json.Marshal(map[string]any{"channel_id": chID, "resume": true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fresh.handle("voice_join", raw)
+
+	if !seatedIn(fresh, chID) || stale.currentVoice() != nil {
+		t.Fatal("the resume did not take the seat from the stale socket")
+	}
+	for _, k := range sentEvents(t, fresh, "voice_kicked") {
+		t.Fatalf("resume was answered with voice_kicked %+v", k)
+	}
+}

@@ -2,6 +2,7 @@ package ws
 
 import (
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,10 +24,11 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 }
 
 // resumeVoice is the join a client sends after its WebSocket reconnected, to
-// resume the call it was in. When the server has not kept that call for it
-// (its stay ended, e.g. a takeover on another device in the meantime) and
-// another connection of the user holds voice, the resume is refused with
-// "voice_taken_over" instead of taking the voice back.
+// resume the call it was in. When a takeover ended that call for the user and
+// another connection of theirs holds voice, the resume is refused with
+// "voice_taken_over" instead of taking the voice back. A resume never fails
+// because of the user's own stale socket (a network flap): only a takeover
+// leaves the mark that refuses it.
 func (h *Hub) resumeVoice(c *Client, ch *chat.ChannelInfo) {
 	h.seatVoice(c, ch, joinMode{evictReason: kickJoinedElsewhere, resume: true})
 }
@@ -71,7 +73,7 @@ func (h *Hub) seatVoice(c *Client, ch *chat.ChannelInfo, mode joinMode) bool {
 	if done {
 		return true
 	}
-	if mode.resume && !rejoin && h.voiceHeldElsewhere(c) {
+	if mode.resume && !rejoin && h.taken.has(voiceKey{c.User.ID, ch.ID}) && h.voiceHeldElsewhere(c) {
 		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": ch.ID, "reason": kickTakenOver})
 		return false
 	}
@@ -86,6 +88,10 @@ func (h *Hub) seatVoice(c *Client, ch *chat.ChannelInfo, mode joinMode) bool {
 	c.setVoice(&id)
 	seat.joined.TalkPower, seat.joined.HandRaisedAt = h.seatStage(c.User.ID, id)
 
+	// Before the seat is final: the eviction it does may mark the room again.
+	if !mode.resume {
+		h.taken.clear(voiceKey{c.User.ID, ch.ID})
+	}
 	if !h.finalizeVoiceSeat(c, ch.ID, mode.evictReason) {
 		return false
 	}
@@ -121,6 +127,7 @@ func (h *Hub) endSiblingVoices(c *Client) {
 		}
 		o.voiceMu.Lock()
 		if cur := o.currentVoice(); cur != nil && o.seatStamp() != 0 && o.seatStamp() < mine {
+			h.taken.mark(voiceKey{o.User.ID, *cur})
 			h.leaveVoiceLocked(o, *cur)
 			o.SendEvent(events.VoiceKicked, map[string]any{"channel_id": *cur, "reason": kickTakenOver})
 		}
@@ -308,6 +315,9 @@ func (h *Hub) evictSiblingConnections(c *Client, chID uuid.UUID, reason string) 
 			continue
 		}
 		if cur := o.currentVoice(); cur != nil && *cur == chID && o.seatStamp() < mine {
+			if reason == kickTakenOver {
+				h.taken.mark(voiceKey{o.User.ID, chID})
+			}
 			o.setVoice(nil)
 			o.SendEvent(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": reason})
 		}
@@ -379,4 +389,42 @@ func (c *Client) joinRefusal(snap *perm.Snapshot) string {
 		return "rules_not_accepted"
 	}
 	return "missing_permission"
+}
+
+// takeoverMarks remembers which stays a takeover ended, so a client that
+// reconnects later and resumes the call is told instead of taking it back.
+// A mark ends when the user joins that room on purpose, or after an hour.
+type takeoverMarks struct {
+	mu sync.Mutex
+	at map[voiceKey]time.Time
+}
+
+const takeoverMarkTTL = time.Hour
+
+func (m *takeoverMarks) mark(k voiceKey) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	now := time.Now()
+	if m.at == nil {
+		m.at = map[voiceKey]time.Time{}
+	}
+	for old, t := range m.at {
+		if now.Sub(t) > takeoverMarkTTL {
+			delete(m.at, old)
+		}
+	}
+	m.at[k] = now
+}
+
+func (m *takeoverMarks) clear(k voiceKey) {
+	m.mu.Lock()
+	delete(m.at, k)
+	m.mu.Unlock()
+}
+
+func (m *takeoverMarks) has(k voiceKey) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	t, ok := m.at[k]
+	return ok && time.Since(t) <= takeoverMarkTTL
 }

@@ -189,7 +189,7 @@ func TestResumeWithAStayTheServerHeldIsAnOrdinaryRejoin(t *testing.T) {
 	h, a, b := twoSessions(t, true)
 	ch := voiceCh()
 	h.joinVoice(a, ch)
-	h.joinVoice(b, voiceCh()) // another session sits in a different Talk
+	h.joinVoice(b, voiceCh())                // another session sits in a different Talk
 	h.startGrace(voiceKey{a.User.ID, ch.ID}) // its socket dropped and the stay lingers
 	a.setVoice(nil)
 
@@ -197,5 +197,37 @@ func TestResumeWithAStayTheServerHeldIsAnOrdinaryRejoin(t *testing.T) {
 
 	if !seatedIn(a, ch.ID) {
 		t.Fatal("a resume within the grace period was refused")
+	}
+}
+
+// A network flap: the new socket resumes before the old one of the same user
+// was unregistered. Nothing took the call over, so the resume succeeds.
+func TestResumeBeforeTheStaleSocketGoesIsNotRefused(t *testing.T) {
+	h, a, b := twoSessions(t, true)
+	ch := voiceCh()
+	h.joinVoice(a, ch)
+
+	h.resumeVoice(b, ch)
+
+	if !seatedIn(b, ch.ID) || b.peer() == nil {
+		t.Fatal("the resume was refused because of the user's own stale socket")
+	}
+	if kicked := sentEvents(t, b, "voice_kicked"); len(kicked) != 0 {
+		t.Fatalf("voice_kicked = %+v", kicked)
+	}
+}
+
+// Joining the Talk again on purpose ends the mark of an earlier takeover.
+func TestAJoinOnPurposeEndsTheTakeoverMark(t *testing.T) {
+	h, a, b := twoSessions(t, true)
+	ch := voiceCh()
+	h.joinVoice(a, ch)
+	h.takeOverVoice(b, ch)
+	if !h.taken.has(voiceKey{a.User.ID, ch.ID}) {
+		t.Fatal("the takeover left no mark")
+	}
+	h.joinVoice(a, ch)
+	if h.taken.has(voiceKey{a.User.ID, ch.ID}) {
+		t.Fatal("a join on purpose left the mark")
 	}
 }

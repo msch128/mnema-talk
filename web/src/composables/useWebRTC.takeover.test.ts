@@ -89,6 +89,24 @@ describe('taking a call over from another device', () => {
   })
 })
 
+describe('leaving here', () => {
+  it('does not take its own just-ended seat for another device', async () => {
+    const { rtc, voice } = setup()
+    const me = userFixture()
+    useAuthStore().user = me
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    voice.channelUsers = { 'ch-1': { [me.id]: voiceUserFixture({ id: me.id }) } }
+    rtc.leaveVoiceChannel()
+    expect(voice.channelUsers['ch-1']).toEqual({})
+    const next = rtc.joinVoiceChannel('ch-2')
+    expect(pendingConfirm.value).toBeNull()
+    await grantMic()
+    await next
+  })
+})
+
 describe('the session whose call was taken over', () => {
   it('ends its call quietly, offers to come back, and does not reconnect', async () => {
     const { rtc, sent, voice, chat } = setup()

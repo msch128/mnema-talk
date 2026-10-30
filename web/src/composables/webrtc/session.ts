@@ -1,6 +1,7 @@
 import * as voiceSession from '../../lib/voiceSession'
 import { preloadNoiseSuppressor } from '../../lib/noiseSuppressor'
 import { useToastStore } from '../../stores/toast'
+import { myUserId } from '../../stores/voice/state'
 import { useAuthStore } from '../../stores/auth'
 import { usePermissionsStore } from '../../stores/permissions'
 import { mediaCall } from '../../lib/media/api'
@@ -202,8 +203,19 @@ function endCall(cx: Cx, { notifyServer }: { notifyServer: boolean }) {
   stopScreenShare(cx)
   stopCamera(cx)
   if (notifyServer) chat.sendWSEvent('voice_leave', {})
+  forgetOwnSeat(cx)
   voice.disconnect()
   voice.audioBlocked = false
+}
+
+// The roster keeps me until the server's voice_leave arrives; a join in that
+// window must not take my own just-ended seat for another device.
+function forgetOwnSeat({ voice }: Cx) {
+  const me = myUserId()
+  const room = voice.currentChannelId
+  if (!me || !room || !voice.channelUsers[room]) return
+  const others = Object.fromEntries(Object.entries(voice.channelUsers[room]).filter(([id]) => id !== me))
+  voice.channelUsers = { ...voice.channelUsers, [room]: others }
 }
 
 export function leaveVoiceChannel(cx: Cx) {
