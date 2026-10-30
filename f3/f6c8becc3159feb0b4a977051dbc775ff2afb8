@@ -1,0 +1,16 @@
+web/src/composables/useAppRouting.ts
+  h_0ff4f4713441f4 12,132-133
+web/src/i18n/de.json
+  h_0ff4f4713441f4 2903
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f3f6c8becc3159feb0b4a977051dbc775ff2afb8",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
