@@ -37,6 +37,13 @@ describe('ForumSettingsForm', () => {
     expect(w.get('[data-testid="forum-require-tag"]').attributes('aria-checked')).toBe('true')
   })
 
+  it('keeps an unsaved edit when fresh settings arrive', async () => {
+    const w = mountForm()
+    await w.get('#forum-guidelines').setValue('Draft rules')
+    await w.setProps({ settings: { require_tag: true, guidelines: '' } })
+    expect((w.get('#forum-guidelines').element as HTMLTextAreaElement).value).toBe('Draft rules')
+  })
+
   it('reports a failed save as a toast and keeps the form dirty', async () => {
     vi.mocked(forumApi.updateForumSettings).mockRejectedValue(new Error('refused'))
     const w = mountForm()

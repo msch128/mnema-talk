@@ -219,7 +219,9 @@ of the pre-update backup (see "Rollback" above).
 | 0074 | `dm_members.hidden_at` and `dm_members.favourite_pos`, `users.dm_mute_all` and `users.dm_list_collapsed`: member-local direct message list preferences (see [Direct message list](#direct-message-list-close-favourites-mute-all)). |
 | 0075 | `channels.slug` and `channel_slugs`: the speaking addresses of channels (see "Speaking URLs"). Every existing channel except a direct message gets its slug in the same migration. |
 | 0076 | `messages_channel_unread_idx`: covering index on `messages (channel_id, created_at) INCLUDE (user_id, parent_id, reply_to_id)` for the unread counts. Adds an index only; building it briefly slows message writes on a very large database. |
-| 0079 | Forum rework: `forum_tags.color`, `forum_tags.position` (existing tags keep their name order) and `forum_tags.moderated`, `forum_settings` (require a tag, guidelines), `messages.is_resolved` and `forum_post_reads` (per-post read markers). Adds columns and tables only; existing rows keep the defaults. See [Forum channels](forums.md). |
+| 0077 | Drops the unused native-client tables (`native_session_families`, `native_access_tokens`, `native_refresh_tokens`, `native_ciphertext_events`) of migrations 0015 and 0016. Nothing wrote them any more. |
+| 0078 | Drops the redundant index `idx_messages_channel_created`, covered by `messages_channel_unread_idx` (0076). |
+| 0082 | Forum rework: `forum_tags.color`, `forum_tags.position` (existing tags keep their name order) and `forum_tags.moderated`, `forum_settings` (require a tag, guidelines), `messages.is_resolved` and `forum_post_reads` (per-post read markers). Adds columns and tables only; existing rows keep the defaults. See [Forum channels](forums.md). |
 
 #### Speaking URLs
 

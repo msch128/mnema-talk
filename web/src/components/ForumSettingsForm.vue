@@ -26,12 +26,15 @@ const requireTag = ref(props.settings.require_tag)
 const guidelines = ref(props.settings.guidelines)
 const saving = ref(false)
 
-watch(() => props.settings, s => {
-  requireTag.value = s.require_tag
-  guidelines.value = s.guidelines
-})
+const isDirty = (from: ForumSettings) => requireTag.value !== from.require_tag || guidelines.value.trim() !== from.guidelines
+const dirty = computed(() => isDirty(props.settings))
 
-const dirty = computed(() => requireTag.value !== props.settings.require_tag || guidelines.value.trim() !== props.settings.guidelines)
+// Fresh settings (a tag changed, a moderator saved) replace the form only while it holds no unsaved edit.
+watch(() => props.settings, (next, previous) => {
+  if (previous && isDirty(previous)) return
+  requireTag.value = next.require_tag
+  guidelines.value = next.guidelines
+})
 
 async function save() {
   if (!dirty.value || saving.value) return

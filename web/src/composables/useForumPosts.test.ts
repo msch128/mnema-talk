@@ -168,6 +168,22 @@ describe('useForumPosts', () => {
     expect(list.posts.value.map(p => p.id)).toEqual(['fresh'])
   })
 
+  it('lets a refresh that runs during a paging request free the load-more button', async () => {
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce(page(50))
+    host()
+    await flushPromises()
+    let release!: (v: ReturnType<typeof page>) => void
+    vi.mocked(forumApi.fetchForumPosts).mockImplementationOnce(() => new Promise(r => { release = r }))
+    const more = list.loadMore()
+    expect(list.isLoadingMore.value).toBe(true)
+    vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([post('fresh')])
+    await list.refresh()
+    release([post('stale')])
+    await more
+    expect(list.isLoadingMore.value).toBe(false)
+    expect(list.posts.value.map(p => p.id)).toEqual(['fresh'])
+  })
+
   it('ignores a second paging request while one runs and does nothing without posts', async () => {
     vi.mocked(forumApi.fetchForumPosts).mockResolvedValueOnce([])
     host()

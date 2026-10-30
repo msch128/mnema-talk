@@ -85,6 +85,8 @@ function useForumPages(channelId: MaybeRefOrGetter<string>, query: () => ListQue
     const id = toValue(channelId)
     if (!id || isLoading.value) return
     const mine = ++seq
+    // A load more that this refresh supersedes will not clear its own flag.
+    isLoadingMore.value = false
     try {
       const limit = Math.min(100, Math.max(PAGE_SIZE, unpinned(posts.value)))
       const page = await fetchForumPosts(id, { ...query(), limit })
