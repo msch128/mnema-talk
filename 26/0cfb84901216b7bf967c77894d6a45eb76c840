@@ -1,0 +1,37 @@
+api/openapi.json
+  s_06fcde5dbef956::t_dc52fa111939f9 35081
+doc/talks.md
+  s_06fcde5dbef956::t_ea26ebc691b358 157
+internal/ws/client.go
+  s_06fcde5dbef956::t_51f2fc1c114864 63-66,231-242
+internal/ws/handle.go
+  s_06fcde5dbef956::t_4e366f8f256c99 25,111-113
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_11098608d7dca4 77
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_4b9befc9f28117 76,130,319,394-396,400-405,410,415,417-418,422,431-433,436-437
+internal/ws/voice_takeover_test.go
+  s_06fcde5dbef956::t_53c76ba2b2936b 172-173,225,229,233,237-259
+web/src/composables/useWebRTC.takeover.test.ts
+  s_06fcde5dbef956::t_72d42dcea68900 46,70,81,88,142
+web/src/composables/webrtc/session.ts
+  s_06fcde5dbef956::t_53fc2b488a3df8 108-111,148,179
+web/src/types/events.ts
+  s_06fcde5dbef956::t_94f2fc9c5ac9f5 169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "260cfb84901216b7bf967c77894d6a45eb76c840",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
