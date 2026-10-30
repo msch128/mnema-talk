@@ -6,12 +6,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 // forumTagFixture is a forum with a plain and a moderated tag, a regular member
@@ -426,5 +429,83 @@ func TestForumRulesReorderAndSolvedAreAudited(t *testing.T) {
 	var d map[string]any
 	if err := json.Unmarshal([]byte(details), &d); err != nil || d["is_resolved"] != false || d["previous_tag_ids"] == nil || d["tag_ids"] == nil {
 		t.Fatalf("post_update details = %s, %v", details, err)
+	}
+}
+
+func TestForumExtrasHandlersReadSettingsUnreadAndRefuseWhatIsNotAForum(t *testing.T) {
+	x := newForumTagFixture(t)
+	ctx := context.Background()
+
+	// Settings are readable by every member who can view the forum.
+	if _, _, err := UpdateForumSettings(ctx, x.f.p, x.ch.ID, ForumSettingsPatch{Guidelines: ptr("Be kind.")}); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	if err := x.h.getForumSettings(rec, chatRequest(x.f.u, "", x.chParam, "")); err != nil {
+		t.Fatal(err)
+	}
+	var s ForumSettings
+	if err := json.Unmarshal(rec.Body.Bytes(), &s); err != nil || s.Guidelines != "Be kind." || s.RequireTag {
+		t.Fatalf("settings = %+v %v", s, err)
+	}
+
+	// The unread list answers with the posts another member wrote.
+	post, err := x.createPost(t, x.mod, "unread for the member")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.f.p.Exec(ctx, `UPDATE users SET created_at = NOW() - interval '1 hour' WHERE id = $1`, x.f.u.ID); err != nil {
+		t.Fatal(err)
+	}
+	rec = httptest.NewRecorder()
+	if err := x.h.listUnreadForumPosts(rec, chatRequest(x.f.u, "", x.chParam, "")); err != nil {
+		t.Fatal(err)
+	}
+	var unread UnreadForumPosts
+	if err := json.Unmarshal(rec.Body.Bytes(), &unread); err != nil || len(unread.PostIDs) != 1 || unread.PostIDs[0] != post.ID {
+		t.Fatalf("unread = %+v %v", unread, err)
+	}
+
+	// A text channel is not a forum: every handler refuses it, a bad id is refused too.
+	textParam := map[string]string{"channelID": x.f.c.ID.String()}
+	postParam := map[string]string{"channelID": x.f.c.ID.String(), "messageID": post.ID.String()}
+	for name, err := range map[string]error{
+		"get settings":    x.h.getForumSettings(httptest.NewRecorder(), chatRequest(x.mod, "", textParam, "")),
+		"update settings": x.h.updateForumSettings(httptest.NewRecorder(), chatRequest(x.mod, `{"require_tag":true}`, textParam, "")),
+		"unread":          x.h.listUnreadForumPosts(httptest.NewRecorder(), chatRequest(x.mod, "", textParam, "")),
+		"mark read":       x.h.markForumPostRead(httptest.NewRecorder(), chatRequest(x.mod, "", postParam, "")),
+		"bad channel id":  x.h.getForumSettings(httptest.NewRecorder(), chatRequest(x.mod, "", map[string]string{"channelID": "nope"}, "")),
+		"bad post id":     x.h.markForumPostRead(httptest.NewRecorder(), chatRequest(x.mod, "", map[string]string{"channelID": x.ch.ID.String(), "messageID": "nope"}, "")),
+	} {
+		if err == nil {
+			t.Errorf("%s: expected an error", name)
+		}
+	}
+
+	// Without View channel the forum does not exist for the member.
+	var everyone uuid.UUID
+	if err := x.f.p.QueryRow(ctx, `SELECT id FROM roles WHERE is_everyone`).Scan(&everyone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.f.p.Exec(ctx, `INSERT INTO permission_overwrites (channel_id, role_id, deny) VALUES ($1, $2, $3)`, x.ch.ID, everyone, int64(perm.ViewChannel)); err != nil {
+		t.Fatal(err)
+	}
+	x.h.Perms.Invalidate()
+	hidden := map[string]string{"channelID": x.ch.ID.String(), "messageID": post.ID.String()}
+	for name, err := range map[string]error{
+		"get settings": x.h.getForumSettings(httptest.NewRecorder(), chatRequest(x.f.u, "", x.chParam, "")),
+		"unread":       x.h.listUnreadForumPosts(httptest.NewRecorder(), chatRequest(x.f.u, "", x.chParam, "")),
+		"mark read":    x.h.markForumPostRead(httptest.NewRecorder(), chatRequest(x.f.u, "", hidden, "")),
+	} {
+		if err == nil {
+			t.Errorf("%s without View channel: expected an error", name)
+		}
+	}
+
+	// The routes are mounted.
+	r := chi.NewRouter()
+	x.h.mountForumExtras(r)
+	if !r.Match(chi.NewRouteContext(), http.MethodGet, "/channels/"+x.ch.ID.String()+"/forum-settings") {
+		t.Fatal("forum-settings route is not mounted")
 	}
 }
