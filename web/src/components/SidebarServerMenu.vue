@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, CheckCheck, ScrollText, Bell } from '@lucide/vue'
+import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, CheckCheck, ScrollText, Bell, ListChecks } from '@lucide/vue'
 import { usePermissionsStore } from '../stores/permissions'
 import { useOnboardingStore } from '../stores/onboarding'
 import { useAppVersionStore } from '../stores/appVersion'
+import { useFirstRunStore } from '../stores/firstRun'
+import { useChatStore } from '../stores/chat'
+import { useVoiceStore } from '../stores/voice'
 import { rulesOpen } from '../lib/communityRules'
 import { notifyDialogOpen } from '../lib/notifyDialog'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
@@ -19,6 +22,19 @@ const emit = defineEmits<{ 'open-admin': []; 'open-legal': []; 'create-channel':
 const permissions = usePermissionsStore()
 const features = useServerFeaturesStore()
 const onboarding = useOnboardingStore()
+// The Owner's closed checklist comes back from here.
+const firstRun = useFirstRunStore()
+// The list shows under a text channel: from a Talk or a DM, the first text channel is opened.
+const chat = useChatStore()
+const voice = useVoiceStore()
+function reopenChecklist() {
+  void firstRun.setHidden(false)
+  if (chat.activeChannel?.type === 'text' && voice.activeView !== 'voice') return
+  const text = chat.allChannels.find(c => c.type === 'text')
+  if (!text) return
+  chat.selectChannel(text)
+  voice.activeView = 'chat'
+}
 // Only people who may open the console see that a new release is out.
 const versionStore = useAppVersionStore()
 const updateHint = computed(() => permissions.canOpenAdmin && versionStore.adminUpdateAvailable)
@@ -152,6 +168,10 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
             class="ml-auto rounded-full bg-mnema-accent/15 px-2 py-0.5 text-xs font-semibold text-mnema-accent"
           >{{ $t('update.badge', { version: versionStore.adminUpdate?.latest_version }) }}</span>
           <Crown class="w-4 h-4 text-mnema-amber shrink-0" />
+        </button>
+        <button v-if="firstRun.state?.hidden" type="button" role="menuitem" tabindex="-1" :class="menuItemClass" data-testid="menu-first-run" @click="runMenuAction(reopenChecklist)">
+          <span class="truncate">{{ $t('firstRun.reopen') }}</span>
+          <ListChecks class="w-4 h-4 shrink-0" />
         </button>
         <template v-if="permissions.can('manage_channels')">
           <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('create-channel'))">

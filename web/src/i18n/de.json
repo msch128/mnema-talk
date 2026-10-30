@@ -2868,6 +2868,53 @@
       "allow_identity_override": "Beiträge dürfen ihren Benutzernamen selbst festlegen"
     }
   },
+  "firstRun": {
+    "label": "Loslegen",
+    "title": "Loslegen mit {name}",
+    "progress": "{done} von {total} erledigt",
+    "allSet": "Deine Community ist startklar",
+    "allSetHint": "Alles Wichtige ist erledigt. Du kannst diese Liste im Servermenü wieder öffnen.",
+    "finish": "Fertig",
+    "hide": "Checkliste ausblenden. Das Servermenü holt sie zurück.",
+    "reopen": "Checkliste „Loslegen“",
+    "done": "Erledigt",
+    "todo": "Noch offen",
+    "optional": "optional",
+    "inviteCopied": "Einladungslink kopiert. Er gilt 7 Tage für {count} Personen.",
+    "inviteCreated": "Einladung erstellt. Kopiere den Link zum Teilen.",
+    "step": {
+      "name": {
+        "label": "Community benennen",
+        "hint": "Der Name erscheint in der Kopfzeile, auf der Anmeldeseite und in Einladungslinks. Ohne Namen heißt sie wie ihre Adresse.",
+        "action": "Benennen"
+      },
+      "invite": {
+        "label": "Leute einladen",
+        "hint": "Erstellt einen Einladungslink für 7 Tage und kopiert ihn.",
+        "action": "Einladung erstellen"
+      },
+      "channels": {
+        "label": "Kanäle durchsehen",
+        "hint": "Benenne die mitgelieferten Kanäle und Kategorien um, sortiere sie oder füge neue hinzu.",
+        "action": "Ansehen"
+      },
+      "voice": {
+        "label": "Sprache einrichten",
+        "hint": "Wähle einen Talk als Lobby für schnelle Talks und Anrufe.",
+        "action": "Einrichten"
+      },
+      "status": {
+        "label": "Verbindung prüfen",
+        "hint": "Die Statusseite prüft, ob Sprache deine Mitglieder von außen erreicht.",
+        "action": "Prüfen"
+      },
+      "roles_rules": {
+        "label": "Rollen und Regeln",
+        "hint": "Schreibe Regeln, die neue Mitglieder annehmen, und vergib Rollen.",
+        "action": "Öffnen"
+      }
+    }
+  },
   "events": {
     "events": "Veranstaltungen",
     "upcoming": "Bevorstehend",

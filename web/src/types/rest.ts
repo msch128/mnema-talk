@@ -3743,6 +3743,49 @@ export function isOnboardingAcceptInput(value: unknown): value is OnboardingAcce
 
 export const decodeOnboardingAcceptInput = decoder("onboarding.AcceptInput", isOnboardingAcceptInput)
 
+export type OnboardingFirstRun = {
+  complete: boolean
+  hidden: boolean
+  steps: Array<OnboardingFirstRunStep>
+}
+
+export function isOnboardingFirstRun(value: unknown): value is OnboardingFirstRun {
+  return isRecord(value)
+    && (hasOwn(value, "complete") && typeof value["complete"] === 'boolean')
+    && (hasOwn(value, "hidden") && typeof value["hidden"] === 'boolean')
+    && (hasOwn(value, "steps") && isArrayOf(value["steps"], item => isOnboardingFirstRunStep(item)))
+}
+
+export const decodeOnboardingFirstRun = decoder("onboarding.FirstRun", isOnboardingFirstRun)
+
+export type OnboardingFirstRunInput = {
+  hidden?: boolean | null
+  visited?: Array<string>
+}
+
+export function isOnboardingFirstRunInput(value: unknown): value is OnboardingFirstRunInput {
+  return isRecord(value)
+    && (!hasOwn(value, "hidden") || (typeof value["hidden"] === 'boolean' || value["hidden"] === null))
+    && (!hasOwn(value, "visited") || isArrayOf(value["visited"], item => isString(item)))
+}
+
+export const decodeOnboardingFirstRunInput = decoder("onboarding.FirstRunInput", isOnboardingFirstRunInput)
+
+export type OnboardingFirstRunStep = {
+  done: boolean
+  id: string
+  optional: boolean
+}
+
+export function isOnboardingFirstRunStep(value: unknown): value is OnboardingFirstRunStep {
+  return isRecord(value)
+    && (hasOwn(value, "done") && typeof value["done"] === 'boolean')
+    && (hasOwn(value, "id") && isString(value["id"]))
+    && (hasOwn(value, "optional") && typeof value["optional"] === 'boolean')
+}
+
+export const decodeOnboardingFirstRunStep = decoder("onboarding.FirstRunStep", isOnboardingFirstRunStep)
+
 export type OnboardingInvitePreview = {
   community_name?: string
   expires_at?: string

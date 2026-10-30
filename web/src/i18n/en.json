@@ -2868,6 +2868,53 @@
       "allow_identity_override": "Allow posts to set their own username"
     }
   },
+  "firstRun": {
+    "label": "Get started",
+    "title": "Get started with {name}",
+    "progress": "{done} of {total} done",
+    "allSet": "Your community is ready",
+    "allSetHint": "Everything you needed is done. You can reopen this list from the server menu.",
+    "finish": "Done",
+    "hide": "Hide the checklist. The server menu brings it back.",
+    "reopen": "Get started checklist",
+    "done": "Done",
+    "todo": "Still to do",
+    "optional": "optional",
+    "inviteCopied": "Invite link copied. It works for 7 days and {count} people.",
+    "inviteCreated": "Invite created. Copy the link to share it.",
+    "step": {
+      "name": {
+        "label": "Name your community",
+        "hint": "It shows in the header, on the sign-in page and on invite links. Until you name it, it is called by its address.",
+        "action": "Name it"
+      },
+      "invite": {
+        "label": "Invite people",
+        "hint": "Creates an invite link for 7 days and copies it.",
+        "action": "Create invite"
+      },
+      "channels": {
+        "label": "Review your channels",
+        "hint": "Rename, reorder or add the channels and categories that came with the community.",
+        "action": "Review"
+      },
+      "voice": {
+        "label": "Set up voice",
+        "hint": "Choose a Talk as the lobby for quick Talks and calls.",
+        "action": "Set up"
+      },
+      "status": {
+        "label": "Check your connection",
+        "hint": "The status page tests whether voice reaches your members from outside.",
+        "action": "Check"
+      },
+      "roles_rules": {
+        "label": "Roles and rules",
+        "hint": "Write rules new members accept, and give people roles.",
+        "action": "Open"
+      }
+    }
+  },
   "events": {
     "events": "Events",
     "upcoming": "Upcoming",

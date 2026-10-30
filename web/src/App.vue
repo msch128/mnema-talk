@@ -28,6 +28,7 @@ import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import { openSettings } from './lib/settingsDialog'
 import { notifyDialogOpen } from './lib/notifyDialog'
+import { watchAdminRequest } from './lib/adminRequest'
 import NotificationSettingsDialog from './components/NotificationSettingsDialog.vue'
 import ShortcutsDialog from './components/ShortcutsDialog.vue'
 import { shortcutsOpen, useShortcutsKey } from './lib/shortcutsDialog'
@@ -124,6 +125,8 @@ usePushBridge()
 usePttHint()
 useShortcutsKey(() => !!authStore.user)
 const { showAdminModal, adminTab, voiceShowChat, voiceChannelId, applyRoute, syncCurrentStateToRoute, openAdmin, closeAdmin, onVoiceJoin } = routing
+// Another part of the UI (the Owner's checklist) asks for a console tab.
+watchAdminRequest(tab => { if (permissions.canOpenAdmin) openAdmin(tab) })
 
 // Avoids flashing the login dialog while the session cookie is being checked.
 const authChecked = ref(false)

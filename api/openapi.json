@@ -6337,6 +6337,70 @@
         ],
         "type": "object"
       },
+      "onboarding.FirstRun": {
+        "properties": {
+          "complete": {
+            "description": "Complete is true when every step that is not optional is done.",
+            "type": "boolean"
+          },
+          "hidden": {
+            "description": "Hidden is true once the Owner closed the checklist (or when the community\nwas already in use before the checklist existed). The server menu\nreopens it.",
+            "type": "boolean"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/onboarding.FirstRunStep"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "complete",
+          "hidden",
+          "steps"
+        ],
+        "type": "object"
+      },
+      "onboarding.FirstRunInput": {
+        "properties": {
+          "hidden": {
+            "description": "Hidden closes (true) or reopens (false) the checklist; left out, it stays as it is.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "visited": {
+            "description": "Visited are steps the Owner has now opened: channels, status. They are added, never removed.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "onboarding.FirstRunStep": {
+        "properties": {
+          "done": {
+            "type": "boolean"
+          },
+          "id": {
+            "description": "ID names the step (name, invite, channels, voice, status, roles_rules).",
+            "type": "string"
+          },
+          "optional": {
+            "description": "Optional steps do not count towards Complete.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "done",
+          "id",
+          "optional"
+        ],
+        "type": "object"
+      },
       "onboarding.InvitePreview": {
         "properties": {
           "community_name": {
@@ -13312,6 +13376,175 @@
         "summary": "Rename a custom emoji",
         "tags": [
           "Emoji"
+        ]
+      }
+    },
+    "/api/admin/first-run": {
+      "get": {
+        "description": "Owner only. The steps (name the community, invite people, review the channels, set up voice, check the status, optionally roles and rules), each with whether it is done, whether the Owner closed the checklist and whether every required step is done. Steps tick themselves from real state; channels and status once the Owner has opened that page. A community that already had members before the checklist existed starts closed.",
+        "operationId": "getFirstRun",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/onboarding.FirstRun"
+                }
+              }
+            },
+            "description": "Checklist."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner may read it."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read the Owner's first-run checklist",
+        "tags": [
+          "Onboarding"
+        ]
+      },
+      "put": {
+        "description": "Owner only. `hidden` closes or reopens the checklist; `visited` adds the steps the Owner has opened (channels, status). Returns the checklist as it now stands.",
+        "operationId": "putFirstRun",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/onboarding.FirstRunInput"
+              }
+            }
+          },
+          "description": "Changes.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/onboarding.FirstRun"
+                }
+              }
+            },
+            "description": "Checklist."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner may change it, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Close, reopen or advance the Owner's first-run checklist",
+        "tags": [
+          "Onboarding"
         ]
       }
     },

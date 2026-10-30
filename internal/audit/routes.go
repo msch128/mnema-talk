@@ -117,6 +117,7 @@ var Routes = []Route{
 	{Method: "PUT", Pattern: "/upload-limit", Action: "settings.upload_limit", TargetType: "settings", Snapshot: ResSettings},
 
 	{Method: "PUT", Pattern: "/onboarding", Action: "settings.onboarding", TargetType: "settings", Snapshot: ResOnboarding},
+	{Method: "PUT", Pattern: "/first-run", Skip: true}, // the Owner's own checklist state, not community data
 
 	{Method: "POST", Pattern: "/emoji", Action: "emoji.create", TargetType: "emoji", Snapshot: ResEmoji, NoBody: true},
 	{Method: "PATCH", Pattern: "/emoji/{id}", Action: "emoji.rename", TargetType: "emoji", IDParam: "id", Snapshot: ResEmoji},
