@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/textcut"
 )
 
 // snippetRunes bounds the text of a message shown in a reminder.
@@ -57,7 +58,7 @@ func cut(s string, limit int) string {
 	if utf8.RuneCountInString(s) <= limit {
 		return s
 	}
-	return string([]rune(s)[:limit-1]) + "…"
+	return textcut.Runes(s, limit-1) + "…"
 }
 
 // canView reports whether the member may see the channel right now. A

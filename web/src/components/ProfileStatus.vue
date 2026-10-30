@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { charCount } from '../lib/textLength'
 import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import { computed, ref } from 'vue'
@@ -89,13 +90,13 @@ async function saveStatus(text = editStatus.value) {
         v-model="editStatus"
         data-testid="profile-status-input"
         type="text"
-        :maxlength="MAX_STATUS"
+        v-max-chars="MAX_STATUS"
         :aria-label="$t('profile.status')"
         :placeholder="$t('profile.statusPlaceholder')"
         class="min-w-0 flex-1 rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
         @keydown.esc.stop.prevent="isEditingStatus = false"
       />
-      <span class="w-10 text-right text-xs tabular-nums text-mnema-tertiary">{{ editStatus.length }}/{{ MAX_STATUS }}</span>
+      <span class="w-10 text-right text-xs tabular-nums text-mnema-tertiary">{{ charCount(editStatus) }}/{{ MAX_STATUS }}</span>
       <button
         type="submit"
         :disabled="isSavingStatus"

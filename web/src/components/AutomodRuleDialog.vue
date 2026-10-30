@@ -95,7 +95,7 @@ const label = 'block text-xs font-medium text-mnema-muted font-mono uppercase tr
 
       <div class="space-y-1">
         <label for="am-name" :class="label">{{ $t('automod.name') }}</label>
-        <input id="am-name" v-model="form.name" type="text" :maxlength="MAX_RULE_NAME" :class="field" data-testid="am-name" />
+        <input id="am-name" v-model="form.name" type="text" v-max-chars="MAX_RULE_NAME" :class="field" data-testid="am-name" />
         <p class="text-xs text-mnema-tertiary">{{ $t('automod.nameHint') }}</p>
       </div>
 

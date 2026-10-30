@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { charCount } from '../lib/textLength'
 import type { PropType } from 'vue'
 import type { Channel, Category } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
@@ -141,11 +142,11 @@ const label = 'text-xs font-medium text-mnema-tertiary uppercase tracking-wider 
             id="edit-name"
             v-model="createName"
             type="text"
-            maxlength="64"
+            v-max-chars="64"
             :placeholder="$t('admin.categoryNamePlaceholder')"
             :class="field"
           />
-          <input v-else id="edit-name" v-model="draft.name" type="text" maxlength="64" :aria-invalid="errors.name ? 'true' : undefined" :class="field" />
+          <input v-else id="edit-name" v-model="draft.name" type="text" v-max-chars="64" :aria-invalid="errors.name ? 'true' : undefined" :class="field" />
           <p v-if="errors.name" role="alert" class="text-xs text-mnema-danger" data-testid="edit-name-error">{{ errors.name }}</p>
         </div>
 
@@ -157,14 +158,14 @@ const label = 'text-xs font-medium text-mnema-tertiary uppercase tracking-wider 
             id="edit-topic"
             v-model="draft.topic"
             rows="2"
-            :maxlength="MAX_TOPIC"
+            v-max-chars="MAX_TOPIC"
             :placeholder="$t('admin.channelTopicPlaceholder')"
             aria-describedby="edit-topic-help"
             :class="[field, 'resize-none']"
           ></textarea>
           <p id="edit-topic-help" class="flex justify-between gap-2 text-xs text-mnema-tertiary">
             <span>{{ $t('admin.channelTopicHelp') }}</span>
-            <span class="tabular-nums shrink-0">{{ draft.topic.length }}/{{ MAX_TOPIC }}</span>
+            <span class="tabular-nums shrink-0">{{ charCount(draft.topic) }}/{{ MAX_TOPIC }}</span>
           </p>
         </div>
 

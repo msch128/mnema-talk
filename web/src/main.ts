@@ -16,6 +16,7 @@ import { installRangeFill } from './lib/rangeFill'
 import { unlockAudioOnFirstGesture } from './lib/soundEffects'
 import './style.css'
 import { i18nPlugin, setLocale, browserLocale } from './i18n'
+import { maxChars } from './directives/maxChars'
 import { tooltip } from './directives/tooltip'
 
 // Before login the browser decides; the account's language takes over after login.
@@ -31,6 +32,7 @@ createApp(root)
   .use(createPinia())
   .use(i18nPlugin)
   .directive('tooltip', tooltip)
+  .directive('maxChars', maxChars)
   .mount('#app')
 
 installRangeFill()

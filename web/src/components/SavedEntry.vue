@@ -128,7 +128,7 @@ const when = (iso: string) => dateTime(iso, locale.value)
           v-model="draft"
           data-testid="saved-note-input"
           type="text"
-          :maxlength="NOTE_MAX"
+          v-max-chars="NOTE_MAX"
           :aria-label="$t('saved.notePlaceholder')"
           :placeholder="$t('saved.notePlaceholder')"
           class="min-w-0 flex-1 rounded-md border border-mnema-border bg-mnema-surface px-2 py-1 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:border-mnema-accent focus:outline-hidden"

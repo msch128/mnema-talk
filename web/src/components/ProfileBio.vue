@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { charCount } from '../lib/textLength'
 import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import { computed, ref } from 'vue'
@@ -109,7 +110,7 @@ async function saveProfile() {
           v-model="editDisplayName"
           :aria-describedby="describedby"
           type="text"
-          maxlength="24"
+          v-max-chars="24"
           class="w-full rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text max-md:min-h-11"
         />
       </FormField>
@@ -118,11 +119,11 @@ async function saveProfile() {
           :id="id"
           v-model="editBio"
           rows="4"
-          maxlength="250"
+          v-max-chars="250"
           class="w-full resize-none rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
           :placeholder="$t('profile.bioPlaceholder')"
         ></textarea>
-        <p class="text-right text-xs tabular-nums text-mnema-tertiary">{{ editBio.length }} / 250</p>
+        <p class="text-right text-xs tabular-nums text-mnema-tertiary">{{ charCount(editBio) }} / 250</p>
       </FormField>
       <div class="flex items-center justify-end gap-2">
         <button type="button" class="btn btn-ghost btn-sm max-md:min-h-11" @click="cancelEditBio">{{ $t('common.cancel') }}</button>

@@ -1,4 +1,5 @@
 import { shallowRef } from 'vue'
+import { clampChars } from './textLength'
 
 // Unsent composer text per channel and thread, kept in this browser only
 // (localStorage, one record per account) so it survives switching and
@@ -102,7 +103,7 @@ function asReply(value: unknown): DraftReply | null {
 function asStored(value: unknown): Stored | null {
   if (!value || typeof value !== 'object') return null
   const { text, reply, at } = value as Record<string, unknown>
-  const draft = { text: typeof text === 'string' ? text.slice(0, MAX_DRAFT_TEXT) : '', reply: asReply(reply), at: typeof at === 'number' ? at : 0 }
+  const draft = { text: typeof text === 'string' ? clampChars(text, MAX_DRAFT_TEXT) : '', reply: asReply(reply), at: typeof at === 'number' ? at : 0 }
   return draft.text || draft.reply ? draft : null
 }
 
@@ -181,7 +182,7 @@ export function hasDraft(uid: string | null | undefined, key: string): boolean {
 export function setDraft(uid: string, key: string, draft: Draft | null) {
   if (!sessionAlive()) return
   const items = fresh(uid)
-  const text = (draft?.text ?? '').slice(0, MAX_DRAFT_TEXT)
+  const text = clampChars(draft?.text ?? '', MAX_DRAFT_TEXT)
   if (draft && (text.trim() || draft.reply)) items[key] = { text, reply: draft.reply, at: Date.now() }
   else delete items[key]
   const next = trimmed(items)

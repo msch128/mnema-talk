@@ -99,7 +99,7 @@ async function remove() {
       <span v-else class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-mnema-raised text-lg font-semibold text-mnema-muted" aria-hidden="true">{{ botInitial(bot.name) }}</span>
       <label class="min-w-0 flex-1 stack-1">
         <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('common.name') }}</span>
-        <input v-model="draft.name" maxlength="24" :aria-invalid="errors.name ? 'true' : undefined" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden transition focus:border-mnema-accent" data-testid="bot-name" @keydown.enter.prevent="form.save" />
+        <input v-model="draft.name" v-max-chars="24" :aria-invalid="errors.name ? 'true' : undefined" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden transition focus:border-mnema-accent" data-testid="bot-name" @keydown.enter.prevent="form.save" />
         <span v-if="errors.name" class="block text-xs text-mnema-danger" data-testid="bot-name-error">{{ errors.name }}</span>
       </label>
       <label class="flex cursor-pointer items-center gap-1.5 rounded-md border border-mnema-border-strong px-3 py-1.5 text-sm text-mnema-text transition hover:bg-mnema-hover">

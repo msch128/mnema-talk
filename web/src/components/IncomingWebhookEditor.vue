@@ -60,7 +60,7 @@ defineExpose({ guard: form.guard })
     <div class="space-y-3 p-4 text-sm text-mnema-text">
       <label class="block">
         <span class="mb-1 block text-xs font-medium text-mnema-muted">{{ $t('common.name') }}</span>
-        <input v-model="draft.name" type="text" maxlength="80" :aria-invalid="errors.name ? 'true' : undefined" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text" data-testid="incoming-edit-name" />
+        <input v-model="draft.name" type="text" v-max-chars="80" :aria-invalid="errors.name ? 'true' : undefined" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text" data-testid="incoming-edit-name" />
         <span v-if="errors.name" class="mt-1 block text-xs text-mnema-danger">{{ errors.name }}</span>
       </label>
       <p class="text-xs text-mnema-tertiary" data-testid="incoming-audit">{{ $t('webhooks.createdBy', { name: memberName(hook.created_by) }) }}</p>

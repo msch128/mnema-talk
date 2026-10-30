@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/mdplain"
+	"github.com/msch128/mnema-talk/internal/textcut"
 )
 
 // Payload is what the service worker receives (after the browser decrypted
@@ -189,8 +190,7 @@ func clean(s string, limit int) string {
 	if utf8.RuneCountInString(s) <= limit {
 		return s
 	}
-	runes := []rune(s)
-	return strings.TrimSpace(string(runes[:limit-1])) + "…"
+	return strings.TrimSpace(textcut.Runes(s, limit-1)) + "…"
 }
 
 // testPayload is what the test button sends.

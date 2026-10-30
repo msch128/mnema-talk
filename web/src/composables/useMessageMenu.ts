@@ -25,6 +25,7 @@ import { caughtErrorMessage } from '../lib/api'
 import { copyToClipboard } from '../lib/clipboard'
 import { messageSafetyItems } from './dmMenuItems'
 import { boxOf, type AnchorBox } from '../lib/floatingPosition'
+import { clampChars } from '../lib/textLength'
 
 export { toggleSavedMessage }
 
@@ -135,7 +136,7 @@ function deleteItems(msg: Message, channelId: string, moderator: boolean, action
     { label: t('chat.delete'), icon: Trash2, danger: true, action: () => actions.deleteMessage(msg) }
   ]
   if (moderator && !actions.isOwn(msg)) {
-    const excerpt = previewText(msg.content).slice(0, 160)
+    const excerpt = clampChars(previewText(msg.content), 160)
     items.push({
       label: t('moderation.deleteWithReason'), icon: Trash2, danger: true,
       action: () => { void moderateMessages({ kind: 'delete', channelId, messageId: msg.id, excerpt }) }

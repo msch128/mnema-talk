@@ -14,6 +14,7 @@ import { confirm } from '../lib/confirm'
 import { t, locale } from '../i18n'
 import { caughtErrorMessage } from '../lib/api'
 import { clockTimeOptions } from '../lib/time'
+import { clampChars } from '../lib/textLength'
 
 export function formatTime(dateStr: string | null | undefined) {
   if (!dateStr) return ''
@@ -28,7 +29,7 @@ function confirmDelete(msg: Message, titleKey: string) {
   return confirm({
     title: t(titleKey),
     body: t('chat.deleteBody'),
-    excerpt: previewText(msg.content).slice(0, 160) || (msg.attachments?.length ? t('chat.attachment') : ''),
+    excerpt: clampChars(previewText(msg.content), 160) || (msg.attachments?.length ? t('chat.attachment') : ''),
     confirmLabel: t('common.delete'),
     danger: true
   })

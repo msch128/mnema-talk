@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { charCount } from '../lib/textLength'
 // Host for openReport() from lib/reportDialog: tell the moderators about a
 // message. The report keeps a copy of the message and the ones around it, so
 // it still stands if the message is deleted; the author is not told.
@@ -75,8 +76,8 @@ async function send() {
 
       <div class="space-y-1">
         <label for="report-note" class="block text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('reports.note') }}</label>
-        <textarea id="report-note" v-model="note" rows="3" :maxlength="REPORT_NOTE_MAX" :placeholder="$t('reports.notePlaceholder')" data-testid="report-note" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"></textarea>
-        <p class="text-right text-xs text-mnema-tertiary">{{ note.length }} / {{ REPORT_NOTE_MAX }}</p>
+        <textarea id="report-note" v-model="note" rows="3" v-max-chars="REPORT_NOTE_MAX" :placeholder="$t('reports.notePlaceholder')" data-testid="report-note" class="w-full rounded-lg border border-mnema-border bg-mnema-canvas px-3 py-2 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"></textarea>
+        <p class="text-right text-xs text-mnema-tertiary">{{ charCount(note) }} / {{ REPORT_NOTE_MAX }}</p>
       </div>
 
       <p class="text-xs text-mnema-tertiary">{{ $t('reports.privacy') }}</p>

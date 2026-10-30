@@ -126,7 +126,7 @@ describe('the own role of a bot', () => {
 
     await row.get('button[aria-pressed]').trigger('click')
     expect(w.get('[data-testid="role-managed-note"]').text()).toContain('“Helper” is a bot’s own role')
-    expect((w.get('input[maxlength="32"]').element as HTMLInputElement).disabled).toBe(true)
+    expect((w.get('input[data-max-chars="32"]').element as HTMLInputElement).disabled).toBe(true)
     expect(w.find('input[type="number"]').exists()).toBe(false)
     expect(w.text()).not.toContain('Delete role')
     // Colour and permissions stay editable.

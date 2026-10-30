@@ -108,11 +108,19 @@ describe('AdminOnboardingTab', () => {
     expect(ok.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeUndefined()
   })
 
-  it('refuses over-long texts', async () => {
+  it('cuts an over-long text at the limit instead of refusing it', async () => {
     const w = await mountTab()
     await w.find('#onb-name').setValue('x'.repeat(61))
-    expect(w.find('[role="alert"]').exists()).toBe(true)
-    expect(w.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeDefined()
+    expect(w.find<HTMLInputElement>('#onb-name').element.value).toBe('x'.repeat(60))
+    expect(w.find('[role="alert"]').exists()).toBe(false)
+  })
+
+  it('counts characters like the server, so 60 emoji fit a limit of 60', async () => {
+    const w = await mountTab()
+    await w.find('#onb-name').setValue('😂'.repeat(60))
+    expect(w.find<HTMLInputElement>('#onb-name').element.value).toBe('😂'.repeat(60))
+    expect(w.find('[role="alert"]').exists()).toBe(false)
+    expect(w.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeUndefined()
   })
 
   it('has a heading, leaves DMs and sign-out to the System page and sends neither', async () => {
