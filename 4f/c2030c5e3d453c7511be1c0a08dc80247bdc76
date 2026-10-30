@@ -1,0 +1,25 @@
+web/src/lib/soundEffects.test.ts
+  s_58ecb9dda7416a::t_5f11efafe7d4ad 206-242
+web/src/lib/soundEffects.ts
+  s_58ecb9dda7416a::t_a5ac83c391aef1 212-214,230-238
+web/src/stores/chat/messageSound.ts
+  s_58ecb9dda7416a::t_c08282932b7d69 5,39-40
+web/src/stores/chatMessageSound.test.ts
+  s_58ecb9dda7416a::t_cb4dddf2475a51 6,79-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4fc2030c5e3d453c7511be1c0a08dc80247bdc76",
+  "prompts": {},
+  "sessions": {
+    "s_58ecb9dda7416a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-unread-sound-3a7f288cf9b01ab5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
