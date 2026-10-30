@@ -1,0 +1,51 @@
+e2e/tests/talk-reactions.spec.ts
+  s_cf5b2fa6f87060::t_62bcac8a097102 1-127
+internal/chat/emoji_reaction_integration_test.go
+  s_cf5b2fa6f87060::t_5e9dce816f6a26 1-46
+internal/chat/emoji_reaction_test.go
+  s_cf5b2fa6f87060::t_31a2943c48634d 1-70
+internal/chat/message_types.go
+  s_cf5b2fa6f87060::t_db5737069b1253 16-19,199
+internal/ws/reactions_integration_test.go
+  s_cf5b2fa6f87060::t_aa0d81be0eac59 1-42
+internal/ws/reactions_test.go
+  s_cf5b2fa6f87060::t_319e2427616ca8 131-148
+web/src/components/EmojiPicker.test.ts
+  s_cf5b2fa6f87060::t_c2a85fb2fe040a 143-178
+web/src/components/EmojiPicker.vue
+  s_cf5b2fa6f87060::t_c8dd29cdee2a27 9,11,52-54,80-81,90,92-96,99,108-110,124,129-140
+web/src/components/TalkReactButton.test.ts
+  s_cf5b2fa6f87060::t_4d40802daf9672 5-7,10-12,45-80
+web/src/composables/useDismissable.test.ts
+  s_cf5b2fa6f87060::t_d9bda6e077261c 5,23-43
+web/src/composables/useDismissable.ts
+  s_cf5b2fa6f87060::t_5b03d1976d0fac 23-36,56-61
+web/src/composables/useStage.ts
+  s_cf5b2fa6f87060::t_3de514aa389e98 7,13,23,57
+web/src/lib/emojiPickerExtras.test.ts
+  s_cf5b2fa6f87060::t_cdb6995dd4f299 1-156
+web/src/lib/emojiPickerExtras.ts
+  s_cf5b2fa6f87060::t_c9ee206ad8efa3 1-111
+web/src/lib/reactionEmoji.test.ts
+  s_cf5b2fa6f87060::t_88faf3a730da93 1-29
+web/src/lib/reactionEmoji.ts
+  s_cf5b2fa6f87060::t_c3b93f5fb58504 1-32
+web/src/stores/chat/messageActions.ts
+  s_cf5b2fa6f87060::t_ba0d72ee527d7c 5,110-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bea42aa31be4db719b2dce00a1f05b9bed7e5768",
+  "prompts": {},
+  "sessions": {
+    "s_cf5b2fa6f87060": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa4a385df44c9d339",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
