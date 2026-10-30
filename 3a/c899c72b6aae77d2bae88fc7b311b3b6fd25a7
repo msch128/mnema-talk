@@ -1,0 +1,33 @@
+web/src/App.vue
+  s_e516df595aeaf4::t_ce722ef9014e73 361
+web/src/components/EventsModal.test.ts
+  s_e516df595aeaf4::t_95db8195e58a6d 198-226
+web/src/components/EventsModal.vue
+  s_e516df595aeaf4::t_ded1bfe15be81e 20,38-39,46,52
+web/src/components/SidebarEventsEntry.test.ts
+  s_e516df595aeaf4::t_aa9297ab2f83f1 57
+web/src/composables/usePushBridge.test.ts
+  s_e516df595aeaf4::t_50e69ec089d848 44,51
+web/src/lib/eventsDialog.ts
+  s_e516df595aeaf4::t_7e3eff209189d2 3-10,14
+web/src/lib/settingsDialog.test.ts
+  s_e516df595aeaf4::t_967bb6ef419f64 94-95
+web/src/stores/events.test.ts
+  s_e516df595aeaf4::t_cebe632e01e116 186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ac899c72b6aae77d2bae88fc7b311b3b6fd25a7",
+  "prompts": {},
+  "sessions": {
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
