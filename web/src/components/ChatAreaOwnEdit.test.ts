@@ -102,11 +102,21 @@ describe('ArrowUp in the composer', () => {
     expect(editor(view).exists()).toBe(false)
   })
 
-  it('leaves the key alone while the window shows older history', async () => {
-    useChatStore().hasMoreAfter = true
+  it('jumps to the present first when the window shows older history', async () => {
+    const chat = useChatStore()
+    chat.hasMoreAfter = true
+    const older = chat.messages
+    chat.messages = [msg('old', 'me', { content: 'long ago' })]
+    const jump = vi.spyOn(chat, 'jumpToLatest').mockImplementation(async () => {
+      chat.hasMoreAfter = false
+      chat.messages = older
+      return true
+    })
     const view = open()
     await up(composer(view))
-    expect(editor(view).exists()).toBe(false)
+    await flushPromises()
+    expect(jump).toHaveBeenCalledOnce()
+    expect(editingId(view)).toBe('m3')
   })
 
   it('works in the Talk chat panel', async () => {

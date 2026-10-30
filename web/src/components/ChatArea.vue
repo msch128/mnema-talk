@@ -80,7 +80,7 @@ useDraftSlot(() => (chatStore.activeChannel ? channelDraftKey(chatStore.activeCh
 // Editing, deleting, reactions and uploads
 const actions = useMessageActions({ container: messageContainer })
 const { editingId: editingMessageId, pickerId: activeReactionPickerMsgId, isUploading } = actions
-const ownNav = useOwnMessageNav({ messages: () => chatStore.messages || [], actions, container: messageContainer, composer: () => composer.value, atNewest: () => !chatStore.hasMoreAfter })
+const ownNav = useOwnMessageNav({ messages: () => chatStore.messages || [], actions, container: messageContainer, composer: () => composer.value, toNewest: () => (chatStore.hasMoreAfter ? chatStore.jumpToLatest() : undefined) })
 const menu = useMessageMenu({ actions, reply: startReply })
 const contextMenu = menu.state
 const {

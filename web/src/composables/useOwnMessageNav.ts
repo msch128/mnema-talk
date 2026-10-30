@@ -38,13 +38,13 @@ function editable(msg: Message, isOwn: (m: Message) => boolean) {
  * @param options.container the element holding the rows (data-msg-id / data-reply-id)
  * @param options.composer  the composer to hand the focus back to
  */
-export function useOwnMessageNav({ messages, actions, container, composer, atNewest = () => true }: {
+export function useOwnMessageNav({ messages, actions, container, composer, toNewest = () => undefined }: {
   messages: () => Message[]
   actions: Actions
   container: MaybeRefOrGetter<HTMLElement | null>
   composer: () => { focus: () => void } | null
-  /** False while the list is not at its newest end (history window): ArrowUp then leaves the composer alone. */
-  atNewest?: () => boolean
+  /** Brings the newest messages into the list when it shows older history; resolves when they are there. */
+  toNewest?: () => Promise<unknown> | undefined
 }) {
   let fromComposer = false
 
@@ -57,15 +57,17 @@ export function useOwnMessageNav({ messages, actions, container, composer, atNew
     })
   }
 
-  /** ArrowUp in the composer. Returns true when it opened an edit (the key is used). */
-  function fromComposerKey(e: KeyboardEvent, draft: string): boolean {
-    if (e.key !== 'ArrowUp' || !plain(e) || draft !== '' || actions.editingId.value || !atNewest()) return false
-    const last = list().at(-1)
-    if (!last) return false
+  /** ArrowUp in the composer: edits the newest own message, jumping to the present first from older history. */
+  async function fromComposerKey(e: KeyboardEvent, draft: string) {
+    if (e.key !== 'ArrowUp' || !plain(e) || draft !== '' || actions.editingId.value) return
+    const jump = toNewest()
+    if (!jump && !list().length) return
     e.preventDefault()
+    await jump
+    const last = list().at(-1)
+    if (!last || actions.editingId.value) return
     fromComposer = true
     open(last)
-    return true
   }
 
   /** The editor of `msg` asked to move on (see arrowStep). Unsaved text stays where it is. */
