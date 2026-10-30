@@ -11,6 +11,8 @@ import { goToMessage } from './messageWindow'
 import { isTabVisible } from './readState'
 import { notificationLevel } from './notifySettings'
 import { notifyShowsText } from '../../lib/notifyPreview'
+import { callKindOf } from '../../lib/callKind'
+import { announceInviteUnlessRung } from './dmCalls'
 
 /** Whether msg mentions the signed-in user (@username, @all, @here) or replies to them. */
 export function messageMentionsMe(cx: Cx, msg: Message) {
@@ -36,7 +38,9 @@ function buildNotificationTitle(cx: Cx, msg: Message): string {
   const channel = cx.cs.allChannels.value.find(c => c.id === msg.channel_id)
   const channelName = channel ? `#${channel.name}` : ''
   const sender = msg.display_name || msg.username || ''
-  return channelName ? `${sender} (${channelName})` : sender
+  // A reply in a thread says so, like the push does.
+  const place = [channelName, msg.parent_id ? t('chat.notifyThread') : ''].filter(Boolean).join(', ')
+  return place ? `${sender} (${place})` : sender
 }
 
 const NOTIFICATION_BODY_LEN = 140
@@ -53,7 +57,7 @@ export function buildNotificationBody(msg: Message): string {
  * addresses by name. Without a list from the server (an older one) every reply
  * is treated as before.
  */
-function threadAllows(cx: Cx, msg: Message): boolean {
+export function threadAllows(cx: Cx, msg: Message): boolean {
   if (!msg.parent_id || !cx.cs.followKnown.value) return true
   return cx.cs.followedThreads.value.has(msg.parent_id) || messageMentionsMeDirectly(cx, msg)
 }
@@ -73,16 +77,25 @@ function canShowBrowserNotification(cx: Cx, msg: Message, isMention: boolean): b
   })
 }
 
-export function triggerBrowserNotification(cx: Cx, msg: Message, isMention: boolean) {
-  if (!canShowBrowserNotification(cx, msg, isMention)) return
+/** Raises the OS notification when the rules allow it; true when it did (the system then plays its own sound). */
+export function triggerBrowserNotification(cx: Cx, msg: Message, isMention: boolean): boolean {
+  const call = callKindOf(msg)
+  // The card of a call is announced by the call itself (dm_call_ring), with its own text and button; without a ring it is announced late.
+  if (call === 'invite') {
+    announceInviteUnlessRung(cx, msg)
+    return false
+  }
+  if (!canShowBrowserNotification(cx, msg, isMention)) return false
+  const sender = msg.display_name || msg.username || ''
   platform.notify({
-    title: buildNotificationTitle(cx, msg),
+    title: call === 'missed' ? t('call.missedTitle', { name: sender }) : buildNotificationTitle(cx, msg),
     // Like a push: with the text off (the member's choice, or the operator's), only who wrote and where.
-    body: notifyShowsText.value ? buildNotificationBody(msg) : t('chat.notifyNoText'),
+    body: call === 'missed' ? t('call.missedBody') : notifyShowsText.value ? buildNotificationBody(msg) : t('chat.notifyNoText'),
     channelId: msg.channel_id,
     messageId: msg.id,
     onClick: () => goToMessage(cx, msg),
   })
+  return true
 }
 
 /** What the platform allows now: the desktop client's operating system can answer differently than at start. */

@@ -2,9 +2,9 @@
 // Admin dashboard shell: the grouped navigation and one component per tab. On a
 // desktop the navigation is a sidebar; on a phone the console is a full-screen
 // sheet that opens on the list of sections and shows one section at a time.
-// Tabs stay alive while the dialog is open, so an unsaved layout survives a tab
-// switch.
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+// Tabs stay alive while the dialog is open, so an unsaved draft survives a tab
+// switch; closing the console with an unsaved draft asks first (doc/settings-ux.md).
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { ArrowLeft, X } from '@lucide/vue'
 import { navigate } from '../lib/router'
 import { t } from '../i18n'
@@ -13,7 +13,9 @@ import { decodeChatReportsPage } from '../types/rest'
 import { ALL_TABS } from '../lib/adminNav'
 import type { AdminTab } from '../lib/adminNav'
 import { useCompactLayout } from '../composables/useCompactLayout'
+import { provideDraftScope } from '../composables/useSettingsDraft'
 import { useAuthStore } from '../stores/auth'
+import { useFirstRunStore } from '../stores/firstRun'
 import { usePermissionsStore } from '../stores/permissions'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import BaseDialog from './BaseDialog.vue'
@@ -29,6 +31,7 @@ import AdminAuditTab from './AdminAuditTab.vue'
 import AdminBansTab from './AdminBansTab.vue'
 import AdminBotsTab from './AdminBotsTab.vue'
 import AdminOnboardingTab from './AdminOnboardingTab.vue'
+import AdminAccessSettings from './AdminAccessSettings.vue'
 import AdminEmojiTab from './AdminEmojiTab.vue'
 import AdminReportsTab from './AdminReportsTab.vue'
 import AdminAutomodTab from './AdminAutomodTab.vue'
@@ -46,6 +49,8 @@ const authStore = useAuthStore()
 const { isCompact } = useCompactLayout()
 const permissions = usePermissionsStore()
 const features = useServerFeaturesStore()
+// Every draft inside a tab registers here, so closing asks once for all of them.
+const drafts = provideDraftScope()
 
 // Each tab needs its own permission; storage and system are the Owner's.
 const ALLOWED: Record<AdminTab, () => boolean> = {
@@ -54,6 +59,7 @@ const ALLOWED: Record<AdminTab, () => boolean> = {
   channels: () => permissions.can('manage_channels'),
   invites: () => permissions.can('create_invites'),
   onboarding: () => permissions.can('administrator'),
+  access: () => permissions.can('administrator'),
   emoji: () => permissions.can('manage_emoji'),
   reports: () => features.reports && permissions.can('manage_reports'),
   automod: () => features.automod && permissions.can('administrator'),
@@ -73,6 +79,7 @@ const TAB_COMPONENTS = {
   channels: AdminLayoutTab,
   invites: AdminInvitesTab,
   onboarding: AdminOnboardingTab,
+  access: AdminAccessSettings,
   emoji: AdminEmojiTab,
   reports: AdminReportsTab,
   automod: AdminAutomodTab,
@@ -127,6 +134,13 @@ const badges = computed<Partial<Record<AdminTab, string>>>(() =>
 const focusDialog = (root: HTMLElement) => root
 const signedInAs = computed(() => t('admin.nav.signedIn', { name: authStore.user?.display_name || authStore.user?.username || '' }))
 
+// Opening the channels or status page completes that step of the Owner's
+// checklist; closing the console reads the checklist again, as the Owner may
+// have changed what its other steps look at.
+const firstRun = useFirstRunStore()
+watch(activeTab, tab => { if (tab === 'channels' || tab === 'status') void firstRun.visit(tab) }, { immediate: true })
+onBeforeUnmount(() => { void firstRun.reload() })
+
 watch(activeTab, (tab) => {
   if (typeof window !== 'undefined' && window.location.pathname !== `/admin/${tab}`) {
     navigate(`/admin/${tab}`, { replace: true })
@@ -138,6 +152,7 @@ watch(activeTab, (tab) => {
   <BaseDialog
     panel-class="max-w-5xl h-[85vh] max-h-[860px] max-md:fixed max-md:inset-0 max-md:h-auto max-md:max-h-none max-md:max-w-none max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)]"
     :initial-focus="focusDialog"
+    :guard="drafts.guard"
     @close="emit('close')"
   >
     <template #default="{ titleId, close }">

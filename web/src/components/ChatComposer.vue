@@ -6,6 +6,8 @@ import { computed, ref } from 'vue'
 import { Plus, ArrowUp, ChartNoAxesColumn, ChevronDown, CalendarClock, Paperclip } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { usePermissionsStore } from '../stores/permissions'
+import type { ComposerHint } from '../composables/useComposerLimits'
 import { openLater } from '../lib/laterDialog'
 import { t } from '../i18n'
 import ContextMenu from './ContextMenu.vue'
@@ -34,12 +36,17 @@ const props = defineProps({
   placeholder: { type: String, default: '' },
   uploading: { type: Boolean, default: false },
   sending: { type: Boolean, default: false },
-  typingText: { type: String, default: '' }
+  typingText: { type: String, default: '' },
+  // What limits writing right now (slow mode wait, message length); null when nothing does.
+  limit: { type: Object as PropType<ComposerHint | null>, default: null }
 })
-const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event] }>()
+const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event]; 'arrow-up': [event: KeyboardEvent]; posted: [] }>()
 
 const chatStore = useChatStore()
 const features = useServerFeaturesStore()
+const permissions = usePermissionsStore()
+// The upload limit is told before a file is picked, not after it was refused.
+const uploadLabel = computed(() => (permissions.maxUploadMb ? t('chat.uploadMax', { size: permissions.maxUploadMb }) : t('chat.upload')))
 const text = useDraftModel(() => props.modelValue, value => emit('update:modelValue', value))
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -93,7 +100,7 @@ function handleComposerInput() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  handleComposerKeydown(e, { consumers: [slash.onKeydown, assist.onKeydown], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send') })
+  handleComposerKeydown(e, { consumers: [slash.onKeydown, assist.onKeydown], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send'), arrowUp: e => emit('arrow-up', e) })
 }
 </script>
 
@@ -153,8 +160,8 @@ function handleKeyDown(e: KeyboardEvent) {
         :aria-haspopup="isCompact ? 'menu' : undefined"
         :aria-expanded="isCompact ? (plusMenuOpen ? 'true' : 'false') : undefined"
         class="focus-ring w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
-        v-tooltip="$t('chat.upload')"
-        :aria-label="$t('chat.upload')"
+        v-tooltip="uploadLabel"
+        :aria-label="uploadLabel"
       >
         <Plus class="w-5 h-5" />
       </button>
@@ -204,7 +211,7 @@ function handleKeyDown(e: KeyboardEvent) {
       <!-- Send Button -->
       <button
         @click="emit('send')"
-        :disabled="!canSend || !text.trim() || uploading || sending"
+        :disabled="!canSend || !text.trim() || uploading || sending || !!limit?.blocks"
         class="btn btn-primary focus-ring w-8 h-8 max-md:w-11 max-md:h-11 flex items-center justify-center shrink-0 disabled:bg-mnema-surface disabled:text-mnema-tertiary p-0"
         v-tooltip="$t('chat.send')"
       >
@@ -234,12 +241,18 @@ function handleKeyDown(e: KeyboardEvent) {
     <PollDialog
       v-if="pollOpen && chatStore.activeChannel"
       :channel-id="chatStore.activeChannel.id"
+      @posted="emit('posted')"
       @close="pollOpen = false; textAreaEl?.focus()"
     />
 
     <!-- Who is typing (keeps its height so the layout doesn't jump) -->
-    <div class="h-5 px-1 pt-0.5 text-xs text-mnema-tertiary truncate" role="status" aria-live="polite" data-testid="typing-indicator">
-      {{ typingText }}
+    <div class="h-5 px-1 pt-0.5 flex items-center justify-between gap-3 text-xs text-mnema-tertiary">
+      <span class="truncate" role="status" aria-live="polite" data-testid="typing-indicator">{{ typingText }}</span>
+      <span
+        v-if="limit"
+        :class="['shrink-0 tabular-nums', limit.tone === 'warn' ? 'text-mnema-danger' : 'text-mnema-muted']"
+        data-testid="composer-limit"
+      >{{ limit.text }}</span>
     </div>
   </div>
 </template>

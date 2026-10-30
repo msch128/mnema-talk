@@ -10,9 +10,11 @@ import { usePermissionsStore } from './stores/permissions'
 import { useServerFeaturesStore } from './stores/serverFeatures'
 import { PERMISSION_BITS } from './lib/permissions'
 import * as router from './lib/router'
+import { requestAdminTab, adminTabRequest } from './lib/adminRequest'
 import { channelFixture, categoryFixture, messageFixture, userFixture, requireValue } from './test-fixtures.fixture'
 import App from './App.vue'
 import { useCompactLayout } from './composables/useCompactLayout'
+import { openEvents, closeEvents } from './lib/eventsDialog'
 
 const rtc = vi.hoisted(() => ({ resumeVoiceSession: vi.fn(async () => false), resumeRemoteAudio: vi.fn(), leaveVoiceChannel: vi.fn(), rejoinAfterReconnect: vi.fn() }))
 vi.mock('./composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
@@ -91,12 +93,37 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     await go('/v/v2/chat')
     expect(chat.activeChannel?.id).toBe('v2')
   })
+  it('shows an event reminder on a phone even with the channel drawer closed', async () => {
+    const { w } = await mountApp()
+    const { isCompact, navOpen } = useCompactLayout()
+    isCompact.value = true
+    navOpen.value = false
+    useServerFeaturesStore().list = ['events']
+    openEvents('44444444-4444-4444-8444-444444444444')
+    await flushPromises()
+    // Drawn by the app itself, not inside the sidebar that is off-screen.
+    const modal = w.findComponent({ name: 'EventsModal' })
+    expect(modal.exists()).toBe(true)
+    expect(w.findComponent({ name: 'Sidebar' }).findComponent({ name: 'EventsModal' }).exists()).toBe(false)
+    expect(modal.props('focusEventId')).toBe('44444444-4444-4444-8444-444444444444')
+    closeEvents()
+  })
   it('closes the channel drawer on a phone with Escape', async () => {
     await mountApp()
     const { navOpen } = useCompactLayout()
     navOpen.value = true
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(navOpen.value).toBe(false)
+  })
+  it('closes only the drawer when Escape is pressed with a thread open too', async () => {
+    const { chat } = await mountApp()
+    const { navOpen } = useCompactLayout()
+    chat.activeThread = messageFixture({ id: 't1' })
+    await flushPromises()
+    navOpen.value = true
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(navOpen.value).toBe(false)
+    expect(chat.activeThread).not.toBeNull()
   })
   it('gives a thread the whole screen on a phone and keeps the member list on a desktop', async () => {
     const { isCompact } = useCompactLayout()
@@ -327,6 +354,19 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     chat.isConnected = true
     await flushPromises()
     expect(rtc.resumeVoiceSession).toHaveBeenCalledTimes(2)
+  })
+  it('opens the console tab another part of the UI asks for, for people who may open it', async () => {
+    const { w } = await mountApp({ admin: true })
+    requestAdminTab('onboarding')
+    await flushPromises()
+    expect(adminTabRequest.value).toBeNull()
+    expect(w.findComponent({ name: 'AdminDashboard' }).props('initialTab')).toBe('onboarding')
+  })
+  it('does not open the console for a request from a member', async () => {
+    const { w } = await mountApp()
+    requestAdminTab('onboarding')
+    await flushPromises()
+    expect(w.findComponent({ name: 'AdminDashboard' }).exists()).toBe(false)
   })
   it('does not open admin for ordinary members and ignores routes after logout', async () => {
     const { w, auth, chat } = await mountApp()

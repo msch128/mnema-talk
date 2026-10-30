@@ -8,7 +8,10 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
 import { currentRoute, navigate, canGoBackInApp } from '../lib/router'
+import { settingsTab } from '../lib/settingsDialog'
+import { useAccountStore } from '../stores/account'
 import { postPath, talkPath } from '../lib/routePaths'
+import { watchAdminRequest } from '../lib/adminRequest'
 import { loadVoiceChatOpen, saveVoiceChatOpen } from '../lib/voiceChatPanel'
 
 /** Writes what the UI shows back to the address whenever any of it changes. */
@@ -31,6 +34,9 @@ function watchStateForRoute(ctx: RoutingContext, sync: () => void) {
   })
   watch(ctx.showAdminModal, () => sync())
   watch(ctx.adminTab, () => sync())
+  // The settings dialog has an address of its own: /settings/:tab.
+  watch(() => ctx.account.dialogOpen, () => sync())
+  watch(settingsTab, () => sync())
 }
 
 /**
@@ -61,9 +67,30 @@ function onFormerSlug(ctx: RoutingContext): boolean {
   return ctx.chatStore.allChannels.some(c => c.slug !== ref && c.previous_slugs?.includes(ref))
 }
 
+/**
+ * The settings dialog and its address: opening it writes /settings/:tab (a tab
+ * change replaces that entry), closing it goes back to where it was opened, or
+ * to the page underneath when the address was the first one. True when it
+ * took care of the address.
+ */
+export function syncSettings(ctx: RoutingContext): boolean {
+  const open = ctx.account.dialogOpen
+  const onSettings = currentRoute.value.view === 'settings'
+  if (open) {
+    const path = `/settings/${settingsTab.value}`
+    if (window.location.pathname !== path) navigate(path, { replace: onSettings })
+    return true
+  }
+  if (!onSettings) return false
+  if (canGoBackInApp()) window.history.back()
+  else navigate(ctx.currentStatePath(), { replace: true })
+  return true
+}
+
 function syncStateToRoute(ctx: RoutingContext) {
   if (ctx.isSyncingFromRoute || ctx.loadingFirstRoute) return
   if (!ctx.authStore.isAuthenticated) return
+  if (syncSettings(ctx)) return
   const targetPath = ctx.showAdminModal.value ? `/admin/${ctx.adminTab.value || 'users'}` : ctx.currentStatePath()
   if (targetPath !== '/' && window.location.pathname !== targetPath) {
     // A rename moves the address from a former slug to the new one: that is no new page.
@@ -112,6 +139,7 @@ export function useAppRouting(alive: () => boolean) {
     chatStore: useChatStore(),
     voiceStore,
     toasts: useToastStore(),
+    account: useAccountStore(),
     showAdminModal,
     adminTab,
     previewVoiceChannelId,
@@ -128,6 +156,8 @@ export function useAppRouting(alive: () => boolean) {
   watchStateForRoute(ctx, syncCurrentStateToRoute)
 
   const { openAdmin, closeAdmin } = createAdminNavigation(ctx)
+  // Another part of the UI (the Owner's checklist) asks for a console tab.
+  watchAdminRequest(tab => { if (ctx.permissions.canOpenAdmin) openAdmin(tab) })
   const onVoiceJoin = (id: string) => { previewVoiceChannelId.value = id === voiceStore.currentChannelId ? null : id }
 
   return {

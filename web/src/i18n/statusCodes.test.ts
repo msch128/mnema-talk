@@ -60,8 +60,9 @@ describe('describing a code', () => {
 
   it('fills the parameters into the check text and falls back to the server sentence without a code', () => {
     setLocale('de')
-    const c = { id: 'voice_udp', level: 'ok' as const, code: 'voice_udp.ok', params: { port: '50000' }, detail: 'English.' }
+    const c = { id: 'voice_udp', level: 'ok' as const, code: 'voice_udp.confirmed', params: { port: '50000', at: '2026-10-29T21:30:00Z', time: '2026-10-29 21:30 UTC' }, detail: 'English.' }
     expect(describeCheck(c).detail).toContain('UDP 50000')
+    expect(describeCheck(c).detail).not.toContain('UTC') // the moment is shown in the viewer's zone and language
     expect(describeCheck({ id: c.id, level: c.level, params: c.params, detail: c.detail })).toEqual({ detail: 'English.', fix: '' })
     setLocale('de')
   })

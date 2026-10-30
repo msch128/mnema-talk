@@ -124,7 +124,7 @@ async function remove() {
         v-model="text"
         data-testid="scheduled-text"
         rows="3"
-        maxlength="4000"
+        v-max-chars="4000"
         :aria-label="$t('later.editText')"
         class="w-full resize-none rounded-md border border-mnema-border bg-mnema-surface px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
       ></textarea>

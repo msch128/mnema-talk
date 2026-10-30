@@ -2,8 +2,8 @@
 // Discord's: a mode (Gaming, Screen or Custom), a resolution and a frame rate.
 // These functions turn a choice into what the browser needs: constraints for
 // the captured track and parameters for the sender; useWebRTC applies them,
-// live and again after every reconnect. The choice lives for one share:
-// every new share starts at DEFAULT_STREAM_QUALITY (see useStreamQuality).
+// live and again after every reconnect. The last choice is remembered and is
+// the start of the next share (DEFAULT_STREAM_QUALITY only the very first time).
 import { locale } from '../i18n'
 import { isFiniteNumber } from './mediaStats'
 import type { MediaStat } from './mediaStats'
@@ -12,7 +12,9 @@ export type StreamResolution = 720 | 1080 | 1440 | 'source'
 export type StreamFrameRate = 15 | 30 | 60
 export type StreamMode = 'gaming' | 'screen' | 'custom'
 export type ScreenQuality = StreamQuality
-export interface StreamQuality { resolution: StreamResolution; fps: StreamFrameRate; custom?: boolean }
+/** What the encoder favours: 'motion' keeps frames flowing, 'detail' keeps the picture sharp. Unset: follows the frame rate. */
+export type StreamOptimize = 'motion' | 'detail'
+export interface StreamQuality { resolution: StreamResolution; fps: StreamFrameRate; custom?: boolean; optimize?: StreamOptimize }
 export interface SendStatsSample { id?: string; bytes: number; ts: number; frames?: number; encodeTime?: number }
 export interface SendStatsSummary {
   codec: string; width: number; height: number; fps: number | null; kbps: number | null
@@ -57,7 +59,8 @@ export function normalizeQuality(q: unknown): StreamQuality {
   const chosenFps = 'fps' in input ? input.fps : undefined
   const resolution = isStreamResolution(chosenResolution) ? chosenResolution : DEFAULT_STREAM_QUALITY.resolution
   const fps = isStreamFrameRate(chosenFps) ? chosenFps : DEFAULT_STREAM_QUALITY.fps
-  return { resolution, fps, ...(markedCustom(q) ? { custom: true } : {}) }
+  const optimize = 'optimize' in input && (input.optimize === 'motion' || input.optimize === 'detail') ? input.optimize : undefined
+  return { resolution, fps, ...(markedCustom(q) ? { custom: true } : {}), ...(optimize ? { optimize } : {}) }
 }
 
 /**
@@ -139,8 +142,9 @@ export function streamEncoding(q: unknown, settings: MediaTrackSettings = {}) {
  * resolution, dropping frames instead, so text stays readable.
  */
 export function streamTuning(q: unknown): { contentHint: string; degradationPreference: RTCDegradationPreference } {
-  const { fps } = normalizeQuality(q)
-  return fps >= 60
+  const { fps, optimize } = normalizeQuality(q)
+  const motion = optimize ? optimize === 'motion' : fps >= 60
+  return motion
     ? { contentHint: 'motion', degradationPreference: 'balanced' }
     : { contentHint: 'detail', degradationPreference: 'maintain-resolution' }
 }

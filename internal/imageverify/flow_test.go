@@ -205,3 +205,26 @@ func TestUpdateStopsBeforeTheRestartWhenThePullFails(t *testing.T) {
 		}
 	}
 }
+
+// The updater pulls from the registry the running container uses: with the
+// official GHCR repository unreachable, an install on the mirror is verified
+// and pulled from the mirror, never from the primary.
+func TestUpdateStaysOnTheRegistryTheContainerRunsFrom(t *testing.T) {
+	f := newFixture(t)
+	rel := f.Push("1.0")
+	f.Sign(rel, Identity, rel.Digest)
+	d := daemontest.New(t, f.Repo+":1.0")
+
+	p := f.Policy()
+	p.Repository, p.Mirror = "ghcr.invalid/msch128/mnema-talk", f.Repo
+	s := flow(t, f, d)
+	s.Verifier = f.VerifierFor(p, f.Trust())
+
+	if rec := update(s); rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d (%s)", rec.Code, rec.Body)
+	}
+	log := strings.Join(d.Log(), "\n")
+	if !strings.Contains(log, "pull "+f.Repo+"@"+rel.Digest.String()) || strings.Contains(log, "ghcr.invalid") {
+		t.Fatalf("calls = %q", d.Log())
+	}
+}

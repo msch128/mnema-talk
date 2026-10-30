@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { effectScope, ref, nextTick, defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
 import { useDialog } from './useDialog'
-import { useDismissable } from './useDismissable'
+import { shieldEscape, useDismissable } from './useDismissable'
 import { required } from '../store-test-support.fixture'
 
 function el() {
@@ -19,6 +19,27 @@ const escape = (node = document.body) => {
 }
 
 afterEach(() => { document.body.innerHTML = '' })
+
+describe('shieldEscape', () => {
+  it('lets something inside take the Escape before a popover closes, until it is removed', () => {
+    const close = vi.fn()
+    const scope = effectScope()
+    scope.run(() => { useDismissable(el(), close); useDismissable(el(), close) })
+    let used = true
+    const remove = shieldEscape(() => used)
+    const taken = escape()
+    expect(close).not.toHaveBeenCalled()
+    expect(taken.defaultPrevented).toBe(true)
+    used = false
+    escape()
+    expect(close).toHaveBeenCalledTimes(2)
+    remove()
+    used = true
+    escape()
+    expect(close).toHaveBeenCalledTimes(4)
+    scope.stop()
+  })
+})
 
 describe('useDismissable', () => {
   it('supports a render environment without a document and permits stopping twice', () => {

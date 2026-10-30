@@ -238,13 +238,27 @@ func (s *Service) notify(ctx context.Context, msg chat.Message, chosen []candida
 				AuthorID: msg.UserID, ChannelID: msg.ChannelID, ChannelName: c.channelName, ChannelSlug: c.channelSlug, MessageID: msg.ID, ParentID: msg.ParentID,
 				Sender: sender(msg), Content: msg.Content, HasFiles: len(msg.Attachments) > 0 || len(msg.Embeds) > 0,
 				Forwarded: msg.Forward != nil && msg.Forward.Forwarded, Poll: msg.Poll != nil,
-				DM: c.dm, Mention: c.mention(msg, byName), Addressed: addressed(msg, c.userID, byName), Count: 1, At: s.Now(),
+				DM: c.dm, Call: callKind(msg), Mention: c.mention(msg, byName), Addressed: addressed(msg, c.userID, byName), Count: 1, At: s.Now(),
 			},
 		}
 		if now := s.co.add(key{c.userID, msg.ChannelID}, h, s.flush); now != nil {
 			s.enqueue(*now, targets[c.userID])
 		}
 	}
+}
+
+// callKind says whether msg is the card of a call ("ring") or the record of a
+// missed one ("missed"); "" for any other message.
+func callKind(msg chat.Message) string {
+	for _, e := range msg.Embeds {
+		switch {
+		case e.TalkID != nil:
+			return "call"
+		case e.Call == "missed":
+			return "missed"
+		}
+	}
+	return ""
 }
 
 func sender(msg chat.Message) string {

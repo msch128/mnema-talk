@@ -12,6 +12,7 @@ import { useAuthStore } from '../stores/auth'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
 import { useVoiceStore } from '../stores/voice'
+import { useDmCallsStore } from '../stores/dmCalls'
 import { useCompactLayout } from '../composables/useCompactLayout'
 import { useDmActions } from '../composables/useDmActions'
 import { useDmListActions } from '../composables/useDmListActions'
@@ -21,6 +22,7 @@ import DmCreateDialog from './DmCreateDialog.vue'
 import DmFindBox from './DmFindBox.vue'
 import DmListRow from './DmListRow.vue'
 import Badge from './Badge.vue'
+import CallMark from './CallMark.vue'
 import ContextMenu from './ContextMenu.vue'
 import type { ContextMenuItem } from './menuTypes'
 
@@ -33,6 +35,7 @@ const authStore = useAuthStore()
 const features = useServerFeaturesStore()
 const toasts = useToastStore()
 const voiceStore = useVoiceStore()
+const calls = useDmCallsStore()
 const { closeNav } = useCompactLayout()
 const { canStart } = useDmActions()
 const actions = useDmListActions()
@@ -79,6 +82,8 @@ const unreadOf = (id: string) => chatStore.readStates[id]?.unread_count || 0
 const mentionsOf = (id: string) => chatStore.readStates[id]?.mention_count || 0
 const isMuted = (id: string) => chatStore.notificationLevel(id) === 'mute'
 const isOpen = (id: string) => chatStore.activeChannel?.id === id && voiceStore.activeView === 'chat'
+const callOf = (id: string) => calls.markOf(id)
+const callTotal = computed(() => chatStore.dms.filter(dm => calls.markOf(dm.id) !== null).length)
 const unreadTotal = computed(() => chatStore.dms.reduce((sum, dm) => sum + unreadOf(dm.id), 0))
 
 const lists = computed(() => {
@@ -153,6 +158,7 @@ function onDragEnd() {
         <ChevronRight v-if="collapsed" class="h-3 w-3 shrink-0" />
         <ChevronDown v-else class="h-3 w-3 shrink-0" />
         <span class="truncate">{{ $t('dm.section') }}</span>
+        <CallMark v-if="collapsed && callTotal > 0" :mark="calls.incoming.length ? 'ringing' : 'active'" class="ml-1" />
         <Badge
           v-if="collapsed && unreadTotal > 0"
           variant="mention"
@@ -190,6 +196,7 @@ function onDragEnd() {
             :unread="unreadOf(dm.id)"
             :mentions="mentionsOf(dm.id)"
             :muted="isMuted(dm.id)"
+            :call="callOf(dm.id)"
             :class="[
               dragging === dm.id ? 'opacity-50' : '',
               dropAt?.id === dm.id ? (dropAt.after ? 'shadow-[inset_0_-2px_0_0_#2DA771]' : 'shadow-[inset_0_2px_0_0_#2DA771]') : ''
@@ -215,6 +222,7 @@ function onDragEnd() {
         :unread="unreadOf(dm.id)"
         :mentions="mentionsOf(dm.id)"
         :muted="isMuted(dm.id)"
+        :call="callOf(dm.id)"
         @open="open(dm.id)"
         @menu="openMenu(dm, $event)"
         @favourite="actions.toggleFavourite(dm)"

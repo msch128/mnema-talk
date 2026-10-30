@@ -3,9 +3,10 @@
 // actually being sent. The choice lives in the voice store for the current
 // share; useWebRTC applies it live (see lib/streamQuality).
 import { computed, ref, getCurrentInstance, onBeforeUnmount } from 'vue'
+import type { StreamOptimize } from '../lib/streamQuality'
 import { useVoiceStore } from '../stores/voice'
 import {
-  normalizeQuality, streamModeOf, STREAM_PRESETS, STREAM_RESOLUTIONS, STREAM_FRAME_RATES,
+  normalizeQuality, streamModeOf, streamTuning, STREAM_PRESETS, STREAM_RESOLUTIONS, STREAM_FRAME_RATES,
   summarizeSendStats, formatSendStats, formatStreamDiagnostics
 } from '../lib/streamQuality'
 import { t } from '../i18n'
@@ -142,6 +143,32 @@ function advancedInfoItems(fps: StreamFrameRate, sendStats: SendStatsSummary | n
   ]
 }
 
+type VoiceStore = ReturnType<typeof useVoiceStore>
+
+/** "Optimise for": what the encoder favours; only where the browser has track.contentHint. */
+function optimizeItems(voiceStore: VoiceStore): ContextMenuItem[] {
+  if (typeof MediaStreamTrack === 'undefined' || !('contentHint' in MediaStreamTrack.prototype)) return []
+  const current: StreamOptimize = streamTuning(voiceStore.screenQuality).contentHint === 'motion' ? 'motion' : 'detail'
+  const choose = (optimize: StreamOptimize) => voiceStore.setScreenQuality({ ...normalizeQuality(voiceStore.screenQuality), optimize })
+  const radio = (id: StreamOptimize) => radioItem({ id: `optimize-${id}`, label: t(`talk.quality.optimize_${id}`), checked: current === id, action: () => choose(id) })
+  return [{
+    id: 'optimize',
+    type: 'submenu',
+    label: t('talk.quality.optimize'),
+    value: t(`talk.quality.optimize_${current}`),
+    minWidth: 170,
+    items: [radio('motion'), radio('detail')]
+  }]
+}
+
+/** What the browser could not change live, and the explicit way to apply it. */
+function restartItems(voiceStore: VoiceStore, onRestart?: () => void): ContextMenuItem[] {
+  if (!voiceStore.screenQualityNeedsRestart) return []
+  const items: ContextMenuItem[] = [{ type: 'label', label: t('talk.quality.restartNeeded') }]
+  if (onRestart) items.push({ id: 'restart-stream', label: t('talk.quality.restartStream'), action: onRestart })
+  return items
+}
+
 /**
  * getStats: async () => RTCStatsReport values of the screen sender (or null);
  * see useWebRTC().getScreenSendStats.
@@ -166,7 +193,7 @@ export function useStreamQuality(options: StreamQualityOptions = {}) {
   }
 
   /** ContextMenu items; read reactively, so the open menu follows every change. */
-  function menuItems({ onChangeSource }: { onChangeSource?: () => void } = {}): ContextMenuItem[] {
+  function menuItems({ onChangeSource, settings = true }: { onChangeSource?: () => void; settings?: boolean } = {}): ContextMenuItem[] {
     const q = quality.value
     const m = mode.value
     const modeItem = (id: StreamMode, subtitle?: string) => radioItem({ id: `mode-${id}`, label: t(`talk.quality.${id}`), checked: m === id, action: () => setMode(id), subtitle })
@@ -177,6 +204,8 @@ export function useStreamQuality(options: StreamQualityOptions = {}) {
       modeItem('custom'),
       { type: 'separator' },
       ...resolutionAndRateItems(q, { setMode, setResolution, setFrameRate }),
+      ...optimizeItems(voiceStore),
+      ...restartItems(voiceStore, onChangeSource),
       { type: 'separator' },
       {
         id: 'mute-sound',
@@ -199,7 +228,7 @@ export function useStreamQuality(options: StreamQualityOptions = {}) {
     ]
     if (onChangeSource) {
       items.push({ type: 'separator' })
-      items.push({ id: 'stream-settings', label: t('talk.quality.streamModalTitle'), action: () => voiceStore.openScreenShareModal() })
+      if (settings) items.push({ id: 'stream-settings', label: t('talk.quality.streamModalTitle'), action: () => voiceStore.openScreenShareModal() })
       items.push({ id: 'change-source', label: t('talk.quality.changeSource'), action: onChangeSource })
     }
     return items

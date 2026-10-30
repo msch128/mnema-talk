@@ -47,6 +47,17 @@ var _ ws.SessionClaimer = (*auth.Sessions)(nil)
 // components are the handlers and background workers NewRouter assembles
 // before it mounts their routes. The new* methods fill it in stages; a later
 // stage may depend on what an earlier one set.
+const (
+	// apiWritesPerMinute is a member's budget for requests that change
+	// something (and for anything else that is not a read).
+	apiWritesPerMinute = 600
+	// apiReadsPerMinute is the separate budget for GET, HEAD and OPTIONS: opening
+	// and closing posts, scrolling and switching channels fetch many pages a
+	// second, and none of it may be refused. 50 a second still stops a runaway
+	// script.
+	apiReadsPerMinute = 3000
+)
+
 type components struct {
 	d       Deps
 	cfg     *config.Config
@@ -88,7 +99,7 @@ type components struct {
 
 	previewH *linkpreview.Handler
 
-	wsPerIP, perUser, previewsPerUser, uploadsPerUser *httpx.RateLimiter
+	wsPerIP, perUser, readsPerUser, previewsPerUser, uploadsPerUser *httpx.RateLimiter
 }
 
 // newCore builds the session, hub, permission and audit services and the
@@ -105,6 +116,7 @@ func (c *components) newCore() {
 	hub.UpgradeLimit = httpx.NewRateLimiter(30, time.Minute).Named("ws_user")
 	c.wsPerIP = httpx.NewRateLimiter(120, time.Minute).Named("ws_ip")
 	hub.Version = d.Version
+	hub.UpgradeSeen = func(upgraded bool) { d.Setup.RecordWebSocket(upgraded, time.Now()) }
 	c.hub = hub
 	c.permSvc = d.Perms
 	if c.permSvc == nil {
@@ -324,6 +336,8 @@ func (c *components) newSystem() error {
 		mail:     c.mail,
 
 		testMailLimit: httpx.NewRateLimiter(5, 10*time.Minute).Named("test_mail"),
+		probeLimit:    httpx.NewRateLimiter(12, 10*time.Minute).Named("connection_probe"),
+		wsReportLimit: httpx.NewRateLimiter(30, 10*time.Minute).Named("ws_report"),
 	}
 	if h.version == "" {
 		h.version = "dev"

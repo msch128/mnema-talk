@@ -26,13 +26,14 @@ Replace the version and paths with yours.
 
 ```sh
 cd /path/to/mnema-talk
-NEW=1.0.0                                  # version to install
+NEW=$(curl -fsSL https://api.github.com/repos/msch128/mnema-talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')  # or set a version
+[ -n "$NEW" ] || { echo "could not read the latest version; set NEW=x.y.z yourself" >&2; false; }
 
 # 1. Back up database, media and .env (see operations.md, "Backups")
 BACKUP_DIR=/path/to/backups ./scripts/backup.sh
 
 # 2. Note what runs now, for a rollback
-grep '^MNEMA_IMAGE=' .env                  # e.g. ghcr.io/msch128/mnema-talk:0.9.0
+grep '^MNEMA_IMAGE=' .env                  # e.g. ghcr.io/msch128/mnema-talk:2.1
 curl -fsS http://127.0.0.1:8080/api/health # {"status":"ok","version":"..."}
 cp docker-compose.yml docker-compose.yml.bak
 
@@ -70,7 +71,7 @@ docker compose logs --since 10m app | grep -E 'migration applied|"level":"(WARN|
 Then open the app: other open tabs show a reload notice; voice calls
 reconnect after the reload. Admin → System shows the new version.
 
-The same image is also published on Docker Hub as `docker.io/msch128/mnema-talk` (same digest and signature, see [Verifying a release image](operations.md#verifying-a-release-image)); GHCR stays the primary reference used in this guide.
+The same image is also published on Docker Hub as `docker.io/msch128/mnema-talk` (same digest and signature, see [Verifying a release image](operations.md#verifying-a-release-image)); GHCR stays the primary reference used in this guide. With `MNEMA_IMAGE=msch128/mnema-talk:<tag>` "Update now" works too and pulls from Docker Hub.
 
 If you follow a minor line instead (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.4`),
 step 4 is unnecessary within that line: `docker compose pull app && docker
@@ -105,6 +106,7 @@ with the preserved `postgres-data` volume. PostgreSQL 18 has a separate
 The preserved PostgreSQL 17 database reflects the upgrade's cutover, so writes
 made afterward on PostgreSQL 18 are not in that rollback.
 
+<!-- test:allow-old-version -->
 ```sh
 set -e
 docker compose stop app postgres
@@ -131,6 +133,14 @@ until the new release has passed your application checks.
 ### 1.2.x → next release
 
 Update with the procedure above and take the backup first. Nothing in `.env` has to change.
+
+The in-app privacy policy is now version 1.7 (the version is shown on the
+page; members are not asked to accept it again). It describes the TURN relay
+built into the server as part of your instance (IP address and port seen,
+encrypted media it cannot read, nothing stored persistently) while it is
+offered, and it names the external TURN servers from `WEBRTC_TURN_URLS`, which
+earlier versions never listed. `GET /api/legal` gains the field `builtin_turn`.
+If you publish your own copy of the policy, update it to match.
 
 Migration 0077 drops `native_session_families`, `native_access_tokens`,
 `native_refresh_tokens` and `native_ciphertext_events` (added by 0015 and 0016).
@@ -398,7 +408,7 @@ them under **Admin > Automod** and change or delete what does not suit you:
 | Links | **off** (block-list mode, empty list) |
 
 The Owner and Administrators are never checked. The effect you may notice: a
-member who joined a few minutes ago gets "it breaks the server rule" when
+member who joined a few minutes ago gets "it breaks the community rule" when
 posting a link, and a burst of invitations used at once (a party of more than 10
 within 10 seconds) is held back for 10 minutes; delete or loosen the rule if
 that does not suit your community. Nothing changes for existing messages.

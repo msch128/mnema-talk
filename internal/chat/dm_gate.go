@@ -146,7 +146,7 @@ func checkDMReachable(ctx context.Context, tx pgx.Tx, sender uuid.UUID, others [
 // answers, in counters that deleting messages does not reset.
 func countDMMessage(ctx context.Context, tx pgx.Tx, nm NewMessage, st dmState) error {
 	switch {
-	case st.replied:
+	case st.replied || nm.Record:
 		return nil
 	case st.creator != nil && *st.creator == nm.UserID:
 		if st.sent >= MaxUnansweredDMMessages {

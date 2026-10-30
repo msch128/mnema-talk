@@ -4,11 +4,13 @@
 import { computed, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
+import { useEmojiStore } from '../stores/emoji'
 import { usePermissionsStore } from '../stores/permissions'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useVoiceStore } from '../stores/voice'
 import { createReactionLimiter } from '../lib/stage'
 import { isStageTalk } from '../lib/talks'
+import { customReaction } from '../lib/reactionEmoji'
 
 const allowReaction = createReactionLimiter()
 
@@ -18,6 +20,7 @@ export function useStage(channelId: () => string | null) {
   const auth = useAuthStore()
   const permissions = usePermissionsStore()
   const features = useServerFeaturesStore()
+  const emojiStore = useEmojiStore()
 
   const channel = computed(() => chat.allChannels.find(c => c.id === channelId()) ?? null)
   const isStage = computed(() => features.talksStage && isStageTalk(channel.value))
@@ -51,7 +54,7 @@ export function useStage(channelId: () => string | null) {
     /** A live reaction; false when over the allowance (nothing is sent). */
     react: (emoji: string) => {
       if (!voice.currentChannelId || !allowReaction()) return false
-      chat.sendWSEvent('talk_reaction', { emoji })
+      chat.sendWSEvent('talk_reaction', { emoji: customReaction(emoji, emojiStore.byName) })
       return true
     }
   }

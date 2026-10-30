@@ -62,7 +62,7 @@ func TestHealthyInstallHasOnlyOptionalAmbers(t *testing.T) {
 		t.Fatalf("worst = %s: %+v", w, checks)
 	}
 	for _, c := range checks {
-		if c.Fix != "" {
+		if c.Fix != "" && c.Level == OK {
 			t.Errorf("ok check %s carries a fix: %q", c.ID, c.Fix)
 		}
 	}
@@ -76,7 +76,7 @@ func TestEveryProblemNamesTheVariableToSet(t *testing.T) {
 		level Level
 		fix   string
 	}{
-		PublicURL:    {Fail, "PUBLIC_URL="},
+		PublicURL:    {Warn, "PUBLIC_URL="}, // a trial on this computer is legitimate: amber, not red
 		VoiceAddress: {Fail, "WEBRTC_NAT_1TO1_IP="},
 		Turn:         {Warn, "WEBRTC_BUILTIN_TURN=off"},
 		Mail:         {Warn, "SMTP_HOST"},
@@ -229,7 +229,7 @@ func TestResolveAnnouncement(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			cfg := prodConfig(t, tc.env)
-			got := ResolveAnnouncement(context.Background(), cfg, tc.detect)
+			got := ResolveAnnouncement(context.Background(), cfg, tc.detect, Host{})
 			if strings.Join(got.Entries, ",") != tc.entries || got.Source != tc.source || !strings.Contains(got.DetectErr, tc.errPart) || (tc.errPart == "" && got.DetectErr != "") {
 				t.Fatalf("got %+v, want entries %q source %s err %q", got, tc.entries, tc.source, tc.errPart)
 			}
@@ -285,7 +285,7 @@ func TestTurnCheckStates(t *testing.T) {
 	}{
 		{"built-in by default", nil, nil, "", OK, "built-in TURN relay serves members", ""},
 		{"probe reachable", nil, nil, "reachable", OK, "port 3479", ""},
-		{"probe unreachable", nil, nil, "unreachable", Warn, "did not answer", "Forward port 3479 (UDP and TCP)"},
+		{"probe unreachable", nil, nil, "unreachable", Info, "could not verify port 3479", "Test my connection"},
 		{"custom port", map[string]string{"WEBRTC_BUILTIN_TURN_PORT": "3500"}, nil, "", OK, "port 3500", ""},
 		{"port taken", nil, unavailable, "", Warn, "could not listen on port 3479", "WEBRTC_BUILTIN_TURN_PORT"},
 		{"external replaces built-in in auto", ext, nil, "unreachable", OK, "A TURN relay is configured", ""},

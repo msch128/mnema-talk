@@ -111,15 +111,17 @@ type Result struct {
 func (r *Result) Ref() string { return r.Repository + "@" + r.Digest }
 
 // Verify resolves image (repository:tag) once, then checks signature and
-// provenance of that exact digest. The repository must be the policy's.
+// provenance of that exact digest. The repository must be one the policy trusts; it is
+// pulled from the registry it was named in (a Docker Hub install stays on
+// Docker Hub).
 func (v *Verifier) Verify(ctx context.Context, image string) (*Result, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
 		return nil, untrusted("image reference: %v", err)
 	}
 	repo := ref.Context()
-	if repo.Name() != v.policy.Repository {
-		return nil, untrusted("repository %s is not %s", repo.Name(), v.policy.Repository)
+	if !v.policy.Allows(repo.Name()) {
+		return nil, untrusted("repository %s is not one of %s", repo.Name(), strings.Join(v.policy.Trusted(), ", "))
 	}
 	if _, pinned := ref.(name.Digest); pinned {
 		return nil, untrusted("%s is pinned by digest; there is nothing to update", image)

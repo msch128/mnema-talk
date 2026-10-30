@@ -15,6 +15,7 @@ import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 import { useSavedStore } from '../stores/saved'
+import { toggleSavedMessage } from '../lib/savedActions'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { moderateMessages } from '../lib/messageModeration'
 import { previewText } from '../lib/replies'
@@ -24,6 +25,9 @@ import { caughtErrorMessage } from '../lib/api'
 import { copyToClipboard } from '../lib/clipboard'
 import { messageSafetyItems } from './dmMenuItems'
 import { boxOf, type AnchorBox } from '../lib/floatingPosition'
+import { clampChars } from '../lib/textLength'
+
+export { toggleSavedMessage }
 
 type MessageActions = ReturnType<typeof useMessageActions>
 
@@ -50,20 +54,6 @@ function markUnreadItem(msg: Message): ContextMenuItem {
   }
 }
 
-/** Adds the message to the member's private saved list, or takes it off. Only on servers that have the feature. */
-export async function toggleSavedMessage(msg: Message): Promise<void> {
-  const saved = useSavedStore()
-  const toasts = useToastStore()
-  const was = saved.isSaved(msg.id)
-  try {
-    if (was) await saved.remove(msg.id)
-    else await saved.save(msg.id)
-    toasts.success(t(was ? 'saved.removed' : 'saved.added'))
-  } catch (err) {
-    toasts.error(caughtErrorMessage(err, t(was ? 'saved.removeFailed' : 'saved.saveFailed')))
-  }
-}
-
 function savedItem(msg: Message): ContextMenuItem {
   const was = useSavedStore().isSaved(msg.id)
   return {
@@ -78,9 +68,9 @@ function savedItem(msg: Message): ContextMenuItem {
 function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMenuItem[] {
   const chatStore = useChatStore()
   const items: ContextMenuItem[] = [
-    { label: t('chat.reply'), icon: Reply, shortcut: 'r', action: () => reply(msg) },
+    { label: t('chat.replyInChannel'), icon: Reply, shortcut: 'r', action: () => reply(msg) },
     { label: t('chat.addReaction'), icon: SmilePlus, action: () => { actions.pickerId.value = msg.id } },
-    { label: t('chat.openThread'), icon: MessageSquare, action: () => chatStore.openThread(msg) }
+    { label: t('chat.replyInThread'), icon: MessageSquare, action: () => chatStore.openThread(msg) }
   ]
   if (actions.isOwn(msg) && !msg.poll) {
     items.push({ label: t('chat.edit'), icon: Pencil, shortcut: 'e', action: () => actions.startEdit(msg) })
@@ -146,7 +136,7 @@ function deleteItems(msg: Message, channelId: string, moderator: boolean, action
     { label: t('chat.delete'), icon: Trash2, danger: true, action: () => actions.deleteMessage(msg) }
   ]
   if (moderator && !actions.isOwn(msg)) {
-    const excerpt = previewText(msg.content).slice(0, 160)
+    const excerpt = clampChars(previewText(msg.content), 160)
     items.push({
       label: t('moderation.deleteWithReason'), icon: Trash2, danger: true,
       action: () => { void moderateMessages({ kind: 'delete', channelId, messageId: msg.id, excerpt }) }

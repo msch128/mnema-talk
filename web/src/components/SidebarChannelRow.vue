@@ -5,11 +5,13 @@ import type { Channel, VoiceUser } from '../types/domain'
 // it for a voice channel. Admins can drag the row (and its users with it) or
 // move it with Alt+ArrowUp / Alt+ArrowDown.
 import { computed } from 'vue'
-import { Hash, Volume2, Radio, Trash2, Monitor, BellOff, MessageSquare, CirclePlus, MessagesSquare, AtSign } from '@lucide/vue'
+import { Hash, Volume2, Radio, Trash2, Monitor, BellOff, MessageSquare, CirclePlus, MessagesSquare, AtSign, Lock } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
 import { channelDraftKey, hasDraft } from '../lib/drafts'
+import { talkSeats } from '../lib/talks'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
@@ -40,8 +42,11 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const authStore = useAuthStore()
+const permissions = usePermissionsStore()
 
 const isVoice = computed(() => props.channel.type === 'voice')
+// A Talk the member may see but not join: the lock says so before a click is refused.
+const cannotJoin = computed(() => isVoice.value && !props.channel.is_lobby && !permissions.canIn(props.channel.id, 'connect'))
 const active = computed(() =>
   isVoice.value
     ? voiceStore.currentChannelId === props.channel.id && voiceStore.activeView === 'voice'
@@ -68,6 +73,9 @@ const voiceUsers = computed(() => {
   const users = voiceStore.channelUsers[props.channel.id]
   return users ? Object.values(users) : []
 })
+
+// "2/3" next to the timer of a Talk with a user limit; warm once it is full.
+const seats = computed(() => talkSeats(props.channel, voiceUsers.value.length))
 
 // Badges and the timer sit at the row's right edge, the same place on every
 // row. The buttons beside the row (24px each) take that place while the
@@ -137,6 +145,12 @@ const rowClass = computed(() => [
           class="w-5 h-5 shrink-0 text-mnema-accent"
           v-tooltip="$t('talk.lobbyOpens')"
         />
+        <Lock
+          v-else-if="cannotJoin"
+          data-testid="talk-locked-icon"
+          class="w-5 h-5 shrink-0 text-mnema-tertiary"
+          v-tooltip="$t('talk.noConnect')"
+        />
         <Radio
           v-else-if="isVoice && channel.is_stage"
           data-testid="stage-icon"
@@ -178,6 +192,13 @@ const rowClass = computed(() => [
 
       <!-- Unread & Mention Badges; for a Talk in use, how long it runs -->
       <div :class="['flex items-center gap-1 ml-auto shrink-0', trailingClass]">
+        <span
+          v-if="seats"
+          :class="['text-xs tabular-nums', seats.full ? 'text-amber-400' : 'text-mnema-tertiary']"
+          data-testid="sidebar-talk-seats"
+          :data-full="seats.full ? 'true' : undefined"
+          v-tooltip="seats.count > seats.limit ? $t('talk.seatsOver') : seats.full ? $t('talk.seatsFull') : $t('talk.seats')"
+        >{{ seats.count }}/{{ seats.limit }}</span>
         <VoiceTimer
           v-if="isVoice && voiceStore.roomStartedAt[channel.id]"
           :since="voiceStore.roomStartedAt[channel.id]"

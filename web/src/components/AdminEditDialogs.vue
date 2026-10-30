@@ -1,97 +1,59 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { Category, Channel } from '../types/domain'
-import { ref } from 'vue'
+import { computed } from 'vue'
+import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
 
 // The rename dialogs of the layout editor: a category's name, or a channel's
-// name and topic. They hand the trimmed fields back; saving is the editor's.
+// name and topic. One draft with one Save; `submit` stores the trimmed fields
+// (the editor's job) and a rejection is shown inline with the draft kept.
 const props = defineProps({
   category: { type: Object as PropType<Category | null>, default: null },
-  channel: { type: Object as PropType<Channel | null>, default: null }
+  channel: { type: Object as PropType<Channel | null>, default: null },
+  submit: { type: Function as PropType<(fields: { name: string; topic: string }) => Promise<void>>, required: true }
 })
-const emit = defineEmits<{
-  close: []
-  'save-category': [name: string]
-  'save-channel': [fields: { name: string; topic: string }]
-}>()
+const emit = defineEmits<{ close: [] }>()
 
-const categoryName = ref(props.category?.name || '')
-const channelName = ref(props.channel?.name || '')
-const channelTopic = ref(props.channel?.topic || '')
-
-function saveCategory() {
-  const name = categoryName.value.trim()
-  if (name) emit('save-category', name)
-}
-
-function saveChannel() {
-  const name = channelName.value.trim()
-  if (name) emit('save-channel', { name, topic: channelTopic.value.trim() })
-}
+const form = useSettingsDraft<{ name: string; topic: string }>({
+  source: () => ({ name: (props.category ?? props.channel)?.name || '', topic: props.channel?.topic || '' }),
+  normalisers: { name: normalise.text, topic: normalise.text },
+  validate: draft => (normalise.text(draft.name) ? {} : { name: t('channel.nameRequired') }),
+  save: ({ draft }) => props.submit({ name: normalise.text(draft.name), topic: normalise.text(draft.topic) })
+})
+const { draft, errors } = form
+const title = computed(() => props.category
+  ? t('admin.editCategoryTitle', { name: props.category.name })
+  : t('admin.editChannelTitle', { name: props.channel?.name ?? '' }))
 
 const field = 'w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent transition'
 const label = 'block text-xs font-semibold text-mnema-tertiary uppercase tracking-wider mb-1.5 font-mono'
-const cancelButton = 'btn btn-secondary'
-const saveButton = 'btn btn-primary'
 </script>
 
 <template>
-  <BaseDialog
-    v-if="category"
-    :title="$t('admin.editCategoryTitle', { name: category.name })"
-    panel-class="max-w-md"
-    @close="emit('close')"
-  >
-    <form @submit.prevent="saveCategory" class="p-6 space-y-4">
-      <div>
-        <label :class="label">{{ $t('admin.categoryNameLabel') }}</label>
-        <input
-          v-model="categoryName"
-          type="text"
-          :placeholder="$t('admin.categoryNamePlaceholder')"
-          :aria-label="$t('admin.categoryNameLabel')"
-          :class="field"
-        />
+  <BaseDialog v-if="category || channel" :title="title" panel-class="max-w-md" :guard="form.guard" @close="emit('close')">
+    <form class="flex min-h-0 flex-1 flex-col" data-testid="admin-edit-form" @submit.prevent="form.save" @keydown="form.onKeydown">
+      <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
+        <div>
+          <label for="admin-edit-name" :class="label">{{ category ? $t('admin.categoryNameLabel') : $t('admin.channelNameLabel') }}</label>
+          <input
+            id="admin-edit-name"
+            v-model="draft.name"
+            type="text"
+            :placeholder="category ? $t('admin.categoryNamePlaceholder') : $t('admin.channelNamePlaceholder')"
+            :aria-invalid="errors.name ? 'true' : undefined"
+            :class="field"
+          />
+          <p v-if="errors.name" role="alert" class="mt-1 text-xs text-mnema-danger" data-testid="admin-edit-error">{{ errors.name }}</p>
+        </div>
+        <div v-if="channel">
+          <label for="admin-edit-topic" :class="label">{{ $t('admin.channelTopicLabel') }}</label>
+          <input id="admin-edit-topic" v-model="draft.topic" type="text" :placeholder="$t('admin.channelTopicPlaceholder')" :class="field" />
+        </div>
       </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <button type="button" :class="cancelButton" @click="emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="!categoryName.trim()" :class="saveButton">{{ $t('common.save') }}</button>
-      </div>
-    </form>
-  </BaseDialog>
-
-  <BaseDialog
-    v-if="channel"
-    :title="$t('admin.editChannelTitle', { name: channel.name })"
-    panel-class="max-w-md"
-    @close="emit('close')"
-  >
-    <form @submit.prevent="saveChannel" class="p-6 space-y-4">
-      <div>
-        <label :class="label">{{ $t('admin.channelNameLabel') }}</label>
-        <input
-          v-model="channelName"
-          type="text"
-          :placeholder="$t('admin.channelNamePlaceholder')"
-          :aria-label="$t('admin.channelNameLabel')"
-          :class="field"
-        />
-      </div>
-      <div>
-        <label :class="label">{{ $t('admin.channelTopicLabel') }}</label>
-        <input
-          v-model="channelTopic"
-          type="text"
-          :placeholder="$t('admin.channelTopicPlaceholder')"
-          :aria-label="$t('admin.channelTopicLabel')"
-          :class="field"
-        />
-      </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <button type="button" :class="cancelButton" @click="emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="!channelName.trim()" :class="saveButton">{{ $t('common.save') }}</button>
-      </div>
+      <UnsavedChangesBar :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset" />
     </form>
   </BaseDialog>
 </template>

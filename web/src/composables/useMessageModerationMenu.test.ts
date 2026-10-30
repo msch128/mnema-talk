@@ -24,7 +24,7 @@ function makeActions({ own = false, canDelete = true } = {}) {
     isOwn: vi.fn(() => own),
     canDelete: vi.fn(() => canDelete),
     startEdit: vi.fn(),
-    deleteMessage: vi.fn(async () => {}),
+    deleteMessage: vi.fn(async () => true),
     closePicker: vi.fn()
   }
 }

@@ -67,10 +67,12 @@ func (h *Handler) preview(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {string} string "Image bytes."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the address has no usable image, or the route does not exist."
+// @Failure 410 {object} httpx.ErrorResponse "The image was taken down (the address answered 404 or 410). The error code is NOT_FOUND."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests or outbound fetch capacity exhausted."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: the image could not be fetched right now; try again."
 // @Router /api/link-preview/image [get]
 func (h *Handler) image(w http.ResponseWriter, r *http.Request) error {
 	body, mime, err := h.Fetcher.Image(requester(r), r.URL.Query().Get("url"))
@@ -81,8 +83,16 @@ func (h *Handler) image(w http.ResponseWriter, r *http.Request) error {
 	if errors.Is(err, ErrBlocked) {
 		return httpx.ErrInvalidInput("not a public image address")
 	}
-	if err != nil {
+	var status statusError
+	switch {
+	case err == nil:
+	case errors.As(err, &status) && status.gone():
+		return httpx.NewAPIError(http.StatusGone, httpx.CodeNotFound, "image is gone")
+	case errors.Is(err, ErrNoPreview) || (errors.As(err, &status) && status.refused()):
 		return httpx.ErrNotFound("image not available")
+	default:
+		// Timeouts, a failing host: the image may well be there next time.
+		return httpx.ErrUnavailable("image could not be fetched")
 	}
 	hdr := w.Header()
 	hdr.Set("Content-Type", mime)

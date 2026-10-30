@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/metrics"
@@ -57,6 +58,8 @@ const (
 // @Description - `dm_member_added`: to the other members of a group conversation; `{dm_id, member}`.
 // @Description - `dm_member_removed`: to the remaining members and the leaver's sessions; `{dm_id, member}`.
 // @Description - `dm_prefs_updated`: to the user's own sessions only; `{dm_id}` after they closed, reopened or (un)favourited a conversation (refetch GET /api/dms/{id}), or `{dm_id: null}` after their direct message settings changed (refetch GET /api/dms).
+// @Description - `dm_call_ring`: to the members' sessions that asked for conversations (`?dm=1`), the caller's own included; `{conversation_id, talk_id, message_id, caller_id, talk_name, ring_seconds}` after a Talk was started from, or shared into, a conversation. Everyone but the caller has an incoming call for `ring_seconds` (counted from receipt), unless a `dm_call_end` comes first. Additive: a client that ignores it still gets the invitation card as `message_create`.
+// @Description - `dm_call_end`: to the same sessions; `{conversation_id, talk_id, reason, active, user_id?, message_id?}` when the call stopped ringing. `reason` is `answered` (a member other than the caller entered the Talk; `user_id` says who, so their other devices and the other members drop the incoming call), `cancelled` (the caller left before anybody joined, or started another Talk in the conversation), `timeout` (nobody joined in time) or `ended` (the last member left). `active` is true while somebody is still in the Talk. After `cancelled` and `timeout` the server has posted a "missed call" message (an embed with `call: "missed"`, written by the caller; `message_id`), announced by `message_create` just before.
 // @Description - `talk_leader`: `{channel_id, leader_id}` to everyone who may view a temporary Talk (opened from a Create-a-Talk lobby) when its leader changes; `leader_id` is null when nobody leads it.
 // @Description - `talk_moved`: `{from_channel_id, channel_id}` to the connection whose `voice_join` of a Create-a-Talk lobby opened the temporary Talk `channel_id`; the client then sends its ordinary `voice_join` for that Talk. The connection is never seated in the lobby itself.
 // @Description - `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}`, or `{refresh: true}` alone after a notification setting changed or everything was marked read (reload read states and notification settings).
@@ -68,13 +71,13 @@ const (
 // @Description - `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).
 // @Description - `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.
 // @Description - `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque: the server checks only its framing (an MLS key package, welcome or public message, or a heartbeat or capability message) and never reads or logs the content.
-// @Description - `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`), `reason: "rules_not_accepted"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), `reason: "talk_rate_limited"` or `"talk_unavailable"` when joining a Create-a-Talk lobby opened no Talk (5 new Talks per 10 minutes and member, 50 open Talks per lobby), or `reason: "connection_lost"` when the media connection of the call failed and the server dropped it (join again), `reason: "media_unavailable"` when the media connection of a join could not be set up (the seat is given up; join again), `reason: "joined_elsewhere"` to a connection whose Talk the same account joined on another connection (one connection per account and Talk holds the media), or `reason: "missing_permission"` when the user may not (or no longer may) view and connect to that Talk.
+// @Description - `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`; members with Disconnect members in that Talk, Administrators and the Owner may exceed it), `reason: "rules_not_accepted"` when the community's rules have not been accepted yet (POST /api/onboarding/accept), `reason: "talk_rate_limited"` or `"talk_unavailable"` when joining a Create-a-Talk lobby opened no Talk (5 new Talks per 10 minutes and member, 50 open Talks per lobby), or `reason: "connection_lost"` when the media connection of the call failed and the server dropped it (join again), `reason: "media_unavailable"` when the media connection of a join could not be set up (the seat is given up; join again), `reason: "joined_elsewhere"` to a connection whose Talk the same account joined on another connection (one connection per account and Talk holds the media), `reason: "voice_taken_over"` to a connection whose voice (in any Talk) the same account moved to another connection with `voice_join` and `takeover: true`; only its voice ends, the WebSocket stays open, or `reason: "missing_permission"` when the user may not (or no longer may) view and connect to that Talk.
 // @Description - `pong`: `{t}` echoing a `ping`.
 // @Description
 // @Description Client to server:
 // @Description - `ping` `{t}`; `presence_idle` `{idle: bool}`.
 // @Description - `typing` `{channel_id}` (text and voice channels, rate-limited; ignored without View channels and Send messages).
-// @Description - `voice_join` `{channel_id}` (needs View channels and Connect, otherwise `voice_kicked` with `reason: "missing_permission"`); `voice_leave`; `voice_speaking` `{active}`. The SFU drops audio without Speak and camera/screen without Video.
+// @Description - `voice_join` `{channel_id, takeover?, resume?, tab?}` (needs View channels and Connect, otherwise `voice_kicked` with `reason: "missing_permission"`). Without `takeover`, the account's other connection in the same Talk is told `joined_elsewhere` and a connection in another Talk keeps its seat. With `takeover: true` (the client sends it after the user confirmed "take over here") the join is completed first and only then does every other connection of the account leave voice, each told `voice_taken_over`; of two takeovers at once the later seat wins. A client that reconnected sends `resume: true` to continue its call, and `tab`, an id its page keeps across reconnects (up to 64 characters): if a takeover ended that page's call and another connection of the account is in voice, it is answered with `voice_kicked` `voice_taken_over` instead of taking the voice back; `voice_leave`; `voice_speaking` `{active}`. The SFU drops audio without Speak and camera/screen without Video.
 // @Description - `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.
 // @Description - `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.
 // @Description - `webrtc_subscribe` `{kind: "screen"|"camera", user_id, on}` or `{kind: "camera", all: true, on}`. A screen subscription may carry `quality`: `"auto"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent. Without one, or with `"auto"`, the server chooses: it starts on the best layer, moves down one layer at a time when the viewer's receiver reports show lasting loss, a rising round trip time or repeated keyframe requests, and tries one layer up again after a long stretch without trouble (a failed attempt makes the next one wait twice as long).
@@ -111,6 +114,9 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, httpx.ErrUnavailable("server shutting down"))
 		return
 	}
+	if !websocket.IsWebSocketUpgrade(r) {
+		h.noteUpgrade(false)
+	}
 	if !h.upgradeAllowed(w, user.ID) {
 		return
 	}
@@ -120,6 +126,7 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("websocket upgrade failed", "err", err)
 		return
 	}
+	h.noteUpgrade(true)
 	c := newClient(h, conn, *user, tv)
 	c.dmAware = r.URL.Query().Get("dm") == "1"
 	h.bindSession(c, r)
@@ -311,4 +318,10 @@ func (h *Hub) unregister(c *Client) {
 		h.recordLastSeen(c.User.ID)
 	}
 	h.announcePresence(c.User.ID, before, after)
+}
+
+func (h *Hub) noteUpgrade(upgraded bool) {
+	if h.UpgradeSeen != nil {
+		h.UpgradeSeen(upgraded)
+	}
 }

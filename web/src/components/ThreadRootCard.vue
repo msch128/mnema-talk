@@ -25,7 +25,6 @@ const props = defineProps({
 
 const emit = defineEmits<{
   reply: [root: ThreadRoot]
-  'open-image': [src: string]
   keydown: [event: KeyboardEvent, root: ThreadRoot]
 }>()
 
@@ -111,7 +110,7 @@ const formatDate = (dateStr?: string) => dateTime(dateStr, locale.value)
     <MessageAttachments
       :attachments="root.attachments ?? []"
       variant="root"
-      @open-image="emit('open-image', $event)"
+      :message="root as Message"
     />
     <!-- Root message reactions -->
     <ReactionBar

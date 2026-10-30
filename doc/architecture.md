@@ -192,7 +192,7 @@ words in conversations (the others keep theirs) and deletes conversations
 nobody is left in; the export lists the member's conversations by id and their
 own messages.
 
-**Calls** in conversations are not part of 1.1.
+**Calls.** A conversation has no call of its own: "Start a Talk" opens a temporary Talk and posts an invitation, and the server rings the other members (`dm_call_ring`, `dm_call_end`, a "missed call" message when nobody answers); see [Talks](talks.md#ringing).
 
 ## Blocking and reports
 
@@ -400,9 +400,23 @@ its recent minimum or three keyframe requests in five seconds move it down one
 layer; the reports of the three seconds after any move are ignored (a keyframe
 burst loses packets on its own). After 12 seconds without trouble it tries one
 layer up, and a try that fails within eight seconds makes the next one wait
-twice as long (up to two minutes), so a link that carries the lower layer but
+twice as long (up to five minutes), so a link that carries the lower layer but
 not the higher one does not flap. A viewer who picked a layer is never moved.
 The SFU cannot read the media; it never estimates from it.
+
+*Size of the picture.* The stage tells the server how large it shows the share
+(`fit` on `webrtc_subscribe`: the index of the smallest layer that still has
+the pixels the stage shows, its CSS height times `devicePixelRatio`, see
+`fitLayer` in `web/src/lib/screenLayers.ts` and `useScreenFit`). Auto starts on
+that layer and never goes above it, so a small tile or a share that is watched
+but not on the stage costs a small stream. When the picture grows (fullscreen,
+a bigger window) a viewer that sat on the old limit climbs on after four quiet
+seconds per layer instead of twelve; a smaller picture moves it down at once.
+The viewer's menu shows what Auto chose ("Auto (1080p)"). The bandwidth
+estimate of a stream the link does not limit only ever reaches about 1.5 times
+what is sent, so while it is still rising after a move up it is not held
+against the better layer; it counts as a limit only when it stays below the
+layer's bitrate and stops rising.
 
 *Bandwidth* ([`bwe.go`](../internal/sfu/bwe.go)). A link that is too slow for
 a layer but queues instead of dropping shows neither loss nor a higher round
@@ -594,7 +608,26 @@ clients were verified with up to 24 viewers in one call; beyond that the single
 test machine, not the server, was the limit. These are single runs, not a
 qualified capacity guarantee.
 
-The measurements are reproducible with `make load-test` (see
+### Capacity table (server host)
+
+The scenarios of [`loadtest/host-run.sh`](../loadtest/host-run.sh) run on the
+server host itself, without browsers (see "On the host" in
+[`loadtest/README.md`](../loadtest/README.md)). The cells are filled from the
+`<scenario>.json` results of a run on the reference host; until then they
+read "to be measured". CPU is the app process in cores, averaged over the
+steady phase; memory is its peak resident set. The generator runs on the same
+host, so its own CPU is part of what the host spends.
+
+| Scenario | Load | Server CPU (cores) | Server memory (peak) | Result |
+|----------|------|--------------------|----------------------|--------|
+| Chat, 100 sessions | 10 writers x 0.2 msg/s, typing, reactions, edits | to be measured | to be measured | delivery p50/p95/p99, loss: to be measured |
+| Chat, 300 sessions | 30 writers x 0.2 msg/s | to be measured | to be measured | to be measured |
+| Chat, 1000 sessions | 100 writers x 0.2 msg/s | to be measured | to be measured | to be measured |
+| Voice, direct | 1 screen (1500 kbit/s) to 99 members | to be measured | to be measured | received kbit/s per member, loss, freezes: to be measured |
+| Voice, through the built-in TURN relay | 1 screen and 3 speakers to 100 members | to be measured | to be measured | members through the relay, loss, freezes: to be measured |
+| Voice, mixed | 1 screen, 10 cameras (300 kbit/s), 3 speakers, 100 members watching all | to be measured | to be measured | received kbit/s per member, loss, freezes: to be measured |
+
+The measurements above are reproducible with `make load-test` (see
 [`loadtest/README.md`](../loadtest/README.md)): one sharer, real browsers and
 lightweight Pion viewers, with join/reload stall checks, optional packet loss
 and jitter, server heap and goroutine sampling, and thresholds that fail the
@@ -612,7 +645,7 @@ single run, so read the figures as orders of magnitude:
 
 | What | Result |
 | --- | --- |
-| Rows written by one message, 2 members vs 10,002 members | the same: 1 message row and 1 `users` row (the sender), 0 read markers |
+| Rows written by one message, 2 members vs 10,002 members | the same: 1 message row and 1 `users` row (the sender), 0 read markers for the members; the sender's own marker moves up to their message, which writes a row only if others posted since it (see below) |
 | Median `POST /messages` time, 2 vs 10,002 members | 3.2 ms vs 2.8 ms (no difference beyond noise) |
 | One message with `@all` to 10,001 members | 1 statement, 10,000 `message_mentions` rows, 185 ms (the only send that writes per recipient; needs the right to use `@all`) |
 | All 10,000 members read the channel (32 concurrent workers) | 10,000 marker rows, 1.0 s in total (about 0.1 ms each) |
@@ -620,6 +653,8 @@ single run, so read the figures as orders of magnitude:
 | `GET /api/read-state` for one member, 600 unread in a 50,000-message channel | 45 ms (cold), index scan on `idx_messages_channel_roots` |
 | Same, 50,000 unread | 29 ms (warm) |
 | First-unread lookup in that channel | 0.04 ms, 6 buffers, index scan |
+
+Sending a message reads the channel for its author: `PublishMessage` calls `MarkRead` with the new message (top-level messages only; thread replies are no channel unread), which writes the sender's marker only when someone else posted since the last one, and sends `read_state` to the author's other sessions. The client does the same at once and drops the "new since" divider, so the "Jump to first unread" pill goes.
 
 No migration was needed: the existing indexes serve every query (the plan is
 printed by the test with `-v`). The remaining cost that grows with unread
@@ -715,8 +750,9 @@ and Administrators) gathers version, update state, database, storage, backup and
   ([`DmCreateDialog.vue`](../web/src/components/DmCreateDialog.vue),
   [`DmInfoDialog.vue`](../web/src/components/DmInfoDialog.vue)), blocking and
   reports ([`BlockedMessageRow.vue`](../web/src/components/BlockedMessageRow.vue),
-  [`ReportDialog.vue`](../web/src/components/ReportDialog.vue)), saved messages
-  ([`SavedMessages.vue`](../web/src/components/SavedMessages.vue)), forwarding
+  [`ReportDialog.vue`](../web/src/components/ReportDialog.vue)), saved messages and
+  reminders in one header panel
+  ([`SavedLaterPanel.vue`](../web/src/components/SavedLaterPanel.vue)), forwarding
   ([`ForwardDialog.vue`](../web/src/components/ForwardDialog.vue),
   [`ForwardedQuote.vue`](../web/src/components/ForwardedQuote.vue)), pinned
   messages with "Pinned by" ([`PinnedMessages.vue`](../web/src/components/PinnedMessages.vue))

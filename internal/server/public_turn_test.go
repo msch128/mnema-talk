@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -168,5 +169,38 @@ func TestBuiltinTURNHealth(t *testing.T) {
 	}
 	if h.voiceHealth().TURNConfigured {
 		t.Fatal("TURN reported configured with the relay off and no external server")
+	}
+}
+
+// The privacy policy names the TURN relays that are actually offered: the
+// built-in one (part of this server) and the external ones, in every mix.
+func TestLegalReportsTURNForEveryConfiguration(t *testing.T) {
+	external := []string{"turn:turn.example.test:3478"}
+	cases := []struct {
+		name         string
+		mode         string
+		urls         []string
+		wantBuiltin  bool
+		wantExternal []string
+	}{
+		{"auto without external", config.BuiltinTURNAuto, nil, true, []string{}},
+		{"auto with external", config.BuiltinTURNAuto, external, false, external},
+		{"on with external", config.BuiltinTURNOn, external, true, external},
+		{"off without external", config.BuiltinTURNOff, nil, false, []string{}},
+		{"off with external", config.BuiltinTURNOff, external, false, external},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			cfg := &config.Config{WebRTCBuiltinTURN: tc.mode, WebRTCTURNURLs: tc.urls}
+			LegalHandler(cfg).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/legal", nil))
+			var got Legal
+			if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+				t.Fatal(err)
+			}
+			if got.BuiltinTURN != tc.wantBuiltin || !slices.Equal(got.TURNServers, tc.wantExternal) || got.LegalVersion != LegalVersion {
+				t.Fatalf("legal = %+v", got)
+			}
+		})
 	}
 }

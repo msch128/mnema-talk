@@ -10,6 +10,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
+import { useDmCallsStore } from '../stores/dmCalls'
 import { PERMISSION_BITS } from '../lib/permissions'
 import { channelFixture, fixtureId, messageFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
@@ -106,14 +107,14 @@ describe('Start a Talk and Invite to my Talk', () => {
     expect(joinVoiceChannel).toHaveBeenCalledWith(talk.id)
   })
 
-  it('explains that the community has no lobby', async () => {
+  it('says so when the Talk could not be started', async () => {
     world(true)
-    apiMock.mockRejectedValue(new ApiError(409, 'CONFLICT', 'no lobby'))
+    apiMock.mockRejectedValue(new ApiError(429, 'RATE_LIMITED', 'Too many requests.'))
     const w = mount(DmTalkActions, { props: { conversationId: conversation, canSend: true } })
     await w.find('[data-testid="dm-start-talk"]').trigger('click')
     await flushPromises()
     expect(joinVoiceChannel).not.toHaveBeenCalled()
-    expect(useToastStore().toasts[0]?.text).toContain('no Talk lobby')
+    expect(useToastStore().toasts[0]?.text).toBe('Too many requests.')
   })
 
   it('invites only from inside a Talk', async () => {
@@ -126,6 +127,26 @@ describe('Start a Talk and Invite to my Talk', () => {
     await w.find('[data-testid="dm-invite-to-talk"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`/api/talks/${talk.id}/invites`, expect.objectContaining({ json: { conversation_id: conversation } }))
+  })
+
+  it('joins the call that is going on instead of starting a second Talk', async () => {
+    world(true)
+    useDmCallsStore().track({ conversationId: conversation, talkId: talk.id, messageId: fixtureId(61), callerId: fixtureId(2), talkName: 'Talk 1' })
+    const w = mount(DmTalkActions, { props: { conversationId: conversation, canSend: true } })
+    expect(w.find('[data-testid="dm-start-talk"]').exists()).toBe(false)
+    await w.find('[data-testid="dm-join-talk"]').trigger('click')
+    await flushPromises()
+    expect(apiMock).not.toHaveBeenCalledWith(`/api/dms/${conversation}/talk`, expect.anything())
+    expect(joinVoiceChannel).toHaveBeenCalledWith(talk.id)
+  })
+
+  it('offers neither once the member is in the call', () => {
+    world(true)
+    useDmCallsStore().track({ conversationId: conversation, talkId: talk.id, messageId: fixtureId(61), callerId: fixtureId(2), talkName: 'Talk 1' })
+    useVoiceStore().currentChannelId = talk.id
+    const w = mount(DmTalkActions, { props: { conversationId: conversation, canSend: true } })
+    expect(w.find('[data-testid="dm-start-talk"]').exists()).toBe(false)
+    expect(w.find('[data-testid="dm-join-talk"]').exists()).toBe(false)
   })
 
   it('is disabled where the member cannot write', () => {

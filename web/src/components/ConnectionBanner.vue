@@ -4,6 +4,7 @@
 import { ref, computed, watch, onBeforeUnmount, onMounted } from 'vue'
 import { WifiOff, RefreshCw, Check } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
+import { visibleInterval } from '../lib/pageVisibility'
 
 const chatStore = useChatStore()
 
@@ -21,7 +22,7 @@ onMounted(() => {
 const lost = computed(() => browserOffline.value || (chatStore.wasConnected && !chatStore.isConnected))
 const justReconnected = ref(false)
 const now = ref(Date.now())
-let tick: ReturnType<typeof setInterval> | undefined
+let tick: (() => void) | undefined
 let hideTimer: ReturnType<typeof setTimeout> | undefined
 
 const secondsLeft = computed(() => Math.max(0, Math.ceil((chatStore.nextRetryAt - now.value) / 1000)))
@@ -31,9 +32,10 @@ watch(lost, (isLost, wasLost) => {
     justReconnected.value = false
     clearTimeout(hideTimer)
     now.value = Date.now()
-    tick = setInterval(() => { now.value = Date.now() }, 1000)
+    tick?.()
+    tick = visibleInterval(() => { now.value = Date.now() }, 1000)
   } else {
-    clearInterval(tick)
+    tick?.()
     tick = undefined
     if (wasLost && chatStore.isConnected) {
       justReconnected.value = true
@@ -45,7 +47,7 @@ watch(lost, (isLost, wasLost) => {
 onBeforeUnmount(() => {
   window.removeEventListener('offline', goOffline)
   window.removeEventListener('online', goOnline)
-  clearInterval(tick)
+  tick?.()
   clearTimeout(hideTimer)
 })
 </script>

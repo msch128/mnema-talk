@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore } from '../stores/chat'
 import type { ContextMenuItem } from '../components/menuTypes'
+import { t } from '../i18n'
+import { categoryFixture, channelFixture } from '../test-fixtures.fixture'
 import { formatMuteEnd, MUTE_DURATIONS, notifyMenuItems, storedSetting } from './useMuteMenu'
 
 const NOW = new Date('2026-01-01T12:00:00Z')
@@ -54,6 +56,23 @@ describe('formatMuteEnd locale', () => {
   })
 })
 
+describe('what "my default" means', () => {
+  const label = (target: Parameters<typeof notifyMenuItems>[0]) => notifyMenuItems(target).find(i => i.id === 'notify-inherit')?.label
+
+  it('names the server-wide level, and the category level for a channel in a category that has one', () => {
+    const chat = useChatStore()
+    chat.categories = [categoryFixture({ id: 'k1', name: 'Text', channels: [channelFixture({ id: 'c1', category_id: 'k1' })] })]
+    chat.notifySettings = { channels: [], categories: [], server: { level: 'mentions', muted_until: null, suppress_everyone: false } }
+    expect(label({ kind: 'channel', id: 'c1' })).toBe(t('notifications.inherit', { level: t('notifications.mentions') }))
+    expect(label({ kind: 'category', id: 'k1' })).toBe(t('notifications.inherit', { level: t('notifications.mentions') }))
+    chat.notifySettings = { channels: [], categories: [{ category_id: 'k1', level: 'mute', muted_until: null }], server: { level: 'mentions', muted_until: null, suppress_everyone: false } }
+    expect(label({ kind: 'channel', id: 'c1' })).toBe(t('notifications.inherit', { level: t('notifications.bellNothing') }))
+    // The category itself and a channel outside any category follow the server.
+    expect(label({ kind: 'category', id: 'k1' })).toBe(t('notifications.inherit', { level: t('notifications.mentions') }))
+    expect(label({ kind: 'channel', id: 'c1', inCategory: false })).toBe(t('notifications.inherit', { level: t('notifications.mentions') }))
+  })
+})
+
 describe('notification menu', () => {
   it('offers the levels and every duration, with category wording for a category', () => {
     const channel = notifyMenuItems({ kind: 'channel', id: 'c1' })
@@ -62,8 +81,9 @@ describe('notification menu', () => {
     // "Nothing" is the open-ended mute, so the "Mute for…" list only has the timed ones.
     expect(submenu(channel).items.map(i => i.id)).toEqual(MUTE_DURATIONS.filter(d => d.ms !== null).map(d => `mute-${d.id}`))
     const label = (items: ContextMenuItem[]) => items.find(i => i.id === 'notify-inherit')?.label
-    // A channel follows its category; a category, or a channel outside any, follows the server default.
-    expect(label(channel)).not.toBe(label(category))
+    // Nothing is set anywhere: "my default" is the server's, all messages.
+    expect(label(channel)).toBe(t('notifications.inherit', { level: t('notifications.all') }))
+    expect(label(category)).toBe(label(channel))
     expect(label(notifyMenuItems({ kind: 'channel', id: 'c2', inCategory: false }))).toBe(label(category))
     expect(channel.find(i => i.id === 'notify-unmute')).toBeUndefined()
   })

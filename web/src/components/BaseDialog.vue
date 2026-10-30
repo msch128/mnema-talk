@@ -21,13 +21,26 @@ const props = defineProps({
   sheet: { type: Boolean, default: false },
   // 'center' (default) or 'top' for palette-style dialogs such as search
   align: { type: String as PropType<'center' | 'top'>, default: 'center' },
+  // Asked before every close (X, Escape, scrim); false keeps the dialog open.
+  // Dialogs with unsaved changes pass useSettingsDraft's guard here.
+  guard: { type: Function as PropType<() => boolean | Promise<boolean>>, default: undefined },
   initialFocus: { type: [String, Function] as PropType<string | ((root: HTMLElement) => HTMLElement | null | undefined)>, default: undefined }
 })
 const emit = defineEmits<{ close: [] }>()
 
 const panel = ref<HTMLElement | null>(null)
 const titleId = useId()
-const close = () => emit('close')
+let asking = false
+async function close() {
+  if (asking) return
+  asking = true
+  try {
+    if (props.guard && !(await props.guard())) return
+  } finally {
+    asking = false
+  }
+  emit('close')
+}
 
 useDialog(panel, { onClose: close, ...(props.initialFocus !== undefined ? { initialFocus: props.initialFocus } : {}) })
 

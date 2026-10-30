@@ -2,56 +2,29 @@
 // Roles of one bot. A bot does not get @everyone: with no role it can do
 // nothing. The server decides who may hand out powerful roles; its message is
 // shown when it refuses.
-import { ref, computed, watch, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { Shield, TriangleAlert, Lock } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
-import { decodeBotBot } from '../types/rest'
 import type { BotBot } from '../types/rest'
 import { isPowerfulRole } from '../lib/bots'
 import { roleColorCss } from '../lib/permissions'
 import { usePermissionsStore } from '../stores/permissions'
-import { useToastStore } from '../stores/toast'
-import { t } from '../i18n'
 
 const props = defineProps({
   bot: { type: Object as () => BotBot, required: true }
 })
-const emit = defineEmits<{ updated: [bot: BotBot] }>()
 
 const permissions = usePermissionsStore()
-const toasts = useToastStore()
-const selected = ref<string[]>([...props.bot.role_ids])
-const busy = ref(false)
+// The chosen roles belong to the bot's draft; nothing is written from here.
+const selected = defineModel<string[]>('roles', { required: true })
 
 // Another bot's own role is not offered; this bot's own role is shown ticked.
 const roles = computed(() => permissions.roles.filter(r => !r.is_everyone && (!r.bot_user_id || r.bot_user_id === props.bot.user_id)))
 // Every bot holds the managed Bot role; it is shown ticked and cannot be changed.
 const held = (role: { id: string; managed?: boolean }) => role.managed === true || selected.value.includes(role.id)
-const dirty = computed(() => {
-  const saved = [...props.bot.role_ids].sort()
-  const now = [...selected.value].sort()
-  return saved.length !== now.length || saved.some((id, i) => id !== now[i])
-})
 const warnsPowerful = computed(() => roles.value.some(r => selected.value.includes(r.id) && isPowerfulRole(r.permissions)))
-
-watch(() => props.bot.role_ids, ids => { selected.value = [...ids] })
 
 function toggle(id: string, on: boolean) {
   selected.value = on ? [...selected.value, id] : selected.value.filter(x => x !== id)
-}
-
-async function save() {
-  if (busy.value || !dirty.value) return
-  busy.value = true
-  try {
-    const bot = await api(`/api/admin/bots/${props.bot.id}/roles`, { method: 'PUT', json: { role_ids: selected.value }, decode: decodeBotBot })
-    emit('updated', bot)
-    toasts.success(t('bots.roles.saved'))
-  } catch (e) {
-    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
-  } finally {
-    busy.value = false
-  }
 }
 
 onMounted(() => { if (!permissions.roles.length) void permissions.loadRoles() })
@@ -78,6 +51,5 @@ onMounted(() => { if (!permissions.roles.length) void permissions.loadRoles() })
       </li>
     </ul>
     <p v-if="warnsPowerful" class="rounded-md border border-mnema-danger/40 bg-mnema-danger/10 px-3 py-2 text-sm text-mnema-text" role="alert" data-testid="bot-power-selected">{{ $t('bots.roles.powerSelected') }}</p>
-    <button type="button" :disabled="!dirty || busy" class="btn btn-primary" data-testid="bot-roles-save" @click="save">{{ $t('bots.roles.save') }}</button>
   </section>
 </template>

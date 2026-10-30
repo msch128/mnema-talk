@@ -43,6 +43,9 @@ func TestDefaults(t *testing.T) {
 	if !cfg.UpdateCheck {
 		t.Error("the update check should default to on")
 	}
+	if cfg.InitialLanguage != "en" {
+		t.Errorf("a new community is named in English unless INITIAL_LANGUAGE says otherwise, got %q", cfg.InitialLanguage)
+	}
 }
 
 func TestUpdaterSettings(t *testing.T) {

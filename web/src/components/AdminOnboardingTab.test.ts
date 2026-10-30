@@ -58,7 +58,7 @@ describe('AdminOnboardingTab', () => {
     await flushPromises()
     expect(apiMock).toHaveBeenLastCalledWith('/api/admin/onboarding', {
       method: 'PUT', decode: expect.any(Function),
-      json: { community_name: 'Home', welcome_text: 'Hi', rules_text: 'Be kinder', start_channel_id: CH_TEXT, require_reacceptance: true, session_inactivity_days: 7 }
+      json: { community_name: 'Home', welcome_text: 'Hi', rules_text: 'Be kinder', start_channel_id: CH_TEXT, require_reacceptance: true }
     })
     expect(useToastStore().toasts.length).toBe(1)
     expect(w.find('[data-testid="reaccept"]').exists()).toBe(true)
@@ -102,33 +102,41 @@ describe('AdminOnboardingTab', () => {
     apiMock.mockRejectedValue(new Error('nope'))
     await ok.find('form').trigger('submit')
     await flushPromises()
-    expect(useToastStore().toasts.length).toBe(2)
+    // A failed save is shown inline, the draft stays as typed and can be saved again.
+    expect(useToastStore().toasts.length).toBe(1)
+    expect(ok.find('[data-testid="unsaved-error"]').text()).toBe('nope')
     expect(ok.find<HTMLInputElement>('#onb-name').element.value).toBe('Changed')
+    expect(ok.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeUndefined()
   })
 
-  it('refuses over-long texts', async () => {
+  it('cuts an over-long text at the limit instead of refusing it', async () => {
     const w = await mountTab()
     await w.find('#onb-name').setValue('x'.repeat(61))
-    expect(w.find('[role="alert"]').exists()).toBe(true)
-    expect(w.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeDefined()
+    expect(w.find<HTMLInputElement>('#onb-name').element.value).toBe('x'.repeat(60))
+    expect(w.find('[role="alert"]').exists()).toBe(false)
   })
 
-  it('sets the inactivity sign-out and refuses days outside 1 to 365', async () => {
+  it('counts characters like the server, so 60 emoji fit a limit of 60', async () => {
     const w = await mountTab()
-    expect(w.find<HTMLInputElement>('[data-testid="inactivity-days"]').element.value).toBe('7')
-    for (const bad of ['0', '366']) {
-      await w.find('[data-testid="inactivity-days"]').setValue(bad)
-      expect(w.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeDefined()
-      expect(w.find('[role="alert"]').text()).toContain('1 to 365')
-    }
-    await w.find('[data-testid="inactivity-days"]').setValue('30')
-    apiMock.mockResolvedValue({ ...settings, session_inactivity_days: 30 })
-    await w.find('form').trigger('submit')
+    await w.find('#onb-name').setValue('😂'.repeat(60))
+    expect(w.find<HTMLInputElement>('#onb-name').element.value).toBe('😂'.repeat(60))
+    expect(w.find('[role="alert"]').exists()).toBe(false)
+    expect(w.find('[data-testid="onboarding-save"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('has a heading, leaves DMs and sign-out to the System page and sends neither', async () => {
+    const w = await mountTab()
+    expect(w.get('h3').text()).toBe('Welcome & rules')
+    expect(w.find('[data-testid="dm-switch"]').exists()).toBe(false)
+    expect(w.find('[data-testid="inactivity-setting"]').exists()).toBe(false)
+    expect(w.get<HTMLInputElement>('#onb-name').attributes('placeholder')).toBe(window.location.hostname)
+    await w.get('#onb-name').setValue('Home 2')
+    apiMock.mockResolvedValue({ ...settings, community_name: 'Home 2' })
+    await w.get('form').trigger('submit')
     await flushPromises()
-    expect(apiMock).toHaveBeenLastCalledWith('/api/admin/onboarding', expect.objectContaining({
-      json: expect.objectContaining({ session_inactivity_days: 30 })
-    }))
-    expect(w.find<HTMLInputElement>('[data-testid="inactivity-days"]').element.value).toBe('30')
+    const body = (apiMock.mock.lastCall![1] as { json: Record<string, unknown> }).json
+    expect(body).not.toHaveProperty('session_inactivity_days')
+    expect(body).not.toHaveProperty('direct_messages_enabled')
   })
 
   it('offers a retry when the first load fails', async () => {
@@ -153,6 +161,31 @@ describe('AdminOnboardingTab', () => {
     const texts = useToastStore().toasts.map(x => x.text)
     expect(texts).toContain('Welcome and rules saved.')
     expect(useToastStore().toasts.some(x => x.type === 'error')).toBe(false)
+  })
+
+  it('counts only real differences as changes', async () => {
+    const w = await mountTab({ ...settings, rules_text: 'Be kind', rules_version: 1 })
+    const saveOff = () => w.find('[data-testid="onboarding-save"]').attributes('disabled') !== undefined
+    await w.find('#onb-name').setValue('  Home ')
+    expect(saveOff()).toBe(true)
+    await w.find('#onb-welcome').setValue('Hi there')
+    expect(saveOff()).toBe(false)
+    await w.find('#onb-welcome').setValue('Hi')
+    expect(saveOff()).toBe(true)
+    await w.find('[data-testid="reaccept"]').setValue(true)
+    expect(saveOff()).toBe(false)
+    await w.find('[data-testid="unsaved-reset"]').trigger('click')
+    expect(saveOff()).toBe(true)
+    expect(w.find<HTMLInputElement>('[data-testid="reaccept"]').element.checked).toBe(false)
+  })
+
+  it('stores nothing before Save and asks before the draft is dropped', async () => {
+    const w = await mountTab()
+    apiMock.mockClear()
+    await w.find('#onb-name').setValue('Elsewhere')
+    await w.find('#onb-start').setValue(CH_TEXT)
+    expect(apiMock).not.toHaveBeenCalled()
+    expect(w.find('[data-testid="unsaved-status"]').text()).toBe('You have unsaved changes')
   })
 
   describe('community icon', () => {

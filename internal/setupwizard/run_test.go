@@ -34,7 +34,7 @@ func TestNonInteractiveSetupWritesBothFiles(t *testing.T) {
 		t.Errorf("config from generated .env: %+v", cfg.SMTP)
 	}
 	env, _ := godotenv.Unmarshal(string(raw))
-	for _, want := range []string{"[ ok ] DNS", "[note] Voice ports", "3479", env["ADMIN_INITIAL_PASSWORD"], "docker compose up -d --wait", "docker compose pull && docker compose up -d"} {
+	for _, want := range []string{"[ ok ] DNS", "3479", "50000-50050/udp", "never 8080", "Test my connection", "reverse proxy", env["ADMIN_INITIAL_PASSWORD"], "docker compose up -d --wait", "docker compose pull && docker compose up -d"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("summary lacks %q:\n%s", want, out)
 		}
@@ -72,10 +72,11 @@ func TestSetupRefusesAnOwnerNameTheServerCannotSeed(t *testing.T) {
 func TestInteractiveSetupAsksAgainForAnOwnerNameTheServerCannotSeed(t *testing.T) {
 	dir := t.TempDir()
 	answers := strings.Join([]string{
+		"n", // not just a trial
 		"https://talk.example.org",
 		"Max Mustermann", // rejected, asked again
 		"max",
-		"en", "", "",
+		"en", "", "", "",
 	}, "\n") + "\n"
 	out, err := runSetup(t, answers, "--dir", dir, "--compose-template", repoCompose, "--skip-preflight")
 	if err != nil {
@@ -97,10 +98,12 @@ func TestNonInteractiveNeedsThePublicURL(t *testing.T) {
 func TestInteractiveSetupAsksForTheRest(t *testing.T) {
 	dir := t.TempDir()
 	answers := strings.Join([]string{
+		"n",             // not just a trial
 		"not a url ://", // rejected, asked again
 		"https://talk.example.org",
 		"",                                                                             // owner name: default
 		"de",                                                                           // language
+		"",                                                                             // LAN address: none
 		"y",                                                                            // mail
 		"smtp.example.org", "", "", "mailer", "Talk <talk@example.org>", "s3cret-smtp", // host, port, tls, user, from, password
 		"y", // updater sidecar

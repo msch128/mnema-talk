@@ -20,6 +20,9 @@ type clientEvent struct {
 	ChannelID uuid.UUID `json:"channel_id"`
 	Active    bool      `json:"active"`
 	Idle      bool      `json:"idle"`
+	Takeover  bool      `json:"takeover"`
+	Resume    bool      `json:"resume"`
+	Tab       string    `json:"tab"`
 	T         float64   `json:"t"`
 }
 
@@ -36,7 +39,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	case events.ClientPresenceIdle:
 		c.hub.setIdle(c, p.Idle)
 	case events.ClientVoiceJoin:
-		c.handleVoiceJoin(ctx, p.ChannelID)
+		c.handleVoiceJoin(ctx, p)
 	case events.ClientVoiceLeave:
 		// A leave is always honoured, but it spends from the same allowance
 		// as joins, so leave/join cycles stay bounded.
@@ -102,8 +105,12 @@ func (c *Client) removeOwnSource(source sfu.Source) {
 	}
 }
 
-func (c *Client) handleVoiceJoin(ctx context.Context, channelID uuid.UUID) {
+func (c *Client) handleVoiceJoin(ctx context.Context, p clientEvent) {
 	h := c.hub
+	channelID := p.ChannelID
+	if len(p.Tab) <= 64 {
+		c.setTab(p.Tab)
+	}
 	if !h.voiceGate.take(c.User.ID, time.Now()) {
 		// Over the join/leave allowance: refused, and the client ends
 		// the attempt on voice_kicked.
@@ -119,7 +126,14 @@ func (c *Client) handleVoiceJoin(ctx context.Context, channelID uuid.UUID) {
 		h.enterLobby(c, ch)
 		return
 	}
-	h.joinVoice(c, ch)
+	switch {
+	case p.Takeover:
+		h.takeOverVoice(c, ch)
+	case p.Resume:
+		h.resumeVoice(c, ch)
+	default:
+		h.joinVoice(c, ch)
+	}
 }
 
 func (c *Client) handleTyping(ctx context.Context, channelID uuid.UUID) {

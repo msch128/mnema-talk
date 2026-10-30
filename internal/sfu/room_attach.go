@@ -43,7 +43,7 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 	})
 
 	pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
-		logICEState(pc, userID, state)
+		logICEState(pc, userID, state, r.iceSeen)
 	})
 
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
@@ -83,12 +83,14 @@ func (r *Room) replacePeerLocked(userID uuid.UUID) {
 }
 
 // logICEState records ICE transitions worth seeing in the log and metrics.
-func logICEState(pc *webrtc.PeerConnection, userID uuid.UUID, state webrtc.ICEConnectionState) {
+func logICEState(pc *webrtc.PeerConnection, userID uuid.UUID, state webrtc.ICEConnectionState, seen *iceObserver) {
 	switch state {
 	case webrtc.ICEConnectionStateConnected:
 		attrs := []any{"user", userID}
-		if pair, err := selectedPair(pc); err == nil && pair != nil {
+		pair, err := selectedPair(pc)
+		if err == nil && pair != nil {
 			attrs = append(attrs, "local", pair.Local.Address, "remote", pair.Remote.Address, "remote_type", pair.Remote.Typ.String())
+			seen.connected(pair)
 		}
 		slog.Info("sfu ice connected", attrs...)
 		metrics.SFUICE.With("connected").Inc()

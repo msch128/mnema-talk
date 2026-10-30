@@ -54,6 +54,30 @@ function role(item: ContextMenuItem) {
     />
   </div>
 
+  <!-- Live level (0-100); the white mark is the threshold at which speaking starts -->
+  <div v-else-if="item.type === 'meter'" class="px-2.5 py-1.5 flex flex-col gap-1 select-none">
+    <span class="text-xs text-mnema-muted font-normal truncate">{{ item.label }}</span>
+    <div
+      role="meter"
+      data-menu-meter
+      :aria-label="item.label"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      :aria-valuenow="item.value"
+      class="relative h-2 overflow-hidden rounded-full bg-mnema-canvas border border-mnema-hairline"
+    >
+      <div
+        class="h-full rounded-full bg-mnema-accent transition-[width] duration-75 motion-reduce:transition-none"
+        :style="{ width: `${Math.max(0, Math.min(100, item.value))}%` }"
+      ></div>
+      <div
+        v-if="item.threshold !== undefined"
+        class="absolute inset-y-0 w-0.5 bg-mnema-text/70"
+        :style="{ left: `${Math.max(0, Math.min(100, item.threshold))}%` }"
+      ></div>
+    </div>
+  </div>
+
   <!-- Read-only line (label: value), focusable so screen readers reach it -->
   <div
     v-else-if="item.type === 'info'"
@@ -77,7 +101,8 @@ function role(item: ContextMenuItem) {
     :data-menu-item="item.id || undefined"
     data-menu-nav
     tabindex="-1"
-    :disabled="item.disabled"
+    v-tooltip.visual="item.disabled ? item.disabledReason : undefined"
+    :disabled="item.disabled && !item.disabledReason"
     :class="[
       'w-full px-3 flex items-center justify-between gap-3 rounded-lg text-left transition-colors font-normal',
       item.subtitle ? 'min-h-9 py-2' : 'h-9',

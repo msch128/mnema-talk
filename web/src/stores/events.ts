@@ -16,6 +16,13 @@ import { useServerFeaturesStore } from './serverFeatures'
 import { usePastEvents } from './eventsPast'
 import { useToastStore } from './toast'
 import { t } from '../i18n'
+import { openEvents } from '../lib/eventsDialog'
+
+/** Whole minutes until an event starts, at least one (the server reminds a quarter of an hour ahead). */
+export function minutesUntil(startTime: string, now = Date.now()): number {
+  const ms = new Date(startTime).getTime() - now
+  return Number.isFinite(ms) ? Math.max(1, Math.round(ms / 60000)) : 15
+}
 
 const decodeEvents = arrayDecoder('community events', isCommunityeventsCommunityEvent)
 const decodeRSVPs = arrayDecoder('event rsvps', isCommunityeventsRSVPItem)
@@ -127,7 +134,10 @@ export const useEventsStore = defineStore('communityEvents', () => {
       past.remove(id)
     },
     handleEventReminder: (p: ServerEventPayloads['event_reminder']) => {
-      useToastStore().info(t('events.reminderToast', { title: p.title }))
+      useToastStore().info(
+        t('events.reminderToast', { title: p.title, count: minutesUntil(p.start_time) }),
+        { action: { label: t('events.reminderOpen'), onClick: () => openEvents(p.event_id) } }
+      )
     },
     reset: () => {
       ++loadSeq

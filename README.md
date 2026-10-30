@@ -57,7 +57,7 @@ no accounts on someone else's platform.
   **Join** in the Talk's header. Reading needs *View channels*, writing
   *Send messages*; *Connect* is not required.
 - **Create-a-Talk lobbies, Stages and live reactions.** Joining a lobby opens a
-  temporary Talk ("Talk 1", "Talk 2", ...) that you lead; it disappears when it
+  temporary Talk named after the lobby ("Lobby 1", "Lobby 2", ...) that you lead; it disappears when it
   is empty. *Start a Talk* in a direct message opens one and invites the
   conversation. A Talk can be a **Stage**: only members with talk power speak,
   others raise a hand and a member with *Manage stage* accepts it. Members in a
@@ -106,7 +106,10 @@ no accounts on someone else's platform.
 - **Saved messages and forwarding.** Keep a private list of up to 1,000
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the
-  reader may already see.
+  reader may already see. A saved message carries a small bookmark (click it to
+  take the message off again), and the header's bookmark button opens *Saved &
+  reminders*: your saved messages, searchable and sortable by channel, next to
+  your reminders and scheduled messages.
 - **Status that clears itself.** Set a custom status with **Clear after** one
   hour, tonight, tomorrow morning, never or a date and time of your own. Your
   device works out the time in your time zone; the server clears the status
@@ -213,8 +216,8 @@ no accounts on someone else's platform.
   it in **Admin > Reports**, which needs the permission *Manage reports*; for a
   direct message this copy is the only part of it they can read. The author is
   not told.
-- **The Owner can switch direct messages off** for the community under
-  **Admin > Welcome & rules**: nothing new can then be started or written, and
+- **The Owner and Administrators can switch direct messages off** for the community under
+  **Admin > Sign-in & messages**: nothing new can then be started or written, and
   existing conversations stay readable. A 1.0.x server has none of this, and
   the web app hides it there.
 
@@ -325,7 +328,7 @@ By hand: [Fresh install in doc/deployment.md](doc/deployment.md#fresh-install)
 downloads the compose file and `.env.example` of a release, lists the few
 values to set (`PUBLIC_URL`, `JWT_SECRET`, `POSTGRES_PASSWORD`,
 `S3_ACCESS_KEY` / `S3_SECRET_KEY`, `ADMIN_INITIAL_PASSWORD`) and starts the
-published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.2`, a pinned patch
+published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:2.1`, a pinned patch
 version or `:latest`). CI runs those exact steps. The same image is also on
 Docker Hub as `docker.io/msch128/mnema-talk`; GHCR stays the primary
 reference ([verify the signature](doc/operations.md#verifying-a-release-image)).

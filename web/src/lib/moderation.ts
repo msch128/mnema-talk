@@ -3,6 +3,7 @@
 // choices and the notice a member gets.
 import { shallowRef } from 'vue'
 import { t } from '../i18n'
+import presets from './presets.json'
 
 export type ModerationKind = 'timeout' | 'ban'
 
@@ -40,7 +41,7 @@ export const MAX_BAN_SECONDS = 3650 * 24 * 3600
 export const MAX_REASON_LENGTH = 200
 
 /** The ready-made durations, in seconds. */
-export const DURATION_CHOICES = [60, 300, 3600, 86400, 604800] as const
+export const DURATION_CHOICES = presets.moderationSeconds
 
 export const CUSTOM_UNITS = { seconds: 1, minutes: 60, hours: 3600, days: 86400 } as const
 export type CustomUnit = keyof typeof CUSTOM_UNITS

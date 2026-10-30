@@ -27,7 +27,15 @@ const features = useServerFeaturesStore()
 
 const channelType = ref(props.initialType || 'text')
 const channelName = ref('')
-const selectedCategoryId = ref(props.initialCategoryId || '')
+// Unless the caller names one, a channel lands in the category of the channel
+// being read, else in the first category: never above all of them, unlabelled.
+function defaultCategoryId(): string {
+  if (props.initialCategoryId) return props.initialCategoryId
+  const open = chatStore.activeChannel?.category_id
+  if (open && chatStore.categories.some(c => c.id === open)) return open
+  return chatStore.categories[0]?.id ?? ''
+}
+const selectedCategoryId = ref(defaultCategoryId())
 const channelTopic = ref('')
 const asStage = ref(false)
 const isCreatingCategory = ref(false)
@@ -117,7 +125,7 @@ async function handleSubmit() {
               <Hash class="w-4 h-4" />
             </div>
             <div class="min-w-0">
-              <div class="text-sm font-semibold truncate">{{ $t('channel.typeText') }}</div>
+              <div class="text-sm font-semibold">{{ $t('channel.typeText') }}</div>
               <div class="text-xs text-mnema-tertiary">{{ $t('channel.typeTextHint') }}</div>
             </div>
           </button>
@@ -132,7 +140,7 @@ async function handleSubmit() {
               <Volume2 class="w-4 h-4" />
             </div>
             <div class="min-w-0">
-              <div class="text-sm font-semibold truncate">{{ $t('channel.typeVoice') }}</div>
+              <div class="text-sm font-semibold">{{ $t('channel.typeVoice') }}</div>
               <div class="text-xs text-mnema-tertiary">{{ $t('channel.typeVoiceHint') }}</div>
             </div>
           </button>
@@ -149,7 +157,7 @@ async function handleSubmit() {
               <MessagesSquare class="w-4 h-4" />
             </div>
             <div class="min-w-0">
-              <div class="text-sm font-semibold truncate">{{ $t('channel.typeForum') }}</div>
+              <div class="text-sm font-semibold">{{ $t('channel.typeForum') }}</div>
               <div class="text-xs text-mnema-tertiary">{{ $t('channel.typeForumHint') }}</div>
             </div>
           </button>

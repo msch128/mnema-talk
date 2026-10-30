@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -266,5 +267,41 @@ func TestImageWriteFailureAfterHeadersIsNotAnError(t *testing.T) {
 	}
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d, want 200", rec.Code)
+	}
+}
+
+// A taken-down image is told from one that cannot be fetched right now, so the
+// client can show "deleted" for the first and offer a retry for the second.
+func TestImageStatusTellsGoneFromUnavailable(t *testing.T) {
+	for _, tc := range []struct {
+		upstream int
+		want     int
+	}{
+		{http.StatusNotFound, http.StatusGone},
+		{http.StatusGone, http.StatusGone},
+		{http.StatusForbidden, http.StatusNotFound},
+		{http.StatusInternalServerError, http.StatusServiceUnavailable},
+		{http.StatusBadGateway, http.StatusServiceUnavailable},
+		{http.StatusTooManyRequests, http.StatusServiceUnavailable},
+	} {
+		t.Run(http.StatusText(tc.upstream), func(t *testing.T) {
+			origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tc.upstream)
+			}))
+			t.Cleanup(origin.Close)
+			fetcher := New()
+			fetcher.allowPrivate = true
+			t.Cleanup(fetcher.client.CloseIdleConnections)
+			router := chi.NewRouter()
+			(&Handler{Fetcher: fetcher}).Mount(router)
+			res := httptest.NewRecorder()
+			router.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/link-preview/image?url="+url.QueryEscape(origin.URL), nil))
+			if res.Code != tc.want {
+				t.Fatalf("upstream %d: status %d, want %d (%s)", tc.upstream, res.Code, tc.want, res.Body.String())
+			}
+			if tc.want == http.StatusGone && !strings.Contains(res.Body.String(), `"NOT_FOUND"`) {
+				t.Fatalf("a gone image keeps the NOT_FOUND code: %s", res.Body.String())
+			}
+		})
 	}
 }

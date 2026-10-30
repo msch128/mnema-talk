@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { charCount } from '../lib/textLength'
 import { ref, computed } from 'vue'
 import { AlertCircle, Loader2 } from '@lucide/vue'
 import type { ForumTag, Message } from '../types/domain'
@@ -27,9 +28,9 @@ const titleTrimmed = computed(() => title.value.trim())
 const contentTrimmed = computed(() => content.value.trim())
 const isValid = computed(() => {
   return titleTrimmed.value.length > 0 &&
-    titleTrimmed.value.length <= 100 &&
+    charCount(titleTrimmed.value) <= 100 &&
     contentTrimmed.value.length > 0 &&
-    contentTrimmed.value.length <= 4000 &&
+    charCount(contentTrimmed.value) <= 4000 &&
     selectedTagIds.value.length <= 5
 })
 
@@ -83,14 +84,14 @@ async function handleSubmit() {
             {{ $t('forum.titleLabel') }}
           </label>
           <span class="text-xs text-mnema-tertiary">
-            {{ title.length }}/100
+            {{ charCount(title) }}/100
           </span>
         </div>
         <input
           id="post-title"
           v-model="title"
           type="text"
-          maxlength="100"
+          v-max-chars="100"
           :placeholder="$t('forum.titlePlaceholder')"
           class="w-full bg-mnema-surface border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:outline-hidden"
           autofocus
@@ -136,13 +137,13 @@ async function handleSubmit() {
             {{ $t('forum.contentLabel') }}
           </label>
           <span class="text-xs text-mnema-tertiary">
-            {{ content.length }}/4000
+            {{ charCount(content) }}/4000
           </span>
         </div>
         <textarea
           id="post-content"
           v-model="content"
-          maxlength="4000"
+          v-max-chars="4000"
           rows="5"
           :placeholder="$t('forum.contentPlaceholder')"
           class="w-full bg-mnema-surface border border-mnema-border rounded-lg p-3 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:outline-hidden resize-y min-h-[100px]"

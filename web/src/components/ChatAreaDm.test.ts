@@ -71,6 +71,14 @@ describe('a conversation in the chat area', () => {
     expect(w.get('[data-testid="chat-channel-name"]').text()).toBe('Ada')
   })
 
+  it('opens an empty conversation with the conversation icon, not the channel hash', async () => {
+    await open()
+    const w = mount(ChatArea, { global, attachTo: document.body })
+    await flushPromises()
+    expect(w.find('svg.lucide-message-circle').exists()).toBe(true)
+    expect(w.find('svg.lucide-hash').exists()).toBe(false)
+  })
+
   it('follows the server’s can_send, not the channel permissions', async () => {
     const chat = await open({ ...pair, can_send: false })
     const w = mount(ChatArea, { global, attachTo: document.body })

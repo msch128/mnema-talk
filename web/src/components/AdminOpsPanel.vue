@@ -6,6 +6,7 @@ import { api } from '../lib/api'
 import { decodeOpsStatus } from '../types/domain'
 import type { OpsStatus, OpsSample } from '../types/domain'
 import { t, locale } from '../i18n'
+import { visibleInterval } from '../lib/pageVisibility'
 import Sparkline from './Sparkline.vue'
 
 const REFRESH_MS = 10_000
@@ -27,11 +28,9 @@ const ops = ref<OpsStatus>(EMPTY)
 // Nothing is drawn before the first answer arrives.
 const loaded = ref(false)
 const failed = ref(false)
-let timer: ReturnType<typeof setInterval> | undefined
+let stopTimer: (() => void) | undefined
 
 async function refresh() {
-  // A hidden tab does not need fresh numbers.
-  if (document.hidden) return
   try {
     ops.value = await api('/api/admin/system/ops', { decode: decodeOpsStatus })
     loaded.value = true
@@ -43,10 +42,11 @@ async function refresh() {
 
 onMounted(() => {
   void refresh()
-  timer = setInterval(() => void refresh(), REFRESH_MS)
+  // A hidden tab does not need fresh numbers; the first look after coming back catches up.
+  stopTimer = visibleInterval(() => void refresh(), REFRESH_MS)
 })
 onBeforeUnmount(() => {
-  clearInterval(timer)
+  stopTimer?.()
 })
 defineExpose({ refresh })
 

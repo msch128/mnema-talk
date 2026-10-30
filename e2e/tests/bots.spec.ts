@@ -75,7 +75,7 @@ test('a member who may manage bots creates one, scopes it to a channel and hands
     // Without a role the bot reaches nothing: the access view is empty.
     await expect(member.getByTestId('bot-access-none')).toBeVisible()
     await member.locator(`[data-testid="bot-roles"] [data-role="${ROLE}"] input[type="checkbox"]`).check()
-    await member.getByTestId('bot-roles-save').click()
+    await member.getByTestId('bot-detail').getByTestId('unsaved-save').click()
     await expect(member.getByTestId('bot-access-channel').filter({ hasText: OPEN })).toBeVisible()
     await expect(member.getByTestId('bot-access-channel').filter({ hasText: CLOSED })).toHaveCount(0)
 

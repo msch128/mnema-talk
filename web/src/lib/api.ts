@@ -11,10 +11,17 @@ const CODES = new Set([
 ])
 
 export class ApiError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string) {
+  /** `retryAfter` is the wait in seconds that the server's sentence names (slow mode, rate limits), if it does. */
+  constructor(readonly status: number, readonly code: string, message: string, readonly retryAfter: number | null = null, readonly slowMode = false) {
     super(message)
     this.name = 'ApiError'
   }
+}
+
+/** Seconds a 429 sentence asks to wait ("slow mode: wait 7 s ...", "too many requests: retry in 7 s"), or null. */
+export function waitSeconds(message: unknown): number | null {
+  const match = typeof message === 'string' ? /^(?:slow mode: wait|too many requests: retry in) (\d+) s/.exec(message) : null
+  return match ? Number(match[1]) : null
 }
 
 export function isApiError(error: unknown): error is ApiError {
@@ -80,6 +87,8 @@ export interface ApiOptions {
   json?: unknown
   form?: FormData
   signal?: AbortSignal
+  /** GETs only: join an identical request that is already in flight instead of sending another. For reads whose answer does not depend on when they were asked. */
+  dedupe?: boolean
   /** A queued session request may become stale before its HTTP response. */
   shouldNotifyUnauthorized?: () => boolean
 }
@@ -125,11 +134,13 @@ async function sendRequest(transport: ApiTransport, path: string, operation: Api
 }
 
 /** The error a non-2xx reply stands for, from the server's {error: {code, message}} body. */
-function serverFailure(status: number, body: unknown) {
+function serverFailure(status: number, body: unknown, path: string, method: string) {
   const serverError = isRecord(body) && isRecord(body['error']) ? body['error'] : null
   const code = typeof serverError?.['code'] === 'string' && serverError['code'].length <= 64
     ? serverError['code'] : 'INTERNAL_ERROR'
-  return new ApiError(status, code, errorMessage(code, serverError?.['message']))
+  // Sign-in and the other account writes talk about attempts (reads like /api/auth/me do not); everything else about requests.
+  if (code === 'RATE_LIMITED' && method !== 'GET' && path.startsWith('/api/auth/')) return new ApiError(status, code, t('errors.rateLimitedAttempts'))
+  return new ApiError(status, code, errorMessage(code, serverError?.['message']), waitSeconds(serverError?.['message']), String(serverError?.['message'] ?? '').startsWith('slow mode:'))
 }
 
 export interface ApiClient {
@@ -170,15 +181,33 @@ function handleUnauthorizedNotification(
 export function createApiClient(transport: ApiTransport): ApiClient {
   const unauthorizedHandlers = new Set<{ readonly handler: UnauthorizedHandler }>()
   const rulesHandlers = new Set<{ readonly handler: () => void }>()
+  // Identical GETs that opt in (dedupe) and are in flight at the same time share
+  // one request: a route change, a watcher and a click often ask for the same
+  // page together. Reads that must see the state after an event do not opt in.
+  const inflight = new Map<string, Promise<ApiReply>>()
+  async function send(path: string, operation: ApiRequest, dedupe: boolean): Promise<ApiReply> {
+    if (!dedupe || operation.method !== 'GET' || operation.signal) return sendRequest(transport, path, operation)
+    const running = inflight.get(path)
+    if (running) {
+      const reply = await running
+      // Every caller gets a body of its own, so none can change what another reads.
+      return { status: reply.status, body: structuredClone(reply.body) }
+    }
+    const pending = sendRequest(transport, path, operation)
+    const done = () => { if (inflight.get(path) === pending) inflight.delete(path) }
+    inflight.set(path, pending)
+    pending.then(done, done)
+    return pending
+  }
   async function request<T>(path: string, options: ApiOptions & { decode?: Decoder<T> } = {}): Promise<unknown> {
     const { decode, shouldNotifyUnauthorized } = options
     const requestUnauthorizedHandlers = [...unauthorizedHandlers]
     const operation = buildApiRequest(options)
-    const response = await sendRequest(transport, path, operation)
+    const response = await send(path, operation, options.dedupe === true)
     if (response.status === 204) return decode ? decode(null) : null
     const body = response.body
     if (response.status < 200 || response.status >= 300) {
-      const error = serverFailure(response.status, body)
+      const error = serverFailure(response.status, body, path, operation.method)
       handleUnauthorizedNotification(path, response.status, error, shouldNotifyUnauthorized, unauthorizedHandlers, requestUnauthorizedHandlers)
       if (error.code === 'RULES_NOT_ACCEPTED') for (const { handler } of [...rulesHandlers]) handler()
       throw error

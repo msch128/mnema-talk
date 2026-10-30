@@ -228,8 +228,8 @@ Administrators are treated like any other non-member: they get the same answer
 as for a conversation that does not exist. The only route to the text of a
 direct message is a report by one of its members (below). Moderation actions
 that target a member (timeout, ban, kick) work as usual, and a timeout also
-takes *Send direct messages*. The Owner can switch direct messages off for the
-community under **Admin > Welcome & rules**: existing conversations stay
+takes *Send direct messages*. The Owner and Administrators can switch direct messages off for the
+community under **Admin > Sign-in & messages**: existing conversations stay
 readable, and nothing new can be started or written.
 
 ### Reporting a message
@@ -550,7 +550,7 @@ the class of the entries that path does record.
 Chat sends have no per-route limiter. The limiters that exist are `loginPerIP`
 (login), `LimitSends` (bot token), `execute` (incoming webhook) and
 `frameLimiter.allow` (bot gateway). Signed-in member routes share `perUser.By`
-(`api_user`), one bucket per user, not per route. A bot token's edits and
+(`api_user`, 600 a minute) for writes and `api_user_read` (3000 a minute) for reads, one bucket of each per user, not per route. A bot token's edits and
 deletes are `message.edit` and `message.delete`, already classed with the
 member rows. An incoming webhook only posts, and the bot gateway only delivers events. Neither is audited, same as a member's post, so those audit cells are `n/a`.
 

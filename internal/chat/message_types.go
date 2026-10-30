@@ -13,7 +13,10 @@ import (
 
 const (
 	MaxMessageLen = 4000
-	maxEmojiBytes = 32
+	maxEmojiBytes = 64
+	// maxEmojiRunes bounds one emoji sequence: the longest real ones (a kiss or
+	// a family with skin tones, a subdivision flag) have 11 code points or fewer.
+	maxEmojiRunes = 16
 )
 
 type MediaAttachment struct {
@@ -121,6 +124,10 @@ type Embed struct {
 	// talks_invite.go); webhook payloads cannot. Joining goes through the
 	// ordinary permission checks, the card grants nothing.
 	TalkID *uuid.UUID `json:"talk_id,omitempty" binding:"optional" format:"uuid"`
+	// Call marks the embed as the record of a call in a conversation: "missed"
+	// is a call nobody answered (Title is the Talk's name). Only the server
+	// sets it (dm_calls.go); webhook payloads cannot.
+	Call string `json:"call,omitempty" binding:"optional" enums:"missed"`
 }
 
 // EmbedFooter is the small text at the bottom of an embed.
@@ -193,7 +200,7 @@ func validEmojiLength(emoji string) bool {
 	if emoji == "" || len(emoji) > maxEmojiBytes {
 		return false
 	}
-	return utf8.ValidString(emoji)
+	return utf8.ValidString(emoji) && utf8.RuneCountInString(emoji) <= maxEmojiRunes
 }
 
 // ValidateEmoji accepts a short, printable, whitespace-free reaction token

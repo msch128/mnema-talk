@@ -87,6 +87,39 @@ func printReport(members []*member, res result) {
 	fmt.Printf("viewers=%d neverConnected=%d iceTimedOut=%d neverReceived=%d failed=%d flaps=%d connect p50/p95=%d/%dms firstVideo p50/p95=%d/%dms maxStall=%dms avgKbps=%.0f\n",
 		res.Members, res.NeverConnected, res.ICETimedOut, res.NeverReceived, res.Failed, res.Flaps,
 		res.ConnectMsP50, res.ConnectMsP95, res.FirstVideoMsP50, res.FirstVideoMsP95, res.MaxStallMs, res.AvgVideoKbps)
+	printMedia(res)
+}
+
+// printMedia prints what the members received, per class, and the verdict.
+func printMedia(res result) {
+	for _, class := range allClasses {
+		r, ok := res.Media[class]
+		if !ok {
+			continue
+		}
+		fmt.Printf("%-12s %d members, %d tracks, per member %.0f kbit/s (min %.0f, max %.0f), per track %.0f kbit/s, loss %.2f%% (%d of %d packets), freezes %d in %d members, longest gap %d ms\n",
+			class, r.Members, r.Tracks, r.KbpsPerMemberAvg, r.KbpsPerMemberMin, r.KbpsPerMemberMax, r.KbpsPerTrackAvg,
+			r.LossPct, r.PacketsLost, r.PacketsExpected, r.Freezes, r.MembersFrozen, r.MaxGapMs)
+	}
+	if res.Relay {
+		fmt.Printf("relay        %d of %d members went through the TURN relay\n", res.Relayed, res.Members-res.NeverConnected)
+	}
+	if s := res.Server; s.Measured {
+		fmt.Printf("server       CPU %.2f cores in hold (%.2f over the whole load, peak %.2f), memory peak %.0f MB resident / %.0f MB heap, goroutines %.0f -> peak %.0f -> %.0f\n",
+			s.CPUCoresHold, s.CPUCoresAvg, s.CPUCoresPeak, s.RSSPeakMB, s.HeapPeakMB, s.GoroutinesPre, s.GoroutinesPeak, s.GoroutinesPost)
+	}
+	fmt.Printf("generator    this tool used %.2f cores on average (a generator near the host's core count measures itself)\n", res.GeneratorCores)
+	if res.Thresholds == nil {
+		return
+	}
+	if res.OK {
+		fmt.Println("OK: all thresholds met")
+		return
+	}
+	fmt.Printf("FAILED (%d):\n", len(res.Violations))
+	for _, v := range res.Violations {
+		fmt.Printf("  - %s\n", v)
+	}
 }
 
 func printMemberDiags(members []*member, id string) {

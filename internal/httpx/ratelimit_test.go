@@ -1,6 +1,7 @@
 package httpx
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -256,5 +257,22 @@ func TestTryAllowChargesOnlyGrantedHits(t *testing.T) {
 	now = now.Add(time.Minute)
 	if ok, _ := rl.TryAllow("k"); !ok {
 		t.Fatal("window did not reset")
+	}
+}
+
+// The wait is in the sentence as well as in the header, so a client that cannot
+// read headers can still tell the member how long to hold back.
+func TestWriteRateLimitedNamesTheWait(t *testing.T) {
+	rec := httptest.NewRecorder()
+	WriteRateLimited(rec, 41500*time.Millisecond)
+	if rec.Code != http.StatusTooManyRequests || rec.Header().Get("Retry-After") != "42" {
+		t.Fatalf("status %d, Retry-After %q", rec.Code, rec.Header().Get("Retry-After"))
+	}
+	var body ErrorResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Error.Code != CodeRateLimited || body.Error.Message != "too many requests: retry in 42 s" {
+		t.Errorf("got %+v", body.Error)
 	}
 }

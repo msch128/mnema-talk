@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { charCount } from '../lib/textLength'
 import { ref, computed } from 'vue'
 import { AlertCircle, Loader2, Plus, Trash2, Edit2, Check, X } from '@lucide/vue'
 import type { ForumTag } from '../types/domain'
@@ -31,7 +32,7 @@ const deletingId = ref<string | null>(null)
 const canAdd = computed(() => {
   return props.tags.length < 20 &&
     newName.value.trim().length > 0 &&
-    newName.value.trim().length <= 20
+    charCount(newName.value.trim()) <= 20
 })
 
 function startEdit(tag: ForumTag) {
@@ -71,7 +72,7 @@ async function handleAddTag() {
 }
 
 async function handleSaveEdit(tagId: string) {
-  if (editName.value.trim().length === 0 || editName.value.trim().length > 20 || isSaving.value) return
+  if (editName.value.trim().length === 0 || charCount(editName.value.trim()) > 20 || isSaving.value) return
   error.value = ''
   isSaving.value = true
 
@@ -128,14 +129,14 @@ async function handleDeleteTag(tagId: string) {
           <input
             v-model="newEmoji"
             type="text"
-            maxlength="32"
+            v-max-chars="32"
             :placeholder="$t('forum.emojiPlaceholder')"
             class="w-16 bg-mnema-surface border border-mnema-border rounded-lg px-2 py-1.5 text-sm text-center text-mnema-text focus:outline-hidden focus:border-mnema-accent"
           />
           <input
             v-model="newName"
             type="text"
-            maxlength="20"
+            v-max-chars="20"
             :placeholder="$t('forum.tagNamePlaceholder')"
             class="flex-1 min-w-0 bg-mnema-surface border border-mnema-border rounded-lg px-3 py-1.5 text-sm text-mnema-text focus:outline-hidden focus:border-mnema-accent"
             @keydown.enter.prevent="handleAddTag"
@@ -175,13 +176,13 @@ async function handleDeleteTag(tagId: string) {
             <input
               v-model="editEmoji"
               type="text"
-              maxlength="32"
+              v-max-chars="32"
               class="w-12 bg-mnema-surface border border-mnema-border rounded-md px-1.5 py-1 text-xs text-center text-mnema-text focus:outline-hidden focus:border-mnema-accent"
             />
             <input
               v-model="editName"
               type="text"
-              maxlength="20"
+              v-max-chars="20"
               class="flex-1 min-w-0 bg-mnema-surface border border-mnema-border rounded-md px-2 py-1 text-xs text-mnema-text focus:outline-hidden focus:border-mnema-accent"
               @keydown.enter.prevent="handleSaveEdit(tag.id)"
             />

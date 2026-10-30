@@ -11,7 +11,7 @@ import { refreshAudioDevices, teardownMicPipeline } from './webrtc/micPipeline'
 import { startMicTest, stopMicTest, toggleMicTest } from './webrtc/micTest'
 import { cleanupVoiceAudio, setGamingPttLease as setLease } from './webrtc/voiceAudio'
 import { getScreenCaptureSettings, getScreenSendStats, replaceScreenShare, startScreenShare, stopScreenShare, toggleScreenShare } from './webrtc/screen'
-import { startCamera, stopCamera, toggleCamera } from './webrtc/camera'
+import { startCamera, stopCamera, toggleCamera, restartCamera } from './webrtc/camera'
 import { joinVoiceChannel, leaveVoiceChannel, rejoinAfterReconnect, resumeRemoteAudio, resumeVoiceSession } from './webrtc/session'
 import { installWatchers } from './webrtc/watchers'
 
@@ -73,6 +73,7 @@ export function useWebRTC() {
     startCamera: () => startCamera(cx),
     stopCamera: () => stopCamera(cx),
     toggleCamera: () => toggleCamera(cx),
+    restartCamera: () => restartCamera(cx),
     resumeVoiceSession: () => resumeVoiceSession(cx),
     resumeRemoteAudio: () => resumeRemoteAudio(cx)
   }

@@ -199,12 +199,24 @@ export function parseOpenRequest(data: unknown): OpenRequest | null {
   return { channel_id: channel, message_id: message, parent_id: uuidOrNull(d['parent_id']) }
 }
 
-/** Calls open for every click the service worker reports; returns a function that stops listening. */
-export function listenForOpenRequests(open: (request: OpenRequest) => void): () => void {
+/** Reads the worker's message about a clicked event reminder; anything else is ignored. */
+export function parseOpenEvent(data: unknown): string | null {
+  if (typeof data !== 'object' || data === null) return null
+  const d = data as Record<string, unknown>
+  return d['type'] === 'mnema:open-event' ? uuidOrNull(d['event_id']) : null
+}
+
+/** Calls open for every click the service worker reports (openEvent for an event reminder); returns a function that stops listening. */
+export function listenForOpenRequests(open: (request: OpenRequest) => void, openEvent?: (eventId: string) => void): () => void {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return () => {}
   const handler = (event: MessageEvent) => {
     const request = parseOpenRequest(event.data)
-    if (request) open(request)
+    if (request) {
+      open(request)
+      return
+    }
+    const eventId = parseOpenEvent(event.data)
+    if (eventId) openEvent?.(eventId)
   }
   navigator.serviceWorker.addEventListener('message', handler)
   return () => navigator.serviceWorker.removeEventListener('message', handler)

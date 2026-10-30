@@ -171,6 +171,8 @@ func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error)
 		`DELETE FROM data_exports WHERE user_id = $1 AND s3_key IS NOT NULL RETURNING s3_key`,
 		// The files of direct messages nobody else is in any more go with them.
 		`DELETE FROM media WHERE message_id IN (SELECT id FROM messages WHERE channel_id IN (` + soleDMs + `)) RETURNING s3_key`,
+		// So do those of the Talks that belong to such a conversation.
+		`DELETE FROM media WHERE message_id IN (SELECT id FROM messages WHERE channel_id IN (SELECT id FROM channels WHERE dm_id IN (` + soleDMs + `))) RETURNING s3_key`,
 	} {
 		rows, err := tx.Query(ctx, sql, id)
 		if err != nil {

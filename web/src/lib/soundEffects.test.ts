@@ -46,6 +46,7 @@ class MockAudioContext {
     return filter
   })
   resume = vi.fn(async () => {})
+  suspend = vi.fn(async () => { this.state = 'suspended' })
   constructor() { MockAudioContext.instances.push(this) }
 }
 import { present } from '../media-test.fixture'
@@ -68,7 +69,7 @@ describe('sound effect envelopes', () => {
     ['join', [392, 523.25, 659.25, 1046.5]], ['leave', [659.25, 523.25, 392]],
     ['mute', [460]], ['unmute', [340]], ['deafen', [360]], ['undeafen', [240]],
     ['user_join', [523.25, 659.25]], ['user_leave', [659.25, 523.25]],
-    ['ptt_start', [650]], ['ptt_stop', [850]]
+    ['ptt_start', [650]], ['ptt_stop', [850]], ['call_ring', [659.25, 880, 659.25, 880]]
   ])('schedules %s with its characteristic frequencies and bounded attack/release', (name, frequencies) => {
     playSoundEffect(name)
     const ctx = context()
@@ -134,6 +135,23 @@ describe('sound playback lifecycle and browser failures', () => {
     playSoundEffect('mute')
     await Promise.resolve()
     expect(ctx.resume).toHaveBeenCalledOnce()
+  })
+  it('lets the audio device sleep again once the tones are over', () => {
+    vi.useFakeTimers()
+    try {
+      playSoundEffect('join')
+      const ctx = context()
+      vi.advanceTimersByTime(2999)
+      expect(ctx.suspend).not.toHaveBeenCalled()
+      playSoundEffect('leave')
+      vi.advanceTimersByTime(2999)
+      expect(ctx.suspend).not.toHaveBeenCalled()
+      vi.advanceTimersByTime(1)
+      expect(ctx.suspend).toHaveBeenCalledOnce()
+      expect(ctx.state).toBe('suspended')
+    } finally {
+      vi.useRealTimers()
+    }
   })
   it('recreates a closed context and uses the legacy constructor when necessary', () => {
     playSoundEffect('join')
@@ -201,5 +219,42 @@ describe('sound playback lifecycle and browser failures', () => {
     gain.gain = undefined
     playSoundEffect('unmute')
     expect(oscillator.start).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('message sound and the autoplay lock', () => {
+  it('skips the message chime while the context is still suspended, and plays it once running', () => {
+    playSoundEffect('mute')
+    const ctx = context()
+    ctx.state = 'suspended'
+    ctx.oscillators.length = 0
+    playSoundEffect('message')
+    expect(ctx.oscillators).toHaveLength(0)
+    ctx.state = 'running'
+    playSoundEffect('message')
+    expect(ctx.oscillators).toHaveLength(2)
+  })
+
+  it('stays armed until the context runs, then drops its listeners', async () => {
+    const { unlockAudioOnFirstGesture } = await import('./soundEffects')
+    const handlers = new Map<string, () => void>()
+    const target = {
+      addEventListener: vi.fn((name: string, fn: () => void) => { handlers.set(name, fn) }),
+      removeEventListener: vi.fn()
+    }
+    unlockAudioOnFirstGesture(target)
+    const fire = () => handlers.get('pointerdown')?.()
+    MockAudioContext.instances = []
+    fire()
+    const ctx = context()
+    ctx.state = 'suspended'
+    ctx.resume.mockImplementation(async () => {})
+    fire()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(target.removeEventListener).not.toHaveBeenCalled()
+    ctx.resume.mockImplementation(async () => { ctx.state = 'running' })
+    fire()
+    await vi.waitFor(() => expect(target.removeEventListener).toHaveBeenCalledTimes(3))
   })
 })

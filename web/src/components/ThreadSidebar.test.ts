@@ -14,6 +14,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { usePermissionsStore } from '../stores/permissions'
 import * as forumApi from '../lib/forumApi'
 import { setLocale, t } from '../i18n'
+import { closeViewer, viewerState } from '../composables/useMediaViewer'
 
 vi.mock('../lib/forumApi', () => ({ updateForumPost: vi.fn() }))
 
@@ -107,7 +108,29 @@ describe('ThreadSidebar keyboard', () => {
   })
 })
 
+describe('ThreadSidebar header', () => {
+  it('says that replies here stay out of the main chat, but not for a forum post', async () => {
+    const chat = setup()
+    expect(w.get('[data-testid="thread-hint"]').text()).toBe(t('thread.hint'))
+    chat.activeThread = msg('post', 'u2', { title: 'A post' })
+    await nextTick()
+    expect(w.find('[data-testid="thread-hint"]').exists()).toBe(false)
+  })
+})
+
 describe('ThreadSidebar content', () => {
+  it('opens the viewer with all images of a reply and the clicked index', async () => {
+    const chat = setup()
+    const img = (id: string) => ({ id, url: `/m/${id}`, mime_type: 'image/png', is_deleted: false, original_filename: `${id}.png`, size_bytes: 10 })
+    chat.threadReplies = [msg('r1', 'u2', { attachments: [img('a'), img('b'), img('c')] })]
+    await nextTick()
+    await w.findAll('[data-reply-id="r1"] [data-gallery-cell]')[1]!.trigger('click')
+    expect(viewerState.items.map(i => i.src)).toEqual(['/m/a', '/m/b', '/m/c'])
+    expect(viewerState.index).toBe(1)
+    expect(viewerState.message?.id).toBe('r1')
+    closeViewer()
+  })
+
   it('plays videos in the root and in replies', async () => {
     const chat = setup()
     const video = { id: 'v', url: '/m/v', mime_type: 'video/mp4', is_deleted: false, original_filename: 'clip.mp4', size_bytes: 10 }
@@ -250,11 +273,9 @@ describe('ThreadSidebar replies', () => {
 
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import MessageEditor from './MessageEditor.vue'
-import MessageAttachments from './MessageAttachments.vue'
 import ReactionBar from './ReactionBar.vue'
 import ReactionPalette from './ReactionPalette.vue'
 import UserAvatar from './UserAvatar.vue'
-import ImageLightbox from './ImageLightbox.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import EmojiButton from './EmojiButton.vue'
 import { pendingConfirm } from '../lib/confirm'
@@ -324,22 +345,27 @@ describe('ThreadSidebar complete interactions', () => {
   })
 
   it('cancels replies through the bar and row Escape, and cancels edits through root/reply Escape', async () => {
-    setup()
+    const chat = setup()
     const root = w.find('[data-reply-id=root]')
+    // With nothing to cancel the key is left to the panel, which closes.
     expect(key(root, { key: 'Escape' }).defaultPrevented).toBe(false)
-    key(root, { key: 'r' })
+    expect(chat.activeThread).toBeNull()
+    chat.activeThread = msg('root', 'u2')
+    chat.threadReplies = [msg('r1', 'u2'), msg('r2', 'me'), msg('r3', 'u2')]
+    await nextTick()
+    key(w.find('[data-reply-id=root]'), { key: 'r' })
     await nextTick()
     w.findComponent(ReplyComposerBar).vm.$emit('cancel')
     await nextTick()
     expect(w.findComponent(ReplyComposerBar).exists()).toBe(false)
-    key(root, { key: 'r' })
+    key(w.find('[data-reply-id=root]'), { key: 'r' })
     await nextTick()
-    key(root, { key: 'Escape' })
+    key(w.find('[data-reply-id=root]'), { key: 'Escape' })
     await nextTick()
     expect(w.findComponent(ReplyComposerBar).exists()).toBe(false)
     key(w.find('[data-reply-id=r2]'), { key: 'e' })
     await nextTick()
-    key(root, { key: 'Escape' })
+    key(w.find('[data-reply-id=root]'), { key: 'Escape' })
     await nextTick()
     expect(w.findComponent(MessageEditor).exists()).toBe(false)
     key(w.find('[data-reply-id=r2]'), { key: 'e' })
@@ -347,7 +373,9 @@ describe('ThreadSidebar complete interactions', () => {
     key(w.find('[data-reply-id=r1]'), { key: 'Escape' })
     await nextTick()
     expect(w.findComponent(MessageEditor).exists()).toBe(false)
+    expect(chat.activeThread).not.toBeNull()
     expect(key(w.find('[data-reply-id=r1]'), { key: 'Escape' }).defaultPrevented).toBe(false)
+    expect(chat.activeThread).toBeNull()
   })
 
   it('edits via the quick action, binds the editor, saves and cancels via child events', async () => {
@@ -367,7 +395,7 @@ describe('ThreadSidebar complete interactions', () => {
     expect(w.findComponent(MessageEditor).exists()).toBe(false)
   })
 
-  it('opens profile avatars, attachment lightboxes and root/reply reaction palettes', async () => {
+  it('opens profile avatars and root/reply reaction palettes', async () => {
     const chat = setup()
     const profile = vi.spyOn(chat, 'openUserProfile').mockResolvedValue(undefined)
     const react = vi.spyOn(chat, 'toggleReaction').mockResolvedValue([])
@@ -376,13 +404,6 @@ describe('ThreadSidebar complete interactions', () => {
     expect(profile).toHaveBeenCalledWith(expect.objectContaining({ id: 'root' }))
     await w.find('[data-reply-id=root] [data-testid=author-name]').trigger('click')
     expect(profile).toHaveBeenCalledTimes(5)
-    for (const attachment of w.findAllComponents(MessageAttachments)) {
-      attachment.vm.$emit('open-image', '/test-image')
-      await nextTick()
-      expect(w.findComponent(ImageLightbox).props('src')).toBe('/test-image')
-      w.findComponent(ImageLightbox).vm.$emit('close')
-      await nextTick()
-    }
     for (const bar of w.findAllComponents(ReactionBar)) {
       bar.vm.$emit('toggle', '👍')
       bar.vm.$emit('toggle-picker')
@@ -679,5 +700,35 @@ describe('ThreadSidebar races and deleted authors', () => {
       await flushPromises()
       expect(container.scrollTop).toBe(1000)
     })
+  })
+})
+
+describe('ThreadSidebar closing', () => {
+  it('the X button closes the thread', async () => {
+    const chat = setup()
+    await w.find('[data-testid="thread-close"]').trigger('click')
+    expect(chat.activeThread).toBeNull()
+  })
+
+  it('Escape closes the thread, unless something inside used the key', async () => {
+    const chat = setup()
+    const used = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    used.preventDefault()
+    w.find('[data-reply-id="r1"]').element.dispatchEvent(used)
+    expect(chat.activeThread).not.toBeNull()
+    key(w.find('[data-reply-id="r1"]'), { key: 'Escape' })
+    expect(chat.activeThread).toBeNull()
+  })
+
+  it('Escape closes the thread while the focus is still outside the panel, but not under a dialog', () => {
+    const chat = setup()
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    document.body.append(dialog)
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(chat.activeThread).not.toBeNull()
+    dialog.remove()
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(chat.activeThread).toBeNull()
   })
 })

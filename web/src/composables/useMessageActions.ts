@@ -14,6 +14,7 @@ import { confirm } from '../lib/confirm'
 import { t, locale } from '../i18n'
 import { caughtErrorMessage } from '../lib/api'
 import { clockTimeOptions } from '../lib/time'
+import { clampChars } from '../lib/textLength'
 
 export function formatTime(dateStr: string | null | undefined) {
   if (!dateStr) return ''
@@ -28,7 +29,7 @@ function confirmDelete(msg: Message, titleKey: string) {
   return confirm({
     title: t(titleKey),
     body: t('chat.deleteBody'),
-    excerpt: previewText(msg.content).slice(0, 160) || (msg.attachments?.length ? t('chat.attachment') : ''),
+    excerpt: clampChars(previewText(msg.content), 160) || (msg.attachments?.length ? t('chat.attachment') : ''),
     confirmLabel: t('common.delete'),
     danger: true
   })
@@ -104,12 +105,14 @@ function useMessageEditor(channelOf: (msg: Message) => string, onStart?: () => v
   const toasts = useToastStore()
   const editingId = ref<string | null>(null)
   const editText = ref('')
+  const editOriginal = ref('') // the text as the editor opened with it
   const isSavingEdit = ref(false)
 
   function startEdit(msg: Message) {
     if (msg.poll) return // a poll cannot be edited
     editingId.value = msg.id
-    editText.value = shortcodesForEditing(msg.content) // :name:, not the stored token; saving turns it back
+    editOriginal.value = shortcodesForEditing(msg.content) // :name:, not the stored token; saving turns it back
+    editText.value = editOriginal.value
     onStart?.()
   }
 
@@ -133,7 +136,7 @@ function useMessageEditor(channelOf: (msg: Message) => string, onStart?: () => v
     }
   }
 
-  return { editingId, editText, isSavingEdit, startEdit, cancelEdit, saveEdit }
+  return { editingId, editText, editOriginal, isSavingEdit, startEdit, cancelEdit, saveEdit }
 }
 
 /**
@@ -155,7 +158,7 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
     return chatStore.activeChannel?.id || msg.channel_id
   }
 
-  const { editingId, editText, isSavingEdit, startEdit, cancelEdit, saveEdit } = useMessageEditor(channelOf, () => { pickerId.value = null })
+  const { editingId, editText, editOriginal, isSavingEdit, startEdit, cancelEdit, saveEdit } = useMessageEditor(channelOf, () => { pickerId.value = null })
 
   // Leaving the editor drops focus with it: hand it back to the message row
   // so keyboard users stay where they were.
@@ -178,18 +181,33 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
     return permissions.canIn(channelOf(msg), 'manage_messages')
   }
 
+  /** Resolves to whether the message is gone. */
   async function deleteMessage(msg: Message) {
     const ok = await confirmDelete(msg, deleteTitle)
-    if (!ok) return
+    if (!ok) return false
     try {
       await chatStore.deleteMessage(channelOf(msg), msg.id)
+      return true
     } catch (err) {
       toasts.error(caughtErrorMessage(err, t('chat.deleteFailed')))
+      return false
+    }
+  }
+
+  // Saving an empty text asks whether to delete the message, as Discord does.
+  async function saveOrDelete(msg: Message) {
+    if (editText.value.trim()) return saveEdit(msg)
+    if (isSavingEdit.value || editingId.value !== msg.id) return
+    isSavingEdit.value = true
+    try {
+      if (await deleteMessage(msg)) cancelEdit()
+    } finally {
+      isSavingEdit.value = false
     }
   }
 
   return {
-    editingId, editText, isSavingEdit, startEdit, cancelEdit, saveEdit,
+    editingId, editText, editOriginal, isSavingEdit, startEdit, cancelEdit, saveEdit: saveOrDelete,
     deleteMessage, toggleReaction, isOwn, canDelete,
     pickerId, togglePicker, closePicker,
     isUploading, upload

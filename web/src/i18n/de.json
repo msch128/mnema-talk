@@ -45,8 +45,8 @@
     "hint": {
       "online": "Für alle erreichbar",
       "away": "Gerade nicht am Platz",
-      "dnd": "Keine Benachrichtigungen",
-      "focus": "Keine Benachrichtigungen, konzentriert bei der Sache"
+      "dnd": "Keine Pop-ups oder Push-Nachrichten. Andere sehen „Nicht stören“.",
+      "focus": "Genauso ruhig. Andere sehen, dass du dich konzentrierst."
     },
     "activity": {
       "playing": "Spielt {name}",
@@ -60,7 +60,28 @@
     "openProfile": "Eigenes Profil öffnen",
     "deleted": "Gelöschtes Mitglied"
   },
+  "viewer": {
+    "label": "Medienansicht",
+    "announce": "{name}, {n} von {total}",
+    "counter": "{n} / {total}",
+    "previous": "Voriges Bild",
+    "next": "Nächstes Bild",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "zoomReset": "Zoom zurücksetzen",
+    "download": "Herunterladen",
+    "copyLink": "Link kopieren",
+    "linkCopied": "Link kopiert",
+    "jumpToMessage": "Zur Nachricht",
+    "openOriginal": "Original öffnen",
+    "inChannel": "in {channel}",
+    "dimensions": "{w} × {h} px",
+    "zoomLevel": "Zoom {percent} %"
+  },
   "media": {
+    "imageDeleted": "Dieses Bild wurde gelöscht",
+    "imageFailed": "Das Bild konnte nicht geladen werden",
+    "retry": "Erneut versuchen",
     "sizeB": "{size} B",
     "sizeKb": "{size} KB",
     "sizeMb": "{size} MB",
@@ -70,7 +91,8 @@
     "adminConsole": "Admin-Konsole",
     "legal": "Rechtliches & Datenschutz",
     "rules": "Community-Regeln",
-    "notificationSettings": "Benachrichtigungen"
+    "notificationSettings": "Benachrichtigungen",
+    "shortcuts": "Tastenkürzel"
   },
   "account": {
     "menu": "Konto-Menü",
@@ -83,6 +105,7 @@
   },
   "errors": {
     "unknown": "Unbekannter Fehler",
+    "rateLimitedAttempts": "Zu viele Versuche – bitte warte einen Moment",
     "network": "Keine Verbindung zum Server",
     "code": {
       "INVALID_CREDENTIALS": "Benutzername oder Passwort ist falsch",
@@ -92,7 +115,7 @@
       "CONFLICT": "Das gibt es bereits",
       "PAYLOAD_TOO_LARGE": "Die Datei ist zu groß",
       "UNSUPPORTED_MEDIA_TYPE": "Dieser Dateityp wird nicht unterstützt",
-      "RATE_LIMITED": "Zu viele Versuche – bitte warte einen Moment",
+      "RATE_LIMITED": "Zu viele Anfragen – bitte kurz warten",
       "RULES_NOT_ACCEPTED": "Bitte akzeptiere zuerst die Regeln der Community",
       "UNAVAILABLE": "Der Dienst ist gerade nicht verfügbar",
       "INTERNAL_ERROR": "Interner Serverfehler",
@@ -112,6 +135,7 @@
       "fileTooBig": "Die Datei ist größer als {size} MB",
       "missingPermission": "Dafür fehlt dir die Berechtigung.",
       "slowMode": "Langsammodus: bitte warte noch {seconds} s",
+      "rateWait": "Das war gerade etwas viel. Versuche es in {time} noch einmal.",
       "linkInvalid": "Dieser Link ist ungültig oder abgelaufen.",
       "emailInvalid": "Gib eine gültige E-Mail-Adresse ein.",
       "emailInUse": "Ein anderes Konto hat diese Adresse bereits bestätigt.",
@@ -167,8 +191,8 @@
       "usernameReserved": "Dieser Benutzername ist reserviert.",
       "pollAlreadyVoted": "Du hast in dieser anonymen Umfrage schon abgestimmt. Eine Stimme lässt sich dort nicht ändern.",
       "pollNoWithdraw": "Eine Stimme in einer anonymen Umfrage lässt sich nicht zurücknehmen.",
-      "automodSend": "Deine Nachricht wurde nicht gesendet: Sie verstößt gegen die Serverregel „{rule}“. Die Moderatoren können das sehen.",
-      "automodEdit": "Deine Änderung wurde nicht gespeichert: Sie verstößt gegen die Serverregel „{rule}“. Die Moderatoren können das sehen."
+      "automodSend": "Deine Nachricht wurde nicht gesendet: Sie verstößt gegen die Regel „{rule}“ der Community. Die Moderatoren können das sehen.",
+      "automodEdit": "Deine Änderung wurde nicht gespeichert: Sie verstößt gegen die Regel „{rule}“ der Community. Die Moderatoren können das sehen."
     },
     "field": {
       "content": "Nachricht",
@@ -200,7 +224,7 @@
   },
   "login": {
     "subtitleLogin": "Anmelden bei Mnema Talk",
-    "subtitleRegister": "Dem Treffpunkt beitreten",
+    "subtitleRegister": "Der Community beitreten",
     "username": "Benutzername",
     "usernamePlaceholder": "z. B. cool_guy",
     "usernameHint": "2–32 Zeichen: a–z, 0–9, _ und .; Leerzeichen werden zu _, Großbuchstaben zu Kleinbuchstaben.",
@@ -292,8 +316,6 @@
     "granted": "Benachrichtigungen sind aktiviert.",
     "denied": "Benachrichtigungen sind im Browser blockiert.",
     "channelSettings": "Benachrichtigungen für diesen Kanal",
-    "inheritChannel": "Standard der Kategorie verwenden",
-    "inheritCategory": "Standard des Servers verwenden",
     "muteChannel": "Stummschalten für …",
     "muteCategory": "Stummschalten für …",
     "mute_15m": "Für 15 Minuten",
@@ -308,16 +330,17 @@
     "bellMentions": "Nur Erwähnungen",
     "bellNothing": "Stumm",
     "serverTitle": "Benachrichtigungen",
-    "serverSubtitle": "Was dich auf diesem Server benachrichtigen darf. Kanäle und Kategorien können das überschreiben.",
+    "serverSubtitle": "Was dich in dieser Community benachrichtigen darf. Kanäle und Kategorien können das überschreiben.",
     "serverDefault": "Standard für alle Kanäle",
     "serverDefaultHint": "Gilt überall dort, wo weder der Kanal noch seine Kategorie eine eigene Einstellung hat. Nachrichten, die dich namentlich ansprechen, kommen bei „Nichts“ weiterhin an.",
-    "muteServer": "Server stummschalten",
+    "muteServer": "Community stummschalten",
     "muteServerStatus": "Stumm bis {time}",
     "muteServerForever": "Stumm, bis du es wieder einschaltest",
     "unmuteServer": "Benachrichtigungen wieder einschalten",
     "suppressEveryone": "@all und @here unterdrücken",
     "suppressEveryoneHint": "Ansagen an alle benachrichtigen dich nicht mehr und zählen nicht als Erwähnung.",
-    "serverSaveFailed": "Die Benachrichtigungen konnten nicht gespeichert werden. Versuche es erneut."
+    "serverSaveFailed": "Die Benachrichtigungen konnten nicht gespeichert werden. Versuche es erneut.",
+    "inherit": "Meine Vorgabe verwenden ({level})"
   },
   "welcome": {
     "progress": "Schritt {current} von {total}",
@@ -351,17 +374,17 @@
     "gotIt": "Verstanden",
     "search": "Mit Strg oder Cmd + K durchsuchst du alle Kanäle, die du sehen kannst.",
     "mention": "Mit @ erwähnst du jemanden, mit / startest du Slash-Befehle.",
-    "talk": "Ein Klick auf einen Talk tritt sofort bei. Niemand wird angerufen, es ist ein Treffpunkt."
+    "talk": "Ein Klick auf einen Talk tritt sofort bei. Niemand wird angerufen, es ist ein offener Raum zum Reden."
   },
   "channel": {
     "create": "Kanal erstellen",
     "createTitle": "Neuen Kanal erstellen",
     "creating": "Wird erstellt …",
     "type": "Art",
-    "typeText": "Kanal",
+    "typeText": "Textkanal",
     "typeTextHint": "Nachrichten und Dateien",
-    "typeVoice": "Talk (Sprache)",
-    "typeVoiceHint": "Sprechen, chatten und Bildschirm teilen",
+    "typeVoice": "Talk",
+    "typeVoiceHint": "Sprache, Video, Bildschirm teilen",
     "typeForum": "Forum",
     "typeForumHint": "Diskussionen mit Beiträgen und Tags",
     "category": "Kategorie",
@@ -479,7 +502,7 @@
     "embedImage": "Bild",
     "embedThumbnail": "Vorschaubild",
     "edited": "(bearbeitet)",
-    "editHint": "Enter speichert · Esc bricht ab",
+    "editHint": "Enter speichert · Esc bricht ab · leerer Text löscht",
     "replies": {
       "one": "{count} Antwort",
       "other": "{count} Antworten"
@@ -488,8 +511,6 @@
     "viewingOlder": "Du siehst ältere Nachrichten",
     "jumpToEnd": "Zum Ende springen",
     "jumpToFirstUnread": "Zur ersten ungelesenen Nachricht",
-    "enlargedImage": "Vergrößertes Bild",
-    "openOriginal": "Original öffnen",
     "attachment": "Anhang",
     "unknownUser": "Unbekannt",
     "message": "Nachricht",
@@ -553,6 +574,7 @@
     "inThread": "im Thread",
     "searchPinned": "Angeheftet",
     "notifyNoText": "Neue Nachricht",
+    "notifyThread": "Thread",
     "searchFilterUnsupported": "Dieser Server unterstützt diesen Filter noch nicht. Entferne ihn oder suche ohne ihn.",
     "copyText": "Text kopieren",
     "copiedText": "Text kopiert",
@@ -560,6 +582,13 @@
     "copiedLink": "Link kopiert",
     "moreActions": "Weitere Aktionen",
     "readOnly": "Du darfst in diesem Kanal nicht schreiben.",
+    "timedOut": "Du bist in einer Auszeit und kannst gerade nicht schreiben.",
+    "uploadMax": "Datei oder Bild hochladen (bis {size} MB)",
+    "limits": {
+      "slowWait": "Langsammodus: Du kannst in {time} wieder schreiben",
+      "charsLeft": "Noch {count} Zeichen",
+      "tooLong": "{count} Zeichen zu viel (höchstens {max})"
+    },
     "noAttach": "Du darfst hier keine Dateien anhängen.",
     "attachMediaOnly": "Es lassen sich nur Bilder und Videos anhängen.",
     "attachSkipped": "Nur Bilder und Videos wurden angehängt. Andere Dateien wurden übersprungen.",
@@ -605,7 +634,9 @@
     "searchProblemChannel": "Kein Kanal „{value}“ gefunden. Prüfe den Namen nach {filter}:.",
     "searchProblemDate": "Das Datum „{value}“ nach {filter}: ist nicht lesbar. Nutze JJJJ-MM-TT, heute oder gestern.",
     "searchProblemOption": "„{value}“ ist kein Wert für {filter}:. Wähle einen von: {options}.",
-    "searchProblemEmpty": "{filter}: braucht einen Wert."
+    "searchProblemEmpty": "{filter}: braucht einen Wert.",
+    "replyInChannel": "Im Kanal antworten",
+    "replyInThread": "Im Thread antworten"
   },
   "linkPreview": {
     "play": "Video abspielen: {title}",
@@ -635,7 +666,8 @@
     "placeholder": "Im Thread antworten …",
     "upload": "Datei oder Bild im Thread teilen",
     "sendFailed": "Die Antwort konnte nicht gesendet werden. Versuche es noch einmal.",
-    "commandHint": "Befehle und Umfragen startest du im Kanal. Hier wird dieser Text als Antwort gesendet."
+    "commandHint": "Befehle und Umfragen startest du im Kanal. Hier wird dieser Text als Antwort gesendet.",
+    "hint": "Antworten hier landen nicht im Hauptchat."
   },
   "voice": {
     "mute": "Stummschalten",
@@ -678,6 +710,11 @@
     "noMediaConnectionRelay": "Keine Medienverbindung. Dein Netzwerk blockiert vermutlich auch das Relay. Probiere ein anderes Netzwerk, schalte ein VPN aus oder frage die Betreiberin oder den Betreiber des Servers.",
     "mediaUnavailable": "Der Talk konnte keine Medienverbindung aufbauen. Versuche es erneut.",
     "joinedElsewhere": "Du bist diesem Talk in einem anderen Fenster oder auf einem anderen Gerät beigetreten.",
+    "takeoverTitle": "Talk hier übernehmen?",
+    "takeoverPrompt": "Du bist in „{channel}“ auf einem anderen Gerät verbunden. Hier übernehmen? Dein Gespräch wechselt auf dieses Gerät.",
+    "takeoverConfirm": "Hier übernehmen",
+    "takenOver": "Dein Gespräch wurde auf ein anderes Gerät verschoben.",
+    "takenOverBack": "Zurück hierher",
     "mediaUnsupported": "Dieser Browser kann die Medien eines Talks nicht schützen und kann deshalb nicht beitreten. Nutze Chrome oder Edge ab 137, Safari ab 17 oder Firefox ab 129.",
     "mediaUnprotected": "Dieser Browser kann den Talk nicht schützen. Mikrofon, Kamera und Bildschirm bleiben aus.",
     "mediaRekeyed": "Die Medienschlüssel dieses Talks wurden von jemandem im Talk oder vom Server zurückgesetzt. Der Talk richtet neue Schlüssel selbst ein.",
@@ -688,27 +725,27 @@
   "audio": {
     "settings": "Audio-Einstellungen",
     "subtitle": "Eingabe und Raumakustik",
-    "groupInput": "Eingang",
-    "groupInputHelp": "Welches Mikrofon du nutzt und wie du das Sprechen auslöst.",
+    "groupInput": "Wie du sprichst",
+    "groupInputHelp": "Frei sprechen oder eine Taste halten, wenn du gehört werden willst.",
     "groupMeter": "Mikrofon prüfen",
-    "groupMeterHelp": "Sprich ein paar Worte. Die Leiste zeigt, was dein Mikrofon hört; über der weißen Marke wird gesendet.",
+    "groupMeterHelp": "Wähle dein Mikrofon, drück den Knopf und sprich ein paar Worte. Wenn sich die Leiste bewegt, bist du fertig.",
     "groupOutput": "Ausgabe",
     "groupOutputHelp": "Worüber du die anderen hörst, wie laut und mit welchen Tönen.",
     "groupProcessing": "Rauschfilter und Echo",
     "groupProcessingHelp": "Filtert Störgeräusche aus deinem Mikrofon, bevor andere sie hören.",
-    "advanced": "Erweitert",
-    "advancedHelp": "Selten nötig: Lautstärkeregelung, Netzwerkpriorität, Hinweise und einzelne Töne.",
+    "advanced": "Feinabstimmung",
+    "advancedHelp": "Selten nötig: Eingangslautstärke, Empfindlichkeit, Lautstärkeregelung, Netzwerkpriorität, Hinweise und einzelne Töne.",
     "levelLabel": "Mikrofonpegel",
-    "inputMode": "Eingabemodus",
+    "inputMode": "Sprechmodus",
     "activity": "Sprachaktivierung",
-    "activityHint": "Das Mikrofon öffnet ab einem Pegel",
+    "activityHint": "Das Mikrofon öffnet, sobald du sprichst",
     "ptt": "Push-to-Talk",
     "pttHint": "Taste gedrückt halten",
     "pttKey": "Push-to-Talk-Taste",
     "pressKey": "Taste drücken …",
-    "pttKeyHint": "Klick auf die Taste und drück dann die gewünschte Taste, zum Beispiel Leertaste oder Strg.",
+    "pttKeyHint": "Wähle eine Taste, mit der du nicht tippst, zum Beispiel F8 oder `. Im Browser funktioniert sie, solange dieses Fenster vorne ist, und nicht, während du in ein Textfeld tippst. Die Desktop-App hat eine eigene Taste, die auch über Spielen funktioniert; du stellst sie in den Overlay-Einstellungen ein.",
     "sensitivity": "Eingabeempfindlichkeit",
-    "auto": "Automatisch ermitteln",
+    "auto": "Automatisch anpassen",
     "level": "Pegel {level} % · Spitze {peak} %",
     "threshold": "Schwelle {value} %",
     "adviceTitle": "Tipp, wenn mehrere Personen im selben Raum sitzen",
@@ -726,12 +763,12 @@
     "deviceFallback": "Mikrofon {id} …",
     "liveNote": "Änderungen gelten sofort",
     "done": "Fertig",
-    "noiseMode_ai": "KI-Filter",
-    "noiseMode_ai-lite": "KI sparsam",
+    "noiseMode_ai": "Stark",
+    "noiseMode_ai-lite": "Leicht",
     "noiseMode_browser": "Browser",
     "noiseMode_off": "Aus",
-    "noiseHint_ai": "DeepFilterNet3 filtert Tastatur, Klicks, Lüfter und Hintergrundlärm in voller Klangqualität heraus. Läuft komplett in deinem Browser, dein Ton verlässt dein Gerät dafür nicht. Einmaliger Download von etwa 10 MB.",
-    "noiseHint_ai-lite": "Ein kleineres KI-Modell für schwächere Rechner. Filtert ähnlich gut, die Stimme klingt aber etwas dumpfer.",
+    "noiseHint_ai": "Empfohlen. Filtert Tastatur, Klicks, Lüfter und Hintergrundlärm in voller Klangqualität heraus. Läuft komplett in deinem Browser, dein Ton verlässt dein Gerät dafür nicht. Einmaliger Download von etwa 10 MB.",
+    "noiseHint_ai-lite": "Wie Stark, aber schonender für deinen Rechner. Filtert ähnlich gut, die Stimme klingt aber etwas dumpfer.",
     "noiseHint_browser": "Die Rauschunterdrückung deines Browsers dämpft gleichmäßige Geräusche wie Lüfter oder Brummen. Spart Rechenleistung.",
     "noiseHint_off": "Kein Filter. Für Studiomikrofone oder wenn du Musik überträgst.",
     "filterDegraded": "Der KI-Filter ist überlastet oder nicht verfügbar. Für diesen Talk wird die Browser-Rauschunterdrückung verwendet.",
@@ -740,7 +777,7 @@
     "micTest": "Mikrofontest",
     "micTestStart": "Mikrofon testen",
     "micTestStop": "Test beenden",
-    "micTestHint": "Dieser Test bleibt lokal und wird nicht an andere übertragen. Du hörst deine eigene Stimme mit dem eingestellten Rauschfilter und Schwellenwert. Während des Tests bist du für andere im Talk stummgeschaltet.",
+    "micTestHint": "Dieser Test bleibt lokal und wird nicht an andere übertragen. Du hörst deine eigene Stimme mit deinem eingestellten Filter. Während des Tests bist du für andere im Talk stummgeschaltet.",
     "micTestActiveBadge": "Aktiv (stumm für andere)",
     "qosTitle": "Netzwerkpriorität für Sprache und Video",
     "qosHint": "Gibt Sprache und Video im Netzwerk Vorrang, um Aussetzer bei hoher Auslastung zu verringern.",
@@ -750,6 +787,7 @@
     "noAudioDetectedToast": "Von deinem Mikrofon kommt kein Ton. Prüfe dein Eingabegerät und die Systemberechtigung.",
     "micHardwareMutedToast": "Dein Mikrofon scheint per Hardware-Schalter oder vom System stummgeschaltet zu sein.",
     "noAudioDismiss": "In diesem Gespräch nicht mehr warnen",
+    "openSettings": "Audioeinstellungen öffnen",
     "switchChannelWarningTitle": "Bestätigung beim Talk-Wechsel",
     "switchChannelWarningHint": "Fragt nach einer Bestätigung, bevor du in einen anderen Talk wechselst.",
     "switchChannelTitle": "Talk wechseln?",
@@ -759,6 +797,11 @@
     "soundsHint": "Spielt Töne beim Beitreten, Verlassen, Stummschalten und Taubschalten ab.",
     "soundsVolume": "Lautstärke der Soundeffekte",
     "soundsTest": "Test abspielen",
+    "messageSounds": "Nachrichtentöne",
+    "messageSounds_all": "Alle Nachrichten",
+    "messageSounds_mentions": "Erwähnungen & Direktnachrichten",
+    "messageSounds_off": "Aus",
+    "messageSoundsHint": "Ein leiser Ton für neue Nachrichten. Er schweigt bei deinen eigenen Nachrichten, in der Unterhaltung, die du gerade liest, bei „Nicht stören“ und Fokus sowie wenn schon eine Systembenachrichtigung ihren eigenen Ton spielt.",
     "soundsCustomTitle": "Einzelne Töne",
     "sound_join": "Kanal beigetreten",
     "sound_leave": "Kanal verlassen",
@@ -774,7 +817,20 @@
     "outputDevice": "Ausgabegerät",
     "outputDeviceUnsupported": "Dieser Browser kann das Ausgabegerät nicht wählen; es wird das Standardgerät des Systems verwendet.",
     "outputVolume": "Ausgabelautstärke",
-    "perUserVolumeHint": "Einzelne Personen stellst du per Rechtsklick auf ihren Namen oder ihre Kachel lauter oder leiser."
+    "perUserVolumeHint": "Einzelne Personen stellst du per Rechtsklick auf ihren Namen oder ihre Kachel lauter oder leiser.",
+    "sound_call_ring": "Klingelton",
+    "defaultOutput": "Standardlautsprecher des Systems",
+    "micHeard": "Wir hören dich. Dein Mikrofon funktioniert.",
+    "pttKeyChoose": "Taste wählen",
+    "pttKeyNone": "Noch keine Taste gewählt. Push-to-Talk tut nichts, bis du eine wählst.",
+    "pttKeyHeld": "Taste gehalten: du sendest",
+    "pttKeyIdle": "Halte {key} gedrückt zum Ausprobieren",
+    "pttFirstUse": "Push-to-Talk ist an: Halte {key}, um zu sprechen. Das funktioniert, solange dieses Fenster vorne ist und du nicht in ein Textfeld tippst. Die Desktop-App funktioniert auch über Spielen.",
+    "pttFirstUseNoKey": "Push-to-Talk ist an, aber es ist noch keine Taste gewählt, daher hört dich niemand.",
+    "pttFirstUseAction": "Taste wählen",
+    "inputVolumeHint": "Wie laut dein Mikrofon vor dem Filter ist. Lass es bei 100 %, außer andere sagen, du seist zu leise.",
+    "sensitivityHint": "Wie laut du sein musst, damit sich das Mikrofon öffnet. Senke den Wert, wenn deine Stimme abgeschnitten wird, erhöhe ihn, wenn Hintergrundgeräusche durchkommen.",
+    "pttKeyIdleTest": "Starte den Mikrofontest und halte dann {key} gedrückt zum Ausprobieren"
   },
   "stats": {
     "title": "Verbindungsstatus",
@@ -792,7 +848,27 @@
     "details": "Details",
     "codec": "Audio-Codec",
     "sendRecv": "Senden / Empfangen",
-    "packets": "Pakete gesendet / empfangen",
+    "mic": {
+      "title": "Mikrofon",
+      "sending": "Sendet",
+      "pausedSilent": "Pausiert (Sprachgate: still)",
+      "pausedPtt": "Pausiert (Push-to-Talk nicht gedrückt)",
+      "pausedTest": "Pausiert (Mikrofontest läuft)",
+      "muted": "Stumm, es wird nichts gesendet",
+      "none": "Kein Mikrofon"
+    },
+    "flow": {
+      "packets": {
+        "one": "{n} Paket",
+        "other": "{n} Pakete"
+      },
+      "mic": "Audio gesendet",
+      "camera": "Kamera gesendet",
+      "screen": "Bildschirm gesendet",
+      "screenAudio": "Bildschirmton gesendet",
+      "audioIn": "Audio empfangen",
+      "videoIn": "Videodaten empfangen"
+    },
     "receivedVideo": "Empfangenes Video",
     "localCandidate": "Lokaler Kandidat",
     "remoteCandidate": "Server-Kandidat",
@@ -865,6 +941,11 @@
       "stunTitle": "STUN-Server:",
       "stunBefore": " Zum Aufbau der Sprachverbindung fragt Ihr Browser folgende STUN-Server nach Ihrer öffentlichen Adresse: ",
       "stunAfter": ". Dabei wird Ihre IP-Adresse an den jeweiligen Betreiber dieser Server übermittelt; Inhalte von Gesprächen oder Nachrichten werden nicht übertragen.",
+      "turnTitle": "Externe TURN-Server:",
+      "turnBefore": " Blockiert Ihr Netzwerk die direkte Medienverbindung, kann Ihr Browser sie über folgende, vom Betreiber eingerichtete TURN-Server weiterleiten: ",
+      "turnAfter": ". Der Betreiber dieser Server erhält dabei Ihre IP-Adresse und den Port und leitet die verschlüsselten Medien weiter, die der Server nicht lesen kann; Inhalte von Gesprächen oder Nachrichten werden nicht übertragen.",
+      "builtinTurnTitle": "Integriertes Relay (TURN):",
+      "builtinTurn": " Mitglieder in restriktiven Netzwerken erreichen Sprache und Video über ein Relay, das innerhalb dieses Servers läuft. Es ist Teil dieses Servers und wird vom Betreiber dieser Instanz betrieben, nicht von einem Dritten, und leitet Medien ausschließlich an den eigenen Medienserver des Servers weiter. Das Relay sieht Ihre IP-Adresse und den Port und leitet die verschlüsselten Medien (DTLS-SRTP) weiter, die es nicht lesen kann. Es verwendet kurzlebige, an Ihr Konto gebundene Zugangsdaten und speichert nichts dauerhaft: Es führt nur betriebliche Zähler (aktive Sitzungen, abgewiesene Versuche, Datenmengen) ohne IP-Adressen oder Kontonamen und schreibt IP-Adressen und Konto-IDs nur dann ins Protokoll, wenn der Betreiber die Debug-Protokollierung einschaltet. Zweck und Rechtsgrundlage entsprechen dem oben beschriebenen Sprachdienst (Vertrag, Art. 6 Abs. 1 lit. b DSGVO).",
       "noStun": "Es werden keine externen STUN- oder TURN-Server von Drittanbietern verwendet.",
       "updateCheckTitle": "Update-Prüfung:",
       "updateCheck": " Der Server fragt etwa alle 30 Minuten bei GitHub (api.github.com, GitHub Inc., USA) nach, ob eine neue Version von Mnema Talk erschienen ist. Dabei sieht GitHub nur die IP-Adresse des Servers; Daten von Nutzerinnen und Nutzern werden nicht übertragen. Der Betreiber kann die Prüfung abschalten.",
@@ -980,6 +1061,10 @@
     "dismiss": "Meldung von {name} ablehnen"
   },
   "talk": {
+    "seats": "Belegte Plätze des Teilnehmerlimits",
+    "seatsFull": "Dieser Talk ist voll",
+    "seatsOver": "Mehr Personen als das Limit (für Moderierende erlaubt)",
+    "fullToast": "Dieser Talk ist voll ({count}/{limit})",
     "react": "Reagieren",
     "participants": {
       "one": "{count} Teilnehmer",
@@ -1060,6 +1145,7 @@
       "auto": "Automatisch",
       "autoHint": "Passt sich deiner Verbindung an",
       "autoNow": "Gerade {name}",
+      "autoWith": "Automatisch ({name})",
       "source": "Quelle",
       "switching": "Wechsle …"
     },
@@ -1105,7 +1191,12 @@
       "changeSource": "Bildschirm wechseln",
       "estimatedBitrate": "Geschätzte Bitrate: ~{bitrate}",
       "motionPriority": "Bewegungs-Priorität: flüssige Darstellung unter Last",
-      "detailPriority": "Detail-Priorität: Text und Code bleiben maximal scharf"
+      "detailPriority": "Detail-Priorität: Text und Code bleiben maximal scharf",
+      "optimize": "Optimieren für",
+      "optimize_motion": "Bewegung",
+      "optimize_detail": "Schärfe",
+      "restartNeeded": "Dein Browser konnte das während der Übertragung nur teilweise anwenden. Starte die Übertragung neu, um es ganz zu übernehmen.",
+      "restartStream": "Übertragung neu starten"
     },
     "controls": "Talk-Steuerung",
     "tapForControls": "Tippe auf den Bildschirm, um die Steuerung zu zeigen",
@@ -1123,7 +1214,6 @@
     "lobby": "Talk-Lobby („Talk erstellen“)",
     "lobbyHint": "Wer diesem Talk beitritt, bekommt einen neuen Talk und leitet ihn. Niemand bleibt in der Lobby, und der neue Talk übernimmt Rechte und Limit der Lobby.",
     "lobbyOpens": "Öffnet beim Beitreten einen neuen Talk",
-    "lobbySaved": "Lobby-Einstellung gespeichert.",
     "followsLobby": "Dieser Talk übernimmt die Rechte seiner Lobby. Ändere sie in der Lobby.",
     "presetsTitle": "Wer beitreten darf",
     "presetEveryone": "Alle",
@@ -1134,12 +1224,19 @@
     "presetLimit": "Limit",
     "presetLimitHint": "Höchstens so viele Mitglieder gleichzeitig. 0 heißt kein Limit.",
     "limitLabel": "Mitgliederlimit",
+    "rolesRequired": "Wähle mindestens eine Rolle oder wechsle zu „Alle“.",
+    "limitInvalid": "Gib eine ganze Zahl von 0 bis 999 ein.",
+    "nameRequired": "Ein Talk braucht einen Namen.",
     "presetApply": "Übernehmen",
     "presetApplied": "Talk aktualisiert.",
     "inviteFrom": "{name} lädt dich in einen Talk ein",
     "inviteGeneric": "Du bist in einen Talk eingeladen",
     "inviteIn": "Du bist dabei",
-    "inviteUnavailable": "Für dich nicht verfügbar"
+    "inviteUnavailable": "Für dich nicht verfügbar",
+    "inviteEnded": "Nicht mehr verfügbar",
+    "moveForControls": "Bewege die Maus, um die Steuerung zu zeigen",
+    "sharingScreen": "Teilt den Bildschirm",
+    "cameraOn": "Kamera an"
   },
   "admin": {
     "signedInAs": "Angemeldet als {name} (Owner)",
@@ -1155,6 +1252,7 @@
       "bans": "Sperren",
       "bots": "Bots",
       "onboarding": "Willkommen & Regeln",
+      "access": "Anmeldung & Nachrichten",
       "emoji": "Emoji",
       "reports": "Meldungen",
       "automod": "Automod",
@@ -1362,7 +1460,8 @@
       "level": {
         "ok": "In Ordnung",
         "warn": "Hinweis",
-        "fail": "Handlungsbedarf"
+        "fail": "Handlungsbedarf",
+        "info": "Nicht geprüft"
       },
       "check": {
         "public_url": "Öffentliche Adresse",
@@ -1373,7 +1472,9 @@
         "storage": "Objektspeicher",
         "database": "Datenbank",
         "clock": "Serveruhr",
-        "reverse_proxy": "Reverse-Proxy"
+        "network": "Internetanschluss",
+        "reverse_proxy": "Reverse-Proxy",
+        "websocket": "WebSocket"
       },
       "checkMsg": {
         "clock": {
@@ -1403,14 +1504,28 @@
             "detail": "Ausgehende E-Mail ist eingerichtet ({host})."
           }
         },
+        "network": {
+          "address_mismatch": {
+            "detail": "Die eigene Adresse dieses Hosts {local} weicht von der Adresse {public} ab, die das Internet sieht; sein Verkehr verlässt das Netz also über ein anderes Gateway, und die Ankündigung von {public} kann falsch sein.",
+            "fix": "Ist dieser Host von außen unter {local} erreichbar, setze WEBRTC_NAT_1TO1_IP={local}; steht ein Router oder Gateway davor, leite die Sprach-Ports dort weiter."
+          },
+          "cgnat": {
+            "detail": "Dieser Heimanschluss hat keine eigene öffentliche IPv4-Adresse (die Adresse {address} liegt im Carrier-Grade-NAT-Bereich 100.64.0.0/10); Port-Weiterleitung kann daher nicht funktionieren, und Mitglieder außerhalb deines Netzes erreichen die Sprache nicht.",
+            "fix": "Heimanschluss ohne eigene öffentliche IPv4 - Port-Weiterleitung kann nicht funktionieren. Möglichkeiten: beim Internetanbieter eine öffentliche IPv4-Adresse anfragen, Mnema Talk auf einem VPS betreiben oder ein externes Relay nutzen (WEBRTC_TURN_URLS und WEBRTC_TURN_SECRET). Siehe „Can I host at home?“ in doc/operations.md."
+          },
+          "no_ipv4": {
+            "detail": "Es wurde keine öffentliche IPv4-Adresse gefunden, IPv6 funktioniert aber: Das sieht nach einem Anschluss ohne eigene öffentliche IPv4 aus (DS-Lite); Port-Weiterleitung kann nicht funktionieren, und Mitglieder außerhalb deines Netzes erreichen die Sprache über IPv4 nicht.",
+            "fix": "Heimanschluss ohne eigene öffentliche IPv4 - Port-Weiterleitung kann nicht funktionieren. Möglichkeiten: beim Internetanbieter eine öffentliche IPv4-Adresse anfragen, Mnema Talk auf einem VPS betreiben oder ein externes Relay nutzen (WEBRTC_TURN_URLS und WEBRTC_TURN_SECRET). Siehe „Can I host at home?“ in doc/operations.md."
+          }
+        },
         "public_url": {
           "insecure": {
             "detail": "PUBLIC_URL ist ein einfaches http://, daher verlieren Sitzungs-Cookies das Secure-Flag und das Präfix __Host-.",
             "fix": "Stelle einen Reverse-Proxy mit TLS davor und setze PUBLIC_URL=https://chat.example.com (in einem vertrauenswürdigen LAN kannst du das überspringen)."
           },
           "local": {
-            "detail": "PUBLIC_URL ist {public_url} und nur auf diesem Rechner erreichbar; Einladungslinks, E-Mails und die Origin-Prüfung des Browsers nutzen sie.",
-            "fix": "Setze in der .env PUBLIC_URL=https://chat.example.com (die Adresse, die Mitglieder in den Browser tippen) und führe docker compose up -d aus."
+            "detail": "PUBLIC_URL ist {public_url} und nur auf diesem Rechner erreichbar; Einladungslinks, E-Mails und die Origin-Prüfung des Browsers nutzen sie. Zum Ausprobieren auf diesem Rechner ist das in Ordnung, andere können aber nicht beitreten.",
+            "fix": "Um andere einzuladen, setze in der .env PUBLIC_URL=https://chat.example.com (die Adresse, die Mitglieder in den Browser tippen) und führe docker compose up -d aus."
           },
           "ok": {
             "detail": "PUBLIC_URL ist {public_url}."
@@ -1448,8 +1563,8 @@
         },
         "turn": {
           "builtin_failed": {
-            "detail": "Das eingebaute TURN-Relay konnte Port {port} nicht belegen: Mitglieder in Netzen, die UDP blockieren, können nicht an der Sprache teilnehmen.",
-            "fix": "Gib Port {port} (UDP und TCP) frei oder wähle mit WEBRTC_BUILTIN_TURN_PORT einen anderen und führe danach docker compose up -d aus."
+            "detail": "Das eingebaute TURN-Relay konnte Port {port} nicht belegen: vermutlich nutzt ihn ein anderes Programm auf diesem Host, daher können Mitglieder in Netzen, die UDP blockieren, nicht an der Sprache teilnehmen.",
+            "fix": "Beende, was Port {port} (UDP und TCP) belegt, oder wähle mit WEBRTC_BUILTIN_TURN_PORT einen anderen Port (und leite diesen weiter) und führe danach docker compose up -d aus."
           },
           "builtin_failed_external": {
             "detail": "Für Mitglieder hinter strengen Firewalls ist ein TURN-Relay eingerichtet; das eingebaute Relay konnte nicht starten."
@@ -1468,8 +1583,8 @@
             "fix": "Optional: Entferne WEBRTC_BUILTIN_TURN=off, um das eingebaute Relay zu nutzen (Port {port}, UDP und TCP weiterleiten), oder setze WEBRTC_TURN_URLS und WEBRTC_TURN_SECRET für ein externes."
           },
           "unreachable": {
-            "detail": "Das eingebaute TURN-Relay läuft, aber Port {port} hat von diesem Server aus nicht geantwortet; ein Router ohne NAT-Loopback verursacht das, obwohl die Weiterleitung funktioniert.",
-            "fix": "Leite Port {port} (UDP und TCP) an diesen Server weiter und teste mit einem Handy im Mobilfunknetz; setze WEBRTC_BUILTIN_TURN_HOST, wenn Mitglieder es unter einem anderen Namen erreichen müssen."
+            "detail": "Das eingebaute TURN-Relay läuft, aber dieser Server konnte Port {port} von innen nicht prüfen; ein Router ohne NAT-Loopback verursacht das, obwohl die Weiterleitung funktioniert.",
+            "fix": "Öffne „Verbindung testen“ auf einem Handy im Mobilfunknetz, um das Relay von außen zu prüfen; schlägt es fehl, leite Port {port} (UDP und TCP) an diesen Server weiter oder setze WEBRTC_BUILTIN_TURN_HOST, wenn Mitglieder es unter einem anderen Namen erreichen müssen."
           },
           "voice_unavailable": {
             "detail": "Das eingebaute TURN-Relay läuft nicht, weil die Sprache nicht verfügbar ist: Mitglieder in Netzen, die UDP blockieren, können nicht an der Sprache teilnehmen.",
@@ -1507,16 +1622,33 @@
           }
         },
         "voice_udp": {
+          "unconfirmed": {
+            "detail": "Lauscht – von außen noch nicht bestätigt. Die Sprache lauscht auf UDP {port}, aber seit dem Start des Servers hat sich kein Mitglied von außerhalb dieses Netzes verbunden; die Weiterleitung im Router ist also unbewiesen.",
+            "fix": "Leite UDP {port_min}-{port_max} am Router an diesen Host weiter und öffne dann „Verbindung testen“ auf einem Handy im Mobilfunknetz (WLAN aus); der Punkt wird grün, sobald es klappt."
+          },
+          "confirmed": {
+            "detail": "Bestätigt: Ein Mitglied von außen hat sich verbunden ({time}). Die Sprache lauscht auf UDP {port}."
+          },
           "mux_disabled": {
             "detail": "WEBRTC_UDP_MUX_PORT=0 gibt jedem Medienteilnehmer einen eigenen Port, was begrenzt, wie viele Personen gleichzeitig telefonieren können.",
             "fix": "Entferne WEBRTC_UDP_MUX_PORT (oder setze es auf {port_min}), damit sich alle einen UDP-Port teilen."
           },
-          "ok": {
-            "detail": "Die Sprache lauscht auf UDP {port}. Leite diesen Port am Router an diesen Host weiter; von innen lässt er sich nicht testen."
-          },
           "unavailable": {
             "detail": "Die Sprach-Engine ist nicht gestartet, daher haben Talks weder Ton noch Video.",
-            "fix": "Gib die UDP-Ports {port_min}-{port_max} auf dem Host frei (oder ändere WEBRTC_UDP_PORT_MIN und WEBRTC_UDP_PORT_MAX) und starte neu; die Ursache steht im Log."
+            "fix": "Vielleicht belegt ein anderes Programm die UDP-Ports {port_min}-{port_max} auf dem Host: beende es oder ändere WEBRTC_UDP_PORT_MIN und WEBRTC_UDP_PORT_MAX und starte neu; die Ursache steht im Log."
+          }
+        },
+        "websocket": {
+          "ok": {
+            "detail": "WebSocket über den Proxy in Ordnung: Ein Browser hat /api/ws geöffnet und die Verbindung wurde hochgestuft ({time})."
+          },
+          "unchecked": {
+            "detail": "Noch nicht geprüft: Seit dem Start des Servers hat kein Browser die Live-Verbindung (/api/ws) geöffnet.",
+            "fix": "Lade diese Seite neu; bleibt der Punkt ungeprüft, aktiviere WebSocket in deinem Reverse-Proxy."
+          },
+          "failing": {
+            "detail": "Browser haben {count}-mal versucht, /api/ws zu öffnen, ohne dass ein WebSocket-Upgrade ankam (zuletzt {time}); der Reverse-Proxy leitet WebSocket-Verbindungen sehr wahrscheinlich nicht durch, daher zeigt die App „Verbindung verloren“.",
+            "fix": "Aktiviere WebSocket in deinem Reverse-Proxy: Er muss die Header Upgrade: websocket und Connection: Upgrade weiterreichen. Nginx Proxy Manager: „Websockets Support“ einschalten. nginx: proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection upgrade; proxy_http_version 1.1. Caddy und Traefik tun das standardmäßig."
           }
         }
       }
@@ -1563,6 +1695,7 @@
     "channelsLayout": "Kanäle & Layout",
     "saveLayout": "Layout speichern",
     "layoutSaved": "Layout erfolgreich gespeichert",
+    "addChannelTo": "Kanal zu {name} hinzufügen",
     "hasUnsavedLayout": "Ungespeicherte Änderungen an der Kanalreihenfolge.",
     "moveUp": "Nach oben",
     "moveDown": "Nach unten",
@@ -1646,7 +1779,7 @@
       "hint": "Wird neuen Mitgliedern gezeigt. Sobald es Regeln gibt, müssen Mitglieder sie akzeptieren, bevor sie schreiben, reagieren, hochladen oder einem Talk beitreten können. Du wirst nie gefragt.",
       "name": "Name der Community",
       "namePlaceholder": "Mnema Talk",
-      "nameHint": "Erscheint auf Einladungslinks, bevor sich jemand angemeldet hat.",
+      "nameHint": "Erscheint auf Einladungslinks, bevor sich jemand angemeldet hat. Bleibt es leer, wird die Adresse ({host}) gezeigt.",
       "welcome": "Willkommenstext",
       "rules": "Regeln",
       "preview": "Vorschau",
@@ -1700,10 +1833,15 @@
       "signedIn": "Angemeldet als {name}",
       "openReports": "{count} offen"
     },
+    "access": {
+      "saved": "Gespeichert."
+    },
     "maxUsesLabel": "Nutzungen",
     "maxUsesPlaceholder": "Unbegrenzt",
-    "validHoursLabel": "Gültig für (Stunden)",
-    "validHoursPlaceholder": "Unbegrenzt",
+    "validDaysLabel": "Gültig für (Tage)",
+    "validDaysPlaceholder": "Unbegrenzt",
+    "openForeverWarning": "Jeder mit diesem Link kann jederzeit beitreten. Lege eine Anzahl Nutzungen oder ein Ablaufdatum fest.",
+    "usesUnlimited": "Nutzungen: {used}, unbegrenzt",
     "presets": "Gültigkeit",
     "preset": {
       "day": "1 Tag",
@@ -1762,8 +1900,6 @@
     "passwordTooShort": "Das neue Passwort braucht mindestens {count} Zeichen.",
     "passwordMismatch": "Die beiden Passwörter stimmen nicht überein.",
     "passwordChanged": "Passwort geändert",
-    "activity": "Im Talk",
-    "inVoice": "Im Talk:",
     "notInVoice": "Gerade in keinem Talk",
     "membership": "Mitgliedschaft",
     "memberSince": "Mitglied seit",
@@ -1794,16 +1930,23 @@
     "passwordLink": "Passwort und Konto in den Einstellungen",
     "clearAfter": "Löschen nach",
     "expiry": {
+      "keep": "Beibehalten",
+      "never": "Nicht löschen",
+      "min30": "30 Minuten",
       "hour": "1 Stunde",
-      "tonight": "Heute Nacht (23:59)",
-      "tomorrow": "Morgen früh (08:00)",
-      "never": "Nie",
-      "custom": "Datum und Uhrzeit wählen …"
+      "hours4": "4 Stunden",
+      "today": "Heute",
+      "week": "Diese Woche"
     },
     "expiryPast": "Wähle einen Zeitpunkt in der Zukunft.",
     "clearsAt": "Wird gelöscht: {time}",
     "moderationTitle": "Moderation",
-    "rolesTitle": "Rollen"
+    "rolesTitle": "Rollen",
+    "account": "Konto",
+    "inTalk": "Im Talk {name}",
+    "inTalkHidden": "In einem Talk",
+    "talkCannotJoin": "Du kannst diesem Talk nicht beitreten.",
+    "talkHidden": "Dieser Talk ist für dich nicht verfügbar."
   },
   "nav": {
     "channelNotFound": "Diesen Kanal gibt es nicht mehr.",
@@ -2027,11 +2170,10 @@
     "title": "Erinnerungen und Geplantes",
     "reminders": "Erinnerungen",
     "scheduled": "Geplante Nachrichten",
-    "empty": "Hier ist nichts. Nutze „Erinnere mich“ an einer Nachricht oder „Später senden“ neben dem Senden-Knopf.",
+    "empty": "Nachrichten, die du mit „Später senden“ neben dem Senden-Knopf planst, warten hier ebenfalls.",
     "failed": "Erinnerungen und geplante Nachrichten ließen sich nicht laden. Versuche es erneut.",
     "due": "Fällig",
     "unavailable": "Eine Nachricht, die du nicht mehr sehen kannst",
-    "dismiss": "Ausblenden",
     "cancel": "Erinnerung abbrechen",
     "edit": "Bearbeiten",
     "delete": "Löschen",
@@ -2073,8 +2215,18 @@
     "reminderFailed": "Die Erinnerung ließ sich nicht setzen. Versuche es erneut.",
     "scheduleFailed": "Die Nachricht ließ sich nicht planen. Versuche es erneut.",
     "reminderDue": "Erinnerung: Eine Nachricht wartet auf dich.",
-    "reminderDueWith": "Erinnerung: {text}",
-    "scheduledFailed": "Eine geplante Nachricht wurde nicht gesendet"
+    "scheduledFailed": "Eine geplante Nachricht wurde nicht gesendet",
+    "emptyTitle": "Keine Erinnerungen",
+    "emptyBody": "Wähle „Erinnere mich“ an einer Nachricht, um zu einer Zeit deiner Wahl darauf zurückzukommen. Du wirst dann benachrichtigt.",
+    "done": "Erledigt",
+    "snooze": "Verschieben",
+    "snoozed": "Verschoben. Wir erinnern dich am {time}.",
+    "snoozeFailed": "Die Erinnerung konnte nicht verschoben werden. Versuche es erneut.",
+    "openMessage": "Öffnen",
+    "snoozeNotCleared": "Verschoben auf {time}, aber die alte Erinnerung konnte nicht entfernt werden und erscheint evtl. noch einmal.",
+    "reminderDueChannel": "Erinnerung: {author} in #{channel}: {text}",
+    "reminderDueDm": "Erinnerung: {author} hat dir geschrieben: {text}",
+    "reminderTitle": "Erinnerung"
   },
   "saved": {
     "title": "Gespeicherte Nachrichten",
@@ -2084,13 +2236,39 @@
     "save": "Nachricht speichern",
     "removeFromSaved": "Aus Gespeichert entfernen",
     "remove": "Entfernen",
-    "added": "Nachricht gespeichert.",
+    "added": "Gespeichert – du findest sie unter Gespeichert & Erinnerungen",
     "removed": "Aus deinen gespeicherten Nachrichten entfernt.",
     "saveFailed": "Die Nachricht konnte nicht gespeichert werden. Versuche es noch einmal.",
     "removeFailed": "Die Nachricht konnte nicht entfernt werden. Versuche es noch einmal.",
     "editNote": "Notiz bearbeiten",
     "saveNote": "Notiz speichern",
-    "notePlaceholder": "Notiz (nur für dich sichtbar)"
+    "notePlaceholder": "Private Notiz (nur für dich sichtbar)",
+    "view": "Ansehen",
+    "unavailableHint": "Sie wurde gelöscht, oder du siehst ihren Kanal nicht mehr. Deine Notiz bleibt, bis du sie entfernst.",
+    "addNote": "Private Notiz hinzufügen",
+    "noteLabel": "Private Notiz",
+    "noteHint": "Nur du siehst diese Notiz.",
+    "openMessage": "Nachricht öffnen",
+    "savedAt": "Gespeichert {time}",
+    "markLabel": "Gespeichert – klicken, um sie aus deinen gespeicherten Nachrichten zu entfernen",
+    "markShort": "Gespeichert",
+    "search": "Gespeicherte Nachrichten durchsuchen",
+    "searchLoaded": "Die Suche umfasst die bisher geladenen Nachrichten.",
+    "noMatches": "Keine gespeicherte Nachricht passt zu „{query}“.",
+    "sortLabel": "Reihenfolge der gespeicherten Nachrichten",
+    "sortRecent": "Neueste",
+    "sortChannel": "Nach Kanal",
+    "groupGone": "Nicht mehr verfügbar",
+    "groupOther": "Sonstige",
+    "emptyTitle": "Noch nichts gespeichert",
+    "emptyBody": "Speichere eine Nachricht, um sie für dich aufzuheben. Gespeicherte Nachrichten sind private Lesezeichen: Niemand sonst sieht sie, und die Autorin oder der Autor erfährt nichts davon.",
+    "emptyExample": "Zum Beispiel die Adresse, die jemand gepostet hat, ein Link für Freitag oder eine Antwort, die du wiederfinden willst.",
+    "emptyHow": "Öffne das ⋯-Menü einer Nachricht und wähle „Nachricht speichern“, oder drücke S auf einer markierten Nachricht.",
+    "hintTitle": "Gespeichert. Hier findest du sie.",
+    "hintBody": "Deine gespeicherten Nachrichten liegen unter diesem Lesezeichen, zusammen mit deinen Erinnerungen. Nur du siehst sie.",
+    "hintDismiss": "Verstanden",
+    "searchPlaceholder": "In Gespeichertem suchen",
+    "undo": "Rückgängig"
   },
   "mentions": {
     "inbox": "Erwähnungen",
@@ -2183,7 +2361,7 @@
     "mute": "Stummschalten",
     "deafen": "Ton aus",
     "ptt": "Push-to-Talk",
-    "games": "Zusätzliche Spiele-EXEs (eine pro Zeile)",
+    "games": "Zusätzliche Spiele",
     "error": "Nicht übernommen. Verbindung prüfen und unterschiedliche unterstützte Tasten wählen.",
     "enabled": "Gaming-Overlay und Sidepeek aktivieren",
     "opacity": "Deckkraft des Sidepeek-Hintergrunds",
@@ -2193,7 +2371,21 @@
     "addLastNone": "Noch keine andere App im Vordergrund. Wechsle zum Spiel und öffne das Overlay erneut.",
     "addConfirm": "Hinzufügen",
     "addCancel": "Abbrechen",
-    "addFailed": "Diese App konnte nicht hinzugefügt werden."
+    "addFailed": "Diese App konnte nicht hinzugefügt werden.",
+    "groupGeneral": "Allgemein",
+    "enabledHint": "Overlay und Sidepeek zeigen, solange du in einem Spiel und in einem Talk bist.",
+    "opacityHint": "Wie durchsichtig der Sidepeek-Hintergrund ist.",
+    "groupShortcuts": "Tastenkürzel",
+    "shortcutsHelp": "Feld anklicken und die gewünschten Tasten drücken. Jedes Kürzel muss anders sein.",
+    "groupGames": "Spiele",
+    "gamesEmpty": "Noch keine zusätzlichen Spiele.",
+    "addGame": "Hinzufügen",
+    "removeGame": "{name} entfernen",
+    "problem": {
+      "invalid": "Gib einen Dateinamen wie Game.exe ein: nur Buchstaben, Ziffern, Leerzeichen und - _ . !",
+      "duplicate": "Dieses Spiel steht schon in der Liste.",
+      "full": "Die Liste fasst höchstens {max} Spiele."
+    }
   },
   "perm": {
     "administrator": {
@@ -2581,11 +2773,6 @@
       "empty": "Diese Rolle sieht keine Kanäle, die du siehst.",
       "exit": "Vorschau beenden"
     },
-    "unsavedTitle": "Ungespeicherte Änderungen verwerfen?",
-    "unsavedBody": "Diese Rolle hat Änderungen, die nicht gespeichert sind. Beim Wechsel zu einer anderen Rolle gehen sie verloren.",
-    "discard": "Verwerfen",
-    "keepEditing": "Weiter bearbeiten",
-    "unsaved": "Ungespeicherte Änderungen",
     "searchPermissions": "Berechtigungen suchen",
     "noPermissionMatch": "Keine Berechtigung passt."
   },
@@ -2641,7 +2828,6 @@
     "loadFailed": "Die Webhooks konnten nicht geladen werden. Versuche es erneut.",
     "emptyIncoming": "In diesem Kanal gibt es noch keine eingehenden Webhooks.",
     "emptyOutgoing": "Noch keine ausgehenden Webhooks.",
-    "rename": "{name} umbenennen",
     "avatar": "Bild festlegen",
     "avatarFor": "Bild von {name}",
     "regenerate": "Neue URL erzeugen",
@@ -2656,8 +2842,10 @@
     "url": "Ziel-URL",
     "eventsLabel": "Ereignisse",
     "edit": "{name} bearbeiten",
-    "switchOff": "{name} ausschalten",
-    "switchOn": "{name} einschalten",
+    "saved": "Webhook gespeichert.",
+    "urlRequired": "Gib die URL ein, die die Ereignisse erhalten soll.",
+    "eventsRequired": "Wähle mindestens ein Ereignis.",
+    "enabledLabel": "Ereignisse an diese URL senden",
     "test": "Testereignis an {name} senden",
     "deliveries": "Letzte Zustellungen von {name}",
     "rotateFor": "Neues Geheimnis für {name}",
@@ -2695,12 +2883,60 @@
       "allow_identity_override": "Beiträge dürfen ihren Benutzernamen selbst festlegen"
     }
   },
+  "firstRun": {
+    "label": "Loslegen",
+    "title": "Loslegen mit {name}",
+    "progress": "{done} von {total} erledigt",
+    "allSet": "Deine Community ist startklar",
+    "allSetHint": "Alles Wichtige ist erledigt. Du kannst diese Liste im Servermenü wieder öffnen.",
+    "finish": "Fertig",
+    "hide": "Checkliste ausblenden. Das Servermenü holt sie zurück.",
+    "reopen": "Checkliste „Loslegen“",
+    "done": "Erledigt",
+    "todo": "Noch offen",
+    "optional": "optional",
+    "inviteCopied": "Einladungslink kopiert. Er gilt 7 Tage für {count} Personen.",
+    "inviteCreated": "Einladung erstellt. Kopiere den Link zum Teilen.",
+    "step": {
+      "name": {
+        "label": "Community benennen",
+        "hint": "Der Name erscheint in der Kopfzeile, auf der Anmeldeseite und in Einladungslinks. Ohne Namen heißt sie wie ihre Adresse.",
+        "action": "Benennen"
+      },
+      "invite": {
+        "label": "Leute einladen",
+        "hint": "Erstellt einen Einladungslink für 7 Tage und kopiert ihn.",
+        "action": "Einladung erstellen"
+      },
+      "channels": {
+        "label": "Kanäle durchsehen",
+        "hint": "Benenne die mitgelieferten Kanäle und Kategorien um, sortiere sie oder füge neue hinzu.",
+        "action": "Ansehen"
+      },
+      "voice": {
+        "label": "Sprache einrichten",
+        "hint": "Wähle einen Talk als Lobby für schnelle Talks.",
+        "action": "Einrichten"
+      },
+      "status": {
+        "label": "Verbindung prüfen",
+        "hint": "Die Statusseite prüft, ob Sprache deine Mitglieder von außen erreicht.",
+        "action": "Prüfen"
+      },
+      "roles_rules": {
+        "label": "Rollen und Regeln",
+        "hint": "Schreibe Regeln, die neue Mitglieder annehmen, und vergib Rollen.",
+        "action": "Öffnen"
+      }
+    }
+  },
   "events": {
     "events": "Veranstaltungen",
     "upcoming": "Bevorstehend",
     "past": "Vergangen",
     "noUpcoming": "Keine bevorstehenden Veranstaltungen geplant.",
     "noPast": "Keine vergangenen Veranstaltungen.",
+    "whatAreEvents": "Veranstaltungen sind Treffen mit festem Termin in einem Talk oder Kanal, mit Startzeit und Zusagen. Mitglieder mit dem Recht „Events verwalten“ können eine anlegen.",
     "loadMorePast": "Ältere Veranstaltungen anzeigen",
     "create": "Veranstaltung erstellen",
     "createTitle": "Community-Veranstaltung erstellen",
@@ -2745,7 +2981,11 @@
       "one": "{count} Vielleicht",
       "other": "{count} Vielleicht"
     },
-    "reminderToast": "Erinnerung: „{title}“ beginnt in 15 Minuten!",
+    "reminderToast": {
+      "one": "Erinnerung: „{title}“ beginnt in {count} Minute!",
+      "other": "Erinnerung: „{title}“ beginnt in {count} Minuten!"
+    },
+    "reminderOpen": "Veranstaltung anzeigen",
     "save": "Änderungen speichern",
     "details": "Details",
     "participants": "Rückmeldungen",
@@ -2876,6 +3116,7 @@
     "deleteTitle": "Bot {name} löschen?",
     "deleteBody": "Alle Tokens funktionieren sofort nicht mehr und seine Befehle verschwinden. Nachrichten, die er geschrieben hat, bleiben.",
     "deleted": "Bot gelöscht.",
+    "saved": "Bot gespeichert.",
     "intents": {
       "title": "Erlaubte Intents",
       "hint": "Worum der Bot beim Verbinden mit dem Gateway bitten darf. Ohne Intent bekommt er solche Ereignisse nicht.",
@@ -2903,8 +3144,6 @@
       "empty": "Es gibt noch keine Rollen. Lege eine im Tab Rollen an.",
       "power": "Gibt dem Bot Administratorrechte. Nur der Owner darf diese Rolle vergeben.",
       "powerSelected": "Eine gewählte Rolle gibt dem Bot Administratorrechte. Vergib das nur an ein Programm, dem du voll vertraust.",
-      "save": "Rollen speichern",
-      "saved": "Rollen gespeichert.",
       "managedOwn": "Verwaltet: Das ist die eigene Rolle des Bots, sie lässt sich nicht wegnehmen."
     },
     "access": {
@@ -3185,7 +3424,6 @@
     },
     "startTalk": "Talk starten",
     "startTalkFailed": "Der Talk konnte nicht gestartet werden.",
-    "noTalkLobby": "Diese Community hat noch keine Talk-Lobby, die du nutzen kannst. Admins können in den Einstellungen eines Talks eine daraus machen.",
     "talkInvited": "Einladung gesendet.",
     "inviteToTalk": "In meinen Talk einladen",
     "inviteTalkFailed": "Die Einladung konnte nicht gesendet werden.",
@@ -3218,7 +3456,9 @@
       "title": "Direktnachrichten",
       "muteAll": "Alle Direktnachrichten stummschalten",
       "muteAllHint": "Kein Ton, keine Benachrichtigung und keine Hervorhebung für Gespräche. Ungelesene Nachrichten werden weiter gezählt. Ein Gespräch, das du selbst stummschaltest oder wieder laut stellst, behält seine eigene Einstellung."
-    }
+    },
+    "previewCall": "Talk-Einladung",
+    "previewMissedCall": "Hat angerufen"
   },
   "blocks": {
     "title": "Blockierte Mitglieder",
@@ -3304,7 +3544,7 @@
     "deleteTitle": "Regel „{name}“ löschen?",
     "deleteBody": "Sie wirkt sofort nicht mehr. Die Einträge, die sie schon unter Meldungen angelegt hat, bleiben.",
     "delete": "Regel löschen",
-    "toggle": "Regel „{name}“ ist an",
+    "off": "Aus",
     "edit": "„{name}“ bearbeiten",
     "deleteRule": "„{name}“ löschen",
     "raidOn": "Ein Raid wird bis {time} gebremst. Neue Mitglieder sind eingeschränkt.",
@@ -3581,6 +3821,19 @@
       "sameNameUsed": "Mit {name} verbunden, weil die Namen übereinstimmen."
     }
   },
+  "draft": {
+    "unsaved": "Ungespeicherte Änderungen",
+    "reset": "Zurücksetzen",
+    "saving": "Speichern …",
+    "saved": "Gespeichert",
+    "saveFailed": "Die Änderungen konnten nicht gespeichert werden.",
+    "partialFailed": "Ein Teil der Änderungen wurde gespeichert, der Rest nicht: {message}",
+    "discardTitle": "Änderungen verwerfen?",
+    "discardBody": "Du hast Änderungen, die nicht gespeichert sind. Schließt du jetzt, gehen sie verloren.",
+    "discard": "Verwerfen",
+    "keepEditing": "Weiter bearbeiten",
+    "shortcut": "Speichern mit {keys}"
+  },
   "settings": {
     "title": "Einstellungen",
     "subtitle": "Dein Konto und dieses Gerät. Das siehst nur du.",
@@ -3593,10 +3846,174 @@
       "signin": "Anmeldung",
       "sessions": "Sitzungen",
       "privacy": "Privatsphäre",
-      "data": "Daten & Konto",
-      "app": "Push & App",
-      "audio": "Audio"
+      "data": "Export & Löschen",
+      "app": "Benachrichtigungen & Installation",
+      "audio": "Ton & Mikrofon"
     },
-    "privacyEmpty": "Auf diesem Server gibt es hier nichts einzustellen."
+    "privacyEmpty": "Auf diesem Server gibt es hier nichts einzustellen.",
+    "notifyLink": "Auswählen, was dich benachrichtigt",
+    "notifyLinkHint": "Welche Nachrichten dich benachrichtigen, stellst du für den ganzen Server und pro Kanal ein (die Glocke in der Kopfzeile). Push unten liefert sie nur an dieses Gerät."
+  },
+  "ctxMenu": {
+    "systemDefault": "Systemstandard",
+    "namesNeedAccess": "Gerätenamen erscheinen, sobald der Browser den Zugriff erlaubt hat.",
+    "outputFallback": "Lautsprecher {id} …",
+    "cameraFallback": "Kamera {id} …",
+    "cameraDevice": "Kamera",
+    "noShareSound": "Diese Übertragung hat keinen Ton zum Stummschalten."
+  },
+  "call": {
+    "isCalling": "ruft dich an",
+    "incomingLabel": "{name} ruft dich an",
+    "directMessage": "Direktnachricht",
+    "inGroup": "Gruppen-Direktnachricht · {name}",
+    "dismiss": "Ausblenden",
+    "openChat": "Konversation öffnen",
+    "calling": "Ruft {name} an …",
+    "callingHint": "Sie sehen es überall in Mnema.",
+    "hasNotJoined": "{name} ist nicht beigetreten",
+    "nobodyJoined": "Noch niemand ist beigetreten",
+    "waitingHint": "Du bist noch im Talk. Sie können aus der Konversation beitreten.",
+    "hangUp": "Auflegen",
+    "gone": "Dieser Talk ist beendet.",
+    "notifyTitle": "{name} ruft dich an",
+    "notifyBody": "Direktnachricht · Klicken zum Beitreten",
+    "missedTitle": "{name} hat dich angerufen",
+    "missedBody": "Verpasst · Direktnachricht",
+    "missedFrom": "{name} hat dich angerufen",
+    "missedMine": "Niemand ist beigetreten",
+    "callBack": "Zurückrufen",
+    "stateRinging": "Ruft dich an",
+    "stateCalling": "Ruft an …",
+    "stateActive": "Im Talk",
+    "joinRunning": "Diesem Talk beitreten"
+  },
+  "panel": {
+    "title": "Gespeichert & Erinnerungen",
+    "tooltip": "Gespeichert & Erinnerungen – deine privaten Lesezeichen und Nachrichten, auf die du zurückkommen willst",
+    "tooltipSaved": "Gespeicherte Nachrichten – deine privaten Lesezeichen",
+    "tooltipLater": "Erinnerungen (Später) – Nachrichten, auf die du zu einer bestimmten Zeit zurückkommen willst",
+    "tabSaved": "Gespeichert",
+    "tabLater": "Später",
+    "descSaved": "Deine privaten Lesezeichen. Niemand sonst sieht sie.",
+    "descLater": "Nachrichten, auf die du zu einer bestimmten Zeit zurückkommen willst, und Nachrichten, die zum Senden geplant sind."
+  },
+  "connectionTest": {
+    "title": "Verbindung testen",
+    "intro": "Prüft von diesem Gerät aus, ob die Sprache den Server erreicht: direkt über UDP und über das eingebaute Relay. Es braucht kein Mikrofon und betritt keinen Talk.",
+    "run": "Test starten",
+    "running": "Teste …",
+    "again": "Erneut testen",
+    "step": {
+      "candidates": "Suche Adressen …",
+      "direct": "Probiere die direkte Route …",
+      "relayUdp": "Probiere das Relay über UDP …",
+      "relayTcp": "Probiere das Relay über TCP …"
+    },
+    "addresses": "Gefundene Adressen: {host} lokal, {srflx} öffentlich, {relay} Relay",
+    "path": {
+      "direct": "Direkt (UDP zum Sprach-Port)",
+      "relayUdp": "Relay über UDP",
+      "relayTcp": "Relay über TCP"
+    },
+    "outcome": {
+      "ok": "Funktioniert",
+      "fail": "Funktioniert nicht",
+      "unavailable": "Nicht angeboten"
+    },
+    "verdict": {
+      "direct": "Direkte Verbindung funktioniert",
+      "relay_only": "Nur das Relay funktioniert (direktes UDP blockiert oder nicht weitergeleitet)",
+      "none": "Nichts funktioniert",
+      "inconclusive": "Test nicht abgeschlossen"
+    },
+    "cause": {
+      "ok": {
+        "text": "Dieses Gerät hat den Sprach-Port direkt über UDP erreicht."
+      },
+      "same_network": {
+        "text": "Dieses Gerät scheint im selben Netz wie der Server zu sein; das sagt wenig über den Weg von außen.",
+        "fix": "Wiederhole den Test mit einem Handy im Mobilfunknetz (WLAN aus)."
+      },
+      "udp_not_forwarded": {
+        "text": "Das Relay antwortet, aber direktes UDP kommt am Sprach-Port nicht an. Meist leitet der Router die Sprach-Ports nicht weiter, eine Firewall blockiert sie oder die angekündigte Adresse stimmt nicht.",
+        "fix": "Leite die UDP-Ports der Sprache (standardmäßig 50000-50050) am Router an den Server weiter, öffne sie in der Firewall des Hosts und prüfe WEBRTC_NAT_1TO1_IP."
+      },
+      "udp_blocked": {
+        "text": "Nur das Relay über TCP funktioniert: Dieses Netz blockiert UDP. Das ist in Firmennetzen und bei manchen VPNs üblich.",
+        "fix": "Talks laufen über das Relay. Für bessere Qualität nimm ein anderes Netz oder schalte das VPN aus."
+      },
+      "voice_off": {
+        "text": "Die Sprach-Engine des Servers läuft nicht.",
+        "fix": "Ein Administrator sollte Admin > Status öffnen und den Punkt Sprach-Port beheben; das Server-Log nennt die Ursache."
+      },
+      "no_relay_offered": {
+        "text": "Direktes UDP funktioniert nicht und der Server bietet kein TURN-Relay als Ausweg an.",
+        "fix": "Schalte das eingebaute Relay ein (entferne WEBRTC_BUILTIN_TURN=off), leite seinen Port 3479 (UDP und TCP) weiter und leite die UDP-Ports der Sprache weiter."
+      },
+      "only_local_addresses": {
+        "text": "Dieses Gerät hat nur lokale Adressen gefunden: Weder STUN- noch Relay-Server haben geantwortet. Eine Firewall, ein VPN oder eine Datenschutzeinstellung des Browsers blockiert UDP und die Relay-Ports.",
+        "fix": "Probiere ein anderes Netz oder schalte VPN bzw. WebRTC-Schutz aus. Leite auf dem Server Port 3479 (UDP und TCP) weiter."
+      },
+      "relay_unreachable": {
+        "text": "Das Relay hat auf keinem Weg geantwortet, und direktes UDP funktioniert ebenfalls nicht.",
+        "fix": "Leite den Relay-Port (standardmäßig 3479) für UDP und TCP an den Server weiter und prüfe, ob Admin > Status das TURN-Relay als laufend zeigt."
+      },
+      "limited": {
+        "text": "Zu viele Tests hintereinander.",
+        "fix": "Warte ein paar Minuten und starte den Test erneut."
+      }
+    },
+    "docs": "Sprache: Fehlersuche",
+    "failed": "Der Test konnte nicht laufen."
+  },
+  "statusEditor": {
+    "subtitle": "Wird allen neben deinem Namen angezeigt.",
+    "hint": "Sag, was du gerade machst. Bis zu 32 Zeichen.",
+    "clear": "Status löschen"
+  },
+  "shortcuts": {
+    "title": "Tastenkürzel",
+    "subtitle": "Alles, was du ohne Maus tun kannst. Diese Liste öffnest du mit ? oder Strg/Cmd + /.",
+    "or": "oder",
+    "notSet": "nicht gewählt",
+    "group": {
+      "general": "Überall",
+      "messages": "An einer Nachricht",
+      "composer": "Schreiben",
+      "talk": "In einem Talk",
+      "sidebar": "Kanalliste"
+    },
+    "groupHint": {
+      "messages": "Wechsle zuerst mit Tab zu einer Nachricht. Die Buchstaben gelten für die gewählte Nachricht, nicht während du tippst.",
+      "sidebar": "Für Administratoren, auf einem gewählten Kanal oder einer gewählten Kategorie."
+    },
+    "general": {
+      "search": "Nachrichten durchsuchen oder zu Kanal oder Unterhaltung springen",
+      "shortcuts": "Diese Liste zeigen",
+      "escape": "Offenes Menü oder Dialog schließen; in einem Kanal ihn als gelesen markieren"
+    },
+    "messages": {
+      "move": "Vorherige oder nächste Nachricht",
+      "reply": "Im Kanal antworten",
+      "edit": "Eigene Nachricht bearbeiten",
+      "save": "Nachricht speichern oder wieder entfernen",
+      "menu": "Nachrichtenmenü öffnen"
+    },
+    "composer": {
+      "send": "Nachricht senden",
+      "newline": "Neue Zeile",
+      "mention": "Jemanden oder eine Rolle erwähnen",
+      "command": "Befehl beginnen",
+      "emoji": "Emoji nach Namen finden",
+      "cancelReply": "Die Antwort, die du schreibst, abbrechen"
+    },
+    "talk": {
+      "fullscreen": "Vollbild für die Bühne",
+      "ptt": "Push-to-Talk (deine eigene Taste, solange dieses Fenster vorne ist)"
+    },
+    "sidebar": {
+      "reorder": "Nach oben oder unten verschieben"
+    }
   }
 }

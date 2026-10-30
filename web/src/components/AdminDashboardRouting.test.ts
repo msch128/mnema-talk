@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount, type VueWrapper } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import type { ApiOptions } from '../lib/api'
 import AdminDashboard from './AdminDashboard.vue'
@@ -70,6 +70,7 @@ describe('dashboard route synchronization', () => {
     window.history.replaceState(null, '', '/admin/media')
     await w.find('[data-testid="tab-media"]').trigger('click')
     w.findComponent(BaseDialog).vm.$emit('close')
+    await flushPromises()
     expect(w.emitted('close')).toHaveLength(1)
   })
   it('renders an empty signed-in name safely', () => {

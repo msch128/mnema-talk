@@ -9,6 +9,7 @@ import { useToastStore } from '../stores/toast'
 import { PERMISSION_BITS } from '../lib/permissions'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
+import { pendingConfirm } from '../lib/confirm'
 import type { Role } from '../types/domain'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -61,7 +62,7 @@ describe('MemberRolesDialog', () => {
     await box(w, 'Speaker').setValue(false)
     await box(w, 'Speaker').setValue(true)
     await box(w, 'Speaker').setValue(false)
-    await w.findAll('button').find(b => b.text() === 'Save')!.trigger('click')
+    await w.find('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`/api/admin/users/${target.id}/roles`, { method: 'PUT', json: { role_ids: [] } })
     expect(useToastStore().toasts.map(t => t.text)).toContain('Roles saved')
@@ -72,9 +73,10 @@ describe('MemberRolesDialog', () => {
   it('reports a failure and stays open', async () => {
     const w = setup()
     apiMock.mockRejectedValueOnce(new Error('refused'))
-    await w.findAll('button').find(b => b.text() === 'Save')!.trigger('click')
+    await box(w, 'Speaker').setValue(false)
+    await w.find('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
-    expect(useToastStore().toasts.map(t => t.text)).toContain('refused')
+    expect(w.find('[data-testid="unsaved-error"]').text()).toContain('refused')
     expect(w.emitted('close')).toBeUndefined()
   })
 
@@ -86,7 +88,7 @@ describe('MemberRolesDialog', () => {
       const w = setup(user)
       expect(w.text()).toContain(hint)
       expect(w.findAll('input').every(i => i.attributes('disabled') !== undefined)).toBe(true)
-      expect(w.findAll('button').find(b => b.text() === 'Save')!.attributes('disabled')).toBeDefined()
+      expect(w.find('[data-testid="unsaved-save"]').attributes('disabled')).toBeDefined()
     }
     const w = setup()
     usePermissionsStore().setMemberRoles([{ id: target.id, role_ids: [fixtureId(24)] }])
@@ -102,10 +104,30 @@ describe('MemberRolesDialog', () => {
     return w.vm.$nextTick().then(() => expect(w.text()).toContain('No roles yet.'))
   })
 
-  it('closes on cancel', async () => {
+  it('keeps Save off until the set of roles really differs, whatever the order', async () => {
     const w = setup()
-    await w.findAll('button').find(b => b.text() === 'Cancel')!.trigger('click')
+    const save = () => w.find<HTMLButtonElement>('[data-testid="unsaved-save"]').element
+    expect(save().disabled).toBe(true)
+    await box(w, 'Speaker').setValue(false)
+    expect(save().disabled).toBe(false)
+    await box(w, 'Speaker').setValue(true)
+    expect(save().disabled).toBe(true)
+    expect(apiMock).not.toHaveBeenCalled()
+  })
+
+  it('asks before closing with unsaved changes and closes straight away without', async () => {
+    const w = setup()
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
     expect(w.emitted('close')).toHaveLength(1)
+    await box(w, 'Speaker').setValue(false)
+    await w.find('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    expect(w.emitted('close')).toHaveLength(1)
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(w.emitted('close')).toHaveLength(2)
   })
 
   it('closes from the dialog frame and copes with permissions not loaded yet', async () => {

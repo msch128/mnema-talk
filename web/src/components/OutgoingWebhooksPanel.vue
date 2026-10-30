@@ -2,15 +2,16 @@
 // Outgoing webhooks: URLs that receive signed events of a channel (or of the
 // whole server, for the Owner). The signing secret is shown once.
 import { ref, computed, onMounted } from 'vue'
-import { Copy, KeyRound, Pencil, Trash2, Send, ListChecks, Power } from '@lucide/vue'
+import { Copy, KeyRound, Pencil, Trash2, Send, ListChecks } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { arrayDecoder } from '../types/validation'
-import { isOutgoingWebhook, isWebhookDelivery, decodeCreatedOutgoingWebhook, decodeOutgoingWebhook, decodeWebhookDelivery, CHANNEL_WEBHOOK_EVENTS } from '../types/webhooks'
+import { isOutgoingWebhook, isWebhookDelivery, decodeCreatedOutgoingWebhook, decodeWebhookDelivery } from '../types/webhooks'
 import type { OutgoingWebhook, WebhookDelivery } from '../types/webhooks'
 import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { useChatStore } from '../stores/chat'
 import { t, locale } from '../i18n'
+import OutgoingWebhookForm from './OutgoingWebhookForm.vue'
 
 const props = defineProps({
   channelId: { type: String, required: true }
@@ -23,12 +24,10 @@ const loaded = ref(false)
 const secret = ref<{ id: string; value: string } | null>(null)
 const deliveries = ref<{ id: string; list: WebhookDelivery[] } | null>(null)
 const testResult = ref<{ id: string; delivery: WebhookDelivery } | null>(null)
-const busy = ref(false)
 
-// null: closed; id '': a new webhook
-const form = ref<{ id: string; name: string; url: string; events: string[] } | null>(null)
+// null: closed; hook null: a new webhook
+const form = ref<{ hook: OutgoingWebhook | null } | null>(null)
 
-const allEvents: readonly string[] = CHANNEL_WEBHOOK_EVENTS
 const listPath = computed(() => `/api/admin/channels/${props.channelId}/outgoing-webhooks`)
 const eventLabel = (event: string) => t(`webhooks.events.${event}`)
 
@@ -46,39 +45,18 @@ async function load() {
   }
 }
 
-function openForm(hook?: OutgoingWebhook) {
-  form.value = hook
-    ? { id: hook.id, name: hook.name, url: hook.url, events: [...hook.events] }
-    : { id: '', name: '', url: '', events: ['MESSAGE_CREATE'] }
-}
-
-function toggleEvent(event: string) {
-  const f = form.value
-  if (!f) return
-  f.events = f.events.includes(event) ? f.events.filter(e => e !== event) : [...f.events, event]
-}
-
-async function save() {
-  const f = form.value
-  if (!f || busy.value) return
-  busy.value = true
-  try {
-    const body = { name: f.name.trim(), url: f.url.trim(), events: f.events }
-    if (f.id) {
-      await api(`/api/admin/outgoing-webhooks/${f.id}`, { method: 'PATCH', json: body, decode: decodeOutgoingWebhook })
-    } else {
-      const created = await api(listPath.value, { method: 'POST', json: body, decode: decodeCreatedOutgoingWebhook })
-      secret.value = { id: created.id, value: created.secret }
-      toasts.success(t('webhooks.created'))
-    }
-    form.value = null
-  } catch (e) {
-    showError(e)
-    return
-  } finally {
-    busy.value = false
-  }
+// Created or saved from the form: show a new secret once and reload the list.
+async function onSaved(created: { id: string; value: string } | null) {
+  if (created) secret.value = created
+  form.value = null
   await load()
+}
+
+const formRef = ref<{ guard: () => Promise<boolean> } | null>(null)
+// Opening another form while one has unsaved edits asks first.
+async function openForm(hook?: OutgoingWebhook) {
+  if (formRef.value && !(await formRef.value.guard())) return
+  form.value = { hook: hook ?? null }
 }
 
 async function copy(value: string) {
@@ -87,15 +65,6 @@ async function copy(value: string) {
     toasts.success(t('webhooks.copied'))
   } catch {
     toasts.error(t('admin.copyFailed'), { detail: value })
-  }
-}
-
-async function setEnabled(hook: OutgoingWebhook, enabled: boolean) {
-  try {
-    const updated = await api(`/api/admin/outgoing-webhooks/${hook.id}`, { method: 'PATCH', json: { enabled }, decode: decodeOutgoingWebhook })
-    hooks.value = hooks.value.map(h => (h.id === updated.id ? updated : h))
-  } catch (e) {
-    showError(e)
   }
 }
 
@@ -180,29 +149,7 @@ onMounted(load)
       </div>
     </div>
 
-    <form v-if="form" class="space-y-3 rounded-lg border border-mnema-border bg-mnema-surface p-3" data-testid="outgoing-form" @submit.prevent="save">
-      <label class="block text-sm text-mnema-text">
-        <span class="mb-1 block text-xs font-medium text-mnema-muted">{{ $t('common.name') }}</span>
-        <input v-model="form.name" type="text" maxlength="80" required class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-3 py-1.5 text-sm text-mnema-text" />
-      </label>
-      <label class="block text-sm text-mnema-text">
-        <span class="mb-1 block text-xs font-medium text-mnema-muted">{{ $t('webhooks.url') }}</span>
-        <input v-model="form.url" type="url" maxlength="2048" required :placeholder="'https://example.org/hook'" class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-3 py-1.5 font-mono text-sm text-mnema-text" />
-      </label>
-      <fieldset>
-        <legend class="mb-1 text-xs font-medium text-mnema-muted">{{ $t('webhooks.eventsLabel') }}</legend>
-        <div class="grid gap-1 sm:grid-cols-2">
-          <label v-for="event in allEvents" :key="event" class="flex items-center gap-2 text-sm text-mnema-text">
-            <input type="checkbox" :checked="form.events.includes(event)" :data-event="event" @change="toggleEvent(event)" />
-            <span>{{ eventLabel(event) }}</span>
-          </label>
-        </div>
-      </fieldset>
-      <div class="flex justify-end gap-2">
-        <button type="button" class="btn btn-ghost" @click="form = null">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="busy || !form.name.trim() || !form.url.trim() || !form.events.length" class="btn btn-primary">{{ form.id ? $t('common.save') : $t('webhooks.create') }}</button>
-      </div>
-    </form>
+    <OutgoingWebhookForm v-if="form" :key="form.hook?.id ?? 'new'" ref="formRef" :channel-id="channelId" :hook="form.hook" @saved="onSaved" @cancel="form = null" />
     <button v-else type="button" class="btn btn-secondary" data-testid="outgoing-new" @click="openForm()">{{ $t('webhooks.newOutgoing') }}</button>
 
     <p v-if="loaded && !hooks.length" class="text-sm text-mnema-tertiary">{{ $t('webhooks.emptyOutgoing') }}</p>
@@ -222,7 +169,6 @@ onMounted(load)
 
         <div class="flex flex-wrap items-center gap-1 text-mnema-tertiary">
           <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.edit', { name: hook.name })" @click="openForm(hook)"><Pencil class="h-4 w-4" /></button>
-          <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="hook.status === 'active' ? $t('webhooks.switchOff', { name: hook.name }) : $t('webhooks.switchOn', { name: hook.name })" @click="setEnabled(hook, hook.status !== 'active')"><Power class="h-4 w-4" /></button>
           <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.test', { name: hook.name })" @click="test(hook)"><Send class="h-4 w-4" /></button>
           <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.deliveries', { name: hook.name })" :aria-expanded="deliveries?.id === hook.id" @click="toggleDeliveries(hook)"><ListChecks class="h-4 w-4" /></button>
           <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.rotateFor', { name: hook.name })" @click="rotate(hook)"><KeyRound class="h-4 w-4" /></button>

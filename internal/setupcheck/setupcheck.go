@@ -23,6 +23,9 @@ const (
 	OK   Level = "ok"
 	Warn Level = "warn"
 	Fail Level = "fail"
+	// Info (neutral) is a check the server cannot judge from where it
+	// stands: not a problem, but not proven either.
+	Info Level = "info"
 )
 
 // Stable check ids; the web app labels each one. Never reuse or rename one.
@@ -36,14 +39,17 @@ const (
 	Database     = "database"
 	Clock        = "clock"
 	ReverseProxy = "reverse_proxy"
+	Network      = "network"
+	WebSocket    = "websocket"
 )
 
 // Check is one line of the setup list.
 type Check struct {
 	// ID is the stable identifier of the check.
 	ID string `json:"id" example:"public_url"`
-	// Level is ok (green), warn (amber) or fail (red).
-	Level Level `json:"level" enums:"ok,warn,fail"`
+	// Level is ok (green), info (neutral: not verifiable from here), warn
+	// (amber) or fail (red).
+	Level Level `json:"level" enums:"ok,info,warn,fail"`
 	// Code names the outcome ("public_url.local"): clients translate by it and
 	// fill in Params. Absent when the server has no code for the outcome.
 	Code string `json:"code,omitempty" binding:"optional"`
@@ -71,8 +77,16 @@ type Runtime struct {
 	announceSource string
 	announceIPs    []string
 	detectErr      string
+	networkCode    string
+	networkLevel   Level
+	networkParams  Params
 	skew           time.Duration
 	clockMeasured  bool
+	// outsideAt is when a peer outside the network last completed ICE; wsOKAt
+	// when a browser last upgraded /api/ws; wsFails the misses since then.
+	outsideAt time.Time
+	wsOKAt    time.Time
+	wsFails   []time.Time
 }
 
 // SetAnnounce records the announced voice addresses and where they came from.
@@ -80,6 +94,14 @@ type Runtime struct {
 func (r *Runtime) SetAnnounce(source string, ips []string, detectErr string) {
 	r.mu.Lock()
 	r.announceSource, r.announceIPs, r.detectErr = source, append([]string(nil), ips...), detectErr
+	r.mu.Unlock()
+}
+
+// SetNetwork records that the connection cannot take port forwarding (CGNAT,
+// no IPv4, a different gateway); code is a network.* code, see ClassifyNetwork.
+func (r *Runtime) SetNetwork(code string, level Level, p Params) {
+	r.mu.Lock()
+	r.networkCode, r.networkLevel, r.networkParams = code, level, p
 	r.mu.Unlock()
 }
 
@@ -97,6 +119,12 @@ type runtimeSnapshot struct {
 	detectErr     string
 	skew          time.Duration
 	clockMeasured bool
+	networkCode   string
+	networkLevel  Level
+	networkParams Params
+	outsideAt     time.Time
+	wsOKAt        time.Time
+	wsFails       []time.Time
 }
 
 func (r *Runtime) snapshot() runtimeSnapshot {
@@ -105,7 +133,7 @@ func (r *Runtime) snapshot() runtimeSnapshot {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	s := runtimeSnapshot{source: r.announceSource, ips: r.announceIPs, detectErr: r.detectErr, skew: r.skew, clockMeasured: r.clockMeasured}
+	s := runtimeSnapshot{source: r.announceSource, ips: r.announceIPs, detectErr: r.detectErr, skew: r.skew, clockMeasured: r.clockMeasured, outsideAt: r.outsideAt, wsOKAt: r.wsOKAt, wsFails: append([]time.Time(nil), r.wsFails...), networkCode: r.networkCode, networkLevel: r.networkLevel, networkParams: r.networkParams}
 	if s.source == "" {
 		s.source = SourceNone
 	}
@@ -142,7 +170,7 @@ func Run(in Input) []Check {
 	checks := []Check{
 		publicURLCheck(in, has),
 		voiceAddressCheck(in.Cfg, rt),
-		voiceUDPCheck(in.Cfg, has),
+		voiceUDPCheck(in.Cfg, has, rt),
 		turnCheck(in, has),
 		mailCheck(in.Cfg),
 		storageCheck(in),
@@ -151,8 +179,22 @@ func Run(in Input) []Check {
 	if c, ok := clockCheck(rt); ok {
 		checks = append(checks, c)
 	}
-	return append(checks, proxyCheck(has))
+	if rt.networkCode != "" {
+		checks = append(checks, networkCheck(rt.networkCode, rt.networkLevel, cloneParams(rt.networkParams)))
+	}
+	return append(checks, proxyCheck(has), websocketCheck(rt, nowFunc()))
 }
+
+func cloneParams(p Params) Params {
+	out := make(Params, len(p))
+	for k, v := range p {
+		out[k] = v
+	}
+	return out
+}
+
+// nowFunc is the clock the observed checks use (tests replace it).
+var nowFunc = time.Now
 
 // Worst returns the most severe level in the list (ok for an empty list).
 func Worst(checks []Check) Level {
@@ -181,7 +223,7 @@ func publicURLCheck(in Input, has map[string]bool) Check {
 	p := Params{"public_url": cfg.PublicURL, "origin": in.RequestOrigin}
 	switch {
 	case cfg.IsProduction() && cfg.PublicURLIsLocal():
-		return newCheck(PublicURL, "public_url.local", Fail, p)
+		return newCheck(PublicURL, "public_url.local", Warn, p)
 	case in.RequestOrigin != "" && !sameOrigin(in.RequestOrigin, cfg.PublicURL):
 		return newCheck(PublicURL, "public_url.origin_mismatch", Warn, p)
 	case cfg.InsecurePublicURLWarning() != "" || has[opwarn.InsecurePublicURL]:
@@ -234,7 +276,7 @@ var announcedCodes = map[string]string{
 	SourceDetected:  "voice_address.announced_stun",
 }
 
-func voiceUDPCheck(cfg *config.Config, has map[string]bool) Check {
+func voiceUDPCheck(cfg *config.Config, has map[string]bool, rt runtimeSnapshot) Check {
 	p := Params{
 		"port_min": fmt.Sprint(cfg.WebRTCUDPPortMin),
 		"port_max": fmt.Sprint(cfg.WebRTCUDPPortMax),
@@ -246,7 +288,7 @@ func voiceUDPCheck(cfg *config.Config, has map[string]bool) Check {
 	case has[opwarn.WebRTCUDPMuxDisabled]:
 		return newCheck(VoiceUDP, "voice_udp.mux_disabled", Warn, p)
 	}
-	return newCheck(VoiceUDP, "voice_udp.ok", OK, p)
+	return voiceReachCheck(rt, p)
 }
 
 func mediaPort(cfg *config.Config) uint16 {

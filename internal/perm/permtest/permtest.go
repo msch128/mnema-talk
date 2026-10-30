@@ -214,6 +214,23 @@ func (f *Fixture) DM(members ...uuid.UUID) uuid.UUID {
 	return id
 }
 
+// AddDMMember adds a member to the conversation dm.
+func (f *Fixture) AddDMMember(dm, member uuid.UUID) *Fixture {
+	f.st.DMs[dm][member] = true
+	return f.touch()
+}
+
+// DMTalk adds a Talk that belongs to the conversation dm.
+func (f *Fixture) DMTalk(dm uuid.UUID) uuid.UUID {
+	id := f.Channel(uuid.Nil)
+	if f.st.DMTalks == nil {
+		f.st.DMTalks = map[uuid.UUID]uuid.UUID{}
+	}
+	f.st.DMTalks[id] = dm
+	f.touch()
+	return id
+}
+
 // DMEnabled sets the community's direct message switch (on by default).
 func (f *Fixture) DMEnabled(on bool) *Fixture {
 	f.st.DMsDisabled = !on

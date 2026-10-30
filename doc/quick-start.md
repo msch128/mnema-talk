@@ -40,6 +40,7 @@ existing database refuses.
 
 Without a terminal (scripts, a NAS web UI) pass everything as flags:
 
+<!-- test:setup-flags -->
 ```sh
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk \
   setup --non-interactive --public-url https://chat.example.com \
@@ -53,7 +54,7 @@ The minimal `.env` it writes is what you would write by hand. The same image is 
 
 ```sh
 PUBLIC_URL=https://chat.example.com
-MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:1.4
+MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:latest
 JWT_SECRET=...            # openssl rand -hex 32
 POSTGRES_PASSWORD=...     # openssl rand -hex 16
 S3_ACCESS_KEY=...         # any letters and digits
@@ -67,6 +68,7 @@ ADMIN_INITIAL_PASSWORD=...  # the Owner's first password, 14+ characters
    `/volume1/docker/mnema-talk`). Run the assistant over SSH (Control Panel >
    Terminal & SNMP > enable SSH; log in as an administrator):
 
+   <!-- test:setup-synology -->
    ```sh
    cd /volume1/docker/mnema-talk
    sudo docker run --rm -it -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
@@ -122,11 +124,17 @@ then rebuild the project once: Container Manager > Project > `mnema-talk` >
 Action > Stop, then Build. Container Manager reads the profile from that `.env`
 and starts `mnema-updater` and `mnema-recreator` next to the app (confirmed on DSM 7.2).
 From then on use Admin > System > **Update now**.
-It needs outbound HTTPS to `ghcr.io` and to Sigstore ([ports](ports.md#outbound-connections)),
+It needs outbound HTTPS to `ghcr.io` (or, with the Docker Hub image below,
+`registry-1.docker.io` and `auth.docker.io`) and to Sigstore ([ports](ports.md#outbound-connections)),
 and the token rules are in [operations.md](operations.md#updates). Container
 Manager's own image update view only tracks registries in its registry list, so
 it will not flag a new Mnema Talk image; the button and the admin update check
 do. The image is also mirrored on Docker Hub ([deployment.md](deployment.md#fresh-install)).
+If your NAS reaches Docker Hub more easily than `ghcr.io`, set
+`MNEMA_IMAGE=msch128/mnema-talk:latest` in the `.env` (or a tag such as
+`msch128/mnema-talk:2.1`) and rebuild the project. "Update now" works with it:
+the updater verifies the same signature and provenance and pulls from Docker
+Hub, not from GHCR.
 Take a backup first ([upgrade.md](upgrade.md)).
 
 In Container Manager's image list, `<none>` as the tag of the postgres,
@@ -137,7 +145,7 @@ seaweedfs and watchtower images is expected: they are pinned by digest.
 In the UI: Container Manager > Project > `mnema-talk` > Action > Stop, then
 Clean (removes the project's containers and images, not your data) and Build,
 which pulls the current image of the tag again. The tag in `MNEMA_IMAGE`
-decides what is "current": `:1.4` follows patch releases of 1.4, `:latest`
+decides what is "current": `:2.1` follows patch releases of 2.1, `:latest`
 everything ([tags](deployment.md#updates)). Menu wording differs a little
 between DSM versions.
 
@@ -146,6 +154,7 @@ between DSM versions.
 1. **Files.** Open the Unraid terminal and run the assistant in an appdata
    folder:
 
+   <!-- test:setup-unraid -->
    ```sh
    mkdir -p /mnt/user/appdata/mnema-talk && cd /mnt/user/appdata/mnema-talk
    docker run --rm -it -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
@@ -174,6 +183,7 @@ before you enable it.
 
 1. **Files.**
 
+   <!-- test:setup-vps -->
    ```sh
    mkdir mnema-talk && cd mnema-talk
    docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup

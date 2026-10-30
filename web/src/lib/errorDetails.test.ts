@@ -8,6 +8,7 @@ describe('server reasons reach the user in their language', () => {
   it.each([
     ['CONFLICT', 'a channel can keep at most 50 pinned messages; unpin one first', /50 angeheftete/],
     ['CONFLICT', 'the poll has ended', /Umfrage ist beendet/],
+    ['RATE_LIMITED', 'too many requests: retry in 90 s', /etwas viel\. Versuche es in 90 s noch einmal/],
     ['CONFLICT', 'the limit of 100 custom emoji is reached', /100 eigenen Emojis/],
     ['CONFLICT', 'an account can use push on at most 10 devices; remove one first', /10 Geräten/],
     ['CONFLICT', 'an emoji with this name already exists', /Emoji mit diesem Namen/],
@@ -28,7 +29,7 @@ describe('server reasons reach the user in their language', () => {
     ['INVALID_INPUT', 'endpoint must be an https URL of a push service on a public address', /Push-Abo/],
     ['INVALID_INPUT', 'p256dh must be a P-256 public key and auth a 16 byte secret, both base64url', /Push-Abo/],
     ['INVALID_INPUT', 'duration must be one of 1h, 1d', /Laufzeiten/],
-    ['INVALID_INPUT', 'Your message was not sent: it breaks the server rule "No spam" (automod). The moderators can see this.', /Serverregel „No spam“/],
+    ['INVALID_INPUT', 'Your message was not sent: it breaks the community rule "No spam" (automod). The moderators can see this.', /Regel „No spam“ der Community/],
     ['INVALID_INPUT', 'Your edit was not saved: it breaks the server rule "Links" (automod). The moderators can see this.', /Änderung wurde nicht gespeichert.*„Links“/]
   ])('%s "%s"', (code, message, expected) => {
     expect(errorMessage(code, message)).toMatch(expected)

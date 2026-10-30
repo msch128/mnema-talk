@@ -77,7 +77,7 @@ async function save() {
         :id="id"
         v-model="displayName"
         type="text"
-        maxlength="24"
+        v-max-chars="24"
         class="w-full rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
       />
     </FormField>
@@ -86,7 +86,7 @@ async function save() {
         :id="id"
         v-model="bio"
         rows="3"
-        maxlength="250"
+        v-max-chars="250"
         class="w-full resize-none rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
         :placeholder="$t('profile.bioPlaceholder')"
       ></textarea>

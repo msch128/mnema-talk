@@ -45,7 +45,7 @@ General rules:
 |---|---|---|
 | `JWT_SECRET` | none | Signs session cookies. In production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). In development an empty value means a random per-process secret (sessions reset on restart). Changing it logs everyone out. |
 | `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. An upper bound: a session that is not used for the inactivity limit (see "Sessions and inactivity sign-out") ends earlier. |
-| `INITIAL_LANGUAGE` | `de` | `de` or `en`: the language of the default categories and channels ("Text channels", "Voice hangouts", #general, #media, Lounge, Gaming 4K) on a brand-new installation. Used only when the database is still untouched (one account, no messages, the seeded names); an existing installation is never renamed. Any other value is rejected at startup. |
+| `INITIAL_LANGUAGE` | `en` | `de` or `en`: the language of the default categories and channels ("Text channels", "Voice hangouts", #general, #media, Lounge, Gaming 4K) on a brand-new installation. Used only when the database is still untouched (one account, no messages, the seeded names); an existing installation is never renamed. Any other value is rejected at startup. |
 | `ADMIN_USERNAME` | `admin` | The Owner account (all-powerful, cannot be restricted by anyone; see [roles-and-permissions.md](roles-and-permissions.md)), created on first start when none exists. |
 | `ADMIN_INITIAL_PASSWORD` | empty | Only used for that first start, and required then in production. In development, empty = a random password is generated and logged **once**. A placeholder value is rejected. |
 
@@ -95,6 +95,8 @@ General rules:
 | `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX` | `50000` / `50050` | UDP range of the SFU; `1 <= MIN <= MAX`. Compose publishes the same range; forward it in your router. |
 | `WEBRTC_UDP_MUX_PORT` | `WEBRTC_UDP_PORT_MIN` | The one UDP port all media peers share (like LiveKit or Discord voice servers), separately bound on each local IPv4/IPv6 interface. Must be inside `MIN`–`MAX`, which Compose already publishes. `0` = legacy mode: every peer takes its own port(s) from the range, so the default 51 ports fit only about 25 people in calls at once (logged at startup). Requires restart. |
 | `WEBRTC_NAT_1TO1_IP` | empty | Comma-separated IPs or host names announced to browsers. Behind a home router list the public address (or a dynamic-DNS name, re-resolved every 5 minutes) **and** the server's LAN IP. Empty in production: the server announces an IPv4 address from `PUBLIC_URL` and finds its public address itself (`WEBRTC_AUTO_ANNOUNCE`); when that fails and no TURN is configured it logs a warning at startup. A value set here is used as it is and never replaced. |
+| `WEBRTC_LAN_IP` | empty | Comma-separated IPv4 addresses of this host in your own network (for example `192.168.1.20`), announced to browsers after the public address the server found itself (`WEBRTC_NAT_1TO1_IP` empty). It solves "voice works from outside but not from inside the home network" on routers without NAT loopback. A process inside a Docker bridge network sees only the container's address, so the server cannot read the host's LAN address there: `mnema-talk setup` asks for it, or set it by hand. A server that runs outside a container announces its own private address when this is empty. Ignored when `WEBRTC_NAT_1TO1_IP` is set (list the LAN address there). |
+| `WEBRTC_PUBLISH_ADDR` | `0.0.0.0` | Compose only: the address Docker publishes the voice UDP range on. `127.0.0.1` keeps voice reachable from this computer only (what `mnema-talk setup --local` writes, together with `TURN_PUBLISH_ADDR=127.0.0.1`). |
 | `WEBRTC_AUTO_ANNOUNCE` | `true` | Production only, and only with `WEBRTC_NAT_1TO1_IP` empty: find the public IPv4 address with one STUN binding request at startup (and every 10 minutes, to follow a changed address) and announce it, logging what was found. The STUN server sees the server's IP address, nothing else. `false` = no request. |
 | `WEBRTC_DETECT_STUN_URLS` | `stun.l.google.com:19302,stun.cloudflare.com:3478` | STUN servers that detection asks, in order (`host:port` or `stun:host:port`). Not the STUN servers browsers use (`WEBRTC_STUN_URLS`). |
 | `WEBRTC_STUN_URLS` | empty | Optional STUN servers. Empty = no third-party STUN (named in the privacy policy when set). |
@@ -149,7 +151,7 @@ behind it and so uses the stored language or the default.
 | `MNEMA_IMAGE` | compose: `mnema-talk:local` | Image the `app` service runs; the app reads it to tell whether a re-pull can reach the latest release. See the tag table in the [deployment guide](deployment.md#updates). |
 | `UPDATER_TOKEN` | empty | Turns on "Update now" through the updater sidecar (profile `autoupdate`). At least 32 characters of letters, digits and `._~+/=-`, no placeholder. Empty = feature off, `UPDATER_URL` ignored. |
 | `UPDATER_URL` | `http://mnema-updater:8080` | Where the app reaches the sidecar: `http(s)` without credentials, query or fragment. |
-| `UPDATER_IMAGE_REPOSITORY`, `UPDATER_CERT_IDENTITY_REGEXP`, `UPDATER_CERT_ISSUER`, `UPDATER_SOURCE_URL`, `UPDATER_TRUSTED_ROOT` | empty = this project's release images and workflow | Read by the updater sidecar only, for a fork that publishes its own signed images: the image repository it may pull from, an anchored (`^...$`) pattern for the signing workflow's identity, its OIDC issuer, the repository URL recorded in the build provenance and (optional) a mounted `trusted_root.json`. See [verifying a release image](#verifying-a-release-image). |
+| `UPDATER_IMAGE_REPOSITORY`, `UPDATER_CERT_IDENTITY_REGEXP`, `UPDATER_CERT_ISSUER`, `UPDATER_SOURCE_URL`, `UPDATER_TRUSTED_ROOT` | empty = this project's release images (GHCR and the Docker Hub mirror) and workflow | Read by the updater sidecar only, for a fork that publishes its own signed images: the one image repository it may pull from (setting it drops the built-in Docker Hub mirror), an anchored (`^...$`) pattern for the signing workflow's identity, its OIDC issuer, the repository URL recorded in the build provenance and (optional) a mounted `trusted_root.json`. See [verifying a release image](#verifying-a-release-image). |
 
 ### Legal and privacy page
 
@@ -194,6 +196,7 @@ the built-in TURN port). All ports: [ports.md](ports.md).
 
 Caddy (passes `X-Forwarded-For` and WebSocket upgrades by default):
 
+<!-- test:caddy -->
 ```caddy
 chat.example.com {
     reverse_proxy app-host:8080
@@ -202,6 +205,7 @@ chat.example.com {
 
 nginx:
 
+<!-- test:nginx -->
 ```nginx
 map $http_upgrade $connection_upgrade {
     default upgrade;
@@ -290,8 +294,7 @@ of them.
 A session that makes no authenticated request for more than the **inactivity
 limit** is signed out. It is inactivity, not age: every request or page load
 keeps the session alive, and `SESSION_EXPIRY_HOURS` still caps the total. The
-Owner and Administrators set the limit under *Admin* > *Welcome & rules* (the community
-settings; `session_inactivity_days` of `PUT /api/admin/onboarding`), 1 to 365
+Owner and Administrators set the limit under *Admin* > *Sign-in & messages* (the community settings; `session_inactivity_days` of `PUT /api/admin/onboarding`), 1 to 365
 days, default 7. A change applies to running sessions at once.
 
 - A request from an over-limit session is refused (401) immediately; a sweeper
@@ -460,8 +463,14 @@ nothing else:
   (`LOG_LEVEL=debug`). `mnema_turn_allocations` is the live sessions,
   `mnema_turn_relayed_bytes_total{direction}` the traffic.
 
-The built-in relay is your own server, so the privacy policy does not list it;
-an external TURN server from `WEBRTC_TURN_URLS` is still listed.
+The built-in relay is part of your server, run by you and not a third party.
+The privacy policy (version 1.7 and later) describes it as such while it is
+offered: it sees the member's IP address and port, forwards encrypted media it
+cannot read only to the server's own SFU, uses short-lived credentials, stores
+nothing persistently and keeps only operational counters. IP addresses and
+account IDs reach the log only at `LOG_LEVEL=debug`, so name that in your own
+records if you run debug logging. An external TURN server from
+`WEBRTC_TURN_URLS` is listed separately by its configured address.
 
 ## TURN (coturn)
 
@@ -502,7 +511,9 @@ shorter lifetime would cut relayed calls. The web app fetches a fresh
 credential on a voice join when its copy is older than an hour. A credential
 therefore outlives a sign-out for up to 12 hours but can only use the relay,
 within the quotas above.
-Configured TURN servers are listed in the privacy policy.
+Configured TURN servers are listed in the privacy policy by their address; the
+policy describes the operator of such a server as a recipient of the member's
+IP address and port, so list the provider in your own records if it is not you.
 
 **Networks that block more than UDP.** `transport=tcp` on port 3478 passes
 firewalls that drop UDP but allow other ports. Some company networks only allow
@@ -511,6 +522,39 @@ TCP 443 and inspect it; for them list a `turns:` URL
 certificate, so `turns:` needs a coturn of your own with a TLS certificate (or a
 TCP/TLS multiplexer in front of it) and the secret from `WEBRTC_TURN_SECRET`.
 The app passes every URL in `WEBRTC_TURN_URLS` to the browser unchanged.
+
+## Can I host at home?
+
+Only if your internet connection has a public IPv4 address of its own. Voice
+and video reach the server over UDP ports that your router forwards to it; a
+provider that shares one public address between many customers (carrier-grade
+NAT, CGNAT) or gives you IPv6 plus a shared IPv4 (DS-Lite) never delivers
+those packets, however you configure the router. Chat over HTTPS may even work
+through a tunnel while every voice call outside your home fails.
+
+Mnema Talk looks for the signs and says so in the **Internet connection** item
+of the Status tab, in the startup log (`setup check:` line) and in the setup
+assistant's checks:
+
+- the address STUN reports, or the host's own WAN address, is in
+  `100.64.0.0/10` (the range providers reserve for CGNAT);
+- no public IPv4 address can be found while a global IPv6 address works
+  (typical for DS-Lite, for example some Fritz!Box lines);
+- the host has a public address of its own that differs from the one the
+  internet sees, so its traffic leaves through another gateway.
+
+Check it yourself in two minutes: open your router's overview page (on a
+Fritz!Box: *Internet > Online Monitor*), note the WAN or "Internet" IPv4
+address and compare it with what `curl -4 ifconfig.me` prints on any computer
+in the network. If they differ, or the router shows an address starting with
+`10.`, `192.168.`, `172.16.`-`172.31.` or `100.64.`-`100.127.`, port forwarding
+cannot work. Your options:
+
+1. Ask the provider for a public IPv4 address (often a free option or a business
+   tariff) or a dual-stack line instead of DS-Lite.
+2. Run Mnema Talk on a small VPS, which has a public address.
+3. Keep the instance at home and put an external relay in front of voice:
+   coturn on a VPS ([TURN (coturn)](#turn-coturn)).
 
 ## IPv6, DS-Lite and CGNAT
 
@@ -617,7 +661,7 @@ The image also carries BuildKit provenance and an SBOM. To check a pulled
 image before running it:
 
 ```sh
-cosign verify ghcr.io/msch128/mnema-talk:1.0 \
+cosign verify ghcr.io/msch128/mnema-talk:latest \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
 ```
@@ -626,7 +670,7 @@ The Docker Hub copy carries the same digest, signature identity, provenance
 and SBOM, so the same command works with the Docker Hub reference:
 
 ```sh
-cosign verify docker.io/msch128/mnema-talk:1.0 \
+cosign verify docker.io/msch128/mnema-talk:latest \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
 ```
@@ -652,6 +696,14 @@ shows that the update was refused, and the updater's log (`docker compose logs
 updater`) has the reason. Details and limits are in
 [SECURITY.md](../SECURITY.md#self-update-sidecar).
 
+- By default the updater trusts exactly two repositories:
+  `ghcr.io/msch128/mnema-talk` and its Docker Hub mirror `docker.io/msch128/mnema-talk`
+  (`msch128/mnema-talk` and `index.docker.io/...` name the same repository).
+  It updates from the registry the running app image names, so an install with
+  `MNEMA_IMAGE=msch128/mnema-talk:latest` stays on Docker Hub. Signature
+  identity, issuer and provenance source are the same for both; any other
+  namespace is refused. With `UPDATER_IMAGE_REPOSITORY` set, only that
+  repository is trusted.
 - The updater needs outbound HTTPS to the image registry and to Sigstore's
   TUF mirror (`tuf-repo-cdn.sigstore.dev`); it has its own network for that. An
   installation that cannot reach the mirror can mount a `trusted_root.json`
@@ -743,31 +795,149 @@ The **Admin → Status** tab provides an operator status overview in a single vi
 - **Backups**: Status of host-level backups and restore verification drills (see [Backups and restore](#backups-and-restore)).
 - **Live activity**: Active sessions, connected WebSocket clients, active Talks, and current voice participants.
 - **Operator warnings**: Active configuration warnings collected by the server (e.g. broad trusted proxies, WebRTC reachability).
-- **Setup checks**: a green, amber and red list of what a new installation needs (below).
+- **Setup checks**: a green, amber, red and neutral list of what a new installation needs (below).
+- **Test my connection**: a button that checks, from the browser you are using, whether voice reaches the server (below).
 
 ### Setup checks
 
-The first block of the Status tab lists the checks below, red first. Every amber
-or red item names the variable to set; the same list is logged (`setup check:`
+The first block of the Status tab lists the checks below, red first, then amber,
+then neutral (grey, *Not verified*), then green. The list needs about 20 seconds
+after a start to be complete: an earlier look can show partial results. Every
+amber or red item names the variable to set; the same list is logged (`setup check:`
 lines, then one `setup checks` summary) about 20 seconds after the start, once
 object storage and the clock measurement have settled. Fix the cause in `.env`,
 run `docker compose up -d` and reload the tab.
 
 | Check | Red | Amber |
 |---|---|---|
-| Public address | `PUBLIC_URL` is `localhost` in production | plain `http://`, or the page was opened at another address (behind a reverse proxy: it must pass `Host` and `X-Forwarded-Proto`) |
+| Public address | n/a | `PUBLIC_URL` is `localhost` (fine for a trial on one computer, nobody else can join), plain `http://`, or the page was opened at another address (behind a reverse proxy: it must pass `Host` and `X-Forwarded-Proto`) |
 | Voice address | nothing announced and no TURN (`WEBRTC_NAT_1TO1_IP`) | nothing announced, TURN configured |
 | Voice port | the voice engine did not start (UDP ports busy) | `WEBRTC_UDP_MUX_PORT=0` caps the number of callers |
-| TURN relay | n/a | built-in relay could not bind its port, or did not answer on it from the server (a router without NAT loopback also causes this), or `WEBRTC_BUILTIN_TURN=off` with no `WEBRTC_TURN_URLS` |
+| TURN relay | n/a | built-in relay could not bind its port, or `WEBRTC_BUILTIN_TURN=off` with no `WEBRTC_TURN_URLS` |
 | Outgoing mail | n/a | `SMTP_HOST` empty (optional) |
 | Object storage | not configured or not answering | n/a |
 | Database | not answering | n/a |
 | Server clock | 30 seconds or more off | 5 seconds or more off (left out when `CLOCK_CHECK_ENABLED=false` or no NTP answers) |
 | Reverse proxy | n/a | proxy headers from an untrusted address, or `TRUSTED_PROXY_CIDRS` too broad |
+| Internet connection | the WAN address is in `100.64.0.0/10` (CGNAT): port forwarding cannot work | no public IPv4 while IPv6 works (DS-Lite), or the host's own public address differs from the one the internet sees. Shown only when there is a finding; see [Can I host at home?](#can-i-host-at-home) |
+| WebSocket | n/a | browsers opened `/api/ws` three or more times in 15 minutes without a WebSocket upgrade and none succeeded since |
 
-Whether the router forwards the voice UDP port cannot be known from inside the
-host, so *Voice port* is green when the server listens. A call from a phone on
-mobile data is the real test.
+Two items are neutral until the server has seen proof, because it cannot know
+from inside the host whether the router forwards the voice UDP port:
+
+- **Voice port** reads *Listening – not yet confirmed from outside* until a
+  member whose address is not private (not on the LAN, loopback or
+  carrier-grade NAT) has completed a media connection since the server started.
+  Then it turns green and reads *Confirmed: a member from outside connected*
+  with the time. The record is kept in memory only, so it starts empty after
+  every restart. A connection made with *Test my connection* counts. To get it
+  green yourself, run the test from a phone on mobile data (Wi-Fi off).
+- **TURN relay** shows *Not verified* (neutral, no longer amber) when the server
+  could not reach its own relay port from the inside; a router without NAT
+  loopback causes that although the forward works. *Test my connection* from a
+  phone on mobile data answers it.
+
+**WebSocket.** When an administrator opens the tab, the page reports whether its
+own `/api/ws` connection is open, and the server notes every signed-in request
+for `/api/ws` that arrived with or without the WebSocket upgrade headers. The
+item reads *WebSocket via proxy OK* with the time of the last upgrade. It turns
+amber when requests keep arriving without the headers, which is what a reverse
+proxy without WebSocket support produces (the app then shows *Connection lost*).
+The fix is to enable WebSocket in the proxy: it must pass `Upgrade: websocket`
+and `Connection: Upgrade`. Nginx Proxy Manager has a *Websockets Support*
+switch; nginx needs `proxy_http_version 1.1;`,
+`proxy_set_header Upgrade $http_upgrade;` and
+`proxy_set_header Connection upgrade;`; Caddy and Traefik do it by default.
+The item is neutral (*Not checked yet*) until a browser has connected.
+
+### Test my connection
+
+**Test my connection** (Admin → Status, and under Settings → Audio for every
+member) runs in the browser and needs no microphone or camera: it does not join
+a Talk and leaves no presence. It
+
+1. gathers ICE candidates against the configured STUN and TURN servers and
+   reports how many are local (host), public (srflx) and relay;
+2. connects to the server's voice port directly over UDP, with one data channel
+   to a throwaway connection on the server (`POST /api/webrtc/probe`, signed-in
+   members only, twelve per ten minutes each, eight at a time);
+3. connects to the voice port through the built-in TURN relay over UDP, and
+   again over TCP, using relay candidates only.
+
+The verdict is one of *Direct connection works*, *Only the relay works (direct
+UDP blocked or not forwarded)* or *Nothing works*, with the likely cause and
+the fix, and a link to the voice troubleshooting guide. Run it from a device
+outside your network (a phone on mobile data) to test the way in from outside;
+on the same network it can only prove the inside. The test sends nothing to
+third parties beyond what voice itself does (the STUN servers you configured).
+
+**Check codes.** The API (`GET /api/admin/status`) and the web app identify each
+outcome by a stable code, `<check>.<outcome>`; this table is the reference for
+what each means. A CI check fails when a code the server can send is missing
+here.
+
+| Code | Meaning and what to do |
+|---|---|
+| `public_url.ok` | `PUBLIC_URL` is set to an address members can use. |
+| `public_url.local` | `PUBLIC_URL` is `localhost`: set it to the address members type into their browser. |
+| `public_url.insecure` | `PUBLIC_URL` is plain `http://`: cookies lose `Secure`. Put TLS in front and use `https://` (skip on a trusted LAN). |
+| `public_url.origin_mismatch` | The page was opened at another address than `PUBLIC_URL`: fix `PUBLIC_URL`, or let the proxy pass `Host` and `X-Forwarded-Proto`. |
+| `voice_address.development` | Development mode: voice uses the machine's own addresses. |
+| `voice_address.announced_env` | Voice is announced on the address from `WEBRTC_NAT_1TO1_IP`. |
+| `voice_address.announced_public_url` | Voice is announced on the address taken from `PUBLIC_URL`. |
+| `voice_address.announced_stun` | Voice is announced on the address a STUN request detected. |
+| `voice_address.missing` | No public voice address is known: set `WEBRTC_NAT_1TO1_IP`. |
+| `voice_address.missing_detect_failed` | As above, and automatic detection failed (the check names the error): set `WEBRTC_NAT_1TO1_IP`. |
+| `voice_address.missing_turn_only` | As `voice_address.missing`, and only the TURN relay can carry voice. |
+| `voice_address.missing_detect_failed_turn_only` | Detection failed and only the TURN relay can carry voice: set `WEBRTC_NAT_1TO1_IP`. |
+| `voice_udp.unconfirmed` | Neutral: *Listening – not yet confirmed from outside*. Voice listens on the named UDP port, but no member from outside the network has connected since the server started. Forward the port and run *Test my connection* from a phone on mobile data. |
+| `voice_udp.confirmed` | A member from outside connected (the item shows when): the voice port is reachable from outside. |
+| `voice_udp.unavailable` | The voice engine did not start: free the UDP range (or change `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX`); the log names the cause. |
+| `voice_udp.mux_disabled` | `WEBRTC_UDP_MUX_PORT=0` gives each peer its own port and caps the callers: remove it. |
+| `turn.builtin_ok` | The built-in TURN relay serves members behind strict firewalls; forward its port (UDP and TCP). |
+| `turn.builtin_failed` | The built-in relay could not listen on its port: free it or set `WEBRTC_BUILTIN_TURN_PORT`. |
+| `turn.builtin_failed_external` | The built-in relay could not start, but an external TURN relay is configured. |
+| `turn.builtin_off_external` | The built-in relay is off and an external TURN relay is configured. |
+| `turn.voice_unavailable` | The relay is not running because the voice engine is down: fix `voice_udp.unavailable` first. |
+| `turn.unreachable` | Neutral: the server could not verify its relay port from the inside (a router without NAT loopback also causes this). Run *Test my connection* from mobile data; if it fails, forward the port. |
+| `turn.external_ok` | An external TURN relay is configured. |
+| `turn.none` | No TURN relay: members on networks that block UDP cannot join (optional; see the *TURN relay* row above). |
+| `mail.ok` | Outgoing mail is configured. |
+| `mail.none` | No outgoing mail: no password reset e-mails (optional). |
+| `storage.ok` | Object storage is ready. |
+| `storage.not_configured` | Object storage is not configured: set the `S3_*` variables. |
+| `storage.unreachable` | Object storage does not answer: check the `seaweedfs` container and the `S3_ACCESS_KEY` / `S3_SECRET_KEY` pair. |
+| `database.ok` | The database is reachable. |
+| `database.unreachable` | The database does not answer: check the `postgres` container and `POSTGRES_PASSWORD`. |
+| `clock.ok` | The server clock is within the window of real time. |
+| `clock.skewed` | The clock is off: turn on NTP on the host. |
+| `reverse_proxy.ok` | No proxy header problems seen. |
+| `reverse_proxy.not_trusted` | Requests carry `X-Forwarded-For` from a proxy that is not trusted: set `TRUSTED_PROXY_CIDRS` to the proxy's own address. |
+| `reverse_proxy.broad` | `TRUSTED_PROXY_CIDRS` covers a wide range: list only the proxy's address. |
+| `websocket.ok` | A browser opened `/api/ws` and it upgraded (the item shows when). |
+| `websocket.unchecked` | Neutral: no browser has opened the live connection since the server started; reload the Status tab. |
+| `websocket.failing` | Browsers keep opening `/api/ws` without the upgrade headers: enable WebSocket in the reverse proxy (`Upgrade: websocket`, `Connection: Upgrade`). |
+| `network.cgnat` | The WAN address is in `100.64.0.0/10` (carrier-grade NAT): port forwarding cannot work. See [Can I host at home?](#can-i-host-at-home). |
+| `network.no_ipv4` | No public IPv4 while IPv6 works (DS-Lite): port forwarding over IPv4 cannot work. See [Can I host at home?](#can-i-host-at-home). |
+| `network.address_mismatch` | The host's own address differs from the one the internet sees: set `WEBRTC_NAT_1TO1_IP` to the host address if it is reachable from outside, or forward the voice ports on the gateway in front. |
+
+### The doctor command
+
+For installations managed over SSH there is no browser tab to read: run
+
+```sh
+docker compose exec app mnema-talk doctor
+```
+
+It prints the checks above, one line each with `[ ok ]`, `[warn]` or `[FAIL]`
+and the fix underneath every amber or red one, and exits with status 1 when a
+check is red (0 otherwise), so it also fits a script. It measures what a second
+process can: the configuration, the voice address (a STUN request, as at
+startup), the database, object storage, the clock, and whether the running
+server holds the voice and relay ports. The *Reverse proxy* check needs live
+requests and stays in the Status tab. Without a running server in the container
+the voice and relay checks are skipped and say so. The setup assistant runs it
+for you with `mnema-talk setup --start`.
 
 The tab is gated by the `ops.status` feature key in `/api/health` and backed by `GET /api/admin/status` (restricted to the Owner and members with the *Administrator* permission; other users receive `403 Forbidden`).
 
@@ -877,7 +1047,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_http_requests_total{route,class}` | counter | Requests by chi route pattern (`/api/channels/{channelID}/messages`) and status class `1xx`..`5xx`. Unknown paths are `unmatched`. |
 | `mnema_http_request_duration_seconds{route}` | histogram | Latency per route pattern (WebSocket upgrades are counted but not timed). |
 | `mnema_http_requests_in_flight` | gauge | Requests being served now. |
-| `mnema_ratelimit_hits_total{limiter}` | counter | Requests refused with 429, by limiter: `api_user` (600 a minute per member), `upload`, `link_preview`, `poll_create` (10 a minute), `poll_vote`, `pin` (60 pins or unpins a minute), `emoji_upload` (10 per 10 minutes), `edit_history`, `export_download`, `dm_start` (new conversations), `block`, `report`, `saved`, `forward`, `thread_follow`, `slash_nick`, `test_mail`, the bot, webhook, gateway, push, e-mail and password-reset limiters, `ws_user` and `ws_ip`, and `other` for the few without a name. |
+| `mnema_ratelimit_hits_total{limiter}` | counter | Requests refused with 429, by limiter: `api_user` (600 a minute per member for requests that change something), `api_user_read` (3000 a minute per member for GET, HEAD and OPTIONS; reads have their own budget so browsing never uses up what a member may post), `upload`, `link_preview`, `poll_create` (10 a minute), `poll_vote`, `pin` (60 pins or unpins a minute), `emoji_upload` (10 per 10 minutes), `edit_history`, `export_download`, `dm_start` (new conversations), `block`, `report`, `saved`, `forward`, `thread_follow`, `slash_nick`, `test_mail`, the bot, webhook, gateway, push, e-mail and password-reset limiters, `ws_user` and `ws_ip`, and `other` for the few without a name. |
 | `mnema_ws_online_users`, `mnema_ws_connections` | gauge | Distinct online users and open WebSockets. |
 | `mnema_ws_connections_total` | counter | Accepted realtime connections (reconnect churn). |
 | `mnema_ws_events_sent_total`, `mnema_ws_events_received_total` | counter | Event throughput to and from clients. |
@@ -1031,7 +1201,14 @@ Otherwise sign in from a browser you used before, or wait.
    NAT, when the automatic detection is wrong (carrier-grade NAT, a proxy in
    front of the server) or switched off, set `WEBRTC_NAT_1TO1_IP` to the public IP or a dynamic-DNS name **and**
    the server's LAN IP, e.g. `myhome.example.org,192.168.0.10`. Members in the
-   LAN need the LAN IP when the router has no hairpin NAT.
+   LAN need the LAN IP when the router has no hairpin NAT: with the public
+   address detected automatically, `WEBRTC_LAN_IP=192.168.0.10` adds just that
+   (the setup assistant asks for it). No public IPv4 at all? See
+   [Can I host at home?](#can-i-host-at-home).
+   **A port in use** shows up in the log as `address already in use` with the
+   port, the protocol and the variable that moves it (`PORT`,
+   `WEBRTC_BUILTIN_TURN_PORT`, `WEBRTC_UDP_PORT_MIN`/`MAX`); stop the other
+   program or pick a free port and forward that one.
 3. **Connection log.** `sfu ice connected` shows the chosen local and remote
    address and the remote candidate type; `sfu ice failed`/`disconnected` and
    `sfu peer state ... failed` mean packets don't get through (firewall,
@@ -1073,9 +1250,26 @@ to `TRUSTED_PROXY_CIDRS`.
 
 ### The app does not start
 
-`docker compose logs app` shows the validation message, e.g. a placeholder
-secret, `TRUSTED_PROXY_CIDRS contains an invalid entry`, or a migration
-failure (see [upgrade.md](upgrade.md)).
+`docker compose logs app` starts with one block that lists **every** required
+setting that is missing or invalid, each with why it is needed and an example:
+
+```
+Mnema Talk cannot start - fix these settings in .env:
+  - JWT_SECRET must be set to a random string of at least 32 characters in production: ...
+  - S3_SECRET_KEY is required in production: ...
+```
+
+Fix them in `.env` and run `docker compose up -d`. The process exits with
+status 78 (a refused configuration, not a crash) after a five second pause;
+Docker restarts the container (`restart: unless-stopped`), so the block
+repeats at that pace until the settings are right. The server deliberately
+serves no "error page" meanwhile: a half-started process would be an
+unauthenticated surface and every health check would have to special-case it.
+Check an `.env` without starting anything with
+`docker run --rm -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup --check --dir /out`
+(or `mnema-talk setup --check`). Other messages here: `TRUSTED_PROXY_CIDRS
+contains an invalid entry`, or a migration failure (see [upgrade.md](upgrade.md)).
+`mnema-talk doctor` prints the same block when the settings are wrong.
 
 ## Downgrading
 

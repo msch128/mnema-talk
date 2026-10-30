@@ -6,10 +6,12 @@ import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { Clock } from '@lucide/vue'
 import { usePermissionsStore } from '../stores/permissions'
 import { formatRemaining } from '../lib/moderation'
+import { visibleInterval } from '../lib/pageVisibility'
 
 const permissions = usePermissionsStore()
 const now = ref(Date.now())
-let tick: ReturnType<typeof setInterval> | undefined
+// Counts only while the page is visible; the catch-up tick on return notices an expiry.
+let tick: (() => void) | undefined
 
 const RETRY_MS = 5000
 // The server still reports the timeout after the local clock ran past it: the
@@ -21,7 +23,7 @@ const remaining = computed(() => (permissions.timeoutUntil === null ? 0 : Math.m
 const active = computed(() => remaining.value > 0 || (serverHolds.value && permissions.timeoutUntil !== null))
 
 function stop() {
-  clearInterval(tick)
+  tick?.()
   tick = undefined
   clearTimeout(retry)
   retry = undefined
@@ -40,10 +42,10 @@ watch(() => permissions.timeoutUntil, until => {
   stop()
   now.value = Date.now()
   if (until === null || until <= now.value) return
-  tick = setInterval(() => {
+  tick = visibleInterval(() => {
     now.value = Date.now()
     if (permissions.timeoutUntil !== null && permissions.timeoutUntil <= now.value) {
-      clearInterval(tick)
+      tick?.()
       tick = undefined
       void expire()
     }

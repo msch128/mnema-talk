@@ -171,7 +171,7 @@ async function submit() {
           :id="ids.title"
           v-model="title"
           type="text"
-          maxlength="100"
+          v-max-chars="100"
           required
           :placeholder="$t('events.titlePlaceholder')"
           class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden"
@@ -187,7 +187,7 @@ async function submit() {
           :id="ids.description"
           v-model="description"
           rows="3"
-          maxlength="2000"
+          v-max-chars="2000"
           :placeholder="$t('events.descriptionPlaceholder')"
           class="w-full resize-none rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden"
         ></textarea>
@@ -263,7 +263,7 @@ async function submit() {
             v-model="locationText"
             :aria-label="$t('events.locationText')"
             type="text"
-            maxlength="255"
+            v-max-chars="255"
             :placeholder="$t('events.locationTextPlaceholder')"
             class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-hidden"
           />

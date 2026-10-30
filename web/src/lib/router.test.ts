@@ -7,6 +7,11 @@ describe('router', () => {
     sessionStorage.clear()
   })
 
+  it('parses the settings dialog address, on the first section by default', () => {
+    expect(parseRoute('/settings/audio')).toEqual({ view: 'settings', tab: 'audio' })
+    expect(parseRoute('/settings')).toEqual({ view: 'settings', tab: 'signin' })
+  })
+
   it('parses text channel route', () => {
     const route = parseRoute('/c/12345678-1234-1234-1234-123456789abc')
     expect(route).toEqual({

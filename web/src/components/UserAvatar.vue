@@ -3,6 +3,7 @@ import type { PropType } from 'vue'
 import type { AvatarUser, AvatarSize, LivePresence } from './presentationTypes'
 import { computed } from 'vue'
 import PresenceDot from './PresenceDot.vue'
+import MediaImage from './MediaImage.vue'
 import { initialOf } from '../lib/initial'
 
 const props = defineProps({
@@ -72,13 +73,16 @@ const avatarUrl = computed(() => {
         avatarUrl ? 'border-mnema-border bg-mnema-surface' : 'bg-mnema-band border-mnema-mint/30 text-mnema-mint'
       ]"
     >
-      <img 
-        v-if="avatarUrl" 
-        :src="avatarUrl" 
+      <MediaImage
+        v-if="avatarUrl"
+        :src="avatarUrl"
         :alt="user?.display_name || $t('user.avatar')"
         class="w-full h-full object-cover"
         loading="lazy"
-      />
+      >
+        <!-- A picture that was deleted from storage: the initial instead of a broken image. -->
+        <template #fallback><span class="text-mnema-mint">{{ initial }}</span></template>
+      </MediaImage>
       <span v-else>{{ initial }}</span>
     </div>
 

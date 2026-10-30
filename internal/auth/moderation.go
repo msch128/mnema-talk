@@ -123,13 +123,20 @@ func (h *Handler) timeoutUser(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func validateTimeoutSeconds(seconds int) error {
+	if seconds < MinTimeoutSeconds || seconds > MaxTimeoutSeconds {
+		return httpx.ErrInvalidInput(fmt.Sprintf("duration_seconds must be between %d and %d", MinTimeoutSeconds, MaxTimeoutSeconds))
+	}
+	return nil
+}
+
 // TimeoutMember puts a member in timeout. The REST route and the /timeout
 // slash command both run it, so the validation, the role hierarchy and what
 // the member and the live clients are told are the same; the caller has
 // checked the Timeout members permission (RequirePermission).
 func (h *Handler) TimeoutMember(r *http.Request, id uuid.UUID, req TimeoutRequest) (TimeoutState, error) {
-	if req.DurationSeconds < MinTimeoutSeconds || req.DurationSeconds > MaxTimeoutSeconds {
-		return TimeoutState{}, httpx.ErrInvalidInput(fmt.Sprintf("duration_seconds must be between %d and %d", MinTimeoutSeconds, MaxTimeoutSeconds))
+	if err := validateTimeoutSeconds(req.DurationSeconds); err != nil {
+		return TimeoutState{}, err
 	}
 	reason, err := cleanReason(req.Reason)
 	if err != nil {

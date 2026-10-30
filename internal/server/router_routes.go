@@ -95,12 +95,13 @@ func (c *components) mountBotAPI(b chi.Router) {
 
 // mountAuthenticated mounts everything that needs a signed-in member.
 func (c *components) mountAuthenticated(authed chi.Router) {
-	authed.Use(c.sessions.RequireUser, c.perUser.By(auth.UserKey))
+	authed.Use(c.sessions.RequireUser, httpx.BySafeMethod(c.readsPerUser.By(auth.UserKey), c.perUser.By(auth.UserKey)))
 
 	authed.Group(func(j chi.Router) {
 		j.Use(httpx.MaxBody(httpx.DefaultMaxBody))
 		c.authH.MountAuthenticated(j)
 		j.Get("/webrtc/config", webrtcConfig(c.cfg, c.d.TURN))
+		j.Post("/webrtc/probe", httpx.Handle(c.systemH.connectionProbe))
 		if c.cfg.APIDocs {
 			j.Get("/openapi.json", openAPISpec)
 		}
@@ -168,6 +169,8 @@ func (c *components) mountAdminJSON(adm chi.Router) {
 	c.botH.MountAdmin(adm)
 	c.mediaH.MountAdmin(adm)
 	c.emojiH.MountAdmin(adm)
-	adm.With(auth.RequirePerm(c.permSvc, perm.Administrator)).Get("/status", httpx.Handle(c.systemH.operatorStatus))
+	status := adm.With(auth.RequirePerm(c.permSvc, perm.Administrator))
+	status.Get("/status", httpx.Handle(c.systemH.operatorStatus))
+	status.Post("/status/websocket", httpx.Handle(c.systemH.reportWebSocket))
 	c.systemH.mountAdmin(adm)
 }

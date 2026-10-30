@@ -65,7 +65,7 @@ test('the Owner creates and assigns a role; the member gains and loses rights li
     await editor.getByLabel('Name').fill(ROLE)
     await editor.locator('[data-permission="manage_roles"] [role="switch"]').click()
     await editor.locator('[data-permission="manage_members"] [role="switch"]').click()
-    await a.getByRole('button', { name: 'Rolle speichern' }).click()
+    await a.getByTestId('unsaved-save').click()
     await expect(a.getByRole('list', { name: 'Rollen' }).getByText(ROLE)).toBeVisible()
     const created = await apiFetch(a, 'GET', '/api/roles')
     const all = (created.json as { roles?: { id: string; name: string; permissions: number }[] }).roles ?? (created.json as { id: string; name: string; permissions: number }[])
