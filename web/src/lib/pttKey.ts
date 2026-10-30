@@ -22,12 +22,13 @@ const NAMES: Record<string, string> = {
 }
 
 export function pttKeyLabel(code: string): string {
-  if (code in NAMES) return NAMES[code] ?? code
-  const letter = /^Key([A-Z])$/.exec(code)
-  if (letter) return letter[1] ?? code
-  const digit = /^(?:Digit|Numpad)(\d)$/.exec(code)
-  if (digit) return code.startsWith('Numpad') ? `Num ${digit[1]}` : (digit[1] ?? code)
-  const arrow = /^Arrow(\w+)$/.exec(code)
-  if (arrow) return arrow[1] ?? code
+  const named = NAMES[code]
+  if (named) return named
+  const [, letter] = /^Key([A-Z])$/.exec(code) ?? []
+  if (letter) return letter
+  const [, numpad, digit] = /^(Numpad|Digit)(\d)$/.exec(code) ?? []
+  if (digit) return numpad === 'Numpad' ? `Num ${digit}` : digit
+  const [, arrow] = /^Arrow(\w+)$/.exec(code) ?? []
+  if (arrow) return arrow
   return code.replace(/([a-z])([A-Z])/g, '$1 $2')
 }
