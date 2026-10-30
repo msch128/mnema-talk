@@ -74,8 +74,7 @@ const voiceStore = useVoiceStore()
 const accountStore = useAccountStore()
 const statusEditor = useStatusEditor()
 const serverFeatures = useServerFeaturesStore()
-// A link from an account e-mail (confirm address, reset password) takes over the
-// page, signed in or not; the token is read here once and then removed from the URL.
+// An account e-mail link (confirm address, reset password) takes over the page; its token is read once, then removed from the URL.
 const recovery = recoveryFromLocation(window.location.pathname, window.location.hash)
 const leaveRecovery = () => window.location.assign('/')
 let alive = true
@@ -112,8 +111,7 @@ watch(() => voiceStore.showAudioSettings, open => { if (open && !accountStore.di
 watch(() => chatStore.activeThread, thread => { if (thread && isCompact.value) chatStore.showMemberList = false })
 // A Talk needs the width: below 1100 px the member list starts closed (the header button opens it).
 watch(() => voiceStore.activeView, view => { if (view === 'voice' && window.innerWidth < 1100) chatStore.showMemberList = false })
-// Captured, so it runs before the panels' own Escape handlers and its
-// preventDefault tells them the key is used: one Escape closes the drawer, not the thread as well.
+// Captured: runs before the panels' Escape handlers; preventDefault tells them the key is used.
 function onWindowKeydown(event: KeyboardEvent) {
   if (event.key !== 'Escape' || !navOpen.value) return
   event.preventDefault()
@@ -356,9 +354,7 @@ onMounted(async () => {
         @mention="(uname) => chatStore.insertMention(uname)"
       />
 
-      <!-- Set a status message -->
       <StatusDialog v-if="statusEditor.open.value" @close="statusEditor.hide()" />
-
       <!-- Settings: account, privacy, push and app, audio -->
       <SettingsDialog v-if="accountStore.dialogOpen" />
       <EventsModal v-if="eventsRequest && authStore.isAuthenticated && serverFeatures.events" :focus-event-id="eventsRequest.eventId" :focus-seq="eventsRequest.seq" @close="closeEvents" />
