@@ -20,6 +20,6 @@ defineProps({
     :items="trigger.menu.items.value"
     :min-width="minWidth"
     :aria-label="ariaLabel"
-    @update:model-value="open => { if (!open) trigger.close() }"
+    @update:model-value="trigger.close()"
   />
 </template>
