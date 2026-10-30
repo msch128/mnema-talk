@@ -43,7 +43,7 @@ describe('taking a call over from another device', () => {
     present(pendingConfirm.value).resolve(true)
     await grantMic()
     await join
-    expect(voiceJoins(sent)).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1', takeover: true } }])
+    expect(voiceJoins(sent)).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1', takeover: true, tab: expect.any(String) } }])
     expect(voice.currentChannelId).toBe('ch-1')
   })
 
@@ -67,7 +67,7 @@ describe('taking a call over from another device', () => {
     expect(pendingConfirm.value).toBeNull()
     await grantMic()
     await join
-    expect(voiceJoins(sent)).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-2' } }])
+    expect(voiceJoins(sent)).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-2', tab: expect.any(String) } }])
   })
 
   it('a rejoin after a reload never asks', async () => {
@@ -78,14 +78,14 @@ describe('taking a call over from another device', () => {
     expect(pendingConfirm.value).toBeNull()
     await grantMic()
     await resumed
-    expect(voiceJoins(sent)).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1' } }])
+    expect(voiceJoins(sent)).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1', tab: expect.any(String) } }])
   })
 
   it('a rejoin after a WebSocket reconnect says it resumes', async () => {
     const { rtc, sent, voice } = setup()
     voice.currentChannelId = 'ch-1'
     rtc.rejoinAfterReconnect()
-    expect(voiceJoins(sent)).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1', resume: true } }])
+    expect(voiceJoins(sent)).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1', resume: true, tab: expect.any(String) } }])
   })
 })
 
@@ -139,7 +139,7 @@ describe('the session whose call was taken over', () => {
     void present(present(useToastStore().toasts.at(-1)).action).onClick()
     expect(pendingConfirm.value).toBeNull()
     await grantMic()
-    await vi.waitFor(() => expect(voiceJoins(sent)).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1', takeover: true } }]))
+    await vi.waitFor(() => expect(voiceJoins(sent)).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1', takeover: true, tab: expect.any(String) } }]))
   })
 
   it('ignores a takeover notice for a Talk it is not in', async () => {

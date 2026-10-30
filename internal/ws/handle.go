@@ -22,6 +22,7 @@ type clientEvent struct {
 	Idle      bool      `json:"idle"`
 	Takeover  bool      `json:"takeover"`
 	Resume    bool      `json:"resume"`
+	Tab       string    `json:"tab"`
 	T         float64   `json:"t"`
 }
 
@@ -107,6 +108,9 @@ func (c *Client) removeOwnSource(source sfu.Source) {
 func (c *Client) handleVoiceJoin(ctx context.Context, p clientEvent) {
 	h := c.hub
 	channelID := p.ChannelID
+	if len(p.Tab) <= 64 {
+		c.setTab(p.Tab)
+	}
 	if !h.voiceGate.take(c.User.ID, time.Now()) {
 		// Over the join/leave allowance: refused, and the client ends
 		// the attempt on voice_kicked.

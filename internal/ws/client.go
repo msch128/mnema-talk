@@ -60,6 +60,10 @@ type Client struct {
 	// seat orders the seated voice connections of one user: the hub's clock
 	// at the moment the SFU join succeeded, 0 while not seated yet.
 	seat uint64
+	// tab is the id the page sends with its voice joins; it stays the same
+	// across its WebSocket reconnects, which tell a takeover's victim
+	// (whose resume is refused) from the taker (whose resume is not).
+	tab string
 	// sfuPeer is this connection's own media peer. Another connection of the
 	// same user (reconnect, second tab) gets its own, and tearing this one
 	// down never touches the other.
@@ -222,6 +226,18 @@ func (c *Client) setVoice(ch *uuid.UUID) {
 		c.sfuPeer = nil
 	}
 	c.mu.Unlock()
+}
+
+func (c *Client) setTab(id string) {
+	c.mu.Lock()
+	c.tab = id
+	c.mu.Unlock()
+}
+
+func (c *Client) tabID() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.tab
 }
 
 // stampSeat records that c's seat in its voice room is live, newer than every

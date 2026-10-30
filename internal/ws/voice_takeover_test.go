@@ -169,6 +169,8 @@ func TestSimultaneousTakeoversLeaveExactlyOneSession(t *testing.T) {
 // voice back by resuming; a resume the server still holds a stay for goes on.
 func TestResumeAfterATakeoverDoesNotStealTheVoiceBack(t *testing.T) {
 	h, a, b := twoSessions(t, true)
+	a.setTab("tab-a")
+	b.setTab("tab-b")
 	ch := voiceCh()
 	h.joinVoice(a, ch)
 	h.takeOverVoice(b, ch)
@@ -220,14 +222,38 @@ func TestResumeBeforeTheStaleSocketGoesIsNotRefused(t *testing.T) {
 // Joining the Talk again on purpose ends the mark of an earlier takeover.
 func TestAJoinOnPurposeEndsTheTakeoverMark(t *testing.T) {
 	h, a, b := twoSessions(t, true)
+	a.setTab("tab-a")
 	ch := voiceCh()
 	h.joinVoice(a, ch)
 	h.takeOverVoice(b, ch)
-	if !h.taken.has(voiceKey{a.User.ID, ch.ID}) {
+	if !h.taken.has(voiceKey{a.User.ID, ch.ID}, "tab-a") {
 		t.Fatal("the takeover left no mark")
 	}
 	h.joinVoice(a, ch)
-	if h.taken.has(voiceKey{a.User.ID, ch.ID}) {
+	if h.taken.has(voiceKey{a.User.ID, ch.ID}, "tab-a") {
 		t.Fatal("a join on purpose left the mark")
+	}
+}
+
+// The page that took the call over reconnects while its old socket is still
+// seated: its resume must succeed, whatever the takeover marked.
+func TestTheTakersReconnectIsNotRefused(t *testing.T) {
+	h, a, b := twoSessions(t, true)
+	a.setTab("tab-a")
+	b.setTab("tab-b")
+	taker2 := testClient(h, b.User)
+	defer h.unregister(taker2)
+	taker2.setTab("tab-b") // the same page, new socket
+	ch := voiceCh()
+	h.joinVoice(a, ch)
+	h.takeOverVoice(b, ch)
+
+	h.resumeVoice(taker2, ch)
+
+	if !seatedIn(taker2, ch.ID) {
+		t.Fatal("the taker's own reconnect was refused")
+	}
+	if kicked := sentEvents(t, taker2, "voice_kicked"); len(kicked) != 0 {
+		t.Fatalf("voice_kicked = %+v", kicked)
 	}
 }

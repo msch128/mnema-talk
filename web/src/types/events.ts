@@ -152,7 +152,7 @@ export type SubscribeRequest =
 export interface ClientEventPayloads {
   ping: { t: number }
   presence_idle: { idle: boolean }
-  voice_join: { channel_id: string; takeover?: true; resume?: true }
+  voice_join: { channel_id: string; takeover?: true; resume?: true; tab?: string }
   voice_leave: Record<string, never>
   typing: { channel_id: string }
   voice_speaking: { active: boolean }

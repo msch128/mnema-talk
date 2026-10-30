@@ -105,6 +105,10 @@ function sealingRefusal(): Promise<boolean> | null {
  * auto: a rejoin the user did not ask for (after a reload), never asks to take
  * the call over. takeover: the user already agreed to move the call here.
  */
+// This page's id for the server: the same across WebSocket reconnects, so it
+// can tell a takeover's victim resuming from the page that took over.
+const tabId = crypto.randomUUID()
+
 export interface JoinOptions { auto?: boolean, takeover?: boolean }
 
 export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOptions = {}): Promise<void> {
@@ -141,7 +145,7 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
   st.localAudioStream.value = sendStream
   voice.localAudioStream = sendStream
   setupPeerConnection(cx)
-  chat.sendWSEvent('voice_join', takeover ? { channel_id: channelId, takeover: true } : { channel_id: channelId })
+  chat.sendWSEvent('voice_join', takeover ? { channel_id: channelId, takeover: true, tab: tabId } : { channel_id: channelId, tab: tabId })
   openMediaRoom()
   attachSubscriptions(cx)
 
@@ -172,7 +176,7 @@ export function rejoinAfterReconnect(cx: Cx) {
   // joins or leaves and a handshake that was dropped is not sent again.
   setupPeerConnection(cx)
   // resume: the server refuses it when another device took the call over meanwhile.
-  chat.sendWSEvent('voice_join', { channel_id: channelId, resume: true })
+  chat.sendWSEvent('voice_join', { channel_id: channelId, resume: true, tab: tabId })
   // After the join, so a package it produces is not dropped by the hub.
   mediaCall().resume()
   attachSubscriptions(cx)

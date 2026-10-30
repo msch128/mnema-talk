@@ -73,7 +73,7 @@ func (h *Hub) seatVoice(c *Client, ch *chat.ChannelInfo, mode joinMode) bool {
 	if done {
 		return true
 	}
-	if mode.resume && !rejoin && h.taken.has(voiceKey{c.User.ID, ch.ID}) && h.voiceHeldElsewhere(c) {
+	if mode.resume && !rejoin && h.taken.has(voiceKey{c.User.ID, ch.ID}, c.tabID()) && h.voiceHeldElsewhere(c) {
 		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": ch.ID, "reason": kickTakenOver})
 		return false
 	}
@@ -127,7 +127,7 @@ func (h *Hub) endSiblingVoices(c *Client) {
 		}
 		o.voiceMu.Lock()
 		if cur := o.currentVoice(); cur != nil && o.seatStamp() != 0 && o.seatStamp() < mine {
-			h.taken.mark(voiceKey{o.User.ID, *cur})
+			h.taken.mark(voiceKey{o.User.ID, *cur}, o.tabID())
 			h.leaveVoiceLocked(o, *cur)
 			o.SendEvent(events.VoiceKicked, map[string]any{"channel_id": *cur, "reason": kickTakenOver})
 		}
@@ -316,7 +316,7 @@ func (h *Hub) evictSiblingConnections(c *Client, chID uuid.UUID, reason string) 
 		}
 		if cur := o.currentVoice(); cur != nil && *cur == chID && o.seatStamp() < mine {
 			if reason == kickTakenOver {
-				h.taken.mark(voiceKey{o.User.ID, chID})
+				h.taken.mark(voiceKey{o.User.ID, chID}, o.tabID())
 			}
 			o.setVoice(nil)
 			o.SendEvent(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": reason})
@@ -391,29 +391,35 @@ func (c *Client) joinRefusal(snap *perm.Snapshot) string {
 	return "missing_permission"
 }
 
-// takeoverMarks remembers which stays a takeover ended, so a client that
-// reconnects later and resumes the call is told instead of taking it back.
+// takeoverMarks remembers which page's stay a takeover ended, so that page,
+// reconnecting later and resuming the call, is told instead of taking it back.
+// The page that took over is not affected: its resume carries another tab id.
 // A mark ends when the user joins that room on purpose, or after an hour.
 type takeoverMarks struct {
 	mu sync.Mutex
-	at map[voiceKey]time.Time
+	at map[voiceKey]takeoverMark
+}
+
+type takeoverMark struct {
+	tab string
+	at  time.Time
 }
 
 const takeoverMarkTTL = time.Hour
 
-func (m *takeoverMarks) mark(k voiceKey) {
+func (m *takeoverMarks) mark(k voiceKey, tab string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	now := time.Now()
 	if m.at == nil {
-		m.at = map[voiceKey]time.Time{}
+		m.at = map[voiceKey]takeoverMark{}
 	}
-	for old, t := range m.at {
-		if now.Sub(t) > takeoverMarkTTL {
+	for old, e := range m.at {
+		if now.Sub(e.at) > takeoverMarkTTL {
 			delete(m.at, old)
 		}
 	}
-	m.at[k] = now
+	m.at[k] = takeoverMark{tab: tab, at: now}
 }
 
 func (m *takeoverMarks) clear(k voiceKey) {
@@ -422,9 +428,11 @@ func (m *takeoverMarks) clear(k voiceKey) {
 	m.mu.Unlock()
 }
 
-func (m *takeoverMarks) has(k voiceKey) bool {
+// has reports whether a takeover ended the stay of the page with this tab id.
+// Pages without an id (older clients) are never refused.
+func (m *takeoverMarks) has(k voiceKey, tab string) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	t, ok := m.at[k]
-	return ok && time.Since(t) <= takeoverMarkTTL
+	e, ok := m.at[k]
+	return ok && tab != "" && e.tab == tab && time.Since(e.at) <= takeoverMarkTTL
 }
