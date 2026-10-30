@@ -191,23 +191,22 @@ func PublishMessage(w http.ResponseWriter, r *http.Request, p *db.Pool, pub even
 // may stay unread (no "new since" divider, no badge on another device). Thread
 // replies are left out; they do not count as channel unread. It writes only
 // when someone else's message sits between the marker and this one (see
-// MarkRead), and tells the author's other sessions. A failure only leaves the
+// MarkRead), and tells the author's other sessions to re-read. A failure only leaves the
 // marker where it was.
 func markReadAfterSend(ctx context.Context, p *db.Pool, pub events.Publisher, msg *Message) {
 	if msg.ParentID != nil {
 		return
 	}
-	at, err := markReadTo(ctx, p, msg.UserID, msg.ChannelID, &msg.CreatedAt, false)
+	_, wrote, err := markReadTo(ctx, p, msg.UserID, msg.ChannelID, &msg.CreatedAt, false)
 	if err != nil {
 		slog.Warn("mark read after send failed", "channel", msg.ChannelID, "err", err)
 		return
 	}
-	if at.Before(msg.CreatedAt) {
+	if !wrote {
 		return // nothing of others lay between the marker and the message: no row, nothing to tell
 	}
-	pub.SendToUsers([]uuid.UUID{msg.UserID}, events.ReadState, map[string]any{
-		"channel_id": msg.ChannelID, "last_read_at": at, "unread_count": 0, "mention_count": 0,
-	})
+	// Other sessions re-read the counts: newer messages of others may already be waiting after this one.
+	pub.SendToUsers([]uuid.UUID{msg.UserID}, events.ReadState, map[string]any{"channel_id": msg.ChannelID, "refresh": true})
 }
 
 // queryIDs parses the named optional UUID query parameters into their
