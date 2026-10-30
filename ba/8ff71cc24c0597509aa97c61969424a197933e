@@ -1,0 +1,21 @@
+e2e/tests/voice-takeover.spec.ts
+  s_06fcde5dbef956::t_23f1b5718f2c25 21
+internal/ws/voice_takeover.go
+  s_06fcde5dbef956::t_c05df232b2736c 1-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ba8ff71cc24c0597509aa97c61969424a197933e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
