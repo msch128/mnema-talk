@@ -1,0 +1,69 @@
+e2e/tests/shortcuts-cheatsheet.spec.ts
+  s_ecf7b9e687a24d::t_202fac381cee50 1-77
+web/src/App.vue
+  s_ecf7b9e687a24d::t_82d5b88bbcfda8 32-33,125,362
+web/src/components/AccountMenu.test.ts
+  s_ecf7b9e687a24d::t_862c660d4ea3b2 13,70-86
+web/src/components/AccountMenu.vue
+  s_ecf7b9e687a24d::t_6bed14b92525b5 7,14,178-182
+web/src/components/AppSettingsPanel.test.ts
+  s_ecf7b9e687a24d::t_1dc1ef1e3f446c 11-13,65-81
+web/src/components/AppSettingsPanel.vue
+  s_ecf7b9e687a24d::t_b8e3a9aacc434a 2-7,10-17,22-27
+web/src/components/ChatArea.test.ts
+  s_ecf7b9e687a24d::t_4ce6f2cae3efcf 482
+web/src/components/ChatArea.vue
+  s_ecf7b9e687a24d::t_2143cc25f97d4f 258
+web/src/components/ChatAreaDm.test.ts
+  s_ecf7b9e687a24d::t_50b0c8d30ed3da 74-81
+web/src/components/MessagePresentation.test.ts
+  s_ecf7b9e687a24d::t_2d57f9a7b25821 39-41,45,47,65
+web/src/components/MessageRow.vue
+  s_ecf7b9e687a24d::t_1cbc9b4c0835d8 116,135-145
+web/src/components/PresenceMenu.test.ts
+  s_ecf7b9e687a24d::t_d2889e737ff5e0 174-184
+web/src/components/ShortcutsDialog.test.ts
+  s_ecf7b9e687a24d::t_601562205b5984 1-64
+web/src/components/ShortcutsDialog.vue
+  s_ecf7b9e687a24d::t_81a876f6f26035 1-47
+web/src/components/Sidebar.menus.test.ts
+  s_ecf7b9e687a24d::t_b685d48bd22a51 206,225
+web/src/components/ThreadSidebar.test.ts
+  s_ecf7b9e687a24d::t_5d620860beaf35 111-120
+web/src/components/ThreadSidebar.vue
+  s_ecf7b9e687a24d::t_aa78d55a35e233 240
+web/src/composables/useMessageMenu.test.ts
+  s_ecf7b9e687a24d::t_431d192b93ec83 65,83,87
+web/src/composables/useMessageMenu.ts
+  s_ecf7b9e687a24d::t_fb0fc7d5f097bc 70,72
+web/src/composables/useMuteMenu.test.ts
+  s_ecf7b9e687a24d::t_f244e608d9dfca 5-6,59-75,84-86
+web/src/composables/useMuteMenu.ts
+  s_ecf7b9e687a24d::t_4b133cdf7d9bf8 49-65,67
+web/src/i18n/de.json
+  s_ecf7b9e687a24d::t_3de04581822a81 48-49,91-92,338-339,625-627,657-658,3771-3773,3892-3935
+web/src/i18n/en.json
+  s_ecf7b9e687a24d::t_e55115c31270a2 48-49,91-92,338-339,625-627,657-658,3771-3773,3892-3935
+web/src/lib/shortcuts.ts
+  s_ecf7b9e687a24d::t_a75b22691995e5 1-76
+web/src/lib/shortcutsDialog.test.ts
+  s_ecf7b9e687a24d::t_c3e0b1c0c33be9 1-73
+web/src/lib/shortcutsDialog.ts
+  s_ecf7b9e687a24d::t_801c830d2406c1 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1817a0b746ab3111cb1ee7a81dcab7b795a46d15",
+  "prompts": {},
+  "sessions": {
+    "s_ecf7b9e687a24d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-setup-e379f010794b742e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
