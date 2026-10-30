@@ -1,0 +1,94 @@
+.env.example
+  h_0ff4f4713441f4 72-73
+README.md
+  h_0ff4f4713441f4 216-217
+doc/deployment.md
+  h_0ff4f4713441f4 55,77-79
+doc/moderation.md
+  h_0ff4f4713441f4 231-232
+doc/operations.md
+  h_0ff4f4713441f4 48,297
+doc/upgrade.md
+  h_0ff4f4713441f4 411
+e2e/tests/admin-defaults.spec.ts
+  h_0ff4f4713441f4 1-87
+e2e/tests/dm.spec.ts
+  h_0ff4f4713441f4 247,249,258
+internal/automod/engine.go
+  h_0ff4f4713441f4 264
+internal/config/config_env.go
+  h_0ff4f4713441f4 117
+internal/config/config_test.go
+  h_0ff4f4713441f4 46-48
+internal/setupwizard/options.go
+  h_0ff4f4713441f4 24
+internal/setupwizard/run.go
+  h_0ff4f4713441f4 39
+web/src/components/AdminAccessSettings.test.ts
+  h_0ff4f4713441f4 1-49
+web/src/components/AdminAccessSettings.vue
+  h_0ff4f4713441f4 1-95
+web/src/components/AdminCategoryHeader.vue
+  h_0ff4f4713441f4 4,12,24-33
+web/src/components/AdminDashboard.vue
+  h_0ff4f4713441f4 33,61,81
+web/src/components/AdminDashboardAccess.test.ts
+  h_0ff4f4713441f4 1-30
+web/src/components/AdminDashboardRouting.test.ts
+  h_0ff4f4713441f4 2,73
+web/src/components/AdminInvitesTab.test.ts
+  h_0ff4f4713441f4 57,78,80,86,92,96-130,220-223,226,255
+web/src/components/AdminInvitesTab.vue
+  h_0ff4f4713441f4 19-24,48,51,110-113,141,143-144,147-148,152,158,167
+web/src/components/AdminLayoutTab.test.ts
+  h_0ff4f4713441f4 8,69-90
+web/src/components/AdminLayoutTab.vue
+  h_0ff4f4713441f4 21,24,41-42,99,226-234,273,319,351-357
+web/src/components/AdminLayoutToolbar.vue
+  h_0ff4f4713441f4 4,8,14-18
+web/src/components/AdminNav.vue
+  h_0ff4f4713441f4 9,12
+web/src/components/AdminOnboardingTab.test.ts
+  h_0ff4f4713441f4 60,118,120-126,128-130,162,164
+web/src/components/AdminOnboardingTab.vue
+  h_0ff4f4713441f4 13,19-20,48,53,66,109-112,117-118
+web/src/components/AdminPermissionsUi.test.ts
+  h_0ff4f4713441f4 117
+web/src/components/CreateChannelModal.test.ts
+  h_0ff4f4713441f4 62,67,72-74,118,128-144,152,196,206
+web/src/components/CreateChannelModal.vue
+  h_0ff4f4713441f4 30-38,128,143,160
+web/src/components/EventsModal.test.ts
+  h_0ff4f4713441f4 110-121
+web/src/components/EventsModal.vue
+  h_0ff4f4713441f4 5,156-172
+web/src/components/ReportsAndPrivacy.test.ts
+  h_0ff4f4713441f4 8,382,389,391,393,395,401,404,407
+web/src/components/Sidebar.menus.test.ts
+  h_0ff4f4713441f4 185,206,225,231
+web/src/components/Sidebar.vue
+  h_0ff4f4713441f4 281
+web/src/composables/useLayoutDrag.ts
+  h_0ff4f4713441f4 1-47
+web/src/i18n/de.json
+  h_0ff4f4713441f4 171-172,204,297,312,315,355,362,364-365,1198,1622,1706,1751-1753,1756-1759,2765
+web/src/i18n/en.json
+  h_0ff4f4713441f4 171-172,297,312,315,362,364-365,1198,1622,1706,1751-1753,1756-1759,2765
+web/src/lib/adminNav.ts
+  h_0ff4f4713441f4 3,6
+web/src/lib/errorDetails.test.ts
+  h_0ff4f4713441f4 31
+web/src/lib/errorDetails.ts
+  h_0ff4f4713441f4 81-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3c1532c17975780f5582ef0efff3a908f7647c89",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
