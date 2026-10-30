@@ -1,0 +1,25 @@
+web/src/components/MediaViewer.test.ts
+  s_06fcde5dbef956::t_17ef0f06f7e898 6,232-240
+web/src/components/MediaViewer.vue
+  s_06fcde5dbef956::t_e2b9c7de3f62a3 2,8,12
+web/src/composables/useZoomPan.test.ts
+  s_06fcde5dbef956::t_4c28f5745af2f8 1-80
+web/src/lib/galleryLayout.test.ts
+  s_06fcde5dbef956::t_45e81b9fc86505 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b877c6c562dc920f59203348a3193f6b71fc329d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
