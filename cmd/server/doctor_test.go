@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"net/netip"
 	"strings"
 	"testing"
@@ -128,5 +131,81 @@ func TestDoctorReportsAllMissingSettingsAsOneConfigError(t *testing.T) {
 	var ce *config.ConfigError
 	if !errors.As(err, &ce) || len(ce.Problems) < 4 {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+// The real probes, against local fixtures: a held port is seen as held, a free
+// one as free, storage answers a HEAD without creating anything, and an
+// unreachable database or a cancelled context fails fast.
+func TestSystemDoctorProbesAgainstLocalFixtures(t *testing.T) {
+	var methods []string
+	objects := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		methods = append(methods, r.Method)
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(objects.Close)
+	cfg := productionTestConfig(t)
+	cfg.S3Endpoint, cfg.S3Bucket, cfg.S3Region, cfg.S3ForcePathStyle = objects.URL, "doctor-test", "us-east-1", true
+	cfg.DatabaseURL = "postgres://u:p@127.0.0.1:1/x?sslmode=disable&connect_timeout=1"
+	p := systemDoctorProbes(cfg)
+	ctx := context.Background()
+
+	if err := p.Storage(ctx); err != nil {
+		t.Fatalf("storage: %v", err)
+	}
+	if len(methods) != 1 || methods[0] != http.MethodHead {
+		t.Fatalf("storage probe sent %v, want one HEAD and no bucket creation", methods)
+	}
+	if err := p.DBPing(ctx); err == nil {
+		t.Error("an unreachable database answered")
+	}
+
+	l, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := uint16(l.Addr().(*net.TCPAddr).Port)
+	if !p.TCPHeld(port) {
+		t.Error("a listening port is not seen as held")
+	}
+	_ = l.Close()
+	if p.TCPHeld(port) {
+		t.Error("a closed port is seen as held")
+	}
+
+	pc, err := net.ListenPacket("udp4", ":0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	udp := uint16(pc.LocalAddr().(*net.UDPAddr).Port)
+	if !p.UDPHeld(udp) {
+		t.Error("a bound UDP port is not seen as held")
+	}
+	_ = pc.Close()
+	if p.UDPHeld(udp) {
+		t.Error("a free UDP port is seen as held")
+	}
+
+	cancelled, cancel := context.WithCancel(ctx)
+	cancel()
+	if _, _, err := p.Detect(cancelled, []string{"127.0.0.1:9"}, time.Second); err == nil {
+		t.Error("IPv4 detection ignored the cancelled context")
+	}
+	if _, _, err := p.Detect6(cancelled, []string{"[::1]:9"}, time.Second); err == nil {
+		t.Error("IPv6 detection ignored the cancelled context")
+	}
+	if _, err := p.Skew(cancelled); err == nil {
+		t.Error("the clock probe ignored the cancelled context")
+	}
+	if p.Host == nil {
+		t.Error("no host probe")
+	}
+}
+
+func TestPortNumberRejectsWhatDoesNotFitAPort(t *testing.T) {
+	for in, want := range map[string]uint16{"8080": 8080, "65535": 65535, "65536": 0, "99999999": 0, "-1": 0, "x": 0, "": 0} {
+		if got := portNumber(in); got != want {
+			t.Errorf("portNumber(%q) = %d, want %d", in, got, want)
+		}
 	}
 }
