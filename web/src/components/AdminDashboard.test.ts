@@ -425,7 +425,7 @@ const channelIds = (w: VueWrapper, catId: string) =>
   w.find(`[data-testid="category-item-${catId}"]`)!.findAll('[data-testid^="channel-item-"]').map(el => el.attributes('data-testid')!.replace('channel-item-', ''))
 const categoryIds = (w: VueWrapper) =>
   w.findAll('[data-testid^="category-item-"]').map(el => el.attributes('data-testid')!.replace('category-item-', ''))
-const unsavedBanner = (w: VueWrapper) => w.text().includes('Unsaved changes to channel order.')
+const unsavedBanner = (w: VueWrapper) => w.text().includes('You have unsaved changes')
 
 describe('AdminDashboard - password policy', () => {
   it('requires the server minimum length before a reset can be sent', async () => {

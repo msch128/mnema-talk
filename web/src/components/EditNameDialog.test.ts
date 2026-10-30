@@ -8,7 +8,9 @@ import EditNameDialog from './EditNameDialog.vue'
 import BaseDialog from './BaseDialog.vue'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { i18nPlugin } from '../i18n'
+import { pendingConfirm } from '../lib/confirm'
 import { tooltip } from '../directives/tooltip'
 
 const mountOpts = { global: { plugins: [i18nPlugin], directives: { tooltip } } }
@@ -22,11 +24,12 @@ afterEach(() => {
 
 describe('EditNameDialog', () => {
   it('shows a translated message when the name is blank', async () => {
-    wrapper = mount(EditNameDialog, { ...mountOpts, props: { kind: 'category', entity: categoryFixture({ id: "00000000-0000-4000-8000-0000000003ee", name: '   ' }) } })
-    await wrapper.find('form')!.trigger('submit')
+    wrapper = mount(EditNameDialog, { ...mountOpts, props: { kind: 'category', entity: categoryFixture({ id: "00000000-0000-4000-8000-0000000003ee", name: 'Projekte' }) } })
+    await wrapper.find<HTMLInputElement>('#edit-name')!.setValue('   ')
     const alert = wrapper.find('[role="alert"]')!
     expect(alert.exists()).toBe(true)
     expect(alert.text()).toBe('Bitte gib einen Namen an.')
+    expect(wrapper.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeDefined()
   })
 
   it('creates a category after the existing ones when it has no entity', async () => {
@@ -75,11 +78,12 @@ describe('EditNameDialog editing', () => {
     chat.updateChannel = vi.fn().mockResolvedValue(undefined)
     wrapper = mount(EditNameDialog, { props: { entity: channelFixture({ type: 'voice' }) } })
     expect(wrapper.find('#edit-topic').exists()).toBe(false)
+    await wrapper.get('#edit-name').setValue('lounge')
     await wrapper.get('form').trigger('submit'); await flushPromises()
-    expect(chat.updateChannel).toHaveBeenCalledWith(channelFixture().id, { name: 'general', topic: '', slow_mode_seconds: 0 })
-    await wrapper.findAll('button').find(b => b.text() === 'Abbrechen')!.trigger('click')
+    expect(chat.updateChannel).toHaveBeenCalledWith(channelFixture().id, { name: 'lounge', topic: '', slow_mode_seconds: 0 })
+    expect(wrapper.emitted('close')).toHaveLength(1)
     wrapper.getComponent(BaseDialog).vm.$emit('close')
-    expect(wrapper.emitted('close')).toHaveLength(3)
+    expect(wrapper.emitted('close')).toHaveLength(2)
   })
   it('sets the slow mode from a preset', async () => {
     const chat = useChatStore()
@@ -101,7 +105,7 @@ describe('EditNameDialog editing', () => {
     expect(wrapper.find('[data-testid="slow-mode-error"]').exists()).toBe(false)
     await wrapper.get('[data-testid="slow-mode-custom"]').setValue('25')
     expect(wrapper.get('[data-testid="slow-mode-error"]').text()).toContain('24 Stunden')
-    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeDefined()
     await wrapper.get('[data-testid="slow-mode-custom"]').setValue('3')
     await wrapper.get('form').trigger('submit'); await flushPromises()
     expect(chat.updateChannel).toHaveBeenCalledWith(channelFixture().id, { name: 'general', topic: '', slow_mode_seconds: 10800 })
@@ -119,12 +123,69 @@ describe('EditNameDialog editing', () => {
     const chat = useChatStore()
     chat.updateCategory = vi.fn().mockRejectedValueOnce(new Error('synthetic conflict')).mockRejectedValueOnce(new Error('')).mockResolvedValueOnce(undefined)
     wrapper = mount(EditNameDialog, { props: { kind: 'category', entity: categoryFixture() } })
+    await wrapper.get('#edit-name').setValue('Renamed')
     await wrapper.get('form').trigger('submit'); await flushPromises()
-    expect(wrapper.get('[role="alert"]').text()).toBe('synthetic conflict')
+    expect(wrapper.get('[data-testid="unsaved-error"]').text()).toBe('synthetic conflict')
     await wrapper.get('form').trigger('submit'); await flushPromises()
-    expect(wrapper.get('[role="alert"]').text()).toBe('Das Aktualisieren hat nicht geklappt. Versuche es noch einmal.')
+    expect(wrapper.get('[data-testid="unsaved-error"]').text()).toBe('Die Änderungen konnten nicht gespeichert werden.')
     await wrapper.get('form').trigger('submit'); await flushPromises()
-    expect(chat.updateCategory).toHaveBeenCalledWith(categoryFixture().id, { name: 'Synthetic category' })
+    expect(chat.updateCategory).toHaveBeenCalledWith(categoryFixture().id, { name: 'Renamed' })
+    expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('keeps Save off until something really differs, and stores nothing before Save', async () => {
+    const chat = useChatStore()
+    chat.updateChannel = vi.fn().mockResolvedValue(undefined)
+    wrapper = mount(EditNameDialog, { props: { kind: 'channel', entity: channelFixture({ name: 'general', topic: 'prior' }) } })
+    const save = () => wrapper.get('[data-testid="unsaved-save"]').element as HTMLButtonElement
+    expect(save().disabled).toBe(true)
+    await wrapper.get('#edit-name').setValue('  general ')
+    await wrapper.get('#edit-topic').setValue('prior  ')
+    expect(save().disabled).toBe(true)
+    await wrapper.get('#edit-topic').setValue('next')
+    expect(save().disabled).toBe(false)
+    expect(chat.updateChannel).not.toHaveBeenCalled()
+    await wrapper.get('[data-testid="unsaved-reset"]').trigger('click')
+    expect((wrapper.get('#edit-topic').element as HTMLTextAreaElement).value).toBe('prior')
+  })
+
+  it('asks before the dialog closes with unsaved edits', async () => {
+    wrapper = mount(EditNameDialog, { props: { kind: 'channel', entity: channelFixture({ name: 'general' }) } })
+    await wrapper.get('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    expect(wrapper.emitted('close')).toHaveLength(1)
+    await wrapper.get('#edit-name').setValue('other')
+    await wrapper.get('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Änderungen verwerfen?')
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('stores auto-delete with the rest on Save, after asking, and not when the question is declined', async () => {
+    useServerFeaturesStore().list = ['channels.auto_delete']
+    const chat = useChatStore()
+    chat.updateChannel = vi.fn().mockResolvedValue(undefined)
+    chat.setChannelAutoDelete = vi.fn().mockResolvedValue(undefined)
+    wrapper = mount(EditNameDialog, { props: { kind: 'channel', entity: channelFixture({ name: 'general' }) } })
+    expect(wrapper.find('[data-testid="auto-delete-apply"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="auto-delete-select"]').setValue('7')
+    expect(chat.setChannelAutoDelete).not.toHaveBeenCalled()
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(pendingConfirm.value?.danger).toBe(true)
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(chat.setChannelAutoDelete).not.toHaveBeenCalled()
+    expect(wrapper.emitted('close')).toBeUndefined()
+
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(chat.setChannelAutoDelete).toHaveBeenCalledWith(channelFixture().id, 7)
+    expect(chat.updateChannel).not.toHaveBeenCalled()
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
 })

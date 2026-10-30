@@ -3,16 +3,16 @@
 // shown once (the server keeps only a hash), so it is revealed right after
 // creating or regenerating, with a copy button.
 import { ref, computed, onMounted } from 'vue'
-import { Copy, KeyRound, Pencil, Trash2, ImagePlus, SlidersHorizontal } from '@lucide/vue'
+import { Copy, KeyRound, Trash2, ImagePlus, SlidersHorizontal } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { arrayDecoder } from '../types/validation'
 import { isWebhook, decodeCreatedWebhook, decodeWebhook } from '../types/webhooks'
 import type { Webhook } from '../types/webhooks'
 import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
-import { useChatStore } from '../stores/chat'
 import { t } from '../i18n'
 import StatePanel from './StatePanel.vue'
+import IncomingWebhookEditor from './IncomingWebhookEditor.vue'
 import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
 import { initialOf } from '../lib/initial'
 
@@ -21,7 +21,6 @@ const props = defineProps({
 })
 
 const toasts = useToastStore()
-const chat = useChatStore()
 const hooks = ref<Webhook[]>([])
 const loaded = ref(false)
 const loadFailed = ref(false)
@@ -29,33 +28,18 @@ const newName = ref('')
 const busy = ref(false)
 // The one URL on show: right after creating or regenerating.
 const revealed = ref<{ id: string; url: string } | null>(null)
-const renaming = ref<{ id: string; name: string } | null>(null)
-// The webhook whose settings are open.
+// The webhook whose settings are open: one draft at a time, so another one is asked about first.
 const settingsOpen = ref<string | null>(null)
+const editor = ref<{ guard: () => Promise<boolean> } | null>(null)
+const setEditor = (el: unknown) => { editor.value = el as { guard: () => Promise<boolean> } | null }
 
-// Each setting is a switch on the webhook; the label says what it allows.
-const SETTINGS = ['allow_everyone', 'allow_user_mentions', 'allow_attachments', 'allow_embeds', 'allow_identity_override'] as const
-type SettingKey = typeof SETTINGS[number]
-
-function memberName(id: string | null): string {
-  if (id === null) return t('webhooks.unknownMember')
-  const m = chat.members.find(x => x.id === id)
-  return m ? (m.display_name || m.username) : t('webhooks.unknownMember')
+async function toggleSettings(id: string) {
+  if (editor.value && !(await editor.value.guard())) return
+  settingsOpen.value = settingsOpen.value === id ? null : id
 }
 
-async function setSetting(hook: Webhook, key: SettingKey, input: HTMLInputElement) {
-  const value = input.checked
-  input.disabled = true
-  try {
-    const updated = await api(`/api/admin/webhooks/${hook.id}`, { method: 'PATCH', json: { [key]: value }, decode: decodeWebhook })
-    hooks.value = hooks.value.map(h => (h.id === updated.id ? updated : h))
-  } catch (e) {
-    // Nothing reactive changed, so Vue would keep the box as the user left it.
-    input.checked = !value
-    showError(e)
-  } finally {
-    input.disabled = false
-  }
+function onUpdated(updated: Webhook) {
+  hooks.value = hooks.value.map(h => (h.id === updated.id ? updated : h))
 }
 
 const base = computed(() => `/api/admin/channels/${props.channelId}/webhooks`)
@@ -100,20 +84,6 @@ async function copy(url: string) {
     toasts.success(t('webhooks.copied'))
   } catch {
     toasts.error(t('admin.copyFailed'), { detail: url })
-  }
-}
-
-async function saveName() {
-  const r = renaming.value
-  if (!r) return
-  const name = r.name.trim()
-  renaming.value = null
-  if (!name) return
-  try {
-    const updated = await api(`/api/admin/webhooks/${r.id}`, { method: 'PATCH', json: { name }, decode: decodeWebhook })
-    hooks.value = hooks.value.map(h => (h.id === updated.id ? updated : h))
-  } catch (e) {
-    showError(e)
   }
 }
 
@@ -200,17 +170,11 @@ onMounted(load)
         <img v-if="hook.avatar_url" :src="hook.avatar_url" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover" />
         <span v-else class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mnema-raised text-sm font-semibold text-mnema-muted" aria-hidden="true">{{ initialOf(hook.name) }}</span>
 
-        <form v-if="renaming?.id === hook.id" class="min-w-0 flex-1" @submit.prevent="saveName">
-          <input v-model="renaming.name" type="text" maxlength="80" autofocus class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-2 py-1 text-sm text-mnema-text" :aria-label="$t('common.name')" @keydown.esc="renaming = null" @blur="saveName" />
-        </form>
-        <span v-else class="min-w-0 flex-1 truncate text-sm font-medium text-mnema-text" data-testid="incoming-name">{{ hook.name }}</span>
+        <span class="min-w-0 flex-1 truncate text-sm font-medium text-mnema-text" data-testid="incoming-name">{{ hook.name }}</span>
 
         <div class="flex shrink-0 items-center gap-1 text-mnema-tertiary">
-          <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.settingsFor', { name: hook.name })" :aria-expanded="settingsOpen === hook.id" @click="settingsOpen = settingsOpen === hook.id ? null : hook.id">
+          <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.settingsFor', { name: hook.name })" :aria-expanded="settingsOpen === hook.id" @click="toggleSettings(hook.id)">
             <SlidersHorizontal class="h-4 w-4" />
-          </button>
-          <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.rename', { name: hook.name })" @click="renaming = { id: hook.id, name: hook.name }">
-            <Pencil class="h-4 w-4" />
           </button>
           <label class="cursor-pointer rounded-sm p-1.5 transition hover:text-mnema-text" :title="$t('webhooks.avatar')">
             <ImagePlus class="h-4 w-4" aria-hidden="true" />
@@ -223,13 +187,7 @@ onMounted(load)
             <Trash2 class="h-4 w-4" />
           </button>
         </div>
-        <div v-if="settingsOpen === hook.id" class="basis-full space-y-1 pl-12 text-sm text-mnema-text" data-testid="webhook-settings">
-          <p class="text-xs text-mnema-tertiary" data-testid="incoming-audit">{{ $t('webhooks.createdBy', { name: memberName(hook.created_by) }) }}</p>
-          <label v-for="key in SETTINGS" :key="key" class="flex items-center gap-2">
-            <input type="checkbox" :checked="hook[key]" :data-setting="key" @change="setSetting(hook, key, $event.target as HTMLInputElement)" />
-            <span>{{ $t(`webhooks.setting.${key}`) }}</span>
-          </label>
-        </div>
+        <IncomingWebhookEditor v-if="settingsOpen === hook.id" :ref="setEditor" :hook="hook" @updated="onUpdated" />
       </li>
     </ul>
   </div>

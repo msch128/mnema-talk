@@ -106,11 +106,6 @@ export function inputFromForm(f: RuleForm): AutomodRuleInput {
   }
 }
 
-/** The same rule with another on/off state, as the body that replaces it. */
-export function toggled(rule: AutomodRule): AutomodRuleInput {
-  return inputFromForm({ ...formFromRule(rule), enabled: !rule.enabled })
-}
-
 /** What the form still lacks, as a translated sentence; '' when it can be saved. */
 export function formProblem(f: RuleForm): string {
   if (!f.name.trim()) return t('automod.problem.name')

@@ -173,7 +173,7 @@ describe('the managed Bot role in role management', () => {
   it('lists the Bot role in a bot\'s roles as held and fixed, and never offers it for people', async () => {
     usePermissionsStore().roles = [role(2, { name: 'Mods' }), botRole, everyone]
     const bot: BotBot = { id: fixtureId(5), user_id: helper.id, name: 'Helper', allowed_intents: 0, disabled: false, role_ids: [], created_at: '2026-01-02T03:04:05Z' }
-    const panel = mount(BotRolesPanel, { props: { bot } })
+    const panel = mount(BotRolesPanel, { props: { bot, roles: [...bot.role_ids] } })
     const box = panel.get('[data-role="Bot"] input').element as HTMLInputElement
     expect(box.checked).toBe(true)
     expect(box.disabled).toBe(true)

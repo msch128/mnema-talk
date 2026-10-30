@@ -78,7 +78,7 @@ describe('AdminRolesTab', () => {
     const name = w.find<HTMLInputElement>('input[maxlength="32"]')
     expect(name.element.value).toBe('Middle')
     expect(w.find<HTMLInputElement>('input[placeholder="#rrggbb"]').element.value).toBe('#ff0000')
-    const save = () => w.findAll('button').find(b => b.text() === 'Save role')!
+    const save = () => w.get('[data-testid="unsaved-save"]')
     expect(save().attributes('disabled')).toBeDefined()
     await name.setValue('  Moderators ')
     await w.find('[data-permission="send_messages"] [role="switch"]').trigger('click')
@@ -101,7 +101,7 @@ describe('AdminRolesTab', () => {
     await row(w, 'Middle').find('button[aria-pressed]').trigger('click')
     const field = w.find<HTMLInputElement>('input[aria-label="Max upload size"]')
     expect(field.element.value).toBe('20')
-    const save = () => w.findAll('button').find(b => b.text() === 'Save role')!
+    const save = () => w.get('[data-testid="unsaved-save"]')
     await field.setValue('1.5')
     await save().trigger('click')
     expect(apiMock).not.toHaveBeenCalledWith(expect.stringContaining('/api/admin/roles/'), expect.anything())
@@ -120,7 +120,7 @@ describe('AdminRolesTab', () => {
     const w = setup()
     await flushPromises()
     await w.find('[data-permission="speak"] [role="switch"]').trigger('click')
-    await w.findAll('button').find(b => b.text() === 'Save role')!.trigger('click')
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`/api/admin/roles/${everyone.id}`, expect.objectContaining({ json: { permissions: PERMISSION_BITS.view_channel | PERMISSION_BITS.speak } }))
   })
@@ -138,9 +138,10 @@ describe('AdminRolesTab', () => {
     await hex.setValue('#00ff00')
     await w.find('input[maxlength="32"]').setValue('   ')
     await w.find('[data-permission="speak"] [role="switch"]').trigger('click')
-    await w.findAll('button').find(b => b.text() === 'Save role')!.trigger('click')
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
-    expect(toastTexts()).toContain('Give the role a name.')
+    expect(w.get('[data-testid="role-name-invalid"]').text()).toBe('Give the role a name.')
+    expect(w.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeDefined()
     expect(apiMock).not.toHaveBeenCalledWith(expect.stringContaining('/api/admin/roles/'), expect.anything())
   })
 
@@ -150,9 +151,9 @@ describe('AdminRolesTab', () => {
     await row(w, 'Bottom').find('button[aria-pressed]').trigger('click')
     await w.find('input[maxlength="32"]').setValue('Other')
     apiMock.mockRejectedValueOnce(new Error('denied'))
-    await w.findAll('button').find(b => b.text() === 'Save role')!.trigger('click')
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
     await flushPromises()
-    expect(toastTexts()).toContain('denied')
+    expect(w.get('[data-testid="unsaved-error"]').text()).toBe('denied')
   })
 
   it('creates a role and selects it', async () => {
@@ -238,7 +239,7 @@ describe('AdminRolesTab', () => {
     expect(row(w, 'Top').attributes('draggable')).toBe('false')
     await row(w, 'Top').find('button[aria-pressed]').trigger('click')
     expect(w.text()).toContain('not below your highest role')
-    expect(w.findAll('button').some(b => b.text() === 'Save role')).toBe(false)
+    expect(w.find('[data-testid="unsaved-save"]').exists()).toBe(false)
     expect(w.find('input[maxlength="32"]').attributes('disabled')).toBeDefined()
     // arrows next to a role above the rank do nothing
     expect(w.find('[aria-label="Move Top down"]').attributes('disabled')).toBeDefined()
@@ -268,7 +269,7 @@ describe('AdminRolesTab', () => {
     await flushPromises()
     await row(w, 'Bottom').find('button[aria-pressed]').trigger('click')
     await w.find('input[maxlength="32"]').setValue('Other')
-    const save = w.findAll('button').find(b => b.text() === 'Save role')!
+    const save = w.get('[data-testid="unsaved-save"]')
     void save.trigger('click')
     void save.trigger('click')
     await flushPromises()
@@ -324,16 +325,43 @@ describe('AdminRolesTab unsaved edits', () => {
     await flushPromises()
   }
 
-  it('marks unsaved edits, offers to discard them and clears the mark on discard', async () => {
+  it('marks unsaved edits in the bar, resets them and clears the mark', async () => {
     const w = setup()
     await flushPromises()
     await pick(w, 'Middle')
-    expect(w.find('[data-testid="role-dirty"]').exists()).toBe(false)
+    expect(w.get('[data-testid="unsaved-status"]').text()).toBe('')
     await w.find('input[maxlength="32"]').setValue('Renamed')
-    expect(w.get('[data-testid="role-dirty"]').text()).toBe('Unsaved changes')
-    await w.get('[data-testid="role-discard"]').trigger('click')
+    expect(w.get('[data-testid="unsaved-status"]').text()).toBe('You have unsaved changes')
+    await w.get('[data-testid="unsaved-reset"]').trigger('click')
     expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Middle')
-    expect(w.find('[data-testid="role-dirty"]').exists()).toBe(false)
+    expect(w.get('[data-testid="unsaved-status"]').text()).toBe('')
+  })
+
+  it('does not count spacing, the typed colour text or nothing-for-@everyone fields as changes', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    const save = () => w.get('[data-testid="unsaved-save"]')
+    await w.find('input[maxlength="32"]').setValue(' Middle  ')
+    await w.get<HTMLInputElement>('input[placeholder="#rrggbb"]').setValue('#FF0000')
+    expect(save().attributes('disabled')).toBeDefined()
+    await w.get<HTMLInputElement>('input[placeholder="#rrggbb"]').setValue('#00ff00')
+    expect(save().attributes('disabled')).toBeUndefined()
+    await w.get<HTMLInputElement>('input[placeholder="#rrggbb"]').setValue('#ff0000')
+    expect(save().attributes('disabled')).toBeDefined()
+  })
+
+  it('stores nothing before Save and shows a failed save inline', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Bottom')
+    await w.find('input[maxlength="32"]').setValue('Other')
+    expect(apiMock.mock.calls.some(([, o]) => o?.method === 'PATCH')).toBe(false)
+    apiMock.mockRejectedValueOnce(new Error('denied'))
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    expect(w.get('[data-testid="unsaved-error"]').text()).toBe('denied')
+    expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Other')
   })
 
   it('asks before another role replaces unsaved edits, and keeps them on cancel', async () => {
@@ -357,6 +385,47 @@ describe('AdminRolesTab unsaved edits', () => {
     await pick(w, 'Bottom')
     expect(confirmMock).not.toHaveBeenCalled()
     expect(w.find<HTMLInputElement>('input[maxlength="32"]').element.value).toBe('Bottom')
+  })
+
+  it('does not save the role when Enter is pressed in the permission search', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    await w.get('input[maxlength="32"]').setValue('Renamed')
+    apiMock.mockClear()
+    await w.get('[data-testid="role-permission-search"]').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(apiMock.mock.calls.some(([, o]) => o?.method === 'PATCH')).toBe(false)
+  })
+
+  it('restores the colour box on Reset and ignores how a colour is spelled', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    const hex = w.get<HTMLInputElement>('input[placeholder="#rrggbb"]')
+    const before = hex.element.value
+    await hex.setValue('#12345')
+    await w.get('[data-testid="unsaved-reset"]').trigger('click')
+    expect(hex.element.value).toBe(before)
+    expect(w.find('[data-testid="role-color-invalid"]').exists()).toBe(false)
+    expect(w.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('treats an emptied colour box as "no colour" and saves that colour', async () => {
+    const w = setup()
+    await flushPromises()
+    await pick(w, 'Middle')
+    const hex = w.get<HTMLInputElement>('input[placeholder="#rrggbb"]')
+    await hex.setValue('#ff0000')
+    apiMock.mockClear()
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    await hex.setValue('')
+    expect(w.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeUndefined()
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    const patch = apiMock.mock.calls.filter(([, o]) => o?.method === 'PATCH').pop()
+    expect((patch?.[1]?.json as { color: number }).color).toBe(0)
   })
 
   it('narrows the permission list by what is typed', async () => {

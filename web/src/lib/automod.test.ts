@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { AutomodRule } from '../types/rest'
-import { emptyForm, formFromRule, formProblem, inputFromForm, longDuration, ruleLabel, ruleSummary, toggled, withCurrent } from './automod'
+import { emptyForm, formFromRule, formProblem, inputFromForm, longDuration, ruleLabel, ruleSummary, withCurrent } from './automod'
 import { setLocale } from '../i18n'
 import de from '../i18n/de.json'
 
@@ -31,19 +31,11 @@ describe('automod rule forms', () => {
     expect(inputFromForm(raid)).toMatchObject({ kind: 'raid', action: 'flag', timeout_seconds: 0, config: { joins: 10, window_seconds: 10, restrict_seconds: 600 } })
   })
 
-  it('flips only the on/off state of a rule', () => {
-    const r = rule({ kind: 'mentions', config: { max_mentions: 4 }, exempt_roles: ['r1'], timeout_seconds: 300 })
-    expect(toggled(r)).toEqual({
-      kind: 'mentions', name: 'Words', enabled: false, action: 'block', timeout_seconds: 300,
-      config: { max_mentions: 4 }, exempt_roles: ['r1'], exempt_channels: []
-    })
-  })
-
   it('keeps the stored name of a built-in rule, whatever the UI language', () => {
     setLocale('de')
     const seeded = rule({ kind: 'words', name: 'Blocked words' })
     expect(formFromRule(seeded).name).toBe('Blocked words')
-    expect(toggled(seeded).name).toBe('Blocked words')
+    expect(inputFromForm(formFromRule(seeded)).name).toBe('Blocked words')
   })
 
   it('names what is missing before anything is sent', () => {

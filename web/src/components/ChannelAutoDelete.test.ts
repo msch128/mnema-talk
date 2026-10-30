@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
+import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ChannelAutoDeleteField from './ChannelAutoDeleteField.vue'
 import ChannelAutoDeleteNote from './ChannelAutoDeleteNote.vue'
 import ChatHeader from './ChatHeader.vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { useToastStore } from '../stores/toast'
 import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { channelFixture } from '../test-fixtures.fixture'
@@ -37,62 +36,36 @@ afterEach(() => {
 })
 
 describe('ChannelAutoDeleteField', () => {
+  const mountField = (days = 0) => mount(ChannelAutoDeleteField, { props: { modelValue: days }, global: { plugins: [i18nPlugin] } })
+
   it('is absent on a server without the feature', () => {
-    const w = mount(ChannelAutoDeleteField, { props: { channel: channelFixture() }, global: { plugins: [i18nPlugin] } })
-    expect(w.find('[data-testid="auto-delete-field"]').exists()).toBe(false)
+    expect(mountField().find('[data-testid="auto-delete-field"]').exists()).toBe(false)
   })
 
-  it('applies nothing until the choice changes, and asks before turning deletion on', async () => {
+  it('offers the periods, has no button of its own and reports the choice', async () => {
     enable()
-    const channel = channelFixture({ id: 'c1', name: 'general' })
-    const w = mount(ChannelAutoDeleteField, { props: { channel }, global: { plugins: [i18nPlugin] } })
-    expect(w.get('[data-testid="auto-delete-apply"]').attributes('disabled')).toBeDefined()
+    const w = mountField()
+    expect(w.find('[data-testid="auto-delete-apply"]').exists()).toBe(false)
     expect(w.findAll('option').map(o => o.text())).toEqual(['Off, keep messages', 'After 1 day', 'After 7 days', 'After 30 days', 'After 90 days'])
-
     await w.get('[data-testid="auto-delete-select"]').setValue('7')
-    confirmMock.mockResolvedValueOnce(false)
-    await w.get('[data-testid="auto-delete-apply"]').trigger('click')
-    await flushPromises()
+    expect(w.emitted('update:modelValue')).toEqual([[7]])
     expect(requests).toEqual([])
-
-    await w.get('[data-testid="auto-delete-apply"]').trigger('click')
-    await flushPromises()
-    expect(requests[0]).toEqual({ url: '/api/admin/channels/c1/auto-delete', method: 'PUT', body: { days: 7 } })
-    expect(useToastStore().toasts[0]?.text).toBe('Auto-delete updated.')
   })
 
-  it('settles after saving: the select matches the stored value and Apply is disabled again', async () => {
+  it('shows the value it is given', () => {
     enable()
-    const chat = useChatStore()
-    const stale = channelFixture({ id: 'c1', name: 'general', auto_delete_days: 0 })
-    chat.uncategorized = [stale]
-    const w = mount(ChannelAutoDeleteField, { props: { channel: stale }, global: { plugins: [i18nPlugin] } })
-    await w.get('[data-testid="auto-delete-select"]').setValue('7')
-    // The store replaces the channel object, the dialog still holds the old one.
-    chat.uncategorized = [channelFixture({ id: 'c1', name: 'general', auto_delete_days: 7 })]
-    await flushPromises()
-    expect(w.get('[data-testid="auto-delete-apply"]').attributes('disabled')).toBeDefined()
+    expect((mountField(30).get('[data-testid="auto-delete-select"]').element as HTMLSelectElement).value).toBe('30')
   })
+})
 
-  it('follows a change made elsewhere while nothing is pending', async () => {
-    enable()
-    const chat = useChatStore()
-    const stale = channelFixture({ id: 'c1', auto_delete_days: 0 })
-    chat.uncategorized = [stale]
-    const w = mount(ChannelAutoDeleteField, { props: { channel: stale }, global: { plugins: [i18nPlugin] } })
-    chat.uncategorized = [channelFixture({ id: 'c1', auto_delete_days: 30 })]
-    await flushPromises()
-    expect((w.get('[data-testid="auto-delete-select"]').element as HTMLSelectElement).value).toBe('30')
-  })
-
-  it('turns it off without a warning', async () => {
-    enable()
-    const w = mount(ChannelAutoDeleteField, { props: { channel: channelFixture({ id: 'c1', auto_delete_days: 30 }) }, global: { plugins: [i18nPlugin] } })
-    await w.get('[data-testid="auto-delete-select"]').setValue('0')
-    await w.get('[data-testid="auto-delete-apply"]').trigger('click')
-    await flushPromises()
+describe('confirmAutoDelete', () => {
+  it('asks before switching deletion on and not before switching it off', async () => {
+    const { confirmAutoDelete } = await import('../lib/autoDelete')
+    expect(await confirmAutoDelete('general', 0)).toBe(true)
     expect(confirmMock).not.toHaveBeenCalled()
-    expect(requests[0]?.body).toEqual({ days: 0 })
+    confirmMock.mockResolvedValueOnce(false)
+    expect(await confirmAutoDelete('general', 7)).toBe(false)
+    expect(confirmMock).toHaveBeenCalledTimes(1)
   })
 })
 

@@ -7,7 +7,7 @@ import { Plus, ShieldCheck, Loader2, Pencil, Trash2 } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { decodeModerationAutomodList, type AutomodRule } from '../types/rest'
 import type { ModerationAutomodList } from '../types/rest'
-import { AUTOMOD_KINDS, ruleLabel, ruleSummary, toggled } from '../lib/automod'
+import { AUTOMOD_KINDS, ruleLabel, ruleSummary } from '../lib/automod'
 import type { AutomodKind } from '../lib/automod'
 import { confirm } from '../lib/confirm'
 import { now } from '../lib/clock'
@@ -21,7 +21,6 @@ const toasts = useToastStore()
 const state = ref<ModerationAutomodList | null>(null)
 const failed = ref(false)
 const editing = ref<{ rule: AutomodRule | null; kind: AutomodKind } | null>(null)
-const busyId = ref('')
 
 const rules = computed(() => state.value?.rules ?? [])
 // Raid protection exists once: it is offered again only after it was deleted.
@@ -38,18 +37,6 @@ async function load() {
   } catch (error) {
     failed.value = true
     toasts.error(caughtErrorMessage(error, t('automod.loadFailed')))
-  }
-}
-
-async function flip(rule: AutomodRule) {
-  busyId.value = rule.id
-  try {
-    await api(`/api/admin/automod/rules/${rule.id}`, { method: 'PUT', json: toggled(rule) })
-    await load()
-  } catch (error) {
-    toasts.error(caughtErrorMessage(error, t('automod.saveFailed')))
-  } finally {
-    busyId.value = ''
   }
 }
 
@@ -94,19 +81,10 @@ onMounted(load)
     <ul v-else class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
       <li v-if="!rules.length" data-testid="automod-empty"><EmptyState :icon="ShieldCheck" :text="$t('automod.empty')" :hint="$t('automod.emptyHint')" /></li>
       <li v-for="rule in rules" :key="rule.id" :data-rule="rule.id" class="flex items-center gap-3 px-4 py-3">
-        <button
-          type="button"
-          role="switch"
-          class="switch"
-          :aria-checked="rule.enabled ? 'true' : 'false'"
-          :disabled="busyId === rule.id"
-          :aria-label="$t('automod.toggle', { name: ruleLabel(rule) })"
-          data-testid="rule-toggle"
-          @click="flip(rule)"
-        ></button>
         <div class="min-w-0 flex-1">
           <p class="flex flex-wrap items-center gap-2 text-sm font-semibold text-mnema-text">
             <span class="wrap-break-word">{{ ruleLabel(rule) }}</span>
+            <span v-if="!rule.enabled" class="rounded-sm border border-mnema-hairline px-1.5 py-0.5 text-xs font-semibold text-mnema-tertiary" data-testid="rule-off">{{ $t('automod.off') }}</span>
             <span v-if="rule.kind !== 'raid'" class="rounded-sm bg-mnema-band px-1.5 py-0.5 text-xs font-semibold text-mnema-muted">{{ $t(`automod.actions.${rule.action}Short`) }}</span>
             <span v-if="rule.timeout_seconds > 0" class="rounded-sm bg-mnema-band px-1.5 py-0.5 text-xs font-semibold text-mnema-muted">{{ $t('automod.timeoutBadge') }}</span>
           </p>
