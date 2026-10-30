@@ -1,0 +1,37 @@
+api/openapi.json
+  s_cf5b2fa6f87060::t_c135f49f5664b6 7312-7315,7360
+doc/operations.md
+  s_cf5b2fa6f87060::t_34284bfef9e78f 463-470,511-513
+doc/upgrade.md
+  s_cf5b2fa6f87060::t_027c690f94a065 135-142
+internal/server/public.go
+  s_cf5b2fa6f87060::t_dcd49cb034817b 24,45-51,96
+internal/server/public_turn_test.go
+  s_cf5b2fa6f87060::t_f788db2373bf60 11,174-206
+web/src/components/LegalModal.test.ts
+  s_cf5b2fa6f87060::t_e9b0c19a8f43b6 7,18,36,48-68
+web/src/components/LegalModal.vue
+  s_cf5b2fa6f87060::t_c080cfc92defa4 26-27,50-51,167-173
+web/src/i18n/de.json
+  s_cf5b2fa6f87060::t_300c0509b68148 868-872
+web/src/i18n/en.json
+  s_cf5b2fa6f87060::t_8b44870911a707 870-874
+web/src/types/rest.ts
+  s_cf5b2fa6f87060::t_c1615cadbd3428 4311,4328
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c433f2bb3c2e81b7ca1dcab43bb4e04587434d9b",
+  "prompts": {},
+  "sessions": {
+    "s_cf5b2fa6f87060": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa4a385df44c9d339",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
