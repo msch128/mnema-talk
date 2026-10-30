@@ -1,0 +1,121 @@
+.env.example
+  s_06fcde5dbef956::t_279055f0686d83 187-194,228-230
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_0d22c47c247cb1 596-601
+api/status-codes.json
+  s_06fcde5dbef956::t_f018922a83916b 18-20
+cmd/server/doctor.go
+  s_06fcde5dbef956::t_2d60192b7c4628 1-182
+cmd/server/doctor_test.go
+  s_06fcde5dbef956::t_5e39445820101a 1-132
+cmd/server/main.go
+  s_06fcde5dbef956::t_8bc12f90090789 7,9,13-14,24,37-43,49-81,91-93,199-201,209,233,261,270,285-293
+cmd/server/main_process_test.go
+  s_06fcde5dbef956::t_8e657a040f8c4b 15,24,27,30-40
+cmd/server/onboarding_integration_test.go
+  s_06fcde5dbef956::t_9c6ecc85755ec3 1-67
+doc/operations.md
+  s_06fcde5dbef956::t_0d4bfeb2e956a0 98-99,525-557,809,818,824-841,1104-1111,1153-1172
+docker-compose.yml
+  s_06fcde5dbef956::t_257cb154a19e4d 34-35,103-104
+internal/config/config.go
+  s_06fcde5dbef956::t_d64ee6752016d5 110-113
+internal/config/config_env.go
+  s_06fcde5dbef956::t_05dcb7e7e23f02 19-22,34-35,38,41-47,49,134
+internal/config/config_validate.go
+  s_06fcde5dbef956::t_429c09818d44cb 7,127-129,133-144
+internal/config/required.go
+  s_06fcde5dbef956::t_383b4a2d0c32b5 1-128
+internal/config/required_test.go
+  s_06fcde5dbef956::t_defa62cd4a3335 1-67
+internal/portconflict/portconflict.go
+  s_06fcde5dbef956::t_f00f80dc82191c 1-42
+internal/portconflict/portconflict_test.go
+  s_06fcde5dbef956::t_91cd73957d9b31 1-50
+internal/s3/s3.go
+  s_06fcde5dbef956::t_09ebe96c42652b 53-72
+internal/server/run.go
+  s_06fcde5dbef956::t_18fbbdd4cde1a6 13,36
+internal/setupcheck/announce.go
+  s_06fcde5dbef956::t_ecccadf0401e71 27-32,42-60,68-72,93
+internal/setupcheck/messages.go
+  s_06fcde5dbef956::t_86a36f83ade307 23-24,59,69-70,116-128,140-141
+internal/setupcheck/network.go
+  s_06fcde5dbef956::t_afa17c091d7a79 1-144
+internal/setupcheck/network_test.go
+  s_06fcde5dbef956::t_62f0638377622c 1-216
+internal/setupcheck/report.go
+  s_06fcde5dbef956::t_9e932403a51adc 1-30
+internal/setupcheck/setupcheck.go
+  s_06fcde5dbef956::t_30ab2424feb7a4 39,75-77,90-97,112-114,123,169-171,175-182,210
+internal/setupcheck/setupcheck_test.go
+  s_06fcde5dbef956::t_a3840e66232d89 79,232
+internal/setupwizard/check.go
+  s_06fcde5dbef956::t_fce3be97cc2e85 1-33
+internal/setupwizard/envfile.go
+  s_06fcde5dbef956::t_7fb29751cface2 31-32,66-74,81-87
+internal/setupwizard/generate.go
+  s_06fcde5dbef956::t_0ef28c195e1d98 61-63
+internal/setupwizard/options.go
+  s_06fcde5dbef956::t_b23173dbcf89fb 10,15,22-31,61-70,97-99,109,125-127,131-158
+internal/setupwizard/preflight.go
+  s_06fcde5dbef956::t_1b6e840bd715d2 33-44,71-77,81-83,89-92,94-97,101,124,148,150
+internal/setupwizard/prereq.go
+  s_06fcde5dbef956::t_443c2abf834f98 1-119
+internal/setupwizard/prereq_test.go
+  s_06fcde5dbef956::t_c763db829f2e07 1-399
+internal/setupwizard/prompt.go
+  s_06fcde5dbef956::t_4e4fe5d1b62773 32-40,79,109
+internal/setupwizard/questions.go
+  s_06fcde5dbef956::t_cc780607adf737 1-138
+internal/setupwizard/run.go
+  s_06fcde5dbef956::t_c3270e63337f98 10,22-23,28-33,37-41,48-50,52-53,55,64-67,106-110,112-113,115,134-135,139-159,162-164,166
+internal/setupwizard/run_test.go
+  s_06fcde5dbef956::t_a1ad633e55ad24 37,75,79,101,106
+internal/setupwizard/setupwizard_test.go
+  s_06fcde5dbef956::t_337fee4ec67bac 70,246,258,263-266
+internal/setupwizard/start.go
+  s_06fcde5dbef956::t_be0a9e6d1e0526 1-70
+internal/setupwizard/summary.go
+  s_06fcde5dbef956::t_ec1d3e788595a7 1-101
+internal/setupwizard/summary_test.go
+  s_06fcde5dbef956::t_9d4058f38358ad 1-103
+internal/setupwizard/testdata/summary_container.golden
+  s_06fcde5dbef956::t_6279d3c35f726f 1-25
+internal/setupwizard/testdata/summary_https.golden
+  s_06fcde5dbef956::t_4319a2d6f4a42e 1-24
+internal/setupwizard/testdata/summary_lan_http.golden
+  s_06fcde5dbef956::t_20f71882462202 1-19
+internal/setupwizard/testdata/summary_local.golden
+  s_06fcde5dbef956::t_2eec0cb13680b6 1-19
+internal/sfu/announce.go
+  s_06fcde5dbef956::t_f455c6cafa725c 120-122,137
+internal/sfu/announce_detected_test.go
+  s_06fcde5dbef956::t_13f9047c05047b 22,45-61
+internal/stunprobe/stunprobe.go
+  s_06fcde5dbef956::t_1dbb8657a3d0f1 33,41-51,60,84,88-92,115,133-135,153,157,166,169-176,191-209
+internal/stunprobe/stunprobe_test.go
+  s_06fcde5dbef956::t_9d5c7de4d0c928 143-195
+scripts/fresh-install-check.sh
+  s_06fcde5dbef956::t_e50aac06434cac 12-14,26-27,57,67-72,86,94-104
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_d60f5aed12cc9b 1385,1416-1429,1436-1437,1475-1476,1543
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_3ce320000b8c87 1385,1416-1429,1436-1437,1475-1476,1543
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9c0cd9bb4debaab4b24c34c04855f2b8d6130781",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
