@@ -6,7 +6,7 @@ import type PickerElement from 'emoji-picker-element/picker.js'
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { locale } from '../i18n'
 import { styleEmojiPicker } from '../lib/emojiPickerSheet'
-import { useDismissable } from '../composables/useDismissable'
+import { shieldEscape, useDismissable } from '../composables/useDismissable'
 import { emojiImage, emojiToken } from '../lib/customEmoji'
 import { enhanceEmojiPicker, type EmojiPreview } from '../lib/emojiPickerExtras'
 import { prefersReducedMotion, useEmojiStore } from '../stores/emoji'
@@ -88,20 +88,15 @@ async function create() {
 
 // Presses on the picker or on its trigger don't close it; Escape does.
 // Escape first clears a search, a second press closes.
-useDismissable(() => [host.value, props.trigger], (_event, reason) => emit('close', reason), { escape: false })
-function onEscape(e: KeyboardEvent) {
-  if (e.key !== 'Escape' || e.isComposing) return
-  e.preventDefault()
-  e.stopPropagation()
-  if (!extras?.clearSearch()) emit('close', 'escape')
-}
+useDismissable(() => [host.value, props.trigger], (_event, reason) => emit('close', reason))
+let unshield: (() => void) | null = null
 // Typing in the search is not a shortcut for the page behind it.
 function keepTyping(e: KeyboardEvent) {
   if (!e.ctrlKey && !e.metaKey && !e.altKey) e.stopPropagation()
 }
 
 onMounted(() => {
-  window.addEventListener('keydown', onEscape, true)
+  unshield = shieldEscape(() => extras?.clearSearch() ?? false)
   keepInViewport()
   window.addEventListener('resize', keepInViewport)
   create().catch(err => {
@@ -110,7 +105,7 @@ onMounted(() => {
   })
 })
 onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onEscape, true)
+  unshield?.()
   extras?.detach()
   extras = null
   window.removeEventListener('resize', keepInViewport)

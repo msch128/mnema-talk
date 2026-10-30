@@ -20,6 +20,18 @@ function isInside(e: Event, roots: Element[]) {
   return roots.some(root => e.target instanceof Node && root.contains(e.target))
 }
 
+const escapeShields = new Set<(event: KeyboardEvent) => boolean>()
+
+/**
+ * Lets something inside a popover take an Escape before any popover closes:
+ * the handler returns true when it used the press (the emoji picker clearing
+ * its search), and then no popover is dismissed by it.
+ */
+export function shieldEscape(handler: (event: KeyboardEvent) => boolean): () => void {
+  escapeShields.add(handler)
+  return () => { escapeShields.delete(handler) }
+}
+
 /**
  * @param target  ref, getter or element(s) that count as "inside": an
  *                Element, a list of Elements, or null.
@@ -39,6 +51,11 @@ export function useDismissable(target: MaybeRefOrGetter<DismissTarget>, onClose:
 
   function onKeydown(e: KeyboardEvent) {
     if (e.key !== 'Escape' || e.isComposing) return
+    if ([...escapeShields].some(shield => shield(e))) {
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    }
     e.preventDefault()
     e.stopPropagation()
     onClose(e, 'escape')
