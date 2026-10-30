@@ -1,0 +1,19 @@
+internal/chat/forum_complete_integration_test.go
+  s_06fcde5dbef956::t_27f8c2ba2062ae 13,392-430
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ea8314fe495a6ed04f525487a5b861dddb48fe0",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
