@@ -124,10 +124,18 @@ describe('useMessageActions edit / delete / react', () => {
     const a = setup()
     useChatStore().activeChannel = null
     const edit = vi.spyOn(useChatStore(), 'editMessage').mockRejectedValue('failed')
-    a.editText.value = ' '
-    await a.saveEdit(msg)
-    expect(edit).not.toHaveBeenCalled()
     a.startEdit(msg)
+    a.editText.value = ' '
+    const del = vi.spyOn(useChatStore(), 'deleteMessage').mockResolvedValue(undefined as never)
+    const emptied = a.saveEdit(msg)
+    await vi.waitFor(() => expect(pendingConfirm.value).not.toBeNull())
+    await a.saveEdit(msg) // a second Enter while the prompt is open does not stack another
+    pendingConfirm.value?.resolve(false)
+    await emptied
+    expect(edit).not.toHaveBeenCalled()
+    expect(del).not.toHaveBeenCalled()
+    expect(a.editingId.value).toBe('m1')
+    a.editText.value = 'hello'
     a.isSavingEdit.value = true
     await a.saveEdit(msg)
     expect(edit).not.toHaveBeenCalled()
