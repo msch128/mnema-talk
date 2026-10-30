@@ -5,7 +5,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
 import { Database, KeyRound, Laptop, Shield, Sliders, Smartphone } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
-import { SETTINGS_TABS, settingsTab, type SettingsTab } from '../lib/settingsDialog'
+import { SETTINGS_TABS, settingsTab, rememberSettingsTab, type SettingsTab } from '../lib/settingsDialog'
 import { platform } from '../lib/platform'
 import { t } from '../i18n'
 import { useAccountStore } from '../stores/account'
@@ -30,14 +30,14 @@ const NEEDS_ACCOUNT: ReadonlySet<SettingsTab> = new Set(['signin', 'data'])
 // The installed desktop client has its own notifications and no install step.
 const visible = computed(() => SETTINGS_TABS.filter(tab => tab !== 'app' || !platform.isTrustedDesktop()))
 const groups = computed(() => [
-  { id: 'account', tabs: visible.value.filter(tab => !['app', 'audio'].includes(tab)) },
-  { id: 'device', tabs: visible.value.filter(tab => ['app', 'audio'].includes(tab)) }
+  { id: 'device', tabs: visible.value.filter(tab => ['app', 'audio'].includes(tab)) },
+  { id: 'account', tabs: visible.value.filter(tab => !['app', 'audio'].includes(tab)) }
 ])
-const active = computed<SettingsTab>(() => (visible.value.includes(settingsTab.value) ? settingsTab.value : 'signin'))
+const active = computed<SettingsTab>(() => (visible.value.includes(settingsTab.value) ? settingsTab.value : SETTINGS_TABS[0]))
 const waiting = computed(() => NEEDS_ACCOUNT.has(active.value) && !account.info)
 
 function select(tab: SettingsTab) {
-  settingsTab.value = tab
+  rememberSettingsTab(tab)
 }
 
 // Arrow keys move through the sections; Tab leaves the list for the content.

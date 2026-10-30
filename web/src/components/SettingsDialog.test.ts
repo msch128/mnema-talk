@@ -31,6 +31,8 @@ async function open(info: Info) {
 }
 
 beforeEach(() => {
+  localStorage.clear()
+  settingsTab.value = 'signin'
   setActivePinia(createPinia())
   setLocale('en')
   apiMock.mockReset()
@@ -205,15 +207,15 @@ describe('SettingsDialog sections', () => {
     await list.trigger('keydown', { key: 'ArrowDown' })
     expect(settingsTab.value).toBe('sessions')
     await list.trigger('keydown', { key: 'End' })
-    expect(settingsTab.value).toBe('audio')
+    expect(settingsTab.value).toBe('data')
     await list.trigger('keydown', { key: 'ArrowRight' })
-    expect(settingsTab.value).toBe('signin')
-    await list.trigger('keydown', { key: 'ArrowUp' })
     expect(settingsTab.value).toBe('audio')
+    await list.trigger('keydown', { key: 'ArrowUp' })
+    expect(settingsTab.value).toBe('data')
     await list.trigger('keydown', { key: 'Home' })
-    expect(settingsTab.value).toBe('signin')
+    expect(settingsTab.value).toBe('audio')
     await list.trigger('keydown', { key: 'x' })
-    expect(settingsTab.value).toBe('signin')
+    expect(settingsTab.value).toBe('audio')
     w.unmount()
   })
 

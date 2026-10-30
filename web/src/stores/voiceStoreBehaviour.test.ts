@@ -67,6 +67,18 @@ describe('voice settings restored and persisted across sessions', () => {
     expect(restored.noiseMode).toBe('ai')
   })
 
+  it('keeps push to talk without a key empty over a reload, and keeps Space only for a setup that never stored a key', async () => {
+    const voice = useVoiceStore()
+    voice.inputMode = 'ptt'
+    voice.pttKey = ''
+    voice.saveSettings()
+    setActivePinia(createPinia())
+    expect(useVoiceStore()).toMatchObject({ inputMode: 'ptt', pttKey: '' })
+    localStorage.removeItem('mnema_ptt_key')
+    setActivePinia(createPinia())
+    expect(useVoiceStore().pttKey).toBe('Space')
+  })
+
   it('restores custom quality and defaults after corrupted JSON', () => {
     localStorage.setItem(SCREEN_QUALITY_STORAGE_KEY, JSON.stringify({ resolution: 'source', fps: 15, custom: true }))
     expect(useVoiceStore().screenQuality).toEqual({ resolution: 'source', fps: 15, custom: true })

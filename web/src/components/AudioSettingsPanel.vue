@@ -1,12 +1,13 @@
 <script setup lang="ts">
-// The audio section of the settings dialog: input, mic check, output, filter,
-// then Advanced behind a disclosure. Every change applies at once and says
-// "Saved" (a personal preference, doc/settings-ux.md).
+// The audio section of the settings dialog: the microphone check first, then
+// output, filter and how you speak, then Fine-tune behind a disclosure. Every
+// change applies at once and says "Saved" (a personal preference, doc/settings-ux.md).
 import { onMounted, onUnmounted } from 'vue'
 import { useWebRTC } from '../composables/useWebRTC'
 import { usePreferenceSave } from '../composables/usePreferenceSave'
 import { useVoiceStore } from '../stores/voice'
 import SavedIndicator from './SavedIndicator.vue'
+import AudioMicCheck from './AudioMicCheck.vue'
 import AudioInputSection from './AudioInputSection.vue'
 import AudioOutputSection from './AudioOutputSection.vue'
 import AudioProcessingSection from './AudioProcessingSection.vue'
@@ -34,9 +35,10 @@ onUnmounted(() => {
 <template>
   <div class="space-y-8">
     <div class="-mb-4 flex justify-end"><SavedIndicator :visible="pref.saved.value" /></div>
-    <AudioInputSection />
+    <AudioMicCheck />
     <AudioOutputSection />
     <AudioProcessingSection />
+    <AudioInputSection />
     <AudioAdvancedSection />
     <p class="font-mono text-xs text-mnema-tertiary">{{ $t('audio.liveNote') }}</p>
   </div>

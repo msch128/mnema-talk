@@ -4,8 +4,9 @@ import type { SoundEvent } from '../stores/voice'
 import { useVoiceStore, SOUND_EVENTS } from '../stores/voice'
 import { useActiveAudioSettings } from '../composables/useActiveAudioSettings'
 import { playSoundEffect } from '../lib/soundEffects'
+import AudioFineTune from './AudioFineTune.vue'
 
-// What most people never change: gain control, network priority, the two
+// What most people never change: input volume and sensitivity, gain control, network priority, the two
 // confirmation warnings and the individual sound effects.
 const voiceStore = useVoiceStore()
 const applyActiveAudioSettings = useActiveAudioSettings()
@@ -43,6 +44,8 @@ function playPreviewSound(sound: SoundEvent = 'join') {
     <p class="settings-help mb-4">{{ $t('audio.advancedHelp') }}</p>
 
     <div class="stack-5">
+      <AudioFineTune />
+
       <div class="settings-rows">
         <!-- Automatic gain control -->
         <div class="settings-row items-start">
