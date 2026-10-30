@@ -9,6 +9,7 @@ import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
 import { currentRoute, navigate, canGoBackInApp } from '../lib/router'
 import { postPath, talkPath } from '../lib/routePaths'
+import { watchAdminRequest } from '../lib/adminRequest'
 import { loadVoiceChatOpen, saveVoiceChatOpen } from '../lib/voiceChatPanel'
 
 /** Writes what the UI shows back to the address whenever any of it changes. */
@@ -128,6 +129,8 @@ export function useAppRouting(alive: () => boolean) {
   watchStateForRoute(ctx, syncCurrentStateToRoute)
 
   const { openAdmin, closeAdmin } = createAdminNavigation(ctx)
+  // Another part of the UI (the Owner's checklist) asks for a console tab.
+  watchAdminRequest(tab => { if (ctx.permissions.canOpenAdmin) openAdmin(tab) })
   const onVoiceJoin = (id: string) => { previewVoiceChannelId.value = id === voiceStore.currentChannelId ? null : id }
 
   return {

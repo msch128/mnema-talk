@@ -2900,7 +2900,7 @@
       },
       "voice": {
         "label": "Sprache einrichten",
-        "hint": "Wähle einen Talk als Lobby für schnelle Talks und Anrufe.",
+        "hint": "Wähle einen Talk als Lobby für schnelle Talks.",
         "action": "Einrichten"
       },
       "status": {
