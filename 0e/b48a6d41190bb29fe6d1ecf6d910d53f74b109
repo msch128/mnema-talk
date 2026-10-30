@@ -1,0 +1,23 @@
+web/src/components/AdminDashboardAccess.test.ts
+  s_06fcde5dbef956::t_c546c19af95d95 1
+web/src/components/AdminLayoutTab.test.ts
+  s_06fcde5dbef956::t_46fe319e41b3e0 88
+web/src/components/AdminOnboardingTab.test.ts
+  s_06fcde5dbef956::t_c9361946ffe7c2 162,164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0eb48a6d41190bb29fe6d1ecf6d910d53f74b109",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
