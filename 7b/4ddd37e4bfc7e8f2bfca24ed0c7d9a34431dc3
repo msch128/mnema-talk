@@ -1,0 +1,19 @@
+web/src/lib/shortcuts.test.ts
+  s_bf24ce51cd8f95::t_0382ab39f7abdf 1-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7b4ddd37e4bfc7e8f2bfca24ed0c7d9a34431dc3",
+  "prompts": {},
+  "sessions": {
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
