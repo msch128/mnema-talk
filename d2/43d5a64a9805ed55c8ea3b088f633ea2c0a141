@@ -1,0 +1,21 @@
+web/src/lib/emojiPickerExtras.test.ts
+  s_5b748b0295d2f4::t_4bbaf3b4705c80 63-69
+web/src/lib/emojiPickerExtras.ts
+  s_5b748b0295d2f4::t_c870213adafd1a 88-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d243d5a64a9805ed55c8ea3b088f633ea2c0a141",
+  "prompts": {},
+  "sessions": {
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
