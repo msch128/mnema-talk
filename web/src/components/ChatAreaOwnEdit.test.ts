@@ -102,6 +102,13 @@ describe('ArrowUp in the composer', () => {
     expect(editor(view).exists()).toBe(false)
   })
 
+  it('leaves the key alone while the window shows older history', async () => {
+    useChatStore().hasMoreAfter = true
+    const view = open()
+    await up(composer(view))
+    expect(editor(view).exists()).toBe(false)
+  })
+
   it('works in the Talk chat panel', async () => {
     const view = open({ panel: true })
     await up(composer(view))
@@ -138,6 +145,16 @@ describe('walking through own messages', () => {
     caretAt(box, box.value.length) // last line
     await down(editor(view))
     expect(editor(view).exists()).toBe(false)
+  })
+
+  it('still walks when someone else edited the same message meanwhile', async () => {
+    const chat = useChatStore()
+    const view = open()
+    await up(composer(view))
+    chat.messages = chat.messages.map(m => (m.id === 'm3' ? { ...m, content: 'edited elsewhere' } : m))
+    await nextTick()
+    await up(editor(view))
+    expect(editingId(view)).toBe('m1')
   })
 
   it('keeps a selection and unsaved changes where they are', async () => {

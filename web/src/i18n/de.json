@@ -479,7 +479,7 @@
     "embedImage": "Bild",
     "embedThumbnail": "Vorschaubild",
     "edited": "(bearbeitet)",
-    "editHint": "Enter speichert · Esc bricht ab",
+    "editHint": "Enter speichert · Esc bricht ab · leerer Text löscht",
     "replies": {
       "one": "{count} Antwort",
       "other": "{count} Antworten"

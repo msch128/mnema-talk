@@ -479,7 +479,7 @@
     "embedImage": "Image",
     "embedThumbnail": "Thumbnail",
     "edited": "(edited)",
-    "editHint": "Enter saves · Esc cancels",
+    "editHint": "Enter saves · Esc cancels · empty text deletes",
     "replies": {
       "one": "{count} reply",
       "other": "{count} replies"

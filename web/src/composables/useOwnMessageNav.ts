@@ -6,10 +6,9 @@ import { nextTick, toValue, watch } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
 import type { Message } from '../types/domain'
 import type { useMessageActions } from './useMessageActions'
-import { shortcodesForEditing } from '../lib/customEmoji'
 import { isImeKey } from './useComposerKeys'
 
-type Actions = Pick<ReturnType<typeof useMessageActions>, 'isOwn' | 'editingId' | 'editText' | 'startEdit' | 'cancelEdit'>
+type Actions = Pick<ReturnType<typeof useMessageActions>, 'isOwn' | 'editingId' | 'editText' | 'editOriginal' | 'startEdit' | 'cancelEdit'>
 
 function plain(e: KeyboardEvent) {
   return !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey && !isImeKey(e)
@@ -39,11 +38,13 @@ function editable(msg: Message, isOwn: (m: Message) => boolean) {
  * @param options.container the element holding the rows (data-msg-id / data-reply-id)
  * @param options.composer  the composer to hand the focus back to
  */
-export function useOwnMessageNav({ messages, actions, container, composer }: {
+export function useOwnMessageNav({ messages, actions, container, composer, atNewest = () => true }: {
   messages: () => Message[]
   actions: Actions
   container: MaybeRefOrGetter<HTMLElement | null>
   composer: () => { focus: () => void } | null
+  /** False while the list is not at its newest end (history window): ArrowUp then leaves the composer alone. */
+  atNewest?: () => boolean
 }) {
   let fromComposer = false
 
@@ -58,7 +59,7 @@ export function useOwnMessageNav({ messages, actions, container, composer }: {
 
   /** ArrowUp in the composer. Returns true when it opened an edit (the key is used). */
   function fromComposerKey(e: KeyboardEvent, draft: string): boolean {
-    if (e.key !== 'ArrowUp' || !plain(e) || draft !== '' || actions.editingId.value) return false
+    if (e.key !== 'ArrowUp' || !plain(e) || draft !== '' || actions.editingId.value || !atNewest()) return false
     const last = list().at(-1)
     if (!last) return false
     e.preventDefault()
@@ -69,7 +70,7 @@ export function useOwnMessageNav({ messages, actions, container, composer }: {
 
   /** The editor of `msg` asked to move on (see arrowStep). Unsaved text stays where it is. */
   function step(dir: -1 | 1, e: KeyboardEvent, msg: Message) {
-    if (actions.editText.value !== shortcodesForEditing(msg.content)) return
+    if (actions.editText.value !== actions.editOriginal.value) return
     const all = list()
     const at = all.findIndex(m => m.id === msg.id)
     if (at < 0) return
