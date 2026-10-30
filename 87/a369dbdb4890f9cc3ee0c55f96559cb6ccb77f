@@ -1,0 +1,19 @@
+web/src/lib/presets.test.ts
+  s_ba0662248deca2::t_dd41728315d883 84,86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87a369dbdb4890f9cc3ee0c55f96559cb6ccb77f",
+  "prompts": {},
+  "sessions": {
+    "s_ba0662248deca2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-desktop-uploads-c294f35d64e7fce5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
