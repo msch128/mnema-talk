@@ -1,0 +1,111 @@
+api/openapi.json
+  s_61e7f03250bd0b::t_b690bf717f40a9 7239-7263,8161-8172,8194,8215-8216,8222-8223,16720-16808,35251-35354
+api/status-codes.json
+  s_61e7f03250bd0b::t_0fb79acf9f2d81 47,49-53
+cmd/server/doctor.go
+  s_61e7f03250bd0b::t_45a2bbcfeda8a9 128-129,133
+cmd/server/main.go
+  s_61e7f03250bd0b::t_1d75fc915091e5 11,214-218,335-351
+cmd/server/reach_test.go
+  s_61e7f03250bd0b::t_b0c7a952fffebc 1-30
+doc/operations.md
+  s_61e7f03250bd0b::t_cb1a85cd774caa 798-799,803-806,816,823-872
+e2e/tests/connection-test.spec.ts
+  s_61e7f03250bd0b::t_74bd83d1b820d4 1-73
+internal/server/connprobe.go
+  s_61e7f03250bd0b::t_ad137a370c20f7 1-119
+internal/server/connprobe_integration_test.go
+  s_61e7f03250bd0b::t_01a23ff53e28ed 1-220
+internal/server/router_build.go
+  s_61e7f03250bd0b::t_5cad89fef0b8c7 119,338-339
+internal/server/router_routes.go
+  s_61e7f03250bd0b::t_615b77acd7ceca 103,167-169
+internal/server/system.go
+  s_61e7f03250bd0b::t_a1d8b4a0f9436b 54-56
+internal/setupcheck/log.go
+  s_61e7f03250bd0b::t_c0b7c174ca3bed 16-19
+internal/setupcheck/messages.go
+  s_61e7f03250bd0b::t_37986e06bae78c 65-69,82-83,142-151,156-157
+internal/setupcheck/observed.go
+  s_61e7f03250bd0b::t_63fc9eb73d0da9 1-101
+internal/setupcheck/observed_test.go
+  s_61e7f03250bd0b::t_a10e3d12b6c545 1-126
+internal/setupcheck/report.go
+  s_61e7f03250bd0b::t_c1b43a85d1bdb5 12,16
+internal/setupcheck/report_info_test.go
+  s_61e7f03250bd0b::t_a1010fabe4a14a 1-19
+internal/setupcheck/setupcheck.go
+  s_61e7f03250bd0b::t_aee35d2e9f2db5 26-28,43,50-52,85-89,125-127,136,173,185,196-198,279,291
+internal/setupcheck/setupcheck_test.go
+  s_61e7f03250bd0b::t_037627ef72157b 65,288
+internal/setupcheck/turn.go
+  s_61e7f03250bd0b::t_bacffac37802ae 24
+internal/sfu/ice_observer.go
+  s_61e7f03250bd0b::t_a4dadb3820683f 1-63
+internal/sfu/probe.go
+  s_61e7f03250bd0b::t_6aab4e91550700 1-190
+internal/sfu/probe_test.go
+  s_61e7f03250bd0b::t_2d4b46fad80579 1-204
+internal/sfu/room_attach.go
+  s_61e7f03250bd0b::t_c73a3e8921ed6e 46,86,90-91,93
+internal/sfu/sfu.go
+  s_61e7f03250bd0b::t_625ba20b550a3d 174-175,203-207
+internal/sfu/sfu_join.go
+  s_61e7f03250bd0b::t_0bc9ab8e47d1eb 66
+internal/sfu/sfu_setup.go
+  s_61e7f03250bd0b::t_6db5ecde40b327 84
+internal/ws/hub.go
+  s_61e7f03250bd0b::t_ec58d635e59d44 41-45
+internal/ws/lifecycle.go
+  s_61e7f03250bd0b::t_df9ca89709c1f5 11,117-119,129,322-327
+web/src/components/AdminStatusTab.test.ts
+  s_61e7f03250bd0b::t_bb69d27b8d30c9 16-18,86-87,167,175-176,180,326-375
+web/src/components/AdminStatusTab.vue
+  s_61e7f03250bd0b::t_f67d896eb3c4d2 4,13-15,18,51-53,55,64-69,104,119-122
+web/src/components/AudioSettingsPanel.vue
+  s_61e7f03250bd0b::t_469308fffd04c1 15,44-47
+web/src/components/ConnectionTest.test.ts
+  s_61e7f03250bd0b::t_e813b977903c90 1-90
+web/src/components/ConnectionTest.vue
+  s_61e7f03250bd0b::t_cbeb32b68839c1 1-87
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_566105f67d2774 1440-1441,1453-1454,1563-1564,1602-1608,1617-1629,3806-3874
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_7e6f7f9bc5dd37 1440-1441,1453-1454,1563-1564,1602-1608,1617-1629,3806-3874
+web/src/i18n/statusCodes.test.ts
+  s_61e7f03250bd0b::t_15f0267842ad91 63,65
+web/src/lib/connectionTest.test.ts
+  s_61e7f03250bd0b::t_54b0fbb76a3c29 1-197
+web/src/lib/connectionTest.ts
+  s_61e7f03250bd0b::t_57d147837722e1 1-172
+web/src/lib/connectionTestApi.ts
+  s_61e7f03250bd0b::t_f6ea598e900cf1 1-14
+web/src/lib/connectionVerdict.test.ts
+  s_61e7f03250bd0b::t_3dfb7be3ff3bb5 1-58
+web/src/lib/connectionVerdict.ts
+  s_61e7f03250bd0b::t_fa755dc8fd2887 1-81
+web/src/lib/setupChecks.ts
+  s_61e7f03250bd0b::t_3937f83f27ec17 3,17-23,26-28
+web/src/lib/wsReport.test.ts
+  s_61e7f03250bd0b::t_4fb4033ae58117 1-39
+web/src/lib/wsReport.ts
+  s_61e7f03250bd0b::t_1f5b044bf76b27 1-17
+web/src/types/rest.ts
+  s_61e7f03250bd0b::t_377fd06cb25d8a 4255-4276,4812-4822,4844,4847
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1969e35bf70c260321a31d27e26668c4c4594700",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
