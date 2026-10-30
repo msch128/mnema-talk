@@ -102,11 +102,11 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		requireChatError(t, err, "load attachments")
 	})
 	t.Run("attachment decoding", func(t *testing.T) {
-		p := driftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,NULL::text original_filename,'image/png'::text mime_type,1::bigint size_bytes,false is_deleted,NOW() created_at FROM public.messages`})
+		p := driftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,NULL::text original_filename,'image/png'::text mime_type,1::bigint size_bytes,false is_deleted,NOW() created_at,0::smallint position FROM public.messages`})
 		requireChatError(t, enrich(ctx, p, []Message{{ID: f.m}}), "NULL")
 	})
 	t.Run("attachment stream", func(t *testing.T) {
-		p := driftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,'image.png'::text original_filename,'image/png'::text mime_type,1/(number-number) size_bytes,false is_deleted,NOW() created_at FROM public.messages`})
+		p := driftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,'image.png'::text original_filename,'image/png'::text mime_type,1/(number-number) size_bytes,false is_deleted,NOW() created_at,0::smallint position FROM public.messages`})
 		requireChatError(t, enrich(ctx, p, []Message{{ID: f.m}}), "division by zero")
 	})
 	t.Run("reaction query", func(t *testing.T) {
