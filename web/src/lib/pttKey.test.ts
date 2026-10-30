@@ -11,5 +11,8 @@ describe('pttKeyLabel', () => {
     expect(pttKeyLabel('Space')).toBe('Space')
     expect(pttKeyLabel('ArrowUp')).toBe('Up')
     expect(pttKeyLabel('PageDown')).toBe('Page Down')
+    expect(pttKeyLabel('x')).toBe('x')
+    expect(pttKeyLabel('CapsLock')).toBe('Caps Lock')
+    expect(pttKeyLabel('Backslash')).toBe('\\')
   })
 })
