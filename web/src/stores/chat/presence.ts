@@ -7,23 +7,25 @@ import { assertCommunity, type Cx } from './state'
 import { updateUserEverywhere } from './members'
 import { sendWSEvent } from './socket'
 
-/**
- * Someone in a Talk who has not deafened themselves is present even without
- * touching the keyboard (listening, or playing with the window in the
- * background). Sharing the screen or the camera counts even when deafened.
- */
+/** Sharing the screen or the camera in a Talk is activity without input events. */
 export function holdsPresence({ voiceStore: voice }: Cx): boolean {
-  return voice.isConnected && (!voice.isDeafened || voice.isScreenSharing || voice.isCameraOn)
+  return voice.isConnected && (voice.isScreenSharing || voice.isCameraOn)
+}
+
+/** Starts the idle countdown over; an idle member stays idle. */
+function armIdleTimer(cx: Cx) {
+  const { cs } = cx
+  clearTimeout(cs.idleTimer)
+  cs.idleTimer = setTimeout(() => {
+    if (holdsPresence(cx)) return armIdleTimer(cx)
+    cs.isIdle = true
+    sendWSEvent(cx, 'presence_idle', { idle: true })
+  }, IDLE_AFTER_MS)
 }
 
 export function markActive(cx: Cx) {
   const { cs } = cx
-  clearTimeout(cs.idleTimer)
-  cs.idleTimer = setTimeout(() => {
-    if (holdsPresence(cx)) return markActive(cx)
-    cs.isIdle = true
-    sendWSEvent(cx, 'presence_idle', { idle: true })
-  }, IDLE_AFTER_MS)
+  armIdleTimer(cx)
   if (cs.isIdle) {
     cs.isIdle = false
     sendWSEvent(cx, 'presence_idle', { idle: false })
@@ -120,9 +122,16 @@ export function installActivityListeners(cx: Cx) {
     }
     markActive(cx)
   }
-  // Joining, leaving, deafening or sharing starts a fresh idle period.
-  watch(() => [cx.voiceStore.isConnected, cx.voiceStore.isDeafened, cx.voiceStore.isScreenSharing, cx.voiceStore.isCameraOn], () => markActive(cx), { flush: 'sync' })
-  // Also covers the desktop global hotkey, which sets the same flag.
-  watch(() => cx.voiceStore.isPttPressed, pressed => { if (pressed && cx.voiceStore.isConnected) onVoiceActivity(cx) }, { flush: 'sync' })
-  watch(() => cx.voiceStore.isSpeaking(cx.authStore.user?.id ?? null), speaking => { if (speaking && cx.voiceStore.isConnected) onVoiceActivity(cx) }, { flush: 'sync' })
+  // Joining, undeafening and turning the camera or a share on are activity; the
+  // opposite changes (leaving, a drop, camera or share off) only restart the
+  // countdown, so an idle member is not woken by them.
+  const { voiceStore: voice } = cx
+  const onChange = (now: boolean, before: boolean) => { if (now && !before) markActive(cx); else if (!now && before) armIdleTimer(cx) }
+  watch(() => voice.isConnected, onChange, { flush: 'sync' })
+  watch(() => voice.isDeafened, (now, before) => onChange(!now, !before), { flush: 'sync' })
+  watch(() => voice.isScreenSharing, onChange, { flush: 'sync' })
+  watch(() => voice.isCameraOn, onChange, { flush: 'sync' })
+  // Push-to-talk also covers the desktop global hotkey, which sets the same flag.
+  watch(() => voice.isPttPressed, pressed => { if (pressed && voice.isConnected) onVoiceActivity(cx) }, { flush: 'sync' })
+  watch(() => voice.isSpeaking(cx.authStore.user?.id ?? null), speaking => { if (speaking && voice.isConnected) onVoiceActivity(cx) }, { flush: 'sync' })
 }

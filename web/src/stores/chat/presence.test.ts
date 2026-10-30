@@ -65,14 +65,14 @@ describe('automatic away', () => {
     expect(idleMessages()).not.toContain(true)
   })
 
-  it('does not go away for a silent listener who is not deafened', () => {
+  it('goes away for a silent, undeafened member in a Talk', () => {
     joinTalk()
-    vi.advanceTimersByTime(IDLE_AFTER_MS * 3)
-    expect(idleMessages()).not.toContain(true)
+    vi.advanceTimersByTime(IDLE_AFTER_MS)
+    expect(isIdle()).toBe(true)
   })
 
-  it('counts push-to-talk presses as activity, also while deafened', () => {
-    joinTalk(true)
+  it('counts push-to-talk presses as activity', () => {
+    joinTalk()
     for (let i = 0; i < 6; i++) {
       cx.voiceStore.isPttPressed = true
       cx.voiceStore.isPttPressed = false
@@ -83,14 +83,8 @@ describe('automatic away', () => {
     expect(isIdle()).toBe(true)
   })
 
-  it('goes away when deafened and silent', () => {
-    joinTalk(true)
-    vi.advanceTimersByTime(IDLE_AFTER_MS)
-    expect(isIdle()).toBe(true)
-  })
-
-  it('treats screen sharing and the camera as activity even when deafened', () => {
-    joinTalk(true)
+  it('holds presence while sharing the screen or using the camera', () => {
+    joinTalk()
     cx.voiceStore.isScreenSharing = true
     vi.advanceTimersByTime(IDLE_AFTER_MS * 2)
     expect(idleMessages()).not.toContain(true)
@@ -98,24 +92,33 @@ describe('automatic away', () => {
     cx.voiceStore.isCameraOn = true
     vi.advanceTimersByTime(IDLE_AFTER_MS * 2)
     expect(idleMessages()).not.toContain(true)
+    cx.voiceStore.isCameraOn = false
+    vi.advanceTimersByTime(IDLE_AFTER_MS)
+    expect(isIdle()).toBe(true)
   })
 
-  it('wakes an idle member who joins a Talk', () => {
+  it('wakes an idle member who joins a Talk or turns the camera on', () => {
     vi.advanceTimersByTime(IDLE_AFTER_MS)
     expect(isIdle()).toBe(true)
     joinTalk()
     expect(idleMessages().at(-1)).toBe(false)
+    vi.advanceTimersByTime(IDLE_AFTER_MS)
+    expect(isIdle()).toBe(true)
+    cx.voiceStore.isCameraOn = true
+    expect(idleMessages().at(-1)).toBe(false)
   })
 
-  it('restores normal idle handling after leaving the Talk', () => {
+  it('keeps an idle member away when they are dropped from the Talk or stop sharing', () => {
     joinTalk()
-    vi.advanceTimersByTime(IDLE_AFTER_MS * 2)
-    expect(idleMessages()).not.toContain(true)
+    cx.voiceStore.isScreenSharing = true
+    cx.voiceStore.isScreenSharing = false
+    vi.advanceTimersByTime(IDLE_AFTER_MS)
+    expect(isIdle()).toBe(true)
+    const count = idleMessages().length
     cx.voiceStore.isConnected = false
     cx.voiceStore.currentChannelId = null
-    vi.advanceTimersByTime(IDLE_AFTER_MS - 1)
-    expect(idleMessages()).not.toContain(true)
-    vi.advanceTimersByTime(1)
+    expect(idleMessages()).toHaveLength(count)
+    vi.advanceTimersByTime(IDLE_AFTER_MS)
     expect(isIdle()).toBe(true)
   })
 
