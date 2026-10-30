@@ -134,7 +134,14 @@ describe('microphone menu', () => {
     expect(rtc.applyAudioSettings).toHaveBeenCalledTimes(1)
     act(find(await open(menus, 'mic'), 'mic-ptt'))
     expect(voice.inputMode).toBe('ptt')
-    expect(find(await open(menus, 'mic'), 'mic-ptt')).toMatchObject({ checked: true, shortcut: 'Space' })
+    // No key is chosen by default, so the row shows none; a chosen key shows as a word.
+    const noKey = find(await open(menus, 'mic'), 'mic-ptt')
+    expect(noKey).toMatchObject({ checked: true })
+    expect(noKey).not.toHaveProperty('shortcut')
+    voice.pttKey = 'KeyV'
+    expect(find(await open(menus, 'mic'), 'mic-ptt')).toMatchObject({ checked: true, shortcut: 'V' })
+    voice.pttKey = 'Space'
+    expect(find(await open(menus, 'mic'), 'mic-ptt')).toMatchObject({ shortcut: 'Space' })
     act(find(await open(menus, 'mic'), 'mic-ptt'))
     expect(voice.inputMode).toBe('activity')
   })
