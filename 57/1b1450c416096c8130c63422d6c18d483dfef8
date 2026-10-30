@@ -1,0 +1,31 @@
+README.md
+  s_06fcde5dbef956::t_2f3f5c4b357791 216
+doc/deployment.md
+  s_06fcde5dbef956::t_78c519e531f6ce 76-78
+doc/moderation.md
+  s_06fcde5dbef956::t_6670955fe14d73 231
+internal/setupwizard/options.go
+  s_06fcde5dbef956::t_09ace8ee5f4c23 24
+internal/setupwizard/run.go
+  s_06fcde5dbef956::t_855346a41f3295 39
+web/src/components/AdminInvitesTab.test.ts
+  s_06fcde5dbef956::t_8c225f70cf2510 105-115
+web/src/components/AdminInvitesTab.vue
+  s_06fcde5dbef956::t_051704cb38d1fb 22-23,48,147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "571b1450c416096c8130c63422d6c18d483dfef8",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
