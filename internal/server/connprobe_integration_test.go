@@ -130,11 +130,15 @@ func TestWebSocketReportIsAdminOnlyAndShowsInTheStatus(t *testing.T) {
 	if c := level(); c.Level != setupcheck.OK || !strings.Contains(c.Detail, "WebSocket via proxy OK") {
 		t.Fatalf("after ok: %+v", c)
 	}
-	for i := 0; i < 3; i++ {
-		admin.post("/api/admin/status/websocket", map[string]bool{"connected": false})
+	// A socket that is merely not open yet proves nothing about the proxy:
+	// reports of false change nothing, however many.
+	for i := 0; i < 5; i++ {
+		if res := admin.post("/api/admin/status/websocket", map[string]bool{"connected": false}); res.status != http.StatusNoContent {
+			t.Fatalf("false report: %d", res.status)
+		}
 	}
-	if c := level(); c.Level != setupcheck.Warn || !strings.Contains(c.Fix, "Upgrade: websocket") {
-		t.Fatalf("after three failures: %+v", c)
+	if c := level(); c.Level != setupcheck.OK {
+		t.Fatalf("after five false reports: %+v", c)
 	}
 }
 
@@ -198,5 +202,19 @@ func TestVoiceUDPTurnsGreenOnlyForAnOutsidePeer(t *testing.T) {
 	rt.RecordICEConnected(netip.MustParseAddr("198.51.100.20"), time.Now())
 	if c := voice(); c.Level != setupcheck.OK || !strings.HasPrefix(c.Detail, "Confirmed: a member from outside connected") {
 		t.Fatalf("outside peer: %+v", c)
+	}
+}
+
+func TestConnectionProbeLimitsLiveTestsPerMember(t *testing.T) {
+	a := appWithVoice(t, &setupcheck.Runtime{}, false)
+	member := a.register(a.seedAdmin(), "pat")
+	offer := browserOffer(t)
+	for i := 0; i < 2; i++ {
+		if res := member.post("/api/webrtc/probe", map[string]string{"sdp": offer}); res.status != http.StatusOK {
+			t.Fatalf("probe %d: %d %s", i, res.status, res.body)
+		}
+	}
+	if res := member.post("/api/webrtc/probe", map[string]string{"sdp": offer}); res.status != http.StatusTooManyRequests {
+		t.Fatalf("third live probe: %d", res.status)
 	}
 }

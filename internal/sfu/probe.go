@@ -25,6 +25,8 @@ const (
 	probeLinger = 5 * time.Second
 	// maxProbes bounds the test connections alive at once.
 	maxProbes = 8
+	// maxProbesPerMember keeps one member from taking every slot.
+	maxProbesPerMember = 2
 	// maxProbeOfferBytes bounds the offer SDP a browser may send.
 	maxProbeOfferBytes = 16 << 10
 )
@@ -42,7 +44,7 @@ var (
 // itself after a few seconds or when it fails. Remote candidates are vetted
 // like those of a Talk member, so the test cannot point the server at
 // addresses it must not probe.
-func (s *SFU) Probe(ctx context.Context, offerSDP string) (string, error) {
+func (s *SFU) Probe(ctx context.Context, owner, offerSDP string) (string, error) {
 	if s.closed.Load() {
 		return "", errSFUClosed
 	}
@@ -51,22 +53,21 @@ func (s *SFU) Probe(ctx context.Context, offerSDP string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if s.probes.Add(1) > maxProbes {
-		s.probes.Add(-1)
+	if !s.takeProbe(owner) {
 		return "", ErrProbeBusy
 	}
 	pc, err := api.NewPeerConnection(webrtc.Configuration{})
 	if err != nil {
-		s.probes.Add(-1)
+		s.releaseProbe(owner)
 		return "", err
 	}
 	answer, err := answerProbe(ctx, pc, offer)
 	if err != nil {
 		_ = pc.Close()
-		s.probes.Add(-1)
+		s.releaseProbe(owner)
 		return "", err
 	}
-	s.watchProbe(pc)
+	s.watchProbe(pc, owner)
 	return answer, nil
 }
 
@@ -129,11 +130,11 @@ func answerProbe(ctx context.Context, pc *webrtc.PeerConnection, offer string) (
 
 // watchProbe logs the outcome, tells the ICE observer, and closes the
 // connection when it ends or its time is up.
-func (s *SFU) watchProbe(pc *webrtc.PeerConnection) {
+func (s *SFU) watchProbe(pc *webrtc.PeerConnection, owner string) {
 	var once atomic.Bool
 	closeProbe := func() {
 		if once.CompareAndSwap(false, true) {
-			s.probes.Add(-1)
+			s.releaseProbe(owner)
 			_ = pc.Close()
 		}
 	}
@@ -152,3 +153,30 @@ func (s *SFU) watchProbe(pc *webrtc.PeerConnection) {
 	})
 	time.AfterFunc(probeLifetime, closeProbe)
 }
+
+// takeProbe reserves a slot for owner, within the global and per-member caps.
+func (s *SFU) takeProbe(owner string) bool {
+	s.probeMu.Lock()
+	defer s.probeMu.Unlock()
+	if s.probes >= maxProbes || s.probesBy[owner] >= maxProbesPerMember {
+		return false
+	}
+	if s.probesBy == nil {
+		s.probesBy = make(map[string]int)
+	}
+	s.probes++
+	s.probesBy[owner]++
+	return true
+}
+
+func (s *SFU) releaseProbe(owner string) {
+	s.probeMu.Lock()
+	defer s.probeMu.Unlock()
+	s.probes--
+	if s.probesBy[owner]--; s.probesBy[owner] <= 0 {
+		delete(s.probesBy, owner)
+	}
+}
+
+// IsClosed reports whether err says the SFU has been shut down.
+func IsClosed(err error) bool { return errors.Is(err, errSFUClosed) }

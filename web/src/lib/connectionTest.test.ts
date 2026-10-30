@@ -99,7 +99,7 @@ describe('selectedPair', () => {
 
 describe('tryPath', () => {
   it('connects with an offer carrying no media, and closes the connection', async () => {
-    const probe = vi.fn(async () => 'answer')
+    const probe = vi.fn(async (_sdp: string) => 'answer')
     const d = deps(() => ({ candidates: ['host'], connects: true, stats: goodStats('host', '198.51.100.2') }), probe)
     const result = await tryPath(d, [], 'all')
     expect(result.outcome).toBe('ok')

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/netip"
 	"os"
 	"os/signal"
 	"strconv"
@@ -210,7 +211,11 @@ func startVoice(ctx context.Context, cfg *config.Config, setup *setupcheck.Runti
 		opwarn.Raise(opwarn.VoiceUnavailable, 0)
 		return nil, func() {}, nil
 	}
-	voice.SetICEConnectedHandler(func(ev sfu.ICEConnected) { setup.RecordICEConnected(ev.Remote, time.Now()) })
+	voice.SetICEConnectedHandler(func(ev sfu.ICEConnected) {
+		if provesOutsideReach(ev, voice.AnnouncedIPs()) {
+			setup.RecordICEConnected(ev.Remote, time.Now())
+		}
+	})
 	closeVoice := func() {
 		if err := voice.Close(); err != nil {
 			slog.Warn("close SFU", "err", err)
@@ -326,4 +331,21 @@ func logLevel(cfg *config.Config) slog.Level {
 		return slog.LevelInfo
 	}
 	return slog.LevelDebug
+}
+
+// provesOutsideReach says whether a finished ICE connection shows that the
+// voice port is reachable from outside. A relayed connection does not: the
+// built-in TURN relay's own address is the server's public one. Neither does a
+// peer-reflexive remote at one of the server's own announced addresses, which
+// is the relay seen from the server.
+func provesOutsideReach(ev sfu.ICEConnected, announced []string) bool {
+	if ev.RemoteType == "relay" {
+		return false
+	}
+	for _, a := range announced {
+		if ip, err := netip.ParseAddr(a); err == nil && ip == ev.Remote {
+			return false
+		}
+	}
+	return true
 }

@@ -202,5 +202,7 @@ type SFU struct {
 	notifier     *mediaNotifier
 	iceSeen      *iceObserver
 	// probes counts the live connection tests (see Probe).
-	probes atomic.Int32
+	probeMu  sync.Mutex
+	probes   int
+	probesBy map[string]int
 }

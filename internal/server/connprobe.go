@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -55,15 +56,18 @@ func (h *systemHandler) connectionProbe(w http.ResponseWriter, r *http.Request) 
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	answer, err := h.sfu.Probe(r.Context(), req.SDP)
+	answer, err := h.sfu.Probe(r.Context(), member.ID.String(), req.SDP)
 	switch {
 	case errors.Is(err, sfu.ErrProbeInvalid):
 		return httpx.ErrInvalidInput("the offer must contain one data channel and no audio or video")
 	case errors.Is(err, sfu.ErrProbeBusy):
 		httpx.WriteRateLimited(w, 5*time.Second)
 		return nil
-	case err != nil:
+	case sfu.IsClosed(err):
 		return httpx.ErrUnavailable("voice is not available")
+	case err != nil:
+		slog.Warn("connection test failed", "err", err)
+		return httpx.ErrInternal("the connection test could not be set up")
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	httpx.WriteJSON(w, http.StatusOK, ConnectionProbeAnswer{SDP: answer})
@@ -104,7 +108,12 @@ func (h *systemHandler) reportWebSocket(w http.ResponseWriter, r *http.Request) 
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	h.setup.RecordWebSocket(req.Connected, time.Now())
+	// Only a success is taken from the browser. A socket that is merely not
+	// open yet says nothing about the proxy; real misses are counted where
+	// they arrive, on /api/ws.
+	if req.Connected {
+		h.setup.RecordWebSocket(true, time.Now())
+	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

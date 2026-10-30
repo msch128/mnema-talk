@@ -25,11 +25,11 @@ describe('reportWebSocket', () => {
     expect(apiMock).toHaveBeenCalledWith('/api/admin/status/websocket', { method: 'POST', json: { connected: true } })
   })
 
-  it('reports a socket that never opens as not connected, after the wait', async () => {
+  it('reports nothing for a socket that never opens, after the wait', async () => {
     const done = reportWebSocket(() => false, 1000)
     await vi.advanceTimersByTimeAsync(1000)
     await done
-    expect(apiMock).toHaveBeenCalledWith('/api/admin/status/websocket', { method: 'POST', json: { connected: false } })
+    expect(apiMock).not.toHaveBeenCalled()
   })
 
   it('never throws when the report cannot be sent', async () => {

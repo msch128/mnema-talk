@@ -61,7 +61,7 @@ func TestProbeConnectsAndTellsTheObserverWithoutCreatingARoom(t *testing.T) {
 		}
 	})
 
-	answer, err := server.Probe(context.Background(), offer)
+	answer, err := server.Probe(context.Background(), "m", offer)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestProbeRefusesWhatIsNotADataChannelOffer(t *testing.T) {
 	}
 	offer, _ := pc.CreateOffer(nil)
 	for name, sdp := range map[string]string{"audio": offer.SDP, "empty": "", "garbage": "v=0\nnot sdp", "huge": strings.Repeat("a", maxProbeOfferBytes+1)} {
-		if _, err := s.Probe(context.Background(), sdp); !errors.Is(err, ErrProbeInvalid) {
+		if _, err := s.Probe(context.Background(), "m", sdp); !errors.Is(err, ErrProbeInvalid) {
 			t.Errorf("%s: err = %v, want ErrProbeInvalid", name, err)
 		}
 	}
@@ -129,19 +129,38 @@ func TestProbeDropsCandidatesTheTricklePathRefuses(t *testing.T) {
 	}
 }
 
-func TestProbeIsCappedAndNeverOnAClosedSFU(t *testing.T) {
+func TestProbeIsCappedGloballyAndPerMemberAndNeverOnAClosedSFU(t *testing.T) {
 	s := newLoopbackSFU(t)
 	_, offer := dataChannelOffer(t, newLoopbackSFU(t))
-	s.probes.Store(maxProbes)
-	if _, err := s.Probe(context.Background(), offer); !errors.Is(err, ErrProbeBusy) {
-		t.Fatalf("err = %v, want ErrProbeBusy", err)
+	ctx := context.Background()
+
+	for i := 0; i < maxProbesPerMember; i++ {
+		if _, err := s.Probe(ctx, "a", offer); err != nil {
+			t.Fatalf("probe %d: %v", i, err)
+		}
 	}
-	if got := s.probes.Load(); got != maxProbes {
-		t.Fatalf("a refused probe left the counter at %d", got)
+	if _, err := s.Probe(ctx, "a", offer); !errors.Is(err, ErrProbeBusy) {
+		t.Fatalf("a third probe of one member: %v, want ErrProbeBusy", err)
 	}
-	s.probes.Store(0)
+	if _, err := s.Probe(ctx, "b", offer); err != nil {
+		t.Fatalf("another member was refused: %v", err)
+	}
+
+	s.probeMu.Lock()
+	s.probes = maxProbes
+	s.probeMu.Unlock()
+	if _, err := s.Probe(ctx, "c", offer); !errors.Is(err, ErrProbeBusy) {
+		t.Fatalf("err = %v, want ErrProbeBusy at the global cap", err)
+	}
+	s.probeMu.Lock()
+	if s.probes != maxProbes || s.probesBy["c"] != 0 {
+		t.Fatalf("a refused probe left counters at %d / %d", s.probes, s.probesBy["c"])
+	}
+	s.probes = 0
+	s.probeMu.Unlock()
+
 	_ = s.Close()
-	if _, err := s.Probe(context.Background(), offer); err == nil {
-		t.Fatal("a closed SFU accepted a probe")
+	if _, err := s.Probe(ctx, "d", offer); !IsClosed(err) {
+		t.Fatalf("a closed SFU: %v", err)
 	}
 }
