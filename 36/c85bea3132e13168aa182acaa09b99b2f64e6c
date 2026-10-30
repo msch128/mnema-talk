@@ -1,0 +1,19 @@
+web/src/components/CreateForumPostModal.test.ts
+  s_4c6a19030e223f::t_3406ddcfd32646 11,260-285
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "36c85bea3132e13168aa182acaa09b99b2f64e6c",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
