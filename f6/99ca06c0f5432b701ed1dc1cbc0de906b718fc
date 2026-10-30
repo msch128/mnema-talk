@@ -1,0 +1,19 @@
+e2e/tests/two-factor.spec.ts
+  s_e516df595aeaf4::t_b7e415bb766bcd 61-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f699ca06c0f5432b701ed1dc1cbc0de906b718fc",
+  "prompts": {},
+  "sessions": {
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
