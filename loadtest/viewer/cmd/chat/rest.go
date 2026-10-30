@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/msch128/mnema-talk/loadtest/viewer/internal/lt"
 )
 
 // decorate adds the session's identity to a REST request: the cookie, and for
@@ -16,7 +18,7 @@ import (
 func (s *session) decorate(req *http.Request) {
 	base := s.r.cfg.base
 	req.Header.Set("Cookie", s.r.cfg.cookie+"="+s.tok.Token)
-	req.Header.Set("Origin", base.Scheme+"://"+base.Host)
+	req.Header.Set("Origin", lt.Origin(base))
 	if s.r.cfg.spoofXFF {
 		req.Header.Set("X-Forwarded-For", s.xff())
 	}

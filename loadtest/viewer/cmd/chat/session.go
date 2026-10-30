@@ -36,7 +36,7 @@ func (s *session) xff() string {
 func (s *session) headers() http.Header {
 	base := s.r.cfg.base
 	h := http.Header{}
-	h.Set("Origin", base.Scheme+"://"+base.Host)
+	h.Set("Origin", lt.Origin(base))
 	h.Set("Cookie", s.r.cfg.cookie+"="+s.tok.Token)
 	if s.r.cfg.spoofXFF {
 		h.Set("X-Forwarded-For", s.xff())
@@ -142,13 +142,18 @@ func (s *session) markUp(ctx context.Context, began time.Time) {
 	}
 }
 
-// close ends the connection politely.
+// closeGrace is how long a peer gets to answer the close frame.
+const closeGrace = 3 * time.Second
+
+// close ends the connection politely, and for good after closeGrace: a peer
+// that never answers must not hold up the end of the run.
 func (s *session) close() {
 	s.wmu.Lock()
 	defer s.wmu.Unlock()
 	if s.conn != nil {
 		_ = s.conn.WriteControl(websocket.CloseMessage,
 			websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Now().Add(time.Second))
+		_ = s.conn.SetReadDeadline(time.Now().Add(closeGrace))
 	}
 }
 

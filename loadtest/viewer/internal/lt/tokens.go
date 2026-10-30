@@ -48,3 +48,14 @@ func ParseBase(raw string) (*url.URL, error) {
 	}
 	return base, nil
 }
+
+// Origin is the page origin the tools claim in the Origin header of the
+// WebSocket upgrade and of every write request. The server compares it with
+// its PUBLIC_URL, so behind an https PUBLIC_URL a run against a loopback
+// BASE_URL must set ORIGIN to the public one. Default: the origin of base.
+func Origin(base *url.URL) string {
+	if v := os.Getenv("ORIGIN"); v != "" {
+		return v
+	}
+	return base.Scheme + "://" + base.Host
+}

@@ -21,7 +21,7 @@ func dialVoice(base *url.URL, tk token) (*websocket.Conn, error) {
 		scheme = "wss"
 	}
 	h := http.Header{}
-	h.Set("Origin", base.Scheme+"://"+base.Host)
+	h.Set("Origin", lt.Origin(base))
 	h.Set("Cookie", cookie+"="+tk.Token)
 	conn, resp, err := websocket.DefaultDialer.Dial(scheme+"://"+base.Host+"/api/ws", h)
 	if err != nil {

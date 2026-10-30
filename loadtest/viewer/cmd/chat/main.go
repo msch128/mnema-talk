@@ -79,7 +79,7 @@ func mainErr() (bool, error) {
 	sampler.Mark("settle")
 	sleep(ctx, cfg.settle)
 	cancel()
-	wg.Wait()
+	waitBounded(wg, 15*time.Second)
 	sampler.SetPhase("post")
 	time.Sleep(5 * time.Second) // the server finishes tearing the sessions down
 	sampler.Mark("post")
@@ -162,5 +162,17 @@ func (r *run) progress(ctx context.Context) {
 			fmt.Printf("%s connected=%d messages sent=%d delivered=%d/%d wsErrors=%d reconnects=%d\n",
 				time.Now().Format("15:04:05"), r.connected.Load(), tot.Sent, tot.Got, tot.Expected, r.wsErrors.Load(), r.reconnects.Load())
 		}
+	}
+}
+
+// waitBounded waits for wg, at most limit: a goroutine stuck in a network call
+// must not keep the report from being written.
+func waitBounded(wg *sync.WaitGroup, limit time.Duration) {
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(limit):
+		fmt.Println("some sessions did not close within", limit)
 	}
 }

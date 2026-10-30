@@ -165,6 +165,14 @@ curl -fsS --max-time 10 "$BASE_URL/api/health" >/dev/null || die "$BASE_URL/api/
 [ -n "${JWT_SECRET:-}" ] || JWT_SECRET="$(container_env "$APP_CONTAINER" JWT_SECRET)"
 [ -n "$JWT_SECRET" ] || die "JWT_SECRET is not in the container's environment; export it"
 [ -n "${METRICS_TOKEN:-}" ] || METRICS_TOKEN="$(container_env "$APP_CONTAINER" METRICS_TOKEN)"
+# ORIGIN is what the tools send as the page origin; the server compares it with
+# its PUBLIC_URL (or CORS_ALLOWED_ORIGINS), also when BASE_URL is a loopback address.
+if [ -z "${ORIGIN:-}" ]; then
+  pub="$(container_env "$APP_CONTAINER" PUBLIC_URL)"
+  [ -n "$pub" ] || pub="$(container_env "$APP_CONTAINER" CORS_ALLOWED_ORIGINS | cut -d, -f1)"
+  ORIGIN="$(printf '%s' "$pub" | sed -E 's#^([a-z]+://[^/]+).*#\1#')"
+  unset pub
+fi
 SESSION_COOKIE="${SESSION_COOKIE:-}"
 if [ -z "$SESSION_COOKIE" ]; then
   case "$(container_env "$APP_CONTAINER" PUBLIC_URL)" in
@@ -186,6 +194,14 @@ if [ "$(psql_db -c "select count(*) from users where username like 'loadtest-%'"
   die "users named loadtest-* exist already (a run that was killed?). Delete them with: delete from users where username like 'loadtest-%'; and the channels named 'Loadtest%', then compare the fingerprint yourself"
 fi
 
+if [ "$(psql_db -c "select count(*) from channels where name in ('Loadtest', 'Loadtest Chat')")" != 0 ]; then
+  die "channels named 'Loadtest' or 'Loadtest Chat' exist already; rename or delete them first (the script deletes its own channels by id)"
+fi
+# Outgoing webhooks and bots would receive the events of the test channels.
+if [ "${ALLOW_WEBHOOKS:-0}" != 1 ] && [ "$(psql_db -c "select (select count(*) from outgoing_webhooks where enabled) + (select count(*) from bots)")" != 0 ]; then
+  die "enabled outgoing webhooks or bots exist and would receive the test channels' events (real requests to their URLs); disable them or set ALLOW_WEBHOOKS=1"
+fi
+
 RESULT_DIR="${RESULT_DIR:-$PWD/loadtest-results/$(date +%Y%m%d-%H%M%S)}"
 mkdir -p "$RESULT_DIR"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/mnema-loadtest.XXXXXX")"
@@ -195,6 +211,8 @@ TOKENS="$WORK/tokens.json"
 # -- cleanup (runs on every exit) ----------------------------------------------------------
 CHILD_PIDS=()
 SEEDED=0
+VOICE_CHANNEL=""
+TEXT_CHANNEL=""
 CLEANED=0
 INTERRUPTED=0
 FINGERPRINT_OK=unknown
@@ -231,27 +249,49 @@ reset_sequences() {
 }
 
 delete_loadtest_data() {
+  # The channels are deleted by the ids they were created with.
+  local CHANNEL_IDS="'00000000-0000-0000-0000-000000000000'"
+  [ -z "$VOICE_CHANNEL" ] || CHANNEL_IDS="$CHANNEL_IDS, '$VOICE_CHANNEL'"
+  [ -z "$TEXT_CHANNEL" ] || CHANNEL_IDS="$CHANNEL_IDS, '$TEXT_CHANNEL'"
   psql_db -q <<SQL >/dev/null
 begin;
--- The audit log keeps no foreign keys: remove what the test users and channels wrote.
+-- The audit log and the outgoing queue keep no foreign keys to the channels:
+-- remove what the test users and channels caused.
 delete from audit_log
  where actor_id in (select id from users where username like 'loadtest-%')
-    or channel_id in (select id from channels where name in ('Loadtest', 'Loadtest Chat'));
-delete from channels where name in ('Loadtest', 'Loadtest Chat');
+    or channel_id in ($CHANNEL_IDS);
+delete from outgoing_queue where channel_id in ($CHANNEL_IDS);
+delete from channels where id in ($CHANNEL_IDS);
 delete from users where username like 'loadtest-%';
 commit;
 SQL
 }
 
+# stop_children asks the tools to stop (TERM), and kills what is still running
+# after 5 s.
+stop_children() {
+  local p i
+  for p in "${CHILD_PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null; done
+  for i in 1 2 3 4 5; do
+    local alive=0
+    for p in "${CHILD_PIDS[@]:-}"; do [ -n "$p" ] && kill -0 "$p" 2>/dev/null && alive=1; done
+    [ "$alive" = 0 ] && break
+    sleep 1
+  done
+  for p in "${CHILD_PIDS[@]:-}"; do [ -n "$p" ] && kill -9 "$p" 2>/dev/null; done
+  for p in "${CHILD_PIDS[@]:-}"; do [ -n "$p" ] && wait "$p" 2>/dev/null; done
+  return 0
+}
+
 cleanup() {
   local status=$?
-  trap - EXIT INT TERM
+  trap - EXIT
+  trap '' INT TERM # a second Ctrl-C must not leave users, channels and tokens behind
   set +e # every step below must run, whatever the one before did
   [ "$CLEANED" = 0 ] || exit "$status"
   CLEANED=1
-  local p
-  for p in "${CHILD_PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null || true; done
-  for p in "${CHILD_PIDS[@]:-}"; do [ -n "$p" ] && wait "$p" 2>/dev/null || true; done
+  say "==> stopping the tools and cleaning up; please wait (Ctrl-C is ignored from here)"
+  stop_children
   rm -f "$TOKENS"
   if [ "$SEEDED" = 1 ]; then
     say "==> cleaning up"
@@ -321,13 +361,9 @@ insert into users (username, display_name, password_hash, rules_accepted_version
 select format('loadtest-%s', lpad(i::text, 4, '0')), format('Load %s', lpad(i::text, 4, '0')), '!loadtest-no-login',
        coalesce((select case when rules_text <> '' then rules_version else 0 end from instance_settings limit 1), 0)
 from generate_series(0, $USERS - 1) i;
-insert into channels (category_id, name, type, sort_order)
-select id, 'Loadtest', 'voice', 99 from categories order by sort_order, id limit 1;
-insert into channels (category_id, name, type, sort_order)
-select id, 'Loadtest Chat', 'text', 99 from categories order by sort_order, id limit 1;
 SQL
-VOICE_CHANNEL="$(psql_db -c "select id from channels where name = 'Loadtest' and type = 'voice'" | head -n1)"
-TEXT_CHANNEL="$(psql_db -c "select id from channels where name = 'Loadtest Chat' and type = 'text'" | head -n1)"
+VOICE_CHANNEL="$(psql_db -q -c "insert into channels (category_id, name, type, sort_order) select id, 'Loadtest', 'voice', 99 from categories order by sort_order, id limit 1 returning id" | head -n1)"
+TEXT_CHANNEL="$(psql_db -q -c "insert into channels (category_id, name, type, sort_order) select id, 'Loadtest Chat', 'text', 99 from categories order by sort_order, id limit 1 returning id" | head -n1)"
 [ -n "$VOICE_CHANNEL" ] && [ -n "$TEXT_CHANNEL" ] || die "no category to put the channels in"
 
 # -- 3. tokens ----------------------------------------------------------------------------------
@@ -365,7 +401,7 @@ run_scenario() {
   sample_docker_stats "$stats" &
   spid=$!
   CHILD_PIDS+=("$spid")
-  local vars=(BASE_URL="$BASE_URL" TOKENS="$TOKENS" METRICS_TOKEN="$METRICS_TOKEN" SESSION_COOKIE="$SESSION_COOKIE" OUT="$out" EVALUATE=1)
+  local vars=(BASE_URL="$BASE_URL" TOKENS="$TOKENS" METRICS_TOKEN="$METRICS_TOKEN" SESSION_COOKIE="$SESSION_COOKIE" ORIGIN="$ORIGIN" OUT="$out" EVALUATE=1)
   while IFS= read -r line; do vars+=("$line"); done < <(scenario_env "$name")
   if [ "$kind" = chat ]; then
     vars+=(CHANNEL_ID="$TEXT_CHANNEL")

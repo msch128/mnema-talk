@@ -289,6 +289,26 @@ The built-in relay limits what one address can do: 120 allocations a minute
 (burst 60), 256 allocations in total, 4 per member. `RELAY_MEMBERS` therefore
 tops out below 256 from one host, and members join 600 ms apart.
 
+### Origin, webhooks and other side effects
+
+- **Origin.** The server compares the `Origin` header of WebSocket upgrades and
+  writes with its `PUBLIC_URL` (or `CORS_ALLOWED_ORIGINS`). `host-run.sh` takes
+  that from the app container and passes it as `ORIGIN`, so a run against a
+  loopback `BASE_URL` works behind an https `PUBLIC_URL`. When you run a tool by
+  hand against such a server, set `ORIGIN` yourself; the default is the origin of
+  `BASE_URL`.
+- **Webhooks and bots.** Events of the test channels reach every enabled
+  outgoing webhook and every bot that listens, as real requests to their URLs.
+  The script refuses to start while one exists; `ALLOW_WEBHOOKS=1` overrides
+  that. Their queue rows for the test channels are removed in the clean-up.
+- **Members see it.** While the test channels exist, real members can see them
+  and get unread badges and, with Web Push enabled, notifications for the
+  messages; run it when nobody is on.
+- **Ctrl-C.** The first one stops the tools and cleans up; further ones are
+  ignored until the clean-up is done (tools still running after 5 s are
+  killed). Channels are created and deleted by their ids, and the script
+  refuses to start when channels named `Loadtest` or `Loadtest Chat` exist.
+
 ### Thresholds
 
 The tools exit 1 when one is violated (the voice tool when `EVALUATE=1`, which
