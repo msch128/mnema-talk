@@ -133,12 +133,13 @@ type voiceSeat struct {
 // hub is closing or the room is full.
 func (h *Hub) takeSeat(c *Client, ch *chat.ChannelInfo, rejoin bool) (voiceSeat, bool) {
 	key := voiceKey{c.User.ID, ch.ID}
+	bypass := h.mayExceedLimit(c, ch) // before h.mu: it asks the permission cache
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.closed {
 		return voiceSeat{}, false
 	}
-	if h.isVoiceRoomFull(ch, c.User.ID) {
+	if !bypass && h.isVoiceRoomFull(ch, c.User.ID) {
 		slog.Info("voice join refused, room full", "user", c.User.Username, "channel", ch.ID, "limit", ch.UserLimit)
 		// The client ends the call on voice_kicked; reason tells it why.
 		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": ch.ID, "reason": "room_full"})
@@ -158,6 +159,17 @@ func (h *Hub) takeSeat(c *Client, ch *chat.ChannelInfo, rejoin bool) (voiceSeat,
 		roomStarted: h.roomSince[ch.ID],
 	}
 	return seat, true
+}
+
+// mayExceedLimit reports whether c may take a seat in ch beyond its user
+// limit: Disconnect members in that Talk (Administrators and the Owner hold
+// every permission). Only asked for a Talk that has a limit.
+func (h *Hub) mayExceedLimit(c *Client, ch *chat.ChannelInfo) bool {
+	if ch.UserLimit <= 0 {
+		return false
+	}
+	snap, ok := h.permSnapshot(ch.ID)
+	return ok && snap != nil && c.can(snap, ch.ID, perm.DisconnectMembers)
 }
 
 func (h *Hub) isVoiceRoomFull(ch *chat.ChannelInfo, userID uuid.UUID) bool {

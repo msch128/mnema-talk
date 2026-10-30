@@ -985,6 +985,10 @@
     "dismiss": "Dismiss {name}’s hand"
   },
   "talk": {
+    "seats": "Seats taken of the user limit",
+    "seatsFull": "This Talk is full",
+    "seatsOver": "More people than the limit (allowed for moderators)",
+    "fullToast": "This Talk is full ({count}/{limit})",
     "react": "React",
     "participants": {
       "one": "{count} participant",
