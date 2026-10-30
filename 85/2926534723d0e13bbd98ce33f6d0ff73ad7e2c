@@ -1,0 +1,33 @@
+web/src/components/MediaViewer.test.ts
+  s_0cae4a4d7ab7c3::t_53a8d91af4addb 6,232-240
+web/src/components/MediaViewer.vue
+  s_0cae4a4d7ab7c3::t_54296f1eb6c735 2,8,12
+web/src/composables/useZoomPan.test.ts
+  s_0cae4a4d7ab7c3::t_5b4f834014fc80 1-80
+web/src/lib/galleryLayout.test.ts
+  s_61e7f03250bd0b::t_eb88fb84117aae 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "852926534723d0e13bbd98ce33f6d0ff73ad7e2c",
+  "prompts": {},
+  "sessions": {
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
