@@ -1,0 +1,91 @@
+README.md
+  s_afb3377f9f37f8::t_1e6042008833c6 90-94
+e2e/tests/attachments.spec.ts
+  s_afb3377f9f37f8::t_da225a4d65d3d6 1-85
+e2e/tests/composer-grow-paste.spec.ts
+  s_afb3377f9f37f8::t_cf09da418cbccd 34,64-65,70-71,73,80-81
+web/src/components/AttachmentTray.test.ts
+  s_afb3377f9f37f8::t_c251f39f60480c 1-68
+web/src/components/AttachmentTray.vue
+  s_afb3377f9f37f8::t_cd7df91502cbf4 1-127
+web/src/components/ChatArea.test.ts
+  s_afb3377f9f37f8::t_a76ca14c5119e4 292,327
+web/src/components/ChatArea.vue
+  s_afb3377f9f37f8::t_b8e3c9bbda22c5 72,74,166-167,181-182,184-187
+web/src/components/ChatAreaAttachments.test.ts
+  s_afb3377f9f37f8::t_60b5ca1583ad47 1-212
+web/src/components/ChatAreaBoundaries.test.ts
+  s_afb3377f9f37f8::t_a90bc34d6544d8 124
+web/src/components/ChatComposer.vue
+  s_afb3377f9f37f8::t_4d200f1387db0f 15,26,44,57-59,79-80,88,90,101,108,124,129,154-155,165,220,233
+web/src/components/ThreadComposer.vue
+  s_afb3377f9f37f8::t_a4c0e58f765620 7,14-15,28,39-45,48,55,60,77-78,84,118
+web/src/components/ThreadSidebar.test.ts
+  s_afb3377f9f37f8::t_3186158cca5cc1 16,21-30,165-170,172,192,205,231,233-234,237,239-241,243,330,338
+web/src/components/ThreadSidebar.vue
+  s_afb3377f9f37f8::t_08b077cd95c23b 59,61,188-189,199,202-205
+web/src/composables/attachmentTrayState.test.ts
+  s_afb3377f9f37f8::t_1b1e3ecaa81be2 1-40
+web/src/composables/attachmentTrayState.ts
+  s_afb3377f9f37f8::t_b51458284a658f 1-33
+web/src/composables/useAttachmentTray.test.ts
+  s_afb3377f9f37f8::t_0787d5d35d6ebb 1-219
+web/src/composables/useAttachmentTray.ts
+  s_afb3377f9f37f8::t_b17060e518dac6 1-216
+web/src/composables/useComposerFiles.test.ts
+  s_afb3377f9f37f8::t_3061931f9827a4 1,16-18,28-29,33,37,41,44-45,47-48,51-58,62,64,68-69,71
+web/src/composables/useComposerFiles.ts
+  s_afb3377f9f37f8::t_e7eaf99162bb5f 1,6-7,9,19,22,30-37
+web/src/composables/useMessageActions.test.ts
+  s_afb3377f9f37f8::t_03ffa1c8d3105f 122
+web/src/composables/useMessageActions.ts
+  s_afb3377f9f37f8::t_c70dde38992ec0 1-2
+web/src/i18n/de.json
+  s_afb3377f9f37f8::t_e8da73fe72b3cf 593-614
+web/src/i18n/en.json
+  s_afb3377f9f37f8::t_4bc0cb93809d34 593-614
+web/src/lib/api.ts
+  s_afb3377f9f37f8::t_bb2bee085871eb 6,77-78,95,158,162-163,237-238
+web/src/lib/attachmentTray.test.ts
+  s_afb3377f9f37f8::t_beba0d5e8f2f43 1-53
+web/src/lib/attachmentTray.ts
+  s_afb3377f9f37f8::t_7d1341f96bea5a 1-63
+web/src/lib/attachmentsApi.test.ts
+  s_afb3377f9f37f8::t_3dd480c7089055 1-36
+web/src/lib/attachmentsApi.ts
+  s_afb3377f9f37f8::t_164bcc93482228 1-28
+web/src/lib/composerFiles.test.ts
+  s_afb3377f9f37f8::t_7b0f53da3f278a 2
+web/src/lib/composerFiles.ts
+  s_afb3377f9f37f8::t_ca65913ffb8329 1
+web/src/lib/xhrUpload.test.ts
+  s_afb3377f9f37f8::t_b5c3f191593288 1-80
+web/src/lib/xhrUpload.ts
+  s_afb3377f9f37f8::t_e945c5ee8e4433 1-45
+web/src/stores/chat/messageActions.ts
+  s_afb3377f9f37f8::t_2764e7ed6951d6 49-50,53,57
+web/src/stores/chat/reset.ts
+  s_afb3377f9f37f8::t_e96f1def70cf85 13,29
+web/src/stores/chat/threads.ts
+  s_afb3377f9f37f8::t_f4dc30e65be1fa 64,67
+web/src/test-setup.ts
+  s_afb3377f9f37f8::t_af0a2b5c15cc64 5,37-41
+web/src/types/domain.ts
+  s_afb3377f9f37f8::t_d61715b7a60008 44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "049d7ded404f5bd8cf21c639123f28c97ef1b8f1",
+  "prompts": {},
+  "sessions": {
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
