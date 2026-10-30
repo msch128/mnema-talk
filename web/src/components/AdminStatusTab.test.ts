@@ -13,6 +13,9 @@ vi.mock('../lib/api', async (original) => ({
   api: (path: string, options?: ApiOptions) => apiMock(path, options),
 }))
 
+const reportMock = vi.fn<(connected: () => boolean) => Promise<void>>()
+vi.mock('../lib/wsReport', () => ({ reportWebSocket: (connected: () => boolean) => reportMock(connected) }))
+
 function statusFixture(overrides: Partial<OperatorStatus> = {}): OperatorStatus {
   return {
     version: {
@@ -80,6 +83,8 @@ beforeEach(() => {
   setActivePinia(createPinia())
   setLocale('en')
   apiMock.mockReset()
+  reportMock.mockReset()
+  reportMock.mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -159,6 +164,7 @@ describe('AdminStatusTab', () => {
 
   it('handles refresh button click and API error toast', async () => {
     apiMock.mockRejectedValueOnce(new Error('Network error'))
+    apiMock.mockResolvedValue(statusFixture())
     const w = keep(mount(AdminStatusTab))
     await flushPromises()
 
@@ -166,11 +172,12 @@ describe('AdminStatusTab', () => {
     expect(toasts.toasts.length).toBeGreaterThan(0)
     expect(toasts.toasts[0]?.text).toBe('Network error')
 
-    apiMock.mockResolvedValueOnce(statusFixture())
+    // The list loads, the WebSocket report goes out, the list loads again; then the button.
+    expect(apiMock).toHaveBeenCalledTimes(2)
     await w.find('button[aria-label="Refresh"]').trigger('click')
     await flushPromises()
 
-    expect(apiMock).toHaveBeenCalledTimes(2)
+    expect(apiMock).toHaveBeenCalledTimes(3)
     expect(w.find('[data-testid="version-current"]').text()).toBe('1.2.0')
   })
   it('says the version is up to date when checks are on and nothing is newer', async () => {
@@ -315,5 +322,55 @@ describe('AdminStatusTab', () => {
     const w = keep(mount(AdminStatusTab))
     await flushPromises()
     expect(w.find('[data-testid="status-setup"]').exists()).toBe(false)
+  })
+
+  it('reports its own WebSocket first, then reloads the list so the WebSocket item reflects it', async () => {
+    const order: string[] = []
+    reportMock.mockImplementation(async () => { order.push('report') })
+    apiMock.mockImplementation(async () => { order.push('status'); return statusFixture() })
+    keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(order).toEqual(['status', 'report', 'status'])
+  })
+
+  it('shows a neutral item below the amber ones, not counted as needing attention', async () => {
+    apiMock.mockResolvedValue(statusFixture({
+      setup: [
+        { id: 'storage', level: 'ok', detail: 'Object storage is ready.' },
+        { id: 'voice_udp', level: 'info', code: 'voice_udp.unconfirmed', params: { port: '50000', port_min: '50000', port_max: '50050' }, detail: 'Listening – not yet confirmed from outside.', fix: 'Forward UDP.' },
+        { id: 'mail', level: 'warn', detail: 'No outgoing mail.', fix: 'Optional: set SMTP_HOST in .env.' },
+      ],
+    }))
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(w.findAll('[data-testid^="setup-check-"]').map(r => r.attributes('data-level'))).toEqual(['warn', 'info', 'ok'])
+    expect(w.find('[data-testid="setup-summary"]').text()).toBe('1 of 3 checks need attention')
+    const voice = w.find('[data-testid="setup-check-voice_udp"]').text()
+    expect(voice).toContain('Listening – not yet confirmed from outside')
+    expect(voice).toContain('Not verified')
+  })
+
+  it('shows the confirmation with the moment in the viewer language, and the WebSocket item', async () => {
+    apiMock.mockResolvedValue(statusFixture({
+      setup: [
+        { id: 'voice_udp', level: 'ok', code: 'voice_udp.confirmed', params: { port: '50000', at: '2026-10-29T21:30:00Z', time: '2026-10-29 21:30 UTC' }, detail: 'Confirmed.' },
+        { id: 'websocket', level: 'warn', code: 'websocket.failing', params: { count: '4', at: '', time: '2026-10-29 21:30 UTC' }, detail: 'x', fix: 'y' },
+      ],
+    }))
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    const voice = w.find('[data-testid="setup-check-voice_udp"]').text()
+    expect(voice).toContain('Confirmed: a member from outside connected (')
+    expect(voice).not.toContain('UTC')
+    const ws = w.find('[data-testid="setup-check-websocket"]')
+    expect(ws.text()).toContain('WebSocket')
+    expect(w.find('[data-testid="setup-fix-websocket"]').text()).toContain('Upgrade: websocket')
+  })
+
+  it('offers Test my connection', async () => {
+    apiMock.mockResolvedValue(statusFixture())
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    expect(w.find('[data-testid="status-connection-test"] [data-testid="connection-test-run"]').exists()).toBe(true)
   })
 })

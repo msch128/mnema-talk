@@ -62,7 +62,7 @@ func TestHealthyInstallHasOnlyOptionalAmbers(t *testing.T) {
 		t.Fatalf("worst = %s: %+v", w, checks)
 	}
 	for _, c := range checks {
-		if c.Fix != "" {
+		if c.Fix != "" && c.Level == OK {
 			t.Errorf("ok check %s carries a fix: %q", c.ID, c.Fix)
 		}
 	}
@@ -285,7 +285,7 @@ func TestTurnCheckStates(t *testing.T) {
 	}{
 		{"built-in by default", nil, nil, "", OK, "built-in TURN relay serves members", ""},
 		{"probe reachable", nil, nil, "reachable", OK, "port 3479", ""},
-		{"probe unreachable", nil, nil, "unreachable", Warn, "did not answer", "Forward port 3479 (UDP and TCP)"},
+		{"probe unreachable", nil, nil, "unreachable", Info, "could not verify port 3479", "Test my connection"},
 		{"custom port", map[string]string{"WEBRTC_BUILTIN_TURN_PORT": "3500"}, nil, "", OK, "port 3500", ""},
 		{"port taken", nil, unavailable, "", Warn, "could not listen on port 3479", "WEBRTC_BUILTIN_TURN_PORT"},
 		{"external replaces built-in in auto", ext, nil, "unreachable", OK, "A TURN relay is configured", ""},

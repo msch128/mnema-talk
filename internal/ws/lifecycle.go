@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/metrics"
@@ -113,6 +114,9 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, httpx.ErrUnavailable("server shutting down"))
 		return
 	}
+	if !websocket.IsWebSocketUpgrade(r) {
+		h.noteUpgrade(false)
+	}
 	if !h.upgradeAllowed(w, user.ID) {
 		return
 	}
@@ -122,6 +126,7 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("websocket upgrade failed", "err", err)
 		return
 	}
+	h.noteUpgrade(true)
 	c := newClient(h, conn, *user, tv)
 	c.dmAware = r.URL.Query().Get("dm") == "1"
 	h.bindSession(c, r)
@@ -313,4 +318,10 @@ func (h *Hub) unregister(c *Client) {
 		h.recordLastSeen(c.User.ID)
 	}
 	h.announcePresence(c.User.ID, before, after)
+}
+
+func (h *Hub) noteUpgrade(upgraded bool) {
+	if h.UpgradeSeen != nil {
+		h.UpgradeSeen(upgraded)
+	}
 }

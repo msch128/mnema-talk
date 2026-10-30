@@ -62,7 +62,11 @@ var messages = map[string]message{
 		"WEBRTC_UDP_MUX_PORT=0 gives every media peer its own port, which caps how many people can be in calls.",
 		"Remove WEBRTC_UDP_MUX_PORT (or set it to {port_min}) so all peers share one UDP port.",
 	},
-	"voice_udp.ok": {"Voice listens on UDP {port}. Forward that port from the router to this host; it cannot be tested from inside.", ""},
+	"voice_udp.unconfirmed": {
+		"Listening – not yet confirmed from outside. Voice listens on UDP {port}, but no member from outside this network has connected since the server started, so the router forward is unproven.",
+		"Forward UDP {port_min}-{port_max} from the router to this host, then open Test my connection from a phone on mobile data (Wi-Fi off); this turns green once it works.",
+	},
+	"voice_udp.confirmed": {"Confirmed: a member from outside connected ({time}). Voice listens on UDP {port}.", ""},
 
 	"turn.builtin_failed_external": {"A TURN relay is configured for members behind strict firewalls; the built-in relay could not start.", ""},
 	"turn.builtin_failed": {
@@ -75,8 +79,8 @@ var messages = map[string]message{
 	},
 	"turn.builtin_off_external": {"A TURN relay is configured for members behind strict firewalls; the built-in relay is not running.", ""},
 	"turn.unreachable": {
-		"The built-in TURN relay runs, but port {port} did not answer from this server; a router without NAT loopback causes this although the forward works.",
-		"Forward port {port} (UDP and TCP) to this server and test from a phone on mobile data; set WEBRTC_BUILTIN_TURN_HOST if members must reach it under another name.",
+		"The built-in TURN relay runs, but this server could not verify port {port} from the inside; a router without NAT loopback causes this although the forward works.",
+		"Open Test my connection from a phone on mobile data to check the relay from outside; if it fails, forward port {port} (UDP and TCP) to this server, or set WEBRTC_BUILTIN_TURN_HOST if members must reach it under another name.",
 	},
 	"turn.builtin_ok":  {"The built-in TURN relay serves members behind strict firewalls on port {port}; forward it (UDP and TCP) next to the voice ports.", ""},
 	"turn.external_ok": {"A TURN relay is configured for members behind strict firewalls.", ""},
@@ -135,9 +139,21 @@ var messages = map[string]message{
 		"List only the reverse proxy's own address in TRUSTED_PROXY_CIDRS.",
 	},
 	"reverse_proxy.ok": {"No proxy header problems seen.", ""},
+
+	"websocket.ok": {"WebSocket via proxy OK: a browser opened /api/ws and it upgraded ({time}).", ""},
+	"websocket.unchecked": {
+		"Not checked yet: no browser has opened the live connection (/api/ws) since the server started.",
+		"Reload this page; if it stays unchecked, enable WebSocket in your reverse proxy.",
+	},
+	"websocket.failing": {
+		"Browsers tried to open /api/ws {count} times without a WebSocket upgrade (last {time}); the reverse proxy most likely does not pass WebSocket connections, so the app shows “Connection lost”.",
+		websocketFix,
+	},
 }
 
 const noPublicIPv4Fix = "Home connection without own public IPv4 - port forwarding cannot work. Options: ask the internet provider for a public IPv4 address, run Mnema Talk on a VPS, or use an external relay (WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET). See \"Can I host at home?\" in doc/operations.md."
+
+const websocketFix = "Enable WebSocket in your reverse proxy: it must pass the headers Upgrade: websocket and Connection: Upgrade. Nginx Proxy Manager: switch on Websockets Support. nginx: proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection upgrade; proxy_http_version 1.1. Caddy and Traefik do this by default."
 
 const voiceAddressFix = "Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address or dynamic-DNS name> in .env (add the LAN address after a comma for members on the same network), then docker compose up -d."
 

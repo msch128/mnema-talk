@@ -12,6 +12,7 @@ import AudioInputSection from './AudioInputSection.vue'
 import AudioOutputSection from './AudioOutputSection.vue'
 import AudioProcessingSection from './AudioProcessingSection.vue'
 import AudioAdvancedSection from './AudioAdvancedSection.vue'
+import ConnectionTest from './ConnectionTest.vue'
 
 const voice = useVoiceStore()
 const pref = usePreferenceSave()
@@ -40,6 +41,10 @@ onUnmounted(() => {
     <AudioProcessingSection />
     <AudioInputSection />
     <AudioAdvancedSection />
+    <section class="settings-group" aria-labelledby="audio-group-connection">
+      <h3 id="audio-group-connection" class="settings-label">{{ $t('connectionTest.title') }}</h3>
+      <div class="settings-card"><ConnectionTest :heading="false" /></div>
+    </section>
     <p class="font-mono text-xs text-mnema-tertiary">{{ $t('audio.liveNote') }}</p>
   </div>
 </template>

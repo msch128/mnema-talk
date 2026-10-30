@@ -9,11 +9,11 @@ import (
 // state, the fix underneath each amber or red one, and a summary. It returns
 // the worst level so a caller can turn red into a non-zero exit code.
 func Report(w io.Writer, checks []Check) Level {
-	marks := map[Level]string{OK: "[ ok ]", Warn: "[warn]", Fail: "[FAIL]"}
+	marks := map[Level]string{OK: "[ ok ]", Info: "[note]", Warn: "[warn]", Fail: "[FAIL]"}
 	attention := 0
 	for _, c := range checks {
 		fmt.Fprintf(w, "%s %s\n", marks[c.Level], c.Detail)
-		if c.Level != OK {
+		if c.Level == Warn || c.Level == Fail {
 			attention++
 		}
 		if c.Fix != "" && c.Level != OK {
