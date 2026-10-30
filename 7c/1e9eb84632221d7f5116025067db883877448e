@@ -1,0 +1,57 @@
+.env.example
+  s_ecf7b9e687a24d::t_a214ae5b7320ad 228-230
+cmd/server/doctor.go
+  s_f17adc80d3e9bd::t_c7ddcae4b76ea4 10,60-63,67-68,76-87,89-90,165,168-171,173
+cmd/server/doctor_test.go
+  s_f28937fbcfdef3::t_1dbf6c75ba9331 84,87,89,91-95,102-115
+doc/operations.md
+  s_ecf7b9e687a24d::t_f85d25bbfc75c4 99
+docker-compose.yml
+  s_ecf7b9e687a24d::t_1d453f4c363911 34-35
+internal/s3/s3.go
+  s_f17adc80d3e9bd::t_7e4335f0d307e4 53-72
+internal/setupcheck/network.go
+  s_f17adc80d3e9bd::t_ddfcfdb76525de 91-97,99-100,103-105,107-109,111,119-121,129,133-134,138,144
+internal/setupcheck/network_test.go
+  s_f28937fbcfdef3::t_f6e0ad39176c7e 42-43,53,62,67,95-114
+internal/setupcheck/setupcheck.go
+  s_f17adc80d3e9bd::t_659fb75f775338 76,92,94,113,123,170
+internal/setupwizard/envfile.go
+  s_ecf7b9e687a24d::t_fe1659f9643ff1 70-74
+internal/setupwizard/prereq.go
+  s_f17adc80d3e9bd::t_41b61b15522134 82,86
+internal/setupwizard/prereq_test.go
+  s_ecf7b9e687a24d::t_703ca1db3e77f4 95-96,98,380-399
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7c1e9eb84632221d7f5116025067db883877448e",
+  "prompts": {},
+  "sessions": {
+    "s_ecf7b9e687a24d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-setup-e379f010794b742e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f17adc80d3e9bd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abe21c9991c3c6977",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f28937fbcfdef3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0621c2f4aab91915",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
