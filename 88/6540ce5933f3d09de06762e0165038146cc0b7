@@ -1,0 +1,19 @@
+web/src/directives/maxChars.test.ts
+  s_e7d8df1dbb402e::t_3dd67079ff8504 54-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "886540ce5933f3d09de06762e0165038146cc0b7",
+  "prompts": {},
+  "sessions": {
+    "s_e7d8df1dbb402e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-app-66e452174912e1a3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
