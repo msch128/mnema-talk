@@ -312,7 +312,10 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
   them: backup to restore, release-to-release upgrade and the PostgreSQL move.
 - **Measured**: `make load-test` reproduces a 100-member call with real
   decrypting browsers and lightweight viewers
-  ([loadtest/README.md](loadtest/README.md)).
+  ([loadtest/README.md](loadtest/README.md)). On a 4-core Intel N100 home
+  server, 1,000 concurrent chat sessions used about 0.7 CPU cores (95th
+  percentile delivery 84 ms) and one screen share to 99 members about 0.6
+  cores; see [doc/benchmark.md](doc/benchmark.md) for the method and limits.
 - A TURN relay built into the server for members behind firewalls that block
   UDP (on by default while no external TURN is configured), an optional
   `coturn` profile and a self-update sidecar (`autoupdate` profile, off by
@@ -450,7 +453,7 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 | Where media keys live in the browser | [SECURITY.md](SECURITY.md#security-model-summary) |
 | Web client code (TypeScript) | [doc/typescript.md](doc/typescript.md) |
 | Trusted desktop client, gaming overlay | [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md), [doc/desktop-app.md](doc/desktop-app.md) |
-| Load test | [loadtest/README.md](loadtest/README.md) |
+| Load test, benchmark | [loadtest/README.md](loadtest/README.md), [doc/benchmark.md](doc/benchmark.md) |
 | Product status and acceptance | [doc/product-status.md](doc/product-status.md) |
 | Building, testing, CI, releases | [doc/development.md](doc/development.md) |
 | Contributing, conduct and getting help | [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SUPPORT.md](SUPPORT.md) |

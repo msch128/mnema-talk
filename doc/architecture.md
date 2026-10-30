@@ -634,6 +634,8 @@ voice scenarios) is part of what the host spends.
 | Voice, through the built-in TURN relay | 1 screen and 3 speakers to 100 members | 1.61 | 312 MB | all 100 members through the relay, 0.00 % loss, one member froze for 12.6 s once (one connection flap) |
 | Voice, mixed | 1 screen, 10 cameras (300 kbit/s), 3 speakers, 100 members watching all | 1.87 | 1044 MB | does not hold: 82 % screen and 34 % camera packet loss, members received 200 kbit/s of the screen (audio loss 0.3 %) |
 
+The method, caveats and per-scenario detail are in [doc/benchmark.md](benchmark.md).
+
 What the host comfortably carries: chat for 1000 sessions, and one screen to
 about 100 members directly or through the relay. Watching all of 10 cameras plus
 a screen with 100 members (about 450 Mbit/s of media out of one 4-core host that
