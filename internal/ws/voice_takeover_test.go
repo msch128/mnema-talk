@@ -257,3 +257,26 @@ func TestTheTakersReconnectIsNotRefused(t *testing.T) {
 		t.Fatalf("voice_kicked = %+v", kicked)
 	}
 }
+
+// A is taken over by B, then B by C: A's resume is still refused.
+func TestAChainOfTakeoversRefusesEveryVictimsResume(t *testing.T) {
+	h, a, b := twoSessions(t, true)
+	c := testClient(h, a.User)
+	defer h.unregister(c)
+	a.setTab("tab-a")
+	b.setTab("tab-b")
+	c.setTab("tab-c")
+	a2 := testClient(h, a.User)
+	defer h.unregister(a2)
+	a2.setTab("tab-a")
+	ch := voiceCh()
+	h.joinVoice(a, ch)
+	h.takeOverVoice(b, ch)
+	h.takeOverVoice(c, ch)
+
+	h.resumeVoice(a2, ch)
+
+	if a2.currentVoice() != nil || !seatedIn(c, ch.ID) {
+		t.Fatal("the first victim took the call back from the latest taker")
+	}
+}

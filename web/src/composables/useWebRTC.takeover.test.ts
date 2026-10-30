@@ -6,6 +6,7 @@ import { useToastStore } from '../stores/toast'
 import { pendingConfirm } from '../lib/confirm'
 import * as voiceSession from '../lib/voiceSession'
 import { t } from '../i18n'
+import { tabId } from './webrtc/session'
 import { installHarness, grantMic, setup } from './useWebRTC.harness.fixture'
 
 vi.mock('../lib/noiseSuppressor', async () => (await import('./useWebRTC.noiseSuppressor.fixture')).noiseSuppressorModule)
@@ -149,5 +150,15 @@ describe('the session whose call was taken over', () => {
     await join
     chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-9', reason: 'voice_taken_over' } })
     expect(voice.currentChannelId).toBe('ch-1')
+  })
+})
+
+describe('the page id', () => {
+  it('is stable, and exists where crypto.randomUUID does not (plain http)', () => {
+    vi.stubGlobal('crypto', {})
+    const id = tabId()
+    expect(id).not.toBe('')
+    expect(tabId()).toBe(id)
+    vi.unstubAllGlobals()
   })
 })

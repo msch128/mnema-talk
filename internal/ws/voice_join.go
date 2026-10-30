@@ -90,7 +90,7 @@ func (h *Hub) seatVoice(c *Client, ch *chat.ChannelInfo, mode joinMode) bool {
 
 	// Before the seat is final: the eviction it does may mark the room again.
 	if !mode.resume {
-		h.taken.clear(voiceKey{c.User.ID, ch.ID})
+		h.taken.clear(voiceKey{c.User.ID, ch.ID}, c.tabID())
 	}
 	if !h.finalizeVoiceSeat(c, ch.ID, mode.evictReason) {
 		return false
@@ -391,18 +391,13 @@ func (c *Client) joinRefusal(snap *perm.Snapshot) string {
 	return "missing_permission"
 }
 
-// takeoverMarks remembers which page's stay a takeover ended, so that page,
+// takeoverMarks remembers which pages' stays a takeover ended, so such a page,
 // reconnecting later and resuming the call, is told instead of taking it back.
 // The page that took over is not affected: its resume carries another tab id.
-// A mark ends when the user joins that room on purpose, or after an hour.
+// A page's mark ends when that page joins the room on purpose, and after an hour.
 type takeoverMarks struct {
 	mu sync.Mutex
-	at map[voiceKey]takeoverMark
-}
-
-type takeoverMark struct {
-	tab string
-	at  time.Time
+	at map[voiceKey]map[string]time.Time // victim tab ids by stay
 }
 
 const takeoverMarkTTL = time.Hour
@@ -412,19 +407,28 @@ func (m *takeoverMarks) mark(k voiceKey, tab string) {
 	defer m.mu.Unlock()
 	now := time.Now()
 	if m.at == nil {
-		m.at = map[voiceKey]takeoverMark{}
+		m.at = map[voiceKey]map[string]time.Time{}
 	}
-	for old, e := range m.at {
-		if now.Sub(e.at) > takeoverMarkTTL {
-			delete(m.at, old)
+	for key, tabs := range m.at {
+		for id, t := range tabs {
+			if now.Sub(t) > takeoverMarkTTL {
+				delete(tabs, id)
+			}
+		}
+		if len(tabs) == 0 {
+			delete(m.at, key)
 		}
 	}
-	m.at[k] = takeoverMark{tab: tab, at: now}
+	if m.at[k] == nil {
+		m.at[k] = map[string]time.Time{}
+	}
+	m.at[k][tab] = now
 }
 
-func (m *takeoverMarks) clear(k voiceKey) {
+// clear ends the mark of a page that joined the room on purpose.
+func (m *takeoverMarks) clear(k voiceKey, tab string) {
 	m.mu.Lock()
-	delete(m.at, k)
+	delete(m.at[k], tab)
 	m.mu.Unlock()
 }
 
@@ -433,6 +437,6 @@ func (m *takeoverMarks) clear(k voiceKey) {
 func (m *takeoverMarks) has(k voiceKey, tab string) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	e, ok := m.at[k]
-	return ok && tab != "" && e.tab == tab && time.Since(e.at) <= takeoverMarkTTL
+	t, ok := m.at[k][tab]
+	return ok && tab != "" && time.Since(t) <= takeoverMarkTTL
 }
