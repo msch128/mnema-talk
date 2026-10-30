@@ -103,6 +103,11 @@ test('changing frame rate in a running stream keeps the stream, the capture and 
   expect(await sharer.evaluate(() => window.__displayCalls)).toBe(1)
   await expect(sharer.getByTestId('voice-panel-share')).toHaveAttribute('aria-pressed', 'true')
 
+  // The menu stays open for further choices and covers the leave button: close it before leaving.
+  await sharer.keyboard.press('Escape')
+  await sharer.keyboard.press('Escape')
+  await expect(sharer.getByRole('menu')).toHaveCount(0)
+
   await leaveTalks([sharer, viewer])
   await sharerCtx.close()
   await viewerCtx.close()
