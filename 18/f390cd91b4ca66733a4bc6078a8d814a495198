@@ -1,0 +1,19 @@
+doc/roles-and-permissions.md
+  s_2e83d65905e837::t_803aeda0452f0b 277
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "18f390cd91b4ca66733a4bc6078a8d814a495198",
+  "prompts": {},
+  "sessions": {
+    "s_2e83d65905e837": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5abf6d969ca7b9a1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
