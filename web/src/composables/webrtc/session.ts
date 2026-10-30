@@ -211,8 +211,12 @@ function endCall(cx: Cx, { notifyServer }: { notifyServer: boolean }) {
   cleanupVoiceAudio(cx)
   stopScreenShare(cx)
   stopCamera(cx)
-  if (notifyServer) chat.sendWSEvent('voice_leave', {})
-  forgetOwnSeat(cx)
+  if (notifyServer) {
+    chat.sendWSEvent('voice_leave', {})
+    // Not when the server ended it (taken over): another device of mine is
+    // still listed in that Talk.
+    forgetOwnSeat(cx)
+  }
   voice.disconnect()
   voice.audioBlocked = false
 }
