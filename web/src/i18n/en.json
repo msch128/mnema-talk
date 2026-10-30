@@ -3606,5 +3606,13 @@
       "audio": "Audio"
     },
     "privacyEmpty": "There is nothing to set here on this server."
+  },
+  "ctxMenu": {
+    "systemDefault": "System default",
+    "namesNeedAccess": "Device names appear once the browser has allowed access.",
+    "outputFallback": "Speaker {id}…",
+    "cameraFallback": "Camera {id}…",
+    "cameraDevice": "Camera",
+    "noShareSound": "This share has no sound to mute."
   }
 }

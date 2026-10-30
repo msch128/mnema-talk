@@ -166,7 +166,7 @@ export function useStreamQuality(options: StreamQualityOptions = {}) {
   }
 
   /** ContextMenu items; read reactively, so the open menu follows every change. */
-  function menuItems({ onChangeSource }: { onChangeSource?: () => void } = {}): ContextMenuItem[] {
+  function menuItems({ onChangeSource, settings = true }: { onChangeSource?: () => void; settings?: boolean } = {}): ContextMenuItem[] {
     const q = quality.value
     const m = mode.value
     const modeItem = (id: StreamMode, subtitle?: string) => radioItem({ id: `mode-${id}`, label: t(`talk.quality.${id}`), checked: m === id, action: () => setMode(id), subtitle })
@@ -199,7 +199,7 @@ export function useStreamQuality(options: StreamQualityOptions = {}) {
     ]
     if (onChangeSource) {
       items.push({ type: 'separator' })
-      items.push({ id: 'stream-settings', label: t('talk.quality.streamModalTitle'), action: () => voiceStore.openScreenShareModal() })
+      if (settings) items.push({ id: 'stream-settings', label: t('talk.quality.streamModalTitle'), action: () => voiceStore.openScreenShareModal() })
       items.push({ id: 'change-source', label: t('talk.quality.changeSource'), action: onChangeSource })
     }
     return items

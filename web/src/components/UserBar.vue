@@ -11,12 +11,16 @@ import UserAvatar from './UserAvatar.vue'
 import VoiceStatusPanel from './VoiceStatusPanel.vue'
 import AccountMenu from './AccountMenu.vue'
 import PresenceMenu from './PresenceMenu.vue'
+import TriggerMenu from './TriggerMenu.vue'
+import { useVoiceMenus } from '../composables/useVoiceMenus'
 
 const emit = defineEmits<{ 'open-legal': [] }>()
 
 const authStore = useAuthStore()
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
+// Right click or long press on a call button: its device and quick-setting menu.
+const { mic, output } = useVoiceMenus()
 
 const menuOpen = ref(false)
 const menuButton = ref<HTMLButtonElement | null>(null)
@@ -100,6 +104,7 @@ function ibTone(active: boolean) {
           v-tooltip="voiceStore.isMuted ? $t('voice.unmute') : $t('voice.mute')"
           :aria-pressed="voiceStore.isMuted ? 'true' : 'false'"
           :class="[ib, ibTone(voiceStore.isMuted)]"
+          v-bind="mic.on"
           @click="voiceStore.toggleMute"
         >
           <MicOff v-if="voiceStore.isMuted" class="h-[18px] w-[18px]" />
@@ -111,11 +116,14 @@ function ibTone(active: boolean) {
           v-tooltip="voiceStore.isDeafened ? $t('voice.undeafen') : $t('voice.deafen')"
           :aria-pressed="voiceStore.isDeafened ? 'true' : 'false'"
           :class="[ib, ibTone(voiceStore.isDeafened)]"
+          v-bind="output.on"
           @click="voiceStore.toggleDeafen"
         >
           <HeadphoneOff v-if="voiceStore.isDeafened" class="h-[18px] w-[18px]" />
           <Headphones v-else class="h-[18px] w-[18px]" />
         </button>
+        <TriggerMenu :trigger="mic" :aria-label="$t('audio.inputDevice')" :min-width="260" />
+        <TriggerMenu :trigger="output" :aria-label="$t('audio.outputDevice')" :min-width="260" />
       </template>
 
       <button

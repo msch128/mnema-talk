@@ -3606,5 +3606,13 @@
       "audio": "Audio"
     },
     "privacyEmpty": "Auf diesem Server gibt es hier nichts einzustellen."
+  },
+  "ctxMenu": {
+    "systemDefault": "Systemstandard",
+    "namesNeedAccess": "Gerätenamen erscheinen, sobald der Browser den Zugriff erlaubt hat.",
+    "outputFallback": "Lautsprecher {id} …",
+    "cameraFallback": "Kamera {id} …",
+    "cameraDevice": "Kamera",
+    "noShareSound": "Diese Übertragung hat keinen Ton zum Stummschalten."
   }
 }

@@ -50,6 +50,8 @@ export async function startCamera(cx: Cx) {
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: {
+        // Preferred, not required: an unplugged camera must not keep the camera from starting.
+        ...(voice.selectedCameraDeviceId ? { deviceId: { ideal: voice.selectedCameraDeviceId } } : {}),
         width: { ideal: 1280 },
         height: { ideal: 720 },
         frameRate: { ideal: 30, max: 30 }
@@ -87,6 +89,13 @@ export function stopCamera(cx: Cx) {
   voice.localCameraStream = null
   voice.isCameraOn = false
   if (wasOn) chat.sendWSEvent('webrtc_camera_stop', {})
+}
+
+/** Applies a changed camera choice to the running camera. */
+export async function restartCamera(cx: Cx) {
+  if (!cx.voice.isCameraOn) return
+  stopCamera(cx)
+  await startCamera(cx)
 }
 
 export function toggleCamera(cx: Cx) {
