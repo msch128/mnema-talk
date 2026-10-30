@@ -1,0 +1,21 @@
+cmd/server/doctor.go
+  s_06fcde5dbef956::t_29dce4b746b705 179,181-184
+cmd/server/doctor_test.go
+  s_06fcde5dbef956::t_9f4d52d43373d9 204-211
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b9e7cdfed3eb869e8f6295dca259d9876ecc2df7",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
