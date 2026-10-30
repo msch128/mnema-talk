@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import MediaViewer from './MediaViewer.vue'
-import { closeViewer, openViewer, viewerState, type ViewerItem } from '../composables/useMediaViewer'
+import { closeViewer, openViewer, viewerMessageFrom, viewerState, type ViewerItem } from '../composables/useMediaViewer'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { setLocale, t } from '../i18n'
@@ -226,6 +226,15 @@ describe('MediaViewer', () => {
     tid('viewer-stage').element.dispatchEvent(ev('pointerup', 50))
     await tid('viewer-stage').trigger('click')
     expect(viewerState.open).toBe(true)
+  })
+})
+
+describe('viewerMessageFrom', () => {
+  it('carries the details a viewer shows, and only those that exist', () => {
+    const base = { id: 'm9', channel_id: 'c9', created_at: '2026-01-01T10:00:00Z', username: 'ada', display_name: 'Ada' } as Parameters<typeof viewerMessageFrom>[0]
+    expect(viewerMessageFrom(base)).toMatchObject({ id: 'm9', channelId: 'c9', senderName: 'Ada' })
+    expect(viewerMessageFrom(base)).not.toHaveProperty('parentId')
+    expect(viewerMessageFrom({ ...base, parent_id: 'root', avatar_url: '/a.png' }, 'lobby')).toMatchObject({ parentId: 'root', senderAvatarUrl: '/a.png', channelName: 'lobby' })
   })
 })
 
