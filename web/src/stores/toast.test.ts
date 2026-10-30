@@ -21,6 +21,23 @@ describe('toast store', () => {
     expect(toasts.toasts).toHaveLength(0)
   })
 
+  it('shows the same error once while it is on screen', () => {
+    const toasts = useToastStore()
+    const first = toasts.error('Zu viele Anfragen')
+    expect(toasts.error('Zu viele Anfragen')).toBe(first)
+    toasts.error('Zu viele Anfragen')
+    expect(toasts.toasts).toHaveLength(1)
+    toasts.error('Etwas anderes')
+    expect(toasts.toasts).toHaveLength(2)
+  })
+
+  it('shows an identical error again when it carries an action', () => {
+    const toasts = useToastStore()
+    toasts.error('Zu viele Anfragen')
+    toasts.error('Zu viele Anfragen', { action: { label: 'Erneut versuchen', onClick() {} } })
+    expect(toasts.toasts).toHaveLength(2)
+  })
+
   it('keeps errors and toasts with an action until dismissed', () => {
     const toasts = useToastStore()
     const e = toasts.error('boom')

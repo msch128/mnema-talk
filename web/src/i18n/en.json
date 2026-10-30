@@ -83,6 +83,7 @@
   },
   "errors": {
     "unknown": "Unknown error",
+    "rateLimitedAttempts": "Too many attempts – wait a moment",
     "network": "Can’t reach the server",
     "code": {
       "INVALID_CREDENTIALS": "Wrong username or password",
@@ -92,7 +93,7 @@
       "CONFLICT": "That already exists",
       "PAYLOAD_TOO_LARGE": "The file is too large",
       "UNSUPPORTED_MEDIA_TYPE": "This file type isn’t supported",
-      "RATE_LIMITED": "Too many attempts – wait a moment",
+      "RATE_LIMITED": "Too many requests – wait a moment",
       "RULES_NOT_ACCEPTED": "Accept the community rules first",
       "UNAVAILABLE": "The service isn’t available right now",
       "INTERNAL_ERROR": "Internal server error",

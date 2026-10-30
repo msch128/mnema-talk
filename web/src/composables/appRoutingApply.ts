@@ -68,7 +68,11 @@ async function openRouteThread(ctx: RoutingContext, channel: ChannelLike, thread
   }
   // A forum post has a speaking address of its own.
   const post = chatStore.activeThread
-  if (channel.type === 'forum' && post?.title) navigate(postPath(channel, post), { replace: true })
+  if (channel.type !== 'forum' || !post?.title) return
+  // Rewriting the address to itself would apply this route again, which
+  // reopens the post the user has just closed.
+  const own = postPath(channel, post)
+  if (window.location.pathname !== own) navigate(own, { replace: true })
 }
 
 /** Pages of 100 posts a /p address searches before it gives up, so a stale link cannot walk a whole large forum. */

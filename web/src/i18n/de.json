@@ -83,6 +83,7 @@
   },
   "errors": {
     "unknown": "Unbekannter Fehler",
+    "rateLimitedAttempts": "Zu viele Versuche – bitte warte einen Moment",
     "network": "Keine Verbindung zum Server",
     "code": {
       "INVALID_CREDENTIALS": "Benutzername oder Passwort ist falsch",
@@ -92,7 +93,7 @@
       "CONFLICT": "Das gibt es bereits",
       "PAYLOAD_TOO_LARGE": "Die Datei ist zu groß",
       "UNSUPPORTED_MEDIA_TYPE": "Dieser Dateityp wird nicht unterstützt",
-      "RATE_LIMITED": "Zu viele Versuche – bitte warte einen Moment",
+      "RATE_LIMITED": "Zu viele Anfragen – bitte kurz warten",
       "RULES_NOT_ACCEPTED": "Bitte akzeptiere zuerst die Regeln der Community",
       "UNAVAILABLE": "Der Dienst ist gerade nicht verfügbar",
       "INTERNAL_ERROR": "Interner Serverfehler",

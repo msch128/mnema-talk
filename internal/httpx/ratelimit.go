@@ -151,6 +151,23 @@ func (rl *RateLimiter) By(keyFn func(*http.Request) string) func(http.Handler) h
 	}
 }
 
+// BySafeMethod applies reads to GET, HEAD and OPTIONS requests and writes to
+// every other method, so cheap reads and state changes draw on separate
+// budgets: browsing never uses up what a member may post.
+func BySafeMethod(reads, writes func(http.Handler) http.Handler) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		readsNext, writesNext := reads(next), writes(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet, http.MethodHead, http.MethodOptions:
+				readsNext.ServeHTTP(w, r)
+			default:
+				writesNext.ServeHTTP(w, r)
+			}
+		})
+	}
+}
+
 // WriteRateLimited answers 429 with Retry-After.
 // It counts as a hit of the unnamed "other" limiter; By counts its own.
 func WriteRateLimited(w http.ResponseWriter, retry time.Duration) {

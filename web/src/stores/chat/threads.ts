@@ -38,7 +38,7 @@ export async function openThread(cx: Cx, msg: Message | ThreadRoot | string) {
   cs.threadReplies.value = []
   cs.isThreadLoading.value = true
   try {
-    const data = await api(`/api/messages/${id}/thread`, { decode: decodeThread })
+    const data = await api(`/api/messages/${id}/thread`, { decode: decodeThread, dedupe: true })
     if (!isThreadActive(cs, id, gen)) return
     cs.activeThread.value = data.root
     cs.threadReplies.value = mergeLiveReplies(data.replies, cs.threadReplies.value)

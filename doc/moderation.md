@@ -550,7 +550,7 @@ the class of the entries that path does record.
 Chat sends have no per-route limiter. The limiters that exist are `loginPerIP`
 (login), `LimitSends` (bot token), `execute` (incoming webhook) and
 `frameLimiter.allow` (bot gateway). Signed-in member routes share `perUser.By`
-(`api_user`), one bucket per user, not per route. A bot token's edits and
+(`api_user`, 600 a minute) for writes and `api_user_read` (3000 a minute) for reads, one bucket of each per user, not per route. A bot token's edits and
 deletes are `message.edit` and `message.delete`, already classed with the
 member rows. An incoming webhook only posts, and the bot gateway only delivers events. Neither is audited, same as a member's post, so those audit cells are `n/a`.
 

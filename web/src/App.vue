@@ -101,11 +101,15 @@ watch(() => voiceStore.showAudioSettings, open => { if (open) openSettings('audi
 watch(() => chatStore.activeThread, thread => { if (thread && isCompact.value) chatStore.showMemberList = false })
 // A Talk needs the width: below 1100 px the member list starts closed (the header button opens it).
 watch(() => voiceStore.activeView, view => { if (view === 'voice' && window.innerWidth < 1100) chatStore.showMemberList = false })
+// Captured, so it runs before the panels' own Escape handlers and its
+// preventDefault tells them the key is used: one Escape closes the drawer, not the thread as well.
 function onWindowKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && navOpen.value) closeNav()
+  if (event.key !== 'Escape' || !navOpen.value) return
+  event.preventDefault()
+  closeNav()
 }
-onMounted(() => window.addEventListener('keydown', onWindowKeydown))
-onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown))
+onMounted(() => window.addEventListener('keydown', onWindowKeydown, true))
+onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown, true))
 const routing = useAppRouting(() => alive)
 useAppBadge()
 usePushBridge()

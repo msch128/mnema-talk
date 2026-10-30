@@ -52,6 +52,9 @@ export const useToastStore = defineStore('toast', () => {
   /** push({ type, text, detail, action: { label, onClick }, duration }) → id */
   function push({ type = 'info', text, detail = '', action = null, duration }: ToastInput = {}) {
     if (!text) return null
+    // The same error shown already is not shown again: a burst of refused requests is one message.
+    const same = type === 'error' && !action && toasts.value.find(t => t.type === 'error' && !t.action && t.text === text && t.detail === detail)
+    if (same) return same.id
     const id = ++seq
     toasts.value = [...toasts.value, { id, type, text, detail, action }].slice(-MAX_VISIBLE)
     const sticky = type === 'error' || !!action

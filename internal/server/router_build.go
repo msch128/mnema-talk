@@ -47,6 +47,17 @@ var _ ws.SessionClaimer = (*auth.Sessions)(nil)
 // components are the handlers and background workers NewRouter assembles
 // before it mounts their routes. The new* methods fill it in stages; a later
 // stage may depend on what an earlier one set.
+const (
+	// apiWritesPerMinute is a member's budget for requests that change
+	// something (and for anything else that is not a read).
+	apiWritesPerMinute = 600
+	// apiReadsPerMinute is the separate budget for GET, HEAD and OPTIONS: opening
+	// and closing posts, scrolling and switching channels fetch many pages a
+	// second, and none of it may be refused. 50 a second still stops a runaway
+	// script.
+	apiReadsPerMinute = 3000
+)
+
 type components struct {
 	d       Deps
 	cfg     *config.Config
@@ -88,7 +99,7 @@ type components struct {
 
 	previewH *linkpreview.Handler
 
-	wsPerIP, perUser, previewsPerUser, uploadsPerUser *httpx.RateLimiter
+	wsPerIP, perUser, readsPerUser, previewsPerUser, uploadsPerUser *httpx.RateLimiter
 }
 
 // newCore builds the session, hub, permission and audit services and the

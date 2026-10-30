@@ -94,7 +94,7 @@ func (c *components) mountBotAPI(b chi.Router) {
 
 // mountAuthenticated mounts everything that needs a signed-in member.
 func (c *components) mountAuthenticated(authed chi.Router) {
-	authed.Use(c.sessions.RequireUser, c.perUser.By(auth.UserKey))
+	authed.Use(c.sessions.RequireUser, httpx.BySafeMethod(c.readsPerUser.By(auth.UserKey), c.perUser.By(auth.UserKey)))
 
 	authed.Group(func(j chi.Router) {
 		j.Use(httpx.MaxBody(httpx.DefaultMaxBody))

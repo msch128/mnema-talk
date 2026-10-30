@@ -53,7 +53,7 @@ export async function fetchForumPosts(channelId: string, options: FetchForumPost
 
   const qs = params.toString()
   const path = `/api/channels/${encodeURIComponent(channelId)}/posts${qs ? '?' + qs : ''}`
-  return api(path, { decode: decodeMessages })
+  return api(path, { decode: decodeMessages, dedupe: true })
 }
 
 export async function createForumPost(

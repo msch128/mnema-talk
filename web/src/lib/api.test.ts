@@ -107,7 +107,7 @@ describe('errorMessage', () => {
   it('translates validation patterns', () => {
     expect(errorMessage('INVALID_INPUT', 'password must be at least 10 characters')).toBe('Das Passwort muss mindestens 10 Zeichen haben')
     expect(errorMessage('INVALID_INPUT', 'content must be at most 4000 characters')).toBe('Nachricht: höchstens 4000 Zeichen')
-    expect(errorMessage('RATE_LIMITED', 'too many requests')).toMatch(/Zu viele Versuche/)
+    expect(errorMessage('RATE_LIMITED', 'too many requests')).toMatch(/Zu viele Anfragen/)
     expect(errorMessage('RULES_NOT_ACCEPTED', 'accept the community rules first')).toBe('Bitte akzeptiere zuerst die Regeln der Community')
     expect(errorMessage('FORBIDDEN', 'missing permission: send messages')).toBe('Dafür fehlt dir die Berechtigung.')
     expect(errorMessage('FORBIDDEN', 'cannot grant a permission you do not have: speak')).toBe('Dafür fehlt dir die Berechtigung.')
@@ -311,5 +311,53 @@ describe('transport reply and subscription incarnation guards', () => {
       await expect(client.api('/api/members')).rejects.toBeInstanceOf(ApiError)
       expect(listener).toHaveBeenCalledOnce()
     } finally { offNew() }
+  })
+})
+
+describe('identical GETs in flight', () => {
+  const reply = (body: unknown): ApiReply => ({ status: 200, body })
+
+  it('share one request, and every caller gets a body of its own', async () => {
+    const releases: Array<(r: ApiReply) => void> = []
+    const transport = vi.fn(() => new Promise<ApiReply>(resolve => { releases.push(resolve) }))
+    const { api: call } = createApiClient(transport)
+    const a = call('/api/channels/f1/posts', { dedupe: true })
+    const b = call('/api/channels/f1/posts', { dedupe: true })
+    const other = call('/api/messages/m1/thread')
+    for (const release of releases) release(reply({ list: [1] }))
+    const [first, second] = await Promise.all([a, b])
+    expect(transport).toHaveBeenCalledTimes(2)
+    expect(first).toEqual({ list: [1] })
+    expect(second).toEqual({ list: [1] })
+    expect(second).not.toBe(first)
+    await other
+  })
+
+  it('are not shared unless the caller asks for it, and writes never are', async () => {
+    const transport = vi.fn(async () => reply({}))
+    const { api: call } = createApiClient(transport)
+    await call('/api/x', { dedupe: true })
+    await call('/api/x', { dedupe: true })
+    await Promise.all([call('/api/z'), call('/api/z')])
+    await Promise.all([call('/api/y', { method: 'POST', json: {} }), call('/api/y', { method: 'POST', json: {} })])
+    expect(transport).toHaveBeenCalledTimes(6)
+  })
+
+  it('fail together when the shared request fails', async () => {
+    const transport = vi.fn(async (): Promise<ApiReply> => ({ status: 429, body: { error: { code: 'RATE_LIMITED', message: 'x' } } }))
+    const { api: call } = createApiClient(transport)
+    const results = await Promise.allSettled([call('/api/x', { dedupe: true }), call('/api/x', { dedupe: true })])
+    expect(transport).toHaveBeenCalledTimes(1)
+    expect(results.map(r => r.status)).toEqual(['rejected', 'rejected'])
+  })
+})
+
+describe('rate limit wording', () => {
+  it('speaks of requests in general and of attempts at sign-in', async () => {
+    const limited = async (): Promise<ApiReply> => ({ status: 429, body: { error: { code: 'RATE_LIMITED', message: 'x' } } })
+    const { api: call } = createApiClient(limited)
+    expect((await apiFailure(call('/api/channels'))).message).toBe('Zu viele Anfragen – bitte kurz warten')
+    expect((await apiFailure(call('/api/auth/login', { method: 'POST', json: {} }))).message).toMatch(/Versuche/)
+    expect((await apiFailure(call('/api/auth/me'))).message).toBe('Zu viele Anfragen – bitte kurz warten')
   })
 })

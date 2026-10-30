@@ -166,11 +166,23 @@ function onReplyKeydown(e: KeyboardEvent, msg: Message, { editable = true } = {}
   })
 }
 
+// Escape closes the panel wherever the focus is (after opening a post it is
+// still on the card), once nothing else has used the key: an edit, a reply, a
+// suggestion list, a picker, the lightbox, an open dialog or menu.
+function onEscape(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return
+  if (selectedImage.value || activeReactionPickerMsgId.value) return
+  if (document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')) return
+  chatStore.closeThread()
+}
+
 onMounted(() => {
+  document.addEventListener('keydown', onEscape)
   scrollToBottom()
 })
 
 onUnmounted(() => {
+  document.removeEventListener('keydown', onEscape)
   clearTimeout(highlightTimer)
 })
 
@@ -260,9 +272,12 @@ async function handleFileUpload(e: Event) {
       </button>
 
       <button
-        @click="chatStore.closeThread"
+        type="button"
+        data-testid="thread-close"
+        @click="chatStore.closeThread()"
         class="btn btn-icon w-8 h-8 shrink-0"
-        v-tooltip="$t('thread.close')"
+        :aria-label="$t('thread.close')"
+        v-tooltip="{ text: $t('thread.close'), shortcut: 'Esc' }"
       >
         <X class="w-5 h-5" />
       </button>
