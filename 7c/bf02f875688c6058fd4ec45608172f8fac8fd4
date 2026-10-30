@@ -1,0 +1,73 @@
+README.md
+  s_61e7f03250bd0b::t_9f60c62b3460a8 109-112
+doc/architecture.md
+  s_61e7f03250bd0b::t_8ea1e4efeba939 734-736
+doc/glossary.md
+  s_61e7f03250bd0b::t_63f1f48d2ae537 35
+e2e/tests/saved-ux.spec.ts
+  s_61e7f03250bd0b::t_445bec6d373c0a 1-75
+e2e/tests/saved.spec.ts
+  s_61e7f03250bd0b::t_773eab11585555 62,85
+web/src/components/ChatHeader.test.ts
+  s_61e7f03250bd0b::t_b6687e6a0a0acb 17,80,94,103
+web/src/components/ChatHeader.vue
+  s_61e7f03250bd0b::t_a96ba5034ff9a3 5,13,32,38,54,109,169,189
+web/src/components/LaterList.vue
+  s_61e7f03250bd0b::t_d96744836cfdad 3-4,10,17-21,35,47-63,67-75,77-94,96-123,125-126,128-131
+web/src/components/MessageRow.vue
+  s_61e7f03250bd0b::t_a1060df9751b9f 9,26-28,32-33,56-58,121-134,193-201,237-246
+web/src/components/MessageRowSaved.test.ts
+  s_61e7f03250bd0b::t_a9af2083d18081 1-67
+web/src/components/SavedEntry.vue
+  s_61e7f03250bd0b::t_37def1285e78a5 1-148
+web/src/components/SavedLaterPanel.test.ts
+  s_61e7f03250bd0b::t_be6b54873dbc31 1-219
+web/src/components/SavedLaterPanel.vue
+  s_61e7f03250bd0b::t_9da4f09e595b50 2-5,7,9-10,12-13,15-19,23-27,29-49,53-63,66-70,72-79,81-89,91,96,101,103,106,110,113-125,127-153
+web/src/components/SavedLaterPanelLater.test.ts
+  s_61e7f03250bd0b::t_d3c145decc2624 6,40,42,44-45,59,66,113,154
+web/src/components/SavedLaterPanelSaved.test.ts
+  s_61e7f03250bd0b::t_7e5fcacda64aa9 6,9,11,13,24-25,30-39,41,46-48,51,57,59,65-67,73-74,77-82,84-85,88-91,94-96,102-103,106-107,118,129-130,134,140,145,148,157,166-219
+web/src/components/SavedList.vue
+  s_61e7f03250bd0b::t_f89c8ef3b53584 1-144
+web/src/composables/useMessageMenu.ts
+  s_61e7f03250bd0b::t_edd5bc9c6e7692 18,29-30
+web/src/composables/useMessageMenuSaved.test.ts
+  s_61e7f03250bd0b::t_b6a91cc3163cc1 54,60
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_ea6f0ca43e2924 2104,2150-2158,2168,2174-2200,3764-3773
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_cfd8c3bba3011b 2104,2150-2158,2164,2168,2174-2200,3764-3773
+web/src/lib/laterNotices.test.ts
+  s_61e7f03250bd0b::t_40e8c86b3c588c 1,4,25-38
+web/src/lib/laterNotices.ts
+  s_61e7f03250bd0b::t_6f8678a59f4f16 5,8,14-23
+web/src/lib/savedActions.test.ts
+  s_61e7f03250bd0b::t_2aba23882791c5 1-74
+web/src/lib/savedActions.ts
+  s_61e7f03250bd0b::t_e08a055b748d77 1-46
+web/src/lib/savedGroups.ts
+  s_61e7f03250bd0b::t_4f75537ae955d9 1-55
+web/src/lib/savedPanel.ts
+  s_61e7f03250bd0b::t_0fa5dc6d6c46ed 1-21
+web/src/stores/later.ts
+  s_61e7f03250bd0b::t_22c15e881e61fe 8,38-54,106-107,143
+web/src/stores/saved.ts
+  s_61e7f03250bd0b::t_23a8ba77d4b320 15-25,65-66,70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7cbf02f875688c6058fd4ec45608172f8fac8fd4",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
