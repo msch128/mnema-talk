@@ -1,0 +1,37 @@
+web/src/App.test.ts
+  s_a23126de6abd07::t_d5e6d5d25bcd52 101-110
+web/src/App.vue
+  s_82e9d48cb7fc7f::t_7e53065a4cac37 104-105,107-109,111-112
+web/src/lib/api.test.ts
+  s_82e9d48cb7fc7f::t_22e77a33cdfc5b 361
+web/src/lib/api.ts
+  s_82e9d48cb7fc7f::t_dc942c7e5c8d94 130,134-135,203
+web/src/stores/toast.test.ts
+  s_82e9d48cb7fc7f::t_30016918e4f2bb 34-40
+web/src/stores/toast.ts
+  s_82e9d48cb7fc7f::t_d90a30c9d0b8f6 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "daabf8cc4ee12662b6d858d7402d8197dcd7bdef",
+  "prompts": {},
+  "sessions": {
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_a23126de6abd07": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a48eb609883c41cb7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
