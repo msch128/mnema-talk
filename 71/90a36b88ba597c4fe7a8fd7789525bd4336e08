@@ -1,0 +1,50 @@
+e2e/tests/arrow-edit.spec.ts
+  h_0ff4f4713441f4 1-74
+web/src/components/ChatArea.vue
+  h_0ff4f4713441f4 22,83,314,383
+web/src/components/ChatAreaOwnEdit.test.ts
+  h_0ff4f4713441f4 1-246
+web/src/components/ChatComposer.vue
+  h_0ff4f4713441f4 39,96
+web/src/components/MessageEditor.vue
+  h_0ff4f4713441f4 4,7,15-16,20,39-43,55-57,66
+web/src/components/MessageRow.vue
+  h_0ff4f4713441f4 48,181
+web/src/components/ThreadComposer.vue
+  h_0ff4f4713441f4 26,41
+web/src/components/ThreadReply.vue
+  h_0ff4f4713441f4 27,142
+web/src/components/ThreadSidebar.vue
+  h_0ff4f4713441f4 19,92,326,347
+web/src/composables/useComposerKeys.ts
+  h_0ff4f4713441f4 12-13,22,25
+web/src/composables/useMessageActions.test.ts
+  h_0ff4f4713441f4 127,129-134,136-138
+web/src/composables/useMessageActions.ts
+  h_0ff4f4713441f4 107,113-114,138,160,183,186,189,192-204,209
+web/src/composables/useMessageMenu.test.ts
+  h_0ff4f4713441f4 22
+web/src/composables/useMessageMenuLater.test.ts
+  h_0ff4f4713441f4 20
+web/src/composables/useMessageMenuSaved.test.ts
+  h_0ff4f4713441f4 28
+web/src/composables/useMessageModerationMenu.test.ts
+  h_0ff4f4713441f4 27
+web/src/composables/useOwnMessageNav.ts
+  h_0ff4f4713441f4 1-98
+web/src/i18n/de.json
+  h_0ff4f4713441f4 482
+web/src/i18n/en.json
+  h_0ff4f4713441f4 482
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7190a36b88ba597c4fe7a8fd7789525bd4336e08",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
