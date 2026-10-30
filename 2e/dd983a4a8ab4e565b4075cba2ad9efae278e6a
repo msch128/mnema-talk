@@ -1,0 +1,19 @@
+loadtest/host-run.sh
+  s_e11d4af221ee25::t_e777f9c61b8d2e 273
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2edd983a4a8ab4e565b4075cba2ad9efae278e6a",
+  "prompts": {},
+  "sessions": {
+    "s_e11d4af221ee25": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aloadtest-build-a0df8b36f37826ce",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
