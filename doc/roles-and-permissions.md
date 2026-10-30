@@ -274,7 +274,7 @@ GIF without animation or WebP, at most 5 MB, at least 128x128 pixels; SVG is
 refused), crops the centre square and writes it again as two PNGs of 512x512 and
 128x128 pixels, so metadata is gone. The files live in object storage under
 `community/icon/<version>/`; `instance_settings.community_icon_version` names
-the current one (migration `0079`).
+the current one (migration `0080`).
 
 The icon is public, on the same footing as the community name, and it stays so
 on an invite-only server: `GET /api/community/icon` (optional `?size=128|512`,
