@@ -67,6 +67,11 @@ func RenderEnv(o Options, s Secrets, now time.Time) string {
 	if o.AppPort() != defaultAppPort {
 		w("PORT=%s", o.AppPort())
 	}
+	if o.IsLocal() {
+		w("# A trial on this computer: voice and the relay stay on it as well.")
+		w("WEBRTC_PUBLISH_ADDR=127.0.0.1")
+		w("TURN_PUBLISH_ADDR=127.0.0.1")
+	}
 	w("# Reverse proxy not on this host? Name its address (never a whole range):")
 	w("# TRUSTED_PROXY_CIDRS=172.17.0.1")
 	w("# Voice: the public IPv4 address is found at startup with a STUN request.")

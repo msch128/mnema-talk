@@ -73,6 +73,7 @@ type Runtime struct {
 	announceIPs    []string
 	detectErr      string
 	networkCode    string
+	networkLevel   Level
 	networkParams  Params
 	skew           time.Duration
 	clockMeasured  bool
@@ -88,9 +89,9 @@ func (r *Runtime) SetAnnounce(source string, ips []string, detectErr string) {
 
 // SetNetwork records that the connection cannot take port forwarding (CGNAT,
 // no IPv4, a different gateway); code is a network.* code, see ClassifyNetwork.
-func (r *Runtime) SetNetwork(code string, p Params) {
+func (r *Runtime) SetNetwork(code string, level Level, p Params) {
 	r.mu.Lock()
-	r.networkCode, r.networkParams = code, p
+	r.networkCode, r.networkLevel, r.networkParams = code, level, p
 	r.mu.Unlock()
 }
 
@@ -109,6 +110,7 @@ type runtimeSnapshot struct {
 	skew          time.Duration
 	clockMeasured bool
 	networkCode   string
+	networkLevel  Level
 	networkParams Params
 }
 
@@ -118,7 +120,7 @@ func (r *Runtime) snapshot() runtimeSnapshot {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	s := runtimeSnapshot{source: r.announceSource, ips: r.announceIPs, detectErr: r.detectErr, skew: r.skew, clockMeasured: r.clockMeasured, networkCode: r.networkCode, networkParams: r.networkParams}
+	s := runtimeSnapshot{source: r.announceSource, ips: r.announceIPs, detectErr: r.detectErr, skew: r.skew, clockMeasured: r.clockMeasured, networkCode: r.networkCode, networkLevel: r.networkLevel, networkParams: r.networkParams}
 	if s.source == "" {
 		s.source = SourceNone
 	}
@@ -165,7 +167,7 @@ func Run(in Input) []Check {
 		checks = append(checks, c)
 	}
 	if rt.networkCode != "" {
-		checks = append(checks, networkCheck(rt.networkCode, cloneParams(rt.networkParams)))
+		checks = append(checks, networkCheck(rt.networkCode, rt.networkLevel, cloneParams(rt.networkParams)))
 	}
 	return append(checks, proxyCheck(has))
 }

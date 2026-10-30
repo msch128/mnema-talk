@@ -39,7 +39,8 @@ func TestClassifyNetwork(t *testing.T) {
 	}{
 		"healthy home connection":              {NetworkFacts{STUN: addr("203.0.113.7"), Local: addr("192.168.1.20")}, ""},
 		"STUN answers with a CGNAT address":    {NetworkFacts{STUN: addr("100.72.1.9"), Local: addr("192.168.1.20")}, "network.cgnat"},
-		"the host's own WAN address is CGNAT":  {NetworkFacts{STUN: addr("203.0.113.7"), Local: addr("100.64.3.2")}, "network.cgnat"},
+		"CGNAT host address, STUN failed":      {NetworkFacts{STUNFailed: true, Local: addr("100.64.3.2")}, "network.cgnat"},
+		"CGNAT host address behind 1:1 NAT":    {NetworkFacts{STUN: addr("203.0.113.7"), Local: addr("100.64.3.2")}, ""},
 		"IPv4 fails while IPv6 works":          {NetworkFacts{STUNFailed: true, IPv6OK: true, Local: addr("192.168.1.20")}, "network.no_ipv4"},
 		"everything fails: no verdict":         {NetworkFacts{STUNFailed: true, Local: addr("192.168.1.20")}, ""},
 		"public local address differs":         {NetworkFacts{STUN: addr("203.0.113.7"), Local: addr("198.51.100.4")}, "network.address_mismatch"},
@@ -49,7 +50,7 @@ func TestClassifyNetwork(t *testing.T) {
 		"CGNAT outranks a failed IPv4 request": {NetworkFacts{STUNFailed: true, IPv6OK: true, Local: addr("100.64.0.9")}, "network.cgnat"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if code, _ := ClassifyNetwork(tc.f); code != tc.code {
+			if code, _, _ := ClassifyNetwork(tc.f); code != tc.code {
 				t.Fatalf("code = %q, want %q", code, tc.code)
 			}
 		})
@@ -58,12 +59,12 @@ func TestClassifyNetwork(t *testing.T) {
 
 func TestEveryNetworkOutcomeHasAnActionableMessage(t *testing.T) {
 	for _, code := range []string{codeCGNAT, codeNoIPv4, codeAddressMismatch} {
-		c := networkCheck(code, Params{"address": "100.64.0.1", "local": "198.51.100.4", "public": "203.0.113.7"})
+		c := networkCheck(code, Warn, Params{"address": "100.64.0.1", "local": "198.51.100.4", "public": "203.0.113.7"})
 		if c.Level == OK || c.Fix == "" || strings.Contains(c.Detail+c.Fix, "{") {
 			t.Errorf("%s: %+v", code, c)
 		}
 	}
-	c := networkCheck(codeCGNAT, Params{"address": "100.64.0.1"})
+	c := networkCheck(codeCGNAT, Fail, Params{"address": "100.64.0.1"})
 	for _, want := range []string{"public IPv4", "VPS", "external relay", "Can I host at home?"} {
 		if !strings.Contains(c.Fix, want) {
 			t.Errorf("CGNAT fix lacks %q: %s", want, c.Fix)
@@ -88,6 +89,26 @@ func TestJudgeNetworkShowsUpInTheChecks(t *testing.T) {
 	}
 	if byID(Run(healthy(cfg)), Network).ID != "" {
 		t.Fatal("a healthy connection adds no network check")
+	}
+}
+
+func TestHostCGNATWithoutASTUNAnswerIsOnlyAmber(t *testing.T) {
+	cfg := prodConfig(t, nil)
+	rt := &Runtime{}
+	JudgeNetwork(context.Background(), cfg, Announcement{DetectErr: "no answer"}, Host{Local: addr("100.64.3.2")}, nil, rt)
+	in := healthy(cfg)
+	in.Runtime = rt
+	if got := byID(Run(in), Network); got.Code != "network.cgnat" || got.Level != Warn {
+		t.Fatalf("network check = %+v", got)
+	}
+}
+
+func TestAnAnnouncedAddressTheOperatorChoseIsNotJudged(t *testing.T) {
+	rt := &Runtime{}
+	cfg := prodConfig(t, map[string]string{"WEBRTC_NAT_1TO1_IP": "203.0.113.7"})
+	JudgeNetwork(context.Background(), cfg, Announcement{DetectErr: "x"}, Host{Local: addr("100.64.3.2")}, nil, rt)
+	if rt.snapshot().networkCode != "" {
+		t.Fatal("judged despite WEBRTC_NAT_1TO1_IP")
 	}
 }
 

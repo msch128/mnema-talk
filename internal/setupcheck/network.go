@@ -88,23 +88,27 @@ const (
 )
 
 // ClassifyNetwork says whether the connection cannot take port forwarding, as
-// the code of the network check and its parameters; "" means nothing to report.
-//   - the WAN address is in 100.64.0.0/10 (carrier-grade NAT);
-//   - IPv4 detection fails while IPv6 works (DS-Lite and similar);
+// the code of the network check, its level and its parameters; "" means
+// nothing to report.
+//   - STUN reports an address in 100.64.0.0/10 (carrier-grade NAT): red;
+//   - the host's own address is in 100.64.0.0/10 and STUN did not return a
+//     public address: amber, because a 1:1 NAT with a public address looks the
+//     same from inside, which is why a different STUN answer clears it;
+//   - IPv4 detection fails while IPv6 works (DS-Lite and similar): amber;
 //   - the host has a public address of its own that differs from the one STUN
-//     sees, so its traffic leaves through another gateway.
-func ClassifyNetwork(f NetworkFacts) (string, Params) {
+//     sees, so its traffic leaves through another gateway: amber.
+func ClassifyNetwork(f NetworkFacts) (string, Level, Params) {
 	switch {
 	case IsCGNAT(f.STUN):
-		return codeCGNAT, Params{"address": f.STUN.String()}
-	case IsCGNAT(f.Local):
-		return codeCGNAT, Params{"address": f.Local.String()}
+		return codeCGNAT, Fail, Params{"address": f.STUN.String()}
+	case IsCGNAT(f.Local) && !f.STUN.IsValid():
+		return codeCGNAT, Warn, Params{"address": f.Local.String()}
 	case f.STUNFailed && f.IPv6OK:
-		return codeNoIPv4, nil
-	case f.STUN.IsValid() && f.Local.IsValid() && f.Local.IsGlobalUnicast() && !f.Local.IsPrivate() && f.Local != f.STUN:
-		return codeAddressMismatch, Params{"local": f.Local.String(), "public": f.STUN.String()}
+		return codeNoIPv4, Warn, nil
+	case f.STUN.IsValid() && f.Local.IsValid() && f.Local.IsGlobalUnicast() && !f.Local.IsPrivate() && !IsCGNAT(f.Local) && f.Local != f.STUN:
+		return codeAddressMismatch, Warn, Params{"local": f.Local.String(), "public": f.STUN.String()}
 	}
-	return "", nil
+	return "", OK, nil
 }
 
 // JudgeNetwork gathers the facts after the announcement was resolved, records
@@ -112,7 +116,9 @@ func ClassifyNetwork(f NetworkFacts) (string, Params) {
 // only when the IPv4 one failed. detect6 may be nil (no request). Development
 // mode and a PUBLIC_URL on this machine have nothing to judge.
 func JudgeNetwork(ctx context.Context, cfg *config.Config, ann Announcement, h Host, detect6 Detector, rt *Runtime) {
-	if !cfg.IsProduction() || cfg.PublicURLIsLocal() {
+	if !cfg.IsProduction() || cfg.PublicURLIsLocal() || len(cfg.WebRTCAnnounce) > 0 {
+		// Development, a trial on one computer and an announced address that
+		// the operator chose are not judged.
 		return
 	}
 	f := NetworkFacts{STUN: ann.DetectedIP, STUNFailed: ann.DetectErr != "", Local: h.Local}
@@ -120,23 +126,19 @@ func JudgeNetwork(ctx context.Context, cfg *config.Config, ann Announcement, h H
 		_, _, err := detect6(ctx, cfg.WebRTCDetectSTUN, detectTimeout)
 		f.IPv6OK = err == nil
 	}
-	code, p := ClassifyNetwork(f)
+	code, level, p := ClassifyNetwork(f)
 	if code == "" {
 		return
 	}
-	rt.SetNetwork(code, p)
-	c := networkCheck(code, p)
+	rt.SetNetwork(code, level, p)
+	c := networkCheck(code, level, p)
 	slog.Warn("setup check: "+c.Detail, "check", Network, "code", code, "fix", c.Fix)
 }
 
-func networkCheck(code string, p Params) Check {
-	level := Warn
-	if code == codeCGNAT {
-		level = Fail
-	}
+func networkCheck(code string, level Level, p Params) Check {
 	return newCheck(Network, code, level, p)
 }
 
 // NetworkCheck renders a network.* outcome as a check (level, English detail
 // and fix), for callers that report it outside the Status page.
-func NetworkCheck(code string, p Params) Check { return networkCheck(code, p) }
+func NetworkCheck(code string, level Level, p Params) Check { return networkCheck(code, level, p) }

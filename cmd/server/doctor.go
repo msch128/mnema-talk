@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/netip"
 	"strconv"
 	"time"
 
@@ -56,9 +57,15 @@ func doctorCommand(ctx context.Context, args []string, out io.Writer) error {
 	return runDoctor(ctx, cfg, systemDoctorProbes(cfg), out)
 }
 
+// doctorProbeTimeout bounds every probe of the doctor, so an unreachable
+// database, storage or STUN server cannot hang the command.
+const doctorProbeTimeout = 5 * time.Second
+
 func systemDoctorProbes(cfg *config.Config) doctorProbes {
 	return doctorProbes{
 		DBPing: func(ctx context.Context) error {
+			ctx, cancel := context.WithTimeout(ctx, doctorProbeTimeout)
+			defer cancel()
 			pool, err := db.Connect(ctx, cfg.DatabaseURL)
 			if err != nil {
 				return err
@@ -66,11 +73,21 @@ func systemDoctorProbes(cfg *config.Config) doctorProbes {
 			defer pool.Close()
 			return pool.Ping(ctx)
 		},
-		Storage: func(ctx context.Context) error { _, err := s3.New(ctx, cfg); return err },
-		Detect:  stunprobe.Detect,
-		Detect6: stunprobe.Detect6,
-		Host:    setupcheck.SystemHost,
+		Storage: func(ctx context.Context) error {
+			ctx, cancel := context.WithTimeout(ctx, doctorProbeTimeout)
+			defer cancel()
+			return s3.CheckBucket(ctx, cfg) // HEAD only: the doctor never creates the bucket
+		},
+		Detect: func(ctx context.Context, s []string, d time.Duration) (netip.Addr, string, error) {
+			return stunprobe.Detect(ctx, s, min(d, doctorProbeTimeout))
+		},
+		Detect6: func(ctx context.Context, s []string, d time.Duration) (netip.Addr, string, error) {
+			return stunprobe.Detect6(ctx, s, min(d, doctorProbeTimeout))
+		},
+		Host: setupcheck.SystemHost,
 		Skew: func(ctx context.Context) (time.Duration, error) {
+			ctx, cancel := context.WithTimeout(ctx, doctorProbeTimeout)
+			defer cancel()
 			return setupcheck.MeasureClockSkew(ctx, setupcheck.DefaultNTPServers, 3*time.Second)
 		},
 		UDPHeld: func(port uint16) bool {
@@ -145,15 +162,15 @@ func doctorInput(ctx context.Context, cfg *config.Config, p doctorProbes) (setup
 
 // serverWarnings derives from the ports what the running server would have
 // raised: voice did not start (nobody holds the media port), a shared port is
-// off, the relay did not start.
+// off (then voice is not judged), the relay did not start.
 func serverWarnings(cfg *config.Config, p doctorProbes) []opwarn.Warning {
 	var ws []opwarn.Warning
-	media := cfg.WebRTCUDPMuxPort
-	if media == 0 {
-		media = cfg.WebRTCUDPPortMin
-		ws = append(ws, opwarn.Warning{Code: opwarn.WebRTCUDPMuxDisabled})
+	if cfg.WebRTCUDPMuxPort == 0 {
+		// Every peer takes its own port from the range while a call runs, so an
+		// idle server holds no fixed port to look for: voice is not judged.
+		return append(ws, opwarn.Warning{Code: opwarn.WebRTCUDPMuxDisabled})
 	}
-	if !p.UDPHeld(media) {
+	if !p.UDPHeld(cfg.WebRTCUDPMuxPort) {
 		ws = append(ws, opwarn.Warning{Code: opwarn.VoiceUnavailable})
 	}
 	return ws

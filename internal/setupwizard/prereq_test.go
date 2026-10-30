@@ -92,10 +92,10 @@ func TestPreflightInTheRunContainerLooksAtNeitherDockerNorPorts(t *testing.T) {
 
 func TestPreflightFlagsAHomeConnectionWithoutPublicIPv4(t *testing.T) {
 	o, _ := Options{PublicURL: "https://chat.example.com"}.normalize()
-	cgnat := hostProbe(setupcheck.Host{})
-	cgnat.PublicIP = func(context.Context) (netip.Addr, error) { return netip.MustParseAddr("100.72.1.9"), nil }
+	cgnat := hostProbe(setupcheck.Host{Local: netip.MustParseAddr("100.64.3.2")})
+	cgnat.PublicIP = func(context.Context) (netip.Addr, error) { return netip.Addr{}, errors.New("no answer") }
 	f, ok := findingFor(Preflight(context.Background(), o, cgnat), "Home connection")
-	if !ok || f.Level != setupcheck.Fail || !strings.Contains(f.Detail, "port forwarding cannot work") || !strings.Contains(f.Detail, "VPS") {
+	if !ok || f.Level != setupcheck.Warn || !strings.Contains(f.Detail, "port forwarding cannot work") || !strings.Contains(f.Detail, "VPS") {
 		t.Errorf("CGNAT: %+v", f)
 	}
 
@@ -375,5 +375,25 @@ func TestSetupOverAnExistingEnvExplainsWhatIsWrongWithIt(t *testing.T) {
 	out, err := runSetup(t, "", "-y", "--dir", dir, "--public-url", "https://chat.example.com", "--compose-template", repoCompose)
 	if err == nil || !strings.Contains(err.Error(), "already exists") || !strings.Contains(out, "JWT_SECRET") {
 		t.Fatalf("err %v\n%s", err, out)
+	}
+}
+
+// --local promises that nothing is reachable from outside: the web port, the
+// voice UDP range and the relay are all published on loopback.
+func TestLocalTrialPublishesEverythingOnLoopback(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := runSetup(t, "", "-y", "--local", "--dir", dir, "--compose-template", repoCompose); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, ".env"))
+	env, _ := godotenv.Unmarshal(string(raw))
+	for _, k := range []string{"PUBLISH_ADDR", "WEBRTC_PUBLISH_ADDR", "TURN_PUBLISH_ADDR"} {
+		if env[k] != "127.0.0.1" {
+			t.Errorf("%s = %q", k, env[k])
+		}
+	}
+	compose, _ := os.ReadFile(repoCompose)
+	if !strings.Contains(string(compose), "${WEBRTC_PUBLISH_ADDR:-0.0.0.0}:${WEBRTC_UDP_PORT_MIN") {
+		t.Error("the UDP range is not published on WEBRTC_PUBLISH_ADDR")
 	}
 }

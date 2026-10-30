@@ -31,7 +31,8 @@ services:
       # Loopback only by default: put a reverse proxy in front. Set
       # PUBLISH_ADDR=0.0.0.0 (or a LAN address) to reach the app directly.
       - "${PUBLISH_ADDR:-127.0.0.1}:${PORT:-8080}:8080"
-      - "${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}:${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}/udp"
+      # WEBRTC_PUBLISH_ADDR=127.0.0.1 keeps voice on this computer (a trial).
+      - "${WEBRTC_PUBLISH_ADDR:-0.0.0.0}:${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}:${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}/udp"
       # The TURN relay built into the app (WEBRTC_BUILTIN_TURN, default auto:
       # it runs while WEBRTC_TURN_URLS is empty). It lets members whose network
       # blocks the UDP range above reach voice through one port, UDP and TCP.

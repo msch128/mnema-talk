@@ -79,11 +79,11 @@ func networkFinding(ctx context.Context, public netip.Addr, pubErr error, p Prob
 		_, err := p.PublicIP6(ctx)
 		f.IPv6OK = err == nil
 	}
-	code, params := setupcheck.ClassifyNetwork(f)
+	code, level, params := setupcheck.ClassifyNetwork(f)
 	if code == "" {
 		return Finding{}, false
 	}
-	c := setupcheck.NetworkCheck(code, params)
+	c := setupcheck.NetworkCheck(code, level, params)
 	return Finding{c.Level, "Home connection", c.Detail + " " + c.Fix}, true
 }
 

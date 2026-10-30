@@ -81,17 +81,35 @@ func TestDoctorSkipsVoiceChecksWhenNoServerRunsHere(t *testing.T) {
 	}
 }
 
-func TestDoctorReportsCGNAT(t *testing.T) {
+func TestDoctorReportsCGNATAsAttentionNotRed(t *testing.T) {
 	p := healthyProbes()
 	p.Detect = func(context.Context, []string, time.Duration) (netip.Addr, string, error) {
-		return netip.MustParseAddr("100.72.1.9"), "stun.test:3478", nil
+		return netip.Addr{}, "", errors.New("no answer")
 	}
+	p.Host = func() setupcheck.Host { return setupcheck.Host{Local: netip.MustParseAddr("100.64.3.2")} }
 	var out bytes.Buffer
-	if err := runDoctor(context.Background(), productionTestConfig(t), p, &out); !errors.Is(err, errDoctorRed) {
-		t.Fatalf("CGNAT is red: %v\n%s", err, out.String())
+	// The failed STUN request makes the voice address red on its own; the
+	// host address in 100.64.0.0/10 must be amber, not red.
+	_ = runDoctor(context.Background(), productionTestConfig(t), p, &out)
+	if !strings.Contains(out.String(), "[warn] This home connection has no public IPv4") {
+		t.Errorf("the host-only CGNAT finding must be amber:\n%s", out.String())
 	}
 	if !strings.Contains(out.String(), "100.64.0.0/10") || !strings.Contains(out.String(), "Can I host at home?") {
 		t.Errorf("CGNAT message incomplete:\n%s", out.String())
+	}
+}
+
+func TestDoctorDoesNotJudgeVoiceWithoutASharedPort(t *testing.T) {
+	cfg := productionTestConfig(t)
+	cfg.WebRTCUDPMuxPort = 0
+	p := healthyProbes()
+	p.UDPHeld = func(uint16) bool { t.Fatal("looked for a port nobody holds while idle"); return false }
+	var out bytes.Buffer
+	if err := runDoctor(context.Background(), cfg, p, &out); err != nil {
+		t.Fatalf("a valid configuration must not be red: %v\n%s", err, out.String())
+	}
+	if !strings.Contains(out.String(), "WEBRTC_UDP_MUX_PORT=0") {
+		t.Errorf("the mux_disabled warning is missing:\n%s", out.String())
 	}
 }
 
