@@ -1,0 +1,19 @@
+web/src/components/WebhookPanels.test.ts
+  s_3d15a6983fd807::t_fcbbe2ce72ea63 230-258
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7f456c96ad30d80875240a4ff56a05fd062c1156",
+  "prompts": {},
+  "sessions": {
+    "s_3d15a6983fd807": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-stats-packets-a99b089a927db102",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
