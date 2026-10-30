@@ -2392,9 +2392,28 @@
       },
       "chat.CreateForumTagRequest": {
         "properties": {
+          "color": {
+            "description": "Color is a palette name (gray, red, orange, yellow, green, teal, blue, purple, pink); omitted means none.",
+            "enum": [
+              "gray",
+              "red",
+              "orange",
+              "yellow",
+              "green",
+              "teal",
+              "blue",
+              "purple",
+              "pink"
+            ],
+            "type": "string"
+          },
           "emoji": {
             "maxLength": 32,
             "type": "string"
+          },
+          "moderated": {
+            "description": "Moderated: only members with Manage messages apply or remove the tag.",
+            "type": "boolean"
           },
           "name": {
             "maxLength": 20,
@@ -2856,10 +2875,43 @@
         ],
         "type": "object"
       },
+      "chat.ForumSettings": {
+        "properties": {
+          "guidelines": {
+            "description": "Guidelines is shown above the new-post form (plain text, at most 1000 characters).",
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "require_tag": {
+            "description": "RequireTag: every post carries at least one tag (waived for a member who\nmay apply none, so a forum without usable tags is not closed).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "guidelines",
+          "require_tag"
+        ],
+        "type": "object"
+      },
       "chat.ForumTag": {
         "properties": {
           "channel_id": {
             "format": "uuid",
+            "type": "string"
+          },
+          "color": {
+            "description": "Color is a name from ForumTagColors, or empty for the plain look.",
+            "enum": [
+              "gray",
+              "red",
+              "orange",
+              "yellow",
+              "green",
+              "teal",
+              "blue",
+              "purple",
+              "pink"
+            ],
             "type": "string"
           },
           "created_at": {
@@ -2873,16 +2925,26 @@
             "format": "uuid",
             "type": "string"
           },
+          "moderated": {
+            "description": "Moderated tags are applied and removed only by members with Manage messages.",
+            "type": "boolean"
+          },
           "name": {
             "maxLength": 20,
             "type": "string"
+          },
+          "position": {
+            "description": "Position is the tag's place in the forum's own order (1 is first).",
+            "type": "integer"
           }
         },
         "required": [
           "channel_id",
           "created_at",
           "id",
-          "name"
+          "moderated",
+          "name",
+          "position"
         ],
         "type": "object"
       },
@@ -3341,6 +3403,10 @@
           "is_pinned": {
             "type": "boolean"
           },
+          "is_resolved": {
+            "description": "IsResolved marks a forum post as solved or answered.",
+            "type": "boolean"
+          },
           "is_webhook": {
             "description": "IsWebhook narrows IsBot: the author is an incoming webhook (shown with\na Webhook label), not a bot account (shown with a BOT label).",
             "type": "boolean"
@@ -3603,6 +3669,19 @@
         ],
         "type": "object"
       },
+      "chat.PostRead": {
+        "properties": {
+          "previous_read_at": {
+            "description": "PreviousReadAt is the read marker before this call (the day the caller\njoined for a post never opened). Replies of others after it are unread.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "previous_read_at"
+        ],
+        "type": "object"
+      },
       "chat.Privacy": {
         "properties": {
           "dm_policy": {
@@ -3738,6 +3817,22 @@
         "required": [
           "id",
           "name"
+        ],
+        "type": "object"
+      },
+      "chat.ReorderForumTagsRequest": {
+        "properties": {
+          "tag_ids": {
+            "description": "TagIDs lists every tag of the forum once, in the new order.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "tag_ids"
         ],
         "type": "object"
       },
@@ -4429,6 +4524,21 @@
         ],
         "type": "object"
       },
+      "chat.UnreadForumPosts": {
+        "properties": {
+          "post_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "post_ids"
+        ],
+        "type": "object"
+      },
       "chat.UpdateChannelRequest": {
         "properties": {
           "is_lobby": {
@@ -4463,11 +4573,42 @@
         },
         "type": "object"
       },
+      "chat.UpdateForumSettingsRequest": {
+        "properties": {
+          "guidelines": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "require_tag": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "chat.UpdateForumTagRequest": {
         "properties": {
+          "color": {
+            "description": "Color is a palette name; an empty string clears it.",
+            "enum": [
+              "",
+              "gray",
+              "red",
+              "orange",
+              "yellow",
+              "green",
+              "teal",
+              "blue",
+              "purple",
+              "pink"
+            ],
+            "type": "string"
+          },
           "emoji": {
             "maxLength": 32,
             "type": "string"
+          },
+          "moderated": {
+            "type": "boolean"
           },
           "name": {
             "maxLength": 20,
@@ -4480,6 +4621,10 @@
       "chat.UpdatePostRequest": {
         "properties": {
           "is_locked": {
+            "type": "boolean"
+          },
+          "is_resolved": {
+            "description": "IsResolved marks the post as solved (author or Manage messages) or reopens it.",
             "type": "boolean"
           },
           "tag_ids": {
@@ -23868,6 +24013,163 @@
         ]
       }
     },
+    "/api/channels/{channelID}/forum-settings": {
+      "get": {
+        "description": "Whether posts need a tag and the guidelines shown above the new-post form. Requires View channel.",
+        "operationId": "getForumSettings",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ForumSettings"
+                }
+              }
+            },
+            "description": "Settings."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Get a forum's settings",
+        "tags": [
+          "Channels"
+        ]
+      },
+      "patch": {
+        "description": "Changes the fields sent: whether posts need a tag, and the guidelines text (at most 1000 characters; empty clears it). Requires Manage channels.",
+        "operationId": "updateForumSettings",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.UpdateForumSettingsRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ForumSettings"
+                }
+              }
+            },
+            "description": "Updated settings."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Update a forum's settings",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/channels/{channelID}/interactions": {
       "post": {
         "description": "A built-in command (builtin in the list) runs on the server and answers 200 with its result. Otherwise sends an interaction to the command's bot over the gateway; the bot answers with a message in the channel, or one only the caller sees (an ephemeral response, delivered as the interaction_response WebSocket event). Needs Send messages in the channel; the bot must still be able to view and send there. 409 when the bot is not connected. At most 20 a minute per member.",
@@ -25656,7 +25958,7 @@
     },
     "/api/channels/{channelID}/posts": {
       "get": {
-        "description": "Root posts in a forum channel, ordered by latest activity or creation. Supports tag filtering and pagination. Requires View channel.",
+        "description": "Root posts in a forum channel, ordered by latest activity or creation. Supports tag filtering, text search and pagination. Pinned posts come first and only on the first page (no before); the pages behind it hold unpinned posts. Requires View channel.",
         "operationId": "listForumPosts",
         "parameters": [
           {
@@ -25687,6 +25989,14 @@
             "name": "tag_id",
             "schema": {
               "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Keep posts whose title, first message or a reply contains this text (at most 100 characters).",
+            "in": "query",
+            "name": "q",
+            "schema": {
               "type": "string"
             }
           },
@@ -25872,9 +26182,78 @@
         ]
       }
     },
+    "/api/channels/{channelID}/posts/unread": {
+      "get": {
+        "description": "The posts (up to 200, newest activity first) with a post or reply of someone else the caller has not read since they last opened the post. Requires View channel.",
+        "operationId": "listUnreadForumPosts",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.UnreadForumPosts"
+                }
+              }
+            },
+            "description": "Unread posts."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List a forum's unread posts",
+        "tags": [
+          "Channels"
+        ]
+      }
+    },
     "/api/channels/{channelID}/posts/{messageID}": {
       "patch": {
-        "description": "Updates a post's title, tags or lock status. Author or Manage messages for title/tags; Manage messages for lock status.",
+        "description": "Updates a post's title, tags, solved mark or lock status. The author or Manage messages for title, tags and the solved mark (not on a locked post, unless Manage messages); Manage messages for lock status and for applying or removing moderated tags. A forum that requires a tag refuses a post without one.",
         "operationId": "updateForumPost",
         "parameters": [
           {
@@ -25969,6 +26348,85 @@
         "summary": "Update a forum post",
         "tags": [
           "Messages"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/posts/{messageID}/read": {
+      "put": {
+        "description": "Sets the caller's read marker of the post to now and returns the marker it had, which is where the first unread reply starts. Never moves backwards. Requires View channel.",
+        "operationId": "markForumPostRead",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Post ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.PostRead"
+                }
+              }
+            },
+            "description": "The marker before."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Mark a forum post read",
+        "tags": [
+          "Channels"
         ]
       }
     },
@@ -26212,7 +26670,7 @@
     },
     "/api/channels/{channelID}/tags": {
       "get": {
-        "description": "Admin-defined tags in a forum channel. Requires View channel.",
+        "description": "The tags of a forum channel in the forum's own order. Requires View channel.",
         "operationId": "listForumTags",
         "parameters": [
           {
@@ -26282,7 +26740,7 @@
         ]
       },
       "post": {
-        "description": "Adds a new tag to the forum channel (up to 20). Requires Manage channels.",
+        "description": "Adds a new tag at the end of the forum channel's tag order (up to 20). Requires Manage channels.",
         "operationId": "createForumTag",
         "parameters": [
           {
@@ -26380,6 +26838,99 @@
         ]
       }
     },
+    "/api/channels/{channelID}/tags/order": {
+      "put": {
+        "description": "Sets the order of the tags. The body names every tag of the forum exactly once. Requires Manage channels.",
+        "operationId": "reorderForumTags",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.ReorderForumTagsRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/chat.ForumTag"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The tags in their new order."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAUTHORIZED"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Reorder a forum's tags",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/channels/{channelID}/tags/{tagID}": {
       "delete": {
         "description": "Removes a tag from the forum channel. Requires Manage channels.",
@@ -26452,7 +27003,7 @@
         ]
       },
       "patch": {
-        "description": "Updates tag name or emoji. Requires Manage channels.",
+        "description": "Updates a tag's name, emoji, colour or moderated flag (only the fields sent change; an empty colour or emoji clears it). Requires Manage channels.",
         "operationId": "updateForumTag",
         "parameters": [
           {
@@ -26700,6 +27251,15 @@
                   "reply_to_id": {
                     "description": "Quoted message ID.",
                     "format": "uuid",
+                    "type": "string"
+                  },
+                  "tag_ids": {
+                    "description": "With title: the post's tags, comma-separated IDs (at most 5, the forum's rules for moderated and required tags apply).",
+                    "type": "string"
+                  },
+                  "title": {
+                    "description": "In a forum channel: makes the message a post with this title (1 to 100 characters; not with parent_id or reply_to_id). A root message in a forum needs one.",
+                    "maxLength": 100,
                     "type": "string"
                   }
                 },

@@ -270,15 +270,15 @@ func TestForumTagPartialUpdates(t *testing.T) {
 		t.Fatal(err)
 	}
 	newName, newEmoji, empty := "renamed", "B", ""
-	got, _, err := UpdateForumTag(ctx, f.p, ch.ID, tag.ID, &newName, nil)
+	got, _, err := UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Name: &newName})
 	if err != nil || got.Name != "renamed" || got.Emoji != "A" {
 		t.Fatalf("name-only update = %+v, %v", got, err)
 	}
-	got, _, err = UpdateForumTag(ctx, f.p, ch.ID, tag.ID, nil, &newEmoji)
+	got, _, err = UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &newEmoji})
 	if err != nil || got.Name != "renamed" || got.Emoji != "B" {
 		t.Fatalf("emoji-only update = %+v, %v", got, err)
 	}
-	got, _, err = UpdateForumTag(ctx, f.p, ch.ID, tag.ID, nil, &empty)
+	got, _, err = UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &empty})
 	if err != nil || got.Emoji != "" {
 		t.Fatalf("clearing emoji = %+v, %v", got, err)
 	}
@@ -422,7 +422,7 @@ func TestForumPostUpdateWithoutPermissionService(t *testing.T) {
 	f, _, mod, ch := forumCtx(t)
 	h := &Handler{DB: f.p, Events: &events.Recorder{}}
 	other := forumNewUser(t, f, "forum_plain")
-	post, err := CreateForumPost(context.Background(), f.p, nil, ch.ID, f.u.ID, "Legacy", "content", nil)
+	post, err := CreateForumPost(context.Background(), f.p, nil, ch.ID, f.u.ID, false, "Legacy", "content", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -490,14 +490,17 @@ func TestForumStoreErrorsOnCanceledContext(t *testing.T) {
 		"list tags":     func() error { _, err := ListForumTags(ctx, f.p, ch.ID); return err },
 		"validate tags": func() error { return ValidatePostTags(ctx, f.p, ch.ID, []uuid.UUID{uuid.New()}) },
 		"delete tag":    func() error { _, err := DeleteForumTag(ctx, f.p, ch.ID, uuid.New()); return err },
-		"update tag":    func() error { _, _, err := UpdateForumTag(ctx, f.p, ch.ID, uuid.New(), &name, nil); return err },
-		"create tag":    func() error { _, err := CreateForumTag(ctx, f.p, ch.ID, "x", ""); return err },
+		"update tag": func() error {
+			_, _, err := UpdateForumTag(ctx, f.p, ch.ID, uuid.New(), TagPatch{Name: &name})
+			return err
+		},
+		"create tag": func() error { _, err := CreateForumTag(ctx, f.p, ch.ID, "x", ""); return err },
 		"list posts": func() error {
 			_, err := ListForumPosts(ctx, f.p, ch.ID, "newest", nil, HistoryQuery{})
 			return err
 		},
 		"update post": func() error {
-			_, err := UpdateForumPost(ctx, f.p, ch.ID, uuid.New(), f.u.ID, true, nil, nil, nil)
+			_, err := UpdateForumPost(ctx, f.p, ch.ID, uuid.New(), PostActor{ID: f.u.ID, CanManage: true}, PostPatch{})
 			return err
 		},
 	}
