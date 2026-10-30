@@ -10,6 +10,7 @@ import { useAuthStore } from '../stores/auth'
 import { setLocale, locale } from '../i18n'
 import { settingsTab } from '../lib/settingsDialog'
 import { useAccountStore } from '../stores/account'
+import { shortcutsOpen } from '../lib/shortcutsDialog'
 
 vi.mock('../composables/useWebRTC', () => ({
   useWebRTC: () => ({ leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn() })
@@ -62,6 +63,23 @@ describe('settings entry', () => {
     await w.find('[data-testid="menu-settings"]').trigger('click')
     expect(useAccountStore().dialogOpen).toBe(true)
     expect(settingsTab.value).toBe('audio')
+    useAccountStore().close()
+  })
+})
+
+describe('shortcuts and sound entries', () => {
+  it('opens the shortcut list and the audio settings from the menu', async () => {
+    const auth = useAuthStore()
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Mnema', role: 'user', locale: 'de' })
+    w = mount(UserBar, { attachTo: document.body })
+    await w.find('[data-testid="account-menu-button"]')!.trigger('click')
+    await w.find('[data-testid="menu-shortcuts"]').trigger('click')
+    expect(shortcutsOpen.value).toBe(true)
+    shortcutsOpen.value = false
+    await w.find('[data-testid="account-menu-button"]')!.trigger('click')
+    await w.find('[data-testid="menu-sound"]').trigger('click')
+    expect(settingsTab.value).toBe('audio')
+    expect(useAccountStore().dialogOpen).toBe(true)
     useAccountStore().close()
   })
 })

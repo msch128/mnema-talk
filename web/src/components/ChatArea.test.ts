@@ -479,7 +479,7 @@ describe('ChatArea notification settings and presentation', () => {
       await w.find('[aria-haspopup=menu]').trigger('click')
       await nextTick()
       const menu = w.findComponent(ContextMenu)
-      const label = level === 'inherit' ? t('notifications.inheritChannel') : t(`notifications.${level}`)
+      const label = level === 'inherit' ? t('notifications.inherit', { level: t('notifications.all') }) : t(`notifications.${level}`)
       const item = requireValue(requireValue(menu.props('items')).find(item => item.label === label))
       expect(item).toMatchObject({ type: 'radio', checked: true })
       item.action?.()

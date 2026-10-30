@@ -45,8 +45,8 @@
     "hint": {
       "online": "Reachable for everyone",
       "away": "Away from the keyboard",
-      "dnd": "No notifications",
-      "focus": "No notifications, heads down"
+      "dnd": "No pop-ups or push messages. Others see Do not disturb.",
+      "focus": "Just as quiet. Others see that you are concentrating."
     },
     "activity": {
       "playing": "Playing {name}",
@@ -88,7 +88,8 @@
     "adminConsole": "Admin console",
     "legal": "Legal & privacy",
     "rules": "Community rules",
-    "notificationSettings": "Notification settings"
+    "notificationSettings": "Notification settings",
+    "shortcuts": "Keyboard shortcuts"
   },
   "account": {
     "menu": "Account menu",
@@ -311,8 +312,6 @@
     "granted": "Notifications are enabled.",
     "denied": "Notifications are blocked in the browser.",
     "channelSettings": "Notifications for this channel",
-    "inheritChannel": "Use category default",
-    "inheritCategory": "Use community default",
     "muteChannel": "Mute for…",
     "muteCategory": "Mute for…",
     "mute_15m": "For 15 minutes",
@@ -336,7 +335,8 @@
     "unmuteServer": "Turn notifications back on",
     "suppressEveryone": "Suppress @all and @here",
     "suppressEveryoneHint": "Announcements to everyone no longer notify you or count as mentions.",
-    "serverSaveFailed": "Couldn’t save the notification settings. Try again."
+    "serverSaveFailed": "Couldn’t save the notification settings. Try again.",
+    "inherit": "Use my default ({level})"
   },
   "welcome": {
     "progress": "Step {current} of {total}",
@@ -622,7 +622,9 @@
     "searchProblemChannel": "No channel “{value}” found. Check the name after {filter}:.",
     "searchProblemDate": "Can’t read the date “{value}” after {filter}:. Use YYYY-MM-DD, today or yesterday.",
     "searchProblemOption": "“{value}” is not a value for {filter}:. Choose one of: {options}.",
-    "searchProblemEmpty": "{filter}: needs a value."
+    "searchProblemEmpty": "{filter}: needs a value.",
+    "replyInChannel": "Reply in channel",
+    "replyInThread": "Reply in thread"
   },
   "linkPreview": {
     "play": "Play video: {title}",
@@ -652,7 +654,8 @@
     "placeholder": "Reply in thread…",
     "upload": "Share a file or image in the thread",
     "sendFailed": "Couldn’t send the reply. Try again.",
-    "commandHint": "Commands and polls start in the channel. Here this text is sent as a reply."
+    "commandHint": "Commands and polls start in the channel. Here this text is sent as a reply.",
+    "hint": "Replies here stay out of the main chat."
   },
   "voice": {
     "mute": "Mute",
@@ -3765,7 +3768,9 @@
       "app": "Notifications & install",
       "audio": "Sound & microphone"
     },
-    "privacyEmpty": "There is nothing to set here on this server."
+    "privacyEmpty": "There is nothing to set here on this server.",
+    "notifyLink": "Choose what notifies you",
+    "notifyLinkHint": "Which messages notify you is set for the whole server and per channel (the bell in its header). Push below only delivers them to this device."
   },
   "ctxMenu": {
     "systemDefault": "System default",
@@ -3884,5 +3889,49 @@
     "subtitle": "Shown next to your name for everyone to see.",
     "hint": "Say what you are up to. Up to 32 characters.",
     "clear": "Clear status"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "subtitle": "Everything you can do without the mouse. Open this list with ? or Ctrl/Cmd + /.",
+    "or": "or",
+    "notSet": "not set",
+    "group": {
+      "general": "Everywhere",
+      "messages": "On a message",
+      "composer": "Writing",
+      "talk": "In a Talk",
+      "sidebar": "Channel list"
+    },
+    "groupHint": {
+      "messages": "Tab to a message first. The letters work on the selected message, not while you type.",
+      "sidebar": "For administrators, on a selected channel or category."
+    },
+    "general": {
+      "search": "Search messages, or jump to a channel or conversation",
+      "shortcuts": "Show this list",
+      "escape": "Close the open menu or dialog; in a channel, mark it as read"
+    },
+    "messages": {
+      "move": "Previous or next message",
+      "reply": "Reply in channel",
+      "edit": "Edit your own message",
+      "save": "Save or unsave the message",
+      "menu": "Open the message menu"
+    },
+    "composer": {
+      "send": "Send the message",
+      "newline": "New line",
+      "mention": "Mention someone or a role",
+      "command": "Start a command",
+      "emoji": "Find an emoji by name",
+      "cancelReply": "Cancel the reply you are writing"
+    },
+    "talk": {
+      "fullscreen": "Full screen for the stage",
+      "ptt": "Push to talk (your own key, while this window is in front)"
+    },
+    "sidebar": {
+      "reorder": "Move it up or down"
+    }
   }
 }

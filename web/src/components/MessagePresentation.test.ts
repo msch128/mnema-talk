@@ -36,11 +36,15 @@ describe('MessageRow presentation and event contract', () => {
     await requireValue(buttons[0]).trigger('click')
     expect(w.emitted('toggle-picker')).toEqual([[msg.id]])
     const quick = w.findAll('button').filter(b => b.find('svg').exists() && b.element.parentElement?.classList.contains('z-20'))
-    expect(quick).toHaveLength(3)
+    // Reply in channel, reply in thread, edit (own message), more.
+    expect(quick).toHaveLength(4)
+    expect(quick.map(b => b.attributes('aria-label'))).toEqual([t('chat.replyInChannel'), t('chat.replyInThread'), t('chat.edit'), t('chat.moreActions')])
     await requireValue(quick[0]).trigger('click')
     await requireValue(quick[1]).trigger('click')
     await requireValue(quick[2]).trigger('click')
+    await requireValue(quick[3]).trigger('click')
     expect(w.emitted('reply')).toHaveLength(1)
+    expect(w.emitted('open-thread')).toHaveLength(1)
     expect(w.emitted('edit')).toHaveLength(1)
     expect(w.emitted('more')?.[0]?.[0]).toBeInstanceOf(MouseEvent)
     await w.find('[data-testid="author-name"]').trigger('click')
@@ -58,7 +62,7 @@ describe('MessageRow presentation and event contract', () => {
     expect(w.emitted('close-picker')).toHaveLength(1)
     const thread = w.findAll('button').find(b => b.text().includes(t('chat.openThread')))
     await requireValue(thread).trigger('click')
-    expect(w.emitted('open-thread')).toHaveLength(1)
+    expect(w.emitted('open-thread')).toHaveLength(2)
   })
 
   it('forwards inline editing and lower reaction controls', async () => {

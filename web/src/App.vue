@@ -29,6 +29,8 @@ import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import { openSettings } from './lib/settingsDialog'
 import { notifyDialogOpen } from './lib/notifyDialog'
 import NotificationSettingsDialog from './components/NotificationSettingsDialog.vue'
+import ShortcutsDialog from './components/ShortcutsDialog.vue'
+import { shortcutsOpen, useShortcutsKey } from './lib/shortcutsDialog'
 import ScreenShareModal from './components/ScreenShareModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
 import StatusDialog from './components/StatusDialog.vue'
@@ -120,6 +122,7 @@ const routing = useAppRouting(() => alive)
 useAppBadge()
 usePushBridge()
 usePttHint()
+useShortcutsKey(() => !!authStore.user)
 const { showAdminModal, adminTab, voiceShowChat, voiceChannelId, applyRoute, syncCurrentStateToRoute, openAdmin, closeAdmin, onVoiceJoin } = routing
 
 // Avoids flashing the login dialog while the session cookie is being checked.
@@ -356,6 +359,7 @@ onMounted(async () => {
       <!-- Settings: account, privacy, push and app, audio -->
       <SettingsDialog v-if="accountStore.dialogOpen" />
       <NotificationSettingsDialog v-if="notifyDialogOpen" @close="notifyDialogOpen = false" />
+      <ShortcutsDialog v-if="shortcutsOpen" @close="shortcutsOpen = false" />
 
       <!-- First run and re-acceptance of changed rules -->
       <WelcomeFlow />

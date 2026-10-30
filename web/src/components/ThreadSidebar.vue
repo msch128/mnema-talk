@@ -237,6 +237,7 @@ async function handleFileUpload(e: Event) {
               #{{ chatStore.activeChannel?.name || '' }}
             </span>
           </div>
+          <p v-if="!chatStore.activeThread?.title" data-testid="thread-hint" class="truncate text-xs leading-4 text-mnema-tertiary">{{ $t('thread.hint') }}</p>
         </div>
       </div>
 

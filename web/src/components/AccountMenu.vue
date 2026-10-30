@@ -4,13 +4,14 @@ import type { Locale } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 // The ⋯ menu of the user bar: profile, settings, notifications, sound, language, admin, legal, sign out.
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { User, Settings, SlidersHorizontal, Languages, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff, Bell } from '@lucide/vue'
+import { User, Settings, SlidersHorizontal, Languages, Keyboard, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff, Bell } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { platform } from '../lib/platform'
 import { openSettings } from '../lib/settingsDialog'
+import { openShortcuts } from '../lib/shortcutsDialog'
 import { notifyDialogOpen } from '../lib/notifyDialog'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useWebRTC } from '../composables/useWebRTC'
@@ -173,6 +174,11 @@ const item = 'flex min-h-9 w-full items-center gap-3 rounded-lg px-2.5 py-2 text
         {{ voiceStore.isScreenSharing ? $t('voice.stopShare') : $t('voice.share') }}
       </button>
     </template>
+
+    <button type="button" role="menuitem" tabindex="-1" :class="item" data-testid="menu-shortcuts" @click="run(openShortcuts)">
+      <Keyboard class="h-4 w-4 shrink-0 text-mnema-tertiary" />{{ $t('menu.shortcuts') }}
+      <span class="ml-auto font-mono text-[13px] text-mnema-tertiary">?</span>
+    </button>
 
     <div class="relative">
       <button

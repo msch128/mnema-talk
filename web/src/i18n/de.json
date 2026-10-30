@@ -45,8 +45,8 @@
     "hint": {
       "online": "Für alle erreichbar",
       "away": "Gerade nicht am Platz",
-      "dnd": "Keine Benachrichtigungen",
-      "focus": "Keine Benachrichtigungen, konzentriert bei der Sache"
+      "dnd": "Keine Pop-ups oder Push-Nachrichten. Andere sehen „Nicht stören“.",
+      "focus": "Genauso ruhig. Andere sehen, dass du dich konzentrierst."
     },
     "activity": {
       "playing": "Spielt {name}",
@@ -88,7 +88,8 @@
     "adminConsole": "Admin-Konsole",
     "legal": "Rechtliches & Datenschutz",
     "rules": "Community-Regeln",
-    "notificationSettings": "Benachrichtigungen"
+    "notificationSettings": "Benachrichtigungen",
+    "shortcuts": "Tastenkürzel"
   },
   "account": {
     "menu": "Konto-Menü",
@@ -311,8 +312,6 @@
     "granted": "Benachrichtigungen sind aktiviert.",
     "denied": "Benachrichtigungen sind im Browser blockiert.",
     "channelSettings": "Benachrichtigungen für diesen Kanal",
-    "inheritChannel": "Standard der Kategorie verwenden",
-    "inheritCategory": "Standard der Community verwenden",
     "muteChannel": "Stummschalten für …",
     "muteCategory": "Stummschalten für …",
     "mute_15m": "Für 15 Minuten",
@@ -336,7 +335,8 @@
     "unmuteServer": "Benachrichtigungen wieder einschalten",
     "suppressEveryone": "@all und @here unterdrücken",
     "suppressEveryoneHint": "Ansagen an alle benachrichtigen dich nicht mehr und zählen nicht als Erwähnung.",
-    "serverSaveFailed": "Die Benachrichtigungen konnten nicht gespeichert werden. Versuche es erneut."
+    "serverSaveFailed": "Die Benachrichtigungen konnten nicht gespeichert werden. Versuche es erneut.",
+    "inherit": "Meine Vorgabe verwenden ({level})"
   },
   "welcome": {
     "progress": "Schritt {current} von {total}",
@@ -622,7 +622,9 @@
     "searchProblemChannel": "Kein Kanal „{value}“ gefunden. Prüfe den Namen nach {filter}:.",
     "searchProblemDate": "Das Datum „{value}“ nach {filter}: ist nicht lesbar. Nutze JJJJ-MM-TT, heute oder gestern.",
     "searchProblemOption": "„{value}“ ist kein Wert für {filter}:. Wähle einen von: {options}.",
-    "searchProblemEmpty": "{filter}: braucht einen Wert."
+    "searchProblemEmpty": "{filter}: braucht einen Wert.",
+    "replyInChannel": "Im Kanal antworten",
+    "replyInThread": "Im Thread antworten"
   },
   "linkPreview": {
     "play": "Video abspielen: {title}",
@@ -652,7 +654,8 @@
     "placeholder": "Im Thread antworten …",
     "upload": "Datei oder Bild im Thread teilen",
     "sendFailed": "Die Antwort konnte nicht gesendet werden. Versuche es noch einmal.",
-    "commandHint": "Befehle und Umfragen startest du im Kanal. Hier wird dieser Text als Antwort gesendet."
+    "commandHint": "Befehle und Umfragen startest du im Kanal. Hier wird dieser Text als Antwort gesendet.",
+    "hint": "Antworten hier landen nicht im Hauptchat."
   },
   "voice": {
     "mute": "Stummschalten",
@@ -3765,7 +3768,9 @@
       "app": "Benachrichtigungen & Installation",
       "audio": "Ton & Mikrofon"
     },
-    "privacyEmpty": "Auf diesem Server gibt es hier nichts einzustellen."
+    "privacyEmpty": "Auf diesem Server gibt es hier nichts einzustellen.",
+    "notifyLink": "Auswählen, was dich benachrichtigt",
+    "notifyLinkHint": "Welche Nachrichten dich benachrichtigen, stellst du für den ganzen Server und pro Kanal ein (die Glocke in der Kopfzeile). Push unten liefert sie nur an dieses Gerät."
   },
   "ctxMenu": {
     "systemDefault": "Systemstandard",
@@ -3884,5 +3889,49 @@
     "subtitle": "Wird allen neben deinem Namen angezeigt.",
     "hint": "Sag, was du gerade machst. Bis zu 32 Zeichen.",
     "clear": "Status löschen"
+  },
+  "shortcuts": {
+    "title": "Tastenkürzel",
+    "subtitle": "Alles, was du ohne Maus tun kannst. Diese Liste öffnest du mit ? oder Strg/Cmd + /.",
+    "or": "oder",
+    "notSet": "nicht gewählt",
+    "group": {
+      "general": "Überall",
+      "messages": "An einer Nachricht",
+      "composer": "Schreiben",
+      "talk": "In einem Talk",
+      "sidebar": "Kanalliste"
+    },
+    "groupHint": {
+      "messages": "Wechsle zuerst mit Tab zu einer Nachricht. Die Buchstaben gelten für die gewählte Nachricht, nicht während du tippst.",
+      "sidebar": "Für Administratoren, auf einem gewählten Kanal oder einer gewählten Kategorie."
+    },
+    "general": {
+      "search": "Nachrichten durchsuchen oder zu Kanal oder Unterhaltung springen",
+      "shortcuts": "Diese Liste zeigen",
+      "escape": "Offenes Menü oder Dialog schließen; in einem Kanal ihn als gelesen markieren"
+    },
+    "messages": {
+      "move": "Vorherige oder nächste Nachricht",
+      "reply": "Im Kanal antworten",
+      "edit": "Eigene Nachricht bearbeiten",
+      "save": "Nachricht speichern oder wieder entfernen",
+      "menu": "Nachrichtenmenü öffnen"
+    },
+    "composer": {
+      "send": "Nachricht senden",
+      "newline": "Neue Zeile",
+      "mention": "Jemanden oder eine Rolle erwähnen",
+      "command": "Befehl beginnen",
+      "emoji": "Emoji nach Namen finden",
+      "cancelReply": "Die Antwort, die du schreibst, abbrechen"
+    },
+    "talk": {
+      "fullscreen": "Vollbild für die Bühne",
+      "ptt": "Push-to-Talk (deine eigene Taste, solange dieses Fenster vorne ist)"
+    },
+    "sidebar": {
+      "reorder": "Nach oben oder unten verschieben"
+    }
   }
 }

@@ -108,6 +108,16 @@ describe('ThreadSidebar keyboard', () => {
   })
 })
 
+describe('ThreadSidebar header', () => {
+  it('says that replies here stay out of the main chat, but not for a forum post', async () => {
+    const chat = setup()
+    expect(w.get('[data-testid="thread-hint"]').text()).toBe(t('thread.hint'))
+    chat.activeThread = msg('post', 'u2', { title: 'A post' })
+    await nextTick()
+    expect(w.find('[data-testid="thread-hint"]').exists()).toBe(false)
+  })
+})
+
 describe('ThreadSidebar content', () => {
   it('opens the viewer with all images of a reply and the clicked index', async () => {
     const chat = setup()

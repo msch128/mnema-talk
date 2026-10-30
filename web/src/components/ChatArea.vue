@@ -255,7 +255,7 @@ const groupedIds = computed(() => {
       <!-- Empty State -->
       <div v-else-if="!chatStore.messages?.length" class="h-full flex flex-col items-center justify-center text-center p-8">
         <div class="w-12 h-12 rounded-full border border-dashed border-mnema-border-strong flex items-center justify-center mb-3 text-mnema-accent bg-mnema-surface/50">
-          <Hash class="w-5 h-5 opacity-80" />
+          <component :is="channelIcon" class="w-5 h-5 opacity-80" />
         </div>
         <p class="font-semibold text-lg text-mnema-text">{{ welcomeText }}</p>
         <p class="text-sm text-mnema-tertiary mt-1 max-w-sm">

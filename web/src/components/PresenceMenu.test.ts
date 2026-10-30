@@ -171,3 +171,14 @@ it('saves a choice for an account using the default online presence', async () =
   await flushPromises()
   expect(chat.setMyPresence).toHaveBeenCalledWith('focus')
 })
+
+describe('the two quiet choices', () => {
+  it('say what each one does, and that they differ in what others see', () => {
+    mountMenu()
+    const hint = (p: string) => option(wrapper, p).text()
+    expect(hint('dnd')).toContain('Others see Do not disturb')
+    expect(hint('focus')).toContain('concentrating')
+    expect(hint('dnd')).not.toBe(hint('focus'))
+    wrapper.unmount()
+  })
+})

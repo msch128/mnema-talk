@@ -113,7 +113,7 @@ defineExpose({ el: row })
         type="button"
         @click.stop="emit('reply')"
         class="btn btn-icon btn-sm max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center hover:text-mnema-text"
-        v-tooltip="$t('chat.reply')"
+        v-tooltip="$t('chat.replyInChannel')"
       >
         <Reply class="w-4 h-4" />
       </button>
@@ -130,6 +130,17 @@ defineExpose({ el: row })
         :aria-label="isSaved ? $t('saved.removeFromSaved') : $t('saved.save')"
       >
         <Bookmark :class="['w-4 h-4', isSaved ? 'fill-current' : '']" />
+      </button>
+
+      <!-- Reply in a thread: the conversation moves to the side panel -->
+      <button
+        type="button"
+        data-testid="msg-open-thread"
+        @click.stop="emit('open-thread')"
+        class="btn btn-icon btn-sm max-md:flex max-md:h-11 max-md:w-11 max-md:items-center max-md:justify-center hover:text-mnema-text"
+        v-tooltip="$t('chat.replyInThread')"
+      >
+        <MessageSquare class="w-4 h-4" />
       </button>
 
       <!-- Edit Message (if author) -->

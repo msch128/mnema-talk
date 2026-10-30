@@ -67,9 +67,9 @@ function savedItem(msg: Message): ContextMenuItem {
 function basicItems(msg: Message, { actions, reply, copy }: MenuDeps): ContextMenuItem[] {
   const chatStore = useChatStore()
   const items: ContextMenuItem[] = [
-    { label: t('chat.reply'), icon: Reply, shortcut: 'r', action: () => reply(msg) },
+    { label: t('chat.replyInChannel'), icon: Reply, shortcut: 'r', action: () => reply(msg) },
     { label: t('chat.addReaction'), icon: SmilePlus, action: () => { actions.pickerId.value = msg.id } },
-    { label: t('chat.openThread'), icon: MessageSquare, action: () => chatStore.openThread(msg) }
+    { label: t('chat.replyInThread'), icon: MessageSquare, action: () => chatStore.openThread(msg) }
   ]
   if (actions.isOwn(msg) && !msg.poll) {
     items.push({ label: t('chat.edit'), icon: Pencil, shortcut: 'e', action: () => actions.startEdit(msg) })
