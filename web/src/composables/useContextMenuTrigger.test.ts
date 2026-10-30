@@ -91,6 +91,18 @@ describe('useContextMenuTrigger', () => {
     expect(trigger.menu.state.open).toBe(false)
   })
 
+  it('lets the click through when a long press has no menu to open', () => {
+    const button = mountButton({ enabled: () => false })
+    const click = vi.fn()
+    button.addEventListener('click', click)
+    button.dispatchEvent(touch('pointerdown'))
+    vi.advanceTimersByTime(LONG_PRESS_MS)
+    button.dispatchEvent(touch('pointerup'))
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    expect(trigger.menu.state.open).toBe(false)
+    expect(click).toHaveBeenCalledTimes(1)
+  })
+
   it('tells the owner when it opens, and closes on request', async () => {
     const onOpen = vi.fn()
     const button = mountButton({ onOpen })

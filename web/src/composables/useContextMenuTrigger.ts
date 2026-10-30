@@ -30,10 +30,12 @@ export function useContextMenuTrigger(build: () => ContextMenuItem[], { onOpen, 
     timer = undefined
   }
 
-  function open(e: MenuTrigger) {
-    if (enabled && !enabled()) return
+  /** Whether a menu was asked for (false: nothing to offer, the event stays untouched). */
+  function open(e: MenuTrigger): boolean {
+    if (enabled && !enabled()) return false
     onOpen?.()
-    return menu.show(e, build)
+    void menu.show(e, build)
+    return true
   }
 
   function onContextmenu(e: MouseEvent) {
@@ -42,7 +44,7 @@ export function useContextMenuTrigger(build: () => ContextMenuItem[], { onOpen, 
       e.preventDefault()
       return
     }
-    void open(e)
+    open(e)
   }
 
   function onPointerdown(e: PointerEvent) {
@@ -53,8 +55,8 @@ export function useContextMenuTrigger(build: () => ContextMenuItem[], { onOpen, 
     const currentTarget = e.currentTarget
     timer = setTimeout(() => {
       timer = undefined
-      opened = true
-      void open({ clientX: origin.x, clientY: origin.y, currentTarget })
+      // Only a menu that really opened takes the click of the release with it.
+      opened = open({ clientX: origin.x, clientY: origin.y, currentTarget })
     }, LONG_PRESS_MS)
   }
 
