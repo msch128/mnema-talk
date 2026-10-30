@@ -1,0 +1,29 @@
+internal/ws/hub.go
+  s_b412f345cd1d68::t_b11224e27245e6 112-113
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_eeb6ac8e77ce2e 5,27-31,76,91-94,130,318-320,393-430
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c1a773c0a65186037d6ae92bbdb2dd5a9fcf5e43",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b412f345cd1d68": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a82d476100ea2bf03",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
