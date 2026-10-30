@@ -1,0 +1,39 @@
+internal/chat/database_failures_integration_test.go
+  s_0cae4a4d7ab7c3::t_6a2b041ffd6196 105,109
+internal/media/staging.go
+  s_f25d7044ea294b::t_ff3a20b6b8e751 196-201,210
+internal/media/staging_failures_integration_test.go
+  s_4c6a19030e223f::t_76a54be643bbe0 1-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8286c1ff8806028f91f04d4cfc7245a2b5cd2421",
+  "prompts": {},
+  "sessions": {
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f25d7044ea294b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-server-rail-8b6f70bd624eb14f",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

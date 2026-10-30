@@ -1,0 +1,19 @@
+internal/chat/forum_complete_integration_test.go
+  s_4c6a19030e223f::t_68d98308660f9e 9,13,17,434-511
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cdc105ab8eea60c290eeaa56e0668de76838461d",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
