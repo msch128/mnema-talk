@@ -8,7 +8,7 @@ import CreateForumPostModal from './CreateForumPostModal.vue'
 import { setLocale } from '../i18n'
 import * as forumApi from '../lib/forumApi'
 import type { ForumTag } from '../types/domain'
-import { messageFixture, forumTagFixture } from '../test-fixtures.fixture'
+import { messageFixture, forumTagFixture, userFixture } from '../test-fixtures.fixture'
 
 vi.mock('../lib/forumApi', () => ({
   createForumPost: vi.fn(),
@@ -256,5 +256,31 @@ describe('CreateForumPostModal', () => {
 
     await w.find('form').trigger('submit')
     expect(forumApi.createForumPost).not.toHaveBeenCalled()
+  })
+
+  it('suggests members while typing an @mention and inserts the picked one', async () => {
+    const { useChatStore } = await import('../stores/chat')
+    const chatStore = useChatStore()
+    chatStore.members = [{ ...userFixture({ id: 'u-ada', username: 'ada', display_name: 'Ada' }), is_online: true } as never]
+    const w = mountModal()
+    const area = w.get<HTMLTextAreaElement>('#post-content')
+    area.element.value = 'Hello @ad'
+    area.element.setSelectionRange(9, 9)
+    await area.trigger('input')
+
+    const list = w.find('[data-testid="mention-suggestions"]')
+    expect(list.exists()).toBe(true)
+    await w.findAll('[role="option"]')[0]!.trigger('mousemove')
+    await area.trigger('keydown', { key: 'ArrowDown' })
+    await area.trigger('click')
+    await w.findAll('[role="option"]')[0]!.trigger('mousedown')
+    await flushPromises()
+    expect((w.get<HTMLTextAreaElement>('#post-content').element).value).toContain('@ada')
+
+    area.element.value = 'again @a'
+    area.element.setSelectionRange(8, 8)
+    await area.trigger('input')
+    await area.trigger('blur')
+    expect(w.find('[data-testid="mention-suggestions"]').exists()).toBe(false)
   })
 })
