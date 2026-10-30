@@ -1,0 +1,19 @@
+web/src/components/LinkPreviewCard.test.ts
+  s_2de5838cb2797c::t_c3fbede6d60304 177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a7521e0c458ddf40ea38ec9110f612dd3593f416",
+  "prompts": {},
+  "sessions": {
+    "s_2de5838cb2797c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aperf-idle-a1f825253ff37314",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
