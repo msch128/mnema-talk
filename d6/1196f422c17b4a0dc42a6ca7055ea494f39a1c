@@ -1,0 +1,29 @@
+web/src/composables/useAppRouting.ts
+  s_2de5838cb2797c::t_cb36a61fede834 12,132-133
+web/src/i18n/de.json
+  s_46a6db8f9e8231::t_694e8916fd15ec 2884
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d61196f422c17b4a0dc42a6ca7055ea494f39a1c",
+  "prompts": {},
+  "sessions": {
+    "s_2de5838cb2797c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aperf-idle-a1f825253ff37314",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
