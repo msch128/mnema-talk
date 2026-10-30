@@ -5,6 +5,7 @@ import { watch } from 'vue'
 import { summarizeStats } from '../../lib/rtcStats'
 import type { RTCStatsSample } from '../../lib/rtcStats'
 import type { MicState, SendLine, SendLines } from '../../lib/rtcFlows'
+import { pageHidden, visibleInterval } from '../../lib/pageVisibility'
 import type { useVoiceStore } from '../../stores/voice'
 import type { JsonValue } from '../../types/events'
 import { streamDiag } from './streamDiag'
@@ -24,6 +25,8 @@ interface StatsPollingSource {
 // connection state and the stream diagnostics.
 const POLL_MS = 2000
 const PANEL_POLL_MS = 1000
+// Nobody reads the numbers in a hidden page; the connected flag only has to stay roughly true.
+const HIDDEN_POLL_MS = 10_000
 // Every 10 s the stream diagnostics go out.
 const DIAG_EVERY_MS = 10_000
 
@@ -69,7 +72,7 @@ function emitStreamDiagnostics(
 }
 
 export function createStatsPolling({ connection, screenAudioGuard, senders }: StatsPollingSource) {
-  let timer: ReturnType<typeof setInterval> | null = null
+  let stopTimer: (() => void) | null = null
   let stopWatching: (() => void) | null = null
   let lastSample: RTCStatsSample | null = null
   let generation = 0
@@ -77,10 +80,8 @@ export function createStatsPolling({ connection, screenAudioGuard, senders }: St
 
   function stop(voiceStore: VoiceStore) {
     generation++
-    if (timer) {
-      clearInterval(timer)
-      timer = null
-    }
+    stopTimer?.()
+    stopTimer = null
     stopWatching?.()
     stopWatching = null
     lastSample = null
@@ -111,7 +112,8 @@ export function createStatsPolling({ connection, screenAudioGuard, senders }: St
         elapsedMs += period
         if (elapsedMs >= nextDiagMs) {
           nextDiagMs += DIAG_EVERY_MS
-          if (sharesOrWatchesScreen(voiceStore)) emitStreamDiagnostics(report, voiceStore, lastVideoBytes, screenAudioGuard, diagSink)
+          // A hidden page receives no video, and the ticks are not DIAG-spaced.
+          if (!pageHidden.value && sharesOrWatchesScreen(voiceStore)) emitStreamDiagnostics(report, voiceStore, lastVideoBytes, screenAudioGuard, diagSink)
         }
       } catch (err) {
         void err
@@ -122,9 +124,9 @@ export function createStatsPolling({ connection, screenAudioGuard, senders }: St
     // Open, the panel samples every second; the rate of a sample is always
     // measured against the one before, whatever the period was.
     function schedule(panelOpen: boolean) {
-      if (timer) clearInterval(timer)
+      stopTimer?.()
       const period = panelOpen ? PANEL_POLL_MS : POLL_MS
-      timer = setInterval(() => void tick(period), period)
+      stopTimer = visibleInterval(() => void tick(pageHidden.value ? HIDDEN_POLL_MS : period), period, { hiddenMs: HIDDEN_POLL_MS, catchUp: false })
       if (panelOpen) void tick(0)
     }
     schedule(Boolean(voiceStore.showStatsModal))

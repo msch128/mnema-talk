@@ -1,5 +1,6 @@
 import { useAuthStore } from '../auth'
 import { syncServerClock } from '../../lib/clock'
+import { pageHidden } from '../../lib/pageVisibility'
 import { playSoundEffect } from '../../lib/soundEffects'
 import type { UserUpdate } from '../../types/domain'
 import type { VoiceRooms, VoiceSnapshot, VoiceStateUpdate, MuteState, SpeakingState } from '../../types/events'
@@ -147,7 +148,8 @@ export function isSpeaking(cs: VoiceState, userId: string | null) {
 
 export function handleSpeakingEvent(cs: VoiceState, event: SpeakingState) {
   const { user_id, active } = event || {}
-  if (!user_id) return
+  // Nobody sees the rings of a hidden page; they start empty when it is shown again.
+  if (!user_id || pageHidden.value) return
   if (active) {
     if (!cs.speakingUsers.value[user_id]) {
       cs.speakingUsers.value = { ...cs.speakingUsers.value, [user_id]: true }

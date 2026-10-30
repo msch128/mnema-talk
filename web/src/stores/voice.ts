@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
+import { onScopeDispose } from 'vue'
+import { onVisibilityChange } from '../lib/pageVisibility'
 import { createVoiceState, type VoiceState } from './voice/state'
 import { toggleScreenAudioMute, setScreenQuality, resetScreenQuality, openScreenShareModal, closeScreenShareModal, recordPing, setNoiseMode, toggleNoiseCancelling, toggleMute, toggleDeafen } from './voice/controls'
-import { setSubscriptionSink, isCameraHidden, setCameraHidden, toggleCameraHidden, setAllCamerasOff, setHideNoVideo, toggleHideNoVideo, resendSubscriptions, cameraStreamOf, canFocusCamera, focusCamera, unfocusCamera, toggleCameraFocus, setUserVideoStream, removeUserVideoStream } from './voice/cameras'
+import { setSubscriptionSink, isCameraHidden, setCameraHidden, toggleCameraHidden, setAllCamerasOff, setHideNoVideo, toggleHideNoVideo, resendSubscriptions, setVideoPaused, cameraStreamOf, canFocusCamera, focusCamera, unfocusCamera, toggleCameraFocus, setUserVideoStream, removeUserVideoStream } from './voice/cameras'
 import { watchScreen, unwatchScreen, focusScreen, focusOwnScreen, setRemoteScreen, removeRemoteScreen, handleMediaState, handleScreenViewers, handleScreenLayers, setScreenFit, handleScreenQuality, handleLayersWanted, setScreenChoice, viewersOf, resetRemoteMedia, dropEndedWatches } from './voice/screens'
 import { updateUser, setVoiceRooms, joinedAtOf, setVoiceSnapshot, handleVoiceStateUpdate, handleSpeakingEvent, handleMuteState, muteStateOf, isSpeaking, setChannel, disconnect } from './voice/room'
 import { installStage } from './voice/cameras'
@@ -136,6 +138,11 @@ function exposedActions(cs: VoiceState) {
 export const useVoiceStore = defineStore('voice', () => {
   const cs = createVoiceState()
   const stage = installStage(cs)
+  // A hidden page shows no video: the server stops sending it (audio goes on) and starts again when the page is back.
+  onScopeDispose(onVisibilityChange(hidden => {
+    if (hidden) cs.speakingUsers.value = {}
+    if (cs.currentChannelId.value) setVideoPaused(cs, hidden)
+  }))
   return { ...exposedState(cs, stage), ...exposedActions(cs), ...cs.settings, ...cs.playback }
 })
 

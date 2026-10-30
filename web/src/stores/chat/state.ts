@@ -115,7 +115,7 @@ function socketState() {
   return {
     socketGeneration: 0,
     reconnectCheckSeq: 0,
-    pingTimer: undefined as Timer | undefined,
+    stopPing: undefined as (() => void) | undefined,
     lastPongAt: 0,
     lastPingAt: 0,
     reconnectTimer: undefined as Timer | undefined,

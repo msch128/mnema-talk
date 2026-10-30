@@ -292,6 +292,52 @@ describe('subscription replay and stale media arrivals', () => {
     expect(sink.mock.calls.map(([payload]) => payload)).toEqual([{ kind: 'screen', user_id: 'live', on: true, fit: 1 }])
   })
 
+  it('switches video off at the server while the page is hidden and asks for it again when shown', async () => {
+    const voice = useVoiceStore()
+    const sink = vi.fn()
+    voice.setSubscriptionSink(sink)
+    voice.setChannel('room')
+    voice.watchScreen('live')
+    sink.mockClear()
+    const visibility = (state: 'visible' | 'hidden') => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+      document.dispatchEvent(new Event('visibilitychange'))
+    }
+    visibility('hidden')
+    expect(sink.mock.calls.map(([payload]) => payload)).toEqual([
+      { kind: 'camera', all: true, on: false }, { kind: 'screen', user_id: 'live', on: false },
+    ])
+    // A reconnect while hidden brings no video back.
+    sink.mockClear()
+    voice.resendSubscriptions()
+    expect(sink.mock.calls.map(([payload]) => payload)).toEqual([{ kind: 'camera', all: true, on: false }])
+    sink.mockClear()
+    visibility('visible')
+    expect(sink.mock.calls.map(([payload]) => payload)).toEqual([
+      { kind: 'camera', all: true, on: true }, { kind: 'screen', user_id: 'live', on: true },
+    ])
+    // Speaking rings are not kept for a page nobody sees, and start empty when it is shown.
+    voice.handleSpeakingEvent({ channel_id: 'room', user_id: 'other', active: true })
+    expect(voice.speakingUsers).toEqual({ other: true })
+    visibility('hidden')
+    expect(voice.speakingUsers).toEqual({})
+    voice.handleSpeakingEvent({ channel_id: 'room', user_id: 'other', active: true })
+    expect(voice.speakingUsers).toEqual({})
+    visibility('visible')
+    // Cameras the member switched off stay off, and a page hidden outside a call sends nothing.
+    voice.setAllCamerasOff(true)
+    sink.mockClear()
+    visibility('hidden')
+    visibility('visible')
+    expect(sink).toHaveBeenCalledWith({ kind: 'camera', all: true, on: false })
+    expect(sink).not.toHaveBeenCalledWith({ kind: 'camera', all: true, on: true })
+    voice.setChannel(null)
+    sink.mockClear()
+    visibility('hidden')
+    visibility('visible')
+    expect(sink).not.toHaveBeenCalled()
+  })
+
   it('ignores absent identities and unselected streams without changing current subscriptions', () => {
     const voice = useVoiceStore()
     const sink = vi.fn()
