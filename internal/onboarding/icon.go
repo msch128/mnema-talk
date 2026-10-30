@@ -82,6 +82,14 @@ func (h *Handler) MountAdminIconUploads(r chi.Router) {
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/community/icon [get]
 func (h *Handler) getIcon(w http.ResponseWriter, r *http.Request) error {
+	err := h.serveIcon(w, r)
+	if err != nil {
+		w.Header().Set("Cache-Control", "no-store")
+	}
+	return err
+}
+
+func (h *Handler) serveIcon(w http.ResponseWriter, r *http.Request) error {
 	size, err := iconSize(r)
 	if err != nil {
 		return err
@@ -99,9 +107,10 @@ func (h *Handler) getIcon(w http.ResponseWriter, r *http.Request) error {
 	if updated != nil {
 		modified = *updated
 	}
-	etag := setIconCacheHeaders(w, r, *version, size)
+	etag := `"` + *version + "-" + strconv.Itoa(size) + `"`
 	// Answer a conditional request before touching object storage.
 	if notModified(r, etag, modified) {
+		setIconCacheHeaders(w, r, *version, etag)
 		w.WriteHeader(http.StatusNotModified)
 		return nil
 	}
@@ -109,6 +118,7 @@ func (h *Handler) getIcon(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	setIconCacheHeaders(w, r, *version, etag)
 	hdr := w.Header()
 	hdr.Set("Content-Type", "image/png")
 	hdr.Set("X-Content-Type-Options", "nosniff")
@@ -130,10 +140,10 @@ func iconSize(r *http.Request) (int, error) {
 	return n, nil
 }
 
-// setIconCacheHeaders sets the validators and the lifetime and returns the
-// ETag. A request that names the current version may keep the icon for good.
-func setIconCacheHeaders(w http.ResponseWriter, r *http.Request, version string, size int) string {
-	etag := `"` + version + "-" + strconv.Itoa(size) + `"`
+// setIconCacheHeaders sets the validators and the lifetime, only for an answer
+// that carries the icon (or says it is unchanged): an error must never be
+// cached. A request that names the current version may keep the icon for good.
+func setIconCacheHeaders(w http.ResponseWriter, r *http.Request, version, etag string) {
 	hdr := w.Header()
 	hdr.Set("ETag", etag)
 	if r.URL.Query().Get("v") == version {
@@ -141,7 +151,6 @@ func setIconCacheHeaders(w http.ResponseWriter, r *http.Request, version string,
 	} else {
 		hdr.Set("Cache-Control", "public, max-age="+strconv.Itoa(iconMaxAge)+", must-revalidate")
 	}
-	return etag
 }
 
 // readIcon reads one stored file of the icon.

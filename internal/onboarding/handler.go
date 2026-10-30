@@ -46,10 +46,10 @@ func NewHandler(pool *db.Pool, perms *perm.Service) *Handler {
 	return &Handler{
 		DB:    pool,
 		Perms: perms,
+		// The icon is a few KB read from storage; this only stops a loop.
+		iconPerIP: httpx.NewRateLimiter(300, time.Minute).Named("community_icon_ip"),
 		// A preview costs one indexed lookup; the budget only has to make
 		// guessing codes pointless (a code carries about 59 bits).
-		// The icon is a few KB read from storage; this only stops a loop.
-		iconPerIP:      httpx.NewRateLimiter(300, time.Minute).Named("community_icon_ip"),
 		previewPerIP:   httpx.NewRateLimiter(30, time.Minute).Named("invite_preview_ip"),
 		previewPerSite: httpx.NewRateLimiter(120, time.Minute).Named("invite_preview_site"),
 	}
