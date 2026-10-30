@@ -1,0 +1,19 @@
+scripts/english-only-allowlist.txt
+  s_f8b5fe59428337::t_6ee3bf9ac36ae0 17-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b991d649e779da88c2af48e16f192922c3890839",
+  "prompts": {},
+  "sessions": {
+    "s_f8b5fe59428337": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-i18n-d461c25d928b7cff",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
