@@ -88,6 +88,71 @@ describe('what the stage tells the server about its size', () => {
     expect(sent.at(-1)).toMatchObject({ fit: 1 })
   })
 
+  it('asks the smallest layer for a share that is watched but not on the stage', async () => {
+    const { voice, sent, resize } = stage()
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'bob', screen: true, camera: false })
+    voice.watchScreen('bob')
+    voice.handleScreenLayers({ channel_id: 'v1', user_id: 'bob', layers })
+    sent.length = 0
+    height = 2160
+    await resize()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sent).toContainEqual({ kind: 'screen', user_id: 'bob', on: true, fit: 2 })
+    expect(sent).toContainEqual({ kind: 'screen', user_id: 'anna', on: true, fit: 0 })
+  })
+
+  it('follows the pixel ratio when the browser zoom or the screen changes', async () => {
+    const { sent, resize } = stage()
+    height = 540
+    await resize()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sent.at(-1)).toMatchObject({ fit: 2 })
+    vi.stubGlobal('devicePixelRatio', 2)
+    window.dispatchEvent(new Event('resize'))
+    await vi.advanceTimersByTimeAsync(FIT_SETTLE_MS)
+    expect(sent.at(-1)).toMatchObject({ fit: 1 })
+  })
+
+  it('falls back to a pixel ratio of 1 when the browser reports none', async () => {
+    vi.stubGlobal('devicePixelRatio', 0)
+    const { sent, resize } = stage()
+    height = 700
+    await resize()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sent.at(-1)).toMatchObject({ fit: 2 })
+  })
+
+  it('asks for the best layer of a watched share whose layers are not known yet', async () => {
+    const { voice, sent, resize } = stage()
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'carl', screen: true, camera: false })
+    voice.watchScreen('carl')
+    sent.length = 0
+    height = 700
+    await resize()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(sent).toContainEqual({ kind: 'screen', user_id: 'carl', on: true, fit: 0 })
+  })
+
+  it('leaves nothing pending when it is torn down after sending', async () => {
+    const { sent, resize, wrapper } = stage()
+    height = 700
+    await resize()
+    await vi.advanceTimersByTimeAsync(0)
+    const before = sent.length
+    wrapper.unmount()
+    await vi.advanceTimersByTimeAsync(FIT_SETTLE_MS)
+    expect(sent.length).toBe(before)
+  })
+
+  it('sends nothing once the stage is gone', async () => {
+    const { sent, resize, wrapper } = stage()
+    height = 700
+    await resize()
+    wrapper.unmount()
+    await vi.advanceTimersByTimeAsync(FIT_SETTLE_MS)
+    expect(sent).toEqual([])
+  })
+
   it('sends one message for a window being dragged, and none when the layer stays', async () => {
     const { sent, resize } = stage()
     height = 700
