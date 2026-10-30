@@ -55,9 +55,9 @@ function savedNoiseMode(): NoiseMode {
 function loadVoiceInputSettings() {
   const inputMode = ref<InputMode>(readItem('mnema_input_mode') === 'ptt' ? 'ptt' : 'activity')
   // No key until the member picks one (a default would collide with typing). A
-  // push-to-talk setup from before that was always saved with its key; one
-  // without keeps the old Space.
-  const pttKey = ref(readItem('mnema_ptt_key') || (inputMode.value === 'ptt' ? 'Space' : ''))
+  // push-to-talk setup from before that never stored a key keeps the old
+  // Space; a stored empty key stays empty.
+  const pttKey = ref(readItem('mnema_ptt_key') ?? (inputMode.value === 'ptt' ? 'Space' : ''))
   const autoSensitivity = ref(readItem('mnema_auto_sens') === 'true')
   const sensitivityThreshold = ref(parseInt(readItem('mnema_sens_threshold') || '30', 10))
   const hangoverMs = ref(parseInt(readItem('mnema_hangover_ms') || '250', 10))

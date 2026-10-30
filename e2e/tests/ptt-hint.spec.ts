@@ -31,6 +31,14 @@ test('push to talk starts without a key, asks for one, and shows what it can and
     await dialog.getByRole('button', { name: /Push-to-Talk/ }).first().click()
     const keyButton = dialog.getByTestId('ptt-key-button')
     await expect(keyButton).toHaveText('Taste drücken …')
+
+    // Leaving without a key keeps it empty over a reload (no silent Space).
+    await page.reload()
+    await page.getByTestId('account-menu-button').click()
+    await page.getByTestId('menu-sound').click()
+    await expect(dialog.getByTestId('ptt-key-panel')).toContainText('Noch keine Taste gewählt')
+    await expect(keyButton).toHaveText('Taste wählen')
+    await keyButton.click()
     await page.keyboard.press('F8')
     await expect(keyButton).toHaveText('F8')
 
