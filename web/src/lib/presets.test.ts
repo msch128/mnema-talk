@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import en from '../i18n/en.json'
 import de from '../i18n/de.json'
 import presets from './presets.json'
-import * as lists from './presets'
 import { DURATION_CHOICES, MAX_BAN_SECONDS, MAX_TIMEOUT_SECONDS, MIN_BAN_SECONDS, MIN_TIMEOUT_SECONDS, durationLabel } from './moderation'
 import { ACCOUNT_AGES, RAID_RESTRICTIONS, RAID_WINDOWS, RULE_TIMEOUTS } from './automod'
 import { POLL_DURATIONS } from './polls'
@@ -25,13 +24,13 @@ const inRange = (values: readonly number[], min: number, max: number) => values.
 
 describe('ready-made choices stay inside what the server accepts', () => {
   it('slow mode', () => {
-    expect(inRange(lists.SLOW_MODE_PRESETS, 0, MAX_SLOW_MODE)).toBe(true)
+    expect(inRange(presets.slowModeSeconds, 0, MAX_SLOW_MODE)).toBe(true)
   })
 
   it('invite validity and uses', () => {
-    expect(inRange(lists.INVITE_CREATE_HOURS, 1, MAX_INVITE_HOURS)).toBe(true)
-    expect(inRange(lists.INVITE_EXPIRY_MINUTES, 1, MAX_INVITE_HOURS * 60)).toBe(true)
-    expect(inRange(lists.INVITE_USES, 1, 1000)).toBe(true)
+    expect(inRange(presets.inviteCreateHours, 1, MAX_INVITE_HOURS)).toBe(true)
+    expect(inRange(presets.inviteExpiryMinutes, 1, MAX_INVITE_HOURS * 60)).toBe(true)
+    expect(inRange(presets.inviteUses, 1, 1000)).toBe(true)
   })
 
   it('timeout and ban durations', () => {
@@ -47,8 +46,8 @@ describe('ready-made choices stay inside what the server accepts', () => {
 
   it('timed mutes', () => {
     const timed = MUTE_DURATIONS.flatMap(d => (d.ms === null ? [] : [d.ms / 60_000]))
-    expect(timed).toEqual(lists.MUTE_MINUTES)
-    expect(lists.MUTE_MINUTES.every(m => m > 0 && m * 60 <= MAX_MUTE_SECONDS)).toBe(true)
+    expect(timed).toEqual(presets.muteMinutes)
+    expect(presets.muteMinutes.every(m => m > 0 && m * 60 <= MAX_MUTE_SECONDS)).toBe(true)
   })
 })
 
@@ -65,7 +64,7 @@ describe('the menus offer exactly the shared presets', () => {
 
   it('every duration reads as a label', () => {
     const all = [
-      ...lists.SLOW_MODE_PRESETS.filter(s => s > 0), ...DURATION_CHOICES, ...ACCOUNT_AGES, ...RAID_WINDOWS,
+      ...presets.slowModeSeconds.filter(s => s > 0), ...DURATION_CHOICES, ...ACCOUNT_AGES, ...RAID_WINDOWS,
       ...RAID_RESTRICTIONS, ...RULE_TIMEOUTS.filter(s => s > 0)
     ]
     for (const s of all) expect(durationLabel(s), `${s} s`).not.toMatch(/units\./)

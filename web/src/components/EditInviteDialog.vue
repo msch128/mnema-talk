@@ -10,7 +10,7 @@ import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import type { FieldErrors } from '../composables/useSettingsDraft'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import { INVITE_EXPIRY_MINUTES, INVITE_USES } from '../lib/presets'
+import presets from '../lib/presets.json'
 import BaseDialog from './BaseDialog.vue'
 import UnsavedChangesBar from './UnsavedChangesBar.vue'
 
@@ -25,8 +25,8 @@ const toasts = useToastStore()
 const MAX_USES = 1000
 const MAX_HOURS = 8760
 const EXPIRY_KEYS: Readonly<Record<number, string>> = { 30: 'min30', 60: 'hour1', 360: 'hour6', 720: 'hour12', 1440: 'day', 10080: 'week' }
-const EXPIRY_PRESETS: readonly { key: string; minutes: number }[] = INVITE_EXPIRY_MINUTES.map(minutes => ({ key: EXPIRY_KEYS[minutes] ?? `min${minutes}`, minutes }))
-const USES_PRESETS = INVITE_USES
+const EXPIRY_PRESETS: readonly { key: string; minutes: number }[] = presets.inviteExpiryMinutes.map(minutes => ({ key: EXPIRY_KEYS[minutes] ?? `min${minutes}`, minutes }))
+const USES_PRESETS = presets.inviteUses
 
 // expiry: 'keep' leaves the expiry alone, 'never' removes it, a preset key sets it
 // from now, 'custom' uses the date field.
