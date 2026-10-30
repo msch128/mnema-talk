@@ -1,0 +1,59 @@
+e2e/tests/status-message.spec.ts
+  s_61e7f03250bd0b::t_3b6c300c4a7b52 1-61
+web/src/App.vue
+  s_61e7f03250bd0b::t_7f02fa38b3ce78 34-35,71,353-355
+web/src/components/PresenceMenu.test.ts
+  s_61e7f03250bd0b::t_4aa39309454226 12,35,99,102-103
+web/src/components/PresenceMenu.vue
+  s_61e7f03250bd0b::t_de39b5f8f4561e 14,44,46-47
+web/src/components/ProfileAvatar.vue
+  s_61e7f03250bd0b::t_d07d9461adef09 79,136
+web/src/components/ProfileBannerControls.vue
+  s_61e7f03250bd0b::t_7dbd314d01cdf4 60
+web/src/components/ProfileBio.vue
+  s_61e7f03250bd0b::t_c4a3bf03ba486c 7,79-80,105-106,108,110,113,115-116,118,120,122,125-133,135
+web/src/components/ProfileStatus.vue
+  s_61e7f03250bd0b::t_f7275bc7c24f28 10,14-15,20,26,28,34-38,48,61-62,83,87
+web/src/components/StatusDialog.test.ts
+  s_61e7f03250bd0b::t_1ae6859d262a50 5-6,9,17,19-20,22-23,37,40-48,50,52-62,66-67,70-74,76-79,82-88,90-92,95,98-99,101-110,113-116,119,122-149,152-157,160-176
+web/src/components/StatusDialog.vue
+  s_61e7f03250bd0b::t_bde4355a4982a9 1-173
+web/src/components/TalkOverviewDialog.test.ts
+  s_61e7f03250bd0b::t_5872c06eef32b2 1-99
+web/src/components/TalkOverviewDialog.vue
+  s_61e7f03250bd0b::t_23a4046dbe05df 1-64
+web/src/components/TalkParticipantList.vue
+  s_61e7f03250bd0b::t_915999b85c0679 1-66
+web/src/components/TalkParticipants.vue
+  s_61e7f03250bd0b::t_42cf4d30c72fe1 8,46,63,67-71
+web/src/components/UserProfileModal.test.ts
+  s_61e7f03250bd0b::t_a00abc02281e71 6,28,160,162-173,176,179,198-199,205-208,241,308-309,313,317-328
+web/src/components/UserProfileModal.vue
+  s_61e7f03250bd0b::t_7f7f46b7681695 17,105-107,114-120,145,173,177,236-238,242-245,249-256,258-265,267-268,274-275,281,293
+web/src/composables/useStatusEditor.ts
+  s_61e7f03250bd0b::t_53c1903d5684f6 1-13
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_a4eebfd3fa0bd4 1216-1218,1903-1905,1907-1909,1914-1919,3882-3886
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_9f4867140dc2d2 1216-1218,1903-1905,1907-1909,1914-1919,3882-3886
+web/src/lib/statusExpiry.test.ts
+  s_61e7f03250bd0b::t_93634f44810900 2,4,9,11-12,15-19,22-23,26-27,29
+web/src/lib/statusExpiry.ts
+  s_61e7f03250bd0b::t_1f309721e7c58a 4,6,8-10,13-15,17-18,22-23,25-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "39a5f505540499247c30833a80541b285540b319",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
