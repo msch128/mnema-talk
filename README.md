@@ -253,7 +253,7 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 - **Hardened by default**: `HttpOnly` session cookies with revocation, CSRF
   origin check, strict CSP, upload content sniffing, rate limits and login
   lockout, an SSRF guard for outgoing webhooks, and an app port that only
-  listens on loopback until you say otherwise.
+  listens on loopback until you say otherwise (see the [FAQ](doc/faq.md#why-cant-i-reach-port-8080-from-another-computer)).
 - **Privacy-minded**: no third-party STUN unless configured, no automatic data
   deletion unless enabled (`MEDIA_RETENTION_DAYS=0`), no telemetry (the optional release check is the only call home, and it can be
   turned off).
@@ -322,69 +322,73 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
 
 ## Quick start
 
-You need a Linux host with Docker and Docker Compose, a domain with HTTPS
-(through a reverse proxy) and a UDP port range open for voice. No clone and no
-build are needed. The shortest path is the setup assistant, `docker run --rm -it
--v "$PWD:/out" ghcr.io/msch128/mnema-talk setup`, which writes the `.env` and
-compose file ([quick start for Synology, Unraid and a VPS](doc/quick-start.md)).
-By hand: [Fresh install in doc/deployment.md](doc/deployment.md#fresh-install)
-downloads the compose file and `.env.example` of a release, lists the few
-values to set (`PUBLIC_URL`, `JWT_SECRET`, `POSTGRES_PASSWORD`,
-`S3_ACCESS_KEY` / `S3_SECRET_KEY`, `ADMIN_INITIAL_PASSWORD`) and starts the
-published image (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:2.1`, a pinned patch
-version or `:latest`). CI runs those exact steps. The same image is also on
-Docker Hub as `docker.io/msch128/mnema-talk`; GHCR stays the primary
-reference ([verify the signature](doc/operations.md#verifying-a-release-image)).
+New to self-hosting? Follow the **[quick start](doc/quick-start.md)**: one path
+for a NAS, a home server or a VPS, with every term explained and a way to check
+each step. In short, you need:
 
+- a machine that runs Docker with Compose (a Synology or Unraid NAS, a Raspberry
+  Pi 4/5, any Linux box or a small VPS),
+- a domain name with HTTPS, set up through a *reverse proxy* (a small web server
+  in front of the app that holds the certificate; [how](doc/reverse-proxy.md)),
+- three open ports: TCP 443 for the site, and UDP 50000-50050 plus port 3479
+  for voice (voice and video do not travel through the proxy; the quick start
+  explains [why](doc/quick-start.md#how-it-fits-together)).
+
+No clone and no build are needed. The setup assistant asks a few questions and
+writes the configuration, including every secret:
+
+```sh
+mkdir mnema-talk && cd mnema-talk
+docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup
+docker compose up -d --wait
+```
+
+Then open your address and sign in as the Owner (default user name `admin`,
+password printed by the assistant; `ADMIN_INITIAL_PASSWORD` only creates the
+account on the first start, so remove it from `.env` afterwards) and create
+invite codes for your members. Admin console > Status checks the setup and has a
+"Test my connection" button that tells you whether voice reaches your server from
+outside.
+
+Just want to look around first? The quick start has a
+[five-minute try-out on one computer](doc/quick-start.md#try-it-on-one-computer-first).
+Is it a fit for your line? Behind CGNAT or DS-Lite you cannot host at home; see
+[Can I host at home?](doc/quick-start.md#can-i-host-at-home).
+
+Where to go next:
+
+| If you want to | Read |
+|---|---|
+| Understand a word (STUN, TURN, NAT, WebSocket ...) | [Glossary](doc/glossary.md#voice-and-network-terms) |
+| Set up HTTPS (Caddy, Synology, Nginx Proxy Manager, nginx) | [doc/reverse-proxy.md](doc/reverse-proxy.md) |
+| Fix "No media connection" or "Connection lost" | [doc/troubleshooting-voice.md](doc/troubleshooting-voice.md) |
+| Ask about domains, dynamic DNS, Cloudflare, tunnels, a Pi | [doc/faq.md](doc/faq.md) |
+| Open the right ports (router table) | [doc/ports.md](doc/ports.md) |
+| Install by hand instead of the assistant | [Fresh install](doc/deployment.md#fresh-install) |
+| Update or back up | [doc/updating.md](doc/updating.md) |
+
+The same image is also on Docker Hub as `docker.io/msch128/mnema-talk`; GHCR
+stays the primary reference ([verify the signature](doc/operations.md#verifying-a-release-image)).
 Building from source is for development; see [Development](#development).
-
-Open `PUBLIC_URL`, sign in as the Owner (default username `admin`, set with
-`ADMIN_USERNAME`) and create invite codes for your members.
-`ADMIN_INITIAL_PASSWORD` only creates the account on the first start; remove
-it from `.env` afterwards.
 
 Two defaults to know about:
 
-- **`PUBLISH_ADDR`** is `127.0.0.1`: the app port is only reachable from the
-  host itself, which is what a reverse proxy on the same host needs. Set it to
-  a LAN address (or `0.0.0.0` behind a firewall) when the proxy runs elsewhere.
+- **`PUBLISH_ADDR`** is `127.0.0.1`: the app port is reachable only from the
+  machine itself, which is what a reverse proxy on the same machine needs. Set it
+  to a LAN address when the proxy runs elsewhere ([FAQ](doc/faq.md#why-cant-i-reach-port-8080-from-another-computer)).
 - **`TRUSTED_PROXY_CIDRS`** is empty, which trusts loopback only. A reverse
-  proxy on another host or in a container must be listed here by address,
-  otherwise all members share the proxy's IP for rate limits and login
-  lockout. Production refuses a range wider than a small network; see
-  [the upgrade note](doc/upgrade.md#broad-trusted-proxies).
-
-### Behind a reverse proxy
-
-Terminate TLS in a proxy such as Caddy and forward HTTP and WebSockets:
-
-```caddy
-chat.example.com {
-    reverse_proxy app-host:8080
-}
-```
-
-**Ports to forward** (the full list, with outbound connections and what stays
-closed, is [doc/ports.md](doc/ports.md)):
-
-- **TCP 443** to the reverse proxy: the web app and API. The proxy forwards to
-  the app on port 8080, which is not published beyond `127.0.0.1`.
-- **UDP 50000-50050** (`WEBRTC_UDP_PORT_MIN`-`WEBRTC_UDP_PORT_MAX`) to the
-  host: voice, video and screen share bypass the proxy. Set
-  `WEBRTC_NAT_1TO1_IP` to your public IP when the server is behind NAT.
-- **UDP and TCP 3479** (`WEBRTC_BUILTIN_TURN_PORT`): the built-in TURN relay for
-  members on networks that block UDP. Needed only while the relay runs.
-
-Proxy settings, TURN and troubleshooting:
-[doc/operations.md](doc/operations.md) and [doc/deployment.md](doc/deployment.md).
+  proxy on another machine or in a container must be listed here by address,
+  otherwise all members share the proxy's IP for rate limits and login lockout.
+  The Status tab names the value to use. Production refuses a range wider than a
+  small network; see [the upgrade note](doc/upgrade.md#broad-trusted-proxies).
 
 ### Upgrades and backups
 
 Take a backup before every update (`scripts/backup.sh`; restore with
 `scripts/restore.sh`, which can verify a backup in a disposable container
-first). Migrations run at startup and are forward-only. Per-version notes,
-including the move from 1.1 to 1.2 ([1.1.x → 1.2.0](doc/upgrade.md#11x--120)), and the rollback procedure are in
-[doc/upgrade.md](doc/upgrade.md). Admins see new releases in the System tab; an
+first). Migrations run at startup and are forward-only. The procedure is on one
+page, [doc/updating.md](doc/updating.md); per-version notes and the rollback are
+in [doc/upgrade.md](doc/upgrade.md). Admins see new releases in the System tab; an
 optional update button needs the `autoupdate` profile.
 
 ## Security and privacy
@@ -431,12 +435,14 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 | **Read first when updating:** what 1.0 promises and what to do before updating; the 1.1 and 1.2 changes are in the upgrade notes | [doc/release-notes-1.0.md](doc/release-notes-1.0.md), [doc/upgrade.md](doc/upgrade.md) |
 | Components, data flow, capacity | [doc/architecture.md](doc/architecture.md) |
 | Configuration, reverse proxy, TURN, backups, metrics and alerts, troubleshooting | [doc/operations.md](doc/operations.md) |
-| Quick start per platform (Synology, Unraid, VPS), setup assistant | [doc/quick-start.md](doc/quick-start.md) |
+| Quick start (setup assistant), platform notes (Synology, Unraid, VPS), HTTPS and reverse proxy | [doc/quick-start.md](doc/quick-start.md), [doc/platform-notes.md](doc/platform-notes.md), [doc/reverse-proxy.md](doc/reverse-proxy.md) |
+| Voice and connection problems, FAQ | [doc/troubleshooting-voice.md](doc/troubleshooting-voice.md), [doc/faq.md](doc/faq.md) |
 | Network ports and outbound connections | [doc/ports.md](doc/ports.md) |
-| Image tags, platforms, updating | [doc/deployment.md](doc/deployment.md) |
+| Updating, image tags | [doc/updating.md](doc/updating.md) |
+| Manual install, platforms | [doc/deployment.md](doc/deployment.md) |
 | Upgrade notes per version, rollback | [doc/upgrade.md](doc/upgrade.md) |
 | Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |
-| Product vocabulary (en/de) used in the UI and docs | [doc/glossary.md](doc/glossary.md) |
+| Product vocabulary (en/de) used in the UI and docs, and voice and network terms | [doc/glossary.md](doc/glossary.md) |
 | Moderation and the audit log | [doc/moderation.md](doc/moderation.md) |
 | Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
 | Bots, the bot API and gateway | [doc/bots.md](doc/bots.md) |

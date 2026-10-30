@@ -8,18 +8,53 @@ egress filter. The settings behind the ports are in
 
 ## What to forward, in short
 
-With the default settings you need exactly three things from the internet:
+That is all: **three things** from the internet, and what breaks without each.
+
+| Port | Protocol | If it is missing |
+|---|---|---|
+| 443 | TCP | The site does not load |
+| 50000-50050 | UDP | Chat works, voice and video show "No media connection" |
+| 3479 | UDP and TCP | Voice works for most members, but not for those behind strict firewalls or VPNs that block UDP |
+
+In detail:
 
 1. **TCP 443** (and TCP 80 if your proxy fetches certificates over HTTP) to the
    reverse proxy. The proxy forwards to the app on `127.0.0.1:8080`.
 2. **UDP 50000-50050** to the host that runs Mnema Talk: voice, video and
-   screen share. The proxy does not carry it.
+   screen share. The proxy does not carry it (see
+   [Why voice needs UDP](quick-start.md#how-it-fits-together)). Only one port of
+   the range carries media in the default mode (the lowest, `WEBRTC_UDP_MUX_PORT`),
+   so forwarding just that port would work today; the whole range is forwarded
+   so the legacy per-peer mode (`WEBRTC_UDP_MUX_PORT=0`, one port per peer, about
+   25 people at once across all rooms) keeps working too.
 3. **UDP and TCP 3479** to the same host: the built-in TURN relay for members
    whose network blocks UDP. Needed only while the relay runs (the default
    while `WEBRTC_TURN_URLS` is empty).
 
 Nothing else must be reachable from the internet. PostgreSQL and SeaweedFS are
-not published at all.
+not published at all, and **8080 stays closed**.
+
+### Router and firewall copy-paste table
+
+Create these entries in your router's port-forwarding page (it may be called
+port sharing, virtual servers or NAT). "Internal IP" is the LAN address of the
+machine that runs Mnema Talk (or of your reverse proxy for the first line when
+it is a different machine); give that machine a fixed address first.
+
+| Name | Protocol | External port | Internal IP | Internal port |
+|---|---|---|---|---|
+| mnema-web | TCP | 443 | the proxy's LAN IP, e.g. 192.168.1.20 | 443 |
+| mnema-web-http (only for certificates) | TCP | 80 | the proxy's LAN IP | 80 |
+| mnema-voice | UDP | 50000-50050 | the server's LAN IP | 50000-50050 |
+| mnema-relay-udp | UDP | 3479 | the server's LAN IP | 3479 |
+| mnema-relay-tcp | TCP | 3479 | the server's LAN IP | 3479 |
+
+Never forward 8080, 5432 or 8333. A router that asks for a single "protocol:
+TCP/UDP" entry can use "both" for 3479. For example, a Fritz!Box calls the page Internet >
+Permit Access > Port Sharing; menu names vary by model and firmware. On a VPS create the
+same ports in the host firewall and in the provider's security group
+([platform notes](platform-notes.md#plain-vps)). Check the result with
+[Test my connection](troubleshooting-voice.md#rung-4-test-my-connection).
 
 ## Inbound ports
 
@@ -31,7 +66,7 @@ The addresses below are the defaults of `docker-compose.yml` and `.env.example`.
 | 443 | TCP | Internet | Your reverse proxy | Web app, API and WebSocket (`/api/ws`) over HTTPS | Required | Yes, to the proxy |
 | 80 | TCP | Internet | Your reverse proxy | Certificate issuance and the redirect to HTTPS | Only if the proxy needs it | Yes, to the proxy |
 | 8080 | TCP | Reverse proxy only | `PORT` (host side of the mapping; the container always listens on 8080), published on `PUBLISH_ADDR` (default `127.0.0.1`) | The app's HTTP server behind the proxy | Required | **No.** Loopback by default. Set `PUBLISH_ADDR=0.0.0.0` or a LAN address only when the proxy runs on another host, and then keep it off the router |
-| 50000-50050 | UDP | Internet | `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX` | Voice, video and screen share from browsers (ICE and SRTP) | Required for calls | Yes, the whole range |
+| 50000-50050 | UDP | Internet | `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX`, published on `WEBRTC_PUBLISH_ADDR` (default `0.0.0.0`; `127.0.0.1` keeps voice on this computer, as `setup --local` sets) | Voice, video and screen share from browsers (ICE and SRTP) | Required for calls | Yes, the whole range |
 | 3479 | UDP and TCP | Internet | `WEBRTC_BUILTIN_TURN_PORT`, narrowed with `TURN_PUBLISH_ADDR` | Built-in TURN relay for members behind firewalls that block UDP | Optional: only while the relay runs (`WEBRTC_BUILTIN_TURN=auto` with `WEBRTC_TURN_URLS` empty, or `on`) | Yes, both protocols, while the relay runs |
 | 3478 | UDP and TCP | Internet | Fixed in the `coturn` service | External coturn, only with `docker compose --profile turn` | Optional: only if you use coturn | Yes, only with coturn |
 | 49152-49200 | UDP | Internet | Fixed in the `coturn` service | coturn relay ports | Optional: only if you use coturn | Yes, only with coturn |
@@ -102,5 +137,7 @@ needed for every name above, as for any host.
 
 - [Deployment](deployment.md): image tags, platforms and update paths.
 - [Operations](operations.md): every setting, reverse proxy, TURN and monitoring.
-- [Quick start](quick-start.md): router and firewall steps for Synology, Unraid
-  and a plain VPS.
+- [Quick start](quick-start.md) and [platform notes](platform-notes.md): router
+  and firewall steps for Synology, Unraid and a plain VPS.
+- [Voice troubleshooting](troubleshooting-voice.md): when a port seems open but
+  calls fail.

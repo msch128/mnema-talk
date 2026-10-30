@@ -21,67 +21,9 @@ configuration and the previous container is already gone.
 
 ## Update procedure (compose, released image)
 
-Run in the deployment directory (where `docker-compose.yml` and `.env` are).
-Replace the version and paths with yours.
-
-```sh
-cd /path/to/mnema-talk
-NEW=$(curl -fsSL https://api.github.com/repos/msch128/mnema-talk/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')  # or set a version
-[ -n "$NEW" ] || { echo "could not read the latest version; set NEW=x.y.z yourself" >&2; false; }
-
-# 1. Back up database, media and .env (see operations.md, "Backups")
-BACKUP_DIR=/path/to/backups ./scripts/backup.sh
-
-# 2. Note what runs now, for a rollback
-grep '^MNEMA_IMAGE=' .env                  # e.g. ghcr.io/msch128/mnema-talk:2.1
-curl -fsS http://127.0.0.1:8080/api/health # {"status":"ok","version":"..."}
-cp docker-compose.yml docker-compose.yml.bak
-
-# 3. Fetch the compose file (and scripts) of the new tag
-base=https://raw.githubusercontent.com/msch128/mnema-talk/v$NEW
-curl -fsSLo docker-compose.yml        "$base/docker-compose.yml"
-curl -fsSLo .env.example.new          "$base/.env.example"
-curl -fsSLo scripts/backup.sh         "$base/scripts/backup.sh"
-curl -fsSLo scripts/backup-common.sh  "$base/scripts/backup-common.sh"
-curl -fsSLo scripts/upgrade-postgres.sh "$base/scripts/upgrade-postgres.sh"
-curl -fsSLo scripts/restore.sh        "$base/scripts/restore.sh"
-curl -fsSLo scripts/health-check.sh   "$base/scripts/health-check.sh"
-chmod +x scripts/*.sh
-# New or changed variables since your .env was written:
-diff <(grep -o '^[A-Z_0-9]*=' .env | sort) <(grep -o '^[A-Z_0-9]*=' .env.example.new | sort)
-
-# 4. Point the app at the new image
-if grep -q '^MNEMA_IMAGE=' .env; then
-  sed -i "s|^MNEMA_IMAGE=.*|MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:$NEW|" .env
-else
-  echo "MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:$NEW" >> .env
-fi
-
-# 5. Check the configuration, pull and start
-docker compose config -q
-docker compose pull app
-docker compose up -d              # add --profile turn / --profile autoupdate if you use them
-
-# 6. Verify
-docker compose ps                 # app "healthy" after ~15-30 s
-curl -fsS http://127.0.0.1:8080/api/health
-docker compose logs --since 10m app | grep -E 'migration applied|"level":"(WARN|ERROR)"'
-```
-
-Then open the app: other open tabs show a reload notice; voice calls
-reconnect after the reload. Admin → System shows the new version.
-
-The same image is also published on Docker Hub as `docker.io/msch128/mnema-talk` (same digest and signature, see [Verifying a release image](operations.md#verifying-a-release-image)); GHCR stays the primary reference used in this guide. With `MNEMA_IMAGE=msch128/mnema-talk:<tag>` "Update now" works too and pulls from Docker Hub.
-
-If you follow a minor line instead (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.4`),
-step 4 is unnecessary within that line: `docker compose pull app && docker
-compose up -d app`, or "Update now" in the System tab when the updater
-sidecar is enabled (see the [deployment guide](deployment.md#updates)). A new minor
-line (e.g. `0.4` → `0.5`) always needs this full procedure.
-
-If you build on the server instead (`MNEMA_IMAGE=mnema-talk:local`):
-`git fetch --tags && git checkout v$NEW && docker compose up -d --build`
-replaces steps 3–5.
+The steps (backup, choosing between the update button, `docker compose pull` and
+a pinned tag, verification) are on one page: [Updating](updating.md). This page
+keeps the per-version notes below and the rollback procedure.
 
 ### Rollback
 

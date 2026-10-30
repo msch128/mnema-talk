@@ -1,10 +1,46 @@
 # Operations
 
 Running Mnema Talk with `docker compose`: configuration, reverse proxy, TURN,
-storage, backups, monitoring and troubleshooting. For the update procedure
-see [upgrade.md](upgrade.md); for the security model see
+storage, backups, monitoring and troubleshooting. For updating
+see [updating.md](updating.md) and the per-version [upgrade.md](upgrade.md); new
+to all this? Start with the [quick start](quick-start.md); for the security model see
 [SECURITY.md](../SECURITY.md). Which ports to forward and which outbound
 connections the server makes: [ports.md](ports.md).
+
+## Settings at a glance
+
+Everything is configured in `.env` next to `docker-compose.yml`; the
+[setup assistant](quick-start.md#step-1-make-the-files) writes it. The server
+checks the required settings at startup and, if any is missing or still a
+placeholder, logs "Mnema Talk cannot start - fix these settings in .env:" with
+the complete list and exits with status 78 (a refused configuration, not a
+crash). `mnema-talk setup --check` prints the same list for the `.env` in a
+folder before you start (`docker run --rm -v "$PWD:/out" ghcr.io/msch128/mnema-talk setup --check`).
+A missing `ADMIN_INITIAL_PASSWORD` is reported separately, when the first start
+tries to create the Owner.
+
+**Required**
+
+| Setting | What it is | Example | How to get it |
+|---|---|---|---|
+| `PUBLIC_URL` | The address members type into their browser | `https://chat.example.com` | You choose it (your domain) |
+| `JWT_SECRET` | Secret that signs sessions, 32+ characters | (random) | `openssl rand -hex 32` |
+| `POSTGRES_PASSWORD` | Database password | (random) | `openssl rand -hex 16` |
+| `S3_ACCESS_KEY` | Media storage user name (compose falls back to `mnema_admin`) | `mnema` | Letters, digits and `. _ ~ + / = -` |
+| `S3_SECRET_KEY` | Media storage password, 8+ characters, same allowed characters | (random) | `openssl rand -hex 16` |
+| `ADMIN_INITIAL_PASSWORD` | The Owner's first password, 14+ characters; first start only | (random) | `openssl rand -base64 18`; delete the line after signing in |
+
+**Usually worth setting**
+
+| Setting | Why |
+|---|---|
+| `MNEMA_IMAGE` | Which released image to run (`:X.Y` or `:latest`; [updating](updating.md)) |
+| `TRUSTED_PROXY_CIDRS` | Address of a reverse proxy in Docker or on another machine (the Status tab names it) |
+| `WEBRTC_NAT_1TO1_IP` | Only if the server finds no public address itself, or LAN members need the LAN address too |
+| `SMTP_*` | E-mail for password resets (optional) |
+| `COMPOSE_PROFILES` | Optional parts: `autoupdate`, `turn` ([profiles](deployment.md#optional-parts-compose-profiles)) |
+
+Everything else has a default; the next section lists every variable.
 
 ## Configuration reference
 
@@ -1190,6 +1226,10 @@ state is held in memory; a restart is not needed to clear it:
 Otherwise sign in from a browser you used before, or wait.
 
 ### Nobody can join voice, or it connects and drops after a few seconds
+
+New to this? The [voice troubleshooting guide](troubleshooting-voice.md) walks
+through the layers in order, explains `chrome://webrtc-internals` and has a
+symptom table. The reference steps follow.
 
 1. **UDP range forwarded?** `WEBRTC_UDP_PORT_MIN`–`MAX` (default
    `50000-50050/udp`) must be forwarded from the router to the host and
