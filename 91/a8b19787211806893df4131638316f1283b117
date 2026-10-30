@@ -1,0 +1,23 @@
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_c07541df70a78f 183,186,206,209
+web/src/composables/useComposerLimits.test.ts
+  s_06fcde5dbef956::t_f0b302dc685f9a 41-50
+web/src/composables/useComposerLimits.ts
+  s_06fcde5dbef956::t_8b7fe8753863b1 9-10,50-54,56-57,78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "91a8b19787211806893df4131638316f1283b117",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
