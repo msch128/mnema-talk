@@ -16,7 +16,7 @@ export function useScreenFit(stageUserId: () => string | null, stageEl: Ref<HTML
   const voice = useVoiceStore()
   const size = useElementSize(stageEl)
   // The pixel ratio changes with the browser zoom and when the window moves to another screen.
-  const pixelRatio = ref(typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1)
+  const pixelRatio = ref(window.devicePixelRatio || 1)
   const syncRatio = () => { pixelRatio.value = window.devicePixelRatio || 1 }
   onMounted(() => window.addEventListener('resize', syncRatio))
   onUnmounted(() => window.removeEventListener('resize', syncRatio))
