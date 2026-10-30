@@ -1,0 +1,31 @@
+loadtest/README.md
+  s_e11d4af221ee25::t_e536129ea4988a 292-311
+loadtest/host-run.sh
+  s_e11d4af221ee25::t_42569440ad2a48 168-175,197-204,214-215,252-255,258-259,262-264,270-285,288-289,293-294,365-366,404
+loadtest/viewer/cmd/chat/main.go
+  s_e11d4af221ee25::t_e8a61ba2fd3ba4 82,167-178
+loadtest/viewer/cmd/chat/rest.go
+  s_e11d4af221ee25::t_8e3d064e8f4eff 12-13,21
+loadtest/viewer/cmd/chat/session.go
+  s_e11d4af221ee25::t_fb6fcce49402d7 39,145-149,156
+loadtest/viewer/internal/lt/tokens.go
+  s_e11d4af221ee25::t_3a797f43b1a2ca 51-61
+loadtest/viewer/session.go
+  s_e11d4af221ee25::t_b59c0d164d5000 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6f0048d1b401639d59fe26c3818fc4255db33ed2",
+  "prompts": {},
+  "sessions": {
+    "s_e11d4af221ee25": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aloadtest-build-a0df8b36f37826ce",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

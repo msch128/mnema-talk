@@ -1,0 +1,21 @@
+loadtest/host-run.sh
+  s_d979cb6f14087b::t_c5b28098110130 275
+loadtest/viewer/internal/lt/metrics_test.go
+  s_d979cb6f14087b::t_832204f3638d16 112-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8bb2c476f6797491133bbd3917ee80da02ef164c",
+  "prompts": {},
+  "sessions": {
+    "s_d979cb6f14087b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5ff3e0b8c42cf017",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

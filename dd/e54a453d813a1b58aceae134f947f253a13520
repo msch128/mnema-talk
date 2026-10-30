@@ -1,0 +1,224 @@
+loadtest/host-run.sh
+  s_06fcde5dbef956::t_e64d891f55bf8a 381
+  s_06fcde5dbef956::t_059116b0013bc1 1-204,206-245,247-364,367,370,373-380,382-408
+  s_06fcde5dbef956::t_7aca9eb4ae8dd9 205
+  s_06fcde5dbef956::t_99fc742caf6bd3 246
+  s_06fcde5dbef956::t_65a46b614e9e09 365-366
+  s_06fcde5dbef956::t_e86f5b0cc82430 368-369
+  s_06fcde5dbef956::t_a8982e12e2b971 371-372
+  s_06fcde5dbef956::t_d54545de2e30ba 409-411
+.github/workflows/ci.yml
+  s_b10e722bc60c79::t_3402d4cc150e3c 211-215
+.gitignore
+  s_fb29f048bd6d02::t_62f852765eae86 100
+AGENTS.md
+  s_4c6a19030e223f::t_6c45539206e697 105
+Makefile
+  s_b10e722bc60c79::t_d29abd6f54b465 6,71-75,175-190
+doc/architecture.md
+  s_4c6a19030e223f::t_1cf12b6c4a9cc9 597-616
+doc/development.md
+  s_4c6a19030e223f::t_e5965273a11350 60-61
+loadtest/README.md
+  s_4c6a19030e223f::t_e7f7f0300d04e4 8-12,32,37-39,148-347
+loadtest/viewer/cmd/chat/config.go
+  s_5b748b0295d2f4::t_4ef5b989449ca6 1-105
+loadtest/viewer/cmd/chat/config_test.go
+  s_524065e4c1d78a::t_d904581bd6b3b5 1-55
+loadtest/viewer/cmd/chat/frames_test.go
+  s_524065e4c1d78a::t_3671db322d1fca 1-87
+loadtest/viewer/cmd/chat/main.go
+  s_45fff186c97845::t_291611e79d0cdf 1-166
+loadtest/viewer/cmd/chat/rest.go
+  s_06fcde5dbef956::t_1117802d5961bf 1-105
+loadtest/viewer/cmd/chat/result.go
+  s_45fff186c97845::t_f079da414bb9d4 1-155
+loadtest/viewer/cmd/chat/run.go
+  s_17ef7810e0243d::t_8cba0e1ff5aca6 1-115
+loadtest/viewer/cmd/chat/session.go
+  s_17ef7810e0243d::t_bc978d9ab1e4f5 1-257
+loadtest/viewer/cmd/chat/thresholds.go
+  s_5b748b0295d2f4::t_5c430b12c05b94 1-77
+loadtest/viewer/cmd/chat/thresholds_test.go
+  s_524065e4c1d78a::t_5a83142d388914 1-126
+loadtest/viewer/cmd/chat/tracker.go
+  s_524065e4c1d78a::t_1e4007c87ae430 1-130
+loadtest/viewer/cmd/chat/tracker_test.go
+  s_524065e4c1d78a::t_43d2eaa2a45124 1-98
+loadtest/viewer/cmd/chat/writer.go
+  s_06fcde5dbef956::t_ada2a55e30d374 1-115
+loadtest/viewer/cmd/mint/main.go
+  s_06fcde5dbef956::t_1f459b2efc7088 1-120
+loadtest/viewer/cmd/mint/main_test.go
+  s_06fcde5dbef956::t_a680929cb1804d 1-52
+loadtest/viewer/internal/lt/checks.go
+  s_8895e592af2d2b::t_ea50401fc1e9cc 1-33
+loadtest/viewer/internal/lt/cpu_other.go
+  s_45fff186c97845::t_4c0f7cc0b24c70 1-6
+loadtest/viewer/internal/lt/cpu_unix.go
+  s_45fff186c97845::t_3d79e892799792 1-12
+loadtest/viewer/internal/lt/env.go
+  s_8895e592af2d2b::t_64c900b52799ea 1-35
+loadtest/viewer/internal/lt/generator.go
+  s_45fff186c97845::t_f8a60580c04342 1-25
+loadtest/viewer/internal/lt/latency.go
+  s_8895e592af2d2b::t_deea2a888841e2 1-106
+loadtest/viewer/internal/lt/latency_test.go
+  s_524065e4c1d78a::t_a8882c13078002 1-83
+loadtest/viewer/internal/lt/metrics.go
+  s_30e74ceb0962ca::t_0971f400a0f216 1-194
+loadtest/viewer/internal/lt/metrics_test.go
+  s_30e74ceb0962ca::t_08f26f99f11e2d 1-111
+loadtest/viewer/internal/lt/server.go
+  s_3b17690a73c198::t_b2ab9d35853642 1-118
+loadtest/viewer/internal/lt/tokens.go
+  s_8895e592af2d2b::t_321f6cead5c7ff 1-50
+loadtest/viewer/main.go
+  s_45fff186c97845::t_f4aa8d4467c675 39-59,69,74,108-109,113-134,139-151,156,158,160-162,167-168,173-198,200-219,227,230,243-249,253-262,265,267-270,272,276-277,280-282,289-297,299-303
+loadtest/viewer/member.go
+  s_30e74ceb0962ca::t_a16b1393b9f1fb 11,15,37-38,62-67
+loadtest/viewer/publish.go
+  s_06fcde5dbef956::t_5ebda092bd1f52 1-188
+loadtest/viewer/relay.go
+  s_06fcde5dbef956::t_2304415947184e 1-110
+loadtest/viewer/relay_test.go
+  s_e11d4af221ee25::t_9dd75ffe5b668c 1-47
+loadtest/viewer/report.go
+  s_45fff186c97845::t_45d1210e782523 90-122
+loadtest/viewer/session.go
+  s_ecf7b9e687a24d::t_ed3fcad8465998 4,13,19,21,66-67,74-76,86-88,92-103,125-128,167-168,173-177,190,194-195
+loadtest/viewer/summary.go
+  s_45fff186c97845::t_b740fa3a342257 5,8-9,13-32,57-69,108,124,134-157,160,162,165,168-170,174,177,181,183,191-201
+loadtest/viewer/synth.go
+  s_ba0662248deca2::t_7f74d2af3165a0 1-137
+loadtest/viewer/synth_test.go
+  s_fb29f048bd6d02::t_e92954b509bed3 1-119
+loadtest/viewer/trackstats.go
+  s_30e74ceb0962ca::t_14240b91fca2f9 1-240
+loadtest/viewer/trackstats_test.go
+  s_ba0662248deca2::t_774f1abb982415 1-100
+loadtest/viewer/voicecheck.go
+  s_8895e592af2d2b::t_d4513ee6483dd4 1-156
+loadtest/viewer/voicecheck_test.go
+  s_ecf7b9e687a24d::t_09da4f9b6252bf 1-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dde54a453d813a1b58aceae134f947f253a13520",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_30e74ceb0962ca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae5e20c7f981d1793",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3b17690a73c198": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac9fae189ea57b132",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_524065e4c1d78a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abfa07ecf4d340a57",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8895e592af2d2b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-newcomer-audit-5cf650531cfbcba0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b10e722bc60c79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-docs-e9d2378f61bc75a7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ba0662248deca2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-desktop-uploads-c294f35d64e7fce5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e11d4af221ee25": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aloadtest-build-a0df8b36f37826ce",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ecf7b9e687a24d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-setup-e379f010794b742e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
