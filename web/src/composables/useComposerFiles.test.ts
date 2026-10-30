@@ -1,33 +1,21 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { ref } from 'vue'
 import { useComposerFiles } from './useComposerFiles'
 import { useToastStore } from '../stores/toast'
 import { setLocale } from '../i18n'
 
 const png = new File(['x'], 'a.png', { type: 'image/png' })
-const mov = new File(['x'], 'b.mov', { type: 'video/mp4' })
 const pdf = new File(['x'], 'c.pdf', { type: 'application/pdf' })
 
 beforeEach(() => {
   setActivePinia(createPinia())
   setLocale('en')
-  // jsdom has no DataTransfer.
-  vi.stubGlobal('DataTransfer', class {
-    private list: File[] = []
-    items = { add: (f: File) => { this.list.push(f) } }
-    get files() { return this.list as unknown as FileList }
-  })
 })
 
 function setup(opts: { canAttach?: boolean; busy?: boolean } = {}) {
-  const input = document.createElement('input')
-  input.type = 'file'
-  const received: File[][] = []
-  input.addEventListener('change', () => received.push(Array.from(input.files ?? [])))
-  Object.defineProperty(input, 'files', { writable: true, value: null })
-  const files = useComposerFiles({ fileInput: ref(input), canAttach: () => opts.canAttach ?? true, busy: () => opts.busy ?? false })
-  return { files, received, toasts: useToastStore() }
+  const staged: File[][] = []
+  const files = useComposerFiles({ add: f => staged.push([...f]), canAttach: () => opts.canAttach ?? true, busy: () => opts.busy ?? false })
+  return { files, staged, toasts: useToastStore() }
 }
 
 function pasteEvent(files: File[], data: Record<string, string> = {}) {
@@ -37,68 +25,49 @@ function pasteEvent(files: File[], data: Record<string, string> = {}) {
 }
 
 describe('useComposerFiles', () => {
-  it('sends a pasted image through the file input', () => {
-    const { files, received } = setup()
+  it('stages a pasted image and sends nothing', () => {
+    const { files, staged } = setup()
     const e = pasteEvent([png])
     files.onPaste(e)
     expect(e.defaultPrevented).toBe(true)
-    expect(received).toEqual([[png]])
+    expect(staged).toEqual([[png]])
   })
 
   it('leaves a text paste to the textarea', () => {
-    const { files, received } = setup()
+    const { files, staged } = setup()
     const e = pasteEvent([], { 'text/plain': 'hello' })
     files.onPaste(e)
     expect(e.defaultPrevented).toBe(false)
-    expect(received).toEqual([])
+    expect(staged).toEqual([])
   })
 
-  it('attaches a dropped file and says that only the first was used', () => {
-    const { files, received, toasts } = setup()
-    files.attachFiles([mov, png])
-    expect(received).toEqual([[mov]])
-    expect(toasts.toasts.map(x => x.text)).toEqual(['A message carries one file. The first one was attached.'])
-  })
-
-  it('says nothing extra for a single file', () => {
-    const { files, toasts } = setup()
-    files.attachFiles([png])
+  it('stages every dropped file, whatever its type', () => {
+    const { files, staged, toasts } = setup()
+    files.attachFiles([pdf, png])
+    expect(staged).toEqual([[pdf, png]])
     expect(toasts.toasts).toEqual([])
   })
 
-  it('says that other files were skipped when only some are media', () => {
-    const { files, received, toasts } = setup()
-    files.attachFiles([pdf, png])
-    expect(received).toEqual([[png]])
-    expect(toasts.toasts.map(x => x.text)).toEqual(['Only images and videos were attached. Other files were skipped.'])
-  })
-
-  it('says one combined thing when files were both extra and not media', () => {
-    const { files, received, toasts } = setup()
-    files.attachFiles([pdf, png, mov])
-    expect(received).toEqual([[png]])
-    expect(toasts.toasts.map(x => x.text)).toEqual([
-      'A message carries one file: the first image or video was attached, the other files were skipped.',
-    ])
+  it('stages the files picked with the button and clears the input', () => {
+    const { files, staged } = setup()
+    const input = document.createElement('input')
+    input.type = 'file'
+    Object.defineProperty(input, 'files', { value: [png, pdf] })
+    files.onPick({ target: input } as unknown as Event)
+    expect(staged).toEqual([[png, pdf]])
+    expect(input.value).toBe('')
   })
 
   it('shows the permission message where attaching is not allowed', () => {
-    const { files, received, toasts } = setup({ canAttach: false })
+    const { files, staged, toasts } = setup({ canAttach: false })
     files.attachFiles([png])
-    expect(received).toEqual([])
+    expect(staged).toEqual([])
     expect(toasts.toasts.at(-1)).toMatchObject({ type: 'error', text: 'You can’t attach files here.' })
   })
 
-  it('refuses files that are not images or videos', () => {
-    const { files, received, toasts } = setup()
-    files.attachFiles([pdf])
-    expect(received).toEqual([])
-    expect(toasts.toasts.at(-1)?.text).toBe('Only images and videos can be attached.')
-  })
-
-  it('ignores a drop while an upload runs', () => {
-    const { files, received } = setup({ busy: true })
+  it('ignores a drop while the message is being sent', () => {
+    const { files, staged } = setup({ busy: true })
     files.attachFiles([png])
-    expect(received).toEqual([])
+    expect(staged).toEqual([])
   })
 })

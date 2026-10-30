@@ -93,7 +93,7 @@ func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
 func loadAttachments(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT id, message_id, original_filename, mime_type, size_bytes, is_deleted
-		FROM media WHERE message_id = ANY($1) ORDER BY created_at`, ids)
+		FROM media WHERE message_id = ANY($1) ORDER BY position, created_at`, ids)
 	if err != nil {
 		return fmt.Errorf("load attachments: %w", err)
 	}

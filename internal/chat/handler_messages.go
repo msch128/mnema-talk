@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -73,7 +74,7 @@ func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) error {
 // createMessage handles POST /api/channels/{channelID}/messages.
 //
 // @Summary Post a message
-// @Description Works in text and voice channels (a voice channel's chat). Resolves mentions and broadcasts message_create.
+// @Description Works in text and voice channels (a voice channel's chat). Resolves mentions and broadcasts message_create. With attachment_ids the message carries those staged files (up to 10, at most 100 MB together); the text may then be empty.
 // @ID createMessage
 // @Tags Messages
 // @Accept json
@@ -96,27 +97,41 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	ctx, err := h.sendContext(r, chID, perm.SendMessages)
+	var req CreateMessageRequest
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	need := perm.SendMessages
+	if len(req.AttachmentIDs) > 0 {
+		need |= perm.AttachFiles
+	}
+	ctx, err := h.sendContext(r, chID, need)
 	if err != nil {
 		return err
 	}
 	if _, err := ChannelForMessages(ctx, h.DB, chID); err != nil {
 		return err
 	}
-	var req CreateMessageRequest
-	if err := httpx.DecodeJSON(r, &req); err != nil {
+	if err := validateAttachmentIDs(req.AttachmentIDs); err != nil {
 		return err
 	}
-	content, err := ValidateContent(req.Content, false)
+	content, err := ValidateContent(req.Content, len(req.AttachmentIDs) > 0)
 	if err != nil {
 		return err
 	}
 	if err := ValidateTarget(ctx, h.DB, chID, req.ParentID, req.ReplyToID); err != nil {
 		return err
 	}
+	var claim func(pgx.Tx, uuid.UUID) error
+	if len(req.AttachmentIDs) > 0 {
+		claim = func(tx pgx.Tx, msgID uuid.UUID) error {
+			return claimAttachments(ctx, tx, msgID, user.ID, chID, req.AttachmentIDs)
+		}
+	}
 	id, err := InsertMessage(ctx, h.DB, h.Online, NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
-	}, nil)
+		HasAttachment: len(req.AttachmentIDs) > 0,
+	}, claim)
 	if err != nil {
 		return err
 	}
@@ -256,7 +271,12 @@ func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
 
 // CreateMessageRequest is the body of POST /api/channels/{channelID}/messages.
 type CreateMessageRequest struct {
-	Content string `json:"content" minLength:"1" maxLength:"4000"`
+	// Content is required unless attachment_ids is set.
+	Content string `json:"content" maxLength:"4000"`
+	// AttachmentIDs are files uploaded with POST /api/channels/{channelID}/attachments,
+	// at most 10, shown in this order. Needs the Attach files permission; the
+	// files must be the caller's, from this channel and not yet sent.
+	AttachmentIDs []uuid.UUID `json:"attachment_ids" binding:"optional" format:"uuid" maxItems:"10"`
 	// ParentID must be a root message of the same channel (thread reply).
 	ParentID *uuid.UUID `json:"parent_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
 	// ReplyToID must be a message of the same conversation (quoted reply).

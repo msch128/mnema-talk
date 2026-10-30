@@ -20,7 +20,7 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | Text room | channel | Kanal | | Group of rooms: category / Kategorie. |
 | Structured discussion room | forum channel | Forum-Kanal | | A channel of posts as cards with threads and tags. |
 | Discussion starter in a forum | post | Beitrag | thread (for the root message) | A root message in a forum channel with a required title and initial message. |
-| Forum tag | tag | Tag | label, category | Up to 20 admin-defined tags per forum channel. |
+| Forum tag | tag | Tag | label, category | Up to 20 admin-defined tags per forum channel, with an optional colour; a moderated tag is applied by moderators only. |
 | Screen broadcast | screen share | Bildschirmübertragung | stream (as a noun for your own share) | A viewer watches a screen share / sieht eine Übertragung; "Nicht mehr ansehen" stops watching. |
 | Mute your own microphone | mute / unmute | stummschalten / Stummschaltung aufheben | | Deafen = "Ton aus". Only for audio. |
 | Silence notifications | mute notifications | Benachrichtigungen aus / stumm | | |

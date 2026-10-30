@@ -160,6 +160,14 @@ describe('LoginModal', () => {
     expect(w.get('[data-testid="login-heading"]').text()).toBe('talk.example.org')
   })
 
+  it('shows the community icon from the sign-in options in place of the letter', async () => {
+    apiMock.mockResolvedValue({ password_reset: false, community_name: 'Owls', community_icon: 'v3' })
+    const w = mountLogin()
+    expect(w.find('[data-testid="login-icon"]').exists()).toBe(false)
+    await flushPromises()
+    expect(w.get('[data-testid="login-icon"]').attributes('src')).toBe('/api/community/icon?size=128&v=v3')
+  })
+
   it('does not guess before the server options are known', async () => {
     apiMock.mockRejectedValue(new Error('offline'))
     const w = mountLogin()

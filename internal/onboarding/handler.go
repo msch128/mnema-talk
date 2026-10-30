@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -29,7 +30,11 @@ type Handler struct {
 	// settings. Events then tells open clients. Both are optional.
 	Names  *community.Names
 	Events events.Publisher
+	// Store holds the community icon; without it the icon cannot be set and
+	// reads as not set.
+	Store media.Store
 
+	iconPerIP    *httpx.RateLimiter
 	previewPerIP *httpx.RateLimiter
 	// previewPerSite caps a whole IPv6 /48 (or one IPv4 address) together, so
 	// rotating /64 prefixes inside one allocation gains nothing.
@@ -41,6 +46,8 @@ func NewHandler(pool *db.Pool, perms *perm.Service) *Handler {
 	return &Handler{
 		DB:    pool,
 		Perms: perms,
+		// The icon is a few KB read from storage; this only stops a loop.
+		iconPerIP: httpx.NewRateLimiter(300, time.Minute).Named("community_icon_ip"),
 		// A preview costs one indexed lookup; the budget only has to make
 		// guessing codes pointless (a code carries about 59 bits).
 		previewPerIP:   httpx.NewRateLimiter(30, time.Minute).Named("invite_preview_ip"),
@@ -50,6 +57,7 @@ func NewHandler(pool *db.Pool, perms *perm.Service) *Handler {
 
 // MountPublic registers the route that needs no session.
 func (h *Handler) MountPublic(r chi.Router) {
+	h.mountPublicIcon(r)
 	r.With(h.previewPerSite.By(httpx.ClientAggregateKey), h.previewPerIP.PerIP).Get("/invites/{code}", httpx.Handle(h.previewInvite))
 }
 

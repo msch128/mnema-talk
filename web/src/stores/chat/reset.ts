@@ -10,6 +10,7 @@ import { useOnboardingStore } from '../onboarding'
 import { useFirstRunStore } from '../firstRun'
 import { useAccountStore } from '../account'
 import { useDmCallsStore } from '../dmCalls'
+import { clearAllTrays } from '../../composables/attachmentTrayState'
 import { emptyWindow } from '../../lib/messageWindow'
 import { emptyNotificationSettings, type Cx } from './state'
 import { resetWindow, setWindow } from './messageWindow'
@@ -25,6 +26,7 @@ export function resetMemberStores() {
   useFirstRunStore().reset()
   useAccountStore().reset()
   useDmCallsStore().reset()
+  clearAllTrays()
 }
 
 /** Removes one ephemeral note. */
@@ -102,6 +104,7 @@ export function resetCommunityState(cx: Cx) {
   cs.mediaHandshakeHandler = null
   cs.forumTagsChangedHandler = null
   cs.forumTagsSignal.value = null
+  cs.forumPostsSignal.value = null
   const version = useAppVersionStore()
   version.followAdminUpdates(() => false)
   version.setServerVersion('')

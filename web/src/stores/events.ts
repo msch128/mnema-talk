@@ -102,7 +102,7 @@ export const useEventsStore = defineStore('communityEvents', () => {
       const list = await apiFetchEvents()
       if (mine === loadSeq) events.value = list
     } catch (err) {
-      if (mine === loadSeq) error.value = err instanceof Error ? err.message : 'Failed to load events'
+      if (mine === loadSeq) error.value = err instanceof Error ? err.message : t('events.loadFailed')
     } finally {
       if (mine === loadSeq) loading.value = false
     }

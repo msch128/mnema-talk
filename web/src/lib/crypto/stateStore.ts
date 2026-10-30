@@ -19,7 +19,7 @@ const DEFAULT_LIMITS: Readonly<CryptoStateLimits> = Object.freeze({
 export class CryptoStateError extends Error {
   readonly code: string
   constructor(code: string) {
-    super(`Cryptographic state operation failed: ${code}`)
+    super(`Cryptographic state operation failed: ${code}`) // i18n-ignore: diagnostic, never shown
     this.name = 'CryptoStateError'
     this.code = code
   }

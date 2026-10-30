@@ -5,6 +5,7 @@ import { minutesUntil, useEventsStore } from './events'
 import { eventsRequest } from '../lib/eventsDialog'
 import { useServerFeaturesStore } from './serverFeatures'
 import { useToastStore } from './toast'
+import { t } from '../i18n'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import type { CommunityEvent, RSVPItem } from '../types/domain'
 
@@ -264,7 +265,7 @@ describe('past events', () => {
     apiMock.mockRejectedValueOnce('boom')
     const store = useEventsStore()
     await store.loadPast()
-    expect(store.error).toBe('Failed to load events')
+    expect(store.error).toBe(t('events.loadFailed'))
   })
 
   it('does nothing while the feature is off', async () => {

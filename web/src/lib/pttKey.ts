@@ -18,7 +18,7 @@ const NAMES: Record<string, string> = {
   Backspace: 'Backspace',
   Enter: 'Enter',
   Tab: 'Tab',
-  CapsLock: 'Caps Lock'
+  CapsLock: 'Caps Lock' // i18n-ignore: physical key name
 }
 
 export function pttKeyLabel(code: string): string {

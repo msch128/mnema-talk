@@ -20,6 +20,9 @@ type AuthOptions struct {
 	// CommunityName is what the sign-in screen calls the community: the Owner's
 	// name for it, else the host. Public, like the rest of this answer.
 	CommunityName string `json:"community_name" binding:"optional"`
+	// CommunityIcon is the version of the community icon (GET
+	// /api/community/icon), left out while the Owner set none. Public as well.
+	CommunityIcon string `json:"community_icon,omitempty" binding:"optional"`
 }
 
 // PasswordResetRequest is the body of POST /api/auth/password-reset/request.
@@ -52,7 +55,7 @@ func addressKey(email string) string {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Router /api/auth/options [get]
 func (h *Handler) authOptions(w http.ResponseWriter, r *http.Request) error {
-	httpx.WriteJSON(w, http.StatusOK, AuthOptions{PasswordReset: h.mailEnabled(), CommunityName: h.Names.Get(r.Context())})
+	httpx.WriteJSON(w, http.StatusOK, AuthOptions{PasswordReset: h.mailEnabled(), CommunityName: h.Names.Get(r.Context()), CommunityIcon: h.Names.Icon(r.Context())})
 	return nil
 }
 

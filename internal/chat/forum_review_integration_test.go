@@ -40,7 +40,7 @@ func TestForumTagNameConflictIsReported(t *testing.T) {
 		t.Fatal(err)
 	}
 	name := "Bug"
-	_, _, err = UpdateForumTag(ctx, f.p, ch.ID, other.ID, &name, nil)
+	_, _, err = UpdateForumTag(ctx, f.p, ch.ID, other.ID, TagPatch{Name: &name})
 	requireAPIStatus(t, err, http.StatusConflict)
 }
 
@@ -58,12 +58,12 @@ func TestForumTagUpdatesDoNotOverwriteEachOther(t *testing.T) {
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 	name, emoji := "new", "B"
-	if _, _, err := UpdateForumTag(ctx, tx, ch.ID, tag.ID, &name, nil); err != nil {
+	if _, _, err := UpdateForumTag(ctx, tx, ch.ID, tag.ID, TagPatch{Name: &name}); err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan error, 1)
 	go func() {
-		_, _, err := UpdateForumTag(ctx, f.p, ch.ID, tag.ID, nil, &emoji)
+		_, _, err := UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &emoji})
 		done <- err
 	}()
 	time.Sleep(200 * time.Millisecond) // the second patch has read the tag and waits for the row
@@ -155,7 +155,7 @@ func TestForumPostPatchChecksTheLockUnderTheRowLock(t *testing.T) {
 	title := "renamed while locked"
 	done := make(chan error, 1)
 	go func() {
-		_, err := UpdateForumPost(ctx, f.p, ch.ID, post.ID, f.u.ID, false, &title, nil, nil)
+		_, err := UpdateForumPost(ctx, f.p, ch.ID, post.ID, PostActor{ID: f.u.ID}, PostPatch{Title: &title})
 		done <- err
 	}()
 	time.Sleep(200 * time.Millisecond) // the author's request saw the post unlocked

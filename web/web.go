@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"mime"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -27,11 +28,21 @@ var distFS embed.FS
 // name): it becomes the page title and the name of the installed app, so a
 // tab, a bookmark and the home screen carry the community's own name.
 func Handler(name func(context.Context) string) http.Handler {
+	return HandlerWithIcon(name, nil)
+}
+
+// HandlerWithIcon is Handler with the community icon: icon returns its version
+// ("" while the Owner set none), and while there is one, the tab icon, the
+// home-screen icon and the manifest's icons point at it instead of the Mnema
+// icon. nil keeps the built-in icons.
+func HandlerWithIcon(name, icon func(context.Context) string) http.Handler {
 	sub, err := fs.Sub(distFS, "dist")
 	if err != nil {
-		return newHandler(distFS, name)
+		sub = distFS
 	}
-	return newHandler(sub, name)
+	h := newHandler(sub, name)
+	h.icon = icon
+	return h
 }
 
 // apiDocsPage is the API reference page. It is only served through
@@ -69,6 +80,7 @@ type staticServer struct {
 	indexHTML  []byte
 	fileServer http.Handler
 	name       func(context.Context) string
+	icon       func(context.Context) string
 }
 
 // The built page names the product in these two places; the server swaps in
@@ -76,7 +88,25 @@ type staticServer struct {
 var (
 	titleTag    = []byte("<title>Mnema Talk</title>")
 	appTitleTag = []byte(`<meta name="apple-mobile-web-app-title" content="Mnema" />`)
+	faviconTag  = []byte(`<link rel="icon" type="image/svg+xml" href="/favicon.svg" />`)
+	touchIcon   = []byte(`<link rel="apple-touch-icon" href="/apple-touch-icon.png" />`)
 )
+
+// IconURL is where the community icon of the given version is served, at the
+// given edge (128 or 512). The version makes the URL immutable.
+func IconURL(version string, edge int) string {
+	return "/api/community/icon?size=" + strconv.Itoa(edge) + "&v=" + url.QueryEscape(version)
+}
+
+// SetIcon points the tab icon and the home-screen icon of a copy of the built
+// page at the community icon of the given version.
+func SetIcon(page []byte, version string) []byte {
+	if version == "" {
+		return page
+	}
+	page = bytes.Replace(page, faviconTag, []byte(`<link rel="icon" type="image/png" sizes="128x128" href="`+html.EscapeString(IconURL(version, 128))+`" />`), 1)
+	return bytes.Replace(page, touchIcon, []byte(`<link rel="apple-touch-icon" href="`+html.EscapeString(IconURL(version, 512))+`" />`), 1)
+}
 
 // SetAppTitle names the iOS home-screen label of a copy of the built page.
 func SetAppTitle(page []byte, name string) []byte {
@@ -99,6 +129,9 @@ func (s *staticServer) serveIndex(w http.ResponseWriter, r *http.Request) {
 		page = bytes.Replace(page, titleTag, []byte("<title>"+name+"</title>"), 1)
 		page = SetAppTitle(page, s.name(r.Context()))
 	}
+	if s.icon != nil {
+		page = SetIcon(page, s.icon(r.Context()))
+	}
 	if _, err := w.Write(page); err != nil {
 		return
 	}
@@ -113,13 +146,8 @@ func (s *staticServer) serveManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var doc map[string]any
-	if s.name != nil && json.Unmarshal(raw, &doc) == nil {
-		name := s.name(r.Context())
-		short := []rune(name)
-		if len(short) > shortNameRunes {
-			short = short[:shortNameRunes]
-		}
-		doc["name"], doc["short_name"] = name, string(short)
+	if (s.name != nil || s.icon != nil) && json.Unmarshal(raw, &doc) == nil {
+		s.brandManifest(r.Context(), doc)
 		if out, err := json.MarshalIndent(doc, "", "  "); err == nil {
 			raw = out
 		}
@@ -128,6 +156,28 @@ func (s *staticServer) serveManifest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/manifest+json")
 	if _, err := w.Write(raw); err != nil {
 		return
+	}
+}
+
+// brandManifest writes the community's name, and its icon when it has one,
+// into the manifest document.
+func (s *staticServer) brandManifest(ctx context.Context, doc map[string]any) {
+	if s.name != nil {
+		name := s.name(ctx)
+		short := []rune(name)
+		if len(short) > shortNameRunes {
+			short = short[:shortNameRunes]
+		}
+		doc["name"], doc["short_name"] = name, string(short)
+	}
+	if s.icon == nil {
+		return
+	}
+	if v := s.icon(ctx); v != "" {
+		doc["icons"] = []map[string]string{
+			{"src": IconURL(v, 128), "sizes": "128x128", "type": "image/png", "purpose": "any"},
+			{"src": IconURL(v, 512), "sizes": "512x512", "type": "image/png", "purpose": "any"},
+		}
 	}
 }
 
@@ -193,7 +243,7 @@ func (s *staticServer) serveFixed(w http.ResponseWriter, r *http.Request, name s
 	s.fileServer.ServeHTTP(w, r)
 }
 
-func newHandler(sub fs.FS, name func(context.Context) string) http.Handler {
+func newHandler(sub fs.FS, name func(context.Context) string) *staticServer {
 	indexHTML, err := fs.ReadFile(sub, "index.html")
 	if err != nil {
 		indexHTML = nil

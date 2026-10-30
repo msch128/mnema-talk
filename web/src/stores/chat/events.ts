@@ -9,6 +9,7 @@ import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
 import { useEventsStore } from '../events'
 import { useOnboardingStore } from '../onboarding'
+import { useServerFeaturesStore } from '../serverFeatures'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
 import { snapshotToMap, applyPresenceUpdate } from '../../lib/presence'
 import { MAX_EPHEMERAL } from './types'
@@ -116,9 +117,17 @@ function handleIncomingMessageReadState(cx: Cx, opts: IncomingReadStateOptions) 
   countUnread(cx, opts.channelId, opts.isMention, opts.isThreadReply)
 }
 
+/** Tells an open forum list that something in the forum changed. */
+function signalForumPosts({ cs }: Cx, channelId: string | undefined) {
+  if (channelId && channelId === cs.activeChannel.value?.id) {
+    cs.forumPostsSignal.value = { channelId, seq: (cs.forumPostsSignal.value?.seq ?? 0) + 1 }
+  }
+}
+
 function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   if (!p) return
   const { cs, authStore } = cx
+  signalForumPosts(cx, p.channel_id)
   countReply(cx, p)
   insertMessage(cx, p)
   noteDmMessage(cx, p)
@@ -165,6 +174,7 @@ function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
   onOriginalDeleted(cx, p.id)
   if (p.parent_id) bumpReplyCount(cx, p.parent_id, -1)
   noteDmMessageChanged(cx, p.channel_id)
+  signalForumPosts(cx, p.channel_id)
   if (cs.activeThread.value?.id === p.id) closeThread(cx)
 }
 
@@ -179,8 +189,11 @@ const HANDLERS: Handlers = {
     voiceStore.serverScreenLayers = p?.screen_layers ?? 0
     versions.followAdminUpdates(() => authStore.isAdmin)
   },
-  // The Owner renamed the community: the header, tab title and login follow.
-  community_updated: () => { void useOnboardingStore().reload() },
+  // The Owner renamed the community or changed its icon: the header, tab title, tab icon and login follow.
+  community_updated: (_cx, p) => {
+    if (p && typeof p.community_icon === 'string') useServerFeaturesStore().setCommunityIcon(p.community_icon)
+    void useOnboardingStore().reload()
+  },
   // An admin started an update: the server restarts in a moment.
   system_update: (_cx, p) => useAppVersionStore().setUpdating(p?.version),
   presence_snapshot: onPresenceSnapshot,
@@ -232,9 +245,14 @@ const HANDLERS: Handlers = {
     useForwardQuotesStore().invalidate()
     onOriginalEdited(cx, p)
     noteDmMessageChanged(cx, p.channel_id)
+    if (p.title != null) signalForumPosts(cx, p.channel_id)
   },
   message_delete: onMessageDelete,
-  pins_changed: (cx, p) => { if (p) onPinsChanged(cx, p) },
+  pins_changed: (cx, p) => {
+    if (!p) return
+    onPinsChanged(cx, p)
+    signalForumPosts(cx, p.channel_id)
+  },
   message_reaction: (cx, p) => {
     if (p?.message_id) applyToMessage(cx, p.message_id, m => { m.reactions = p.reactions })
   },

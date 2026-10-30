@@ -30,15 +30,20 @@ type servedMedia struct {
 // cannot fetch the file either (avatars have no channel). Deleted media is 410.
 func (h *Handler) lookupServed(r *http.Request, id uuid.UUID) (*servedMedia, error) {
 	m := &servedMedia{id: id}
-	var deleted bool
+	var deleted, staged bool
+	var uploader uuid.UUID
 	err := h.DB.QueryRow(r.Context(), `
-		SELECT s3_key, mime_type, original_filename, size_bytes, is_deleted, channel_id FROM media WHERE id = $1`, id).
-		Scan(&m.key, &m.mimeType, &m.filename, &m.size, &deleted, &m.channelID)
+		SELECT s3_key, mime_type, original_filename, size_bytes, is_deleted, channel_id, staged, uploader_id FROM media WHERE id = $1`, id).
+		Scan(&m.key, &m.mimeType, &m.filename, &m.size, &deleted, &m.channelID, &staged, &uploader)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("media not found")
 	}
 	if err != nil {
 		return nil, err
+	}
+	// A file that is not sent yet belongs to its uploader alone.
+	if staged && uploader != auth.UserFrom(r.Context()).ID {
+		return nil, httpx.ErrNotFound("media not found")
 	}
 	if m.channelID != nil {
 		if err := h.Perms.RequireChannel(r.Context(), auth.UserFrom(r.Context()).Subject(), *m.channelID, perm.ViewChannel); err != nil {

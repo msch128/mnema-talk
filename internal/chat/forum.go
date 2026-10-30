@@ -23,6 +23,12 @@ type ForumTag struct {
 	ChannelID uuid.UUID `json:"channel_id" format:"uuid"`
 	Name      string    `json:"name" maxLength:"20"`
 	Emoji     string    `json:"emoji,omitempty" binding:"optional"`
+	// Color is a name from ForumTagColors, or empty for the plain look.
+	Color string `json:"color,omitempty" binding:"optional" enums:"gray,red,orange,yellow,green,teal,blue,purple,pink"`
+	// Position is the tag's place in the forum's own order (1 is first).
+	Position int `json:"position"`
+	// Moderated tags are applied and removed only by members with Manage messages.
+	Moderated bool      `json:"moderated"`
 	CreatedAt time.Time `json:"created_at" format:"date-time"`
 }
 
@@ -37,10 +43,10 @@ func loadForumPostDetails(ctx context.Context, p *db.Pool, msgs []Message, idx m
 
 func loadPostTitlesAndLocks(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
-		SELECT m.id, m.title, m.is_locked,
+		SELECT m.id, m.title, m.is_locked, m.is_resolved,
 		       (SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = m.id) AS last_reply_at
 		FROM messages m
-		WHERE m.id = ANY($1) AND m.parent_id IS NULL AND (m.title IS NOT NULL OR m.is_locked)`, ids)
+		WHERE m.id = ANY($1) AND m.parent_id IS NULL AND (m.title IS NOT NULL OR m.is_locked OR m.is_resolved)`, ids)
 	if err != nil {
 		return fmt.Errorf("load forum post details: %w", err)
 	}
@@ -48,9 +54,9 @@ func loadPostTitlesAndLocks(ctx context.Context, p *db.Pool, msgs []Message, idx
 	for rows.Next() {
 		var id uuid.UUID
 		var title *string
-		var isLocked bool
+		var isLocked, isResolved bool
 		var lastReplyAt *time.Time
-		if err := rows.Scan(&id, &title, &isLocked, &lastReplyAt); err != nil {
+		if err := rows.Scan(&id, &title, &isLocked, &isResolved, &lastReplyAt); err != nil {
 			return err
 		}
 		i, ok := idx[id]
@@ -59,6 +65,7 @@ func loadPostTitlesAndLocks(ctx context.Context, p *db.Pool, msgs []Message, idx
 		}
 		msgs[i].Title = title
 		msgs[i].IsLocked = isLocked
+		msgs[i].IsResolved = isResolved
 		if lastReplyAt != nil {
 			msgs[i].LastActivityAt = lastReplyAt
 		} else {
@@ -73,11 +80,11 @@ func loadPostTitlesAndLocks(ctx context.Context, p *db.Pool, msgs []Message, idx
 
 func loadPostTags(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
-		SELECT pt.message_id, ft.id, ft.channel_id, ft.name, ft.emoji, ft.created_at
+		SELECT pt.message_id, ft.id, ft.channel_id, ft.name, ft.emoji, ft.color, ft.position, ft.moderated, ft.created_at
 		FROM forum_post_tags pt
 		JOIN forum_tags ft ON ft.id = pt.tag_id
 		WHERE pt.message_id = ANY($1)
-		ORDER BY ft.name`, ids)
+		ORDER BY ft.position, ft.name`, ids)
 	if err != nil {
 		return fmt.Errorf("load forum post tags: %w", err)
 	}
@@ -85,7 +92,7 @@ func loadPostTags(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.
 	for rows.Next() {
 		var msgID uuid.UUID
 		var tag ForumTag
-		if err := rows.Scan(&msgID, &tag.ID, &tag.ChannelID, &tag.Name, &tag.Emoji, &tag.CreatedAt); err != nil {
+		if err := rows.Scan(&msgID, &tag.ID, &tag.ChannelID, &tag.Name, &tag.Emoji, &tag.Color, &tag.Position, &tag.Moderated, &tag.CreatedAt); err != nil {
 			return err
 		}
 		if i, ok := idx[msgID]; ok {
