@@ -55,15 +55,19 @@ test('the connection panel counts audio packets up while the microphone sends', 
   await sidebarVoice(member).click()
   await expectTalkLive(member)
 
-  await admin.getByTestId('voice-panel-ping').click()
-  const mic = admin.locator('[data-stat="mic"]')
-  await expect(mic).toBeVisible()
-  await expect.poll(() => panelPacketsSent(admin), { timeout: 20_000 }).toBeGreaterThan(0)
-  const first = await panelPacketsSent(admin)
-  // The panel refreshes every second; two seconds on, the count has grown.
-  await expect.poll(() => panelPacketsSent(admin), { timeout: 15_000, intervals: [500] }).toBeGreaterThan(first + 20)
-
-  await leaveTalks([admin, member])
-  await ctxA.close()
-  await ctxB.close()
+  try {
+    await admin.getByTestId('voice-panel-ping').click()
+    const mic = admin.locator('[data-stat="mic"]')
+    await expect(mic).toBeVisible()
+    await expect.poll(() => panelPacketsSent(admin), { timeout: 20_000 }).toBeGreaterThan(0)
+    const first = await panelPacketsSent(admin)
+    // The panel refreshes every second; two seconds on, the count has grown.
+    await expect.poll(() => panelPacketsSent(admin), { timeout: 15_000, intervals: [500] }).toBeGreaterThan(first + 20)
+  } finally {
+    // The open panel's backdrop would swallow the click on Leave.
+    await admin.getByRole('dialog').getByRole('button', { name: 'Schließen' }).last().click({ timeout: 5000 }).catch(() => {})
+    await leaveTalks([admin, member])
+    await ctxA.close()
+    await ctxB.close()
+  }
 })
