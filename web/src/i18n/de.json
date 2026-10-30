@@ -798,7 +798,27 @@
     "details": "Details",
     "codec": "Audio-Codec",
     "sendRecv": "Senden / Empfangen",
-    "packets": "Pakete gesendet / empfangen",
+    "mic": {
+      "title": "Mikrofon",
+      "sending": "Sendet",
+      "pausedSilent": "Pausiert (Sprachgate: still)",
+      "pausedPtt": "Pausiert (Push-to-Talk nicht gedrückt)",
+      "pausedTest": "Pausiert (Mikrofontest läuft)",
+      "muted": "Stumm, es wird nichts gesendet",
+      "none": "Kein Mikrofon"
+    },
+    "flow": {
+      "packets": {
+        "one": "{n} Paket",
+        "other": "{n} Pakete"
+      },
+      "mic": "Audio gesendet",
+      "camera": "Kamera gesendet",
+      "screen": "Bildschirm gesendet",
+      "screenAudio": "Bildschirmton gesendet",
+      "audioIn": "Audio empfangen",
+      "videoIn": "Videodaten empfangen"
+    },
     "receivedVideo": "Empfangenes Video",
     "localCandidate": "Lokaler Kandidat",
     "remoteCandidate": "Server-Kandidat",
