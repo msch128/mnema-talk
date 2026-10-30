@@ -33,8 +33,10 @@ var (
 )
 
 // tempTalkNumberDigits is the room a temporary Talk's number may take in the
-// name, so the base is cut the same way for every number of one lobby.
-var tempTalkNumberDigits = len(strconv.Itoa(MaxTempTalksPerLobby))
+// name, so the base is cut the same way for every number. Numbers run across
+// the whole category, so lobbies sharing a long prefix can pass the per-lobby
+// cap; three digits cover a category far beyond that.
+const tempTalkNumberDigits = 3
 
 // tempTalkBase is the lobby name as the stem of its temporary Talks' names,
 // cut on a rune boundary so "<base> <n>" fits MaxChannelNameLen.
@@ -166,7 +168,17 @@ func nextTalkName(ctx context.Context, tx pgx.Tx, lobbyName string, category *uu
 		return "", err
 	}
 	base := tempTalkBase(lobbyName)
-	return base + " " + strconv.Itoa(lowestFreeTalkNumber(base, names)), nil
+	return fitTalkName(base, lowestFreeTalkNumber(base, names)), nil
+}
+
+// fitTalkName is "<base> n", with the base cut further in the unlikely case
+// that n has more digits than tempTalkNumberDigits reserves.
+func fitTalkName(base string, n int) string {
+	num := strconv.Itoa(n)
+	if r := []rune(base); len(r)+1+len(num) > MaxChannelNameLen {
+		base = strings.TrimSpace(string(r[:MaxChannelNameLen-1-len(num)]))
+	}
+	return base + " " + num
 }
 
 func markTemp(ctx context.Context, tx pgx.Tx, ch *Channel, lobby, creator uuid.UUID) error {

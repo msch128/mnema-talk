@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -31,7 +32,7 @@ func TestTempTalkBaseKeepsTheNumberWithinTheNameLimit(t *testing.T) {
 	}
 	for _, lobby := range []string{strings.Repeat("a", 200), strings.Repeat("\u00e4", 64), strings.Repeat("\U0001F600", 64), strings.Repeat("ab ", 40)} {
 		base := tempTalkBase(lobby)
-		name := base + " 50"
+		name := fitTalkName(base, 999)
 		if utf8.RuneCountInString(name) > MaxChannelNameLen {
 			t.Fatalf("%q has %d runes", name, utf8.RuneCountInString(name))
 		}
@@ -39,8 +40,18 @@ func TestTempTalkBaseKeepsTheNumberWithinTheNameLimit(t *testing.T) {
 			t.Fatalf("bad base %q", base)
 		}
 	}
-	short := strings.Repeat("x", 61)
+	short := strings.Repeat("x", 60)
 	if tempTalkBase(short) != short {
 		t.Fatalf("a name that fits is kept whole")
+	}
+}
+
+func TestFitTalkNameHoldsForLargeNumbers(t *testing.T) {
+	base := tempTalkBase(strings.Repeat("a", 200))
+	for _, n := range []int{1, 99, 100, 999, 1000, 123456} {
+		name := fitTalkName(base, n)
+		if utf8.RuneCountInString(name) > MaxChannelNameLen || !strings.HasSuffix(name, " "+strconv.Itoa(n)) {
+			t.Fatalf("n=%d: %q (%d runes)", n, name, utf8.RuneCountInString(name))
+		}
 	}
 }
