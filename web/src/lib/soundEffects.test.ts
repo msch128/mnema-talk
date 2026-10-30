@@ -203,3 +203,40 @@ describe('sound playback lifecycle and browser failures', () => {
     expect(oscillator.start).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('message sound and the autoplay lock', () => {
+  it('skips the message chime while the context is still suspended, and plays it once running', () => {
+    playSoundEffect('mute')
+    const ctx = context()
+    ctx.state = 'suspended'
+    ctx.oscillators.length = 0
+    playSoundEffect('message')
+    expect(ctx.oscillators).toHaveLength(0)
+    ctx.state = 'running'
+    playSoundEffect('message')
+    expect(ctx.oscillators).toHaveLength(2)
+  })
+
+  it('stays armed until the context runs, then drops its listeners', async () => {
+    const { unlockAudioOnFirstGesture } = await import('./soundEffects')
+    const handlers = new Map<string, () => void>()
+    const target = {
+      addEventListener: vi.fn((name: string, fn: () => void) => { handlers.set(name, fn) }),
+      removeEventListener: vi.fn()
+    }
+    unlockAudioOnFirstGesture(target)
+    const fire = () => handlers.get('pointerdown')?.()
+    MockAudioContext.instances = []
+    fire()
+    const ctx = context()
+    ctx.state = 'suspended'
+    ctx.resume.mockImplementation(async () => {})
+    fire()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(target.removeEventListener).not.toHaveBeenCalled()
+    ctx.resume.mockImplementation(async () => { ctx.state = 'running' })
+    fire()
+    await vi.waitFor(() => expect(target.removeEventListener).toHaveBeenCalledTimes(3))
+  })
+})

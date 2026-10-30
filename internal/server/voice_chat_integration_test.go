@@ -112,8 +112,9 @@ func TestVoiceChannelChatHasReadState(t *testing.T) {
 	postMessage(t, admin, voice, map[string]any{"content": "@max kommst du?"})
 	postMessage(t, max, voice, map[string]any{"content": "gleich"})
 
-	if got := max.readState(t, voice); got.UnreadCount != 2 || got.MentionCount != 1 {
-		t.Fatalf("voice unread=%d mentions=%d, want 2 and 1", got.UnreadCount, got.MentionCount)
+	// max answered, which read the voice chat up to the answer.
+	if got := max.readState(t, voice); got.UnreadCount != 0 || got.MentionCount != 0 {
+		t.Fatalf("voice unread=%d mentions=%d, want 0 and 0 after answering", got.UnreadCount, got.MentionCount)
 	}
 	if got := admin.readState(t, voice); got.UnreadCount != 1 {
 		t.Fatalf("admin voice unread=%d, want 1", got.UnreadCount)

@@ -53,7 +53,7 @@ export function buildNotificationBody(msg: Message): string {
  * addresses by name. Without a list from the server (an older one) every reply
  * is treated as before.
  */
-function threadAllows(cx: Cx, msg: Message): boolean {
+export function threadAllows(cx: Cx, msg: Message): boolean {
   if (!msg.parent_id || !cx.cs.followKnown.value) return true
   return cx.cs.followedThreads.value.has(msg.parent_id) || messageMentionsMeDirectly(cx, msg)
 }
@@ -73,8 +73,9 @@ function canShowBrowserNotification(cx: Cx, msg: Message, isMention: boolean): b
   })
 }
 
-export function triggerBrowserNotification(cx: Cx, msg: Message, isMention: boolean) {
-  if (!canShowBrowserNotification(cx, msg, isMention)) return
+/** Raises the OS notification when the rules allow it; true when it did (the system then plays its own sound). */
+export function triggerBrowserNotification(cx: Cx, msg: Message, isMention: boolean): boolean {
+  if (!canShowBrowserNotification(cx, msg, isMention)) return false
   platform.notify({
     title: buildNotificationTitle(cx, msg),
     // Like a push: with the text off (the member's choice, or the operator's), only who wrote and where.
@@ -83,6 +84,7 @@ export function triggerBrowserNotification(cx: Cx, msg: Message, isMention: bool
     messageId: msg.id,
     onClick: () => goToMessage(cx, msg),
   })
+  return true
 }
 
 /** What the platform allows now: the desktop client's operating system can answer differently than at start. */

@@ -13,6 +13,7 @@ import { gamingSurface } from './lib/desktopGaming'
 import { platform } from './lib/platform'
 import { captureInstallPrompt, registerServiceWorker } from './lib/pwa'
 import { installRangeFill } from './lib/rangeFill'
+import { unlockAudioOnFirstGesture } from './lib/soundEffects'
 import './style.css'
 import { i18nPlugin, setLocale, browserLocale } from './i18n'
 import { tooltip } from './directives/tooltip'
@@ -33,5 +34,6 @@ createApp(root)
   .mount('#app')
 
 installRangeFill()
+unlockAudioOnFirstGesture()
 captureInstallPrompt()
 registerServiceWorker()

@@ -626,7 +626,7 @@ single run, so read the figures as orders of magnitude:
 
 | What | Result |
 | --- | --- |
-| Rows written by one message, 2 members vs 10,002 members | the same: 1 message row and 1 `users` row (the sender), 0 read markers |
+| Rows written by one message, 2 members vs 10,002 members | the same: 1 message row and 1 `users` row (the sender), 0 read markers for the members; the sender's own marker moves up to their message, which writes a row only if others posted since it (see below) |
 | Median `POST /messages` time, 2 vs 10,002 members | 3.2 ms vs 2.8 ms (no difference beyond noise) |
 | One message with `@all` to 10,001 members | 1 statement, 10,000 `message_mentions` rows, 185 ms (the only send that writes per recipient; needs the right to use `@all`) |
 | All 10,000 members read the channel (32 concurrent workers) | 10,000 marker rows, 1.0 s in total (about 0.1 ms each) |
@@ -634,6 +634,8 @@ single run, so read the figures as orders of magnitude:
 | `GET /api/read-state` for one member, 600 unread in a 50,000-message channel | 45 ms (cold), index scan on `idx_messages_channel_roots` |
 | Same, 50,000 unread | 29 ms (warm) |
 | First-unread lookup in that channel | 0.04 ms, 6 buffers, index scan |
+
+Sending a message reads the channel for its author: `PublishMessage` calls `MarkRead` with the new message (top-level messages only; thread replies are no channel unread), which writes the sender's marker only when someone else posted since the last one, and sends `read_state` to the author's other sessions. The client does the same at once and drops the "new since" divider, so the "Jump to first unread" pill goes.
 
 No migration was needed: the existing indexes serve every query (the plan is
 printed by the test with `-v`). The remaining cost that grows with unread

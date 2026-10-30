@@ -121,6 +121,9 @@ func TestPrivateChannelIsInvisibleEverywhereToOutsiders(t *testing.T) {
 		t.Fatalf("insider's channels: %v", got)
 	}
 	wantStatus(t, "insider history", in.get(base+"/messages"), http.StatusOK)
+	if rs := in.readState(t, secret); rs.MentionCount != 1 {
+		t.Fatalf("the insider's mention: %+v", rs)
+	}
 	wantStatus(t, "insider post", in.post(base+"/messages", map[string]any{"content": "got it"}), http.StatusCreated)
 	wantStatus(t, "insider attachment", in.get(shot.Attachments[0].URL), http.StatusOK)
 	wantStatus(t, "insider thread", in.get("/api/messages/"+root.String()+"/thread"), http.StatusOK)
@@ -128,9 +131,6 @@ func TestPrivateChannelIsInvisibleEverywhereToOutsiders(t *testing.T) {
 	in.get("/api/search?q=secret").decode(t, &search)
 	if len(search.Messages) != 1 {
 		t.Fatalf("insider search: %+v", search)
-	}
-	if rs := in.readState(t, secret); rs.MentionCount != 1 {
-		t.Fatalf("the insider's mention: %+v", rs)
 	}
 	// Nobody who cannot see a channel is notified about a mention in it.
 	if rs := out.readState(t, secret); rs.MentionCount != 0 {
@@ -234,7 +234,8 @@ func TestMentionPolicy(t *testing.T) {
 	// Editing cannot smuggle it in.
 	id := postMessage(t, other, ch, map[string]any{"content": "calm"})
 	wantStatus(t, "edit", other.put("/api/channels/"+ch.String()+"/messages/"+id.String(), map[string]string{"content": "@all now"}), http.StatusOK)
-	if rs := f.insider.readState(t, ch); rs.MentionCount != 1 {
+	// The insider's own @all post read the channel up to it, mention included; a smuggled @all would count again.
+	if rs := f.insider.readState(t, ch); rs.MentionCount != 0 || rs.UnreadCount != 1 {
 		t.Fatalf("an edit smuggled @all in: %+v", rs)
 	}
 }
