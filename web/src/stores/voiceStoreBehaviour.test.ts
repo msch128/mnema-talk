@@ -281,6 +281,17 @@ describe('subscription replay and stale media arrivals', () => {
     expect(sink).toHaveBeenCalledTimes(2)
   })
 
+  it('replays an Auto screen watch with its fit, still as a subscription', () => {
+    const voice = useVoiceStore()
+    const sink = vi.fn()
+    voice.setSubscriptionSink(sink)
+    voice.watchScreen('live')
+    voice.setScreenFit('live', 1)
+    sink.mockClear()
+    voice.resendSubscriptions()
+    expect(sink.mock.calls.map(([payload]) => payload)).toEqual([{ kind: 'screen', user_id: 'live', on: true, fit: 1 }])
+  })
+
   it('ignores absent identities and unselected streams without changing current subscriptions', () => {
     const voice = useVoiceStore()
     const sink = vi.fn()

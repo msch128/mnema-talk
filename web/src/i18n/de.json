@@ -1069,6 +1069,7 @@
       "auto": "Automatisch",
       "autoHint": "Passt sich deiner Verbindung an",
       "autoNow": "Gerade {name}",
+      "autoWith": "Automatisch ({name})",
       "source": "Quelle",
       "switching": "Wechsle …"
     },

@@ -48,6 +48,7 @@ function mediaState() {
     screenLayers: ref<Record<string, ScreenLayer[]>>({}),
     receivedLayer: ref<Record<string, { layer: number, auto: boolean }>>({}),
     screenChoice: ref<Record<string, number | 'auto'>>({}),
+    screenFit: ref<Record<string, number>>({}),
     serverScreenLayers: ref(0),
     layersWanted: ref<number[] | null>(null),
     localCameraStream: shallowRef<MediaStream | null>(null),

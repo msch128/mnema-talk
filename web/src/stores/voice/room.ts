@@ -171,6 +171,7 @@ export function setChannel(cs: VoiceState, channelId: string | null) {
     cs.screenLayers.value = {}
     cs.receivedLayer.value = {}
     cs.screenChoice.value = {}
+    cs.screenFit.value = {}
     cs.layersWanted.value = null
     cs.speakingUsers.value = {}
   }
@@ -206,6 +207,7 @@ export function disconnect(cs: VoiceState) {
   cs.screenLayers.value = {}
   cs.receivedLayer.value = {}
   cs.screenChoice.value = {}
+  cs.screenFit.value = {}
   cs.layersWanted.value = null
   cs.userVideoStreams.value = {}
   cs.speakingUsers.value = {}

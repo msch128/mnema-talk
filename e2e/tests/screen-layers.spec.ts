@@ -7,6 +7,7 @@ const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
+const AUTO_LABEL = /^Automatisch( \(\d+p\))?$/
 const suffix = Date.now().toString(36)
 const VOICE_CHANNEL = `Layers ${suffix}`
 // Registrations are limited to ten an hour from one address and the whole
@@ -122,8 +123,11 @@ test.afterEach(async () => {
 test('viewers pick their own layer of a shared screen and switch mid-stream', async ({ browser }) => {
   test.setTimeout(240_000)
   const sharerCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
-  const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
-  const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
+  // A looks at a 2x screen with a large stage: Auto may use the source. B has
+  // a small window on a 1x screen: Auto has no use for it (the stage shows
+  // fewer pixels than the source has).
+  const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 }, deviceScaleFactor: 2 })
+  const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 700 }, deviceScaleFactor: 1 })
   cleanups.push(() => sharerCtx.close(), () => aCtx.close(), () => bCtx.close())
   await sharerCtx.addInitScript(fakeScreen)
   const sharer = await sharerCtx.newPage()
@@ -164,12 +168,16 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
     await expect(page.getByTestId('stage')).toBeVisible({ timeout: 20_000 })
     // The sharer declared its layers: the picker appears (Auto by default).
     await expect(page.getByTestId('screen-layer-button')).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByTestId('screen-layer-label')).toHaveText('Automatisch')
+    await expect(page.getByTestId('screen-layer-label')).toHaveText(AUTO_LABEL)
   }
 
-  // Automatic starts on the sharer's own quality: the whole 1280x720 picture.
+  // Automatic gives each viewer the best layer its stage can use: A (2x
+  // screen, large stage) the sharer's own 1280x720 picture, B (small stage)
+  // a smaller one, which the label names.
   await expect.poll(() => videoSize(a), { timeout: 30_000 }).toBe('1280x720')
-  await expect.poll(() => videoSize(b), { timeout: 30_000 }).toBe('1280x720')
+  await expect(a.getByTestId('screen-layer-label')).toHaveText('Automatisch (720p)', { timeout: 20_000 })
+  await expect.poll(async () => Number((await videoSize(b)).split('x')[0]), { timeout: 30_000 }).toBeLessThan(1280)
+  await expect(b.getByTestId('screen-layer-label')).toHaveText(/^Automatisch \(\d+p\)$/, { timeout: 20_000 })
 
   // The media is sealed in the sharer's browser, on every layer's line.
   const sealed = await sharer.evaluate(() => window.__pcs.flatMap(pc => pc.getSenders()).filter(s => s.track?.kind === 'video').map(s => !!s.transform))
@@ -193,14 +201,13 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
 
   // Switching while the stream runs never stalls it for long.
   await watchFrames(a)
-  // Auto after a pick carries on from the picked layer (the server only moves
-  // it up after a quiet stretch, see adaptCleanFor), so it still shows 360p.
+  // Auto after a pick carries on from the picked layer and climbs from there.
   const sizes: Array<['auto' | 0 | 1 | 2, string]> = [[1, '852x480'], [0, '1280x720'], [2, '640x360'], ['auto', '640x360'], [1, '852x480']]
   for (const [layer, size] of sizes) {
     await chooseLayer(a, layer)
     await expect.poll(async () => sameSize(await videoSize(a), size), { timeout: 30_000 }).toBe(true)
     await a.waitForTimeout(1500)
-    if (layer === 'auto') await expect(a.getByTestId('screen-layer-label')).toHaveText('Automatisch')
+    if (layer === 'auto') await expect(a.getByTestId('screen-layer-label')).toHaveText(AUTO_LABEL)
   }
   const seen = await frames(a)
   console.log(`[layers] ${seen.frames} frames while switching, longest gap ${Math.round(seen.maxGap)} ms`)
@@ -208,6 +215,16 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   expect(seen.maxGap).toBeLessThan(1500)
   // B was not disturbed by A's choices.
   expect(await videoSize(b)).toBe('1280x720')
+
+  // A, with a stage that can use the source, goes back to Auto and reaches the
+  // top layer on its own within a few seconds, and says so.
+  await chooseLayer(a, 'auto')
+  await expect.poll(() => videoSize(a), { timeout: 45_000, message: 'Auto did not climb to the source' }).toBe('1280x720')
+  await expect(a.getByTestId('screen-layer-label')).toHaveText('Automatisch (720p)', { timeout: 20_000 })
+
+  // B goes back to Auto too and drops to what its small stage can use.
+  await chooseLayer(b, 'auto')
+  await expect.poll(async () => Number((await videoSize(b)).split('x')[0]), { timeout: 30_000 }).toBeLessThan(1280)
 
   // Leave the sidebar as it was: other specs drag channels around by position.
   for (const page of [a, b, sharer]) await page.getByRole('button', { name: 'Verlassen' }).first().click()
