@@ -1,0 +1,23 @@
+doc/talks.md
+  s_06fcde5dbef956::t_d3cfc39f9647cb 87
+web/src/components/SidebarChannelRowTalks.test.ts
+  s_06fcde5dbef956::t_0883fb32ee13dd 7-9,101-117
+web/src/lib/talks.ts
+  s_06fcde5dbef956::t_45dd58017ce358 9,51,56-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e259198952599d2eca5e7c53ee8a14a36390ee00",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
