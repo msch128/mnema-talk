@@ -270,7 +270,7 @@ SQL
 # stop_children asks the tools to stop (TERM), and kills what is still running
 # after 5 s.
 stop_children() {
-  local p i
+  local p
   for p in "${CHILD_PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null; done
   for _ in 1 2 3 4 5; do
     local alive=0
