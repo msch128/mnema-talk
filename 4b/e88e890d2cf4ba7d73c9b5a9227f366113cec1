@@ -1,0 +1,45 @@
+cmd/server/main.go
+  s_e7d8df1dbb402e::t_b41dae50fa0da2 11,214-218,335-351
+cmd/server/reach_test.go
+  s_e7d8df1dbb402e::t_afb51d1a7765d3 1-30
+internal/server/connprobe.go
+  s_e7d8df1dbb402e::t_b698b365640957 5,59,66,68-70,111-116
+internal/server/connprobe_integration_test.go
+  s_e7d8df1dbb402e::t_79bc003eda61cd 133-138,140-141,207-220
+internal/sfu/probe.go
+  s_e7d8df1dbb402e::t_12fc3785c1c865 28-29,47,56,61,67,70,133,137,156-182
+internal/sfu/probe_test.go
+  s_e7d8df1dbb402e::t_735315d797ebe3 64,104,132,135-143,145-146,148-161,163-164
+internal/sfu/sfu.go
+  s_e7d8df1dbb402e::t_9ba58e0872fab9 205-207
+web/src/lib/connectionTest.test.ts
+  s_363ec6df9b3acb::t_f2708776d761e7 102
+web/src/lib/wsReport.test.ts
+  s_e7d8df1dbb402e::t_4443ae03e26021 28,32
+web/src/lib/wsReport.ts
+  s_e7d8df1dbb402e::t_7a932fa6e50a1b 7,10-11,13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4be88e890d2cf4ba7d73c9b5a9227f366113cec1",
+  "prompts": {},
+  "sessions": {
+    "s_363ec6df9b3acb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aee114c7cafab75c9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e7d8df1dbb402e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-app-66e452174912e1a3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
