@@ -85,7 +85,8 @@ export function enhanceEmojiPicker(picker: PickerLike, onPreview: (preview: Emoj
   function onKeydown(event: Event) {
     if (!(event instanceof KeyboardEvent) || event.key !== 'Enter' || event.isComposing) return
     const origin = event.composedPath()[0]
-    if (!(origin instanceof HTMLInputElement)) return
+    // An empty search has no result to choose; a reflexive Enter must not send the first emoji.
+    if (!(origin instanceof HTMLInputElement) || !origin.value.trim()) return
     const first = root?.querySelector<HTMLElement>(`.tabpanel ${OPTION}`) ?? root?.querySelector<HTMLElement>(OPTION)
     if (!first) return
     event.preventDefault()

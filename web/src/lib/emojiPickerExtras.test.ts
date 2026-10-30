@@ -60,7 +60,13 @@ describe('enhanceEmojiPicker', () => {
     const clicked = vi.fn()
     root(el).getElementById('tada')?.addEventListener('click', clicked)
     const input = root(el).querySelector('input') as HTMLInputElement
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }))
+    const enter = () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }))
+    enter()
+    input.value = '   '
+    enter()
+    expect(clicked, 'Enter on an empty or blank search clicks nothing').not.toHaveBeenCalled()
+    input.value = 'tada'
+    enter()
     expect(clicked).toHaveBeenCalledOnce()
     root(el).getElementById('custom')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }))
     expect(clicked).toHaveBeenCalledOnce()
