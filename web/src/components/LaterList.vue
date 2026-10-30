@@ -54,8 +54,9 @@ async function snooze(entry: LaterReminder, preset: typeof SNOOZES[number]['pres
   if (!entry.message) return
   const at = presetTime(preset)
   try {
-    await later.snooze(entry.id, entry.message.id, at)
-    toasts.success(t('later.snoozed', { time: when(at.toISOString()) }))
+    const { cleanupFailed } = await later.snooze(entry.id, entry.message.id, at)
+    if (cleanupFailed) toasts.info(t('later.snoozeNotCleared', { time: when(at.toISOString()) }))
+    else toasts.success(t('later.snoozed', { time: when(at.toISOString()) }))
   } catch (error) {
     toasts.error(caughtErrorMessage(error, t('later.snoozeFailed')))
   }

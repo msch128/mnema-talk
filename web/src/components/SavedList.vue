@@ -53,8 +53,9 @@ function pick(entry: ChatSavedMessage) {
   chatStore.goToMessage(entry.message)
 }
 
-// Scrolls to the entry the toast asked for, once the list has it.
-watch([() => props.focusId, () => saved.items, () => saved.loading], async ([id]) => {
+// Scrolls to the entry the toast asked for, once the list has it; asked for once, so a later reload or search is left alone.
+const wanted = ref(props.focusId)
+watch([wanted, () => saved.items, () => saved.loading], async ([id]) => {
   if (!id || saved.loading || !saved.items.some(e => e.message_id === id)) return
   query.value = ''
   await nextTick()
@@ -62,6 +63,7 @@ watch([() => props.focusId, () => saved.items, () => saved.loading], async ([id]
   if (!row) return
   row.scrollIntoView?.({ block: 'nearest' })
   flashId.value = id
+  wanted.value = undefined
 }, { immediate: true })
 
 const sorts: { id: SavedSort; label: string }[] = [

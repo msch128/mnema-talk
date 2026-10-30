@@ -38,15 +38,19 @@ describe('saving a message', () => {
     expect(pendingPanel.value).toEqual({ tab: 'saved', messageId: msg.id })
   })
 
-  it('takes a saved message off again, without a View action', async () => {
-    apiMock.mockResolvedValue(saved)
+  it('takes a saved message off again and offers Undo, which puts the note back', async () => {
+    apiMock.mockResolvedValue({ ...saved, note: 'for Friday' })
     await toggleSavedMessage(msg)
     apiMock.mockResolvedValue(null)
     await toggleSavedMessage(msg)
     const toast = useToastStore().toasts.at(-1)
     expect(toast?.text).toBe(t('saved.removed'))
-    expect(toast?.action).toBeNull()
+    expect(toast?.action?.label).toBe(t('saved.undo'))
     expect(useSavedStore().isSaved(msg.id)).toBe(false)
+    apiMock.mockResolvedValue({ ...saved, note: 'for Friday' })
+    await toast?.action?.onClick()
+    expect(apiMock).toHaveBeenLastCalledWith(`/api/me/saved/${msg.id}`, expect.objectContaining({ method: 'PUT', json: { note: 'for Friday' } }))
+    expect(useSavedStore().isSaved(msg.id)).toBe(true)
   })
 
   it('tells the member when saving fails and shows no hint', async () => {

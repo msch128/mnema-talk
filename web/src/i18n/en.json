@@ -2076,7 +2076,8 @@
     "snooze": "Snooze",
     "snoozed": "Snoozed. We’ll remind you on {time}.",
     "snoozeFailed": "Couldn’t snooze the reminder. Try again.",
-    "openMessage": "Open"
+    "openMessage": "Open",
+    "snoozeNotCleared": "Snoozed to {time}, but the old reminder couldn’t be removed and may show up once more."
   },
   "saved": {
     "title": "Saved messages",
@@ -2086,7 +2087,7 @@
     "save": "Save message",
     "removeFromSaved": "Remove from saved",
     "remove": "Remove",
-    "added": "Saved – find it under Saved messages",
+    "added": "Saved – find it under Saved & reminders",
     "removed": "Removed from your saved messages.",
     "saveFailed": "Couldn’t save the message. Try again.",
     "removeFailed": "Couldn’t remove the message. Try again.",
@@ -2117,7 +2118,8 @@
     "hintTitle": "Saved. It lives here.",
     "hintBody": "Your saved messages are under this bookmark, together with your reminders. Only you can see them.",
     "hintDismiss": "Got it",
-    "searchPlaceholder": "Search saved"
+    "searchPlaceholder": "Search saved",
+    "undo": "Undo"
   },
   "mentions": {
     "inbox": "Mentions",

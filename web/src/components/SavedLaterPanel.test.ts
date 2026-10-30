@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import SavedLaterPanel from './SavedLaterPanel.vue'
+import { ApiError } from '../lib/api'
+import { useToastStore } from '../stores/toast'
 import { useAuthStore } from '../stores/auth'
 import { useOnboardingStore } from '../stores/onboarding'
 import { useSavedStore } from '../stores/saved'
@@ -141,6 +143,32 @@ describe('snoozing a reminder that is due', () => {
     const items = w.findAll('[data-testid="reminder-item"]')
     expect(items).toHaveLength(1)
     expect(items[0]!.find('[data-testid="reminder-snooze"]').exists()).toBe(false)
+  })
+
+  async function snoozeWithDeleteAnswer(answer: unknown) {
+    reminders = [dueReminder]
+    const w = mountPanel()
+    await flushPromises()
+    await w.get('[data-testid="saved-button"]').trigger('click')
+    await w.get('[data-testid="panel-tab-later"]').trigger('click')
+    apiMock.mockResolvedValueOnce({ ...dueReminder, id: fixtureId(61), delivered_at: null })
+    apiMock.mockImplementationOnce(() => answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer))
+    await w.get('[data-testid="reminder-snooze-in1h"]').trigger('click')
+    await flushPromises()
+    return w
+  }
+
+  it('counts an old reminder that is already gone as removed', async () => {
+    const w = await snoozeWithDeleteAnswer(new ApiError(404, 'not_found', 'gone'))
+    expect(w.findAll('[data-testid="reminder-item"]')).toHaveLength(1)
+    expect(useToastStore().toasts.at(-1)?.type).toBe('success')
+  })
+
+  it('drops the old reminder and says so when it cannot be removed, instead of reporting a failure', async () => {
+    const w = await snoozeWithDeleteAnswer(new Error('offline'))
+    expect(w.findAll('[data-testid="reminder-item"]')).toHaveLength(1)
+    expect(useToastStore().toasts.at(-1)).toMatchObject({ type: 'info' })
+    expect(useToastStore().toasts.at(-1)?.text).toContain('old reminder')
   })
 
   it('marks a due reminder done', async () => {

@@ -9,6 +9,14 @@ import { t } from '../i18n'
 
 const VIEW_TOAST_MS = 8000
 
+async function undoRemove(messageId: string, note: string) {
+  try {
+    await useSavedStore().save(messageId, note)
+  } catch (err) {
+    useToastStore().error(caughtErrorMessage(err, t('saved.saveFailed')))
+  }
+}
+
 /** Adds the message to the member's private saved list, or takes it off. Only on servers that have the feature. */
 export async function toggleSavedMessage(msg: Pick<Message, 'id'>): Promise<void> {
   const saved = useSavedStore()
@@ -16,8 +24,13 @@ export async function toggleSavedMessage(msg: Pick<Message, 'id'>): Promise<void
   const was = saved.isSaved(msg.id)
   try {
     if (was) {
+      const note = saved.items.find(e => e.message_id === msg.id)?.note ?? ''
       await saved.remove(msg.id)
-      toasts.success(t('saved.removed'))
+      // The private note goes with the save: Undo puts both back.
+      toasts.success(t('saved.removed'), {
+        duration: VIEW_TOAST_MS,
+        action: { label: t('saved.undo'), onClick: () => undoRemove(msg.id, note) }
+      })
     } else {
       await saved.save(msg.id)
       saved.hintPending = true

@@ -2076,7 +2076,8 @@
     "snooze": "Verschieben",
     "snoozed": "Verschoben. Wir erinnern dich am {time}.",
     "snoozeFailed": "Die Erinnerung konnte nicht verschoben werden. Versuche es erneut.",
-    "openMessage": "Öffnen"
+    "openMessage": "Öffnen",
+    "snoozeNotCleared": "Verschoben auf {time}, aber die alte Erinnerung konnte nicht entfernt werden und erscheint evtl. noch einmal."
   },
   "saved": {
     "title": "Gespeicherte Nachrichten",
@@ -2086,7 +2087,7 @@
     "save": "Nachricht speichern",
     "removeFromSaved": "Aus Gespeichert entfernen",
     "remove": "Entfernen",
-    "added": "Gespeichert – du findest sie unter Gespeicherte Nachrichten",
+    "added": "Gespeichert – du findest sie unter Gespeichert & Erinnerungen",
     "removed": "Aus deinen gespeicherten Nachrichten entfernt.",
     "saveFailed": "Die Nachricht konnte nicht gespeichert werden. Versuche es noch einmal.",
     "removeFailed": "Die Nachricht konnte nicht entfernt werden. Versuche es noch einmal.",
@@ -2117,7 +2118,8 @@
     "hintTitle": "Gespeichert. Hier findest du sie.",
     "hintBody": "Deine gespeicherten Nachrichten liegen unter diesem Lesezeichen, zusammen mit deinen Erinnerungen. Nur du siehst sie.",
     "hintDismiss": "Verstanden",
-    "searchPlaceholder": "In Gespeichertem suchen"
+    "searchPlaceholder": "In Gespeichertem suchen",
+    "undo": "Rückgängig"
   },
   "mentions": {
     "inbox": "Erwähnungen",

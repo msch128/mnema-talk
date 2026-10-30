@@ -8,6 +8,7 @@ import { useChatStore } from '../stores/chat'
 import { useSavedStore } from '../stores/saved'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
+import { openSavedPanel } from '../lib/savedPanel'
 import { dateTime } from '../lib/time'
 import { locale, setLocale, t } from '../i18n'
 import { channelFixture, fixtureId, messageFixture, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
@@ -182,6 +183,18 @@ describe('the saved messages tab', () => {
     await search.setValue('nothing like this')
     expect(w.find('[data-testid="saved-item"]').exists()).toBe(false)
     expect(w.get('[data-testid="saved-no-match"]').text()).toBe(t('saved.noMatches', { query: 'nothing like this' }))
+  })
+
+  it('scrolls to the entry a toast asked for once, and leaves a later search alone', async () => {
+    serve(page([entry(30, 'one'), entry(29, 'two')]))
+    const w = mountSaved()
+    openSavedPanel({ tab: 'saved', messageId: fixtureId(30) })
+    await flushPromises()
+    await w.get('[data-testid="saved-search"]').setValue('two')
+    useSavedStore().items = [...useSavedStore().items]
+    await flushPromises()
+    expect((w.get('[data-testid="saved-search"]').element as HTMLInputElement).value).toBe('two')
+    expect(w.findAll('[data-testid="saved-item"]')).toHaveLength(1)
   })
 
   it('groups by channel on request and keeps messages that are gone together at the end', async () => {
