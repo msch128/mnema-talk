@@ -865,6 +865,9 @@ here.
 | `reverse_proxy.ok` | No proxy header problems seen. |
 | `reverse_proxy.not_trusted` | Requests carry `X-Forwarded-For` from a proxy that is not trusted: set `TRUSTED_PROXY_CIDRS` to the proxy's own address. |
 | `reverse_proxy.broad` | `TRUSTED_PROXY_CIDRS` covers a wide range: list only the proxy's address. |
+| `network.cgnat` | The WAN address is in `100.64.0.0/10` (carrier-grade NAT): port forwarding cannot work. See [Can I host at home?](#can-i-host-at-home). |
+| `network.no_ipv4` | No public IPv4 while IPv6 works (DS-Lite): port forwarding over IPv4 cannot work. See [Can I host at home?](#can-i-host-at-home). |
+| `network.address_mismatch` | The host's own address differs from the one the internet sees: set `WEBRTC_NAT_1TO1_IP` to the host address if it is reachable from outside, or forward the voice ports on the gateway in front. |
 
 ### The doctor command
 
