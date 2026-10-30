@@ -1,0 +1,19 @@
+web/src/components/MediaPlaceholder.test.ts
+  s_82e9d48cb7fc7f::t_20051577091f92 44-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "faee3edf9bb4addf2d80a5072947819ecf4d83c8",
+  "prompts": {},
+  "sessions": {
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
