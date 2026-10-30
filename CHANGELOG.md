@@ -1,5 +1,66 @@
 # Changelog
 
+## [2.2.0](https://github.com/msch128/mnema-talk/compare/v2.1.1...v2.2.0) (2026-10-30)
+
+
+### Features
+
+* **chat:** edit your last message with ArrowUp ([#546](https://github.com/msch128/mnema-talk/issues/546)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **chat:** several attachments per message through staged uploads ([#551](https://github.com/msch128/mnema-talk/issues/551)) ([f941a51](https://github.com/msch128/mnema-talk/commit/f941a51021d2b5684c2589edb2be453323c3e0bf))
+* **community:** let the Owner set a community icon ([#529](https://github.com/msch128/mnema-talk/issues/529)) ([f941a51](https://github.com/msch128/mnema-talk/commit/f941a51021d2b5684c2589edb2be453323c3e0bf))
+* **dm:** ring the members of a conversation when a Talk is started in it ([#540](https://github.com/msch128/mnema-talk/issues/540)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **forum:** tag colours, order and moderated tags, rules, solved posts, search, unread and post uploads ([#552](https://github.com/msch128/mnema-talk/issues/552)) ([f941a51](https://github.com/msch128/mnema-talk/commit/f941a51021d2b5684c2589edb2be453323c3e0bf))
+* **loadtest:** capacity test for the server host (chat, headless voice publishers, TURN relay) ([#539](https://github.com/msch128/mnema-talk/issues/539)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **onboarding:** guided first run for the Owner with a self-ticking Get started checklist ([#566](https://github.com/msch128/mnema-talk/issues/566)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **onboarding:** Test my connection, voice reach confirmed from outside, WebSocket check ([#533](https://github.com/msch128/mnema-talk/issues/533)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **setup:** guided assistant, CGNAT detection, doctor and a localhost trial ([#530](https://github.com/msch128/mnema-talk/issues/530)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **talks:** name temporary Talks after their lobby ([#531](https://github.com/msch128/mnema-talk/issues/531)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **updater:** trust the Docker Hub mirror next to GHCR and update from the running image's registry ([#522](https://github.com/msch128/mnema-talk/issues/522)) ([84c794c](https://github.com/msch128/mnema-talk/commit/84c794ca609e18ff74cb200e136cf7819674a529))
+* **voice:** show N/limit on a Talk and let Disconnect members exceed the user limit ([#538](https://github.com/msch128/mnema-talk/issues/538)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **voice:** take over a call from another device ([#532](https://github.com/msch128/mnema-talk/issues/532)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** a first microphone check, a chosen push-to-talk key and settings that open where the member left off ([#557](https://github.com/msch128/mnema-talk/issues/557)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** a keyboard shortcut list, threads one click from a message, and clearer presence and notification choices ([#559](https://github.com/msch128/mnema-talk/issues/559)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** an attachment tray above the composer, up to 10 files per message ([#560](https://github.com/msch128/mnema-talk/issues/560)) ([f941a51](https://github.com/msch128/mnema-talk/commit/f941a51021d2b5684c2589edb2be453323c3e0bf))
+* **web:** clearer admin defaults for invites, channels, settings and events ([#554](https://github.com/msch128/mnema-talk/issues/554)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** designed placeholder for deleted images ([#537](https://github.com/msch128/mnema-talk/issues/537)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** forum tags you can edit, colours and rules, search, unread markers and a post header ([#562](https://github.com/msch128/mnema-talk/issues/562)) ([f941a51](https://github.com/msch128/mnema-talk/commit/f941a51021d2b5684c2589edb2be453323c3e0bf))
+* **web:** i18n audit check (warn mode) and translated event load error ([#542](https://github.com/msch128/mnema-talk/issues/542)) ([f941a51](https://github.com/msch128/mnema-talk/commit/f941a51021d2b5684c2589edb2be453323c3e0bf))
+* **web:** image gallery layout and a media viewer with metadata ([#550](https://github.com/msch128/mnema-talk/issues/550)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** live stream quality, motion/clarity and a remembered choice ([#563](https://github.com/msch128/mnema-talk/issues/563)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** one Saved & reminders panel that says what saving means ([#556](https://github.com/msch128/mnema-talk/issues/556)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** redesign the formatting help in the composer ([#528](https://github.com/msch128/mnema-talk/issues/528)) ([729432f](https://github.com/msch128/mnema-talk/commit/729432fb2a7ca4495cfaa718dbabeb4b854d3ff4))
+* **web:** right-click menus for the call buttons ([#536](https://github.com/msch128/mnema-talk/issues/536)) ([84c794c](https://github.com/msch128/mnema-talk/commit/84c794ca609e18ff74cb200e136cf7819674a529))
+* **web:** show restrictions before they refuse, and test every quick-menu preset ([#545](https://github.com/msch128/mnema-talk/issues/545)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+
+
+### Bug Fixes
+
+* **chat:** react with every emoji in text channels, DMs and Talk chats ([#523](https://github.com/msch128/mnema-talk/issues/523)) ([84c794c](https://github.com/msch128/mnema-talk/commit/84c794ca609e18ff74cb200e136cf7819674a529))
+* **chat:** sending reads the channel; feat(web): message sounds ([#553](https://github.com/msch128/mnema-talk/issues/553)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **legal:** privacy policy describes the built-in TURN relay and external TURN servers ([#524](https://github.com/msch128/mnema-talk/issues/524)) ([84c794c](https://github.com/msch128/mnema-talk/commit/84c794ca609e18ff74cb200e136cf7819674a529))
+* **presence:** being in a Talk keeps the member from going auto-away ([#549](https://github.com/msch128/mnema-talk/issues/549)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **sfu:** Auto reaches the best layer that fits the viewer's picture and shows which one it chose ([#548](https://github.com/msch128/mnema-talk/issues/548)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **text:** count characters, not bytes or UTF-16 units, and never cut through an emoji ([#547](https://github.com/msch128/mnema-talk/issues/547)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **voice:** packets sent in the connection panel never increased ([#544](https://github.com/msch128/mnema-talk/issues/544)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** a closed forum post stays closed, and Escape closes the thread panel ([#534](https://github.com/msch128/mnema-talk/issues/534)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** a conversation list read before a call event no longer undoes it ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** game list editor and roomier layout in the gaming settings ([#526](https://github.com/msch128/mnema-talk/issues/526)) ([84c794c](https://github.com/msch128/mnema-talk/commit/84c794ca609e18ff74cb200e136cf7819674a529))
+* **web:** notices that name who and where, and links that land on the exact field ([#558](https://github.com/msch128/mnema-talk/issues/558)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** one save pattern per settings screen, Talk settings in a single draft ([#555](https://github.com/msch128/mnema-talk/issues/555)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** onVideoSeenChange works without a document ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+* **web:** set a status message in a dialog of its own and give the profile room ([#535](https://github.com/msch128/mnema-talk/issues/535)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+
+
+### Performance Improvements
+
+* **web:** idle means idle: pause timers, polling and video while the page is hidden ([#561](https://github.com/msch128/mnema-talk/issues/561)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+
+
+### Documentation
+
+* newcomer onboarding rewrite ([#525](https://github.com/msch128/mnema-talk/issues/525)) ([519ec91](https://github.com/msch128/mnema-talk/commit/519ec9168ef04ec04c33f4d7f580107449f1cd73))
+* **operations:** check codes for the connection test ([#533](https://github.com/msch128/mnema-talk/issues/533)) ([2a5e969](https://github.com/msch128/mnema-talk/commit/2a5e969f241498f4754871e8283b2aaf9c491f7a))
+
 ## [2.1.1](https://github.com/msch128/mnema-talk/compare/v2.1.0...v2.1.1) (2026-10-29)
 
 
