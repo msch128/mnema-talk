@@ -1,0 +1,73 @@
+e2e/tests/ptt-hint.spec.ts
+  s_61e7f03250bd0b::t_88c996d90bf0c3 1-60
+web/src/App.vue
+  s_61e7f03250bd0b::t_5167dfcef30f1c 59,119
+web/src/components/AccountMenu.test.ts
+  s_61e7f03250bd0b::t_89974a984a071b 64
+web/src/components/AccountMenu.vue
+  s_61e7f03250bd0b::t_d82e699a5a0e46 5,7,163-165
+web/src/components/AudioAdvancedSection.vue
+  s_61e7f03250bd0b::t_b4d61e7fd1dc64 7,9,47-48
+web/src/components/AudioFineTune.vue
+  s_61e7f03250bd0b::t_c5aa824ff8684d 1-68
+web/src/components/AudioInputSection.vue
+  s_61e7f03250bd0b::t_f4d49320b9e2a7 2-3,6-7,9-10,14,16-20,26-29,48,54-55,89,93,95,101,104-114
+web/src/components/AudioMicCheck.vue
+  s_61e7f03250bd0b::t_ff66c974d1ca6b 1-99
+web/src/components/AudioOutputSection.vue
+  s_61e7f03250bd0b::t_70e173d56dc6dd 51
+web/src/components/AudioSettingsPanel.test.ts
+  s_61e7f03250bd0b::t_eeb3c5d9cea569 275-326,334-342,351,354
+web/src/components/AudioSettingsPanel.vue
+  s_61e7f03250bd0b::t_600b340f101fdc 2-4,10,38,41
+web/src/components/MicLevelMeter.vue
+  s_61e7f03250bd0b::t_7f72e3905f178b 1-63
+web/src/components/SettingsDialog.test.ts
+  s_61e7f03250bd0b::t_0b257d4a7cf75c 34-35,210,213-214,216,218
+web/src/components/SettingsDialog.vue
+  s_61e7f03250bd0b::t_f45c9ce632b9bd 8,33-34,36,40
+web/src/components/VoiceStage.phone.test.ts
+  s_61e7f03250bd0b::t_d6ac0ca62cdf69 103,105,111-123
+web/src/components/VoiceStage.vue
+  s_61e7f03250bd0b::t_7427f75a3ec294 233,384,387
+web/src/composables/usePttHint.test.ts
+  s_61e7f03250bd0b::t_6cb936ccb57bdd 1-65
+web/src/composables/usePttHint.ts
+  s_61e7f03250bd0b::t_179fe8f5ebccd5 1-28
+web/src/composables/useTalkControls.test.ts
+  s_61e7f03250bd0b::t_93099bb22ded11 1-73
+web/src/composables/useTalkControls.ts
+  s_61e7f03250bd0b::t_60130f23d9d366 6-10,17-19,32,34,38-50,67
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_5ed626aacfb75c 708-709,711,716-717,719,721,726,728,746-747,750-751,760,800-812,1215-1216,3738-3740
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_a112df1602d740 708-709,711,716-717,719,721,726,728,746-747,750-751,760,800-812,1215-1216,3738-3740
+web/src/lib/pttKey.test.ts
+  s_61e7f03250bd0b::t_0c5bdafefbe2e9 1-15
+web/src/lib/pttKey.ts
+  s_61e7f03250bd0b::t_3e840626e966c3 1-33
+web/src/lib/settingsDialog.test.ts
+  s_61e7f03250bd0b::t_372812ff4c8866 1-40
+web/src/lib/settingsDialog.ts
+  s_61e7f03250bd0b::t_43d1b1ab484f40 3,5-6,9-15,17,19-20,22-27
+web/src/stores/voiceSettings.ts
+  s_61e7f03250bd0b::t_7f67cce9a2a195 59-62
+web/src/stores/voiceStoreBehaviour.test.ts
+  s_61e7f03250bd0b::t_9d8722cdb78819 70-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "70ccd1edc117efe11231fca460ce61abdf84ec4e",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
