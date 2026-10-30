@@ -23,6 +23,8 @@ const operator = computed(() => ({
 const mediaRetentionDays = ref(0) // 0 = no automatic deletion
 const sessionExpiryDays = ref(30)
 const stunServers = ref<string[]>([])
+const turnServers = ref<string[]>([])
+const builtinTurn = ref(false)
 // Empty until the server has answered, so no wrong version is ever shown.
 const legalVersion = ref('')
 const updateCheck = ref(false)
@@ -45,6 +47,8 @@ function applyLegalData(data: ReturnType<typeof decodeServerLegal>): void {
   mediaRetentionDays.value = data.media_retention_days || 0
   if (data.session_expiry_days) sessionExpiryDays.value = data.session_expiry_days
   stunServers.value = data.stun_servers || []
+  turnServers.value = data.turn_servers || []
+  builtinTurn.value = data.builtin_turn === true
   updateCheck.value = data.update_check === true
   addressDetection.value = data.address_detection === true
   clockCheck.value = data.clock_check === true
@@ -160,7 +164,13 @@ onMounted(() => {
           <p v-if="stunServers.length" class="text-xs">
             <strong class="text-mnema-text">{{ $t('legal.privacy.stunTitle') }}</strong>{{ $t('legal.privacy.stunBefore') }}<span class="font-mono text-mnema-text">{{ stunServers.join(', ') }}</span>{{ $t('legal.privacy.stunAfter') }}
           </p>
-          <p v-else class="text-xs">
+          <p v-if="turnServers.length" class="text-xs" data-testid="legal-external-turn">
+            <strong class="text-mnema-text">{{ $t('legal.privacy.turnTitle') }}</strong>{{ $t('legal.privacy.turnBefore') }}<span class="font-mono text-mnema-text">{{ turnServers.join(', ') }}</span>{{ $t('legal.privacy.turnAfter') }}
+          </p>
+          <p v-if="builtinTurn" class="text-xs" data-testid="legal-builtin-turn">
+            <strong class="text-mnema-text">{{ $t('legal.privacy.builtinTurnTitle') }}</strong>{{ $t('legal.privacy.builtinTurn') }}
+          </p>
+          <p v-if="!stunServers.length && !turnServers.length" class="text-xs" data-testid="legal-no-stun">
             {{ $t('legal.privacy.noStun') }}
           </p>
         </div>

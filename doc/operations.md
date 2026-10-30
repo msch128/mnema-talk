@@ -460,8 +460,14 @@ nothing else:
   (`LOG_LEVEL=debug`). `mnema_turn_allocations` is the live sessions,
   `mnema_turn_relayed_bytes_total{direction}` the traffic.
 
-The built-in relay is your own server, so the privacy policy does not list it;
-an external TURN server from `WEBRTC_TURN_URLS` is still listed.
+The built-in relay is part of your server, run by you and not a third party.
+The privacy policy (version 1.7 and later) describes it as such while it is
+offered: it sees the member's IP address and port, forwards encrypted media it
+cannot read only to the server's own SFU, uses short-lived credentials, stores
+nothing persistently and keeps only operational counters. IP addresses and
+account IDs reach the log only at `LOG_LEVEL=debug`, so name that in your own
+records if you run debug logging. An external TURN server from
+`WEBRTC_TURN_URLS` is listed separately by its configured address.
 
 ## TURN (coturn)
 
@@ -502,7 +508,9 @@ shorter lifetime would cut relayed calls. The web app fetches a fresh
 credential on a voice join when its copy is older than an hour. A credential
 therefore outlives a sign-out for up to 12 hours but can only use the relay,
 within the quotas above.
-Configured TURN servers are listed in the privacy policy.
+Configured TURN servers are listed in the privacy policy by their address; the
+policy describes the operator of such a server as a recipient of the member's
+IP address and port, so list the provider in your own records if it is not you.
 
 **Networks that block more than UDP.** `transport=tcp` on port 3478 passes
 firewalls that drop UDP but allow other ports. Some company networks only allow
