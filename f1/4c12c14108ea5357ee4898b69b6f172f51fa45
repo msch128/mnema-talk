@@ -1,0 +1,35 @@
+web/src/stores/chat/dmCalls.ts
+  s_fb29f048bd6d02::t_3cf74feba2c2bb 113-114
+web/src/stores/chat/dms.ts
+  s_fb29f048bd6d02::t_42a30f603d6d76 109,114
+web/src/stores/dmCalls.test.ts
+  s_dbdfffe0fa33da::t_01f7c613dc4631 183-212
+web/src/stores/dmCalls.ts
+  s_fb29f048bd6d02::t_b70823712acdff 28
+web/src/stores/dmCalls/actions.ts
+  s_dbdfffe0fa33da::t_ddee0c01827371 16-17,21,38,76,121-126,128-131,133,153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f14c12c14108ea5357ee4898b69b6f172f51fa45",
+  "prompts": {},
+  "sessions": {
+    "s_dbdfffe0fa33da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-voice-takeover-a0aadf43d700b47c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
