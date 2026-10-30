@@ -41,6 +41,13 @@ describe('a deleted attachment', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('shows a deleted image inside the mosaic as a compact box in its cell', () => {
+    const second = { ...image, id: '00000000-0000-4000-8000-0000000003f9', url: '/api/media/second' }
+    const w = mount(MessageAttachments, { props: { attachments: [{ ...image, is_deleted: true }, second] } })
+    expect(w.findAll('[data-gallery-cell]')).toHaveLength(1)
+    expect(w.get('[data-media-placeholder="gone"]').attributes('title')).toBe('This image was deleted')
+  })
+
   it.each([['chat', 'h-40'], ['reply', 'h-24'], ['root', 'h-28']] as const)('keeps a size of its own in the %s layout', (variant, height) => {
     const w = mount(MessageAttachments, { props: { variant, attachments: [{ ...image, is_deleted: true }] } })
     expect(w.get('[data-media-placeholder]').classes()).toContain(height)
