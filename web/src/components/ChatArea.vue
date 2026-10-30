@@ -66,7 +66,6 @@ const textAreaEl = computed(() => composer.value?.textArea ?? null)
 const isSending = ref(false)
 // Message the composer is currently replying to.
 const replyingTo = ref<DraftReply | null>(null)
-// The wait of slow mode and the length of the message, told before a send is refused.
 const limits = useChannelLimits(() => inputMessage.value)
 // Text and reply target stay with their channel while another one is open.
 useDraftSlot(() => (chatStore.activeChannel ? channelDraftKey(chatStore.activeChannel.id) : null), inputMessage, replyingTo)
@@ -179,9 +178,10 @@ async function handleSend() {
 
   isSending.value = true
   const sentIn = chatStore.activeChannel?.id
+  const slow = limits.rule()
   try {
     await chatStore.sendMessage(text, null, replyingTo.value?.id || null)
-    limits.sent(sentIn)
+    limits.sent(sentIn, slow)
     if (stillIn(sentIn)) {
       inputMessage.value = ''
       replyingTo.value = null
@@ -201,9 +201,10 @@ async function handleSend() {
 async function handleFileUpload(e: Event) {
   const replyId = replyingTo.value?.id || null
   const uploadedIn = chatStore.activeChannel?.id
+  const slow = limits.rule()
   const ok = await actions.upload(e.target as HTMLInputElement, (file: File) => chatStore.uploadMedia(file, '', null, replyId))
   if (!ok) return
-  limits.sent(uploadedIn)
+  limits.sent(uploadedIn, slow)
   if (!stillIn(uploadedIn)) return
   replyingTo.value = null
   await revealOwnMessage()

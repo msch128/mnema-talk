@@ -38,6 +38,16 @@ describe('limits of the composer', () => {
     expect(limits.hint.value).toBeNull()
   })
 
+  it('uses the rule of the channel the message was sent in, even after another one is opened', () => {
+    const state = { slow: 10, exempt: false, text: 'hi' }
+    const limits = setup(state)
+    const rule = limits.rule()
+    state.slow = 0
+    limits.sent('c1', rule)
+    state.slow = 10
+    expect(limits.hint.value?.text).toBe('Slow mode: you can write again in 0:10')
+  })
+
   it('does not hold back members who manage messages, or channels without slow mode', () => {
     const exempt = setup({ slow: 10, exempt: true, text: 'hi' })
     exempt.sent('c1')

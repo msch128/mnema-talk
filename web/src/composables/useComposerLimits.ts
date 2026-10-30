@@ -6,6 +6,8 @@ import { formatRemaining } from '../lib/moderation'
 import { isApiError } from '../lib/api'
 import { t } from '../i18n'
 
+export interface SlowRule { seconds: number; exempt: boolean }
+
 export interface ComposerHint { text: string; blocks: boolean; tone: 'calm' | 'warn' }
 
 /**
@@ -45,9 +47,14 @@ export function useComposerLimits(opts: {
     keepTicking()
   }
 
+  /** The wait that applies to the open channel now; take it before a send, the open channel may change while it runs. */
+  function rule(): SlowRule {
+    return { seconds: opts.slowModeSeconds(), exempt: opts.exempt() }
+  }
+
   /** A message went out: in a slow channel the next one has to wait. */
-  function sent(channelId: string | undefined) {
-    if (opts.slowModeSeconds() > 0 && !opts.exempt()) wait(channelId, opts.slowModeSeconds() * 1000)
+  function sent(channelId: string | undefined, at: SlowRule = rule()) {
+    if (at.seconds > 0 && !at.exempt) wait(channelId, at.seconds * 1000)
   }
 
   /** A refused send: the server's own wait replaces the estimate. */
@@ -68,7 +75,7 @@ export function useComposerLimits(opts: {
     return null
   })
 
-  return { hint, sent, refused }
+  return { hint, rule, sent, refused }
 }
 
 /** The limits of the open channel for the member: its slow mode (unless they manage messages there) and the message length. */
