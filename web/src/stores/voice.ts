@@ -22,6 +22,7 @@ function exposedState(cs: VoiceState, stage: ReturnType<typeof installStage>) {
     isScreenSharing: cs.isScreenSharing,
     isScreenAudioMuted: cs.isScreenAudioMuted,
     hasScreenAudio: cs.hasScreenAudio,
+    screenQualityNeedsRestart: cs.screenQualityNeedsRestart,
     screenQuality: cs.screenQuality,
     showScreenShareModal: cs.showScreenShareModal,
     isCameraOn: cs.isCameraOn,

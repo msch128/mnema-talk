@@ -1110,7 +1110,12 @@
       "changeSource": "Bildschirm wechseln",
       "estimatedBitrate": "Geschätzte Bitrate: ~{bitrate}",
       "motionPriority": "Bewegungs-Priorität: flüssige Darstellung unter Last",
-      "detailPriority": "Detail-Priorität: Text und Code bleiben maximal scharf"
+      "detailPriority": "Detail-Priorität: Text und Code bleiben maximal scharf",
+      "optimize": "Optimieren für",
+      "optimize_motion": "Bewegung",
+      "optimize_detail": "Schärfe",
+      "restartNeeded": "Dein Browser konnte das während der Übertragung nur teilweise anwenden. Starte die Übertragung neu, um es ganz zu übernehmen.",
+      "restartStream": "Übertragung neu starten"
     },
     "controls": "Talk-Steuerung",
     "tapForControls": "Tippe auf den Bildschirm, um die Steuerung zu zeigen",

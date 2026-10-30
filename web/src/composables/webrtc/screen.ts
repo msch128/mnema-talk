@@ -108,7 +108,9 @@ async function dispatchAttachedSenders(
 
 // Sends a freshly picked screen (and its sound, on its own line).
 export async function attachScreen(cx: Cx, stream: MediaStream) {
-  const { st } = cx
+  const { voice, st } = cx
+  // A newly picked capture was made at the chosen quality: nothing is pending a restart.
+  voice.screenQualityNeedsRestart = false
   const gen = st.joinGeneration
   const captureGen = st.screenCaptureGeneration
   const currentCapture = () => gen === st.joinGeneration && captureGen === st.screenCaptureGeneration && toRaw(st.localScreenStream.value) === stream
@@ -159,8 +161,8 @@ export async function startScreenShare(cx: Cx, quality?: StreamQuality): Promise
   const gen = st.joinGeneration
   const captureGen = ++st.screenCaptureGeneration
   const channelId = voice.currentChannelId
+  // Without a choice made in the dialog the share starts at the last one used.
   if (quality) voice.setScreenQuality(quality)
-  else voice.resetScreenQuality()
 
   st.screenCapturePending = true
   let stream: MediaStream
@@ -241,7 +243,7 @@ export function stopScreenShare(cx: Cx) {
   voice.isScreenSharing = false
   voice.hasScreenAudio = false
   voice.isScreenAudioMuted = false
-  voice.resetScreenQuality()
+  voice.screenQualityNeedsRestart = false
   if (wasSharing) chat.sendWSEvent('webrtc_screenshare_stop', {})
   void syncLayers(cx)
 }

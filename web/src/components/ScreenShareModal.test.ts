@@ -165,4 +165,21 @@ describe('ScreenShareModal custom selection and dismissal', () => {
     w.findComponent({ name: 'BaseDialog' }).vm.$emit('close')
     expect(w.emitted('close')).toEqual([[]])
   })
+
+  it('keeps motion or clarity chosen in the stream menu, and a preset takes it back', async () => {
+    const voice = useVoiceStore()
+    voice.setScreenQuality({ resolution: 1080, fps: 30, optimize: 'motion' })
+    w = mount(ScreenShareModal)
+    expect(w.text()).toContain('Bewegung')
+    await w.find('[data-testid="stream-modal-submit"]').trigger('click')
+    await flushPromises()
+    expect(rtc.startScreenShare).toHaveBeenCalledWith({ resolution: 1080, fps: 30, custom: true, optimize: 'motion' })
+
+    w.unmount()
+    w = mount(ScreenShareModal)
+    await w.find('[data-testid="preset-screen"]').trigger('click')
+    await w.find('[data-testid="stream-modal-submit"]').trigger('click')
+    await flushPromises()
+    expect(rtc.startScreenShare).toHaveBeenLastCalledWith({ resolution: 'source', fps: 15, custom: false })
+  })
 })
