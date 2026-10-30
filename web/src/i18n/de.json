@@ -724,7 +724,8 @@
     "searchProblemOption": "„{value}“ ist kein Wert für {filter}:. Wähle einen von: {options}.",
     "searchProblemEmpty": "{filter}: braucht einen Wert.",
     "replyInChannel": "Im Kanal antworten",
-    "replyInThread": "Im Thread antworten"
+    "replyInThread": "Im Thread antworten",
+    "attachMediaOnly": "Es lassen sich nur Bilder und Videos anhängen."
   },
   "linkPreview": {
     "play": "Video abspielen: {title}",

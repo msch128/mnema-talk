@@ -724,7 +724,8 @@
     "searchProblemOption": "“{value}” is not a value for {filter}:. Choose one of: {options}.",
     "searchProblemEmpty": "{filter}: needs a value.",
     "replyInChannel": "Reply in channel",
-    "replyInThread": "Reply in thread"
+    "replyInThread": "Reply in thread",
+    "attachMediaOnly": "Only images and videos can be attached."
   },
   "linkPreview": {
     "play": "Play video: {title}",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dragHasFiles, growHeight, pastedFiles } from './composerFiles'
+import { dragHasFiles, growHeight, isMedia, pastedFiles } from './composerFiles'
 
 const png = new File(['x'], 'a.png', { type: 'image/png' })
 
@@ -39,5 +39,13 @@ describe('dragHasFiles', () => {
     expect(dragHasFiles(transfer([], {}, ['Files']))).toBe(true)
     expect(dragHasFiles(transfer([], {}, ['text/plain']))).toBe(false)
     expect(dragHasFiles(null)).toBe(false)
+  })
+})
+
+describe('isMedia', () => {
+  it('takes pictures and videos, not other files', () => {
+    expect(isMedia(new File(['x'], 'a.png', { type: 'image/png' }))).toBe(true)
+    expect(isMedia(new File(['x'], 'a.mp4', { type: 'video/mp4' }))).toBe(true)
+    expect(isMedia(new File(['x'], 'a.pdf', { type: 'application/pdf' }))).toBe(false)
   })
 })

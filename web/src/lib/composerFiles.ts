@@ -3,6 +3,9 @@
 /** Whether a drag carries files (as opposed to selected text or a link). */
 export const dragHasFiles = (dt: DataTransfer | null) => !!dt && Array.from(dt.types ?? []).includes('Files')
 
+/** Whether a file is a picture or a video: the only kinds a forum post takes. */
+export const isMedia = (file: File) => file.type.startsWith('image/') || file.type.startsWith('video/')
+
 export const filesOf = (dt: DataTransfer | null): File[] => Array.from(dt?.files ?? [])
 
 /**
