@@ -1,0 +1,29 @@
+web/src/components/AdminInvitesTab.vue
+  s_0cae4a4d7ab7c3::t_3cdec76c277061 12,114
+web/src/components/EditInviteDialog.vue
+  s_0cae4a4d7ab7c3::t_b65e5d379f2dc5 13,28-29
+web/src/components/SlowModePicker.vue
+  s_0cae4a4d7ab7c3::t_711d678347da50 6,14
+web/src/lib/automod.ts
+  s_0cae4a4d7ab7c3::t_7ee2aae2320872 5,13-16
+web/src/lib/moderation.ts
+  s_0cae4a4d7ab7c3::t_ff0906413f61eb 6,44
+web/src/lib/presets.test.ts
+  s_0cae4a4d7ab7c3::t_3c8b4cdef5517f 27,31-33,49-50,67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0360be8a7e82ebd51e7a1621037a0028ed33ae4d",
+  "prompts": {},
+  "sessions": {
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
