@@ -174,7 +174,7 @@ describe('LinkPreviewCard', () => {
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response('', { status: 503 }))))
     await w.find('img').trigger('error')
     await flushPromises()
-    expect(w.get('[data-media-placeholder="failed"]').exists()).toBe(true)
+    expect(w.find('[data-media-placeholder="failed"]').exists()).toBe(true)
   })
 
   it('puts a small thumbnail beside the text for compact cards', async () => {
