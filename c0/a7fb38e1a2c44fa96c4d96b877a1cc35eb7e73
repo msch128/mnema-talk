@@ -1,0 +1,27 @@
+e2e/tests/talk-reactions.spec.ts
+  s_3e68b8fa0e1785::t_dc6c3de1ec3682 92-95,104-105,110-119
+web/src/components/EmojiPicker.test.ts
+  s_3e68b8fa0e1785::t_53b046a8d04fe2 143-178
+web/src/components/EmojiPicker.vue
+  s_3e68b8fa0e1785::t_9576fbb73c98e7 11,52-54,80-81,90-101,104,113-115,129,134-145
+web/src/lib/emojiPickerExtras.test.ts
+  s_3e68b8fa0e1785::t_88c0f1e24b27bf 1-100
+web/src/lib/emojiPickerExtras.ts
+  s_3e68b8fa0e1785::t_1defee37e3c33f 1-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c0a7fb38e1a2c44fa96c4d96b877a1cc35eb7e73",
+  "prompts": {},
+  "sessions": {
+    "s_3e68b8fa0e1785": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-reactions-7d1b14603defb791",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
