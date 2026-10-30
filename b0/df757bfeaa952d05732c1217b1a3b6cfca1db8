@@ -1,5 +1,6 @@
 web/src/lib/shortcuts.test.ts
   s_61e7f03250bd0b::t_bb17a04531f898 1-40
+  s_bf24ce51cd8f95::t_0382ab39f7abdf 1-40
 ---
 {
   "schema_version": "authorship/3.0.0",
@@ -11,6 +12,14 @@ web/src/lib/shortcuts.test.ts
       "agent_id": {
         "tool": "claude",
         "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
         "model": "unknown"
       },
       "human_author": "Marius Schröder <git@schroeder.systems>"
