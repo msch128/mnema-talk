@@ -248,7 +248,9 @@ func restRoutes() []restRoute {
 
 // failures that only lose a timestamp do not fail the request.
 func tolerated(sql string) bool {
-	return strings.Contains(sql, "last_used_at = NOW()") || strings.Contains(sql, "last_active_at = NOW()")
+	// The author's read marker after a send is best effort: the message is already stored.
+	return strings.Contains(sql, "INSERT INTO channel_reads") ||
+		strings.Contains(sql, "last_used_at = NOW()") || strings.Contains(sql, "last_active_at = NOW()")
 }
 
 func (e *env) callRest(h http.Handler, rt restRoute, st state) *httptest.ResponseRecorder {

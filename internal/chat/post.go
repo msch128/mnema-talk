@@ -197,10 +197,13 @@ func markReadAfterSend(ctx context.Context, p *db.Pool, pub events.Publisher, ms
 	if msg.ParentID != nil {
 		return
 	}
-	at, err := MarkRead(ctx, p, msg.UserID, msg.ChannelID, &msg.ID)
+	at, err := markReadTo(ctx, p, msg.UserID, msg.ChannelID, &msg.CreatedAt, false)
 	if err != nil {
 		slog.Warn("mark read after send failed", "channel", msg.ChannelID, "err", err)
 		return
+	}
+	if at.Before(msg.CreatedAt) {
+		return // nothing of others lay between the marker and the message: no row, nothing to tell
 	}
 	pub.SendToUsers([]uuid.UUID{msg.UserID}, events.ReadState, map[string]any{
 		"channel_id": msg.ChannelID, "last_read_at": at, "unread_count": 0, "mention_count": 0,

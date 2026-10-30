@@ -104,12 +104,9 @@ func messageTime(ctx context.Context, p *db.Pool, channelID, messageID uuid.UUID
 // starts the "new since" divider). Repeated calls (a second tab, Esc on an
 // already read channel, a client retry) cost one indexed probe and no row
 // version. Sending a message calls it for the author (see markReadAfterSend):
-// that writes a marker only when others posted since the last one. The result
-// is the marker afterwards.
+// that writes only when others posted since the last marker and never starts
+// one. The result is the marker afterwards.
 func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, messageID *uuid.UUID) (time.Time, error) {
-	// "Now" is the database's clock, the one messages.created_at comes from:
-	// the app's clock may lag it by a few milliseconds (separate containers,
-	// Docker Desktop's VM), which left the newest message unread.
 	var at *time.Time
 	if messageID != nil {
 		t, err := messageTime(ctx, p, channelID, *messageID)
@@ -118,6 +115,17 @@ func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, mess
 		}
 		at = &t
 	}
+	return markReadTo(ctx, p, userID, channelID, at, true)
+}
+
+// markReadTo moves the marker to at (the database's now when nil). With
+// startMarker, a member without a marker gets one (the first read starts the
+// "new since" divider); without it, a row is written only when another
+// member's message sits between the marker and at.
+func markReadTo(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, at *time.Time, startMarker bool) (time.Time, error) {
+	// "Now" is the database's clock, the one messages.created_at comes from:
+	// the app's clock may lag it by a few milliseconds (separate containers,
+	// Docker Desktop's VM), which left the newest message unread.
 	var marked time.Time
 	err := p.QueryRow(ctx, `
 		WITH marker AS (
@@ -129,7 +137,7 @@ func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, mess
 		written AS (
 		    INSERT INTO channel_reads (user_id, channel_id, last_read_at, notify_level)
 		    SELECT $1, $2, target.at, 'inherit' FROM target, cur
-		    WHERE NOT cur.has_marker OR EXISTS (SELECT 1 FROM messages m
+		    WHERE ($4 AND NOT cur.has_marker) OR EXISTS (SELECT 1 FROM messages m
 		                  WHERE m.channel_id = $2 AND m.user_id <> $1
 		                    AND m.created_at > cur.at AND m.created_at <= target.at)
 		    ON CONFLICT (user_id, channel_id) DO UPDATE
@@ -137,7 +145,7 @@ func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, mess
 		    RETURNING last_read_at
 		)
 		SELECT COALESCE((SELECT last_read_at FROM written), (SELECT at FROM cur))`,
-		userID, channelID, at).Scan(&marked)
+		userID, channelID, at, startMarker).Scan(&marked)
 	return marked, err
 }
 
