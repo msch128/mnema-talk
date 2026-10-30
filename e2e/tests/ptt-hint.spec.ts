@@ -33,9 +33,9 @@ test('push to talk starts without a key, asks for one, and shows what it can and
     await expect(keyButton).toHaveText('Taste drücken …')
 
     // Leaving without a key keeps it empty over a reload (no silent Space).
+    // The settings have an address of their own, so the reload comes back to the open dialog.
     await page.reload()
-    await page.getByTestId('account-menu-button').click()
-    await page.getByTestId('menu-sound').click()
+    await expect(dialog).toBeVisible()
     await expect(dialog.getByTestId('ptt-key-panel')).toContainText('Noch keine Taste gewählt')
     await expect(keyButton).toHaveText('Taste wählen')
     await keyButton.click()
