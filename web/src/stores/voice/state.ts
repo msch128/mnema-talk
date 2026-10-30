@@ -73,6 +73,8 @@ export function createVoiceState() {
     isScreenSharing: ref(false),
     isScreenAudioMuted: ref(false),
     hasScreenAudio: ref(false),
+    // The browser could not apply the chosen quality to the running capture (see applyScreenQuality).
+    screenQualityNeedsRestart: ref(false),
     screenQuality: ref(loadSavedScreenQuality()),
     showScreenShareModal: ref(false),
     isCameraOn: ref(false),

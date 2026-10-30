@@ -1158,7 +1158,12 @@
       "changeSource": "Change screen",
       "estimatedBitrate": "Estimated bitrate: ~{bitrate}",
       "motionPriority": "Motion priority: smoother video under load",
-      "detailPriority": "Detail priority: text and code remain sharp"
+      "detailPriority": "Detail priority: text and code remain sharp",
+      "optimize": "Optimise for",
+      "optimize_motion": "Motion",
+      "optimize_detail": "Clarity",
+      "restartNeeded": "Your browser applied this only partly while streaming. Restart the stream to apply it fully.",
+      "restartStream": "Restart stream"
     },
     "controls": "Talk controls",
     "tapForControls": "Tap the screen to show the controls",

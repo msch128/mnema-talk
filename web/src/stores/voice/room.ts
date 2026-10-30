@@ -7,7 +7,6 @@ import type { VoiceRooms, VoiceSnapshot, VoiceStateUpdate, MuteState, SpeakingSt
 import { myUserId } from './state'
 import type { VoiceState } from './state'
 import { removeUserVideoStream } from './cameras'
-import { resetScreenQuality } from './controls'
 import { handleMediaState } from './screens'
 
 export function setVoiceSnapshot(cs: VoiceState, snapshot: VoiceSnapshot | null) {
@@ -216,7 +215,7 @@ export function disconnect(cs: VoiceState) {
   cs.isScreenSharing.value = false
   cs.isScreenAudioMuted.value = false
   cs.hasScreenAudio.value = false
-  resetScreenQuality(cs)
+  cs.screenQualityNeedsRestart.value = false
   cs.isCameraOn.value = false
   cs.localCameraStream.value = null
   cs.remoteScreenStream.value = null
