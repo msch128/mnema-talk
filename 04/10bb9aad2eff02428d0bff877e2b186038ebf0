@@ -1,0 +1,181 @@
+api/openapi.json
+  s_06fcde5dbef956::t_60e3098961c496 2487-2521,2524-2531,2607-2610,2710-2716,27008,35125
+doc/architecture.md
+  s_06fcde5dbef956::t_3e2fa5c0985587 195
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_76cb7a6a97385a 508-530
+doc/glossary.md
+  s_06fcde5dbef956::t_5fb37425fd8e36 17
+doc/talks.md
+  s_06fcde5dbef956::t_c95cfea151b5b6 63-73,80-121
+e2e/tests/dm-call.spec.ts
+  s_06fcde5dbef956::t_01879fbb7956f1 1-149
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_bf31afe1bc74ed 174-175
+internal/chat/dm.go
+  s_06fcde5dbef956::t_3faf111cf57590 97-100,110-112,137,145-146,157,184
+internal/chat/dm_calls.go
+  s_06fcde5dbef956::t_cb61c4db81e220 1-355
+internal/chat/dm_calls_integration_test.go
+  s_06fcde5dbef956::t_2d40415d1f2062 1-363
+internal/chat/dm_calls_test.go
+  s_06fcde5dbef956::t_df018367aeb22c 1-191
+internal/chat/dm_gate.go
+  s_06fcde5dbef956::t_aaaa677bd469da 149
+internal/chat/dm_handler.go
+  s_06fcde5dbef956::t_8549c15a20b01c 76,97-103,143,307-310,315-317,328-336
+internal/chat/dm_members.go
+  s_06fcde5dbef956::t_cdb213c7c0e890 119-124,134-142
+internal/chat/handler.go
+  s_06fcde5dbef956::t_4b35f966226de9 57-59
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_2fab943b50ae2b 127-130
+internal/chat/messages.go
+  s_06fcde5dbef956::t_c8bf62593877f7 331-334
+internal/chat/talks.go
+  s_06fcde5dbef956::t_9af71c24881c70 30,130-172
+internal/chat/talks_handler.go
+  s_06fcde5dbef956::t_3249d337912f29 105,129-138,147
+internal/chat/talks_invite.go
+  s_06fcde5dbef956::t_32a6b91a35b11a 57-64,106
+internal/chat/talks_manager.go
+  s_06fcde5dbef956::t_1da69aed98ea3a 126-148,150-152
+internal/db/migrations/0079_dm_talk.sql
+  s_06fcde5dbef956::t_974568d0265a86 1-9
+internal/events/testdata/events.golden.json
+  s_06fcde5dbef956::t_91e0c246c18098 49-50
+internal/events/types.go
+  s_06fcde5dbef956::t_51d226d0a0dfd3 58-62
+internal/perm/permtest/permtest.go
+  s_06fcde5dbef956::t_469ba2d6b77749 217-233
+internal/perm/snapshot.go
+  s_06fcde5dbef956::t_70bd917d551e93 82-85
+internal/perm/snapshot_build.go
+  s_06fcde5dbef956::t_b33c8cc13502b1 30-31,48-50
+internal/perm/snapshot_channels.go
+  s_06fcde5dbef956::t_a1791a3ce93224 80-82,147-148,150,181
+internal/perm/snapshot_dm.go
+  s_06fcde5dbef956::t_89da77a630515e 37-38
+internal/perm/snapshot_dm_test.go
+  s_06fcde5dbef956::t_ddf06f68c8c66e 4,81-129
+internal/perm/snapshot_load.go
+  s_06fcde5dbef956::t_637031aab47f3d 28,129,150-152
+internal/push/locales/texts.json
+  s_06fcde5dbef956::t_2d53f87e44fe09 17-21,38-42
+internal/push/payload.go
+  s_06fcde5dbef956::t_7848111049caac 88-92,131-135
+internal/push/payload_test.go
+  s_06fcde5dbef956::t_abe24634594324 205-227
+internal/push/service.go
+  s_06fcde5dbef956::t_dd8638913e785e 241,250-263
+internal/server/dm_call_integration_test.go
+  s_06fcde5dbef956::t_65ce07151c8eb3 1-198
+internal/server/router_talks.go
+  s_06fcde5dbef956::t_6721083668a2db 26-27,33,35
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_ef4a00f26de5d6 60-61
+internal/ws/voice_kick.go
+  s_06fcde5dbef956::t_4ee318ad3160c5 78-87
+web/src/App.vue
+  s_06fcde5dbef956::t_2deb27fddbefa1 37,373
+web/src/components/CallHost.test.ts
+  s_06fcde5dbef956::t_2294a4d9e8d76b 1-303
+web/src/components/CallHost.vue
+  s_06fcde5dbef956::t_5181eaf162502e 1-50
+web/src/components/CallMark.vue
+  s_06fcde5dbef956::t_8c01101b68000c 1-22
+web/src/components/CallMissedNote.vue
+  s_06fcde5dbef956::t_f4275d7cc60240 1-54
+web/src/components/DmListRow.vue
+  s_06fcde5dbef956::t_ac8ad0c364f0b4 16-17,28-30,45-49,53,60,120-124
+web/src/components/DmTalkActions.vue
+  s_06fcde5dbef956::t_c56c57738a2614 3,6-8,11,13,24-25,30-33,38-39,62,64-68,71-72
+web/src/components/IncomingCallCard.vue
+  s_06fcde5dbef956::t_00606d6cc0f674 1-78
+web/src/components/MessageEmbeds.vue
+  s_06fcde5dbef956::t_ea22f0d9fbe9e1 12,17-20,44
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_eee14dc91a16bd 192
+web/src/components/OutgoingCallCard.vue
+  s_06fcde5dbef956::t_2f6216728f30a5 1-63
+web/src/components/SidebarDmSection.vue
+  s_06fcde5dbef956::t_c2d4ee59ef8b9c 15,25,38,85-86,161,199,225
+web/src/components/TalkInvite.test.ts
+  s_06fcde5dbef956::t_94bad149bd7f9e 13,110,112,117,132-151
+web/src/components/TalkInviteCard.vue
+  s_06fcde5dbef956::t_756a2ae1ca2652 10,23,30,43
+web/src/composables/useCallParty.ts
+  s_06fcde5dbef956::t_841be6a6f667af 1-22
+web/src/composables/useDmCall.ts
+  s_06fcde5dbef956::t_d1300384826acc 1-61
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_f081193106ced6 782-783,1160-1161,3252-3254,3655-3680
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_0aa57b4c046699 782-783,1160-1161,3218,3252-3254,3655-3680
+web/src/lib/callKind.ts
+  s_06fcde5dbef956::t_9601572282e037 1-10
+web/src/lib/dmList.test.ts
+  s_06fcde5dbef956::t_34ad6432d23278 47-53,61-66
+web/src/lib/dmList.ts
+  s_06fcde5dbef956::t_15a2b20813d1db 8,31-32,36-41,51-57,62
+web/src/lib/osNotify.test.ts
+  s_06fcde5dbef956::t_01843d9763bcf7 44-55,145-176
+web/src/lib/osNotify.ts
+  s_06fcde5dbef956::t_07470481caf2d8 2,18-24,27-29,36-37,49-51,67-68,74,79-82,94-95,123-124,143,168-169,171,174-176,186
+web/src/lib/platform.ts
+  s_06fcde5dbef956::t_19f85fe78e0544 40-41,101
+web/src/lib/soundEffects.test.ts
+  s_06fcde5dbef956::t_88b64523e2f75b 71
+web/src/lib/soundEffects.ts
+  s_06fcde5dbef956::t_2959a6a5bb706a 102,147-153
+web/src/stores/chat/dmCalls.ts
+  s_06fcde5dbef956::t_5b99b69dd2d74f 1-92
+web/src/stores/chat/dms.ts
+  s_06fcde5dbef956::t_65cd6198007b52 21,113
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_4219c97aa93346 19,208-209
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_051c2c6bcfa052 14,79-81,83,85,87
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_b630ee6476b36f 11,25
+web/src/stores/chatDmCalls.test.ts
+  s_06fcde5dbef956::t_f16686ff0a590d 1-179
+web/src/stores/dmCalls.test.ts
+  s_06fcde5dbef956::t_26738f4afa214d 1-195
+web/src/stores/dmCalls.ts
+  s_06fcde5dbef956::t_4fcade35388e76 1-34
+web/src/stores/dmCalls/actions.ts
+  s_06fcde5dbef956::t_9315dcebf57dea 1-143
+web/src/stores/dmCalls/types.ts
+  s_06fcde5dbef956::t_f937a0b4a67553 1-26
+web/src/stores/voiceSettings.ts
+  s_06fcde5dbef956::t_8bf3a4df2e5fa2 21-22,37-38
+web/src/style.css
+  s_06fcde5dbef956::t_777bd2d6df2323 8
+web/src/styles/calls.css
+  s_06fcde5dbef956::t_d6f8081da36330 1-65
+web/src/types/dmEvents.ts
+  s_06fcde5dbef956::t_5ef78a9f2eefcb 1-84
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_b328669b241a6a 33-39
+web/src/types/events.ts
+  s_06fcde5dbef956::t_b45d3a7f620dd0 10-11,91-94,336,366
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_8b3d875ba3669b 1480-1500,1502,1511,1562,1580,1611,1627
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0410bb9aad2eff02428d0bff877e2b186038ebf0",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
