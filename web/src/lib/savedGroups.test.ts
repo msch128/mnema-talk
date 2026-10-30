@@ -64,7 +64,7 @@ describe('groupSaved', () => {
   })
 
   it('puts an available entry without its message with the gone ones', () => {
-    const { message: _message, ...broken } = entry(5, 'x')
+    const broken = { ...gone(5), available: true }
     expect(groupSaved([broken], 'channel', contextOf)[0]).toMatchObject({ key: 'gone', gone: true })
   })
 })
