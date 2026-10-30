@@ -1,0 +1,25 @@
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_23771653bd1433 727-728
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_3e39a4d0db696d 727-728
+web/src/lib/composerFiles.test.ts
+  s_61e7f03250bd0b::t_2f660d8dcc7244 2,44-51
+web/src/lib/composerFiles.ts
+  s_61e7f03250bd0b::t_87b87a4997ff54 6-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e409be9719571d7ddf554199724bc3b7481096ae",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
