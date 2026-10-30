@@ -1,0 +1,25 @@
+web/src/App.vue
+  s_e516df595aeaf4::t_da86cfa2263b6b 31-32,346
+web/src/components/EventsModal.vue
+  s_e516df595aeaf4::t_583d0ea2035fbd 35-37,39-48,50
+web/src/components/SidebarEventsEntry.vue
+  s_e516df595aeaf4::t_d45c1181a770a7 2,6,24
+web/src/stores/toast.ts
+  s_e516df595aeaf4::t_35e261a09f82fe 11-12,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "649bb807b3cdd9652b4612e60f69a40fe8d59ae2",
+  "prompts": {},
+  "sessions": {
+    "s_e516df595aeaf4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-notify-links-78aaa4213a135c59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
