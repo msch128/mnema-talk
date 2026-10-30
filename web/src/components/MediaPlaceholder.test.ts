@@ -121,6 +121,29 @@ describe('a custom emoji whose picture is gone', () => {
   })
 })
 
+describe('a custom emoji that failed to load', () => {
+  it('has no "deleted" title and loads again on click', async () => {
+    serverAnswers(503)
+    const w = mount(EmojiGlyph, { props: { value: '<:wave:11111111-1111-4111-8111-111111111111>' } })
+    await w.get('img').trigger('error')
+    await flushPromises()
+    const retry = w.get('button')
+    expect(retry.text()).toBe(':wave:')
+    expect(retry.attributes('title')).toBe('Try again')
+    await retry.trigger('click')
+    expect(w.find('img').exists()).toBe(true)
+  })
+
+  it('titles a deleted one', async () => {
+    serverAnswers(410)
+    const w = mount(EmojiGlyph, { props: { value: '<:wave:11111111-1111-4111-8111-111111111111>' } })
+    await w.get('img').trigger('error')
+    await flushPromises()
+    expect(w.get('span').attributes('title')).toBe('This image was deleted')
+    expect(w.find('button').exists()).toBe(false)
+  })
+})
+
 describe('MediaImage', () => {
   it('lets the caller stand in for a picture that is gone, such as the default banner', async () => {
     serverAnswers(410)

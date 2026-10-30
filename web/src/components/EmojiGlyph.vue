@@ -29,7 +29,10 @@ const image = computed(() => {
     decoding="async"
   >
     <!-- The emoji's picture is gone from storage: its name, as for a deleted emoji. -->
-    <template #fallback><span :title="$t('media.imageDeleted')">:{{ token?.name }}:</span></template>
+    <template #fallback="{ state, retry }">
+      <span v-if="state === 'gone'" :title="$t('media.imageDeleted')">:{{ token?.name }}:</span>
+      <button v-else type="button" class="cursor-pointer" :title="$t('media.retry')" @click.stop.prevent="retry">:{{ token?.name }}:</button>
+    </template>
   </MediaImage>
   <span v-else-if="token">:{{ token.name }}:</span>
   <span v-else>{{ value }}</span>

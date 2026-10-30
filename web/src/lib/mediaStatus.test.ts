@@ -32,6 +32,20 @@ describe('classifyMediaFailure', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it('treats a 404 of the link preview proxy as a failure, only its 410 as gone', async () => {
+    vi.stubGlobal('fetch', answer(404))
+    expect(await classifyMediaFailure('/api/link-preview/image?url=x')).toBe('failed')
+    vi.stubGlobal('fetch', answer(410))
+    expect(await classifyMediaFailure('/api/link-preview/image?url=y')).toBe('gone')
+  })
+
+  it('does not read the body of the probe', async () => {
+    const cancel = vi.fn(() => Promise.resolve())
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ status: 200, body: { cancel } })))
+    await classifyMediaFailure('/api/media/e')
+    expect(cancel).toHaveBeenCalled()
+  })
+
   it('shares one request among simultaneous failures of an address', async () => {
     const fetchMock = answer(410)
     vi.stubGlobal('fetch', fetchMock)

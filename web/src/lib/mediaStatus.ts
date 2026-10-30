@@ -21,7 +21,12 @@ export function knownGone(url: string): boolean {
 async function ask(url: string): Promise<MediaFailure> {
   try {
     const response = await fetch(url, { headers: { Range: 'bytes=0-0' }, credentials: 'same-origin', cache: 'no-store' })
-    if (response.status !== 404 && response.status !== 410) return 'failed'
+    // Only the answer is wanted; a server that ignores Range would stream the picture.
+    void response.body?.cancel().catch(() => undefined)
+    // The link preview proxy says 404 for "no usable image" (hotlink block,
+    // not a picture, too large): only its 410 means taken down.
+    const goneStatus = url.startsWith('/api/link-preview/') ? response.status === 410 : response.status === 404 || response.status === 410
+    if (!goneStatus) return 'failed'
     if (gone.size >= GONE_MAX) gone.clear()
     gone.add(url)
     return 'gone'
