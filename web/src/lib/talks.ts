@@ -6,6 +6,7 @@ import { decodeChatMessage, decodeChatStartTalkResponse } from '../types/rest'
 import { decodeChannel } from '../types/domain'
 import { t } from '../i18n'
 import { useToastStore } from '../stores/toast'
+import { useAuthStore } from '../stores/auth'
 import type { Channel, Message } from '../types/domain'
 
 export function isTempTalk(channel: Channel | null | undefined): boolean {
@@ -47,12 +48,13 @@ export function talkSeats(channel: Channel | null | undefined, count: number): T
 
 /**
  * Tells a member who clicks a full Talk that it is full, and reports whether
- * it did. Not for those already in it or exempt (Disconnect members); the
+ * it did. Not for those already in it (on any device) or exempt (Disconnect members); the
  * server refuses an over-limit join anyway, this saves the failing attempt.
  */
 export function refuseFullTalk(channel: Channel, users: Record<string, unknown> | undefined, exempt: boolean): boolean {
   const count = Object.keys(users ?? {}).length
-  if (exempt || !talkSeats(channel, count)?.full) return false
+  const me = useAuthStore().user?.id
+  if (exempt || (me !== undefined && !!users && me in users) || !talkSeats(channel, count)?.full) return false
   useToastStore().info(t('talk.fullToast', { count, limit: channel.user_limit }))
   return true
 }

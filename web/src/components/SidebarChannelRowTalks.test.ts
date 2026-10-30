@@ -4,7 +4,9 @@ import { setActivePinia, createPinia } from 'pinia'
 import SidebarChannelRow from './SidebarChannelRow.vue'
 import TalkParticipants from './TalkParticipants.vue'
 import { useVoiceStore } from '../stores/voice'
-import { canConfigureTalk, isTalkLeader, isTempTalk, talkSeats } from '../lib/talks'
+import { useAuthStore } from '../stores/auth'
+import { useToastStore } from '../stores/toast'
+import { canConfigureTalk, isTalkLeader, isTempTalk, talkSeats, refuseFullTalk } from '../lib/talks'
 import { channelFixture, fixtureId, userFixture, voiceUserFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
 
@@ -94,5 +96,22 @@ describe('talkSeats', () => {
     expect(talkSeats(talk({ user_limit: 2 }), 1)).toEqual({ limit: 2, count: 1, full: false })
     expect(talkSeats(talk({ user_limit: 2 }), 2)?.full).toBe(true)
     expect(talkSeats(talk({ user_limit: 2 }), 3)).toEqual({ limit: 2, count: 3, full: true })
+  })
+})
+
+describe('refuseFullTalk', () => {
+  const full = channelFixture({ type: 'voice', user_limit: 2 })
+  const users = { [ann.id]: ann, [ben.id]: ben }
+
+  it('turns a stranger away from a full Talk', () => {
+    useAuthStore().user = userFixture({ id: fixtureId(9) })
+    expect(refuseFullTalk(full, users, false)).toBe(true)
+    expect(useToastStore().toasts).toHaveLength(1)
+  })
+
+  it('lets a member in who already sits in it on another device', () => {
+    useAuthStore().user = userFixture({ id: ann.id })
+    expect(refuseFullTalk(full, users, false)).toBe(false)
+    expect(useToastStore().toasts).toHaveLength(0)
   })
 })
