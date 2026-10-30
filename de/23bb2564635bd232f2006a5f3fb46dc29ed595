@@ -1,0 +1,61 @@
+doc/architecture.md
+  s_57fa886a85f9f6::t_bf2dbc809a9ae1 629,638-639
+e2e/tests/unread-jump.spec.ts
+  s_57fa886a85f9f6::t_a0f8c016db75b7 2,25-28,62-73,75-76,91-108
+internal/chat/post.go
+  s_57fa886a85f9f6::t_664b61721ea410 184,189-209
+internal/chat/readstate.go
+  s_57fa886a85f9f6::t_02ab5024313820 106-108
+internal/server/read_after_send_integration_test.go
+  s_57fa886a85f9f6::t_5dd34ba85535dc 1-83
+internal/server/readstate_integration_test.go
+  s_57fa886a85f9f6::t_adf0189856d4a9 80-85
+web/src/components/AudioOutputSection.test.ts
+  s_57fa886a85f9f6::t_122cd1241bce1f 1-46
+web/src/components/AudioOutputSection.vue
+  s_57fa886a85f9f6::t_87b7b43b66e6f9 5-6,24-33,111-135
+web/src/composables/useFirstUnreadJump.send.test.ts
+  s_57fa886a85f9f6::t_6457d8d2110fcd 1-96
+web/src/i18n/de.json
+  s_57fa886a85f9f6::t_fd8f1f637019b4 762-766
+web/src/i18n/en.json
+  s_57fa886a85f9f6::t_716bab0fcaf7b2 762-766
+web/src/lib/messageSound.test.ts
+  s_57fa886a85f9f6::t_0f7250274b589a 1-56
+web/src/lib/messageSound.ts
+  s_57fa886a85f9f6::t_ff2c933cae3ff1 1-46
+web/src/lib/soundEffects.test.ts
+  s_57fa886a85f9f6::t_d16085c7a7fbf6 206-242
+web/src/lib/soundEffects.ts
+  s_57fa886a85f9f6::t_b929e420014a6b 102,142-147,194,212-214,221-241
+web/src/main.ts
+  s_57fa886a85f9f6::t_6e45c661acbdaa 16,37
+web/src/stores/chat/events.ts
+  s_57fa886a85f9f6::t_944616cf281546 23,141-142
+web/src/stores/chat/messageActions.ts
+  s_57fa886a85f9f6::t_f2418bf941bf2a 1,34-48,64,85
+web/src/stores/chat/messageSound.ts
+  s_57fa886a85f9f6::t_48cbcba1e42792 1-50
+web/src/stores/chat/notifications.ts
+  s_57fa886a85f9f6::t_c05d73cedea276 56,76-78,87
+web/src/stores/chatMessageSound.test.ts
+  s_57fa886a85f9f6::t_505ad1342e7917 1-90
+web/src/stores/voiceSettings.ts
+  s_57fa886a85f9f6::t_ad49e6893d6f89 5,74,77,113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "de23bb2564635bd232f2006a5f3fb46dc29ed595",
+  "prompts": {},
+  "sessions": {
+    "s_57fa886a85f9f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4edefc50d802f9c0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
