@@ -1,0 +1,21 @@
+web/src/composables/attachmentTrayState.test.ts
+  s_4c6a19030e223f::t_827cd38b173c63 1-40
+web/src/lib/attachmentsApi.test.ts
+  s_4c6a19030e223f::t_f7e391ae6ad398 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e27954ffd94be0c969365f1bad965f9f085774b7",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
