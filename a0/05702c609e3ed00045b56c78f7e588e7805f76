@@ -1,0 +1,63 @@
+e2e/tests/context-menus.spec.ts
+  s_cf5b2fa6f87060::t_db759168caa6c2 1-79
+web/src/components/ContextMenu.test.ts
+  s_cf5b2fa6f87060::t_1d2e85681df9ee 226-228
+web/src/components/ContextMenu.vue
+  s_cf5b2fa6f87060::t_1117506b4b0d18 8,17-18,29-30,45,101,107-112,281-286,291,299,302-308,313,371
+web/src/components/ContextMenuBehaviour.test.ts
+  s_cf5b2fa6f87060::t_56179fdbe0cf5d 1-131
+web/src/components/ContextMenuRow.vue
+  s_cf5b2fa6f87060::t_6c256cb6282b06 57-80,104-105
+web/src/components/TalkControlBar.vue
+  s_cf5b2fa6f87060::t_e1f3fa282d330d 18-19,46-47,116,168,181,196,209,293-297
+web/src/components/TriggerMenu.test.ts
+  s_cf5b2fa6f87060::t_61a6bc5e7038a0 1-50
+web/src/components/TriggerMenu.vue
+  s_cf5b2fa6f87060::t_fc9e1039f3a74b 1-25
+web/src/components/UserBar.vue
+  s_cf5b2fa6f87060::t_d8299ccb789d5b 14-15,22-23,107,119,125-126
+web/src/components/VoiceStatusPanel.vue
+  s_cf5b2fa6f87060::t_a7160a407e1751 10-11,16-17,70,76
+web/src/components/menuTypes.ts
+  s_cf5b2fa6f87060::t_365c1fea0d1369 12-13,36
+web/src/composables/useContextMenuTrigger.test.ts
+  s_cf5b2fa6f87060::t_f4aa0afd398718 1-115
+web/src/composables/useContextMenuTrigger.ts
+  s_cf5b2fa6f87060::t_2ff47649fb1f4f 1-98
+web/src/composables/useStreamQuality.ts
+  s_cf5b2fa6f87060::t_5232771faa68bb 169,202
+web/src/composables/useVoiceMenus.test.ts
+  s_cf5b2fa6f87060::t_a1382d7528b582 1-233
+web/src/composables/useVoiceMenus.ts
+  s_cf5b2fa6f87060::t_935cd57ba57a29 1-180
+web/src/composables/useWebRTC.devices.test.ts
+  s_cf5b2fa6f87060::t_b81ec5255d69c6 102-122
+web/src/composables/useWebRTC.ts
+  s_cf5b2fa6f87060::t_d67c4436d62ff2 14,76
+web/src/composables/webrtc/camera.ts
+  s_cf5b2fa6f87060::t_1299604d6856fe 53-54,94-100
+web/src/i18n/de.json
+  s_cf5b2fa6f87060::t_901c755d27e919 3609-3616
+web/src/i18n/en.json
+  s_cf5b2fa6f87060::t_aed9e6eacc5405 3609-3616
+web/src/lib/menuKeys.ts
+  s_cf5b2fa6f87060::t_531fdd2d692750 1-29
+web/src/stores/voiceSettings.ts
+  s_cf5b2fa6f87060::t_be6fef26de0935 88,91,118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a005702c609e3ed00045b56c78f7e588e7805f76",
+  "prompts": {},
+  "sessions": {
+    "s_cf5b2fa6f87060": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa4a385df44c9d339",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
