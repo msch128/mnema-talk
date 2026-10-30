@@ -41,7 +41,7 @@ export {
   decodeAuthInvite as decodeInvite, decodeAuthUserEnvelope as decodeUserEnvelope,
   decodePermRole as decodeRole, decodeRolesPermissionsInfo as decodePermissionsInfo,
   decodePermOverwrite as decodeOverwrite, decodeRolesOverwritesBody as decodeOverwritesBody,
-  decodeChatChannel as decodeChannel, decodeChatCategory as decodeCategory,
+  decodeChatMediaAttachment as decodeMediaAttachment, decodeChatChannel as decodeChannel, decodeChatCategory as decodeCategory,
   decodeChatChannelHierarchy as decodeChannelHierarchy, decodeChatMessage as decodeMessage,
   decodeChatForumTag as decodeForumTag,
   decodeChatReactionResult as decodeReactionResult, decodeChatReadState as decodeReadState, decodeChatNotificationSettings as decodeNotificationSettings,

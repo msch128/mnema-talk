@@ -10,6 +10,7 @@ import { useOnboardingStore } from '../onboarding'
 import { useFirstRunStore } from '../firstRun'
 import { useAccountStore } from '../account'
 import { useDmCallsStore } from '../dmCalls'
+import { clearAllTrays } from '../../composables/attachmentTrayState'
 import { emptyWindow } from '../../lib/messageWindow'
 import { emptyNotificationSettings, type Cx } from './state'
 import { resetWindow, setWindow } from './messageWindow'
@@ -25,6 +26,7 @@ export function resetMemberStores() {
   useFirstRunStore().reset()
   useAccountStore().reset()
   useDmCallsStore().reset()
+  clearAllTrays()
 }
 
 /** Removes one ephemeral note. */

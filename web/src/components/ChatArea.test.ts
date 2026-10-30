@@ -248,19 +248,6 @@ describe('ChatArea message actions', () => {
     expect(w.find<HTMLVideoElement>('[data-msg-id="v"] video').exists()).toBe(true)
   })
 
-  it('clears the file input after a failed upload', async () => {
-    const chat = setup()
-    vi.spyOn(chat, 'uploadMedia').mockRejectedValue(new Error('zu groß'))
-    const input = w.find<HTMLInputElement>('input[type="file"]').element
-    const file = new File(['x'], 'a.png', { type: 'image/png' })
-    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
-    let value = 'C:\\fakepath\\a.png'
-    Object.defineProperty(input, 'value', { configurable: true, get: () => value, set: v => { value = v } })
-    input.dispatchEvent(new Event('change'))
-    await flushPromises()
-    expect(chat.uploadMedia).toHaveBeenCalled()
-    expect(value).toBe('')
-  })
 })
 
 // Exercise the panel through its public UI and child component events; stores
@@ -302,7 +289,7 @@ describe('ChatArea composer, replies and lifecycle', () => {
     key(composer(), { key: 'Enter' })
     key(composer(), { key: 'Enter' })
     expect(send).toHaveBeenCalledTimes(1)
-    expect(send).toHaveBeenCalledWith('hello', null, null)
+    expect(send).toHaveBeenCalledWith('hello', null, null, [])
     finish(null)
     await flushPromises()
     expect(composer().element.value).toBe('')
@@ -337,31 +324,8 @@ describe('ChatArea composer, replies and lifecycle', () => {
     await composer().setValue('reply')
     key(composer(), { key: 'Enter' })
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('reply', null, 'a')
+    expect(send).toHaveBeenCalledWith('reply', null, 'a', [])
     expect(latest).toHaveBeenCalledTimes(1)
-    expect(w.findComponent(ReplyComposerBar).exists()).toBe(false)
-  })
-
-  it('uploads with the selected reply, blocks sends during upload and invokes the attachment picker', async () => {
-    const chat = setup()
-    const send = vi.spyOn(chat, 'sendMessage').mockResolvedValue(null)
-    let complete!: (value: ReturnType<typeof messageFixture>) => void
-    const upload = vi.spyOn(chat, 'uploadMedia').mockImplementation(() => new Promise(resolve => { complete = resolve }))
-    rowComponent('b').vm.$emit('reply')
-    await nextTick()
-    const input = w.find<HTMLInputElement>('input[type=file]').element
-    const pick = vi.spyOn(input, 'click').mockImplementation(() => {})
-    const button = requireValue(w.findAll<HTMLElement>('button').find(b => b.find('svg.lucide-plus').exists()))
-    await button.trigger('click')
-    expect(pick).toHaveBeenCalledTimes(1)
-    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['x'], 'image.png', { type: 'image/png' })] })
-    input.dispatchEvent(new Event('change'))
-    await composer().setValue('draft')
-    key(composer(), { key: 'Enter' })
-    expect(send).not.toHaveBeenCalled()
-    expect(upload).toHaveBeenCalledWith(expect.any(File), '', null, 'b')
-    complete(messageFixture())
-    await flushPromises()
     expect(w.findComponent(ReplyComposerBar).exists()).toBe(false)
   })
 

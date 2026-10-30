@@ -13,10 +13,21 @@ import { useBlocksStore } from '../stores/blocks'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { usePermissionsStore } from '../stores/permissions'
 import * as forumApi from '../lib/forumApi'
+import { stageAttachment } from '../lib/attachmentsApi'
 import { setLocale, t } from '../i18n'
 import { closeViewer, viewerState } from '../composables/useMediaViewer'
 
 vi.mock('../lib/forumApi', () => ({ updateForumPost: vi.fn() }))
+vi.mock('../lib/attachmentsApi', () => ({ stageAttachment: vi.fn(), unstageAttachment: vi.fn(async () => undefined) }))
+
+const staged = (id: string) => ({ id, original_filename: 'a.png', mime_type: 'image/png', size_bytes: 1, url: `/api/media/${id}`, is_deleted: false })
+
+/** Picks files with the reply box's file button. */
+function pickFiles(files: File[]) {
+  const input = w.find<HTMLInputElement>('input[type="file"]').element
+  Object.defineProperty(input, 'files', { configurable: true, value: files })
+  input.dispatchEvent(new Event('change'))
+}
 
 let w!: ReturnType<typeof mount<typeof ThreadSidebar>>
 
@@ -151,17 +162,14 @@ describe('ThreadSidebar content', () => {
     expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }))
   })
 
-  it('clears the file input after a failed upload', async () => {
-    const chat = setup()
-    vi.spyOn(chat, 'uploadThreadMedia').mockRejectedValue(new Error('nope'))
-    const input = w.find<HTMLInputElement>('input[type="file"]').element
-    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['x'], 'a.png', { type: 'image/png' })] })
-    let value = 'C:\\fakepath\\a.png'
-    Object.defineProperty(input, 'value', { configurable: true, get: () => value, set: v => { value = v } })
-    input.dispatchEvent(new Event('change'))
+  it('keeps a file whose upload failed in the reply tray and retries it', async () => {
+    setup()
+    vi.mocked(stageAttachment).mockRejectedValueOnce(new Error('nope')).mockResolvedValueOnce(staged('att1'))
+    pickFiles([new File(['x'], 'a.png', { type: 'image/png' })])
     await flushPromises()
-    expect(chat.uploadThreadMedia).toHaveBeenCalled()
-    expect(value).toBe('')
+    await w.find('[data-attachment-status="error"] button').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-attachment-status="ready"]').exists()).toBe(true)
   })
 })
 
@@ -181,7 +189,7 @@ describe('ThreadSidebar replies', () => {
     expect(send).not.toHaveBeenCalled()
     expect(key(textarea(), { key: 'Enter' }).defaultPrevented).toBe(true)
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('hello thread', null)
+    expect(send).toHaveBeenCalledWith('hello thread', null, [])
     expect(textarea().element.value).toBe('')
   })
 
@@ -194,7 +202,7 @@ describe('ThreadSidebar replies', () => {
     await textarea().setValue('genau')
     key(textarea(), { key: 'Enter' })
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('genau', 'r3')
+    expect(send).toHaveBeenCalledWith('genau', 'r3', [])
     expect(w.text()).not.toContain('Antwort an')
   })
 
@@ -220,17 +228,19 @@ describe('ThreadSidebar replies', () => {
     expect(requireValue(useToastStore().toasts.at(-1)).text).toBe('zu lang')
   })
 
-  it('a successful upload clears the reply target', async () => {
+  it('sends the staged files with the reply and clears the reply target', async () => {
     const chat = setup()
-    const upload = vi.spyOn(chat, 'uploadThreadMedia').mockResolvedValue(messageFixture())
+    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(null)
+    vi.mocked(stageAttachment).mockResolvedValue(staged('att1'))
     key(w.find<HTMLElement>('[data-reply-id="r1"]'), { key: 'r' })
     await nextTick()
-    const input = w.find<HTMLInputElement>('input[type="file"]').element
-    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['x'], 'a.png', { type: 'image/png' })] })
-    input.dispatchEvent(new Event('change'))
+    pickFiles([new File(['x'], 'a.png', { type: 'image/png' })])
     await flushPromises()
-    expect(upload).toHaveBeenCalledWith(expect.any(File), '', 'r1')
+    key(replyComposer(), { key: 'Enter' })
+    await flushPromises()
+    expect(send).toHaveBeenCalledWith('', 'r1', ['att1'])
     expect(w.text()).not.toContain('Antwort an')
+    expect(w.find('[data-testid="attachment-tray"]').exists()).toBe(false)
   })
 
   it('jumps to the replied message, or says it is gone', async () => {
@@ -317,7 +327,7 @@ describe('ThreadSidebar complete interactions', () => {
     expect(w.find('[data-reply-id=bare-reply]').text()).toContain(t('chat.edited'))
   })
 
-  it('guards concurrent sends and uploads while keeping the draft editable', async () => {
+  it('guards concurrent sends while keeping the draft editable', async () => {
     const chat = setup()
     let sent!: (message: null) => void
     const send = vi.spyOn(chat, 'sendThreadReply').mockImplementation(() => new Promise<null>(resolve => { sent = resolve }))
@@ -325,6 +335,7 @@ describe('ThreadSidebar complete interactions', () => {
     key(replyComposer(), { key: 'Enter' })
     key(replyComposer(), { key: 'Enter' })
     expect(send).toHaveBeenCalledTimes(1)
+    await replyComposer().setValue('keep')
     sent(null)
     await flushPromises()
     const input = w.find<HTMLInputElement>('input[type=file]').element
@@ -332,15 +343,6 @@ describe('ThreadSidebar complete interactions', () => {
     const uploadButton = requireValue(w.findAll('button').find(button => button.find('svg.lucide-plus').exists()))
     await uploadButton.trigger('click')
     expect(picker).toHaveBeenCalledTimes(1)
-    let uploaded!: (message: ReturnType<typeof messageFixture>) => void
-    vi.spyOn(chat, 'uploadThreadMedia').mockImplementation(() => new Promise(resolve => { uploaded = resolve }))
-    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['x'], 'image.png', { type: 'image/png' })] })
-    input.dispatchEvent(new Event('change'))
-    await replyComposer().setValue('keep')
-    key(replyComposer(), { key: 'Enter' })
-    expect(send).toHaveBeenCalledTimes(1)
-    uploaded(messageFixture())
-    await flushPromises()
     expect(replyComposer().element.value).toBe('keep')
   })
 

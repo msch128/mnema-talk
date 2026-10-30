@@ -590,10 +590,28 @@
       "tooLong": "{count} Zeichen zu viel (höchstens {max})"
     },
     "noAttach": "Du darfst hier keine Dateien anhängen.",
-    "attachMediaOnly": "Es lassen sich nur Bilder und Videos anhängen.",
-    "attachSkipped": "Nur Bilder und Videos wurden angehängt. Andere Dateien wurden übersprungen.",
-    "attachFirstOnly": "Eine Nachricht trägt eine Datei. Die erste wurde angehängt.",
-    "attachOneSkipped": "Eine Nachricht trägt eine Datei: Das erste Bild oder Video wurde angehängt, die anderen Dateien wurden übersprungen.",
+    "attachLimit": "Eine Nachricht kann höchstens {max} Dateien enthalten.",
+    "attachSkippedN": {
+      "one": "{count} Datei wurde nicht hinzugefügt.",
+      "other": "{count} Dateien wurden nicht hinzugefügt."
+    },
+    "attachTotalLimit": "Eine Nachricht kann höchstens 100 MB an Dateien enthalten.",
+    "attachTray": "Dateien zum Senden",
+    "attachCount": "{count} von {max} Dateien",
+    "attachStatusUploading": "Wird hochgeladen …",
+    "attachStatusFailed": "Hochladen fehlgeschlagen",
+    "attachStatusReady": "Bereit zum Senden",
+    "attachUploading": "{name} wird hochgeladen",
+    "attachRetry": "Erneut versuchen",
+    "attachView": "{name} ansehen",
+    "attachRemove": "{name} entfernen",
+    "attachFailedSend": "Einige Dateien konnten nicht hochgeladen werden. Versuche es erneut oder entferne sie, um zu senden.",
+    "attachDiscardTitle": {
+      "one": "Die angehängte Datei entfernen?",
+      "other": "{count} angehängte Dateien entfernen?"
+    },
+    "attachDiscardBody": "Sie werden nicht gesendet und vom Server gelöscht.",
+    "attachDiscard": "Entfernen",
     "dropFiles": "Zum Anhängen hier ablegen",
     "messageRemoved": "Nachricht entfernt",
     "searchSyntaxTip": "Tipp: „genaue Wendung“ sucht eine Wendung, -Wort schließt ein Wort aus.",

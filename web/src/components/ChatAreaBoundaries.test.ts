@@ -121,7 +121,7 @@ describe('ChatArea boundary and teardown behavior', () => {
     await composer.setValue('Supported without resize observation')
     await composer.trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('Supported without resize observation', null, null)
+    expect(send).toHaveBeenCalledWith('Supported without resize observation', null, null, [])
     expect(composer.element.value).toBe('')
   })
 

@@ -1,14 +1,12 @@
-import type { Ref } from 'vue'
-import { pastedFiles, pickAttachable } from '../lib/composerFiles'
+import { pastedFiles } from '../lib/composerFiles'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 
 /**
- * Pasted and dropped files take the same road as a file picked with the
- * button: they are put into the composer's file input, which fires its change
- * event, so the chat's own upload (size limit, permission, errors) runs.
+ * Pasted, dropped and picked files are staged in the composer's attachment
+ * tray, never sent on their own: the member adds text and sends the message.
  */
-export function useComposerFiles(opts: { fileInput: Ref<HTMLInputElement | null>; canAttach: () => boolean; busy: () => boolean }) {
+export function useComposerFiles(opts: { add: (files: readonly File[]) => void; canAttach: () => boolean; busy: () => boolean }) {
   const toasts = useToastStore()
 
   function attachFiles(files: readonly File[]) {
@@ -18,22 +16,10 @@ export function useComposerFiles(opts: { fileInput: Ref<HTMLInputElement | null>
       return
     }
     if (opts.busy()) return
-    const { file, extra, rejected } = pickAttachable(files)
-    const input = opts.fileInput.value
-    if (!file || !input) {
-      toasts.error(t('chat.attachMediaOnly'))
-      return
-    }
-    if (rejected && extra) toasts.info(t('chat.attachOneSkipped'))
-    else if (rejected) toasts.info(t('chat.attachSkipped'))
-    else if (extra) toasts.info(t('chat.attachFirstOnly'))
-    const transfer = new DataTransfer()
-    transfer.items.add(file)
-    input.files = transfer.files
-    input.dispatchEvent(new Event('change'))
+    opts.add(files)
   }
 
-  /** Files on the clipboard attach; text pastes as it always did. */
+  /** Files on the clipboard are staged; text pastes as it always did. */
   function onPaste(e: ClipboardEvent) {
     const files = pastedFiles(e.clipboardData)
     if (!files.length) return
@@ -41,5 +27,12 @@ export function useComposerFiles(opts: { fileInput: Ref<HTMLInputElement | null>
     attachFiles(files)
   }
 
-  return { attachFiles, onPaste }
+  /** The hidden file input: stages what was picked and clears it, so the same file can be picked again. */
+  function onPick(e: Event) {
+    const input = e.target as HTMLInputElement
+    attachFiles(Array.from(input.files ?? []))
+    input.value = ''
+  }
+
+  return { attachFiles, onPaste, onPick }
 }
