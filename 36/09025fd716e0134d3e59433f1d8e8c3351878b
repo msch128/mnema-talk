@@ -1,0 +1,19 @@
+web/src/lib/savedGroups.test.ts
+  s_731038fe4fc0d1::t_34e975b4b0176b 67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3609025fd716e0134d3e59433f1d8e8c3351878b",
+  "prompts": {},
+  "sessions": {
+    "s_731038fe4fc0d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-saved-later-006f0c1510ca4d15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
