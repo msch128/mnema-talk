@@ -180,6 +180,36 @@ describe('the calls the conversation list names', () => {
   })
 })
 
+describe('a conversation list read before an event', () => {
+  it('does not undo a call the event brought', () => {
+    const calls = useDmCallsStore()
+    const askedAt = Date.now()
+    vi.advanceTimersByTime(5)
+    calls.ringIncoming(info(), 45, false)
+    calls.syncList([{ id: conversation }], me, vi.fn(), askedAt)
+    expect(calls.incoming).toHaveLength(1)
+    expect(calls.markOf(conversation)).toBe('ringing')
+  })
+
+  it('does not undo the end an event brought either', () => {
+    const calls = useDmCallsStore()
+    const askedAt = Date.now()
+    vi.advanceTimersByTime(5)
+    calls.end(ended({ reason: 'cancelled', active: false }))
+    const ring = vi.fn()
+    calls.syncList([{ id: conversation, call: { talk_id: talk, caller_id: caller, message_id: fixtureId(300), talk_name: 'Talk 1', ringing: true, ring_seconds: 20 } }], me, ring, askedAt)
+    expect(ring).not.toHaveBeenCalled()
+  })
+
+  it('still replaces what it is older than', () => {
+    const calls = useDmCallsStore()
+    calls.ringIncoming(info(), 45, false)
+    vi.advanceTimersByTime(5)
+    calls.syncList([{ id: conversation }], me, vi.fn(), Date.now())
+    expect(calls.incoming).toEqual([])
+  })
+})
+
 describe('leaving', () => {
   it('forgets everything, timers included', () => {
     const calls = useDmCallsStore()

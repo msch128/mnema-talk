@@ -13,10 +13,12 @@ export interface CallState {
   /** Talks whose incoming call the member closed: it does not come back by itself. */
   dismissed: Set<string>
   timers: Map<string, ReturnType<typeof setTimeout>>
+  /** When an event last changed the call of a conversation: a conversation list read earlier must not undo it. */
+  touched: Map<string, number>
 }
 
 export function createCallState(): CallState {
-  return { incoming: ref([]), outgoing: ref(null), active: ref({}), dismissed: new Set(), timers: new Map() }
+  return { incoming: ref([]), outgoing: ref(null), active: ref({}), dismissed: new Set(), timers: new Map(), touched: new Map() }
 }
 
 function stopTimer(cs: CallState, conversationId: string) {
@@ -33,6 +35,7 @@ function startTimer(cs: CallState, conversationId: string, ms: number, then: () 
 }
 
 export function track(cs: CallState, call: CallInfo) {
+  cs.touched.set(call.conversationId, Date.now())
   cs.active.value = { ...cs.active.value, [call.conversationId]: call }
 }
 
@@ -70,6 +73,7 @@ export function ringOutgoing(cs: CallState, call: CallInfo, seconds: number) {
 
 /** The call stopped ringing or is over, as the server says. */
 export function endCall(cs: CallState, p: DmCallEnd) {
+  cs.touched.set(p.conversation_id, Date.now())
   const mine = cs.outgoing.value?.talkId === p.talk_id
   const ringing = cs.incoming.value.some(c => c.conversationId === p.conversation_id && c.talkId === p.talk_id)
   if (ringing) removeIncoming(cs, p.conversation_id)
@@ -114,13 +118,19 @@ function infoOf(conversationId: string, call: ChatDMCall): CallInfo {
  * The calls the server lists with the conversations replace what is held (a
  * reconnect, a reload). `ring` is told of a call that rings and is not shown yet.
  */
-export function syncList(cs: CallState, list: readonly { id: string; call?: ChatDMCall }[], meId: string | undefined, ring: (call: CallInfo, seconds: number, mine: boolean) => void) {
+export function syncList(
+  cs: CallState, list: readonly { id: string; call?: ChatDMCall }[], meId: string | undefined,
+  ring: (call: CallInfo, seconds: number, mine: boolean) => void, readAt = Infinity
+) {
+  // A conversation an event changed after the list was asked for keeps what the event said.
+  const newer = (id: string) => (cs.touched.get(id) ?? 0) >= readAt
   const listed = new Set(list.filter(dm => dm.call).map(dm => dm.id))
-  for (const id of Object.keys(cs.active.value)) if (!listed.has(id)) untrack(cs, id)
-  cs.incoming.value = cs.incoming.value.filter(c => listed.has(c.conversationId))
-  if (cs.outgoing.value && !listed.has(cs.outgoing.value.conversationId)) clearOutgoing(cs)
+  const stale = (id: string) => !listed.has(id) && !newer(id)
+  for (const id of Object.keys(cs.active.value)) if (stale(id)) untrack(cs, id)
+  cs.incoming.value = cs.incoming.value.filter(c => !stale(c.conversationId))
+  if (cs.outgoing.value && stale(cs.outgoing.value.conversationId)) clearOutgoing(cs)
   for (const dm of list) {
-    if (!dm.call) continue
+    if (!dm.call || newer(dm.id)) continue
     const info = infoOf(dm.id, dm.call)
     const shown = cs.incoming.value.some(c => c.talkId === info.talkId) || cs.outgoing.value?.talkId === info.talkId
     if (dm.call.ringing && !shown) ring(info, dm.call.ring_seconds, dm.call.caller_id === meId)
@@ -140,4 +150,5 @@ export function resetCalls(cs: CallState) {
   cs.outgoing.value = null
   cs.active.value = {}
   cs.dismissed.clear()
+  cs.touched.clear()
 }
