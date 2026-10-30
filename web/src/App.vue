@@ -28,7 +28,6 @@ import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import { openSettings } from './lib/settingsDialog'
 import { notifyDialogOpen } from './lib/notifyDialog'
-import { watchAdminRequest } from './lib/adminRequest'
 import NotificationSettingsDialog from './components/NotificationSettingsDialog.vue'
 import ScreenShareModal from './components/ScreenShareModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
@@ -122,8 +121,6 @@ useAppBadge()
 usePushBridge()
 usePttHint()
 const { showAdminModal, adminTab, voiceShowChat, voiceChannelId, applyRoute, syncCurrentStateToRoute, openAdmin, closeAdmin, onVoiceJoin } = routing
-// Another part of the UI (the Owner's checklist) asks for a console tab.
-watchAdminRequest(tab => { if (permissions.canOpenAdmin) openAdmin(tab) })
 
 // Avoids flashing the login dialog while the session cookie is being checked.
 const authChecked = ref(false)
