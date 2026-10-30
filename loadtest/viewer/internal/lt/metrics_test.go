@@ -109,3 +109,15 @@ func TestChecksCollectViolations(t *testing.T) {
 		t.Fatalf("violations: %v", c.Violations)
 	}
 }
+
+func TestOriginDefaultsToBaseAndIsOverridable(t *testing.T) {
+	base, _ := ParseBase("http://127.0.0.1:8080")
+	t.Setenv("ORIGIN", "")
+	if got := Origin(base); got != "http://127.0.0.1:8080" {
+		t.Fatalf("origin = %q", got)
+	}
+	t.Setenv("ORIGIN", "https://talk.example.org")
+	if got := Origin(base); got != "https://talk.example.org" {
+		t.Fatalf("origin = %q", got)
+	}
+}

@@ -272,7 +272,7 @@ SQL
 stop_children() {
   local p i
   for p in "${CHILD_PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null; done
-  for i in 1 2 3 4 5; do
+  for _ in 1 2 3 4 5; do
     local alive=0
     for p in "${CHILD_PIDS[@]:-}"; do [ -n "$p" ] && kill -0 "$p" 2>/dev/null && alive=1; done
     [ "$alive" = 0 ] && break
