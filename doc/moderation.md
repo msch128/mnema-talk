@@ -229,7 +229,7 @@ as for a conversation that does not exist. The only route to the text of a
 direct message is a report by one of its members (below). Moderation actions
 that target a member (timeout, ban, kick) work as usual, and a timeout also
 takes *Send direct messages*. The Owner can switch direct messages off for the
-community under **Admin > Welcome & rules**: existing conversations stay
+community under **Admin > Sign-in & messages**: existing conversations stay
 readable, and nothing new can be started or written.
 
 ### Reporting a message

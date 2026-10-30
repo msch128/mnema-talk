@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { Plus } from '@lucide/vue'
 
-// The layout editor's toolbar: a new category (an action; the order is saved by the unsaved-changes bar).
+// The layout editor's toolbar: a new channel, a new category (an action; the order is saved by the unsaved-changes bar).
 defineProps({
   creating: { type: Boolean, default: false }
 })
-const emit = defineEmits<{ create: [] }>()
+const emit = defineEmits<{ create: []; 'add-channel': [] }>()
 const newCategoryName = defineModel<string>('newCategoryName', { required: true })
 </script>
 
 <template>
   <div class="flex w-full min-w-0 flex-wrap items-center gap-2 md:ml-auto md:w-auto">
+    <button type="button" class="btn btn-secondary btn-sm flex shrink-0 items-center gap-1" data-testid="layout-add-channel" @click="emit('add-channel')">
+      <Plus class="w-4 h-4" />
+      <span>{{ $t('channel.create') }}</span>
+    </button>
+
     <!-- Add Category form -->
     <div class="flex min-w-0 items-center gap-1.5 max-md:basis-full md:flex-none">
       <input

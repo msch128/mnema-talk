@@ -5,7 +5,7 @@ import ReportDialog from './ReportDialog.vue'
 import AdminReportsTab from './AdminReportsTab.vue'
 import AccountDmPolicy from './AccountDmPolicy.vue'
 import AccountBlockedList from './AccountBlockedList.vue'
-import AdminOnboardingTab from './AdminOnboardingTab.vue'
+import AdminAccessSettings from './AdminAccessSettings.vue'
 import AdminDashboard from './AdminDashboard.vue'
 import { closeReport, openReport } from '../lib/reportDialog'
 import { useAuthStore } from '../stores/auth'
@@ -379,31 +379,32 @@ describe('AccountBlockedList', () => {
   })
 })
 
-describe('the kill switch in the welcome settings', () => {
+describe('the kill switch in the access settings', () => {
   const settings = { community_name: 'Home', welcome_text: '', rules_text: '', rules_version: 0, start_channel_id: null, direct_messages_enabled: true, session_inactivity_days: 7 }
 
   it('is offered on a server with direct messages and saved with the other settings', async () => {
     useServerFeaturesStore().list = ['dm']
     const puts: unknown[] = []
     http.handle = (_url, o) => { if (o?.method === 'PUT') { puts.push(o.json); return { ...settings, direct_messages_enabled: false } } return settings }
-    const w = mount(AdminOnboardingTab, { global })
+    const w = mount(AdminAccessSettings, { global })
     await flushPromises()
-    expect(w.get('[data-testid="onboarding-save"]').attributes('disabled')).toBeDefined()
+    expect(w.get('[data-testid="access-save"]').attributes('disabled')).toBeDefined()
     await w.get('[data-testid="dm-enabled"]').setValue(false)
-    await w.get('[data-testid="onboarding-save"]').trigger('submit')
+    await w.get('[data-testid="access-save"]').trigger('submit')
     await flushPromises()
-    expect(puts[0]).toMatchObject({ direct_messages_enabled: false })
+    expect(puts[0]).toMatchObject({ direct_messages_enabled: false, community_name: 'Home' })
   })
 
   it('is absent, and not sent, on a server without direct messages', async () => {
     const puts: unknown[] = []
     http.handle = (_url, o) => { if (o?.method === 'PUT') { puts.push(o.json); return settings } return settings }
-    const w = mount(AdminOnboardingTab, { global })
+    const w = mount(AdminAccessSettings, { global })
     await flushPromises()
     expect(w.find('[data-testid="dm-switch"]').exists()).toBe(false)
-    await w.get('#onb-name').setValue('Renamed')
+    await w.get('[data-testid="inactivity-days"]').setValue('30')
     await w.get('form').trigger('submit')
     await flushPromises()
+    expect(puts[0]).toMatchObject({ session_inactivity_days: 30 })
     expect(puts[0]).not.toHaveProperty('direct_messages_enabled')
   })
 })

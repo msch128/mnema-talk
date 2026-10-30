@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { Category } from '../types/domain'
-import { Trash2, Edit2, ArrowUp, ArrowDown, GripVertical } from '@lucide/vue'
+import { Trash2, Edit2, ArrowUp, ArrowDown, GripVertical, Plus } from '@lucide/vue'
 
 // The header of a category in the layout editor: name, count and its arrows, rename and delete.
 defineProps({
@@ -9,7 +9,7 @@ defineProps({
   index: { type: Number, required: true },
   count: { type: Number, required: true }
 })
-const emit = defineEmits<{ move: [direction: number]; rename: []; delete: [] }>()
+const emit = defineEmits<{ move: [direction: number]; rename: []; delete: []; 'add-channel': [] }>()
 </script>
 
 <template>
@@ -21,6 +21,16 @@ const emit = defineEmits<{ move: [direction: number]; rename: []; delete: [] }>(
     </div>
 
     <div class="flex items-center gap-1 shrink-0">
+      <button
+        data-testid="add-channel-category"
+        type="button"
+        class="btn btn-icon btn-sm hover:text-mnema-text"
+        :title="$t('channel.create')"
+        :aria-label="$t('admin.addChannelTo', { name: category.name })"
+        @click="emit('add-channel')"
+      >
+        <Plus class="w-3.5 h-3.5" />
+      </button>
       <button
         data-testid="move-up-category"
         type="button"

@@ -107,6 +107,18 @@ describe('EventsModal', () => {
     expect(wrapper.text()).toContain('Create event')
   })
 
+  it('explains what events are in the empty state and offers creating one to those who may', async () => {
+    const perms = usePermissionsStore()
+    wrapper = mount(EventsModal)
+    expect(wrapper.get('[data-testid="empty-state"]').text()).toContain('Events are dated gatherings in a Talk or channel')
+    expect(wrapper.find('[data-testid="events-empty-create"]').exists()).toBe(false)
+
+    perms.info = makePermsInfo(33554432) // manage_events
+    wrapper = mount(EventsModal)
+    await wrapper.get('[data-testid="events-empty-create"]').trigger('click')
+    expect(wrapper.text()).not.toContain('Events are dated gatherings')
+  })
+
   it('allows joining active Talk channel event', async () => {
     const store = useEventsStore()
     const chat = useChatStore()

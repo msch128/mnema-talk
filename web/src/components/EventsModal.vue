@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { Calendar, Check, HelpCircle, MapPin, Plus, Volume2 } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
+import EmptyState from './EmptyState.vue'
 import EventDetailModal from './EventDetailModal.vue'
 import EventEditDialog from './EventEditDialog.vue'
 import UserAvatar from './UserAvatar.vue'
@@ -152,9 +153,23 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
           {{ $t('common.loading') }}
         </div>
 
-        <div v-else-if="displayedEvents.length === 0" class="py-12 text-center text-sm text-mnema-tertiary italic">
-          {{ activeTab === 'upcoming' ? $t('events.noUpcoming') : $t('events.noPast') }}
-        </div>
+        <EmptyState
+          v-else-if="displayedEvents.length === 0"
+          :icon="Calendar"
+          :text="activeTab === 'upcoming' ? $t('events.noUpcoming') : $t('events.noPast')"
+          :hint="activeTab === 'upcoming' ? $t('events.whatAreEvents') : ''"
+        >
+          <button
+            v-if="activeTab === 'upcoming' && permissions.can('manage_events')"
+            type="button"
+            class="btn btn-primary btn-sm flex items-center gap-1"
+            data-testid="events-empty-create"
+            @click="creatingEvent = true"
+          >
+            <Plus class="w-3.5 h-3.5" />
+            <span>{{ $t('events.create') }}</span>
+          </button>
+        </EmptyState>
 
         <article
           v-for="event in displayedEvents"

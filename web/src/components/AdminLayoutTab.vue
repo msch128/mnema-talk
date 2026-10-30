@@ -18,8 +18,10 @@ import AdminChannelRow from './AdminChannelRow.vue'
 import AdminCategoryHeader from './AdminCategoryHeader.vue'
 import AdminLayoutToolbar from './AdminLayoutToolbar.vue'
 import AdminEditDialogs from './AdminEditDialogs.vue'
+import CreateChannelModal from './CreateChannelModal.vue'
 import UnsavedChangesBar from './UnsavedChangesBar.vue'
 import { onSaveShortcut, useLeaveGuard } from '../composables/draftGuard'
+import { useLayoutDrag } from '../composables/useLayoutDrag'
 
 const chatStore = useChatStore()
 const toasts = useToastStore()
@@ -36,8 +38,8 @@ const isCreatingCategory = ref(false)
 const editingCategory = ref<Category | null>(null)
 const editingChannel = ref<Channel | null>(null)
 const newCategoryName = ref('')
-const draggedCategoryId = ref<string | null>(null)
-const draggedChannelId = ref<string | null>(null)
+// The create-channel dialog; categoryId preselects its category ('' lets the dialog pick).
+const creatingChannel = ref<{ categoryId: string } | null>(null)
 
 function showError(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
@@ -94,42 +96,7 @@ function moveChannelBy(categoryId: string | null, channel: Channel, direction: n
   if (from) reorder(moveChannel(layout.value, channel.id, categoryId, from.index + direction))
 }
 
-// Only one kind of drag is ever in progress; a drag cancelled with Escape or
-// dropped outside ends in dragend, which forgets it.
-function onDragEnd() {
-  draggedCategoryId.value = null
-  draggedChannelId.value = null
-}
-
-function onCategoryDragStart(e: DragEvent, cat: Category) {
-  draggedChannelId.value = null
-  draggedCategoryId.value = cat.id
-  if (e?.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move'
-  }
-}
-
-function onCategoryDrop(e: DragEvent, targetIndex: number) {
-  const id = draggedCategoryId.value
-  draggedCategoryId.value = null
-  if (id !== null) reorder(moveCategory(layout.value, id, targetIndex))
-}
-
-function onChannelDragStart(e: DragEvent, channel: Channel) {
-  draggedCategoryId.value = null
-  draggedChannelId.value = channel.id
-  if (e?.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move'
-  }
-}
-
-// The dropped channel takes the target's place (or goes last for a drop on
-// the category's list itself).
-function onChannelDrop(e: DragEvent, targetCategoryId: string | null, targetIndex: number) {
-  const id = draggedChannelId.value
-  draggedChannelId.value = null
-  if (id !== null) reorder(moveChannel(layout.value, id, targetCategoryId, targetIndex))
-}
+const { onDragEnd, onCategoryDragStart, onCategoryDrop, onChannelDragStart, onChannelDrop } = useLayoutDrag(() => layout.value, reorder)
 
 async function saveLayout() {
   if (isSavingLayout.value || !hasLayoutChanges.value) return
@@ -256,6 +223,15 @@ async function deleteChannel(channel: Channel) {
   }
 }
 
+// The new channel is already on the server; an unsaved reorder keeps its order and gets the row appended.
+async function onChannelCreated(channel: Channel) {
+  await syncAfterEdit(() => {
+    const target = channel.category_id ? layout.value.categories.find(c => c.id === channel.category_id) : null
+    if (target) target.channels = [...(target.channels ?? []), { ...channel }]
+    else layout.value = { ...layout.value, uncategorized: [...layout.value.uncategorized, { ...channel }] }
+  })
+}
+
 async function createCategory() {
   if (isCreatingCategory.value || !newCategoryName.value.trim()) return
   isCreatingCategory.value = true
@@ -294,6 +270,7 @@ onMounted(() => loadChannelsData())
         v-model:new-category-name="newCategoryName"
         :creating="isCreatingCategory"
         @create="createCategory"
+        @add-channel="creatingChannel = { categoryId: '' }"
       />
     </div>
 
@@ -339,6 +316,7 @@ onMounted(() => loadChannelsData())
           :index="catIdx"
           :count="layout.categories.length"
           @move="moveCategoryBy(cat, $event)"
+          @add-channel="creatingChannel = { categoryId: cat.id }"
           @rename="openEditCategory(cat)"
           @delete="deleteCategory(cat)"
         />
@@ -369,6 +347,13 @@ onMounted(() => loadChannelsData())
         </div>
       </div>
     </div>
+
+    <CreateChannelModal
+      v-if="creatingChannel"
+      :initial-category-id="creatingChannel.categoryId"
+      @close="creatingChannel = null"
+      @created="onChannelCreated"
+    />
 
     <AdminEditDialogs
       v-if="editingCategory || editingChannel"

@@ -277,8 +277,8 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
       v-on="navListeners"
       @contextmenu="openListMenu"
     >
-      <SidebarEventsEntry />
       <SidebarDmSection />
+      <SidebarEventsEntry />
       <div class="shrink-0">
         <!-- Uncategorized channels first (headless section), then the categories -->
         <section
