@@ -1,0 +1,58 @@
+doc/moderation.md
+  h_0ff4f4713441f4 553
+doc/operations.md
+  h_0ff4f4713441f4 950
+e2e/tests/forum-close.spec.ts
+  h_0ff4f4713441f4 1-67
+internal/httpx/ratelimit.go
+  h_0ff4f4713441f4 154-170
+internal/server/api_limits_test.go
+  h_0ff4f4713441f4 1-57
+internal/server/router_build.go
+  h_0ff4f4713441f4 50-60,102
+internal/server/router_routes.go
+  h_0ff4f4713441f4 97
+internal/server/server.go
+  h_0ff4f4713441f4 164-165
+web/src/App.test.ts
+  h_0ff4f4713441f4 101-110
+web/src/App.vue
+  h_0ff4f4713441f4 104-105,107-109,111-112
+web/src/components/ThreadSidebar.test.ts
+  h_0ff4f4713441f4 327,329,331-335,340,342,347,355,357,691-720
+web/src/components/ThreadSidebar.vue
+  h_0ff4f4713441f4 169-178,180,185,275-277,279-280
+web/src/composables/appRoutingApply.test.ts
+  h_0ff4f4713441f4 106-118
+web/src/composables/appRoutingApply.ts
+  h_0ff4f4713441f4 71-75
+web/src/composables/useAppRouting.test.ts
+  h_0ff4f4713441f4 38-42
+web/src/i18n/de.json
+  h_0ff4f4713441f4 86,96
+web/src/i18n/en.json
+  h_0ff4f4713441f4 86,96
+web/src/lib/api.test.ts
+  h_0ff4f4713441f4 110,316-363
+web/src/lib/api.ts
+  h_0ff4f4713441f4 83-84,130,134-135,177-194,199,203
+web/src/lib/forumApi.ts
+  h_0ff4f4713441f4 56
+web/src/stores/chat/threads.ts
+  h_0ff4f4713441f4 41
+web/src/stores/toast.test.ts
+  h_0ff4f4713441f4 24-40
+web/src/stores/toast.ts
+  h_0ff4f4713441f4 55-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4c30700e6ca48e12c40c33597a01a7fa7c248ea3",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
