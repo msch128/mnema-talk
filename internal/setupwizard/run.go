@@ -144,6 +144,12 @@ func checkExistingEnv(out io.Writer, o Options) (done bool, err error) {
 		return false, nil
 	}
 	found, problems, err := checkExisting(out, o.Dir)
+	if err != nil && !o.CheckOnly {
+		// An .env this user cannot read (another uid wrote it) is still there:
+		// refuse to replace it, with the usual message, rather than fail on the read.
+		fmt.Fprintf(out, "%v (not checked)\n", err)
+		found, err = true, nil
+	}
 	switch {
 	case err != nil:
 		return true, err

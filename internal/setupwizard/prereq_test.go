@@ -397,3 +397,22 @@ func TestLocalTrialPublishesEverythingOnLoopback(t *testing.T) {
 		t.Error("the UDP range is not published on WEBRTC_PUBLISH_ADDR")
 	}
 }
+
+// A second run as another user cannot read the first run's 0600 .env: it must
+// still say the file was left alone, not fail on the permission.
+func TestSetupOverAnUnreadableEnvStillRefusesCleanly(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads everything")
+	}
+	dir := writeEnv(t, "JWT_SECRET=x\n")
+	if err := os.Chmod(filepath.Join(dir, ".env"), 0); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runSetup(t, "", "-y", "--dir", dir, "--public-url", "https://chat.example.com", "--compose-template", repoCompose)
+	if err == nil || !strings.Contains(err.Error(), "already exists and was left alone") || strings.Contains(err.Error(), "permission denied") {
+		t.Fatalf("err = %v\n%s", err, out)
+	}
+	if _, err := runSetup(t, "", "--check", "--dir", dir); err == nil || !strings.Contains(err.Error(), "permission denied") {
+		t.Fatalf("--check must report the unreadable file: %v", err)
+	}
+}
