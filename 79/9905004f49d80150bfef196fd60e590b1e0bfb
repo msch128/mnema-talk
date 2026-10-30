@@ -1,0 +1,21 @@
+web/src/lib/pttKey.test.ts
+  s_afb3377f9f37f8::t_3e32b0511d43a6 14-16
+web/src/lib/pttKey.ts
+  s_afb3377f9f37f8::t_07601dd82a5b43 25-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "799905004f49d80150bfef196fd60e590b1e0bfb",
+  "prompts": {},
+  "sessions": {
+    "s_afb3377f9f37f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-proxy-limits-737a1a591bac000a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
