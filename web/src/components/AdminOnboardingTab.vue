@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { charCount } from '../lib/textLength'
 // Owner and Administrators: the community's name, the welcome text, the rules
 // and the channel new members land in. Rules are Markdown; once they exist,
 // members must accept them before they may post, react, upload or join a Talk
@@ -54,7 +55,7 @@ const form = useSettingsDraft<CommunityForm>({
   },
   validate: draft => {
     const found: Partial<Record<keyof CommunityForm, string>> = {}
-    if (draft.name.length > MAX_NAME || draft.welcome.length > MAX_WELCOME || draft.rules.length > MAX_RULES) found.name = t('admin.onboarding.tooLong')
+    if (charCount(draft.name) > MAX_NAME || charCount(draft.welcome) > MAX_WELCOME || charCount(draft.rules) > MAX_RULES) found.name = t('admin.onboarding.tooLong')
     return found
   },
   blocked: () => !loaded.value,
@@ -114,7 +115,7 @@ onMounted(load)
 
     <div class="space-y-1">
       <label for="onb-name" class="block text-xs font-medium text-mnema-muted font-mono uppercase tracking-wider">{{ $t('admin.onboarding.name') }}</label>
-      <input id="onb-name" v-model="draft.name" type="text" :maxlength="MAX_NAME" :placeholder="host" class="w-full max-w-sm rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
+      <input id="onb-name" v-model="draft.name" type="text" v-max-chars="MAX_NAME" :placeholder="host" class="w-full max-w-sm rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
       <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.nameHint', { host }) }}</p>
     </div>
 
@@ -124,7 +125,7 @@ onMounted(load)
         <button type="button" class="text-xs text-mnema-accent hover:underline" :aria-pressed="previewing === 'welcome' ? 'true' : 'false'" @click="togglePreview('welcome')">{{ previewing === 'welcome' ? $t('admin.onboarding.edit') : $t('admin.onboarding.preview') }}</button>
       </div>
       <div v-if="previewing === 'welcome'" class="min-h-24 rounded-md border border-mnema-hairline bg-mnema-canvas/40 p-3 text-sm" data-testid="welcome-preview"><MarkdownContent :content="draft.welcome" /></div>
-      <textarea v-else id="onb-welcome" v-model="draft.welcome" rows="5" :maxlength="MAX_WELCOME" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
+      <textarea v-else id="onb-welcome" v-model="draft.welcome" rows="5" v-max-chars="MAX_WELCOME" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
     </div>
 
     <div class="space-y-1">
@@ -133,7 +134,7 @@ onMounted(load)
         <button type="button" class="text-xs text-mnema-accent hover:underline" :aria-pressed="previewing === 'rules' ? 'true' : 'false'" @click="togglePreview('rules')">{{ previewing === 'rules' ? $t('admin.onboarding.edit') : $t('admin.onboarding.preview') }}</button>
       </div>
       <div v-if="previewing === 'rules'" class="min-h-24 rounded-md border border-mnema-hairline bg-mnema-canvas/40 p-3 text-sm" data-testid="rules-preview"><MarkdownContent :content="draft.rules" /></div>
-      <textarea v-else id="onb-rules" v-model="draft.rules" rows="8" :maxlength="MAX_RULES" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
+      <textarea v-else id="onb-rules" v-model="draft.rules" rows="8" v-max-chars="MAX_RULES" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" />
       <p class="text-xs text-mnema-tertiary">{{ $t(hasRules ? 'admin.onboarding.rulesOn' : 'admin.onboarding.rulesOff', { version: loaded.rules_version }) }}</p>
       <label v-if="hasRules && loaded.rules_version > 0" class="flex items-center gap-2 text-sm text-mnema-text">
         <input v-model="draft.reaccept" type="checkbox" data-testid="reaccept" />

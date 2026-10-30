@@ -126,7 +126,7 @@ onMounted(load)
         <h4 class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('modHistory.notes') }}</h4>
         <form class="space-y-2" @submit.prevent="add">
           <label for="mod-note" class="sr-only">{{ $t('modHistory.noteLabel') }}</label>
-          <textarea id="mod-note" v-model="draft" rows="2" :maxlength="NOTE_MAX" :placeholder="$t('modHistory.notePlaceholder')" data-testid="mod-note-input" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"></textarea>
+          <textarea id="mod-note" v-model="draft" rows="2" v-max-chars="NOTE_MAX" :placeholder="$t('modHistory.notePlaceholder')" data-testid="mod-note-input" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"></textarea>
           <div class="flex flex-wrap items-center justify-between gap-2">
             <label class="flex items-center gap-2 text-sm text-mnema-text">
               <input v-model="draftStrike" type="checkbox" data-testid="mod-note-strike" /><span>{{ $t('modHistory.asStrike') }}</span>
@@ -138,7 +138,7 @@ onMounted(load)
         <ul v-else class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
           <li v-for="note in history.notes" :key="note.id" :data-note="note.id" class="space-y-1 px-3 py-2.5 text-sm">
             <template v-if="editingId === note.id">
-              <textarea v-model="editText" rows="2" :maxlength="NOTE_MAX" :aria-label="$t('modHistory.noteLabel')" data-testid="mod-note-edit-input" class="w-full rounded-md border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"></textarea>
+              <textarea v-model="editText" rows="2" v-max-chars="NOTE_MAX" :aria-label="$t('modHistory.noteLabel')" data-testid="mod-note-edit-input" class="w-full rounded-md border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"></textarea>
               <label class="flex items-center gap-2 text-sm text-mnema-text"><input v-model="editStrike" type="checkbox" /><span>{{ $t('modHistory.asStrike') }}</span></label>
               <div class="flex gap-2">
                 <button type="button" :disabled="busy || !editText.trim()" class="btn btn-primary btn-sm" data-testid="mod-note-save" @click="saveEdit">{{ $t('common.save') }}</button>

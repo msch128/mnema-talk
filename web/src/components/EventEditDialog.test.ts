@@ -116,7 +116,7 @@ describe('EventEditDialog', () => {
     await titleInput()?.setValue('  Party ')
     await setText('input[type="datetime-local"]', '2026-11-01T18:00')
     await setText('input[type="datetime-local"]', '2026-11-01T20:00', 1)
-    await wrapper.find('input[maxlength="255"]').setValue(' Room 42 ')
+    await wrapper.find('input[data-max-chars="255"]').setValue(' Room 42 ')
     await submit()
     expect(create).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Party',
@@ -205,7 +205,7 @@ describe('EventEditDialog', () => {
     await wrapper.find('button.absolute').trigger('click')
     await titleInput()?.setValue('Party')
     await setText('input[type="datetime-local"]', '2026-11-01T18:00')
-    await wrapper.find('input[maxlength="255"]').setValue('Here')
+    await wrapper.find('input[data-max-chars="255"]').setValue('Here')
     await submit()
     expect(upload).not.toHaveBeenCalled()
     expect(del).not.toHaveBeenCalled()
@@ -216,7 +216,7 @@ describe('EventEditDialog', () => {
     wrapper = mount(EventEditDialog)
     await titleInput()?.setValue('Party')
     await setText('input[type="datetime-local"]', '2026-11-01T18:00')
-    await wrapper.find('input[maxlength="255"]').setValue('Here')
+    await wrapper.find('input[data-max-chars="255"]').setValue('Here')
     await submit()
     expect(wrapper.text()).toContain('Server said no')
     expect(wrapper.emitted('close')).toBeUndefined()
@@ -236,7 +236,7 @@ describe('EventEditDialog', () => {
     wrapper = mount(EventEditDialog)
     await titleInput()?.setValue('Party')
     await setText('input[type="datetime-local"]', '2026-11-01T18:00')
-    await wrapper.find('input[maxlength="255"]').setValue('Room 42')
+    await wrapper.find('input[data-max-chars="255"]').setValue('Room 42')
     const input = wrapper.find('input[type="file"]')
     Object.defineProperty(input.element, 'files', { value: [new File(['x'], 'cover.png', { type: 'image/png' })], configurable: true })
     await input.trigger('change')
@@ -258,7 +258,7 @@ describe('EventEditDialog', () => {
     wrapper = mount(EventEditDialog)
     for (const input of wrapper.findAll('input[type="text"], textarea, input[type="datetime-local"]')) {
       const id = input.attributes('id')
-      if (input.attributes('maxlength') === '255') continue
+      if (input.attributes('data-max-chars') === '255') continue
       expect(id).toBeTruthy()
       expect(wrapper.find(`label[for="${id}"]`).exists()).toBe(true)
     }

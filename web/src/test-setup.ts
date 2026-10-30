@@ -1,8 +1,9 @@
-// Global plugins every component test needs: $t and v-tooltip.
+// Global plugins every component test needs: $t, v-tooltip and v-max-chars.
 import { config } from '@vue/test-utils'
 import { beforeEach } from 'vitest'
 import { clearAllDrafts } from './lib/drafts'
 import { i18nPlugin, setLocale } from './i18n'
+import { maxChars } from './directives/maxChars'
 import { tooltip } from './directives/tooltip'
 import { installMediaCall } from './lib/media/api'
 import { clock } from './lib/media/clock'
@@ -27,7 +28,7 @@ installMediaCall({
 })
 
 config.global.plugins = [i18nPlugin]
-config.global.directives = { tooltip }
+config.global.directives = { tooltip, maxChars }
 setLocale('de')
 
 // Unsent drafts live in the page's storage: no test inherits another's.

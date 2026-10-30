@@ -138,7 +138,7 @@ defineExpose({ guard: form.guard, dirty: form.dirty })
     <template v-if="!isEveryone">
       <label class="block stack-1">
         <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('common.name') }}</span>
-        <input v-model="draft.name" maxlength="32" :disabled="readonly || isManaged" :aria-invalid="errors.name ? 'true' : undefined" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden transition focus:border-mnema-accent disabled:opacity-50" />
+        <input v-model="draft.name" v-max-chars="32" :disabled="readonly || isManaged" :aria-invalid="errors.name ? 'true' : undefined" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden transition focus:border-mnema-accent disabled:opacity-50" />
         <span v-if="errors.name" class="block text-xs text-mnema-danger" role="alert" data-testid="role-name-invalid">{{ errors.name }}</span>
       </label>
 

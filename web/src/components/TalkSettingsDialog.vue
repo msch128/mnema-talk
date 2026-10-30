@@ -126,7 +126,7 @@ const field = 'w-full rounded-md border border-mnema-border-field bg-mnema-canva
       <div class="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
         <div class="space-y-1.5">
           <label for="talk-name" class="font-mono text-xs font-medium uppercase tracking-wider text-mnema-tertiary">{{ $t('admin.channelNameLabel') }}</label>
-          <input id="talk-name" v-model="draft.name" type="text" maxlength="64" data-testid="talk-name" :aria-invalid="errors.name ? 'true' : undefined" :class="field" />
+          <input id="talk-name" v-model="draft.name" type="text" v-max-chars="64" data-testid="talk-name" :aria-invalid="errors.name ? 'true' : undefined" :class="field" />
           <p v-if="errors.name" class="text-xs text-mnema-danger" data-testid="talk-name-error">{{ errors.name }}</p>
         </div>
 

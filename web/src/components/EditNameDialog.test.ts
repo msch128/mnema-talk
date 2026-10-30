@@ -113,7 +113,7 @@ describe('EditNameDialog editing', () => {
   it('shows the topic helper text with its length', async () => {
     wrapper = mount(EditNameDialog, { props: { kind: 'channel', entity: channelFixture({ topic: 'abc' }) } })
     expect(wrapper.get('#edit-topic-help').text()).toContain('3/255')
-    expect(wrapper.get('#edit-topic').attributes('maxlength')).toBe('255')
+    expect(wrapper.get('#edit-topic').attributes('data-max-chars')).toBe('255')
   })
   it('offers no slow mode for categories', () => {
     wrapper = mount(EditNameDialog, { props: { kind: 'category', entity: categoryFixture() } })

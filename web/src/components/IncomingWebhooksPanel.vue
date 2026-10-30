@@ -145,7 +145,7 @@ onMounted(load)
       <input
         v-model="newName"
         type="text"
-        maxlength="80"
+        v-max-chars="80"
         class="min-w-0 flex-1 rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text"
         :placeholder="$t('webhooks.namePlaceholder')"
         :aria-label="$t('common.name')"
