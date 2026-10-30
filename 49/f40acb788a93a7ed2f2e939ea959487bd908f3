@@ -1,0 +1,19 @@
+e2e/tests/perf-probe.ts
+  s_2de5838cb2797c::t_a16e5cf2fced2d 1-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "49f40acb788a93a7ed2f2e939ea959487bd908f3",
+  "prompts": {},
+  "sessions": {
+    "s_2de5838cb2797c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aperf-idle-a1f825253ff37314",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
