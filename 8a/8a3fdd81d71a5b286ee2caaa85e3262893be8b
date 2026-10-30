@@ -1,0 +1,220 @@
+web/src/lib/settingsDialog.ts
+  s_ed05b7d59456d3::t_f8420c9f8c1658 3,5-6,9-15,17,19-20,22-27
+web/src/components/MicLevelMeter.vue
+  s_ed05b7d59456d3::t_c2df4b4d362444 1-63
+web/src/composables/useTalkControls.ts
+  s_ed05b7d59456d3::t_75f93a84acb504 6-10,17-19,32,34,38-50,67
+web/src/components/SettingsDialog.test.ts
+  s_06fcde5dbef956::t_c3b2d7999f48f6 34-35,210,213-214,216,218
+web/src/stores/voiceSettings.ts
+  s_0dfc723326fc69::t_52a3b3673a0f68 57
+  s_06fcde5dbef956::t_71331abf4e6fc7 58-60
+web/src/i18n/de.json
+  s_46a6db8f9e8231::t_cc885d720a5b4b 694-695,697,702-703,705,707,712,714,732-733,736-737,746,785-797,1174-1175,3655-3657
+  s_0cae4a4d7ab7c3::t_3d6b0e50c10b89 48-49,73-74,319-320,608-610,640-641,3659-3662,3671-3713
+web/src/components/AudioInputSection.vue
+  s_46a6db8f9e8231::t_e8ae36346f3c9b 2-3,6-7,9-10,14,16-20,26-29,48,54-55,89,93,95,101,104-114
+web/src/components/AudioOutputSection.vue
+  s_3255aa8302478d::t_c4653f548f821c 51
+web/src/components/VoiceStage.phone.test.ts
+  s_06fcde5dbef956::t_fe9e27abd15f53 103,105,111-123
+web/src/components/AudioSettingsPanel.vue
+  s_3255aa8302478d::t_c2ba5473722670 2,10,38,41
+web/src/components/AudioSettingsPanel.test.ts
+  s_46a6db8f9e8231::t_e8cc686a00d4e3 275-326,334-342,351,354
+web/src/composables/useTalkControls.test.ts
+  s_2de5838cb2797c::t_b36bd9372a52e8 1-73
+web/src/components/SettingsDialog.vue
+  s_ed05b7d59456d3::t_d6f5d9af9e3f86 8,33-34,36,40
+web/src/components/AccountMenu.vue
+  s_06fcde5dbef956::t_85473be255d1f2 5,164-166
+  s_46a6db8f9e8231::t_a812ebd25b8660 7,14,178-182
+web/src/lib/pttKey.test.ts
+  s_0dfc723326fc69::t_cc9adcbadb4f22 1-15
+web/src/components/AccountMenu.test.ts
+  s_06fcde5dbef956::t_3e658768d7d7d4 65
+  s_0cae4a4d7ab7c3::t_94dabc6e68023f 13,70-86
+web/src/lib/pttKey.ts
+  s_0dfc723326fc69::t_bbcbccc513c0ee 1-33
+web/src/App.vue
+  s_17ef7810e0243d::t_1307b778b934ed 59,115
+  s_bf24ce51cd8f95::t_115eaf42d38a8e 32-33,116,350
+e2e/tests/ptt-hint.spec.ts
+  s_46a6db8f9e8231::t_def21cef540ad7 1-33,42-60
+  s_06fcde5dbef956::t_ddc4c71f12748b 34-41
+web/src/components/AudioMicCheck.vue
+  s_75fc0e47390cec::t_b475897d7260ab 1-99
+web/src/i18n/en.json
+  s_46a6db8f9e8231::t_fbc12b2f80ce4d 694-695,697,702-703,705,707,712,714,732-733,736-737,746,785-797,1174-1175,3655-3657
+  s_0cae4a4d7ab7c3::t_3e925277a9eb97 48-49,73-74,319-320,608-610,640-641,3659-3662,3671-3713
+web/src/composables/usePttHint.test.ts
+  s_ed05b7d59456d3::t_a8df35104500f3 1-65
+web/src/components/AudioFineTune.vue
+  s_75fc0e47390cec::t_132c645f22935e 1-68
+web/src/components/AudioAdvancedSection.vue
+  s_3255aa8302478d::t_79d75360306a99 7,9,47-48
+web/src/composables/usePttHint.ts
+  s_7e9329d487a94d::t_90ad73f613fef3 1-28
+web/src/components/VoiceStage.vue
+  s_ed05b7d59456d3::t_a34339ef29c648 233,384,387
+web/src/lib/settingsDialog.test.ts
+  s_7e9329d487a94d::t_34aeb462b06c73 1-40
+web/src/stores/voiceStoreBehaviour.test.ts
+  s_06fcde5dbef956::t_2d252d048aaa1b 70-81
+web/src/components/AppSettingsPanel.test.ts
+  s_0cae4a4d7ab7c3::t_f69eaea22790aa 11-13,65-81
+web/src/components/AppSettingsPanel.vue
+  s_bf24ce51cd8f95::t_4991b9725c2382 2-7,10-17,22-27
+web/src/components/ChatArea.test.ts
+  s_4c6a19030e223f::t_6cc89f26168a0f 485
+web/src/components/ChatArea.vue
+  s_bf24ce51cd8f95::t_1cfe9a2ea8a3ec 259
+web/src/components/ChatAreaDm.test.ts
+  s_bf24ce51cd8f95::t_3359dc28daf65c 74-81
+web/src/components/DmTalkActions.vue
+  s_bf24ce51cd8f95::t_13cc01f43fda08 2,6,74
+web/src/components/MessagePresentation.test.ts
+  s_ba0662248deca2::t_2300b99afe3b89 39-41,45,47,63
+web/src/components/MessageRow.vue
+  s_ba0662248deca2::t_c209a61c318807 108,113-123
+web/src/components/PresenceMenu.test.ts
+  s_0cae4a4d7ab7c3::t_b8bb022177bdab 171-181
+web/src/components/ShortcutsDialog.test.ts
+  s_bf24ce51cd8f95::t_65dd1fe729b7bf 1-64
+web/src/components/ShortcutsDialog.vue
+  s_bf24ce51cd8f95::t_93ee69850bc252 1-47
+web/src/components/Sidebar.menus.test.ts
+  s_4c6a19030e223f::t_333198f2598b32 206,225
+web/src/components/TalkInvite.test.ts
+  s_bf24ce51cd8f95::t_b97c53eb1dc1cc 109-116
+web/src/components/ThreadSidebar.test.ts
+  s_0cae4a4d7ab7c3::t_8cdb6eda2969ab 110-119
+web/src/components/ThreadSidebar.vue
+  s_bf24ce51cd8f95::t_d8447bed1636ad 230
+web/src/composables/useMessageMenu.test.ts
+  s_4c6a19030e223f::t_2f389c1e01e53b 65,83,87
+web/src/composables/useMessageMenu.ts
+  s_bf24ce51cd8f95::t_b19de2fa933cca 81,83
+web/src/composables/useMuteMenu.test.ts
+  s_bf24ce51cd8f95::t_ef1dc438943454 5-6,59-75,84-86
+web/src/composables/useMuteMenu.ts
+  s_bf24ce51cd8f95::t_4d2983528ef858 49-65,67
+web/src/lib/shortcuts.ts
+  s_bf24ce51cd8f95::t_774e03ad03040f 1-76
+web/src/lib/shortcutsDialog.test.ts
+  s_bf24ce51cd8f95::t_97a8ee9b6f5b63 1-73
+web/src/lib/shortcutsDialog.ts
+  s_bf24ce51cd8f95::t_d683306369688d 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8a8a3fdd81d71a5b286ee2caaa85e3262893be8b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_0dfc723326fc69": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aci-secretscan-scope-eead97415a6d3132",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2de5838cb2797c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aperf-idle-a1f825253ff37314",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3255aa8302478d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-gaming-ui-52e3f2038ee574d1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_75fc0e47390cec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-gaming-hang-b142da8f7ea70c03",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7e9329d487a94d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-status-profile-6b773a73ee58ea30",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ba0662248deca2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-desktop-uploads-c294f35d64e7fce5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ed05b7d59456d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a843a0ef992e8c6d6",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
