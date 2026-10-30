@@ -34,6 +34,7 @@ DIR="$(mktemp -d)"
 PROXY_NAME="$PROJECT-$PROXY"
 ADMIN_PASSWORD="proxy-$(openssl rand -hex 10)"
 COOKIES="$DIR/cookies"
+NET="$PROJECT-net"
 COMPOSE=(docker compose -p "$PROJECT" --project-directory "$DIR")
 
 cleanup() {
@@ -56,6 +57,23 @@ fail() { echo "FAIL ($PROXY): $*" >&2; exit 1; }
 cp "$SRC/docker-compose.yml" "$DIR/docker-compose.yml"
 cp "$SRC/.env.example" "$DIR/.env"
 chmod 600 "$DIR/.env"
+# The compose file fixes container and network names, which would collide with
+# a running deployment or a concurrent run on this Docker host. Compose merges
+# this override automatically: no fixed container names, per-project networks.
+cat >"$DIR/docker-compose.override.yml" <<YAML
+services:
+  app: {container_name: !reset null}
+  postgres: {container_name: !reset null}
+  seaweedfs: {container_name: !reset null}
+  coturn: {container_name: !reset null}
+  updater: {container_name: !reset null}
+  recreator: {container_name: !reset null}
+networks:
+  mnema-network: {name: $NET}
+  mnema-updater: {name: $PROJECT-updater}
+  mnema-recreator: {name: $PROJECT-recreator}
+  mnema-updater-egress: {name: $PROJECT-updater-egress}
+YAML
 set_env() { # name value
   if grep -q "^$1=" "$DIR/.env"; then
     sed "s|^$1=.*|$1=$2|" "$DIR/.env" >"$DIR/.env.tmp" && mv "$DIR/.env.tmp" "$DIR/.env"
@@ -95,14 +113,14 @@ case "$PROXY" in
   caddy)
     # Self-signed certificate from Caddy's own CA instead of an ACME request.
     { printf '{\n    local_certs\n    skip_install_trust\n}\n'; printf '%s\n' "$snippet"; } >"$DIR/proxy/Caddyfile"
-    docker run -d --name "$PROXY_NAME" --network mnema-network -p 127.0.0.1:443:443 \
+    docker run -d --name "$PROXY_NAME" --network "$NET" -p 127.0.0.1:443:443 \
       -v "$DIR/proxy/Caddyfile:/etc/caddy/Caddyfile:ro" "$CADDY_IMAGE" >/dev/null
     ;;
   nginx)
     grep -q '# ssl_certificate \.\.\.;' <<<"$snippet" || fail "the nginx snippet lost its '# ssl_certificate ...;' line"
     snippet="${snippet//'# ssl_certificate ...;'/ssl_certificate /certs/tls.crt; ssl_certificate_key /certs/tls.key;}"
     printf '%s\n' "$snippet" >"$DIR/proxy/default.conf"
-    docker run -d --name "$PROXY_NAME" --network mnema-network -p 127.0.0.1:443:443 \
+    docker run -d --name "$PROXY_NAME" --network "$NET" -p 127.0.0.1:443:443 \
       -v "$DIR/proxy/default.conf:/etc/nginx/conf.d/default.conf:ro" \
       -v "$DIR/proxy:/certs:ro" "$NGINX_IMAGE" >/dev/null
     ;;
@@ -154,14 +172,18 @@ read -r rp _ <<<"$(proxy_check)"
 [ "$rp" = reverse_proxy.not_trusted ] || fail "expected reverse_proxy.not_trusted before TRUSTED_PROXY_CIDRS is set, got $rp (the check cannot see an untrusted proxy)"
 
 echo "==> Status with the documented TRUSTED_PROXY_CIDRS (the proxy container's address)"
-proxy_ip="$(docker inspect -f '{{(index .NetworkSettings.Networks "mnema-network").IPAddress}}' "$PROXY_NAME")"
+proxy_ip="$(docker inspect -f "{{(index .NetworkSettings.Networks \"$NET\").IPAddress}}" "$PROXY_NAME")"
 [ -n "$proxy_ip" ] || fail "cannot read the proxy container address"
 set_env TRUSTED_PROXY_CIDRS "$proxy_ip"
 "${COMPOSE[@]}" up -d --wait --wait-timeout 240 app
+# nginx resolves app:8080 once at start; the recreated app has a new address.
+if [ "$PROXY" = nginx ]; then docker exec "$PROXY_NAME" nginx -s reload >/dev/null; fi
+ok=
 for _ in $(seq 1 30); do
-  [ "$("${CURL[@]}" -o /dev/null -w '%{http_code}' "$BASE/api/health" || true)" = 200 ] && break
+  if [ "$("${CURL[@]}" -o /dev/null -w '%{http_code}' "$BASE/api/health" || true)" = 200 ]; then ok=1; break; fi
   sleep 1
 done
+[ "$ok" = 1 ] || fail "$BASE/api/health did not answer 200 through the proxy after the app restart"
 "${CURL[@]}" -f -c "$COOKIES" -H "Origin: $BASE" -H 'Content-Type: application/json' \
   --data "{\"username\":\"admin\",\"password\":\"$ADMIN_PASSWORD\"}" "$BASE/api/auth/login" >/dev/null \
   || fail "sign-in after the restart failed"
