@@ -1,0 +1,16 @@
+cmd/server/doctor.go
+  h_0ff4f4713441f4 179,181-184
+cmd/server/doctor_test.go
+  h_0ff4f4713441f4 7-9,136-211
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e87ee194b6b2c2a3597674d6a5e40b0942539f2e",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
