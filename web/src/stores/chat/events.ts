@@ -20,6 +20,7 @@ import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, update
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
 import { onThreadFollowUpdated } from './threadFollow'
 import { messageMentionsMe, messageMentionsMeDirectly, triggerBrowserNotification } from './notifications'
+import { playMessageSoundFor } from './messageSound'
 import { fetchReadState, isReadingActiveChannel } from './readState'
 import { notificationLevel, refreshNotifications } from './notifySettings'
 import { applyPoll } from './polls'
@@ -137,7 +138,8 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   handleIncomingMessageReadState(cx, { channelId: p.channel_id, isOwn, isCurrentChannel, isMention, isThreadReply: !!p.parent_id })
   if (!isOwn && p.channel_id) {
     // Everything somebody writes in a conversation is addressed to me.
-    triggerBrowserNotification(cx, p, isMention || isDm(cx, p.channel_id))
+    const osNotified = triggerBrowserNotification(cx, p, isMention || isDm(cx, p.channel_id))
+    playMessageSoundFor(cx, p, isMention, osNotified)
   }
 }
 

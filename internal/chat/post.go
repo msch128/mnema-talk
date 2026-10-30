@@ -181,8 +181,30 @@ func PublishMessage(w http.ResponseWriter, r *http.Request, p *db.Pool, pub even
 		return err
 	}
 	pub.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
+	markReadAfterSend(r.Context(), p, pub, msg)
 	httpx.WriteJSON(w, http.StatusCreated, msg)
 	return nil
+}
+
+// markReadAfterSend moves the author's read marker up to their own new
+// message: whoever writes has seen everything before it, so nothing earlier
+// may stay unread (no "new since" divider, no badge on another device). Thread
+// replies are left out; they do not count as channel unread. It writes only
+// when someone else's message sits between the marker and this one (see
+// MarkRead), and tells the author's other sessions. A failure only leaves the
+// marker where it was.
+func markReadAfterSend(ctx context.Context, p *db.Pool, pub events.Publisher, msg *Message) {
+	if msg.ParentID != nil {
+		return
+	}
+	at, err := MarkRead(ctx, p, msg.UserID, msg.ChannelID, &msg.ID)
+	if err != nil {
+		slog.Warn("mark read after send failed", "channel", msg.ChannelID, "err", err)
+		return
+	}
+	pub.SendToUsers([]uuid.UUID{msg.UserID}, events.ReadState, map[string]any{
+		"channel_id": msg.ChannelID, "last_read_at": at, "unread_count": 0, "mention_count": 0,
+	})
 }
 
 // queryIDs parses the named optional UUID query parameters into their

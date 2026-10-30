@@ -99,7 +99,7 @@ function playTone(ctx: AudioContext, dest: AudioNode, tone: Tone) {
  * Play a synthesized sound effect by name.
  * Supported names: 'join', 'leave', 'mute', 'unmute', 'deafen', 'undeafen', 'user_join', 'user_leave'
  */
-export type SoundEvent = 'join' | 'leave' | 'mute' | 'unmute' | 'deafen' | 'undeafen' | 'user_join' | 'user_leave' | 'ptt_start' | 'ptt_stop'
+export type SoundEvent = 'join' | 'leave' | 'mute' | 'unmute' | 'deafen' | 'undeafen' | 'user_join' | 'user_leave' | 'ptt_start' | 'ptt_stop' | 'message'
 
 /** One tone of an effect: `at` seconds after it starts. */
 type ToneSpec = Omit<Tone, 'startTime'> & { at: number }
@@ -139,7 +139,12 @@ const SOUND_TONES: Record<SoundEvent, ToneSpec[]> = {
   // Subtle ascending PTT activate chirp
   ptt_start: [{ freq: 650, endFreq: 850, at: 0, duration: 0.04, gain: 0.25 }],
   // Subtle descending PTT deactivate chirp
-  ptt_stop: [{ freq: 850, endFreq: 650, at: 0, duration: 0.04, gain: 0.25 }]
+  ptt_stop: [{ freq: 850, endFreq: 650, at: 0, duration: 0.04, gain: 0.25 }],
+  // New chat message: a quiet, rounded two-note "pock" (A5 -> E6), softer than the call sounds
+  message: [
+    { freq: 880, at: 0, duration: 0.09, gain: 0.2 },
+    { freq: 1318.5, at: 0.08, duration: 0.2, gain: 0.16 }
+  ]
 }
 
 /** The muffling low-pass the deafen sound plays through, or null if the browser has none. */
@@ -186,7 +191,7 @@ function getVoiceStoreSafe(): ReturnType<typeof useVoiceStore> | null {
 function isSoundAllowed(voiceStore: ReturnType<typeof useVoiceStore> | null, name: SoundEvent, force: boolean): boolean {
   if (!voiceStore || force) return true
   if (!voiceStore.soundEffectsEnabled) return false
-  if (voiceStore.soundEvents && voiceStore.soundEvents[name] === false) return false
+  if (voiceStore.soundEvents && (voiceStore.soundEvents as Record<string, boolean | undefined>)[name] === false) return false
   return true
 }
 
@@ -204,9 +209,33 @@ export function playSoundEffect(name: SoundEvent, overrideVolume: number | null 
 
   const ctx = getAudioContext(voiceStore?.selectedOutputDeviceId)
   if (!ctx) return
+  // A message chime is not worth hearing late: on a context that is still locked its tones
+  // would queue up and burst out together at the first gesture.
+  if (name === 'message' && ctx.state !== 'running') return
 
   const now = ctx.currentTime || 0
   const masterGain = createMasterGain(ctx, masterVol, now)
   if (!masterGain) return
   playEffectTones(ctx, masterGain, name, now)
+}
+
+/**
+ * Browsers start an AudioContext suspended until the page has seen a user
+ * gesture. The first click, tap or key press creates and resumes the shared
+ * context, so the first message sound after that is heard.
+ */
+export function unlockAudioOnFirstGesture(target: Pick<Document, 'addEventListener' | 'removeEventListener'> = document) {
+  const events = ['pointerdown', 'keydown', 'touchstart'] as const
+  const unlock = () => {
+    const ctx = getAudioContext(getVoiceStoreSafe()?.selectedOutputDeviceId)
+    if (!ctx) return
+    // Stay armed until the context really runs; a gesture the browser does not count tries again.
+    void Promise.resolve(ctx.resume?.())
+      .then(() => {
+        if (ctx.state !== 'running') return
+        for (const name of events) target.removeEventListener(name, unlock)
+      })
+      .catch((err) => console.debug?.('soundEffects: unlock failed', err))
+  }
+  for (const name of events) target.addEventListener(name, unlock, { passive: true })
 }

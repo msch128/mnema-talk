@@ -2,6 +2,7 @@
 // noise handling, volumes, devices and sound effects. Built inside the voice store.
 import { computed, ref, watch } from 'vue'
 import { readItem, readJson, writeItem, writeJson } from '../lib/voicePlayback'
+import { normalizeMessageSoundMode, type MessageSoundMode } from '../lib/messageSound'
 
 export type InputMode = 'activity' | 'ptt'
 export type NoiseMode = 'ai' | 'ai-lite' | 'browser' | 'off'
@@ -70,9 +71,10 @@ function loadFeedbackSettings() {
     ...defaultSoundEvents(),
     ...readJson('mnema_sound_events')
   })
+  const messageSounds = ref<MessageSoundMode>(normalizeMessageSoundMode(readItem('mnema_message_sounds')))
   return {
     warnNoAudioDetected, warnSwitchChannel, qosHighPriority,
-    soundEffectsEnabled, soundEffectsVolume, soundEvents
+    soundEffectsEnabled, soundEffectsVolume, soundEvents, messageSounds
   }
 }
 
@@ -108,6 +110,7 @@ function persistVoiceSettings(
   writeItem('mnema_sounds_enabled', String(feedback.soundEffectsEnabled.value))
   writeItem('mnema_sounds_volume', String(feedback.soundEffectsVolume.value))
   writeJson('mnema_sound_events', feedback.soundEvents.value)
+  writeItem('mnema_message_sounds', feedback.messageSounds.value)
   writeItem('mnema_noise', audio.noiseMode.value)
   writeItem('mnema_agc', String(audio.autoGainControl.value))
   writeItem('mnema_echo', String(audio.echoCancellation.value))
