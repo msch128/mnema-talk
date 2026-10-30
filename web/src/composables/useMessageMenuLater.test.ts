@@ -17,7 +17,7 @@ const labels = (items: ContextMenuItem[]) => items.map(i => i.type === 'separato
 function menu() {
   const actions = {
     ...useMessageActions(), pickerId: ref<string | null>(null),
-    isOwn: vi.fn(() => false), canDelete: vi.fn(() => false), startEdit: vi.fn(), deleteMessage: vi.fn(async () => {}), closePicker: vi.fn()
+    isOwn: vi.fn(() => false), canDelete: vi.fn(() => false), startEdit: vi.fn(), deleteMessage: vi.fn(async () => true), closePicker: vi.fn()
   }
   return useMessageMenu({ actions, reply: vi.fn() })
 }

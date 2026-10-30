@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // Inline editor for a message. Takes focus when it opens, so editing from
 // the keyboard (e on a message) can go straight on typing.
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, useId } from 'vue'
 import { Check, Loader2 } from '@lucide/vue'
 import { isImeKey } from '../composables/useComposerKeys'
+import { arrowStep } from '../composables/useOwnMessageNav'
 
 defineProps({
   saving: { type: Boolean, default: false },
@@ -11,10 +12,12 @@ defineProps({
   compact: { type: Boolean, default: false },
   label: { type: String, default: '' }
 })
-const emit = defineEmits<{ save: []; cancel: [] }>()
+// navigate: ArrowUp/Down on the first/last line (-1 older, 1 newer); the parent calls preventDefault when it moves on.
+const emit = defineEmits<{ save: []; cancel: []; navigate: [step: -1 | 1, event: KeyboardEvent] }>()
 const text = defineModel<string>({ type: String, default: '' })
 
 const input = ref<HTMLTextAreaElement | null>(null)
+const hintId = useId()
 
 onMounted(() => {
   nextTick(() => {
@@ -33,6 +36,11 @@ function onEnter(e: KeyboardEvent) {
   emit('save')
 }
 
+function onArrow(e: KeyboardEvent) {
+  const step = arrowStep(e)
+  if (step) emit('navigate', step, e)
+}
+
 defineExpose({ focus: () => input.value?.focus() })
 </script>
 
@@ -44,6 +52,9 @@ defineExpose({ focus: () => input.value?.focus() })
       rows="2"
       :aria-label="label || undefined"
       data-testid="message-editor"
+      :aria-describedby="hintId"
+      @keydown.up="onArrow"
+      @keydown.down="onArrow"
       @keydown.enter.exact="onEnter"
       @keydown.esc.prevent="emit('cancel')"
       :class="[
@@ -52,7 +63,7 @@ defineExpose({ focus: () => input.value?.focus() })
       ]"
     ></textarea>
     <div class="flex items-center justify-between text-xs text-mnema-tertiary">
-      <span class="font-mono">{{ $t('chat.editHint') }}</span>
+      <span :id="hintId" class="font-mono">{{ $t('chat.editHint') }}</span>
       <div :class="['flex items-center', compact ? 'gap-1' : 'gap-1.5']">
         <button
           type="button"

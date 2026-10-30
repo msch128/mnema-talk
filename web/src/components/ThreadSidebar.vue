@@ -16,6 +16,7 @@ import { useBlocksStore } from '../stores/blocks'
 import { useDmChat } from '../composables/useDmChat'
 import ThreadComposer from './ThreadComposer.vue'
 import FileDropOverlay from './FileDropOverlay.vue'
+import { useOwnMessageNav } from '../composables/useOwnMessageNav'
 import { useMessageActions } from '../composables/useMessageActions'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { useDraftSlot } from '../composables/useDraftSlot'
@@ -88,6 +89,7 @@ const replyingTo = ref<DraftReply | null>(null)
 // Each thread keeps its own reply text and target.
 useDraftSlot(() => (chatStore.activeThread ? threadDraftKey(chatStore.activeThread.id) : null), replyInput, replyingTo)
 const composer = ref<InstanceType<typeof ThreadComposer> | null>(null)
+const ownNav = useOwnMessageNav({ messages: () => chatStore.threadReplies, actions, container: repliesContainer, composer: () => composer.value })
 const highlightedId = ref<string | null>(null)
 let highlightTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -321,6 +323,7 @@ async function handleFileUpload(e: Event) {
         @keydown="onReplyKeydown($event, reply)"
         @reply="startReply(reply)"
         @jump="jumpToReplied(reply)"
+        @edit-step="(step, e) => ownNav.step(step, e, reply)"
         @open-image="selectedImage = $event"
       />
       </template>
@@ -341,6 +344,7 @@ async function handleFileUpload(e: Event) {
       :sending="isSending"
       @send="handleSendReply"
       @cancel-reply="cancelReply"
+      @arrow-up="ownNav.fromComposerKey($event, replyInput)"
       @file="handleFileUpload"
     />
     <FileDropOverlay @files="composer?.attachFiles($event)" />

@@ -19,6 +19,7 @@ import BlockedMessageRow from './BlockedMessageRow.vue'
 import { useMessageActions } from '../composables/useMessageActions'
 import { useDmChat } from '../composables/useDmChat'
 import { toggleSavedMessage, useMessageMenu } from '../composables/useMessageMenu'
+import { useOwnMessageNav } from '../composables/useOwnMessageNav'
 import { useMessageScroll } from '../composables/useMessageScroll'
 import { useUnreadDivider } from '../composables/useUnreadDivider'
 import { useRovingMessages } from '../composables/useRovingMessages'
@@ -45,7 +46,6 @@ const authStore = useAuthStore()
 const serverFeatures = useServerFeaturesStore()
 const toasts = useToastStore()
 const permissions = usePermissionsStore()
-
 const blocks = useBlocksStore()
 // A conversation sits in the channel slot: its words, and the server's own answer to "may I write".
 const dmChat = useDmChat()
@@ -80,9 +80,9 @@ useDraftSlot(() => (chatStore.activeChannel ? channelDraftKey(chatStore.activeCh
 // Editing, deleting, reactions and uploads
 const actions = useMessageActions({ container: messageContainer })
 const { editingId: editingMessageId, pickerId: activeReactionPickerMsgId, isUploading } = actions
+const ownNav = useOwnMessageNav({ messages: () => chatStore.messages || [], actions, container: messageContainer, composer: () => composer.value, toNewest: () => (chatStore.hasMoreAfter ? chatStore.jumpToLatest() : undefined) })
 const menu = useMessageMenu({ actions, reply: startReply })
 const contextMenu = menu.state
-
 const {
   showUnreadPill, highlightedId, messageRows, scrollToBottom, scrollToBottomNow,
   handleScroll, resetUnreadPill
@@ -90,7 +90,6 @@ const {
 const { stopId } = useRovingMessages(messageContainer, () => (chatStore.messages || []).map(m => m.id))
 const { dividerSince, dividerBeforeId, dividerLabel, markAllRead } = useUnreadDivider()
 const { showJumpToUnread, jumpToFirstUnread } = useFirstUnreadJump({ container: messageContainer, since: dividerSince, dividerBeforeId })
-
 const typingText = computed(() => {
   const line = typingLine(chatStore.typingByChannel[chatStore.activeChannel?.id ?? ''])
   return line ? t(line.key, line.params) : ''
@@ -165,7 +164,6 @@ useEscapeMarksRead({
 })
 
 onMounted(() => composer.value?.focus())
-
 // After sending while viewing older history, jump to the present.
 async function revealOwnMessage() {
   if (chatStore.hasMoreAfter) await chatStore.jumpToLatest()
@@ -313,6 +311,7 @@ const groupedIds = computed(() => {
         @edit="actions.startEdit(msg)"
         @save="actions.saveEdit(msg)"
         @cancel-edit="actions.cancelEdit()"
+        @edit-step="(step, e) => ownNav.step(step, e, msg)"
         @more="menu.openFromButton($event, msg)"
         @react="actions.toggleReaction(msg.id, $event)"
         @toggle-picker="actions.togglePicker($event)"
@@ -381,6 +380,7 @@ const groupedIds = computed(() => {
       :typing-text="typingText"
       @send="handleSend"
       @cancel-reply="cancelReply"
+      @arrow-up="ownNav.fromComposerKey($event, inputMessage)"
       @file="handleFileUpload"
     />
 

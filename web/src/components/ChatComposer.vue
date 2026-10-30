@@ -36,7 +36,7 @@ const props = defineProps({
   sending: { type: Boolean, default: false },
   typingText: { type: String, default: '' }
 })
-const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event] }>()
+const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event]; 'arrow-up': [event: KeyboardEvent] }>()
 
 const chatStore = useChatStore()
 const features = useServerFeaturesStore()
@@ -93,7 +93,7 @@ function handleComposerInput() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  handleComposerKeydown(e, { consumers: [slash.onKeydown, assist.onKeydown], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send') })
+  handleComposerKeydown(e, { consumers: [slash.onKeydown, assist.onKeydown], replying: () => !!props.replyingTo, cancelReply: () => emit('cancel-reply'), send: () => emit('send'), arrowUp: e => emit('arrow-up', e) })
 }
 </script>
 
