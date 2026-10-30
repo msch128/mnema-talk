@@ -49,7 +49,7 @@ export function isDictionaryOf<T>(value: unknown, itemGuard: (item: unknown) => 
 /** Contains a schema name only: never dumps private response content. */
 export class ContractError extends Error {
   constructor(readonly schema: string) {
-    super(`Invalid server response (${schema})`)
+    super(`Invalid server response (${schema})`) // i18n-ignore: schema name for diagnostics
     this.name = 'ContractError'
   }
 }

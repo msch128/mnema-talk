@@ -2944,6 +2944,7 @@
     "noUpcoming": "No upcoming events scheduled.",
     "noPast": "No past events.",
     "whatAreEvents": "Events are dated gatherings in a Talk or channel, with a start time and sign-ups. Members with the “Manage events” permission can create one.",
+    "loadFailed": "Couldn’t load the events. Try again.",
     "loadMorePast": "Show older events",
     "create": "Create event",
     "createTitle": "Create community event",

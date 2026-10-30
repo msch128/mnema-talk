@@ -144,7 +144,7 @@ function serverFailure(status: number, body: unknown, path: string, method: stri
     ? serverError['code'] : 'INTERNAL_ERROR'
   // Sign-in and the other account writes talk about attempts (reads like /api/auth/me do not); everything else about requests.
   if (code === 'RATE_LIMITED' && method !== 'GET' && path.startsWith('/api/auth/')) return new ApiError(status, code, t('errors.rateLimitedAttempts'))
-  return new ApiError(status, code, errorMessage(code, serverError?.['message']), waitSeconds(serverError?.['message']), String(serverError?.['message'] ?? '').startsWith('slow mode:'))
+  return new ApiError(status, code, errorMessage(code, serverError?.['message']), waitSeconds(serverError?.['message']), String(serverError?.['message'] ?? '').startsWith('slow mode:')) // i18n-ignore: matches the server's English sentence
 }
 
 export interface ApiClient {

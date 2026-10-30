@@ -373,6 +373,6 @@ const SERVER_EVENT_TYPES = new Set<string>([
  * known events never reach stores. No payload is included in the error. */
 export function decodeServerEvent(value: unknown): ServerEvent | null {
   if (isRecord(value) && typeof value['type'] === 'string' && !SERVER_EVENT_TYPES.has(value['type'])) return null
-  if (!isServerEvent(value)) throw new ContractError('WebSocket event')
+  if (!isServerEvent(value)) throw new ContractError('WebSocket event') // i18n-ignore: schema name
   return value
 }
