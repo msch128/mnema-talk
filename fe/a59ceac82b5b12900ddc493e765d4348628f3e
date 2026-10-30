@@ -1,0 +1,21 @@
+web/src/composables/useDismissable.test.ts
+  s_3e68b8fa0e1785::t_b246594967ed31 27,35,39
+web/src/composables/useDismissable.ts
+  s_3e68b8fa0e1785::t_f7eebd411a575a 24-25,56-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fea59ceac82b5b12900ddc493e765d4348628f3e",
+  "prompts": {},
+  "sessions": {
+    "s_3e68b8fa0e1785": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-reactions-7d1b14603defb791",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
