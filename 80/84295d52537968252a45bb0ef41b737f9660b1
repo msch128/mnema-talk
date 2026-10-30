@@ -1,0 +1,43 @@
+api/openapi.json
+  s_06fcde5dbef956::t_919bc0073a83b2 35081
+doc/talks.md
+  s_06fcde5dbef956::t_ed8e540f517ae8 85-88
+e2e/tests/talk-user-limit.spec.ts
+  s_06fcde5dbef956::t_ca5b91f3e6ea5d 1-62
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_82136d2276c8e0 71
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_094d950dde8f41 136,142,164-174
+internal/ws/voice_limit_test.go
+  s_06fcde5dbef956::t_3f0516783294ce 1-82
+web/src/components/Sidebar.test.ts
+  s_06fcde5dbef956::t_bb2e0a626a1f8a 52,229-276
+web/src/components/Sidebar.vue
+  s_06fcde5dbef956::t_38960a4570b8f7 24,189-190
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_2f57f93012d90a 13,73-75,185-191
+web/src/components/SidebarChannelRowTalks.test.ts
+  s_06fcde5dbef956::t_314e26e8a177bf 7-9,84-117
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_e1d56cd095ac9f 988-991
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_6b4f81f416db24 988-991
+web/src/lib/talks.ts
+  s_06fcde5dbef956::t_210d499e09a81b 7-9,30-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8084295d52537968252a45bb0ef41b737f9660b1",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
