@@ -87,4 +87,52 @@ describe('ConnectionTest', () => {
     wrapper = mount(ConnectionTest, { props: { heading: false } })
     expect(wrapper.find('h4').exists()).toBe(false)
   })
+
+  it('shows each verdict with its own tone and icon, and the inconclusive one without a fix of its own cause', async () => {
+    const cases: Array<[ConnectionReport, string, string]> = [
+      [{ ...base, direct: { outcome: 'ok' } }, 'direct', 'text-mnema-success'],
+      [{ ...base, relayTcp: { outcome: 'ok' } }, 'relay_only', 'text-mnema-warning'],
+      [base, 'none', 'text-mnema-danger'],
+      [{ ...base, limited: true }, 'inconclusive', 'text-mnema-muted']
+    ]
+    for (const [report, kind, tone] of cases) {
+      const w = await runWith(report)
+      const verdict = w.get('[data-testid="connection-test-verdict"]')
+      expect(verdict.attributes('data-kind'), kind).toBe(kind)
+      expect(verdict.classes(), kind).toContain(tone)
+      expect(verdict.find('svg').exists(), kind).toBe(true)
+      w.unmount()
+      wrapper = null
+    }
+  })
+
+  it('shows the fix only for causes that have one', async () => {
+    const w = await runWith({ ...base, direct: { outcome: 'ok', pair: { localType: 'host', remoteType: 'host', remoteAddress: '8.8.8.8' } } })
+    expect(w.find('[data-testid="connection-test-fix"]').exists()).toBe(false)
+    await w.get('[data-testid="connection-test-run"]').trigger('click')
+    await flushPromises()
+    runMock.mockResolvedValue({ ...base, limited: true })
+    await w.get('[data-testid="connection-test-run"]').trigger('click')
+    await flushPromises()
+    expect(w.get('[data-testid="connection-test-fix"]').text()).toContain('Wait a few minutes')
+  })
+
+  it('clears an earlier result while a new test runs', async () => {
+    const w = await runWith({ ...base, direct: { outcome: 'ok' } })
+    runMock.mockReturnValue(new Promise(() => {}))
+    await w.get('[data-testid="connection-test-run"]').trigger('click')
+    expect(w.find('[data-testid="connection-test-result"]').exists()).toBe(false)
+    expect(w.get('[data-testid="connection-test-run"]').text()).toBe('Testing…')
+  })
+
+  it('ignores a result that arrives after it was closed', async () => {
+    let finish: (r: ConnectionReport) => void = () => {}
+    runMock.mockReturnValue(new Promise<ConnectionReport>(resolve => { finish = resolve }))
+    wrapper = mount(ConnectionTest)
+    await wrapper.get('[data-testid="connection-test-run"]').trigger('click')
+    wrapper.unmount()
+    wrapper = null
+    finish(base)
+    await flushPromises()
+  })
 })
