@@ -445,6 +445,14 @@
     "blockQuote": "Quote to the end",
     "link": "Link with its own text",
     "noEmbed": "Link without a preview",
+    "groupText": "Text",
+    "groupBlocks": "Blocks",
+    "groupLinks": "Links and mentions",
+    "type": "Type",
+    "result": "Result",
+    "insert": "Click to add it to your message",
+    "mentionAll": "Mention everyone",
+    "tip": "Enter sends, Shift+Enter starts a new line. Type @ for people and : for emoji.",
     "close": "Close"
   },
   "chat": {

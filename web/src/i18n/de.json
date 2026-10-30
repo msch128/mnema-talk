@@ -445,6 +445,14 @@
     "blockQuote": "Zitat bis zum Ende",
     "link": "Link mit eigenem Text",
     "noEmbed": "Link ohne Vorschau",
+    "groupText": "Text",
+    "groupBlocks": "Blöcke",
+    "groupLinks": "Links und Erwähnungen",
+    "type": "Eingabe",
+    "result": "Ergebnis",
+    "insert": "Klicken, um es in die Nachricht einzufügen",
+    "mentionAll": "Alle erwähnen",
+    "tip": "Enter sendet, Umschalt+Enter beginnt eine neue Zeile. Mit @ erwähnst du Personen, mit : fügst du Emoji ein.",
     "close": "Schließen"
   },
   "chat": {

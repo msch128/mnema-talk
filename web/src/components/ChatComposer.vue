@@ -197,7 +197,7 @@ function handleKeyDown(e: KeyboardEvent) {
         class="bg-transparent flex-1 min-w-0 resize-none outline-hidden text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
       ></textarea>
 
-      <MarkdownHelp class="max-md:hidden" :disabled="!canSend" />
+      <MarkdownHelp :disabled="!canSend" @insert="assist.insertText" />
 
       <EmojiButton :disabled="sending || !canSend" @pick="assist.insertText" />
 
