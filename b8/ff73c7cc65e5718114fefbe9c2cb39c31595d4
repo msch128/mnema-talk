@@ -1,0 +1,121 @@
+README.md
+  s_61e7f03250bd0b::t_3bb063587c971b 104
+doc/architecture.md
+  s_61e7f03250bd0b::t_bc0083502a57cb 110
+doc/glossary.md
+  s_61e7f03250bd0b::t_12a14c067a12e8 23
+doc/upgrade.md
+  s_61e7f03250bd0b::t_cb468b1a93b797 222-224
+e2e/tests/forum.spec.ts
+  s_61e7f03250bd0b::t_50890cb341697c 1-131
+web/src/components/CreateForumPostModal.test.ts
+  s_61e7f03250bd0b::t_ee2819a1277816 5-6,11,15-16,24-25,27-29,31,37-47,143-285
+web/src/components/CreateForumPostModal.vue
+  s_61e7f03250bd0b::t_fbde18356d827c 3-4,7-14,16,18-21,26-28,36-42,46,49-51,55-79,86-87,89-100,112-115,119-126,128-130,136,138,143-150,153-155,157-205,209-211
+web/src/components/ForumArea.test.ts
+  s_61e7f03250bd0b::t_64ff670144cabb 12,19-24,43-44,84-85,251-259,375-427
+web/src/components/ForumArea.vue
+  s_61e7f03250bd0b::t_258670869048bf 3,7-9,15-16,28,30-31,34-36,41-42,44-47,49-54,56,65,70,74-76,79-82,84-86,88,90,127,139,149,151-152,157,161,163-170,175,184,196-198,207,209-210
+web/src/components/ForumEmptyState.test.ts
+  s_61e7f03250bd0b::t_775b39633572c9 1-30
+web/src/components/ForumEmptyState.vue
+  s_61e7f03250bd0b::t_b724cf0539307c 1-40
+web/src/components/ForumPostCard.test.ts
+  s_61e7f03250bd0b::t_2df3984a385e56 6,24,57-89
+web/src/components/ForumPostCard.vue
+  s_61e7f03250bd0b::t_e44c058e492dc5 3,5,10,14,24-27,33,36-37,42-65,68,70-71,74-83,87-95
+web/src/components/ForumPostHeader.test.ts
+  s_61e7f03250bd0b::t_21ca754f757329 1-243
+web/src/components/ForumPostHeader.vue
+  s_61e7f03250bd0b::t_6e6239722bc2c4 1-229
+web/src/components/ForumSettingsForm.test.ts
+  s_61e7f03250bd0b::t_2cd4f3dc643923 1-57
+web/src/components/ForumSettingsForm.vue
+  s_61e7f03250bd0b::t_5b3f2936caf42a 1-82
+web/src/components/ForumTagChip.test.ts
+  s_61e7f03250bd0b::t_a4e92a785e9dca 1-34
+web/src/components/ForumTagChip.vue
+  s_61e7f03250bd0b::t_c62f36f9586604 1-38
+web/src/components/ForumTagEditor.vue
+  s_61e7f03250bd0b::t_66d64ec27d5b65 1-107
+web/src/components/ForumTagPicker.test.ts
+  s_61e7f03250bd0b::t_e5e3c9da541482 1-58
+web/src/components/ForumTagPicker.vue
+  s_61e7f03250bd0b::t_2db874f4fc6a67 1-59
+web/src/components/ForumToolbar.test.ts
+  s_61e7f03250bd0b::t_d1d771c8d03b6f 1-57
+web/src/components/ForumToolbar.vue
+  s_61e7f03250bd0b::t_b8619225e040f5 1-85
+web/src/components/ManageForumTagsModal.test.ts
+  s_61e7f03250bd0b::t_150be8ce02aa61 4,8,11,16-18,23-24,27-30,34-44,47,53,59-61,65-66,74-75,78-79,83,86-91,94,96,99,102-104,106,109,111-114,118,121-123,125,127,133-135,140-141,143,146,148-157,160,162,165,167-169,176-177,180,184,187,189-191,196-230,232-235,237-238
+web/src/components/ManageForumTagsModal.vue
+  s_61e7f03250bd0b::t_cc42411994df10 2-3,6-9,12-14,16-17,21,27,30,32-33,35,40-43,46,49,52,56,58-63,65-71,74-86,88-93,98-101,105,107-108,110-136,138-139,141,143,145-147,149-150,152-158
+web/src/components/ThreadRootCard.test.ts
+  s_61e7f03250bd0b::t_1eae8afd49560a 1-81
+web/src/components/ThreadRootCard.vue
+  s_61e7f03250bd0b::t_f41f77d7d76a59 3,17,33,49-69,96-105
+web/src/components/ThreadSidebar.test.ts
+  s_06fcde5dbef956::t_08b7bd5677dcb1 20-25,85,216,556,559-560,563
+web/src/components/ThreadSidebar.vue
+  s_61e7f03250bd0b::t_76e3fa06437748 5,11,104-109,259-260
+web/src/composables/useForumPostActions.test.ts
+  s_61e7f03250bd0b::t_a68c615012887a 1-155
+web/src/composables/useForumPostActions.ts
+  s_61e7f03250bd0b::t_e49df2d1c33ac7 1-80
+web/src/composables/useForumPostRead.test.ts
+  s_61e7f03250bd0b::t_2eed703e45c489 1-85
+web/src/composables/useForumPostRead.ts
+  s_61e7f03250bd0b::t_8f4f1b48565011 1-60
+web/src/composables/useForumPosts.test.ts
+  s_61e7f03250bd0b::t_70f5158460a3fa 1-263
+web/src/composables/useForumPosts.ts
+  s_61e7f03250bd0b::t_24c756fb889cbf 1-171
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_619a8091503a24 442-512
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_b14490aca36eb2 442-512
+web/src/lib/forumApi.test.ts
+  s_61e7f03250bd0b::t_7af85964c07700 5-7,17,123-208
+web/src/lib/forumApi.ts
+  s_61e7f03250bd0b::t_ce8f0b5c901b75 4-7,17-23,26,31-32,35,40-76,86,97,128,142-166
+web/src/lib/forumTags.test.ts
+  s_61e7f03250bd0b::t_63578669702c80 1-24
+web/src/lib/forumTags.ts
+  s_61e7f03250bd0b::t_c0a086dfa0c20c 1-49
+web/src/stores/chat.ts
+  s_61e7f03250bd0b::t_67a17941dcc4a3 39
+web/src/stores/chat/events.ts
+  s_61e7f03250bd0b::t_f2cc4947e05cfc 119-125,129,176,244,247-251
+web/src/stores/chat/reset.ts
+  s_61e7f03250bd0b::t_c720399dc9efbc 107
+web/src/stores/chat/state.ts
+  s_61e7f03250bd0b::t_923a5501bfc0b1 45-46
+web/src/stores/chatEvents.test.ts
+  s_61e7f03250bd0b::t_52e31075d82380 10,77-106
+web/src/test-fixtures.fixture.ts
+  s_61e7f03250bd0b::t_511280da8b9db5 2,57-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b8ff73c7cc65e5718114fefbe9c2cb39c31595d4",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
