@@ -1,0 +1,79 @@
+doc/architecture.md
+  s_57fa886a85f9f6::t_5fc5d1e8441bb6 403,407-420
+e2e/tests/screen-layers.spec.ts
+  s_57fa886a85f9f6::t_ac28ad42011a2f 10,126-130,171,174-176,178-180,204,210,219-228
+internal/sfu/adapt.go
+  s_57fa886a85f9f6::t_6ea04bb09067b2 3,11-12,51,77-86,95-100,116-117,136-142,145-147,150-156,159-167,169-172,174,213,218,307,316-320,327,330,336-343,358-361
+internal/sfu/adapt_auto_test.go
+  s_57fa886a85f9f6::t_7944ec75e8dfec 1-258
+internal/sfu/adapt_bw.go
+  s_57fa886a85f9f6::t_ba1f09de2111d0 1-46
+internal/sfu/adapt_report.go
+  s_57fa886a85f9f6::t_4d79198a4fb664 1-39
+internal/sfu/bwe.go
+  s_57fa886a85f9f6::t_50657be547eefc 27
+internal/sfu/layer_viewers.go
+  s_57fa886a85f9f6::t_e062841665866e 25-27,32,35-36
+internal/sfu/layers_test.go
+  s_57fa886a85f9f6::t_35d6c6da871984 104,594
+internal/sfu/room_signal.go
+  s_57fa886a85f9f6::t_a8fb2abaecf407 227,230
+internal/sfu/screen.go
+  s_57fa886a85f9f6::t_ca9600f9197ad7 152-180
+internal/sfu/subscriptions.go
+  s_57fa886a85f9f6::t_13c959c4d5824c 31-33,64-87
+internal/sfu/viewer_track.go
+  s_57fa886a85f9f6::t_c6a330a065d686 36-38,101-105,116-137
+internal/ws/layers_test.go
+  s_57fa886a85f9f6::t_f5e5f9637f3d8f 336-374
+internal/ws/signal.go
+  s_57fa886a85f9f6::t_e2a9246c5d9fb2 48-52,88-91,100,121-132,159-162,174-175
+web/src/components/TalkStageView.vue
+  s_57fa886a85f9f6::t_9a24615a4b12a3 10,48
+web/src/composables/useScreenFit.test.ts
+  s_57fa886a85f9f6::t_3633ace5214c33 1-105
+web/src/composables/useScreenFit.ts
+  s_57fa886a85f9f6::t_38eeaaf48a4ba4 1-50
+web/src/composables/useScreenLayerMenu.test.ts
+  s_57fa886a85f9f6::t_2797cd1a7b1c35 67-81
+web/src/composables/useScreenLayerMenu.ts
+  s_57fa886a85f9f6::t_cabb51296e3951 17-18,23,77-82,85-88,104
+web/src/i18n/de.json
+  s_57fa886a85f9f6::t_6ab0385ecd5e1d 1072
+web/src/i18n/en.json
+  s_57fa886a85f9f6::t_bd981c8c965f53 1072
+web/src/lib/screenLayers.test.ts
+  s_57fa886a85f9f6::t_2b9b62140de979 2,80-113
+web/src/lib/screenLayers.ts
+  s_57fa886a85f9f6::t_5cd8ed5d35d966 103-120
+web/src/stores/voice.ts
+  s_57fa886a85f9f6::t_ee9dee0452175f 5,107
+web/src/stores/voice/cameras.ts
+  s_57fa886a85f9f6::t_0fdcb43a6c4172 103-105
+web/src/stores/voice/room.ts
+  s_57fa886a85f9f6::t_a990033b44b8d4 174,210
+web/src/stores/voice/screens.ts
+  s_57fa886a85f9f6::t_af0657ef96661c 73,150-159
+web/src/stores/voice/state.ts
+  s_57fa886a85f9f6::t_53a85eed5982e3 51
+web/src/stores/voiceStoreBehaviour.test.ts
+  s_57fa886a85f9f6::t_14617b0a7abf8d 284-294
+web/src/types/events.ts
+  s_57fa886a85f9f6::t_3ff86a7bd4ce6a 162-164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a3c322a9bf050f03f22d89fdf54c50132207211",
+  "prompts": {},
+  "sessions": {
+    "s_57fa886a85f9f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4edefc50d802f9c0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
