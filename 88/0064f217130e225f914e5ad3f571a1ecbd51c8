@@ -1,0 +1,21 @@
+web/src/components/ThreadRootCard.test.ts
+  s_4c6a19030e223f::t_c0ddc6a0fd5149 69,73
+web/src/components/ThreadSidebar.test.ts
+  s_4c6a19030e223f::t_c44d200f881fb8 553,556-557,560
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "880064f217130e225f914e5ad3f571a1ecbd51c8",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
