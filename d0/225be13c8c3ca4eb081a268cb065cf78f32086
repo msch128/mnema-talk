@@ -1,0 +1,42 @@
+.env.example
+  h_0ff4f4713441f4 289-291
+.github/workflows/ci.yml
+  h_0ff4f4713441f4 230-238
+.github/workflows/onboarding.yml
+  h_0ff4f4713441f4 1-110
+Makefile
+  h_0ff4f4713441f4 6,176,179-185
+README.md
+  h_0ff4f4713441f4 328
+doc/deployment.md
+  h_0ff4f4713441f4 28,32-33,49,99,153,170,172,176,178,180,182
+doc/operations.md
+  h_0ff4f4713441f4 199,208,665,674,826-871
+doc/quick-start.md
+  h_0ff4f4713441f4 43,57,71,148,157,186
+doc/upgrade.md
+  h_0ff4f4713441f4 29-30,36,109
+docker-compose.yml
+  h_0ff4f4713441f4 18-19
+scripts/check-onboarding-docs.mjs
+  h_0ff4f4713441f4 1-158
+scripts/check-onboarding-docs.test.mjs
+  h_0ff4f4713441f4 1-81
+scripts/doc-blocks.mjs
+  h_0ff4f4713441f4 1-85
+scripts/onboarding-proxy-check.sh
+  h_0ff4f4713441f4 1-195
+scripts/onboarding_wizard_check.py
+  h_0ff4f4713441f4 1-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d0225be13c8c3ca4eb081a268cb065cf78f32086",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
