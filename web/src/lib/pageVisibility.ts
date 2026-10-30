@@ -103,6 +103,8 @@ export function onVideoSeenChange(fn: (unseen: boolean) => void): () => void {
     fn(next)
   }
   const stop = onVisibilityChange(check)
+  // No document (a store under test, server-side): nothing to watch beyond the page state.
+  if (typeof document === 'undefined') return stop
   // These bubble from the video element; the page state is already updated by then.
   document.addEventListener('enterpictureinpicture', check, true)
   document.addEventListener('leavepictureinpicture', check, true)

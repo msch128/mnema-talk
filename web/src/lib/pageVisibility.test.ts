@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { onVisibilityChange, pageHidden, visibleInterval } from './pageVisibility'
+import { onVideoSeenChange, onVisibilityChange, pageHidden, visibleInterval } from './pageVisibility'
 
 function setVisibility(state: 'visible' | 'hidden') {
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
@@ -75,5 +75,15 @@ describe('page visibility', () => {
     setVisibility('visible')
     vi.advanceTimersByTime(5000)
     expect(fn).not.toHaveBeenCalled()
+  })
+
+  it('watches video without a document', () => {
+    vi.stubGlobal('document', undefined)
+    try {
+      const stop = onVideoSeenChange(() => {})
+      expect(() => stop()).not.toThrow()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
