@@ -1,0 +1,19 @@
+e2e/tests/stream-quality-live.spec.ts
+  s_fb29f048bd6d02::t_986d2c01d7f8ab 106-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d289b1d0a9f6913f18e9c24489e6382b1f5511cb",
+  "prompts": {},
+  "sessions": {
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
