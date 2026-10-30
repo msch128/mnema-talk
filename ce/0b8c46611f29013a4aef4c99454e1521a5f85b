@@ -1,0 +1,23 @@
+web/src/components/MediaViewer.test.ts
+  s_0cae4a4d7ab7c3::t_55e1e520ce6fcf 19,22,36
+web/src/components/MediaViewer.vue
+  s_0cae4a4d7ab7c3::t_48fc45ad5e88b0 2-3,5-6,10
+web/src/components/MediaViewerDialog.vue
+  s_0cae4a4d7ab7c3::t_53ace8350c8c93 1-212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce0b8c46611f29013a4aef4c99454e1521a5f85b",
+  "prompts": {},
+  "sessions": {
+    "s_0cae4a4d7ab7c3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-attachments-tray-a664e3a00112060a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
