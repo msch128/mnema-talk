@@ -201,3 +201,11 @@ func TestSystemDoctorProbesAgainstLocalFixtures(t *testing.T) {
 		t.Error("no host probe")
 	}
 }
+
+func TestPortNumberRejectsWhatDoesNotFitAPort(t *testing.T) {
+	for in, want := range map[string]uint16{"8080": 8080, "65535": 65535, "65536": 0, "99999999": 0, "-1": 0, "x": 0, "": 0} {
+		if got := portNumber(in); got != want {
+			t.Errorf("portNumber(%q) = %d, want %d", in, got, want)
+		}
+	}
+}

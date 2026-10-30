@@ -176,7 +176,11 @@ func serverWarnings(cfg *config.Config, p doctorProbes) []opwarn.Warning {
 	return ws
 }
 
+// portNumber parses a port; anything outside 1-65535 is 0 (no port).
 func portNumber(s string) uint16 {
-	n, _ := strconv.Atoi(s)
+	n, err := strconv.ParseUint(s, 10, 16)
+	if err != nil {
+		return 0
+	}
 	return uint16(n)
 }
