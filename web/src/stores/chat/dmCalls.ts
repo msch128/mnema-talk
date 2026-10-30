@@ -110,6 +110,6 @@ export function onDmCallEnd(_cx: Cx, p: DmCallEnd) {
 }
 
 /** The conversation list was read: the calls it names replace what is held. */
-export function syncDmCalls(cx: Cx) {
-  useDmCallsStore().syncList(cx.cs.dms.value, cx.authStore.user?.id, (call, seconds) => ring(cx, call, seconds, false))
+export function syncDmCalls(cx: Cx, readAt: number) {
+  useDmCallsStore().syncList(cx.cs.dms.value, cx.authStore.user?.id, (call, seconds) => ring(cx, call, seconds, false), readAt)
 }

@@ -25,7 +25,7 @@ export const useDmCallsStore = defineStore('dmCalls', () => {
     dismiss: (conversationId: string) => calls.dismiss(cs, conversationId),
     joined: (talkId: string) => calls.joined(cs, talkId),
     clearOutgoing: () => calls.clearOutgoing(cs),
-    syncList: (list: readonly { id: string; call?: ChatDMCall }[], meId: string | undefined, ring: (call: CallInfo, seconds: number, mine: boolean) => void) => calls.syncList(cs, list, meId, ring),
+    syncList: (list: readonly { id: string; call?: ChatDMCall }[], meId: string | undefined, ring: (call: CallInfo, seconds: number, mine: boolean) => void, readAt?: number) => calls.syncList(cs, list, meId, ring, readAt),
     markOf: (conversationId: string): CallMark | null => calls.markOf(cs, conversationId),
     track: (call: CallInfo) => calls.track(cs, call),
     untrack: (conversationId: string) => calls.untrack(cs, conversationId),

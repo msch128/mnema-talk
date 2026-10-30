@@ -106,11 +106,12 @@ export async function fetchDms(cx: Cx) {
   if (!useServerFeaturesStore().dm) return
   const community = cs.communityGeneration
   const seq = ++cs.dmsFetchSeq
+  const askedAt = Date.now()
   try {
     const list = await api('/api/dms', { decode: decodeDms })
     if (seq !== cs.dmsFetchSeq || community !== cs.communityGeneration) return
     setDms(cx, list, true)
-    syncDmCalls(cx)
+    syncDmCalls(cx, askedAt)
     // Only a list the server answered counts as loaded; draft pruning relies on it.
     cs.dmsLoaded.value = true
     void fetchDmSettings(cx)
