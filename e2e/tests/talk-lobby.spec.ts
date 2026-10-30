@@ -58,7 +58,7 @@ test('joining a lobby opens a Talk, its leader hands over, and the empty Talk go
   await expect(lobbyRow(a).locator('xpath=..').locator('[data-voice-user]')).toHaveCount(0)
 
   // The first Talk shows its leader.
-  const firstTalk = a.locator('[data-channel-item]', { has: a.locator('[data-voice-user]') }).first()
+  const firstTalk = a.locator('[data-channel-item]', { has: a.locator('[data-voice-user]'), hasText: new RegExp(`${LOBBY} \\d+`) }).first()
   await expect(firstTalk.getByTestId('talk-leader-mark')).toBeVisible()
 
   // A second member joins that Talk; the admin leaves; the member leads now.
