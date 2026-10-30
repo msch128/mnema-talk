@@ -24,7 +24,7 @@ describe('shieldEscape', () => {
   it('lets something inside take the Escape before a popover closes, until it is removed', () => {
     const close = vi.fn()
     const scope = effectScope()
-    scope.run(() => useDismissable(el(), close))
+    scope.run(() => { useDismissable(el(), close); useDismissable(el(), close) })
     let used = true
     const remove = shieldEscape(() => used)
     const taken = escape()
@@ -32,11 +32,11 @@ describe('shieldEscape', () => {
     expect(taken.defaultPrevented).toBe(true)
     used = false
     escape()
-    expect(close).toHaveBeenCalledOnce()
+    expect(close).toHaveBeenCalledTimes(2)
     remove()
     used = true
     escape()
-    expect(close).toHaveBeenCalledTimes(2)
+    expect(close).toHaveBeenCalledTimes(4)
     scope.stop()
   })
 })

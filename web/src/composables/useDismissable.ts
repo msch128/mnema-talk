@@ -21,6 +21,8 @@ function isInside(e: Event, roots: Element[]) {
 }
 
 const escapeShields = new Set<(event: KeyboardEvent) => boolean>()
+// Every popover listens on the same window, so a press a shield took is remembered.
+const shielded = new WeakSet<Event>()
 
 /**
  * Lets something inside a popover take an Escape before any popover closes:
@@ -51,7 +53,8 @@ export function useDismissable(target: MaybeRefOrGetter<DismissTarget>, onClose:
 
   function onKeydown(e: KeyboardEvent) {
     if (e.key !== 'Escape' || e.isComposing) return
-    if ([...escapeShields].some(shield => shield(e))) {
+    if (shielded.has(e) || [...escapeShields].some(shield => shield(e))) {
+      shielded.add(e)
       e.preventDefault()
       e.stopPropagation()
       return
