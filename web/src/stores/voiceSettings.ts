@@ -18,7 +18,8 @@ export const SOUND_EVENTS = [
   'deafen',
   'undeafen',
   'ptt_start',
-  'ptt_stop'
+  'ptt_stop',
+  'call_ring'
 ] as const
 export type SoundEvent = typeof SOUND_EVENTS[number]
 
@@ -33,7 +34,8 @@ function defaultSoundEvents() {
     deafen: true,
     undeafen: true,
     ptt_start: true,
-    ptt_stop: true
+    ptt_stop: true,
+    call_ring: true
   }
 }
 

@@ -85,7 +85,11 @@ type Notice struct {
 	Poll bool
 	// DM is set for a message of a direct message conversation: the push
 	// shows the sender and no channel name.
-	DM      bool
+	DM bool
+	// Call is "call" for the invitation card of a call and "missed" for the
+	// record of one nobody answered; the push then says so instead of showing
+	// an empty message.
+	Call    string
 	Mention bool
 	// Addressed is set when the message is meant for the member itself (see addressed); it decides about a mute.
 	Addressed bool
@@ -124,6 +128,11 @@ func build(n Notice, locale string, preview bool) Payload {
 // channel; a burst from possibly several people is titled by the kind of
 // conversation.
 func buildDM(p Payload, n Notice, sender, locale, line string, preview bool) Payload {
+	if n.Count <= 1 && n.Call != "" {
+		p.Title = fmt.Sprintf(text(locale, n.Call+"_title"), sender)
+		p.Body = text(locale, n.Call+"_body")
+		return p
+	}
 	if n.Count > 1 {
 		p.Title = text(locale, "dm")
 		p.Body = fmt.Sprintf(text(locale, "group"), n.Count)

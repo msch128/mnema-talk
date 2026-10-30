@@ -780,7 +780,8 @@
     "outputDevice": "Output device",
     "outputDeviceUnsupported": "This browser can’t pick an output device; the system default is used.",
     "outputVolume": "Output volume",
-    "perUserVolumeHint": "Make single people louder or quieter with a right-click on their name or tile."
+    "perUserVolumeHint": "Make single people louder or quieter with a right-click on their name or tile.",
+    "sound_call_ring": "Incoming call ringtone"
   },
   "stats": {
     "title": "Connection status",
@@ -1177,7 +1178,8 @@
     "inviteFrom": "{name} invites you to a Talk",
     "inviteGeneric": "You’re invited to a Talk",
     "inviteIn": "You’re here",
-    "inviteUnavailable": "Not available to you"
+    "inviteUnavailable": "Not available to you",
+    "inviteEnded": "No longer available"
   },
   "admin": {
     "signedInAs": "Signed in as {name} (Owner)",
@@ -3234,9 +3236,8 @@
       "failed": "Couldn’t save the setting. Try again.",
       "loadFailed": "Couldn’t load the setting. Try again."
     },
-    "startTalk": "Start a Talk",
+    "startTalk": "Call (starts a Talk)",
     "startTalkFailed": "Couldn’t start a Talk.",
-    "noTalkLobby": "This community has no Talk lobby you can use yet. An admin can turn a Talk into one in its settings.",
     "talkInvited": "Invitation sent.",
     "inviteToTalk": "Invite to my Talk",
     "inviteTalkFailed": "Couldn’t send the invitation.",
@@ -3269,7 +3270,9 @@
       "title": "Direct messages",
       "muteAll": "Mute all direct messages",
       "muteAllHint": "No sound, no notification and no highlight for any conversation. Unread messages are still counted. A conversation you mute or unmute yourself keeps its own setting."
-    }
+    },
+    "previewCall": "Talk invitation",
+    "previewMissedCall": "Missed call"
   },
   "blocks": {
     "title": "Blocked members",
@@ -3670,5 +3673,31 @@
     "cameraFallback": "Camera {id}…",
     "cameraDevice": "Camera",
     "noShareSound": "This share has no sound to mute."
+  },
+  "call": {
+    "isCalling": "is calling you",
+    "incomingLabel": "Incoming call from {name}",
+    "directMessage": "Direct message",
+    "inGroup": "Group direct message · {name}",
+    "dismiss": "Dismiss",
+    "openChat": "Open the conversation",
+    "calling": "Calling {name}…",
+    "callingHint": "They see it wherever they are in Mnema.",
+    "hasNotJoined": "{name} hasn’t joined",
+    "nobodyJoined": "Nobody has joined yet",
+    "waitingHint": "You’re still in the Talk. They can join from the conversation.",
+    "hangUp": "Hang up",
+    "gone": "This call has ended.",
+    "notifyTitle": "{name} is calling you",
+    "notifyBody": "Direct message · Click to join",
+    "missedTitle": "Missed call from {name}",
+    "missedBody": "Direct message",
+    "missedFrom": "Missed call from {name}",
+    "missedMine": "Nobody answered your call",
+    "callBack": "Call back",
+    "stateRinging": "Incoming call",
+    "stateCalling": "Calling…",
+    "stateActive": "In a call",
+    "joinRunning": "Join this Talk"
   }
 }

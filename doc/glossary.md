@@ -14,6 +14,7 @@ in the legal texts (Impressum, Datenschutz, AGB), which are formal by design.
 | The single all-powerful account | Owner | Owner | admin, cool_guy (in docs) | Not translated; one per community. |
 | Role or permission with all rights | Administrator | Administrator | Admin as a noun for a person | "Admin console" / "Admin-Bereich" stays as the name of the area. |
 | Voice room | Talk | Talk | voice channel, Sprachkanal, call, Anruf, Raum | "Talk" is the Mnema product term in both languages. The create dialog may say "Talk (voice)" / "Talk (Sprache)". Verbs: join a Talk / einem Talk beitreten, leave. |
+| Ring a member to a Talk | call (verb: “is calling you”; noun only as “missed call”) | anrufen: „ruft dich an“ (no noun) | Anruf, Telefonat | What “Start a Talk” does in a direct message: the others see an incoming-call card until they join, it stops, or it times out. The room stays a Talk. |
 | Lobby that opens Talks | Talk lobby | Talk-Lobby | Create-a-Talk room, Warteraum | A Talk marked as a lobby: joining it opens a temporary Talk named after the lobby ("<lobby> 1", "<lobby> 2", ...) instead of a seat. Shown as "Create a Talk" / „Talk erstellen“ in the sidebar when named so. |
 | Who may rename and limit a temporary Talk | Talk leader | Talk-Leitung | host, owner, Talk-Admin | The member who opened a temporary Talk, then the member who has been in it longest. Tooltip "Talk leader" / „Talk-Leitung“. |
 | Text room | channel | Kanal | | Group of rooms: category / Kategorie. |

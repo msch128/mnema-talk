@@ -34,6 +34,7 @@ import UserProfileModal from './components/UserProfileModal.vue'
 import LegalModal from './components/LegalModal.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
 import ToastHost from './components/ToastHost.vue'
+import CallHost from './components/CallHost.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import WelcomeFlow from './components/WelcomeFlow.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
@@ -373,6 +374,7 @@ onMounted(async () => {
     <ToastHost />
     <!-- Before the confirm host: its "Discard changes?" must open above the Talk settings. -->
     <TalkSettingsHost />
+    <CallHost />
     <ConfirmDialog />
     <ModerationDialog />
     <MessageModerationDialog />

@@ -780,7 +780,8 @@
     "outputDevice": "Ausgabegerät",
     "outputDeviceUnsupported": "Dieser Browser kann das Ausgabegerät nicht wählen; es wird das Standardgerät des Systems verwendet.",
     "outputVolume": "Ausgabelautstärke",
-    "perUserVolumeHint": "Einzelne Personen stellst du per Rechtsklick auf ihren Namen oder ihre Kachel lauter oder leiser."
+    "perUserVolumeHint": "Einzelne Personen stellst du per Rechtsklick auf ihren Namen oder ihre Kachel lauter oder leiser.",
+    "sound_call_ring": "Klingelton"
   },
   "stats": {
     "title": "Verbindungsstatus",
@@ -1177,7 +1178,8 @@
     "inviteFrom": "{name} lädt dich in einen Talk ein",
     "inviteGeneric": "Du bist in einen Talk eingeladen",
     "inviteIn": "Du bist dabei",
-    "inviteUnavailable": "Für dich nicht verfügbar"
+    "inviteUnavailable": "Für dich nicht verfügbar",
+    "inviteEnded": "Nicht mehr verfügbar"
   },
   "admin": {
     "signedInAs": "Angemeldet als {name} (Owner)",
@@ -3236,7 +3238,6 @@
     },
     "startTalk": "Talk starten",
     "startTalkFailed": "Der Talk konnte nicht gestartet werden.",
-    "noTalkLobby": "Diese Community hat noch keine Talk-Lobby, die du nutzen kannst. Admins können in den Einstellungen eines Talks eine daraus machen.",
     "talkInvited": "Einladung gesendet.",
     "inviteToTalk": "In meinen Talk einladen",
     "inviteTalkFailed": "Die Einladung konnte nicht gesendet werden.",
@@ -3269,7 +3270,9 @@
       "title": "Direktnachrichten",
       "muteAll": "Alle Direktnachrichten stummschalten",
       "muteAllHint": "Kein Ton, keine Benachrichtigung und keine Hervorhebung für Gespräche. Ungelesene Nachrichten werden weiter gezählt. Ein Gespräch, das du selbst stummschaltest oder wieder laut stellst, behält seine eigene Einstellung."
-    }
+    },
+    "previewCall": "Talk-Einladung",
+    "previewMissedCall": "Hat angerufen"
   },
   "blocks": {
     "title": "Blockierte Mitglieder",
@@ -3670,5 +3673,31 @@
     "cameraFallback": "Kamera {id} …",
     "cameraDevice": "Kamera",
     "noShareSound": "Diese Übertragung hat keinen Ton zum Stummschalten."
+  },
+  "call": {
+    "isCalling": "ruft dich an",
+    "incomingLabel": "{name} ruft dich an",
+    "directMessage": "Direktnachricht",
+    "inGroup": "Gruppen-Direktnachricht · {name}",
+    "dismiss": "Ausblenden",
+    "openChat": "Konversation öffnen",
+    "calling": "Ruft {name} an …",
+    "callingHint": "Sie sehen es überall in Mnema.",
+    "hasNotJoined": "{name} ist nicht beigetreten",
+    "nobodyJoined": "Noch niemand ist beigetreten",
+    "waitingHint": "Du bist noch im Talk. Sie können aus der Konversation beitreten.",
+    "hangUp": "Auflegen",
+    "gone": "Dieser Talk ist beendet.",
+    "notifyTitle": "{name} ruft dich an",
+    "notifyBody": "Direktnachricht · Klicken zum Beitreten",
+    "missedTitle": "{name} hat dich angerufen",
+    "missedBody": "Verpasst · Direktnachricht",
+    "missedFrom": "{name} hat dich angerufen",
+    "missedMine": "Niemand ist beigetreten",
+    "callBack": "Zurückrufen",
+    "stateRinging": "Ruft dich an",
+    "stateCalling": "Ruft an …",
+    "stateActive": "Im Talk",
+    "joinRunning": "Diesem Talk beitreten"
   }
 }

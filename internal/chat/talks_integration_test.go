@@ -398,21 +398,6 @@ func TestStartingATalkFromAConversationPostsAnInvite(t *testing.T) {
 	}
 	params := map[string]string{"id": dm.String()}
 
-	// Hide the only lobby from Alice: the community has none she can use.
-	var everyone uuid.UUID
-	_ = w.p.QueryRow(ctx, `SELECT id FROM roles WHERE is_everyone`).Scan(&everyone)
-	if _, err := w.p.Exec(ctx, `INSERT INTO permission_overwrites (channel_id, role_id, deny) VALUES ($1, $2, $3)`, w.lobby.ID, everyone, int64(perm.ViewChannel)); err != nil {
-		t.Fatal(err)
-	}
-	h.Perms.Invalidate()
-	if err := h.startDMTalk(httptest.NewRecorder(), talkRequest(w.alice, ``, params)); !errors.Is(err, errNoTalkLobby) {
-		t.Fatalf("no usable lobby: %v", err)
-	}
-	if _, err := w.p.Exec(ctx, `DELETE FROM permission_overwrites WHERE channel_id = $1`, w.lobby.ID); err != nil {
-		t.Fatal(err)
-	}
-	h.Perms.Invalidate()
-
 	rec := httptest.NewRecorder()
 	if err := h.startDMTalk(rec, talkRequest(w.alice, ``, params)); err != nil {
 		t.Fatal(err)
@@ -693,14 +678,6 @@ func TestTalkRoutesExistOnlyWithAManager(t *testing.T) {
 	}
 	if n := routes(w.mgr); n != 3 {
 		t.Fatalf("with a manager: %d routes; want the three Talk routes", n)
-	}
-}
-
-func TestUsableLobbyWithoutAPermissionModelAcceptsEveryLobby(t *testing.T) {
-	w := newTalksWorld(t)
-	h := &Handler{DB: w.p, Events: w.rec, Talks: w.mgr}
-	if !h.usableLobby(talkRequest(w.alice, ``, nil))(w.lobby.ID) {
-		t.Fatal("no model, no limits")
 	}
 }
 

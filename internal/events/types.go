@@ -55,6 +55,11 @@ const (
 	DMMemberAdded       = "dm_member_added"
 	DMMemberRemoved     = "dm_member_removed"
 	DMPrefsUpdated      = "dm_prefs_updated"
+	// DMCallRing says a call started in a conversation ("Start a Talk"): its
+	// members' sessions show an incoming call. DMCallEnd says it stopped
+	// ringing (answered, cancelled, timed out) or is over.
+	DMCallRing = "dm_call_ring"
+	DMCallEnd  = "dm_call_end"
 	// TalkLeader says who leads a temporary Talk now (leader_id is null when
 	// nobody does). TalkMoved tells one connection that its join of a Create-a-
 	// Talk lobby opened the Talk channel_id and seated it there.

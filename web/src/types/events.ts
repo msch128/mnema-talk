@@ -7,6 +7,8 @@ import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNot
 import type { StageHand, StageTalkPower, TalkReaction } from './stageEvents'
 import { STAGE_EVENT_CHECKS } from './stageEvents'
 import { NOTICE_EVENT_CHECKS } from './noticeEvents'
+import type { DirectMessageMember, DirectMessageRef, DmCallEnd, DmCallRing } from './dmEvents'
+import { DM_EVENT_CHECKS } from './dmEvents'
 import { ContractError, onlyFields, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue | undefined }
@@ -30,26 +32,6 @@ export type ReadStateUpdate =
   | { channel_id: string; last_read_at: string; refresh: true }
   | { refresh: true }
   | Pick<ReadState, 'channel_id' | 'notify_level'>
-
-/** A member of a direct message conversation (the server's DirectMessage). */
-export interface DirectMessageMember { id: string; username: string; display_name: string; avatar_url?: string }
-/** A direct message conversation as GET /api/dms returns it. */
-export interface DirectMessageRef {
-  id: string
-  group: boolean
-  members: DirectMessageMember[]
-  created_at: string
-  last_message_at: string | null
-  unread_count: number
-  mention_count: number
-  last_read_at: string | null
-  notify_level: 'all' | 'mentions' | 'mute' | 'inherit'
-  can_send: boolean; hidden: boolean; favourite_position: number | null
-}
-
-function isDirectMessageMember(value: unknown): value is DirectMessageMember {
-  return isRecord(value) && isIdentifier(value['id']) && isString(value['username'], 128) && isString(value['display_name'], 128)
-}
 
 /** A bot's reply to a slash command that only the member who ran it sees (never stored). */
 /** What a bot says it is doing: Discord's activity type (0 playing, 2 listening, 3 watching, 4 custom, 5 competing) and a short text. */
@@ -106,6 +88,10 @@ export interface ServerEventPayloads {
   dm_member_removed: { dm_id: string; member: DirectMessageMember }
   /** The caller closed, reopened or favourited a conversation (own sessions only): read it again; dm_id null: the whole list (their settings changed). */
   dm_prefs_updated: { dm_id: string | null }
+  /** A Talk was started from, or shared into, a conversation: everyone but the caller has an incoming call (dm_call_end stops it). */
+  dm_call_ring: DmCallRing
+  /** The call stopped ringing (answered, cancelled, timeout) or is over (ended); `active`: somebody is still in the Talk. */
+  dm_call_end: DmCallEnd
   typing: { channel_id: string; user_id: string }
   read_state: ReadStateUpdate
   message_create: Message
@@ -326,15 +312,6 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
     && ['created', 'updated', 'sent', 'failed', 'deleted'].includes(String(payload['state']))
     && (!hasOwn(payload, 'reason') || isString(payload['reason'], 64)) && onlyFields(payload, ['id', 'channel_id', 'state', 'reason'])],
   ['saved_updated', payload => isIdentifier(payload['message_id']) && typeof payload['saved'] === 'boolean' && onlyFields(payload, ['message_id', 'saved'])],
-  ['dm_created', payload => isIdentifier(payload['id']) && typeof payload['group'] === 'boolean' && isArrayOf(payload['members'], isDirectMessageMember)
-    && isTimestamp(payload['created_at']) && (payload['last_message_at'] === null || isTimestamp(payload['last_message_at']))
-    && isInteger(payload['unread_count']) && isInteger(payload['mention_count'])
-    && (payload['last_read_at'] === null || isTimestamp(payload['last_read_at']))
-    && isChatNotifyLevel(payload['notify_level']) && typeof payload['can_send'] === 'boolean' && typeof payload['hidden'] === 'boolean'
-    && (payload['favourite_position'] === null || isInteger(payload['favourite_position']))],
-  ['dm_member_added', payload => isIdentifier(payload['dm_id']) && isDirectMessageMember(payload['member'])],
-  ['dm_member_removed', payload => isIdentifier(payload['dm_id']) && isDirectMessageMember(payload['member'])],
-  ['dm_prefs_updated', payload => (payload['dm_id'] === null || isIdentifier(payload['dm_id'])) && onlyFields(payload, ['dm_id'])],
   ['block_updated', payload => isIdentifier(payload['user_id']) && typeof payload['blocked'] === 'boolean' && onlyFields(payload, ['user_id', 'blocked'])],
   ['webrtc_offer', payload => payload['type'] === 'offer' && isString(payload['sdp'], 262_144)],
   ['webrtc_candidate', isIceCandidate],
@@ -356,6 +333,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['talk_leader', payload => isIdentifier(payload['channel_id']) && (payload['leader_id'] === null || isIdentifier(payload['leader_id']))],
   ['talk_moved', payload => isIdentifier(payload['from_channel_id']) && isIdentifier(payload['channel_id'])],
   ...STAGE_EVENT_CHECKS,
+  ...DM_EVENT_CHECKS,
   ['media_handshake', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
     && isString(payload['wire'], 48_000) && payload['wire'] !== ''],
   ...NOTICE_EVENT_CHECKS
@@ -385,7 +363,7 @@ const VOICE_KICK_REASONS = new Set(['room_full', 'missing_permission', 'rules_no
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
-  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'dm_prefs_updated', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
+  'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'dm_prefs_updated', 'dm_call_ring', 'dm_call_end', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'community_updated'

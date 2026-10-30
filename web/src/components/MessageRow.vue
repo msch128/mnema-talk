@@ -189,7 +189,7 @@ defineExpose({ el: row })
       <ForwardedQuote v-if="msg.forward" :msg="msg" />
 
       <!-- Webhook cards -->
-      <MessageEmbeds :embeds="msg.embeds ?? []" :author="msg.display_name || msg.username" />
+      <MessageEmbeds :embeds="msg.embeds ?? []" :author="msg.display_name || msg.username" :author-id="msg.user_id" :channel-id="msg.channel_id" />
 
       <!-- Poll options and results -->
       <PollCard v-if="msg.poll" :msg="msg" />

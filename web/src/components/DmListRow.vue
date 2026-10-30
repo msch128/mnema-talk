@@ -13,6 +13,8 @@ import { dmTitle } from '../lib/dm'
 import { locale, t } from '../i18n'
 import DmAvatar from './DmAvatar.vue'
 import Badge from './Badge.vue'
+import CallMark from './CallMark.vue'
+import type { CallMark as CallMarkKind } from '../stores/dmCalls'
 
 const props = defineProps({
   dm: { type: Object as PropType<ChatDirectMessage>, required: true },
@@ -23,7 +25,9 @@ const props = defineProps({
   // Whether the new features (favourites, closing) are offered.
   enhanced: { type: Boolean, default: false },
   favourite: { type: Boolean, default: false },
-  draggable: { type: Boolean, default: false }
+  draggable: { type: Boolean, default: false },
+  // A call is ringing, being made or going on in this conversation.
+  call: { type: String as PropType<CallMarkKind | null>, default: null }
 })
 const emit = defineEmits<{
   open: []
@@ -38,17 +42,22 @@ const me = computed(() => authStore.user?.id)
 const title = computed(() => dmTitle(props.dm, me.value))
 const clock = computed(() => dmClock(props.dm.last_message_at, locale.value))
 
+const PREVIEW_KEYS = { poll: 'dm.previewPoll', attachment: 'dm.previewAttachment', call: 'dm.previewCall', missedCall: 'dm.previewMissedCall' } as const
+const CALL_KEYS = { ringing: 'call.stateRinging', calling: 'call.stateCalling', active: 'call.stateActive' } as const
+
+const callText = computed(() => (props.call ? t(CALL_KEYS[props.call]) : ''))
+
 const line = computed(() => {
   const preview = dmPreview(props.dm, me.value)
   if (preview.kind === 'none') return ''
-  const text = preview.kind === 'text' ? preview.text : t(preview.kind === 'poll' ? 'dm.previewPoll' : 'dm.previewAttachment')
+  const text = preview.kind === 'text' ? preview.text : t(PREVIEW_KEYS[preview.kind])
   if (preview.sender === 'me') return t('dm.previewYou', { text })
   return preview.sender ? t('dm.previewFrom', { name: preview.sender, text }) : text
 })
 
 const label = computed(() => [
   title.value,
-  line.value,
+  callText.value || line.value,
   props.unread > 0 ? t('dm.unreadCount', { n: props.unread }) : '',
   props.mentions > 0 ? t('dm.mentionCount', { n: props.mentions }) : '',
   props.muted ? t('dm.mutedState') : ''
@@ -108,7 +117,11 @@ function onKey(event: KeyboardEvent) {
           >{{ clock }}</time>
         </div>
         <div class="flex min-h-4 items-center gap-1.5">
-          <span class="truncate text-xs text-mnema-tertiary" data-testid="dm-preview">{{ line }}</span>
+          <template v-if="call">
+            <CallMark :mark="call" />
+            <span class="truncate text-xs font-medium text-mnema-accent" data-testid="dm-call">{{ callText }}</span>
+          </template>
+          <span v-else class="truncate text-xs text-mnema-tertiary" data-testid="dm-preview">{{ line }}</span>
           <Badge
             v-if="mentions > 0 && !open && !muted"
             variant="mention"

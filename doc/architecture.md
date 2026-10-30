@@ -192,7 +192,7 @@ words in conversations (the others keep theirs) and deletes conversations
 nobody is left in; the export lists the member's conversations by id and their
 own messages.
 
-**Calls** in conversations are not part of 1.1.
+**Calls.** A conversation has no call of its own: "Start a Talk" opens a temporary Talk and posts an invitation, and the server rings the other members (`dm_call_ring`, `dm_call_end`, a "missed call" message when nobody answers); see [Talks](talks.md#ringing).
 
 ## Blocking and reports
 

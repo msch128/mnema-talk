@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"github.com/msch128/mnema-talk/internal/chat"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -45,9 +46,15 @@ func writePresence(ctx context.Context, l *audit.Log, q db.Querier, ev presenceE
 	if l == nil {
 		return
 	}
+	if chat.IsDMTalk(ctx, q, ev.channel) {
+		return
+	}
 	var username, channel string
 	_ = q.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, ev.user).Scan(&username)
-	_ = q.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, ev.channel).Scan(&channel)
+	// A Talk that is gone by now may have been a conversation's: nothing to say about it.
+	if err := q.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, ev.channel).Scan(&channel); err != nil {
+		return
+	}
 	action := "voice.leave"
 	if ev.joined {
 		action = "voice.join"

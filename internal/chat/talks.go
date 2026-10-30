@@ -27,9 +27,9 @@ const (
 var (
 	errNotLobby      = httpx.ErrConflict("this Talk is not a lobby")
 	errTooManyTalks  = httpx.ErrConflict("too many open Talks for this lobby")
+	errCannotConnect = httpx.ErrForbidden("you may not join Talks in this community")
 	errNotTempTalk   = httpx.ErrNotFound("Talk not found")
 	errNotTalkLeader = httpx.ErrForbidden("only the Talk leader can change this Talk")
-	errNoTalkLobby   = httpx.ErrConflict("this community has no Talk lobby you can use")
 )
 
 // tempTalkNumberDigits is the room a temporary Talk's number may take in the
@@ -127,6 +127,58 @@ func OpenTempTalk(ctx context.Context, p *db.Pool, lobbyID, creator uuid.UUID) (
 	return ch, nil
 }
 
+// OpenDMTalk creates a temporary Talk that belongs to the conversation dm, with
+// creator as its leader. It has no lobby and no overwrites: the permission
+// snapshot lets only the conversation's members see and join it (dm_id), so a
+// community needs no setup for calls in conversations. It is uncategorized and
+// goes with the conversation.
+func OpenDMTalk(ctx context.Context, p *db.Pool, dm, creator uuid.UUID) (*Channel, error) {
+	var ch *Channel
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if err := lockChannelLayout(ctx, tx); err != nil {
+			return err
+		}
+		name, err := nextDMTalkName(ctx, tx, dm)
+		if err != nil {
+			return err
+		}
+		id := uuid.New()
+		ch = &Channel{Slug: TempTalkSlug(id), PreviousSlugs: []string{}, IsTemp: true, LeaderID: &creator}
+		err = tx.QueryRow(ctx, `
+			INSERT INTO channels (id, category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds, dm_id, is_temp, leader_id, slug)
+			VALUES ($1, NULL, $2, 'voice', '', 0, 0, 0, $3, TRUE, $4, $5)
+			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`, id, name, dm, creator, ch.Slug).
+			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
+		if err != nil {
+			return fmt.Errorf("open conversation Talk: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ch, nil
+}
+
+// IsDMTalk reports whether the channel is a Talk that belongs to a
+// conversation. Nothing about such a Talk is audited: who called whom, and when,
+// is as private as the conversation (not even the Owner reads it).
+func IsDMTalk(ctx context.Context, q db.Querier, id uuid.UUID) bool {
+	var is bool
+	err := q.QueryRow(ctx, `SELECT dm_id IS NOT NULL FROM channels WHERE id = $1`, id).Scan(&is)
+	return err == nil && is
+}
+
+// nextDMTalkName is "Talk n" for the lowest n the conversation's open Talks do not use.
+func nextDMTalkName(ctx context.Context, tx pgx.Tx, dm uuid.UUID) (string, error) {
+	var names []string
+	err := tx.QueryRow(ctx, `SELECT COALESCE(array_agg(name), '{}') FROM channels WHERE dm_id = $1`, dm).Scan(&names)
+	if err != nil {
+		return "", fmt.Errorf("list conversation Talks: %w", err)
+	}
+	return fitTalkName("Talk", lowestFreeTalkNumber("Talk", names)), nil
+}
+
 // checkLobby refuses a channel that is no lobby or has too many open Talks.
 func checkLobby(ctx context.Context, tx pgx.Tx, lobby *Channel) error {
 	var isLobby bool
@@ -209,29 +261,4 @@ func TalkLeader(ctx context.Context, q db.Querier, id uuid.UUID) (leader *uuid.U
 		return nil, false, fmt.Errorf("load Talk leader: %w", err)
 	}
 	return leader, true, nil
-}
-
-// FirstLobbyFor returns the first lobby (in sidebar order) that usable
-// accepts, or errNoTalkLobby.
-func FirstLobbyFor(ctx context.Context, p *db.Pool, usable func(id uuid.UUID) bool) (uuid.UUID, error) {
-	rows, err := p.Query(ctx, `
-		SELECT ch.id FROM channels ch LEFT JOIN categories c ON c.id = ch.category_id
-		WHERE ch.is_lobby ORDER BY c.sort_order NULLS FIRST, ch.sort_order, ch.created_at`)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("list lobbies: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			return uuid.Nil, err
-		}
-		if usable(id) {
-			return id, nil
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return uuid.Nil, err
-	}
-	return uuid.Nil, errNoTalkLobby
 }

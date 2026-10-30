@@ -30,6 +30,13 @@ const examples: Record<ServerEventType, unknown[]> = {
   dm_member_added: [{ dm_id: id, member: { id, username: 'bob', display_name: 'Bob', avatar_url: '/api/media/x' } }],
   dm_member_removed: [{ dm_id: id, member: { id, username: 'bob', display_name: 'Bob' } }],
   dm_prefs_updated: [{ dm_id: id }, { dm_id: null }],
+  dm_call_ring: [{ conversation_id: id, talk_id: fixtureId(2), message_id: fixtureId(3), caller_id: id, talk_name: 'Talk 1', ring_seconds: 45 }],
+  dm_call_end: [
+    { conversation_id: id, talk_id: fixtureId(2), reason: 'answered', active: true, user_id: id },
+    { conversation_id: id, talk_id: fixtureId(2), reason: 'cancelled', active: false, message_id: fixtureId(3) },
+    { conversation_id: id, talk_id: fixtureId(2), reason: 'timeout', active: true, message_id: fixtureId(3) },
+    { conversation_id: id, talk_id: fixtureId(2), reason: 'ended', active: false }
+  ],
   block_updated: [{ user_id: id, blocked: true }, { user_id: id, blocked: false }],
   typing: [room],
   read_state: [

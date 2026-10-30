@@ -123,13 +123,35 @@ func (m *TalkManager) Open(ctx context.Context, user, lobbyID uuid.UUID) (*Chann
 	if err != nil {
 		return nil, err
 	}
+	m.register(ch.ID, user)
+	return &ChannelInfo{ID: ch.ID, Type: ch.Type, UserLimit: ch.UserLimit, SlowMode: ch.SlowModeSeconds}, nil
+}
+
+// OpenForDM creates a Talk that belongs to the conversation dm for user, who
+// leads it (see OpenDMTalk): no lobby is needed. Like Open it counts against
+// the member's limit and the Talk is removed again if nobody enters it.
+func (m *TalkManager) OpenForDM(ctx context.Context, user, dm uuid.UUID) (*ChannelInfo, error) {
+	if m.CreateLimit != nil {
+		if ok, _ := m.CreateLimit.Allow(user.String()); !ok {
+			return nil, httpx.ErrRateLimited()
+		}
+	}
+	ch, err := OpenDMTalk(ctx, m.DB, dm, user)
+	if err != nil {
+		return nil, err
+	}
+	m.register(ch.ID, user)
+	return &ChannelInfo{ID: ch.ID, Type: ch.Type, UserLimit: ch.UserLimit, SlowMode: ch.SlowModeSeconds}, nil
+}
+
+// register starts following the new Talk and tells everyone who may see it.
+func (m *TalkManager) register(id, leader uuid.UUID) {
 	m.mu.Lock()
-	t := &liveTalk{leader: &user}
-	m.talks[ch.ID] = t
-	m.armLocked(ch.ID, t)
+	t := &liveTalk{leader: &leader}
+	m.talks[id] = t
+	m.armLocked(id, t)
 	m.mu.Unlock()
 	m.structureChanged()
-	return &ChannelInfo{ID: ch.ID, Type: ch.Type, UserLimit: ch.UserLimit, SlowMode: ch.SlowModeSeconds}, nil
 }
 
 // Leader returns the current leader of a temporary Talk.

@@ -116,7 +116,12 @@ func removeDMMember(ctx context.Context, tx pgx.Tx, id, user uuid.UUID) ([]uuid.
 // deleteEmptyDM removes a conversation without members with its messages and
 // returns the storage keys of their attachments.
 func deleteEmptyDM(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]string, error) {
-	keys, err := channelMediaKeys(ctx, tx, []uuid.UUID{id})
+	// The conversation's Talks go with it (dm_id cascades): their attachments too.
+	ids, err := dmAndTalkIDs(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	keys, err := channelMediaKeys(ctx, tx, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -124,6 +129,15 @@ func deleteEmptyDM(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]string, erro
 		return nil, fmt.Errorf("delete direct message: %w", err)
 	}
 	return keys, nil
+}
+
+// dmAndTalkIDs is the conversation and the Talks that belong to it.
+func dmAndTalkIDs(ctx context.Context, q db.Querier, dm uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.Query(ctx, `SELECT id FROM channels WHERE id = $1 OR dm_id = $1`, dm)
+	if err != nil {
+		return nil, fmt.Errorf("list conversation Talks: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
 }
 
 // DMPolicy values.

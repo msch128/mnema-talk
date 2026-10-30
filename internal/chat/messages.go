@@ -328,6 +328,10 @@ type NewMessage struct {
 	// ScreenText is more member-written text of the message (poll options)
 	// that automod reads together with Title and Content.
 	ScreenText []string
+	// Record marks a message the server writes on a member's behalf (the
+	// "missed call" note): it does not count towards the cap on a starter's
+	// unanswered messages in a conversation.
+	Record bool
 }
 
 // CreateMessage inserts a message and returns its ID.

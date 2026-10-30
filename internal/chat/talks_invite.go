@@ -54,6 +54,14 @@ func (h *Handler) postTalkInvite(ctx context.Context, dm, user, talk uuid.UUID) 
 	return GetMessage(ctx, h.DB, id)
 }
 
+// inviteName is the Talk's name on the invitation card msg.
+func inviteName(msg *Message) string {
+	if len(msg.Embeds) == 0 {
+		return ""
+	}
+	return msg.Embeds[0].Title
+}
+
 // inviteToTalk handles POST /api/talks/{id}/invites.
 //
 // @Summary Invite a conversation to a Talk
@@ -95,6 +103,7 @@ func (h *Handler) inviteToTalk(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.Events.BroadcastChannel(req.ConversationID, events.MessageCreate, msg)
+	h.Calls.Begin(req.ConversationID, talk, auth.UserFrom(ctx).ID, msg.ID, inviteName(msg))
 	httpx.WriteJSON(w, http.StatusCreated, msg)
 	return nil
 }

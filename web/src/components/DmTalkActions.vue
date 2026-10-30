@@ -1,17 +1,16 @@
 <script setup lang="ts">
 // A conversation has no call of its own. "Start a Talk" opens a temporary Talk
-// from a Create-a-Talk lobby and posts an invitation into the conversation;
+// that belongs to the conversation (no lobby needed) and rings its members;
 // "Invite to my Talk" posts the same card for the Talk the member is in.
 import { computed, ref } from 'vue'
-import { AudioLines, UserPlus } from '@lucide/vue'
-import { isApiError, caughtErrorMessage } from '../lib/api'
-import { inviteConversationToTalk, startConversationTalk } from '../lib/talks'
+import { Phone, PhoneCall, UserPlus } from '@lucide/vue'
+import { caughtErrorMessage } from '../lib/api'
+import { inviteConversationToTalk } from '../lib/talks'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
-import { usePermissionsStore } from '../stores/permissions'
+import { useDmCallsStore } from '../stores/dmCalls'
 import { useToastStore } from '../stores/toast'
-import { useWebRTC } from '../composables/useWebRTC'
-import { navigate } from '../lib/router'
+import { useDmCall } from '../composables/useDmCall'
 import { t } from '../i18n'
 
 const props = defineProps({
@@ -21,26 +20,23 @@ const props = defineProps({
 
 const chat = useChatStore()
 const voice = useVoiceStore()
-const permissions = usePermissionsStore()
 const toasts = useToastStore()
-const { joinVoiceChannel } = useWebRTC()
+const call = useDmCall()
+const calls = useDmCallsStore()
 const busy = ref(false)
 
 const myTalk = computed(() => chat.allChannels.find(c => c.id === voice.currentChannelId && c.type === 'voice' && !c.is_lobby) ?? null)
+
+// A call is going on here: joining it beats starting a second Talk, which would end its ring.
+const running = computed(() => calls.active[props.conversationId] ?? null)
+const inRunning = computed(() => !!running.value && voice.currentChannelId === running.value.talkId)
 
 async function start() {
   if (busy.value) return
   busy.value = true
   try {
-    const started = await startConversationTalk(props.conversationId)
-    await Promise.all([chat.fetchChannels(), permissions.load()])
-    const talk = chat.allChannels.find(c => c.id === started.channel_id)
-    if (talk) void chat.selectChannel(talk)
-    void joinVoiceChannel(started.channel_id)
-    voice.activeView = 'voice'
-    navigate(chat.linkTo(started.channel_id))
-  } catch (e) {
-    toasts.error(isApiError(e) && e.status === 409 ? t('dm.noTalkLobby') : caughtErrorMessage(e, t('dm.startTalkFailed')))
+    if (running.value) await call.join(running.value.talkId)
+    else await call.start(props.conversationId)
   } finally {
     busy.value = false
   }
@@ -63,15 +59,17 @@ async function invite() {
 
 <template>
   <button
+    v-if="!inRunning"
     type="button"
-    data-testid="dm-start-talk"
-    class="btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11"
-    :disabled="!canSend || busy"
-    v-tooltip="$t('dm.startTalk')"
-    :aria-label="$t('dm.startTalk')"
+    :data-testid="running ? 'dm-join-talk' : 'dm-start-talk'"
+    :class="['btn btn-icon w-9 h-9 max-md:w-11 max-md:h-11', running ? 'text-mnema-accent' : '']"
+    :disabled="(!running && !canSend) || busy"
+    v-tooltip="running ? $t('call.joinRunning') : $t('dm.startTalk')"
+    :aria-label="running ? $t('call.joinRunning') : $t('dm.startTalk')"
     @click="start"
   >
-    <AudioLines class="w-5 h-5" />
+    <PhoneCall v-if="running" class="w-5 h-5" />
+    <Phone v-else class="w-5 h-5" />
   </button>
   <button
     v-if="myTalk"

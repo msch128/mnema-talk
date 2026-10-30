@@ -202,3 +202,26 @@ func TestCleanKeepsJoinersButDropsBidiControls(t *testing.T) {
 		t.Fatalf("bidi override or BOM survive: %q", got)
 	}
 }
+
+func TestPushForACallSaysWhoIsCallingAndHowToJoin(t *testing.T) {
+	n := notice()
+	n.DM, n.Call, n.ChannelName = true, "call", ""
+	if p := build(n, "en", true); p.Title != "Alice is calling you" || p.Body != "Direct message · Tap to join" {
+		t.Fatalf("title %q body %q", p.Title, p.Body)
+	}
+	if p := build(n, "de", false); p.Title != "Alice ruft dich an" || p.Body != "Direktnachricht · Tippen zum Beitreten" {
+		t.Fatalf("title %q body %q", p.Title, p.Body)
+	}
+	n.Call = "missed"
+	if p := build(n, "en", true); p.Title != "Missed call from Alice" || p.Body != "Direct message" {
+		t.Fatalf("title %q body %q", p.Title, p.Body)
+	}
+}
+
+func TestPushForACallInAGroupOfMessagesStaysOneBurst(t *testing.T) {
+	n := notice()
+	n.DM, n.Call, n.Count = true, "call", 3
+	if p := build(n, "en", false); p.Title != "Direct message" || p.Body != "3 new messages" {
+		t.Fatalf("title %q body %q", p.Title, p.Body)
+	}
+}

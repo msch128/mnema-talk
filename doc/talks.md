@@ -60,17 +60,64 @@ temporary Talks, because nobody is in a Talk then.
 ## Start a Talk from a direct message
 
 A conversation has no call of its own. In the header of a direct message
-"Start a Talk" (`POST /api/dms/{id}/talk`) opens a temporary Talk from the first
-lobby the member can see and join (in sidebar order) and posts an **invitation
-card** into the conversation. If no such lobby exists the request answers 409 and
-the web app explains that the community has no Talk lobby. While in a Talk, "Invite
-to my Talk" (`POST /api/talks/{id}/invites` with the conversation) posts the same
-card.
+"Start a Talk" (`POST /api/dms/{id}/talk`) opens a temporary Talk **that belongs
+to the conversation** and posts an **invitation card** into it. No lobby and no
+admin setup are needed, so it works on a fresh community. The Talk is a temporary
+Talk without a lobby (`is_temp`, `lobby_id` NULL) with `channels.dm_id` pointing
+at the conversation (migration 0079): the permission snapshot lets only the
+conversation's members see and join it, the Owner and Administrators included
+(like the conversation itself), a member added to a group gets it too, it shows
+in the sidebar of its members only, and it is deleted when it is empty (like any
+temporary Talk) or when the conversation is. Nothing about it reaches the audit log (who joined it, renamed it or when it went), because that would tell the Owner who called whom. It is led by whoever started it and
+counts against the 5 new Talks per 10 minutes. While in a Talk, "Invite to my
+Talk" (`POST /api/talks/{id}/invites` with the conversation) posts the same card.
 
 The card is an ordinary message whose embed carries `talk_id`. Only the server
 sets it (webhook payloads cannot). Its **Join** button runs the normal join, so an
 invitation never lets anyone into a Talk they could not join: a member who cannot
 see the Talk sees it as unavailable.
+
+### Ringing
+
+Starting a Talk from a conversation, or sharing a Talk into one ("Invite to my
+Talk"), also *rings* the conversation (`internal/chat/dm_calls.go`). Nothing
+about the room changes: it is still a Talk, and the card in the conversation
+still works. The ring is what makes the invitation visible where the member is:
+
+- **Events.** `dm_call_ring` goes to the conversation's members' sessions that
+  asked for conversations (`?dm=1`), the caller's own included. It carries the
+  Talk, the invitation message, the caller and how long it rings
+  (`ring_seconds`, 45 by default). `dm_call_end` says it stopped ringing:
+  `answered` (another member entered the Talk; `user_id` says who, so their
+  other devices and the other members drop the card), `cancelled` (the caller
+  left before anybody joined, or started another Talk in the conversation),
+  `timeout` (nobody joined in time) or `ended` (the last member left). `active`
+  is true while somebody is still in the Talk. Both are additive: a client that
+  ignores them still gets the card as an ordinary message.
+- **Missed call.** After `cancelled` and `timeout` the server writes a "missed
+  call" message in the conversation (an embed with `call: "missed"`, written by
+  the caller, set by the server only) and announces it with `message_create`
+  before `dm_call_end` (`message_id`). It is an ordinary unread message, so the
+  conversation gets its badge and the preview reads "Missed call". It does not
+  count towards the cap on a starter's unanswered messages. A call that rang out
+  while the caller waits in the Talk leaves one record, and a member who joins
+  later writes nothing more.
+- **After a reload.** `GET /api/dms` and `GET /api/dms/{id}` carry `call` (the
+  Talk, the caller, `ringing` and the seconds it still rings) for a conversation
+  with a call going on, and `last_message.call` names the card and the record
+  of a call, so a window that opens during a call shows it. The calls are kept in
+  memory: a restart ends them, together with their Talks.
+- **The web app** shows an incoming call card (caller, "is calling you", Join,
+  the conversation and Dismiss) over whatever is open, a phone on the
+  conversation in the sidebar while a call rings or goes on, and to the caller
+  "Calling …" with Cancel, then "… hasn't joined". Joining on one device ends the
+  ring on the member's others. A muted conversation, a blocked caller and
+  do not disturb show no card or sound (do not disturb still shows the card
+  quietly), and the ringtone is the sound effect "Incoming call ringtone" in the
+  audio settings (volume, output device and the switch for it apply). A
+  notification of the operating system says "{name} is calling you" with
+  "Direct message · Click to join", and Web Push says the same; using either
+  opens the conversation at the card.
 
 ## Access presets
 

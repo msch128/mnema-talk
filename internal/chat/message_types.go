@@ -124,6 +124,10 @@ type Embed struct {
 	// talks_invite.go); webhook payloads cannot. Joining goes through the
 	// ordinary permission checks, the card grants nothing.
 	TalkID *uuid.UUID `json:"talk_id,omitempty" binding:"optional" format:"uuid"`
+	// Call marks the embed as the record of a call in a conversation: "missed"
+	// is a call nobody answered (Title is the Talk's name). Only the server
+	// sets it (dm_calls.go); webhook payloads cannot.
+	Call string `json:"call,omitempty" binding:"optional" enums:"missed"`
 }
 
 // EmbedFooter is the small text at the bottom of an embed.

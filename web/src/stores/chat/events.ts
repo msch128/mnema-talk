@@ -16,6 +16,7 @@ import type { Cx } from './state'
 import { fetchChannels } from './channels'
 import { fetchDms, isDm, noteDmMessage, noteDmMessageChanged, onDmCreated, onDmMemberAdded, onDmMemberRemoved } from './dms'
 import { onDmPrefsUpdated } from './dmPrefs'
+import { onDmCallEnd, onDmCallRing } from './dmCalls'
 import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, updateUserEverywhere } from './members'
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
 import { onThreadFollowUpdated } from './threadFollow'
@@ -204,6 +205,8 @@ const HANDLERS: Handlers = {
   dm_member_added: (cx, p) => { if (p) onDmMemberAdded(cx, p) },
   dm_member_removed: (cx, p) => { if (p) onDmMemberRemoved(cx, p) },
   dm_prefs_updated: (cx, p) => { if (p) onDmPrefsUpdated(cx, p) },
+  dm_call_ring: (cx, p) => { if (p) onDmCallRing(cx, p) },
+  dm_call_end: (cx, p) => { if (p) onDmCallEnd(cx, p) },
   roles_changed: cx => {
     const permissions = usePermissionsStore()
     permissions.loadRoles()

@@ -1477,7 +1477,29 @@ export function isChatCreateReportRequest(value: unknown): value is ChatCreateRe
 
 export const decodeChatCreateReportRequest = decoder("chat.CreateReportRequest", isChatCreateReportRequest)
 
+export type ChatDMCall = {
+  caller_id: string
+  message_id: string
+  ring_seconds: number
+  ringing: boolean
+  talk_id: string
+  talk_name: string
+}
+
+export function isChatDMCall(value: unknown): value is ChatDMCall {
+  return isRecord(value)
+    && (hasOwn(value, "caller_id") && isIdentifier(value["caller_id"]))
+    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+    && (hasOwn(value, "ring_seconds") && isInteger(value["ring_seconds"]))
+    && (hasOwn(value, "ringing") && typeof value["ringing"] === 'boolean')
+    && (hasOwn(value, "talk_id") && isIdentifier(value["talk_id"]))
+    && (hasOwn(value, "talk_name") && isString(value["talk_name"]))
+}
+
+export const decodeChatDMCall = decoder("chat.DMCall", isChatDMCall)
+
 export type ChatDMLastMessage = {
+  call?: "invite" | "missed"
   has_attachment: boolean
   has_poll: boolean
   text: string
@@ -1486,6 +1508,7 @@ export type ChatDMLastMessage = {
 
 export function isChatDMLastMessage(value: unknown): value is ChatDMLastMessage {
   return isRecord(value)
+    && (!hasOwn(value, "call") || (value["call"] === "invite" || value["call"] === "missed"))
     && (hasOwn(value, "has_attachment") && typeof value["has_attachment"] === 'boolean')
     && (hasOwn(value, "has_poll") && typeof value["has_poll"] === 'boolean')
     && (hasOwn(value, "text") && isString(value["text"]))
@@ -1536,6 +1559,7 @@ export function isChatDeleteMessageRequest(value: unknown): value is ChatDeleteM
 export const decodeChatDeleteMessageRequest = decoder("chat.DeleteMessageRequest", isChatDeleteMessageRequest)
 
 export type ChatDirectMessage = {
+  call?: ChatDMCall
   can_send: boolean
   created_at: string
   favourite_position: number | null
@@ -1553,6 +1577,7 @@ export type ChatDirectMessage = {
 
 export function isChatDirectMessage(value: unknown): value is ChatDirectMessage {
   return isRecord(value)
+    && (!hasOwn(value, "call") || isChatDMCall(value["call"]))
     && (hasOwn(value, "can_send") && typeof value["can_send"] === 'boolean')
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "favourite_position") && (isInteger(value["favourite_position"]) || value["favourite_position"] === null))
@@ -1583,6 +1608,7 @@ export const decodeChatEditMessageRequest = decoder("chat.EditMessageRequest", i
 
 export type ChatEmbed = {
   author?: ChatEmbedAuthor
+  call?: "missed"
   color?: number
   description?: string
   fields?: Array<ChatEmbedField>
@@ -1598,6 +1624,7 @@ export type ChatEmbed = {
 export function isChatEmbed(value: unknown): value is ChatEmbed {
   return isRecord(value)
     && (!hasOwn(value, "author") || isChatEmbedAuthor(value["author"]))
+    && (!hasOwn(value, "call") || (value["call"] === "missed"))
     && (!hasOwn(value, "color") || (isInteger(value["color"]) && value["color"] >= 0 && value["color"] <= 16777215))
     && (!hasOwn(value, "description") || isString(value["description"], 4096))
     && (!hasOwn(value, "fields") || isArrayOf(value["fields"], item => isChatEmbedField(item)))

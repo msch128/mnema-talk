@@ -99,7 +99,7 @@ function playTone(ctx: AudioContext, dest: AudioNode, tone: Tone) {
  * Play a synthesized sound effect by name.
  * Supported names: 'join', 'leave', 'mute', 'unmute', 'deafen', 'undeafen', 'user_join', 'user_leave'
  */
-export type SoundEvent = 'join' | 'leave' | 'mute' | 'unmute' | 'deafen' | 'undeafen' | 'user_join' | 'user_leave' | 'ptt_start' | 'ptt_stop' | 'message'
+export type SoundEvent = 'join' | 'leave' | 'mute' | 'unmute' | 'deafen' | 'undeafen' | 'user_join' | 'user_leave' | 'ptt_start' | 'ptt_stop' | 'message' | 'call_ring'
 
 /** One tone of an effect: `at` seconds after it starts. */
 type ToneSpec = Omit<Tone, 'startTime'> & { at: number }
@@ -144,6 +144,13 @@ const SOUND_TONES: Record<SoundEvent, ToneSpec[]> = {
   message: [
     { freq: 880, at: 0, duration: 0.09, gain: 0.2 },
     { freq: 1318.5, at: 0.08, duration: 0.2, gain: 0.16 }
+  ],
+  // Incoming call: two soft two-note phrases, repeated by the call card every few seconds while it rings
+  call_ring: [
+    { freq: 659.25, at: 0, duration: 0.16, gain: 0.3 },
+    { freq: 880.0, at: 0.17, duration: 0.22, gain: 0.3 },
+    { freq: 659.25, at: 0.55, duration: 0.16, gain: 0.3 },
+    { freq: 880.0, at: 0.72, duration: 0.3, gain: 0.3 }
   ]
 }
 

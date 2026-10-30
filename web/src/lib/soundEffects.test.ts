@@ -68,7 +68,7 @@ describe('sound effect envelopes', () => {
     ['join', [392, 523.25, 659.25, 1046.5]], ['leave', [659.25, 523.25, 392]],
     ['mute', [460]], ['unmute', [340]], ['deafen', [360]], ['undeafen', [240]],
     ['user_join', [523.25, 659.25]], ['user_leave', [659.25, 523.25]],
-    ['ptt_start', [650]], ['ptt_stop', [850]]
+    ['ptt_start', [650]], ['ptt_stop', [850]], ['call_ring', [659.25, 880, 659.25, 880]]
   ])('schedules %s with its characteristic frequencies and bounded attack/release', (name, frequencies) => {
     playSoundEffect(name)
     const ctx = context()

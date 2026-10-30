@@ -14,7 +14,11 @@
     "reminder_gone": "Eine Nachricht, die du nicht mehr sehen kannst",
     "scheduled_failed": "Geplante Nachricht nicht gesendet",
     "scheduled_failed_body": "Sie liegt jetzt als Entwurf bereit.",
-    "event_reminder": "Beginnt in 15 Minuten"
+    "event_reminder": "Beginnt in 15 Minuten",
+    "call_title": "%s ruft dich an",
+    "call_body": "Direktnachricht · Tippen zum Beitreten",
+    "missed_title": "Verpasster Anruf von %s",
+    "missed_body": "Direktnachricht"
   },
   "en": {
     "new": "New message",
@@ -31,6 +35,10 @@
     "reminder_gone": "A message you can no longer see",
     "scheduled_failed": "Scheduled message not sent",
     "scheduled_failed_body": "It is waiting as a draft.",
-    "event_reminder": "Starts in 15 minutes"
+    "event_reminder": "Starts in 15 minutes",
+    "call_title": "%s is calling you",
+    "call_body": "Direct message · Tap to join",
+    "missed_title": "Missed call from %s",
+    "missed_body": "Direct message"
   }
 }

@@ -8,6 +8,7 @@ import { useForwardQuotesStore } from '../forwardQuotes'
 import { useEventsStore } from '../events'
 import { useOnboardingStore } from '../onboarding'
 import { useAccountStore } from '../account'
+import { useDmCallsStore } from '../dmCalls'
 import { emptyWindow } from '../../lib/messageWindow'
 import { emptyNotificationSettings, type Cx } from './state'
 import { resetWindow, setWindow } from './messageWindow'
@@ -21,6 +22,7 @@ export function resetMemberStores() {
   useEventsStore().reset()
   useOnboardingStore().reset()
   useAccountStore().reset()
+  useDmCallsStore().reset()
 }
 
 /** Removes one ephemeral note. */
