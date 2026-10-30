@@ -1,0 +1,37 @@
+.github/workflows/onboarding.yml
+  s_fc0f81897b6653::t_6d59c00932908d 6,8,84
+scripts/check-onboarding-docs.mjs
+  s_06fcde5dbef956::t_734170854d5845 7,10,73,79
+scripts/check-onboarding-docs.test.mjs
+  s_06fcde5dbef956::t_ee227595ef15b1 3-6,71-81
+scripts/doc-blocks.mjs
+  s_fc0f81897b6653::t_9dea94e1499ef0 13-14,17-22,59-72,74-76,80
+scripts/onboarding-proxy-check.sh
+  s_06fcde5dbef956::t_7a7a50314c93ce 3,85
+scripts/onboarding_wizard_check.py
+  s_06fcde5dbef956::t_e3cc41889cd084 6,35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "208414bf640fce40480f9f79ac2cdac8876064d1",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fc0f81897b6653": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-tests-fc20e0fa5cecb986",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
