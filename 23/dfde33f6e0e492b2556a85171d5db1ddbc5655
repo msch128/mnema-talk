@@ -1,0 +1,21 @@
+web/src/lib/api.ts
+  s_61e7f03250bd0b::t_688e90d98aab69 143
+web/src/lib/pttKey.ts
+  s_61e7f03250bd0b::t_ff1b53dabee165 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "23dfde33f6e0e492b2556a85171d5db1ddbc5655",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
