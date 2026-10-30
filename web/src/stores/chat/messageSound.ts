@@ -2,6 +2,7 @@ import type { Message } from '../../types/domain'
 import { shouldPlayMessageSound, MESSAGE_SOUND_GAP_MS } from '../../lib/messageSound'
 import { isQuiet } from '../../lib/presence'
 import { playSoundEffect } from '../../lib/soundEffects'
+import { pushOnThisDevice } from '../../lib/webPush'
 import { useVoiceStore } from '../voice'
 import type { Cx } from './state'
 import { isDm } from './dms'
@@ -35,7 +36,8 @@ export function playMessageSoundFor(cx: Cx, msg: Message, isMention: boolean, os
     isDirectMention: messageMentionsMeDirectly(cx, msg),
     threadSilenced: !threadAllows(cx, msg),
     viewing: msg.channel_id === cx.cs.activeChannel.value?.id && isTabVisible() && windowFocused(),
-    osNotified
+    // With push on and the page hidden, the service worker shows the notification and the system sounds.
+    osNotified: osNotified || (pushOnThisDevice.value && !isTabVisible())
   })
   if (!play) return
   lastPlayedAt = now

@@ -209,6 +209,9 @@ export function playSoundEffect(name: SoundEvent, overrideVolume: number | null 
 
   const ctx = getAudioContext(voiceStore?.selectedOutputDeviceId)
   if (!ctx) return
+  // A message chime is not worth hearing late: on a context that is still locked its tones
+  // would queue up and burst out together at the first gesture.
+  if (name === 'message' && ctx.state !== 'running') return
 
   const now = ctx.currentTime || 0
   const masterGain = createMasterGain(ctx, masterVol, now)
@@ -224,8 +227,15 @@ export function playSoundEffect(name: SoundEvent, overrideVolume: number | null 
 export function unlockAudioOnFirstGesture(target: Pick<Document, 'addEventListener' | 'removeEventListener'> = document) {
   const events = ['pointerdown', 'keydown', 'touchstart'] as const
   const unlock = () => {
-    for (const name of events) target.removeEventListener(name, unlock)
-    getAudioContext(getVoiceStoreSafe()?.selectedOutputDeviceId)
+    const ctx = getAudioContext(getVoiceStoreSafe()?.selectedOutputDeviceId)
+    if (!ctx) return
+    // Stay armed until the context really runs; a gesture the browser does not count tries again.
+    void Promise.resolve(ctx.resume?.())
+      .then(() => {
+        if (ctx.state !== 'running') return
+        for (const name of events) target.removeEventListener(name, unlock)
+      })
+      .catch((err) => console.debug?.('soundEffects: unlock failed', err))
   }
   for (const name of events) target.addEventListener(name, unlock, { passive: true })
 }

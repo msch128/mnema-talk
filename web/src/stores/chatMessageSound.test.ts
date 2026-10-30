@@ -3,6 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
+import { pushOnThisDevice } from '../lib/webPush'
 import { resetMessageSoundGap } from './chat/messageSound'
 import { channelFixture, messageFixture, readStateFixture, userFixture, fixtureId } from '../test-fixtures.fixture'
 
@@ -74,5 +75,16 @@ describe('message sounds', () => {
     chat.readStates = { ...chat.readStates, [side.id]: readStateFixture({ channel_id: side.id, notify_level: 'mute' }) }
     chat.handleWSEvent({ type: 'message_create', payload: incoming() })
     expect(sound.play).not.toHaveBeenCalled()
+  })
+
+  it('leaves a hidden page with push on to the push notification and its own sound', () => {
+    useVoiceStore().messageSounds = 'all'
+    pushOnThisDevice.value = true
+    vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
+    chat.handleWSEvent({ type: 'message_create', payload: incoming() })
+    expect(sound.play).not.toHaveBeenCalled()
+    pushOnThisDevice.value = false
+    chat.handleWSEvent({ type: 'message_create', payload: incoming() })
+    expect(sound.play).toHaveBeenCalledWith('message')
   })
 })
