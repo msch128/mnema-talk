@@ -1,0 +1,49 @@
+README.md
+  s_46a6db8f9e8231::t_26b04d3f8f8e86 217
+doc/deployment.md
+  s_46a6db8f9e8231::t_520ff338093249 76
+doc/moderation.md
+  s_46a6db8f9e8231::t_0bf198259a2268 232
+doc/operations.md
+  s_46a6db8f9e8231::t_23e7f1fbb07cba 293
+e2e/tests/admin-defaults.spec.ts
+  s_46a6db8f9e8231::t_30a37fdf720a3d 74
+e2e/tests/dm.spec.ts
+  s_46a6db8f9e8231::t_8614570da31eff 247
+web/src/components/AdminAccessSettings.vue
+  s_06fcde5dbef956::t_6e52288b3922cf 12,74-78
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_afd74d453edce8 34,60,80,108-109,142-145,150-153
+web/src/components/AdminNav.vue
+  s_06fcde5dbef956::t_c75b40d8ded258 9,12
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_3e8120f6963a81 1150
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_8732aafb8ef561 1150
+web/src/lib/adminNav.ts
+  s_06fcde5dbef956::t_5d895118b62ef7 3,6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "40801bd6fcaad1f8f1d960bbf587c9c7cf4cf2ca",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_46a6db8f9e8231": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-owner-firstrun-b73e149d9963f888",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
