@@ -46,7 +46,6 @@ const chatStore = useChatStore()
 const authStore = useAuthStore()
 const serverFeatures = useServerFeaturesStore()
 const toasts = useToastStore()
-const permissions = usePermissionsStore()
 const blocks = useBlocksStore()
 // A conversation sits in the channel slot: its words, and the server's own answer to "may I write".
 const dmChat = useDmChat()
