@@ -33,10 +33,11 @@ test('the settings dialog has an address per section, and Back closes it', async
     await page.getByTestId('account-menu-button').click()
     await page.getByTestId('menu-settings').click()
     await expect(page.getByRole('dialog', { name: 'Einstellungen' })).toBeVisible()
-    await expect(page).toHaveURL(/\/settings\/signin$/)
-
-    await page.getByTestId('settings-tab-audio').click()
+    // The section visited last opens first (a fresh browser: the first one, audio).
     await expect(page).toHaveURL(/\/settings\/audio$/)
+
+    await page.getByTestId('settings-tab-sessions').click()
+    await expect(page).toHaveURL(/\/settings\/sessions$/)
 
     await page.goBack()
     await expect(page.getByRole('dialog', { name: 'Einstellungen' })).toBeHidden()
