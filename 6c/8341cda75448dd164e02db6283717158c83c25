@@ -1,0 +1,35 @@
+doc/upgrade.md
+  s_3e68b8fa0e1785::t_2cf8ebde155e9f 30
+scripts/check-onboarding-docs.mjs
+  s_bf24ce51cd8f95::t_b679a82645a274 3,34-37,39-41,46-47,65
+doc/deployment.md
+  s_3e68b8fa0e1785::t_7edaf3587fad23 33
+scripts/check-onboarding-docs.test.mjs
+  s_3e68b8fa0e1785::t_a1e20b30242b02 6-15,20
+scripts/onboarding_wizard_check.py
+  s_3e68b8fa0e1785::t_e36130b31231ad 156-157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6c8341cda75448dd164e02db6283717158c83c25",
+  "prompts": {},
+  "sessions": {
+    "s_3e68b8fa0e1785": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-reactions-7d1b14603defb791",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
