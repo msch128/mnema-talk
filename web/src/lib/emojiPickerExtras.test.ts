@@ -14,7 +14,7 @@ function picker(): FakePicker {
     <input type="search" value="">
     <div class="tabpanel">
       <button class="emoji" role="option" id="tada">🎉</button>
-      <button class="emoji" role="option" id="custom" aria-label="party"><img src="http://x/party.png" alt=""></button>
+      <button class="emoji custom-emoji" role="option" id="custom" aria-label="party" style='--custom-emoji-background: url("http://x/party.png")'></button>
     </div>`
   document.body.appendChild(el)
   return el
@@ -93,12 +93,14 @@ describe('enhanceEmojiPicker edge cases', () => {
   it('shows nothing for things that are no emoji, and ignores other keys', async () => {
     const el = picker()
     const root = el.shadowRoot as ShadowRoot
-    root.innerHTML += '<button class="emoji" id="blank"> </button><button class="emoji" id="noname"><img src="http://x/a.png" alt=""></button><span id="plain">x</span>'
+    root.innerHTML += '<button class="emoji" id="blank"> </button><button class="emoji custom-emoji" id="noname" style="--custom-emoji-background: url(x)"></button><button class="emoji custom-emoji" id="nopicture" aria-label="solo"></button><span id="plain">x</span>'
     const onPreview = vi.fn()
     enhanceEmojiPicker(el, onPreview)
     for (const id of ['blank', 'noname', 'plain']) over(el, id)
+    over(el, 'nopicture')
     await new Promise(resolve => setTimeout(resolve, 20))
-    expect(onPreview).not.toHaveBeenCalled()
+    expect(onPreview).toHaveBeenCalledOnce()
+    expect(onPreview).toHaveBeenCalledWith({ glyph: '', src: '', code: ':solo:' })
     const input = root.querySelector('input') as HTMLInputElement
     const clicked = vi.fn()
     root.getElementById('tada')?.addEventListener('click', clicked)

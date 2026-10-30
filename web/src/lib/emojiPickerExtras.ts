@@ -50,10 +50,11 @@ async function previewOf(picker: PickerLike, event: Event): Promise<EmojiPreview
   const origin = event.composedPath()[0]
   const button = origin instanceof Element ? origin.closest('button.emoji') : null
   if (!button) return null
-  const image = button.querySelector('img')
-  if (image) {
-    const name = button.getAttribute('aria-label') ?? image.alt
-    return name ? { glyph: '', src: image.src, code: `:${name}:` } : null
+  // A custom emoji is a button with its picture as a CSS variable and its name as label.
+  if (button.classList.contains('custom-emoji')) {
+    const name = button.getAttribute('aria-label')
+    const src = /url\(\s*["']?([^"')]+)["']?\s*\)/.exec(button.getAttribute('style') ?? '')?.[1] ?? ''
+    return name ? { glyph: '', src, code: `:${name}:` } : null
   }
   const glyph = button.textContent?.trim() ?? ''
   return glyph ? { glyph, src: '', code: await shortcodeOf(picker, glyph) } : null
