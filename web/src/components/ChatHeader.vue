@@ -2,7 +2,7 @@
 import type { Component } from 'vue'
 import type { ContextMenuItem } from './menuTypes'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Hash, Users, Bell, BellOff, AtSign, X, Volume2, Search, MessageCircle, Info, Timer, Ellipsis, Inbox, Bookmark, AlarmClock } from '@lucide/vue'
+import { Hash, Users, Bell, BellOff, AtSign, X, Volume2, Search, MessageCircle, Info, Timer, Ellipsis, Inbox, Bookmark } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { t } from '../i18n'
 import { useLaterStore } from '../stores/later'
@@ -10,8 +10,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useNotificationHint } from '../composables/useNotificationHint'
 import { durationLabel } from '../lib/moderation'
 import MentionsInbox from './MentionsInbox.vue'
-import SavedMessages from './SavedMessages.vue'
-import LaterPopover from './LaterPopover.vue'
+import SavedLaterPanel from './SavedLaterPanel.vue'
 import PinnedMessages from './PinnedMessages.vue'
 import TipBar from './TipBar.vue'
 import NavDrawerButton from './NavDrawerButton.vue'
@@ -30,13 +29,13 @@ const props = defineProps({
 })
 const emit = defineEmits<{ close: []; menu: [x: number, y: number, items: ContextMenuItem[]] }>()
 
-// Below this header width the mentions, saved and later buttons fold into one
+// Below this header width the mentions and the saved & reminders buttons fold into one
 // More menu, so the channel name keeps its room. The header's own width counts
 // (a container query), not the window's: the side columns take their share.
 const NARROW_BELOW = 640
 const headerEl = ref<HTMLElement | null>(null)
 const narrow = ref(false)
-// The three buttons mount only once the width is known, so a narrow header
+// The buttons mount only once the width is known, so a narrow header
 // never mounts them in their wide form first (each one loads its data on mount).
 const measured = ref(false)
 let observer: ResizeObserver | null = null
@@ -52,7 +51,7 @@ onMounted(() => {
   observer.observe(el)
 })
 onBeforeUnmount(() => observer?.disconnect())
-type FoldedPanel = 'mentions' | 'saved' | 'later'
+type FoldedPanel = 'mentions' | 'saved'
 const foldedOpen = ref<FoldedPanel | null>(null)
 
 const chatStore = useChatStore()
@@ -107,8 +106,7 @@ function openMoreMenu(e: MouseEvent) {
   const items: ContextMenuItem[] = [
     { id: 'mentions', label: t('mentions.inbox'), icon: Inbox, action: () => { foldedOpen.value = 'mentions' } }
   ]
-  if (hasSaved.value) items.push({ id: 'saved', label: t('saved.title'), icon: Bookmark, action: () => { foldedOpen.value = 'saved' } })
-  if (hasLater.value) items.push({ id: 'later', label: t('later.title'), icon: AlarmClock, action: () => { foldedOpen.value = 'later' } })
+  if (hasSaved.value || hasLater.value) items.push({ id: 'saved', label: t('panel.title'), icon: Bookmark, action: () => { foldedOpen.value = 'saved' } })
   emit('menu', Math.max(8, rect.right - 200), rect.bottom + 4, items)
 }
 
@@ -168,8 +166,7 @@ function openNotificationMenu(e: MouseEvent) {
     <div class="flex items-center gap-2 max-md:gap-0 shrink-0">
       <template v-if="!panel && !folded && measured">
         <MentionsInbox />
-        <SavedMessages v-if="hasSaved" />
-        <LaterPopover />
+        <SavedLaterPanel />
       </template>
       <div v-else-if="!panel && measured" class="relative">
         <button
@@ -189,8 +186,7 @@ function openNotificationMenu(e: MouseEvent) {
           />
         </button>
         <MentionsInbox bare :open="foldedOpen === 'mentions'" @update:open="foldedOpen = $event ? 'mentions' : null" />
-        <SavedMessages v-if="hasSaved" bare :open="foldedOpen === 'saved'" @update:open="foldedOpen = $event ? 'saved' : null" />
-        <LaterPopover bare :open="foldedOpen === 'later'" @update:open="foldedOpen = $event ? 'later' : null" />
+        <SavedLaterPanel bare :open="foldedOpen === 'saved'" @update:open="foldedOpen = $event ? 'saved' : null" />
       </div>
       <PinnedMessages v-if="chatStore.activeChannel && !isDm" />
       <DmMuteButton v-if="richDm && dm" :dm="dm" />

@@ -3,7 +3,7 @@ import type { ApiOptions } from '../lib/api'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import LaterPopover from './LaterPopover.vue'
+import SavedLaterPanel from './SavedLaterPanel.vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { toLocalInputValue } from '../lib/laterTimes'
@@ -37,10 +37,12 @@ beforeEach(() => {
   useServerFeaturesStore().loaded = true
 })
 
-const mountPopover = () => mount(LaterPopover, { global: { directives: { tooltip: () => undefined } } })
+const mountPopover = () => mount(SavedLaterPanel, { global: { directives: { tooltip: () => undefined } } })
 async function openPanel(w: ReturnType<typeof mountPopover>) {
-  await w.find('[data-testid="later-button"]').trigger('click')
+  await w.find('[data-testid="saved-button"]').trigger('click')
   await flushPromises()
+  const tab = w.find('[data-testid="panel-tab-later"]')
+  if (tab.exists()) await tab.trigger('click')
 }
 
 let features = ['reminders', 'messages.scheduled']
@@ -54,14 +56,14 @@ function answer(reminders: unknown[], scheduledList: unknown[]) {
   })
 }
 
-describe('the reminders and scheduled popover', () => {
+describe('the reminders and scheduled tab', () => {
   it('stays hidden on a server without the features', async () => {
     features = []
     useServerFeaturesStore().list = []
     answer([], [])
     const w = mountPopover()
     await flushPromises()
-    expect(w.find('[data-testid="later-button"]').exists()).toBe(false)
+    expect(w.find('[data-testid="saved-button"]').exists()).toBe(false)
     expect(apiMock.mock.calls.every(([path]) => path === '/api/health')).toBe(true)
   })
 
@@ -108,7 +110,7 @@ describe('the reminders and scheduled popover', () => {
     expect(w.find('[data-testid="reminder-item"]').exists()).toBe(false)
 
     answer([reminder(5)], [])
-    await w.find('[data-testid="later-button"]').trigger('click')
+    await w.find('[data-testid="saved-button"]').trigger('click')
     await openPanel(w)
     await w.find('[data-testid="reminder-open"]').trigger('click')
     expect(go).toHaveBeenCalledWith({ id: ref.id, channel_id: ref.channel_id })
@@ -149,7 +151,7 @@ describe('the reminders and scheduled popover', () => {
     expect(w.find('[data-testid="later-empty"]').exists()).toBe(true)
     apiMock.mockReset()
     apiMock.mockRejectedValue(new Error('offline'))
-    await w.find('[data-testid="later-button"]').trigger('click')
+    await w.find('[data-testid="saved-button"]').trigger('click')
     await openPanel(w)
     expect(w.find('[role="alert"]').text()).toContain(t('later.failed'))
   })

@@ -15,6 +15,7 @@ import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 import { useSavedStore } from '../stores/saved'
+import { toggleSavedMessage } from '../lib/savedActions'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { moderateMessages } from '../lib/messageModeration'
 import { previewText } from '../lib/replies'
@@ -24,6 +25,8 @@ import { caughtErrorMessage } from '../lib/api'
 import { copyToClipboard } from '../lib/clipboard'
 import { messageSafetyItems } from './dmMenuItems'
 import { boxOf, type AnchorBox } from '../lib/floatingPosition'
+
+export { toggleSavedMessage }
 
 type MessageActions = ReturnType<typeof useMessageActions>
 
@@ -47,20 +50,6 @@ function markUnreadItem(msg: Message): ContextMenuItem {
         toasts.error(caughtErrorMessage(err, t('chat.markUnreadFailed')))
       }
     }
-  }
-}
-
-/** Adds the message to the member's private saved list, or takes it off. Only on servers that have the feature. */
-export async function toggleSavedMessage(msg: Message): Promise<void> {
-  const saved = useSavedStore()
-  const toasts = useToastStore()
-  const was = saved.isSaved(msg.id)
-  try {
-    if (was) await saved.remove(msg.id)
-    else await saved.save(msg.id)
-    toasts.success(t(was ? 'saved.removed' : 'saved.added'))
-  } catch (err) {
-    toasts.error(caughtErrorMessage(err, t(was ? 'saved.removeFailed' : 'saved.saveFailed')))
   }
 }
 

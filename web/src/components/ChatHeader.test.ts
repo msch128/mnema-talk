@@ -14,7 +14,7 @@ vi.mock('../lib/api', async importOriginal => ({
   ...(await importOriginal<typeof import('../lib/api')>()),
   api: vi.fn((url: string) => {
     if (url === '/api/health') return Promise.resolve({ features: useServerFeaturesStore().list })
-    if (url.startsWith('/api/me/saved')) return Promise.resolve({ entries: [], has_more: false })
+    if (url.startsWith('/api/me/saved')) return Promise.resolve({ items: [], has_more: false })
     if (url.startsWith('/api/mentions')) return Promise.resolve({ messages: [], has_more: false })
     if (url.startsWith('/api/me/reminders') || url.startsWith('/api/me/scheduled')) return Promise.resolve({ items: [] })
     return Promise.resolve([])
@@ -77,7 +77,7 @@ describe('ChatHeader overflow', () => {
     expect(wrapper.find('[data-testid="mentions-inbox-button"]').exists()).toBe(true)
   })
 
-  it('folds mentions, saved and later into a More menu in a narrow header', async () => {
+  it('folds mentions and saved & reminders into a More menu in a narrow header', async () => {
     width = 500
     const wrapper = mountHeader()
     await wrapper.vm.$nextTick()
@@ -91,7 +91,7 @@ describe('ChatHeader overflow', () => {
     expect(wrapper.find('[data-testid="mentions-inbox"]').exists()).toBe(true)
   })
 
-  it('lists saved and later in the More menu when the server has them, and marks unread mentions', async () => {
+  it('lists saved & reminders in the More menu when the server has them, and marks unread mentions', async () => {
     width = 500
     useServerFeaturesStore().list = ['saved', 'reminders']
     useChatStore().readStates = { c1: { mention_count: 2 } } as never
@@ -100,7 +100,7 @@ describe('ChatHeader overflow', () => {
     expect(wrapper.find('[data-testid="header-more-badge"]').exists()).toBe(true)
     await wrapper.find('[data-testid="header-more"]').trigger('click')
     const [, , items] = wrapper.emitted('menu')![0] as [number, number, { id: string; action: () => void }[]]
-    expect(items.map(i => i.id)).toEqual(['mentions', 'saved', 'later'])
+    expect(items.map(i => i.id)).toEqual(['mentions', 'saved'])
     for (const item of items) {
       item.action()
       await wrapper.vm.$nextTick()

@@ -731,8 +731,9 @@ and Administrators) gathers version, update state, database, storage, backup and
   ([`DmCreateDialog.vue`](../web/src/components/DmCreateDialog.vue),
   [`DmInfoDialog.vue`](../web/src/components/DmInfoDialog.vue)), blocking and
   reports ([`BlockedMessageRow.vue`](../web/src/components/BlockedMessageRow.vue),
-  [`ReportDialog.vue`](../web/src/components/ReportDialog.vue)), saved messages
-  ([`SavedMessages.vue`](../web/src/components/SavedMessages.vue)), forwarding
+  [`ReportDialog.vue`](../web/src/components/ReportDialog.vue)), saved messages and
+  reminders in one header panel
+  ([`SavedLaterPanel.vue`](../web/src/components/SavedLaterPanel.vue)), forwarding
   ([`ForwardDialog.vue`](../web/src/components/ForwardDialog.vue),
   [`ForwardedQuote.vue`](../web/src/components/ForwardedQuote.vue)), pinned
   messages with "Pinned by" ([`PinnedMessages.vue`](../web/src/components/PinnedMessages.vue))

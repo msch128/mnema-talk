@@ -12,6 +12,17 @@ export const useSavedStore = defineStore('saved', () => {
   const known = ref(new Set<string>())
   const list = createSavedList(entries => { for (const e of entries) known.value.add(e.message_id) })
   const { items } = list
+  // Set by a save in this session: the header shows its one-time hint about where saved messages live.
+  const hintPending = ref(false)
+  let requested = false
+
+  /** Loads the newest page once, so messages already saved carry their mark before the list is opened. */
+  async function ensureLoaded() {
+    if (requested) return
+    requested = true
+    await list.load()
+    if (list.failed.value) requested = false
+  }
 
   function isSaved(messageId: string): boolean {
     return known.value.has(messageId)
@@ -51,8 +62,10 @@ export const useSavedStore = defineStore('saved', () => {
   /** Forgets everything of the signed-in member's list (sign-out). */
   function reset() {
     list.reset()
+    requested = false
+    hintPending.value = false
     known.value = new Set()
   }
 
-  return { ...list, reset, isSaved, save, remove, onUpdated }
+  return { ...list, hintPending, ensureLoaded, reset, isSaved, save, remove, onUpdated }
 })
