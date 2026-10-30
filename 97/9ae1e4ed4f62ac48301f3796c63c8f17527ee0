@@ -1,0 +1,37 @@
+doc/talks.md
+  s_06fcde5dbef956::t_a1a58c00dd3b2d 71
+internal/chat/dm_calls_integration_test.go
+  s_06fcde5dbef956::t_0806bd1611c258 364-384
+internal/chat/talks.go
+  s_06fcde5dbef956::t_c404a68da486d8 163-171
+internal/chat/talks_handler.go
+  s_06fcde5dbef956::t_40869badb36c75 85-90
+internal/chat/talks_live.go
+  s_06fcde5dbef956::t_feff1992f37563 154-155,174-180
+internal/server/audit_presence.go
+  s_06fcde5dbef956::t_f13bc5e6feda06 5,49-51,54-57
+internal/server/dm_call_integration_test.go
+  s_06fcde5dbef956::t_b347902901e2e8 199-228
+web/src/stores/chat/dmCalls.ts
+  s_06fcde5dbef956::t_ace5ce83d79526 5,56-60,64-81
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_8aff019656c5c6 15,81-85
+web/src/stores/chatDmCalls.test.ts
+  s_06fcde5dbef956::t_3c47cc2f9aacbc 21-23,86-97,165-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "979ae1e4ed4f62ac48301f3796c63c8f17527ee0",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
