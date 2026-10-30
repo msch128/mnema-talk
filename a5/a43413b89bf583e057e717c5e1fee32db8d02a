@@ -1,0 +1,21 @@
+web/src/components/DmTalkActions.vue
+  s_fb29f048bd6d02::t_9b2bb7d1c01176 6,71-72
+web/src/i18n/en.json
+  s_fb29f048bd6d02::t_344b9cae35ad0d 3169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a5a43413b89bf583e057e717c5e1fee32db8d02a",
+  "prompts": {},
+  "sessions": {
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
