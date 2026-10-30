@@ -87,8 +87,11 @@ no accounts on someone else's platform.
   back), threads, reactions, emoji, @mentions, file and image attachments,
   link cards, search, typing notices, unread and mention markers,
   per-channel notification settings and presence with a status line.
-- **A composer that grows** with multi-line text. Paste (Ctrl/Cmd+V) or drag and
-  drop an image or video into a chat to attach it; a message carries one file.
+- **A composer that grows** with multi-line text. Paste (Ctrl/Cmd+V), drag and
+  drop or pick up to 10 files per message: they wait in a tray above the composer
+  (upload progress, remove, retry) and go out only when you send. Several images
+  show as a gallery; a viewer steps through them with file name, sender, time, size and
+  dimensions.
 - **Pinned messages** (with who pinned them and when), **polls**, **custom
   emoji** managed by the community (and `:shortcode` suggestions for standard emoji), **edit history** for moderators, **drafts**
   that survive a reload and a **jump to the first unread message**.

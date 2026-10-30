@@ -7,7 +7,6 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useMessageActions, formatTime } from './useMessageActions'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { pendingConfirm } from '../lib/confirm'
 import { setLocale } from '../i18n'
@@ -17,14 +16,6 @@ let scope: EffectScope | undefined
 function setup(options: Parameters<typeof useMessageActions>[0] = {}) {
   scope = effectScope()
   return required(scope.run(() => useMessageActions(options)))
-}
-
-// A file input stand-in: browsers only allow '' as a value to set.
-function fileInput(file: File | null = new File(['x'], 'a.png', { type: 'image/png' })) {
-  const input = document.createElement('input')
-  input.type = 'file'
-  Object.defineProperty(input, 'files', { value: file ? [file] : [], configurable: true })
-  return input
 }
 
 beforeEach(() => {
@@ -38,68 +29,6 @@ afterEach(() => {
   scope?.stop()
   pendingConfirm.value = null
   document.body.innerHTML = ''
-})
-
-describe('useMessageActions upload', () => {
-  it('refuses a file above the member limit before sending anything', async () => {
-    const perms = usePermissionsStore()
-    perms.info = { owner: false, permissions: 0, max_upload_mb: 1, role_ids: [], top_position: 0, catalog: [], channels: [] }
-    const a = setup()
-    const big = new File([new Uint8Array(2 * 1024 * 1024)], 'big.mov')
-    const input = fileInput(big)
-    const send = vi.fn()
-    expect(await a.upload(input, send)).toBe(false)
-    expect(send).not.toHaveBeenCalled()
-    expect(input.value).toBe('')
-    const toast = required(useToastStore().toasts.at(-1))
-    expect(toast.text).toBe('File is too large (max. 1 MB).')
-    expect(toast.detail).toBe('big.mov is 2 MB.')
-    // At the limit it goes through.
-    const ok = fileInput(new File([new Uint8Array(1024 * 1024)], 'ok.mov'))
-    expect(await a.upload(ok, vi.fn())).toBe(true)
-  })
-
-  it('clears the file input after a failed upload so the same file can be picked again', async () => {
-    const a = setup()
-    const input = fileInput()
-    const ok = await a.upload(input, () => Promise.reject(new Error('too big')))
-    expect(ok).toBe(false)
-    expect(input.value).toBe('')
-    expect(a.isUploading.value).toBe(false)
-    expect(required(useToastStore().toasts.at(-1)).text).toBe('too big')
-  })
-
-  it('clears the input after success too and reports success', async () => {
-    const a = setup()
-    const input = fileInput()
-    const send = vi.fn(() => Promise.resolve())
-    expect(await a.upload(input, send)).toBe(true)
-    expect(send).toHaveBeenCalledWith(required(input.files)[0])
-    expect(input.value).toBe('')
-  })
-
-  it('does nothing without a file', async () => {
-    const a = setup()
-    const send = vi.fn()
-    expect(await a.upload(fileInput(null), send)).toBe(false)
-    expect(send).not.toHaveBeenCalled()
-    expect(await a.upload(document.createElement('input'), send)).toBe(false)
-    const textInput = document.createElement('input')
-    // The native files getter is null for a text input.
-    Object.defineProperty(textInput, 'files', { value: null })
-    expect(await a.upload(textInput, send)).toBe(false)
-    expect(send).not.toHaveBeenCalled()
-  })
-
-  it('is uploading while the request runs', async () => {
-    const a = setup()
-    let finish: (() => void) | undefined
-    const p = a.upload(fileInput(), () => new Promise<void>(r => { finish = r }))
-    expect(a.isUploading.value).toBe(true)
-    required(finish)()
-    await p
-    expect(a.isUploading.value).toBe(false)
-  })
 })
 
 describe('useMessageActions edit / delete / react', () => {
@@ -190,7 +119,7 @@ describe('useMessageActions edit / delete / react', () => {
     expect(useToastStore().toasts.at(-1)?.type).toBe('error')
   })
 
-  it('closes the picker despite reaction failure and uploads report fallback errors', async () => {
+  it('closes the picker despite a reaction failure', async () => {
     const a = setup()
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.spyOn(useChatStore(), 'toggleReaction').mockRejectedValue('failed')
@@ -199,9 +128,6 @@ describe('useMessageActions edit / delete / react', () => {
     expect(a.pickerId.value).toBeNull()
     expect(warn).toHaveBeenCalledOnce()
     warn.mockRestore()
-    expect(await a.upload(null, vi.fn())).toBe(false)
-    expect(await a.upload(fileInput(), () => Promise.reject('failed'))).toBe(false)
-    expect(useToastStore().toasts.at(-1)?.type).toBe('error')
   })
 
   it('edits through the store and leaves edit mode', async () => {

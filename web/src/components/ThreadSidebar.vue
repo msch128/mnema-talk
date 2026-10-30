@@ -56,9 +56,9 @@ const replyInput = ref('')
 const repliesContainer = ref<HTMLElement | null>(null)
 const isSending = ref(false)
 
-// Editing, deleting, reactions and uploads
+// Editing, deleting and reactions
 const actions = useMessageActions({ container: repliesContainer, deleteTitle: 'thread.deleteTitle' })
-const { editingId: editingReplyId, pickerId: activeReactionPickerMsgId, isUploading } = actions
+const { editingId: editingReplyId, pickerId: activeReactionPickerMsgId } = actions
 
 function scrollToBottom() {
   nextTick(() => {
@@ -185,8 +185,8 @@ onUnmounted(() => {
 })
 
 function isReplyBlocked(text: string): boolean {
-  if (!text || !canSend.value) return true
-  return isSending.value || isUploading.value
+  if ((!text && !composer.value?.tray.count.value) || !canSend.value) return true
+  return isSending.value
 }
 
 async function handleSendReply() {
@@ -196,9 +196,13 @@ async function handleSendReply() {
   // The thread and target of this send: the reader may be elsewhere or typing on when it lands.
   const threadId = chatStore.activeThread?.id
   const target = replyingTo.value?.id || null
+  const files = composer.value?.tray.hold() ?? null
   isSending.value = true
   try {
-    await chatStore.sendThreadReply(text, target)
+    const ids = files && composer.value?.tray.count.value ? await files.prepare() : []
+    if (!ids) return
+    await chatStore.sendThreadReply(text, target, ids)
+    files?.clear()
     if (chatStore.activeThread?.id === threadId) {
       if (replyInput.value.trim() === text) replyInput.value = ''
       if ((replyingTo.value?.id || null) === target) replyingTo.value = null
@@ -212,15 +216,6 @@ async function handleSendReply() {
   } finally {
     isSending.value = false
   }
-}
-
-async function handleFileUpload(e: Event) {
-  const replyId = replyingTo.value?.id || null
-  const threadId = chatStore.activeThread?.id
-  const ok = await actions.upload(e.target as HTMLInputElement, (file: File) => chatStore.uploadThreadMedia(file, '', replyId))
-  if (!ok || chatStore.activeThread?.id !== threadId) return
-  if ((replyingTo.value?.id || null) === replyId) replyingTo.value = null
-  scrollToBottom()
 }
 </script>
 
@@ -352,12 +347,10 @@ async function handleFileUpload(e: Event) {
       :replying-to="replyingTo"
       :can-send="canSend"
       :can-attach="canAttach"
-      :uploading="isUploading"
       :sending="isSending"
       @send="handleSendReply"
       @cancel-reply="cancelReply"
       @arrow-up="ownNav.fromComposerKey($event, replyInput)"
-      @file="handleFileUpload"
     />
     <FileDropOverlay @files="composer?.attachFiles($event)" />
 

@@ -61,10 +61,10 @@ export function closeThread(cx: Cx) {
   cs.isThreadLoading.value = false
 }
 
-export async function sendThreadReply(cx: Cx, content: string, replyToId: string | null = null) {
+export async function sendThreadReply(cx: Cx, content: string, replyToId: string | null = null, attachmentIds: readonly string[] = []) {
   const { cs } = cx
   if (!cs.activeThread.value) return null
-  return sendMessage(cx, content, cs.activeThread.value.id, replyToId)
+  return sendMessage(cx, content, cs.activeThread.value.id, replyToId, attachmentIds)
 }
 
 export async function uploadThreadMedia(cx: Cx, file: File, content = '', replyToId: string | null = null) {

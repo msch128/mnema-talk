@@ -3,6 +3,7 @@
 // Response JSON stays unknown until an explicit runtime decoder accepts it.
 import { t } from '../i18n'
 import { formatDetailMessage } from './errorDetails'
+import { xhrUpload } from './xhrUpload'
 import { isRecord, type Decoder } from '../types/validation'
 
 const CODES = new Set([
@@ -73,6 +74,8 @@ export interface ApiRequest {
   readonly json?: unknown
   readonly form?: FormData
   readonly signal?: AbortSignal
+  /** Reports how much of a form has been sent; a transport that cannot ignores it. */
+  readonly onUploadProgress?: (loaded: number, total: number) => void
 }
 
 export interface ApiReply {
@@ -89,6 +92,7 @@ export interface ApiOptions {
   signal?: AbortSignal
   /** GETs only: join an identical request that is already in flight instead of sending another. For reads whose answer does not depend on when they were asked. */
   dedupe?: boolean
+  onUploadProgress?: (loaded: number, total: number) => void
   /** A queued session request may become stale before its HTTP response. */
   shouldNotifyUnauthorized?: () => boolean
 }
@@ -151,11 +155,12 @@ export interface ApiClient {
 }
 
 function buildApiRequest(options: ApiOptions): ApiRequest {
-  const { method = 'GET', json, form, signal } = options
+  const { method = 'GET', json, form, signal, onUploadProgress } = options
   return {
     method,
     ...(json !== undefined ? { json } : form ? { form } : {}),
-    ...(signal !== undefined ? { signal } : {})
+    ...(signal !== undefined ? { signal } : {}),
+    ...(onUploadProgress !== undefined ? { onUploadProgress } : {})
   }
 }
 
@@ -229,7 +234,8 @@ export function createApiClient(transport: ApiTransport): ApiClient {
   })
 }
 
-const browserTransport: ApiTransport = async (path, { method, json, form, signal }) => {
+const browserTransport: ApiTransport = async (path, { method, json, form, signal, onUploadProgress }) => {
+  if (form && json === undefined && onUploadProgress) return xhrUpload(path, method, form, onUploadProgress, signal)
   const headers: Record<string, string> = {}
   const init: RequestInit = { method, credentials: 'same-origin', headers }
   if (signal !== undefined) init.signal = signal

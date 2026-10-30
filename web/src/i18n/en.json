@@ -590,10 +590,28 @@
       "tooLong": "{count} characters too many (at most {max})"
     },
     "noAttach": "You can’t attach files here.",
-    "attachMediaOnly": "Only images and videos can be attached.",
-    "attachSkipped": "Only images and videos were attached. Other files were skipped.",
-    "attachFirstOnly": "A message carries one file. The first one was attached.",
-    "attachOneSkipped": "A message carries one file: the first image or video was attached, the other files were skipped.",
+    "attachLimit": "A message carries at most {max} files.",
+    "attachSkippedN": {
+      "one": "{count} file was not added.",
+      "other": "{count} files were not added."
+    },
+    "attachTotalLimit": "A message carries at most 100 MB of files.",
+    "attachTray": "Files to send",
+    "attachCount": "{count} of {max} files",
+    "attachStatusUploading": "Uploading…",
+    "attachStatusFailed": "Upload failed",
+    "attachStatusReady": "Ready to send",
+    "attachUploading": "Uploading {name}",
+    "attachRetry": "Retry",
+    "attachView": "View {name}",
+    "attachRemove": "Remove {name}",
+    "attachFailedSend": "Some files could not be uploaded. Retry or remove them to send.",
+    "attachDiscardTitle": {
+      "one": "Remove the attached file?",
+      "other": "Remove {count} attached files?"
+    },
+    "attachDiscardBody": "They are not sent and are deleted from the server.",
+    "attachDiscard": "Remove",
     "dropFiles": "Drop to attach",
     "messageRemoved": "Message removed",
     "searchSyntaxTip": "Tip: “exact phrase” finds a phrase, -word leaves a word out.",

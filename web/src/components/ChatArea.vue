@@ -69,9 +69,9 @@ const limits = useChannelLimits(() => inputMessage.value)
 // Text and reply target stay with their channel while another one is open.
 useDraftSlot(() => (chatStore.activeChannel ? channelDraftKey(chatStore.activeChannel.id) : null), inputMessage, replyingTo)
 
-// Editing, deleting, reactions and uploads
+// Editing, deleting and reactions
 const actions = useMessageActions({ container: messageContainer })
-const { editingId: editingMessageId, pickerId: activeReactionPickerMsgId, isUploading } = actions
+const { editingId: editingMessageId, pickerId: activeReactionPickerMsgId } = actions
 const ownNav = useOwnMessageNav({ messages: () => chatStore.messages || [], actions, container: messageContainer, composer: () => composer.value, toNewest: () => (chatStore.hasMoreAfter ? chatStore.jumpToLatest() : undefined) })
 const menu = useMessageMenu({ actions, reply: startReply })
 const contextMenu = menu.state
@@ -163,8 +163,8 @@ async function revealOwnMessage() {
 }
 
 function isSendBlocked(text: string): boolean {
-  if (!text || !canSend.value) return true
-  return isUploading.value || isSending.value || !!limits.hint.value?.blocks
+  if ((!text && !composer.value?.tray.count.value) || !canSend.value) return true
+  return isSending.value || !!limits.hint.value?.blocks
 }
 
 // The composer refs belong to whichever channel is open now, so a send that
@@ -178,8 +178,13 @@ async function handleSend() {
   isSending.value = true
   const sentIn = chatStore.activeChannel?.id
   const slow = limits.rule()
+  // The files belong to the conversation they were added in, even if the member moves on while they upload.
+  const files = composer.value?.tray.hold() ?? null
   try {
-    await chatStore.sendMessage(text, null, replyingTo.value?.id || null)
+    const ids = files && composer.value?.tray.count.value ? await files.prepare() : []
+    if (!ids) return
+    await chatStore.sendMessage(text, null, replyingTo.value?.id || null, ids)
+    files?.clear()
     limits.sent(sentIn, slow)
     if (stillIn(sentIn)) {
       inputMessage.value = ''
@@ -195,18 +200,6 @@ async function handleSend() {
   } finally {
     isSending.value = false
   }
-}
-
-async function handleFileUpload(e: Event) {
-  const replyId = replyingTo.value?.id || null
-  const uploadedIn = chatStore.activeChannel?.id
-  const slow = limits.rule()
-  const ok = await actions.upload(e.target as HTMLInputElement, (file: File) => chatStore.uploadMedia(file, '', null, replyId))
-  if (!ok) return
-  limits.sent(uploadedIn, slow)
-  if (!stillIn(uploadedIn)) return
-  replyingTo.value = null
-  await revealOwnMessage()
 }
 
 // Consecutive messages by the same author (< 7 min apart) render compactly.
@@ -371,14 +364,12 @@ const groupedIds = computed(() => {
       :can-send="canSend"
       :can-attach="canAttach"
       :placeholder="placeholder"
-      :uploading="isUploading"
       :sending="isSending"
       :typing-text="typingText"
       :limit="limits.hint.value"
       @send="handleSend"
       @cancel-reply="cancelReply"
       @arrow-up="ownNav.fromComposerKey($event, inputMessage)"
-      @file="handleFileUpload"
       @posted="limits.sent(chatStore.activeChannel?.id)"
     />
 

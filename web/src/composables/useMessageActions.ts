@@ -1,5 +1,5 @@
-// What every message list does with its messages: edit, delete, react,
-// upload. Shared by the channel chat, the thread panel and the Talk chat.
+// What every message list does with its messages: edit, delete, react
+// and keep their pickers in order. Shared by the channel chat, the thread panel and the Talk chat.
 import { ref, toValue, watch } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
 import type { Message } from '../types/domain'
@@ -65,41 +65,6 @@ function useReactionPicker(container: MaybeRefOrGetter<HTMLElement | null>) {
   return { pickerId, toggleReaction, togglePicker, closePicker }
 }
 
-/**
- * Sends the file chosen in a file input. The input is cleared afterwards
- * either way, so the same file can be picked again after a failure.
- * `upload` resolves to whether the upload went through.
- */
-function useFileUpload() {
-  const toasts = useToastStore()
-  const permissions = usePermissionsStore()
-  const isUploading = ref(false)
-
-  async function upload(input: HTMLInputElement | null, send: (file: File) => unknown | Promise<unknown>) {
-    const file = input?.files?.[0]
-    if (!input || !file) return false
-    const max = permissions.maxUploadMb
-    if (max !== null && file.size > max * 1024 * 1024) {
-      // Refuse early: the server would only read and drop the body.
-      toasts.error(t('chat.uploadTooLarge', { max }), { detail: t('chat.uploadTooLargeDetail', { name: file.name, size: Math.ceil(file.size / (1024 * 1024)) }) })
-      input.value = ''
-      return false
-    }
-    isUploading.value = true
-    try {
-      await send(file)
-      return true
-    } catch (err) {
-      toasts.error(caughtErrorMessage(err, t('chat.uploadFailed')))
-      return false
-    } finally {
-      isUploading.value = false
-      input.value = ''
-    }
-  }
-  return { isUploading, upload }
-}
-
 function useMessageEditor(channelOf: (msg: Message) => string, onStart?: () => void) {
   const chatStore = useChatStore()
   const toasts = useToastStore()
@@ -152,7 +117,6 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
   const toasts = useToastStore()
   const permissions = usePermissionsStore()
   const { pickerId, toggleReaction, togglePicker, closePicker } = useReactionPicker(container)
-  const { isUploading, upload } = useFileUpload()
 
   function channelOf(msg: Message): string {
     return chatStore.activeChannel?.id || msg.channel_id
@@ -210,6 +174,5 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
     editingId, editText, editOriginal, isSavingEdit, startEdit, cancelEdit, saveEdit: saveOrDelete,
     deleteMessage, toggleReaction, isOwn, canDelete,
     pickerId, togglePicker, closePicker,
-    isUploading, upload
   }
 }

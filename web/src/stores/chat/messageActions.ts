@@ -46,13 +46,15 @@ function markReadBySending({ cs }: Cx, msg: Message) {
   if (msg.channel_id === cs.activeChannel.value?.id) cs.activeChannelLastReadAt.value = msg.created_at
 }
 
-export async function sendMessage(cx: Cx, content: string, parentId: string | null = null, replyToId: string | null = null) {
+/** Posts a message; attachmentIds are files staged with the attachment tray, shown in that order. */
+export async function sendMessage(cx: Cx, content: string, parentId: string | null = null, replyToId: string | null = null, attachmentIds: readonly string[] = []) {
   const { cs } = cx
   const community = cs.communityGeneration
-  if (!cs.activeChannel.value || !content.trim()) return null
+  if (!cs.activeChannel.value || (!content.trim() && !attachmentIds.length)) return null
   const channelId = cs.activeChannel.value.id
   const msg = await postWithReplyFallback(replyToId, reply => {
     const json: CreateMessageRequest = { content: withEmojiTokens(content.trim()) }
+    if (attachmentIds.length) json.attachment_ids = [...attachmentIds]
     if (parentId) json.parent_id = parentId
     if (reply) json.reply_to_id = reply
     return api(`/api/channels/${channelId}/messages`, { method: 'POST', json, decode: decodeMessage })

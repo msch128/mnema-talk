@@ -2,6 +2,7 @@
 import { config } from '@vue/test-utils'
 import { beforeEach } from 'vitest'
 import { clearAllDrafts } from './lib/drafts'
+import { clearAllTrays } from './composables/attachmentTrayState'
 import { i18nPlugin, setLocale } from './i18n'
 import { maxChars } from './directives/maxChars'
 import { tooltip } from './directives/tooltip'
@@ -33,3 +34,8 @@ setLocale('de')
 
 // Unsent drafts live in the page's storage: no test inherits another's.
 beforeEach(() => clearAllDrafts())
+// Nor do staged attachments carry over.
+beforeEach(() => clearAllTrays())
+
+// jsdom has no object URLs; the attachment tray previews files with them.
+if (!URL.createObjectURL) Object.assign(URL, { createObjectURL: () => 'blob:test', revokeObjectURL: () => undefined })

@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { dragHasFiles, growHeight, pastedFiles, pickAttachable } from './composerFiles'
+import { dragHasFiles, growHeight, pastedFiles } from './composerFiles'
 
 const png = new File(['x'], 'a.png', { type: 'image/png' })
-const mov = new File(['x'], 'b.mov', { type: 'video/quicktime' })
-const pdf = new File(['x'], 'c.pdf', { type: 'application/pdf' })
 
 function transfer(files: File[], data: Record<string, string> = {}, types: string[] = []) {
   return { files, types, getData: (k: string) => data[k] ?? '' } as unknown as DataTransfer
@@ -17,15 +15,6 @@ describe('growHeight', () => {
   it('caps at 45 percent of the window and then scrolls', () => {
     expect(growHeight(900, 1000)).toEqual({ height: 450, scrolls: true })
     expect(growHeight(900, 600, 0.5)).toEqual({ height: 300, scrolls: true })
-  })
-})
-
-describe('pickAttachable', () => {
-  it('takes the first image or video and counts the rest', () => {
-    expect(pickAttachable([pdf, png, mov])).toEqual({ file: png, extra: 1, rejected: 1 })
-  })
-  it('has nothing to attach when no file is media', () => {
-    expect(pickAttachable([pdf])).toEqual({ file: null, extra: 0, rejected: 1 })
   })
 })
 
