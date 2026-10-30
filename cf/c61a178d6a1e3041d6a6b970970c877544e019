@@ -1,0 +1,19 @@
+internal/db/migrations/0082_forum_complete.sql
+  s_2e83d65905e837::t_2c28ed4a030667 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cfc61a178d6a1e3041d6a6b970970c877544e019",
+  "prompts": {},
+  "sessions": {
+    "s_2e83d65905e837": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5abf6d969ca7b9a1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
