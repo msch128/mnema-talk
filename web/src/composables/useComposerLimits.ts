@@ -52,7 +52,7 @@ export function useComposerLimits(opts: {
 
   /** A refused send: the server's own wait replaces the estimate. */
   function refused(channelId: string | undefined, error: unknown) {
-    if (isApiError(error) && error.status === 429 && error.retryAfter !== null) wait(channelId, error.retryAfter * 1000)
+    if (isApiError(error) && error.slowMode && error.retryAfter !== null) wait(channelId, error.retryAfter * 1000)
   }
 
   const remainingMs = computed(() => {

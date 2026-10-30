@@ -49,8 +49,11 @@ describe('limits of the composer', () => {
 
   it('takes the wait from a refusal of the server', () => {
     const limits = setup({ slow: 30, exempt: false, text: 'hi' })
-    limits.refused('c1', new ApiError(429, 'RATE_LIMITED', 'x', 12))
+    limits.refused('c1', new ApiError(429, 'RATE_LIMITED', 'x', 12, true))
     expect(limits.hint.value?.text).toBe('Slow mode: you can write again in 0:12')
+    const generic = setup({ slow: 30, exempt: false, text: 'hi' })
+    generic.refused('c1', new ApiError(429, 'RATE_LIMITED', 'x', 12))
+    expect(generic.hint.value).toBeNull()
     const other = setup({ slow: 30, exempt: false, text: 'hi' })
     other.refused('c1', new ApiError(500, 'INTERNAL_ERROR', 'x'))
     other.refused('c1', new Error('boom'))

@@ -12,7 +12,7 @@ const CODES = new Set([
 
 export class ApiError extends Error {
   /** `retryAfter` is the wait in seconds that the server's sentence names (slow mode, rate limits), if it does. */
-  constructor(readonly status: number, readonly code: string, message: string, readonly retryAfter: number | null = null) {
+  constructor(readonly status: number, readonly code: string, message: string, readonly retryAfter: number | null = null, readonly slowMode = false) {
     super(message)
     this.name = 'ApiError'
   }
@@ -140,7 +140,7 @@ function serverFailure(status: number, body: unknown, path: string, method: stri
     ? serverError['code'] : 'INTERNAL_ERROR'
   // Sign-in and the other account writes talk about attempts (reads like /api/auth/me do not); everything else about requests.
   if (code === 'RATE_LIMITED' && method !== 'GET' && path.startsWith('/api/auth/')) return new ApiError(status, code, t('errors.rateLimitedAttempts'))
-  return new ApiError(status, code, errorMessage(code, serverError?.['message']), waitSeconds(serverError?.['message']))
+  return new ApiError(status, code, errorMessage(code, serverError?.['message']), waitSeconds(serverError?.['message']), String(serverError?.['message'] ?? '').startsWith('slow mode:'))
 }
 
 export interface ApiClient {

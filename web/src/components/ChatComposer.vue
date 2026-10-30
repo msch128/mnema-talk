@@ -40,7 +40,7 @@ const props = defineProps({
   // What limits writing right now (slow mode wait, message length); null when nothing does.
   limit: { type: Object as PropType<ComposerHint | null>, default: null }
 })
-const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event]; 'arrow-up': [event: KeyboardEvent] }>()
+const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event]; 'arrow-up': [event: KeyboardEvent]; posted: [] }>()
 
 const chatStore = useChatStore()
 const features = useServerFeaturesStore()
@@ -241,6 +241,7 @@ function handleKeyDown(e: KeyboardEvent) {
     <PollDialog
       v-if="pollOpen && chatStore.activeChannel"
       :channel-id="chatStore.activeChannel.id"
+      @posted="emit('posted')"
       @close="pollOpen = false; textAreaEl?.focus()"
     />
 

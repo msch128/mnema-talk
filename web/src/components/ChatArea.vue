@@ -203,6 +203,7 @@ async function handleFileUpload(e: Event) {
   const uploadedIn = chatStore.activeChannel?.id
   const ok = await actions.upload(e.target as HTMLInputElement, (file: File) => chatStore.uploadMedia(file, '', null, replyId))
   if (!ok) return
+  limits.sent(uploadedIn)
   if (!stillIn(uploadedIn)) return
   replyingTo.value = null
   await revealOwnMessage()
@@ -378,6 +379,7 @@ const groupedIds = computed(() => {
       @cancel-reply="cancelReply"
       @arrow-up="ownNav.fromComposerKey($event, inputMessage)"
       @file="handleFileUpload"
+      @posted="limits.sent(chatStore.activeChannel?.id)"
     />
 
     <FileDropOverlay @files="composer?.attachFiles($event)" />
