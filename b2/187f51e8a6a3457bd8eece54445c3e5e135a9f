@@ -1,0 +1,27 @@
+internal/bot/rest_faults_integration_test.go
+  s_06fcde5dbef956::t_161e7bf5b438f2 251-253
+internal/chat/post.go
+  s_06fcde5dbef956::t_bd58e39cb7a3d2 200,205-207
+internal/chat/readstate.go
+  s_06fcde5dbef956::t_b03d965d59da0c 107-108,118-128,140,148
+internal/server/channel_access_integration_test.go
+  s_06fcde5dbef956::t_108b57ec7504cf 124-126,237-238
+internal/server/voice_chat_integration_test.go
+  s_06fcde5dbef956::t_ee835dacacac8c 115-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b2187f51e8a6a3457bd8eece54445c3e5e135a9f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
