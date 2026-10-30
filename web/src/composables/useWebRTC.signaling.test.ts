@@ -18,7 +18,7 @@ describe('useWebRTC join and leave', () => {
     const join = rtc.joinVoiceChannel('ch-1')
     await grantMic()
     await join
-    expect(sent.filter(e => e.type === 'voice_join')).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1' } }])
+    expect(sent.filter(e => e.type === 'voice_join')).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1', tab: expect.any(String) } }])
     expect(voice.currentChannelId).toBe('ch-1')
     // We send on the SFU's own mic, screen and camera lines (never on lines
     // added locally, which a browser would not match to the offer); only
@@ -98,7 +98,7 @@ describe('kicked from voice', () => {
     await join
     const pc = present(FakePC.instances.at(-1))
 
-    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1' } })
+    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1', tab: expect.any(String) } })
     expect(voice.currentChannelId).toBeNull()
     expect(pc.closed).toBe(true)
     expect(present(mic.getTracks()[0]).stop).toHaveBeenCalled()
@@ -199,7 +199,7 @@ describe('kicked from voice', () => {
     const join = rtc.joinVoiceChannel('ch-2')
     await grantMic()
     await join
-    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1' } })
+    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1', tab: expect.any(String) } })
     expect(voice.currentChannelId).toBe('ch-2')
   })
 })

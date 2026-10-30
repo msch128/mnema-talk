@@ -396,7 +396,7 @@ describe('native microphone graph rejection handling', () => {
     await join
     await Promise.resolve()
     expect(voice.currentChannelId).toBe('suspended-call')
-    expect(sent).toContainEqual({ type: 'voice_join', payload: { channel_id: 'suspended-call' } })
+    expect(sent).toContainEqual({ type: 'voice_join', payload: { channel_id: 'suspended-call', tab: expect.any(String) } })
   })
 
   it('retains microphone transmission when corrupt persisted volume is rejected by the native gain parameter', async () => {
@@ -457,7 +457,7 @@ describe('capture delivery microtasks and microphone source removal', () => {
     await rtc.joinVoiceChannel('device-removed')
     const pc = await negotiate()
     expect(present(pc.senders[0]).track).toBeNull()
-    expect(sent).toContainEqual({ type: 'voice_join', payload: { channel_id: 'device-removed' } })
+    expect(sent).toContainEqual({ type: 'voice_join', payload: { channel_id: 'device-removed', tab: expect.any(String) } })
     await rtc.applyAudioSettings()
     expect(present(pc.senders[0]).track).toBeNull()
   })
