@@ -1,0 +1,47 @@
+README.md
+  s_6f62c78e3c93c5::t_3a18edea47d2c2 60
+doc/glossary.md
+  s_6f62c78e3c93c5::t_1278f8cfe1224e 17
+doc/talks.md
+  s_6f62c78e3c93c5::t_720ec33261411b 19-23
+internal/chat/talks.go
+  s_ecf7b9e687a24d::t_516c540e93b6e9 9,28-32,35-51,54,113,146-149,168-169
+internal/chat/talks_integration_test.go
+  s_12bbeb5404ac3b::t_44c7d96366ba0e 130-131,157-158,297
+internal/chat/talks_naming_integration_test.go
+  s_12bbeb5404ac3b::t_0cd62ef0aed0cb 1-69
+internal/chat/talks_naming_test.go
+  s_12bbeb5404ac3b::t_d589a0df5706a5 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "80abee32e1dad1e38d501a092e03774707b48cf8",
+  "prompts": {},
+  "sessions": {
+    "s_12bbeb5404ac3b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aad7ca6625b99e477",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ecf7b9e687a24d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-setup-e379f010794b742e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

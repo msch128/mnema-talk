@@ -1,0 +1,21 @@
+internal/chat/talks.go
+  s_dbdfffe0fa33da::t_2c8843c4cbaeac 36-39,171-181
+internal/chat/talks_naming_test.go
+  s_dbdfffe0fa33da::t_f75dbd5361592c 4,35,43,48-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7ae2c63b0f4f81557d18d72a3095e56bb4e5c471",
+  "prompts": {},
+  "sessions": {
+    "s_dbdfffe0fa33da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-voice-takeover-a0aadf43d700b47c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
