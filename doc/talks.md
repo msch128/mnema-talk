@@ -193,6 +193,17 @@ seconds per member are relayed over all their connections, and an invalid or
 unknown emoji (a custom emoji that does not exist) is dropped. With reduced motion
 the web app shows a still badge instead of a floating emoji.
 
+## Taking a call over from another device
+
+The browser and the desktop client are both sessions of the same web app, and one account may be signed in on several at once. Joining a Talk while the account is already in a Talk on another session (the same Talk or a different one) asks first: "You are in <Talk> on another device. Take over here?" Confirming moves the call; cancelling changes nothing.
+
+- The confirmed join is sent with `takeover: true`. The server seats the new session first; only when its media connection is up does it end the voice of the account's other sessions, each told `voice_kicked` with `reason: "voice_taken_over"`. If the new join fails, the old call carries on.
+- Only the voice ends. The old session stays connected and keeps its text and chat. It shows "Your call moved to another device" with a "Back here" button, which takes the call back without asking again.
+- Of two takeovers at the same moment the later seat wins; exactly one session keeps the call.
+- Mute and deafen are not carried over: the new session starts from its own saved settings, and device choices stay per device.
+- Without `takeover` nothing changes: a second session joining the same Talk replaces the first (`voice_kicked` with `joined_elsewhere`), and one joining a different Talk is seated there as well. Rejoins nobody asked for (after a reload) never ask. A session that reconnects its WebSocket resumes its call with `resume: true`; if another device took the call over meanwhile, the server refuses with `voice_taken_over` instead of taking it back. Only the page whose call was taken over is refused (pages send a `tab` id for this); a resume that only replaces the account's own stale socket, including the taker's own reconnect, always succeeds.
+- A device that vanished without leaving (closed lid, lost network) stays listed for the 30 s voice grace period, so a join in that time still asks once; confirming simply ends the leftover.
+
 ## Limits
 
 | What | Limit |

@@ -274,7 +274,7 @@ describe('permission and microphone switching outcomes', () => {
     const { rtc, voice, sent } = setup()
     await rtc.joinVoiceChannel('silent')
     expect(voice.localAudioStream).toBeNull()
-    expect(sent).toContainEqual({ type: 'voice_join', payload: { channel_id: 'silent' } })
+    expect(sent).toContainEqual({ type: 'voice_join', payload: { channel_id: 'silent', tab: expect.any(String) } })
     const pc = await negotiate()
     expect(pc.senders.every(sender => sender.track === null)).toBe(true)
   })
