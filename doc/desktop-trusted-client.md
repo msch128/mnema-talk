@@ -545,7 +545,7 @@ host:
   `window.dispatchEvent(new CustomEvent('mnema-desktop:mark-all-read'))` in the
   page of that server. The instance window (`role: 'instance'` only) marks every
   channel and conversation read through the same path as the sidebar
-  (`useDesktopMarkRead`); the new counts reach the rail by the unread report
+  (`useDesktopMarkRead`, started by `useAppBadge`); the new counts reach the rail by the unread report
   above, which fires whenever the read states change. Nothing is sent back.
 
 ### Why this keeps the browser model intact

@@ -14,8 +14,8 @@ import { useAppBadge } from './useAppBadge'
 import { useChatStore } from '../stores/chat'
 
 let mounted: App | null = null
-function mount(pinia = createPinia(), extra: () => void = () => {}) {
-  mounted = createApp(defineComponent({ setup() { extra(); useDesktopMarkRead(); return () => h('div') } }))
+function mount(pinia = createPinia(), use: () => void = useDesktopMarkRead) {
+  mounted = createApp(defineComponent({ setup() { use(); return () => h('div') } }))
   mounted.use(pinia)
   mounted.mount(document.createElement('div'))
   return mounted
