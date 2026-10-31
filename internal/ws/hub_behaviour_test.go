@@ -201,6 +201,9 @@ func TestSignalingRejectsMalformedAndUnavailableSubscriptions(t *testing.T) {
 	if err := room.PublishTestVideo(c.User.ID, sfu.SourceCamera); err != nil {
 		t.Fatal(err)
 	}
+	// Its own camera and screen are asked for by name; this must neither panic nor need a watched video.
+	c.handle("webrtc_request_keyframe", []byte(`{"source":"camera"}`))
+	c.handle("webrtc_request_keyframe", []byte(`{"source":"screen"}`))
 	c.handle("webrtc_camera_stop", nil)
 	if room.MediaStates()[c.User.ID].Camera {
 		t.Fatal("camera_stop retained the published camera")
@@ -590,5 +593,28 @@ func TestReconnectWithinGraceResumesOriginalVoiceStay(t *testing.T) {
 	defer h.mu.RUnlock()
 	if len(h.grace) != 0 {
 		t.Fatal("resumed participant retained grace timer")
+	}
+}
+
+// A keyframe request names the sender's own source after it changed (a new
+// camera, a new picture size); without a source it is for the videos the
+// sender watches.
+func TestOwnKeyframeSource(t *testing.T) {
+	for _, tc := range []struct {
+		payload string
+		want    sfu.Source
+		own     bool
+	}{
+		{`{"source":"camera"}`, sfu.SourceCamera, true},
+		{`{"source":"screen"}`, sfu.SourceScreen, true},
+		{`{}`, "", false},
+		{`{"source":"audio"}`, "", false},
+		{`not json`, "", false},
+		{``, "", false},
+	} {
+		got, own := ownKeyframeSource([]byte(tc.payload))
+		if got != tc.want || own != tc.own {
+			t.Errorf("%q: got (%q, %v), want (%q, %v)", tc.payload, got, own, tc.want, tc.own)
+		}
 	}
 }

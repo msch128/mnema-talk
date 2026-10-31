@@ -67,9 +67,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	case events.ClientWebrtcDiag:
 		c.handleDiag(payload)
 	case events.ClientWebrtcRequestKeyframe:
-		if room := c.currentRoom(); room != nil {
-			room.DispatchKeyframe(c.User.ID)
-		}
+		c.handleRequestKeyframe(payload)
 	case events.ClientWebrtcSubscribe:
 		c.handleSubscribe(payload)
 	case events.ClientWebrtcLayers:
@@ -87,6 +85,38 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	case events.ClientMediaHandshake:
 		c.handleMediaHandshake(payload)
 	}
+}
+
+// ownKeyframeSource reads the optional {source} of webrtc_request_keyframe:
+// "screen" or "camera" asks for a keyframe of the sender's own video of that
+// source (after it changed size or device); without it the request is for the
+// videos the sender watches.
+func ownKeyframeSource(payload json.RawMessage) (sfu.Source, bool) {
+	var req struct {
+		Source string `json:"source"`
+	}
+	if json.Unmarshal(payload, &req) != nil {
+		return "", false
+	}
+	switch sfu.Source(req.Source) {
+	case sfu.SourceScreen:
+		return sfu.SourceScreen, true
+	case sfu.SourceCamera:
+		return sfu.SourceCamera, true
+	}
+	return "", false
+}
+
+func (c *Client) handleRequestKeyframe(payload json.RawMessage) {
+	room := c.currentRoom()
+	if room == nil {
+		return
+	}
+	if source, own := ownKeyframeSource(payload); own {
+		room.RequestSourceKeyframe(c.User.ID, source)
+		return
+	}
+	room.DispatchKeyframe(c.User.ID)
 }
 
 // currentRoom is the SFU room c is seated in, or nil when it is in none, the
