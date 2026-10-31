@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.3.0](https://github.com/msch128/mnema-talk/compare/v2.2.0...v2.3.0) (2026-10-31)
+
+
+### Features
+
+* **web:** translate every server error sentence and make the i18n check strict ([#575](https://github.com/msch128/mnema-talk/issues/575)) ([df5a6b8](https://github.com/msch128/mnema-talk/commit/df5a6b8185b37ace632b61ed9c2b9415404ee55d))
+
+
+### Bug Fixes
+
+* ask the SFU for the sender's own camera keyframe after a camera change ([#574](https://github.com/msch128/mnema-talk/issues/574)) ([df5a6b8](https://github.com/msch128/mnema-talk/commit/df5a6b8185b37ace632b61ed9c2b9415404ee55d))
+* **web:** mark everything read when the desktop rail asks for it ([#573](https://github.com/msch128/mnema-talk/issues/573)) ([df5a6b8](https://github.com/msch128/mnema-talk/commit/df5a6b8185b37ace632b61ed9c2b9415404ee55d))
+
 ## [2.2.0](https://github.com/msch128/mnema-talk/compare/v2.1.1...v2.2.0) (2026-10-30)
 
 
