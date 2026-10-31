@@ -1,0 +1,51 @@
+loadtest/viewer/cameras.go
+  s_45fff186c97845::t_ea123a0f6d1be4 1-93
+loadtest/viewer/cameras_test.go
+  s_45fff186c97845::t_911f3768de9f28 1-74
+loadtest/viewer/internal/lt/server.go
+  s_45fff186c97845::t_adff31bbd65db5 24-26,63-65
+loadtest/viewer/main.go
+  s_06fcde5dbef956::t_8654598795d0a5 44-46,149,176-178,215-216,225-242,249
+loadtest/viewer/member.go
+  s_06fcde5dbef956::t_320e4b0df0ca1d 38-40,67
+loadtest/viewer/publish.go
+  s_06fcde5dbef956::t_73acc32e78aeb2 175,187
+loadtest/viewer/report.go
+  s_45fff186c97845::t_c10404615e1bf8 104-108
+loadtest/viewer/session.go
+  s_06fcde5dbef956::t_164f834e2e3d68 87-88,102,193,196-209
+loadtest/viewer/stages.go
+  s_45fff186c97845::t_a83be84a1b31c6 1-84
+loadtest/viewer/stages_test.go
+  s_45fff186c97845::t_bd879dc0e360bb 1-86
+loadtest/viewer/summary.go
+  s_45fff186c97845::t_6cc72447023590 17,66,110
+loadtest/viewer/trackstats.go
+  s_45fff186c97845::t_8b20a2d35d5c51 135,196
+loadtest/viewer/voicecheck.go
+  s_45fff186c97845::t_8fbacf25d9be76 49,57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9d0ec32e7ac2689d034cd4ff115ddc41afca998b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
