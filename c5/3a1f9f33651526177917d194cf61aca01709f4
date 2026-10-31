@@ -1,0 +1,21 @@
+doc/architecture.md
+  s_61e7f03250bd0b::t_4079b9cd4b22e5 608-612,640
+doc/benchmark.md
+  s_61e7f03250bd0b::t_d9c9ca8cd230d7 115-266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c53a1f9f33651526177917d194cf61aca01709f4",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
