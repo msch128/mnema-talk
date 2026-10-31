@@ -330,7 +330,8 @@ for a NAS, a home server or a VPS, with every term explained and a way to check
 each step. In short, you need:
 
 - a machine that runs Docker with Compose (a Synology or Unraid NAS, a Raspberry
-  Pi 4/5, any Linux box or a small VPS),
+  Pi 4/5, any Linux box or a small VPS); what size you need depends on the
+  Talks you run, see [Hardware by size](doc/deployment.md#hardware-by-size),
 - a domain name with HTTPS, set up through a *reverse proxy* (a small web server
   in front of the app that holds the certificate; [how](doc/reverse-proxy.md)),
 - three open ports: TCP 443 for the site, and UDP 50000-50050 plus port 3479
