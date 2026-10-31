@@ -60,6 +60,7 @@ import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
 import { useAppRouting } from './composables/useAppRouting'
 import { useAppBadge } from './composables/useAppBadge'
+import { useDesktopMarkRead } from './composables/useDesktopMarkRead'
 import { useCompactLayout } from './composables/useCompactLayout'
 import { usePushBridge } from './composables/usePushBridge'
 import { usePttHint } from './composables/usePttHint'
@@ -121,6 +122,7 @@ onMounted(() => window.addEventListener('keydown', onWindowKeydown, true))
 onBeforeUnmount(() => window.removeEventListener('keydown', onWindowKeydown, true))
 const routing = useAppRouting(() => alive)
 useAppBadge()
+useDesktopMarkRead()
 usePushBridge()
 usePttHint()
 useShortcutsKey(() => !!authStore.user)
