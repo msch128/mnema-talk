@@ -52,23 +52,33 @@ func TestWatchersAddUpToMembersTimesLimit(t *testing.T) {
 	members := ids(30) // the first ten publish
 	v := cameraView{limit: 4}
 	total := 0
-	for _, n := range v.watchers(members, cams) {
+	for _, n := range v.watchers(members, cams, nil) {
 		total += n
 	}
 	if total != 30*4 {
 		t.Fatalf("shown cameras = %d, want %d", total, 30*4)
 	}
 	// Spread: no camera is shown to everybody while others are shown to nobody.
-	for id, n := range v.watchers(members, cams) {
+	for id, n := range v.watchers(members, cams, nil) {
 		if n == 0 || n > 20 {
 			t.Errorf("camera %s shown to %d members", id, n)
 		}
 	}
-	all := allCameras.watchers(members, cams)
+	all := allCameras.watchers(members, cams, nil)
 	if all["a"] != 29 || all["j"] != 29 {
 		t.Fatalf("all cameras: %v", all)
 	}
-	if got := (cameraView{}).watchers(members, cams); len(got) != 0 {
+	if got := (cameraView{}).watchers(members, cams, nil); len(got) != 0 {
 		t.Fatalf("none: %v", got)
+	}
+}
+
+func TestOnlyConnectedMembersWatch(t *testing.T) {
+	cams := ids(2)
+	members := ids(5)
+	alive := map[string]bool{"a": true, "c": true, "d": true} // b and e are gone
+	got := allCameras.watchers(members, cams, alive)
+	if got["a"] != 2 || got["b"] != 3 { // a is watched by c and d; b by a, c, d
+		t.Fatalf("watchers = %v", got)
 	}
 }

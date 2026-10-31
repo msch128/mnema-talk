@@ -1,20 +1,26 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
-// stageSplit follows the packets of a run through the three hops, to tell
+// stageSplit follows the packets of the window through the three hops, to tell
 // where they go missing: from the generator into the SFU, through the SFU's
-// fan-out, and from the SFU back into the generator. The server's counters are
-// those of the whole run; the generator's are the packets of its publishers
-// and of all received tracks.
+// fan-out, and from the SFU back into the generator. All numbers cover the same
+// window (see window.go). Remaining bias: packets in flight at either end of the
+// window (a fraction of a second of traffic), retransmissions (counted by the
+// SFU and the receivers like any packet, so a surplus is not shown as loss), and
+// packets the SFU drops on purpose (its ingress rate limit, a viewer paused at a
+// layer switch), which show as missing at the hop where they are dropped.
 type stageSplit struct {
+	WindowS           float64 `json:"window_s"`
+	Audience          int     `json:"audience"`
 	GeneratorSent     int64   `json:"generator_sent"`
 	SFUIngress        int64   `json:"sfu_ingress"`
 	IngressMissing    int64   `json:"ingress_missing"`
 	IngressMissingPct float64 `json:"ingress_missing_pct"`
-	// ExpectedEgress is what the SFU should write: the packets of every
-	// published track, as far as they reached it, times the members that
-	// watch the track.
+	// ExpectedEgress is what the SFU should write: the packets that reached it
+	// times the connected members that watch each track.
 	ExpectedEgress     int64   `json:"expected_egress"`
 	SFUEgress          int64   `json:"sfu_egress"`
 	EgressMissing      int64   `json:"egress_missing"`
@@ -26,28 +32,37 @@ type stageSplit struct {
 }
 
 // splitStages computes the split; nil when no publisher sent anything.
-func splitStages(res *result, c viewerConfig) *stageSplit {
-	st := &stageSplit{}
-	watchers := c.cameras.watchers(c.memberIDs(), c.cameraIDs())
-	n := int64(len(res.PerMember))
+func splitStages(in stageInput, c viewerConfig) *stageSplit {
+	st := &stageSplit{WindowS: in.window.Seconds()}
+	for _, ok := range in.audience {
+		if ok {
+			st.Audience++
+		}
+	}
+	watchers := c.cameras.watchers(c.memberIDs(), c.cameraIDs(), in.audience)
 	var expected float64
-	for _, m := range res.PerMember {
-		st.GeneratorSent += m.SentPackets
-		switch m.Role {
+	for id, sent := range in.sent {
+		if !in.audience[id] {
+			continue // a publisher that dropped out sent an unknown share
+		}
+		st.GeneratorSent += sent
+		switch in.roles[id] {
 		case "camera":
-			expected += float64(m.SentPackets) * float64(watchers[m.ID])
+			expected += float64(sent) * float64(watchers[id])
 		case "screen", "audio":
-			expected += float64(m.SentPackets) * float64(n-1)
+			expected += float64(sent) * float64(st.Audience-1)
 		}
 	}
 	if st.GeneratorSent == 0 {
 		return nil
 	}
-	for _, r := range res.Media {
-		st.GeneratorReceived += r.Packets
+	for id, n := range in.recv {
+		if in.audience[id] {
+			st.GeneratorReceived += n
+		}
 	}
-	ing, eg := res.Server.RunDeltas["mnema_sfu_ingress_packets_total"], res.Server.RunDeltas["mnema_sfu_egress_packets_total"]
-	if !res.Server.Measured || ing == 0 {
+	ing, eg := in.server["mnema_sfu_ingress_packets_total"], in.server["mnema_sfu_egress_packets_total"]
+	if !in.hasServer || ing == 0 {
 		st.ExpectedEgress = int64(expected)
 		st.ReceiveMissing, st.ReceiveMissingPct = missing(st.ExpectedEgress, st.GeneratorReceived)
 		return st
@@ -72,7 +87,8 @@ func missing(want, got int64) (int64, float64) {
 
 // lines renders the split for the console.
 func (s *stageSplit) lines() []string {
-	out := []string{fmt.Sprintf("packets      generator sent %d", s.GeneratorSent)}
+	out := []string{fmt.Sprintf("packets      %.0f s window, %d members connected throughout; generator sent %d",
+		s.WindowS, s.Audience, s.GeneratorSent)}
 	if !s.ServerCountersUsed {
 		return append(out, fmt.Sprintf("             no server counters (METRICS_TOKEN): expected to arrive %d, received %d (%.2f%% missing)",
 			s.ExpectedEgress, s.GeneratorReceived, s.ReceiveMissingPct))

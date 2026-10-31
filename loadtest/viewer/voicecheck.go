@@ -54,7 +54,6 @@ func expectationsOf(c viewerConfig) expectations {
 // finishResult adds the server's numbers and, with EVALUATE=1, the verdict.
 func finishResult(res *result, c viewerConfig, server lt.ServerSummary) {
 	res.Relay, res.Server = c.relay, server
-	res.Stages = splitStages(res, c)
 	res.OK = true
 	if !lt.Bool("EVALUATE") {
 		return

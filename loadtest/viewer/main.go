@@ -212,8 +212,8 @@ func (c viewerConfig) validate() error {
 	if c.channel == "" {
 		return errors.New("CHANNEL_ID is required")
 	}
-	if len(c.sharers) == 0 && c.roles.cameras == 0 {
-		return errors.New("nothing to watch: set SHARER_ID, SCREEN_PUBLISHERS or CAMERA_PUBLISHERS")
+	if len(c.sharers) == 0 && c.roles.cameras == 0 && c.roles.audio == 0 {
+		return errors.New("nothing to watch or hear: set SHARER_ID, SCREEN_PUBLISHERS, CAMERA_PUBLISHERS or AUDIO_PUBLISHERS")
 	}
 	n := c.roles.screens + c.roles.cameras + c.roles.audio
 	if n > c.to-c.from {
@@ -291,8 +291,7 @@ func mainErr() (bool, error) {
 	sampler.Mark("pre")
 	sampler.SetPhase("ramp")
 	members := startMembers(api, c)
-	sampler.Mark("hold")
-	watchMembers(members, c.hold, os.Getenv("STOP_FILE"))
+	stages := runHold(members, c, sampler)
 
 	// Take every member's ICE snapshot (bounded: Pion's statistics can block on
 	// a stuck connection) and the received media before anything is closed,
@@ -313,6 +312,7 @@ func mainErr() (bool, error) {
 	sampler.Mark("post")
 	samples, scrapeErrors := sampler.Stop()
 	finishResult(&res, c, lt.SummarizeServer(samples, scrapeErrors))
+	res.Stages = splitStages(stages, c)
 	res.GeneratorCores = cpu.Cores()
 
 	if err := writeResult(res); err != nil {

@@ -74,12 +74,12 @@ spec_field() { # spec index (1=N 2=K 3=C 4=S 5=relay)
   echo "${f[$2]:-}"
 }
 check_voice_spec() {
-  [[ "$1" =~ ^voice:[0-9]+:[0-9]+:[0-9]+:[0-9]+(:relay)?$ ]] || die "bad scenario '$1' (voice:N:K:C:S or voice:N:K:C:S:relay)"
+  [[ "$1" =~ ^voice:([1-9][0-9]*):(0|[1-9][0-9]*):(0|[1-9][0-9]*):(0|[1-9][0-9]*)(:relay)?$ ]] || die "bad scenario '$1' (voice:N:K:C:S or voice:N:K:C:S:relay, plain numbers without leading zeros)"
   local n k c s
   n="$(spec_field "$1" 1)" k="$(spec_field "$1" 2)" c="$(spec_field "$1" 3)" s="$(spec_field "$1" 4)"
   [ "$n" -ge 2 ] || die "scenario '$1': N must be at least 2"
   [ $((k + c + s)) -le "$n" ] || die "scenario '$1': K+C+S is more than the N members"
-  [ $((s + c)) -gt 0 ] || [ "$k" -gt 0 ] || die "scenario '$1': nothing is published"
+  [ $((k + c + s)) -gt 0 ] || die "scenario '$1': nothing is published (K, C and S are all 0)"
 }
 # file_name makes a scenario name safe for a file name.
 file_name() { echo "${1//:/-}"; }
@@ -472,21 +472,34 @@ add_kernel_json() {
 # PPROF=1 captures profiles of the server during the hold: a 30 s CPU profile,
 # then allocs and heap. They come from the server's PPROF_ADDR, which listens on
 # loopback inside the container, so they are fetched with wget in the container.
-pprof_capture() { # log-file name
-  local addr
+# The CPU profile needs a hold of at least 60 s (10 s warm-up, the first progress
+# line, then 30 s); with a shorter one it is skipped and the log says so.
+pprof_capture() { # log-file name hold-seconds
+  local addr inflight="" what
+  # TERM comes from the end of the scenario: stop what is running, too.
+  trap '[ -z "$inflight" ] || kill "$inflight" 2>/dev/null; exit 0' TERM
   addr="$(container_env "$APP_CONTAINER" PPROF_ADDR)"
   if [ -z "$addr" ]; then
-    say "    PPROF=1, but the app container has no PPROF_ADDR; no profiles"
+    say "    PPROF=1, but the app container has no PPROF_ADDR; no profiles captured"
     return 0
   fi
   # The tools print a progress line every 10 s once the hold has begun.
-  until grep -Eq '^[0-9:]{8} (viewers|connected)=' "$1" 2>/dev/null; do sleep 2; done
-  local what
-  for what in "profile?seconds=30:cpu" "allocs:allocs" "heap:heap"; do
-    docker exec "$APP_CONTAINER" wget -qO- "http://$addr/debug/pprof/${what%%:*}" >"$RESULT_DIR/$2.pprof-${what##*:}" 2>/dev/null \
-      || say "    pprof ${what##*:}: failed"
+  until grep -Eq '^[0-9:]{8} (viewers|connected)=' "$1" 2>/dev/null; do
+    sleep 2 &
+    inflight=$!
+    wait "$inflight" || true
   done
-  say "    pprof: $2.pprof-{cpu,allocs,heap} saved (go tool pprof <file>)"
+  for what in "profile?seconds=30:cpu" "allocs:allocs" "heap:heap"; do
+    if [ "${what##*:}" = cpu ] && [ "$3" -lt 60 ]; then
+      say "    pprof cpu skipped: the hold of ${3}s is shorter than 60 s (allocs and heap are captured)"
+      continue
+    fi
+    docker exec "$APP_CONTAINER" wget -qO- "http://$addr/debug/pprof/${what%%:*}" >"$RESULT_DIR/$2.pprof-${what##*:}" 2>/dev/null &
+    inflight=$!
+    wait "$inflight" || say "    pprof ${what##*:}: failed"
+    inflight=""
+  done
+  say "    pprof: $2.pprof-{cpu,allocs,heap} saved where captured (go tool pprof <file>)"
 }
 
 run_scenario() {
@@ -514,7 +527,7 @@ run_scenario() {
   pid=$!
   CHILD_PIDS+=("$pid")
   if [ "${PPROF:-0}" = 1 ]; then
-    pprof_capture "$log" "$fname" &
+    pprof_capture "$log" "$fname" "$(scenario_env "$name" | sed -n 's/^HOLD_S=//p')" &
     ppid=$!
     CHILD_PIDS+=("$ppid")
   fi

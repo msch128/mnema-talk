@@ -71,10 +71,14 @@ func (v cameraView) plan(self string, pos int, cameras []string) cameraPlan {
 }
 
 // watchers counts, for every camera, the members that show it. members are the
-// user ids of the whole slice in order.
-func (v cameraView) watchers(members, cameras []string) map[string]int {
+// user ids of the whole slice in order; only those in alive (all when nil)
+// count as watching.
+func (v cameraView) watchers(members, cameras []string, alive map[string]bool) map[string]int {
 	out := map[string]int{}
 	for pos, self := range members {
+		if alive != nil && !alive[self] {
+			continue
+		}
 		p := v.plan(self, pos, cameras)
 		if p.allOff {
 			continue

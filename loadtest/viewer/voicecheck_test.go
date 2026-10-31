@@ -138,6 +138,10 @@ func TestConfigRefusesMorePublishersThanMembers(t *testing.T) {
 		t.Fatalf("cameras are something to watch: %v", err)
 	}
 	c.roles = roleCounts{0, 0, 2}
+	if err := c.validate(); err != nil {
+		t.Fatalf("an audio-only run is a valid shape: %v", err)
+	}
+	c.roles = roleCounts{}
 	if c.validate() == nil {
 		t.Fatal("a run that watches nothing was accepted")
 	}

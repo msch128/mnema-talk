@@ -158,7 +158,7 @@ not depend on a laptop or the network between. Everything the host needs is
 | `voice` | 1 shared screen (synthetic VP8, 1500 kbit/s, 15 fps) watched by 99 members, direct | 100 |
 | `relay` | the same screen and 3 speakers, but every member allowed relayed candidates only, so all media goes through the built-in TURN relay | 100 |
 | `mixed` | 1 shared screen, 10 cameras (300 kbit/s, 24 fps), 3 speakers, every one of the 100 members watching the screen and all cameras | 100 |
-| `voice:N:K:C:S[:relay]` | any shape: N members, of which K speakers, C cameras and S screens publish (K+C+S <= N); `:relay` sends everything through the TURN relay. `voice:100:3:10:1` is `mixed`, `voice:50:3:4:1:relay` a relay run with 4 cameras | N |
+| `voice:N:K:C:S[:relay]` | any shape: N members, of which K speakers, C cameras and S screens publish (K+C+S <= N); `:relay` sends everything through the TURN relay. `voice:100:3:10:1` is `mixed`, `voice:50:3:4:1:relay` a relay run with 4 cameras, `voice:25:3:0:0` audio only; plain numbers, N at least 2 | N |
 
 ### Build and copy
 
@@ -276,10 +276,14 @@ VP8 (a valid payload descriptor and keyframe bit, random bytes sized to the
 bitrate, keyframes every 3 s and on a PLI) to the screen or camera line, and
 20 ms Opus-sized packets to the microphone line; no device is touched and
 nothing is played. Every member subscribes to the screens. Cameras reach
-everybody by default, as in the web client; `WATCH_CAMERAS=<n>` keeps only n
+everybody by default, as in the web client. `WATCH_CAMERAS=<n>` keeps only n
 of them visible per member (the others are opted out one by one, and the
 visible ones are spread over the members like different people's tiles),
-`WATCH_CAMERAS=none` hides all. Per class (screen, camera, audio) the result
+`WATCH_CAMERAS=none` hides all. (Before this option existed `WATCH_CAMERAS=1`
+meant "all cameras"; it now means one camera, and "all" is the default.) The
+camera choice is sent when the member joins and once more when its connection
+comes up, not repeatedly, because every subscription makes the server
+renegotiate with the room. Per class (screen, camera, audio) the result
 has, per receiving member, the received bitrate (average, minimum, maximum),
 the packet loss that nothing repaired, and freezes (a video gap above
 `FREEZE_MS`, 1000), plus the connect time, time to first video, and the same
@@ -353,9 +357,19 @@ the `packets` lines in the log) that follows the packets through the three hops:
 
 The hop with the missing share is where loss starts: the first points at the
 generator or its socket, the second at the SFU falling behind, the third at
-the path back or the generator's own CPU. The split needs `METRICS_TOKEN`; it is
-for the whole run, not just the hold. Retransmissions count as received, so a
-small surplus is not hidden as negative loss.
+the path back or the generator's own CPU. The split needs `METRICS_TOKEN`.
+
+All numbers cover the same window: it starts `WINDOW_WARMUP_S` (10) seconds into
+the hold, when every member has had time to join, and ends with the hold; the
+generator's counters and the server's counters are read at the same two
+moments. Only members that were connected at both ends count as audience, for
+the expected egress as well as the received packets. What bias remains:
+packets in flight at either end (a fraction of a second of traffic),
+retransmissions (the SFU and the receivers count them like any packet, so a
+surplus is never shown as negative loss), and packets the SFU drops on purpose
+(its ingress rate limit, a viewer waiting for a keyframe), which show as missing
+at the hop where they are dropped. Read a small percentage at one hop as noise,
+and compare hops with each other.
 
 After each scenario the script prints and stores (`"kernel"` in the scenario
 JSON, a `kernel:` line in the log) the growth of the UDP counters `InErrors`,
@@ -368,9 +382,12 @@ were dropped by the kernel before the program read them; a non-zero `max` or
 `PPROF=1 ./host-run.sh` also captures, during the hold of each scenario, a 30 s
 CPU profile, `allocs` and `heap` of the server (`<scenario>.pprof-{cpu,allocs,heap}`,
 open with `go tool pprof`). The server serves them on the address in its
-`PPROF_ADDR`, which listens on loopback inside the container, so the script
-fetches them with `wget` in the container; without `PPROF_ADDR` it says so and
-captures nothing. The hold must be longer than about 45 s.
+`PPROF_ADDR` (added to the server together with this option; the profiles need
+a server that has it), which listens on loopback inside the container, so the
+script fetches them with `wget` in the container; without `PPROF_ADDR` it says
+so and captures nothing. The CPU profile needs a hold of at least 60 s; with a
+shorter hold it is skipped, the log names it, and allocs and heap are still
+captured.
 
 ### Reading the numbers
 

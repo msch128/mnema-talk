@@ -83,29 +83,53 @@ func (m *member) countTrack(tr *webrtc.TrackRemote) {
 	}
 }
 
-// keepSubscribed renews the subscriptions every 5 s until the member stops:
-// the screens it watches and the cameras it keeps visible.
+// keepSubscribed renews the screen subscriptions every 5 s until the member
+// stops (a share that restarts drops its viewers' opt-ins). The camera choice
+// is sent once at the start and once more when the connection first comes up:
+// it stays in force for the member's stay, and every subscription message makes
+// the server renegotiate with the whole room, which would skew a load test.
 func (m *member) keepSubscribed(sharers []string) {
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
+	camerasSent, camerasResent := false, false
 	for {
-		for _, sharer := range sharers {
-			if sharer == m.id {
-				continue
-			}
-			sub := map[string]any{"kind": "screen", "user_id": sharer, "on": true}
-			if q := m.quality(); q != nil {
-				sub["quality"] = q
-			}
-			m.send("webrtc_subscribe", sub)
+		if !m.subscribeScreens(sharers) {
+			return
 		}
-		m.subscribeCameras()
+		if !camerasSent || (!camerasResent && m.connected.Load()) {
+			camerasResent = camerasSent
+			camerasSent = true
+			if !m.subscribeCameras() {
+				return
+			}
+		}
 		select {
 		case <-t.C:
 		case <-m.stop:
 			return
 		}
 	}
+}
+
+// subscribeScreens subscribes to each sharer's screen, spaced out by pauseGap.
+// It reports false when the member stopped meanwhile.
+func (m *member) subscribeScreens(sharers []string) bool {
+	first := true
+	for _, sharer := range sharers {
+		if sharer == m.id {
+			continue
+		}
+		if !first && !m.pause() {
+			return false
+		}
+		first = false
+		sub := map[string]any{"kind": "screen", "user_id": sharer, "on": true}
+		if q := m.quality(); q != nil {
+			sub["quality"] = q
+		}
+		m.send("webrtc_subscribe", sub)
+	}
+	return true
 }
 
 // answerOffer applies the SFU's offer and sends the answer. A step that fails
@@ -194,16 +218,30 @@ func run(api *webrtc.API, c viewerConfig, tk token, m *member) error {
 	return m.readLoop(conn, pc)
 }
 
-// cameraGap spaces the camera opt-outs: the server takes 40 events a second
-// per connection.
-const cameraGap = 30 * time.Millisecond
+// pauseGap spaces consecutive subscriptions: the server takes 40 events a
+// second per connection.
+const pauseGap = 30 * time.Millisecond
+
+// pause waits pauseGap and reports false when the member stopped meanwhile.
+func (m *member) pause() bool {
+	select {
+	case <-time.After(pauseGap):
+		return true
+	case <-m.stop:
+		return false
+	}
+}
 
 // subscribeCameras sends the member's camera choice: every camera is on unless
-// the plan hides all of them or some of them.
-func (m *member) subscribeCameras() {
+// the plan hides all of them or some of them. It reports false when the member
+// stopped meanwhile.
+func (m *member) subscribeCameras() bool {
 	m.send("webrtc_subscribe", map[string]any{"kind": "camera", "all": true, "on": !m.cameras.allOff})
 	for _, id := range m.cameras.hide {
+		if !m.pause() {
+			return false
+		}
 		m.send("webrtc_subscribe", map[string]any{"kind": "camera", "user_id": id, "on": false})
-		time.Sleep(cameraGap)
 	}
+	return true
 }
