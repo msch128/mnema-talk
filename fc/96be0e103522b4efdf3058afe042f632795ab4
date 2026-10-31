@@ -1,0 +1,55 @@
+loadtest/README.md
+  s_06fcde5dbef956::t_1034e75622a491 161,278-286,346-391,410
+loadtest/host-run.sh
+  s_06fcde5dbef956::t_10e948e374779a 29,32,67-86,91-92,101,111-115,123,156-166,432-504,506,508-511,517,529-533,538-539,542-546,550
+loadtest/viewer/cameras.go
+  s_06fcde5dbef956::t_0b93137a4b961e 1-97
+loadtest/viewer/cameras_test.go
+  s_06fcde5dbef956::t_f3ac7000089d08 1-84
+loadtest/viewer/internal/lt/metrics.go
+  s_06fcde5dbef956::t_bcfa46d9cd8ab8 158,166,169,175-177,179-180,182
+loadtest/viewer/internal/lt/metrics_test.go
+  s_06fcde5dbef956::t_ec0698634c1be5 79-81
+loadtest/viewer/internal/lt/server.go
+  s_06fcde5dbef956::t_f68f49e0afb6d9 24-26,61-64,108-109
+loadtest/viewer/main.go
+  s_06fcde5dbef956::t_25e8845632c536 44-46,149,176-178,215-216,225-242,249,294,315
+loadtest/viewer/member.go
+  s_06fcde5dbef956::t_32fbf1bf5280a5 38-40,67
+loadtest/viewer/publish.go
+  s_06fcde5dbef956::t_f42611ad08838a 175,187
+loadtest/viewer/report.go
+  s_06fcde5dbef956::t_831280ec346aa8 104-108
+loadtest/viewer/session.go
+  s_06fcde5dbef956::t_b76c23f431700f 86-91,94,96-97,99-104,114-134,217,220-247
+loadtest/viewer/stages.go
+  s_06fcde5dbef956::t_b5357c35ccae04 1-100
+loadtest/viewer/stages_test.go
+  s_06fcde5dbef956::t_330c23e762d7c6 1-100
+loadtest/viewer/summary.go
+  s_06fcde5dbef956::t_928110a6709a63 17,66,110
+loadtest/viewer/trackstats.go
+  s_06fcde5dbef956::t_398afdb8d32a1a 135,196
+loadtest/viewer/voicecheck.go
+  s_06fcde5dbef956::t_52e08c244f3079 49
+loadtest/viewer/voicecheck_test.go
+  s_06fcde5dbef956::t_62272f54b8e2da 137-144
+loadtest/viewer/window.go
+  s_06fcde5dbef956::t_0aaf70f027156d 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fc96be0e103522b4efdf3058afe042f632795ab4",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
