@@ -46,7 +46,7 @@ type expectations struct {
 func expectationsOf(c viewerConfig) expectations {
 	set := loadPublishSettings()
 	return expectations{
-		members: c.to - c.from, roles: c.roles, cameras: c.watchCameras, relay: c.relay,
+		members: c.to - c.from, roles: c.roles, cameras: c.cameras.limit != 0, relay: c.relay,
 		screenKbps: set.screenKbps, cameraKbps: set.cameraKbps,
 	}
 }

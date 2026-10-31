@@ -35,7 +35,9 @@ type member struct {
 	id    string
 	index int
 	role  pubRole
-	api   *webrtc.API
+	// cameras is what the member opts out of.
+	cameras cameraPlan
+	api     *webrtc.API
 
 	conn    *websocket.Conn
 	pc      *webrtc.PeerConnection
@@ -62,6 +64,7 @@ type member struct {
 	// Published media (synthetic, see publish.go) and received tracks.
 	pubOnce sync.Once
 	sentB   atomic.Int64
+	sentPkt atomic.Int64 // packets handed to the connection
 	trackMu sync.Mutex
 	tracks  []*trackStats
 

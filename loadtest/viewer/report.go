@@ -101,6 +101,11 @@ func printMedia(res result) {
 			class, r.Members, r.Tracks, r.KbpsPerMemberAvg, r.KbpsPerMemberMin, r.KbpsPerMemberMax, r.KbpsPerTrackAvg,
 			r.LossPct, r.PacketsLost, r.PacketsExpected, r.Freezes, r.MembersFrozen, r.MaxGapMs)
 	}
+	if res.Stages != nil {
+		for _, l := range res.Stages.lines() {
+			fmt.Println(l)
+		}
+	}
 	if res.Relay {
 		fmt.Printf("relay        %d of %d members went through the TURN relay\n", res.Relayed, res.Members-res.NeverConnected)
 	}
