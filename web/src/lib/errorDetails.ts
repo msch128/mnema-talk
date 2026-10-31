@@ -2,6 +2,7 @@
 // localized text the user should see. Anything not listed here falls back to
 // the generic text of its error code plus the server message (see api.ts).
 import { t } from '../i18n'
+import { SENTENCES } from './errorSentences'
 import { durationLabel } from './moderation'
 
 const FIELDS = new Set(['content', 'bio', 'display_name', 'topic'])
@@ -94,6 +95,36 @@ const PATTERNS: readonly ErrorPattern[] = [
   [/^the image must be between 1 and (\d+) pixels/, n => t('errors.detail.emojiPixels', { size: n })]
 ]
 
+const PLACEHOLDER = /%[dsq]/g
+const PLACEHOLDER_NAMES = ['a', 'b', 'c', 'd']
+
+// A server format string such as "at most %d favourites" becomes a regex that
+// reads the varying parts back out of the finished sentence.
+function compile(format: string, key: string) {
+  const source = format.split(/(%[dsq])/).map(part => {
+    if (part === '%d') return '(\\d+)'
+    if (part === '%q') return '"(.*)"'
+    if (part === '%s') return '(.+?)'
+    return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  }).join('')
+  return { key, pattern: new RegExp(`^${source}$`), literal: format.replace(PLACEHOLDER, '').length }
+}
+
+const SENTENCE_KEYS = new Map(SENTENCES.filter(([format]) => !PLACEHOLDER.test(format)).map(([format, key]) => [format, key]))
+// The most specific format (the most fixed text) wins over a generic "%s is required".
+const SENTENCE_FORMATS = SENTENCES.filter(([format]) => /%[dsq]/.test(format)).map(([format, key]) => compile(format, key))
+  .sort((a, b) => b.literal - a.literal)
+
+function formatSentence(message: string): string | null {
+  const exact = SENTENCE_KEYS.get(message)
+  if (exact) return t(`errors.detail.${exact}`)
+  for (const { key, pattern } of SENTENCE_FORMATS) {
+    const match = message.match(pattern)
+    if (match) return t(`errors.detail.${key}`, Object.fromEntries(match.slice(1).map((value, i) => [PLACEHOLDER_NAMES[i] ?? `p${i}`, value])))
+  }
+  return null
+}
+
 /** The localized sentence for a known server message, or null. */
 export function formatDetailMessage(message: string): string | null {
   if (Object.prototype.hasOwnProperty.call(DETAILS, message)) {
@@ -103,5 +134,5 @@ export function formatDetailMessage(message: string): string | null {
     const match = message.match(pattern)
     if (match) return format(...match.slice(1))
   }
-  return null
+  return formatSentence(message)
 }

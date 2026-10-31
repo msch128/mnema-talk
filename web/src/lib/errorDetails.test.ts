@@ -47,40 +47,32 @@ describe('server reasons reach the user in their language', () => {
   })
 })
 
-/** Plain string literals of httpx.Err*("...") calls in the files of the 1.0 features. */
-const FILES = [
-  'poll/input.go', 'poll/store.go', 'poll/handler.go',
-  'emoji/store.go', 'emoji/handler.go', 'emoji/image.go',
-  'push/store.go', 'push/handler.go', 'push/validate.go',
-  'chat/pins.go', 'chat/message_types.go', 'chat/message_mutations.go',
-  'auth/account_delete.go', 'auth/account_export.go', 'auth/email.go', 'auth/email_handler.go',
-  'auth/two_factor_store.go', 'auth/two_factor_handler.go'
-]
-
-// Messages that the UI never shows as they are: developer-facing or covered by a generic code text.
-const IGNORED = [
-  /^moderation needs the permission service$/, /^edit history needs the permission service$/,
-  /^user not found$/
-]
-
-function literals(file: string): string[] {
-  const src = readFileSync(join(process.cwd(), '..', 'internal', file), 'utf8')
-  const found: string[] = []
-  for (const m of src.matchAll(/httpx\.Err(?:Conflict|Forbidden|Unavailable|InvalidInput|NotFound|UnsupportedMediaType)\(\s*"((?:[^"\\]|\\.)*)"\s*\)/g)) {
-    found.push((m[1] ?? '').replace(/\\"/g, '"'))
-  }
-  return found
+/** A message the server could send, with every placeholder filled in. */
+function sample(format: string): string {
+  return format.replace(/%d/g, '7').replace(/%q/g, '"abc"').replace(/%s/g, 'abc')
 }
 
-describe('every sentence the 1.0 features can answer with is localized', () => {
-  const all = FILES.flatMap(file => literals(file).map(message => ({ file, message })))
+describe('every sentence the server can answer with is localized', () => {
+  const catalogue = JSON.parse(readFileSync(join(process.cwd(), '..', 'internal', 'repo', 'testdata', 'error_messages.golden.json'), 'utf8')) as string[]
 
   it('finds the sentences', () => {
-    expect(all.length).toBeGreaterThan(25)
+    expect(catalogue.length).toBeGreaterThan(300)
   })
 
-  it.each(all)('$file: $message', ({ message }) => {
-    if (IGNORED.some(pattern => pattern.test(message))) return
-    expect(formatDetailMessage(message), `no localized text for "${message}"`).not.toBeNull()
+  it.each(catalogue)('%s', (format) => {
+    const shown = formatDetailMessage(sample(format))
+    expect(shown, `no localized text for "${format}"`).not.toBeNull()
+    expect(shown).not.toMatch(/\{[a-d]\}/)
+    expect(shown).not.toBe(sample(format))
+  })
+
+  it('reads the varying parts of a sentence back out', () => {
+    expect(formatDetailMessage('at most 12 favourites')).toBe('Höchstens 12 Favoriten.')
+    expect(formatDetailMessage('sort_order must be between -1000 and 1000')).toContain('-1000')
+    expect(formatDetailMessage('max_upload_mb must be between 1 and 500')).toContain('500')
+  })
+
+  it('answers null for a sentence it does not know', () => {
+    expect(formatDetailMessage('something brand new happened')).toBeNull()
   })
 })
