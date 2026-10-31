@@ -1,0 +1,27 @@
+web/src/i18n/de.json
+  s_f8b5fe59428337::t_105fa55826971f 125-136,398
+web/src/i18n/en.json
+  s_f8b5fe59428337::t_dba86bc67e1831 125-136,398
+web/src/lib/errorDetails.test.ts
+  s_f8b5fe59428337::t_5a89090de4c9eb 50-58,61-63,72-73,76-77,86-93
+web/src/lib/errorDetails.ts
+  s_f8b5fe59428337::t_6e4480ac04b238 98-111,123,126,128,136
+web/src/lib/errorSentences.ts
+  s_f8b5fe59428337::t_d53e8cb38cacce 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "873d5876462606cb89e6a2e54d06b4c1de6349d0",
+  "prompts": {},
+  "sessions": {
+    "s_f8b5fe59428337": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-i18n-d461c25d928b7cff",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
