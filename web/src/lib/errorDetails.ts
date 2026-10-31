@@ -41,22 +41,25 @@ function wildcard(before: string): string {
   return before === '' || /(?:^|\s)(?:invalid|option)\s$/.test(before) ? '(\\S+)' : '(.+?)'
 }
 
-interface Compiled { row: SentenceRow; pattern: RegExp; literal: number }
+interface Compiled { row: SentenceRow; pattern: RegExp; literal: number; quoted: number[] }
 
 // A format such as "at most %d favourites" becomes a regex that reads the
 // varying parts back out of the finished sentence, anchored at both ends.
 function compile(row: SentenceRow): Compiled {
   let before = ''
+  const quoted: number[] = []
+  let group = 0
   const source = row[0].split(/(%[dsq])/).map(part => {
     let piece: string
     if (part === '%d') piece = '(-?\\d+)'
     else if (part === '%q') piece = '"(.*)"'
     else if (part === '%s') piece = wildcard(before)
     else piece = part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    if (/^%[dsq]$/.test(part)) { if (part === '%q') quoted.push(group); group++ }
     before += part
     return piece
   }).join('')
-  return { row, pattern: new RegExp(`^${source}$`), literal: row[0].replace(/%[dsq]/g, '').length }
+  return { row, pattern: new RegExp(`^${source}$`), literal: row[0].replace(/%[dsq]/g, '').length, quoted }
 }
 
 const EXACT = new Map(SENTENCES.filter(row => !row[0].includes('%')).map(row => [row[0], row]))
@@ -71,13 +74,22 @@ function render(row: SentenceRow, values: readonly string[]): string {
   return t(`errors.detail.${row[1]}`, params)
 }
 
+// Go's %q writes a name with backslash escapes (a quote in it becomes \").
+function unquote(escaped: string): string {
+  try {
+    return JSON.parse(`"${escaped}"`) as string
+  } catch {
+    return escaped
+  }
+}
+
 /** The row that answers a server message, with the parts of the message that vary. */
 export function matchSentence(message: string): { row: SentenceRow; values: string[] } | null {
   const exact = EXACT.get(message)
   if (exact) return { row: exact, values: [] }
-  for (const { row, pattern } of FORMATS) {
+  for (const { row, pattern, quoted } of FORMATS) {
     const match = message.match(pattern)
-    if (match) return { row, values: match.slice(1) }
+    if (match) return { row, values: match.slice(1).map((value, i) => quoted.includes(i) ? unquote(value) : value) }
   }
   return null
 }

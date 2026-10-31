@@ -520,7 +520,7 @@
       "srvUserLimitAppliesToVoice": "Das Teilnehmerlimit gilt nur für Talks.",
       "srvUserLimitMustBeBetween": "Das Teilnehmerlimit muss zwischen 0 (kein Limit) und {a} liegen.",
       "srvVisitedMayOnlyNameChannels": "„visited“ darf nur Kanäle oder den Status nennen.",
-      "srvVoiceIsNotAvailable": "Sprache ist nicht verfügbar.",
+      "srvVoiceIsNotAvailable": "Talks sind nicht verfügbar.",
       "srvWebAppNotBuiltRun": "Die Web-App ist auf diesem Server nicht gebaut.",
       "srvWebhookNotFound": "Dieser Webhook wurde nicht gefunden.",
       "srvWhenMustBeUpcomingOr": "„when“ muss „upcoming“ oder „past“ sein.",
@@ -560,7 +560,8 @@
       "srvCloseReportFirst": "Schließe die Meldung, bevor du sie löschst.",
       "srvReportAlreadyClosed": "Diese Meldung ist bereits abgeschlossen.",
       "srvAfterRfc3339": "„after“ muss ein Zeitstempel im Format RFC 3339 sein.",
-      "srvBeforeDateRfc3339": "„before_date“ muss ein Zeitstempel im Format RFC 3339 sein."
+      "srvBeforeDateRfc3339": "„before_date“ muss ein Zeitstempel im Format RFC 3339 sein.",
+      "srvUsernameTooLong": "Der Benutzername ist zu lang (höchstens {count} Zeichen)."
     },
     "field": {
       "content": "Nachricht",

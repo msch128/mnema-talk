@@ -520,7 +520,7 @@
       "srvUserLimitAppliesToVoice": "The user limit applies to Talks only.",
       "srvUserLimitMustBeBetween": "The user limit must be between 0 (no limit) and {a}.",
       "srvVisitedMayOnlyNameChannels": "“visited” may only name channels or status.",
-      "srvVoiceIsNotAvailable": "Voice isn’t available.",
+      "srvVoiceIsNotAvailable": "Talks aren’t available.",
       "srvWebAppNotBuiltRun": "The web app isn’t built on this server.",
       "srvWebhookNotFound": "That webhook wasn’t found.",
       "srvWhenMustBeUpcomingOr": "“when” must be “upcoming” or “past”.",
@@ -560,7 +560,8 @@
       "srvCloseReportFirst": "Close the report before deleting it.",
       "srvReportAlreadyClosed": "This report is already closed.",
       "srvAfterRfc3339": "“after” must be a timestamp in RFC 3339 format.",
-      "srvBeforeDateRfc3339": "“before_date” must be a timestamp in RFC 3339 format."
+      "srvBeforeDateRfc3339": "“before_date” must be a timestamp in RFC 3339 format.",
+      "srvUsernameTooLong": "The username is too long (max. {count} characters)."
     },
     "field": {
       "content": "Message",

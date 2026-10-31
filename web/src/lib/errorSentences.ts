@@ -510,7 +510,7 @@ export const SENTENCES: readonly SentenceRow[] = [
   ['username is required', 'fieldRequired', [], { field: 'username' }],
   ['username must be 2-32 characters: letters, digits, \'_\', \'.\', \'-\'', 'usernameFormat', []],
   ['username must be 2-32 characters: lowercase letters, digits, \'_\' and \'.\' (no leading, trailing or repeated \'.\')', 'usernameFormat', []],
-  ['username must be at most %d characters', 'usernameFormat', []],
+  ['username must be at most %d characters', 'srvUsernameTooLong', ['count']],
   ['visited may only name channels or status', 'srvVisitedMayOnlyNameChannels'],
   ['voice is not available', 'srvVoiceIsNotAvailable'],
   ['web app not built: run `make web`', 'srvWebAppNotBuiltRun'],

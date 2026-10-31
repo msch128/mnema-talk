@@ -62,7 +62,7 @@ function sample(format: string): { message: string; values: string[] } {
 // Texts that leave the value out on purpose (a permission id, a list of durations, an English reason mean nothing to a member).
 const WITHOUT_VALUE = new Set([
   'cannot change a permission you do not have: %s', 'cannot grant a permission you do not have: %s', 'missing permission: %s',
-  'duration must be one of %s', 'password must be at most %d bytes', 'username must be at most %d characters',
+  'duration must be one of %s', 'password must be at most %d bytes',
   'the configured image tag cannot reach this release (%s); update manually'
 ])
 
@@ -100,6 +100,15 @@ describe('every sentence the server can answer with is localized by a row of its
     expect(formatDetailMessage('at most 12 favourites')).toBe('Höchstens 12 Favoriten.')
     expect(formatDetailMessage('sort_order must be between -1000 and 1000')).toContain('-1000')
     expect(formatDetailMessage('max_upload_mb must be between 1 and 500')).toContain('500')
+  })
+
+  it('shows the name in a rule quoted by the server without its escapes', () => {
+    const shown = formatDetailMessage('Your message was not sent: it breaks the community rule "No \\"spam\\" here" (automod). The moderators can see this.')
+    expect(shown).toContain('„No "spam" here“')
+  })
+
+  it('gives the webhook name limit its own text', () => {
+    expect(formatDetailMessage('username must be at most 80 characters')).toBe('Der Benutzername ist zu lang (höchstens 80 Zeichen).')
   })
 
   it('shows English words the server fills in as translated words', () => {
