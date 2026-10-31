@@ -1,0 +1,27 @@
+web/scripts/check-i18n.ts
+  s_f8b5fe59428337::t_cf899c69d7e87f 279
+web/src/lib/errorSentences.ts
+  s_f8b5fe59428337::t_2afcef7b4f31f2 1-4,12-13,16
+web/src/lib/errorSentencesA.ts
+  s_f8b5fe59428337::t_deae53f7bc4337 1-183
+web/src/lib/errorSentencesB.ts
+  s_f8b5fe59428337::t_3712c58c7e153d 1-183
+web/src/lib/errorSentencesC.ts
+  s_f8b5fe59428337::t_f246de24f01220 1-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c811a58f9f76cdf05113cb69eabe09c3afcea5b1",
+  "prompts": {},
+  "sessions": {
+    "s_f8b5fe59428337": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-i18n-d461c25d928b7cff",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
