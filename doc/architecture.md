@@ -605,8 +605,11 @@ of one core and about 500 MB of app memory, each receiver getting about
 because Pion keeps a retransmission history of about 1.5 KB per packet for every
 outgoing video track. Since 0.7.7 that history shrinks with the number of
 connected members (1024 packets up to 16, halving as the count doubles, at
-least 128 from 65 on; see `internal/sfu/nack.go`), so 100 receivers x 10
-cameras stay around 200 MB instead of 1.5 GB. The price in large calls is that
+least 128 from 65 on; see `internal/sfu/nack.go`), but a connection keeps the
+size it got when it joined, so the earliest joiners keep the large history: in
+a measured Talk of 100 members watching a screen and ten cameras the live heap
+reached 0.8 to 1.0 GB. The [sizing guide](benchmark.md#sizing-guide) gives
+memory, CPU and upload for a given Talk. The price of the shrinking history is that
 a late retransmission request goes unanswered and the picture shows an artifact
 until the next keyframe. Memory is returned after the call. With about 16 real browsers plus 84
 lightweight members (100 total) the app used about 1.6 cores. Real E2EE browser
@@ -634,7 +637,7 @@ voice scenarios) is part of what the host spends.
 | Voice, through the built-in TURN relay | 1 screen and 3 speakers to 100 members | 1.61 | 312 MB | all 100 members through the relay, 0.00 % loss, one member froze for 12.6 s once (one connection flap) |
 | Voice, mixed | 1 screen, 10 cameras (300 kbit/s), 3 speakers, 100 members watching all | 1.87 | 1044 MB | does not hold: 82 % screen and 34 % camera packet loss, members received 200 kbit/s of the screen (audio loss 0.3 %) |
 
-The method, caveats and per-scenario detail are in [doc/benchmark.md](benchmark.md).
+The method, caveats and per-scenario detail are in [doc/benchmark.md](benchmark.md); the sizing table (members, speakers, cameras, screens to CPU, memory and upload) is in its [sizing guide](benchmark.md#sizing-guide).
 
 What the host comfortably carries: chat for 1000 sessions, and one screen to
 about 100 members directly or through the relay. Watching all of 10 cameras plus
