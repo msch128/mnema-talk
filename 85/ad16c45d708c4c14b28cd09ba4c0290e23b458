@@ -1,0 +1,35 @@
+api/openapi.json
+  s_f8b5fe59428337::t_a56e803a991c40 36784
+internal/sfu/keyframe_test.go
+  s_f8b5fe59428337::t_47d5363fdda2f0 32-41
+internal/ws/handle.go
+  s_f8b5fe59428337::t_f0fb9191124729 70,90-121
+internal/ws/hub_behaviour_test.go
+  s_f8b5fe59428337::t_1c2637844d0700 204-206
+internal/ws/keyframe_source_test.go
+  s_f8b5fe59428337::t_b7523bd1562a26 1-30
+internal/ws/lifecycle.go
+  s_f8b5fe59428337::t_0cc85da5b4cd63 81
+web/src/composables/useWebRTC.devices.test.ts
+  s_f8b5fe59428337::t_2d2ec9e8b636de 103,111,113-115
+web/src/composables/webrtc/camera.ts
+  s_f8b5fe59428337::t_3f9e169d2e8d87 40-41
+web/src/types/events.ts
+  s_f8b5fe59428337::t_f547ac0779c7ec 163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "85ad16c45d708c4c14b28cd09ba4c0290e23b458",
+  "prompts": {},
+  "sessions": {
+    "s_f8b5fe59428337": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-i18n-d461c25d928b7cff",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
