@@ -1,0 +1,22 @@
+web/scripts/check-i18n.ts
+  h_0ff4f4713441f4 279
+web/src/lib/errorSentences.ts
+  h_0ff4f4713441f4 1-4,12-13,16
+web/src/lib/errorSentencesA.ts
+  h_0ff4f4713441f4 1-183
+web/src/lib/errorSentencesB.ts
+  h_0ff4f4713441f4 1-183
+web/src/lib/errorSentencesC.ts
+  h_0ff4f4713441f4 1-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "629e0211ed4bc0fd3fb7d04730ca8bc2592650ee",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
