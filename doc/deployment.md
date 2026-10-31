@@ -22,6 +22,33 @@ forward TCP 443 to the reverse proxy, **UDP 50000-50050** for voice and video
 and **UDP and TCP 3479** for the built-in TURN relay. Do not forward 8080
 (published on `127.0.0.1` only), PostgreSQL or SeaweedFS.
 
+## UDP socket buffers and the memory limit
+
+**Socket buffers.** The server asks the kernel for 4 MiB of receive and send
+buffer on its media and relay sockets, because a screen frame arrives as a
+burst of ten or more packets and a keyframe as 40 or more. The kernel grants
+at most `net.core.rmem_max` (receive) and `net.core.wmem_max` (send) of the
+**host**; the usual default of about 208 KB silently caps the request and
+bursts are then dropped when the server is briefly short of CPU. On a host
+with many viewers, raise both (the values are bytes):
+
+```sh
+sudo sysctl -w net.core.rmem_max=8388608 net.core.wmem_max=8388608
+# keep them across reboots:
+printf 'net.core.rmem_max=8388608\nnet.core.wmem_max=8388608\n' | sudo tee /etc/sysctl.d/90-mnema-udp.conf
+```
+
+Docker containers on the default bridge share the host's limits. To see
+whether packets were dropped, compare `RcvbufErrors` and `SndbufErrors` before
+and after a call: `nstat -az UdpRcvbufErrors UdpSndbufErrors`.
+
+**Memory limit.** At start the server reads the container's memory limit
+(cgroup v2 `memory.max`, else cgroup v1) and tells the Go runtime to keep its
+heap within 85% of it, so the garbage collector works harder near the limit
+instead of letting the kernel reclaim or kill the process. It logs what it
+chose (`memory limit: ...`). An explicit `GOMEMLIMIT` in the environment is
+left as it is; without a container limit nothing is set.
+
 ## Fresh install
 
 A new host needs Docker with Compose and nothing else: the compose file and

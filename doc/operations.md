@@ -177,6 +177,7 @@ behind it and so uses the stored language or the default.
 | Variable | Default | Meaning and validation |
 |---|---|---|
 | `METRICS_TOKEN` | empty | Enables `GET /api/metrics` with `Authorization: Bearer <token>`; empty = 404. At least 24 characters when set. |
+| `PPROF_ADDR` | empty | Serves Go pprof profiles (`/debug/pprof/`) on this `host:port`; empty = off. Only a loopback address is accepted (`127.0.0.1:6060`, `[::1]:6060`, `localhost:6060`); anything else stops the start. There is no authentication, so inside the container read it with `docker compose exec app wget -qO- http://127.0.0.1:6060/debug/pprof/heap`. |
 
 ### Updates
 

@@ -68,6 +68,9 @@ type Config struct {
 	// MetricsToken enables GET /api/metrics for Prometheus (Bearer token);
 	// empty keeps the endpoint off.
 	MetricsToken string
+	// PprofAddr (PPROF_ADDR) serves Go's pprof profiles on that loopback
+	// host:port for diagnosing load; empty (the default) serves nothing.
+	PprofAddr string
 	// WebhookAllowPrivateTargets are local-network address ranges outgoing
 	// webhooks may contact (WEBHOOK_ALLOW_PRIVATE_TARGETS, comma-separated
 	// addresses and CIDR ranges). Empty (the default) allows public addresses

@@ -55,6 +55,8 @@ type viewerTrack struct {
 	lastPic uint16
 	lastTl0 uint8
 	scratch []byte
+	// out is the packet handed to the sink: the source with this viewer's numbers.
+	out rtp.Packet
 	// sink delivers a packet to the viewer: the track's own WriteRTP.
 	sink func(*rtp.Packet) error
 	// reported is the last state announced to the viewer.
@@ -283,14 +285,19 @@ func (vt *viewerTrack) checkLayerTransition(idx int, src *rtp.Packet, now time.T
 }
 
 func (vt *viewerTrack) sendPacketLocked(src *rtp.Packet, now time.Time) {
-	out := *src
+	// The viewer's copy is a field, not a local: the sink is a func value, so
+	// a local would be allocated on the heap for every packet and viewer. The
+	// sink returns before the next packet (the track copies what it keeps),
+	// and vt.mu is held throughout.
+	vt.out = *src
+	out := &vt.out
 	out.Header.SequenceNumber = src.SequenceNumber + vt.seqOff
 	out.Header.Timestamp = src.Timestamp + vt.tsOff
 	if vt.group.kind == codecVP8 {
-		vt.patchVP8Locked(&out, src)
+		vt.patchVP8Locked(out, src)
 	}
 	vt.lastSeq, vt.lastTs, vt.lastAt = out.Header.SequenceNumber, out.Header.Timestamp, now
-	if err := vt.sink(&out); err != nil && !errors.Is(err, io.ErrClosedPipe) {
+	if err := vt.sink(out); err != nil && !errors.Is(err, io.ErrClosedPipe) {
 		slog.Debug("sfu layer write", "viewer", vt.viewer, "err", err)
 	}
 }
