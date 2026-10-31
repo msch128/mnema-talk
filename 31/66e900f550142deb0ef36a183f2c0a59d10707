@@ -1,0 +1,35 @@
+internal/repo/errormessages_test.go
+  s_06fcde5dbef956::t_ebac59df3442c1 1-174
+internal/repo/testdata/error_messages.golden.json
+  s_06fcde5dbef956::t_f4ad10f0905649 1-428
+web/package.json
+  s_06fcde5dbef956::t_19a61673b232c6 13
+web/scripts/check-i18n.ts
+  s_06fcde5dbef956::t_f4b327d4edb2b6 279
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_e2dc606c5170fc 125-136,207-554
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_b4bca51860d723 125-136,207-554
+web/src/lib/errorDetails.test.ts
+  s_06fcde5dbef956::t_dbb889276f787c 50-58,61-65,68-91,94-95
+web/src/lib/errorDetails.ts
+  s_06fcde5dbef956::t_304df9d1e27134 5,98-140,150
+web/src/lib/errorSentences.ts
+  s_06fcde5dbef956::t_8809eb8fda991a 1-353
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3166e900f550142deb0ef36a183f2c0a59d10707",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
