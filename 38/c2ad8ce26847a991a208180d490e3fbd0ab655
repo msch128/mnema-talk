@@ -1,0 +1,93 @@
+.env.example
+  s_06fcde5dbef956::t_141ba06b0f1ba1 356-360
+cmd/server/main.go
+  s_4cedadaa86fd3e::t_c13877decb23c2 23,25,111-116
+doc/deployment.md
+  s_e11d4af221ee25::t_288bf880440e19 25-51
+doc/operations.md
+  s_06fcde5dbef956::t_8c2193c74ffd31 180
+docker-compose.yml
+  s_e11d4af221ee25::t_e31094c465618c 144,168
+internal/config/config.go
+  s_06fcde5dbef956::t_84d72670935c98 71-73
+internal/config/config_env.go
+  s_06fcde5dbef956::t_b2f75f103c50f2 133
+internal/config/config_test.go
+  s_4cedadaa86fd3e::t_8dd8574ab6d9d5 629-638,656,658
+internal/config/config_validate.go
+  s_45fff186c97845::t_935afce197cb5d 11-12,57-61
+internal/debugsrv/debugsrv.go
+  s_4cedadaa86fd3e::t_5e9e1a49704d10 1-79
+internal/debugsrv/debugsrv_test.go
+  s_4cedadaa86fd3e::t_d3bb95d07bef48 1-83
+internal/memlimit/memlimit.go
+  s_4cedadaa86fd3e::t_e5f8afe81cae0f 1-81
+internal/memlimit/memlimit_test.go
+  s_4cedadaa86fd3e::t_c2c4723748f1ce 1-100
+internal/sfu/bwe.go
+  s_f8b5fe59428337::t_dd0aae00aae5db 107,115-116,118-121
+internal/sfu/bwe_test.go
+  s_45fff186c97845::t_13faeade96e6d5 42,60
+internal/sfu/perpacket_alloc_test.go
+  s_e11d4af221ee25::t_edbae84be5722a 1-60
+internal/sfu/rtcp_scan.go
+  s_f8b5fe59428337::t_adf76fc7deab8d 1-46
+internal/sfu/telemetry.go
+  s_f8b5fe59428337::t_c86be93b8d5dd8 44-47,49-53,56-66
+internal/sfu/transport.go
+  s_4cedadaa86fd3e::t_5b8edf0313c0c2 50-56,58-61
+internal/sfu/transport_test.go
+  s_e11d4af221ee25::t_8e067322b3851d 266-273
+internal/sfu/viewer_track.go
+  s_e11d4af221ee25::t_892b029d7d3888 58-59,288-293,297,300
+internal/turnrelay/generator.go
+  s_4cedadaa86fd3e::t_369e661051c04f 19-22,71-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "38c2ad8ce26847a991a208180d490e3fbd0ab655",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4cedadaa86fd3e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac7c6579e19708acc",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e11d4af221ee25": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aloadtest-build-a0df8b36f37826ce",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f8b5fe59428337": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-i18n-d461c25d928b7cff",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
