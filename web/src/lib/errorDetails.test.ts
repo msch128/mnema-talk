@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { errorMessage } from './api'
-import { formatDetailMessage } from './errorDetails'
+import { formatDetailMessage, matchSentence } from './errorDetails'
+import { SENTENCES } from './errorSentences'
 
 describe('server reasons reach the user in their language', () => {
   it.each([
@@ -30,7 +31,7 @@ describe('server reasons reach the user in their language', () => {
     ['INVALID_INPUT', 'p256dh must be a P-256 public key and auth a 16 byte secret, both base64url', /Push-Abo/],
     ['INVALID_INPUT', 'duration must be one of 1h, 1d', /Laufzeiten/],
     ['INVALID_INPUT', 'Your message was not sent: it breaks the community rule "No spam" (automod). The moderators can see this.', /Regel „No spam“ der Community/],
-    ['INVALID_INPUT', 'Your edit was not saved: it breaks the server rule "Links" (automod). The moderators can see this.', /Änderung wurde nicht gespeichert.*„Links“/]
+    ['INVALID_INPUT', 'Your edit was not saved: it breaks the community rule "Links" (automod). The moderators can see this.', /Änderung wurde nicht gespeichert.*„Links“/]
   ])('%s "%s"', (code, message, expected) => {
     expect(errorMessage(code, message)).toMatch(expected)
   })
@@ -58,23 +59,41 @@ function sample(format: string): { message: string; values: string[] } {
   return { message, values }
 }
 
-// Older texts that leave the value out on purpose (a permission id or a list of durations means nothing to a member).
-const WITHOUT_VALUE = new Set(['cannot change a permission you do not have: %s', 'cannot grant a permission you do not have: %s', 'missing permission: %s', 'duration must be one of %s', 'password must be at most %d bytes'])
+// Texts that leave the value out on purpose (a permission id, a list of durations, an English reason mean nothing to a member).
+const WITHOUT_VALUE = new Set([
+  'cannot change a permission you do not have: %s', 'cannot grant a permission you do not have: %s', 'missing permission: %s',
+  'duration must be one of %s', 'password must be at most %d bytes', 'username must be at most %d characters',
+  'the configured image tag cannot reach this release (%s); update manually'
+])
 
-describe('every sentence the server can answer with is localized', () => {
+describe('every sentence the server can answer with is localized by a row of its own', () => {
   const catalogue = JSON.parse(readFileSync(join(process.cwd(), '..', 'internal', 'repo', 'testdata', 'error_messages.golden.json'), 'utf8')) as string[]
 
   it('finds the sentences', () => {
-    expect(catalogue.length).toBeGreaterThan(300)
+    expect(catalogue.length).toBeGreaterThan(500)
+  })
+
+  it('has one row per sentence and no row for a sentence the server no longer sends', () => {
+    const formats = SENTENCES.map(row => row[0])
+    expect(new Set(formats).size, 'a sentence has two rows').toBe(formats.length)
+    expect(formats.filter(format => !catalogue.includes(format)), 'rows without a server sentence').toEqual([])
+    expect(catalogue.filter(format => !formats.includes(format)), 'server sentences without a row').toEqual([])
   })
 
   it.each(catalogue)('%s', (format) => {
     const { message, values } = sample(format)
+    // The row must be this sentence's own, not a more general one that happens to match too.
+    expect(matchSentence(message)?.row[0], `"${message}" is answered by another row`).toBe(format)
     const shown = formatDetailMessage(message)
-    expect(shown, `no localized text for "${format}"`).not.toBeNull()
-    expect(shown).not.toMatch(/\{[a-d]\}/)
+    expect(shown).not.toMatch(/\{[a-z]+\}/)
     expect(shown).not.toBe(message)
     for (const value of WITHOUT_VALUE.has(format) ? [] : values) expect(shown, `the value ${value} is missing`).toContain(value)
+  })
+
+  it('does not translate half of a sentence it does not know', () => {
+    for (const message of ['widget does not work', 'the widget is required', 'invalid widget id', 'a brand new sentence is too long', 'cannot do this', 'widget has no gadget']) {
+      expect(formatDetailMessage(message), message).toBeNull()
+    }
   })
 
   it('reads the varying parts of a sentence back out', () => {
