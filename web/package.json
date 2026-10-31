@@ -10,7 +10,7 @@
     "test": "npm run test:tooling && vitest run",
     "test:coverage": "npm run test:tooling && vitest run --coverage && npm run coverage:check",
     "lint": "node scripts/lint.ts && node scripts/check-tailwind.ts && npm run i18n:check",
-    "i18n:check": "node scripts/check-i18n.ts",
+    "i18n:check": "node scripts/check-i18n.ts --strict",
     "check": "npm run lint && npm run contracts:check && npm run typecheck && npm run test:coverage && npm run build",
     "typecheck": "npm run typecheck:source && vue-tsc --noEmit -p tsconfig.app.json && vue-tsc --noEmit -p tsconfig.tests.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.worklet.json",
     "contracts:check": "node scripts/generate-contracts.ts --check && node scripts/check-event-registry.ts",

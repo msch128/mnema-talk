@@ -2,6 +2,7 @@
 // localized text the user should see. Anything not listed here falls back to
 // the generic text of its error code plus the server message (see api.ts).
 import { t } from '../i18n'
+import { SENTENCES } from './errorSentences'
 import { durationLabel } from './moderation'
 
 const FIELDS = new Set(['content', 'bio', 'display_name', 'topic'])
@@ -94,6 +95,49 @@ const PATTERNS: readonly ErrorPattern[] = [
   [/^the image must be between 1 and (\d+) pixels/, n => t('errors.detail.emojiPixels', { size: n })]
 ]
 
+// Values the server fills in as English words (an event status, "avatar", why an invite code is weak).
+const WORDS: Readonly<Record<string, string>> = {
+  'too repetitive': 'repetitive', 'needs letters and digits, or 16 or more characters': 'lettersDigits',
+  'contains a common word or sequence': 'commonWord', avatar: 'avatar', banner: 'banner',
+  scheduled: 'scheduled', active: 'active', completed: 'completed', cancelled: 'cancelled'
+}
+const SHORTER = /^shorter than (\d+) characters$/
+
+function word(value: string): string {
+  if (Object.prototype.hasOwnProperty.call(WORDS, value)) return t(`errors.word.${WORDS[value]}`)
+  const shorter = SHORTER.exec(value)
+  return shorter ? t('errors.word.shorter', { a: shorter[1] }) : value
+}
+
+const PLACEHOLDER_NAMES = ['a', 'b', 'c', 'd']
+
+// A server format string such as "at most %d favourites" becomes a regex that
+// reads the varying parts back out of the finished sentence.
+function compile(format: string, key: string) {
+  const source = format.split(/(%[dsq])/).map(part => {
+    if (part === '%d') return '(\\d+)'
+    if (part === '%q') return '"(.*)"'
+    if (part === '%s') return '(.+?)'
+    return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  }).join('')
+  return { key, pattern: new RegExp(`^${source}$`), literal: format.replace(/%[dsq]/g, '').length }
+}
+
+const SENTENCE_KEYS = new Map(SENTENCES.filter(([format]) => !format.includes('%')).map(([format, key]) => [format, key]))
+// The most specific format (the most fixed text) wins over a generic "%s is required".
+const SENTENCE_FORMATS = SENTENCES.filter(([format]) => format.includes('%')).map(([format, key]) => compile(format, key))
+  .sort((a, b) => b.literal - a.literal)
+
+function formatSentence(message: string): string | null {
+  const exact = SENTENCE_KEYS.get(message)
+  if (exact) return t(`errors.detail.${exact}`)
+  for (const { key, pattern } of SENTENCE_FORMATS) {
+    const match = message.match(pattern)
+    if (match) return t(`errors.detail.${key}`, Object.fromEntries(match.slice(1).map((value, i) => [PLACEHOLDER_NAMES[i] ?? `p${i}`, word(value)])))
+  }
+  return null
+}
+
 /** The localized sentence for a known server message, or null. */
 export function formatDetailMessage(message: string): string | null {
   if (Object.prototype.hasOwnProperty.call(DETAILS, message)) {
@@ -103,5 +147,5 @@ export function formatDetailMessage(message: string): string | null {
     const match = message.match(pattern)
     if (match) return format(...match.slice(1))
   }
-  return null
+  return formatSentence(message)
 }
