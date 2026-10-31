@@ -1,0 +1,56 @@
+.env.example
+  h_0ff4f4713441f4 356-360
+cmd/server/main.go
+  h_0ff4f4713441f4 23,25,111-116
+doc/deployment.md
+  h_0ff4f4713441f4 25-51
+doc/operations.md
+  h_0ff4f4713441f4 180
+docker-compose.yml
+  h_0ff4f4713441f4 144,168
+internal/config/config.go
+  h_0ff4f4713441f4 71-73
+internal/config/config_env.go
+  h_0ff4f4713441f4 133
+internal/config/config_test.go
+  h_0ff4f4713441f4 629-638,656,658
+internal/config/config_validate.go
+  h_0ff4f4713441f4 11-12,57-61
+internal/debugsrv/debugsrv.go
+  h_0ff4f4713441f4 1-79
+internal/debugsrv/debugsrv_test.go
+  h_0ff4f4713441f4 1-83
+internal/memlimit/memlimit.go
+  h_0ff4f4713441f4 1-81
+internal/memlimit/memlimit_test.go
+  h_0ff4f4713441f4 1-100
+internal/sfu/bwe.go
+  h_0ff4f4713441f4 107,115-116,118-121
+internal/sfu/bwe_test.go
+  h_0ff4f4713441f4 42,60
+internal/sfu/perpacket_alloc_test.go
+  h_0ff4f4713441f4 1-60
+internal/sfu/rtcp_scan.go
+  h_0ff4f4713441f4 1-46
+internal/sfu/telemetry.go
+  h_0ff4f4713441f4 44-47,49-53,56-66
+internal/sfu/transport.go
+  h_0ff4f4713441f4 50-56,58-61
+internal/sfu/transport_test.go
+  h_0ff4f4713441f4 266-273
+internal/sfu/viewer_track.go
+  h_0ff4f4713441f4 58-59,288-293,297,300
+internal/turnrelay/generator.go
+  h_0ff4f4713441f4 19-22,71-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0769953eb9d5c99b64f23c05577a9dae0a8edca0",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
