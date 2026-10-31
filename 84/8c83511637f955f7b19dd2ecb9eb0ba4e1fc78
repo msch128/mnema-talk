@@ -1,0 +1,41 @@
+api/openapi.json
+  s_5b748b0295d2f4::t_ca2fc26045625e 36784
+internal/sfu/keyframe_test.go
+  s_5b748b0295d2f4::t_a3b3b0f303e88f 32-41
+internal/ws/handle.go
+  s_5b748b0295d2f4::t_eb36e52dbb0e12 70,90-121
+internal/ws/hub_behaviour_test.go
+  s_f25d7044ea294b::t_f2e38a2383b476 204-206,598-620
+internal/ws/lifecycle.go
+  s_5b748b0295d2f4::t_9bc1fdcb032163 81
+web/src/composables/useWebRTC.devices.test.ts
+  s_5b748b0295d2f4::t_2148e0091a3ea0 103,111,113-115
+web/src/composables/webrtc/camera.ts
+  s_5b748b0295d2f4::t_369068cc27babf 40-41
+web/src/types/events.ts
+  s_5b748b0295d2f4::t_9ab545e7dfbe8e 163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "848c83511637f955f7b19dd2ecb9eb0ba4e1fc78",
+  "prompts": {},
+  "sessions": {
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f25d7044ea294b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-server-rail-8b6f70bd624eb14f",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
