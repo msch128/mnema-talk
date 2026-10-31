@@ -201,6 +201,9 @@ func TestSignalingRejectsMalformedAndUnavailableSubscriptions(t *testing.T) {
 	if err := room.PublishTestVideo(c.User.ID, sfu.SourceCamera); err != nil {
 		t.Fatal(err)
 	}
+	// Its own camera and screen are asked for by name; this must neither panic nor need a watched video.
+	c.handle("webrtc_request_keyframe", []byte(`{"source":"camera"}`))
+	c.handle("webrtc_request_keyframe", []byte(`{"source":"screen"}`))
 	c.handle("webrtc_camera_stop", nil)
 	if room.MediaStates()[c.User.ID].Camera {
 		t.Fatal("camera_stop retained the published camera")

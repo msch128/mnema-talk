@@ -540,6 +540,13 @@ host:
   capability keeps getting `desktop_set_badge`, and a browser gets neither. No
   `web_client_api` bump. Allowed only in the instance window, like the other
   notification commands.
+* **Mark all as read** (from the rail's menu, desktop 1.3). The host cannot
+  reach the chat store, so it runs
+  `window.dispatchEvent(new CustomEvent('mnema-desktop:mark-all-read'))` in the
+  page of that server. The instance window (`role: 'instance'` only) marks every
+  channel and conversation read through the same path as the sidebar
+  (`useDesktopMarkRead`, started by `useAppBadge`); the new counts reach the rail by the unread report
+  above, which fires whenever the read states change. Nothing is sent back.
 
 ### Why this keeps the browser model intact
 

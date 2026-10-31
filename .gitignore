@@ -98,3 +98,6 @@ scripts/tests/__pycache__/
 __pycache__/
 *.pyc
 /loadtest-results/
+
+# A symlinked web/node_modules (worktrees) is not matched by the directory pattern above.
+/web/node_modules

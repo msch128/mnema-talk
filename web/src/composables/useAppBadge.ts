@@ -6,9 +6,12 @@ import { computed, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { platform } from '../lib/platform'
 import { aggregateActivity } from '../lib/channelActivity'
+import { useDesktopMarkRead } from './useDesktopMarkRead'
 
 export function useAppBadge() {
   const chat = useChatStore()
+  // The rail's "Mark all as read" clears the same counts this reports.
+  useDesktopMarkRead()
   const activity = computed(() => {
     const states = chat.readStates
     return aggregateActivity(Object.keys(states).map(id => ({ id })), states)

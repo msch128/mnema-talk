@@ -47,40 +47,51 @@ describe('server reasons reach the user in their language', () => {
   })
 })
 
-/** Plain string literals of httpx.Err*("...") calls in the files of the 1.0 features. */
-const FILES = [
-  'poll/input.go', 'poll/store.go', 'poll/handler.go',
-  'emoji/store.go', 'emoji/handler.go', 'emoji/image.go',
-  'push/store.go', 'push/handler.go', 'push/validate.go',
-  'chat/pins.go', 'chat/message_types.go', 'chat/message_mutations.go',
-  'auth/account_delete.go', 'auth/account_export.go', 'auth/email.go', 'auth/email_handler.go',
-  'auth/two_factor_store.go', 'auth/two_factor_handler.go'
-]
-
-// Messages that the UI never shows as they are: developer-facing or covered by a generic code text.
-const IGNORED = [
-  /^moderation needs the permission service$/, /^edit history needs the permission service$/,
-  /^user not found$/
-]
-
-function literals(file: string): string[] {
-  const src = readFileSync(join(process.cwd(), '..', 'internal', file), 'utf8')
-  const found: string[] = []
-  for (const m of src.matchAll(/httpx\.Err(?:Conflict|Forbidden|Unavailable|InvalidInput|NotFound|UnsupportedMediaType)\(\s*"((?:[^"\\]|\\.)*)"\s*\)/g)) {
-    found.push((m[1] ?? '').replace(/\\"/g, '"'))
-  }
-  return found
+/** A message the server could send: the n-th placeholder is filled with 70+n so each one can be found again. */
+function sample(format: string): { message: string; values: string[] } {
+  const values: string[] = []
+  const message = format.replace(/%[dsq]/g, (verb) => {
+    const value = String(71 + values.length)
+    values.push(value)
+    return verb === '%q' ? `"${value}"` : value
+  })
+  return { message, values }
 }
 
-describe('every sentence the 1.0 features can answer with is localized', () => {
-  const all = FILES.flatMap(file => literals(file).map(message => ({ file, message })))
+// Older texts that leave the value out on purpose (a permission id or a list of durations means nothing to a member).
+const WITHOUT_VALUE = new Set(['cannot change a permission you do not have: %s', 'cannot grant a permission you do not have: %s', 'missing permission: %s', 'duration must be one of %s', 'password must be at most %d bytes'])
+
+describe('every sentence the server can answer with is localized', () => {
+  const catalogue = JSON.parse(readFileSync(join(process.cwd(), '..', 'internal', 'repo', 'testdata', 'error_messages.golden.json'), 'utf8')) as string[]
 
   it('finds the sentences', () => {
-    expect(all.length).toBeGreaterThan(25)
+    expect(catalogue.length).toBeGreaterThan(300)
   })
 
-  it.each(all)('$file: $message', ({ message }) => {
-    if (IGNORED.some(pattern => pattern.test(message))) return
-    expect(formatDetailMessage(message), `no localized text for "${message}"`).not.toBeNull()
+  it.each(catalogue)('%s', (format) => {
+    const { message, values } = sample(format)
+    const shown = formatDetailMessage(message)
+    expect(shown, `no localized text for "${format}"`).not.toBeNull()
+    expect(shown).not.toMatch(/\{[a-d]\}/)
+    expect(shown).not.toBe(message)
+    for (const value of WITHOUT_VALUE.has(format) ? [] : values) expect(shown, `the value ${value} is missing`).toContain(value)
+  })
+
+  it('reads the varying parts of a sentence back out', () => {
+    expect(formatDetailMessage('at most 12 favourites')).toBe('Höchstens 12 Favoriten.')
+    expect(formatDetailMessage('sort_order must be between -1000 and 1000')).toContain('-1000')
+    expect(formatDetailMessage('max_upload_mb must be between 1 and 500')).toContain('500')
+  })
+
+  it('shows English words the server fills in as translated words', () => {
+    expect(formatDetailMessage('this event is cancelled and cannot be cancelled')).toContain('abgesagt')
+    expect(formatDetailMessage('this event is active and takes no more responses')).toContain('live')
+    expect(formatDetailMessage('the banner is larger than 8 MB after processing')).toContain('Banner')
+    expect(formatDetailMessage('code is too easy to guess (too repetitive); leave it empty for a random code or use at least 8 hard-to-guess characters')).toContain('zu eintönig')
+    expect(formatDetailMessage('code is too easy to guess (shorter than 6 characters); leave it empty for a random code or use at least 8 hard-to-guess characters')).toContain('kürzer als 6 Zeichen')
+  })
+
+  it('answers null for a sentence it does not know', () => {
+    expect(formatDetailMessage('something brand new happened')).toBeNull()
   })
 })

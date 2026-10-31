@@ -29,11 +29,16 @@ func TestRequestSourceKeyframeTargetsPublisherSource(t *testing.T) {
 		r.trackLocals[key] = &TrackInfo{SenderID: pub.user, Kind: webrtc.RTPCodecTypeVideo, Source: pub.source, publisher: peers[pub.user]}
 	}
 
-	r.RequestSourceKeyframe(sharer, SourceScreen)
-	for _, info := range r.trackLocals {
-		want := info.SenderID == sharer && info.Source == SourceScreen
-		if got := info.lastPLI.Load() != 0; got != want {
-			t.Errorf("sharer=%v source=%s: keyframe requested %v, want %v", info.SenderID == sharer, info.Source, got, want)
+	for _, source := range []Source{SourceScreen, SourceCamera} {
+		for _, info := range r.trackLocals {
+			info.lastPLI.Store(0)
+		}
+		r.RequestSourceKeyframe(sharer, source)
+		for _, info := range r.trackLocals {
+			want := info.SenderID == sharer && info.Source == source
+			if got := info.lastPLI.Load() != 0; got != want {
+				t.Errorf("request %s: sharer=%v source=%s: keyframe requested %v, want %v", source, info.SenderID == sharer, info.Source, got, want)
+			}
 		}
 	}
 }
