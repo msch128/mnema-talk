@@ -161,6 +161,39 @@ docker compose pull app && docker compose up -d
 Then update with `docker compose pull app && docker compose up -d app`, or
 from the admin console (see [Updates](#updates)).
 
+## Hardware by size
+
+What a server needs depends on the largest Talk you run, not on how many
+members have an account: chat is cheap (1,000 connected chat sessions used about
+0.7 of a core and 100 MB in the [benchmark](benchmark.md)), while every video
+stream the server forwards costs CPU, memory and upload bandwidth. The rows
+below come from the [sizing guide](benchmark.md#sizing-guide) and describe one
+Talk at a time with 3 speakers, plus the screen share or cameras named.
+
+| Talk | CPU to plan for | RAM (`APP_MEM_LIMIT`) | Server upload |
+|---|---|---|---|
+| About 10 members, voice only | 0.1 core | 1 GB (the default) | 1 Mbit/s |
+| About 25 members, with 1 screen share (1.5 Mbit/s) | 0.5 core | 1 GB (the default) | about 51 Mbit/s |
+| About 50 members, 1 screen share and 4 cameras (300 kbit/s each) | 1.4 cores | 1.5 GB | about 180 Mbit/s |
+| About 100 members, voice and 1 screen share | 1.9 cores | 1 GB (the default) | about 208 Mbit/s |
+| More than that, or several Talks at once | Measure it ([benchmark](benchmark.md#reproduce)) | | |
+
+CPU is in cores of an Intel N100, the benchmark's test host, and already
+doubled from the fitted value because bursts lose packets well before 100 %
+load. A modern server CPU is usually at least as fast per core, but that was
+not calibrated on other hardware. The upload column is what the server's
+internet connection must carry while the Talk is running.
+
+**Upload bandwidth, not CPU, is usually the limit for video on a home
+connection.** A screen share watched by 25 members already needs about 51 Mbit/s
+upstream, more than many home lines offer, and a VPS with a fast uplink or fewer
+simultaneous viewers solves that where a faster CPU does not.
+
+Shapes with many cameras and 100 members did not hold on the test host (they
+lost packets), and several Talks at once and longer runs were not measured. For
+anything beyond the table, run the measurement on your own hardware: see the
+method, the caveats and the way to reproduce it in the [benchmark](benchmark.md).
+
 ## Supported platforms
 
 Images are published for **linux/amd64** and **linux/arm64** (e.g. Raspberry Pi
