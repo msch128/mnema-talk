@@ -1,0 +1,19 @@
+.gitignore
+  s_5b748b0295d2f4::t_759dc049e8e7ed 101-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d4f56f83c9a9ac9bc6f621cc907422128be48b4f",
+  "prompts": {},
+  "sessions": {
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
