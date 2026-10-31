@@ -14,6 +14,7 @@ type memberResult struct {
 	Role          string               `json:"role"`
 	Relayed       bool                 `json:"relayed"`
 	SentBytes     int64                `json:"sent_bytes"`
+	SentPackets   int64                `json:"sent_packets"`
 	Received      map[mediaClass]int64 `json:"received_bytes,omitempty"`
 	Connected     bool                 `json:"connected"`
 	EverConnected bool                 `json:"ever_connected"`
@@ -62,6 +63,7 @@ type result struct {
 	Roles   map[string]int             `json:"roles"`
 	Media   map[mediaClass]classResult `json:"media,omitempty"`
 	Server  lt.ServerSummary           `json:"server"`
+	Stages  *stageSplit                `json:"packet_stages,omitempty"`
 	// GeneratorCores is the CPU this tool used itself, in cores on average.
 	GeneratorCores float64          `json:"generator_cpu_cores"`
 	Thresholds     *voiceThresholds `json:"thresholds,omitempty"`
@@ -105,7 +107,7 @@ func firstVideoMs(m *member) (int64, bool) {
 // details are kept only for members that never connected.
 func newMemberResult(m *member) memberResult {
 	mr := memberResult{
-		ID: m.id, Role: m.role.String(), SentBytes: m.sentB.Load(), Connected: m.connected.Load(), EverConnected: m.everConn.Load(),
+		ID: m.id, Role: m.role.String(), SentBytes: m.sentB.Load(), SentPackets: m.sentPkt.Load(), Connected: m.connected.Load(), EverConnected: m.everConn.Load(),
 		ConnectMs: m.connMs.Load(), VideoBytes: m.videoB.Load(), AudioTracks: m.audioT.Load(),
 		Offers: m.offers.Load(), Flaps: m.flaps.Load(), CandSent: m.candSent.Load(),
 		CandRecv: m.candRecv.Load(), CandErrors: m.candErr.Load(), MaxStallMs: m.maxStallMs.Load(),

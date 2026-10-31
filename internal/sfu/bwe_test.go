@@ -39,7 +39,7 @@ func receiverReportBytes(t *testing.T) []byte {
 	return raw
 }
 
-func TestHasTransportFeedback(t *testing.T) {
+func TestTransportFeedbackOfFindsOnlyTransportWideFeedback(t *testing.T) {
 	twcc, rr := twccFeedback(t), receiverReportBytes(t)
 	nack, err := (&rtcp.TransportLayerNack{SenderSSRC: 1, MediaSSRC: 2, Nacks: []rtcp.NackPair{{PacketID: 1}}}).Marshal()
 	if err != nil {
@@ -57,7 +57,7 @@ func TestHasTransportFeedback(t *testing.T) {
 		"twcc after report": {append(append([]byte{}, rr...), twcc...), true},
 		"truncated":         {append(append([]byte{}, rr...), 0x8f, 205, 0xff, 0xff, 0), false},
 	} {
-		if got := hasTransportFeedback(tc.in); got != tc.want {
+		if got := len(transportFeedbackOf(tc.in)) > 0; got != tc.want {
 			t.Errorf("%s: %v, want %v", name, got, tc.want)
 		}
 	}

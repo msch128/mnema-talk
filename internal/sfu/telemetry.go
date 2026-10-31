@@ -41,21 +41,28 @@ func (*telemetryInterceptor) BindRTCPReader(r interceptor.RTCPReader) intercepto
 	})
 }
 
-// countFeedback tallies NACK, PLI and FIR feedback in an RTCP batch.
+// countFeedback tallies NACK, PLI and FIR feedback in an RTCP batch. A PLI or
+// FIR is counted from its header alone and only a NACK is decoded (for the
+// packets it asks for); the receiver reports and transport feedback that make
+// up most batches are not parsed here.
 func countFeedback(raw []byte) {
-	pkts, err := rtcp.Unmarshal(raw)
-	if err != nil {
-		return
-	}
-	for _, p := range pkts {
-		switch f := p.(type) {
-		case *rtcp.TransportLayerNack:
-			metrics.SFUNackRequests.Inc()
-			for _, pair := range f.Nacks {
-				metrics.SFUNackPackets.Add(uint64(bits.OnesCount16(uint16(pair.LostPackets))) + 1)
-			}
-		case *rtcp.PictureLossIndication, *rtcp.FullIntraRequest:
+	scanRTCP(raw, func(typ byte, format uint8, pkt []byte) {
+		switch {
+		case typ == rtcpTypeTransportFeedback && format == fmtNACK:
+			countNack(pkt)
+		case typ == rtcpTypePayloadFeedback && (format == fmtPLI || format == fmtFIR):
 			metrics.SFUKeyframeRequests.Inc()
 		}
+	})
+}
+
+func countNack(raw []byte) {
+	var nack rtcp.TransportLayerNack
+	if nack.Unmarshal(raw) != nil {
+		return
+	}
+	metrics.SFUNackRequests.Inc()
+	for _, pair := range nack.Nacks {
+		metrics.SFUNackPackets.Add(uint64(bits.OnesCount16(uint16(pair.LostPackets))) + 1)
 	}
 }

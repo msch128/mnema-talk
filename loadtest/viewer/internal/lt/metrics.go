@@ -155,7 +155,7 @@ func (s *Sampler) loop(ctx context.Context) {
 	}
 }
 
-func (s *Sampler) sampleNow(ctx context.Context) {
+func (s *Sampler) sampleNow(ctx context.Context) (Sample, bool) {
 	smp, err := s.scraper.Scrape(ctx, s.phase.Load().(string))
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -163,20 +163,23 @@ func (s *Sampler) sampleNow(ctx context.Context) {
 		if ctx.Err() == nil {
 			s.errs++
 		}
-		return
+		return Sample{}, false
 	}
 	s.samples = append(s.samples, smp)
+	return smp, true
 }
 
 // SetPhase labels the samples that follow.
 func (s *Sampler) SetPhase(p string) { s.phase.Store(p) }
 
-// Mark takes a sample right now, for the edges of a phase.
-func (s *Sampler) Mark(phase string) {
+// Mark takes a sample right now, for the edges of a phase, and returns it
+// (false when the server is not measured or did not answer).
+func (s *Sampler) Mark(phase string) (Sample, bool) {
 	s.SetPhase(phase)
-	if s.scraper != nil {
-		s.sampleNow(context.Background())
+	if s.scraper == nil {
+		return Sample{}, false
 	}
+	return s.sampleNow(context.Background())
 }
 
 // Stop ends the sampling and returns the samples and the number of failed scrapes.

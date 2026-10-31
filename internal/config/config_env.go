@@ -130,6 +130,7 @@ func (r *envReader) textSettings() *Config {
 		WebRTCBuiltinTURN:     strings.ToLower(r.get("WEBRTC_BUILTIN_TURN", BuiltinTURNAuto)),
 		WebRTCBuiltinTURNHost: r.get("WEBRTC_BUILTIN_TURN_HOST", ""),
 		MetricsToken:          r.get("METRICS_TOKEN", ""),
+		PprofAddr:             r.get("PPROF_ADDR", ""),
 		WebRTCAnnounce:        SplitList(r.get("WEBRTC_NAT_1TO1_IP", "")),
 		WebRTCLANIPs:          SplitList(r.get("WEBRTC_LAN_IP", "")),
 		WebRTCSTUNURLs:        SplitList(r.get("WEBRTC_STUN_URLS", "")),

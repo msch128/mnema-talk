@@ -47,8 +47,18 @@ func openUDPMux(port, portMin, portMax uint16, announceIPs []string) (ice.UDPMux
 	return mux, nil
 }
 
+// udpSocketBuffer is the kernel buffer asked for on every media socket. A
+// screen frame arrives as a burst of ten or more packets and a keyframe as
+// 40 or more; the default (about 208 KB) overflows when the reader is briefly
+// short of CPU, and the loss shows up as broken video. The kernel grants at
+// most net.core.rmem_max / wmem_max (doc/deployment.md, "UDP socket buffers").
+const udpSocketBuffer = 4 << 20
+
 func buildUDPMuxOptions(announceIPs []string) []ice.UDPMuxFromPortOption {
-	var options []ice.UDPMuxFromPortOption
+	options := []ice.UDPMuxFromPortOption{
+		ice.UDPMuxFromPortWithReadBufferSize(udpSocketBuffer),
+		ice.UDPMuxFromPortWithWriteBufferSize(udpSocketBuffer),
+	}
 	if filter := announceIPFilter(announceIPs); filter != nil {
 		options = append(options, ice.UDPMuxFromPortWithIPFilter(filter))
 	}

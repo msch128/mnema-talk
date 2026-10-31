@@ -21,6 +21,9 @@ type ServerSummary struct {
 	// Deltas are the growth of the counters between the first and last
 	// loaded sample, by metric name.
 	Deltas map[string]float64 `json:"counter_deltas,omitempty"`
+	// RunDeltas are the growth between the first and the last sample of the
+	// whole run, for balancing packets sent against packets received.
+	RunDeltas map[string]float64 `json:"run_counter_deltas,omitempty"`
 }
 
 // loadedPhase says whether a phase counts as under load.
@@ -55,7 +58,10 @@ func SummarizeServer(samples []Sample, scrapeErrors int) ServerSummary {
 	s.GoroutinesPost = firstOf(samples, "post", "go_goroutines", true)
 	if len(loaded) >= 2 {
 		s.CPUCoresAvg, s.CPUCoresPeak = cpuCores(loaded)
-		s.Deltas = counterDeltas(loaded[0], loaded[len(loaded)-1])
+		s.Deltas = CounterDeltas(loaded[0], loaded[len(loaded)-1])
+	}
+	if len(samples) >= 2 {
+		s.RunDeltas = CounterDeltas(samples[0], samples[len(samples)-1])
 	}
 	if len(hold) >= 2 {
 		s.CPUCoresHold, _ = cpuCores(hold)
@@ -99,8 +105,8 @@ func cpuCores(loaded []Sample) (avg, peak float64) {
 	return avg, max(peak, avg)
 }
 
-// counterDeltas returns how far the counters grew between two samples.
-func counterDeltas(a, b Sample) map[string]float64 {
+// CounterDeltas returns how far the counters grew between two samples.
+func CounterDeltas(a, b Sample) map[string]float64 {
 	out := map[string]float64{}
 	for name, v := range b.Values {
 		if !isCounter(name) {

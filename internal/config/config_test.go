@@ -626,13 +626,16 @@ func TestMalformedNumericSettingsNameTheirField(t *testing.T) {
 
 func TestUploadRelayAndMetricsValidation(t *testing.T) {
 	for name, changes := range map[string]map[string]string{
-		"upload zero":         {"MAX_UPLOAD_SIZE_MB": "0"},
-		"upload oversized":    {"MAX_UPLOAD_SIZE_MB": "2049"},
-		"negative quota":      {"UPLOAD_QUOTA_MB_PER_DAY": "-1"},
-		"negative total cap":  {"MEDIA_MAX_TOTAL_MB": "-1"},
-		"negative free floor": {"MEDIA_MIN_FREE_MB": "-1"},
-		"TURN weak secret":    {"WEBRTC_TURN_URLS": "turn:relay.example.com:3478", "WEBRTC_TURN_SECRET": "short"},
-		"metrics weak token":  {"METRICS_TOKEN": "short"},
+		"upload zero":            {"MAX_UPLOAD_SIZE_MB": "0"},
+		"upload oversized":       {"MAX_UPLOAD_SIZE_MB": "2049"},
+		"negative quota":         {"UPLOAD_QUOTA_MB_PER_DAY": "-1"},
+		"negative total cap":     {"MEDIA_MAX_TOTAL_MB": "-1"},
+		"negative free floor":    {"MEDIA_MIN_FREE_MB": "-1"},
+		"TURN weak secret":       {"WEBRTC_TURN_URLS": "turn:relay.example.com:3478", "WEBRTC_TURN_SECRET": "short"},
+		"metrics weak token":     {"METRICS_TOKEN": "short"},
+		"pprof on all addresses": {"PPROF_ADDR": "0.0.0.0:6060"},
+		"pprof without a host":   {"PPROF_ADDR": ":6060"},
+		"pprof public host":      {"PPROF_ADDR": "192.0.2.1:6060"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			env := base()
@@ -650,8 +653,9 @@ func TestUploadRelayAndMetricsValidation(t *testing.T) {
 	env["WEBRTC_TURN_URLS"] = "turn:relay.example.com:3478"
 	env["WEBRTC_TURN_SECRET"] = strings.Repeat("t", 16)
 	env["METRICS_TOKEN"] = strings.Repeat("m", 24)
+	env["PPROF_ADDR"] = "127.0.0.1:6060"
 	cfg, err := FromEnv(lookup(env))
-	if err != nil || cfg.AppEnv != "development" || cfg.MaxUploadMB != 2048 {
+	if err != nil || cfg.AppEnv != "development" || cfg.MaxUploadMB != 2048 || cfg.PprofAddr != "127.0.0.1:6060" {
 		t.Fatalf("valid boundary settings: cfg=%v err=%v", cfg, err)
 	}
 }

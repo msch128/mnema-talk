@@ -172,6 +172,7 @@ func (m *member) sendVideo(track *webrtc.TrackLocalStaticRTP, src *vp8Source) {
 		for _, p := range src.nextFrame() {
 			if track.WriteRTP(p) == nil {
 				m.sentB.Add(int64(len(p.Payload)))
+				m.sentPkt.Add(1)
 			}
 		}
 	})
@@ -183,6 +184,7 @@ func (m *member) sendAudio(track *webrtc.TrackLocalStaticRTP) {
 		p := src.next()
 		if track.WriteRTP(p) == nil {
 			m.sentB.Add(int64(len(p.Payload)))
+			m.sentPkt.Add(1)
 		}
 	})
 }

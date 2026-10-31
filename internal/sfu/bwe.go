@@ -104,7 +104,7 @@ func (b *bweInterceptor) BindRTCPReader(r interceptor.RTCPReader) interceptor.RT
 			attr = interceptor.Attributes{}
 		}
 		attr.Set(bweKey{}, bandwidthSource(b))
-		if n > 0 && hasTransportFeedback(buf[:n]) {
+		if n > 0 {
 			b.feedEstimator(buf[:n], attr)
 		}
 		return n, attr, nil
@@ -112,42 +112,19 @@ func (b *bweInterceptor) BindRTCPReader(r interceptor.RTCPReader) interceptor.RT
 }
 
 // feedEstimator hands the transport-wide feedback in the compound RTCP packet
-// to the bandwidth estimator. Unmarshal copies what it keeps, and the
-// estimator gets nothing else.
+// to the bandwidth estimator. Only those packets are decoded (Unmarshal copies
+// what it keeps), and the estimator gets nothing else.
 func (b *bweInterceptor) feedEstimator(compound []byte, attr interceptor.Attributes) {
-	pkts, err := rtcp.Unmarshal(compound)
-	if err != nil {
-		return
-	}
-	for _, p := range pkts {
-		if fb, ok := p.(*rtcp.TransportLayerCC); ok {
-			b.feedback.Add(1)
-			// An estimator that cannot use a feedback must not stop the reader.
-			_ = b.est.WriteRTCP([]rtcp.Packet{fb}, attr)
-		}
+	for _, fb := range transportFeedbackOf(compound) {
+		b.feedback.Add(1)
+		// An estimator that cannot use a feedback must not stop the reader.
+		_ = b.est.WriteRTCP([]rtcp.Packet{fb}, attr)
 	}
 }
 
 func (b *bweInterceptor) Close() error {
 	b.closeOnce.Do(func() { b.closeErr = b.est.Close() })
 	return b.closeErr
-}
-
-// hasTransportFeedback reports whether the compound RTCP packet holds
-// transport-wide congestion control feedback (a transport layer feedback with
-// format 15), looking at the headers only.
-func hasTransportFeedback(b []byte) bool {
-	for len(b) >= 4 {
-		size := 4 * (1 + (int(b[2])<<8 | int(b[3])))
-		if size > len(b) {
-			return false
-		}
-		if b[1] == 205 && b[0]&0x1f == 15 {
-			return true
-		}
-		b = b[size:]
-	}
-	return false
 }
 
 // passPacer is gcc's pacer without pacing: it hands a packet to the writer of
