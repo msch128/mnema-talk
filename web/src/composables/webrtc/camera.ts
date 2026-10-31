@@ -37,7 +37,8 @@ async function attachCameraTrack(cx: Cx, track: MediaStreamTrack) {
   if (cx.st.cameraSender) {
     await cx.st.cameraSender.replaceTrack(track).catch(() => {})
     await tuneSender(cx.st.cameraSender, cameraSenderParams(cx))
-    cx.chat.sendWSEvent('webrtc_request_keyframe', {})
+    // The server asks the sender's own camera; a plain request is for the videos it watches.
+    cx.chat.sendWSEvent('webrtc_request_keyframe', { source: 'camera' })
   }
 }
 

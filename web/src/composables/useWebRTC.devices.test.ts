@@ -100,7 +100,7 @@ describe('webcam', () => {
   })
 
   it('prefers the chosen camera without requiring it, and restarts a running camera on a new choice', async () => {
-    const { rtc, voice } = await joined()
+    const { rtc, voice, sent } = await joined()
     voice.selectedCameraDeviceId = 'cam-2'
     vi.mocked(navigator.mediaDevices.getUserMedia).mockImplementationOnce(async () => fakeStream(['video']))
     await rtc.startCamera()
@@ -108,7 +108,11 @@ describe('webcam', () => {
 
     voice.selectedCameraDeviceId = 'cam-3'
     vi.mocked(navigator.mediaDevices.getUserMedia).mockImplementationOnce(async () => fakeStream(['video']))
+    sent.length = 0
     await rtc.restartCamera()
+    // Viewers need a fresh picture from the new device: the server must ask our own camera, not the videos we watch.
+    expect(sent).toContainEqual({ type: 'webrtc_request_keyframe', payload: { source: 'camera' } })
+    expect(sent).not.toContainEqual({ type: 'webrtc_request_keyframe', payload: {} })
     expect(present(present(vi.mocked(navigator.mediaDevices.getUserMedia).mock.calls.at(-1))[0]).video).toMatchObject({ deviceId: { ideal: 'cam-3' } })
     expect(voice.isCameraOn).toBe(true)
 

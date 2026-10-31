@@ -160,7 +160,7 @@ export interface ClientEventPayloads {
   webrtc_answer: RTCSessionDescriptionInit
   webrtc_candidate: RTCIceCandidateInit
   webrtc_diag: { [key: string]: JsonValue | undefined }
-  webrtc_request_keyframe: Record<string, never>
+  webrtc_request_keyframe: { source?: 'screen' | 'camera' }
   webrtc_subscribe: SubscribeRequest
   webrtc_layers: { layers: ScreenLayer[] }
   webrtc_screenshare_start: Record<string, never>
