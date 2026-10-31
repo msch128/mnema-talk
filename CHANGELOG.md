@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.4.0](https://github.com/msch128/mnema-talk/compare/v2.3.0...v2.4.0) (2026-10-31)
+
+
+### Features
+
+* **loadtest:** scenario spec, camera view, kernel counters, packet stage split and pprof capture ([#579](https://github.com/msch128/mnema-talk/issues/579)) ([765243f](https://github.com/msch128/mnema-talk/commit/765243fcaafe21d5b004152a2e2e5e676ab20c8c))
+
+
+### Bug Fixes
+
+* **web:** answer every server error sentence with a row of its own ([#578](https://github.com/msch128/mnema-talk/issues/578)) ([765243f](https://github.com/msch128/mnema-talk/commit/765243fcaafe21d5b004152a2e2e5e676ab20c8c))
+
+
+### Performance Improvements
+
+* **sfu:** memory limit from the cgroup, larger UDP buffers, fewer per-packet allocations, loopback pprof ([#580](https://github.com/msch128/mnema-talk/issues/580)) ([765243f](https://github.com/msch128/mnema-talk/commit/765243fcaafe21d5b004152a2e2e5e676ab20c8c))
+
 ## [2.3.0](https://github.com/msch128/mnema-talk/compare/v2.2.0...v2.3.0) (2026-10-31)
 
 
