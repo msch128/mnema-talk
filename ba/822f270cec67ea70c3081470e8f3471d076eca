@@ -1,0 +1,43 @@
+internal/repo/errormessages_test.go
+  s_f25d7044ea294b::t_d159706746037b 1-174
+internal/repo/testdata/error_messages.golden.json
+  s_f25d7044ea294b::t_abd1e5b56d3359 1-428
+web/package.json
+  s_f25d7044ea294b::t_50221f7cde6d25 13
+web/scripts/check-i18n.ts
+  s_f8b5fe59428337::t_491d848cb5e717 279
+web/src/i18n/de.json
+  s_f8b5fe59428337::t_40eefcafe3f183 195-549
+web/src/i18n/en.json
+  s_f8b5fe59428337::t_20ed46597b9006 195-549
+web/src/lib/errorDetails.test.ts
+  s_f8b5fe59428337::t_6fae8542840541 50-52,55-56,59-72,75-76
+web/src/lib/errorDetails.ts
+  s_f8b5fe59428337::t_887de59791888b 5,98-127,137
+web/src/lib/errorSentences.ts
+  s_f8b5fe59428337::t_8af2b31d3ce888 1-360
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ba822f270cec67ea70c3081470e8f3471d076eca",
+  "prompts": {},
+  "sessions": {
+    "s_f25d7044ea294b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-server-rail-8b6f70bd624eb14f",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f8b5fe59428337": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-i18n-d461c25d928b7cff",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
