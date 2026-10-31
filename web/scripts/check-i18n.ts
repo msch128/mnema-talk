@@ -276,7 +276,7 @@ function walkDir(dir: string, out: string[] = []): string[] {
   return out
 }
 
-const SKIP = /\.(test|fixture|spec)\.ts$|errorSentences\.ts$|\.d\.ts$|\/i18n\/|\/sw\/|\.generated\./
+const SKIP = /\.(test|fixture|spec)\.ts$|errorSentences[A-C]?\.ts$|\.d\.ts$|\/i18n\/|\/sw\/|\.generated\./
 
 export function scanTree(srcDir: string): Finding[] {
   const out: Finding[] = []
