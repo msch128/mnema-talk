@@ -1,0 +1,25 @@
+doc/desktop-trusted-client.md
+  s_f8b5fe59428337::t_1f0e4878cb4498 543-549
+web/src/composables/useAppBadge.ts
+  s_f8b5fe59428337::t_8dc88458b6dd64 9,13-14
+web/src/composables/useDesktopMarkRead.test.ts
+  s_f8b5fe59428337::t_1dea303f18f59b 1-73
+web/src/composables/useDesktopMarkRead.ts
+  s_f8b5fe59428337::t_e8ece368db5e0d 1-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a6fd60cafb4d8481e31608c112e1f3aad69c4edc",
+  "prompts": {},
+  "sessions": {
+    "s_f8b5fe59428337": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-i18n-d461c25d928b7cff",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
