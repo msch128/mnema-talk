@@ -1,0 +1,23 @@
+doc/desktop-trusted-client.md
+  s_f25d7044ea294b::t_1e2b3a431d65a8 548
+web/src/composables/useAppBadge.ts
+  s_f25d7044ea294b::t_56e762c85bb9d3 9,13-14
+web/src/composables/useDesktopMarkRead.test.ts
+  s_f25d7044ea294b::t_ca3d762160fddf 17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7b06bda991a20ce288fb522c0e874566e69c7c32",
+  "prompts": {},
+  "sessions": {
+    "s_f25d7044ea294b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adesk-server-rail-8b6f70bd624eb14f",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
