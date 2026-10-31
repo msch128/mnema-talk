@@ -84,8 +84,8 @@ func (m *member) countTrack(tr *webrtc.TrackRemote) {
 }
 
 // keepSubscribed renews the subscriptions every 5 s until the member stops:
-// the screens it watches and, when asked, every camera.
-func (m *member) keepSubscribed(sharers []string, cameras bool) {
+// the screens it watches and the cameras it keeps visible.
+func (m *member) keepSubscribed(sharers []string) {
 	t := time.NewTicker(5 * time.Second)
 	defer t.Stop()
 	for {
@@ -99,9 +99,7 @@ func (m *member) keepSubscribed(sharers []string, cameras bool) {
 			}
 			m.send("webrtc_subscribe", sub)
 		}
-		if cameras {
-			m.send("webrtc_subscribe", map[string]any{"kind": "camera", "all": true, "on": true})
-		}
+		m.subscribeCameras()
 		select {
 		case <-t.C:
 		case <-m.stop:
@@ -192,6 +190,20 @@ func run(api *webrtc.API, c viewerConfig, tk token, m *member) error {
 		go m.watchConnect(d)
 	}
 	m.send("voice_mute_state", map[string]any{"muted": !m.role.audio, "deafened": false})
-	go m.keepSubscribed(c.sharers, c.watchCameras)
+	go m.keepSubscribed(c.sharers)
 	return m.readLoop(conn, pc)
+}
+
+// cameraGap spaces the camera opt-outs: the server takes 40 events a second
+// per connection.
+const cameraGap = 30 * time.Millisecond
+
+// subscribeCameras sends the member's camera choice: every camera is on unless
+// the plan hides all of them or some of them.
+func (m *member) subscribeCameras() {
+	m.send("webrtc_subscribe", map[string]any{"kind": "camera", "all": true, "on": !m.cameras.allOff})
+	for _, id := range m.cameras.hide {
+		m.send("webrtc_subscribe", map[string]any{"kind": "camera", "user_id": id, "on": false})
+		time.Sleep(cameraGap)
+	}
 }

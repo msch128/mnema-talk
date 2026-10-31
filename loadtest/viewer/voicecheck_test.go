@@ -134,6 +134,10 @@ func TestConfigRefusesMorePublishersThanMembers(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.sharers = nil
+	if err := c.validate(); err != nil {
+		t.Fatalf("cameras are something to watch: %v", err)
+	}
+	c.roles = roleCounts{0, 0, 2}
 	if c.validate() == nil {
 		t.Fatal("a run that watches nothing was accepted")
 	}

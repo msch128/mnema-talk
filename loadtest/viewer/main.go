@@ -41,8 +41,9 @@
 // SCREEN_PUBLISHERS tokens of the slice share a screen, the next
 // CAMERA_PUBLISHERS publish a camera and the next AUDIO_PUBLISHERS speak.
 // Every member watches the screens (SHARER_ID, a comma separated list, adds
-// ones published elsewhere; the screen publishers' ids are added) and, with
-// WATCH_CAMERAS=1, every camera.
+// ones published elsewhere; the screen publishers' ids are added). Cameras
+// reach everybody by default; WATCH_CAMERAS=<n> keeps n of them visible per
+// member (the others are opted out), "none" hides all.
 //
 //	SCREEN_KBPS, SCREEN_FPS   shape of a shared screen (default 1500, 15)
 //	CAMERA_KBPS, CAMERA_FPS   shape of a camera (default 300, 24)
@@ -145,7 +146,7 @@ type viewerConfig struct {
 	channel       string
 	sharers       []string // users whose screen every member watches
 	roles         roleCounts
-	watchCameras  bool
+	cameras       cameraView // WATCH_CAMERAS
 	relay         bool
 	relayHost     string
 	metrics       string
@@ -172,7 +173,9 @@ func loadConfig() (viewerConfig, error) {
 	c.jitter = time.Duration(envInt("JITTER_MS", 0)) * time.Millisecond
 	c.channel = os.Getenv("CHANNEL_ID")
 	c.roles = roleCounts{envInt("SCREEN_PUBLISHERS", 0), envInt("CAMERA_PUBLISHERS", 0), envInt("AUDIO_PUBLISHERS", 0)}
-	c.watchCameras = lt.Bool("WATCH_CAMERAS")
+	if c.cameras, err = parseCameraView(os.Getenv("WATCH_CAMERAS")); err != nil {
+		return c, err
+	}
 	c.metrics = os.Getenv("METRICS_TOKEN")
 	c.sharers = sharerIDs(c)
 	return c, c.validate()
@@ -209,8 +212,8 @@ func (c viewerConfig) validate() error {
 	if c.channel == "" {
 		return errors.New("CHANNEL_ID is required")
 	}
-	if len(c.sharers) == 0 && !c.watchCameras {
-		return errors.New("nothing to watch: set SHARER_ID, SCREEN_PUBLISHERS or WATCH_CAMERAS=1")
+	if len(c.sharers) == 0 && c.roles.cameras == 0 {
+		return errors.New("nothing to watch: set SHARER_ID, SCREEN_PUBLISHERS or CAMERA_PUBLISHERS")
 	}
 	n := c.roles.screens + c.roles.cameras + c.roles.audio
 	if n > c.to-c.from {
@@ -219,12 +222,31 @@ func (c viewerConfig) validate() error {
 	return nil
 }
 
+// cameraIDs lists the users that publish a camera.
+func (c viewerConfig) cameraIDs() []string {
+	var ids []string
+	for i := range c.roles.cameras {
+		ids = append(ids, c.tokens[c.from+c.roles.screens+i].ID)
+	}
+	return ids
+}
+
+// memberIDs lists the users of the slice in order.
+func (c viewerConfig) memberIDs() []string {
+	var ids []string
+	for _, t := range c.tokens[c.from:c.to] {
+		ids = append(ids, t.ID)
+	}
+	return ids
+}
+
 // startMembers starts one member per token in the configured slice, spaced
 // apart.
 func startMembers(api *webrtc.API, c viewerConfig) []*member {
 	var members []*member
 	for i := c.from; i < c.to; i++ {
 		m := &member{id: c.tokens[i].ID, index: i, stop: make(chan struct{}), api: api, role: c.roles.roleOf(i - c.from)}
+		m.cameras = c.cameras.plan(m.id, i-c.from, c.cameraIDs())
 		members = append(members, m)
 		go func() {
 			if err := run(api, c, c.tokens[i], m); err != nil {

@@ -76,6 +76,9 @@ func TestSummarizeServerReadsCPUAsCoresOverTheLoadedPhases(t *testing.T) {
 	if s.RSSPeakMB != 260 || s.GoroutinesPre != 50 || s.GoroutinesPost != 55 || s.GoroutinesPeak != 410 {
 		t.Errorf("summary = %+v", s)
 	}
+	if d := s.RunDeltas["mnema_sfu_egress_bytes_total"]; d != 24100 {
+		t.Errorf("run delta = %v", d)
+	}
 	if d := s.Deltas["mnema_sfu_egress_bytes_total"]; d != 22000 {
 		t.Errorf("delta = %v", d)
 	}

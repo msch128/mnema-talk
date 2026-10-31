@@ -158,6 +158,7 @@ not depend on a laptop or the network between. Everything the host needs is
 | `voice` | 1 shared screen (synthetic VP8, 1500 kbit/s, 15 fps) watched by 99 members, direct | 100 |
 | `relay` | the same screen and 3 speakers, but every member allowed relayed candidates only, so all media goes through the built-in TURN relay | 100 |
 | `mixed` | 1 shared screen, 10 cameras (300 kbit/s, 24 fps), 3 speakers, every one of the 100 members watching the screen and all cameras | 100 |
+| `voice:N:K:C:S[:relay]` | any shape: N members, of which K speakers, C cameras and S screens publish (K+C+S <= N); `:relay` sends everything through the TURN relay. `voice:100:3:10:1` is `mixed`, `voice:50:3:4:1:relay` a relay run with 4 cameras | N |
 
 ### Build and copy
 
@@ -274,8 +275,11 @@ Talk over the WebSocket and answer the SFU's offers. Publishers attach synthetic
 VP8 (a valid payload descriptor and keyframe bit, random bytes sized to the
 bitrate, keyframes every 3 s and on a PLI) to the screen or camera line, and
 20 ms Opus-sized packets to the microphone line; no device is touched and
-nothing is played. Every member subscribes to the screens and, with
-`WATCH_CAMERAS=1`, to all cameras. Per class (screen, camera, audio) the result
+nothing is played. Every member subscribes to the screens. Cameras reach
+everybody by default, as in the web client; `WATCH_CAMERAS=<n>` keeps only n
+of them visible per member (the others are opted out one by one, and the
+visible ones are spread over the members like different people's tiles),
+`WATCH_CAMERAS=none` hides all. Per class (screen, camera, audio) the result
 has, per receiving member, the received bitrate (average, minimum, maximum),
 the packet loss that nothing repaired, and freezes (a video gap above
 `FREEZE_MS`, 1000), plus the connect time, time to first video, and the same
@@ -335,6 +339,39 @@ the script sets). Override with the environment variable of the same name.
 
 Relay mode also fails when a connected member did not use the relay.
 
+### Where packets go missing, kernel counters and profiles
+
+Every voice result carries a **packet split** (`packet_stages` in the JSON,
+the `packets` lines in the log) that follows the packets through the three hops:
+
+1. *into the SFU*: packets the publishers wrote against the server's
+   `mnema_sfu_ingress_packets_total`;
+2. *fan-out*: what the SFU should have written (the packets that reached it,
+   times the members watching each track) against
+   `mnema_sfu_egress_packets_total`;
+3. *out of the SFU*: egress against the packets the generator's receivers read.
+
+The hop with the missing share is where loss starts: the first points at the
+generator or its socket, the second at the SFU falling behind, the third at
+the path back or the generator's own CPU. The split needs `METRICS_TOKEN`; it is
+for the whole run, not just the hold. Retransmissions count as received, so a
+small surplus is not hidden as negative loss.
+
+After each scenario the script prints and stores (`"kernel"` in the scenario
+JSON, a `kernel:` line in the log) the growth of the UDP counters `InErrors`,
+`RcvbufErrors` and `SndbufErrors` from `/proc/net/snmp`, on the host and inside
+the app container, and of the app container's cgroup `memory.events` (`max`,
+`oom`, `oom_kill`; cgroup v2). A non-zero receive-buffer count means packets
+were dropped by the kernel before the program read them; a non-zero `max` or
+`oom` means the memory limit was hit. Counters that cannot be read show `n/a`.
+
+`PPROF=1 ./host-run.sh` also captures, during the hold of each scenario, a 30 s
+CPU profile, `allocs` and `heap` of the server (`<scenario>.pprof-{cpu,allocs,heap}`,
+open with `go tool pprof`). The server serves them on the address in its
+`PPROF_ADDR`, which listens on loopback inside the container, so the script
+fetches them with `wget` in the container; without `PPROF_ADDR` it says so and
+captures nothing. The hold must be longer than about 45 s.
+
 ### Reading the numbers
 
 - **Server CPU is the app process in cores** (`process_cpu_seconds_total` over
@@ -353,7 +390,7 @@ Relay mode also fails when a connected member did not use the relay.
 `CHAT_HOLD_S` (120), `CHAT_WRITER_PCT` (10), `CHAT_RATE` (0.2),
 `CHAT_RAMP_PER_MIN` (100), `VOICE_HOLD_S` (120), `VOICE_MEMBERS`,
 `RELAY_MEMBERS`, `MIXED_MEMBERS` (100), `MIXED_CAMERAS` (10),
-`MIXED_SPEAKERS` (3). The tools take everything else from the environment of
+`MIXED_SPEAKERS` (3), `WATCH_CAMERAS` (all, a number, or none), `PPROF` (0). The tools take everything else from the environment of
 the script: `REACT_PCT`, `EDIT_PCT`, `MSG_BYTES`, `TYPING=0` for chat;
 `SCREEN_KBPS`, `SCREEN_FPS`, `CAMERA_KBPS`, `CAMERA_FPS`, `KEYFRAME_S`,
 `QUALITY`, `LOSS`, `JITTER_MS`, `BW_KBPS` for voice (see the header of

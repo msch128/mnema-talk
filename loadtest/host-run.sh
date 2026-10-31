@@ -26,9 +26,10 @@
 #   BASE_URL=http://127.0.0.1:8080       default: the app container's published port
 #   BIN_DIR=<dir with loadtest-mint, loadtest-chat, loadtest-voice>   default: ./bin
 #   RESULT_DIR=./loadtest-results/<time>
-#   PAUSE_S=30 (between scenarios)   ABORT_ON_FAIL=1 (stop at the first failed scenario)
+#   PAUSE_S=30 (between scenarios)   PPROF=1 (profiles of the server, needs PPROF_ADDR there)   ABORT_ON_FAIL=1 (stop at the first failed scenario)
 #   JWT_SECRET, METRICS_TOKEN: read from the app container when unset
 #   PGUSER, PGDATABASE: read from the app container's DATABASE_URL when unset
+# Voice scenarios of any shape: voice:N:K:C:S[:relay] (members, speakers, cameras, screens).
 # Scenario knobs (defaults in brackets): CHAT_HOLD_S [120], CHAT_WRITER_PCT [10],
 #   CHAT_RATE [0.2], CHAT_RAMP_PER_MIN [100], VOICE_HOLD_S [120], VOICE_MEMBERS [100],
 #   RELAY_MEMBERS [100], RELAY_HOST [], MIXED_MEMBERS [100], MIXED_CAMERAS [10],
@@ -63,11 +64,32 @@ die() { printf 'host-run: %s\n' "$*" >&2; exit 2; }
 
 # -- scenarios ---------------------------------------------------------------------------
 # scenario_kind and scenario_users give the tool and how many users it needs.
+#
+# voice:N:K:C:S[:relay] is a voice scenario of any shape: N members, K speakers,
+# C cameras and S screens (K+C+S <= N, the publishers are among the members),
+# optionally through the built-in TURN relay. voice:100:3:10:1 is "mixed".
+spec_field() { # spec index (1=N 2=K 3=C 4=S 5=relay)
+  local IFS=: f
+  read -ra f <<<"$1"
+  echo "${f[$2]:-}"
+}
+check_voice_spec() {
+  [[ "$1" =~ ^voice:[0-9]+:[0-9]+:[0-9]+:[0-9]+(:relay)?$ ]] || die "bad scenario '$1' (voice:N:K:C:S or voice:N:K:C:S:relay)"
+  local n k c s
+  n="$(spec_field "$1" 1)" k="$(spec_field "$1" 2)" c="$(spec_field "$1" 3)" s="$(spec_field "$1" 4)"
+  [ "$n" -ge 2 ] || die "scenario '$1': N must be at least 2"
+  [ $((k + c + s)) -le "$n" ] || die "scenario '$1': K+C+S is more than the N members"
+  [ $((s + c)) -gt 0 ] || [ "$k" -gt 0 ] || die "scenario '$1': nothing is published"
+}
+# file_name makes a scenario name safe for a file name.
+file_name() { echo "${1//:/-}"; }
+
 scenario_kind() {
   case "$1" in
     chat[1-9] | chat[1-9][0-9]*) echo chat ;; # chat<N>: N sessions
     voice | relay | mixed) echo voice ;;
-    *) die "unknown scenario '$1' (chat<N> such as chat100, voice, relay, mixed)" ;;
+    voice:*) check_voice_spec "$1"; echo voice ;;
+    *) die "unknown scenario '$1' (chat<N> such as chat100, voice, relay, mixed, voice:N:K:C:S[:relay])" ;;
   esac
 }
 scenario_users() {
@@ -76,6 +98,7 @@ scenario_users() {
     voice) echo "$VOICE_MEMBERS" ;;
     relay) echo "$RELAY_MEMBERS" ;;
     mixed) echo "$MIXED_MEMBERS" ;;
+    voice:*) spec_field "$1" 1 ;;
   esac
 }
 # scenario_minutes estimates the run time: connecting, the hold, and the settle.
@@ -85,6 +108,11 @@ scenario_minutes() {
     voice) echo $(( VOICE_MEMBERS * 3 / 600 + (VOICE_HOLD_S + 40) / 60 + 1 )) ;;
     relay) echo $(( RELAY_MEMBERS * 6 / 600 + (VOICE_HOLD_S + 40) / 60 + 1 )) ;;
     mixed) echo $(( MIXED_MEMBERS * 3 / 600 + (VOICE_HOLD_S + 40) / 60 + 1 )) ;;
+    voice:*)
+      local per=3
+      [ "$(spec_field "$1" 5)" != relay ] || per=6
+      echo $(( $(spec_field "$1" 1) * per / 600 + (VOICE_HOLD_S + 40) / 60 + 1 ))
+      ;;
   esac
 }
 
@@ -92,6 +120,7 @@ if [ "${1:-}" = "--list" ]; then
   for s in chat100 chat300 chat1000 voice relay mixed; do
     printf '%-9s %-5s users %-5s about %s min\n' "$s" "$(scenario_kind "$s")" "$(scenario_users "$s")" "$(scenario_minutes "$s")"
   done
+  echo "any voice shape: voice:N:K:C:S[:relay], N members, K speakers, C cameras, S screens (e.g. voice:50:3:4:1)"
   exit 0
 fi
 [ "$#" -eq 0 ] || die "usage: $0 [--list]"
@@ -124,7 +153,17 @@ scenario_env() {
       echo "SCREEN_PUBLISHERS=1"
       echo "CAMERA_PUBLISHERS=$MIXED_CAMERAS"
       echo "AUDIO_PUBLISHERS=$MIXED_SPEAKERS"
-      echo "WATCH_CAMERAS=1"
+      echo "HOLD_S=$VOICE_HOLD_S"
+      ;;
+    voice:*)
+      echo "TO=$(spec_field "$1" 1)"
+      echo "AUDIO_PUBLISHERS=$(spec_field "$1" 2)"
+      echo "CAMERA_PUBLISHERS=$(spec_field "$1" 3)"
+      echo "SCREEN_PUBLISHERS=$(spec_field "$1" 4)"
+      if [ "$(spec_field "$1" 5)" = relay ]; then
+        echo "RELAY=1"
+        echo "RELAY_HOST=$RELAY_HOST"
+      fi
       echo "HOLD_S=$VOICE_HOLD_S"
       ;;
   esac
@@ -390,17 +429,79 @@ docker_peak() { # file container
     } END { printf "%.0f%% CPU, %.0f MiB", mc, mm }' "$1"
 }
 
+# -- kernel counters and profiles -------------------------------------------------------
+# udp_counters prints "InErrors RcvbufErrors SndbufErrors" of /proc/net/snmp
+# read from stdin ("- - -" when there is none).
+udp_counters() {
+  awk '/^Udp:/ { if (!h) { for (i = 2; i <= NF; i++) n[i] = $i; h = 1 } else { for (i = 2; i <= NF; i++) v[n[i]] = $i } }
+       END { if (h) print v["InErrors"] + 0, v["RcvbufErrors"] + 0, v["SndbufErrors"] + 0; else print "- - -" }'
+}
+host_udp() { if [ -r /proc/net/snmp ]; then udp_counters </proc/net/snmp; else echo "- - -"; fi; }
+container_udp() { docker exec "$APP_CONTAINER" cat /proc/net/snmp 2>/dev/null | udp_counters; }
+# cgroup_events prints "low high max oom oom_kill" of the app container's
+# memory.events (cgroup v2), "- - - - -" when it cannot be read.
+cgroup_events() {
+  local out
+  out="$(docker exec "$APP_CONTAINER" cat /sys/fs/cgroup/memory.events 2>/dev/null || true)"
+  if [ -z "$out" ]; then echo "- - - - -"; return; fi
+  printf '%s\n' "$out" | awk '{ v[$1] = $2 } END { print v["low"] + 0, v["high"] + 0, v["max"] + 0, v["oom"] + 0, v["oom_kill"] + 0 }'
+}
+# kernel_snapshot prints one line: host udp, container udp, cgroup events.
+kernel_snapshot() { echo "$(host_udp) $(container_udp) $(cgroup_events)"; }
+
+# kernel_report turns the snapshots before and after a scenario into a log line
+# ($3) and a JSON object ($4).
+kernel_report() { # before after
+  printf '%s\n%s\n' "$1" "$2" | awk '
+    function d(i) { return (b[i] == "-" || a[i] == "-") ? "n/a" : a[i] - b[i] }
+    function j(i) { return (b[i] == "-" || a[i] == "-") ? "null" : a[i] - b[i] }
+    NR == 1 { split($0, b, " ") } NR == 2 { split($0, a, " ") }
+    END {
+      printf "kernel: host udp InErrors %s RcvbufErrors %s SndbufErrors %s; container udp InErrors %s RcvbufErrors %s SndbufErrors %s; cgroup memory.events max %s oom %s oom_kill %s (low %s, high %s)\n", d(1), d(2), d(3), d(4), d(5), d(6), d(9), d(10), d(11), d(7), d(8)
+      printf "{\"host_udp\":{\"in_errors\":%s,\"rcvbuf_errors\":%s,\"sndbuf_errors\":%s},\"container_udp\":{\"in_errors\":%s,\"rcvbuf_errors\":%s,\"sndbuf_errors\":%s},\"cgroup_memory_events\":{\"low\":%s,\"high\":%s,\"max\":%s,\"oom\":%s,\"oom_kill\":%s}}\n", j(1), j(2), j(3), j(4), j(5), j(6), j(7), j(8), j(9), j(10), j(11)
+    }'
+}
+
+# add_kernel_json appends the kernel object ($2) to the tool's JSON file ($1),
+# whose last line is the closing brace.
+add_kernel_json() {
+  [ -s "$1" ] || return 0
+  sed '$d' "$1" >"$1.tmp" && printf ',\n "kernel": %s\n}\n' "$2" >>"$1.tmp" && mv "$1.tmp" "$1"
+}
+
+# PPROF=1 captures profiles of the server during the hold: a 30 s CPU profile,
+# then allocs and heap. They come from the server's PPROF_ADDR, which listens on
+# loopback inside the container, so they are fetched with wget in the container.
+pprof_capture() { # log-file name
+  local addr
+  addr="$(container_env "$APP_CONTAINER" PPROF_ADDR)"
+  if [ -z "$addr" ]; then
+    say "    PPROF=1, but the app container has no PPROF_ADDR; no profiles"
+    return 0
+  fi
+  # The tools print a progress line every 10 s once the hold has begun.
+  until grep -Eq '^[0-9:]{8} (viewers|connected)=' "$1" 2>/dev/null; do sleep 2; done
+  local what
+  for what in "profile?seconds=30:cpu" "allocs:allocs" "heap:heap"; do
+    docker exec "$APP_CONTAINER" wget -qO- "http://$addr/debug/pprof/${what%%:*}" >"$RESULT_DIR/$2.pprof-${what##*:}" 2>/dev/null \
+      || say "    pprof ${what##*:}: failed"
+  done
+  say "    pprof: $2.pprof-{cpu,allocs,heap} saved (go tool pprof <file>)"
+}
+
 run_scenario() {
-  local name="$1" kind out log stats pid spid status line
+  local name="$1" kind out log stats pid spid ppid="" status line fname kbefore kafter
   kind="$(scenario_kind "$name")"
-  out="$RESULT_DIR/$name.json"
-  log="$RESULT_DIR/$name.log"
-  stats="$RESULT_DIR/$name.docker-stats.tsv"
+  fname="$(file_name "$name")"
+  out="$RESULT_DIR/$fname.json"
+  log="$RESULT_DIR/$fname.log"
+  stats="$RESULT_DIR/$fname.docker-stats.tsv"
   : >"$stats"
   say "==> scenario $name (about $(scenario_minutes "$name") min)"
   sample_docker_stats "$stats" &
   spid=$!
   CHILD_PIDS+=("$spid")
+  kbefore="$(kernel_snapshot)"
   local vars=(BASE_URL="$BASE_URL" TOKENS="$TOKENS" METRICS_TOKEN="$METRICS_TOKEN" SESSION_COOKIE="$SESSION_COOKIE" ORIGIN="$ORIGIN" OUT="$out" EVALUATE=1)
   while IFS= read -r line; do vars+=("$line"); done < <(scenario_env "$name")
   if [ "$kind" = chat ]; then
@@ -412,16 +513,28 @@ run_scenario() {
   fi
   pid=$!
   CHILD_PIDS+=("$pid")
+  if [ "${PPROF:-0}" = 1 ]; then
+    pprof_capture "$log" "$fname" &
+    ppid=$!
+    CHILD_PIDS+=("$ppid")
+  fi
   status=0
   wait "$pid" || status=$?
   kill "$spid" 2>/dev/null || true
   wait "$spid" 2>/dev/null || true
+  if [ -n "$ppid" ]; then kill "$ppid" 2>/dev/null || true; wait "$ppid" 2>/dev/null || true; fi
+  kafter="$(kernel_snapshot)"
   # The tool printed its own summary; show the part from the headline on.
   awk '/^=== /{p=1} /^viewers=/{p=1} p {print "    " $0}' "$log"
+  local kernel
+  kernel="$(kernel_report "$kbefore" "$kafter")"
+  say "    $(printf '%s\n' "$kernel" | sed -n 1p)"
+  printf '%s\n' "$kernel" | sed -n 1p >>"$log"
+  add_kernel_json "$out" "$(printf '%s\n' "$kernel" | sed -n 2p)"
   say "    docker stats: $APP_CONTAINER $(docker_peak "$stats" "$APP_CONTAINER"); $DB_CONTAINER $(docker_peak "$stats" "$DB_CONTAINER")"
   local verdict=ok
   [ "$status" = 0 ] || verdict="failed($status)"
-  SCENARIO_ROWS+=("{\"name\":\"$name\",\"exit\":$status,\"result\":\"$name.json\",\"log\":\"$name.log\",\"docker_stats\":\"$name.docker-stats.tsv\"}")
+  SCENARIO_ROWS+=("{\"name\":\"$name\",\"exit\":$status,\"result\":\"$fname.json\",\"log\":\"$fname.log\",\"docker_stats\":\"$fname.docker-stats.tsv\"}")
   say "    $name: $verdict"
   return "$status"
 }

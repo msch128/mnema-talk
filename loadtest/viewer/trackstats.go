@@ -132,6 +132,7 @@ func (t *trackStats) snapshot(now time.Time) trackSnapshot {
 type classResult struct {
 	Members          int     `json:"members"`
 	Tracks           int     `json:"tracks"`
+	Packets          int64   `json:"packets"`
 	KbpsPerMemberAvg float64 `json:"kbps_per_member_avg"`
 	KbpsPerMemberMin float64 `json:"kbps_per_member_min"`
 	KbpsPerMemberMax float64 `json:"kbps_per_member_max"`
@@ -192,6 +193,7 @@ func foldTracks(r *classResult, tracks []trackSnapshot, perTrack *[]float64) (fl
 	frozen := false
 	for _, s := range tracks {
 		r.Tracks++
+		r.Packets += s.packets
 		r.PacketsExpected += s.expected
 		r.PacketsLost += s.lost
 		r.Freezes += s.freezes

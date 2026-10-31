@@ -46,7 +46,7 @@ type expectations struct {
 func expectationsOf(c viewerConfig) expectations {
 	set := loadPublishSettings()
 	return expectations{
-		members: c.to - c.from, roles: c.roles, cameras: c.watchCameras, relay: c.relay,
+		members: c.to - c.from, roles: c.roles, cameras: c.cameras.limit != 0, relay: c.relay,
 		screenKbps: set.screenKbps, cameraKbps: set.cameraKbps,
 	}
 }
@@ -54,6 +54,7 @@ func expectationsOf(c viewerConfig) expectations {
 // finishResult adds the server's numbers and, with EVALUATE=1, the verdict.
 func finishResult(res *result, c viewerConfig, server lt.ServerSummary) {
 	res.Relay, res.Server = c.relay, server
+	res.Stages = splitStages(res, c)
 	res.OK = true
 	if !lt.Bool("EVALUATE") {
 		return
