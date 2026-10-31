@@ -141,6 +141,7 @@ services:
       - WEBRTC_BUILTIN_TURN_PORT=${WEBRTC_BUILTIN_TURN_PORT:-3479}
       - WEBRTC_BUILTIN_TURN_HOST=${WEBRTC_BUILTIN_TURN_HOST:-}
       - METRICS_TOKEN=${METRICS_TOKEN:-}
+      - PPROF_ADDR=${PPROF_ADDR:-}
       # Outgoing e-mail (confirm an address, reset a password). Empty SMTP_HOST =
       # the server sends no e-mail. SMTP_PASSWORD_FILE needs the file mounted.
       - SMTP_HOST=${SMTP_HOST:-}
@@ -164,6 +165,7 @@ services:
       - ALL
     security_opt:
       - "no-new-privileges:true"
+    # The server sets its Go memory limit to 85% of this (internal/memlimit).
     mem_limit: ${APP_MEM_LIMIT:-1g}
     pids_limit: 512
     logging: *default-logging

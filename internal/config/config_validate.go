@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/msch128/mnema-talk/internal/debugsrv"
 )
 
 // maxSessionExpiryHours caps SESSION_EXPIRY_HOURS at one year.
@@ -51,6 +53,11 @@ func (c *Config) validateOptionalSecrets() error {
 	}
 	if c.MetricsToken != "" && len(c.MetricsToken) < 24 {
 		return fmt.Errorf("METRICS_TOKEN must be at least 24 characters when set")
+	}
+	if c.PprofAddr != "" {
+		if err := debugsrv.CheckAddr(c.PprofAddr); err != nil {
+			return fmt.Errorf("PPROF_ADDR %q %w", c.PprofAddr, err)
+		}
 	}
 	return c.validateSMTP()
 }

@@ -16,6 +16,10 @@ var errRefused = errors.New("turn: not supported")
 // relay and the SFU on the same machine.
 type generator struct{ s *Server }
 
+// relaySocketBuffer is the kernel buffer asked for on each relay socket; the
+// kernel grants at most net.core.rmem_max / wmem_max.
+const relaySocketBuffer = 4 << 20
+
 func (g *generator) Validate() error { return nil }
 
 // AllocatePacketConn opens the relayed UDP socket of one allocation.
@@ -64,6 +68,9 @@ func (g *generator) AllocatePacketConn(conf turn.AllocateListenerConfig) (net.Pa
 		s.unacquire(user)
 		return nil, nil, errors.New("turn: no relay port outside the SFU range")
 	}
+	// A relayed screen frame is a burst of packets; see the SFU's media sockets.
+	_ = conn.SetReadBuffer(relaySocketBuffer)
+	_ = conn.SetWriteBuffer(relaySocketBuffer)
 	port := conn.LocalAddr().(*net.UDPAddr).Port
 	gd := &guard{
 		PacketConn: conn, srv: s, user: user, expires: expires, bind: bind, port: port,

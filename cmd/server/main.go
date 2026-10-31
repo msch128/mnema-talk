@@ -20,7 +20,9 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/debugsrv"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/memlimit"
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/portconflict"
 	"github.com/msch128/mnema-talk/internal/s3"
@@ -106,6 +108,12 @@ func runWithContext(ctx context.Context) error {
 		return err
 	}
 	setupLogging(cfg)
+	memlimit.Apply(slog.Default())
+	if addr, err := debugsrv.Start(ctx, cfg.PprofAddr); err != nil {
+		return err
+	} else if addr != "" {
+		slog.Info("pprof listening", "addr", addr)
+	}
 	warnBroadTrustedProxies(cfg)
 	warnInsecurePublicURL(cfg)
 

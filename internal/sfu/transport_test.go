@@ -263,3 +263,11 @@ func TestOnlyLoopbackAnnouncements(t *testing.T) {
 		t.Fatal("explicit loopback list not detected")
 	}
 }
+
+func TestUDPMuxAsksForLargeSocketBuffers(t *testing.T) {
+	for _, announce := range [][]string{nil, {"203.0.113.7"}} {
+		if got := len(buildUDPMuxOptions(announce)); got < 2 {
+			t.Fatalf("announce %v: %d options, want the read and write buffer sizes among them", announce, got)
+		}
+	}
+}
