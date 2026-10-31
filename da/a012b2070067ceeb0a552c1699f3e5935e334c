@@ -1,0 +1,27 @@
+web/src/i18n/de.json
+  s_45fff186c97845::t_a1555fcec2e419 523,563-564
+web/src/i18n/en.json
+  s_45fff186c97845::t_17474cdc40a93a 523,563-564
+web/src/lib/errorDetails.test.ts
+  s_45fff186c97845::t_4171057cae1e1f 65,105-113
+web/src/lib/errorDetails.ts
+  s_45fff186c97845::t_3e79a3599b1d3e 44,50-51,58,62,77-85,90,92
+web/src/lib/errorSentences.ts
+  s_45fff186c97845::t_e2de7ab5860383 513
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "daa012b2070067ceeb0a552c1699f3e5935e334c",
+  "prompts": {},
+  "sessions": {
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
