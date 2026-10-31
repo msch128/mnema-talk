@@ -1,0 +1,21 @@
+README.md
+  s_b10e722bc60c79::t_686e4e04887e92 333-334
+doc/deployment.md
+  s_b10e722bc60c79::t_eaed92c5dfdf81 164-196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db37e369f6f8454f44cdce984e89b72c89919a01",
+  "prompts": {},
+  "sessions": {
+    "s_b10e722bc60c79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-docs-e9d2378f61bc75a7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
