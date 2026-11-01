@@ -1,0 +1,165 @@
+api/openapi.json
+  s_596f6ac592d714::t_973969312fdb10 36784
+doc/architecture.md
+  s_596f6ac592d714::t_9ad3531f508b71 476-504
+e2e/tests/camera-layers.spec.ts
+  s_5b748b0295d2f4::t_e6c04dd801ed21 1-108
+internal/sfu/camera_layers.go
+  s_bf24ce51cd8f95::t_faf9efd10a8c80 1-96
+internal/sfu/camera_layers_test.go
+  s_8fccc5273dd47d::t_f5e3d8b68b4e16 1-313
+internal/sfu/codecs_test.go
+  s_5b748b0295d2f4::t_d63162ac56cc33 107-108
+internal/sfu/layer_wanted.go
+  s_45fff186c97845::t_830d8f059b46c0 178,192-193
+internal/sfu/layers.go
+  s_45fff186c97845::t_13120a3142b10b 110-130,139-140,142-146,188
+internal/sfu/media_state.go
+  s_45fff186c97845::t_700b926f4ef581 27-28,49-56,59-62,65,68,71,74
+internal/sfu/room_attach.go
+  s_bf24ce51cd8f95::t_5b4e3568d82002 134-140,199-207,230-243
+internal/sfu/room_signal.go
+  s_5b748b0295d2f4::t_26d3be96fd2b1c 226-232,235
+internal/sfu/room_tracks.go
+  s_5b748b0295d2f4::t_938d65439ab542 184-188,190,197-199,271-273
+internal/sfu/screen.go
+  s_bf24ce51cd8f95::t_64f34b5ce55d95 22-63,70,80-87,91-93,106
+internal/sfu/sfu.go
+  s_45fff186c97845::t_ea3b745ca0fe32 156-164
+internal/sfu/sfu_join.go
+  s_5b748b0295d2f4::t_881f2796c98e96 145-146,162-163,193-202,204
+internal/sfu/sfu_setup.go
+  s_45fff186c97845::t_5c94bc29c6c449 45-50
+internal/sfu/subscriptions.go
+  s_5b748b0295d2f4::t_69ba157274de4c 34-36,92-115,178-182
+internal/sfu/testhooks.go
+  s_0ef1cb310e2de4::t_11c11484960447 37-52
+internal/ws/camera_layers_test.go
+  s_0ef1cb310e2de4::t_24e9911bbc3700 1-136
+internal/ws/hub.go
+  s_bf24ce51cd8f95::t_680f80675c43dd 179
+internal/ws/info.go
+  s_bf24ce51cd8f95::t_ebfc722e1e179b 14-16,27
+internal/ws/layers.go
+  s_bf24ce51cd8f95::t_4c6f5a50db13d6 42-50,69-71,75,84-89
+internal/ws/lifecycle.go
+  s_5b748b0295d2f4::t_391078198d9ad9 72,83-84
+internal/ws/signal.go
+  s_bf24ce51cd8f95::t_f8a9f3e26d2dd0 72-78,99-102,112,145-156,187-190,204-205
+web/src/components/ParticipantTile.vue
+  s_bf24ce51cd8f95::t_6990a353580ef4 17,85-86
+web/src/components/TalkStageView.vue
+  s_bf24ce51cd8f95::t_3523131bff9c20 11,50
+web/src/composables/useCameraFit.test.ts
+  s_5b748b0295d2f4::t_9f4bab3c5d0473 1-102
+web/src/composables/useCameraFit.ts
+  s_bf24ce51cd8f95::t_e391e969337822 1-50
+web/src/composables/useWebRTC.cameraLayers.test.ts
+  s_5b748b0295d2f4::t_5df520625feb99 1-189
+web/src/composables/useWebRTC.harness.fixture.ts
+  s_5b748b0295d2f4::t_89cc0fb0030098 277-307
+web/src/composables/webrtc/camera.ts
+  s_5b748b0295d2f4::t_8cd692be1f9a1b 7-8,40-41,44,91
+web/src/composables/webrtc/cameraLayerSync.ts
+  s_5b748b0295d2f4::t_eb6bf208284911 1-59
+web/src/composables/webrtc/cameraLayers.ts
+  s_5b748b0295d2f4::t_79551a16265082 1-53
+web/src/composables/webrtc/layers.ts
+  s_5b748b0295d2f4::t_41f27ba4587506 92
+web/src/composables/webrtc/peer.ts
+  s_5b748b0295d2f4::t_72cf2351b9ec33 11,30,32,210,212,241-243,267-268,271
+web/src/composables/webrtc/sdp.test.ts
+  s_5b748b0295d2f4::t_fd2b6539ce2786 25,30,132-133,150-151,155-165
+web/src/composables/webrtc/sdp.ts
+  s_5b748b0295d2f4::t_583bbbbe3f857a 8-9,13,25-26,30-31,34
+web/src/composables/webrtc/senderTuning.ts
+  s_5b748b0295d2f4::t_a26ac77394178f 4
+web/src/composables/webrtc/senders.ts
+  s_45fff186c97845::t_9e95081dc2f08f 5,130,132,140-142,153-159
+web/src/composables/webrtc/state.ts
+  s_596f6ac592d714::t_bb0b4f14d2732b 64-65,68-69,158-159,203-204
+web/src/composables/webrtc/watchers.ts
+  s_5b748b0295d2f4::t_b6b6a88e31ebc3 8,75-76
+web/src/lib/cameraLayers.test.ts
+  s_45fff186c97845::t_2ee4a6621956aa 1-50
+web/src/lib/cameraLayers.ts
+  s_5b748b0295d2f4::t_11c6713b4a6be8 1-70
+web/src/lib/media/mediaFrameWorker.test.ts
+  s_45fff186c97845::t_5cf364e74a64fb 516-556
+web/src/stores/chat/events.ts
+  s_5b748b0295d2f4::t_8f2018d78ded95 190
+web/src/stores/voice.ts
+  s_bf24ce51cd8f95::t_b242603395c167 9,49-51,115
+web/src/stores/voice/cameraFit.test.ts
+  s_5b748b0295d2f4::t_dd7988cce38557 1-97
+web/src/stores/voice/cameraFit.ts
+  s_5b748b0295d2f4::t_6da3a3f92a708d 1-83
+web/src/stores/voice/cameras.ts
+  s_bf24ce51cd8f95::t_385e2704353cbe 7,100
+web/src/stores/voice/room.ts
+  s_bf24ce51cd8f95::t_844cf971ed17bd 10,220-221
+web/src/stores/voice/screens.ts
+  s_5b748b0295d2f4::t_8d76c5f5148061 137,140-141,221
+web/src/stores/voice/state.ts
+  s_bf24ce51cd8f95::t_6ed8be960d9229 54-58
+web/src/types/events.test.ts
+  s_45fff186c97845::t_2f56dc771236fc 13,84,266-272
+web/src/types/events.ts
+  s_5b748b0295d2f4::t_16aed4d25b616f 22-23,61,149-151,166,289-290,330-331
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c20fe16dd98bd297b87bd7a881d35f914ba84f4c",
+  "prompts": {},
+  "sessions": {
+    "s_0ef1cb310e2de4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab83fdebf37cb7b44",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_596f6ac592d714": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7d0fa0e89699e38d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8fccc5273dd47d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a71473b3eac6aa12f",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
