@@ -182,6 +182,15 @@ describe('media transform guard', () => {
     expect(created.transforms[2]?.options).toMatchObject({ layer: 0 })
   })
 
+  it('tells the transform of a microphone line that uses DTX, and only then', () => {
+    installBrowser()
+    const guard = createMediaGuard()
+    expect(guard.armSender({ transform: null } as RTCRtpSender, 'channel', 'alice', 0, undefined, true)).toBe(true)
+    expect(guard.armSender({ transform: null } as RTCRtpSender, 'channel', 'alice', 0, undefined, false)).toBe(true)
+    expect(created.transforms[0]?.options).toEqual({ port: created.channels[0]?.port2, direction: 'send', channelId: 'channel', senderId: 'alice', source: 0, dtx: true })
+    expect(created.transforms[1]?.options).not.toHaveProperty('dtx')
+  })
+
   it('tells every line the key, and a line armed later too', () => {
     installBrowser()
     const guard = createMediaGuard()

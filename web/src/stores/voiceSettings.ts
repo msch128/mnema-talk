@@ -88,13 +88,15 @@ function loadAudioProcessingSettings() {
   const noiseCancelling = computed(() => noiseMode.value !== 'off')
   const autoGainControl = ref(readItem('mnema_agc') === 'true')
   const echoCancellation = ref(readItem('mnema_echo') !== 'false')
+  // Opus DTX: send almost nothing while silent. Off for music and steady sounds, which the encoder may take for silence.
+  const silenceSaving = ref(readItem('mnema_dtx') !== 'false')
   const inputVolume = ref(parseInt(readItem('mnema_input_volume') || '100', 10))
   const outputVolume = ref(parseInt(readItem('mnema_output_volume') || '100', 10))
   const selectedInputDeviceId = ref(readItem('mnema_input_dev') || '')
   const selectedOutputDeviceId = ref(readItem('mnema_output_dev') || '')
   const selectedCameraDeviceId = ref(readItem('mnema_camera_dev') || '')
   return {
-    noiseMode, noiseCancelling, autoGainControl, echoCancellation,
+    noiseMode, noiseCancelling, autoGainControl, echoCancellation, silenceSaving,
     inputVolume, outputVolume, selectedInputDeviceId, selectedOutputDeviceId, selectedCameraDeviceId
   }
 }
@@ -119,6 +121,7 @@ function persistVoiceSettings(
   writeItem('mnema_noise', audio.noiseMode.value)
   writeItem('mnema_agc', String(audio.autoGainControl.value))
   writeItem('mnema_echo', String(audio.echoCancellation.value))
+  writeItem('mnema_dtx', String(audio.silenceSaving.value))
   writeItem('mnema_input_volume', String(audio.inputVolume.value))
   writeItem('mnema_output_volume', String(audio.outputVolume.value))
   writeItem('mnema_input_dev', audio.selectedInputDeviceId.value)

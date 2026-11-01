@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/msch128/mnema-talk/loadtest/viewer/internal/lt"
 	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v4"
 )
@@ -35,6 +36,11 @@ type publishSettings struct {
 	screenKbps, screenFPS int
 	cameraKbps, cameraFPS int
 	keySeconds            int
+	// audioDTX makes the speakers send like an Opus encoder with DTX: only
+	// while they talk (audioTalkPct percent of the time), a small comfort-noise
+	// frame every 200 ms otherwise.
+	audioDTX     bool
+	audioTalkPct int
 }
 
 func loadPublishSettings() publishSettings {
@@ -42,6 +48,7 @@ func loadPublishSettings() publishSettings {
 		screenKbps: envInt("SCREEN_KBPS", 1500), screenFPS: envInt("SCREEN_FPS", 15),
 		cameraKbps: envInt("CAMERA_KBPS", 300), cameraFPS: envInt("CAMERA_FPS", 24),
 		keySeconds: envInt("KEYFRAME_S", 3),
+		audioDTX:   lt.Bool("AUDIO_DTX"), audioTalkPct: envInt("AUDIO_TALK_PCT", 40),
 	}
 }
 
@@ -71,7 +78,7 @@ func (m *member) attachTracks(pc *webrtc.PeerConnection) error {
 	}
 	set := loadPublishSettings()
 	if m.role.audio {
-		if err := m.publishAudio(lines[lineMic]); err != nil {
+		if err := m.publishAudio(lines[lineMic], set); err != nil {
 			return err
 		}
 	}
@@ -115,9 +122,15 @@ func (m *member) publishVideo(line *webrtc.RTPTransceiver, kbps, fps, keySeconds
 	return nil
 }
 
-func (m *member) publishAudio(line *webrtc.RTPTransceiver) error {
+func (m *member) publishAudio(line *webrtc.RTPTransceiver, set publishSettings) error {
+	fmtp := "minptime=10;useinbandfec=1"
+	var plan dtxPlan
+	if set.audioDTX {
+		fmtp += ";usedtx=1"
+		plan = newDTXPlan(set.audioTalkPct)
+	}
 	track, err := webrtc.NewTrackLocalStaticRTP(
-		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: opusClock, Channels: 2, SDPFmtpLine: "minptime=10;useinbandfec=1"},
+		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus, ClockRate: opusClock, Channels: 2, SDPFmtpLine: fmtp},
 		"audio", m.id)
 	if err != nil {
 		return err
@@ -125,7 +138,7 @@ func (m *member) publishAudio(line *webrtc.RTPTransceiver) error {
 	if _, err := m.attach(line, track); err != nil {
 		return fmt.Errorf("publish audio: %w", err)
 	}
-	go m.sendAudio(track)
+	go m.sendAudio(track, plan)
 	return nil
 }
 
@@ -178,10 +191,13 @@ func (m *member) sendVideo(track *webrtc.TrackLocalStaticRTP, src *vp8Source) {
 	})
 }
 
-func (m *member) sendAudio(track *webrtc.TrackLocalStaticRTP) {
-	src := newOpusSource()
+func (m *member) sendAudio(track *webrtc.TrackLocalStaticRTP, plan dtxPlan) {
+	src := newOpusSource(plan)
 	m.paceTicks(opusFrameMs*time.Millisecond, func() {
 		p := src.next()
+		if p == nil {
+			return // DTX: nothing is sent in the silence
+		}
 		if track.WriteRTP(p) == nil {
 			m.sentB.Add(int64(len(p.Payload)))
 			m.sentPkt.Add(1)

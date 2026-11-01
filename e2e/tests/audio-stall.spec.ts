@@ -16,6 +16,8 @@ const suffix = Date.now().toString(36)
 // nothing.
 const stallAudioEngine = () => {
   localStorage.setItem('mnema_noise', 'ai')
+  // The fake microphone is a steady tone that Opus DTX would take for silence; this spec listens for it.
+  localStorage.setItem('mnema_dtx', 'false')
   Object.defineProperty(AudioContext.prototype, 'state', { configurable: true, get: () => 'suspended' })
   AudioContext.prototype.resume = () => new Promise<void>(() => {})
 }

@@ -243,10 +243,23 @@ async function openIncoming(data: Uint8Array, kind: FrameKind, codec: ReturnType
   return opened ? packet(opened) : null
 }
 
+// With Opus DTX (usedtx=1) the encoder hands a sending line a frame of one or
+// two bytes, the header and nothing else, for every 20 ms in which it has
+// nothing to say. The browser sends none of those itself. Sealed, each would be
+// 100 bytes and go out 50 times a second, which is what DTX is there to avoid.
+// They carry no sound, so on a line that negotiated DTX they are dropped; the
+// listeners see the gap in the RTP timestamps and fill it with comfort noise.
+const OPUS_EMPTY_FRAME_BYTES = 2
+
+function isSilentDtxFrame(frame: EncodedFrame, line: Line): boolean {
+  return line.dtx && frame.type === undefined && frame.data.byteLength <= OPUS_EMPTY_FRAME_BYTES
+}
+
 async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | null> {
   const { direction, senderId } = line
   // A receiver whose publisher is not known yet opens nothing.
   if (senderId === null) return null
+  if (isSilentDtxFrame(frame, line)) return null
   const kind: FrameKind = frame.type === 'key' || frame.type === 'delta' ? frame.type : undefined
   // A video frame of another type is not one this worker can seal.
   if (frame.type !== undefined && kind === undefined) return null

@@ -410,6 +410,7 @@ captured.
 `MIXED_SPEAKERS` (3), `WATCH_CAMERAS` (all, a number, or none), `PPROF` (0). The tools take everything else from the environment of
 the script: `REACT_PCT`, `EDIT_PCT`, `MSG_BYTES`, `TYPING=0` for chat;
 `SCREEN_KBPS`, `SCREEN_FPS`, `CAMERA_KBPS`, `CAMERA_FPS`, `KEYFRAME_S`,
+`AUDIO_DTX=1` (speakers send like an Opus encoder with DTX: packets only while talking, `AUDIO_TALK_PCT` percent of a 10 s cycle, 40 by default, and a 16-byte comfort-noise frame every 200 ms otherwise, about 5 packets a second as Chrome sends),
 `QUALITY`, `LOSS`, `JITTER_MS`, `BW_KBPS` for voice (see the header of
 `loadtest/viewer/main.go` and `loadtest/viewer/cmd/chat/main.go`). `ABORT_ON_FAIL=1`
 stops at the first failed scenario.

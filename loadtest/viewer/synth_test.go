@@ -2,6 +2,8 @@ package main
 
 import (
 	"testing"
+
+	"github.com/pion/rtp"
 )
 
 // isKey reads what the SFU reads: the descriptor of the first packet of a
@@ -111,9 +113,77 @@ func TestPacketsStayBelowTheMTU(t *testing.T) {
 }
 
 func TestOpusPacketsStepByTwentyMilliseconds(t *testing.T) {
-	s := newOpusSource()
+	s := newOpusSource(dtxPlan{})
 	a, b := s.next(), s.next()
 	if b.SequenceNumber != a.SequenceNumber+1 || b.Timestamp-a.Timestamp != 960 || len(a.Payload) != opusBytes {
 		t.Fatalf("packets %+v %+v", a.Header, b.Header)
+	}
+}
+
+func TestOpusWithoutAPlanNeverStops(t *testing.T) {
+	s := newOpusSource(dtxPlan{})
+	for range 1000 {
+		if s.next() == nil {
+			t.Fatal("a speaker without DTX sends a packet every 20 ms")
+		}
+	}
+}
+
+// With DTX a speaker who talks 40 % of the time sends well under half the
+// packets, the sequence numbers stay consecutive and the timestamps show the
+// silence as gaps.
+func TestOpusWithDTXSendsOnlyWhileTalkingAndAComfortFrameEvery200Ms(t *testing.T) {
+	plan := newDTXPlan(40)
+	s := newOpusSource(plan)
+	ticks := plan.cycleTicks * 3
+	var pkts []*rtp.Packet
+	for range ticks {
+		if p := s.next(); p != nil {
+			pkts = append(pkts, p)
+		}
+	}
+	speech, comfort, markers := 0, 0, 0
+	for i, p := range pkts {
+		if len(p.Payload) == dtxFrameBytes {
+			comfort++
+		} else {
+			speech++
+		}
+		if p.Marker {
+			markers++
+		}
+		if i > 0 && p.SequenceNumber != pkts[i-1].SequenceNumber+1 {
+			t.Fatalf("sequence numbers must stay consecutive: %d after %d", p.SequenceNumber, pkts[i-1].SequenceNumber)
+		}
+	}
+	if speech != plan.talkTicks*3 {
+		t.Fatalf("%d speech packets, want %d", speech, plan.talkTicks*3)
+	}
+	// 300 silent ticks per cycle: one frame as the silence starts, then one every 200 ms.
+	perCycle := 1 + (plan.cycleTicks-plan.talkTicks-1)/(dtxSilenceMs/opusFrameMs)
+	if comfort < 2*perCycle || comfort > 3*perCycle+1 {
+		t.Fatalf("%d comfort-noise frames, want about %d per cycle", comfort, perCycle)
+	}
+	if markers < 2 {
+		t.Fatalf("speech resuming after silence carries the marker bit, saw %d", markers)
+	}
+	// Against 500 packets per cycle without DTX: about 60 % fewer at 40 % talk time, and about 90 % fewer in silence.
+	if per := len(pkts) / 3; per >= plan.cycleTicks*6/10 {
+		t.Fatalf("%d packets per cycle with DTX, %d without: not enough saved", per, plan.cycleTicks)
+	}
+	if end := s.ts - pkts[0].Timestamp; end != uint32(ticks)*960 {
+		t.Fatalf("the clock must run on through the silence: %d", end)
+	}
+}
+
+func TestDTXPlanBounds(t *testing.T) {
+	if p := newDTXPlan(150); p.talkTicks != p.cycleTicks {
+		t.Fatalf("over 100 %% means always talking, got %d of %d", p.talkTicks, p.cycleTicks)
+	}
+	if p := newDTXPlan(-5); p.talkTicks != 0 {
+		t.Fatalf("below 0 %% means never talking, got %d", p.talkTicks)
+	}
+	if !(dtxPlan{}).talking(7) {
+		t.Fatal("an empty plan talks all the time")
 	}
 }
