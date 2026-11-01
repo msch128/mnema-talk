@@ -152,7 +152,7 @@ func TestGovernorStepsTheBiggestConsumersDownFirstAndBackUpWithHysteresis(t *tes
 		t.Fatalf("moved again inside the hold: %d capped, %d small viewers still on 0", capped, wanting(small, 0))
 	}
 	// Between 70% and 85%: no change either way.
-	later := now.Add(uploadSqueezeHold + time.Second)
+	later := now.Add(uploadRelaxHold + time.Second)
 	views := viewsOf(t, later, all...)
 	g.step(later, 24_000_000, views)
 	if all[0].wantA.Load() != 1 || all[1].wantA.Load() != 1 {
@@ -235,8 +235,9 @@ func TestUploadGovernorLoopFollowsTheEgressAndStopsWithItsContext(t *testing.T) 
 	var bytes uint64
 	var fake = time.Unix(2_000_000, 0)
 	src := uploadSource{
-		egressBytes: func() uint64 { mu.Lock(); defer mu.Unlock(); b := bytes; bytes += 2_500_000; return b },
-		now:         func() time.Time { mu.Lock(); defer mu.Unlock(); fake = fake.Add(time.Second); return fake },
+		egressBytes:   func() uint64 { mu.Lock(); defer mu.Unlock(); b := bytes; bytes += 2_500_000; return b },
+		egressPackets: func() uint64 { return 0 },
+		now:           func() time.Time { mu.Lock(); defer mu.Unlock(); fake = fake.Add(time.Second); return fake },
 		views: func(now time.Time) []uploadView {
 			return viewsOf(t, clock.now, vts...)
 		},
@@ -258,29 +259,18 @@ func TestUploadGovernorLoopFollowsTheEgressAndStopsWithItsContext(t *testing.T) 
 	}
 }
 
-func TestStartUploadGovernorIsOffAtZeroAndFindsEveryLayerGroup(t *testing.T) {
+func TestStartUploadGovernorIsOffAtZeroAndStopsWithTheSFU(t *testing.T) {
 	s := newTestSFU(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	s.StartUploadGovernor(ctx, 0)
-	if metrics.SFUUploadLimit.Load() != 0 {
+	s.StartUploadGovernor(context.Background(), 0)
+	s.StartUploadGovernor(context.Background(), -3)
+	if s.uploadRuns.Load() != 0 {
 		t.Fatal("a limit of 0 started the governor")
 	}
-	clock := useFakeClock(t)
-	rig, vts := limitRig(t, 1, [3]int64{8_000_000, 4_000_000, 2_000_000})
-	cam, camViewers := limitRig(t, 1, [3]int64{2_000_000, 1_000_000, 500_000})
-	s.rooms[uuid.New()] = &Room{
-		groups:       map[uuid.UUID]*layerGroup{uuid.New(): rig.group},
-		cameraGroups: map[uuid.UUID]*layerGroup{uuid.New(): cam.group},
+	s.StartUploadGovernor(context.Background(), 5)
+	s.StartUploadGovernor(context.Background(), 7) // one is enough
+	if s.uploadRuns.Load() != 1 {
+		t.Fatalf("%d governors started", s.uploadRuns.Load())
 	}
-	s.rooms[uuid.New()] = &Room{} // a room with no layers
-	got := s.uploadViews(clock.now)
-	if len(got) != 2 {
-		t.Fatalf("%d views, want the screen's and the camera's viewer", len(got))
-	}
-	_ = vts
-	_ = camViewers
-	s.StartUploadGovernor(ctx, 5)
 	deadline := time.Now().Add(5 * time.Second)
 	for metrics.SFUUploadLimit.Load() == 0 && time.Now().Before(deadline) {
 		time.Sleep(5 * time.Millisecond)
@@ -288,7 +278,52 @@ func TestStartUploadGovernorIsOffAtZeroAndFindsEveryLayerGroup(t *testing.T) {
 	if metrics.SFUUploadLimit.Load() != 5_000_000 {
 		t.Fatalf("limit gauge %d", metrics.SFUUploadLimit.Load())
 	}
-	cancel()
+	// Closing the SFU stops it and clears every gauge it set.
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if metrics.SFUUploadLimit.Load() != 0 || metrics.SFUUploadEgress.Load() != 0 || metrics.SFUUploadCapped.Load() != 0 {
+		t.Fatal("a gauge stayed after the SFU was closed")
+	}
+	s.StartUploadGovernor(context.Background(), 5) // after Close: nothing
+	if s.uploadRuns.Load() != 1 {
+		t.Fatal("a governor started on a closed SFU")
+	}
+}
+
+func TestUploadViewsFindEveryLayerGroup(t *testing.T) {
+	s := newTestSFU(t)
+	clock := useFakeClock(t)
+	rig, _ := limitRig(t, 1, [3]int64{8_000_000, 4_000_000, 2_000_000})
+	cam, _ := limitRig(t, 1, [3]int64{2_000_000, 1_000_000, 500_000})
+	s.rooms[uuid.New()] = &Room{
+		groups:       map[uuid.UUID]*layerGroup{uuid.New(): rig.group},
+		cameraGroups: map[uuid.UUID]*layerGroup{uuid.New(): cam.group},
+	}
+	s.rooms[uuid.New()] = &Room{} // a room with no layers
+	if got := s.uploadViews(clock.now); len(got) != 2 {
+		t.Fatalf("%d views, want the screen's and the camera's viewer", len(got))
+	}
+}
+
+func TestEgressMeterCountsTheWireAndSmooths(t *testing.T) {
+	start := time.Unix(1000, 0)
+	m := newEgressMeter(0, 0, start)
+	// 1000 audio packets of 100 bytes in a second: 138 KB on the wire, and the
+	// first sample is half of it (the rate before was 0).
+	first := m.sample(100_000, 1000, start.Add(time.Second))
+	if want := (100_000 + 1000*uploadWireOverhead) * 8 / 2.0; first != want {
+		t.Fatalf("first sample %v, want %v", first, want)
+	}
+	// The same again: it moves towards the full rate.
+	second := m.sample(200_000, 2000, start.Add(2*time.Second))
+	if want := first/2 + (100_000+1000*uploadWireOverhead)*8/2.0; second != want {
+		t.Fatalf("second sample %v, want %v", second, want)
+	}
+	// No time passed: the rate is kept.
+	if again := m.sample(200_000, 2000, start.Add(2*time.Second)); again != second {
+		t.Fatalf("rate changed with no time passed: %v", again)
+	}
 }
 
 // Coming back costs the difference between the layers; with less room than
@@ -310,5 +345,81 @@ func TestGovernorDoesNotLetBackWhatTheRoomCannotCarry(t *testing.T) {
 	g.step(later, 19_000_000, viewsOf(t, later, vts...)) // 19 + 4 <= 24
 	if squeezed(vts) != 0 {
 		t.Fatal("the viewer was not let back with room for it")
+	}
+}
+
+// A step up does not keep the protective step down from acting; a step down
+// holds the step up back.
+func TestGovernorSqueezesAfterARelaxButDoesNotRelaxAfterASqueeze(t *testing.T) {
+	clock := useFakeClock(t)
+	_, vts := limitRig(t, 3, [3]int64{8_000_000, 4_000_000, 2_000_000})
+	g := &uploadGovernor{limit: 30_000_000}
+	now := clock.now
+	g.step(now, 31_000_000, viewsOf(t, now, vts...)) // squeezes two viewers
+	if squeezed(vts) != 2 {
+		t.Fatalf("%d squeezed", squeezed(vts))
+	}
+	// Quiet again, long after: one is let back, which holds further relaxes for 20 s.
+	t1 := now.Add(time.Minute)
+	g.step(t1, 10_000_000, viewsOf(t, t1, vts...))
+	if squeezed(vts) != 1 {
+		t.Fatalf("%d squeezed after the relax", squeezed(vts))
+	}
+	// A second later the egress is high again: the squeeze acts at once.
+	t2 := t1.Add(time.Second)
+	g.step(t2, 31_000_000, viewsOf(t, t2, vts...))
+	if squeezed(vts) != 2 {
+		t.Fatalf("%d squeezed, want the protective step to act inside the relax hold", squeezed(vts))
+	}
+	// And right after a squeeze, quiet does not relax before the relax hold.
+	t3 := t2.Add(uploadSqueezeHold + time.Second)
+	g.step(t3, 10_000_000, viewsOf(t, t3, vts...))
+	if squeezed(vts) != 2 {
+		t.Fatalf("%d squeezed: relaxed inside the hold that follows a squeeze", squeezed(vts))
+	}
+	t4 := t2.Add(uploadRelaxHold + time.Second)
+	g.step(t4, 10_000_000, viewsOf(t, t4, vts...))
+	if squeezed(vts) != 1 {
+		t.Fatalf("%d squeezed after the hold, want one let back", squeezed(vts))
+	}
+}
+
+// A camera whose picture grows jumps to its best layer, but not past the squeeze.
+func TestCameraViewerWhosePictureGrowsStaysWithinTheSqueeze(t *testing.T) {
+	clock := useFakeClock(t)
+	rig := newLayerRig(t, "video/VP8", 3)
+	rig.group.source = SourceCamera
+	rig.group.declared.Store(3)
+	for i := 0; i < 3; i++ {
+		rig.key(i, uint16(100*(i+1)))
+	}
+	vt, _ := rig.viewerFit(-1, 1)
+	clock.advance(adaptGrace + time.Second)
+	vt.setSqueeze(1)
+	if got := vt.wantA.Load(); got != 2 {
+		t.Fatalf("squeezed camera wants layer %d", got)
+	}
+	vt.setFit(0)
+	if got := vt.wantA.Load(); got != 1 {
+		t.Fatalf("a growing camera picture jumped to layer %d, want 1 (best 0 plus a squeeze of 1)", got)
+	}
+}
+
+func TestChoosingALayerDropsTheSqueeze(t *testing.T) {
+	useFakeClock(t)
+	rig := newLayerRig(t, "video/VP8", 3)
+	rig.group.declared.Store(3)
+	vt, _ := rig.viewer(-1)
+	vt.setSqueeze(2)
+	vt.setPref(0)
+	if vt.ad != nil || vt.wantA.Load() != 0 {
+		t.Fatal("a chosen layer is still governed")
+	}
+	vt.setPref(-1)
+	vt.mu.Lock()
+	squeeze := vt.ad.squeeze
+	vt.mu.Unlock()
+	if squeeze != 0 {
+		t.Fatalf("automatic came back with a squeeze of %d", squeeze)
 	}
 }

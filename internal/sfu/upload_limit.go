@@ -17,6 +17,12 @@ import (
 // picked a layer, or watches a track that has none, is left alone (when that
 // leaves nothing to step down, the check is counted in
 // mnema_sfu_upload_unmet_total and logged).
+//
+// Coming back is slow on purpose: one viewer per uploadRelaxHold at most. A
+// viewer on a layer that carries nothing now (a static share whose encoder
+// sends next to nothing) has no cost to relax and stays held until its
+// picture moves and shows what it costs; that is harmless, since it sends
+// nothing either way.
 const (
 	uploadHigh   = 0.85
 	uploadTarget = 0.80
@@ -33,9 +39,11 @@ const (
 // uploadGovernor decides the steps; it holds no clock and no locks.
 type uploadGovernor struct {
 	// limit is in bits per second.
-	limit     float64
-	holdUntil time.Time
-	loggedAt  time.Time
+	limit float64
+	// The two directions wait separately: a step up must not keep the
+	// protective step down from acting, but a step down holds both back.
+	squeezeHoldUntil, relaxHoldUntil time.Time
+	loggedAt                         time.Time
 }
 
 // step looks at the egress (bits per second) and the viewers it can move, and
@@ -48,13 +56,10 @@ func (g *uploadGovernor) step(now time.Time, egress float64, views []uploadView)
 			}
 		}
 	}()
-	if now.Before(g.holdUntil) {
-		return 0
-	}
 	switch {
-	case egress > g.limit*uploadHigh:
+	case egress > g.limit*uploadHigh && !now.Before(g.squeezeHoldUntil):
 		g.squeezeDown(now, egress-g.limit*uploadTarget, views)
-	case egress < g.limit*uploadLow:
+	case egress < g.limit*uploadLow && !now.Before(g.squeezeHoldUntil) && !now.Before(g.relaxHoldUntil):
 		g.relax(now, g.limit*uploadTarget-egress, views)
 	}
 	return 0
@@ -87,7 +92,8 @@ func (g *uploadGovernor) squeezeDown(now time.Time, excess float64, views []uplo
 		moved = true
 	}
 	if moved {
-		g.holdUntil = now.Add(uploadSqueezeHold)
+		g.squeezeHoldUntil = now.Add(uploadSqueezeHold)
+		g.relaxHoldUntil = now.Add(uploadRelaxHold)
 		return
 	}
 	countUnmet()
@@ -111,7 +117,7 @@ func (g *uploadGovernor) relax(now time.Time, room float64, views []uploadView) 
 	v := views[best]
 	v.vt.setSqueeze(v.squeeze - 1)
 	markSqueezed(views, v.vt, v.squeeze-1)
-	g.holdUntil = now.Add(uploadRelaxHold)
+	g.relaxHoldUntil = now.Add(uploadRelaxHold)
 }
 
 // markSqueezed records a new squeeze in the list the caller counts from.

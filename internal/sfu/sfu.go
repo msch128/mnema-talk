@@ -4,6 +4,7 @@
 package sfu
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -206,9 +207,15 @@ type SFU struct {
 	// offerTimeout is defaultOfferTimeout; tests shorten it.
 	offerTimeout time.Duration
 	rooms        map[uuid.UUID]*Room
-	roomsMu      sync.Mutex
-	notifier     *mediaNotifier
-	iceSeen      *iceObserver
+	// The upload governor (StartUploadGovernor): its stop function, the
+	// goroutine to wait for and how many times one was started.
+	uploadMu   sync.Mutex
+	uploadStop context.CancelFunc
+	uploadWG   sync.WaitGroup
+	uploadRuns atomic.Int32
+	roomsMu    sync.Mutex
+	notifier   *mediaNotifier
+	iceSeen    *iceObserver
 	// probes counts the live connection tests (see Probe).
 	probeMu  sync.Mutex
 	probes   int
