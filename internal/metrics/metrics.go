@@ -250,6 +250,10 @@ var (
 	// direction (to_sfu, from_sfu). TURNAllocations is the live allocations.
 	TURNRelayedBytes = newVec("mnema_turn_relayed_bytes_total", "Bytes forwarded by the built-in TURN relay, by direction", "direction")
 	TURNAllocations  Gauge
+	// TURNRelayedPackets counts the packets behind TURNRelayedBytes, by the
+	// same direction. The voice upload limit adds the relay's framing for the
+	// from_sfu ones to the egress it measures.
+	TURNRelayedPackets = newVec("mnema_turn_relayed_packets_total", "Packets forwarded by the built-in TURN relay, by direction", "direction")
 
 	// S3Operations counts object storage calls, by operation and result.
 	S3Operations = newVec("mnema_s3_operations_total", "Object storage operations, by operation and result", "op", "result")
@@ -315,6 +319,7 @@ func WriteInstruments(w io.Writer) {
 	writeCounter(w, "mnema_sfu_peer_joins_total", "Media connections created", SFUPeerJoins.Load())
 	TURNEvents.write(w)
 	TURNRelayedBytes.write(w)
+	TURNRelayedPackets.write(w)
 	WriteGauge(w, "mnema_turn_allocations", "Live allocations of the built-in TURN relay", TURNAllocations.Load())
 	S3Operations.write(w)
 	WebhookDropped.write(w)

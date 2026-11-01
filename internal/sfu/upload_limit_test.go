@@ -237,6 +237,7 @@ func TestUploadGovernorLoopFollowsTheEgressAndStopsWithItsContext(t *testing.T) 
 	src := uploadSource{
 		egressBytes:   func() uint64 { mu.Lock(); defer mu.Unlock(); b := bytes; bytes += 2_500_000; return b },
 		egressPackets: func() uint64 { return 0 },
+		relayPackets:  func() uint64 { return 0 },
 		now:           func() time.Time { mu.Lock(); defer mu.Unlock(); fake = fake.Add(time.Second); return fake },
 		views: func(now time.Time) []uploadView {
 			return viewsOf(t, clock.now, vts...)
@@ -308,21 +309,35 @@ func TestUploadViewsFindEveryLayerGroup(t *testing.T) {
 
 func TestEgressMeterCountsTheWireAndSmooths(t *testing.T) {
 	start := time.Unix(1000, 0)
-	m := newEgressMeter(0, 0, start)
+	m := newEgressMeter(0, 0, 0, start)
 	// 1000 audio packets of 100 bytes in a second: 138 KB on the wire, and the
 	// first sample is half of it (the rate before was 0).
-	first := m.sample(100_000, 1000, start.Add(time.Second))
+	first := m.sample(100_000, 1000, 0, start.Add(time.Second))
 	if want := (100_000 + 1000*uploadWireOverhead) * 8 / 2.0; first != want {
 		t.Fatalf("first sample %v, want %v", first, want)
 	}
 	// The same again: it moves towards the full rate.
-	second := m.sample(200_000, 2000, start.Add(2*time.Second))
+	second := m.sample(200_000, 2000, 0, start.Add(2*time.Second))
 	if want := first/2 + (100_000+1000*uploadWireOverhead)*8/2.0; second != want {
 		t.Fatalf("second sample %v, want %v", second, want)
 	}
 	// No time passed: the rate is kept.
-	if again := m.sample(200_000, 2000, start.Add(2*time.Second)); again != second {
+	if again := m.sample(200_000, 2000, 0, start.Add(2*time.Second)); again != second {
 		t.Fatalf("rate changed with no time passed: %v", again)
+	}
+}
+
+// Relayed members are in the SFU's own counters; the relay adds only its
+// framing, once per relayed packet, and the media is not counted twice.
+func TestEgressMeterAddsOnlyTheRelaysFramingForRelayedMembers(t *testing.T) {
+	start := time.Unix(1000, 0)
+	direct := newEgressMeter(0, 0, 0, start)
+	relayed := newEgressMeter(0, 0, 0, start)
+	// The same 500 packets of 1000 bytes; in the second case all were relayed.
+	d := direct.sample(500_000, 500, 0, start.Add(time.Second))
+	r := relayed.sample(500_000, 500, 500, start.Add(time.Second))
+	if want := float64(500*turnFraming) * 8 / 2; r-d != want {
+		t.Fatalf("relaying adds %v bit/s, want only the framing %v", r-d, want)
 	}
 }
 

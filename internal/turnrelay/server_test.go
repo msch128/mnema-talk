@@ -129,6 +129,8 @@ func TestRelaysBothWaysToTheSFUOnly(t *testing.T) {
 	}
 	defer relay.Close()
 
+	toSFU, fromSFU := metrics.TURNRelayedPackets.With("to_sfu").Load(), metrics.TURNRelayedPackets.With("from_sfu").Load()
+
 	// client -> SFU
 	if _, err := relay.WriteTo([]byte("to-sfu"), h.sfuAddr()); err != nil {
 		t.Fatal(err)
@@ -145,6 +147,9 @@ func TestRelaysBothWaysToTheSFUOnly(t *testing.T) {
 	got, src, ok := recvWithin(relay, 2*time.Second)
 	if !ok || string(got) != "to-client" {
 		t.Fatalf("client received %q (ok=%v)", got, ok)
+	}
+	if metrics.TURNRelayedPackets.With("to_sfu").Load()-toSFU != 1 || metrics.TURNRelayedPackets.With("from_sfu").Load()-fromSFU != 1 {
+		t.Fatal("the relayed packets were not counted, one in each direction")
 	}
 	if src.String() != h.sfuAddr().String() {
 		t.Fatalf("client sees the SFU at %s, want %s", src, h.sfuAddr())
