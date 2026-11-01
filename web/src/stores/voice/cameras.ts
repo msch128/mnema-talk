@@ -56,6 +56,11 @@ export function isCameraHidden(cs: VoiceState, userId: string | null) {
   return cs.allCamerasOff.value || (!!userId && !!cs.hiddenCameras.value[userId])
 }
 
+/** Whether the server was told to stop sending userId's camera because its tile is not on screen (see cameraVisibility). */
+export function isCameraOffscreen(cs: VoiceState, userId: string | null) {
+  return !!userId && !!cs.offscreenCameras.value[userId]
+}
+
 export function setCameraHidden(cs: VoiceState, userId: string | null, hidden: boolean) {
   if (!userId) return
   const next = { ...cs.hiddenCameras.value }
@@ -64,7 +69,8 @@ export function setCameraHidden(cs: VoiceState, userId: string | null, hidden: b
   cs.hiddenCameras.value = next
   writeJson(HIDDEN_CAMERAS_KEY, next)
   if (hidden) removeUserVideoStream(cs, userId)
-  emitSubscription(cs, { kind: 'camera', user_id: userId, on: !hidden })
+  // A camera whose tile is off screen stays off at the server when I stop hiding it.
+  emitSubscription(cs, { kind: 'camera', user_id: userId, on: !hidden && !isCameraOffscreen(cs, userId) })
 }
 
 export function toggleCameraHidden(cs: VoiceState, userId: string | null) {

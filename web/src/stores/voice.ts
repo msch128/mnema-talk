@@ -3,7 +3,8 @@ import { onScopeDispose } from 'vue'
 import { onVideoSeenChange, onVisibilityChange } from '../lib/pageVisibility'
 import { createVoiceState, type VoiceState } from './voice/state'
 import { toggleScreenAudioMute, setScreenQuality, resetScreenQuality, openScreenShareModal, closeScreenShareModal, recordPing, setNoiseMode, toggleNoiseCancelling, toggleMute, toggleDeafen } from './voice/controls'
-import { setSubscriptionSink, isCameraHidden, setCameraHidden, toggleCameraHidden, setAllCamerasOff, setHideNoVideo, toggleHideNoVideo, resendSubscriptions, setVideoPaused, cameraStreamOf, canFocusCamera, focusCamera, unfocusCamera, toggleCameraFocus, setUserVideoStream, removeUserVideoStream } from './voice/cameras'
+import { setSubscriptionSink, isCameraHidden, isCameraOffscreen, setCameraHidden, toggleCameraHidden, setAllCamerasOff, setHideNoVideo, toggleHideNoVideo, resendSubscriptions, setVideoPaused, cameraStreamOf, canFocusCamera, focusCamera, unfocusCamera, toggleCameraFocus, setUserVideoStream, removeUserVideoStream } from './voice/cameras'
+import { setVisibleCameras, resetCameraVisibility, handleCamerasCapped, isCameraCapped, installCameraVisibility } from './voice/cameraVisibility'
 import { watchScreen, unwatchScreen, focusScreen, focusOwnScreen, setRemoteScreen, removeRemoteScreen, handleMediaState, handleScreenViewers, handleScreenLayers, setScreenFit, handleScreenQuality, handleLayersWanted, setScreenChoice, viewersOf, resetRemoteMedia, dropEndedWatches } from './voice/screens'
 import { updateUser, setVoiceRooms, syncSpeakingVisibility, joinedAtOf, setVoiceSnapshot, handleVoiceStateUpdate, handleSpeakingEvent, handleMuteState, muteStateOf, isSpeaking, setChannel, disconnect } from './voice/room'
 import { installStage } from './voice/cameras'
@@ -35,6 +36,7 @@ function exposedState(cs: VoiceState, stage: ReturnType<typeof installStage>) {
     mediaState: cs.mediaState,
     hiddenCameras: cs.hiddenCameras,
     allCamerasOff: cs.allCamerasOff,
+    cappedCameras: cs.cappedCameras,
     hideNoVideo: cs.hideNoVideo,
     ownScreenFocused: cs.ownScreenFocused,
     focusedCamera: cs.focusedCamera,
@@ -90,6 +92,11 @@ function exposedActions(cs: VoiceState) {
     setHideNoVideo: bind(setHideNoVideo),
     toggleHideNoVideo: bind(toggleHideNoVideo),
     resendSubscriptions: bind(resendSubscriptions),
+    setVisibleCameras: bind(setVisibleCameras),
+    resetCameraVisibility: bind(resetCameraVisibility),
+    handleCamerasCapped: bind(handleCamerasCapped),
+    isCameraCapped: bind(isCameraCapped),
+    isCameraOffscreen: bind(isCameraOffscreen),
     watchScreen: bind(watchScreen),
     unwatchScreen: bind(unwatchScreen),
     focusScreen: bind(focusScreen),
@@ -139,6 +146,7 @@ function exposedActions(cs: VoiceState) {
 export const useVoiceStore = defineStore('voice', () => {
   const cs = createVoiceState()
   const stage = installStage(cs)
+  installCameraVisibility(cs)
   // A hidden page shows no video: the server stops sending it (audio goes on) and starts again when the page is back.
   // (Picture-in-Picture counts as seen: it is used exactly when the tab is in the background.)
   onScopeDispose(onVideoSeenChange(unseen => { if (cs.currentChannelId.value) setVideoPaused(cs, unseen) }))

@@ -59,8 +59,15 @@ func (c *Client) applySubscriptionQuality(room *sfu.Room, req subscribeRequest) 
 
 // handleSubscribe applies a viewer's choice of which video to receive:
 // {kind: "screen"|"camera", user_id, on} for one publisher, or
-// {kind: "camera", all: true, on} for every camera.
+// {kind: "camera", all: true, on} for every camera, or
+// {kind: "camera", user_ids: [...], on} for up to 16 cameras at once.
 func (c *Client) handleSubscribe(payload json.RawMessage) {
+	if ids, on, batch, ok := parseCameraBatch(payload, c.User.ID); batch {
+		if ok {
+			c.handleCameraBatch(ids, on)
+		}
+		return
+	}
 	req, ok := parseSubscribe(payload, c.User.ID)
 	if !ok {
 		return

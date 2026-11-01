@@ -218,6 +218,7 @@ export function resetRemoteMedia(cs: VoiceState) {
   cs.receivedLayer.value = {}
   cs.layersWanted.value = null
   cs.userVideoStreams.value = {}
+  cs.cappedCameras.value = {}
   syncScreenFocus(cs, null)
 }
 

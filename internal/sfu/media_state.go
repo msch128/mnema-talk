@@ -24,6 +24,8 @@ type mediaNotifier struct {
 	layers  func(roomID, sharer uuid.UUID, layers []Layer)
 	quality func(roomID, viewer, sharer uuid.UUID, state QualityState)
 	wanted  func(roomID, sharer uuid.UUID, layers []int)
+	// capped says whose cameras a viewer is not sent (see camera_cap.go).
+	capped func(roomID, viewer uuid.UUID, publishers []uuid.UUID)
 }
 
 func (n *mediaNotifier) setLayers(fn func(roomID, sharer uuid.UUID, layers []Layer)) {

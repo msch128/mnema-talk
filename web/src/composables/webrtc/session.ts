@@ -196,6 +196,8 @@ function attachSubscriptions(cx: Cx) {
   const { voice, chat } = cx
   voice.setSubscriptionSink((msg: SubscribeRequest) => chat.sendWSEvent('webrtc_subscribe', msg))
   voice.resendSubscriptions()
+  // The server forgot which cameras were off: ask again for what is not on screen.
+  voice.resetCameraVisibility()
   sendMuteState(cx)
 }
 

@@ -82,6 +82,7 @@ func (r *Room) signalPeer(peer *Peer) {
 	if !ok {
 		return
 	}
+	r.announceCapped(peer, capCameras(desired))
 	if peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed {
 		return
 	}

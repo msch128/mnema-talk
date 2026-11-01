@@ -23,6 +23,7 @@ import { useTalkControls } from '../composables/useTalkControls'
 import { useElementSize } from '../composables/useElementSize'
 import { useTalkJoin } from '../composables/useTalkJoin'
 import { useStageFullscreen } from '../composables/useStageFullscreen'
+import { useVisibleCameras } from '../composables/useVisibleCameras'
 import { COMPACT_BAR_WIDTH } from '../lib/talkLayout'
 import { focusRing } from './talkButtons'
 import { unreadBadge } from '../lib/voiceChatPanel'
@@ -154,6 +155,7 @@ const pip = usePictureInPicture()
 const pipActive = computed(() => pip.active.value)
 
 const root = ref<HTMLElement | null>(null)
+useVisibleCameras(root)
 const { isFullscreen, enterFullscreen, toggleFullscreen, onTileFocusCamera, fullscreenCamera, onAreaDblclick } = useStageFullscreen({
   container: () => stageView.value?.container ?? null,
   root,

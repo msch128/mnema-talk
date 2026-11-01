@@ -1724,7 +1724,8 @@
     "inviteEnded": "Nicht mehr verfügbar",
     "moveForControls": "Bewege die Maus, um die Steuerung zu zeigen",
     "sharingScreen": "Teilt den Bildschirm",
-    "cameraOn": "Kamera an"
+    "cameraOn": "Kamera an",
+    "cameraCapped": "Zu viele Kameras gleichzeitig: diese wird nicht gezeigt"
   },
   "admin": {
     "signedInAs": "Angemeldet als {name} (Owner)",

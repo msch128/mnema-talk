@@ -35,6 +35,8 @@ const props = defineProps({
   // Their camera is running (known without receiving it) and I may hide it.
   cameraAvailable: { type: Boolean, default: false },
   cameraHidden: { type: Boolean, default: false },
+  // The server sends no picture of their camera: too many cameras at once.
+  cameraCapped: { type: Boolean, default: false },
   // Their camera can go on the stage / is on the stage.
   cameraFocusable: { type: Boolean, default: false },
   cameraFocused: { type: Boolean, default: false },
@@ -155,6 +157,12 @@ watch(() => props.stream, (stream) => {
         <span v-else class="tile-initial leading-none" aria-hidden="true">{{ initial }}</span>
       </div>
     </div>
+
+    <p
+      v-if="cameraCapped && !stream"
+      data-testid="tile-camera-capped"
+      :class="['pointer-events-none absolute inset-x-2 z-30 text-center leading-4 text-mnema-tertiary', compact ? 'bottom-7 text-[10px]' : 'bottom-10 text-xs']"
+    >{{ $t('talk.cameraCapped') }}</p>
 
     <!-- Streaming: hover (or keyboard focus) offers to watch / stop watching -->
     <div

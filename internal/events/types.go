@@ -33,6 +33,7 @@ const (
 	ScreenLayers        = "screen_layers"
 	ScreenQuality       = "screen_quality"
 	ScreenLayersWanted  = "screen_layers_wanted"
+	CamerasCapped       = "cameras_capped"
 	MediaHandshake      = "media_handshake"
 	VoiceKicked         = "voice_kicked"
 	ServerInfo          = "server_info"
