@@ -1,0 +1,57 @@
+.env.example
+  s_45fff186c97845::t_d69ae54c9d9f51 362-369
+cmd/server/main.go
+  s_bf24ce51cd8f95::t_12674292b133ce 223-226
+doc/operations.md
+  s_bf24ce51cd8f95::t_fb450a13f51d36 145,1104-1105
+docker-compose.yml
+  s_45fff186c97845::t_d4527e4b312421 145
+internal/config/config.go
+  s_45fff186c97845::t_54cd424331772f 110-113
+internal/config/config_env.go
+  s_45fff186c97845::t_554c6f416b9a6e 154
+internal/config/config_test.go
+  s_bf24ce51cd8f95::t_afbb146937a49a 636-637,659,661
+internal/config/config_validate.go
+  s_bf24ce51cd8f95::t_a98f27b285aaa9 62-64,68-75
+internal/metrics/metrics.go
+  s_45fff186c97845::t_14ad477f6dc018 48-50,221-226,308-311
+internal/metrics/metrics_test.go
+  s_bf24ce51cd8f95::t_5883318d7e8451 121,211-219
+internal/sfu/adapt.go
+  s_45fff186c97845::t_2bda19dc4b0a53 99-102,150
+internal/sfu/adapt_limit.go
+  s_bf24ce51cd8f95::t_16de18511b7921 1-35
+internal/sfu/upload_limit.go
+  s_45fff186c97845::t_7e3adc98c19fd8 1-124
+internal/sfu/upload_limit_run.go
+  s_45fff186c97845::t_50173055aadd1e 1-100
+internal/sfu/upload_limit_test.go
+  s_bf24ce51cd8f95::t_8190a1e9a25c3b 1-314
+internal/sfu/viewer_limit.go
+  s_45fff186c97845::t_fef2ce1fcf79df 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e8ca9dd990ee39cdedd7bb25d36f841076fdde2e",
+  "prompts": {},
+  "sessions": {
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
