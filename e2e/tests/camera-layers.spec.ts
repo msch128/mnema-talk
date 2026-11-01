@@ -51,6 +51,7 @@ const sendingLayers = (page: Page) => page.evaluate(() => {
 })
 
 test('a small tile gets the camera\'s thumbnail layer and the stage its best one, without a break', async ({ browser }) => {
+  test.setTimeout(180_000)
   const sharerCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   const viewerCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   await sharerCtx.addInitScript(trackPeerConnections)
@@ -83,8 +84,11 @@ test('a small tile gets the camera\'s thumbnail layer and the stage its best one
     const tile = `[data-participant-tile][data-user-id="${sharerId}"]`
     const tileVideo = `${tile} video`
     await expect(viewer.locator(tileVideo)).toBeVisible({ timeout: 20_000 })
-    // The thumbnail: 180 pixels tall, whatever the camera's best layer is.
-    await expect.poll(async () => (await showing(viewer, tileVideo)).height, { timeout: 30_000 }).toBe(180)
+    // The tile has settled in the strip under the stage (it was in the grid before the screen was watched): small.
+    await expect.poll(() => viewer.locator(tile).evaluate(el => el.clientWidth), { timeout: 20_000 }).toBeLessThan(200)
+    // The thumbnail: 180 pixels tall, whatever the camera's best layer is. The size of the small tile
+    // is told to the server when the tile settles and again when its camera arrives, so this takes a moment.
+    await expect.poll(async () => (await showing(viewer, tileVideo)).height, { timeout: 45_000, intervals: [500, 1000, 2000] }).toBe(180)
     const small = await showing(viewer, tileVideo)
     await expect.poll(async () => (await showing(viewer, tileVideo)).frames, { timeout: 15_000 }).toBeGreaterThan(small.frames + 5)
     // The sharer sends the thumbnail (a scaled-down layer is on), and the best layer only while someone needs it.
@@ -94,7 +98,7 @@ test('a small tile gets the camera\'s thumbnail layer and the stage its best one
     await viewer.locator(tile).click({ position: { x: 6, y: 6 } })
     await expect(stage).toHaveAttribute('data-stage-source', `camera:${sharerId}`)
     const stageVideo = '[data-testid="stage"] video'
-    await expect.poll(async () => (await showing(viewer, stageVideo)).height, { timeout: 30_000 }).toBeGreaterThanOrEqual(360)
+    await expect.poll(async () => (await showing(viewer, stageVideo)).height, { timeout: 45_000, intervals: [500, 1000, 2000] }).toBeGreaterThanOrEqual(360)
     const big = await showing(viewer, stageVideo)
     await expect.poll(async () => (await showing(viewer, stageVideo)).frames, { timeout: 15_000 }).toBeGreaterThan(big.frames + 5)
     await expect.poll(async () => (await sendingLayers(sharer)).some(scale => scale === 1), { timeout: 20_000 }).toBe(true)
@@ -102,7 +106,7 @@ test('a small tile gets the camera\'s thumbnail layer and the stage its best one
     // And back: the stage shows the screen again, the tile the thumbnail.
     await stage.getByTestId('stage-unfocus-camera').click()
     await expect(stage).toHaveAttribute('data-stage-source', sharerId)
-    await expect.poll(async () => (await showing(viewer, tileVideo)).height, { timeout: 30_000 }).toBe(180)
+    await expect.poll(async () => (await showing(viewer, tileVideo)).height, { timeout: 45_000, intervals: [500, 1000, 2000] }).toBe(180)
 
     await leaveTalks([sharer, viewer])
   } finally {

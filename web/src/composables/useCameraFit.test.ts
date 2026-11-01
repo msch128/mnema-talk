@@ -4,7 +4,7 @@ import { defineComponent, h, nextTick, ref } from 'vue'
 import { mount } from '@vue/test-utils'
 import { useCameraFit } from './useCameraFit'
 import { useVoiceStore } from '../stores/voice'
-import { CAMERA_FIT_SETTLE_MS } from '../stores/voice/cameraFit'
+import { CAMERA_FIT_GONE_MS, CAMERA_FIT_SETTLE_MS } from '../stores/voice/cameraFit'
 import type { SubscribeRequest } from '../types/events'
 
 class FakeObserver {
@@ -80,11 +80,11 @@ describe('the size of my picture of a camera', () => {
 
     who.value = 'bob'
     await nextTick()
-    vi.advanceTimersByTime(CAMERA_FIT_SETTLE_MS)
+    vi.advanceTimersByTime(CAMERA_FIT_GONE_MS)
     expect(sent.map(m => [m.user_id, m.fit_px])).toEqual([['anna', 198], ['bob', 198], ['anna', 0]])
 
     wrapper.unmount()
-    vi.advanceTimersByTime(CAMERA_FIT_SETTLE_MS)
+    vi.advanceTimersByTime(CAMERA_FIT_GONE_MS)
     expect(sent.at(-1)).toEqual({ kind: 'camera', user_id: 'bob', on: true, fit_px: 0 })
     expect(voice.cameraSizes).toEqual({})
   })
