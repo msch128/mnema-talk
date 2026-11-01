@@ -1,0 +1,35 @@
+e2e/tests/audio-stall.spec.ts
+  s_bf24ce51cd8f95::t_797fce1d65e4ec 19-20
+e2e/tests/late-join.spec.ts
+  s_bf24ce51cd8f95::t_e6b5621b4d94f8 20-21
+web/src/components/AudioAdvancedSection.vue
+  s_bf24ce51cd8f95::t_913f687c6366c9 26-31,68-76
+web/src/components/AudioSettingsPanel.test.ts
+  s_bf24ce51cd8f95::t_30812e84218221 327-348
+web/src/composables/webrtc/sdp.ts
+  s_bf24ce51cd8f95::t_629c8a6c4b4341 257-262
+web/src/i18n/de.json
+  s_bf24ce51cd8f95::t_2b210babe33acc 1321-1323
+web/src/i18n/en.json
+  s_bf24ce51cd8f95::t_4fa6fc39a7141c 1321-1323
+web/src/stores/voiceSettings.ts
+  s_bf24ce51cd8f95::t_b8c22b934b99f2 91-92,99,124
+web/src/stores/voiceStoreBehaviour.test.ts
+  s_bf24ce51cd8f95::t_142a6a0e795a4a 46,61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "21116a4e2243a9798e144ce2e7980192e69b6e7c",
+  "prompts": {},
+  "sessions": {
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
