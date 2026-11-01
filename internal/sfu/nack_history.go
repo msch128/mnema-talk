@@ -15,16 +15,20 @@ import (
 const (
 	// nackSlots is the most packets a track remembers (the ring's size).
 	nackSlots = 1024
-	// nackMinBytes is the least a track remembers, enough for a keyframe
-	// (40 or more packets) to be answered whatever the load.
+	// nackMinBytes is the least a track remembers whatever the load; a track
+	// whose frames are larger (a screen's keyframe is 100 KB or more) keeps
+	// room for a frame and a quarter, up to nackMaxFloor.
 	nackMinBytes = 64 << 10
+	nackMaxFloor = 768 << 10
 	// nackStartBytes is the budget before the track's bitrate is known.
 	nackStartBytes = 256 << 10
 	// nackRateEvery is how often the track's bitrate is measured.
 	nackRateEvery = 500 * time.Millisecond
-	// nackPacketOverhead is counted on top of the payload of a stored packet
-	// (its header and the bookkeeping).
-	nackPacketOverhead = 64
+	// nackSlotOverhead is counted on top of the buffer of a stored packet (the
+	// slot's own fields).
+	nackSlotOverhead = 48
+	// nackFrameDecay forgets the size of the largest frame slowly (per frame).
+	nackFrameDecay = 0.999
 )
 
 // nackWindow is how long a track's history reaches back with peers connections
@@ -57,86 +61,142 @@ func nackConnBytes(peers int64) int {
 	}
 }
 
-// Payload buffers come in three sizes, so a 120 byte packet does not hold 1.5 KB.
+// nackBuf is a pooled buffer: the stored header followed by the payload.
+type nackBuf struct{ b []byte }
+
+// Buffers come in four sizes, so a 120 byte packet does not hold 1.5 KB.
 var nackPools = [...]struct {
 	size int
 	pool sync.Pool
 }{
-	{size: 256}, {size: 640}, {size: 1500},
+	{size: 256}, {size: 640}, {size: 1500}, {size: 2048},
 }
 
-func nackBuffer(n int) []byte {
+// getNackBuf returns a buffer with room for n bytes.
+func getNackBuf(n int) *nackBuf {
 	for i := range nackPools {
 		if n <= nackPools[i].size {
-			if b, ok := nackPools[i].pool.Get().(*[]byte); ok {
-				return (*b)[:n]
+			if b, ok := nackPools[i].pool.Get().(*nackBuf); ok {
+				return b
 			}
-			return make([]byte, n, nackPools[i].size)
+			return &nackBuf{b: make([]byte, 0, nackPools[i].size)}
 		}
 	}
-	return make([]byte, n)
+	return &nackBuf{b: make([]byte, 0, n)}
 }
 
-func nackRecycle(b []byte) {
+func putNackBuf(b *nackBuf) {
 	for i := range nackPools {
-		if cap(b) == nackPools[i].size {
-			b = b[:0]
-			nackPools[i].pool.Put(&b)
+		if cap(b.b) == nackPools[i].size {
+			b.b = b.b[:0]
+			nackPools[i].pool.Put(b)
 			return
 		}
 	}
 }
 
-// nackEntry is one remembered packet.
-type nackEntry struct {
-	header     rtp.Header
-	payload    []byte
-	resentAt   time.Time
-	storedSize int
+// nackSlot is one remembered packet.
+type nackSlot struct {
+	buf      *nackBuf
+	seq      uint16
+	hdrLen   int
+	padding  uint8
+	size     int
+	resentAt time.Time
 }
 
 // nackHistory is the remembered packets of one video track of one subscriber.
+// The retained range is [oldest, highest]; slot seq%nackSlots holds seq.
 type nackHistory struct {
 	mu      sync.Mutex
-	ring    [nackSlots]*nackEntry
+	ring    [nackSlots]nackSlot
 	started bool
 	// oldest and highest are the sequence numbers of the retained range.
 	oldest, highest uint16
 	bytes           int
+	// budget is the bytes the history may hold now, given the track's bitrate.
+	budget func(rate float64) int
 
 	// The bitrate of the track, in bytes per second, measured every nackRateEvery.
 	rate     float64
 	rateAt   time.Time
 	rateSeen int
 	sent     int
+	// frame is the bytes of the frame being sent (packets of one RTP
+	// timestamp) and frameMax the largest recently.
+	frame, frameMax float64
+	frameTs         uint32
 }
 
 // add remembers a packet and drops what no longer fits.
-func (h *nackHistory) add(header *rtp.Header, payload []byte, now time.Time, budget func(rate float64) int) {
+func (h *nackHistory) add(header *rtp.Header, payload []byte, now time.Time) {
 	if len(payload) == 0 {
 		return
 	}
-	seq := header.SequenceNumber
-	e := &nackEntry{header: header.Clone(), payload: append(nackBuffer(len(payload))[:0], payload...)}
-	e.storedSize = len(payload) + nackPacketOverhead
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.measure(now, e.storedSize)
-	if !h.started {
-		h.started, h.oldest, h.highest = true, seq, seq
-	} else if diff := seq - h.highest; diff == 0 || diff >= 1<<15 {
-		// A repeat or an old packet; the numbers are not going back.
-		nackRecycle(e.payload)
+	need := header.MarshalSize() + len(payload)
+	buf := getNackBuf(need)
+	hdrLen, err := header.MarshalTo(buf.b[:need])
+	if err != nil {
+		putNackBuf(buf)
 		return
 	}
-	h.highest = seq
-	h.put(seq, e)
-	h.trim(budget(h.rate))
+	buf.b = append(buf.b[:hdrLen], payload...)
+	slot := nackSlot{
+		buf: buf, seq: header.SequenceNumber, hdrLen: hdrLen,
+		padding: header.PaddingSize, size: cap(buf.b) + nackSlotOverhead,
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.measure(now, need, header.Timestamp)
+	if !h.store(slot) {
+		putNackBuf(buf)
+		return
+	}
+	h.trim(max(h.budget(h.rate), h.frameFloor()))
 }
 
-// measure counts size bytes sent and updates the bitrate every nackRateEvery.
-func (h *nackHistory) measure(now time.Time, size int) {
+// store places the packet in the ring; false when it is not kept (a repeat,
+// or older than anything retained).
+func (h *nackHistory) store(slot nackSlot) bool {
+	seq := slot.seq
+	if !h.started {
+		h.started, h.oldest, h.highest = true, seq, seq
+		h.put(slot)
+		return true
+	}
+	if back := h.highest - seq; back < 1<<15 {
+		// Not newer than the newest: kept when it fills a gap in the range.
+		if back == 0 || back >= nackSlots || seq-h.oldest >= 1<<15 || h.ring[int(seq)%nackSlots].buf != nil {
+			return false
+		}
+		h.put(slot)
+		return true
+	}
+	// Newer: make room first, so the oldest packet is dropped and never the new one.
+	if ahead := seq - h.oldest; ahead >= nackSlots {
+		if seq-h.highest >= nackSlots {
+			h.clearRing()
+			h.oldest = seq
+		} else {
+			for seq-h.oldest >= nackSlots {
+				h.dropOldest()
+			}
+		}
+	}
+	h.highest = seq
+	h.put(slot)
+	return true
+}
+
+// measure counts size bytes sent and updates the bitrate every nackRateEvery
+// and the size of the largest frame.
+func (h *nackHistory) measure(now time.Time, size int, ts uint32) {
 	h.sent += size
+	if ts != h.frameTs {
+		h.frameMax = max(h.frame, h.frameMax*nackFrameDecay)
+		h.frame, h.frameTs = 0, ts
+	}
+	h.frame += float64(size)
 	if h.rateAt.IsZero() {
 		h.rateAt, h.rateSeen = now, h.sent
 		return
@@ -152,29 +212,42 @@ func (h *nackHistory) measure(now time.Time, size int) {
 	}
 }
 
-func (h *nackHistory) put(seq uint16, e *nackEntry) {
-	idx := int(seq) % nackSlots
-	if old := h.ring[idx]; old != nil {
-		h.drop(idx, old)
+// frameFloor is the least the history keeps: a frame and a quarter of the
+// largest recent frame, within [nackMinBytes, nackMaxFloor].
+func (h *nackHistory) frameFloor() int {
+	return max(nackMinBytes, min(int(h.frameMax*1.25), nackMaxFloor))
+}
+
+func (h *nackHistory) put(slot nackSlot) {
+	h.ring[int(slot.seq)%nackSlots] = slot
+	h.bytes += slot.size
+}
+
+// release forgets the packet in slot idx.
+func (h *nackHistory) release(idx int) {
+	if s := &h.ring[idx]; s.buf != nil {
+		h.bytes -= s.size
+		putNackBuf(s.buf)
+		*s = nackSlot{}
 	}
-	h.ring[idx] = e
-	h.bytes += e.storedSize
 }
 
-func (h *nackHistory) drop(idx int, e *nackEntry) {
-	h.bytes -= e.storedSize
-	nackRecycle(e.payload)
-	h.ring[idx] = nil
+// dropOldest forgets the oldest packet and moves the range on.
+func (h *nackHistory) dropOldest() {
+	h.release(int(h.oldest) % nackSlots)
+	h.oldest++
 }
 
-// trim forgets the oldest packets until the history fits max bytes and the ring.
+// trim forgets the oldest packets until the history fits max bytes.
 func (h *nackHistory) trim(max int) {
-	for h.oldest != h.highest && (h.bytes > max || int(h.highest-h.oldest) >= nackSlots) {
-		idx := int(h.oldest) % nackSlots
-		if e := h.ring[idx]; e != nil {
-			h.drop(idx, e)
-		}
-		h.oldest++
+	for h.oldest != h.highest && h.bytes > max {
+		h.dropOldest()
+	}
+}
+
+func (h *nackHistory) clearRing() {
+	for i := range h.ring {
+		h.release(i)
 	}
 }
 
@@ -183,27 +256,30 @@ func (h *nackHistory) trim(max int) {
 // history goes on without it.
 func (h *nackHistory) find(seq uint16, now time.Time, interval time.Duration) (rtp.Header, []byte, bool) {
 	h.mu.Lock()
-	defer h.mu.Unlock()
-	if !h.started || h.highest-seq >= 1<<15 || seq-h.oldest >= 1<<15 {
+	s := &h.ring[int(seq)%nackSlots]
+	if !h.started || s.buf == nil || s.seq != seq || h.highest-seq >= 1<<15 || seq-h.oldest >= 1<<15 ||
+		(!s.resentAt.IsZero() && now.Sub(s.resentAt) < interval) {
+		h.mu.Unlock()
 		return rtp.Header{}, nil, false
 	}
-	e := h.ring[int(seq)%nackSlots]
-	if e == nil || e.header.SequenceNumber != seq {
+	s.resentAt = now
+	raw := append([]byte(nil), s.buf.b...)
+	hdrLen, pad := s.hdrLen, s.padding
+	h.mu.Unlock()
+	var header rtp.Header
+	if _, err := header.Unmarshal(raw[:hdrLen]); err != nil {
 		return rtp.Header{}, nil, false
 	}
-	if !e.resentAt.IsZero() && now.Sub(e.resentAt) < interval {
-		return rtp.Header{}, nil, false
-	}
-	e.resentAt = now
-	return e.header.Clone(), append([]byte(nil), e.payload...), true
+	header.PaddingSize = pad
+	return header, raw[hdrLen:], true
 }
 
 // forgetResend allows seq to be resent at once again (its resend was not sent).
 func (h *nackHistory) forgetResend(seq uint16) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if e := h.ring[int(seq)%nackSlots]; e != nil && e.header.SequenceNumber == seq {
-		e.resentAt = time.Time{}
+	if s := &h.ring[int(seq)%nackSlots]; s.buf != nil && s.seq == seq {
+		s.resentAt = time.Time{}
 	}
 }
 
@@ -218,10 +294,6 @@ func (h *nackHistory) retained() int {
 func (h *nackHistory) clear() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	for i, e := range h.ring {
-		if e != nil {
-			h.drop(i, e)
-		}
-	}
+	h.clearRing()
 	h.started, h.bytes = false, 0
 }

@@ -3,6 +3,7 @@ package sfu
 import (
 	"encoding/binary"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/metrics"
@@ -52,6 +53,8 @@ type nackResponder struct {
 
 	mu      sync.Mutex
 	streams map[uint32]*nackStream
+	// count is len(streams), readable without the lock on every packet.
+	count atomic.Int32
 	// afterResend, when set (tests), is called when a NACK has been answered.
 	afterResend func()
 }
@@ -71,9 +74,7 @@ func supportsNack(info *interceptor.StreamInfo) bool {
 // connection's budget and never less than a keyframe.
 func (n *nackResponder) budget(rate float64) int {
 	peers := n.load.count()
-	n.mu.Lock()
-	streams := max(len(n.streams), 1)
-	n.mu.Unlock()
+	streams := max(int(n.count.Load()), 1)
 	share := max(nackConnBytes(peers)/streams, nackMinBytes)
 	if rate <= 0 {
 		return min(nackStartBytes, share)
@@ -86,12 +87,14 @@ func (n *nackResponder) BindLocalStream(info *interceptor.StreamInfo, writer int
 		return writer
 	}
 	s := &nackStream{info: info, writer: writer, rtxSeq: rtp.NewRandomSequencer()}
+	s.history.budget = n.budget
 	n.mu.Lock()
 	n.streams[info.SSRC] = s
+	n.count.Store(int32(len(n.streams)))
 	n.mu.Unlock()
 	return interceptor.RTPWriterFunc(func(h *rtp.Header, payload []byte, a interceptor.Attributes) (int, error) {
 		if h.SSRC == info.SSRC {
-			s.history.add(h, payload, n.now(), n.budget)
+			s.history.add(h, payload, n.now())
 		}
 		return writer.Write(h, payload, a)
 	})
@@ -101,6 +104,7 @@ func (n *nackResponder) UnbindLocalStream(info *interceptor.StreamInfo) {
 	n.mu.Lock()
 	s := n.streams[info.SSRC]
 	delete(n.streams, info.SSRC)
+	n.count.Store(int32(len(n.streams)))
 	n.mu.Unlock()
 	if s != nil {
 		s.history.clear()
@@ -111,6 +115,7 @@ func (n *nackResponder) Close() error {
 	n.mu.Lock()
 	streams := n.streams
 	n.streams = map[uint32]*nackStream{}
+	n.count.Store(0)
 	n.mu.Unlock()
 	for _, s := range streams {
 		s.history.clear()
