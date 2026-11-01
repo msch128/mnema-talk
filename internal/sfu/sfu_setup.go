@@ -190,13 +190,13 @@ func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, loa
 		return nil, fmt.Errorf("failed to register the transport-cc stamp: %w", err)
 	}
 	registry.Add(telemetryFactory{})
-	var options []webrtc.InterceptorOption
-	if load != nil {
-		options = append(options, webrtc.WithNackResponderOptions(load.responderOption()))
-	}
+	// Pion's NACK responder keeps a history of a fixed size per connection;
+	// it is given no streams and ours (nack_responder.go) answers instead.
+	options := []webrtc.InterceptorOption{webrtc.WithNackResponderOptions(disablePionResponder())}
 	if err := webrtc.RegisterDefaultInterceptorsWithOptions(mediaEngine, registry, options...); err != nil {
 		return nil, fmt.Errorf("failed to register WebRTC interceptors: %w", err)
 	}
+	registry.Add(nackResponderFactory{load: load})
 
 	return webrtc.NewAPI(
 		webrtc.WithSettingEngine(settingEngine),

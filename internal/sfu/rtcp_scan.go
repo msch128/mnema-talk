@@ -4,6 +4,7 @@ import "github.com/pion/rtcp"
 
 // RTCP packet types and feedback formats the SFU looks at.
 const (
+	rtcpTypeReceiverReport    = 201
 	rtcpTypeTransportFeedback = 205
 	rtcpTypePayloadFeedback   = 206
 	fmtNACK                   = 1
