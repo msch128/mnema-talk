@@ -102,6 +102,7 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 		c.authH.MountAuthenticated(j)
 		j.Get("/webrtc/config", webrtcConfig(c.cfg, c.d.TURN))
 		j.Post("/webrtc/probe", httpx.Handle(c.systemH.connectionProbe))
+		j.Get("/webrtc/speedtest", httpx.Handle(c.systemH.downloadSpeedTest))
 		if c.cfg.APIDocs {
 			j.Get("/openapi.json", openAPISpec)
 		}

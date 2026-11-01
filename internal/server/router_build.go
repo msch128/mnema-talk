@@ -338,6 +338,7 @@ func (c *components) newSystem() error {
 		testMailLimit: httpx.NewRateLimiter(5, 10*time.Minute).Named("test_mail"),
 		probeLimit:    httpx.NewRateLimiter(12, 10*time.Minute).Named("connection_probe"),
 		wsReportLimit: httpx.NewRateLimiter(30, 10*time.Minute).Named("ws_report"),
+		speed:         newSpeedTest(),
 	}
 	if h.version == "" {
 		h.version = "dev"

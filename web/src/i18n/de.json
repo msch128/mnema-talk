@@ -4398,7 +4398,8 @@
       "candidates": "Suche Adressen …",
       "direct": "Probiere die direkte Route …",
       "relayUdp": "Probiere das Relay über UDP …",
-      "relayTcp": "Probiere das Relay über TCP …"
+      "relayTcp": "Probiere das Relay über TCP …",
+      "speed": "Messe den Download vom Server …"
     },
     "addresses": "Gefundene Adressen: {host} lokal, {srflx} öffentlich, {relay} Relay",
     "path": {
@@ -4455,7 +4456,12 @@
       }
     },
     "docs": "Sprache: Fehlersuche",
-    "failed": "Der Test konnte nicht laufen."
+    "failed": "Der Test konnte nicht laufen.",
+    "speed": {
+      "ok": "Dein Gerät hat vom Server mit {mbps} Mbit/s geladen, sein Upload ist also mindestens so hoch: genug für eine Bildschirmfreigabe, die etwa {count} Mitglieder sehen (je 1,5 Mbit/s plus 30 % Zuschlag). Ein kurzer Test, und deine eigene Verbindung kann die Grenze sein.",
+      "lan": "Dieses Gerät ist im selben Netz wie der Server, daher kann der Speedtest den Upload des Servers nicht messen. Starte ihn auf einem Handy im Mobilfunknetz.",
+      "fail": "Der Speedtest konnte nicht laufen, daher ist der Upload des Servers unbekannt."
+    }
   },
   "statusEditor": {
     "subtitle": "Wird allen neben deinem Namen angezeigt.",

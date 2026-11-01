@@ -195,3 +195,35 @@ describe('runConnectionTest', () => {
     expect(report.relayUdp.outcome).toBe('ok')
   })
 })
+
+describe('the download speed test', () => {
+  const scripted = () => ({ candidates: ['host'], connects: true, stats: goodStats('srflx', '203.0.113.9') })
+  const withDownload = (download: NonNullable<ConnectionTestDeps['download']>) => ({ ...deps(scripted), download })
+
+  it('measures Mbit/s from the bytes and the time, after the paths, and announces the step', async () => {
+    const steps: string[] = []
+    const report = await runConnectionTest(withDownload(async () => ({ bytes: 5_000_000, ms: 1000 })), s => steps.push(s))
+    expect(steps.at(-1)).toBe('speed')
+    expect(report.speed).toEqual({ outcome: 'ok', mbps: 40 })
+  })
+
+  it('does not measure from the same network: the download would say nothing about the upload', async () => {
+    const download = vi.fn(async () => ({ bytes: 5_000_000, ms: 1000 }))
+    const local = { ...deps(() => ({ candidates: ['host'], connects: true, stats: goodStats('host', '192.168.1.5') })), download }
+    expect((await runConnectionTest(local)).speed).toEqual({ outcome: 'lan' })
+    expect(download).not.toHaveBeenCalled()
+  })
+
+  it('is a failure, not a number, when the stream is too short, the request fails or the test was refused', async () => {
+    expect((await runConnectionTest(withDownload(async () => ({ bytes: 1000, ms: 5 })))).speed).toEqual({ outcome: 'fail' })
+    expect((await runConnectionTest(withDownload(async () => ({ bytes: 5_000_000, ms: 0 })))).speed).toEqual({ outcome: 'fail' })
+    expect((await runConnectionTest(withDownload(async () => { throw new Error('429') }))).speed).toEqual({ outcome: 'fail' })
+    const limited = withDownload(async () => ({ bytes: 5_000_000, ms: 1000 }))
+    limited.probe = async () => { throw new ApiError(429, 'RATE_LIMITED', '') }
+    expect((await runConnectionTest(limited)).speed).toEqual({ outcome: 'fail' })
+  })
+
+  it('leaves the speed out when the deps have no download', async () => {
+    expect((await runConnectionTest(deps(scripted))).speed).toBeUndefined()
+  })
+})

@@ -67,7 +67,7 @@ func TestSummaryChecklistOrderAndContent(t *testing.T) {
 	order := []string{
 		"What to do next:", "docker compose up -d --wait", "reverse proxy", "Open https://chat.example.com",
 		`Sign in as "owner"`, "Change the password", "never 8080", "443/tcp", "50000-50050/udp", "3479/udp and 3479/tcp",
-		`"Test my connection"`, "mobile data", "mnema-talk doctor",
+		`"Test my connection"`, "mobile data", "internet upload", "no number is shown here", "mnema-talk doctor",
 	}
 	at := 0
 	for _, want := range order {

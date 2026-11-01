@@ -4398,7 +4398,8 @@
       "candidates": "Looking for addresses…",
       "direct": "Trying the direct route…",
       "relayUdp": "Trying the relay over UDP…",
-      "relayTcp": "Trying the relay over TCP…"
+      "relayTcp": "Trying the relay over TCP…",
+      "speed": "Measuring the download from the server…"
     },
     "addresses": "Addresses found: {host} local, {srflx} public, {relay} relay",
     "path": {
@@ -4455,7 +4456,12 @@
       }
     },
     "docs": "Troubleshooting voice",
-    "failed": "The test could not run."
+    "failed": "The test could not run.",
+    "speed": {
+      "ok": "Your device downloaded from the server at {mbps} Mbit/s, so its upload is at least that: enough for a screen share watched by about {count} members (1.5 Mbit/s plus 30 % overhead each). A short test, and your own connection can be the limit.",
+      "lan": "This device is on the same network as the server, so the speed test cannot measure the server’s upload. Run it from a phone on mobile data.",
+      "fail": "The speed test could not run, so the server’s upload is not known."
+    }
   },
   "statusEditor": {
     "subtitle": "Shown next to your name for everyone to see.",

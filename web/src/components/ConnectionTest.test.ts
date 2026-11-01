@@ -136,3 +136,29 @@ describe('ConnectionTest', () => {
     await flushPromises()
   })
 })
+
+describe('the upload hint', () => {
+  const direct = { outcome: 'ok' as const, pair: { localType: 'srflx', remoteType: 'host', remoteAddress: '203.0.113.7' } }
+
+  it('says what the download means for the screen share size, honestly', async () => {
+    const w = await runWith({ ...base, direct, speed: { outcome: 'ok', mbps: 100 } })
+    const text = w.get('[data-testid="connection-test-speed"]').text()
+    expect(text).toContain('100 Mbit/s')
+    expect(text).toContain('at least that')
+    expect(text).toContain('about 51 members')
+    expect(text).toContain('your own connection can be the limit')
+  })
+
+  it('says it cannot measure the upload from the same network', async () => {
+    const w = await runWith({ ...base, direct, speed: { outcome: 'lan' } })
+    expect(w.get('[data-testid="connection-test-speed"]').text()).toContain('cannot measure the server’s upload')
+  })
+
+  it('says when the speed test could not run, and shows nothing when none was made', async () => {
+    let w = await runWith({ ...base, direct, speed: { outcome: 'fail' } })
+    expect(w.get('[data-testid="connection-test-speed"]').attributes('data-outcome')).toBe('fail')
+    w.unmount()
+    w = await runWith({ ...base, direct })
+    expect(w.find('[data-testid="connection-test-speed"]').exists()).toBe(false)
+  })
+})

@@ -4,7 +4,7 @@
 // channel to a throwaway connection on the server (POST /api/webrtc/probe),
 // which is no Talk, shows no presence and closes itself.
 import { ApiError } from './api'
-import type { CandidateCounts, ConnectionReport, PathResult } from './connectionVerdict'
+import { isLocalAddress, type CandidateCounts, type ConnectionReport, type PathResult, type SpeedResult } from './connectionVerdict'
 
 export interface ConnectionTestDeps {
   /** The ICE servers the server offers this member (STUN, TURN with credentials). */
@@ -12,6 +12,8 @@ export interface ConnectionTestDeps {
   /** Sends the offer to the server and returns its answer. */
   probe: (offerSdp: string) => Promise<string>
   createPeer: (config: RTCConfiguration) => RTCPeerConnection
+  /** Reads the server's speed test stream; absent: no speed test. */
+  download?: () => Promise<{ bytes: number; ms: number }>
   /** Milliseconds to wait for candidates and for a connection. */
   gatherMs?: number
   connectMs?: number
@@ -139,8 +141,25 @@ export async function tryPath(deps: ConnectionTestDeps, servers: RTCIceServer[],
 
 const unavailable: PathResult = { outcome: 'unavailable' }
 
+// A stream shorter than this says nothing about a speed.
+const MIN_SPEED_BYTES = 256 * 1024
+
+/** The download speed from the server, or why there is none. From the server's own network it is not measured. */
+export async function measureSpeed(deps: ConnectionTestDeps, report: ConnectionReport): Promise<SpeedResult> {
+  const remote = report.direct.pair?.remoteAddress
+  if (report.direct.outcome === 'ok' && remote && isLocalAddress(remote)) return { outcome: 'lan' }
+  if (!deps.download || report.limited) return { outcome: 'fail' }
+  try {
+    const { bytes, ms } = await deps.download()
+    if (bytes < MIN_SPEED_BYTES || ms <= 0) return { outcome: 'fail' }
+    return { outcome: 'ok', mbps: (bytes * 8) / ms / 1000 }
+  } catch {
+    return { outcome: 'fail' }
+  }
+}
+
 /** Runs the whole test. `onStep` hears which part starts, for a progress line. */
-export async function runConnectionTest(deps: ConnectionTestDeps, onStep: (step: 'candidates' | 'direct' | 'relayUdp' | 'relayTcp') => void = () => {}): Promise<ConnectionReport> {
+export async function runConnectionTest(deps: ConnectionTestDeps, onStep: (step: 'candidates' | 'direct' | 'relayUdp' | 'relayTcp' | 'speed') => void = () => {}): Promise<ConnectionReport> {
   const servers = await deps.iceServers()
   const turn = onlyUrls(servers, isTurn)
   const report: ConnectionReport = {
@@ -167,6 +186,10 @@ export async function runConnectionTest(deps: ConnectionTestDeps, onStep: (step:
       else if (e.kind === 'limited') { report.limited = true; break }
       else { report.voiceOff = true; break }
     }
+  }
+  if (deps.download) {
+    onStep('speed')
+    report.speed = await measureSpeed(deps, report)
   }
   return report
 }

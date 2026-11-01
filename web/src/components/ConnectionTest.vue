@@ -5,11 +5,11 @@ import { computed, onUnmounted, ref } from 'vue'
 import { CheckCircle2, CircleHelp, Loader2, Network, TriangleAlert, XCircle } from '@lucide/vue'
 import { runConnectionTest } from '../lib/connectionTest'
 import { browserTestDeps } from '../lib/connectionTestApi'
-import { verdictOf, type ConnectionReport, type PathOutcome } from '../lib/connectionVerdict'
+import { screenViewersFor, verdictOf, type ConnectionReport, type PathOutcome } from '../lib/connectionVerdict'
 import { SOURCE_URL } from '../lib/thirdParty'
-import { t } from '../i18n'
+import { locale, t } from '../i18n'
 
-type Step = 'candidates' | 'direct' | 'relayUdp' | 'relayTcp'
+type Step = 'candidates' | 'direct' | 'relayUdp' | 'relayTcp' | 'speed'
 
 const { heading = true } = defineProps<{ heading?: boolean }>()
 const running = ref(false)
@@ -29,6 +29,14 @@ const fixText = computed(() => {
   const key = `connectionTest.cause.${verdict.value?.cause}.fix`
   const text = t(key)
   return text === key ? '' : text
+})
+// The upload hint: what the download from the server says about its upload, or why it says nothing.
+const speedText = computed(() => {
+  const speed = report.value?.speed
+  if (!speed) return ''
+  if (speed.outcome !== 'ok') return t(`connectionTest.speed.${speed.outcome}`)
+  const mbps = new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(speed.mbps)
+  return t('connectionTest.speed.ok', { mbps, count: screenViewersFor(speed.mbps) })
 })
 const docsUrl = `${SOURCE_URL}/blob/main/doc/troubleshooting-voice.md`
 const outcomeLabel = (o: PathOutcome) => `connectionTest.outcome.${o}`
@@ -79,6 +87,7 @@ async function run() {
         <li v-for="[name, path] in paths" :key="name" :data-testid="`connection-test-path-${name}`" :data-outcome="path.outcome">
           {{ $t(`connectionTest.path.${name}`) }}: {{ $t(outcomeLabel(path.outcome)) }}
         </li>
+        <li v-if="speedText" data-testid="connection-test-speed" :data-outcome="report.speed?.outcome">{{ speedText }}</li>
         <li data-testid="connection-test-addresses">{{ $t('connectionTest.addresses', report.candidates) }}</li>
       </ul>
       <a :href="docsUrl" target="_blank" rel="noopener noreferrer" class="text-xs text-mnema-accent hover:underline">{{ $t('connectionTest.docs') }}</a>

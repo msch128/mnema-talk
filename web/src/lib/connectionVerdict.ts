@@ -12,6 +12,21 @@ export interface PathResult {
 
 export interface CandidateCounts { host: number; srflx: number; relay: number }
 
+/** What the download speed test found. */
+export type SpeedResult =
+  | { outcome: 'ok'; mbps: number }
+  /** Run from the server's own network: a download there says nothing about the upload. */
+  | { outcome: 'lan' }
+  | { outcome: 'fail' }
+
+/** Mbit/s of upload one screen watcher needs: 1.5 Mbit/s plus 30 % for headers, keyframes and retransmissions (doc/benchmark.md). */
+export const SCREEN_VIEWER_MBPS = 1.95
+
+/** How many members can watch one screen share over this much upload. */
+export function screenViewersFor(mbps: number): number {
+  return Math.max(0, Math.floor(mbps / SCREEN_VIEWER_MBPS))
+}
+
 export interface ConnectionReport {
   candidates: CandidateCounts
   /** The server hands out STUN servers / a TURN relay to this member. */
@@ -24,6 +39,8 @@ export interface ConnectionReport {
   voiceOff: boolean
   /** The server refused the test as too frequent (429). */
   limited: boolean
+  /** The download speed test, when the test ran one. */
+  speed?: SpeedResult
 }
 
 export type VerdictKind = 'direct' | 'relay_only' | 'none' | 'inconclusive'

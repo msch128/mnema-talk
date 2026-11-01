@@ -34,3 +34,21 @@ describe('browserTestDeps', () => {
     expect(made).toEqual([{ iceTransportPolicy: 'relay' }])
   })
 })
+
+describe('browserTestDeps.download', () => {
+  const stream = (chunks: number[]) => new ReadableStream<Uint8Array>({
+    start(c) { for (const n of chunks) c.enqueue(new Uint8Array(n)); c.close() }
+  })
+
+  it('counts the bytes after the first chunk and times them from the first chunk', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, body: stream([100, 1000, 2000]) })))
+    const r = await browserTestDeps.download?.()
+    expect(r?.bytes).toBe(3000)
+    expect(r?.ms).toBeGreaterThanOrEqual(0)
+  })
+
+  it('throws when the server refuses', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 429, body: null })))
+    await expect(browserTestDeps.download?.()).rejects.toThrow('HTTP 429')
+  })
+})
