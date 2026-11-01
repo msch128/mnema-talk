@@ -1,0 +1,35 @@
+doc/architecture.md
+  s_5b748b0295d2f4::t_aeef5de02a248b 506
+e2e/tests/camera-layers.spec.ts
+  s_5b748b0295d2f4::t_5de63590659493 54,87-91,101,109
+internal/sfu/camera_group_test.go
+  s_5b748b0295d2f4::t_7f26dd1601c9c2 261-295
+internal/sfu/camera_layers_test.go
+  s_5b748b0295d2f4::t_ff1e66a79d3601 420-456
+internal/sfu/layer_viewers.go
+  s_5b748b0295d2f4::t_407ae2c8faa280 87-89
+web/src/composables/useCameraFit.test.ts
+  s_5b748b0295d2f4::t_100f9180a63812 7,83,87
+web/src/stores/voice/cameraFit.test.ts
+  s_5b748b0295d2f4::t_350c771eaa18ee 4,58-60,99-163
+web/src/stores/voice/cameraFit.ts
+  s_5b748b0295d2f4::t_cf36bcd1615ade 11-19,25,33,49-50,58-86,105-107,117,127
+web/src/stores/voice/cameras.ts
+  s_5b748b0295d2f4::t_2fbff41121267d 7,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ec32c5980ebbdb17bb29df2bcba33a5aabca3ed",
+  "prompts": {},
+  "sessions": {
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
