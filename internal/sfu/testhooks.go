@@ -43,3 +43,19 @@ func (r *Room) ReceivesCamera(viewer, publisher uuid.UUID) bool {
 	defer r.mu.RUnlock()
 	return viewer != publisher && r.subs[viewer].Wants(publisher, webrtc.RTPCodecTypeVideo, SourceCamera)
 }
+
+// CameraLayers is what publisher declared about the layers of its camera. It
+// lets packages built on the SFU test the signalling; the server never calls it.
+func (r *Room) CameraLayers(publisher uuid.UUID) []Layer {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return append([]Layer(nil), r.cameraLayerMeta[publisher]...)
+}
+
+// CameraFit is the best layer of publisher's camera viewer's picture can use,
+// as the SFU worked it out from the size the viewer reported. Tests only.
+func (r *Room) CameraFit(viewer, publisher uuid.UUID) int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.cameraFitLocked(viewer, publisher)
+}

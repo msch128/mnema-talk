@@ -22,12 +22,12 @@ describe('publishMids', () => {
       'm=video 9 UDP 96', 'a=mid:5', 'a=sendonly',
       ''
     ].join('\r\n')
-    const ours = { audio: '0', screenAudio: '3', video: ['1', '2'] }
+    const ours = { audio: '0', screenAudio: '3', video: ['1', '2'], cameraLayers: [] }
     expect(publishMids(offer)).toEqual(ours)
     // Someone was already talking: the SFU forwards their voice on our mic
     // line, which then reads sendrecv. It is still our microphone line.
     expect(publishMids(offer.replace('a=mid:0\r\na=recvonly', 'a=mid:0\r\na=sendrecv'))).toEqual(ours)
-    expect(publishMids('')).toEqual({ audio: null, screenAudio: null, video: [] })
+    expect(publishMids('')).toEqual({ audio: null, screenAudio: null, video: [], cameraLayers: [] })
   })
 })
 
@@ -129,8 +129,8 @@ describe('tuneScreenOffer', () => {
 
 describe('SDP capability edge cases', () => {
   it('ignores unknown media, unnumbered lines and forwarded lines beyond four publish slots', () => {
-    expect(publishMids('v=0\nm=audio 9 UDP 1\nm=application 9 UDP 1\na=mid:data\nm=audio 9 UDP 1\na=mid:mic\nm=audio 9 UDP 1\na=mid:sound\nm=audio 9 UDP 1\na=mid:other\nm=video 9 UDP 96\na=mid:screen\nm=video 9 UDP 96\na=mid:camera\nm=video 9 UDP 96\na=mid:other-video')).toEqual({ audio: 'mic', screenAudio: 'sound', video: ['screen', 'camera'] })
-    expect(publishMids(null)).toEqual({ audio: null, screenAudio: null, video: [] })
+    expect(publishMids('v=0\nm=audio 9 UDP 1\nm=application 9 UDP 1\na=mid:data\nm=audio 9 UDP 1\na=mid:mic\nm=audio 9 UDP 1\na=mid:sound\nm=audio 9 UDP 1\na=mid:other\nm=video 9 UDP 96\na=mid:screen\nm=video 9 UDP 96\na=mid:camera\nm=video 9 UDP 96\na=mid:other-video')).toEqual({ audio: 'mic', screenAudio: 'sound', video: ['screen', 'camera'], cameraLayers: [] })
+    expect(publishMids(null)).toEqual({ audio: null, screenAudio: null, video: [], cameraLayers: [] })
   })
 
   it('preserves LF, existing Google codec hints and ranks unconstrained H264 after baseline', () => {
@@ -147,9 +147,20 @@ describe('SDP capability edge cases', () => {
 describe('screen lines of an SFU offer', () => {
   it('publishMids takes the lower layer lines only where the server has them', () => {
     const offer = SFU_LAYER_OFFER
-    expect(publishMids(offer)).toEqual({ audio: '0', screenAudio: '3', video: ['1', '2'] })
-    expect(publishMids(offer, 2)).toEqual({ audio: '0', screenAudio: '3', video: ['1', '2', '4', '5'] })
+    expect(publishMids(offer)).toEqual({ audio: '0', screenAudio: '3', video: ['1', '2'], cameraLayers: [] })
+    expect(publishMids(offer, 2)).toEqual({ audio: '0', screenAudio: '3', video: ['1', '2', '4', '5'], cameraLayers: [] })
     expect(publishMids(offer, 1).video).toEqual(['1', '2', '4'])
+  })
+
+  it('publishMids puts the camera layer lines after the screen\'s, only where the server has them', () => {
+    const lines = ['1', '2', '4', '5', '6', '7'].flatMap(mid => ['m=video 9 UDP 96', `a=mid:${mid}`, 'a=recvonly'])
+    const offer = ['v=0', 'm=audio 9 UDP 111', 'a=mid:0', 'a=recvonly', 'm=audio 9 UDP 111', 'a=mid:3', 'a=recvonly', ...lines, ''].join('\r\n')
+    expect(publishMids(offer, 2, 2)).toEqual({ audio: '0', screenAudio: '3', video: ['1', '2', '4', '5'], cameraLayers: ['6', '7'] })
+    expect(publishMids(offer, 2, 1).cameraLayers).toEqual(['6'])
+    // An older server without camera lines: the lines are not ours to use.
+    expect(publishMids(offer, 2, 0).cameraLayers).toEqual([])
+    // A server with camera lines but no screen layers.
+    expect(publishMids(offer, 0, 2)).toMatchObject({ video: ['1', '2'], cameraLayers: ['4', '5'] })
   })
 
   it('tuneScreenLines gives every layer line the screen line tuning', () => {

@@ -39,6 +39,15 @@ func (h *Hub) announceLayersWanted(roomID, sharer uuid.UUID, layers []int) {
 	h.sendToVoiceUser(roomID, sharer, events.ScreenLayersWanted, map[string]any{"channel_id": roomID, "layers": layers})
 }
 
+// announceCameraLayersWanted is announceLayersWanted for the layers of the
+// sender's camera: the same event, marked with its source.
+func (h *Hub) announceCameraLayersWanted(roomID, sharer uuid.UUID, layers []int) {
+	if layers == nil {
+		layers = []int{}
+	}
+	h.sendToVoiceUser(roomID, sharer, events.ScreenLayersWanted, map[string]any{"channel_id": roomID, "layers": layers, "source": sfu.SourceCamera})
+}
+
 // sendToVoiceUser sends to the connections of userID that are in chID's room.
 func (h *Hub) sendToVoiceUser(chID, userID uuid.UUID, eventType string, payload any) {
 	data := encode(eventType, payload)
@@ -57,11 +66,13 @@ func (h *Hub) sendToVoiceUser(chID, userID uuid.UUID, eventType string, payload 
 	}
 }
 
-// handleLayers records the layers of the sender's screen share:
-// {layers: [{width, height, fps}, ...]}, best first.
+// handleLayers records the layers of the sender's screen share, or of its
+// camera with "source": "camera": {layers: [{width, height, fps}, ...]}, best
+// first.
 func (c *Client) handleLayers(payload json.RawMessage) {
 	var req struct {
 		Layers []sfu.Layer `json:"layers"`
+		Source string      `json:"source"`
 	}
 	if json.Unmarshal(payload, &req) != nil {
 		return
@@ -70,8 +81,12 @@ func (c *Client) handleLayers(payload json.RawMessage) {
 	if room == nil {
 		return
 	}
-	if err := room.SetScreenLayers(c.User.ID, req.Layers); err != nil {
-		slog.Debug("sfu layers rejected", "user", c.User.ID, "err", err)
+	set := room.SetScreenLayers
+	if sfu.Source(req.Source) == sfu.SourceCamera {
+		set = room.SetCameraLayers
+	}
+	if err := set(c.User.ID, req.Layers); err != nil {
+		slog.Debug("sfu layers rejected", "user", c.User.ID, "source", req.Source, "err", err)
 	}
 }
 

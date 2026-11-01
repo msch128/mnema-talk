@@ -175,7 +175,7 @@ func (g *layerGroup) notifyWanted(mask uint8) {
 	if g.notifier == nil {
 		return
 	}
-	fn := g.notifier.wantedFn()
+	fn := g.notifier.wantedFnFor(g.source)
 	if fn == nil {
 		return
 	}
@@ -189,7 +189,8 @@ func (g *layerGroup) notifyWanted(mask uint8) {
 }
 
 func (g *layerGroup) notifyQuality(vt *viewerTrack, st QualityState) {
-	if g.notifier == nil {
+	// Viewers pick the layer of a screen share; a camera has no picker.
+	if g.notifier == nil || g.source != SourceScreen {
 		return
 	}
 	if fn := g.notifier.qualityFn(); fn != nil {

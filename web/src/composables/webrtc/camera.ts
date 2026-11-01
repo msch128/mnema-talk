@@ -4,6 +4,8 @@ import { mediaUnprotected } from './mediaRoom'
 import type { Cx } from './state'
 import { tuneSender } from './senderTuning'
 import { cameraSenderParams } from './senders'
+import { declareCameraLayers, releaseCameraLayers } from './cameraLayers'
+import { syncCameraLayers } from './cameraLayerSync'
 
 // Tells the user why the camera failed instead of always blaming permissions.
 function cameraErrorKey(err: unknown) {
@@ -35,8 +37,11 @@ async function attachCameraTrack(cx: Cx, track: MediaStreamTrack) {
   if ('contentHint' in track) track.contentHint = 'motion'
   track.onended = () => stopCamera(cx)
   if (cx.st.cameraSender) {
+    // The server hears of the layers before the first video: that is when it decides to take them.
+    declareCameraLayers(cx, track, cx.st.cameraLayerSenders.some(Boolean))
     await cx.st.cameraSender.replaceTrack(track).catch(() => {})
     await tuneSender(cx.st.cameraSender, cameraSenderParams(cx))
+    await syncCameraLayers(cx)
     // The server asks the sender's own camera; a plain request is for the videos it watches.
     cx.chat.sendWSEvent('webrtc_request_keyframe', { source: 'camera' })
   }
@@ -83,6 +88,7 @@ export function stopCamera(cx: Cx) {
   st.cameraCaptureGeneration++
   const wasOn = !!st.localCameraStream.value
   if (st.cameraSender) st.cameraSender.replaceTrack(null).catch(() => {})
+  releaseCameraLayers(cx)
   if (st.localCameraStream.value) {
     st.localCameraStream.value.getTracks().forEach(tr => tr.stop())
     st.localCameraStream.value = null

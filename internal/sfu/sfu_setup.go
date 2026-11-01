@@ -42,6 +42,12 @@ func (s *SFU) SetLayersWantedHandler(fn func(roomID, sharer uuid.UUID, layers []
 	s.notifier.setWanted(fn)
 }
 
+// SetCameraLayersWantedHandler is SetLayersWantedHandler for the layers of a
+// camera.
+func (s *SFU) SetCameraLayersWantedHandler(fn func(roomID, sharer uuid.UUID, layers []int)) {
+	s.notifier.setWantedCamera(fn)
+}
+
 // NewSFU creates the SFU. announceIPs are the addresses browsers are told to
 // send media to instead of the container's own (WEBRTC_NAT_1TO1_IP): usually
 // the public IP and the LAN IP, so both remote and local members connect.

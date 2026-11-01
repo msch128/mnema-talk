@@ -131,6 +131,13 @@ func classifyVideoTrack(userID uuid.UUID, conn *receiveConn, receiver *webrtc.RT
 		role.source = SourceCamera
 		role.streamID = CameraStreamPrefix + role.streamID
 	}
+	if layer := matchSimulcastLayer(conn.cameraLowerTrs, receiver); layer > 0 {
+		// A lower layer of the camera.
+		role.source = SourceCamera
+		role.streamID = CameraStreamPrefix + userID.String()
+		role.layer = layer
+		return role
+	}
 	role.layer = matchSimulcastLayer(conn.lowerTrs, receiver)
 	return role
 }
@@ -189,6 +196,15 @@ func (r *Room) publishRemoteTrack(peer *Peer, remoteTrack *webrtc.TrackRemote, r
 		r.receiveScreenLayer(peer, remoteTrack, remoteTrack.ID(), uint32(remoteTrack.SSRC()), remoteTrack.Codec().RTPCodecCapability, role.layer)
 		return
 	}
+	if source == SourceCamera && r.takesCameraLayer(userID) {
+		r.receiveLayer(peer, remoteTrack, SourceCamera, remoteTrack.ID(), uint32(remoteTrack.SSRC()), remoteTrack.Codec().RTPCodecCapability, role.layer)
+		return
+	}
+	if role.layer > 0 {
+		// A lower layer of a camera that is not sent as layers: nothing to join.
+		drain(remoteTrack)
+		return
+	}
 
 	key := trackKey(userID, remoteTrack.ID())
 	// The stream ID names the publishing user, so clients can map tracks to people.
@@ -209,6 +225,20 @@ func (r *Room) publishRemoteTrack(peer *Peer, remoteTrack *webrtc.TrackRemote, r
 	r.addTrack(key, info)
 
 	go r.forward(remoteTrack, trackLocal, key, info)
+}
+
+// takesCameraLayer reports whether a camera video goes into a layer group:
+// when its sender declared layers before its video started, or when the
+// camera already has a group (a restart keeps it). Any layer of it may arrive
+// first.
+func (r *Room) takesCameraLayer(userID uuid.UUID) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.cameraLayeredLocked(userID) {
+		return true
+	}
+	g := r.cameraGroups[userID]
+	return g != nil && !g.superseded.Load()
 }
 
 // pinCodecOrder keeps the codec order of the first offer on a publisher's

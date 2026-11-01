@@ -8,6 +8,7 @@ import { CAMERA_STREAM_PREFIX, SCREEN_AUDIO_STREAM_PREFIX, publisherId } from '.
 import { announceMediaUnprotected, announceNoMediaConnection } from './mediaRoom'
 import type { Cx } from './state'
 import { stopCaptureWatch, syncLayers } from './layers'
+import { syncCameraLayers } from './cameraLayerSync'
 import { bindPublishSenders, tuneBoundSenders } from './senders'
 
 export function cleanupPeerConnection(cx: Cx) {
@@ -26,7 +27,9 @@ export function cleanupPeerConnection(cx: Cx) {
   st.cameraSender = null
   st.screenAudioSender = null
   st.layerSenders = [null, null]
+  st.cameraLayerSenders = [null, null]
   st.declaredKey = ''
+  st.declaredCameraKey = ''
   voice?.resetRemoteMedia()
 }
 
@@ -204,9 +207,9 @@ function ensurePeerConnection(cx: Cx): RTCPeerConnection {
   return cx.st.pc || setupPeerConnection(cx)
 }
 
-function prepareRemoteSdp(offerSdp: string | undefined, layerLines: number): string {
+function prepareRemoteSdp(offerSdp: string | undefined, layerLines: number, cameraLayerLines: number): string {
   const raw = offerSdp || ''
-  return tuneScreenLines(restrictVideoCodecs(raw), publishMids(raw, layerLines), canSendH264())
+  return tuneScreenLines(restrictVideoCodecs(raw), publishMids(raw, layerLines, cameraLayerLines), canSendH264())
 }
 
 function prepareTransceiverTransforms(conn: RTCPeerConnection) {
@@ -235,6 +238,9 @@ async function finishOfferNegotiation(
   if (bound.fresh.layers?.length) {
     await syncLayers(cx)
   }
+  if (bound.fresh.cameraLayers?.length) {
+    await syncCameraLayers(cx)
+  }
 }
 
 function reportNegotiationError(chat: Cx['chat'], err: unknown) {
@@ -258,10 +264,11 @@ async function executeOfferNegotiation(
   isCurrent: () => boolean
 ): Promise<void> {
   const layerLines = Math.max(0, cx.voice.serverScreenLayers - 1)
-  const sdp = prepareRemoteSdp(offer.sdp, layerLines)
+  const cameraLayerLines = Math.max(0, cx.voice.serverCameraLayers - 1)
+  const sdp = prepareRemoteSdp(offer.sdp, layerLines, cameraLayerLines)
   await conn.setRemoteDescription(new RTCSessionDescription({ type: offer.type, sdp }))
   if (!isCurrent()) return
-  const bound = bindPublishSenders(cx, conn, offer.sdp || '', layerLines)
+  const bound = bindPublishSenders(cx, conn, offer.sdp || '', layerLines, cameraLayerLines)
   prepareTransceiverTransforms(conn)
   if (!(await flushQueuedCandidates(cx, conn, isCurrent))) return
   if (!(await publishAnswer(conn, cx.chat, isCurrent))) return

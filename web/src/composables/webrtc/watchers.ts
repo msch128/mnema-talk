@@ -5,6 +5,7 @@ import { announceMediaRekeyed, queueMediaWire } from './mediaRoom'
 import type { Cx } from './state'
 import { setNodeGain } from './audioMath'
 import { applyAudioSettings } from './audioSettings'
+import { syncCameraLayers } from './cameraLayerSync'
 import { syncLayers } from './layers'
 import { applyScreenQuality, liveScreenAudioTrack } from './senders'
 import { sendMuteState } from './session'
@@ -71,6 +72,8 @@ function installAudioWatchers(cx: Cx) {
   watch(() => voice.screenQuality, () => { void applyScreenQuality(cx).then(() => syncLayers(cx)) })
   // The layers viewers need: the others stop being encoded and sent.
   watch(() => voice.layersWanted, () => { void syncLayers(cx) })
+  // The same for the camera's layers.
+  watch(() => voice.cameraLayersWanted, () => { void syncCameraLayers(cx) })
 
   // Everyone sees whether I am muted or deafened.
   watch(() => [voice.isMuted, voice.isDeafened], () => sendMuteState(cx))

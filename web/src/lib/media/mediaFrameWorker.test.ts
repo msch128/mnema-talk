@@ -513,6 +513,47 @@ describe('media frame worker, layers of a screen share', () => {
   })
 })
 
+describe('media frame worker, layers of a camera', () => {
+  const streamOf = (written: unknown[]) => written.map(frame => new DataView((frame as { data: ArrayBuffer }).data).getUint32(6))
+  const lineOf = (written: unknown[]) => new Uint8Array((written[0] as { data: ArrayBuffer }).data)[14]
+  const payload = [new Uint8Array([1]).buffer]
+
+  // The line byte keeps naming the camera, as every receiver checks it; the layer lives in the stream
+  // only, so an older viewer that knows layers of screens alone still opens a camera layer.
+  it('seals each layer in a stream of its own on the unchanged camera line', async () => {
+    const key = await epochKeys(60)
+    const keyed = [{ type: 'key', epoch: 2, key, seq: 1 }]
+    const streams: number[] = []
+    for (const layer of [0, 1, 2]) {
+      const out = await frames('send', payload, keyed, { layer, source: 1 })
+      expect(lineOf(out)).toBe(0x10)
+      streams.push(streamOf(out)[0] ?? 0)
+      expect((streams[layer] ?? 0) & 3).toBe(layer)
+    }
+    expect(new Set(streams).size).toBe(3)
+  })
+
+  it('opens frames of the layers of a camera as the server switches between them', async () => {
+    const key = await epochKeys(61)
+    const keyed = [{ type: 'key', epoch: 2, key, seq: 1 }]
+    const sealedBy = async (layer: number) => {
+      const out = await frames('send', [new Uint8Array([layer, 9]).buffer], keyed, { layer, source: 1 })
+      return new Uint8Array((out[0] as { data: ArrayBuffer }).data)
+    }
+    const packets = [await sealedBy(2), await sealedBy(0), await sealedBy(2), await sealedBy(1)]
+    const opened = await frames('recv', packets.map(packet => asBuffer(packet.buffer)), keyed, { source: 1 })
+    expect(opened.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data)])).toEqual([[2, 9], [0, 9], [2, 9], [1, 9]])
+  })
+
+  it('seals a camera with no layer as before: a stream of no particular layer', async () => {
+    const key = await epochKeys(62)
+    const keyed = [{ type: 'key', epoch: 2, key, seq: 1 }]
+    const out = await frames('send', payload, keyed, { source: 1 })
+    expect(lineOf(out)).toBe(0x10)
+    expect(streamOf(out)).toHaveLength(1)
+  })
+})
+
 describe('media frame worker, lines and the retired frame version', () => {
   const body = [new Uint8Array([6, 6]).buffer]
   const magic = async (keysAt: unknown[], over: Parameters<typeof frames>[3] = {}) => {

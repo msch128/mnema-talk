@@ -5,12 +5,12 @@
  * SFU may reuse them to forward other members' media (then they read
  * sendrecv/sendonly).
  */
-export function publishMids(sdp: string | null | undefined, layerLines = 0) {
-  const out: { audio: string | null; screenAudio: string | null; video: string[] } = { audio: null, screenAudio: null, video: [] }
+export function publishMids(sdp: string | null | undefined, layerLines = 0, cameraLayerLines = 0) {
+  const out: PublishMids = { audio: null, screenAudio: null, video: [], cameraLayers: [] }
   let kind: string | undefined | null = null
   let mid: string | null = null
   const flush = () => {
-    if (kind && mid !== null) assignMid(out, kind, mid, 2 + layerLines)
+    if (kind && mid !== null) assignMid(out, kind, mid, 2 + layerLines + cameraLayerLines)
   }
   for (const line of String(sdp || '').split(/\r?\n/)) {
     if (line.startsWith('m=')) {
@@ -22,12 +22,16 @@ export function publishMids(sdp: string | null | undefined, layerLines = 0) {
     }
   }
   flush()
+  // After the screen, the camera and the screen's lower layers come those of the camera.
+  out.cameraLayers = out.video.splice(2 + layerLines)
   return out
 }
 
+export interface PublishMids { audio: string | null; screenAudio: string | null; video: string[]; cameraLayers: string[] }
+
 // The first two audio lines are the microphone and the screen's sound, the
 // first `videoLines` video lines the screen, camera and lower layers.
-function assignMid(out: { audio: string | null; screenAudio: string | null; video: string[] }, kind: string, mid: string, videoLines: number) {
+function assignMid(out: PublishMids, kind: string, mid: string, videoLines: number) {
   if (kind === 'audio') {
     if (out.audio === null) out.audio = mid
     else if (out.screenAudio === null) out.screenAudio = mid
