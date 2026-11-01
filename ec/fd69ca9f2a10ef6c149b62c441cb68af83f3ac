@@ -1,0 +1,52 @@
+.env.example
+  h_0ff4f4713441f4 362-369
+cmd/server/main.go
+  h_0ff4f4713441f4 223-226
+doc/operations.md
+  h_0ff4f4713441f4 145,1104-1105,1115
+docker-compose.yml
+  h_0ff4f4713441f4 145
+internal/config/config.go
+  h_0ff4f4713441f4 110-113
+internal/config/config_env.go
+  h_0ff4f4713441f4 154
+internal/config/config_test.go
+  h_0ff4f4713441f4 636-637,659,661
+internal/config/config_validate.go
+  h_0ff4f4713441f4 62-64,68-75
+internal/metrics/metrics.go
+  h_0ff4f4713441f4 48-50,221-226,253-256,312-315,322
+internal/metrics/metrics_test.go
+  h_0ff4f4713441f4 121,211-219
+internal/sfu/adapt.go
+  h_0ff4f4713441f4 99-102,150
+internal/sfu/adapt_limit.go
+  h_0ff4f4713441f4 1-35
+internal/sfu/sfu.go
+  h_0ff4f4713441f4 7,210-218
+internal/sfu/transport.go
+  h_0ff4f4713441f4 121
+internal/sfu/upload_limit.go
+  h_0ff4f4713441f4 1-130
+internal/sfu/upload_limit_run.go
+  h_0ff4f4713441f4 1-169
+internal/sfu/upload_limit_test.go
+  h_0ff4f4713441f4 1-440
+internal/sfu/viewer_limit.go
+  h_0ff4f4713441f4 1-74
+internal/turnrelay/guard.go
+  h_0ff4f4713441f4 88,116
+internal/turnrelay/server_test.go
+  h_0ff4f4713441f4 132-133,151-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ecfd69ca9f2a10ef6c149b62c441cb68af83f3ac",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
