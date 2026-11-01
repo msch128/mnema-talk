@@ -1,0 +1,47 @@
+doc/architecture.md
+  s_bf24ce51cd8f95::t_9df448c4523c53 373
+internal/sfu/camera_cap.go
+  s_bf24ce51cd8f95::t_2bd5434727d974 17-19,32-34
+internal/sfu/camera_cap_test.go
+  s_5b748b0295d2f4::t_bb2cf0181844eb 153-165
+web/src/composables/useVisibleCameras.test.ts
+  s_5b748b0295d2f4::t_58dae861c77f4b 74-90
+web/src/composables/useVisibleCameras.ts
+  s_8fccc5273dd47d::t_157f95aeaa4751 18,26-29,64
+web/src/stores/voice.cameraVisibility.test.ts
+  s_5b748b0295d2f4::t_2ed10348899883 135,143-151,153-168
+web/src/stores/voice/cameraVisibility.ts
+  s_bf24ce51cd8f95::t_4a148bc9c6d6a7 20-21,61-65,68-72,75-76,98-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cd1af0d3c2c2f672dd6a00f50b19ec27c9b3ee16",
+  "prompts": {},
+  "sessions": {
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8fccc5273dd47d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a71473b3eac6aa12f",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
