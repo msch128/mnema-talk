@@ -127,6 +127,11 @@ func (vt *viewerTrack) setFit(fit int) {
 	if vt.ad != nil && !vt.closed {
 		vt.ad.setFloor(vt.group.floor())
 		changed = vt.ad.setBest(layerNow(), fit)
+		if vt.group.source == SourceCamera {
+			// A camera has no picker and its picture changes by what the viewer does:
+			// a larger one gets its layer at once.
+			changed = vt.ad.jumpToTop(layerNow()) || changed
+		}
 		vt.want = vt.ad.layer
 		vt.wantA.Store(int32(vt.want))
 	}

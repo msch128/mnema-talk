@@ -146,16 +146,15 @@ func TestCameraViewerFollowsItsPictureSizeAtKeyframes(t *testing.T) {
 	}
 	checkContinuous(t, got)
 
-	// The picture grows: the viewer climbs one layer at a time on its clean reports, at the pace of
-	// an enlarged picture (not after a long clean stretch), and moves at the keyframe of each.
+	// The picture grows (a tile put on the stage): the viewer has the best layer's keyframe asked for at
+	// once, not after a clean stretch of reports.
 	clock.advance(time.Second)
 	vt.setFit(0)
-	for i := 0; i < 6 && vt.wantA.Load() != 0; i++ {
-		clock.advance(time.Second)
-		vt.observeReport(0, 0)
-	}
 	if vt.wantA.Load() != 0 {
 		t.Fatalf("a growing picture still wants layer %d", vt.wantA.Load())
+	}
+	if !rig.asked(0) {
+		t.Fatal("a growing picture did not ask for a keyframe of the best layer")
 	}
 	rig.key(0, 103)
 	rig.delta(0, 104)
@@ -224,5 +223,38 @@ func drainWanted(rig *layerRig) {
 		default:
 			return
 		}
+	}
+}
+
+// A screen share's viewer still climbs at the pace of its clean reports; the jump is for cameras.
+func TestScreenViewerWhosePictureGrowsClimbsOnReports(t *testing.T) {
+	clock := useFakeClock(t)
+	rig := newLayerRig(t, "video/VP8", 3)
+	for i := 0; i < 3; i++ {
+		rig.key(i, uint16(100*(i+1)))
+	}
+	vt, _ := rig.viewerFit(-1, 2)
+	clock.advance(adaptGrace + time.Second)
+	vt.setFit(0)
+	if got := vt.wantA.Load(); got != 2 {
+		t.Fatalf("a growing screen picture jumped to layer %d", got)
+	}
+}
+
+func TestAdapterJumpsToTheTopOnlyWhenBelowIt(t *testing.T) {
+	now := time.Now()
+	a := newAdapter(now, 2)
+	a.best = 2
+	a.layer = 2
+	if a.jumpToTop(now) {
+		t.Fatal("a viewer on its top layer jumped")
+	}
+	a.best = 0
+	a.climbing = true
+	if !a.jumpToTop(now) || a.layer != 0 || a.climbing {
+		t.Fatalf("layer %d climbing %v after the jump", a.layer, a.climbing)
+	}
+	if a.jumpToTop(now) {
+		t.Fatal("a viewer already on top jumped again")
 	}
 }
