@@ -833,6 +833,7 @@ The **Admin → Status** tab provides an operator status overview in a single vi
 - **Live activity**: Active sessions, connected WebSocket clients, active Talks, and current voice participants.
 - **Operator warnings**: Active configuration warnings collected by the server (e.g. broad trusted proxies, WebRTC reachability).
 - **Setup checks**: a green, amber, red and neutral list of what a new installation needs (below).
+- **Capacity**: live CPU, memory and media rates, and an estimate of how many more members the server can take (below).
 - **Test my connection**: a button that checks, from the browser you are using, whether voice reaches the server (below).
 
 ### Setup checks
@@ -886,6 +887,29 @@ switch; nginx needs `proxy_http_version 1.1;`,
 `proxy_set_header Upgrade $http_upgrade;` and
 `proxy_set_header Connection upgrade;`; Caddy and Traefik do it by default.
 The item is neutral (*Not checked yet*) until a browser has connected.
+
+### Capacity
+
+The **Capacity** panel in Admin → Status (`GET /api/admin/status/capacity`,
+Owner or Administrator only) shows, averaged over the last minute: CPU used of
+the cores the container may use (the cgroup quota when there is one), memory
+(resident size against the container limit, `APP_MEM_LIMIT`), the media the
+server sends (Mbit/s and packets/s) and the members and screen shares in calls.
+It works with no traffic at all.
+
+Below that it prints an **estimate**: about how many more members the server
+can take, each watching one 1.5 Mbit/s screen share next to three speakers. It
+uses the cost model of [the benchmark](benchmark.md#the-model): 22 µs of one
+core per packet sent, 72 µs per packet received, 0.57 ms per second per member.
+It plans at half of the CPU, because bursts lose packets well before 100 %. With
+enough traffic (1,000 packets/s sent) the panel compares the CPU it actually
+used with what the model predicts and scales the per-member cost by that factor
+(between 0.5 and 4), so a slower or faster host gives its own number; with less
+traffic it uses the table values and says so. When the server is already past
+half of its CPU the panel says that instead of a number, and when resident
+memory is above 85 % of the limit it says memory comes first. The estimate
+counts CPU only, not the upload bandwidth (see [the sizing
+table](benchmark.md#sizing-table)) and not relayed packets (+12 µs each).
 
 ### Test my connection
 

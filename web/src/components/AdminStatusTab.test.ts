@@ -13,6 +13,9 @@ vi.mock('../lib/api', async (original) => ({
   api: (path: string, options?: ApiOptions) => apiMock(path, options),
 }))
 
+// The capacity panel has its own tests and its own request.
+vi.mock('./AdminCapacityPanel.vue', () => ({ default: { template: '<div data-testid="capacity-stub" />' } }))
+
 const reportMock = vi.fn<(connected: () => boolean) => Promise<void>>()
 vi.mock('../lib/wsReport', () => ({ reportWebSocket: (connected: () => boolean) => reportMock(connected) }))
 

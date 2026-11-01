@@ -4,7 +4,7 @@ import type { OpsStatus, OpsSample } from '../types/domain'
 export function opsSample(i: number, overrides: Partial<OpsSample> = {}): OpsSample {
   return {
     t: 1_790_000_000 + i * 10, cpu_millicores: 50 + i * 10, rss_bytes: (100 + i) * 1024 * 1024, heap_bytes: 40 * 1024 * 1024,
-    goroutines: 120 + i, online_users: 3, peers: 2, screen_shares: 1, egress_bps: 2_500_000 + i, ingress_bps: 800,
+    goroutines: 120 + i, online_users: 3, peers: 2, screen_shares: 1, egress_bps: 2_500_000 + i, ingress_bps: 800, egress_pps: 300, ingress_pps: 30,
     requests: 15, errors_5xx: 0, ice_failures: 0, db_connections_acquired: 1, ws_connections: 4, ...overrides
   }
 }
