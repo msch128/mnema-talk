@@ -1,0 +1,139 @@
+api/openapi.json
+  s_61e7f03250bd0b::t_e4eb6edb70a688 36784
+doc/architecture.md
+  s_61e7f03250bd0b::t_b78a0d6cc69a35 487-523
+doc/operations.md
+  s_61e7f03250bd0b::t_6bfebe7558d07c 1104-1106
+e2e/tests/camera-layers.spec.ts
+  s_61e7f03250bd0b::t_242d52c4a19291 1-108
+internal/metrics/metrics.go
+  s_61e7f03250bd0b::t_581c109fb6a33f 209-213,216,296-297
+internal/metrics/metrics_test.go
+  s_61e7f03250bd0b::t_80ca118c28d152 120
+internal/server/system_ops.go
+  s_61e7f03250bd0b::t_4d01d60b0104cb 115
+internal/sfu/camera_group_test.go
+  s_61e7f03250bd0b::t_0b4ae1b953db49 1-229
+internal/sfu/camera_layers.go
+  s_61e7f03250bd0b::t_b1b2f94d7817cf 1-120
+internal/sfu/camera_layers_test.go
+  s_61e7f03250bd0b::t_2811d5e2829540 1-419
+internal/sfu/codecs_test.go
+  s_61e7f03250bd0b::t_7163b693ceabc4 107-108
+internal/sfu/layer_viewers.go
+  s_61e7f03250bd0b::t_f0f90ae1f2ad3b 70-76,86-91
+internal/sfu/layer_wanted.go
+  s_61e7f03250bd0b::t_7a6522f15eeb2c 59-84,204,218-219
+internal/sfu/layers.go
+  s_61e7f03250bd0b::t_4de3f581a0a051 110-130,139-140,142-146,188
+internal/sfu/media_state.go
+  s_61e7f03250bd0b::t_db553feee1125f 29-30,51-58,61-64,67,70,73,76
+internal/sfu/room_attach.go
+  s_61e7f03250bd0b::t_c2c0ec39e550f1 134-140,199-207,230-243
+internal/sfu/room_signal.go
+  s_61e7f03250bd0b::t_10aeb1619504b4 227-233,236
+internal/sfu/room_tracks.go
+  s_61e7f03250bd0b::t_7569101748b0dd 184-188,190,197-199,271-273
+internal/sfu/screen.go
+  s_61e7f03250bd0b::t_286346914d7ae0 22-63,70,80-87,91-93,106
+internal/sfu/sfu.go
+  s_61e7f03250bd0b::t_ae48aa6fc74c5c 159-167
+internal/sfu/sfu_join.go
+  s_61e7f03250bd0b::t_1607559e214a28 145-146,162-163,193-202,204
+internal/sfu/sfu_setup.go
+  s_61e7f03250bd0b::t_8c377d12a478ed 45-50
+internal/sfu/subscriptions.go
+  s_61e7f03250bd0b::t_4ce0df0698c969 34-36,92-115,178-182
+internal/sfu/testhooks.go
+  s_61e7f03250bd0b::t_b28ffbf4a66bdf 46-61
+internal/sfu/viewer_track.go
+  s_61e7f03250bd0b::t_fee0f8cc897fa5 84,323-327
+internal/ws/camera_layers_test.go
+  s_61e7f03250bd0b::t_a8f0fb6567edf8 1-136
+internal/ws/hub.go
+  s_61e7f03250bd0b::t_dcb07670d76c52 180
+internal/ws/info.go
+  s_61e7f03250bd0b::t_e8a4ed7d8377fb 14-16,27
+internal/ws/layers.go
+  s_61e7f03250bd0b::t_e6bc1de7d488bb 42-50,69-71,75,84-89
+internal/ws/lifecycle.go
+  s_61e7f03250bd0b::t_68e2368d71b094 73,84-85
+internal/ws/signal.go
+  s_61e7f03250bd0b::t_c9ca9bca7decf8 79-85,106-109,119,152-163,194-197,211-212
+web/src/components/ParticipantTile.vue
+  s_61e7f03250bd0b::t_9f809cea09fb9d 17,87-88
+web/src/components/TalkStageView.vue
+  s_61e7f03250bd0b::t_b2e4c90b9b848f 11,50
+web/src/composables/useCameraFit.test.ts
+  s_61e7f03250bd0b::t_074a80b83c74a4 1-163
+web/src/composables/useCameraFit.ts
+  s_61e7f03250bd0b::t_6584fb3ebc3884 1-69
+web/src/composables/useWebRTC.cameraLayers.test.ts
+  s_61e7f03250bd0b::t_f8c9efd3d98bde 1-189
+web/src/composables/useWebRTC.harness.fixture.ts
+  s_61e7f03250bd0b::t_6caab4c628ee56 277-307
+web/src/composables/webrtc/camera.ts
+  s_61e7f03250bd0b::t_23fede82e87532 7-8,40-41,44,91
+web/src/composables/webrtc/cameraLayerSync.ts
+  s_61e7f03250bd0b::t_fbf18be09d207e 1-59
+web/src/composables/webrtc/cameraLayers.ts
+  s_61e7f03250bd0b::t_d4842f6d0f5801 1-53
+web/src/composables/webrtc/layers.ts
+  s_61e7f03250bd0b::t_9cd84b2afa0072 92
+web/src/composables/webrtc/peer.ts
+  s_61e7f03250bd0b::t_0e08ae6784b2ba 11,30,32,210,212,241-243,267-268,271
+web/src/composables/webrtc/sdp.test.ts
+  s_61e7f03250bd0b::t_02f685c7214270 25,30,132-133,150-151,155-165
+web/src/composables/webrtc/sdp.ts
+  s_61e7f03250bd0b::t_42da97e8547014 8-9,13,25-26,30-31,34
+web/src/composables/webrtc/senderTuning.ts
+  s_61e7f03250bd0b::t_b3c76fd9649d96 4
+web/src/composables/webrtc/senders.ts
+  s_61e7f03250bd0b::t_7fd94f0148e48b 5,130,132,140-142,153-159
+web/src/composables/webrtc/state.ts
+  s_61e7f03250bd0b::t_15e19638839e5f 64-65,68-69,158-159,203-204
+web/src/composables/webrtc/watchers.ts
+  s_61e7f03250bd0b::t_f61d18088bd550 8,75-76
+web/src/lib/cameraLayers.test.ts
+  s_61e7f03250bd0b::t_d8d559e336ca44 1-50
+web/src/lib/cameraLayers.ts
+  s_61e7f03250bd0b::t_7a4f4eba02ed75 1-70
+web/src/lib/media/mediaFrameWorker.test.ts
+  s_61e7f03250bd0b::t_591dfda67c1565 516-556
+web/src/stores/chat/events.ts
+  s_61e7f03250bd0b::t_5e6bf6c45d6417 190
+web/src/stores/voice.ts
+  s_61e7f03250bd0b::t_6eb8b8ef65350e 10,51-53,122
+web/src/stores/voice/cameraFit.test.ts
+  s_61e7f03250bd0b::t_1ac786e0b66afb 1-97
+web/src/stores/voice/cameraFit.ts
+  s_61e7f03250bd0b::t_136dab3fac71ca 1-83
+web/src/stores/voice/cameras.ts
+  s_61e7f03250bd0b::t_0964c8f8958e0e 7,106
+web/src/stores/voice/room.ts
+  s_61e7f03250bd0b::t_db51166599afec 10,220-221
+web/src/stores/voice/screens.ts
+  s_61e7f03250bd0b::t_6904dc595d4f3a 137,140-141,221
+web/src/stores/voice/state.ts
+  s_61e7f03250bd0b::t_8cbb12a6f997df 54-58
+web/src/types/events.test.ts
+  s_61e7f03250bd0b::t_5e65589c88ca22 13,84,273-279
+web/src/types/events.ts
+  s_61e7f03250bd0b::t_20a36e0ef2fdf5 22-23,63,152-155,170,293-294,334-335
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1df536b0a13d5585f31250a7309d247862c3d13a",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
