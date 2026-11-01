@@ -1,0 +1,64 @@
+api/openapi.json
+  h_0ff4f4713441f4 36981-37063
+doc/operations.md
+  h_0ff4f4713441f4 933-951
+doc/troubleshooting-voice.md
+  h_0ff4f4713441f4 78-88
+e2e/tests/connection-test.spec.ts
+  h_0ff4f4713441f4 52-54
+internal/httpx/ratelimit.go
+  h_0ff4f4713441f4 85-94
+internal/httpx/ratelimit_test.go
+  h_0ff4f4713441f4 279-301
+internal/server/router_build.go
+  h_0ff4f4713441f4 341,347
+internal/server/router_routes.go
+  h_0ff4f4713441f4 105
+internal/server/speedtest.go
+  h_0ff4f4713441f4 1-137
+internal/server/speedtest_integration_test.go
+  h_0ff4f4713441f4 1-20
+internal/server/speedtest_test.go
+  h_0ff4f4713441f4 1-212
+internal/server/system.go
+  h_0ff4f4713441f4 57-58
+internal/setupwizard/summary.go
+  h_0ff4f4713441f4 97
+internal/setupwizard/summary_test.go
+  h_0ff4f4713441f4 70
+internal/setupwizard/testdata/summary_container.golden
+  h_0ff4f4713441f4 23
+internal/setupwizard/testdata/summary_https.golden
+  h_0ff4f4713441f4 22
+web/src/components/ConnectionTest.test.ts
+  h_0ff4f4713441f4 139-203
+web/src/components/ConnectionTest.vue
+  h_0ff4f4713441f4 8,10,12,20-21,34-43,52,93
+web/src/i18n/de.json
+  h_0ff4f4713441f4 4434-4435,4492-4504
+web/src/i18n/en.json
+  h_0ff4f4713441f4 4434-4435,4492-4504
+web/src/lib/connectionTest.test.ts
+  h_0ff4f4713441f4 3,198-253
+web/src/lib/connectionTest.ts
+  h_0ff4f4713441f4 7,15-18,146-175,203-206
+web/src/lib/connectionTestApi.test.ts
+  h_0ff4f4713441f4 37-83
+web/src/lib/connectionTestApi.ts
+  h_0ff4f4713441f4 3,13-42
+web/src/lib/connectionVerdict.test.ts
+  h_0ff4f4713441f4 2,59-68
+web/src/lib/connectionVerdict.ts
+  h_0ff4f4713441f4 15-36,49-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a2c83bd9c8f600c04c8c0147c4cb02dc0197eea",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
