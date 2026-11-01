@@ -23,6 +23,12 @@ async function toggleQos() {
   await applyActiveAudioSettings()
 }
 
+// Read when the next offer arrives, so it applies from the next call; nothing to apply to a running one.
+function toggleSilenceSaving() {
+  voiceStore.silenceSaving = !voiceStore.silenceSaving
+  voiceStore.saveSettings()
+}
+
 function toggleWarnNoAudio() {
   voiceStore.warnNoAudioDetected = !voiceStore.warnNoAudioDetected
   voiceStore.saveSettings()
@@ -57,6 +63,15 @@ function playPreviewSound(sound: SoundEvent = 'join') {
             <p class="settings-hint">{{ $t('audio.agcHint') }}</p>
           </div>
           <button type="button" role="switch" :aria-checked="voiceStore.autoGainControl ? 'true' : 'false'" :aria-label="$t('audio.agc')" class="switch mt-0.5" @click="toggleAgc"></button>
+        </div>
+
+        <!-- Opus DTX: almost nothing is sent while silent -->
+        <div class="settings-row items-start">
+          <div class="settings-row-text">
+            <div class="settings-row-title">{{ $t('audio.silenceSavingTitle') }}</div>
+            <p class="settings-hint">{{ $t('audio.silenceSavingHint') }}</p>
+          </div>
+          <button type="button" role="switch" data-testid="silence-saving" :aria-checked="voiceStore.silenceSaving ? 'true' : 'false'" :aria-label="$t('audio.silenceSavingTitle')" class="switch mt-0.5" @click="toggleSilenceSaving"></button>
         </div>
 
         <!-- Quality of service (high packet priority) -->

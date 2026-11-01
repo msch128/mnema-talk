@@ -1318,7 +1318,9 @@
     "pttFirstUseAction": "Taste wählen",
     "inputVolumeHint": "Wie laut dein Mikrofon vor dem Filter ist. Lass es bei 100 %, außer andere sagen, du seist zu leise.",
     "sensitivityHint": "Wie laut du sein musst, damit sich das Mikrofon öffnet. Senke den Wert, wenn deine Stimme abgeschnitten wird, erhöhe ihn, wenn Hintergrundgeräusche durchkommen.",
-    "pttKeyIdleTest": "Starte den Mikrofontest und halte dann {key} gedrückt zum Ausprobieren"
+    "pttKeyIdleTest": "Starte den Mikrofontest und halte dann {key} gedrückt zum Ausprobieren",
+    "silenceSavingTitle": "Datenverbrauch senken, wenn es still ist",
+    "silenceSavingHint": "Sendet fast nichts, solange du nicht sprichst. Schalte es für Musik, ein Instrument oder einen gleichbleibenden Ton aus dem Mikrofon aus, die für Stille gehalten werden können. Es ist auch aus, solange der Rauschfilter auf „Aus“ steht. Gilt ab dem nächsten Talk, dem du beitrittst."
   },
   "stats": {
     "title": "Verbindungsstatus",

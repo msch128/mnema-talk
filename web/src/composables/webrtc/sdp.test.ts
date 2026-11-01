@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { present } from '../../media-test.fixture'
 import { useChatStore } from '../../stores/chat'
 import { enableMicDtx, publishMids, restrictVideoCodecs, tuneScreenLines, tuneScreenOffer, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './sdp'
-import { installHarness, FakePC, SFU_LAYER_OFFER, grantMic, setup } from '../useWebRTC.harness.fixture'
+import { wantsDtx } from './dtx'
+import { installHarness, installRecordingCall, FakePC, SFU_LAYER_OFFER, grantMic, setup } from '../useWebRTC.harness.fixture'
 
 vi.mock('../../lib/noiseSuppressor', async () => (await import('../useWebRTC.noiseSuppressor.fixture')).noiseSuppressorModule)
 vi.mock('../../lib/soundEffects', () => ({ playSoundEffect: vi.fn() }))
@@ -175,6 +176,15 @@ describe('screen lines of an SFU offer', () => {
   })
 })
 
+describe('wantsDtx', () => {
+  it('follows the setting, and is off while the noise filter is off', () => {
+    expect(wantsDtx({ silenceSaving: true, noiseMode: 'ai' })).toBe(true)
+    expect(wantsDtx({ silenceSaving: true, noiseMode: 'browser' })).toBe(true)
+    expect(wantsDtx({ silenceSaving: true, noiseMode: 'off' })).toBe(false)
+    expect(wantsDtx({ silenceSaving: false, noiseMode: 'ai' })).toBe(false)
+  })
+})
+
 describe('enableMicDtx', () => {
   // The SFU's offer: microphone line, the screen's sound, a video line, and someone else's voice.
   const audio = (mid: string, fmtp: string | null, rtpmap = 'a=rtpmap:111 opus/48000/2') => [
@@ -230,5 +240,35 @@ describe('enableMicDtx', () => {
     const sdp = String(pc.remoteDescription?.sdp)
     expect(sdp).toContain('a=fmtp:111 minptime=10;useinbandfec=1;usedtx=1')
     expect(sdp.match(/usedtx=1/g)).toHaveLength(1)
+  })
+
+  it.each([[true, 'ai', true], [false, 'ai', false], [true, 'off', false]] as const)('tells the media worker whether the microphone line uses DTX (setting %s, filter %s: %s)', async (saving, noise, dtx) => {
+    const call = installRecordingCall()
+    const { rtc, voice } = setup()
+    voice.silenceSaving = saving
+    voice.noiseMode = noise
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const pc = present(FakePC.instances.at(-1))
+    useChatStore().handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: offer('minptime=10;useinbandfec=1') } })
+    await vi.waitFor(() => expect(pc.remoteDescription).not.toBeNull())
+    const mic = call.protectSender.mock.calls.find(c => c[1] === 0)
+    expect(mic?.[3]).toBe(dtx)
+    // Only the microphone line asks; the screen's sound never does.
+    expect(call.protectSender.mock.calls.filter(c => c[3] === true)).toHaveLength(dtx ? 1 : 0)
+  })
+
+  it.each([[false, 'ai'], [true, 'off']] as const)('is not asked for with the setting %s and the noise filter %s', async (saving, noise) => {
+    const { rtc, voice } = setup()
+    voice.silenceSaving = saving
+    voice.noiseMode = noise
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const pc = present(FakePC.instances.at(-1))
+    useChatStore().handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: offer('minptime=10;useinbandfec=1') } })
+    await vi.waitFor(() => expect(pc.remoteDescription).not.toBeNull())
+    expect(String(pc.remoteDescription?.sdp)).not.toContain('usedtx')
   })
 })

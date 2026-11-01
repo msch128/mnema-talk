@@ -1,5 +1,6 @@
 import { webcrypto } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { requireValue } from '../../test-fixtures.fixture'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSeal } from './frame'
 import { testAesKey, testEpochKeys, testMember, type TestMember } from './keys.fixture'
 import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS } from './bounds'
@@ -40,7 +41,7 @@ function asBuffer(data: ArrayBufferLike): ArrayBuffer {
   return copy.buffer
 }
 
-async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type, mime = 'video/H264', afterCommands, layer, source = 0, posted }: { posted?: unknown[], named?: boolean, type?: string, mime?: string, afterCommands?: () => void, layer?: unknown, source?: unknown } = {}) {
+async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type, mime = 'video/H264', afterCommands, layer, source = 0, posted, dtx }: { posted?: unknown[], named?: boolean, type?: string, mime?: string, afterCommands?: () => void, layer?: unknown, source?: unknown, dtx?: boolean } = {}) {
   vi.resetModules()
   const scope: WorkerScope = { onrtctransform: null, postMessage(data) { posted?.push(data) } }
   vi.stubGlobal('self', scope)
@@ -66,7 +67,7 @@ async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], co
     close() { resolveDone() },
   })
   scope.onrtctransform?.({})
-  scope.onrtctransform?.({ transformer: { readable, writable, options: { port, direction, channelId: 'channel', ...(source === undefined ? {} : { source }), ...(named ? { senderId: 'alice' } : {}), ...(layer === undefined ? {} : { layer }) } } })
+  scope.onrtctransform?.({ transformer: { readable, writable, options: { port, direction, channelId: 'channel', ...(source === undefined ? {} : { source }), ...(named ? { senderId: 'alice' } : {}), ...(layer === undefined ? {} : { layer }), ...(dtx ? { dtx } : {}) } } })
   for (const command of commands) port.postMessage(command)
   afterCommands?.()
   for (const data of packets) enqueueFrame({ data: asBuffer(data), ...(type ? { type, getMetadata: () => ({ mimeType: mime }) } : {}) })
@@ -79,6 +80,27 @@ beforeEach(() => { vi.stubGlobal('crypto', webcrypto) })
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.stubGlobal('crypto', previous)
+})
+
+describe('media frame worker, Opus DTX', () => {
+  const sizes = (written: unknown[]) => written.map(frame => (frame as { data: ArrayBuffer }).data.byteLength)
+
+  it('drops the empty frames a DTX encoder hands over while silent, and seals the ones with sound', async () => {
+    const key = { type: 'key', epoch: 2, key: await epochKeys(3) }
+    const packets = [new Uint8Array([0xf8]).buffer, new Uint8Array([0xf8, 0xff]).buffer, new Uint8Array([0xfc, 0xff, 0xfe]).buffer, new Uint8Array(16).fill(7).buffer]
+    const written = await frames('send', packets, [key], { dtx: true })
+    // The overhead of a sealed frame: header, nonce, tag and signature.
+    expect(sizes(written)).toEqual([3 + 107, 16 + 107])
+    // A line that did not negotiate DTX seals everything it is given.
+    expect(sizes(await frames('send', packets, [key]))).toEqual([1 + 107, 2 + 107, 3 + 107, 16 + 107])
+  })
+
+  it('never drops what a line receives, however small', async () => {
+    const key = await epochKeys(3)
+    const packet = await seal({ keys: key, epoch: 2, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([9]) })
+    const received = await frames('recv', [requireValue(packet).buffer], [{ type: 'key', epoch: 2, key }], { dtx: true })
+    expect(received).toHaveLength(1)
+  })
 })
 
 describe('media frame worker', () => {

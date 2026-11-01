@@ -132,7 +132,7 @@ func TestOpusWithoutAPlanNeverStops(t *testing.T) {
 // With DTX a speaker who talks 40 % of the time sends well under half the
 // packets, the sequence numbers stay consecutive and the timestamps show the
 // silence as gaps.
-func TestOpusWithDTXSendsOnlyWhileTalkingAndAComfortFrameEvery400Ms(t *testing.T) {
+func TestOpusWithDTXSendsOnlyWhileTalkingAndAComfortFrameEvery200Ms(t *testing.T) {
 	plan := newDTXPlan(40)
 	s := newOpusSource(plan)
 	ticks := plan.cycleTicks * 3
@@ -144,7 +144,7 @@ func TestOpusWithDTXSendsOnlyWhileTalkingAndAComfortFrameEvery400Ms(t *testing.T
 	}
 	speech, comfort, markers := 0, 0, 0
 	for i, p := range pkts {
-		if len(p.Payload) == 1 {
+		if len(p.Payload) == dtxFrameBytes {
 			comfort++
 		} else {
 			speech++
@@ -159,7 +159,7 @@ func TestOpusWithDTXSendsOnlyWhileTalkingAndAComfortFrameEvery400Ms(t *testing.T
 	if speech != plan.talkTicks*3 {
 		t.Fatalf("%d speech packets, want %d", speech, plan.talkTicks*3)
 	}
-	// 300 silent ticks per cycle: one frame as the silence starts, then one every 400 ms.
+	// 300 silent ticks per cycle: one frame as the silence starts, then one every 200 ms.
 	perCycle := 1 + (plan.cycleTicks-plan.talkTicks-1)/(dtxSilenceMs/opusFrameMs)
 	if comfort < 2*perCycle || comfort > 3*perCycle+1 {
 		t.Fatalf("%d comfort-noise frames, want about %d per cycle", comfort, perCycle)
@@ -167,7 +167,7 @@ func TestOpusWithDTXSendsOnlyWhileTalkingAndAComfortFrameEvery400Ms(t *testing.T
 	if markers < 2 {
 		t.Fatalf("speech resuming after silence carries the marker bit, saw %d", markers)
 	}
-	// Against 500 packets per cycle without DTX.
+	// Against 500 packets per cycle without DTX: about 60 % fewer at 40 % talk time, and about 90 % fewer in silence.
 	if per := len(pkts) / 3; per >= plan.cycleTicks*6/10 {
 		t.Fatalf("%d packets per cycle with DTX, %d without: not enough saved", per, plan.cycleTicks)
 	}

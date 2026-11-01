@@ -254,10 +254,12 @@ function dtxSection(section: string[]) {
 
 /**
  * Asks, in the SFU's offer, for discontinuous transmission on the microphone
- * line (mid): the browser then stops sending packets while nothing is said and
- * sends a short one now and then instead of 50 packets a second of silence
- * (RFC 7587 usedtx). The SFU forwards the packets as they come, with their
- * timestamp gaps, and the listeners' browsers fill the gaps with comfort noise.
+ * line (mid): the browser then sends only about 5 small packets a second while
+ * the encoder finds nothing but silence, instead of 50 (RFC 7587 usedtx).
+ * It decides by the signal: true silence and quiet room noise count as
+ * silence, speech never does, and a steady or very quiet musical sound may.
+ * The SFU forwards the packets as they come, with their timestamp gaps, and
+ * the listeners' browsers fill the gaps with comfort noise.
  * The screen's sound is left alone: music and game sound have quiet passages
  * that are not silence.
  */

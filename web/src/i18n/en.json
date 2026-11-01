@@ -1318,7 +1318,9 @@
     "pttFirstUseAction": "Choose a key",
     "inputVolumeHint": "How loud your microphone is before the filter. Leave it at 100 % unless people say you are too quiet.",
     "sensitivityHint": "How loud you must be before the microphone opens. Lower it if your voice gets cut off, raise it if background noise gets through.",
-    "pttKeyIdleTest": "Start the microphone test, then hold {key} to try it"
+    "pttKeyIdleTest": "Start the microphone test, then hold {key} to try it",
+    "silenceSavingTitle": "Save bandwidth when silent",
+    "silenceSavingHint": "Sends almost nothing while you are not speaking. Turn it off for music, an instrument or a steady sound from your microphone, which can be taken for silence. It is also off while the noise filter is Off. Applies from the next Talk you join."
   },
   "stats": {
     "title": "Connection status",

@@ -37,8 +37,8 @@ type publishSettings struct {
 	cameraKbps, cameraFPS int
 	keySeconds            int
 	// audioDTX makes the speakers send like an Opus encoder with DTX: only
-	// while they talk (audioTalkPct percent of the time), a comfort-noise frame
-	// every 400 ms otherwise.
+	// while they talk (audioTalkPct percent of the time), a small comfort-noise
+	// frame every 200 ms otherwise.
 	audioDTX     bool
 	audioTalkPct int
 }

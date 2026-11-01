@@ -2,6 +2,7 @@ import { mediaCall } from '../../lib/media/api'
 import { trackConstraints, streamEncoding, streamTuning } from '../../lib/streamQuality'
 import { SOURCE_CAMERA, SOURCE_MIC, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO, type FrameSource } from '../../lib/media/frame'
 import { publishMids } from './sdp'
+import { wantsDtx } from './dtx'
 import { declareCameraLayers } from './cameraLayers'
 import { announceMediaUnprotected } from './mediaRoom'
 import type { Cx } from './state'
@@ -90,10 +91,10 @@ export function applyScreenQuality(cx: Cx) {
 }
 
 /** Switches the offer's own transceiver with this mid to send, protected for its source. */
-function bindTransceiver(conn: RTCPeerConnection, mid: string | null | undefined, track: MediaStreamTrack | null | undefined, source: FrameSource, layer?: number) {
+function bindTransceiver(conn: RTCPeerConnection, mid: string | null | undefined, track: MediaStreamTrack | null | undefined, source: FrameSource, layer?: number, dtx?: boolean) {
   const tr = mid === null || mid === undefined ? null : conn.getTransceivers().find(t => t.mid === mid)
   if (!tr) return null
-  if (!mediaCall().protectSender(tr.sender, source, layer)) {
+  if (!mediaCall().protectSender(tr.sender, source, layer, dtx)) {
     announceMediaUnprotected()
     return null
   }
@@ -110,12 +111,12 @@ function bindSlot(
   conn: RTCPeerConnection,
   slot: 'audioSender' | 'screenSender' | 'cameraSender' | 'screenAudioSender',
   freshKey: 'audio' | 'screen' | 'camera' | 'screenAudio',
-  line: { mid: string | null | undefined; track: MediaStreamTrack | null | undefined; source: FrameSource; layer?: number },
+  line: { mid: string | null | undefined; track: MediaStreamTrack | null | undefined; source: FrameSource; layer?: number; dtx?: boolean },
   bound: Bound
 ) {
   const { st } = cx
   if (st[slot]) return false
-  const sender = bindTransceiver(conn, line.mid, line.track, line.source, line.layer)
+  const sender = bindTransceiver(conn, line.mid, line.track, line.source, line.layer, line.dtx)
   st[slot] = sender
   if (sender) bound.fresh[freshKey] = sender
   return !!sender
@@ -132,7 +133,7 @@ export function bindPublishSenders(cx: Cx, conn: RTCPeerConnection, sdp: string,
   const mids = publishMids(sdp, layerLines, cameraLayerLines)
   // fresh: senders bound by this call, which still need their parameters.
   const bound: Bound = { screen: false, camera: false, fresh: {} }
-  bindSlot(cx, conn, 'audioSender', 'audio', { mid: mids.audio, track: activeAudioTrack(cx), source: SOURCE_MIC }, bound)
+  bindSlot(cx, conn, 'audioSender', 'audio', { mid: mids.audio, track: activeAudioTrack(cx), source: SOURCE_MIC, dtx: wantsDtx(cx.voice) }, bound)
   if (bindSlot(cx, conn, 'screenSender', 'screen', { mid: mids.video[0], track: null, source: SOURCE_SCREEN, layer: 0 }, bound)) {
     bound.screen = !!st.localScreenStream.value
   }

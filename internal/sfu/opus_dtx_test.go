@@ -11,6 +11,9 @@ import (
 	"github.com/pion/webrtc/v4"
 )
 
+// comfortFrame is the size of what Chrome's encoder sends while it is silent.
+var comfortFrame = []byte{0xf8, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+
 // enableDTX is what the web client does to the SFU's offer: it asks for
 // discontinuous transmission on the Opus line (usedtx=1).
 func enableDTX(sdp string) string {
@@ -26,7 +29,7 @@ type sentPacket struct {
 
 // dtxPublisher publishes an Opus track that is written by hand, the way a
 // browser with DTX does: 20 ms frames while somebody speaks, then, without any
-// packet for the silent time, a one-byte comfort-noise frame every 400 ms; the
+// packet for the silent time but a small comfort-noise frame every 200 ms; the
 // first frame after the silence carries the marker bit. Sequence numbers stay
 // consecutive, the timestamps jump.
 type dtxPublisher struct {
@@ -68,14 +71,14 @@ func (p *dtxPublisher) write(payload []byte, marker bool, advance uint32) {
 }
 
 // cycle is one stretch of speech followed by silence: the packets stop for a
-// while, and a comfort-noise frame marks every 400 ms of it.
+// while, and a comfort-noise frame marks the start of it.
 func (p *dtxPublisher) cycle(silence time.Duration) {
-	const frame, sid = 960, 19200 // 20 ms and 400 ms at 48 kHz
+	const frame, sid = 960, 9600 // 20 ms and 200 ms at 48 kHz
 	for i := 0; i < 4; i++ {
 		p.write([]byte{0xfc, 0xff, 0xfe, byte(i)}, i == 0 && p.seq > 100, frame)
 		time.Sleep(20 * time.Millisecond)
 	}
-	p.write([]byte{0xf8}, false, sid)
+	p.write(comfortFrame, false, sid)
 	time.Sleep(silence)
 	p.ts += uint32(silence.Seconds() * 48000) // the clock ran on while no packet was sent
 }
@@ -89,7 +92,7 @@ func (p *dtxPublisher) record(seq uint16) (sentPacket, bool) {
 
 // A publisher that sends DTX (usedtx=1 negotiated, packets stopping in the
 // silence) is forwarded intact: the SFU takes the parameter, keeps every
-// sequence number, timestamp gap, marker and one-byte frame, and does not see
+// sequence number, timestamp gap, marker and comfort-noise frame, and does not see
 // the silence as a track that went away.
 func TestOpusDtxIsNegotiatedAndItsGapsAreForwarded(t *testing.T) {
 	s := newTestSFU(t)
@@ -133,7 +136,7 @@ func TestOpusDtxIsNegotiatedAndItsGapsAreForwarded(t *testing.T) {
 		}
 	}
 
-	var oneByte, gaps, markers int
+	var comfort, gaps, markers int
 	for i, pkt := range got {
 		rec, ok := dtx.record(pkt.SequenceNumber)
 		if !ok {
@@ -142,8 +145,8 @@ func TestOpusDtxIsNegotiatedAndItsGapsAreForwarded(t *testing.T) {
 		if pkt.Timestamp != rec.ts || pkt.Marker != rec.marker || len(pkt.Payload) != rec.size {
 			t.Fatalf("packet %d changed on the way: ts %d/%d marker %v/%v size %d/%d", pkt.SequenceNumber, pkt.Timestamp, rec.ts, pkt.Marker, rec.marker, len(pkt.Payload), rec.size)
 		}
-		if len(pkt.Payload) == 1 {
-			oneByte++
+		if len(pkt.Payload) == len(comfortFrame) {
+			comfort++
 		}
 		if pkt.Marker {
 			markers++
@@ -159,12 +162,14 @@ func TestOpusDtxIsNegotiatedAndItsGapsAreForwarded(t *testing.T) {
 			gaps++
 		}
 	}
-	if oneByte == 0 || gaps == 0 || markers == 0 {
-		t.Fatalf("the DTX pattern did not arrive: %d comfort-noise frames, %d timestamp gaps, %d markers", oneByte, gaps, markers)
+	if comfort == 0 || gaps == 0 || markers == 0 {
+		t.Fatalf("the DTX pattern did not arrive: %d comfort-noise frames, %d timestamp gaps, %d markers", comfort, gaps, markers)
 	}
 
-	// The silence did not unpublish the track: it is still there, and the
-	// publisher's answer said it takes DTX.
+	// The silence did not unpublish the track: it is still there. The pion
+	// client reflects the offered parameter in its answer, which the SFU accepted
+	// (a browser's answer may leave usedtx out while its sender still applies it,
+	// so this shows that the SFU takes the parameter, not what a browser answers).
 	r := s.Room(room)
 	r.mu.RLock()
 	var live bool
@@ -188,8 +193,9 @@ func TestOpusDtxIsNegotiatedAndItsGapsAreForwarded(t *testing.T) {
 	}
 }
 
-// A quiet stretch of several seconds, with packets only now and then, must not
-// make the SFU do anything about the track (it is not a stall).
+// A quiet stretch of several seconds, with only comfort-noise frames now and
+// then, must not make the SFU do anything about the track (it is not a stall),
+// and the speech that ends it is forwarded as if nothing had happened.
 func TestAQuietPublisherIsNotDropped(t *testing.T) {
 	s := newTestSFU(t)
 	room := uuid.New()
@@ -200,31 +206,64 @@ func TestAQuietPublisherIsNotDropped(t *testing.T) {
 	sub := newClient(t)
 	sub.join(s, room)
 
+	// Comfort noise every 200 ms until the subscriber has the track.
 	stop := make(chan struct{})
-	t.Cleanup(func() { close(stop) })
+	var stopOnce sync.Once
+	quit := func() { stopOnce.Do(func() { close(stop) }) }
+	t.Cleanup(quit)
 	go func() {
 		for {
 			select {
 			case <-stop:
 				return
 			default:
-				dtx.write([]byte{0xf8}, false, 19200)
-				time.Sleep(400 * time.Millisecond)
+				dtx.write(comfortFrame, false, 9600)
+				time.Sleep(200 * time.Millisecond)
 			}
 		}
 	}()
 	waitTrack(t, sub)
-	received := 0
+	var got []*rtp.Packet
 	timeout := time.After(10 * time.Second)
-	for received < 8 {
+	for len(got) < 15 { // three seconds of silence
 		select {
-		case <-sub.received:
-			received++
+		case pkt := <-sub.received:
+			got = append(got, pkt)
 		case <-timeout:
-			t.Fatalf("only %d comfort-noise frames arrived in 10 s", received)
+			t.Fatalf("only %d comfort-noise frames arrived in 10 s", len(got))
 		}
 	}
-	if _, ok := s.Room(room).MediaStates()[pub.id]; ok {
-		t.Fatal("audio must not show as a screen or camera")
+	quit()
+	for i, pkt := range got {
+		rec, ok := dtx.record(pkt.SequenceNumber)
+		if !ok || pkt.Timestamp != rec.ts || len(pkt.Payload) != len(comfortFrame) {
+			t.Fatalf("comfort-noise frame %d changed on the way: %+v", pkt.SequenceNumber, pkt.Header)
+		}
+		if i > 0 && pkt.SequenceNumber != got[i-1].SequenceNumber+1 {
+			t.Fatalf("a frame went missing before %d", pkt.SequenceNumber)
+		}
+	}
+
+	// Then somebody speaks again, after a pause with no packet at all.
+	time.Sleep(1500 * time.Millisecond)
+	dtx.write([]byte{0xfc, 0xff, 0xfe, 1}, true, 72000)
+	deadline := time.After(10 * time.Second)
+	for {
+		select {
+		case pkt := <-sub.received:
+			if len(pkt.Payload) == len(comfortFrame) {
+				continue // frames of the silence still on their way
+			}
+			rec, _ := dtx.record(pkt.SequenceNumber)
+			if !pkt.Marker || pkt.Timestamp != rec.ts || len(pkt.Payload) != 4 {
+				t.Fatalf("the speech after the silence arrived as %+v", pkt.Header)
+			}
+			if _, ok := s.Room(room).MediaStates()[pub.id]; ok {
+				t.Fatal("audio must not show as a screen or camera")
+			}
+			return
+		case <-deadline:
+			t.Fatal("the speech after the silence never arrived: the track was dropped")
+		}
 	}
 }

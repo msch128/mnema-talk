@@ -43,6 +43,7 @@ describe('voice settings restored and persisted across sessions', () => {
     voice.soundEffectsVolume = 25
     voice.autoGainControl = true
     voice.echoCancellation = false
+    voice.silenceSaving = false
     voice.selectedInputDeviceId = 'synthetic-mic'
     voice.inputVolume = 75
     voice.outputVolume = 60
@@ -57,7 +58,7 @@ describe('voice settings restored and persisted across sessions', () => {
     const restored = useVoiceStore()
     expect(restored).toMatchObject({ inputMode: 'ptt', pttKey: 'KeyM', autoSensitivity: true, sensitivityThreshold: 42, hangoverMs: 500,
       warnNoAudioDetected: false, warnSwitchChannel: false, qosHighPriority: false, soundEffectsEnabled: false,
-      soundEffectsVolume: 25, autoGainControl: true, echoCancellation: false, selectedInputDeviceId: 'synthetic-mic',
+      soundEffectsVolume: 25, autoGainControl: true, echoCancellation: false, silenceSaving: false, selectedInputDeviceId: 'synthetic-mic',
       inputVolume: 75, outputVolume: 60, selectedOutputDeviceId: 'synthetic-speaker' })
     restored.setNoiseMode('browser')
     expect(localStorage.getItem('mnema_noise')).toBe('browser')

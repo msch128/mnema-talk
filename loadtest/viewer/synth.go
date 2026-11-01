@@ -113,7 +113,8 @@ func (s *vp8Source) frameInterval() time.Duration { return time.Second / time.Du
 
 // dtxPlan makes a speaker talk for a share of a cycle and be silent for the rest,
 // the way Opus with DTX (usedtx=1) sends: 20 ms frames while talking, and in
-// the silence no packet but a one-byte comfort-noise frame every 400 ms. A zero
+// the silence no packet but a small comfort-noise frame every 200 ms (about 5
+// packets a second of some 16 bytes, as Chrome's encoder sends). A zero
 // plan is the old speaker who never stops.
 type dtxPlan struct {
 	cycleTicks int // 20 ms ticks in one talk-and-silence cycle
@@ -122,8 +123,9 @@ type dtxPlan struct {
 }
 
 const (
-	dtxCycle     = 10 * time.Second
-	dtxSilenceMs = 400 // the comfort-noise frame interval of Opus DTX
+	dtxCycle      = 10 * time.Second
+	dtxSilenceMs  = 200 // the comfort-noise frame interval measured in Chrome
+	dtxFrameBytes = 16  // and its size
 )
 
 // newDTXPlan is the plan of a speaker who talks talkPct percent of the time.
@@ -143,6 +145,7 @@ type opusSource struct {
 	seq      uint16
 	ts       uint32
 	payload  []byte
+	comfort  []byte // the comfort-noise frame
 	plan     dtxPlan
 	tick     int
 	silent   int  // ticks since the last comfort-noise frame
@@ -154,7 +157,9 @@ func newOpusSource(plan dtxPlan) *opusSource {
 	for i := range p {
 		p[i] = byte(rand.UintN(256))
 	}
-	return &opusSource{seq: uint16(rand.UintN(1 << 16)), ts: rand.Uint32(), payload: p, plan: plan}
+	comfort := make([]byte, dtxFrameBytes)
+	comfort[0] = 0xf8
+	return &opusSource{seq: uint16(rand.UintN(1 << 16)), ts: rand.Uint32(), payload: p, comfort: comfort, plan: plan}
 }
 
 // next is the packet of the next 20 ms tick, or nil when DTX sends nothing.
@@ -169,7 +174,7 @@ func (s *opusSource) next() *rtp.Packet {
 		p = &rtp.Packet{Header: rtp.Header{Version: 2, SequenceNumber: s.seq, Timestamp: s.ts, Marker: s.wasQuiet}, Payload: s.payload}
 		s.silent = 0
 	case s.silent == 0 || s.silent*opusFrameMs >= dtxSilenceMs:
-		p = &rtp.Packet{Header: rtp.Header{Version: 2, SequenceNumber: s.seq, Timestamp: s.ts}, Payload: []byte{0xf8}}
+		p = &rtp.Packet{Header: rtp.Header{Version: 2, SequenceNumber: s.seq, Timestamp: s.ts}, Payload: s.comfort}
 		s.silent = 1
 	default:
 		s.silent++

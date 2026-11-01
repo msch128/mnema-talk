@@ -135,7 +135,7 @@ describe('received video', () => {
 })
 
 describe('a quiet microphone with discontinuous transmission', () => {
-  // Opus DTX stops the packets while nobody speaks (a short one every 400 ms): the
+  // Opus DTX stops the packets while nobody speaks (about five small ones a second): the
   // counters stand still or creep, which is not a broken microphone.
   const outbound = (packetsSent: number, bytesSent: number, timestamp: number) => [
     { id: 'cp', type: 'candidate-pair', state: 'succeeded', nominated: true, currentRoundTripTime: 0.02, localCandidateId: 'l', remoteCandidateId: 'r', bytesSent, bytesReceived: 0, timestamp },

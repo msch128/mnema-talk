@@ -9,6 +9,8 @@ export interface TransformOptions {
   layer?: unknown
   /** What the line carries (frame.ts SOURCE_*). */
   source?: unknown
+  /** The microphone's Opus was negotiated with DTX (usedtx=1): its empty frames are not sent. */
+  dtx?: unknown
 }
 
 export interface Line {
@@ -19,6 +21,8 @@ export interface Line {
   /** What the line carries; a receiver learns it with the publisher. */
   source: FrameSource | null
   layer: number
+  /** A sending line whose encoder uses DTX; its empty frames are dropped (see mediaFrameWorker). */
+  dtx: boolean
 }
 
 function directionOf(value: unknown): 'send' | 'recv' | null {
@@ -81,5 +85,6 @@ export function lineFrom(options: TransformOptions | undefined): Line | null {
     stream: sendingStream(direction, layerNo),
     source,
     layer: layerNo ?? 0,
+    dtx: direction === 'send' && options?.dtx === true,
   }
 }

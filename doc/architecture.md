@@ -350,9 +350,17 @@ back), so it needs no public relay ports and cannot reach anything else.
    ([`sfu.go`](../internal/sfu/sfu.go)). The web client changes the SFU's
    offer before applying it so that the Opus parameters of the microphone line
    carry `usedtx=1` (discontinuous transmission, RFC 7587; the screen's sound
-   does not): the browser then stops sending packets while nothing is said and
-   sends a one-byte comfort-noise frame every 400 ms, instead of 50 packets a
-   second of silence. Sequence numbers stay consecutive and only the RTP
+   does not). While the encoder finds nothing but silence the browser then
+   sends about 5 small packets a second (some 16 bytes) instead of 50, around
+   90 % fewer; speech goes out at the full rate. The encoder decides by the
+   signal: true silence and quiet room noise count as silence, speech never
+   does, a steady tone or very quiet music may. So the setting "Save bandwidth
+   when silent" (Audio, Fine-tune; on by default) turns it off, and it is off
+   while the noise filter is Off, the setting for studio microphones and music;
+   it applies from the next Talk. With sealed media the encoder's empty frames
+   (one or two bytes, header only) pass the media worker, which drops them on
+   a line that uses DTX: sealed they would be 100 bytes each and go out 50
+   times a second. Sequence numbers stay consecutive and only the RTP
    timestamp jumps, which the SFU forwards untouched; listeners' browsers
    fill the gap with comfort noise. Nothing on the server depends on a steady
    packet rate: speaking comes from the client's own `voice_speaking`, the
