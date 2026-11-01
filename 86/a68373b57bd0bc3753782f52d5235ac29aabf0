@@ -1,0 +1,134 @@
+api/openapi.json
+  h_0ff4f4713441f4 36784
+doc/architecture.md
+  h_0ff4f4713441f4 487-523
+doc/operations.md
+  h_0ff4f4713441f4 1104-1106
+e2e/tests/camera-layers.spec.ts
+  h_0ff4f4713441f4 1-108
+internal/metrics/metrics.go
+  h_0ff4f4713441f4 209-213,216,296-297
+internal/metrics/metrics_test.go
+  h_0ff4f4713441f4 120
+internal/server/system_ops.go
+  h_0ff4f4713441f4 115
+internal/sfu/camera_group_test.go
+  h_0ff4f4713441f4 1-228
+internal/sfu/camera_layers.go
+  h_0ff4f4713441f4 1-120
+internal/sfu/camera_layers_test.go
+  h_0ff4f4713441f4 1-419
+internal/sfu/codecs_test.go
+  h_0ff4f4713441f4 107-108
+internal/sfu/layer_viewers.go
+  h_0ff4f4713441f4 70-76,86-91
+internal/sfu/layer_wanted.go
+  h_0ff4f4713441f4 59-84,204,218-219
+internal/sfu/layers.go
+  h_0ff4f4713441f4 110-130,139-140,142-146,188
+internal/sfu/media_state.go
+  h_0ff4f4713441f4 29-30,51-58,61-64,67,70,73,76
+internal/sfu/room_attach.go
+  h_0ff4f4713441f4 134-140,199-207,230-243
+internal/sfu/room_signal.go
+  h_0ff4f4713441f4 227-233,236
+internal/sfu/room_tracks.go
+  h_0ff4f4713441f4 184-188,190,197-199,271-273
+internal/sfu/screen.go
+  h_0ff4f4713441f4 22-63,70,80-87,91-93,106
+internal/sfu/sfu.go
+  h_0ff4f4713441f4 159-167
+internal/sfu/sfu_join.go
+  h_0ff4f4713441f4 145-146,162-163,193-202,204
+internal/sfu/sfu_setup.go
+  h_0ff4f4713441f4 45-50
+internal/sfu/subscriptions.go
+  h_0ff4f4713441f4 34-36,92-115,178-182
+internal/sfu/testhooks.go
+  h_0ff4f4713441f4 46-61
+internal/sfu/viewer_track.go
+  h_0ff4f4713441f4 84,323-327
+internal/ws/camera_layers_test.go
+  h_0ff4f4713441f4 1-136
+internal/ws/hub.go
+  h_0ff4f4713441f4 180
+internal/ws/info.go
+  h_0ff4f4713441f4 14-16,27
+internal/ws/layers.go
+  h_0ff4f4713441f4 42-50,69-71,75,84-89
+internal/ws/lifecycle.go
+  h_0ff4f4713441f4 73,84-85
+internal/ws/signal.go
+  h_0ff4f4713441f4 79-85,106-109,119,152-163,194-197,211-212
+web/src/components/ParticipantTile.vue
+  h_0ff4f4713441f4 17,87-88
+web/src/components/TalkStageView.vue
+  h_0ff4f4713441f4 11,50
+web/src/composables/useCameraFit.test.ts
+  h_0ff4f4713441f4 1-163
+web/src/composables/useCameraFit.ts
+  h_0ff4f4713441f4 1-69
+web/src/composables/useWebRTC.cameraLayers.test.ts
+  h_0ff4f4713441f4 1-189
+web/src/composables/useWebRTC.harness.fixture.ts
+  h_0ff4f4713441f4 277-307
+web/src/composables/webrtc/camera.ts
+  h_0ff4f4713441f4 7-8,40-41,44,91
+web/src/composables/webrtc/cameraLayerSync.ts
+  h_0ff4f4713441f4 1-59
+web/src/composables/webrtc/cameraLayers.ts
+  h_0ff4f4713441f4 1-53
+web/src/composables/webrtc/layers.ts
+  h_0ff4f4713441f4 92
+web/src/composables/webrtc/peer.ts
+  h_0ff4f4713441f4 11,30,32,210,212,241-243,267-268,271
+web/src/composables/webrtc/sdp.test.ts
+  h_0ff4f4713441f4 25,30,132-133,150-151,155-165
+web/src/composables/webrtc/sdp.ts
+  h_0ff4f4713441f4 8-9,13,25-26,30-31,34
+web/src/composables/webrtc/senderTuning.ts
+  h_0ff4f4713441f4 4
+web/src/composables/webrtc/senders.ts
+  h_0ff4f4713441f4 5,130,132,140-142,153-159
+web/src/composables/webrtc/state.ts
+  h_0ff4f4713441f4 64-65,68-69,158-159,203-204
+web/src/composables/webrtc/watchers.ts
+  h_0ff4f4713441f4 8,75-76
+web/src/lib/cameraLayers.test.ts
+  h_0ff4f4713441f4 1-50
+web/src/lib/cameraLayers.ts
+  h_0ff4f4713441f4 1-70
+web/src/lib/media/mediaFrameWorker.test.ts
+  h_0ff4f4713441f4 516-556
+web/src/stores/chat/events.ts
+  h_0ff4f4713441f4 190
+web/src/stores/voice.ts
+  h_0ff4f4713441f4 10,51-53,122
+web/src/stores/voice/cameraFit.test.ts
+  h_0ff4f4713441f4 1-97
+web/src/stores/voice/cameraFit.ts
+  h_0ff4f4713441f4 1-83
+web/src/stores/voice/cameras.ts
+  h_0ff4f4713441f4 7,106
+web/src/stores/voice/room.ts
+  h_0ff4f4713441f4 10,220-221
+web/src/stores/voice/screens.ts
+  h_0ff4f4713441f4 137,140-141,221
+web/src/stores/voice/state.ts
+  h_0ff4f4713441f4 54-58
+web/src/types/events.test.ts
+  h_0ff4f4713441f4 13,84,273-279
+web/src/types/events.ts
+  h_0ff4f4713441f4 22-23,63,152-155,170,293-294,334-335
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "86a68373b57bd0bc3753782f52d5235ac29aabf0",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
