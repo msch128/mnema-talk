@@ -46,6 +46,7 @@ path: web/src/components/UserBar.test.ts | asserts German UI output
 path: web/src/components/UserProfileModal.test.ts | asserts German UI output
 path: web/src/components/VoiceChatPanel.test.ts | asserts German UI output
 path: web/src/components/ConnectionTest.test.ts | asserts German UI output
+path: web/src/components/AdminCapacityPanel.test.ts | asserts German UI output
 path: web/src/components/TalkOverviewDialog.test.ts | asserts German UI output
 path: web/src/composables/useChannelLayout.test.ts | asserts German UI output
 path: web/src/composables/useWebRTC.signaling.test.ts | asserts German UI output

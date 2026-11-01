@@ -13,6 +13,7 @@ import { t, locale } from '../i18n'
 import { useChatStore } from '../stores/chat'
 import { reportWebSocket } from '../lib/wsReport'
 import ConnectionTest from './ConnectionTest.vue'
+import AdminCapacityPanel from './AdminCapacityPanel.vue'
 
 const toasts = useToastStore()
 const chat = useChatStore()
@@ -136,6 +137,8 @@ onMounted(async () => {
         </li>
       </ul>
     </div>
+
+    <AdminCapacityPanel />
 
     <!-- Live Activity -->
     <div v-if="activity" class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline space-y-3" data-testid="status-activity">

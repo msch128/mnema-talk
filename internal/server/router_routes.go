@@ -172,5 +172,6 @@ func (c *components) mountAdminJSON(adm chi.Router) {
 	status := adm.With(auth.RequirePerm(c.permSvc, perm.Administrator))
 	status.Get("/status", httpx.Handle(c.systemH.operatorStatus))
 	status.Post("/status/websocket", httpx.Handle(c.systemH.reportWebSocket))
+	status.Get("/status/capacity", httpx.Handle(c.systemH.capacityStatus))
 	c.systemH.mountAdmin(adm)
 }
