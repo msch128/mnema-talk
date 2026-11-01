@@ -198,18 +198,17 @@ func TestCameraAutoViewerMovesDownUnderLossAndIsNotToldItsQuality(t *testing.T) 
 	if got := int(vt.wantA.Load()); got != 1 {
 		t.Fatalf("severe loss left the viewer wanting layer %d, want 1", got)
 	}
-	var announced []int
-	select {
-	case announced = <-rig.wanted:
-	case <-time.After(time.Second):
-		t.Fatal("the sender was not told the lower layer is wanted")
-	}
-	found := false
-	for _, l := range announced {
-		found = found || l == 1
-	}
-	if !found {
-		t.Fatalf("wanted layers %v lack layer 1", announced)
+	// Announcements arrive in order and an earlier one may still be on its way: wait for the one with layer 1.
+	deadline := time.After(2 * time.Second)
+	for found := false; !found; {
+		select {
+		case announced := <-rig.wanted:
+			for _, l := range announced {
+				found = found || l == 1
+			}
+		case <-deadline:
+			t.Fatal("the sender was not told the lower layer is wanted")
+		}
 	}
 	select {
 	case st := <-rig.qual:
