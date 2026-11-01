@@ -30,6 +30,7 @@
   "You have started enough direct messages for today. Try again tomorrow.",
   "Your edit was not saved: it breaks the community rule %q (automod). The moderators can see this.",
   "Your message was not sent: it breaks the community rule %q (automod). The moderators can see this.",
+  "a Talk is running; the speed test would disturb it",
   "a bot can have at most %d active tokens",
   "a bot can have at most %d commands",
   "a bot holds this role: only the Owner can add administrator or admin-area permissions to it",

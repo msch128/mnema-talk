@@ -561,7 +561,8 @@
       "srvReportAlreadyClosed": "This report is already closed.",
       "srvAfterRfc3339": "“after” must be a timestamp in RFC 3339 format.",
       "srvBeforeDateRfc3339": "“before_date” must be a timestamp in RFC 3339 format.",
-      "srvUsernameTooLong": "The username is too long (max. {count} characters)."
+      "srvUsernameTooLong": "The username is too long (max. {count} characters).",
+      "srvATalkIsRunning": "A Talk is running; the speed test would disturb it."
     },
     "field": {
       "content": "Message",

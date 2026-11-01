@@ -561,7 +561,8 @@
       "srvReportAlreadyClosed": "Diese Meldung ist bereits abgeschlossen.",
       "srvAfterRfc3339": "„after“ muss ein Zeitstempel im Format RFC 3339 sein.",
       "srvBeforeDateRfc3339": "„before_date“ muss ein Zeitstempel im Format RFC 3339 sein.",
-      "srvUsernameTooLong": "Der Benutzername ist zu lang (höchstens {count} Zeichen)."
+      "srvUsernameTooLong": "Der Benutzername ist zu lang (höchstens {count} Zeichen).",
+      "srvATalkIsRunning": "Ein Talk läuft; der Geschwindigkeitstest würde ihn stören."
     },
     "field": {
       "content": "Nachricht",
