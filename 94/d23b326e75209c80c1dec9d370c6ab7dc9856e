@@ -1,0 +1,51 @@
+api/openapi.json
+  s_e7d8df1dbb402e::t_5a0bc30eee7f61 7512-7515,7556
+doc/operations.md
+  s_e7d8df1dbb402e::t_09451d82f147e9 898-899,906-918
+internal/capacity/capacity.go
+  s_e7d8df1dbb402e::t_03832344711788 28-33,88,92-93,96
+internal/capacity/capacity_test.go
+  s_bf24ce51cd8f95::t_18aaa8ea584c3e 34,37,55,133-175
+internal/capacity/cpu.go
+  s_e7d8df1dbb402e::t_2e6d4d2a3e387e 4,13-14,17-18,21-30,32-35,37-43
+internal/server/capacity.go
+  s_e7d8df1dbb402e::t_00e60abf02dd84 35-37,103
+internal/server/capacity_test.go
+  s_e7d8df1dbb402e::t_9f405e8347d4e2 23
+scripts/english-only-allowlist.txt
+  s_e7d8df1dbb402e::t_adeaee97503a75 49
+web/src/components/AdminCapacityPanel.test.ts
+  s_e7d8df1dbb402e::t_31c780013930de 16,40-41,68,85-140
+web/src/components/AdminCapacityPanel.vue
+  s_e7d8df1dbb402e::t_0cb255efaac90b 14,16,19-20,23,25-28,32-36,39-44,53,64,72-75
+web/src/i18n/de.json
+  s_e7d8df1dbb402e::t_911a4923e9ffc6 2154-2158,2163-2173
+web/src/i18n/en.json
+  s_e7d8df1dbb402e::t_08b24e16dffa95 2154-2158,2163-2173
+web/src/types/rest.ts
+  s_e7d8df1dbb402e::t_55d64135d8848b 4403,4419
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "94d23b326e75209c80c1dec9d370c6ab7dc9856e",
+  "prompts": {},
+  "sessions": {
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e7d8df1dbb402e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-app-66e452174912e1a3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
