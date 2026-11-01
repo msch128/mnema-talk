@@ -82,6 +82,16 @@ func (rl *RateLimiter) TryAllow(key string) (bool, time.Duration) {
 	return true, e.reset.Sub(now)
 }
 
+// Refund gives back one hit that TryAllow granted for key, for a request that
+// another limiter then refused.
+func (rl *RateLimiter) Refund(key string) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	if e, ok := rl.entries[key]; ok && e.count > 0 {
+		e.count--
+	}
+}
+
 // entryLocked returns the live window of key, starting a fresh one (after a
 // sweep and, at the cap, an eviction) when there is none or it has elapsed.
 func (rl *RateLimiter) entryLocked(key string, now time.Time) *rateEntry {

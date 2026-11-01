@@ -4,7 +4,7 @@
 // channel to a throwaway connection on the server (POST /api/webrtc/probe),
 // which is no Talk, shows no presence and closes itself.
 import { ApiError } from './api'
-import type { CandidateCounts, ConnectionReport, PathResult } from './connectionVerdict'
+import { LAN_SPEED_MBPS, isLocalAddress, type CandidateCounts, type ConnectionReport, type PathResult, type SpeedResult } from './connectionVerdict'
 
 export interface ConnectionTestDeps {
   /** The ICE servers the server offers this member (STUN, TURN with credentials). */
@@ -12,6 +12,10 @@ export interface ConnectionTestDeps {
   /** Sends the offer to the server and returns its answer. */
   probe: (offerSdp: string) => Promise<string>
   createPeer: (config: RTCConfiguration) => RTCPeerConnection
+  /** Reads the server's speed test stream; absent: no speed test. */
+  download?: (signal?: AbortSignal) => Promise<{ bytes: number; ms: number }>
+  /** The host name of the page; a private one means the server is reached over the LAN. */
+  pageHost?: string
   /** Milliseconds to wait for candidates and for a connection. */
   gatherMs?: number
   connectMs?: number
@@ -139,8 +143,36 @@ export async function tryPath(deps: ConnectionTestDeps, servers: RTCIceServer[],
 
 const unavailable: PathResult = { outcome: 'unavailable' }
 
-/** Runs the whole test. `onStep` hears which part starts, for a progress line. */
-export async function runConnectionTest(deps: ConnectionTestDeps, onStep: (step: 'candidates' | 'direct' | 'relayUdp' | 'relayTcp') => void = () => {}): Promise<ConnectionReport> {
+// A stream shorter than either of these says nothing about a speed: it must be
+// at least MIN_SPEED_BYTES and either MIN_SPEED_MS long or MIN_FAST_BYTES big.
+const MIN_SPEED_BYTES = 256 * 1024
+const MIN_SPEED_MS = 300
+const MIN_FAST_BYTES = 2 * 1024 * 1024
+
+/** The server turned the speed test away. */
+export class SpeedRefused extends Error {
+  constructor(readonly kind: 'limited' | 'busy') {
+    super(kind)
+  }
+}
+
+/** The download speed from the server, or why there is none. From the server's own network it is not measured. */
+export async function measureSpeed(deps: ConnectionTestDeps, report: ConnectionReport, signal?: AbortSignal): Promise<SpeedResult> {
+  const remote = report.direct.pair?.remoteAddress
+  const lan = (report.direct.outcome === 'ok' && !!remote && isLocalAddress(remote)) || (!!deps.pageHost && isLocalAddress(deps.pageHost))
+  if (lan) return { outcome: 'lan' }
+  if (!deps.download || report.limited) return { outcome: 'fail' }
+  try {
+    const { bytes, ms } = await deps.download(signal)
+    if (bytes < MIN_SPEED_BYTES || ms <= 0 || (ms < MIN_SPEED_MS && bytes < MIN_FAST_BYTES)) return { outcome: 'fail' }
+    const mbps = (bytes * 8) / ms / 1000
+    return mbps >= LAN_SPEED_MBPS ? { outcome: 'ok', mbps, maybeLocal: true } : { outcome: 'ok', mbps }
+  } catch (e) {
+    return e instanceof SpeedRefused ? { outcome: e.kind } : { outcome: 'fail' }
+  }
+}
+
+export async function runConnectionTest(deps: ConnectionTestDeps, onStep: (step: 'candidates' | 'direct' | 'relayUdp' | 'relayTcp' | 'speed') => void = () => {}, signal?: AbortSignal): Promise<ConnectionReport> {
   const servers = await deps.iceServers()
   const turn = onlyUrls(servers, isTurn)
   const report: ConnectionReport = {
@@ -167,6 +199,10 @@ export async function runConnectionTest(deps: ConnectionTestDeps, onStep: (step:
       else if (e.kind === 'limited') { report.limited = true; break }
       else { report.voiceOff = true; break }
     }
+  }
+  if (deps.download) {
+    onStep('speed')
+    report.speed = await measureSpeed(deps, report, signal)
   }
   return report
 }

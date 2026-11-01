@@ -54,6 +54,8 @@ type systemHandler struct {
 	// probeLimit bounds connection tests per member; wsReportLimit the
 	// WebSocket reports of the status tab per admin.
 	probeLimit, wsReportLimit *httpx.RateLimiter
+	// speed bounds the download speed test: per member and in parallel.
+	speed speedTest
 
 	selfMu sync.Mutex
 	self   selfUpdate

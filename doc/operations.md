@@ -930,7 +930,25 @@ a Talk and leaves no presence. It
    to a throwaway connection on the server (`POST /api/webrtc/probe`, signed-in
    members only, twelve per ten minutes each, eight at a time);
 3. connects to the voice port through the built-in TURN relay over UDP, and
-   again over TCP, using relay candidates only.
+   again over TCP, using relay candidates only;
+4. reads a short stream from the server (`GET /api/webrtc/speedtest`: at most
+   16 MiB or three seconds, signed-in members only, four per ten minutes per
+   member and six per address, one test at a time) and divides what arrived by
+   the time it took. It measures the speed **to where the server is reachable**:
+   behind a reverse proxy, a CDN or a tunnel that is the speed to that proxy,
+   not necessarily to the server (the stream carries `Content-Encoding:
+   identity` and `X-Accel-Buffering: no` so proxies pass it through unchanged).
+   From outside the server's network it is roughly the server's upload, and the
+   result says what screen share that upload can serve (1.5 Mbit/s plus 30 %
+   overhead per watcher, as in [the sizing guide](benchmark.md#the-model)).
+   A page address on a private network (or a private direct path) is taken as
+   the same network, where the test says it cannot measure the upload; run it
+   from a phone on mobile data. A speed of 700 Mbit/s or more is shown as
+   measured, with the note that it may be a local connection (symmetric
+   gigabit fibre exists, but so does a LAN), so test from outside to be sure. A busy slot or an exhausted budget costs nothing, and
+   the test is skipped while a Talk has participants, because for three seconds
+   it can fill a home uplink and would be heard in the call. The setup assistant
+   prints only this hint, never a number.
 
 The verdict is one of *Direct connection works*, *Only the relay works (direct
 UDP blocked or not forwarded)* or *Nothing works*, with the likely cause and

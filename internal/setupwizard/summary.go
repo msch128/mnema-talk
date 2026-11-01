@@ -94,7 +94,7 @@ func portsStep() step {
 
 func checkStep() step {
 	return step{
-		text: "Check it from outside: open Admin > Status and press \"Test my connection\", best from a phone on mobile data instead of your Wi-Fi. From a shell: docker compose exec app mnema-talk doctor",
+		text: "Check it from outside: open Admin > Status and press \"Test my connection\", best from a phone on mobile data instead of your Wi-Fi. The same test also reads how many members your internet upload can serve a screen share to (it cannot be measured from inside your network, so no number is shown here). From a shell: docker compose exec app mnema-talk doctor",
 	}
 }
 

@@ -136,3 +136,68 @@ describe('ConnectionTest', () => {
     await flushPromises()
   })
 })
+
+describe('the upload hint', () => {
+  const direct = { outcome: 'ok' as const, pair: { localType: 'srflx', remoteType: 'host', remoteAddress: '203.0.113.7' } }
+
+  it('says what the download means for the screen share size, and what it measured', async () => {
+    const w = await runWith({ ...base, direct, speed: { outcome: 'ok', mbps: 100 } })
+    const text = w.get('[data-testid="connection-test-speed"]').text()
+    expect(text).toContain('100 Mbit/s')
+    expect(text).toContain('nearest reverse proxy')
+    expect(text).toContain('roughly its upload')
+    expect(text).not.toContain('at least')
+    expect(text).toContain('about 51 members (1.5 Mbit/s plus 30 % overhead each)')
+    expect(text).toContain('your own connection can be the limit')
+  })
+
+  it('uses the singular for one watcher and says so when the upload is not enough for even one', async () => {
+    let w = await runWith({ ...base, direct, speed: { outcome: 'ok', mbps: 2.5 } })
+    expect(w.get('[data-testid="connection-test-speed"]').text()).toContain('about 1 member (')
+    w.unmount()
+    w = await runWith({ ...base, direct, speed: { outcome: 'ok', mbps: 1 } })
+    expect(w.get('[data-testid="connection-test-speed"]').text()).toContain('not enough upload for even one member')
+  })
+
+  it('keeps the number and the members estimate for a very fast download, with the note that it may be local', async () => {
+    const w = await runWith({ ...base, direct, speed: { outcome: 'ok', mbps: 940, maybeLocal: true } })
+    const text = w.get('[data-testid="connection-test-speed"]').text()
+    expect(text).toContain('940 Mbit/s')
+    expect(text).toContain('about 482 members')
+    expect(text).toContain('This may be a local connection; test from outside to be sure.')
+    w.unmount()
+    const plain = await runWith({ ...base, direct, speed: { outcome: 'ok', mbps: 100 } })
+    expect(plain.get('[data-testid="connection-test-speed"]').text()).not.toContain('local connection')
+  })
+
+  it('says it cannot measure the upload from the same network', async () => {
+    const w = await runWith({ ...base, direct, speed: { outcome: 'lan' } })
+    expect(w.get('[data-testid="connection-test-speed"]').text()).toContain('cannot measure the server’s upload')
+  })
+
+  it('has its own words for a failed, a refused and a skipped speed test, and shows nothing when none was made', async () => {
+    const texts: Record<string, string> = {}
+    for (const outcome of ['fail', 'limited', 'busy'] as const) {
+      const w = await runWith({ ...base, direct, speed: { outcome } })
+      texts[outcome] = w.get('[data-testid="connection-test-speed"]').text()
+      w.unmount()
+      wrapper = null
+    }
+    expect(texts.fail).toContain('could not run')
+    expect(texts.limited).toContain('Too many speed tests')
+    expect(texts.busy).toContain('a Talk is running')
+    const w = await runWith({ ...base, direct })
+    expect(w.find('[data-testid="connection-test-speed"]').exists()).toBe(false)
+  })
+
+  it('stops the speed test when the dialog is closed', async () => {
+    let seen: AbortSignal | undefined
+    runMock.mockImplementation((_d: unknown, _s: unknown, signal: AbortSignal) => { seen = signal; return new Promise(() => {}) })
+    wrapper = mount(ConnectionTest)
+    await wrapper.get('[data-testid="connection-test-run"]').trigger('click')
+    expect(seen?.aborted).toBe(false)
+    wrapper.unmount()
+    wrapper = null
+    expect(seen?.aborted).toBe(true)
+  })
+})

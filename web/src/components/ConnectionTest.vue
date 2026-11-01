@@ -5,11 +5,11 @@ import { computed, onUnmounted, ref } from 'vue'
 import { CheckCircle2, CircleHelp, Loader2, Network, TriangleAlert, XCircle } from '@lucide/vue'
 import { runConnectionTest } from '../lib/connectionTest'
 import { browserTestDeps } from '../lib/connectionTestApi'
-import { verdictOf, type ConnectionReport, type PathOutcome } from '../lib/connectionVerdict'
+import { OVERHEAD_PERCENT, SCREEN_MBPS, screenViewersFor, verdictOf, type ConnectionReport, type PathOutcome } from '../lib/connectionVerdict'
 import { SOURCE_URL } from '../lib/thirdParty'
-import { t } from '../i18n'
+import { locale, t } from '../i18n'
 
-type Step = 'candidates' | 'direct' | 'relayUdp' | 'relayTcp'
+type Step = 'candidates' | 'direct' | 'relayUdp' | 'relayTcp' | 'speed'
 
 const { heading = true } = defineProps<{ heading?: boolean }>()
 const running = ref(false)
@@ -17,7 +17,8 @@ const step = ref<Step>('candidates')
 const report = ref<ConnectionReport | null>(null)
 const failed = ref(false)
 let alive = true
-onUnmounted(() => { alive = false })
+const stop = new AbortController()
+onUnmounted(() => { alive = false; stop.abort() })
 
 const verdict = computed(() => (report.value ? verdictOf(report.value) : null))
 const paths = computed(() => (report.value
@@ -30,6 +31,16 @@ const fixText = computed(() => {
   const text = t(key)
   return text === key ? '' : text
 })
+// The upload hint: what the download from the server says about its upload, or why it says nothing.
+const speedText = computed(() => {
+  const speed = report.value?.speed
+  if (!speed) return ''
+  if (speed.outcome !== 'ok') return t(`connectionTest.speed.${speed.outcome}`)
+  const mbps = new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(speed.mbps)
+  const count = screenViewersFor(speed.mbps)
+  const text = t(count > 0 ? 'connectionTest.speed.ok' : 'connectionTest.speed.none', { mbps, count, rate: SCREEN_MBPS, overhead: OVERHEAD_PERCENT })
+  return speed.maybeLocal ? `${text} ${t('connectionTest.speed.maybeLocal')}` : text
+})
 const docsUrl = `${SOURCE_URL}/blob/main/doc/troubleshooting-voice.md`
 const outcomeLabel = (o: PathOutcome) => `connectionTest.outcome.${o}`
 
@@ -38,7 +49,7 @@ async function run() {
   failed.value = false
   report.value = null
   try {
-    const result = await runConnectionTest(browserTestDeps, s => { if (alive) step.value = s })
+    const result = await runConnectionTest(browserTestDeps, s => { if (alive) step.value = s }, stop.signal)
     if (alive) report.value = result
   } catch {
     if (alive) failed.value = true
@@ -79,6 +90,7 @@ async function run() {
         <li v-for="[name, path] in paths" :key="name" :data-testid="`connection-test-path-${name}`" :data-outcome="path.outcome">
           {{ $t(`connectionTest.path.${name}`) }}: {{ $t(outcomeLabel(path.outcome)) }}
         </li>
+        <li v-if="speedText" data-testid="connection-test-speed" :data-outcome="report.speed?.outcome">{{ speedText }}</li>
         <li data-testid="connection-test-addresses">{{ $t('connectionTest.addresses', report.candidates) }}</li>
       </ul>
       <a :href="docsUrl" target="_blank" rel="noopener noreferrer" class="text-xs text-mnema-accent hover:underline">{{ $t('connectionTest.docs') }}</a>

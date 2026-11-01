@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './api'
-import { gatherCandidates, onlyUrls, ProbeRefused, refusalOf, runConnectionTest, selectedPair, tryPath, type ConnectionTestDeps } from './connectionTest'
+import { gatherCandidates, onlyUrls, ProbeRefused, SpeedRefused, refusalOf, runConnectionTest, selectedPair, tryPath, type ConnectionTestDeps } from './connectionTest'
 
 // A stand-in for RTCPeerConnection that gathers a scripted list of candidates, connects (or not) after the
 // answer is set, and reports scripted statistics. It records how each connection was configured.
@@ -193,5 +193,61 @@ describe('runConnectionTest', () => {
     const report = await runConnectionTest(d)
     expect(report.direct.outcome).toBe('fail')
     expect(report.relayUdp.outcome).toBe('ok')
+  })
+})
+
+describe('the download speed test', () => {
+  const scripted = () => ({ candidates: ['host'], connects: true, stats: goodStats('srflx', '203.0.113.9') })
+  const withDownload = (download: NonNullable<ConnectionTestDeps['download']>, extra: Partial<ConnectionTestDeps> = {}) => ({ ...deps(scripted), download, ...extra })
+  const speed = async (d: ConnectionTestDeps) => (await runConnectionTest(d)).speed
+
+  it('measures Mbit/s from the bytes and the time, after the paths, and announces the step', async () => {
+    const steps: string[] = []
+    const report = await runConnectionTest(withDownload(async () => ({ bytes: 5_000_000, ms: 1000 })), s => steps.push(s))
+    expect(steps.at(-1)).toBe('speed')
+    expect(report.speed).toEqual({ outcome: 'ok', mbps: 40 })
+  })
+
+  it('does not measure from the same network, by the direct path or by the page address', async () => {
+    const download = vi.fn(async () => ({ bytes: 5_000_000, ms: 1000 }))
+    const local = { ...deps(() => ({ candidates: ['host'], connects: true, stats: goodStats('host', '192.168.1.5') })), download }
+    expect(await speed(local)).toEqual({ outcome: 'lan' })
+    expect(await speed(withDownload(download, { pageHost: '192.168.1.5' }))).toEqual({ outcome: 'lan' })
+    expect(await speed(withDownload(download, { pageHost: 'chat.example.com' }))).toMatchObject({ outcome: 'ok' })
+    expect(download).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a very high speed as measured, flagged as possibly local, because symmetric gigabit fibre exists', async () => {
+    expect(await speed(withDownload(async () => ({ bytes: 16_000_000, ms: 100 })))).toEqual({ outcome: 'ok', mbps: 1280, maybeLocal: true })
+    expect(await speed(withDownload(async () => ({ bytes: 5_000_000, ms: 1000 })))).toEqual({ outcome: 'ok', mbps: 40 })
+  })
+
+  it('needs a stream long or big enough to mean something', async () => {
+    const fail = { outcome: 'fail' }
+    expect(await speed(withDownload(async () => ({ bytes: 1000, ms: 5 })))).toEqual(fail)
+    expect(await speed(withDownload(async () => ({ bytes: 5_000_000, ms: 0 })))).toEqual(fail)
+    expect(await speed(withDownload(async () => ({ bytes: 500_000, ms: 100 })))).toEqual(fail) // too short and too small
+    expect(await speed(withDownload(async () => ({ bytes: 300_000, ms: 400 })))).toMatchObject({ outcome: 'ok' }) // slow but long enough
+    expect(await speed(withDownload(async () => ({ bytes: 2_500_000, ms: 100 })))).toMatchObject({ outcome: 'ok' }) // fast but big enough
+  })
+
+  it('tells a refusal from a failure', async () => {
+    expect(await speed(withDownload(async () => { throw new SpeedRefused('limited') }))).toEqual({ outcome: 'limited' })
+    expect(await speed(withDownload(async () => { throw new SpeedRefused('busy') }))).toEqual({ outcome: 'busy' })
+    expect(await speed(withDownload(async () => { throw new Error('network') }))).toEqual({ outcome: 'fail' })
+    const limited = withDownload(async () => ({ bytes: 5_000_000, ms: 1000 }))
+    limited.probe = async () => { throw new ApiError(429, 'RATE_LIMITED', '') }
+    expect(await speed(limited)).toEqual({ outcome: 'fail' })
+  })
+
+  it('hands the abort signal to the download', async () => {
+    const seen: Array<AbortSignal | undefined> = []
+    const signal = new AbortController().signal
+    await runConnectionTest(withDownload(async s => { seen.push(s); return { bytes: 5_000_000, ms: 1000 } }), () => {}, signal)
+    expect(seen).toEqual([signal])
+  })
+
+  it('leaves the speed out when the deps have no download', async () => {
+    expect(await speed(deps(scripted))).toBeUndefined()
   })
 })
