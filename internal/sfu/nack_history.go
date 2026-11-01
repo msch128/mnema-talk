@@ -330,6 +330,25 @@ func (h *nackHistory) mayResend(s *nackSlot, now time.Time, interval time.Durati
 	return s.resentAt == 0 || now.UnixNano()-s.resentAt >= int64(interval)
 }
 
+// size is the bytes packet seq takes on the wire if it is remembered and may
+// be resent now, without copying it.
+func (h *nackHistory) size(seq uint16, now time.Time, interval time.Duration) (int, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	s := h.slot(seq)
+	if s == nil || !h.mayResend(s, now, interval) {
+		return 0, false
+	}
+	return len(s.buf.b), true
+}
+
+// bitrate is the track's measured bitrate in bytes per second.
+func (h *nackHistory) bitrate() float64 {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.rate
+}
+
 // forgetResend allows seq to be resent at once again (its resend was not sent).
 func (h *nackHistory) forgetResend(seq uint16) {
 	h.mu.Lock()

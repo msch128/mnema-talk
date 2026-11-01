@@ -21,6 +21,9 @@ import (
 type nackResponderFactory struct {
 	load *peerLoad
 	now  func() time.Time
+	// limits is the retransmission budget of each connection; the zero value
+	// means defaultResendLimits.
+	limits resendLimits
 }
 
 func (f nackResponderFactory) NewInterceptor(string) (interceptor.Interceptor, error) {
@@ -28,7 +31,14 @@ func (f nackResponderFactory) NewInterceptor(string) (interceptor.Interceptor, e
 	if now == nil {
 		now = time.Now
 	}
-	return &nackResponder{load: f.load, now: now, streams: map[uint32]*nackStream{}, done: make(chan struct{})}, nil
+	limits := f.limits
+	if limits == (resendLimits{}) {
+		limits = defaultResendLimits
+	}
+	return &nackResponder{
+		load: f.load, now: now, streams: map[uint32]*nackStream{}, done: make(chan struct{}),
+		budgetFor: newResendBudget(limits),
+	}, nil
 }
 
 // disablePionResponder is the option that leaves Pion's own responder with no
@@ -56,6 +66,8 @@ type nackResponder struct {
 	streams map[uint32]*nackStream
 	// count is len(streams), readable without the lock on every packet.
 	count atomic.Int32
+	// budgetFor limits the resends of this connection.
+	budgetFor *resendBudget
 	// queue holds the NACKs to answer, worked off by one goroutine started with
 	// the first; done ends it.
 	queue     chan *rtcp.TransportLayerNack
@@ -170,7 +182,7 @@ func (n *nackResponder) enqueue(req *rtcp.TransportLayerNack) {
 	select {
 	case n.queue <- req:
 	default:
-		metrics.SFURetransmitDropped.Add(uint64(nackSeqs(req)))
+		metrics.SFURetransmitDropped.Add(uint64(min(nackSeqs(req), nackMaxSeqs)))
 	}
 }
 
@@ -212,7 +224,12 @@ func (n *nackResponder) noteRTT(raw []byte) {
 	}
 }
 
-// resend answers one NACK: every packet it names that is still remembered.
+// nackMaxSeqs is the most packets one NACK is answered for; a request names up
+// to about 17 per pair and a receiver has no use for more than a few frames.
+const nackMaxSeqs = 128
+
+// resend answers one NACK: the first nackMaxSeqs packets it names that are
+// still remembered, as far as the connection's retransmission budget goes.
 func (n *nackResponder) resend(req *rtcp.TransportLayerNack) {
 	n.mu.Lock()
 	s := n.streams[req.MediaSSRC]
@@ -223,27 +240,52 @@ func (n *nackResponder) resend(req *rtcp.TransportLayerNack) {
 	s.mu.Lock()
 	interval := s.rtt + 5*time.Millisecond
 	s.mu.Unlock()
+	rate := n.mediaRate()
+	left := min(nackSeqs(req), nackMaxSeqs)
 	for _, pair := range req.Nacks {
 		pair.Range(func(seq uint16) bool {
-			n.resendOne(s, seq, interval)
+			if left == 0 {
+				return false
+			}
+			if !n.resendOne(s, seq, interval, rate) {
+				// The budget is empty: the rest of this request is refused.
+				metrics.SFURetransmitDropped.Add(uint64(left))
+				left = 0
+				return false
+			}
+			left--
 			return true
 		})
+		if left == 0 {
+			return
+		}
 	}
 }
 
-func (n *nackResponder) resendOne(s *nackStream, seq uint16, interval time.Duration) {
-	header, payload, ok := s.history.find(seq, n.now(), interval)
+// resendOne resends packet seq; false when the budget refused it. The budget
+// is asked before the packet is copied, and a refused packet stays as it was.
+func (n *nackResponder) resendOne(s *nackStream, seq uint16, interval time.Duration, mediaRate float64) bool {
+	now := n.now()
+	size, ok := s.history.size(seq, now, interval)
 	if !ok {
-		return
+		return true
+	}
+	if !n.budgetFor.allow(now, size, mediaRate) {
+		return false
+	}
+	header, payload, ok := s.history.find(seq, now, interval)
+	if !ok {
+		return true
 	}
 	if s.info.SSRCRetransmission != 0 && s.info.PayloadTypeRetransmission != 0 {
 		header, payload = s.rtxForm(header, payload)
 	}
 	if _, err := s.writer.Write(&header, payload, interceptor.Attributes{}); err != nil {
 		s.history.forgetResend(seq)
-		return
+		return true
 	}
 	metrics.SFURetransmitted.Inc()
+	return true
 }
 
 // rtxForm wraps a packet for the retransmission stream: its own SSRC, payload
@@ -264,6 +306,21 @@ func nackSeqs(req *rtcp.TransportLayerNack) int {
 	total := 0
 	for _, pair := range req.Nacks {
 		total += bits.OnesCount16(uint16(pair.LostPackets)) + 1
+	}
+	return total
+}
+
+// mediaRate is what this connection is sent now, in bytes per second.
+func (n *nackResponder) mediaRate() float64 {
+	n.mu.Lock()
+	streams := make([]*nackStream, 0, len(n.streams))
+	for _, s := range n.streams {
+		streams = append(streams, s)
+	}
+	n.mu.Unlock()
+	total := 0.0
+	for _, s := range streams {
+		total += s.history.bitrate()
 	}
 	return total
 }
