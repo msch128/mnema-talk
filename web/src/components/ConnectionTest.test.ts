@@ -159,6 +159,17 @@ describe('the upload hint', () => {
     expect(w.get('[data-testid="connection-test-speed"]').text()).toContain('not enough upload for even one member')
   })
 
+  it('keeps the number and the members estimate for a very fast download, with the note that it may be local', async () => {
+    const w = await runWith({ ...base, direct, speed: { outcome: 'ok', mbps: 940, maybeLocal: true } })
+    const text = w.get('[data-testid="connection-test-speed"]').text()
+    expect(text).toContain('940 Mbit/s')
+    expect(text).toContain('about 482 members')
+    expect(text).toContain('This may be a local connection; test from outside to be sure.')
+    w.unmount()
+    const plain = await runWith({ ...base, direct, speed: { outcome: 'ok', mbps: 100 } })
+    expect(plain.get('[data-testid="connection-test-speed"]').text()).not.toContain('local connection')
+  })
+
   it('says it cannot measure the upload from the same network', async () => {
     const w = await runWith({ ...base, direct, speed: { outcome: 'lan' } })
     expect(w.get('[data-testid="connection-test-speed"]').text()).toContain('cannot measure the server’s upload')

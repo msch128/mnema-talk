@@ -910,9 +910,11 @@ a Talk and leaves no presence. It
    From outside the server's network it is roughly the server's upload, and the
    result says what screen share that upload can serve (1.5 Mbit/s plus 30 %
    overhead per watcher, as in [the sizing guide](benchmark.md#the-model)).
-   A very high speed, or a page address on a private network, is taken as the
-   same network, where the test says it cannot measure the upload; run it from
-   a phone on mobile data. A busy slot or an exhausted budget costs nothing, and
+   A page address on a private network (or a private direct path) is taken as
+   the same network, where the test says it cannot measure the upload; run it
+   from a phone on mobile data. A speed of 700 Mbit/s or more is shown as
+   measured, with the note that it may be a local connection (symmetric
+   gigabit fibre exists, but so does a LAN), so test from outside to be sure. A busy slot or an exhausted budget costs nothing, and
    the test is skipped while a Talk has participants, because for three seconds
    it can fill a home uplink and would be heard in the call. The setup assistant
    prints only this hint, never a number.

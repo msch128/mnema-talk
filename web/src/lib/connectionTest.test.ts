@@ -217,8 +217,9 @@ describe('the download speed test', () => {
     expect(download).toHaveBeenCalledTimes(1)
   })
 
-  it('takes a speed no home uplink has as the LAN (split-horizon DNS), not as a measurement', async () => {
-    expect(await speed(withDownload(async () => ({ bytes: 16_000_000, ms: 100 })))).toEqual({ outcome: 'lan' })
+  it('shows a very high speed as measured, flagged as possibly local, because symmetric gigabit fibre exists', async () => {
+    expect(await speed(withDownload(async () => ({ bytes: 16_000_000, ms: 100 })))).toEqual({ outcome: 'ok', mbps: 1280, maybeLocal: true })
+    expect(await speed(withDownload(async () => ({ bytes: 5_000_000, ms: 1000 })))).toEqual({ outcome: 'ok', mbps: 40 })
   })
 
   it('needs a stream long or big enough to mean something', async () => {

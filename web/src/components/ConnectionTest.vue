@@ -38,7 +38,8 @@ const speedText = computed(() => {
   if (speed.outcome !== 'ok') return t(`connectionTest.speed.${speed.outcome}`)
   const mbps = new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(speed.mbps)
   const count = screenViewersFor(speed.mbps)
-  return t(count > 0 ? 'connectionTest.speed.ok' : 'connectionTest.speed.none', { mbps, count, rate: SCREEN_MBPS, overhead: OVERHEAD_PERCENT })
+  const text = t(count > 0 ? 'connectionTest.speed.ok' : 'connectionTest.speed.none', { mbps, count, rate: SCREEN_MBPS, overhead: OVERHEAD_PERCENT })
+  return speed.maybeLocal ? `${text} ${t('connectionTest.speed.maybeLocal')}` : text
 })
 const docsUrl = `${SOURCE_URL}/blob/main/doc/troubleshooting-voice.md`
 const outcomeLabel = (o: PathOutcome) => `connectionTest.outcome.${o}`

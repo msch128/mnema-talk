@@ -166,7 +166,7 @@ export async function measureSpeed(deps: ConnectionTestDeps, report: ConnectionR
     const { bytes, ms } = await deps.download(signal)
     if (bytes < MIN_SPEED_BYTES || ms <= 0 || (ms < MIN_SPEED_MS && bytes < MIN_FAST_BYTES)) return { outcome: 'fail' }
     const mbps = (bytes * 8) / ms / 1000
-    return mbps >= LAN_SPEED_MBPS ? { outcome: 'lan' } : { outcome: 'ok', mbps }
+    return mbps >= LAN_SPEED_MBPS ? { outcome: 'ok', mbps, maybeLocal: true } : { outcome: 'ok', mbps }
   } catch (e) {
     return e instanceof SpeedRefused ? { outcome: e.kind } : { outcome: 'fail' }
   }

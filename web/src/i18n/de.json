@@ -4466,7 +4466,8 @@
       "lan": "Dieses Gerät ist wahrscheinlich im selben Netz wie der Server, daher kann der Speedtest den Upload des Servers nicht messen. Starte ihn auf einem Handy im Mobilfunknetz.",
       "fail": "Der Speedtest konnte nicht laufen, daher ist der Upload des Servers unbekannt.",
       "limited": "Zu viele Speedtests hintereinander; warte ein paar Minuten und starte den Test erneut.",
-      "busy": "Der Speedtest wurde übersprungen, weil gerade ein Talk läuft; er würde das Gespräch stören. Starte den Test, wenn niemand spricht."
+      "busy": "Der Speedtest wurde übersprungen, weil gerade ein Talk läuft; er würde das Gespräch stören. Starte den Test, wenn niemand spricht.",
+      "maybeLocal": "Das kann eine lokale Verbindung sein; teste von außen, um sicherzugehen."
     }
   },
   "statusEditor": {

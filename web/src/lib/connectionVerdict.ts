@@ -14,7 +14,7 @@ export interface CandidateCounts { host: number; srflx: number; relay: number }
 
 /** What the download speed test found. */
 export type SpeedResult =
-  | { outcome: 'ok'; mbps: number }
+  | { outcome: 'ok'; mbps: number; /** So fast it may be a local connection (LAN or split-horizon DNS). */ maybeLocal?: boolean }
   /** Run from the server's own network (or so fast it must be): a download there says nothing about the upload. */
   | { outcome: 'lan' }
   | { outcome: 'fail' }
@@ -26,7 +26,7 @@ export type SpeedResult =
 export const SCREEN_VIEWER_MBPS = 1.95
 export const SCREEN_MBPS = 1.5
 export const OVERHEAD_PERCENT = 30
-/** Faster than any home uplink: the download came over a LAN or a split-horizon DNS name. */
+/** From this speed on the number is shown with a note: symmetric gigabit fibre is real, but so is a LAN. */
 export const LAN_SPEED_MBPS = 700
 
 /** How many members can watch one screen share over this much upload. */
