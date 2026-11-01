@@ -71,6 +71,23 @@ describe('useVisibleCameras', () => {
     w.unmount()
   })
 
+  it('does not report again while the view only changes around the tiles', async () => {
+    const voice = useVoiceStore()
+    const spy = vi.spyOn(voice, 'setVisibleCameras')
+    const w = mount(View, { attachTo: document.body })
+    const [observer] = FakeObserver.all
+    if (!observer) throw new Error('no observer')
+    observer.show(tile('a', w))
+    const reports = spy.mock.calls.length
+    for (let i = 0; i < 5; i++) {
+      w.element.append(document.createElement('p'))
+      await Promise.resolve()
+      await nextTick()
+    }
+    expect(spy.mock.calls).toHaveLength(reports)
+    w.unmount()
+  })
+
   it('reports nobody when the view goes away during a call, and stops watching', async () => {
     const voice = useVoiceStore()
     voice.isConnected = true

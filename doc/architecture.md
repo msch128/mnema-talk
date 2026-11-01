@@ -370,7 +370,7 @@ back), so it needs no public relay ports and cannot reach anything else.
    for a camera again about a tenth of a second after its tile comes back; a
    camera the member hid stays hidden. As a safety net the server forwards at
    most `MaxViewerCameras` (24, [`camera_cap.go`](../internal/sfu/camera_cap.go))
-   cameras to one viewer, the lowest user IDs first, and tells the viewer
+   cameras to one viewer, the lowest user IDs first (by ID alone: it ignores which camera the viewer focuses, an accepted limitation for a limit meant never to be reached), and tells the viewer
    which others it does not send (`cameras_capped`) so their tiles say so
    instead of showing a frozen picture. Egress per viewer scales with the
    cameras on screen, not with everyone who has one on.

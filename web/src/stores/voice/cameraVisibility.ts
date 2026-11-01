@@ -17,7 +17,8 @@ const SHOW_DELAY_MS = 120
 /** A tile that left view waits longer, so a scroll back and forth costs nothing. */
 const HIDE_DELAY_MS = 800
 
-const timers = new WeakMap<VoiceState, ReturnType<typeof setTimeout>>()
+// The pending flush of each state and when it is due.
+const timers = new WeakMap<VoiceState, { timer: ReturnType<typeof setTimeout>; due: number }>()
 
 // Who should not be sent a camera: everyone with a camera on whose tile is not
 // on screen and who is not on the stage. Nobody while the view does not report.
@@ -57,15 +58,22 @@ export function flushCameraVisibility(cs: VoiceState) {
   for (const id of off) removeUserVideoStream(cs, id)
 }
 
-function schedule(cs: VoiceState) {
-  const pending = timers.get(cs)
-  if (pending !== undefined) clearTimeout(pending)
+// A flush is due after the wait that fits what it does: soon when a camera is to
+// come back (or right after a join), later when cameras only go off. A change
+// never pushes a flush that is pending already further out, so a view that keeps
+// changing cannot hold the cameras off its screen back for ever.
+function schedule(cs: VoiceState, soon = false) {
   const want = offscreenNow(cs)
   const bringsBack = Object.keys(cs.offscreenCameras.value).some(id => !want[id])
-  timers.set(cs, setTimeout(() => {
+  const due = Date.now() + (soon || bringsBack ? SHOW_DELAY_MS : HIDE_DELAY_MS)
+  const pending = timers.get(cs)
+  if (pending && pending.due <= due) return
+  if (pending) clearTimeout(pending.timer)
+  const timer = setTimeout(() => {
     timers.delete(cs)
     flushCameraVisibility(cs)
-  }, bringsBack ? SHOW_DELAY_MS : HIDE_DELAY_MS))
+  }, due - Date.now())
+  timers.set(cs, { timer, due })
 }
 
 /**
@@ -87,7 +95,8 @@ export function installCameraVisibility(cs: VoiceState) {
 export function resetCameraVisibility(cs: VoiceState) {
   cs.offscreenCameras.value = {}
   cs.cappedCameras.value = {}
-  if (cs.visibleCameras.value) schedule(cs)
+  // Soon: until it is sent, the server sends everything, the very spike this avoids.
+  if (cs.visibleCameras.value) schedule(cs, true)
 }
 
 /** cameras_capped: whose cameras the server does not forward because I asked for too many. */

@@ -14,7 +14,9 @@ import (
 // server send hundreds of pictures. Cameras beyond it are not forwarded; the
 // viewer is told which (see SetCamerasCappedHandler) and shows a placeholder.
 // Which cameras fall outside is decided by user ID, so it does not change
-// while the same people are in the Talk.
+// while the same people are in the Talk; it does not look at what the viewer
+// focuses, so a camera on the stage can fall outside (accepted for a limit
+// meant never to be reached).
 const MaxViewerCameras = 24
 
 // capCameras removes from desired the camera tracks beyond MaxViewerCameras
@@ -27,10 +29,12 @@ func capCameras(desired map[string]*TrackInfo) []uuid.UUID {
 			senders = append(senders, info.SenderID)
 		}
 	}
+	// One camera per publisher counts, however many tracks it came as.
+	slices.SortFunc(senders, compareIDs)
+	senders = slices.Compact(senders)
 	if len(senders) <= MaxViewerCameras {
 		return nil
 	}
-	slices.SortFunc(senders, compareIDs)
 	capped := senders[MaxViewerCameras:]
 	for id, info := range desired {
 		if isCameraVideo(info) && slices.Contains(capped, info.SenderID) {

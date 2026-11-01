@@ -132,7 +132,7 @@ describe('receiving only the cameras that are on screen', () => {
     expect(voice.isCameraHidden('a')).toBe(true)
   })
 
-  it('asks for everything again after the server forgot (a reconnect)', () => {
+  it('asks for what is off screen at once after the server forgot (a reconnect), not after the long wait', () => {
     const voice = setup(['a', 'b'])
     voice.setVisibleCameras(['a'])
     vi.advanceTimersByTime(1000)
@@ -140,8 +140,32 @@ describe('receiving only the cameras that are on screen', () => {
     voice.resendSubscriptions()
     voice.resetCameraVisibility()
     expect(voice.isCameraOffscreen('b')).toBe(false)
+    vi.advanceTimersByTime(150)
+    expect(sent).toEqual([{ kind: 'camera', user_id: 'b', on: false }])
+    expect(voice.isCameraOffscreen('b')).toBe(true)
+  })
+
+  it('sends a hidden camera again after a reconnect together with the other choices, in order', () => {
+    const voice = setup(['a', 'b', 'c'])
+    voice.setCameraHidden('c', true)
+    voice.setVisibleCameras(['a'])
     vi.advanceTimersByTime(1000)
-    expect(sent.at(-1)).toEqual({ kind: 'camera', user_id: 'b', on: false })
+    sent.length = 0
+    voice.resendSubscriptions()
+    voice.resetCameraVisibility()
+    vi.advanceTimersByTime(150)
+    expect(sent).toEqual([{ kind: 'camera', user_id: 'c', on: false }, { kind: 'camera', user_id: 'b', on: false }])
+  })
+
+  it('does not hold a pending flush back when the view keeps reporting the same thing', () => {
+    const voice = setup(['a', 'b'])
+    voice.setVisibleCameras(['a'])
+    for (let i = 0; i < 5; i++) {
+      vi.advanceTimersByTime(500)
+      voice.setVisibleCameras(['a'])
+    }
+    // 2500 ms of churn: the cameras went off after the first 800 ms.
+    expect(sent).toEqual([{ kind: 'camera', user_id: 'b', on: false }])
   })
 
   it('stops reporting: nothing is held back for a view that does not tell', async () => {

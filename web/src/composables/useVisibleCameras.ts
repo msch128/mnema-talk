@@ -15,6 +15,7 @@ export function useVisibleCameras(root: Ref<HTMLElement | null>) {
   const seen = new Map<Element, boolean>()
   let observer: IntersectionObserver | null = null
   let mutations: MutationObserver | null = null
+  let reported: string | null = null
 
   function report() {
     const ids = new Set<string>()
@@ -22,6 +23,10 @@ export function useVisibleCameras(root: Ref<HTMLElement | null>) {
       const id = tile instanceof HTMLElement ? tile.dataset['userId'] : undefined
       if (visible && id) ids.add(id)
     }
+    // The view changes all the time (chat, reactions); only a changed set is news.
+    const key = [...ids].sort().join(',')
+    if (key === reported) return
+    reported = key
     voice.setVisibleCameras([...ids])
   }
 
@@ -56,6 +61,7 @@ export function useVisibleCameras(root: Ref<HTMLElement | null>) {
     observer?.disconnect()
     mutations?.disconnect()
     seen.clear()
+    reported = null
     // Still in the call, but not looking at it: nothing is on screen.
     voice.setVisibleCameras(observer && voice.isConnected ? [] : null)
   })

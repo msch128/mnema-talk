@@ -150,3 +150,16 @@ func TestADesiredSetOfManyCamerasIsCapped(t *testing.T) {
 		t.Fatalf("capped %d, left %d", len(capped), len(desired))
 	}
 }
+
+func TestCapCamerasCountsPublishersNotTracks(t *testing.T) {
+	desired := map[string]*TrackInfo{}
+	for i := 0; i < MaxViewerCameras; i++ {
+		id := uuid.New()
+		// Two tracks of one camera (a replaced capture) are one camera.
+		desired[id.String()+"-a"] = cameraInfo(id)
+		desired[id.String()+"-b"] = cameraInfo(id)
+	}
+	if capped := capCameras(desired); capped != nil || len(desired) != 2*MaxViewerCameras {
+		t.Fatalf("%d publishers fit the limit, capped %v", MaxViewerCameras, capped)
+	}
+}
