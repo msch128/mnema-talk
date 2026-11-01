@@ -1,0 +1,29 @@
+doc/operations.md
+  s_45fff186c97845::t_7657a412908033 145
+internal/sfu/sfu.go
+  s_45fff186c97845::t_e69429933daeb5 7,210-218
+internal/sfu/transport.go
+  s_45fff186c97845::t_2346b7fabce44b 121
+internal/sfu/upload_limit.go
+  s_45fff186c97845::t_cd47049b09631d 20-25,42-46,60,62,95-96,120
+internal/sfu/upload_limit_run.go
+  s_45fff186c97845::t_41a9e294d678d2 15-21,24-25,30-60,65-91,97-102,112
+internal/sfu/upload_limit_test.go
+  s_45fff186c97845::t_e1c604dae35726 155,238-240,262,264-266,269-295,297-298,304,307-325,350-425
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a6448697eaf2e94a90ed9ba0a4e53421cda4f448",
+  "prompts": {},
+  "sessions": {
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
