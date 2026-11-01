@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1](https://github.com/msch128/mnema-talk/compare/v2.5.0...v2.5.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* a camera layer's first packet moves its waiting viewers, fit reports survive loss and moves ([ee1e66b](https://github.com/msch128/mnema-talk/commit/ee1e66bd9d00c24f641fd830d9037c76b66f8de3))
+
 ## [2.5.0](https://github.com/msch128/mnema-talk/compare/v2.4.0...v2.5.0) (2026-11-01)
 
 
