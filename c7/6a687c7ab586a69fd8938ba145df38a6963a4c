@@ -1,0 +1,50 @@
+api/openapi.json
+  h_0ff4f4713441f4 7464-7570,7936-7939,7955-7957,7985,7991,17438-17520
+doc/operations.md
+  h_0ff4f4713441f4 837,892-920
+internal/capacity/capacity.go
+  h_0ff4f4713441f4 1-120
+internal/capacity/capacity_test.go
+  h_0ff4f4713441f4 1-175
+internal/capacity/cpu.go
+  h_0ff4f4713441f4 1-60
+internal/server/capacity.go
+  h_0ff4f4713441f4 1-132
+internal/server/capacity_integration_test.go
+  h_0ff4f4713441f4 1-30
+internal/server/capacity_test.go
+  h_0ff4f4713441f4 1-49
+internal/server/ops.go
+  h_0ff4f4713441f4 78-80,93,104-105,144-145
+internal/server/router_routes.go
+  h_0ff4f4713441f4 175
+scripts/english-only-allowlist.txt
+  h_0ff4f4713441f4 49
+web/src/components/AdminCapacityPanel.test.ts
+  h_0ff4f4713441f4 1-141
+web/src/components/AdminCapacityPanel.vue
+  h_0ff4f4713441f4 1-103
+web/src/components/AdminStatusTab.test.ts
+  h_0ff4f4713441f4 16-18
+web/src/components/AdminStatusTab.vue
+  h_0ff4f4713441f4 16,141-142
+web/src/components/opsStatus.fixture.ts
+  h_0ff4f4713441f4 7
+web/src/i18n/de.json
+  h_0ff4f4713441f4 2143-2173
+web/src/i18n/en.json
+  h_0ff4f4713441f4 2143-2173
+web/src/types/rest.ts
+  h_0ff4f4713441f4 4381-4434,4663,4669,4684,4690
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c76a687c7ab586a69fd8938ba145df38a6963a4c",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
