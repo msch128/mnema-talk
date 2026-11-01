@@ -276,6 +276,7 @@ const HANDLERS: Handlers = {
   screen_layers: ({ voiceStore }, p) => voiceStore.handleScreenLayers(p),
   screen_quality: ({ voiceStore }, p) => voiceStore.handleScreenQuality(p),
   screen_layers_wanted: ({ voiceStore }, p) => voiceStore.handleLayersWanted(p),
+  cameras_capped: ({ voiceStore }, p) => voiceStore.handleCamerasCapped(p),
   voice_speaking: ({ voiceStore }, p) => voiceStore.handleSpeakingEvent(p),
   voice_mute_state: ({ voiceStore }, p) => voiceStore.handleMuteState(p),
   stage_hand: ({ voiceStore }, p) => voiceStore.handleStageHand(p),

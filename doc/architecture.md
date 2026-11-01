@@ -363,6 +363,17 @@ back), so it needs no public relay ports and cannot reach anything else.
    viewer only. The hub tells the room who publishes what
    (`webrtc_media_state`) and who watches each share (`screen_viewers`), so
    clients can offer "Watch" and show viewers without receiving the video.
+   **Cameras are received only while their tile is on screen.** The web
+   client reports which tiles are visible (IntersectionObserver), keeps
+   the cameras of the others off with the same opt-out (several at once in
+   one `webrtc_subscribe` with `user_ids`, so one renegotiation), and asks
+   for a camera again about a tenth of a second after its tile comes back; a
+   camera the member hid stays hidden. As a safety net the server forwards at
+   most `MaxViewerCameras` (24, [`camera_cap.go`](../internal/sfu/camera_cap.go))
+   cameras to one viewer, the lowest user IDs first (by ID alone: it ignores which camera the viewer focuses, an accepted limitation for a limit meant never to be reached), and tells the viewer
+   which others it does not send (`cameras_capped`) so their tiles say so
+   instead of showing a frozen picture. Egress per viewer scales with the
+   cameras on screen, not with everyone who has one on.
 5. **Stop.** `webrtc_screenshare_stop` / `webrtc_camera_stop` unpublish that
    source; the screen opt-ins belong to one share and are dropped with it.
    Leaving, a failed connection or an admin kick removes the peer.

@@ -82,6 +82,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   screen_layers: [{ ...room, layers: [] }, { ...room, layers: [{ width: 1920, height: 1080, fps: 30 }, { width: 1280, height: 720, fps: 30 }] }],
   screen_quality: [{ ...room, layer: -1, auto: true }, { ...room, layer: 2, auto: false }],
   screen_layers_wanted: [{ channel_id: id, layers: [] }, { channel_id: id, layers: [0, 2] }],
+  cameras_capped: [{ channel_id: id, user_ids: [] }, { channel_id: id, user_ids: [id, fixtureId(2)] }],
   voice_speaking: [{ ...room, active: true }],
   voice_mute_state: [{ ...room, muted: true, deafened: false }],
   voice_kicked: [{ channel_id: id }, { channel_id: id, reason: 'room_full' }, { channel_id: id, reason: 'missing_permission' }, { channel_id: id, reason: 'talk_rate_limited' }, { channel_id: id, reason: 'talk_unavailable' }, { channel_id: id, reason: 'connection_lost' }, { channel_id: id, reason: 'media_unavailable' }, { channel_id: id, reason: 'joined_elsewhere' }, { channel_id: id, reason: 'voice_taken_over' }],
@@ -261,6 +262,12 @@ describe('screen layer events', () => {
     for (const layerIndex of [-2, 3, 0.5, '1', null]) expect(valid('screen_quality', { ...room, layer: layerIndex, auto: false })).toBe(false)
     for (const index of [-1, 3, 1.5, '0']) expect(valid('screen_layers_wanted', { channel_id: id, layers: [index] })).toBe(false)
     expect(valid('screen_layers_wanted', { layers: [0] })).toBe(false)
+  })
+
+  it('takes the cameras the server caps as a list of users in a room', () => {
+    expect(valid('cameras_capped', { channel_id: id, user_ids: ['not an id'] })).toBe(false)
+    expect(valid('cameras_capped', { channel_id: id, user_ids: 'none' })).toBe(false)
+    expect(valid('cameras_capped', { user_ids: [] })).toBe(false)
   })
 
   it('takes the layer count of a server_info within bounds', () => {

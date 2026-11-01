@@ -131,6 +131,9 @@ type Peer struct {
 	// track ID, so they can be released with the track.
 	vtMu         sync.Mutex
 	viewerTracks map[string]*viewerTrack
+	// lastCapped is the set of cameras last announced as not forwarded (see
+	// announceCapped); guarded by signalingMu.
+	lastCapped []uuid.UUID
 	// vtReleased is set by releaseViewerTracks; no viewer track is added after.
 	vtReleased bool
 	// lostMu guards onLost and lost (see OnLost).

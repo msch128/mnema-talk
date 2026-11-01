@@ -34,3 +34,12 @@ func (r *Room) PublishTestVideo(sender uuid.UUID, source Source) error {
 	r.addTrack(key, &TrackInfo{Track: local, SenderID: sender, Kind: webrtc.RTPCodecTypeVideo, Source: source, publisher: peer})
 	return nil
 }
+
+// ReceivesCamera reports whether viewer is subscribed to publisher's camera.
+// It lets packages built on the SFU check a subscription without media; the
+// server never calls it.
+func (r *Room) ReceivesCamera(viewer, publisher uuid.UUID) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return viewer != publisher && r.subs[viewer].Wants(publisher, webrtc.RTPCodecTypeVideo, SourceCamera)
+}

@@ -1724,7 +1724,8 @@
     "inviteEnded": "No longer available",
     "moveForControls": "Move the mouse to show the controls",
     "sharingScreen": "Sharing screen",
-    "cameraOn": "Camera on"
+    "cameraOn": "Camera on",
+    "cameraCapped": "Too many cameras at once: this one is not shown"
   },
   "admin": {
     "signedInAs": "Signed in as {name} (Owner)",

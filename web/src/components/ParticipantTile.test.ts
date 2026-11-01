@@ -262,3 +262,14 @@ it('announces the pending screen subscription and prevents a duplicate watch act
   expect(w.emitted('watch-stream')).toBeUndefined()
   w.unmount()
 })
+
+describe('ParticipantTile with a camera the server does not send', () => {
+  it('says why there is no picture, and only while there is none', () => {
+    expect(tile().find('[data-testid="tile-camera-capped"]').exists()).toBe(false)
+    const capped = tile({ cameraCapped: true })
+    expect(capped.get('[data-testid="tile-camera-capped"]').text()).toBe('Too many cameras at once: this one is not shown')
+    expect(capped.find('[data-tile-avatar]').exists()).toBe(true)
+    const withPicture = tile({ cameraCapped: true, stream: new MediaStream() })
+    expect(withPicture.find('[data-testid="tile-camera-capped"]').exists()).toBe(false)
+  })
+})
