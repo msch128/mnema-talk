@@ -1,0 +1,37 @@
+doc/operations.md
+  s_12ef0721e9294a::t_e321181827572f 145,1115
+internal/metrics/metrics.go
+  s_45fff186c97845::t_2a0c5ba49b82cd 253-256,322
+internal/sfu/upload_limit_run.go
+  s_45fff186c97845::t_012b5b17a7d2c2 18-25,28-31,56,78-81,87-89,92-93,98,100,103,115,125
+internal/sfu/upload_limit_test.go
+  s_12ef0721e9294a::t_63a7ab60b05259 240,312,315,320,325,330-343
+internal/turnrelay/guard.go
+  s_45fff186c97845::t_111f7a3c16f42b 88,116
+internal/turnrelay/server_test.go
+  s_12ef0721e9294a::t_762493efb225d2 132-133,151-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7baae8a8818acd7faa744238828da44d75307636",
+  "prompts": {},
+  "sessions": {
+    "s_12ef0721e9294a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0809221d7b42bb92",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
