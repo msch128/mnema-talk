@@ -1,0 +1,93 @@
+doc/operations.md
+  s_45fff186c97845::t_6cd20ddc119549 902-912
+e2e/tests/connection-test.spec.ts
+  s_61e7f03250bd0b::t_5ccff25dc5f5b3 52-54
+internal/server/router_build.go
+  s_96d59e23732f72::t_6b02883bdc62a0 341
+internal/server/router_routes.go
+  s_96d59e23732f72::t_4201c2af5643dd 105
+internal/server/speedtest.go
+  s_96d59e23732f72::t_168451dc6bb470 1-107
+internal/server/speedtest_integration_test.go
+  s_96d59e23732f72::t_d4f0cb1109e862 1-20
+internal/server/speedtest_test.go
+  s_e7d8df1dbb402e::t_5350a2289ef35b 1-116
+internal/server/system.go
+  s_96d59e23732f72::t_363f3c6bffc655 57-58
+internal/setupwizard/summary.go
+  s_96d59e23732f72::t_28664326782d8f 97
+internal/setupwizard/summary_test.go
+  s_96d59e23732f72::t_ab5a9897cf0da8 70
+internal/setupwizard/testdata/summary_container.golden
+  s_61e7f03250bd0b::t_1484935ac561b2 23
+internal/setupwizard/testdata/summary_https.golden
+  s_61e7f03250bd0b::t_50183a3c6538b9 22
+web/src/components/ConnectionTest.test.ts
+  s_bf24ce51cd8f95::t_5aca4d434bfc01 139-164
+web/src/components/ConnectionTest.vue
+  s_e7d8df1dbb402e::t_e8e47f08b33d61 8,10,12,33-40,90
+web/src/i18n/de.json
+  s_e7d8df1dbb402e::t_c0e0e30ffd024a 4401-4402,4459-4464
+web/src/i18n/en.json
+  s_e7d8df1dbb402e::t_160d3aae2486c8 4401-4402,4459-4464
+web/src/lib/connectionTest.test.ts
+  s_bf24ce51cd8f95::t_d55a9f765068b8 198-229
+web/src/lib/connectionTest.ts
+  s_bf24ce51cd8f95::t_3f03eb25d4f366 7,15-16,144-160,162,190-193
+web/src/lib/connectionTestApi.test.ts
+  s_bf24ce51cd8f95::t_351d8639278cc1 37-54
+web/src/lib/connectionTestApi.ts
+  s_bf24ce51cd8f95::t_edda925c4a5e02 13-28
+web/src/lib/connectionVerdict.test.ts
+  s_bf24ce51cd8f95::t_49d8a6328c5012 2,59-68
+web/src/lib/connectionVerdict.ts
+  s_96d59e23732f72::t_7c1583aec25b62 15-29,42-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8876553454bc3d59c361a21010606c7ed7d6e9d6",
+  "prompts": {},
+  "sessions": {
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_96d59e23732f72": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae77e32aecbacf85d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e7d8df1dbb402e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-app-66e452174912e1a3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
