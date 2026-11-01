@@ -84,8 +84,9 @@ func (g *layerGroup) viewerFor(viewer uuid.UUID) *viewerTrack {
 // write hands one packet of layer idx to every viewer.
 func (g *layerGroup) write(idx int, p *rtp.Packet) {
 	now := layerNow().UnixNano()
-	if was := g.lastPkt[idx].Swap(now); was != 0 && now-was >= int64(time.Second) && g.source == SourceCamera {
-		// The layer was silent (its sender switched it off) and delivers again:
+	if was := g.lastPkt[idx].Swap(now); now-was >= int64(time.Second) && g.source == SourceCamera {
+		// The layer was silent (its sender switched it off, or it just began: its
+		// first packet comes after the layer was attached) and delivers now:
 		// viewers waiting for it on another layer move over.
 		g.retarget()
 	}
