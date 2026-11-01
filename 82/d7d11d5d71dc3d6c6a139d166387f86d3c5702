@@ -1,0 +1,25 @@
+internal/repo/testdata/error_messages.golden.json
+  s_61e7f03250bd0b::t_d747e3c8eb2d47 33
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_3683b919ce49db 564-565
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_f69178d3f916c2 564-565
+web/src/lib/errorSentencesA.ts
+  s_61e7f03250bd0b::t_1116008c07ab1a 36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "82d7d11d5d71dc3d6c6a139d166387f86d3c5702",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
