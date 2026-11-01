@@ -36781,7 +36781,7 @@
     },
     "/api/webrtc/speedtest": {
       "get": {
-        "description": "Backs the upload hint of \"Test my connection\": streams up to 16 MiB of noise or for at most three seconds, whichever ends first, so the browser can measure its download speed from the server. Signed-in members only; at most four per ten minutes per member and two at a time.",
+        "description": "Backs the upload hint of \"Test my connection\": streams up to 16 MiB of noise or for at most three seconds, whichever ends first, so the browser can measure its download speed from the server. The speed is the one to the nearest reverse proxy or tunnel, not necessarily to the server itself. Signed-in members only; at most four per ten minutes per member and six per address, one at a time. A busy slot or an exhausted budget answers 429 and costs nothing; while a Talk has participants it answers 503 so the test does not disturb the call.",
         "operationId": "downloadSpeedTest",
         "responses": {
           "200": {
@@ -36820,7 +36820,7 @@
                 }
               }
             },
-            "description": "RATE_LIMITED: too many tests, or too many running.",
+            "description": "RATE_LIMITED: too many tests, or one is running.",
             "headers": {
               "Retry-After": {
                 "description": "Seconds until the client may retry.",
@@ -36839,6 +36839,16 @@
               }
             },
             "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a Talk has participants; the test would disturb the call."
           }
         },
         "security": [

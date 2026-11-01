@@ -4458,9 +4458,15 @@
     "docs": "Troubleshooting voice",
     "failed": "The test could not run.",
     "speed": {
-      "ok": "Your device downloaded from the server at {mbps} Mbit/s, so its upload is at least that: enough for a screen share watched by about {count} members (1.5 Mbit/s plus 30 % overhead each). A short test, and your own connection can be the limit.",
-      "lan": "This device is on the same network as the server, so the speed test cannot measure the server’s upload. Run it from a phone on mobile data.",
-      "fail": "The speed test could not run, so the server’s upload is not known."
+      "ok": {
+        "one": "Your device downloaded from the server at {mbps} Mbit/s, measured to where the server is reachable (the nearest reverse proxy or tunnel). That is roughly its upload: enough for a screen share watched by about {count} member ({rate} Mbit/s plus {overhead} % overhead each). A short test; your own connection can be the limit.",
+        "other": "Your device downloaded from the server at {mbps} Mbit/s, measured to where the server is reachable (the nearest reverse proxy or tunnel). That is roughly its upload: enough for a screen share watched by about {count} members ({rate} Mbit/s plus {overhead} % overhead each). A short test; your own connection can be the limit."
+      },
+      "none": "Your device downloaded from the server at {mbps} Mbit/s, measured to where the server is reachable. That is not enough upload for even one member to watch a screen share ({rate} Mbit/s plus {overhead} % overhead). A short test; your own connection can be the limit.",
+      "lan": "This device is probably on the same network as the server, so the speed test cannot measure the server’s upload. Run it from a phone on mobile data.",
+      "fail": "The speed test could not run, so the server’s upload is not known.",
+      "limited": "Too many speed tests in a row; wait a few minutes and run the test again.",
+      "busy": "The speed test was skipped because a Talk is running; it would disturb the call. Run the test when nobody is talking."
     }
   },
   "statusEditor": {

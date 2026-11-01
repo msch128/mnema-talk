@@ -901,14 +901,20 @@ a Talk and leaves no presence. It
 3. connects to the voice port through the built-in TURN relay over UDP, and
    again over TCP, using relay candidates only;
 4. reads a short stream from the server (`GET /api/webrtc/speedtest`: at most
-   16 MiB or three seconds, signed-in members only, four per ten minutes each
-   and two at a time) and divides what arrived by the time it took. From
-   outside the server's network that approximates the server's upload, and the
-   result says how large a screen share the upload can serve (1.5 Mbit/s plus
-   30 % overhead per watcher, as in [the sizing guide](benchmark.md#the-model)):
-   at least that, because a short test over your own connection can only
-   undershoot. From the same network as the server the test says it cannot
-   measure the upload; run it from a phone on mobile data. The setup assistant
+   16 MiB or three seconds, signed-in members only, four per ten minutes per
+   member and six per address, one test at a time) and divides what arrived by
+   the time it took. It measures the speed **to where the server is reachable**:
+   behind a reverse proxy, a CDN or a tunnel that is the speed to that proxy,
+   not necessarily to the server (the stream carries `Content-Encoding:
+   identity` and `X-Accel-Buffering: no` so proxies pass it through unchanged).
+   From outside the server's network it is roughly the server's upload, and the
+   result says what screen share that upload can serve (1.5 Mbit/s plus 30 %
+   overhead per watcher, as in [the sizing guide](benchmark.md#the-model)).
+   A very high speed, or a page address on a private network, is taken as the
+   same network, where the test says it cannot measure the upload; run it from
+   a phone on mobile data. A busy slot or an exhausted budget costs nothing, and
+   the test is skipped while a Talk has participants, because for three seconds
+   it can fill a home uplink and would be heard in the call. The setup assistant
    prints only this hint, never a number.
 
 The verdict is one of *Direct connection works*, *Only the relay works (direct

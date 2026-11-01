@@ -344,6 +344,7 @@ func (c *components) newSystem() error {
 		h.version = "dev"
 	}
 	h.events = c.pub
+	h.speed.callRunning = func() bool { return c.hub != nil && c.hub.Stats().VoiceParticipants > 0 }
 	h.warnings = opwarn.Default
 	h.setup = d.Setup
 	c.opsSrc = &opsSource{db: d.DB, hub: c.hub, sfu: d.SFU, storage: d.StorageReady, hasStore: d.Store != nil, version: h.version}

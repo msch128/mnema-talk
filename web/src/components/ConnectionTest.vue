@@ -5,7 +5,7 @@ import { computed, onUnmounted, ref } from 'vue'
 import { CheckCircle2, CircleHelp, Loader2, Network, TriangleAlert, XCircle } from '@lucide/vue'
 import { runConnectionTest } from '../lib/connectionTest'
 import { browserTestDeps } from '../lib/connectionTestApi'
-import { screenViewersFor, verdictOf, type ConnectionReport, type PathOutcome } from '../lib/connectionVerdict'
+import { OVERHEAD_PERCENT, SCREEN_MBPS, screenViewersFor, verdictOf, type ConnectionReport, type PathOutcome } from '../lib/connectionVerdict'
 import { SOURCE_URL } from '../lib/thirdParty'
 import { locale, t } from '../i18n'
 
@@ -17,7 +17,8 @@ const step = ref<Step>('candidates')
 const report = ref<ConnectionReport | null>(null)
 const failed = ref(false)
 let alive = true
-onUnmounted(() => { alive = false })
+const stop = new AbortController()
+onUnmounted(() => { alive = false; stop.abort() })
 
 const verdict = computed(() => (report.value ? verdictOf(report.value) : null))
 const paths = computed(() => (report.value
@@ -36,7 +37,8 @@ const speedText = computed(() => {
   if (!speed) return ''
   if (speed.outcome !== 'ok') return t(`connectionTest.speed.${speed.outcome}`)
   const mbps = new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(speed.mbps)
-  return t('connectionTest.speed.ok', { mbps, count: screenViewersFor(speed.mbps) })
+  const count = screenViewersFor(speed.mbps)
+  return t(count > 0 ? 'connectionTest.speed.ok' : 'connectionTest.speed.none', { mbps, count, rate: SCREEN_MBPS, overhead: OVERHEAD_PERCENT })
 })
 const docsUrl = `${SOURCE_URL}/blob/main/doc/troubleshooting-voice.md`
 const outcomeLabel = (o: PathOutcome) => `connectionTest.outcome.${o}`
@@ -46,7 +48,7 @@ async function run() {
   failed.value = false
   report.value = null
   try {
-    const result = await runConnectionTest(browserTestDeps, s => { if (alive) step.value = s })
+    const result = await runConnectionTest(browserTestDeps, s => { if (alive) step.value = s }, stop.signal)
     if (alive) report.value = result
   } catch {
     if (alive) failed.value = true

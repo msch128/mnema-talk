@@ -15,12 +15,19 @@ export interface CandidateCounts { host: number; srflx: number; relay: number }
 /** What the download speed test found. */
 export type SpeedResult =
   | { outcome: 'ok'; mbps: number }
-  /** Run from the server's own network: a download there says nothing about the upload. */
+  /** Run from the server's own network (or so fast it must be): a download there says nothing about the upload. */
   | { outcome: 'lan' }
   | { outcome: 'fail' }
+  /** The server turned the test away: too many tests (limited), or a Talk is running (busy). */
+  | { outcome: 'limited' }
+  | { outcome: 'busy' }
 
 /** Mbit/s of upload one screen watcher needs: 1.5 Mbit/s plus 30 % for headers, keyframes and retransmissions (doc/benchmark.md). */
 export const SCREEN_VIEWER_MBPS = 1.95
+export const SCREEN_MBPS = 1.5
+export const OVERHEAD_PERCENT = 30
+/** Faster than any home uplink: the download came over a LAN or a split-horizon DNS name. */
+export const LAN_SPEED_MBPS = 700
 
 /** How many members can watch one screen share over this much upload. */
 export function screenViewersFor(mbps: number): number {
