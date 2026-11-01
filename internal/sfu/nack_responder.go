@@ -2,7 +2,9 @@ package sfu
 
 import (
 	"encoding/binary"
+	"math/bits"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/metrics"
@@ -61,6 +63,10 @@ type nackResponder struct {
 	streams map[uint32]*nackStream
 	// budgetFor limits the resends of this connection.
 	budgetFor *resendBudget
+	// count is len(streams), readable without the lock on every packet.
+	count atomic.Int32
+	// answering is set while a NACK is being answered: one at a time.
+	answering atomic.Bool
 	// afterResend, when set (tests), is called when a NACK has been answered.
 	afterResend func()
 }
@@ -80,9 +86,7 @@ func supportsNack(info *interceptor.StreamInfo) bool {
 // connection's budget and never less than a keyframe.
 func (n *nackResponder) budget(rate float64) int {
 	peers := n.load.count()
-	n.mu.Lock()
-	streams := max(len(n.streams), 1)
-	n.mu.Unlock()
+	streams := max(int(n.count.Load()), 1)
 	share := max(nackConnBytes(peers)/streams, nackMinBytes)
 	if rate <= 0 {
 		return min(nackStartBytes, share)
@@ -95,12 +99,14 @@ func (n *nackResponder) BindLocalStream(info *interceptor.StreamInfo, writer int
 		return writer
 	}
 	s := &nackStream{info: info, writer: writer, rtxSeq: rtp.NewRandomSequencer()}
+	s.history.budget = n.budget
 	n.mu.Lock()
 	n.streams[info.SSRC] = s
+	n.count.Store(int32(len(n.streams)))
 	n.mu.Unlock()
 	return interceptor.RTPWriterFunc(func(h *rtp.Header, payload []byte, a interceptor.Attributes) (int, error) {
 		if h.SSRC == info.SSRC {
-			s.history.add(h, payload, n.now(), n.budget)
+			s.history.add(h, payload, n.now())
 		}
 		return writer.Write(h, payload, a)
 	})
@@ -110,6 +116,7 @@ func (n *nackResponder) UnbindLocalStream(info *interceptor.StreamInfo) {
 	n.mu.Lock()
 	s := n.streams[info.SSRC]
 	delete(n.streams, info.SSRC)
+	n.count.Store(int32(len(n.streams)))
 	n.mu.Unlock()
 	if s != nil {
 		s.history.clear()
@@ -120,6 +127,7 @@ func (n *nackResponder) Close() error {
 	n.mu.Lock()
 	streams := n.streams
 	n.streams = map[uint32]*nackStream{}
+	n.count.Store(0)
 	n.mu.Unlock()
 	for _, s := range streams {
 		s.history.clear()
@@ -144,15 +152,24 @@ func (n *nackResponder) feedback(typ byte, format uint8, raw []byte) {
 	case typ == rtcpTypeReceiverReport:
 		n.noteRTT(raw)
 	case typ == rtcpTypeTransportFeedback && format == fmtNACK:
-		var req rtcp.TransportLayerNack
-		if req.Unmarshal(raw) == nil {
-			go n.answer(&req)
+		// One NACK is answered at a time: a subscriber flooding requests cannot
+		// start work faster than it finishes, and loses the ones in between
+		// (it asks again for what it still misses).
+		if !n.answering.CompareAndSwap(false, true) {
+			return
 		}
+		var req rtcp.TransportLayerNack
+		if req.Unmarshal(raw) != nil {
+			n.answering.Store(false)
+			return
+		}
+		go n.answer(&req)
 	}
 }
 
 // answer resends in a goroutine of its own, so the reader is not held up.
 func (n *nackResponder) answer(req *rtcp.TransportLayerNack) {
+	defer n.answering.Store(false)
 	n.resend(req)
 	if n.afterResend != nil {
 		n.afterResend()
@@ -182,7 +199,21 @@ func (n *nackResponder) noteRTT(raw []byte) {
 	}
 }
 
-// resend answers one NACK: every packet it names that is still remembered.
+// nackMaxSeqs is the most packets one NACK is answered for; a request names up
+// to about 17 per pair and a receiver has no use for more than a few frames.
+const nackMaxSeqs = 128
+
+// nackSeqs is the number of packets a request names.
+func nackSeqs(req *rtcp.TransportLayerNack) int {
+	total := 0
+	for _, pair := range req.Nacks {
+		total += bits.OnesCount16(uint16(pair.LostPackets)) + 1
+	}
+	return total
+}
+
+// resend answers one NACK: the first nackMaxSeqs packets it names that are
+// still remembered, as far as the connection's retransmission budget goes.
 func (n *nackResponder) resend(req *rtcp.TransportLayerNack) {
 	n.mu.Lock()
 	s := n.streams[req.MediaSSRC]
@@ -193,32 +224,52 @@ func (n *nackResponder) resend(req *rtcp.TransportLayerNack) {
 	s.mu.Lock()
 	interval := s.rtt + 5*time.Millisecond
 	s.mu.Unlock()
+	rate := n.mediaRate()
+	left := min(nackSeqs(req), nackMaxSeqs)
 	for _, pair := range req.Nacks {
 		pair.Range(func(seq uint16) bool {
-			n.resendOne(s, seq, interval)
+			if left == 0 {
+				return false
+			}
+			if !n.resendOne(s, seq, interval, rate) {
+				// The budget is empty: the rest of this request is refused.
+				metrics.SFURetransmitDropped.Add(uint64(left))
+				left = 0
+				return false
+			}
+			left--
 			return true
 		})
+		if left == 0 {
+			return
+		}
 	}
 }
 
-func (n *nackResponder) resendOne(s *nackStream, seq uint16, interval time.Duration) {
-	header, payload, ok := s.history.find(seq, n.now(), interval)
+// resendOne resends packet seq; false when the budget refused it. The budget
+// is asked before the packet is copied, and a refused packet stays as it was.
+func (n *nackResponder) resendOne(s *nackStream, seq uint16, interval time.Duration, mediaRate float64) bool {
+	now := n.now()
+	size, ok := s.history.size(seq, now, interval)
 	if !ok {
-		return
+		return true
 	}
-	if !n.budgetFor.allow(n.now(), len(payload)+rtpFixedHeader, n.mediaRate()) {
-		s.history.forgetResend(seq)
-		metrics.SFURetransmitDropped.Inc()
-		return
+	if !n.budgetFor.allow(now, size, mediaRate) {
+		return false
+	}
+	header, payload, ok := s.history.find(seq, now, interval)
+	if !ok {
+		return true
 	}
 	if s.info.SSRCRetransmission != 0 && s.info.PayloadTypeRetransmission != 0 {
 		header, payload = s.rtxForm(header, payload)
 	}
 	if _, err := s.writer.Write(&header, payload, interceptor.Attributes{}); err != nil {
 		s.history.forgetResend(seq)
-		return
+		return true
 	}
 	metrics.SFURetransmitted.Inc()
+	return true
 }
 
 // rtxForm wraps a packet for the retransmission stream: its own SSRC, payload
@@ -233,9 +284,6 @@ func (s *nackStream) rtxForm(h rtp.Header, payload []byte) (rtp.Header, []byte) 
 	h.Padding, h.PaddingSize = false, 0
 	return h, out
 }
-
-// rtpFixedHeader is counted for the header of a resent packet.
-const rtpFixedHeader = 12
 
 // mediaRate is what this connection is sent now, in bytes per second.
 func (n *nackResponder) mediaRate() float64 {

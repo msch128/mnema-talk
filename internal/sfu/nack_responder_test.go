@@ -105,14 +105,19 @@ func nackFor(t *testing.T, n *nackResponder, ssrc uint32, seqs ...uint16) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	nackRaw(n, raw)
+}
+
+// nackRaw feeds an encoded NACK to the responder and waits until it is answered.
+func nackRaw(n *nackResponder, raw []byte) {
 	var wg sync.WaitGroup
 	n.afterResend = wg.Done
 	wg.Add(1)
 	reader := n.BindRTCPReader(interceptor.RTCPReaderFunc(func(b []byte, a interceptor.Attributes) (int, interceptor.Attributes, error) {
 		return copy(b, raw), a, nil
 	}))
-	if _, _, err := reader.Read(make([]byte, 1500), nil); err != nil {
-		t.Fatal(err)
+	if _, _, err := reader.Read(make([]byte, 4096), nil); err != nil {
+		panic(err)
 	}
 	wg.Wait()
 }

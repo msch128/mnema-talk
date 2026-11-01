@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/pion/rtcp"
 )
 
 func TestResendBudgetFillsAtTheFloorOnAQuietLink(t *testing.T) {
@@ -119,5 +120,76 @@ func TestMediaRateSumsTheStreamsOfAConnection(t *testing.T) {
 	// 100 pps of about 1.1 KB and about 0.6 KB.
 	if got < 150_000 || got > 200_000 {
 		t.Fatalf("media rate %v, want about 170000 bytes/s", got)
+	}
+}
+
+// One NACK naming thousands of packets costs at most nackMaxSeqs of them: it
+// does not take thousands of locks or copies.
+func TestAnAbusiveNackIsCappedAndAnsweredOnce(t *testing.T) {
+	clk := &clock{t: time.Unix(1_000_000, 0)}
+	limits := resendLimits{floor: 100 << 20, share: 0, burst: time.Second}
+	icp, _ := nackResponderFactory{now: clk.now, limits: limits}.NewInterceptor("")
+	n := icp.(*nackResponder)
+	w := &wire{}
+	out := n.BindLocalStream(videoInfo(100, false), w)
+	for seq := uint16(0); seq < 200; seq++ {
+		send(out, 100, seq, 100)
+	}
+	w.take()
+	clk.advance(time.Second)
+	// 60 pairs of 17 packets, as a receiver that lost a lot would send.
+	var pairs []rtcp.NackPair
+	for i := 0; i < 60; i++ {
+		pairs = append(pairs, rtcp.NackPair{PacketID: uint16(i * 17), LostPackets: 0xFFFF})
+	}
+	raw, err := (&rtcp.TransportLayerNack{SenderSSRC: 1, MediaSSRC: 100, Nacks: pairs}).Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	nackRaw(n, raw)
+	if got := len(w.take()); got != nackMaxSeqs {
+		t.Fatalf("%d packets resent for one abusive NACK, want %d", got, nackMaxSeqs)
+	}
+}
+
+func TestANackWhileAnotherIsBeingAnsweredIsDropped(t *testing.T) {
+	n, clk := newResponder(t, nil)
+	w := &wire{}
+	out := n.BindLocalStream(videoInfo(110, false), w)
+	send(out, 110, 1, 100)
+	w.take()
+	clk.advance(time.Second)
+	n.answering.Store(true) // an answer in progress
+	raw, _ := (&rtcp.TransportLayerNack{MediaSSRC: 110, Nacks: []rtcp.NackPair{{PacketID: 1}}}).Marshal()
+	n.feedback(rtcpTypeTransportFeedback, fmtNACK, raw)
+	time.Sleep(20 * time.Millisecond)
+	if len(w.take()) != 0 {
+		t.Fatal("a second NACK was answered while the first was")
+	}
+	n.answering.Store(false)
+	n.feedback(rtcpTypeTransportFeedback, fmtNACK, []byte{0x81, 205, 0, 1, 0, 0, 0, 1}) // malformed: releases the gate
+	if n.answering.Load() {
+		t.Fatal("a malformed NACK kept the gate shut")
+	}
+}
+
+// A refused packet is not touched: it is still there, and not marked as resent.
+func TestARefusedResendKeepsThePacketAsItWas(t *testing.T) {
+	clk := &clock{t: time.Unix(1_000_000, 0)}
+	limits := resendLimits{floor: 100, share: 0, burst: time.Second}
+	icp, _ := nackResponderFactory{now: clk.now, limits: limits}.NewInterceptor("")
+	n := icp.(*nackResponder)
+	out := n.BindLocalStream(videoInfo(120, false), &wire{})
+	send(out, 120, 1, 1000)
+	send(out, 120, 2, 1000)
+	clk.advance(time.Second)
+	dropped := metrics.SFURetransmitDropped.Load()
+	nackFor(t, n, 120, 1) // takes the whole bucket
+	nackFor(t, n, 120, 2)
+	if metrics.SFURetransmitDropped.Load()-dropped != 1 {
+		t.Fatal("the refusal was not counted")
+	}
+	if _, ok := n.streams[120].history.size(2, clk.now(), time.Hour); !ok {
+		t.Fatal("a refused packet was marked as resent")
 	}
 }

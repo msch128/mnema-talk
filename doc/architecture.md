@@ -603,22 +603,25 @@ sharing a 640x360 screen at 20 fps to 99 members in one Talk used about 28 %
 of one core and about 500 MB of app memory, each receiver getting about
 320 kbit/s (0.7.5). App memory grows with receivers x forwarded video sources,
 because the server keeps a retransmission history of the video it sends each
-receiver. Until 2.4.0 that was Pion's responder: 1.5 KB buffers, a fixed count
+receiver. Before this change that was Pion's responder: 1.5 KB buffers, a fixed count
 sized when the connection joined (1024 packets for the first 16 members,
 fewer later), so the earliest joiners kept the large history and a measured
 Talk of 100 members watching a screen and ten cameras reached a live heap of
-0.8 to 1.0 GB. Now `internal/sfu/nack_responder.go` keeps the history by bytes
-and looks at the load on every packet: a track remembers about a second of its
-own bitrate (a quarter of a second beyond 64 members), within a share of 4 MiB
-(512 KiB beyond 64 members) of the connection's budget, never less than 64 KB
-(a keyframe), so a connection that joined early shrinks as the server fills up.
-A hundred members watching three 1.5 Mbit/s cameras hold about 20 MB of history
-instead of about 460 MB. Each connection also has a retransmission budget (`nack_budget.go`): a token
+0.8 to 1.0 GB. Now `internal/sfu/nack_responder.go` keeps the history by bytes (buffer sizes
+included) and looks at the load on every packet: a track remembers about a
+second of its own bitrate (a quarter of a second beyond 64 members), within a
+share of 4 MiB (512 KiB beyond 64 members) of the connection's budget, and
+never less than 64 KB or, for a track with large frames such as a screen's
+keyframe, a frame and a quarter (up to 768 KB), so a connection that joined
+early shrinks as the server fills up. A hundred members watching three
+1.5 Mbit/s cameras hold about 20 MB of history (mostly the 64 KB floor per
+track) instead of about 460 MB. Each connection also has a retransmission budget (`nack_budget.go`): a token
 bucket that fills at a quarter of what the connection is sent, at least
 128 KB/s, and holds half a second of that. A subscriber that keeps asking for
 packets beyond it (a retransmission storm on an overloaded link) is refused the
 excess, which `mnema_sfu_retransmit_dropped_total` counts; it recovers at the
-next keyframe. The [sizing guide](benchmark.md#sizing-guide) gives
+next keyframe. One NACK is answered for at most 128 packets, and one at a
+time per connection. The [sizing guide](benchmark.md#sizing-guide) gives
 memory, CPU and upload for a given Talk. The price of the shorter history is that
 a late retransmission request goes unanswered and the picture shows an artifact
 until the next keyframe. Memory is returned after the call. With about 16 real browsers plus 84
