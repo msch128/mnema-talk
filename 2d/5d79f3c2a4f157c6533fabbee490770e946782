@@ -1,0 +1,36 @@
+doc/architecture.md
+  h_0ff4f4713441f4 605-622
+doc/operations.md
+  h_0ff4f4713441f4 1100-1101
+internal/metrics/metrics.go
+  h_0ff4f4713441f4 201-205,291-292
+internal/metrics/metrics_test.go
+  h_0ff4f4713441f4 119
+internal/sfu/nack.go
+  h_0ff4f4713441f4 3,5-12,25-28,30
+internal/sfu/nack_history.go
+  h_0ff4f4713441f4 1-356
+internal/sfu/nack_history_test.go
+  h_0ff4f4713441f4 1-191
+internal/sfu/nack_responder.go
+  h_0ff4f4713441f4 1-269
+internal/sfu/nack_responder_test.go
+  h_0ff4f4713441f4 1-429
+internal/sfu/nack_test.go
+  h_0ff4f4713441f4 44-51
+internal/sfu/rtcp_scan.go
+  h_0ff4f4713441f4 7
+internal/sfu/sfu_setup.go
+  h_0ff4f4713441f4 193-195,199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2d5d79f3c2a4f157c6533fabbee490770e946782",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
