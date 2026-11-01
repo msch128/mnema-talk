@@ -1,0 +1,45 @@
+doc/architecture.md
+  s_5b748b0295d2f4::t_64618a0dfd6c03 494-497,508-513
+doc/operations.md
+  s_5b748b0295d2f4::t_3f1187db986a51 1104-1106
+internal/metrics/metrics.go
+  s_5b748b0295d2f4::t_1c40338bf6d994 209-213,216,296-297
+internal/metrics/metrics_test.go
+  s_5b748b0295d2f4::t_fbc40386db313c 120
+internal/server/system_ops.go
+  s_5b748b0295d2f4::t_b3189725d75808 115
+internal/sfu/camera_group_test.go
+  s_5b748b0295d2f4::t_2a491ff7a300fc 1-229
+internal/sfu/camera_layers.go
+  s_5b748b0295d2f4::t_9c8e4b899ff95b 4,34-42,48-54,59-65
+internal/sfu/camera_layers_test.go
+  s_5b748b0295d2f4::t_3e9c85fd30e89d 193-198,200,204-212,214-224,339-419
+internal/sfu/layer_viewers.go
+  s_5b748b0295d2f4::t_eb93a887a7d4bc 70-76,86-91
+internal/sfu/layer_wanted.go
+  s_5b748b0295d2f4::t_70c46b484ba972 59-84
+internal/sfu/viewer_track.go
+  s_5b748b0295d2f4::t_7c6205ecb377e8 84,323-327
+web/src/components/ParticipantTile.vue
+  s_5b748b0295d2f4::t_8a93a434d3df8a 88
+web/src/composables/useCameraFit.test.ts
+  s_5b748b0295d2f4::t_2dd50bb7577ba8 103-163
+web/src/composables/useCameraFit.ts
+  s_5b748b0295d2f4::t_2ee3a31a27060f 16-18,20,36-50,54-55,58,65-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9ef50845d625e04134dc133b78c88cf2c6b3e7ed",
+  "prompts": {},
+  "sessions": {
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
