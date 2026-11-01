@@ -121,25 +121,31 @@ size need? It comes from a second series on server 2.4.0 on the same host as
 above: 27 shapes (3 speakers; plus a 1.5 Mbit/s screen share; plus 4 or 10
 cameras at 300 kbit/s, or 4 cameras at 1 Mbit/s; 10, 25, 50 and 100 members;
 direct and through the relay for the first two shapes), each run three times
-with a 120 s hold (81 runs). The generator ran on the same host, as above.
+with a 120 s hold (81 runs). The shapes with cameras were then measured again
+on server 2.5.0, which changed how video memory and cameras are handled (two
+runs of each; see [2.4.0 and 2.5.0](#240-and-250)). The generator ran on the same
+host, as above.
 
 ### The model
 
 Server CPU is well described by the number of packets the server handles. A
-least-squares fit over the 23 shapes that ran without packet loss (all three
-repeats averaged) gives:
+least-squares fit over 22 shapes that ran without packet loss (the shapes
+without cameras from the 2.4.0 series, the shapes with cameras from the 2.5.0
+series, repeats averaged) gives:
 
 | Term | Cost |
 |---|---|
-| each packet sent to a member (egress) | 24 µs of one core |
-| each packet received from a publisher (ingress) | 57 µs |
-| each connected member | 0.17 ms per second (0.00017 cores) |
-| each relayed egress packet (built-in TURN) | +11 µs |
+| each packet sent to a member (egress) | 22 µs of one core |
+| each packet received from a publisher (ingress) | 72 µs |
+| each connected member | 0.57 ms per second (0.00057 cores) |
+| each relayed egress packet (built-in TURN) | +12 µs |
 
-The fit has R² = 0.995; the largest difference to a measurement is 0.06 cores,
-and the standard deviation over the three repeats of a shape is at most 0.03 cores. The packet rates
-follow from the shape, with K speakers (50 packets/s each at 20 ms), C cameras
-and S screen shares of bitrate b, and N members:
+The fit has R² = 0.997; the largest difference to a measurement is 0.04 cores,
+and the standard deviation over the repeats of a shape is at most 0.03 cores.
+(The per-packet costs of the first fit on 2.4.0 alone were 24 and 57 µs; the two
+are not separable beyond that, because ingress and egress grow together.) The
+packet rates follow from the shape, with K speakers (50 packets/s each at
+20 ms), C cameras and S screen shares of bitrate b, and N members:
 
 - ingress packets/s = 50·K + (C·b_camera + S·b_screen) / 6.5 kbit
 - egress packets/s = (N − 1) · ingress packets/s
@@ -150,52 +156,54 @@ and S screen shares of bitrate b, and N members:
 synthetic publishers. Real browsers send 720p cameras at up to 2.5 Mbit/s, so
 use the real bitrate of your cameras.
 
-Memory is dominated by the retransmission history Pion keeps for every
-video stream a member receives. The live heap (peak, without garbage) fits
-110 MB + 2.1 MB · (N − 1) · (C + S) − 0.6 MB · N (R² = 0.90, fitted up to
-245 forwarded video streams). The process also needs about 250 MB for the
-runtime and connections. The table sizes the container limit as
-1.3 · (heap + 250 MB), at least 1 GB. Up to the measured range this is
-consistent with what we saw: the 1 GB limit was reached (`memory.events` `max`
-above zero) with 4 cameras from 50 members on and with 10 cameras from 25 members on.
+Memory used to be the second limit: in 2.4.0 Pion kept a retransmission
+history per video stream and member, and the live heap grew to 380 to 720 MB
+with 4 to 10 cameras and 25 to 50 members. Server 2.5.0 sizes that history by
+bytes and by the current load. In the same shapes the peak live heap was 82 to
+246 MB, and 203 to 323 MB with 100 members (see the comparison below). The
+process needs about 250 MB beyond the heap for the runtime and connections, so
+the default `APP_MEM_LIMIT` of 1 GB was enough in every shape that was
+measured on 2.5.0, with 1.3 times the heap plus 250 MB as the working rule.
+Shapes with only a screen share were not measured again on 2.5.0; their peak
+heap on 2.4.0 was 51 to 232 MB.
 
 ### Sizing table
 
 CPU is in cores of this host's Intel N100. "To plan for" is twice the fit,
 because bursts lose packets well before 100 % CPU. A modern server vCPU is
 usually at least as fast as an N100 core, but we did not calibrate this on
-another CPU, so treat it as an assumption. Memory is the suggested
-`APP_MEM_LIMIT` (the application sets its Go memory limit to 85 % of it);
-upload is the connection the server needs. The last column says whether the
-shape itself was run on the test host and kept 100 % of its packets.
+another CPU, so treat it as an assumption. Upload is the connection
+the server needs. The default `APP_MEM_LIMIT` of 1 GB covers every shape in
+the table (see above; the application sets its Go memory limit to 85 % of it).
+The last column says whether the shape itself was run on the test host and kept
+all of its packets.
 
-| Shape | Members | Egress packets/s | CPU, fitted (cores) | CPU to plan for (x2) | `APP_MEM_LIMIT` | Upload (Mbit/s) | On the test host |
-|---|---:|---:|---:|---:|---:|---:|---|
-| 3 speakers | 10 | 1,350 | 0.04 | 0.1 | 1.0 GB | 1 | measured, no loss |
-| 3 speakers | 25 | 3,600 | 0.10 | 0.2 | 1.0 GB | 4 | measured, no loss |
-| 3 speakers | 50 | 7,350 | 0.20 | 0.4 | 1.0 GB | 8 | measured, no loss |
-| 3 speakers | 100 | 14,850 | 0.39 | 0.8 | 1.0 GB | 15 | measured, no loss |
-| 3 speakers + 1 screen share (1.5 Mbit/s) | 10 | 3,427 | 0.11 | 0.2 | 1.0 GB | 19 | measured, no loss |
-| 3 speakers + 1 screen share (1.5 Mbit/s) | 25 | 9,138 | 0.25 | 0.5 | 1.0 GB | 51 | measured, no loss |
-| 3 speakers + 1 screen share (1.5 Mbit/s) | 50 | 18,658 | 0.49 | 1.0 | 1.0 GB | 103 | measured, no loss |
-| 3 speakers + 1 screen share (1.5 Mbit/s) | 100 | 37,696 | 0.96 | 1.9 | 1.0 GB | 208 | measured, no loss |
-| + 4 cameras (300 kbit/s each) | 10 | 5,088 | 0.16 | 0.3 | 1.0 GB | 33 | measured, no loss |
-| + 4 cameras (300 kbit/s each) | 25 | 13,569 | 0.37 | 0.7 | 1.0 GB | 88 | measured, no loss |
-| + 4 cameras (300 kbit/s each) | 50 | 27,704 | 0.72 | 1.4 | 1.5 GB | 180 | measured, no loss |
-| + 4 cameras (300 kbit/s each) | 100 | 55,973 | 1.41 | 2.8 | 2.0 GB | 363 | measured, **packet loss** |
-| + 4 cameras (1 Mbit/s each) | 10 | 8,965 | 0.28 | 0.6 | 1.0 GB | 66 | measured, no loss |
-| + 4 cameras (1 Mbit/s each) | 25 | 23,908 | 0.64 | 1.3 | 1.0 GB | 175 | measured, no loss |
-| + 4 cameras (1 Mbit/s each) | 50 | 48,812 | 1.26 | 2.5 | 1.5 GB | 358 | measured, no loss |
-| + 4 cameras (1 Mbit/s each) | 100 | 98,619 | 2.48 | 5.0 (more than 4) | 2.0 GB | 723 | measured, **packet loss** |
-| + 10 cameras (300 kbit/s each) | 25 | 20,215 | 0.55 | 1.1 | 1.5 GB | 144 | measured, no loss |
-| + 10 cameras (300 kbit/s each) | 50 | 41,273 | 1.06 | 2.1 | 2.0 GB | 294 | measured, **packet loss** |
-| + 10 cameras (300 kbit/s each) | 100 | 83,388 | 2.10 | 4.2 (more than 4) | 3.5 GB | 595 | measured, **packet loss** |
+| Shape | Members | Egress packets/s | CPU, fitted (cores) | CPU to plan for (x2) | Upload (Mbit/s) | On the test host |
+|---|---:|---:|---:|---:|---:|---|
+| 3 speakers | 10 | 1,350 | 0.05 | 0.1 | 1 | measured, no loss |
+| 3 speakers | 25 | 3,600 | 0.11 | 0.2 | 4 | measured, no loss |
+| 3 speakers | 50 | 7,350 | 0.20 | 0.4 | 8 | measured, no loss |
+| 3 speakers | 100 | 14,850 | 0.40 | 0.8 | 15 | measured, no loss |
+| 3 speakers + 1 screen share (1.5 Mbit/s) | 10 | 3,427 | 0.11 | 0.2 | 19 | measured, no loss |
+| 3 speakers + 1 screen share (1.5 Mbit/s) | 25 | 9,138 | 0.25 | 0.5 | 51 | measured, no loss |
+| 3 speakers + 1 screen share (1.5 Mbit/s) | 50 | 18,658 | 0.47 | 0.9 | 103 | measured, no loss |
+| 3 speakers + 1 screen share (1.5 Mbit/s) | 100 | 37,696 | 0.92 | 1.8 | 208 | measured, no loss |
+| + 4 cameras (300 kbit/s each) | 10 | 5,088 | 0.16 | 0.3 | 33 | measured, no loss |
+| + 4 cameras (300 kbit/s each) | 25 | 13,569 | 0.36 | 0.7 | 88 | measured, no loss |
+| + 4 cameras (300 kbit/s each) | 50 | 27,704 | 0.69 | 1.4 | 180 | measured, no loss |
+| + 4 cameras (300 kbit/s each) | 100 | 55,973 | 1.34 | 2.7 | 363 | measured, **packet loss** |
+| + 4 cameras (1 Mbit/s each) | 10 | 8,965 | 0.28 | 0.6 | 66 | measured, no loss |
+| + 4 cameras (1 Mbit/s each) | 25 | 23,908 | 0.62 | 1.2 | 175 | measured, no loss |
+| + 4 cameras (1 Mbit/s each) | 50 | 48,812 | 1.19 | 2.4 | 358 | measured, no loss |
+| + 4 cameras (1 Mbit/s each) | 100 | 98,619 | 2.33 | 4.7 (more than 4) | 723 | measured, **packet loss** |
+| + 10 cameras (300 kbit/s each) | 25 | 20,215 | 0.53 | 1.1 | 144 | measured, no loss |
+| + 10 cameras (300 kbit/s each) | 50 | 41,273 | 1.01 | 2.0 | 294 | measured, no loss |
+| + 10 cameras (300 kbit/s each) | 100 | 83,388 | 1.98 | 4.0 | 595 | measured, **packet loss** |
 
 Read the rows marked "packet loss" as "does not hold on this host", not as
 the cost of the shape: the numbers in them are the model's, which is fitted
 only on shapes without loss. They hold at most up to about 1.5 times the
-largest shape that ran cleanly (the clean shapes reach 1.3 cores of server CPU
-and 720 MB of heap), and only for one Talk at a time: several Talks at once were
+largest shape that ran cleanly (the clean shapes reach 1.2 cores of server CPU), and only for one Talk at a time: several Talks at once were
 not measured. The relay adds 60 to 70 % CPU for the screen-share shape.
 
 ### What was measured
@@ -235,6 +243,44 @@ host.
 | + 4 cameras @ 1000 kbit/s | 100 | direct | 1.41 (±0.01) | 1.10 | 664 | 48,714 | 285 | 68.1 % | 99 | 3 |
 | + 10 cameras @ 300 kbit/s | 100 | direct | 3.11 (±0.00) | 0.73 | 815 | 28,277 | 155 | 81.4 % | 81 | 15 |
 
+### 2.4.0 and 2.5.0
+
+Server 2.5.0 brought the memory-bound retransmission history, a retransmission
+budget per receiver, receiving only the cameras that are on screen (with a cap
+of 24 per member), and camera layers with a thumbnail. The shapes with cameras
+were run again on the same host under the same conditions (two runs each, mean
+shown; worst loss is the worst media class of any run). The load generator
+publishes each camera as one layer and subscribes to all cameras, so the
+thumbnail layer is not exercised; "4 watched" shows only the first four cameras
+(the others hidden through the existing opt-out), which is what a member whose
+grid shows four tiles receives with the visible-cameras behaviour.
+
+| Shape | Members | 2.4.0 CPU | 2.5.0 CPU | 2.4.0 heap MB | 2.5.0 heap MB | 2.4.0 worst loss | 2.5.0 worst loss | 2.5.0 generator CPU |
+| 4 cameras @ 300 kbit/s | 25 | 0.37 | 0.35 | 378 | 82 | 0.0 % | 0.0 % | 0.33 |
+| 4 cameras @ 1000 kbit/s | 25 | 0.55 | 0.54 | 377 | 246 | 0.0 % | 0.0 % | 0.51 |
+| 10 cameras @ 300 kbit/s | 25 | 0.58 | 0.55 | 711 | 168 | 0.0 % | 0.0 % | 0.52 |
+| 10 cameras @ 300 kbit/s , 4 watched | 25 | 0.58 | 0.37 | 711 | 163 | 0.0 % | 0.0 % | 0.37 |
+| 4 cameras @ 300 kbit/s | 50 | 0.79 | 0.73 | 542 | 107 | 0.0 % | 0.0 % | 0.66 |
+| 4 cameras @ 1000 kbit/s | 50 | 1.28 | 1.17 | 547 | 113 | 0.0 % | 0.0 % | 1.01 |
+| 10 cameras @ 300 kbit/s | 50 | 1.39 | 1.16 | 721 | 171 | 14.6 % | 0.0 % | 1.03 |
+| 10 cameras @ 300 kbit/s , 4 watched | 50 | 1.39 | 0.77 | 721 | 122 | 14.6 % | 0.0 % | 0.72 |
+| 4 cameras @ 300 kbit/s | 100 | 1.35 | 1.33 | 693 | 203 | 64.0 % | 54.1 % | 1.10 |
+| 4 cameras @ 1000 kbit/s | 100 | 1.41 | 1.39 | 664 | 210 | 68.1 % | 66.0 % | 1.13 |
+| 10 cameras @ 300 kbit/s | 100 | 3.11 | 1.38 | 815 | 323 | 81.4 % | 77.2 % | 1.15 |
+| 10 cameras @ 300 kbit/s , 4 watched | 100 | 3.11 | 1.35 | 815 | 227 | 81.4 % | 60.4 % | 1.15 |
+
+- **Memory:** the peak live heap fell by a factor of 1.5 to 5 in every shape
+  (for example 721 MB to 171 MB at 50 members and 10 cameras).
+- **CPU:** equal within noise up to 25 members, 8 to 17 % lower at 50, and far
+  lower at 100 members with 10 cameras (3.1 to 1.4 cores), where 2.4.0 was
+  spending its time on garbage collection against the memory limit.
+- **Loss:** 50 members with 10 cameras no longer lose packets (15 % before).
+  At 100 members the shapes with cameras still lose a large share of the
+  screen's packets (54 to 77 %), with the generator at 1.1 cores; see below.
+- **Only four cameras watched:** at 50 members CPU falls from 1.16 to 0.77
+  cores and at 25 from 0.55 to 0.37, in line with the egress packets that are
+  no longer sent.
+
 ### Where the packet loss comes from
 
 The shapes with loss all have a screen share and several cameras with 50 to
@@ -256,14 +302,22 @@ cameras reached a live heap of 815 MB and a resident set of up to 986 MB,
 close to the 870 MB the application sets as its Go memory limit; its server
 CPU of 3.1 cores for 28,000 packets/s is four times what the fit predicts at
 that packet rate and fits garbage collection under that limit). A run with the generator on a second machine, and
-one with a higher `APP_MEM_LIMIT`, would tell them apart; neither was done.
+one with a higher `APP_MEM_LIMIT`, would tell them apart; neither was done on 2.4.0.
+
+On 2.5.0 the 100-member shape with 10 cameras uses 1.4 cores instead of 3.1
+and its heap is 323 MB instead of 815 MB, which supports the explanation that
+2.4.0 was collecting garbage against its memory limit; but the loss at the
+server's ingress remains (77 % of the screen's packets), now with the server
+far from its limit and the generator on 1.15 cores. That points at the load
+generator and the shared host as the limit of these runs, not at the server,
+but we have not shown it: a run with the generator on a second machine is
+still missing.
 
 The 100-member shape of the first benchmark (screen, 10 cameras, 3 speakers)
-was run again on 2.4.0, which sets the memory limit from the container,
-requests larger UDP buffers and allocates less per packet: it still lost 81 %
-of the screen's packets. `net.core.rmem_max` and `wmem_max` on this host are
-already 4 MiB, which is what the server requests, so a larger kernel limit
-alone would not have changed anything.
+lost 81 % of the screen's packets on 2.4.0 and 77 % on 2.5.0.
+`net.core.rmem_max` and `wmem_max` on this host are already 4 MiB, which is
+what the server requests, so a larger kernel limit alone would not have changed
+anything.
 
 ## Limits and caveats
 

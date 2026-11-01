@@ -174,8 +174,8 @@ Talk at a time with 3 speakers, plus the screen share or cameras named.
 |---|---|---|---|
 | About 10 members, voice only | 0.1 core | 1 GB (the default) | 1 Mbit/s |
 | About 25 members, with 1 screen share (1.5 Mbit/s) | 0.5 core | 1 GB (the default) | about 51 Mbit/s |
-| About 50 members, 1 screen share and 4 cameras (300 kbit/s each) | 1.4 cores | 1.5 GB | about 180 Mbit/s |
-| About 100 members, voice and 1 screen share | 1.9 cores | 1 GB (the default) | about 208 Mbit/s |
+| About 50 members, 1 screen share and 4 cameras (300 kbit/s each) | 1.4 cores | 1 GB (the default) | about 180 Mbit/s |
+| About 100 members, voice and 1 screen share | 1.8 cores | 1 GB (the default) | about 208 Mbit/s |
 | More than that, or several Talks at once | Measure it ([benchmark](benchmark.md#reproduce)) | | |
 
 CPU is in cores of an Intel N100, the benchmark's test host, and already
