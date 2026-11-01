@@ -615,13 +615,14 @@ never less than 64 KB or, for a track with large frames such as a screen's
 keyframe, a frame and a quarter (up to 768 KB), so a connection that joined
 early shrinks as the server fills up. A hundred members watching three
 1.5 Mbit/s cameras hold about 20 MB of history (mostly the 64 KB floor per
-track) instead of about 460 MB. Each connection also has a retransmission budget (`nack_budget.go`): a token
+track) instead of about 460 MB. The ring that indexes a track's packets starts at 64 slots of 24 bytes
+and grows with the track. Each connection also has a retransmission budget (`nack_budget.go`): a token
 bucket that fills at a quarter of what the connection is sent, at least
 128 KB/s, and holds half a second of that. A subscriber that keeps asking for
 packets beyond it (a retransmission storm on an overloaded link) is refused the
 excess, which `mnema_sfu_retransmit_dropped_total` counts; it recovers at the
-next keyframe. One NACK is answered for at most 128 packets, and one at a
-time per connection. The [sizing guide](benchmark.md#sizing-guide) gives
+next keyframe. Each connection answers its NACKs one at a time from a queue of
+16 (the excess is counted too), and one NACK for at most 128 packets. The [sizing guide](benchmark.md#sizing-guide) gives
 memory, CPU and upload for a given Talk. The price of the shorter history is that
 a late retransmission request goes unanswered and the picture shows an artifact
 until the next keyframe. Memory is returned after the call. With about 16 real browsers plus 84

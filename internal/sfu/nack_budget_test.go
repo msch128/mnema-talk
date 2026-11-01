@@ -152,27 +152,6 @@ func TestAnAbusiveNackIsCappedAndAnsweredOnce(t *testing.T) {
 	}
 }
 
-func TestANackWhileAnotherIsBeingAnsweredIsDropped(t *testing.T) {
-	n, clk := newResponder(t, nil)
-	w := &wire{}
-	out := n.BindLocalStream(videoInfo(110, false), w)
-	send(out, 110, 1, 100)
-	w.take()
-	clk.advance(time.Second)
-	n.answering.Store(true) // an answer in progress
-	raw, _ := (&rtcp.TransportLayerNack{MediaSSRC: 110, Nacks: []rtcp.NackPair{{PacketID: 1}}}).Marshal()
-	n.feedback(rtcpTypeTransportFeedback, fmtNACK, raw)
-	time.Sleep(20 * time.Millisecond)
-	if len(w.take()) != 0 {
-		t.Fatal("a second NACK was answered while the first was")
-	}
-	n.answering.Store(false)
-	n.feedback(rtcpTypeTransportFeedback, fmtNACK, []byte{0x81, 205, 0, 1, 0, 0, 0, 1}) // malformed: releases the gate
-	if n.answering.Load() {
-		t.Fatal("a malformed NACK kept the gate shut")
-	}
-}
-
 // A refused packet is not touched: it is still there, and not marked as resent.
 func TestARefusedResendKeepsThePacketAsItWas(t *testing.T) {
 	clk := &clock{t: time.Unix(1_000_000, 0)}

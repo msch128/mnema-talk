@@ -2,6 +2,7 @@ package sfu
 
 import (
 	"encoding/binary"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -277,21 +278,36 @@ func TestEarlyJoinersDoNotKeepTheLargeHistory(t *testing.T) {
 	}
 }
 
-// A hundred members each watching three cameras of 1.5 Mbit/s: what the
-// histories hold, measured on synthetic connections, against the 1024 buffers
+type discard struct{}
+
+func (discard) Write(_ *rtp.Header, payload []byte, _ interceptor.Attributes) (int, error) {
+	return len(payload), nil
+}
+
+func heapInUse() uint64 {
+	runtime.GC()
+	runtime.GC()
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return m.HeapAlloc
+}
+
+// A hundred members each watching three cameras of 1.5 Mbit/s: the heap the
+// histories take, measured on synthetic connections, against the 1024 buffers
 // of 1.5 KB the fixed history kept for every one of them.
 func TestHistoryMemoryOfAFullRoom(t *testing.T) {
 	const members, cameras, pps = 100, 3, 150
 	load := &peerLoad{}
 	load.peers.Store(members)
 	clk := &clock{t: time.Unix(1_000_000, 0)}
+	before := heapInUse()
 	var writers [members][cameras]interceptor.RTPWriter
 	var responders [members]*nackResponder
 	for m := range responders {
 		icp, _ := nackResponderFactory{load: load, now: clk.now}.NewInterceptor("")
 		responders[m] = icp.(*nackResponder)
 		for c := 0; c < cameras; c++ {
-			writers[m][c] = responders[m].BindLocalStream(videoInfo(uint32(c+1), true), &wire{})
+			writers[m][c] = responders[m].BindLocalStream(videoInfo(uint32(c+1), true), discard{})
 		}
 	}
 	for step := 0; step < 10*pps; step++ {
@@ -302,16 +318,82 @@ func TestHistoryMemoryOfAFullRoom(t *testing.T) {
 		}
 		clk.advance(time.Second / pps)
 	}
-	total := 0
+	heap := int64(heapInUse()) - int64(before)
+	counted := 0
 	for _, r := range responders {
 		for _, s := range r.streams {
-			total += s.history.retained()
+			counted += s.history.retained()
 		}
 	}
+	runtime.KeepAlive(responders)
+	runtime.KeepAlive(writers)
 	fixed := members * cameras * 1024 * 1500
-	t.Logf("histories hold %.1f MB; the fixed history holds %.1f MB", float64(total)/1e6, float64(fixed)/1e6)
-	if total*5 > fixed {
-		t.Fatalf("histories hold %d bytes, more than a fifth of the fixed %d", total, fixed)
+	t.Logf("histories take %.1f MB of heap (%.1f MB counted); the fixed history holds %.1f MB", float64(heap)/1e6, float64(counted)/1e6, float64(fixed)/1e6)
+	if heap*5 > int64(fixed) {
+		t.Fatalf("histories take %d bytes of heap, more than a fifth of the fixed %d", heap, fixed)
+	}
+	// The accounting follows the real heap within a third.
+	if float64(counted) < 0.66*float64(heap) || float64(counted) > 1.34*float64(heap) {
+		t.Fatalf("counted %d bytes but the heap grew by %d", counted, heap)
+	}
+}
+
+// The camera's and the screen's NACKs in one batch are both answered.
+func TestTwoNacksInOneBatchAreBothAnswered(t *testing.T) {
+	n, clk := newResponder(t, nil)
+	w := &wire{}
+	cam := n.BindLocalStream(videoInfo(200, false), w)
+	screen := n.BindLocalStream(videoInfo(201, false), w)
+	send(cam, 200, 1, 100)
+	send(screen, 201, 1, 100)
+	w.take()
+	clk.advance(time.Second)
+	raw, err := rtcp.Marshal([]rtcp.Packet{
+		&rtcp.TransportLayerNack{MediaSSRC: 200, Nacks: []rtcp.NackPair{{PacketID: 1}}},
+		&rtcp.TransportLayerNack{MediaSSRC: 201, Nacks: []rtcp.NackPair{{PacketID: 1}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	n.afterResend = wg.Done
+	wg.Add(2)
+	reader := n.BindRTCPReader(interceptor.RTCPReaderFunc(func(b []byte, a interceptor.Attributes) (int, interceptor.Attributes, error) {
+		return copy(b, raw), a, nil
+	}))
+	if _, _, err := reader.Read(make([]byte, 1500), nil); err != nil {
+		t.Fatal(err)
+	}
+	wg.Wait()
+	got := w.take()
+	if len(got) != 2 || got[0].SSRC == got[1].SSRC {
+		t.Fatalf("resent %+v, want one packet of each stream", got)
+	}
+}
+
+// Asking faster than the queue drains loses the excess, and it is counted.
+func TestANackFloodBeyondTheQueueIsCounted(t *testing.T) {
+	n, _ := newResponder(t, nil)
+	n.queue = make(chan *rtcp.TransportLayerNack) // nobody reads: every enqueue after start finds it full
+	n.startOnce.Do(func() {})
+	dropped := metrics.SFURetransmitDropped.Load()
+	n.enqueue(&rtcp.TransportLayerNack{Nacks: []rtcp.NackPair{{PacketID: 1, LostPackets: 0b11}}})
+	if got := metrics.SFURetransmitDropped.Load() - dropped; got != 3 {
+		t.Fatalf("counted %d dropped packets, want 3", got)
+	}
+}
+
+func TestClosingStopsTheWorker(t *testing.T) {
+	n, _ := newResponder(t, nil)
+	n.enqueue(&rtcp.TransportLayerNack{MediaSSRC: 9, Nacks: []rtcp.NackPair{{PacketID: 1}}})
+	if err := n.Close(); err != nil {
+		t.Fatal(err)
+	}
+	n.Close() // twice is fine
+	select {
+	case <-n.done:
+	default:
+		t.Fatal("done not closed")
 	}
 }
 

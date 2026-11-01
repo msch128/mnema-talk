@@ -35,7 +35,10 @@ func (f nackResponderFactory) NewInterceptor(string) (interceptor.Interceptor, e
 	if limits == (resendLimits{}) {
 		limits = defaultResendLimits
 	}
-	return &nackResponder{load: f.load, now: now, streams: map[uint32]*nackStream{}, budgetFor: newResendBudget(limits)}, nil
+	return &nackResponder{
+		load: f.load, now: now, streams: map[uint32]*nackStream{}, done: make(chan struct{}),
+		budgetFor: newResendBudget(limits),
+	}, nil
 }
 
 // disablePionResponder is the option that leaves Pion's own responder with no
@@ -61,12 +64,16 @@ type nackResponder struct {
 
 	mu      sync.Mutex
 	streams map[uint32]*nackStream
-	// budgetFor limits the resends of this connection.
-	budgetFor *resendBudget
 	// count is len(streams), readable without the lock on every packet.
 	count atomic.Int32
-	// answering is set while a NACK is being answered: one at a time.
-	answering atomic.Bool
+	// budgetFor limits the resends of this connection.
+	budgetFor *resendBudget
+	// queue holds the NACKs to answer, worked off by one goroutine started with
+	// the first; done ends it.
+	queue     chan *rtcp.TransportLayerNack
+	startOnce sync.Once
+	done      chan struct{}
+	closeOnce sync.Once
 	// afterResend, when set (tests), is called when a NACK has been answered.
 	afterResend func()
 }
@@ -124,6 +131,7 @@ func (n *nackResponder) UnbindLocalStream(info *interceptor.StreamInfo) {
 }
 
 func (n *nackResponder) Close() error {
+	n.closeOnce.Do(func() { close(n.done) })
 	n.mu.Lock()
 	streams := n.streams
 	n.streams = map[uint32]*nackStream{}
@@ -152,27 +160,44 @@ func (n *nackResponder) feedback(typ byte, format uint8, raw []byte) {
 	case typ == rtcpTypeReceiverReport:
 		n.noteRTT(raw)
 	case typ == rtcpTypeTransportFeedback && format == fmtNACK:
-		// One NACK is answered at a time: a subscriber flooding requests cannot
-		// start work faster than it finishes, and loses the ones in between
-		// (it asks again for what it still misses).
-		if !n.answering.CompareAndSwap(false, true) {
-			return
+		req := &rtcp.TransportLayerNack{}
+		if req.Unmarshal(raw) == nil {
+			n.enqueue(req)
 		}
-		var req rtcp.TransportLayerNack
-		if req.Unmarshal(raw) != nil {
-			n.answering.Store(false)
-			return
-		}
-		go n.answer(&req)
 	}
 }
 
-// answer resends in a goroutine of its own, so the reader is not held up.
-func (n *nackResponder) answer(req *rtcp.TransportLayerNack) {
-	defer n.answering.Store(false)
-	n.resend(req)
-	if n.afterResend != nil {
-		n.afterResend()
+// nackQueue is how many NACKs of one connection wait to be answered.
+const nackQueue = 16
+
+// enqueue hands a NACK to the connection's worker, which answers them one at
+// a time in the order they came (the camera's and the screen's NACKs of one
+// batch included). A subscriber flooding requests faster than they are
+// answered loses the excess, which is counted as refused resends.
+func (n *nackResponder) enqueue(req *rtcp.TransportLayerNack) {
+	n.startOnce.Do(func() {
+		n.queue = make(chan *rtcp.TransportLayerNack, nackQueue)
+		go n.work(n.queue)
+	})
+	select {
+	case n.queue <- req:
+	default:
+		metrics.SFURetransmitDropped.Add(uint64(min(nackSeqs(req), nackMaxSeqs)))
+	}
+}
+
+// work answers the queued NACKs until the responder is closed.
+func (n *nackResponder) work(queue <-chan *rtcp.TransportLayerNack) {
+	for {
+		select {
+		case req := <-queue:
+			n.resend(req)
+			if n.afterResend != nil {
+				n.afterResend()
+			}
+		case <-n.done:
+			return
+		}
 	}
 }
 
@@ -202,15 +227,6 @@ func (n *nackResponder) noteRTT(raw []byte) {
 // nackMaxSeqs is the most packets one NACK is answered for; a request names up
 // to about 17 per pair and a receiver has no use for more than a few frames.
 const nackMaxSeqs = 128
-
-// nackSeqs is the number of packets a request names.
-func nackSeqs(req *rtcp.TransportLayerNack) int {
-	total := 0
-	for _, pair := range req.Nacks {
-		total += bits.OnesCount16(uint16(pair.LostPackets)) + 1
-	}
-	return total
-}
 
 // resend answers one NACK: the first nackMaxSeqs packets it names that are
 // still remembered, as far as the connection's retransmission budget goes.
@@ -283,6 +299,15 @@ func (s *nackStream) rtxForm(h rtp.Header, payload []byte) (rtp.Header, []byte) 
 	h.SequenceNumber = s.rtxSeq.NextSequenceNumber()
 	h.Padding, h.PaddingSize = false, 0
 	return h, out
+}
+
+// nackSeqs is the number of packets a request names.
+func nackSeqs(req *rtcp.TransportLayerNack) int {
+	total := 0
+	for _, pair := range req.Nacks {
+		total += bits.OnesCount16(uint16(pair.LostPackets)) + 1
+	}
+	return total
 }
 
 // mediaRate is what this connection is sent now, in bytes per second.
