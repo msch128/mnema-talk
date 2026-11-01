@@ -633,6 +633,8 @@ func TestUploadRelayAndMetricsValidation(t *testing.T) {
 		"negative free floor":    {"MEDIA_MIN_FREE_MB": "-1"},
 		"TURN weak secret":       {"WEBRTC_TURN_URLS": "turn:relay.example.com:3478", "WEBRTC_TURN_SECRET": "short"},
 		"metrics weak token":     {"METRICS_TOKEN": "short"},
+		"upload limit negative":  {"VOICE_UPLOAD_LIMIT_MBIT": "-1"},
+		"upload limit absurd":    {"VOICE_UPLOAD_LIMIT_MBIT": "100001"},
 		"pprof on all addresses": {"PPROF_ADDR": "0.0.0.0:6060"},
 		"pprof without a host":   {"PPROF_ADDR": ":6060"},
 		"pprof public host":      {"PPROF_ADDR": "192.0.2.1:6060"},
@@ -654,8 +656,9 @@ func TestUploadRelayAndMetricsValidation(t *testing.T) {
 	env["WEBRTC_TURN_SECRET"] = strings.Repeat("t", 16)
 	env["METRICS_TOKEN"] = strings.Repeat("m", 24)
 	env["PPROF_ADDR"] = "127.0.0.1:6060"
+	env["VOICE_UPLOAD_LIMIT_MBIT"] = "200"
 	cfg, err := FromEnv(lookup(env))
-	if err != nil || cfg.AppEnv != "development" || cfg.MaxUploadMB != 2048 || cfg.PprofAddr != "127.0.0.1:6060" {
+	if err != nil || cfg.AppEnv != "development" || cfg.MaxUploadMB != 2048 || cfg.PprofAddr != "127.0.0.1:6060" || cfg.VoiceUploadLimitMbit != 200 {
 		t.Fatalf("valid boundary settings: cfg=%v err=%v", cfg, err)
 	}
 }

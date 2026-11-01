@@ -45,6 +45,9 @@ type Gauge struct{ v atomic.Int64 }
 // Add changes the gauge by d.
 func (g *Gauge) Add(d int64) { g.v.Add(d) }
 
+// Set replaces the gauge's value.
+func (g *Gauge) Set(v int64) { g.v.Store(v) }
+
 // Load returns the current value.
 func (g *Gauge) Load() int64 { return g.v.Load() }
 
@@ -215,6 +218,12 @@ var (
 	// the estimate caused.
 	SFUBandwidth      = newVec("mnema_sfu_bandwidth_estimate_reports_total", "Bandwidth estimates of automatic viewers of screens and cameras, by range", "range")
 	SFUBandwidthMoves Counter
+	// The voice upload limit (VOICE_UPLOAD_LIMIT_MBIT): the limit and the
+	// egress the server measures, in bits per second, the viewers held under
+	// their best layer, and the checks that found the egress over the limit
+	// with nothing left to step down.
+	SFUUploadLimit, SFUUploadEgress, SFUUploadCapped Gauge
+	SFUUploadUnmet                                   Counter
 	// SFUICE counts ICE connection transitions, by state: connected, failed,
 	// disconnected.
 	SFUICE = newVec("mnema_sfu_ice_transitions_total", "SFU ICE connection transitions, by state", "state")
@@ -296,6 +305,10 @@ func WriteInstruments(w io.Writer) {
 	writeCounter(w, "mnema_sfu_layer_switches_total", "Simulcast layer switches for viewers of screen shares", SFULayerSwitches.Load())
 	writeCounter(w, "mnema_sfu_camera_layer_switches_total", "Simulcast layer switches for viewers of cameras", SFUCameraLayerSwitches.Load())
 	writeCounter(w, "mnema_sfu_bandwidth_layer_moves_total", "Layer moves down caused by the bandwidth estimate", SFUBandwidthMoves.Load())
+	WriteGauge(w, "mnema_sfu_upload_limit_bits", "Configured voice upload limit in bits per second (0 = off)", SFUUploadLimit.Load())
+	WriteGauge(w, "mnema_sfu_upload_egress_bits", "Media the SFU sends, bits per second (measured while a limit is set)", SFUUploadEgress.Load())
+	WriteGauge(w, "mnema_sfu_upload_capped_viewers", "Viewers held below their best layer by the voice upload limit", SFUUploadCapped.Load())
+	writeCounter(w, "mnema_sfu_upload_unmet_total", "Checks that found the upload over the limit with nothing left to step down", SFUUploadUnmet.Load())
 	SFUBandwidth.write(w)
 	SFUICE.write(w)
 	SFUIngressDropped.write(w)
