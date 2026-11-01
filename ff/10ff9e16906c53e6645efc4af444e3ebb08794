@@ -1,0 +1,55 @@
+doc/architecture.md
+  s_45fff186c97845::t_ee574028fb9435 605-617
+doc/operations.md
+  s_45fff186c97845::t_5a9d01f90ecb58 1100
+internal/metrics/metrics.go
+  s_45fff186c97845::t_2f135769461001 201-202,288
+internal/metrics/metrics_test.go
+  s_45fff186c97845::t_cbd449feb4ebc0 119
+internal/sfu/nack.go
+  s_45fff186c97845::t_95ff0b47cd2749 3,5-12,25-28,30
+internal/sfu/nack_history.go
+  s_45fff186c97845::t_518963d97064f9 1-227
+internal/sfu/nack_responder.go
+  s_45fff186c97845::t_74534b9663c9e8 1-221
+internal/sfu/nack_responder_test.go
+  s_45fff186c97845::t_1c58fa8aba4418 1-347
+internal/sfu/nack_test.go
+  s_5b748b0295d2f4::t_9034f0c0fa0f40 44-51
+internal/sfu/rtcp_scan.go
+  s_bf24ce51cd8f95::t_57b5c98d602259 7
+internal/sfu/sfu_setup.go
+  s_bf24ce51cd8f95::t_cb1f5fd13ccad5 193-195,199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff10ff9e16906c53e6645efc4af444e3ebb08794",
+  "prompts": {},
+  "sessions": {
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
