@@ -50,7 +50,7 @@ func TestHistoryDropsTheOldestFirstWhenOverTheByteBudget(t *testing.T) {
 	for seq := uint16(0); seq < 200; seq++ {
 		addPacket(h, seq, 1000, now)
 	}
-	if got := h.retained(); got > 100<<10+1500+nackSlotOverhead {
+	if got := h.retained(); got > 100<<10+1500+nackSlotBytes {
 		t.Fatalf("%d bytes held over a 100 KB budget", got)
 	}
 	if !has(h, 199) || !has(h, 190) || has(h, 0) {

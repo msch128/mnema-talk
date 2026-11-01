@@ -2,6 +2,7 @@ package sfu
 
 import (
 	"encoding/binary"
+	"math/bits"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -27,7 +28,7 @@ func (f nackResponderFactory) NewInterceptor(string) (interceptor.Interceptor, e
 	if now == nil {
 		now = time.Now
 	}
-	return &nackResponder{load: f.load, now: now, streams: map[uint32]*nackStream{}}, nil
+	return &nackResponder{load: f.load, now: now, streams: map[uint32]*nackStream{}, done: make(chan struct{})}, nil
 }
 
 // disablePionResponder is the option that leaves Pion's own responder with no
@@ -55,6 +56,12 @@ type nackResponder struct {
 	streams map[uint32]*nackStream
 	// count is len(streams), readable without the lock on every packet.
 	count atomic.Int32
+	// queue holds the NACKs to answer, worked off by one goroutine started with
+	// the first; done ends it.
+	queue     chan *rtcp.TransportLayerNack
+	startOnce sync.Once
+	done      chan struct{}
+	closeOnce sync.Once
 	// afterResend, when set (tests), is called when a NACK has been answered.
 	afterResend func()
 }
@@ -112,6 +119,7 @@ func (n *nackResponder) UnbindLocalStream(info *interceptor.StreamInfo) {
 }
 
 func (n *nackResponder) Close() error {
+	n.closeOnce.Do(func() { close(n.done) })
 	n.mu.Lock()
 	streams := n.streams
 	n.streams = map[uint32]*nackStream{}
@@ -140,18 +148,44 @@ func (n *nackResponder) feedback(typ byte, format uint8, raw []byte) {
 	case typ == rtcpTypeReceiverReport:
 		n.noteRTT(raw)
 	case typ == rtcpTypeTransportFeedback && format == fmtNACK:
-		var req rtcp.TransportLayerNack
+		req := &rtcp.TransportLayerNack{}
 		if req.Unmarshal(raw) == nil {
-			go n.answer(&req)
+			n.enqueue(req)
 		}
 	}
 }
 
-// answer resends in a goroutine of its own, so the reader is not held up.
-func (n *nackResponder) answer(req *rtcp.TransportLayerNack) {
-	n.resend(req)
-	if n.afterResend != nil {
-		n.afterResend()
+// nackQueue is how many NACKs of one connection wait to be answered.
+const nackQueue = 16
+
+// enqueue hands a NACK to the connection's worker, which answers them one at
+// a time in the order they came (the camera's and the screen's NACKs of one
+// batch included). A subscriber flooding requests faster than they are
+// answered loses the excess, which is counted as refused resends.
+func (n *nackResponder) enqueue(req *rtcp.TransportLayerNack) {
+	n.startOnce.Do(func() {
+		n.queue = make(chan *rtcp.TransportLayerNack, nackQueue)
+		go n.work(n.queue)
+	})
+	select {
+	case n.queue <- req:
+	default:
+		metrics.SFURetransmitDropped.Add(uint64(nackSeqs(req)))
+	}
+}
+
+// work answers the queued NACKs until the responder is closed.
+func (n *nackResponder) work(queue <-chan *rtcp.TransportLayerNack) {
+	for {
+		select {
+		case req := <-queue:
+			n.resend(req)
+			if n.afterResend != nil {
+				n.afterResend()
+			}
+		case <-n.done:
+			return
+		}
 	}
 }
 
@@ -223,4 +257,13 @@ func (s *nackStream) rtxForm(h rtp.Header, payload []byte) (rtp.Header, []byte) 
 	h.SequenceNumber = s.rtxSeq.NextSequenceNumber()
 	h.Padding, h.PaddingSize = false, 0
 	return h, out
+}
+
+// nackSeqs is the number of packets a request names.
+func nackSeqs(req *rtcp.TransportLayerNack) int {
+	total := 0
+	for _, pair := range req.Nacks {
+		total += bits.OnesCount16(uint16(pair.LostPackets)) + 1
+	}
+	return total
 }

@@ -200,6 +200,9 @@ var (
 	SFUNackRequests, SFUNackPackets Counter
 	// SFURetransmitted counts the packets the SFU resent in answer.
 	SFURetransmitted Counter
+	// SFURetransmitDropped counts packets a subscriber asked for that were not
+	// resent because it asked faster than they could be answered.
+	SFURetransmitDropped Counter
 	// SFUKeyframeRequests counts PLI/FIR feedback received.
 	SFUKeyframeRequests Counter
 	// SFULayerSwitches counts simulcast layer changes for viewers.
@@ -286,6 +289,7 @@ func WriteInstruments(w io.Writer) {
 	writeCounter(w, "mnema_sfu_nack_requests_total", "NACK feedback messages received from subscribers", SFUNackRequests.Load())
 	writeCounter(w, "mnema_sfu_nack_packets_total", "Packets subscribers asked to be retransmitted", SFUNackPackets.Load())
 	writeCounter(w, "mnema_sfu_retransmitted_packets_total", "Packets resent to subscribers after a NACK", SFURetransmitted.Load())
+	writeCounter(w, "mnema_sfu_retransmit_dropped_total", "Retransmissions not sent because the subscriber asked faster than they could be answered", SFURetransmitDropped.Load())
 	writeCounter(w, "mnema_sfu_keyframe_requests_total", "PLI and FIR feedback messages received", SFUKeyframeRequests.Load())
 	writeCounter(w, "mnema_sfu_layer_switches_total", "Simulcast layer switches for viewers", SFULayerSwitches.Load())
 	writeCounter(w, "mnema_sfu_bandwidth_layer_moves_total", "Layer moves down caused by the bandwidth estimate", SFUBandwidthMoves.Load())
