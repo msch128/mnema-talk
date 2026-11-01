@@ -85,6 +85,7 @@ func (g *guard) WriteTo(p []byte, addr net.Addr) (int, error) {
 	g.touch()
 	n, err := g.PacketConn.WriteTo(p, dst)
 	metrics.TURNRelayedBytes.With("to_sfu").Add(uint64(n))
+	metrics.TURNRelayedPackets.With("to_sfu").Inc()
 	return n, err
 }
 
@@ -112,6 +113,7 @@ func (g *guard) ReadFrom(p []byte) (int, net.Addr, error) {
 		}
 		g.touch()
 		metrics.TURNRelayedBytes.With("from_sfu").Add(uint64(n))
+		metrics.TURNRelayedPackets.With("from_sfu").Inc()
 		return n, &net.UDPAddr{IP: g.virtualFor(t, udp.IP.To4()), Port: udp.Port}, nil
 	}
 }

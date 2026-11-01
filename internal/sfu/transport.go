@@ -118,6 +118,7 @@ func (s *SFU) Close() error {
 		rooms := s.rooms
 		s.rooms = make(map[uuid.UUID]*Room)
 		s.roomsMu.Unlock()
+		s.stopUploadGovernor()
 		if s.udpMux != nil {
 			s.closeErr = errors.Join(s.closeErr, s.udpMux.Close())
 		}

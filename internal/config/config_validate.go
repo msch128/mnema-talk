@@ -59,7 +59,18 @@ func (c *Config) validateOptionalSecrets() error {
 			return fmt.Errorf("PPROF_ADDR %q %w", c.PprofAddr, err)
 		}
 	}
+	if err := c.validateVoiceLimit(); err != nil {
+		return err
+	}
 	return c.validateSMTP()
+}
+
+// validateVoiceLimit checks VOICE_UPLOAD_LIMIT_MBIT: 0 (off) or a sane rate.
+func (c *Config) validateVoiceLimit() error {
+	if c.VoiceUploadLimitMbit < 0 || c.VoiceUploadLimitMbit > 100_000 {
+		return fmt.Errorf("VOICE_UPLOAD_LIMIT_MBIT must be 0 (off) or between 1 and 100000")
+	}
+	return nil
 }
 
 // validateBasics checks the settings every environment needs, stores the

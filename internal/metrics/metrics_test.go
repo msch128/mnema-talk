@@ -118,7 +118,7 @@ func TestWriteInstrumentsListsEveryFamily(t *testing.T) {
 		"mnema_mls_handshake_bytes_total", "mnema_sfu_ingress_bytes_total", "mnema_sfu_egress_packets_total",
 		"mnema_sfu_nack_requests_total", "mnema_sfu_nack_packets_total", "mnema_sfu_retransmitted_packets_total", "mnema_sfu_retransmit_dropped_total", "mnema_sfu_keyframe_requests_total",
 		"mnema_sfu_layer_switches_total", "mnema_sfu_camera_layer_switches_total", "mnema_sfu_ice_transitions_total", "mnema_sfu_peer_joins_total",
-		"mnema_s3_operations_total", "mnema_sfu_bandwidth_estimate_reports_total", "mnema_sfu_bandwidth_layer_moves_total",
+		"mnema_s3_operations_total", "mnema_sfu_bandwidth_estimate_reports_total", "mnema_sfu_bandwidth_layer_moves_total", "mnema_sfu_upload_limit_bits", "mnema_sfu_upload_egress_bits", "mnema_sfu_upload_capped_viewers", "mnema_sfu_upload_unmet_total",
 	} {
 		if !strings.Contains(b.String(), "# TYPE "+name+" ") {
 			t.Errorf("missing family %s", name)
@@ -206,5 +206,14 @@ func TestHTTPFamiliesKeepErrorClassesPastGenericCap(t *testing.T) {
 	ObserveHTTP("GET /late-route", 500, time.Millisecond)
 	if got := HTTPRequests.Sum(1, "5xx"); got != 1 {
 		t.Fatalf("5xx total = %d, want 1", got)
+	}
+}
+
+func TestGaugeSetReplacesTheValue(t *testing.T) {
+	var g Gauge
+	g.Add(5)
+	g.Set(2)
+	if g.Load() != 2 {
+		t.Fatalf("gauge %d", g.Load())
 	}
 }
