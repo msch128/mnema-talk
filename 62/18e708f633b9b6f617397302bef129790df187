@@ -1,0 +1,57 @@
+doc/architecture.md
+  s_bf24ce51cd8f95::t_c39813b62b2c46 350-361
+e2e/tests/opus-dtx.spec.ts
+  s_e7d8df1dbb402e::t_02a048ab0779d0 1-92
+internal/sfu/opus_dtx_test.go
+  s_e7d8df1dbb402e::t_ab4f934a89916f 1-230
+internal/sfu/sfu_test.go
+  s_bf24ce51cd8f95::t_830e53e82991ea 7,30-33,143-147,163
+loadtest/README.md
+  s_bf24ce51cd8f95::t_42c339cf695d73 413
+loadtest/viewer/publish.go
+  s_bf24ce51cd8f95::t_fbe18a202bbdb8 8,39-43,51,81,125-131,133,141,194-195,198-200
+loadtest/viewer/synth.go
+  s_bf24ce51cd8f95::t_8a4752ebd6ccdc 114-141,143-149,152,157,160-162,164-179
+loadtest/viewer/synth_test.go
+  s_45fff186c97845::t_cf70ecafa8b01f 5-6,116,122-189
+web/src/composables/webrtc/peer.ts
+  s_bf24ce51cd8f95::t_bccf4fa7df49de 4,212-213
+web/src/composables/webrtc/sdp.test.ts
+  s_e7d8df1dbb402e::t_8203af70c9da71 4,177-234
+web/src/composables/webrtc/sdp.ts
+  s_bf24ce51cd8f95::t_c061e68e146479 239-275
+web/src/lib/rtcStats.test.ts
+  s_45fff186c97845::t_637b31d732721a 3-4,136-164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6218e708f633b9b6f617397302bef129790df187",
+  "prompts": {},
+  "sessions": {
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e7d8df1dbb402e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aonb-product-app-66e452174912e1a3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
