@@ -1,7 +1,7 @@
 import { mediaCall } from '../../lib/media/api'
 import { SOURCE_CAMERA, SOURCE_MIC, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO } from '../../lib/media/frame'
 import { canSendH264 } from './h264Support'
-import { publishMids, restrictVideoCodecs, tuneScreenLines } from './sdp'
+import { enableMicDtx, publishMids, restrictVideoCodecs, tuneScreenLines } from './sdp'
 import { iceServers, relayOffered } from './iceServers'
 import { attachRemoteAudio, releaseRemoteAudio } from './remoteAudio'
 import { CAMERA_STREAM_PREFIX, SCREEN_AUDIO_STREAM_PREFIX, publisherId } from './streamIds'
@@ -209,7 +209,8 @@ function ensurePeerConnection(cx: Cx): RTCPeerConnection {
 
 function prepareRemoteSdp(offerSdp: string | undefined, layerLines: number, cameraLayerLines: number): string {
   const raw = offerSdp || ''
-  return tuneScreenLines(restrictVideoCodecs(raw), publishMids(raw, layerLines, cameraLayerLines), canSendH264())
+  const mids = publishMids(raw, layerLines, cameraLayerLines)
+  return enableMicDtx(tuneScreenLines(restrictVideoCodecs(raw), mids, canSendH264()), mids.audio)
 }
 
 function prepareTransceiverTransforms(conn: RTCPeerConnection) {

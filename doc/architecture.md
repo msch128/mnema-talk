@@ -347,7 +347,18 @@ back), so it needs no public relay ports and cannot reach anything else.
    screen's sound separately (stream ID `screen:<user>`); before that, the
    screen's sound was mixed into the microphone track. Audio and screen are
    published under the user's ID as stream ID, a camera under `cam:<user>`
-   ([`sfu.go`](../internal/sfu/sfu.go)).
+   ([`sfu.go`](../internal/sfu/sfu.go)). The web client changes the SFU's
+   offer before applying it so that the Opus parameters of the microphone line
+   carry `usedtx=1` (discontinuous transmission, RFC 7587; the screen's sound
+   does not): the browser then stops sending packets while nothing is said and
+   sends a one-byte comfort-noise frame every 400 ms, instead of 50 packets a
+   second of silence. Sequence numbers stay consecutive and only the RTP
+   timestamp jumps, which the SFU forwards untouched; listeners' browsers
+   fill the gap with comfort noise. Nothing on the server depends on a steady
+   packet rate: speaking comes from the client's own `voice_speaking`, the
+   ingress limits are ceilings, and the track is not timed out. The microphone
+   line shown as "sending" in the connection panel follows the track, not the
+   packet counters, and the no-sound warning reads the raw capture.
 3. **Forward.** For every incoming track the SFU creates one local track and
    copies the RTP packets to it ([`forward`](../internal/sfu/sfu.go)); a
    write error for one subscriber never ends the track for the others. No

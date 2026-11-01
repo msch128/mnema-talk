@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -26,6 +27,10 @@ type client struct {
 	// received holds the RTP packets of every track this client receives, for
 	// tests that look at them; a full channel drops.
 	received chan *rtp.Packet
+	// offerTweak changes the SFU's offer before the client applies it, as the
+	// web client does; answerSDP is the last answer the client gave.
+	offerTweak func(string) string
+	answerSDP  atomic.Value
 }
 
 func newTestSFU(t *testing.T) *SFU {
@@ -135,7 +140,11 @@ func (c *client) answer(p *Peer, mu *sync.Mutex) error {
 	if offer == nil {
 		return fmt.Errorf("SFU offer missing after gathering")
 	}
-	if err := c.pc.SetRemoteDescription(*offer); err != nil {
+	remote := *offer
+	if c.offerTweak != nil {
+		remote.SDP = c.offerTweak(remote.SDP)
+	}
+	if err := c.pc.SetRemoteDescription(remote); err != nil {
 		return fmt.Errorf("client remote description: %w", err)
 	}
 	ans, err := c.pc.CreateAnswer(nil)
@@ -151,6 +160,7 @@ func (c *client) answer(p *Peer, mu *sync.Mutex) error {
 	case <-time.After(5 * time.Second):
 		return fmt.Errorf("client ICE gathering timed out")
 	}
+	c.answerSDP.Store(c.pc.LocalDescription().SDP)
 	if err := p.SetAnswer(*c.pc.LocalDescription()); err != nil {
 		return fmt.Errorf("SFU remote answer: %w", err)
 	}

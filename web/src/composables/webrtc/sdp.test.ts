@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { present } from '../../media-test.fixture'
 import { useChatStore } from '../../stores/chat'
-import { publishMids, restrictVideoCodecs, tuneScreenLines, tuneScreenOffer, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './sdp'
+import { enableMicDtx, publishMids, restrictVideoCodecs, tuneScreenLines, tuneScreenOffer, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './sdp'
 import { installHarness, FakePC, SFU_LAYER_OFFER, grantMic, setup } from '../useWebRTC.harness.fixture'
 
 vi.mock('../../lib/noiseSuppressor', async () => (await import('../useWebRTC.noiseSuppressor.fixture')).noiseSuppressorModule)
@@ -172,5 +172,63 @@ describe('screen lines of an SFU offer', () => {
     expect(sections.map(s => s.split('\r\n')[0])).toEqual([' 9 UDP/TLS/RTP/SAVPF 102 96', ' 9 UDP/TLS/RTP/SAVPF 96 102', ' 9 UDP/TLS/RTP/SAVPF 102 96', ' 9 UDP/TLS/RTP/SAVPF 102 96'])
     expect(out).toContain(`x-google-start-bitrate=${SCREEN_START_KBPS}`)
     expect(tuneScreenLines(sdp, { video: ['1'] }, false).split('m=video')[1]).toContain('x-google-start-bitrate')
+  })
+})
+
+describe('enableMicDtx', () => {
+  // The SFU's offer: microphone line, the screen's sound, a video line, and someone else's voice.
+  const audio = (mid: string, fmtp: string | null, rtpmap = 'a=rtpmap:111 opus/48000/2') => [
+    'm=audio 9 UDP/TLS/RTP/SAVPF 111 9', `a=mid:${mid}`, 'a=recvonly', rtpmap, ...(fmtp === null ? [] : [`a=fmtp:111 ${fmtp}`]), 'a=rtpmap:9 G722/8000'
+  ]
+  const offer = (mic: string | null, other = 'minptime=10;useinbandfec=1') => [
+    'v=0', ...audio('0', mic), ...audio('1', other), 'm=video 9 UDP/TLS/RTP/SAVPF 96', 'a=mid:2', 'a=rtpmap:96 VP8/90000', ''
+  ].join('\r\n')
+
+  it('adds usedtx=1 to Opus on the microphone line only', () => {
+    const out = enableMicDtx(offer('minptime=10;useinbandfec=1'), '0')
+    expect(out).toContain('a=fmtp:111 minptime=10;useinbandfec=1;usedtx=1')
+    // The screen's sound keeps its parameters: its quiet passages are not silence.
+    expect(out.match(/usedtx=1/g)).toHaveLength(1)
+    expect(out).toContain('a=mid:1\r\na=recvonly\r\na=rtpmap:111 opus/48000/2\r\na=fmtp:111 minptime=10;useinbandfec=1\r\n')
+    // Nothing else changes.
+    expect(out.replace(';usedtx=1', '')).toBe(offer('minptime=10;useinbandfec=1'))
+  })
+
+  it('turns an existing usedtx=0 on and does not repeat usedtx=1', () => {
+    expect(enableMicDtx(offer('minptime=10;usedtx=0;useinbandfec=1'), '0')).toContain('a=fmtp:111 minptime=10;useinbandfec=1;usedtx=1')
+    const again = enableMicDtx(enableMicDtx(offer('minptime=10;useinbandfec=1'), '0'), '0')
+    expect(again.match(/usedtx=1/g)).toHaveLength(1)
+  })
+
+  it('gives Opus without parameters a line of its own, and handles LF and a mixed-case name', () => {
+    const bare = enableMicDtx(offer(null), '0')
+    expect(bare).toContain('a=rtpmap:111 opus/48000/2\r\na=fmtp:111 usedtx=1\r\n')
+    const lf = enableMicDtx(offer('stereo=1').replaceAll('\r\n', '\n').replace('opus/48000', 'OPUS/48000'), '0')
+    expect(lf).toContain('stereo=1;usedtx=1')
+    expect(lf).not.toContain('\r')
+  })
+
+  it('leaves a line without Opus, an unknown line and a missing mid alone', () => {
+    const noOpus = offer('minptime=10').replace(/opus\/48000\/2/g, 'PCMU/8000')
+    expect(enableMicDtx(noOpus, '0')).toBe(noOpus)
+    expect(enableMicDtx(offer('minptime=10'), '9')).toBe(offer('minptime=10'))
+    expect(enableMicDtx(offer('minptime=10'), null)).toBe(offer('minptime=10'))
+    expect(enableMicDtx(offer('minptime=10'), undefined)).toBe(offer('minptime=10'))
+    expect(enableMicDtx('', '0')).toBe('')
+    // A video line with that mid is not the microphone.
+    expect(enableMicDtx(offer('minptime=10'), '2')).toBe(offer('minptime=10'))
+  })
+
+  it('is applied to the offer the browser receives, on the microphone line', async () => {
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const pc = present(FakePC.instances.at(-1))
+    useChatStore().handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: offer('minptime=10;useinbandfec=1') } })
+    await vi.waitFor(() => expect(pc.remoteDescription).not.toBeNull())
+    const sdp = String(pc.remoteDescription?.sdp)
+    expect(sdp).toContain('a=fmtp:111 minptime=10;useinbandfec=1;usedtx=1')
+    expect(sdp.match(/usedtx=1/g)).toHaveLength(1)
   })
 })

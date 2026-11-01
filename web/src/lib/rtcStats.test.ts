@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { summarizeStats, rateJitter } from './rtcStats'
+import { micStatus } from './rtcFlowRows'
+import { setLocale, t } from '../i18n'
 
 function report({ bytesSent = 10000, bytesReceived = 20000, timestamp = 1000 } = {}) {
   return [
@@ -129,5 +131,34 @@ describe('received video', () => {
   it('leaves out streams that have not shown a picture yet', () => {
     expect(summarizeStats([video('a', undefined, undefined), video('b', 640, undefined), video('c', undefined, 360)]).videoIn).toEqual([])
     expect(summarizeStats([]).videoIn).toEqual([])
+  })
+})
+
+describe('a quiet microphone with discontinuous transmission', () => {
+  // Opus DTX stops the packets while nobody speaks (a short one every 400 ms): the
+  // counters stand still or creep, which is not a broken microphone.
+  const outbound = (packetsSent: number, bytesSent: number, timestamp: number) => [
+    { id: 'cp', type: 'candidate-pair', state: 'succeeded', nominated: true, currentRoundTripTime: 0.02, localCandidateId: 'l', remoteCandidateId: 'r', bytesSent, bytesReceived: 0, timestamp },
+    { id: 'l', type: 'local-candidate', candidateType: 'host', protocol: 'udp' },
+    { id: 'r', type: 'remote-candidate', candidateType: 'host', protocol: 'udp' },
+    { id: 'out', type: 'outbound-rtp', kind: 'audio', packetsSent, bytesSent, codecId: 'c' },
+    { id: 'c', type: 'codec', mimeType: 'audio/opus', clockRate: 48000, channels: 2 }
+  ]
+
+  it('shows no bitrate and no loss while no packets go out, and the line is still the sending one', () => {
+    const talking = summarizeStats(outbound(500, 40_000, 0), null, { micState: 'sending' })
+    const quiet = summarizeStats(outbound(500, 40_000, 5000), talking.sample, { micState: 'sending' })
+    expect(quiet.sendKbps).toBe(0)
+    expect(quiet.packetsSent).toBe(500)
+    expect(quiet.packetsLost).toBe(0)
+    expect(quiet.lossPercent).toBe(0)
+    expect(quiet.micState).toBe('sending')
+  })
+
+  it('says the microphone is sending, from the track, not from the packet counters', () => {
+    setLocale('en')
+    expect(micStatus('sending', false, 'activity')).toBe(t('stats.mic.sending'))
+    expect(micStatus('sending', false, 'activity')).not.toBe(t('stats.mic.pausedSilent'))
+    expect(micStatus('sending', false, 'ptt')).toBe(t('stats.mic.sending'))
   })
 })

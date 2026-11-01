@@ -111,27 +111,73 @@ func (s *vp8Source) packetize(size int, key bool) []*rtp.Packet {
 // frameInterval is the time between frames.
 func (s *vp8Source) frameInterval() time.Duration { return time.Second / time.Duration(s.fps) }
 
-// opusSource produces 20 ms Opus-sized packets.
-type opusSource struct {
-	seq     uint16
-	ts      uint32
-	payload []byte
+// dtxPlan makes a speaker talk for a share of a cycle and be silent for the rest,
+// the way Opus with DTX (usedtx=1) sends: 20 ms frames while talking, and in
+// the silence no packet but a one-byte comfort-noise frame every 400 ms. A zero
+// plan is the old speaker who never stops.
+type dtxPlan struct {
+	cycleTicks int // 20 ms ticks in one talk-and-silence cycle
+	talkTicks  int // how many of them are talking
+	offset     int // where in the cycle this speaker starts
 }
 
-func newOpusSource() *opusSource {
+const (
+	dtxCycle     = 10 * time.Second
+	dtxSilenceMs = 400 // the comfort-noise frame interval of Opus DTX
+)
+
+// newDTXPlan is the plan of a speaker who talks talkPct percent of the time.
+func newDTXPlan(talkPct int) dtxPlan {
+	cycle := int(dtxCycle / (opusFrameMs * time.Millisecond))
+	talk := min(max(talkPct, 0), 100) * cycle / 100
+	return dtxPlan{cycleTicks: cycle, talkTicks: talk, offset: int(rand.UintN(uint(cycle)))}
+}
+
+func (d dtxPlan) talking(tick int) bool {
+	return d.cycleTicks == 0 || (tick+d.offset)%d.cycleTicks < d.talkTicks
+}
+
+// opusSource produces 20 ms Opus-sized packets, or with a plan the packets of
+// a speaker whose encoder uses DTX.
+type opusSource struct {
+	seq      uint16
+	ts       uint32
+	payload  []byte
+	plan     dtxPlan
+	tick     int
+	silent   int  // ticks since the last comfort-noise frame
+	wasQuiet bool // the last tick was silence: speech resumes with the marker bit
+}
+
+func newOpusSource(plan dtxPlan) *opusSource {
 	p := make([]byte, opusBytes)
 	for i := range p {
 		p[i] = byte(rand.UintN(256))
 	}
-	return &opusSource{seq: uint16(rand.UintN(1 << 16)), ts: rand.Uint32(), payload: p}
+	return &opusSource{seq: uint16(rand.UintN(1 << 16)), ts: rand.Uint32(), payload: p, plan: plan}
 }
 
+// next is the packet of the next 20 ms tick, or nil when DTX sends nothing.
+// The timestamp runs on with every tick, so a silence shows as a gap in it
+// while the sequence numbers stay consecutive.
 func (s *opusSource) next() *rtp.Packet {
-	p := &rtp.Packet{
-		Header:  rtp.Header{Version: 2, SequenceNumber: s.seq, Timestamp: s.ts},
-		Payload: s.payload,
+	talking := s.plan.talking(s.tick)
+	s.tick++
+	var p *rtp.Packet
+	switch {
+	case talking:
+		p = &rtp.Packet{Header: rtp.Header{Version: 2, SequenceNumber: s.seq, Timestamp: s.ts, Marker: s.wasQuiet}, Payload: s.payload}
+		s.silent = 0
+	case s.silent == 0 || s.silent*opusFrameMs >= dtxSilenceMs:
+		p = &rtp.Packet{Header: rtp.Header{Version: 2, SequenceNumber: s.seq, Timestamp: s.ts}, Payload: []byte{0xf8}}
+		s.silent = 1
+	default:
+		s.silent++
 	}
-	s.seq++
+	s.wasQuiet = !talking
+	if p != nil {
+		s.seq++
+	}
 	s.ts += opusClock * opusFrameMs / 1000
 	return p
 }
