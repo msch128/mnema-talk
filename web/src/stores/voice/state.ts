@@ -51,6 +51,11 @@ function mediaState() {
     screenFit: ref<Record<string, number>>({}),
     serverScreenLayers: ref(0),
     layersWanted: ref<number[] | null>(null),
+    serverCameraLayers: ref(0),
+    // How tall my pictures of each person's camera are, by where they are shown (see cameraFit).
+    cameraSizes: ref<Record<string, Record<string, number>>>({}),
+    // The layers of my own camera that someone receives (null: not announced yet).
+    cameraLayersWanted: ref<number[] | null>(null),
     localCameraStream: shallowRef<MediaStream | null>(null),
     userVideoStreams: shallowRef<Record<string, MediaStream>>({}),
     channelUsers: ref<VoiceSnapshot>({}),
@@ -112,6 +117,12 @@ export function createVoiceState() {
     // --- Video subscriptions (enforced by the server's SFU) ---
     hiddenCameras: ref(readJson(HIDDEN_CAMERAS_KEY)),
     allCamerasOff: ref(readJson(ALL_CAMERAS_OFF_KEY).off === true),
+    // The users whose camera tile is on screen (null: the Talk view does not report, every camera is received).
+    visibleCameras: ref<Record<string, true> | null>(null),
+    // The cameras the server was told to stop sending because their tile is off screen.
+    offscreenCameras: ref<Record<string, true>>({}),
+    // The cameras the server does not forward to me because I asked for more than its limit.
+    cappedCameras: ref<Record<string, true>>({}),
     // Set by useWebRTC while in a call: sends a webrtc_subscribe event.
     subscriptionSink: null as ((request: SubscribeRequest) => void) | null,
     // Only tiles with a camera or a screen share in the Talk view.

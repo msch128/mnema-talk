@@ -56,6 +56,32 @@ func (g *layerGroup) resolve(want int) int {
 	return -1
 }
 
+// resolveFlowing is resolve for a viewer that should see something now: a
+// layer its sender switched off (nobody needed it for a while) is still
+// attached but silent, and a viewer resolved to it would see nothing until
+// the sender, told it is needed, starts it again. Until that layer delivers,
+// the nearest one that does carries the viewer, and the viewer moves over as
+// soon as the wished-for layer's packets are back (see write). When nothing
+// flows at all the wished-for layer is kept. A screen share's viewer chose
+// its layer (or the adapter did), and waits for it as before; a camera's
+// viewer only has a picture size, so it should never be left looking at
+// nothing.
+func (g *layerGroup) resolveFlowing(want int, now time.Time) int {
+	layer := g.resolve(want)
+	if g.source != SourceCamera || layer < 0 || g.recent(layer, now) {
+		return layer
+	}
+	if alt := g.flowing(layer, now); alt >= 0 {
+		return alt
+	}
+	return layer
+}
+
+// recent reports whether layer i delivered a packet within the last second.
+func (g *layerGroup) recent(i int, now time.Time) bool {
+	return g.live.Load()&(1<<i) != 0 && now.UnixNano()-g.lastPkt[i].Load() < int64(time.Second)
+}
+
 // floor is the worst layer a viewer may be given: the last declared one, else
 // the lowest-quality layer that exists.
 func (g *layerGroup) floor() int {
@@ -175,7 +201,7 @@ func (g *layerGroup) notifyWanted(mask uint8) {
 	if g.notifier == nil {
 		return
 	}
-	fn := g.notifier.wantedFn()
+	fn := g.notifier.wantedFnFor(g.source)
 	if fn == nil {
 		return
 	}
@@ -189,7 +215,8 @@ func (g *layerGroup) notifyWanted(mask uint8) {
 }
 
 func (g *layerGroup) notifyQuality(vt *viewerTrack, st QualityState) {
-	if g.notifier == nil {
+	// Viewers pick the layer of a screen share; a camera has no picker.
+	if g.notifier == nil || g.source != SourceScreen {
 		return
 	}
 	if fn := g.notifier.qualityFn(); fn != nil {

@@ -19,13 +19,55 @@ var layerGroupSeq atomic.Uint64
 // receiveScreenLayer starts forwarding one layer of peer's screen share. The
 // first layer to arrive makes the group; the others join it.
 func (r *Room) receiveScreenLayer(peer *Peer, remote rtpReader, trackID string, ssrc uint32, codec webrtc.RTPCodecCapability, layer int) {
+	r.receiveLayer(peer, remote, SourceScreen, trackID, ssrc, codec, layer)
+}
+
+// groupsLocked is the layer groups of source's publishers. r.mu is held.
+func (r *Room) groupsLocked(source Source) map[uuid.UUID]*layerGroup {
+	if source == SourceCamera {
+		if r.cameraGroups == nil {
+			r.cameraGroups = make(map[uuid.UUID]*layerGroup)
+		}
+		return r.cameraGroups
+	}
+	if r.groups == nil {
+		r.groups = make(map[uuid.UUID]*layerGroup)
+	}
+	return r.groups
+}
+
+// layerMetaLocked is what publishers declared about the layers of source.
+func (r *Room) layerMetaLocked(source Source) map[uuid.UUID][]Layer {
+	if source == SourceCamera {
+		if r.cameraLayerMeta == nil {
+			r.cameraLayerMeta = make(map[uuid.UUID][]Layer)
+		}
+		return r.cameraLayerMeta
+	}
+	if r.layerMeta == nil {
+		r.layerMeta = make(map[uuid.UUID][]Layer)
+	}
+	return r.layerMeta
+}
+
+// groupFor is the layer group of publisher's source, or nil.
+func (r *Room) groupFor(publisher uuid.UUID, source Source) *layerGroup {
+	if source == SourceCamera {
+		return r.cameraGroups[publisher]
+	}
+	return r.groups[publisher]
+}
+
+// receiveLayer starts forwarding one layer of peer's screen share or camera.
+// The first layer to arrive makes the group; the others join it.
+func (r *Room) receiveLayer(peer *Peer, remote rtpReader, source Source, trackID string, ssrc uint32, codec webrtc.RTPCodecCapability, layer int) {
 	userID := peer.ID
 	if layer > 0 {
 		trackID += "#" + strconv.Itoa(layer)
 	}
 	key := trackKey(userID, trackID)
 	info := &TrackInfo{
-		SenderID: userID, Kind: webrtc.RTPCodecTypeVideo, Source: SourceScreen,
+		SenderID: userID, Kind: webrtc.RTPCodecTypeVideo, Source: source,
 		publisher: peer, ssrc: ssrc, layer: layer,
 	}
 
@@ -35,15 +77,20 @@ func (r *Room) receiveScreenLayer(peer *Peer, remote rtpReader, trackID string, 
 		drain(remote)
 		return
 	}
-	g := r.groups[userID]
+	g := r.groupFor(userID, source)
+	if g == nil && layer > 0 && source == SourceCamera && !r.cameraLayeredLocked(userID) {
+		// A lower layer of a camera joins a group or a declaration; with
+		// neither, that camera is sent as one plain track and has no layers.
+		r.mu.Unlock()
+		drain(remote)
+		return
+	}
 	if g == nil || g.superseded.Load() {
 		id := fmt.Sprintf("%s~%d", trackKey(userID, trackID), layerGroupSeq.Add(1))
 		g = newLayerGroup(id, r.ID, userID, r.notifier, codec)
-		g.declared.Store(int32(len(r.layerMeta[userID])))
-		if r.groups == nil {
-			r.groups = make(map[uuid.UUID]*layerGroup)
-		}
-		r.groups[userID] = g
+		g.source = source
+		g.declared.Store(int32(len(r.layerMetaLocked(source)[userID])))
+		r.groupsLocked(source)[userID] = g
 	} else {
 		// A new capture on a group that outlived the last share: its
 		// wanted layers are announced afresh, whatever they were.
@@ -56,7 +103,7 @@ func (r *Room) receiveScreenLayer(peer *Peer, remote rtpReader, trackID string, 
 
 	info.group = g
 	if !g.attach(info, codec) {
-		slog.Warn("sfu screen layer refused", "user", userID, "layer", layer, "codec", codec.MimeType, "group", g.codec.MimeType)
+		slog.Warn("sfu layer refused", "user", userID, "source", string(source), "layer", layer, "codec", codec.MimeType, "group", g.codec.MimeType)
 		drain(remote)
 		return
 	}

@@ -19,7 +19,10 @@ export interface ScreenLayer { width: number; height: number; fps: number }
 export interface ScreenLayers { channel_id: string; user_id: string; layers: ScreenLayer[] }
 /** The layer of a screen share this connection receives (-1 before the first picture) and whether the server chose it. */
 export interface ScreenReception { channel_id: string; user_id: string; layer: number; auto: boolean }
-export interface ScreenLayersWanted { channel_id: string; layers: number[] }
+/** The layers of my own screen share (or, with source 'camera', of my camera) that someone receives. */
+export interface ScreenLayersWanted { channel_id: string; layers: number[]; source?: 'camera' }
+/** Whose cameras the server does not forward to me (it caps them per viewer); [] for none. */
+export interface CamerasCapped { channel_id: string; user_ids: string[] }
 export interface SpeakingState { channel_id: string; user_id: string; active: boolean }
 export interface MuteState { channel_id: string; user_id: string; muted: boolean; deafened: boolean }
 export interface VoiceRooms { started: Record<string, string>; now: string }
@@ -57,7 +60,7 @@ export interface InteractionResponse {
 
 export interface ServerEventPayloads {
   pong: { t: number }
-  server_info: { version: string; screen_layers?: number }
+  server_info: { version: string; screen_layers?: number; camera_layers?: number }
   system_update: { version: string }
   presence_snapshot: Record<string, Presence> | string[]
   /** A bot that set an activity (PRESENCE_UPDATE of the bot gateway) also sends it. */
@@ -121,6 +124,7 @@ export interface ServerEventPayloads {
   screen_layers: ScreenLayers
   screen_quality: ScreenReception
   screen_layers_wanted: ScreenLayersWanted
+  cameras_capped: CamerasCapped
   voice_speaking: SpeakingState
   voice_mute_state: MuteState
   voice_kicked: { channel_id: string; reason?: 'room_full' | 'missing_permission' | 'rules_not_accepted' | 'talk_rate_limited' | 'talk_unavailable' | 'connection_lost' | 'media_unavailable' | 'joined_elsewhere' | 'voice_taken_over' }
@@ -145,9 +149,10 @@ export type ServerEvent = EventUnion<ServerEventPayloads>
 export type ServerEventType = keyof ServerEventPayloads
 
 export type SubscribeRequest =
-  | { kind: 'camera'; user_id: string; on: boolean; all?: false; quality?: never; fit?: never }
-  | { kind: 'screen'; user_id: string; on: boolean; all?: false; quality?: 'auto' | number; fit?: number }
-  | { kind: 'camera'; all: true; on: boolean; user_id?: never; quality?: never; fit?: never }
+  | { kind: 'camera'; user_id: string; on: boolean; all?: false; quality?: never; fit?: never; fit_px?: number }
+  | { kind: 'screen'; user_id: string; on: boolean; all?: false; quality?: 'auto' | number; fit?: number; fit_px?: never }
+  | { kind: 'camera'; all: true; on: boolean; user_id?: never; quality?: never; fit?: never; fit_px?: never }
+  | { kind: 'camera'; user_ids: string[]; on: boolean; user_id?: never; all?: false; quality?: never; fit?: never; fit_px?: never }
 
 export interface ClientEventPayloads {
   ping: { t: number }
@@ -162,7 +167,7 @@ export interface ClientEventPayloads {
   webrtc_diag: { [key: string]: JsonValue | undefined }
   webrtc_request_keyframe: { source?: 'screen' | 'camera' }
   webrtc_subscribe: SubscribeRequest
-  webrtc_layers: { layers: ScreenLayer[] }
+  webrtc_layers: { layers: ScreenLayer[]; source?: 'camera' }
   webrtc_screenshare_start: Record<string, never>
   webrtc_screenshare_stop: Record<string, never>
   webrtc_camera_stop: Record<string, never>
@@ -285,7 +290,8 @@ function isInteractionResponse(payload: Record<string, unknown>): boolean {
 const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['pong', payload => typeof payload['t'] === 'number' && Number.isFinite(payload['t'])],
   ['server_info', payload => isString(payload['version'], 64)
-    && (!hasOwn(payload, 'screen_layers') || (isInteger(payload['screen_layers']) && payload['screen_layers'] >= 0 && payload['screen_layers'] <= MAX_SCREEN_LAYERS))],
+    && (!hasOwn(payload, 'screen_layers') || (isInteger(payload['screen_layers']) && payload['screen_layers'] >= 0 && payload['screen_layers'] <= MAX_SCREEN_LAYERS))
+    && (!hasOwn(payload, 'camera_layers') || (isInteger(payload['camera_layers']) && payload['camera_layers'] >= 0 && payload['camera_layers'] <= MAX_SCREEN_LAYERS))],
   ['system_update', payload => isString(payload['version'], 64)],
   ['presence_update', payload => isIdentifier(payload['user_id']) && isPresence(payload['status'])
     && (!hasOwn(payload, 'activity') || isBotActivity(payload['activity']))],
@@ -325,7 +331,9 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
   ['screen_layers', payload => roomUser(payload) && isArrayOf(payload['layers'], isScreenLayer) && (payload['layers'] as unknown[]).length <= MAX_SCREEN_LAYERS],
   ['screen_quality', payload => roomUser(payload) && isInteger(payload['layer']) && payload['layer'] >= -1 && payload['layer'] < MAX_SCREEN_LAYERS
     && typeof payload['auto'] === 'boolean'],
-  ['screen_layers_wanted', payload => isIdentifier(payload['channel_id']) && isArrayOf(payload['layers'], isLayerIndex)],
+  ['screen_layers_wanted', payload => isIdentifier(payload['channel_id']) && isArrayOf(payload['layers'], isLayerIndex)
+    && (!hasOwn(payload, 'source') || payload['source'] === 'camera')],
+  ['cameras_capped', payload => isIdentifier(payload['channel_id']) && isArrayOf(payload['user_ids'], isIdentifier)],
   ['voice_speaking', payload => roomUser(payload) && typeof payload['active'] === 'boolean'],
   ['voice_mute_state', payload => roomUser(payload) && typeof payload['muted'] === 'boolean' && typeof payload['deafened'] === 'boolean'],
   ['voice_kicked', payload => isIdentifier(payload['channel_id'])
@@ -366,7 +374,7 @@ const SERVER_EVENT_TYPES = new Set<string>([
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'dm_prefs_updated', 'dm_call_ring', 'dm_call_end', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
-  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'community_updated'
+  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'cameras_capped', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'community_updated'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

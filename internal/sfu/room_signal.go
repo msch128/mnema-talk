@@ -82,6 +82,7 @@ func (r *Room) signalPeer(peer *Peer) {
 	if !ok {
 		return
 	}
+	r.announceCapped(peer, capCameras(desired))
 	if peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed {
 		return
 	}
@@ -223,11 +224,16 @@ func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webr
 	var vt *viewerTrack
 	if info.group != nil {
 		r.mu.RLock()
-		pref := r.subs[peer.ID].screenQuality(info.SenderID)
-		fit := r.subs[peer.ID].screenFit(info.SenderID)
+		// A camera has no picker: it is always automatic, bounded by its picture's size.
+		pref, fit, streamID := -1, r.cameraFitLocked(peer.ID, info.SenderID), CameraStreamPrefix+info.SenderID.String()
+		if info.Source == SourceScreen {
+			pref = r.subs[peer.ID].screenQuality(info.SenderID)
+			fit = r.subs[peer.ID].screenFit(info.SenderID)
+			streamID = info.SenderID.String()
+		}
 		r.mu.RUnlock()
 		var err error
-		vt, err = info.group.newViewer(peer.ID, pref, fit, trackID, info.SenderID.String())
+		vt, err = info.group.newViewer(peer.ID, pref, fit, trackID, streamID)
 		if err != nil {
 			return nil, nil, err
 		}

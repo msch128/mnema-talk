@@ -181,13 +181,22 @@ func (r *Room) removePeerTracksLocked(userID uuid.UUID) {
 		g.close()
 		delete(r.groups, userID)
 	}
+	if g := r.cameraGroups[userID]; g != nil {
+		g.supersede()
+		g.close()
+		delete(r.cameraGroups, userID)
+	}
 	delete(r.layerMeta, userID)
+	delete(r.cameraLayerMeta, userID)
 	for id, tInfo := range r.trackLocals {
 		if tInfo.SenderID == userID {
 			delete(r.trackLocals, id)
 		}
 	}
 	r.dropScreenSubsLocked(userID)
+	for _, s := range r.subs {
+		s.dropCameraFit(userID)
+	}
 }
 
 // dropScreenSubsLocked ends every viewer's opt-in to userID's screen share:
@@ -258,6 +267,9 @@ func (r *Room) unpublish(userID uuid.UUID, source Source) {
 	changed := r.stopSourceTracksLocked(userID, source)
 	if source == SourceScreen {
 		r.stopScreenShareLocked(userID)
+	}
+	if source == SourceCamera {
+		r.cameraStoppedLocked(userID)
 	}
 	r.mu.Unlock()
 	if changed {

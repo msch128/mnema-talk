@@ -40,6 +40,7 @@ function cameraAvailable() {
     :local-muted="voiceStore.isUserLocalMuted(user.id)"
     :camera-available="cameraAvailable()"
     :camera-hidden="voiceStore.isCameraHidden(user.id)"
+    :camera-capped="voiceStore.isCameraCapped(user.id)"
     :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
     :is-watching="!!voiceStore.watchedScreens[user.id]"
     :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"

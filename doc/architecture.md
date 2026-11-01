@@ -363,6 +363,17 @@ back), so it needs no public relay ports and cannot reach anything else.
    viewer only. The hub tells the room who publishes what
    (`webrtc_media_state`) and who watches each share (`screen_viewers`), so
    clients can offer "Watch" and show viewers without receiving the video.
+   **Cameras are received only while their tile is on screen.** The web
+   client reports which tiles are visible (IntersectionObserver), keeps
+   the cameras of the others off with the same opt-out (several at once in
+   one `webrtc_subscribe` with `user_ids`, so one renegotiation), and asks
+   for a camera again about a tenth of a second after its tile comes back; a
+   camera the member hid stays hidden. As a safety net the server forwards at
+   most `MaxViewerCameras` (24, [`camera_cap.go`](../internal/sfu/camera_cap.go))
+   cameras to one viewer, the lowest user IDs first (by ID alone: it ignores which camera the viewer focuses, an accepted limitation for a limit meant never to be reached), and tells the viewer
+   which others it does not send (`cameras_capped`) so their tiles say so
+   instead of showing a frozen picture. Egress per viewer scales with the
+   cameras on screen, not with everyone who has one on.
 5. **Stop.** `webrtc_screenshare_stop` / `webrtc_camera_stop` unpublish that
    source; the screen opt-ins belong to one share and are dropped with it.
    Leaving, a failed connection or an admin kick removes the peer.
@@ -472,6 +483,43 @@ layers and survives new sizes, but not a different number of layers or other
 frame rates. Each layer's frames are sealed in a stream
 of their own (see SECURITY.md), so a switch needs no coordination between
 sender and receiver.
+
+**Layers of a camera.** A camera is sent as layers the same way, so a small
+tile costs the sender and the viewer a thumbnail instead of the full picture.
+After the screen's lower lines the SFU offers two more video lines for the
+camera's lower layers; the camera line itself is layer 0
+([`camera_layers.go`](../internal/sfu/camera_layers.go)). The server never
+requires them: a camera is forwarded as one plain track, exactly as before,
+unless its sender declared more than one layer (`webrtc_layers` with
+`source: "camera"`) before its first video, which is when the SFU decides.
+A camera that began plain stays plain until the connection is made anew: a
+declaration that comes while it is live (or when it was last live) is ignored,
+because a lower layer joining later would replace its best layer. A
+client without the lines (an older browser or desktop client, an older server)
+sends one layer, and a mixed room works in every combination: every viewer
+gets one track named like a camera (`camera:<id>`), whether the SFU switches
+layers behind it or not. The sealed lines are unchanged: a camera layer is
+sealed on the camera's line with its layer only in its stream ID (the same
+low bits a screen's layers use), so an older viewer opens it like any camera.
+Nobody picks a layer of a camera: the viewer reports how tall its picture of
+that camera is in device pixels (`fit_px` on `webrtc_subscribe`, from the tile
+or the stage that shows it, the largest one if several), the SFU gives it the
+smallest layer that still has the pixels the picture shows, and Auto
+adaptation can move it lower under loss as for screens. A layer its sender
+switched off is attached but silent, so a camera viewer whose picture fits it
+is carried by the nearest layer that delivers and moves over, at a keyframe,
+when the layer is back; a viewer that has not reported a size yet gets the
+best layer (older clients never report, and must not be left on a thumbnail).
+Switches count in `mnema_sfu_camera_layer_switches_total`. The sender is told
+which layers anyone needs in the same event as for a screen, marked
+`source: "camera"` (`screen_layers_wanted`), and switches the others off. The
+server announces the capability as `server_info.camera_layers`; a client sends
+camera layers and size reports only where it is there. The web client
+([`lib/cameraLayers.ts`](../web/src/lib/cameraLayers.ts),
+[`useCameraFit.ts`](../web/src/composables/useCameraFit.ts)) plans up to three
+layers of the capture (full size, 360p and 180p thumbnail at 150 kbit/s, none
+smaller than 180p) and sends them with `scaleResolutionDownBy` on the extra
+lines.
 
 **Stream quality and volume (0.4.0).** The sharer chooses mode, resolution
 and frame rate; the client applies them as capture constraints and sender
@@ -602,14 +650,28 @@ Measured on a 4-core home NAS with the default `APP_MEM_LIMIT=1g`: one browser
 sharing a 640x360 screen at 20 fps to 99 members in one Talk used about 28 %
 of one core and about 500 MB of app memory, each receiver getting about
 320 kbit/s (0.7.5). App memory grows with receivers x forwarded video sources,
-because Pion keeps a retransmission history of about 1.5 KB per packet for every
-outgoing video track. Since 0.7.7 that history shrinks with the number of
-connected members (1024 packets up to 16, halving as the count doubles, at
-least 128 from 65 on; see `internal/sfu/nack.go`), but a connection keeps the
-size it got when it joined, so the earliest joiners keep the large history: in
-a measured Talk of 100 members watching a screen and ten cameras the live heap
-reached 0.8 to 1.0 GB. The [sizing guide](benchmark.md#sizing-guide) gives
-memory, CPU and upload for a given Talk. The price of the shrinking history is that
+because the server keeps a retransmission history of the video it sends each
+receiver. Before this change that was Pion's responder: 1.5 KB buffers, a fixed count
+sized when the connection joined (1024 packets for the first 16 members,
+fewer later), so the earliest joiners kept the large history and a measured
+Talk of 100 members watching a screen and ten cameras reached a live heap of
+0.8 to 1.0 GB. Now `internal/sfu/nack_responder.go` keeps the history by bytes (buffer sizes
+included) and looks at the load on every packet: a track remembers about a
+second of its own bitrate (a quarter of a second beyond 64 members), within a
+share of 4 MiB (512 KiB beyond 64 members) of the connection's budget, and
+never less than 64 KB or, for a track with large frames such as a screen's
+keyframe, a frame and a quarter (up to 768 KB), so a connection that joined
+early shrinks as the server fills up. A hundred members watching three
+1.5 Mbit/s cameras hold about 20 MB of history (mostly the 64 KB floor per
+track) instead of about 460 MB. The ring that indexes a track's packets starts at 64 slots of 24 bytes
+and grows with the track. Each connection also has a retransmission budget (`nack_budget.go`): a token
+bucket that fills at a quarter of what the connection is sent, at least
+128 KB/s, and holds half a second of that. A subscriber that keeps asking for
+packets beyond it (a retransmission storm on an overloaded link) is refused the
+excess, which `mnema_sfu_retransmit_dropped_total` counts; it recovers at the
+next keyframe. Each connection answers its NACKs one at a time from a queue of
+16 (the excess is counted too), and one NACK for at most 128 packets. The [sizing guide](benchmark.md#sizing-guide) gives
+memory, CPU and upload for a given Talk. The price of the shorter history is that
 a late retransmission request goes unanswered and the picture shows an artifact
 until the next keyframe. Memory is returned after the call. With about 16 real browsers plus 84
 lightweight members (100 total) the app used about 1.6 cores. Real E2EE browser

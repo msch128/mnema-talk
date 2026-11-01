@@ -116,8 +116,8 @@ func TestWriteInstrumentsListsEveryFamily(t *testing.T) {
 		"mnema_ratelimit_hits_total", "mnema_ws_connections_total", "mnema_ws_events_sent_total",
 		"mnema_ws_events_received_total", "mnema_ws_dropped_total", "mnema_mls_handshakes_total",
 		"mnema_mls_handshake_bytes_total", "mnema_sfu_ingress_bytes_total", "mnema_sfu_egress_packets_total",
-		"mnema_sfu_nack_requests_total", "mnema_sfu_nack_packets_total", "mnema_sfu_keyframe_requests_total",
-		"mnema_sfu_layer_switches_total", "mnema_sfu_ice_transitions_total", "mnema_sfu_peer_joins_total",
+		"mnema_sfu_nack_requests_total", "mnema_sfu_nack_packets_total", "mnema_sfu_retransmitted_packets_total", "mnema_sfu_retransmit_dropped_total", "mnema_sfu_keyframe_requests_total",
+		"mnema_sfu_layer_switches_total", "mnema_sfu_camera_layer_switches_total", "mnema_sfu_ice_transitions_total", "mnema_sfu_peer_joins_total",
 		"mnema_s3_operations_total", "mnema_sfu_bandwidth_estimate_reports_total", "mnema_sfu_bandwidth_layer_moves_total",
 	} {
 		if !strings.Contains(b.String(), "# TYPE "+name+" ") {

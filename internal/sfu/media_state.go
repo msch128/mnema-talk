@@ -24,6 +24,10 @@ type mediaNotifier struct {
 	layers  func(roomID, sharer uuid.UUID, layers []Layer)
 	quality func(roomID, viewer, sharer uuid.UUID, state QualityState)
 	wanted  func(roomID, sharer uuid.UUID, layers []int)
+	// capped says whose cameras a viewer is not sent (see camera_cap.go).
+	capped func(roomID, viewer uuid.UUID, publishers []uuid.UUID)
+	// wantedCamera is wanted for the layers of a camera.
+	wantedCamera func(roomID, sharer uuid.UUID, layers []int)
 }
 
 func (n *mediaNotifier) setLayers(fn func(roomID, sharer uuid.UUID, layers []Layer)) {
@@ -44,6 +48,22 @@ func (n *mediaNotifier) setWanted(fn func(roomID, sharer uuid.UUID, layers []int
 	n.mu.Unlock()
 }
 
+func (n *mediaNotifier) setWantedCamera(fn func(roomID, sharer uuid.UUID, layers []int)) {
+	n.mu.Lock()
+	n.wantedCamera = fn
+	n.mu.Unlock()
+}
+
+// wantedFnFor is the callback that announces the wanted layers of source.
+func (n *mediaNotifier) wantedFnFor(source Source) func(roomID, sharer uuid.UUID, layers []int) {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	if source == SourceCamera {
+		return n.wantedCamera
+	}
+	return n.wanted
+}
+
 func (n *mediaNotifier) layersFn() func(roomID, sharer uuid.UUID, layers []Layer) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -54,12 +74,6 @@ func (n *mediaNotifier) qualityFn() func(roomID, viewer, sharer uuid.UUID, state
 	n.mu.RLock()
 	defer n.mu.RUnlock()
 	return n.quality
-}
-
-func (n *mediaNotifier) wantedFn() func(roomID, sharer uuid.UUID, layers []int) {
-	n.mu.RLock()
-	defer n.mu.RUnlock()
-	return n.wanted
 }
 
 func (n *mediaNotifier) set(fn func(roomID, userID uuid.UUID, state MediaState)) {

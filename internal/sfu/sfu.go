@@ -131,6 +131,9 @@ type Peer struct {
 	// track ID, so they can be released with the track.
 	vtMu         sync.Mutex
 	viewerTracks map[string]*viewerTrack
+	// lastCapped is the set of cameras last announced as not forwarded (see
+	// announceCapped); guarded by signalingMu.
+	lastCapped []uuid.UUID
 	// vtReleased is set by releaseViewerTracks; no viewer track is added after.
 	vtReleased bool
 	// lostMu guards onLost and lost (see OnLost).
@@ -153,10 +156,15 @@ type Room struct {
 	latestSources map[string]*TrackInfo
 	// groups holds each publisher's screen share received as layers, guarded
 	// by mu.
-	groups       map[uuid.UUID]*layerGroup
-	mu           sync.RWMutex
-	iceServers   []webrtc.ICEServer
-	offerTimeout time.Duration
+	groups map[uuid.UUID]*layerGroup
+	// cameraGroups is the same for a camera sent as layers; cameraLayerMeta
+	// is what each publisher declared about them. Both guarded by mu. A camera
+	// without declared layers is forwarded as one plain track, as before.
+	cameraGroups    map[uuid.UUID]*layerGroup
+	cameraLayerMeta map[uuid.UUID][]Layer
+	mu              sync.RWMutex
+	iceServers      []webrtc.ICEServer
+	offerTimeout    time.Duration
 
 	// subs is what each viewer receives (see Subscriptions); guarded by mu.
 	subs map[uuid.UUID]*Subscriptions

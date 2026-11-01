@@ -2,6 +2,7 @@ import { mediaCall } from '../../lib/media/api'
 import { trackConstraints, streamEncoding, streamTuning } from '../../lib/streamQuality'
 import { SOURCE_CAMERA, SOURCE_MIC, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO, type FrameSource } from '../../lib/media/frame'
 import { publishMids } from './sdp'
+import { declareCameraLayers } from './cameraLayers'
 import { announceMediaUnprotected } from './mediaRoom'
 import type { Cx } from './state'
 import type { BoundSenders, SenderTuning } from './senderTuning'
@@ -126,9 +127,9 @@ function bindSlot(
  * on them would never reach the server; the offer's own transceivers are
  * switched to send instead, once, right after the offer is applied.
  */
-export function bindPublishSenders(cx: Cx, conn: RTCPeerConnection, sdp: string, layerLines = 0) {
+export function bindPublishSenders(cx: Cx, conn: RTCPeerConnection, sdp: string, layerLines = 0, cameraLayerLines = 0) {
   const { st } = cx
-  const mids = publishMids(sdp, layerLines)
+  const mids = publishMids(sdp, layerLines, cameraLayerLines)
   // fresh: senders bound by this call, which still need their parameters.
   const bound: Bound = { screen: false, camera: false, fresh: {} }
   bindSlot(cx, conn, 'audioSender', 'audio', { mid: mids.audio, track: activeAudioTrack(cx), source: SOURCE_MIC }, bound)
@@ -136,7 +137,9 @@ export function bindPublishSenders(cx: Cx, conn: RTCPeerConnection, sdp: string,
     bound.screen = !!st.localScreenStream.value
   }
   const cameraTrack = st.localCameraStream.value?.getVideoTracks()[0]
-  if (bindSlot(cx, conn, 'cameraSender', 'camera', { mid: mids.video[1], track: cameraTrack, source: SOURCE_CAMERA }, bound)) {
+  // A running camera is sent as layers from the start: the server hears of them before its video.
+  if (cameraTrack && cameraLayerLines > 0) declareCameraLayers(cx, cameraTrack, true)
+  if (bindSlot(cx, conn, 'cameraSender', 'camera', { mid: mids.video[1], track: cameraTrack, source: SOURCE_CAMERA, ...(cameraLayerLines > 0 ? { layer: 0 } : {}) }, bound)) {
     bound.camera = !!st.localCameraStream.value
   }
   bindSlot(cx, conn, 'screenAudioSender', 'screenAudio', { mid: mids.screenAudio, track: liveScreenAudioTrack(cx), source: SOURCE_SCREEN_AUDIO }, bound)
@@ -146,6 +149,13 @@ export function bindPublishSenders(cx: Cx, conn: RTCPeerConnection, sdp: string,
     const sender = bindTransceiver(conn, mids.video[2 + i], null, SOURCE_SCREEN, i + 1)
     st.layerSenders[i] = sender
     if (sender) (bound.fresh.layers ??= []).push(sender)
+  }
+  // The same for the camera's, on the lines after those.
+  for (let i = 0; i < Math.min(st.cameraLayerSenders.length, cameraLayerLines); i++) {
+    if (st.cameraLayerSenders[i]) continue
+    const sender = bindTransceiver(conn, mids.cameraLayers[i], null, SOURCE_CAMERA, i + 1)
+    st.cameraLayerSenders[i] = sender
+    if (sender) (bound.fresh.cameraLayers ??= []).push(sender)
   }
   return bound
 }

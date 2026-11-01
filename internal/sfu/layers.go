@@ -107,6 +107,27 @@ func validLayers(layers []Layer) bool {
 	return true
 }
 
+// fitLayerTolerance is the share of the pixels a picture shows that a layer
+// must have to be enough for it.
+const fitLayerTolerance = 0.9
+
+// fitLayerFor is the index of the smallest layer that still has the pixels a
+// picture of `pixels` device pixels in height shows: a small tile gets a small
+// layer, a large one the best. 0 while the size is unknown or no layer is
+// large enough.
+func fitLayerFor(layers []Layer, pixels int) int {
+	if len(layers) < 2 || pixels <= 0 {
+		return 0
+	}
+	needed := float64(pixels) * fitLayerTolerance
+	for i := len(layers) - 1; i > 0; i-- {
+		if float64(layers[i].Height) >= needed {
+			return i
+		}
+	}
+	return 0
+}
+
 // QualityState is what a viewer currently receives of one screen share.
 type QualityState struct {
 	// Layer is the layer being forwarded, -1 while none is.
@@ -115,12 +136,14 @@ type QualityState struct {
 	Auto bool
 }
 
-// layerGroup is the set of layers of one capture of a screen share, and the
-// viewers receiving it.
+// layerGroup is the set of layers of one capture of a screen share or camera,
+// and the viewers receiving it.
 type layerGroup struct {
-	id         string
-	roomID     uuid.UUID
-	publisher  uuid.UUID
+	id        string
+	roomID    uuid.UUID
+	publisher uuid.UUID
+	// source is SourceScreen or SourceCamera.
+	source     Source
 	notifier   *mediaNotifier
 	codec      webrtc.RTPCodecCapability
 	kind       codecKind
@@ -162,6 +185,7 @@ type layerGroup struct {
 func newLayerGroup(id string, roomID, publisher uuid.UUID, notifier *mediaNotifier, codec webrtc.RTPCodecCapability) *layerGroup {
 	return &layerGroup{
 		id: id, roomID: roomID, publisher: publisher, notifier: notifier, codec: codec,
+		source:  SourceScreen,
 		kind:    codecKindOf(codec.MimeType),
 		viewers: make(map[uuid.UUID]*viewerTrack),
 	}

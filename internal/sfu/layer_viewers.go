@@ -67,6 +67,13 @@ func (g *layerGroup) removeViewer(vt *viewerTrack) {
 	g.refreshWanted()
 }
 
+// viewerTracks is a snapshot of the group's viewers' outgoing tracks.
+func (g *layerGroup) viewerTracks() []*viewerTrack {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.viewerListLocked()
+}
+
 // viewerFor is viewer's outgoing track of the group, nil if it has none.
 func (g *layerGroup) viewerFor(viewer uuid.UUID) *viewerTrack {
 	g.mu.Lock()
@@ -76,7 +83,12 @@ func (g *layerGroup) viewerFor(viewer uuid.UUID) *viewerTrack {
 
 // write hands one packet of layer idx to every viewer.
 func (g *layerGroup) write(idx int, p *rtp.Packet) {
-	g.lastPkt[idx].Store(layerNow().UnixNano())
+	now := layerNow().UnixNano()
+	if was := g.lastPkt[idx].Swap(now); was != 0 && now-was >= int64(time.Second) && g.source == SourceCamera {
+		// The layer was silent (its sender switched it off) and delivers again:
+		// viewers waiting for it on another layer move over.
+		g.retarget()
+	}
 	g.sent[idx].Add(uint64(rtpHeaderSize + len(p.Payload)))
 	list := g.snapshot.Load()
 	if list == nil {

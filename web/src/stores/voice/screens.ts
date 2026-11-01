@@ -134,10 +134,11 @@ export function handleScreenQuality(cs: VoiceState, event: ScreenReception) {
   cs.receivedLayer.value = { ...cs.receivedLayer.value, [user_id]: { layer, auto } }
 }
 
-/** screen_layers_wanted: the layers of my own share that someone receives. */
+/** screen_layers_wanted: the layers of my own share (or, marked source camera, of my camera) that someone receives. */
 export function handleLayersWanted(cs: VoiceState, event: ScreenLayersWanted) {
   if (!event || !Array.isArray(event.layers) || !sameRoom(cs, event.channel_id)) return
-  cs.layersWanted.value = [...event.layers]
+  if (event.source === 'camera') cs.cameraLayersWanted.value = [...event.layers]
+  else cs.layersWanted.value = [...event.layers]
 }
 
 /** Chooses which layer of userId's screen share I receive: 'auto' or a layer index. */
@@ -217,7 +218,9 @@ export function resetRemoteMedia(cs: VoiceState) {
   cs.screenLayers.value = {}
   cs.receivedLayer.value = {}
   cs.layersWanted.value = null
+  cs.cameraLayersWanted.value = null
   cs.userVideoStreams.value = {}
+  cs.cappedCameras.value = {}
   syncScreenFocus(cs, null)
 }
 

@@ -61,8 +61,12 @@ export interface RtcState {
   screenAudioSender: RTCRtpSender | null
   /** Senders of the screen's lower layers (see lib/screenLayers), on the SFU's third and fourth video line; null where the server offers none. */
   layerSenders: (RTCRtpSender | null)[]
+  /** Senders of the camera's lower layers (see lib/cameraLayers), on the video lines after the screen's; null where the server offers none. */
+  cameraLayerSenders: (RTCRtpSender | null)[]
   /** The layers last declared to the server (lib/screenLayers.layersKey). */
   declaredKey: string
+  /** The same for the camera's layers. */
+  declaredCameraKey: string
   captureWatch: ReturnType<typeof setInterval> | null
   captureSettle: ReturnType<typeof setTimeout> | null
   /** A browser picker may stay open for a long time. Repeated clicks must not launch several capture pipelines; stopping also invalidates its result. */
@@ -151,8 +155,8 @@ export function createRtcState(): RtcState {
     screenSender: null,
     cameraSender: null,
     screenAudioSender: null,
-    layerSenders: [null, null],
-    declaredKey: '',
+    layerSenders: [null, null], cameraLayerSenders: [null, null],
+    declaredKey: '', declaredCameraKey: '',
     captureWatch: null,
     captureSettle: null,
     screenCapturePending: false,
@@ -196,7 +200,8 @@ export function createRtcState(): RtcState {
         ['screenAudio', st.screenAudioSender],
         ['camera', st.cameraSender],
         ['screen', st.screenSender],
-        ...st.layerSenders.map((sender): ['screen', RTCRtpSender | null] => ['screen', sender])
+        ...st.layerSenders.map((sender): ['screen', RTCRtpSender | null] => ['screen', sender]),
+        ...st.cameraLayerSenders.map((sender): ['camera', RTCRtpSender | null] => ['camera', sender])
       ]
     })
   }

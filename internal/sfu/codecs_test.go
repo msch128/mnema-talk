@@ -104,8 +104,8 @@ func TestRenegotiationKeepsTheCameraLineCodecOrder(t *testing.T) {
 
 	first := nextOffer()
 	lines := videoSections(first.SDP)
-	if len(lines) != 2+maxLayers-1 {
-		t.Fatalf("want screen, camera and the screen's lower layers, got %d video lines", len(lines))
+	if len(lines) != 2+2*(maxLayers-1) {
+		t.Fatalf("want screen, camera and the lower layers of both, got %d video lines", len(lines))
 	}
 	cameraCodec := firstCodec(t, lines[1])
 	if cameraCodec != "VP8" {

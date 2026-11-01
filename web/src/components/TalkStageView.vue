@@ -8,6 +8,7 @@ import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
 import { fitAspect } from '../lib/talkLayout'
 import { useScreenFit } from '../composables/useScreenFit'
+import { useCameraFit } from '../composables/useCameraFit'
 import ScreenViewers from './ScreenViewers.vue'
 import StreamQualityMenu from './StreamQualityMenu.vue'
 import ScreenLayerMenu from './ScreenLayerMenu.vue'
@@ -46,6 +47,7 @@ const videoContainer = ref<HTMLElement | null>(null)
 const screenVideoEl = ref<HTMLVideoElement | null>(null)
 defineExpose({ container: videoContainer })
 useScreenFit(() => (props.ownOnStage || props.cameraOnStage ? null : props.stageUserId), videoContainer)
+useCameraFit(() => (props.cameraOnStage && !props.ownOnStage ? props.stage?.userId ?? null : null), screenVideoEl, 'stage')
 
 // Actual resolution of the shared screen as decoded by the browser.
 const videoResolution = ref('')

@@ -14,6 +14,7 @@ import MediaImage from './MediaImage.vue'
 import MuteMarks from './MuteMarks.vue'
 import TalkReactionFloat from './TalkReactionFloat.vue'
 import { initialOf } from '../lib/initial'
+import { useCameraFit } from '../composables/useCameraFit'
 
 const props = defineProps({
   user: { type: Object as PropType<AvatarUser & { id: string; joined_at?: string; role?: 'admin' | 'user' }>, required: true },
@@ -35,6 +36,8 @@ const props = defineProps({
   // Their camera is running (known without receiving it) and I may hide it.
   cameraAvailable: { type: Boolean, default: false },
   cameraHidden: { type: Boolean, default: false },
+  // The server sends no picture of their camera: too many cameras at once.
+  cameraCapped: { type: Boolean, default: false },
   // Their camera can go on the stage / is on the stage.
   cameraFocusable: { type: Boolean, default: false },
   cameraFocused: { type: Boolean, default: false },
@@ -81,6 +84,8 @@ function onDblclick(e: MouseEvent) {
 }
 
 const videoEl = ref<HTMLVideoElement | null>(null)
+// The server sends the layer of their camera this tile can use (not for my own, which comes from nobody).
+useCameraFit(() => (props.stream && !props.isSelf ? props.user.id : null), videoEl, 'tile', 'cover')
 watch(() => props.stream, (stream) => {
   nextTick(() => {
     if (videoEl.value) videoEl.value.srcObject = stream
@@ -155,6 +160,12 @@ watch(() => props.stream, (stream) => {
         <span v-else class="tile-initial leading-none" aria-hidden="true">{{ initial }}</span>
       </div>
     </div>
+
+    <p
+      v-if="cameraCapped && !stream"
+      data-testid="tile-camera-capped"
+      :class="['pointer-events-none absolute inset-x-2 z-30 text-center leading-4 text-mnema-tertiary', compact ? 'bottom-7 text-[10px]' : 'bottom-10 text-xs']"
+    >{{ $t('talk.cameraCapped') }}</p>
 
     <!-- Streaming: hover (or keyboard focus) offers to watch / stop watching -->
     <div

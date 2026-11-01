@@ -1,7 +1,7 @@
 import { STREAM_MAX_BITRATE } from '../../lib/streamQuality'
 
 export type AudioGuard = 'restricted' | 'echo-cancel' | 'none'
-export interface BoundSenders { audio?: RTCRtpSender; screen?: RTCRtpSender; camera?: RTCRtpSender; screenAudio?: RTCRtpSender; layers?: RTCRtpSender[] }
+export interface BoundSenders { audio?: RTCRtpSender; screen?: RTCRtpSender; camera?: RTCRtpSender; screenAudio?: RTCRtpSender; layers?: RTCRtpSender[]; cameraLayers?: RTCRtpSender[] }
 export interface SenderTuning { active?: boolean; maxBitrate?: number; maxFramerate?: number; scaleResolutionDownBy?: number; degradationPreference?: RTCDegradationPreference; priority?: RTCPriorityType; networkPriority?: RTCPriorityType }
 
 // Sender limits (bits per second). The browser's own congestion control still

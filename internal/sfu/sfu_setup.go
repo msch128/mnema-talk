@@ -42,6 +42,12 @@ func (s *SFU) SetLayersWantedHandler(fn func(roomID, sharer uuid.UUID, layers []
 	s.notifier.setWanted(fn)
 }
 
+// SetCameraLayersWantedHandler is SetLayersWantedHandler for the layers of a
+// camera.
+func (s *SFU) SetCameraLayersWantedHandler(fn func(roomID, sharer uuid.UUID, layers []int)) {
+	s.notifier.setWantedCamera(fn)
+}
+
 // NewSFU creates the SFU. announceIPs are the addresses browsers are told to
 // send media to instead of the container's own (WEBRTC_NAT_1TO1_IP): usually
 // the public IP and the LAN IP, so both remote and local members connect.
@@ -190,13 +196,13 @@ func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, loa
 		return nil, fmt.Errorf("failed to register the transport-cc stamp: %w", err)
 	}
 	registry.Add(telemetryFactory{})
-	var options []webrtc.InterceptorOption
-	if load != nil {
-		options = append(options, webrtc.WithNackResponderOptions(load.responderOption()))
-	}
+	// Pion's NACK responder keeps a history of a fixed size per connection;
+	// it is given no streams and ours (nack_responder.go) answers instead.
+	options := []webrtc.InterceptorOption{webrtc.WithNackResponderOptions(disablePionResponder())}
 	if err := webrtc.RegisterDefaultInterceptorsWithOptions(mediaEngine, registry, options...); err != nil {
 		return nil, fmt.Errorf("failed to register WebRTC interceptors: %w", err)
 	}
+	registry.Add(nackResponderFactory{load: load})
 
 	return webrtc.NewAPI(
 		webrtc.WithSettingEngine(settingEngine),

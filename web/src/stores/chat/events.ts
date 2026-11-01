@@ -187,6 +187,7 @@ const HANDLERS: Handlers = {
     const versions = useAppVersionStore()
     versions.setServerVersion(p?.version)
     voiceStore.serverScreenLayers = p?.screen_layers ?? 0
+    voiceStore.serverCameraLayers = p?.camera_layers ?? 0
     versions.followAdminUpdates(() => authStore.isAdmin)
   },
   // The Owner renamed the community or changed its icon: the header, tab title, tab icon and login follow.
@@ -276,6 +277,7 @@ const HANDLERS: Handlers = {
   screen_layers: ({ voiceStore }, p) => voiceStore.handleScreenLayers(p),
   screen_quality: ({ voiceStore }, p) => voiceStore.handleScreenQuality(p),
   screen_layers_wanted: ({ voiceStore }, p) => voiceStore.handleLayersWanted(p),
+  cameras_capped: ({ voiceStore }, p) => voiceStore.handleCamerasCapped(p),
   voice_speaking: ({ voiceStore }, p) => voiceStore.handleSpeakingEvent(p),
   voice_mute_state: ({ voiceStore }, p) => voiceStore.handleMuteState(p),
   stage_hand: ({ voiceStore }, p) => voiceStore.handleStageHand(p),
