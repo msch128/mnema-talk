@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.5.0](https://github.com/msch128/mnema-talk/compare/v2.4.0...v2.5.0) (2026-11-01)
+
+
+### Features
+
+* send the camera as layers and give small tiles the thumbnail ([#588](https://github.com/msch128/mnema-talk/issues/588)) ([349fe13](https://github.com/msch128/mnema-talk/commit/349fe13a2fc58e1e38a14b1c143a38e4901b06be))
+* **voice:** receive only the cameras that are on screen, with a server cap per viewer ([#587](https://github.com/msch128/mnema-talk/issues/587)) ([349fe13](https://github.com/msch128/mnema-talk/commit/349fe13a2fc58e1e38a14b1c143a38e4901b06be))
+
+
+### Performance Improvements
+
+* **sfu:** NACK history by bytes, shrinking with the current load ([#585](https://github.com/msch128/mnema-talk/issues/585)) ([349fe13](https://github.com/msch128/mnema-talk/commit/349fe13a2fc58e1e38a14b1c143a38e4901b06be))
+* **sfu:** per-subscriber retransmission budget ([#586](https://github.com/msch128/mnema-talk/issues/586)) ([349fe13](https://github.com/msch128/mnema-talk/commit/349fe13a2fc58e1e38a14b1c143a38e4901b06be))
+
 ## [2.4.0](https://github.com/msch128/mnema-talk/compare/v2.3.0...v2.4.0) (2026-10-31)
 
 
