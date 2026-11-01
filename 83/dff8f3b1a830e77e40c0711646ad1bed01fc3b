@@ -1,0 +1,19 @@
+internal/sfu/nack_responder_test.go
+  s_45fff186c97845::t_97dc8c4ccdd544 335-357
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "83dff8f3b1a830e77e40c0711646ad1bed01fc3b",
+  "prompts": {},
+  "sessions": {
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
