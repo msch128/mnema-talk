@@ -1098,6 +1098,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_sfu_egress_bytes_total`, `..._packets_total` | counter | RTP sent to viewers (each viewer counts), retransmissions included. `rate(...)*8` = bits per second. |
 | `mnema_sfu_nack_requests_total`, `mnema_sfu_nack_packets_total` | counter | Retransmission requests from viewers and the packets they asked for: a measure of packet loss on the downlinks. |
 | `mnema_sfu_retransmitted_packets_total` | counter | Packets actually resent after a NACK. The history they come from is sized by bytes and shrinks as the server fills up (doc/architecture.md, "NACK history"), so a request for a packet that is no longer remembered is counted in `nack_packets` but not here. |
+| `mnema_sfu_retransmit_dropped_total` | counter | Resends refused by the per-subscriber retransmission budget (a share of 25% of the connection's video bitrate, at least 128 KB/s). A steady rate means subscribers are losing more than the server is willing to repair: look at the downlinks and at host overload. |
 | `mnema_sfu_keyframe_requests_total` | counter | PLI and FIR feedback from viewers. |
 | `mnema_sfu_layer_switches_total` | counter | Simulcast layer changes of screen share viewers. |
 | `mnema_sfu_bandwidth_estimate_reports_total{range}` | counter | Bandwidth estimates taken for viewers whose screen layer the server chooses, by range (`lt0.5m` ... `ge16m`, bits per second); `rate()` per range shows how the downlinks are distributed. |

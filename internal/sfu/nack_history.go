@@ -207,6 +207,14 @@ func (h *nackHistory) forgetResend(seq uint16) {
 	}
 }
 
+// bitrate is the track's measured bitrate in bytes per second (zero before
+// the first measurement).
+func (h *nackHistory) bitrate() float64 {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.rate
+}
+
 // retained is the bytes the history holds now.
 func (h *nackHistory) retained() int {
 	h.mu.Lock()

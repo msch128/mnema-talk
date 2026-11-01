@@ -19,6 +19,9 @@ import (
 type nackResponderFactory struct {
 	load *peerLoad
 	now  func() time.Time
+	// limits is the retransmission budget of each connection; the zero value
+	// means defaultResendLimits.
+	limits resendLimits
 }
 
 func (f nackResponderFactory) NewInterceptor(string) (interceptor.Interceptor, error) {
@@ -26,7 +29,11 @@ func (f nackResponderFactory) NewInterceptor(string) (interceptor.Interceptor, e
 	if now == nil {
 		now = time.Now
 	}
-	return &nackResponder{load: f.load, now: now, streams: map[uint32]*nackStream{}}, nil
+	limits := f.limits
+	if limits == (resendLimits{}) {
+		limits = defaultResendLimits
+	}
+	return &nackResponder{load: f.load, now: now, streams: map[uint32]*nackStream{}, budgetFor: newResendBudget(limits)}, nil
 }
 
 // disablePionResponder is the option that leaves Pion's own responder with no
@@ -52,6 +59,8 @@ type nackResponder struct {
 
 	mu      sync.Mutex
 	streams map[uint32]*nackStream
+	// budgetFor limits the resends of this connection.
+	budgetFor *resendBudget
 	// afterResend, when set (tests), is called when a NACK has been answered.
 	afterResend func()
 }
@@ -197,6 +206,11 @@ func (n *nackResponder) resendOne(s *nackStream, seq uint16, interval time.Durat
 	if !ok {
 		return
 	}
+	if !n.budgetFor.allow(n.now(), len(payload)+rtpFixedHeader, n.mediaRate()) {
+		s.history.forgetResend(seq)
+		metrics.SFURetransmitDropped.Inc()
+		return
+	}
 	if s.info.SSRCRetransmission != 0 && s.info.PayloadTypeRetransmission != 0 {
 		header, payload = s.rtxForm(header, payload)
 	}
@@ -218,4 +232,22 @@ func (s *nackStream) rtxForm(h rtp.Header, payload []byte) (rtp.Header, []byte) 
 	h.SequenceNumber = s.rtxSeq.NextSequenceNumber()
 	h.Padding, h.PaddingSize = false, 0
 	return h, out
+}
+
+// rtpFixedHeader is counted for the header of a resent packet.
+const rtpFixedHeader = 12
+
+// mediaRate is what this connection is sent now, in bytes per second.
+func (n *nackResponder) mediaRate() float64 {
+	n.mu.Lock()
+	streams := make([]*nackStream, 0, len(n.streams))
+	for _, s := range n.streams {
+		streams = append(streams, s)
+	}
+	n.mu.Unlock()
+	total := 0.0
+	for _, s := range streams {
+		total += s.history.bitrate()
+	}
+	return total
 }

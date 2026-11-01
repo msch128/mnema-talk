@@ -613,7 +613,12 @@ own bitrate (a quarter of a second beyond 64 members), within a share of 4 MiB
 (512 KiB beyond 64 members) of the connection's budget, never less than 64 KB
 (a keyframe), so a connection that joined early shrinks as the server fills up.
 A hundred members watching three 1.5 Mbit/s cameras hold about 20 MB of history
-instead of about 460 MB. The [sizing guide](benchmark.md#sizing-guide) gives
+instead of about 460 MB. Each connection also has a retransmission budget (`nack_budget.go`): a token
+bucket that fills at a quarter of what the connection is sent, at least
+128 KB/s, and holds half a second of that. A subscriber that keeps asking for
+packets beyond it (a retransmission storm on an overloaded link) is refused the
+excess, which `mnema_sfu_retransmit_dropped_total` counts; it recovers at the
+next keyframe. The [sizing guide](benchmark.md#sizing-guide) gives
 memory, CPU and upload for a given Talk. The price of the shorter history is that
 a late retransmission request goes unanswered and the picture shows an artifact
 until the next keyframe. Memory is returned after the call. With about 16 real browsers plus 84
