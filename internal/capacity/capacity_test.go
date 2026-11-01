@@ -31,10 +31,10 @@ func TestEstimateWithoutTrafficUsesTheTable(t *testing.T) {
 
 func TestEstimateScalesWithTheHostsObservedCost(t *testing.T) {
 	// Model: 38,000 x 22 us + 400 x 72 us + 100 x 0.57 ms = 0.92 cores.
-	base := Input{Cores: 4, EgressPPS: 38000, IngressPPS: 400, Peers: 100, UsedCores: 0.92}
+	base := Input{Cores: 4, EgressPPS: 38000, IngressPPS: 400, Peers: 100, UsedCores: 0.92 + IdleCores}
 	fast := Estimate(base)
 	slow := base
-	slow.UsedCores = 1.84 // twice as expensive as the model says
+	slow.UsedCores = 1.84 + IdleCores // twice as expensive as the model says
 	s := Estimate(slow)
 	if fast.Basis != BasisObserved || math.Abs(fast.Scale-1) > 0.02 {
 		t.Fatalf("fast: %+v", fast)
@@ -52,7 +52,7 @@ func TestEstimateIgnoresTooLittleTrafficAndClampsNoise(t *testing.T) {
 	if few.Basis != BasisTable {
 		t.Fatalf("500 packets/s is too little to trust: %+v", few)
 	}
-	wild := Estimate(Input{Cores: 8, EgressPPS: 2000, Peers: 5, UsedCores: 7})
+	wild := Estimate(Input{Cores: 8, EgressPPS: 6000, Peers: 5, UsedCores: 7})
 	if wild.Scale != 4 {
 		t.Fatalf("scale = %v, want clamped to 4", wild.Scale)
 	}
@@ -128,5 +128,48 @@ func TestMemoryLimit(t *testing.T) {
 	write(t, v1, "memory/memory.limit_in_bytes", "9223372036854771712")
 	if got := MemoryLimit(v1); got != 0 {
 		t.Errorf("v1 unlimited: %d", got)
+	}
+}
+
+// A small call on a quiet server: the CPU is mostly the rest of the server
+// (about 0.1 core), not media, and must not make a member look 3x as costly.
+func TestEstimateDoesNotBlameMediaForTheIdleBaseline(t *testing.T) {
+	quiet := Input{Cores: 2, EgressPPS: 1200, IngressPPS: 150, Peers: 3, UsedCores: 0.12}
+	r := Estimate(quiet)
+	table := Estimate(Input{Cores: 2})
+	if r.Basis != BasisTable || r.Scale != 1 {
+		t.Fatalf("1200 packets/s is not enough traffic to measure a host: %+v", r)
+	}
+	if r.PerMemberCores != table.PerMemberCores {
+		t.Fatalf("per member %v, want the table's %v", r.PerMemberCores, table.PerMemberCores)
+	}
+	// Enough traffic, and a host that costs what the model says on top of the baseline.
+	m := Input{Cores: 4, EgressPPS: 6000, IngressPPS: 400, Peers: 20}
+	m.UsedCores = modelled(m) + IdleCores
+	if r := Estimate(m); r.Basis != BasisObserved || math.Abs(r.Scale-1) > 0.01 {
+		t.Fatalf("baseline must be subtracted: %+v", r)
+	}
+	// Used CPU below the baseline cannot be a measurement of media.
+	m.UsedCores = IdleCores / 2
+	if r := Estimate(m); r.Basis != BasisTable {
+		t.Fatalf("%+v", r)
+	}
+}
+
+func TestCoresFromCgroupV1(t *testing.T) {
+	host := float64(runtime.NumCPU())
+	dir := t.TempDir()
+	write(t, dir, "cpu/cpu.cfs_quota_us", "50000\n")
+	write(t, dir, "cpu/cpu.cfs_period_us", "100000\n")
+	if got := Cores(dir); got != 0.5 {
+		t.Errorf("half a core: %v", got)
+	}
+	write(t, dir, "cpu/cpu.cfs_quota_us", "-1\n")
+	if got := Cores(dir); got != host {
+		t.Errorf("unlimited (-1): %v", got)
+	}
+	write(t, dir, "cpu/cpu.cfs_quota_us", "abc")
+	if got := Cores(dir); got != host {
+		t.Errorf("garbage: %v", got)
 	}
 }

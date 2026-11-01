@@ -2151,13 +2151,26 @@
         "memoryValue": "{used} of {limit}",
         "memoryNoLimit": "{used} (no limit set)",
         "mediaValue": "{mbps} Mbit/s · {pps} packets/s",
-        "callsValue": "{peers} members · {shares} screen shares",
-        "estimateOk": "Estimate: this server can take about {count} more members with a screen share.",
+        "callsValue": "{members} · {shares}",
+        "estimateOk": {
+          "one": "Estimate: this server can take about {count} more member, each watching a screen share.",
+          "other": "Estimate: this server can take about {count} more members, each watching a screen share."
+        },
         "estimate_busy": "Estimate: the server is already past half of its CPU; do not plan for more members until it is quieter.",
         "estimate_memory": "Estimate: memory is nearly full; raise APP_MEM_LIMIT before more members join.",
         "basisObserved": "it uses this server’s measured CPU cost per packet ({scale} times the benchmark)",
         "basisTable": "it uses the benchmark values, because there is too little traffic to measure this server",
-        "assumption": "An estimate, not a promise. Assumes each new member watches one 1.5 Mbit/s screen share next to 3 speakers, costing {cost} millicores, and plans at half of the CPU ({cores} cores); {basis}. Details: doc/benchmark.md."
+        "assumption": "An estimate, not a promise. It counts CPU only: it assumes each new member watches one 1.5 Mbit/s screen share next to 3 speakers, costing {cost} millicores of CPU, and plans at half of the CPU ({cores} cores). Memory and upload bandwidth are not part of it, apart from the switch when memory is nearly full; {basis}. Details: doc/benchmark.md.",
+        "members": {
+          "one": "{count} member",
+          "other": "{count} members"
+        },
+        "shares": {
+          "one": "{count} screen share",
+          "other": "{count} screen shares"
+        },
+        "collecting": "Collecting measurements; the figures appear within a few seconds of the start.",
+        "failed": "The capacity figures could not be loaded."
       }
     },
     "users": "Member management",

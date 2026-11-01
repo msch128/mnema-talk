@@ -25,8 +25,12 @@ const (
 	// packets well before 100 % CPU.
 	PlanFraction = 0.5
 	// MinObservedPPS is the egress rate below which the host's own cost per
-	// packet is not trusted and the table values are used.
-	MinObservedPPS = 1000
+	// packet is not trusted and the table values are used: with little media
+	// the CPU is mostly the rest of the server.
+	MinObservedPPS = 5000
+	// IdleCores is the CPU the server spends with no media (HTTP, WebSocket,
+	// database, garbage collection, the chart sampler); it is not media cost.
+	IdleCores = 0.08
 	// MemoryTight is the share of the memory limit above which memory, not
 	// CPU, is reported as the limit.
 	MemoryTight = 0.85
@@ -81,14 +85,15 @@ func modelled(in Input) float64 {
 	return in.EgressPPS*EgressCost + in.IngressPPS*IngressCost + float64(in.Peers)*MemberCost
 }
 
-// scale is how much more (or less) CPU this host spends than the model says,
+// scale is how much more (or less) CPU this host spends on media than the model says,
 // clamped so a noisy window cannot swing the estimate wildly.
 func scale(in Input) (float64, string) {
 	m := modelled(in)
-	if in.EgressPPS < MinObservedPPS || m <= 0 || in.UsedCores <= 0 {
+	media := in.UsedCores - IdleCores
+	if in.EgressPPS < MinObservedPPS || m <= 0 || media <= 0 {
 		return 1, BasisTable
 	}
-	return math.Min(4, math.Max(0.5, in.UsedCores/m)), BasisObserved
+	return math.Min(4, math.Max(0.5, media/m)), BasisObserved
 }
 
 // MemberPackets is the packets per second one more member receives in the

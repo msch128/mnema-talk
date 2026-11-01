@@ -32,6 +32,9 @@ type CapacityStatus struct {
 	// Peers are media connections now; ScreenShares live screen shares.
 	Peers        int `json:"peers"`
 	ScreenShares int `json:"screen_shares"`
+	// Collecting is true in the first seconds after the start, before the
+	// sampler has taken a measurement: the figures are not real yet.
+	Collecting bool `json:"collecting"`
 	// Estimate is the planning estimate (see doc/benchmark.md).
 	Estimate CapacityEstimate `json:"estimate"`
 }
@@ -97,6 +100,7 @@ func averageSamples(s []OpsSample) CapacityStatus {
 		var ms runtime.MemStats
 		runtime.ReadMemStats(&ms)
 		st.HeapBytes = ms.HeapAlloc
+		st.Collecting = true
 		return st
 	}
 	var cpu, bps, epps, ipps float64

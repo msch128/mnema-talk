@@ -4400,6 +4400,7 @@ export function isServerCapacityEstimate(value: unknown): value is ServerCapacit
 export const decodeServerCapacityEstimate = decoder("server.CapacityEstimate", isServerCapacityEstimate)
 
 export type ServerCapacityStatus = {
+  collecting: boolean
   cpu_cores: number
   cpu_used_cores: number
   egress_mbps: number
@@ -4415,6 +4416,7 @@ export type ServerCapacityStatus = {
 
 export function isServerCapacityStatus(value: unknown): value is ServerCapacityStatus {
   return isRecord(value)
+    && (hasOwn(value, "collecting") && typeof value["collecting"] === 'boolean')
     && (hasOwn(value, "cpu_cores") && (typeof value["cpu_cores"] === 'number' && Number.isFinite(value["cpu_cores"])))
     && (hasOwn(value, "cpu_used_cores") && (typeof value["cpu_used_cores"] === 'number' && Number.isFinite(value["cpu_used_cores"])))
     && (hasOwn(value, "egress_mbps") && (typeof value["egress_mbps"] === 'number' && Number.isFinite(value["egress_mbps"])))

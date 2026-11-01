@@ -7509,6 +7509,10 @@
       },
       "server.CapacityStatus": {
         "properties": {
+          "collecting": {
+            "description": "Collecting is true in the first seconds after the start, before the\nsampler has taken a measurement: the figures are not real yet.",
+            "type": "boolean"
+          },
           "cpu_cores": {
             "description": "CPUCores is the CPU the server may use; CPUUsedCores what it used over\nthe last minute.",
             "type": "number"
@@ -7549,6 +7553,7 @@
           }
         },
         "required": [
+          "collecting",
           "cpu_cores",
           "cpu_used_cores",
           "egress_mbps",

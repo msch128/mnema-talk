@@ -895,21 +895,27 @@ Owner or Administrator only) shows, averaged over the last minute: CPU used of
 the cores the container may use (the cgroup quota when there is one), memory
 (resident size against the container limit, `APP_MEM_LIMIT`), the media the
 server sends (Mbit/s and packets/s) and the members and screen shares in calls.
-It works with no traffic at all.
+It works with no traffic at all; in the first seconds after a start, before
+the first measurement, it says it is collecting.
 
 Below that it prints an **estimate**: about how many more members the server
 can take, each watching one 1.5 Mbit/s screen share next to three speakers. It
 uses the cost model of [the benchmark](benchmark.md#the-model): 22 µs of one
 core per packet sent, 72 µs per packet received, 0.57 ms per second per member.
 It plans at half of the CPU, because bursts lose packets well before 100 %. With
-enough traffic (1,000 packets/s sent) the panel compares the CPU it actually
-used with what the model predicts and scales the per-member cost by that factor
-(between 0.5 and 4), so a slower or faster host gives its own number; with less
-traffic it uses the table values and says so. When the server is already past
-half of its CPU the panel says that instead of a number, and when resident
-memory is above 85 % of the limit it says memory comes first. The estimate
-counts CPU only, not the upload bandwidth (see [the sizing
-table](benchmark.md#sizing-table)) and not relayed packets (+12 µs each).
+substantial traffic (5,000 packets/s sent or more) the panel compares the CPU
+the media actually used (the process CPU minus about 0.08 core the server spends
+with no media at all) with what the model predicts and scales the per-member
+cost by that factor (between 0.5 and 4), so a slower or faster host gives its
+own number; with less traffic it uses the table values and says so. When the
+server is already past half of its CPU the panel says that instead of a number,
+and when resident memory is above 85 % of the limit it says memory comes first.
+
+The estimate counts **CPU only**. It ignores the upload bandwidth (see [the
+sizing table](benchmark.md#sizing-table)), relayed packets (+12 µs each) and how
+memory grows with more members, apart from the 85 % switch; the assumption line
+under it says so. CPU quotas are read from the container's cgroup (v2 `cpu.max`
+or v1 `cpu.cfs_quota_us`); without one the host's cores count.
 
 ### Test my connection
 

@@ -20,7 +20,7 @@ func TestAverageSamplesTakesRatesOverTheWindowAndStateFromTheNewest(t *testing.T
 
 func TestAverageSamplesWithoutSamplesReadsTheProcess(t *testing.T) {
 	st := averageSamples(nil)
-	if st.HeapBytes == 0 || st.CPUUsedCores != 0 || st.EgressPPS != 0 {
+	if st.HeapBytes == 0 || st.CPUUsedCores != 0 || st.EgressPPS != 0 || !st.Collecting {
 		t.Fatalf("%+v", st)
 	}
 }

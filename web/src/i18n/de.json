@@ -2151,13 +2151,26 @@
         "memoryValue": "{used} von {limit}",
         "memoryNoLimit": "{used} (kein Limit gesetzt)",
         "mediaValue": "{mbps} Mbit/s · {pps} Pakete/s",
-        "callsValue": "{peers} Mitglieder · {shares} Bildschirmfreigaben",
-        "estimateOk": "Schätzung: Dieser Server kann etwa {count} weitere Mitglieder mit einer Bildschirmfreigabe aufnehmen.",
+        "callsValue": "{members} · {shares}",
+        "estimateOk": {
+          "one": "Schätzung: Dieser Server kann etwa {count} weiteres Mitglied aufnehmen, das eine Bildschirmfreigabe sieht.",
+          "other": "Schätzung: Dieser Server kann etwa {count} weitere Mitglieder aufnehmen, die je eine Bildschirmfreigabe sehen."
+        },
         "estimate_busy": "Schätzung: Der Server ist schon über der Hälfte seiner CPU; plane keine weiteren Mitglieder ein, bis es ruhiger ist.",
         "estimate_memory": "Schätzung: Der Speicher ist fast voll; erhöhe APP_MEM_LIMIT, bevor weitere Mitglieder dazukommen.",
         "basisObserved": "sie nutzt die gemessenen CPU-Kosten pro Paket dieses Servers ({scale}-mal der Benchmark)",
         "basisTable": "sie nutzt die Werte des Benchmarks, weil zu wenig Verkehr zum Messen dieses Servers da ist",
-        "assumption": "Eine Schätzung, keine Zusage. Angenommen: Jedes neue Mitglied sieht eine Bildschirmfreigabe mit 1,5 Mbit/s neben 3 Sprechenden und kostet {cost} Millikerne; geplant wird mit der Hälfte der CPU ({cores} Kerne); {basis}. Einzelheiten: doc/benchmark.md."
+        "assumption": "Eine Schätzung, keine Zusage. Sie zählt nur die CPU: Angenommen wird, dass jedes neue Mitglied eine Bildschirmfreigabe mit 1,5 Mbit/s neben 3 Sprechenden sieht und {cost} Millicores CPU kostet; geplant wird mit der Hälfte der CPU ({cores} Kerne). Speicher und Upload gehen nicht ein, außer dem Umschalten, wenn der Speicher fast voll ist; {basis}. Einzelheiten: doc/benchmark.md.",
+        "members": {
+          "one": "{count} Mitglied",
+          "other": "{count} Mitglieder"
+        },
+        "shares": {
+          "one": "{count} Bildschirmfreigabe",
+          "other": "{count} Bildschirmfreigaben"
+        },
+        "collecting": "Messwerte werden gesammelt; die Zahlen erscheinen wenige Sekunden nach dem Start.",
+        "failed": "Die Kapazitätswerte konnten nicht geladen werden."
       }
     },
     "users": "Mitgliederverwaltung",

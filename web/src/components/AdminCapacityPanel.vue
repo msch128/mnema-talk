@@ -11,21 +11,38 @@ import { locale, t } from '../i18n'
 const REFRESH_MS = 10_000
 
 const cap = ref<ServerCapacityStatus | null>(null)
+const failed = ref(false)
 let timer: ReturnType<typeof setInterval> | undefined
+let inFlight = false
 
 async function load() {
+  if (inFlight) return
+  inFlight = true
   try {
     cap.value = await api('/api/admin/status/capacity', { decode: decodeServerCapacityStatus })
+    failed.value = false
   } catch {
-    // Advisory: the last figures stay.
+    // The last figures stay; before the first answer a hint says so.
+    failed.value = true
+  } finally {
+    inFlight = false
   }
+}
+
+// A hidden tab does not poll; coming back loads at once.
+function tick() {
+  if (document.visibilityState !== 'hidden') void load()
 }
 
 onMounted(() => {
   void load()
-  timer = setInterval(() => void load(), REFRESH_MS)
+  timer = setInterval(tick, REFRESH_MS)
+  document.addEventListener('visibilitychange', tick)
 })
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => {
+  clearInterval(timer)
+  document.removeEventListener('visibilitychange', tick)
+})
 
 const num = (v: number, digits = 1) => new Intl.NumberFormat(locale.value, { maximumFractionDigits: digits }).format(v)
 const size = (bytes: number) => formatFileSize(bytes, locale.value)
@@ -33,7 +50,7 @@ const size = (bytes: number) => formatFileSize(bytes, locale.value)
 // Everything the template shows, worked out once from the last answer.
 const view = computed(() => {
   const c = cap.value
-  if (!c) return null
+  if (!c || c.collecting) return null
   const e = c.estimate
   const p = 'admin.operatorStatus.capacity.'
   const basis = e.basis === 'observed' ? t(`${p}basisObserved`, { scale: num(e.scale, 2) }) : t(`${p}basisTable`)
@@ -44,7 +61,7 @@ const view = computed(() => {
       ? t(`${p}memoryValue`, { used: size(c.rss_bytes), limit: size(c.memory_limit_bytes) })
       : t(`${p}memoryNoLimit`, { used: size(c.rss_bytes) }),
     media: t(`${p}mediaValue`, { mbps: num(c.egress_mbps), pps: num(c.egress_pps, 0) }),
-    calls: t(`${p}callsValue`, { peers: c.peers, shares: c.screen_shares }),
+    calls: t(`${p}callsValue`, { members: t(`${p}members`, { count: c.peers }), shares: t(`${p}shares`, { count: c.screen_shares }) }),
     verdict: e.status === 'ok' ? t(`${p}estimateOk`, { count: e.more_members }) : t(`${p}estimate_${e.status}`),
     assumption: t(`${p}assumption`, { cores: num(e.plan_cores, 2), cost: num(e.per_member_millicores, 1), basis })
   }
@@ -52,7 +69,10 @@ const view = computed(() => {
 </script>
 
 <template>
-  <div v-if="view" class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline space-y-3" data-testid="status-capacity">
+  <div v-if="cap?.collecting || (failed && !cap)" class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline" data-testid="status-capacity-pending">
+    <p class="text-xs text-mnema-muted">{{ cap?.collecting ? $t('admin.operatorStatus.capacity.collecting') : $t('admin.operatorStatus.capacity.failed') }}</p>
+  </div>
+  <div v-else-if="view" class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline space-y-3" data-testid="status-capacity">
     <div class="flex items-center gap-2">
       <Gauge class="w-4 h-4 text-mnema-accent shrink-0" aria-hidden="true" />
       <span class="text-xs uppercase font-semibold font-mono text-mnema-tertiary tracking-wider">{{ $t('admin.operatorStatus.capacity.heading') }}</span>
