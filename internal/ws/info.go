@@ -11,6 +11,9 @@ import "github.com/msch128/mnema-talk/internal/sfu"
 type ServerInfo struct {
 	Version      string `json:"version"`
 	ScreenLayers int    `json:"screen_layers,omitempty"`
+	// CameraLayers is the same for a camera (absent on a server without
+	// camera layers): a browser declares and sends camera layers only then.
+	CameraLayers int `json:"camera_layers,omitempty"`
 }
 
 // serverInfo reports "dev" for a hub without a version (tests, go run).
@@ -21,6 +24,7 @@ func (h *Hub) serverInfo() ServerInfo {
 	}
 	if h.SFU != nil {
 		info.ScreenLayers = sfu.MaxLayers
+		info.CameraLayers = sfu.MaxLayers
 	}
 	return info
 }

@@ -51,6 +51,11 @@ function mediaState() {
     screenFit: ref<Record<string, number>>({}),
     serverScreenLayers: ref(0),
     layersWanted: ref<number[] | null>(null),
+    serverCameraLayers: ref(0),
+    // How tall my pictures of each person's camera are, by where they are shown (see cameraFit).
+    cameraSizes: ref<Record<string, Record<string, number>>>({}),
+    // The layers of my own camera that someone receives (null: not announced yet).
+    cameraLayersWanted: ref<number[] | null>(null),
     localCameraStream: shallowRef<MediaStream | null>(null),
     userVideoStreams: shallowRef<Record<string, MediaStream>>({}),
     channelUsers: ref<VoiceSnapshot>({}),

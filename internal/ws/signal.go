@@ -76,6 +76,13 @@ func (c *Client) handleSubscribe(payload json.RawMessage) {
 	if room == nil {
 		return
 	}
+	if req.hasFitPx {
+		// How big the viewer's picture of a camera is: nothing else changes.
+		if err := room.SetCameraFit(c.User.ID, req.publisher, req.fitPx); err != nil {
+			slog.Debug("sfu camera fit rejected", "user", c.User.ID, "err", err)
+		}
+		return
+	}
 	c.applySubscriptionQuality(room, req)
 	if err := room.Subscribe(c.User.ID, req.publisher, req.kind, req.all, req.on); err != nil {
 		slog.Debug("sfu subscribe rejected", "user", c.User.ID, "err", err)
@@ -96,6 +103,10 @@ type subscribeRequest struct {
 	// hasFit tells whether the message said.
 	fit    int
 	hasFit bool
+	// fitPx is the height in device pixels of the viewer's picture of a
+	// camera; hasFitPx tells whether the message said.
+	fitPx    int
+	hasFitPx bool
 }
 
 type subscribeWire struct {
@@ -105,6 +116,7 @@ type subscribeWire struct {
 	On      bool            `json:"on"`
 	Quality json.RawMessage `json:"quality"`
 	Fit     *int            `json:"fit"`
+	FitPx   *int            `json:"fit_px"`
 }
 
 func isValidSubscriptionKind(kind sfu.Source, all bool) bool {
@@ -132,6 +144,18 @@ func validateFit(raw *int, kind sfu.Source) (fit int, present, ok bool) {
 		return 0, false, true
 	}
 	if kind != sfu.SourceScreen || *raw < 0 || *raw >= sfu.MaxLayers {
+		return 0, false, false
+	}
+	return *raw, true, true
+}
+
+// validateFitPx reads the optional fit_px of a camera subscription: the
+// height of the viewer's picture of one person's camera, in device pixels.
+func validateFitPx(raw *int, kind sfu.Source, all bool) (px int, present, ok bool) {
+	if raw == nil {
+		return 0, false, true
+	}
+	if kind != sfu.SourceCamera || all || *raw < 0 || *raw > sfu.MaxFitPixels {
 		return 0, false, false
 	}
 	return *raw, true, true
@@ -167,6 +191,10 @@ func parseSubscribe(payload json.RawMessage, viewer uuid.UUID) (subscribeRequest
 	if !ok {
 		return subscribeRequest{}, false
 	}
+	fitPx, hasFitPx, ok := validateFitPx(wire.FitPx, kind, wire.All)
+	if !ok {
+		return subscribeRequest{}, false
+	}
 	pub, ok := parsePublisher(wire.All, wire.UserID, viewer)
 	if !ok {
 		return subscribeRequest{}, false
@@ -180,5 +208,7 @@ func parseSubscribe(payload json.RawMessage, viewer uuid.UUID) (subscribeRequest
 		hasQuality: hasQuality,
 		fit:        fit,
 		hasFit:     hasFit,
+		fitPx:      fitPx,
+		hasFitPx:   hasFitPx,
 	}, true
 }

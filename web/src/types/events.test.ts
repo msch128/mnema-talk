@@ -10,7 +10,7 @@ const voiceUser = { ...userFixture(), joined_at: FIXTURE_TIMESTAMP, muted: false
 const reaction = { emoji: '👍', count: 1, users: [id] }
 const examples: Record<ServerEventType, unknown[]> = {
   pong: [{ t: 0 }, { t: 0.5 }],
-  server_info: [{ version: '0.4.4' }, { version: '0.8.0', screen_layers: 3 }, { version: '0.8.0', screen_layers: 0 }],
+  server_info: [{ version: '0.4.4' }, { version: '0.8.0', screen_layers: 3 }, { version: '0.8.0', screen_layers: 0 }, { version: '2.2.0', screen_layers: 3, camera_layers: 3 }],
   system_update: [{ version: '0.5.0' }],
   presence_snapshot: [[], [id], {}, { [id]: 'online' }, { [id]: 'offline' }],
   presence_update: [{ user_id: id, status: 'focus' }, { user_id: id, status: 'dnd', activity: { type: 0, name: 'chess' } }],
@@ -81,7 +81,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   screen_viewers: [{ ...room, viewers: [] }, { ...room, viewers: [id] }],
   screen_layers: [{ ...room, layers: [] }, { ...room, layers: [{ width: 1920, height: 1080, fps: 30 }, { width: 1280, height: 720, fps: 30 }] }],
   screen_quality: [{ ...room, layer: -1, auto: true }, { ...room, layer: 2, auto: false }],
-  screen_layers_wanted: [{ channel_id: id, layers: [] }, { channel_id: id, layers: [0, 2] }],
+  screen_layers_wanted: [{ channel_id: id, layers: [] }, { channel_id: id, layers: [0, 2] }, { channel_id: id, layers: [2], source: 'camera' }],
   cameras_capped: [{ channel_id: id, user_ids: [] }, { channel_id: id, user_ids: [id, fixtureId(2)] }],
   voice_speaking: [{ ...room, active: true }],
   voice_mute_state: [{ ...room, muted: true, deafened: false }],
@@ -268,6 +268,13 @@ describe('screen layer events', () => {
     expect(valid('cameras_capped', { channel_id: id, user_ids: ['not an id'] })).toBe(false)
     expect(valid('cameras_capped', { channel_id: id, user_ids: 'none' })).toBe(false)
     expect(valid('cameras_capped', { user_ids: [] })).toBe(false)
+  })
+
+  it('takes the camera layer count of a server_info and the source of a wanted announcement within bounds', () => {
+    for (const count of [0, 1, 3]) expect(valid('server_info', { version: '1', camera_layers: count })).toBe(true)
+    for (const count of [-1, 4, 1.5, '3', null]) expect(valid('server_info', { version: '1', camera_layers: count })).toBe(false)
+    expect(valid('screen_layers_wanted', { channel_id: id, layers: [1], source: 'camera' })).toBe(true)
+    for (const source of ['screen', 'audio', 1, null]) expect(valid('screen_layers_wanted', { channel_id: id, layers: [1], source })).toBe(false)
   })
 
   it('takes the layer count of a server_info within bounds', () => {

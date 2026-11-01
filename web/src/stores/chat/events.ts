@@ -187,6 +187,7 @@ const HANDLERS: Handlers = {
     const versions = useAppVersionStore()
     versions.setServerVersion(p?.version)
     voiceStore.serverScreenLayers = p?.screen_layers ?? 0
+    voiceStore.serverCameraLayers = p?.camera_layers ?? 0
     versions.followAdminUpdates(() => authStore.isAdmin)
   },
   // The Owner renamed the community or changed its icon: the header, tab title, tab icon and login follow.

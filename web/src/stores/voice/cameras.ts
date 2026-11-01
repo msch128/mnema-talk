@@ -4,6 +4,7 @@ import type { SubscribeRequest } from '../../types/events'
 import { HIDDEN_CAMERAS_KEY, ALL_CAMERAS_OFF_KEY, HIDE_NO_VIDEO_KEY, myUserId } from './state'
 import type { VoiceState } from './state'
 import { videoUnseen } from '../../lib/pageVisibility'
+import { resendCameraFit } from './cameraFit'
 
 // A camera on the stage: mine, or one I receive and have not hidden.
 export function cameraStreamOf(cs: VoiceState, userId: string | null) {
@@ -102,6 +103,7 @@ export function resendSubscriptions(cs: VoiceState) {
     emitSubscription(cs, { kind: 'camera', user_id: id, on: false })
   }
   if (hidden) return
+  resendCameraFit(cs)
   for (const id of Object.keys(cs.watchedScreens.value)) {
     emitSubscription(cs, screenRequest(cs, id, true))
   }

@@ -177,6 +177,7 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 		voiceSFU.SetScreenQualityHandler(h.announceScreenQuality)
 		voiceSFU.SetLayersWantedHandler(h.announceLayersWanted)
 		voiceSFU.SetCamerasCappedHandler(h.announceCamerasCapped)
+		voiceSFU.SetCameraLayersWantedHandler(h.announceCameraLayersWanted)
 	}
 	return h
 }

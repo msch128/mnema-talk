@@ -484,6 +484,43 @@ frame rates. Each layer's frames are sealed in a stream
 of their own (see SECURITY.md), so a switch needs no coordination between
 sender and receiver.
 
+**Layers of a camera.** A camera is sent as layers the same way, so a small
+tile costs the sender and the viewer a thumbnail instead of the full picture.
+After the screen's lower lines the SFU offers two more video lines for the
+camera's lower layers; the camera line itself is layer 0
+([`camera_layers.go`](../internal/sfu/camera_layers.go)). The server never
+requires them: a camera is forwarded as one plain track, exactly as before,
+unless its sender declared more than one layer (`webrtc_layers` with
+`source: "camera"`) before its first video, which is when the SFU decides.
+A camera that began plain stays plain until the connection is made anew: a
+declaration that comes while it is live (or when it was last live) is ignored,
+because a lower layer joining later would replace its best layer. A
+client without the lines (an older browser or desktop client, an older server)
+sends one layer, and a mixed room works in every combination: every viewer
+gets one track named like a camera (`camera:<id>`), whether the SFU switches
+layers behind it or not. The sealed lines are unchanged: a camera layer is
+sealed on the camera's line with its layer only in its stream ID (the same
+low bits a screen's layers use), so an older viewer opens it like any camera.
+Nobody picks a layer of a camera: the viewer reports how tall its picture of
+that camera is in device pixels (`fit_px` on `webrtc_subscribe`, from the tile
+or the stage that shows it, the largest one if several), the SFU gives it the
+smallest layer that still has the pixels the picture shows, and Auto
+adaptation can move it lower under loss as for screens. A layer its sender
+switched off is attached but silent, so a camera viewer whose picture fits it
+is carried by the nearest layer that delivers and moves over, at a keyframe,
+when the layer is back; a viewer that has not reported a size yet gets the
+best layer (older clients never report, and must not be left on a thumbnail).
+Switches count in `mnema_sfu_camera_layer_switches_total`. The sender is told
+which layers anyone needs in the same event as for a screen, marked
+`source: "camera"` (`screen_layers_wanted`), and switches the others off. The
+server announces the capability as `server_info.camera_layers`; a client sends
+camera layers and size reports only where it is there. The web client
+([`lib/cameraLayers.ts`](../web/src/lib/cameraLayers.ts),
+[`useCameraFit.ts`](../web/src/composables/useCameraFit.ts)) plans up to three
+layers of the capture (full size, 360p and 180p thumbnail at 150 kbit/s, none
+smaller than 180p) and sends them with `scaleResolutionDownBy` on the extra
+lines.
+
 **Stream quality and volume (0.4.0).** The sharer chooses mode, resolution
 and frame rate; the client applies them as capture constraints and sender
 parameters (`maxFramerate`, a bitrate cap, `scaleResolutionDownBy`), so the

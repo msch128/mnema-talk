@@ -112,7 +112,7 @@ func (h *systemHandler) opsSnapshot() OpsStatus {
 			ICEDisconnected:  metrics.SFUICE.Sum(0, "disconnected"),
 			NackRequests:     metrics.SFUNackRequests.Load(),
 			KeyframeRequests: metrics.SFUKeyframeRequests.Load(),
-			LayerSwitches:    metrics.SFULayerSwitches.Load(),
+			LayerSwitches:    metrics.SFULayerSwitches.Load() + metrics.SFUCameraLayerSwitches.Load(),
 			EgressBytes:      metrics.SFUEgressBytes.Load(),
 			IngressBytes:     metrics.SFUIngressBytes.Load(),
 			StorageErrors:    metrics.S3Operations.Sum(1, "error"),

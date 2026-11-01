@@ -31,6 +31,9 @@ type Subscriptions struct {
 	// fit is the best layer the viewer's picture of a screen share can use;
 	// absent means the best the share has.
 	fit map[uuid.UUID]int8
+	// cameraPixels is how many device pixels tall the viewer's picture of a
+	// publisher's camera is; absent means unknown (the best layer).
+	cameraPixels map[uuid.UUID]int32
 }
 
 // screenQuality is the layer chosen for publisher's screen share, -1 for
@@ -84,6 +87,30 @@ func (s *Subscriptions) setScreenFit(publisher uuid.UUID, layer int) {
 		s.fit = map[uuid.UUID]int8{}
 	}
 	s.fit[publisher] = int8(min(layer, maxLayers-1))
+}
+
+// cameraFit is the height in device pixels of the viewer's picture of
+// publisher's camera, 0 when unknown.
+func (s *Subscriptions) cameraFit(publisher uuid.UUID) int {
+	if s == nil {
+		return 0
+	}
+	return int(s.cameraPixels[publisher])
+}
+
+// setCameraFit remembers the height of the viewer's picture of a camera.
+func (s *Subscriptions) setCameraFit(publisher uuid.UUID, pixels int) {
+	if pixels <= 0 {
+		delete(s.cameraPixels, publisher)
+		return
+	}
+	if _, ok := s.cameraPixels[publisher]; !ok && len(s.cameraPixels) >= maxHiddenCameras {
+		return
+	}
+	if s.cameraPixels == nil {
+		s.cameraPixels = map[uuid.UUID]int32{}
+	}
+	s.cameraPixels[publisher] = int32(pixels)
 }
 
 // Wants reports whether a track of the given kind and source published by
@@ -146,6 +173,11 @@ func (s *Subscriptions) SetScreen(publisher uuid.UUID, on bool) error {
 func (s *Subscriptions) dropScreen(publisher uuid.UUID) {
 	delete(s.screens, publisher)
 	delete(s.quality, publisher)
+}
+
+// dropCameraFit forgets the size of the viewer's picture of a camera that is gone.
+func (s *Subscriptions) dropCameraFit(publisher uuid.UUID) {
+	delete(s.cameraPixels, publisher)
 }
 
 // subsLocked returns the viewer's subscriptions, creating them. r.mu must be held for writing.

@@ -14,6 +14,7 @@ import MediaImage from './MediaImage.vue'
 import MuteMarks from './MuteMarks.vue'
 import TalkReactionFloat from './TalkReactionFloat.vue'
 import { initialOf } from '../lib/initial'
+import { useCameraFit } from '../composables/useCameraFit'
 
 const props = defineProps({
   user: { type: Object as PropType<AvatarUser & { id: string; joined_at?: string; role?: 'admin' | 'user' }>, required: true },
@@ -83,6 +84,8 @@ function onDblclick(e: MouseEvent) {
 }
 
 const videoEl = ref<HTMLVideoElement | null>(null)
+// The server sends the layer of their camera this tile can use (not for my own, which comes from nobody).
+useCameraFit(() => (props.stream && !props.isSelf ? props.user.id : null), videoEl, 'tile', 'cover')
 watch(() => props.stream, (stream) => {
   nextTick(() => {
     if (videoEl.value) videoEl.value.srcObject = stream

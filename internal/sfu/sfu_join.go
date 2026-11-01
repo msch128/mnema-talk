@@ -142,6 +142,8 @@ type receiveConn struct {
 	cameraTr      *webrtc.RTPTransceiver
 	screenAudioTr *webrtc.RTPTransceiver
 	lowerTrs      []*webrtc.RTPTransceiver
+	// cameraLowerTrs are the lines of the camera's lower layers, after those of the screen's.
+	cameraLowerTrs []*webrtc.RTPTransceiver
 }
 
 func newReceiveConn(api *webrtc.API, iceServers []webrtc.ICEServer) (*receiveConn, error) {
@@ -157,7 +159,8 @@ func newReceiveConn(api *webrtc.API, iceServers []webrtc.ICEServer) (*receiveCon
 	// apart by their position: the first video line is the screen, the second
 	// the camera; the first audio line is the mic, the second the screen's
 	// sound. After them come the lines of the screen's lower layers (see
-	// layerGroup): a sender that does not know them answers them inactive.
+	// layerGroup) and then those of the camera's: a sender that does not know
+	// them answers them inactive.
 	recvOnly := webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}
 	if _, err := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, recvOnly); err != nil {
 		_ = pc.Close()
@@ -187,7 +190,16 @@ func newReceiveConn(api *webrtc.API, iceServers []webrtc.ICEServer) (*receiveCon
 		}
 		lowerTrs = append(lowerTrs, tr)
 	}
-	pinCodecOrder(append([]*webrtc.RTPTransceiver{screenTr, cameraTr}, lowerTrs...)...)
+	cameraLowerTrs := make([]*webrtc.RTPTransceiver, 0, maxLayers-1)
+	for range maxLayers - 1 {
+		tr, err := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
+		if err != nil {
+			_ = pc.Close()
+			return nil, fmt.Errorf("failed to add camera layer transceiver: %w", err)
+		}
+		cameraLowerTrs = append(cameraLowerTrs, tr)
+	}
+	pinCodecOrder(append(append([]*webrtc.RTPTransceiver{screenTr, cameraTr}, lowerTrs...), cameraLowerTrs...)...)
 
-	return &receiveConn{pc: pc, cameraTr: cameraTr, screenAudioTr: screenAudioTr, lowerTrs: lowerTrs}, nil
+	return &receiveConn{pc: pc, cameraTr: cameraTr, screenAudioTr: screenAudioTr, lowerTrs: lowerTrs, cameraLowerTrs: cameraLowerTrs}, nil
 }

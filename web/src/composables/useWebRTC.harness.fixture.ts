@@ -274,6 +274,37 @@ export const SFU_LAYER_OFFER = SFU_OFFER + [
   ''
 ].join('\r\n')
 
+// The offer of a server that also takes layers of the camera: the lines for the
+// camera's two lower layers follow those of the screen's.
+export const SFU_CAMERA_LAYER_OFFER = SFU_LAYER_OFFER + [
+  'm=video 9 UDP/TLS/RTP/SAVPF 96', 'a=mid:6', 'a=recvonly',
+  'm=video 9 UDP/TLS/RTP/SAVPF 96', 'a=mid:7', 'a=recvonly',
+  ''
+].join('\r\n')
+
+export async function joinedWithCameraLayers({ screen = 3, camera = 3 } = {}) {
+  const ctx = setup()
+  ctx.voice.serverScreenLayers = screen
+  ctx.voice.serverCameraLayers = camera
+  const join = ctx.rtc.joinVoiceChannel('ch-1')
+  const mic = await grantMic()
+  await join
+  const pc = present(FakePC.instances.at(-1))
+  ctx.chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_CAMERA_LAYER_OFFER } })
+  await vi.waitFor(() => expect(pc.transceivers.length).toBe(8))
+  await new Promise(r => setTimeout(r, 0))
+  const senders = pc.senders
+  return { ...ctx, mic, pc, camera: present(senders[2]), cameraLow1: present(senders[6]), cameraLow2: present(senders[7]) }
+}
+
+/** A camera capture of this size, as getUserMedia returns it. */
+export function cameraCapture(width: number, height: number) {
+  const stream = fakeStream(['video'])
+  const track = present(stream.getVideoTracks()[0])
+  track.getSettings = () => ({ width, height, frameRate: 30 })
+  return { stream, track }
+}
+
 export async function joinedWithLayers({ announce = 3 } = {}) {
   const ctx = setup()
   ctx.voice.serverScreenLayers = announce

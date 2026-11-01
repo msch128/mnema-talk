@@ -7,6 +7,7 @@ import { setSubscriptionSink, isCameraHidden, isCameraOffscreen, setCameraHidden
 import { setVisibleCameras, resetCameraVisibility, handleCamerasCapped, isCameraCapped, installCameraVisibility } from './voice/cameraVisibility'
 import { watchScreen, unwatchScreen, focusScreen, focusOwnScreen, setRemoteScreen, removeRemoteScreen, handleMediaState, handleScreenViewers, handleScreenLayers, setScreenFit, handleScreenQuality, handleLayersWanted, setScreenChoice, viewersOf, resetRemoteMedia, dropEndedWatches } from './voice/screens'
 import { updateUser, setVoiceRooms, syncSpeakingVisibility, joinedAtOf, setVoiceSnapshot, handleVoiceStateUpdate, handleSpeakingEvent, handleMuteState, muteStateOf, isSpeaking, setChannel, disconnect } from './voice/room'
+import { setCameraSize } from './voice/cameraFit'
 import { installStage } from './voice/cameras'
 import { handleStageHand, handleStageTalkPower, handleTalkReaction, hasTalkPower } from './voice/stage'
 
@@ -47,6 +48,9 @@ function exposedState(cs: VoiceState, stage: ReturnType<typeof installStage>) {
     screenChoice: cs.screenChoice,
     layersWanted: cs.layersWanted,
     serverScreenLayers: cs.serverScreenLayers,
+    serverCameraLayers: cs.serverCameraLayers,
+    cameraLayersWanted: cs.cameraLayersWanted,
+    cameraSizes: cs.cameraSizes,
     userVideoStreams: cs.userVideoStreams,
     isConnected: cs.isConnected,
     ping: cs.ping,
@@ -115,6 +119,7 @@ function exposedActions(cs: VoiceState) {
     handleLayersWanted: bind(handleLayersWanted),
     setScreenChoice: bind(setScreenChoice),
     setScreenFit: bind(setScreenFit),
+    setCameraSize: bind(setCameraSize),
     viewersOf: bind(viewersOf),
     resetRemoteMedia: bind(resetRemoteMedia),
     dropEndedWatches: bind(dropEndedWatches),

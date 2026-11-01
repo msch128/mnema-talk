@@ -81,7 +81,7 @@ func (vt *viewerTrack) retarget() {
 		vt.want = vt.ad.layer
 		vt.wantA.Store(int32(vt.want))
 	}
-	vt.eff = vt.group.resolve(vt.want)
+	vt.eff = vt.group.resolveFlowing(vt.want, layerNow())
 	ask := vt.keyframeDueLocked(layerNow())
 	eff := vt.eff
 	vt.mu.Unlock()
@@ -320,7 +320,11 @@ func (vt *viewerTrack) writeLocked(idx int, src *rtp.Packet, now time.Time) (swi
 // ones sent.
 func (vt *viewerTrack) switchLocked(idx int, src *rtp.Packet, now time.Time) {
 	if vt.started {
-		metrics.SFULayerSwitches.Inc()
+		if vt.group.source == SourceCamera {
+			metrics.SFUCameraLayerSwitches.Inc()
+		} else {
+			metrics.SFULayerSwitches.Inc()
+		}
 		vt.seqOff = vt.lastSeq + 1 - src.SequenceNumber
 		ticks := uint32(now.Sub(vt.lastAt).Seconds() * videoClockRate)
 		if ticks < 1 {

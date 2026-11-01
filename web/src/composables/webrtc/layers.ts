@@ -89,7 +89,7 @@ function declareLayers(cx: Cx, plans: LayerPlan[]) {
   chat.sendWSEvent('webrtc_layers', { layers: declared })
 }
 
-function isLayerActive(wanted: number[] | null, layer: number): boolean {
+export function isLayerActive(wanted: number[] | null, layer: number): boolean {
   return wanted === null ? layer === 0 : wanted.includes(layer)
 }
 
