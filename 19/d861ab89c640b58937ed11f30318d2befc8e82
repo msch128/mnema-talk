@@ -1,0 +1,76 @@
+doc/architecture.md
+  h_0ff4f4713441f4 350-369
+e2e/tests/audio-stall.spec.ts
+  h_0ff4f4713441f4 19-20
+e2e/tests/late-join.spec.ts
+  h_0ff4f4713441f4 20-21
+e2e/tests/opus-dtx.spec.ts
+  h_0ff4f4713441f4 1-155
+internal/sfu/opus_dtx_test.go
+  h_0ff4f4713441f4 1-269
+internal/sfu/sfu_test.go
+  h_0ff4f4713441f4 7,30-33,143-147,163
+loadtest/README.md
+  h_0ff4f4713441f4 413
+loadtest/viewer/publish.go
+  h_0ff4f4713441f4 8,39-43,51,81,125-131,133,141,194-195,198-200
+loadtest/viewer/synth.go
+  h_0ff4f4713441f4 114-143,145-152,155,160-162,165-167,169-184
+loadtest/viewer/synth_test.go
+  h_0ff4f4713441f4 5-6,116,122-189
+web/src/components/AudioAdvancedSection.vue
+  h_0ff4f4713441f4 26-31,68-76
+web/src/components/AudioSettingsPanel.test.ts
+  h_0ff4f4713441f4 327-348
+web/src/composables/useWebRTC.harness.fixture.ts
+  h_0ff4f4713441f4 214
+web/src/composables/webrtc/dtx.ts
+  h_0ff4f4713441f4 1-23
+web/src/composables/webrtc/peer.ts
+  h_0ff4f4713441f4 4-5,211,213-215,271
+web/src/composables/webrtc/sdp.test.ts
+  h_0ff4f4713441f4 4-6,178-304
+web/src/composables/webrtc/sdp.ts
+  h_0ff4f4713441f4 239-277
+web/src/composables/webrtc/senders.ts
+  h_0ff4f4713441f4 5,94,97,114,119,136
+web/src/composables/webrtc/session.ts
+  h_0ff4f4713441f4 142,210
+web/src/composables/webrtc/state.ts
+  h_0ff4f4713441f4 93-94,177
+web/src/i18n/de.json
+  h_0ff4f4713441f4 1321-1323
+web/src/i18n/en.json
+  h_0ff4f4713441f4 1321-1323
+web/src/lib/media/api.ts
+  h_0ff4f4713441f4 28-29,31
+web/src/lib/media/browserCall.ts
+  h_0ff4f4713441f4 35,37
+web/src/lib/media/frameWorkerLine.ts
+  h_0ff4f4713441f4 12-13,24-25,88
+web/src/lib/media/guard.test.ts
+  h_0ff4f4713441f4 185-193
+web/src/lib/media/guard.ts
+  h_0ff4f4713441f4 11,94,102,192,198,231
+web/src/lib/media/mediaFrameWorker.test.ts
+  h_0ff4f4713441f4 3,44,70,85-105
+web/src/lib/media/mediaFrameWorker.ts
+  h_0ff4f4713441f4 246-257,262
+web/src/lib/rtcStats.test.ts
+  h_0ff4f4713441f4 3-4,136-164
+web/src/stores/voiceSettings.ts
+  h_0ff4f4713441f4 91-92,99,124
+web/src/stores/voiceStoreBehaviour.test.ts
+  h_0ff4f4713441f4 46,61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "19d861ab89c640b58937ed11f30318d2befc8e82",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
