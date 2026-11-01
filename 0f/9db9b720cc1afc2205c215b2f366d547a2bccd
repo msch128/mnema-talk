@@ -1,0 +1,80 @@
+api/openapi.json
+  h_0ff4f4713441f4 36784
+doc/architecture.md
+  h_0ff4f4713441f4 366-376
+e2e/tests/camera-visibility.spec.ts
+  h_0ff4f4713441f4 1-94
+internal/events/testdata/events.golden.json
+  h_0ff4f4713441f4 27
+internal/events/types.go
+  h_0ff4f4713441f4 36
+internal/sfu/camera_cap.go
+  h_0ff4f4713441f4 1-108
+internal/sfu/camera_cap_test.go
+  h_0ff4f4713441f4 1-165
+internal/sfu/media_state.go
+  h_0ff4f4713441f4 27-28
+internal/sfu/room_signal.go
+  h_0ff4f4713441f4 85
+internal/sfu/sfu.go
+  h_0ff4f4713441f4 134-136
+internal/sfu/testhooks.go
+  h_0ff4f4713441f4 37-45
+internal/ws/camera_cap.go
+  h_0ff4f4713441f4 1-62
+internal/ws/camera_cap_test.go
+  h_0ff4f4713441f4 1-116
+internal/ws/hub.go
+  h_0ff4f4713441f4 179
+internal/ws/lifecycle.go
+  h_0ff4f4713441f4 72,84
+internal/ws/signal.go
+  h_0ff4f4713441f4 62-63,65-70
+web/src/components/ParticipantTile.test.ts
+  h_0ff4f4713441f4 265-275
+web/src/components/ParticipantTile.vue
+  h_0ff4f4713441f4 38-39,161-166
+web/src/components/TalkTile.vue
+  h_0ff4f4713441f4 43
+web/src/components/VoiceStage.vue
+  h_0ff4f4713441f4 26,158
+web/src/composables/useVisibleCameras.test.ts
+  h_0ff4f4713441f4 1-118
+web/src/composables/useVisibleCameras.ts
+  h_0ff4f4713441f4 1-68
+web/src/composables/webrtc/session.ts
+  h_0ff4f4713441f4 199-200
+web/src/i18n/de.json
+  h_0ff4f4713441f4 1727-1728
+web/src/i18n/en.json
+  h_0ff4f4713441f4 1727-1728
+web/src/stores/chat/events.ts
+  h_0ff4f4713441f4 279
+web/src/stores/voice.cameraVisibility.test.ts
+  h_0ff4f4713441f4 1-207
+web/src/stores/voice.ts
+  h_0ff4f4713441f4 6-7,39,95-99,149
+web/src/stores/voice/cameraVisibility.ts
+  h_0ff4f4713441f4 1-113
+web/src/stores/voice/cameras.ts
+  h_0ff4f4713441f4 59-63,72-73
+web/src/stores/voice/screens.ts
+  h_0ff4f4713441f4 221
+web/src/stores/voice/state.ts
+  h_0ff4f4713441f4 115-120
+web/src/types/events.test.ts
+  h_0ff4f4713441f4 85,267-272
+web/src/types/events.ts
+  h_0ff4f4713441f4 23-24,126,154,333,374
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0f9db9b720cc1afc2205c215b2f366d547a2bccd",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
