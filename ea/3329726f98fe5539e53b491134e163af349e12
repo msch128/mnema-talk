@@ -1,0 +1,61 @@
+api/openapi.json
+  s_5b748b0295d2f4::t_0ed11200c77524 36784
+internal/events/testdata/events.golden.json
+  s_45fff186c97845::t_1a4e540dd80020 27
+internal/events/types.go
+  s_bf24ce51cd8f95::t_96701afec54ff2 36
+internal/sfu/camera_cap.go
+  s_bf24ce51cd8f95::t_717ec224d63e37 1-104
+internal/sfu/camera_cap_test.go
+  s_5b748b0295d2f4::t_6100e02ddb430f 1-152
+internal/sfu/media_state.go
+  s_bf24ce51cd8f95::t_d726aa185ee567 27-28
+internal/sfu/room_signal.go
+  s_bf24ce51cd8f95::t_b6a064bc612ba5 85
+internal/sfu/sfu.go
+  s_bf24ce51cd8f95::t_00e94a78e004c4 134-136
+internal/sfu/testhooks.go
+  s_bf24ce51cd8f95::t_aa5c5c3f031d07 37-45
+internal/ws/camera_cap.go
+  s_45fff186c97845::t_19e755a0165744 1-62
+internal/ws/camera_cap_test.go
+  s_bf24ce51cd8f95::t_4269467cc27bb4 1-116
+internal/ws/hub.go
+  s_bf24ce51cd8f95::t_65f88373bd901c 179
+internal/ws/lifecycle.go
+  s_45fff186c97845::t_558f9859da380d 72,84
+internal/ws/signal.go
+  s_45fff186c97845::t_92ef6b09094373 62-63,65-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ea3329726f98fe5539e53b491134e163af349e12",
+  "prompts": {},
+  "sessions": {
+    "s_45fff186c97845": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afix-auto-quality-f2d71f852b07e2dd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
