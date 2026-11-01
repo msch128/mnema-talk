@@ -1,0 +1,27 @@
+internal/httpx/ratelimit.go
+  s_bf24ce51cd8f95::t_99e0ad5097d847 85-94
+internal/httpx/ratelimit_test.go
+  s_bf24ce51cd8f95::t_b4f281dd9b9ecb 279-301
+internal/server/router_build.go
+  s_bf24ce51cd8f95::t_62e7fdeff45060 347
+internal/server/speedtest.go
+  s_bf24ce51cd8f95::t_f56dd66265b505 18-27,33-42,47-53,74,82,85,89-90,99-118,123,130,133
+internal/server/speedtest_test.go
+  s_bf24ce51cd8f95::t_d9a4ee270ed3ec 4,8,27,37,41,44-48,54-71,73,78-80,84-103,107,110-116,118-143,146-147,150-156,158,160-169,171-174,178-183,185-201,204-210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d439a16c17caecca64ec7ad5ade2a143b29462bb",
+  "prompts": {},
+  "sessions": {
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
