@@ -1,0 +1,26 @@
+doc/architecture.md
+  h_0ff4f4713441f4 618-619,624-625
+doc/operations.md
+  h_0ff4f4713441f4 1101
+internal/metrics/metrics.go
+  h_0ff4f4713441f4 203-205,293
+internal/sfu/nack_history.go
+  h_0ff4f4713441f4 6,17-20,98,100-108,111-113,115-116,119,146,152-153,171,177,183,189-226,258-264,270,278,284,300-301,305,307,317-332,338-339,345-349,356-357,365,373
+internal/sfu/nack_history_test.go
+  h_0ff4f4713441f4 53
+internal/sfu/nack_responder.go
+  h_0ff4f4713441f4 38-41,69-76,134,163-165,170-200,304-312
+internal/sfu/nack_responder_test.go
+  h_0ff4f4713441f4 5,281-296,303,310,321-322,325,328-329,331-396
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e19fae9e1283dc66b48642007163326ca27843a3",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
