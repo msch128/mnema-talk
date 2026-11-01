@@ -1,0 +1,29 @@
+web/src/composables/webrtc/dtx.ts
+  s_bf24ce51cd8f95::t_8c064019664a4c 12-23
+web/src/composables/webrtc/peer.ts
+  s_bf24ce51cd8f95::t_46b82370c71dd5 4,271
+web/src/composables/webrtc/sdp.test.ts
+  s_bf24ce51cd8f95::t_8335d8d993cbe7 262-291
+web/src/composables/webrtc/senders.ts
+  s_bf24ce51cd8f95::t_2873e279bf5b2a 5,136
+web/src/composables/webrtc/session.ts
+  s_bf24ce51cd8f95::t_3359178765cbc6 142,210
+web/src/composables/webrtc/state.ts
+  s_bf24ce51cd8f95::t_362266d995434f 93-94,177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9b3577adb510fd2e75d8e54145b7e3df02cc2db4",
+  "prompts": {},
+  "sessions": {
+    "s_bf24ce51cd8f95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-member-polish-b2114349ae94ee15",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
