@@ -1,0 +1,29 @@
+e2e/tests/camera-layers.spec.ts
+  s_5b748b0295d2f4::t_dd99df680d60d5 61-69,71-74,76-81,83-91,93-100,102-105,107-111
+internal/sfu/adapt.go
+  s_5b748b0295d2f4::t_5ba94c3fa31a6f 177-197
+internal/sfu/camera_group_test.go
+  s_5b748b0295d2f4::t_290140bcaade08 149-150,156-158,228-260
+internal/sfu/viewer_track.go
+  s_5b748b0295d2f4::t_8526e0b9136b34 130-134
+web/src/components/TalkStageView.vue
+  s_5b748b0295d2f4::t_7c5ddc5d31cd87 50
+web/src/components/VoiceStage.cameraFit.test.ts
+  s_5b748b0295d2f4::t_cbd547fb989701 1-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "39cf15ce3acdabd20a26f9d40f36af616a263afd",
+  "prompts": {},
+  "sessions": {
+    "s_5b748b0295d2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aui-context-menus-43b7c728d6d610b9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
