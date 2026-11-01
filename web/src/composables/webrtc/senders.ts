@@ -2,7 +2,7 @@ import { mediaCall } from '../../lib/media/api'
 import { trackConstraints, streamEncoding, streamTuning } from '../../lib/streamQuality'
 import { SOURCE_CAMERA, SOURCE_MIC, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO, type FrameSource } from '../../lib/media/frame'
 import { publishMids } from './sdp'
-import { wantsDtx } from './dtx'
+import { callDtx } from './dtx'
 import { declareCameraLayers } from './cameraLayers'
 import { announceMediaUnprotected } from './mediaRoom'
 import type { Cx } from './state'
@@ -133,7 +133,7 @@ export function bindPublishSenders(cx: Cx, conn: RTCPeerConnection, sdp: string,
   const mids = publishMids(sdp, layerLines, cameraLayerLines)
   // fresh: senders bound by this call, which still need their parameters.
   const bound: Bound = { screen: false, camera: false, fresh: {} }
-  bindSlot(cx, conn, 'audioSender', 'audio', { mid: mids.audio, track: activeAudioTrack(cx), source: SOURCE_MIC, dtx: wantsDtx(cx.voice) }, bound)
+  bindSlot(cx, conn, 'audioSender', 'audio', { mid: mids.audio, track: activeAudioTrack(cx), source: SOURCE_MIC, dtx: callDtx(cx) }, bound)
   if (bindSlot(cx, conn, 'screenSender', 'screen', { mid: mids.video[0], track: null, source: SOURCE_SCREEN, layer: 0 }, bound)) {
     bound.screen = !!st.localScreenStream.value
   }

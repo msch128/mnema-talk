@@ -139,6 +139,7 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
   registerSignalingHandlers(cx)
 
   const gen = ++st.joinGeneration
+  st.dtx = null
   voice.setChannel(channelId)
   startMediaCall(cx, channelId)
   voiceSession.track(channelId)
@@ -206,6 +207,7 @@ function attachSubscriptions(cx: Cx) {
 function endCall(cx: Cx, { notifyServer }: { notifyServer: boolean }) {
   const { voice, chat, st } = cx
   st.joinGeneration++
+  st.dtx = null
   resetMediaAnnouncements()
   closeMediaRoom()
   mediaCall().stop()

@@ -90,6 +90,8 @@ export interface RtcState {
   pendingCandidates: RTCIceCandidateInit[]
   /** Bumped by every join and leave: an older join that is still awaiting the microphone sees the change and backs out instead of finishing. */
   joinGeneration: number
+  /** Whether this call's microphone uses DTX: decided once, with the first offer, and kept (see callDtx). */
+  dtx: boolean | null
   /** The join of a Create-a-Talk lobby that waits for its Talk (lobby.ts). */
   pendingLobby: PendingLobby | null
   screenAudioGuard: AudioGuard | null
@@ -172,7 +174,7 @@ export function createRtcState(): RtcState {
     audioSettingsBusy: 0,
     signalingChain: Promise.resolve(),
     pendingCandidates: [],
-    joinGeneration: 0,
+    joinGeneration: 0, dtx: null,
     pendingLobby: null,
     screenAudioGuard: null,
     warnedScreenAudioTracks: new WeakSet(),

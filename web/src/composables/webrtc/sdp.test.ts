@@ -259,6 +259,36 @@ describe('enableMicDtx', () => {
     expect(call.protectSender.mock.calls.filter(c => c[3] === true)).toHaveLength(dtx ? 1 : 0)
   })
 
+  it.each([true, false])('keeps the decision of a call when the setting is changed in it (setting %s at the start)', async (start) => {
+    const call = installRecordingCall()
+    const { rtc, voice } = setup()
+    voice.silenceSaving = start
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const pc = present(FakePC.instances.at(-1))
+    const offerAgain = async (n: number) => {
+      useChatStore().handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: offer('minptime=10;useinbandfec=1') + `a=x-round:${n}\r\n` } })
+      await vi.waitFor(() => expect(String(pc.remoteDescription?.sdp)).toContain(`a=x-round:${n}`))
+      return String(pc.remoteDescription?.sdp)
+    }
+    expect((await offerAgain(1)).includes('usedtx=1')).toBe(start)
+    // Changed mid-call: the next offers, and the worker, still follow the start of the call.
+    voice.silenceSaving = !start
+    voice.noiseMode = 'off'
+    expect((await offerAgain(2)).includes('usedtx=1')).toBe(start)
+    expect(call.protectSender.mock.calls.filter(c => c[3] === true)).toHaveLength(start ? 1 : 0)
+    // A new call decides again.
+    await rtc.leaveVoiceChannel()
+    const second = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await second
+    const pc2 = present(FakePC.instances.at(-1))
+    useChatStore().handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: offer('minptime=10;useinbandfec=1') } })
+    await vi.waitFor(() => expect(pc2.remoteDescription).not.toBeNull())
+    expect(String(pc2.remoteDescription?.sdp)).not.toContain('usedtx')
+  })
+
   it.each([[false, 'ai'], [true, 'off']] as const)('is not asked for with the setting %s and the noise filter %s', async (saving, noise) => {
     const { rtc, voice } = setup()
     voice.silenceSaving = saving

@@ -1,7 +1,7 @@
 import { mediaCall } from '../../lib/media/api'
 import { SOURCE_CAMERA, SOURCE_MIC, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO } from '../../lib/media/frame'
 import { canSendH264 } from './h264Support'
-import { wantsDtx } from './dtx'
+import { callDtx } from './dtx'
 import { enableMicDtx, publishMids, restrictVideoCodecs, tuneScreenLines } from './sdp'
 import { iceServers, relayOffered } from './iceServers'
 import { attachRemoteAudio, releaseRemoteAudio } from './remoteAudio'
@@ -268,7 +268,7 @@ async function executeOfferNegotiation(
 ): Promise<void> {
   const layerLines = Math.max(0, cx.voice.serverScreenLayers - 1)
   const cameraLayerLines = Math.max(0, cx.voice.serverCameraLayers - 1)
-  const sdp = prepareRemoteSdp(offer.sdp, layerLines, cameraLayerLines, wantsDtx(cx.voice))
+  const sdp = prepareRemoteSdp(offer.sdp, layerLines, cameraLayerLines, callDtx(cx))
   await conn.setRemoteDescription(new RTCSessionDescription({ type: offer.type, sdp }))
   if (!isCurrent()) return
   const bound = bindPublishSenders(cx, conn, offer.sdp || '', layerLines, cameraLayerLines)
