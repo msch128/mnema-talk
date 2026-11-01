@@ -220,6 +220,10 @@ func startVoice(ctx context.Context, cfg *config.Config, setup *setupcheck.Runti
 		opwarn.Raise(opwarn.VoiceUnavailable, 0)
 		return nil, func() {}, nil
 	}
+	if cfg.VoiceUploadLimitMbit > 0 {
+		voice.StartUploadGovernor(ctx, cfg.VoiceUploadLimitMbit)
+		slog.Info("voice upload limit on: viewers on automatic are stepped down the layers to stay under it", "limit_mbit", cfg.VoiceUploadLimitMbit)
+	}
 	voice.SetICEConnectedHandler(func(ev sfu.ICEConnected) {
 		if provesOutsideReach(ev, voice.AnnouncedIPs()) {
 			setup.RecordICEConnected(ev.Remote, time.Now())

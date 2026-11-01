@@ -107,6 +107,10 @@ type Config struct {
 	// WEBRTC_UDP_PORT_MIN). 0 gives every peer its own port(s) from the range
 	// instead, which caps how many people can be in calls at once.
 	WebRTCUDPMuxPort uint16
+	// VoiceUploadLimitMbit (VOICE_UPLOAD_LIMIT_MBIT) is the upload the server
+	// should stay under in calls, in Mbit/s; the SFU then steps viewers on
+	// automatic down the camera and screen layers. 0 (the default) = no limit.
+	VoiceUploadLimitMbit int
 	// WebRTCAnnounce lists the IPs or host names announced to browsers for
 	// media (WEBRTC_NAT_1TO1_IP, comma-separated).
 	WebRTCAnnounce []string

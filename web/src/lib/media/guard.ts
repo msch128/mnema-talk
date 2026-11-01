@@ -8,7 +8,7 @@ interface KeyedPort {
 }
 
 export interface MediaGuard {
-  armSender(sender: RTCRtpSender, channelId: string, senderId: string, source: FrameSource, layer?: number): boolean
+  armSender(sender: RTCRtpSender, channelId: string, senderId: string, source: FrameSource, layer?: number, dtx?: boolean): boolean
   /**
    * Arms a receiver. With no sender yet it opens nothing until bindReceiver
    * names the publisher. Arming an armed receiver only names the publisher
@@ -91,7 +91,7 @@ function keyMessage(fields: KeyFields): KeyMessage {
 }
 
 /** What a line's transform worker is told about it when it is armed. */
-function transformOptions(port: MessagePort, direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource, layer?: number) {
+function transformOptions(port: MessagePort, direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource, layer?: number, dtx?: boolean) {
   return {
     port,
     direction,
@@ -99,6 +99,7 @@ function transformOptions(port: MessagePort, direction: 'send' | 'recv', channel
     ...(senderId === null ? {} : { senderId }),
     ...(source === undefined ? {} : { source }),
     ...(layer === undefined ? {} : { layer }),
+    ...(dtx ? { dtx: true } : {}),
   }
 }
 
@@ -188,13 +189,13 @@ export function createMediaGuard(): MediaGuard {
     return worker
   }
 
-  function arm(target: TransformTarget, direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource, layer?: number): boolean {
+  function arm(target: TransformTarget, direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource, layer?: number, dtx?: boolean): boolean {
     if (!isValidArmTarget(direction, channelId, senderId, source)) return false
     const currentWorker = sharedWorker()
     if (!currentWorker) return false
     const channel = new MessageChannel()
     try {
-      target.transform = new RTCRtpScriptTransform(currentWorker, transformOptions(channel.port2, direction, channelId, senderId, source, layer), [channel.port2])
+      target.transform = new RTCRtpScriptTransform(currentWorker, transformOptions(channel.port2, direction, channelId, senderId, source, layer, dtx), [channel.port2])
     } catch (error) {
       // The line stays unprotected, which every caller already refuses; the
       // rest of the negotiation (and the other lines) must not be lost to it.
@@ -227,7 +228,7 @@ export function createMediaGuard(): MediaGuard {
   }
 
   return {
-    armSender: (sender, channelId, senderId, source, layer) => arm(sender, 'send', channelId, senderId, source, layer),
+    armSender: (sender, channelId, senderId, source, layer, dtx) => arm(sender, 'send', channelId, senderId, source, layer, dtx),
     armReceiver: armIncoming,
     setKey(epoch, key, replace = false, soft = false) {
       seq += 1

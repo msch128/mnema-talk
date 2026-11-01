@@ -561,7 +561,8 @@
       "srvReportAlreadyClosed": "Diese Meldung ist bereits abgeschlossen.",
       "srvAfterRfc3339": "„after“ muss ein Zeitstempel im Format RFC 3339 sein.",
       "srvBeforeDateRfc3339": "„before_date“ muss ein Zeitstempel im Format RFC 3339 sein.",
-      "srvUsernameTooLong": "Der Benutzername ist zu lang (höchstens {count} Zeichen)."
+      "srvUsernameTooLong": "Der Benutzername ist zu lang (höchstens {count} Zeichen).",
+      "srvATalkIsRunning": "Ein Talk läuft; der Geschwindigkeitstest würde ihn stören."
     },
     "field": {
       "content": "Nachricht",
@@ -1318,7 +1319,9 @@
     "pttFirstUseAction": "Taste wählen",
     "inputVolumeHint": "Wie laut dein Mikrofon vor dem Filter ist. Lass es bei 100 %, außer andere sagen, du seist zu leise.",
     "sensitivityHint": "Wie laut du sein musst, damit sich das Mikrofon öffnet. Senke den Wert, wenn deine Stimme abgeschnitten wird, erhöhe ihn, wenn Hintergrundgeräusche durchkommen.",
-    "pttKeyIdleTest": "Starte den Mikrofontest und halte dann {key} gedrückt zum Ausprobieren"
+    "pttKeyIdleTest": "Starte den Mikrofontest und halte dann {key} gedrückt zum Ausprobieren",
+    "silenceSavingTitle": "Datenverbrauch senken, wenn es still ist",
+    "silenceSavingHint": "Sendet fast nichts, solange du nicht sprichst. Schalte es für Musik, ein Instrument oder einen gleichbleibenden Ton aus dem Mikrofon aus, die für Stille gehalten werden können. Es ist auch aus, solange der Rauschfilter auf „Aus“ steht. Gilt ab dem nächsten Talk, dem du beitrittst."
   },
   "stats": {
     "title": "Verbindungsstatus",
@@ -2140,6 +2143,37 @@
             "fix": "Aktiviere WebSocket in deinem Reverse-Proxy: Er muss die Header Upgrade: websocket und Connection: Upgrade weiterreichen. Nginx Proxy Manager: „Websockets Support“ einschalten. nginx: proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection upgrade; proxy_http_version 1.1. Caddy und Traefik tun das standardmäßig."
           }
         }
+      },
+      "capacity": {
+        "heading": "Kapazität",
+        "cpu": "CPU",
+        "memory": "Speicher",
+        "media": "Gesendete Medien",
+        "calls": "In Gesprächen",
+        "cpuValue": "{used} von {total} Kernen",
+        "memoryValue": "{used} von {limit}",
+        "memoryNoLimit": "{used} (kein Limit gesetzt)",
+        "mediaValue": "{mbps} Mbit/s · {pps} Pakete/s",
+        "callsValue": "{members} · {shares}",
+        "estimateOk": {
+          "one": "Schätzung: Dieser Server kann etwa {count} weiteres Mitglied aufnehmen, das eine Bildschirmfreigabe sieht.",
+          "other": "Schätzung: Dieser Server kann etwa {count} weitere Mitglieder aufnehmen, die je eine Bildschirmfreigabe sehen."
+        },
+        "estimate_busy": "Schätzung: Der Server ist schon über der Hälfte seiner CPU; plane keine weiteren Mitglieder ein, bis es ruhiger ist.",
+        "estimate_memory": "Schätzung: Der Speicher ist fast voll; erhöhe APP_MEM_LIMIT, bevor weitere Mitglieder dazukommen.",
+        "basisObserved": "sie nutzt die gemessenen CPU-Kosten pro Paket dieses Servers ({scale}-mal der Benchmark)",
+        "basisTable": "sie nutzt die Werte des Benchmarks, weil zu wenig Verkehr zum Messen dieses Servers da ist",
+        "assumption": "Eine Schätzung, keine Zusage. Sie zählt nur die CPU: Angenommen wird, dass jedes neue Mitglied eine Bildschirmfreigabe mit 1,5 Mbit/s neben 3 Sprechenden sieht und {cost} Millicores CPU kostet; geplant wird mit der Hälfte der CPU ({cores} Kerne). Speicher und Upload gehen nicht ein, außer dem Umschalten, wenn der Speicher fast voll ist; {basis}. Einzelheiten: doc/benchmark.md.",
+        "members": {
+          "one": "{count} Mitglied",
+          "other": "{count} Mitglieder"
+        },
+        "shares": {
+          "one": "{count} Bildschirmfreigabe",
+          "other": "{count} Bildschirmfreigaben"
+        },
+        "collecting": "Messwerte werden gesammelt; die Zahlen erscheinen wenige Sekunden nach dem Start.",
+        "failed": "Die Kapazitätswerte konnten nicht geladen werden."
       }
     },
     "users": "Mitgliederverwaltung",
@@ -4398,7 +4432,8 @@
       "candidates": "Suche Adressen …",
       "direct": "Probiere die direkte Route …",
       "relayUdp": "Probiere das Relay über UDP …",
-      "relayTcp": "Probiere das Relay über TCP …"
+      "relayTcp": "Probiere das Relay über TCP …",
+      "speed": "Messe den Download vom Server …"
     },
     "addresses": "Gefundene Adressen: {host} lokal, {srflx} öffentlich, {relay} Relay",
     "path": {
@@ -4455,7 +4490,19 @@
       }
     },
     "docs": "Sprache: Fehlersuche",
-    "failed": "Der Test konnte nicht laufen."
+    "failed": "Der Test konnte nicht laufen.",
+    "speed": {
+      "ok": {
+        "one": "Dein Gerät hat vom Server mit {mbps} Mbit/s geladen, gemessen bis dorthin, wo der Server erreichbar ist (der nächste Reverse-Proxy oder Tunnel). Das ist grob sein Upload: genug für eine Bildschirmfreigabe, die etwa {count} Mitglied sieht (je {rate} Mbit/s plus {overhead} % Zuschlag). Ein kurzer Test; deine eigene Verbindung kann die Grenze sein.",
+        "other": "Dein Gerät hat vom Server mit {mbps} Mbit/s geladen, gemessen bis dorthin, wo der Server erreichbar ist (der nächste Reverse-Proxy oder Tunnel). Das ist grob sein Upload: genug für eine Bildschirmfreigabe, die etwa {count} Mitglieder sehen (je {rate} Mbit/s plus {overhead} % Zuschlag). Ein kurzer Test; deine eigene Verbindung kann die Grenze sein."
+      },
+      "none": "Dein Gerät hat vom Server mit {mbps} Mbit/s geladen, gemessen bis dorthin, wo der Server erreichbar ist. Das reicht als Upload nicht einmal für ein Mitglied, das eine Bildschirmfreigabe sieht ({rate} Mbit/s plus {overhead} % Zuschlag). Ein kurzer Test; deine eigene Verbindung kann die Grenze sein.",
+      "lan": "Dieses Gerät ist wahrscheinlich im selben Netz wie der Server, daher kann der Speedtest den Upload des Servers nicht messen. Starte ihn auf einem Handy im Mobilfunknetz.",
+      "fail": "Der Speedtest konnte nicht laufen, daher ist der Upload des Servers unbekannt.",
+      "limited": "Zu viele Speedtests hintereinander; warte ein paar Minuten und starte den Test erneut.",
+      "busy": "Der Speedtest wurde übersprungen, weil gerade ein Talk läuft; er würde das Gespräch stören. Starte den Test, wenn niemand spricht.",
+      "maybeLocal": "Das kann eine lokale Verbindung sein; teste von außen, um sicherzugehen."
+    }
   },
   "statusEditor": {
     "subtitle": "Wird allen neben deinem Namen angezeigt.",

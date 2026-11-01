@@ -151,6 +151,7 @@ func (r *envReader) numericSettings(cfg *Config) (portMin, portMax uint16) {
 	cfg.AuditRetentionDays = r.int("AUDIT_RETENTION_DAYS", 0)
 	cfg.EditHistoryRetentionDays = r.int("EDIT_HISTORY_RETENTION_DAYS", 0)
 	cfg.MaxUploadMB = r.int("MAX_UPLOAD_SIZE_MB", 50)
+	cfg.VoiceUploadLimitMbit = r.int("VOICE_UPLOAD_LIMIT_MBIT", 0)
 	cfg.EmojiMax = r.int("EMOJI_MAX", 200)
 	cfg.UploadQuotaMBPerDay = r.int("UPLOAD_QUOTA_MB_PER_DAY", 2048)
 	cfg.MediaMaxTotalMB = r.int("MEDIA_MAX_TOTAL_MB", 0)

@@ -236,3 +236,42 @@ export function tuneScreenLines(sdp: string, mids: { video: string[] }, h264: bo
   for (const mid of [mids.video[0], ...mids.video.slice(2)]) tuned = tuneScreenOffer(tuned, mid, { h264 })
   return tuned
 }
+
+/** One Opus fmtp line with discontinuous transmission requested (usedtx=1), whatever it said before. */
+function withDtx(params: string) {
+  const rest = params.split(';').filter(p => p.trim() && !/^\s*usedtx=/.test(p))
+  return [...rest, 'usedtx=1'].join(';')
+}
+
+function dtxSection(section: string[]) {
+  const opus = section.map(l => /^a=rtpmap:(\d+) opus\//i.exec(l)?.[1]).find(Boolean)
+  if (!opus) return section
+  const fmtp = new RegExp(`^a=fmtp:${opus} (.*)$`)
+  if (section.some(l => fmtp.test(l))) return section.map(l => l.replace(fmtp, (_, params: string) => `a=fmtp:${opus} ${withDtx(params)}`))
+  // Opus without parameters: the line goes right after its rtpmap.
+  return section.flatMap(l => (l.startsWith(`a=rtpmap:${opus} `) ? [l, `a=fmtp:${opus} usedtx=1`] : [l]))
+}
+
+/**
+ * Asks, in the SFU's offer, for discontinuous transmission on the microphone
+ * line (mid): the browser then sends only about 5 small packets a second while
+ * the encoder finds nothing but silence, instead of 50 (RFC 7587 usedtx).
+ * It decides by the signal: true silence and quiet room noise count as
+ * silence, speech never does, and a steady or very quiet musical sound may.
+ * The SFU forwards the packets as they come, with their timestamp gaps, and
+ * the listeners' browsers fill the gaps with comfort noise.
+ * The screen's sound is left alone: music and game sound have quiet passages
+ * that are not silence.
+ */
+export function enableMicDtx(sdp: string, mid: string | null | undefined) {
+  if (!sdp || mid === null || mid === undefined) return sdp
+  const eol = sdp.includes('\r\n') ? '\r\n' : '\n'
+  const lines = sdp.split(/\r?\n/)
+  for (const [from, to] of sectionBounds(lines)) {
+    const section = lines.slice(from, to)
+    if (!section[0]?.startsWith('m=audio') || !section.includes(`a=mid:${mid}`)) continue
+    lines.splice(from, to - from, ...dtxSection(section))
+    break
+  }
+  return lines.join(eol)
+}

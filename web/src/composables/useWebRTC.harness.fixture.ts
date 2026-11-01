@@ -211,7 +211,7 @@ export function installRecordingCall(allow = true) {
     onWire: vi.fn((listener: (channelId: string, wire: string) => void) => { onWireListener = listener }),
     onNotice: vi.fn((listener: (notice: MediaNotice) => void) => { onNoticeListener = listener }),
     onVerification: vi.fn((listener: (verification: MediaVerification | null) => void) => { onVerificationListener = listener }),
-    protectSender: vi.fn((_sender: RTCRtpSender, _source: number, _layer?: number) => allow),
+    protectSender: vi.fn((_sender: RTCRtpSender, _source: number, _layer?: number, _dtx?: boolean) => allow),
     prepareIncoming: vi.fn((_receiver: RTCRtpReceiver) => allow),
     protectIncoming: vi.fn((_receiver: RTCRtpReceiver | undefined, _senderId: string, _source: number) => allow),
     fireKey() { onKeyListener?.() },

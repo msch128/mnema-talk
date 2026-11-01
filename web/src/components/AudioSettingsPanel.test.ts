@@ -324,6 +324,28 @@ describe('AudioSettingsPanel first check and push to talk', () => {
   })
 })
 
+describe('AudioSettingsPanel silence saving', () => {
+  beforeEach(() => { localStorage.clear(); setActivePinia(createPinia()); vi.clearAllMocks() })
+
+  it('is on by default, can be turned off and stays off', async () => {
+    const voice = useVoiceStore()
+    expect(voice.silenceSaving).toBe(true)
+    const wrapper = mount(AudioSettingsPanel, mountOpts)
+    const toggle = wrapper.get('[data-testid="silence-saving"]')
+    expect(toggle.attributes('aria-checked')).toBe('true')
+    expect(wrapper.text()).toContain(t('audio.silenceSavingHint'))
+    await toggle.trigger('click')
+    expect(voice.silenceSaving).toBe(false)
+    expect(toggle.attributes('aria-checked')).toBe('false')
+    expect(localStorage.getItem('mnema_dtx')).toBe('false')
+    setActivePinia(createPinia())
+    expect(useVoiceStore().silenceSaving).toBe(false)
+    await toggle.trigger('click')
+    expect(voice.silenceSaving).toBe(true)
+    wrapper.unmount()
+  })
+})
+
 describe('AudioSettingsPanel preference interactions', () => {
   beforeEach(() => { localStorage.clear(); setActivePinia(createPinia()); vi.clearAllMocks() })
   it('switches input mode, records code or key, ignores keys while not recording, changes manual sensitivity', async () => {

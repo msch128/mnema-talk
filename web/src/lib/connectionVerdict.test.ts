@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isLocalAddress, verdictOf, type ConnectionReport, type PathResult } from './connectionVerdict'
+import { isLocalAddress, screenViewersFor, verdictOf, type ConnectionReport, type PathResult } from './connectionVerdict'
 
 const ok = (remoteAddress = '203.0.113.7'): PathResult => ({ outcome: 'ok', pair: { localType: 'srflx', remoteType: 'host', remoteAddress } })
 const fail: PathResult = { outcome: 'fail' }
@@ -54,5 +54,15 @@ describe('isLocalAddress', () => {
     for (const a of ['8.8.8.8', '203.0.113.7', '172.32.0.1', '100.128.0.1', '2a00:1450::1']) {
       expect(isLocalAddress(a), a).toBe(false)
     }
+  })
+})
+
+describe('screenViewersFor', () => {
+  it('divides the upload by what one screen watcher needs (1.5 Mbit/s plus 30 %)', () => {
+    expect(screenViewersFor(0)).toBe(0)
+    expect(screenViewersFor(1.9)).toBe(0)
+    expect(screenViewersFor(1.95)).toBe(1)
+    expect(screenViewersFor(100)).toBe(51)
+    expect(screenViewersFor(-5)).toBe(0)
   })
 })

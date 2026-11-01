@@ -75,7 +75,17 @@ verdict: direct UDP works, only the relay works, or nothing works. "Only the
 relay works" means calls work but the UDP forward is missing or blocked: fix it
 (rung 5) so the relay is not the only way in. "Nothing works" means neither
 50000-50050/udp nor 3479 reached the server: check the router and firewall, and
-CGNAT. In a terminal, `docker compose exec app mnema-talk doctor` prints the
+CGNAT.
+
+The last line of the result is the speed test: how fast this device downloaded
+from the server, and what that means for a screen share (roughly the server's
+upload, measured to the nearest reverse proxy or tunnel, so a tunnel in front
+of your server shows the tunnel's speed). It says it cannot measure when the
+device is on the server's network, so run it from the phone. *Could not run*
+means the stream was blocked or too short to mean anything. *Too many speed
+tests* is the limit of four per ten minutes per member (six per address): wait
+and repeat. *Skipped because a Talk is running* is on purpose: the test can fill
+a home uplink for three seconds, which would be heard in the call. In a terminal, `docker compose exec app mnema-talk doctor` prints the
 Status checks with the same fixes.
 
 ### Rung 5: a real call between two networks

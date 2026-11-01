@@ -561,7 +561,8 @@
       "srvReportAlreadyClosed": "This report is already closed.",
       "srvAfterRfc3339": "“after” must be a timestamp in RFC 3339 format.",
       "srvBeforeDateRfc3339": "“before_date” must be a timestamp in RFC 3339 format.",
-      "srvUsernameTooLong": "The username is too long (max. {count} characters)."
+      "srvUsernameTooLong": "The username is too long (max. {count} characters).",
+      "srvATalkIsRunning": "A Talk is running; the speed test would disturb it."
     },
     "field": {
       "content": "Message",
@@ -1318,7 +1319,9 @@
     "pttFirstUseAction": "Choose a key",
     "inputVolumeHint": "How loud your microphone is before the filter. Leave it at 100 % unless people say you are too quiet.",
     "sensitivityHint": "How loud you must be before the microphone opens. Lower it if your voice gets cut off, raise it if background noise gets through.",
-    "pttKeyIdleTest": "Start the microphone test, then hold {key} to try it"
+    "pttKeyIdleTest": "Start the microphone test, then hold {key} to try it",
+    "silenceSavingTitle": "Save bandwidth when silent",
+    "silenceSavingHint": "Sends almost nothing while you are not speaking. Turn it off for music, an instrument or a steady sound from your microphone, which can be taken for silence. It is also off while the noise filter is Off. Applies from the next Talk you join."
   },
   "stats": {
     "title": "Connection status",
@@ -2140,6 +2143,37 @@
             "fix": "Enable WebSocket in your reverse proxy: it must pass the headers Upgrade: websocket and Connection: Upgrade. Nginx Proxy Manager: switch on Websockets Support. nginx: proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection upgrade; proxy_http_version 1.1. Caddy and Traefik do this by default."
           }
         }
+      },
+      "capacity": {
+        "heading": "Capacity",
+        "cpu": "CPU",
+        "memory": "Memory",
+        "media": "Media sent",
+        "calls": "In calls",
+        "cpuValue": "{used} of {total} cores",
+        "memoryValue": "{used} of {limit}",
+        "memoryNoLimit": "{used} (no limit set)",
+        "mediaValue": "{mbps} Mbit/s · {pps} packets/s",
+        "callsValue": "{members} · {shares}",
+        "estimateOk": {
+          "one": "Estimate: this server can take about {count} more member, each watching a screen share.",
+          "other": "Estimate: this server can take about {count} more members, each watching a screen share."
+        },
+        "estimate_busy": "Estimate: the server is already past half of its CPU; do not plan for more members until it is quieter.",
+        "estimate_memory": "Estimate: memory is nearly full; raise APP_MEM_LIMIT before more members join.",
+        "basisObserved": "it uses this server’s measured CPU cost per packet ({scale} times the benchmark)",
+        "basisTable": "it uses the benchmark values, because there is too little traffic to measure this server",
+        "assumption": "An estimate, not a promise. It counts CPU only: it assumes each new member watches one 1.5 Mbit/s screen share next to 3 speakers, costing {cost} millicores of CPU, and plans at half of the CPU ({cores} cores). Memory and upload bandwidth are not part of it, apart from the switch when memory is nearly full; {basis}. Details: doc/benchmark.md.",
+        "members": {
+          "one": "{count} member",
+          "other": "{count} members"
+        },
+        "shares": {
+          "one": "{count} screen share",
+          "other": "{count} screen shares"
+        },
+        "collecting": "Collecting measurements; the figures appear within a few seconds of the start.",
+        "failed": "The capacity figures could not be loaded."
       }
     },
     "users": "Member management",
@@ -4398,7 +4432,8 @@
       "candidates": "Looking for addresses…",
       "direct": "Trying the direct route…",
       "relayUdp": "Trying the relay over UDP…",
-      "relayTcp": "Trying the relay over TCP…"
+      "relayTcp": "Trying the relay over TCP…",
+      "speed": "Measuring the download from the server…"
     },
     "addresses": "Addresses found: {host} local, {srflx} public, {relay} relay",
     "path": {
@@ -4455,7 +4490,19 @@
       }
     },
     "docs": "Troubleshooting voice",
-    "failed": "The test could not run."
+    "failed": "The test could not run.",
+    "speed": {
+      "ok": {
+        "one": "Your device downloaded from the server at {mbps} Mbit/s, measured to where the server is reachable (the nearest reverse proxy or tunnel). That is roughly its upload: enough for a screen share watched by about {count} member ({rate} Mbit/s plus {overhead} % overhead each). A short test; your own connection can be the limit.",
+        "other": "Your device downloaded from the server at {mbps} Mbit/s, measured to where the server is reachable (the nearest reverse proxy or tunnel). That is roughly its upload: enough for a screen share watched by about {count} members ({rate} Mbit/s plus {overhead} % overhead each). A short test; your own connection can be the limit."
+      },
+      "none": "Your device downloaded from the server at {mbps} Mbit/s, measured to where the server is reachable. That is not enough upload for even one member to watch a screen share ({rate} Mbit/s plus {overhead} % overhead). A short test; your own connection can be the limit.",
+      "lan": "This device is probably on the same network as the server, so the speed test cannot measure the server’s upload. Run it from a phone on mobile data.",
+      "fail": "The speed test could not run, so the server’s upload is not known.",
+      "limited": "Too many speed tests in a row; wait a few minutes and run the test again.",
+      "busy": "The speed test was skipped because a Talk is running; it would disturb the call. Run the test when nobody is talking.",
+      "maybeLocal": "This may be a local connection; test from outside to be sure."
+    }
   },
   "statusEditor": {
     "subtitle": "Shown next to your name for everyone to see.",

@@ -338,11 +338,13 @@ func (c *components) newSystem() error {
 		testMailLimit: httpx.NewRateLimiter(5, 10*time.Minute).Named("test_mail"),
 		probeLimit:    httpx.NewRateLimiter(12, 10*time.Minute).Named("connection_probe"),
 		wsReportLimit: httpx.NewRateLimiter(30, 10*time.Minute).Named("ws_report"),
+		speed:         newSpeedTest(),
 	}
 	if h.version == "" {
 		h.version = "dev"
 	}
 	h.events = c.pub
+	h.speed.callRunning = func() bool { return c.hub != nil && c.hub.Stats().VoiceParticipants > 0 }
 	h.warnings = opwarn.Default
 	h.setup = d.Setup
 	c.opsSrc = &opsSource{db: d.DB, hub: c.hub, sfu: d.SFU, storage: d.StorageReady, hasStore: d.Store != nil, version: h.version}

@@ -276,3 +276,26 @@ func TestWriteRateLimitedNamesTheWait(t *testing.T) {
 		t.Errorf("got %+v", body.Error)
 	}
 }
+
+func TestRefundGivesBackAGrantedHit(t *testing.T) {
+	rl := NewRateLimiter(2, time.Minute)
+	for i := 0; i < 2; i++ {
+		if ok, _ := rl.TryAllow("k"); !ok {
+			t.Fatal("within the limit")
+		}
+	}
+	if ok, _ := rl.TryAllow("k"); ok {
+		t.Fatal("over the limit")
+	}
+	rl.Refund("k")
+	if ok, _ := rl.TryAllow("k"); !ok {
+		t.Fatal("a refunded hit must be usable again")
+	}
+	rl.Refund("unknown") // no entry: nothing happens
+	rl.Refund("k")
+	rl.Refund("k")
+	rl.Refund("k") // never below zero
+	if ok, _ := rl.TryAllow("k"); !ok {
+		t.Fatal("window still usable")
+	}
+}

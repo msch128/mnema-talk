@@ -25,9 +25,10 @@ export interface MediaCall {
    * Seals what a sender sends. `source` is what the line carries (microphone,
    * camera, screen, screen sound); it is bound into every frame. `layer` (0..3)
    * marks a line of a screen share's layers, whose frames then carry that
-   * layer in their stream ID.
+   * layer in their stream ID. `dtx` says the line's Opus encoder uses DTX:
+   * the empty frames it hands over while silent are then not sent.
    */
-  protectSender(sender: RTCRtpSender, source: FrameSource, layer?: number): boolean
+  protectSender(sender: RTCRtpSender, source: FrameSource, layer?: number, dtx?: boolean): boolean
   /**
    * Arms a receiver before its line receives anything. A browser applies a
    * receiver transform only if it was set before then, and the publisher of a

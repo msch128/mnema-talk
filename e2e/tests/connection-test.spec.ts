@@ -49,6 +49,9 @@ test('Test my connection reaches the voice port directly and through the relay o
     await expect(page.getByTestId(`connection-test-path-${path}`), path).toHaveAttribute('data-outcome', 'ok')
   }
 
+  // The harness is the server's own network, so the upload cannot be measured and the test says so.
+  await expect(page.getByTestId('connection-test-speed')).toHaveAttribute('data-outcome', 'lan')
+
   // The test made no presence and no Talk, and a peer on the harness's own
   // loopback address is not "from outside": the voice port stays neutral.
   await page.getByTestId('admin-status').getByRole('button', { name: 'Aktualisieren' }).click()

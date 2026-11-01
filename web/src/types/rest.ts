@@ -4378,6 +4378,60 @@ export function isServerBuiltinTURNHealth(value: unknown): value is ServerBuilti
 
 export const decodeServerBuiltinTURNHealth = decoder("server.BuiltinTURNHealth", isServerBuiltinTURNHealth)
 
+export type ServerCapacityEstimate = {
+  basis: "table" | "observed"
+  more_members: number
+  per_member_millicores: number
+  plan_cores: number
+  scale: number
+  status: "ok" | "busy" | "memory"
+}
+
+export function isServerCapacityEstimate(value: unknown): value is ServerCapacityEstimate {
+  return isRecord(value)
+    && (hasOwn(value, "basis") && (value["basis"] === "table" || value["basis"] === "observed"))
+    && (hasOwn(value, "more_members") && isInteger(value["more_members"]))
+    && (hasOwn(value, "per_member_millicores") && (typeof value["per_member_millicores"] === 'number' && Number.isFinite(value["per_member_millicores"])))
+    && (hasOwn(value, "plan_cores") && (typeof value["plan_cores"] === 'number' && Number.isFinite(value["plan_cores"])))
+    && (hasOwn(value, "scale") && (typeof value["scale"] === 'number' && Number.isFinite(value["scale"])))
+    && (hasOwn(value, "status") && (value["status"] === "ok" || value["status"] === "busy" || value["status"] === "memory"))
+}
+
+export const decodeServerCapacityEstimate = decoder("server.CapacityEstimate", isServerCapacityEstimate)
+
+export type ServerCapacityStatus = {
+  collecting: boolean
+  cpu_cores: number
+  cpu_used_cores: number
+  egress_mbps: number
+  egress_pps: number
+  estimate: ServerCapacityEstimate
+  heap_bytes: number
+  ingress_pps: number
+  memory_limit_bytes: number
+  peers: number
+  rss_bytes: number
+  screen_shares: number
+}
+
+export function isServerCapacityStatus(value: unknown): value is ServerCapacityStatus {
+  return isRecord(value)
+    && (hasOwn(value, "collecting") && typeof value["collecting"] === 'boolean')
+    && (hasOwn(value, "cpu_cores") && (typeof value["cpu_cores"] === 'number' && Number.isFinite(value["cpu_cores"])))
+    && (hasOwn(value, "cpu_used_cores") && (typeof value["cpu_used_cores"] === 'number' && Number.isFinite(value["cpu_used_cores"])))
+    && (hasOwn(value, "egress_mbps") && (typeof value["egress_mbps"] === 'number' && Number.isFinite(value["egress_mbps"])))
+    && (hasOwn(value, "egress_pps") && isInteger(value["egress_pps"]))
+    && (hasOwn(value, "estimate") && isServerCapacityEstimate(value["estimate"]))
+    && (hasOwn(value, "heap_bytes") && isInteger(value["heap_bytes"]))
+    && (hasOwn(value, "ingress_pps") && isInteger(value["ingress_pps"]))
+    && (hasOwn(value, "memory_limit_bytes") && isInteger(value["memory_limit_bytes"]))
+    && (hasOwn(value, "peers") && isInteger(value["peers"]))
+    && (hasOwn(value, "rss_bytes") && isInteger(value["rss_bytes"]))
+    && (hasOwn(value, "screen_shares") && isInteger(value["screen_shares"]))
+}
+
+export const decodeServerCapacityStatus = decoder("server.CapacityStatus", isServerCapacityStatus)
+
 export type ServerConnectionProbeAnswer = {
   sdp: string
 }
@@ -4606,11 +4660,13 @@ export type ServerOpsSample = {
   cpu_millicores: number
   db_connections_acquired: number
   egress_bps: number
+  egress_pps: number
   errors_5xx: number
   goroutines: number
   heap_bytes: number
   ice_failures: number
   ingress_bps: number
+  ingress_pps: number
   online_users: number
   peers: number
   requests: number
@@ -4625,11 +4681,13 @@ export function isServerOpsSample(value: unknown): value is ServerOpsSample {
     && (hasOwn(value, "cpu_millicores") && isInteger(value["cpu_millicores"]))
     && (hasOwn(value, "db_connections_acquired") && isInteger(value["db_connections_acquired"]))
     && (hasOwn(value, "egress_bps") && isInteger(value["egress_bps"]))
+    && (hasOwn(value, "egress_pps") && isInteger(value["egress_pps"]))
     && (hasOwn(value, "errors_5xx") && isInteger(value["errors_5xx"]))
     && (hasOwn(value, "goroutines") && isInteger(value["goroutines"]))
     && (hasOwn(value, "heap_bytes") && isInteger(value["heap_bytes"]))
     && (hasOwn(value, "ice_failures") && isInteger(value["ice_failures"]))
     && (hasOwn(value, "ingress_bps") && isInteger(value["ingress_bps"]))
+    && (hasOwn(value, "ingress_pps") && isInteger(value["ingress_pps"]))
     && (hasOwn(value, "online_users") && isInteger(value["online_users"]))
     && (hasOwn(value, "peers") && isInteger(value["peers"]))
     && (hasOwn(value, "requests") && isInteger(value["requests"]))

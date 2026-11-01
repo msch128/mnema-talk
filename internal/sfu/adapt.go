@@ -96,7 +96,10 @@ type adapter struct {
 	// share has): a small tile does not need the source, so the layer never
 	// goes above it. climbing is set while the viewer is below a best that
 	// has just been raised and has had no trouble since.
-	best     int
+	best int
+	// squeeze is how many layers below best the upload limit holds the viewer
+	// (adapt_limit.go).
+	squeeze  int
 	climbing bool
 
 	graceUntil time.Time
@@ -144,7 +147,7 @@ func (a *adapter) setFloor(floor int) {
 
 // top is the best layer allowed: the viewer's best, but never worse than the floor.
 func (a *adapter) top() int {
-	return min(a.best, a.floor)
+	return min(a.best+a.squeeze, a.floor)
 }
 
 // setBest limits the layer to what the viewer's picture can use. A viewer

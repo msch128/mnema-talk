@@ -7461,6 +7461,113 @@
         ],
         "type": "object"
       },
+      "server.CapacityEstimate": {
+        "properties": {
+          "basis": {
+            "description": "Basis is \"observed\" when this host's own cost per packet was used,\n\"table\" when the benchmark values were (too little traffic).",
+            "enum": [
+              "table",
+              "observed"
+            ],
+            "type": "string"
+          },
+          "more_members": {
+            "description": "MoreMembers: each one watching a 1.5 Mbit/s screen share, planning at\nhalf of the CPU. 0 with Status memory or busy.",
+            "type": "integer"
+          },
+          "per_member_millicores": {
+            "description": "PerMemberMillicores is the CPU one more member costs.",
+            "type": "number"
+          },
+          "plan_cores": {
+            "description": "PlanCores is the CPU the estimate allows itself to use.",
+            "type": "number"
+          },
+          "scale": {
+            "description": "Scale is this host's observed CPU cost divided by the model's.",
+            "type": "number"
+          },
+          "status": {
+            "description": "Status is ok, busy (past the plan already) or memory (RSS near the limit).",
+            "enum": [
+              "ok",
+              "busy",
+              "memory"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "basis",
+          "more_members",
+          "per_member_millicores",
+          "plan_cores",
+          "scale",
+          "status"
+        ],
+        "type": "object"
+      },
+      "server.CapacityStatus": {
+        "properties": {
+          "collecting": {
+            "description": "Collecting is true in the first seconds after the start, before the\nsampler has taken a measurement: the figures are not real yet.",
+            "type": "boolean"
+          },
+          "cpu_cores": {
+            "description": "CPUCores is the CPU the server may use; CPUUsedCores what it used over\nthe last minute.",
+            "type": "number"
+          },
+          "cpu_used_cores": {
+            "type": "number"
+          },
+          "egress_mbps": {
+            "description": "EgressMbps is the media the server sends, averaged over the last minute.",
+            "type": "number"
+          },
+          "egress_pps": {
+            "type": "integer"
+          },
+          "estimate": {
+            "$ref": "#/components/schemas/server.CapacityEstimate",
+            "description": "Estimate is the planning estimate (see doc/benchmark.md)."
+          },
+          "heap_bytes": {
+            "type": "integer"
+          },
+          "ingress_pps": {
+            "type": "integer"
+          },
+          "memory_limit_bytes": {
+            "description": "MemoryLimitBytes is the container limit (APP_MEM_LIMIT); 0 when unknown.",
+            "type": "integer"
+          },
+          "peers": {
+            "description": "Peers are media connections now; ScreenShares live screen shares.",
+            "type": "integer"
+          },
+          "rss_bytes": {
+            "type": "integer"
+          },
+          "screen_shares": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "collecting",
+          "cpu_cores",
+          "cpu_used_cores",
+          "egress_mbps",
+          "egress_pps",
+          "estimate",
+          "heap_bytes",
+          "ingress_pps",
+          "memory_limit_bytes",
+          "peers",
+          "rss_bytes",
+          "screen_shares"
+        ],
+        "type": "object"
+      },
       "server.ConnectionProbeAnswer": {
         "properties": {
           "sdp": {
@@ -7826,6 +7933,10 @@
           "egress_bps": {
             "type": "integer"
           },
+          "egress_pps": {
+            "description": "EgressPPS and IngressPPS are RTP packets per second over the interval.",
+            "type": "integer"
+          },
           "errors_5xx": {
             "type": "integer"
           },
@@ -7839,6 +7950,9 @@
             "type": "integer"
           },
           "ingress_bps": {
+            "type": "integer"
+          },
+          "ingress_pps": {
             "type": "integer"
           },
           "online_users": {
@@ -7868,11 +7982,13 @@
           "cpu_millicores",
           "db_connections_acquired",
           "egress_bps",
+          "egress_pps",
           "errors_5xx",
           "goroutines",
           "heap_bytes",
           "ice_failures",
           "ingress_bps",
+          "ingress_pps",
           "online_users",
           "peers",
           "requests",
@@ -17319,6 +17435,89 @@
           }
         ],
         "summary": "Operator status",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/status/capacity": {
+      "get": {
+        "description": "Live CPU, memory and media rates of the server over the last minute and an estimate of how many more members it can take, each watching a screen share. The estimate uses the cost model of doc/benchmark.md, scaled by this host's observed CPU per packet when there is enough traffic; it is an estimate for planning, not a promise. Owner or Administrator only (403 otherwise).",
+        "operationId": "getAdminCapacity",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.CapacityStatus"
+                }
+              }
+            },
+            "description": "Capacity figures and estimate.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may do this."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Server capacity",
         "tags": [
           "Admin"
         ]
@@ -36774,6 +36973,89 @@
           }
         ],
         "summary": "Answer a connection test",
+        "tags": [
+          "Realtime"
+        ]
+      }
+    },
+    "/api/webrtc/speedtest": {
+      "get": {
+        "description": "Backs the upload hint of \"Test my connection\": streams up to 16 MiB of noise or for at most three seconds, whichever ends first, so the browser can measure its download speed from the server. The speed is the one to the nearest reverse proxy or tunnel, not necessarily to the server itself. Signed-in members only; at most four per ten minutes per member and six per address, one at a time. A busy slot or an exhausted budget answers 429 and costs nothing; while a Talk has participants it answers 503 so the test does not disturb the call.",
+        "operationId": "downloadSpeedTest",
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "file"
+                }
+              }
+            },
+            "description": "A stream of bytes.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many tests, or one is running.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a Talk has participants; the test would disturb the call."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Download speed test",
         "tags": [
           "Realtime"
         ]

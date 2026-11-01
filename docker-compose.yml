@@ -142,6 +142,7 @@ services:
       - WEBRTC_BUILTIN_TURN_HOST=${WEBRTC_BUILTIN_TURN_HOST:-}
       - METRICS_TOKEN=${METRICS_TOKEN:-}
       - PPROF_ADDR=${PPROF_ADDR:-}
+      - VOICE_UPLOAD_LIMIT_MBIT=${VOICE_UPLOAD_LIMIT_MBIT:-0}
       # Outgoing e-mail (confirm an address, reset a password). Empty SMTP_HOST =
       # the server sends no e-mail. SMTP_PASSWORD_FILE needs the file mounted.
       - SMTP_HOST=${SMTP_HOST:-}

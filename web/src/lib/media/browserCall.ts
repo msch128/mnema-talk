@@ -32,9 +32,9 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
     onWire(listener) { s.wireListener = listener },
     onNotice(listener) { s.noticeListener = listener },
     onVerification(listener) { s.verificationListener = listener },
-    protectSender(sender, source, layer) {
+    protectSender(sender, source, layer, dtx) {
       if (!s.channelId || !s.userId) return false
-      return guard.armSender(sender, s.channelId, s.userId, source, layer)
+      return guard.armSender(sender, s.channelId, s.userId, source, layer, dtx)
     },
     canSeal: mediaSealingSupported,
     prepareIncoming(receiver) {

@@ -142,6 +142,7 @@ General rules:
 | `WEBRTC_BUILTIN_TURN` | `auto` | The TURN relay built into the server: `auto` runs it only while `WEBRTC_TURN_URLS` is empty, `on` always, `off` never. See [Built-in TURN relay](#built-in-turn-relay). |
 | `WEBRTC_BUILTIN_TURN_HOST` | empty | Host name or IP members are told to reach the built-in relay at; empty = the host of `PUBLIC_URL`. |
 | `WEBRTC_BUILTIN_TURN_PORT` | `3479` | UDP and TCP port of the built-in relay. With `on` it must lie outside the media range. Compose publishes it on `TURN_PUBLISH_ADDR` (default all addresses). |
+| `VOICE_UPLOAD_LIMIT_MBIT` | `0` | The upload your connection can carry for calls, in Mbit/s; `0` = no limit. Above 0 the server measures the media it sends (all of it, audio included, with about 38 bytes of IP, UDP and SRTP overhead per packet; members who go through the built-in TURN relay are counted once, as the media the server sends them, plus the relay's 4 bytes of framing per packet, which also means a relayed member costs the same as a direct one and squeezing cannot reduce that per-packet overhead, only the layers) and, above about 85% of the limit, moves viewers on **Auto** quality one layer further down their screen-share and camera layers, biggest streams first, until the estimated saving covers the excess; below about 70% it lets them back, the cheapest first, one viewer at a time and not more often than every 20 seconds (and not within 20 seconds of a step down). A viewer on a layer that sends next to nothing at the moment (a static screen share) stays held until its picture moves, which costs nothing. Audio is never touched. A viewer who picked a quality, and a share or camera sent without layers, are not moved: when that leaves nothing to step down, the server logs it (once a minute) and counts `mnema_sfu_upload_unmet_total`. Must be 0 or between 1 and 100000. Metrics: `mnema_sfu_upload_limit_bits`, `mnema_sfu_upload_egress_bits`, `mnema_sfu_upload_capped_viewers`. |
 
 ### Outgoing e-mail
 
@@ -833,6 +834,7 @@ The **Admin → Status** tab provides an operator status overview in a single vi
 - **Live activity**: Active sessions, connected WebSocket clients, active Talks, and current voice participants.
 - **Operator warnings**: Active configuration warnings collected by the server (e.g. broad trusted proxies, WebRTC reachability).
 - **Setup checks**: a green, amber, red and neutral list of what a new installation needs (below).
+- **Capacity**: live CPU, memory and media rates, and an estimate of how many more members the server can take (below).
 - **Test my connection**: a button that checks, from the browser you are using, whether voice reaches the server (below).
 
 ### Setup checks
@@ -887,6 +889,35 @@ switch; nginx needs `proxy_http_version 1.1;`,
 `proxy_set_header Connection upgrade;`; Caddy and Traefik do it by default.
 The item is neutral (*Not checked yet*) until a browser has connected.
 
+### Capacity
+
+The **Capacity** panel in Admin → Status (`GET /api/admin/status/capacity`,
+Owner or Administrator only) shows, averaged over the last minute: CPU used of
+the cores the container may use (the cgroup quota when there is one), memory
+(resident size against the container limit, `APP_MEM_LIMIT`), the media the
+server sends (Mbit/s and packets/s) and the members and screen shares in calls.
+It works with no traffic at all; in the first seconds after a start, before
+the first measurement, it says it is collecting.
+
+Below that it prints an **estimate**: about how many more members the server
+can take, each watching one 1.5 Mbit/s screen share next to three speakers. It
+uses the cost model of [the benchmark](benchmark.md#the-model): 22 µs of one
+core per packet sent, 72 µs per packet received, 0.57 ms per second per member.
+It plans at half of the CPU, because bursts lose packets well before 100 %. With
+substantial traffic (5,000 packets/s sent or more) the panel compares the CPU
+the media actually used (the process CPU minus about 0.08 core the server spends
+with no media at all) with what the model predicts and scales the per-member
+cost by that factor (between 0.5 and 4), so a slower or faster host gives its
+own number; with less traffic it uses the table values and says so. When the
+server is already past half of its CPU the panel says that instead of a number,
+and when resident memory is above 85 % of the limit it says memory comes first.
+
+The estimate counts **CPU only**. It ignores the upload bandwidth (see [the
+sizing table](benchmark.md#sizing-table)), relayed packets (+12 µs each) and how
+memory grows with more members, apart from the 85 % switch; the assumption line
+under it says so. CPU quotas are read from the container's cgroup (v2 `cpu.max`
+or v1 `cpu.cfs_quota_us`); without one the host's cores count.
+
 ### Test my connection
 
 **Test my connection** (Admin → Status, and under Settings → Audio for every
@@ -899,7 +930,25 @@ a Talk and leaves no presence. It
    to a throwaway connection on the server (`POST /api/webrtc/probe`, signed-in
    members only, twelve per ten minutes each, eight at a time);
 3. connects to the voice port through the built-in TURN relay over UDP, and
-   again over TCP, using relay candidates only.
+   again over TCP, using relay candidates only;
+4. reads a short stream from the server (`GET /api/webrtc/speedtest`: at most
+   16 MiB or three seconds, signed-in members only, four per ten minutes per
+   member and six per address, one test at a time) and divides what arrived by
+   the time it took. It measures the speed **to where the server is reachable**:
+   behind a reverse proxy, a CDN or a tunnel that is the speed to that proxy,
+   not necessarily to the server (the stream carries `Content-Encoding:
+   identity` and `X-Accel-Buffering: no` so proxies pass it through unchanged).
+   From outside the server's network it is roughly the server's upload, and the
+   result says what screen share that upload can serve (1.5 Mbit/s plus 30 %
+   overhead per watcher, as in [the sizing guide](benchmark.md#the-model)).
+   A page address on a private network (or a private direct path) is taken as
+   the same network, where the test says it cannot measure the upload; run it
+   from a phone on mobile data. A speed of 700 Mbit/s or more is shown as
+   measured, with the note that it may be a local connection (symmetric
+   gigabit fibre exists, but so does a LAN), so test from outside to be sure. A busy slot or an exhausted budget costs nothing, and
+   the test is skipped while a Talk has participants, because for three seconds
+   it can fill a home uplink and would be heard in the call. The setup assistant
+   prints only this hint, never a number.
 
 The verdict is one of *Direct connection works*, *Only the relay works (direct
 UDP blocked or not forwarded)* or *Nothing works*, with the likely cause and
@@ -1100,6 +1149,8 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_sfu_retransmitted_packets_total` | counter | Packets actually resent after a NACK. The history they come from is sized by bytes and shrinks as the server fills up (doc/architecture.md, "NACK history"), so a request for a packet that is no longer remembered is counted in `nack_packets` but not here. |
 | `mnema_sfu_retransmit_dropped_total` | counter | Packets a subscriber asked for that were not resent: refused by the per-subscriber retransmission budget (a share of 25% of the connection's video bitrate, at least 128 KB/s) or asked faster than the server answers (each connection answers its NACKs one at a time, 16 waiting at most). A steady rate means subscribers are losing more than the server is willing to repair, or a subscriber is flooding NACKs: look at the downlinks and at host overload. |
 | `mnema_sfu_keyframe_requests_total` | counter | PLI and FIR feedback from viewers. |
+| `mnema_sfu_upload_limit_bits`, `mnema_sfu_upload_egress_bits`, `mnema_sfu_upload_capped_viewers` | gauge | `VOICE_UPLOAD_LIMIT_MBIT` in bits per second (0 = off), the media the server sends now (smoothed; measured only while a limit is set) and the viewers held below their best layer by the limit. |
+| `mnema_sfu_upload_unmet_total` | counter | Checks that found the upload above the limit with nothing left to step down (see `VOICE_UPLOAD_LIMIT_MBIT`). |
 | `mnema_sfu_layer_switches_total` | counter | Simulcast layer changes of screen share viewers. |
 | `mnema_sfu_camera_layer_switches_total` | counter | Simulcast layer changes of camera viewers (a small tile moving to the thumbnail, the stage to the best layer, or the server moving a viewer down under loss). The admin overview's quality switches add both. |
 | `mnema_sfu_bandwidth_estimate_reports_total{range}` | counter | Bandwidth estimates taken for viewers whose layer of a screen share or camera the server chooses, by range (`lt0.5m` ... `ge16m`, bits per second); `rate()` per range shows how the downlinks are distributed. |
@@ -1109,7 +1160,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_sfu_peer_joins_total` | counter | Media connections created. |
 | `mnema_turn_events_total{event}` | counter | The built-in TURN relay: `allocation`, `relay_opened` and the refused attempts `auth_failed`, `forbidden`, `rate_limited`, `quota_user`, `quota_total`, `peer_denied`, `packet_blocked`, `throttled`. A steady climb of `peer_denied` or `packet_blocked` means someone is probing the relay; it cannot get anywhere. |
 | `mnema_turn_allocations` | gauge | Sessions relayed by the built-in TURN relay right now. |
-| `mnema_turn_relayed_bytes_total{direction}` | counter | Bytes the relay forwarded, `to_sfu` and `from_sfu`. |
+| `mnema_turn_relayed_bytes_total{direction}`, `mnema_turn_relayed_packets_total{direction}` | counter | Bytes and packets the relay forwarded, `to_sfu` and `from_sfu`. |
 | `mnema_db_connections_total\|acquired\|idle\|max` | gauge | Database pool. `mnema_db_acquires_total`, `..._waited_total`, `..._canceled_total`, `mnema_db_acquire_seconds_total` count acquisitions, those that had to wait, those abandoned and the time spent. |
 | `mnema_storage_up` | gauge | 1 when object storage answers (the same check as `/api/health`), else 0. |
 | `mnema_s3_operations_total{op,result}` | counter | Object storage calls (`upload`, `get`, `delete`, `list`) by `ok`/`error`. |

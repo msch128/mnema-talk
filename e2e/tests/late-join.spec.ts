@@ -17,6 +17,8 @@ const VOICE_CHANNEL = `Late ${suffix}`
 // ports. Received RTP alone could also pass after browser-filter fallback.
 const trackAudioFilters = () => {
   localStorage.setItem('mnema_noise', 'ai')
+  // The fake microphone is a steady tone that Opus DTX would take for silence; this spec listens for it.
+  localStorage.setItem('mnema_dtx', 'false')
   window.__dfnWorkers = []
   window.__dfnNodes = []
   const NativeWorker = window.Worker

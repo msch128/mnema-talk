@@ -75,6 +75,9 @@ type OpsSample struct {
 	ScreenShares  int    `json:"screen_shares"`
 	EgressBps     uint64 `json:"egress_bps"`
 	IngressBps    uint64 `json:"ingress_bps"`
+	// EgressPPS and IngressPPS are RTP packets per second over the interval.
+	EgressPPS     uint64 `json:"egress_pps"`
+	IngressPPS    uint64 `json:"ingress_pps"`
 	Requests      uint64 `json:"requests"`
 	Errors5xx     uint64 `json:"errors_5xx"`
 	ICEFailures   uint64 `json:"ice_failures"`
@@ -87,6 +90,7 @@ type opsCounters struct {
 	cpu                     float64
 	reqs, e5xx, iceFail     uint64
 	egressBytes, ingressByt uint64
+	egressPkts, ingressPkts uint64
 }
 
 func readCounters(p metrics.ProcessStats) opsCounters {
@@ -97,6 +101,8 @@ func readCounters(p metrics.ProcessStats) opsCounters {
 		iceFail:     metrics.SFUICE.Sum(0, "failed"),
 		egressBytes: metrics.SFUEgressBytes.Load(),
 		ingressByt:  metrics.SFUIngressBytes.Load(),
+		egressPkts:  metrics.SFUEgressPackets.Load(),
+		ingressPkts: metrics.SFUIngressPackets.Load(),
 	}
 }
 
@@ -135,6 +141,8 @@ func (o *opsSampler) sample() {
 				ScreenShares:  rd.sfu.ScreenShares,
 				EgressBps:     uint64(float64(ctr.egressBytes-o.lastCtr.egressBytes) * 8 / dt),
 				IngressBps:    uint64(float64(ctr.ingressByt-o.lastCtr.ingressByt) * 8 / dt),
+				EgressPPS:     uint64(float64(ctr.egressPkts-o.lastCtr.egressPkts) / dt),
+				IngressPPS:    uint64(float64(ctr.ingressPkts-o.lastCtr.ingressPkts) / dt),
 				Requests:      ctr.reqs - o.lastCtr.reqs,
 				Errors5xx:     ctr.e5xx - o.lastCtr.e5xx,
 				ICEFailures:   ctr.iceFail - o.lastCtr.iceFail,

@@ -102,6 +102,7 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 		c.authH.MountAuthenticated(j)
 		j.Get("/webrtc/config", webrtcConfig(c.cfg, c.d.TURN))
 		j.Post("/webrtc/probe", httpx.Handle(c.systemH.connectionProbe))
+		j.Get("/webrtc/speedtest", httpx.Handle(c.systemH.downloadSpeedTest))
 		if c.cfg.APIDocs {
 			j.Get("/openapi.json", openAPISpec)
 		}
@@ -172,5 +173,6 @@ func (c *components) mountAdminJSON(adm chi.Router) {
 	status := adm.With(auth.RequirePerm(c.permSvc, perm.Administrator))
 	status.Get("/status", httpx.Handle(c.systemH.operatorStatus))
 	status.Post("/status/websocket", httpx.Handle(c.systemH.reportWebSocket))
+	status.Get("/status/capacity", httpx.Handle(c.systemH.capacityStatus))
 	c.systemH.mountAdmin(adm)
 }
