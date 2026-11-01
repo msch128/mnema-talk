@@ -1,6 +1,7 @@
 package sfu
 
 import (
+	"log/slog"
 	"slices"
 
 	"github.com/google/uuid"
@@ -30,13 +31,36 @@ func (r *Room) SetCameraLayers(publisher uuid.UUID, layers []Layer) error {
 		r.mu.Unlock()
 		return nil
 	}
+	if r.plainCameraLiveLocked(publisher) {
+		// Its video began without layers (and may resume on the same line
+		// without a new track): a lower layer joining now would replace it and
+		// leave viewers without its best layer. It stays one plain track
+		// until the connection is made anew.
+		r.mu.Unlock()
+		slog.Debug("sfu camera layers ignored: the camera is already sent plain", "user", publisher)
+		return nil
+	}
 	meta[publisher] = slices.Clone(layers)
 	g := r.cameraGroups[publisher]
 	r.mu.Unlock()
 	if g != nil {
 		g.setDeclared(len(layers))
+		// The sizes the viewers' pictures fit are layer indexes of the new ladder.
+		for _, vt := range g.viewerTracks() {
+			r.mu.RLock()
+			fit := r.cameraFitLocked(vt.viewer, publisher)
+			r.mu.RUnlock()
+			vt.setFit(fit)
+		}
 	}
 	return nil
+}
+
+// plainCameraLiveLocked reports whether publisher's camera is, or was last,
+// forwarded as one plain track. r.mu is held.
+func (r *Room) plainCameraLiveLocked(publisher uuid.UUID) bool {
+	info := r.latestSources[trackKey(publisher, string(SourceCamera))]
+	return info != nil && info.group == nil && !info.isSuperseded()
 }
 
 // cameraLayeredLocked reports whether publisher declared more than one layer

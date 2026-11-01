@@ -190,13 +190,38 @@ func TestCameraLayersFollowEachViewersPicture(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkOneStream(t, waitLayer(t, tile, 0))
+	// The move asked the publisher for a keyframe of the layer it moved to.
+	select {
+	case <-pubs[0].plis:
+	case <-time.After(3 * time.Second):
+		t.Fatal("moving to the best layer did not ask the publisher for its keyframe")
+	}
 
-	// Layer 2 is no longer needed by anyone for a while; layers 0 stays wanted.
+	// The sender was told the layers somebody needs: the thumbnail among them, and in the end the best layer.
 	waitFor(t, func() bool {
 		mu.Lock()
 		defer mu.Unlock()
-		return len(wanted) > 0
+		if len(wanted) == 0 {
+			return false
+		}
+		for _, l := range wanted[len(wanted)-1] {
+			if l == 0 {
+				return true
+			}
+		}
+		return false
 	})
+	mu.Lock()
+	defer mu.Unlock()
+	sawThumbnail := false
+	for _, mask := range wanted {
+		for _, l := range mask {
+			sawThumbnail = sawThumbnail || l == 2
+		}
+	}
+	if !sawThumbnail {
+		t.Fatalf("the sender was never told the thumbnail was wanted: %v", wanted)
+	}
 }
 
 func TestCameraWithoutDeclaredLayersStaysOnePlainTrack(t *testing.T) {
@@ -310,4 +335,85 @@ func TestTestHooksReportCameraState(t *testing.T) {
 	if err := r.PublishTestVideo(uuid.New(), SourceCamera); err == nil {
 		t.Error("a video of someone outside the room was published")
 	}
+}
+
+// A camera that began as one plain track cannot become layers in the middle of
+// its video: a lower layer joining would replace the best one for good. The
+// declaration is ignored, the lower layers are drained and viewers keep the
+// plain camera.
+func TestLayersDeclaredInTheMiddleOfAPlainCameraAreIgnored(t *testing.T) {
+	s := newTestSFU(t)
+	room := uuid.New()
+	pub := newClient(t)
+	_, start := pub.publishCameraLayers(25)
+	pub.join(s, room)
+	r := s.Room(room)
+	start()
+	waitSources(t, r, pub.id, SourceCamera, 1)
+
+	if err := r.SetCameraLayers(pub.id, []Layer{{1280, 720, 30}, {640, 360, 30}, {320, 180, 15}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.CameraLayers(pub.id); len(got) != 0 {
+		t.Fatalf("a late declaration was kept: %v", got)
+	}
+	time.Sleep(300 * time.Millisecond)
+	if n := r.sourceCount(pub.id, SourceCamera); n != 1 {
+		t.Fatalf("camera tracks %d, want the one plain track", n)
+	}
+	r.mu.RLock()
+	groups := len(r.cameraGroups)
+	r.mu.RUnlock()
+	if groups != 0 {
+		t.Fatal("a plain camera became a group")
+	}
+
+	viewer := newClient(t)
+	viewer.join(s, room)
+	waitTrack(t, viewer)
+	if len(gather(viewer, 500*time.Millisecond)) == 0 {
+		t.Fatal("viewers lost the plain camera")
+	}
+}
+
+// Declaring a different ladder while viewers are on a camera recomputes the
+// layers their pictures fit.
+func TestChangedLadderRecomputesWhatViewersPicturesFit(t *testing.T) {
+	s := newTestSFU(t)
+	room := uuid.New()
+	pub := newClient(t)
+	_, start := pub.publishCameraLayers(25)
+	pub.join(s, room)
+	r := s.Room(room)
+	if err := r.SetCameraLayers(pub.id, []Layer{{1280, 720, 30}, {640, 360, 30}, {320, 180, 15}}); err != nil {
+		t.Fatal(err)
+	}
+	start()
+	waitSources(t, r, pub.id, SourceCamera, 3)
+
+	viewer := newClient(t)
+	viewer.join(s, room)
+	if err := r.SetCameraFit(viewer.id, pub.id, 150); err != nil {
+		t.Fatal(err)
+	}
+	waitTrack(t, viewer)
+	r.mu.RLock()
+	g := r.cameraGroups[pub.id]
+	r.mu.RUnlock()
+	fitOf := func() int {
+		vt := g.viewerFor(viewer.id)
+		if vt == nil {
+			return -1
+		}
+		vt.mu.Lock()
+		defer vt.mu.Unlock()
+		return vt.fit
+	}
+	waitFor(t, func() bool { return fitOf() == 2 })
+
+	// The camera is sent as two layers now: the same picture fits the second.
+	if err := r.SetCameraLayers(pub.id, []Layer{{1280, 720, 30}, {640, 360, 30}}); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, func() bool { return fitOf() == 1 })
 }

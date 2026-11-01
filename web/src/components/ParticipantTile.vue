@@ -85,7 +85,7 @@ function onDblclick(e: MouseEvent) {
 
 const videoEl = ref<HTMLVideoElement | null>(null)
 // The server sends the layer of their camera this tile can use (not for my own, which comes from nobody).
-useCameraFit(() => (props.stream && !props.isSelf ? props.user.id : null), videoEl, 'tile')
+useCameraFit(() => (props.stream && !props.isSelf ? props.user.id : null), videoEl, 'tile', 'cover')
 watch(() => props.stream, (stream) => {
   nextTick(() => {
     if (videoEl.value) videoEl.value.srcObject = stream

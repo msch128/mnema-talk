@@ -491,7 +491,10 @@ camera's lower layers; the camera line itself is layer 0
 ([`camera_layers.go`](../internal/sfu/camera_layers.go)). The server never
 requires them: a camera is forwarded as one plain track, exactly as before,
 unless its sender declared more than one layer (`webrtc_layers` with
-`source: "camera"`) before its first video, which is when the SFU decides. A
+`source: "camera"`) before its first video, which is when the SFU decides.
+A camera that began plain stays plain until the connection is made anew: a
+declaration that comes while it is live (or when it was last live) is ignored,
+because a lower layer joining later would replace its best layer. A
 client without the lines (an older browser or desktop client, an older server)
 sends one layer, and a mixed room works in every combination: every viewer
 gets one track named like a camera (`camera:<id>`), whether the SFU switches
@@ -502,7 +505,12 @@ Nobody picks a layer of a camera: the viewer reports how tall its picture of
 that camera is in device pixels (`fit_px` on `webrtc_subscribe`, from the tile
 or the stage that shows it, the largest one if several), the SFU gives it the
 smallest layer that still has the pixels the picture shows, and Auto
-adaptation can move it lower under loss as for screens. The sender is told
+adaptation can move it lower under loss as for screens. A layer its sender
+switched off is attached but silent, so a camera viewer whose picture fits it
+is carried by the nearest layer that delivers and moves over, at a keyframe,
+when the layer is back; a viewer that has not reported a size yet gets the
+best layer (older clients never report, and must not be left on a thumbnail).
+Switches count in `mnema_sfu_camera_layer_switches_total`. The sender is told
 which layers anyone needs in the same event as for a screen, marked
 `source: "camera"` (`screen_layers_wanted`), and switches the others off. The
 server announces the capability as `server_info.camera_layers`; a client sends

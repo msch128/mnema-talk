@@ -13,9 +13,11 @@ let places = 0
 /**
  * `userId` is whose camera the element shows (null: none, or my own, which
  * nobody sends back); `element` is what shows it; every call needs a `place`
- * of its own, e.g. "tile" and "stage".
+ * of its own, e.g. "tile" and "stage". `fit` is how the picture sits in the
+ * element: 'cover' (a tile, the picture fills it and is cropped) or 'contain'
+ * (the stage, the whole picture shows with bars).
  */
-export function useCameraFit(userId: () => string | null, element: Ref<HTMLElement | null>, place: string) {
+export function useCameraFit(userId: () => string | null, element: Ref<HTMLElement | null>, place: string, fit: 'cover' | 'contain' = 'contain') {
   const voice = useVoiceStore()
   const size = useElementSize(element)
   // The pixel ratio changes with the browser zoom and when the window moves to another screen.
@@ -31,20 +33,37 @@ export function useCameraFit(userId: () => string | null, element: Ref<HTMLEleme
     if (id) voice.setCameraSize(id, key, pixels)
   }
 
-  // The picture the element shows is at most as tall as the element and as its width allows.
+  // The video's shape is known once its first frame is; a different camera or a turned phone changes it.
+  const shape = ref(0)
+  let watched: HTMLElement | null = null
+  const reshape = () => { shape.value++ }
+  watch(element, (el) => {
+    watched?.removeEventListener('loadedmetadata', reshape)
+    watched?.removeEventListener('resize', reshape)
+    watched = el
+    el?.addEventListener('loadedmetadata', reshape)
+    el?.addEventListener('resize', reshape)
+  }, { immediate: true, flush: 'post' })
+
+  // How tall the picture is on screen: a covering picture is scaled to fill the
+  // element, so it can be taller than the element; a contained one is at most as tall
+  // as the element and as its width allows.
   function shownHeight(): number {
     const el = element.value
     const aspect = el instanceof HTMLVideoElement && el.videoWidth > 0 ? el.videoHeight / el.videoWidth : 9 / 16
-    return Math.min(size.value.height, size.value.width * aspect)
+    const byWidth = size.value.width * aspect
+    return fit === 'cover' ? Math.max(size.value.height, byWidth) : Math.min(size.value.height, byWidth)
   }
 
-  watch([userId, size, pixelRatio], () => {
+  watch([userId, size, pixelRatio, shape], () => {
     const id = userId()
     report(id, id ? pictureHeightPx(shownHeight(), pixelRatio.value) : 0)
   }, { immediate: true, deep: true })
 
   onUnmounted(() => {
     window.removeEventListener('resize', syncRatio)
+    watched?.removeEventListener('loadedmetadata', reshape)
+    watched?.removeEventListener('resize', reshape)
     report(null, 0)
   })
 }

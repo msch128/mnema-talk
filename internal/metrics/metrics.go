@@ -206,13 +206,14 @@ var (
 	SFURetransmitDropped Counter
 	// SFUKeyframeRequests counts PLI/FIR feedback received.
 	SFUKeyframeRequests Counter
-	// SFULayerSwitches counts simulcast layer changes for viewers.
-	SFULayerSwitches Counter
-	// SFUBandwidth counts the bandwidth estimates taken for automatic screen
-	// viewers, by range (see BandwidthRange), so the distribution is visible
+	// SFULayerSwitches counts simulcast layer changes for viewers of screen
+	// shares, SFUCameraLayerSwitches those of viewers of cameras.
+	SFULayerSwitches, SFUCameraLayerSwitches Counter
+	// SFUBandwidth counts the bandwidth estimates taken for automatic viewers
+	// of screens and cameras, by range (see BandwidthRange), so the distribution is visible
 	// with a handful of series. SFUBandwidthMoves counts layer moves down that
 	// the estimate caused.
-	SFUBandwidth      = newVec("mnema_sfu_bandwidth_estimate_reports_total", "Bandwidth estimates of automatic screen viewers, by range", "range")
+	SFUBandwidth      = newVec("mnema_sfu_bandwidth_estimate_reports_total", "Bandwidth estimates of automatic viewers of screens and cameras, by range", "range")
 	SFUBandwidthMoves Counter
 	// SFUICE counts ICE connection transitions, by state: connected, failed,
 	// disconnected.
@@ -292,7 +293,8 @@ func WriteInstruments(w io.Writer) {
 	writeCounter(w, "mnema_sfu_retransmitted_packets_total", "Packets resent to subscribers after a NACK", SFURetransmitted.Load())
 	writeCounter(w, "mnema_sfu_retransmit_dropped_total", "Retransmissions not sent: refused by the per-subscriber budget or asked faster than they can be answered", SFURetransmitDropped.Load())
 	writeCounter(w, "mnema_sfu_keyframe_requests_total", "PLI and FIR feedback messages received", SFUKeyframeRequests.Load())
-	writeCounter(w, "mnema_sfu_layer_switches_total", "Simulcast layer switches for viewers", SFULayerSwitches.Load())
+	writeCounter(w, "mnema_sfu_layer_switches_total", "Simulcast layer switches for viewers of screen shares", SFULayerSwitches.Load())
+	writeCounter(w, "mnema_sfu_camera_layer_switches_total", "Simulcast layer switches for viewers of cameras", SFUCameraLayerSwitches.Load())
 	writeCounter(w, "mnema_sfu_bandwidth_layer_moves_total", "Layer moves down caused by the bandwidth estimate", SFUBandwidthMoves.Load())
 	SFUBandwidth.write(w)
 	SFUICE.write(w)
