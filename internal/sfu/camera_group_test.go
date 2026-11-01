@@ -258,3 +258,38 @@ func TestAdapterJumpsToTheTopOnlyWhenBelowIt(t *testing.T) {
 		t.Fatal("a viewer already on top jumped again")
 	}
 }
+
+// A layer that just began delivers its first packet after it was attached, so
+// attaching finds it silent: the viewer that wants it must move over when that
+// first packet arrives, not stay on the layer that carried it meanwhile.
+func TestCameraViewerMovesToALayerAtItsFirstPacket(t *testing.T) {
+	clock := useFakeClock(t)
+	rig := cameraRig(t)
+	rig.key(0, 100)
+	vt, out := rig.viewerFit(-1, 2)
+	rig.asked(0)
+	rig.key(0, 101)
+	out.take()
+
+	// Layer 2 attaches now; its first packet is not written yet (the best layer carries on meanwhile).
+	clock.advance(1100 * time.Millisecond)
+	rig.delta(0, 102)
+	rig.group.markLive(rig.infos[2])
+	rig.group.retarget()
+	if rig.asked(2) {
+		t.Fatal("asked for the keyframe of a layer that has not delivered yet")
+	}
+	rig.key(2, 200)
+	if !rig.asked(2) {
+		t.Fatal("the layer's first packet did not move the viewer over")
+	}
+	rig.key(2, 201)
+	rig.delta(2, 202)
+	got := out.take()
+	if lastLayerOf(got) != 2 {
+		t.Fatalf("the viewer sees layer %d", lastLayerOf(got))
+	}
+	if st := vt.state(); st.Layer != 2 {
+		t.Fatalf("state %+v", st)
+	}
+}

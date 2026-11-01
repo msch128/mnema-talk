@@ -417,3 +417,40 @@ func TestChangedLadderRecomputesWhatViewersPicturesFit(t *testing.T) {
 	}
 	waitFor(t, func() bool { return fitOf() == 1 })
 }
+
+// A viewer's picture size is kept whatever order things happen in: told before
+// the camera exists or its layers are declared, it still decides the layer the
+// viewer's track starts on.
+func TestFitReportedBeforeTheCameraExistsDecidesTheStartingLayer(t *testing.T) {
+	s := newTestSFU(t)
+	room := uuid.New()
+	pub, viewer := newClient(t), newClient(t)
+	_, start := pub.publishCameraLayers(25)
+	pub.join(s, room)
+	viewer.join(s, room)
+	r := s.Room(room)
+
+	// The tile reports before the sender declared anything or sent a frame.
+	if err := r.SetCameraFit(viewer.id, pub.id, 150); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.SetCameraLayers(pub.id, []Layer{{1280, 720, 30}, {640, 360, 30}, {320, 180, 15}}); err != nil {
+		t.Fatal(err)
+	}
+	start()
+	waitSources(t, r, pub.id, SourceCamera, 3)
+	waitTrack(t, viewer)
+	r.mu.RLock()
+	g := r.cameraGroups[pub.id]
+	r.mu.RUnlock()
+	waitFor(t, func() bool {
+		vt := g.viewerFor(viewer.id)
+		if vt == nil {
+			return false
+		}
+		vt.mu.Lock()
+		defer vt.mu.Unlock()
+		return vt.fit == 2
+	})
+	checkOneStream(t, waitLayer(t, viewer, 2))
+}

@@ -503,7 +503,7 @@ sealed on the camera's line with its layer only in its stream ID (the same
 low bits a screen's layers use), so an older viewer opens it like any camera.
 Nobody picks a layer of a camera: the viewer reports how tall its picture of
 that camera is in device pixels (`fit_px` on `webrtc_subscribe`, from the tile
-or the stage that shows it, the largest one if several), the SFU gives it the
+or the stage that shows it, the largest one if several), said again when that camera arrives and every ten seconds while it is shown, so a lost message heals; a picture that is gone is only reported after two seconds, because a tile moving from the grid to the strip is removed and shown again, the SFU gives it the
 smallest layer that still has the pixels the picture shows, and Auto
 adaptation can move it lower under loss as for screens. A layer its sender
 switched off is attached but silent, so a camera viewer whose picture fits it
