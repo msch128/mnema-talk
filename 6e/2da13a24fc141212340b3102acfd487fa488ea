@@ -1,0 +1,61 @@
+SECURITY.md
+  s_17ef7810e0243d::t_44fbdbda104ddd 237-238,243
+api/openapi.json
+  s_82e9d48cb7fc7f::t_308e4e6cd65d54 20511,20563
+doc/operations.md
+  s_17ef7810e0243d::t_f365b5c36c4a26 333,335-339,344-347
+internal/auth/vanity_signup.go
+  s_17ef7810e0243d::t_5fff17870d9a78 7,24-29,32-33
+internal/onboarding/vanity.go
+  s_17ef7810e0243d::t_a06f2e1ba11f44 9,30-31,38-59,68,92,96-101,158,168,182-184
+internal/repo/testdata/error_messages.golden.json
+  s_6f62c78e3c93c5::t_5743385c37b843 294
+internal/server/vanity_link_integration_test.go
+  s_17ef7810e0243d::t_755bbe81164981 201-244
+web/src/components/AdminVanityLink.test.ts
+  s_17ef7810e0243d::t_d13f27b627a9dc 9-10,18-19,95-112
+web/src/components/AdminVanityLink.vue
+  s_17ef7810e0243d::t_510261ee018f95 11,19-20,29-32,55,92,99
+web/src/components/InviteLanding.test.ts
+  s_17ef7810e0243d::t_ad75af02026f5a 87-98
+web/src/components/LoginModal.vue
+  s_6f62c78e3c93c5::t_9f09b0d261c247 60-62,141-144
+web/src/i18n/de.json
+  s_17ef7810e0243d::t_7fd89e8fefc436 139,1749
+web/src/i18n/en.json
+  s_17ef7810e0243d::t_9516ca48b91359 139,1749
+web/src/lib/errorSentencesB.ts
+  s_17ef7810e0243d::t_81c457b0e3bf70 118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6e2da13a24fc141212340b3102acfd487fa488ea",
+  "prompts": {},
+  "sessions": {
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
