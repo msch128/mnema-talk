@@ -8,6 +8,7 @@ import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
 import { useEventsStore } from '../events'
+import { useEventCommentsStore } from '../eventComments'
 import { useOnboardingStore } from '../onboarding'
 import { useServerFeaturesStore } from '../serverFeatures'
 import { noticeText, kickedText, KICKED_NOTICE_MS } from '../../lib/moderation'
@@ -298,7 +299,9 @@ const HANDLERS: Handlers = {
   event_update: (_cx, p) => { if (p) useEventsStore().handleEventUpdate(p) },
   event_delete: (_cx, p) => { if (p) useEventsStore().handleEventDelete(p.id) },
   event_reminder: (_cx, p) => { if (p) useEventsStore().handleEventReminder(p) },
-  event_signup_notice: (_cx, p) => { if (p) useEventsStore().handleSignupNotice(p) }
+  event_signup_notice: (_cx, p) => { if (p) useEventsStore().handleSignupNotice(p) },
+  event_comment: (_cx, p) => { if (p) useEventCommentsStore().handleChange(p) },
+  event_comment_notice: (_cx, p) => { if (p) useEventCommentsStore().handleNotice(p) }
 }
 
 export function handleWSEvent(cx: Cx, event: ServerEvent) {

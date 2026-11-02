@@ -584,7 +584,13 @@
       "srvAfterRfc3339": "„after“ muss ein Zeitstempel im Format RFC 3339 sein.",
       "srvBeforeDateRfc3339": "„before_date“ muss ein Zeitstempel im Format RFC 3339 sein.",
       "srvUsernameTooLong": "Der Benutzername ist zu lang (höchstens {count} Zeichen).",
-      "srvATalkIsRunning": "Ein Talk läuft; der Geschwindigkeitstest würde ihn stören."
+      "srvATalkIsRunning": "Ein Talk läuft; der Geschwindigkeitstest würde ihn stören.",
+      "srvAnEventKeepsAtMost": "Eine Veranstaltung behält höchstens {a} Kommentare.",
+      "srvBeforeMustBeAUuid": "Der Kommentar, ab dem es weitergeht, muss die ID eines Kommentars sein.",
+      "srvCommentNotFound": "Diesen Kommentar gibt es nicht mehr.",
+      "srvInvalidCommentId": "Der Kommentar ist nicht gültig.",
+      "srvOnlyTheAuthorAndModerators": "Nur die Autorin oder der Autor und die Moderation können einen Kommentar löschen.",
+      "srvOnlyTheAuthorEditsA": "Nur die Autorin oder der Autor kann einen Kommentar bearbeiten."
     },
     "field": {
       "content": "Nachricht",
@@ -3252,7 +3258,9 @@
         "talk_cancel": "Talk-Event abgesagt",
         "role_template_create": "Event-Rollenvorlage erstellt",
         "role_template_update": "Event-Rollenvorlage geändert",
-        "role_template_delete": "Event-Rollenvorlage gelöscht"
+        "role_template_delete": "Event-Rollenvorlage gelöscht",
+        "comment_delete": "Event-Kommentar gelöscht",
+        "talk_comment_delete": "Talk-Event-Kommentar gelöscht"
       },
       "import": {
         "discord": "Discord-Vorlage importiert",
@@ -3600,7 +3608,23 @@
     },
     "rolePromoted": "Du bist von der Warteliste nachgerückt: {role} – {title}",
     "roleRemoved": "Du wurdest aus {role} entfernt – {title}",
-    "roleWaitlisted": "Du stehst jetzt auf der Warteliste: {role} – {title}"
+    "roleWaitlisted": "Du stehst jetzt auf der Warteliste: {role} – {title}",
+    "comments": "Kommentare",
+    "noComments": "Noch keine Kommentare. Starte die Unterhaltung.",
+    "commentPlaceholder": "Kommentar schreiben",
+    "commentsOlder": "Ältere Kommentare anzeigen",
+    "commentsLoadFailed": "Die Kommentare konnten nicht geladen werden. Versuche es noch einmal.",
+    "commentFailed": "Der Kommentar konnte nicht gesendet werden. Versuche es noch einmal.",
+    "commentEditFailed": "Der Kommentar konnte nicht gespeichert werden. Versuche es noch einmal.",
+    "commentDeleteFailed": "Der Kommentar konnte nicht gelöscht werden. Versuche es noch einmal.",
+    "commentMuteFailed": "Die Benachrichtigungen konnten nicht geändert werden. Versuche es noch einmal.",
+    "commentsMute": "Keine Hinweise auf neue Kommentare mehr",
+    "commentsUnmute": "Hinweise auf neue Kommentare erhalten",
+    "commentEdit": "Kommentar bearbeiten",
+    "commentDeleteTitle": "Diesen Kommentar löschen?",
+    "commentDeleteBody": "Der Kommentar wird für alle entfernt. Das lässt sich nicht rückgängig machen.",
+    "commentToast": "Neuer Kommentar zu {title}: {author}: {excerpt}",
+    "commentOpen": "Veranstaltung anzeigen"
   },
   "moderation": {
     "timeoutAction": "Auszeit verhängen …",

@@ -132,6 +132,14 @@ const examples: Record<ServerEventType, unknown[]> = {
     { event_id: id, title: 'Raid', kind: 'removed', role_name: 'DPS', start_time: FIXTURE_TIMESTAMP, channel_id: id },
     { event_id: id, title: 'Raid', kind: 'waitlisted', role_name: 'DPS', start_time: FIXTURE_TIMESTAMP }
   ],
+  event_comment: [
+    { action: 'created', event_id: id, comment_id: id, comment: { id, event_id: id, content: 'Hi', created_at: FIXTURE_TIMESTAMP, user: { id, username: 'a', display_name: 'A' } } },
+    { action: 'deleted', event_id: id, comment_id: id }
+  ],
+  event_comment_notice: [
+    { event_id: id, title: 'Raid', author_name: 'Ada', excerpt: 'See you' },
+    { event_id: id, title: 'Raid', author_name: 'Ada', excerpt: '', channel_id: id }
+  ],
   community_updated: [{ community_name: 'Lantern Fox' }, { community_name: '' }],
 }
 

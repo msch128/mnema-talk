@@ -105,7 +105,7 @@ no accounts on someone else's platform.
 - **Community events.** Scheduled events with a description, a cover image, a
   location (a Talk or free text), RSVPs and a reminder 15 minutes before the
   start. Creating them needs the *Manage events* permission, which the seeded Moderator
-  and Admin roles (every role with *Timeout members*) get at the upgrade. An event can have roles with places and a waitlist that moves up on its own ([doc/events.md](doc/events.md)).
+  and Admin roles (every role with *Timeout members*) get at the upgrade. An event can have roles with places and a waitlist that moves up on its own, and every event has a comment thread with notices you can mute ([doc/events.md](doc/events.md)).
 - **Saved messages and forwarding.** Keep a private list of up to 1,000
   messages with an optional note, or forward a message into another channel or
   a direct message. A forward is a reference, so it never shows more than the
