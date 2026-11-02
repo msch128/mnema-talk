@@ -33,6 +33,19 @@ Members who can view an event can submit their RSVP:
 
 15 minutes before an event starts, the server automatically delivers a reminder notification (in-app notification and Web Push) to every member who RSVP'd **going** or **interested**. Reminders respect member notification settings, including Do Not Disturb and muted channels.
 
+## Roles and waitlist
+
+An event can have **roles with places**, for example a raid with Tank, Heal and DPS. The server advertises the feature as `events.roles` in `GET /api/health`; the web app hides the role UI without it.
+
+- **Roles**: up to 12 per event, each with a name (up to 40 characters, unique within the event), an optional emoji, a capacity of 1 to 1,000 or none (unlimited) and a position. The event dialog lists them as cards with their fill (`3/5`) and the members.
+- **Sign-up**: everyone who can view the event signs up for one role while it is scheduled or active (`PUT /api/events/{id}/signup`). A sign-up counts as RSVP *going*; leaving keeps the RSVP as it is. Signing up for another role moves the member over.
+- **Waitlist**: a full role puts the next sign-up on its waitlist (`state: waitlist`, with the place in line). When a place frees (the member leaves or is removed, switches role, or the capacity grows), the oldest waitlisted member moves up first in, first out, in the same transaction, and is told in-app and by Web Push (`event_signup_notice`; do-not-disturb and a muted Talk hold the push back). A scheduler pass moves members up where a place was freed without a request, for example after an erased account.
+- **No overbooking**: every roster change locks the event's role rows, so the last place is never given twice.
+- **Who changes the roster**: the creator of the event and members with *Manage events* set the roles (`PUT /api/events/{id}/roles`, replaces the list; `DELETE /api/events/{id}/roles/{roleID}`) and remove sign-ups (`DELETE /api/events/{id}/signup/{userID}`; the member is told). A capacity below the confirmed members is refused with 409 naming how many to remove; a role that still has sign-ups is removed only with `?move_to=<other role>`, which takes them over. Leaving (`DELETE /api/events/{id}/signup`) is always allowed. A completed or cancelled event keeps its roster read-only.
+- **Visibility**: the roster follows the event: members who cannot view the event's Talk neither see nor change it and are told nothing. `GET /api/events/{id}` carries `signups`; the list and the live updates carry `roles` with the counts and the caller's own `my_signup` only in answers to the caller's requests.
+- **Role templates**: sets of roles to start from (`GET /api/event-role-templates`). Members see only the templates an administrator enabled. Two presets (*Party of five*, *Raid of ten*) ship disabled; administrators enable or disable them, create their own and delete custom ones (`POST`/`PATCH`/`DELETE`, audited as `event.role_template_*`). Nothing shows to members until then.
+- **Audit, erasure and export**: role and roster changes are audited as `event.edit` (`event.talk_edit` in a Talk) with a `roster` detail. Erasing an account deletes its sign-ups; `event_signups.json` in the account export lists a member's own.
+
 ## Active events and joining Talks
 
 When an event's start time arrives:

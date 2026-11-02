@@ -141,6 +141,8 @@ export interface ServerEventPayloads {
   event_update: CommunityeventsCommunityEvent
   event_delete: { id: string }
   event_reminder: { event_id: string; title: string; start_time: string; channel_id?: string }
+  /** One member's sign-up for an event role changed without their doing: they moved up from the waitlist, or a moderator removed them. */
+  event_signup_notice: { event_id: string; title: string; kind: 'promoted' | 'removed'; role_name: string; start_time: string; channel_id?: string }
   community_updated: { community_name: string; community_icon?: string } // the Owner renamed the community or changed its icon (community_icon: the new version, '' when removed)
 }
 
@@ -374,7 +376,7 @@ const SERVER_EVENT_TYPES = new Set<string>([
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'dm_prefs_updated', 'dm_call_ring', 'dm_call_end', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
-  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'cameras_capped', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'community_updated'
+  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'cameras_capped', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'event_signup_notice', 'community_updated'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

@@ -17,6 +17,7 @@ import { usePastEvents } from './eventsPast'
 import { useToastStore } from './toast'
 import { t } from '../i18n'
 import { openEvents } from '../lib/eventsDialog'
+import { eventRosterActions } from './eventsRoster'
 
 /** Whole minutes until an event starts, at least one (the server reminds a quarter of an hour ahead). */
 export function minutesUntil(startTime: string, now = Date.now()): number {
@@ -63,6 +64,16 @@ async function apiDeleteCover(id: string): Promise<CommunityEvent> {
 
 async function apiListRSVPs(id: string): Promise<RSVPItem[]> {
   return api(`/api/events/${id}/rsvps`, { decode: decodeRSVPs })
+}
+
+/** A pushed event carries no one's own answers or the sign-ups: keep the ones this client knows. */
+function keepOwn(pushed: CommunityEvent, known: CommunityEvent | undefined): CommunityEvent {
+  return {
+    ...pushed,
+    ...(known?.my_rsvp != null ? { my_rsvp: known.my_rsvp } : {}),
+    ...(known?.my_signup ? { my_signup: known.my_signup } : {}),
+    ...(known?.signups ? { signups: known.signups } : {})
+  }
 }
 
 function isOngoing(e: CommunityEvent) {
@@ -114,6 +125,7 @@ export const useEventsStore = defineStore('communityEvents', () => {
     return item
   }
 
+  const roster = eventRosterActions(act)
   return {
     events, loading, error, enabled, upcomingCount, upcomingEvents, pastEvents, pastLoading: past.loading, pastLoaded: past.loaded, pastHasMore: past.hasMore, load, loadPast: past.load,
     create: (data: CreateEventRequest) => act(() => apiCreate(data)),
@@ -124,14 +136,13 @@ export const useEventsStore = defineStore('communityEvents', () => {
     uploadCover: (id: string, file: File) => act(() => apiUploadCover(id, file)),
     deleteCover: (id: string) => act(() => apiDeleteCover(id)),
     listRSVPs: (id: string) => apiListRSVPs(id),
-    // A pushed event carries no one's own answer: keep the one this client knows.
+    ...roster,
+    // A pushed event carries no one's own answers: keep the ones this client knows.
     handleEventUpdate: (payload: CommunityEvent) => {
-      const known = events.value.find(e => e.id === payload.id)
-      replaceOrAppend(known?.my_rsvp != null ? { ...payload, my_rsvp: known.my_rsvp } : payload)
+      replaceOrAppend(keepOwn(payload, events.value.find(e => e.id === payload.id)))
     },
     handleEventDelete: (id: string) => {
-      events.value = events.value.filter(e => e.id !== id)
-      past.remove(id)
+      events.value = events.value.filter(e => e.id !== id); past.remove(id)
     },
     handleEventReminder: (p: ServerEventPayloads['event_reminder']) => {
       useToastStore().info(

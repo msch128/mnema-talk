@@ -297,7 +297,8 @@ const HANDLERS: Handlers = {
   },
   event_update: (_cx, p) => { if (p) useEventsStore().handleEventUpdate(p) },
   event_delete: (_cx, p) => { if (p) useEventsStore().handleEventDelete(p.id) },
-  event_reminder: (_cx, p) => { if (p) useEventsStore().handleEventReminder(p) }
+  event_reminder: (_cx, p) => { if (p) useEventsStore().handleEventReminder(p) },
+  event_signup_notice: (_cx, p) => { if (p) useEventsStore().handleSignupNotice(p) }
 }
 
 export function handleWSEvent(cx: Cx, event: ServerEvent) {
