@@ -58,6 +58,7 @@ func (r eventRow) toEvent() *CommunityEvent {
 		CreatedBy:   r.CreatedBy,
 		CreatedAt:   r.CreatedAt,
 		UpdatedAt:   r.UpdatedAt,
+		Roles:       []EventRole{},
 	}
 }
 
