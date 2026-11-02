@@ -77,6 +77,16 @@ func (s *Service) talkMuted(ctx context.Context, userID, channelID uuid.UUID) (b
 	return chat.ResolveNotify(dbNow, chSetting, catSetting, srvSetting) == chat.NotifyMute, nil
 }
 
+// EventQuiet is eventQuiet for notices that are not pushes (the in-app toast
+// of the communityevents package): the member's presence is quiet or the Talk
+// is muted for them. A service without a database holds nothing back.
+func (s *Service) EventQuiet(ctx context.Context, userID uuid.UUID, channelID *uuid.UUID) (bool, error) {
+	if s == nil || s.DB == nil {
+		return false, nil
+	}
+	return s.eventQuiet(ctx, userID, channelID)
+}
+
 // eventQuiet says whether an event notification is held back for the member:
 // their presence is quiet (do not disturb, focus) or the Talk is muted for them.
 func (s *Service) eventQuiet(ctx context.Context, userID uuid.UUID, channelID *uuid.UUID) (bool, error) {

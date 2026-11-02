@@ -32,3 +32,15 @@ func exportEventSignups(ctx context.Context, q db.Querier, user uuid.UUID) (capp
 		FROM event_signups s JOIN event_roles r ON r.id = s.role_id
 		WHERE s.user_id = $1 ORDER BY s.created_at LIMIT $2`)
 }
+
+// exportEventComments lists the member's comments on community events.
+func exportEventComments(ctx context.Context, q db.Querier, user uuid.UUID) (capped, error) {
+	type commentRow struct {
+		EventID   uuid.UUID  `json:"event_id" db:"event_id"`
+		Content   string     `json:"content" db:"content"`
+		CreatedAt time.Time  `json:"created_at" db:"created_at"`
+		EditedAt  *time.Time `json:"edited_at,omitempty" db:"edited_at"`
+	}
+	return listDataset[commentRow](ctx, q, user, `SELECT event_id, content, created_at, edited_at
+		FROM event_comments WHERE user_id = $1 ORDER BY created_at LIMIT $2`)
+}

@@ -149,3 +149,31 @@ func TestAnEventReminderForAMissingTalkSendsNothing(t *testing.T) {
 		t.Fatalf("%d pushes, want none", len(got))
 	}
 }
+
+func TestEventQuietTellsTheToastWhatTheRemindersWouldDo(t *testing.T) {
+	e := newEnv(t, http.StatusCreated)
+	bob := e.member("bob")
+	ctx := context.Background()
+	held := func(channel *uuid.UUID) bool {
+		h, err := e.svc.EventQuiet(ctx, bob.id, channel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	if held(&e.general) || held(nil) {
+		t.Fatal("an ordinary member is not held back")
+	}
+	e.exec(`INSERT INTO channel_reads (user_id, channel_id, notify_level) SELECT $1, id, 'mute' FROM channels WHERE name = 'general'`, bob.id)
+	if !held(&e.general) || held(nil) {
+		t.Fatal("a muted Talk holds back, an event outside any Talk does not")
+	}
+	e.exec(`UPDATE users SET presence = 'focus' WHERE id = $1`, bob.id)
+	if !held(nil) {
+		t.Fatal("focus holds back")
+	}
+	var none *Service
+	if h, err := none.EventQuiet(ctx, bob.id, nil); h || err != nil {
+		t.Fatalf("without a service nothing is held back: %v %v", h, err)
+	}
+}

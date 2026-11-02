@@ -604,7 +604,15 @@
       "srvThisEventIsAndItsRoles": "This event is {a}; its roles can no longer change.",
       "srvThisEventIsAndItsRoster": "This event is {a}; its sign-ups can no longer change.",
       "srvThisEventIsAndTakesSignUps": "This event is {a} and takes no more sign-ups.",
-      "srvTwoRolesAreCalled": "Two roles are called {a}."
+      "srvTwoRolesAreCalled": "Two roles are called {a}.",
+      "srvAnEventKeepsAtMost": "An event keeps at most {a} comments.",
+      "srvBeforeMustBeAUuid": "The comment to continue after must be the ID of a comment.",
+      "srvCommentNotFound": "That comment doesn’t exist any more.",
+      "srvInvalidCommentId": "The comment is not valid.",
+      "srvOnlyTheAuthorAndModerators": "Only the author and moderators can delete a comment.",
+      "srvOnlyTheAuthorEditsA": "Only the author can edit a comment.",
+      "srvOneMemberLeavesAtMost": "One member leaves at most {a} comments under an event.",
+      "srvThisEventIsCancelledAndTakes": "This event is cancelled and takes no more comments."
     },
     "field": {
       "content": "Message",
@@ -3297,7 +3305,9 @@
         "talk_cancel": "Talk event cancelled",
         "role_template_create": "Event role template created",
         "role_template_update": "Event role template changed",
-        "role_template_delete": "Event role template deleted"
+        "role_template_delete": "Event role template deleted",
+        "comment_delete": "Event comment deleted",
+        "talk_comment_delete": "Talk event comment deleted"
       },
       "import": {
         "discord": "Discord template imported",
@@ -3653,7 +3663,23 @@
     },
     "rolePromoted": "You moved up from the waitlist: {role} – {title}",
     "roleRemoved": "You were removed from {role} – {title}",
-    "roleWaitlisted": "You were put on the waitlist: {role} – {title}"
+    "roleWaitlisted": "You were put on the waitlist: {role} – {title}",
+    "comments": "Comments",
+    "noComments": "No comments yet. Start the conversation.",
+    "commentPlaceholder": "Write a comment",
+    "commentsOlder": "Show older comments",
+    "commentsLoadFailed": "Couldn’t load the comments. Try again.",
+    "commentFailed": "Couldn’t post the comment. Try again.",
+    "commentEditFailed": "Couldn’t save the comment. Try again.",
+    "commentDeleteFailed": "Couldn’t delete the comment. Try again.",
+    "commentMuteFailed": "Couldn’t change the notices. Try again.",
+    "commentEdit": "Edit comment",
+    "commentDeleteTitle": "Delete this comment?",
+    "commentDeleteBody": "The comment is removed for everyone. This can’t be undone.",
+    "commentsMute": "Stop notices about new comments",
+    "commentsUnmute": "Get notices about new comments",
+    "commentToast": "New comment on {title}: {author}: {excerpt}",
+    "commentOpen": "Show event"
   },
   "moderation": {
     "timeoutAction": "Time out…",
