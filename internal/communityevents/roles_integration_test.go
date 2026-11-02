@@ -625,7 +625,7 @@ func TestSignUpsRaceWithRoleEditing(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, _, err := f.s.SignUp(ctx, f.event.ID, u.ID, roles[i%2].ID); err != nil {
+			if _, _, err := f.s.SignUp(ctx, f.event.ID, u.ID, roles[i%2].ID); err != nil && !strings.Contains(err.Error(), "role not found") {
 				t.Errorf("sign up: %v", err)
 			}
 		}()
@@ -636,14 +636,14 @@ func TestSignUpsRaceWithRoleEditing(t *testing.T) {
 			defer wg.Done()
 			capacity := 2 + i%3
 			_, err := f.s.SetRoles(ctx, f.event.ID, []RoleInput{{ID: &roles[0].ID, Name: "Tank", Capacity: &capacity}, {ID: &roles[1].ID, Name: "Flex", Capacity: ptr(50)}})
-			if err != nil && !strings.Contains(err.Error(), "confirmed members") {
+			if err != nil && !strings.Contains(err.Error(), "confirmed members") && !strings.Contains(err.Error(), "role not found") { // a delete that met an empty role removed it
 				t.Errorf("set roles: %v", err)
 			}
 		}()
 		go func() {
 			defer wg.Done()
 			// Deleting a role with sign-ups without a target is a conflict, never a deadlock.
-			if _, err := f.s.DeleteRole(ctx, f.event.ID, roles[0].ID, nil); err != nil && !strings.Contains(err.Error(), "sign-ups") {
+			if _, err := f.s.DeleteRole(ctx, f.event.ID, roles[0].ID, nil); err != nil && !strings.Contains(err.Error(), "sign-ups") && !strings.Contains(err.Error(), "role not found") {
 				t.Errorf("delete role: %v", err)
 			}
 		}()
