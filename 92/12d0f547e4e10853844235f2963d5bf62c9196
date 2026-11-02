@@ -1,0 +1,19 @@
+internal/communityevents/roles_integration_test.go
+  s_4c6a19030e223f::t_5246b384996c23 640,651,658
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9212d0f547e4e10853844235f2963d5bf62c9196",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
