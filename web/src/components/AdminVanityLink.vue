@@ -8,6 +8,7 @@ import { api, caughtErrorMessage } from '../lib/api'
 import { decodeOnboardingVanitySettings } from '../types/rest'
 import { joinLink } from '../lib/inviteLink'
 import { useToastStore } from '../stores/toast'
+import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
 
 const MIN_SLUG = 3
@@ -15,6 +16,8 @@ const MAX_SLUG = 32
 const JOIN_PREFIX = '/join/'
 
 const toasts = useToastStore()
+// Only the Owner decides that the link creates accounts; Administrators set the name and may switch it off.
+const isOwner = computed(() => usePermissionsStore().isOwner)
 const slug = ref('')
 const accepts = ref(false)
 const saved = ref({ slug: '', accepts: false })
@@ -23,7 +26,10 @@ const busy = ref(false)
 const copied = ref(false)
 
 const fullLink = computed(() => (saved.value.slug ? joinLink(window.location.origin, saved.value.slug) : ''))
-const dirty = computed(() => slug.value.trim().toLowerCase() !== saved.value.slug || (slug.value.trim() !== '' && accepts.value !== saved.value.accepts))
+const renamed = computed(() => slug.value.trim().toLowerCase() !== saved.value.slug)
+// What is sent: an Administrator cannot keep sign-ups on for another name, so a rename switches them off.
+const acceptsToSend = computed(() => accepts.value && (isOwner.value || !renamed.value))
+const dirty = computed(() => renamed.value || (slug.value.trim() !== '' && acceptsToSend.value !== saved.value.accepts))
 const tooShort = computed(() => slug.value.trim() !== '' && slug.value.trim().length < MIN_SLUG)
 
 async function load() {
@@ -46,7 +52,7 @@ async function save() {
   try {
     adopt(await api('/api/admin/vanity-link', {
       method: 'PUT',
-      json: { slug: slug.value, accepts_signups: accepts.value },
+      json: { slug: slug.value, accepts_signups: acceptsToSend.value },
       decode: decodeOnboardingVanitySettings
     }))
     toasts.success(t(saved.value.slug ? 'admin.vanity.saved' : 'admin.vanity.removed'))
@@ -83,13 +89,14 @@ onMounted(load)
         </div>
         <p class="text-xs" :class="tooShort ? 'text-mnema-danger' : 'text-mnema-tertiary'">{{ $t('admin.vanity.rules', { min: MIN_SLUG, max: MAX_SLUG }) }}</p>
       </div>
-      <label class="flex items-start gap-2 text-sm text-mnema-text">
+      <label v-if="isOwner || saved.accepts" class="flex items-start gap-2 text-sm text-mnema-text">
         <input v-model="accepts" type="checkbox" class="mt-0.5" :disabled="slug.trim() === ''" data-testid="vanity-accepts" />
         <span>
           {{ $t('admin.vanity.accepts') }}
           <span class="block text-xs text-mnema-tertiary">{{ $t('admin.vanity.acceptsHint') }}</span>
         </span>
       </label>
+      <p v-else class="text-xs text-mnema-tertiary" data-testid="vanity-owner-note">{{ $t('admin.vanity.ownerOnly') }}</p>
       <button type="submit" class="btn btn-primary" :disabled="busy || !dirty || tooShort" data-testid="vanity-save">{{ $t('common.save') }}</button>
     </form>
     <div v-if="fullLink" class="flex items-center gap-2" data-testid="vanity-full">

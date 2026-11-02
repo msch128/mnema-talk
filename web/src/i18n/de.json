@@ -136,6 +136,7 @@
     },
     "detail": {
       "invalidInvite": "Ungültiger Einladungscode",
+      "vanityOwnerOnly": "Nur der Owner kann mit dem Kurzlink Konten erstellen lassen.",
       "vanityChars": "Der Linkname darf nur Kleinbuchstaben, Ziffern und einzelne Bindestriche dazwischen enthalten.",
       "vanityLength": "Der Linkname muss {min} bis {max} Zeichen lang sein.",
       "vanityReserved": "Dieser Linkname ist reserviert. Wähle einen anderen.",
@@ -1745,6 +1746,7 @@
       "rules": "{min} bis {max} Zeichen: Kleinbuchstaben, Ziffern und einzelne Bindestriche. Großbuchstaben werden zu Kleinbuchstaben; einige Wörter sind reserviert.",
       "accepts": "Mit diesem Link Konten erstellen lassen",
       "acceptsHint": "Dann kann sich jeder, der den Link kennt, ohne Limit und ohne Ablauf registrieren, wie mit einer dauerhaften öffentlichen Einladung. Lass es aus, damit Einladungen persönlich bleiben. Ausschalten oder den Link entfernen schließt ihn sofort.",
+      "ownerOnly": "Nur der Owner kann mit diesem Link Konten erstellen lassen. Administratoren können den Namen setzen und die Registrierung ausschalten.",
       "saved": "Kurzlink gespeichert.",
       "removed": "Kurzlink entfernt.",
       "copy": "Link kopieren",

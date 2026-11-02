@@ -136,6 +136,7 @@
     },
     "detail": {
       "invalidInvite": "Invalid invite code",
+      "vanityOwnerOnly": "Only the Owner can let the vanity link create accounts.",
       "vanityChars": "The link name may only hold lowercase letters, digits and single hyphens between them.",
       "vanityLength": "The link name must be {min} to {max} characters.",
       "vanityReserved": "This link name is reserved. Choose another one.",
@@ -1745,6 +1746,7 @@
       "rules": "{min} to {max} characters: lowercase letters, digits and single hyphens. Upper case is turned into lower case; some words are reserved.",
       "accepts": "Let this link create accounts",
       "acceptsHint": "Anyone who knows the link can then sign up, without limit and without expiry, like a permanent public invite. Leave it off to keep invites individual. Switching it off or removing the link closes it at once.",
+      "ownerOnly": "Only the Owner can let this link create accounts. Administrators can set the name and switch sign-ups off.",
       "saved": "Vanity link saved.",
       "removed": "Vanity link removed.",
       "copy": "Copy link",

@@ -84,6 +84,18 @@ describe('InviteLanding', () => {
       expect(w.find('button[type="submit"]').text()).toBe('Register')
     })
 
+    it('falls back to asking for a code when the link was switched off meanwhile', async () => {
+      apiMock.mockResolvedValue({ valid: true, community_name: 'Owls', accepts_signups: true })
+      const w = await landing('/join/owls')
+      apiMock.mockRejectedValue(new Error('invalid invite code'))
+      await w.get('#login-username').setValue('newbie')
+      await w.get('input[type="password"]').setValue('correct-horse-battery')
+      await w.get('form').trigger('submit')
+      await flushPromises()
+      expect(w.find('#login-invite').exists()).toBe(true)
+      expect(w.find<HTMLInputElement>('#login-invite').element.value).toBe('')
+    })
+
     it('greets the visitor on the sign-in page when the link takes no sign-ups', async () => {
       apiMock.mockResolvedValue({ valid: true, community_name: 'Owls' })
       const w = await landing('/join/owls')

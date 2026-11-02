@@ -198,3 +198,47 @@ func TestVanityLinkPageCarriesTheCommunityNameAndEscapesTheSlug(t *testing.T) {
 		t.Error("no redirect from a vanity link")
 	}
 }
+
+func TestOnlyTheOwnerCanOpenTheVanityLinkToSignUps(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	boss := a.register(admin, "boss")
+	assignRoles(t, admin, boss, createRole(t, admin, "caretaker", perm.Administrator))
+
+	// An Administrator may set the name but not take sign-ups.
+	setVanity(t, boss, "owls", false, http.StatusOK)
+	if r := setVanity(t, boss, "owls", true, http.StatusForbidden); r.code(t) != "FORBIDDEN" || !strings.Contains(string(r.body), "only the Owner can let the vanity link create accounts") {
+		t.Errorf("enabling: %s", r.body)
+	}
+	if valid, accepts, _ := joinPreview(t, a.anon(), "owls"); !valid || accepts {
+		t.Fatalf("a refused request changes nothing: %v %v", valid, accepts)
+	}
+	// The Owner opens it; the Administrator may keep it, switch it off, or clear it, but not move it open.
+	setVanity(t, admin, "owls", true, http.StatusOK)
+	setVanity(t, boss, "owls", true, http.StatusOK)
+	setVanity(t, boss, "hawks", true, http.StatusForbidden)
+	setVanity(t, boss, "hawks", false, http.StatusOK)
+	if _, accepts, _ := joinPreview(t, a.anon(), "hawks"); accepts {
+		t.Error("renaming with sign-ups off leaves them off")
+	}
+	setVanity(t, admin, "hawks", true, http.StatusOK)
+	setVanity(t, boss, "", false, http.StatusOK)
+	if valid, _, _ := joinPreview(t, a.anon(), "hawks"); valid {
+		t.Error("an Administrator can clear the link")
+	}
+	// Enabling an empty name is nothing to open.
+	setVanity(t, boss, "", true, http.StatusOK)
+}
+
+func TestVanitySignupCodeFoldsOnlyAscii(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	setVanity(t, admin, "kelvin", true, http.StatusOK)
+	// U+212A KELVIN SIGN lowercases to "k" in Unicode folding, but is not the letter.
+	if r := registerWith(a.anon(), "newbie", "~\u212Aelvin"); r.status != http.StatusBadRequest {
+		t.Errorf("kelvin sign: %d %s", r.status, r.body)
+	}
+	if r := setVanity(t, admin, "\u212Aelvin", false, http.StatusBadRequest); r.code(t) != "INVALID_INPUT" {
+		t.Errorf("slug with kelvin sign: %s", r.body)
+	}
+}

@@ -22,7 +22,7 @@ func TestCleanVanitySlugMatrix(t *testing.T) {
 		}
 	}
 	bad := []string{
-		"ab", strings.Repeat("a", 33), "-owls", "owls-", "my--clan", "my_clan", "my clan", "own.s", "ünï", "a/b", "../x",
+		"ab", strings.Repeat("a", 33), "-owls", "owls-", "my--clan", "my_clan", "my clan", "own.s", "\u00fcn\u00ef", "\u212Aelvin", "a/b", "../x",
 		"admin", "API", "Join", "login", "wiki", "events", "assets", "health", "static", "settings", "invite",
 	}
 	for _, in := range bad {
@@ -53,18 +53,21 @@ func TestReservedSlugsCoverTheRoutesOfTheApp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// pwa-icon-512, mnema-talk-icon-maskable and the like: the name before a size or variant.
+	variant := regexp.MustCompile(`-(\d+|maskable|dark|light|mono)$`)
 	for _, f := range files {
 		if strings.HasPrefix(f.Name(), ".") {
 			continue
 		}
 		base := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
-		// pwa-icon-512 and the like: the prefix before a size or variant.
-		base = regexp.MustCompile(`-(\d+|maskable.*|dark|light|mono)$`).ReplaceAllString(base, "")
+		for variant.MatchString(base) {
+			base = variant.ReplaceAllString(base, "")
+		}
 		names = append(names, base)
 	}
 	names = append(names, "api", "invite", "join", "login", "assets", "sw", "ws")
 	for _, name := range names {
-		if !reservedSlugs[name] && !reservedSlugs[strings.SplitN(name, "-", 2)[0]] {
+		if !reservedSlugs[name] {
 			t.Errorf("%q is a route or file of the app but not a reserved vanity slug", name)
 		}
 	}

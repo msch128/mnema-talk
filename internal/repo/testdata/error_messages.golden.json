@@ -291,6 +291,7 @@
   "only the Owner can give a bot a role with administrator or admin-area permissions",
   "only the Owner can give a bot administrator or admin-area permissions, anywhere",
   "only the Owner can grant: manage bots",
+  "only the Owner can let the vanity link create accounts",
   "only the Owner can manage a bot with administrator permissions",
   "only the Owner can map onto a role a bot holds: %s",
   "only the Owner can set a role's upload limit",
