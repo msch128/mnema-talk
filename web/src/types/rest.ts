@@ -2850,6 +2850,43 @@ export function isChatViewAsRole(value: unknown): value is ChatViewAsRole {
 
 export const decodeChatViewAsRole = decoder("chat.ViewAsRole", isChatViewAsRole)
 
+export type CommunityeventsCommentList = {
+  comments: Array<CommunityeventsEventComment>
+  has_more: boolean
+  muted: boolean
+}
+
+export function isCommunityeventsCommentList(value: unknown): value is CommunityeventsCommentList {
+  return isRecord(value)
+    && (hasOwn(value, "comments") && isArrayOf(value["comments"], item => isCommunityeventsEventComment(item)))
+    && (hasOwn(value, "has_more") && typeof value["has_more"] === 'boolean')
+    && (hasOwn(value, "muted") && typeof value["muted"] === 'boolean')
+}
+
+export const decodeCommunityeventsCommentList = decoder("communityevents.CommentList", isCommunityeventsCommentList)
+
+export type CommunityeventsCommentMute = {
+  muted: boolean
+}
+
+export function isCommunityeventsCommentMute(value: unknown): value is CommunityeventsCommentMute {
+  return isRecord(value)
+    && (hasOwn(value, "muted") && typeof value["muted"] === 'boolean')
+}
+
+export const decodeCommunityeventsCommentMute = decoder("communityevents.CommentMute", isCommunityeventsCommentMute)
+
+export type CommunityeventsCommentRequest = {
+  content: string
+}
+
+export function isCommunityeventsCommentRequest(value: unknown): value is CommunityeventsCommentRequest {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"], 2000))
+}
+
+export const decodeCommunityeventsCommentRequest = decoder("communityevents.CommentRequest", isCommunityeventsCommentRequest)
+
 export type CommunityeventsCommunityEvent = {
   channel_id?: string | null
   cover_url?: string | null
@@ -2915,6 +2952,27 @@ export function isCommunityeventsCreateEventRequest(value: unknown): value is Co
 }
 
 export const decodeCommunityeventsCreateEventRequest = decoder("communityevents.CreateEventRequest", isCommunityeventsCreateEventRequest)
+
+export type CommunityeventsEventComment = {
+  content: string
+  created_at: string
+  edited_at?: string | null
+  event_id: string
+  id: string
+  user: CommunityeventsUserRef
+}
+
+export function isCommunityeventsEventComment(value: unknown): value is CommunityeventsEventComment {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"], 2000))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "edited_at") || (isTimestamp(value["edited_at"]) || value["edited_at"] === null))
+    && (hasOwn(value, "event_id") && isIdentifier(value["event_id"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "user") && isCommunityeventsUserRef(value["user"]))
+}
+
+export const decodeCommunityeventsEventComment = decoder("communityevents.EventComment", isCommunityeventsEventComment)
 
 export type CommunityeventsEventRole = {
   capacity?: number | null

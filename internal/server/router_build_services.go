@@ -73,14 +73,15 @@ func (c *components) newEvents() {
 		pushSvc = c.pushH.Service
 	}
 	c.eventsH = &communityevents.Handler{
-		DB:          c.d.DB,
-		Store:       communityevents.NewStore(c.d.DB),
-		MediaStore:  c.d.Store,
-		MediaBucket: c.cfg.S3Bucket,
-		Events:      c.pub,
-		Perms:       c.permSvc,
-		Audit:       c.auditLog,
-		Push:        pushSvc,
+		DB:           c.d.DB,
+		Store:        communityevents.NewStore(c.d.DB),
+		MediaStore:   c.d.Store,
+		MediaBucket:  c.cfg.S3Bucket,
+		Events:       c.pub,
+		Perms:        c.permSvc,
+		Audit:        c.auditLog,
+		Push:         pushSvc,
+		CommentLimit: httpx.NewRateLimiter(communityevents.CommentsPerMinute, time.Minute).Named("event_comment"),
 	}
 	c.eventsScheduler = communityevents.NewScheduler(c.eventsH)
 	if c.d.DB != nil { // router-only tests run without a database

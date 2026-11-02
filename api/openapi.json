@@ -4782,6 +4782,53 @@
         ],
         "type": "object"
       },
+      "communityevents.CommentList": {
+        "properties": {
+          "comments": {
+            "items": {
+              "$ref": "#/components/schemas/communityevents.EventComment"
+            },
+            "type": "array"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "muted": {
+            "description": "Muted says the caller switched the notices of this event's comments off.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "comments",
+          "has_more",
+          "muted"
+        ],
+        "type": "object"
+      },
+      "communityevents.CommentMute": {
+        "properties": {
+          "muted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "muted"
+        ],
+        "type": "object"
+      },
+      "communityevents.CommentRequest": {
+        "properties": {
+          "content": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "type": "object"
+      },
       "communityevents.CommunityEvent": {
         "properties": {
           "channel_id": {
@@ -4931,6 +4978,44 @@
           "description",
           "start_time",
           "title"
+        ],
+        "type": "object"
+      },
+      "communityevents.EventComment": {
+        "properties": {
+          "content": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "edited_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "event_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/communityevents.UserRef"
+          }
+        },
+        "required": [
+          "content",
+          "created_at",
+          "event_id",
+          "id",
+          "user"
         ],
         "type": "object"
       },
@@ -29985,6 +30070,391 @@
           }
         ],
         "summary": "Cancel a community event",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/events/{id}/comments": {
+      "get": {
+        "description": "A page of the event's comments, oldest first. Without before it is the newest page; before names the oldest comment already loaded and returns the page ahead of it. has_more says older comments exist; muted says the caller switched the notices of this event's comments off. If the event is in a Talk, requires ViewChannel.",
+        "operationId": "listCommunityEventComments",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comment ID: return the comments before it.",
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, 1 to 100.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/communityevents.CommentList"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List the comments of an event",
+        "tags": [
+          "Events"
+        ]
+      },
+      "post": {
+        "description": "Adds a comment of 1 to 2000 characters (no replies; an event keeps at most 500). Everyone who can view the event may comment. Announces the comment to everyone who may see the event (event_comment) and tells the event's creator and attendees, who did not mute it, by event_comment_notice and Web Push. Rate limited per member.",
+        "operationId": "createCommunityEventComment",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/communityevents.CommentRequest"
+              }
+            }
+          },
+          "description": "The comment",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/communityevents.EventComment"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the event holds 500 comments already."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Comment on an event",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/events/{id}/comments/mute": {
+      "put": {
+        "description": "Sets whether the caller is told about new comments of this event (the creator and attendees are by default).",
+        "operationId": "muteCommunityEventComments",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/communityevents.CommentMute"
+              }
+            }
+          },
+          "description": "muted",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/communityevents.CommentMute"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Mute or unmute the notices of an event's comments",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/events/{id}/comments/{commentID}": {
+      "delete": {
+        "description": "Removes a comment. The author may delete their own; members with Manage events or Manage messages may delete any (audited).",
+        "operationId": "deleteCommunityEventComment",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comment ID",
+            "in": "path",
+            "name": "commentID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a comment",
+        "tags": [
+          "Events"
+        ]
+      },
+      "patch": {
+        "description": "Changes the text of the caller's own comment (shown as edited). Rate limited per member.",
+        "operationId": "updateCommunityEventComment",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comment ID",
+            "in": "path",
+            "name": "commentID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/communityevents.CommentRequest"
+              }
+            }
+          },
+          "description": "The new text",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/communityevents.EventComment"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not the author."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Edit a comment",
         "tags": [
           "Events"
         ]

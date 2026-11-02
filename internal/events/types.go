@@ -91,6 +91,11 @@ const (
 	// EventSignupNotice tells one member that their sign-up for an event role changed
 	// without their doing: they moved up from the waitlist, or a moderator removed them.
 	EventSignupNotice = "event_signup_notice"
+	// EventComment announces a created, edited or deleted comment of an event to
+	// everyone who may see the event; EventCommentNotice tells the creator and the
+	// attendees (not the author, not those who muted the event) about a new one.
+	EventComment       = "event_comment"
+	EventCommentNotice = "event_comment_notice"
 	// CommunityUpdated announces the community's name after the Owner changed
 	// it, so open tabs retitle themselves without a reload.
 	CommunityUpdated = "community_updated"
