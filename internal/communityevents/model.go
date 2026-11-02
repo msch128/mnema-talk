@@ -51,6 +51,12 @@ type CommunityEvent struct {
 	RSVPCounts   RSVPCounts `json:"rsvp_counts"`
 	MyRSVP       *string    `json:"my_rsvp,omitempty" binding:"optional" extensions:"x-nullable"`
 	GoingMembers []UserRef  `json:"going_members,omitempty" binding:"optional"`
+	// Roles are the event's roles with their sign-up counts (in position order).
+	Roles []EventRole `json:"roles" binding:"optional"`
+	// MySignup is the caller's own sign-up for a role; the answer to a request, never broadcast.
+	MySignup *Signup `json:"my_signup,omitempty" binding:"optional"`
+	// Signups lists who is signed up for which role (event details only).
+	Signups []SignupItem `json:"signups,omitempty" binding:"optional"`
 }
 
 // CreateEventRequest is the payload to create a new community event.

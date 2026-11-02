@@ -3,6 +3,7 @@ package communityevents
 import (
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -27,6 +28,9 @@ type Handler struct {
 	Perms       *perm.Service
 	Audit       *audit.Log
 	Push        *push.Service
+	// notices counts the sign-up pushes in flight; pusher overrides Push (tests).
+	notices sync.WaitGroup
+	pusher  signupPusher
 }
 
 func (h *Handler) Mount(r chi.Router) {
@@ -38,6 +42,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Put("/events/{id}/rsvp", httpx.Handle(h.setRSVP))
 	r.Delete("/events/{id}/rsvp", httpx.Handle(h.deleteRSVP))
 	r.Get("/events/{id}/rsvps", httpx.Handle(h.listRSVPs))
+	h.mountRoles(r)
 	r.Delete("/events/{id}/cover", httpx.Handle(h.deleteCover))
 }
 
@@ -79,6 +84,8 @@ func (h *Handler) broadcast(ev *CommunityEvent) {
 	}
 	shared := *ev
 	shared.MyRSVP = nil
+	shared.MySignup = nil
+	shared.Signups = nil
 	ev = &shared
 	if ev.ChannelID != nil {
 		h.Events.BroadcastChannel(*ev.ChannelID, events.EventUpdate, ev)

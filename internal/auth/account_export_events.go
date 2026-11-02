@@ -19,3 +19,16 @@ func exportRSVPs(ctx context.Context, q db.Querier, user uuid.UUID) (capped, err
 	return listDataset[rsvpRow](ctx, q, user, `SELECT event_id, response, created_at, updated_at
 		FROM event_rsvps WHERE user_id = $1 ORDER BY created_at LIMIT $2`)
 }
+
+// exportEventSignups lists the member's sign-ups for event roles.
+func exportEventSignups(ctx context.Context, q db.Querier, user uuid.UUID) (capped, error) {
+	type signupRow struct {
+		EventID   uuid.UUID `json:"event_id" db:"event_id"`
+		Role      string    `json:"role" db:"role"`
+		State     string    `json:"state" db:"state"`
+		CreatedAt time.Time `json:"created_at" db:"created_at"`
+	}
+	return listDataset[signupRow](ctx, q, user, `SELECT s.event_id, r.name AS role, s.state, s.created_at
+		FROM event_signups s JOIN event_roles r ON r.id = s.role_id
+		WHERE s.user_id = $1 ORDER BY s.created_at LIMIT $2`)
+}

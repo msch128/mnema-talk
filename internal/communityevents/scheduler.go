@@ -70,6 +70,7 @@ func (s *Scheduler) Tick(ctx context.Context, now time.Time) {
 	s.processActivations(ctx, now)
 	s.processCompletions(ctx, now)
 	s.processReminders(ctx, now)
+	s.processPromotions(ctx)
 }
 
 func (s *Scheduler) processActivations(ctx context.Context, now time.Time) {
@@ -191,7 +192,7 @@ func (s *Scheduler) pushAll(ctx context.Context, pusher reminderPusher, recipien
 }
 
 // Wait blocks until the push reminders already started are done.
-func (s *Scheduler) Wait() { s.pushes.Wait() }
+func (s *Scheduler) Wait() { s.pushes.Wait(); s.Handler.WaitNotices() }
 
 // broadcastEvents announces the current state of each event; an event that
 // vanished meanwhile is skipped.
@@ -200,5 +201,30 @@ func (s *Scheduler) broadcastEvents(ctx context.Context, ids []uuid.UUID) {
 		if ev, err := s.Handler.Store.Get(ctx, id, nil); err == nil {
 			s.Handler.broadcast(ev)
 		}
+	}
+}
+
+// processPromotions moves waitlisted members up wherever a role has room that
+// no sign-up route filled (a member was erased, say) and tells them.
+func (s *Scheduler) processPromotions(ctx context.Context) {
+	promoted, err := s.Handler.Store.PromoteOpenSlots(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "promote waitlists failed", "err", err)
+	}
+	byEvent := map[uuid.UUID][]Promotion{}
+	var order []uuid.UUID
+	for _, p := range promoted {
+		if _, ok := byEvent[p.EventID]; !ok {
+			order = append(order, p.EventID)
+		}
+		byEvent[p.EventID] = append(byEvent[p.EventID], p)
+	}
+	for _, id := range order {
+		ev, err := s.Handler.Store.Get(ctx, id, nil)
+		if err != nil {
+			continue
+		}
+		s.Handler.broadcast(ev)
+		s.Handler.notifyMembers(ctx, ev, SignupKindPromoted, "", byEvent[id])
 	}
 }
