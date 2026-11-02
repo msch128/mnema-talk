@@ -1,0 +1,53 @@
+web/src/components/EventDetailModal.vue
+  s_b0f5385af34509::t_c7e55a0dbe94ea 231
+web/src/components/EventEditDialog.test.ts
+  s_b0f5385af34509::t_8916278279ebb4 331
+web/src/components/EventEditDialog.vue
+  s_b0f5385af34509::t_758b7e74730d17 157
+web/src/components/EventRolesDialog.vue
+  s_b0f5385af34509::t_fae7fc9fba7804 29
+web/src/components/EventRoster.test.ts
+  s_b0f5385af34509::t_5f7fc2ada59235 109-123
+web/src/components/EventRoster.vue
+  s_b0f5385af34509::t_fb250c87942295 23,78,94
+web/src/composables/useEventRoles.test.ts
+  s_b0f5385af34509::t_82ece9bb067b4d 8-9,32-64
+web/src/composables/useEventRoles.ts
+  s_b0f5385af34509::t_4751e70d61ef4b 4,6,10-28,32-47,50-64
+web/src/i18n/de.json
+  s_b0f5385af34509::t_9614cad6ff5fdb 3602-3603
+web/src/i18n/en.json
+  s_b0f5385af34509::t_ac6b7d5c070b07 3602-3603
+web/src/lib/eventRolesApi.test.ts
+  s_b0f5385af34509::t_5376e165f41eda 50-51
+web/src/lib/eventRolesApi.ts
+  s_b0f5385af34509::t_724b68b276b098 39-41
+web/src/stores/events.test.ts
+  s_b0f5385af34509::t_35f4cccf6a8635 317-331
+web/src/stores/events.ts
+  s_b0f5385af34509::t_aa74f4fa438cea 128-131,147
+web/src/stores/eventsRoster.ts
+  s_b0f5385af34509::t_00a2e464199500 13,20-28,32
+web/src/types/events.test.ts
+  s_b0f5385af34509::t_178239a26ed2e8 132-133
+web/src/types/events.ts
+  s_b0f5385af34509::t_17a516a870582d 145
+web/src/types/noticeEvents.ts
+  s_b0f5385af34509::t_5916c018b79c9f 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7df026931e4d054d3d2e43747591e7a5f133bfe7",
+  "prompts": {},
+  "sessions": {
+    "s_b0f5385af34509": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a493114f25b1f8514",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
