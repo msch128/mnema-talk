@@ -60,6 +60,8 @@
     "EventDelete": "event_delete",
     "EventReminder": "event_reminder",
     "EventSignupNotice": "event_signup_notice",
+    "EventComment": "event_comment",
+    "EventCommentNotice": "event_comment_notice",
     "CommunityUpdated": "community_updated"
   },
   "client": {

@@ -2,7 +2,7 @@
 // internal/ws/{handle,voice,presence,signal,lifecycle}.go and chat publications.
 import type { ModerationNotice } from '../lib/moderation'
 import type { Message, Poll, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
-import type { ChatUserRef, CommunityeventsCommunityEvent } from './rest'
+import type { ChatUserRef, CommunityeventsCommunityEvent, CommunityeventsEventComment } from './rest'
 import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel, isCommunityeventsCommunityEvent } from './rest'
 import type { StageHand, StageTalkPower, TalkReaction } from './stageEvents'
 import { STAGE_EVENT_CHECKS } from './stageEvents'
@@ -143,6 +143,10 @@ export interface ServerEventPayloads {
   event_reminder: { event_id: string; title: string; start_time: string; channel_id?: string }
   /** One member's sign-up for an event role changed without their doing: they moved up from the waitlist, or a moderator removed them. */
   event_signup_notice: { event_id: string; title: string; kind: 'promoted' | 'removed' | 'waitlisted'; role_name: string; start_time: string; channel_id?: string }
+  /** A comment of an event was created, edited or deleted (comment is absent when deleted). */
+  event_comment: { action: 'created' | 'updated' | 'deleted'; event_id: string; comment_id: string; comment?: CommunityeventsEventComment }
+  /** A new comment on an event the member created or attends and did not mute. */
+  event_comment_notice: { event_id: string; title: string; author_name: string; excerpt: string; channel_id?: string }
   community_updated: { community_name: string; community_icon?: string } // the Owner renamed the community or changed its icon (community_icon: the new version, '' when removed)
 }
 
@@ -376,7 +380,7 @@ const SERVER_EVENT_TYPES = new Set<string>([
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'dm_prefs_updated', 'dm_call_ring', 'dm_call_end', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
-  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'cameras_capped', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'event_signup_notice', 'community_updated'
+  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'cameras_capped', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'event_signup_notice', 'event_comment', 'event_comment_notice', 'community_updated'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

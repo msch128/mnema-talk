@@ -31,6 +31,10 @@ type Handler struct {
 	// notices counts the sign-up pushes in flight; pusher overrides Push (tests).
 	notices sync.WaitGroup
 	pusher  signupPusher
+	// CommentLimit caps comments and edits per member; nil means no cap.
+	CommentLimit *httpx.RateLimiter
+	// commentPusher overrides Push for comment notices (tests).
+	commentsPusher commentPusher
 }
 
 func (h *Handler) Mount(r chi.Router) {
@@ -43,6 +47,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Delete("/events/{id}/rsvp", httpx.Handle(h.deleteRSVP))
 	r.Get("/events/{id}/rsvps", httpx.Handle(h.listRSVPs))
 	h.mountRoles(r)
+	h.mountComments(r)
 	r.Delete("/events/{id}/cover", httpx.Handle(h.deleteCover))
 }
 

@@ -11,6 +11,10 @@ import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import type { CommunityEvent, PermissionsInfo, RSVPItem } from '../types/domain'
 
 vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel: vi.fn() }) }))
+vi.mock('../lib/eventCommentsApi', () => ({
+  fetchComments: vi.fn().mockResolvedValue({ comments: [], has_more: false, muted: false }),
+  postComment: vi.fn(), editComment: vi.fn(), deleteComment: vi.fn(), setCommentsMuted: vi.fn()
+}))
 vi.mock('../lib/api', async importOriginal => ({
   ...(await importOriginal<typeof import('../lib/api')>()),
   api: vi.fn(() => Promise.resolve([]))
