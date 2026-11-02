@@ -1,0 +1,147 @@
+README.md
+  s_61e7f03250bd0b::t_83a9295ce25453 108
+api/openapi.json
+  s_61e7f03250bd0b::t_b50cf5395ecdb6 4845-4855,4859-4865,4937-4977,5032-5193,30064,30066-30067,30074,30088,30094-30095,30100,30104,30112,30137-30150,30154,30160-30310,30312-30722,30735-30755,30767-30786,30796-30815,30823,30827-30832,30849,30853,30905,30913,30919-30922,30933-30951,30965-30974,31003,31011,31017,31019-31020,31060,31065-31067,31082,31084,31088,31112,31120,31122,31130-31161,31165-31168,31172,31174,31182,31190,31196,31198-31199,31223-31225,31242,31248-31249,31266,31270,31312,31320,31326-31329,31340-31349,31357,31363-31372,31382-31391,31399
+doc/events.md
+  s_61e7f03250bd0b::t_9f33094b51efab 36-48
+e2e/tests/event-roles.spec.ts
+  s_61e7f03250bd0b::t_9678ede1eadf97 1-98
+internal/auth/account_erase.go
+  s_61e7f03250bd0b::t_d23795c6daa63e 73
+internal/auth/account_export_build.go
+  s_61e7f03250bd0b::t_628b15a280bb27 78,200
+internal/auth/account_export_events.go
+  s_61e7f03250bd0b::t_8ef16bf7626446 22-34
+internal/communityevents/handler.go
+  s_61e7f03250bd0b::t_570c620d4e4944 6,31-33,45,87-88
+internal/communityevents/handler_roles.go
+  s_61e7f03250bd0b::t_6d803f8e5200a5 1-173
+internal/communityevents/handler_signup.go
+  s_61e7f03250bd0b::t_1efca437dd1ade 1-112
+internal/communityevents/handler_templates.go
+  s_61e7f03250bd0b::t_83ae2e340e059b 1-151
+internal/communityevents/model.go
+  s_61e7f03250bd0b::t_607b56716977cf 54-59
+internal/communityevents/model_roles.go
+  s_61e7f03250bd0b::t_bd424f279c8df8 1-93
+internal/communityevents/notify.go
+  s_61e7f03250bd0b::t_7e9e145c969275 1-110
+internal/communityevents/roles_integration_test.go
+  s_61e7f03250bd0b::t_cae17af7be2e15 1-790
+internal/communityevents/scheduler.go
+  s_61e7f03250bd0b::t_544282bd576d1a 73,195,206-230
+internal/communityevents/store.go
+  s_61e7f03250bd0b::t_8ec05f9d3c7e7a 61,118-120
+internal/communityevents/store_list.go
+  s_61e7f03250bd0b::t_b2fc15e033a3ef 138-140
+internal/communityevents/store_roles.go
+  s_61e7f03250bd0b::t_2060bcbb16c57e 1-400
+internal/communityevents/store_roster_read.go
+  s_61e7f03250bd0b::t_2ac8e5aa55f07d 1-94
+internal/communityevents/store_signup.go
+  s_61e7f03250bd0b::t_8d0ba257fe4938 1-208
+internal/communityevents/store_templates.go
+  s_61e7f03250bd0b::t_7c7c7f806b6764 1-150
+internal/db/migrations/0086_event_roles.sql
+  s_61e7f03250bd0b::t_f4bca899e0a4cc 1-79
+internal/events/testdata/events.golden.json
+  s_61e7f03250bd0b::t_e5086ac43ac8ba 63
+internal/events/types.go
+  s_61e7f03250bd0b::t_01a9d9de64a22d 92-94
+internal/push/event_reminder.go
+  s_61e7f03250bd0b::t_1648de416d484e 22,79-94
+internal/push/event_signup.go
+  s_61e7f03250bd0b::t_4d0b65ed5d6f2c 1-50
+internal/push/locales/texts.json
+  s_61e7f03250bd0b::t_0089b071846f0f 19-21,44-46
+internal/repo/testdata/error_messages.golden.json
+  s_61e7f03250bd0b::t_972b4135288210 54-55,60,73,105,222,226,283-284,288,310,326,404-405,442-444,456,471-472,474,513
+internal/server/events_roles_integration_test.go
+  s_61e7f03250bd0b::t_8202bd87373478 1-57
+internal/server/health.go
+  s_61e7f03250bd0b::t_2c09488c8b2fa5 71
+web/src/components/EventDetailModal.test.ts
+  s_61e7f03250bd0b::t_53442ead8de148 10-11,14,254-308
+web/src/components/EventDetailModal.vue
+  s_61e7f03250bd0b::t_080106c068c161 2,16-19,36-42,76-85,88,91-93,231-232,319
+web/src/components/EventEditDialog.test.ts
+  s_61e7f03250bd0b::t_e702e1d61b2d8e 6,10,281-363
+web/src/components/EventEditDialog.vue
+  s_61e7f03250bd0b::t_0d9916ab949006 11-15,60-68,157-166,335-336
+web/src/components/EventRoleTemplates.test.ts
+  s_61e7f03250bd0b::t_fd77fa68a4435a 1-81
+web/src/components/EventRoleTemplates.vue
+  s_61e7f03250bd0b::t_5ca7cb835c151f 1-61
+web/src/components/EventRolesDialog.test.ts
+  s_61e7f03250bd0b::t_443caa7021e994 1-85
+web/src/components/EventRolesDialog.vue
+  s_61e7f03250bd0b::t_15980e74af7ac9 1-52
+web/src/components/EventRolesEditor.test.ts
+  s_61e7f03250bd0b::t_e9a7211b5f884d 1-130
+web/src/components/EventRolesEditor.vue
+  s_61e7f03250bd0b::t_1a6bf105bc2df7 1-132
+web/src/components/EventRoster.test.ts
+  s_61e7f03250bd0b::t_301023dde25d28 1-147
+web/src/components/EventRoster.vue
+  s_61e7f03250bd0b::t_8e4f5a74c63664 1-162
+web/src/composables/useEventRoles.test.ts
+  s_61e7f03250bd0b::t_b709a236968be5 1-65
+web/src/composables/useEventRoles.ts
+  s_61e7f03250bd0b::t_70ef7ded490643 1-68
+web/src/eventRoles.fixture.ts
+  s_61e7f03250bd0b::t_819000ce43d409 1-23
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_ba7d295d30c77b 585-607,3297-3300,3607-3656,4288
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_de2563034309b3 585-607,3297-3300,3607-3656,4288
+web/src/lib/errorSentencesA.ts
+  s_61e7f03250bd0b::t_d9631cdf24a128 57-58,63,76,108
+web/src/lib/errorSentencesB.ts
+  s_61e7f03250bd0b::t_9ba05631337e08 38,42,99-100,104,126,142
+web/src/lib/errorSentencesC.ts
+  s_61e7f03250bd0b::t_8c183d8d95066a 22-23,60-62,74,89-90,92,131
+web/src/lib/eventRoleDrafts.test.ts
+  s_61e7f03250bd0b::t_9e0b034b14052c 1-41
+web/src/lib/eventRoleDrafts.ts
+  s_61e7f03250bd0b::t_b3b6ab821937cd 1-66
+web/src/lib/eventRolesApi.test.ts
+  s_61e7f03250bd0b::t_d85cfcdcb84e3f 1-68
+web/src/lib/eventRolesApi.ts
+  s_61e7f03250bd0b::t_14b3b07ad56411 1-63
+web/src/stores/chat/events.ts
+  s_61e7f03250bd0b::t_94c28eaca577b7 310-311
+web/src/stores/chatEvents.test.ts
+  s_61e7f03250bd0b::t_833ab36490fdd9 205-212
+web/src/stores/events.test.ts
+  s_61e7f03250bd0b::t_15ee6ad82104c4 4-5,14-17,282-349
+web/src/stores/events.ts
+  s_61e7f03250bd0b::t_4a7d92e83b657a 20,69-78,128-131,142-143,145,147
+web/src/stores/eventsRoster.ts
+  s_61e7f03250bd0b::t_318bb32aaf033c 1-37
+web/src/stores/serverFeatures.ts
+  s_61e7f03250bd0b::t_7f38cd1e169c28 69
+web/src/types/events.test.ts
+  s_61e7f03250bd0b::t_8d988d51303451 131-135
+web/src/types/events.ts
+  s_61e7f03250bd0b::t_86cd9b2bb66b79 146-147,382
+web/src/types/noticeEvents.ts
+  s_61e7f03250bd0b::t_ae5c1e79bf32ad 30-32
+web/src/types/rest.ts
+  s_61e7f03250bd0b::t_5c133c6fd57aee 2864-2865,2867,2886-2887,2889,2919-2941,2983-3087
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0038538f38fe766554b7d1ed8a6062e38e0c8ead",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
