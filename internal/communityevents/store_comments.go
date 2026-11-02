@@ -74,15 +74,22 @@ func (s *Store) CreateComment(ctx context.Context, eventID, userID uuid.UUID, co
 	}
 	var id uuid.UUID
 	err = s.inTx(ctx, func(tx pgx.Tx) error {
-		if _, err := openEvent(ctx, tx, eventID, true); err != nil {
+		status, err := openEvent(ctx, tx, eventID, true)
+		if err != nil {
 			return err
 		}
-		var n int
-		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM event_comments WHERE event_id = $1`, eventID).Scan(&n); err != nil {
+		if status == StatusCancelled {
+			return httpx.ErrConflict("this event is cancelled and takes no more comments")
+		}
+		var n, mine int
+		if err := tx.QueryRow(ctx, `SELECT COUNT(*), COUNT(*) FILTER (WHERE user_id = $2) FROM event_comments WHERE event_id = $1`, eventID, userID).Scan(&n, &mine); err != nil {
 			return err
 		}
 		if n >= MaxEventComments {
 			return httpx.ErrConflict(fmt.Sprintf("an event keeps at most %d comments", MaxEventComments))
+		}
+		if mine >= MaxCommentsPerMember {
+			return httpx.ErrConflict(fmt.Sprintf("one member leaves at most %d comments under an event", MaxCommentsPerMember))
 		}
 		return tx.QueryRow(ctx, `INSERT INTO event_comments (event_id, user_id, content) VALUES ($1, $2, $3) RETURNING id`, eventID, userID, text).Scan(&id)
 	})
@@ -141,18 +148,28 @@ func (s *Store) SetCommentMute(ctx context.Context, eventID, userID uuid.UUID, m
 
 // CommentRecipients are the members a new comment is announced to: the event's
 // creator and everyone who responded going or interested or holds a role,
-// except the author and those who muted the event's comments.
-func (s *Store) CommentRecipients(ctx context.Context, eventID, authorID uuid.UUID) ([]uuid.UUID, error) {
+// except the author, those who muted the event's comments and those who blocked
+// the author. The creator comes first, then those who go or hold a role, then
+// those who are interested, so the cut at 1000 spares the people most concerned.
+func (s *Store) CommentRecipients(ctx context.Context, eventID, authorID uuid.UUID) ([]CommentRecipient, error) {
 	rows, err := s.DB.Query(ctx, `
-		SELECT DISTINCT u FROM (
-		    SELECT created_by AS u FROM events WHERE id = $1 AND created_by IS NOT NULL
-		    UNION SELECT user_id FROM event_rsvps WHERE event_id = $1 AND response IN ('going', 'interested')
-		    UNION SELECT user_id FROM event_signups WHERE event_id = $1
-		) people
-		WHERE u <> $2 AND NOT EXISTS (SELECT 1 FROM event_comment_mutes m WHERE m.event_id = $1 AND m.user_id = people.u)
+		SELECT u, COALESCE(usr.presence, 'offline') FROM (
+		    SELECT u, MIN(rank) AS rank FROM (
+		        SELECT created_by AS u, 0 AS rank FROM events WHERE id = $1 AND created_by IS NOT NULL
+		        UNION ALL SELECT user_id, 1 FROM event_signups WHERE event_id = $1
+		        UNION ALL SELECT user_id, CASE response WHEN 'going' THEN 1 ELSE 2 END FROM event_rsvps WHERE event_id = $1 AND response IN ('going', 'interested')
+		    ) people GROUP BY u
+		) ranked JOIN users usr ON usr.id = ranked.u
+		WHERE u <> $2
+		  AND NOT EXISTS (SELECT 1 FROM event_comment_mutes m WHERE m.event_id = $1 AND m.user_id = ranked.u)
+		  AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE b.blocker_id = ranked.u AND b.blocked_id = $2)
+		ORDER BY rank, u
 		LIMIT 1000`, eventID, authorID)
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (CommentRecipient, error) {
+		var c CommentRecipient
+		return c, r.Scan(&c.UserID, &c.Presence)
+	})
 }

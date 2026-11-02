@@ -11,6 +11,8 @@ const (
 	MaxCommentLen = 2000
 	// MaxEventComments is the most comments one event keeps.
 	MaxEventComments = 500
+	// MaxCommentsPerMember is the most comments one member leaves under one event, so nobody fills the thread alone.
+	MaxCommentsPerMember = 50
 	// CommentsPerMinute bounds how often a member may comment or edit.
 	CommentsPerMinute = 10
 	// DefaultCommentPage and MaxCommentPage size the comment list.
@@ -31,6 +33,12 @@ type EventComment struct {
 	Content   string     `json:"content" maxLength:"2000"`
 	CreatedAt time.Time  `json:"created_at" format:"date-time"`
 	EditedAt  *time.Time `json:"edited_at,omitempty" format:"date-time" binding:"optional" extensions:"x-nullable"`
+}
+
+// CommentRecipient is a member a new comment is announced to, with their presence.
+type CommentRecipient struct {
+	UserID   uuid.UUID
+	Presence string
 }
 
 // CommentRequest is the body of a new or edited comment.

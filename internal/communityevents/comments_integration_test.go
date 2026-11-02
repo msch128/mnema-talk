@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 type fakeCommentPusher struct {
@@ -286,4 +287,140 @@ func TestCommentRoutesAreMountedWithTheRateLimit(t *testing.T) {
 		t.Fatal("without push there is no pusher")
 	}
 	bare.notifyComment(context.Background(), f.event, EventComment{User: UserRef{ID: uuid.New(), Username: "x"}, Content: "hi"})
+}
+
+func TestCommentsNeedSendMessages(t *testing.T) {
+	f := newRosterFixture(t)
+	ctx := context.Background()
+	timedOut, pending := f.user(t, "timedout", "user"), f.user(t, "pending", "user")
+	c := f.comment(t, timedOut, "before the timeout")
+	params := map[string]string{"commentID": c.ID.String()}
+	body := `{"content":"after"}`
+
+	if _, err := f.p.Exec(ctx, `UPDATE users SET timeout_until = NOW() + interval '1 hour' WHERE id = $1`, timedOut.ID); err != nil {
+		t.Fatal(err)
+	}
+	f.h.Perms.Invalidate()
+	if _, err := f.call(t, timedOut, f.h.createComment, http.MethodPost, body, nil); err == nil {
+		t.Fatal("a member in timeout must not comment")
+	}
+	if _, err := f.call(t, timedOut, f.h.updateComment, http.MethodPatch, body, params); err == nil {
+		t.Fatal("nor edit")
+	}
+	// Taking back is allowed: delete and mute stay open.
+	if _, err := f.call(t, timedOut, f.h.muteComments, http.MethodPut, `{"muted":true}`, nil); err != nil {
+		t.Fatalf("mute stays open: %v", err)
+	}
+	if _, err := f.call(t, timedOut, f.h.deleteComment, http.MethodDelete, "", params); err != nil {
+		t.Fatalf("delete stays open: %v", err)
+	}
+
+	if _, err := f.p.Exec(ctx, `UPDATE instance_settings SET rules_text = 'Be kind', rules_version = 3`); err != nil {
+		t.Fatal(err)
+	}
+	f.h.Perms.Invalidate()
+	_, err := f.call(t, pending, f.h.createComment, http.MethodPost, body, nil)
+	if apiErr, ok := httpx.AsAPIError(err); !ok || apiErr.Code != httpx.CodeRulesNotAccepted {
+		t.Fatalf("a member who has not accepted the rules is told so, got %v", err)
+	}
+}
+
+func TestATalkThatDeniesSendMessagesRefusesComments(t *testing.T) {
+	f := newRosterFixture(t)
+	talk := f.privateTalk(t)
+	member := f.user(t, "member", "user")
+	var everyone uuid.UUID
+	if err := f.p.QueryRow(context.Background(), `SELECT id FROM roles WHERE is_everyone`).Scan(&everyone); err != nil {
+		t.Fatal(err)
+	}
+	// Viewable again, but no writing in this Talk.
+	if _, err := f.p.Exec(context.Background(), `DELETE FROM permission_overwrites WHERE channel_id = $1`, talk); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.p.Exec(context.Background(), `INSERT INTO permission_overwrites (channel_id, role_id, deny) VALUES ($1, $2, $3)`, talk, everyone, int64(perm.SendMessages)); err != nil {
+		t.Fatal(err)
+	}
+	f.h.Perms.Invalidate()
+	if _, err := f.call(t, member, f.h.createComment, http.MethodPost, `{"content":"hi"}`, nil); err == nil {
+		t.Fatal("a Talk that denies Send messages takes no comments")
+	}
+	if got := f.comments(t, member, ""); len(got.Comments) != 0 {
+		t.Fatalf("reading stays open: %+v", got)
+	}
+}
+
+func TestCommentRulesOfTheEvent(t *testing.T) {
+	f := newRosterFixture(t)
+	ctx := context.Background()
+	// One member cannot fill the thread.
+	if _, err := f.p.Exec(ctx, `INSERT INTO event_comments (event_id, user_id, content) SELECT $1, $2, 'c' || g FROM generate_series(1, $3) g`, f.event.ID, f.creator.ID, MaxCommentsPerMember); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.call(t, f.creator, f.h.createComment, http.MethodPost, `{"content":"one too many"}`, nil); err == nil {
+		t.Fatal("a member's share of one event is capped")
+	}
+	other := f.user(t, "other", "user")
+	f.comment(t, other, "others still can")
+
+	// The creator moderates their own event without a permission; a stranger does not.
+	c := f.comment(t, other, "to be removed")
+	stranger := f.user(t, "stranger", "user")
+	if _, err := f.call(t, stranger, f.h.deleteComment, http.MethodDelete, "", map[string]string{"commentID": c.ID.String()}); err == nil {
+		t.Fatal("a stranger must not delete it")
+	}
+	if _, err := f.call(t, f.creator, f.h.deleteComment, http.MethodDelete, "", map[string]string{"commentID": c.ID.String()}); err != nil {
+		t.Fatalf("the creator deletes under their event: %v", err)
+	}
+
+	// Comments stay open after the event, and close when it is cancelled.
+	if _, err := f.p.Exec(ctx, `UPDATE events SET status = 'completed' WHERE id = $1`, f.event.ID); err != nil {
+		t.Fatal(err)
+	}
+	f.comment(t, other, "thanks for the evening")
+	if _, err := f.p.Exec(ctx, `UPDATE events SET status = 'cancelled' WHERE id = $1`, f.event.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.call(t, other, f.h.createComment, http.MethodPost, `{"content":"hello?"}`, nil); err == nil {
+		t.Fatal("a cancelled event takes no more comments")
+	}
+}
+
+func TestNoticesSpareBlockersAndThoseWhoDoNotWantToBeDisturbed(t *testing.T) {
+	f := newRosterFixture(t)
+	ctx := context.Background()
+	author, blocker, dnd, first, interested := f.user(t, "author", "user"), f.user(t, "blocker", "user"), f.user(t, "dnd", "user"), f.user(t, "going", "user"), f.user(t, "interested", "user")
+	for u, resp := range map[*auth.User]string{blocker: RSVPGoing, dnd: RSVPGoing, first: RSVPGoing, interested: RSVPInterested} {
+		if err := f.s.SetRSVP(ctx, f.event.ID, u.ID, resp); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := f.p.Exec(ctx, `INSERT INTO user_blocks (blocker_id, blocked_id) VALUES ($1, $2)`, blocker.ID, author.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.p.Exec(ctx, `UPDATE users SET presence = 'dnd' WHERE id = $1`, dnd.ID); err != nil {
+		t.Fatal(err)
+	}
+	cp := &fakeCommentPusher{}
+	f.h.commentsPusher = cp
+
+	ids, err := f.s.CommentRecipients(ctx, f.event.ID, author.ID)
+	if err != nil || len(ids) != 4 || ids[0].UserID != f.creator.ID || ids[len(ids)-1].UserID != interested.ID {
+		t.Fatalf("recipients (creator first, interested last, no blocker): %+v %v", ids, err)
+	}
+	f.comment(t, author, "hello")
+	f.h.WaitNotices()
+	toasted := map[uuid.UUID]bool{}
+	for _, e := range f.rec.Snapshot() {
+		if e.Type == events.EventCommentNotice {
+			toasted[e.Recipients[0]] = true
+		}
+	}
+	if toasted[blocker.ID] || toasted[dnd.ID] || !toasted[first.ID] || !toasted[f.creator.ID] {
+		t.Fatalf("toasts: %v", toasted)
+	}
+	for _, s := range cp.got() {
+		if strings.HasPrefix(s, blocker.ID.String()) {
+			t.Fatal("a blocker gets no push")
+		}
+	}
 }

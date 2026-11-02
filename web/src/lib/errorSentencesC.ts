@@ -87,6 +87,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['this event is %s and its roster can no longer change', 'srvThisEventIsAndItsRoster'],
   ['this event is %s and takes no more responses', 'srvThisEventIsAndTakes'],
   ['this event is %s and takes no more sign-ups', 'srvThisEventIsAndTakesSignUps'],
+  ['this event is cancelled and takes no more comments', 'srvThisEventIsCancelledAndTakes'],
   ['this event is completed and cannot be cancelled', 'srvThisEventIsCompletedAnd'],
   ['this forum requires at least one tag on every post', 'srvThisForumRequiresAtLeast'],
   ['this import was already undone', 'srvThisImportWasAlreadyUndone'],

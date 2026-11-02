@@ -109,6 +109,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['note must be at most %d characters', 'fieldMax', ['count'], { field: 'note' }],
   ['note not found', 'srvNoteNotFound'],
   ['nothing to change: send expires_at or max_uses', 'srvNothingToChangeSendExpires'],
+  ['one member leaves at most %d comments under an event', 'srvOneMemberLeavesAtMost'],
   ['only PNG, GIF and WebP images are accepted', 'emojiImageType', []],
   ['only a permanent Talk that is no Stage can be a lobby', 'srvOnlyAPermanentTalkThat'],
   ['only a permanent Talk that is no lobby can be a Stage', 'srvOnlyAPermanentTalkThat2'],

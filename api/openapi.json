@@ -30152,7 +30152,7 @@
         ]
       },
       "post": {
-        "description": "Adds a comment of 1 to 2000 characters (no replies; an event keeps at most 500). Everyone who can view the event may comment. Announces the comment to everyone who may see the event (event_comment) and tells the event's creator and attendees, who did not mute it, by event_comment_notice and Web Push. Rate limited per member.",
+        "description": "Adds a comment of 1 to 2000 characters (no replies; an event keeps at most 500, one member at most 50 of them). Needs Send messages (in the event's Talk when it has one: a timeout, unaccepted rules and a new member's hold refuse it). Comments stay open on a completed event and close on a cancelled one (409). Announces the comment to everyone who may see the event (event_comment) and tells the event's creator and attendees, who did not mute it, by event_comment_notice and Web Push. Rate limited per member.",
         "operationId": "createCommunityEventComment",
         "parameters": [
           {
@@ -30198,6 +30198,16 @@
             },
             "description": "INVALID_INPUT"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN or RULES_NOT_ACCEPTED"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -30216,7 +30226,7 @@
                 }
               }
             },
-            "description": "CONFLICT: the event holds 500 comments already."
+            "description": "CONFLICT: the event is cancelled, holds 500 comments already, or the member left 50."
           },
           "429": {
             "content": {
@@ -30302,7 +30312,7 @@
     },
     "/api/events/{id}/comments/{commentID}": {
       "delete": {
-        "description": "Removes a comment. The author may delete their own; members with Manage events or Manage messages may delete any (audited).",
+        "description": "Removes a comment. The author may delete their own; the event's creator and members with Manage events or Manage messages (server-wide) may delete any (audited).",
         "operationId": "deleteCommunityEventComment",
         "parameters": [
           {
@@ -30362,7 +30372,7 @@
         ]
       },
       "patch": {
-        "description": "Changes the text of the caller's own comment (shown as edited). Rate limited per member.",
+        "description": "Changes the text of the caller's own comment (shown as edited). Needs Send messages like a new comment. Rate limited per member.",
         "operationId": "updateCommunityEventComment",
         "parameters": [
           {

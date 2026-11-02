@@ -590,7 +590,9 @@
       "srvCommentNotFound": "That comment doesn’t exist any more.",
       "srvInvalidCommentId": "The comment is not valid.",
       "srvOnlyTheAuthorAndModerators": "Only the author and moderators can delete a comment.",
-      "srvOnlyTheAuthorEditsA": "Only the author can edit a comment."
+      "srvOnlyTheAuthorEditsA": "Only the author can edit a comment.",
+      "srvOneMemberLeavesAtMost": "One member leaves at most {a} comments under an event.",
+      "srvThisEventIsCancelledAndTakes": "This event is cancelled and takes no more comments."
     },
     "field": {
       "content": "Message",

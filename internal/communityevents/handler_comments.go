@@ -15,11 +15,11 @@ import (
 
 func (h *Handler) mountComments(r chi.Router) {
 	r.Get("/events/{id}/comments", httpx.Handle(h.listComments))
-	r.Put("/events/{id}/comments/mute", httpx.Handle(h.muteComments))
 	writes := r.With()
 	if h.CommentLimit != nil {
 		writes = r.With(h.CommentLimit.By(auth.UserKey))
 	}
+	writes.Put("/events/{id}/comments/mute", httpx.Handle(h.muteComments))
 	writes.Post("/events/{id}/comments", httpx.Handle(h.createComment))
 	writes.Patch("/events/{id}/comments/{commentID}", httpx.Handle(h.updateComment))
 	r.Delete("/events/{id}/comments/{commentID}", httpx.Handle(h.deleteComment))
@@ -37,9 +37,31 @@ func (h *Handler) broadcastComment(ev *CommunityEvent, p CommentPayload) {
 	h.Events.Broadcast(events.EventComment, p)
 }
 
-// canModerateComments says whether the caller may delete other members' comments.
-func (h *Handler) canModerateComments(r *http.Request) bool {
+// requireWrite holds a comment or an edit to what a message needs: Send messages
+// (a timeout, rules not yet accepted and a new member's hold take it away), in
+// the event's Talk when it has one.
+func (h *Handler) requireWrite(r *http.Request, ev *CommunityEvent) error {
+	if h.Perms == nil {
+		return nil
+	}
+	sub := auth.UserFrom(r.Context()).Subject()
+	if ev.ChannelID == nil {
+		return h.Perms.RequireGlobal(r.Context(), sub, perm.SendMessages)
+	}
+	snap, err := h.Perms.ForChannel(r.Context(), *ev.ChannelID)
+	if err != nil {
+		return err
+	}
+	return snap.Deny(sub, snap.Channel(sub, *ev.ChannelID), perm.SendMessages)
+}
+
+// canModerateComments says whether the caller may delete other members' comments: the event's
+// creator, and members who hold Manage events or Manage messages (server-wide).
+func (h *Handler) canModerateComments(r *http.Request, ev *CommunityEvent) bool {
 	user := auth.UserFrom(r.Context())
+	if ev.CreatedBy != nil && *ev.CreatedBy == user.ID {
+		return true
+	}
 	if h.Perms == nil {
 		return user.Role == "admin"
 	}
@@ -87,7 +109,7 @@ func (h *Handler) listComments(w http.ResponseWriter, r *http.Request) error {
 }
 
 // @Summary Comment on an event
-// @Description Adds a comment of 1 to 2000 characters (no replies; an event keeps at most 500). Everyone who can view the event may comment. Announces the comment to everyone who may see the event (event_comment) and tells the event's creator and attendees, who did not mute it, by event_comment_notice and Web Push. Rate limited per member.
+// @Description Adds a comment of 1 to 2000 characters (no replies; an event keeps at most 500, one member at most 50 of them). Needs Send messages (in the event's Talk when it has one: a timeout, unaccepted rules and a new member's hold refuse it). Comments stay open on a completed event and close on a cancelled one (409). Announces the comment to everyone who may see the event (event_comment) and tells the event's creator and attendees, who did not mute it, by event_comment_notice and Web Push. Rate limited per member.
 // @ID createCommunityEventComment
 // @Tags Events
 // @Accept json
@@ -98,12 +120,16 @@ func (h *Handler) listComments(w http.ResponseWriter, r *http.Request) error {
 // @Success 201 {object} EventComment
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
-// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the event holds 500 comments already."
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the event is cancelled, holds 500 comments already, or the member left 50."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN or RULES_NOT_ACCEPTED"
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED"
 // @Router /api/events/{id}/comments [post]
 func (h *Handler) createComment(w http.ResponseWriter, r *http.Request) error {
 	ev, err := h.loadViewable(r)
 	if err != nil {
+		return err
+	}
+	if err := h.requireWrite(r, ev); err != nil {
 		return err
 	}
 	var req CommentRequest
@@ -116,13 +142,13 @@ func (h *Handler) createComment(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.broadcastComment(ev, CommentPayload{Action: CommentCreated, EventID: ev.ID, CommentID: c.ID, Comment: &c})
-	h.notifyComment(r.Context(), ev, c)
+	h.notifyCommentAsync(r.Context(), ev, c)
 	httpx.WriteJSON(w, http.StatusCreated, c)
 	return nil
 }
 
 // @Summary Edit a comment
-// @Description Changes the text of the caller's own comment (shown as edited). Rate limited per member.
+// @Description Changes the text of the caller's own comment (shown as edited). Needs Send messages like a new comment. Rate limited per member.
 // @ID updateCommunityEventComment
 // @Tags Events
 // @Accept json
@@ -140,6 +166,9 @@ func (h *Handler) createComment(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) updateComment(w http.ResponseWriter, r *http.Request) error {
 	ev, err := h.loadViewable(r)
 	if err != nil {
+		return err
+	}
+	if err := h.requireWrite(r, ev); err != nil {
 		return err
 	}
 	id, err := httpx.PathUUID(r, "commentID")
@@ -160,7 +189,7 @@ func (h *Handler) updateComment(w http.ResponseWriter, r *http.Request) error {
 }
 
 // @Summary Delete a comment
-// @Description Removes a comment. The author may delete their own; members with Manage events or Manage messages may delete any (audited).
+// @Description Removes a comment. The author may delete their own; the event's creator and members with Manage events or Manage messages (server-wide) may delete any (audited).
 // @ID deleteCommunityEventComment
 // @Tags Events
 // @Security cookieAuth
@@ -184,7 +213,7 @@ func (h *Handler) deleteComment(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if c.User.ID != user.ID && !h.canModerateComments(r) {
+	if c.User.ID != user.ID && !h.canModerateComments(r, ev) {
 		return httpx.ErrForbidden("only the author and moderators delete a comment")
 	}
 	if _, err := h.Store.DeleteComment(r.Context(), ev.ID, id); err != nil {

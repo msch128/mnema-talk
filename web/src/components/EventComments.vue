@@ -124,7 +124,7 @@ async function removeComment(c: EventComment) {
                 <button type="submit" data-testid="comment-edit-save" class="btn btn-primary px-3 py-1.5 text-xs max-md:min-h-11" :disabled="list.busy.value || !editText.trim()">{{ $t('common.save') }}</button>
               </div>
             </form>
-            <MarkdownContent v-else :content="c.content" class="text-sm text-mnema-text" />
+            <MarkdownContent v-else :content="c.content" :previews="false" class="text-sm text-mnema-text" />
           </div>
         </li>
       </ul>

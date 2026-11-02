@@ -590,7 +590,9 @@
       "srvCommentNotFound": "Diesen Kommentar gibt es nicht mehr.",
       "srvInvalidCommentId": "Der Kommentar ist nicht gültig.",
       "srvOnlyTheAuthorAndModerators": "Nur die Autorin oder der Autor und die Moderation können einen Kommentar löschen.",
-      "srvOnlyTheAuthorEditsA": "Nur die Autorin oder der Autor kann einen Kommentar bearbeiten."
+      "srvOnlyTheAuthorEditsA": "Nur die Autorin oder der Autor kann einen Kommentar bearbeiten.",
+      "srvOneMemberLeavesAtMost": "Eine Person kann höchstens {a} Kommentare unter einer Veranstaltung hinterlassen.",
+      "srvThisEventIsCancelledAndTakes": "Diese Veranstaltung ist abgesagt und nimmt keine Kommentare mehr an."
     },
     "field": {
       "content": "Nachricht",
@@ -3618,8 +3620,8 @@
     "commentEditFailed": "Der Kommentar konnte nicht gespeichert werden. Versuche es noch einmal.",
     "commentDeleteFailed": "Der Kommentar konnte nicht gelöscht werden. Versuche es noch einmal.",
     "commentMuteFailed": "Die Benachrichtigungen konnten nicht geändert werden. Versuche es noch einmal.",
-    "commentsMute": "Keine Hinweise auf neue Kommentare mehr",
-    "commentsUnmute": "Hinweise auf neue Kommentare erhalten",
+    "commentsMute": "Keine Benachrichtigungen über neue Kommentare mehr",
+    "commentsUnmute": "Benachrichtigungen über neue Kommentare erhalten",
     "commentEdit": "Kommentar bearbeiten",
     "commentDeleteTitle": "Diesen Kommentar löschen?",
     "commentDeleteBody": "Der Kommentar wird für alle entfernt. Das lässt sich nicht rückgängig machen.",

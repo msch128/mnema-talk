@@ -36,12 +36,25 @@ func excerptOf(content string) string {
 	return text
 }
 
+// notifyCommentAsync runs notifyComment off the request, so a comment under a
+// popular event does not hold up the member who wrote it.
+func (h *Handler) notifyCommentAsync(ctx context.Context, ev *CommunityEvent, c EventComment) {
+	h.notices.Add(1)
+	bg := context.WithoutCancel(ctx)
+	go func() {
+		defer h.notices.Done()
+		bg, cancel := context.WithTimeout(bg, 2*noticePushTimeout)
+		defer cancel()
+		h.notifyComment(bg, ev, c)
+	}()
+}
+
 // notifyComment tells the creator and the attendees of the event, except the
 // author and those who muted it, about a new comment: over WebSocket right
 // away and by push in the background. A member who cannot view the event's
 // Talk is told nothing.
 func (h *Handler) notifyComment(ctx context.Context, ev *CommunityEvent, c EventComment) {
-	ids, err := h.Store.CommentRecipients(ctx, ev.ID, c.User.ID)
+	recipients, err := h.Store.CommentRecipients(ctx, ev.ID, c.User.ID)
 	if err != nil {
 		slog.ErrorContext(ctx, "load comment recipients failed", "event_id", ev.ID, "err", err)
 		return
@@ -56,11 +69,13 @@ func (h *Handler) notifyComment(ctx context.Context, ev *CommunityEvent, c Event
 		name = c.User.Username
 	}
 	excerpt := excerptOf(c.Content)
-	for _, id := range ids {
+	for _, rcp := range recipients {
+		id := rcp.UserID
 		if ev.ChannelID != nil && snap != nil && !snap.Channel(perm.Subject{ID: id}, *ev.ChannelID).Has(perm.ViewChannel) {
 			continue
 		}
-		if h.Events != nil {
+		// Do not disturb and focus hold the toast back as they hold the push back.
+		if h.Events != nil && rcp.Presence != "dnd" && rcp.Presence != "focus" {
 			h.Events.SendToUsers([]uuid.UUID{id}, events.EventCommentNotice, CommentNoticePayload{
 				EventID: ev.ID, Title: ev.Title, AuthorName: name, Excerpt: excerpt, ChannelID: ev.ChannelID,
 			})
