@@ -1,0 +1,39 @@
+web/src/App.vue
+  s_fb29f048bd6d02::t_3b293de0085706 47-48,352,379
+web/src/components/MarkdownContent.vue
+  s_fb29f048bd6d02::t_2c1268cdc50dc0 14-17,33-37,55-56,78-82,119-123
+web/src/components/Sidebar.vue
+  s_fb29f048bd6d02::t_81d987a747d69d 20,281
+web/src/components/markdownBody.css
+  s_fb29f048bd6d02::t_890322ebf0ce3b 177-181
+web/src/composables/useAppRouting.ts
+  s_fb29f048bd6d02::t_c64bb220d3349a 94-95
+web/src/i18n/de.json
+  s_fb29f048bd6d02::t_c05ff491dfbb24 4708-4822
+web/src/i18n/en.json
+  s_fb29f048bd6d02::t_605214f67205d4 4708-4822
+web/src/lib/markdown.ts
+  s_fb29f048bd6d02::t_e4a80377ef1c38 25-26,28,32,41,45-51,54,58
+web/src/lib/router.ts
+  s_fb29f048bd6d02::t_38dcbb88f9836a 5,17-18,74
+web/src/stores/chat/reset.ts
+  s_fb29f048bd6d02::t_d226157555fde9 14,31
+web/src/stores/serverFeatures.ts
+  s_fb29f048bd6d02::t_5e7d5a1507ba56 69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "206b552287a384a9e2d60d5c6579dd5bf8bc021b",
+  "prompts": {},
+  "sessions": {
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
