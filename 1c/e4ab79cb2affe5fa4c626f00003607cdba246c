@@ -1,0 +1,87 @@
+README.md
+  s_6f62c78e3c93c5::t_421655aa63eb47 248-251
+SECURITY.md
+  s_6f62c78e3c93c5::t_0f21f60d52ac95 236-246
+api/openapi.json
+  s_82e9d48cb7fc7f::t_1f69d44a3369b4 6579-6596,6779-6817,20436-20604,30193-30254
+doc/operations.md
+  s_6f62c78e3c93c5::t_a2ec6c67cd8337 318-350
+doc/reverse-proxy.md
+  s_6f62c78e3c93c5::t_fac75438886b5a 108-111
+internal/audit/classes_test.go
+  s_6f62c78e3c93c5::t_6a1a681a9b7fec 20
+internal/audit/routes.go
+  s_82e9d48cb7fc7f::t_01ee01d4cc83f5 28,55
+internal/audit/snapshot.go
+  s_6f62c78e3c93c5::t_254ac7fb2dd203 45-46,75
+internal/auth/service_accounts.go
+  s_82e9d48cb7fc7f::t_3aebcfa4de4e02 27-28,34-35,52,118,140-144
+internal/auth/vanity_signup.go
+  s_6f62c78e3c93c5::t_e210da18325ab7 1-65
+internal/auth/vanity_signup_integration_test.go
+  s_82e9d48cb7fc7f::t_a24861f6d0d7f3 1-50
+internal/db/migrations/0084_vanity_invite.sql
+  s_82e9d48cb7fc7f::t_0a86494f52b7f9 1-10
+internal/onboarding/handler.go
+  s_82e9d48cb7fc7f::t_dee11e25d58b53 61,78-79
+internal/onboarding/vanity.go
+  s_82e9d48cb7fc7f::t_c2ea1f41f7e77d 1-167
+internal/onboarding/vanity_public.go
+  s_82e9d48cb7fc7f::t_9c910dd100dcd8 1-91
+internal/onboarding/vanity_test.go
+  s_82e9d48cb7fc7f::t_7c1815b0f70037 1-71
+internal/repo/testdata/error_messages.golden.json
+  s_6f62c78e3c93c5::t_0a43e89ec31587 404-405,442
+internal/server/sharepage.go
+  s_6f62c78e3c93c5::t_ed8959b7409904 29-32,72-74,154-176
+internal/server/vanity_link_integration_test.go
+  s_6f62c78e3c93c5::t_5606342bb3cbab 1-200
+web/src/components/AdminInvitesTab.vue
+  s_82e9d48cb7fc7f::t_dd9c916df17047 15-16,19,136-137
+web/src/components/AdminVanityLink.test.ts
+  s_6f62c78e3c93c5::t_ad9f82608baa0d 1-92
+web/src/components/AdminVanityLink.vue
+  s_82e9d48cb7fc7f::t_241d10dc38047a 1-104
+web/src/components/InviteLanding.test.ts
+  s_82e9d48cb7fc7f::t_f4be920c79f90c 75-106
+web/src/components/InviteLanding.vue
+  s_6f62c78e3c93c5::t_9b4b6f66ed918d 5-8,11-12,15-17,19-33,36-40
+web/src/components/LoginModal.vue
+  s_6f62c78e3c93c5::t_719209ec779738 58-65,75,108,165,236
+web/src/i18n/de.json
+  s_82e9d48cb7fc7f::t_e9ad34ae00d848 139-141,649,1740-1753,3130-3131
+web/src/i18n/en.json
+  s_82e9d48cb7fc7f::t_79c50cb5773b4e 139-141,649,1740-1753,3130-3131
+web/src/lib/errorSentencesC.ts
+  s_82e9d48cb7fc7f::t_6e8f24d1fe7d85 50-51,88
+web/src/lib/inviteLink.test.ts
+  s_6f62c78e3c93c5::t_bd228a027c2a68 24-38
+web/src/lib/inviteLink.ts
+  s_6f62c78e3c93c5::t_0b957618eaa1ab 6-8,15-20,22-32,49-50
+web/src/types/rest.ts
+  s_6f62c78e3c93c5::t_ed620fbfd15668 3885-3899,3988-4015
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ce4ab79cb2affe5fa4c626f00003607cdba246c",
+  "prompts": {},
+  "sessions": {
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
