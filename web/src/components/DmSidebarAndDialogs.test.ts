@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import SidebarDmSection from './SidebarDmSection.vue'
@@ -65,15 +66,22 @@ afterEach(() => {
 })
 
 describe('SidebarDmSection and the wait of a new member', () => {
-  it('holds the new-conversation button back and says when writing opens up', () => {
-    setup({ canStart: false })
-    usePermissionsStore().info = {
-      owner: false, permissions: 0, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [], channels: [],
-      can_start_direct_messages: false, new_member: { write_at: new Date(Date.now() + 12 * 60_000).toISOString() }
+  it('holds the new-conversation button back and says when writing opens up', async () => {
+    // A fixed clock: the wait is exactly twelve minutes, whatever the machine's speed.
+    vi.useFakeTimers({ now: Date.parse('2026-11-02T12:00:00Z') })
+    try {
+      setup({ canStart: false })
+      usePermissionsStore().info = {
+        owner: false, permissions: 0, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [], channels: [],
+        can_start_direct_messages: false, new_member: { write_at: '2026-11-02T12:12:00Z' }
+      }
+      await nextTick()
+      const w = mount(SidebarDmSection, { global })
+      expect(w.find('[data-testid="dm-new"]').exists()).toBe(false)
+      expect(w.get('[data-testid="dm-new-wait"]').attributes('aria-label')).toBe('You can write in 12 min.')
+    } finally {
+      vi.useRealTimers()
     }
-    const w = mount(SidebarDmSection, { global })
-    expect(w.find('[data-testid="dm-new"]').exists()).toBe(false)
-    expect(w.get('[data-testid="dm-new-wait"]').attributes('aria-label')).toBe('You can write in 12 min.')
   })
 
   it('names the wait instead of the calm refusal when a new member tries', () => {

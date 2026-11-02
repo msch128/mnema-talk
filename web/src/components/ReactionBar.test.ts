@@ -1,6 +1,7 @@
 import { requireValue } from '../test-fixtures.fixture'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import ReactionBar from './ReactionBar.vue'
@@ -94,11 +95,18 @@ describe('ReactionBar with a deleted custom emoji', () => {
     expect(requireValue(w.find('button[aria-pressed]')).attributes('disabled')).toBeUndefined()
   })
 
-  it('shows a held-back add button with the wait to a new member who may not react yet', () => {
-    useAuthStore().user = userFixture({ id: fixtureId(1), username: 'me', role: 'user' })
-    usePermissionsStore().info = { owner: false, permissions: 0, role_ids: [], top_position: 0, max_upload_mb: 50, catalog: [], channels: [], new_member: { react_at: new Date(Date.now() + 12 * 60_000).toISOString() } }
-    const w = mount(ReactionBar, { props: { reactions, canAdd: false }, global: { directives: { tooltip: () => undefined } } })
-    expect(w.find('[data-testid="reaction-add"]').exists()).toBe(false)
-    expect(w.get('[data-testid="reaction-wait"] [role="img"]').attributes('aria-label')).toBe('You can react in 12 min.')
+  it('shows a held-back add button with the wait to a new member who may not react yet', async () => {
+    // A fixed clock: the wait is exactly twelve minutes, whatever the machine's speed.
+    vi.useFakeTimers({ now: Date.parse('2026-11-02T12:00:00Z') })
+    try {
+      useAuthStore().user = userFixture({ id: fixtureId(1), username: 'me', role: 'user' })
+      usePermissionsStore().info = { owner: false, permissions: 0, role_ids: [], top_position: 0, max_upload_mb: 50, catalog: [], channels: [], new_member: { react_at: '2026-11-02T12:12:00Z' } }
+      await nextTick()
+      const w = mount(ReactionBar, { props: { reactions, canAdd: false }, global: { directives: { tooltip: () => undefined } } })
+      expect(w.find('[data-testid="reaction-add"]').exists()).toBe(false)
+      expect(w.get('[data-testid="reaction-wait"] [role="img"]').attributes('aria-label')).toBe('You can react in 12 min.')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
