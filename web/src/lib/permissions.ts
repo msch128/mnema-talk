@@ -67,7 +67,7 @@ export const ADMIN_AREA_KEYS: readonly PermissionKey[] = [
 
 /** A self-assignable role holds none of these: administration, the admin area and moderation (internal/perm SelfAssignBlocked). */
 export const SELF_ASSIGN_BLOCKED_KEYS: readonly PermissionKey[] = [
-  'administrator', 'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots', 'manage_emoji', 'manage_reports', 'kick_members', 'manage_messages', 'manage_stage', 'manage_events'
+  'administrator', 'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots', 'manage_emoji', 'manage_reports', 'kick_members', 'manage_messages', 'manage_stage', 'manage_events', 'bypass_new_member_limits'
 ]
 
 /** Whether a role with these permissions holds something members must not be able to choose for themselves. */
