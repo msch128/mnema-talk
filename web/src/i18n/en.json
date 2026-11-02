@@ -592,7 +592,13 @@
       "srvOnlyTheAuthorAndModerators": "Only the author and moderators can delete a comment.",
       "srvOnlyTheAuthorEditsA": "Only the author can edit a comment.",
       "srvOneMemberLeavesAtMost": "One member leaves at most {a} comments under an event.",
-      "srvThisEventIsCancelledAndTakes": "This event is cancelled and takes no more comments."
+      "srvThisEventIsCancelledAndTakes": "This event is cancelled and takes no more comments.",
+      "srvFrequencyMustBeWeekly": "The frequency must be weekly, biweekly or monthly.",
+      "srvScopeMustBeThisOr": "The scope must be this or following.",
+      "srvSeriesNotFound": "This series was not found.",
+      "srvThisEventIsNotPartOf": "This event is not part of a series.",
+      "srvTimezoneMustBeAnIana": "The time zone must be an IANA name such as Europe/Berlin.",
+      "srvUntilMustBeAfterStart": "The end date must be after the start."
     },
     "field": {
       "content": "Message",
@@ -3626,7 +3632,30 @@
     "commentsMute": "Stop notices about new comments",
     "commentsUnmute": "Get notices about new comments",
     "commentToast": "New comment on {title}: {author}: {excerpt}",
-    "commentOpen": "Show event"
+    "commentOpen": "Show event",
+    "repeat": {
+      "label": "Repeat",
+      "none": "Does not repeat",
+      "option": {
+        "weekly": "Every week",
+        "biweekly": "Every two weeks",
+        "monthly": "Every month"
+      },
+      "until": "Ends on (optional)",
+      "untilHint": "The next dates are created automatically, at the same time of day.",
+      "weekly": "Repeats every week",
+      "biweekly": "Repeats every two weeks",
+      "monthly": "Repeats every month",
+      "ended": "series over"
+    },
+    "scope": {
+      "title": "This is part of a series",
+      "this": "Only this event",
+      "following": "This and all following events",
+      "editHint": "Earlier events stay as they are. A new start time moves the following events along.",
+      "rolesHint": "Following events keep their roles if members have already signed up for them.",
+      "cancelHint": "The following events are cancelled and the series ends."
+    }
   },
   "moderation": {
     "timeoutAction": "Time out…",

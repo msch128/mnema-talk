@@ -56,6 +56,21 @@ Every event has a flat discussion under it (no replies).
 - **Live and notices**: a created, edited or deleted comment is announced to everyone who may see the event (`event_comment`); open lists follow. The event's creator and everyone who answered going or interested or holds a role are told about a new comment (`event_comment_notice` and Web Push, which respects do-not-disturb, focus and a muted Talk), except the author, members who switched the event's comment notices off and members who blocked the author. The creator comes first, then those who go or hold a role, then those who are interested. Do-not-disturb, focus and a muted Talk hold the toast back as well as the push. Up to 5,000 members are considered in that order, those who may not view the Talk are dropped, and the first 1,000 are told (pushes go out through a few workers). A member who cannot view the Talk is told nothing. The notices go out in the background, not while the author waits.
 - **Erasure and export**: erasing an account deletes the member's comments and mute settings; the export holds them in `event_comments.json`.
 
+## Recurring events
+
+An event can repeat every week, every two weeks or every month. The first event is created as usual, with a `recurrence` (`frequency`, the IANA time `zone` of the person who sets it up, an optional `until`); it is the first **occurrence** of a **series**. Occurrences are ordinary events (reminders, RSVPs, roles, comments, the audit log all work as before), each marked with its series (`series.index`, `series.frequency`, `series.ended`).
+
+- **Time rule**: every start is counted from the series' anchor (the first start, later the start set by an edit of the following events) in the series' time zone, so a 19:00 event stays at 19:00 across the change to or from summer time. A monthly series keeps the day of the month and falls back to the last day of a shorter month (the 31st becomes the 28th), counted from the anchor, so a short month moves nothing after it.
+- **Creation**: the server creates the occurrences of the next 60 days when the series is made and then once every ten minutes as time passes. A series has at most 200 occurrences and none starts after `until`. Occurrences that would start in the past (after a long downtime) are skipped, not created late.
+- **Scope of a change**: `PATCH /api/events/{id}`, `POST /api/events/{id}/cancel` and `PUT /api/events/{id}/roles` take `scope=this` (default) or `scope=following`; `following` on an event without a series answers `400`.
+  - *Edit, following*: the occurrence and every later open one take the edit, and the series' template changes with it, so later occurrences carry it too. A new `start_time` becomes the new anchor: the edited occurrence takes it and the later ones keep their distance in the series' frequency and zone. Earlier occurrences, cancelled and finished ones stay as they are.
+  - *Cancel, following*: the occurrence and every later open one are cancelled and the series ends there.
+  - *Roles, following*: the list becomes the template of occurrences created later and replaces the roles of later open occurrences that have no sign-ups; those with sign-ups keep their roles.
+  - *This only*: the one event changes and stays in its series; a later edit of the following events overwrites such a one-off change.
+- **Sign-ups**: role definitions are copied to every occurrence, sign-ups and RSVPs never carry over.
+- **Web**: the new-event dialog has a "Repeat" choice (when the server lists `events.recurrence`); editing, cancelling or setting the roles of an occurrence asks whether it applies to this event only or to it and all following events. Events of a series show "Repeats every week" and so on.
+- **GDPR**: a series holds nothing personal besides its creator, which is set to empty when the member's account is erased.
+
 ## Active events and joining Talks
 
 When an event's start time arrives:

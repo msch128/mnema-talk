@@ -18,6 +18,7 @@ import { useToastStore } from './toast'
 import { t } from '../i18n'
 import { openEvents } from '../lib/eventsDialog'
 import { eventRosterActions } from './eventsRoster'
+import type { RoleInput } from '../lib/eventRolesApi'
 
 /** Whole minutes until an event starts, at least one (the server reminds a quarter of an hour ahead). */
 export function minutesUntil(startTime: string, now = Date.now()): number {
@@ -36,12 +37,15 @@ async function apiCreate(data: CreateEventRequest): Promise<CommunityEvent> {
   return api('/api/events', { method: 'POST', json: data, decode: decodeCommunityeventsCommunityEvent })
 }
 
-async function apiUpdate(id: string, data: UpdateEventRequest): Promise<CommunityEvent> {
-  return api(`/api/events/${id}`, { method: 'PATCH', json: data, decode: decodeCommunityeventsCommunityEvent })
+type Scope = 'this' | 'following'
+const scopeQuery = (scope?: Scope) => (scope === 'following' ? '?scope=following' : '')
+
+async function apiUpdate(id: string, data: UpdateEventRequest, scope?: Scope): Promise<CommunityEvent> {
+  return api(`/api/events/${id}${scopeQuery(scope)}`, { method: 'PATCH', json: data, decode: decodeCommunityeventsCommunityEvent })
 }
 
-async function apiCancel(id: string): Promise<CommunityEvent> {
-  return api(`/api/events/${id}/cancel`, { method: 'POST', decode: decodeCommunityeventsCommunityEvent })
+async function apiCancel(id: string, scope?: Scope): Promise<CommunityEvent> {
+  return api(`/api/events/${id}/cancel${scopeQuery(scope)}`, { method: 'POST', decode: decodeCommunityeventsCommunityEvent })
 }
 
 async function apiSetRSVP(id: string, response: 'going' | 'interested' | 'not_going'): Promise<CommunityEvent> {
@@ -73,6 +77,28 @@ function keepOwn(pushed: CommunityEvent, known: CommunityEvent | undefined): Com
     ...(known?.my_rsvp != null ? { my_rsvp: known.my_rsvp } : {}),
     ...(known?.my_signup ? { my_signup: known.my_signup } : {}),
     ...(known?.signups ? { signups: known.signups } : {})
+  }
+}
+
+/**
+ * Edit, cancel and set the roles of an event, for it alone or (scope following) for it and the
+ * later occurrences of its series. The second case touches many events, so the list is read
+ * once more afterwards instead of following them one by one.
+ */
+function scopedActions(
+  act: <T extends CommunityEvent>(fn: () => Promise<T>) => Promise<T>,
+  load: () => Promise<void>,
+  setRoles: (id: string, list: RoleInput[], scope?: Scope) => Promise<CommunityEvent>
+) {
+  const thenRefresh = async <T>(scope: Scope | undefined, work: Promise<T>): Promise<T> => {
+    const result = await work
+    if (scope === 'following') await load()
+    return result
+  }
+  return {
+    update: (id: string, data: UpdateEventRequest, scope?: Scope) => thenRefresh(scope, act(() => apiUpdate(id, data, scope))),
+    cancel: (id: string, scope?: Scope) => thenRefresh(scope, act(() => apiCancel(id, scope))),
+    setRoles: (id: string, list: RoleInput[], scope?: Scope) => thenRefresh(scope, setRoles(id, list, scope))
   }
 }
 
@@ -132,14 +158,13 @@ export const useEventsStore = defineStore('communityEvents', () => {
   return {
     events, loading, error, enabled, upcomingCount, upcomingEvents, pastEvents, pastLoading: past.loading, pastLoaded: past.loaded, pastHasMore: past.hasMore, load, loadPast: past.load,
     create: (data: CreateEventRequest) => act(() => apiCreate(data)),
-    update: (id: string, data: UpdateEventRequest) => act(() => apiUpdate(id, data)),
-    cancel: (id: string) => act(() => apiCancel(id)),
     setRSVP: (id: string, resp: 'going' | 'interested' | 'not_going') => act(() => apiSetRSVP(id, resp)),
     deleteRSVP: (id: string) => act(() => apiDeleteRSVP(id)),
     uploadCover: (id: string, file: File) => act(() => apiUploadCover(id, file)),
     deleteCover: (id: string) => act(() => apiDeleteCover(id)),
     listRSVPs: (id: string) => apiListRSVPs(id),
     ...roster,
+    ...scopedActions(act, load, roster.setRoles),
     // A pushed event carries no one's own answers: keep the ones this client knows.
     handleEventUpdate: (payload: CommunityEvent) => {
       replaceOrAppend(keepOwn(payload, events.value.find(e => e.id === payload.id)))

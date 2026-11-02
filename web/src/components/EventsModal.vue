@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { Calendar, Check, HelpCircle, MapPin, Plus, Volume2 } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
+import RepeatBadge from './RepeatBadge.vue'
 import EmptyState from './EmptyState.vue'
 import EventDetailModal from './EventDetailModal.vue'
 import EventEditDialog from './EventEditDialog.vue'
@@ -219,6 +220,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
                     <span>{{ startText(event.start_time) }}</span>
                     <span v-if="whenHint(event)" class="text-mnema-tertiary">· {{ whenHint(event) }}</span>
                   </div>
+                  <RepeatBadge :event="event" />
                   <div v-if="event.channel_id" class="flex items-center gap-1 font-medium text-mnema-accent">
                     <Volume2 class="w-3.5 h-3.5" />
                     <span>{{ getChannelName(event.channel_id) }}</span>

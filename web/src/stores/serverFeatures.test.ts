@@ -32,6 +32,9 @@ describe('server features', () => {
     expect(features.events).toBe(false)
     features.list = ['events']
     expect(features.events).toBe(true)
+    expect(features.eventRecurrence).toBe(false)
+    features.list = ['events', 'events.recurrence']
+    expect(features.eventRecurrence).toBe(true)
     expect(features.has('forward')).toBe(false)
     expect(features.loaded).toBe(true)
   })

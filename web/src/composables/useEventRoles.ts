@@ -44,7 +44,7 @@ export function useEventRoles() {
    * `sync` gets what is left (and the member counts as the server has them), so a retry
    * does not send the same removal twice.
    */
-  async function save(eventId: string, rows: readonly RoleDraft[], removals: readonly RoleRemoval[], sync?: (state: RolesState) => void): Promise<CommunityEvent> {
+  async function save(eventId: string, rows: readonly RoleDraft[], removals: readonly RoleRemoval[], sync?: (state: RolesState) => void, scope?: 'this' | 'following'): Promise<CommunityEvent> {
     const inputs = inputsOf(rows)
     if (!inputs) throw new Error(t('events.roles.invalid'))
     let pending = [...removals]
@@ -53,7 +53,7 @@ export function useEventRoles() {
         await remove(eventId, r)
         pending = pending.filter(p => p.id !== r.id)
       }
-      return await events.setRoles(eventId, inputs)
+      return await (scope ? events.setRoles(eventId, inputs, scope) : events.setRoles(eventId, inputs))
     } catch (err) {
       let current = [...rows]
       try {

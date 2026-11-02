@@ -100,6 +100,18 @@ describe('EventsModal', () => {
     expect(loadPast).toHaveBeenLastCalledWith(true)
   })
 
+  it('marks the events of a series on their cards', async () => {
+    const store = useEventsStore()
+    const series = { id: 's', frequency: 'biweekly' as const, timezone: 'UTC', index: 0, ended: false }
+    const repeating = makeEvent({ id: fixtureId(1), title: 'Raid night', status: 'scheduled', series })
+    const single = makeEvent({ id: fixtureId(2), title: 'Picnic', status: 'scheduled' })
+    vi.spyOn(store, 'load').mockImplementation(async () => { store.events = [repeating, single] })
+    store.events = [repeating, single]
+    wrapper = mount(EventsModal, { attachTo: document.body })
+    expect(wrapper.findAll('[data-testid="repeat-badge"]')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="repeat-badge"]').text()).toContain('Repeats every two weeks')
+  })
+
   it('shows create button only when member has manage_events permission', async () => {
     const perms = usePermissionsStore()
     perms.info = makePermsInfo(0)

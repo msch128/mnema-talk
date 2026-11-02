@@ -23,6 +23,13 @@ describe('useEventRoles', () => {
     expect(calls).toEqual(['r1:r2', 'r3:-', 'set 1'])
   })
 
+  it('passes the scope of a series on to the store', async () => {
+    const store = useEventsStore()
+    const setRoles = vi.spyOn(store, 'setRoles').mockResolvedValue(eventWithRoles())
+    await useEventRoles().save('e1', [{ ...blankDraft(), name: 'Tank' }], [], undefined, 'following')
+    expect(setRoles).toHaveBeenCalledWith('e1', [{ name: 'Tank' }], 'following')
+  })
+
   it('refuses a list with an unnamed role before anything is sent', async () => {
     const store = useEventsStore()
     const setRoles = vi.spyOn(store, 'setRoles')

@@ -33,6 +33,13 @@ describe('event roles api', () => {
     expect(opts.json).toEqual({ roles: [{ name: 'Tank', capacity: 1 }] })
   })
 
+  it('can apply the roles to the following occurrences of a series', async () => {
+    await setEventRoles('e1', [{ name: 'Tank' }], 'following')
+    expect(last()[0]).toBe('/api/events/e1/roles?scope=following')
+    await setEventRoles('e1', [{ name: 'Tank' }], 'this')
+    expect(last()[0]).toBe('/api/events/e1/roles')
+  })
+
   it('deletes a role with or without a role to move the sign-ups to', async () => {
     await deleteEventRole('e1', 'r1')
     expect(last()[0]).toBe('/api/events/e1/roles/r1')
