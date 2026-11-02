@@ -1,0 +1,81 @@
+README.md
+  s_61e7f03250bd0b::t_c9f3d2856ed1b6 248-251
+SECURITY.md
+  s_61e7f03250bd0b::t_b25affd15d1298 236-247
+api/openapi.json
+  s_61e7f03250bd0b::t_ac68fb6c54a8a3 6579-6596,6779-6817,20879-21047,30636-30697
+doc/operations.md
+  s_61e7f03250bd0b::t_72e15dfea94e96 318-355
+doc/reverse-proxy.md
+  s_61e7f03250bd0b::t_f9618259e52d50 108-111
+internal/audit/classes_test.go
+  s_61e7f03250bd0b::t_364f07e409a186 20
+internal/audit/routes.go
+  s_61e7f03250bd0b::t_e755e615d25799 28,55
+internal/audit/snapshot.go
+  s_61e7f03250bd0b::t_3a10db12e8dfa6 46-47,76
+internal/auth/service_accounts.go
+  s_61e7f03250bd0b::t_58d1a594f02678 28-29,35-36,61,127,149-153
+internal/auth/vanity_signup.go
+  s_61e7f03250bd0b::t_ee68c2221ea8d7 1-73
+internal/auth/vanity_signup_integration_test.go
+  s_61e7f03250bd0b::t_3ac315b89710ce 1-50
+internal/db/migrations/0084_vanity_invite.sql
+  s_61e7f03250bd0b::t_1aaf42ed1c1bf9 1-10
+internal/onboarding/handler.go
+  s_61e7f03250bd0b::t_0088707eaa47e8 61,81-82
+internal/onboarding/vanity.go
+  s_61e7f03250bd0b::t_16190567b16dbc 1-201
+internal/onboarding/vanity_public.go
+  s_61e7f03250bd0b::t_f6b69eb50fbb05 1-91
+internal/onboarding/vanity_test.go
+  s_61e7f03250bd0b::t_4368b78043af22 1-74
+internal/repo/testdata/error_messages.golden.json
+  s_61e7f03250bd0b::t_176054c6c9d142 308,421-422,459
+internal/server/sharepage.go
+  s_61e7f03250bd0b::t_b4c91f0bbce011 29-32,72-74,154-176
+internal/server/vanity_link_integration_test.go
+  s_61e7f03250bd0b::t_6d1161c378502c 1-258
+web/src/components/AdminInvitesTab.vue
+  s_61e7f03250bd0b::t_3cf454842f7179 15-16,19,136-137
+web/src/components/AdminVanityLink.test.ts
+  s_61e7f03250bd0b::t_8948384cb867ed 1-113
+web/src/components/AdminVanityLink.vue
+  s_61e7f03250bd0b::t_c8d76b23dd8581 1-111
+web/src/components/InviteLanding.test.ts
+  s_61e7f03250bd0b::t_3f6696050acb7f 75-118
+web/src/components/InviteLanding.vue
+  s_61e7f03250bd0b::t_b27b684198da0b 5-8,11-12,15-17,19-33,36-40
+web/src/components/LoginModal.vue
+  s_61e7f03250bd0b::t_32fa3b317e3a00 58-67,77,110,141-144,171,242
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_c41eaf508ea51e 139-142,666,1757-1771,3155-3156
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_c9e399d2a790c3 139-142,666,1757-1771,3155-3156
+web/src/lib/errorSentencesB.ts
+  s_61e7f03250bd0b::t_1c0a4a691a203f 129
+web/src/lib/errorSentencesC.ts
+  s_61e7f03250bd0b::t_20d4a3fd13d59b 51-52,89
+web/src/lib/inviteLink.test.ts
+  s_61e7f03250bd0b::t_09694d069a7895 24-38
+web/src/lib/inviteLink.ts
+  s_61e7f03250bd0b::t_d891b5742c0b10 6-8,15-20,22-32,49-50
+web/src/types/rest.ts
+  s_61e7f03250bd0b::t_ee055797122a8e 3885-3899,3988-4015
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fd87cd2f66e0a8a4743b02a860726f69fb42b305",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
