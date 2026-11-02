@@ -57,7 +57,7 @@ test('a full role puts the next member on the waitlist, and they move up when a 
 
     // The administrator creates the event with one role of one place.
     await admin.getByRole('button', { name: 'Veranstaltungen' }).click()
-    await admin.getByTestId('events-empty-create').or(admin.getByRole('button', { name: 'Veranstaltung erstellen' }).first()).click()
+    await admin.getByTestId('events-empty-create').or(admin.getByRole('button', { name: 'Veranstaltung erstellen' }).first()).first().click()
     const dialog = admin.getByRole('dialog').last()
     await dialog.getByLabel('Titel', { exact: true }).fill(TITLE)
     const start = new Date(Date.now() + 2 * 86_400_000)

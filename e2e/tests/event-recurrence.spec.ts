@@ -29,7 +29,7 @@ test('a weekly event creates its next dates, an edit of the following ones chang
   const title = `Stammtisch ${suffix}`
   await signIn(page)
   await page.getByRole('button', { name: 'Veranstaltungen' }).click()
-  await page.getByTestId('events-empty-create').or(page.getByRole('button', { name: 'Veranstaltung erstellen' }).first()).click()
+  await page.getByTestId('events-empty-create').or(page.getByRole('button', { name: 'Veranstaltung erstellen' }).first()).first().click()
 
   const create = page.getByRole('dialog').last()
   await create.getByLabel('Titel', { exact: true }).fill(title)
