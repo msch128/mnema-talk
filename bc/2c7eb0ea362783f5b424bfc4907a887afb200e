@@ -1,0 +1,179 @@
+api/openapi.json
+  s_82e9d48cb7fc7f::t_e2f84d011d63d9 7206-7344,7378-7394,7437-7440,16545-16809
+doc/moderation.md
+  s_82e9d48cb7fc7f::t_951b4f18a382d7 111-155
+doc/roles-and-permissions.md
+  s_82e9d48cb7fc7f::t_960287d7c4805c 138,151
+e2e/tests/raid-protection.spec.ts
+  s_8d4da942b23eba::t_2b13dd32853c6d 1-56
+internal/audit/classes_test.go
+  s_82e9d48cb7fc7f::t_4bbd0e75d774da 37
+internal/audit/routes.go
+  s_17ef7810e0243d::t_3403628c339b5b 122-123
+internal/auth/invites.go
+  s_4c6a19030e223f::t_4b321a16d41566 17,140-142
+internal/auth/service_accounts.go
+  s_8d4da942b23eba::t_48407045ced94f 15,42-46
+internal/chat/handler_lookup.go
+  s_8d4da942b23eba::t_b214723510b002 64
+internal/chat/permissions.go
+  s_8d4da942b23eba::t_8c0fd1a129809a 79-82,88-92,95-97
+internal/db/migrations/0083_raid_protection.sql
+  s_8d4da942b23eba::t_51a40c4fd45e2f 1-30
+internal/onboarding/handler.go
+  s_17ef7810e0243d::t_2abb440aa5aed8 77-79
+internal/onboarding/raid_handler.go
+  s_17ef7810e0243d::t_d11bcb003c13e9 1-96
+internal/perm/newmember.go
+  s_8d4da942b23eba::t_ddbae7d901d02e 1-103
+internal/perm/newmember_test.go
+  s_17ef7810e0243d::t_eb5811b86d8239 1-103
+internal/perm/perm.go
+  s_8d4da942b23eba::t_045574c8b2aa1b 91-95,136
+internal/perm/permtest/permtest.go
+  s_17ef7810e0243d::t_e02c79d009c6f6 53,149-160
+internal/perm/service.go
+  s_6f62c78e3c93c5::t_a09448f81b4e16 312-314
+internal/perm/snapshot.go
+  s_6f62c78e3c93c5::t_d4ee130c6e6843 103-106,148-152,216-220
+internal/perm/snapshot_build.go
+  s_17ef7810e0243d::t_d84c903bf563ba 38-40,57-60
+internal/perm/snapshot_channels.go
+  s_6f62c78e3c93c5::t_f800c37888918a 90,103-107
+internal/perm/snapshot_load.go
+  s_6f62c78e3c93c5::t_9715dc83d330b5 36,101-108,132,135-136,154-159
+internal/perm/snapshot_test.go
+  s_8d4da942b23eba::t_66bc67890b07ef 39
+internal/raid/presets_test.go
+  s_17ef7810e0243d::t_ebbca07f120f74 1-44
+internal/raid/raid.go
+  s_82e9d48cb7fc7f::t_5d7d685c9caeb6 1-197
+internal/repo/testdata/error_messages.golden.json
+  s_82e9d48cb7fc7f::t_606e362459dfd0 189,229,231-232,257-259,280-282,368
+internal/roles/handler_permissions.go
+  s_6f62c78e3c93c5::t_2ccbd2842b69f5 21-28,51-53,111,116-132
+internal/server/raid_integration_test.go
+  s_6f62c78e3c93c5::t_3af8400e31ea95 1-186
+internal/testutil/presets/presets.go
+  s_17ef7810e0243d::t_ca88284d0c6747 23-24,52
+web/src/components/AdminDashboard.vue
+  s_8d4da942b23eba::t_d8de2e13224d42 38,67,88
+web/src/components/AdminNav.vue
+  s_8d4da942b23eba::t_65a372e12279a9 9,13
+web/src/components/AdminPermissionsUi.test.ts
+  s_ed7cb296d2935c::t_9153ccc07a1e6d 117
+web/src/components/AdminRaidTab.test.ts
+  s_82e9d48cb7fc7f::t_701647e502ab53 1-94
+web/src/components/AdminRaidTab.vue
+  s_82e9d48cb7fc7f::t_add819c2d15626 1-142
+web/src/components/AdminRolesTab.test.ts
+  s_ed7cb296d2935c::t_94382073b6373c 64
+web/src/components/RaidLockdownBanner.test.ts
+  s_8d4da942b23eba::t_f7858be3467264 1-85
+web/src/components/RaidLockdownBanner.vue
+  s_82e9d48cb7fc7f::t_618c3574ce61d3 1-62
+web/src/components/ReactionBar.test.ts
+  s_8d4da942b23eba::t_06eae6db7562de 10-11,19,96-103
+web/src/components/ReactionBar.vue
+  s_8d4da942b23eba::t_9cb346a7e65b5a 6,14-15,32-37,94-99
+web/src/components/TalkControlBar.vue
+  s_06fcde5dbef956::t_c140787d1bb967 23,43-48
+web/src/components/TimeoutBanner.vue
+  s_8d4da942b23eba::t_f4e4194bc17417 2-4,12,75-76
+web/src/composables/useChannelWrite.test.ts
+  s_8d4da942b23eba::t_3d15ae74f24a6b 14,17-18,47-51
+web/src/composables/useChannelWrite.ts
+  s_06fcde5dbef956::t_eef71b44860b38 5,29-31
+web/src/composables/useNewMemberClock.ts
+  s_8d4da942b23eba::t_a65a58cba87cff 1-38
+web/src/i18n/de.json
+  s_82e9d48cb7fc7f::t_87d71b3c6f1845 149-159,1762,3033-3036,3193-3194,4021-4070
+web/src/i18n/en.json
+  s_82e9d48cb7fc7f::t_ea2173dc4d336a 149-159,1762,3033-3036,3193-3194,4021-4070
+web/src/lib/adminNav.ts
+  s_8d4da942b23eba::t_e09410ed5cdfe9 3,7
+web/src/lib/errorSentencesB.ts
+  s_82e9d48cb7fc7f::t_b8c5fc36401ab6 13,53,55-56,81-83,104-106,192
+web/src/lib/newMember.test.ts
+  s_82e9d48cb7fc7f::t_1f3024518ccd5c 1-35
+web/src/lib/newMember.ts
+  s_4c6a19030e223f::t_e1b53fd7cf8661 1-40
+web/src/lib/permissions.ts
+  s_8d4da942b23eba::t_c11baaf2a48b82 32-33,53
+web/src/lib/presets.json
+  s_17ef7810e0243d::t_a5db0e0a80b79b 8-9
+web/src/lib/presets.test.ts
+  s_8d4da942b23eba::t_622c6b902ddffa 47-52,61-66
+web/src/stores/permissions.ts
+  s_8d4da942b23eba::t_5fcc349f2a4d8a 12-13,31-32,91,144-146,148,156
+web/src/stores/permissionsNewMember.test.ts
+  s_8d4da942b23eba::t_55922cc7c791c3 1-49
+web/src/stores/raid.ts
+  s_82e9d48cb7fc7f::t_8cb5dfc3aa45bf 1-40
+web/src/types/rest.ts
+  s_82e9d48cb7fc7f::t_b787aac6ff9c64 4232-4305,4330-4344,4362,4379
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc2c7eb0ea362783f5b424bfc4907a887afb200e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8d4da942b23eba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0fc251d9c06e53e1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ed7cb296d2935c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a26fd862ec4919cdd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
