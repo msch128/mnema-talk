@@ -125,7 +125,10 @@ export const useEventsStore = defineStore('communityEvents', () => {
     return item
   }
 
-  const roster = eventRosterActions(act)
+  const dropEvent = (id: string) => {
+    events.value = events.value.filter(e => e.id !== id); past.remove(id)
+  }
+  const roster = eventRosterActions(act, dropEvent)
   return {
     events, loading, error, enabled, upcomingCount, upcomingEvents, pastEvents, pastLoading: past.loading, pastLoaded: past.loaded, pastHasMore: past.hasMore, load, loadPast: past.load,
     create: (data: CreateEventRequest) => act(() => apiCreate(data)),
@@ -141,9 +144,7 @@ export const useEventsStore = defineStore('communityEvents', () => {
     handleEventUpdate: (payload: CommunityEvent) => {
       replaceOrAppend(keepOwn(payload, events.value.find(e => e.id === payload.id)))
     },
-    handleEventDelete: (id: string) => {
-      events.value = events.value.filter(e => e.id !== id); past.remove(id)
-    },
+    handleEventDelete: dropEvent,
     handleEventReminder: (p: ServerEventPayloads['event_reminder']) => {
       useToastStore().info(
         t('events.reminderToast', { title: p.title, count: minutesUntil(p.start_time) }),

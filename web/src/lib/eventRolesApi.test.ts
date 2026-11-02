@@ -47,6 +47,8 @@ describe('event roles api', () => {
     expect(last()[0]).toBe('/api/events/e1/signup')
     await leaveRole('e1')
     expect(last()[1].method).toBe('DELETE')
+    expect(last()[1].decode?.(null)).toBeNull()
+    expect(() => last()[1].decode?.({ nope: 1 })).toThrow()
     await removeSignup('e1', 'u1')
     expect(last()[0]).toBe('/api/events/e1/signup/u1')
   })

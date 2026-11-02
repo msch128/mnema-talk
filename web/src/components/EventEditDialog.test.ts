@@ -328,6 +328,7 @@ describe('EventEditDialog', () => {
       vi.spyOn(store, 'create').mockResolvedValue(created)
       vi.spyOn(store, 'update').mockResolvedValue(created)
       const setRoles = vi.spyOn(store, 'setRoles').mockRejectedValueOnce(new Error('two roles are called Tank')).mockResolvedValue(created)
+      vi.spyOn(store, 'fetchDetail').mockResolvedValue(created)
       wrapper = mount(EventEditDialog)
       await fillBasics()
       await wrapper.get('[data-testid="event-role-add"]').trigger('click')

@@ -228,7 +228,7 @@ async function cancelEvent() {
         </p>
       </div>
 
-      <EventRoster v-if="showRoster" :event="currentEvent" :can-manage="canManageRoster" @edit-roles="editingRoles = true" />
+      <EventRoster v-if="showRoster" :event="currentEvent" :can-manage="canManageRoster" @edit-roles="editingRoles = true" @gone="emit('close')" />
 
       <!-- RSVP Section -->
       <div class="mb-6 flex flex-col gap-3 rounded-xl border border-mnema-border bg-mnema-surface p-4">

@@ -36,8 +36,9 @@ export function signUpForRole(id: string, roleId: string): Promise<CommunityEven
   return api(`${eventPath(id)}/signup`, { method: 'PUT', json: { role_id: roleId }, decode: decodeCommunityeventsCommunityEvent })
 }
 
-export function leaveRole(id: string): Promise<CommunityEvent> {
-  return api(`${eventPath(id)}/signup`, { method: 'DELETE', decode: decodeCommunityeventsCommunityEvent })
+/** Leaves the role. The answer is the event, or null (204) when the member can no longer view it. */
+export function leaveRole(id: string): Promise<CommunityEvent | null> {
+  return api(`${eventPath(id)}/signup`, { method: 'DELETE', decode: value => (value === null ? null : decodeCommunityeventsCommunityEvent(value)) })
 }
 
 /** A moderator or the creator removes another member from the roster. */

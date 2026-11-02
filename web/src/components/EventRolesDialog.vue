@@ -26,7 +26,7 @@ async function submit() {
   saving.value = true
   error.value = ''
   try {
-    await save(props.event.id, rows.value, removals.value)
+    await save(props.event.id, rows.value, removals.value, state => { rows.value = state.rows; removals.value = state.removals })
     emit('close')
   } catch (err) {
     error.value = caughtErrorMessage(err, t('events.roles.saveFailed'))

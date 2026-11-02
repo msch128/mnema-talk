@@ -3599,7 +3599,8 @@
       "dialogTitle": "Rollen & Plätze"
     },
     "rolePromoted": "Du bist von der Warteliste nachgerückt: {role} – {title}",
-    "roleRemoved": "Du wurdest aus {role} entfernt – {title}"
+    "roleRemoved": "Du wurdest aus {role} entfernt – {title}",
+    "roleWaitlisted": "Du stehst jetzt auf der Warteliste: {role} – {title}"
   },
   "moderation": {
     "timeoutAction": "Auszeit verhängen …",

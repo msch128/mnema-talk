@@ -29,6 +29,6 @@ export const NOTICE_EVENT_CHECKS: [string, (payload: Record<string, unknown>) =>
   ['event_reminder', payload => isIdentifier(payload['event_id']) && isString(payload['title'], 100)
     && isTimestamp(payload['start_time']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))],
   ['event_signup_notice', payload => isIdentifier(payload['event_id']) && isString(payload['title'], 100)
-    && (payload['kind'] === 'promoted' || payload['kind'] === 'removed') && isString(payload['role_name'], 100)
+    && (payload['kind'] === 'promoted' || payload['kind'] === 'removed' || payload['kind'] === 'waitlisted') && isString(payload['role_name'], 100)
     && isTimestamp(payload['start_time']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))]
 ]

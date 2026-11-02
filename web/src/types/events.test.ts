@@ -129,7 +129,8 @@ const examples: Record<ServerEventType, unknown[]> = {
   ],
   event_signup_notice: [
     { event_id: id, title: 'Raid', kind: 'promoted', role_name: 'Tank', start_time: FIXTURE_TIMESTAMP },
-    { event_id: id, title: 'Raid', kind: 'removed', role_name: 'DPS', start_time: FIXTURE_TIMESTAMP, channel_id: id }
+    { event_id: id, title: 'Raid', kind: 'removed', role_name: 'DPS', start_time: FIXTURE_TIMESTAMP, channel_id: id },
+    { event_id: id, title: 'Raid', kind: 'waitlisted', role_name: 'DPS', start_time: FIXTURE_TIMESTAMP }
   ],
   community_updated: [{ community_name: 'Lantern Fox' }, { community_name: '' }],
 }

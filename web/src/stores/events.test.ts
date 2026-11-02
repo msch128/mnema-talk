@@ -314,6 +314,21 @@ describe('past events', () => {
       warn.mockRestore()
     })
 
+    it('puts a waitlisted notice into words', async () => {
+      vi.mocked(rolesApi.fetchEvent).mockResolvedValue(makeEvent({ id: fixtureId(20) }))
+      useEventsStore().handleSignupNotice({ event_id: fixtureId(20), title: 'Raid', kind: 'waitlisted', role_name: 'DPS', start_time: FIXTURE_TIMESTAMP })
+      await flushPromises()
+      expect(useToastStore().toasts[0]?.text).toMatch(/Warteliste.*DPS/)
+    })
+
+    it('drops the event when leaving it answers that it can no longer be viewed', async () => {
+      const store = useEventsStore()
+      store.events = [makeEvent({ id: fixtureId(20) }), makeEvent({ id: fixtureId(21) })]
+      vi.mocked(rolesApi.leaveRole).mockResolvedValue(null)
+      expect(await store.leaveRole(fixtureId(20))).toBeNull()
+      expect(store.events.map(e => e.id)).toEqual([fixtureId(21)])
+    })
+
     it('stores what each roster action answers', async () => {
       const store = useEventsStore()
       const answer = makeEvent({ id: fixtureId(20), title: 'After' })

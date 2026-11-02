@@ -154,7 +154,7 @@ async function submit() {
     }
     if (features.eventRoles && rolesTouched.value) {
       try {
-        result = await saveRoles(result.id, roleRows.value, roleRemovals.value)
+        result = await saveRoles(result.id, roleRows.value, roleRemovals.value, state => { roleRows.value = state.rows; roleRemovals.value = state.removals })
         roleRemovals.value = []
       } catch (err) {
         // The event is saved; the roles are not. The next submit retries them.

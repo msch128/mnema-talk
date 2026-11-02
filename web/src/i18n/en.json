@@ -3599,7 +3599,8 @@
       "dialogTitle": "Roles & slots"
     },
     "rolePromoted": "You moved up from the waitlist: {role} – {title}",
-    "roleRemoved": "You were removed from {role} – {title}"
+    "roleRemoved": "You were removed from {role} – {title}",
+    "roleWaitlisted": "You were put on the waitlist: {role} – {title}"
   },
   "moderation": {
     "timeoutAction": "Time out…",

@@ -142,7 +142,7 @@ export interface ServerEventPayloads {
   event_delete: { id: string }
   event_reminder: { event_id: string; title: string; start_time: string; channel_id?: string }
   /** One member's sign-up for an event role changed without their doing: they moved up from the waitlist, or a moderator removed them. */
-  event_signup_notice: { event_id: string; title: string; kind: 'promoted' | 'removed'; role_name: string; start_time: string; channel_id?: string }
+  event_signup_notice: { event_id: string; title: string; kind: 'promoted' | 'removed' | 'waitlisted'; role_name: string; start_time: string; channel_id?: string }
   community_updated: { community_name: string; community_icon?: string } // the Owner renamed the community or changed its icon (community_icon: the new version, '' when removed)
 }
 

@@ -20,7 +20,7 @@ const props = defineProps<{
   canManage: boolean
 }>()
 
-const emit = defineEmits<{ 'edit-roles': [] }>()
+const emit = defineEmits<{ 'edit-roles': []; gone: [] }>()
 
 const eventsStore = useEventsStore()
 const auth = useAuthStore()
@@ -75,7 +75,7 @@ async function run(work: () => Promise<unknown>, failure: string) {
 
 function press(role: EventRole) {
   const what = action(role)
-  if (what === 'leave') return run(() => eventsStore.leaveRole(props.event.id), t('events.roles.leaveFailed'))
+  if (what === 'leave') return run(async () => { if ((await eventsStore.leaveRole(props.event.id)) === null) emit('gone') }, t('events.roles.leaveFailed'))
   if (what) return run(() => eventsStore.signUp(props.event.id, role.id), t('events.roles.joinFailed'))
 }
 
@@ -91,7 +91,7 @@ const isMe = (item: SignupItem) => item.user.id === auth.user?.id
     <div class="mb-3 flex items-center justify-between gap-3">
       <h3 class="text-sm font-medium text-mnema-text">{{ $t('events.roles.title') }}</h3>
       <button
-        v-if="canManage && (open || roles.length > 0)"
+        v-if="canManage && open"
         type="button"
         data-testid="event-roles-edit"
         class="flex items-center gap-1.5 rounded-lg border border-mnema-border px-2.5 py-1 text-xs font-medium text-mnema-secondary transition-colors hover:bg-mnema-hover max-md:min-h-11"

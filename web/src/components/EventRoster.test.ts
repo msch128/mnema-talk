@@ -106,6 +106,21 @@ describe('EventRoster', () => {
     expect(wrapper.emitted('edit-roles')).toHaveLength(1)
   })
 
+  it('offers no role editing on a finished event, and tells the detail view when the member can no longer see the event', async () => {
+    mountRoster(roster({ status: 'completed' }), true)
+    expect(wrapper.find('[data-testid="event-roles-edit"]').exists()).toBe(false)
+    wrapper.unmount()
+    mountRoster(roster({ status: 'cancelled' }), true)
+    expect(wrapper.find('[data-testid="event-roles-edit"]').exists()).toBe(false)
+    wrapper.unmount()
+    const store = useEventsStore()
+    vi.spyOn(store, 'leaveRole').mockResolvedValue(null)
+    mountRoster(roster({ my_signup: { role_id: dps.id, state: 'confirmed', waitlist_position: 0 } }))
+    await wrapper.findAll('[data-testid="event-role"]')[1]!.get('[data-testid="event-role-action"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.emitted('gone')).toHaveLength(1)
+  })
+
   it('shows no remove buttons to members and nothing at all without roles for them', () => {
     mountRoster(roster())
     expect(wrapper.find('button[aria-label^="Remove "]').exists()).toBe(false)
