@@ -1,0 +1,23 @@
+web/src/components/WikiSearch.vue
+  s_fb29f048bd6d02::t_141483d39144f2 29
+web/src/i18n/de.json
+  s_fb29f048bd6d02::t_6c63212301f164 4811
+web/src/i18n/en.json
+  s_fb29f048bd6d02::t_84052be9f72d78 4811
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0383256108fd0f6d4c0ccbed96b447f65c3ab08d",
+  "prompts": {},
+  "sessions": {
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
