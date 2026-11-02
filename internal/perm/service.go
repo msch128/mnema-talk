@@ -47,6 +47,10 @@ type Service struct {
 
 	notifierMu sync.RWMutex
 	notifier   Notifier
+
+	waitTimer  *time.Timer // guarded by mu: fires when the next wait of a new member ends
+	announceMu sync.Mutex
+	announced  time.Time // guarded by announceMu: ended waits were announced up to here
 }
 
 // Loader builds the permission state as of now. The database is the only
@@ -177,6 +181,7 @@ func (s *Service) reload(ctx context.Context, forced bool) (*Snapshot, error) {
 	if s.gen.Load() != gen {
 		s.cur.CompareAndSwap(snap, nil)
 	}
+	s.scheduleWaitEnd(snap, now)
 	return snap, nil
 }
 
@@ -281,7 +286,7 @@ func (s *Service) RequireChannel(ctx context.Context, sub Subject, ch uuid.UUID,
 	if err != nil {
 		return err
 	}
-	return snap.Deny(sub, snap.Channel(sub, ch), need)
+	return snap.DenyIn(sub, ch, snap.Channel(sub, ch), need)
 }
 
 // CheckChannel is RequireChannel for an already resolved Set.
@@ -309,7 +314,26 @@ func (s *Service) RequireGlobal(ctx context.Context, sub Subject, need Set) erro
 		if snap.RulesPending(sub.ID) && need&^p&TimeoutMask != 0 {
 			return ErrRulesNotAccepted
 		}
+		if nm := snap.newMemberRefusal(sub.ID, p, need); nm != nil {
+			return nm
+		}
 		return httpx.ErrForbidden("missing permission: " + name)
+	}
+	return nil
+}
+
+// RequireCall refuses a new member whose speak wait is still running: the
+// call of a conversation is held back as a whole, so they may not start one.
+func (s *Service) RequireCall(ctx context.Context, sub Subject) error {
+	if s == nil {
+		return nil
+	}
+	snap, err := s.Snapshot(ctx)
+	if err != nil {
+		return err
+	}
+	if w := snap.NewMemberWaits(sub.ID).Speak; w > 0 && !snap.IsOwner(sub) {
+		return NewMemberSpeakError(w)
 	}
 	return nil
 }
@@ -323,3 +347,47 @@ func RequireOwner(sub Subject) error {
 }
 
 var errNoDatabase = errors.New("permissions: service has no database")
+
+// minWaitGap is the least gap between two reloads caused by waits ending, so
+// a burst of sign-ups ends in a few reloads, not one per member.
+const minWaitGap = 3 * time.Second
+
+// scheduleWaitEnd arranges for the members whose wait as a new member ends to
+// be told: their rights come back at that moment, and a Talk they are in has
+// to hear it too (the media policy is applied on permission changes). One
+// timer serves all members and is set again after every load. A wait that
+// ended since the last announcement, between a timer and a reload, is
+// announced at once, so none is missed.
+func (s *Service) scheduleWaitEnd(snap *Snapshot, now time.Time) {
+	if s.waitTimer != nil {
+		s.waitTimer.Stop()
+		s.waitTimer = nil
+	}
+	if ids := snap.waitsEndedSince(s.announcedUntil(now, now), now); len(ids) > 0 {
+		go s.Changed(ids) // not under the load's lock: the hub asks for a snapshot
+	}
+	end, ok := snap.nextWaitEnd(now)
+	if !ok {
+		return
+	}
+	delay := max(end.Sub(now)+100*time.Millisecond, minWaitGap)
+	s.waitTimer = time.AfterFunc(delay, func() {
+		fired := s.now()
+		if ids := snap.waitsEndedSince(s.announcedUntil(fired, fired), fired); len(ids) > 0 {
+			s.Changed(ids)
+		}
+	})
+}
+
+// announcedUntil returns the moment up to which ended waits were announced
+// (the first call counts from first) and moves it to upTo.
+func (s *Service) announcedUntil(first, upTo time.Time) time.Time {
+	s.announceMu.Lock()
+	defer s.announceMu.Unlock()
+	from := s.announced
+	if from.IsZero() {
+		from = first
+	}
+	s.announced = upTo
+	return from
+}

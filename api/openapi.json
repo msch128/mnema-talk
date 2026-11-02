@@ -6576,6 +6576,24 @@
         ],
         "type": "object"
       },
+      "onboarding.JoinPreview": {
+        "properties": {
+          "accepts_signups": {
+            "description": "AcceptsSignups: the link is a permanent public invite, and the sign-up\nnames the slug as \"~<slug>\" in invite_code.",
+            "type": "boolean"
+          },
+          "community_name": {
+            "type": "string"
+          },
+          "valid": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid"
+        ],
+        "type": "object"
+      },
       "onboarding.Settings": {
         "properties": {
           "community_icon": {
@@ -6758,6 +6776,45 @@
         },
         "type": "object"
       },
+      "onboarding.VanityInput": {
+        "properties": {
+          "accepts_signups": {
+            "type": "boolean"
+          },
+          "slug": {
+            "description": "Slug is 3 to 32 characters: lowercase letters, digits and single\nhyphens inside. Upper case is folded to lower. Empty removes the link.",
+            "maxLength": 32,
+            "type": "string"
+          }
+        },
+        "required": [
+          "accepts_signups",
+          "slug"
+        ],
+        "type": "object"
+      },
+      "onboarding.VanitySettings": {
+        "properties": {
+          "accepts_signups": {
+            "description": "AcceptsSignups: the link works as a permanent public invite.",
+            "type": "boolean"
+          },
+          "path": {
+            "description": "Path is where the link lives on this server, empty without a slug; the\nweb app puts its address in front.",
+            "type": "string"
+          },
+          "slug": {
+            "description": "Slug is empty while there is no vanity link.",
+            "maxLength": 32,
+            "type": "string"
+          }
+        },
+        "required": [
+          "accepts_signups",
+          "slug"
+        ],
+        "type": "object"
+      },
       "opwarn.Warning": {
         "properties": {
           "code": {
@@ -6850,6 +6907,11 @@
             "minimum": 0,
             "type": "integer"
           },
+          "description": {
+            "description": "Description says in a line what the role is for; the member picker shows it.",
+            "maxLength": 200,
+            "type": "string"
+          },
           "hoist": {
             "type": "boolean"
           },
@@ -6887,6 +6949,10 @@
           "position": {
             "minimum": 0,
             "type": "integer"
+          },
+          "self_assignable": {
+            "description": "SelfAssignable lets every member add or remove this role on their own\naccount. Only roles without Administrator or admin-area permissions can be\nflagged, never @everyone or a managed role. Omitted when false.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -6908,6 +6974,11 @@
             "maximum": 16777215,
             "minimum": 0,
             "type": "integer"
+          },
+          "description": {
+            "description": "Description is one line shown to members choosing roles.",
+            "maxLength": 200,
+            "type": "string"
           },
           "hoist": {
             "type": "boolean"
@@ -6931,6 +7002,10 @@
           "permissions": {
             "minimum": 0,
             "type": "integer"
+          },
+          "self_assignable": {
+            "description": "SelfAssignable lets members add and remove the role themselves; refused\nfor @everyone, managed roles and roles with Administrator or admin-area permissions.",
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -7203,6 +7278,145 @@
         ],
         "type": "object"
       },
+      "raid.Input": {
+        "properties": {
+          "join_limit": {
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "join_window_minutes": {
+            "maximum": 1440,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "min_age_react_minutes": {
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min_age_speak_minutes": {
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min_age_write_minutes": {
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "join_limit",
+          "join_window_minutes",
+          "min_age_react_minutes",
+          "min_age_speak_minutes",
+          "min_age_write_minutes"
+        ],
+        "type": "object"
+      },
+      "raid.Lockdown": {
+        "properties": {
+          "active": {
+            "description": "Active is true while sign-ups are stopped (switched on and not expired).",
+            "type": "boolean"
+          },
+          "pause_invites": {
+            "description": "PauseInvites also stops creating invites.",
+            "type": "boolean"
+          },
+          "started_at": {
+            "description": "StartedAt is when it was switched on.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "until": {
+            "description": "Until is when the lockdown ends by itself; null: when switched off.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "active",
+          "pause_invites"
+        ],
+        "type": "object"
+      },
+      "raid.LockdownInput": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "hours": {
+            "description": "Hours ends the lockdown by itself after this long (1 to 720); 0 or\nomitted: it stays until switched off.",
+            "maximum": 720,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "pause_invites": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "active"
+        ],
+        "type": "object"
+      },
+      "raid.Settings": {
+        "properties": {
+          "join_limit": {
+            "description": "JoinLimit is the most new members within JoinWindowMinutes; 0: no throttle.",
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "join_window_minutes": {
+            "maximum": 1440,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "joined_in_window": {
+            "description": "JoinedInWindow is how many members joined within the window right now.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "lockdown": {
+            "$ref": "#/components/schemas/raid.Lockdown"
+          },
+          "min_age_react_minutes": {
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min_age_speak_minutes": {
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min_age_write_minutes": {
+            "description": "MinAgeWriteMinutes, MinAgeReactMinutes and MinAgeSpeakMinutes are how\nlong after joining a new member may write, react and speak; 0: at once.",
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "join_limit",
+          "join_window_minutes",
+          "joined_in_window",
+          "lockdown",
+          "min_age_react_minutes",
+          "min_age_speak_minutes",
+          "min_age_write_minutes"
+        ],
+        "type": "object"
+      },
       "roles.ChannelPermissions": {
         "properties": {
           "channel_id": {
@@ -7234,6 +7448,23 @@
         "required": [
           "role_ids"
         ],
+        "type": "object"
+      },
+      "roles.NewMemberInfo": {
+        "properties": {
+          "react_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "speak_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "write_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "roles.OverwritesBody": {
@@ -7277,6 +7508,10 @@
             "description": "MaxUploadMB is the largest file the caller may upload, in MB: their\nroles' override or the global limit, never above the server's ceiling.\nIt changes with permissions_changed.",
             "minimum": 1,
             "type": "integer"
+          },
+          "new_member": {
+            "$ref": "#/components/schemas/roles.NewMemberInfo",
+            "description": "NewMember is set while the caller is too new to write, react or speak\n(raid protection): per action the moment it opens up."
           },
           "owner": {
             "description": "Owner is true for the Owner, who may do everything and cannot be\nrestricted.",
@@ -16382,6 +16617,271 @@
         ]
       }
     },
+    "/api/admin/raid": {
+      "get": {
+        "description": "Owner and Administrators only. The sign-up throttle (at most join_limit new members within join_window_minutes), the minimum membership ages before a new member may write, react and speak (0: off), how many members joined within the window right now, and the state of the lockdown.",
+        "operationId": "getRaidProtection",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/raid.Settings"
+                }
+              }
+            },
+            "description": "Settings."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may read it."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read the raid protection settings",
+        "tags": [
+          "Onboarding"
+        ]
+      },
+      "put": {
+        "description": "Owner and Administrators only; audited. Replaces the sign-up throttle and the minimum membership ages. While the throttle is full, or a lockdown is on, new sign-ups answer UNAVAILABLE (\"sign-ups are paused\"); existing members are unaffected. A new member who has not reached an age yet cannot write, react or speak in Talks, start a conversation or write first in one, react in conversations (react wait) or join a conversation's call (speak wait); the answer is FORBIDDEN with the seconds left, and permissions carry `new_member`. Administrators, the Owner, bots and holders of Bypass new member limits never wait. Broadcasts permissions_changed.",
+        "operationId": "setRaidProtection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/raid.Input"
+              }
+            }
+          },
+          "description": "New settings.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/raid.Settings"
+                }
+              }
+            },
+            "description": "Settings."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may change it, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the raid protection settings",
+        "tags": [
+          "Onboarding"
+        ]
+      }
+    },
+    "/api/admin/raid/lockdown": {
+      "put": {
+        "description": "Owner and Administrators only; audited. While the lockdown is on, nobody new can sign up (also with a valid invite); with `pause_invites` no invite can be created either. `hours` ends it by itself after that long (1 to 720); without it, it stays until switched off. Existing members and their sessions are unaffected.",
+        "operationId": "setLockdown",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/raid.LockdownInput"
+              }
+            }
+          },
+          "description": "Lockdown.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/raid.Settings"
+                }
+              }
+            },
+            "description": "Settings."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may change it, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Switch the lockdown on or off",
+        "tags": [
+          "Onboarding"
+        ]
+      }
+    },
     "/api/admin/reports": {
       "get": {
         "description": "The moderation queue, newest first. Needs Manage reports (the Owner and Administrators always). The list holds no message text; open a report for that.",
@@ -20373,6 +20873,175 @@
         "summary": "Reset a member's two-factor sign-in",
         "tags": [
           "Admin"
+        ]
+      }
+    },
+    "/api/admin/vanity-link": {
+      "get": {
+        "description": "Owner and Administrators only.",
+        "operationId": "getVanityLink",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/onboarding.VanitySettings"
+                }
+              }
+            },
+            "description": "Setting."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may read it."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read the vanity invite link",
+        "tags": [
+          "Onboarding"
+        ]
+      },
+      "put": {
+        "description": "Owner and Administrators only, except that only the Owner may turn `accepts_signups` on (or keep it on for a new name): an Administrator gets 403 FORBIDDEN; audited. `slug` is 3 to 32 characters (lowercase letters, digits, single hyphens inside; upper case is folded) and must not be a reserved word (400 INVALID_INPUT); an empty slug removes the link. The link is served at /join/{slug}. By default it only leads visitors to the sign-in page: sign-up stays invite-only. With `accepts_signups` it works as a permanent public invite (unlimited uses, no expiry), so anyone who knows it can register; leave it off to keep invites individual. One link per community; setting it replaces the previous one.",
+        "operationId": "setVanityLink",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/onboarding.VanityInput"
+              }
+            }
+          },
+          "description": "New setting.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/onboarding.VanitySettings"
+                }
+              }
+            },
+            "description": "Setting."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, or a slug of the wrong length or characters, or reserved."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may change it, only the Owner may turn accepts_signups on, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set or remove the vanity invite link",
+        "tags": [
+          "Onboarding"
         ]
       }
     },
@@ -29964,6 +30633,68 @@
         ]
       }
     },
+    "/api/join/{slug}": {
+      "get": {
+        "description": "Public, no session. Says whether the vanity link /join/{slug} exists and, if so, the community's name and whether it accepts sign-ups. When it does, register with invite_code \"~{slug}\"; when it does not, the visitor signs in or needs an individual invite code. Unknown slugs answer `{\"valid\": false}`. Rate limited per IP like the invite preview (30 per minute, IPv6 per /64).",
+        "operationId": "previewJoinLink",
+        "parameters": [
+          {
+            "description": "Link name.",
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/onboarding.JoinPreview"
+                }
+              }
+            },
+            "description": "Preview."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [],
+        "summary": "Preview a vanity invite link",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/legal": {
       "get": {
         "description": "Public, no session needed. The operator named by the environment, the retention and session lifetimes, the STUN and TURN servers in use and whether the release check is on: the facts the in-app privacy policy states.",
@@ -30696,6 +31427,204 @@
         "summary": "Cancel or dismiss a reminder",
         "tags": [
           "Messages"
+        ]
+      }
+    },
+    "/api/me/roles/{id}": {
+      "delete": {
+        "description": "Removes the role from the caller's own account. Only roles listed by GET /api/roles/self-assignable; dropping a role the caller does not hold changes nothing. Recorded in the audit log as role.self_remove. Broadcasts member_roles_changed (the member's id and roles) and tells the caller to refresh (permissions_changed).",
+        "operationId": "dropSelfRole",
+        "parameters": [
+          {
+            "description": "Role ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the role is not open to self-assignment, or the caller is the Owner, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Drop a self-assignable role",
+        "tags": [
+          "Roles"
+        ]
+      },
+      "put": {
+        "description": "Adds the role to the caller's own account. Only roles listed by GET /api/roles/self-assignable; asking for a role the caller already holds changes nothing. Recorded in the audit log as role.self_assign. Broadcasts member_roles_changed (the member's id and roles) and tells the caller to refresh (permissions_changed).",
+        "operationId": "takeSelfRole",
+        "parameters": [
+          {
+            "description": "Role ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the role is not open to self-assignment, or the caller is the Owner, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Take a self-assignable role",
+        "tags": [
+          "Roles"
         ]
       }
     },
@@ -33508,6 +34437,74 @@
           }
         ],
         "summary": "List roles",
+        "tags": [
+          "Roles"
+        ]
+      }
+    },
+    "/api/roles/self-assignable": {
+      "get": {
+        "description": "The roles an admin opened to self-assignment, highest first: ordinary roles without Administrator or admin-area permissions. Any member may read it; PUT and DELETE /api/me/roles/{id} take and drop them.",
+        "operationId": "listSelfAssignableRoles",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/perm.Role"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Roles members may choose for themselves."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List the roles members can choose",
         "tags": [
           "Roles"
         ]

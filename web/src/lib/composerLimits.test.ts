@@ -33,6 +33,7 @@ describe('the wait of slow mode', () => {
   it('is read from the sentence of a refusal', () => {
     expect(waitSeconds('slow mode: wait 7 s before posting again')).toBe(7)
     expect(waitSeconds('too many requests: retry in 42 s')).toBe(42)
+    expect(waitSeconds('new members can write in 90 s')).toBe(90)
     expect(waitSeconds('too many requests')).toBeNull()
     expect(waitSeconds(undefined)).toBeNull()
     expect(new ApiError(429, 'RATE_LIMITED', 'x', 7).retryAfter).toBe(7)

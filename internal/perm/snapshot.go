@@ -39,6 +39,12 @@ type Role struct {
 	// inherits the global limit. A member gets the highest override of their
 	// roles (@everyone included), never above the server's ceiling.
 	MaxUploadMB *int `json:"max_upload_mb" minimum:"1" extensions:"x-nullable"`
+	// SelfAssignable lets every member add or remove this role on their own
+	// account. Only roles without Administrator or admin-area permissions can be
+	// flagged, never @everyone or a managed role. Omitted when false.
+	SelfAssignable bool `json:"self_assignable,omitempty" binding:"optional"`
+	// Description says in a line what the role is for; the member picker shows it.
+	Description string `json:"description,omitempty" maxLength:"200" binding:"optional"`
 }
 
 type overwrite struct{ allow, deny Set }
@@ -100,6 +106,10 @@ type Snapshot struct {
 	// enforce it from this one snapshot. The Owner and bots are exempt.
 	rulesVersion  int
 	rulesAccepted map[uuid.UUID]int
+	// newMember are the minimum membership ages (zero: off) and joined when
+	// each member joined; it is only filled while a gate is on.
+	newMember NewMemberRules
+	joined    map[uuid.UUID]time.Time
 }
 
 // Timeout is a member's timeout: they keep reading but lose TimeoutMask.
@@ -141,6 +151,11 @@ func (s *Snapshot) Role(id uuid.UUID) (Role, bool) {
 // Global is what sub may do server-wide: the Owner everything, otherwise
 // @everyone plus the member's roles, or everything for an Administrator.
 func (s *Snapshot) Global(sub Subject) Set {
+	return s.hold(sub.ID, s.globalUnheld(sub))
+}
+
+// globalUnheld is Global before the waits of new members apply.
+func (s *Snapshot) globalUnheld(sub Subject) Set {
 	if s.IsOwner(sub) {
 		return All
 	}
@@ -203,6 +218,11 @@ func (s *Snapshot) Deny(sub Subject, p, need Set) error {
 	err := CheckChannel(p, need)
 	if err != nil && p.Has(ViewChannel) && s.RulesPending(sub.ID) && need&^p&TimeoutMask != 0 {
 		return ErrRulesNotAccepted
+	}
+	if err != nil && p.Has(ViewChannel) {
+		if nm := s.newMemberRefusal(sub.ID, p, need); nm != nil {
+			return nm
+		}
 	}
 	return err
 }

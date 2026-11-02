@@ -8,6 +8,7 @@ import { setLocale } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import { settingsTab } from '../lib/settingsDialog'
 import { useToastStore } from '../stores/toast'
+import { usePermissionsStore } from '../stores/permissions'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../lib/api', async (importOriginal) => ({
@@ -253,6 +254,27 @@ describe('SettingsDialog jump targets', () => {
     openSettings('signin', { field: 'noise' })
     await w.get('[data-testid="settings-tab-sessions"]').trigger('click')
     expect(settingsField.value).toBeNull()
+    w.unmount()
+  })
+})
+
+describe('SettingsDialog Roles section', () => {
+  const closedRole = { id: '00000000-0000-4000-8000-000000000041', name: 'Mods', color: 0, position: 1, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null }
+
+  it('appears only where an admin opened a role to everyone, and shows the choices', async () => {
+    usePermissionsStore().roles = [closedRole]
+    let w = await open(none)
+    expect(w.find('[data-testid="settings-tab-roles"]').exists()).toBe(false)
+    w.unmount()
+    document.body.replaceChildren()
+
+    usePermissionsStore().roles = [{ ...closedRole, self_assignable: true }]
+    apiMock.mockImplementation(async (path) => (path === '/api/roles/self-assignable' ? [{ ...closedRole, self_assignable: true }] : none))
+    w = mount(SettingsDialog, { attachTo: document.body })
+    await flushPromises()
+    await w.get('[data-testid="settings-tab-roles"]').trigger('click')
+    await flushPromises()
+    expect(w.get('[data-testid="self-roles"]').text()).toContain('Mods')
     w.unmount()
   })
 })

@@ -111,6 +111,9 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 		if err != nil {
 			return nil, err
 		}
+		if err := checkOverwritesOfOpenRoles(snap, next); err != nil {
+			return nil, err
+		}
 		if err := authorizeOverwriteChanges(snap, actor, held, diffOverwrites(existing, next)); err != nil {
 			return nil, err
 		}

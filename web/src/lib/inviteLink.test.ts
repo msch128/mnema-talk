@@ -21,3 +21,18 @@ describe('inviteLink', () => {
     expect(inviteLink('https://talk.example', 'abc234xyz789')).toBe('https://talk.example/invite/abc234xyz789')
   })
 })
+
+describe('vanity links', () => {
+  it('reads the slug of /join/{name} in any case and refuses anything else', async () => {
+    const { joinSlugFromPath, isInvitePath, vanityInviteCode, joinLink } = await import('./inviteLink')
+    expect(joinSlugFromPath('/join/meinclan')).toBe('meinclan')
+    expect(joinSlugFromPath('/join/MeinClan/')).toBe('meinclan')
+    for (const bad of ['/join/ab', '/join/a_b', '/join/', '/join/x/y', '/joinx/abc', '/join/' + 'a'.repeat(33), '/join/%3Cb%3E']) {
+      expect(joinSlugFromPath(bad), bad).toBe('')
+    }
+    expect(isInvitePath('/join/meinclan')).toBe(true)
+    expect(isInvitePath('/c/general')).toBe(false)
+    expect(vanityInviteCode('owls')).toBe('~owls')
+    expect(joinLink('https://talk.example', 'owls')).toBe('https://talk.example/join/owls')
+  })
+})

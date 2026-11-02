@@ -67,6 +67,7 @@ func SendContextFor(perms *perm.Service, ctx context.Context, ch uuid.UUID, need
 		return nil, err
 	}
 	ctx = WithSlowModeExempt(ctx, p.Has(perm.ManageMessages))
+	ctx = withNewMemberWriteWait(ctx, snap.NewMemberWaits(sub.ID).Write)
 	return WithMentionPolicy(ctx, MentionPolicy{
 		NoEveryone: !p.Has(perm.MentionEveryone),
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) },
@@ -76,14 +77,24 @@ func SendContextFor(perms *perm.Service, ctx context.Context, ch uuid.UUID, need
 
 // refusalFor turns a "missing permission" refusal into RULES_NOT_ACCEPTED when
 // the caller's rules acceptance is what took the permission away.
-func (h *Handler) refusalFor(r *http.Request, err error) error {
+//
+// need is what the refused action required; a new member's wait for it is
+// named when it is what took the permission away.
+func (h *Handler) refusalFor(r *http.Request, err error, need perm.Set) error {
 	var apiErr *httpx.APIError
 	if h.Perms == nil || !errors.As(err, &apiErr) || apiErr.Code != httpx.CodeForbidden {
 		return err
 	}
 	snap, serr := h.Perms.Snapshot(r.Context())
-	if serr == nil && snap.RulesPending(auth.UserFrom(r.Context()).ID) {
+	if serr != nil {
+		return err
+	}
+	uid := auth.UserFrom(r.Context()).ID
+	if snap.RulesPending(uid) {
 		return perm.ErrRulesNotAccepted
+	}
+	if nm := snap.NewMemberRefusal(uid, need); nm != nil {
+		return nm
 	}
 	return err
 }

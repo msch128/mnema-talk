@@ -167,6 +167,25 @@ describe('other live updates', () => {
     }
   })
 
+  it('updates only the member whose roles changed, without refetching anything', () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      const permissions = usePermissionsStore()
+      const roles = vi.spyOn(permissions, 'loadRoles').mockResolvedValue()
+      const chat = useChatStore()
+      chat.members = [{ id: fixtureId(9), role_ids: [] } as never, { id: fixtureId(8), role_ids: [] } as never]
+      chat.handleWSEvent({ type: 'member_roles_changed', payload: { id: fixtureId(9), role_ids: [fixtureId(30)] } })
+      expect(chat.members.map(m => m.role_ids)).toEqual([[fixtureId(30)], []])
+      expect(permissions.memberRoles[fixtureId(9)]).toEqual([fixtureId(30)])
+      chat.handleWSEvent({ type: 'member_roles_changed', payload: { id: fixtureId(77), role_ids: [] } })
+      expect(roles).not.toHaveBeenCalled()
+      expect(fetchMock).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('collects a bot interaction response as an ephemeral message', () => {
     const chat = useChatStore()
     chat.handleWSEvent({

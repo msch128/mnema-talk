@@ -136,6 +136,10 @@
     },
     "detail": {
       "invalidInvite": "Invalid invite code",
+      "vanityOwnerOnly": "Only the Owner can let the vanity link create accounts.",
+      "vanityChars": "The link name may only hold lowercase letters, digits and single hyphens between them.",
+      "vanityLength": "The link name must be {min} to {max} characters.",
+      "vanityReserved": "This link name is reserved. Choose another one.",
       "inviteExpired": "The invite code has expired",
       "inviteUsedUp": "The invite code has been used too many times",
       "usernameTaken": "That username is already taken",
@@ -146,6 +150,17 @@
       "fieldMax": "{field}: at most {count} characters",
       "fileTooBig": "The file is larger than {size} MB",
       "missingPermission": "You don’t have permission to do that.",
+      "srvHoursMustBeBetween0": "Hours must be between 0 and {a}.",
+      "invitesPausedLockdown": "Creating invites is paused during a lockdown.",
+      "srvJoinLimitMustBeBetween0": "The sign-up limit must be between 0 and {a}.",
+      "srvJoinWindowMinutesMustBe": "The sign-up window must be between {a} and {b} minutes.",
+      "srvMinAgeReactMinutesMustBe": "The waiting time to react must be between 0 and {a} minutes.",
+      "srvMinAgeSpeakMinutesMustBe": "The waiting time to speak must be between 0 and {a} minutes.",
+      "srvMinAgeWriteMinutesMustBe": "The waiting time to write must be between 0 and {a} minutes.",
+      "newMemberReact": "New here: you can react in {time}.",
+      "newMemberSpeak": "New here: you can speak in {time}.",
+      "newMemberWrite": "New here: you can write in {time}.",
+      "signupsPaused": "Sign-ups are paused for now. Try again later.",
       "slowMode": "Slow mode: wait {seconds} s before posting again",
       "rateWait": "That was a lot at once. Try again in {time}.",
       "linkInvalid": "This link is invalid or has expired.",
@@ -205,10 +220,14 @@
       "pollNoWithdraw": "A vote in an anonymous poll can’t be withdrawn.",
       "automodSend": "Your message wasn’t sent: it breaks the community rule “{rule}”. The moderators can see this.",
       "automodEdit": "Your edit wasn’t saved: it breaks the community rule “{rule}”. The moderators can see this.",
+      "srvASelfAssignableRoleCannot": "A self-assignable role can’t have administrator, admin-area or moderation permissions.",
+      "srvASelfAssignableRoleCannot2": "A self-assignable role can’t be allowed administrator, admin-area or moderation permissions in a channel.",
       "srvCreatedChannelSHaveMessages": "{a} created channels now contain messages. Confirm that they are deleted as well.",
+      "srvEveryoneAndManagedRoles": "@everyone and managed roles can’t be self-assignable.",
       "srvIsNotADomain": "{a} is not a domain.",
       "srvFileIsRequired": "The {a} file is required.",
       "srvIsTooLong": "{a} is too long.",
+      "srvMembersCannotTakeOr": "Members can’t take or drop this role themselves.",
       "srvMustBeAnRfc3339": "{a} must be a time in RFC 3339 format.",
       "srvNotFound": "{a} wasn’t found.",
       "srv401Unauthorized": "You’re not signed in.",
@@ -226,6 +245,7 @@
       "srvSmtpIsNotConfiguredSmtp": "This server can’t send e-mail yet.",
       "srvTalkNotFound": "That Talk wasn’t found.",
       "srvTemporaryTalksFollowTheirLobby": "Temporary Talks follow the permissions of their lobby.",
+      "srvTheOwnerHasNoRoles": "The Owner has no roles to choose.",
       "srvWaitForAReplyBefore": "Wait for a reply before you send more than {a} messages.",
       "srvYouAreInGroupDirect": "You’re already in {a} group direct messages. Leave one first.",
       "srvYouHaveStartedEnoughDirect": "You’ve started enough direct messages for today. Try again tomorrow.",
@@ -643,6 +663,7 @@
     "legal": "Privacy policy & legal",
     "inviteRequired": "Enter an invite code.",
     "failed": "That didn’t work. Try again.",
+    "subtitleVanity": "You were invited to {name}. Sign in, or ask for an invite code to create an account.",
     "subtitleInvited": "You’ve been invited to join",
     "inviteChecking": "Checking your invite…",
     "inviteInvalid": "This invite is not valid any more. Ask for a new one, or sign in if you already have an account.",
@@ -1733,6 +1754,21 @@
   "admin": {
     "signedInAs": "Signed in as {name} (Owner)",
     "unknownError": "Unknown error",
+    "vanity": {
+      "title": "Vanity link",
+      "hint": "One short address for the whole community, for example in a profile or on a poster. By default it only leads visitors to the sign-in page: signing up still needs an invite code.",
+      "slug": "Link name",
+      "placeholder": "your-community",
+      "rules": "{min} to {max} characters: lowercase letters, digits and single hyphens. Upper case is turned into lower case; some words are reserved.",
+      "accepts": "Let this link create accounts",
+      "acceptsHint": "Anyone who knows the link can then sign up, without limit and without expiry, like a permanent public invite. Leave it off to keep invites individual. Switching it off or removing the link closes it at once.",
+      "ownerOnly": "Only the Owner can let this link create accounts. Administrators can set the name and switch sign-ups off.",
+      "saved": "Vanity link saved.",
+      "removed": "Vanity link removed.",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "copyFailed": "Couldn’t copy the link."
+    },
     "tabs": {
       "users": "Members",
       "channels": "Channels & layout",
@@ -3018,6 +3054,10 @@
       "name": "Manage events",
       "desc": "Create, edit and cancel community events."
     },
+    "bypass_new_member_limits": {
+      "name": "Bypass new member limits",
+      "desc": "Write, react and speak right away, without waiting out the minimum membership age (raid protection)."
+    },
     "groups": {
       "general": "General",
       "text": "Text",
@@ -3074,7 +3114,9 @@
         "create": "Role created",
         "update": "Role edited",
         "delete": "Role deleted",
-        "reorder": "Roles reordered"
+        "reorder": "Roles reordered",
+        "self_assign": "Role taken by the member",
+        "self_remove": "Role dropped by the member"
       },
       "user": {
         "roles_set": "Roles assigned",
@@ -3109,7 +3151,8 @@
       "invite": {
         "create": "Invite created",
         "update": "Invite edited",
-        "revoke": "Invite revoked"
+        "revoke": "Invite revoked",
+        "vanity_link": "Vanity link changed"
       },
       "webhook": {
         "create": "Webhook created",
@@ -3174,6 +3217,8 @@
       "settings": {
         "upload_limit": "Upload limit changed",
         "onboarding": "Welcome and rules changed",
+        "raid": "Raid protection changed",
+        "lockdown": "Lockdown switched",
         "community_icon": "Community icon changed",
         "community_icon_remove": "Community icon removed"
       },
@@ -3278,6 +3323,14 @@
     "uploadHint": "Leave empty to use the global limit. A member gets the highest limit of their roles, never above the server maximum.",
     "uploadInvalid": "Enter a whole number of MB, or leave it empty.",
     "colorInvalid": "Use a colour like #5fd0b6.",
+    "selfAssign": {
+      "description": "Description",
+      "descriptionPlaceholder": "What is this role for?",
+      "label": "Members can assign this role to themselves",
+      "hint": "Shown in Settings > Roles. Members add and drop it freely; every change is recorded in the audit log.",
+      "blocked": "This role has administration or moderation permissions. Turn them off, or turn this off.",
+      "unavailable": "Not available while the role has administration or moderation permissions."
+    },
     "botRoles": "Bot roles",
     "botRoleHint": "Managed role of one bot: it cannot be removed.",
     "botRoleNote": "“{name}” is a bot’s own role. It is created with the bot, follows its name and is deleted with it; only that bot holds it, and it cannot be renamed, given to anyone else, removed from the bot or deleted by hand. You can change its colour and permissions. Nobody can give a bot permissions they lack themselves, and only the Owner can make a bot elevated.",
@@ -4000,6 +4053,57 @@
     "collapsed": "Blocked message",
     "show": "Show"
   },
+  "raid": {
+    "title": "Raid protection",
+    "hint": "Keep a sudden wave of new accounts calm: limit sign-ups, make new members wait before they can write, react or speak, or close the door for a while.",
+    "loadFailed": "Couldn’t load the raid protection settings.",
+    "saved": "Raid protection saved.",
+    "lockdown": {
+      "title": "Lockdown",
+      "offText": "Sign-ups are open.",
+      "onText": "Lockdown is on: nobody new can sign up.",
+      "onUntil": "Lockdown is on until {time}: nobody new can sign up.",
+      "hint": "Closes the door at once. Members who are already here are not affected.",
+      "pauseInvites": "Also pause creating invites",
+      "invitesPaused": "Creating invites is paused too.",
+      "ends": "Ends",
+      "durations": {
+        "0": "when I switch it off",
+        "1": "in 1 hour",
+        "6": "in 6 hours",
+        "24": "in 24 hours"
+      },
+      "start": "Start lockdown",
+      "end": "End lockdown",
+      "failed": "Couldn’t switch the lockdown.",
+      "banner": "Lockdown is on: nobody new can sign up.",
+      "bannerUntil": "Lockdown is on until {time}: nobody new can sign up.",
+      "manage": "Open settings"
+    },
+    "throttle": {
+      "title": "Sign-up limit",
+      "hint": "When this many people joined within the window, further sign-ups wait until there is room again. 0 turns the limit off.",
+      "limit": "New members per window",
+      "window": "Window in minutes",
+      "status": "{count} joined in the last {minutes} min.",
+      "invalid": "Enter whole numbers; the window is 1 to 1440 minutes."
+    },
+    "waits": {
+      "title": "Waiting time for new members",
+      "hint": "How long after joining a new member waits before they can do this. Administrators, the Owner and roles with “Bypass new member limits” never wait. They also hold starting a conversation or writing first in one; answering is always possible.",
+      "write": "Write messages",
+      "react": "React to messages",
+      "speak": "Speak and share video in Talks",
+      "none": "No wait",
+      "existing": "Members who joined recently wait out what is left of their time since they joined, counted from the day they signed up."
+    }
+  },
+  "newMember": {
+    "write": "You can write in {time}.",
+    "react": "You can react in {time}.",
+    "speak": "You can speak in {time}.",
+    "bannerHint": "You are new here."
+  },
   "automod": {
     "title": "Automod",
     "hint": "Rules that check every new or edited message and every sign-up. A hit is blocked or only flagged, and always appears in Reports, marked Automod. The Owner and Administrators are never held back by a rule.",
@@ -4107,6 +4211,7 @@
     "tabModeration": "Moderation",
     "strikeCount": "{count} strikes",
     "privacy": "Only moderators see this. The member is never shown it and it is not part of their data export.",
+      "roles": "Roles",
     "loadFailed": "Couldn’t load the moderation history.",
     "saveFailed": "Couldn’t save the note. Try again.",
     "deleteFailed": "Couldn’t delete the note. Try again.",
@@ -4357,6 +4462,15 @@
     "discard": "Discard",
     "keepEditing": "Keep editing",
     "shortcut": "Save with {keys}"
+  },
+  "selfRoles": {
+    "title": "Roles you can choose",
+    "intro": "These roles are open to everyone. Switch them on or off as you like; nothing here gives anyone more rights over others.",
+    "empty": "There are no roles to choose.",
+    "loadFailed": "Could not load the roles.",
+    "retry": "Try again",
+    "switch": "Take the role {name}",
+    "noDescription": "No description"
   },
   "settings": {
     "title": "Settings",

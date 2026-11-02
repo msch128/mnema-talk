@@ -17,11 +17,13 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"auth.recovery_code_used": VisPrivileged, "auth.account_delete": VisPrivileged, "auth.export_request": VisPrivileged, "auth.export_download": VisPrivileged, "auth.recovery_codes_regenerated": VisPrivileged, "user.two_factor_reset": VisPrivileged,
 		"auth.email_set": VisPrivileged, "auth.email_remove": VisPrivileged, "auth.email_verified": VisPrivileged, "auth.password_reset_mail": VisPrivileged,
 		// Admin routes.
-		"invite.create": VisAuditors, "invite.update": VisAuditors, "invite.revoke": VisAuditors,
+		"invite.create": VisAuditors, "invite.vanity_link": VisAuditors, "invite.update": VisAuditors, "invite.revoke": VisAuditors,
 		"user.disable": VisAuditors, "user.enable": VisAuditors, "user.sessions_revoke": VisAuditors,
 		"user.status": VisAuditors, "user.talk_kick": VisAuditors, "user.roles_set": VisAuditors,
 		"user.password_set": VisPrivileged, "user.password_reset": VisPrivileged, "user.lockout_clear": VisPrivileged,
 		"role.create": VisAuditors, "role.update": VisAuditors, "role.delete": VisAuditors, "role.reorder": VisAuditors,
+		// A member choosing a role for themselves is administration news, not private content.
+		"role.self_assign": VisAuditors, "role.self_remove": VisAuditors,
 		"category.overwrites_set": VisPrivileged,
 		"channel.overwrites_set":  VisChannel, "channel.create": VisChannel, "channel.update": VisChannel, "channel.delete": VisChannel, "channel.duplicate": VisChannel, "channel.auto_delete_set": VisChannel,
 		"category.create": VisPrivileged, "category.update": VisPrivileged, "category.delete": VisPrivileged, "layout.apply": VisPrivileged,
@@ -34,7 +36,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"outgoing_webhook.rotate_secret": VisPrivileged, "outgoing_webhook.delete": VisPrivileged,
 		"media.prune": VisPrivileged, "media.orphans_cleanup": VisPrivileged, "media.delete": VisPrivileged,
 		"import.discord": VisPrivileged, "import.discord_undo": VisPrivileged,
-		"settings.upload_limit": VisPrivileged, "settings.onboarding": VisPrivileged, "settings.community_icon": VisPrivileged, "settings.community_icon_remove": VisPrivileged, "system.update": VisPrivileged, "system.mail_test": VisPrivileged,
+		"settings.upload_limit": VisPrivileged, "settings.onboarding": VisPrivileged, "settings.raid": VisPrivileged, "settings.lockdown": VisPrivileged, "settings.community_icon": VisPrivileged, "settings.community_icon_remove": VisPrivileged, "system.update": VisPrivileged, "system.mail_test": VisPrivileged,
 		"moderation.timeout": VisAuditors, "moderation.timeout_remove": VisAuditors, "moderation.ban": VisAuditors,
 		"moderation.unban": VisAuditors, "moderation.ban_expired": VisAuditors,
 		"emoji.create": VisAuditors, "emoji.rename": VisAuditors, "emoji.delete": VisAuditors,

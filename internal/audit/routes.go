@@ -25,6 +25,7 @@ const (
 	ResSettings   Resource = "settings"
 	ResBot        Resource = "bot"
 	ResOnboarding Resource = "onboarding"
+	ResVanity     Resource = "vanity"
 	ResEmoji      Resource = "emoji"
 )
 
@@ -51,6 +52,7 @@ type Route struct {
 // unknown ones under a generic action, so nothing escapes the log.
 var Routes = []Route{
 	{Method: "POST", Pattern: "/invites", Action: "invite.create", TargetType: "invite"},
+	{Method: "PUT", Pattern: "/vanity-link", Action: "invite.vanity_link", TargetType: "settings", Snapshot: ResVanity},
 	{Method: "PATCH", Pattern: "/invites/{id}", Action: "invite.update", TargetType: "invite", IDParam: "id", Snapshot: ResInvite},
 	{Method: "DELETE", Pattern: "/invites/{id}", Action: "invite.revoke", TargetType: "invite", IDParam: "id", Snapshot: ResInvite},
 
@@ -119,6 +121,8 @@ var Routes = []Route{
 	{Method: "PUT", Pattern: "/community/icon", Action: "settings.community_icon", TargetType: "settings", Snapshot: ResOnboarding, NoBody: true},
 	{Method: "DELETE", Pattern: "/community/icon", Action: "settings.community_icon_remove", TargetType: "settings", Snapshot: ResOnboarding},
 	{Method: "PUT", Pattern: "/onboarding", Action: "settings.onboarding", TargetType: "settings", Snapshot: ResOnboarding},
+	{Method: "PUT", Pattern: "/raid", Action: "settings.raid", TargetType: "settings"},
+	{Method: "PUT", Pattern: "/raid/lockdown", Action: "settings.lockdown", TargetType: "settings"},
 	{Method: "PUT", Pattern: "/first-run", Skip: true}, // the Owner's own checklist state, not community data
 
 	{Method: "POST", Pattern: "/emoji", Action: "emoji.create", TargetType: "emoji", Snapshot: ResEmoji, NoBody: true},

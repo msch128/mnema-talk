@@ -136,6 +136,10 @@
     },
     "detail": {
       "invalidInvite": "Ungültiger Einladungscode",
+      "vanityOwnerOnly": "Nur der Owner kann mit dem Kurzlink Konten erstellen lassen.",
+      "vanityChars": "Der Linkname darf nur Kleinbuchstaben, Ziffern und einzelne Bindestriche dazwischen enthalten.",
+      "vanityLength": "Der Linkname muss {min} bis {max} Zeichen lang sein.",
+      "vanityReserved": "Dieser Linkname ist reserviert. Wähle einen anderen.",
       "inviteExpired": "Der Einladungscode ist abgelaufen",
       "inviteUsedUp": "Der Einladungscode wurde bereits zu oft verwendet",
       "usernameTaken": "Dieser Benutzername ist bereits vergeben",
@@ -146,6 +150,17 @@
       "fieldMax": "{field}: höchstens {count} Zeichen",
       "fileTooBig": "Die Datei ist größer als {size} MB",
       "missingPermission": "Dafür fehlt dir die Berechtigung.",
+      "srvHoursMustBeBetween0": "Stunden müssen zwischen 0 und {a} liegen.",
+      "invitesPausedLockdown": "Einladungen sind während eines Lockdowns pausiert.",
+      "srvJoinLimitMustBeBetween0": "Das Anmelde-Limit muss zwischen 0 und {a} liegen.",
+      "srvJoinWindowMinutesMustBe": "Das Anmelde-Zeitfenster muss zwischen {a} und {b} Minuten liegen.",
+      "srvMinAgeReactMinutesMustBe": "Die Wartezeit zum Reagieren muss zwischen 0 und {a} Minuten liegen.",
+      "srvMinAgeSpeakMinutesMustBe": "Die Wartezeit zum Sprechen muss zwischen 0 und {a} Minuten liegen.",
+      "srvMinAgeWriteMinutesMustBe": "Die Wartezeit zum Schreiben muss zwischen 0 und {a} Minuten liegen.",
+      "newMemberReact": "Du bist neu hier: Reagieren kannst du in {time}.",
+      "newMemberSpeak": "Du bist neu hier: Sprechen kannst du in {time}.",
+      "newMemberWrite": "Du bist neu hier: Schreiben kannst du in {time}.",
+      "signupsPaused": "Anmeldungen sind vorerst pausiert. Versuche es später noch einmal.",
       "slowMode": "Langsammodus: bitte warte noch {seconds} s",
       "rateWait": "Das war gerade etwas viel. Versuche es in {time} noch einmal.",
       "linkInvalid": "Dieser Link ist ungültig oder abgelaufen.",
@@ -205,10 +220,14 @@
       "pollNoWithdraw": "Eine Stimme in einer anonymen Umfrage lässt sich nicht zurücknehmen.",
       "automodSend": "Deine Nachricht wurde nicht gesendet: Sie verstößt gegen die Regel „{rule}“ der Community. Die Moderatoren können das sehen.",
       "automodEdit": "Deine Änderung wurde nicht gespeichert: Sie verstößt gegen die Regel „{rule}“ der Community. Die Moderatoren können das sehen.",
+      "srvASelfAssignableRoleCannot": "Eine frei wählbare Rolle darf keine Administrator-, Admin-Bereich- oder Moderationsrechte haben.",
+      "srvASelfAssignableRoleCannot2": "Einer frei wählbaren Rolle dürfen in einem Kanal keine Administrator-, Admin-Bereich- oder Moderationsrechte erlaubt werden.",
       "srvCreatedChannelSHaveMessages": "In {a} erstellten Kanälen stehen jetzt Nachrichten. Bestätige, dass sie ebenfalls gelöscht werden.",
+      "srvEveryoneAndManagedRoles": "@everyone und verwaltete Rollen können nicht selbst gewählt werden.",
       "srvIsNotADomain": "{a} ist keine Domain.",
       "srvFileIsRequired": "Die Datei „{a}“ ist erforderlich.",
       "srvIsTooLong": "{a} ist zu lang.",
+      "srvMembersCannotTakeOr": "Mitglieder können diese Rolle nicht selbst annehmen oder abgeben.",
       "srvMustBeAnRfc3339": "{a} muss eine Zeitangabe im Format RFC 3339 sein.",
       "srvNotFound": "{a} wurde nicht gefunden.",
       "srv401Unauthorized": "Du bist nicht angemeldet.",
@@ -226,6 +245,7 @@
       "srvSmtpIsNotConfiguredSmtp": "Dieser Server kann noch keine E-Mails senden.",
       "srvTalkNotFound": "Dieser Talk wurde nicht gefunden.",
       "srvTemporaryTalksFollowTheirLobby": "Temporäre Talks übernehmen die Berechtigungen ihrer Lobby.",
+      "srvTheOwnerHasNoRoles": "Der Owner hat keine Rollen zur Auswahl.",
       "srvWaitForAReplyBefore": "Warte auf eine Antwort, bevor du mehr als {a} Nachrichten sendest.",
       "srvYouAreInGroupDirect": "Du bist schon in {a} Gruppen-Direktnachrichten. Verlasse zuerst eine.",
       "srvYouHaveStartedEnoughDirect": "Du hast für heute genug Direktnachrichten gestartet. Versuche es morgen wieder.",
@@ -643,6 +663,7 @@
     "legal": "Datenschutzerklärung & Rechtliches",
     "inviteRequired": "Bitte gib einen Einladungscode ein.",
     "failed": "Das hat nicht geklappt. Versuche es noch einmal.",
+    "subtitleVanity": "Du wurdest zu {name} eingeladen. Melde dich an oder frag nach einem Einladungscode, um ein Konto zu erstellen.",
     "subtitleInvited": "Du wurdest eingeladen, beizutreten",
     "inviteChecking": "Einladung wird geprüft …",
     "inviteInvalid": "Diese Einladung gilt nicht mehr. Frag nach einer neuen, oder melde dich an, wenn du schon ein Konto hast.",
@@ -1733,6 +1754,21 @@
   "admin": {
     "signedInAs": "Angemeldet als {name} (Owner)",
     "unknownError": "Unbekannter Fehler",
+    "vanity": {
+      "title": "Kurzlink",
+      "hint": "Eine kurze Adresse für die ganze Community, zum Beispiel für ein Profil oder ein Plakat. Standardmäßig führt sie Besucher nur zur Anmeldeseite: Zum Registrieren braucht es weiterhin einen Einladungscode.",
+      "slug": "Linkname",
+      "placeholder": "deine-community",
+      "rules": "{min} bis {max} Zeichen: Kleinbuchstaben, Ziffern und einzelne Bindestriche. Großbuchstaben werden zu Kleinbuchstaben; einige Wörter sind reserviert.",
+      "accepts": "Mit diesem Link Konten erstellen lassen",
+      "acceptsHint": "Dann kann sich jeder, der den Link kennt, ohne Limit und ohne Ablauf registrieren, wie mit einer dauerhaften öffentlichen Einladung. Lass es aus, damit Einladungen persönlich bleiben. Ausschalten oder den Link entfernen schließt ihn sofort.",
+      "ownerOnly": "Nur der Owner kann mit diesem Link Konten erstellen lassen. Administratoren können den Namen setzen und die Registrierung ausschalten.",
+      "saved": "Kurzlink gespeichert.",
+      "removed": "Kurzlink entfernt.",
+      "copy": "Link kopieren",
+      "copied": "Kopiert",
+      "copyFailed": "Der Link konnte nicht kopiert werden."
+    },
     "tabs": {
       "users": "Mitglieder",
       "channels": "Kanäle & Layout",
@@ -3018,6 +3054,10 @@
       "name": "Events verwalten",
       "desc": "Community-Events erstellen, bearbeiten und absagen."
     },
+    "bypass_new_member_limits": {
+      "name": "Wartezeit für neue Mitglieder umgehen",
+      "desc": "Sofort schreiben, reagieren und sprechen, ohne die Mindestmitgliedschaft abzuwarten (Raid-Schutz)."
+    },
     "groups": {
       "general": "Allgemein",
       "text": "Text",
@@ -3074,7 +3114,9 @@
         "create": "Rolle erstellt",
         "update": "Rolle bearbeitet",
         "delete": "Rolle gelöscht",
-        "reorder": "Rollen sortiert"
+        "reorder": "Rollen sortiert",
+        "self_assign": "Rolle selbst angenommen",
+        "self_remove": "Rolle selbst abgegeben"
       },
       "user": {
         "roles_set": "Rollen zugewiesen",
@@ -3109,7 +3151,8 @@
       "invite": {
         "create": "Einladung erstellt",
         "update": "Einladung bearbeitet",
-        "revoke": "Einladung widerrufen"
+        "revoke": "Einladung widerrufen",
+        "vanity_link": "Kurzlink geändert"
       },
       "webhook": {
         "create": "Webhook erstellt",
@@ -3174,6 +3217,8 @@
       "settings": {
         "upload_limit": "Upload-Limit geändert",
         "onboarding": "Willkommen und Regeln geändert",
+        "raid": "Raid-Schutz geändert",
+        "lockdown": "Lockdown umgeschaltet",
         "community_icon": "Community-Icon geändert",
         "community_icon_remove": "Community-Icon entfernt"
       },
@@ -3278,6 +3323,14 @@
     "uploadHint": "Leer lassen, um das globale Limit zu nutzen. Mitglieder erhalten das höchste Limit ihrer Rollen, nie mehr als das Server-Maximum.",
     "uploadInvalid": "Gib eine ganze Zahl in MB ein oder lass das Feld leer.",
     "colorInvalid": "Nutze eine Farbe wie #5fd0b6.",
+    "selfAssign": {
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Wofür ist diese Rolle?",
+      "label": "Mitglieder können sich diese Rolle selbst geben",
+      "hint": "Erscheint unter Einstellungen > Rollen. Mitglieder nehmen sie frei an und geben sie ab; jede Änderung steht im Audit-Log.",
+      "blocked": "Diese Rolle hat Administrations- oder Moderationsrechte. Schalte sie ab oder schalte dies ab.",
+      "unavailable": "Nicht möglich, solange die Rolle Administrations- oder Moderationsrechte hat."
+    },
     "botRoles": "Bot-Rollen",
     "botRoleHint": "Verwaltete Rolle eines Bots: sie lässt sich nicht entfernen.",
     "botRoleNote": "„{name}“ ist die eigene Rolle eines Bots. Sie entsteht mit dem Bot, folgt seinem Namen und wird mit ihm gelöscht; nur dieser Bot hat sie, und sie lässt sich nicht von Hand umbenennen, jemand anderem geben, dem Bot wegnehmen oder löschen. Farbe und Rechte kannst du ändern. Niemand kann einem Bot Rechte geben, die er selbst nicht hat, und nur der Owner kann einen Bot erhöhen.",
@@ -4000,6 +4053,57 @@
     "collapsed": "Blockierte Nachricht",
     "show": "Anzeigen"
   },
+  "raid": {
+    "title": "Raid-Schutz",
+    "hint": "Halte eine plötzliche Welle neuer Accounts im Griff: begrenze Anmeldungen, lass neue Mitglieder warten, bevor sie schreiben, reagieren oder sprechen dürfen, oder schließe die Tür für eine Weile.",
+    "loadFailed": "Die Einstellungen zum Raid-Schutz konnten nicht geladen werden.",
+    "saved": "Raid-Schutz gespeichert.",
+    "lockdown": {
+      "title": "Lockdown",
+      "offText": "Anmeldungen sind offen.",
+      "onText": "Lockdown ist aktiv: Niemand Neues kann sich anmelden.",
+      "onUntil": "Lockdown ist bis {time} aktiv: Niemand Neues kann sich anmelden.",
+      "hint": "Schließt die Tür sofort. Wer schon dabei ist, ist nicht betroffen.",
+      "pauseInvites": "Auch das Erstellen von Einladungen pausieren",
+      "invitesPaused": "Auch das Erstellen von Einladungen ist pausiert.",
+      "ends": "Endet",
+      "durations": {
+        "0": "wenn ich ihn beende",
+        "1": "in 1 Stunde",
+        "6": "in 6 Stunden",
+        "24": "in 24 Stunden"
+      },
+      "start": "Lockdown starten",
+      "end": "Lockdown beenden",
+      "failed": "Der Lockdown konnte nicht umgeschaltet werden.",
+      "banner": "Lockdown ist aktiv: Niemand Neues kann sich anmelden.",
+      "bannerUntil": "Lockdown ist bis {time} aktiv: Niemand Neues kann sich anmelden.",
+      "manage": "Einstellungen öffnen"
+    },
+    "throttle": {
+      "title": "Anmelde-Limit",
+      "hint": "Haben sich so viele Leute innerhalb des Zeitfensters angemeldet, warten weitere Anmeldungen, bis wieder Platz ist. 0 schaltet das Limit aus.",
+      "limit": "Neue Mitglieder pro Zeitfenster",
+      "window": "Zeitfenster in Minuten",
+      "status": "{count} in den letzten {minutes} Min. beigetreten.",
+      "invalid": "Gib ganze Zahlen ein; das Zeitfenster hat 1 bis 1440 Minuten."
+    },
+    "waits": {
+      "title": "Wartezeit für neue Mitglieder",
+      "hint": "Wie lange ein neues Mitglied nach dem Beitritt warten muss, bevor es das darf. Administratoren, der Owner und Rollen mit „Wartezeit für neue Mitglieder umgehen“ warten nie. Sie halten auch das Starten einer Unterhaltung oder das erste Schreiben darin zurück; Antworten ist immer möglich.",
+      "write": "Nachrichten schreiben",
+      "react": "Auf Nachrichten reagieren",
+      "speak": "In Talks sprechen und Video teilen",
+      "none": "Keine Wartezeit",
+      "existing": "Wer erst kürzlich beigetreten ist, wartet die verbleibende Zeit ab, gerechnet ab dem Tag der Anmeldung."
+    }
+  },
+  "newMember": {
+    "write": "Schreiben kannst du in {time}.",
+    "react": "Reagieren kannst du in {time}.",
+    "speak": "Sprechen kannst du in {time}.",
+    "bannerHint": "Du bist neu hier."
+  },
   "automod": {
     "title": "Automod",
     "hint": "Regeln, die jede neue oder bearbeitete Nachricht und jede Registrierung prüfen. Ein Treffer wird blockiert oder nur markiert und erscheint immer unter Meldungen, gekennzeichnet als Automod. Der Owner und Administratoren werden von keiner Regel aufgehalten.",
@@ -4107,6 +4211,7 @@
     "tabModeration": "Moderation",
     "strikeCount": "{count} Verwarnungen",
     "privacy": "Das sehen nur Moderatoren. Das Mitglied bekommt es nie zu sehen, und es ist nicht Teil seines Datenexports.",
+      "roles": "Rollen",
     "loadFailed": "Der Moderationsverlauf konnte nicht geladen werden.",
     "saveFailed": "Die Notiz konnte nicht gespeichert werden. Versuche es noch einmal.",
     "deleteFailed": "Die Notiz konnte nicht gelöscht werden. Versuche es noch einmal.",
@@ -4357,6 +4462,15 @@
     "discard": "Verwerfen",
     "keepEditing": "Weiter bearbeiten",
     "shortcut": "Speichern mit {keys}"
+  },
+  "selfRoles": {
+    "title": "Rollen zum Auswählen",
+    "intro": "Diese Rollen stehen allen offen. Schalte sie nach Belieben ein oder aus; sie geben niemandem mehr Rechte über andere.",
+    "empty": "Es gibt keine Rollen zum Auswählen.",
+    "loadFailed": "Die Rollen konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "switch": "Rolle {name} annehmen",
+    "noDescription": "Keine Beschreibung"
   },
   "settings": {
     "title": "Einstellungen",

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 var errDMWait = httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimited,
@@ -108,6 +109,9 @@ func gateDM(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 	if err := checkDMReachable(ctx, tx, nm.UserID, others, st.group); err != nil {
 		return err
 	}
+	if err := gateNewMemberFirstWrite(ctx, nm, st); err != nil {
+		return err
+	}
 	if err := countDMMessage(ctx, tx, nm, st); err != nil {
 		return err
 	}
@@ -157,4 +161,19 @@ func countDMMessage(ctx context.Context, tx pgx.Tx, nm NewMessage, st dmState) e
 	}
 	_, err := tx.Exec(ctx, `UPDATE channels SET dm_replied = TRUE WHERE id = $1`, nm.ChannelID)
 	return err
+}
+
+// gateNewMemberFirstWrite keeps a member who is still new from opening a
+// conversation: while their write wait runs they may answer someone who wrote
+// first, but not write first (raid protection, doc/moderation.md).
+func gateNewMemberFirstWrite(ctx context.Context, nm NewMessage, st dmState) error {
+	wait := newMemberWriteWait(ctx)
+	if wait <= 0 || nm.Record {
+		return nil
+	}
+	answering := st.replied || (st.creator != nil && *st.creator != nm.UserID && st.sent > 0)
+	if answering {
+		return nil
+	}
+	return perm.NewMemberWriteError(wait)
 }

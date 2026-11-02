@@ -13,6 +13,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
 import { useSettingsDraft } from '../composables/useSettingsDraft'
 import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import AdminRaidTab from './AdminRaidTab.vue'
 
 const MIN_DAYS = 1
 const MAX_DAYS = 365
@@ -69,27 +70,31 @@ onMounted(load)
 </script>
 
 <template>
-  <form v-if="loaded" class="space-y-5" data-testid="access-settings" @submit.prevent="form.save" @keydown="form.onKeydown">
-    <h3 class="flex items-center gap-2 text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider">
-      <KeyRound class="w-4 h-4 text-mnema-accent" />
-      <span>{{ $t('admin.tabs.access') }}</span>
-    </h3>
+  <div v-if="loaded" class="space-y-10">
+    <form class="space-y-5" data-testid="access-settings" @submit.prevent="form.save" @keydown="form.onKeydown">
+      <h3 class="flex items-center gap-2 text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider">
+        <KeyRound class="w-4 h-4 text-mnema-accent" />
+        <span>{{ $t('admin.tabs.access') }}</span>
+      </h3>
 
-    <div v-if="features.dm" class="space-y-1" data-testid="dm-switch">
-      <label class="flex items-center gap-2 text-sm text-mnema-text">
-        <input v-model="draft.dmEnabled" type="checkbox" data-testid="dm-enabled" />
-        <span>{{ $t('admin.onboarding.dmEnabled') }}</span>
-      </label>
-      <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.dmEnabledHint') }}</p>
-    </div>
+      <div v-if="features.dm" class="space-y-1" data-testid="dm-switch">
+        <label class="flex items-center gap-2 text-sm text-mnema-text">
+          <input v-model="draft.dmEnabled" type="checkbox" data-testid="dm-enabled" />
+          <span>{{ $t('admin.onboarding.dmEnabled') }}</span>
+        </label>
+        <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.dmEnabledHint') }}</p>
+      </div>
 
-    <div class="space-y-1" data-testid="inactivity-setting">
-      <label for="access-inactivity" class="block text-xs font-medium text-mnema-muted font-mono uppercase tracking-wider">{{ $t('admin.onboarding.inactivity') }}</label>
-      <input id="access-inactivity" v-model.number="draft.inactivityDays" type="number" :min="MIN_DAYS" :max="MAX_DAYS" step="1" inputmode="numeric" :aria-invalid="daysInvalid ? 'true' : 'false'" class="w-28 rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" data-testid="inactivity-days" />
-      <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.inactivityHint') }}</p>
-      <p v-if="daysInvalid" class="text-xs text-mnema-danger" role="alert">{{ errors.inactivityDays }}</p>
-    </div>
+      <div class="space-y-1" data-testid="inactivity-setting">
+        <label for="access-inactivity" class="block text-xs font-medium text-mnema-muted font-mono uppercase tracking-wider">{{ $t('admin.onboarding.inactivity') }}</label>
+        <input id="access-inactivity" v-model.number="draft.inactivityDays" type="number" :min="MIN_DAYS" :max="MAX_DAYS" step="1" inputmode="numeric" :aria-invalid="daysInvalid ? 'true' : 'false'" class="w-28 rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent" data-testid="inactivity-days" />
+        <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.inactivityHint') }}</p>
+        <p v-if="daysInvalid" class="text-xs text-mnema-danger" role="alert">{{ errors.inactivityDays }}</p>
+      </div>
 
-    <UnsavedChangesBar sticky save-testid="access-save" :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset" />
-  </form>
+      <UnsavedChangesBar sticky save-testid="access-save" :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset" />
+    </form>
+    <!-- Sign-up limit, lockdown and the waiting times of new members: the other half of who gets in and what they may do first -->
+    <AdminRaidTab />
+  </div>
 </template>

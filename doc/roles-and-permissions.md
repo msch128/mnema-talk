@@ -135,6 +135,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Kick members | Sign members below your highest role out everywhere and drop them from their Talk, with no lasting sanction (bit `1 << 23`, [moderation](moderation.md#kicks)). Off for @everyone and every seeded role; Administrators and the Owner have it implicitly | no |
 | Manage stage | Give and take talk power in a Stage and answer raised hands; holders can always speak there (bit `1 << 24`, [Talks](talks.md#stages)). Off for @everyone and every seeded role; Administrators and the Owner have it implicitly. It is channel-scoped, so it can be allowed for one Stage only | yes |
 | Manage events | Create, edit and cancel community events, and upload or remove their cover images (bit `1 << 25`, [events](events.md)). Granted to roles holding *Timeout members* (seeded Moderator and Admin) by migration 0070; Administrators and the Owner have it implicitly | no |
+| Bypass new member limits | Write, react and speak at once, without waiting out the minimum membership age of [raid protection](moderation.md#raid-protection) (bit `1 << 26`). Separate from the slow mode exemption, which *Manage messages* gives. Granted to roles holding *Timeout members* (seeded Moderator and Admin) by migration 0083; Administrators and the Owner have it implicitly | no |
 
 The bit values are stored in the database and sent over the API; they never
 change meaning (`perm.Catalog` and its test freeze them).
@@ -147,7 +148,7 @@ role either: it is the one account with `users.role = 'admin'`.
 | Who | What it is | Permissions |
 |---|---|---|
 | Member | `@everyone` (position 0, every member has it) | *View channels, Send messages, Attach files, Add reactions, Mention @all and @here, Connect, Speak, Video, Send direct messages* (`perm.DefaultEveryone`) |
-| Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log, Manage events* |
+| Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log, Manage events, Bypass new member limits* |
 | Admin | Seeded role, hoisted, not managed, not mentionable, above Moderator when both are new | Moderator's permissions, plus *Manage channels, Manage roles, Manage invites, Manage members, Ban members* |
 | Owner | The account `users.role = 'admin'`, not a role | Every permission, plus the Owner-only powers |
 
@@ -165,6 +166,40 @@ so the Owner can rename or delete them.
 
 Before roles existed every member could do exactly what `@everyone` holds,
 and only the admin account could do the rest.
+
+### Roles members choose themselves
+
+A role can be opened to everyone: in the role editor, an admin with *Manage
+roles* turns on **Members can assign this role to themselves** (off by default)
+and may add a one-line description. Members then see it under *Settings >
+Roles* (the section appears only while such roles exist) and switch it on or off
+for their own account, without any admin involved.
+
+The flag is only for harmless roles, and the server enforces it every time:
+
+- never `@everyone`, a managed role or a bot's role;
+- never a role with *Administrator*, any permission that opens the admin area
+  (the same set the bot rules use), or a moderation power over others
+  (*Manage messages*, *Manage Stages*, *Manage events*). Turning the flag on for
+  such a role, or giving permissions like that to a flagged role, is refused with
+  a clear sentence. If a flagged role somehow carries such a bit anyway, it is no
+  longer listed and cannot be taken.
+- never a role that a channel or category overwrite allows one of those permissions
+  (Manage messages in one channel is moderation there): such an overwrite is refused
+  for an opened role, and an opened role that has one anyway is not listed;
+- the Owner has no roles to choose; bots cannot use it.
+
+A self-assignable role is cosmetic for the hierarchy: it **never counts towards
+anyone's rank**, wherever it is positioned, so taking one cannot put a member out of
+a moderator's reach (or let them drop it to escape). Deny overwrites on an opened
+role are fine and are the member's to shed: dropping the role lifts them.
+
+Taking or dropping a role is audited as `role.self_assign` / `role.self_remove`
+(the member is the actor; asking for what one already has is not a change and
+leaves no entry) and rebuilds permissions like any other role change, but tells
+the other clients only the one member's new roles (`member_roles_changed`), not to
+refetch everything. A member's own changes are limited to 6 a minute. A Discord
+import never sets the flag.
 
 ## Channel and category overwrites
 
@@ -358,6 +393,8 @@ minute is only a backstop for edits made directly in the database) and then:
 - `GET /api/onboarding`, `POST /api/onboarding/accept`, `PUT /api/onboarding/tips`: a member's view of them and their acceptance and dismissed tips.
 - `GET /api/invites/{code}` (public): the invite preview.
 - `GET /api/roles`: all roles (visible to every member; they colour names).
+- `GET /api/roles/self-assignable`: the roles members may choose;
+  `PUT|DELETE /api/me/roles/{id}` take and drop one for the caller.
 - `POST /api/admin/roles`, `PATCH|DELETE /api/admin/roles/{id}`,
   `PUT /api/admin/roles/order`, `PUT /api/admin/users/{id}/roles`.
 - `GET|PUT /api/admin/channels/{id}/overwrites`,
