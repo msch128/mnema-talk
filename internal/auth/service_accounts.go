@@ -24,18 +24,15 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 
 	// A legacy custom code below the current floor is guessable and no longer
 	// works; it is refused like any invalid code.
-	if IsWeakInviteCode(inviteCode) {
+	// A vanity link is public by design, so the floor does not apply to it.
+	if _, vanity := vanitySlug(inviteCode); !vanity && IsWeakInviteCode(inviteCode) {
 		return nil, ErrInvalidInvite
 	}
 
 	// Cheap pre-check so unauthenticated guesses never cost a bcrypt hash;
 	// the transaction below re-checks under a row lock.
-	var known bool
-	if err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM invites WHERE code = $1)`, inviteCode).Scan(&known); err != nil {
-		return nil, fmt.Errorf("invite lookup: %w", err)
-	}
-	if !known {
-		return nil, ErrInvalidInvite
+	if err := checkCodeKnown(ctx, p, inviteCode); err != nil {
+		return nil, err
 	}
 
 	hash, err := hashPasswordCtx(ctx, password)
@@ -52,7 +49,7 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 
 	var user *User
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		inviteID, err := claimInvite(ctx, tx, inviteCode)
+		inviteID, err := claimCode(ctx, tx, inviteCode)
 		if err != nil {
 			return err
 		}
@@ -118,7 +115,7 @@ func claimInvite(ctx context.Context, tx pgx.Tx, code string) (uuid.UUID, error)
 }
 
 // insertInvitedUser creates the account and counts one use of its invite.
-func insertInvitedUser(ctx context.Context, tx pgx.Tx, username, displayName, hash string, inviteID uuid.UUID) (*User, error) {
+func insertInvitedUser(ctx context.Context, tx pgx.Tx, username, displayName, hash string, inviteID *uuid.UUID) (*User, error) {
 	var taken bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(username) = LOWER($1))`, username).Scan(&taken); err != nil {
 		return nil, err
@@ -140,7 +137,11 @@ func insertInvitedUser(ctx context.Context, tx pgx.Tx, username, displayName, ha
 		return nil, fmt.Errorf("insert user: %w", err)
 	}
 
-	if _, err = tx.Exec(ctx, `UPDATE invites SET uses_count = uses_count + 1 WHERE id = $1`, inviteID); err != nil {
+	// The vanity link has no invite row: nothing to count.
+	if inviteID == nil {
+		return user, nil
+	}
+	if _, err = tx.Exec(ctx, `UPDATE invites SET uses_count = uses_count + 1 WHERE id = $1`, *inviteID); err != nil {
 		return nil, err
 	}
 	return user, nil

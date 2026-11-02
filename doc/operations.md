@@ -315,6 +315,44 @@ System; it does not refuse to start, so a trusted-LAN install over `http://`
 keeps working. Behind a TLS-terminating reverse proxy, set `PUBLIC_URL` to the
 public `https://` address.
 
+## Vanity invite link
+
+The Owner and Administrators can give the community one short address,
+`https://chat.example.com/join/your-community` (Admin console > Invites >
+*Vanity link*; `GET|PUT /api/admin/vanity-link`, audited as
+`invite.vanity_link`). The name is 3 to 32 characters: lowercase letters,
+digits and single hyphens between them (upper case is turned into lower case).
+Words that name something of the app (`admin`, `api`, `join`, `login`,
+`settings`, `wiki`, `events`, `assets`, `health`, `static`, ...) are reserved; a
+test keeps the list in step with the routes of the web app and the files of the
+web build. There is one link per community.
+
+**Registration stays invite-only.** By default the link is only a friendly door:
+it opens the sign-in page under "You were invited to <community>", and creating
+an account still needs an invite code (individual, limited, revocable). The
+link grants nothing.
+
+Only the Owner can turn on the switch *Let this link create accounts*
+(an Administrator gets 403, and renaming a link that takes sign-ups switches it
+off for them); an Administrator may set or clear the name and switch sign-ups
+off. The switch turns the link into a permanent public invite: unlimited uses,
+no expiry. Anyone who knows the link can then register,
+so enable it only when you want that (a poster, a profile bio). The sign-up goes
+through the same registration as every invite (username rules, password rules,
+rate limits, raid protection, the rules gate); its code is `~<name>`, which no
+real invite code can look like. Accounts made this way have no invite behind them,
+so banning one does not revoke an invite, and the audit log shows them as a
+plain `auth.register` (no invite is recorded). Switching it off or removing the
+link takes effect at once for every new sign-up; one that is already being
+processed may still complete.
+
+`GET /api/join/<name>` (public, rate limited like the invite preview) tells the
+sign-in page whether the link exists and whether it takes sign-ups. Link
+previews of `/join/<name>` carry the community name and nothing else; an
+unknown name gets the generic page and is never written into it. The reverse
+proxy needs nothing extra: `/join/...` is an ordinary page of the app, forwarded
+like every other path ([reverse-proxy.md](reverse-proxy.md)).
+
 ## Sessions and inactivity sign-out
 
 Each browser sign-in is a session. Members see their own sessions under

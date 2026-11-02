@@ -136,6 +136,10 @@
     },
     "detail": {
       "invalidInvite": "Ungültiger Einladungscode",
+      "vanityOwnerOnly": "Nur der Owner kann mit dem Kurzlink Konten erstellen lassen.",
+      "vanityChars": "Der Linkname darf nur Kleinbuchstaben, Ziffern und einzelne Bindestriche dazwischen enthalten.",
+      "vanityLength": "Der Linkname muss {min} bis {max} Zeichen lang sein.",
+      "vanityReserved": "Dieser Linkname ist reserviert. Wähle einen anderen.",
       "inviteExpired": "Der Einladungscode ist abgelaufen",
       "inviteUsedUp": "Der Einladungscode wurde bereits zu oft verwendet",
       "usernameTaken": "Dieser Benutzername ist bereits vergeben",
@@ -643,6 +647,7 @@
     "legal": "Datenschutzerklärung & Rechtliches",
     "inviteRequired": "Bitte gib einen Einladungscode ein.",
     "failed": "Das hat nicht geklappt. Versuche es noch einmal.",
+    "subtitleVanity": "Du wurdest zu {name} eingeladen. Melde dich an oder frag nach einem Einladungscode, um ein Konto zu erstellen.",
     "subtitleInvited": "Du wurdest eingeladen, beizutreten",
     "inviteChecking": "Einladung wird geprüft …",
     "inviteInvalid": "Diese Einladung gilt nicht mehr. Frag nach einer neuen, oder melde dich an, wenn du schon ein Konto hast.",
@@ -1733,6 +1738,21 @@
   "admin": {
     "signedInAs": "Angemeldet als {name} (Owner)",
     "unknownError": "Unbekannter Fehler",
+    "vanity": {
+      "title": "Kurzlink",
+      "hint": "Eine kurze Adresse für die ganze Community, zum Beispiel für ein Profil oder ein Plakat. Standardmäßig führt sie Besucher nur zur Anmeldeseite: Zum Registrieren braucht es weiterhin einen Einladungscode.",
+      "slug": "Linkname",
+      "placeholder": "deine-community",
+      "rules": "{min} bis {max} Zeichen: Kleinbuchstaben, Ziffern und einzelne Bindestriche. Großbuchstaben werden zu Kleinbuchstaben; einige Wörter sind reserviert.",
+      "accepts": "Mit diesem Link Konten erstellen lassen",
+      "acceptsHint": "Dann kann sich jeder, der den Link kennt, ohne Limit und ohne Ablauf registrieren, wie mit einer dauerhaften öffentlichen Einladung. Lass es aus, damit Einladungen persönlich bleiben. Ausschalten oder den Link entfernen schließt ihn sofort.",
+      "ownerOnly": "Nur der Owner kann mit diesem Link Konten erstellen lassen. Administratoren können den Namen setzen und die Registrierung ausschalten.",
+      "saved": "Kurzlink gespeichert.",
+      "removed": "Kurzlink entfernt.",
+      "copy": "Link kopieren",
+      "copied": "Kopiert",
+      "copyFailed": "Der Link konnte nicht kopiert werden."
+    },
     "tabs": {
       "users": "Mitglieder",
       "channels": "Kanäle & Layout",
@@ -3109,7 +3129,8 @@
       "invite": {
         "create": "Einladung erstellt",
         "update": "Einladung bearbeitet",
-        "revoke": "Einladung widerrufen"
+        "revoke": "Einladung widerrufen",
+        "vanity_link": "Kurzlink geändert"
       },
       "webhook": {
         "create": "Webhook erstellt",

@@ -136,6 +136,10 @@
     },
     "detail": {
       "invalidInvite": "Invalid invite code",
+      "vanityOwnerOnly": "Only the Owner can let the vanity link create accounts.",
+      "vanityChars": "The link name may only hold lowercase letters, digits and single hyphens between them.",
+      "vanityLength": "The link name must be {min} to {max} characters.",
+      "vanityReserved": "This link name is reserved. Choose another one.",
       "inviteExpired": "The invite code has expired",
       "inviteUsedUp": "The invite code has been used too many times",
       "usernameTaken": "That username is already taken",
@@ -643,6 +647,7 @@
     "legal": "Privacy policy & legal",
     "inviteRequired": "Enter an invite code.",
     "failed": "That didn’t work. Try again.",
+    "subtitleVanity": "You were invited to {name}. Sign in, or ask for an invite code to create an account.",
     "subtitleInvited": "You’ve been invited to join",
     "inviteChecking": "Checking your invite…",
     "inviteInvalid": "This invite is not valid any more. Ask for a new one, or sign in if you already have an account.",
@@ -1733,6 +1738,21 @@
   "admin": {
     "signedInAs": "Signed in as {name} (Owner)",
     "unknownError": "Unknown error",
+    "vanity": {
+      "title": "Vanity link",
+      "hint": "One short address for the whole community, for example in a profile or on a poster. By default it only leads visitors to the sign-in page: signing up still needs an invite code.",
+      "slug": "Link name",
+      "placeholder": "your-community",
+      "rules": "{min} to {max} characters: lowercase letters, digits and single hyphens. Upper case is turned into lower case; some words are reserved.",
+      "accepts": "Let this link create accounts",
+      "acceptsHint": "Anyone who knows the link can then sign up, without limit and without expiry, like a permanent public invite. Leave it off to keep invites individual. Switching it off or removing the link closes it at once.",
+      "ownerOnly": "Only the Owner can let this link create accounts. Administrators can set the name and switch sign-ups off.",
+      "saved": "Vanity link saved.",
+      "removed": "Vanity link removed.",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "copyFailed": "Couldn’t copy the link."
+    },
     "tabs": {
       "users": "Members",
       "channels": "Channels & layout",
@@ -3109,7 +3129,8 @@
       "invite": {
         "create": "Invite created",
         "update": "Invite edited",
-        "revoke": "Invite revoked"
+        "revoke": "Invite revoked",
+        "vanity_link": "Vanity link changed"
       },
       "webhook": {
         "create": "Webhook created",

@@ -12,8 +12,11 @@ import { t, locale } from '../i18n'
 import presets from '../lib/presets.json'
 import EmptyState from './EmptyState.vue'
 import EditInviteDialog from './EditInviteDialog.vue'
+import AdminVanityLink from './AdminVanityLink.vue'
+import { usePermissionsStore } from '../stores/permissions'
 
 const toasts = useToastStore()
+const permissions = usePermissionsStore()
 
 const invites = ref<Invite[]>([])
 const newInviteUses = ref<string | number>('')
@@ -129,6 +132,8 @@ onMounted(loadInvites)
       </h3>
       <span class="text-xs text-mnema-tertiary">{{ $t('admin.inviteOnly') }}</span>
     </div>
+
+    <AdminVanityLink v-if="permissions.can('administrator')" />
 
     <form class="flex flex-wrap items-start gap-3" data-testid="invite-form" @submit.prevent="createInvite">
       <div class="block min-w-0 flex-1 basis-48 space-y-1">

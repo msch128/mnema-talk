@@ -72,4 +72,48 @@ describe('InviteLanding', () => {
     expect(w.find<HTMLInputElement>('#login-invite').element.value).toBe('abc234xyz789')
     expect(w.find('[data-testid="invite-invalid"]').exists()).toBe(false)
   })
+
+  describe('vanity link', () => {
+    it('opens the sign-up form with the link as the code when it takes sign-ups', async () => {
+      apiMock.mockResolvedValue({ valid: true, community_name: 'Owls', accepts_signups: true })
+      const w = await landing('/join/Owls')
+      expect(apiMock).toHaveBeenCalledWith('/api/join/owls', { decode: expect.any(Function) })
+      expect(w.find('[data-testid="login-heading"]').text()).toBe('Owls')
+      expect(w.find('#login-invite').exists()).toBe(false)
+      expect(w.find('[data-testid="invite-invalid"]').exists()).toBe(false)
+      expect(w.find('button[type="submit"]').text()).toBe('Register')
+    })
+
+    it('falls back to asking for a code when the link was switched off meanwhile', async () => {
+      apiMock.mockResolvedValue({ valid: true, community_name: 'Owls', accepts_signups: true })
+      const w = await landing('/join/owls')
+      apiMock.mockRejectedValue(new Error('invalid invite code'))
+      await w.get('#login-username').setValue('newbie')
+      await w.get('input[type="password"]').setValue('correct-horse-battery')
+      await w.get('form').trigger('submit')
+      await flushPromises()
+      expect(w.find('#login-invite').exists()).toBe(true)
+      expect(w.find<HTMLInputElement>('#login-invite').element.value).toBe('')
+    })
+
+    it('greets the visitor on the sign-in page when the link takes no sign-ups', async () => {
+      apiMock.mockResolvedValue({ valid: true, community_name: 'Owls' })
+      const w = await landing('/join/owls')
+      expect(w.find('[data-testid="login-heading"]').text()).toBe('Owls')
+      expect(w.text()).toContain('You were invited to Owls')
+      expect(w.find('#login-invite').exists()).toBe(false)
+      expect(w.find('button[type="submit"]').text()).toBe('Sign in')
+    })
+
+    it('is the plain login dialog for an unknown link, and when the server cannot be asked', async () => {
+      apiMock.mockResolvedValue({ valid: false })
+      let w = await landing('/join/nobody')
+      expect(w.find('[data-testid="login-heading"]').text()).toBe('Mnema Talk')
+      expect(w.text()).not.toContain('nobody')
+      apiMock.mockRejectedValue(new Error('offline'))
+      w = await landing('/join/owls')
+      expect(w.find('[data-testid="login-heading"]').exists()).toBe(true)
+      expect(w.find('[data-testid="invite-invalid"]').exists()).toBe(false)
+    })
+  })
 })
