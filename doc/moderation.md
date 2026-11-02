@@ -108,6 +108,57 @@ transaction and concurrent posts of one member in one channel are serialized
 with an advisory lock, so a burst cannot slip several messages through the same
 gap.
 
+## Raid protection
+
+Raid protection keeps a sudden wave of new accounts calm. It has three parts,
+all under **Admin > Raid protection** (Owner and Administrators only; every
+change is audited as `settings.raid` or `settings.lockdown`). Code:
+[`internal/raid`](../internal/raid/) (the settings and the door),
+[`internal/perm`](../internal/perm/newmember.go) (the waiting times).
+It sits beside the automod *Raid protection* rule, which times out a wave
+after it came in; this part keeps the wave out or holds it back.
+
+**Lockdown.** One click shuts the door: while it is on nobody new can sign
+up, not even with a valid invite (`503 UNAVAILABLE`, "sign-ups are paused for
+now"). *Also pause creating invites* stops `POST /api/admin/invites` as well
+(`409`). It ends by itself after 1, 6 or 24 hours if you choose, otherwise
+when you switch it off. Existing members, their sessions and the Owner are
+untouched. While it is on, administrators see a banner under the header with
+an *End lockdown* button.
+
+**Sign-up limit.** At most *N* new members within *M* minutes (0 turns it
+off; the window is 1 to 1440 minutes). When the window is full, further
+sign-ups get the same calm "paused" answer until there is room again. The
+count is the accounts created within the window (bots and deleted accounts
+excluded); the check runs before the password is hashed, so a closed door costs
+nothing.
+
+**Waiting time of new members.** Three settings, each 0 (off) to 30 days:
+how long after joining a member may **write** (send messages, polls, uploads),
+**react**, and **speak** in Talks (the microphone, and with it camera and screen share). A member who is too new keeps reading, joining
+Talks and listening. The gate lives in the permission snapshot, like a
+timeout, so REST, the WebSocket hub (reactions) and the SFU (audio) enforce it
+from one place and it ends by itself without a reload. The refusal is
+`403 FORBIDDEN` with the seconds left ("new members can write in 600 s"); the
+client shows it as "You can write in 10 min." in the composer, on the reaction
+button and on the Talk's microphone button, and fetches the permissions again
+when the wait is over. `GET /api/permissions` carries `new_member` (`write_at`,
+`react_at`, `speak_at`) while a wait is running.
+
+When a wait ends the server tells the member's clients and the Talk they are in
+(one timer for all members, set again after every load of the permission
+snapshot), so the microphone and the Stage's raised hand work at that moment
+without rejoining. Turning a gate on later holds members who joined recently by
+their real sign-up time.
+
+Who never waits: the Owner, bots, Administrators, and members with a role that
+holds **Bypass new member limits** (bit 26, [roles](roles-and-permissions.md);
+Moderator and Admin roles get it by migration 0083). It is separate from the
+slow mode exemption. **Direct messages are exempt**: conversations, and the
+Talks started from one, are not held back, because their members chose each
+other. A member the permission snapshot does not know yet (it is reloaded at
+least every minute) counts as having just joined.
+
 ## Auto-delete
 
 *Manage channels* can let a channel forget: **Channel settings > Delete old

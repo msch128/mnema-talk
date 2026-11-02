@@ -20,6 +20,8 @@ type Set struct {
 	InviteUses              []int    `json:"inviteUses"`
 	ModerationSeconds       []int    `json:"moderationSeconds"`
 	PollDurations           []string `json:"pollDurations"`
+	LockdownHours           []int    `json:"lockdownHours"`
+	NewMemberWaitMinutes    []int    `json:"newMemberWaitMinutes"`
 	MuteMinutes             []int    `json:"muteMinutes"`
 	AutomodAccountAges      []int    `json:"automodAccountAges"`
 	AutomodRaidWindows      []int    `json:"automodRaidWindows"`
@@ -47,7 +49,7 @@ func Load(t testing.TB) Set {
 		"slowModeSeconds": len(s.SlowModeSeconds), "inviteCreateHours": len(s.InviteCreateHours),
 		"inviteExpiryMinutes": len(s.InviteExpiryMinutes), "inviteUses": len(s.InviteUses),
 		"moderationSeconds": len(s.ModerationSeconds), "pollDurations": len(s.PollDurations),
-		"muteMinutes": len(s.MuteMinutes), "automodAccountAges": len(s.AutomodAccountAges),
+		"muteMinutes": len(s.MuteMinutes), "lockdownHours": len(s.LockdownHours), "newMemberWaitMinutes": len(s.NewMemberWaitMinutes), "automodAccountAges": len(s.AutomodAccountAges),
 		"automodRaidWindows": len(s.AutomodRaidWindows), "automodRaidRestrictions": len(s.AutomodRaidRestrictions),
 		"automodRuleTimeouts": len(s.AutomodRuleTimeouts),
 	} {

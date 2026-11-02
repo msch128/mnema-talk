@@ -69,7 +69,7 @@ func (s *Snapshot) DirectMessagesEnabled() bool { return s.dmEnabled }
 // and write in them: they hold Send direct messages, the switch is on, and
 // no timeout or pending rules take it away.
 func (s *Snapshot) CanStartDM(sub Subject) bool {
-	return s.dmEnabled && s.Global(sub).Has(SendDirectMessages)
+	return s.dmEnabled && s.globalUnheld(sub).Has(SendDirectMessages)
 }
 
 // dmPerms is what sub may do in a conversation with the given members.
@@ -79,7 +79,7 @@ func (s *Snapshot) dmPerms(sub Subject, members map[uuid.UUID]bool) Set {
 	}
 	p := ViewChannel
 	if s.CanStartDM(sub) {
-		p |= s.Global(sub) & dmWritePerms
+		p |= s.globalUnheld(sub) & dmWritePerms // conversations are exempt from the waits of new members
 	}
 	return p
 }

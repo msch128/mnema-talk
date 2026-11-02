@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import type { Ref } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
+import { waitSentence } from '../lib/newMember'
 import { t } from '../i18n'
 
 /**
@@ -25,7 +26,9 @@ export function useChannelWrite(dmChat: {
   const placeholder = computed(() => {
     if (dmChat.isDm.value) return dmChat.placeholder.value
     if (canSend.value) return t(panel() ? 'talk.chatPlaceholder' : 'chat.placeholder', { channel: chat.activeChannel?.name ?? '' })
-    return t(timedOut.value ? 'chat.timedOut' : 'chat.readOnly')
+    if (timedOut.value) return t('chat.timedOut')
+    const wait = permissions.newMemberWait('write')
+    return wait > 0 ? waitSentence('write', wait) : t('chat.readOnly')
   })
   return { canSend, canAttach, canReact, placeholder }
 }

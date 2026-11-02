@@ -87,7 +87,7 @@ func (s *Snapshot) Channel(sub Subject, ch uuid.UUID) Set {
 	if !ok {
 		return 0
 	}
-	base := s.Global(sub)
+	base := s.globalUnheld(sub)
 	if base.Has(Administrator) {
 		return base
 	}
@@ -100,7 +100,11 @@ func (s *Snapshot) Channel(sub Subject, ch uuid.UUID) Set {
 		p &^= ChannelScoped
 	}
 	// Overwrites must not hand back what the timeout took.
-	return s.silence(sub.ID, p)
+	p = s.silence(sub.ID, p)
+	if _, ok := s.dmTalks[ch]; ok {
+		return p // the Talk of a conversation: its members vouch for each other
+	}
+	return s.hold(sub.ID, p)
 }
 
 // CategoryPerms is what sub holds under a category's own overwrites: the

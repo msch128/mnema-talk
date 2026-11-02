@@ -18,6 +18,14 @@ type ChannelPermissions struct {
 	Permissions perm.Set  `json:"permissions" swaggertype:"integer" minimum:"0"`
 }
 
+// NewMemberInfo tells a new member when each action opens up. A missing time
+// means that action is not held back.
+type NewMemberInfo struct {
+	WriteAt *time.Time `json:"write_at,omitempty" binding:"optional" format:"date-time"`
+	ReactAt *time.Time `json:"react_at,omitempty" binding:"optional" format:"date-time"`
+	SpeakAt *time.Time `json:"speak_at,omitempty" binding:"optional" format:"date-time"`
+}
+
 // PermissionsInfo is what the caller may do.
 type PermissionsInfo struct {
 	// Owner is true for the Owner, who may do everything and cannot be
@@ -40,6 +48,9 @@ type PermissionsInfo struct {
 	// the moderator's, and the caller's own to see.
 	TimeoutUntil  *time.Time `json:"timeout_until,omitempty" binding:"optional" format:"date-time"`
 	TimeoutReason string     `json:"timeout_reason,omitempty" binding:"optional"`
+	// NewMember is set while the caller is too new to write, react or speak
+	// (raid protection): per action the moment it opens up.
+	NewMember *NewMemberInfo `json:"new_member,omitempty" binding:"optional"`
 	// Channels lists every channel the caller may view with what they may do
 	// there (bits).
 	Channels []ChannelPermissions `json:"channels"`
@@ -97,8 +108,26 @@ func (h *Handler) myPermissions(w http.ResponseWriter, r *http.Request) error {
 	if t, ok := snap.Timeout(user.ID); ok {
 		info.TimeoutUntil, info.TimeoutReason = &t.Until, t.Reason
 	}
+	info.NewMember = newMemberInfo(snap.NewMemberWaits(user.ID), time.Now())
 	httpx.WriteJSON(w, http.StatusOK, info)
 	return nil
+}
+
+// newMemberInfo turns the remaining waits into the moments they end; nil when
+// nothing holds the member back.
+func newMemberInfo(w perm.NewMemberWaits, now time.Time) *NewMemberInfo {
+	at := func(d time.Duration) *time.Time {
+		if d <= 0 {
+			return nil
+		}
+		t := now.Add(d).Truncate(time.Second).Add(time.Second)
+		return &t
+	}
+	info := NewMemberInfo{WriteAt: at(w.Write), ReactAt: at(w.React), SpeakAt: at(w.Speak)}
+	if info == (NewMemberInfo{}) {
+		return nil
+	}
+	return &info
 }
 
 // maxReportedPosition is what the Owner's unlimited position is reported as.

@@ -88,6 +88,11 @@ const (
 	ManageStage Set = 1 << 24
 	// ManageEvents creates, edits and cancels community events.
 	ManageEvents Set = 1 << 25
+	// BypassNewMemberLimits exempts a member from the minimum membership age
+	// before writing, reacting and speaking (doc/moderation.md, raid
+	// protection). Administrators and the Owner never wait. Separate from the
+	// slow mode exemption, which Manage messages gives.
+	BypassNewMemberLimits Set = 1 << 26
 )
 
 // Info describes one permission for clients.
@@ -128,6 +133,7 @@ var Catalog = []Info{
 	{Key: "kick_members", Bit: KickMembers, Name: "kick members"},
 	{Key: "manage_stage", Bit: ManageStage, Name: "manage Stages", Channel: true},
 	{Key: "manage_events", Bit: ManageEvents, Name: "manage events"},
+	{Key: "bypass_new_member_limits", Bit: BypassNewMemberLimits, Name: "bypass new member limits"},
 }
 
 var (

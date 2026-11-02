@@ -35,6 +35,9 @@ type State struct {
 	Timeouts       map[uuid.UUID]Timeout
 	RulesVersion   int
 	RulesAccepted  map[uuid.UUID]int
+	// NewMember are the minimum membership ages; Joined when members joined.
+	NewMember NewMemberRules
+	Joined    map[uuid.UUID]time.Time
 }
 
 // NewSnapshot builds the Snapshot of st as loaded at the given time. The
@@ -51,6 +54,10 @@ func NewSnapshot(st State, loaded time.Time) *Snapshot {
 	s.channelOv, s.categoryOv = scopes(st.ChannelOv), scopes(st.CategoryOv)
 	s.globalUploadMB, s.timeouts = st.GlobalUploadMB, st.Timeouts
 	s.rulesVersion, s.rulesAccepted = st.RulesVersion, st.RulesAccepted
+	s.newMember = st.NewMember
+	if st.Joined != nil {
+		s.joined = st.Joined
+	}
 	return s
 }
 

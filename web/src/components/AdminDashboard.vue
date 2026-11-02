@@ -35,6 +35,7 @@ import AdminAccessSettings from './AdminAccessSettings.vue'
 import AdminEmojiTab from './AdminEmojiTab.vue'
 import AdminReportsTab from './AdminReportsTab.vue'
 import AdminAutomodTab from './AdminAutomodTab.vue'
+import AdminRaidTab from './AdminRaidTab.vue'
 import AdminImportTab from './AdminImportTab.vue'
 
 const props = defineProps({
@@ -63,6 +64,7 @@ const ALLOWED: Record<AdminTab, () => boolean> = {
   emoji: () => permissions.can('manage_emoji'),
   reports: () => features.reports && permissions.can('manage_reports'),
   automod: () => features.automod && permissions.can('administrator'),
+  raid: () => permissions.can('administrator'),
   bans: () => permissions.can('ban_members'),
   bots: () => permissions.can('manage_bots'),
   import: () => features.importDiscord && permissions.can('administrator'),
@@ -83,6 +85,7 @@ const TAB_COMPONENTS = {
   emoji: AdminEmojiTab,
   reports: AdminReportsTab,
   automod: AdminAutomodTab,
+  raid: AdminRaidTab,
   bans: AdminBansTab,
   bots: AdminBotsTab,
   import: AdminImportTab,
