@@ -150,7 +150,9 @@ func (s *Store) SetCommentMute(ctx context.Context, eventID, userID uuid.UUID, m
 // creator and everyone who responded going or interested or holds a role,
 // except the author, those who muted the event's comments and those who blocked
 // the author. The creator comes first, then those who go or hold a role, then
-// those who are interested, so the cut at 1000 spares the people most concerned.
+// those who are interested, so the cut spares the people most concerned. The
+// list is cut at MaxCommentCandidates; the caller drops those who may not view
+// the event and keeps the first MaxCommentNotices.
 func (s *Store) CommentRecipients(ctx context.Context, eventID, authorID uuid.UUID) ([]CommentRecipient, error) {
 	rows, err := s.DB.Query(ctx, `
 		SELECT u, COALESCE(usr.presence, 'offline') FROM (
@@ -164,7 +166,7 @@ func (s *Store) CommentRecipients(ctx context.Context, eventID, authorID uuid.UU
 		  AND NOT EXISTS (SELECT 1 FROM event_comment_mutes m WHERE m.event_id = $1 AND m.user_id = ranked.u)
 		  AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE b.blocker_id = ranked.u AND b.blocked_id = $2)
 		ORDER BY rank, u
-		LIMIT 1000`, eventID, authorID)
+		LIMIT $3`, eventID, authorID, commentCandidates)
 	if err != nil {
 		return nil, err
 	}

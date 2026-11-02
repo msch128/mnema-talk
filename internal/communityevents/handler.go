@@ -35,6 +35,8 @@ type Handler struct {
 	CommentLimit *httpx.RateLimiter
 	// commentPusher overrides Push for comment notices (tests).
 	commentsPusher commentPusher
+	// quieter overrides Push for the toast checks (tests).
+	quieter eventQuieter
 }
 
 func (h *Handler) Mount(r chi.Router) {

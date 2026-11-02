@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -69,32 +70,83 @@ func (h *Handler) notifyComment(ctx context.Context, ev *CommunityEvent, c Event
 		name = c.User.Username
 	}
 	excerpt := excerptOf(c.Content)
+	var pushTo []uuid.UUID
 	for _, rcp := range recipients {
+		if len(pushTo) >= commentNotices {
+			break
+		}
 		id := rcp.UserID
 		if ev.ChannelID != nil && snap != nil && !snap.Channel(perm.Subject{ID: id}, *ev.ChannelID).Has(perm.ViewChannel) {
 			continue
 		}
-		// Do not disturb and focus hold the toast back as they hold the push back.
-		if h.Events != nil && rcp.Presence != "dnd" && rcp.Presence != "focus" {
+		pushTo = append(pushTo, id)
+		if h.Events != nil && !h.toastHeld(ctx, ev, rcp) {
 			h.Events.SendToUsers([]uuid.UUID{id}, events.EventCommentNotice, CommentNoticePayload{
 				EventID: ev.ID, Title: ev.Title, AuthorName: name, Excerpt: excerpt, ChannelID: ev.ChannelID,
 			})
 		}
-		if pusher != nil {
-			h.pushComment(ctx, pusher, ev, id, name, excerpt)
-		}
+	}
+	if pusher != nil {
+		h.pushComments(ctx, pusher, ev, pushTo, name, excerpt)
 	}
 }
 
-func (h *Handler) pushComment(ctx context.Context, p commentPusher, ev *CommunityEvent, userID uuid.UUID, author, excerpt string) {
-	h.notices.Add(1)
-	bg := context.WithoutCancel(ctx)
-	go func() {
-		defer h.notices.Done()
-		bg, cancel := context.WithTimeout(bg, noticePushTimeout)
-		defer cancel()
-		if err := p.SendEventCommentNotice(bg, userID, ev.ID, ev.Title, author, excerpt, ev.StartTime, ev.ChannelID); err != nil {
-			slog.DebugContext(bg, "send comment push failed", "user_id", userID, "err", err)
+// eventQuieter says whether a member's presence or a muted Talk holds an event notice back.
+type eventQuieter interface {
+	EventQuiet(ctx context.Context, userID uuid.UUID, channelID *uuid.UUID) (bool, error)
+}
+
+func (h *Handler) eventQuieter() eventQuieter {
+	if h.quieter != nil {
+		return h.quieter
+	}
+	if h.Push != nil {
+		return h.Push
+	}
+	return nil
+}
+
+// toastHeld says whether the in-app toast stays back for a recipient, as the
+// push does: do not disturb, focus and a muted Talk. A failed lookup holds it
+// back (a muted Talk must not ring because the lookup failed).
+func (h *Handler) toastHeld(ctx context.Context, ev *CommunityEvent, rcp CommentRecipient) bool {
+	if rcp.Presence == "dnd" || rcp.Presence == "focus" {
+		return true
+	}
+	q := h.eventQuieter()
+	if ev.ChannelID == nil || q == nil {
+		return false
+	}
+	held, err := q.EventQuiet(ctx, rcp.UserID, ev.ChannelID)
+	return err != nil || held
+}
+
+// commentPushWorkers is how many pushes of one comment run at once.
+const commentPushWorkers = 8
+
+// pushComments sends the pushes of one comment with a few workers; it returns when they are done.
+func (h *Handler) pushComments(ctx context.Context, p commentPusher, ev *CommunityEvent, userIDs []uuid.UUID, author, excerpt string) {
+	ctx, cancel := context.WithTimeout(ctx, noticePushTimeout)
+	defer cancel()
+	todo := make(chan uuid.UUID)
+	var wg sync.WaitGroup
+	for range min(commentPushWorkers, len(userIDs)) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for id := range todo {
+				if err := p.SendEventCommentNotice(ctx, id, ev.ID, ev.Title, author, excerpt, ev.StartTime, ev.ChannelID); err != nil {
+					slog.DebugContext(ctx, "send comment push failed", "user_id", id, "err", err)
+				}
+			}
+		}()
+	}
+	for _, id := range userIDs {
+		if ctx.Err() != nil {
+			break
 		}
-	}()
+		todo <- id
+	}
+	close(todo)
+	wg.Wait()
 }

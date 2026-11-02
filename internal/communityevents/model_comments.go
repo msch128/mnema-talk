@@ -15,6 +15,10 @@ const (
 	MaxCommentsPerMember = 50
 	// CommentsPerMinute bounds how often a member may comment or edit.
 	CommentsPerMinute = 10
+	// MaxCommentCandidates bounds the members considered for a notice and MaxCommentNotices
+	// the members told; the first are cut before the Talk's viewers are known, the second after.
+	MaxCommentCandidates = 5000
+	MaxCommentNotices    = 1000
 	// DefaultCommentPage and MaxCommentPage size the comment list.
 	DefaultCommentPage = 50
 	MaxCommentPage     = 100
@@ -75,3 +79,9 @@ type CommentNoticePayload struct {
 	Excerpt    string     `json:"excerpt"`
 	ChannelID  *uuid.UUID `json:"channel_id,omitempty" format:"uuid" binding:"optional"`
 }
+
+// commentCandidates and commentNotices are the limits above, variables so a test can lower them.
+var (
+	commentCandidates = MaxCommentCandidates
+	commentNotices    = MaxCommentNotices
+)

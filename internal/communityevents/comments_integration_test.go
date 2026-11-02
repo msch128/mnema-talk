@@ -424,3 +424,72 @@ func TestNoticesSpareBlockersAndThoseWhoDoNotWantToBeDisturbed(t *testing.T) {
 		}
 	}
 }
+
+type fakeQuieter struct {
+	held map[uuid.UUID]bool
+	fail map[uuid.UUID]bool
+}
+
+func (q fakeQuieter) EventQuiet(_ context.Context, id uuid.UUID, _ *uuid.UUID) (bool, error) {
+	if q.fail[id] {
+		return false, fmt.Errorf("lookup failed")
+	}
+	return q.held[id], nil
+}
+
+func TestTheToastHonoursAMutedTalkAndTheCutIsMadeAfterTheViewFilter(t *testing.T) {
+	f := newRosterFixture(t)
+	ctx := context.Background()
+	talk := f.privateTalk(t)
+	var everyone uuid.UUID
+	if err := f.p.QueryRow(ctx, `SELECT id FROM roles WHERE is_everyone`).Scan(&everyone); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.p.Exec(ctx, `DELETE FROM permission_overwrites WHERE channel_id = $1`, talk); err != nil { // everybody views the Talk again
+		t.Fatal(err)
+	}
+	f.h.Perms.Invalidate()
+	author, muted, failing, ok := f.user(t, "author", "user"), f.user(t, "muted", "user"), f.user(t, "failing", "user"), f.user(t, "ok", "user")
+	for _, u := range []*auth.User{muted, failing, ok} {
+		if err := f.s.SetRSVP(ctx, f.event.ID, u.ID, RSVPGoing); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cp := &fakeCommentPusher{}
+	f.h.commentsPusher = cp
+	f.h.quieter = fakeQuieter{held: map[uuid.UUID]bool{muted.ID: true}, fail: map[uuid.UUID]bool{failing.ID: true}}
+
+	f.comment(t, author, "talk comment")
+	f.h.WaitNotices()
+	toasted := map[uuid.UUID]bool{}
+	for _, e := range f.rec.Snapshot() {
+		if e.Type == events.EventCommentNotice {
+			toasted[e.Recipients[0]] = true
+		}
+	}
+	if toasted[muted.ID] || toasted[failing.ID] || !toasted[ok.ID] || !toasted[f.creator.ID] {
+		t.Fatalf("a muted Talk (or a failed lookup) holds the toast back: %v", toasted)
+	}
+
+	// The cut at the number of notices comes after the Talk's viewers are known.
+	if _, err := f.p.Exec(ctx, `INSERT INTO permission_overwrites (channel_id, role_id, deny) VALUES ($1, $2, $3)`, talk, everyone, int64(perm.ViewChannel)); err != nil {
+		t.Fatal(err)
+	}
+	for _, u := range []*auth.User{ok, author} {
+		if _, err := f.p.Exec(ctx, `INSERT INTO permission_overwrites (channel_id, user_id, allow) VALUES ($1, $2, $3)`, talk, u.ID, int64(perm.ViewChannel)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.h.Perms.Invalidate()
+	f.h.quieter = nil
+	before := len(cp.got())
+	old := commentNotices
+	commentNotices = 1
+	defer func() { commentNotices = old }()
+	f.comment(t, author, "second")
+	f.h.WaitNotices()
+	sent := cp.got()[before:]
+	if len(sent) != 1 || !strings.HasPrefix(sent[0], ok.ID.String()) {
+		t.Fatalf("only the member who may still view the Talk is told, and the one slot is not lost to those who may not: %v", sent)
+	}
+}
