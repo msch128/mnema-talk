@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.7.0](https://github.com/msch128/mnema-talk/compare/v2.6.0...v2.7.0) (2026-11-02)
+
+
+### Features
+
+* **invites:** vanity invite link /join/&lt;name&gt; ([#601](https://github.com/msch128/mnema-talk/issues/601)) ([361e4d1](https://github.com/msch128/mnema-talk/commit/361e4d1e1e3199650ea823c795a4991952fb8dd6))
+* **moderation:** raid protection with a lockdown, a sign-up limit and waiting times for new members ([#603](https://github.com/msch128/mnema-talk/issues/603)) ([361e4d1](https://github.com/msch128/mnema-talk/commit/361e4d1e1e3199650ea823c795a4991952fb8dd6))
+* **roles:** roles members can assign to themselves ([#602](https://github.com/msch128/mnema-talk/issues/602)) ([361e4d1](https://github.com/msch128/mnema-talk/commit/361e4d1e1e3199650ea823c795a4991952fb8dd6))
+
+
+### Bug Fixes
+
+* **web:** make the new-member wait tests independent of the clock ([#608](https://github.com/msch128/mnema-talk/issues/608)) ([50be2ea](https://github.com/msch128/mnema-talk/commit/50be2eab18c1adaf5ec35ded8f02e727a0852f5d))
+
 ## [2.6.0](https://github.com/msch128/mnema-talk/compare/v2.5.1...v2.6.0) (2026-11-02)
 
 
