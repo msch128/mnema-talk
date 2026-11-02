@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { ref } from 'vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, ref } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChannelWrite } from './useChannelWrite'
 import { useChatStore } from '../stores/chat'
@@ -44,9 +44,16 @@ describe('what the composer says about writing', () => {
     expect(useChannelWrite(noDm, () => false).placeholder.value).toBe('You are timed out and can’t write right now.')
   })
 
-  it('tells a new member when writing opens up instead of calling the channel read-only', () => {
-    holds(PERMISSION_BITS.view_channel, undefined, new Date(Date.now() + 12 * 60_000).toISOString())
-    expect(useChannelWrite(noDm, () => false).placeholder.value).toBe('You can write in 12 min.')
+  it('tells a new member when writing opens up instead of calling the channel read-only', async () => {
+    // A fixed clock: the wait is exactly twelve minutes, whatever the machine's speed.
+    vi.useFakeTimers({ now: Date.parse('2026-11-02T12:00:00Z') })
+    try {
+      holds(PERMISSION_BITS.view_channel, undefined, '2026-11-02T12:12:00Z')
+      await nextTick()
+      expect(useChannelWrite(noDm, () => false).placeholder.value).toBe('You can write in 12 min.')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('leaves a conversation to its own answer', () => {
