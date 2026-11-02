@@ -1,0 +1,108 @@
+README.md
+  h_0ff4f4713441f4 108
+api/openapi.json
+  h_0ff4f4713441f4 4785-4831,4984-5021,30747-31141
+doc/events.md
+  h_0ff4f4713441f4 49-58
+e2e/tests/event-comments.spec.ts
+  h_0ff4f4713441f4 1-74
+internal/auth/account_erase.go
+  h_0ff4f4713441f4 74-75
+internal/auth/account_export_build.go
+  h_0ff4f4713441f4 79,202
+internal/auth/account_export_events.go
+  h_0ff4f4713441f4 35-46
+internal/communityevents/comments_integration_test.go
+  h_0ff4f4713441f4 1-495
+internal/communityevents/handler.go
+  h_0ff4f4713441f4 34-39,52
+internal/communityevents/handler_comments.go
+  h_0ff4f4713441f4 1-274
+internal/communityevents/model_comments.go
+  h_0ff4f4713441f4 1-87
+internal/communityevents/notify_comments.go
+  h_0ff4f4713441f4 1-152
+internal/communityevents/store_comments.go
+  h_0ff4f4713441f4 1-177
+internal/db/migrations/0087_event_comments.sql
+  h_0ff4f4713441f4 1-25
+internal/events/testdata/events.golden.json
+  h_0ff4f4713441f4 64-65
+internal/events/types.go
+  h_0ff4f4713441f4 95-99
+internal/push/event_comment.go
+  h_0ff4f4713441f4 1-45
+internal/push/event_reminder.go
+  h_0ff4f4713441f4 80-89
+internal/push/event_reminder_integration_test.go
+  h_0ff4f4713441f4 152-179
+internal/push/locales/texts.json
+  h_0ff4f4713441f4 19,45
+internal/repo/testdata/error_messages.golden.json
+  h_0ff4f4713441f4 74,91,126,214,310,329,331,482
+internal/server/events_comments_integration_test.go
+  h_0ff4f4713441f4 1-42
+internal/server/router_build_services.go
+  h_0ff4f4713441f4 76-84
+web/src/components/EventComments.test.ts
+  h_0ff4f4713441f4 1-164
+web/src/components/EventComments.vue
+  h_0ff4f4713441f4 1-159
+web/src/components/EventDetailModal.test.ts
+  h_0ff4f4713441f4 17-20
+web/src/components/EventDetailModal.vue
+  h_0ff4f4713441f4 19,299-300
+web/src/components/EventsModal.test.ts
+  h_0ff4f4713441f4 18-21
+web/src/components/EventsModalDetails.test.ts
+  h_0ff4f4713441f4 19-22
+web/src/components/EventsModalPolish.test.ts
+  h_0ff4f4713441f4 14-17
+web/src/composables/useEventComments.test.ts
+  h_0ff4f4713441f4 1-140
+web/src/composables/useEventComments.ts
+  h_0ff4f4713441f4 1-122
+web/src/eventRoles.fixture.ts
+  h_0ff4f4713441f4 3,24-31
+web/src/i18n/de.json
+  h_0ff4f4713441f4 607-615,3308-3310,3666-3682
+web/src/i18n/en.json
+  h_0ff4f4713441f4 607-615,3308-3310,3666-3682
+web/src/lib/errorSentencesA.ts
+  h_0ff4f4713441f4 77,94,129
+web/src/lib/errorSentencesB.ts
+  h_0ff4f4713441f4 27,123,142,144
+web/src/lib/errorSentencesC.ts
+  h_0ff4f4713441f4 93
+web/src/lib/eventCommentsApi.test.ts
+  h_0ff4f4713441f4 1-45
+web/src/lib/eventCommentsApi.ts
+  h_0ff4f4713441f4 1-38
+web/src/stores/chat/events.ts
+  h_0ff4f4713441f4 11,312-314
+web/src/stores/chatEvents.test.ts
+  h_0ff4f4713441f4 5,207-219
+web/src/stores/eventComments.test.ts
+  h_0ff4f4713441f4 1-36
+web/src/stores/eventComments.ts
+  h_0ff4f4713441f4 1-30
+web/src/types/events.test.ts
+  h_0ff4f4713441f4 136-143
+web/src/types/events.ts
+  h_0ff4f4713441f4 5,148-151,386
+web/src/types/noticeEvents.ts
+  h_0ff4f4713441f4 4,32-37
+web/src/types/rest.ts
+  h_0ff4f4713441f4 2853-2889,2956-2976
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f2b33b0ccf2836dbb7b57cf5d640702c56e4dff0",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
