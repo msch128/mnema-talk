@@ -1,0 +1,23 @@
+web/src/components/DmSidebarAndDialogs.test.ts
+  s_82e9d48cb7fc7f::t_58315444fe03e1 2,69-83
+web/src/components/ReactionBar.test.ts
+  s_82e9d48cb7fc7f::t_23b6b311a9f404 3-4,98-110
+web/src/composables/useChannelWrite.test.ts
+  s_82e9d48cb7fc7f::t_14fbffdf0da960 1-2,47-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8bd652507a23f638c8d51e9955994e86ac9082ad",
+  "prompts": {},
+  "sessions": {
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
