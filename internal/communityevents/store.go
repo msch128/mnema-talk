@@ -58,6 +58,7 @@ func (r eventRow) toEvent() *CommunityEvent {
 		CreatedBy:   r.CreatedBy,
 		CreatedAt:   r.CreatedAt,
 		UpdatedAt:   r.UpdatedAt,
+		Roles:       []EventRole{},
 	}
 }
 
@@ -112,6 +113,9 @@ func (s *Store) Get(ctx context.Context, id uuid.UUID, callerID *uuid.UUID) (*Co
 	}
 	ev := row.toEvent()
 	if err := s.fillRSVPsBatch(ctx, []*CommunityEvent{ev}, callerID); err != nil {
+		return nil, err
+	}
+	if err := s.fillSignups(ctx, ev); err != nil {
 		return nil, err
 	}
 	return ev, nil

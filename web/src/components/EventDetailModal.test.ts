@@ -7,9 +7,11 @@ import { useEventsStore } from '../stores/events'
 import { usePermissionsStore } from '../stores/permissions'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { useAuthStore } from '../stores/auth'
 import { pendingConfirm } from '../lib/confirm'
 import { setLocale } from '../i18n'
-import { categoryFixture, channelFixture, fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
+import { categoryFixture, channelFixture, fixtureId, FIXTURE_TIMESTAMP, userFixture } from '../test-fixtures.fixture'
 import type { CommunityEvent, PermissionsInfo, RSVPItem } from '../types/domain'
 
 vi.mock('../lib/api', async importOriginal => ({
@@ -247,6 +249,61 @@ describe('EventDetailModal', () => {
       pendingConfirm.value?.resolve(true)
       await flushPromises()
       expect(useToastStore().toasts.some(t => t.text === 'Nope' && t.type === 'error')).toBe(true)
+    })
+  })
+
+  describe('roles and sign-ups', () => {
+    const tank = { id: fixtureId(101), name: 'Tank', position: 0, confirmed: 1, waitlist: 0, capacity: 1 }
+
+    beforeEach(() => {
+      useServerFeaturesStore().list = ['events', 'events.roles']
+      vi.spyOn(useEventsStore(), 'listRSVPs').mockResolvedValue([])
+    })
+
+    it('reads the sign-ups of the event and shows the roster', async () => {
+      const store = useEventsStore()
+      const detail = vi.spyOn(store, 'fetchDetail').mockResolvedValue(makeEvent({ roles: [tank] }))
+      wrapper = mount(EventDetailModal, { props: { event: makeEvent({ roles: [tank] }) } })
+      await flushPromises()
+      expect(detail).toHaveBeenCalledWith(fixtureId(1))
+      expect(wrapper.find('[data-testid="event-roster"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="event-roles-edit"]').exists()).toBe(false)
+    })
+
+    it('reads them again when the counts of a role change, and survives a failing read', async () => {
+      const store = useEventsStore()
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const detail = vi.spyOn(store, 'fetchDetail').mockRejectedValue(new Error('down'))
+      store.events = [makeEvent({ roles: [tank] })]
+      wrapper = mount(EventDetailModal, { props: { event: makeEvent({ roles: [tank] }) } })
+      await flushPromises()
+      store.events = [makeEvent({ roles: [{ ...tank, waitlist: 2 }] })]
+      await flushPromises()
+      expect(detail).toHaveBeenCalledTimes(2)
+      expect(warn).toHaveBeenCalled()
+      warn.mockRestore()
+    })
+
+    it('lets the creator open the role editor without Manage events, and nobody else', async () => {
+      vi.spyOn(useEventsStore(), 'fetchDetail').mockResolvedValue(makeEvent())
+      useAuthStore().user = userFixture({ id: fixtureId(5) })
+      wrapper = mount(EventDetailModal, { props: { event: makeEvent({ created_by: fixtureId(5) }) }, attachTo: document.body })
+      await flushPromises()
+      await wrapper.get('[data-testid="event-roles-edit"]').trigger('click')
+      expect(document.body.querySelector('[data-testid="event-roles-editor"]')).not.toBeNull()
+      wrapper.unmount()
+      wrapper = mount(EventDetailModal, { props: { event: makeEvent({ created_by: fixtureId(6) }) } })
+      await flushPromises()
+      expect(wrapper.find('[data-testid="event-roster"]').exists()).toBe(false)
+    })
+
+    it('shows no roster and reads nothing when the server has no roles', async () => {
+      useServerFeaturesStore().list = ['events']
+      const detail = vi.spyOn(useEventsStore(), 'fetchDetail')
+      wrapper = mount(EventDetailModal, { props: { event: makeEvent({ roles: [tank] }) } })
+      await flushPromises()
+      expect(detail).not.toHaveBeenCalled()
+      expect(wrapper.find('[data-testid="event-roster"]').exists()).toBe(false)
     })
   })
 })

@@ -19,19 +19,8 @@ func (s *Service) SendEventReminder(ctx context.Context, userID uuid.UUID, event
 	}
 	s.init()
 
-	var presence string
-	if err := s.DB.QueryRow(ctx, `SELECT COALESCE(presence, 'offline') FROM users WHERE id = $1`, userID).Scan(&presence); err != nil {
+	if quietOrMuted, err := s.eventQuiet(ctx, userID, channelID); err != nil || quietOrMuted {
 		return err
-	}
-	if quiet(presence) {
-		return nil
-	}
-
-	if channelID != nil {
-		muted, err := s.talkMuted(ctx, userID, *channelID)
-		if err != nil || muted {
-			return err
-		}
 	}
 
 	opts := Options{TTL: time.Hour, Urgent: true, Timeout: sendTimeout}
@@ -86,4 +75,20 @@ func (s *Service) talkMuted(ctx context.Context, userID, channelID uuid.UUID) (b
 	catSetting.Level = levelOf(catLvl)
 	srvSetting.Level = levelOf(srvLvl)
 	return chat.ResolveNotify(dbNow, chSetting, catSetting, srvSetting) == chat.NotifyMute, nil
+}
+
+// eventQuiet says whether an event notification is held back for the member:
+// their presence is quiet (do not disturb, focus) or the Talk is muted for them.
+func (s *Service) eventQuiet(ctx context.Context, userID uuid.UUID, channelID *uuid.UUID) (bool, error) {
+	var presence string
+	if err := s.DB.QueryRow(ctx, `SELECT COALESCE(presence, 'offline') FROM users WHERE id = $1`, userID).Scan(&presence); err != nil {
+		return false, err
+	}
+	if quiet(presence) {
+		return true, nil
+	}
+	if channelID != nil {
+		return s.talkMuted(ctx, userID, *channelID)
+	}
+	return false, nil
 }

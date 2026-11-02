@@ -1,6 +1,8 @@
 import type { ApiOptions } from '../lib/api'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { flushPromises } from '@vue/test-utils'
+import * as rolesApi from '../lib/eventRolesApi'
 import { minutesUntil, useEventsStore } from './events'
 import { eventsRequest } from '../lib/eventsDialog'
 import { useServerFeaturesStore } from './serverFeatures'
@@ -8,6 +10,10 @@ import { useToastStore } from './toast'
 import { t } from '../i18n'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import type { CommunityEvent, RSVPItem } from '../types/domain'
+
+vi.mock('../lib/eventRolesApi', () => ({
+  fetchEvent: vi.fn(), setEventRoles: vi.fn(), deleteEventRole: vi.fn(), signUpForRole: vi.fn(), leaveRole: vi.fn(), removeSignup: vi.fn()
+}))
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../lib/api', async importOriginal => ({
@@ -272,5 +278,73 @@ describe('past events', () => {
     useServerFeaturesStore().list = []
     await useEventsStore().loadPast()
     expect(apiMock).not.toHaveBeenCalled()
+  })
+
+  describe('roles and sign-ups', () => {
+    const roleId = fixtureId(30)
+
+    it('keeps the members own sign-up and the sign-ups when a broadcast leaves them out', () => {
+      const store = useEventsStore()
+      const mine = { role_id: roleId, state: 'waitlist' as const, waitlist_position: 2 }
+      const signups = [{ user: { id: fixtureId(2), username: 'a', display_name: 'a' }, role_id: roleId, state: 'waitlist' as const, created_at: FIXTURE_TIMESTAMP }]
+      store.events = [makeEvent({ id: fixtureId(20), my_signup: mine, signups })]
+      store.handleEventUpdate(makeEvent({ id: fixtureId(20), title: 'Moved' }))
+      expect(store.events[0]).toMatchObject({ title: 'Moved', my_signup: mine, signups })
+    })
+
+    it('tells the member that they moved up, or were removed, and reads the event again', async () => {
+      const store = useEventsStore()
+      const read = vi.mocked(rolesApi.fetchEvent).mockResolvedValue(makeEvent({ id: fixtureId(20), title: 'Fresh' }))
+      store.handleSignupNotice({ event_id: fixtureId(20), title: 'Raid', kind: 'promoted', role_name: 'Tank', start_time: FIXTURE_TIMESTAMP })
+      store.handleSignupNotice({ event_id: fixtureId(20), title: 'Raid', kind: 'removed', role_name: 'DPS', start_time: FIXTURE_TIMESTAMP })
+      await flushPromises()
+      const texts = useToastStore().toasts.map(t => t.text)
+      expect(texts[0]).toMatch(/Tank.*Raid|Raid.*Tank/)
+      expect(texts[1]).toMatch(/DPS/)
+      expect(read).toHaveBeenCalledTimes(2)
+      expect(store.events[0]?.title).toBe('Fresh')
+    })
+
+    it('does not fail when the event cannot be read after a notice', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      vi.mocked(rolesApi.fetchEvent).mockRejectedValue(new Error('down'))
+      useEventsStore().handleSignupNotice({ event_id: fixtureId(20), title: 'Raid', kind: 'promoted', role_name: 'Tank', start_time: FIXTURE_TIMESTAMP })
+      await flushPromises()
+      expect(warn).toHaveBeenCalled()
+      warn.mockRestore()
+    })
+
+    it('puts a waitlisted notice into words', async () => {
+      vi.mocked(rolesApi.fetchEvent).mockResolvedValue(makeEvent({ id: fixtureId(20) }))
+      useEventsStore().handleSignupNotice({ event_id: fixtureId(20), title: 'Raid', kind: 'waitlisted', role_name: 'DPS', start_time: FIXTURE_TIMESTAMP })
+      await flushPromises()
+      expect(useToastStore().toasts[0]?.text).toMatch(/Warteliste.*DPS/)
+    })
+
+    it('drops the event when leaving it answers that it can no longer be viewed', async () => {
+      const store = useEventsStore()
+      store.events = [makeEvent({ id: fixtureId(20) }), makeEvent({ id: fixtureId(21) })]
+      vi.mocked(rolesApi.leaveRole).mockResolvedValue(null)
+      expect(await store.leaveRole(fixtureId(20))).toBeNull()
+      expect(store.events.map(e => e.id)).toEqual([fixtureId(21)])
+    })
+
+    it('stores what each roster action answers', async () => {
+      const store = useEventsStore()
+      const answer = makeEvent({ id: fixtureId(20), title: 'After' })
+      for (const [name, spy] of [
+        ['setEventRoles', () => store.setRoles(fixtureId(20), [{ name: 'Tank' }])],
+        ['deleteEventRole', () => store.deleteRole(fixtureId(20), roleId, fixtureId(31))],
+        ['signUpForRole', () => store.signUp(fixtureId(20), roleId)],
+        ['leaveRole', () => store.leaveRole(fixtureId(20))],
+        ['removeSignup', () => store.removeSignup(fixtureId(20), fixtureId(2))],
+        ['fetchEvent', () => store.fetchDetail(fixtureId(20))]
+      ] as const) {
+        vi.mocked(rolesApi[name]).mockResolvedValue(answer)
+        store.events = []
+        await spy()
+        expect(store.events[0]?.title).toBe('After')
+      }
+    })
   })
 })

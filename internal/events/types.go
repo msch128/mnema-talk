@@ -88,6 +88,9 @@ const (
 	EventDelete = "event_delete"
 	// EventReminder notifies members 15 minutes before an event starts.
 	EventReminder = "event_reminder"
+	// EventSignupNotice tells one member that their sign-up for an event role changed
+	// without their doing: they moved up from the waitlist, or a moderator removed them.
+	EventSignupNotice = "event_signup_notice"
 	// CommunityUpdated announces the community's name after the Owner changed
 	// it, so open tabs retitle themselves without a reload.
 	CommunityUpdated = "community_updated"

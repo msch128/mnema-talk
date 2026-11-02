@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Calendar, Check, Edit3, HelpCircle, MapPin, Volume2, X } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import MarkdownContent from './MarkdownContent.vue'
@@ -13,6 +13,10 @@ import type { CommunityEvent, RSVPItem } from '../types/domain'
 import { eventAvatar } from '../lib/eventAvatar'
 import { formatEventStart, relativeEventDay } from '../lib/eventTime'
 import { caughtErrorMessage } from '../lib/api'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { useAuthStore } from '../stores/auth'
+import EventRoster from './EventRoster.vue'
+import EventRolesDialog from './EventRolesDialog.vue'
 import { locale, t } from '../i18n'
 
 const props = defineProps<{
@@ -29,6 +33,13 @@ const eventsStore = useEventsStore()
 const chatStore = useChatStore()
 const permissions = usePermissionsStore()
 const toast = useToastStore()
+const features = useServerFeaturesStore()
+const auth = useAuthStore()
+const editingRoles = ref(false)
+
+// The creator and moderators change the roster.
+const canManageRoster = computed(() => permissions.can('manage_events') || (!!auth.user && currentEvent.value.created_by === auth.user.id))
+const showRoster = computed(() => features.eventRoles && ((currentEvent.value.roles ?? []).length > 0 || canManageRoster.value))
 
 const currentEvent = computed(() => {
   return eventsStore.events.find(e => e.id === props.event.id) || props.event
@@ -62,9 +73,23 @@ async function loadRsvps() {
   }
 }
 
+// The sign-ups come with the event's details only; the list and the live updates leave them out.
+async function loadSignups() {
+  if (!features.eventRoles) return
+  try {
+    await eventsStore.fetchDetail(currentEvent.value.id)
+  } catch (err) {
+    console.warn('Failed to load the sign-ups', err)
+  }
+}
+
 onMounted(() => {
   void loadRsvps()
+  void loadSignups()
 })
+
+// Someone signed up or left: read the sign-ups again.
+watch(() => JSON.stringify((currentEvent.value.roles ?? []).map(r => [r.id, r.confirmed, r.waitlist])), () => { void loadSignups() })
 
 function formatDateTime(iso: string): string {
   return formatEventStart(iso, locale.value)
@@ -203,6 +228,8 @@ async function cancelEvent() {
         </p>
       </div>
 
+      <EventRoster v-if="showRoster" :event="currentEvent" :can-manage="canManageRoster" @edit-roles="editingRoles = true" @gone="emit('close')" />
+
       <!-- RSVP Section -->
       <div class="mb-6 flex flex-col gap-3 rounded-xl border border-mnema-border bg-mnema-surface p-4">
         <div class="text-sm font-medium text-mnema-text">{{ $t('events.rsvp') }}</div>
@@ -289,5 +316,6 @@ async function cancelEvent() {
         </button>
       </div>
     </div>
+    <EventRolesDialog v-if="editingRoles" :event="currentEvent" @close="editingRoles = false" />
   </BaseDialog>
 </template>

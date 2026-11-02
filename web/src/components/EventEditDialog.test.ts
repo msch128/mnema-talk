@@ -6,6 +6,7 @@ import EventEditDialog from './EventEditDialog.vue'
 import { useEventsStore } from '../stores/events'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { setLocale } from '../i18n'
 import { categoryFixture, channelFixture, fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import type { CommunityEvent } from '../types/domain'
@@ -275,5 +276,69 @@ describe('EventEditDialog', () => {
     wrapper.unmount()
     wrapper = undefined
     expect(revoke).toHaveBeenCalledTimes(2)
+  })
+
+  describe('roles', () => {
+    beforeEach(() => {
+      useServerFeaturesStore().list = ['events', 'events.roles']
+    })
+
+    async function fillBasics() {
+      await titleInput()?.setValue('Raid')
+      await setText('input[type="datetime-local"]', '2026-11-01T18:00')
+      await wrapper!.find('input[data-max-chars="255"]').setValue('Hall')
+    }
+
+    it('shows the role editor only when the server has roles', async () => {
+      wrapper = mount(EventEditDialog)
+      expect(wrapper.find('[data-testid="event-roles-editor"]').exists()).toBe(true)
+      wrapper.unmount()
+      useServerFeaturesStore().list = ['events']
+      wrapper = mount(EventEditDialog)
+      expect(wrapper.find('[data-testid="event-roles-editor"]').exists()).toBe(false)
+    })
+
+    it('sets the roles after creating the event', async () => {
+      const store = useEventsStore()
+      const created = makeEvent({ id: fixtureId(8) })
+      vi.spyOn(store, 'create').mockResolvedValue(created)
+      const setRoles = vi.spyOn(store, 'setRoles').mockResolvedValue(created)
+      wrapper = mount(EventEditDialog)
+      await fillBasics()
+      await wrapper.get('[data-testid="event-role-add"]').trigger('click')
+      await wrapper.get('[data-testid="event-role-name"]').setValue('Tank')
+      await submit()
+      expect(setRoles).toHaveBeenCalledWith(fixtureId(8), [{ name: 'Tank' }])
+      expect(wrapper.emitted('saved')).toHaveLength(1)
+    })
+
+    it('sends no role list for an event that never had roles', async () => {
+      const store = useEventsStore()
+      vi.spyOn(store, 'create').mockResolvedValue(makeEvent())
+      const setRoles = vi.spyOn(store, 'setRoles')
+      wrapper = mount(EventEditDialog)
+      await fillBasics()
+      await submit()
+      expect(setRoles).not.toHaveBeenCalled()
+    })
+
+    it('keeps the dialog open with the reason when the roles are refused, and retries them on the next submit', async () => {
+      const store = useEventsStore()
+      const created = makeEvent({ id: fixtureId(8) })
+      vi.spyOn(store, 'create').mockResolvedValue(created)
+      vi.spyOn(store, 'update').mockResolvedValue(created)
+      const setRoles = vi.spyOn(store, 'setRoles').mockRejectedValueOnce(new Error('two roles are called Tank')).mockResolvedValue(created)
+      vi.spyOn(store, 'fetchDetail').mockResolvedValue(created)
+      wrapper = mount(EventEditDialog)
+      await fillBasics()
+      await wrapper.get('[data-testid="event-role-add"]').trigger('click')
+      await wrapper.get('[data-testid="event-role-name"]').setValue('Tank')
+      await submit()
+      expect(wrapper.find('.text-red-400').text()).toContain('two roles are called Tank')
+      expect(wrapper.emitted('close')).toBeUndefined()
+      await submit()
+      expect(setRoles).toHaveBeenCalledTimes(2)
+      expect(wrapper.emitted('close')).toHaveLength(1)
+    })
   })
 })

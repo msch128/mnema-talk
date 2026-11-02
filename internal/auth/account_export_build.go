@@ -75,6 +75,7 @@ saved.json      the messages you saved (their ids, your note and when; not the s
 reminders.json  your reminders (the message id and the times; not the message text)
 scheduled_messages.json  your scheduled messages that were not sent yet (your text, the time and the state)
 rsvps.json      your RSVPs to community events
+event_signups.json your sign-ups for event roles (the event, the role, confirmed or waitlist)
 truncated.json  only present when a list was cut: the files that hold more rows than the archive keeps
 
 The files are meant for machines: file names and keys are in English whatever
@@ -196,6 +197,7 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 		{"reminders.json", func() (any, error) { return exportReminders(ctx, q, user) }},
 		{"scheduled_messages.json", func() (any, error) { return exportScheduled(ctx, q, user, viewable) }},
 		{"rsvps.json", func() (any, error) { return exportRSVPs(ctx, q, user) }},
+		{"event_signups.json", func() (any, error) { return exportEventSignups(ctx, q, user) }},
 	}
 	cut, err := z.addSteps(steps)
 	if err != nil {

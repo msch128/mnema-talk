@@ -8,6 +8,11 @@ import { useToastStore } from '../stores/toast'
 import type { CommunityEvent } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { t } from '../i18n'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { draftsOf } from '../lib/eventRoleDrafts'
+import type { RoleDraft, RoleRemoval } from '../lib/eventRoleDrafts'
+import { useEventRoles } from '../composables/useEventRoles'
+import EventRolesEditor from './EventRolesEditor.vue'
 
 const props = defineProps<{
   event?: CommunityEvent | null
@@ -51,6 +56,13 @@ const locationText = ref(props.event?.location || '')
 const coverFile = ref<File | null>(null)
 const coverPreview = ref<string | null>(props.event?.cover_url || null)
 const removeExistingCover = ref(false)
+
+const features = useServerFeaturesStore()
+const roleRows = ref<RoleDraft[]>(draftsOf(props.event?.roles ?? []))
+const roleRemovals = ref<RoleRemoval[]>([])
+const { save: saveRoles } = useEventRoles()
+// Only when the editor was used: an untouched event is not sent a role list.
+const rolesTouched = computed(() => roleRows.value.length > 0 || roleRemovals.value.length > 0 || (existing.value?.roles?.length ?? 0) > 0)
 
 const saving = ref(false)
 const error = ref('')
@@ -139,6 +151,16 @@ async function submit() {
       // The event itself is saved; only the cover is missing.
       error.value = created.value ? caughtErrorMessage(err, t('events.coverFailed')) : caughtErrorMessage(err, t('events.saveFailed'))
       return
+    }
+    if (features.eventRoles && rolesTouched.value) {
+      try {
+        result = await saveRoles(result.id, roleRows.value, roleRemovals.value, state => { roleRows.value = state.rows; roleRemovals.value = state.removals })
+        roleRemovals.value = []
+      } catch (err) {
+        // The event is saved; the roles are not. The next submit retries them.
+        error.value = caughtErrorMessage(err, t('events.roles.saveFailed'))
+        return
+      }
     }
     toast.success(current ? t('events.updated') : t('events.created'))
     emit('saved', result)
@@ -307,6 +329,8 @@ async function submit() {
           </button>
         </div>
       </div>
+
+      <EventRolesEditor v-if="features.eventRoles" v-model="roleRows" v-model:removals="roleRemovals" />
 
       <!-- Actions -->
       <div class="mt-4 flex justify-end gap-3 border-t border-mnema-hairline pt-4">
