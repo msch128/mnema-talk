@@ -1,0 +1,23 @@
+e2e/tests/event-recurrence.spec.ts
+  s_61e7f03250bd0b::t_4814700c6e16d6 37,40,46,55,65-66
+e2e/tests/event-roles.spec.ts
+  s_61e7f03250bd0b::t_832aa256e282d5 66,72
+scripts/english-only-allowlist.txt
+  s_61e7f03250bd0b::t_435d4b607771ce 81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a55ec8a5249a7826f64c09b747fee5f5d559bd3b",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
