@@ -55,6 +55,16 @@ const optionsIcon = ref('')
 const communityIcon = computed(() => communityIconUrl(optionsIcon.value, 128))
 const heading = computed(() => (props.invite?.valid && props.invite.communityName) || optionsName.value || communityName.value)
 const inviteDead = computed(() => props.invite?.valid === false)
+// A vanity link (/join/name) that takes sign-ups signs up with the link itself; one that does not
+// only greets the visitor on the sign-in page.
+// A refused vanity code (the Owner switched it off meanwhile) falls back to asking for a code.
+const vanityRefused = ref(false)
+const vanityCode = computed(() => !vanityRefused.value && !!props.invite?.vanity && props.invite.code !== '')
+const vanityGreeting = computed(() => !!props.invite?.vanity && props.invite.code === '' && props.invite.valid === true)
+const subtitle = computed(() => {
+  if (!isRegister.value) return t(vanityGreeting.value ? 'login.subtitleVanity' : 'login.subtitleLogin', { name: heading.value })
+  return t(props.invite?.valid ? 'login.subtitleInvited' : 'login.subtitleRegister')
+})
 const expiry = computed(() => {
   const at = props.invite?.valid ? props.invite.expiresAt : ''
   return at ? new Date(at).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' }) : ''
@@ -64,7 +74,7 @@ onMounted(() => {
   void loadOptions()
   if (props.invite) {
     inviteCode.value = props.invite.code
-    isRegister.value = props.invite.valid !== false
+    isRegister.value = props.invite.valid !== false && !vanityGreeting.value
     return
   }
   // Check if URL has ?invite=...
@@ -97,7 +107,7 @@ async function handleSubmit() {
   const rawUsername = usernameInput.value?.value ?? ''
   const submittedPassword = passwordField.value?.el?.value ?? ''
   const submittedDisplayName = displayNameInput.value?.value ?? ''
-  const submittedInviteCode = inviteCodeInput.value?.value ?? ''
+  const submittedInviteCode = inviteCodeInput.value?.value ?? inviteCode.value
   const submittedUsername = isRegister.value ? normalizeUsername(rawUsername.trim()) : rawUsername
   username.value = submittedUsername
   password.value = submittedPassword
@@ -128,6 +138,10 @@ async function handleSubmit() {
       }
     }
   } catch (err) {
+    if (isRegister.value && vanityCode.value) {
+      vanityRefused.value = true
+      inviteCode.value = ''
+    }
     errorMsg.value = caughtErrorMessage(err, t('login.failed'))
   } finally {
     isLoading.value = false
@@ -154,7 +168,7 @@ async function handleSubmit() {
         <div>
           <h1 :id="titleId" class="text-lg font-bold tracking-tight text-mnema-text" data-testid="login-heading">{{ heading }}</h1>
           <p class="text-sm text-mnema-muted mt-0.5">
-            {{ isRegister ? (invite?.valid ? $t('login.subtitleInvited') : $t('login.subtitleRegister')) : $t('login.subtitleLogin', { name: heading }) }}
+            {{ subtitle }}
           </p>
           <p v-if="expiry" class="text-xs text-mnema-tertiary mt-1" data-testid="invite-expiry">{{ $t('login.inviteExpires', { when: expiry }) }}</p>
         </div>
@@ -225,7 +239,7 @@ async function handleSubmit() {
           <p v-else-if="!isRegister && optionsLoaded" class="mt-1.5 text-xs text-mnema-tertiary" data-testid="forgot-password-hint">{{ $t('login.forgotNoMail') }}</p>
         </div>
 
-        <div v-if="isRegister">
+        <div v-if="isRegister && !vanityCode">
           <label for="login-invite" class="block text-sm font-medium text-mnema-body-ink mb-1">{{ $t('login.inviteCode') }}</label>
           <input
             id="login-invite"

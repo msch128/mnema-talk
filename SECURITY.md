@@ -233,6 +233,18 @@ details and the limits.
   the container are gone and SVG never gets in; the route answers a fixed set of
   sizes from stored files, has its own per-address rate limit and carries no
   member data.
+- **Vanity link (`/join/<name>`).** One optional short address the Owner or an
+  Administrator sets (only the Owner may turn on sign-ups, enforced
+  server-side). Alone it only leads to the sign-in page and never
+  bypasses invite-only registration. If the Owner switches on *Let this link
+  create accounts*, it is a deliberate permanent public invite (unlimited, no
+  expiry; the guessable name is public by design, so the strong-code floor does
+  not apply to it) that goes through the same registration, limits and raid
+  protection as any invite; off or removed, it stops working for new sign-ups at once. Its
+  preview (`GET /api/join/<name>`) is public and shares the invite preview's
+  rate limits and says only whether the link exists, the community name and
+  whether it takes sign-ups; the name is never reflected into a page unescaped
+  and an unknown name gets the generic page.
 - **Invite preview (the one public read).** `GET /api/invites/{code}` needs no
   session so an invite link can show the community's name before sign-up. It
   answers `{"valid": true, "community_name", "expires_at"?}` or exactly

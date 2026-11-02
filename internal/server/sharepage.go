@@ -26,6 +26,10 @@ import (
 
 var invitePagePath = regexp.MustCompile(`^/invite/([A-Za-z0-9_-]{6,64})/?$`)
 
+// joinPagePath is the vanity invite link (a slug of lowercase letters, digits
+// and hyphens; any case is read, the lookup folds it).
+var joinPagePath = regexp.MustCompile(`^/join/([A-Za-z0-9-]{3,32})/?$`)
+
 const (
 	// shareIcon is a 512x512 PNG: crawlers do not render SVG.
 	shareIcon        = "/pwa-icon-512.png"
@@ -65,6 +69,9 @@ func (s *sharePages) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case invitePagePath.MatchString(r.URL.Path):
 		code := invitePagePath.FindStringSubmatch(r.URL.Path)[1]
 		s.write(w, r, s.inviteTags(r, code))
+	case joinPagePath.MatchString(r.URL.Path):
+		slug := joinPagePath.FindStringSubmatch(r.URL.Path)[1]
+		s.write(w, r, s.joinTags(r, slug))
 	default:
 		s.next.ServeHTTP(w, r)
 	}
@@ -142,6 +149,29 @@ func (s *sharePages) withIcon(ctx context.Context, t pageTags) pageTags {
 		t.image = s.abs(web.IconURL(v, 512))
 	}
 	return t
+}
+
+// joinTags is the preview of a vanity link: the community's name, like an
+// invite. The slug is only looked up, never written into the page (the URL in
+// og:url is escaped like every value); an unknown one gets the generic page.
+func (s *sharePages) joinTags(r *http.Request, slug string) pageTags {
+	t := pageTags{title: shareProduct, description: shareTagline, image: s.abs(shareIcon), noindex: true}
+	info, ok, err := s.onboard.JoinShareInfo(r, slug)
+	if err != nil {
+		slog.Warn("share page: vanity link", "err", err)
+	}
+	if !ok {
+		return t
+	}
+	name := strings.TrimSpace(info.CommunityName)
+	if name == "" {
+		name = s.names.Get(r.Context())
+	}
+	t.appName = name
+	t.title = "Join " + name + " on " + shareProduct
+	t.description = "You have been invited to join " + name + "."
+	t.url = s.abs(r.URL.Path)
+	return s.withIcon(r.Context(), t)
 }
 
 func (s *sharePages) abs(path string) string {
