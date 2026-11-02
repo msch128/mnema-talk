@@ -1,0 +1,21 @@
+internal/communityevents/handler_list.go
+  s_61e7f03250bd0b::t_770ed18a5a84b8 1-58
+internal/communityevents/roles_cancel_integration_test.go
+  s_61e7f03250bd0b::t_9d5ad78e5cc310 1-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5c203067b251c7d9e2f9b1366b00279fbacd9906",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
