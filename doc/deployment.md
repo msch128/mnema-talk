@@ -189,6 +189,17 @@ connection.** A screen share watched by 25 members already needs about 51 Mbit/s
 upstream, more than many home lines offer, and a VPS with a fast uplink or fewer
 simultaneous viewers solves that where a faster CPU does not.
 
+Three tools help you check your own server against these rows. **Admin >
+Status** has a capacity panel with the live CPU, memory and outgoing traffic of
+the server and an estimate of how many more members with a screen share it can
+take. **Test my connection** (Settings > Audio, and the Status tab) reports
+roughly the server's upload and what it means in members with a screen share,
+when you run it from outside the server's network. And
+`VOICE_UPLOAD_LIMIT_MBIT` (off by default, see [operations](operations.md))
+tells the server the speed of its line: it then keeps its outgoing media under
+about 85 % of it by lowering the quality of screen shares and cameras, never
+audio.
+
 Shapes with many cameras and 100 members did not hold on the test host (they
 lost packets), and several Talks at once and longer runs were not measured. For
 anything beyond the table, run the measurement on your own hardware: see the

@@ -281,6 +281,31 @@ grid shows four tiles receives with the visible-cameras behaviour.
   cores and at 25 from 0.55 to 0.37, in line with the egress packets that are
   no longer sent.
 
+### Opus DTX (2.6.0)
+
+Server 2.6.0 turns on Opus discontinuous transmission for the microphone, so a
+member who is not speaking sends about five small packets a second instead of
+fifty. The load generator can emulate this (`AUDIO_DTX=1`, with `AUDIO_TALK_PCT`
+the share of time each speaker talks); it sends a 16-byte frame every 200 ms
+while a speaker is silent, which is what Chrome sends. Two cells, 10 speakers
+and the rest of the members listening, each run twice with a 120 s hold, with
+speakers talking 30 % of the time:
+
+| Members | DTX | Egress packets/s | Server CPU (cores) | Audio loss |
+|---:|---|---:|---:|---:|
+| 100 | off | 58,614 | 1.31 | 0 % |
+| 100 | on, 30 % talk time | 22,372 | 0.58 | 0 % |
+| 50 | off | 28,216 | 0.67 | 0 % |
+| 50 | on, 30 % talk time | 10,443 | 0.28 | 0 % |
+
+Packets fall by 62 to 63 % and server CPU by 56 to 58 %. This is an emulation with a
+fixed talk pattern, not real people: real conversations have fewer speakers
+talking at once than ten, so the saving in an ordinary call is smaller in
+absolute terms, and music or a steady tone (which the encoder may treat as
+silence) is why DTX is off when the noise filter is set to Off and can be
+switched off in Audio settings. The sizing table above assumes continuous
+speakers (50 packets/s each), which is the conservative case.
+
 ### Where the packet loss comes from
 
 The shapes with loss all have a screen share and several cameras with 50 to
