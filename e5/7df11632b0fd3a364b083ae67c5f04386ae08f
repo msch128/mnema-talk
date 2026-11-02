@@ -1,0 +1,47 @@
+doc/moderation.md
+  s_82e9d48cb7fc7f::t_cd91847d37ae74 138,148-153
+internal/auth/service_accounts.go
+  s_82e9d48cb7fc7f::t_bf49bc9d94c565 61-63
+internal/perm/newmember.go
+  s_82e9d48cb7fc7f::t_8705b20556ee52 24,52,104-131
+internal/perm/newmember_test.go
+  s_82e9d48cb7fc7f::t_785344f773275e 4-5,106-193
+internal/perm/service.go
+  s_82e9d48cb7fc7f::t_4803fc901cde6f 50-51,182,332-355
+internal/perm/snapshot_dm.go
+  s_82e9d48cb7fc7f::t_3e889e08a7dd7d 72,82
+internal/raid/raid.go
+  s_82e9d48cb7fc7f::t_f3dc577b77b885 114,159-161,169-179
+internal/server/raid_integration_test.go
+  s_82e9d48cb7fc7f::t_5089eb4d1cad19 7,10,189-265
+web/src/components/AdminRaidTab.vue
+  s_82e9d48cb7fc7f::t_8ab5eadf1ef1a2 128
+web/src/components/RaidLockdownBanner.test.ts
+  s_82e9d48cb7fc7f::t_475385891c71ae 63-77
+web/src/components/RaidLockdownBanner.vue
+  s_82e9d48cb7fc7f::t_a11528e978c02e 21-22,48-54,57
+web/src/i18n/de.json
+  s_82e9d48cb7fc7f::t_338b76fe950690 4061-4063
+web/src/i18n/en.json
+  s_82e9d48cb7fc7f::t_d49f805a1616d2 4061-4063
+web/src/stores/chat/reset.ts
+  s_82e9d48cb7fc7f::t_410a3f49ab8b99 3,74
+web/src/stores/raid.test.ts
+  s_82e9d48cb7fc7f::t_9c4cc6ce48c68f 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e57df11632b0fd3a364b083ae67c5f04386ae08f",
+  "prompts": {},
+  "sessions": {
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
