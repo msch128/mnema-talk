@@ -1,0 +1,27 @@
+e2e/tests/event-recurrence.spec.ts
+  s_4c6a19030e223f::t_142e9e2b31475f 35,52
+e2e/tests/event-roles.spec.ts
+  s_4c6a19030e223f::t_19f17938700689 62
+internal/communityevents/series_integration_test.go
+  s_4c6a19030e223f::t_98d99d527261e9 518-581
+internal/communityevents/store_series_edit.go
+  s_4c6a19030e223f::t_319ac8b9a21699 61-65,67-77,80-84,91-103,178-181
+internal/push/event_notices_integration_test.go
+  s_4c6a19030e223f::t_409da8ec59fe2d 1-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7bf224c466a33b901ce8bb579455c8347efe26ff",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
