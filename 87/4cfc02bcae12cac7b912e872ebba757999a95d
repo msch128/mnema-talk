@@ -1,0 +1,35 @@
+internal/communityevents/handler_roles.go
+  s_4c6a19030e223f::t_9988e94b24dfa6 39-42
+internal/communityevents/handler_signup.go
+  s_4c6a19030e223f::t_2a050cc3143f21 42,49,53,57-58,62-72,108-110
+internal/communityevents/model_roles.go
+  s_4c6a19030e223f::t_28e01e59caf881 85,89
+internal/communityevents/notify.go
+  s_4c6a19030e223f::t_3c788447d50c25 19-20,65-68,75,79
+internal/communityevents/store_roles.go
+  s_4c6a19030e223f::t_a8b9ca86ea3405 16-18,23,63-67,334-336,348-352,359-360,365-366,368,370,373-378,381-383
+internal/communityevents/store_signup.go
+  s_4c6a19030e223f::t_1aa4b75cc4ac6f 93
+internal/db/migrations/0086_event_roles.sql
+  s_4c6a19030e223f::t_78e1325411fdd6 50-79
+internal/push/event_signup.go
+  s_4c6a19030e223f::t_bcd999c8ae9cdb 25-27
+internal/push/locales/texts.json
+  s_4c6a19030e223f::t_75504381cbc19f 21,46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "874cfc02bcae12cac7b912e872ebba757999a95d",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
