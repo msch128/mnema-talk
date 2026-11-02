@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -19,12 +20,23 @@ import (
 type Handler struct {
 	Perms  *perm.Service
 	Events events.Publisher
+	// Audit records members taking and dropping self-assignable roles (nil: nothing is recorded).
+	Audit *audit.Log
+	// SelfRoleLimit throttles those changes per member (nil: unlimited, for tests).
+	SelfRoleLimit *httpx.RateLimiter
 }
 
 // Mount registers the routes every member may call (RequireUser applies).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/permissions", httpx.Handle(h.myPermissions))
 	r.Get("/roles", httpx.Handle(h.listRoles))
+	r.Get("/roles/self-assignable", httpx.Handle(h.listSelfAssignable))
+	self := r
+	if h.SelfRoleLimit != nil {
+		self = r.With(h.SelfRoleLimit.By(auth.UserKey))
+	}
+	self.Put("/me/roles/{id}", httpx.Handle(h.takeSelfRole))
+	self.Delete("/me/roles/{id}", httpx.Handle(h.dropSelfRole))
 }
 
 // MountAdmin registers role administration; each route checks its own

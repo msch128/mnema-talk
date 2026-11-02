@@ -19,7 +19,8 @@ import (
 // must not leak into the log by accident. Every query takes the id as $1.
 var snapshotSQL = map[Resource]string{
 	ResRole: `SELECT jsonb_build_object('name', name, 'color', color, 'position', position,
-		'permissions', permissions, 'hoist', hoist, 'mentionable', mentionable, 'max_upload_mb', max_upload_mb), name
+		'permissions', permissions, 'hoist', hoist, 'mentionable', mentionable, 'max_upload_mb', max_upload_mb,
+		'self_assignable', self_assignable, 'description', description), name
 		FROM roles WHERE id = $1`,
 	ResChannel: `SELECT jsonb_build_object('name', name, 'type', type, 'topic', topic,
 		'category_id', category_id, 'user_limit', user_limit, 'slow_mode_seconds', slow_mode_seconds, 'auto_delete_days', auto_delete_days, 'sort_order', sort_order, 'is_lobby', is_lobby, 'is_stage', is_stage), name

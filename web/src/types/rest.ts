@@ -4022,6 +4022,7 @@ export const decodePermOverwrite = decoder("perm.Overwrite", isPermOverwrite)
 export type PermRole = {
   bot_user_id?: string
   color: number
+  description?: string
   hoist: boolean
   id: string
   is_everyone: boolean
@@ -4031,12 +4032,14 @@ export type PermRole = {
   name: string
   permissions: number
   position: number
+  self_assignable?: boolean
 }
 
 export function isPermRole(value: unknown): value is PermRole {
   return isRecord(value)
     && (!hasOwn(value, "bot_user_id") || isIdentifier(value["bot_user_id"]))
     && (hasOwn(value, "color") && (isInteger(value["color"]) && value["color"] >= 0 && value["color"] <= 16777215))
+    && (!hasOwn(value, "description") || isString(value["description"], 200))
     && (hasOwn(value, "hoist") && typeof value["hoist"] === 'boolean')
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "is_everyone") && typeof value["is_everyone"] === 'boolean')
@@ -4046,27 +4049,32 @@ export function isPermRole(value: unknown): value is PermRole {
     && (hasOwn(value, "name") && isString(value["name"], 32))
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
     && (hasOwn(value, "position") && (isInteger(value["position"]) && value["position"] >= 0))
+    && (!hasOwn(value, "self_assignable") || typeof value["self_assignable"] === 'boolean')
 }
 
 export const decodePermRole = decoder("perm.Role", isPermRole)
 
 export type PermRoleInput = {
   color?: number
+  description?: string
   hoist?: boolean
   max_upload_mb?: number | null
   mentionable?: boolean
   name?: string
   permissions?: number
+  self_assignable?: boolean
 }
 
 export function isPermRoleInput(value: unknown): value is PermRoleInput {
   return isRecord(value)
     && (!hasOwn(value, "color") || (isInteger(value["color"]) && value["color"] >= 0 && value["color"] <= 16777215))
+    && (!hasOwn(value, "description") || isString(value["description"], 200))
     && (!hasOwn(value, "hoist") || typeof value["hoist"] === 'boolean')
     && (!hasOwn(value, "max_upload_mb") || ((isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1) || value["max_upload_mb"] === null))
     && (!hasOwn(value, "mentionable") || typeof value["mentionable"] === 'boolean')
     && (!hasOwn(value, "name") || isString(value["name"], 32))
     && (!hasOwn(value, "permissions") || (isInteger(value["permissions"]) && value["permissions"] >= 0))
+    && (!hasOwn(value, "self_assignable") || typeof value["self_assignable"] === 'boolean')
 }
 
 export const decodePermRoleInput = decoder("perm.RoleInput", isPermRoleInput)

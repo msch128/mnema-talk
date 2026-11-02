@@ -3,7 +3,7 @@ import { useAccountStore } from '../stores/account'
 import { readItem, writeItem } from './voicePlayback'
 
 /** The sections of the settings dialog, in the order they are listed: this device first, then the account. */
-export const SETTINGS_TABS = ['audio', 'app', 'signin', 'sessions', 'privacy', 'data'] as const
+export const SETTINGS_TABS = ['audio', 'app', 'signin', 'sessions', 'privacy', 'roles', 'data'] as const
 export type SettingsTab = typeof SETTINGS_TABS[number]
 
 const LAST_TAB_KEY = 'mnema_settings_tab'

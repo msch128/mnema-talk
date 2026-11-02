@@ -22,6 +22,8 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"user.status": VisAuditors, "user.talk_kick": VisAuditors, "user.roles_set": VisAuditors,
 		"user.password_set": VisPrivileged, "user.password_reset": VisPrivileged, "user.lockout_clear": VisPrivileged,
 		"role.create": VisAuditors, "role.update": VisAuditors, "role.delete": VisAuditors, "role.reorder": VisAuditors,
+		// A member choosing a role for themselves is administration news, not private content.
+		"role.self_assign": VisAuditors, "role.self_remove": VisAuditors,
 		"category.overwrites_set": VisPrivileged,
 		"channel.overwrites_set":  VisChannel, "channel.create": VisChannel, "channel.update": VisChannel, "channel.delete": VisChannel, "channel.duplicate": VisChannel, "channel.auto_delete_set": VisChannel,
 		"category.create": VisPrivileged, "category.update": VisPrivileged, "category.delete": VisPrivileged, "layout.apply": VisPrivileged,
