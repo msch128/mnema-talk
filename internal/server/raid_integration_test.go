@@ -240,21 +240,100 @@ func TestDeletedAccountsStillCountAndALockdownRestartsItsClock(t *testing.T) {
 	}
 }
 
-func TestDirectMessagesAndTheSpeakWaitOfANewMember(t *testing.T) {
+func startDM(t *testing.T, c *client, with ...*client) response {
+	t.Helper()
+	ids := make([]string, 0, len(with))
+	for _, w := range with {
+		ids = append(ids, w.user.ID.String())
+	}
+	return c.post("/api/dms", map[string]any{"user_ids": ids})
+}
+
+func dmID(t *testing.T, res response) string {
+	t.Helper()
+	var dm struct{ ID string }
+	res.decode(t, &dm)
+	return dm.ID
+}
+
+// While the write wait runs a new member may answer in a conversation but
+// neither start one nor write first (DM spam is the classic raid vector);
+// reactions follow the react wait.
+func TestDirectMessagesFollowTheWaitsOfANewMember(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 	newbie := a.register(admin, "newbie")
 	friend := a.register(admin, "friend")
-	wantStatus(t, "set", putRaid(t, admin, 0, 60, 60, 60), http.StatusOK)
-	// A conversation is not held back, whatever the waits say.
-	res := newbie.post("/api/dms", map[string]any{"user_ids": []string{friend.user.ID.String()}})
-	if res.status != http.StatusCreated && res.status != http.StatusOK {
-		t.Fatalf("start a conversation: %d %s", res.status, res.body)
+	other := a.register(admin, "other")
+	for _, name := range []string{"friend", "other"} {
+		if _, err := a.db.Exec(context.Background(), `UPDATE users SET created_at = NOW() - INTERVAL '30 days' WHERE username = $1`, name); err != nil {
+			t.Fatal(err)
+		}
 	}
-	var dm struct{ ID string }
-	res.decode(t, &dm)
-	wantStatus(t, "write in the conversation", newbie.post("/api/channels/"+dm.ID+"/messages", map[string]any{"content": "hello"}), http.StatusCreated)
-	// Camera and screen share are held with the microphone.
+	wantStatus(t, "set", putRaid(t, admin, 0, 60, 60, 0), http.StatusOK)
+	say := func(c *client, dm, text string) response {
+		return c.post("/api/channels/"+dm+"/messages", map[string]any{"content": text})
+	}
+
+	// 1. Starting a conversation (or a group) is refused with the seconds left.
+	res := startDM(t, newbie, friend)
+	wantStatus(t, "new member starts a DM", res, http.StatusForbidden)
+	if !strings.Contains(string(res.body), "new members can write in ") {
+		t.Fatalf("body %s", res.body)
+	}
+	wantStatus(t, "new member starts a group", startDM(t, newbie, friend, other), http.StatusForbidden)
+	var info struct {
+		CanStart bool `json:"can_start_direct_messages"`
+	}
+	newbie.get("/api/permissions").decode(t, &info)
+	if info.CanStart {
+		t.Fatal("permissions still offer starting a conversation")
+	}
+
+	// 2. Answering someone who wrote first is allowed.
+	written := startDM(t, friend, newbie)
+	wantStatus(t, "friend starts", written, http.StatusCreated)
+	withMessage := dmID(t, written)
+	wantStatus(t, "friend writes first", say(friend, withMessage, "hi"), http.StatusCreated)
+	wantStatus(t, "new member answers", say(newbie, withMessage, "hello"), http.StatusCreated)
+
+	// 3. Writing first in a conversation that is still empty is refused.
+	empty := startDM(t, other, newbie)
+	wantStatus(t, "other starts", empty, http.StatusCreated)
+	emptyID := dmID(t, empty)
+	res = say(newbie, emptyID, "first!")
+	wantStatus(t, "new member writes first", res, http.StatusForbidden)
+	if !strings.Contains(string(res.body), "new members can write in ") {
+		t.Fatalf("body %s", res.body)
+	}
+	wantStatus(t, "once the other wrote, answering is fine", say(other, emptyID, "hey"), http.StatusCreated)
+	wantStatus(t, "new member answers there too", say(newbie, emptyID, "hey you"), http.StatusCreated)
+
+	// 4. Reactions in a conversation follow the react wait.
+	var page []struct{ ID string }
+	friendMsgs := newbie.get("/api/channels/" + withMessage + "/messages")
+	friendMsgs.decode(t, &page)
+	if len(page) == 0 {
+		t.Fatalf("no messages: %s", friendMsgs.body)
+	}
+	res = newbie.post("/api/messages/"+page[0].ID+"/reactions", map[string]string{"emoji": "👍"})
+	wantStatus(t, "new member reacts in a DM", res, http.StatusForbidden)
+	if !strings.Contains(string(res.body), "new members can react in ") {
+		t.Fatalf("body %s", res.body)
+	}
+	wantStatus(t, "an older member reacts", friend.post("/api/messages/"+page[0].ID+"/reactions", map[string]string{"emoji": "👍"}), http.StatusOK)
+
+	// Once the waits are over the member starts a conversation like anyone.
+	wantStatus(t, "off", putRaid(t, admin, 0, 0, 0, 0), http.StatusOK)
+	wantStatus(t, "starts after the wait", startDM(t, newbie, friend), http.StatusOK)
+}
+
+// Camera and screen share are held with the microphone.
+func TestTheSpeakWaitAlsoHoldsVideoInThePermissions(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	newbie := a.register(admin, "newbie")
+	wantStatus(t, "set", putRaid(t, admin, 0, 0, 0, 60), http.StatusOK)
 	var info struct {
 		Permissions int64 `json:"permissions"`
 	}

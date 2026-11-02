@@ -284,7 +284,7 @@ func (s *Service) RequireChannel(ctx context.Context, sub Subject, ch uuid.UUID,
 	if err != nil {
 		return err
 	}
-	return snap.Deny(sub, snap.Channel(sub, ch), need)
+	return snap.DenyIn(sub, ch, snap.Channel(sub, ch), need)
 }
 
 // CheckChannel is RequireChannel for an already resolved Set.

@@ -8,6 +8,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 func (h *Handler) mountDMs(r chi.Router) {
@@ -38,7 +39,7 @@ type DMMemberChange struct {
 }
 
 // canStartDMs requires the caller to hold Send direct messages with the
-// community switch on, answering the generic refusal otherwise.
+// community switch on and, for a new member, the write wait to be over.
 func (h *Handler) canStartDMs(r *http.Request) error {
 	if h.Perms == nil {
 		return nil
@@ -47,8 +48,12 @@ func (h *Handler) canStartDMs(r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if !snap.CanStartDM(auth.UserFrom(r.Context()).Subject()) {
+	sub := auth.UserFrom(r.Context()).Subject()
+	if !snap.CanStartDM(sub) {
 		return errDMStart
+	}
+	if w := snap.NewMemberWaits(sub.ID).Write; w > 0 {
+		return perm.NewMemberWriteError(w)
 	}
 	return nil
 }

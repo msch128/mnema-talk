@@ -72,6 +72,13 @@ func (s *Snapshot) CanStartDM(sub Subject) bool {
 	return s.dmEnabled && s.globalUnheld(sub).Has(SendDirectMessages)
 }
 
+// CanStartNewDM is CanStartDM for a new conversation or a new member of one:
+// it also needs the new-member write wait to be over. Replying in a
+// conversation does not (the chat package holds back writing first).
+func (s *Snapshot) CanStartNewDM(sub Subject) bool {
+	return s.CanStartDM(sub) && s.NewMemberWaits(sub.ID).Write == 0
+}
+
 // dmPerms is what sub may do in a conversation with the given members.
 func (s *Snapshot) dmPerms(sub Subject, members map[uuid.UUID]bool) Set {
 	if !members[sub.ID] {
@@ -79,7 +86,10 @@ func (s *Snapshot) dmPerms(sub Subject, members map[uuid.UUID]bool) Set {
 	}
 	p := ViewChannel
 	if s.CanStartDM(sub) {
-		p |= s.globalUnheld(sub) & dmWritePerms // conversations are exempt from the waits of new members
+		// A new member may answer, so writing stays (the chat package refuses to write first
+		// while the wait runs); reactions follow the react wait.
+		p |= s.globalUnheld(sub) & (SendMessages | AttachFiles)
+		p |= s.Global(sub) & AddReactions
 	}
 	return p
 }

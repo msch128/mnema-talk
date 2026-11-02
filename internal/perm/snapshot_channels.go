@@ -102,7 +102,11 @@ func (s *Snapshot) Channel(sub Subject, ch uuid.UUID) Set {
 	// Overwrites must not hand back what the timeout took.
 	p = s.silence(sub.ID, p)
 	if _, ok := s.dmTalks[ch]; ok {
-		return p // the Talk of a conversation: its members vouch for each other
+		// A call of a conversation follows the speak wait as a whole: joining it waits too.
+		if s.NewMemberWaits(sub.ID).Speak > 0 {
+			p &^= dmCallMask
+		}
+		return p
 	}
 	return s.hold(sub.ID, p)
 }

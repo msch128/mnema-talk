@@ -92,34 +92,64 @@ func TestNewMemberRefusalNamesTheWaitAndAnUnknownMemberCountsAsNew(t *testing.T)
 	}
 }
 
-func TestTalksOfConversationsAreExemptFromTheWaits(t *testing.T) {
+// Conversations: a new member may answer (writing stays; the chat package
+// refuses to write first), reactions follow the react wait, starting a
+// conversation follows the write wait.
+func TestConversationsFollowTheWaitsOfANewMember(t *testing.T) {
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	t.Cleanup(SetClock(func() time.Time { return now }))
 	f := permtest.NewFixture()
-	a, b := uuid.New(), uuid.New()
-	dm := f.DM(a, b)
-	talk := f.DMTalk(dm)
-	f.NewMemberRules(time.Hour, time.Hour, time.Hour)
+	newbie, old := uuid.New(), uuid.New()
+	dm := f.DM(newbie, old)
+	f.Joined(newbie, now).Joined(old, now.Add(-48*time.Hour))
+	f.NewMemberRules(time.Hour, 2*time.Hour, 3*time.Hour)
 	s := f.Snapshot()
-	if !s.Channel(Subject{ID: a}, talk).Has(Speak) {
-		t.Fatal("members of a conversation speak in its Talk at once")
+
+	got := s.Channel(Subject{ID: newbie}, dm)
+	if !got.Has(ViewChannel|SendMessages|AttachFiles) || got.Has(AddReactions) {
+		t.Fatalf("new member holds %b in a conversation", got)
+	}
+	if !s.CanStartDM(Subject{ID: newbie}) || s.CanStartNewDM(Subject{ID: newbie}) {
+		t.Fatal("a new member may reply but not start conversations")
+	}
+	if !s.CanStartNewDM(Subject{ID: old}) || !s.Channel(Subject{ID: old}, dm).Has(AddReactions) {
+		t.Fatal("older members are not held back")
+	}
+	if err := s.NewMemberRefusal(newbie, AddReactions); err == nil || err.Error() == "" {
+		t.Fatalf("react refusal %v", err)
+	}
+
+	now = now.Add(3 * time.Hour)
+	if !s.CanStartNewDM(Subject{ID: newbie}) || !s.Channel(Subject{ID: newbie}, dm).Has(AddReactions) {
+		t.Fatal("the waits are over")
 	}
 }
 
-func TestConversationsAreExemptFromTheWaits(t *testing.T) {
+func TestTheCallOfAConversationFollowsTheSpeakWait(t *testing.T) {
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	t.Cleanup(SetClock(func() time.Time { return now }))
 	f := permtest.NewFixture()
-	a, b := uuid.New(), uuid.New()
-	dm := f.DM(a, b)
-	f.Joined(a, time.Now()).Joined(b, time.Now())
-	f.NewMemberRules(time.Hour, time.Hour, time.Hour)
+	newbie, old := uuid.New(), uuid.New()
+	dm := f.DM(newbie, old)
+	call := f.DMTalk(dm)
+	f.Joined(newbie, now).Joined(old, now.Add(-48*time.Hour))
+	f.NewMemberRules(0, 0, time.Hour)
 	s := f.Snapshot()
-	got := s.Channel(Subject{ID: a}, dm)
-	if !got.Has(ViewChannel | SendMessages | AttachFiles | AddReactions) {
-		t.Fatalf("a new member writes in a conversation at once, holds %b", got)
+	sub := Subject{ID: newbie}
+
+	if got := s.Channel(sub, call); got.HasAny(Connect | Speak | Video) {
+		t.Fatalf("new member holds %b in the call", got)
 	}
-	if !s.CanStartDM(Subject{ID: a}) {
-		t.Fatal("a new member may start a conversation")
+	err := s.DenyIn(sub, call, s.Channel(sub, call), ViewChannel|Connect)
+	if err == nil || err.Error() != "new members can speak in 3600 s" {
+		t.Fatalf("join refusal: %v", err)
 	}
-	if w := s.NewMemberWaits(a); w.Write == 0 {
-		t.Fatal("the member is still held back elsewhere")
+	if !s.Channel(Subject{ID: old}, call).Has(Connect | Speak) {
+		t.Fatal("the other member joins freely")
+	}
+	now = now.Add(2 * time.Hour)
+	if !s.Channel(sub, call).Has(Connect | Speak) {
+		t.Fatal("after the wait the call is open")
 	}
 }
 

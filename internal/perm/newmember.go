@@ -22,6 +22,8 @@ const (
 	writeMask = SendMessages | AttachFiles | MentionEveryone
 	reactMask = AddReactions
 	speakMask = Speak | Video // camera and screen share count as speaking
+	// dmCallMask is what the speak wait takes in the call of a conversation.
+	dmCallMask = Connect | Speak | Video
 )
 
 // mask is what the waits take from the member.
@@ -90,13 +92,31 @@ func (s *Snapshot) newMemberRefusal(userID uuid.UUID, p, need Set) error {
 	miss := need &^ p
 	switch {
 	case w.Write > 0 && miss&writeMask != 0:
-		return httpx.ErrForbidden(fmt.Sprintf("new members can write in %d s", seconds(w.Write)))
+		return NewMemberWriteError(w.Write)
 	case w.React > 0 && miss&reactMask != 0:
 		return httpx.ErrForbidden(fmt.Sprintf("new members can react in %d s", seconds(w.React)))
 	case w.Speak > 0 && miss&speakMask != 0:
 		return httpx.ErrForbidden(fmt.Sprintf("new members can speak in %d s", seconds(w.Speak)))
 	}
 	return nil
+}
+
+// NewMemberWriteError is the refusal for writing (or starting a conversation)
+// while the member's write wait runs.
+func NewMemberWriteError(wait time.Duration) error {
+	return httpx.ErrForbidden(fmt.Sprintf("new members can write in %d s", seconds(wait)))
+}
+
+// DenyIn is Deny for a request about channel ch: joining the call of a
+// conversation, which the speak wait holds as a whole, answers with that wait.
+func (s *Snapshot) DenyIn(sub Subject, ch uuid.UUID, p, need Set) error {
+	err := s.Deny(sub, p, need)
+	if _, call := s.dmTalks[ch]; err != nil && call && p.Has(ViewChannel) && need&^p&dmCallMask != 0 {
+		if w := s.NewMemberWaits(sub.ID); w.Speak > 0 {
+			return httpx.ErrForbidden(fmt.Sprintf("new members can speak in %d s", seconds(w.Speak)))
+		}
+	}
+	return err
 }
 
 // seconds rounds a wait up to whole seconds.

@@ -4055,7 +4055,7 @@
     },
     "waits": {
       "title": "Waiting time for new members",
-      "hint": "How long after joining a new member waits before they can do this. Administrators, the Owner and roles with “Bypass new member limits” never wait. Direct messages are not affected.",
+      "hint": "How long after joining a new member waits before they can do this. Administrators, the Owner and roles with “Bypass new member limits” never wait. They also hold starting a conversation or writing first in one; answering is always possible.",
       "write": "Write messages",
       "react": "React to messages",
       "speak": "Speak and share video in Talks",

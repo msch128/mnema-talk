@@ -4055,7 +4055,7 @@
     },
     "waits": {
       "title": "Wartezeit für neue Mitglieder",
-      "hint": "Wie lange ein neues Mitglied nach dem Beitritt warten muss, bevor es das darf. Administratoren, der Owner und Rollen mit „Wartezeit für neue Mitglieder umgehen“ warten nie. Direktnachrichten sind nicht betroffen.",
+      "hint": "Wie lange ein neues Mitglied nach dem Beitritt warten muss, bevor es das darf. Administratoren, der Owner und Rollen mit „Wartezeit für neue Mitglieder umgehen“ warten nie. Sie halten auch das Starten einer Unterhaltung oder das erste Schreiben darin zurück; Antworten ist immer möglich.",
       "write": "Nachrichten schreiben",
       "react": "Auf Nachrichten reagieren",
       "speak": "In Talks sprechen und Video teilen",

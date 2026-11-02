@@ -34,7 +34,7 @@ func (h *Handler) getRaid(w http.ResponseWriter, r *http.Request) error {
 // putRaid handles PUT /api/admin/raid.
 //
 // @Summary Set the raid protection settings
-// @Description Owner and Administrators only; audited. Replaces the sign-up throttle and the minimum membership ages. While the throttle is full, or a lockdown is on, new sign-ups answer UNAVAILABLE ("sign-ups are paused"); existing members are unaffected. A new member who has not reached an age yet cannot write, react or speak in Talks (direct messages are exempt); the answer is FORBIDDEN with the seconds left, and permissions carry `new_member`. Administrators, the Owner, bots and holders of Bypass new member limits never wait. Broadcasts permissions_changed.
+// @Description Owner and Administrators only; audited. Replaces the sign-up throttle and the minimum membership ages. While the throttle is full, or a lockdown is on, new sign-ups answer UNAVAILABLE ("sign-ups are paused"); existing members are unaffected. A new member who has not reached an age yet cannot write, react or speak in Talks, start a conversation or write first in one, react in conversations (react wait) or join a conversation's call (speak wait); the answer is FORBIDDEN with the seconds left, and permissions carry `new_member`. Administrators, the Owner, bots and holders of Bypass new member limits never wait. Broadcasts permissions_changed.
 // @ID setRaidProtection
 // @Tags Onboarding
 // @Accept json

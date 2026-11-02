@@ -67,6 +67,7 @@ func SendContextFor(perms *perm.Service, ctx context.Context, ch uuid.UUID, need
 		return nil, err
 	}
 	ctx = WithSlowModeExempt(ctx, p.Has(perm.ManageMessages))
+	ctx = withNewMemberWriteWait(ctx, snap.NewMemberWaits(sub.ID).Write)
 	return WithMentionPolicy(ctx, MentionPolicy{
 		NoEveryone: !p.Has(perm.MentionEveryone),
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) },

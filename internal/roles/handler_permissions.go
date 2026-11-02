@@ -103,7 +103,7 @@ func (h *Handler) myPermissions(w http.ResponseWriter, r *http.Request) error {
 		Catalog:     perm.Catalog,
 		MaxUploadMB: snap.UploadMB(sub, h.Perms.UploadCeilingMB()),
 	}
-	info.DirectMessagesEnabled, info.CanStartDirectMessages = snap.DirectMessagesEnabled(), snap.CanStartDM(sub)
+	info.DirectMessagesEnabled, info.CanStartDirectMessages = snap.DirectMessagesEnabled(), snap.CanStartNewDM(sub)
 	info.RulesPending = snap.RulesPending(user.ID)
 	if t, ok := snap.Timeout(user.ID); ok {
 		info.TimeoutUntil, info.TimeoutReason = &t.Until, t.Reason

@@ -19,9 +19,9 @@ export class ApiError extends Error {
   }
 }
 
-/** Seconds a 429 sentence asks to wait ("slow mode: wait 7 s ...", "too many requests: retry in 7 s"), or null. */
+/** Seconds a 429 sentence asks to wait ("slow mode: wait 7 s ...", "too many requests: retry in 7 s", "new members can write in 7 s"), or null. */
 export function waitSeconds(message: unknown): number | null {
-  const match = typeof message === 'string' ? /^(?:slow mode: wait|too many requests: retry in) (\d+) s/.exec(message) : null
+  const match = typeof message === 'string' ? /^(?:slow mode: wait|too many requests: retry in|new members can \w+ in) (\d+) s/.exec(message) : null
   return match ? Number(match[1]) : null
 }
 

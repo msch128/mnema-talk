@@ -151,12 +151,19 @@ snapshot), so the microphone and the Stage's raised hand work at that moment
 without rejoining. Turning a gate on later holds members who joined recently by
 their real sign-up time.
 
+**Direct messages follow the waits too**, because DM spam is the classic raid
+vector. While the *write* wait runs a new member cannot start a conversation or
+a group, nor add people to one (`403` with the seconds left; `GET
+/api/permissions` then says `can_start_direct_messages: false`). They can answer
+a conversation where the other person wrote first, but not write first, not even
+in an existing, still empty conversation (`internal/chat`, `gateNewMemberFirstWrite`).
+Reactions in conversations follow the *react* wait, and joining the call of a
+conversation (which includes speaking and video there) follows the *speak* wait.
+
 Who never waits: the Owner, bots, Administrators, and members with a role that
 holds **Bypass new member limits** (bit 26, [roles](roles-and-permissions.md);
 Moderator and Admin roles get it by migration 0083). It is separate from the
-slow mode exemption. **Direct messages are exempt**: conversations, and the
-Talks started from one, are not held back, because their members chose each
-other. A member the permission snapshot does not know yet (it is reloaded at
+slow mode exemption. A member the permission snapshot does not know yet (it is reloaded at
 least every minute) counts as having just joined.
 
 ## Auto-delete
