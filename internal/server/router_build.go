@@ -153,7 +153,7 @@ func (c *components) newCore() {
 	}
 	go chat.RunSlowModePrune(c.ctx, d.DB, time.Hour)
 	c.newChat()
-	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
+	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub, Audit: c.auditLog, SelfRoleLimit: httpx.NewRateLimiter(6, time.Minute).Named("self_roles")}
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
 	c.onboardH.Names, c.onboardH.Events = d.Names, c.pub
 	c.newImport()

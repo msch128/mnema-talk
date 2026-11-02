@@ -18,9 +18,10 @@ const (
 	// the hierarchy checks below see the state they write into.
 	lockKey = 0x6d6e7065726d // "mnperm"
 
-	maxRoles      = 250
-	maxOverwrites = 200
-	maxRoleName   = 32
+	maxRoles           = 250
+	maxOverwrites      = 200
+	maxRoleName        = 32
+	maxRoleDescription = 200
 )
 
 // RoleInput is a role to create or the fields of one to change; omitted
@@ -31,6 +32,11 @@ type RoleInput struct {
 	Permissions *Set    `json:"permissions" swaggertype:"integer" minimum:"0" binding:"optional"`
 	Hoist       *bool   `json:"hoist" binding:"optional"`
 	Mentionable *bool   `json:"mentionable" binding:"optional"`
+	// SelfAssignable lets members add and remove the role themselves; refused
+	// for @everyone, managed roles and roles with Administrator or admin-area permissions.
+	SelfAssignable *bool `json:"self_assignable" binding:"optional"`
+	// Description is one line shown to members choosing roles.
+	Description *string `json:"description" maxLength:"200" binding:"optional"`
 	// MaxUploadMB: absent leaves it alone, null inherits the global limit, a
 	// number sets the role's limit. Only the Owner may send it.
 	MaxUploadMB OptionalInt `json:"max_upload_mb" swaggertype:"integer" minimum:"1" binding:"optional" extensions:"x-nullable"`

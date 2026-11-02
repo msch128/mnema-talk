@@ -39,6 +39,12 @@ type Role struct {
 	// inherits the global limit. A member gets the highest override of their
 	// roles (@everyone included), never above the server's ceiling.
 	MaxUploadMB *int `json:"max_upload_mb" minimum:"1" extensions:"x-nullable"`
+	// SelfAssignable lets every member add or remove this role on their own
+	// account. Only roles without Administrator or admin-area permissions can be
+	// flagged, never @everyone or a managed role. Omitted when false.
+	SelfAssignable bool `json:"self_assignable,omitempty" binding:"optional"`
+	// Description says in a line what the role is for; the member picker shows it.
+	Description string `json:"description,omitempty" maxLength:"200" binding:"optional"`
 }
 
 type overwrite struct{ allow, deny Set }

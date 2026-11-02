@@ -70,6 +70,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['media has expired or was deleted', 'srvMediaHasExpiredOrWas'],
   ['media not found', 'srvMediaNotFound'],
   ['member not found', 'srvMemberNotFound'],
+  ['members cannot take or drop this role themselves', 'srvMembersCannotTakeOr'],
   ['message not found', 'srvMessageNotFound'],
   ['message not found in this channel', 'srvMessageNotFoundInThis'],
   ['message to reply to not found', 'replyGone', []],

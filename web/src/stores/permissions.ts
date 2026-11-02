@@ -109,7 +109,8 @@ export const usePermissionsStore = defineStore('permissions', () => {
   /** May the member change this other member's roles or moderate them? */
   function outranksMember(userId: string): boolean {
     if (isOwner.value) return true
-    const top = Math.max(0, ...(memberRoles.value[userId] ?? []).map(id => roleById(id)?.position ?? 0))
+    // A role members choose for themselves is cosmetic and never raises a rank (as on the server).
+    const top = Math.max(0, ...(memberRoles.value[userId] ?? []).map(id => { const r = roleById(id); return r && !r.self_assignable ? r.position : 0 }))
     return top < topPosition.value
   }
 

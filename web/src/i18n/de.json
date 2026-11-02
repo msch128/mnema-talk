@@ -205,10 +205,14 @@
       "pollNoWithdraw": "Eine Stimme in einer anonymen Umfrage lässt sich nicht zurücknehmen.",
       "automodSend": "Deine Nachricht wurde nicht gesendet: Sie verstößt gegen die Regel „{rule}“ der Community. Die Moderatoren können das sehen.",
       "automodEdit": "Deine Änderung wurde nicht gespeichert: Sie verstößt gegen die Regel „{rule}“ der Community. Die Moderatoren können das sehen.",
+      "srvASelfAssignableRoleCannot": "Eine frei wählbare Rolle darf keine Administrator-, Admin-Bereich- oder Moderationsrechte haben.",
+      "srvASelfAssignableRoleCannot2": "Einer frei wählbaren Rolle dürfen in einem Kanal keine Administrator-, Admin-Bereich- oder Moderationsrechte erlaubt werden.",
       "srvCreatedChannelSHaveMessages": "In {a} erstellten Kanälen stehen jetzt Nachrichten. Bestätige, dass sie ebenfalls gelöscht werden.",
+      "srvEveryoneAndManagedRoles": "@everyone und verwaltete Rollen können nicht selbst gewählt werden.",
       "srvIsNotADomain": "{a} ist keine Domain.",
       "srvFileIsRequired": "Die Datei „{a}“ ist erforderlich.",
       "srvIsTooLong": "{a} ist zu lang.",
+      "srvMembersCannotTakeOr": "Mitglieder können diese Rolle nicht selbst annehmen oder abgeben.",
       "srvMustBeAnRfc3339": "{a} muss eine Zeitangabe im Format RFC 3339 sein.",
       "srvNotFound": "{a} wurde nicht gefunden.",
       "srv401Unauthorized": "Du bist nicht angemeldet.",
@@ -226,6 +230,7 @@
       "srvSmtpIsNotConfiguredSmtp": "Dieser Server kann noch keine E-Mails senden.",
       "srvTalkNotFound": "Dieser Talk wurde nicht gefunden.",
       "srvTemporaryTalksFollowTheirLobby": "Temporäre Talks übernehmen die Berechtigungen ihrer Lobby.",
+      "srvTheOwnerHasNoRoles": "Der Owner hat keine Rollen zur Auswahl.",
       "srvWaitForAReplyBefore": "Warte auf eine Antwort, bevor du mehr als {a} Nachrichten sendest.",
       "srvYouAreInGroupDirect": "Du bist schon in {a} Gruppen-Direktnachrichten. Verlasse zuerst eine.",
       "srvYouHaveStartedEnoughDirect": "Du hast für heute genug Direktnachrichten gestartet. Versuche es morgen wieder.",
@@ -3074,7 +3079,9 @@
         "create": "Rolle erstellt",
         "update": "Rolle bearbeitet",
         "delete": "Rolle gelöscht",
-        "reorder": "Rollen sortiert"
+        "reorder": "Rollen sortiert",
+        "self_assign": "Rolle selbst angenommen",
+        "self_remove": "Rolle selbst abgegeben"
       },
       "user": {
         "roles_set": "Rollen zugewiesen",
@@ -3278,6 +3285,14 @@
     "uploadHint": "Leer lassen, um das globale Limit zu nutzen. Mitglieder erhalten das höchste Limit ihrer Rollen, nie mehr als das Server-Maximum.",
     "uploadInvalid": "Gib eine ganze Zahl in MB ein oder lass das Feld leer.",
     "colorInvalid": "Nutze eine Farbe wie #5fd0b6.",
+    "selfAssign": {
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Wofür ist diese Rolle?",
+      "label": "Mitglieder können sich diese Rolle selbst geben",
+      "hint": "Erscheint unter Einstellungen > Rollen. Mitglieder nehmen sie frei an und geben sie ab; jede Änderung steht im Audit-Log.",
+      "blocked": "Diese Rolle hat Administrations- oder Moderationsrechte. Schalte sie ab oder schalte dies ab.",
+      "unavailable": "Nicht möglich, solange die Rolle Administrations- oder Moderationsrechte hat."
+    },
     "botRoles": "Bot-Rollen",
     "botRoleHint": "Verwaltete Rolle eines Bots: sie lässt sich nicht entfernen.",
     "botRoleNote": "„{name}“ ist die eigene Rolle eines Bots. Sie entsteht mit dem Bot, folgt seinem Namen und wird mit ihm gelöscht; nur dieser Bot hat sie, und sie lässt sich nicht von Hand umbenennen, jemand anderem geben, dem Bot wegnehmen oder löschen. Farbe und Rechte kannst du ändern. Niemand kann einem Bot Rechte geben, die er selbst nicht hat, und nur der Owner kann einen Bot erhöhen.",
@@ -4107,6 +4122,7 @@
     "tabModeration": "Moderation",
     "strikeCount": "{count} Verwarnungen",
     "privacy": "Das sehen nur Moderatoren. Das Mitglied bekommt es nie zu sehen, und es ist nicht Teil seines Datenexports.",
+      "roles": "Rollen",
     "loadFailed": "Der Moderationsverlauf konnte nicht geladen werden.",
     "saveFailed": "Die Notiz konnte nicht gespeichert werden. Versuche es noch einmal.",
     "deleteFailed": "Die Notiz konnte nicht gelöscht werden. Versuche es noch einmal.",
@@ -4357,6 +4373,15 @@
     "discard": "Verwerfen",
     "keepEditing": "Weiter bearbeiten",
     "shortcut": "Speichern mit {keys}"
+  },
+  "selfRoles": {
+    "title": "Rollen zum Auswählen",
+    "intro": "Diese Rollen stehen allen offen. Schalte sie nach Belieben ein oder aus; sie geben niemandem mehr Rechte über andere.",
+    "empty": "Es gibt keine Rollen zum Auswählen.",
+    "loadFailed": "Die Rollen konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "switch": "Rolle {name} annehmen",
+    "noDescription": "Keine Beschreibung"
   },
   "settings": {
     "title": "Einstellungen",

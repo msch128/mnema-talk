@@ -12,6 +12,7 @@ describe('settings dialog sections', () => {
   it('lists this device first, so the microphone is the first thing to find', () => {
     expect(SETTINGS_TABS[0]).toBe('audio')
     expect(SETTINGS_TABS.indexOf('app')).toBeLessThan(SETTINGS_TABS.indexOf('signin'))
+    expect(isSettingsTab('roles')).toBe(true)
   })
 
   it('opens on the section the member used last, and on the first one before that', () => {

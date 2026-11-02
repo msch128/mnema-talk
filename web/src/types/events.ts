@@ -109,6 +109,8 @@ export interface ServerEventPayloads {
   user_update: UserUpdate
   /** A member's timeout started (timeout_until) or ended (null). */
   member_timeout: { id: string; timeout_until: string | null }
+  /** A member took or dropped a role they may choose themselves: their roles now. */
+  member_roles_changed: { id: string; role_ids: string[] }
   /** Told to the member a moderator acted on. */
   moderation_notice: ModerationNotice
   /** A moderator signed this member out everywhere (/kick); the connection closes right after. They may sign in again at once. */
@@ -311,6 +313,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
     : isAuthUser(payload)],
   ['member_timeout', payload => isIdentifier(payload['id']) && (payload['timeout_until'] === null || isTimestamp(payload['timeout_until']))
     && onlyFields(payload, ['id', 'timeout_until'])],
+  ['member_roles_changed', payload => isIdentifier(payload['id']) && isArrayOf(payload['role_ids'], isIdentifier) && onlyFields(payload, ['id', 'role_ids'])],
   ['kicked', payload => isString(payload['reason'], 400) && onlyFields(payload, ['reason'])],
   ['reminder_update', payload => isIdentifier(payload['id']) && (payload['state'] === 'created' || payload['state'] === 'due' || payload['state'] === 'removed')
     && onlyFields(payload, ['id', 'state'])],
@@ -372,7 +375,7 @@ const VOICE_KICK_REASONS = new Set(['room_full', 'missing_permission', 'rules_no
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'dm_prefs_updated', 'dm_call_ring', 'dm_call_end', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
-  'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
+  'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'member_roles_changed', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'cameras_capped', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'community_updated'
 ])
