@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { isRecord } from '../types/validation'
 import { isInvitePath } from './inviteLink'
 import { dmPath, talkPath, textPath, type PathChannel, type PathDm } from './routePaths'
+import { parseWikiLocation, type WikiLocation } from './wikiPaths'
 
 export type Route =
   | { view: 'root' }
@@ -13,6 +14,8 @@ export type Route =
   | { view: 'voice'; channelRef: string; showChat?: boolean; messageId?: string; watching: boolean }
   // dmRef is a username (a conversation of two) or the short id of a group.
   | { view: 'dm'; dmRef: string; group: boolean; messageId?: string; threadId?: string }
+  // The wiki dialog (doc/wiki.md): /wiki, /wiki/<slug>, /wiki/<slug>/history, /wiki/<slug>/edit, /wiki/search, /wiki/new, /wiki/deleted.
+  | { view: 'wiki'; wiki: WikiLocation }
 export type ChannelRoute = Extract<Route, { view: 'chat' | 'voice' }>
 export interface RouteChannel extends PathChannel { previous_slugs?: readonly string[] | undefined }
 export interface RouteOptions { isAdmin?: boolean; channels?: RouteChannel[]; dms?: PathDm[] }
@@ -68,6 +71,7 @@ export function parseRoute(pathname = (typeof window !== 'undefined' ? window.lo
   if (parts[0] === 'dm' && parts[1]) return parseDmRoute(parts)
   if (parts[0] === 'admin') return { view: 'admin', tab: parts[1] || 'users' }
   if (parts[0] === 'settings') return { view: 'settings', tab: parts[1] || 'signin' }
+  if (parts[0] === 'wiki') return { view: 'wiki', wiki: parseWikiLocation(parts.slice(1).map(decode)) }
   return { view: 'root' }
 }
 

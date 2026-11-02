@@ -1,0 +1,80 @@
+// The history of a wiki page: its revisions, newest first, one chosen revision
+// with the change it made, and restoring it as a new revision.
+import { computed, ref, watch } from 'vue'
+import { caughtErrorMessage, isApiError } from '../lib/api'
+import { confirm } from '../lib/confirm'
+import { fetchWikiRevision, fetchWikiRevisions, restoreWikiRevision, type WikiPage, type WikiRevision } from '../lib/wikiApi'
+import { goWiki } from '../lib/wikiNav'
+import { t } from '../i18n'
+import { useToastStore } from '../stores/toast'
+import { useWikiStore } from '../stores/wiki'
+
+const PAGE = 50
+
+export function useWikiHistory(page: () => WikiPage) {
+  const wiki = useWikiStore()
+  const toasts = useToastStore()
+  const revisions = ref<WikiRevision[]>([])
+  const more = ref(false)
+  const loading = ref(true)
+  const failed = ref(false)
+  const chosen = ref<WikiRevision | null>(null)
+  // The text of the revision before the chosen one; null while it loads, '' when there is none (the first, or pruned).
+  const previous = ref<string | null>(null)
+  const busy = ref(false)
+
+  const latest = computed(() => revisions.value[0]?.rev ?? page().rev)
+  const mayRestore = computed(() => wiki.canEdit && (!page().locked || wiki.canManage))
+
+  async function load(before?: number) {
+    loading.value = true
+    failed.value = false
+    try {
+      const got = await fetchWikiRevisions(page().slug, before)
+      revisions.value = before ? [...revisions.value, ...got] : got
+      more.value = got.length >= PAGE
+      if (!before && got[0]) await choose(got[0].rev)
+    } catch {
+      failed.value = true
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function choose(rev: number) {
+    chosen.value = null
+    previous.value = null
+    try {
+      const [current, before] = await Promise.all([
+        fetchWikiRevision(page().slug, rev),
+        rev > 1 ? fetchWikiRevision(page().slug, rev - 1).catch(() => null) : Promise.resolve(null)
+      ])
+      chosen.value = current
+      previous.value = before?.content ?? ''
+    } catch (error) {
+      toasts.error(caughtErrorMessage(error, t('wiki.revisionFailed')))
+    }
+  }
+
+  async function restore(rev: number) {
+    if (busy.value) return
+    const ok = await confirm({ title: t('wiki.restoreTitle', { n: rev }), body: t('wiki.restoreBody'), confirmLabel: t('wiki.restore') })
+    if (!ok) return
+    busy.value = true
+    try {
+      const next = await restoreWikiRevision(page().slug, rev, { base_rev: page().rev })
+      wiki.applyPage(next)
+      toasts.success(t('wiki.restoredRevision', { n: rev }))
+      void goWiki({ mode: 'page', slug: next.slug }, true)
+    } catch (error) {
+      toasts.error(isApiError(error) && error.status === 409 ? t('wiki.restoreStale') : caughtErrorMessage(error, t('wiki.actionFailed')))
+      void load()
+    } finally {
+      busy.value = false
+    }
+  }
+
+  watch(() => page().slug, () => { void load() }, { immediate: true })
+
+  return { revisions, more, loading, failed, chosen, previous, busy, latest, mayRestore, load, choose, restore }
+}

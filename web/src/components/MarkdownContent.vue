@@ -11,6 +11,10 @@ import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { roleColorCss } from '../lib/permissions'
 import { roleColors as vRoleColors } from '../directives/roleColor'
+import { wikiLinkRule } from '../lib/wikiLinks'
+import { navigate } from '../lib/router'
+import { wikiPath } from '../lib/wikiPaths'
+import type { WikiPageSummary } from '../lib/wikiApi'
 
 const props = defineProps({
   content: {
@@ -26,6 +30,11 @@ const props = defineProps({
   previews: {
     type: Boolean,
     default: true
+  },
+  // A wiki page: the document length limit, and [[Page]] links to these pages.
+  wikiPages: {
+    type: Array as PropType<readonly WikiPageSummary[] | null>,
+    default: null
   }
 })
 
@@ -43,7 +52,8 @@ const mentionedRoles = computed(() => props.mentionRoles
 const parsedHtml = computed(() => renderMarkdown(props.content, {
   known: knownNames.value,
   me: authStore.user?.username || '',
-  roles: mentionedRoles.value
+  roles: mentionedRoles.value,
+  ...(props.wikiPages ? { document: true, rules: [wikiLinkRule(props.wikiPages)] } : {})
 }))
 
 function openMention(el: HTMLElement) {
@@ -65,6 +75,11 @@ function onClick(event: MouseEvent) {
     return
   }
   if (confirmLink(event, target)) return
+  const wiki = target?.closest<HTMLElement>('.md-wikilink[data-wiki]')
+  if (wiki?.dataset.wiki) {
+    navigate(wikiPath({ mode: 'page', slug: wiki.dataset.wiki }))
+    return
+  }
   const mention = target?.closest<HTMLElement>('.md-mention[data-mention]')
   if (mention) {
     openMention(mention)
@@ -101,6 +116,11 @@ function isSpoilerElement(target: EventTarget | null): target is Element {
 }
 
 function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter' && event.target instanceof HTMLElement && event.target.dataset.wiki) {
+    event.preventDefault()
+    navigate(wikiPath({ mode: 'page', slug: event.target.dataset.wiki }))
+    return
+  }
   if (event.key === 'Enter' && event.target instanceof HTMLElement && event.target.dataset.mention) {
     event.preventDefault()
     openMention(event.target)

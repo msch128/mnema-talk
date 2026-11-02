@@ -39,22 +39,13 @@ import StatusDialog from './components/StatusDialog.vue'
 import { useStatusEditor } from './composables/useStatusEditor'
 import LegalModal from './components/LegalModal.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
-import ToastHost from './components/ToastHost.vue'
-import CallHost from './components/CallHost.vue'
-import ConfirmDialog from './components/ConfirmDialog.vue'
-import MediaViewer from './components/MediaViewer.vue'
 import WelcomeFlow from './components/WelcomeFlow.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
 import SkipLinks from './components/SkipLinks.vue'
 import TimeoutBanner from './components/TimeoutBanner.vue'
-import ModerationDialog from './components/ModerationDialog.vue'
-import MessageModerationDialog from './components/MessageModerationDialog.vue'
-import EditHistoryDialog from './components/EditHistoryDialog.vue'
-import ReportDialog from './components/ReportDialog.vue'
-import ForwardDialog from './components/ForwardDialog.vue'
-import LaterDialog from './components/LaterDialog.vue'
-import TalkSettingsHost from './components/TalkSettingsHost.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
+import OverlayHosts from './components/OverlayHosts.vue'
+import WikiDialog from './components/WikiDialog.vue'
 import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
@@ -358,6 +349,7 @@ onMounted(async () => {
       <!-- Settings: account, privacy, push and app, audio -->
       <SettingsDialog v-if="accountStore.dialogOpen" />
       <EventsModal v-if="eventsRequest && authStore.isAuthenticated && serverFeatures.events" :focus-event-id="eventsRequest.eventId" :focus-seq="eventsRequest.seq" @close="closeEvents" />
+      <WikiDialog v-if="currentRoute.view === 'wiki' && serverFeatures.wiki" />
       <NotificationSettingsDialog v-if="notifyDialogOpen" @close="notifyDialogOpen = false" />
       <ShortcutsDialog v-if="shortcutsOpen" @close="shortcutsOpen = false" />
 
@@ -384,17 +376,6 @@ onMounted(async () => {
       </button>
     </template>
 
-    <ToastHost />
-    <!-- Before the confirm host: its "Discard changes?" must open above the Talk settings. -->
-    <TalkSettingsHost />
-    <CallHost />
-    <ConfirmDialog />
-    <MediaViewer />
-    <ModerationDialog />
-    <MessageModerationDialog />
-    <EditHistoryDialog />
-    <ReportDialog />
-    <ForwardDialog />
-    <LaterDialog />
+    <OverlayHosts />
   </div>
 </template>
