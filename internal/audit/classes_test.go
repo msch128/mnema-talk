@@ -34,7 +34,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"outgoing_webhook.rotate_secret": VisPrivileged, "outgoing_webhook.delete": VisPrivileged,
 		"media.prune": VisPrivileged, "media.orphans_cleanup": VisPrivileged, "media.delete": VisPrivileged,
 		"import.discord": VisPrivileged, "import.discord_undo": VisPrivileged,
-		"settings.upload_limit": VisPrivileged, "settings.onboarding": VisPrivileged, "settings.community_icon": VisPrivileged, "settings.community_icon_remove": VisPrivileged, "system.update": VisPrivileged, "system.mail_test": VisPrivileged,
+		"settings.upload_limit": VisPrivileged, "settings.onboarding": VisPrivileged, "settings.raid": VisPrivileged, "settings.lockdown": VisPrivileged, "settings.community_icon": VisPrivileged, "settings.community_icon_remove": VisPrivileged, "system.update": VisPrivileged, "system.mail_test": VisPrivileged,
 		"moderation.timeout": VisAuditors, "moderation.timeout_remove": VisAuditors, "moderation.ban": VisAuditors,
 		"moderation.unban": VisAuditors, "moderation.ban_expired": VisAuditors,
 		"emoji.create": VisAuditors, "emoji.rename": VisAuditors, "emoji.delete": VisAuditors,

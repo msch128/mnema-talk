@@ -146,6 +146,17 @@
       "fieldMax": "{field}: at most {count} characters",
       "fileTooBig": "The file is larger than {size} MB",
       "missingPermission": "You don’t have permission to do that.",
+      "srvHoursMustBeBetween0": "Hours must be between 0 and {a}.",
+      "invitesPausedLockdown": "Creating invites is paused during a lockdown.",
+      "srvJoinLimitMustBeBetween0": "The sign-up limit must be between 0 and {a}.",
+      "srvJoinWindowMinutesMustBe": "The sign-up window must be between {a} and {b} minutes.",
+      "srvMinAgeReactMinutesMustBe": "The waiting time to react must be between 0 and {a} minutes.",
+      "srvMinAgeSpeakMinutesMustBe": "The waiting time to speak must be between 0 and {a} minutes.",
+      "srvMinAgeWriteMinutesMustBe": "The waiting time to write must be between 0 and {a} minutes.",
+      "newMemberReact": "New here: you can react in {time}.",
+      "newMemberSpeak": "New here: you can speak in {time}.",
+      "newMemberWrite": "New here: you can write in {time}.",
+      "signupsPaused": "Sign-ups are paused for now. Try again later.",
       "slowMode": "Slow mode: wait {seconds} s before posting again",
       "rateWait": "That was a lot at once. Try again in {time}.",
       "linkInvalid": "This link is invalid or has expired.",
@@ -1748,6 +1759,7 @@
       "emoji": "Emoji",
       "reports": "Reports",
       "automod": "Automod",
+      "raid": "Raid protection",
       "status": "Status",
       "import": "Import"
     },
@@ -3018,6 +3030,10 @@
       "name": "Manage events",
       "desc": "Create, edit and cancel community events."
     },
+    "bypass_new_member_limits": {
+      "name": "Bypass new member limits",
+      "desc": "Write, react and speak right away, without waiting out the minimum membership age (raid protection)."
+    },
     "groups": {
       "general": "General",
       "text": "Text",
@@ -3174,6 +3190,8 @@
       "settings": {
         "upload_limit": "Upload limit changed",
         "onboarding": "Welcome and rules changed",
+        "raid": "Raid protection changed",
+        "lockdown": "Lockdown switched",
         "community_icon": "Community icon changed",
         "community_icon_remove": "Community icon removed"
       },
@@ -3999,6 +4017,56 @@
     "full": "Your block list is full. Unblock someone first.",
     "collapsed": "Blocked message",
     "show": "Show"
+  },
+  "raid": {
+    "title": "Raid protection",
+    "hint": "Keep a sudden wave of new accounts calm: limit sign-ups, make new members wait before they can write, react or speak, or close the door for a while.",
+    "loadFailed": "Couldn’t load the raid protection settings.",
+    "saved": "Raid protection saved.",
+    "lockdown": {
+      "title": "Lockdown",
+      "offText": "Sign-ups are open.",
+      "onText": "Lockdown is on: nobody new can sign up.",
+      "onUntil": "Lockdown is on until {time}: nobody new can sign up.",
+      "hint": "Closes the door at once. Members who are already here are not affected.",
+      "pauseInvites": "Also pause creating invites",
+      "invitesPaused": "Creating invites is paused too.",
+      "ends": "Ends",
+      "durations": {
+        "0": "when I switch it off",
+        "1": "in 1 hour",
+        "6": "in 6 hours",
+        "24": "in 24 hours"
+      },
+      "start": "Start lockdown",
+      "end": "End lockdown",
+      "failed": "Couldn’t switch the lockdown.",
+      "banner": "Lockdown is on: nobody new can sign up.",
+      "bannerUntil": "Lockdown is on until {time}: nobody new can sign up.",
+      "manage": "Open settings"
+    },
+    "throttle": {
+      "title": "Sign-up limit",
+      "hint": "When this many people joined within the window, further sign-ups wait until there is room again. 0 turns the limit off.",
+      "limit": "New members per window",
+      "window": "Window in minutes",
+      "status": "{count} joined in the last {minutes} min.",
+      "invalid": "Enter whole numbers; the window is 1 to 1440 minutes."
+    },
+    "waits": {
+      "title": "Waiting time for new members",
+      "hint": "How long after joining a new member waits before they can do this. Administrators, the Owner and roles with “Bypass new member limits” never wait. Direct messages are not affected.",
+      "write": "Write messages",
+      "react": "React to messages",
+      "speak": "Speak in Talks",
+      "none": "No wait"
+    }
+  },
+  "newMember": {
+    "write": "You can write in {time}.",
+    "react": "You can react in {time}.",
+    "speak": "You can speak in {time}.",
+    "bannerHint": "You are new here."
   },
   "automod": {
     "title": "Automod",

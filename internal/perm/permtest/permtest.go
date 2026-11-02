@@ -50,6 +50,7 @@ func NewFixture() *Fixture {
 		CategoryOv:    map[uuid.UUID]perm.Scope{},
 		Timeouts:      map[uuid.UUID]perm.Timeout{},
 		RulesAccepted: map[uuid.UUID]int{},
+		Joined:        map[uuid.UUID]time.Time{},
 	}}).touch()
 }
 
@@ -142,6 +143,18 @@ func (f *Fixture) Rules(version int) *Fixture {
 // AcceptedRules records the rules version a member has accepted.
 func (f *Fixture) AcceptedRules(user uuid.UUID, version int) *Fixture {
 	f.st.RulesAccepted[user] = version
+	return f.touch()
+}
+
+// NewMemberRules sets the minimum membership ages (zero: that gate is off).
+func (f *Fixture) NewMemberRules(write, react, speak time.Duration) *Fixture {
+	f.st.NewMember = perm.NewMemberRules{Write: write, React: react, Speak: speak}
+	return f.touch()
+}
+
+// Joined records when a member joined.
+func (f *Fixture) Joined(user uuid.UUID, at time.Time) *Fixture {
+	f.st.Joined[user] = at
 	return f.touch()
 }
 

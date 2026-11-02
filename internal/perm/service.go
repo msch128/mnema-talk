@@ -309,6 +309,9 @@ func (s *Service) RequireGlobal(ctx context.Context, sub Subject, need Set) erro
 		if snap.RulesPending(sub.ID) && need&^p&TimeoutMask != 0 {
 			return ErrRulesNotAccepted
 		}
+		if nm := snap.newMemberRefusal(sub.ID, p, need); nm != nil {
+			return nm
+		}
 		return httpx.ErrForbidden("missing permission: " + name)
 	}
 	return nil

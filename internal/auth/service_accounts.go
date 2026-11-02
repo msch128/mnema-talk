@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/raid"
 	"github.com/msch128/mnema-talk/internal/textcut"
 )
 
@@ -36,6 +37,11 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 	}
 	if !known {
 		return nil, ErrInvalidInvite
+	}
+
+	// A shut door (lockdown, sign-up throttle) costs no password hash either.
+	if err := raid.CheckSignup(ctx, p); err != nil {
+		return nil, err
 	}
 
 	hash, err := hashPasswordCtx(ctx, password)

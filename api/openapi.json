@@ -7203,6 +7203,145 @@
         ],
         "type": "object"
       },
+      "raid.Input": {
+        "properties": {
+          "join_limit": {
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "join_window_minutes": {
+            "maximum": 1440,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "min_age_react_minutes": {
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min_age_speak_minutes": {
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min_age_write_minutes": {
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "join_limit",
+          "join_window_minutes",
+          "min_age_react_minutes",
+          "min_age_speak_minutes",
+          "min_age_write_minutes"
+        ],
+        "type": "object"
+      },
+      "raid.Lockdown": {
+        "properties": {
+          "active": {
+            "description": "Active is true while sign-ups are stopped (switched on and not expired).",
+            "type": "boolean"
+          },
+          "pause_invites": {
+            "description": "PauseInvites also stops creating invites.",
+            "type": "boolean"
+          },
+          "started_at": {
+            "description": "StartedAt is when it was switched on.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "until": {
+            "description": "Until is when the lockdown ends by itself; null: when switched off.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "active",
+          "pause_invites"
+        ],
+        "type": "object"
+      },
+      "raid.LockdownInput": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "hours": {
+            "description": "Hours ends the lockdown by itself after this long (1 to 720); 0 or\nomitted: it stays until switched off.",
+            "maximum": 720,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "pause_invites": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "active"
+        ],
+        "type": "object"
+      },
+      "raid.Settings": {
+        "properties": {
+          "join_limit": {
+            "description": "JoinLimit is the most new members within JoinWindowMinutes; 0: no throttle.",
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "join_window_minutes": {
+            "maximum": 1440,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "joined_in_window": {
+            "description": "JoinedInWindow is how many members joined within the window right now.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "lockdown": {
+            "$ref": "#/components/schemas/raid.Lockdown"
+          },
+          "min_age_react_minutes": {
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min_age_speak_minutes": {
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min_age_write_minutes": {
+            "description": "MinAgeWriteMinutes, MinAgeReactMinutes and MinAgeSpeakMinutes are how\nlong after joining a new member may write, react and speak; 0: at once.",
+            "maximum": 43200,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "join_limit",
+          "join_window_minutes",
+          "joined_in_window",
+          "lockdown",
+          "min_age_react_minutes",
+          "min_age_speak_minutes",
+          "min_age_write_minutes"
+        ],
+        "type": "object"
+      },
       "roles.ChannelPermissions": {
         "properties": {
           "channel_id": {
@@ -7234,6 +7373,23 @@
         "required": [
           "role_ids"
         ],
+        "type": "object"
+      },
+      "roles.NewMemberInfo": {
+        "properties": {
+          "react_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "speak_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "write_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "roles.OverwritesBody": {
@@ -7277,6 +7433,10 @@
             "description": "MaxUploadMB is the largest file the caller may upload, in MB: their\nroles' override or the global limit, never above the server's ceiling.\nIt changes with permissions_changed.",
             "minimum": 1,
             "type": "integer"
+          },
+          "new_member": {
+            "$ref": "#/components/schemas/roles.NewMemberInfo",
+            "description": "NewMember is set while the caller is too new to write, react or speak\n(raid protection): per action the moment it opens up."
           },
           "owner": {
             "description": "Owner is true for the Owner, who may do everything and cannot be\nrestricted.",
@@ -16379,6 +16539,271 @@
         "summary": "Send a test event",
         "tags": [
           "Webhooks"
+        ]
+      }
+    },
+    "/api/admin/raid": {
+      "get": {
+        "description": "Owner and Administrators only. The sign-up throttle (at most join_limit new members within join_window_minutes), the minimum membership ages before a new member may write, react and speak (0: off), how many members joined within the window right now, and the state of the lockdown.",
+        "operationId": "getRaidProtection",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/raid.Settings"
+                }
+              }
+            },
+            "description": "Settings."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may read it."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read the raid protection settings",
+        "tags": [
+          "Onboarding"
+        ]
+      },
+      "put": {
+        "description": "Owner and Administrators only; audited. Replaces the sign-up throttle and the minimum membership ages. While the throttle is full, or a lockdown is on, new sign-ups answer UNAVAILABLE (\"sign-ups are paused\"); existing members are unaffected. A new member who has not reached an age yet cannot write, react or speak in Talks (direct messages are exempt); the answer is FORBIDDEN with the seconds left, and permissions carry `new_member`. Administrators, the Owner, bots and holders of Bypass new member limits never wait. Broadcasts permissions_changed.",
+        "operationId": "setRaidProtection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/raid.Input"
+              }
+            }
+          },
+          "description": "New settings.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/raid.Settings"
+                }
+              }
+            },
+            "description": "Settings."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may change it, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the raid protection settings",
+        "tags": [
+          "Onboarding"
+        ]
+      }
+    },
+    "/api/admin/raid/lockdown": {
+      "put": {
+        "description": "Owner and Administrators only; audited. While the lockdown is on, nobody new can sign up (also with a valid invite); with `pause_invites` no invite can be created either. `hours` ends it by itself after that long (1 to 720); without it, it stays until switched off. Existing members and their sessions are unaffected.",
+        "operationId": "setLockdown",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/raid.LockdownInput"
+              }
+            }
+          },
+          "description": "Lockdown.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/raid.Settings"
+                }
+              }
+            },
+            "description": "Settings."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may change it, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Switch the lockdown on or off",
+        "tags": [
+          "Onboarding"
         ]
       }
     },

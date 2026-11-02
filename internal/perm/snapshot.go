@@ -100,6 +100,10 @@ type Snapshot struct {
 	// enforce it from this one snapshot. The Owner and bots are exempt.
 	rulesVersion  int
 	rulesAccepted map[uuid.UUID]int
+	// newMember are the minimum membership ages (zero: off) and joined when
+	// each member joined; it is only filled while a gate is on.
+	newMember NewMemberRules
+	joined    map[uuid.UUID]time.Time
 }
 
 // Timeout is a member's timeout: they keep reading but lose TimeoutMask.
@@ -141,6 +145,11 @@ func (s *Snapshot) Role(id uuid.UUID) (Role, bool) {
 // Global is what sub may do server-wide: the Owner everything, otherwise
 // @everyone plus the member's roles, or everything for an Administrator.
 func (s *Snapshot) Global(sub Subject) Set {
+	return s.hold(sub.ID, s.globalUnheld(sub))
+}
+
+// globalUnheld is Global before the waits of new members apply.
+func (s *Snapshot) globalUnheld(sub Subject) Set {
 	if s.IsOwner(sub) {
 		return All
 	}
@@ -203,6 +212,11 @@ func (s *Snapshot) Deny(sub Subject, p, need Set) error {
 	err := CheckChannel(p, need)
 	if err != nil && p.Has(ViewChannel) && s.RulesPending(sub.ID) && need&^p&TimeoutMask != 0 {
 		return ErrRulesNotAccepted
+	}
+	if err != nil && p.Has(ViewChannel) {
+		if nm := s.newMemberRefusal(sub.ID, p, need); nm != nil {
+			return nm
+		}
 	}
 	return err
 }

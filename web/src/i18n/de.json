@@ -146,6 +146,17 @@
       "fieldMax": "{field}: höchstens {count} Zeichen",
       "fileTooBig": "Die Datei ist größer als {size} MB",
       "missingPermission": "Dafür fehlt dir die Berechtigung.",
+      "srvHoursMustBeBetween0": "Stunden müssen zwischen 0 und {a} liegen.",
+      "invitesPausedLockdown": "Einladungen sind während eines Lockdowns pausiert.",
+      "srvJoinLimitMustBeBetween0": "Das Anmelde-Limit muss zwischen 0 und {a} liegen.",
+      "srvJoinWindowMinutesMustBe": "Das Anmelde-Zeitfenster muss zwischen {a} und {b} Minuten liegen.",
+      "srvMinAgeReactMinutesMustBe": "Die Wartezeit zum Reagieren muss zwischen 0 und {a} Minuten liegen.",
+      "srvMinAgeSpeakMinutesMustBe": "Die Wartezeit zum Sprechen muss zwischen 0 und {a} Minuten liegen.",
+      "srvMinAgeWriteMinutesMustBe": "Die Wartezeit zum Schreiben muss zwischen 0 und {a} Minuten liegen.",
+      "newMemberReact": "Du bist neu hier: Reagieren kannst du in {time}.",
+      "newMemberSpeak": "Du bist neu hier: Sprechen kannst du in {time}.",
+      "newMemberWrite": "Du bist neu hier: Schreiben kannst du in {time}.",
+      "signupsPaused": "Anmeldungen sind vorerst pausiert. Versuche es später noch einmal.",
       "slowMode": "Langsammodus: bitte warte noch {seconds} s",
       "rateWait": "Das war gerade etwas viel. Versuche es in {time} noch einmal.",
       "linkInvalid": "Dieser Link ist ungültig oder abgelaufen.",
@@ -1748,6 +1759,7 @@
       "emoji": "Emoji",
       "reports": "Meldungen",
       "automod": "Automod",
+      "raid": "Raid-Schutz",
       "status": "Status",
       "import": "Import"
     },
@@ -3018,6 +3030,10 @@
       "name": "Events verwalten",
       "desc": "Community-Events erstellen, bearbeiten und absagen."
     },
+    "bypass_new_member_limits": {
+      "name": "Wartezeit für neue Mitglieder umgehen",
+      "desc": "Sofort schreiben, reagieren und sprechen, ohne die Mindestmitgliedschaft abzuwarten (Raid-Schutz)."
+    },
     "groups": {
       "general": "Allgemein",
       "text": "Text",
@@ -3174,6 +3190,8 @@
       "settings": {
         "upload_limit": "Upload-Limit geändert",
         "onboarding": "Willkommen und Regeln geändert",
+        "raid": "Raid-Schutz geändert",
+        "lockdown": "Lockdown umgeschaltet",
         "community_icon": "Community-Icon geändert",
         "community_icon_remove": "Community-Icon entfernt"
       },
@@ -3999,6 +4017,56 @@
     "full": "Deine Blockliste ist voll. Hebe zuerst eine Blockierung auf.",
     "collapsed": "Blockierte Nachricht",
     "show": "Anzeigen"
+  },
+  "raid": {
+    "title": "Raid-Schutz",
+    "hint": "Halte eine plötzliche Welle neuer Accounts im Griff: begrenze Anmeldungen, lass neue Mitglieder warten, bevor sie schreiben, reagieren oder sprechen dürfen, oder schließe die Tür für eine Weile.",
+    "loadFailed": "Die Einstellungen zum Raid-Schutz konnten nicht geladen werden.",
+    "saved": "Raid-Schutz gespeichert.",
+    "lockdown": {
+      "title": "Lockdown",
+      "offText": "Anmeldungen sind offen.",
+      "onText": "Lockdown ist aktiv: Niemand Neues kann sich anmelden.",
+      "onUntil": "Lockdown ist bis {time} aktiv: Niemand Neues kann sich anmelden.",
+      "hint": "Schließt die Tür sofort. Wer schon dabei ist, ist nicht betroffen.",
+      "pauseInvites": "Auch das Erstellen von Einladungen pausieren",
+      "invitesPaused": "Auch das Erstellen von Einladungen ist pausiert.",
+      "ends": "Endet",
+      "durations": {
+        "0": "wenn ich ihn beende",
+        "1": "in 1 Stunde",
+        "6": "in 6 Stunden",
+        "24": "in 24 Stunden"
+      },
+      "start": "Lockdown starten",
+      "end": "Lockdown beenden",
+      "failed": "Der Lockdown konnte nicht umgeschaltet werden.",
+      "banner": "Lockdown ist aktiv: Niemand Neues kann sich anmelden.",
+      "bannerUntil": "Lockdown ist bis {time} aktiv: Niemand Neues kann sich anmelden.",
+      "manage": "Einstellungen öffnen"
+    },
+    "throttle": {
+      "title": "Anmelde-Limit",
+      "hint": "Haben sich so viele Leute innerhalb des Zeitfensters angemeldet, warten weitere Anmeldungen, bis wieder Platz ist. 0 schaltet das Limit aus.",
+      "limit": "Neue Mitglieder pro Zeitfenster",
+      "window": "Zeitfenster in Minuten",
+      "status": "{count} in den letzten {minutes} Min. beigetreten.",
+      "invalid": "Gib ganze Zahlen ein; das Zeitfenster hat 1 bis 1440 Minuten."
+    },
+    "waits": {
+      "title": "Wartezeit für neue Mitglieder",
+      "hint": "Wie lange ein neues Mitglied nach dem Beitritt warten muss, bevor es das darf. Administratoren, der Owner und Rollen mit „Wartezeit für neue Mitglieder umgehen“ warten nie. Direktnachrichten sind nicht betroffen.",
+      "write": "Nachrichten schreiben",
+      "react": "Auf Nachrichten reagieren",
+      "speak": "In Talks sprechen",
+      "none": "Keine Wartezeit"
+    }
+  },
+  "newMember": {
+    "write": "Schreiben kannst du in {time}.",
+    "react": "Reagieren kannst du in {time}.",
+    "speak": "Sprechen kannst du in {time}.",
+    "bannerHint": "Du bist neu hier."
   },
   "automod": {
     "title": "Automod",

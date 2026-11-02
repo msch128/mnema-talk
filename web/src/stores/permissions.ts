@@ -9,6 +9,8 @@ import type { PermissionsInfo, Role } from '../types/domain'
 import { useAuthStore } from './auth'
 import { ADMIN_AREA_KEYS, DEFAULT_EVERYONE, hasPermission, roleColorCss } from '../lib/permissions'
 import type { PermissionKey } from '../lib/permissions'
+import { newMemberTimes } from '../lib/newMember'
+import { useNewMemberClock } from '../composables/useNewMemberClock'
 
 const decodeRoles = arrayDecoder('roles', isPermRole)
 
@@ -26,6 +28,8 @@ function infoViews(info: Ref<PermissionsInfo | null>) {
       return until ? Date.parse(until) : null
     }),
     timeoutReason: computed(() => info.value?.timeout_reason ?? ''),
+    /** When a new member may write, react and speak (raid protection); null: not held back. */
+    newMember: computed(() => newMemberTimes(info.value?.new_member)),
     /** The largest file the member may upload, in MB; null until known. */
     maxUploadMb: computed(() => info.value?.max_upload_mb ?? null)
   }
@@ -84,7 +88,7 @@ export const usePermissionsStore = defineStore('permissions', () => {
   const memberRoles = ref<Record<string, string[]>>({})
 
   const isOwner = computed(() => auth.isAdmin)
-  const { loaded, global, channelPermissions, topPosition, myRoleIds, timeoutUntil, timeoutReason, maxUploadMb } = infoViews(info)
+  const { loaded, global, channelPermissions, topPosition, myRoleIds, timeoutUntil, timeoutReason, maxUploadMb, newMember } = infoViews(info)
 
   /** Does the member hold a server-wide permission? */
   function can(key: PermissionKey): boolean {
@@ -137,7 +141,11 @@ export const usePermissionsStore = defineStore('permissions', () => {
 
   const loader = useServerLoading(info, roles)
 
+  // Milliseconds a new member still waits before an action (0: it is open), counted down by a clock that runs while a wait is pending.
+  const { wait: newMemberWait, stop: stopNewMemberClock } = useNewMemberClock(newMember, () => loader.load())
+
   function reset() {
+    stopNewMemberClock()
     loader.invalidate()
     info.value = null
     roles.value = []
@@ -145,7 +153,7 @@ export const usePermissionsStore = defineStore('permissions', () => {
   }
 
   return {
-    info, roles, memberRoles, maxUploadMb, isOwner, loaded, topPosition, myRoleIds, timeoutUntil, timeoutReason, canOpenAdmin,
+    info, roles, memberRoles, maxUploadMb, isOwner, loaded, topPosition, myRoleIds, timeoutUntil, timeoutReason, canOpenAdmin, newMemberWait,
     can, canIn, outranks, outranksMember, roleById, rolesOf, nameColor, setMemberRoles, load: loader.load, loadRoles: loader.loadRoles, reset
   }
 })

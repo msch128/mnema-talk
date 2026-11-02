@@ -5,6 +5,8 @@
   "inviteUses": [1, 5, 10, 25, 50, 100],
   "moderationSeconds": [60, 300, 3600, 86400, 604800],
   "pollDurations": ["1h", "4h", "8h", "24h", "3d", "1w"],
+  "lockdownHours": [0, 1, 6, 24],
+  "newMemberWaitMinutes": [0, 10, 30, 60, 360, 1440, 10080],
   "muteMinutes": [15, 60, 480, 1440],
   "automodAccountAges": [60, 300, 600, 1800, 3600, 21600, 86400, 259200, 604800, 2592000],
   "automodRaidWindows": [5, 10, 30, 60, 300, 600],

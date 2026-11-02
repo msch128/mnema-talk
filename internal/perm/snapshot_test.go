@@ -36,7 +36,7 @@ func TestCatalogIsConsistent(t *testing.T) {
 		"manage_bots": 1 << 16, "view_audit_log": 1 << 17, "timeout_members": 1 << 18, "ban_members": 1 << 19, "manage_emoji": 1 << 20,
 		"manage_reports": 1 << 21, "send_direct_messages": 1 << 22, "kick_members": 1 << 23,
 		"manage_stage":  1 << 24,
-		"manage_events": 1 << 25,
+		"manage_events": 1 << 25, "bypass_new_member_limits": 1 << 26,
 	}
 	for _, i := range Catalog {
 		if want[i.Key] != i.Bit {
