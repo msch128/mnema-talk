@@ -1,0 +1,43 @@
+doc/moderation.md
+  s_82e9d48cb7fc7f::t_057dc2416786a5 114
+e2e/tests/raid-protection.spec.ts
+  s_82e9d48cb7fc7f::t_2fcc28a88ff506 28,37
+internal/db/starter_roles_integration_test.go
+  s_27fa9449c22b13::t_25a49e02cac855 195-197
+scripts/upgrade-drill-data.sh
+  s_82e9d48cb7fc7f::t_520b8e2386a61c 85,88-91,94-95,127-128
+web/src/components/AdminAccessSettings.test.ts
+  s_27fa9449c22b13::t_7e105783d7b512 17-18,22
+web/src/components/AdminAccessSettings.vue
+  s_27fa9449c22b13::t_fe60ec64448dba 16,73-78,80-86,88-93,95-99
+web/src/components/AdminNav.vue
+  s_82e9d48cb7fc7f::t_e8542844f46c5d 9,13
+web/src/components/AdminPermissionsUi.test.ts
+  s_82e9d48cb7fc7f::t_efed2b29d87a6f 117
+web/src/lib/adminNav.ts
+  s_82e9d48cb7fc7f::t_1a72ea0a80a241 3,7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "110a6123ed732e30ee5f82d5300f46b74d0215c2",
+  "prompts": {},
+  "sessions": {
+    "s_27fa9449c22b13": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af3d9b6ddf22b715c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
