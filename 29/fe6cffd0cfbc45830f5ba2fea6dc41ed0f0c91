@@ -1,0 +1,127 @@
+README.md
+  s_61e7f03250bd0b::t_6e97eca53d3f98 108
+api/openapi.json
+  s_61e7f03250bd0b::t_8890945b3aa4eb 4906-4909,4972-4975,5125-5153,5236-5277,30564,30681-30692,30783-30794,31414,31426-31437
+doc/events.md
+  s_61e7f03250bd0b::t_01d58581d9f181 59-73
+e2e/tests/event-recurrence.spec.ts
+  s_61e7f03250bd0b::t_b2bc9a773ecef4 1-66
+internal/auth/account_erase.go
+  s_61e7f03250bd0b::t_a164185dc7db97 74
+internal/communityevents/handler.go
+  s_61e7f03250bd0b::t_2468d9f3c9bb75 180,204,249,277-280,289-291,356,377-383
+internal/communityevents/handler_roles.go
+  s_61e7f03250bd0b::t_f4b636b651f748 86,93,113-116,121-129
+internal/communityevents/handler_series.go
+  s_61e7f03250bd0b::t_5c2291753a0411 1-128
+internal/communityevents/model.go
+  s_61e7f03250bd0b::t_973b00f16fa628 60-61,72-73
+internal/communityevents/model_series.go
+  s_61e7f03250bd0b::t_6199a09ae3d1bb 1-28
+internal/communityevents/recurrence.go
+  s_61e7f03250bd0b::t_11db4183c8787c 1-67
+internal/communityevents/recurrence_test.go
+  s_61e7f03250bd0b::t_83d6209600bede 1-98
+internal/communityevents/roles_integration_test.go
+  s_61e7f03250bd0b::t_3db97536c2c1f3 132-143
+internal/communityevents/scheduler.go
+  s_61e7f03250bd0b::t_fb7a2a48c0049c 21-22,76,234-255
+internal/communityevents/series_integration_test.go
+  s_61e7f03250bd0b::t_18dc217f9ca221 1-517
+internal/communityevents/store.go
+  s_61e7f03250bd0b::t_3aaba88615e9d6 38-39,50-53,55,74,79
+internal/communityevents/store_list.go
+  s_61e7f03250bd0b::t_bf7bdcc927e656 141-143
+internal/communityevents/store_series.go
+  s_61e7f03250bd0b::t_ced48e28f01ed9 1-197
+internal/communityevents/store_series_edit.go
+  s_61e7f03250bd0b::t_4b9b6dd807a107 1-278
+internal/communityevents/store_series_read.go
+  s_61e7f03250bd0b::t_49c81a627c856b 1-51
+internal/db/migrations/0088_event_series.sql
+  s_61e7f03250bd0b::t_4b96b245a8d96b 1-37
+internal/repo/testdata/error_messages.golden.json
+  s_61e7f03250bd0b::t_cf558a475b0df8 196,388,391,487,505,544
+internal/server/health.go
+  s_61e7f03250bd0b::t_8b003db754f4d7 72
+web/src/components/EventCancelDialog.test.ts
+  s_61e7f03250bd0b::t_4e6f11abb9d984 1-36
+web/src/components/EventCancelDialog.vue
+  s_61e7f03250bd0b::t_31df5d8575995c 1-23
+web/src/components/EventDetailModal.test.ts
+  s_61e7f03250bd0b::t_b4ace148133421 236-266
+web/src/components/EventDetailModal.vue
+  s_61e7f03250bd0b::t_5aaf29b52f48aa 21-23,43,136-139,148-151,153,159-163,214-215,341
+web/src/components/EventEditDialog.test.ts
+  s_61e7f03250bd0b::t_fccf06239b0b98 166,173,175,180-191,264-265,378-473
+web/src/components/EventEditDialog.vue
+  s_61e7f03250bd0b::t_11e8025c7f78b4 16-19,73-78,124,130-131,133-151,160-169,185,199,287-288,379-380
+web/src/components/EventRepeatFields.test.ts
+  s_61e7f03250bd0b::t_93071f8ce86546 1-24
+web/src/components/EventRepeatFields.vue
+  s_61e7f03250bd0b::t_e7de08d311dbd5 1-37
+web/src/components/EventRolesDialog.test.ts
+  s_61e7f03250bd0b::t_dffa5a1d0ee0ef 46-64
+web/src/components/EventRolesDialog.vue
+  s_61e7f03250bd0b::t_105331f07744f5 12-13,22,32,47
+web/src/components/EventsModal.test.ts
+  s_61e7f03250bd0b::t_2fadeb4990028a 103-114
+web/src/components/EventsModal.vue
+  s_61e7f03250bd0b::t_c3455e3a7e73e8 5,223
+web/src/components/RepeatBadge.test.ts
+  s_61e7f03250bd0b::t_8a3aee29dd8998 1-27
+web/src/components/RepeatBadge.vue
+  s_61e7f03250bd0b::t_d01d23f542401d 1-18
+web/src/components/ScopeChoice.test.ts
+  s_61e7f03250bd0b::t_dc89f3e9ed6897 1-28
+web/src/components/ScopeChoice.vue
+  s_61e7f03250bd0b::t_049d548929f62f 1-25
+web/src/composables/useEventRoles.test.ts
+  s_61e7f03250bd0b::t_f6aaf3d5416ea4 26-32
+web/src/composables/useEventRoles.ts
+  s_61e7f03250bd0b::t_94fefe8e0c7c60 47,56
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_a8e829238452dd 615-621,3688-3711
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_9a4628749d14d4 615-621,3688-3711
+web/src/lib/errorSentencesB.ts
+  s_61e7f03250bd0b::t_07900e0a2345f8 9,201,204
+web/src/lib/errorSentencesC.ts
+  s_61e7f03250bd0b::t_bd49f1e85d392a 95,113,152
+web/src/lib/eventRecurrence.test.ts
+  s_61e7f03250bd0b::t_a537c323d4cb99 1-28
+web/src/lib/eventRecurrence.ts
+  s_61e7f03250bd0b::t_8cbb325b0165f9 1-30
+web/src/lib/eventRolesApi.test.ts
+  s_61e7f03250bd0b::t_e441a766f6e419 36-42
+web/src/lib/eventRolesApi.ts
+  s_61e7f03250bd0b::t_86bbe509f5687d 25-27
+web/src/stores/events.test.ts
+  s_61e7f03250bd0b::t_8dddbec1da8cd3 117-153
+web/src/stores/events.ts
+  s_61e7f03250bd0b::t_ca64aa69c89970 21,40-44,47-48,83-104,167
+web/src/stores/eventsRoster.ts
+  s_61e7f03250bd0b::t_e0fca6218c836f 17
+web/src/stores/serverFeatures.test.ts
+  s_61e7f03250bd0b::t_f36ee524f9ef4b 35-37
+web/src/stores/serverFeatures.ts
+  s_61e7f03250bd0b::t_bdaad02ea47db8 70
+web/src/types/rest.ts
+  s_61e7f03250bd0b::t_579bb1e9de6c37 2904,2927,2942,2953,3045-3059,3111-3131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "29fe6cffd0cfbc45830f5ba2fea6dc41ed0f0c91",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
