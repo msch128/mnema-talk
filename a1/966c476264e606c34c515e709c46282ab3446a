@@ -1,0 +1,99 @@
+api/openapi.json
+  s_82e9d48cb7fc7f::t_9ad231330f98c6 6853-6857,6895-6898,6921-6925,6948-6951,30720-30917,33730-33797
+internal/audit/snapshot.go
+  s_4c6a19030e223f::t_e5599d01aae759 22-23
+internal/db/migrations/0085_self_assignable_roles.sql
+  s_4c6a19030e223f::t_90eba44df97208 1-20
+internal/perm/snapshot.go
+  s_82e9d48cb7fc7f::t_b599aa27d137ad 42-47
+internal/perm/snapshot_load.go
+  s_4c6a19030e223f::t_1ae22852b05b91 75-87,122,189-190
+internal/perm/store.go
+  s_4c6a19030e223f::t_36a18e56773473 21-24,35-39
+internal/perm/store_roles.go
+  s_4c6a19030e223f::t_27b63101b23f5e 62,67,81-84,94-96,194-196,218,220,235,269
+internal/perm/store_self_assign_integration_test.go
+  s_17ef7810e0243d::t_989878c7b8d248 1-140
+internal/perm/webmirror_test.go
+  s_17ef7810e0243d::t_91b6bbc241c1d5 50-60
+internal/repo/testdata/error_messages.golden.json
+  s_6f62c78e3c93c5::t_b252f2a6e4c6e8 14,55,251,384
+internal/roles/handler.go
+  s_4c6a19030e223f::t_dfd4397d1eda6a 11,23-26,33-39
+internal/roles/handler_integration_test.go
+  s_82e9d48cb7fc7f::t_6aef8f1221e9c7 15,54-56,91-158
+internal/roles/handler_self.go
+  s_4c6a19030e223f::t_faf7be54263023 1-95
+internal/server/router_build.go
+  s_17ef7810e0243d::t_2061a3875364a3 156
+web/src/components/AdminRolesTab.test.ts
+  s_82e9d48cb7fc7f::t_d7af76f0142dfa 97-133
+web/src/components/RoleEditor.vue
+  s_82e9d48cb7fc7f::t_ac74d7b5585e20 16,56-58,69-76,84-86,95-96,108,116,188-203
+web/src/components/SelfRolesPanel.test.ts
+  s_82e9d48cb7fc7f::t_27b2ba434d01e0 1-99
+web/src/components/SelfRolesPanel.vue
+  s_6f62c78e3c93c5::t_c733f3027e71f0 1-80
+web/src/components/SettingsDialog.test.ts
+  s_17ef7810e0243d::t_bfef2349f0140c 11,260-280
+web/src/components/SettingsDialog.vue
+  s_6f62c78e3c93c5::t_89127415b2dc21 4-5,7,13,23,26,33,38-39,148
+web/src/i18n/de.json
+  s_17ef7810e0243d::t_a9bd8fc3620b56 208,210,214,232,3081-3083,3287-3294,4124,4376-4384
+web/src/i18n/en.json
+  s_17ef7810e0243d::t_7dbe6e84ae9024 208,210,214,232,3081-3083,3287-3294,4124,4376-4384
+web/src/lib/errorSentencesA.ts
+  s_4c6a19030e223f::t_bc93c42c075648 17,58
+web/src/lib/errorSentencesB.ts
+  s_4c6a19030e223f::t_66085a45f96f3d 73
+web/src/lib/errorSentencesC.ts
+  s_17ef7810e0243d::t_b861bc8eb8a955 27
+web/src/lib/permissions.ts
+  s_17ef7810e0243d::t_13e9e0cfbefd37 67-76
+web/src/lib/settingsDialog.test.ts
+  s_17ef7810e0243d::t_e8524fc5f1c207 15
+web/src/lib/settingsDialog.ts
+  s_6f62c78e3c93c5::t_3530bb3ee78114 6
+web/src/types/rest.ts
+  s_82e9d48cb7fc7f::t_69951c672dfc28 4025,4035,4042,4052,4059,4065,4071,4077
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1966c476264e606c34c515e709c46282ab3446a",
+  "prompts": {},
+  "sessions": {
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
