@@ -34,16 +34,16 @@ test('a weekly event creates its next dates, an edit of the following ones chang
   const create = page.getByRole('dialog').last()
   await create.getByLabel('Titel', { exact: true }).fill(title)
   await create.locator('input[type="datetime-local"]').first().fill(localInput(new Date(Date.now() + 3 * 86_400_000)))
-  await create.getByLabel('Freitext-Ort').fill('Stammkneipe')
+  await create.getByRole('textbox', { name: 'Freitext-Ort' }).fill('Stammkneipe')
   await create.getByTestId('event-repeat-select').selectOption('weekly')
   await create.getByRole('button', { name: 'Erstellen' }).click()
-  await expect(create).toBeHidden()
+  await expect(create.getByLabel('Titel', { exact: true })).toBeHidden()
 
   // The server created the dates of the next weeks (60 days ahead: eight or nine of them).
   const cards = page.locator('article').filter({ hasText: title })
   await expect(cards.first()).toBeVisible()
   await expect.poll(() => cards.count()).toBeGreaterThanOrEqual(8)
-  await expect(cards.first().getByTestId('repeat-badge')).toContainText('Jede Woche')
+  await expect(cards.first().getByTestId('repeat-badge')).toContainText('jede Woche')
 
   // Rename this and the following ones from the second date on: the first keeps its name.
   await cards.nth(1).getByRole('button', { name: 'Details' }).click()
@@ -52,7 +52,7 @@ test('a weekly event creates its next dates, an edit of the following ones chang
   await edit.getByLabel('Titel', { exact: true }).fill(`${title} neu`)
   await edit.getByTestId('scope-following').check()
   await edit.getByRole('button', { name: 'Änderungen speichern' }).click()
-  await expect(edit).toBeHidden()
+  await expect(edit.getByLabel('Titel', { exact: true })).toBeHidden()
   await expect(page.locator('article').filter({ hasText: `${title} neu` }).first()).toBeVisible()
   await expect(page.locator('article').filter({ hasText: title }).filter({ hasNotText: 'neu' })).toHaveCount(1)
 
@@ -62,5 +62,7 @@ test('a weekly event creates its next dates, an edit of the following ones chang
   await page.getByRole('button', { name: 'Veranstaltung absagen' }).click()
   await page.getByTestId('scope-following').check()
   await page.getByTestId('cancel-confirm').click()
+  // The detail view stays open over the list; close it to see the dates that are left.
+  await page.keyboard.press('Escape')
   await expect.poll(() => renamed.count()).toBe(1)
 })

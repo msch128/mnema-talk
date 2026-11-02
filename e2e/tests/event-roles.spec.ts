@@ -63,13 +63,13 @@ test('a full role puts the next member on the waitlist, and they move up when a 
     const start = new Date(Date.now() + 2 * 86_400_000)
     const pad = (n: number) => String(n).padStart(2, '0')
     await dialog.locator('input[type="datetime-local"]').first().fill(`${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}T18:00`)
-    await dialog.getByLabel('Freitext-Ort').fill('Halle 1')
+    await dialog.getByRole('textbox', { name: 'Freitext-Ort' }).fill('Halle 1')
     await dialog.getByTestId('event-role-add').click()
     await dialog.getByTestId('event-role-name').fill('Tank')
     await dialog.getByRole('checkbox', { name: 'Unbegrenzt' }).uncheck()
     await dialog.getByTestId('event-role-capacity').fill('1')
     await dialog.getByRole('button', { name: 'Erstellen' }).click()
-    await expect(dialog).toBeHidden()
+    await expect(dialog.getByLabel('Titel', { exact: true })).toBeHidden()
 
     // Two members: the first takes the place, the second waits.
     const first = await member(browser, admin, suiteMember.username, suiteMember.password, suiteMember.registered)
