@@ -64,6 +64,16 @@ export const ADMIN_AREA_KEYS: readonly PermissionKey[] = [
   'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots', 'manage_emoji', 'manage_reports', 'kick_members'
 ]
 
+/** A self-assignable role holds none of these: administration, the admin area and moderation (internal/perm SelfAssignBlocked). */
+export const SELF_ASSIGN_BLOCKED_KEYS: readonly PermissionKey[] = [
+  'administrator', 'manage_channels', 'manage_roles', 'create_invites', 'manage_webhooks', 'manage_members', 'disconnect_members', 'view_audit_log', 'timeout_members', 'ban_members', 'manage_bots', 'manage_emoji', 'manage_reports', 'kick_members', 'manage_messages', 'manage_stage', 'manage_events'
+]
+
+/** Whether a role with these permissions holds something members must not be able to choose for themselves. */
+export function blockedForSelfAssign(set: number): boolean {
+  return SELF_ASSIGN_BLOCKED_KEYS.some(key => hasPermission(set, key))
+}
+
 /** What @everyone holds on a fresh install (internal/perm DefaultEveryone). */
 export const DEFAULT_EVERYONE = 4195294
 

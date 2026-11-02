@@ -1,14 +1,16 @@
 <script setup lang="ts">
 // "Settings": everything a member sets for themselves in one dialog, one
 // section at a time instead of one long scroll. Sections: sign-in security,
-// sessions, privacy, data and account, push and app, audio.
+// sessions, privacy, the roles members may choose, data and account, push
+// and app, audio.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
-import { Database, KeyRound, Laptop, Shield, Sliders, Smartphone } from '@lucide/vue'
+import { Database, KeyRound, Laptop, Shield, Sliders, Smartphone, Tags } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
 import { SETTINGS_TABS, focusSettingsField, rememberSettingsTab, settingsField, settingsFieldTarget, settingsTab, type SettingsTab } from '../lib/settingsDialog'
 import { platform } from '../lib/platform'
 import { t } from '../i18n'
 import { useAccountStore } from '../stores/account'
+import { usePermissionsStore } from '../stores/permissions'
 import BaseDialog from './BaseDialog.vue'
 import ProfilePassword from './ProfilePassword.vue'
 import AccountEmail from './AccountEmail.vue'
@@ -18,20 +20,23 @@ import AccountPrivacy from './AccountPrivacy.vue'
 import AccountData from './AccountData.vue'
 import AppSettingsPanel from './AppSettingsPanel.vue'
 import AudioSettingsPanel from './AudioSettingsPanel.vue'
+import SelfRolesPanel from './SelfRolesPanel.vue'
 
 const account = useAccountStore()
+const permissions = usePermissionsStore()
 const loadError = ref('')
 const nav = ref<HTMLElement | null>(null)
 // The dialog's own first focus goes to the requested field when it is already rendered.
 const initialFocus = (root: HTMLElement) => (settingsField.value ? settingsFieldTarget(root, settingsField.value) : null)
 const panel = ref<HTMLElement | null>(null)
 
-const ICONS: Record<SettingsTab, Component> = { signin: KeyRound, sessions: Laptop, privacy: Shield, data: Database, app: Smartphone, audio: Sliders }
+const ICONS: Record<SettingsTab, Component> = { signin: KeyRound, sessions: Laptop, privacy: Shield, data: Database, app: Smartphone, audio: Sliders, roles: Tags }
 // Only these need the loaded account (e-mail, two-factor state).
 const NEEDS_ACCOUNT: ReadonlySet<SettingsTab> = new Set(['signin', 'data'])
 
 // The installed desktop client has its own notifications and no install step.
-const visible = computed(() => SETTINGS_TABS.filter(tab => tab !== 'app' || !platform.isTrustedDesktop()))
+// Roles shows only where an admin opened some to everyone.
+const visible = computed(() => SETTINGS_TABS.filter(tab => (tab !== 'app' || !platform.isTrustedDesktop()) && (tab !== 'roles' || permissions.roles.some(r => r.self_assignable))))
 const groups = computed(() => [
   { id: 'device', tabs: visible.value.filter(tab => ['app', 'audio'].includes(tab)) },
   { id: 'account', tabs: visible.value.filter(tab => !['app', 'audio'].includes(tab)) }
@@ -140,6 +145,7 @@ onBeforeUnmount(() => account.close())
           </template>
           <AccountSessions v-else-if="active === 'sessions'" />
           <AccountPrivacy v-else-if="active === 'privacy'" />
+          <SelfRolesPanel v-else-if="active === 'roles'" />
           <AccountData v-else-if="active === 'data'" />
           <AppSettingsPanel v-else-if="active === 'app'" />
           <AudioSettingsPanel v-else />

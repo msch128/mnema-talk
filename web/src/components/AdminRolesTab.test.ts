@@ -94,6 +94,43 @@ describe('AdminRolesTab', () => {
     expect(toastTexts()).toContain('Role saved')
   })
 
+  it('lets an admin open a role to members with a description, and refuses it for administration rights', async () => {
+    const w = setup()
+    await flushPromises()
+    await row(w, 'Middle').find('button[aria-pressed]').trigger('click')
+    const save = () => w.get('[data-testid="unsaved-save"]')
+    const box = w.get<HTMLInputElement>('[data-testid="role-self-assignable"]')
+    await w.get('[data-testid="role-description"]').setValue('  Pings for game nights ')
+    await box.setValue(true)
+    expect(save().attributes('disabled')).toBeUndefined()
+    await save().trigger('click')
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledWith(`/api/admin/roles/${roles[1]!.id}`, expect.objectContaining({
+      method: 'PATCH',
+      json: expect.objectContaining({ self_assignable: true, description: 'Pings for game nights' })
+    }))
+    // Giving the opened role an admin-area permission is refused before it is sent.
+    await w.find('[data-permission="manage_channels"] [role="switch"]').trigger('click')
+    expect(w.find('[data-testid="role-self-assign-blocked"]').exists()).toBe(true)
+    expect(save().attributes('disabled')).toBeDefined()
+  })
+
+  it('does not offer the switch while the role holds administration or moderation permissions', async () => {
+    roles = [role(2, { name: 'Middle', permissions: PERMISSION_BITS.manage_messages | PERMISSION_BITS.speak }), everyone]
+    const w = setup()
+    await flushPromises()
+    await row(w, 'Middle').find('button[aria-pressed]').trigger('click')
+    expect(w.get('[data-testid="role-self-assignable"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('has no self-assign settings on @everyone', async () => {
+    const w = setup()
+    await flushPromises()
+    // @everyone is the role that opens first.
+    expect(w.find('[data-testid="role-editor-title"]').text()).toBe('@everyone')
+    expect(w.find('[data-testid="role-self-assign"]').exists()).toBe(false)
+  })
+
   it('lets only the Owner set a role upload limit and sends null to inherit', async () => {
     roles = [role(2, { name: 'Middle', max_upload_mb: 20 }), everyone]
     const w = setup()

@@ -72,17 +72,19 @@ func load[T any](r *reader, sql string, scan pgx.RowToFunc[T]) []T {
 }
 
 type roleRow struct {
-	ID          uuid.UUID
-	Name        string
-	Color       int
-	Position    int
-	Permissions int64
-	Hoist       bool
-	Mentionable bool
-	Everyone    bool
-	Managed     bool
-	MaxUploadMB *int
-	BotUserID   *uuid.UUID
+	ID             uuid.UUID
+	Name           string
+	Color          int
+	Position       int
+	Permissions    int64
+	Hoist          bool
+	Mentionable    bool
+	Everyone       bool
+	Managed        bool
+	MaxUploadMB    *int
+	BotUserID      *uuid.UUID
+	SelfAssignable bool
+	Description    string
 }
 
 type userRoleRow struct{ UserID, RoleID uuid.UUID }
@@ -117,7 +119,7 @@ type overwriteRow struct {
 
 func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	r := &reader{ctx: ctx, q: q}
-	roles := load(r, `SELECT id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb, bot_user_id FROM roles`, pgx.RowToStructByPos[roleRow])
+	roles := load(r, `SELECT id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb, bot_user_id, self_assignable, description FROM roles`, pgx.RowToStructByPos[roleRow])
 	assigned := load(r, `SELECT user_id, role_id FROM user_roles`, pgx.RowToStructByPos[userRoleRow])
 	owners := load(r, `SELECT id FROM users WHERE role = 'admin'`, pgx.RowTo[uuid.UUID])
 	settings := load(r, `SELECT max_upload_mb, CASE WHEN rules_text <> '' THEN rules_version ELSE 0 END, direct_messages_enabled FROM instance_settings`, pgx.RowToStructByPos[settingsRow])
@@ -184,7 +186,8 @@ func (s *Snapshot) addChannels(rows []channelRow) {
 func (s *Snapshot) addRoles(rows []roleRow) {
 	for _, row := range rows {
 		role := Role{ID: row.ID, Name: row.Name, Color: row.Color, Position: row.Position,
-			Permissions: Set(row.Permissions), Hoist: row.Hoist, Mentionable: row.Mentionable, Everyone: row.Everyone, Managed: row.Managed, MaxUploadMB: row.MaxUploadMB, BotUserID: row.BotUserID}
+			Permissions: Set(row.Permissions), Hoist: row.Hoist, Mentionable: row.Mentionable, Everyone: row.Everyone, Managed: row.Managed, MaxUploadMB: row.MaxUploadMB, BotUserID: row.BotUserID,
+			SelfAssignable: row.SelfAssignable, Description: row.Description}
 		s.roles[role.ID] = role
 		if role.Everyone {
 			s.everyoneID, s.everyone = role.ID, role.Permissions

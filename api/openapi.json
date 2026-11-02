@@ -6850,6 +6850,11 @@
             "minimum": 0,
             "type": "integer"
           },
+          "description": {
+            "description": "Description says in a line what the role is for; the member picker shows it.",
+            "maxLength": 200,
+            "type": "string"
+          },
           "hoist": {
             "type": "boolean"
           },
@@ -6887,6 +6892,10 @@
           "position": {
             "minimum": 0,
             "type": "integer"
+          },
+          "self_assignable": {
+            "description": "SelfAssignable lets every member add or remove this role on their own\naccount. Only roles without Administrator or admin-area permissions can be\nflagged, never @everyone or a managed role. Omitted when false.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -6908,6 +6917,11 @@
             "maximum": 16777215,
             "minimum": 0,
             "type": "integer"
+          },
+          "description": {
+            "description": "Description is one line shown to members choosing roles.",
+            "maxLength": 200,
+            "type": "string"
           },
           "hoist": {
             "type": "boolean"
@@ -6931,6 +6945,10 @@
           "permissions": {
             "minimum": 0,
             "type": "integer"
+          },
+          "self_assignable": {
+            "description": "SelfAssignable lets members add and remove the role themselves; refused\nfor @everyone, managed roles and roles with Administrator or admin-area permissions.",
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -30699,6 +30717,204 @@
         ]
       }
     },
+    "/api/me/roles/{id}": {
+      "delete": {
+        "description": "Removes the role from the caller's own account. Only roles listed by GET /api/roles/self-assignable; dropping a role the caller does not hold changes nothing. Recorded in the audit log as role.self_remove. Broadcasts roles_changed.",
+        "operationId": "dropSelfRole",
+        "parameters": [
+          {
+            "description": "Role ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the role is not open to self-assignment, or the caller is the Owner, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Drop a self-assignable role",
+        "tags": [
+          "Roles"
+        ]
+      },
+      "put": {
+        "description": "Adds the role to the caller's own account. Only roles listed by GET /api/roles/self-assignable; asking for a role the caller already holds changes nothing. Recorded in the audit log as role.self_assign. Broadcasts roles_changed.",
+        "operationId": "takeSelfRole",
+        "parameters": [
+          {
+            "description": "Role ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: the role is not open to self-assignment, or the caller is the Owner, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Take a self-assignable role",
+        "tags": [
+          "Roles"
+        ]
+      }
+    },
     "/api/me/saved": {
       "get": {
         "description": "The caller's private saved list, newest first. Visibility is checked on every read: a message the caller can no longer see comes back with available=false and no message, only their own note. At most 1,000 messages can be saved.",
@@ -33508,6 +33724,74 @@
           }
         ],
         "summary": "List roles",
+        "tags": [
+          "Roles"
+        ]
+      }
+    },
+    "/api/roles/self-assignable": {
+      "get": {
+        "description": "The roles an admin opened to self-assignment, highest first: ordinary roles without Administrator or admin-area permissions. Any member may read it; PUT and DELETE /api/me/roles/{id} take and drop them.",
+        "operationId": "listSelfAssignableRoles",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/perm.Role"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Roles members may choose for themselves."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List the roles members can choose",
         "tags": [
           "Roles"
         ]

@@ -47,6 +47,17 @@ func TestWebMirrorsTheCatalog(t *testing.T) {
 	if webArea != AdminArea {
 		t.Errorf("ADMIN_AREA_KEYS is %d on the web and %d (AdminArea) on the server", webArea, AdminArea)
 	}
+	blocked := regexp.MustCompile(`(?s)SELF_ASSIGN_BLOCKED_KEYS[^=]*= \[(.*?)\]`).FindSubmatch(src)
+	if blocked == nil {
+		t.Fatal("SELF_ASSIGN_BLOCKED_KEYS not found")
+	}
+	var webBlocked Set
+	for _, m := range regexp.MustCompile(`'(\w+)'`).FindAllSubmatch(blocked[1], -1) {
+		webBlocked |= got[string(m[1])]
+	}
+	if webBlocked != SelfAssignBlocked {
+		t.Errorf("SELF_ASSIGN_BLOCKED_KEYS is %d on the web and %d (SelfAssignBlocked) on the server", webBlocked, SelfAssignBlocked)
+	}
 	if m := regexp.MustCompile(`DEFAULT_EVERYONE = (\d+)`).FindSubmatch(src); m == nil || string(m[1]) != strconv.Itoa(int(DefaultEveryone)) {
 		t.Errorf("DEFAULT_EVERYONE differs from %d", DefaultEveryone)
 	}

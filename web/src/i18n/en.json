@@ -205,10 +205,13 @@
       "pollNoWithdraw": "A vote in an anonymous poll can’t be withdrawn.",
       "automodSend": "Your message wasn’t sent: it breaks the community rule “{rule}”. The moderators can see this.",
       "automodEdit": "Your edit wasn’t saved: it breaks the community rule “{rule}”. The moderators can see this.",
+      "srvASelfAssignableRoleCannot": "A self-assignable role can’t have administrator, admin-area or moderation permissions.",
       "srvCreatedChannelSHaveMessages": "{a} created channels now contain messages. Confirm that they are deleted as well.",
+      "srvEveryoneAndManagedRoles": "@everyone and managed roles can’t be self-assignable.",
       "srvIsNotADomain": "{a} is not a domain.",
       "srvFileIsRequired": "The {a} file is required.",
       "srvIsTooLong": "{a} is too long.",
+      "srvMembersCannotTakeOr": "Members can’t take or drop this role themselves.",
       "srvMustBeAnRfc3339": "{a} must be a time in RFC 3339 format.",
       "srvNotFound": "{a} wasn’t found.",
       "srv401Unauthorized": "You’re not signed in.",
@@ -226,6 +229,7 @@
       "srvSmtpIsNotConfiguredSmtp": "This server can’t send e-mail yet.",
       "srvTalkNotFound": "That Talk wasn’t found.",
       "srvTemporaryTalksFollowTheirLobby": "Temporary Talks follow the permissions of their lobby.",
+      "srvTheOwnerHasNoRoles": "The Owner has no roles to choose.",
       "srvWaitForAReplyBefore": "Wait for a reply before you send more than {a} messages.",
       "srvYouAreInGroupDirect": "You’re already in {a} group direct messages. Leave one first.",
       "srvYouHaveStartedEnoughDirect": "You’ve started enough direct messages for today. Try again tomorrow.",
@@ -3074,7 +3078,9 @@
         "create": "Role created",
         "update": "Role edited",
         "delete": "Role deleted",
-        "reorder": "Roles reordered"
+        "reorder": "Roles reordered",
+        "self_assign": "Role taken by the member",
+        "self_remove": "Role dropped by the member"
       },
       "user": {
         "roles_set": "Roles assigned",
@@ -3278,6 +3284,14 @@
     "uploadHint": "Leave empty to use the global limit. A member gets the highest limit of their roles, never above the server maximum.",
     "uploadInvalid": "Enter a whole number of MB, or leave it empty.",
     "colorInvalid": "Use a colour like #5fd0b6.",
+    "selfAssign": {
+      "description": "Description",
+      "descriptionPlaceholder": "What is this role for?",
+      "label": "Members can assign this role to themselves",
+      "hint": "Shown in Settings > Roles. Members add and drop it freely; every change is recorded in the audit log.",
+      "blocked": "This role has administration or moderation permissions. Turn them off, or turn this off.",
+      "unavailable": "Not available while the role has administration or moderation permissions."
+    },
     "botRoles": "Bot roles",
     "botRoleHint": "Managed role of one bot: it cannot be removed.",
     "botRoleNote": "“{name}” is a bot’s own role. It is created with the bot, follows its name and is deleted with it; only that bot holds it, and it cannot be renamed, given to anyone else, removed from the bot or deleted by hand. You can change its colour and permissions. Nobody can give a bot permissions they lack themselves, and only the Owner can make a bot elevated.",
@@ -4107,6 +4121,7 @@
     "tabModeration": "Moderation",
     "strikeCount": "{count} strikes",
     "privacy": "Only moderators see this. The member is never shown it and it is not part of their data export.",
+      "roles": "Roles",
     "loadFailed": "Couldn’t load the moderation history.",
     "saveFailed": "Couldn’t save the note. Try again.",
     "deleteFailed": "Couldn’t delete the note. Try again.",
@@ -4357,6 +4372,15 @@
     "discard": "Discard",
     "keepEditing": "Keep editing",
     "shortcut": "Save with {keys}"
+  },
+  "selfRoles": {
+    "title": "Roles you can choose",
+    "intro": "These roles are open to everyone. Switch them on or off as you like; nothing here gives anyone more rights over others.",
+    "empty": "There are no roles to choose.",
+    "loadFailed": "Could not load the roles.",
+    "retry": "Try again",
+    "switch": "Take the role {name}",
+    "noDescription": "No description"
   },
   "settings": {
     "title": "Settings",

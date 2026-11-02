@@ -59,12 +59,12 @@ func checkColor(c int) error {
 func scanRole(row pgx.Row) (Role, error) {
 	var r Role
 	var perms int64
-	err := row.Scan(&r.ID, &r.Name, &r.Color, &r.Position, &perms, &r.Hoist, &r.Mentionable, &r.Everyone, &r.Managed, &r.MaxUploadMB, &r.BotUserID)
+	err := row.Scan(&r.ID, &r.Name, &r.Color, &r.Position, &perms, &r.Hoist, &r.Mentionable, &r.Everyone, &r.Managed, &r.MaxUploadMB, &r.BotUserID, &r.SelfAssignable, &r.Description)
 	r.Permissions = Set(perms)
 	return r, err
 }
 
-const roleColumns = `id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb, bot_user_id`
+const roleColumns = `id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb, bot_user_id, self_assignable, description`
 
 // CreateRole adds a role at the bottom of the hierarchy (just above
 // @everyone), so it is always below the actor's own highest role.
@@ -78,6 +78,10 @@ func (s *Service) CreateRole(ctx context.Context, actor Subject, in RoleInput) (
 		if err != nil {
 			return nil, err
 		}
+		extra, err := newRoleExtras(perms, in)
+		if err != nil {
+			return nil, err
+		}
 		maxUpload, err := s.checkRoleUpload(actor, in.MaxUploadMB, nil)
 		if err != nil {
 			return nil, err
@@ -87,9 +91,9 @@ func (s *Service) CreateRole(ctx context.Context, actor Subject, in RoleInput) (
 			return nil, fmt.Errorf("shift roles: %w", err)
 		}
 		created, err = scanRole(tx.QueryRow(ctx, `
-			INSERT INTO roles (name, color, position, permissions, hoist, mentionable, max_upload_mb)
-			VALUES ($1, $2, $7, $3, $4, $5, $6) RETURNING `+roleColumns,
-			name, color, int64(perms), in.Hoist != nil && *in.Hoist, in.Mentionable != nil && *in.Mentionable, maxUpload, at))
+			INSERT INTO roles (name, color, position, permissions, hoist, mentionable, max_upload_mb, self_assignable, description)
+			VALUES ($1, $2, $7, $3, $4, $5, $6, $8, $9) RETURNING `+roleColumns,
+			name, color, int64(perms), in.Hoist != nil && *in.Hoist, in.Mentionable != nil && *in.Mentionable, maxUpload, at, extra.selfAssignable, extra.description))
 		if err != nil {
 			return nil, fmt.Errorf("insert role: %w", err)
 		}
@@ -187,6 +191,9 @@ func (s *Service) validateRoleUpdate(snap *Snapshot, actor Subject, id uuid.UUID
 	if err != nil {
 		return Role{}, Role{}, err
 	}
+	if err := checkSelfAssignable(next); err != nil {
+		return Role{}, Role{}, err
+	}
 	if err := checkGrant(snap, actor, role.Permissions^next.Permissions); err != nil {
 		return Role{}, Role{}, err
 	}
@@ -208,9 +215,9 @@ func (s *Service) updateRole(ctx context.Context, tx pgx.Tx, snap *Snapshot, act
 		return Role{}, nil, err
 	}
 	updated, err := scanRole(tx.QueryRow(ctx, `
-		UPDATE roles SET name = $2, color = $3, permissions = $4, hoist = $5, mentionable = $6, max_upload_mb = $7, updated_at = NOW()
+		UPDATE roles SET name = $2, color = $3, permissions = $4, hoist = $5, mentionable = $6, max_upload_mb = $7, self_assignable = $8, description = $9, updated_at = NOW()
 		WHERE id = $1 RETURNING `+roleColumns,
-		id, next.Name, next.Color, int64(next.Permissions), next.Hoist, next.Mentionable, next.MaxUploadMB))
+		id, next.Name, next.Color, int64(next.Permissions), next.Hoist, next.Mentionable, next.MaxUploadMB, next.SelfAssignable, next.Description))
 	if err != nil {
 		return Role{}, nil, fmt.Errorf("update role: %w", err)
 	}
@@ -225,7 +232,7 @@ func checkEveryoneChanges(in RoleInput) error {
 	if in.Name != nil || in.Color != nil {
 		return httpx.ErrInvalidInput("only the permissions of @everyone can be changed")
 	}
-	if in.Hoist != nil || in.Mentionable != nil {
+	if in.Hoist != nil || in.Mentionable != nil || in.SelfAssignable != nil || in.Description != nil {
 		return httpx.ErrInvalidInput("only the permissions of @everyone can be changed")
 	}
 	return nil
@@ -259,7 +266,7 @@ func applyRoleInput(role Role, in RoleInput) (Role, error) {
 	if in.Mentionable != nil {
 		next.Mentionable = *in.Mentionable
 	}
-	return next, nil
+	return applyRoleSelfAssign(next, in)
 }
 
 func resolveRoleName(role Role, inName *string) (string, error) {

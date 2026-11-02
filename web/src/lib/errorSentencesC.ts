@@ -24,6 +24,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['the %s is larger than %d MB after processing', 'srvTheIsLargerThanMb'],
   ['the Owner account cannot be deleted: ownership is not transferable, so the community would be left without an Owner', 'ownerDelete', []],
   ['the Owner cannot be targeted', 'srvTheOwnerCannotBeTargeted'],
+  ['the Owner has no roles to choose', 'srvTheOwnerHasNoRoles'],
   ['the Owner\'s messages can only be deleted by the Owner', 'deleteOwnerMessage', []],
   ['the account cannot send', 'srvTheAccountCannotSend'],
   ['the body is not a valid JSON object', 'srvTheBodyIsNotA'],

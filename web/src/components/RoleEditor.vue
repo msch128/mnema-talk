@@ -13,7 +13,7 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { uploadPatch } from '../lib/roleSave'
 import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
-import { PERMISSION_BITS, ROLE_COLOR_PRESETS, parseRoleColor, roleColorCss } from '../lib/permissions'
+import { PERMISSION_BITS, ROLE_COLOR_PRESETS, blockedForSelfAssign, parseRoleColor, roleColorCss } from '../lib/permissions'
 import { t } from '../i18n'
 import RolePermissionPicker from './RolePermissionPicker.vue'
 import RoleViewAsDialog from './RoleViewAsDialog.vue'
@@ -53,6 +53,9 @@ interface RoleForm {
   /** Upload limit override in MB as typed; '' inherits the global limit. */
   upload: string | number
   allow: number
+  /** Members may take and drop the role themselves. */
+  selfAssignable: boolean
+  description: string
 }
 
 // The limit as the server takes it: null inherits, a whole number of MB, or undefined for text it would ignore.
@@ -63,6 +66,14 @@ function uploadOf(raw: string | number): number | null | undefined {
   return Number.isInteger(n) && n >= 1 ? n : undefined
 }
 
+// The flag and the description go along only when they were edited.
+function selfAssign(draft: RoleForm, changed: (keyof RoleForm)[]) {
+  return {
+    ...(changed.includes('selfAssignable') ? { self_assignable: draft.selfAssignable } : {}),
+    ...(changed.includes('description') ? { description: normalise.text(draft.description) } : {})
+  }
+}
+
 const form = useSettingsDraft<RoleForm>({
   source: () => ({
     name: props.role.name,
@@ -70,7 +81,9 @@ const form = useSettingsDraft<RoleForm>({
     hex: roleColorCss(props.role.color),
     hoist: props.role.hoist,
     upload: props.role.max_upload_mb == null ? '' : String(props.role.max_upload_mb),
-    allow: props.role.permissions
+    allow: props.role.permissions,
+    selfAssignable: props.role.self_assignable ?? false,
+    description: props.role.description ?? ''
   }),
   normalisers: {
     // @everyone has only its permissions (and, for the Owner, the limit).
@@ -79,6 +92,8 @@ const form = useSettingsDraft<RoleForm>({
     // Typed text counts as the colour it means; an empty box is "no colour", unreadable text is its own value.
     hex: value => parseRoleColor(value) ?? (value.trim() === '' ? 0 : `invalid:${value.trim()}`),
     hoist: value => (isEveryone.value ? false : value),
+    selfAssignable: value => !isEveryone.value && !isManaged.value && value,
+    description: value => (isEveryone.value ? '' : normalise.text(value)),
     // Only the Owner may send the limit.
     upload: value => {
       const limit = uploadOf(value)
@@ -90,6 +105,7 @@ const form = useSettingsDraft<RoleForm>({
     if (!isEveryone.value && !normalise.text(draft.name)) found.name = t('roles.nameRequired')
     if (permissions.isOwner && uploadOf(draft.upload) === undefined) found.upload = t('roles.uploadInvalid')
     if (draft.hex.trim() !== '' && parseRoleColor(draft.hex) === null) found.hex = t('roles.colorInvalid')
+    if (draft.selfAssignable && blockedForSelfAssign(draft.allow)) found.selfAssignable = t('roles.selfAssign.blocked')
     return found
   },
   blocked: () => readonly.value,
@@ -97,7 +113,7 @@ const form = useSettingsDraft<RoleForm>({
     const upload = uploadPatch(permissions.isOwner, uploadOf(draft.upload), props.role.max_upload_mb)
     const json = isEveryone.value
       ? { permissions: draft.allow, ...upload }
-      : { name: normalise.text(draft.name), color: draft.color, hoist: draft.hoist, permissions: draft.allow, ...upload }
+      : { name: normalise.text(draft.name), color: draft.color, hoist: draft.hoist, permissions: draft.allow, ...selfAssign(draft, changed), ...upload }
     await api(`/api/admin/roles/${props.role.id}`, { method: 'PATCH', json, decode: decodeRole })
     commit(changed)
   },
@@ -168,6 +184,22 @@ defineExpose({ guard: form.guard, dirty: form.dirty })
         <span>{{ $t('roles.hoist') }}</span>
       </label>
     </template>
+
+    <div v-if="!isEveryone" class="stack-3" data-testid="role-self-assign">
+      <label class="block stack-1">
+        <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.selfAssign.description') }}</span>
+        <input v-model="draft.description" v-max-chars="200" :disabled="readonly" :placeholder="$t('roles.selfAssign.descriptionPlaceholder')" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-hidden transition focus:border-mnema-accent disabled:opacity-50" data-testid="role-description" />
+      </label>
+      <label v-if="!isManaged" class="flex items-start gap-2 text-sm text-mnema-text">
+        <input v-model="draft.selfAssignable" type="checkbox" class="mt-1" :disabled="readonly || (!draft.selfAssignable && blockedForSelfAssign(draft.allow))" data-testid="role-self-assignable" />
+        <span>
+          <span class="block">{{ $t('roles.selfAssign.label') }}</span>
+          <span class="block text-xs text-mnema-tertiary">{{ $t('roles.selfAssign.hint') }}</span>
+          <span v-if="errors.selfAssignable" class="block text-xs text-mnema-danger" role="alert" data-testid="role-self-assign-blocked">{{ errors.selfAssignable }}</span>
+          <span v-else-if="!draft.selfAssignable && blockedForSelfAssign(draft.allow)" class="block text-xs text-mnema-tertiary">{{ $t('roles.selfAssign.unavailable') }}</span>
+        </span>
+      </label>
+    </div>
 
     <label v-if="permissions.isOwner && !isManaged" class="block stack-1">
       <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.uploadLimit') }}</span>

@@ -166,6 +166,31 @@ so the Owner can rename or delete them.
 Before roles existed every member could do exactly what `@everyone` holds,
 and only the admin account could do the rest.
 
+### Roles members choose themselves
+
+A role can be opened to everyone: in the role editor, an admin with *Manage
+roles* turns on **Members can assign this role to themselves** (off by default)
+and may add a one-line description. Members then see it under *Settings >
+Roles* (the section appears only while such roles exist) and switch it on or off
+for their own account, without any admin involved.
+
+The flag is only for harmless roles, and the server enforces it every time:
+
+- never `@everyone`, a managed role or a bot's role;
+- never a role with *Administrator*, any permission that opens the admin area
+  (the same set the bot rules use), or a moderation power over others
+  (*Manage messages*, *Manage Stages*, *Manage events*). Turning the flag on for
+  such a role, or giving permissions like that to a flagged role, is refused with
+  a clear sentence. If a flagged role somehow carries such a bit anyway, it is no
+  longer listed and cannot be taken.
+- the Owner has no roles to choose; bots cannot use it.
+
+Taking or dropping a role is audited as `role.self_assign` / `role.self_remove`
+(the member is the actor; asking for what one already has is not a change and
+leaves no entry), rebuilds permissions like any other role change and broadcasts
+`roles_changed`. A member's own changes are limited to 30 a minute. A Discord
+import never sets the flag.
+
 ## Channel and category overwrites
 
 A category or channel can allow or deny channel permissions for a **role**
@@ -358,6 +383,8 @@ minute is only a backstop for edits made directly in the database) and then:
 - `GET /api/onboarding`, `POST /api/onboarding/accept`, `PUT /api/onboarding/tips`: a member's view of them and their acceptance and dismissed tips.
 - `GET /api/invites/{code}` (public): the invite preview.
 - `GET /api/roles`: all roles (visible to every member; they colour names).
+- `GET /api/roles/self-assignable`: the roles members may choose;
+  `PUT|DELETE /api/me/roles/{id}` take and drop one for the caller.
 - `POST /api/admin/roles`, `PATCH|DELETE /api/admin/roles/{id}`,
   `PUT /api/admin/roles/order`, `PUT /api/admin/users/{id}/roles`.
 - `GET|PUT /api/admin/channels/{id}/overwrites`,
