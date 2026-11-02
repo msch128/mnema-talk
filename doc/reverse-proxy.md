@@ -105,6 +105,10 @@ server {
 
 Get the certificate with `certbot` or your usual tool.
 
+Every path of the web app, including invite links (`/invite/CODE`) and the
+optional vanity link (`/join/NAME`), is served by the app itself; forward
+everything to it and add no rewrite or redirect rules for these paths.
+
 ## WebSockets
 
 After sign-in the browser opens a WebSocket to `/api/ws` and keeps it open. It
