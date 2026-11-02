@@ -1,0 +1,53 @@
+internal/auth/account_erase.go
+  s_4c6a19030e223f::t_46c8383631c986 74-75
+internal/auth/account_export_build.go
+  s_4c6a19030e223f::t_367ae784c22d97 79,202
+internal/auth/account_export_events.go
+  s_4c6a19030e223f::t_78c9c7d021c2f9 35-46
+internal/communityevents/handler.go
+  s_4c6a19030e223f::t_ad983fd32f4cc3 34-37,50
+internal/communityevents/handler_comments.go
+  s_4c6a19030e223f::t_f8db7ec8fb761e 1-245
+internal/communityevents/model_comments.go
+  s_17ef7810e0243d::t_f1734541fe726e 1-69
+internal/communityevents/notify_comments.go
+  s_4c6a19030e223f::t_27682508240287 1-85
+internal/communityevents/store_comments.go
+  s_17ef7810e0243d::t_bfde9304178169 1-158
+internal/db/migrations/0087_event_comments.sql
+  s_17ef7810e0243d::t_464faac7be4aec 1-25
+internal/events/testdata/events.golden.json
+  s_4c6a19030e223f::t_bd55592883586c 63-64
+internal/events/types.go
+  s_4c6a19030e223f::t_408bbaf9f4f018 94-98
+internal/push/event_comment.go
+  s_4c6a19030e223f::t_75a14d109d87ef 1-45
+internal/push/locales/texts.json
+  s_4c6a19030e223f::t_5f3f59133ed90a 19,45
+internal/server/router_build_services.go
+  s_4c6a19030e223f::t_8d552a48f40d82 76-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "671f4af60dbf30c7851d44a440ed0a62a13aac08",
+  "prompts": {},
+  "sessions": {
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

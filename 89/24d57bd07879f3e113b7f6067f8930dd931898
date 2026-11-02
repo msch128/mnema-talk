@@ -1,0 +1,75 @@
+README.md
+  s_5738887ecf2da8::t_7cc971b5868576 108
+doc/events.md
+  s_5738887ecf2da8::t_848140052c0557 49-58
+e2e/tests/event-comments.spec.ts
+  s_5738887ecf2da8::t_da086a0fe3080f 1-74
+web/src/components/EventComments.test.ts
+  s_5738887ecf2da8::t_2cf96d955c4c41 1-164
+web/src/components/EventComments.vue
+  s_5738887ecf2da8::t_e72dfe04838fd7 1-159
+web/src/components/EventDetailModal.test.ts
+  s_5738887ecf2da8::t_a0cccde9114a8c 17-20
+web/src/components/EventDetailModal.vue
+  s_5738887ecf2da8::t_4f8398797c7df3 19,299-300
+web/src/components/EventsModal.test.ts
+  s_82e9d48cb7fc7f::t_a80e96fd8e5d06 18-21
+web/src/components/EventsModalDetails.test.ts
+  s_82e9d48cb7fc7f::t_e5e7bb05d1c52a 19-22
+web/src/components/EventsModalPolish.test.ts
+  s_82e9d48cb7fc7f::t_74de6e1c2e3aa7 14-17
+web/src/composables/useEventComments.test.ts
+  s_5738887ecf2da8::t_596b6f3e89274a 1-140
+web/src/composables/useEventComments.ts
+  s_5738887ecf2da8::t_602fef24c80a2e 1-122
+web/src/eventRoles.fixture.ts
+  s_5738887ecf2da8::t_cfb59ad71e5f7c 3,24-31
+web/src/i18n/de.json
+  s_5738887ecf2da8::t_ef5523e392bea3 587-593,3261-3263,3610,3612-3627
+web/src/i18n/en.json
+  s_5738887ecf2da8::t_666cd8e3740684 587-593,3261-3263,3610,3612-3627
+web/src/lib/errorSentencesA.ts
+  s_5738887ecf2da8::t_ed32abc13aca45 74,91,126
+web/src/lib/errorSentencesB.ts
+  s_5738887ecf2da8::t_344d76e4cbbd87 26,129,131
+web/src/lib/eventCommentsApi.test.ts
+  s_5738887ecf2da8::t_4dc42b2aa5a613 1-45
+web/src/stores/chatEvents.test.ts
+  s_7f0a4a30630f00::t_7996cad2a9d84a 5,188-200
+web/src/stores/eventComments.test.ts
+  s_5738887ecf2da8::t_00dbf9a61a1972 1-36
+web/src/types/events.test.ts
+  s_5738887ecf2da8::t_48ccb67fedbfc6 135-142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8924d57bd07879f3e113b7f6067f8930dd931898",
+  "prompts": {},
+  "sessions": {
+    "s_5738887ecf2da8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5d39aa3d27a2eaf7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_7f0a4a30630f00": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0f53487eefe78c3e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
