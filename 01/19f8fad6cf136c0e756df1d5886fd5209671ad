@@ -1,0 +1,100 @@
+api/openapi.json
+  h_0ff4f4713441f4 6853-6857,6895-6898,6921-6925,6948-6951,31145-31342,34155-34222
+doc/moderation.md
+  h_0ff4f4713441f4 484
+doc/roles-and-permissions.md
+  h_0ff4f4713441f4 170-203,396-397
+e2e/tests/self-roles.spec.ts
+  h_0ff4f4713441f4 1-83
+internal/audit/classes_test.go
+  h_0ff4f4713441f4 25-26
+internal/audit/snapshot.go
+  h_0ff4f4713441f4 22-23
+internal/db/migrations/0085_self_assignable_roles.sql
+  h_0ff4f4713441f4 1-20
+internal/events/testdata/events.golden.json
+  h_0ff4f4713441f4 16
+internal/events/types.go
+  h_0ff4f4713441f4 25
+internal/perm/snapshot.go
+  h_0ff4f4713441f4 42-47
+internal/perm/snapshot_actions.go
+  h_0ff4f4713441f4 12-14,21-23,117-122,125
+internal/perm/snapshot_load.go
+  h_0ff4f4713441f4 76-88,131,206-207
+internal/perm/store.go
+  h_0ff4f4713441f4 21-24,35-39
+internal/perm/store_overwrites.go
+  h_0ff4f4713441f4 114-116
+internal/perm/store_roles.go
+  h_0ff4f4713441f4 62,67,81-84,94-96,194-199,221,223,238,272
+internal/perm/store_self_assign.go
+  h_0ff4f4713441f4 1-182
+internal/perm/store_self_assign_integration_test.go
+  h_0ff4f4713441f4 1-233
+internal/perm/webmirror_test.go
+  h_0ff4f4713441f4 50-60
+internal/repo/testdata/error_messages.golden.json
+  h_0ff4f4713441f4 14,55-56,256,396
+internal/roles/handler.go
+  h_0ff4f4713441f4 11,23-26,33-39
+internal/roles/handler_integration_test.go
+  h_0ff4f4713441f4 15,54-56,91-165
+internal/roles/handler_self.go
+  h_0ff4f4713441f4 1-97
+internal/server/router_build.go
+  h_0ff4f4713441f4 156
+web/src/components/AdminRolesTab.test.ts
+  h_0ff4f4713441f4 97-133
+web/src/components/RoleEditor.vue
+  h_0ff4f4713441f4 16,56-58,69-76,84-86,95-96,108,116,188-203
+web/src/components/SelfRolesPanel.test.ts
+  h_0ff4f4713441f4 1-111
+web/src/components/SelfRolesPanel.vue
+  h_0ff4f4713441f4 1-85
+web/src/components/SettingsDialog.test.ts
+  h_0ff4f4713441f4 11,260-280
+web/src/components/SettingsDialog.vue
+  h_0ff4f4713441f4 4-5,7,13,23,26,33,38-39,148
+web/src/i18n/de.json
+  h_0ff4f4713441f4 219-220,222,226,244,3098-3100,3306-3313,4194,4446-4454
+web/src/i18n/en.json
+  h_0ff4f4713441f4 219-220,222,226,244,3098-3100,3306-3313,4194,4446-4454
+web/src/lib/errorSentencesA.ts
+  h_0ff4f4713441f4 17,58-59
+web/src/lib/errorSentencesB.ts
+  h_0ff4f4713441f4 77
+web/src/lib/errorSentencesC.ts
+  h_0ff4f4713441f4 27
+web/src/lib/permissions.ts
+  h_0ff4f4713441f4 68-77
+web/src/lib/settingsDialog.test.ts
+  h_0ff4f4713441f4 15
+web/src/lib/settingsDialog.ts
+  h_0ff4f4713441f4 6
+web/src/stores/chat/events.ts
+  h_0ff4f4713441f4 166-174,244
+web/src/stores/chatEvents.test.ts
+  h_0ff4f4713441f4 170-188
+web/src/stores/permissions.test.ts
+  h_0ff4f4713441f4 91-99
+web/src/stores/permissions.ts
+  h_0ff4f4713441f4 116-117
+web/src/types/events.test.ts
+  h_0ff4f4713441f4 66
+web/src/types/events.ts
+  h_0ff4f4713441f4 112-113,316,378
+web/src/types/rest.ts
+  h_0ff4f4713441f4 4025,4035,4042,4052,4059,4065,4071,4077
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0119f8fad6cf136c0e756df1d5886fd5209671ad",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
