@@ -1,0 +1,19 @@
+e2e/tests/self-roles.spec.ts
+  s_6f62c78e3c93c5::t_dc9c0f560e43ab 1-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "904aff709a4d7e2b6bdd7bf31ecef10ca46b38cb",
+  "prompts": {},
+  "sessions": {
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
