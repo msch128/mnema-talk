@@ -1,0 +1,83 @@
+api/openapi.json
+  s_8d4da942b23eba::t_046d4fe3bc8347 30722,30820
+doc/roles-and-permissions.md
+  s_17ef7810e0243d::t_5b2e2bf2d072cb 186-188,191-195,198-200
+internal/audit/classes_test.go
+  s_17ef7810e0243d::t_cddf7f11329259 25-26
+internal/events/testdata/events.golden.json
+  s_82e9d48cb7fc7f::t_b328c1315d590e 16
+internal/events/types.go
+  s_17ef7810e0243d::t_9f08a43e708663 25
+internal/perm/snapshot_actions.go
+  s_17ef7810e0243d::t_cc3bbccf9d10dd 12-14,21-23,117-122,125
+internal/perm/store_overwrites.go
+  s_17ef7810e0243d::t_87aa093add9761 114-116
+internal/perm/store_roles.go
+  s_17ef7810e0243d::t_28357c8bd42bb5 197-199
+internal/perm/store_self_assign.go
+  s_17ef7810e0243d::t_49154cc3075b70 21,84,89-90,99-102,104,114,119-121,128,133-141,150,156-166
+internal/perm/store_self_assign_integration_test.go
+  s_17ef7810e0243d::t_91e1dd53c47cd2 87,94,97,103,110,112,114,116,118,130,141-233
+internal/repo/testdata/error_messages.golden.json
+  s_17ef7810e0243d::t_85d5d6ad1d65e8 55
+internal/roles/handler_integration_test.go
+  s_17ef7810e0243d::t_c6ec9c5395e0dd 155-163
+internal/roles/handler_self.go
+  s_17ef7810e0243d::t_1288f1bda60305 8,38,59,82-83,93
+internal/server/router_build.go
+  s_17ef7810e0243d::t_8d913c5e40b9b7 156
+web/src/components/SelfRolesPanel.test.ts
+  s_17ef7810e0243d::t_b6c456400692bf 90-101
+web/src/components/SelfRolesPanel.vue
+  s_17ef7810e0243d::t_03da4d861deb07 35-39,45,62,66-67
+web/src/i18n/de.json
+  s_17ef7810e0243d::t_41eaeca9befa66 209
+web/src/i18n/en.json
+  s_17ef7810e0243d::t_0bdea7f3a385fb 209
+web/src/lib/errorSentencesA.ts
+  s_17ef7810e0243d::t_8372f17ee6bbec 58
+web/src/stores/chat/events.ts
+  s_82e9d48cb7fc7f::t_a34339f01b5bc2 166-174,244
+web/src/stores/chatEvents.test.ts
+  s_17ef7810e0243d::t_61a3bfc40ea5c2 170-188
+web/src/stores/permissions.test.ts
+  s_17ef7810e0243d::t_75a91b083dbb90 91-99
+web/src/stores/permissions.ts
+  s_17ef7810e0243d::t_6282b1a8fa3f0c 112-113
+web/src/types/events.test.ts
+  s_17ef7810e0243d::t_d9c0011f77d15e 66
+web/src/types/events.ts
+  s_82e9d48cb7fc7f::t_a154d10fb5fe25 112-113,316,378
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "40b84ac414ab5a9d741e81e853f5eba07a6cbede",
+  "prompts": {},
+  "sessions": {
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8d4da942b23eba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0fc251d9c06e53e1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
