@@ -133,16 +133,15 @@ function buildPayload(trimmedTitle: string) {
   return full
 }
 
-/** An edit names only what changed: a start or place that was not touched must not re-anchor a series or move occurrences that were moved by hand. */
+/** An edit names only what changed, so an untouched start or place cannot re-anchor a series. */
 function changedFields(full: ReturnType<typeof buildPayload>, current: CommunityEvent) {
   const same = (a: string | null | undefined, b: string | null | undefined) => (a ? new Date(a).getTime() : null) === (b ? new Date(b).getTime() : null)
-  const placeSame = (full.channel_id ?? null) === (current.channel_id ?? null) && (full.location ?? null) === (current.location ?? null)
   return {
     ...(full.title !== current.title ? { title: full.title } : {}),
     ...(full.description !== current.description ? { description: full.description } : {}),
     ...(!same(full.start_time, current.start_time) ? { start_time: full.start_time } : {}),
     ...(!same(full.end_time, current.end_time) ? { end_time: full.end_time } : {}),
-    ...(!placeSame ? { channel_id: full.channel_id, location: full.location } : {})
+    ...((full.channel_id ?? null) !== (current.channel_id ?? null) || (full.location ?? null) !== (current.location ?? null) ? { channel_id: full.channel_id, location: full.location } : {})
   }
 }
 
@@ -158,12 +157,11 @@ async function applyCover(id: string, current: CommunityEvent): Promise<Communit
   return current
 }
 
-/** An occurrence of a series is saved for itself or for it and the following ones; any other event just is. */
 function saveEvent(id: string, payload: ReturnType<typeof changedFields>) {
   return inSeries.value ? eventsStore.update(id, payload, scope.value) : eventsStore.update(id, payload)
 }
 
-/** The roles of a series that was just created are the series' template; those of an existing occurrence follow the scope chosen. */
+/** Roles chosen while creating a series are its template; an existing occurrence follows the scope. */
 function rolesScope(): Scope | undefined {
   if (created.value?.series) return 'following'
   return inSeries.value ? scope.value : undefined

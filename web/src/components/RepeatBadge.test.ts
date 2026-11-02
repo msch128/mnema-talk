@@ -17,7 +17,7 @@ describe('RepeatBadge', () => {
     expect(wrapper.text()).toBe('Repeats every week')
     await wrapper.setProps({ event: eventWithRoles({ series: series({ frequency: 'monthly', ended: true }) }) })
     expect(wrapper.text()).toContain('Repeats every month')
-    expect(wrapper.text()).toContain('series over')
+    expect(wrapper.text()).toContain('Series over')
   })
 
   it('shows nothing for a single event', () => {
