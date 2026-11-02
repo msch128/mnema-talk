@@ -1,0 +1,47 @@
+doc/wiki.md
+  s_fb29f048bd6d02::t_7cc5a556caf8bf 29-31,36-41,91-92,110-118
+internal/perm/perm.go
+  s_fb29f048bd6d02::t_a44c87774b9838 186
+internal/repo/testdata/error_messages.golden.json
+  s_fb29f048bd6d02::t_b390338e61c204 77,341
+internal/server/wiki_integration_test.go
+  s_fb29f048bd6d02::t_c67d4df53fabb7 149-154
+internal/wiki/model.go
+  s_fb29f048bd6d02::t_5562082d0678fe 29-34,38-39
+internal/wiki/store.go
+  s_fb29f048bd6d02::t_e29924a1c9ab33 31-32
+internal/wiki/store_edit.go
+  s_fb29f048bd6d02::t_bfe826c8a14bc5 6,35-38,41-44,49-53,63-67,89-90,117-127
+internal/wiki/store_integration_test.go
+  s_fb29f048bd6d02::t_979e60ff27dfc5 150-153,193-221,274,472-474,516-559
+internal/wiki/store_revisions.go
+  s_fb29f048bd6d02::t_a0068209e4480b 13-19,21,43,69
+internal/wiki/store_search.go
+  s_fb29f048bd6d02::t_5032ef8d11a338 20,24
+internal/wiki/store_write.go
+  s_fb29f048bd6d02::t_72c847357457ce 23,40-59,162-163,195-197,234-262
+web/src/i18n/de.json
+  s_fb29f048bd6d02::t_babd90b2f140ae 293,440
+web/src/i18n/en.json
+  s_fb29f048bd6d02::t_0474365229fa7e 293,440
+web/src/lib/errorSentencesA.ts
+  s_fb29f048bd6d02::t_d39e92e48e394d 79
+web/src/lib/errorSentencesB.ts
+  s_fb29f048bd6d02::t_25637fe0ef032c 158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a8ad012a5baee6cb33f93bb7f7318b6feb7cb23e",
+  "prompts": {},
+  "sessions": {
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
