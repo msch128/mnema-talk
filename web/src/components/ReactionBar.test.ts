@@ -7,6 +7,8 @@ import ReactionBar from './ReactionBar.vue'
 import ReactionPalette from './ReactionPalette.vue'
 import { useAuthStore } from '../stores/auth'
 import { useEmojiStore } from '../stores/emoji'
+import { usePermissionsStore } from '../stores/permissions'
+import { setLocale } from '../i18n'
 
 const reactions = [
   { emoji: '👍', count: 2, users: [fixtureId(1), fixtureId(2)] },
@@ -14,6 +16,7 @@ const reactions = [
 ]
 
 beforeEach(() => {
+  setLocale('en')
   setActivePinia(createPinia())
   useAuthStore().user = userFixture({ id: fixtureId(1), username: 'me', role: 'user' })
 })
@@ -89,5 +92,13 @@ describe('ReactionBar with a deleted custom emoji', () => {
   it('does not treat an emoji as gone before the list has loaded', () => {
     const w = mount(ReactionBar, { props: { reactions: custom } })
     expect(requireValue(w.find('button[aria-pressed]')).attributes('disabled')).toBeUndefined()
+  })
+
+  it('shows a held-back add button with the wait to a new member who may not react yet', () => {
+    useAuthStore().user = userFixture({ id: fixtureId(1), username: 'me', role: 'user' })
+    usePermissionsStore().info = { owner: false, permissions: 0, role_ids: [], top_position: 0, max_upload_mb: 50, catalog: [], channels: [], new_member: { react_at: new Date(Date.now() + 12 * 60_000).toISOString() } }
+    const w = mount(ReactionBar, { props: { reactions, canAdd: false }, global: { directives: { tooltip: () => undefined } } })
+    expect(w.find('[data-testid="reaction-add"]').exists()).toBe(false)
+    expect(w.get('[data-testid="reaction-wait"] [role="img"]').attributes('aria-label')).toBe('You can react in 12 min.')
   })
 })

@@ -61,7 +61,7 @@ describe('AdminRolesTab', () => {
     expect(w.text()).toContain('What every member has.')
     // only the permissions of @everyone are editable
     expect(w.find('input[data-max-chars="32"]').exists()).toBe(false)
-    expect(w.findAll('[role="switch"]')).toHaveLength(25)
+    expect(w.findAll('[role="switch"]')).toHaveLength(26)
   })
 
   it('shows the empty state', async () => {

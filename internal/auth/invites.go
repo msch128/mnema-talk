@@ -14,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/raid"
 )
 
 type Invite struct {
@@ -134,6 +135,9 @@ func CreateInvite(ctx context.Context, p *db.Pool, createdBy uuid.UUID, rawCode 
 	}
 	expiresAt, err := validateInviteExpiry(expiresInHours)
 	if err != nil {
+		return nil, err
+	}
+	if err := raid.CheckInvite(ctx, p); err != nil {
 		return nil, err
 	}
 	var inv Invite

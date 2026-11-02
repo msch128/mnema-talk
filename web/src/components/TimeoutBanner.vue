@@ -1,5 +1,7 @@
 <script setup lang="ts">
-// Shown under the header while the member is timed out: the time that is
+// The notices under the header about the member or the community itself (the
+// administrators' lockdown banner rides along below).
+// A timeout is shown while the member is timed out: the time that is
 // left, counting down, and the moderator's reason. When it reaches zero the
 // permissions are fetched again, which gives the member their rights back.
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
@@ -7,6 +9,7 @@ import { Clock } from '@lucide/vue'
 import { usePermissionsStore } from '../stores/permissions'
 import { formatRemaining } from '../lib/moderation'
 import { visibleInterval } from '../lib/pageVisibility'
+import RaidLockdownBanner from './RaidLockdownBanner.vue'
 
 const permissions = usePermissionsStore()
 const now = ref(Date.now())
@@ -69,4 +72,6 @@ onBeforeUnmount(stop)
     </span>
     <span data-testid="timeout-remaining" class="ml-auto font-mono text-xs tabular-nums text-mnema-text">{{ formatRemaining(remaining) }}</span>
   </div>
+  <!-- For administrators: a running lockdown -->
+  <RaidLockdownBanner />
 </template>

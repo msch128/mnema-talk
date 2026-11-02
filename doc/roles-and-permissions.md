@@ -135,6 +135,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Kick members | Sign members below your highest role out everywhere and drop them from their Talk, with no lasting sanction (bit `1 << 23`, [moderation](moderation.md#kicks)). Off for @everyone and every seeded role; Administrators and the Owner have it implicitly | no |
 | Manage stage | Give and take talk power in a Stage and answer raised hands; holders can always speak there (bit `1 << 24`, [Talks](talks.md#stages)). Off for @everyone and every seeded role; Administrators and the Owner have it implicitly. It is channel-scoped, so it can be allowed for one Stage only | yes |
 | Manage events | Create, edit and cancel community events, and upload or remove their cover images (bit `1 << 25`, [events](events.md)). Granted to roles holding *Timeout members* (seeded Moderator and Admin) by migration 0070; Administrators and the Owner have it implicitly | no |
+| Bypass new member limits | Write, react and speak at once, without waiting out the minimum membership age of [raid protection](moderation.md#raid-protection) (bit `1 << 26`). Separate from the slow mode exemption, which *Manage messages* gives. Granted to roles holding *Timeout members* (seeded Moderator and Admin) by migration 0083; Administrators and the Owner have it implicitly | no |
 
 The bit values are stored in the database and sent over the API; they never
 change meaning (`perm.Catalog` and its test freeze them).
@@ -147,7 +148,7 @@ role either: it is the one account with `users.role = 'admin'`.
 | Who | What it is | Permissions |
 |---|---|---|
 | Member | `@everyone` (position 0, every member has it) | *View channels, Send messages, Attach files, Add reactions, Mention @all and @here, Connect, Speak, Video, Send direct messages* (`perm.DefaultEveryone`) |
-| Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log, Manage events* |
+| Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log, Manage events, Bypass new member limits* |
 | Admin | Seeded role, hoisted, not managed, not mentionable, above Moderator when both are new | Moderator's permissions, plus *Manage channels, Manage roles, Manage invites, Manage members, Ban members* |
 | Owner | The account `users.role = 'admin'`, not a role | Every permission, plus the Owner-only powers |
 

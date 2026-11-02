@@ -33,6 +33,7 @@ func newSnapshot(now time.Time) *Snapshot {
 		timeouts:   map[uuid.UUID]Timeout{},
 
 		rulesAccepted: map[uuid.UUID]int{},
+		joined:        map[uuid.UUID]time.Time{},
 	}
 }
 
@@ -97,6 +98,14 @@ type settingsRow struct {
 	MaxUploadMB    *int
 	RulesVersion   int
 	DirectMessages bool
+	AgeWrite       int
+	AgeReact       int
+	AgeSpeak       int
+}
+
+type joinedRow struct {
+	ID     uuid.UUID
+	Joined time.Time
 }
 
 type acceptedRow struct {
@@ -120,9 +129,11 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	roles := load(r, `SELECT id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb, bot_user_id FROM roles`, pgx.RowToStructByPos[roleRow])
 	assigned := load(r, `SELECT user_id, role_id FROM user_roles`, pgx.RowToStructByPos[userRoleRow])
 	owners := load(r, `SELECT id FROM users WHERE role = 'admin'`, pgx.RowTo[uuid.UUID])
-	settings := load(r, `SELECT max_upload_mb, CASE WHEN rules_text <> '' THEN rules_version ELSE 0 END, direct_messages_enabled FROM instance_settings`, pgx.RowToStructByPos[settingsRow])
+	settings := load(r, `SELECT max_upload_mb, CASE WHEN rules_text <> '' THEN rules_version ELSE 0 END, direct_messages_enabled, min_age_write_minutes, min_age_react_minutes, min_age_speak_minutes FROM instance_settings`, pgx.RowToStructByPos[settingsRow])
 	timeouts := load(r, `SELECT id, timeout_until, timeout_reason FROM users WHERE timeout_until > NOW()`, pgx.RowToStructByPos[timeoutRow])
 	accepted := load(r, `SELECT id, rules_accepted_version FROM users WHERE rules_accepted_version > 0`, pgx.RowToStructByPos[acceptedRow])
+	// Only while a minimum age is set: when each member joined.
+	joined := load(r, `SELECT id, created_at FROM users WHERE deleted_at IS NULL AND (SELECT GREATEST(min_age_write_minutes, min_age_react_minutes, min_age_speak_minutes) FROM instance_settings) > 0`, pgx.RowToStructByPos[joinedRow])
 	bots := load(r, `SELECT user_id FROM bots`, pgx.RowTo[uuid.UUID])
 	cats := load(r, `SELECT id FROM categories`, pgx.RowTo[uuid.UUID])
 	chans := load(r, `SELECT id, category_id, is_stage FROM channels WHERE type <> 'dm'`, pgx.RowToStructByPos[channelRow])
@@ -140,6 +151,12 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 		s.globalUploadMB = settings[0].MaxUploadMB
 		s.rulesVersion = settings[0].RulesVersion
 		dmOn = settings[0].DirectMessages
+		s.newMember = NewMemberRules{
+			Write: time.Duration(settings[0].AgeWrite) * time.Minute, React: time.Duration(settings[0].AgeReact) * time.Minute, Speak: time.Duration(settings[0].AgeSpeak) * time.Minute,
+		}
+	}
+	for _, j := range joined {
+		s.joined[j.ID] = j.Joined
 	}
 	s.addEntities(owners, bots, cats, timeouts)
 	for _, a := range accepted {

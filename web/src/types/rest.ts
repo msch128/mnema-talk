@@ -4229,6 +4229,80 @@ export function isPushTestResult(value: unknown): value is PushTestResult {
 
 export const decodePushTestResult = decoder("push.TestResult", isPushTestResult)
 
+export type RaidInput = {
+  join_limit: number
+  join_window_minutes: number
+  min_age_react_minutes: number
+  min_age_speak_minutes: number
+  min_age_write_minutes: number
+}
+
+export function isRaidInput(value: unknown): value is RaidInput {
+  return isRecord(value)
+    && (hasOwn(value, "join_limit") && (isInteger(value["join_limit"]) && value["join_limit"] >= 0 && value["join_limit"] <= 1000))
+    && (hasOwn(value, "join_window_minutes") && (isInteger(value["join_window_minutes"]) && value["join_window_minutes"] >= 1 && value["join_window_minutes"] <= 1440))
+    && (hasOwn(value, "min_age_react_minutes") && (isInteger(value["min_age_react_minutes"]) && value["min_age_react_minutes"] >= 0 && value["min_age_react_minutes"] <= 43200))
+    && (hasOwn(value, "min_age_speak_minutes") && (isInteger(value["min_age_speak_minutes"]) && value["min_age_speak_minutes"] >= 0 && value["min_age_speak_minutes"] <= 43200))
+    && (hasOwn(value, "min_age_write_minutes") && (isInteger(value["min_age_write_minutes"]) && value["min_age_write_minutes"] >= 0 && value["min_age_write_minutes"] <= 43200))
+}
+
+export const decodeRaidInput = decoder("raid.Input", isRaidInput)
+
+export type RaidLockdown = {
+  active: boolean
+  pause_invites: boolean
+  started_at?: string | null
+  until?: string | null
+}
+
+export function isRaidLockdown(value: unknown): value is RaidLockdown {
+  return isRecord(value)
+    && (hasOwn(value, "active") && typeof value["active"] === 'boolean')
+    && (hasOwn(value, "pause_invites") && typeof value["pause_invites"] === 'boolean')
+    && (!hasOwn(value, "started_at") || (isTimestamp(value["started_at"]) || value["started_at"] === null))
+    && (!hasOwn(value, "until") || (isTimestamp(value["until"]) || value["until"] === null))
+}
+
+export const decodeRaidLockdown = decoder("raid.Lockdown", isRaidLockdown)
+
+export type RaidLockdownInput = {
+  active: boolean
+  hours?: number
+  pause_invites?: boolean
+}
+
+export function isRaidLockdownInput(value: unknown): value is RaidLockdownInput {
+  return isRecord(value)
+    && (hasOwn(value, "active") && typeof value["active"] === 'boolean')
+    && (!hasOwn(value, "hours") || (isInteger(value["hours"]) && value["hours"] >= 0 && value["hours"] <= 720))
+    && (!hasOwn(value, "pause_invites") || typeof value["pause_invites"] === 'boolean')
+}
+
+export const decodeRaidLockdownInput = decoder("raid.LockdownInput", isRaidLockdownInput)
+
+export type RaidSettings = {
+  join_limit: number
+  join_window_minutes: number
+  joined_in_window: number
+  lockdown: RaidLockdown
+  min_age_react_minutes: number
+  min_age_speak_minutes: number
+  min_age_write_minutes: number
+}
+
+export function isRaidSettings(value: unknown): value is RaidSettings {
+  return isRecord(value)
+    && (hasOwn(value, "join_limit") && (isInteger(value["join_limit"]) && value["join_limit"] >= 0 && value["join_limit"] <= 1000))
+    && (hasOwn(value, "join_window_minutes") && (isInteger(value["join_window_minutes"]) && value["join_window_minutes"] >= 1 && value["join_window_minutes"] <= 1440))
+    && (hasOwn(value, "joined_in_window") && (isInteger(value["joined_in_window"]) && value["joined_in_window"] >= 0))
+    && (hasOwn(value, "lockdown") && isRaidLockdown(value["lockdown"]))
+    && (hasOwn(value, "min_age_react_minutes") && (isInteger(value["min_age_react_minutes"]) && value["min_age_react_minutes"] >= 0 && value["min_age_react_minutes"] <= 43200))
+    && (hasOwn(value, "min_age_speak_minutes") && (isInteger(value["min_age_speak_minutes"]) && value["min_age_speak_minutes"] >= 0 && value["min_age_speak_minutes"] <= 43200))
+    && (hasOwn(value, "min_age_write_minutes") && (isInteger(value["min_age_write_minutes"]) && value["min_age_write_minutes"] >= 0 && value["min_age_write_minutes"] <= 43200))
+}
+
+export const decodeRaidSettings = decoder("raid.Settings", isRaidSettings)
+
 export type RolesChannelPermissions = {
   channel_id: string
   permissions: number
@@ -4253,6 +4327,21 @@ export function isRolesMemberRolesRequest(value: unknown): value is RolesMemberR
 
 export const decodeRolesMemberRolesRequest = decoder("roles.MemberRolesRequest", isRolesMemberRolesRequest)
 
+export type RolesNewMemberInfo = {
+  react_at?: string
+  speak_at?: string
+  write_at?: string
+}
+
+export function isRolesNewMemberInfo(value: unknown): value is RolesNewMemberInfo {
+  return isRecord(value)
+    && (!hasOwn(value, "react_at") || isTimestamp(value["react_at"]))
+    && (!hasOwn(value, "speak_at") || isTimestamp(value["speak_at"]))
+    && (!hasOwn(value, "write_at") || isTimestamp(value["write_at"]))
+}
+
+export const decodeRolesNewMemberInfo = decoder("roles.NewMemberInfo", isRolesNewMemberInfo)
+
 export type RolesOverwritesBody = {
   overwrites: Array<PermOverwrite>
 }
@@ -4270,6 +4359,7 @@ export type RolesPermissionsInfo = {
   channels: Array<RolesChannelPermissions>
   direct_messages_enabled?: boolean
   max_upload_mb: number
+  new_member?: RolesNewMemberInfo
   owner: boolean
   permissions: number
   role_ids: Array<string>
@@ -4286,6 +4376,7 @@ export function isRolesPermissionsInfo(value: unknown): value is RolesPermission
     && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isRolesChannelPermissions(item)))
     && (!hasOwn(value, "direct_messages_enabled") || typeof value["direct_messages_enabled"] === 'boolean')
     && (hasOwn(value, "max_upload_mb") && (isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1))
+    && (!hasOwn(value, "new_member") || isRolesNewMemberInfo(value["new_member"]))
     && (hasOwn(value, "owner") && typeof value["owner"] === 'boolean')
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
     && (hasOwn(value, "role_ids") && isArrayOf(value["role_ids"], item => isIdentifier(item)))

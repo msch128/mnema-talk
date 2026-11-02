@@ -44,6 +44,12 @@ describe('ready-made choices stay inside what the server accepts', () => {
     expect(RULE_TIMEOUTS.every(s => s === 0 || (s >= 5 && s <= 28 * 24 * 3600))).toBe(true)
   })
 
+  it('lockdown and waiting times of new members', () => {
+    expect(inRange(presets.lockdownHours, 0, 720)).toBe(true)
+    expect(inRange(presets.newMemberWaitMinutes, 0, 30 * 24 * 60)).toBe(true)
+    expect(presets.newMemberWaitMinutes).toContain(0)
+  })
+
   it('timed mutes', () => {
     const timed = MUTE_DURATIONS.flatMap(d => (d.ms === null ? [] : [d.ms / 60_000]))
     expect(timed).toEqual(presets.muteMinutes)
@@ -52,6 +58,12 @@ describe('ready-made choices stay inside what the server accepts', () => {
 })
 
 describe('the menus offer exactly the shared presets', () => {
+  it('lockdown durations have a text in both languages', () => {
+    for (const tree of [en, de]) {
+      for (const h of presets.lockdownHours) expect(text(tree, `raid.lockdown.durations.${h}`), `durations.${h}`).toEqual(expect.any(String))
+    }
+  })
+
   it('poll durations', () => {
     expect([...POLL_DURATIONS]).toEqual(presets.pollDurations)
   })

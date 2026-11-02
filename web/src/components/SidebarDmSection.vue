@@ -12,6 +12,8 @@ import { useAuthStore } from '../stores/auth'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
 import { useVoiceStore } from '../stores/voice'
+import { usePermissionsStore } from '../stores/permissions'
+import { waitSentence } from '../lib/newMember'
 import { useDmCallsStore } from '../stores/dmCalls'
 import { useCompactLayout } from '../composables/useCompactLayout'
 import { useDmActions } from '../composables/useDmActions'
@@ -38,6 +40,12 @@ const voiceStore = useVoiceStore()
 const calls = useDmCallsStore()
 const { closeNav } = useCompactLayout()
 const { canStart } = useDmActions()
+// A new member who may not start conversations yet sees the button held back, with the time.
+const permissions = usePermissionsStore()
+const startWait = computed(() => {
+  const ms = permissions.newMemberWait('write')
+  return features.dm && !canStart.value && ms > 0 ? waitSentence('write', ms) : ''
+})
 const actions = useDmListActions()
 
 const enhanced = computed(() => features.dmV2)
@@ -77,7 +85,7 @@ function toggle() {
 const showAll = ref(false)
 const creating = ref(false)
 
-const visible = computed(() => features.dm && (chatStore.dms.length > 0 || canStart.value))
+const visible = computed(() => features.dm && (chatStore.dms.length > 0 || canStart.value || !!startWait.value))
 const unreadOf = (id: string) => chatStore.readStates[id]?.unread_count || 0
 const mentionsOf = (id: string) => chatStore.readStates[id]?.mention_count || 0
 const isMuted = (id: string) => chatStore.notificationLevel(id) === 'mute'
@@ -177,6 +185,9 @@ function onDragEnd() {
       >
         <Plus class="h-4 w-4" />
       </button>
+      <span v-else-if="startWait" data-testid="dm-new-wait" role="img" class="btn btn-icon h-5 w-5 shrink-0 opacity-50 max-md:h-11 max-md:w-11" aria-disabled="true" v-tooltip="startWait" :aria-label="startWait">
+        <Plus class="h-4 w-4" />
+      </span>
     </div>
 
     <div v-if="!collapsed" class="mt-0.5" data-testid="dm-body">

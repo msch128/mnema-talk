@@ -20,6 +20,7 @@ import { useVoiceMenus } from '../composables/useVoiceMenus'
 import TalkReactButton from './TalkReactButton.vue'
 import { useStage } from '../composables/useStage'
 import { blockedButton } from './talkButtons'
+import { waitSentence } from '../lib/newMember'
 import { t } from '../i18n'
 
 const props = defineProps({
@@ -39,7 +40,12 @@ const stage = useStage(() => voiceStore.currentChannelId)
 stage.muteWithoutTalkPower(() => voiceStore.isConnected)
 const canSpeak = computed(() => permissions.canIn(room.value, 'speak') && stage.iAmSpeaker.value)
 const canVideo = computed(() => permissions.canIn(room.value, 'video') && stage.iAmSpeaker.value)
-const speakHint = computed(() => (stage.isStage.value && !stage.iAmSpeaker.value ? t('stage.noPower') : t('talk.noSpeak')))
+const speakHint = computed(() => {
+  if (stage.isStage.value && !stage.iAmSpeaker.value) return t('stage.noPower')
+  // A new member who has to wait is told until when, not just that they may not.
+  const wait = permissions.newMemberWait('speak')
+  return wait > 0 && !permissions.canIn(room.value, 'speak') ? waitSentence('speak', wait) : t('talk.noSpeak')
+})
 const videoHint = computed(() => (stage.isStage.value && !stage.iAmSpeaker.value ? t('stage.noPower') : t('talk.noVideo')))
 const reactOpen = ref(false)
 const { leaveVoiceChannel, startScreenShare, stopScreenShare, applyAudioSettings, toggleCamera } = useWebRTC()

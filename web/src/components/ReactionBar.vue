@@ -3,6 +3,7 @@ import type { PropType } from 'vue'
 import type { ReactionSummary } from '../types/domain'
 // Reaction badges under a message plus the dashed "add reaction" button
 // with its palette.
+import { computed } from 'vue'
 import { SmilePlus } from '@lucide/vue'
 import { parseEmojiToken, plainEmojiText } from '../lib/customEmoji'
 import { useEmojiStore } from '../stores/emoji'
@@ -10,6 +11,8 @@ import { useAuthStore } from '../stores/auth'
 import EmojiGlyph from './EmojiGlyph.vue'
 import ReactionPalette from './ReactionPalette.vue'
 import { PICKER_ANCHOR } from '../composables/useMessageActions'
+import { usePermissionsStore } from '../stores/permissions'
+import { waitSentence } from '../lib/newMember'
 
 defineProps({
   reactions: { type: Array as PropType<ReactionSummary[]>, default: () => [] },
@@ -26,6 +29,12 @@ const emit = defineEmits<{ toggle: [emoji: string]; 'toggle-picker': []; 'close-
 
 const authStore = useAuthStore()
 const emojiStore = useEmojiStore()
+const permissions = usePermissionsStore()
+// A new member who may not react yet: the sentence that says until when (empty: nothing holds them back).
+const reactWait = computed(() => {
+  const ms = permissions.newMemberWait('react')
+  return ms > 0 ? waitSentence('react', ms) : ''
+})
 
 function reacted(reaction: ReactionSummary) {
   const me = authStore.user?.id
@@ -82,5 +91,11 @@ function gone(reaction: ReactionSummary) {
         @close="emit('close-picker')"
       />
     </div>
+    <!-- A new member who has to wait: the button is there, held back, and says until when -->
+    <span v-else-if="reactWait" class="relative inline-block" data-testid="reaction-wait" v-tooltip="reactWait">
+      <span class="btn btn-secondary inline-flex items-center justify-center w-7 h-7 rounded-full border-dashed p-0 opacity-50" aria-disabled="true" role="img" :aria-label="reactWait">
+        <SmilePlus :class="smallIcon ? 'w-3.5 h-3.5' : 'w-4 h-4'" />
+      </span>
+    </span>
   </div>
 </template>

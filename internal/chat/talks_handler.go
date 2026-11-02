@@ -136,6 +136,10 @@ func (h *Handler) startDMTalk(w http.ResponseWriter, r *http.Request) error {
 		if !global.Has(perm.Connect) {
 			return errCannotConnect
 		}
+		// The call of a conversation follows the speak wait of a new member: no ringing one they cannot join.
+		if err := h.Perms.RequireCall(ctx, user.Subject()); err != nil {
+			return err
+		}
 	}
 	talk, err := h.Talks.OpenForDM(ctx, user.ID, dm)
 	if err != nil {

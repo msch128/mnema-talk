@@ -103,6 +103,19 @@ func insertMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, nm New
 	return id, nil
 }
 
+type newMemberWriteWaitKey struct{}
+
+// withNewMemberWriteWait carries how long the author still waits as a new
+// member before they may write (raid protection); zero: not at all.
+func withNewMemberWriteWait(ctx context.Context, wait time.Duration) context.Context {
+	return context.WithValue(ctx, newMemberWriteWaitKey{}, wait)
+}
+
+func newMemberWriteWait(ctx context.Context) time.Duration {
+	v, _ := ctx.Value(newMemberWriteWaitKey{}).(time.Duration)
+	return v
+}
+
 type slowModeExemptKey struct{}
 
 // WithSlowModeExempt marks a request whose author is not held back by slow

@@ -72,6 +72,8 @@ const FAILED = { start: 'dm.startFailed', add: 'dm.addFailed', send: 'dm.sendFai
  */
 export function dmErrorText(error: unknown, kind: 'start' | 'add' | 'send'): string {
   if (isApiError(error)) {
+    // A new member's wait is named, not hidden behind the calm refusal.
+    if (error.status === 403 && error.retryAfter !== null) return error.message
     if (error.status === 403 && error.code === 'FORBIDDEN') return t('dm.refused')
     if (error.status === 409) return t(kind === 'add' ? 'dm.groupFull' : 'dm.tooManyGroups')
     if (error.status === 429) return t('dm.slowDown')

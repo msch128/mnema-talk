@@ -16,6 +16,7 @@ import { fixtureId, userFixture } from '../test-fixtures.fixture'
 import { dmFixture, dmMemberFixture } from '../dm.fixture'
 import type { ApiOptions } from '../lib/api'
 import { ApiError } from '../lib/api'
+import { dmErrorText } from '../lib/dm'
 import type { ChatMember } from '../types/rest'
 
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
@@ -61,6 +62,23 @@ afterEach(() => {
   useChatStore().resetCommunityState()
   document.body.innerHTML = ''
   vi.restoreAllMocks()
+})
+
+describe('SidebarDmSection and the wait of a new member', () => {
+  it('holds the new-conversation button back and says when writing opens up', () => {
+    setup({ canStart: false })
+    usePermissionsStore().info = {
+      owner: false, permissions: 0, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [], channels: [],
+      can_start_direct_messages: false, new_member: { write_at: new Date(Date.now() + 12 * 60_000).toISOString() }
+    }
+    const w = mount(SidebarDmSection, { global })
+    expect(w.find('[data-testid="dm-new"]').exists()).toBe(false)
+    expect(w.get('[data-testid="dm-new-wait"]').attributes('aria-label')).toBe('You can write in 12 min.')
+  })
+
+  it('names the wait instead of the calm refusal when a new member tries', () => {
+    expect(dmErrorText(new ApiError(403, 'FORBIDDEN', 'New here: you can write in 5 min.', 300), 'start')).toBe('New here: you can write in 5 min.')
+  })
 })
 
 describe('SidebarDmSection', () => {
