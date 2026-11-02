@@ -90,7 +90,7 @@ func joinRole(ctx context.Context, tx pgx.Tx, eventID, userID uuid.UUID, role ro
 	if role.Capacity != nil && confirmed >= *role.Capacity {
 		state = SignupWaitlist
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO event_signups (event_id, user_id, role_id, state) VALUES ($1, $2, $3, $4)`, eventID, userID, role.ID, state); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO event_signups (event_id, user_id, role_id, state, created_at) VALUES ($1, $2, $3, $4, clock_timestamp())`, eventID, userID, role.ID, state); err != nil {
 		return Signup{}, fmt.Errorf("sign up: %w", err)
 	}
 	return signupWithPosition(ctx, tx, role.ID, userID, state)

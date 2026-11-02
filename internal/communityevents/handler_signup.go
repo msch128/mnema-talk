@@ -39,25 +39,37 @@ func (h *Handler) signUp(w http.ResponseWriter, r *http.Request) error {
 }
 
 // @Summary Leave the role of an event
-// @Description Removes the caller's sign-up and moves the role's waitlist up. Always allowed, also on a finished event. The RSVP stays as it is.
+// @Description Removes the caller's sign-up and moves the role's waitlist up. Always allowed, also on a finished event and for a member who can no longer view the event (a Talk they lost access to): such a member gets 204 instead of the event. The RSVP stays as it is.
 // @ID leaveCommunityEventRole
 // @Tags Events
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Event ID" Format(uuid)
 // @Success 200 {object} CommunityEvent
+// @Success 204 "Left; the caller can no longer view the event."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
 // @Router /api/events/{id}/signup [delete]
 func (h *Handler) leaveSignup(w http.ResponseWriter, r *http.Request) error {
-	ev, err := h.loadViewable(r)
+	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	_, promoted, err := h.Store.Leave(r.Context(), ev.ID, auth.UserFrom(r.Context()).ID)
+	user := auth.UserFrom(r.Context())
+	_, promoted, err := h.Store.Leave(r.Context(), id, user.ID)
 	if err != nil {
 		return err
 	}
-	return h.finishRoster(w, r, ev.ID, promoted)
+	ev, err := h.Store.Get(r.Context(), id, &user.ID)
+	if err != nil {
+		return err
+	}
+	if h.requireViewable(r, ev) != nil {
+		h.broadcast(ev)
+		h.notifyPromoted(r, ev, promoted)
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
+	return h.finishRoster(w, r, id, promoted)
 }
 
 // @Summary Remove a member from the roster of an event
@@ -93,6 +105,8 @@ func (h *Handler) removeSignup(w http.ResponseWriter, r *http.Request) error {
 		return httpx.ErrNotFound("that member has no sign-up for this event")
 	}
 	h.auditRoster(r, ev, "signup_removed", map[string]any{"user_id": target, "role": left.Name})
-	h.notifyMembers(r.Context(), ev, SignupKindRemoved, left.Name, []Promotion{{EventID: ev.ID, UserID: target, RoleName: left.Name}})
+	if target != auth.UserFrom(r.Context()).ID {
+		h.notifyMembers(r.Context(), ev, SignupKindRemoved, left.Name, []Promotion{{EventID: ev.ID, UserID: target, RoleName: left.Name}})
+	}
 	return h.finishRoster(w, r, ev.ID, promoted)
 }

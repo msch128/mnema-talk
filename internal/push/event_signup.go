@@ -22,9 +22,9 @@ func (s *Service) SendEventSignupNotice(ctx context.Context, userID, eventID uui
 	if held, err := s.eventQuiet(ctx, userID, channelID); err != nil || held {
 		return err
 	}
-	key := "event_promoted"
-	if kind == "removed" {
-		key = "event_removed"
+	key := map[string]string{"removed": "event_removed", "waitlisted": "event_waitlisted"}[kind]
+	if key == "" {
+		key = "event_promoted"
 	}
 	opts := Options{TTL: time.Hour, Urgent: false, Timeout: sendTimeout}
 	err := s.pushToMember(ctx, userID, opts, func(locale string, preview bool) Payload {

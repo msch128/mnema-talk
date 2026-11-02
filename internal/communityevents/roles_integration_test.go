@@ -401,8 +401,9 @@ func TestAMemberWhoMovesUpIsToldAndTheBroadcastKeepsTheRosterPrivate(t *testing.
 	}
 }
 
-func TestATalkEventRosterIsHiddenFromMembersWhoCannotViewTheTalk(t *testing.T) {
-	f := newRosterFixture(t)
+// privateTalk moves the event into a Talk that @everyone cannot view and returns the Talk.
+func (f *rosterFixture) privateTalk(t *testing.T) uuid.UUID {
+	t.Helper()
 	var talk uuid.UUID
 	if err := f.p.QueryRow(context.Background(), `INSERT INTO channels (name, type) VALUES ('private-talk', 'voice') RETURNING id`).Scan(&talk); err != nil {
 		t.Fatal(err)
@@ -418,13 +419,19 @@ func TestATalkEventRosterIsHiddenFromMembersWhoCannotViewTheTalk(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.h.Perms.Invalidate()
+	return talk
+}
+
+func TestATalkEventRosterIsHiddenFromMembersWhoCannotViewTheTalk(t *testing.T) {
+	f := newRosterFixture(t)
+	f.privateTalk(t)
 	stranger := f.user(t, "stranger", "user")
 	roles := f.setRoles(t, role("Tank", 1))
 	if _, err := f.call(t, stranger, f.h.signUp, http.MethodPut, fmt.Sprintf(`{"role_id":%q}`, roles[0].ID), nil); err == nil {
 		t.Fatal("a member who cannot view the Talk must not sign up")
 	}
-	if _, err := f.call(t, stranger, f.h.leaveSignup, http.MethodDelete, "", nil); err == nil {
-		t.Fatal("nor reach the event through leaving")
+	if rec, err := f.call(t, stranger, f.h.leaveSignup, http.MethodDelete, "", nil); err != nil || rec.Code != http.StatusNoContent || rec.Body.Len() != 0 {
+		t.Fatalf("leaving reveals nothing of the event: %v %d %s", err, rec.Code, rec.Body.String())
 	}
 	// A promoted member who lost sight of the Talk is told nothing.
 	ev, _ := f.s.Get(context.Background(), f.event.ID, nil)
@@ -602,4 +609,147 @@ func TestNoticesNeedNeitherPushNorEventsAndNameTheFallbackRole(t *testing.T) {
 		}
 	}
 	t.Fatal("the notice should carry the fallback role name")
+}
+
+// Sign-ups race with the editors of the role list: no deadlock, no overbooking.
+func TestSignUpsRaceWithRoleEditing(t *testing.T) {
+	f := newRosterFixture(t)
+	roles := f.setRoles(t, role("Tank", 2), role("Flex", 50))
+	users := make([]*auth.User, 16)
+	for i := range users {
+		users[i] = f.user(t, fmt.Sprintf("r%d", i), "user")
+	}
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	for i, u := range users {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, _, err := f.s.SignUp(ctx, f.event.ID, u.ID, roles[i%2].ID); err != nil {
+				t.Errorf("sign up: %v", err)
+			}
+		}()
+	}
+	for i := range 6 {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			capacity := 2 + i%3
+			_, err := f.s.SetRoles(ctx, f.event.ID, []RoleInput{{ID: &roles[0].ID, Name: "Tank", Capacity: &capacity}, {ID: &roles[1].ID, Name: "Flex", Capacity: ptr(50)}})
+			if err != nil && !strings.Contains(err.Error(), "confirmed members") {
+				t.Errorf("set roles: %v", err)
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			// Deleting a role with sign-ups without a target is a conflict, never a deadlock.
+			if _, err := f.s.DeleteRole(ctx, f.event.ID, roles[0].ID, nil); err != nil && !strings.Contains(err.Error(), "sign-ups") {
+				t.Errorf("delete role: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+	ev, err := f.s.Get(ctx, f.event.ID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range ev.Roles {
+		if r.Capacity != nil && r.Confirmed > *r.Capacity {
+			t.Fatalf("%s is overbooked: %d of %d", r.Name, r.Confirmed, *r.Capacity)
+		}
+	}
+}
+
+func TestTheDatabaseRefusesAnOverbookedRole(t *testing.T) {
+	f := newRosterFixture(t)
+	roles := f.setRoles(t, role("Tank", 1))
+	a, b := f.user(t, "a", "user"), f.user(t, "b", "user")
+	insert := func(u *auth.User, state string) error {
+		_, err := f.p.Exec(context.Background(), `INSERT INTO event_signups (event_id, user_id, role_id, state) VALUES ($1, $2, $3, $4)`, f.event.ID, u.ID, roles[0].ID, state)
+		return err
+	}
+	if err := insert(a, SignupConfirmed); err != nil {
+		t.Fatal(err)
+	}
+	if err := insert(b, SignupConfirmed); err == nil {
+		t.Fatal("a second confirmed member must be refused by the database")
+	}
+	if err := insert(b, SignupWaitlist); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.p.Exec(context.Background(), `UPDATE event_signups SET state = 'confirmed' WHERE user_id = $1`, b.ID); err == nil {
+		t.Fatal("promoting past the capacity must be refused")
+	}
+	if _, err := f.p.Exec(context.Background(), `UPDATE event_roles SET capacity = NULL WHERE id = $1`, roles[0].ID); err != nil {
+		t.Fatalf("unlimited is fine: %v", err)
+	}
+	if _, err := f.p.Exec(context.Background(), `UPDATE event_signups SET state = 'confirmed' WHERE user_id = $1`, b.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.p.Exec(context.Background(), `UPDATE event_roles SET capacity = 1 WHERE id = $1`, roles[0].ID); err == nil {
+		t.Fatal("lowering below the confirmed members must be refused")
+	}
+}
+
+func TestMembersPushedToTheWaitlistByARoleMoveAreTold(t *testing.T) {
+	f := newRosterFixture(t)
+	roles := f.setRoles(t, role("Tank", 1), role("DPS", 1))
+	a, b := f.user(t, "a", "user"), f.user(t, "b", "user")
+	f.signUp(t, a, roles[0].ID)
+	f.signUp(t, b, roles[1].ID)
+	req := httptest.NewRequest(http.MethodDelete, "/?move_to="+roles[1].ID.String(), nil)
+	rc := chi.NewRouteContext()
+	rc.URLParams.Add("id", f.event.ID.String())
+	rc.URLParams.Add("roleID", roles[0].ID.String())
+	req = req.WithContext(context.WithValue(auth.WithUser(req.Context(), f.creator), chi.RouteCtxKey, rc))
+	if err := f.h.deleteRole(httptest.NewRecorder(), req); err != nil {
+		t.Fatal(err)
+	}
+	f.h.WaitNotices()
+	if !hasNotice(f.rec, a.ID, SignupKindWaitlisted) {
+		t.Fatal("a, who held a slot and now waits, must be told")
+	}
+	if hasNotice(f.rec, b.ID, SignupKindWaitlisted) || hasNotice(f.rec, b.ID, SignupKindPromoted) {
+		t.Fatal("b keeps the slot and is told nothing")
+	}
+}
+
+func TestLeavingAlwaysWorksAndRemovingYourselfIsNoModeratorAction(t *testing.T) {
+	f := newRosterFixture(t)
+	roles := f.setRoles(t, role("Tank", 1))
+	a := f.user(t, "a", "user")
+	f.signUp(t, a, roles[0].ID)
+	f.signUp(t, f.creator, roles[0].ID)
+
+	// The creator removes themselves: no "removed by a moderator" notice.
+	if _, err := f.call(t, f.creator, f.h.removeSignup, http.MethodDelete, "", map[string]string{"userID": f.creator.ID.String()}); err != nil {
+		t.Fatal(err)
+	}
+	f.h.WaitNotices()
+	if hasNotice(f.rec, f.creator.ID, SignupKindRemoved) {
+		t.Fatal("removing yourself is not a removal by a moderator")
+	}
+
+	// A member who lost sight of the Talk can still free their slot.
+	f.privateTalk(t)
+	rec, err := f.call(t, a, f.h.leaveSignup, http.MethodDelete, "", nil)
+	if err != nil || rec.Code != http.StatusNoContent {
+		t.Fatalf("leaving without view access: %v %d", err, rec.Code)
+	}
+	if f.state(t, a) != "none" {
+		t.Fatal("the slot should be free")
+	}
+}
+
+func TestWithoutAPermissionServiceOnlyTheOwnerAndTheCreatorManageTheRoster(t *testing.T) {
+	f := newRosterFixture(t)
+	f.h.Perms = nil
+	stranger := f.user(t, "stranger", "user")
+	body := `{"roles":[{"name":"Tank"}]}`
+	if _, err := f.call(t, stranger, f.h.setRoles, http.MethodPut, body, nil); err == nil {
+		t.Fatal("the roster fails closed without a permission service")
+	}
+	if _, err := f.call(t, f.owner, f.h.setRoles, http.MethodPut, body, nil); err != nil {
+		t.Fatalf("owner: %v", err)
+	}
 }

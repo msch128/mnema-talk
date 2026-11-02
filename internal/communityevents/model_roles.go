@@ -82,11 +82,11 @@ type RoleTemplateRequest struct {
 	Enabled *bool        `json:"enabled,omitempty" binding:"optional"`
 }
 
-// SignupNoticePayload is sent over WebSocket to a member whose sign-up changed without their doing: they moved up from the waitlist or a moderator removed them.
+// SignupNoticePayload is sent over WebSocket to a member whose sign-up changed without their doing: they moved up from the waitlist a moderator removed them, or their role was removed and they landed on the waitlist of another.
 type SignupNoticePayload struct {
 	EventID   uuid.UUID  `json:"event_id" format:"uuid"`
 	Title     string     `json:"title"`
-	Kind      string     `json:"kind" enums:"promoted,removed"`
+	Kind      string     `json:"kind" enums:"promoted,removed,waitlisted"`
 	RoleName  string     `json:"role_name"`
 	StartTime time.Time  `json:"start_time" format:"date-time"`
 	ChannelID *uuid.UUID `json:"channel_id,omitempty" format:"uuid" binding:"optional"`

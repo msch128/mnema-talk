@@ -47,3 +47,33 @@ CREATE TABLE event_role_templates (
 INSERT INTO event_role_templates (name, roles, preset) VALUES
     ('Party of five', '[{"name":"Tank","emoji":"🛡️","capacity":1},{"name":"Heal","emoji":"💚","capacity":1},{"name":"DPS","emoji":"⚔️","capacity":3}]', TRUE),
     ('Raid of ten', '[{"name":"Tank","emoji":"🛡️","capacity":2},{"name":"Heal","emoji":"💚","capacity":2},{"name":"DPS","emoji":"⚔️","capacity":6}]', TRUE);
+
+-- No overbooking, as a last line behind the application. The API takes row
+-- locks on an event's roles before it counts and writes, which is what makes
+-- the check exact when sign-ups race; these triggers refuse any write that
+-- would leave a role with more confirmed members than its capacity, so a bug
+-- or a hand-written statement cannot do it either (a plain trigger sees only
+-- committed rows and its own, hence the locks).
+CREATE FUNCTION event_role_check_capacity() RETURNS trigger AS $$
+DECLARE
+    v_role UUID;
+    cap INT;
+BEGIN
+    IF TG_TABLE_NAME = 'event_signups' THEN
+        IF NEW.state <> 'confirmed' THEN RETURN NULL; END IF;
+        v_role := NEW.role_id;
+    ELSE
+        v_role := NEW.id;
+    END IF;
+    SELECT capacity INTO cap FROM event_roles WHERE id = v_role;
+    IF cap IS NOT NULL AND (SELECT COUNT(*) FROM event_signups WHERE event_signups.role_id = v_role AND state = 'confirmed') > cap THEN
+        RAISE EXCEPTION 'the event role % holds more confirmed members than its capacity of %', v_role, cap USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER event_signups_capacity AFTER INSERT OR UPDATE OF state, role_id ON event_signups
+    FOR EACH ROW EXECUTE FUNCTION event_role_check_capacity();
+CREATE TRIGGER event_roles_capacity AFTER UPDATE OF capacity ON event_roles
+    FOR EACH ROW EXECUTE FUNCTION event_role_check_capacity();

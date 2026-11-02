@@ -13,11 +13,14 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// Promotion says that a member moved up from the waitlist of a role.
+// Promotion says that a member's place changed without their doing: they moved
+// up from the waitlist of a role (Kind empty) or, when a role is removed and
+// its members move to a full one, down to its waitlist (SignupKindWaitlisted).
 type Promotion struct {
 	EventID  uuid.UUID
 	UserID   uuid.UUID
 	RoleName string
+	Kind     string
 }
 
 // roleRow is a role as the transactions of the roster see it.
@@ -57,7 +60,11 @@ func lockRoles(ctx context.Context, tx pgx.Tx, eventID uuid.UUID) ([]roleRow, er
 func openEvent(ctx context.Context, tx pgx.Tx, eventID uuid.UUID, lock bool) (string, error) {
 	q := `SELECT status FROM events WHERE id = $1`
 	if lock {
-		q += ` FOR UPDATE`
+		// NO KEY UPDATE serializes the role editors with each other without
+		// conflicting with the FOR KEY SHARE that inserting a sign-up takes on
+		// the event row through its foreign key (FOR UPDATE would deadlock
+		// against a sign-up that holds the role locks).
+		q += ` FOR NO KEY UPDATE`
 	}
 	var status string
 	err := tx.QueryRow(ctx, q, eventID).Scan(&status)
@@ -324,8 +331,9 @@ func pickRoles(roles []roleRow, roleID uuid.UUID, moveTo *uuid.UUID) (role roleR
 }
 
 // moveSignups hands the sign-ups of role over to target, or refuses when there
-// is no target and the role is not empty. The members who were waitlisted and
-// are confirmed by the move are returned.
+// is no target and the role is not empty. It returns the members whose standing
+// changed: those who were waitlisted and are confirmed by the move, and those who
+// were confirmed and end up on the waitlist of a target that is full.
 func moveSignups(ctx context.Context, tx pgx.Tx, eventID uuid.UUID, role roleRow, target *roleRow) ([]Promotion, error) {
 	var n int
 	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM event_signups WHERE role_id = $1`, role.ID).Scan(&n); err != nil {
@@ -337,29 +345,42 @@ func moveSignups(ctx context.Context, tx pgx.Tx, eventID uuid.UUID, role roleRow
 	if target == nil {
 		return nil, httpx.ErrConflict(fmt.Sprintf("the role %s has %d sign-ups; pass move_to to hand them to another role", role.Name, n))
 	}
-	waiting, err := waitlisted(ctx, tx, role.ID)
+	waiting, err := membersIn(ctx, tx, role.ID, SignupWaitlist)
+	if err != nil {
+		return nil, err
+	}
+	held, err := membersIn(ctx, tx, role.ID, SignupConfirmed)
 	if err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(ctx, `UPDATE event_signups SET role_id = $2, state = 'waitlist' WHERE role_id = $1`, role.ID, target.ID); err != nil {
 		return nil, fmt.Errorf("move sign-ups: %w", err)
 	}
-	// Members who held a slot keep their place in line ahead of the others, because the oldest sign-up goes first.
+	// The oldest sign-up goes first, so a member who moves over takes the place
+	// their own sign-up time gives them among the target's waitlist.
 	all, err := promoteRole(ctx, tx, eventID, *target)
 	if err != nil {
 		return nil, err
 	}
-	var promoted []Promotion
+	var changed []Promotion
+	confirmed := make(map[uuid.UUID]bool, len(all))
 	for _, p := range all {
+		confirmed[p.UserID] = true
 		if waiting[p.UserID] {
-			promoted = append(promoted, p)
+			changed = append(changed, p)
 		}
 	}
-	return promoted, nil
+	for id := range held {
+		if !confirmed[id] {
+			changed = append(changed, Promotion{EventID: eventID, UserID: id, RoleName: target.Name, Kind: SignupKindWaitlisted})
+		}
+	}
+	return changed, nil
 }
 
-func waitlisted(ctx context.Context, tx pgx.Tx, roleID uuid.UUID) (map[uuid.UUID]bool, error) {
-	rows, err := tx.Query(ctx, `SELECT user_id FROM event_signups WHERE role_id = $1 AND state = 'waitlist'`, roleID)
+// membersIn returns the members of a role in one state.
+func membersIn(ctx context.Context, tx pgx.Tx, roleID uuid.UUID, state string) (map[uuid.UUID]bool, error) {
+	rows, err := tx.Query(ctx, `SELECT user_id FROM event_signups WHERE role_id = $1 AND state = $2`, roleID, state)
 	if err != nil {
 		return nil, err
 	}

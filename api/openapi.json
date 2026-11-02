@@ -30526,7 +30526,7 @@
     },
     "/api/events/{id}/signup": {
       "delete": {
-        "description": "Removes the caller's sign-up and moves the role's waitlist up. Always allowed, also on a finished event. The RSVP stays as it is.",
+        "description": "Removes the caller's sign-up and moves the role's waitlist up. Always allowed, also on a finished event and for a member who can no longer view the event (a Talk they lost access to): such a member gets 204 instead of the event. The RSVP stays as it is.",
         "operationId": "leaveCommunityEventRole",
         "parameters": [
           {
@@ -30550,6 +30550,9 @@
               }
             },
             "description": "OK"
+          },
+          "204": {
+            "description": "Left; the caller can no longer view the event."
           },
           "404": {
             "content": {

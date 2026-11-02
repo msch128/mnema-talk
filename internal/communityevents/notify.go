@@ -16,6 +16,8 @@ const (
 	SignupKindPromoted = "promoted"
 	// SignupKindRemoved: a moderator removed the member from the roster.
 	SignupKindRemoved = "removed"
+	// SignupKindWaitlisted: the member's role was removed and they were moved to a full one.
+	SignupKindWaitlisted = "waitlisted"
 
 	noticePushTimeout = time.Minute
 )
@@ -60,17 +62,21 @@ func (h *Handler) notifyMembers(ctx context.Context, ev *CommunityEvent, kind, r
 		if ev.ChannelID != nil && snap != nil && !snap.Channel(perm.Subject{ID: it.UserID}, *ev.ChannelID).Has(perm.ViewChannel) {
 			continue
 		}
+		kindOf := kind
+		if it.Kind != "" {
+			kindOf = it.Kind
+		}
 		role := it.RoleName
 		if role == "" {
 			role = roleName
 		}
 		if h.Events != nil {
 			h.Events.SendToUsers([]uuid.UUID{it.UserID}, events.EventSignupNotice, SignupNoticePayload{
-				EventID: ev.ID, Title: ev.Title, Kind: kind, RoleName: role, StartTime: ev.StartTime, ChannelID: ev.ChannelID,
+				EventID: ev.ID, Title: ev.Title, Kind: kindOf, RoleName: role, StartTime: ev.StartTime, ChannelID: ev.ChannelID,
 			})
 		}
 		if pusher != nil {
-			h.pushNotice(ctx, pusher, ev, it.UserID, kind, role)
+			h.pushNotice(ctx, pusher, ev, it.UserID, kindOf, role)
 		}
 	}
 }
