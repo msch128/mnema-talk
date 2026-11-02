@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.6.0](https://github.com/msch128/mnema-talk/compare/v2.5.1...v2.6.0) (2026-11-02)
+
+
+### Features
+
+* **admin:** capacity panel in Status with a members-we-can-take estimate ([#595](https://github.com/msch128/mnema-talk/issues/595)) ([2f9732c](https://github.com/msch128/mnema-talk/commit/2f9732cda382245d055e4b108efe092285ea5cbb))
+* **onboarding:** upload hint in Test my connection from a bounded download ([#597](https://github.com/msch128/mnema-talk/issues/597)) ([2f9732c](https://github.com/msch128/mnema-talk/commit/2f9732cda382245d055e4b108efe092285ea5cbb))
+* **sfu:** optional voice upload limit (VOICE_UPLOAD_LIMIT_MBIT) ([#594](https://github.com/msch128/mnema-talk/issues/594)) ([2f9732c](https://github.com/msch128/mnema-talk/commit/2f9732cda382245d055e4b108efe092285ea5cbb))
+* **voice:** Opus DTX on the microphone so quiet speakers stop sending 50 packets a second ([#596](https://github.com/msch128/mnema-talk/issues/596)) ([2f9732c](https://github.com/msch128/mnema-talk/commit/2f9732cda382245d055e4b108efe092285ea5cbb))
+
 ## [2.5.1](https://github.com/msch128/mnema-talk/compare/v2.5.0...v2.5.1) (2026-11-01)
 
 
