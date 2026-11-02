@@ -125,6 +125,7 @@ onMounted(() => raid.load())
         <div class="space-y-2">
           <h4 class="text-sm font-semibold text-mnema-text">{{ $t('raid.waits.title') }}</h4>
           <p class="text-xs text-mnema-tertiary">{{ $t('raid.waits.hint') }}</p>
+          <p class="text-xs text-mnema-tertiary" data-testid="raid-wait-existing">{{ $t('raid.waits.existing') }}</p>
           <div class="flex flex-wrap gap-4">
             <div v-for="action in WAITS" :key="action" class="space-y-1">
               <label :for="`raid-wait-${action}`" class="block text-xs font-medium text-mnema-muted font-mono uppercase tracking-wider">{{ $t(`raid.waits.${action}`) }}</label>

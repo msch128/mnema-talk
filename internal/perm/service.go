@@ -47,6 +47,8 @@ type Service struct {
 
 	notifierMu sync.RWMutex
 	notifier   Notifier
+
+	waitTimer *time.Timer // guarded by mu: fires when the next wait of a new member ends
 }
 
 // Loader builds the permission state as of now. The database is the only
@@ -177,6 +179,7 @@ func (s *Service) reload(ctx context.Context, forced bool) (*Snapshot, error) {
 	if s.gen.Load() != gen {
 		s.cur.CompareAndSwap(snap, nil)
 	}
+	s.scheduleWaitEnd(snap, now)
 	return snap, nil
 }
 
@@ -326,3 +329,27 @@ func RequireOwner(sub Subject) error {
 }
 
 var errNoDatabase = errors.New("permissions: service has no database")
+
+// minWaitGap is the least gap between two reloads caused by waits ending.
+const minWaitGap = time.Second
+
+// scheduleWaitEnd arranges for the members whose wait as a new member ends
+// next to be told: their rights come back at that moment, and a Talk they are
+// in has to hear it too (the media policy is applied on permission changes).
+// One timer serves all members; it is set again after every load.
+func (s *Service) scheduleWaitEnd(snap *Snapshot, now time.Time) {
+	if s.waitTimer != nil {
+		s.waitTimer.Stop()
+		s.waitTimer = nil
+	}
+	end, ok := snap.nextWaitEnd(now)
+	if !ok {
+		return
+	}
+	delay := max(end.Sub(now)+100*time.Millisecond, minWaitGap)
+	s.waitTimer = time.AfterFunc(delay, func() {
+		if ids := snap.waitsEndedSince(now, now.Add(delay)); len(ids) > 0 {
+			s.Changed(ids)
+		}
+	})
+}

@@ -21,7 +21,7 @@ type NewMemberWaits struct{ Write, React, Speak time.Duration }
 const (
 	writeMask = SendMessages | AttachFiles | MentionEveryone
 	reactMask = AddReactions
-	speakMask = Speak
+	speakMask = Speak | Video // camera and screen share count as speaking
 )
 
 // mask is what the waits take from the member.
@@ -49,7 +49,7 @@ func (s *Snapshot) NewMemberWaits(userID uuid.UUID) NewMemberWaits {
 	}
 	joined, ok := s.joined[userID]
 	if !ok {
-		joined = s.loaded
+		joined = clock() // joined since the snapshot was loaded: a full wait, corrected by the next load
 	}
 	age := clock().Sub(joined)
 	w := NewMemberWaits{Write: max(0, r.Write-age), React: max(0, r.React-age), Speak: max(0, r.Speak-age)}
@@ -101,3 +101,31 @@ func (s *Snapshot) newMemberRefusal(userID uuid.UUID, p, need Set) error {
 
 // seconds rounds a wait up to whole seconds.
 func seconds(d time.Duration) int { return int((d + time.Second - 1) / time.Second) }
+
+// nextWaitEnd is the first moment after now at which a member's wait ends,
+// or false when no member is waiting.
+func (s *Snapshot) nextWaitEnd(now time.Time) (time.Time, bool) {
+	var next time.Time
+	for _, joined := range s.joined {
+		for _, d := range []time.Duration{s.newMember.Write, s.newMember.React, s.newMember.Speak} {
+			if end := joined.Add(d); d > 0 && end.After(now) && (next.IsZero() || end.Before(next)) {
+				next = end
+			}
+		}
+	}
+	return next, !next.IsZero()
+}
+
+// waitsEndedSince lists the members one of whose waits ended in (since, now].
+func (s *Snapshot) waitsEndedSince(since, now time.Time) []uuid.UUID {
+	var out []uuid.UUID
+	for id, joined := range s.joined {
+		for _, d := range []time.Duration{s.newMember.Write, s.newMember.React, s.newMember.Speak} {
+			if end := joined.Add(d); d > 0 && end.After(since) && !end.After(now) {
+				out = append(out, id)
+				break
+			}
+		}
+	}
+	return out
+}

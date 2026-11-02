@@ -135,7 +135,7 @@ nothing.
 
 **Waiting time of new members.** Three settings, each 0 (off) to 30 days:
 how long after joining a member may **write** (send messages, polls, uploads),
-**react**, and **speak** in Talks. A member who is too new keeps reading, joining
+**react**, and **speak** in Talks (the microphone, and with it camera and screen share). A member who is too new keeps reading, joining
 Talks and listening. The gate lives in the permission snapshot, like a
 timeout, so REST, the WebSocket hub (reactions) and the SFU (audio) enforce it
 from one place and it ends by itself without a reload. The refusal is
@@ -144,6 +144,12 @@ client shows it as "You can write in 10 min." in the composer, on the reaction
 button and on the Talk's microphone button, and fetches the permissions again
 when the wait is over. `GET /api/permissions` carries `new_member` (`write_at`,
 `react_at`, `speak_at`) while a wait is running.
+
+When a wait ends the server tells the member's clients and the Talk they are in
+(one timer for all members, set again after every load of the permission
+snapshot), so the microphone and the Stage's raised hand work at that moment
+without rejoining. Turning a gate on later holds members who joined recently by
+their real sign-up time.
 
 Who never waits: the Owner, bots, Administrators, and members with a role that
 holds **Bypass new member limits** (bit 26, [roles](roles-and-permissions.md);

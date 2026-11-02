@@ -58,6 +58,9 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 
 	var user *User
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if err := raid.LockSignup(ctx, tx); err != nil {
+			return err
+		}
 		inviteID, err := claimInvite(ctx, tx, inviteCode)
 		if err != nil {
 			return err

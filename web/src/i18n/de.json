@@ -4058,8 +4058,9 @@
       "hint": "Wie lange ein neues Mitglied nach dem Beitritt warten muss, bevor es das darf. Administratoren, der Owner und Rollen mit „Wartezeit für neue Mitglieder umgehen“ warten nie. Direktnachrichten sind nicht betroffen.",
       "write": "Nachrichten schreiben",
       "react": "Auf Nachrichten reagieren",
-      "speak": "In Talks sprechen",
-      "none": "Keine Wartezeit"
+      "speak": "In Talks sprechen und Video teilen",
+      "none": "Keine Wartezeit",
+      "existing": "Wer erst kürzlich beigetreten ist, wartet die verbleibende Zeit ab, gerechnet ab dem Tag der Anmeldung."
     }
   },
   "newMember": {

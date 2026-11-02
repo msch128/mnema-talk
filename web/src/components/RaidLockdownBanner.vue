@@ -18,6 +18,8 @@ const toasts = useToastStore()
 const busy = ref(false)
 const allowed = computed(() => permissions.can('administrator'))
 let stop: (() => void) | undefined
+let expiry: ReturnType<typeof setTimeout> | undefined
+const MAX_DELAY_MS = 2 ** 31 - 1
 
 const until = computed(() => {
   const at = raid.lockdown?.until
@@ -43,9 +45,16 @@ async function end() {
   }
 }
 
+// A lockdown that ends by itself: look again just after its time, so the banner does not wait for the minute.
+watch(() => raid.lockdown?.until, at => {
+  clearTimeout(expiry)
+  const left = at ? Date.parse(at) - Date.now() : NaN
+  if (left > 0) expiry = setTimeout(() => { void raid.load() }, Math.min(left + 500, MAX_DELAY_MS))
+}, { immediate: true })
+
 watch(allowed, start)
 onMounted(start)
-onBeforeUnmount(() => stop?.())
+onBeforeUnmount(() => { stop?.(); clearTimeout(expiry) })
 </script>
 
 <template>

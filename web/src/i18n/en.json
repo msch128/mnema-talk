@@ -4058,8 +4058,9 @@
       "hint": "How long after joining a new member waits before they can do this. Administrators, the Owner and roles with “Bypass new member limits” never wait. Direct messages are not affected.",
       "write": "Write messages",
       "react": "React to messages",
-      "speak": "Speak in Talks",
-      "none": "No wait"
+      "speak": "Speak and share video in Talks",
+      "none": "No wait",
+      "existing": "Members who joined recently wait out what is left of their time since they joined, counted from the day they signed up."
     }
   },
   "newMember": {

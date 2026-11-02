@@ -4,8 +4,10 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -182,5 +184,82 @@ func TestRaidProtectionChangesAreAudited(t *testing.T) {
 		if err := a.db.QueryRow(context.Background(), `SELECT COUNT(*) FROM audit_log WHERE action = $1`, action).Scan(&n); err != nil || n != 1 {
 			t.Fatalf("%s audited %d times (%v)", action, n, err)
 		}
+	}
+}
+
+// Sign-ups run one after the other under the settings row's lock: of many at
+// once, only as many as the limit leaves room for get in.
+func TestConcurrentSignupsCannotPassTheLimit(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	inv := admin.post("/api/admin/invites", map[string]any{"max_uses": 20})
+	var invite struct{ Code string }
+	inv.decode(t, &invite)
+	room := 3
+	wantStatus(t, "limit", putRaid(t, admin, getRaid(t, admin).JoinedInWindow+room, 0, 0, 0), http.StatusOK)
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	statuses := map[int]int{}
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			res := a.anon().post("/api/auth/register", map[string]string{"username": fmt.Sprintf("racer%d", i), "password": "member-password-123", "invite_code": invite.Code})
+			mu.Lock()
+			statuses[res.status]++
+			mu.Unlock()
+		}(i)
+	}
+	wg.Wait()
+	if statuses[http.StatusCreated] != room || statuses[http.StatusServiceUnavailable] != 10-room {
+		t.Fatalf("statuses %v, want %d created", statuses, room)
+	}
+}
+
+func TestDeletedAccountsStillCountAndALockdownRestartsItsClock(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	a.register(admin, "gone")
+	before := getRaid(t, admin).JoinedInWindow
+	if _, err := a.db.Exec(context.Background(), `UPDATE users SET deleted_at = NOW() WHERE username = 'gone'`); err != nil {
+		t.Fatal(err)
+	}
+	if after := getRaid(t, admin).JoinedInWindow; after != before {
+		t.Fatalf("deleting an account changed the count from %d to %d", before, after)
+	}
+
+	wantStatus(t, "lock", admin.put("/api/admin/raid/lockdown", map[string]any{"active": true, "hours": 1}), http.StatusOK)
+	if _, err := a.db.Exec(context.Background(), `UPDATE instance_settings SET lockdown_started_at = NOW() - INTERVAL '5 days', lockdown_until = NOW() - INTERVAL '1 day'`); err != nil {
+		t.Fatal(err)
+	}
+	wantStatus(t, "lock again after expiry", admin.put("/api/admin/raid/lockdown", map[string]any{"active": true}), http.StatusOK)
+	var fresh bool
+	if err := a.db.QueryRow(context.Background(), `SELECT lockdown_started_at > NOW() - INTERVAL '1 minute' FROM instance_settings`).Scan(&fresh); err != nil || !fresh {
+		t.Fatalf("started_at was not restarted (%v, %v)", fresh, err)
+	}
+}
+
+func TestDirectMessagesAndTheSpeakWaitOfANewMember(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	newbie := a.register(admin, "newbie")
+	friend := a.register(admin, "friend")
+	wantStatus(t, "set", putRaid(t, admin, 0, 60, 60, 60), http.StatusOK)
+	// A conversation is not held back, whatever the waits say.
+	res := newbie.post("/api/dms", map[string]any{"user_ids": []string{friend.user.ID.String()}})
+	if res.status != http.StatusCreated && res.status != http.StatusOK {
+		t.Fatalf("start a conversation: %d %s", res.status, res.body)
+	}
+	var dm struct{ ID string }
+	res.decode(t, &dm)
+	wantStatus(t, "write in the conversation", newbie.post("/api/channels/"+dm.ID+"/messages", map[string]any{"content": "hello"}), http.StatusCreated)
+	// Camera and screen share are held with the microphone.
+	var info struct {
+		Permissions int64 `json:"permissions"`
+	}
+	newbie.get("/api/permissions").decode(t, &info)
+	if info.Permissions&int64(perm.Speak|perm.Video) != 0 {
+		t.Fatalf("permissions %b still hold Speak or Video", info.Permissions)
 	}
 }

@@ -60,6 +60,21 @@ describe('the lockdown banner', () => {
     expect(w.get('[data-testid="lockdown-banner"]').text()).toContain('Lockdown is on until')
   })
 
+  it('looks again right after a lockdown ends by itself', async () => {
+    vi.useFakeTimers({ now: Date.parse('2026-11-02T12:00:00Z'), toFake: ['setTimeout', 'Date'] })
+    try {
+      asAdmin(true)
+      apiMock.mockResolvedValueOnce({ ...settings(true), lockdown: { active: true, pause_invites: false, until: '2026-11-02T12:00:30Z' } })
+      const w = await mountBanner()
+      expect(w.find('[data-testid="lockdown-banner"]').exists()).toBe(true)
+      apiMock.mockResolvedValueOnce(settings(false))
+      await vi.advanceTimersByTimeAsync(31_000)
+      expect(w.find('[data-testid="lockdown-banner"]').exists()).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('keeps the banner and says so when the lockdown cannot be ended', async () => {
     asAdmin(true)
     apiMock.mockResolvedValueOnce(settings(true))

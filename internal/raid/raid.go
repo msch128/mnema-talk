@@ -111,7 +111,7 @@ var ErrSignupsPaused = httpx.NewAPIError(http.StatusServiceUnavailable, httpx.Co
 var ErrInvitesPaused = httpx.NewAPIError(http.StatusConflict, httpx.CodeConflict, "invites are paused during a lockdown")
 
 const columns = `join_limit, join_window_minutes, min_age_write_minutes, min_age_react_minutes, min_age_speak_minutes,
-	(SELECT COUNT(*)::int FROM users WHERE created_at > NOW() - make_interval(mins => join_window_minutes) AND NOT is_bot AND deleted_at IS NULL),
+	(SELECT COUNT(*)::int FROM users WHERE created_at > NOW() - make_interval(mins => join_window_minutes) AND NOT is_bot),
 	COALESCE(lockdown AND (lockdown_until IS NULL OR lockdown_until > NOW()), FALSE), lockdown_pause_invites, lockdown_until, lockdown_started_at`
 
 func scan(row pgx.Row) (Settings, error) {
@@ -156,12 +156,25 @@ func SetLockdown(ctx context.Context, q db.Querier, in LockdownInput) (Settings,
 	}
 	s, err := scan(q.QueryRow(ctx, `UPDATE instance_settings SET lockdown = $1,
 		lockdown_pause_invites = $1 AND $2, lockdown_until = $3,
-		lockdown_started_at = CASE WHEN $1 THEN COALESCE(lockdown_started_at, NOW()) ELSE NULL END, updated_at = NOW()
+		lockdown_started_at = CASE WHEN NOT $1 THEN NULL
+			WHEN lockdown AND (lockdown_until IS NULL OR lockdown_until > NOW()) THEN COALESCE(lockdown_started_at, NOW())
+			ELSE NOW() END, updated_at = NOW()
 		RETURNING `+columns, in.Active, in.PauseInvites, until))
 	if err != nil {
 		return Settings{}, fmt.Errorf("write lockdown: %w", err)
 	}
 	return s, nil
+}
+
+// LockSignup is CheckSignup inside the transaction that creates the account:
+// it first locks the settings row, so sign-ups run one after the other, each
+// sees the accounts of the ones before it, and a lockdown or a new limit that
+// was saved while the password was hashed is honoured too.
+func LockSignup(ctx context.Context, tx pgx.Tx) error {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM instance_settings FOR UPDATE`); err != nil {
+		return fmt.Errorf("lock sign-ups: %w", err)
+	}
+	return CheckSignup(ctx, tx)
 }
 
 // CheckSignup answers ErrSignupsPaused while a lockdown is on or more members

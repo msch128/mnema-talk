@@ -1,5 +1,6 @@
 import { useToastStore } from '../toast'
 import { usePermissionsStore } from '../permissions'
+import { useRaidStore } from '../raid'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
 import { useLaterStore } from '../later'
@@ -70,6 +71,7 @@ export function resetCommunityState(cx: Cx) {
   useLaterStore().reset()
   resetMemberStores()
   usePermissionsStore().reset()
+  useRaidStore().reset()
   cs.presenceById.value = {}
   cs.activityById.value = {}
   cs.disabledMembers.clear()

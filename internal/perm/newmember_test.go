@@ -1,6 +1,8 @@
 package perm_test
 
 import (
+	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -99,5 +101,93 @@ func TestTalksOfConversationsAreExemptFromTheWaits(t *testing.T) {
 	s := f.Snapshot()
 	if !s.Channel(Subject{ID: a}, talk).Has(Speak) {
 		t.Fatal("members of a conversation speak in its Talk at once")
+	}
+}
+
+func TestConversationsAreExemptFromTheWaits(t *testing.T) {
+	f := permtest.NewFixture()
+	a, b := uuid.New(), uuid.New()
+	dm := f.DM(a, b)
+	f.Joined(a, time.Now()).Joined(b, time.Now())
+	f.NewMemberRules(time.Hour, time.Hour, time.Hour)
+	s := f.Snapshot()
+	got := s.Channel(Subject{ID: a}, dm)
+	if !got.Has(ViewChannel | SendMessages | AttachFiles | AddReactions) {
+		t.Fatalf("a new member writes in a conversation at once, holds %b", got)
+	}
+	if !s.CanStartDM(Subject{ID: a}) {
+		t.Fatal("a new member may start a conversation")
+	}
+	if w := s.NewMemberWaits(a); w.Write == 0 {
+		t.Fatal("the member is still held back elsewhere")
+	}
+}
+
+func TestSpeakingWaitAlsoHoldsCameraAndScreenShare(t *testing.T) {
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	t.Cleanup(SetClock(func() time.Time { return now }))
+	f := permtest.NewFixture()
+	ch := f.Channel(uuid.Nil)
+	newbie := uuid.New()
+	f.Joined(newbie, now).NewMemberRules(0, 0, time.Hour)
+	got := f.Snapshot().Channel(Subject{ID: newbie}, ch)
+	if got.HasAny(Speak|Video) || !got.Has(Connect|SendMessages) {
+		t.Fatalf("holds %b", got)
+	}
+}
+
+type recordedChanges struct {
+	mu  sync.Mutex
+	ids []uuid.UUID
+}
+
+func (r *recordedChanges) PermissionsChanged(ids []uuid.UUID) {
+	r.mu.Lock()
+	r.ids = append(r.ids, ids...)
+	r.mu.Unlock()
+}
+
+func (r *recordedChanges) seen() []uuid.UUID {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]uuid.UUID(nil), r.ids...)
+}
+
+// A wait that ends is announced like any change of rights, so a Talk the
+// member is in applies the new media policy without a rejoin.
+func TestTheEndOfAWaitIsAnnouncedToTheMember(t *testing.T) {
+	f := permtest.NewFixture()
+	newbie, waiting := uuid.New(), uuid.New()
+	// newbie's speak wait ends in 300 ms; waiting's much later.
+	f.Joined(newbie, time.Now().Add(-time.Hour+300*time.Millisecond)).Joined(waiting, time.Now())
+	f.NewMemberRules(0, 0, time.Hour)
+	snap := f.Snapshot()
+	svc := NewServiceFrom(func(context.Context, time.Time) (*Snapshot, error) { return snap, nil })
+	rec := &recordedChanges{}
+	svc.SetNotifier(rec)
+	if _, err := svc.Snapshot(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for len(rec.seen()) == 0 && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	got := rec.seen()
+	if len(got) != 1 || got[0] != newbie {
+		t.Fatalf("announced %v, want only %v", got, newbie)
+	}
+}
+
+func TestNoTimerWithoutWaits(t *testing.T) {
+	f := permtest.NewFixture()
+	svc := NewServiceFrom(func(context.Context, time.Time) (*Snapshot, error) { return f.Snapshot(), nil })
+	rec := &recordedChanges{}
+	svc.SetNotifier(rec)
+	if _, err := svc.Snapshot(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1300 * time.Millisecond)
+	if len(rec.seen()) != 0 {
+		t.Fatalf("announced %v", rec.seen())
 	}
 }
