@@ -1,0 +1,142 @@
+README.md
+  h_0ff4f4713441f4 108
+api/openapi.json
+  h_0ff4f4713441f4 4845-4855,4859-4865,4937-4977,5032-5193,30064,30066-30067,30074,30088,30094-30095,30100,30104,30112,30137-30150,30154,30160-30310,30312-30722,30735-30755,30767-30786,30796-30815,30823,30827-30832,30849,30853,30905,30913,30919-30922,30933-30951,30965-30974,31003,31011,31017,31019-31020,31060,31065-31067,31082,31084,31088,31112,31120,31122,31130-31161,31165-31168,31172,31174,31182,31190,31196,31198-31199,31223-31225,31242,31248-31249,31266,31270,31312,31320,31326-31329,31340-31349,31357,31363-31372,31382-31391,31399
+doc/events.md
+  h_0ff4f4713441f4 36-48
+e2e/tests/event-roles.spec.ts
+  h_0ff4f4713441f4 1-98
+internal/auth/account_erase.go
+  h_0ff4f4713441f4 73
+internal/auth/account_export_build.go
+  h_0ff4f4713441f4 78,200
+internal/auth/account_export_events.go
+  h_0ff4f4713441f4 22-34
+internal/communityevents/handler.go
+  h_0ff4f4713441f4 6,31-33,45,87-88
+internal/communityevents/handler_roles.go
+  h_0ff4f4713441f4 1-173
+internal/communityevents/handler_signup.go
+  h_0ff4f4713441f4 1-112
+internal/communityevents/handler_templates.go
+  h_0ff4f4713441f4 1-151
+internal/communityevents/model.go
+  h_0ff4f4713441f4 54-59
+internal/communityevents/model_roles.go
+  h_0ff4f4713441f4 1-93
+internal/communityevents/notify.go
+  h_0ff4f4713441f4 1-110
+internal/communityevents/roles_integration_test.go
+  h_0ff4f4713441f4 1-790
+internal/communityevents/scheduler.go
+  h_0ff4f4713441f4 73,195,206-230
+internal/communityevents/store.go
+  h_0ff4f4713441f4 61,118-120
+internal/communityevents/store_list.go
+  h_0ff4f4713441f4 138-140
+internal/communityevents/store_roles.go
+  h_0ff4f4713441f4 1-400
+internal/communityevents/store_roster_read.go
+  h_0ff4f4713441f4 1-94
+internal/communityevents/store_signup.go
+  h_0ff4f4713441f4 1-208
+internal/communityevents/store_templates.go
+  h_0ff4f4713441f4 1-150
+internal/db/migrations/0086_event_roles.sql
+  h_0ff4f4713441f4 1-79
+internal/events/testdata/events.golden.json
+  h_0ff4f4713441f4 63
+internal/events/types.go
+  h_0ff4f4713441f4 92-94
+internal/push/event_reminder.go
+  h_0ff4f4713441f4 22,79-94
+internal/push/event_signup.go
+  h_0ff4f4713441f4 1-50
+internal/push/locales/texts.json
+  h_0ff4f4713441f4 19-21,44-46
+internal/repo/testdata/error_messages.golden.json
+  h_0ff4f4713441f4 54-55,60,73,105,222,226,283-284,288,310,326,404-405,442-444,456,471-472,474,513
+internal/server/events_roles_integration_test.go
+  h_0ff4f4713441f4 1-57
+internal/server/health.go
+  h_0ff4f4713441f4 71
+web/src/components/EventDetailModal.test.ts
+  h_0ff4f4713441f4 10-11,14,254-308
+web/src/components/EventDetailModal.vue
+  h_0ff4f4713441f4 2,16-19,36-42,76-85,88,91-93,231-232,319
+web/src/components/EventEditDialog.test.ts
+  h_0ff4f4713441f4 6,10,281-363
+web/src/components/EventEditDialog.vue
+  h_0ff4f4713441f4 11-15,60-68,157-166,335-336
+web/src/components/EventRoleTemplates.test.ts
+  h_0ff4f4713441f4 1-81
+web/src/components/EventRoleTemplates.vue
+  h_0ff4f4713441f4 1-61
+web/src/components/EventRolesDialog.test.ts
+  h_0ff4f4713441f4 1-85
+web/src/components/EventRolesDialog.vue
+  h_0ff4f4713441f4 1-52
+web/src/components/EventRolesEditor.test.ts
+  h_0ff4f4713441f4 1-130
+web/src/components/EventRolesEditor.vue
+  h_0ff4f4713441f4 1-132
+web/src/components/EventRoster.test.ts
+  h_0ff4f4713441f4 1-147
+web/src/components/EventRoster.vue
+  h_0ff4f4713441f4 1-162
+web/src/composables/useEventRoles.test.ts
+  h_0ff4f4713441f4 1-65
+web/src/composables/useEventRoles.ts
+  h_0ff4f4713441f4 1-68
+web/src/eventRoles.fixture.ts
+  h_0ff4f4713441f4 1-23
+web/src/i18n/de.json
+  h_0ff4f4713441f4 585-607,3297-3300,3607-3656,4288
+web/src/i18n/en.json
+  h_0ff4f4713441f4 585-607,3297-3300,3607-3656,4288
+web/src/lib/errorSentencesA.ts
+  h_0ff4f4713441f4 57-58,63,76,108
+web/src/lib/errorSentencesB.ts
+  h_0ff4f4713441f4 38,42,99-100,104,126,142
+web/src/lib/errorSentencesC.ts
+  h_0ff4f4713441f4 22-23,60-62,74,89-90,92,131
+web/src/lib/eventRoleDrafts.test.ts
+  h_0ff4f4713441f4 1-41
+web/src/lib/eventRoleDrafts.ts
+  h_0ff4f4713441f4 1-66
+web/src/lib/eventRolesApi.test.ts
+  h_0ff4f4713441f4 1-68
+web/src/lib/eventRolesApi.ts
+  h_0ff4f4713441f4 1-63
+web/src/stores/chat/events.ts
+  h_0ff4f4713441f4 310-311
+web/src/stores/chatEvents.test.ts
+  h_0ff4f4713441f4 205-212
+web/src/stores/events.test.ts
+  h_0ff4f4713441f4 4-5,14-17,282-349
+web/src/stores/events.ts
+  h_0ff4f4713441f4 20,69-78,128-131,142-143,145,147
+web/src/stores/eventsRoster.ts
+  h_0ff4f4713441f4 1-37
+web/src/stores/serverFeatures.ts
+  h_0ff4f4713441f4 69
+web/src/types/events.test.ts
+  h_0ff4f4713441f4 131-135
+web/src/types/events.ts
+  h_0ff4f4713441f4 146-147,382
+web/src/types/noticeEvents.ts
+  h_0ff4f4713441f4 30-32
+web/src/types/rest.ts
+  h_0ff4f4713441f4 2864-2865,2867,2886-2887,2889,2919-2941,2983-3087
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "20a60cf59bad2c4c8591e5d26172796f0bdc49c3",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
