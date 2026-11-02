@@ -156,6 +156,7 @@ func NewRouter(d Deps) (*Router, error) {
 		return nil, err
 	}
 	c.newEvents()
+	c.newWiki()
 	if err := c.newSystem(); err != nil {
 		cancel()
 		return nil, err

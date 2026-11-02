@@ -37,6 +37,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/ssrf"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/webhook"
+	"github.com/msch128/mnema-talk/internal/wiki"
 	"github.com/msch128/mnema-talk/internal/ws"
 )
 
@@ -85,6 +86,7 @@ type components struct {
 	pushH           *push.Handler
 	later           *later.Service
 	eventsH         *communityevents.Handler
+	wikiH           *wiki.Handler
 	eventsScheduler *communityevents.Scheduler
 
 	botH     *bot.Handler

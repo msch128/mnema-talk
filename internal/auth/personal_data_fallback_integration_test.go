@@ -9,6 +9,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/userdata"
+	"github.com/msch128/mnema-talk/internal/wiki"
 )
 
 // Integration tests in package auth build a Handler without the server, so
@@ -19,5 +20,6 @@ func init() {
 	later.RegisterAccountData(r)
 	communityevents.RegisterAccountData(r)
 	push.RegisterAccountData(r)
+	wiki.RegisterAccountData(r)
 	auth.SetPersonalDataFallback(r)
 }

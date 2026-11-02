@@ -5732,3 +5732,197 @@ export function isWebhookWebhook(value: unknown): value is WebhookWebhook {
 }
 
 export const decodeWebhookWebhook = decoder("webhook.Webhook", isWebhookWebhook)
+
+export type WikiLockInput = {
+  locked: boolean
+}
+
+export function isWikiLockInput(value: unknown): value is WikiLockInput {
+  return isRecord(value)
+    && (hasOwn(value, "locked") && typeof value["locked"] === 'boolean')
+}
+
+export const decodeWikiLockInput = decoder("wiki.LockInput", isWikiLockInput)
+
+export type WikiPage = {
+  content: string
+  created_at: string
+  created_by?: WikiUserRef
+  deleted_at?: string
+  id: string
+  locked: boolean
+  parent_id: string | null
+  position: number
+  redirected_from?: string
+  rev: number
+  slug: string
+  title: string
+  updated_at: string
+  updated_by?: WikiUserRef
+}
+
+export function isWikiPage(value: unknown): value is WikiPage {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "created_by") || isWikiUserRef(value["created_by"]))
+    && (!hasOwn(value, "deleted_at") || isTimestamp(value["deleted_at"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "locked") && typeof value["locked"] === 'boolean')
+    && (hasOwn(value, "parent_id") && (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
+    && (hasOwn(value, "position") && isInteger(value["position"]))
+    && (!hasOwn(value, "redirected_from") || isString(value["redirected_from"]))
+    && (hasOwn(value, "rev") && isInteger(value["rev"]))
+    && (hasOwn(value, "slug") && isString(value["slug"]))
+    && (hasOwn(value, "title") && isString(value["title"]))
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+    && (!hasOwn(value, "updated_by") || isWikiUserRef(value["updated_by"]))
+}
+
+export const decodeWikiPage = decoder("wiki.Page", isWikiPage)
+
+export type WikiPageChange = {
+  base_rev: number
+  content?: string
+  parent_id?: string
+  position?: number
+  slug?: string
+  summary?: string
+  title?: string
+}
+
+export function isWikiPageChange(value: unknown): value is WikiPageChange {
+  return isRecord(value)
+    && (hasOwn(value, "base_rev") && (isInteger(value["base_rev"]) && value["base_rev"] >= 1))
+    && (!hasOwn(value, "content") || isString(value["content"]))
+    && (!hasOwn(value, "parent_id") || isIdentifier(value["parent_id"]))
+    && (!hasOwn(value, "position") || (isInteger(value["position"]) && value["position"] >= 0))
+    && (!hasOwn(value, "slug") || isString(value["slug"], 80))
+    && (!hasOwn(value, "summary") || isString(value["summary"], 200))
+    && (!hasOwn(value, "title") || isString(value["title"], 100))
+}
+
+export const decodeWikiPageChange = decoder("wiki.PageChange", isWikiPageChange)
+
+export type WikiPageInput = {
+  content: string
+  parent_id?: string
+  slug?: string
+  summary?: string
+  title: string
+}
+
+export function isWikiPageInput(value: unknown): value is WikiPageInput {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"]))
+    && (!hasOwn(value, "parent_id") || isIdentifier(value["parent_id"]))
+    && (!hasOwn(value, "slug") || isString(value["slug"], 80))
+    && (!hasOwn(value, "summary") || isString(value["summary"], 200))
+    && (hasOwn(value, "title") && isString(value["title"], 100))
+}
+
+export const decodeWikiPageInput = decoder("wiki.PageInput", isWikiPageInput)
+
+export type WikiPageSummary = {
+  deleted_at?: string
+  id: string
+  locked: boolean
+  parent_id: string | null
+  position: number
+  slug: string
+  title: string
+  updated_at: string
+}
+
+export function isWikiPageSummary(value: unknown): value is WikiPageSummary {
+  return isRecord(value)
+    && (!hasOwn(value, "deleted_at") || isTimestamp(value["deleted_at"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "locked") && typeof value["locked"] === 'boolean')
+    && (hasOwn(value, "parent_id") && (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
+    && (hasOwn(value, "position") && isInteger(value["position"]))
+    && (hasOwn(value, "slug") && isString(value["slug"]))
+    && (hasOwn(value, "title") && isString(value["title"]))
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+}
+
+export const decodeWikiPageSummary = decoder("wiki.PageSummary", isWikiPageSummary)
+
+export type WikiRestoreInput = {
+  base_rev: number
+  summary?: string
+}
+
+export function isWikiRestoreInput(value: unknown): value is WikiRestoreInput {
+  return isRecord(value)
+    && (hasOwn(value, "base_rev") && (isInteger(value["base_rev"]) && value["base_rev"] >= 1))
+    && (!hasOwn(value, "summary") || isString(value["summary"], 200))
+}
+
+export const decodeWikiRestoreInput = decoder("wiki.RestoreInput", isWikiRestoreInput)
+
+export type WikiRevision = {
+  content?: string
+  created_at: string
+  editor?: WikiUserRef
+  restored_from?: number
+  rev: number
+  size: number
+  summary: string
+  title?: string
+}
+
+export function isWikiRevision(value: unknown): value is WikiRevision {
+  return isRecord(value)
+    && (!hasOwn(value, "content") || isString(value["content"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "editor") || isWikiUserRef(value["editor"]))
+    && (!hasOwn(value, "restored_from") || isInteger(value["restored_from"]))
+    && (hasOwn(value, "rev") && isInteger(value["rev"]))
+    && (hasOwn(value, "size") && isInteger(value["size"]))
+    && (hasOwn(value, "summary") && isString(value["summary"]))
+    && (!hasOwn(value, "title") || isString(value["title"]))
+}
+
+export const decodeWikiRevision = decoder("wiki.Revision", isWikiRevision)
+
+export type WikiSearchHit = {
+  slug: string
+  snippet: string
+  title: string
+}
+
+export function isWikiSearchHit(value: unknown): value is WikiSearchHit {
+  return isRecord(value)
+    && (hasOwn(value, "slug") && isString(value["slug"]))
+    && (hasOwn(value, "snippet") && isString(value["snippet"]))
+    && (hasOwn(value, "title") && isString(value["title"]))
+}
+
+export const decodeWikiSearchHit = decoder("wiki.SearchHit", isWikiSearchHit)
+
+export type WikiTreeResponse = {
+  pages: Array<WikiPageSummary>
+}
+
+export function isWikiTreeResponse(value: unknown): value is WikiTreeResponse {
+  return isRecord(value)
+    && (hasOwn(value, "pages") && isArrayOf(value["pages"], item => isWikiPageSummary(item)))
+}
+
+export const decodeWikiTreeResponse = decoder("wiki.TreeResponse", isWikiTreeResponse)
+
+export type WikiUserRef = {
+  display_name: string
+  id: string
+  username: string
+}
+
+export function isWikiUserRef(value: unknown): value is WikiUserRef {
+  return isRecord(value)
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeWikiUserRef = decoder("wiki.UserRef", isWikiUserRef)

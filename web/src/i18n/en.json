@@ -150,6 +150,9 @@
       "fieldMax": "{field}: at most {count} characters",
       "fileTooBig": "The file is larger than {size} MB",
       "missingPermission": "You don’t have permission to do that.",
+      "srvAPageCannotMoveUnder": "A page can’t move under itself or one of its subpages.",
+      "srvAWikiPageHoldsAtMost": "A wiki page holds at most 50 KB of text.",
+      "srvBaseRevTheRevisionYouEdited": "The revision you edited is missing. Open the page again.",
       "srvHoursMustBeBetween0": "Hours must be between 0 and {a}.",
       "invitesPausedLockdown": "Creating invites is paused during a lockdown.",
       "srvJoinLimitMustBeBetween0": "The sign-up limit must be between 0 and {a}.",
@@ -228,6 +231,7 @@
       "srvFileIsRequired": "The {a} file is required.",
       "srvIsTooLong": "{a} is too long.",
       "srvMembersCannotTakeOr": "Members can’t take or drop this role themselves.",
+      "srvMoveOrDeleteTheSubpages": "Move or delete the subpages first.",
       "srvMustBeAnRfc3339": "{a} must be a time in RFC 3339 format.",
       "srvNotFound": "{a} wasn’t found.",
       "srv401Unauthorized": "You’re not signed in.",
@@ -242,11 +246,24 @@
       "srvDiscordCouldNotBeReached": "Discord couldn’t be reached. Try again later.",
       "srvDiscordSentSomethingThatIs": "Discord sent something that isn’t a server template.",
       "srvMissingAccessTheBotMay": "The bot isn’t allowed to ask for the member list.",
+      "srvParentPageNotFound": "The parent page wasn’t found.",
+      "srvRevMustBeARevision": "That isn’t a revision number.",
+      "srvRevisionNotFound": "That revision wasn’t found. Old ones are removed.",
       "srvSmtpIsNotConfiguredSmtp": "This server can’t send e-mail yet.",
       "srvTalkNotFound": "That Talk wasn’t found.",
       "srvTemporaryTalksFollowTheirLobby": "Temporary Talks follow the permissions of their lobby.",
+      "srvThatAddressIsAlreadyUsed": "That address is already used by a page or an old address of one.",
+      "srvThatIsThePageAs": "The page already is that version.",
+      "srvTheAddressNeedsLowerCase": "The address needs lower-case letters, digits and single hyphens, and must not be a reserved word.",
       "srvTheOwnerHasNoRoles": "The Owner has no roles to choose.",
+      "srvThePageChangedSinceYou": "The page changed since you opened it. Open it again and apply your change to the new version.",
+      "srvThePageIsNotDeleted": "The page isn’t deleted.",
+      "srvTheTextMustBeValid": "The text must be valid text without NUL characters.",
+      "srvTheWikiHoldsAtMost": "The wiki holds at most 500 pages.",
+      "srvThisPageIsLockedOnly": "This page is locked. Only people who manage the wiki can change it.",
       "srvWaitForAReplyBefore": "Wait for a reply before you send more than {a} messages.",
+      "srvWikiPageNotFound": "That wiki page wasn’t found.",
+      "srvWikiPagesNestAtMost": "Wiki pages nest at most 5 levels.",
       "srvYouAreInGroupDirect": "You’re already in {a} group direct messages. Leave one first.",
       "srvYouHaveStartedEnoughDirect": "You’ve started enough direct messages for today. Try again tomorrow.",
       "srvABotCanHaveAt": "A bot can have at most {a} active tokens.",
@@ -654,7 +671,8 @@
       "tag": "Tag",
       "thread": "Thread",
       "token": "Token",
-      "user": "Member"
+      "user": "Member",
+      "summary": "Summary"
     }
   },
   "connection": {
@@ -3099,7 +3117,20 @@
       "text": "Text",
       "voice": "Voice",
       "moderation": "Moderation",
-      "administration": "Administration"
+      "administration": "Administration",
+      "wiki": "Wiki"
+    },
+    "edit_wiki": {
+      "name": "Edit the wiki",
+      "desc": "Create and edit wiki pages and restore earlier versions. Not part of @everyone: give it to the roles you trust with the wiki. A timeout and the new-member wait take it away."
+    },
+    "manage_wiki": {
+      "name": "Manage the wiki",
+      "desc": "Lock, move, rename and delete wiki pages, restore deleted ones and read them. The people who revert vandalism."
+    },
+    "view_wiki": {
+      "name": "View the wiki",
+      "desc": "Read the wiki. On for @everyone; switch it off there to close the wiki to members without a role that has it."
     }
   },
   "audit": {
@@ -3318,6 +3349,14 @@
       "import": {
         "discord": "Discord template imported",
         "discord_undo": "Discord import undone"
+      },
+      "wiki": {
+        "create": "Wiki page created",
+        "edit": "Wiki page edited",
+        "move": "Wiki page moved or renamed",
+        "delete": "Wiki page deleted",
+        "restore": "Wiki page or revision restored",
+        "lock": "Wiki page locked or unlocked"
       }
     },
     "hideSignIns": "Hide sign-ins",
@@ -4037,7 +4076,7 @@
       "exportExpired": "The last export expired and was removed.",
       "exportNext": "You can request the next export from {when}.",
       "deleteTitle": "Delete my account",
-      "deleteIntro": "This erases your profile, avatar, e-mail address, sessions, settings, reactions and uploads for good. Your messages stay in their threads as written by “Deleted member”, but their text is removed. Replies of other members stay. Your username becomes free. This cannot be undone.",
+      "deleteIntro": "This erases your profile, avatar, e-mail address, sessions, settings, reactions and uploads for good. Your messages stay in their threads as written by “Deleted member”, but their text is removed. Replies of other members stay. Your username becomes free. Wiki pages you wrote stay in the wiki, no longer linked to you. This cannot be undone.",
       "deleteOwner": "The Owner account cannot be deleted: ownership cannot be transferred, so the community would be left without an Owner.",
       "deleteButton": "Delete my account…",
       "deleteType": "Type your username ({name}) to confirm",

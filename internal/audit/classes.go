@@ -49,6 +49,7 @@ var Classes = []Class{
 	{"layout.apply", VisPrivileged, "lists channel and category placements, private ones included"},
 	{"event.talk_%", VisChannel, "names and times an event held in a possibly private Talk"},
 	{"channel.%", VisChannel, "names, topics and overwrites of a possibly private channel"},
+	{"wiki.%", VisAuditors, "the wiki is open to every member who may view it; the log says who changed which page"},
 	{"%", VisAuditors, "administration and moderation"},
 }
 

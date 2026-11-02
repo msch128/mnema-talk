@@ -93,6 +93,16 @@ const (
 	// protection). Administrators and the Owner never wait. Separate from the
 	// slow mode exemption, which Manage messages gives.
 	BypassNewMemberLimits Set = 1 << 26
+	// EditWiki creates and edits wiki pages and restores earlier revisions
+	// (doc/wiki.md). Not part of @everyone: only roles that are given it, and
+	// Administrators and the Owner. A timeout and the new-member write wait take
+	// it away like sending messages.
+	EditWiki Set = 1 << 27
+	// ManageWiki locks pages, moves, renames and deletes them, restores deleted
+	// pages and reads the deleted ones.
+	ManageWiki Set = 1 << 28
+	// ViewWiki reads the wiki. On for @everyone.
+	ViewWiki Set = 1 << 29
 )
 
 // Info describes one permission for clients.
@@ -134,6 +144,9 @@ var Catalog = []Info{
 	{Key: "manage_stage", Bit: ManageStage, Name: "manage Stages", Channel: true},
 	{Key: "manage_events", Bit: ManageEvents, Name: "manage events"},
 	{Key: "bypass_new_member_limits", Bit: BypassNewMemberLimits, Name: "bypass new member limits"},
+	{Key: "edit_wiki", Bit: EditWiki, Name: "edit the wiki"},
+	{Key: "manage_wiki", Bit: ManageWiki, Name: "manage the wiki"},
+	{Key: "view_wiki", Bit: ViewWiki, Name: "view the wiki"},
 }
 
 var (
@@ -162,7 +175,7 @@ const (
 	// DefaultEveryone is what @everyone holds on a fresh install and what
 	// migration 0017 seeds: exactly what every member could do before roles
 	// existed. Do not widen it: upgrades must not change behavior.
-	DefaultEveryone = ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages
+	DefaultEveryone = ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | ViewWiki
 	// OwnerGrantOnly can only be handed out by the Owner.
 	OwnerGrantOnly = ManageBots
 	// AdminArea is any permission that opens a part of the admin area.
@@ -170,7 +183,7 @@ const (
 )
 
 // TimeoutMask is what a timeout takes from a member: they can still read.
-const TimeoutMask = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages
+const TimeoutMask = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | EditWiki
 
 // Has reports whether every bit of need is in s.
 func (s Set) Has(need Set) bool { return s&need == need }
