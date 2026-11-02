@@ -32,12 +32,17 @@ async function load() {
   }
 }
 
+// The list as the server has it now; a reload that fails keeps what is shown and says so.
+async function refresh() {
+  await Promise.all([permissions.load(), load()])
+}
+
 async function toggle(role: Role, on: boolean) {
   busy.value = role.id
   try {
     const saved = await pref.run(() => api(`/api/me/roles/${role.id}`, { method: on ? 'PUT' : 'DELETE' }))
     // Whatever the outcome, show what the server holds now (the role may have been closed meanwhile).
-    await Promise.all([permissions.load(), load()])
+    await refresh()
     return saved
   } finally {
     busy.value = null
@@ -54,12 +59,12 @@ onMounted(load)
       <SavedIndicator :visible="pref.saved.value" />
     </div>
     <p class="settings-help">{{ $t('selfRoles.intro') }}</p>
-    <div v-if="failed && !loaded" class="space-y-2" role="alert">
+    <div v-if="failed" class="space-y-2" role="alert">
       <p class="text-sm text-mnema-danger">{{ $t('selfRoles.loadFailed') }}</p>
       <button type="button" class="btn btn-ghost btn-sm" data-testid="self-roles-retry" @click="load">{{ $t('selfRoles.retry') }}</button>
     </div>
-    <p v-else-if="loaded && !roles.length" class="text-sm text-mnema-tertiary" data-testid="self-roles-empty">{{ $t('selfRoles.empty') }}</p>
-    <ul v-else class="divide-y divide-mnema-hairline">
+    <p v-if="loaded && !roles.length && !failed" class="text-sm text-mnema-tertiary" data-testid="self-roles-empty">{{ $t('selfRoles.empty') }}</p>
+    <ul v-if="roles.length" class="divide-y divide-mnema-hairline">
       <li v-for="role in roles" :key="role.id" class="py-3" :data-role="role.name">
         <div class="flex items-start gap-3">
           <span v-if="role.color" class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" :style="{ background: roleColorCss(role.color) }" aria-hidden="true"></span>

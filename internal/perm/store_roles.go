@@ -194,6 +194,9 @@ func (s *Service) validateRoleUpdate(snap *Snapshot, actor Subject, id uuid.UUID
 	if err := checkSelfAssignable(next); err != nil {
 		return Role{}, Role{}, err
 	}
+	if next.SelfAssignable && snap.roleAllowsInChannels(id, SelfAssignBlocked) {
+		return Role{}, Role{}, errOverwriteOpenRole
+	}
 	if err := checkGrant(snap, actor, role.Permissions^next.Permissions); err != nil {
 		return Role{}, Role{}, err
 	}

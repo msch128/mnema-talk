@@ -5,6 +5,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -34,7 +35,7 @@ func (h *Handler) listSelfAssignable(w http.ResponseWriter, r *http.Request) err
 // takeSelfRole handles PUT /api/me/roles/{id}.
 //
 // @Summary Take a self-assignable role
-// @Description Adds the role to the caller's own account. Only roles listed by GET /api/roles/self-assignable; asking for a role the caller already holds changes nothing. Recorded in the audit log as role.self_assign. Broadcasts roles_changed.
+// @Description Adds the role to the caller's own account. Only roles listed by GET /api/roles/self-assignable; asking for a role the caller already holds changes nothing. Recorded in the audit log as role.self_assign. Broadcasts member_roles_changed (the member's id and roles) and tells the caller to refresh (permissions_changed).
 // @ID takeSelfRole
 // @Tags Roles
 // @Security cookieAuth
@@ -55,7 +56,7 @@ func (h *Handler) takeSelfRole(w http.ResponseWriter, r *http.Request) error {
 // dropSelfRole handles DELETE /api/me/roles/{id}.
 //
 // @Summary Drop a self-assignable role
-// @Description Removes the role from the caller's own account. Only roles listed by GET /api/roles/self-assignable; dropping a role the caller does not hold changes nothing. Recorded in the audit log as role.self_remove. Broadcasts roles_changed.
+// @Description Removes the role from the caller's own account. Only roles listed by GET /api/roles/self-assignable; dropping a role the caller does not hold changes nothing. Recorded in the audit log as role.self_remove. Broadcasts member_roles_changed (the member's id and roles) and tells the caller to refresh (permissions_changed).
 // @ID dropSelfRole
 // @Tags Roles
 // @Security cookieAuth
@@ -78,7 +79,8 @@ func (h *Handler) setSelfRole(w http.ResponseWriter, r *http.Request, on bool) e
 	if err != nil {
 		return err
 	}
-	role, changed, err := h.Perms.SetSelfRole(r.Context(), auth.UserFrom(r.Context()).ID, id, on)
+	user := auth.UserFrom(r.Context())
+	role, changed, held, err := h.Perms.SetSelfRole(r.Context(), user.ID, id, on)
 	if err != nil {
 		return err
 	}
@@ -88,7 +90,7 @@ func (h *Handler) setSelfRole(w http.ResponseWriter, r *http.Request, on bool) e
 			action = "role.self_assign"
 		}
 		h.Audit.RecordOrLog(r.Context(), audit.Entry{Action: action, TargetType: "role", TargetID: role.ID.String(), TargetName: role.Name})
-		h.rolesChanged()
+		h.Events.Broadcast(events.MemberRolesChanged, map[string]any{"id": user.ID, "role_ids": held})
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

@@ -63,6 +63,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   ],
   user_update: [userFixture(), { id, disabled: false }, { id, disabled: true }],
   member_timeout: [{ id, timeout_until: FIXTURE_TIMESTAMP }, { id, timeout_until: null }],
+  member_roles_changed: [{ id, role_ids: [] }, { id, role_ids: [id] }],
   moderation_notice: [
     { kind: 'timeout', until: FIXTURE_TIMESTAMP, duration_seconds: 3600, reason: 'spam' },
     { kind: 'timeout_removed', reason: '' },

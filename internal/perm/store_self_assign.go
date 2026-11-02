@@ -18,6 +18,7 @@ const SelfAssignBlocked = Elevated | ManageMessages | ManageStage | ManageEvents
 var (
 	errSelfAssignElevated = httpx.ErrInvalidInput("a self-assignable role cannot have administrator, admin-area or moderation permissions")
 	errSelfAssignPlain    = httpx.ErrInvalidInput("@everyone and managed roles cannot be self-assignable")
+	errOverwriteOpenRole  = httpx.ErrInvalidInput("a self-assignable role cannot be allowed administrator, admin-area or moderation permissions in a channel")
 	errNotSelfAssignable  = httpx.ErrForbidden("members cannot take or drop this role themselves")
 	errOwnerHasNoRoles    = httpx.ErrForbidden("the Owner has no roles to choose")
 )
@@ -80,13 +81,13 @@ func newRoleExtras(perms Set, in RoleInput) (roleExtras, error) {
 // SelfAssignableRoles lists the roles members may choose for themselves,
 // highest first.
 func (s *Service) SelfAssignableRoles(ctx context.Context) ([]Role, error) {
-	all, err := s.Roles(ctx)
+	snap, err := s.Snapshot(ctx)
 	if err != nil {
 		return nil, err
 	}
 	open := []Role{}
-	for _, r := range all {
-		if r.selfAssignable() {
+	for _, r := range snap.Roles() {
+		if snap.open(r) {
 			open = append(open, r)
 		}
 	}
@@ -95,10 +96,12 @@ func (s *Service) SelfAssignableRoles(ctx context.Context) ([]Role, error) {
 
 // SetSelfRole adds the role to the member's own account, or removes it. The
 // role must be open to self-assignment; nothing else about the member's roles
-// changes. It returns the role and whether the member's roles changed (asking
-// for what they already have is not a change and is not audited).
-func (s *Service) SetSelfRole(ctx context.Context, userID, roleID uuid.UUID, on bool) (Role, bool, error) {
+// changes. It returns the role, whether the member's roles changed (asking
+// for what they already have is not a change and is not audited) and the
+// roles the member holds afterwards.
+func (s *Service) SetSelfRole(ctx context.Context, userID, roleID uuid.UUID, on bool) (Role, bool, []uuid.UUID, error) {
 	var role Role
+	var held []uuid.UUID
 	changed := false
 	err := s.Locked(ctx, Subject{ID: userID}, func(tx pgx.Tx, snap *Snapshot) error {
 		var err error
@@ -108,22 +111,34 @@ func (s *Service) SetSelfRole(ctx context.Context, userID, roleID uuid.UUID, on 
 		if err := checkSelfAssignTarget(ctx, tx, userID); err != nil {
 			return err
 		}
+		held = slices.DeleteFunc(slices.Clone(snap.userRoles[userID]), func(id uuid.UUID) bool { return id == roleID && !on })
 		if holds(snap, userID, roleID) == on {
 			return nil
 		}
 		changed = true
+		if on {
+			held = append(held, roleID)
+		}
 		if on {
 			return grantRoles(ctx, tx, userID, []uuid.UUID{roleID})
 		}
 		return revokeRoles(ctx, tx, userID, []uuid.UUID{roleID})
 	})
 	if err != nil {
-		return Role{}, false, err
+		return Role{}, false, nil, err
 	}
 	if changed {
 		s.Changed([]uuid.UUID{userID})
 	}
-	return role, changed, nil
+	return role, changed, held, nil
+}
+
+// open reports whether members may choose the role for themselves right now:
+// the role itself is open and no channel or category overwrite allows it
+// something that is blocked there either (Manage messages in one channel is
+// moderation power just the same).
+func (s *Snapshot) open(role Role) bool {
+	return role.selfAssignable() && !s.roleAllowsInChannels(role.ID, SelfAssignBlocked)
 }
 
 // openRole is the role if members may choose it for themselves.
@@ -132,10 +147,21 @@ func openRole(snap *Snapshot, id uuid.UUID) (Role, error) {
 	switch {
 	case !ok:
 		return Role{}, errRoleNotFound
-	case !role.selfAssignable():
+	case !snap.open(role):
 		return Role{}, errNotSelfAssignable
 	}
 	return role, nil
+}
+
+// checkOverwritesOfOpenRoles refuses overwrites that would allow a
+// self-assignable role a blocked permission in a channel.
+func checkOverwritesOfOpenRoles(snap *Snapshot, next map[overwriteKey]overwrite) error {
+	for k, o := range next {
+		if k.typ == "role" && snap.roles[k.id].SelfAssignable && o.allow.HasAny(SelfAssignBlocked) {
+			return errOverwriteOpenRole
+		}
+	}
+	return nil
 }
 
 // checkSelfAssignTarget refuses accounts that cannot choose roles: bots, the

@@ -52,6 +52,7 @@
   "a poll has 2 to 10 options",
   "a post can have at most 5 tags",
   "a reply has no title or tags",
+  "a self-assignable role cannot be allowed administrator, admin-area or moderation permissions in a channel",
   "a self-assignable role cannot have administrator, admin-area or moderation permissions",
   "a tag with this name already exists",
   "a vote in an anonymous poll cannot be withdrawn",

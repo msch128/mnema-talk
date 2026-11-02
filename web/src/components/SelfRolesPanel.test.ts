@@ -87,6 +87,18 @@ describe('SelfRolesPanel', () => {
     expect(w.find('[data-testid="self-roles-empty"]').exists()).toBe(true)
   })
 
+  it('says so when the list cannot be refreshed after a change, and keeps what is shown', async () => {
+    const w = await mountPanel()
+    apiMock.mockImplementation(async (path, options) => {
+      if (path === '/api/roles/self-assignable') throw new Error('offline')
+      return options?.method ? undefined : undefined
+    })
+    await toggle(w, open[0]!).trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('Could not load the roles.')
+    expect(w.text()).toContain('Role 1')
+  })
+
   it('offers a retry when the list cannot be loaded', async () => {
     apiMock.mockRejectedValueOnce(new Error('offline'))
     const w = mount(SelfRolesPanel)

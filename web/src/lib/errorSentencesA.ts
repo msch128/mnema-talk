@@ -55,6 +55,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['a poll has 2 to 10 options', 'pollOptionCount', []],
   ['a post can have at most 5 tags', 'srvAPostCanHaveAt'],
   ['a reply has no title or tags', 'srvAReplyHasNoTitle'],
+  ['a self-assignable role cannot be allowed administrator, admin-area or moderation permissions in a channel', 'srvASelfAssignableRoleCannot2'],
   ['a self-assignable role cannot have administrator, admin-area or moderation permissions', 'srvASelfAssignableRoleCannot'],
   ['a tag with this name already exists', 'srvATagWithThisName'],
   ['a vote in an anonymous poll cannot be withdrawn', 'pollNoWithdraw', []],

@@ -30719,7 +30719,7 @@
     },
     "/api/me/roles/{id}": {
       "delete": {
-        "description": "Removes the role from the caller's own account. Only roles listed by GET /api/roles/self-assignable; dropping a role the caller does not hold changes nothing. Recorded in the audit log as role.self_remove. Broadcasts roles_changed.",
+        "description": "Removes the role from the caller's own account. Only roles listed by GET /api/roles/self-assignable; dropping a role the caller does not hold changes nothing. Recorded in the audit log as role.self_remove. Broadcasts member_roles_changed (the member's id and roles) and tells the caller to refresh (permissions_changed).",
         "operationId": "dropSelfRole",
         "parameters": [
           {
@@ -30817,7 +30817,7 @@
         ]
       },
       "put": {
-        "description": "Adds the role to the caller's own account. Only roles listed by GET /api/roles/self-assignable; asking for a role the caller already holds changes nothing. Recorded in the audit log as role.self_assign. Broadcasts roles_changed.",
+        "description": "Adds the role to the caller's own account. Only roles listed by GET /api/roles/self-assignable; asking for a role the caller already holds changes nothing. Recorded in the audit log as role.self_assign. Broadcasts member_roles_changed (the member's id and roles) and tells the caller to refresh (permissions_changed).",
         "operationId": "takeSelfRole",
         "parameters": [
           {

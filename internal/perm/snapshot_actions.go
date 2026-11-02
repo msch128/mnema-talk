@@ -9,14 +9,18 @@ import (
 )
 
 // TopPosition is the position of sub's highest role (0 without custom roles);
-// the Owner is above every position.
+// the Owner is above every position. A role members can assign to themselves
+// is cosmetic and never counts: otherwise taking one positioned above the
+// moderators would put a member out of their reach.
 func (s *Snapshot) TopPosition(sub Subject) int {
 	if s.IsOwner(sub) {
 		return math.MaxInt32
 	}
 	top := 0
 	for _, id := range s.userRoles[sub.ID] {
-		top = max(top, s.roles[id].Position)
+		if role := s.roles[id]; !role.SelfAssignable {
+			top = max(top, role.Position)
+		}
 	}
 	return top
 }
@@ -110,9 +114,15 @@ func (s *Snapshot) ElevatedFor(sub Subject) bool {
 // RoleGrantsElevatedInChannels reports whether any category or channel
 // overwrite allows the role an elevated permission.
 func (s *Snapshot) RoleGrantsElevatedInChannels(role uuid.UUID) bool {
+	return s.roleAllowsInChannels(role, Elevated)
+}
+
+// roleAllowsInChannels reports whether any category or channel overwrite
+// allows the role one of the permissions in mask.
+func (s *Snapshot) roleAllowsInChannels(role uuid.UUID, mask Set) bool {
 	for _, m := range []map[uuid.UUID]*scope{s.channelOv, s.categoryOv} {
 		for _, sc := range m {
-			if ow, ok := sc.roles[role]; ok && ow.allow.HasAny(Elevated) {
+			if ow, ok := sc.roles[role]; ok && ow.allow.HasAny(mask) {
 				return true
 			}
 		}

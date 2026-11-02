@@ -206,6 +206,7 @@
       "automodSend": "Deine Nachricht wurde nicht gesendet: Sie verstößt gegen die Regel „{rule}“ der Community. Die Moderatoren können das sehen.",
       "automodEdit": "Deine Änderung wurde nicht gespeichert: Sie verstößt gegen die Regel „{rule}“ der Community. Die Moderatoren können das sehen.",
       "srvASelfAssignableRoleCannot": "Eine frei wählbare Rolle darf keine Administrator-, Admin-Bereich- oder Moderationsrechte haben.",
+      "srvASelfAssignableRoleCannot2": "Einer frei wählbaren Rolle dürfen in einem Kanal keine Administrator-, Admin-Bereich- oder Moderationsrechte erlaubt werden.",
       "srvCreatedChannelSHaveMessages": "In {a} erstellten Kanälen stehen jetzt Nachrichten. Bestätige, dass sie ebenfalls gelöscht werden.",
       "srvEveryoneAndManagedRoles": "@everyone und verwaltete Rollen können nicht selbst gewählt werden.",
       "srvIsNotADomain": "{a} ist keine Domain.",

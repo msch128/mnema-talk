@@ -163,6 +163,15 @@ function onMemberTimeout({ cs }: Cx, p: Payload<'member_timeout'>) {
   cs.members.value[idx] = next
 }
 
+// A member chose a role for themselves: only their roles change, nothing is refetched.
+function onMemberRolesChanged({ cs }: Cx, p: Payload<'member_roles_changed'>) {
+  const idx = cs.members.value.findIndex(member => member.id === p.id)
+  const existing = cs.members.value[idx]
+  if (!existing) return
+  cs.members.value[idx] = { ...existing, role_ids: p.role_ids }
+  usePermissionsStore().setMemberRoles(cs.members.value)
+}
+
 function onMessageDelete(cx: Cx, p: Payload<'message_delete'>) {
   useForwardQuotesStore().invalidate()
   const { cs } = cx
@@ -232,6 +241,7 @@ const HANDLERS: Handlers = {
   message_create: onMessageCreate,
   user_update: (cx, p) => { if (p) updateUserEverywhere(cx, p) },
   member_timeout: onMemberTimeout,
+  member_roles_changed: onMemberRolesChanged,
   moderation_notice: (_cx, p) => {
     useToastStore().info(noticeText(p))
     usePermissionsStore().load()

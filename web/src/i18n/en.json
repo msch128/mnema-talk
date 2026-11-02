@@ -206,6 +206,7 @@
       "automodSend": "Your message wasn’t sent: it breaks the community rule “{rule}”. The moderators can see this.",
       "automodEdit": "Your edit wasn’t saved: it breaks the community rule “{rule}”. The moderators can see this.",
       "srvASelfAssignableRoleCannot": "A self-assignable role can’t have administrator, admin-area or moderation permissions.",
+      "srvASelfAssignableRoleCannot2": "A self-assignable role can’t be allowed administrator, admin-area or moderation permissions in a channel.",
       "srvCreatedChannelSHaveMessages": "{a} created channels now contain messages. Confirm that they are deleted as well.",
       "srvEveryoneAndManagedRoles": "@everyone and managed roles can’t be self-assignable.",
       "srvIsNotADomain": "{a} is not a domain.",

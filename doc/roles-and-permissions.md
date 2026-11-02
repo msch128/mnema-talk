@@ -183,12 +183,21 @@ The flag is only for harmless roles, and the server enforces it every time:
   such a role, or giving permissions like that to a flagged role, is refused with
   a clear sentence. If a flagged role somehow carries such a bit anyway, it is no
   longer listed and cannot be taken.
+- never a role that a channel or category overwrite allows one of those permissions
+  (Manage messages in one channel is moderation there): such an overwrite is refused
+  for an opened role, and an opened role that has one anyway is not listed;
 - the Owner has no roles to choose; bots cannot use it.
+
+A self-assignable role is cosmetic for the hierarchy: it **never counts towards
+anyone's rank**, wherever it is positioned, so taking one cannot put a member out of
+a moderator's reach (or let them drop it to escape). Deny overwrites on an opened
+role are fine and are the member's to shed: dropping the role lifts them.
 
 Taking or dropping a role is audited as `role.self_assign` / `role.self_remove`
 (the member is the actor; asking for what one already has is not a change and
-leaves no entry), rebuilds permissions like any other role change and broadcasts
-`roles_changed`. A member's own changes are limited to 30 a minute. A Discord
+leaves no entry) and rebuilds permissions like any other role change, but tells
+the other clients only the one member's new roles (`member_roles_changed`), not to
+refetch everything. A member's own changes are limited to 6 a minute. A Discord
 import never sets the flag.
 
 ## Channel and category overwrites

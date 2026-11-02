@@ -152,7 +152,14 @@ func TestMembersChooseOpenRolesThroughTheHandlers(t *testing.T) {
 	if strings.Join(got, ",") != "role.self_assign,role.self_remove" {
 		t.Fatalf("audited %v: asking for what one already has leaves nothing", got)
 	}
-	if len(rec.Events) != 2 || rec.Events[0].Type != events.RolesChanged {
-		t.Fatalf("roles_changed broadcast once per real change: %+v", rec.Events)
+	if len(rec.Events) != 2 || rec.Events[0].Type != events.MemberRolesChanged {
+		t.Fatalf("one targeted member_roles_changed per real change: %+v", rec.Events)
+	}
+	first, ok := rec.Events[0].Payload.(map[string]any)
+	if !ok || first["id"] != memberID || len(first["role_ids"].([]uuid.UUID)) != 1 {
+		t.Fatalf("the event names the member and the roles they hold: %+v", rec.Events[0].Payload)
+	}
+	if last := rec.Events[1].Payload.(map[string]any); len(last["role_ids"].([]uuid.UUID)) != 0 {
+		t.Fatalf("after dropping, no roles are held: %+v", last)
 	}
 }

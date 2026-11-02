@@ -22,6 +22,7 @@ const (
 	MemberJoined        = "member_joined"
 	MemberTimeout       = "member_timeout"
 	RolesChanged        = "roles_changed"
+	MemberRolesChanged  = "member_roles_changed"
 	PermissionsChanged  = "permissions_changed"
 	SystemUpdate        = "system_update"
 	InteractionResponse = "interaction_response"

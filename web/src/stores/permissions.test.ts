@@ -88,6 +88,15 @@ describe('permissions store', () => {
     expect(store.outranksMember(fixtureId(5))).toBe(true)
   })
 
+  it('does not count a role members choose themselves towards a rank', async () => {
+    apiMock.mockResolvedValueOnce(info({ role_ids: [fixtureId(11)], top_position: 5 }))
+    const store = usePermissionsStore()
+    store.roles = [role({ id: fixtureId(11), position: 5 }), role({ id: fixtureId(14), position: 9, self_assignable: true })]
+    await store.load()
+    store.setMemberRoles([{ id: other, role_ids: [fixtureId(14)] }])
+    expect(store.outranksMember(other)).toBe(true)
+  })
+
   it('colours names by the highest role that has a colour', async () => {
     useAuthStore().user = userFixture({ id: fixtureId(1) })
     apiMock.mockResolvedValueOnce(info({ role_ids: [fixtureId(11)] }))

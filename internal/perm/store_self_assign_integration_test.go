@@ -84,38 +84,38 @@ func TestMembersTakeAndDropOpenRolesOnly(t *testing.T) {
 		t.Fatalf("the picker lists exactly the open role: %v %+v", err, list)
 	}
 
-	if _, changed, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, true); err != nil || !changed {
+	if _, changed, _, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, true); err != nil || !changed {
 		t.Fatalf("take: changed=%v err=%v", changed, err)
 	}
 	if got := w.heldRoles(t, w.member.ID); len(got) != 1 || got[0] != open.ID {
 		t.Fatalf("roles after take: %v", got)
 	}
 	// Taking it again is no change.
-	if _, changed, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, true); err != nil || changed {
+	if _, changed, _, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, true); err != nil || changed {
 		t.Fatalf("take twice: changed=%v err=%v", changed, err)
 	}
-	if _, changed, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, false); err != nil || !changed {
+	if _, changed, _, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, false); err != nil || !changed {
 		t.Fatalf("drop: changed=%v err=%v", changed, err)
 	}
 	if got := w.heldRoles(t, w.member.ID); len(got) != 0 {
 		t.Fatalf("roles after drop: %v", got)
 	}
-	if _, changed, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, false); err != nil || changed {
+	if _, changed, _, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, false); err != nil || changed {
 		t.Fatalf("drop twice: changed=%v err=%v", changed, err)
 	}
 	if len(notified.calls) != 2 || len(notified.calls[0]) != 1 || notified.calls[0][0] != w.member.ID {
 		t.Fatalf("permissions were refreshed for the member twice, got %v", notified.calls)
 	}
 
-	_, _, err = w.svc.SetSelfRole(ctx, w.member.ID, closed.ID, true)
+	_, _, _, err = w.svc.SetSelfRole(ctx, w.member.ID, closed.ID, true)
 	wantAPI(t, "a role that is not open", err, 403)
-	_, _, err = w.svc.SetSelfRole(ctx, w.member.ID, w.everyone, true)
+	_, _, _, err = w.svc.SetSelfRole(ctx, w.member.ID, w.everyone, true)
 	wantAPI(t, "@everyone", err, 403)
-	_, _, err = w.svc.SetSelfRole(ctx, w.member.ID, uuid.New(), true)
+	_, _, _, err = w.svc.SetSelfRole(ctx, w.member.ID, uuid.New(), true)
 	wantAPI(t, "an unknown role", err, 404)
-	_, _, err = w.svc.SetSelfRole(ctx, w.owner.ID, open.ID, true)
+	_, _, _, err = w.svc.SetSelfRole(ctx, w.owner.ID, open.ID, true)
 	wantAPI(t, "the Owner", err, 403)
-	_, _, err = w.svc.SetSelfRole(ctx, uuid.New(), open.ID, true)
+	_, _, _, err = w.svc.SetSelfRole(ctx, uuid.New(), open.ID, true)
 	wantAPI(t, "an unknown account", err, 404)
 }
 
@@ -127,7 +127,7 @@ func TestAnOpenRoleThatGainedAdminPermissionsIsClosedAtOnce(t *testing.T) {
 	if _, err := w.p.Exec(ctx, `UPDATE roles SET permissions = $2 WHERE id = $1`, open.ID, int64(perm.SendMessages|perm.BanMembers)); err != nil {
 		t.Fatal(err)
 	}
-	_, _, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, true)
+	_, _, _, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, true)
 	wantAPI(t, "a role that gained a ban permission", err, 403)
 	list, err := w.svc.SelfAssignableRoles(ctx)
 	if err != nil || len(list) != 0 {
@@ -138,3 +138,96 @@ func TestAnOpenRoleThatGainedAdminPermissionsIsClosedAtOnce(t *testing.T) {
 type countingNotifier struct{ calls [][]uuid.UUID }
 
 func (c *countingNotifier) PermissionsChanged(ids []uuid.UUID) { c.calls = append(c.calls, ids) }
+
+func TestAChannelOverwriteThatAllowsModerationClosesTheRole(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	open := w.selfRole(t, "Gamer", perm.SendMessages, true)
+	// Setting it on a flagged role is refused ...
+	err := w.svc.SetOverwrites(ctx, w.owner, perm.TargetChannel, w.channel, []perm.Overwrite{{Type: "role", ID: open.ID, Allow: perm.ManageMessages}})
+	wantAPI(t, "moderation allowed to an open role in a channel", err, 400)
+	err = w.svc.SetOverwrites(ctx, w.owner, perm.TargetCategory, w.category, []perm.Overwrite{{Type: "role", ID: open.ID, Allow: perm.DisconnectMembers}})
+	wantAPI(t, "disconnect allowed to an open role in a category", err, 400)
+	// A role that already has such an overwrite cannot be opened.
+	other := w.selfRole(t, "Closed", perm.SendMessages, false)
+	if err := w.svc.SetOverwrites(ctx, w.owner, perm.TargetChannel, w.channel, []perm.Overwrite{{Type: "role", ID: other.ID, Allow: perm.ManageMessages}}); err != nil {
+		t.Fatal(err)
+	}
+	yes := true
+	_, err = w.svc.UpdateRole(ctx, w.owner, other.ID, perm.RoleInput{SelfAssignable: &yes})
+	wantAPI(t, "opening a role with a moderation overwrite", err, 400)
+	// ... a harmless allow and a deny are fine, and a deny can be dropped again by the member.
+	if err := w.svc.SetOverwrites(ctx, w.owner, perm.TargetChannel, w.channel, []perm.Overwrite{{Type: "role", ID: open.ID, Allow: perm.SendMessages, Deny: perm.AddReactions}}); err != nil {
+		t.Fatalf("a harmless overwrite: %v", err)
+	}
+	if _, _, _, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, true); err != nil {
+		t.Fatalf("take: %v", err)
+	}
+	// An overwrite that got there some other way closes the role.
+	if _, err := w.p.Exec(ctx, `UPDATE permission_overwrites SET allow = $2 WHERE channel_id = $1`, w.channel, int64(perm.ManageMessages)); err != nil {
+		t.Fatal(err)
+	}
+	w.svc.Invalidate()
+	_, _, _, err = w.svc.SetSelfRole(ctx, w.other.ID, open.ID, true)
+	wantAPI(t, "a role with an overwrite that allows moderation", err, 403)
+	list, _ := w.svc.SelfAssignableRoles(ctx)
+	if len(list) != 0 {
+		t.Fatalf("it is no longer listed: %+v", list)
+	}
+}
+
+func TestAPositionAboveTheModeratorsGivesNoRank(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	// Created first, so it ends up above the moderators' role created next.
+	open := w.selfRole(t, "Gamer", perm.SendMessages, true)
+	modName, mod := "Moderators", perm.ManageMembers|perm.KickMembers
+	modRole, err := w.svc.CreateRole(ctx, w.owner, perm.RoleInput{Name: &modName, Permissions: &mod})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if open.Position >= modRole.Position {
+		// The new role goes to the bottom: the flagged one moved up above it.
+		after, _ := w.svc.Roles(ctx)
+		for _, r := range after {
+			if r.ID == open.ID {
+				open = r
+			}
+		}
+	}
+	if open.Position <= modRole.Position {
+		t.Fatalf("setup: the open role (%d) must sit above the moderators' (%d)", open.Position, modRole.Position)
+	}
+	if err := w.svc.SetMemberRoles(ctx, w.owner, w.other.ID, []uuid.UUID{modRole.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err := w.svc.SetSelfRole(ctx, w.member.ID, open.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	snap, err := w.svc.Snapshot(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := snap.TopPosition(w.member); got != 0 {
+		t.Fatalf("the open role gives rank %d, want none", got)
+	}
+	if err := snap.CanModerate(w.other, w.member); err != nil {
+		t.Fatalf("a moderator can still act on the member: %v", err)
+	}
+}
+
+func TestTheSelfRoleCallReportsWhatTheMemberHolds(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	a := w.selfRole(t, "Alpha", perm.SendMessages, true)
+	b := w.selfRole(t, "Beta", perm.SendMessages, true)
+	if _, _, held, err := w.svc.SetSelfRole(ctx, w.member.ID, a.ID, true); err != nil || len(held) != 1 {
+		t.Fatalf("after one: %v %v", err, held)
+	}
+	if _, _, held, _ := w.svc.SetSelfRole(ctx, w.member.ID, b.ID, true); len(held) != 2 {
+		t.Fatalf("after two: %v", held)
+	}
+	if _, _, held, _ := w.svc.SetSelfRole(ctx, w.member.ID, a.ID, false); len(held) != 1 || held[0] != b.ID {
+		t.Fatalf("after dropping one: %v", held)
+	}
+}
