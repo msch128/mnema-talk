@@ -25,7 +25,7 @@ test('a lockdown shuts the door with a calm answer, a waiting time tells a new m
   const newbie = await newbieCtx.newPage()
   try {
     await signIn(admin, ADMIN_USER, ADMIN_PASSWORD)
-    await admin.goto('/admin/raid')
+    await admin.goto('/admin/access')
 
     // Lockdown on: the banner is there and a sign-up is refused with the paused sentence.
     await admin.getByTestId('lockdown-start').click()
@@ -34,6 +34,7 @@ test('a lockdown shuts the door with a calm answer, a waiting time tells a new m
     const invite = await apiFetch(admin, 'POST', '/api/admin/invites', { max_uses: 1 })
     expect(invite.status).toBe(201)
     const code = responseString(invite, 'code')
+    await newbie.goto('/')
     const refused = await apiFetch(newbie, 'POST', '/api/auth/register', { username: `newbie_${suffix}`, password: 'newbie-password-123', invite_code: code })
     expect(refused.status).toBe(503)
     await admin.getByTestId('lockdown-end').click()
@@ -42,7 +43,6 @@ test('a lockdown shuts the door with a calm answer, a waiting time tells a new m
 
     // Waiting time: the new member sees when writing opens up, in the composer.
     expect((await apiFetch(admin, 'PUT', '/api/admin/raid', { join_limit: 0, join_window_minutes: 10, min_age_write_minutes: 60, min_age_react_minutes: 0, min_age_speak_minutes: 0 })).status).toBe(200)
-    await newbie.goto('/')
     const registered = await apiFetch(newbie, 'POST', '/api/auth/register', { username: `newbie_${suffix}`, password: 'newbie-password-123', invite_code: code })
     expect(registered.status).toBe(201)
     await newbie.reload()

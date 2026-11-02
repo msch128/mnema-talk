@@ -82,14 +82,17 @@ seed_090() {
   post_message cool_guy "$GENERAL" "ping @drillmods $TAG"
 }
 
-# Roles as the drill compares them. Two upgrades add a permission on purpose,
+# Roles as the drill compares them. Three upgrades add a permission on purpose,
 # so those bits are left out of the comparison and checked on their own in
 # verify_roles: migration 0050 gives Send direct messages (bit 1 << 22) to
-# @everyone, and migration 0070 gives Manage events (bit 1 << 25) to every role
-# that holds Timeout members (bit 1 << 18).
-ROLES_JQ='map({id, name, color, permissions: (.permissions as $p | (if (($p / 4194304 | floor) % 2) == 1 then $p - 4194304 else $p end) as $q | if (($q / 33554432 | floor) % 2) == 1 then $q - 33554432 else $q end), mentionable, position}) | sort_by(.id)'
+# @everyone, migration 0070 gives Manage events (bit 1 << 25) and migration 0083
+# Bypass new member limits (bit 1 << 26) to every role that holds Timeout
+# members (bit 1 << 18).
+ROLES_JQ='def strip($bit): (. as $p | if (($p / $bit | floor) % 2) == 1 then $p - $bit else $p end); map({id, name, color, permissions: (.permissions | strip(4194304) | strip(33554432) | strip(67108864)), mentionable, position}) | sort_by(.id)'
 # Holds Manage events exactly when it can time members out.
 EVENTS_GRANT_JQ='all(.[]; (((.permissions / 33554432 | floor) % 2) == 1) == (((.permissions / 262144 | floor) % 2) == 1))'
+# Holds Bypass new member limits exactly when it can time members out.
+BYPASS_GRANT_JQ='all(.[]; (((.permissions / 67108864 | floor) % 2) == 1) == (((.permissions / 262144 | floor) % 2) == 1))'
 
 snapshot_integrations() {
   ROLES_BEFORE="$(api cool_guy "$BASE/api/roles" | jq -S "$ROLES_JQ")"
@@ -121,6 +124,8 @@ verify_roles() {
     fail 'no role holds Send direct messages after the upgrade (migration 0050 gives it to @everyone)'
   api cool_guy "$BASE/api/roles" | jq -e "$EVENTS_GRANT_JQ" >/dev/null ||
     fail 'Manage events does not match Timeout members after the upgrade (migration 0070)'
+  api cool_guy "$BASE/api/roles" | jq -e "$BYPASS_GRANT_JQ" >/dev/null ||
+    fail 'Bypass new member limits does not match Timeout members after the upgrade (migration 0083)'
   [ "$(api cool_guy "$BASE/api/admin/channels/$PROJECTS/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$OVERWRITES_BEFORE" ] ||
     fail 'the channel overwrites changed'
   [ "$(api cool_guy "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$CATEGORY_OVERWRITES_BEFORE" ] ||

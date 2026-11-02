@@ -111,7 +111,7 @@ gap.
 ## Raid protection
 
 Raid protection keeps a sudden wave of new accounts calm. It has three parts,
-all under **Admin > Raid protection** (Owner and Administrators only; every
+all under **Admin > Sign-in & messages** (the *Raid protection* section) (Owner and Administrators only; every
 change is audited as `settings.raid` or `settings.lockdown`). Code:
 [`internal/raid`](../internal/raid/) (the settings and the door),
 [`internal/perm`](../internal/perm/newmember.go) (the waiting times).

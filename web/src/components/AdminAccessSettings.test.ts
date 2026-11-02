@@ -14,10 +14,12 @@ vi.mock('../lib/api', async (importOriginal) => ({
 
 const settings = { community_name: 'Home', welcome_text: 'Hi', rules_text: '', rules_version: 0, start_channel_id: null, direct_messages_enabled: true, session_inactivity_days: 7 }
 
+const raid = { join_limit: 0, join_window_minutes: 10, joined_in_window: 0, min_age_write_minutes: 0, min_age_react_minutes: 0, min_age_speak_minutes: 0, lockdown: { active: false, pause_invites: false } }
+
 beforeEach(() => {
   setActivePinia(createPinia())
   setLocale('en')
-  apiMock.mockReset().mockResolvedValue(settings)
+  apiMock.mockReset().mockImplementation(path => Promise.resolve(path === '/api/admin/raid' ? raid : settings))
 })
 
 describe('AdminAccessSettings', () => {
