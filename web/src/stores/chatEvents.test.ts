@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore } from './chat'
 import { useEventsStore } from './events'
+import { useEventCommentsStore } from './eventComments'
 import { useToastStore } from './toast'
 import { useVoiceStore } from './voice'
 import { useEmojiStore } from './emoji'
@@ -201,5 +202,26 @@ describe('other live updates', () => {
     })
     expect(chat.ephemeral).toHaveLength(1)
     expect(chat.ephemeral[0]?.content).toBe('Only you see this')
+  })
+
+  it('hands the comment events to the event comments store', () => {
+    const chat = useChatStore()
+    const comments = useEventCommentsStore()
+    const change = vi.spyOn(comments, 'handleChange').mockImplementation(() => undefined)
+    const notice = vi.spyOn(comments, 'handleNotice').mockImplementation(() => undefined)
+    const changed = { action: 'deleted' as const, event_id: fixtureId(1), comment_id: fixtureId(2) }
+    const told = { event_id: fixtureId(1), title: 'Raid', author_name: 'Ada', excerpt: 'Hi' }
+    chat.handleWSEvent({ type: 'event_comment', payload: changed })
+    chat.handleWSEvent({ type: 'event_comment_notice', payload: told })
+    expect(change).toHaveBeenCalledWith(changed)
+    expect(notice).toHaveBeenCalledWith(told)
+  })
+
+  it('hands event_signup_notice to the events store', () => {
+    const chat = useChatStore()
+    const notice = vi.spyOn(useEventsStore(), 'handleSignupNotice').mockImplementation(() => undefined)
+    const payload = { event_id: fixtureId(1), title: 'Raid', kind: 'promoted' as const, role_name: 'Tank', start_time: '2026-11-01T18:00:00Z' }
+    chat.handleWSEvent({ type: 'event_signup_notice', payload })
+    expect(notice).toHaveBeenCalledWith(payload)
   })
 })

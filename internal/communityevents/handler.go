@@ -3,7 +3,7 @@ package communityevents
 import (
 	"log/slog"
 	"net/http"
-	"time"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -27,6 +27,15 @@ type Handler struct {
 	Perms       *perm.Service
 	Audit       *audit.Log
 	Push        *push.Service
+	// notices counts the sign-up pushes in flight; pusher overrides Push (tests).
+	notices sync.WaitGroup
+	pusher  signupPusher
+	// CommentLimit caps comments and edits per member; nil means no cap.
+	CommentLimit *httpx.RateLimiter
+	// commentPusher overrides Push for comment notices (tests).
+	commentsPusher commentPusher
+	// quieter overrides Push for the toast checks (tests).
+	quieter eventQuieter
 }
 
 func (h *Handler) Mount(r chi.Router) {
@@ -38,6 +47,8 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Put("/events/{id}/rsvp", httpx.Handle(h.setRSVP))
 	r.Delete("/events/{id}/rsvp", httpx.Handle(h.deleteRSVP))
 	r.Get("/events/{id}/rsvps", httpx.Handle(h.listRSVPs))
+	h.mountRoles(r)
+	h.mountComments(r)
 	r.Delete("/events/{id}/cover", httpx.Handle(h.deleteCover))
 }
 
@@ -79,6 +90,8 @@ func (h *Handler) broadcast(ev *CommunityEvent) {
 	}
 	shared := *ev
 	shared.MyRSVP = nil
+	shared.MySignup = nil
+	shared.Signups = nil
 	ev = &shared
 	if ev.ChannelID != nil {
 		h.Events.BroadcastChannel(*ev.ChannelID, events.EventUpdate, ev)
@@ -115,55 +128,8 @@ func (h *Handler) listEvents(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// listQuery reads after, before and limit and builds the visibility check
-// from one permission snapshot. Without a snapshot nothing in a Talk is shown.
-func (h *Handler) listQuery(r *http.Request) (ListQuery, error) {
-	now := time.Now()
-	q := ListQuery{
-		After:  now.Add(-listLookBehind),
-		Before: now.Add(listLookAhead),
-		Limit:  httpx.QueryLimit(r, "limit", DefaultListLimit, MaxListLimit),
-	}
-	switch when := r.URL.Query().Get("when"); when {
-	case "", "upcoming":
-	case "past":
-		q.Past = true
-		q.Before = now.AddDate(100, 0, 0) // no cursor: start from the newest
-	default:
-		return q, httpx.ErrInvalidInput("when must be upcoming or past")
-	}
-	if raw := r.URL.Query().Get("before_id"); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return q, httpx.ErrInvalidInput("before_id must be a UUID")
-		}
-		q.BeforeID = id
-	}
-	for name, dst := range map[string]*time.Time{"after": &q.After, "before": &q.Before} {
-		raw := r.URL.Query().Get(name)
-		if raw == "" {
-			continue
-		}
-		t, err := time.Parse(time.RFC3339, raw)
-		if err != nil {
-			return q, httpx.ErrInvalidInput(name + " must be an RFC 3339 time")
-		}
-		*dst = t
-	}
-	if h.Perms == nil {
-		return q, nil
-	}
-	snap, err := h.Perms.Snapshot(r.Context())
-	if err != nil {
-		return q, err
-	}
-	sub := auth.UserFrom(r.Context()).Subject()
-	q.Allow = func(id uuid.UUID) bool { return snap.Channel(sub, id).Has(perm.ViewChannel) }
-	return q, nil
-}
-
 // @Summary Create a community event
-// @Description Creates an event. Requires ManageEvents permission. Location must be either a Talk voice channel or free text.
+// @Description Creates an event. With recurrence the event is the first occurrence of a series that repeats weekly, every two weeks or monthly (at the same wall-clock time in the given time zone; the later occurrences are created up to 60 days ahead and then by the server as time passes, at most 200 and not past until). Requires ManageEvents permission. Location must be either a Talk voice channel or free text.
 // @ID createCommunityEvent
 // @Tags Events
 // @Accept json
@@ -187,7 +153,7 @@ func (h *Handler) createEvent(w http.ResponseWriter, r *http.Request) error {
 	if err := h.validateEventPayload(r, req.Title, req.Description, req.StartTime, req.EndTime, req.ChannelID, req.Location); err != nil {
 		return err
 	}
-	ev, err := h.Store.Create(r.Context(), req, user.ID)
+	ev, err := h.createOrStartSeries(r, req, user.ID)
 	if err != nil {
 		return err
 	}
@@ -232,6 +198,7 @@ func (h *Handler) getEvent(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Event ID" Format(uuid)
+// @Param scope query string false "this (default) or following: with following, an occurrence of a series and every later open occurrence take the edit and the series' template changes with it (a new start_time becomes the series' new anchor; occurrences before it stay)." Enums(this, following)
 // @Param body body UpdateEventRequest true "Event update request"
 // @Success 200 {object} CommunityEvent
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
@@ -259,6 +226,10 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	req.normalize()
+	following, err := h.followingScope(r, ev)
+	if err != nil {
+		return err
+	}
 	cancelling, err := statusRequest(ev, req.Status)
 	if err != nil {
 		return err
@@ -266,6 +237,9 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 	m := mergeUpdate(ev, req)
 	if err := h.validateEventPayload(r, m.title, m.desc, m.start, m.end, m.channel, m.location); err != nil {
 		return err
+	}
+	if following {
+		return h.updateFollowing(w, r, ev, req, cancelling)
 	}
 	updated, err := h.applyUpdate(r, ev, req, cancelling)
 	if err != nil {
@@ -331,6 +305,7 @@ func (h *Handler) applyEdit(r *http.Request, ev *CommunityEvent, req UpdateEvent
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Event ID" Format(uuid)
+// @Param scope query string false "this (default) or following: cancel an occurrence of a series and every later open occurrence and end the series there." Enums(this, following)
 // @Success 200 {object} CommunityEvent
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
@@ -350,6 +325,13 @@ func (h *Handler) cancelEvent(w http.ResponseWriter, r *http.Request) error {
 	}
 	if err := h.requireViewable(r, current); err != nil {
 		return err
+	}
+	following, err := h.followingScope(r, current)
+	if err != nil {
+		return err
+	}
+	if following {
+		return h.cancelFollowing(w, r, current)
 	}
 	ev, err := h.Store.Cancel(r.Context(), id)
 	if err != nil {

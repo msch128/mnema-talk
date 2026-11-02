@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Calendar, Check, Edit3, HelpCircle, MapPin, Volume2, X } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import MarkdownContent from './MarkdownContent.vue'
@@ -13,6 +13,14 @@ import type { CommunityEvent, RSVPItem } from '../types/domain'
 import { eventAvatar } from '../lib/eventAvatar'
 import { formatEventStart, relativeEventDay } from '../lib/eventTime'
 import { caughtErrorMessage } from '../lib/api'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { useAuthStore } from '../stores/auth'
+import EventRoster from './EventRoster.vue'
+import EventComments from './EventComments.vue'
+import EventRolesDialog from './EventRolesDialog.vue'
+import EventCancelDialog from './EventCancelDialog.vue'
+import RepeatBadge from './RepeatBadge.vue'
+import type { Scope } from '../lib/eventRecurrence'
 import { locale, t } from '../i18n'
 
 const props = defineProps<{
@@ -29,6 +37,14 @@ const eventsStore = useEventsStore()
 const chatStore = useChatStore()
 const permissions = usePermissionsStore()
 const toast = useToastStore()
+const features = useServerFeaturesStore()
+const auth = useAuthStore()
+const editingRoles = ref(false)
+const cancelling = ref(false)
+
+// The creator and moderators change the roster.
+const canManageRoster = computed(() => permissions.can('manage_events') || (!!auth.user && currentEvent.value.created_by === auth.user.id))
+const showRoster = computed(() => features.eventRoles && ((currentEvent.value.roles ?? []).length > 0 || canManageRoster.value))
 
 const currentEvent = computed(() => {
   return eventsStore.events.find(e => e.id === props.event.id) || props.event
@@ -62,9 +78,23 @@ async function loadRsvps() {
   }
 }
 
+// The sign-ups come with the event's details only; the list and the live updates leave them out.
+async function loadSignups() {
+  if (!features.eventRoles) return
+  try {
+    await eventsStore.fetchDetail(currentEvent.value.id)
+  } catch (err) {
+    console.warn('Failed to load the sign-ups', err)
+  }
+}
+
 onMounted(() => {
   void loadRsvps()
+  void loadSignups()
 })
+
+// Someone signed up or left: read the sign-ups again.
+watch(() => JSON.stringify((currentEvent.value.roles ?? []).map(r => [r.id, r.confirmed, r.waitlist])), () => { void loadSignups() })
 
 function formatDateTime(iso: string): string {
   return formatEventStart(iso, locale.value)
@@ -103,6 +133,10 @@ async function setRSVP(response: 'going' | 'interested' | 'not_going') {
 }
 
 async function cancelEvent() {
+  if (currentEvent.value.series) {
+    cancelling.value = true
+    return
+  }
   const confirmed = await confirm({
     title: t('events.cancel'),
     body: t('events.cancelConfirm'),
@@ -111,12 +145,21 @@ async function cancelEvent() {
     danger: true
   })
   if (!confirmed) return
+  await runCancel()
+}
+
+async function runCancel(scope?: Scope) {
   try {
-    await eventsStore.cancel(currentEvent.value.id)
+    await (scope ? eventsStore.cancel(currentEvent.value.id, scope) : eventsStore.cancel(currentEvent.value.id))
     toast.success(t('events.cancelled'))
   } catch (err) {
     toast.error(caughtErrorMessage(err, t('events.cancelFailed')))
   }
+}
+
+async function confirmCancel(scope: Scope) {
+  cancelling.value = false
+  await runCancel(scope)
 }
 </script>
 
@@ -168,6 +211,8 @@ async function cancelEvent() {
           <span v-if="currentEvent.end_time">- {{ formatDateTime(currentEvent.end_time) }}</span>
         </div>
 
+        <RepeatBadge :event="currentEvent" />
+
         <!-- Location -->
         <div v-if="talkChannel" class="flex items-center gap-1.5 text-sm text-mnema-accent font-medium">
           <Volume2 class="w-4 h-4" />
@@ -202,6 +247,8 @@ async function cancelEvent() {
           {{ $t('events.noDescription') }}
         </p>
       </div>
+
+      <EventRoster v-if="showRoster" :event="currentEvent" :can-manage="canManageRoster" @edit-roles="editingRoles = true" @gone="emit('close')" />
 
       <!-- RSVP Section -->
       <div class="mb-6 flex flex-col gap-3 rounded-xl border border-mnema-border bg-mnema-surface p-4">
@@ -268,6 +315,8 @@ async function cancelEvent() {
         </div>
       </div>
 
+      <EventComments :event-id="currentEvent.id" />
+
       <!-- Moderator Actions -->
       <div v-if="permissions.can('manage_events')" class="mt-4 flex justify-between gap-3 border-t border-mnema-hairline pt-4">
         <button
@@ -289,5 +338,7 @@ async function cancelEvent() {
         </button>
       </div>
     </div>
+    <EventCancelDialog v-if="cancelling" @close="cancelling = false" @confirm="confirmCancel" />
+    <EventRolesDialog v-if="editingRoles" :event="currentEvent" @close="editingRoles = false" />
   </BaseDialog>
 </template>

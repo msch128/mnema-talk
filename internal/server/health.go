@@ -68,6 +68,8 @@ var Features = []string{
 	"talks.reactions",
 	"channels.forum",
 	"events",
+	"events.roles",
+	"events.recurrence",
 	"notify.levels.v2",
 	"dm.v2",
 }

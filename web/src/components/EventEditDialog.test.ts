@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import EventEditDialog from './EventEditDialog.vue'
+import { eventWithRoles, roleFixture } from '../eventRoles.fixture'
 import { useEventsStore } from '../stores/events'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { setLocale } from '../i18n'
 import { categoryFixture, channelFixture, fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import type { CommunityEvent } from '../types/domain'
@@ -161,17 +163,30 @@ describe('EventEditDialog', () => {
     expect(wrapper.find('img').exists()).toBe(false)
   })
 
-  it('prefills an existing event and saves changes', async () => {
+  it('prefills an existing event and saves only what changed', async () => {
     const existing = makeEvent({ location: 'Room 1', end_time: '2026-11-01T20:00:00Z' })
     const store = useEventsStore()
     const update = vi.spyOn(store, 'update').mockResolvedValue(existing)
     wrapper = mount(EventEditDialog, { props: { event: existing } })
     expect((titleInput()?.element as HTMLInputElement).value).toBe('Game Night')
     expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('Playing games')
+    await titleInput()?.setValue('Game Night II')
     await submit()
-    expect(update).toHaveBeenCalledWith(fixtureId(1), expect.objectContaining({ title: 'Game Night', location: 'Room 1' }))
+    expect(update).toHaveBeenCalledWith(fixtureId(1), { title: 'Game Night II' })
     expect(useToastStore().toasts.some(t => t.text === 'Event updated')).toBe(true)
     expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('names the place together when either part of it changed, and sends nothing for an untouched form', async () => {
+    const existing = makeEvent({ location: 'Room 1' })
+    const store = useEventsStore()
+    const update = vi.spyOn(store, 'update').mockResolvedValue(existing)
+    wrapper = mount(EventEditDialog, { props: { event: existing } })
+    await submit()
+    expect(update).toHaveBeenCalledWith(fixtureId(1), {})
+    await wrapper.find('input[data-max-chars="255"]').setValue('Room 2')
+    await submit()
+    expect(update).toHaveBeenLastCalledWith(fixtureId(1), { channel_id: null, location: 'Room 2' })
   })
 
   it('prefills the Talk of an existing event', () => {
@@ -246,7 +261,8 @@ describe('EventEditDialog', () => {
 
     await submit()
     expect(create).toHaveBeenCalledTimes(1)
-    expect(update).toHaveBeenCalledWith(created.id, expect.objectContaining({ title: 'Party' }))
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(update.mock.calls[0]![0]).toBe(created.id)
     expect(upload).toHaveBeenCalledTimes(2)
     expect(wrapper.emitted('saved')).toHaveLength(1)
     expect(wrapper.emitted('close')).toHaveLength(1)
@@ -275,5 +291,184 @@ describe('EventEditDialog', () => {
     wrapper.unmount()
     wrapper = undefined
     expect(revoke).toHaveBeenCalledTimes(2)
+  })
+
+  describe('roles', () => {
+    beforeEach(() => {
+      useServerFeaturesStore().list = ['events', 'events.roles']
+    })
+
+    async function fillBasics() {
+      await titleInput()?.setValue('Raid')
+      await setText('input[type="datetime-local"]', '2026-11-01T18:00')
+      await wrapper!.find('input[data-max-chars="255"]').setValue('Hall')
+    }
+
+    it('shows the role editor only when the server has roles', async () => {
+      wrapper = mount(EventEditDialog)
+      expect(wrapper.find('[data-testid="event-roles-editor"]').exists()).toBe(true)
+      wrapper.unmount()
+      useServerFeaturesStore().list = ['events']
+      wrapper = mount(EventEditDialog)
+      expect(wrapper.find('[data-testid="event-roles-editor"]').exists()).toBe(false)
+    })
+
+    it('sets the roles after creating the event', async () => {
+      const store = useEventsStore()
+      const created = makeEvent({ id: fixtureId(8) })
+      vi.spyOn(store, 'create').mockResolvedValue(created)
+      const setRoles = vi.spyOn(store, 'setRoles').mockResolvedValue(created)
+      wrapper = mount(EventEditDialog)
+      await fillBasics()
+      await wrapper.get('[data-testid="event-role-add"]').trigger('click')
+      await wrapper.get('[data-testid="event-role-name"]').setValue('Tank')
+      await submit()
+      expect(setRoles).toHaveBeenCalledWith(fixtureId(8), [{ name: 'Tank' }])
+      expect(wrapper.emitted('saved')).toHaveLength(1)
+    })
+
+    it('sends no role list for an event that never had roles', async () => {
+      const store = useEventsStore()
+      vi.spyOn(store, 'create').mockResolvedValue(makeEvent())
+      const setRoles = vi.spyOn(store, 'setRoles')
+      wrapper = mount(EventEditDialog)
+      await fillBasics()
+      await submit()
+      expect(setRoles).not.toHaveBeenCalled()
+    })
+
+    it('sends the roles of an existing event only when the editor changed them', async () => {
+      const store = useEventsStore()
+      const existing = eventWithRoles({ roles: [roleFixture(1)], location: 'Hall' })
+      vi.spyOn(store, 'update').mockResolvedValue(existing)
+      vi.spyOn(store, 'fetchDetail').mockResolvedValue(existing)
+      const setRoles = vi.spyOn(store, 'setRoles').mockResolvedValue(existing)
+      wrapper = mount(EventEditDialog, { props: { event: existing } })
+      await titleInput()?.setValue('Raid night, new title')
+      await submit()
+      expect(store.update).toHaveBeenCalledTimes(1)
+      expect(setRoles).not.toHaveBeenCalled()
+
+      wrapper.unmount()
+      wrapper = mount(EventEditDialog, { props: { event: existing } })
+      await wrapper.get('[data-testid="event-role-name"]').setValue('Renamed')
+      await submit()
+      expect(setRoles).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps the dialog open with the reason when the roles are refused, and retries them on the next submit', async () => {
+      const store = useEventsStore()
+      const created = makeEvent({ id: fixtureId(8) })
+      vi.spyOn(store, 'create').mockResolvedValue(created)
+      vi.spyOn(store, 'update').mockResolvedValue(created)
+      const setRoles = vi.spyOn(store, 'setRoles').mockRejectedValueOnce(new Error('two roles are called Tank')).mockResolvedValue(created)
+      vi.spyOn(store, 'fetchDetail').mockResolvedValue(created)
+      wrapper = mount(EventEditDialog)
+      await fillBasics()
+      await wrapper.get('[data-testid="event-role-add"]').trigger('click')
+      await wrapper.get('[data-testid="event-role-name"]').setValue('Tank')
+      await submit()
+      expect(wrapper.find('.text-red-400').text()).toContain('two roles are called Tank')
+      expect(wrapper.emitted('close')).toBeUndefined()
+      await submit()
+      expect(setRoles).toHaveBeenCalledTimes(2)
+      expect(wrapper.emitted('close')).toHaveLength(1)
+    })
+  })
+
+  describe('repeating events', () => {
+    async function fillBasics() {
+      await titleInput()?.setValue('Raid')
+      await setText('input[type="datetime-local"]', '2026-11-01T18:00')
+      await wrapper!.find('input[data-max-chars="255"]').setValue('Hall')
+    }
+
+    it('offers the repeat choice only for a new event on a server that knows recurrence', async () => {
+      useServerFeaturesStore().list = ['events']
+      wrapper = mount(EventEditDialog)
+      expect(wrapper.find('[data-testid="event-repeat"]').exists()).toBe(false)
+      wrapper.unmount()
+      useServerFeaturesStore().list = ['events', 'events.recurrence']
+      wrapper = mount(EventEditDialog)
+      expect(wrapper.find('[data-testid="event-repeat"]').exists()).toBe(true)
+      wrapper.unmount()
+      wrapper = mount(EventEditDialog, { props: { event: makeEvent({ location: 'Hall' }) } })
+      expect(wrapper.find('[data-testid="event-repeat"]').exists()).toBe(false)
+    })
+
+    it('creates the event as the first of a series, in the browser zone, ending on the chosen day', async () => {
+      useServerFeaturesStore().list = ['events', 'events.recurrence']
+      const store = useEventsStore()
+      const create = vi.spyOn(store, 'create').mockResolvedValue(makeEvent({ id: fixtureId(8) }))
+      wrapper = mount(EventEditDialog)
+      await fillBasics()
+      await wrapper.get('[data-testid="event-repeat-select"]').setValue('weekly')
+      await wrapper.get('[data-testid="event-repeat-until"]').setValue('2027-01-31')
+      await submit()
+      const payload = create.mock.calls[0]![0] as { recurrence?: { frequency: string; timezone?: string; until?: string } }
+      expect(payload.recurrence?.frequency).toBe('weekly')
+      expect(payload.recurrence?.timezone).toBeTruthy()
+      expect(new Date(payload.recurrence!.until!).getDate()).toBe(31)
+    })
+
+    it('gives the roles chosen while creating a repeating event to the whole series', async () => {
+      useServerFeaturesStore().list = ['events', 'events.recurrence', 'events.roles']
+      const store = useEventsStore()
+      const series = { id: 's', frequency: 'weekly' as const, timezone: 'UTC', index: 0, ended: false }
+      const created = makeEvent({ id: fixtureId(8), series })
+      vi.spyOn(store, 'create').mockResolvedValue(created)
+      const setRoles = vi.spyOn(store, 'setRoles').mockResolvedValue(created)
+      wrapper = mount(EventEditDialog)
+      await fillBasics()
+      await wrapper.get('[data-testid="event-repeat-select"]').setValue('weekly')
+      await wrapper.get('[data-testid="event-role-add"]').trigger('click')
+      await wrapper.get('[data-testid="event-role-name"]').setValue('Tank')
+      await submit()
+      expect(setRoles).toHaveBeenCalledWith(fixtureId(8), [{ name: 'Tank' }], 'following')
+    })
+
+    it('sends no recurrence for an event that does not repeat', async () => {
+      useServerFeaturesStore().list = ['events', 'events.recurrence']
+      const store = useEventsStore()
+      const create = vi.spyOn(store, 'create').mockResolvedValue(makeEvent({ id: fixtureId(8) }))
+      wrapper = mount(EventEditDialog)
+      await fillBasics()
+      await submit()
+      expect(create.mock.calls[0]![0]).not.toHaveProperty('recurrence')
+    })
+
+    it('asks whether an edit of an occurrence applies to it or to the following ones', async () => {
+      const series = { id: 's', frequency: 'weekly' as const, timezone: 'UTC', index: 1, ended: false }
+      const existing = makeEvent({ location: 'Hall', series })
+      const store = useEventsStore()
+      const update = vi.spyOn(store, 'update').mockResolvedValue(existing)
+      wrapper = mount(EventEditDialog, { props: { event: existing } })
+      expect(wrapper.find('[data-testid="scope-choice"]').exists()).toBe(true)
+      await submit()
+      expect(update).toHaveBeenLastCalledWith(fixtureId(1), expect.anything(), 'this')
+      await wrapper.get('[data-testid="scope-following"]').setValue(true)
+      await submit()
+      expect(update).toHaveBeenLastCalledWith(fixtureId(1), expect.anything(), 'following')
+    })
+
+    it('does not ask for a single event', () => {
+      wrapper = mount(EventEditDialog, { props: { event: makeEvent({ location: 'Hall' }) } })
+      expect(wrapper.find('[data-testid="scope-choice"]').exists()).toBe(false)
+    })
+
+    it('sends the chosen scope with the role list of an occurrence', async () => {
+      useServerFeaturesStore().list = ['events', 'events.roles']
+      const series = { id: 's', frequency: 'monthly' as const, timezone: 'UTC', index: 0, ended: false }
+      const existing = eventWithRoles({ location: 'Hall', series, roles: [roleFixture(1)], start_time: '2026-11-01T18:00:00Z' })
+      const store = useEventsStore()
+      vi.spyOn(store, 'update').mockResolvedValue(existing)
+      vi.spyOn(store, 'fetchDetail').mockResolvedValue(existing)
+      const setRoles = vi.spyOn(store, 'setRoles').mockResolvedValue(existing)
+      wrapper = mount(EventEditDialog, { props: { event: existing } })
+      await wrapper.get('[data-testid="event-role-name"]').setValue('Renamed')
+      await wrapper.get('[data-testid="scope-following"]').setValue(true)
+      await submit()
+      expect(setRoles).toHaveBeenCalledWith(fixtureId(1), expect.anything(), 'following')
+    })
   })
 })

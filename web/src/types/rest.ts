@@ -2850,6 +2850,43 @@ export function isChatViewAsRole(value: unknown): value is ChatViewAsRole {
 
 export const decodeChatViewAsRole = decoder("chat.ViewAsRole", isChatViewAsRole)
 
+export type CommunityeventsCommentList = {
+  comments: Array<CommunityeventsEventComment>
+  has_more: boolean
+  muted: boolean
+}
+
+export function isCommunityeventsCommentList(value: unknown): value is CommunityeventsCommentList {
+  return isRecord(value)
+    && (hasOwn(value, "comments") && isArrayOf(value["comments"], item => isCommunityeventsEventComment(item)))
+    && (hasOwn(value, "has_more") && typeof value["has_more"] === 'boolean')
+    && (hasOwn(value, "muted") && typeof value["muted"] === 'boolean')
+}
+
+export const decodeCommunityeventsCommentList = decoder("communityevents.CommentList", isCommunityeventsCommentList)
+
+export type CommunityeventsCommentMute = {
+  muted: boolean
+}
+
+export function isCommunityeventsCommentMute(value: unknown): value is CommunityeventsCommentMute {
+  return isRecord(value)
+    && (hasOwn(value, "muted") && typeof value["muted"] === 'boolean')
+}
+
+export const decodeCommunityeventsCommentMute = decoder("communityevents.CommentMute", isCommunityeventsCommentMute)
+
+export type CommunityeventsCommentRequest = {
+  content: string
+}
+
+export function isCommunityeventsCommentRequest(value: unknown): value is CommunityeventsCommentRequest {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"], 2000))
+}
+
+export const decodeCommunityeventsCommentRequest = decoder("communityevents.CommentRequest", isCommunityeventsCommentRequest)
+
 export type CommunityeventsCommunityEvent = {
   channel_id?: string | null
   cover_url?: string | null
@@ -2861,7 +2898,11 @@ export type CommunityeventsCommunityEvent = {
   id: string
   location?: string | null
   my_rsvp?: string | null
+  my_signup?: CommunityeventsSignup
+  roles?: Array<CommunityeventsEventRole>
   rsvp_counts: CommunityeventsRSVPCounts
+  series?: CommunityeventsSeriesInfo
+  signups?: Array<CommunityeventsSignupItem>
   start_time: string
   status: string
   title: string
@@ -2880,7 +2921,11 @@ export function isCommunityeventsCommunityEvent(value: unknown): value is Commun
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
     && (!hasOwn(value, "my_rsvp") || (isString(value["my_rsvp"]) || value["my_rsvp"] === null))
+    && (!hasOwn(value, "my_signup") || isCommunityeventsSignup(value["my_signup"]))
+    && (!hasOwn(value, "roles") || isArrayOf(value["roles"], item => isCommunityeventsEventRole(item)))
     && (hasOwn(value, "rsvp_counts") && isCommunityeventsRSVPCounts(value["rsvp_counts"]))
+    && (!hasOwn(value, "series") || isCommunityeventsSeriesInfo(value["series"]))
+    && (!hasOwn(value, "signups") || isArrayOf(value["signups"], item => isCommunityeventsSignupItem(item)))
     && (hasOwn(value, "start_time") && isTimestamp(value["start_time"]))
     && (hasOwn(value, "status") && isString(value["status"]))
     && (hasOwn(value, "title") && isString(value["title"], 100))
@@ -2894,6 +2939,7 @@ export type CommunityeventsCreateEventRequest = {
   description: string
   end_time?: string | null
   location?: string | null
+  recurrence?: CommunityeventsRecurrenceRequest
   start_time: string
   title: string
 }
@@ -2904,11 +2950,56 @@ export function isCommunityeventsCreateEventRequest(value: unknown): value is Co
     && (hasOwn(value, "description") && isString(value["description"], 2000))
     && (!hasOwn(value, "end_time") || (isTimestamp(value["end_time"]) || value["end_time"] === null))
     && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
+    && (!hasOwn(value, "recurrence") || isCommunityeventsRecurrenceRequest(value["recurrence"]))
     && (hasOwn(value, "start_time") && isTimestamp(value["start_time"]))
     && (hasOwn(value, "title") && isString(value["title"], 100))
 }
 
 export const decodeCommunityeventsCreateEventRequest = decoder("communityevents.CreateEventRequest", isCommunityeventsCreateEventRequest)
+
+export type CommunityeventsEventComment = {
+  content: string
+  created_at: string
+  edited_at?: string | null
+  event_id: string
+  id: string
+  user: CommunityeventsUserRef
+}
+
+export function isCommunityeventsEventComment(value: unknown): value is CommunityeventsEventComment {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"], 2000))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "edited_at") || (isTimestamp(value["edited_at"]) || value["edited_at"] === null))
+    && (hasOwn(value, "event_id") && isIdentifier(value["event_id"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "user") && isCommunityeventsUserRef(value["user"]))
+}
+
+export const decodeCommunityeventsEventComment = decoder("communityevents.EventComment", isCommunityeventsEventComment)
+
+export type CommunityeventsEventRole = {
+  capacity?: number | null
+  confirmed: number
+  emoji?: string
+  id: string
+  name: string
+  position: number
+  waitlist: number
+}
+
+export function isCommunityeventsEventRole(value: unknown): value is CommunityeventsEventRole {
+  return isRecord(value)
+    && (!hasOwn(value, "capacity") || ((isInteger(value["capacity"]) && value["capacity"] >= 1 && value["capacity"] <= 1000) || value["capacity"] === null))
+    && (hasOwn(value, "confirmed") && isInteger(value["confirmed"]))
+    && (!hasOwn(value, "emoji") || isString(value["emoji"], 32))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 40))
+    && (hasOwn(value, "position") && isInteger(value["position"]))
+    && (hasOwn(value, "waitlist") && isInteger(value["waitlist"]))
+}
+
+export const decodeCommunityeventsEventRole = decoder("communityevents.EventRole", isCommunityeventsEventRole)
 
 export type CommunityeventsRSVPCounts = {
   going: number
@@ -2950,6 +3041,147 @@ export function isCommunityeventsRSVPRequest(value: unknown): value is Community
 }
 
 export const decodeCommunityeventsRSVPRequest = decoder("communityevents.RSVPRequest", isCommunityeventsRSVPRequest)
+
+export type CommunityeventsRecurrenceRequest = {
+  frequency: "weekly" | "biweekly" | "monthly"
+  timezone?: string
+  until?: string | null
+}
+
+export function isCommunityeventsRecurrenceRequest(value: unknown): value is CommunityeventsRecurrenceRequest {
+  return isRecord(value)
+    && (hasOwn(value, "frequency") && (value["frequency"] === "weekly" || value["frequency"] === "biweekly" || value["frequency"] === "monthly"))
+    && (!hasOwn(value, "timezone") || isString(value["timezone"], 64))
+    && (!hasOwn(value, "until") || (isTimestamp(value["until"]) || value["until"] === null))
+}
+
+export const decodeCommunityeventsRecurrenceRequest = decoder("communityevents.RecurrenceRequest", isCommunityeventsRecurrenceRequest)
+
+export type CommunityeventsRoleInput = {
+  capacity?: number | null
+  emoji?: string
+  id?: string | null
+  name: string
+}
+
+export function isCommunityeventsRoleInput(value: unknown): value is CommunityeventsRoleInput {
+  return isRecord(value)
+    && (!hasOwn(value, "capacity") || ((isInteger(value["capacity"]) && value["capacity"] >= 1 && value["capacity"] <= 1000) || value["capacity"] === null))
+    && (!hasOwn(value, "emoji") || isString(value["emoji"], 32))
+    && (!hasOwn(value, "id") || (isIdentifier(value["id"]) || value["id"] === null))
+    && (hasOwn(value, "name") && isString(value["name"], 40))
+}
+
+export const decodeCommunityeventsRoleInput = decoder("communityevents.RoleInput", isCommunityeventsRoleInput)
+
+export type CommunityeventsRoleTemplate = {
+  enabled: boolean
+  id: string
+  name: string
+  preset: boolean
+  roles: Array<CommunityeventsRoleInput>
+}
+
+export function isCommunityeventsRoleTemplate(value: unknown): value is CommunityeventsRoleTemplate {
+  return isRecord(value)
+    && (hasOwn(value, "enabled") && typeof value["enabled"] === 'boolean')
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 60))
+    && (hasOwn(value, "preset") && typeof value["preset"] === 'boolean')
+    && (hasOwn(value, "roles") && isArrayOf(value["roles"], item => isCommunityeventsRoleInput(item)))
+}
+
+export const decodeCommunityeventsRoleTemplate = decoder("communityevents.RoleTemplate", isCommunityeventsRoleTemplate)
+
+export type CommunityeventsRoleTemplateRequest = {
+  enabled?: boolean
+  name?: string
+  roles?: Array<CommunityeventsRoleInput>
+}
+
+export function isCommunityeventsRoleTemplateRequest(value: unknown): value is CommunityeventsRoleTemplateRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "enabled") || typeof value["enabled"] === 'boolean')
+    && (!hasOwn(value, "name") || isString(value["name"], 60))
+    && (!hasOwn(value, "roles") || isArrayOf(value["roles"], item => isCommunityeventsRoleInput(item)))
+}
+
+export const decodeCommunityeventsRoleTemplateRequest = decoder("communityevents.RoleTemplateRequest", isCommunityeventsRoleTemplateRequest)
+
+export type CommunityeventsSeriesInfo = {
+  ended: boolean
+  frequency: "weekly" | "biweekly" | "monthly"
+  id: string
+  index: number
+  timezone: string
+  until?: string | null
+}
+
+export function isCommunityeventsSeriesInfo(value: unknown): value is CommunityeventsSeriesInfo {
+  return isRecord(value)
+    && (hasOwn(value, "ended") && typeof value["ended"] === 'boolean')
+    && (hasOwn(value, "frequency") && (value["frequency"] === "weekly" || value["frequency"] === "biweekly" || value["frequency"] === "monthly"))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "index") && isInteger(value["index"]))
+    && (hasOwn(value, "timezone") && isString(value["timezone"]))
+    && (!hasOwn(value, "until") || (isTimestamp(value["until"]) || value["until"] === null))
+}
+
+export const decodeCommunityeventsSeriesInfo = decoder("communityevents.SeriesInfo", isCommunityeventsSeriesInfo)
+
+export type CommunityeventsSetRolesRequest = {
+  roles: Array<CommunityeventsRoleInput>
+}
+
+export function isCommunityeventsSetRolesRequest(value: unknown): value is CommunityeventsSetRolesRequest {
+  return isRecord(value)
+    && (hasOwn(value, "roles") && isArrayOf(value["roles"], item => isCommunityeventsRoleInput(item)))
+}
+
+export const decodeCommunityeventsSetRolesRequest = decoder("communityevents.SetRolesRequest", isCommunityeventsSetRolesRequest)
+
+export type CommunityeventsSignup = {
+  role_id: string
+  state: "confirmed" | "waitlist"
+  waitlist_position: number
+}
+
+export function isCommunityeventsSignup(value: unknown): value is CommunityeventsSignup {
+  return isRecord(value)
+    && (hasOwn(value, "role_id") && isIdentifier(value["role_id"]))
+    && (hasOwn(value, "state") && (value["state"] === "confirmed" || value["state"] === "waitlist"))
+    && (hasOwn(value, "waitlist_position") && isInteger(value["waitlist_position"]))
+}
+
+export const decodeCommunityeventsSignup = decoder("communityevents.Signup", isCommunityeventsSignup)
+
+export type CommunityeventsSignupItem = {
+  created_at: string
+  role_id: string
+  state: "confirmed" | "waitlist"
+  user: CommunityeventsUserRef
+}
+
+export function isCommunityeventsSignupItem(value: unknown): value is CommunityeventsSignupItem {
+  return isRecord(value)
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "role_id") && isIdentifier(value["role_id"]))
+    && (hasOwn(value, "state") && (value["state"] === "confirmed" || value["state"] === "waitlist"))
+    && (hasOwn(value, "user") && isCommunityeventsUserRef(value["user"]))
+}
+
+export const decodeCommunityeventsSignupItem = decoder("communityevents.SignupItem", isCommunityeventsSignupItem)
+
+export type CommunityeventsSignupRequest = {
+  role_id: string
+}
+
+export function isCommunityeventsSignupRequest(value: unknown): value is CommunityeventsSignupRequest {
+  return isRecord(value)
+    && (hasOwn(value, "role_id") && isIdentifier(value["role_id"]))
+}
+
+export const decodeCommunityeventsSignupRequest = decoder("communityevents.SignupRequest", isCommunityeventsSignupRequest)
 
 export type CommunityeventsUpdateEventRequest = {
   channel_id?: string | null

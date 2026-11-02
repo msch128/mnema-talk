@@ -18,6 +18,8 @@ type Scheduler struct {
 	pushes   sync.WaitGroup
 	// pusher overrides Handler.Push (tests).
 	pusher reminderPusher
+	// lastSeries is when the series were last looked at.
+	lastSeries time.Time
 }
 
 // reminderPusher sends the push reminder of an event to one member.
@@ -70,6 +72,8 @@ func (s *Scheduler) Tick(ctx context.Context, now time.Time) {
 	s.processActivations(ctx, now)
 	s.processCompletions(ctx, now)
 	s.processReminders(ctx, now)
+	s.processPromotions(ctx)
+	s.processSeries(ctx, now)
 }
 
 func (s *Scheduler) processActivations(ctx context.Context, now time.Time) {
@@ -191,7 +195,7 @@ func (s *Scheduler) pushAll(ctx context.Context, pusher reminderPusher, recipien
 }
 
 // Wait blocks until the push reminders already started are done.
-func (s *Scheduler) Wait() { s.pushes.Wait() }
+func (s *Scheduler) Wait() { s.pushes.Wait(); s.Handler.WaitNotices() }
 
 // broadcastEvents announces the current state of each event; an event that
 // vanished meanwhile is skipped.
@@ -200,5 +204,52 @@ func (s *Scheduler) broadcastEvents(ctx context.Context, ids []uuid.UUID) {
 		if ev, err := s.Handler.Store.Get(ctx, id, nil); err == nil {
 			s.Handler.broadcast(ev)
 		}
+	}
+}
+
+// processPromotions moves waitlisted members up wherever a role has room that
+// no sign-up route filled (a member was erased, say) and tells them.
+func (s *Scheduler) processPromotions(ctx context.Context) {
+	promoted, err := s.Handler.Store.PromoteOpenSlots(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "promote waitlists failed", "err", err)
+	}
+	byEvent := map[uuid.UUID][]Promotion{}
+	var order []uuid.UUID
+	for _, p := range promoted {
+		if _, ok := byEvent[p.EventID]; !ok {
+			order = append(order, p.EventID)
+		}
+		byEvent[p.EventID] = append(byEvent[p.EventID], p)
+	}
+	for _, id := range order {
+		ev, err := s.Handler.Store.Get(ctx, id, nil)
+		if err != nil {
+			continue
+		}
+		s.Handler.broadcast(ev)
+		s.Handler.notifyMembers(ctx, ev, SignupKindPromoted, "", byEvent[id])
+	}
+}
+
+// processSeries creates the occurrences of the recurring events that now start
+// within the horizon. It looks every ten minutes, not every tick.
+func (s *Scheduler) processSeries(ctx context.Context, now time.Time) {
+	if now.Sub(s.lastSeries) < seriesTick {
+		return
+	}
+	s.lastSeries = now
+	ids, err := s.Handler.Store.ActiveSeries(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "list event series failed", "err", err)
+		return
+	}
+	for _, id := range ids {
+		created, err := s.Handler.Store.GenerateSeries(ctx, id, now)
+		if err != nil {
+			slog.ErrorContext(ctx, "create event occurrences failed", "series_id", id, "err", err)
+			continue
+		}
+		s.broadcastEvents(ctx, created)
 	}
 }
