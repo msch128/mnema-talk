@@ -1,0 +1,127 @@
+README.md
+  s_8d4da942b23eba::t_0f4daead3607fb 108
+doc/events.md
+  s_8d4da942b23eba::t_c7e930c720b93e 36-48
+e2e/tests/event-roles.spec.ts
+  s_06fcde5dbef956::t_e97a7f2a6a644a 1-98
+web/src/components/EventDetailModal.test.ts
+  s_82e9d48cb7fc7f::t_24acea922f6233 10-11,14,254-308
+web/src/components/EventDetailModal.vue
+  s_8d4da942b23eba::t_0277ce1972b03d 2,16-19,36-42,76-85,88,91-93,231-232,319
+web/src/components/EventEditDialog.test.ts
+  s_82e9d48cb7fc7f::t_3d55975cd40173 9,280-342
+web/src/components/EventEditDialog.vue
+  s_8d4da942b23eba::t_31f699b3783dbe 11-15,60-66,155-164,333-334
+web/src/components/EventRoleTemplates.test.ts
+  s_8d4da942b23eba::t_6589c7532613e5 1-81
+web/src/components/EventRoleTemplates.vue
+  s_06fcde5dbef956::t_a11ec04e75bcde 1-61
+web/src/components/EventRolesDialog.test.ts
+  s_8d4da942b23eba::t_19069af7b90134 1-85
+web/src/components/EventRolesDialog.vue
+  s_8d4da942b23eba::t_3ca93520992096 1-52
+web/src/components/EventRolesEditor.test.ts
+  s_8d4da942b23eba::t_8f386eb2494503 1-130
+web/src/components/EventRolesEditor.vue
+  s_17ef7810e0243d::t_53ea70eb231818 1-132
+web/src/components/EventRoster.test.ts
+  s_8d4da942b23eba::t_83bd1f3c7aff4b 1-132
+web/src/components/EventRoster.vue
+  s_8d4da942b23eba::t_f8b7e34ab8829b 1-162
+web/src/composables/useEventRoles.ts
+  s_8d4da942b23eba::t_eba13253c91802 1-21
+web/src/eventRoles.fixture.ts
+  s_82e9d48cb7fc7f::t_eba8e9beb772cb 1-23
+web/src/i18n/de.json
+  s_82e9d48cb7fc7f::t_3ea19d7a1e1d6f 208-212,214-215,219-220,222,236-237,240,242-250,3252-3255,3554-3602
+web/src/i18n/en.json
+  s_82e9d48cb7fc7f::t_ca47d8b31cc895 208-212,214-215,219-220,222,236-237,240,242-250,3252-3255,3554-3602
+web/src/lib/errorSentencesA.ts
+  s_8d4da942b23eba::t_b46c946a2932d0 56-57,60,73,105
+web/src/lib/errorSentencesB.ts
+  s_8d4da942b23eba::t_e09ce247e66058 37,41,91-92,96,115,130
+web/src/lib/errorSentencesC.ts
+  s_8d4da942b23eba::t_1edf27d874df7d 22-23,57-59,71,86-87,89,127
+web/src/lib/eventRoleDrafts.test.ts
+  s_06fcde5dbef956::t_62d236cf9c84bf 1-41
+web/src/lib/eventRoleDrafts.ts
+  s_06fcde5dbef956::t_3bb0745f8dba6c 1-66
+web/src/lib/eventRolesApi.test.ts
+  s_17ef7810e0243d::t_c4c3b4be4c3ba1 1-66
+web/src/lib/eventRolesApi.ts
+  s_17ef7810e0243d::t_e8c8ba791e7090 1-62
+web/src/stores/chat/events.ts
+  s_17ef7810e0243d::t_3befde0903b1b6 300-301
+web/src/stores/chatEvents.test.ts
+  s_82e9d48cb7fc7f::t_62a74d25635d88 186-193
+web/src/stores/events.test.ts
+  s_82e9d48cb7fc7f::t_ca0c4bbffcf3be 4-5,14-17,282-334
+web/src/stores/events.ts
+  s_6f62c78e3c93c5::t_fd4490ed165e6c 20,69-78,128,139-140,142,145
+web/src/stores/eventsRoster.ts
+  s_61e7f03250bd0b::t_1043266286479a 1-29
+web/src/stores/serverFeatures.ts
+  s_17ef7810e0243d::t_bbc737283c7590 69
+web/src/types/events.test.ts
+  s_8d4da942b23eba::t_3dbd3a6e63d967 130-133
+web/src/types/events.ts
+  s_17ef7810e0243d::t_a67e019140b083 144-145,379
+web/src/types/noticeEvents.ts
+  s_61e7f03250bd0b::t_06003310079dc1 30-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a7b1594ca4011c543f1c2fc9c137236082723a49",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_8d4da942b23eba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0fc251d9c06e53e1",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
