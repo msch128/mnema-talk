@@ -1,0 +1,88 @@
+web/src/components/markdownBody.css
+  s_fb29f048bd6d02::t_890322ebf0ce3b 177-181
+web/src/i18n/en.json
+  s_fb29f048bd6d02::t_84052be9f72d78 4811
+  s_fb29f048bd6d02::t_605214f67205d4 4710-4810,4812-4824
+web/src/components/MarkdownContent.vue
+  s_fb29f048bd6d02::t_2c1268cdc50dc0 14-17,33-37,55-56,78-82,119-123
+web/src/i18n/de.json
+  s_fb29f048bd6d02::t_6c63212301f164 4811
+  s_fb29f048bd6d02::t_c05ff491dfbb24 4710-4810,4812-4824
+web/src/stores/chat/reset.ts
+  s_fb29f048bd6d02::t_d226157555fde9 14,31
+web/src/App.vue
+  s_fb29f048bd6d02::t_3b293de0085706 47-48,352,379
+web/src/lib/router.ts
+  s_fb29f048bd6d02::t_38dcbb88f9836a 5,17-18,74
+web/src/components/Sidebar.vue
+  s_fb29f048bd6d02::t_81d987a747d69d 20,281
+web/src/lib/markdown.ts
+  s_fb29f048bd6d02::t_e4a80377ef1c38 25-26,28,32,41,45-51,54,58
+web/src/components/WikiSearch.vue
+  s_fb29f048bd6d02::t_141483d39144f2 29
+  s_fb29f048bd6d02::t_d398025966e546 26-28
+  s_fb29f048bd6d02::t_98cfa9b3ef4c9c 30-32
+  s_fb29f048bd6d02::t_da55af87eecbd4 1-25,33-57
+web/src/stores/serverFeatures.ts
+  s_fb29f048bd6d02::t_5e7d5a1507ba56 69
+web/src/composables/useAppRouting.ts
+  s_fb29f048bd6d02::t_c64bb220d3349a 94-95
+web/src/components/OverlayHosts.vue
+  s_fb29f048bd6d02::t_fb9252b6c80a93 1-31
+web/src/components/SidebarEntries.vue
+  s_fb29f048bd6d02::t_f9bdd9245ee478 1-10
+web/src/components/SidebarWikiEntry.vue
+  s_fb29f048bd6d02::t_2531b277cd8541 1-28
+web/src/components/WikiDeleted.vue
+  s_fb29f048bd6d02::t_84715e90be4508 1-48
+web/src/components/WikiDiff.vue
+  s_fb29f048bd6d02::t_0d1258078ff0a2 1-35
+web/src/components/WikiHistory.vue
+  s_fb29f048bd6d02::t_716bb7af6a7588 1-74
+web/src/components/WikiHome.vue
+  s_fb29f048bd6d02::t_9606a2420f4fd5 1-50
+web/src/components/WikiMove.vue
+  s_fb29f048bd6d02::t_9088bef89339b7 1-102
+web/src/components/WikiPageView.vue
+  s_fb29f048bd6d02::t_b5939c83fdb0e6 1-112
+web/src/components/WikiTree.vue
+  s_fb29f048bd6d02::t_ed08e7a407ae7d 1-87
+web/src/composables/useWikiHistory.ts
+  s_fb29f048bd6d02::t_3655187eba0297 1-80
+web/src/composables/useWikiLocation.ts
+  s_fb29f048bd6d02::t_85f4b54328a2de 1-10
+web/src/lib/lineDiff.ts
+  s_fb29f048bd6d02::t_c48ca763e65951 1-80
+web/src/lib/wikiApi.ts
+  s_fb29f048bd6d02::t_e8bf0c9ca4ffa1 1-62
+web/src/lib/wikiEditorActions.ts
+  s_fb29f048bd6d02::t_ccbac8c905e3e5 1-39
+web/src/lib/wikiLinks.ts
+  s_fb29f048bd6d02::t_71b8c311f55f8e 1-21
+web/src/lib/wikiNav.ts
+  s_fb29f048bd6d02::t_974e1155b341b9 1-39
+web/src/lib/wikiPaths.ts
+  s_fb29f048bd6d02::t_d6e98111e51936 1-30
+web/src/lib/wikiSlug.ts
+  s_fb29f048bd6d02::t_69bfd8576fd2af 1-27
+web/src/lib/wikiTree.ts
+  s_fb29f048bd6d02::t_0fc3ab1ec29a04 1-87
+web/src/lib/wikiUi.ts
+  s_fb29f048bd6d02::t_2d23841ada7bbc 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "40c318007f896409b493dc7204c8a1b4e4297ca7",
+  "prompts": {},
+  "sessions": {
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
