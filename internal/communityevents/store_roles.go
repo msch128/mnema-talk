@@ -58,13 +58,17 @@ func lockRoles(ctx context.Context, tx pgx.Tx, eventID uuid.UUID) ([]roleRow, er
 
 // openEvent returns the status of an event inside tx, failing for an unknown one.
 func openEvent(ctx context.Context, tx pgx.Tx, eventID uuid.UUID, lock bool) (string, error) {
-	q := `SELECT status FROM events WHERE id = $1`
+	// Everything takes the event row first and the role rows second, so no two
+	// roster transactions wait for each other in a circle. A sign-up (and a
+	// leave) share-locks it: a cancel or a completion that is being written
+	// (NO KEY UPDATE) is waited for and its new status seen, and sign-ups do not
+	// block each other. The role editors lock it FOR NO KEY UPDATE, which
+	// excludes the other editors and the status writers but not the FOR KEY
+	// SHARE that inserting a sign-up takes through its foreign key (FOR UPDATE
+	// would deadlock against a sign-up holding the role locks).
+	q := `SELECT status FROM events WHERE id = $1 FOR SHARE`
 	if lock {
-		// NO KEY UPDATE serializes the role editors with each other without
-		// conflicting with the FOR KEY SHARE that inserting a sign-up takes on
-		// the event row through its foreign key (FOR UPDATE would deadlock
-		// against a sign-up that holds the role locks).
-		q += ` FOR NO KEY UPDATE`
+		q = `SELECT status FROM events WHERE id = $1 FOR NO KEY UPDATE`
 	}
 	var status string
 	err := tx.QueryRow(ctx, q, eventID).Scan(&status)

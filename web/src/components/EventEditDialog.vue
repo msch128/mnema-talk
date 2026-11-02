@@ -61,8 +61,10 @@ const features = useServerFeaturesStore()
 const roleRows = ref<RoleDraft[]>(draftsOf(props.event?.roles ?? []))
 const roleRemovals = ref<RoleRemoval[]>([])
 const { save: saveRoles } = useEventRoles()
-// Only when the editor was used: an untouched event is not sent a role list.
-const rolesTouched = computed(() => roleRows.value.length > 0 || roleRemovals.value.length > 0 || (existing.value?.roles?.length ?? 0) > 0)
+// Only when the editor changed something: a title edit must not send back the
+// role list as it was when the dialog opened (it may have changed since).
+const initialRoles = JSON.stringify(roleRows.value)
+const rolesTouched = computed(() => roleRemovals.value.length > 0 || JSON.stringify(roleRows.value) !== initialRoles)
 
 const saving = ref(false)
 const error = ref('')

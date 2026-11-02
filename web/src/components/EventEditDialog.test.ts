@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import EventEditDialog from './EventEditDialog.vue'
+import { eventWithRoles, roleFixture } from '../eventRoles.fixture'
 import { useEventsStore } from '../stores/events'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
@@ -320,6 +321,25 @@ describe('EventEditDialog', () => {
       await fillBasics()
       await submit()
       expect(setRoles).not.toHaveBeenCalled()
+    })
+
+    it('sends the roles of an existing event only when the editor changed them', async () => {
+      const store = useEventsStore()
+      const existing = eventWithRoles({ roles: [roleFixture(1)], location: 'Hall' })
+      vi.spyOn(store, 'update').mockResolvedValue(existing)
+      vi.spyOn(store, 'fetchDetail').mockResolvedValue(existing)
+      const setRoles = vi.spyOn(store, 'setRoles').mockResolvedValue(existing)
+      wrapper = mount(EventEditDialog, { props: { event: existing } })
+      await titleInput()?.setValue('Raid night, new title')
+      await submit()
+      expect(store.update).toHaveBeenCalledTimes(1)
+      expect(setRoles).not.toHaveBeenCalled()
+
+      wrapper.unmount()
+      wrapper = mount(EventEditDialog, { props: { event: existing } })
+      await wrapper.get('[data-testid="event-role-name"]').setValue('Renamed')
+      await submit()
+      expect(setRoles).toHaveBeenCalledTimes(1)
     })
 
     it('keeps the dialog open with the reason when the roles are refused, and retries them on the next submit', async () => {
