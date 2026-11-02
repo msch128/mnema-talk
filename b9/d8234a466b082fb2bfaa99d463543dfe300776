@@ -1,0 +1,21 @@
+web/src/components/EventEditDialog.vue
+  s_4c6a19030e223f::t_f4b63f4bbd4ed1 136,144,164
+web/src/components/RepeatBadge.test.ts
+  s_4c6a19030e223f::t_3b1b86756f386e 20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b9d8234a466b082fb2bfaa99d463543dfe300776",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

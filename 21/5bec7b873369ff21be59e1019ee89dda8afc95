@@ -1,0 +1,21 @@
+internal/server/health.go
+  s_4c6a19030e223f::t_e39590aba8214b 72
+internal/communityevents/roles_integration_test.go
+  s_4c6a19030e223f::t_5246b384996c23 640,651,658
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "215bec7b873369ff21be59e1019ee89dda8afc95",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
