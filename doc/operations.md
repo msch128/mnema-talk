@@ -330,16 +330,21 @@ web build. There is one link per community.
 **Registration stays invite-only.** By default the link is only a friendly door:
 it opens the sign-in page under "You were invited to <community>", and creating
 an account still needs an invite code (individual, limited, revocable). The
-link grants nothing and works the same in every registration state.
+link grants nothing.
 
-The switch *Let this link create accounts* turns it into a permanent public
-invite: unlimited uses, no expiry. Anyone who knows the link can then register,
+Only the Owner can turn on the switch *Let this link create accounts*
+(an Administrator gets 403, and renaming a link that takes sign-ups switches it
+off for them); an Administrator may set or clear the name and switch sign-ups
+off. The switch turns the link into a permanent public invite: unlimited uses,
+no expiry. Anyone who knows the link can then register,
 so enable it only when you want that (a poster, a profile bio). The sign-up goes
 through the same registration as every invite (username rules, password rules,
 rate limits, raid protection, the rules gate); its code is `~<name>`, which no
 real invite code can look like. Accounts made this way have no invite behind them,
-so banning one does not revoke an invite. Switching it off or removing the link
-takes effect at once, also for sign-ups in flight.
+so banning one does not revoke an invite, and the audit log shows them as a
+plain `auth.register` (no invite is recorded). Switching it off or removing the
+link takes effect at once for every new sign-up; one that is already being
+processed may still complete.
 
 `GET /api/join/<name>` (public, rate limited like the invite preview) tells the
 sign-in page whether the link exists and whether it takes sign-ups. Link

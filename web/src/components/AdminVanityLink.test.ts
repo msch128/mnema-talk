@@ -6,6 +6,8 @@ import { setActivePinia, createPinia } from 'pinia'
 import AdminVanityLink from './AdminVanityLink.vue'
 import { setLocale } from '../i18n'
 import { useToastStore } from '../stores/toast'
+import { useAuthStore } from '../stores/auth'
+import { userFixture } from '../test-fixtures.fixture'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('../lib/api', async (importOriginal) => ({
@@ -13,7 +15,8 @@ vi.mock('../lib/api', async (importOriginal) => ({
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
 
-async function mountLink(initial = { slug: '', accepts_signups: false, path: '' }) {
+async function mountLink(initial = { slug: '', accepts_signups: false, path: '' }, role: 'admin' | 'user' = 'admin') {
+  useAuthStore().user = userFixture({ role })
   apiMock.mockResolvedValue(initial)
   const w = mount(AdminVanityLink)
   await flushPromises()
@@ -88,5 +91,23 @@ describe('AdminVanityLink', () => {
   it('shows nothing until the setting is known', () => {
     apiMock.mockReturnValue(new Promise(() => {}))
     expect(mount(AdminVanityLink).find('[data-testid="vanity-link"]').exists()).toBe(false)
+  })
+
+  describe('for an Administrator who is not the Owner', () => {
+    it('hides the switch while sign-ups are off and says why', async () => {
+      const w = await mountLink({ slug: 'owls', accepts_signups: false, path: '/join/owls' }, 'user')
+      expect(w.find('[data-testid="vanity-accepts"]').exists()).toBe(false)
+      expect(w.get('[data-testid="vanity-owner-note"]').text()).toContain('Only the Owner')
+    })
+
+    it('shows the switch while sign-ups are on so they can be switched off, and a rename switches them off', async () => {
+      const w = await mountLink({ slug: 'owls', accepts_signups: true, path: '/join/owls' }, 'user')
+      expect(w.find('[data-testid="vanity-accepts"]').exists()).toBe(true)
+      await w.get('[data-testid="vanity-slug"]').setValue('hawks')
+      apiMock.mockResolvedValue({ slug: 'hawks', accepts_signups: false, path: '/join/hawks' })
+      await w.get('form').trigger('submit')
+      await flushPromises()
+      expect(apiMock).toHaveBeenLastCalledWith('/api/admin/vanity-link', { method: 'PUT', json: { slug: 'hawks', accepts_signups: false }, decode: expect.any(Function) })
+    })
   })
 })

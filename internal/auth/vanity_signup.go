@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
@@ -20,8 +21,15 @@ const VanityCodePrefix = "~"
 // vanitySlug returns the slug of a vanity sign-up code.
 func vanitySlug(code string) (string, bool) {
 	slug, ok := strings.CutPrefix(code, VanityCodePrefix)
-	return strings.ToLower(slug), ok
+	// Only ASCII is folded: Unicode folding turns some other characters (the
+	// Kelvin sign) into ASCII letters. Anything else cannot name a link.
+	if !ok || !vanitySlugChars.MatchString(slug) {
+		return "", ok
+	}
+	return strings.ToLower(slug), true
 }
+
+var vanitySlugChars = regexp.MustCompile(`^[A-Za-z0-9-]{3,32}$`)
 
 // checkCodeKnown is the cheap check before a password is hashed: the code
 // names an invite, or a vanity link that takes sign-ups.

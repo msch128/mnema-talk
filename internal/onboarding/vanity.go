@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -26,12 +27,36 @@ const (
 )
 
 // vanityPattern: lowercase letters and digits, single hyphens between them.
+var asciiSlug = regexp.MustCompile(`^[A-Za-z0-9-]+$`)
+
 var vanityPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
 // reservedSlugs are words that name something of the app: its routes (the
 // API, the web app's top-level paths), its static files and the words people
 // expect to mean the service itself. A test keeps the list in step with the
 // routes of web/src/lib/router.ts and the files in web/public.
+// requireOwnerToOpen lets only the Owner make the link a public invite:
+// turning sign-ups on, or moving a link that takes sign-ups to another name,
+// opens registration to whoever knows the new address. An Administrator may
+// set or clear the name and switch sign-ups off.
+func (h *Handler) requireOwnerToOpen(r *http.Request, slug string, accepts bool) error {
+	if !accepts || slug == "" {
+		return nil
+	}
+	if u := auth.UserFrom(r.Context()); u != nil && u.IsAdmin() {
+		return nil
+	}
+	var current *string
+	var open bool
+	if err := h.DB.QueryRow(r.Context(), `SELECT vanity_slug, vanity_accepts_signups FROM instance_settings`).Scan(&current, &open); err != nil {
+		return fmt.Errorf("read vanity link: %w", err)
+	}
+	if open && current != nil && *current == slug {
+		return nil
+	}
+	return httpx.ErrForbidden("only the Owner can let the vanity link create accounts")
+}
+
 var reservedSlugs = map[string]bool{
 	"admin": true, "api": true, "assets": true, "c": true, "dm": true, "docs": true,
 	"events": true, "favicon": true, "health": true, "help": true, "invite": true,
@@ -40,7 +65,7 @@ var reservedSlugs = map[string]bool{
 	"pwa": true, "register": true, "root": true, "security": true, "settings": true,
 	"signup": true, "static": true, "status": true, "support": true, "sw": true,
 	"terms": true, "v": true, "wiki": true, "ws": true, "www": true, "apple-touch-icon": true,
-	"pwa-icon": true, "pwa-badge": true, "robots": true, "sitemap": true, "well-known": true,
+	"pwa-icon": true, "mnema-talk-icon": true, "mnema-talk-mark": true, "mnema-talk-wordmark": true, "pwa-badge": true, "robots": true, "sitemap": true, "well-known": true,
 }
 
 // VanitySettings is the vanity link as the admin console shows it.
@@ -64,10 +89,16 @@ type VanityInput struct {
 
 // CleanVanitySlug folds the slug to lower case and checks it.
 func CleanVanitySlug(raw string) (string, error) {
-	slug := strings.ToLower(strings.TrimSpace(raw))
+	slug := strings.TrimSpace(raw)
 	if slug == "" {
 		return "", nil
 	}
+	// Only ASCII is read before folding: Unicode folding turns some other
+	// characters (the Kelvin sign) into ASCII letters.
+	if !asciiSlug.MatchString(slug) {
+		return "", httpx.ErrInvalidInput("the link name may only hold lowercase letters, digits and single hyphens between them")
+	}
+	slug = strings.ToLower(slug)
 	if n := len(slug); n < MinVanitySlug || n > MaxVanitySlug {
 		return "", httpx.ErrInvalidInput(fmt.Sprintf("the link name must be %d to %d characters", MinVanitySlug, MaxVanitySlug))
 	}
@@ -124,7 +155,7 @@ func (h *Handler) getVanity(w http.ResponseWriter, r *http.Request) error {
 // putVanity handles PUT /api/admin/vanity-link.
 //
 // @Summary Set or remove the vanity invite link
-// @Description Owner and Administrators only; audited. `slug` is 3 to 32 characters (lowercase letters, digits, single hyphens inside; upper case is folded) and must not be a reserved word (400 INVALID_INPUT); an empty slug removes the link. The link is served at /join/{slug}. By default it only leads visitors to the sign-in page: sign-up stays invite-only. With `accepts_signups` it works as a permanent public invite (unlimited uses, no expiry), so anyone who knows it can register; leave it off to keep invites individual. One link per community; setting it replaces the previous one.
+// @Description Owner and Administrators only, except that only the Owner may turn `accepts_signups` on (or keep it on for a new name): an Administrator gets 403 FORBIDDEN; audited. `slug` is 3 to 32 characters (lowercase letters, digits, single hyphens inside; upper case is folded) and must not be a reserved word (400 INVALID_INPUT); an empty slug removes the link. The link is served at /join/{slug}. By default it only leads visitors to the sign-in page: sign-up stays invite-only. With `accepts_signups` it works as a permanent public invite (unlimited uses, no expiry), so anyone who knows it can register; leave it off to keep invites individual. One link per community; setting it replaces the previous one.
 // @ID setVanityLink
 // @Tags Onboarding
 // @Accept json
@@ -134,7 +165,7 @@ func (h *Handler) getVanity(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} VanitySettings "Setting."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, or a slug of the wrong length or characters, or reserved."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner and members with the Administrator permission may change it, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner and members with the Administrator permission may change it, only the Owner may turn accepts_signups on, or cross-origin request rejected."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
@@ -146,6 +177,9 @@ func (h *Handler) putVanity(w http.ResponseWriter, r *http.Request) error {
 	}
 	slug, err := CleanVanitySlug(in.Slug)
 	if err != nil {
+		return err
+	}
+	if err := h.requireOwnerToOpen(r, slug, in.AcceptsSignups); err != nil {
 		return err
 	}
 	var value *string

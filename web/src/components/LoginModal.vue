@@ -57,7 +57,9 @@ const heading = computed(() => (props.invite?.valid && props.invite.communityNam
 const inviteDead = computed(() => props.invite?.valid === false)
 // A vanity link (/join/name) that takes sign-ups signs up with the link itself; one that does not
 // only greets the visitor on the sign-in page.
-const vanityCode = computed(() => !!props.invite?.vanity && props.invite.code !== '')
+// A refused vanity code (the Owner switched it off meanwhile) falls back to asking for a code.
+const vanityRefused = ref(false)
+const vanityCode = computed(() => !vanityRefused.value && !!props.invite?.vanity && props.invite.code !== '')
 const vanityGreeting = computed(() => !!props.invite?.vanity && props.invite.code === '' && props.invite.valid === true)
 const subtitle = computed(() => {
   if (!isRegister.value) return t(vanityGreeting.value ? 'login.subtitleVanity' : 'login.subtitleLogin', { name: heading.value })
@@ -136,6 +138,10 @@ async function handleSubmit() {
       }
     }
   } catch (err) {
+    if (isRegister.value && vanityCode.value) {
+      vanityRefused.value = true
+      inviteCode.value = ''
+    }
     errorMsg.value = caughtErrorMessage(err, t('login.failed'))
   } finally {
     isLoading.value = false
