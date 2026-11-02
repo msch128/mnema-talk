@@ -6576,6 +6576,24 @@
         ],
         "type": "object"
       },
+      "onboarding.JoinPreview": {
+        "properties": {
+          "accepts_signups": {
+            "description": "AcceptsSignups: the link is a permanent public invite, and the sign-up\nnames the slug as \"~<slug>\" in invite_code.",
+            "type": "boolean"
+          },
+          "community_name": {
+            "type": "string"
+          },
+          "valid": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid"
+        ],
+        "type": "object"
+      },
       "onboarding.Settings": {
         "properties": {
           "community_icon": {
@@ -6756,6 +6774,45 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "onboarding.VanityInput": {
+        "properties": {
+          "accepts_signups": {
+            "type": "boolean"
+          },
+          "slug": {
+            "description": "Slug is 3 to 32 characters: lowercase letters, digits and single\nhyphens inside. Upper case is folded to lower. Empty removes the link.",
+            "maxLength": 32,
+            "type": "string"
+          }
+        },
+        "required": [
+          "accepts_signups",
+          "slug"
+        ],
+        "type": "object"
+      },
+      "onboarding.VanitySettings": {
+        "properties": {
+          "accepts_signups": {
+            "description": "AcceptsSignups: the link works as a permanent public invite.",
+            "type": "boolean"
+          },
+          "path": {
+            "description": "Path is where the link lives on this server, empty without a slug; the\nweb app puts its address in front.",
+            "type": "string"
+          },
+          "slug": {
+            "description": "Slug is empty while there is no vanity link.",
+            "maxLength": 32,
+            "type": "string"
+          }
+        },
+        "required": [
+          "accepts_signups",
+          "slug"
+        ],
         "type": "object"
       },
       "opwarn.Warning": {
@@ -20376,6 +20433,175 @@
         ]
       }
     },
+    "/api/admin/vanity-link": {
+      "get": {
+        "description": "Owner and Administrators only.",
+        "operationId": "getVanityLink",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/onboarding.VanitySettings"
+                }
+              }
+            },
+            "description": "Setting."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may read it."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read the vanity invite link",
+        "tags": [
+          "Onboarding"
+        ]
+      },
+      "put": {
+        "description": "Owner and Administrators only; audited. `slug` is 3 to 32 characters (lowercase letters, digits, single hyphens inside; upper case is folded) and must not be a reserved word (400 INVALID_INPUT); an empty slug removes the link. The link is served at /join/{slug}. By default it only leads visitors to the sign-in page: sign-up stays invite-only. With `accepts_signups` it works as a permanent public invite (unlimited uses, no expiry), so anyone who knows it can register; leave it off to keep invites individual. One link per community; setting it replaces the previous one.",
+        "operationId": "setVanityLink",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/onboarding.VanityInput"
+              }
+            }
+          },
+          "description": "New setting.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/onboarding.VanitySettings"
+                }
+              }
+            },
+            "description": "Setting."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, or a slug of the wrong length or characters, or reserved."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: only the Owner and members with the Administrator permission may change it, or cross-origin request rejected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set or remove the vanity invite link",
+        "tags": [
+          "Onboarding"
+        ]
+      }
+    },
     "/api/admin/webhooks/{id}": {
       "delete": {
         "description": "Its URL stops working at once. Messages it posted stay.",
@@ -29959,6 +30185,68 @@
         },
         "security": [],
         "summary": "Preview an invite",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/join/{slug}": {
+      "get": {
+        "description": "Public, no session. Says whether the vanity link /join/{slug} exists and, if so, the community's name and whether it accepts sign-ups. When it does, register with invite_code \"~{slug}\"; when it does not, the visitor signs in or needs an individual invite code. Unknown slugs answer `{\"valid\": false}`. Rate limited per IP like the invite preview (30 per minute, IPv6 per /64).",
+        "operationId": "previewJoinLink",
+        "parameters": [
+          {
+            "description": "Link name.",
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/onboarding.JoinPreview"
+                }
+              }
+            },
+            "description": "Preview."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [],
+        "summary": "Preview a vanity invite link",
         "tags": [
           "Auth"
         ]

@@ -245,7 +245,10 @@ Details: [Browsers in product-status.md](doc/product-status.md#browsers).
   opened, so a client that old must be reloaded or updated
   ([doc/upgrade.md](doc/upgrade.md#calls-and-the-security-floor)).
 - **Invite-only.** There is no public registration. Admins can change an
-  invite's expiry and use limit later, or remove them.
+  invite's expiry and use limit later, or remove them. An optional vanity link
+  (`/join/your-community`) leads visitors to the sign-in page; only if the
+  Owner switches it on does it also create accounts
+  ([doc/operations.md](doc/operations.md#vanity-invite-link)).
 - **Accounts you control.** Optional e-mail (password reset needs SMTP),
   two-factor sign-in with recovery codes, and self-service export and deletion
   of your own data.

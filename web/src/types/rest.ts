@@ -3882,6 +3882,21 @@ export function isOnboardingInvitePreview(value: unknown): value is OnboardingIn
 
 export const decodeOnboardingInvitePreview = decoder("onboarding.InvitePreview", isOnboardingInvitePreview)
 
+export type OnboardingJoinPreview = {
+  accepts_signups?: boolean
+  community_name?: string
+  valid: boolean
+}
+
+export function isOnboardingJoinPreview(value: unknown): value is OnboardingJoinPreview {
+  return isRecord(value)
+    && (!hasOwn(value, "accepts_signups") || typeof value["accepts_signups"] === 'boolean')
+    && (!hasOwn(value, "community_name") || isString(value["community_name"]))
+    && (hasOwn(value, "valid") && typeof value["valid"] === 'boolean')
+}
+
+export const decodeOnboardingJoinPreview = decoder("onboarding.JoinPreview", isOnboardingJoinPreview)
+
 export type OnboardingSettings = {
   community_icon?: string
   community_name: string
@@ -3969,6 +3984,34 @@ export function isOnboardingTipsInput(value: unknown): value is OnboardingTipsIn
 }
 
 export const decodeOnboardingTipsInput = decoder("onboarding.TipsInput", isOnboardingTipsInput)
+
+export type OnboardingVanityInput = {
+  accepts_signups: boolean
+  slug: string
+}
+
+export function isOnboardingVanityInput(value: unknown): value is OnboardingVanityInput {
+  return isRecord(value)
+    && (hasOwn(value, "accepts_signups") && typeof value["accepts_signups"] === 'boolean')
+    && (hasOwn(value, "slug") && isString(value["slug"], 32))
+}
+
+export const decodeOnboardingVanityInput = decoder("onboarding.VanityInput", isOnboardingVanityInput)
+
+export type OnboardingVanitySettings = {
+  accepts_signups: boolean
+  path?: string
+  slug: string
+}
+
+export function isOnboardingVanitySettings(value: unknown): value is OnboardingVanitySettings {
+  return isRecord(value)
+    && (hasOwn(value, "accepts_signups") && typeof value["accepts_signups"] === 'boolean')
+    && (!hasOwn(value, "path") || isString(value["path"]))
+    && (hasOwn(value, "slug") && isString(value["slug"], 32))
+}
+
+export const decodeOnboardingVanitySettings = decoder("onboarding.VanitySettings", isOnboardingVanitySettings)
 
 export type OpwarnWarning = {
   code: string

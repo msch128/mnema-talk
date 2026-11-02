@@ -42,7 +42,8 @@ var snapshotSQL = map[Resource]string{
 		'rules_text', rules_text, 'rules_version', rules_version, 'start_channel_id', start_channel_id,
 		'community_icon', community_icon_version IS NOT NULL),
 		'onboarding' FROM instance_settings`,
-	ResEmoji: `SELECT jsonb_build_object('name', name, 'animated', animated), name FROM custom_emoji WHERE id = $1`,
+	ResVanity: `SELECT jsonb_build_object('slug', vanity_slug, 'accepts_signups', vanity_accepts_signups), 'vanity link' FROM instance_settings`,
+	ResEmoji:  `SELECT jsonb_build_object('name', name, 'animated', animated), name FROM custom_emoji WHERE id = $1`,
 	ResBot: `SELECT jsonb_build_object('name', b.name, 'allowed_intents', b.allowed_intents, 'disabled', b.disabled,
 		'role_ids', COALESCE((SELECT jsonb_agg(role_id ORDER BY role_id) FROM user_roles WHERE user_id = b.user_id), '[]'::jsonb),
 		'active_tokens', (SELECT COUNT(*) FROM bot_tokens t WHERE t.bot_id = b.id AND t.revoked_at IS NULL
@@ -71,7 +72,7 @@ func Snapshot(ctx context.Context, q db.Querier, res Resource, id string) (map[s
 		return nil, ""
 	}
 	var args []any
-	if res != ResSettings && res != ResOnboarding {
+	if res != ResSettings && res != ResOnboarding && res != ResVanity {
 		uid, err := uuid.Parse(id)
 		if err != nil {
 			return nil, ""

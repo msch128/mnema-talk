@@ -58,6 +58,7 @@ func NewHandler(pool *db.Pool, perms *perm.Service) *Handler {
 // MountPublic registers the route that needs no session.
 func (h *Handler) MountPublic(r chi.Router) {
 	h.mountPublicIcon(r)
+	r.With(h.previewPerSite.By(httpx.ClientAggregateKey), h.previewPerIP.PerIP).Get("/join/{slug}", httpx.Handle(h.previewJoin))
 	r.With(h.previewPerSite.By(httpx.ClientAggregateKey), h.previewPerIP.PerIP).Get("/invites/{code}", httpx.Handle(h.previewInvite))
 }
 
@@ -74,6 +75,8 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	admin := r.With(auth.RequirePerm(h.Perms, perm.Administrator))
 	admin.Get("/onboarding", httpx.Handle(h.getSettings))
 	admin.Put("/onboarding", httpx.Handle(h.putSettings))
+	admin.Get("/vanity-link", httpx.Handle(h.getVanity))
+	admin.Put("/vanity-link", httpx.Handle(h.putVanity))
 	owner := r.With(auth.RequireOwner)
 	owner.Get("/first-run", httpx.Handle(h.getFirstRun))
 	owner.Put("/first-run", httpx.Handle(h.putFirstRun))
