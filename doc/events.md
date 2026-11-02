@@ -46,6 +46,16 @@ An event can have **roles with places**, for example a raid with Tank, Heal and 
 - **Role templates**: sets of roles to start from (`GET /api/event-role-templates`). Members see only the templates an administrator enabled. Two presets (*Party of five*, *Raid of ten*) ship disabled; administrators enable or disable them, create their own and delete custom ones (`POST`/`PATCH`/`DELETE`, audited as `event.role_template_*`). Nothing shows to members until then.
 - **Audit, erasure and export**: role and roster changes are audited as `event.edit` (`event.talk_edit` in a Talk) with a `roster` detail. Erasing an account deletes its sign-ups; `event_signups.json` in the account export lists a member's own.
 
+## Comments
+
+Every event has a flat discussion under it (no replies).
+
+- **Model**: a comment has a text of 1 to 2,000 characters; an event keeps at most 500 comments (the next one answers `409`). Posting and editing are rate limited to 10 a minute per member (`429`). Comments are plain text with the chat's Markdown.
+- **API**: `GET /api/events/{id}/comments` returns the newest page, oldest first (`before` names the oldest comment already loaded; `has_more` says older ones exist; `muted` is the caller's own setting); `POST` adds a comment, `PATCH /api/events/{id}/comments/{commentID}` changes the author's own text (shown as edited), `DELETE` removes one, `PUT /api/events/{id}/comments/mute` switches the notices off or on.
+- **Permissions**: everyone who can view the event reads and comments (an event in a Talk needs *View channel* on it). Authors edit and delete their own comments; members with *Manage events* or *Manage messages* delete any (audited as `event.comment_delete`, `event.talk_comment_delete` in a Talk). Nobody edits another member's words.
+- **Live and notices**: a created, edited or deleted comment is announced to everyone who may see the event (`event_comment`); open lists follow. The event's creator and everyone who answered going or interested or holds a role are told about a new comment (`event_comment_notice` and Web Push, which respects do-not-disturb, focus and a muted Talk), except the author and members who switched the event's comment notices off. A member who cannot view the Talk is told nothing.
+- **Erasure and export**: erasing an account deletes the member's comments and mute settings; the export holds them in `event_comments.json`.
+
 ## Active events and joining Talks
 
 When an event's start time arrives:

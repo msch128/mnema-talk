@@ -16,6 +16,7 @@ import { caughtErrorMessage } from '../lib/api'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useAuthStore } from '../stores/auth'
 import EventRoster from './EventRoster.vue'
+import EventComments from './EventComments.vue'
 import EventRolesDialog from './EventRolesDialog.vue'
 import { locale, t } from '../i18n'
 
@@ -294,6 +295,8 @@ async function cancelEvent() {
           </div>
         </div>
       </div>
+
+      <EventComments :event-id="currentEvent.id" />
 
       <!-- Moderator Actions -->
       <div v-if="permissions.can('manage_events')" class="mt-4 flex justify-between gap-3 border-t border-mnema-hairline pt-4">
