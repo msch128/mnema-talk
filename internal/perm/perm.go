@@ -183,7 +183,7 @@ const (
 )
 
 // TimeoutMask is what a timeout takes from a member: they can still read.
-const TimeoutMask = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | EditWiki
+const TimeoutMask = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video | SendDirectMessages | EditWiki | ManageWiki
 
 // Has reports whether every bit of need is in s.
 func (s Set) Has(need Set) bool { return s&need == need }

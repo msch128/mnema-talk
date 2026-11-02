@@ -81,6 +81,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['an option is given twice', 'pollOptionTwice', []],
   ['an option is one line of text', 'pollOptionLine', []],
   ['an update is already running', 'srvAnUpdateIsAlreadyRunning'],
+  ['another wiki page already has that title', 'srvAnotherWikiPageHasThatTitle'],
   ['animated WebP is not supported, use a GIF', 'emojiAnimatedWebp', []],
   ['at most %d automod rules', 'srvAtMostAutomodRules'],
   ['at most %d bots are allowed', 'srvAtMostBotsAreAllowed'],

@@ -20,7 +20,7 @@ func cleanText(title, content *string, summary string) (text, error) {
 	var out text
 	var err error
 	if title != nil {
-		if out.title, err = httpx.CleanText("title", *title, MaxTitleRunes, true); err != nil {
+		if out.title, err = httpx.CleanName("title", *title, MaxTitleRunes, true); err != nil {
 			return out, err
 		}
 	}
@@ -35,6 +35,26 @@ func cleanText(title, content *string, summary string) (text, error) {
 	}
 	out.summary, err = httpx.CleanText("summary", summary, MaxSummaryRunes, false)
 	return out, err
+}
+
+// titleTaken reports whether a live page other than except has the title, ignoring case:
+// [[Title]] links name one page.
+func titleTaken(ctx context.Context, q db.Querier, title string, except uuid.UUID) (bool, error) {
+	var taken bool
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM wiki_pages WHERE lower(title) = lower($1) AND deleted_at IS NULL AND id <> $2)`, title, except).Scan(&taken)
+	return taken, err
+}
+
+// checkTitle refuses a title another live page has.
+func checkTitle(ctx context.Context, q db.Querier, title string, except uuid.UUID) error {
+	taken, err := titleTaken(ctx, q, title, except)
+	if err != nil {
+		return err
+	}
+	if taken {
+		return errTitleTaken
+	}
+	return nil
 }
 
 // slugTaken reports whether a page or a redirect uses the address.
@@ -139,27 +159,8 @@ func (s *Store) Create(ctx context.Context, user uuid.UUID, in PageInput) (*Page
 		if err := lockTree(ctx, tx); err != nil {
 			return err
 		}
-		if err := checkCount(ctx, tx); err != nil {
-			return err
-		}
-		if err := checkRoom(ctx, tx, in.ParentID, 1); err != nil {
-			return err
-		}
-		if slug, err = chooseSlug(ctx, tx, in.Slug, t.title); err != nil {
-			return err
-		}
-		pos, err := nextPosition(ctx, tx, in.ParentID)
-		if err != nil {
-			return err
-		}
-		var id uuid.UUID
-		err = tx.QueryRow(ctx, `
-			INSERT INTO wiki_pages (slug, title, parent_id, position, content, created_by, updated_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $6) RETURNING id`, slug, t.title, in.ParentID, pos, t.content, user).Scan(&id)
-		if err != nil {
-			return fmt.Errorf("create wiki page: %w", err)
-		}
-		return insertRevision(ctx, tx, id, 1, user, t, nil)
+		slug, err = createIn(ctx, tx, user, in, t)
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -189,6 +190,9 @@ func (s *Store) Undelete(ctx context.Context, slug string) (*Page, error) {
 			return errNotDeleted
 		}
 		if err := checkCount(ctx, tx); err != nil {
+			return err
+		}
+		if err := checkTitle(ctx, tx, p.Title, p.ID); err != nil {
 			return err
 		}
 		parent := p.ParentID
@@ -226,4 +230,33 @@ func (s *Store) inTx(ctx context.Context, slug string, deleted bool, change func
 		return err
 	})
 	return out, err
+}
+
+// createIn writes the page and its first revision in the locked tree and returns its address.
+func createIn(ctx context.Context, tx pgx.Tx, user uuid.UUID, in PageInput, t text) (string, error) {
+	if err := checkCount(ctx, tx); err != nil {
+		return "", err
+	}
+	if err := checkRoom(ctx, tx, in.ParentID, 1); err != nil {
+		return "", err
+	}
+	if err := checkTitle(ctx, tx, t.title, uuid.Nil); err != nil {
+		return "", err
+	}
+	slug, err := chooseSlug(ctx, tx, in.Slug, t.title)
+	if err != nil {
+		return "", err
+	}
+	pos, err := nextPosition(ctx, tx, in.ParentID)
+	if err != nil {
+		return "", err
+	}
+	var id uuid.UUID
+	err = tx.QueryRow(ctx, `
+		INSERT INTO wiki_pages (slug, title, parent_id, position, content, created_by, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $6) RETURNING id`, slug, t.title, in.ParentID, pos, t.content, user).Scan(&id)
+	if err != nil {
+		return "", fmt.Errorf("create wiki page: %w", err)
+	}
+	return slug, insertRevision(ctx, tx, id, 1, user, t, nil)
 }

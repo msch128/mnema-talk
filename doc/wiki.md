@@ -26,12 +26,19 @@ This page covers using the wiki and running it. The API is in the
   trust with the wiki (and *Manage the wiki* to those who revert vandalism).
   The seeded Moderator and Admin roles, and any role that holds *Timeout members*,
   get both by migration 0089; Administrators and the Owner hold everything.
-- *Edit the wiki* behaves like writing a message: a timeout takes it away, and
+- *Edit the wiki* and *Manage the wiki* are taken by a timeout (a timed-out
+  manager cannot lock, delete, rename or move either). *Edit the wiki* also
+  behaves like writing a message: the timeout takes it away, and
   so does the new-member wait of [raid protection](moderation.md#raid-protection)
   (*Bypass new member limits* and Administrators are exempt). Reading stays.
 - Neither editing nor managing can be put on a self-assignable role.
 - A **locked** page changes only for holders of *Manage the wiki*; use it for
-  pages that must not move (the rules, say).
+  pages that must not move (the rules, say). Changing the text of a locked page
+  needs *Edit the wiki* as well: a manager without it can lock, unlock, move and
+  delete, but not write.
+- A title is one line (no line breaks, no invisible or direction-changing
+  characters) and unique among the pages, ignoring case, so `[[Title]]` names
+  one page.
 
 ## Writing
 
@@ -81,8 +88,8 @@ edits, the revision number and summary.
 
 ## Search
 
-*Search the wiki* finds pages whose title or text contains the words, titles
-first, with a few words around the match. Deleted pages are never found.
+*Search the wiki* finds pages whose title or text contains the words (at least
+three characters), titles first, with a few words around the match. Deleted pages are never found.
 
 ## Privacy
 
@@ -100,8 +107,15 @@ first, with a few words around the match. Deleted pages are never found.
 ## For operators
 
 - The 50 KB, 500 pages, 5 levels, 100 revisions and 20 changes a minute are
-  fixed; a page at the limit costs the database about 50 KB per revision, so
-  the worst case is far below a gigabyte for a community of normal size.
+  fixed. Worst case, every one of the 500 pages is full (50 KB) and holds its
+  100 latest revisions: about 2.5 GB, plus, for 90 days, one more revision per
+  editor and day and page. A real wiki is a few megabytes; the history list
+  never reads the texts, only their sizes.
+- Pruning: besides the latest 100, a page keeps for 90 days the last revision of
+  every editor and day, and every revision a kept restore points to. One
+  account that saves over and over (20 a minute at most) therefore cannot push
+  the good revisions of other members out; an old good revision stays
+  restorable.
 - Migration 0089 adds the tables `wiki_pages`, `wiki_revisions` and
   `wiki_redirects`, turns on *View the wiki* for @everyone and grants *Edit* and
   *Manage the wiki* to roles holding *Timeout members*. The bits are

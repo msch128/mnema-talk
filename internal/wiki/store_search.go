@@ -17,11 +17,11 @@ func likePattern(q string) string {
 	return "%" + r.Replace(q) + "%"
 }
 
-// Search finds pages whose title or text contains q (at least two characters),
+// Search finds pages whose title or text contains q (at least MinSearchRunes characters),
 // titles first, then the most recently changed.
 func (s *Store) Search(ctx context.Context, q string) ([]SearchHit, error) {
 	q = strings.TrimSpace(q)
-	if utf8.RuneCountInString(q) < 2 {
+	if utf8.RuneCountInString(q) < MinSearchRunes {
 		return []SearchHit{}, nil
 	}
 	rows, err := s.DB.Query(ctx, `

@@ -146,6 +146,12 @@ func TestAGivenEditorStaysSubjectToTimeoutsAndTheNewMemberWait(t *testing.T) {
 	wantStatus(t, "end the timeout", f.admin.delete("/api/admin/users/"+f.editor.user.ID.String()+"/timeout"), http.StatusNoContent)
 	wantStatus(t, "after the timeout", f.editor.post("/api/wiki/pages", map[string]any{"title": "After"}), http.StatusCreated)
 
+	// A timeout takes managing too: a timed-out manager cannot lock or delete.
+	page := f.create(t, f.editor, "Managed", "text")
+	wantStatus(t, "timeout manager", f.admin.post("/api/admin/users/"+f.manager.user.ID.String()+"/timeout", map[string]any{"duration_seconds": 3600, "reason": "calm down"}), http.StatusOK)
+	wantStatus(t, "timed out manager locks", f.manager.put("/api/wiki/pages/"+page.Slug+"/lock", map[string]any{"locked": true}), http.StatusForbidden)
+	wantStatus(t, "end the manager timeout", f.admin.delete("/api/admin/users/"+f.manager.user.ID.String()+"/timeout"), http.StatusNoContent)
+
 	// Raid protection: a member who just joined waits before writing, the wiki included.
 	wantStatus(t, "set the wait", putRaid(t, f.admin, 0, 60, 0, 0), http.StatusOK)
 	res := f.editor.post("/api/wiki/pages", map[string]any{"title": "Too early"})

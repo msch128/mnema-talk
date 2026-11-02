@@ -147,6 +147,10 @@ func TestOldRevisionsArePrunedButNotThoseAKeptRestorePointsTo(t *testing.T) {
 	if _, err := w.s.RestoreRevision(ctx, w.bob, p.Slug, 2, RestoreInput{BaseRev: 5}, false); err != nil {
 		t.Fatal(err)
 	}
+	// The first six revisions are older than the quarter the daily last ones are kept for.
+	if _, err := w.p.Exec(ctx, `UPDATE wiki_revisions SET created_at = created_at - interval '200 days'`); err != nil {
+		t.Fatal(err)
+	}
 	for rev := 6; rev < 103; rev++ { // up to revision 103: the latest 100 are 4 to 103
 		if _, err := w.edit(p.Slug, rev, strings.Repeat("w", rev)); err != nil {
 			t.Fatal(err)
@@ -183,6 +187,35 @@ func TestOldRevisionsArePrunedButNotThoseAKeptRestorePointsTo(t *testing.T) {
 	}
 	if got := have(); got[2] || got[6] || !got[7] || len(got) != KeepRevisions {
 		t.Fatalf("after the restore aged out: %d revisions, 2:%v 6:%v", len(got), got[2], got[6])
+	}
+}
+
+func TestAFloodOfSavesDoesNotPushTheGoodRevisionOut(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	p := w.page(t, "Rules", nil) // revision 1 by alice
+	good, err := w.s.Change(ctx, w.alice, p.Slug, PageChange{BaseRev: 1, Content: ptr("the good rules")}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rev := good.Page.Rev
+	for i := 0; i < 105; i++ { // bob alternates two texts
+		e, err := w.edit(p.Slug, rev, []string{"spam one", "spam two"}[i%2])
+		if err != nil {
+			t.Fatal(err)
+		}
+		rev = e.Page.Rev
+	}
+	r, err := w.s.Revision(ctx, p.Slug, good.Page.Rev, false)
+	if err != nil || *r.Content != "the good rules" {
+		t.Fatalf("the good revision is gone: %v", err)
+	}
+	var n int
+	if err := w.p.QueryRow(ctx, `SELECT count(*) FROM wiki_revisions WHERE page_id = $1`, p.ID).Scan(&n); err != nil || n > KeepRevisions+2 {
+		t.Fatalf("the history is bounded: %d revisions, %v", n, err)
+	}
+	if _, err := w.s.RestoreRevision(ctx, w.alice, p.Slug, good.Page.Rev, RestoreInput{BaseRev: rev}, false); err != nil {
+		t.Fatalf("restore the good revision: %v", err)
 	}
 }
 
@@ -238,7 +271,7 @@ func TestAddressesAreDerivedMadeUniqueAndReserved(t *testing.T) {
 	w := newWorld(t)
 	ctx := context.Background()
 	a := w.page(t, "Größe & Ärger!", nil)
-	b := w.page(t, "Größe & Ärger!", nil)
+	b := w.page(t, "Größe, Ärger", nil)
 	c := w.page(t, "Search", nil)
 	if a.Slug != "groesse-aerger" || b.Slug != "groesse-aerger-2" || c.Slug != "search-2" {
 		t.Fatalf("slugs: %q %q %q", a.Slug, b.Slug, c.Slug)
@@ -436,6 +469,9 @@ func TestSearchFindsTitlesFirstAndOnlyWhatIsNotDeleted(t *testing.T) {
 	if hits, _ := w.s.Search(ctx, "%"); len(hits) != 0 {
 		t.Fatalf("one character: %+v", hits)
 	}
+	if hits, _ := w.s.Search(ctx, "lo"); len(hits) != 0 {
+		t.Fatalf("two characters are too short for the index: %+v", hits)
+	}
 	if hits, _ := w.s.Search(ctx, "__"); len(hits) != 0 {
 		t.Fatalf("underscores are not wildcards: %+v", hits)
 	}
@@ -475,5 +511,49 @@ func TestErasingAnEditorKeepsTheTextAndDetachesThePerson(t *testing.T) {
 	revs, _ := w.s.Revisions(ctx, p.Slug, 0, 10, false)
 	if len(revs) != 2 || revs[0].Editor != nil || revs[1].Editor == nil {
 		t.Fatalf("revisions: %+v", revs)
+	}
+}
+
+func TestTitlesAreOneLineAndUniqueIgnoringCase(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	a := w.page(t, "Rules", nil)
+	if _, err := w.s.Create(ctx, w.alice, PageInput{Title: "Rules\nrules"}); err == nil {
+		t.Fatal("a title with a line break")
+	}
+	// Direction and zero-width characters are stripped, so a lookalike is the same title.
+	if _, err := w.s.Create(ctx, w.alice, PageInput{Title: "Ru\u200bles"}); !is(err, errTitleTaken) {
+		t.Fatalf("zero-width lookalike: %v", err)
+	}
+	if lr, err := w.s.Create(ctx, w.alice, PageInput{Title: "Admin\u202eslur"}); err != nil || lr.Title != "Adminslur" {
+		t.Fatalf("direction override: %+v, %v", lr, err)
+	}
+	if _, err := w.s.Create(ctx, w.alice, PageInput{Title: "rules"}); !is(err, errTitleTaken) {
+		t.Fatalf("same title in another case: %v", err)
+	}
+	b := w.page(t, "Guide", nil)
+	if _, err := w.s.Change(ctx, w.alice, b.Slug, PageChange{BaseRev: 1, Title: ptr("RULES")}, false); !is(err, errTitleTaken) {
+		t.Fatalf("rename to a taken title: %v", err)
+	}
+	// A deleted page frees its title; bringing it back while another page holds it is refused.
+	if _, err := w.s.Delete(ctx, w.alice, a.Slug); err != nil {
+		t.Fatal(err)
+	}
+	w.page(t, "Rules", nil)
+	if _, err := w.s.Undelete(ctx, a.Slug); !is(err, errTitleTaken) {
+		t.Fatalf("undelete into a taken title: %v", err)
+	}
+}
+
+func TestAPositionOutsideTheRangeIsRefused(t *testing.T) {
+	w := newWorld(t)
+	p := w.page(t, "Order", nil)
+	for _, pos := range []int{-5, MaxPosition + 1, 1 << 40} {
+		if _, err := w.s.Change(context.Background(), w.alice, p.Slug, PageChange{Position: ptr(pos)}, true); !is(err, errPosition) {
+			t.Fatalf("position %d: %v", pos, err)
+		}
+	}
+	if _, err := w.s.Change(context.Background(), w.alice, p.Slug, PageChange{Position: ptr(MaxPosition)}, true); err != nil {
+		t.Fatalf("the highest position: %v", err)
 	}
 }

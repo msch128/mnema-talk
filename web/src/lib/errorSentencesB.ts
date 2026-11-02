@@ -167,6 +167,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['password reset by e-mail is not available', 'mailOff', []],
   ['payload_json too large', 'srvPayloadJsonTooLarge'],
   ['poll not found', 'pollGone', []],
+  ['position must be between 0 and 1048576', 'srvPositionMustBeBetween'],
   ['presence must be online, away, dnd or focus', 'srvPresenceMustBeOnlineAway'],
   ['push notifications are turned off on this server', 'pushOff', []],
   ['q contains invalid characters', 'fieldInvalidChars', [], { field: 'q' }],

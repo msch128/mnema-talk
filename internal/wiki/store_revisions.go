@@ -10,8 +10,15 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
-const revisionColumns = `r.rev, r.summary, r.restored_from, octet_length(r.content), r.created_at, r.title, r.content,
+// revisionColumns selects a revision; the list leaves the text out (an empty string in its place), only its size is read.
+func revisionColumns(withText bool) string {
+	content := `''`
+	if withText {
+		content = `r.content`
+	}
+	return `r.rev, r.summary, r.restored_from, octet_length(r.content), r.created_at, r.title, ` + content + `,
 	e.id, e.username, e.display_name`
+}
 
 func scanRevision(row pgx.Row, withText bool) (Revision, error) {
 	var r Revision
@@ -33,7 +40,7 @@ func scanRevision(row pgx.Row, withText bool) (Revision, error) {
 
 // loadRevision returns revision rev of a page with its text.
 func loadRevision(ctx context.Context, q db.Querier, page uuid.UUID, rev int) (Revision, error) {
-	r, err := scanRevision(q.QueryRow(ctx, `SELECT `+revisionColumns+`
+	r, err := scanRevision(q.QueryRow(ctx, `SELECT `+revisionColumns(true)+`
 		FROM wiki_revisions r LEFT JOIN users e ON e.id = r.editor_id WHERE r.page_id = $1 AND r.rev = $2`, page, rev), true)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return r, errRevGone
@@ -59,7 +66,7 @@ func (s *Store) Revisions(ctx context.Context, slug string, before, limit int, d
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.DB.Query(ctx, `SELECT `+revisionColumns+`
+	rows, err := s.DB.Query(ctx, `SELECT `+revisionColumns(false)+`
 		FROM wiki_revisions r LEFT JOIN users e ON e.id = r.editor_id
 		WHERE r.page_id = $1 AND ($2 = 0 OR r.rev < $2) ORDER BY r.rev DESC LIMIT $3`, p.ID, before, limit)
 	if err != nil {

@@ -3,6 +3,7 @@ package wiki
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -31,16 +32,25 @@ func insertRevision(ctx context.Context, q db.Querier, page uuid.UUID, rev int, 
 	return nil
 }
 
-// pruneRevisions drops the revisions older than the latest KeepRevisions of a
-// page, except those a kept restore points to: a restore never loses what it
-// restored from while it is still in the history.
+// pruneRevisions thins the history of a page: the latest KeepRevisions stay,
+// and so does, for KeepRevisionDays, the last revision of every editor and
+// day, so a flood of saves by one account cannot push everyone else's good
+// revisions out. A revision a kept restore points to stays too.
 func pruneRevisions(ctx context.Context, q db.Querier, page uuid.UUID, latest int) error {
 	cutoff := latest - KeepRevisions // revisions up to this one are older than the latest KeepRevisions
+	if cutoff < 1 {
+		return nil
+	}
+	since := time.Now().AddDate(0, 0, -KeepRevisionDays)
 	_, err := q.Exec(ctx, `
 		DELETE FROM wiki_revisions r
 		WHERE r.page_id = $1 AND r.rev <= $2
 		  AND NOT EXISTS (SELECT 1 FROM wiki_revisions k
-		                  WHERE k.page_id = r.page_id AND k.restored_from = r.rev AND k.rev > $2)`, page, cutoff)
+		                  WHERE k.page_id = r.page_id AND k.restored_from = r.rev AND k.rev > $2)
+		  AND NOT (r.created_at >= $3 AND r.rev = (
+		        SELECT max(d.rev) FROM wiki_revisions d
+		        WHERE d.page_id = r.page_id AND d.editor_id IS NOT DISTINCT FROM r.editor_id
+		          AND d.created_at::date = r.created_at::date))`, page, cutoff, since)
 	if err != nil {
 		return fmt.Errorf("prune wiki revisions: %w", err)
 	}
@@ -50,6 +60,11 @@ func pruneRevisions(ctx context.Context, q db.Querier, page uuid.UUID, latest in
 // save writes the new state of a page as the next revision.
 func save(ctx context.Context, tx pgx.Tx, cur *Page, user uuid.UUID, t text, restoredFrom *int) error {
 	rev := cur.Rev + 1
+	if t.title != cur.Title {
+		if err := checkTitle(ctx, tx, t.title, cur.ID); err != nil {
+			return err
+		}
+	}
 	_, err := tx.Exec(ctx, `
 		UPDATE wiki_pages SET title = $2, content = $3, rev = $4, updated_by = $5, updated_at = NOW() WHERE id = $1`,
 		cur.ID, t.title, t.content, rev, user)
@@ -71,8 +86,8 @@ func (s *Store) Change(ctx context.Context, user uuid.UUID, slug string, ch Page
 	if err != nil {
 		return nil, err
 	}
-	if (ch.Title != nil || ch.Content != nil) && ch.BaseRev < 1 {
-		return nil, errBaseRev
+	if err := checkChange(ch); err != nil {
+		return nil, err
 	}
 	var out Edited
 	err = pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
@@ -97,6 +112,17 @@ func (s *Store) Change(ctx context.Context, user uuid.UUID, slug string, ch Page
 		return nil, err
 	}
 	return &out, nil
+}
+
+// checkChange refuses a change that is wrong whatever the page is.
+func checkChange(ch PageChange) error {
+	if ch.Position != nil && (*ch.Position < 0 || *ch.Position > MaxPosition) {
+		return errPosition
+	}
+	if (ch.Title != nil || ch.Content != nil) && ch.BaseRev < 1 {
+		return errBaseRev
+	}
+	return nil
 }
 
 // reviseText writes the revision of a changed title or text.

@@ -26,9 +26,17 @@ const (
 	// KeepRevisions is how many of the latest revisions of a page are kept;
 	// older ones are pruned, except those a kept restore points to.
 	KeepRevisions = 100
+	// MaxPosition is the highest position among siblings.
+	MaxPosition = 1 << 20
+	// KeepRevisionDays is how long the last revision of each editor and day
+	// outlives the latest KeepRevisions: a flood of saves cannot push the
+	// good revisions of the last quarter out of the history.
+	KeepRevisionDays = 90
 	// EditsPerMinute caps the writes of one member (saves, restores, moves,
 	// locks and deletes).
 	EditsPerMinute = 20
+	// MinSearchRunes is the shortest search: shorter words cannot use the trigram index.
+	MinSearchRunes = 3
 	// SearchLimit is the most results of a search.
 	SearchLimit = 30
 	// RevisionPage is the page size of the revision list.

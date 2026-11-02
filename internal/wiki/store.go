@@ -28,6 +28,8 @@ var (
 	errNothingNew   = httpx.ErrInvalidInput("that is the page as it is")
 	errNotDeleted   = httpx.ErrConflict("the page is not deleted")
 	errRevGone      = httpx.ErrNotFound("revision not found")
+	errTitleTaken   = httpx.ErrConflict("another wiki page already has that title")
+	errPosition     = httpx.ErrInvalidInput("position must be between 0 and 1048576")
 )
 
 // Store keeps the wiki in the database.
