@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.8.0](https://github.com/msch128/mnema-talk/compare/v2.7.0...v2.8.0) (2026-11-02)
+
+
+### Features
+
+* **events:** comments under an event, with notices for the creator and attendees ([#605](https://github.com/msch128/mnema-talk/issues/605)) ([dbedb78](https://github.com/msch128/mnema-talk/commit/dbedb7835eeb6d918ce71f065b62e29c25344f15))
+* **events:** recurring events that repeat weekly, every two weeks or monthly ([#607](https://github.com/msch128/mnema-talk/issues/607)) ([dbedb78](https://github.com/msch128/mnema-talk/commit/dbedb7835eeb6d918ce71f065b62e29c25344f15))
+* **events:** roles with slots, a waitlist that moves up and admin-enabled role templates ([#604](https://github.com/msch128/mnema-talk/issues/604)) ([dbedb78](https://github.com/msch128/mnema-talk/commit/dbedb7835eeb6d918ce71f065b62e29c25344f15))
+
 ## [2.7.0](https://github.com/msch128/mnema-talk/compare/v2.6.0...v2.7.0) (2026-11-02)
 
 
