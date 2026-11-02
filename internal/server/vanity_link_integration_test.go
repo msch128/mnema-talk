@@ -242,3 +242,17 @@ func TestVanitySignupCodeFoldsOnlyAscii(t *testing.T) {
 		t.Errorf("slug with kelvin sign: %s", r.body)
 	}
 }
+
+func TestLockdownRefusesVanitySignupsToo(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	setVanity(t, admin, "owls", true, http.StatusOK)
+	wantStatus(t, "lock", admin.put("/api/admin/raid/lockdown", map[string]any{"active": true, "hours": 1}), http.StatusOK)
+	wantStatus(t, "vanity sign-up in lockdown", registerWith(a.anon(), "newbie", "~owls"), http.StatusServiceUnavailable)
+	var n int
+	if err := a.db.QueryRow(context.Background(), `SELECT COUNT(*) FROM users WHERE username = 'newbie'`).Scan(&n); err != nil || n != 0 {
+		t.Fatalf("no account in lockdown: %d %v", n, err)
+	}
+	wantStatus(t, "unlock", admin.put("/api/admin/raid/lockdown", map[string]any{"active": false}), http.StatusOK)
+	wantStatus(t, "vanity sign-up after lockdown", registerWith(a.anon(), "newbie", "~owls"), http.StatusCreated)
+}
