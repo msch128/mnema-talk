@@ -2901,6 +2901,7 @@ export type CommunityeventsCommunityEvent = {
   my_signup?: CommunityeventsSignup
   roles?: Array<CommunityeventsEventRole>
   rsvp_counts: CommunityeventsRSVPCounts
+  series?: CommunityeventsSeriesInfo
   signups?: Array<CommunityeventsSignupItem>
   start_time: string
   status: string
@@ -2923,6 +2924,7 @@ export function isCommunityeventsCommunityEvent(value: unknown): value is Commun
     && (!hasOwn(value, "my_signup") || isCommunityeventsSignup(value["my_signup"]))
     && (!hasOwn(value, "roles") || isArrayOf(value["roles"], item => isCommunityeventsEventRole(item)))
     && (hasOwn(value, "rsvp_counts") && isCommunityeventsRSVPCounts(value["rsvp_counts"]))
+    && (!hasOwn(value, "series") || isCommunityeventsSeriesInfo(value["series"]))
     && (!hasOwn(value, "signups") || isArrayOf(value["signups"], item => isCommunityeventsSignupItem(item)))
     && (hasOwn(value, "start_time") && isTimestamp(value["start_time"]))
     && (hasOwn(value, "status") && isString(value["status"]))
@@ -2937,6 +2939,7 @@ export type CommunityeventsCreateEventRequest = {
   description: string
   end_time?: string | null
   location?: string | null
+  recurrence?: CommunityeventsRecurrenceRequest
   start_time: string
   title: string
 }
@@ -2947,6 +2950,7 @@ export function isCommunityeventsCreateEventRequest(value: unknown): value is Co
     && (hasOwn(value, "description") && isString(value["description"], 2000))
     && (!hasOwn(value, "end_time") || (isTimestamp(value["end_time"]) || value["end_time"] === null))
     && (!hasOwn(value, "location") || (isString(value["location"], 255) || value["location"] === null))
+    && (!hasOwn(value, "recurrence") || isCommunityeventsRecurrenceRequest(value["recurrence"]))
     && (hasOwn(value, "start_time") && isTimestamp(value["start_time"]))
     && (hasOwn(value, "title") && isString(value["title"], 100))
 }
@@ -3038,6 +3042,21 @@ export function isCommunityeventsRSVPRequest(value: unknown): value is Community
 
 export const decodeCommunityeventsRSVPRequest = decoder("communityevents.RSVPRequest", isCommunityeventsRSVPRequest)
 
+export type CommunityeventsRecurrenceRequest = {
+  frequency: "weekly" | "biweekly" | "monthly"
+  timezone?: string
+  until?: string | null
+}
+
+export function isCommunityeventsRecurrenceRequest(value: unknown): value is CommunityeventsRecurrenceRequest {
+  return isRecord(value)
+    && (hasOwn(value, "frequency") && (value["frequency"] === "weekly" || value["frequency"] === "biweekly" || value["frequency"] === "monthly"))
+    && (!hasOwn(value, "timezone") || isString(value["timezone"], 64))
+    && (!hasOwn(value, "until") || (isTimestamp(value["until"]) || value["until"] === null))
+}
+
+export const decodeCommunityeventsRecurrenceRequest = decoder("communityevents.RecurrenceRequest", isCommunityeventsRecurrenceRequest)
+
 export type CommunityeventsRoleInput = {
   capacity?: number | null
   emoji?: string
@@ -3088,6 +3107,27 @@ export function isCommunityeventsRoleTemplateRequest(value: unknown): value is C
 }
 
 export const decodeCommunityeventsRoleTemplateRequest = decoder("communityevents.RoleTemplateRequest", isCommunityeventsRoleTemplateRequest)
+
+export type CommunityeventsSeriesInfo = {
+  ended: boolean
+  frequency: "weekly" | "biweekly" | "monthly"
+  id: string
+  index: number
+  timezone: string
+  until?: string | null
+}
+
+export function isCommunityeventsSeriesInfo(value: unknown): value is CommunityeventsSeriesInfo {
+  return isRecord(value)
+    && (hasOwn(value, "ended") && typeof value["ended"] === 'boolean')
+    && (hasOwn(value, "frequency") && (value["frequency"] === "weekly" || value["frequency"] === "biweekly" || value["frequency"] === "monthly"))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "index") && isInteger(value["index"]))
+    && (hasOwn(value, "timezone") && isString(value["timezone"]))
+    && (!hasOwn(value, "until") || (isTimestamp(value["until"]) || value["until"] === null))
+}
+
+export const decodeCommunityeventsSeriesInfo = decoder("communityevents.SeriesInfo", isCommunityeventsSeriesInfo)
 
 export type CommunityeventsSetRolesRequest = {
   roles: Array<CommunityeventsRoleInput>

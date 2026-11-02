@@ -138,6 +138,9 @@ func (s *Store) fillRSVPsBatch(ctx context.Context, list []*CommunityEvent, call
 	if err := s.fillRoles(ctx, byID, ids, callerID); err != nil {
 		return err
 	}
+	if err := s.fillSeries(ctx, list); err != nil {
+		return err
+	}
 	return s.batchGoing(ctx, byID, ids)
 }
 

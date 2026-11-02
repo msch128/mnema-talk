@@ -612,7 +612,13 @@
       "srvOnlyTheAuthorAndModerators": "Nur die Autorin oder der Autor und die Moderation können einen Kommentar löschen.",
       "srvOnlyTheAuthorEditsA": "Nur die Autorin oder der Autor kann einen Kommentar bearbeiten.",
       "srvOneMemberLeavesAtMost": "Eine Person kann höchstens {a} Kommentare unter einer Veranstaltung hinterlassen.",
-      "srvThisEventIsCancelledAndTakes": "Diese Veranstaltung ist abgesagt und nimmt keine Kommentare mehr an."
+      "srvThisEventIsCancelledAndTakes": "Diese Veranstaltung ist abgesagt und nimmt keine Kommentare mehr an.",
+      "srvFrequencyMustBeWeekly": "Die Wiederholung muss wöchentlich, zweiwöchentlich oder monatlich sein.",
+      "srvScopeMustBeThisOr": "Der Geltungsbereich muss „diese“ oder „folgende“ sein.",
+      "srvSeriesNotFound": "Diese Serie wurde nicht gefunden.",
+      "srvThisEventIsNotPartOf": "Diese Veranstaltung gehört zu keiner Serie.",
+      "srvTimezoneMustBeAnIana": "Die Zeitzone muss ein IANA-Name wie Europe/Berlin sein.",
+      "srvUntilMustBeAfterStart": "Das Enddatum muss nach dem Start liegen."
     },
     "field": {
       "content": "Nachricht",
@@ -3679,7 +3685,30 @@
     "commentDeleteTitle": "Diesen Kommentar löschen?",
     "commentDeleteBody": "Der Kommentar wird für alle entfernt. Das lässt sich nicht rückgängig machen.",
     "commentToast": "Neuer Kommentar zu {title}: {author}: {excerpt}",
-    "commentOpen": "Veranstaltung anzeigen"
+    "commentOpen": "Veranstaltung anzeigen",
+    "repeat": {
+      "label": "Wiederholung",
+      "none": "Wiederholt sich nicht",
+      "option": {
+        "weekly": "Jede Woche",
+        "biweekly": "Alle zwei Wochen",
+        "monthly": "Jeden Monat"
+      },
+      "until": "Endet am (optional)",
+      "untilHint": "Die nächsten Termine entstehen automatisch, zur gleichen Uhrzeit.",
+      "weekly": "Wiederholt sich jede Woche",
+      "biweekly": "Wiederholt sich alle zwei Wochen",
+      "monthly": "Wiederholt sich jeden Monat",
+      "ended": "Serie beendet"
+    },
+    "scope": {
+      "title": "Teil einer Serie",
+      "this": "Nur diese Veranstaltung",
+      "following": "Diese und alle folgenden Veranstaltungen",
+      "editHint": "Frühere Veranstaltungen bleiben, wie sie sind. Eine neue Startzeit verschiebt die folgenden mit.",
+      "rolesHint": "Folgende Veranstaltungen behalten ihre Rollen, wenn sich dort schon Mitglieder angemeldet haben.",
+      "cancelHint": "Die folgenden Veranstaltungen werden abgesagt und die Serie endet."
+    }
   },
   "moderation": {
     "timeoutAction": "Auszeit verhängen …",

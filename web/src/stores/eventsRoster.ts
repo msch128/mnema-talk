@@ -14,7 +14,7 @@ export function eventRosterActions(act: Act, drop: (id: string) => void) {
   return {
     /** One event with its sign-ups. */
     fetchDetail: (id: string) => act(() => roles.fetchEvent(id)),
-    setRoles: (id: string, list: RoleInput[]) => act(() => roles.setEventRoles(id, list)),
+    setRoles: (id: string, list: RoleInput[], scope?: 'this' | 'following') => act(() => roles.setEventRoles(id, list, scope)),
     deleteRole: (id: string, roleId: string, moveTo?: string) => act(() => roles.deleteEventRole(id, roleId, moveTo)),
     signUp: (id: string, roleId: string) => act(() => roles.signUpForRole(id, roleId)),
     // The answer is null when the member can no longer view the event: it leaves the list like a retracted one.

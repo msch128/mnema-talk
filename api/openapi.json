@@ -4903,6 +4903,10 @@
           "rsvp_counts": {
             "$ref": "#/components/schemas/communityevents.RSVPCounts"
           },
+          "series": {
+            "$ref": "#/components/schemas/communityevents.SeriesInfo",
+            "description": "Series is set when the event is an occurrence of a recurring event."
+          },
           "signups": {
             "description": "Signups lists who is signed up for which role (event details only).",
             "items": {
@@ -4964,6 +4968,10 @@
               "string",
               "null"
             ]
+          },
+          "recurrence": {
+            "$ref": "#/components/schemas/communityevents.RecurrenceRequest",
+            "description": "Recurrence makes this event the first of a series that repeats weekly, every two weeks or monthly."
           },
           "start_time": {
             "format": "date-time",
@@ -5114,6 +5122,35 @@
         ],
         "type": "object"
       },
+      "communityevents.RecurrenceRequest": {
+        "properties": {
+          "frequency": {
+            "enum": [
+              "weekly",
+              "biweekly",
+              "monthly"
+            ],
+            "type": "string"
+          },
+          "timezone": {
+            "description": "Timezone is the IANA zone whose wall-clock time the occurrences keep (the browser's zone); UTC when omitted.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "until": {
+            "description": "Until: no occurrence starts after this time. Without it the series runs for at most 200 occurrences.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "frequency"
+        ],
+        "type": "object"
+      },
       "communityevents.RoleInput": {
         "properties": {
           "capacity": {
@@ -5194,6 +5231,48 @@
             "type": "array"
           }
         },
+        "type": "object"
+      },
+      "communityevents.SeriesInfo": {
+        "properties": {
+          "ended": {
+            "description": "Ended: the series creates no more occurrences.",
+            "type": "boolean"
+          },
+          "frequency": {
+            "enum": [
+              "weekly",
+              "biweekly",
+              "monthly"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "index": {
+            "description": "Index is the occurrence's number in the series (0 is the first).",
+            "type": "integer"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "until": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "ended",
+          "frequency",
+          "id",
+          "index",
+          "timezone"
+        ],
         "type": "object"
       },
       "communityevents.SetRolesRequest": {
@@ -30482,7 +30561,7 @@
         ]
       },
       "post": {
-        "description": "Creates an event. Requires ManageEvents permission. Location must be either a Talk voice channel or free text.",
+        "description": "Creates an event. With recurrence the event is the first occurrence of a series that repeats weekly, every two weeks or monthly (at the same wall-clock time in the given time zone; the later occurrences are created up to 60 days ahead and then by the server as time passes, at most 200 and not past until). Requires ManageEvents permission. Location must be either a Talk voice channel or free text.",
         "operationId": "createCommunityEvent",
         "requestBody": {
           "content": {
@@ -30599,6 +30678,18 @@
               "format": "uuid",
               "type": "string"
             }
+          },
+          {
+            "description": "this (default) or following: with following, an occurrence of a series and every later open occurrence take the edit and the series' template changes with it (a new start_time becomes the series' new anchor; occurrences before it stay).",
+            "in": "query",
+            "name": "scope",
+            "schema": {
+              "enum": [
+                "this",
+                "following"
+              ],
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -30687,6 +30778,18 @@
             "required": true,
             "schema": {
               "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "this (default) or following: cancel an occurrence of a series and every later open occurrence and end the series there.",
+            "in": "query",
+            "name": "scope",
+            "schema": {
+              "enum": [
+                "this",
+                "following"
+              ],
               "type": "string"
             }
           }
@@ -31308,7 +31411,7 @@
     },
     "/api/events/{id}/roles": {
       "put": {
-        "description": "Replaces the event's role list (at most 12; each with a name of up to 40 characters, an optional emoji and a capacity of 1 to 1000, or none for unlimited). A role sent with its id keeps its sign-ups; one that is left out is removed, which is refused with 409 while it has sign-ups (hand them over with DELETE .../roles/{roleID}?move_to=). A capacity below the number of confirmed members is refused with 409 naming how many to remove; a larger capacity moves the waitlist up. Allowed for the event's creator and for members with Manage events; not on a completed or cancelled event.",
+        "description": "Replaces the event's role list (at most 12; each with a name of up to 40 characters, an optional emoji and a capacity of 1 to 1000, or none for unlimited). A role sent with its id keeps its sign-ups; one that is left out is removed, which is refused with 409 while it has sign-ups (hand them over with DELETE .../roles/{roleID}?move_to=). A capacity below the number of confirmed members is refused with 409 naming how many to remove; a larger capacity moves the waitlist up. Allowed for the event's creator and for members with Manage events; not on a completed or cancelled event. The two steps of scope=following (this occurrence, then the series) are separate transactions: when the second fails the first stays. The event's creator, who needs no Manage events for this, can thereby change the roles of the whole future series.",
         "operationId": "setCommunityEventRoles",
         "parameters": [
           {
@@ -31318,6 +31421,18 @@
             "required": true,
             "schema": {
               "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "this (default) or following: also the later occurrences of a series.",
+            "in": "query",
+            "name": "scope",
+            "schema": {
+              "enum": [
+                "this",
+                "following"
+              ],
               "type": "string"
             }
           }

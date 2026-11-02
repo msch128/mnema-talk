@@ -18,6 +18,8 @@ type Scheduler struct {
 	pushes   sync.WaitGroup
 	// pusher overrides Handler.Push (tests).
 	pusher reminderPusher
+	// lastSeries is when the series were last looked at.
+	lastSeries time.Time
 }
 
 // reminderPusher sends the push reminder of an event to one member.
@@ -71,6 +73,7 @@ func (s *Scheduler) Tick(ctx context.Context, now time.Time) {
 	s.processCompletions(ctx, now)
 	s.processReminders(ctx, now)
 	s.processPromotions(ctx)
+	s.processSeries(ctx, now)
 }
 
 func (s *Scheduler) processActivations(ctx context.Context, now time.Time) {
@@ -226,5 +229,27 @@ func (s *Scheduler) processPromotions(ctx context.Context) {
 		}
 		s.Handler.broadcast(ev)
 		s.Handler.notifyMembers(ctx, ev, SignupKindPromoted, "", byEvent[id])
+	}
+}
+
+// processSeries creates the occurrences of the recurring events that now start
+// within the horizon. It looks every ten minutes, not every tick.
+func (s *Scheduler) processSeries(ctx context.Context, now time.Time) {
+	if now.Sub(s.lastSeries) < seriesTick {
+		return
+	}
+	s.lastSeries = now
+	ids, err := s.Handler.Store.ActiveSeries(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "list event series failed", "err", err)
+		return
+	}
+	for _, id := range ids {
+		created, err := s.Handler.Store.GenerateSeries(ctx, id, now)
+		if err != nil {
+			slog.ErrorContext(ctx, "create event occurrences failed", "series_id", id, "err", err)
+			continue
+		}
+		s.broadcastEvents(ctx, created)
 	}
 }

@@ -83,13 +83,14 @@ func (h *Handler) finishRoster(w http.ResponseWriter, r *http.Request, id uuid.U
 }
 
 // @Summary Set the roles of an event
-// @Description Replaces the event's role list (at most 12; each with a name of up to 40 characters, an optional emoji and a capacity of 1 to 1000, or none for unlimited). A role sent with its id keeps its sign-ups; one that is left out is removed, which is refused with 409 while it has sign-ups (hand them over with DELETE .../roles/{roleID}?move_to=). A capacity below the number of confirmed members is refused with 409 naming how many to remove; a larger capacity moves the waitlist up. Allowed for the event's creator and for members with Manage events; not on a completed or cancelled event.
+// @Description Replaces the event's role list (at most 12; each with a name of up to 40 characters, an optional emoji and a capacity of 1 to 1000, or none for unlimited). A role sent with its id keeps its sign-ups; one that is left out is removed, which is refused with 409 while it has sign-ups (hand them over with DELETE .../roles/{roleID}?move_to=). A capacity below the number of confirmed members is refused with 409 naming how many to remove; a larger capacity moves the waitlist up. Allowed for the event's creator and for members with Manage events; not on a completed or cancelled event. The two steps of scope=following (this occurrence, then the series) are separate transactions: when the second fails the first stays. The event's creator, who needs no Manage events for this, can thereby change the roles of the whole future series.
 // @ID setCommunityEventRoles
 // @Tags Events
 // @Accept json
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Event ID" Format(uuid)
+// @Param scope query string false "this (default) or following: also the later occurrences of a series." Enums(this, following)
 // @Param body body SetRolesRequest true "The new role list, in order"
 // @Success 200 {object} CommunityEvent
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
@@ -109,11 +110,23 @@ func (h *Handler) setRoles(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	following, err := h.followingScope(r, ev)
+	if err != nil {
+		return err
+	}
 	promoted, err := h.Store.SetRoles(r.Context(), ev.ID, req.Roles)
 	if err != nil {
 		return err
 	}
-	h.auditRoster(r, ev, "roles_set", map[string]any{"roles": len(req.Roles)})
+	extra := map[string]any{"roles": len(req.Roles)}
+	if following {
+		updated, skipped, err := h.Store.SetSeriesRoles(r.Context(), ev, req.Roles)
+		if err != nil {
+			return err
+		}
+		extra["scope"], extra["occurrences_updated"], extra["occurrences_skipped"] = "following", updated, skipped
+	}
+	h.auditRoster(r, ev, "roles_set", extra)
 	return h.finishRoster(w, r, ev.ID, promoted)
 }
 

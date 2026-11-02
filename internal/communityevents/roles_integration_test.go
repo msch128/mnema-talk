@@ -129,6 +129,18 @@ func (f *rosterFixture) call(t *testing.T, u *auth.User, handler func(http.Respo
 	return rec, handler(rec, req)
 }
 
+// callQuery is call with a query string on the request.
+func (f *rosterFixture) callQuery(t *testing.T, u *auth.User, handler func(http.ResponseWriter, *http.Request) error, method, body, query string) (*httptest.ResponseRecorder, error) {
+	t.Helper()
+	req := httptest.NewRequest(method, "/?"+query, strings.NewReader(body))
+	rc := chi.NewRouteContext()
+	rc.URLParams.Add("id", f.event.ID.String())
+	ctx := auth.WithUser(req.Context(), u)
+	req = req.WithContext(context.WithValue(ctx, chi.RouteCtxKey, rc))
+	rec := httptest.NewRecorder()
+	return rec, handler(rec, req)
+}
+
 func TestTheLastSlotIsGivenOnce(t *testing.T) {
 	f := newRosterFixture(t)
 	roles := f.setRoles(t, role("Tank", 1))

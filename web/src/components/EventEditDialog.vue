@@ -13,6 +13,10 @@ import { draftsOf } from '../lib/eventRoleDrafts'
 import type { RoleDraft, RoleRemoval } from '../lib/eventRoleDrafts'
 import { useEventRoles } from '../composables/useEventRoles'
 import EventRolesEditor from './EventRolesEditor.vue'
+import EventRepeatFields from './EventRepeatFields.vue'
+import ScopeChoice from './ScopeChoice.vue'
+import { browserZone, untilIso } from '../lib/eventRecurrence'
+import type { Scope } from '../lib/eventRecurrence'
 
 const props = defineProps<{
   event?: CommunityEvent | null
@@ -66,6 +70,12 @@ const { save: saveRoles } = useEventRoles()
 const initialRoles = JSON.stringify(roleRows.value)
 const rolesTouched = computed(() => roleRemovals.value.length > 0 || JSON.stringify(roleRows.value) !== initialRoles)
 
+// A new event may repeat; an occurrence of a series may be changed for itself or for it and the later ones.
+const repeat = ref('')
+const repeatUntil = ref('')
+const scope = ref<Scope>('this')
+const inSeries = computed(() => !!existing.value?.series)
+
 const saving = ref(false)
 const error = ref('')
 
@@ -111,20 +121,50 @@ function validateForm(trimmedTitle: string): string | null {
 }
 
 function buildPayload(trimmedTitle: string) {
-  return {
+  const full = {
     title: trimmedTitle,
     description: description.value,
     start_time: new Date(startTime.value).toISOString(),
     end_time: endTime.value ? new Date(endTime.value).toISOString() : null,
     channel_id: locationType.value === 'talk' ? channelId.value : null,
-    location: locationType.value === 'text' ? locationText.value.trim() : null
+    location: locationType.value === 'text' ? locationText.value.trim() : null,
+    ...(!isEdit.value && features.eventRecurrence && repeat.value ? { recurrence: recurrence() } : {})
   }
+  return full
+}
+
+/** An edit names only what changed, so an untouched start or place cannot re-anchor a series. */
+function changedFields(full: ReturnType<typeof buildPayload>, current: CommunityEvent) {
+  const same = (a: string | null | undefined, b: string | null | undefined) => (a ? new Date(a).getTime() : null) === (b ? new Date(b).getTime() : null)
+  return {
+    ...(full.title !== current.title ? { title: full.title } : {}),
+    ...(full.description !== current.description ? { description: full.description } : {}),
+    ...(!same(full.start_time, current.start_time) ? { start_time: full.start_time } : {}),
+    ...(!same(full.end_time, current.end_time) ? { end_time: full.end_time } : {}),
+    ...((full.channel_id ?? null) !== (current.channel_id ?? null) || (full.location ?? null) !== (current.location ?? null) ? { channel_id: full.channel_id, location: full.location } : {})
+  }
+}
+
+function recurrence() {
+  const zone = browserZone()
+  const until = untilIso(repeatUntil.value)
+  return { frequency: repeat.value as 'weekly' | 'biweekly' | 'monthly', ...(zone ? { timezone: zone } : {}), ...(until ? { until } : {}) }
 }
 
 async function applyCover(id: string, current: CommunityEvent): Promise<CommunityEvent> {
   if (removeExistingCover.value) return eventsStore.deleteCover(id)
   if (coverFile.value) return eventsStore.uploadCover(id, coverFile.value)
   return current
+}
+
+function saveEvent(id: string, payload: ReturnType<typeof changedFields>) {
+  return inSeries.value ? eventsStore.update(id, payload, scope.value) : eventsStore.update(id, payload)
+}
+
+/** Roles chosen while creating a series are its template; an existing occurrence follows the scope. */
+function rolesScope(): Scope | undefined {
+  if (created.value?.series) return 'following'
+  return inSeries.value ? scope.value : undefined
 }
 
 async function submit() {
@@ -142,7 +182,7 @@ async function submit() {
     const current = existing.value
     let result: CommunityEvent
     if (current) {
-      result = await eventsStore.update(current.id, payload)
+      result = await saveEvent(current.id, changedFields(payload, current))
     } else {
       result = await eventsStore.create(payload)
       created.value = result
@@ -156,7 +196,7 @@ async function submit() {
     }
     if (features.eventRoles && rolesTouched.value) {
       try {
-        result = await saveRoles(result.id, roleRows.value, roleRemovals.value, state => { roleRows.value = state.rows; roleRemovals.value = state.removals })
+        result = await saveRoles(result.id, roleRows.value, roleRemovals.value, state => { roleRows.value = state.rows; roleRemovals.value = state.removals }, rolesScope())
         roleRemovals.value = []
       } catch (err) {
         // The event is saved; the roles are not. The next submit retries them.
@@ -243,6 +283,8 @@ async function submit() {
           />
         </div>
       </div>
+
+      <EventRepeatFields v-if="!isEdit && features.eventRecurrence" v-model:repeat="repeat" v-model:until="repeatUntil" />
 
       <!-- Location Type -->
       <div>
@@ -333,6 +375,8 @@ async function submit() {
       </div>
 
       <EventRolesEditor v-if="features.eventRoles" v-model="roleRows" v-model:removals="roleRemovals" />
+
+      <ScopeChoice v-if="isEdit && inSeries" v-model="scope" :hint="$t('events.scope.editHint')" />
 
       <!-- Actions -->
       <div class="mt-4 flex justify-end gap-3 border-t border-mnema-hairline pt-4">

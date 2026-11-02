@@ -114,6 +114,43 @@ describe('events store', () => {
     expect(store.events[0]?.status).toBe('cancelled')
   })
 
+  it('applies an edit or a cancellation to the following occurrences and reads the list once', async () => {
+    useServerFeaturesStore().list = ['events']
+    const store = useEventsStore()
+    const edited = makeEvent({ id: fixtureId(1), title: 'Renamed' })
+    apiMock.mockResolvedValueOnce(edited).mockResolvedValueOnce([edited])
+    await store.update(fixtureId(1), { title: 'Renamed' }, 'following')
+    expect(apiMock.mock.calls[0]?.[0]).toBe(`/api/events/${fixtureId(1)}?scope=following`)
+    expect(apiMock.mock.calls[1]?.[0]).toBe('/api/events')
+    expect(apiMock).toHaveBeenCalledTimes(2)
+
+    apiMock.mockReset()
+    apiMock.mockResolvedValueOnce(makeEvent({ id: fixtureId(1), status: 'cancelled' })).mockResolvedValueOnce([])
+    await store.cancel(fixtureId(1), 'following')
+    expect(apiMock.mock.calls[0]?.[0]).toBe(`/api/events/${fixtureId(1)}/cancel?scope=following`)
+    expect(apiMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not read the list again after a change of one occurrence', async () => {
+    const store = useEventsStore()
+    apiMock.mockResolvedValueOnce(makeEvent({ id: fixtureId(1) }))
+    await store.update(fixtureId(1), { title: 'x' }, 'this')
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    expect(apiMock.mock.calls[0]?.[0]).toBe(`/api/events/${fixtureId(1)}`)
+  })
+
+  it('sets the roles of the following occurrences and reads the list once', async () => {
+    useServerFeaturesStore().list = ['events']
+    const store = useEventsStore()
+    const ev = makeEvent({ id: fixtureId(1) })
+    const set = vi.mocked(rolesApi.setEventRoles).mockResolvedValue(ev)
+    apiMock.mockResolvedValueOnce([ev])
+    await store.setRoles(fixtureId(1), [{ name: 'Tank' }], 'following')
+    expect(set).toHaveBeenCalledWith(fixtureId(1), [{ name: 'Tank' }], 'following')
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    expect(apiMock.mock.calls[0]?.[0]).toBe('/api/events')
+  })
+
   it('sets and deletes RSVP', async () => {
     const initial = makeEvent({ id: fixtureId(1), my_rsvp: null })
     const withRsvp = makeEvent({ id: fixtureId(1), my_rsvp: 'going' })

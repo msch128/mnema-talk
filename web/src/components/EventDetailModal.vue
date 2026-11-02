@@ -18,6 +18,9 @@ import { useAuthStore } from '../stores/auth'
 import EventRoster from './EventRoster.vue'
 import EventComments from './EventComments.vue'
 import EventRolesDialog from './EventRolesDialog.vue'
+import EventCancelDialog from './EventCancelDialog.vue'
+import RepeatBadge from './RepeatBadge.vue'
+import type { Scope } from '../lib/eventRecurrence'
 import { locale, t } from '../i18n'
 
 const props = defineProps<{
@@ -37,6 +40,7 @@ const toast = useToastStore()
 const features = useServerFeaturesStore()
 const auth = useAuthStore()
 const editingRoles = ref(false)
+const cancelling = ref(false)
 
 // The creator and moderators change the roster.
 const canManageRoster = computed(() => permissions.can('manage_events') || (!!auth.user && currentEvent.value.created_by === auth.user.id))
@@ -129,6 +133,10 @@ async function setRSVP(response: 'going' | 'interested' | 'not_going') {
 }
 
 async function cancelEvent() {
+  if (currentEvent.value.series) {
+    cancelling.value = true
+    return
+  }
   const confirmed = await confirm({
     title: t('events.cancel'),
     body: t('events.cancelConfirm'),
@@ -137,12 +145,21 @@ async function cancelEvent() {
     danger: true
   })
   if (!confirmed) return
+  await runCancel()
+}
+
+async function runCancel(scope?: Scope) {
   try {
-    await eventsStore.cancel(currentEvent.value.id)
+    await (scope ? eventsStore.cancel(currentEvent.value.id, scope) : eventsStore.cancel(currentEvent.value.id))
     toast.success(t('events.cancelled'))
   } catch (err) {
     toast.error(caughtErrorMessage(err, t('events.cancelFailed')))
   }
+}
+
+async function confirmCancel(scope: Scope) {
+  cancelling.value = false
+  await runCancel(scope)
 }
 </script>
 
@@ -193,6 +210,8 @@ async function cancelEvent() {
           <span v-if="whenHint" class="text-mnema-tertiary">· {{ whenHint }}</span>
           <span v-if="currentEvent.end_time">- {{ formatDateTime(currentEvent.end_time) }}</span>
         </div>
+
+        <RepeatBadge :event="currentEvent" />
 
         <!-- Location -->
         <div v-if="talkChannel" class="flex items-center gap-1.5 text-sm text-mnema-accent font-medium">
@@ -319,6 +338,7 @@ async function cancelEvent() {
         </button>
       </div>
     </div>
+    <EventCancelDialog v-if="cancelling" @close="cancelling = false" @confirm="confirmCancel" />
     <EventRolesDialog v-if="editingRoles" :event="currentEvent" @close="editingRoles = false" />
   </BaseDialog>
 </template>

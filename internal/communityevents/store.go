@@ -35,6 +35,8 @@ type eventRow struct {
 	CreatedBy    *uuid.UUID `db:"created_by"`
 	CreatedAt    time.Time  `db:"created_at"`
 	UpdatedAt    time.Time  `db:"updated_at"`
+	SeriesID     *uuid.UUID `db:"series_id"`
+	SeriesIndex  *int       `db:"series_index"`
 }
 
 func (r eventRow) toEvent() *CommunityEvent {
@@ -45,7 +47,12 @@ func (r eventRow) toEvent() *CommunityEvent {
 			coverURL = &u
 		}
 	}
+	var series *SeriesInfo
+	if r.SeriesID != nil && r.SeriesIndex != nil {
+		series = &SeriesInfo{ID: *r.SeriesID, Index: *r.SeriesIndex}
+	}
 	return &CommunityEvent{
+		Series:      series,
 		ID:          r.ID,
 		Title:       r.Title,
 		Description: r.Description,
@@ -64,12 +71,12 @@ func (r eventRow) toEvent() *CommunityEvent {
 
 func ptrString(s string) *string { return &s }
 
-const eventColumns = `id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at`
+const eventColumns = `id, title, description, start_time, end_time, channel_id, location, cover_media_id, status, created_by, created_at, updated_at, series_id, series_index`
 
 // scanEvent reads one row selected with eventColumns.
 func scanEvent(row pgx.Row) (eventRow, error) {
 	var r eventRow
-	err := row.Scan(&r.ID, &r.Title, &r.Description, &r.StartTime, &r.EndTime, &r.ChannelID, &r.Location, &r.CoverMediaID, &r.Status, &r.CreatedBy, &r.CreatedAt, &r.UpdatedAt)
+	err := row.Scan(&r.ID, &r.Title, &r.Description, &r.StartTime, &r.EndTime, &r.ChannelID, &r.Location, &r.CoverMediaID, &r.Status, &r.CreatedBy, &r.CreatedAt, &r.UpdatedAt, &r.SeriesID, &r.SeriesIndex)
 	return r, err
 }
 

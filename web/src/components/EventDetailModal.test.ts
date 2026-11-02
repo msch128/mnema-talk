@@ -233,6 +233,37 @@ describe('EventDetailModal', () => {
       expect(useToastStore().toasts.some(t => t.type === 'success')).toBe(true)
     })
 
+    it('asks what to cancel for an occurrence of a series and cancels the following ones', async () => {
+      const store = useEventsStore()
+      vi.spyOn(store, 'listRSVPs').mockResolvedValue([])
+      const cancel = vi.spyOn(store, 'cancel').mockResolvedValue(makeEvent({ status: 'cancelled' }))
+      const series = { id: 's', frequency: 'weekly' as const, timezone: 'UTC', index: 2, ended: false }
+      wrapper = mount(EventDetailModal, { props: { event: makeEvent({ series }) }, attachTo: document.body })
+      expect(wrapper.text()).toContain('Repeats every week')
+      await button('Cancel event')?.trigger('click')
+      expect(pendingConfirm.value).toBeNull()
+      const dialog = document.body.querySelector('[data-testid="cancel-confirm"]')
+      expect(dialog).not.toBeNull()
+      ;(document.body.querySelector('[data-testid="scope-following"]') as HTMLInputElement).click()
+      ;(dialog as HTMLButtonElement).click()
+      await flushPromises()
+      expect(cancel).toHaveBeenCalledWith(fixtureId(1), 'following')
+      expect(document.body.querySelector('[data-testid="cancel-confirm"]')).toBeNull()
+    })
+
+    it('keeps the event when the member backs out of the series question', async () => {
+      const store = useEventsStore()
+      vi.spyOn(store, 'listRSVPs').mockResolvedValue([])
+      const cancel = vi.spyOn(store, 'cancel')
+      const series = { id: 's', frequency: 'monthly' as const, timezone: 'UTC', index: 0, ended: false }
+      wrapper = mount(EventDetailModal, { props: { event: makeEvent({ series }) }, attachTo: document.body })
+      await button('Cancel event')?.trigger('click')
+      const keep = Array.from(document.body.querySelectorAll('button')).find(b => b.textContent === 'Keep event')
+      keep?.click()
+      await flushPromises()
+      expect(cancel).not.toHaveBeenCalled()
+    })
+
     it('does nothing when the confirmation is declined', async () => {
       const store = useEventsStore()
       vi.spyOn(store, 'listRSVPs').mockResolvedValue([])

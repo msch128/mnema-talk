@@ -22,8 +22,9 @@ export function fetchEvent(id: string): Promise<CommunityEvent> {
 }
 
 /** Replaces the roles of an event, in this order; a role with an id keeps its sign-ups. */
-export function setEventRoles(id: string, roles: RoleInput[]): Promise<CommunityEvent> {
-  return api(`${eventPath(id)}/roles`, { method: 'PUT', json: { roles }, decode: decodeCommunityeventsCommunityEvent })
+export function setEventRoles(id: string, roles: RoleInput[], scope?: 'this' | 'following'): Promise<CommunityEvent> {
+  const query = scope === 'following' ? '?scope=following' : ''
+  return api(`${eventPath(id)}/roles${query}`, { method: 'PUT', json: { roles }, decode: decodeCommunityeventsCommunityEvent })
 }
 
 /** Removes a role; moveTo takes its sign-ups over (needed when it has any). */

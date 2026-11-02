@@ -177,7 +177,7 @@ func (h *Handler) listQuery(r *http.Request) (ListQuery, error) {
 }
 
 // @Summary Create a community event
-// @Description Creates an event. Requires ManageEvents permission. Location must be either a Talk voice channel or free text.
+// @Description Creates an event. With recurrence the event is the first occurrence of a series that repeats weekly, every two weeks or monthly (at the same wall-clock time in the given time zone; the later occurrences are created up to 60 days ahead and then by the server as time passes, at most 200 and not past until). Requires ManageEvents permission. Location must be either a Talk voice channel or free text.
 // @ID createCommunityEvent
 // @Tags Events
 // @Accept json
@@ -201,7 +201,7 @@ func (h *Handler) createEvent(w http.ResponseWriter, r *http.Request) error {
 	if err := h.validateEventPayload(r, req.Title, req.Description, req.StartTime, req.EndTime, req.ChannelID, req.Location); err != nil {
 		return err
 	}
-	ev, err := h.Store.Create(r.Context(), req, user.ID)
+	ev, err := h.createOrStartSeries(r, req, user.ID)
 	if err != nil {
 		return err
 	}
@@ -246,6 +246,7 @@ func (h *Handler) getEvent(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Event ID" Format(uuid)
+// @Param scope query string false "this (default) or following: with following, an occurrence of a series and every later open occurrence take the edit and the series' template changes with it (a new start_time becomes the series' new anchor; occurrences before it stay)." Enums(this, following)
 // @Param body body UpdateEventRequest true "Event update request"
 // @Success 200 {object} CommunityEvent
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
@@ -273,6 +274,10 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	req.normalize()
+	following, err := h.followingScope(r, ev)
+	if err != nil {
+		return err
+	}
 	cancelling, err := statusRequest(ev, req.Status)
 	if err != nil {
 		return err
@@ -280,6 +285,9 @@ func (h *Handler) updateEvent(w http.ResponseWriter, r *http.Request) error {
 	m := mergeUpdate(ev, req)
 	if err := h.validateEventPayload(r, m.title, m.desc, m.start, m.end, m.channel, m.location); err != nil {
 		return err
+	}
+	if following {
+		return h.updateFollowing(w, r, ev, req, cancelling)
 	}
 	updated, err := h.applyUpdate(r, ev, req, cancelling)
 	if err != nil {
@@ -345,6 +353,7 @@ func (h *Handler) applyEdit(r *http.Request, ev *CommunityEvent, req UpdateEvent
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Event ID" Format(uuid)
+// @Param scope query string false "this (default) or following: cancel an occurrence of a series and every later open occurrence and end the series there." Enums(this, following)
 // @Success 200 {object} CommunityEvent
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
@@ -364,6 +373,13 @@ func (h *Handler) cancelEvent(w http.ResponseWriter, r *http.Request) error {
 	}
 	if err := h.requireViewable(r, current); err != nil {
 		return err
+	}
+	following, err := h.followingScope(r, current)
+	if err != nil {
+		return err
+	}
+	if following {
+		return h.cancelFollowing(w, r, current)
 	}
 	ev, err := h.Store.Cancel(r.Context(), id)
 	if err != nil {

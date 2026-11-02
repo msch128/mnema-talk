@@ -43,6 +43,25 @@ describe('EventRolesDialog', () => {
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
 
+  it('asks what the roles apply to for an occurrence of a series and sends the choice', async () => {
+    const store = useEventsStore()
+    const setRoles = vi.spyOn(store, 'setRoles').mockResolvedValue(eventWithRoles())
+    const series = { id: 's', frequency: 'weekly' as const, timezone: 'UTC', index: 1, ended: false }
+    const event = mountDialog(eventWithRoles({ series, roles: [roleFixture(1, { name: 'Tank' })] }))
+    await flushPromises()
+    expect(wrapper.find('[data-testid="scope-choice"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="scope-following"]').setValue(true)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(setRoles).toHaveBeenCalledWith(event.id, [{ id: roleFixture(1).id, name: 'Tank' }], 'following')
+  })
+
+  it('does not ask for a single event', async () => {
+    mountDialog()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="scope-choice"]').exists()).toBe(false)
+  })
+
   it('hands the members of a removed role over first', async () => {
     const store = useEventsStore()
     const order: string[] = []
