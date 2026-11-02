@@ -1,0 +1,19 @@
+internal/server/vanity_link_integration_test.go
+  s_6f62c78e3c93c5::t_813b51c6ffc035 245-258
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e71d7f2cf2d24bca79d9ed52f0b9bf80253b62d4",
+  "prompts": {},
+  "sessions": {
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
