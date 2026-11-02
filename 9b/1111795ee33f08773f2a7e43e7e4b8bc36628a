@@ -1,0 +1,23 @@
+e2e/tests/event-recurrence.spec.ts
+  s_61e7f03250bd0b::t_9d664ad4a8a2fb 32
+e2e/tests/event-roles.spec.ts
+  s_61e7f03250bd0b::t_cc70b7e0ef3031 60
+internal/push/callkind_test.go
+  s_61e7f03250bd0b::t_5ffb0978c844d8 1-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9b1111795ee33f08773f2a7e43e7e4b8bc36628a",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
