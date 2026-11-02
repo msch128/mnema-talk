@@ -1,0 +1,91 @@
+api/openapi.json
+  s_4c6a19030e223f::t_9502b57f309113 4845-4855,4859-4865,4937-4977,5032-5193,29395,29397-29398,29405,29419,29425-29426,29431,29435,29443,29468-29777,29830-30154,30158-30163,30180,30184,30236,30244,30250-30253,30264-30282,30296-30305,30334,30342,30348,30350-30351,30391,30396-30398,30413,30415,30419,30443,30451,30453,30461-30492,30496-30499,30503,30505,30513,30521,30527,30529-30530,30570,30576-30577,30594,30598,30640,30648,30654-30657,30668-30677,30685,30691-30700,30710-30719,30727
+internal/auth/account_erase.go
+  s_6f62c78e3c93c5::t_265e59ec143c5a 73
+internal/auth/account_export_build.go
+  s_6f62c78e3c93c5::t_668c5a116f0791 78,200
+internal/auth/account_export_events.go
+  s_6f62c78e3c93c5::t_c59c9902f84466 22-34
+internal/communityevents/handler.go
+  s_6f62c78e3c93c5::t_08adf93cedde38 6,31-33,45,87-88
+internal/communityevents/handler_roles.go
+  s_6f62c78e3c93c5::t_8091527c993571 1-170
+internal/communityevents/handler_signup.go
+  s_4c6a19030e223f::t_3e754899164032 1-98
+internal/communityevents/handler_templates.go
+  s_4c6a19030e223f::t_0342d78f2e1341 1-151
+internal/communityevents/model.go
+  s_4c6a19030e223f::t_58ac476af2a1a4 54-59
+internal/communityevents/model_roles.go
+  s_4c6a19030e223f::t_5268bcd5d7f461 1-93
+internal/communityevents/notify.go
+  s_6f62c78e3c93c5::t_5feabd14da70d6 1-104
+internal/communityevents/roles_integration_test.go
+  s_17ef7810e0243d::t_17ead6db27d22f 1-605
+internal/communityevents/scheduler.go
+  s_17ef7810e0243d::t_bdb203669aa1f2 73,195,206-230
+internal/communityevents/store.go
+  s_4c6a19030e223f::t_72bde9e319acab 117-119
+internal/communityevents/store_list.go
+  s_4c6a19030e223f::t_3e108e16967ce2 138-140
+internal/communityevents/store_roles.go
+  s_4c6a19030e223f::t_51bda2f6fe9996 1-375
+internal/communityevents/store_roster_read.go
+  s_4c6a19030e223f::t_659a7c5a6da8a7 1-94
+internal/communityevents/store_signup.go
+  s_17ef7810e0243d::t_79d61bdd97abea 1-208
+internal/communityevents/store_templates.go
+  s_4c6a19030e223f::t_4845a7cde9821c 1-150
+internal/db/migrations/0086_event_roles.sql
+  s_4c6a19030e223f::t_adcd44746ed1a7 1-49
+internal/events/testdata/events.golden.json
+  s_4c6a19030e223f::t_402f4866339029 62
+internal/events/types.go
+  s_4c6a19030e223f::t_fab6c1df12346b 91-93
+internal/push/event_reminder.go
+  s_17ef7810e0243d::t_1ea9b4fb35bf14 22,79-94
+internal/push/event_signup.go
+  s_17ef7810e0243d::t_1a90d060eedb60 1-50
+internal/push/locales/texts.json
+  s_17ef7810e0243d::t_9c79f0d3fb58ae 19-20,43-44
+internal/repo/testdata/error_messages.golden.json
+  s_4c6a19030e223f::t_67a0c2ec4502c5 53-54,57,70,102,218,222,272-273,277,296,311,388-389,423-425,437,452-453,455,493
+internal/server/events_roles_integration_test.go
+  s_17ef7810e0243d::t_6ed407058269ac 1-57
+internal/server/health.go
+  s_17ef7810e0243d::t_fcbde19f9c18e3 71
+web/src/types/rest.ts
+  s_4c6a19030e223f::t_eef790e7126153 2864-2865,2867,2886-2887,2889,2919-2941,2983-3087
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "06e838757da46e4dd44231addcc88cd9d0b4b84b",
+  "prompts": {},
+  "sessions": {
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6f62c78e3c93c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aserver-community-icon-172addf752c84f0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
