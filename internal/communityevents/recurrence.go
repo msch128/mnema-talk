@@ -27,6 +27,9 @@ func LoadZone(name string) (*time.Location, error) {
 	if name == "" {
 		return time.UTC, nil
 	}
+	if name == "Local" { // the server's own zone is no choice of the member
+		return nil, httpx.ErrInvalidInput("timezone must be an IANA time zone name such as Europe/Berlin")
+	}
 	loc, err := time.LoadLocation(name)
 	if err != nil || len(name) > 64 {
 		return nil, httpx.ErrInvalidInput("timezone must be an IANA time zone name such as Europe/Berlin")

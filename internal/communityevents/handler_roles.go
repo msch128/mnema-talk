@@ -83,7 +83,7 @@ func (h *Handler) finishRoster(w http.ResponseWriter, r *http.Request, id uuid.U
 }
 
 // @Summary Set the roles of an event
-// @Description Replaces the event's role list (at most 12; each with a name of up to 40 characters, an optional emoji and a capacity of 1 to 1000, or none for unlimited). A role sent with its id keeps its sign-ups; one that is left out is removed, which is refused with 409 while it has sign-ups (hand them over with DELETE .../roles/{roleID}?move_to=). A capacity below the number of confirmed members is refused with 409 naming how many to remove; a larger capacity moves the waitlist up. Allowed for the event's creator and for members with Manage events; not on a completed or cancelled event.
+// @Description Replaces the event's role list (at most 12; each with a name of up to 40 characters, an optional emoji and a capacity of 1 to 1000, or none for unlimited). A role sent with its id keeps its sign-ups; one that is left out is removed, which is refused with 409 while it has sign-ups (hand them over with DELETE .../roles/{roleID}?move_to=). A capacity below the number of confirmed members is refused with 409 naming how many to remove; a larger capacity moves the waitlist up. Allowed for the event's creator and for members with Manage events; not on a completed or cancelled event. The two steps of scope=following (this occurrence, then the series) are separate transactions: when the second fails the first stays. The event's creator, who needs no Manage events for this, can thereby change the roles of the whole future series.
 // @ID setCommunityEventRoles
 // @Tags Events
 // @Accept json

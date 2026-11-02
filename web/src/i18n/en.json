@@ -3646,7 +3646,7 @@
       "weekly": "Repeats every week",
       "biweekly": "Repeats every two weeks",
       "monthly": "Repeats every month",
-      "ended": "series over"
+      "ended": "Series over"
     },
     "scope": {
       "title": "This is part of a series",

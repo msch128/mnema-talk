@@ -80,6 +80,7 @@ func (h *Handler) updateFollowing(w http.ResponseWriter, r *http.Request, ev *Co
 	if cancelling {
 		return h.cancelFollowing(w, r, ev)
 	}
+	req = withoutUnchanged(ev, req)
 	if !req.changesFields() {
 		httpx.WriteJSON(w, http.StatusOK, ev)
 		return nil

@@ -440,3 +440,78 @@ func TestMovingAFollowingOccurrenceMovesItsCoverAlong(t *testing.T) {
 		t.Fatalf("the cover follows the occurrence to its Talk: %v %v", channel, err)
 	}
 }
+
+// A form that always sends the start must not re-anchor a series: a monthly series on the 31st, edited at its clamped February occurrence, stays on the 31st.
+func TestAFollowingEditWithTheStartUnchangedKeepsTheAnchor(t *testing.T) {
+	f := newRosterFixture(t)
+	ctx := context.Background()
+	jan31 := time.Date(2030, 1, 31, 12, 0, 0, 0, time.UTC)
+	ev, seriesID, err := f.s.CreateSeries(ctx, CreateEventRequest{Title: "Monthly", StartTime: jan31, Location: ptr("Hall")}, RecurrenceRequest{Frequency: FreqMonthly}, f.creator.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.s.GenerateSeries(ctx, seriesID, time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	list := f.occurrences(t, seriesID)
+	if len(list) != 2 || list[1].Start.Day() != 28 {
+		t.Fatalf("january and the clamped february: %+v", list)
+	}
+	f.event = &CommunityEvent{ID: list[1].ID}
+	body := fmt.Sprintf(`{"title":"Monthly II","start_time":%q}`, list[1].Start.Format(time.RFC3339))
+	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, body, "scope=following"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.s.GenerateSeries(ctx, seriesID, time.Date(2030, 3, 1, 0, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	got := f.occurrences(t, seriesID)
+	if len(got) < 3 || got[2].Start.Day() != 31 || got[2].Title != "Monthly II" {
+		t.Fatalf("march is still the 31st and carries the new title: %+v", got)
+	}
+	_ = ev
+}
+
+// What was changed by hand on one occurrence survives an edit that does not touch it.
+func TestAFollowingEditLeavesIndividuallyChangedFieldsAlone(t *testing.T) {
+	f := newRosterFixture(t)
+	first := f.startSeries(t, weeklyBody)
+	list := f.occurrences(t, first.Series.ID)
+	f.event = &CommunityEvent{ID: list[2].ID}
+	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, `{"title":"Special","location":"Rooftop"}`, ""); err != nil {
+		t.Fatal(err)
+	}
+	f.event = &CommunityEvent{ID: list[1].ID}
+	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, `{"description":"for everyone"}`, "scope=following"); err != nil {
+		t.Fatal(err)
+	}
+	special, _ := f.s.Get(context.Background(), list[2].ID, nil)
+	if special.Title != "Special" || special.Location == nil || *special.Location != "Rooftop" || special.Description != "for everyone" {
+		t.Fatalf("the hand-made title and place stay, the description follows: %+v", special)
+	}
+	if !special.StartTime.Equal(list[2].Start) {
+		t.Fatal("and so does the time")
+	}
+}
+
+func TestCancellingNothingDoesNotEndTheSeries(t *testing.T) {
+	f := newRosterFixture(t)
+	first := f.startSeries(t, weeklyBody)
+	list := f.occurrences(t, first.Series.ID)
+	ctx := context.Background()
+	if _, err := f.p.Exec(ctx, `UPDATE events SET status = 'completed' WHERE series_id = $1 AND series_index >= 3`, first.Series.ID); err != nil {
+		t.Fatal(err)
+	}
+	ids, err := f.s.CancelFollowing(ctx, &CommunityEvent{ID: list[3].ID, Series: &SeriesInfo{ID: first.Series.ID, Index: 3}})
+	if err != nil || len(ids) != 0 {
+		t.Fatalf("nothing was open: %v %v", ids, err)
+	}
+	var status string
+	if err := f.p.QueryRow(ctx, `SELECT status FROM event_series WHERE id = $1`, first.Series.ID).Scan(&status); err != nil || status != "active" {
+		t.Fatalf("the series goes on: %q %v", status, err)
+	}
+	f.event = &CommunityEvent{ID: list[3].ID}
+	if _, err := f.callQuery(t, f.owner, f.h.cancelEvent, http.MethodPost, ``, "scope=following"); err == nil {
+		t.Fatal("the handler answers with a conflict")
+	}
+}

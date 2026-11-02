@@ -163,17 +163,30 @@ describe('EventEditDialog', () => {
     expect(wrapper.find('img').exists()).toBe(false)
   })
 
-  it('prefills an existing event and saves changes', async () => {
+  it('prefills an existing event and saves only what changed', async () => {
     const existing = makeEvent({ location: 'Room 1', end_time: '2026-11-01T20:00:00Z' })
     const store = useEventsStore()
     const update = vi.spyOn(store, 'update').mockResolvedValue(existing)
     wrapper = mount(EventEditDialog, { props: { event: existing } })
     expect((titleInput()?.element as HTMLInputElement).value).toBe('Game Night')
     expect((wrapper.find('textarea').element as HTMLTextAreaElement).value).toBe('Playing games')
+    await titleInput()?.setValue('Game Night II')
     await submit()
-    expect(update).toHaveBeenCalledWith(fixtureId(1), expect.objectContaining({ title: 'Game Night', location: 'Room 1' }))
+    expect(update).toHaveBeenCalledWith(fixtureId(1), { title: 'Game Night II' })
     expect(useToastStore().toasts.some(t => t.text === 'Event updated')).toBe(true)
     expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('names the place together when either part of it changed, and sends nothing for an untouched form', async () => {
+    const existing = makeEvent({ location: 'Room 1' })
+    const store = useEventsStore()
+    const update = vi.spyOn(store, 'update').mockResolvedValue(existing)
+    wrapper = mount(EventEditDialog, { props: { event: existing } })
+    await submit()
+    expect(update).toHaveBeenCalledWith(fixtureId(1), {})
+    await wrapper.find('input[data-max-chars="255"]').setValue('Room 2')
+    await submit()
+    expect(update).toHaveBeenLastCalledWith(fixtureId(1), { channel_id: null, location: 'Room 2' })
   })
 
   it('prefills the Talk of an existing event', () => {
@@ -248,7 +261,8 @@ describe('EventEditDialog', () => {
 
     await submit()
     expect(create).toHaveBeenCalledTimes(1)
-    expect(update).toHaveBeenCalledWith(created.id, expect.objectContaining({ title: 'Party' }))
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(update.mock.calls[0]![0]).toBe(created.id)
     expect(upload).toHaveBeenCalledTimes(2)
     expect(wrapper.emitted('saved')).toHaveLength(1)
     expect(wrapper.emitted('close')).toHaveLength(1)
@@ -395,6 +409,22 @@ describe('EventEditDialog', () => {
       expect(payload.recurrence?.frequency).toBe('weekly')
       expect(payload.recurrence?.timezone).toBeTruthy()
       expect(new Date(payload.recurrence!.until!).getDate()).toBe(31)
+    })
+
+    it('gives the roles chosen while creating a repeating event to the whole series', async () => {
+      useServerFeaturesStore().list = ['events', 'events.recurrence', 'events.roles']
+      const store = useEventsStore()
+      const series = { id: 's', frequency: 'weekly' as const, timezone: 'UTC', index: 0, ended: false }
+      const created = makeEvent({ id: fixtureId(8), series })
+      vi.spyOn(store, 'create').mockResolvedValue(created)
+      const setRoles = vi.spyOn(store, 'setRoles').mockResolvedValue(created)
+      wrapper = mount(EventEditDialog)
+      await fillBasics()
+      await wrapper.get('[data-testid="event-repeat-select"]').setValue('weekly')
+      await wrapper.get('[data-testid="event-role-add"]').trigger('click')
+      await wrapper.get('[data-testid="event-role-name"]').setValue('Tank')
+      await submit()
+      expect(setRoles).toHaveBeenCalledWith(fixtureId(8), [{ name: 'Tank' }], 'following')
     })
 
     it('sends no recurrence for an event that does not repeat', async () => {

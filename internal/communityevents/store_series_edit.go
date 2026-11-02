@@ -3,6 +3,7 @@ package communityevents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -40,6 +41,7 @@ type followingEvent struct {
 // and wall-clock time zone. Without a new start each occurrence keeps its own.
 // The occurrences before ev are not touched. It returns the changed events.
 func (s *Store) UpdateFollowing(ctx context.Context, ev *CommunityEvent, req UpdateEventRequest) ([]uuid.UUID, error) {
+	req = withoutUnchanged(ev, req)
 	var changed []uuid.UUID
 	err := s.inTx(ctx, func(tx pgx.Tx) error {
 		r, err := lockSeries(ctx, tx, ev.Series.ID)
@@ -106,30 +108,69 @@ func saveTemplate(ctx context.Context, tx pgx.Tx, r seriesRow) error {
 	return err
 }
 
-// rewriteOccurrence writes the series' template into one occurrence, at start.
+// rewriteOccurrence writes into one occurrence what the edit changed and
+// nothing else: an occurrence that was renamed, moved to another place or to
+// another time by hand keeps that unless this edit touches the same field.
 func rewriteOccurrence(ctx context.Context, tx pgx.Tx, r seriesRow, f followingEvent, start time.Time, req UpdateEventRequest) error {
 	var end *time.Time
 	if r.Duration != nil {
 		e := start.Add(time.Duration(*r.Duration) * time.Second)
 		end = &e
 	}
+	timeChanged := req.StartTime != nil || req.EndTime != nil || req.ClearEndTime
+	placeChanged := req.ChannelID != nil || req.Location != nil
 	_, err := tx.Exec(ctx, `
-		UPDATE events SET title = $2, description = $3, start_time = $4, end_time = $5, channel_id = $6, location = $7,
-		       reminder_sent_at = CASE WHEN start_time = $4 THEN reminder_sent_at ELSE NULL END,
-		       status = CASE WHEN $4::timestamptz > NOW() THEN 'scheduled'
+		UPDATE events SET
+		       title = CASE WHEN $8 THEN $2 ELSE title END,
+		       description = CASE WHEN $9 THEN $3 ELSE description END,
+		       channel_id = CASE WHEN $10 THEN $6::uuid ELSE channel_id END,
+		       location = CASE WHEN $10 THEN $7::text ELSE location END,
+		       start_time = CASE WHEN $11 THEN $4::timestamptz ELSE start_time END,
+		       end_time = CASE WHEN $11 THEN $5::timestamptz ELSE end_time END,
+		       reminder_sent_at = CASE WHEN $11 AND start_time <> $4::timestamptz THEN NULL ELSE reminder_sent_at END,
+		       status = CASE WHEN NOT $11 THEN status
+		                     WHEN $4::timestamptz > NOW() THEN 'scheduled'
 		                     WHEN COALESCE($5::timestamptz, $4::timestamptz + `+defaultEventDuration+`) <= NOW() THEN 'completed'
 		                     ELSE 'active' END,
 		       updated_at = NOW()
-		WHERE id = $1`, f.ID, r.Title, r.Description, start, end, r.ChannelID, r.Location)
+		WHERE id = $1`, f.ID, r.Title, r.Description, start, end, r.ChannelID, r.Location,
+		req.Title != nil, req.Description != nil, placeChanged, timeChanged)
 	if err != nil {
 		return fmt.Errorf("update occurrence: %w", err)
 	}
-	if f.Cover != nil && (req.ChannelID != nil || req.Location != nil) {
+	if f.Cover != nil && placeChanged {
 		if _, err := tx.Exec(ctx, `UPDATE media SET channel_id = $2 WHERE id = $1`, f.Cover, r.ChannelID); err != nil {
 			return fmt.Errorf("move occurrence cover: %w", err)
 		}
 	}
 	return nil
+}
+
+// withoutUnchanged drops the fields of an edit that name what the occurrence
+// already has (a form that always sends its start must not re-anchor the series).
+func withoutUnchanged(ev *CommunityEvent, req UpdateEventRequest) UpdateEventRequest {
+	if req.StartTime != nil && req.StartTime.Equal(ev.StartTime) {
+		req.StartTime = nil
+	}
+	if req.EndTime != nil && ev.EndTime != nil && req.EndTime.Equal(*ev.EndTime) {
+		req.EndTime = nil
+	}
+	if req.ClearEndTime && ev.EndTime == nil {
+		req.ClearEndTime = false
+	}
+	if req.ChannelID != nil && ev.ChannelID != nil && *req.ChannelID == *ev.ChannelID {
+		req.ChannelID = nil
+	}
+	if req.Location != nil && ev.Location != nil && *req.Location == *ev.Location {
+		req.Location = nil
+	}
+	if req.Title != nil && *req.Title == ev.Title {
+		req.Title = nil
+	}
+	if req.Description != nil && *req.Description == ev.Description {
+		req.Description = nil
+	}
+	return req
 }
 
 // CancelFollowing cancels occurrence ev and every open occurrence after it and
@@ -152,11 +193,20 @@ func (s *Store) CancelFollowing(ctx context.Context, ev *CommunityEvent) ([]uuid
 		if cancelled, err = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID]); err != nil {
 			return err
 		}
+		if len(cancelled) == 0 {
+			return errNothingOpen // roll back: the series is not ended by a cancellation that cancelled nothing
+		}
 		_, err = tx.Exec(ctx, `UPDATE event_series SET end_index = $2, status = 'ended' WHERE id = $1`, r.ID, ev.Series.Index-1)
 		return err
 	})
+	if errors.Is(err, errNothingOpen) {
+		return nil, nil
+	}
 	return cancelled, err
 }
+
+// errNothingOpen is the sentinel that rolls back a cancellation with nothing to cancel.
+var errNothingOpen = errors.New("no open occurrence")
 
 // SetSeriesRoles makes the role list the series' template, so occurrences
 // created later start with it, and gives it to the open occurrences after ev

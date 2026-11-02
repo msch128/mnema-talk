@@ -121,7 +121,7 @@ function validateForm(trimmedTitle: string): string | null {
 }
 
 function buildPayload(trimmedTitle: string) {
-  return {
+  const full = {
     title: trimmedTitle,
     description: description.value,
     start_time: new Date(startTime.value).toISOString(),
@@ -129,6 +129,20 @@ function buildPayload(trimmedTitle: string) {
     channel_id: locationType.value === 'talk' ? channelId.value : null,
     location: locationType.value === 'text' ? locationText.value.trim() : null,
     ...(!isEdit.value && features.eventRecurrence && repeat.value ? { recurrence: recurrence() } : {})
+  }
+  return full
+}
+
+/** An edit names only what changed: a start or place that was not touched must not re-anchor a series or move occurrences that were moved by hand. */
+function changedFields(full: ReturnType<typeof buildPayload>, current: CommunityEvent) {
+  const same = (a: string | null | undefined, b: string | null | undefined) => (a ? new Date(a).getTime() : null) === (b ? new Date(b).getTime() : null)
+  const placeSame = (full.channel_id ?? null) === (current.channel_id ?? null) && (full.location ?? null) === (current.location ?? null)
+  return {
+    ...(full.title !== current.title ? { title: full.title } : {}),
+    ...(full.description !== current.description ? { description: full.description } : {}),
+    ...(!same(full.start_time, current.start_time) ? { start_time: full.start_time } : {}),
+    ...(!same(full.end_time, current.end_time) ? { end_time: full.end_time } : {}),
+    ...(!placeSame ? { channel_id: full.channel_id, location: full.location } : {})
   }
 }
 
@@ -145,8 +159,14 @@ async function applyCover(id: string, current: CommunityEvent): Promise<Communit
 }
 
 /** An occurrence of a series is saved for itself or for it and the following ones; any other event just is. */
-function saveEvent(id: string, payload: ReturnType<typeof buildPayload>) {
+function saveEvent(id: string, payload: ReturnType<typeof changedFields>) {
   return inSeries.value ? eventsStore.update(id, payload, scope.value) : eventsStore.update(id, payload)
+}
+
+/** The roles of a series that was just created are the series' template; those of an existing occurrence follow the scope chosen. */
+function rolesScope(): Scope | undefined {
+  if (created.value?.series) return 'following'
+  return inSeries.value ? scope.value : undefined
 }
 
 async function submit() {
@@ -164,7 +184,7 @@ async function submit() {
     const current = existing.value
     let result: CommunityEvent
     if (current) {
-      result = await saveEvent(current.id, payload)
+      result = await saveEvent(current.id, changedFields(payload, current))
     } else {
       result = await eventsStore.create(payload)
       created.value = result
@@ -178,7 +198,7 @@ async function submit() {
     }
     if (features.eventRoles && rolesTouched.value) {
       try {
-        result = await saveRoles(result.id, roleRows.value, roleRemovals.value, state => { roleRows.value = state.rows; roleRemovals.value = state.removals }, inSeries.value ? scope.value : undefined)
+        result = await saveRoles(result.id, roleRows.value, roleRemovals.value, state => { roleRows.value = state.rows; roleRemovals.value = state.removals }, rolesScope())
         roleRemovals.value = []
       } catch (err) {
         // The event is saved; the roles are not. The next submit retries them.
