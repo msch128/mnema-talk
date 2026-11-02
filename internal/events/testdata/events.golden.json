@@ -59,6 +59,7 @@
     "EventUpdate": "event_update",
     "EventDelete": "event_delete",
     "EventReminder": "event_reminder",
+    "EventSignupNotice": "event_signup_notice",
     "CommunityUpdated": "community_updated"
   },
   "client": {

@@ -114,6 +114,9 @@ func (s *Store) Get(ctx context.Context, id uuid.UUID, callerID *uuid.UUID) (*Co
 	if err := s.fillRSVPsBatch(ctx, []*CommunityEvent{ev}, callerID); err != nil {
 		return nil, err
 	}
+	if err := s.fillSignups(ctx, ev); err != nil {
+		return nil, err
+	}
 	return ev, nil
 }
 

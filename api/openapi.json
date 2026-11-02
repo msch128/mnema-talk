@@ -4842,8 +4842,26 @@
               "null"
             ]
           },
+          "my_signup": {
+            "$ref": "#/components/schemas/communityevents.Signup",
+            "description": "MySignup is the caller's own sign-up for a role; the answer to a request, never broadcast."
+          },
+          "roles": {
+            "description": "Roles are the event's roles with their sign-up counts (in position order).",
+            "items": {
+              "$ref": "#/components/schemas/communityevents.EventRole"
+            },
+            "type": "array"
+          },
           "rsvp_counts": {
             "$ref": "#/components/schemas/communityevents.RSVPCounts"
+          },
+          "signups": {
+            "description": "Signups lists who is signed up for which role (event details only).",
+            "items": {
+              "$ref": "#/components/schemas/communityevents.SignupItem"
+            },
+            "type": "array"
           },
           "start_time": {
             "format": "date-time",
@@ -4916,6 +4934,47 @@
         ],
         "type": "object"
       },
+      "communityevents.EventRole": {
+        "properties": {
+          "capacity": {
+            "maximum": 1000,
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "confirmed": {
+            "type": "integer"
+          },
+          "emoji": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "position": {
+            "type": "integer"
+          },
+          "waitlist": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "confirmed",
+          "id",
+          "name",
+          "position",
+          "waitlist"
+        ],
+        "type": "object"
+      },
       "communityevents.RSVPCounts": {
         "properties": {
           "going": {
@@ -4967,6 +5026,168 @@
         },
         "required": [
           "response"
+        ],
+        "type": "object"
+      },
+      "communityevents.RoleInput": {
+        "properties": {
+          "capacity": {
+            "maximum": 1000,
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "emoji": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "maxLength": 40,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "communityevents.RoleTemplate": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 60,
+            "type": "string"
+          },
+          "preset": {
+            "description": "Preset marks a template that ships with the server; it can be enabled and disabled, not deleted.",
+            "type": "boolean"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/communityevents.RoleInput"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "id",
+          "name",
+          "preset",
+          "roles"
+        ],
+        "type": "object"
+      },
+      "communityevents.RoleTemplateRequest": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 60,
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/communityevents.RoleInput"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "communityevents.SetRolesRequest": {
+        "properties": {
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/communityevents.RoleInput"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "roles"
+        ],
+        "type": "object"
+      },
+      "communityevents.Signup": {
+        "properties": {
+          "role_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "confirmed",
+              "waitlist"
+            ],
+            "type": "string"
+          },
+          "waitlist_position": {
+            "description": "WaitlistPosition is the place in the role's waitlist (1 is next); 0 when confirmed.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "role_id",
+          "state",
+          "waitlist_position"
+        ],
+        "type": "object"
+      },
+      "communityevents.SignupItem": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "role_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "confirmed",
+              "waitlist"
+            ],
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/communityevents.UserRef"
+          }
+        },
+        "required": [
+          "created_at",
+          "role_id",
+          "state",
+          "user"
+        ],
+        "type": "object"
+      },
+      "communityevents.SignupRequest": {
+        "properties": {
+          "role_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role_id"
         ],
         "type": "object"
       },
@@ -29171,6 +29392,252 @@
         ]
       }
     },
+    "/api/event-role-templates": {
+      "get": {
+        "description": "Sets of roles to start an event's role list from. Members see the templates an administrator enabled; administrators see all, including the disabled presets that ship with the server.",
+        "operationId": "listCommunityEventRoleTemplates",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/communityevents.RoleTemplate"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List role templates",
+        "tags": [
+          "Events"
+        ]
+      },
+      "post": {
+        "description": "Adds a template (enabled unless enabled is false). Administrators only.",
+        "operationId": "createCommunityEventRoleTemplate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/communityevents.RoleTemplateRequest"
+              }
+            }
+          },
+          "description": "name and roles are required",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/communityevents.RoleTemplate"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the name is taken or there are 50 templates."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Create a role template",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/event-role-templates/{templateID}": {
+      "delete": {
+        "description": "Removes a template. A preset that ships with the server cannot be deleted, only disabled. Administrators only.",
+        "operationId": "deleteCommunityEventRoleTemplate",
+        "parameters": [
+          {
+            "description": "Template ID",
+            "in": "path",
+            "name": "templateID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the template is a preset."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a role template",
+        "tags": [
+          "Events"
+        ]
+      },
+      "patch": {
+        "description": "Changes the fields sent: enabled, name or roles. A preset can only be enabled or disabled. Administrators only.",
+        "operationId": "updateCommunityEventRoleTemplate",
+        "parameters": [
+          {
+            "description": "Template ID",
+            "in": "path",
+            "name": "templateID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/communityevents.RoleTemplateRequest"
+              }
+            }
+          },
+          "description": "Fields to change",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/communityevents.RoleTemplate"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the name is taken, or the change is to a preset's content."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Update a role template",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
     "/api/events": {
       "get": {
         "description": "Returns community events visible to the caller, ordered by start time. Events located in a Talk channel require ViewChannel on that channel. By default the window runs from 1 day ago to 90 days ahead; an event is in the window while it has not ended before after and starts before before.",
@@ -29690,6 +30157,194 @@
         ]
       }
     },
+    "/api/events/{id}/roles": {
+      "put": {
+        "description": "Replaces the event's role list (at most 12; each with a name of up to 40 characters, an optional emoji and a capacity of 1 to 1000, or none for unlimited). A role sent with its id keeps its sign-ups; one that is left out is removed, which is refused with 409 while it has sign-ups (hand them over with DELETE .../roles/{roleID}?move_to=). A capacity below the number of confirmed members is refused with 409 naming how many to remove; a larger capacity moves the waitlist up. Allowed for the event's creator and for members with Manage events; not on a completed or cancelled event.",
+        "operationId": "setCommunityEventRoles",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/communityevents.SetRolesRequest"
+              }
+            }
+          },
+          "description": "The new role list, in order",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/communityevents.CommunityEvent"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the event is over, a role to remove has sign-ups, a capacity is below the confirmed members, or two roles share a name."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the roles of an event",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/events/{id}/roles/{roleID}": {
+      "delete": {
+        "description": "Removes a role. A role with sign-ups is refused with 409 unless move_to names another role of the event, which takes the sign-ups over (members who held a slot keep their place in line). Allowed for the event's creator and for members with Manage events; not on a completed or cancelled event.",
+        "operationId": "deleteCommunityEventRole",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Role ID",
+            "in": "path",
+            "name": "roleID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Another role of the event that takes the sign-ups over.",
+            "in": "query",
+            "name": "move_to",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/communityevents.CommunityEvent"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the event is over or the role has sign-ups and no move_to."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a role of an event",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
     "/api/events/{id}/rsvp": {
       "delete": {
         "description": "Removes caller's RSVP from the event.",
@@ -29864,6 +30519,212 @@
           }
         ],
         "summary": "List RSVPs for an event",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/events/{id}/signup": {
+      "delete": {
+        "description": "Removes the caller's sign-up and moves the role's waitlist up. Always allowed, also on a finished event. The RSVP stays as it is.",
+        "operationId": "leaveCommunityEventRole",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/communityevents.CommunityEvent"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Leave the role of an event",
+        "tags": [
+          "Events"
+        ]
+      },
+      "put": {
+        "description": "Puts the caller on a role: confirmed while the role has room, otherwise on its waitlist (the answer's my_signup says which, and the place in line). A member who holds another role of the event moves over and the old role's waitlist moves up. The capacity check runs under a lock, so the last slot is never given twice. A sign-up counts as RSVP going. Everyone who can view the event may sign up while it is scheduled or active.",
+        "operationId": "signUpForCommunityEventRole",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/communityevents.SignupRequest"
+              }
+            }
+          },
+          "description": "The role",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/communityevents.CommunityEvent"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INVALID_INPUT"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the event is completed or cancelled."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Sign up for a role of an event",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/events/{id}/signup/{userID}": {
+      "delete": {
+        "description": "Removes another member's sign-up and moves the role's waitlist up; the member is told. Allowed for the event's creator and for members with Manage events; not on a completed or cancelled event.",
+        "operationId": "removeCommunityEventSignup",
+        "parameters": [
+          {
+            "description": "Event ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Member ID",
+            "in": "path",
+            "name": "userID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/communityevents.CommunityEvent"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the event is completed or cancelled."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove a member from the roster of an event",
         "tags": [
           "Events"
         ]

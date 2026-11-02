@@ -70,6 +70,7 @@ var eraseSteps = []string{
 	`DELETE FROM message_reminders WHERE user_id = $1`,
 	`DELETE FROM scheduled_messages WHERE user_id = $1`,
 	`DELETE FROM event_rsvps WHERE user_id = $1`,
+	`DELETE FROM event_signups WHERE user_id = $1`,
 	`UPDATE events SET created_by = NULL WHERE created_by = $1`,
 	// Reports keep their copies of other people's messages, so the person's
 	// own text is blanked in every copy (as reported message or as context),
