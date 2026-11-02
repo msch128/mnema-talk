@@ -1,0 +1,29 @@
+doc/moderation.md
+  s_82e9d48cb7fc7f::t_1024df2a455ae0 160,167
+internal/chat/talks_handler.go
+  s_82e9d48cb7fc7f::t_20298794edba61 139-142
+internal/perm/newmember.go
+  s_82e9d48cb7fc7f::t_31f6709955f729 54-56,101,112-117,124
+internal/perm/newmember_test.go
+  s_82e9d48cb7fc7f::t_1f43eae516ff93 5,225-280
+internal/perm/service.go
+  s_82e9d48cb7fc7f::t_6a78122738fe24 51-53,325-340,351-353,355-360,366-368,375-376,381-393
+internal/server/raid_integration_test.go
+  s_82e9d48cb7fc7f::t_8d57990cfa0c2d 345-364
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a6fa252657a6a46ce0c72f4a954f5f5c626562bd",
+  "prompts": {},
+  "sessions": {
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
