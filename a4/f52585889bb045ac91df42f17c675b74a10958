@@ -1,0 +1,37 @@
+api/openapi.json
+  s_4c6a19030e223f::t_6936f75bf9add3 30745
+internal/communityevents/handler_roles.go
+  s_4c6a19030e223f::t_e724a90732afa3 86
+internal/communityevents/handler_series.go
+  s_4c6a19030e223f::t_87b990539289b8 83
+internal/communityevents/recurrence.go
+  s_4c6a19030e223f::t_c724f214175aad 30-32
+internal/communityevents/recurrence_test.go
+  s_4c6a19030e223f::t_ba9ae4ebccd779 61-64,72-98
+internal/communityevents/series_integration_test.go
+  s_4c6a19030e223f::t_0620c41b474482 443-517
+internal/communityevents/store_series_edit.go
+  s_4c6a19030e223f::t_96d40d20ddd703 6,44,111-113,120-121,123-132,136-137,141,149-175,196-198,202-204,208-210
+web/src/components/EventEditDialog.test.ts
+  s_4c6a19030e223f::t_6bfe6972614390 166,173,175,180-191,264-265,414-429
+web/src/components/EventEditDialog.vue
+  s_4c6a19030e223f::t_8456c1590d1acd 124,133-146,162,166-171,187,201
+web/src/i18n/en.json
+  s_4c6a19030e223f::t_8cd7de6663982b 3649
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a4f52585889bb045ac91df42f17c675b74a10958",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
