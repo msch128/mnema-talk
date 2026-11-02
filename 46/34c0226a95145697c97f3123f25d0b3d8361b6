@@ -1,0 +1,33 @@
+doc/events.md
+  s_4c6a19030e223f::t_6ee6e9a2a9e4d0 56
+internal/communityevents/comments_integration_test.go
+  s_4c6a19030e223f::t_7bba4f71e0c39c 427-495
+internal/communityevents/handler.go
+  s_4c6a19030e223f::t_217eb77a2ce5f3 38-39
+internal/communityevents/model_comments.go
+  s_4c6a19030e223f::t_9defd8418d0cb7 18-21,82-87
+internal/communityevents/notify_comments.go
+  s_4c6a19030e223f::t_33ae22033050ec 7,73,75-77,82-83,88-90,94-146,148-151
+internal/communityevents/store_comments.go
+  s_4c6a19030e223f::t_4b48fe7e4c838e 153-155,169
+internal/push/event_reminder.go
+  s_4c6a19030e223f::t_f913cc5447244e 80-89
+internal/push/event_reminder_integration_test.go
+  s_4c6a19030e223f::t_063c4dc0c78455 152-179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4634c0226a95145697c97f3123f25d0b3d8361b6",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+api/openapi.json
+  s_4c6a19030e223f::t_4cab9b4282e77d 30155,30201-30210,30229,30315,30375
+doc/events.md
+  s_4c6a19030e223f::t_ada233739e334a 53,55-56
+internal/communityevents/comments_integration_test.go
+  s_4c6a19030e223f::t_f3deb9f77821c4 21,291-426
+internal/communityevents/handler_comments.go
+  s_4c6a19030e223f::t_2131b93b8c7b9a 22,40-60,62-64,112,123-124,132-134,145,151,171-173,192,216
+internal/communityevents/model_comments.go
+  s_4c6a19030e223f::t_558eaed4d2f0df 14-15,38-43
+internal/communityevents/notify_comments.go
+  s_4c6a19030e223f::t_d767cebd50e0bc 39-51,57,72-73,77-78
+internal/communityevents/store_comments.go
+  s_4c6a19030e223f::t_efbd318c19d172 77-78,81-85,91-93,151-154,156-166,171-174
+internal/repo/testdata/error_messages.golden.json
+  s_4c6a19030e223f::t_91ff36b7701168 296,463
+web/src/components/EventComments.vue
+  s_4c6a19030e223f::t_d6dd44209be48c 127
+web/src/i18n/de.json
+  s_4c6a19030e223f::t_02566ab3f21fa0 593-595,3623-3624
+web/src/i18n/en.json
+  s_4c6a19030e223f::t_81b285a551d47d 593-595
+web/src/lib/errorSentencesB.ts
+  s_4c6a19030e223f::t_ffdcb66e30bf58 112
+web/src/lib/errorSentencesC.ts
+  s_4c6a19030e223f::t_6f75f744c39c73 90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc29a49254dfcd994497d6ae2cd67d5bb1738eb2",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
