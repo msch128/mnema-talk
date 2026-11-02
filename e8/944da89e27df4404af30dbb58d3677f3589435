@@ -1,0 +1,113 @@
+README.md
+  s_61e7f03250bd0b::t_d5a47d9937679a 108
+api/openapi.json
+  s_61e7f03250bd0b::t_fdf0c4894fc6fd 4785-4831,4984-5021,30747-31141
+doc/events.md
+  s_61e7f03250bd0b::t_1c6d49ee4502a5 49-58
+e2e/tests/event-comments.spec.ts
+  s_61e7f03250bd0b::t_ab572ea51ad42a 1-74
+internal/auth/account_erase.go
+  s_61e7f03250bd0b::t_af350d041f82e9 74-75
+internal/auth/account_export_build.go
+  s_61e7f03250bd0b::t_702231282935a7 79,202
+internal/auth/account_export_events.go
+  s_61e7f03250bd0b::t_94d2d097ad8b5d 35-46
+internal/communityevents/comments_integration_test.go
+  s_61e7f03250bd0b::t_0e96f6f9d8f8ca 1-495
+internal/communityevents/handler.go
+  s_61e7f03250bd0b::t_1344b15f6c5114 34-39,52
+internal/communityevents/handler_comments.go
+  s_61e7f03250bd0b::t_d24750cf9ab3a4 1-274
+internal/communityevents/model_comments.go
+  s_61e7f03250bd0b::t_5d62a068f33a93 1-87
+internal/communityevents/notify_comments.go
+  s_61e7f03250bd0b::t_5af54bbb06cf34 1-152
+internal/communityevents/store_comments.go
+  s_61e7f03250bd0b::t_5bed214a99870c 1-177
+internal/db/migrations/0087_event_comments.sql
+  s_61e7f03250bd0b::t_0102cbf6d650e9 1-25
+internal/events/testdata/events.golden.json
+  s_61e7f03250bd0b::t_8461e10c55c62c 64-65
+internal/events/types.go
+  s_61e7f03250bd0b::t_b1cbd55d45b7ee 95-99
+internal/push/event_comment.go
+  s_61e7f03250bd0b::t_c39f723ae81bb2 1-45
+internal/push/event_reminder.go
+  s_61e7f03250bd0b::t_77d905f3a4740c 80-89
+internal/push/event_reminder_integration_test.go
+  s_61e7f03250bd0b::t_3d8400654409c3 152-179
+internal/push/locales/texts.json
+  s_61e7f03250bd0b::t_10a8c0afc7f5a7 19,45
+internal/repo/testdata/error_messages.golden.json
+  s_61e7f03250bd0b::t_5f364c6b95879d 74,91,126,214,310,329,331,482
+internal/server/events_comments_integration_test.go
+  s_61e7f03250bd0b::t_81accd852a2b91 1-42
+internal/server/router_build_services.go
+  s_61e7f03250bd0b::t_7eb46cb4ab36e1 76-84
+web/src/components/EventComments.test.ts
+  s_61e7f03250bd0b::t_1be7e92afed444 1-164
+web/src/components/EventComments.vue
+  s_61e7f03250bd0b::t_80ded04a366b77 1-159
+web/src/components/EventDetailModal.test.ts
+  s_61e7f03250bd0b::t_1d8ec8af06bdef 17-20
+web/src/components/EventDetailModal.vue
+  s_61e7f03250bd0b::t_c1b33b2625fa20 19,299-300
+web/src/components/EventsModal.test.ts
+  s_61e7f03250bd0b::t_2eb5e7f697836c 18-21
+web/src/components/EventsModalDetails.test.ts
+  s_61e7f03250bd0b::t_2b76c57b19def4 19-22
+web/src/components/EventsModalPolish.test.ts
+  s_61e7f03250bd0b::t_89a96fbf7ab02a 14-17
+web/src/composables/useEventComments.test.ts
+  s_61e7f03250bd0b::t_69c48ba10f0c90 1-140
+web/src/composables/useEventComments.ts
+  s_61e7f03250bd0b::t_ef247a2a77935c 1-122
+web/src/eventRoles.fixture.ts
+  s_61e7f03250bd0b::t_45ce066add8385 3,24-31
+web/src/i18n/de.json
+  s_61e7f03250bd0b::t_11d0d7e29bd938 607-615,3308-3310,3666-3682
+web/src/i18n/en.json
+  s_61e7f03250bd0b::t_867e70e0321c67 607-615,3308-3310,3666-3682
+web/src/lib/errorSentencesA.ts
+  s_61e7f03250bd0b::t_a44dd0ca22602c 77,94,129
+web/src/lib/errorSentencesB.ts
+  s_61e7f03250bd0b::t_ab4ffe27322c56 27,123,142,144
+web/src/lib/errorSentencesC.ts
+  s_61e7f03250bd0b::t_90a78ec5a2ccd7 93
+web/src/lib/eventCommentsApi.test.ts
+  s_61e7f03250bd0b::t_534718eda3a275 1-45
+web/src/lib/eventCommentsApi.ts
+  s_61e7f03250bd0b::t_21d6eacc465d7a 1-38
+web/src/stores/chat/events.ts
+  s_61e7f03250bd0b::t_160e98cec76fc4 11,312-314
+web/src/stores/chatEvents.test.ts
+  s_61e7f03250bd0b::t_bb82c63d00e6bf 5,207-219
+web/src/stores/eventComments.test.ts
+  s_61e7f03250bd0b::t_b6620c47c70e0f 1-36
+web/src/stores/eventComments.ts
+  s_61e7f03250bd0b::t_802796d9f41c21 1-30
+web/src/types/events.test.ts
+  s_61e7f03250bd0b::t_d9612628e93000 136-143
+web/src/types/events.ts
+  s_61e7f03250bd0b::t_347a6f162bc7f1 5,148-151,386
+web/src/types/noticeEvents.ts
+  s_61e7f03250bd0b::t_304dc278794232 4,32-37
+web/src/types/rest.ts
+  s_61e7f03250bd0b::t_ed36d01526a554 2853-2889,2956-2976
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e8944da89e27df4404af30dbb58d3677f3589435",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
