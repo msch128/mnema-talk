@@ -1,0 +1,21 @@
+internal/perm/store_self_assign.go
+  s_61e7f03250bd0b::t_7155935616a56a 14-15,17
+web/src/lib/permissions.ts
+  s_61e7f03250bd0b::t_570929d04294d4 70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4247f1e077727300ff37dcd6ed4756220cde7eda",
+  "prompts": {},
+  "sessions": {
+    "s_61e7f03250bd0b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-amerge-captain-dda8f8183a4550cb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
