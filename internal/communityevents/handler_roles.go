@@ -90,6 +90,7 @@ func (h *Handler) finishRoster(w http.ResponseWriter, r *http.Request, id uuid.U
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Event ID" Format(uuid)
+// @Param scope query string false "this (default) or following: also the later occurrences of a series." Enums(this, following)
 // @Param body body SetRolesRequest true "The new role list, in order"
 // @Success 200 {object} CommunityEvent
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
@@ -109,11 +110,23 @@ func (h *Handler) setRoles(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	following, err := h.followingScope(r, ev)
+	if err != nil {
+		return err
+	}
 	promoted, err := h.Store.SetRoles(r.Context(), ev.ID, req.Roles)
 	if err != nil {
 		return err
 	}
-	h.auditRoster(r, ev, "roles_set", map[string]any{"roles": len(req.Roles)})
+	extra := map[string]any{"roles": len(req.Roles)}
+	if following {
+		updated, skipped, err := h.Store.SetSeriesRoles(r.Context(), ev, req.Roles)
+		if err != nil {
+			return err
+		}
+		extra["scope"], extra["occurrences_updated"], extra["occurrences_skipped"] = "following", updated, skipped
+	}
+	h.auditRoster(r, ev, "roles_set", extra)
 	return h.finishRoster(w, r, ev.ID, promoted)
 }
 
