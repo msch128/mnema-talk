@@ -32,7 +32,7 @@ test('a weekly event creates its next dates, an edit of the following ones chang
   await page.getByTestId('events-empty-create').or(page.getByRole('button', { name: 'Veranstaltung erstellen' }).first()).click()
 
   const create = page.getByRole('dialog').last()
-  await create.getByLabel('Titel').fill(title)
+  await create.getByLabel('Titel', { exact: true }).fill(title)
   await create.locator('input[type="datetime-local"]').first().fill(localInput(new Date(Date.now() + 3 * 86_400_000)))
   await create.getByLabel('Freitext-Ort').fill('Stammkneipe')
   await create.getByTestId('event-repeat-select').selectOption('weekly')
@@ -49,7 +49,7 @@ test('a weekly event creates its next dates, an edit of the following ones chang
   await cards.nth(1).getByRole('button', { name: 'Details' }).click()
   await page.getByRole('button', { name: 'Veranstaltung bearbeiten' }).click()
   const edit = page.getByRole('dialog').last()
-  await edit.getByLabel('Titel').fill(`${title} neu`)
+  await edit.getByLabel('Titel', { exact: true }).fill(`${title} neu`)
   await edit.getByTestId('scope-following').check()
   await edit.getByRole('button', { name: 'Änderungen speichern' }).click()
   await expect(edit).toBeHidden()

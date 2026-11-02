@@ -515,3 +515,67 @@ func TestCancellingNothingDoesNotEndTheSeries(t *testing.T) {
 		t.Fatal("the handler answers with a conflict")
 	}
 }
+
+// What one occurrence was changed to by hand does not become the series' template when an edit names something else.
+func TestTheTemplateTakesOnlyWhatAnEditNames(t *testing.T) {
+	f := newRosterFixture(t)
+	first := f.startSeries(t, weeklyBody)
+	list := f.occurrences(t, first.Series.ID)
+	f.event = &CommunityEvent{ID: list[1].ID}
+	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, `{"title":"Special","location":"Rooftop"}`, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, `{"description":"bring snacks"}`, "scope=following"); err != nil {
+		t.Fatal(err)
+	}
+	ids, err := f.s.GenerateSeries(context.Background(), first.Series.ID, time.Now().Add(60*24*time.Hour))
+	if err != nil || len(ids) == 0 {
+		t.Fatalf("%v %v", ids, err)
+	}
+	fresh, _ := f.s.Get(context.Background(), ids[0], nil)
+	if fresh.Title != "Raid night" || fresh.Location == nil || *fresh.Location != "Hall" || fresh.Description != "bring snacks" {
+		t.Fatalf("a later occurrence has the series' title and place and the new description: %+v", fresh)
+	}
+	// Naming the title that the occurrence already has makes it the series' for the following ones.
+	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, `{"title":"Special"}`, "scope=following"); err != nil {
+		t.Fatal(err)
+	}
+	if later, _ := f.s.Get(context.Background(), list[3].ID, nil); later.Title != "Special" {
+		t.Fatalf("named, so it follows: %+v", later.Title)
+	}
+}
+
+// A time-of-day edit at a clamped occurrence keeps the anchor's day of the month.
+func TestAMonthlySeriesEditedAtItsClampedOccurrenceKeepsTheDayWhenOnlyTheTimeMoves(t *testing.T) {
+	f := newRosterFixture(t)
+	ctx := context.Background()
+	_, seriesID, err := f.s.CreateSeries(ctx, CreateEventRequest{Title: "Monthly", StartTime: time.Date(2030, 1, 31, 12, 0, 0, 0, time.UTC), Location: ptr("Hall")}, RecurrenceRequest{Frequency: FreqMonthly}, f.creator.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.s.GenerateSeries(ctx, seriesID, time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	list := f.occurrences(t, seriesID)
+	f.event = &CommunityEvent{ID: list[1].ID}
+	body := fmt.Sprintf(`{"start_time":%q}`, list[1].Start.Add(3*time.Hour).Format(time.RFC3339))
+	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, body, "scope=following"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.s.GenerateSeries(ctx, seriesID, time.Date(2030, 3, 1, 0, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	got := f.occurrences(t, seriesID)
+	if got[1].Start.UTC().Hour() != 15 || got[2].Start.UTC().Day() != 31 || got[2].Start.UTC().Hour() != 15 {
+		t.Fatalf("the 28th at 15:00 and March the 31st at 15:00: %v %v", got[1].Start, got[2].Start)
+	}
+	// A move to another day re-anchors there.
+	f.event = &CommunityEvent{ID: got[2].ID}
+	moved := got[2].Start.Add(24 * time.Hour).Format(time.RFC3339)
+	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, fmt.Sprintf(`{"start_time":%q}`, moved), "scope=following"); err != nil {
+		t.Fatal(err)
+	}
+	if again := f.occurrences(t, seriesID); again[2].Start.UTC().Day() != 1 || again[2].Start.UTC().Month() != time.April {
+		t.Fatalf("a new date is a new anchor: %v", again[2].Start)
+	}
+}

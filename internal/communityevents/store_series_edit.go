@@ -58,18 +58,47 @@ func (s *Store) UpdateFollowing(ctx context.Context, ev *CommunityEvent, req Upd
 	return changed, err
 }
 
-// editTemplate applies an edit to the series' template: the texts and the
-// place, a new start as the new anchor (at the edited occurrence) and a
-// changed end as the new duration.
+// editTemplate applies an edit to the series' template: only the fields the
+// edit names (what one occurrence was changed to by hand is not the series'
+// doing), a new start as the new anchor and a changed end as the new duration.
+// An edit that moves only the time of day keeps the anchor's date, so a monthly
+// series on the 31st edited at its clamped 28 February stays on the 31st.
 func editTemplate(r *seriesRow, ev *CommunityEvent, req UpdateEventRequest) {
+	if req.Title != nil {
+		r.Title = *req.Title
+	}
+	if req.Description != nil {
+		r.Description = *req.Description
+	}
+	if req.ChannelID != nil {
+		r.ChannelID, r.Location = req.ChannelID, nil
+	} else if req.Location != nil {
+		r.Location, r.ChannelID = req.Location, nil
+	}
 	m := mergeUpdate(ev, req)
-	r.Title, r.Description, r.ChannelID, r.Location = m.title, m.desc, m.channel, m.location
 	if req.StartTime != nil {
-		r.Anchor, r.AnchorIndex = m.start, ev.Series.Index
+		if sameLocalDate(ev.StartTime, m.start, r.Zone) {
+			r.Anchor = withTimeOfDay(r.Anchor, m.start, r.Zone)
+		} else {
+			r.Anchor, r.AnchorIndex = m.start, ev.Series.Index
+		}
 	}
 	if req.StartTime != nil || req.EndTime != nil || req.ClearEndTime {
 		r.Duration = durationOf(m.start, m.end)
 	}
+}
+
+func sameLocalDate(a, b time.Time, loc *time.Location) bool {
+	ay, am, ad := a.In(loc).Date()
+	by, bm, bd := b.In(loc).Date()
+	return ay == by && am == bm && ad == bd
+}
+
+// withTimeOfDay is anchor's date with the wall-clock time of t, in loc.
+func withTimeOfDay(anchor, t time.Time, loc *time.Location) time.Time {
+	y, m, d := anchor.In(loc).Date()
+	n := t.In(loc)
+	return time.Date(y, m, d, n.Hour(), n.Minute(), n.Second(), n.Nanosecond(), loc).UTC()
 }
 
 // rewriteFollowing writes the template into the open occurrences from index i on; each keeps its own start unless the edit moved the anchor.
@@ -146,8 +175,10 @@ func rewriteOccurrence(ctx context.Context, tx pgx.Tx, r seriesRow, f followingE
 	return nil
 }
 
-// withoutUnchanged drops the fields of an edit that name what the occurrence
-// already has (a form that always sends its start must not re-anchor the series).
+// withoutUnchanged drops a start or an end that names what the occurrence
+// already has (a client that always sends the start must not re-anchor the
+// series). Title, description and place are not dropped: naming them is how a
+// one-off change of this occurrence becomes the series' for the following ones.
 func withoutUnchanged(ev *CommunityEvent, req UpdateEventRequest) UpdateEventRequest {
 	if req.StartTime != nil && req.StartTime.Equal(ev.StartTime) {
 		req.StartTime = nil
@@ -157,18 +188,6 @@ func withoutUnchanged(ev *CommunityEvent, req UpdateEventRequest) UpdateEventReq
 	}
 	if req.ClearEndTime && ev.EndTime == nil {
 		req.ClearEndTime = false
-	}
-	if req.ChannelID != nil && ev.ChannelID != nil && *req.ChannelID == *ev.ChannelID {
-		req.ChannelID = nil
-	}
-	if req.Location != nil && ev.Location != nil && *req.Location == *ev.Location {
-		req.Location = nil
-	}
-	if req.Title != nil && *req.Title == ev.Title {
-		req.Title = nil
-	}
-	if req.Description != nil && *req.Description == ev.Description {
-		req.Description = nil
 	}
 	return req
 }

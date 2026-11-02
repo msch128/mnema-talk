@@ -59,7 +59,7 @@ test('a full role puts the next member on the waitlist, and they move up when a 
     await admin.getByRole('button', { name: 'Veranstaltungen' }).click()
     await admin.getByTestId('events-empty-create').or(admin.getByRole('button', { name: 'Veranstaltung erstellen' }).first()).click()
     const dialog = admin.getByRole('dialog').last()
-    await dialog.getByLabel('Titel').fill(TITLE)
+    await dialog.getByLabel('Titel', { exact: true }).fill(TITLE)
     const start = new Date(Date.now() + 2 * 86_400_000)
     const pad = (n: number) => String(n).padStart(2, '0')
     await dialog.locator('input[type="datetime-local"]').first().fill(`${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}T18:00`)
