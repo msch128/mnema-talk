@@ -1,0 +1,41 @@
+internal/chat/dm_gate.go
+  s_17ef7810e0243d::t_67c6cf58cfb94c 13,112-114,165-179
+internal/chat/permissions.go
+  s_17ef7810e0243d::t_80ed4ee55d3472 70
+internal/chat/post.go
+  s_17ef7810e0243d::t_e39f543a9b7902 106-118
+internal/perm/newmember.go
+  s_82e9d48cb7fc7f::t_460ca5cdac0070 25-26,95,104-121
+internal/perm/service.go
+  s_82e9d48cb7fc7f::t_190f789664f8c9 287
+internal/perm/snapshot_channels.go
+  s_82e9d48cb7fc7f::t_a7ea022a6de516 105-109
+internal/perm/snapshot_dm.go
+  s_82e9d48cb7fc7f::t_06b497604155fb 75-81,89-92
+internal/roles/handler_permissions.go
+  s_82e9d48cb7fc7f::t_4aaa2c0e93b26b 106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8ee0c97a9ba142f2fb679941877a4bf848fa9342",
+  "prompts": {},
+  "sessions": {
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_82e9d48cb7fc7f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aaudit-visibility-quickmenus-60ef409b936feaeb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
