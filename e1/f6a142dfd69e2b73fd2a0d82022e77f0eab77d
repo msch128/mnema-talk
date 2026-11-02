@@ -1,0 +1,25 @@
+internal/communityevents/roles_integration_test.go
+  s_4c6a19030e223f::t_6f5d346ad3ac0c 756-790
+internal/communityevents/store_roles.go
+  s_4c6a19030e223f::t_3143c5a23f7f56 61-69,71
+web/src/components/EventEditDialog.test.ts
+  s_4c6a19030e223f::t_b37bce2eb9930f 6,326-344
+web/src/components/EventEditDialog.vue
+  s_4c6a19030e223f::t_94ee8f2174dc0d 64-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e1f6a142dfd69e2b73fd2a0d82022e77f0eab77d",
+  "prompts": {},
+  "sessions": {
+    "s_4c6a19030e223f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afeat-forum-complete-6df26c849476ff6a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
