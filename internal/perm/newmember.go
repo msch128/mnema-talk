@@ -51,7 +51,9 @@ func (s *Snapshot) NewMemberWaits(userID uuid.UUID) NewMemberWaits {
 	}
 	joined, ok := s.joined[userID]
 	if !ok {
-		joined = clock() // joined since the snapshot was loaded: a full wait, corrected by the next load
+		// Signed up since the snapshot was loaded: counted from the load, at most a snapshot TTL
+		// short of the real time, and exact from the next load on.
+		joined = s.loaded
 	}
 	age := clock().Sub(joined)
 	w := NewMemberWaits{Write: max(0, r.Write-age), React: max(0, r.React-age), Speak: max(0, r.Speak-age)}
@@ -96,7 +98,7 @@ func (s *Snapshot) newMemberRefusal(userID uuid.UUID, p, need Set) error {
 	case w.React > 0 && miss&reactMask != 0:
 		return httpx.ErrForbidden(fmt.Sprintf("new members can react in %d s", seconds(w.React)))
 	case w.Speak > 0 && miss&speakMask != 0:
-		return httpx.ErrForbidden(fmt.Sprintf("new members can speak in %d s", seconds(w.Speak)))
+		return NewMemberSpeakError(w.Speak)
 	}
 	return nil
 }
@@ -107,13 +109,19 @@ func NewMemberWriteError(wait time.Duration) error {
 	return httpx.ErrForbidden(fmt.Sprintf("new members can write in %d s", seconds(wait)))
 }
 
+// NewMemberSpeakError is the refusal for speaking (or joining a call) while
+// the member's speak wait runs.
+func NewMemberSpeakError(wait time.Duration) error {
+	return httpx.ErrForbidden(fmt.Sprintf("new members can speak in %d s", seconds(wait)))
+}
+
 // DenyIn is Deny for a request about channel ch: joining the call of a
 // conversation, which the speak wait holds as a whole, answers with that wait.
 func (s *Snapshot) DenyIn(sub Subject, ch uuid.UUID, p, need Set) error {
 	err := s.Deny(sub, p, need)
 	if _, call := s.dmTalks[ch]; err != nil && call && p.Has(ViewChannel) && need&^p&dmCallMask != 0 {
 		if w := s.NewMemberWaits(sub.ID); w.Speak > 0 {
-			return httpx.ErrForbidden(fmt.Sprintf("new members can speak in %d s", seconds(w.Speak)))
+			return NewMemberSpeakError(w.Speak)
 		}
 	}
 	return err

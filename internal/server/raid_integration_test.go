@@ -342,3 +342,23 @@ func TestTheSpeakWaitAlsoHoldsVideoInThePermissions(t *testing.T) {
 		t.Fatalf("permissions %b still hold Speak or Video", info.Permissions)
 	}
 }
+
+// The call of a conversation is held back by the speak wait as a whole, so a
+// new member cannot ring one they could not join.
+func TestANewMemberCannotStartACallInsideTheSpeakWait(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	newbie := a.register(admin, "newbie")
+	friend := a.register(admin, "friend")
+	if _, err := a.db.Exec(context.Background(), `UPDATE users SET created_at = NOW() - INTERVAL '30 days' WHERE username = 'friend'`); err != nil {
+		t.Fatal(err)
+	}
+	dm := dmID(t, startDM(t, friend, newbie))
+	wantStatus(t, "friend writes", friend.post("/api/channels/"+dm+"/messages", map[string]any{"content": "hi"}), http.StatusCreated)
+	wantStatus(t, "set", putRaid(t, admin, 0, 0, 0, 60), http.StatusOK)
+	res := newbie.post("/api/dms/"+dm+"/talk", map[string]any{})
+	wantStatus(t, "new member starts a call", res, http.StatusForbidden)
+	if !strings.Contains(string(res.body), "new members can speak in ") {
+		t.Fatalf("body %s", res.body)
+	}
+}

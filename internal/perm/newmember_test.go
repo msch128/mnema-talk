@@ -2,6 +2,7 @@ package perm_test
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -219,5 +220,61 @@ func TestNoTimerWithoutWaits(t *testing.T) {
 	time.Sleep(1300 * time.Millisecond)
 	if len(rec.seen()) != 0 {
 		t.Fatalf("announced %v", rec.seen())
+	}
+}
+
+// A wait that ended between a timer and the next load is announced by that
+// load, not lost.
+func TestAWaitThatEndedBetweenLoadsIsAnnouncedByTheNextLoad(t *testing.T) {
+	f := permtest.NewFixture()
+	newbie := uuid.New()
+	f.Joined(newbie, time.Now().Add(-time.Hour+250*time.Millisecond))
+	f.NewMemberRules(0, 0, time.Hour)
+	snap := f.Snapshot()
+	svc := NewServiceFrom(func(context.Context, time.Time) (*Snapshot, error) { return snap, nil })
+	rec := &recordedChanges{}
+	svc.SetNotifier(rec)
+	if _, err := svc.Snapshot(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(400 * time.Millisecond) // the wait ends; the timer (3 s at the least) has not fired
+	svc.Invalidate()
+	if _, err := svc.Snapshot(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for len(rec.seen()) == 0 && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if got := rec.seen(); len(got) != 1 || got[0] != newbie {
+		t.Fatalf("announced %v, want %v", got, newbie)
+	}
+}
+
+func TestACallCannotBeStartedInsideTheSpeakWait(t *testing.T) {
+	f := permtest.NewFixture()
+	newbie := uuid.New()
+	f.Joined(newbie, time.Now()).NewMemberRules(0, 0, time.Hour)
+	snap := f.Snapshot()
+	svc := NewServiceFrom(func(context.Context, time.Time) (*Snapshot, error) { return snap, nil })
+	err := svc.RequireCall(context.Background(), Subject{ID: newbie})
+	if err == nil || !strings.HasPrefix(err.Error(), "new members can speak in ") {
+		t.Fatalf("RequireCall: %v", err)
+	}
+	if err := svc.RequireCall(context.Background(), Subject{ID: uuid.New(), Owner: true}); err != nil {
+		t.Fatalf("a member unknown to the fixture but the Owner: %v", err)
+	}
+	var none *Service
+	if err := none.RequireCall(context.Background(), Subject{ID: newbie}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAMemberUnknownToTheSnapshotIsCountedFromTheLoad(t *testing.T) {
+	f := permtest.NewFixture()
+	f.NewMemberRules(time.Hour, 0, 0)
+	w := f.Snapshot().NewMemberWaits(uuid.New())
+	if w.Write <= 59*time.Minute || w.Write > time.Hour {
+		t.Fatalf("wait %v", w.Write)
 	}
 }

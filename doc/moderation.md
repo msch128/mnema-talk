@@ -157,14 +157,14 @@ a group, nor add people to one (`403` with the seconds left; `GET
 /api/permissions` then says `can_start_direct_messages: false`). They can answer
 a conversation where the other person wrote first, but not write first, not even
 in an existing, still empty conversation (`internal/chat`, `gateNewMemberFirstWrite`).
-Reactions in conversations follow the *react* wait, and joining the call of a
+Reactions in conversations follow the *react* wait, and joining or starting the call of a
 conversation (which includes speaking and video there) follows the *speak* wait.
 
 Who never waits: the Owner, bots, Administrators, and members with a role that
 holds **Bypass new member limits** (bit 26, [roles](roles-and-permissions.md);
 Moderator and Admin roles get it by migration 0083). It is separate from the
 slow mode exemption. A member the permission snapshot does not know yet (it is reloaded at
-least every minute) counts as having just joined.
+least every minute) is counted from the moment that snapshot was loaded (at most a minute short of the real sign-up time), and exactly from the next load on.
 
 ## Auto-delete
 
