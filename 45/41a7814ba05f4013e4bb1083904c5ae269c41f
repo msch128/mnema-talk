@@ -1,0 +1,18 @@
+doc/desktop-trusted-client.md
+  h_0ff4f4713441f4 55,58-59
+internal/webbundle/webbundle.go
+  h_0ff4f4713441f4 5-7,27,291,294-296,309-325
+internal/webbundle/webbundle_test.go
+  h_0ff4f4713441f4 86-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4541a7814ba05f4013e4bb1083904c5ae269c41f",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
