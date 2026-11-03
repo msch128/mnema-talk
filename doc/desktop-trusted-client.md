@@ -52,8 +52,10 @@ A bundle is one file, `mnema-web-<version>.zip`:
 ```
 manifest.json     what is signed
 manifest.sig      base64 Ed25519 signature over the exact bytes of manifest.json
-app/<path>        every file of web/dist (index.html, assets/..., wasm, fonts)
+app/<path>        desktop files from web/dist (index.html, assets, wasm, fonts)
 ```
+
+Dotfiles are rejected. `api-docs.html` and the `apiDocs-*` files Vite emits for it are not signed. The server embed still serves that page at `/api/docs` for a signed-in member.
 
 `manifest.json`:
 

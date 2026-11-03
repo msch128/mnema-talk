@@ -83,6 +83,49 @@ func TestBuildAndVerifyRoundTrip(t *testing.T) {
 	}
 }
 
+func TestBuildLeavesTheAPIReferenceOut(t *testing.T) {
+	_, priv := testKey(t)
+	o := okOptions(t, priv)
+	o.Dir = writeTree(t, map[string]string{
+		"index.html":                 "<html></html>",
+		"api-docs.html":              "<html>docs</html>",
+		"assets/app-1.js":            "console.log(1)",
+		"assets/apiDocs-abc123.js":   "swagger",
+		"assets/apiDocs-abc123.css":  "docs",
+		"assets/rolldown-runtime.js": "shared",
+	})
+	b, err := Build(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, f := range b.Info.Files {
+		got[f.Path] = true
+	}
+	for _, keep := range []string{"index.html", "assets/app-1.js", "assets/rolldown-runtime.js"} {
+		if !got[keep] {
+			t.Fatalf("missing %s in %+v", keep, b.Info.Files)
+		}
+	}
+	for _, drop := range []string{"api-docs.html", "assets/apiDocs-abc123.js", "assets/apiDocs-abc123.css"} {
+		if got[drop] {
+			t.Fatalf("signed %s", drop)
+		}
+	}
+}
+
+func TestBuildRejectsADotfile(t *testing.T) {
+	_, priv := testKey(t)
+	o := okOptions(t, priv)
+	if err := os.WriteFile(filepath.Join(o.Dir, ".gitkeep"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Build(o)
+	if err == nil || !strings.Contains(err.Error(), "dotfile forbidden") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
 func TestBuildIsDeterministic(t *testing.T) {
 	_, priv := testKey(t)
 	o := okOptions(t, priv)

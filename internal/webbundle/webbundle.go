@@ -2,7 +2,9 @@
 // desktop client ships instead of loading JavaScript from the server (see
 // doc/desktop-trusted-client.md). A bundle is one zip: manifest.json (file
 // hashes, version and compatibility numbers), manifest.sig (Ed25519 over the
-// exact manifest bytes) and app/<path> for every file of web/dist.
+// exact manifest bytes) and app/<path> for the files the desktop client
+// serves. Dotfiles are rejected. The API reference stays in the server
+// embed and is left out of the signed bundle.
 //
 // The desktop host implements the same verification in Rust; the limits and
 // path rules below are part of the format and must stay in step with it.
@@ -22,6 +24,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -285,8 +288,11 @@ func (c *appCollector) visit(path string, d fs.DirEntry, err error) error {
 		return err
 	}
 	rel = filepath.ToSlash(rel)
-	if hasAnySuffix(rel, c.exclude) {
+	if hasAnySuffix(rel, c.exclude) || omitFromSignedBundle(rel) {
 		return nil
+	}
+	if err := rejectDotfile(rel); err != nil {
+		return err
 	}
 	data, err := readAppFile(path, rel)
 	if err != nil {
@@ -300,8 +306,23 @@ func (c *appCollector) visit(path string, d fs.DirEntry, err error) error {
 	return nil
 }
 
-// readWebApp loads every file below o.Dir (minus excluded suffixes), within
-// the bundle's size limits. It requires an index.html.
+// omitFromSignedBundle leaves the server-only API reference out of the
+// desktop bundle. Vite names that entry's chunks apiDocs-<hash>.
+func omitFromSignedBundle(rel string) bool {
+	base := path.Base(rel)
+	return rel == "api-docs.html" || strings.HasPrefix(base, "apiDocs-")
+}
+
+// rejectDotfile stops placeholders such as .gitkeep from being signed.
+func rejectDotfile(rel string) error {
+	if strings.HasPrefix(path.Base(rel), ".") {
+		return fmt.Errorf("dotfile forbidden in signed web bundle: %s", rel)
+	}
+	return nil
+}
+
+// readWebApp loads the desktop files below o.Dir, within the bundle's size
+// limits. It requires an index.html.
 func readWebApp(o BuildOptions) (map[string][]byte, error) {
 	c := &appCollector{
 		dir:      o.Dir,
