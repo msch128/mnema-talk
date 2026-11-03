@@ -38,6 +38,7 @@ func readCover(w http.ResponseWriter, r *http.Request) (*imgproc.Picture, error)
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
 // @Failure 413 {object} httpx.ErrorResponse "PAYLOAD_TOO_LARGE"
 // @Failure 415 {object} httpx.ErrorResponse "UNSUPPORTED_MEDIA_TYPE"
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: file storage is not available, or image processing is busy."
 // @Router /api/events/{id}/cover [post]
 func (h *Handler) uploadCover(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")

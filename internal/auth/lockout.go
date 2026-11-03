@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // Login lockout state lives in this process's memory. Two ways clear it
@@ -204,9 +205,13 @@ func (h *Handler) RunUnlockWorker(ctx context.Context, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
 	for {
-		if _, err := h.ProcessUnlockRequests(ctx); err != nil && ctx.Err() == nil {
-			slog.Warn("process unlock requests", "err", err)
-		}
+		worker.Tick(worker.JobUnlock, func() error {
+			_, err := h.ProcessUnlockRequests(ctx)
+			if err != nil && ctx.Err() == nil {
+				slog.Warn("process unlock requests", "err", err)
+			}
+			return worker.IgnoreDone(ctx, err)
+		})
 		select {
 		case <-ctx.Done():
 			return

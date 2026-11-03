@@ -26,6 +26,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/emojitext"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/imgproc"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -126,6 +127,9 @@ func readUpload(r *http.Request) (string, *Image, error) {
 		return "", nil, err
 	}
 	img, err := Process(data)
+	if errors.Is(err, imgproc.ErrBusy) {
+		return "", nil, httpx.ErrUnavailable("the server is busy, try again shortly")
+	}
 	if err != nil {
 		return "", nil, httpx.ErrInvalidInput(strings.TrimPrefix(err.Error(), ErrImage.Error()+": "))
 	}
@@ -200,7 +204,7 @@ func (h *Handler) discard(ctx context.Context, keys ...string) {
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available, or image processing is busy."
 // @Router /api/admin/emoji [post]
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 	if h.Store == nil {

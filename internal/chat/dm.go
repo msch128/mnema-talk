@@ -125,6 +125,9 @@ func (d DirectMessage) forOthers() DirectMessage {
 	return d
 }
 
+// dmSelect repeats authorHiddenFrom three times (last activity, last message,
+// unread). The clauses are wrapped differently, so the text stays here;
+// block_sql_test.go checks it still matches the shared rule.
 const dmSelect = `
 	SELECT c.id, c.dm_key IS NULL, c.created_at,
 	       (SELECT MAX(m.created_at) FROM messages m WHERE m.channel_id = c.id AND NOT EXISTS (

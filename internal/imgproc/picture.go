@@ -82,6 +82,11 @@ func ProcessLegacyAvatar(data []byte) (*Picture, error) {
 }
 
 func process(data []byte, k kind) (*Picture, error) {
+	release, err := acquire()
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 	switch {
 	case bytes.HasPrefix(data, []byte("\x89PNG\r\n\x1a\n")):
 		return still(data, k, png.DecodeConfig, png.Decode, "image/png")

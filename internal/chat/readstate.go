@@ -22,22 +22,10 @@ type ReadState struct {
 	NotifyLevel  NotifyLevel `json:"notify_level"`
 }
 
-// GetReadStates returns the unread summary of every channel for user (a
-// voice channel's chat counts like a text channel).
-// Unread counts top-level messages by others since the last read; mentions
-// count any message (also thread replies) that mentions the user (@username,
-// @all, @here unless the member suppresses them; see message_mentions) or replies to one of their messages. In a
-// muted channel only messages addressed to the user count (by name, through a
-// role or as a reply; not @all or @here), the same ones that still notify.
-// Before the first read, "last read" is the sign-up.
-// Messages of members the caller blocked never count as mentions.
-// The unread count is an index-only scan of messages_channel_unread_idx per
-// channel; only messages that mention the user or reply to their messages
-// are looked at one by one, so a channel with a long backlog stays cheap.
-// NotifyLevel is the effective level: the channel's own setting, else its
-// category's, else the member's server default, else "all"; an expired mute counts as none (see ResolveNotify).
-func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadState, error) {
-	rows, err := p.Query(ctx, `
+// readStateSQL is the unread summary of every channel. Messages of members
+// the caller blocked never count as mentions.
+func readStateSQL() string {
+	return `
 		SELECT c.id, unread.n, addr.mentions, addr.addressed,
 		       cr.last_read_at,
 		       COALESCE(cr.notify_level, 'inherit'), cr.muted_until,
@@ -64,10 +52,28 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		    WHERE m.channel_id = c.id AND m.user_id <> $1
 		      AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
 		      AND (mm.message_id IS NOT NULL OR orig.user_id = $1)
-		      AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id)
+		      AND ` + authorHiddenFrom("$1", "m.user_id") + `
 		) addr
 		WHERE c.type <> 'dm'
-		ORDER BY c.id`, user.ID, MentionKindGroup)
+		ORDER BY c.id`
+}
+
+// GetReadStates returns the unread summary of every channel for user (a
+// voice channel's chat counts like a text channel).
+// Unread counts top-level messages by others since the last read; mentions
+// count any message (also thread replies) that mentions the user (@username,
+// @all, @here unless the member suppresses them; see message_mentions) or replies to one of their messages. In a
+// muted channel only messages addressed to the user count (by name, through a
+// role or as a reply; not @all or @here), the same ones that still notify.
+// Before the first read, "last read" is the sign-up.
+// Messages of members the caller blocked never count as mentions.
+// The unread count is an index-only scan of messages_channel_unread_idx per
+// channel; only messages that mention the user or reply to their messages
+// are looked at one by one, so a channel with a long backlog stays cheap.
+// NotifyLevel is the effective level: the channel's own setting, else its
+// category's, else the member's server default, else "all"; an expired mute counts as none (see ResolveNotify).
+func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadState, error) {
+	rows, err := p.Query(ctx, readStateSQL(), user.ID, MentionKindGroup)
 	if err != nil {
 		return nil, fmt.Errorf("read states: %w", err)
 	}

@@ -2,6 +2,7 @@ package communityevents
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // Scheduler runs periodic checks for event state transitions and reminders.
@@ -62,47 +64,55 @@ func (s *Scheduler) run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case now := <-ticker.C:
-			s.Tick(ctx, now)
+			worker.Tick(worker.JobCommunityEvents, func() error {
+				return worker.IgnoreDone(ctx, s.Tick(ctx, now))
+			})
 		}
 	}
 }
 
 // Tick executes a single scheduler cycle for activations, completions and reminders.
-func (s *Scheduler) Tick(ctx context.Context, now time.Time) {
-	s.processActivations(ctx, now)
-	s.processCompletions(ctx, now)
-	s.processReminders(ctx, now)
-	s.processPromotions(ctx)
-	s.processSeries(ctx, now)
+// It returns every step that failed; one failure does not skip the others.
+func (s *Scheduler) Tick(ctx context.Context, now time.Time) error {
+	return errors.Join(
+		s.processActivations(ctx, now),
+		s.processCompletions(ctx, now),
+		s.processReminders(ctx, now),
+		s.processPromotions(ctx),
+		s.processSeries(ctx, now),
+	)
 }
 
-func (s *Scheduler) processActivations(ctx context.Context, now time.Time) {
+func (s *Scheduler) processActivations(ctx context.Context, now time.Time) error {
 	ids, err := s.Handler.Store.ActivateScheduled(ctx, now)
 	if err != nil {
 		slog.ErrorContext(ctx, "activate events failed", "err", err)
-		return
+		return err
 	}
 	s.broadcastEvents(ctx, ids)
+	return nil
 }
 
-func (s *Scheduler) processCompletions(ctx context.Context, now time.Time) {
+func (s *Scheduler) processCompletions(ctx context.Context, now time.Time) error {
 	ids, err := s.Handler.Store.CompleteActive(ctx, now)
 	if err != nil {
 		slog.ErrorContext(ctx, "complete events failed", "err", err)
-		return
+		return err
 	}
 	s.broadcastEvents(ctx, ids)
+	return nil
 }
 
-func (s *Scheduler) processReminders(ctx context.Context, now time.Time) {
+func (s *Scheduler) processReminders(ctx context.Context, now time.Time) error {
 	reminders, err := s.Handler.Store.DueReminders(ctx, now)
 	if err != nil {
 		slog.ErrorContext(ctx, "check due event reminders failed", "err", err)
-		return
+		return err
 	}
 	for _, r := range reminders {
 		s.dispatchReminder(ctx, r)
 	}
+	return nil
 }
 
 func (s *Scheduler) dispatchReminder(ctx context.Context, r DueReminder) {
@@ -209,11 +219,12 @@ func (s *Scheduler) broadcastEvents(ctx context.Context, ids []uuid.UUID) {
 
 // processPromotions moves waitlisted members up wherever a role has room that
 // no sign-up route filled (a member was erased, say) and tells them.
-func (s *Scheduler) processPromotions(ctx context.Context) {
+func (s *Scheduler) processPromotions(ctx context.Context) error {
 	promoted, err := s.Handler.Store.PromoteOpenSlots(ctx)
 	if err != nil {
 		slog.ErrorContext(ctx, "promote waitlists failed", "err", err)
 	}
+	failed := err
 	byEvent := map[uuid.UUID][]Promotion{}
 	var order []uuid.UUID
 	for _, p := range promoted {
@@ -230,26 +241,30 @@ func (s *Scheduler) processPromotions(ctx context.Context) {
 		s.Handler.broadcast(ev)
 		s.Handler.notifyMembers(ctx, ev, SignupKindPromoted, "", byEvent[id])
 	}
+	return failed
 }
 
 // processSeries creates the occurrences of the recurring events that now start
 // within the horizon. It looks every ten minutes, not every tick.
-func (s *Scheduler) processSeries(ctx context.Context, now time.Time) {
+func (s *Scheduler) processSeries(ctx context.Context, now time.Time) error {
 	if now.Sub(s.lastSeries) < seriesTick {
-		return
+		return nil
 	}
 	s.lastSeries = now
 	ids, err := s.Handler.Store.ActiveSeries(ctx)
 	if err != nil {
 		slog.ErrorContext(ctx, "list event series failed", "err", err)
-		return
+		return err
 	}
+	var failed error
 	for _, id := range ids {
 		created, err := s.Handler.Store.GenerateSeries(ctx, id, now)
 		if err != nil {
 			slog.ErrorContext(ctx, "create event occurrences failed", "series_id", id, "err", err)
+			failed = err
 			continue
 		}
 		s.broadcastEvents(ctx, created)
 	}
+	return failed
 }

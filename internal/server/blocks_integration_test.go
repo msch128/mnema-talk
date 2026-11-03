@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/blocks"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
@@ -84,7 +84,7 @@ func TestTheBlockListIsBounded(t *testing.T) {
 		WITH extra AS (
 		    INSERT INTO users (username, display_name, password_hash)
 		    SELECT 'filler' || n, 'Filler ' || n, 'x' FROM generate_series(1, $2::int) n RETURNING id)
-		INSERT INTO user_blocks (blocker_id, blocked_id) SELECT $1, id FROM extra`, alice.user.ID, chat.MaxBlocksPerMember)
+		INSERT INTO user_blocks (blocker_id, blocked_id) SELECT $1, id FROM extra`, alice.user.ID, blocks.MaxBlocksPerMember)
 	if err != nil {
 		t.Fatal(err)
 	}

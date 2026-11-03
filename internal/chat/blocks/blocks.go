@@ -1,4 +1,4 @@
-package chat
+package blocks
 
 import (
 	"context"
@@ -121,14 +121,23 @@ func RemoveBlock(ctx context.Context, q db.Querier, blocker, target uuid.UUID) (
 	return tag.RowsAffected() == 1, nil
 }
 
-func (h *Handler) mountBlocks(r chi.Router) {
-	r.Get("/me/blocks", httpx.Handle(h.listBlocks))
+// API serves one member's block list. Events may be nil, and then a change
+// is not broadcast. Limit may be nil, and then blocking is not rate limited.
+type API struct {
+	DB     *db.Pool
+	Events events.Publisher
+	Limit  *httpx.RateLimiter
+}
+
+// Mount registers the block routes (RequireUser must already apply).
+func (a API) Mount(r chi.Router) {
+	r.Get("/me/blocks", httpx.Handle(a.listBlocks))
 	changes := r
-	if h.BlockLimit != nil {
-		changes = r.With(h.BlockLimit.By(auth.UserKey))
+	if a.Limit != nil {
+		changes = r.With(a.Limit.By(auth.UserKey))
 	}
-	changes.Put("/me/blocks/{userID}", httpx.Handle(h.blockMember))
-	changes.Delete("/me/blocks/{userID}", httpx.Handle(h.unblockMember))
+	changes.Put("/me/blocks/{userID}", httpx.Handle(a.blockMember))
+	changes.Delete("/me/blocks/{userID}", httpx.Handle(a.unblockMember))
 }
 
 // listBlocks handles GET /api/me/blocks.
@@ -145,8 +154,8 @@ func (h *Handler) mountBlocks(r chi.Router) {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/me/blocks [get]
-func (h *Handler) listBlocks(w http.ResponseWriter, r *http.Request) error {
-	out, err := ListBlocks(r.Context(), h.DB, auth.UserFrom(r.Context()).ID)
+func (a API) listBlocks(w http.ResponseWriter, r *http.Request) error {
+	out, err := ListBlocks(r.Context(), a.DB, auth.UserFrom(r.Context()).ID)
 	if err != nil {
 		return err
 	}
@@ -172,8 +181,8 @@ func (h *Handler) listBlocks(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/me/blocks/{userID} [put]
-func (h *Handler) blockMember(w http.ResponseWriter, r *http.Request) error {
-	return h.changeBlock(w, r, true)
+func (a API) blockMember(w http.ResponseWriter, r *http.Request) error {
+	return a.changeBlock(w, r, true)
 }
 
 // unblockMember handles DELETE /api/me/blocks/{userID}.
@@ -192,11 +201,11 @@ func (h *Handler) blockMember(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/me/blocks/{userID} [delete]
-func (h *Handler) unblockMember(w http.ResponseWriter, r *http.Request) error {
-	return h.changeBlock(w, r, false)
+func (a API) unblockMember(w http.ResponseWriter, r *http.Request) error {
+	return a.changeBlock(w, r, false)
 }
 
-func (h *Handler) changeBlock(w http.ResponseWriter, r *http.Request, block bool) error {
+func (a API) changeBlock(w http.ResponseWriter, r *http.Request, block bool) error {
 	target, err := httpx.PathUUID(r, "userID")
 	if err != nil {
 		return err
@@ -204,15 +213,15 @@ func (h *Handler) changeBlock(w http.ResponseWriter, r *http.Request, block bool
 	me := auth.UserFrom(r.Context()).ID
 	var changed bool
 	if block {
-		changed, err = AddBlock(r.Context(), h.DB, me, target)
+		changed, err = AddBlock(r.Context(), a.DB, me, target)
 	} else {
-		changed, err = RemoveBlock(r.Context(), h.DB, me, target)
+		changed, err = RemoveBlock(r.Context(), a.DB, me, target)
 	}
 	if err != nil {
 		return err
 	}
-	if changed && h.Events != nil {
-		h.Events.SendToUsers([]uuid.UUID{me}, events.BlockUpdated, BlockUpdated{UserID: target, Blocked: block})
+	if changed && a.Events != nil {
+		a.Events.SendToUsers([]uuid.UUID{me}, events.BlockUpdated, BlockUpdated{UserID: target, Blocked: block})
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

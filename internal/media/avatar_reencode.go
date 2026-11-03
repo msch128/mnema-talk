@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/imgproc"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // Avatars stored before 1.1 are the files members uploaded, EXIF block
@@ -39,13 +40,16 @@ func StartAvatarReencode(ctx context.Context, p *db.Pool, store Store, bucket st
 	}
 	h := &Handler{DB: p, Store: store, Bucket: bucket, Audit: log, Events: pub}
 	go runPeriodically(ctx, avatarReencodeFirstRun, avatarReencodeInterval, func(ctx context.Context) {
-		done, failed, err := h.ReencodeAvatars(ctx)
-		switch {
-		case err != nil:
-			slog.Warn("avatar re-encode failed", "err", err)
-		case done > 0 || failed > 0:
-			slog.Info("avatars re-encoded without metadata", "done", done, "retry_later", failed)
-		}
+		worker.Tick(worker.JobAvatarReencode, func() error {
+			done, failed, err := h.ReencodeAvatars(ctx)
+			switch {
+			case err != nil:
+				slog.Warn("avatar re-encode failed", "err", err)
+			case done > 0 || failed > 0:
+				slog.Info("avatars re-encoded without metadata", "done", done, "retry_later", failed)
+			}
+			return worker.IgnoreDone(ctx, err)
+		})
 	})
 }
 
@@ -105,6 +109,9 @@ func (h *Handler) reencodeAvatar(ctx context.Context, a storedAvatar) error {
 		return fmt.Errorf("read avatar: %w", err)
 	}
 	pic, err := imgproc.ProcessAvatar(data)
+	if errors.Is(err, imgproc.ErrBusy) {
+		return err
+	}
 	if errors.Is(err, imgproc.ErrImage) {
 		// Outside today's limits (a huge canvas, a long animation): old files
 		// were accepted, so redraw what can still be drawn, first frame only.

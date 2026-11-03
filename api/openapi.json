@@ -1300,6 +1300,34 @@
         },
         "type": "object"
       },
+      "blocks.BlockedMember": {
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "blocked_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blocked_at",
+          "display_name",
+          "user_id",
+          "username"
+        ],
+        "type": "object"
+      },
       "bot.Access": {
         "properties": {
           "channels": {
@@ -1898,34 +1926,6 @@
         },
         "required": [
           "days"
-        ],
-        "type": "object"
-      },
-      "chat.BlockedMember": {
-        "properties": {
-          "avatar_url": {
-            "type": "string"
-          },
-          "blocked_at": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "display_name": {
-            "type": "string"
-          },
-          "user_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "username": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "blocked_at",
-          "display_name",
-          "user_id",
-          "username"
         ],
         "type": "object"
       },
@@ -14096,7 +14096,7 @@
                 }
               }
             },
-            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available, or image processing is busy."
           }
         },
         "security": [
@@ -14249,7 +14249,7 @@
                 }
               }
             },
-            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available, or image processing is busy."
           }
         },
         "security": [
@@ -31396,6 +31396,16 @@
               }
             },
             "description": "UNSUPPORTED_MEDIA_TYPE"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: file storage is not available, or image processing is busy."
           }
         },
         "security": [
@@ -32394,7 +32404,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/chat.BlockedMember"
+                    "$ref": "#/components/schemas/blocks.BlockedMember"
                   },
                   "type": "array"
                 }
@@ -37432,7 +37442,7 @@
                 }
               }
             },
-            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available, or image processing is busy."
           }
         },
         "security": [
@@ -37651,7 +37661,7 @@
                 }
               }
             },
-            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available, or image processing is busy."
           }
         },
         "security": [

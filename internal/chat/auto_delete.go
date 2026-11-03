@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // AutoDeleteChoices are the retention periods a channel can be set to, in
@@ -89,9 +90,13 @@ func (a *AutoDeleter) Run(ctx context.Context, every time.Duration) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			if err := a.Sweep(ctx); err != nil && ctx.Err() == nil {
-				slog.Error("auto-delete sweep failed", "err", err)
-			}
+			worker.Tick(worker.JobAutoDelete, func() error {
+				err := a.Sweep(ctx)
+				if err != nil && ctx.Err() == nil {
+					slog.Error("auto-delete sweep failed", "err", err)
+				}
+				return worker.IgnoreDone(ctx, err)
+			})
 		}
 	}
 }

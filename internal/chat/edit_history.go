@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // MaxEditVersions is how many replaced versions of one message are kept; the
@@ -249,11 +250,15 @@ func RunEditHistoryRetention(ctx context.Context, p *db.Pool, days int, every ti
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {
-		if n, err := PruneEditHistory(ctx, p, days); err != nil {
-			slog.Error("edit history retention failed", "err", err)
-		} else if n > 0 {
-			slog.Info("edit history retention", "deleted", n)
-		}
+		worker.Tick(worker.JobEditHistory, func() error {
+			n, err := PruneEditHistory(ctx, p, days)
+			if err != nil {
+				slog.Error("edit history retention failed", "err", err)
+			} else if n > 0 {
+				slog.Info("edit history retention", "deleted", n)
+			}
+			return worker.IgnoreDone(ctx, err)
+		})
 		select {
 		case <-ctx.Done():
 			return

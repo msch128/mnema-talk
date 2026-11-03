@@ -149,17 +149,18 @@ func (s *Service) claimDue(ctx context.Context) ([]dueReminder, error) {
 // deliverReminders tells the owners of the reminders that fell due: an event
 // for their open sessions and a push. The message is checked against the
 // owner's access at this moment; a message they cannot see is not described.
-func (s *Service) deliverReminders(ctx context.Context) {
+func (s *Service) deliverReminders(ctx context.Context) error {
 	due, err := s.claimDue(ctx)
 	if err != nil {
 		if ctx.Err() == nil {
 			slog.Warn("reminders: claim", "err", err)
 		}
-		return
+		return err
 	}
 	for _, d := range due {
 		s.deliverOne(ctx, d)
 	}
+	return nil
 }
 
 func (s *Service) deliverOne(ctx context.Context, d dueReminder) {
@@ -191,9 +192,10 @@ func (s *Service) deliverOne(ctx context.Context, d dueReminder) {
 }
 
 // pruneDelivered removes delivered reminders nobody dismissed for a month.
-func (s *Service) pruneDelivered(ctx context.Context) {
+func (s *Service) pruneDelivered(ctx context.Context) error {
 	_, err := s.DB.Exec(ctx, `DELETE FROM message_reminders WHERE delivered_at < clock_timestamp() - make_interval(secs => $1)`, DeliveredRetention.Seconds())
 	if err != nil && ctx.Err() == nil {
 		slog.Warn("reminders: prune", "err", err)
 	}
+	return err
 }

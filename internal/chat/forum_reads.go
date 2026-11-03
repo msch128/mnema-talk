@@ -12,12 +12,10 @@ import (
 // maxUnreadPosts bounds the list of unread posts a client loads at once.
 const maxUnreadPosts = 200
 
-// UnreadPostIDs lists the posts of channelID with something the member has not
-// read: the post itself or a reply of someone else (not someone they blocked)
-// newer than their last read of the post. A post they never opened counts from
-// the day they joined. Newest activity first.
-func UnreadPostIDs(ctx context.Context, p *db.Pool, channelID, userID uuid.UUID) ([]uuid.UUID, error) {
-	rows, err := p.Query(ctx, `
+// unreadPostsSQL lists posts with something the member has not read. A reply
+// by someone they blocked does not count.
+func unreadPostsSQL() string {
+	return `
 		SELECT m.id
 		FROM messages m
 		JOIN users me ON me.id = $2
@@ -28,12 +26,20 @@ func UnreadPostIDs(ctx context.Context, p *db.Pool, channelID, userID uuid.UUID)
 		        UNION ALL SELECT c.created_at, c.user_id FROM messages c WHERE c.parent_id = m.id
 		    ) x
 		    WHERE x.user_id <> $2
-		      AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $2 AND ub.blocked_id = x.user_id)
+		      AND ` + authorHiddenFrom("$2", "x.user_id") + `
 		      AND x.created_at > COALESCE(r.last_read_at, me.created_at)
 		) news
 		WHERE m.channel_id = $1 AND m.parent_id IS NULL AND news.at IS NOT NULL
 		ORDER BY news.at DESC, m.id DESC
-		LIMIT $3`, channelID, userID, maxUnreadPosts)
+		LIMIT $3`
+}
+
+// UnreadPostIDs lists the posts of channelID with something the member has not
+// read: the post itself or a reply of someone else (not someone they blocked)
+// newer than their last read of the post. A post they never opened counts from
+// the day they joined. Newest activity first.
+func UnreadPostIDs(ctx context.Context, p *db.Pool, channelID, userID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := p.Query(ctx, unreadPostsSQL(), channelID, userID, maxUnreadPosts)
 	if err != nil {
 		return nil, fmt.Errorf("unread posts: %w", err)
 	}

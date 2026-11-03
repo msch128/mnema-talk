@@ -9,7 +9,7 @@ import (
 )
 
 func TestExportedUploadsListEveryAttachmentOfAMessageButNotUnsentOnes(t *testing.T) {
-	_, pool, member, _, channel := exportFixture(t)
+	h, pool, member, store, channel := exportFixture(t)
 	seedMessages(t, pool, member.ID, channel, 1)
 	ctx := context.Background()
 	if _, err := pool.Exec(ctx, `
@@ -23,11 +23,13 @@ func TestExportedUploadsListEveryAttachmentOfAMessageButNotUnsentOnes(t *testing
 		VALUES ($1, $2, 'b', 'uploads/unsent', 'unsent.png', 'image/png', 10, TRUE)`, member.ID, channel); err != nil {
 		t.Fatal(err)
 	}
-	got, err := exportUploads(ctx, pool, member.ID)
-	if err != nil {
+	if _, err := runExport(t, h, member.ID); err != nil {
 		t.Fatal(err)
 	}
-	raw, _ := json.Marshal(got.value)
+	raw, ok := archiveFile(t, store, "uploads.json")
+	if !ok {
+		t.Fatal("no uploads.json")
+	}
 	var uploads []struct {
 		Filename  string  `json:"filename"`
 		MessageID *string `json:"message_id"`

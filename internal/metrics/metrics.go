@@ -257,6 +257,12 @@ var (
 
 	// S3Operations counts object storage calls, by operation and result.
 	S3Operations = newVec("mnema_s3_operations_total", "Object storage operations, by operation and result", "op", "result")
+
+	// JobDuration, JobErrors and JobPanics cover one run of a periodic
+	// maintenance job (internal/worker). A panic is not also an error.
+	JobDuration = newHistVec("mnema_job_duration_seconds", "How long one run of a periodic maintenance job took", "job")
+	JobErrors   = newVec("mnema_job_errors_total", "Periodic maintenance runs that returned an error", "job")
+	JobPanics   = newVec("mnema_job_panics_total", "Periodic maintenance runs that panicked", "job")
 )
 
 // ObserveHTTP records one finished request.
@@ -324,6 +330,9 @@ func WriteInstruments(w io.Writer) {
 	S3Operations.write(w)
 	WebhookDropped.write(w)
 	PushDeliveries.write(w)
+	JobDuration.write(w)
+	JobErrors.write(w)
+	JobPanics.write(w)
 }
 
 func writeCounter(w io.Writer, name, help string, v uint64) {

@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/userdata"
 )
 
 const (
@@ -21,6 +22,9 @@ const (
 	// (the archive says so in "truncated"), the other lists at exportMaxRows
 	// (truncated.json names the ones that were cut), and the compressed archive at exportMaxBytes, which fails the export.
 	exportPage = 1000
+	// exportMaxEdits bounds the earlier versions in an export: each can be 4000
+	// characters, and they are held in memory while the list is built.
+	exportMaxEdits = 2000
 )
 
 // The bounds are variables so tests can lower them.
@@ -132,116 +136,28 @@ func (z *zipFiles) add(name string, v any) error {
 	return enc.Encode(v)
 }
 
-// exportStep is one file of the archive and the function that builds its content.
-type exportStep struct {
-	name  string
-	build func() (any, error)
-}
-
-// addSteps builds and adds every step; it returns the names of the files that
-// were cut at the row limit.
-func (z *zipFiles) addSteps(steps []exportStep) (cut []string, err error) {
-	for _, s := range steps {
-		v, err := s.build()
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", s.name, err)
-		}
-		if c, ok := v.(capped); ok {
-			if c.truncated {
-				cut = append(cut, s.name)
-			}
-			v = c.value
-		}
-		if err := z.add(s.name, v); err != nil {
-			return nil, err
-		}
-	}
-	return cut, nil
-}
-
-// writeArchive collects the person's own data into a ZIP written to out.
-// Channel names appear only for channels the person can still view; nothing
-// here names another member.
-func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Writer) error {
-	q := h.Sessions.DB
-	viewable, err := h.viewableChannels(ctx, user)
-	if err != nil {
-		return err
-	}
-	z := &zipFiles{zw: zip.NewWriter(out)}
-	w, err := z.zw.Create("README.txt")
-	if err != nil {
-		return err
-	}
-	if _, err := w.Write([]byte(exportReadme)); err != nil {
-		return err
-	}
-	steps := []exportStep{
-		{"profile.json", func() (any, error) { return h.exportProfileWithImages(ctx, z, user) }},
-		{"settings.json", func() (any, error) { return exportSettings(ctx, q, user, viewable) }},
-		{"edits.json", func() (any, error) { return exportEdits(ctx, q, user) }},
-		{"reactions.json", func() (any, error) { return exportReactions(ctx, q, user) }},
-		{"poll_votes.json", func() (any, error) { return exportPollVotes(ctx, q, user) }},
-		{"uploads.json", func() (any, error) { return exportUploads(ctx, q, user) }},
-		{"polls.json", func() (any, error) { return exportPolls(ctx, q, user, viewable) }},
-		{"pins.json", func() (any, error) { return exportPins(ctx, q, user, viewable) }},
-		{"thread_follows.json", func() (any, error) { return exportThreadFollows(ctx, q, user) }},
-		{"push.json", func() (any, error) { return exportPush(ctx, q, user) }},
-		{"sessions.json", func() (any, error) { return exportSessions(ctx, q, user) }},
-		{"emoji.json", func() (any, error) { return h.exportEmoji(ctx, z, user) }},
-		{"audit.json", func() (any, error) { return exportAudit(ctx, q, user) }},
-		{"security.json", func() (any, error) { return h.exportSecurity(ctx, user) }},
-		{"direct_messages.json", func() (any, error) { return exportDirectMessages(ctx, q, user) }},
-		{"blocks.json", func() (any, error) { return exportBlocks(ctx, q, user) }},
-		{"reports.json", func() (any, error) { return exportReports(ctx, q, user) }},
-		{"saved.json", func() (any, error) { return exportSaved(ctx, q, user) }},
-		{"reminders.json", func() (any, error) { return exportReminders(ctx, q, user) }},
-		{"scheduled_messages.json", func() (any, error) { return exportScheduled(ctx, q, user, viewable) }},
-		{"rsvps.json", func() (any, error) { return exportRSVPs(ctx, q, user) }},
-		{"event_signups.json", func() (any, error) { return exportEventSignups(ctx, q, user) }},
-		{"event_comments.json", func() (any, error) { return exportEventComments(ctx, q, user) }},
-	}
-	cut, err := z.addSteps(steps)
-	if err != nil {
-		return err
-	}
-	mw, err := z.zw.Create("messages.json")
-	if err != nil {
-		return err
-	}
-	if err := streamMessages(ctx, q, user, viewable, mw); err != nil {
-		return fmt.Errorf("messages.json: %w", err)
-	}
-	if len(cut) > 0 {
-		if err := z.add("truncated.json", map[string]any{"limit": exportMaxRows, "files": cut}); err != nil {
-			return err
-		}
-	}
-	return z.zw.Close()
-}
-
 // viewableChannels are the channels the person may still see, by the live
 // permission state. Without a permission service no channel name is revealed.
-func (h *Handler) viewableChannels(ctx context.Context, user uuid.UUID) (viewSet, error) {
+func (h *Handler) viewableChannels(ctx context.Context, user uuid.UUID) (userdata.Channels, error) {
 	if h.Perms == nil {
-		return viewSet{}, nil
+		return userdata.Channels{}, nil
 	}
 	snap, err := h.Perms.Snapshot(ctx)
 	if err != nil {
-		return viewSet{}, err
+		return userdata.Channels{}, err
 	}
 	u, err := GetUser(ctx, h.Sessions.DB, user)
 	if err != nil {
-		return viewSet{}, err
+		return userdata.Channels{}, err
 	}
 	channels := snap.ViewableChannels(u.Subject())
 	if channels == nil {
 		// The Owner and Administrators see every channel.
-		return viewSet{all: true}, nil
+		return userdata.Channels{All: true}, nil
 	}
-	out := viewSet{ids: make(map[uuid.UUID]bool, len(channels))}
+	out := userdata.Channels{IDs: make(map[uuid.UUID]bool, len(channels))}
 	for _, c := range channels {
-		out.ids[c] = true
+		out.IDs[c] = true
 	}
 	return out, nil
 }

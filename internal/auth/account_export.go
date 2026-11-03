@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 const (
@@ -323,7 +324,13 @@ func (h *Handler) RunExportSweep(ctx context.Context, every time.Duration) {
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {
-		h.sweepExports(ctx)
+		worker.Tick(worker.JobExportSweep, func() error {
+			err := h.sweepExports(ctx)
+			if err != nil && ctx.Err() == nil {
+				slog.Warn("export sweep failed", "err", err)
+			}
+			return worker.IgnoreDone(ctx, err)
+		})
 		select {
 		case <-ctx.Done():
 			return
@@ -332,12 +339,12 @@ func (h *Handler) RunExportSweep(ctx context.Context, every time.Duration) {
 	}
 }
 
-func (h *Handler) sweepExports(ctx context.Context) {
+func (h *Handler) sweepExports(ctx context.Context) error {
 	db := h.Sessions.DB
 	_, _ = db.Exec(ctx, `UPDATE data_exports SET status = 'failed' WHERE status = 'pending' AND requested_at < NOW() - INTERVAL '30 minutes'`)
 	rows, err := db.Query(ctx, `SELECT id, s3_key FROM data_exports WHERE s3_key IS NOT NULL AND (expires_at < NOW() OR downloaded_at IS NOT NULL) LIMIT 200`)
 	if err != nil {
-		return
+		return err
 	}
 	type item struct {
 		id  uuid.UUID
@@ -348,10 +355,11 @@ func (h *Handler) sweepExports(ctx context.Context) {
 		return it, row.Scan(&it.id, &it.key)
 	})
 	if err != nil || h.Objects == nil {
-		return
+		return err
 	}
 	for _, it := range items {
 		h.dropExportFile(ctx, it.id, it.key)
 	}
 	_, _ = db.Exec(ctx, `DELETE FROM data_exports WHERE requested_at < NOW() - INTERVAL '7 days' AND s3_key IS NULL`)
+	return nil
 }

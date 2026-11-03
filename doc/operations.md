@@ -1204,6 +1204,9 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_s3_operations_total{op,result}` | counter | Object storage calls (`upload`, `get`, `delete`, `list`) by `ok`/`error`. |
 | `mnema_webhook_events_dropped_total{reason}` | counter | Outgoing webhook events dropped or expired unsent: `webhook_cap` and `global_cap` (queue limits), `buffer_full`, `channel_share`, `store_error` and `expired` (older than the retry window). A rising count means a receiver is down or too slow. |
 | `mnema_push_deliveries_total{outcome}` | counter | Web Push deliveries: `ok`, `gone` (the browser ended the subscription; it is removed), `retry` (temporary refusal, retried once), `rejected`, `error` (no answer: blocked address, DNS, connection, TLS, timeout) and `dropped` (a full queue). A rising `rejected` share right after a restore means the VAPID key changed. |
+| `mnema_job_duration_seconds{job}` | histogram | How long one run of a periodic maintenance job took. `job` is `session_sweep`, `status_expiry`, `ban_expiry`, `unlock`, `export_sweep`, `slow_mode_prune`, `edit_history`, `auto_delete`, `poll_fold`, `later`, `audit_retention`, `community_events`, `push_sweep` or `avatar_reencode`. |
+| `mnema_job_errors_total{job}` | counter | Runs of those jobs that returned an error. Stopping the process is not counted. |
+| `mnema_job_panics_total{job}` | counter | Runs that panicked. The panic is logged and the job keeps its schedule; it is not also counted as an error. |
 
 ## Orphaned media
 
