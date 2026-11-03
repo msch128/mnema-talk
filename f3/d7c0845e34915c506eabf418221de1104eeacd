@@ -1,0 +1,170 @@
+api/openapi.json
+  h_0ff4f4713441f4 1303-1330,14099,14252,31399-31408,32407,37445,37664
+doc/operations.md
+  h_0ff4f4713441f4 1207-1209
+internal/audit/audit.go
+  h_0ff4f4713441f4 26,147-154,156-157
+internal/auth/account_delete.go
+  h_0ff4f4713441f4 74
+internal/auth/account_erase.go
+  h_0ff4f4713441f4 12,21-24,69-70,82-83,85-92,94-95,102-121,123-125,129-136,140,142-143,145-157
+internal/auth/account_erase_steps.go
+  h_0ff4f4713441f4 1-35
+internal/auth/account_export.go
+  h_0ff4f4713441f4 16,327-333,342,347,358,364
+internal/auth/account_export_activity.go
+  h_0ff4f4713441f4 13-15
+internal/auth/account_export_archive.go
+  h_0ff4f4713441f4 1-174
+internal/auth/account_export_build.go
+  h_0ff4f4713441f4 15,25-27,141,143,147,151,156,158,160
+internal/auth/account_export_data.go
+  h_0ff4f4713441f4 11,14-15,17,31
+internal/auth/account_export_edits_integration_test.go
+  h_0ff4f4713441f4 12,19,22-24
+internal/auth/account_export_list.go
+  h_0ff4f4713441f4 8,23,29
+internal/auth/account_export_uploads_integration_test.go
+  h_0ff4f4713441f4 12,26,29-32
+internal/auth/account_personal.go
+  h_0ff4f4713441f4 1-26
+internal/auth/handler.go
+  h_0ff4f4713441f4 18,51-52
+internal/auth/lockout.go
+  h_0ff4f4713441f4 15,208-214
+internal/auth/moderation_bans.go
+  h_0ff4f4713441f4 18,269-271,280-282,288,298,303,310,322
+internal/auth/personal_data_fallback_integration_test.go
+  h_0ff4f4713441f4 1-23
+internal/auth/session_sweep.go
+  h_0ff4f4713441f4 9,64-71
+internal/auth/status_expiry.go
+  h_0ff4f4713441f4 9,35-37,46-48,54,59,64,71,77
+internal/auth/testhooks_integration.go
+  h_0ff4f4713441f4 9,31-40
+internal/chat/account_data.go
+  h_0ff4f4713441f4 1,8,11-34,37-48,50-53
+internal/chat/account_erase.go
+  h_0ff4f4713441f4 1-54
+internal/chat/account_export.go
+  h_0ff4f4713441f4 1,10,13-15,22,24,28,30,34-151
+internal/chat/account_export_messages.go
+  h_0ff4f4713441f4 1-121
+internal/chat/account_export_polls.go
+  h_0ff4f4713441f4 1,9,12-18,21,27,30,32,39,42,44,48-146
+internal/chat/auto_delete.go
+  h_0ff4f4713441f4 16,93-99
+internal/chat/block_sql.go
+  h_0ff4f4713441f4 1-16
+internal/chat/block_sql_test.go
+  h_0ff4f4713441f4 1-31
+internal/chat/blocks/blocks.go
+  h_0ff4f4713441f4 1,124-134,136-137,139-140,157-158,184-185,204-205,208,216,218,223-224
+internal/chat/channels.go
+  h_0ff4f4713441f4 11,151,171-172,287,293-294
+internal/chat/dm.go
+  h_0ff4f4713441f4 128-130
+internal/chat/edit_history.go
+  h_0ff4f4713441f4 18,253-261
+internal/chat/forum_reads.go
+  h_0ff4f4713441f4 15-18,29,34-42
+internal/chat/handler.go
+  h_0ff4f4713441f4 13,104
+internal/chat/inbox.go
+  h_0ff4f4713441f4 69
+internal/chat/post.go
+  h_0ff4f4713441f4 18,183-189
+internal/chat/readstate.go
+  h_0ff4f4713441f4 25-28,55,58-76
+internal/chat/stage/stage.go
+  h_0ff4f4713441f4 1,22-27,29
+internal/chat/stage_integration_test.go
+  h_0ff4f4713441f4 10,34,38,42,49,61,65,72,77,80,83,92,96,100,103
+internal/communityevents/account_data.go
+  h_0ff4f4713441f4 1,9,12-53,60-63,66,73-74,76-77,80,87-90
+internal/communityevents/handler_cover.go
+  h_0ff4f4713441f4 41
+internal/communityevents/scheduler.go
+  h_0ff4f4713441f4 5,13,67-69,75-83,86,90,93,96,100,103,106,110,115,222,227,244,249,251,257,259,264,269
+internal/emoji/handler.go
+  h_0ff4f4713441f4 29,130-132,207
+internal/emoji/image.go
+  h_0ff4f4713441f4 5,66-70
+internal/imgproc/picture.go
+  h_0ff4f4713441f4 85-89
+internal/imgproc/slots.go
+  h_0ff4f4713441f4 1,5-7,9-14,16-24,27-39,41-55
+internal/imgproc/slots_test.go
+  h_0ff4f4713441f4 1,4-5,9-37,39-40
+internal/later/account_data.go
+  h_0ff4f4713441f4 1,9,12-35,42-61,64-67,77,81,84,88
+internal/later/reminders.go
+  h_0ff4f4713441f4 152,158,163,195,200
+internal/later/scheduled_send.go
+  h_0ff4f4713441f4 51,57,61,67
+internal/later/service.go
+  h_0ff4f4713441f4 10,21,106-108,114-115,117,119,121,123
+internal/media/avatar_reencode.go
+  h_0ff4f4713441f4 19,43-52,112-114
+internal/media/banner.go
+  h_0ff4f4713441f4 33
+internal/media/handler_upload.go
+  h_0ff4f4713441f4 229
+internal/media/profile_image.go
+  h_0ff4f4713441f4 81-83
+internal/metrics/metrics.go
+  h_0ff4f4713441f4 260-265,333-335
+internal/metrics/metrics_test.go
+  h_0ff4f4713441f4 122
+internal/onboarding/icon.go
+  h_0ff4f4713441f4 223
+internal/poll/store.go
+  h_0ff4f4713441f4 14,160-166
+internal/push/account_data.go
+  h_0ff4f4713441f4 1-55
+internal/push/maintenance.go
+  h_0ff4f4713441f4 1-30
+internal/push/service.go
+  h_0ff4f4713441f4 139
+internal/server/blocks_integration_test.go
+  h_0ff4f4713441f4 11,87
+internal/server/personal_data.go
+  h_0ff4f4713441f4 1-20
+internal/server/personal_data_test.go
+  h_0ff4f4713441f4 1-181
+internal/server/router_build.go
+  h_0ff4f4713441f4 184
+internal/server/router_build_services.go
+  h_0ff4f4713441f4 9,29
+internal/userdata/doc.go
+  h_0ff4f4713441f4 1-4
+internal/userdata/order.go
+  h_0ff4f4713441f4 1-94
+internal/userdata/registry_test.go
+  h_0ff4f4713441f4 1-74
+internal/userdata/rows.go
+  h_0ff4f4713441f4 1,6,10-14,16-39
+internal/userdata/rows_test.go
+  h_0ff4f4713441f4 1-14
+internal/userdata/userdata.go
+  h_0ff4f4713441f4 1-133
+internal/worker/tick.go
+  h_0ff4f4713441f4 1-61
+internal/worker/tick_test.go
+  h_0ff4f4713441f4 1-90
+internal/ws/stage_integration_test.go
+  h_0ff4f4713441f4 12,111,119
+scripts/english-only-allowlist.txt
+  h_0ff4f4713441f4 79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f3d7c0845e34915c506eabf418221de1104eeacd",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
