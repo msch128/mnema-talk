@@ -27,24 +27,41 @@ func startTestRelay(t *testing.T, mayRelay func(uuid.UUID) bool) *turnrelay.Serv
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = sfu.Close() })
-	probe, err := net.ListenPacket("udp4", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	port := probe.LocalAddr().(*net.UDPAddr).Port
-	_ = probe.Close()
 	media := uint16(sfu.LocalAddr().(*net.UDPAddr).Port)
-	relay, err := turnrelay.Start(turnrelay.Options{
-		Port: port, BindAddr: "127.0.0.1", MayRelay: mayRelay,
-		Target: func() turnrelay.Target {
-			return turnrelay.Target{LocalIPs: []net.IP{net.IPv4(127, 0, 0, 1)}, PortMin: media, PortMax: media}
-		},
-	})
+	var last string
+	for range 8 {
+		relay, err := turnrelay.Start(turnrelay.Options{
+			Port: freeLocalPort(t), BindAddr: "127.0.0.1", MayRelay: mayRelay,
+			Target: func() turnrelay.Target {
+				return turnrelay.Target{LocalIPs: []net.IP{net.IPv4(127, 0, 0, 1)}, PortMin: media, PortMax: media}
+			},
+		})
+		if err != nil {
+			last = err.Error()
+			continue
+		}
+		// A port that was free a moment ago can be taken before TCP binds.
+		// The relay then stays up on UDP only, which is not this test.
+		if st := relay.Status(); st.UDP && st.TCP {
+			t.Cleanup(func() { _ = relay.Close() })
+			return relay
+		}
+		last = relay.Status().TCPErr
+		_ = relay.Close()
+	}
+	t.Fatalf("relay did not listen on udp and tcp: %s", last)
+	return nil
+}
+
+func freeLocalPort(t *testing.T) int {
+	t.Helper()
+	ln, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = relay.Close() })
-	return relay
+	port := ln.Addr().(*net.TCPAddr).Port
+	_ = ln.Close()
+	return port
 }
 
 // externalPassword is the password the external (coturn) path derives for a

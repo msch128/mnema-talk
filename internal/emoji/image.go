@@ -2,6 +2,7 @@ package emoji
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -62,6 +63,11 @@ func Process(data []byte) (*Image, error) {
 	if len(data) == 0 || len(data) > MaxFileBytes {
 		return nil, reject("the file must be between 1 byte and %d KiB", MaxFileBytes>>10)
 	}
+	release, err := imgproc.Gate(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 	out, err := redraw(data)
 	if err != nil {
 		return nil, err

@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/userdata"
 )
 
 // errStoreMissing is what memStore answers for an unknown key.
@@ -268,5 +269,76 @@ func TestOnlyOneDownloadCanHoldTheExportAtATime(t *testing.T) {
 	download(h, member, w, "none")
 	if w.Code != http.StatusOK {
 		t.Fatalf("a lapsed hold: %d", w.Code)
+	}
+}
+
+func TestExportSettingsLeaveOutNamesTheMemberCannotSee(t *testing.T) {
+	_, pool, member, _, visible := exportFixture(t)
+	ctx := context.Background()
+	var hidden uuid.UUID
+	if err := pool.QueryRow(ctx, `INSERT INTO channels (name, type) VALUES ('backroom', 'text') RETURNING id`).Scan(&hidden); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO channel_reads (user_id, channel_id, notify_level) VALUES ($1, $2, 'all'), ($1, $3, 'mentions')`, member.ID, visible, hidden); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO server_notify (user_id, notify_level, suppress_everyone) VALUES ($1, 'mentions', TRUE)`, member.ID); err != nil {
+		t.Fatal(err)
+	}
+	got, err := exportSettings(ctx, pool, member.ID, userdata.Channels{IDs: map[uuid.UUID]bool{visible: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(got.value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Channels []struct {
+			ID    uuid.UUID `json:"channel_id"`
+			Name  *string   `json:"channel_name"`
+			Level string    `json:"notify_level"`
+		} `json:"channels"`
+		Server struct {
+			Level    string `json:"notify_level"`
+			Suppress bool   `json:"suppress_everyone"`
+		} `json:"server"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	if doc.Server.Level != "mentions" || !doc.Server.Suppress {
+		t.Fatalf("server setting: %+v", doc.Server)
+	}
+	if len(doc.Channels) != 2 {
+		t.Fatalf("channels: %+v", doc.Channels)
+	}
+	for _, ch := range doc.Channels {
+		switch ch.ID {
+		case visible:
+			if ch.Name == nil || *ch.Name != "room" || ch.Level != "all" {
+				t.Fatalf("visible channel: %+v", ch)
+			}
+		case hidden:
+			if ch.Name != nil || ch.Level != "mentions" {
+				t.Fatalf("hidden channel keeps its name: %+v", ch)
+			}
+		default:
+			t.Fatalf("unexpected channel %s", ch.ID)
+		}
+	}
+}
+
+func TestExportSettingsStopWhenAReadIsCancelled(t *testing.T) {
+	_, pool, member, _, _ := exportFixture(t)
+	for _, match := range []string{"FROM channel_reads", "FROM category_notify", "FROM server_notify"} {
+		t.Run(match, func(t *testing.T) {
+			hook := &authQueryHook{match: match, cancel: true}
+			fault := authHookPool(t, pool, hook)
+			_, err := exportSettings(context.Background(), fault, member.ID, userdata.Channels{})
+			if !errors.Is(err, context.Canceled) {
+				t.Fatalf("err = %v, want the cancelled read", err)
+			}
+		})
 	}
 }

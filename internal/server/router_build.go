@@ -181,6 +181,7 @@ func (c *components) newCore() {
 		},
 	}
 	media.StartAvatarReencode(c.ctx, d.DB, d.Store, cfg.S3Bucket, &audit.Log{DB: d.DB}, c.pub)
+	c.wirePersonalData()
 }
 
 // newMail builds the SMTP client when configured and hands it to the account

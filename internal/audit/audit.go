@@ -23,6 +23,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/textcut"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // Entry is one thing that happened.
@@ -143,13 +144,17 @@ func (l *Log) RunRetention(ctx context.Context, days int, every time.Duration) {
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {
-		if n, err := l.Prune(ctx, days); err != nil {
-			if ctx.Err() == nil {
-				slog.ErrorContext(ctx, "audit log retention failed", "err", err)
+		worker.Tick(worker.JobAuditRetention, func() error {
+			n, err := l.Prune(ctx, days)
+			if err != nil {
+				if ctx.Err() == nil {
+					slog.ErrorContext(ctx, "audit log retention failed", "err", err)
+				}
+			} else if n > 0 {
+				slog.Info("audit log retention", "deleted", n)
 			}
-		} else if n > 0 {
-			slog.Info("audit log retention", "deleted", n)
-		}
+			return worker.IgnoreDone(ctx, err)
+		})
 		select {
 		case <-ctx.Done():
 			return

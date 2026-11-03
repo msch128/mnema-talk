@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/userdata"
 )
 
 // Handler serves /api/auth/* and the profile endpoints under /api/users.
@@ -47,6 +48,8 @@ type Handler struct {
 	// failure; an export skips only the files that are gone. nil treats every
 	// error as a failure.
 	ObjectMissing func(error) bool
+	// personal is the other domains' export files and erasure statements.
+	personal *userdata.Registry
 	// Lifetime bounds the background jobs (data exports): they stop when it
 	// ends. nil means they run to completion.
 	Lifetime    context.Context

@@ -226,7 +226,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available, or image processing is busy."
 // @Router /api/users/me/avatar [post]
 func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/stage"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -147,7 +148,7 @@ func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name 
 // CreateChannelWithStage is CreateChannel that can make the new channel a
 // Stage in the same transaction, so a request that cannot be a Stage (a text
 // channel) creates nothing.
-func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int, stage bool) (*Channel, error) {
+func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int, asStage bool) (*Channel, error) {
 	name, topic, err := cleanChannelInputs(name, topic, chType)
 	if err != nil {
 		return nil, err
@@ -167,8 +168,8 @@ func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UU
 			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds); err != nil {
 			return err
 		}
-		if stage {
-			if err := SetStage(ctx, tx, ch.ID, true); err != nil {
+		if asStage {
+			if err := stage.SetStage(ctx, tx, ch.ID, true); err != nil {
 				return err
 			}
 			ch.IsStage = true
@@ -283,14 +284,14 @@ func EditChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *str
 
 // applyChannelEdit writes the lobby and Stage marks and the validated fields
 // of one channel edit into ch.
-func applyChannelEdit(ctx context.Context, tx pgx.Tx, id uuid.UUID, ch *Channel, name, topic *string, userLimit, slowMode *int, lobby, stage *bool) error {
+func applyChannelEdit(ctx context.Context, tx pgx.Tx, id uuid.UUID, ch *Channel, name, topic *string, userLimit, slowMode *int, lobby, isStage *bool) error {
 	if lobby != nil {
 		if err := SetLobby(ctx, tx, id, *lobby); err != nil {
 			return err
 		}
 	}
-	if stage != nil {
-		if err := SetStage(ctx, tx, id, *stage); err != nil {
+	if isStage != nil {
+		if err := stage.SetStage(ctx, tx, id, *isStage); err != nil {
 			return err
 		}
 	}

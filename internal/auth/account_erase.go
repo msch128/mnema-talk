@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/userdata"
 )
 
 // deletedUsernamePrefix starts the placeholder name of a deleted account. No
@@ -17,9 +18,10 @@ const deletedUsernamePrefix = "deleted-"
 
 // Account deletion keeps one row: the account itself, anonymised, so that its
 // messages still have an author and threads stay readable. Everything else
-// that refers to the person is removed in one transaction. The step list is
-// the single place to extend when a new table refers to users; a test walks
-// every foreign key to users and fails when a table is forgotten here.
+// that refers to the person is removed in one transaction. Statements that
+// belong to another domain live next to that domain and carry an explicit
+// order; auth sorts them with its own before running any. A test walks every
+// foreign key to users and fails when a table is forgotten.
 //
 // What happens to what the person wrote:
 //   - their messages stay, authored by "Deleted member", with the text, link
@@ -33,80 +35,6 @@ const deletedUsernamePrefix = "deleted-"
 //   - audit entries about them keep action, time and ids but lose names and
 //     details (other people's text that merely mentions them cannot be found
 //     and stays; the operator's privacy policy says so).
-var eraseSteps = []string{
-	`DELETE FROM message_reactions WHERE user_id = $1`,
-	`DELETE FROM message_mentions WHERE user_id = $1`,
-	`DELETE FROM poll_votes WHERE user_id = $1`,
-	`DELETE FROM poll_voters WHERE user_id = $1`,
-	`DELETE FROM polls WHERE message_id IN (SELECT id FROM messages WHERE user_id = $1)`,
-	`DELETE FROM message_edits WHERE editor_id = $1 OR message_id IN (SELECT id FROM messages WHERE user_id = $1)`,
-	`UPDATE messages SET content = '', title = NULL, embeds = '[]'::jsonb, author_name = NULL, is_pinned = FALSE, pinned_at = NULL, pinned_by = NULL, is_edited = FALSE WHERE user_id = $1`,
-	`DELETE FROM outgoing_queue WHERE convert_from(data, 'UTF8')::jsonb->>'user_id' = $1::text
-		OR convert_from(data, 'UTF8')::jsonb->'reply_to'->>'user_id' = $1::text`,
-	`UPDATE discord_imports SET created_by_name = '' WHERE created_by = $1`,
-	`DELETE FROM invites WHERE created_by = $1`,
-	`DELETE FROM channel_reads WHERE user_id = $1`,
-	`DELETE FROM category_notify WHERE user_id = $1`,
-	`DELETE FROM server_notify WHERE user_id = $1`,
-	`DELETE FROM thread_follows WHERE user_id = $1`,
-	`DELETE FROM forum_post_reads WHERE user_id = $1`,
-	`DELETE FROM slow_mode_posts WHERE user_id = $1`,
-	`DELETE FROM user_roles WHERE user_id = $1`,
-	`DELETE FROM permission_overwrites WHERE user_id = $1`,
-	`DELETE FROM push_subscriptions WHERE user_id = $1`,
-	`DELETE FROM user_sessions WHERE user_id = $1`,
-	`DELETE FROM bot_tokens WHERE created_by = $1`,
-	`UPDATE bots SET created_by = NULL WHERE created_by = $1`,
-	`UPDATE webhooks SET created_by = NULL WHERE created_by = $1`,
-	`UPDATE outgoing_webhooks SET created_by = NULL WHERE created_by = $1`,
-	`UPDATE outgoing_webhooks SET url_set_by = NULL WHERE url_set_by = $1`,
-	`DELETE FROM account_tokens WHERE user_id = $1`,
-	`DELETE FROM user_totp WHERE user_id = $1`,
-	`DELETE FROM recovery_codes WHERE user_id = $1`,
-	`DELETE FROM login_challenges WHERE user_id = $1`,
-	`DELETE FROM second_factor_failures WHERE user_id = $1`,
-	`DELETE FROM user_blocks WHERE blocker_id = $1 OR blocked_id = $1`,
-	`DELETE FROM saved_messages WHERE user_id = $1`,
-	`DELETE FROM message_reminders WHERE user_id = $1`,
-	`DELETE FROM scheduled_messages WHERE user_id = $1`,
-	`DELETE FROM event_rsvps WHERE user_id = $1`,
-	`DELETE FROM event_signups WHERE user_id = $1`,
-	`UPDATE event_series SET created_by = NULL WHERE created_by = $1`,
-	`DELETE FROM event_comments WHERE user_id = $1`,
-	`DELETE FROM event_comment_mutes WHERE user_id = $1`,
-	`UPDATE events SET created_by = NULL WHERE created_by = $1`,
-	// Reports keep their copies of other people's messages, so the person's
-	// own text is blanked in every copy (as reported message or as context),
-	// and the links to their account are cut. The reports stay for the
-	// moderators.
-	`UPDATE message_reports SET reporter_id = NULL, note = '' WHERE reporter_id = $1`,
-	`UPDATE message_reports SET reported_user_id = NULL WHERE reported_user_id = $1`,
-	`UPDATE message_reports SET resolved_by = NULL WHERE resolved_by = $1`,
-	// Direct messages: a conversation nobody else is in goes with its
-	// messages; the others keep theirs (the erased member's words in it are
-	// emptied like everywhere), without the erased member.
-	`DELETE FROM channels WHERE id IN (` + soleDMs + `)`,
-	`DELETE FROM dm_members WHERE user_id = $1`,
-	`UPDATE dm_members SET added_by = NULL WHERE added_by = $1`,
-	`UPDATE channels SET dm_created_by = NULL WHERE dm_created_by = $1`,
-}
-
-// soleDMs selects the direct message conversations in which nobody but $1 is.
-const soleDMs = `SELECT c.id FROM channels c WHERE c.type = 'dm'
-	AND NOT EXISTS (SELECT 1 FROM dm_members m WHERE m.channel_id = c.id AND m.user_id <> $1)`
-
-// scrubReportCopies blanks the text, file names and author names of the
-// account's messages inside the stored copies of message_reports ($1 the
-// account, $2 its tombstone username).
-const scrubReportCopies = `UPDATE message_reports SET snapshot = jsonb_build_object(
-	'message', CASE WHEN snapshot->'message'->>'user_id' = $1::text
-	                THEN snapshot->'message' || jsonb_build_object('content', '', 'attachments', '[]'::jsonb, 'username', $2::text, 'display_name', 'Deleted member')
-	                ELSE snapshot->'message' END,
-	'context', COALESCE((SELECT jsonb_agg(CASE WHEN e->>'user_id' = $1::text
-	                THEN e || jsonb_build_object('content', '', 'attachments', '[]'::jsonb, 'username', $2::text, 'display_name', 'Deleted member')
-	                ELSE e END ORDER BY ord)
-	                FROM jsonb_array_elements(snapshot->'context') WITH ORDINALITY AS t(e, ord)), '[]'::jsonb))
-	WHERE snapshot::text LIKE '%' || $1::text || '%'`
 
 // scrubAudit blanks the names and details of every audit entry that is about
 // the account or mentions its id. The audit trigger allows exactly this while
@@ -126,16 +54,6 @@ const anonymise = `UPDATE users SET
 	disabled_at = NOW(), deleted_at = NOW(), token_version = token_version + 1, updated_at = NOW()
 	WHERE id = $1`
 
-// eraseStep is one statement of the erasure and the arguments it takes.
-type eraseStep struct {
-	sql  string
-	args func(id uuid.UUID, name string) []any
-}
-
-func byID(id uuid.UUID, _ string) []any     { return []any{id} }
-func byName(_ uuid.UUID, name string) []any { return []any{name} }
-func noArgs(uuid.UUID, string) []any        { return nil }
-
 // pinRef is a pinned message the erasure unpinned.
 type pinRef struct{ channelID, messageID uuid.UUID }
 
@@ -148,7 +66,8 @@ type erased struct {
 	unpins []pinRef
 }
 
-// pinnedOf lists the pinned messages the account wrote.
+// pinnedOf lists the pinned messages the account wrote. It runs before any
+// statement clears those pins.
 func pinnedOf(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]pinRef, error) {
 	rows, err := tx.Query(ctx, `SELECT channel_id, id FROM messages WHERE user_id = $1 AND is_pinned ORDER BY pinned_at`, id)
 	if err != nil {
@@ -160,54 +79,83 @@ func pinnedOf(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]pinRef, error) {
 	})
 }
 
-// eraseAccount removes the person from the database.
+// eraseAccount runs the erasure for a test that already holds the transaction.
+// It uses the fallback registry. deleteAccount uses the handler's registry.
 func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error) {
+	return eraseWith(ctx, tx, id, personalFallback)
+}
+
+func (h *Handler) eraseOwnAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error) {
+	return eraseWith(ctx, tx, id, h.personalData())
+}
+
+func eraseWith(ctx context.Context, tx pgx.Tx, id uuid.UUID, reg *userdata.Registry) (*erased, error) {
 	var name string
-	if err := tx.QueryRow(ctx, `SELECT username FROM users WHERE id = $1 AND NOT is_bot AND deleted_at IS NULL FOR UPDATE`, id).Scan(&name); err != nil {
+	err := tx.QueryRow(ctx, `SELECT username FROM users WHERE id = $1 AND NOT is_bot AND deleted_at IS NULL FOR UPDATE`, id).Scan(&name)
+	if err != nil {
 		return nil, err
 	}
 	unpins, err := pinnedOf(ctx, tx, id)
 	if err != nil {
 		return nil, err
 	}
-	var keys []string
-	for _, sql := range []string{
-		`DELETE FROM media WHERE uploader_id = $1 RETURNING s3_key`,
-		`DELETE FROM data_exports WHERE user_id = $1 AND s3_key IS NOT NULL RETURNING s3_key`,
-		// The files of direct messages nobody else is in any more go with them.
-		`DELETE FROM media WHERE message_id IN (SELECT id FROM messages WHERE channel_id IN (` + soleDMs + `)) RETURNING s3_key`,
-		// So do those of the Talks that belong to such a conversation.
-		`DELETE FROM media WHERE message_id IN (SELECT id FROM messages WHERE channel_id IN (SELECT id FROM channels WHERE dm_id IN (` + soleDMs + `))) RETURNING s3_key`,
-	} {
-		rows, err := tx.Query(ctx, sql, id)
-		if err != nil {
-			return nil, err
-		}
-		got, err := pgx.CollectRows(rows, pgx.RowTo[string])
-		if err != nil {
-			return nil, err
-		}
-		keys = append(keys, got...)
-	}
-	steps := []eraseStep{{`DELETE FROM data_exports WHERE user_id = $1`, byID}}
-	for _, sql := range eraseSteps {
-		steps = append(steps, eraseStep{sql, byID})
-	}
-	steps = append(steps,
-		eraseStep{scrubReportCopies, func(id uuid.UUID, _ string) []any { return []any{id, deletedUsernamePrefix + shortID(id)} }},
-		eraseStep{`DELETE FROM login_unlock_requests WHERE LOWER(username) = LOWER($1)`, byName},
-		eraseStep{`SELECT set_config('mnema.audit_scrub', 'on', true)`, noArgs},
-		eraseStep{scrubAudit, byID},
-	)
-	for _, st := range steps {
-		if _, err := tx.Exec(ctx, st.sql, st.args(id, name)...); err != nil {
-			return nil, fmt.Errorf("erase %q: %w", st.sql, err)
-		}
+	keys, err := runErase(ctx, tx, id, name, mergedEraseSteps(reg))
+	if err != nil {
+		return nil, err
 	}
 	if _, err := tx.Exec(ctx, anonymise, id, deletedUsernamePrefix+shortID(id)); err != nil {
 		return nil, fmt.Errorf("anonymise account: %w", err)
 	}
 	return &erased{keys: keys, unpins: unpins}, nil
+}
+
+func mergedEraseSteps(reg *userdata.Registry) []userdata.Step {
+	steps := authEraseSteps()
+	if reg != nil {
+		steps = append(steps, reg.Steps()...)
+	}
+	userdata.SortSteps(steps)
+	return steps
+}
+
+func runErase(ctx context.Context, tx pgx.Tx, id uuid.UUID, name string, steps []userdata.Step) ([]string, error) {
+	var keys []string
+	tomb := deletedUsernamePrefix + shortID(id)
+	for _, st := range steps {
+		got, err := execErase(ctx, tx, st, eraseArgs(st.Arg, id, name, tomb))
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, got...)
+	}
+	return keys, nil
+}
+
+func execErase(ctx context.Context, tx pgx.Tx, st userdata.Step, args []any) ([]string, error) {
+	if st.Keys {
+		rows, err := tx.Query(ctx, st.SQL, args...)
+		if err != nil {
+			return nil, err
+		}
+		return pgx.CollectRows(rows, pgx.RowTo[string])
+	}
+	if _, err := tx.Exec(ctx, st.SQL, args...); err != nil {
+		return nil, fmt.Errorf("erase %q: %w", st.SQL, err)
+	}
+	return nil, nil
+}
+
+func eraseArgs(kind userdata.Arg, id uuid.UUID, name, tomb string) []any {
+	switch kind {
+	case userdata.ArgUsername:
+		return []any{name}
+	case userdata.ArgIDAndName:
+		return []any{id, tomb}
+	case userdata.ArgNone:
+		return nil
+	default:
+		return []any{id}
+	}
 }
 
 func shortID(id uuid.UUID) string { return fmt.Sprintf("%x", id[:6]) }

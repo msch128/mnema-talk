@@ -1,4 +1,4 @@
-package chat
+package stage
 
 import (
 	"context"
@@ -19,10 +19,14 @@ func SetStage(ctx context.Context, p db.Querier, id uuid.UUID, stage bool) error
 		return fmt.Errorf("set stage: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		if _, lerr := LoadChannel(ctx, p, id); lerr == nil {
-			return httpx.ErrInvalidInput("only a permanent Talk that is no lobby can be a Stage")
+		// A failed lookup, including a missing row, is "not found". An existing
+		// channel that the update skipped is a text channel, a lobby or a
+		// temporary Talk.
+		var one int
+		if qerr := p.QueryRow(ctx, `SELECT 1 FROM channels WHERE id = $1`, id).Scan(&one); qerr != nil {
+			return httpx.ErrNotFound("channel not found")
 		}
-		return errChannelNotFound
+		return httpx.ErrInvalidInput("only a permanent Talk that is no lobby can be a Stage")
 	}
 	return nil
 }

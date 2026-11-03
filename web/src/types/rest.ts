@@ -773,6 +773,25 @@ export function isAutomodSettings(value: unknown): value is AutomodSettings {
 
 export const decodeAutomodSettings = decoder("automod.Settings", isAutomodSettings)
 
+export type BlocksBlockedMember = {
+  avatar_url?: string
+  blocked_at: string
+  display_name: string
+  user_id: string
+  username: string
+}
+
+export function isBlocksBlockedMember(value: unknown): value is BlocksBlockedMember {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (hasOwn(value, "blocked_at") && isTimestamp(value["blocked_at"]))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeBlocksBlockedMember = decoder("blocks.BlockedMember", isBlocksBlockedMember)
+
 export type BotAccess = {
   channels: Array<BotChannelAccess>
   elevated: boolean
@@ -1127,25 +1146,6 @@ export function isChatAutoDeleteRequest(value: unknown): value is ChatAutoDelete
 }
 
 export const decodeChatAutoDeleteRequest = decoder("chat.AutoDeleteRequest", isChatAutoDeleteRequest)
-
-export type ChatBlockedMember = {
-  avatar_url?: string
-  blocked_at: string
-  display_name: string
-  user_id: string
-  username: string
-}
-
-export function isChatBlockedMember(value: unknown): value is ChatBlockedMember {
-  return isRecord(value)
-    && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
-    && (hasOwn(value, "blocked_at") && isTimestamp(value["blocked_at"]))
-    && (hasOwn(value, "display_name") && isString(value["display_name"]))
-    && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
-    && (hasOwn(value, "username") && isString(value["username"]))
-}
-
-export const decodeChatBlockedMember = decoder("chat.BlockedMember", isChatBlockedMember)
 
 export type ChatBotAllowedMentions = {
   parse: Array<string>

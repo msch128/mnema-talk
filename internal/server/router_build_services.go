@@ -6,6 +6,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/blocks"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/discordimport"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -25,7 +26,7 @@ func (c *components) newChat() {
 		EditHistoryLimit: httpx.NewRateLimiter(chat.EditHistoryRate, time.Minute).Named("edit_history"),
 		PinLimit:         httpx.NewRateLimiter(chat.PinChangesPerMinute, time.Minute).Named("pin"),
 		FollowLimit:      httpx.NewRateLimiter(chat.ThreadFollowChangesPerMinute, time.Minute).Named("thread_follow"),
-		BlockLimit:       httpx.NewRateLimiter(chat.BlockChangesPerMinute, time.Minute).Named("block"),
+		BlockLimit:       httpx.NewRateLimiter(blocks.BlockChangesPerMinute, time.Minute).Named("block"),
 		ReportLimit:      httpx.NewRateLimiter(chat.ReportsPerHour, time.Hour).Named("report"),
 		SavedLimit:       httpx.NewRateLimiter(chat.SavedChangesPerMinute, time.Minute).Named("saved"),
 		ForwardLimit:     httpx.NewRateLimiter(chat.ForwardsPerMinute, time.Minute).Named("forward"),

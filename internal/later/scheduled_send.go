@@ -48,22 +48,23 @@ func (s *Service) loadDue(ctx context.Context) ([]dueScheduled, error) {
 }
 
 // sendScheduled sends the scheduled messages that fell due.
-func (s *Service) sendScheduled(ctx context.Context) {
+func (s *Service) sendScheduled(ctx context.Context) error {
 	due, err := s.loadDue(ctx)
 	if err != nil {
 		if ctx.Err() == nil {
 			slog.Warn("scheduled: load due", "err", err)
 		}
-		return
+		return err
 	}
 	for _, d := range due {
 		if ctx.Err() != nil {
-			return
+			return nil
 		}
 		sctx, cancel := context.WithTimeout(ctx, sendTimeout)
 		s.sendOne(sctx, d)
 		cancel()
 	}
+	return nil
 }
 
 // sendOne sends one message as its author through the normal send path: the

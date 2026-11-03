@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/msch128/mnema-talk/internal/userdata"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,3 +28,13 @@ func SetPasswordCostForTests(cost int) {
 
 // PasswordCost reports the bcrypt cost new hashes currently use.
 func PasswordCost() int { return passwordCost }
+
+// SetPersonalDataFallback installs the domain registry used by integration
+// tests that erase or export an account without the server. It refuses to run
+// outside a test binary.
+func SetPersonalDataFallback(r *userdata.Registry) {
+	if !testing.Testing() {
+		panic("auth: SetPersonalDataFallback called outside a test binary")
+	}
+	personalFallback = r
+}

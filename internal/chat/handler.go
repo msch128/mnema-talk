@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/blocks"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -100,7 +101,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Put("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.editMessage))
 	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.deleteMessage))
 	h.mountModeration(r)
-	h.mountBlocks(r)
+	blocks.API{DB: h.DB, Events: h.Events, Limit: h.BlockLimit}.Mount(r)
 	h.mountReports(r)
 	h.mountSaved(r)
 	h.mountForward(r)

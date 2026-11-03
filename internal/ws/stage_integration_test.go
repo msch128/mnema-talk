@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/stage"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/emojitext"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -107,7 +108,7 @@ func TestStageFromTheDatabaseRefusesMediaUntilManageStageGrantsIt(t *testing.T) 
 func TestStageFlagChangeInTheDatabaseReachesTheRoom(t *testing.T) {
 	s := newDBStage(t)
 	ctx := context.Background()
-	if err := chat.SetStage(ctx, s.p, s.ch.ID, false); err != nil {
+	if err := stage.SetStage(ctx, s.p, s.ch.ID, false); err != nil {
 		t.Fatal(err)
 	}
 	s.h.Perms.Changed(nil)
@@ -115,7 +116,7 @@ func TestStageFlagChangeInTheDatabaseReachesTheRoom(t *testing.T) {
 	if s.peers[s.amy].DeniedSources() != 0 {
 		t.Fatal("a normal Talk still limits the audience")
 	}
-	if err := chat.SetStage(ctx, s.p, s.ch.ID, true); err != nil {
+	if err := stage.SetStage(ctx, s.p, s.ch.ID, true); err != nil {
 		t.Fatal(err)
 	}
 	s.h.Perms.Changed(nil)

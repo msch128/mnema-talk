@@ -78,6 +78,9 @@ func ReadPicture(r *http.Request, up PictureUpload) (*imgproc.Picture, error) {
 		return nil, fmt.Errorf("read %s: %w", field, err)
 	}
 	pic, err := up.Process(data)
+	if errors.Is(err, imgproc.ErrBusy) {
+		return nil, httpx.ErrUnavailable("the server is busy, try again shortly")
+	}
 	if errors.Is(err, imgproc.ErrImage) {
 		return nil, httpx.ErrInvalidInput(err.Error())
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // BanRequest is the body of POST /api/admin/users/{id}/ban.
@@ -265,7 +266,9 @@ func (h *Handler) RunBanExpiry(ctx context.Context, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
 	for {
-		h.ExpireBans(ctx)
+		worker.Tick(worker.JobBanExpiry, func() error {
+			return worker.IgnoreDone(ctx, h.ExpireBans(ctx))
+		})
 		select {
 		case <-ctx.Done():
 			return
@@ -274,14 +277,15 @@ func (h *Handler) RunBanExpiry(ctx context.Context, interval time.Duration) {
 	}
 }
 
-// ExpireBans lifts the bans whose time has come.
-func (h *Handler) ExpireBans(ctx context.Context) {
+// ExpireBans lifts the bans whose time has come. It returns the error it
+// logged; a row that cannot be read does not drop the ones that can.
+func (h *Handler) ExpireBans(ctx context.Context) error {
 	rows, err := h.Sessions.DB.Query(ctx, `UPDATE users SET `+clearBanColumns+`
 		WHERE banned_at IS NOT NULL AND banned_until IS NOT NULL AND banned_until <= NOW()
 		RETURNING id, username, disabled_at IS NOT NULL`)
 	if err != nil {
 		slog.Error("ban expiry failed", "err", err)
-		return
+		return err
 	}
 	type expired struct {
 		ID       uuid.UUID
@@ -291,16 +295,19 @@ func (h *Handler) ExpireBans(ctx context.Context) {
 	// The UPDATE is already committed: audit and announce every row that can
 	// be read, and say what could not be, instead of losing the lifted bans.
 	var done []expired
+	var failed error
 	for rows.Next() {
 		var e expired
 		if err := rows.Scan(&e.ID, &e.Name, &e.Disabled); err != nil {
 			slog.Error("ban expiry: read lifted ban", "err", err)
+			failed = err
 			continue
 		}
 		done = append(done, e)
 	}
 	if err := rows.Err(); err != nil {
 		slog.Error("ban expiry: iterate lifted bans", "err", err, "read", len(done))
+		failed = err
 	}
 	rows.Close()
 	for _, e := range done {
@@ -312,4 +319,5 @@ func (h *Handler) ExpireBans(ctx context.Context) {
 			h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": e.Disabled})
 		}
 	}
+	return failed
 }

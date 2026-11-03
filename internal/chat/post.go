@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // Posting a message is shared by plain messages and uploads (media package).
@@ -179,9 +180,13 @@ func RunSlowModePrune(ctx context.Context, q db.Querier, every time.Duration) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			if _, err := PruneSlowMode(ctx, q); err != nil && ctx.Err() == nil {
-				slog.Warn("slow mode prune failed", "err", err)
-			}
+			worker.Tick(worker.JobSlowMode, func() error {
+				_, err := PruneSlowMode(ctx, q)
+				if err != nil && ctx.Err() == nil {
+					slog.Warn("slow mode prune failed", "err", err)
+				}
+				return worker.IgnoreDone(ctx, err)
+			})
 		}
 	}
 }

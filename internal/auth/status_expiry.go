@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // StatusSQLFor yields the status line and its expiry as two select columns of
@@ -31,7 +32,9 @@ func (h *Handler) RunStatusExpiry(ctx context.Context, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
 	for {
-		h.ExpireStatuses(ctx)
+		worker.Tick(worker.JobStatusExpiry, func() error {
+			return worker.IgnoreDone(ctx, h.ExpireStatuses(ctx))
+		})
 		select {
 		case <-ctx.Done():
 			return
@@ -40,31 +43,36 @@ func (h *Handler) RunStatusExpiry(ctx context.Context, interval time.Duration) {
 	}
 }
 
-// ExpireStatuses clears the status lines whose time has come.
-func (h *Handler) ExpireStatuses(ctx context.Context) {
+// ExpireStatuses clears the status lines whose time has come. It returns the
+// error it logged; a failure to read one row does not drop the others.
+func (h *Handler) ExpireStatuses(ctx context.Context) error {
 	rows, err := h.Sessions.DB.Query(ctx, `UPDATE users SET status_text = '', status_expires_at = NULL, updated_at = NOW()
 		WHERE status_expires_at IS NOT NULL AND status_expires_at <= NOW()
 		RETURNING `+userColumns)
 	if err != nil {
 		slog.Error("status expiry failed", "err", err)
-		return
+		return err
 	}
 	// The UPDATE has committed: announce every row that can be read, and say
 	// what could not be, instead of leaving clients with a stale status line.
 	var cleared []User
+	var failed error
 	for rows.Next() {
 		u, err := scanUser(rows)
 		if err != nil {
 			slog.Error("status expiry: read cleared user", "err", err)
+			failed = err
 			continue
 		}
 		cleared = append(cleared, u.Public())
 	}
 	if err := rows.Err(); err != nil {
 		slog.Error("status expiry: iterate cleared users", "err", err)
+		failed = err
 	}
 	rows.Close()
 	for _, u := range cleared {
 		h.Events.Broadcast(events.UserUpdate, u)
 	}
+	return failed
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // DefaultSessionSweepEvery is how often the inactivity sweep runs. Requests
@@ -60,11 +61,14 @@ func (h *Handler) RunSessionSweep(ctx context.Context, every time.Duration) {
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {
-		jtis, err := h.Sessions.SweepSessions(ctx)
-		if err != nil && ctx.Err() == nil {
-			slog.Warn("session inactivity sweep failed", "err", err)
-		}
-		h.disconnect(jtis)
+		worker.Tick(worker.JobSessionSweep, func() error {
+			jtis, err := h.Sessions.SweepSessions(ctx)
+			if err != nil && ctx.Err() == nil {
+				slog.Warn("session inactivity sweep failed", "err", err)
+			}
+			h.disconnect(jtis)
+			return worker.IgnoreDone(ctx, err)
+		})
 		select {
 		case <-ctx.Done():
 			return

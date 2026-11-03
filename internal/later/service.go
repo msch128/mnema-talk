@@ -7,6 +7,7 @@ package later
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/push"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // Limits.
@@ -101,21 +103,24 @@ func (s *Service) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			s.Sweep(ctx)
+			worker.Tick(worker.JobLater, func() error {
+				return worker.IgnoreDone(ctx, s.Sweep(ctx))
+			})
 		}
 	}
 }
 
 // Sweep does one round of work: it is what the ticker runs, and what tests call.
-func (s *Service) Sweep(ctx context.Context) {
+// A step that fails does not skip the rest; their errors are joined.
+func (s *Service) Sweep(ctx context.Context) error {
 	if s.DB == nil {
-		return
+		return nil
 	}
-	s.deliverReminders(ctx)
-	s.sendScheduled(ctx)
+	err := errors.Join(s.deliverReminders(ctx), s.sendScheduled(ctx))
 	if s.pruned.due(s.Now()) {
-		s.pruneDelivered(ctx)
+		err = errors.Join(err, s.pruneDelivered(ctx))
 	}
+	return err
 }
 
 // checkTime requires a time a client sent to lie in the future, within a year.

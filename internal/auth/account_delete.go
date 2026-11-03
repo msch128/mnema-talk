@@ -71,7 +71,7 @@ func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 	}
 	var gone *erased
 	err := pgx.BeginFunc(r.Context(), h.Sessions.DB, func(tx pgx.Tx) (err error) {
-		gone, err = eraseAccount(r.Context(), tx, u.ID)
+		gone, err = h.eraseOwnAccount(r.Context(), tx, u.ID)
 		return err
 	})
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 var (
@@ -156,9 +157,13 @@ func RunFold(ctx context.Context, p *db.Pool, every time.Duration) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			if err := FoldBallots(ctx, p); err != nil && ctx.Err() == nil {
-				slog.Error("fold poll ballots failed", "err", err)
-			}
+			worker.Tick(worker.JobPollFold, func() error {
+				err := FoldBallots(ctx, p)
+				if err != nil && ctx.Err() == nil {
+					slog.Error("fold poll ballots failed", "err", err)
+				}
+				return worker.IgnoreDone(ctx, err)
+			})
 		}
 	}
 }
