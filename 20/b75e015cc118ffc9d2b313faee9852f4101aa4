@@ -1,0 +1,16 @@
+internal/push/maintenance_integration_test.go
+  h_0ff4f4713441f4 20-23,25
+internal/server/public_turn_test.go
+  h_0ff4f4713441f4 31-58,62-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "20b75e015cc118ffc9d2b313faee9852f4101aa4",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
