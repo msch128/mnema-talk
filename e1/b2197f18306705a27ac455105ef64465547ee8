@@ -1,0 +1,26 @@
+doc/architecture.md
+  h_0ff4f4713441f4 34
+internal/auth/account_export_integration_test.go
+  h_0ff4f4713441f4 20,274-344
+internal/auth/status_expiry_integration_test.go
+  h_0ff4f4713441f4 1-22
+internal/imgproc/slots_test.go
+  h_0ff4f4713441f4 4,43-112
+internal/push/maintenance_integration_test.go
+  h_0ff4f4713441f4 1-50
+web/src/stores/blocks.ts
+  h_0ff4f4713441f4 4,10,17
+web/src/types/rest.ts
+  h_0ff4f4713441f4 776-794
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e1b2197f18306705a27ac455105ef64465547ee8",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
