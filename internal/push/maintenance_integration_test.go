@@ -17,8 +17,12 @@ func TestTheSweepDropsDevicesWhoseSessionHasEnded(t *testing.T) {
 	e := newEnv(t, http.StatusCreated)
 	bob := e.member("bob")
 	e.exec(`UPDATE push_subscriptions SET session_expires_at = NOW() - INTERVAL '1 minute' WHERE user_id = $1`, bob.id)
+	// The env's delivery loop initialises its own service. Sweeping that one
+	// races its init. This service only prunes.
+	svc := &Service{DB: e.pool}
+	svc.init()
 	before := metrics.JobErrors.With(worker.JobPushSweep).Load()
-	e.svc.sweepMaintenance(context.Background())
+	svc.sweepMaintenance(context.Background())
 	if n := countSubscriptions(e, bob.id); n != 0 {
 		t.Fatalf("%d devices left after the session ended", n)
 	}
