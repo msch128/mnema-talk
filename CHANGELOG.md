@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.2](https://github.com/msch128/mnema-talk/compare/v2.8.1...v2.8.2) (2026-11-03)
+
+
+### Bug Fixes
+
+* leave the API reference and dotfiles out of the signed bundle ([#622](https://github.com/msch128/mnema-talk/issues/622)) ([581ae3c](https://github.com/msch128/mnema-talk/commit/581ae3cceaac675a9aef89184d1e35aaf4aef0c1))
+
 ## [2.8.1](https://github.com/msch128/mnema-talk/compare/v2.8.0...v2.8.1) (2026-11-03)
 
 
