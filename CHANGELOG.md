@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.1](https://github.com/msch128/mnema-talk/compare/v2.8.0...v2.8.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* cap image decoding and record background-job failures ([#620](https://github.com/msch128/mnema-talk/issues/620)) ([daa1245](https://github.com/msch128/mnema-talk/commit/daa1245e26eb266998369028c91f3245f65d277d))
+
 ## [2.8.0](https://github.com/msch128/mnema-talk/compare/v2.7.0...v2.8.0) (2026-11-02)
 
 
