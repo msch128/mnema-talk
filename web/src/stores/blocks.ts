@@ -1,20 +1,20 @@
 import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
 import { api, isApiError } from '../lib/api'
-import { isChatBlockedMember, type ChatBlockedMember } from '../types/rest'
+import { isBlocksBlockedMember, type BlocksBlockedMember } from '../types/rest'
 import { arrayDecoder } from '../types/validation'
 import { t } from '../i18n'
 import { useServerFeaturesStore } from './serverFeatures'
 import { useToastStore } from './toast'
 
-const decodeBlocked = arrayDecoder('blocked members', isChatBlockedMember)
+const decodeBlocked = arrayDecoder('blocked members', isBlocksBlockedMember)
 
 // The members this member blocked (GET /api/me/blocks). Blocking is private:
 // the list belongs to this member's sessions only and nothing about it is
 // told to the blocked member. Their messages are collapsed in every list.
 export const useBlocksStore = defineStore('blocks', () => {
   const features = useServerFeaturesStore()
-  const blocked = ref<ChatBlockedMember[]>([])
+  const blocked = ref<BlocksBlockedMember[]>([])
   const ids = computed(() => new Set(blocked.value.map(b => b.user_id)))
   // Blocked members' messages the reader chose to show (kept until the page closes).
   const revealed = reactive(new Set<string>())
