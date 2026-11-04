@@ -766,8 +766,7 @@ func TestWithoutAPermissionServiceOnlyTheOwnerAndTheCreatorManageTheRoster(t *te
 	}
 }
 
-// An answer other than going contradicts the sign-up (which counts as going),
-// so it gives up the slot and the waitlist moves up.
+// An answer other than going gives up the slot and the waitlist moves up.
 func TestChangingOrWithdrawingTheRSVPFreesTheRoleSlot(t *testing.T) {
 	ctx := context.Background()
 	for name, act := range map[string]func(f *rosterFixture, u *auth.User) ([]Promotion, error){
