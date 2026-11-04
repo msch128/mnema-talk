@@ -76,9 +76,6 @@ func TestCreateRoleStaysBelowTheCreatorsTopRole(t *testing.T) {
 	n := "Y"
 	y, err := w.svc.CreateRole(ctx, w.member, perm.RoleInput{Name: &n})
 	if err != nil {
-		if apiCode(err) == 403 {
-			return // refused is as good as below
-		}
 		t.Fatal(err)
 	}
 	if pos(y.ID) >= pos(x.ID) {
