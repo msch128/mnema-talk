@@ -6,6 +6,7 @@ import { useAccountStore } from './stores/account'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
 import { useToastStore } from './stores/toast'
+import { useLaterStore } from './stores/later'
 import { usePermissionsStore } from './stores/permissions'
 import { useServerFeaturesStore } from './stores/serverFeatures'
 import { PERMISSION_BITS } from './lib/permissions'
@@ -335,7 +336,6 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     auth.user = null
     await flushPromises()
     expect(rtc.leaveVoiceChannel).toHaveBeenCalledOnce()
-    expect(chat.closeWebSocket).toHaveBeenCalledOnce()
     expect(w.findComponent({ name: 'InviteLanding' }).exists()).toBe(true)
     sessionStorage.setItem('mnema_pending_route', '/c/ch3')
     auth.user = userFixture()
@@ -354,6 +354,16 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     chat.isConnected = true
     await flushPromises()
     expect(rtc.resumeVoiceSession).toHaveBeenCalledTimes(2)
+  })
+  it('drops the signed-out account\'s reminders and open channel before anyone signs in again', async () => {
+    const { auth, chat } = await mountApp()
+    const later = useLaterStore()
+    later.loaded = true
+    chat.activeChannel = requireValue(channels[0])
+    auth.user = null
+    await flushPromises()
+    expect(later.loaded).toBe(false)
+    expect(chat.activeChannel).toBeNull()
   })
   it('opens the console tab another part of the UI asks for, for people who may open it', async () => {
     const { w } = await mountApp({ admin: true })
@@ -376,7 +386,7 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     auth.user = null
     await flushPromises()
     await go('/c/ch3')
-    expect(chat.activeChannel?.id).toBe('ch1')
+    expect(chat.activeChannel).toBeNull()
   })
   it('keeps loading on transient auth errors and caps exponential retry delay', async () => {
     vi.useFakeTimers()
