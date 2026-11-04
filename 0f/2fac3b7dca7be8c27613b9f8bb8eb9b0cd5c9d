@@ -1,0 +1,33 @@
+internal/communityevents/comments_integration_test.go
+  s_c62097689a4feb::t_dc7e14d2aa756a 181,257,393,454
+internal/communityevents/roles_integration_test.go
+  s_c62097689a4feb::t_0bcaf28b0a5b06 768-802
+internal/communityevents/store.go
+  s_2f483d17207293::t_1716381f957efd 214-251
+internal/server/events_store_integration_test.go
+  s_c62097689a4feb::t_62b1472544194b 90-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0f2fac3b7dca7be8c27613b9f8bb8eb9b0cd5c9d",
+  "prompts": {},
+  "sessions": {
+    "s_2f483d17207293": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a553f67746b72de61",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_c62097689a4feb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aebe01056a737cc59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
