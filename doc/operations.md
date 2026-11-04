@@ -1268,7 +1268,9 @@ nobody else is in is deleted with its messages and files, and in the others
 their messages stay without text; reports keep their copies for the
 moderators with the member's text blanked; files are removed from
 object storage in the same request, and anything that could not be removed is
-found by Admin > Media > orphan cleanup. Exports are stored for at most 24 hours
+found by Admin > Media > orphan cleanup. The one exception is a picture a
+wiki page still shows: it survives the erasure, unlinked from the person
+(see [the wiki](wiki.md#privacy)). Exports are stored for at most 24 hours
 under `exports/` in the bucket and need object storage; back-ups taken in that
 window contain them, so a restore can bring back a deleted account's rows and
 files: delete the account again after restoring an old back-up. Add this to your

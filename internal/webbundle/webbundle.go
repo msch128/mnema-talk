@@ -3,7 +3,7 @@
 // doc/desktop-trusted-client.md). A bundle is one zip: manifest.json (file
 // hashes, version and compatibility numbers), manifest.sig (Ed25519 over the
 // exact manifest bytes) and app/<path> for the files the desktop client
-// serves. Dotfiles are rejected. The API reference stays in the server
+// serves. Dotfiles and dotted directories are rejected. The API reference stays in the server
 // embed and is left out of the signed bundle.
 //
 // The desktop host implements the same verification in Rust; the limits and
@@ -313,10 +313,13 @@ func omitFromSignedBundle(rel string) bool {
 	return rel == "api-docs.html" || strings.HasPrefix(base, "apiDocs-")
 }
 
-// rejectDotfile stops placeholders such as .gitkeep from being signed.
+// rejectDotfile stops placeholders such as .gitkeep, and anything below a
+// dotted directory such as .well-known/, from being signed.
 func rejectDotfile(rel string) error {
-	if strings.HasPrefix(path.Base(rel), ".") {
-		return fmt.Errorf("dotfile forbidden in signed web bundle: %s", rel)
+	for _, seg := range strings.Split(rel, "/") {
+		if strings.HasPrefix(seg, ".") {
+			return fmt.Errorf("dotfile forbidden in signed web bundle: %s", rel)
+		}
 	}
 	return nil
 }

@@ -66,7 +66,7 @@ func TestForumTagUpdatesDoNotOverwriteEachOther(t *testing.T) {
 		_, _, err := UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &emoji})
 		done <- err
 	}()
-	time.Sleep(200 * time.Millisecond) // the second patch has read the tag and waits for the row
+	waitForBlockedStatement(t, f.p) // the second patch has read the tag and waits for the row
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestForumPostPatchChecksTheLockUnderTheRowLock(t *testing.T) {
 		_, err := UpdateForumPost(ctx, f.p, ch.ID, post.ID, PostActor{ID: f.u.ID}, PostPatch{Title: &title})
 		done <- err
 	}()
-	time.Sleep(200 * time.Millisecond) // the author's request saw the post unlocked
+	waitForBlockedStatement(t, f.p) // the author's request saw the post unlocked
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}

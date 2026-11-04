@@ -397,7 +397,9 @@ details and the limits.
   blocker and as blocked), the saved list, thread follows, direct message
   memberships (a conversation nobody else is in goes with its messages and
   files), every file
-  the member uploaded (database rows and objects), pending and finished exports,
+  the member uploaded (database rows and objects; the one exception is a
+  picture a wiki page still shows, which stays, unlinked from the person, so
+  the page does not break), pending and finished exports,
   and the second factor. Reports the member sent or received stay for the
   moderators with the member's text, note and links blanked. What stays: the account row as an anonymised tombstone
   (`deleted-<id>`, "Deleted member", disabled, unusable password hash) and the
