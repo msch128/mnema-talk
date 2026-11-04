@@ -1,0 +1,19 @@
+web/src/composables/useWikiImages.test.ts
+  s_2a6b32cb6cdc90::t_d1b9c0bd92659d 1-7,22-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "96a3cb0a698f6b7436e4b7505d0eec3bc2c9bdba",
+  "prompts": {},
+  "sessions": {
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+internal/wiki/images_integration_test.go
+  s_77d1cfc6355b6b::t_8e6d5f358615a3 1-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "81e015432f06d98a7e689f8c51507ca512691bd4",
+  "prompts": {},
+  "sessions": {
+    "s_77d1cfc6355b6b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a22174be5576d01ec",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
