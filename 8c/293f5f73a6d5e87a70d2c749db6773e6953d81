@@ -1,0 +1,87 @@
+web/src/components/DesktopGamingOverlay.test.ts
+  s_f5b55a0a60a19a::t_bd34f8e043d348 34-42
+web/src/components/DesktopGamingOverlay.vue
+  s_f5b55a0a60a19a::t_eef4fc05104c73 93
+web/src/components/ProfileStatus.vue
+  s_59eb8e240be725::t_9a4889c8a0507b 22-23,62
+web/src/components/UserProfileModal.test.ts
+  s_f1956343134576::t_89d304a00e5c80 397-418
+web/src/components/UserProfileModal.vue
+  s_59eb8e240be725::t_49da7979e800ca 25,45-47,49,52-56,99,148,150,255
+web/src/components/WikiDialog.test.ts
+  s_f1956343134576::t_e5417696749c85 11,201-220
+web/src/components/WikiDialog.vue
+  s_f1956343134576::t_d33c4a4eeda8c9 5,27-28,59-68,85,97-98
+web/src/components/WikiDiff.test.ts
+  s_f5b55a0a60a19a::t_e82f57b6f4b320 1,6-7,9-26
+web/src/components/WikiDiff.vue
+  s_f5b55a0a60a19a::t_24b1827d369794 4,8-20,31
+web/src/components/WikiEditor.test.ts
+  s_f1956343134576::t_a3ace8d2522858 217-238
+web/src/components/WikiEditor.vue
+  s_f1956343134576::t_8af6cf32d9049a 8,61-62
+web/src/components/WikiTree.test.ts
+  s_f1956343134576::t_dd585e287d781d 47-59
+web/src/components/WikiTree.vue
+  s_f5b55a0a60a19a::t_3d2f1fe3722de4 18-20,22,24-26
+web/src/components/markdownBody.css
+  s_f1956343134576::t_e6690c2624c77d 184
+web/src/composables/useEventComments.test.ts
+  s_b47983ece0d3bd::t_f95eff2d10fc0a 152-168
+web/src/composables/useEventComments.ts
+  s_f1956343134576::t_a84f59eb91a465 100-102,104-106,109-112,115-118,122-124
+web/src/lib/router.ts
+  s_f5b55a0a60a19a::t_4c48118d76a4f4 240-241,261-263
+web/src/lib/wikiEditorActions.ts
+  s_f1956343134576::t_d1e66235b1b74f 40-63
+web/src/lib/wikiNav.test.ts
+  s_f1956343134576::t_c1b75e4f9bb63a 133-150
+web/src/lib/wikiNav.ts
+  s_f1956343134576::t_280d7793930273 4,10,12
+web/src/lib/wikiState.ts
+  s_f1956343134576::t_dc0843e9319371 1-13
+web/src/stores/wiki.test.ts
+  s_f1956343134576::t_789d012f485148 5,133-141
+web/src/stores/wiki.ts
+  s_f1956343134576::t_0f7da290ea0915 8,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8c293f5f73a6d5e87a70d2c749db6773e6953d81",
+  "prompts": {},
+  "sessions": {
+    "s_59eb8e240be725": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae8dbe2020fc53ad5",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b47983ece0d3bd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a574ba8a7663450bb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f1956343134576": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad54d0ea1be3fff67",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f5b55a0a60a19a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a166472fae6e4c14e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
