@@ -1,0 +1,25 @@
+web/src/components/DesktopGamingOverlay.test.ts
+  s_17ef7810e0243d::t_e3cf06d72d8229 107-109,190-202
+web/src/components/DesktopGamingOverlay.vue
+  s_17ef7810e0243d::t_d555aa57aa2be8 71-72,94
+web/src/components/ProfileStatus.vue
+  s_17ef7810e0243d::t_36ca219fd16195 6,12-13,33-59,67,71-78,80,84,99-100,116-132
+web/src/components/UserProfileModal.test.ts
+  s_17ef7810e0243d::t_5cac52ac24b7e3 433,440-469
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5aeac5ed42dac5b213b2bfe46e23f6098d2dddbb",
+  "prompts": {},
+  "sessions": {
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
