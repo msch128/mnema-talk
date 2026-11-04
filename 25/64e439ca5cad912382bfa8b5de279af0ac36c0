@@ -1,0 +1,19 @@
+internal/webbundle/rules.go
+  s_869ea305aebe07::t_6ec4913ed140f3 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2564e439ca5cad912382bfa8b5de279af0ac36c0",
+  "prompts": {},
+  "sessions": {
+    "s_869ea305aebe07": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a14d226f5583e5198",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
