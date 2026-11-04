@@ -595,6 +595,7 @@
   "words must be at most %d characters",
   "words must not contain control characters",
   "words: at most %d entries",
+  "you added the most pictures one member may add in a day; try again later",
   "you can block at most %d members; unblock someone first",
   "you can have at most %d reminders; remove one first",
   "you can have at most %d scheduled messages; remove one first",

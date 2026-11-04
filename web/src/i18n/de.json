@@ -263,6 +263,7 @@
       "srvTheWikiHoldsAtMost": "Das Wiki fasst höchstens 500 Seiten.",
       "srvTheWikiHoldsAtMost2": "Das Wiki fasst höchstens 200 Bilder.",
       "srvThisPageIsLockedOnly": "Diese Seite ist gesperrt. Nur wer das Wiki verwaltet, kann sie ändern.",
+      "srvYouAddedTheMostPictures": "Du hast heute so viele Bilder hinzugefügt, wie ein Mitglied an einem Tag darf. Versuch es später noch einmal.",
       "srvWaitForAReplyBefore": "Warte auf eine Antwort, bevor du mehr als {a} Nachrichten sendest.",
       "srvWikiPageNotFound": "Diese Wiki-Seite wurde nicht gefunden.",
       "srvWikiPagesNestAtMost": "Wiki-Seiten lassen sich höchstens 5 Ebenen tief verschachteln.",

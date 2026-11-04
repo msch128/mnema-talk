@@ -194,6 +194,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['words must be at most %d characters', 'fieldMax', ['count'], { field: 'words' }],
   ['words must not contain control characters', 'srvWordsMustNotContainControl'],
   ['words: at most %d entries', 'fieldEntries', ['count'], { field: 'words' }],
+  ['you added the most pictures one member may add in a day; try again later', 'srvYouAddedTheMostPictures'],
   ['you can block at most %d members; unblock someone first', 'srvYouCanBlockAtMost'],
   ['you can have at most %d reminders; remove one first', 'srvYouCanHaveAtMost'],
   ['you can have at most %d scheduled messages; remove one first', 'srvYouCanHaveAtMost2'],

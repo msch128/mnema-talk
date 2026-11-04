@@ -263,6 +263,7 @@
       "srvTheWikiHoldsAtMost": "The wiki holds at most 500 pages.",
       "srvTheWikiHoldsAtMost2": "The wiki holds at most 200 pictures.",
       "srvThisPageIsLockedOnly": "This page is locked. Only people who manage the wiki can change it.",
+      "srvYouAddedTheMostPictures": "You added the most pictures one member may add in a day. Try again later.",
       "srvWaitForAReplyBefore": "Wait for a reply before you send more than {a} messages.",
       "srvWikiPageNotFound": "That wiki page wasn’t found.",
       "srvWikiPagesNestAtMost": "Wiki pages nest at most 5 levels.",
