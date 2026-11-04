@@ -75,17 +75,20 @@ func MyVotes(ctx context.Context, q db.Querier, messageID, userID uuid.UUID) ([]
 }
 
 // Vote makes optionIDs the member's votes in the poll (none withdraws them).
-// The poll row is share-locked, so ending the poll waits for votes in flight
-// and a vote never lands after the end; a per-member advisory lock serializes
-// one member's concurrent requests, so two of them cannot leave a single-choice
-// poll with two votes.
+// The poll row is locked FOR NO KEY UPDATE, so ending the poll waits for votes
+// in flight and a vote never lands after the end. A share lock would not do:
+// an anonymous vote raises the poll's counter, and two voters holding share
+// locks would each wait for the other's before that update (a deadlock). The
+// votes of one poll therefore run one after the other, each for a moment. A per-member
+// advisory lock serializes one member's concurrent requests, so two of them
+// cannot leave a single-choice poll with two votes.
 func Vote(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, optionIDs []uuid.UUID) error {
 	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1::text || $2::text, 0))`, messageID, userID); err != nil {
 			return fmt.Errorf("lock votes: %w", err)
 		}
 		var multiple, ended, anonymous bool
-		err := tx.QueryRow(ctx, `SELECT multiple, closes_at <= clock_timestamp(), anonymous FROM polls WHERE message_id = $1 FOR SHARE`, messageID).Scan(&multiple, &ended, &anonymous)
+		err := tx.QueryRow(ctx, `SELECT multiple, closes_at <= clock_timestamp(), anonymous FROM polls WHERE message_id = $1 FOR NO KEY UPDATE`, messageID).Scan(&multiple, &ended, &anonymous)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errPollNotFound
 		}
