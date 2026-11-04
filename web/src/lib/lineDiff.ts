@@ -36,6 +36,9 @@ export function lineDiff(before: string, after: string): DiffOp[] | null {
   ]
 }
 
+const cell = (table: Uint32Array, index: number): number => table[index] ?? 0
+const lineAt = (list: readonly string[], index: number): string => list[index] ?? ''
+
 function middle(a: readonly string[], b: readonly string[]): DiffOp[] {
   const rows = a.length + 1
   const cols = b.length + 1
@@ -43,8 +46,8 @@ function middle(a: readonly string[], b: readonly string[]): DiffOp[] {
   for (let i = a.length - 1; i >= 0; i--) {
     for (let j = b.length - 1; j >= 0; j--) {
       table[i * cols + j] = a[i] === b[j]
-        ? (table[(i + 1) * cols + j + 1] ?? 0) + 1
-        : Math.max(table[(i + 1) * cols + j] ?? 0, table[i * cols + j + 1] ?? 0)
+        ? cell(table, (i + 1) * cols + j + 1) + 1
+        : Math.max(cell(table, (i + 1) * cols + j), cell(table, i * cols + j + 1))
     }
   }
   const out: DiffOp[] = []
@@ -52,19 +55,19 @@ function middle(a: readonly string[], b: readonly string[]): DiffOp[] {
   let j = 0
   while (i < a.length && j < b.length) {
     if (a[i] === b[j]) {
-      out.push({ kind: 'same', text: a[i] ?? '' })
+      out.push({ kind: 'same', text: lineAt(a, i) })
       i++
       j++
-    } else if ((table[(i + 1) * cols + j] ?? 0) >= (table[i * cols + j + 1] ?? 0)) {
-      out.push({ kind: 'del', text: a[i] ?? '' })
+    } else if (cell(table, (i + 1) * cols + j) >= cell(table, i * cols + j + 1)) {
+      out.push({ kind: 'del', text: lineAt(a, i) })
       i++
     } else {
-      out.push({ kind: 'add', text: b[j] ?? '' })
+      out.push({ kind: 'add', text: lineAt(b, j) })
       j++
     }
   }
-  for (; i < a.length; i++) out.push({ kind: 'del', text: a[i] ?? '' })
-  for (; j < b.length; j++) out.push({ kind: 'add', text: b[j] ?? '' })
+  for (; i < a.length; i++) out.push({ kind: 'del', text: lineAt(a, i) })
+  for (; j < b.length; j++) out.push({ kind: 'add', text: lineAt(b, j) })
   return out
 }
 

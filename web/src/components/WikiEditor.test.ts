@@ -258,6 +258,30 @@ describe('an unsaved draft', () => {
     expect(loadWikiDraft(key)).toBeNull()
   })
 
+  it('comes back for a page that was not created yet, and an empty one is no draft', () => {
+    const fresh = wikiDraftKey('', null)
+    saveWikiDraft(fresh, { title: '', content: '', summary: '', slug: '', parent: '', baseRev: 0 })
+    expect(open(null).w.find('[data-testid="wiki-draft-restored"]').exists()).toBe(false)
+    saveWikiDraft(fresh, { title: 'Raid', content: 'plan', summary: '', slug: 'raid', parent: 'g', baseRev: 0 })
+    const { w, field } = open(null)
+    expect(w.find('[data-testid="wiki-draft-restored"]').exists()).toBe(true)
+    expect((field('title-input').element as HTMLInputElement).value).toBe('Raid')
+    expect((field('slug-input').element as HTMLInputElement).value).toBe('raid')
+  })
+
+  it('is dropped again when the text goes back to what the page says before it was written down', async () => {
+    vi.useFakeTimers()
+    try {
+      saveWikiDraft(key, { title: 'FAQ', content: 'older draft', summary: '', slug: '', parent: '', baseRev: 3 })
+      const { field } = open(wikiPage())
+      await field('text-input').setValue(wikiPage().content)
+      vi.advanceTimersByTime(500)
+      expect(loadWikiDraft(key)).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('is ignored when it says what the page already says', () => {
     saveWikiDraft(key, { title: 'FAQ', content: wikiPage().content, summary: '', slug: '', parent: '', baseRev: 1 })
     const { w } = open(wikiPage())

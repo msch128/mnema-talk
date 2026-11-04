@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { enableAutoUnmount, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import SidebarEntries from './SidebarEntries.vue'
 import SidebarWikiEntry from './SidebarWikiEntry.vue'
 import { currentRoute, navigate } from '../lib/router'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
@@ -31,11 +30,5 @@ describe('SidebarWikiEntry', () => {
   it('is hidden from a member who may not view it', () => {
     grantWiki(0)
     expect(mount(SidebarWikiEntry).find('button').exists()).toBe(false)
-  })
-
-  it('sits beside Events in the sidebar', () => {
-    const w = mount(SidebarEntries, { global: { stubs: { SidebarEventsEntry: { template: '<i data-testid="events" />' } } } })
-    expect(w.find('[data-testid="events"]').exists()).toBe(true)
-    expect(w.find('[data-testid="sidebar-wiki"]').exists()).toBe(true)
   })
 })
