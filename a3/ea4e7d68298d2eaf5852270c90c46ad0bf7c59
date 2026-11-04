@@ -1,0 +1,41 @@
+.github/workflows/release.yml
+  s_4b2058924667b9::t_6b272392d01c97 566-571
+internal/webbundle/path.go
+  s_2220a72d125284::t_e35be18588a097 13-15,36-37
+internal/webbundle/webbundle.go
+  s_2220a72d125284::t_256b43e44ed095 297-299,319-321,323-326,331-353
+internal/webbundle/webbundle_test.go
+  s_454fefec3473f8::t_28e9e98645fc58 129-168,495
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a3ea4e7d68298d2eaf5852270c90c46ad0bf7c59",
+  "prompts": {},
+  "sessions": {
+    "s_2220a72d125284": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a66b9c4efe685471b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_454fefec3473f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aff0a305e188febe7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4b2058924667b9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a22d1fba9dfadcddd",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
