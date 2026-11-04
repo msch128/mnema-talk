@@ -1,0 +1,29 @@
+internal/server/authz_idor_integration_test.go
+  s_6fef45a9968f0a::t_7d930431de12de 1-532
+internal/server/authz_matrix_integration_test.go
+  s_36edd195d2d0ff::t_05f6b28af3d125 1-393
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "faf32c2c16cbeff6bca3f90ff08328436343e1ed",
+  "prompts": {},
+  "sessions": {
+    "s_36edd195d2d0ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adade4a38b8db0111",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6fef45a9968f0a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4fd70cfda6b1701c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
