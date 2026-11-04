@@ -1,0 +1,29 @@
+internal/auth/handler.go
+  s_e5821d1cfa7866::t_64619cef335bd5 101-102
+internal/auth/invites.go
+  s_e5821d1cfa7866::t_ed7e6090efd779 20,67,158
+internal/auth/service.go
+  s_e5821d1cfa7866::t_23ffaa11ab0ed7 115
+internal/auth/session.go
+  s_e5821d1cfa7866::t_35faf7ae8fb392 121
+internal/httpx/ratelimit.go
+  s_e5821d1cfa7866::t_648013ed03a11f 47
+internal/httpx/response.go
+  s_e5821d1cfa7866::t_c71ac2e4c9de24 74,160-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5c9a3870259448bef720e85e3dea562cfe8f344e",
+  "prompts": {},
+  "sessions": {
+    "s_e5821d1cfa7866": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a95476b9b2bdfa027",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
