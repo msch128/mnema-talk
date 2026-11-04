@@ -90,6 +90,11 @@ var shared = []netip.Prefix{
 	netip.MustParsePrefix("64:ff9b:1::/48"),  // local-use NAT64
 	netip.MustParsePrefix("2001::/32"),       // Teredo
 	netip.MustParsePrefix("2001:db8::/32"),   // documentation
+	netip.MustParsePrefix("3fff::/20"),       // documentation (RFC 9637); labs number internal hosts from it
+	netip.MustParsePrefix("2001:2::/48"),     // benchmarking
+	netip.MustParsePrefix("2001:10::/28"),    // ORCHID (deprecated), not routable
+	netip.MustParsePrefix("2001:20::/28"),    // ORCHIDv2, not routable
+	netip.MustParsePrefix("5f00::/16"),       // segment routing SIDs, internal to a network
 	netip.MustParsePrefix("2002::/16"),       // 6to4: carries an IPv4 address
 	netip.MustParsePrefix("fec0::/10"),       // site-local; allowlist may open it
 }
