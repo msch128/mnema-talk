@@ -146,3 +146,49 @@ func TestImageCacheIsBoundedAndExpires(t *testing.T) {
 		t.Fatal("expired entry served")
 	}
 }
+
+func TestImageFailuresAreCached(t *testing.T) {
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		_, _ = w.Write([]byte("not an image"))
+	}))
+	defer srv.Close()
+	f := New()
+	f.allowPrivate = true
+	for range 3 {
+		if _, _, err := f.Image(context.Background(), srv.URL+"/x.png"); err == nil {
+			t.Fatal("want an error")
+		}
+	}
+	if n := hits.Load(); n != 1 {
+		t.Fatalf("origin fetched %d times, want 1", n)
+	}
+}
+
+func TestFlightWaiterDoesNotInheritLeaderBusy(t *testing.T) {
+	var g flightGroup[string]
+	started := make(chan struct{})
+	release := make(chan struct{})
+	go func() {
+		_, _ = g.do("k", func() (string, error) {
+			close(started)
+			<-release
+			return "", errBusy
+		})
+	}()
+	<-started
+	res := make(chan error, 1)
+	go func() {
+		v, err := g.do("k", func() (string, error) { return "ok", nil })
+		if err == nil && v != "ok" {
+			err = context.Canceled
+		}
+		res <- err
+	}()
+	time.Sleep(50 * time.Millisecond) // let the waiter join the leader's flight
+	close(release)
+	if err := <-res; err != nil {
+		t.Fatalf("waiter got %v, want its own result", err)
+	}
+}
