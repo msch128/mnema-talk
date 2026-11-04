@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.9.0](https://github.com/msch128/mnema-talk/compare/v2.8.3...v2.9.0) (2026-11-04)
+
+
+### Features
+
+* **wiki:** pages with revisions, locks, restore and search, behind new permissions ([#610](https://github.com/msch128/mnema-talk/issues/610)) ([42db9a7](https://github.com/msch128/mnema-talk/commit/42db9a7ba592220d3cc870991fa4877b155d74b3))
+* **wiki:** pictures in pages ([#633](https://github.com/msch128/mnema-talk/issues/633)) ([42db9a7](https://github.com/msch128/mnema-talk/commit/42db9a7ba592220d3cc870991fa4877b155d74b3))
+* **wiki:** wiki interface (sidebar, tree, editor, history, links, search) ([#613](https://github.com/msch128/mnema-talk/issues/613)) ([42db9a7](https://github.com/msch128/mnema-talk/commit/42db9a7ba592220d3cc870991fa4877b155d74b3))
+
+
+### Bug Fixes
+
+* **web:** profile, status and gaming settings follow the save pattern ([#632](https://github.com/msch128/mnema-talk/issues/632)) ([42db9a7](https://github.com/msch128/mnema-talk/commit/42db9a7ba592220d3cc870991fa4877b155d74b3))
+
 ## [2.8.3](https://github.com/msch128/mnema-talk/compare/v2.8.2...v2.8.3) (2026-11-04)
 
 
