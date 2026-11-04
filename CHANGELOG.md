@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.9.1](https://github.com/msch128/mnema-talk/compare/v2.9.0...v2.9.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **auth:** count a failed export file removal as a failed sweep run ([#653](https://github.com/msch128/mnema-talk/issues/653)) ([50ff237](https://github.com/msch128/mnema-talk/commit/50ff237c994e2022dc8e63bde5479240ea74be9d))
+* reject dotted directories in the signed bundle, lock RSVP changes in sign-up order, report Stage lookup failures; document wiki pictures after erasure ([#659](https://github.com/msch128/mnema-talk/issues/659)) ([50ff237](https://github.com/msch128/mnema-talk/commit/50ff237c994e2022dc8e63bde5479240ea74be9d))
+* **web:** web review R3 (wiki UI, profile, event comments) ([#660](https://github.com/msch128/mnema-talk/issues/660)) ([50ff237](https://github.com/msch128/mnema-talk/commit/50ff237c994e2022dc8e63bde5479240ea74be9d))
+* **wiki:** bound the wiki revision export by bytes, make the time-only series edit test clock-proof ([#665](https://github.com/msch128/mnema-talk/issues/665)) ([50ff237](https://github.com/msch128/mnema-talk/commit/50ff237c994e2022dc8e63bde5479240ea74be9d))
+* **wiki:** revalidate wiki pictures, keep a position named with a move, API reference, e2e for editing rights and conflicts ([#652](https://github.com/msch128/mnema-talk/issues/652)) ([50ff237](https://github.com/msch128/mnema-talk/commit/50ff237c994e2022dc8e63bde5479240ea74be9d))
+
 ## [2.9.0](https://github.com/msch128/mnema-talk/compare/v2.8.3...v2.9.0) (2026-11-04)
 
 
