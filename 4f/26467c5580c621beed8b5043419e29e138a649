@@ -1,0 +1,20 @@
+.github/workflows/release.yml
+  h_0ff4f4713441f4 566-571
+internal/webbundle/path.go
+  h_0ff4f4713441f4 13-15,36-37
+internal/webbundle/webbundle.go
+  h_0ff4f4713441f4 6,297-299,319-321,331-353
+internal/webbundle/webbundle_test.go
+  h_0ff4f4713441f4 129-146,149-158,161-165,306,495
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4f26467c5580c621beed8b5043419e29e138a649",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
