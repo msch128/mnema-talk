@@ -41,12 +41,7 @@ func newLoginHandler() *Handler {
 }
 
 func postLogin(h *Handler, ip, username, password string) int {
-	body, _ := json.Marshal(LoginRequest{Username: username, Password: password})
-	r := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(string(body)))
-	r.RemoteAddr = ip + ":1234"
-	rec := httptest.NewRecorder()
-	httpx.Handle(h.login).ServeHTTP(rec, r)
-	return rec.Code
+	return postLoginWith(h, ip, username, password).Code
 }
 
 // Registration allows two characters, so the login lookup must too.
