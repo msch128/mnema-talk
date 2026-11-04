@@ -1,0 +1,19 @@
+internal/webbundle/webbundle_test.go
+  s_3077c68dc2ac1a::t_68e3779fde3e8e 281,359-369
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "406b04e15cb681749ec786cc2e9f590fd176ff28",
+  "prompts": {},
+  "sessions": {
+    "s_3077c68dc2ac1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aeb9709308f6320cc",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
