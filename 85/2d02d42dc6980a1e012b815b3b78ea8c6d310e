@@ -1,0 +1,23 @@
+scripts/english-only-allowlist.txt
+  s_2a6b32cb6cdc90::t_9b2449db73359f 76-79
+scripts/upgrade-drill-data.sh
+  s_2a6b32cb6cdc90::t_8a702511cce938 85,90-93,98-99,133-136
+web/src/types/rest.ts
+  s_2a6b32cb6cdc90::t_433febbf01da62 3617,3623
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "852d02d42dc6980a1e012b815b3b78ea8c6d310e",
+  "prompts": {},
+  "sessions": {
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
