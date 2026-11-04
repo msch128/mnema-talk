@@ -3,12 +3,14 @@ import { charCount } from '../lib/textLength'
 import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import { computed, ref } from 'vue'
-import { Edit3, Eraser, Loader2, Save } from '@lucide/vue'
+import { Edit3, Eraser } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 import { useStatusEditor } from '../composables/useStatusEditor'
+import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
 import { locale, t } from '../i18n'
 import { dateTime } from '../lib/time'
 
@@ -28,8 +30,33 @@ const statusEditor = useStatusEditor()
 
 const canEditStatus = computed(() => props.isSelf || (props.profileUser.role !== 'admin' && permissions.can('manage_members') && permissions.outranksMember(props.profileUser.id ?? '')))
 const isEditingStatus = ref(false)
-const editStatus = ref('')
-const isSavingStatus = ref(false)
+const isClearing = ref(false)
+
+// The inline edit of another member's status is a small draft (doc/settings-ux.md):
+// Save is on only for a change, and leaving it (Escape, closing the profile) asks first.
+const form = useSettingsDraft<{ status: string }>({
+  source: () => ({ status: props.profileUser.status_text || '' }),
+  normalisers: { status: normalise.text },
+  blocked: () => !props.profileUser.id,
+  save: async ({ draft, commit }) => {
+    try {
+      await store(draft.status.trim())
+    } catch (err) {
+      throw new Error(caughtErrorMessage(err, t('profile.saveFailed')), { cause: err })
+    }
+    commit(['status'])
+  },
+  saved: () => { isEditingStatus.value = false }
+})
+const { draft } = form
+
+async function store(text: string) {
+  const id = props.profileUser.id
+  if (!id) return
+  const updated = await chatStore.setStatusText(id, text)
+  chatStore.patchOpenProfile(id, { status_text: updated.status_text, ...(updated.status_expires_at ? { status_expires_at: updated.status_expires_at } : {}) }, updated.status_expires_at ? [] : ['status_expires_at'])
+  toasts.success(text ? t('profile.statusSaved') : t('profile.statusCleared'))
+}
 
 function startEditStatus() {
   if (props.isSelf) {
@@ -37,23 +64,24 @@ function startEditStatus() {
     statusEditor.show()
     return
   }
-  editStatus.value = props.profileUser.status_text || ''
+  form.reset()
   isEditingStatus.value = true
 }
 
-async function saveStatus(text = editStatus.value) {
-  const id = props.profileUser.id
-  if (!id) return
-  isSavingStatus.value = true
+async function cancelEditStatus() {
+  if (!await form.guard()) return
+  form.reset()
+  isEditingStatus.value = false
+}
+
+async function clearStatus() {
+  isClearing.value = true
   try {
-    const updated = await chatStore.setStatusText(id, text.trim())
-    chatStore.patchOpenProfile(id, { status_text: updated.status_text, ...(updated.status_expires_at ? { status_expires_at: updated.status_expires_at } : {}) }, updated.status_expires_at ? [] : ['status_expires_at'])
-    isEditingStatus.value = false
-    toasts.success(text.trim() ? t('profile.statusSaved') : t('profile.statusCleared'))
+    await store('')
   } catch (err) {
     toasts.error(caughtErrorMessage(err, t('profile.saveFailed')))
   } finally {
-    isSavingStatus.value = false
+    isClearing.value = false
   }
 }
 </script>
@@ -68,8 +96,8 @@ async function saveStatus(text = editStatus.value) {
           type="button"
           data-testid="profile-status-clear"
           class="flex items-center gap-1 text-xs text-mnema-danger hover:underline"
-          :disabled="isSavingStatus"
-          @click="saveStatus('')"
+          :disabled="isClearing"
+          @click="clearStatus"
         >
           <Eraser class="h-3.5 w-3.5" />
           <span>{{ $t('profile.clearStatus') }}</span>
@@ -85,27 +113,23 @@ async function saveStatus(text = editStatus.value) {
         </button>
       </div>
     </div>
-    <form v-if="isEditingStatus" class="flex items-center gap-2" @submit.prevent="saveStatus()">
-      <input
-        v-model="editStatus"
-        data-testid="profile-status-input"
-        type="text"
-        v-max-chars="MAX_STATUS"
-        :aria-label="$t('profile.status')"
-        :placeholder="$t('profile.statusPlaceholder')"
-        class="min-w-0 flex-1 rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
-        @keydown.esc.stop.prevent="isEditingStatus = false"
-      />
-      <span class="w-10 text-right text-xs tabular-nums text-mnema-tertiary">{{ charCount(editStatus) }}/{{ MAX_STATUS }}</span>
-      <button
-        type="submit"
-        :disabled="isSavingStatus || editStatus.trim() === (profileUser.status_text || '')"
-        class="btn btn-primary btn-sm flex items-center gap-1"
-      >
-        <Loader2 v-if="isSavingStatus" class="h-3.5 w-3.5 animate-spin" />
-        <Save v-else class="h-3.5 w-3.5" />
-        <span>{{ $t('common.save') }}</span>
-      </button>
+    <form v-if="isEditingStatus" @submit.prevent="form.save" @keydown="form.onKeydown">
+      <div class="flex items-center gap-2">
+        <input
+          v-model="draft.status"
+          data-testid="profile-status-input"
+          type="text"
+          v-max-chars="MAX_STATUS"
+          :aria-label="$t('profile.status')"
+          :placeholder="$t('profile.statusPlaceholder')"
+          class="min-w-0 flex-1 rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
+          @keydown.esc.stop.prevent="cancelEditStatus"
+        />
+        <span class="w-10 text-right text-xs tabular-nums text-mnema-tertiary">{{ charCount(draft.status) }}/{{ MAX_STATUS }}</span>
+      </div>
+      <UnsavedChangesBar inline :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset">
+        <template #extra><button type="button" class="btn btn-ghost btn-sm" data-testid="profile-status-cancel" @click="cancelEditStatus">{{ $t('common.cancel') }}</button></template>
+      </UnsavedChangesBar>
     </form>
     <template v-else-if="profileUser.status_text">
       <p class="wrap-break-word text-sm text-mnema-text">{{ profileUser.status_text }}</p>

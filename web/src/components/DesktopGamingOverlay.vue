@@ -68,8 +68,8 @@ async function refresh() {
 async function control(action: string) {
   try { await platform.invoke('desktop_gaming_control', { action }); error.value = false } catch { error.value = true }
 }
-function settings() { form.reset(); editing.value = !editing.value; error.value = false }
-// Closing the settings window with unsaved changes asks first.
+// Folding the settings away, or closing the window, with unsaved changes asks first.
+async function settings() { if (editing.value && !await form.guard()) return; form.reset(); editing.value = !editing.value; error.value = false }
 async function closeWindow() { if (await form.guard()) await control('close') }
 function bind(key: 'overlay' | 'mute' | 'deafen' | 'ptt', event: KeyboardEvent) {
   const chord = chordFromKey(event)
@@ -91,7 +91,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
       <span v-if="!settingsOnly" class="text-xs text-mnema-muted">{{ snapshot.voice.members.length }}</span>
       <template v-if="interactive">
         <button v-if="!settingsOnly" :aria-label="$t('gaming.settings')" @click="settings"><Settings class="w-4 h-4" /></button>
-        <button :aria-label="$t('common.close')" @click="settingsOnly ? closeWindow() : control('close')"><X class="w-4 h-4" /></button>
+        <button :aria-label="$t('common.close')" @click="closeWindow"><X class="w-4 h-4" /></button>
       </template>
     </header>
     <div v-if="interactive && !settingsOnly" class="controls flex gap-2 mb-3">

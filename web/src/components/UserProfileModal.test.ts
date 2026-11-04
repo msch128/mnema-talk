@@ -430,11 +430,41 @@ describe('UserProfileModal unsaved edits', () => {
     chat.selectedUserProfile = other
     wrapper = mount(UserProfileModal, { attachTo: document.body, props: { user: other } })
     await wrapper.get('[data-testid="profile-status-edit"]').trigger('click')
-    const save = () => wrapper.get('form [type="submit"]').attributes('disabled')
+    const save = () => wrapper.get('[data-testid="unsaved-save"]').attributes('disabled')
     expect(save()).toBeDefined()
     await wrapper.get('[data-testid="profile-status-input"]').setValue(' Busy ')
     expect(save()).toBeDefined()
     await wrapper.get('[data-testid="profile-status-input"]').setValue('Away')
     expect(save()).toBeUndefined()
+  })
+
+  it('asks before another member status text is dropped, by Cancel or closing the profile', async () => {
+    auth.user = userFixture({ role: 'admin' })
+    const other = userFixture({ ...stub, status_text: 'Busy' })
+    chat.selectedUserProfile = other
+    wrapper = mount(UserProfileModal, { attachTo: document.body, props: { user: other } })
+    await wrapper.get('[data-testid="profile-status-edit"]').trigger('click')
+    // Nothing typed: Cancel leaves without a question.
+    await wrapper.get('[data-testid="profile-status-cancel"]').trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value).toBeNull()
+    expect(wrapper.find('[data-testid="profile-status-input"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="profile-status-edit"]').trigger('click')
+    await wrapper.get('[data-testid="profile-status-input"]').setValue('Away')
+    await wrapper.get('[data-testid="profile-status-cancel"]').trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Änderungen verwerfen?')
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect((wrapper.get('[data-testid="profile-status-input"]').element as HTMLInputElement).value).toBe('Away')
+
+    await wrapper.get('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Änderungen verwerfen?')
+    expect(wrapper.emitted('close')).toBeUndefined()
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(wrapper.emitted('close')).toEqual([[]])
   })
 })

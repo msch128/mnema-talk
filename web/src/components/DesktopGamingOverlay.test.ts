@@ -104,7 +104,9 @@ describe('native gaming surfaces', () => {
     await w.get('form').trigger('submit'); await flushPromises()
     expect(w.find('[role="alert"]').exists()).toBe(true); expect(w.find('form').exists()).toBe(true)
     expect(w.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeUndefined()
-    await w.findAll('button')[0]!.trigger('click'); expect(w.find('form').exists()).toBe(false)
+    // The draft still holds an unsaved change: folding the settings away asks first.
+    await w.findAll('button')[0]!.trigger('click'); await flushPromises(); pendingConfirm.value?.resolve(true); await flushPromises()
+    expect(w.find('form').exists()).toBe(false)
     ipc.invoke.mockImplementation((command: string) => Promise.resolve(command === 'desktop_gaming_snapshot' ? structuredClone(snapshot) : undefined))
     ipc.invoke.mockRejectedValueOnce(new Error('unavailable')); await vi.advanceTimersByTimeAsync(200); await flushPromises(); expect(w.find('section').exists()).toBe(false)
   })
@@ -184,6 +186,19 @@ describe('native gaming surfaces', () => {
       const w = await settings()
       await w.get('[aria-label="Remove A.exe"]').trigger('click'); expect(save(w)).toBeUndefined()
       await addGame(w, 'A.exe'); expect(save(w)).toBeDefined()
+    })
+    it('asks before the settings fold away of the overlay and keeps them when told to', async () => {
+      const w = await settings()
+      await w.get('[data-testid="gaming-enabled"]').trigger('click')
+      await w.findAll('button')[0]!.trigger('click'); await flushPromises()
+      expect(pendingConfirm.value?.title).toBe('Discard changes?')
+      pendingConfirm.value?.resolve(false); await flushPromises()
+      expect(w.find('form').exists()).toBe(true)
+      expect(w.get('[data-testid="gaming-enabled"]').attributes('aria-checked')).toBe('false')
+      // Unchanged settings fold away without a question.
+      await w.get('[data-testid="unsaved-reset"]').trigger('click')
+      await w.findAll('button')[0]!.trigger('click'); await flushPromises()
+      expect(pendingConfirm.value).toBeNull(); expect(w.find('form').exists()).toBe(false)
     })
     it('asks before the settings window closes with unsaved changes', async () => {
       Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'gaming-settings'); wrapper = mount(DesktopGamingOverlay); await flushPromises()
