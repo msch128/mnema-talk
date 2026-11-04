@@ -29,7 +29,7 @@ the target out of reach between the check and the write.
 A timeout silences a member until a time passes: they can still read, and still
 delete or take back their own words, but they lose *Send messages*, *Attach
 files*, *Add reactions*, *Mention @all and @here*, *Connect*, *Speak*, *Video*
-and *Send direct messages* (`perm.TimeoutMask`). Durations run from 5 seconds to 28 days; the interface
+*Send direct messages*, *Edit the wiki* and *Manage the wiki* (`perm.TimeoutMask`). Durations run from 5 seconds to 28 days; the interface
 offers 1 min, 5 min, 1 h, 1 day, 1 week or a custom time, with an optional
 reason of up to 200 characters.
 
@@ -134,7 +134,7 @@ excluded); the check runs before the password is hashed, so a closed door costs
 nothing.
 
 **Waiting time of new members.** Three settings, each 0 (off) to 30 days:
-how long after joining a member may **write** (send messages, polls, uploads),
+how long after joining a member may **write** (send messages, polls, uploads, edit the wiki),
 **react**, and **speak** in Talks (the microphone, and with it camera and screen share). A member who is too new keeps reading, joining
 Talks and listening. The gate lives in the permission snapshot, like a
 timeout, so REST, the WebSocket hub (reactions) and the SFU (audio) enforce it
@@ -545,9 +545,9 @@ quietly default to something wider than intended; this is the same table.
 
 | Class | Who reads it | Actions |
 |---|---|---|
-| Auditors | Every holder of *View audit log* | `role.*`, `user.*` except the Owner-only ones below, `invite.*` (and the moderation actions of later releases) |
-| Channel | Holders of *View audit log* **who can view the entry's channel when they read** | `message.*`, `voice.*`, `channel.*` (a private channel's name, topic and overwrites are private too) |
-| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `report.*` (a report may concern a private channel or a direct message), `admin.*` (routes not yet named in the route table) |
+| Auditors | Every holder of *View audit log* | `role.*`, `user.*` except the Owner-only ones below, `invite.*`, `wiki.*` (the wiki is open to every member who may view it), and the moderation actions not listed elsewhere |
+| Channel | Holders of *View audit log* **who can view the entry's channel when they read** | `message.*`, `poll.*`, `voice.*`, `channel.*` (a private channel's name, topic and overwrites are private too), `event.talk_*`, `moderation.bulk_delete` |
+| Owner and Administrators only | The Owner and members with *Administrator* | `category.*` and `layout.apply` (a private category's name and overwrites are private too, and a layout lists every placement), `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `import.*`, `moderation.note_*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `report.*` (a report may concern a private channel or a direct message), `admin.*` (routes not yet named in the route table) |
 
 The check runs on every read against the current permissions, so access that is
 granted later also opens the older entries of that channel, and access that is

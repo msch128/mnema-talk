@@ -137,7 +137,7 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Manage events | Create, edit and cancel community events, and upload or remove their cover images (bit `1 << 25`, [events](events.md)). Granted to roles holding *Timeout members* (seeded Moderator and Admin) by migration 0070; Administrators and the Owner have it implicitly | no |
 | Bypass new member limits | Write, react and speak at once, without waiting out the minimum membership age of [raid protection](moderation.md#raid-protection) (bit `1 << 26`). Separate from the slow mode exemption, which *Manage messages* gives. Granted to roles holding *Timeout members* (seeded Moderator and Admin) by migration 0083; Administrators and the Owner have it implicitly | no |
 | Edit the wiki | Create and edit [wiki](wiki.md) pages and restore earlier revisions (bit `1 << 27`). Off for @everyone. Granted to roles holding *Timeout members* by migration 0089; Administrators and the Owner have it implicitly. A timeout and the new-member wait of raid protection take it away like *Send messages*. Never allowed for a self-assignable role | no |
-| Manage the wiki | Lock, move, rename and delete wiki pages, restore deleted ones and read them (bit `1 << 28`). Off for @everyone; granted like *Edit the wiki*. Never allowed for a self-assignable role | no |
+| Manage the wiki | Lock, move, rename and delete wiki pages, restore deleted ones and read them (bit `1 << 28`); each change also needs *Edit the wiki*, only reading deleted pages does not. Off for @everyone; granted like *Edit the wiki*. Never allowed for a self-assignable role | no |
 | View the wiki | Read the wiki (bit `1 << 29`). On for @everyone (migration 0089 adds it to existing databases); switch it off there to close the wiki | no |
 
 The bit values are stored in the database and sent over the API; they never
@@ -183,7 +183,7 @@ The flag is only for harmless roles, and the server enforces it every time:
 - never `@everyone`, a managed role or a bot's role;
 - never a role with *Administrator*, any permission that opens the admin area
   (the same set the bot rules use), or a moderation power over others
-  (*Manage messages*, *Manage Stages*, *Manage events*). Turning the flag on for
+  (*Manage messages*, *Manage stage*, *Manage events*, *Bypass new member limits*, *Edit the wiki*, *Manage the wiki*). Turning the flag on for
   such a role, or giving permissions like that to a flagged role, is refused with
   a clear sentence. If a flagged role somehow carries such a bit anyway, it is no
   longer listed and cannot be taken.
@@ -271,7 +271,7 @@ cannot do.
 | WebSocket | Channel events (messages, reactions, typing, who is in a Talk, media state) only reach viewers; the connect snapshot lists only viewable Talks |
 | Talks | *View channels* + *Connect* to join (reading and writing a Talk's chat without joining needs only *View channels* and *Send messages*); the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running |
 | `GET /api/admin/roles/{id}/view-as` | *Manage roles*. A preview for a made-up member holding only @everyone and that role, computed by the same resolver (overwrites included) and intersected with what the caller can view: a channel or category the caller cannot see is never in it |
-| Wiki (`/api/wiki`, [wiki](wiki.md)) | Reading, history and search: *View the wiki*. Creating, editing and restoring a revision: *Edit the wiki* (a timeout, pending rules and the new-member wait refuse it). Locking, moving, renaming, deleting and restoring a page, and reading deleted ones: *Manage the wiki*. A locked page: *Manage the wiki* for any change |
+| Wiki (`/api/wiki`, [wiki](wiki.md)) | Reading, history and search: *View the wiki*. Creating, editing and restoring a revision: *Edit the wiki* (a timeout, pending rules and the new-member wait refuse it). Locking, moving, renaming, deleting and restoring a page: *Manage the wiki* together with *Edit the wiki*; reading deleted pages: *Manage the wiki*. A locked page: *Manage the wiki* for any change |
 | Community events (`/api/events`) | Listing, viewing, RSVPing: public if free-text location; if located in a Talk channel, requires *View channels* on that Talk. Creating, editing, cancelling, uploading cover: *Manage events* |
 
 ## View the server as a role
@@ -337,8 +337,8 @@ Mnema icon stays.
 While rules exist, a member who has not accepted the current version
 (`rules_pending` in `GET /api/permissions`, `GET /api/auth/me` and
 `GET /api/onboarding`) loses what a timeout takes: *Send messages*, *Attach
-files*, *Add reactions*, *Mention @all and @here*, *Connect*, *Speak* and *Video*.
-They keep reading. It is not a permission anyone can grant or deny: it comes
+files*, *Add reactions*, *Mention @all and @here*, *Connect*, *Speak*, *Video*,
+*Send direct messages*, *Edit the wiki* and *Manage the wiki*. They keep reading. It is not a permission anyone can grant or deny: it comes
 from the same snapshot as a timeout, so REST, the WebSocket hub and the SFU all
 agree, and writes answer `403 RULES_NOT_ACCEPTED` (a Talk join answers
 `voice_kicked` with reason `rules_not_accepted`). `POST /api/onboarding/accept`

@@ -207,7 +207,7 @@
       "pushSubscription": "Das Push-Abo deines Browsers wurde nicht akzeptiert. Schalte Benachrichtigungen aus und wieder ein.",
       "deviceGone": "Dieses Gerät ist schon entfernt.",
       "pinCap": "Ein Kanal kann höchstens {count} angeheftete Nachrichten haben. Löse zuerst eine.",
-      "ownerDelete": "Das Owner-Konto kann nicht gelöscht werden: Die Ownerschaft lässt sich nicht übertragen, die Community stünde sonst ohne Owner da.",
+      "ownerDelete": "Das Owner-Konto kann nicht gelöscht werden: Die Eigentümerschaft lässt sich nicht übertragen, die Community hätte sonst keinen Owner.",
       "ownerProtected": "Beim Owner-Konto ist das nicht möglich.",
       "ownerOnly": "Das kann nur der Owner.",
       "selfModeration": "Das kannst du bei dir selbst nicht tun.",
@@ -263,7 +263,7 @@
       "srvTheWikiHoldsAtMost": "Das Wiki fasst höchstens 500 Seiten.",
       "srvTheWikiHoldsAtMost2": "Das Wiki fasst höchstens 200 Bilder.",
       "srvThisPageIsLockedOnly": "Diese Seite ist gesperrt. Nur wer das Wiki verwaltet, kann sie ändern.",
-      "srvYouAddedTheMostPictures": "Du hast heute so viele Bilder hinzugefügt, wie ein Mitglied an einem Tag darf. Versuch es später noch einmal.",
+      "srvYouAddedTheMostPictures": "Du hast heute so viele Bilder hinzugefügt, wie ein Mitglied an einem Tag darf. Versuche es später noch einmal.",
       "srvWaitForAReplyBefore": "Warte auf eine Antwort, bevor du mehr als {a} Nachrichten sendest.",
       "srvWikiPageNotFound": "Diese Wiki-Seite wurde nicht gefunden.",
       "srvWikiPagesNestAtMost": "Wiki-Seiten lassen sich höchstens 5 Ebenen tief verschachteln.",
@@ -413,7 +413,7 @@
       "srvMovingAChannelBetweenCategories": "Einen Kanal zwischen Kategorien mit Berechtigungen zu verschieben, erfordert die Administrator-Berechtigung.",
       "srvMutedUntilMustBeIn": "„muted_until“ muss in der Zukunft und innerhalb eines Jahres liegen.",
       "srvMutedUntilNeedsLevelMute": "„muted_until“ braucht die Stufe „mute“.",
-      "srvNoCommunityIconIsSet": "Es ist kein Community-Symbol festgelegt.",
+      "srvNoCommunityIconIsSet": "Es ist kein Community-Icon festgelegt.",
       "srvNoFieldsToUpdate": "Es gibt nichts zu aktualisieren.",
       "srvNoUpdateAvailable": "Es ist kein Update verfügbar.",
       "srvNotAPublicImageAddress": "Das ist nicht die Adresse eines öffentlichen Bildes.",
@@ -971,7 +971,7 @@
     "markSolved": "Als gelöst markieren",
     "reopen": "Wieder öffnen",
     "pin": "Oben anheften",
-    "unpin": "Lösen",
+    "unpin": "Anheftung aufheben",
     "deletePost": "Beitrag löschen",
     "deletePostTitle": "Diesen Beitrag löschen?",
     "deletePostBody": "Der Beitrag wird für alle entfernt. Das lässt sich nicht rückgängig machen.",
@@ -983,7 +983,7 @@
     "renameFailed": "Der Titel konnte nicht geändert werden. Versuche es noch einmal.",
     "retagFailed": "Die Tags konnten nicht geändert werden. Versuche es noch einmal.",
     "solvedFailed": "Der Beitrag konnte nicht aktualisiert werden. Versuche es noch einmal.",
-    "pinFailed": "Der Beitrag konnte nicht angeheftet oder gelöst werden. Versuche es noch einmal.",
+    "pinFailed": "Die Anheftung des Beitrags konnte nicht geändert werden. Versuche es noch einmal.",
     "newReplies": {
       "one": "{count} neue Antwort",
       "other": "{count} neue Antworten"
@@ -1361,7 +1361,7 @@
     "switchChannelWarningHint": "Fragt nach einer Bestätigung, bevor du in einen anderen Talk wechselst.",
     "switchChannelTitle": "Talk wechseln?",
     "switchChannelPrompt": "Möchtest du wirklich in den Talk „{channel}“ wechseln?",
-    "switchChannelConfirm": "Kanal wechseln",
+    "switchChannelConfirm": "Talk wechseln",
     "soundsTitle": "Soundeffekte",
     "soundsHint": "Spielt Töne beim Beitreten, Verlassen, Stummschalten und Taubschalten ab.",
     "soundsVolume": "Lautstärke der Soundeffekte",
@@ -1468,7 +1468,7 @@
     "title": "Rechtliches & Datenschutzerklärung",
     "version": "v{version} (DSGVO)",
     "subtitle": "Transparenz, Datenschutz (Art. 13 DSGVO) und Nutzungsbedingungen für Mnema Talk",
-    "defaultOperator": "Community Operator",
+    "defaultOperator": "Community-Betreiber",
     "defaultCountry": "Deutschland",
     "defaultStatus": "Privates, nicht-kommerzielles Projekt",
     "tabs": {
@@ -1481,7 +1481,7 @@
     "operator": {
       "heading": "1. Betreiber & Verantwortlicher",
       "introName": "Mnema Talk",
-      "introAfter": " ist ein privates, nicht-kommerzielles Softwareprojekt für geschlossene Gemeinschaften – ohne Gewinnerzielungsabsicht, ohne Werbeeinnahmen und ohne geschäftliche Beziehung. Konten werden ausschließlich über persönliche Einladungsschlüssel vergeben.",
+      "introAfter": " ist ein privates, nicht-kommerzielles Softwareprojekt für geschlossene Gemeinschaften – ohne Gewinnerzielungsabsicht, ohne Werbeeinnahmen und ohne geschäftliche Beziehung. Konten werden ausschließlich über persönliche Einladungscodes vergeben.",
       "controller": "Verantwortlicher (Art. 4 Nr. 7 DSGVO)",
       "email": "E-Mail-Kontakt",
       "emailUnset": "vom Betreiber nicht angegeben",
@@ -1560,7 +1560,7 @@
       "rightsComplain": "Datenschutzaufsichtsbehörde zu beschweren",
       "rights2After": " (Art. 77 DSGVO), insbesondere in dem Land Ihres Wohnorts oder des Wohnsitzes des Betreibers.",
       "noiseFilter": "Die KI-Rauschunterdrückung (DeepFilterNet3 bzw. GTCRN) läuft vollständig in Ihrem Browser. Ihr Mikrofonsignal wird dafür an keinen Drittanbieter übertragen; Modell und Programmcode kommen von diesem Server.",
-      "selfService": "Ohne jemanden anzuschreiben: Unter Konto & Sicherheit im Kontomenü kannst du eine Kopie deiner Daten herunterladen (JSON-Dateien in einer ZIP-Datei, einmal pro Tag) und dein Konto selbst löschen. Beim Löschen werden Profil, Avatar, E-Mail-Adresse, Sitzungen und Uploads entfernt, außer Bildern, die eine Wiki-Seite noch zeigt: Sie bleiben, ohne Verbindung zu dir; deine Nachrichten bleiben ohne ihren Text als von „Gelöschtes Mitglied“ in ihren Threads stehen. Eine freiwillige E-Mail-Adresse dient nur zur Bestätigung und zum Zurücksetzen deines Passworts und wird anderen Mitgliedern nie angezeigt.",
+      "selfService": "Ohne jemanden anzuschreiben: Unter Konto & Sicherheit im Kontomenü können Sie eine Kopie Ihrer Daten herunterladen (JSON-Dateien in einer ZIP-Datei, einmal pro Tag) und Ihr Konto selbst löschen. Beim Löschen werden Profil, Avatar, E-Mail-Adresse, Sitzungen und Uploads entfernt, außer Bildern, die eine Wiki-Seite noch zeigt: Diese bleiben, ohne Verbindung zu Ihnen; Ihre Nachrichten bleiben ohne ihren Text als von „Gelöschtes Mitglied“ in ihren Threads stehen. Eine freiwillige E-Mail-Adresse dient nur zur Bestätigung und zum Zurücksetzen Ihres Passworts und wird anderen Mitgliedern nie angezeigt.",
       "addressDetectionTitle": "Adress-Ermittlung:",
       "addressDetection": " Hat der Betreiber die öffentliche Adresse des Servers nicht festgelegt, sendet der Server beim Start (und etwa alle 10 Minuten) eine STUN-Anfrage an Google (stun.l.google.com, Google LLC, USA) oder Cloudflare (stun.cloudflare.com, Cloudflare Inc., USA), um seine eigene Adresse für Sprache zu erfahren. Diese sehen nur die IP-Adresse des Servers; Daten von Nutzerinnen und Nutzern werden nicht übertragen. Der Betreiber kann dies abschalten.",
       "clockCheckTitle": "Uhrzeit-Prüfung:",
@@ -1583,11 +1583,11 @@
     },
     "oss": {
       "heading": "5. Open-Source-Hinweise",
-      "intro": "Mnema Talk ist selbst freie Software (GNU AGPL-3.0) und baut auf freier Software auf. Hier steht alles, was wir verwenden und an dich ausliefern, mit Lizenz.",
+      "intro": "Mnema Talk ist selbst freie Software (GNU AGPL-3.0) und baut auf freier Software auf. Hier steht alles, was wir verwenden und an Sie ausliefern, mit Lizenz.",
       "openSite": "{name} öffnen",
       "groups": {
-        "browser": "In der Web-App (läuft in deinem Browser)",
-        "noise": "KI-Rauschunterdrückung (läuft in deinem Browser)",
+        "browser": "In der Web-App (läuft in Ihrem Browser)",
+        "noise": "KI-Rauschunterdrückung (läuft in Ihrem Browser)",
         "server": "Im Server-Programm",
         "services": "Mitgelieferte Dienste (Docker)"
       },
@@ -1600,7 +1600,7 @@
         "turn": "Optional, als TURN-Server für Verbindungen hinter strikten Firewalls.",
         "updater": "Optional, aktualisiert auf Wunsch des Admins den App-Container."
       },
-      "sourceBefore": "Den vollständigen Quellcode dieser Software findest du unter ",
+      "sourceBefore": "Den vollständigen Quellcode dieser Software finden Sie unter ",
       "sourceAfter": " (© Marius Schröder, GNU AGPL-3.0).",
       "fullListBefore": "Die vollständige Liste mit allen Bibliotheken, Versionen und Lizenztexten steht in ",
       "fullListAfter": " im Quellcode."
@@ -1777,8 +1777,8 @@
     "noSpeak": "Du darfst hier nicht sprechen.",
     "noVideo": "Du darfst hier kein Video teilen.",
     "noConnect": "Du darfst diesem Talk nicht beitreten.",
-    "lobbyUnavailable": "Der Talk konnte nicht geöffnet werden. Versuch es gleich noch einmal.",
-    "lobbyRateLimited": "Du hast in letzter Zeit viele Talks geöffnet. Versuch es in ein paar Minuten noch einmal.",
+    "lobbyUnavailable": "Der Talk konnte nicht geöffnet werden. Versuche es gleich noch einmal.",
+    "lobbyRateLimited": "Du hast in letzter Zeit viele Talks geöffnet. Versuche es in ein paar Minuten noch einmal.",
     "leader": "Talk-Leitung",
     "settings": "Talk-Einstellungen",
     "settingsTitle": "Einstellungen für {name}",
@@ -1881,9 +1881,9 @@
       "yes": "Ja",
       "no": "Nein",
       "uptime": "Laufzeit",
-      "uptimeDays": "{d} T {h} Std",
+      "uptimeDays": "{d} T {h} Std.",
       "uptimeHours": "{h} Std. {m} Min.",
-      "uptimeMinutes": "{m} Min",
+      "uptimeMinutes": "{m} Min.",
       "memory": "Speicher (belegt / reserviert)",
       "goroutines": "Goroutinen",
       "updates": "Updates",
@@ -2098,11 +2098,11 @@
           },
           "cgnat": {
             "detail": "Dieser Heimanschluss hat keine eigene öffentliche IPv4-Adresse (die Adresse {address} liegt im Carrier-Grade-NAT-Bereich 100.64.0.0/10); Port-Weiterleitung kann daher nicht funktionieren, und Mitglieder außerhalb deines Netzes erreichen die Sprache nicht.",
-            "fix": "Heimanschluss ohne eigene öffentliche IPv4 - Port-Weiterleitung kann nicht funktionieren. Möglichkeiten: beim Internetanbieter eine öffentliche IPv4-Adresse anfragen, Mnema Talk auf einem VPS betreiben oder ein externes Relay nutzen (WEBRTC_TURN_URLS und WEBRTC_TURN_SECRET). Siehe „Can I host at home?“ in doc/operations.md."
+            "fix": "Heimanschluss ohne eigene öffentliche IPv4 – Port-Weiterleitung kann nicht funktionieren. Möglichkeiten: beim Internetanbieter eine öffentliche IPv4-Adresse anfragen, Mnema Talk auf einem VPS betreiben oder ein externes Relay nutzen (WEBRTC_TURN_URLS und WEBRTC_TURN_SECRET). Siehe „Can I host at home?“ in doc/operations.md."
           },
           "no_ipv4": {
             "detail": "Es wurde keine öffentliche IPv4-Adresse gefunden, IPv6 funktioniert aber: Das sieht nach einem Anschluss ohne eigene öffentliche IPv4 aus (DS-Lite); Port-Weiterleitung kann nicht funktionieren, und Mitglieder außerhalb deines Netzes erreichen die Sprache über IPv4 nicht.",
-            "fix": "Heimanschluss ohne eigene öffentliche IPv4 - Port-Weiterleitung kann nicht funktionieren. Möglichkeiten: beim Internetanbieter eine öffentliche IPv4-Adresse anfragen, Mnema Talk auf einem VPS betreiben oder ein externes Relay nutzen (WEBRTC_TURN_URLS und WEBRTC_TURN_SECRET). Siehe „Can I host at home?“ in doc/operations.md."
+            "fix": "Heimanschluss ohne eigene öffentliche IPv4 – Port-Weiterleitung kann nicht funktionieren. Möglichkeiten: beim Internetanbieter eine öffentliche IPv4-Adresse anfragen, Mnema Talk auf einem VPS betreiben oder ein externes Relay nutzen (WEBRTC_TURN_URLS und WEBRTC_TURN_SECRET). Siehe „Can I host at home?“ in doc/operations.md."
           }
         },
         "public_url": {
@@ -2762,7 +2762,7 @@
     "empty": "In diesem Kanal ist noch nichts angeheftet.",
     "emptyModerator": "Noch nichts angeheftet. Hefte eine Nachricht über ihr Nachrichtenmenü an.",
     "failed": "Die angehefteten Nachrichten konnten nicht geladen werden. Versuche es noch einmal.",
-    "unpinFailed": "Die Nachricht konnte nicht gelöst werden. Versuche es noch einmal.",
+    "unpinFailed": "Die Anheftung der Nachricht konnte nicht aufgehoben werden. Versuche es noch einmal.",
     "poll": "Umfrage",
     "pinnedBy": "Angeheftet von {name}",
     "pinnedByOn": "Angeheftet von {name} · {date}",
@@ -2804,7 +2804,7 @@
     "channelGone": "Ein Kanal, den du nicht sehen kannst",
     "removeFailed": "Das ließ sich nicht entfernen. Versuche es erneut.",
     "reason": {
-      "slow_mode": "Der Langsam-Modus hat sie gebremst. Bearbeite sie und wähle eine neue Zeit.",
+      "slow_mode": "Der Langsammodus hat sie gebremst. Bearbeite sie und wähle eine neue Zeit.",
       "not_allowed": "Du darfst dort gerade nicht schreiben. Sie bleibt als Entwurf erhalten.",
       "unavailable": "Der Kanal oder die Nachricht, auf die du antwortest, existiert nicht mehr.",
       "refused": "Der Server hat das Senden abgelehnt. Sie bleibt als Entwurf erhalten."
@@ -3028,7 +3028,7 @@
     },
     "manage_messages": {
       "name": "Nachrichten verwalten",
-      "desc": "Nachrichten anderer löschen (nie die des Owners), auch gesammelt. Nachrichten anheften und lösen, jede Umfrage beenden, frühere Fassungen bearbeiteter Nachrichten lesen und den Langsammodus umgehen."
+      "desc": "Nachrichten anderer löschen (nie die des Owners), auch gesammelt. Nachrichten anheften und Anheftungen aufheben, jede Umfrage beenden, frühere Fassungen bearbeiteter Nachrichten lesen und den Langsammodus umgehen."
     },
     "mention_everyone": {
       "name": "@all und @here erwähnen",
@@ -3110,8 +3110,8 @@
       "desc": "In einer Stage das Rederecht vergeben und entziehen und Handzeichen beantworten. Wer sie hat, darf in einer Stage immer sprechen."
     },
     "manage_events": {
-      "name": "Events verwalten",
-      "desc": "Community-Events erstellen, bearbeiten und absagen."
+      "name": "Veranstaltungen verwalten",
+      "desc": "Veranstaltungen der Community erstellen, bearbeiten und absagen."
     },
     "bypass_new_member_limits": {
       "name": "Wartezeit für neue Mitglieder umgehen",
@@ -3178,7 +3178,7 @@
       "poll": "Umfragen",
       "automod": "Automod",
       "report": "Meldungen",
-      "event": "Events",
+      "event": "Veranstaltungen",
       "import": "Importe"
     },
     "actions": {
@@ -3327,7 +3327,7 @@
         "rule_create": "Automod-Regel erstellt",
         "rule_update": "Automod-Regel bearbeitet",
         "rule_delete": "Automod-Regel gelöscht",
-        "timeout": "Mitglied von Automod in den Timeout geschickt",
+        "timeout": "Mitglied von Automod in Auszeit geschickt",
         "raid": "Raid-Schutz ausgelöst"
       },
       "admin": {
@@ -3339,17 +3339,17 @@
         "delete": "Meldung gelöscht"
       },
       "event": {
-        "create": "Event erstellt",
-        "edit": "Event bearbeitet",
-        "cancel": "Event abgesagt",
-        "talk_create": "Talk-Event erstellt",
-        "talk_edit": "Talk-Event bearbeitet",
-        "talk_cancel": "Talk-Event abgesagt",
-        "role_template_create": "Event-Rollenvorlage erstellt",
-        "role_template_update": "Event-Rollenvorlage geändert",
-        "role_template_delete": "Event-Rollenvorlage gelöscht",
-        "comment_delete": "Event-Kommentar gelöscht",
-        "talk_comment_delete": "Talk-Event-Kommentar gelöscht"
+        "create": "Veranstaltung erstellt",
+        "edit": "Veranstaltung bearbeitet",
+        "cancel": "Veranstaltung abgesagt",
+        "talk_create": "Talk-Veranstaltung erstellt",
+        "talk_edit": "Talk-Veranstaltung bearbeitet",
+        "talk_cancel": "Talk-Veranstaltung abgesagt",
+        "role_template_create": "Rollenvorlage für Veranstaltungen erstellt",
+        "role_template_update": "Rollenvorlage für Veranstaltungen geändert",
+        "role_template_delete": "Rollenvorlage für Veranstaltungen gelöscht",
+        "comment_delete": "Kommentar zu einer Veranstaltung gelöscht",
+        "talk_comment_delete": "Kommentar zu einer Talk-Veranstaltung gelöscht"
       },
       "import": {
         "discord": "Discord-Vorlage importiert",
@@ -3598,7 +3598,7 @@
     "past": "Vergangen",
     "noUpcoming": "Keine bevorstehenden Veranstaltungen geplant.",
     "noPast": "Keine vergangenen Veranstaltungen.",
-    "whatAreEvents": "Veranstaltungen sind Treffen mit festem Termin in einem Talk oder Kanal, mit Startzeit und Zusagen. Mitglieder mit dem Recht „Events verwalten“ können eine anlegen.",
+    "whatAreEvents": "Veranstaltungen sind Treffen mit festem Termin in einem Talk oder Kanal, mit Startzeit und Zusagen. Mitglieder mit dem Recht „Veranstaltungen verwalten“ können eine anlegen.",
     "loadFailed": "Veranstaltungen konnten nicht geladen werden. Versuche es erneut.",
     "loadMorePast": "Ältere Veranstaltungen anzeigen",
     "create": "Veranstaltung erstellen",
@@ -3654,14 +3654,14 @@
     "participants": "Rückmeldungen",
     "noResponses": "Noch keine Rückmeldungen.",
     "noDescription": "Es gibt keine Beschreibung.",
-    "cancelFailed": "Das Event konnte nicht abgesagt werden.",
+    "cancelFailed": "Die Veranstaltung konnte nicht abgesagt werden.",
     "participantsFailed": "Die Rückmeldungen konnten nicht geladen werden.",
     "created": "Veranstaltung erstellt",
     "updated": "Veranstaltung aktualisiert",
     "rsvpFailed": "Deine Antwort konnte nicht gespeichert werden. Versuche es erneut.",
     "talkFallback": "Talk",
-    "saveFailed": "Das Event konnte nicht gespeichert werden. Versuche es erneut.",
-    "coverFailed": "Das Event wurde gespeichert, aber das Titelbild konnte nicht hochgeladen werden. Versuche es erneut.",
+    "saveFailed": "Die Veranstaltung konnte nicht gespeichert werden. Versuche es erneut.",
+    "coverFailed": "Die Veranstaltung wurde gespeichert, aber das Titelbild konnte nicht hochgeladen werden. Versuche es erneut.",
     "errTitle": "Gib einen Titel ein.",
     "errStart": "Wähle eine Startzeit.",
     "errEnd": "Das Ende darf nicht vor dem Start liegen.",
@@ -4294,7 +4294,7 @@
       "links": "Blockiert oder markiert Nachrichten mit Links: jeden Link, jeden Link außer zu den erlaubten Domains oder nur Links zu den aufgelisteten Domains.",
       "mentions": "Blockiert oder markiert eine Nachricht, die mehr verschiedene Personen erwähnt als erlaubt.",
       "new_account": "Hindert gerade beigetretene Konten eine Weile daran, Links oder Dateien zu posten oder überhaupt zu schreiben.",
-      "raid": "Wenn viele Konten in kurzer Zeit beitreten, bekommen die Neuen für eine Weile einen Timeout und die Moderatoren einen Hinweis. Ein Moderator kann den Timeout wie jeden anderen aufheben."
+      "raid": "Wenn viele Konten in kurzer Zeit beitreten, bekommen die Neuen für eine Weile eine Auszeit und die Moderatoren einen Hinweis. Ein Moderator kann die Auszeit wie jede andere aufheben."
     },
     "newTitle": "Neue Regel: {kind}",
     "editTitle": "Regel bearbeiten",
@@ -4318,12 +4318,12 @@
       "links": "Links posten",
       "attachments": "Dateien anhängen",
       "links_and_attachments": "Links posten oder Dateien anhängen",
-      "everything": "überhaupt schreiben"
+      "everything": "Überhaupt schreiben"
     },
     "joins": "Beitritte, ab denen es ein Raid ist",
     "window": "Innerhalb von",
     "restrictTime": "Neue einschränken für",
-    "raidHint": "Jedes neue Konto zählt. Die Neuen dieser Zeit und alle, die während des Raids beitreten, bekommen einen Timeout.",
+    "raidHint": "Jedes neue Konto zählt. Die Neuen dieser Zeit und alle, die während des Raids beitreten, bekommen eine Auszeit.",
     "action": "Wenn eine Regel trifft",
     "actions": {
       "block": "Nachricht blockieren und den Autor informieren",
@@ -4331,9 +4331,9 @@
       "blockShort": "Blockiert",
       "flagShort": "Markiert"
     },
-    "timeout": "Autor zusätzlich in den Timeout schicken",
-    "noTimeout": "Kein Timeout",
-    "timeoutBadge": "Timeout",
+    "timeout": "Autor zusätzlich in Auszeit schicken",
+    "noTimeout": "Keine Auszeit",
+    "timeoutBadge": "Auszeit",
     "exemptRoles": "Ausgenommene Rollen",
     "noRoles": "Noch keine Rollen.",
     "exemptChannels": "Ausgenommene Kanäle",
@@ -4405,8 +4405,8 @@
     "someModerator": "Ein Moderator",
     "reason": "Grund: {reason}",
     "event": {
-      "timeout": "{actor} hat einen Timeout von {duration} verhängt",
-      "timeout_removed": "{actor} hat den Timeout beendet",
+      "timeout": "{actor} hat eine Auszeit von {duration} verhängt",
+      "timeout_removed": "{actor} hat die Auszeit beendet",
       "ban": "{actor} hat das Mitglied gesperrt",
       "banTimed": "{actor} hat das Mitglied für {duration} gesperrt",
       "unban": "{actor} hat die Sperre aufgehoben",
@@ -4425,7 +4425,7 @@
   "reports": {
     "menu": "Nachricht melden",
     "title": "Nachricht melden",
-    "intro": "Melde den Moderatoren diese Nachricht von {name}. Sie sehen eine Kopie davon und der Nachrichten drumherum.",
+    "intro": "Melde den Moderatoren diese Nachricht von {name}. Sie sehen eine Kopie von ihr und den Nachrichten drumherum.",
     "reason": "Grund",
     "category": {
       "spam": "Spam",
@@ -4463,7 +4463,7 @@
       "automod": "Automod",
       "alertWhere": "Server",
       "raidAlert": "„{rule}“ hat Neue eingeschränkt",
-      "alertText": "Der Raid-Schutz hat bemerkt, dass viele Konten in kurzer Zeit beigetreten sind. Die Neuen haben für eine Weile einen Timeout bekommen. Einen Timeout hebst du im Profil des Mitglieds auf; schließe diesen Eintrag, wenn du ihn dir angesehen hast.",
+      "alertText": "Der Raid-Schutz hat bemerkt, dass viele Konten in kurzer Zeit beigetreten sind. Die Neuen haben für eine Weile eine Auszeit bekommen. Eine Auszeit hebst du im Profil des Mitglieds auf; schließe diesen Eintrag, wenn du ihn dir angesehen hast.",
       "automodHit": {
         "blocked": "„{rule}“ hat eine Nachricht von {reported} blockiert",
         "flagged": "„{rule}“ hat eine Nachricht von {reported} markiert"
@@ -4523,7 +4523,7 @@
       "30": "30 Tage",
       "90": "90 Tage"
     },
-    "hint": "Nachrichten, die älter sind, werden samt Anhängen automatisch gelöscht, das lässt sich nicht rückgängig machen. Angepinnte Nachrichten bleiben. Direktnachrichten sind nie betroffen.",
+    "hint": "Nachrichten, die älter sind, werden samt Anhängen automatisch gelöscht, das lässt sich nicht rückgängig machen. Angeheftete Nachrichten bleiben. Direktnachrichten sind nie betroffen.",
     "apply": "Übernehmen",
     "confirmTitle": "Alte Nachrichten automatisch löschen?",
     "confirmBody": "Jede Nachricht in {name}, die älter ist als {period}, wird endgültig gelöscht, innerhalb weniger Minuten. Die Mitglieder sehen dazu einen Hinweis im Kanal.",
@@ -4592,19 +4592,19 @@
       "step2Dropped": "Verworfen, weil Mnema Talk keine sichere Entsprechung hat: {list}",
       "step2AdminDropped": "Die Administrator-Berechtigung von Discord wird bei jeder Rolle verworfen.",
       "step2Yes": "Ja, diese Berechtigungen verwenden",
-      "step3Named": "Letzter Schritt. Zur Bestätigung den Servernamen „{name}“ oder IMPORT eingeben.",
-      "step3": "Letzter Schritt. Zur Bestätigung IMPORT eingeben.",
+      "step3Named": "Letzter Schritt. Gib zur Bestätigung den Servernamen „{name}“ oder IMPORT ein.",
+      "step3": "Letzter Schritt. Gib zur Bestätigung IMPORT ein.",
       "typeLabel": "Bestätigung",
       "go": "Jetzt importieren",
       "working": "Importiert …",
       "failed": "Der Import ist fehlgeschlagen.",
-      "stale": "Die Vorlage oder dieser Server hat sich seit der Vorschau geändert. Bitte die Vorschau neu laden.",
+      "stale": "Die Vorlage oder dieser Server hat sich seit der Vorschau geändert. Lade die Vorschau neu.",
       "done": "Importiert: {summary}. Unten lässt sich das rückgängig machen.",
-      "step2Mapped": "{source} wird nicht angelegt. Die Kanaleinstellungen gehen an {name}, dessen Rechte sich nicht ändern."
+      "step2Mapped": "{source} wird nicht angelegt. Die Kanaleinstellungen gehen an {name}, deren Rechte sich nicht ändern."
     },
     "undo": {
       "title": "Diesen Import rückgängig machen?",
-      "body": "Das entfernt genau die Kategorien, Kanäle und Rollen, die dieser Import angelegt hat, und sonst nichts. Was du inzwischen von Hand gelöscht habt, wird übersprungen. Mitglieder, denen eine importierte Rolle zugewiesen wurde, verlieren sie.",
+      "body": "Das entfernt genau die Kategorien, Kanäle und Rollen, die dieser Import angelegt hat, und sonst nichts. Was du inzwischen von Hand gelöscht hast, wird übersprungen. Mitglieder, denen eine importierte Rolle zugewiesen wurde, verlieren sie.",
       "kept": " Bleiben erhalten, weil sie jetzt andere Kanäle enthalten: {list}.",
       "confirm": "Import rückgängig machen",
       "messagesTitle": "Kanäle mit Nachrichten löschen?",
@@ -4816,7 +4816,7 @@
     "general": {
       "search": "Nachrichten durchsuchen oder zu Kanal oder Unterhaltung springen",
       "shortcuts": "Diese Liste zeigen",
-      "escape": "Offenes Menü oder Dialog schließen; in einem Kanal ihn als gelesen markieren"
+      "escape": "Offenes Menü oder Dialog schließen; in einem Kanal den Kanal als gelesen markieren"
     },
     "messages": {
       "move": "Vorherige oder nächste Nachricht",
@@ -4871,7 +4871,7 @@
     "restored": "Seite wiederhergestellt.",
     "emptyPage": "Diese Seite ist leer.",
     "subpages": "Unterseiten",
-    "actionFailed": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "actionFailed": "Das hat nicht geklappt. Versuche es noch einmal.",
     "deleteTitle": "„{title}“ löschen?",
     "deleteBody": "Die Seite verlässt das Wiki, aber nichts geht verloren: Wer das Wiki verwaltet, stellt sie mit dem ganzen Verlauf wieder her.",
     "linkCopied": "Link kopiert.",
@@ -4955,7 +4955,7 @@
     "searchTitle": "Im Wiki suchen",
     "searchHint": "Gib mindestens drei Zeichen ins Suchfeld ein.",
     "searching": "Sucht …",
-    "searchFailed": "Die Suche hat nicht geklappt. Versuch es noch einmal.",
+    "searchFailed": "Die Suche hat nicht geklappt. Versuche es noch einmal.",
     "noHits": "Keine Seite passt zu „{query}“.",
     "deletedIntro": "Seiten, die gelöscht wurden. Öffne eine, um sie zu lesen, oder stell sie wieder her.",
     "noDeleted": "Keine gelöschten Seiten.",
