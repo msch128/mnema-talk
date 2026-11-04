@@ -1,0 +1,29 @@
+internal/auth/personal_data_fallback_integration_test.go
+  s_454fefec3473f8::t_831d56c4421022 7,10-11,15,28-31
+internal/bot/account_data.go
+  s_454fefec3473f8::t_a2bc593345f2e5 1-17
+internal/discordimport/account_data.go
+  s_454fefec3473f8::t_252aa9ecc5bf5f 1-18
+internal/emoji/account_data.go
+  s_454fefec3473f8::t_589b51ff17d425 1-16
+internal/server/personal_data.go
+  s_454fefec3473f8::t_9973baa9608e7f 4,7-8,12,25-28
+internal/webhook/account_data.go
+  s_454fefec3473f8::t_ed8d3da8251807 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e76bf9326ac6f8c7f4dc2cd575f22e54e69406a2",
+  "prompts": {},
+  "sessions": {
+    "s_454fefec3473f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aff0a305e188febe7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
