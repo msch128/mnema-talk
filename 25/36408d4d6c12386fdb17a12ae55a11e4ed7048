@@ -1,0 +1,21 @@
+internal/later/reminders.go
+  s_97115bd0f9e8e0::t_d0759534dfee86 99-108,112-113
+internal/later/visibility.go
+  s_97115bd0f9e8e0::t_cf05b65f85cd57 36-46,49,53-68,70,120-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2536408d4d6c12386fdb17a12ae55a11e4ed7048",
+  "prompts": {},
+  "sessions": {
+    "s_97115bd0f9e8e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a78766d8a90126f63",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
