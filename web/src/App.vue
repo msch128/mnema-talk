@@ -4,7 +4,6 @@ import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { usePermissionsStore } from './stores/permissions'
 import { useChatStore } from './stores/chat'
-import { resetMemberStores } from './stores/chat/reset'
 import { useVoiceStore } from './stores/voice'
 import { useAccountStore } from './stores/account'
 import { useBlocksStore } from './stores/blocks'
@@ -163,24 +162,25 @@ async function onAuthSuccess() {
   }
 }
 
+/** Ends the call and drops everything the previous account had loaded, so nothing leaks into the next sign-in. */
+function endAccountSession() {
+  savePendingRoute()
+  if (voiceStore.currentChannelId) leaveVoiceChannel()
+  chatStore.resetCommunityState()
+}
+
 // Single place that reacts to login, logout and expired sessions.
 watch(() => authStore.isAuthenticated, async (isAuthed) => {
   if (!alive) return
-  if (isAuthed) {
-    if (authChecked.value) {
-      await onAuthSuccess()
-    }
-  } else {
-    // Logout or expired session: end the call so mic and connection stop.
-    savePendingRoute()
-    if (voiceStore.currentChannelId) leaveVoiceChannel()
-    chatStore.closeWebSocket()
-    // Nothing of this account's private lists stays for the next sign-in.
-    chatStore.dms = []
-    chatStore.dmsLoaded = false
-    useBlocksStore().reset()
-    resetMemberStores()
-  }
+  if (!isAuthed) endAccountSession() // logout or expired session
+  else if (authChecked.value) await onAuthSuccess()
+})
+
+// Another tab may sign a different account in under the same cookie: the user swaps without a "signed out" step.
+watch(() => authStore.user?.id, async (id, previous) => {
+  if (!alive || !id || !previous || !authChecked.value) return
+  endAccountSession()
+  await onAuthSuccess()
 })
 
 // The server may have dropped our media connection while the socket was down.
