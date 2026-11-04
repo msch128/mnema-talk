@@ -1,0 +1,19 @@
+web/src/lib/markdown/security.test.ts
+  s_55a440e6dabde3::t_e0e38bdb632e40 7,221-252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "915057d93863489707ac247d6ebf6cdfe8c7251f",
+  "prompts": {},
+  "sessions": {
+    "s_55a440e6dabde3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0ce4fe16328c5cde",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
