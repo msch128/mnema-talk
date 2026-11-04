@@ -1,0 +1,27 @@
+internal/setupcheck/observed.go
+  s_97115bd0f9e8e0::t_258f93d9fba833 30
+internal/setupwizard/options.go
+  s_97115bd0f9e8e0::t_a4cf3149867893 111-112,167-172,177-184
+internal/setupwizard/prompt.go
+  s_97115bd0f9e8e0::t_d861949f69c9d6 76,113-114,116-120,123-137
+internal/setupwizard/questions.go
+  s_97115bd0f9e8e0::t_4563988ac61373 5,74-86
+internal/setupwizard/run_test.go
+  s_97115bd0f9e8e0::t_0da00eb9f1165e 175-201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "70d3b44c19dbbd8c6461aecbc5c24bb71de9d97a",
+  "prompts": {},
+  "sessions": {
+    "s_97115bd0f9e8e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a78766d8a90126f63",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
