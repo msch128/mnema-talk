@@ -261,7 +261,9 @@
       "srvThePageIsNotDeleted": "The page isn’t deleted.",
       "srvTheTextMustBeValid": "The text must be valid text without NUL characters.",
       "srvTheWikiHoldsAtMost": "The wiki holds at most 500 pages.",
+      "srvTheWikiHoldsAtMost2": "The wiki holds at most 200 pictures.",
       "srvThisPageIsLockedOnly": "This page is locked. Only people who manage the wiki can change it.",
+      "srvYouAddedTheMostPictures": "You added the most pictures one member may add in a day. Try again later.",
       "srvWaitForAReplyBefore": "Wait for a reply before you send more than {a} messages.",
       "srvWikiPageNotFound": "That wiki page wasn’t found.",
       "srvWikiPagesNestAtMost": "Wiki pages nest at most 5 levels.",
@@ -3359,7 +3361,8 @@
         "move": "Wiki page moved or renamed",
         "delete": "Wiki page deleted",
         "restore": "Wiki page or revision restored",
-        "lock": "Wiki page locked or unlocked"
+        "lock": "Wiki page locked or unlocked",
+        "image": "Wiki picture uploaded"
       }
     },
     "hideSignIns": "Hide sign-ins",
@@ -4901,6 +4904,10 @@
     "toolQuote": "Quote",
     "toolLink": "Link",
     "toolWikiLink": "Link to a wiki page",
+    "toolImage": "Insert picture",
+    "imageUploading": "Uploading picture…",
+    "imageFailed": "The picture could not be uploaded.",
+    "notAPicture": "Only PNG, JPEG, GIF and WebP pictures can be added.",
     "write": "Write",
     "preview": "Preview",
     "textLabel": "Page text (Markdown)",

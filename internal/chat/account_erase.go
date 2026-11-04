@@ -27,7 +27,10 @@ const scrubReportCopies = `UPDATE message_reports SET snapshot = jsonb_build_obj
 
 func chatEraseSteps() []userdata.Step {
 	return []userdata.Step{
-		{Order: userdata.OrderMediaOwn, SQL: `DELETE FROM media WHERE uploader_id = $1 RETURNING s3_key`, Keys: true},
+		{Order: userdata.OrderMediaOwn, SQL: `DELETE FROM media WHERE uploader_id = $1
+		AND NOT EXISTS (SELECT 1 FROM wiki_images w WHERE w.media_id = media.id
+			AND EXISTS (SELECT 1 FROM wiki_revisions r WHERE strpos(r.content, '/api/media/' || media.id::text) > 0))
+		RETURNING s3_key`, Keys: true},
 		{Order: userdata.OrderMediaDM, SQL: deleteSoleDMMedia, Keys: true},
 		{Order: userdata.OrderMediaTalk, SQL: deleteSoleDMTalkMedia, Keys: true},
 		{Order: userdata.OrderReactions, SQL: `DELETE FROM message_reactions WHERE user_id = $1`},

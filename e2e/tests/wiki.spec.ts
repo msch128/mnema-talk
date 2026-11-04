@@ -7,6 +7,7 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
 const suffix = Date.now().toString(36)
+const PIXEL = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGOQW1ABAAIWATe4c9leAAAAAElFTkSuQmCC'
 const TITLE = `Raid rules ${suffix}`
 
 async function signIn(page: Page) {
@@ -29,9 +30,14 @@ test('an owner writes a wiki page, edits it, reads the history and restores the 
   await page.getByTestId('wiki-title-input').fill(TITLE)
   await page.getByTestId('wiki-text-input').fill('# Loot\n\nNeed before greed.')
   await expect(page.getByTestId('wiki-preview')).toContainText('Need before greed.')
+  // A picture: uploaded, redrawn by the server, put into the text and shown.
+  await page.getByTestId('wiki-image-input').setInputFiles({ name: 'dot.png', mimeType: 'image/png', buffer: Buffer.from(PIXEL, 'base64') })
+  await expect(page.getByTestId('wiki-text-input')).toHaveValue(/!\[dot\]\(\/api\/media\/[0-9a-f-]{36}\)/)
+  await expect(page.getByTestId('wiki-preview').locator('img.md-wikiimage')).toBeVisible()
   await page.getByTestId('wiki-save').click()
   await expect(page.getByTestId('wiki-title')).toHaveText(TITLE)
   await expect(page.getByTestId('wiki-content')).toContainText('Need before greed.')
+  await expect(page.getByTestId('wiki-content').locator('img.md-wikiimage')).toHaveCount(1)
   const slug = new URL(page.url()).pathname.split('/')[2] ?? ''
   expect(slug).toMatch(/^raid-rules-/)
 

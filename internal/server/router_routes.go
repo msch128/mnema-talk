@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/onboarding"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/webhook"
+	"github.com/msch128/mnema-talk/internal/wiki"
 	"github.com/msch128/mnema-talk/web"
 )
 
@@ -137,6 +138,12 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 	authed.Group(func(u chi.Router) {
 		u.Use(httpx.MaxBody(communityevents.CoverBodyLimit))
 		c.eventsH.MountUploads(u)
+	})
+
+	// Wiki pictures are parsed in memory (at most 5 MB), like covers.
+	authed.Group(func(u chi.Router) {
+		u.Use(httpx.MaxBody(wiki.ImageBodyLimit))
+		c.wikiH.MountUploads(u)
 	})
 
 	authed.Route("/admin", c.mountAdmin)

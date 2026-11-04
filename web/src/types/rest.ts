@@ -5733,6 +5733,23 @@ export function isWebhookWebhook(value: unknown): value is WebhookWebhook {
 
 export const decodeWebhookWebhook = decoder("webhook.Webhook", isWebhookWebhook)
 
+export type WikiImage = {
+  id: string
+  markdown: string
+  size: number
+  url: string
+}
+
+export function isWikiImage(value: unknown): value is WikiImage {
+  return isRecord(value)
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "markdown") && isString(value["markdown"]))
+    && (hasOwn(value, "size") && isInteger(value["size"]))
+    && (hasOwn(value, "url") && isString(value["url"]))
+}
+
+export const decodeWikiImage = decoder("wiki.Image", isWikiImage)
+
 export type WikiLockInput = {
   locked: boolean
 }

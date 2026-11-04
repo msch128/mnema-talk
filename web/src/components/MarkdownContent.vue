@@ -11,7 +11,7 @@ import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { roleColorCss } from '../lib/permissions'
 import { roleColors as vRoleColors } from '../directives/roleColor'
-import { wikiLinkRule } from '../lib/wikiLinks'
+import { wikiImageRule, wikiLinkRule } from '../lib/wikiLinks'
 import { goWiki } from '../lib/wikiNav'
 import type { WikiPageSummary } from '../lib/wikiApi'
 
@@ -52,7 +52,7 @@ const parsedHtml = computed(() => renderMarkdown(props.content, {
   known: knownNames.value,
   me: authStore.user?.username || '',
   roles: mentionedRoles.value,
-  ...(props.wikiPages ? { document: true, rules: [wikiLinkRule(props.wikiPages)] } : {})
+  ...(props.wikiPages ? { document: true, rules: [wikiImageRule, wikiLinkRule(props.wikiPages)] } : {})
 }))
 
 function openMention(el: HTMLElement) {

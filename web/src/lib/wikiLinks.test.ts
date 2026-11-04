@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { renderMarkdown } from './markdown'
 import type { WikiPageSummary } from './wikiApi'
-import { wikiLinkRule } from './wikiLinks'
+import { wikiImageRule, wikiLinkRule } from './wikiLinks'
 
 const pages: WikiPageSummary[] = [
   { id: '1', slug: 'raid-guide', title: 'Raid guide', parent_id: null, position: 0, locked: false, updated_at: '2026-01-01T00:00:00Z' }
@@ -9,7 +9,7 @@ const pages: WikiPageSummary[] = [
 
 function render(text: string) {
   const root = document.createElement('div')
-  root.innerHTML = renderMarkdown(text, { document: true, rules: [wikiLinkRule(pages)] })
+  root.innerHTML = renderMarkdown(text, { document: true, rules: [wikiImageRule, wikiLinkRule(pages)] })
   return root
 }
 
@@ -98,5 +98,50 @@ describe('wiki links in plain text', () => {
 
   it('falls back to the target when the label is blank', () => {
     expect(render('[[Raid guide|   ]]').querySelector('.md-wikilink')?.textContent).toBe('Raid guide')
+  })
+})
+
+describe('wiki pictures', () => {
+  const ID = '0b7e1c52-9a43-4f5e-8c0d-3d1f2a9b6e77'
+
+  it('shows an uploaded picture with its description', () => {
+    const img = render(`Before ![a map](/api/media/${ID}) after`).querySelector('img')
+    expect(img?.getAttribute('src')).toBe(`/api/media/${ID}`)
+    expect(img?.getAttribute('alt')).toBe('a map')
+    expect(img?.getAttribute('loading')).toBe('lazy')
+    expect(img?.className).toBe('md-wikiimage')
+  })
+
+  it('accepts an empty description', () => {
+    expect(render(`![](/api/media/${ID})`).querySelector('img')).not.toBeNull()
+  })
+
+  it.each([
+    '![x](https://evil.example/x.png)',
+    '![x](//evil.example/x.png)',
+    '![x](javascript:alert(1))',
+    '![x](data:image/svg+xml;base64,PHN2Zz4=)',
+    '![x](/api/media/not-a-uuid)',
+    `![x](/api/media/${ID}/../../admin)`,
+    `![x](/api/media/${ID}?x=1)`,
+    `![x](/api/media/${ID.toUpperCase()})`,
+    `![x"onerror="alert(1)](/api/media/${ID})`
+  ])('does not make a picture of %s', input => {
+    const root = render(input)
+    const img = root.querySelector('img')
+    expect(img === null || img.getAttribute('src') === `/api/media/${ID}`).toBe(true)
+    for (const el of root.querySelectorAll('*')) {
+      for (const attr of el.attributes) expect(attr.name.startsWith('on')).toBe(false)
+    }
+  })
+
+  it('keeps pictures out of messages', () => {
+    const root = document.createElement('div')
+    root.innerHTML = renderMarkdown(`![x](/api/media/${ID})`)
+    expect(root.querySelector('img')).toBeNull()
+  })
+
+  it('shows the description in plain text', () => {
+    expect(wikiImageRule.plain?.(new RegExp(wikiImageRule.re.source).exec(`![a map](/api/media/${ID})`) as RegExpExecArray)).toBe('a map')
   })
 })

@@ -184,3 +184,32 @@ func TestIconRejectsWhatItCannotBe(t *testing.T) {
 		}
 	}
 }
+
+func TestInlinePicturesKeepTheirShapeAndAreOnlyShrunk(t *testing.T) {
+	for _, tc := range []struct{ w, h, wantW, wantH int }{
+		{3200, 800, InlineMaxEdge, 400}, // wide: the width is cut
+		{800, 3200, 400, InlineMaxEdge}, // tall: the height is cut
+		{640, 480, 640, 480},            // small: never enlarged
+		{1600, 1600, 1600, 1600},        // exactly the limit
+		{1, 1, 1, 1},                    // tiny
+		{InlineMaxEdge * 2, 1, InlineMaxEdge, 1},
+	} {
+		pic, err := ProcessInline(pngOf(t, tc.w, tc.h))
+		if err != nil {
+			t.Fatalf("%dx%d: %v", tc.w, tc.h, err)
+		}
+		if got := sizeOf(t, pic.Data); got.X != tc.wantW || got.Y != tc.wantH {
+			t.Errorf("%dx%d became %v, want %dx%d", tc.w, tc.h, got, tc.wantW, tc.wantH)
+		}
+	}
+}
+
+func TestInlineAnimationStaysAnimatedAndOtherTypesAreRefused(t *testing.T) {
+	pic, err := ProcessInline(gifOf(t, 40, 30, 3))
+	if err != nil || !pic.Animated || pic.ContentType != "image/gif" {
+		t.Fatalf("animation: %+v, %v", pic, err)
+	}
+	if _, err := ProcessInline([]byte("<svg xmlns='http://www.w3.org/2000/svg'/>")); !errors.Is(err, ErrImage) {
+		t.Fatalf("svg: %v", err)
+	}
+}

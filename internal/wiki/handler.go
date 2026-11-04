@@ -1,6 +1,7 @@
 package wiki
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -17,6 +19,11 @@ type Handler struct {
 	Store *Store
 	Perms *perm.Service
 	Audit *audit.Log
+	// MediaStore and MediaBucket keep the pictures; nil MediaStore turns the upload off.
+	MediaStore  media.Store
+	MediaBucket string
+	// Reserve checks an upload against the storage budgets and holds the room until released; nil imposes none.
+	Reserve func(ctx context.Context, user uuid.UUID, size int64) (release func(), err error)
 	// WriteLimit caps the writes of one member; nil means no cap.
 	WriteLimit *httpx.RateLimiter
 }

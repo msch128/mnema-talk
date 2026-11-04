@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { api } from './api'
 import {
   changeWikiPage, createWikiPage, deleteWikiPage, fetchWikiPage, fetchWikiRevision, fetchWikiRevisions, fetchWikiTree,
-  lockWikiPage, restoreWikiRevision, searchWiki, undeleteWikiPage
+  lockWikiPage, restoreWikiRevision, searchWiki, undeleteWikiPage, uploadWikiImage
 } from './wikiApi'
 
 vi.mock('./api', () => ({ api: vi.fn() }))
@@ -55,5 +55,14 @@ describe('wiki calls', () => {
   it('encodes a search', async () => {
     await searchWiki('loot & greed')
     expect(lastCall()[0]).toBe('/api/wiki/search?q=loot%20%26%20greed')
+  })
+
+  it('uploads a picture as a form with the field image', async () => {
+    const file = new File(['x'], 'map.png', { type: 'image/png' })
+    await uploadWikiImage(file)
+    const [path, options] = call.mock.calls.at(-1) as [string, { method?: string; form?: FormData }]
+    expect(path).toBe('/api/wiki/images')
+    expect(options.method).toBe('POST')
+    expect(options.form?.get('image')).toBeInstanceOf(File)
   })
 })
