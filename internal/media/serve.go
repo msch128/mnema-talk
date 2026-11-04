@@ -25,6 +25,14 @@ type servedMedia struct {
 	channelID *uuid.UUID
 }
 
+// hideDenied turns a refusal into "not found", so a file the member may not see is not revealed.
+func (h *Handler) hideDenied(err error) error {
+	if _, denied := httpx.AsAPIError(err); denied && err != nil {
+		return httpx.ErrNotFound("media not found")
+	}
+	return err
+}
+
 // lookupServed loads the media row and checks that the caller may fetch it:
 // an attachment belongs to its channel, so whoever cannot view the channel
 // cannot fetch the file either (avatars have no channel). Deleted media is 410.
@@ -48,19 +56,13 @@ func (h *Handler) lookupServed(r *http.Request, id uuid.UUID) (*servedMedia, err
 		return nil, httpx.ErrNotFound("media not found")
 	}
 	if m.channelID != nil {
-		if err := h.Perms.RequireChannel(r.Context(), auth.UserFrom(r.Context()).Subject(), *m.channelID, perm.ViewChannel); err != nil {
-			if _, denied := httpx.AsAPIError(err); denied {
-				return nil, httpx.ErrNotFound("media not found")
-			}
+		if err := h.hideDenied(h.Perms.RequireChannel(r.Context(), auth.UserFrom(r.Context()).Subject(), *m.channelID, perm.ViewChannel)); err != nil {
 			return nil, err
 		}
 	}
 	// A wiki picture has no channel; it is as readable as the wiki, so closing the wiki to readers closes its pictures.
 	if wikiPicture {
-		if err := h.Perms.RequireGlobal(r.Context(), auth.UserFrom(r.Context()).Subject(), perm.ViewWiki); err != nil {
-			if _, denied := httpx.AsAPIError(err); denied {
-				return nil, httpx.ErrNotFound("media not found")
-			}
+		if err := h.hideDenied(h.Perms.RequireGlobal(r.Context(), auth.UserFrom(r.Context()).Subject(), perm.ViewWiki)); err != nil {
 			return nil, err
 		}
 	}
