@@ -1,0 +1,19 @@
+web/src/App.vue
+  s_a1b7d9df75eb9c::t_d0f77b3c93aed8 165,175-176,179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2d477dbbdb3b93a684c281132d2413c23282d858",
+  "prompts": {},
+  "sessions": {
+    "s_a1b7d9df75eb9c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1695beeeeae2aa06",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
