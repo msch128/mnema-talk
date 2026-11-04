@@ -1,0 +1,43 @@
+e2e/tests/status-message.spec.ts
+  s_2a6b32cb6cdc90::t_28be1f33aa19ff 47-48,51,53,55
+web/src/components/DesktopGamingOverlay.test.ts
+  s_2a6b32cb6cdc90::t_10b1b364146760 6,83-84,87-88,102-104,106,108,115,168-201
+web/src/components/GamingGameList.vue
+  s_17ef7810e0243d::t_d76048a80a9e0b 4,24-25
+web/src/components/ProfileBio.vue
+  s_17ef7810e0243d::t_49e336571de2d8 6,8,10,29-31,40-61,63-64,68-70,74-75,105,109,119,125,127-129
+web/src/components/ProfileStatus.vue
+  s_17ef7810e0243d::t_985e0d536c1cca 102
+web/src/components/StatusDialog.vue
+  s_17ef7810e0243d::t_82c88fe51d0ce5 4-5,15,19,35,41-61,63,87,93,97-108,119,122,176-180
+web/src/components/UnsavedChangesBar.vue
+  s_17ef7810e0243d::t_6576a1cf7b2c0d 16-18,24-28
+web/src/components/UserProfileModal.test.ts
+  s_17ef7810e0243d::t_bfd6a4c98eee7a 16,61-65,70,94-97,137,267,395-440
+web/src/components/UserProfileModal.vue
+  s_17ef7810e0243d::t_244708b246ac58 24,40-41,149-150,172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b4a598d80a3fbbee0cb77de8e85fa431339141ba",
+  "prompts": {},
+  "sessions": {
+    "s_17ef7810e0243d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-settings-consistency-dafcd1d9d14d2c0a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
