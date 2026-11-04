@@ -23,6 +23,8 @@ type servedMedia struct {
 	filename  string
 	size      int64
 	channelID *uuid.UUID
+	// wiki marks a wiki picture: it has no channel but is readable only while the wiki is.
+	wiki bool
 }
 
 // hideDenied turns a refusal into "not found", so a file the member may not see is not revealed.
@@ -61,6 +63,7 @@ func (h *Handler) lookupServed(r *http.Request, id uuid.UUID) (*servedMedia, err
 		}
 	}
 	// A wiki picture has no channel; it is as readable as the wiki, so closing the wiki to readers closes its pictures.
+	m.wiki = wikiPicture
 	if wikiPicture {
 		if err := h.hideDenied(h.Perms.RequireGlobal(r.Context(), auth.UserFrom(r.Context()).Subject(), perm.ViewWiki)); err != nil {
 			return nil, err
@@ -103,8 +106,10 @@ func setServeHeaders(hdr http.Header, m *servedMedia, etag string) {
 	// permission and deletion checks), so a removed file or a revoked channel
 	// stops working at once instead of living on in the browser cache.
 	// Avatars belong to no channel and are replaced under a new ID, so they
-	// may be cached; private keeps shared caches out in both cases.
-	if m.channelID == nil {
+	// may be cached; private keeps shared caches out in both cases. A wiki
+	// picture is revalidated like an attachment: closing the wiki to readers
+	// must not leave it in their browsers for a day.
+	if m.channelID == nil && !m.wiki {
 		hdr.Set("Cache-Control", "private, max-age=86400, immutable")
 	} else {
 		hdr.Set("Cache-Control", "private, no-cache")
