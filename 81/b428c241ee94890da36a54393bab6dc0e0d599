@@ -1,0 +1,29 @@
+internal/db/message_fk_index_integration_test.go
+  s_ac86bbae7477e8::t_35b7e51b276d6d 1-46
+internal/db/migrations/0091_message_fk_indexes.sql
+  s_940849ce58ef79::t_e11f107e7e44d2 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "81b428c241ee94890da36a54393bab6dc0e0d599",
+  "prompts": {},
+  "sessions": {
+    "s_940849ce58ef79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7f6bda54f018aeb2",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ac86bbae7477e8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acdaaa3b5dd7f0aaf",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
