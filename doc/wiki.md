@@ -136,9 +136,10 @@ three characters), titles first, with a few words around the match. Deleted page
   anonymised account), so the pages of other people do not break; ask an
   administrator to remove a picture that must go, and edit the text that shows
   it. They are part of the export's list of uploads until then.
-- The account export (`wiki_revisions.json`) holds every revision the member
-  saved: the page's address, the title and text they wrote, the summary and
-  the time.
+- The account export (`wiki_revisions.json`) holds the revisions the member
+  saved, oldest first: the page's address, the title and text they wrote, the
+  summary and the time. Like the member's messages it stops at 48 MB of text
+  (or 50,000 revisions) and then lists the file in `truncated.json`.
 - Pages are readable by every member who may view the wiki; do not put anything
   into it that members are not meant to read. Messages in private channels or
   direct messages are never copied into it.
