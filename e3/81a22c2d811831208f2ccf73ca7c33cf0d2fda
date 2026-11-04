@@ -1,0 +1,19 @@
+internal/chat/webhook_bot_cleanup_integration_test.go
+  s_ac86bbae7477e8::t_c7fa255665c928 11-12,61-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e381a22c2d811831208f2ccf73ca7c33cf0d2fda",
+  "prompts": {},
+  "sessions": {
+    "s_ac86bbae7477e8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acdaaa3b5dd7f0aaf",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
