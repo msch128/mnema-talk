@@ -7,6 +7,7 @@ import { decodeOpsStatus } from '../types/domain'
 import type { OpsStatus, OpsSample } from '../types/domain'
 import { t, locale } from '../i18n'
 import { visibleInterval } from '../lib/pageVisibility'
+import { formatBytes } from '../lib/byteUnits'
 import Sparkline from './Sparkline.vue'
 
 const REFRESH_MS = 10_000
@@ -53,12 +54,7 @@ defineExpose({ refresh })
 const nf = computed(() => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }))
 const int = computed(() => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 0 }))
 
-function bytes(n: number) {
-  if (!n) return '0 B'
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.min(sizes.length - 1, Math.floor(Math.log(n) / Math.log(1024)))
-  return `${nf.value.format(n / Math.pow(1024, i))} ${sizes[i]}`
-}
+const bytes = (n: number) => formatBytes(n, locale.value)
 
 function rate(bps: number) {
   const units = ['bit/s', 'kbit/s', 'Mbit/s', 'Gbit/s']

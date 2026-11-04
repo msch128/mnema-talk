@@ -35,7 +35,7 @@ const messagesText = computed(() => new Intl.NumberFormat(locale.value).format(p
     v-if="variant === 'compact'"
     class="flex shrink-0 flex-col items-end gap-0.5 text-[11px] leading-[14px] text-mnema-tertiary"
     data-testid="activity-stats"
-    :aria-label="$t('activity.summary', { voice: voiceText, messages: messagesText })"
+    role="group"
     v-tooltip="$t('activity.summary', { voice: voiceText, messages: messagesText })"
   >
     <span v-if="voiceSeconds > 0" class="flex items-center gap-1 tabular-nums" data-testid="activity-voice"><Headphones class="h-3 w-3" />{{ voiceText }}</span>
