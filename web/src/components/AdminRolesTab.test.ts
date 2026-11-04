@@ -61,7 +61,7 @@ describe('AdminRolesTab', () => {
     expect(w.text()).toContain('What every member has.')
     // only the permissions of @everyone are editable
     expect(w.find('input[data-max-chars="32"]').exists()).toBe(false)
-    expect(w.findAll('[role="switch"]')).toHaveLength(26)
+    expect(w.findAll('[role="switch"]')).toHaveLength(29)
   })
 
   it('shows the empty state', async () => {
@@ -333,8 +333,8 @@ describe('AdminRolesTab permission list', () => {
     await flushPromises()
     await row(w, 'Middle').find('button[aria-pressed]').trigger('click')
     const groups = w.findAll('[data-permission-group]')
-    expect(groups.map(g => g.attributes('data-permission-group'))).toEqual(['general', 'text', 'voice', 'moderation', 'administration'])
-    expect(groups.map(g => g.find('h4').text())).toEqual(['General', 'Text', 'Voice', 'Moderation', 'Administration'])
+    expect(groups.map(g => g.attributes('data-permission-group'))).toEqual(['general', 'text', 'voice', 'moderation', 'administration', 'wiki'])
+    expect(groups.map(g => g.find('h4').text())).toEqual(['General', 'Text', 'Voice', 'Moderation', 'Administration', 'Wiki'])
     const shown = w.findAll('[data-permission]').map(li => li.attributes('data-permission'))
     expect(shown).not.toContain('manage_webhooks')
     expect(new Set(shown)).toEqual(new Set(Object.keys(PERMISSION_BITS).filter(key => key !== 'manage_webhooks')))
