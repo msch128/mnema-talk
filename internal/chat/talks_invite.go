@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -38,15 +39,24 @@ func (h *Handler) dmSendContext(r *http.Request, dm uuid.UUID) (context.Context,
 	return h.sendContext(r, dm, perm.SendMessages)
 }
 
-// postTalkInvite posts the invitation card for talk into dm as user.
-func (h *Handler) postTalkInvite(ctx context.Context, dm, user, talk uuid.UUID) (*Message, error) {
+// talkName is the name of a voice channel; anything else is not found.
+func talkName(ctx context.Context, q db.Querier, talk uuid.UUID) (string, error) {
 	var name string
-	err := h.DB.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1 AND type = 'voice'`, talk).Scan(&name)
+	err := q.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1 AND type = 'voice'`, talk).Scan(&name)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, errChannelNotFound
+		return "", errChannelNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("load talk for invite: %w", err)
+		return "", fmt.Errorf("load talk for invite: %w", err)
+	}
+	return name, nil
+}
+
+// postTalkInvite posts the invitation card for talk into dm as user.
+func (h *Handler) postTalkInvite(ctx context.Context, dm, user, talk uuid.UUID) (*Message, error) {
+	name, err := talkName(ctx, h.DB, talk)
+	if err != nil {
+		return nil, err
 	}
 	id, err := InsertMessage(ctx, h.DB, h.Online, NewMessage{
 		ChannelID: dm, UserID: user, Embeds: []Embed{{Title: name, TalkID: &talk}},

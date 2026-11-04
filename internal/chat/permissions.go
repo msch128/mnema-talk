@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -155,7 +156,12 @@ func (h *Handler) hiddenMessageCounts(r *http.Request) (map[uuid.UUID]int64, err
 	if len(hidden) == 0 {
 		return nil, nil
 	}
-	rows, err := h.DB.Query(r.Context(), `SELECT user_id, COUNT(*) FROM messages WHERE channel_id = ANY($1::uuid[]) GROUP BY user_id`, hidden)
+	return MessageCountsByAuthor(r.Context(), h.DB, hidden)
+}
+
+// MessageCountsByAuthor counts the messages per author inside the channels.
+func MessageCountsByAuthor(ctx context.Context, q db.Querier, channels []uuid.UUID) (map[uuid.UUID]int64, error) {
+	rows, err := q.Query(ctx, `SELECT user_id, COUNT(*) FROM messages WHERE channel_id = ANY($1::uuid[]) GROUP BY user_id`, channels)
 	if err != nil {
 		return nil, fmt.Errorf("count hidden messages: %w", err)
 	}
