@@ -71,6 +71,7 @@ type ErrorResponse struct {
 
 func (e *APIError) Error() string { return e.Message }
 
+// NewAPIError builds an APIError with an explicit status and stable code.
 func NewAPIError(status int, code, msg string) *APIError {
 	return &APIError{Status: status, Code: code, Message: msg}
 }
@@ -156,6 +157,8 @@ func WriteError(w http.ResponseWriter, err error) {
 // handlers can `return err` instead of repeating the error tail.
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 
+// Handle adapts a HandlerFunc to http.HandlerFunc: a returned error is
+// written in the JSON error envelope, and a non-APIError becomes a sanitized 500.
 func Handle(h HandlerFunc) http.HandlerFunc {
 	return handleWith(h, WriteError)
 }

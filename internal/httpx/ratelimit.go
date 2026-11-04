@@ -44,6 +44,7 @@ type rateEntry struct {
 	reset time.Time
 }
 
+// NewRateLimiter allows limit hits per key in each fixed window.
 func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 	return &RateLimiter{
 		limit:      limit,

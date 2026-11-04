@@ -17,6 +17,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/raid"
 )
 
+// Invite is an invite code as the admin list shows it.
 type Invite struct {
 	ID        uuid.UUID  `json:"id" format:"uuid"`
 	Code      string     `json:"code"`
@@ -63,6 +64,7 @@ func randomInviteCode() (string, error) {
 	return string(b), nil
 }
 
+// ListInvites returns every invite, newest first, weak legacy codes flagged.
 func ListInvites(ctx context.Context, p *db.Pool) ([]Invite, error) {
 	rows, err := p.Query(ctx, `
 		SELECT id, code, max_uses, uses_count, expires_at, created_at
@@ -153,6 +155,7 @@ func CreateInvite(ctx context.Context, p *db.Pool, createdBy uuid.UUID, rawCode 
 	return &inv, nil
 }
 
+// DeleteInvite revokes an invite; accounts that registered with it stay.
 func DeleteInvite(ctx context.Context, p *db.Pool, id uuid.UUID) error {
 	tag, err := p.Exec(ctx, `DELETE FROM invites WHERE id = $1`, id)
 	if err != nil {

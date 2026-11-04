@@ -118,6 +118,7 @@ func UserKey(r *http.Request) string {
 	return ""
 }
 
+// WithUser stores the authenticated user in ctx for UserFrom.
 func WithUser(ctx context.Context, u *User) context.Context {
 	return context.WithValue(ctx, userKey, u)
 }
