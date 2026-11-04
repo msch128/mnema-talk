@@ -9,6 +9,7 @@ import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { t, locale } from '../i18n'
 import { describeWarning } from '../lib/operatorWarnings'
+import { formatBytes as formatBytesIn } from '../lib/byteUnits'
 import { builtinTurnText } from './adminSystemWarnings'
 import SelfUpdateDialog from './SelfUpdateDialog.vue'
 import AdminOpsPanel from './AdminOpsPanel.vue'
@@ -138,13 +139,7 @@ const health = computed(() => status.value?.health || null)
 const builtinTurnLabel = computed(() => builtinTurnText(health.value?.voice.builtin_turn))
 const upd = computed(() => status.value?.update || null)
 
-function formatBytes(bytes: number) {
-  if (!bytes) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.min(sizes.length - 1, Math.floor(Math.log(bytes) / Math.log(k)))
-  return new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(bytes / Math.pow(k, i)) + ' ' + sizes[i]
-}
+const formatBytes = (bytes: number) => formatBytesIn(bytes, locale.value)
 
 function formatUptime(seconds: number) {
   const s = Math.max(0, Math.floor(seconds || 0))

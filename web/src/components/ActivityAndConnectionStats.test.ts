@@ -67,6 +67,12 @@ describe('member activity and connection summaries', () => {
     await w.setProps({ user: { id: fixtureId(1), voice_seconds: 90, message_count: 5 } })
     expect(w.find('[data-testid="activity-voice"]').exists()).toBe(true)
   })
+  it('names the compact totals as a group, so the summary is announced as one', () => {
+    const w = keep(mount(ActivityStats, { props: { user: { id: fixtureId(1), voice_seconds: 90, message_count: 5 } } }))
+    const stats = w.get('[data-testid="activity-stats"]')
+    expect(stats.attributes('role')).toBe('group')
+    expect(stats.attributes('aria-label')).toBe('1 min in Talks · 5 messages')
+  })
   it('shows empty connection data and emits close through both controls', async () => {
     const w = keep(mount(ConnectionStatsModal))
     expect(w.text()).toContain('–')

@@ -10,6 +10,7 @@ import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 import EmptyState from './EmptyState.vue'
+import { formatBytes as formatBytesIn } from '../lib/byteUnits'
 
 const EMPTY_STATS = { total_files: 0, total_size_bytes: 0, deleted_files: 0 }
 
@@ -37,13 +38,7 @@ async function refresh() {
   else showError(m.reason)
 }
 
-function formatBytes(bytes: number) {
-  if (!bytes) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return new Intl.NumberFormat(locale.value, { maximumFractionDigits: 2 }).format(bytes / Math.pow(k, i)) + ' ' + sizes[i]
-}
+const formatBytes = (bytes: number) => formatBytesIn(bytes, locale.value, 2)
 
 async function runPrune() {
   const days = parseInt(String(pruneDays.value), 10)

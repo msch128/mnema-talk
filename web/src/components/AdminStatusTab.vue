@@ -9,6 +9,7 @@ import { useToastStore } from '../stores/toast'
 import { SOURCE_URL } from '../lib/thirdParty'
 import { describeWarning } from '../lib/operatorWarnings'
 import { describeCheck } from '../lib/setupChecks'
+import { formatBytes as formatBytesIn } from '../lib/byteUnits'
 import { t, locale } from '../i18n'
 import { useChatStore } from '../stores/chat'
 import { reportWebSocket } from '../lib/wsReport'
@@ -31,14 +32,7 @@ async function refresh() {
   }
 }
 
-function formatBytes(bytes: number | null | undefined): string {
-  if (bytes === null || bytes === undefined) return '–'
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.min(sizes.length - 1, Math.floor(Math.log(bytes) / Math.log(k)))
-  return new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(bytes / Math.pow(k, i)) + ' ' + sizes[i]
-}
+const formatBytes = (bytes: number | null | undefined): string => (bytes === null || bytes === undefined ? '–' : formatBytesIn(bytes, locale.value))
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '–'
