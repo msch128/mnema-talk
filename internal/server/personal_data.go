@@ -1,11 +1,15 @@
 package server
 
 import (
+	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/communityevents"
+	"github.com/msch128/mnema-talk/internal/discordimport"
+	"github.com/msch128/mnema-talk/internal/emoji"
 	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/userdata"
+	"github.com/msch128/mnema-talk/internal/webhook"
 	"github.com/msch128/mnema-talk/internal/wiki"
 )
 
@@ -18,5 +22,9 @@ func (c *components) wirePersonalData() {
 	communityevents.RegisterAccountData(r)
 	push.RegisterAccountData(r)
 	wiki.RegisterAccountData(r)
+	bot.RegisterAccountData(r)
+	discordimport.RegisterAccountData(r)
+	emoji.RegisterAccountData(r)
+	webhook.RegisterAccountData(r)
 	c.authH.SetPersonalData(r)
 }
