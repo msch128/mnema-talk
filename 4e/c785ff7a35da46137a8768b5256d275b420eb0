@@ -1,0 +1,23 @@
+internal/poll/command.go
+  s_ee26457faa4490::t_f973cb4ccb8122 43
+internal/sfu/adapt_auto_test.go
+  s_ee26457faa4490::t_bd42968d2a23cd 65
+internal/ws/lifecycle.go
+  s_ee26457faa4490::t_ce03d85eaa56a6 155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4ec785ff7a35da46137a8768b5256d275b420eb0",
+  "prompts": {},
+  "sessions": {
+    "s_ee26457faa4490": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9d5e9468b576c783",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
