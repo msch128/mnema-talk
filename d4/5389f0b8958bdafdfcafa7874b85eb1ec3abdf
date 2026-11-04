@@ -1,0 +1,51 @@
+api/openapi.json
+  s_b8f19a143fd126::t_2a7d39e3e7f431 39984-39993,40002,40044-40053,40150,40455,40475,40950,41056,41100
+e2e/tests/wiki-permissions.spec.ts
+  s_428e179215eed1::t_0eb00d79cc7113 1-108
+internal/media/serve.go
+  s_b8f19a143fd126::t_79621a69e491eb 26-27,66,109-112
+internal/server/wiki_images_integration_test.go
+  s_428e179215eed1::t_0cee7152177f4f 156-161
+internal/wiki/handler_read.go
+  s_428e179215eed1::t_98c3e605e87a85 146
+internal/wiki/handler_write.go
+  s_428e179215eed1::t_df520f7c5ae785 26,62,64,143,215
+internal/wiki/images.go
+  s_b8f19a143fd126::t_a06bd2cf510e40 70-71,76
+internal/wiki/store_edit.go
+  s_e5821d1cfa7866::t_a4c883886fe992 232-236
+internal/wiki/store_integration_test.go
+  s_428e179215eed1::t_fe17250643978b 560-575
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d45389f0b8958bdafdfcafa7874b85eb1ec3abdf",
+  "prompts": {},
+  "sessions": {
+    "s_428e179215eed1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4dcf8660e27bed8a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b8f19a143fd126": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab1c726eddbddca55",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e5821d1cfa7866": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a95476b9b2bdfa027",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
