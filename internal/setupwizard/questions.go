@@ -2,6 +2,7 @@ package setupwizard
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/msch128/mnema-talk/internal/setupcheck"
 )
@@ -70,9 +71,19 @@ func askLanguage(p *prompter, o Options, _ string) (Options, error) {
 		"#general, Lounge ...). This is the language of their names, used once at the first",
 		"start. Members choose their own interface language in their settings.",
 		"Answer: de or en")
-	var err error
-	o.Language, err = p.ask("Language of the default channel names (en or de)", DefaultLanguage)
-	return o, err
+	for {
+		v, err := p.ask("Language of the default channel names (en or de)", DefaultLanguage)
+		if err != nil {
+			return o, err
+		}
+		v = strings.ToLower(v)
+		if err := validateLanguage(v); err != nil {
+			fmt.Fprintln(p.out, "  "+err.Error())
+			continue
+		}
+		o.Language = v
+		return o, nil
+	}
 }
 
 // askLAN asks for the host's LAN address. A trial on this computer, or an
