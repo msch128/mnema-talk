@@ -60,7 +60,8 @@ page exists, and follows a renamed page).
   for another page.
 - Saving needs the revision you started from. If somebody saved meanwhile, the
   save is **refused** (nothing is overwritten) and you open the page again and
-  apply your change to the new version.
+  apply your change to the new version. The refusal is `409` with the stable
+  code `STALE_REVISION`.
 - Each member may make 20 wiki changes a minute.
 
 ## History and undoing vandalism

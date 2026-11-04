@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -16,7 +17,7 @@ var (
 	errPageNotFound = httpx.ErrNotFound("wiki page not found")
 	errSlugTaken    = httpx.ErrConflict("that address is already used by a page or a redirect")
 	errSlugInvalid  = httpx.ErrInvalidInput("the address needs lower-case letters, digits and single hyphens, and must not be a reserved word")
-	errStale        = httpx.ErrConflict("the page changed since you opened it; open it again and apply your change to the new version")
+	errStale        = httpx.NewAPIError(http.StatusConflict, httpx.CodeStaleRevision, "the page changed since you opened it; open it again and apply your change to the new version")
 	errLocked       = httpx.ErrForbidden("this page is locked; only holders of Manage wiki can change it")
 	errTooLong      = httpx.ErrInvalidInput("a wiki page holds at most 50 KB of text")
 	errTooMany      = httpx.ErrConflict("the wiki holds at most 500 pages")

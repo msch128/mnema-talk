@@ -105,7 +105,7 @@ func TestAStaleSaveIsAnErrorOverHTTPAndTheOtherEditorKeepsTheirText(t *testing.T
 	wantStatus(t, "first save", f.editor.patch("/api/wiki/pages/plans", map[string]any{"base_rev": 1, "content": "edda"}), http.StatusOK)
 	res := f.admin.patch("/api/wiki/pages/plans", map[string]any{"base_rev": 1, "content": "admin"})
 	wantStatus(t, "second save on the same revision", res, http.StatusConflict)
-	if !strings.Contains(string(res.body), "changed since you opened it") {
+	if !strings.Contains(string(res.body), `"code":"STALE_REVISION"`) {
 		t.Fatalf("body: %s", res.body)
 	}
 	var now wikiPage

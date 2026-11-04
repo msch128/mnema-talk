@@ -6132,6 +6132,7 @@
               "UNSUPPORTED_MEDIA_TYPE",
               "RATE_LIMITED",
               "RULES_NOT_ACCEPTED",
+              "STALE_REVISION",
               "UNAVAILABLE",
               "INTERNAL_ERROR"
             ],
@@ -40309,7 +40310,7 @@
                 }
               }
             },
-            "description": "CONFLICT: the page changed meanwhile, the address is taken, or the move passes the depth limit or goes under the page itself."
+            "description": "STALE_REVISION: the page changed meanwhile. CONFLICT: the address is taken, or the move passes the depth limit or goes under the page itself."
           },
           "429": {
             "content": {
@@ -40784,7 +40785,7 @@
                 }
               }
             },
-            "description": "CONFLICT: the page changed meanwhile."
+            "description": "STALE_REVISION: the page changed meanwhile."
           },
           "429": {
             "content": {
