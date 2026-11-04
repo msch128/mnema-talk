@@ -1,0 +1,25 @@
+SECURITY.md
+  s_f1956343134576::t_034279f85fff27 400-402
+doc/operations.md
+  s_f1956343134576::t_55049a5ab32128 1271-1273
+web/src/i18n/de.json
+  s_f1956343134576::t_1e57816c57ada2 1563,4085
+web/src/i18n/en.json
+  s_f1956343134576::t_7afaaa29c19ad6 1563,4085
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4dbad638a6a3d2cf9ec878deade227fc72a273ec",
+  "prompts": {},
+  "sessions": {
+    "s_f1956343134576": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad54d0ea1be3fff67",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
