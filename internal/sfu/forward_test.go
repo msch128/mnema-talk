@@ -1,7 +1,6 @@
 package sfu
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"log/slog"
@@ -14,25 +13,6 @@ import (
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 )
-
-// SFU callbacks log asynchronously. TextHandler serializes writes, but test
-// snapshots also need to share that lock rather than read a raw bytes.Buffer.
-type synchronizedLogCapture struct {
-	mu  sync.Mutex
-	buf bytes.Buffer
-}
-
-func (b *synchronizedLogCapture) Write(p []byte) (int, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.buf.Write(p)
-}
-
-func (b *synchronizedLogCapture) String() string {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.buf.String()
-}
 
 // fakeRemote yields n RTP packets, then fails like an ended remote track.
 type fakeRemote struct {
@@ -112,10 +92,7 @@ func TestForwardIgnoresSubscriberWriteErrors(t *testing.T) {
 // A forwarding error other than a stopped subscriber is logged, once per
 // track; a stopped subscriber is not logged at all.
 func TestForwardLogsWriteErrorsOnce(t *testing.T) {
-	var buf synchronizedLogCapture
-	prev := slog.Default()
-	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
-	t.Cleanup(func() { slog.SetDefault(prev) })
+	buf := captureSFULog(t)
 
 	user := uuid.New()
 	r := &Room{peers: map[uuid.UUID]*Peer{}, trackLocals: map[string]*TrackInfo{}, notifier: &mediaNotifier{}}

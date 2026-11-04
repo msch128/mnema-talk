@@ -63,6 +63,40 @@ func TestDeniedSourcesAreNeverPublished(t *testing.T) {
 	})
 }
 
+// The video permission is checked per source: a user who may share the screen
+// but not show a camera gets the screen published and the camera held back
+// until the right is given.
+func TestDeniedCameraIsHeldBackWhileTheScreenIsPublished(t *testing.T) {
+	logs := captureSFULog(t)
+	s := newTestSFU(t)
+	room := uuid.New()
+
+	pub := newClient(t)
+	pub.publishVideo("screen")
+	pub.publishVideo("camera")
+	pub.joinWith(func(offer func(webrtc.SessionDescription)) (*Peer, error) {
+		_, p, err := s.Join(room, pub.id, offer, nil)
+		if p != nil {
+			p.SetDeniedSources(SourceSet(0).With(SourceCamera))
+		}
+		return p, err
+	})
+	r := s.Room(room)
+	waitSources(t, r, pub.id, SourceScreen, 1)
+	waitSFUCondition(t, "denied camera to be handled", func() bool {
+		if n := r.sourceCount(pub.id, SourceCamera); n != 0 {
+			t.Fatalf("a denied camera was published (%d tracks)", n)
+		}
+		return strings.Contains(logs.String(), "source=camera")
+	})
+
+	pub.peer.SetDeniedSources(0)
+	waitSources(t, r, pub.id, SourceCamera, 1)
+	if n := r.sourceCount(pub.id, SourceScreen); n != 1 {
+		t.Fatalf("giving the camera back changed the screen (%d tracks)", n)
+	}
+}
+
 // Taking a permission away unpublishes the live source and drops its packets;
 // giving it back publishes it again.
 func TestRevokedSourceIsUnpublishedAndComesBack(t *testing.T) {
@@ -94,6 +128,7 @@ func TestRevokedSourceIsUnpublishedAndComesBack(t *testing.T) {
 // track once, so the SFU keeps reading it and publishes it as soon as the
 // permission is back.
 func TestTrackArrivingWhileDeniedIsPublishedOnceAllowed(t *testing.T) {
+	logs := captureSFULog(t)
 	s := newTestSFU(t)
 	room := uuid.New()
 
@@ -107,11 +142,13 @@ func TestTrackArrivingWhileDeniedIsPublishedOnceAllowed(t *testing.T) {
 		return p, err
 	})
 	r := s.Room(room)
-	// Packets arrive (the track is handled) but nothing is published.
-	time.Sleep(time.Second)
-	if n := r.sourceCount(pub.id, SourceAudio); n != 0 {
-		t.Fatalf("a denied microphone was published (%d tracks)", n)
-	}
+	// The track is handled but nothing is published.
+	waitSFUCondition(t, "denied microphone to be handled", func() bool {
+		if n := r.sourceCount(pub.id, SourceAudio); n != 0 {
+			t.Fatalf("a denied microphone was published (%d tracks)", n)
+		}
+		return strings.Contains(logs.String(), "source=audio")
+	})
 
 	pub.peer.SetDeniedSources(0)
 	waitSources(t, r, pub.id, SourceAudio, 1)
