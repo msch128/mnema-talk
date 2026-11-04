@@ -3,6 +3,7 @@ import type { Page, BrowserContext, Locator, Request } from '@playwright/test'
 import { apiFetch, responseString, bounds } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from './fixtures'
+import { isCancelledApiRequest } from './page-errors'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
@@ -222,15 +223,8 @@ let member: Page
 let layoutSaves = 0
 const pageErrors: string[] = []
 
-// A reload (every test starts with one) cancels the requests still on their
-// way; WebKit reports such a cancelled API request as a page error of its own,
-// "Fetch API cannot load <url> due to access control checks", although the app
-// handles the failed request. Only that signature, only for the app's own API,
-// is not an app error; every other uncaught error still fails the test.
-const CANCELLED_API_REQUEST = /^Fetch API cannot load https?:\/\/127\.0\.0\.1:\d+\/api\/\S+ due to access control checks\.$/
-
 function collectPageErrors(page: Page) {
-  page.on('pageerror', (err) => { if (!CANCELLED_API_REQUEST.test(err.message)) pageErrors.push(err.message) })
+  page.on('pageerror', (err) => { if (!isCancelledApiRequest(err)) pageErrors.push(err.message) })
 }
 
 test.describe.configure({ mode: 'serial' })
