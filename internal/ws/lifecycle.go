@@ -161,8 +161,7 @@ func (h *Hub) registerPending(c *Client) (bool, []*Client) {
 	if h.closed {
 		return false, nil
 	}
-	var evicted []*Client
-	evicted = h.browserOverflowLocked(c)
+	evicted := h.browserOverflowLocked(c)
 	h.pending[c] = struct{}{}
 	return true, evicted
 }

@@ -40,7 +40,7 @@ func (Command) Definition() slash.Definition {
 func (Command) Available(*perm.Snapshot, perm.Subject, uuid.UUID) bool { return true }
 
 // Run posts the poll.
-func (c Command) Run(ctx context.Context, call slash.Call) (slash.Result, error) {
+func (c Command) Run(_ context.Context, call slash.Call) (slash.Result, error) {
 	ctx, err := chat.SendContext(c.Service.Perms, call.Request, call.Channel, perm.SendMessages)
 	if err != nil {
 		return slash.Result{}, err
