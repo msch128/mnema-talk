@@ -35,10 +35,14 @@ function useCommentPages(eventId: Ref<string>) {
     const mine = ++seq
     loading.value = true
     failed.value = false
+    const before = new Set(comments.value.map(c => c.id))
     try {
       const page = await api.fetchComments(eventId.value)
       if (mine !== seq) return
-      comments.value = page.comments
+      // A comment sent or pushed while the page was on its way is newer than it and stays.
+      const have = new Set(page.comments.map(c => c.id))
+      const arrived = comments.value.filter(c => !before.has(c.id) && !have.has(c.id))
+      comments.value = [...page.comments, ...arrived]
       hasMore.value = page.has_more
       muted.value = page.muted
     } catch (err) {
