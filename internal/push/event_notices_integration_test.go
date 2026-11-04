@@ -107,12 +107,16 @@ func TestEventNoticesAreSilentWithoutAServiceOrAnAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 	e := newEnv(t, http.StatusCreated)
+	// An unknown account is reported as a lookup error, never answered with a push.
 	ghost := member{id: uuid.New()}
 	if err := e.signupNotice(ghost, "promoted", nil); err == nil {
-		t.Log("an unknown account is a lookup error here, not a push")
+		t.Error("a sign-up notice for an unknown account was not reported")
 	}
 	if err := e.commentNotice(ghost, nil); err == nil {
-		t.Log("same for comments")
+		t.Error("a comment notice for an unknown account was not reported")
 	}
 	settle()
+	if n := len(e.push.requests()); n != 0 {
+		t.Errorf("%d pushes for an account that does not exist", n)
+	}
 }

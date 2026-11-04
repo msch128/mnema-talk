@@ -39,6 +39,22 @@ func TestRunPeriodicallyWaitsForFirstRun(t *testing.T) {
 	}
 }
 
+// Retention runs soon after start, not only after the first full interval.
+func TestRunPeriodicallyRunsSoonThenRepeats(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var runs atomic.Int32
+	go runPeriodically(ctx, 5*time.Millisecond, 20*time.Millisecond, func(context.Context) { runs.Add(1) })
+	deadline := time.Now().Add(2 * time.Second)
+	for runs.Load() < 2 {
+		if time.Now().After(deadline) {
+			t.Fatalf("ran %d times", runs.Load())
+		}
+		time.Sleep(time.Millisecond)
+	}
+	cancel()
+}
+
 func TestRetentionWorkerIsOffByDefault(t *testing.T) {
 	// Days 0 (the default) or no store: nothing is started, so a nil pool is
 	// never touched.

@@ -35,15 +35,15 @@ func TestPushWithoutPreviewNeverCarriesTheText(t *testing.T) {
 	n := notice()
 	n.Content = "secret password"
 	for _, c := range []struct {
-		locale, want string
-		mention      bool
-		wantBody     string
+		locale   string
+		mention  bool
+		wantBody string
 	}{
-		{"de", "", false, "Neue Nachricht"},
-		{"en", "", false, "New message"},
-		{"en", "", true, "Mentioned you"},
-		{"de", "", true, "Hat dich erwähnt"},
-		{"fr", "", false, "Neue Nachricht"},
+		{"de", false, "Neue Nachricht"},
+		{"en", false, "New message"},
+		{"en", true, "Mentioned you"},
+		{"de", true, "Hat dich erwähnt"},
+		{"fr", false, "Neue Nachricht"},
 	} {
 		n.Mention = c.mention
 		raw, err := build(n, c.locale, false).encode()
