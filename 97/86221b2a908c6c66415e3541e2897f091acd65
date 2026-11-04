@@ -1,0 +1,21 @@
+internal/chat/stage/stage.go
+  s_f1956343134576::t_ab3ca0f1bb4447 5,9,24-26,28-29,32-34
+internal/chat/stage/stage_test.go
+  s_f1956343134576::t_f80e79bcadda44 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9786221b2a908c6c66415e3541e2897f091acd65",
+  "prompts": {},
+  "sessions": {
+    "s_f1956343134576": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad54d0ea1be3fff67",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
