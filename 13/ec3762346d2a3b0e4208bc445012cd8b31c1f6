@@ -1,0 +1,21 @@
+internal/communityevents/rsvp_lock_integration_test.go
+  s_f1956343134576::t_e251c2a1d88b5b 1-64
+internal/communityevents/store.go
+  s_f1956343134576::t_b22c30058e4d49 216-218,222-228,234,245-246,249
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "13ec3762346d2a3b0e4208bc445012cd8b31c1f6",
+  "prompts": {},
+  "sessions": {
+    "s_f1956343134576": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad54d0ea1be3fff67",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
