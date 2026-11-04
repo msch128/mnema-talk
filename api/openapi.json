@@ -39999,7 +39999,7 @@
                 }
               }
             },
-            "description": "CONFLICT"
+            "description": "CONFLICT: the wiki holds its most pictures."
           },
           "413": {
             "content": {
@@ -40029,7 +40029,17 @@
                 }
               }
             },
-            "description": "RATE_LIMITED"
+            "description": "RATE_LIMITED: too many writes, or the member's daily number of pictures or bytes is reached."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: file storage is not configured or full, or the server is busy redrawing pictures."
           }
         },
         "security": [

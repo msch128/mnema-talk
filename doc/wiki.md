@@ -70,14 +70,13 @@ page exists, and follows a renamed page).
 - **Pictures**: the editor's picture button (or paste, or drop a file) uploads a
   PNG, JPEG, GIF or WebP of up to 5 MB and puts `![description](/api/media/…)`
   in the text. The server redraws it (no EXIF or other metadata; animated GIFs
-  stay animated) and shrinks it to 1600 pixels on the longer edge. Every member
-  who may use the app loads the file by its address, like an avatar; the
-  address is a random id, so keep to the rule that the wiki holds nothing
-  members may not read. Only pictures uploaded this way show; any other
+  stay animated) and shrinks it to 1600 pixels on the longer edge. Only members
+  who may read the wiki load the file (*View the wiki* is checked on every
+  request, so closing the wiki to readers closes its pictures too). Only pictures uploaded this way show; any other
   `![](…)` stays text. Uploading is an edit (*Edit the wiki*; a timeout, the
   new-member wait and the 20-a-minute limit apply) and is recorded as
   `wiki.image`.
-- The wiki holds at most **200 pictures**. At the limit, pictures that no
+- One member adds at most **30 pictures a day**, and the upload counts against the daily upload limit and the storage budget like other uploads. The wiki holds at most **200 pictures**. At the limit, pictures that no
   revision uses any more (and are a day old) are removed to make room; if there
   are none, the upload is refused.
 - A page has a title (100 characters) and an **address** (the slug, lower-case
@@ -132,10 +131,11 @@ three characters), titles first, with a few words around the match. Deleted page
   handbook. When an account is erased, the pages and revisions stay and are
   detached from the person (`editor_id` is set to nothing; the history shows
   "a former member"). Wiki pages are not deleted with the author.
-- Pictures a member uploaded are **deleted with their account** (they may show
-  the person), while the text that refers to them stays; the page then shows
-  the description instead of the picture. They are part of the export's list of
-  uploads.
+- Pictures a member uploaded that **no page revision uses** are deleted with
+  their account. A picture a page still shows **stays** (it now belongs to the
+  anonymised account), so the pages of other people do not break; ask an
+  administrator to remove a picture that must go, and edit the text that shows
+  it. They are part of the export's list of uploads until then.
 - The account export (`wiki_revisions.json`) holds every revision the member
   saved: the page's address, the title and text they wrote, the summary and
   the time.

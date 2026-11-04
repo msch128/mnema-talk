@@ -1,6 +1,7 @@
 package wiki
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -21,6 +22,8 @@ type Handler struct {
 	// MediaStore and MediaBucket keep the pictures; nil MediaStore turns the upload off.
 	MediaStore  media.Store
 	MediaBucket string
+	// Reserve checks an upload against the storage budgets and holds the room until released; nil imposes none.
+	Reserve func(ctx context.Context, user uuid.UUID, size int64) (release func(), err error)
 	// WriteLimit caps the writes of one member; nil means no cap.
 	WriteLimit *httpx.RateLimiter
 }

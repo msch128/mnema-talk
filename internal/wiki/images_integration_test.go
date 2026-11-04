@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -124,5 +125,53 @@ func TestMakingRoomSkipsAPictureThatCannotBeDeletedFromStorage(t *testing.T) {
 	}
 	if w.pictureCount(t) != MaxImages {
 		t.Fatalf("pictures whose object could not be deleted were forgotten: %d", w.pictureCount(t))
+	}
+}
+
+func TestOneMemberCannotFillTheRoomOfTheWiki(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	pic := &imgproc.Picture{Data: []byte("png"), ContentType: "image/png"}
+	h := &Handler{Store: w.s, MediaStore: media.NewMemoryStore(), MediaBucket: "b"}
+	for i := 0; i < MaxImagesPerDay; i++ {
+		if _, err := h.storeImage(ctx, w.alice, pic); err != nil {
+			t.Fatalf("picture %d: %v", i, err)
+		}
+	}
+	if _, err := h.storeImage(ctx, w.alice, pic); !is(err, errImagesToday) {
+		t.Fatalf("the picture after the daily number: %v", err)
+	}
+	if _, err := h.storeImage(ctx, w.bob, pic); err != nil {
+		t.Fatalf("somebody else is not held back by it: %v", err)
+	}
+}
+
+func TestParallelUploadsCannotPassTheCapTogether(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	w.addPictures(t, MaxImages-1, "2 days")
+	pic := &imgproc.Picture{Data: []byte("png"), ContentType: "image/png"}
+	mem := media.NewMemoryStore()
+	h := &Handler{Store: w.s, MediaStore: mem, MediaBucket: "b"}
+	var wg sync.WaitGroup
+	results := make([]error, 8)
+	for i := range results {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, results[i] = h.storeImage(ctx, w.bob, pic)
+		}()
+	}
+	wg.Wait()
+	ok := 0
+	for _, err := range results {
+		if err == nil {
+			ok++
+		} else if !is(err, errTooManyImages) {
+			t.Fatalf("unexpected: %v", err)
+		}
+	}
+	if ok != 1 || w.pictureCount(t) != MaxImages || mem.Len() != 1 {
+		t.Fatalf("%d went through, %d pictures, %d objects", ok, w.pictureCount(t), mem.Len())
 	}
 }

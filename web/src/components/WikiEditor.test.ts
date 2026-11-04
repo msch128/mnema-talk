@@ -384,6 +384,15 @@ describe('pictures', () => {
     expect(click).toHaveBeenCalled()
   })
 
+  it('leaves a paste that carries text as well as a picture to the browser', async () => {
+    const { field } = open(null)
+    const paste = new Event('paste', { cancelable: true }) as ClipboardEvent
+    Object.defineProperty(paste, 'clipboardData', { value: { files: [png('shot.png')], types: ['text/plain', 'text/html', 'Files'] } })
+    field('text-input').element.dispatchEvent(paste)
+    expect(paste.defaultPrevented).toBe(false)
+    expect(api.uploadWikiImage).not.toHaveBeenCalled()
+  })
+
   it('takes a pasted or dropped picture instead of the default, and leaves pasted text alone', async () => {
     api.uploadWikiImage.mockResolvedValue({ id: 'i', url: URL, markdown: '', size: 1 })
     const { field } = open(null)

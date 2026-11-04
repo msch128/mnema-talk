@@ -48,6 +48,8 @@ export function useWikiImages(area: Ref<HTMLTextAreaElement | null>, content: Re
   }
 
   function takeFiles(event: ClipboardEvent | DragEvent, transfer: DataTransfer | null) {
+    // A clipboard with text next to the picture (copied from a page or a document) is pasted as text, as before.
+    if (event.type === 'paste' && [...(transfer?.types ?? [])].includes('text/plain')) return
     const files = [...(transfer?.files ?? [])]
     if (files.length === 0) return
     event.preventDefault()

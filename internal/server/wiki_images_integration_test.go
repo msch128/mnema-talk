@@ -47,7 +47,9 @@ func TestWikiPicturesAreRedrawnServedToMembersAndCheckedAtTheDoor(t *testing.T) 
 
 	// Who may upload, and what.
 	wantStatus(t, "reader", f.uploadImage(f.viewer, "a.png", "image/png", bannerPNG(t, 10, 10)), http.StatusForbidden)
-	wantStatus(t, "manager without edit", f.uploadImage(f.manager, "a.png", "image/png", bannerPNG(t, 10, 10)), http.StatusForbidden)
+	solo := f.a.register(f.admin, "solo")
+	assignRoles(t, f.admin, solo, createRole(t, f.admin, "manage only", perm.ManageWiki))
+	wantStatus(t, "manager without edit", f.uploadImage(solo, "a.png", "image/png", bannerPNG(t, 10, 10)), http.StatusForbidden)
 	wantStatus(t, "svg", f.uploadImage(f.editor, "a.svg", "image/svg+xml", []byte(`<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>`)), http.StatusUnsupportedMediaType)
 	wantStatus(t, "html as png", f.uploadImage(f.editor, "a.png", "image/png", []byte("<script>alert(1)</script>")), http.StatusUnsupportedMediaType)
 	wantStatus(t, "empty", f.uploadImage(f.editor, "a.png", "image/png", nil), http.StatusBadRequest)
@@ -117,26 +119,47 @@ func TestAtTheCapUnusedPicturesMakeRoomAndUsedOnesStay(t *testing.T) {
 	wantStatus(t, "full", f.uploadImage(f.admin, "late.png", "image/png", bannerPNG(t, 20, 20)), http.StatusConflict)
 }
 
-func TestErasingAnUploaderTakesTheirPicturesAndLeavesTheText(t *testing.T) {
+func TestErasingAnUploaderKeepsThePicturesPagesStillShowAndTakesTheRest(t *testing.T) {
 	a, _ := mailApp(t)
 	admin := a.seedAdmin()
 	author := a.register(admin, "wanda")
+	reader := a.register(admin, "rita")
 	assignRoles(t, admin, author, createRole(t, admin, "wiki editors", perm.EditWiki))
+	var used, spare wiki.Image
 	res := author.upload("/api/wiki/images", "image", "me.png", "image/png", bannerPNG(t, 30, 30), nil)
 	wantStatus(t, "upload", res, http.StatusCreated)
-	var img wiki.Image
-	res.decode(t, &img)
-	wantStatus(t, "page", author.post("/api/wiki/pages", map[string]any{"title": "Faces", "content": "Me: " + img.Markdown}), http.StatusCreated)
+	res.decode(t, &used)
+	res = author.upload("/api/wiki/images", "image", "spare.png", "image/png", bannerPNG(t, 31, 31), nil)
+	wantStatus(t, "upload spare", res, http.StatusCreated)
+	res.decode(t, &spare)
+	wantStatus(t, "page", author.post("/api/wiki/pages", map[string]any{"title": "Faces", "content": "Me: " + used.Markdown}), http.StatusCreated)
 	a.setEmail(author, "wanda@example.org")
 	wantStatus(t, "erase", a.deleteAccount(author, memberPassword, ""), http.StatusNoContent)
-	if a.store.Len() != 0 {
-		t.Fatalf("the picture file is gone: %d objects", a.store.Len())
+
+	if a.store.Len() != 1 {
+		t.Fatalf("only the picture no page shows is gone: %d objects", a.store.Len())
 	}
 	var content string
 	if err := a.db.QueryRow(context.Background(), `SELECT content FROM wiki_pages WHERE slug = 'faces'`).Scan(&content); err != nil || !strings.Contains(content, "Me:") {
 		t.Fatalf("the text stays: %q %v", content, err)
 	}
-	wantStatus(t, "gone", admin.get(img.URL), http.StatusNotFound)
+	wantStatus(t, "the picture of the page still loads for other members", reader.get(used.URL), http.StatusOK)
+	wantStatus(t, "the spare one is gone", admin.get(spare.URL), http.StatusNotFound)
+}
+
+func TestWikiPicturesAreReadableOnlyWhereTheWikiIs(t *testing.T) {
+	f := newWikiFixture(t)
+	var img wiki.Image
+	res := f.uploadImage(f.editor, "a.png", "image/png", bannerPNG(t, 20, 20))
+	wantStatus(t, "upload", res, http.StatusCreated)
+	res.decode(t, &img)
+	wantStatus(t, "open wiki", f.viewer.get(img.URL), http.StatusOK)
+
+	everyone := everyoneID(t, f.admin)
+	closed := f.admin.patch("/api/admin/roles/"+everyone.String(), map[string]any{"permissions": int64(perm.DefaultEveryone &^ perm.ViewWiki)})
+	wantStatus(t, "close the wiki", closed, http.StatusOK)
+	wantStatus(t, "closed wiki hides the picture", f.viewer.get(img.URL), http.StatusNotFound)
+	wantStatus(t, "an administrator still sees it", f.admin.get(img.URL), http.StatusOK)
 }
 
 func imageID(t *testing.T, res response) string {

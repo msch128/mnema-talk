@@ -16,7 +16,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/imgproc"
 	"github.com/msch128/mnema-talk/internal/media"
-	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 const (
@@ -31,9 +30,15 @@ const (
 	imageGrace = 24 * time.Hour
 	// imageSweep is how many unused pictures one upload removes.
 	imageSweep = 20
+	// MaxImagesPerDay is how many pictures one member may add in a day, so one
+	// editor cannot fill the wiki's room with tiny files.
+	MaxImagesPerDay = 30
 )
 
-var errTooManyImages = httpx.ErrConflict("the wiki holds at most 200 pictures")
+var (
+	errTooManyImages = httpx.ErrConflict("the wiki holds at most 200 pictures")
+	errImagesToday   = httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimited, "you added the most pictures one member may add in a day; try again later")
+)
 
 // Image is an uploaded picture: put the markdown in the page.
 type Image struct {
@@ -63,17 +68,27 @@ func (h *Handler) MountUploads(r chi.Router) {
 // @Success 201 {object} Image
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
-// @Failure 409 {object} httpx.ErrorResponse "CONFLICT"
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the wiki holds its most pictures."
 // @Failure 413 {object} httpx.ErrorResponse "PAYLOAD_TOO_LARGE"
 // @Failure 415 {object} httpx.ErrorResponse "UNSUPPORTED_MEDIA_TYPE"
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED"
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many writes, or the member's daily number of pictures or bytes is reached."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: file storage is not configured or full, or the server is busy redrawing pictures."
 // @Router /api/wiki/images [post]
 func (h *Handler) uploadImage(w http.ResponseWriter, r *http.Request) error {
-	if err := h.require(r, perm.EditWiki); err != nil {
+	if err := h.requireWrite(r, 0); err != nil {
 		return err
 	}
 	if h.MediaStore == nil {
 		return httpx.ErrUnavailable("file storage is not configured")
+	}
+	// The same storage budgets as other uploads: the daily bytes of the member and the room of the storage.
+	user := auth.UserFrom(r.Context()).ID
+	if h.Reserve != nil {
+		release, err := h.Reserve(r.Context(), user, ImageBodyLimit)
+		if err != nil {
+			return err
+		}
+		defer release()
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, ImageBodyLimit)
 	pic, err := media.ReadPicture(r, media.PictureUpload{Fields: []string{"image"}, MaxBytes: MaxImageBytes, Process: imgproc.ProcessInline})
@@ -83,7 +98,7 @@ func (h *Handler) uploadImage(w http.ResponseWriter, r *http.Request) error {
 	if err := h.Store.makeRoom(r.Context(), h.MediaStore); err != nil {
 		return err
 	}
-	img, err := h.storeImage(r.Context(), auth.UserFrom(r.Context()).ID, pic)
+	img, err := h.storeImage(r.Context(), user, pic)
 	if err != nil {
 		return err
 	}
@@ -101,6 +116,10 @@ func (h *Handler) storeImage(ctx context.Context, user uuid.UUID, pic *imgproc.P
 		return Image{}, fmt.Errorf("upload wiki picture: %w", err)
 	}
 	err := pgx.BeginFunc(ctx, h.Store.DB, func(q pgx.Tx) error {
+		// The limits are counted and the rows written under one lock, so parallel uploads cannot all pass the same count.
+		if err := lockAndCount(ctx, q, user); err != nil {
+			return err
+		}
 		if _, err := q.Exec(ctx, `
 			INSERT INTO media (id, uploader_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)`, id, user, h.MediaBucket, key, "wiki"+ext, pic.ContentType, len(pic.Data)); err != nil {
@@ -115,6 +134,27 @@ func (h *Handler) storeImage(ctx context.Context, user uuid.UUID, pic *imgproc.P
 	}
 	url := "/api/media/" + id.String()
 	return Image{ID: id, URL: url, Markdown: "![](" + url + ")", Size: len(pic.Data)}, nil
+}
+
+// lockAndCount takes the lock of the picture table for this transaction and
+// refuses the upload at the wiki's cap or the member's daily cap.
+func lockAndCount(ctx context.Context, q pgx.Tx, user uuid.UUID) error {
+	if _, err := q.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('wiki_images'))`); err != nil {
+		return err
+	}
+	var all, mine int
+	if err := q.QueryRow(ctx, `
+		SELECT count(*), count(*) FILTER (WHERE m.uploader_id = $1 AND wi.created_at > $2)
+		FROM wiki_images wi JOIN media m ON m.id = wi.media_id`, user, time.Now().Add(-imageGrace)).Scan(&all, &mine); err != nil {
+		return err
+	}
+	if all >= MaxImages {
+		return errTooManyImages
+	}
+	if mine >= MaxImagesPerDay {
+		return errImagesToday
+	}
+	return nil
 }
 
 func (h *Handler) recordImage(r *http.Request, img Image) {

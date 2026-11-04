@@ -74,6 +74,7 @@ func (c *components) newWiki() {
 		Store:       wiki.NewStore(c.d.DB),
 		MediaStore:  c.d.Store,
 		MediaBucket: c.cfg.S3Bucket,
+		Reserve:     c.mediaH.ReserveUpload,
 		Perms:       c.permSvc,
 		Audit:       c.auditLog,
 		WriteLimit:  httpx.NewRateLimiter(wiki.EditsPerMinute, time.Minute).Named("wiki"),

@@ -69,7 +69,10 @@ var previousEraseSteps = []string{
 }
 
 var eraseStatementsBefore = []string{
-	`DELETE FROM media WHERE uploader_id = $1 RETURNING s3_key`,
+	`DELETE FROM media WHERE uploader_id = $1
+		AND NOT EXISTS (SELECT 1 FROM wiki_images w WHERE w.media_id = media.id
+			AND EXISTS (SELECT 1 FROM wiki_revisions r WHERE strpos(r.content, '/api/media/' || media.id::text) > 0))
+		RETURNING s3_key`,
 	`DELETE FROM data_exports WHERE user_id = $1 AND s3_key IS NOT NULL RETURNING s3_key`,
 	`DELETE FROM media WHERE message_id IN (SELECT id FROM messages WHERE channel_id IN (SELECT c.id FROM channels c WHERE c.type = 'dm'
 	AND NOT EXISTS (SELECT 1 FROM dm_members m WHERE m.channel_id = c.id AND m.user_id <> $1))) RETURNING s3_key`,
