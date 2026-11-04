@@ -1,0 +1,21 @@
+web/src/App.test.ts
+  s_d93aa86a845bf6::t_274e2a6fc56be5 9,358-367,389
+web/src/App.vue
+  s_d93aa86a845bf6::t_65fc5182f46582 176-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "098246707056c75f6a741ec75e695385bd0e1dfc",
+  "prompts": {},
+  "sessions": {
+    "s_d93aa86a845bf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a3b327a2e1aaf3ffa",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
