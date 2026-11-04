@@ -1,0 +1,29 @@
+internal/sfu/candidates.go
+  s_2f483d17207293::t_b5a6f959c3e341 227,292-299
+internal/sfu/candidates_test.go
+  s_9019ac2405099a::t_b47e15de96692c 419-440
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6e3e43f30782102bd451d8fa1903bbdd3809bf86",
+  "prompts": {},
+  "sessions": {
+    "s_2f483d17207293": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a553f67746b72de61",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_9019ac2405099a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7c90b529b8fb1a1f",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
