@@ -1,0 +1,23 @@
+e2e/tests/page-errors.spec.ts
+  s_454fefec3473f8::t_1539afd4253938 1-18
+e2e/tests/page-errors.ts
+  s_454fefec3473f8::t_b085858593d5b5 1-17
+e2e/tests/sidebar-layout.spec.ts
+  s_454fefec3473f8::t_1372091c2771a7 6,227
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "95c2d60d19691504030ef944abf2b6ef802bb836",
+  "prompts": {},
+  "sessions": {
+    "s_454fefec3473f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aff0a305e188febe7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
