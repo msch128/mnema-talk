@@ -336,9 +336,8 @@ func TestTheFirstMessagesToSomeoneWhoNeverAnsweredAreCapped(t *testing.T) {
 	wantStatus(t, "still capped", f.alice.dmPost(dm.ID, "4"), http.StatusTooManyRequests)
 
 	wantStatus(t, "bob answers", f.bob.dmPost(dm.ID, "hi!"), http.StatusCreated)
-	for i := range 5 {
+	for range 5 {
 		wantStatus(t, "free after an answer", f.alice.dmPost(dm.ID, "go on"), http.StatusCreated)
-		_ = i
 	}
 }
 

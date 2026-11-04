@@ -102,8 +102,7 @@ func TestInviteUpdateValidation(t *testing.T) {
 	admin := a.seedAdmin()
 	inv := createInvite(t, admin, map[string]any{"max_uses": 5})
 	path := "/api/admin/invites/" + inv.ID.String()
-	for i, name := range []string{"u1", "u2", "u3"} {
-		_ = i
+	for _, name := range []string{"u1", "u2", "u3"} {
 		if res := a.anon().post("/api/auth/register", map[string]string{"username": name, "password": "member-password-123", "invite_code": inv.Code}); res.status != http.StatusCreated {
 			t.Fatalf("register %s: %d %s", name, res.status, res.body)
 		}
