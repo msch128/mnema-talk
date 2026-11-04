@@ -1,0 +1,21 @@
+web/src/App.test.ts
+  s_b8f19a143fd126::t_ca5d05cb4b4141 368-377
+web/src/App.vue
+  s_b8f19a143fd126::t_623de02977d87f 165-172,182,186-193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e72e7d246e885503dc1b66d469a33da07dd95191",
+  "prompts": {},
+  "sessions": {
+    "s_b8f19a143fd126": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab1c726eddbddca55",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
