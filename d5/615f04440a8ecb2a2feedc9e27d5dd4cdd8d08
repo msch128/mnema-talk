@@ -1,0 +1,14 @@
+internal/later/reminders_list_integration_test.go
+  h_0ff4f4713441f4 1-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d5615f04440a8ecb2a2feedc9e27d5dd4cdd8d08",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
