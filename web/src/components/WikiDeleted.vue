@@ -18,7 +18,7 @@ async function restore(slug: string) {
   if (busy.value) return
   busy.value = slug
   try {
-    wiki.applyPage(await undeleteWikiPage(slug))
+    wiki.applyPage(await undeleteWikiPage(slug), false)
     await wiki.loadTree()
     toasts.success(t('wiki.restored'))
   } catch (error) {

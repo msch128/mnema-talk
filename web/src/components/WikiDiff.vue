@@ -16,6 +16,7 @@ const changed = computed(() => !!ops.value && ops.value.some(o => o.kind !== 'sa
     <template v-else>
       <p class="border-b border-mnema-border bg-mnema-raised px-3 py-1.5 text-xs text-mnema-tertiary" data-testid="wiki-diff-stats">
         <template v-if="changed">{{ $t('wiki.diffStats', { added: stats?.added ?? 0, removed: stats?.removed ?? 0 }) }}</template>
+        <template v-else-if="before !== after">{{ $t('wiki.diffWhitespace') }}</template>
         <template v-else>{{ $t('wiki.diffSame') }}</template>
       </p>
       <ol v-if="changed" class="max-h-96 overflow-auto font-mono text-xs leading-5">

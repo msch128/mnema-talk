@@ -15,6 +15,7 @@ import WikiTree from './WikiTree.vue'
 import WikiHome from './WikiHome.vue'
 import WikiPageView from './WikiPageView.vue'
 import WikiEditor from './WikiEditor.vue'
+import WikiHeldDraft from './WikiHeldDraft.vue'
 import WikiHistory from './WikiHistory.vue'
 import WikiSearch from './WikiSearch.vue'
 import WikiDeleted from './WikiDeleted.vue'
@@ -30,6 +31,10 @@ const needsPage = computed(() => ['page', 'history', 'edit'].includes(location.v
 const mayEdit = computed(() => wiki.canEdit && !!page.value && !page.value.deleted_at && (!page.value.locked || wiki.canManage))
 
 onMounted(() => { void wiki.loadTree() })
+// Managers also get the deleted pages: read the tree again when that right comes or goes.
+watch(() => wiki.canManage, () => { void wiki.loadTree() })
+// What was kept from an earlier visit may be old: the first read of a page always asks the server.
+let opened = true
 
 // The page the address names: read it, and move the address to its current name after a rename.
 watch(slug, async name => {
@@ -38,7 +43,9 @@ watch(slug, async name => {
     wiki.clearPage()
     return
   }
-  if (wiki.page?.slug === name && wiki.pageState === 'ready') return
+  const fresh = opened
+  opened = false
+  if (!fresh && wiki.page?.slug === name && wiki.pageState === 'ready') return
   const read = await wiki.loadPage(name)
   if (read && read.slug !== name && slug.value === name) {
     navigate(wikiPath({ ...location.value, slug: read.slug } as Parameters<typeof wikiPath>[0]), { replace: true })
@@ -79,7 +86,10 @@ function search(event: Event) {
         <main class="min-w-0 flex-1 overflow-y-auto" data-testid="wiki-main">
           <WikiSearch v-if="location.mode === 'search'" />
           <WikiDeleted v-else-if="location.mode === 'deleted'" />
-          <p v-else-if="location.mode === 'new' && !wiki.canEdit" class="px-6 py-8 text-sm text-mnema-danger" role="alert" data-testid="wiki-no-edit">{{ $t('wiki.noEdit') }}</p>
+          <template v-else-if="location.mode === 'new' && !wiki.canEdit">
+            <p class="px-6 py-8 text-sm text-mnema-danger" role="alert" data-testid="wiki-no-edit">{{ $t('wiki.noEdit') }}</p>
+            <WikiHeldDraft :key="'new'" :slug="null" />
+          </template>
           <WikiEditor v-else-if="location.mode === 'new'" :key="'new'" :page="null" />
           <template v-else-if="needsPage">
             <p v-if="wiki.pageState === 'loading' || wiki.pageState === 'idle'" class="px-6 py-6 text-sm text-mnema-tertiary" role="status">{{ $t('wiki.loading') }}</p>
@@ -88,7 +98,10 @@ function search(event: Event) {
               <p v-if="wiki.pageState === 'missing'" class="mt-1 text-sm text-mnema-tertiary">{{ $t('wiki.missingBody') }}</p>
               <button type="button" class="btn btn-secondary btn-sm mt-4" @click="goWiki({ mode: 'home' })">{{ $t('wiki.home') }}</button>
             </div>
-            <p v-else-if="location.mode === 'edit' && !mayEdit" class="px-6 py-8 text-sm text-mnema-danger" role="alert" data-testid="wiki-no-edit">{{ $t(page.locked ? 'wiki.pageLockedNoEdit' : 'wiki.noEdit') }}</p>
+            <template v-else-if="location.mode === 'edit' && !mayEdit">
+              <p class="px-6 py-8 text-sm text-mnema-danger" role="alert" data-testid="wiki-no-edit">{{ $t(page.locked ? 'wiki.pageLockedNoEdit' : 'wiki.noEdit') }}</p>
+              <WikiHeldDraft :key="page.slug" :slug="page.slug" />
+            </template>
             <WikiEditor v-else-if="location.mode === 'edit'" :key="`edit-${page.slug}-${page.id}`" :page="page" />
             <WikiHistory v-else-if="location.mode === 'history'" :key="`history-${page.slug}`" :page="page" />
             <WikiPageView v-else :page="page" />

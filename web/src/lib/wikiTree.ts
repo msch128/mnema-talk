@@ -1,5 +1,6 @@
 // The page tree as the sidebar of the wiki shows it: the flat list the server
 // sends, nested by parent, plus what the screens ask of it.
+import { computed, type Ref } from 'vue'
 import type { WikiPageSummary } from './wikiApi'
 
 export interface WikiNode extends WikiPageSummary {
@@ -84,4 +85,15 @@ export function subtreeSlugs(roots: readonly WikiNode[], slug: string): Set<stri
 /** How many levels a node and its subpages take: 1 for a page without subpages. */
 export function height(node: WikiNode): number {
   return 1 + Math.max(0, ...node.children.map(height))
+}
+
+/** What the tree store derives from the page list: the live pages as a tree, the deleted ones, the latest changes. */
+export function wikiViews(pages: Ref<readonly WikiPageSummary[]>) {
+  const live = computed(() => pages.value.filter(p => !p.deleted_at))
+  return {
+    live,
+    tree: computed(() => buildTree(live.value)),
+    deleted: computed(() => pages.value.filter(p => p.deleted_at)),
+    recent: computed(() => [...live.value].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 8))
+  }
 }

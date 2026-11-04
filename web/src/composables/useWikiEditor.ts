@@ -3,15 +3,16 @@
 // meanwhile (the server refuses the save and nothing is overwritten). What is
 // written is also kept in the tab's session storage, so a reload brings it back.
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { caughtErrorMessage } from '../lib/api'
-import { changeWikiPage, createWikiPage, fetchWikiPage, type WikiPage } from '../lib/wikiApi'
+import { changeWikiPage, createWikiPage, type WikiPage } from '../lib/wikiApi'
 import { wikiDraftKey, type WikiDraft } from '../lib/wikiDraft'
-import { isStaleRevision } from '../lib/wikiErrors'
 import { goWiki, wikiDirty } from '../lib/wikiNav'
-import { t } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { keepWikiDraft, resumableDraft } from './useWikiDraft'
+import { useStaleSave } from './useStaleSave'
 import { useWikiStore } from '../stores/wiki'
+
+/** How many editors are open: an unsaved flag left by a closed one is cleared only when none is. */
+let editors = 0
 
 export const MAX_BYTES = 50 * 1024
 
@@ -50,8 +51,6 @@ export function useWikiEditor(page: WikiPage | null, parentId: string | null = n
   const error = ref('')
   const busy = ref(false)
   const restored = ref(!!start) // the text of a draft from before a reload is back in the fields
-  // The page as it is now when somebody saved after this editor was opened.
-  const theirs = ref<WikiPage | null>(null)
 
   const bytes = computed(() => encoder.encode(content.value).length)
   const tooLong = computed(() => bytes.value > MAX_BYTES)
@@ -59,13 +58,22 @@ export function useWikiEditor(page: WikiPage | null, parentId: string | null = n
   const canSave = computed(() => !busy.value && !tooLong.value && title.value.trim() !== '' && (page ? dirty.value : true))
 
   watch(dirty, value => { wikiDirty.value = value }, { immediate: true })
-  const draft = keepWikiDraft(draftKey, { title, content, summary, slug, parent, baseRev }, dirty)
-  onBeforeUnmount(() => { wikiDirty.value = false })
+  const draft = keepWikiDraft(draftKey, { title, content, summary, slug, parent, baseRev }, dirty, () => wikiDirty.value)
+  // An editor that is gone (the member went elsewhere) must not pull them back when its save comes in.
+  let alive = true
+  editors++
+  onBeforeUnmount(() => { alive = false; editors-- })
 
   function leave(target: WikiPage) {
     wikiDirty.value = false
     draft.drop()
     void goWiki({ mode: 'page', slug: target.slug }, true)
+  }
+
+  /** The save of an editor that was left meanwhile went through: its text is on the server, nothing is held any more. */
+  function finishUnseen() {
+    draft.drop()
+    if (editors === 0) wikiDirty.value = false
   }
 
   /** Saves; true when it went through. A refused save keeps the text and opens the conflict view. */
@@ -75,9 +83,10 @@ export function useWikiEditor(page: WikiPage | null, parentId: string | null = n
     error.value = ''
     try {
       const saved = await submitEditor(page, baseRev.value, { title: title.value, content: content.value, summary: summary.value.trim(), slug: slug.value.trim(), parent: parent.value })
-      wiki.applyPage(saved)
+      wiki.applyPage(saved, alive)
       await wiki.loadTree()
-      leave(saved)
+      if (alive) leave(saved)
+      else finishUnseen()
       return true
     } catch (e) {
       await explain(e)
@@ -87,30 +96,7 @@ export function useWikiEditor(page: WikiPage | null, parentId: string | null = n
     }
   }
 
-  async function explain(e: unknown) {
-    if (page && isStaleRevision(e)) {
-      try {
-        theirs.value = await fetchWikiPage(page.slug)
-        return
-      } catch { /* shown as the plain failure below */ }
-    }
-    error.value = caughtErrorMessage(e, t('wiki.saveFailed'))
-  }
-
-  /** Writes this text on top of the newer version: a revision like any other, so theirs stays in the history. */
-  function saveOnTop(): Promise<boolean> {
-    if (!theirs.value) return Promise.resolve(false)
-    baseRev.value = theirs.value.rev
-    theirs.value = null
-    return save()
-  }
-
-  function takeTheirs() {
-    const latest = theirs.value
-    if (!latest) return
-    wiki.applyPage(latest)
-    leave(latest)
-  }
+  const { theirs, explain, saveOnTop, takeTheirs } = useStaleSave({ page, baseRev, error, save: () => save(), leave })
 
   /** Drops the text of the draft that came back after a reload and starts again from the page. */
   function discardDraft() {

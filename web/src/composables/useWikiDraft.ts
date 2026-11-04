@@ -14,8 +14,8 @@ export function resumableDraft(key: string, page: WikiPage | null): WikiDraft | 
   return differs ? kept : null
 }
 
-/** Writes the fields to the session a moment after they change, and removes the draft when the editor goes (or on `drop`). */
-export function keepWikiDraft(key: string, fields: { [K in keyof WikiDraft]: Ref<WikiDraft[K]> }, dirty: Ref<boolean>): { drop: () => void } {
+/** Writes the fields to the session a moment after they change, and removes the draft when the editor goes saved or discarded (or on `drop`). */
+export function keepWikiDraft(key: string, fields: { [K in keyof WikiDraft]: Ref<WikiDraft[K]> }, dirty: Ref<boolean>, wanted: () => boolean): { drop: () => void } {
   function keep() {
     if (dirty.value) {
       saveWikiDraft(key, {
@@ -45,10 +45,13 @@ export function keepWikiDraft(key: string, fields: { [K in keyof WikiDraft]: Ref
     clearTimeout(timer)
     clearWikiDraft(key)
   }
-  // Leaving the editor inside the app means saved or discarded; a reload never gets here.
+  // The editor goes away saved or discarded (nothing is `wanted` any more), or because the member lost the
+  // right to edit meanwhile: then the unsaved text stays, for the held-draft view and for later.
   onBeforeUnmount(() => {
     window.removeEventListener('beforeunload', beforeUnload)
-    drop()
+    clearTimeout(timer)
+    if (dirty.value && wanted()) keep()
+    else drop()
   })
   return { drop }
 }

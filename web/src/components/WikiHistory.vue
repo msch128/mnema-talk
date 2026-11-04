@@ -60,7 +60,8 @@ const diffAgainst = computed(() => h.previous.value ?? '')
           <h2 class="text-base font-semibold text-mnema-text">{{ h.chosen.value.title }}</h2>
           <button v-if="h.mayRestore.value && h.chosen.value.rev !== h.latest.value" type="button" class="btn btn-primary btn-sm" :disabled="h.busy.value" data-testid="wiki-restore" @click="h.restore(h.chosen.value.rev)"><Undo2 class="h-3.5 w-3.5" aria-hidden="true" />{{ $t('wiki.restoreThis') }}</button>
         </div>
-        <template v-if="h.previous.value !== null">
+        <p v-if="h.noCompare.value" class="text-sm text-mnema-tertiary" data-testid="wiki-no-compare">{{ $t('wiki.noCompare') }}</p>
+        <template v-else-if="h.previous.value !== null">
           <h3 class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('wiki.changesMade') }}</h3>
           <WikiDiff :before="diffAgainst" :after="h.chosen.value.content ?? ''" />
         </template>

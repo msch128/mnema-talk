@@ -30,7 +30,7 @@ describe('wiki store', () => {
     expect(wiki.treeLoaded).toBe(true)
     expect(wiki.live.map(p => p.slug)).toEqual(['rules'])
     expect(wiki.deleted.map(p => p.slug)).toEqual(['old'])
-    grantWiki(VIEW_WIKI | MANAGE_WIKI)
+    grantWiki(VIEW_WIKI | EDIT_WIKI | MANAGE_WIKI)
     await wiki.loadTree()
     expect(api.fetchWikiTree).toHaveBeenLastCalledWith(true)
   })

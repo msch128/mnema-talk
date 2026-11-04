@@ -141,12 +141,12 @@ describe('WikiDeleted', () => {
   })
 
   it('says when nothing is deleted', () => {
-    grantWiki(VIEW_WIKI | MANAGE_WIKI)
+    grantWiki(VIEW_WIKI | EDIT_WIKI | MANAGE_WIKI)
     expect(mount(WikiDeleted).find('[data-testid="wiki-no-deleted"]').exists()).toBe(true)
   })
 
   it('restores a page, and reads the tree again', async () => {
-    grantWiki(VIEW_WIKI | MANAGE_WIKI)
+    grantWiki(VIEW_WIKI | EDIT_WIKI | MANAGE_WIKI)
     useWikiStore().pages = [gone]
     api.undeleteWikiPage.mockResolvedValue(wikiPage({ id: '9', slug: 'old' }))
     const w = mount(WikiDeleted)
@@ -158,7 +158,7 @@ describe('WikiDeleted', () => {
   })
 
   it('opens a deleted page to read it, and reports a failed restore', async () => {
-    grantWiki(VIEW_WIKI | MANAGE_WIKI)
+    grantWiki(VIEW_WIKI | EDIT_WIKI | MANAGE_WIKI)
     useWikiStore().pages = [gone]
     api.undeleteWikiPage.mockRejectedValue(new ApiError(409, 'CONFLICT', 'the wiki holds at most 500 pages'))
     const w = mount(WikiDeleted)

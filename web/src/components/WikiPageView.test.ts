@@ -26,7 +26,10 @@ beforeEach(() => {
 })
 afterEach(() => { pendingConfirm.value?.resolve(false) })
 
-const show = (page = wikiPage()) => mount(WikiPageView, { props: { page } })
+const show = (page = wikiPage()) => {
+  useWikiStore().applyPage(page) // the page on screen, as the dialog holds it
+  return mount(WikiPageView, { props: { page } })
+}
 const btn = (w: ReturnType<typeof show>, id: string) => w.find(`[data-testid="wiki-${id}"]`)
 
 describe('WikiPageView', () => {
@@ -100,6 +103,19 @@ describe('WikiPageView', () => {
       await btn(w, 'lock').trigger('click')
       await flushPromises()
       expect(api.lockWikiPage).toHaveBeenLastCalledWith('faq', false)
+    })
+
+    it('does not pull the member back to a page they left while the lock was on its way', async () => {
+      let answer: (page: ReturnType<typeof wikiPage>) => void = () => {}
+      api.lockWikiPage.mockReturnValue(new Promise(resolve => { answer = resolve }))
+      const w = show()
+      void btn(w, 'lock').trigger('click')
+      await flushPromises()
+      useWikiStore().applyPage(wikiPage({ id: 'p-other', slug: 'other', title: 'Other' })) // the member went to another page
+      answer(wikiPage({ locked: true }))
+      await flushPromises()
+      expect(useWikiStore().page?.slug).toBe('other')
+      expect(useWikiStore().pages.find(p => p.id === 'p1')?.locked ?? true).toBe(true) // the tree still learns of it
     })
 
     it('shows a refusal as a toast', async () => {

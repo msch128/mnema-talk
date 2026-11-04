@@ -3,6 +3,7 @@ import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import WikiEditor from './WikiEditor.vue'
 import { ApiError } from '../lib/api'
+import { pendingConfirm } from '../lib/confirm'
 import { currentRoute, navigate } from '../lib/router'
 import { wikiDirty } from '../lib/wikiNav'
 import { loadWikiDraft, saveWikiDraft, wikiDraftKey } from '../lib/wikiDraft'
@@ -92,11 +93,38 @@ describe('editing a page', () => {
     expect(wikiDirty.value).toBe(false)
   })
 
-  it('forgets the unsaved mark when it goes away', async () => {
+  it('keeps the unsaved mark and the text when it goes away with the text unsaved (the right to edit was lost)', async () => {
     const { w, field } = open(wikiPage())
     await field('text-input').setValue('x')
     w.unmount()
+    expect(wikiDirty.value).toBe(true)
+    expect(loadWikiDraft(wikiDraftKey('', 'faq'))).toMatchObject({ content: 'x' })
+  })
+
+  it('lets go of the text once the member agreed to discard it', async () => {
+    const { w, field } = open(wikiPage())
+    await field('text-input').setValue('x')
+    wikiDirty.value = false // what the question "Discard your changes?" does on a yes
+    w.unmount()
+    expect(loadWikiDraft(wikiDraftKey('', 'faq'))).toBeNull()
+  })
+
+  it('does not pull the member back when a save that was in flight comes in after they left', async () => {
+    let finish: (page: ReturnType<typeof wikiPage>) => void = () => {}
+    api.changeWikiPage.mockReturnValue(new Promise(resolve => { finish = resolve }))
+    const { w, field } = open(wikiPage())
+    await field('text-input').setValue('mine')
+    void w.get('form').trigger('submit')
+    await flushPromises()
+    w.unmount()
+    navigate('/wiki/other', { replace: true })
+    useWikiStore().applyPage(wikiPage({ id: 'p-other', slug: 'other', title: 'Other' }))
+    finish(wikiPage({ rev: 4, content: 'mine' }))
+    await flushPromises()
+    expect(currentRoute.value).toMatchObject({ wiki: { slug: 'other' } })
+    expect(useWikiStore().page?.slug).toBe('other')
     expect(wikiDirty.value).toBe(false)
+    expect(loadWikiDraft(wikiDraftKey('', 'faq'))).toBeNull()
   })
 
   it('counts bytes, not characters, and blocks a text over 50 KB', async () => {
@@ -135,9 +163,28 @@ describe('editing a page', () => {
     await w.get('form').trigger('submit')
     await flushPromises()
     await field('conflict-theirs').trigger('click')
+    await vi.waitFor(() => expect(pendingConfirm.value).not.toBeNull())
+    expect(useWikiStore().page?.content).not.toBe('theirs') // nothing is dropped before the member agrees
+    pendingConfirm.value?.resolve(true)
     await flushPromises()
     expect(useWikiStore().page?.content).toBe('theirs')
     expect(currentRoute.value).toMatchObject({ wiki: { mode: 'page', slug: 'faq' } })
+  })
+
+  it('keeps the text when the member declines to drop it for their version', async () => {
+    api.changeWikiPage.mockRejectedValueOnce(new ApiError(409, 'STALE_REVISION', STALE))
+    api.fetchWikiPage.mockResolvedValue(wikiPage({ rev: 4, content: 'theirs' }))
+    const { w, field } = open(wikiPage())
+    await field('text-input').setValue('mine')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    await field('conflict-theirs').trigger('click')
+    await vi.waitFor(() => expect(pendingConfirm.value).not.toBeNull())
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect((field('text-input').element as HTMLTextAreaElement).value).toBe('mine')
+    expect(w.find('[data-testid="wiki-conflict"]').exists()).toBe(true)
+    expect(wikiDirty.value).toBe(true)
   })
 
   it('shows an ordinary failure, also when the newer page cannot be read', async () => {
@@ -227,6 +274,7 @@ describe('an unsaved draft', () => {
       expect(loadWikiDraft(key)).toBeNull()
       vi.advanceTimersByTime(500)
       expect(loadWikiDraft(key)).toMatchObject({ content: 'half a thought', title: 'FAQ', baseRev: 3 })
+      wikiDirty.value = false // the member agreed to discard it
       w.unmount()
       expect(loadWikiDraft(key)).toBeNull()
     } finally {

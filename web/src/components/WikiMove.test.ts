@@ -57,6 +57,16 @@ describe('WikiMove', () => {
     expect(currentRoute.value).toMatchObject({ wiki: { mode: 'page', slug: 'help' } })
   })
 
+  it('does not turn an emptied position field into position 0', async () => {
+    api.changeWikiPage.mockResolvedValue(wikiPage({ slug: 'help' }))
+    const w = mount(WikiMove, { props: { page: wikiPage({ position: 7 }) } })
+    await field(w, 'slug').setValue('help')
+    await field(w, 'position').setValue('')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(api.changeWikiPage).toHaveBeenCalledWith('faq', { base_rev: 3, slug: 'help' })
+  })
+
   it('moves below another page and stays on the address when it did not change', async () => {
     api.changeWikiPage.mockResolvedValue(wikiPage({ parent_id: 'x' }))
     const w = mount(WikiMove, { props: { page: wikiPage() } })

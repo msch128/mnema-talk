@@ -28,6 +28,12 @@ describe('MarkdownContent in a wiki page', () => {
     expect(currentRoute.value).toMatchObject({ wiki: { slug: 'raid-guide' } })
   })
 
+  it('opens a link with the Space key as well, as a button does', async () => {
+    const w = mount(MarkdownContent, { props: { content: 'See [[Raid guide]].', wikiPages: pages, previews: false } })
+    await w.get('.md-wikilink[data-wiki="raid-guide"]').trigger('keydown', { key: ' ' })
+    expect(currentRoute.value).toMatchObject({ wiki: { slug: 'raid-guide' } })
+  })
+
   it('asks before a link in the preview takes an unsaved draft away', async () => {
     const w = mount(MarkdownContent, { props: { content: 'See [[Raid guide]].', wikiPages: pages, previews: false } })
     wikiDirty.value = true

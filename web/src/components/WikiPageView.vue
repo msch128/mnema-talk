@@ -36,7 +36,9 @@ async function run(action: () => Promise<WikiPage>, done?: string) {
   if (busy.value) return
   busy.value = true
   try {
-    wiki.applyPage(await action())
+    const id = props.page.id
+    // An answer that comes after the member went to another page only updates the tree.
+    wiki.applyPage(await action(), wiki.isOpen(id))
     if (done) toasts.success(done)
   } catch (error) {
     toasts.error(caughtErrorMessage(error, t('wiki.actionFailed')))

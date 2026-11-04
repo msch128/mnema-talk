@@ -4,7 +4,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { isApiError } from '../lib/api'
 import { fetchWikiPage, fetchWikiTree, type WikiPage, type WikiPageSummary } from '../lib/wikiApi'
-import { buildTree } from '../lib/wikiTree'
+import { wikiViews } from '../lib/wikiTree'
 import { usePermissionsStore } from './permissions'
 
 export type WikiPageState = 'idle' | 'loading' | 'ready' | 'missing' | 'denied' | 'failed'
@@ -14,23 +14,29 @@ function summaryOf(p: WikiPage): WikiPageSummary {
   return { id: p.id, slug: p.slug, title: p.title, parent_id: p.parent_id, position: p.position, locked: p.locked, updated_at: p.updated_at, ...(p.deleted_at ? { deleted_at: p.deleted_at } : {}) }
 }
 
+/** How a failed read of a page is told to the screen. */
+function failureState(error: unknown): WikiPageState {
+  if (isApiError(error) && error.status === 404) return 'missing'
+  return isApiError(error) && error.status === 403 ? 'denied' : 'failed'
+}
+
+/** The list with the page's summary put in its place (added when it is new). */
+function withPage(list: WikiPageSummary[], summary: WikiPageSummary): WikiPageSummary[] {
+  return list.some(p => p.id === summary.id) ? list.map(p => (p.id === summary.id ? summary : p)) : [...list, summary]
+}
+
 export const useWikiStore = defineStore('wiki', () => {
   const permissions = usePermissionsStore()
   const pages = ref<WikiPageSummary[]>([])
-  const treeLoaded = ref(false)
-  const treeFailed = ref(false)
+  const [treeLoaded, treeFailed] = [ref(false), ref(false)]
   const page = ref<WikiPage | null>(null)
   const pageState = ref<WikiPageState>('idle')
-  let treeSeq = 0
-  let pageSeq = 0
+  let [treeSeq, pageSeq] = [0, 0]
 
   const canView = computed(() => permissions.can('view_wiki'))
   const canEdit = computed(() => permissions.can('edit_wiki'))
-  const canManage = computed(() => permissions.can('manage_wiki'))
-  const live = computed(() => pages.value.filter(p => !p.deleted_at))
-  const tree = computed(() => buildTree(live.value))
-  const deleted = computed(() => pages.value.filter(p => p.deleted_at))
-  const recent = computed(() => [...live.value].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 8))
+  const canManage = computed(() => permissions.can('manage_wiki') && permissions.can('edit_wiki')) // the server asks for both
+  const { live, tree, deleted, recent } = wikiViews(pages)
 
   /** Reads the tree again; managers also get the deleted pages. */
   async function loadTree(): Promise<void> {
@@ -62,19 +68,23 @@ export const useWikiStore = defineStore('wiki', () => {
     } catch (error) {
       if (seq !== pageSeq) return null
       page.value = null
-      pageState.value = isApiError(error) && error.status === 404 ? 'missing' : isApiError(error) && error.status === 403 ? 'denied' : 'failed'
+      pageState.value = failureState(error)
       return null
     }
   }
 
-  /** Takes a page the server just answered as the one on screen, and updates its place in the tree. */
-  function applyPage(next: WikiPage): void {
-    pageSeq++
-    page.value = next
-    pageState.value = 'ready'
-    const summary = summaryOf(next)
-    const at = pages.value.findIndex(p => p.id === next.id)
-    pages.value = at < 0 ? [...pages.value, summary] : pages.value.map((p, i) => (i === at ? summary : p))
+  /**
+   * Takes a page the server just answered, and updates its place in the tree.
+   * It becomes the one on screen unless `show` is false: an answer that comes
+   * after the member went elsewhere must not pull them back.
+   */
+  function applyPage(next: WikiPage, show = true): void {
+    if (show) {
+      pageSeq++
+      page.value = next
+      pageState.value = 'ready'
+    }
+    pages.value = withPage(pages.value, summaryOf(next))
   }
 
   function clearPage(): void {
@@ -85,12 +95,12 @@ export const useWikiStore = defineStore('wiki', () => {
 
   function reset(): void {
     treeSeq++
-    pageSeq++
     pages.value = []
-    treeLoaded.value = false
-    treeFailed.value = false
+    treeLoaded.value = treeFailed.value = false
     clearPage()
   }
 
-  return { pages, treeLoaded, treeFailed, page, pageState, canView, canEdit, canManage, live, tree, deleted, recent, loadTree, loadPage, applyPage, clearPage, reset }
+  const isOpen = (id: string): boolean => page.value?.id === id
+
+  return { isOpen, pages, treeLoaded, treeFailed, page, pageState, canView, canEdit, canManage, live, tree, deleted, recent, loadTree, loadPage, applyPage, clearPage, reset }
 })

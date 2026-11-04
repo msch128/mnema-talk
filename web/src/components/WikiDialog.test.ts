@@ -6,6 +6,7 @@ import { ApiError } from '../lib/api'
 import { pendingConfirm } from '../lib/confirm'
 import { currentRoute, navigate } from '../lib/router'
 import { wikiDirty, wikiQuery } from '../lib/wikiNav'
+import { loadWikiDraft, wikiDraftKey } from '../lib/wikiDraft'
 import { useWikiStore } from '../stores/wiki'
 import { EDIT_WIKI, grantWiki, MANAGE_WIKI, summary, VIEW_WIKI, wikiPage } from '../wiki.fixture'
 
@@ -144,5 +145,56 @@ describe('WikiDialog', () => {
     useWikiStore().pages = [summary('p1', 'FAQ')]
     const w = await openAt('/wiki')
     expect(w.find('[data-wiki-page="faq"]').exists()).toBe(true)
+  })
+
+  it('reads a page from the server when it opens, even when an older copy was kept', async () => {
+    const store = useWikiStore()
+    store.applyPage(wikiPage({ rev: 1, content: 'old copy' }))
+    api.fetchWikiPage.mockResolvedValue(wikiPage({ rev: 2, content: 'new text' }))
+    const w = await openAt('/wiki/faq')
+    expect(api.fetchWikiPage).toHaveBeenCalledWith('faq')
+    expect(w.get('[data-testid="wiki-content"]').text()).toContain('new text')
+  })
+
+  it('reads the tree again when the right to manage comes or goes', async () => {
+    await openAt('/wiki')
+    expect(api.fetchWikiTree).toHaveBeenLastCalledWith(false)
+    grantWiki(VIEW_WIKI | EDIT_WIKI | MANAGE_WIKI)
+    await flushPromises()
+    expect(api.fetchWikiTree).toHaveBeenLastCalledWith(true)
+  })
+
+  it('shows what a member wrote when the right to edit goes away meanwhile, and keeps it', async () => {
+    const w = await openAt('/wiki/faq/edit')
+    await w.get('[data-testid="wiki-text-input"]').setValue('hours of work')
+    grantWiki(VIEW_WIKI)
+    await flushPromises()
+    expect(w.find('[data-testid="wiki-editor"]').exists()).toBe(false)
+    expect(w.find('[data-testid="wiki-no-edit"]').exists()).toBe(true)
+    expect((w.get('[data-testid="wiki-held-text"]').element as HTMLTextAreaElement).value).toContain('hours of work')
+    expect(loadWikiDraft(wikiDraftKey('', 'faq'))).toMatchObject({ content: 'hours of work' })
+    expect(wikiDirty.value).toBe(true)
+
+    // Leaving asks, and a yes lets the text go.
+    const close = w.get('[data-testid="wiki-close"]').trigger('click')
+    await vi.waitFor(() => expect(pendingConfirm.value).not.toBeNull())
+    pendingConfirm.value?.resolve(true)
+    await close
+    await flushPromises()
+    expect(loadWikiDraft(wikiDraftKey('', 'faq'))).toBeNull()
+  })
+
+  it('lets the held text be discarded on request', async () => {
+    const w = await openAt('/wiki/faq/edit')
+    await w.get('[data-testid="wiki-text-input"]').setValue('hours of work')
+    grantWiki(VIEW_WIKI)
+    await flushPromises()
+    await w.get('[data-testid="wiki-held-discard"]').trigger('click')
+    await vi.waitFor(() => expect(pendingConfirm.value).not.toBeNull())
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(w.find('[data-testid="wiki-held-draft"]').exists()).toBe(false)
+    expect(wikiDirty.value).toBe(false)
+    expect(loadWikiDraft(wikiDraftKey('', 'faq'))).toBeNull()
   })
 })

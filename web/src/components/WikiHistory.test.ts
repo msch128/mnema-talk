@@ -9,7 +9,7 @@ import { useToastStore } from '../stores/toast'
 import { useWikiStore } from '../stores/wiki'
 import { EDIT_WIKI, grantWiki, MANAGE_WIKI, revision, VIEW_WIKI, wikiPage } from '../wiki.fixture'
 
-const api = vi.hoisted(() => ({ fetchWikiRevisions: vi.fn(), fetchWikiRevision: vi.fn(), restoreWikiRevision: vi.fn() }))
+const api = vi.hoisted(() => ({ fetchWikiRevisions: vi.fn(), fetchWikiRevision: vi.fn(), restoreWikiRevision: vi.fn(), fetchWikiPage: vi.fn(), fetchWikiTree: vi.fn() }))
 vi.mock('../lib/wikiApi', () => api)
 
 const full = (rev: number) => revision(rev, { content: `text ${rev}\nline` })
@@ -27,6 +27,7 @@ beforeEach(() => {
 afterEach(() => { pendingConfirm.value?.resolve(false) })
 
 async function open(page = wikiPage()) {
+  useWikiStore().applyPage(page)
   const w = mount(WikiHistory, { props: { page } })
   await flushPromises()
   return w
@@ -119,6 +120,41 @@ describe('WikiHistory', () => {
     await flushPromises()
     expect(useToastStore().toasts.some(t => t.type === 'error')).toBe(true)
     expect(api.fetchWikiRevisions).toHaveBeenCalledTimes(2)
+  })
+
+  it('reads the page again after a stale restore, so a second try goes through on the new revision', async () => {
+    api.restoreWikiRevision
+      .mockRejectedValueOnce(new ApiError(409, 'STALE_REVISION', 'the page changed since you opened it; open it again and apply your change to the new version'))
+      .mockResolvedValueOnce(wikiPage({ rev: 5 }))
+    api.fetchWikiPage.mockResolvedValue(wikiPage({ rev: 4 }))
+    const w = await open()
+    const ask = async () => {
+      await w.get('[data-rev="2"]').trigger('click')
+      await flushPromises()
+      await w.get('[data-testid="wiki-restore"]').trigger('click')
+      await vi.waitFor(() => expect(pendingConfirm.value).not.toBeNull())
+      pendingConfirm.value?.resolve(true)
+      await flushPromises()
+    }
+    await ask()
+    expect(api.fetchWikiPage).toHaveBeenCalledWith('faq')
+    const store = useWikiStore()
+    expect(store.page?.rev).toBe(4)
+    await w.setProps({ page: store.page as ReturnType<typeof wikiPage> })
+    await ask()
+    expect(api.restoreWikiRevision).toHaveBeenLastCalledWith('faq', 2, { base_rev: 4 })
+  })
+
+  it('shows no comparison, and not an everything-added one, when the revision before cannot be read', async () => {
+    api.fetchWikiRevision.mockImplementation((_slug: string, rev: number) => (rev === 1 ? Promise.reject(new ApiError(404, 'NOT_FOUND', 'revision not found')) : Promise.resolve(full(rev))))
+    const w = await open()
+    await w.get('[data-rev="2"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="wiki-no-compare"]').exists()).toBe(true)
+    expect(w.find('[data-testid="wiki-diff"]').exists()).toBe(false)
+    await w.get('[data-rev="1"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="wiki-no-compare"]').exists()).toBe(false) // the first revision has nothing before it, by nature
   })
 
   it('continues the list below the oldest shown revision', async () => {

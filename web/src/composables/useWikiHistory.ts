@@ -22,6 +22,8 @@ export function useWikiHistory(page: () => WikiPage) {
   const chosen = ref<WikiRevision | null>(null)
   // The text of the revision before the chosen one; null while it loads, '' when there is none (the first, or pruned).
   const previous = ref<string | null>(null)
+  // The revision before the chosen one could not be read (pruned or a failed read): no comparison is shown, not a false one.
+  const noCompare = ref(false)
   const busy = ref(false)
 
   const latest = computed(() => revisions.value[0]?.rev ?? page().rev)
@@ -49,6 +51,7 @@ export function useWikiHistory(page: () => WikiPage) {
     const mine = ++choice
     chosen.value = null
     previous.value = null
+    noCompare.value = false
     try {
       const [current, before] = await Promise.all([
         fetchWikiRevision(page().slug, rev),
@@ -56,6 +59,7 @@ export function useWikiHistory(page: () => WikiPage) {
       ])
       if (mine !== choice) return
       chosen.value = current
+      noCompare.value = rev > 1 && before === null
       previous.value = before?.content ?? ''
     } catch (error) {
       if (mine !== choice) return
@@ -70,11 +74,14 @@ export function useWikiHistory(page: () => WikiPage) {
     busy.value = true
     try {
       const next = await restoreWikiRevision(page().slug, rev, { base_rev: page().rev })
-      wiki.applyPage(next)
+      const shown = wiki.isOpen(next.id)
+      wiki.applyPage(next, shown)
       toasts.success(t('wiki.restoredRevision', { n: rev }))
-      void goWiki({ mode: 'page', slug: next.slug }, true)
+      if (shown) void goWiki({ mode: 'page', slug: next.slug }, true)
     } catch (error) {
       toasts.error(isStaleRevision(error) ? t('wiki.restoreStale') : caughtErrorMessage(error, t('wiki.actionFailed')))
+      // The page the next try builds on is read again, or every retry would meet the same refusal.
+      void wiki.loadPage(page().slug)
       void load()
     } finally {
       busy.value = false
@@ -83,5 +90,5 @@ export function useWikiHistory(page: () => WikiPage) {
 
   watch(() => page().slug, () => { void load() }, { immediate: true })
 
-  return { revisions, more, loading, failed, chosen, previous, busy, latest, mayRestore, load, choose, restore }
+  return { revisions, more, loading, failed, chosen, previous, noCompare, busy, latest, mayRestore, load, choose, restore }
 }

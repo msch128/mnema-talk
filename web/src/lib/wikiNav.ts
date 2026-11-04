@@ -5,6 +5,7 @@ import { ref, watch } from 'vue'
 import { confirm } from './confirm'
 import { canGoBackInApp, currentRoute, historyDepth, navigate, setLeaveGuard } from './router'
 import { t } from '../i18n'
+import { clearAllWikiDrafts } from './wikiDraft'
 import { wikiPath, type WikiLocation } from './wikiPaths'
 
 /** Set by the editor while it holds text that is not saved. */
@@ -16,7 +17,10 @@ export const wikiQuery = ref('')
 export async function mayLeaveWiki(): Promise<boolean> {
   if (!wikiDirty.value) return true
   const ok = await confirm({ title: t('wiki.discardTitle'), body: t('wiki.discardBody'), confirmLabel: t('wiki.discard'), danger: true })
-  if (ok) wikiDirty.value = false
+  if (ok) {
+    wikiDirty.value = false
+    clearAllWikiDrafts() // an editor that was already gone leaves its text in the session until now
+  }
   return ok
 }
 

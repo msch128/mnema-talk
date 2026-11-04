@@ -61,9 +61,10 @@ async function save() {
       base_rev: props.page.rev,
       ...(slug.value !== props.page.slug ? { slug: slug.value.trim() } : {}),
       ...(parent.value !== (props.page.parent_id ?? '') ? { parent_id: parent.value || '00000000-0000-0000-0000-000000000000' } : {}),
-      ...(position.value !== props.page.position ? { position: Math.max(0, Math.trunc(position.value)) } : {})
+      // An emptied field is no position (v-model.number leaves '' behind), not position 0.
+      ...(typeof position.value === 'number' && Number.isFinite(position.value) && position.value !== props.page.position ? { position: Math.max(0, Math.trunc(position.value)) } : {})
     })
-    wiki.applyPage(next)
+    wiki.applyPage(next, wiki.isOpen(props.page.id))
     await wiki.loadTree()
     emit('done')
     if (next.slug !== props.page.slug) void goWiki({ mode: 'page', slug: next.slug }, true)

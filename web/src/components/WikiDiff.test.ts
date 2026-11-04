@@ -14,6 +14,12 @@ describe('WikiDiff', () => {
     expect(w.get('[data-testid="wiki-diff-stats"]').text()).toMatch(/1.*1/)
   })
 
+  it('does not claim "no changes" when only the end of the text differs in blank space', () => {
+    const same = mount(WikiDiff, { props: { before: 'same', after: 'same' } }).get('[data-testid="wiki-diff-stats"]').text()
+    const spaced = mount(WikiDiff, { props: { before: 'same', after: 'same\n' } }).get('[data-testid="wiki-diff-stats"]').text()
+    expect(spaced).not.toBe(same)
+  })
+
   it('says so when nothing changed', () => {
     const w = mount(WikiDiff, { props: { before: 'same', after: 'same' } })
     expect(w.find('li').exists()).toBe(false)

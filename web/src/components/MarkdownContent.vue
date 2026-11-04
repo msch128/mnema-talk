@@ -115,7 +115,7 @@ function isSpoilerElement(target: EventTarget | null): target is Element {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Enter' && event.target instanceof HTMLElement && event.target.dataset.wiki) {
+  if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLElement && event.target.dataset.wiki) {
     event.preventDefault()
     void goWiki({ mode: 'page', slug: event.target.dataset.wiki })
     return
