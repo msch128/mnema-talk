@@ -1,0 +1,23 @@
+api/openapi.json
+  s_97115bd0f9e8e0::t_f22b6810f94bb7 41169
+internal/ws/hub_behaviour_test.go
+  s_97115bd0f9e8e0::t_86956929b48547 541-544,561
+internal/ws/lifecycle.go
+  s_97115bd0f9e8e0::t_8c4898a381b820 35,69-72,91-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "289cdca86f52a034774458291690ca1f94dca0a1",
+  "prompts": {},
+  "sessions": {
+    "s_97115bd0f9e8e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a78766d8a90126f63",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
