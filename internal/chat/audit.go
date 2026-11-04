@@ -45,7 +45,7 @@ func (h *Handler) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies
 	s := &auditSnapshot{msg: msg}
 	// Fail closed: when the channel cannot be read, a direct message must not
 	// end up in the log with its text.
-	if err := h.DB.QueryRow(ctx, `SELECT name, type = 'dm' FROM channels WHERE id = $1`, msg.ChannelID).Scan(&s.channel, &s.dm); err != nil {
+	if s.channel, s.dm, err = channelAuditName(ctx, h.DB, msg.ChannelID); err != nil {
 		return nil
 	}
 	if s.dm {
@@ -174,4 +174,10 @@ func (h *Handler) tellAuthor(s *auditSnapshot, by *auth.User, reason string) {
 	h.Events.SendToUsers([]uuid.UUID{s.msg.UserID}, events.ModerationNotice, map[string]any{
 		"kind": "message_deleted", "reason": reason, "channel_name": s.channel,
 	})
+}
+
+// channelAuditName reads a channel's name and whether it is a conversation.
+func channelAuditName(ctx context.Context, q db.Querier, id uuid.UUID) (name string, dm bool, err error) {
+	err = q.QueryRow(ctx, `SELECT name, type = 'dm' FROM channels WHERE id = $1`, id).Scan(&name, &dm)
+	return name, dm, err
 }

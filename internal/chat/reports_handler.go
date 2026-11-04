@@ -138,16 +138,9 @@ func (h *Handler) listReports(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	rows, err := h.DB.Query(r.Context(), reportSelect+reportFrom+`
-		WHERE ($1 = 'all' OR r.status = $1)
-		  AND ($2::uuid IS NULL OR (r.created_at, r.id) < (SELECT created_at, id FROM message_reports WHERE id = $2))
-		ORDER BY r.created_at DESC, r.id DESC LIMIT $3`, status, before, limit+1)
+	reports, err := listReportRows(r.Context(), h.DB, status, before, limit+1)
 	if err != nil {
-		return fmt.Errorf("list reports: %w", err)
-	}
-	reports, err := pgx.CollectRows(rows, scanReport)
-	if err != nil {
-		return fmt.Errorf("list reports: %w", err)
+		return err
 	}
 	more := len(reports) > limit
 	if more {
@@ -183,20 +176,9 @@ func (h *Handler) getReport(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	rows, err := h.DB.Query(r.Context(), reportSelect+`, r.snapshot`+reportFrom+` WHERE r.id = $1`, id)
+	detail, err := loadReportDetail(r.Context(), h.DB, id)
 	if err != nil {
-		return fmt.Errorf("get report: %w", err)
-	}
-	detail, err := pgx.CollectExactlyOneRow(rows, func(row pgx.CollectableRow) (ReportDetail, error) {
-		var snap ReportSnapshot
-		rep, err := scanReportWith(row, &snap)
-		return ReportDetail{Report: rep, Snapshot: snap}, err
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return errReportNotFound
-	}
-	if err != nil {
-		return fmt.Errorf("get report: %w", err)
+		return err
 	}
 	httpx.WriteJSON(w, http.StatusOK, detail)
 	return nil
@@ -287,8 +269,8 @@ var errReportNotOpen = errors.New("report is not open")
 // nothing: the report does not exist (404), or it is in the wrong state
 // (409, with conflict as the message).
 func (h *Handler) reportClosedOrMissing(ctx context.Context, id uuid.UUID, conflict string) error {
-	var exists bool
-	if err := h.DB.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM message_reports WHERE id = $1)`, id).Scan(&exists); err != nil {
+	exists, err := reportExists(ctx, h.DB, id)
+	if err != nil {
 		return err
 	}
 	if !exists {
@@ -320,11 +302,11 @@ func (h *Handler) deleteReport(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	tag, err := h.DB.Exec(r.Context(), `DELETE FROM message_reports WHERE id = $1 AND status <> 'open'`, id)
+	deleted, err := deleteClosedReport(r.Context(), h.DB, id)
 	if err != nil {
-		return fmt.Errorf("delete report: %w", err)
+		return err
 	}
-	if tag.RowsAffected() == 0 {
+	if !deleted {
 		return h.reportClosedOrMissing(r.Context(), id, "close the report before deleting it")
 	}
 	w.WriteHeader(http.StatusNoContent)
