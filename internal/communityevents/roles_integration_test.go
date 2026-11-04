@@ -790,11 +790,8 @@ func TestChangingOrWithdrawingTheRSVPFreesTheRoleSlot(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if f.state(t, a) != "none" {
-				t.Fatalf("a keeps the slot: %s", f.state(t, a))
-			}
-			if f.state(t, b) != SignupConfirmed || len(promoted) != 1 || promoted[0].UserID != b.ID {
-				t.Fatalf("b should move up: %s %+v", f.state(t, b), promoted)
+			if f.state(t, a) != "none" || f.state(t, b) != SignupConfirmed || len(promoted) != 1 || promoted[0].UserID != b.ID {
+				t.Fatalf("a should give up the slot and b move up: a=%s b=%s %+v", f.state(t, a), f.state(t, b), promoted)
 			}
 		})
 	}
