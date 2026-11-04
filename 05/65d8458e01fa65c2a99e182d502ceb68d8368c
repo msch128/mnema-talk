@@ -1,0 +1,29 @@
+web/src/App.vue
+  s_2a6b32cb6cdc90::t_c013dda1a46034 42-45,52,383-394
+web/src/components/Sidebar.vue
+  s_2a6b32cb6cdc90::t_fcccaf6c0d7fe3 15,276-277
+web/src/components/WikiEditor.test.ts
+  s_2a6b32cb6cdc90::t_c2479f7a11735c 261-284
+web/src/components/overlayHosts.ts
+  s_2a6b32cb6cdc90::t_2dead9bdb30c52 1-8
+web/src/components/sidebarParts.ts
+  s_2a6b32cb6cdc90::t_f329d988ac8f1d 1-8
+web/src/lib/lineDiff.ts
+  s_2a6b32cb6cdc90::t_bff53e6ec5d2ca 39-41,49-50,58,61-62,65,69-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0565d8458e01fa65c2a99e182d502ceb68d8368c",
+  "prompts": {},
+  "sessions": {
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
