@@ -1,0 +1,19 @@
+internal/wiki/images_integration_test.go
+  s_2a6b32cb6cdc90::t_a7eb19e3cacc70 7-8,11-12,88-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "231f3de4eaea4b22ae5a4f9282b3db8b3aa2828c",
+  "prompts": {},
+  "sessions": {
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
