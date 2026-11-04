@@ -1,0 +1,19 @@
+internal/updaterd/rollback_test.go
+  s_3068d0f63e5258::t_18471322064da2 1-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6d3249435b0a5639c9a6ad4abccc4b74fcb282d2",
+  "prompts": {},
+  "sessions": {
+    "s_3068d0f63e5258": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aff599cd4cb22dec7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
