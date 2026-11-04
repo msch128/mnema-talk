@@ -1,0 +1,29 @@
+web/src/composables/useEventComments.test.ts
+  s_6951ddd344b092::t_a80ab1d38f96a4 72-83
+web/src/composables/useEventComments.ts
+  s_c62097689a4feb::t_a88c7e6069d959 38,42-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4134af08504437f232030ba8d50da74a75cd522c",
+  "prompts": {},
+  "sessions": {
+    "s_6951ddd344b092": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa278c1fcc3f7a80c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_c62097689a4feb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aebe01056a737cc59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
