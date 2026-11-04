@@ -1,0 +1,16 @@
+web/src/App.test.ts
+  h_0ff4f4713441f4 9,358-377,399
+web/src/App.vue
+  h_0ff4f4713441f4 165-171,175-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f9ceb8332a7989643457d695a6e3b412f519e64",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
