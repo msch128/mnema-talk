@@ -4,8 +4,12 @@ package wiki
 
 import (
 	"context"
+	"errors"
+	"io"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/imgproc"
 	"github.com/msch128/mnema-talk/internal/media"
 )
 
@@ -79,5 +83,46 @@ func TestAtTheCapWithoutRoomTheUploadIsRefused(t *testing.T) {
 	}
 	if w.pictureCount(t) != MaxImages {
 		t.Fatalf("a refused upload removed pictures: %d", w.pictureCount(t))
+	}
+}
+
+// brokenStore refuses to write or delete, like object storage that is down.
+type brokenStore struct{ *media.MemoryStore }
+
+func (brokenStore) Upload(context.Context, string, io.Reader, string, int64) error {
+	return errors.New("storage is down")
+}
+
+func (brokenStore) Delete(context.Context, string) error { return errors.New("storage is down") }
+
+func TestAPictureThatCannotBeStoredLeavesNothingBehind(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	pic := &imgproc.Picture{Data: []byte("png"), ContentType: "image/png"}
+
+	h := &Handler{Store: w.s, MediaStore: brokenStore{media.NewMemoryStore()}, MediaBucket: "b"}
+	if _, err := h.storeImage(ctx, w.alice, pic); err == nil {
+		t.Fatal("an upload to storage that is down was accepted")
+	}
+
+	// The object went up but the rows could not be written (no such uploader): the object is removed again.
+	mem := media.NewMemoryStore()
+	h = &Handler{Store: w.s, MediaStore: mem, MediaBucket: "b"}
+	if _, err := h.storeImage(ctx, uuid.New(), pic); err == nil {
+		t.Fatal("a picture of an unknown uploader was accepted")
+	}
+	if mem.Len() != 0 || w.pictureCount(t) != 0 {
+		t.Fatalf("left behind: %d objects, %d rows", mem.Len(), w.pictureCount(t))
+	}
+}
+
+func TestMakingRoomSkipsAPictureThatCannotBeDeletedFromStorage(t *testing.T) {
+	w := newWorld(t)
+	w.addPictures(t, MaxImages, "2 days")
+	if err := w.s.makeRoom(context.Background(), brokenStore{media.NewMemoryStore()}); err != nil {
+		t.Fatalf("make room with storage down: %v", err)
+	}
+	if w.pictureCount(t) != MaxImages {
+		t.Fatalf("pictures whose object could not be deleted were forgotten: %d", w.pictureCount(t))
 	}
 }
