@@ -1,0 +1,27 @@
+api/openapi.json
+  s_2a6b32cb6cdc90::t_4999e8025b660e 40032,40074,40230,40293,40357,40420,40832,40874
+doc/wiki.md
+  s_2a6b32cb6cdc90::t_309f11c2f0f7dd 19,37-42
+internal/server/wiki_integration_test.go
+  s_2a6b32cb6cdc90::t_ec14ce7f185f6a 20,29,81,250-277
+internal/wiki/handler.go
+  s_2a6b32cb6cdc90::t_b4d3f1894803a3 49-56
+internal/wiki/handler_write.go
+  s_2a6b32cb6cdc90::t_0e042b1da3b571 36,51,62,74-75,77,80,82-85,102,110,118,133,141,149,164,175,186,229,232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db02598cab93e8471db9bf404d750c00840b292a",
+  "prompts": {},
+  "sessions": {
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
