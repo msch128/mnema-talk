@@ -14,11 +14,6 @@ import (
 // Owner shortcut, so every caller that asks the snapshot (REST, WebSocket
 // hub, media, push, search) inherits the rule.
 
-// dmWritePerms are the channel permissions a member keeps in a conversation
-// when they may write there. Manage messages, mention-everyone and the
-// voice permissions never apply: nobody moderates a conversation.
-const dmWritePerms = SendMessages | AttachFiles | AddReactions
-
 // addDMs records the conversations and their members.
 func (s *Snapshot) addDMs(rows []dmMemberRow, enabled bool) {
 	s.dmEnabled = enabled
