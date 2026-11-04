@@ -43,7 +43,13 @@ func (f *rosterFixture) occurrences(t *testing.T, series uuid.UUID) []occurrence
 // startSeries creates a weekly series through the handler, as the API does, and returns its first occurrence.
 func (f *rosterFixture) startSeries(t *testing.T, body string) *CommunityEvent {
 	t.Helper()
-	req := fmt.Sprintf(body, time.Now().Add(48*time.Hour).UTC().Format(time.RFC3339))
+	return f.startSeriesAt(t, body, time.Now().Add(48*time.Hour))
+}
+
+// startSeriesAt starts a series whose first occurrence begins at start.
+func (f *rosterFixture) startSeriesAt(t *testing.T, body string, start time.Time) *CommunityEvent {
+	t.Helper()
+	req := fmt.Sprintf(body, start.UTC().Format(time.RFC3339))
 	rec, err := f.call(t, f.owner, f.h.createEvent, http.MethodPost, req, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -616,12 +622,15 @@ func TestRolesOfTheFollowingOccurrencesAreAnnouncedToClients(t *testing.T) {
 // between: they keep their days.
 func TestATimeOnlyEditKeepsTheDaysOfOccurrencesBeforeTheAnchor(t *testing.T) {
 	f := newRosterFixture(t)
-	first := f.startSeries(t, weeklyBody)
+	zone, _ := time.LoadLocation("Europe/Berlin")
+	// Noon in the series' zone, so moving the time by two hours never crosses
+	// midnight whatever the time of day the test runs at.
+	day := time.Now().In(zone).AddDate(0, 0, 2)
+	first := f.startSeriesAt(t, weeklyBody, time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, zone))
 	list := f.occurrences(t, first.Series.ID)
 	if len(list) < 6 {
 		t.Fatalf("need six occurrences, have %d", len(list))
 	}
-	zone, _ := time.LoadLocation("Europe/Berlin")
 	// Re-anchor on occurrence 4, a day later.
 	f.event = &CommunityEvent{ID: list[4].ID}
 	moved := list[4].Start.Add(24 * time.Hour).Format(time.RFC3339)
