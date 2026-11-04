@@ -1,17 +1,15 @@
 // Moving around the wiki dialog. What an editor holds unsaved is asked about
 // before anything leaves it, whichever way it leaves: a page in the tree, the
 // close button, Escape.
-import { ref, watch } from 'vue'
+import { watch } from 'vue'
 import { confirm } from './confirm'
 import { canGoBackInApp, currentRoute, historyDepth, navigate, setLeaveGuard } from './router'
 import { t } from '../i18n'
 import { clearAllWikiDrafts } from './wikiDraft'
 import { wikiPath, type WikiLocation } from './wikiPaths'
+import { wikiDirty, wikiQuery } from './wikiState'
 
-/** Set by the editor while it holds text that is not saved. */
-export const wikiDirty = ref(false)
-/** What the search box holds; the search screen reads it. */
-export const wikiQuery = ref('')
+export { wikiDirty, wikiQuery }
 
 /** Asks whether unsaved text may go; true when there is none or the member says so. */
 export async function mayLeaveWiki(): Promise<boolean> {

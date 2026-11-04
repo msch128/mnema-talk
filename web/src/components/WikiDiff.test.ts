@@ -1,9 +1,29 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import WikiDiff from './WikiDiff.vue'
 import { MAX_DIFF_CELLS } from '../lib/lineDiff'
 
+afterEach(() => vi.useRealTimers())
+
 describe('WikiDiff', () => {
+  it('compares once the writer pauses, not on every key', async () => {
+    vi.useFakeTimers()
+    const w = mount(WikiDiff, { props: { before: 'a\nb', after: 'a\nb' } })
+    await w.setProps({ after: 'a\nb1' })
+    await w.setProps({ after: 'a\nb12' })
+    expect(w.find('[data-op="add"]').exists()).toBe(false)
+    vi.advanceTimersByTime(300)
+    await w.vm.$nextTick()
+    expect(w.get('[data-op="add"]').text()).toContain('b12')
+  })
+
+  it('shows at once what a different text to compare against changes', async () => {
+    vi.useFakeTimers()
+    const w = mount(WikiDiff, { props: { before: 'a', after: 'a' } })
+    await w.setProps({ before: 'x', after: 'y' })
+    expect(w.findAll('[data-op]').map(o => o.attributes('data-op'))).toEqual(['del', 'add'])
+  })
+
   it('marks added and removed lines with signs and words, not colour alone', () => {
     const w = mount(WikiDiff, { props: { before: 'a\nb\nc', after: 'a\nx\nc' } })
     const ops = w.findAll('li').map(li => li.attributes('data-op'))

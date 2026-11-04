@@ -37,3 +37,27 @@ function prefixLines(text: string, start: number, end: number, prefix: string): 
   const changed = lines.map(l => (all ? l.slice(prefix.length) : prefix + l)).join('\n')
   return { text: text.slice(0, from) + changed + text.slice(to), start: from, end: from + changed.length }
 }
+
+/**
+ * Puts `next` into the textarea the way typing would, so the browser's own undo
+ * (Ctrl+Z) still takes the change back; assigning `value` would wipe that history.
+ * Only the part that differs is replaced. False when the browser cannot do it:
+ * the caller then sets the text itself.
+ */
+export function replaceAsTyped(el: HTMLTextAreaElement, next: string): boolean {
+  if (typeof document.execCommand !== 'function') return false
+  const before = el.value
+  let head = 0
+  while (head < before.length && head < next.length && before[head] === next[head]) head++
+  let tail = 0
+  while (tail < before.length - head && tail < next.length - head && before[before.length - 1 - tail] === next[next.length - 1 - tail]) tail++
+  el.focus()
+  el.setSelectionRange(head, before.length - tail)
+  const insert = next.slice(head, next.length - tail)
+  try {
+    document.execCommand(insert === '' ? 'delete' : 'insertText', false, insert)
+  } catch {
+    return false
+  }
+  return el.value === next
+}

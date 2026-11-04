@@ -130,6 +130,24 @@ describe('Back and Forward with an unsaved draft', () => {
     expect(currentRoute.value).toMatchObject({ wiki: { mode: 'page', slug: 'faq' } })
   })
 
+  it('ask once when Back is pressed again while the question is open', () => {
+    openWiki()
+    openWiki('faq')
+    wikiDirty.value = true
+    const go = vi.spyOn(window.history, 'go').mockImplementation(() => {})
+    const at = window.history.state.idx
+    const here = window.location.pathname
+    pop(at - 1, '/wiki')
+    pop(at, here)
+    const question = pendingConfirm.value
+    expect(question).not.toBeNull()
+    pop(at - 1, '/wiki') // a second Back
+    pop(at, here)
+    expect(pendingConfirm.value).toBe(question)
+    expect(go).toHaveBeenCalledTimes(2) // both steps put back, nothing moved on
+    expect(currentRoute.value).toMatchObject({ wiki: { mode: 'page', slug: 'faq' } })
+  })
+
   it('follow the browser at once when nothing is unsaved', () => {
     openWiki()
     openWiki('faq')

@@ -97,23 +97,31 @@ export function useEventComments(eventId: Ref<string>) {
     }
   }
 
+  // An answer that arrives after the list moved on to another event belongs to the old one: it changes nothing here.
+  const onThisEvent = (id: string) => eventId.value === id
+
   const send = (text: string) => attempt(t('events.commentFailed'), async () => {
-    const c = await api.postComment(eventId.value, text)
-    if (!comments.value.some(x => x.id === c.id)) comments.value = [...comments.value, c]
+    const id = eventId.value
+    const c = await api.postComment(id, text)
+    if (onThisEvent(id) && !comments.value.some(x => x.id === c.id)) comments.value = [...comments.value, c]
   })
 
-  const edit = (id: string, text: string) => attempt(t('events.commentEditFailed'), async () => {
-    const c = await api.editComment(eventId.value, id, text)
-    comments.value = comments.value.map(x => (x.id === id ? c : x))
+  const edit = (commentId: string, text: string) => attempt(t('events.commentEditFailed'), async () => {
+    const id = eventId.value
+    const c = await api.editComment(id, commentId, text)
+    if (onThisEvent(id)) comments.value = comments.value.map(x => (x.id === commentId ? c : x))
   })
 
-  const remove = (id: string) => attempt(t('events.commentDeleteFailed'), async () => {
-    await api.deleteComment(eventId.value, id)
-    comments.value = comments.value.filter(c => c.id !== id)
+  const remove = (commentId: string) => attempt(t('events.commentDeleteFailed'), async () => {
+    const id = eventId.value
+    await api.deleteComment(id, commentId)
+    if (onThisEvent(id)) comments.value = comments.value.filter(c => c.id !== commentId)
   })
 
   const toggleMute = () => attempt(t('events.commentMuteFailed'), async () => {
-    muted.value = await api.setCommentsMuted(eventId.value, !muted.value)
+    const id = eventId.value
+    const now = await api.setCommentsMuted(id, !muted.value)
+    if (onThisEvent(id)) muted.value = now
   })
 
   // Changes made by others (and by this member in another tab) while the list is open.

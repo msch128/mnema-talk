@@ -237,6 +237,8 @@ let leaveGuard: LeaveGuard | null = null
 let lastIndex = typeof window !== 'undefined' ? historyIndex() : 0
 // Pops this file caused itself, to put the browser back where it was.
 let undoing = 0
+// A question about unsaved work is open: a further Back or Forward meanwhile is only undone, not asked again.
+let asking = false
 
 export function setLeaveGuard(guard: LeaveGuard | null) {
   leaveGuard = guard
@@ -256,7 +258,9 @@ if (typeof window !== 'undefined') {
       // The browser already moved: go back to the entry that is still on screen, ask, and move again on a yes.
       undoing++
       window.history.go(-step)
-      void guard.ask().then(ok => { if (ok) window.history.go(step) })
+      if (asking) return
+      asking = true
+      void guard.ask().then(ok => { if (ok) window.history.go(step) }).finally(() => { asking = false })
       return
     }
     lastIndex = index

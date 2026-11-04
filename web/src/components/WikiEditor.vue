@@ -5,7 +5,7 @@
 // anything: the editor shows the difference and lets the writer decide.
 import { computed, nextTick, ref } from 'vue'
 import { Bold, Code, Heading2, ImagePlus, Italic, Link, List, Quote, BookMarked } from '@lucide/vue'
-import { applyEdit, type EditAction } from '../lib/wikiEditorActions'
+import { applyEdit, replaceAsTyped, type EditAction } from '../lib/wikiEditorActions'
 import { MAX_BYTES, useWikiEditor } from '../composables/useWikiEditor'
 import { useWikiImages } from '../composables/useWikiImages'
 import { deriveSlug } from '../lib/wikiSlug'
@@ -58,7 +58,8 @@ async function tool(action: EditAction) {
   const el = area.value
   if (!el) return
   const next = applyEdit(content.value, el.selectionStart, el.selectionEnd, action)
-  content.value = next.text
+  // Typed in, so the browser's undo still works; assigning the text is the way out where that is not possible.
+  if (!replaceAsTyped(el, next.text)) content.value = next.text
   await nextTick()
   el.focus()
   el.setSelectionRange(next.start, next.end)

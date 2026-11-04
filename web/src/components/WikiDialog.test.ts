@@ -8,6 +8,7 @@ import { currentRoute, navigate } from '../lib/router'
 import { wikiDirty, wikiQuery } from '../lib/wikiNav'
 import { loadWikiDraft, wikiDraftKey } from '../lib/wikiDraft'
 import { useWikiStore } from '../stores/wiki'
+import { useCompactLayout } from '../composables/useCompactLayout'
 import { EDIT_WIKI, grantWiki, MANAGE_WIKI, summary, VIEW_WIKI, wikiPage } from '../wiki.fixture'
 
 const api = vi.hoisted(() => ({ fetchWikiTree: vi.fn(), fetchWikiPage: vi.fn(), searchWiki: vi.fn(), fetchWikiRevisions: vi.fn(), fetchWikiRevision: vi.fn() }))
@@ -196,5 +197,25 @@ describe('WikiDialog', () => {
     expect(w.find('[data-testid="wiki-held-draft"]').exists()).toBe(false)
     expect(wikiDirty.value).toBe(false)
     expect(loadWikiDraft(wikiDraftKey('', 'faq'))).toBeNull()
+  })
+
+  it('closes the page list on a narrow screen with a tap beside it, and gives focus back to its button', async () => {
+    const { isCompact } = useCompactLayout()
+    isCompact.value = true
+    try {
+      const w = await openAt('/wiki')
+      const toggle = w.get('[data-testid="wiki-tree-toggle"]')
+      await toggle.trigger('click')
+      await flushPromises()
+      expect(toggle.attributes('aria-expanded')).toBe('true')
+      expect(w.get('[data-testid="wiki-tree"]').element.contains(document.activeElement)).toBe(true)
+      await w.get('[data-testid="wiki-tree-scrim"]').trigger('click')
+      await flushPromises()
+      expect(toggle.attributes('aria-expanded')).toBe('false')
+      expect(w.find('[data-testid="wiki-tree-scrim"]').exists()).toBe(false)
+      expect(document.activeElement).toBe(toggle.element)
+    } finally {
+      isCompact.value = false
+    }
   })
 })
