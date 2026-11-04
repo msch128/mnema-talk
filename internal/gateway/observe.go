@@ -182,7 +182,7 @@ func (g *Gateway) DeliverInteraction(botID uuid.UUID, d json.RawMessage) bool {
 	g.mu.Lock()
 	var best *session
 	for _, s := range g.byBot[botID] {
-		if s.live() && (best == nil || s.startedAt.After(best.startedAt)) {
+		if s.accepting() && (best == nil || s.startedAt.After(best.startedAt)) {
 			best = s
 		}
 	}
