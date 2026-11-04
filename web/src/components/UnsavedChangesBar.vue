@@ -13,16 +13,19 @@ defineProps({
   saveLabel: { type: String, default: '' },
   saveTestid: { type: String, default: 'unsaved-save' },
   /** Stays at the bottom of an admin page (inside the dashboard's padded area) instead of sitting in a dialog footer. */
-  sticky: { type: Boolean, default: false }
+  sticky: { type: Boolean, default: false },
+  /** Sits inside a card or dialog body: no band of its own, less height. */
+  inline: { type: Boolean, default: false }
 })
 const emit = defineEmits<{ save: []; reset: [] }>()
 </script>
 
 <template>
-  <div :class="['shrink-0 border-t border-mnema-hairline bg-mnema-raised', sticky && 'sticky bottom-0 z-10 -mx-6 -mb-6 max-md:-mx-4 max-md:-mb-4']" data-testid="unsaved-bar">
-    <p v-if="error" role="alert" class="px-5 pt-3 text-sm text-mnema-danger" data-testid="unsaved-error">{{ error }}</p>
-    <div class="flex min-h-14 items-center justify-between gap-3 px-5 py-3 max-md:flex-wrap">
-      <p class="flex min-w-0 items-center gap-2 text-sm text-mnema-muted" role="status" data-testid="unsaved-status">
+  <div :class="['shrink-0', inline ? 'mt-3' : 'border-t border-mnema-hairline bg-mnema-raised', sticky && 'sticky bottom-0 z-10 -mx-6 -mb-6 max-md:-mx-4 max-md:-mb-4']" data-testid="unsaved-bar">
+    <p v-if="error" role="alert" :class="['text-sm text-mnema-danger', inline ? 'pb-2' : 'px-5 pt-3']" data-testid="unsaved-error">{{ error }}</p>
+    <div :class="['flex items-center justify-between gap-3 max-md:flex-wrap', inline ? 'min-h-9' : 'min-h-14 px-5 py-3']">
+      <slot name="extra" />
+      <p class="flex min-w-0 flex-1 items-center gap-2 text-sm text-mnema-muted" role="status" data-testid="unsaved-status">
         <template v-if="dirty">
           <span class="h-2 w-2 shrink-0 rounded-full bg-mnema-accent" aria-hidden="true" />
           <span class="leading-snug">{{ $t('draft.unsaved') }}</span>

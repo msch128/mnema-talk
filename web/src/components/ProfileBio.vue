@@ -3,9 +3,11 @@ import { charCount } from '../lib/textLength'
 import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import { computed, ref } from 'vue'
-import { Edit3, Loader2, Save } from '@lucide/vue'
+import { Edit3 } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
+import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import FormField from './FormField.vue'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
@@ -22,15 +24,11 @@ const chatStore = useChatStore()
 const toasts = useToastStore()
 
 const isEditingBio = ref(false)
-const editDisplayName = ref('')
-const editBio = ref('')
-const isSavingProfile = ref(false)
-const profileSaveError = ref('')
 
 // The profile opens with a stub (no bio) that fills in once /api/users/:id
-// answers, so the edit fields are copied when editing starts. Your own
-// account record is complete, so it wins; without a loaded bio there is
-// nothing safe to send (the PUT replaces both fields).
+// answers, so editing starts only from a loaded record. Your own account
+// record is complete, so it wins; without a loaded bio there is nothing safe
+// to send (the PUT replaces both fields).
 const editSource = computed(() => {
   const own = authStore.user
   if (props.isSelf && own && 'bio' in own) return own
@@ -39,41 +37,42 @@ const editSource = computed(() => {
 })
 const canEditProfile = computed(() => props.isSelf && !!editSource.value)
 
+// Name and bio are one draft with one Save (doc/settings-ux.md): the PUT replaces both.
+const form = useSettingsDraft<{ displayName: string; bio: string }>({
+  source: () => ({ displayName: editSource.value?.display_name || '', bio: editSource.value?.bio || '' }),
+  normalisers: { displayName: normalise.text, bio: normalise.text },
+  blocked: () => !canEditProfile.value,
+  save: async ({ draft, commit }) => {
+    const openId = chatStore.selectedUserProfile?.id
+    try {
+      const updated = await authStore.updateProfile({ displayName: draft.displayName.trim(), bio: draft.bio.trim() })
+      chatStore.patchOpenProfile(openId, updated)
+    } catch (err) {
+      throw new Error(caughtErrorMessage(err, t('profile.saveFailed')), { cause: err })
+    }
+    commit(['displayName', 'bio'])
+  },
+  saved: () => {
+    isEditingBio.value = false
+    toasts.success(t('profile.profileSaved'))
+  }
+})
+const { draft } = form
+
 function startEditBio() {
-  const src = editSource.value
-  if (!src) return
-  editDisplayName.value = src.display_name || ''
-  editBio.value = src.bio || ''
-  profileSaveError.value = ''
+  if (!editSource.value) return
+  form.reset()
   isEditingBio.value = true
 }
 
-function cancelEditBio() {
+async function cancelEditBio() {
+  if (!await form.guard()) return
+  form.reset()
   isEditingBio.value = false
-  profileSaveError.value = ''
-  editDisplayName.value = ''
-  editBio.value = ''
 }
 
-async function saveProfile() {
-  if (!canEditProfile.value) return
-  isSavingProfile.value = true
-  profileSaveError.value = ''
-  const openId = chatStore.selectedUserProfile?.id
-  try {
-    const updated = await authStore.updateProfile({
-      displayName: editDisplayName.value,
-      bio: editBio.value
-    })
-    chatStore.patchOpenProfile(openId, updated)
-    isEditingBio.value = false
-    toasts.success(t('profile.profileSaved'))
-  } catch (err) {
-    profileSaveError.value = caughtErrorMessage(err, t('profile.saveFailed'))
-  } finally {
-    isSavingProfile.value = false
-  }
-}
+// Closing the profile with an unsaved edit asks first.
+defineExpose({ guard: form.guard })
 </script>
 
 <template>
@@ -103,11 +102,11 @@ async function saveProfile() {
     </div>
 
     <!-- Edit Mode (Own Profile) -->
-    <form v-else class="space-y-4" @submit.prevent="saveProfile">
+    <form v-else class="space-y-4" @submit.prevent="form.save" @keydown="form.onKeydown">
       <FormField v-slot="{ id, describedby }" input-id="profile-displayname" :label="$t('profile.displayName')" :hint="$t('profile.displayNameHint', { username: profileUser.username, count: 24 })">
         <input
           :id="id"
-          v-model="editDisplayName"
+          v-model="draft.displayName"
           :aria-describedby="describedby"
           type="text"
           v-max-chars="24"
@@ -117,26 +116,18 @@ async function saveProfile() {
       <FormField v-slot="{ id }" input-id="profile-bio" :label="$t('profile.bioLabel', { count: 250 })">
         <textarea
           :id="id"
-          v-model="editBio"
+          v-model="draft.bio"
           rows="4"
           v-max-chars="250"
           class="w-full resize-none rounded-lg border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text"
           :placeholder="$t('profile.bioPlaceholder')"
         ></textarea>
-        <p class="text-right text-xs tabular-nums text-mnema-tertiary">{{ charCount(editBio) }} / 250</p>
+        <p class="text-right text-xs tabular-nums text-mnema-tertiary">{{ charCount(draft.bio) }} / 250</p>
       </FormField>
-      <div class="flex items-center justify-end gap-2">
-        <button type="button" class="btn btn-ghost btn-sm max-md:min-h-11" @click="cancelEditBio">{{ $t('common.cancel') }}</button>
-        <button type="submit" :disabled="isSavingProfile" class="btn btn-primary btn-sm flex items-center gap-1 max-md:min-h-11">
-          <Loader2 v-if="isSavingProfile" class="w-3.5 h-3.5 animate-spin" />
-          <Save v-else class="w-3.5 h-3.5" />
-          <span>{{ $t('common.save') }}</span>
-        </button>
-      </div>
+      <UnsavedChangesBar inline :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset">
+        <template #extra><button type="button" class="btn btn-ghost btn-sm max-md:min-h-11" data-testid="profile-bio-cancel" @click="cancelEditBio">{{ $t('common.cancel') }}</button></template>
+      </UnsavedChangesBar>
     </form>
 
-    <div v-if="profileSaveError" role="alert" class="mt-2 p-1.5 rounded-sm bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-1.5">
-      <span>{{ profileSaveError }}</span>
-    </div>
   </div>
 </template>
