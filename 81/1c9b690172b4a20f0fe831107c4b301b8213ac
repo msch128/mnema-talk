@@ -1,0 +1,65 @@
+web/src/components/MarkdownContent.vue
+  s_2a6b32cb6cdc90::t_a62d8928c36a9f 118
+web/src/components/MarkdownContent.wiki.test.ts
+  s_2a6b32cb6cdc90::t_bbd52d993dda7d 31-36
+web/src/components/WikiDeleted.vue
+  s_2a6b32cb6cdc90::t_22d5a0a81804ef 21
+web/src/components/WikiDialog.test.ts
+  s_2a6b32cb6cdc90::t_2b32a89a6778a4 9,149-199
+web/src/components/WikiDialog.vue
+  s_2a6b32cb6cdc90::t_2a7e616665938a 18,34-37,46-48,89-92,101-104
+web/src/components/WikiDiff.test.ts
+  s_2a6b32cb6cdc90::t_5b856eef66e719 17-22
+web/src/components/WikiDiff.vue
+  s_2a6b32cb6cdc90::t_303b17f66156a0 19
+web/src/components/WikiEditor.test.ts
+  s_2a6b32cb6cdc90::t_3c733c6448388a 6,96,100-125,127,166-168,174-189,277
+web/src/components/WikiHistory.test.ts
+  s_2a6b32cb6cdc90::t_4f22d7f1a869ac 12,30,125-159
+web/src/components/WikiHistory.vue
+  s_2a6b32cb6cdc90::t_8d52f78459ad00 63-64
+web/src/components/WikiMove.test.ts
+  s_2a6b32cb6cdc90::t_10ef2a4868d1c6 60-69
+web/src/components/WikiMove.vue
+  s_2a6b32cb6cdc90::t_385f08f9518132 64-65,67
+web/src/components/WikiPageView.test.ts
+  s_2a6b32cb6cdc90::t_09084b30e8c5cd 29-32,108-120
+web/src/components/WikiPageView.vue
+  s_2a6b32cb6cdc90::t_75dd8930694315 39-41
+web/src/components/WikiViews.test.ts
+  s_2a6b32cb6cdc90::t_3f03ccb7eed4f4 144,149,161
+web/src/composables/useWikiDraft.ts
+  s_2a6b32cb6cdc90::t_d27621e204868c 17-18,48-49,52-54
+web/src/composables/useWikiEditor.ts
+  s_2a6b32cb6cdc90::t_ad1c247534ad47 6,11,14-16,61-65,73-78,86,88-89,99
+web/src/composables/useWikiHistory.ts
+  s_2a6b32cb6cdc90::t_9aae2e31ab5fbb 25-26,54,62,77-78,80,83-84,93
+web/src/i18n/de.json
+  s_2a6b32cb6cdc90::t_a1af925a03adc9 4937-4939,4944-4945
+web/src/i18n/en.json
+  s_2a6b32cb6cdc90::t_dd56ca4eb8e128 4937-4939,4944-4945
+web/src/lib/wikiNav.ts
+  s_2a6b32cb6cdc90::t_8631173aec7692 8,20-23
+web/src/lib/wikiTree.ts
+  s_2a6b32cb6cdc90::t_f9a3a650df93bb 3,89-99
+web/src/stores/wiki.test.ts
+  s_2a6b32cb6cdc90::t_197cdaee353f7f 33
+web/src/stores/wiki.ts
+  s_2a6b32cb6cdc90::t_87406df5ddd091 7,17-27,31,34,38-39,71,76-87,99,103-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "811c9b690172b4a20f0fe831107c4b301b8213ac",
+  "prompts": {},
+  "sessions": {
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

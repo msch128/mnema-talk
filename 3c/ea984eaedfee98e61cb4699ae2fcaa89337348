@@ -1,0 +1,200 @@
+api/openapi.json
+  s_fb29f048bd6d02::t_72d3aee273b3af 9845-10142,39829-40031,40033-40073,40075-40229,40231-40292,40294-40312,40314-40356,40358-40419,40421-40787,40789-40831,40833-40873,40875-41024
+  s_2a6b32cb6cdc90::t_8a73b6b6478776 6135,40313,40788
+  s_2a6b32cb6cdc90::t_4999e8025b660e 40032,40074,40230,40293,40357,40420,40832,40874
+internal/audit/classes.go
+  s_fb29f048bd6d02::t_b3669f407fbe27 52
+internal/auth/account_export_build.go
+  s_fb29f048bd6d02::t_a7f10f70acb022 84
+internal/db/migrations/0089_wiki.sql
+  s_fb29f048bd6d02::t_1f6d4bc29d1f90 1-70
+internal/perm/newmember.go
+  s_fb29f048bd6d02::t_7095ed8dba8004 22
+internal/perm/perm.go
+  s_fb29f048bd6d02::t_e6dae5d5b6b71b 96-105,147-149,178
+  s_fb29f048bd6d02::t_a44c87774b9838 186
+internal/perm/snapshot_test.go
+  s_fb29f048bd6d02::t_b05373fd4808cc 40,51-53,81
+internal/perm/store_self_assign.go
+  s_fb29f048bd6d02::t_7ca243f7dca56a 17
+internal/repo/testdata/error_messages.golden.json
+  s_fb29f048bd6d02::t_c7fe2971927d48 50,63,94,292,355,384-385,420-422,427-428,438,463,465,480,484,514,589-590
+  s_fb29f048bd6d02::t_b390338e61c204 82,361
+internal/server/health.go
+  s_fb29f048bd6d02::t_b30c4103426e75 73
+internal/server/router_build.go
+  s_fb29f048bd6d02::t_6da4001df2cf50 40,89
+internal/server/router_build_services.go
+  s_fb29f048bd6d02::t_4144d677b82c71 17,72-80
+internal/server/router_routes.go
+  s_fb29f048bd6d02::t_f13ecd0ac615d1 119
+internal/server/server.go
+  s_fb29f048bd6d02::t_d2b250372f6c6c 159
+internal/server/wiki_integration_test.go
+  s_fb29f048bd6d02::t_48aa7861371d81 1-19,21-28,30-80,82-106,108-147,154-249
+  s_fb29f048bd6d02::t_c67d4df53fabb7 148-153
+  s_2a6b32cb6cdc90::t_e63d2b30d2f2c8 107
+  s_2a6b32cb6cdc90::t_ec14ce7f185f6a 20,29,81,250-277
+internal/wiki/handler.go
+  s_fb29f048bd6d02::t_6c4614253f647e 1-48,57-79
+  s_2a6b32cb6cdc90::t_b4d3f1894803a3 49-56
+internal/wiki/handler_read.go
+  s_fb29f048bd6d02::t_94f0cfde97bca3 1-169
+internal/wiki/handler_write.go
+  s_fb29f048bd6d02::t_f54e64e71df075 1-35,37-50,52-61,63,65-73,76,78-79,81,86-101,103-109,111-117,119-132,134-140,142-148,150-163,165-174,176-185,187-214,216-228,230-231,233-239
+  s_2a6b32cb6cdc90::t_e47a2b663726b0 64,215
+  s_2a6b32cb6cdc90::t_0e042b1da3b571 36,51,62,74-75,77,80,82-85,102,110,118,133,141,149,164,175,186,229,232
+internal/wiki/model.go
+  s_fb29f048bd6d02::t_75ad6bda6b9b48 1-28,35-37,40-131
+  s_fb29f048bd6d02::t_5562082d0678fe 29-34,38-39
+internal/wiki/slug.go
+  s_fb29f048bd6d02::t_2d7fe238e07cc5 1-71
+internal/wiki/slug_test.go
+  s_fb29f048bd6d02::t_5aeb844083bca3 1-98
+internal/wiki/store.go
+  s_fb29f048bd6d02::t_861c85e9547e9d 1-6,8-19,21-31,34-153
+  s_fb29f048bd6d02::t_e29924a1c9ab33 32-33
+  s_2a6b32cb6cdc90::t_1ed14d8af08985 7,20
+internal/wiki/store_edit.go
+  s_fb29f048bd6d02::t_6d05a43bb024f6 1-5,7-34,39-40,45-48,54-62,68-88,91-116,128-285
+  s_fb29f048bd6d02::t_bfe826c8a14bc5 6,35-38,41-44,49-53,63-67,89-90,117-127
+internal/wiki/store_integration_test.go
+  s_fb29f048bd6d02::t_0a4c8d131bd6ec 1-149,154-192,222-273,275-471,475-515
+  s_fb29f048bd6d02::t_979e60ff27dfc5 150-153,193-221,274,472-474,516-559
+internal/wiki/store_revisions.go
+  s_fb29f048bd6d02::t_511ab4d2046829 1-12,20,22-42,44-68,70-76
+  s_fb29f048bd6d02::t_a0068209e4480b 13-19,21,43,69
+internal/wiki/store_search.go
+  s_fb29f048bd6d02::t_ac18b63522391c 1-19,21-23,25-66
+  s_fb29f048bd6d02::t_5032ef8d11a338 20,24
+internal/wiki/store_write.go
+  s_fb29f048bd6d02::t_446dcd5160b6e6 1-22,24-39,60-161,164-194,198-233
+  s_fb29f048bd6d02::t_72c847357457ce 23,40-59,162-163,195-197,234-262
+web/src/i18n/de.json
+  s_fb29f048bd6d02::t_47e18bfef10291 153-155,234,249-251,255-257,259-263,265-266,676-677,3122-3135,3354-3361,4081,4384
+  s_fb29f048bd6d02::t_babd90b2f140ae 293,440
+  s_fb29f048bd6d02::t_6c63212301f164 4940
+  s_fb29f048bd6d02::t_c05ff491dfbb24 4839-4939,4941-4953
+web/src/i18n/en.json
+  s_fb29f048bd6d02::t_cd75e9ea10f213 153-155,234,249-251,255-257,259-263,265-266,676-677,3122-3135,3354-3361,4081,4384
+  s_fb29f048bd6d02::t_0474365229fa7e 293,440
+  s_fb29f048bd6d02::t_84052be9f72d78 4940
+  s_fb29f048bd6d02::t_605214f67205d4 4839-4939,4941-4953
+web/src/lib/errorSentencesA.ts
+  s_fb29f048bd6d02::t_064747cd899386 53,66,97
+  s_fb29f048bd6d02::t_d39e92e48e394d 84
+web/src/lib/errorSentencesB.ts
+  s_fb29f048bd6d02::t_876a171b37a4de 101,164,193-194
+  s_fb29f048bd6d02::t_25637fe0ef032c 170
+web/src/lib/errorSentencesC.ts
+  s_fb29f048bd6d02::t_f21d8e06336314 19-21,26-27,37,62,64,79,83,113,188-189
+web/src/lib/permissions.test.ts
+  s_fb29f048bd6d02::t_b9021d69ab0c87 26,30-31
+web/src/lib/permissions.ts
+  s_fb29f048bd6d02::t_420023b08500ab 33-36,44,53,57-58,74,83
+web/src/types/rest.ts
+  s_fb29f048bd6d02::t_0d41d76130f526 5735-5928
+  s_2a6b32cb6cdc90::t_433febbf01da62 3617,3623
+doc/wiki.md
+  s_fb29f048bd6d02::t_7cc5a556caf8bf 29-31,36,43-45,113-114,132-140
+  s_2a6b32cb6cdc90::t_309f11c2f0f7dd 19,37-42
+internal/server/personal_data_test.go
+  s_2a6b32cb6cdc90::t_ec901aea565bde 57-60,164
+internal/httpx/response.go
+  s_2a6b32cb6cdc90::t_95309d1d0d2c44 37,49
+scripts/english-only-allowlist.txt
+  s_2a6b32cb6cdc90::t_9b2449db73359f 76-78,80
+scripts/upgrade-drill-data.sh
+  s_2a6b32cb6cdc90::t_8a702511cce938 85,90-93,98-99,133-136
+web/src/components/AdminRolesTab.test.ts
+  s_2a6b32cb6cdc90::t_3f018253f6dbf3 64,336-337
+web/src/components/markdownBody.css
+  s_fb29f048bd6d02::t_890322ebf0ce3b 177-181
+web/src/components/MarkdownContent.vue
+  s_fb29f048bd6d02::t_2c1268cdc50dc0 14-17,33-37,55-56,78-82,119-123
+web/src/stores/chat/reset.ts
+  s_fb29f048bd6d02::t_d226157555fde9 14,31
+web/src/App.vue
+  s_fb29f048bd6d02::t_3b293de0085706 47-48,352,379
+web/src/lib/router.ts
+  s_fb29f048bd6d02::t_38dcbb88f9836a 5,17-18,74
+web/src/components/Sidebar.vue
+  s_fb29f048bd6d02::t_81d987a747d69d 20,281
+web/src/lib/markdown.ts
+  s_fb29f048bd6d02::t_e4a80377ef1c38 25-26,28,32,41,45-51,54,58
+web/src/components/WikiSearch.vue
+  s_fb29f048bd6d02::t_141483d39144f2 29
+  s_fb29f048bd6d02::t_d398025966e546 26-28
+  s_fb29f048bd6d02::t_98cfa9b3ef4c9c 30-32
+  s_fb29f048bd6d02::t_da55af87eecbd4 1-25,33-57
+web/src/stores/serverFeatures.ts
+  s_fb29f048bd6d02::t_5e7d5a1507ba56 71
+web/src/composables/useAppRouting.ts
+  s_fb29f048bd6d02::t_c64bb220d3349a 94-95
+web/src/components/OverlayHosts.vue
+  s_fb29f048bd6d02::t_fb9252b6c80a93 1-31
+web/src/components/SidebarEntries.vue
+  s_fb29f048bd6d02::t_f9bdd9245ee478 1-10
+web/src/components/SidebarWikiEntry.vue
+  s_fb29f048bd6d02::t_2531b277cd8541 1-28
+web/src/components/WikiDeleted.vue
+  s_fb29f048bd6d02::t_84715e90be4508 1-48
+web/src/components/WikiDiff.vue
+  s_fb29f048bd6d02::t_0d1258078ff0a2 1-35
+web/src/components/WikiHistory.vue
+  s_fb29f048bd6d02::t_716bb7af6a7588 1-74
+web/src/components/WikiHome.vue
+  s_fb29f048bd6d02::t_9606a2420f4fd5 1-50
+web/src/components/WikiMove.vue
+  s_fb29f048bd6d02::t_9088bef89339b7 1-102
+web/src/components/WikiPageView.vue
+  s_fb29f048bd6d02::t_b5939c83fdb0e6 1-112
+web/src/components/WikiTree.vue
+  s_fb29f048bd6d02::t_ed08e7a407ae7d 1-87
+web/src/composables/useWikiHistory.ts
+  s_fb29f048bd6d02::t_3655187eba0297 1-80
+web/src/composables/useWikiLocation.ts
+  s_fb29f048bd6d02::t_85f4b54328a2de 1-10
+web/src/lib/lineDiff.ts
+  s_fb29f048bd6d02::t_c48ca763e65951 1-80
+web/src/lib/wikiApi.ts
+  s_fb29f048bd6d02::t_e8bf0c9ca4ffa1 1-62
+web/src/lib/wikiEditorActions.ts
+  s_fb29f048bd6d02::t_ccbac8c905e3e5 1-39
+web/src/lib/wikiLinks.ts
+  s_fb29f048bd6d02::t_71b8c311f55f8e 1-21
+web/src/lib/wikiNav.ts
+  s_fb29f048bd6d02::t_974e1155b341b9 1-39
+web/src/lib/wikiPaths.ts
+  s_fb29f048bd6d02::t_d6e98111e51936 1-30
+web/src/lib/wikiSlug.ts
+  s_fb29f048bd6d02::t_69bfd8576fd2af 1-27
+web/src/lib/wikiTree.ts
+  s_fb29f048bd6d02::t_0fc3ab1ec29a04 1-87
+web/src/lib/wikiUi.ts
+  s_fb29f048bd6d02::t_2d23841ada7bbc 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3cea984eaedfee98e61cb4699ae2fcaa89337348",
+  "prompts": {},
+  "sessions": {
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fb29f048bd6d02": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aux-dm-call-b381541aa369cad3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
