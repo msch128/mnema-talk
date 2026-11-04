@@ -5,18 +5,20 @@ import type { TextRule } from './markdown'
 import type { WikiPageSummary } from './wikiApi'
 import { resolveWikiLink } from './wikiTree'
 
+const group = (m: RegExpMatchArray, index: number): string => m[index] ?? ''
+
 /** The rule for the pages the reader can see. Linear: no nested quantifiers. */
 export function wikiLinkRule(pages: readonly WikiPageSummary[]): TextRule {
   return {
     re: /\[\[([^[\]|\n]{1,100})(?:\|([^[\]\n]{1,100}))?\]\]/g,
     build(m) {
-      const target = (m[1] ?? '').trim()
-      const label = (m[2] ?? target).trim() || target
+      const target = group(m, 1).trim()
+      const label = (m[2] === undefined ? target : group(m, 2)).trim() || target
       const slug = resolveWikiLink(pages, target)
       if (!slug) return [{ t: 'el', tag: 'span', attrs: { class: 'md-wikilink md-wikilink-missing' }, c: [{ t: 'text', v: label }] }]
       return [{ t: 'el', tag: 'span', attrs: { class: 'md-wikilink', 'data-wiki': slug, role: 'button', tabindex: '0' }, c: [{ t: 'text', v: label }] }]
     },
-    plain: m => (m[2] ?? m[1] ?? '').trim()
+    plain: m => (m[2] === undefined ? group(m, 1) : group(m, 2)).trim()
   }
 }
 
@@ -30,8 +32,8 @@ const MEDIA_ID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 export const wikiImageRule: TextRule = {
   re: new RegExp(`!\\[([^\\[\\]\\n]{0,100})\\]\\((/api/media/${MEDIA_ID})\\)`, 'g'),
   build(m) {
-    const alt = (m[1] ?? '').trim()
-    return [{ t: 'el', tag: 'img', attrs: { src: m[2] ?? '', alt, class: 'md-wikiimage', loading: 'lazy', draggable: 'false' }, c: [] }]
+    const alt = group(m, 1).trim()
+    return [{ t: 'el', tag: 'img', attrs: { src: group(m, 2), alt, class: 'md-wikiimage', loading: 'lazy', draggable: 'false' }, c: [] }]
   },
-  plain: m => (m[1] ?? '').trim()
+  plain: m => group(m, 1).trim()
 }
