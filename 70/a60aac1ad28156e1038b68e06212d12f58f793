@@ -1,0 +1,21 @@
+internal/chat/channels.go
+  s_5bc0f1e67fcfa6::t_ca7f775656bbce 208-210,216-225,229-254
+internal/chat/webhook_bot_cleanup_integration_test.go
+  s_5bc0f1e67fcfa6::t_dca345d8a52132 1-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "70a60aac1ad28156e1038b68e06212d12f58f793",
+  "prompts": {},
+  "sessions": {
+    "s_5bc0f1e67fcfa6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aargon-verify-2e17111427570974",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
