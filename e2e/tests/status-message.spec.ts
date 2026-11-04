@@ -44,11 +44,15 @@ test('a member sets a status message with an expiry from the presence menu, edit
   const until = Date.parse(responseString(me, 'status_expires_at'))
   expect(Math.abs(until - (Date.now() + 4 * 3_600_000))).toBeLessThan(5 * 60_000)
 
-  // Editing starts from the saved text; Escape closes without changes.
+  // Editing starts from the saved text; Save stays off until it changes, and
+  // Escape with an unsaved change asks before it closes without saving.
   await openStatusDialog()
   await expect(page.getByTestId('status-input')).toHaveValue('Mittagspause')
+  await expect(page.getByTestId('status-save')).toBeDisabled()
   await page.getByTestId('status-input').fill('Etwas anderes')
+  await expect(page.getByTestId('status-save')).toBeEnabled()
   await page.keyboard.press('Escape')
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Verwerfen' }).click()
   await expect(page.getByTestId('status-dialog')).toBeHidden()
   await expect(page.getByTestId('own-subline')).toHaveText('Mittagspause')
 

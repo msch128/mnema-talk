@@ -91,6 +91,8 @@ function syncStateToRoute(ctx: RoutingContext) {
   if (ctx.isSyncingFromRoute || ctx.loadingFirstRoute) return
   if (!ctx.authStore.isAuthenticated) return
   if (syncSettings(ctx)) return
+  // The wiki dialog has an address of its own and keeps it while it is open.
+  if (currentRoute.value.view === 'wiki') return
   const targetPath = ctx.showAdminModal.value ? `/admin/${ctx.adminTab.value || 'users'}` : ctx.currentStatePath()
   if (targetPath !== '/' && window.location.pathname !== targetPath) {
     // A rename moves the address from a former slug to the new one: that is no new page.

@@ -81,6 +81,13 @@ func ProcessLegacyAvatar(data []byte) (*Picture, error) {
 	return process(data, kind{minW: 1, minH: 1, cover: coverAvatar, legacy: true})
 }
 
+// ProcessInline returns an uploaded PNG, JPEG, GIF or WebP for a wiki page: not
+// cropped, only shrunk to at most InlineMaxEdge pixels on its longer edge, with
+// the same animation rules as ProcessBanner.
+func ProcessInline(data []byte) (*Picture, error) {
+	return process(data, kind{minW: 1, minH: 1, cover: coverFit})
+}
+
 func process(data []byte, k kind) (*Picture, error) {
 	release, err := acquire()
 	if err != nil {
@@ -152,6 +159,19 @@ func coverBanner(src image.Image) *image.NRGBA {
 		return crop(src, area, BannerMaxWidth, BannerMaxHeight)
 	}
 	return crop(src, area, area.Dx(), area.Dy())
+}
+
+func coverFit(src image.Image) *image.NRGBA {
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	switch {
+	case w <= InlineMaxEdge && h <= InlineMaxEdge:
+		return crop(src, b, w, h)
+	case w >= h:
+		return crop(src, b, InlineMaxEdge, max(1, h*InlineMaxEdge/w))
+	default:
+		return crop(src, b, max(1, w*InlineMaxEdge/h), InlineMaxEdge)
+	}
 }
 
 func coverAvatar(src image.Image) *image.NRGBA {

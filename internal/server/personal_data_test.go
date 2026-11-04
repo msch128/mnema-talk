@@ -54,6 +54,10 @@ var previousEraseSteps = []string{
 	`DELETE FROM event_comments WHERE user_id = $1`,
 	`DELETE FROM event_comment_mutes WHERE user_id = $1`,
 	`UPDATE events SET created_by = NULL WHERE created_by = $1`,
+	`UPDATE wiki_revisions SET editor_id = NULL WHERE editor_id = $1`,
+	`UPDATE wiki_pages SET created_by = NULL WHERE created_by = $1`,
+	`UPDATE wiki_pages SET updated_by = NULL WHERE updated_by = $1`,
+	`UPDATE wiki_pages SET deleted_by = NULL WHERE deleted_by = $1`,
 	`UPDATE message_reports SET reporter_id = NULL, note = '' WHERE reporter_id = $1`,
 	`UPDATE message_reports SET reported_user_id = NULL WHERE reported_user_id = $1`,
 	`UPDATE message_reports SET resolved_by = NULL WHERE resolved_by = $1`,
@@ -65,7 +69,10 @@ var previousEraseSteps = []string{
 }
 
 var eraseStatementsBefore = []string{
-	`DELETE FROM media WHERE uploader_id = $1 RETURNING s3_key`,
+	`DELETE FROM media WHERE uploader_id = $1
+		AND NOT EXISTS (SELECT 1 FROM wiki_images w WHERE w.media_id = media.id
+			AND EXISTS (SELECT 1 FROM wiki_revisions r WHERE strpos(r.content, '/api/media/' || media.id::text) > 0))
+		RETURNING s3_key`,
 	`DELETE FROM data_exports WHERE user_id = $1 AND s3_key IS NOT NULL RETURNING s3_key`,
 	`DELETE FROM media WHERE message_id IN (SELECT id FROM messages WHERE channel_id IN (SELECT c.id FROM channels c WHERE c.type = 'dm'
 	AND NOT EXISTS (SELECT 1 FROM dm_members m WHERE m.channel_id = c.id AND m.user_id <> $1))) RETURNING s3_key`,
@@ -157,6 +164,7 @@ func TestArchiveFilesStayInTheOriginalOrder(t *testing.T) {
 		"rsvps.json",
 		"event_signups.json",
 		"event_comments.json",
+		"wiki_revisions.json",
 		"messages.json",
 	}
 	if len(names) != len(want) {

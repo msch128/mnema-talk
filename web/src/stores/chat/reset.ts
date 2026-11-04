@@ -11,6 +11,8 @@ import { useOnboardingStore } from '../onboarding'
 import { useFirstRunStore } from '../firstRun'
 import { useAccountStore } from '../account'
 import { useDmCallsStore } from '../dmCalls'
+import { clearAllWikiDrafts } from '../../lib/wikiDraft'
+import { useWikiStore } from '../wiki'
 import { clearAllTrays } from '../../composables/attachmentTrayState'
 import { emptyWindow } from '../../lib/messageWindow'
 import { emptyNotificationSettings, type Cx } from './state'
@@ -27,6 +29,8 @@ export function resetMemberStores() {
   useFirstRunStore().reset()
   useAccountStore().reset()
   useDmCallsStore().reset()
+  useWikiStore().reset()
+  clearAllWikiDrafts()
   clearAllTrays()
 }
 

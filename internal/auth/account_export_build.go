@@ -81,6 +81,7 @@ scheduled_messages.json  your scheduled messages that were not sent yet (your te
 rsvps.json      your RSVPs to community events
 event_signups.json your sign-ups for event roles (the event, the role, confirmed or waitlist)
 event_comments.json  your comments on community events (the event, your text and when)
+wiki_revisions.json  the wiki pages you saved (address, title and text you wrote); the pages stay in the wiki
 truncated.json  only present when a list was cut: the files that hold more rows than the archive keeps
 
 The files are meant for machines: file names and keys are in English whatever

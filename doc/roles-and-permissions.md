@@ -136,6 +136,9 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Manage stage | Give and take talk power in a Stage and answer raised hands; holders can always speak there (bit `1 << 24`, [Talks](talks.md#stages)). Off for @everyone and every seeded role; Administrators and the Owner have it implicitly. It is channel-scoped, so it can be allowed for one Stage only | yes |
 | Manage events | Create, edit and cancel community events, and upload or remove their cover images (bit `1 << 25`, [events](events.md)). Granted to roles holding *Timeout members* (seeded Moderator and Admin) by migration 0070; Administrators and the Owner have it implicitly | no |
 | Bypass new member limits | Write, react and speak at once, without waiting out the minimum membership age of [raid protection](moderation.md#raid-protection) (bit `1 << 26`). Separate from the slow mode exemption, which *Manage messages* gives. Granted to roles holding *Timeout members* (seeded Moderator and Admin) by migration 0083; Administrators and the Owner have it implicitly | no |
+| Edit the wiki | Create and edit [wiki](wiki.md) pages and restore earlier revisions (bit `1 << 27`). Off for @everyone. Granted to roles holding *Timeout members* by migration 0089; Administrators and the Owner have it implicitly. A timeout and the new-member wait of raid protection take it away like *Send messages*. Never allowed for a self-assignable role | no |
+| Manage the wiki | Lock, move, rename and delete wiki pages, restore deleted ones and read them (bit `1 << 28`). Off for @everyone; granted like *Edit the wiki*. Never allowed for a self-assignable role | no |
+| View the wiki | Read the wiki (bit `1 << 29`). On for @everyone (migration 0089 adds it to existing databases); switch it off there to close the wiki | no |
 
 The bit values are stored in the database and sent over the API; they never
 change meaning (`perm.Catalog` and its test freeze them).
@@ -147,8 +150,8 @@ role either: it is the one account with `users.role = 'admin'`.
 
 | Who | What it is | Permissions |
 |---|---|---|
-| Member | `@everyone` (position 0, every member has it) | *View channels, Send messages, Attach files, Add reactions, Mention @all and @here, Connect, Speak, Video, Send direct messages* (`perm.DefaultEveryone`) |
-| Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log, Manage events, Bypass new member limits* |
+| Member | `@everyone` (position 0, every member has it) | *View channels, Send messages, Attach files, Add reactions, Mention @all and @here, Connect, Speak, Video, Send direct messages, View the wiki* (`perm.DefaultEveryone`) |
+| Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log, Manage events, Bypass new member limits, Edit the wiki, Manage the wiki* |
 | Admin | Seeded role, hoisted, not managed, not mentionable, above Moderator when both are new | Moderator's permissions, plus *Manage channels, Manage roles, Manage invites, Manage members, Ban members* |
 | Owner | The account `users.role = 'admin'`, not a role | Every permission, plus the Owner-only powers |
 
@@ -268,6 +271,7 @@ cannot do.
 | WebSocket | Channel events (messages, reactions, typing, who is in a Talk, media state) only reach viewers; the connect snapshot lists only viewable Talks |
 | Talks | *View channels* + *Connect* to join (reading and writing a Talk's chat without joining needs only *View channels* and *Send messages*); the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running |
 | `GET /api/admin/roles/{id}/view-as` | *Manage roles*. A preview for a made-up member holding only @everyone and that role, computed by the same resolver (overwrites included) and intersected with what the caller can view: a channel or category the caller cannot see is never in it |
+| Wiki (`/api/wiki`, [wiki](wiki.md)) | Reading, history and search: *View the wiki*. Creating, editing and restoring a revision: *Edit the wiki* (a timeout, pending rules and the new-member wait refuse it). Locking, moving, renaming, deleting and restoring a page, and reading deleted ones: *Manage the wiki*. A locked page: *Manage the wiki* for any change |
 | Community events (`/api/events`) | Listing, viewing, RSVPing: public if free-text location; if located in a Talk channel, requires *View channels* on that Talk. Creating, editing, cancelling, uploading cover: *Manage events* |
 
 ## View the server as a role

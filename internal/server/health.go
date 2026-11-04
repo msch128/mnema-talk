@@ -70,6 +70,7 @@ var Features = []string{
 	"events",
 	"events.roles",
 	"events.recurrence",
+	"wiki",
 	"notify.levels.v2",
 	"dm.v2",
 }

@@ -9,6 +9,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
 import { i18nPlugin, setLocale } from '../i18n'
 import { userFixture } from '../test-fixtures.fixture'
+import { pendingConfirm } from '../lib/confirm'
 
 let wrapper: VueWrapper
 let setStatusText: ReturnType<typeof vi.fn>
@@ -143,7 +144,7 @@ describe('the status dialog', () => {
     await input().setValue('Lunch')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(wrapper.get('[data-testid="status-error"]').text()).toBe('Server said no')
+    expect(wrapper.get('[data-testid="unsaved-error"]').text()).toBe('Server said no')
     expect(input().element.value).toBe('Lunch')
     expect(wrapper.get('[data-testid="status-save"]').attributes('disabled')).toBeUndefined()
     expect(wrapper.emitted('close')).toBeUndefined()
@@ -174,5 +175,39 @@ describe('the status dialog', () => {
     wrapper.findComponent({ name: 'EmojiPicker' }).vm.$emit('pick', '🍕')
     await flushPromises()
     expect(input().element.value).toBe('x'.repeat(32))
+  })
+
+  it('keeps Save off until something really changed, and spacing is no change', async () => {
+    open(['status.expiry'], userFixture({ status_text: 'Lunch' }))
+    const save = () => wrapper.get('[data-testid="status-save"]').attributes('disabled')
+    expect(save()).toBeDefined()
+    await input().setValue('  Lunch ')
+    expect(save()).toBeDefined()
+    await input().setValue('Lunch break')
+    expect(save()).toBeUndefined()
+    await wrapper.get('[data-testid="unsaved-reset"]').trigger('click')
+    expect(input().element.value).toBe('Lunch')
+    expect(save()).toBeDefined()
+  })
+
+  it('does not count the expiry as a change while there is no text to apply it to', async () => {
+    open(['status.expiry'])
+    await input().setValue('')
+    expect(wrapper.find('[data-expiry]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="status-save"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('asks before closing with unsaved changes', async () => {
+    open(['status.expiry'])
+    await wrapper.get('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    expect(wrapper.emitted('close')).toHaveLength(1)
+    await input().setValue('Lunch')
+    await wrapper.get('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(wrapper.emitted('close')).toHaveLength(1)
   })
 })

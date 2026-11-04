@@ -6,6 +6,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/userdata"
+	"github.com/msch128/mnema-talk/internal/wiki"
 )
 
 // wirePersonalData registers each domain's export files and erasure statements
@@ -16,5 +17,6 @@ func (c *components) wirePersonalData() {
 	later.RegisterAccountData(r)
 	communityevents.RegisterAccountData(r)
 	push.RegisterAccountData(r)
+	wiki.RegisterAccountData(r)
 	c.authH.SetPersonalData(r)
 }

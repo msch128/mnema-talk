@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The extra game executables of the gaming settings: one row per name with a
 // remove button, and an input where Enter (or Add) appends a validated entry.
-import { ref, useId } from 'vue'
+import { computed, ref, useId } from 'vue'
 import { X } from '@lucide/vue'
 import { checkGameName, type GameNameProblem } from '../lib/gameList'
 
@@ -21,7 +21,8 @@ function add(): boolean {
   return true
 }
 // Save adds what is still typed, so it is not lost.
-defineExpose({ add })
+// `typed` tells the form there is text that Save would still add.
+defineExpose({ add, typed: computed(() => draft.value.trim() !== '') })
 function remove(name: string) { emit('update:modelValue', props.modelValue.filter(item => item !== name)) }
 </script>
 

@@ -47,14 +47,9 @@ import WelcomeFlow from './components/WelcomeFlow.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
 import SkipLinks from './components/SkipLinks.vue'
 import TimeoutBanner from './components/TimeoutBanner.vue'
-import ModerationDialog from './components/ModerationDialog.vue'
-import MessageModerationDialog from './components/MessageModerationDialog.vue'
-import EditHistoryDialog from './components/EditHistoryDialog.vue'
-import ReportDialog from './components/ReportDialog.vue'
-import ForwardDialog from './components/ForwardDialog.vue'
-import LaterDialog from './components/LaterDialog.vue'
-import TalkSettingsHost from './components/TalkSettingsHost.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
+import WikiDialog from './components/WikiDialog.vue'
+import { ModerationDialog, MessageModerationDialog, EditHistoryDialog, ReportDialog, ForwardDialog, LaterDialog, TalkSettingsHost } from './components/overlayHosts'
 import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
@@ -358,6 +353,7 @@ onMounted(async () => {
       <!-- Settings: account, privacy, push and app, audio -->
       <SettingsDialog v-if="accountStore.dialogOpen" />
       <EventsModal v-if="eventsRequest && authStore.isAuthenticated && serverFeatures.events" :focus-event-id="eventsRequest.eventId" :focus-seq="eventsRequest.seq" @close="closeEvents" />
+      <WikiDialog v-if="currentRoute.view === 'wiki' && serverFeatures.wiki" />
       <NotificationSettingsDialog v-if="notifyDialogOpen" @close="notifyDialogOpen = false" />
       <ShortcutsDialog v-if="shortcutsOpen" @close="shortcutsOpen = false" />
 

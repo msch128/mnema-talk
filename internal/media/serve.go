@@ -25,16 +25,26 @@ type servedMedia struct {
 	channelID *uuid.UUID
 }
 
+// hideDenied turns a refusal into "not found", so a file the member may not see is not revealed.
+func (h *Handler) hideDenied(err error) error {
+	if _, denied := httpx.AsAPIError(err); denied && err != nil {
+		return httpx.ErrNotFound("media not found")
+	}
+	return err
+}
+
 // lookupServed loads the media row and checks that the caller may fetch it:
 // an attachment belongs to its channel, so whoever cannot view the channel
 // cannot fetch the file either (avatars have no channel). Deleted media is 410.
 func (h *Handler) lookupServed(r *http.Request, id uuid.UUID) (*servedMedia, error) {
 	m := &servedMedia{id: id}
-	var deleted, staged bool
+	var deleted, staged, wikiPicture bool
 	var uploader uuid.UUID
 	err := h.DB.QueryRow(r.Context(), `
-		SELECT s3_key, mime_type, original_filename, size_bytes, is_deleted, channel_id, staged, uploader_id FROM media WHERE id = $1`, id).
-		Scan(&m.key, &m.mimeType, &m.filename, &m.size, &deleted, &m.channelID, &staged, &uploader)
+		SELECT s3_key, mime_type, original_filename, size_bytes, is_deleted, channel_id, staged, uploader_id,
+			EXISTS (SELECT 1 FROM wiki_images w WHERE w.media_id = media.id)
+		FROM media WHERE id = $1`, id).
+		Scan(&m.key, &m.mimeType, &m.filename, &m.size, &deleted, &m.channelID, &staged, &uploader, &wikiPicture)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("media not found")
 	}
@@ -46,10 +56,13 @@ func (h *Handler) lookupServed(r *http.Request, id uuid.UUID) (*servedMedia, err
 		return nil, httpx.ErrNotFound("media not found")
 	}
 	if m.channelID != nil {
-		if err := h.Perms.RequireChannel(r.Context(), auth.UserFrom(r.Context()).Subject(), *m.channelID, perm.ViewChannel); err != nil {
-			if _, denied := httpx.AsAPIError(err); denied {
-				return nil, httpx.ErrNotFound("media not found")
-			}
+		if err := h.hideDenied(h.Perms.RequireChannel(r.Context(), auth.UserFrom(r.Context()).Subject(), *m.channelID, perm.ViewChannel)); err != nil {
+			return nil, err
+		}
+	}
+	// A wiki picture has no channel; it is as readable as the wiki, so closing the wiki to readers closes its pictures.
+	if wikiPicture {
+		if err := h.hideDenied(h.Perms.RequireGlobal(r.Context(), auth.UserFrom(r.Context()).Subject(), perm.ViewWiki)); err != nil {
 			return nil, err
 		}
 	}

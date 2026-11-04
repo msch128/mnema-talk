@@ -52,6 +52,10 @@ const (
 	OrderEventComments
 	OrderEventCommentMutes
 	OrderEvents
+	OrderWikiRevisions
+	OrderWikiCreated
+	OrderWikiUpdated
+	OrderWikiDeleted
 	OrderReportReporter
 	OrderReportReported
 	OrderReportResolved
@@ -97,5 +101,6 @@ const (
 	FileRSVPs          = 210
 	FileEventSignups   = 220
 	FileEventComments  = 230
+	FileWikiRevisions  = 235
 	FileMessages       = 240
 )

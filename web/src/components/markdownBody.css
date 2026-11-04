@@ -174,3 +174,11 @@
   user-select: text !important;
   cursor: text;
 }
+
+/* Pictures of a wiki page: as wide as the text at most, never stretched. */
+.markdown-body img.md-wikiimage { display: block; max-width: 100%; height: auto; margin: 0.5rem 0; border-radius: 0.375rem; }
+
+/* [[Page]] links of a wiki page: a link to a page, or the dotted name of one that does not exist. */
+.markdown-body .md-wikilink[data-wiki] { color: var(--color-mnema-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.markdown-body .md-wikilink[data-wiki]:hover { color: var(--color-mnema-accent-hover); }
+.markdown-body .md-wikilink-missing { color: var(--color-mnema-muted); text-decoration: underline dotted; text-underline-offset: 2px; }

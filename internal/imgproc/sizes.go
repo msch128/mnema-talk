@@ -9,6 +9,9 @@ const (
 	// it is cropped to 3:1 (smaller pictures would be blurry when stretched).
 	BannerMinWidth  = 300
 	BannerMinHeight = 100
+	// InlineMaxEdge is the longest edge of a picture in a wiki page: the whole
+	// picture is kept and only shrunk to this (never enlarged).
+	InlineMaxEdge = 1600
 	// AvatarMaxEdge is the largest stored avatar (a square).
 	AvatarMaxEdge = 512
 	// LegacyMaxEdge and LegacyMaxPixels bound the canvas of an avatar stored
