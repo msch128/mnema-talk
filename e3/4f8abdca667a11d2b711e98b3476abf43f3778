@@ -1,0 +1,75 @@
+README.md
+  s_2a6b32cb6cdc90::t_ee6800ddb7dc8c 107
+api/openapi.json
+  s_2a6b32cb6cdc90::t_f82cec0ea4ba3e 9846-9869,39938-40045
+doc/moderation.md
+  s_2a6b32cb6cdc90::t_2286d8acf8e832 471
+doc/wiki.md
+  s_2a6b32cb6cdc90::t_4b192370993a00 66-78,131-134,154-155
+e2e/tests/wiki.spec.ts
+  s_2a6b32cb6cdc90::t_d5601dfb5632b1 10,33-36,40
+internal/db/migrations/0090_wiki_images.sql
+  s_2a6b32cb6cdc90::t_06626c1a29b4fd 1-8
+internal/imgproc/picture.go
+  s_2a6b32cb6cdc90::t_f1d07b2f639319 84-90,164-176
+internal/imgproc/picture_test.go
+  s_2a6b32cb6cdc90::t_a85182a9c33495 187-215
+internal/imgproc/sizes.go
+  s_2a6b32cb6cdc90::t_743916b6e57c9a 12-14
+internal/repo/testdata/error_messages.golden.json
+  s_2a6b32cb6cdc90::t_dbc389a846e6a3 484
+internal/server/router_build_services.go
+  s_2a6b32cb6cdc90::t_92a973bc978555 74-79
+internal/server/router_routes.go
+  s_2a6b32cb6cdc90::t_bb15de7476269a 15,143-148
+internal/server/wiki_images_integration_test.go
+  s_2a6b32cb6cdc90::t_16373e25110678 1-147
+internal/wiki/handler.go
+  s_2a6b32cb6cdc90::t_d5f57971bd0b6e 12,21-23
+internal/wiki/images.go
+  s_2a6b32cb6cdc90::t_37911d7d2ad9c5 1-164
+web/src/components/MarkdownContent.vue
+  s_2a6b32cb6cdc90::t_2165def5030a17 14,55
+web/src/components/WikiEditor.test.ts
+  s_2a6b32cb6cdc90::t_873d69660ffe32 9,13,289-364
+web/src/components/WikiEditor.vue
+  s_2a6b32cb6cdc90::t_8fe40e5cbee422 7,10,25-26,51-56,100-101,113-115,125,145
+web/src/components/markdownBody.css
+  s_2a6b32cb6cdc90::t_2787ce774c7a69 178-180
+web/src/composables/useWikiImages.test.ts
+  s_2a6b32cb6cdc90::t_c1b9833b2d7a1a 1-16
+web/src/composables/useWikiImages.ts
+  s_2a6b32cb6cdc90::t_5653d6f68fe082 1-63
+web/src/i18n/de.json
+  s_2a6b32cb6cdc90::t_0aa9b99e060839 264,3363-3364,4906-4909
+web/src/i18n/en.json
+  s_2a6b32cb6cdc90::t_0948c8cf77f692 264,3363-3364,4906-4909
+web/src/lib/errorSentencesC.ts
+  s_2a6b32cb6cdc90::t_b7df70a26ac881 83
+web/src/lib/wikiApi.test.ts
+  s_2a6b32cb6cdc90::t_19e6fd459f4c1e 5,59-67
+web/src/lib/wikiApi.ts
+  s_2a6b32cb6cdc90::t_e56258ead024d2 5-6,10,63-69
+web/src/lib/wikiLinks.test.ts
+  s_2a6b32cb6cdc90::t_94c98c06a6a467 4,12,103-147
+web/src/lib/wikiLinks.ts
+  s_2a6b32cb6cdc90::t_40fe8b44c9b4a3 22-37
+web/src/types/rest.ts
+  s_2a6b32cb6cdc90::t_17ad1b74d2364f 5736-5752
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e34f8abdca667a11d2b711e98b3476abf43f3778",
+  "prompts": {},
+  "sessions": {
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
