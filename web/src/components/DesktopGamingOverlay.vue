@@ -90,7 +90,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
       <strong>{{ settingsOnly ? $t('gaming.settings') : $t('gaming.title') }}</strong>
       <span v-if="!settingsOnly" class="text-xs text-mnema-muted">{{ snapshot.voice.members.length }}</span>
       <template v-if="interactive">
-        <button v-if="!settingsOnly" :aria-label="$t('gaming.settings')" @click="settings"><Settings class="w-4 h-4" /></button>
+        <button v-if="!settingsOnly" :aria-label="$t('gaming.settings')" :aria-expanded="editing" data-testid="gaming-settings-toggle" @click="settings"><Settings class="w-4 h-4" /></button>
         <button :aria-label="$t('common.close')" @click="closeWindow"><X class="w-4 h-4" /></button>
       </template>
     </header>

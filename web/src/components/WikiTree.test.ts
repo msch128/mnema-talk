@@ -44,6 +44,19 @@ describe('WikiTree', () => {
     expect(w.get('[data-wiki-page="loot"]').attributes('aria-current')).toBe('page')
   })
 
+  it('keeps a branch folded that the member folded, when the list is read again', async () => {
+    navigate('/wiki/loot', { replace: true })
+    const w = mount(WikiTree)
+    await w.get('li[data-depth="1"] button[aria-label]').trigger('click')
+    expect(pages(w)).toEqual(['guides', 'rules'])
+    useWikiStore().pages = [...useWikiStore().pages]
+    await w.vm.$nextTick()
+    expect(pages(w)).toEqual(['guides', 'rules'])
+    navigate('/wiki/raid')
+    await w.vm.$nextTick()
+    expect(pages(w)).toEqual(['guides', 'raid', 'loot', 'rules'])
+  })
+
   it('opens a page and the start page', async () => {
     const w = mount(WikiTree)
     await w.get('[data-wiki-page="raid"]').trigger('click')

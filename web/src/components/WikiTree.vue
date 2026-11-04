@@ -15,10 +15,15 @@ const collapsed = ref(new Set<string>())
 
 const rows = computed(() => visibleNodes(wiki.tree, collapsed.value))
 
-// The page on screen is always visible: its parents open.
+// The page on screen is shown: its parents open when it is opened or moved, not
+// again on every refresh of the list, so a branch the member folded stays folded.
+let shown = ''
 watch([slug, () => wiki.pages], () => {
-  if (!slug.value) return
+  if (!slug.value) { shown = ''; return }
   const parents = breadcrumbs(wiki.pages, slug.value).slice(0, -1).map(p => p.id)
+  const place = `${slug.value}|${parents.join(',')}`
+  if (place === shown) return
+  shown = place
   if (parents.some(id => collapsed.value.has(id))) collapsed.value = new Set([...collapsed.value].filter(id => !parents.includes(id)))
 }, { immediate: true })
 

@@ -2,7 +2,7 @@
 // The wiki (doc/wiki.md): a dialog over the app with the page tree on the left
 // and the page, its editor, its history or the search on the right. It lives at
 // /wiki/…: the address says what it shows, and Back closes it.
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { BookOpen, FilePlus2, Menu, Search, X } from '@lucide/vue'
 import { useCompactLayout } from '../composables/useCompactLayout'
 import { useWikiLocation } from '../composables/useWikiLocation'
@@ -24,6 +24,8 @@ const wiki = useWikiStore()
 const { location, slug } = useWikiLocation()
 const { isCompact } = useCompactLayout()
 const treeOpen = ref(false)
+const treeToggle = ref<HTMLButtonElement | null>(null)
+const tree = ref<{ $el: HTMLElement } | null>(null)
 
 const page = computed(() => wiki.page)
 const needsPage = computed(() => ['page', 'history', 'edit'].includes(location.value.mode))
@@ -54,6 +56,16 @@ watch(slug, async name => {
 
 watch(location, () => { treeOpen.value = false })
 
+// The page list over the page (narrow screens): focus goes into it when it opens and back to its button when it
+// closes from inside; a tap beside it (the scrim) closes it.
+watch(treeOpen, async open => {
+  const at = document.activeElement
+  const inside = !!tree.value?.$el.contains(at) || at === document.body || (at instanceof HTMLElement && at.dataset.testid === 'wiki-tree-scrim')
+  await nextTick()
+  if (open) tree.value?.$el.querySelector<HTMLElement>('button')?.focus()
+  else if (inside) treeToggle.value?.focus()
+})
+
 /** The close button asks about unsaved text first, like Escape and a click outside do. */
 async function leave() {
   if (await mayLeaveWiki()) closeWiki()
@@ -70,7 +82,7 @@ function search(event: Event) {
   <BaseDialog sheet panel-class="max-w-6xl h-[min(92vh,54rem)]" :guard="mayLeaveWiki" @close="closeWiki">
     <template #default="{ titleId }">
       <header class="flex shrink-0 items-center gap-2 border-b border-mnema-hairline bg-mnema-raised px-4 py-3">
-        <button v-if="isCompact" type="button" class="btn btn-ghost btn-icon" :aria-expanded="treeOpen" :aria-label="$t('wiki.pages')" data-testid="wiki-tree-toggle" @click="treeOpen = !treeOpen"><Menu class="h-5 w-5" /></button>
+        <button v-if="isCompact" ref="treeToggle" type="button" class="btn btn-ghost btn-icon" :aria-expanded="treeOpen" aria-controls="wiki-tree" :aria-label="$t('wiki.pages')" data-testid="wiki-tree-toggle" @click="treeOpen = !treeOpen"><Menu class="h-5 w-5" /></button>
         <BookOpen class="h-5 w-5 shrink-0 text-mnema-accent max-md:hidden" aria-hidden="true" />
         <h2 :id="titleId" class="text-lg font-semibold text-mnema-text">{{ $t('wiki.title') }}</h2>
         <label class="relative ml-auto flex min-w-0 max-w-xs flex-1 items-center">
@@ -82,7 +94,8 @@ function search(event: Event) {
       </header>
 
       <div class="relative flex min-h-0 flex-1">
-        <WikiTree :class="['w-64 shrink-0 border-r border-mnema-hairline bg-mnema-raised/60', isCompact ? 'absolute inset-y-0 left-0 z-10 w-72 max-w-[85%] bg-mnema-raised shadow-xl' : '', isCompact && !treeOpen ? 'hidden' : '']" />
+        <button v-if="isCompact && treeOpen" type="button" class="absolute inset-0 z-5 bg-black/40" tabindex="-1" aria-hidden="true" data-testid="wiki-tree-scrim" @click="treeOpen = false"></button>
+        <WikiTree id="wiki-tree" ref="tree" :class="['w-64 shrink-0 border-r border-mnema-hairline bg-mnema-raised/60', isCompact ? 'absolute inset-y-0 left-0 z-10 w-72 max-w-[85%] bg-mnema-raised shadow-xl' : '', isCompact && !treeOpen ? 'hidden' : '']" />
         <main class="min-w-0 flex-1 overflow-y-auto" data-testid="wiki-main">
           <WikiSearch v-if="location.mode === 'search'" />
           <WikiDeleted v-else-if="location.mode === 'deleted'" />
