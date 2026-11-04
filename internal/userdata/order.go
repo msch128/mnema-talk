@@ -62,9 +62,11 @@ const (
 	OrderScrubReports
 	OrderTalkLeader
 	OrderPinnedBy
-	OrderModerationBy
+	OrderBannedBy
+	OrderTimeoutBy
 	OrderEmoji
-	OrderDiscordImportRefs
+	OrderDiscordImportCreatedBy
+	OrderDiscordImportUndoneBy
 	OrderLoginUnlock
 	OrderAuditFlag
 	OrderScrubAudit
