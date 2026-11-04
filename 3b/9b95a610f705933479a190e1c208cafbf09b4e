@@ -1,0 +1,19 @@
+internal/wiki/store_edit.go
+  s_b8f19a143fd126::t_947dd20c8f6faa 213,227-244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3b9b95a610f705933479a190e1c208cafbf09b4e",
+  "prompts": {},
+  "sessions": {
+    "s_b8f19a143fd126": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab1c726eddbddca55",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
