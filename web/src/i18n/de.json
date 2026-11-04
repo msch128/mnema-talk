@@ -261,6 +261,7 @@
       "srvThePageIsNotDeleted": "Die Seite ist nicht gelöscht.",
       "srvTheTextMustBeValid": "Der Text muss gültiger Text ohne NUL-Zeichen sein.",
       "srvTheWikiHoldsAtMost": "Das Wiki fasst höchstens 500 Seiten.",
+      "srvTheWikiHoldsAtMost2": "Das Wiki fasst höchstens 200 Bilder.",
       "srvThisPageIsLockedOnly": "Diese Seite ist gesperrt. Nur wer das Wiki verwaltet, kann sie ändern.",
       "srvWaitForAReplyBefore": "Warte auf eine Antwort, bevor du mehr als {a} Nachrichten sendest.",
       "srvWikiPageNotFound": "Diese Wiki-Seite wurde nicht gefunden.",
@@ -3359,7 +3360,8 @@
         "move": "Wiki-Seite verschoben oder umbenannt",
         "delete": "Wiki-Seite gelöscht",
         "restore": "Wiki-Seite oder Version wiederhergestellt",
-        "lock": "Wiki-Seite gesperrt oder entsperrt"
+        "lock": "Wiki-Seite gesperrt oder entsperrt",
+        "image": "Wiki-Bild hochgeladen"
       }
     },
     "hideSignIns": "Anmeldungen ausblenden",
@@ -4901,6 +4903,10 @@
     "toolQuote": "Zitat",
     "toolLink": "Link",
     "toolWikiLink": "Link auf eine Wiki-Seite",
+    "toolImage": "Bild einfügen",
+    "imageUploading": "Bild wird hochgeladen …",
+    "imageFailed": "Das Bild konnte nicht hochgeladen werden.",
+    "notAPicture": "Es lassen sich nur Bilder als PNG, JPEG, GIF und WebP einfügen.",
     "write": "Schreiben",
     "preview": "Vorschau",
     "textLabel": "Text der Seite (Markdown)",

@@ -104,7 +104,7 @@ no accounts on someone else's platform.
 - **Forum channels.** Structured discussions with posts as cards: coloured, ordered and moderator-only tags that authors can change afterwards, required tags and guidelines per forum, search, tag filter and sorting, pinned and solved posts, locks, unread markers with a jump to the first unread reply, and a first message with formatting and files ([doc/forums.md](doc/forums.md)).
 - **Wiki.** A shared handbook of pages in a tree beside *Events*, with a revision
   for every save, a history with a diff, two-click restore of an earlier version,
-  page locks and search. Everybody reads; writing needs the *Edit the wiki*
+  page locks, pictures and search. Everybody reads; writing needs the *Edit the wiki*
   permission, which only roles you give it hold, so a new member cannot wipe pages
   ([doc/wiki.md](doc/wiki.md)).
 - **Community events.** Scheduled events with a description, a cover image, a

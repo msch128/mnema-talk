@@ -481,6 +481,7 @@
   "the time is too far ahead (one year at most)",
   "the time must be in the future",
   "the update check is disabled (UPDATE_CHECK_ENABLED=false)",
+  "the wiki holds at most 200 pictures",
   "the wiki holds at most 500 pages",
   "there can be at most %d role templates",
   "there is no export to download",

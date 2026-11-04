@@ -80,6 +80,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['the time is too far ahead (one year at most)', 'srvTheTimeIsTooFar'],
   ['the time must be in the future', 'srvTheTimeMustBeIn'],
   ['the update check is disabled (UPDATE_CHECK_ENABLED=false)', 'srvTheUpdateCheckIsDisabled'],
+  ['the wiki holds at most 200 pictures', 'srvTheWikiHoldsAtMost2'],
   ['the wiki holds at most 500 pages', 'srvTheWikiHoldsAtMost'],
   ['there can be at most %d role templates', 'srvThereCanBeAtMost'],
   ['there is no export to download', 'exportNone', []],

@@ -7,10 +7,11 @@ import { pendingConfirm } from '../lib/confirm'
 import { currentRoute, navigate } from '../lib/router'
 import { wikiDirty } from '../lib/wikiNav'
 import { loadWikiDraft, saveWikiDraft, wikiDraftKey } from '../lib/wikiDraft'
+import { useToastStore } from '../stores/toast'
 import { useWikiStore } from '../stores/wiki'
 import { EDIT_WIKI, grantWiki, summary, VIEW_WIKI, wikiPage } from '../wiki.fixture'
 
-const api = vi.hoisted(() => ({ createWikiPage: vi.fn(), changeWikiPage: vi.fn(), fetchWikiPage: vi.fn(), fetchWikiTree: vi.fn() }))
+const api = vi.hoisted(() => ({ createWikiPage: vi.fn(), changeWikiPage: vi.fn(), fetchWikiPage: vi.fn(), fetchWikiTree: vi.fn(), uploadWikiImage: vi.fn() }))
 vi.mock('../lib/wikiApi', () => api)
 
 const STALE = 'the page changed since you opened it; open it again and apply your change to the new version'
@@ -355,5 +356,81 @@ describe('an unsaved draft', () => {
     const event = new Event('beforeunload', { cancelable: true })
     window.dispatchEvent(event)
     expect(event.defaultPrevented).toBe(false)
+  })
+})
+
+describe('pictures', () => {
+  const URL = '/api/media/0b7e1c52-9a43-4f5e-8c0d-3d1f2a9b6e77'
+  const png = (name = 'Site map.png') => new File(['x'], name, { type: 'image/png' })
+
+  it('uploads a picked file and puts its Markdown where the cursor is', async () => {
+    api.uploadWikiImage.mockResolvedValue({ id: 'i', url: URL, markdown: `![](${URL})`, size: 1 })
+    const { w, field } = open(wikiPage({ content: 'before after' }))
+    const area = field('text-input').element as HTMLTextAreaElement
+    area.setSelectionRange(7, 7)
+    const input = field('image-input').element as HTMLInputElement
+    Object.defineProperty(input, 'files', { value: [png()], configurable: true })
+    await field('image-input').trigger('change')
+    await flushPromises()
+    expect(api.uploadWikiImage).toHaveBeenCalledTimes(1)
+    expect(area.value).toBe(`before ![Site map](${URL})after`)
+    expect(w.find('[data-testid="wiki-uploading"]').exists()).toBe(false)
+  })
+
+  it('opens the file picker from the toolbar', async () => {
+    const { field } = open(null)
+    const click = vi.spyOn(field('image-input').element as HTMLInputElement, 'click')
+    await field('image-button').trigger('click')
+    expect(click).toHaveBeenCalled()
+  })
+
+  it('takes a pasted or dropped picture instead of the default, and leaves pasted text alone', async () => {
+    api.uploadWikiImage.mockResolvedValue({ id: 'i', url: URL, markdown: '', size: 1 })
+    const { field } = open(null)
+    const paste = new Event('paste', { cancelable: true }) as ClipboardEvent
+    Object.defineProperty(paste, 'clipboardData', { value: { files: [png('shot.png')] } })
+    field('text-input').element.dispatchEvent(paste)
+    expect(paste.defaultPrevented).toBe(true)
+    const drop = new Event('drop', { cancelable: true }) as DragEvent
+    Object.defineProperty(drop, 'dataTransfer', { value: { files: [png('b.png')] } })
+    field('text-input').element.dispatchEvent(drop)
+    expect(drop.defaultPrevented).toBe(true)
+    await flushPromises()
+    expect(api.uploadWikiImage).toHaveBeenCalledTimes(2)
+    const text = new Event('paste', { cancelable: true }) as ClipboardEvent
+    Object.defineProperty(text, 'clipboardData', { value: { files: [] } })
+    field('text-input').element.dispatchEvent(text)
+    expect(text.defaultPrevented).toBe(false)
+  })
+
+  it('cannot be saved while a picture is on its way', async () => {
+    let done!: (v: unknown) => void
+    api.uploadWikiImage.mockReturnValue(new Promise(r => { done = r }))
+    const { w, field } = open(null)
+    await field('title-input').setValue('Maps')
+    const input = field('image-input').element as HTMLInputElement
+    Object.defineProperty(input, 'files', { value: [png()], configurable: true })
+    await field('image-input').trigger('change')
+    expect(w.find('[data-testid="wiki-uploading"]').exists()).toBe(true)
+    expect(field('save').attributes('disabled')).toBeDefined()
+    done({ id: 'i', url: URL, markdown: '', size: 1 })
+    await flushPromises()
+    expect(field('save').attributes('disabled')).toBeUndefined()
+  })
+
+  it('says why a picture was not added', async () => {
+    const { field } = open(null)
+    const input = field('image-input').element as HTMLInputElement
+    Object.defineProperty(input, 'files', { value: [new File(['x'], 'a.svg', { type: 'image/svg+xml' })], configurable: true })
+    await field('image-input').trigger('change')
+    expect(api.uploadWikiImage).not.toHaveBeenCalled()
+    api.uploadWikiImage.mockRejectedValue(new ApiError(409, 'CONFLICT', 'the wiki holds at most 200 pictures'))
+    Object.defineProperty(input, 'files', { value: [png()], configurable: true })
+    await field('image-input').trigger('change')
+    await flushPromises()
+    const toasts = useToastStore().toasts
+    expect(toasts).toHaveLength(2)
+    expect(toasts.every(t => t.type === 'error')).toBe(true)
+    expect((field('text-input').element as HTMLTextAreaElement).value).toBe('')
   })
 })

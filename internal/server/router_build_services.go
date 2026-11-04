@@ -71,10 +71,12 @@ func (c *components) newLater(pusher later.Notifier) {
 
 func (c *components) newWiki() {
 	c.wikiH = &wiki.Handler{
-		Store:      wiki.NewStore(c.d.DB),
-		Perms:      c.permSvc,
-		Audit:      c.auditLog,
-		WriteLimit: httpx.NewRateLimiter(wiki.EditsPerMinute, time.Minute).Named("wiki"),
+		Store:       wiki.NewStore(c.d.DB),
+		MediaStore:  c.d.Store,
+		MediaBucket: c.cfg.S3Bucket,
+		Perms:       c.permSvc,
+		Audit:       c.auditLog,
+		WriteLimit:  httpx.NewRateLimiter(wiki.EditsPerMinute, time.Minute).Named("wiki"),
 	}
 }
 

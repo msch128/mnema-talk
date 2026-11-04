@@ -19,3 +19,19 @@ export function wikiLinkRule(pages: readonly WikiPageSummary[]): TextRule {
     plain: m => (m[2] ?? m[1] ?? '').trim()
   }
 }
+
+const MEDIA_ID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+/**
+ * `![alt](/api/media/<id>)`: a picture uploaded to the wiki. Only that address
+ * shape becomes an image (the renderer allows no other source); anything else
+ * stays text. Linear: no nested quantifiers.
+ */
+export const wikiImageRule: TextRule = {
+  re: new RegExp(`!\\[([^\\[\\]\\n]{0,100})\\]\\((/api/media/${MEDIA_ID})\\)`, 'g'),
+  build(m) {
+    const alt = (m[1] ?? '').trim()
+    return [{ t: 'el', tag: 'img', attrs: { src: m[2] ?? '', alt, class: 'md-wikiimage', loading: 'lazy', draggable: 'false' }, c: [] }]
+  },
+  plain: m => (m[1] ?? '').trim()
+}

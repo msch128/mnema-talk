@@ -2,12 +2,12 @@
 // caller passes the slug as it is.
 import { api } from './api'
 import {
-  decodeWikiPage, decodeWikiRevision, decodeWikiTreeResponse, isWikiRevision, isWikiSearchHit,
-  type WikiPage, type WikiPageChange, type WikiPageInput, type WikiPageSummary, type WikiRevision, type WikiRestoreInput, type WikiSearchHit
+  decodeWikiImage, decodeWikiPage, decodeWikiRevision, decodeWikiTreeResponse, isWikiRevision, isWikiSearchHit,
+  type WikiImage, type WikiPage, type WikiPageChange, type WikiPageInput, type WikiPageSummary, type WikiRevision, type WikiRestoreInput, type WikiSearchHit
 } from '../types/rest'
 import { arrayDecoder } from '../types/validation'
 
-export type { WikiPage, WikiPageChange, WikiPageInput, WikiPageSummary, WikiRevision, WikiSearchHit }
+export type { WikiImage, WikiPage, WikiPageChange, WikiPageInput, WikiPageSummary, WikiRevision, WikiSearchHit }
 
 const decodeRevisions = arrayDecoder('wiki revisions', isWikiRevision)
 const decodeHits = arrayDecoder('wiki search hits', isWikiSearchHit)
@@ -59,4 +59,11 @@ export function restoreWikiRevision(slug: string, rev: number, input: WikiRestor
 
 export function searchWiki(query: string): Promise<WikiSearchHit[]> {
   return api(`/api/wiki/search?q=${encodeURIComponent(query)}`, { decode: decodeHits })
+}
+
+/** Stores a picture for use in pages; the answer holds the markdown to put in the text. */
+export function uploadWikiImage(file: File): Promise<WikiImage> {
+  const form = new FormData()
+  form.append('image', file)
+  return api('/api/wiki/images', { method: 'POST', form, decode: decodeWikiImage })
 }

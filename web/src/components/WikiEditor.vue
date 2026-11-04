@@ -4,9 +4,10 @@
 // save the server refuses because somebody saved meanwhile never overwrites
 // anything: the editor shows the difference and lets the writer decide.
 import { computed, nextTick, ref } from 'vue'
-import { Bold, Code, Heading2, Italic, Link, List, Quote, BookMarked } from '@lucide/vue'
+import { Bold, Code, Heading2, ImagePlus, Italic, Link, List, Quote, BookMarked } from '@lucide/vue'
 import { applyEdit, type EditAction } from '../lib/wikiEditorActions'
 import { MAX_BYTES, useWikiEditor } from '../composables/useWikiEditor'
+import { useWikiImages } from '../composables/useWikiImages'
 import { deriveSlug } from '../lib/wikiSlug'
 import { WIKI_FIELD as FIELD } from '../lib/wikiUi'
 import { goWiki } from '../lib/wikiNav'
@@ -21,6 +22,8 @@ const editor = useWikiEditor(props.page, props.parentId ?? null)
 const { title, content, summary, slug, parent, error, busy, theirs, restored, bytes, tooLong, canSave } = editor
 const area = ref<HTMLTextAreaElement | null>(null)
 const preview = ref(false)
+const picker = ref<HTMLInputElement | null>(null)
+const images = useWikiImages(area, content)
 
 const TOOLS: { action: EditAction; icon: typeof Bold; key: string }[] = [
   { action: 'heading', icon: Heading2, key: 'wiki.toolHeading' }, { action: 'bold', icon: Bold, key: 'wiki.toolBold' },
@@ -43,6 +46,12 @@ function depth(id: string): number {
     at = up ? wiki.pages.find(p => p.id === up) : undefined
   }
   return n
+}
+
+function picked(event: Event) {
+  const input = event.target as HTMLInputElement
+  void images.addFiles([...(input.files ?? [])])
+  input.value = ''
 }
 
 async function tool(action: EditAction) {
@@ -88,6 +97,8 @@ function cancel() {
 
     <div class="flex flex-wrap items-center gap-1" role="toolbar" :aria-label="$t('wiki.toolbar')">
       <button v-for="tl in TOOLS" :key="tl.action" type="button" :data-tool="tl.action" class="btn btn-ghost btn-icon btn-sm" :aria-label="$t(tl.key)" v-tooltip="$t(tl.key)" :disabled="preview" @click="tool(tl.action)"><component :is="tl.icon" class="h-4 w-4" /></button>
+      <button type="button" class="btn btn-ghost btn-icon btn-sm" :aria-label="$t('wiki.toolImage')" v-tooltip="$t('wiki.toolImage')" :disabled="preview" data-testid="wiki-image-button" @click="picker?.click()"><ImagePlus class="h-4 w-4" /></button>
+      <input ref="picker" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple class="hidden" tabindex="-1" aria-hidden="true" data-testid="wiki-image-input" @change="picked" />
       <button type="button" class="btn btn-ghost btn-sm ml-auto md:hidden" :aria-pressed="preview" data-testid="wiki-preview-toggle" @click="preview = !preview">{{ $t(preview ? 'wiki.write' : 'wiki.preview') }}</button>
     </div>
 
@@ -99,6 +110,9 @@ function cancel() {
         spellcheck="true"
         :aria-label="$t('wiki.textLabel')"
         data-testid="wiki-text-input"
+        @paste="images.onPaste"
+        @drop="images.onDrop"
+        @dragover.prevent
       ></textarea>
       <div :class="['min-h-64 overflow-auto rounded-md border border-mnema-border bg-mnema-canvas/40 p-3', preview ? '' : 'max-md:hidden']" data-testid="wiki-preview" :aria-label="$t('wiki.preview')">
         <MarkdownContent v-if="content" :content="content" :previews="false" :wiki-pages="wiki.live" />
@@ -108,6 +122,7 @@ function cancel() {
 
     <div class="flex flex-wrap items-center gap-2 text-xs text-mnema-tertiary">
       <span :class="tooLong ? 'text-mnema-danger' : ''" data-testid="wiki-size" :role="tooLong ? 'alert' : undefined">{{ tooLong ? $t('wiki.tooLong', { kb: MAX_BYTES / 1024 }) : $t('wiki.size', { used: Math.ceil(bytes / 1024), kb: MAX_BYTES / 1024 }) }}</span>
+      <span v-if="images.uploading.value > 0" role="status" data-testid="wiki-uploading">{{ $t('wiki.imageUploading') }}</span>
     </div>
 
     <label class="flex flex-col gap-1 text-sm">
@@ -127,7 +142,7 @@ function cancel() {
 
     <p v-if="error" class="text-sm text-mnema-danger" role="alert" data-testid="wiki-error">{{ error }}</p>
     <div class="flex gap-2 border-t border-mnema-hairline pt-3">
-      <button type="submit" class="btn btn-primary" :disabled="!canSave" data-testid="wiki-save">{{ $t('common.save') }}</button>
+      <button type="submit" class="btn btn-primary" :disabled="!canSave || images.uploading.value > 0" data-testid="wiki-save">{{ $t('common.save') }}</button>
       <button type="button" class="btn btn-ghost" data-testid="wiki-cancel" @click="cancel">{{ $t('common.cancel') }}</button>
     </div>
   </form>

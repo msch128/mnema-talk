@@ -9,6 +9,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -17,6 +18,9 @@ type Handler struct {
 	Store *Store
 	Perms *perm.Service
 	Audit *audit.Log
+	// MediaStore and MediaBucket keep the pictures; nil MediaStore turns the upload off.
+	MediaStore  media.Store
+	MediaBucket string
 	// WriteLimit caps the writes of one member; nil means no cap.
 	WriteLimit *httpx.RateLimiter
 }
