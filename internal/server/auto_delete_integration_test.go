@@ -244,8 +244,8 @@ func TestAutoDeleteLoopSweepsOnScheduleAndStops(t *testing.T) {
 	}
 }
 
-// A sweep over a channel whose messages cannot be deleted reports nothing as
-// done: no audit entry claims a deletion, and the message stays.
+// A sweep over a channel whose messages cannot be deleted fails (so the job
+// counts as failed) and reports nothing as done: no audit entry claims a deletion, and the message stays.
 func TestAutoDeleteSweepThatFailsKeepsMessagesAndAuditsNothing(t *testing.T) {
 	f := newAutoDeleteFixture(t)
 	id := f.a.send(f.alice, f.channel, "old")
@@ -264,7 +264,10 @@ func TestAutoDeleteSweepThatFailsKeepsMessagesAndAuditsNothing(t *testing.T) {
 		_, _ = f.a.db.Exec(context.Background(), `DROP TRIGGER IF EXISTS refuse_message_delete ON messages`)
 		_, _ = f.a.db.Exec(context.Background(), `DROP FUNCTION IF EXISTS refuse_message_delete()`)
 	})
-	f.sweep(t)
+	d := &chat.AutoDeleter{DB: f.a.db, Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
+	if err := d.Sweep(ctx); err == nil {
+		t.Fatal("the sweep reported success although a channel failed")
+	}
 	if !f.exists(id) {
 		t.Fatal("the message went although the delete was refused")
 	}
