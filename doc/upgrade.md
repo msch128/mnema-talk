@@ -163,7 +163,20 @@ of the pre-update backup (see "Rollback" above).
 | 0076 | `messages_channel_unread_idx`: covering index on `messages (channel_id, created_at) INCLUDE (user_id, parent_id, reply_to_id)` for the unread counts. Adds an index only; building it briefly slows message writes on a very large database. |
 | 0077 | Drops the unused native-client tables (`native_session_families`, `native_access_tokens`, `native_refresh_tokens`, `native_ciphertext_events`) of migrations 0015 and 0016. Nothing wrote them any more. |
 | 0078 | Drops the redundant index `idx_messages_channel_created`, covered by `messages_channel_unread_idx` (0076). |
+| 0079 | `channels.dm_id`: a Talk started from a direct message belongs to that conversation and goes with it (see [Talks](talks.md)). Adds a column and an index only. |
+| 0080 | `instance_settings.community_icon_version` and `community_icon_updated_at`: the community icon the Owner or an administrator uploads. Empty by default, so the Mnema icon stays. |
+| 0081 | `media.staged` and `media.position`: several attachments per message. Files the composer uploaded but no message claimed are swept away after a timeout. Existing media keep `staged = false`. |
 | 0082 | Forum rework: `forum_tags.color`, `forum_tags.position` (existing tags keep their name order) and `forum_tags.moderated`, `forum_settings` (require a tag, guidelines), `messages.is_resolved` and `forum_post_reads` (per-post read markers). Adds columns and tables only; existing rows keep the defaults. See [Forum channels](forums.md). |
+| 0083 | Raid protection settings on `instance_settings`: sign-up throttle, lockdown and the minimum age before a new member may write or react (see [moderation](moderation.md)). The defaults leave all of it off. |
+| 0084 | `instance_settings.vanity_slug` and `vanity_accepts_signups`: the vanity invite link served at `/join/<slug>`. Empty by default. |
+| 0085 | `roles.self_assignable`: roles members may add to or remove from their own account. Off for every existing role (see [Roles and permissions](roles-and-permissions.md)). |
+| 0086 | `event_roles` and `event_signups`: roles with slots and a waitlist for community events (see [events](events.md)). Adds tables only. |
+| 0087 | `event_comments` and `event_comment_mutes`: a flat discussion under each event (see [events](events.md)). Adds tables only. |
+| 0088 | `event_series`: recurring events; occurrences are ordinary events linked to their series (see [events](events.md)). Existing events stay single. |
+| 0089 | The wiki tables: pages, revisions and redirects, one tree per community. Adds tables only. |
+| 0090 | `wiki_images`: marks the media rows used as wiki pictures. Adds a table and an index only. |
+
+The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 
 #### Speaking URLs
 
