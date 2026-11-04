@@ -3,6 +3,7 @@ package sfu
 import (
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -292,6 +293,7 @@ func TestForwardsVideoAndRequestsKeyframeFromPublisher(t *testing.T) {
 }
 
 func TestRejoinKeepsTheNewPeer(t *testing.T) {
+	logs := captureSFULog(t)
 	s := newTestSFU(t)
 	room := uuid.New()
 	user := uuid.New()
@@ -308,8 +310,14 @@ func TestRejoinKeepsTheNewPeer(t *testing.T) {
 	}
 
 	// The old connection's close callback and a late unregister of the old
-	// socket must not tear down the replacement.
-	time.Sleep(200 * time.Millisecond)
+	// socket must not tear down the replacement. Wait until the old connection
+	// has reported its close, which is when the callback runs.
+	waitSFUCondition(t, "the replaced connection to close", func() bool {
+		return old.PC.ConnectionState() == webrtc.PeerConnectionStateClosed
+	})
+	waitSFUCondition(t, "the close callback to have run", func() bool {
+		return strings.Contains(logs.String(), "user="+user.String()+" state=closed")
+	})
 	s.RemovePeer(room, old)
 
 	if got := r.GetPeer(user); got != fresh {

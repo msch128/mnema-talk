@@ -63,7 +63,7 @@ func TestReceiveScreenLayerRefusals(t *testing.T) {
 	// The first layer makes the group, a second one joins it.
 	r.receiveScreenLayer(peer, newIdleRemote(t), "t", 11, codec, 0)
 	r.receiveScreenLayer(peer, newIdleRemote(t), "t", 12, codec, 1)
-	waitFor(t, func() bool { return r.sourceCount(user, SourceScreen) == 2 })
+	waitSFUCondition(t, "both screen layers to be published", func() bool { return r.sourceCount(user, SourceScreen) == 2 })
 	r.mu.RLock()
 	g := r.groups[user]
 	r.mu.RUnlock()
@@ -297,10 +297,10 @@ func TestLeavingReleasesLayeredViewerTracks(t *testing.T) {
 	r.mu.RLock()
 	g := r.groups[pub.id]
 	r.mu.RUnlock()
-	waitFor(t, func() bool { return g.viewerFor(viewer.id) != nil })
+	waitSFUCondition(t, "the viewer's track to join the group", func() bool { return g.viewerFor(viewer.id) != nil })
 
 	s.RemovePeer(room, viewer.peer)
-	waitFor(t, func() bool { return g.viewerFor(viewer.id) == nil })
+	waitSFUCondition(t, "the viewer's track to leave the group", func() bool { return g.viewerFor(viewer.id) == nil })
 	// The publisher leaving ends the group.
 	s.RemovePeer(room, pub.peer)
 	if !g.superseded.Load() {

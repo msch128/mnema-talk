@@ -29,16 +29,11 @@ func TestNewestDeliversInOrderAndCoalesces(t *testing.T) {
 		out.send(v, deliver)
 	}
 	close(block)
-	deadline := time.Now().Add(5 * time.Second)
-	for {
+	waitSFUCondition(t, "both deliveries", func() bool {
 		mu.Lock()
-		n := len(got)
-		mu.Unlock()
-		if n >= 2 || time.Now().After(deadline) {
-			break
-		}
-		time.Sleep(time.Millisecond)
-	}
+		defer mu.Unlock()
+		return len(got) >= 2
+	})
 	mu.Lock()
 	defer mu.Unlock()
 	if len(got) != 2 || got[0] != 1 || got[1] != 9 {
@@ -59,7 +54,12 @@ func TestNewestRestartsAfterGoingIdle(t *testing.T) {
 		case <-time.After(5 * time.Second):
 			t.Fatalf("%q never delivered", v)
 		}
-		// Let the goroutine find nothing pending and stop.
-		time.Sleep(10 * time.Millisecond)
+		// Let the goroutine find nothing pending and stop, so the next send
+		// has to start a new one.
+		waitSFUCondition(t, "the delivery goroutine to stop", func() bool {
+			out.mu.Lock()
+			defer out.mu.Unlock()
+			return !out.running
+		})
 	}
 }

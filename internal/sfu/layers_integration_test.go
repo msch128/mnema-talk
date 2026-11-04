@@ -318,30 +318,15 @@ func TestLayersAreAnnouncedAndWithdrawn(t *testing.T) {
 	if got := r.ScreenLayers()[pub.id]; len(got) != 2 || got[1].Height != 720 {
 		t.Fatalf("ScreenLayers = %v", got)
 	}
-	waitFor(t, func() bool { mu.Lock(); defer mu.Unlock(); return len(announced) == 1 && len(announced[0]) == 2 })
+	waitSFUCondition(t, "the declared layers to be announced", func() bool { mu.Lock(); defer mu.Unlock(); return len(announced) == 1 && len(announced[0]) == 2 })
 
 	r.RemoveUserSource(pub.id, SourceScreen)
-	waitFor(t, func() bool {
+	waitSFUCondition(t, "the layers to be withdrawn", func() bool {
 		mu.Lock()
 		defer mu.Unlock()
 		return len(announced) >= 2 && len(announced[len(announced)-1]) == 0
 	})
 	if len(r.ScreenLayers()) != 0 {
 		t.Fatal("layers of a stopped share are still listed")
-	}
-}
-
-func waitFor(t *testing.T, cond func() bool) {
-	t.Helper()
-	timeout := time.After(10 * time.Second)
-	for {
-		if cond() {
-			return
-		}
-		select {
-		case <-timeout:
-			t.Fatal("condition never became true")
-		case <-time.After(10 * time.Millisecond):
-		}
 	}
 }

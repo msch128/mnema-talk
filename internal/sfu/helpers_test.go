@@ -1,6 +1,12 @@
 package sfu
 
 import (
+	"bytes"
+	"log/slog"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
 )
@@ -35,4 +41,52 @@ func (r *Room) ScreenQuality(viewer, publisher uuid.UUID) (QualityState, bool) {
 		return QualityState{}, false
 	}
 	return vt.state(), true
+}
+
+// synchronizedLogCapture collects log output. SFU callbacks log
+// asynchronously, so a test that reads the log while they run needs the same
+// lock the handler writes under.
+type synchronizedLogCapture struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *synchronizedLogCapture) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *synchronizedLogCapture) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+// captureSFULog redirects the default logger into the returned capture for the
+// rest of the test.
+func captureSFULog(t *testing.T) *synchronizedLogCapture {
+	t.Helper()
+	buf := &synchronizedLogCapture{}
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(old) })
+	return buf
+}
+
+// waitSFUCondition polls condition until it holds and fails the test, naming
+// label, if it does not within ten seconds.
+func waitSFUCondition(t *testing.T, label string, condition func() bool) {
+	t.Helper()
+	timeout := time.After(10 * time.Second)
+	for {
+		if condition() {
+			return
+		}
+		select {
+		case <-timeout:
+			t.Fatalf("timed out waiting for %s", label)
+		case <-time.After(time.Millisecond):
+		}
+	}
 }

@@ -3,7 +3,6 @@ package sfu
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
 	"sync"
 	"testing"
@@ -12,15 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
 )
-
-func captureLogs(t *testing.T) *synchronizedLogCapture {
-	t.Helper()
-	var buf synchronizedLogCapture
-	prev := slog.Default()
-	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
-	t.Cleanup(func() { slog.SetDefault(prev) })
-	return &buf
-}
 
 func candidate(i int) webrtc.ICECandidateInit {
 	return webrtc.ICECandidateInit{Candidate: fmt.Sprintf("candidate:%d 1 udp 2130706431 192.0.2.%d 50000 typ host", i, i)}
@@ -173,7 +163,7 @@ func TestEarlyClientCandidatesAreAppliedWithTheAnswer(t *testing.T) {
 	}
 	// Pion's agent takes a candidate on a goroutine of its own, so it shows up
 	// in the statistics shortly after AddICECandidate returned, not with it.
-	waitFor(t, func() bool {
+	waitSFUCondition(t, "the early candidate in the ICE statistics", func() bool {
 		for _, st := range peer.PC.GetStats() {
 			if cs, ok := st.(webrtc.ICECandidateStats); ok && cs.Type == webrtc.StatsTypeRemoteCandidate {
 				return true
@@ -184,7 +174,7 @@ func TestEarlyClientCandidatesAreAppliedWithTheAnswer(t *testing.T) {
 }
 
 func TestEarlyClientCandidatesAreBounded(t *testing.T) {
-	logs := captureLogs(t)
+	logs := captureSFULog(t)
 	s := newTestSFU(t)
 	_, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil)
 	if err != nil {
@@ -206,7 +196,7 @@ func TestEarlyClientCandidatesAreBounded(t *testing.T) {
 // A rejected candidate is logged at WARN with a reason, without its address,
 // and a flood of them does not flood the log.
 func TestRejectedRemoteCandidatesAreLoggedRateLimited(t *testing.T) {
-	logs := captureLogs(t)
+	logs := captureSFULog(t)
 	s := newTestSFU(t)
 	c := newClient(t)
 	offers := make(chan webrtc.SessionDescription, 4)
@@ -257,7 +247,7 @@ func TestRejectedRemoteCandidatesAreLoggedRateLimited(t *testing.T) {
 }
 
 func TestEarlyCandidateRejectedWhenApplied(t *testing.T) {
-	logs := captureLogs(t)
+	logs := captureSFULog(t)
 	s := newTestSFU(t)
 	_, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil)
 	if err != nil {
@@ -339,7 +329,7 @@ func TestVetRemoteCandidate(t *testing.T) {
 }
 
 func TestRemoteCandidateBudgetHoldsAfterTheAnswer(t *testing.T) {
-	logs := captureLogs(t)
+	logs := captureSFULog(t)
 	s := newTestSFU(t)
 	c := newClient(t)
 	offers := make(chan webrtc.SessionDescription, 4)
@@ -386,7 +376,7 @@ func TestLoopbackCandidatesFollowTheAnnouncement(t *testing.T) {
 // A candidate Pion refuses although it was vetted (here: the connection is
 // gone) is returned and logged.
 func TestLiveCandidateRefusedByPion(t *testing.T) {
-	logs := captureLogs(t)
+	logs := captureSFULog(t)
 	s := newTestSFU(t)
 	c := newClient(t)
 	offers := make(chan webrtc.SessionDescription, 4)
