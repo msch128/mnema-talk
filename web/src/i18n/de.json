@@ -4853,6 +4853,7 @@
     "lastEdited": "Zuletzt bearbeitet von {name} {when}",
     "lastEditedFormer": "Zuletzt bearbeitet {when} von einem früheren Mitglied",
     "revisionNumber": "Version {n}",
+    "sizeKb": "{kb} KB",
     "edit": "Bearbeiten",
     "history": "Verlauf",
     "copyLink": "Link kopieren",

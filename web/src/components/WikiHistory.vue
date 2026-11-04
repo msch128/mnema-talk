@@ -44,7 +44,7 @@ const diffAgainst = computed(() => h.previous.value ?? '')
           >
             <span class="flex items-center justify-between gap-2">
               <span class="font-medium text-mnema-text">{{ $t('wiki.revisionNumber', { n: r.rev }) }}<span v-if="r.rev === h.latest.value" class="ml-1.5 rounded bg-mnema-accent/20 px-1.5 text-xs text-mnema-accent">{{ $t('wiki.current') }}</span></span>
-              <span class="text-xs text-mnema-tertiary">{{ Math.max(1, Math.round(r.size / 1024)) }} KB</span>
+              <span class="text-xs text-mnema-tertiary">{{ $t('wiki.sizeKb', { kb: Math.max(1, Math.round(r.size / 1024)) }) }}</span>
             </span>
             <span class="truncate text-xs text-mnema-tertiary">{{ name(r) || $t('wiki.formerMember') }} · {{ dateTime(r.created_at, locale) }}</span>
             <span v-if="r.restored_from" class="text-xs text-mnema-muted">{{ $t('wiki.restoreOf', { n: r.restored_from }) }}</span>
