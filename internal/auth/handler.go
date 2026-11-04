@@ -98,6 +98,8 @@ type Handler struct {
 // client address while the account-wide lockout is active (10 → 4 guesses).
 const accountAttackWeight = 3
 
+// NewHandler builds the auth handler with every limiter at its production
+// setting; the limits and lockout tiers are explained where they are set below.
 func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 	h := &Handler{
 		Sessions:    s,
