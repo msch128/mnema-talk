@@ -19,9 +19,6 @@ const (
 	wsFailKept = 16
 )
 
-// cgnat is the shared address space of carrier-grade NAT (RFC 6598).
-var cgnat = netip.MustParsePrefix("100.64.0.0/10")
-
 // IsOutsideAddress reports whether a member reached the server from beyond
 // its own network: a global unicast address that is neither private, loopback,
 // link-local nor carrier-grade-NAT shared space.
@@ -30,7 +27,7 @@ func IsOutsideAddress(a netip.Addr) bool {
 	if !a.IsValid() || !a.IsGlobalUnicast() {
 		return false
 	}
-	return !a.IsPrivate() && !a.IsLoopback() && !a.IsLinkLocalUnicast() && !cgnat.Contains(a)
+	return !a.IsPrivate() && !a.IsLoopback() && !a.IsLinkLocalUnicast() && !IsCGNAT(a)
 }
 
 // RecordICEConnected notes that a media connection finished ICE with a peer
