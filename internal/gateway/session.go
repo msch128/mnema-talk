@@ -25,7 +25,11 @@ type session struct {
 	// startedAt orders the sessions of a bot.
 	startedAt time.Time
 
-	mu         sync.Mutex
+	mu sync.Mutex
+	// starting is true from the registration of an identifying session until
+	// its READY is queued: events published meanwhile are not part of the
+	// session, so that READY stays the first dispatch.
+	starting   bool
 	seq        int64
 	ring       []entry
 	conn       *connection
@@ -34,10 +38,33 @@ type session struct {
 
 // enqueue numbers an event, keeps it for RESUME and sends it to the live
 // connection. It never blocks: a connection that cannot keep up is closed and
-// can resume.
+// can resume. A session that has not sent READY yet takes no events.
 func (s *session) enqueue(name string, d json.RawMessage) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.starting {
+		return
+	}
+	s.pushLocked(name, d)
+}
+
+// enqueueReady queues READY, the first dispatch of a session, and opens the
+// session to events.
+func (s *session) enqueueReady(d json.RawMessage) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.starting = false
+	s.pushLocked("READY", d)
+}
+
+// accepting reports whether the session has a connection and is past READY.
+func (s *session) accepting() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.conn != nil && !s.starting
+}
+
+func (s *session) pushLocked(name string, d json.RawMessage) {
 	s.seq++
 	data := dispatch(s.seq, name, d)
 	if len(s.ring) >= bufferSize {

@@ -397,3 +397,27 @@ func TestRevokeEndsMatchingSessions(t *testing.T) {
 		t.Fatalf("sessions left: %v", g.sessions)
 	}
 }
+
+// A session that is still identifying takes no events and no interactions:
+// READY has to be its first dispatch.
+func TestStartingSessionTakesNothingBeforeReady(t *testing.T) {
+	g := New(Config{})
+	b := uuid.New()
+	s := &session{id: "s", botID: b, conn: newConnection(nil), starting: true}
+	g.register(s)
+	s.enqueue("MESSAGE_CREATE", json.RawMessage(`{}`))
+	if s.seq != 0 || len(s.conn.send) != 0 {
+		t.Fatalf("event queued before READY: seq %d", s.seq)
+	}
+	if g.DeliverInteraction(b, json.RawMessage(`{}`)) {
+		t.Fatal("an interaction was delivered to a session without READY")
+	}
+	s.enqueueReady(json.RawMessage(`{}`))
+	s.enqueue("MESSAGE_CREATE", json.RawMessage(`{}`))
+	if seqs := dataOf(t, s); len(seqs) != 2 || seqs[0] != 1 {
+		t.Fatalf("ring after READY: %v", seqs)
+	}
+	if !g.DeliverInteraction(b, json.RawMessage(`{}`)) {
+		t.Fatal("a session past READY takes interactions")
+	}
+}
