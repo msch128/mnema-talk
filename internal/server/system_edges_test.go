@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -30,11 +31,24 @@ func TestPublicConfigurationEmptyListsAndSTUN(t *testing.T) {
 	}
 }
 
+// fakeClock is a settable time source for the update checker.
+type fakeClock struct {
+	mu sync.Mutex
+	t  time.Time
+}
+
+func (c *fakeClock) set(t time.Time)     { c.mu.Lock(); c.t = t; c.mu.Unlock() }
+func (c *fakeClock) Add(d time.Duration) { c.mu.Lock(); c.t = c.t.Add(d); c.mu.Unlock() }
+func (c *fakeClock) Now() time.Time      { c.mu.Lock(); defer c.mu.Unlock(); return c.t }
+
 func TestUpdateBackoffIsReportedAndEnforced(t *testing.T) {
 	var calls atomic.Int32
 	remote := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { calls.Add(1); w.WriteHeader(http.StatusTooManyRequests) }))
 	defer remote.Close()
 	checker := update.NewChecker(remote.URL, "0.3.0")
+	var clock fakeClock
+	clock.set(time.Now())
+	checker.SetClock(clock.Now)
 	if err := checker.Check(context.Background()); err == nil {
 		t.Fatal("rate limit was accepted")
 	}
@@ -52,9 +66,7 @@ func TestUpdateBackoffIsReportedAndEnforced(t *testing.T) {
 	}
 	// The one-minute manual cooldown wins immediately after an attempt. Once
 	// it elapses the longer GitHub backoff must still prevent another request.
-	timer := time.NewTimer(update.ManualMinGap + 20*time.Millisecond)
-	defer timer.Stop()
-	<-timer.C
+	clock.Add(update.ManualMinGap + time.Second)
 	rec = httptest.NewRecorder()
 	if err := h.checkNow(rec, httptest.NewRequest(http.MethodPost, "/", nil)); err != nil {
 		t.Fatal(err)

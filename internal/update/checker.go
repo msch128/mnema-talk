@@ -117,6 +117,11 @@ func NewChecker(releaseURL, current string) *Checker {
 	}
 }
 
+// SetClock replaces the time source. Tests of the manual-check gap and of the
+// rate-limit backoff use it to move past minutes and hours without waiting;
+// call it before the checker is shared.
+func (c *Checker) SetClock(now func() time.Time) { c.now = now }
+
 // Snapshot returns what the last checks found.
 func (c *Checker) Snapshot() Snapshot {
 	c.mu.Lock()
