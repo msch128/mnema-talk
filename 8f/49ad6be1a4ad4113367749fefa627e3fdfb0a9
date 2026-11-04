@@ -1,0 +1,19 @@
+internal/server/auto_delete_integration_test.go
+  s_2f483d17207293::t_231bde93054a77 247-248,267-270
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f49ad6be1a4ad4113367749fefa627e3fdfb0a9",
+  "prompts": {},
+  "sessions": {
+    "s_2f483d17207293": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a553f67746b72de61",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
