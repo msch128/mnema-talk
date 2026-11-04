@@ -456,6 +456,7 @@ and the threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client
 | Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |
 | Product vocabulary (en/de) used in the UI and docs, and voice and network terms | [doc/glossary.md](doc/glossary.md) |
 | Moderation and the audit log | [doc/moderation.md](doc/moderation.md) |
+| Talks and Stages, forums, events, the wiki and the Discord import | [doc/talks.md](doc/talks.md), [doc/forums.md](doc/forums.md), [doc/events.md](doc/events.md), [doc/wiki.md](doc/wiki.md), [doc/import.md](doc/import.md) |
 | Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
 | Bots, the bot API and gateway | [doc/bots.md](doc/bots.md) |
 | What is public API and how it may change (1.0 stability promise) | [doc/api-stability.md](doc/api-stability.md) |
