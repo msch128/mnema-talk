@@ -54,6 +54,10 @@ var previousEraseSteps = []string{
 	`DELETE FROM event_comments WHERE user_id = $1`,
 	`DELETE FROM event_comment_mutes WHERE user_id = $1`,
 	`UPDATE events SET created_by = NULL WHERE created_by = $1`,
+	`UPDATE wiki_revisions SET editor_id = NULL WHERE editor_id = $1`,
+	`UPDATE wiki_pages SET created_by = NULL WHERE created_by = $1`,
+	`UPDATE wiki_pages SET updated_by = NULL WHERE updated_by = $1`,
+	`UPDATE wiki_pages SET deleted_by = NULL WHERE deleted_by = $1`,
 	`UPDATE message_reports SET reporter_id = NULL, note = '' WHERE reporter_id = $1`,
 	`UPDATE message_reports SET reported_user_id = NULL WHERE reported_user_id = $1`,
 	`UPDATE message_reports SET resolved_by = NULL WHERE resolved_by = $1`,
@@ -157,6 +161,7 @@ func TestArchiveFilesStayInTheOriginalOrder(t *testing.T) {
 		"rsvps.json",
 		"event_signups.json",
 		"event_comments.json",
+		"wiki_revisions.json",
 		"messages.json",
 	}
 	if len(names) != len(want) {

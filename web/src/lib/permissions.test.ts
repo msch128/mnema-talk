@@ -23,11 +23,12 @@ describe('permission bits', () => {
   })
 
   it('default @everyone to what members could always do', () => {
-    expect(DEFAULT_EVERYONE).toBe(990 + 4194304) // plus send_direct_messages
+    expect(DEFAULT_EVERYONE).toBe(990 + 4194304 + 536870912) // plus send_direct_messages and view_wiki
     for (const key of ['view_channel', 'send_messages', 'attach_files', 'add_reactions', 'mention_everyone', 'connect', 'speak', 'video'] as const) {
       expect(hasPermission(DEFAULT_EVERYONE, key)).toBe(true)
     }
-    for (const key of ['administrator', 'manage_messages', 'manage_channels', 'manage_roles', 'create_invites', 'manage_members'] as const) {
+    expect(hasPermission(DEFAULT_EVERYONE, 'view_wiki')).toBe(true)
+    for (const key of ['administrator', 'manage_messages', 'manage_channels', 'manage_roles', 'create_invites', 'manage_members', 'edit_wiki', 'manage_wiki'] as const) {
       expect(hasPermission(DEFAULT_EVERYONE, key)).toBe(false)
     }
   })

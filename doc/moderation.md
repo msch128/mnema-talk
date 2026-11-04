@@ -468,7 +468,7 @@ channel and category overwrites, channels and categories (create, edit,
 delete, duplicate, layout), invites (created, changed, revoked), members (disable,
 enable, end sessions, status line, password set or reset, login unlock, Talk
 kick), incoming and outgoing webhooks (create, edit, regenerate or rotate,
-delete), media pruning and deletion, and self-update. A test walks the router
+delete), media pruning and deletion, and self-update. The wiki is edited by members, not through `/api/admin`, so it records its own actions: `wiki.create`, `wiki.edit`, `wiki.move`, `wiki.delete`, `wiki.restore` and `wiki.lock` ([wiki](wiki.md#history-and-undoing-vandalism)). A test walks the router
 and fails when an admin route is missing from the table; an unlisted route is
 still recorded under a generic `admin.<method>` action. Refused or failed
 requests leave no entry. Reading the log is not recorded.

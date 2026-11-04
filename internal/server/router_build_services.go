@@ -14,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/moderation"
 	"github.com/msch128/mnema-talk/internal/poll"
 	"github.com/msch128/mnema-talk/internal/push"
+	"github.com/msch128/mnema-talk/internal/wiki"
 )
 
 // newChat builds the chat handler with its rate limits and the background
@@ -66,6 +67,15 @@ func (c *components) newModeration() {
 func (c *components) newLater(pusher later.Notifier) {
 	c.later = later.NewService(later.Service{DB: c.d.DB, Perms: c.permSvc, Events: c.pub, Online: c.hub, Push: pusher})
 	go c.later.Run(c.ctx)
+}
+
+func (c *components) newWiki() {
+	c.wikiH = &wiki.Handler{
+		Store:      wiki.NewStore(c.d.DB),
+		Perms:      c.permSvc,
+		Audit:      c.auditLog,
+		WriteLimit: httpx.NewRateLimiter(wiki.EditsPerMinute, time.Minute).Named("wiki"),
+	}
 }
 
 func (c *components) newEvents() {

@@ -14,7 +14,7 @@ import (
 // powers over other members' messages, Stages and events, and the bypass of
 // the new-member limits (raid protection). A member who may
 // choose a role must never be able to choose power over others with it.
-const SelfAssignBlocked = Elevated | ManageMessages | ManageStage | ManageEvents | BypassNewMemberLimits
+const SelfAssignBlocked = Elevated | ManageMessages | ManageStage | ManageEvents | BypassNewMemberLimits | EditWiki | ManageWiki
 
 var (
 	errSelfAssignElevated = httpx.ErrInvalidInput("a self-assignable role cannot have administrator, admin-area or moderation permissions")

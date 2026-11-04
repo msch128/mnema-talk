@@ -116,6 +116,7 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 		c.onboardH.Mount(j)
 		c.pushH.Mount(j)
 		c.eventsH.Mount(j)
+		c.wikiH.Mount(j)
 	})
 
 	// Link cards make outbound requests; they get their own budget.
