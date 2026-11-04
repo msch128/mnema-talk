@@ -1,0 +1,21 @@
+internal/server/system_edges_test.go
+  s_428e179215eed1::t_5c20b8868717d3 9,34-43,49-51,69
+internal/update/checker.go
+  s_428e179215eed1::t_7d21efc5abea40 120-124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f127543f22c1d7d90231a680acedf8185649163a",
+  "prompts": {},
+  "sessions": {
+    "s_428e179215eed1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4dcf8660e27bed8a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
