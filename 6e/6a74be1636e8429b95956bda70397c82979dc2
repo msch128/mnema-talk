@@ -1,0 +1,41 @@
+web/src/components/ActivityAndConnectionStats.test.ts
+  s_5bc0f1e67fcfa6::t_09de73e037bcc1 70-75
+web/src/components/ActivityStats.vue
+  s_c9daf452ffda44::t_4666ea51520c3c 38
+web/src/components/AdminMediaTab.vue
+  s_c9daf452ffda44::t_9dde7382f123a7 13,41
+web/src/components/AdminOpsPanel.vue
+  s_c9daf452ffda44::t_2de550011d8caa 10,57
+web/src/components/AdminStatusTab.vue
+  s_c9daf452ffda44::t_f53705d7e0f7e6 12,35
+web/src/components/AdminSystemTab.vue
+  s_c9daf452ffda44::t_429be9ce4820de 12,142
+web/src/lib/byteUnits.test.ts
+  s_c9daf452ffda44::t_73370ad6262e4a 1-25
+web/src/lib/byteUnits.ts
+  s_c9daf452ffda44::t_dc90e360234dbc 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6e6a74be1636e8429b95956bda70397c82979dc2",
+  "prompts": {},
+  "sessions": {
+    "s_5bc0f1e67fcfa6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aargon-verify-2e17111427570974",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_c9daf452ffda44": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a35e148bc761c22df",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
