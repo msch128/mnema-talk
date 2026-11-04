@@ -99,7 +99,7 @@ async function saveStatus(text = editStatus.value) {
       <span class="w-10 text-right text-xs tabular-nums text-mnema-tertiary">{{ charCount(editStatus) }}/{{ MAX_STATUS }}</span>
       <button
         type="submit"
-        :disabled="isSavingStatus"
+        :disabled="isSavingStatus || editStatus.trim() === (profileUser.status_text || '')"
         class="btn btn-primary btn-sm flex items-center gap-1"
       >
         <Loader2 v-if="isSavingStatus" class="h-3.5 w-3.5 animate-spin" />

@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref, toRaw } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { t } from '../i18n'
 import { platform } from '../lib/platform'
 import { Mic, MicOff, Headphones, HeadphoneOff, Monitor, X, Settings } from '@lucide/vue'
 import SwitchRow from './SwitchRow.vue'
 import GamingGameList from './GamingGameList.vue'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { checkGameName } from '../lib/gameList'
 import { chordFromKey, chordText, type GamingSettings, type GamingSnapshot } from '../lib/desktopGaming'
+const NO_CHORD = { key: 0, alt: false, control: false, shift: false }
+// A draft is reactive; the host takes plain data.
+const toPlain = (settings: GamingSettings): GamingSettings => JSON.parse(JSON.stringify(settings))
 const settingsOnly = platform.gamingSurface() === 'gaming-settings'
 const interactive = settingsOnly || platform.gamingSurface() === 'gaming-overlay'
 const snapshot = ref<GamingSnapshot | null>(null)
 const labels = computed(() => ({ overlay: t('gaming.overlay'), mute: t('gaming.mute'), deafen: t('gaming.deafen'), ptt: t('gaming.ptt') }))
 const editing = ref(settingsOnly)
-const draft = ref<GamingSettings | null>(null)
 const gameList = ref<InstanceType<typeof GamingGameList> | null>(null)
 const error = ref(false)
 // The last other app in front, offered by the host only when asked, for the person to confirm.
@@ -22,11 +27,34 @@ async function askCandidate() {
   try { const name = await platform.invoke<string | null>('desktop_gaming_candidate'); if (name) candidate.value = name; else addNote.value = 'none' }
   catch { addNote.value = 'failed' }
 }
-async function addCandidate() {
+// The confirmed app joins the draft like a typed name: nothing is stored before Save.
+function addCandidate() {
   const name = candidate.value
-  if (!name || !draft.value) return
-  try { draft.value.games = await platform.invoke<string[]>('desktop_gaming_add_game', { name }); candidate.value = null; addNote.value = null }
-  catch { candidate.value = null; addNote.value = 'failed' }
+  if (!name) return
+  const result = checkGameName(name, draft.games)
+  candidate.value = null
+  if ('problem' in result) { addNote.value = 'failed'; return }
+  draft.games = [...draft.games, result.name]; addNote.value = null
+}
+// The settings are one draft with one Save (doc/settings-ux.md): Save is on only
+// for a real change, and closing the window with one asks first. The host polls
+// every 200 ms; the draft keeps what is being edited and follows the rest.
+const stored = (): GamingSettings => snapshot.value?.settings ?? { enabled: true, sidepeek_opacity: 55, overlay: NO_CHORD, mute: NO_CHORD, deafen: NO_CHORD, ptt: NO_CHORD, games: [] }
+const form = useSettingsDraft<GamingSettings>({
+  source: stored,
+  normalisers: { games: normalise.set, sidepeek_opacity: normalise.count },
+  blocked: () => !snapshot.value,
+  save: async ({ draft: next, commit }) => {
+    await platform.invoke('desktop_gaming_settings', { settings: toPlain(next) })
+    commit(Object.keys(next) as (keyof GamingSettings)[])
+  }
+})
+const { draft } = form
+// A name still being typed counts as a change: Save adds it first, so it is not lost.
+const typed = computed(() => gameList.value?.typed === true)
+async function submit() {
+  if (typed.value && !gameList.value?.add()) return
+  await form.save()
 }
 const members = computed(() => interactive ? snapshot.value?.voice.members ?? [] : (snapshot.value?.voice.members ?? []).slice(0, 12))
 let timer: ReturnType<typeof setInterval> | undefined
@@ -34,25 +62,21 @@ let pending = false; let alive = true
 async function refresh() {
   if (!alive || pending) return
   pending = true
-  try { const next = await platform.invoke<GamingSnapshot>('desktop_gaming_snapshot'); if (alive) { snapshot.value = next; if (settingsOnly && !draft.value) draft.value = structuredClone(next.settings) } }
+  try { const next = await platform.invoke<GamingSnapshot>('desktop_gaming_snapshot'); if (alive) snapshot.value = next }
   catch { snapshot.value = null } finally { pending = false }
 }
 async function control(action: string) {
   try { await platform.invoke('desktop_gaming_control', { action }); error.value = false } catch { error.value = true }
 }
-function settings() { draft.value = snapshot.value ? structuredClone(toRaw(snapshot.value.settings)) : null; editing.value = !editing.value; error.value = false }
+function settings() { form.reset(); editing.value = !editing.value; error.value = false }
+// Closing the settings window with unsaved changes asks first.
+async function closeWindow() { if (await form.guard()) await control('close') }
 function bind(key: 'overlay' | 'mute' | 'deafen' | 'ptt', event: KeyboardEvent) {
   const chord = chordFromKey(event)
   // Tab and Escape without a chord must still leave the field.
   if (!chord && (event.key === 'Tab' || event.key === 'Escape')) return
   event.preventDefault(); event.stopPropagation()
-  if (chord && draft.value) draft.value[key] = chord
-}
-async function save() {
-  if (!draft.value) return
-  if (gameList.value && !gameList.value.add()) return
-  try { await platform.invoke('desktop_gaming_settings', { settings: draft.value }); editing.value = settingsOnly; error.value = false }
-  catch { error.value = true }
+  if (chord) draft[key] = chord
 }
 onMounted(() => {
   document.documentElement.style.background = 'transparent'; document.body.style.background = 'transparent'
@@ -67,7 +91,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
       <span v-if="!settingsOnly" class="text-xs text-mnema-muted">{{ snapshot.voice.members.length }}</span>
       <template v-if="interactive">
         <button v-if="!settingsOnly" :aria-label="$t('gaming.settings')" @click="settings"><Settings class="w-4 h-4" /></button>
-        <button :aria-label="$t('common.close')" @click="control('close')"><X class="w-4 h-4" /></button>
+        <button :aria-label="$t('common.close')" @click="settingsOnly ? closeWindow() : control('close')"><X class="w-4 h-4" /></button>
       </template>
     </header>
     <div v-if="interactive && !settingsOnly" class="controls flex gap-2 mb-3">
@@ -85,7 +109,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
       </li>
     </ul>
     <p v-if="!interactive" class="mt-3 text-xs text-mnema-muted">{{ chordText(snapshot.settings.overlay) }}</p>
-    <form v-if="interactive && editing && draft" class="gaming-form" @submit.prevent="save">
+    <form v-if="interactive && editing && snapshot" class="gaming-form" @submit.prevent="submit" @keydown="form.onKeydown">
       <section class="settings-group" aria-labelledby="gaming-group-general">
         <h3 id="gaming-group-general" class="settings-label">{{ $t('gaming.groupGeneral') }}</h3>
         <div class="settings-card">
@@ -126,7 +150,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
           </div>
         </div>
       </section>
-      <div class="flex justify-end"><button type="submit" class="btn btn-primary">{{ $t('common.save') }}</button></div>
+      <UnsavedChangesBar inline :dirty="form.dirty.value || typed" :can-save="(form.canSave.value || typed) && !form.saving.value" :saving="form.saving.value" :error="form.error.value" @save="submit" @reset="form.reset" />
     </form>
     <p v-if="error" role="alert" class="text-sm text-mnema-danger mt-3">{{ $t('gaming.error') }}</p>
   </section>

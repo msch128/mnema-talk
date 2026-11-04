@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setLocale } from '../i18n'
 import DesktopGamingOverlay from './DesktopGamingOverlay.vue'
 import type { GamingSnapshot } from '../lib/desktopGaming'
+import { pendingConfirm } from '../lib/confirm'
 const ipc = vi.hoisted(() => ({ invoke: vi.fn() }))
 vi.mock('@tauri-apps/api/core', async importOriginal => ({ ...await importOriginal<typeof import('@tauri-apps/api/core')>(), invoke: ipc.invoke }))
 let wrapper: ReturnType<typeof mount<typeof DesktopGamingOverlay>> | undefined
@@ -79,9 +80,12 @@ describe('native gaming surfaces', () => {
     expect(w.get('[role="group"]').text()).toContain('MyGame.exe')
     expect(ipc.invoke).not.toHaveBeenCalledWith('desktop_gaming_add_game', expect.anything())
     await w.get('[data-testid="add-confirm"]').trigger('click'); await flushPromises()
-    expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_add_game', { name: 'MyGame.exe' })
+    // The confirmed app joins the draft like a typed name; the host stores nothing before Save.
+    expect(ipc.invoke).not.toHaveBeenCalledWith('desktop_gaming_add_game', expect.anything())
     expect(gameNames(w)).toEqual(['Wow.exe', 'MyGame.exe'])
     expect(w.find('[role="group"]').exists()).toBe(false)
+    await w.get('form').trigger('submit'); await flushPromises()
+    expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_settings', { settings: { ...snapshot.settings, games: ['Wow.exe', 'MyGame.exe'] } })
   })
   it('lets the person decline the offered app, and says when there is none or the host refuses', async () => {
     const w = await open(true); await w.findAll('button')[0]!.trigger('click')
@@ -95,16 +99,20 @@ describe('native gaming surfaces', () => {
     await ask().trigger('click'); await flushPromises(); expect(w.find('[role="status"]').exists()).toBe(true)
   })
   it('shows save failures without discarding the draft and clears unavailable snapshots', async () => {
-    const w = await open(true); await w.findAll('button')[0]!.trigger('click'); ipc.invoke.mockRejectedValueOnce(new Error('duplicate')); await w.get('form').trigger('submit'); await flushPromises()
+    const w = await open(true); await w.findAll('button')[0]!.trigger('click'); await w.get('[data-testid="gaming-enabled"]').trigger('click')
+    ipc.invoke.mockImplementation((command: string) => command === 'desktop_gaming_settings' ? Promise.reject(new Error('duplicate')) : Promise.resolve(command === 'desktop_gaming_snapshot' ? structuredClone(snapshot) : undefined))
+    await w.get('form').trigger('submit'); await flushPromises()
     expect(w.find('[role="alert"]').exists()).toBe(true); expect(w.find('form').exists()).toBe(true)
+    expect(w.get('[data-testid="unsaved-save"]').attributes('disabled')).toBeUndefined()
     await w.findAll('button')[0]!.trigger('click'); expect(w.find('form').exists()).toBe(false)
+    ipc.invoke.mockImplementation((command: string) => Promise.resolve(command === 'desktop_gaming_snapshot' ? structuredClone(snapshot) : undefined))
     ipc.invoke.mockRejectedValueOnce(new Error('unavailable')); await vi.advanceTimersByTimeAsync(200); await flushPromises(); expect(w.find('section').exists()).toBe(false)
   })
   it('handles stale settings and submit events after snapshots become unavailable', async () => {
     const w = await open(true); const button = w.findAll('button')[0]!
     await button.trigger('click'); const form = w.get('form')
     ipc.invoke.mockRejectedValueOnce(new Error('unavailable')); await vi.advanceTimersByTimeAsync(200); await flushPromises()
-    await button.trigger('click'); await form.trigger('submit'); expect(w.find('section').exists()).toBe(false)
+    await form.trigger('submit'); expect(w.find('section').exists()).toBe(false)
     expect(ipc.invoke.mock.calls.some(call => call[0] === 'desktop_gaming_settings')).toBe(false)
   })
   it('does not overlap pending polling and ignores responses after unmount', async () => {
@@ -155,6 +163,40 @@ describe('native gaming surfaces', () => {
     it('blocks Save with the message when the pending name is invalid', async () => {
       const w = await settings(); await w.get('.game-input').setValue('nope')
       expect(await saved(w)).toBeUndefined(); expect(w.get('[role="alert"]').text()).toContain('Game.exe')
+    })
+  })
+
+  describe('one draft with one Save', () => {
+    beforeEach(() => setLocale('en'))
+    const settings = async () => { const w = await open(true); await w.findAll('button')[0]!.trigger('click'); return w }
+    const save = (w: Awaited<ReturnType<typeof open>>) => w.get('[data-testid="unsaved-save"]').attributes('disabled')
+    it('keeps Save off until something really changed and puts the values back on Reset', async () => {
+      const w = await settings()
+      expect(save(w)).toBeDefined()
+      await w.get('input[type="range"]').setValue('30'); expect(save(w)).toBeUndefined()
+      await w.get('input[type="range"]').setValue('55'); expect(save(w)).toBeDefined()
+      await w.get('[data-testid="gaming-enabled"]').trigger('click'); expect(save(w)).toBeUndefined()
+      await w.get('[data-testid="unsaved-reset"]').trigger('click')
+      expect(save(w)).toBeDefined(); expect(w.get('[data-testid="gaming-enabled"]').attributes('aria-checked')).toBe('true')
+    })
+    it('does not count the order of the games as a change', async () => {
+      snapshot.settings.games = ['A.exe', 'B.exe']
+      const w = await settings()
+      await w.get('[aria-label="Remove A.exe"]').trigger('click'); expect(save(w)).toBeUndefined()
+      await addGame(w, 'A.exe'); expect(save(w)).toBeDefined()
+    })
+    it('asks before the settings window closes with unsaved changes', async () => {
+      Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'gaming-settings'); wrapper = mount(DesktopGamingOverlay); await flushPromises()
+      const close = () => wrapper!.get('[aria-label="Close"]')
+      await close().trigger('click'); await flushPromises()
+      expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_control', { action: 'close' })
+      ipc.invoke.mockClear()
+      await wrapper.get('[data-testid="gaming-enabled"]').trigger('click')
+      await close().trigger('click'); await flushPromises()
+      expect(pendingConfirm.value?.title).toBe('Discard changes?')
+      expect(ipc.invoke).not.toHaveBeenCalledWith('desktop_gaming_control', { action: 'close' })
+      pendingConfirm.value?.resolve(true); await flushPromises()
+      expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_control', { action: 'close' })
     })
   })
 })

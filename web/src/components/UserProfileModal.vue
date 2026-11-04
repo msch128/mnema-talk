@@ -21,6 +21,7 @@ import ProfileAvatar from './ProfileAvatar.vue'
 import ProfileBannerControls from './ProfileBannerControls.vue'
 import ProfileBio from './ProfileBio.vue'
 import ProfileStatus from './ProfileStatus.vue'
+import { provideDraftScope } from '../composables/useSettingsDraft'
 import BotBadge from './BotBadge.vue'
 import { shownName } from '../lib/deletedUser'
 import ActivityStats from './ActivityStats.vue'
@@ -36,6 +37,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits<{ close: []; mention: [username: string] }>()
+// An unsaved edit of the bio (a draft inside ProfileBio) makes closing ask first.
+const drafts = provideDraftScope()
 const account = useAccountStore()
 
 // Password and sign-in security live together in "Account & security".
@@ -143,8 +146,8 @@ function handleMention() {
 </script>
 
 <template>
-  <BaseDialog panel-class="max-w-md select-none bg-mnema-surface" initial-focus="[data-dialog-close]" @close="emit('close')">
-    <template #default="{ titleId }">
+  <BaseDialog panel-class="max-w-md select-none bg-mnema-surface" initial-focus="[data-dialog-close]" :guard="drafts.guard" @close="emit('close')">
+    <template #default="{ titleId, close }">
     <div class="flex min-h-0 flex-col overflow-y-auto">
       <!-- Top banner -->
       <div class="h-28 shrink-0 bg-linear-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
@@ -166,7 +169,7 @@ function handleMention() {
         <ProfileBannerControls v-if="isSelf && features.profileBanner" :has-banner="!!profileUser.banner_url" />
 
         <button 
-          @click="emit('close')"
+          @click="close"
           data-dialog-close
           class="relative z-10 w-7 h-7 max-md:w-11 max-md:h-11 rounded-full bg-black/50 hover:bg-black/80 text-mnema-muted hover:text-mnema-text flex items-center justify-center transition border border-white/10"
           v-tooltip="{ text: $t('common.close'), shortcut: 'Esc' }"

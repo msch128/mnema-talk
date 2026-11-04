@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // "Set a status message": the one place to write one's own status line: an
 // emoji, the text (the server's limit), how long it stays and Save / Clear.
-import { computed, ref } from 'vue'
-import { Loader2, Smile } from '@lucide/vue'
+import { computed, ref, toRef } from 'vue'
+import { Smile } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
 import { EXPIRY_CHOICES, expiryTime, isFuture } from '../lib/statusExpiry'
 import type { ExpiryChoice } from '../lib/statusExpiry'
@@ -12,9 +12,11 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
+import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import BaseDialog from './BaseDialog.vue'
 import EmojiPicker from './EmojiPicker.vue'
 import FormField from './FormField.vue'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
 
 const emit = defineEmits<{ close: [] }>()
 
@@ -26,21 +28,39 @@ const toasts = useToastStore()
 const features = useServerFeaturesStore()
 
 const hadStatus = !!authStore.user?.status_text
-const text = ref(authStore.user?.status_text ?? '')
 // Editing a status that has an expiry keeps it unless another choice is made.
 type Choice = ExpiryChoice | 'keep'
 const kept = authStore.user?.status_text && authStore.user.status_expires_at ? new Date(authStore.user.status_expires_at) : null
 const keepable = kept !== null && isFuture(kept, new Date())
-const expiry = ref<Choice>(keepable ? 'keep' : 'never')
-const error = ref('')
-const saving = ref(false)
+const clearing = ref(false)
 const pickerOpen = ref(false)
 const input = ref<HTMLInputElement | null>(null)
 const emojiButton = ref<HTMLButtonElement | null>(null)
 
 const chars = (s: string) => Array.from(s)
+const canExpireFor = (text: string) => features.has('status.expiry') && text.trim() !== ''
+
+// The text and how long it stays are one draft with one Save (doc/settings-ux.md);
+// "Clear" removes the status at once and is an action of its own.
+const form = useSettingsDraft<{ text: string; expiry: Choice }>({
+  source: () => ({ text: authStore.user?.status_text ?? '', expiry: keepable ? 'keep' : 'never' }),
+  // A choice only counts while there is a text it can apply to.
+  normalisers: { text: normalise.text, expiry: (value, state) => (canExpireFor(state.text) ? value : 'never') },
+  save: async ({ draft }) => {
+    const id = authStore.user?.id
+    if (!id) return
+    const next = draft.text.trim()
+    const at = next && canExpireFor(next) ? (draft.expiry === 'keep' ? kept : expiryTime(draft.expiry, new Date())) : null
+    if (at && !isFuture(at, new Date())) throw new Error(t('profile.expiryPast'))
+    await send(id, next, at)
+  },
+  saved: () => emit('close')
+})
+const { draft } = form
+const text = toRef(draft, 'text')
+const expiry = toRef(draft, 'expiry')
 const count = computed(() => chars(text.value).length)
-const canExpire = computed(() => features.has('status.expiry') && text.value.trim() !== '')
+const canExpire = computed(() => canExpireFor(text.value))
 // A choice whose moment has passed ("today" at 23:59:30) is not offered.
 const choices: Choice[] = [...(keepable ? ['keep' as const] : []), ...EXPIRY_CHOICES.filter(c => c === 'never' || isFuture(expiryTime(c, new Date()), new Date()))]
 const until = computed(() => authStore.user?.status_expires_at)
@@ -64,36 +84,29 @@ function insertEmoji(emoji: string) {
   })
 }
 
-async function send(next: string, expiresAt: Date | null) {
-  const id = authStore.user?.id
-  if (!id) return
-  saving.value = true
+async function send(id: string, next: string, expiresAt: Date | null) {
   try {
     const updated = await chatStore.setStatusText(id, next, expiresAt)
     chatStore.patchOpenProfile(id, { status_text: updated.status_text, ...(updated.status_expires_at ? { status_expires_at: updated.status_expires_at } : {}) }, updated.status_expires_at ? [] : ['status_expires_at'])
     toasts.success(next ? t('profile.statusSaved') : t('profile.statusCleared'))
+  } catch (err) {
+    throw new Error(caughtErrorMessage(err, t('profile.saveFailed')), { cause: err })
+  }
+}
+
+async function clear() {
+  const id = authStore.user?.id
+  if (!id || form.saving.value) return
+  clearing.value = true
+  form.error.value = ''
+  try {
+    await send(id, '', null)
     emit('close')
   } catch (err) {
-    error.value = caughtErrorMessage(err, t('profile.saveFailed'))
+    form.error.value = caughtErrorMessage(err, t('profile.saveFailed'))
   } finally {
-    saving.value = false
+    clearing.value = false
   }
-}
-
-function save() {
-  error.value = ''
-  const next = text.value.trim()
-  const at = next && canExpire.value ? (expiry.value === 'keep' ? kept : expiryTime(expiry.value, new Date())) : null
-  if (at && !isFuture(at, new Date())) {
-    error.value = t('profile.expiryPast')
-    return
-  }
-  void send(next, at)
-}
-
-function clear() {
-  error.value = ''
-  void send('', null)
 }
 </script>
 
@@ -103,9 +116,10 @@ function clear() {
     :subtitle="$t('statusEditor.subtitle')"
     panel-class="max-w-md"
     initial-focus="[data-testid='status-input']"
+    :guard="form.guard"
     @close="emit('close')"
   >
-    <form class="flex min-h-0 flex-1 flex-col" data-testid="status-dialog" @submit.prevent="save">
+    <form class="flex min-h-0 flex-1 flex-col" data-testid="status-dialog" @submit.prevent="form.save" @keydown="form.onKeydown">
       <div class="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
         <FormField v-slot="{ id, describedby }" :label="$t('profile.status')" :hint="$t('statusEditor.hint')">
           <div class="flex items-center gap-2">
@@ -157,17 +171,13 @@ function clear() {
           <p v-if="keepable && until" class="field-hint">{{ $t('profile.clearsAt', { time: dateTime(until, locale) }) }}</p>
         </div>
 
-        <p v-if="error" role="alert" data-testid="status-error" class="field-error">{{ error }}</p>
       </div>
 
-      <footer class="flex items-center justify-between gap-3 border-t border-mnema-hairline bg-mnema-raised px-6 py-4">
-        <button v-if="hadStatus" type="button" data-testid="status-clear" class="btn btn-ghost max-md:min-h-11" :disabled="saving" @click="clear">{{ $t('statusEditor.clear') }}</button>
-        <span v-else></span>
-        <button type="submit" data-testid="status-save" class="btn btn-primary max-md:min-h-11" :disabled="saving" :aria-busy="saving">
-          <Loader2 v-if="saving" class="h-4 w-4 animate-spin" aria-hidden="true" />
-          <span>{{ $t('common.save') }}</span>
-        </button>
-      </footer>
+      <UnsavedChangesBar save-testid="status-save" :dirty="form.dirty.value" :can-save="form.canSave.value && !clearing" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset">
+        <template v-if="hadStatus" #extra>
+          <button type="button" data-testid="status-clear" class="btn btn-ghost max-md:min-h-11" :disabled="form.saving.value || clearing" @click="clear">{{ $t('statusEditor.clear') }}</button>
+        </template>
+      </UnsavedChangesBar>
     </form>
   </BaseDialog>
 </template>
