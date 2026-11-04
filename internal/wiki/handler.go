@@ -46,6 +46,14 @@ func (h *Handler) require(r *http.Request, need perm.Set) error {
 	return h.Perms.RequireGlobal(r.Context(), auth.UserFrom(r.Context()).Subject(), need)
 }
 
+// requireWrite checks what every change of the wiki needs: to read it, to edit
+// it, and what the change itself asks for on top (Manage wiki for deleting,
+// locking, renaming and moving). Managing alone changes nothing, and a caller
+// who may not read the wiki gets no page back from a write either.
+func (h *Handler) requireWrite(r *http.Request, extra perm.Set) error {
+	return h.require(r, perm.ViewWiki|perm.EditWiki|extra)
+}
+
 // can reports whether the caller holds the permission (false when it cannot be told).
 func (h *Handler) can(r *http.Request, need perm.Set) bool {
 	return h.require(r, need) == nil

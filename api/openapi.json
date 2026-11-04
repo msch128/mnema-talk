@@ -40029,7 +40029,7 @@
     },
     "/api/wiki/pages/{slug}": {
       "delete": {
-        "description": "Takes the page out of the wiki. Nothing is lost: it keeps its address and revisions, and holders of Manage wiki can restore it. A page with subpages cannot be deleted. Needs Manage wiki.",
+        "description": "Takes the page out of the wiki. Nothing is lost: it keeps its address and revisions, and holders of Manage wiki can restore it. A page with subpages cannot be deleted. Needs Manage wiki and Edit wiki.",
         "operationId": "deleteWikiPage",
         "parameters": [
           {
@@ -40071,7 +40071,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing Manage wiki, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing Manage wiki or Edit wiki, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -40227,7 +40227,7 @@
         ]
       },
       "patch": {
-        "description": "A change of the title or text needs Edit wiki, base_rev (the revision the editor saw) and an unlocked page, and writes a new revision; when the page has moved on meanwhile it answers 409 and changes nothing. A change of the address (the old one redirects), the parent or the position needs Manage wiki and writes no revision. Holders of Manage wiki may change a locked page. A change that leaves the page as it is answers 200 and writes nothing.",
+        "description": "A change of the title or text needs Edit wiki, base_rev (the revision the editor saw) and an unlocked page, and writes a new revision; when the page has moved on meanwhile it answers 409 and changes nothing. A change of the address (the old one redirects), the parent or the position needs Manage wiki as well as Edit wiki, and writes no revision. Holders of Manage wiki may change a locked page. A change that leaves the page as it is answers 200 and writes nothing.",
         "operationId": "updateWikiPage",
         "parameters": [
           {
@@ -40290,7 +40290,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing Edit wiki or Manage wiki, the page is locked, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing Read, Edit wiki or (to rename or move) Manage wiki as well, the page is locked, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -40354,7 +40354,7 @@
     },
     "/api/wiki/pages/{slug}/lock": {
       "put": {
-        "description": "While a page is locked only holders of Manage wiki change its title or text. Needs Manage wiki.",
+        "description": "While a page is locked only holders of Manage wiki change its title or text. Needs Manage wiki and Edit wiki.",
         "operationId": "lockWikiPage",
         "parameters": [
           {
@@ -40417,7 +40417,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing Manage wiki, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing Manage wiki or Edit wiki, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -40829,7 +40829,7 @@
     },
     "/api/wiki/pages/{slug}/undelete": {
       "post": {
-        "description": "Puts a deleted page back below its old parent (at the top when that one is gone). Needs Manage wiki.",
+        "description": "Puts a deleted page back below its old parent (at the top when that one is gone). Needs Manage wiki and Edit wiki.",
         "operationId": "undeleteWikiPage",
         "parameters": [
           {
@@ -40871,7 +40871,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing Manage wiki, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing Manage wiki or Edit wiki, or cross-origin request rejected."
           },
           "404": {
             "content": {

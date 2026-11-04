@@ -33,7 +33,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &in); err != nil {
 		return err
 	}
-	if err := h.require(r, perm.EditWiki); err != nil {
+	if err := h.requireWrite(r, 0); err != nil {
 		return err
 	}
 	p, err := h.Store.Create(r.Context(), h.userID(r), in)
@@ -48,7 +48,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 // update handles PATCH /api/wiki/pages/{slug}.
 //
 // @Summary Change a wiki page
-// @Description A change of the title or text needs Edit wiki, base_rev (the revision the editor saw) and an unlocked page, and writes a new revision; when the page has moved on meanwhile it answers 409 and changes nothing. A change of the address (the old one redirects), the parent or the position needs Manage wiki and writes no revision. Holders of Manage wiki may change a locked page. A change that leaves the page as it is answers 200 and writes nothing.
+// @Description A change of the title or text needs Edit wiki, base_rev (the revision the editor saw) and an unlocked page, and writes a new revision; when the page has moved on meanwhile it answers 409 and changes nothing. A change of the address (the old one redirects), the parent or the position needs Manage wiki as well as Edit wiki, and writes no revision. Holders of Manage wiki may change a locked page. A change that leaves the page as it is answers 200 and writes nothing.
 // @ID updateWikiPage
 // @Tags Wiki
 // @Accept json
@@ -59,7 +59,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} Page "The page after the change."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, missing base_rev, text too long or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing Edit wiki or Manage wiki, the page is locked, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing Read, Edit wiki or (to rename or move) Manage wiki as well, the page is locked, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such page or parent."
 // @Failure 409 {object} httpx.ErrorResponse "STALE_REVISION: the page changed meanwhile. CONFLICT: the address is taken, or the move passes the depth limit or goes under the page itself."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -71,17 +71,18 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &in); err != nil {
 		return err
 	}
+	// Whatever the change, the answer is the page: the caller must be able to read it.
+	need := perm.ViewWiki
 	if in.Title != nil || in.Content != nil {
-		if err := h.require(r, perm.EditWiki); err != nil {
-			return err
-		}
+		need |= perm.EditWiki
 	}
 	if in.Slug != nil || in.ParentID != nil || in.Position != nil {
-		if err := h.require(r, perm.ManageWiki); err != nil {
-			return err
-		}
+		need |= perm.EditWiki | perm.ManageWiki
 	}
-	done, err := h.Store.Change(r.Context(), h.userID(r), chi.URLParam(r, "slug"), in, h.can(r, perm.ManageWiki))
+	if err := h.require(r, need); err != nil {
+		return err
+	}
+	done, err := h.Store.Change(r.Context(), h.userID(r), chi.URLParam(r, "slug"), in, h.can(r, perm.ViewWiki|perm.EditWiki|perm.ManageWiki))
 	if err != nil {
 		return err
 	}
@@ -98,7 +99,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 // remove handles DELETE /api/wiki/pages/{slug}.
 //
 // @Summary Delete a wiki page
-// @Description Takes the page out of the wiki. Nothing is lost: it keeps its address and revisions, and holders of Manage wiki can restore it. A page with subpages cannot be deleted. Needs Manage wiki.
+// @Description Takes the page out of the wiki. Nothing is lost: it keeps its address and revisions, and holders of Manage wiki can restore it. A page with subpages cannot be deleted. Needs Manage wiki and Edit wiki.
 // @ID deleteWikiPage
 // @Tags Wiki
 // @Produce json
@@ -106,7 +107,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 // @Param slug path string true "The page's address."
 // @Success 200 {object} Page "The deleted page."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing Manage wiki, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing Manage wiki or Edit wiki, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such page."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the page has subpages."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -114,7 +115,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/wiki/pages/{slug} [delete]
 func (h *Handler) remove(w http.ResponseWriter, r *http.Request) error {
-	if err := h.require(r, perm.ManageWiki); err != nil {
+	if err := h.requireWrite(r, perm.ManageWiki); err != nil {
 		return err
 	}
 	p, err := h.Store.Delete(r.Context(), h.userID(r), chi.URLParam(r, "slug"))
@@ -129,7 +130,7 @@ func (h *Handler) remove(w http.ResponseWriter, r *http.Request) error {
 // undelete handles POST /api/wiki/pages/{slug}/undelete.
 //
 // @Summary Restore a deleted wiki page
-// @Description Puts a deleted page back below its old parent (at the top when that one is gone). Needs Manage wiki.
+// @Description Puts a deleted page back below its old parent (at the top when that one is gone). Needs Manage wiki and Edit wiki.
 // @ID undeleteWikiPage
 // @Tags Wiki
 // @Produce json
@@ -137,7 +138,7 @@ func (h *Handler) remove(w http.ResponseWriter, r *http.Request) error {
 // @Param slug path string true "The page's address."
 // @Success 200 {object} Page "The restored page."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing Manage wiki, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing Manage wiki or Edit wiki, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such page."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the page is not deleted, or the page limit is reached."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -145,7 +146,7 @@ func (h *Handler) remove(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/wiki/pages/{slug}/undelete [post]
 func (h *Handler) undelete(w http.ResponseWriter, r *http.Request) error {
-	if err := h.require(r, perm.ManageWiki); err != nil {
+	if err := h.requireWrite(r, perm.ManageWiki); err != nil {
 		return err
 	}
 	p, err := h.Store.Undelete(r.Context(), chi.URLParam(r, "slug"))
@@ -160,7 +161,7 @@ func (h *Handler) undelete(w http.ResponseWriter, r *http.Request) error {
 // lock handles PUT /api/wiki/pages/{slug}/lock.
 //
 // @Summary Lock or unlock a wiki page
-// @Description While a page is locked only holders of Manage wiki change its title or text. Needs Manage wiki.
+// @Description While a page is locked only holders of Manage wiki change its title or text. Needs Manage wiki and Edit wiki.
 // @ID lockWikiPage
 // @Tags Wiki
 // @Accept json
@@ -171,7 +172,7 @@ func (h *Handler) undelete(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} Page "The page."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON or unknown JSON fields."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing Manage wiki, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing Manage wiki or Edit wiki, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such page."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -182,7 +183,7 @@ func (h *Handler) lock(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &in); err != nil {
 		return err
 	}
-	if err := h.require(r, perm.ManageWiki); err != nil {
+	if err := h.requireWrite(r, perm.ManageWiki); err != nil {
 		return err
 	}
 	p, err := h.Store.SetLocked(r.Context(), chi.URLParam(r, "slug"), in.Locked)
@@ -225,10 +226,10 @@ func (h *Handler) restore(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &in); err != nil {
 		return err
 	}
-	if err := h.require(r, perm.EditWiki); err != nil {
+	if err := h.requireWrite(r, 0); err != nil {
 		return err
 	}
-	p, err := h.Store.RestoreRevision(r.Context(), h.userID(r), chi.URLParam(r, "slug"), rev, in, h.can(r, perm.ManageWiki))
+	p, err := h.Store.RestoreRevision(r.Context(), h.userID(r), chi.URLParam(r, "slug"), rev, in, h.can(r, perm.ViewWiki|perm.EditWiki|perm.ManageWiki))
 	if err != nil {
 		return err
 	}

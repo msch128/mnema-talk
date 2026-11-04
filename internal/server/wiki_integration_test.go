@@ -17,7 +17,7 @@ type wikiFixture struct {
 	admin   *client
 	viewer  *client // a plain member: may read
 	editor  *client // EditWiki
-	manager *client // ManageWiki
+	manager *client // EditWiki and ManageWiki: managing needs editing
 }
 
 func newWikiFixture(t *testing.T) *wikiFixture {
@@ -26,7 +26,7 @@ func newWikiFixture(t *testing.T) *wikiFixture {
 	admin := a.seedAdmin()
 	f := &wikiFixture{a: a, admin: admin, viewer: a.register(admin, "vera"), editor: a.register(admin, "edda"), manager: a.register(admin, "manu")}
 	assignRoles(t, admin, f.editor, createRole(t, admin, "wiki editors", perm.EditWiki))
-	assignRoles(t, admin, f.manager, createRole(t, admin, "wiki managers", perm.ManageWiki))
+	assignRoles(t, admin, f.manager, createRole(t, admin, "wiki managers", perm.EditWiki|perm.ManageWiki))
 	return f
 }
 
@@ -78,8 +78,7 @@ func TestEveryoneReadsTheWikiButOnlyHoldersOfAPermissionWriteIt(t *testing.T) {
 	wantStatus(t, "editor deletes", f.editor.delete("/api/wiki/pages/"+created.Slug), http.StatusForbidden)
 	wantStatus(t, "editor sees no deleted pages", f.editor.get("/api/wiki?deleted=true"), http.StatusOK)
 
-	// A manager organises and moderates, but does not write text.
-	wantStatus(t, "manager edits text", edit(f.manager, 3, "no"), http.StatusForbidden)
+	// A manager organises and moderates (and, holding Edit the wiki too, writes).
 	wantStatus(t, "manager moves", f.manager.patch("/api/wiki/pages/"+created.Slug, map[string]any{"parent_id": page.ID}), http.StatusOK)
 	wantStatus(t, "manager renames", f.manager.patch("/api/wiki/pages/"+created.Slug, map[string]any{"slug": "renamed"}), http.StatusOK)
 	wantStatus(t, "manager locks", f.manager.put("/api/wiki/pages/welcome/lock", map[string]any{"locked": true}), http.StatusOK)
@@ -247,4 +246,32 @@ func TestErasingAMemberKeepsTheirWikiTextAndTheExportHoldsIt(t *testing.T) {
 	if shown.Content != "what wanda wrote" {
 		t.Fatalf("the page stays: %+v", shown)
 	}
+}
+
+func TestManagingAndWritingNeedTheRightToEditAndToRead(t *testing.T) {
+	f := newWikiFixture(t)
+	page := f.create(t, f.admin, "Handbook", "text")
+
+	// Manage the wiki alone changes nothing: every change of content or structure needs Edit the wiki as well.
+	solo := f.a.register(f.admin, "solo")
+	assignRoles(t, f.admin, solo, createRole(t, f.admin, "manage only", perm.ManageWiki))
+	wantStatus(t, "manage-only locks", solo.put("/api/wiki/pages/handbook/lock", map[string]any{"locked": true}), http.StatusForbidden)
+	wantStatus(t, "manage-only moves", solo.patch("/api/wiki/pages/handbook", map[string]any{"slug": "other"}), http.StatusForbidden)
+	wantStatus(t, "manage-only deletes", solo.delete("/api/wiki/pages/handbook"), http.StatusForbidden)
+	wantStatus(t, "manage-only reads", solo.get("/api/wiki/pages/handbook"), http.StatusOK)
+
+	// Both together may organise.
+	both := f.a.register(f.admin, "both")
+	assignRoles(t, f.admin, both, createRole(t, f.admin, "edit and manage", perm.EditWiki|perm.ManageWiki))
+	wantStatus(t, "edit+manage locks", both.put("/api/wiki/pages/handbook/lock", map[string]any{"locked": false}), http.StatusOK)
+
+	// With the wiki closed to readers, a role that only edits learns nothing from a write.
+	everyone := everyoneID(t, f.admin)
+	res := f.admin.patch("/api/admin/roles/"+everyone.String(), map[string]any{"permissions": int64(perm.DefaultEveryone &^ perm.ViewWiki)})
+	wantStatus(t, "close the wiki", res, http.StatusOK)
+	wantStatus(t, "blind editor, no-op patch", f.editor.patch("/api/wiki/pages/handbook", map[string]any{}), http.StatusForbidden)
+	wantStatus(t, "blind editor edits", f.editor.patch("/api/wiki/pages/handbook", map[string]any{"base_rev": 1, "content": "x"}), http.StatusForbidden)
+	wantStatus(t, "blind editor creates", f.editor.post("/api/wiki/pages", map[string]any{"title": "Leak"}), http.StatusForbidden)
+	wantStatus(t, "blind editor restores", f.editor.post("/api/wiki/pages/handbook/revisions/1/restore", map[string]any{"base_rev": 1}), http.StatusForbidden)
+	_ = page
 }

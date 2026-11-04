@@ -16,7 +16,7 @@ This page covers using the wiki and running it. The API is in the
 | Permission | *View the wiki* | *Edit the wiki* | *Manage the wiki* |
 | Default | on for @everyone | **off** for @everyone | **off** for @everyone |
 | Pages, history, search | read | create, change title and text, restore an earlier revision | |
-| Lock, move, rename, delete | | | yes |
+| Lock, move, rename, delete | | | yes, together with *Edit the wiki* |
 | Deleted pages | | | read and restore |
 
 - Everybody reads by default; switch *View the wiki* off for @everyone to close
@@ -34,8 +34,12 @@ This page covers using the wiki and running it. The API is in the
 - Neither editing nor managing can be put on a self-assignable role.
 - A **locked** page changes only for holders of *Manage the wiki*; use it for
   pages that must not move (the rules, say). Changing the text of a locked page
-  needs *Edit the wiki* as well: a manager without it can lock, unlock, move and
-  delete, but not write.
+  needs *Edit the wiki* as well.
+- **Managing needs editing.** Every change of content or structure (create, edit,
+  restore, lock, move, rename, delete and undelete) needs *Edit the wiki*, so a
+  new-member wait or a timeout stops a manager's changes too. *Manage the wiki*
+  alone reads the deleted pages and nothing more. Every write also needs *View
+  the wiki*: a caller who may not read gets no page back.
 - A title is one line (no line breaks, no invisible or direction-changing
   characters) and unique among the pages, ignoring case, so `[[Title]]` names
   one page.
