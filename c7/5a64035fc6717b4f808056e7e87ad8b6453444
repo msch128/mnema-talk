@@ -1,0 +1,19 @@
+web/src/components/AdminRolesTab.test.ts
+  s_2a6b32cb6cdc90::t_3f018253f6dbf3 64,336-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c75a64035fc6717b4f808056e7e87ad8b6453444",
+  "prompts": {},
+  "sessions": {
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
