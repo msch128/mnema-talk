@@ -1,0 +1,41 @@
+api/openapi.json
+  s_2a6b32cb6cdc90::t_b5139fcaf2d8ca 40002,40032-40042
+doc/wiki.md
+  s_2a6b32cb6cdc90::t_715b54f97f9530 73-75,79,134-138
+internal/chat/account_erase.go
+  s_2a6b32cb6cdc90::t_a5c77a1e19f3e9 30-33
+internal/media/serve.go
+  s_2a6b32cb6cdc90::t_b933a922fc10b9 33,36-39,52-60
+internal/server/personal_data_test.go
+  s_2a6b32cb6cdc90::t_8ccb4e4e524973 72-75
+internal/server/router_build_services.go
+  s_2a6b32cb6cdc90::t_0a5d575781fdb2 77
+internal/server/wiki_images_integration_test.go
+  s_2a6b32cb6cdc90::t_22e0e6e668b565 50-52,122,126,128,131-135,138-140,146-162
+internal/wiki/handler.go
+  s_2a6b32cb6cdc90::t_39f8ba813fcd8c 4,25-26
+internal/wiki/images.go
+  s_2a6b32cb6cdc90::t_e9ef1f03cd3bc3 33-35,38-41,71,74-75,78,84-92,101,119-122,139-159
+internal/wiki/images_integration_test.go
+  s_2a6b32cb6cdc90::t_7d58ab92cce3a1 9,130-177
+web/src/components/WikiEditor.test.ts
+  s_2a6b32cb6cdc90::t_714cdc1664779f 387-395
+web/src/composables/useWikiImages.ts
+  s_2a6b32cb6cdc90::t_63415bf6fe3657 51-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8a6102622346352c674e73d452e9d6fde9e4b52f",
+  "prompts": {},
+  "sessions": {
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
