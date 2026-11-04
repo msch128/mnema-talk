@@ -1,0 +1,21 @@
+internal/ssrf/ssrf.go
+  s_2220a72d125284::t_8e4dd10774133e 93-97
+internal/ssrf/ssrf_test.go
+  s_2220a72d125284::t_a989ae169d9e79 36-37,52-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d1290830a08f0142eb64962a86b03f80695ef518",
+  "prompts": {},
+  "sessions": {
+    "s_2220a72d125284": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a66b9c4efe685471b",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
