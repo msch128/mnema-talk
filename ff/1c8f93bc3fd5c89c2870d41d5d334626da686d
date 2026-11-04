@@ -1,0 +1,23 @@
+doc/desktop-trusted-client.md
+  s_f1956343134576::t_addd436696a90c 58
+internal/webbundle/webbundle.go
+  s_f1956343134576::t_ca3cc6fcace5b2 6,316-317,319-322
+internal/webbundle/webbundle_test.go
+  s_f1956343134576::t_04fd6a3605e49e 125-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff1c8f93bc3fd5c89c2870d41d5d334626da686d",
+  "prompts": {},
+  "sessions": {
+    "s_f1956343134576": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad54d0ea1be3fff67",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
