@@ -1,0 +1,21 @@
+internal/auth/bcrypt_slots_test.go
+  s_1b419e390af98d::t_f1252330c1783b 49-55,65-67
+internal/auth/login_test.go
+  s_1b419e390af98d::t_614ac4ff868758 44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9cab0649b8332b9913871ebbe36b08bd8fcf02d2",
+  "prompts": {},
+  "sessions": {
+    "s_1b419e390af98d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a6bc99b1659aa5afe",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
