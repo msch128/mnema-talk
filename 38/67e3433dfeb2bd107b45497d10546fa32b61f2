@@ -1,0 +1,33 @@
+internal/auth/account_erase_steps.go
+  s_c62097689a4feb::t_a0ed189e68b84b 14-18
+internal/chat/account_erase.go
+  s_c62097689a4feb::t_6683f699c88d8d 52-53
+internal/server/acct_refs_integration_test.go
+  s_2f483d17207293::t_d25ed9ca4611df 1-68
+internal/userdata/order.go
+  s_c62097689a4feb::t_d62faeeb7884e1 63-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3867e3433dfeb2bd107b45497d10546fa32b61f2",
+  "prompts": {},
+  "sessions": {
+    "s_2f483d17207293": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a553f67746b72de61",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_c62097689a4feb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aebe01056a737cc59",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
