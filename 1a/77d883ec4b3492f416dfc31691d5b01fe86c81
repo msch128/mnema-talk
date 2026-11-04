@@ -1,0 +1,25 @@
+internal/repo/testdata/error_messages.golden.json
+  s_2a6b32cb6cdc90::t_2c5ee847a0b07d 598
+web/src/i18n/de.json
+  s_2a6b32cb6cdc90::t_bcd83715d017db 266
+web/src/i18n/en.json
+  s_2a6b32cb6cdc90::t_e7f4253a60730f 266
+web/src/lib/errorSentencesC.ts
+  s_2a6b32cb6cdc90::t_6f9ed6ec8854eb 197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a77d883ec4b3492f416dfc31691d5b01fe86c81",
+  "prompts": {},
+  "sessions": {
+    "s_2a6b32cb6cdc90": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-awiki-finish-09ce81c117022779",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
