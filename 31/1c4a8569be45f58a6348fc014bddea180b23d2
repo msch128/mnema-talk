@@ -1,0 +1,19 @@
+internal/server/visibility_surfaces_integration_test.go
+  s_6fef45a9968f0a::t_a5c684b887fe41 1-235
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "311c4a8569be45f58a6348fc014bddea180b23d2",
+  "prompts": {},
+  "sessions": {
+    "s_6fef45a9968f0a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4fd70cfda6b1701c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
