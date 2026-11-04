@@ -1,0 +1,23 @@
+internal/server/moderation_history_integration_test.go
+  s_428e179215eed1::t_5972500b1165c8 221-223
+internal/server/router_build.go
+  s_428e179215eed1::t_ceb7d7b58cf0aa 59-61
+internal/server/router_build_services.go
+  s_428e179215eed1::t_bef2307f138abf 72-73,86-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a2eb7da836aa121bc31eaac25cb28fcf63d04f41",
+  "prompts": {},
+  "sessions": {
+    "s_428e179215eed1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a4dcf8660e27bed8a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
