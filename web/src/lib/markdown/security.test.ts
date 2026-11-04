@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { MAX_MARKDOWN_CHARS, registerTextRule, renderMarkdown } from '../markdown'
 import { highlightCode, sanitizeHighlighted } from './highlight'
+import { wikiImageRule, wikiLinkRule } from '../wikiLinks'
 
 const TAGS = new Set(['STRONG', 'EM', 'U', 'DEL', 'SPAN', 'CODE', 'A', 'H1', 'H2', 'H3', 'DIV', 'BLOCKQUOTE', 'UL', 'OL', 'LI', 'PRE', 'BUTTON'])
 const ATTRS: Record<string, readonly string[]> = {
@@ -215,5 +216,37 @@ describe('hostile input stays cheap', () => {
   it('shows text beyond the size limit as it is', () => {
     const big = `**${'a'.repeat(MAX_MARKDOWN_CHARS)}**`
     expect(renderMarkdown(big)).toBe(`**${'a'.repeat(MAX_MARKDOWN_CHARS)}**`)
+  })
+})
+
+describe('random token soup', () => {
+  // Every token that means something to the parser or to a browser, in any order.
+  const TOKENS = ['*', '**', '_', '__', '~~', '||', '`', '``', '```', '```js\n', '\n', '\n\n', '> ', '>>> ', '- ', '1. ', '# ', '-# ', '[', ']', '(', ')', '](', '<', '>',
+    '<http://a.b>', 'https://a.b/c?d=e', 'mailto:a@b.c', '@max', '@Dev', '@all', ':x:', '<:ab:0a1b2c3d-0a1b-0a1b-0a1b-0a1b2c3d4e5f>', '[[Page]]',
+    '![a](/api/media/0a1b2c3d-0a1b-0a1b-0a1b-0a1b2c3d4e5f)', '&lt;', '&', '"', "'", '\\', 'a', ' ', '<script>', '</span>', '<img src=x onerror=1>', 'javascript:alert(1)', '\u0000', '\u2028', '\u202e']
+  // A fixed generator: a failure names the input that caused it and replays.
+  function random(seed: number): () => number {
+    let state = seed >>> 0
+    return () => {
+      state = (Math.imul(state, 1664525) + 1013904223) >>> 0
+      return state / 2 ** 32
+    }
+  }
+
+  it('builds only owned elements, and what the browser serialises parses back the same', () => {
+    const next = random(7)
+    const options = { known: new Set(['max']), me: 'max', roles: [{ name: 'Dev', color: '#112233' }], rules: [wikiImageRule, wikiLinkRule([])] }
+    for (let i = 0; i < 4000; i++) {
+      let input = ''
+      for (let n = 1 + Math.floor(next() * 14); n > 0; n--) input += TOKENS[Math.floor(next() * TOKENS.length)]
+      const html = renderMarkdown(input, { ...options, document: i % 2 === 0 })
+      for (const el of parse(html).querySelectorAll('*')) {
+        expect(TAGS.has(el.tagName) || el.tagName === 'IMG', `tag ${el.tagName} for ${JSON.stringify(input)}`).toBe(true)
+        for (const attr of el.attributes) expect(attr.name, `${el.tagName} for ${JSON.stringify(input)}`).not.toMatch(/^on|^style$|^srcdoc$|^formaction$/i)
+      }
+      // A markup the parser rewrites on its way back in is what mutation XSS is made of.
+      const once = parse(html).innerHTML
+      expect(parse(once).innerHTML, JSON.stringify(input)).toBe(once)
+    }
   })
 })
