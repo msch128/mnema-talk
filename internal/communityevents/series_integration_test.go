@@ -630,7 +630,12 @@ func TestATimeOnlyEditKeepsTheDaysOfOccurrencesBeforeTheAnchor(t *testing.T) {
 	}
 	// Then move only the time of day, starting at occurrence 2.
 	f.event = &CommunityEvent{ID: list[2].ID}
-	later := list[2].Start.Add(2 * time.Hour).Format(time.RFC3339)
+	// The series starts relative to now, so move away from midnight: a shift into the next Berlin day would legitimately change the day.
+	shift := 2 * time.Hour
+	if list[2].Start.In(zone).Hour() >= 22 {
+		shift = -shift
+	}
+	later := list[2].Start.Add(shift).Format(time.RFC3339)
 	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, fmt.Sprintf(`{"start_time":%q}`, later), "scope=following"); err != nil {
 		t.Fatal(err)
 	}
@@ -640,7 +645,7 @@ func TestATimeOnlyEditKeepsTheDaysOfOccurrencesBeforeTheAnchor(t *testing.T) {
 		if day := got[i].Start.In(zone).Format("2006-01-02"); day != wantDay {
 			t.Fatalf("occurrence %d moved from %s to %s", i, wantDay, day)
 		}
-		if h := got[i].Start.In(zone).Hour(); h != list[2].Start.In(zone).Add(2*time.Hour).Hour() {
+		if h := got[i].Start.In(zone).Hour(); h != list[2].Start.In(zone).Add(shift).Hour() {
 			t.Fatalf("occurrence %d is at %d h, the new time of day was not applied", i, h)
 		}
 	}
