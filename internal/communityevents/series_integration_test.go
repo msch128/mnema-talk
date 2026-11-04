@@ -628,9 +628,16 @@ func TestATimeOnlyEditKeepsTheDaysOfOccurrencesBeforeTheAnchor(t *testing.T) {
 	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, fmt.Sprintf(`{"start_time":%q}`, moved), "scope=following"); err != nil {
 		t.Fatal(err)
 	}
-	// Then move only the time of day, starting at occurrence 2.
+	// Then move only the time of day, starting at occurrence 2: another hour of
+	// its own day, whatever the clock says (an offset of a few hours would cross
+	// midnight in the evening, and that is a new date, not a new time).
 	f.event = &CommunityEvent{ID: list[2].ID}
-	later := list[2].Start.Add(2 * time.Hour).Format(time.RFC3339)
+	own := list[2].Start.In(zone)
+	hour := 9
+	if own.Hour() == hour {
+		hour++
+	}
+	later := time.Date(own.Year(), own.Month(), own.Day(), hour, 30, 0, 0, zone).Format(time.RFC3339)
 	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, fmt.Sprintf(`{"start_time":%q}`, later), "scope=following"); err != nil {
 		t.Fatal(err)
 	}
@@ -640,8 +647,8 @@ func TestATimeOnlyEditKeepsTheDaysOfOccurrencesBeforeTheAnchor(t *testing.T) {
 		if day := got[i].Start.In(zone).Format("2006-01-02"); day != wantDay {
 			t.Fatalf("occurrence %d moved from %s to %s", i, wantDay, day)
 		}
-		if h := got[i].Start.In(zone).Hour(); h != list[2].Start.In(zone).Add(2*time.Hour).Hour() {
-			t.Fatalf("occurrence %d is at %d h, the new time of day was not applied", i, h)
+		if at := got[i].Start.In(zone); at.Hour() != hour || at.Minute() != 30 {
+			t.Fatalf("occurrence %d is at %s, the new time of day (%d:30) was not applied", i, at.Format("15:04"), hour)
 		}
 	}
 }
