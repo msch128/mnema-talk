@@ -365,6 +365,16 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     expect(later.loaded).toBe(false)
     expect(chat.activeChannel).toBeNull()
   })
+  it('starts over for a different account that replaces the signed-in one without a signed-out step', async () => {
+    const { auth, chat } = await mountApp()
+    const later = useLaterStore()
+    later.loaded = true
+    const opened = vi.mocked(chat.initWebSocket).mock.calls.length
+    auth.user = userFixture({ id: 'someone-else' })
+    await flushPromises()
+    expect(later.loaded).toBe(false)
+    expect(vi.mocked(chat.initWebSocket).mock.calls.length).toBe(opened + 1)
+  })
   it('opens the console tab another part of the UI asks for, for people who may open it', async () => {
     const { w } = await mountApp({ admin: true })
     requestAdminTab('onboarding')

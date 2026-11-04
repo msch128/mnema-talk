@@ -162,6 +162,14 @@ async function onAuthSuccess() {
   }
 }
 
+/** Ends the call and drops everything the signed-out account had loaded. */
+function endAccountSession() {
+  savePendingRoute()
+  if (voiceStore.currentChannelId) leaveVoiceChannel()
+  // Nothing of this account stays for the next sign-in on this tab: the socket, lists, permissions, reminders and open conversation all go.
+  chatStore.resetCommunityState()
+}
+
 // Single place that reacts to login, logout and expired sessions.
 watch(() => authStore.isAuthenticated, async (isAuthed) => {
   if (!alive) return
@@ -171,11 +179,16 @@ watch(() => authStore.isAuthenticated, async (isAuthed) => {
     }
   } else {
     // Logout or expired session: end the call so mic and connection stop.
-    savePendingRoute()
-    if (voiceStore.currentChannelId) leaveVoiceChannel()
-    // Nothing of this account stays for the next sign-in on this tab: the socket, lists, permissions, reminders and open conversation all go.
-    chatStore.resetCommunityState()
+    endAccountSession()
   }
+})
+
+// Another tab may sign a different account in under the same cookie; the session check after a
+// socket drop then swaps the user without ever passing through "signed out".
+watch(() => authStore.user?.id, async (id, previous) => {
+  if (!alive || !id || !previous || !authChecked.value) return
+  endAccountSession()
+  await onAuthSuccess()
 })
 
 // The server may have dropped our media connection while the socket was down.
