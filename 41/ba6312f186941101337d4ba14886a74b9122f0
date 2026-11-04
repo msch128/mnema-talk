@@ -1,0 +1,31 @@
+README.md
+  s_4a07bed1eeb5c6::t_a1f11f1f7327bd 459
+doc/architecture.md
+  s_4a07bed1eeb5c6::t_ac517da652193e 38,57-60
+doc/product-status.md
+  s_5836d9dc286191::t_b5b8a647b7ca7e 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "41ba6312f186941101337d4ba14886a74b9122f0",
+  "prompts": {},
+  "sessions": {
+    "s_4a07bed1eeb5c6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ad5d3687b8d5ec406",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_5836d9dc286191": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9a0fa4b1ffeaca70",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
