@@ -114,15 +114,18 @@ func (a *AutoDeleter) Sweep(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("list auto-delete channels: %w", err)
 	}
+	// A channel that fails does not stop the others, but the run counts as failed.
+	var failed []error
 	for _, c := range chans {
 		if err := a.sweepChannel(ctx, c); err != nil {
 			if ctx.Err() != nil {
 				return nil
 			}
 			slog.Error("auto-delete channel failed", "channel", c.id, "err", err)
+			failed = append(failed, fmt.Errorf("channel %s: %w", c.id, err))
 		}
 	}
-	return nil
+	return errors.Join(failed...)
 }
 
 func (a *AutoDeleter) sweepChannel(ctx context.Context, c autoDeleteChannel) error {
