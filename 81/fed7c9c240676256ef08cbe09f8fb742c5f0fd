@@ -1,0 +1,21 @@
+internal/chat/channel_edges_integration_test.go
+  s_ac86bbae7477e8::t_2cc86b1c16274d 16,29-49,158,162,270,274
+internal/chat/forum_edges_integration_test.go
+  s_ac86bbae7477e8::t_4eb0fc6e75369c 69,161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "81fed7c9c240676256ef08cbe09f8fb742c5f0fd",
+  "prompts": {},
+  "sessions": {
+    "s_ac86bbae7477e8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acdaaa3b5dd7f0aaf",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
