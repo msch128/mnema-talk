@@ -1,0 +1,21 @@
+internal/httpx/logpath_test.go
+  s_55a440e6dabde3::t_5e1a0c19e73b27 13-18
+internal/httpx/middleware.go
+  s_55a440e6dabde3::t_45cd6f8a2dbbc5 97-101,103-104,106-122,124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d15b2c4596749c2a14c3cf77cbf1c50a3dd7635b",
+  "prompts": {},
+  "sessions": {
+    "s_55a440e6dabde3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a0ce4fe16328c5cde",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
