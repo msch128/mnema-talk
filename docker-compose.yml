@@ -190,7 +190,7 @@ services:
   # 2. Database: PostgreSQL 18
   # ==========================================================
   postgres:
-    image: postgres:18-alpine@sha256:898c60cb390d1085bc97bdd6a1ae968757421df394b071848b52b1c09c89d6a5
+    image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
     container_name: mnema-postgres
     restart: unless-stopped
     environment:
@@ -251,7 +251,7 @@ services:
   # 3. Object Storage: SeaweedFS (S3-compatible)
   # ==========================================================
   seaweedfs:
-    image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    image: chrislusf/seaweedfs:4.50@sha256:c2658820e763294a9e9de7b36c81e59b879e3459148351aee4e31a126ca64860
     container_name: mnema-seaweedfs
     restart: unless-stopped
     environment:
