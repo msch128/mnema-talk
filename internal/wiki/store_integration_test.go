@@ -557,3 +557,19 @@ func TestAPositionOutsideTheRangeIsRefused(t *testing.T) {
 		t.Fatalf("the highest position: %v", err)
 	}
 }
+
+func TestAPositionNamedWithAMoveIsKeptEvenWhenItEqualsTheOldOne(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	top := w.page(t, "Top", nil)
+	w.page(t, "Sibling", &top.ID) // position 0 below top
+	moved := w.page(t, "Moved", nil)
+	if _, err := w.s.Change(ctx, w.alice, moved.Slug, PageChange{Position: ptr(0)}, true); err != nil {
+		t.Fatal(err)
+	}
+	// The page sits at position 0; it moves below a parent that already has a page there and asks for position 0 again.
+	done, err := w.s.Change(ctx, w.alice, moved.Slug, PageChange{ParentID: &top.ID, Position: ptr(0)}, true)
+	if err != nil || done.Page.Position != 0 {
+		t.Fatalf("moved to position 0: %+v, %v", done, err)
+	}
+}

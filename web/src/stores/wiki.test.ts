@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ApiError } from '../lib/api'
 import { useWikiStore } from './wiki'
+import { wikiDirty, wikiQuery } from '../lib/wikiNav'
 import { EDIT_WIKI, grantWiki, MANAGE_WIKI, summary, VIEW_WIKI, wikiPage } from '../wiki.fixture'
 
 const api = vi.hoisted(() => ({ fetchWikiTree: vi.fn(), fetchWikiPage: vi.fn() }))
@@ -128,5 +129,14 @@ describe('wiki store', () => {
     expect(wiki.page).toBeNull()
     expect(wiki.pageState).toBe('idle')
     expect(wiki.treeLoaded).toBe(false)
+  })
+
+  it('forgets the search text and the unsaved flag of the member who signed out', () => {
+    const wiki = useWikiStore()
+    wikiQuery.value = 'secret plans'
+    wikiDirty.value = true
+    wiki.reset()
+    expect(wikiQuery.value).toBe('')
+    expect(wikiDirty.value).toBe(false)
   })
 })

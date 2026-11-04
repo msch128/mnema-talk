@@ -394,6 +394,28 @@ it('starts editing an account whose optional display name is empty', async () =>
 })
 
 describe('UserProfileModal unsaved edits', () => {
+  it('asks before an unsaved bio is lost by the profile\'s own links (status, account) closing it', async () => {
+    auth.user = userFixture({ ...stub, bio: 'Original.' })
+    wrapper = mount(UserProfileModal, { attachTo: document.body })
+    await wrapper.get('[data-testid="profile-bio-edit"]').trigger('click')
+    await wrapper.get('#profile-bio').setValue('Half written')
+    await wrapper.get('[data-testid="profile-status-edit"]').trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Änderungen verwerfen?')
+    expect(wrapper.emitted('close')).toBeUndefined()
+    expect(useStatusEditor().open.value).toBe(false)
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(wrapper.emitted('close')).toBeUndefined()
+    expect(wrapper.get<HTMLInputElement>('#profile-bio').element.value).toBe('Half written')
+    await wrapper.get('[data-testid="profile-status-edit"]').trigger('click')
+    await flushPromises()
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(wrapper.emitted('close')).toEqual([[]])
+    expect(useStatusEditor().open.value).toBe(true)
+  })
+
   it('asks before the profile closes with an unsaved bio and keeps it open on "keep editing"', async () => {
     auth.user = userFixture({ ...stub, bio: 'Original.' })
     wrapper = mount(UserProfileModal, { attachTo: document.body })

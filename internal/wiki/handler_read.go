@@ -143,7 +143,7 @@ func (h *Handler) revision(w http.ResponseWriter, r *http.Request) error {
 // search handles GET /api/wiki/search.
 //
 // @Summary Search the wiki
-// @Description Pages whose title or text contains q (at least two characters), titles first, at most 30, with a few words around the match. Deleted pages are never found. Needs View wiki.
+// @Description Pages whose title or text contains q (at least three characters), titles first, at most 30, with a few words around the match. Deleted pages are never found. Needs View wiki.
 // @ID searchWiki
 // @Tags Wiki
 // @Produce json

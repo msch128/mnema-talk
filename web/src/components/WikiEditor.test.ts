@@ -214,6 +214,28 @@ describe('the toolbar and the preview', () => {
     expect(area.value).toBe('say **hello** now')
   })
 
+  it('applies a toolbar change as typed text, so the textarea keeps its undo history', async () => {
+    const typed: string[] = []
+    // What a browser does for insertText: replace the selection and tell the field (a plain value assignment would not be undoable).
+    document.execCommand = ((command: string, _ui: boolean, text: string) => {
+      const el = document.activeElement as HTMLTextAreaElement
+      typed.push(`${command}:${text}`)
+      el.setRangeText(text, el.selectionStart, el.selectionEnd, 'end')
+      el.dispatchEvent(new Event('input'))
+      return true
+    }) as typeof document.execCommand
+    const { w, field } = open(wikiPage({ content: 'say hello now' }))
+    const area = field('text-input').element as HTMLTextAreaElement
+    document.body.append(w.element)
+    area.setSelectionRange(4, 9)
+    await w.get('[data-tool="bold"]').trigger('click')
+    await flushPromises()
+    expect(typed).toEqual(['insertText:**hello**'])
+    expect(area.value).toBe('say **hello** now')
+    expect(field('preview').text()).toContain('hello') // the model followed the typed change
+    delete (document as { execCommand?: unknown }).execCommand
+  })
+
   it('previews the text through the safe renderer, links included', async () => {
     useWikiStore().pages = [summary('1', 'Rules')]
     const { field } = open(null)

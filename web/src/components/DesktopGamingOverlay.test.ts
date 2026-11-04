@@ -31,6 +31,15 @@ describe('native gaming surfaces', () => {
     expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_settings', { settings: { ...snapshot.settings, enabled: false, sidepeek_opacity: 30, games: [] } })
     expect(snapshot.settings.enabled).toBe(true)
   })
+  it('tells assistive technology whether the settings are unfolded', async () => {
+    const w = await open(true)
+    const toggle = w.get('[data-testid="gaming-settings-toggle"]')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    await toggle.trigger('click'); await flushPromises()
+    expect(toggle.attributes('aria-expanded')).toBe('true')
+    await toggle.trigger('click'); await flushPromises()
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+  })
   it('allows reenabling without Talk or a game in the local configuration surface', async () => {
     snapshot.active = false; snapshot.settings.enabled = false; snapshot.voice.members = []
     Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'gaming-settings'); wrapper = mount(DesktopGamingOverlay); await flushPromises()

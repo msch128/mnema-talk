@@ -8,7 +8,6 @@ import { caughtErrorMessage } from '../lib/api'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
-import { useStatusEditor } from '../composables/useStatusEditor'
 import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import UnsavedChangesBar from './UnsavedChangesBar.vue'
 import { locale, t } from '../i18n'
@@ -20,13 +19,13 @@ const props = defineProps({
   profileUser: { type: Object as PropType<Partial<ProfileUser>>, required: true },
   isSelf: { type: Boolean, default: false }
 })
-const emit = defineEmits<{ close: [] }>()
+// One's own status is written in the status dialog: the profile (which may hold other unsaved edits) decides whether it makes way.
+const emit = defineEmits<{ editOwn: [] }>()
 
 const MAX_STATUS = 32
 const chatStore = useChatStore()
 const toasts = useToastStore()
 const permissions = usePermissionsStore()
-const statusEditor = useStatusEditor()
 
 const canEditStatus = computed(() => props.isSelf || (props.profileUser.role !== 'admin' && permissions.can('manage_members') && permissions.outranksMember(props.profileUser.id ?? '')))
 const isEditingStatus = ref(false)
@@ -60,8 +59,7 @@ async function store(text: string) {
 
 function startEditStatus() {
   if (props.isSelf) {
-    emit('close')
-    statusEditor.show()
+    emit('editOwn')
     return
   }
   form.reset()

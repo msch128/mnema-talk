@@ -149,4 +149,21 @@ describe('useEventComments', () => {
     expect(api.fetchComments).toHaveBeenLastCalledWith(fixtureId(5))
     expect(list.comments.value).toEqual([c2])
   })
+
+  it('does not put a comment sent for one event into the list of the next one', async () => {
+    const id = ref(fixtureId(1))
+    vi.mocked(api.fetchComments).mockResolvedValue(page([c2], false))
+    const list = useEventComments(id)
+    await list.load()
+    let answer: (c: typeof c3) => void = () => {}
+    vi.mocked(api.postComment).mockReturnValueOnce(new Promise(resolve => { answer = resolve }))
+    const sending = list.send('hello')
+    id.value = fixtureId(2)
+    vi.mocked(api.fetchComments).mockResolvedValue(page([c1], false))
+    await flushPromises()
+    answer(c3)
+    await sending
+    await flushPromises()
+    expect(list.comments.value).toEqual([c1])
+  })
 })

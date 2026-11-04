@@ -210,27 +210,36 @@ func reparent(ctx context.Context, tx pgx.Tx, cur *Page, parent uuid.UUID) (bool
 	if (target == nil && cur.ParentID == nil) || (target != nil && cur.ParentID != nil && *target == *cur.ParentID) {
 		return false, nil
 	}
-	if target != nil {
-		if under, err := isUnder(ctx, tx, *target, cur.ID); err != nil || under {
-			if err != nil {
-				return false, err
-			}
-			return false, errMoveIntoSelf
-		}
-	}
-	height, err := heightOf(ctx, tx, cur.ID)
-	if err != nil {
-		return false, err
-	}
-	if err := checkRoom(ctx, tx, target, height); err != nil {
+	if err := checkMove(ctx, tx, cur, target); err != nil {
 		return false, err
 	}
 	pos, err := nextPosition(ctx, tx, target)
 	if err != nil {
 		return false, err
 	}
-	_, err = tx.Exec(ctx, `UPDATE wiki_pages SET parent_id = $2, position = $3 WHERE id = $1`, cur.ID, target, pos)
-	return true, err
+	if _, err = tx.Exec(ctx, `UPDATE wiki_pages SET parent_id = $2, position = $3 WHERE id = $1`, cur.ID, target, pos); err != nil {
+		return false, err
+	}
+	cur.ParentID, cur.Position = target, pos // a position named with the move is compared with where the page is now
+	return true, nil
+}
+
+// checkMove refuses a move below the page itself or its subpages, below a page that is gone, or past the depth limit.
+func checkMove(ctx context.Context, tx pgx.Tx, cur *Page, target *uuid.UUID) error {
+	if target != nil {
+		under, err := isUnder(ctx, tx, *target, cur.ID)
+		if err != nil {
+			return err
+		}
+		if under {
+			return errMoveIntoSelf
+		}
+	}
+	height, err := heightOf(ctx, tx, cur.ID)
+	if err != nil {
+		return err
+	}
+	return checkRoom(ctx, tx, target, height)
 }
 
 // RestoreRevision makes revision rev the page's text again, as a new revision.

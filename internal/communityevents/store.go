@@ -213,24 +213,25 @@ func (s *Store) swapCover(ctx context.Context, id uuid.UUID, mediaID *uuid.UUID)
 
 // SetRSVP records the answer. A sign-up counts as going, so any other answer
 // gives up the member's role slot and moves that role's waitlist up; the
-// members who moved up are returned.
+// members who moved up are returned. The slot goes first: sign-ups take the
+// event and role locks before they write the RSVP, and so must this, or the
+// two wait for each other.
 func (s *Store) SetRSVP(ctx context.Context, eventID, userID uuid.UUID, response string) ([]Promotion, error) {
 	var promoted []Promotion
 	err := s.inTx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
+		if response != RSVPGoing {
+			var err error
+			if _, promoted, err = removeSignup(ctx, tx, eventID, userID); err != nil {
+				return err
+			}
+		}
+		_, err := tx.Exec(ctx, `
 			INSERT INTO event_rsvps (event_id, user_id, response, created_at, updated_at)
 			VALUES ($1, $2, $3, NOW(), NOW())
 			ON CONFLICT (event_id, user_id)
 			DO UPDATE SET response = EXCLUDED.response, updated_at = NOW()`,
 			eventID, userID, response,
-		); err != nil {
-			return err
-		}
-		if response == RSVPGoing {
-			return nil
-		}
-		var err error
-		_, promoted, err = removeSignup(ctx, tx, eventID, userID)
+		)
 		return err
 	})
 	return promoted, err
@@ -241,11 +242,11 @@ func (s *Store) SetRSVP(ctx context.Context, eventID, userID uuid.UUID, response
 func (s *Store) DeleteRSVP(ctx context.Context, eventID, userID uuid.UUID) ([]Promotion, error) {
 	var promoted []Promotion
 	err := s.inTx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `DELETE FROM event_rsvps WHERE event_id = $1 AND user_id = $2`, eventID, userID); err != nil {
+		var err error
+		if _, promoted, err = removeSignup(ctx, tx, eventID, userID); err != nil {
 			return err
 		}
-		var err error
-		_, promoted, err = removeSignup(ctx, tx, eventID, userID)
+		_, err = tx.Exec(ctx, `DELETE FROM event_rsvps WHERE event_id = $1 AND user_id = $2`, eventID, userID)
 		return err
 	})
 	return promoted, err

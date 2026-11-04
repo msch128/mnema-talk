@@ -5,6 +5,7 @@ import { computed, ref } from 'vue'
 import { isApiError } from '../lib/api'
 import { fetchWikiPage, fetchWikiTree, type WikiPage, type WikiPageSummary } from '../lib/wikiApi'
 import { wikiViews } from '../lib/wikiTree'
+import { forgetWikiSession } from '../lib/wikiState'
 import { usePermissionsStore } from './permissions'
 
 export type WikiPageState = 'idle' | 'loading' | 'ready' | 'missing' | 'denied' | 'failed'
@@ -97,6 +98,7 @@ export const useWikiStore = defineStore('wiki', () => {
     treeSeq++
     pages.value = []
     treeLoaded.value = treeFailed.value = false
+    forgetWikiSession()
     clearPage()
   }
 

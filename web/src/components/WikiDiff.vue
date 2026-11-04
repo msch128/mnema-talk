@@ -1,11 +1,23 @@
 <script setup lang="ts">
 // What changed between two texts, line by line: removed lines in red, added in
 // green, unchanged ones dim. Marks and words carry the meaning, not colour alone.
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { diffStats, lineDiff } from '../lib/lineDiff'
 
 const props = defineProps<{ before: string; after: string }>()
-const ops = computed(() => lineDiff(props.before, props.after))
+// While the writer types on one side (the conflict view), the diff follows a moment after the last key,
+// not on every keystroke; a different text to compare against shows at once.
+const SETTLE_MS = 300
+const shown = ref({ before: props.before, after: props.after })
+let timer: ReturnType<typeof setTimeout> | undefined
+watch(() => [props.before, props.after] as const, ([before, after]) => {
+  clearTimeout(timer)
+  const settle = () => { shown.value = { before, after } }
+  if (before !== shown.value.before) settle()
+  else timer = setTimeout(settle, SETTLE_MS)
+})
+onBeforeUnmount(() => clearTimeout(timer))
+const ops = computed(() => lineDiff(shown.value.before, shown.value.after))
 const stats = computed(() => (ops.value ? diffStats(ops.value) : null))
 const changed = computed(() => !!ops.value && ops.value.some(o => o.kind !== 'same'))
 </script>
@@ -16,7 +28,7 @@ const changed = computed(() => !!ops.value && ops.value.some(o => o.kind !== 'sa
     <template v-else>
       <p class="border-b border-mnema-border bg-mnema-raised px-3 py-1.5 text-xs text-mnema-tertiary" data-testid="wiki-diff-stats">
         <template v-if="changed">{{ $t('wiki.diffStats', { added: stats?.added ?? 0, removed: stats?.removed ?? 0 }) }}</template>
-        <template v-else-if="before !== after">{{ $t('wiki.diffWhitespace') }}</template>
+        <template v-else-if="shown.before !== shown.after">{{ $t('wiki.diffWhitespace') }}</template>
         <template v-else>{{ $t('wiki.diffSame') }}</template>
       </p>
       <ol v-if="changed" class="max-h-96 overflow-auto font-mono text-xs leading-5">

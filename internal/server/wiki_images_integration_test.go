@@ -153,7 +153,12 @@ func TestWikiPicturesAreReadableOnlyWhereTheWikiIs(t *testing.T) {
 	res := f.uploadImage(f.editor, "a.png", "image/png", bannerPNG(t, 20, 20))
 	wantStatus(t, "upload", res, http.StatusCreated)
 	res.decode(t, &img)
-	wantStatus(t, "open wiki", f.viewer.get(img.URL), http.StatusOK)
+	open := f.viewer.get(img.URL)
+	wantStatus(t, "open wiki", open, http.StatusOK)
+	// The browser asks again before it shows the picture, so closing the wiki closes the picture at once and not a day later.
+	if cc := open.header.Get("Cache-Control"); !strings.Contains(cc, "no-cache") || strings.Contains(cc, "immutable") {
+		t.Fatalf("a wiki picture must be revalidated on every use, Cache-Control: %q", cc)
+	}
 
 	everyone := everyoneID(t, f.admin)
 	closed := f.admin.patch("/api/admin/roles/"+everyone.String(), map[string]any{"permissions": int64(perm.DefaultEveryone &^ perm.ViewWiki)})

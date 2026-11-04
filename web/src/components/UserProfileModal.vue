@@ -22,6 +22,7 @@ import ProfileBannerControls from './ProfileBannerControls.vue'
 import ProfileBio from './ProfileBio.vue'
 import ProfileStatus from './ProfileStatus.vue'
 import { provideDraftScope } from '../composables/useSettingsDraft'
+import { useStatusEditor } from '../composables/useStatusEditor'
 import BotBadge from './BotBadge.vue'
 import { shownName } from '../lib/deletedUser'
 import ActivityStats from './ActivityStats.vue'
@@ -41,11 +42,17 @@ const emit = defineEmits<{ close: []; mention: [username: string] }>()
 const drafts = provideDraftScope()
 const account = useAccountStore()
 
-// Password and sign-in security live together in "Account & security".
-function openSecurity() {
+// Whatever leaves the profile for somewhere else asks first about an unsaved edit, like the close button.
+async function leaveFor(next: () => void) {
+  if (!await drafts.guard()) return
   emit('close')
-  account.open()
+  next()
 }
+
+// Password and sign-in security live together in "Account & security".
+const openSecurity = () => leaveFor(() => account.open())
+const statusEditor = useStatusEditor()
+const openOwnStatus = () => leaveFor(() => statusEditor.show())
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
@@ -89,6 +96,7 @@ const features = useServerFeaturesStore()
 const dmActions = useDmActions()
 const showMessage = computed(() => dmActions.canMessage(profileId.value))
 async function handleMessage() {
+  if (!await drafts.guard()) return
   if (await dmActions.messageMember(profileId.value)) emit('close')
 }
 // Moderators with Manage reports get a Moderation tab: the member's history and
@@ -137,9 +145,9 @@ const memberSinceFormatted = computed(() => {
   }
 })
 
-function handleMention() {
+async function handleMention() {
   const username = profileUser.value.username
-  if (!username) return
+  if (!username || !await drafts.guard()) return
   emit('mention', username)
   emit('close')
 }
@@ -244,7 +252,7 @@ function handleMention() {
 
           <ProfileMemberActions v-if="!isSelf" v-show="tab === 'profile' || !hasModerationTab" :profile-user="profileUser" :is-bot="isBot" />
           <div v-show="tab === 'profile' || !hasModerationTab" class="mt-5 divide-y divide-mnema-hairline [&>*]:py-4 [&>:first-child]:pt-0 [&>:last-child]:pb-0">
-          <ProfileStatus :profile-user="profileUser" :is-self="!!isSelf" @close="emit('close')" />
+          <ProfileStatus :profile-user="profileUser" :is-self="!!isSelf" @edit-own="openOwnStatus" />
 
           <ProfileBio :profile-user="profileUser" :is-self="!!isSelf" />
 

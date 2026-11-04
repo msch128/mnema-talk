@@ -303,15 +303,18 @@ func (h *Handler) releaseDownload(ctx context.Context, id uuid.UUID) {
 // finishDownload spends the export after the whole file was sent.
 func (h *Handler) finishDownload(ctx context.Context, id uuid.UUID, key string) {
 	_, _ = h.Sessions.DB.Exec(context.WithoutCancel(ctx), `UPDATE data_exports SET downloaded_at = NOW() WHERE id = $1`, id)
-	h.dropExportFile(ctx, id, key)
+	_ = h.dropExportFile(ctx, id, key)
 }
 
-func (h *Handler) dropExportFile(ctx context.Context, id uuid.UUID, key string) {
+// dropExportFile removes the stored file, then forgets its key. A failure
+// keeps the key, so the next sweep tries again.
+func (h *Handler) dropExportFile(ctx context.Context, id uuid.UUID, key string) error {
 	if err := h.Objects.Delete(context.WithoutCancel(ctx), key); err != nil {
 		slog.Warn("export file not removed", "err", err)
-		return
+		return err
 	}
-	_, _ = h.Sessions.DB.Exec(context.WithoutCancel(ctx), `UPDATE data_exports SET s3_key = NULL WHERE id = $1`, id)
+	_, err := h.Sessions.DB.Exec(context.WithoutCancel(ctx), `UPDATE data_exports SET s3_key = NULL WHERE id = $1`, id)
+	return err
 }
 
 // RunExportSweep removes finished exports that were downloaded or expired,
@@ -341,10 +344,10 @@ func (h *Handler) RunExportSweep(ctx context.Context, every time.Duration) {
 
 func (h *Handler) sweepExports(ctx context.Context) error {
 	db := h.Sessions.DB
-	_, _ = db.Exec(ctx, `UPDATE data_exports SET status = 'failed' WHERE status = 'pending' AND requested_at < NOW() - INTERVAL '30 minutes'`)
+	_, markErr := db.Exec(ctx, `UPDATE data_exports SET status = 'failed' WHERE status = 'pending' AND requested_at < NOW() - INTERVAL '30 minutes'`)
 	rows, err := db.Query(ctx, `SELECT id, s3_key FROM data_exports WHERE s3_key IS NOT NULL AND (expires_at < NOW() OR downloaded_at IS NOT NULL) LIMIT 200`)
 	if err != nil {
-		return err
+		return errors.Join(markErr, err)
 	}
 	type item struct {
 		id  uuid.UUID
@@ -355,11 +358,14 @@ func (h *Handler) sweepExports(ctx context.Context) error {
 		return it, row.Scan(&it.id, &it.key)
 	})
 	if err != nil || h.Objects == nil {
-		return err
+		return errors.Join(markErr, err)
 	}
+	failed := []error{markErr}
 	for _, it := range items {
-		h.dropExportFile(ctx, it.id, it.key)
+		if err := h.dropExportFile(ctx, it.id, it.key); err != nil {
+			failed = append(failed, err)
+		}
 	}
-	_, _ = db.Exec(ctx, `DELETE FROM data_exports WHERE requested_at < NOW() - INTERVAL '7 days' AND s3_key IS NULL`)
-	return nil
+	_, err = db.Exec(ctx, `DELETE FROM data_exports WHERE requested_at < NOW() - INTERVAL '7 days' AND s3_key IS NULL`)
+	return errors.Join(append(failed, err)...)
 }
