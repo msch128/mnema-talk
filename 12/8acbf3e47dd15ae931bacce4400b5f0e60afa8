@@ -1,0 +1,19 @@
+internal/communityevents/series_integration_test.go
+  s_e7ff506d891a17::t_8f15597167793e 633-638,648
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "128acbf3e47dd15ae931bacce4400b5f0e60afa8",
+  "prompts": {},
+  "sessions": {
+    "s_e7ff506d891a17": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5d0d8b5a85443d53",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
