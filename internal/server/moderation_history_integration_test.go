@@ -218,9 +218,9 @@ func TestTheTimelineGathersWhatModeratorsAndAutomodDidAboutAMember(t *testing.T)
 			}
 		}
 	}
-	for i := 1; i < len(h.Events); i++ {
-		if h.Events[i].Kind == "" {
-			t.Errorf("event without kind: %+v", h.Events[i])
+	for _, e := range h.Events {
+		if e.Kind == "" {
+			t.Errorf("event without kind: %+v", e)
 		}
 	}
 	// What was said in the report stays in the queue, never in the timeline.

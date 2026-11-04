@@ -45,9 +45,6 @@ import (
 // sign-out of one session would not end that session's sockets.
 var _ ws.SessionClaimer = (*auth.Sessions)(nil)
 
-// components are the handlers and background workers NewRouter assembles
-// before it mounts their routes. The new* methods fill it in stages; a later
-// stage may depend on what an earlier one set.
 const (
 	// apiWritesPerMinute is a member's budget for requests that change
 	// something (and for anything else that is not a read).
@@ -59,6 +56,9 @@ const (
 	apiReadsPerMinute = 3000
 )
 
+// components are the handlers and background workers NewRouter assembles
+// before it mounts their routes. The new* methods fill it in stages; a later
+// stage may depend on what an earlier one set.
 type components struct {
 	d       Deps
 	cfg     *config.Config
