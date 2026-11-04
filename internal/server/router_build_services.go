@@ -69,6 +69,8 @@ func (c *components) newLater(pusher later.Notifier) {
 	go c.later.Run(c.ctx)
 }
 
+// newWiki builds the wiki handler; its picture uploads reserve quota through
+// the media handler, so newCore must have run.
 func (c *components) newWiki() {
 	c.wikiH = &wiki.Handler{
 		Store:       wiki.NewStore(c.d.DB),
@@ -81,6 +83,8 @@ func (c *components) newWiki() {
 	}
 }
 
+// newEvents builds the community events handler and starts its scheduler.
+// It takes the push service from newPush, so it runs after it.
 func (c *components) newEvents() {
 	var pushSvc *push.Service
 	if c.pushH != nil {
