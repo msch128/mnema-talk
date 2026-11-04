@@ -10,7 +10,9 @@ func validPathRune(r rune) bool {
 }
 
 func validPathSegment(seg string) bool {
-	if seg == "" || seg == "." || seg == ".." {
+	// A leading dot hides the entry (and covers "." and ".."): hidden files and
+	// directories are never part of a signed bundle.
+	if seg == "" || seg[0] == '.' {
 		return false
 	}
 	// Windows silently strips trailing dots and spaces and reserves device names.
@@ -31,7 +33,8 @@ var windowsReserved = map[string]bool{
 }
 
 // ValidPath reports whether p is an acceptable bundle-relative path: UTF-8,
-// forward slashes only, no empty, "." or ".." segments, no control characters,
+// forward slashes only, no empty or dot-leading segments (hidden entries,
+// "." and ".."), no control characters,
 // and nothing a Windows file system would rename (":", trailing dot or space,
 // device names).
 func ValidPath(p string) bool {
