@@ -1,0 +1,31 @@
+doc/wiki.md
+  s_623b170811f2b4::t_6b5e50d14c188e 139-142
+internal/wiki/account_data.go
+  s_1f08bc1c52cb91::t_baa1dfa937740c 8,27,31-73
+internal/wiki/account_data_integration_test.go
+  s_623b170811f2b4::t_279654779fafa8 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7cb1eb8be1c6b637f7e0aa235b4b5fab2e302574",
+  "prompts": {},
+  "sessions": {
+    "s_1f08bc1c52cb91": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a48a6e205a8c73214",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_623b170811f2b4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a07d6a1490aa5b177",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
