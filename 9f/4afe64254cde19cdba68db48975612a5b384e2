@@ -1,0 +1,27 @@
+internal/server/audit_presence.go
+  s_c9daf452ffda44::t_2c76ba3cd23747 10
+internal/server/auth_integration_test.go
+  s_c9daf452ffda44::t_d9edd24c80f576 12
+internal/server/bot_status_integration_test.go
+  s_c9daf452ffda44::t_24452333b72bd8 144
+internal/server/botapi_integration_test.go
+  s_c9daf452ffda44::t_1fc57847c7a815 399
+internal/server/bots_integration_test.go
+  s_c9daf452ffda44::t_93079443e44aaa 102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9f4afe64254cde19cdba68db48975612a5b384e2",
+  "prompts": {},
+  "sessions": {
+    "s_c9daf452ffda44": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a35e148bc761c22df",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
