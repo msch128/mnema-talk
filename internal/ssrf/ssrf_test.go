@@ -33,6 +33,8 @@ func TestCheckRefusesEverythingButPublicUnicast(t *testing.T) {
 		"224.0.0.1", "239.255.255.255", "ff02::1", "ff0e::1",
 		// IPv6 unique local, site-local, discard, documentation, tunnels
 		"fc00::1", "fdff::1", "fec0::1", "100::1", "2001:db8::1", "2001::1", "2002:c000:204::1", "64:ff9b::808:808", "64:ff9b:1::1",
+		// other special-purpose IPv6 ranges no public host lives in
+		"3fff::1", "3fff:fff:ffff::1", "2001:2::1", "2001:10::1", "2001:20::1", "2001:2f:ffff::1", "5f00::1", "5f00:ffff::1",
 		// IPv4-mapped and -compatible forms of the above
 		"::ffff:127.0.0.1", "::ffff:10.0.0.1", "::ffff:169.254.169.254", "::ffff:192.168.1.1", "::ffff:0.0.0.0", "::10.0.0.1", "::127.0.0.1",
 		// with a zone
@@ -47,7 +49,9 @@ func TestCheckRefusesEverythingButPublicUnicast(t *testing.T) {
 			t.Errorf("%s was not blocked", s)
 		}
 	}
-	for _, s := range []string{"93.184.216.34", "8.8.8.8", "1.1.1.1", "172.15.255.255", "172.32.0.1", "100.63.255.255", "100.128.0.1", "2606:4700:4700::1111", "2a00:1450:4001::200e", "::ffff:8.8.8.8"} {
+	for _, s := range []string{"93.184.216.34", "8.8.8.8", "1.1.1.1", "172.15.255.255", "172.32.0.1", "100.63.255.255", "100.128.0.1", "2606:4700:4700::1111", "2a00:1450:4001::200e", "::ffff:8.8.8.8",
+		// next to the special-purpose ranges, but ordinary global unicast
+		"4000::1", "2001:30::1", "2001:3::1", "2001:4:112::1", "5e00::1", "6000::1"} {
 		if err := p.Check(addr(s)); err != nil {
 			t.Errorf("%s was blocked: %v", s, err)
 		}
