@@ -224,7 +224,7 @@ func vetCandidateAddresses(parsed ice.Candidate, allowLoopback bool) error {
 		return errCandidateAddress
 	}
 	rel := parsed.RelatedAddress()
-	if rel != nil && rel.Address != "" {
+	if rel != nil && rel.Address != "" && !unspecifiedAddress(rel.Address) {
 		if !routableCandidateAddress(rel.Address, allowLoopback) {
 			return errCandidateAddress
 		}
@@ -287,6 +287,14 @@ func (p *Peer) candidateKnown(key string) bool {
 	}
 	_, ok := p.cands.seen[key]
 	return ok
+}
+
+// unspecifiedAddress reports 0.0.0.0 or ::. Browsers that hide the host
+// address send it as the related address of a srflx candidate (raddr 0.0.0.0
+// rport 0); it only says "not disclosed" and is never probed.
+func unspecifiedAddress(host string) bool {
+	addr, err := netip.ParseAddr(host)
+	return err == nil && addr.Unmap().IsUnspecified()
 }
 
 func isDisallowedAddr(addr netip.Addr) bool {
