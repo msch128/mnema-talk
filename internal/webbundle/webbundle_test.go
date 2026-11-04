@@ -278,7 +278,7 @@ func TestVerifyRejectsTampering(t *testing.T) {
 		"changed file": func(e map[string][]byte) []string { e["app/index.html"] = []byte("<html>evil</html>"); return nil },
 		"extra file": func(e map[string][]byte) []string {
 			e["app/evil.js"] = []byte("x")
-			return append(entryNames(e), "app/evil.js")
+			return entryNames(e)
 		},
 		"missing file": func(e map[string][]byte) []string { delete(e, "app/assets/app-1.js"); return nil },
 		"swapped file": func(e map[string][]byte) []string {
@@ -356,6 +356,17 @@ func TestVerifyRejectsTampering(t *testing.T) {
 			}
 		})
 	}
+	// An entry the signed manifest does not list is refused for that reason,
+	// not merely because the archive is malformed.
+	t.Run("extra file is not in the manifest", func(t *testing.T) {
+		data := rebuild(t, b.Zip, func(e map[string][]byte) []string {
+			e["app/evil.js"] = []byte("x")
+			return entryNames(e)
+		})
+		if _, err := Verify(data, keys); err == nil || !strings.Contains(err.Error(), "do not match the manifest") {
+			t.Fatalf("err = %v, want the manifest mismatch", err)
+		}
+	})
 	t.Run("untrusted key", func(t *testing.T) {
 		if _, err := Verify(b.Zip, []ed25519.PublicKey{otherPub, {1, 2}}); err == nil {
 			t.Fatal("bundle accepted without its key")
