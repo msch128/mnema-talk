@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -23,6 +24,27 @@ func newMember(t *testing.T, f chatFixture, name string) uuid.UUID {
 		t.Fatal(err)
 	}
 	return id
+}
+
+// waitForBlockedStatement returns once some statement waits for a lock, which
+// tells a test that the goroutine it started has reached the row it is meant
+// to wait for; a sleep would only hope so.
+func waitForBlockedStatement(t *testing.T, p *db.Pool) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		var waiting int
+		if err := p.QueryRow(context.Background(), `SELECT COUNT(*) FROM pg_locks WHERE NOT granted`).Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting > 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("no statement is waiting for a lock")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 }
 
 func apiStatus(err error) int {
@@ -133,10 +155,11 @@ func TestChannelInADeletedCategoryIsRefusedNotAFailure(t *testing.T) {
 		_, err := CreateChannel(ctx, f.p, &cat.ID, "late", ChannelTypeText, "", 0)
 		done <- err
 	}()
+	waitForBlockedStatement(t, f.p)
 	select {
 	case err := <-done:
 		t.Fatalf("the channel was created while the category was being deleted: %v", err)
-	case <-time.After(300 * time.Millisecond):
+	default:
 	}
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatal(err)
@@ -244,10 +267,11 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 		t.Helper()
 		done := make(chan error, 1)
 		go func() { done <- run() }()
+		waitForBlockedStatement(t, f.p)
 		select {
 		case err := <-done:
 			t.Fatalf("finished while the member's row was locked: %v", err)
-		case <-time.After(300 * time.Millisecond):
+		default:
 		}
 		if err := hold.Commit(ctx); err != nil {
 			t.Fatal(err)
