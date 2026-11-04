@@ -126,18 +126,43 @@ func TestBuildRejectsADotfile(t *testing.T) {
 	}
 }
 
-func TestBuildRejectsAFileInADottedDirectory(t *testing.T) {
+func TestBuildRejectsAHiddenDirectory(t *testing.T) {
+	for _, hidden := range []string{".well-known/security.txt", "assets/.vite/manifest.json"} {
+		_, priv := testKey(t)
+		o := okOptions(t, priv)
+		p := filepath.Join(o.Dir, filepath.FromSlash(hidden))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Build(o); err == nil || !strings.Contains(err.Error(), "dotfile forbidden") {
+			t.Fatalf("%s: err = %v", hidden, err)
+		}
+	}
+}
+
+func TestBuildAllowsOnlyTheWebBuildFileTypes(t *testing.T) {
 	_, priv := testKey(t)
 	o := okOptions(t, priv)
-	if err := os.MkdirAll(filepath.Join(o.Dir, ".well-known"), 0o755); err != nil {
+	o.Dir = writeTree(t, map[string]string{
+		"index.html":                        "<html></html>",
+		"assets/a.js":                       "1",
+		"assets/model.tgz":                  "m",
+		"licenses/x/LICENSE":                "l",
+		"licenses/tauri/LICENSE-MIT":        "l",
+		"licenses/swagger-ui/NOTICE":        "n",
+		"licenses/tauri/LICENSE-APACHE-2.0": "l",
+	})
+	if _, err := Build(o); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(o.Dir, ".well-known", "security.txt"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	_, err := Build(o)
-	if err == nil || !strings.Contains(err.Error(), "dotfile forbidden") {
-		t.Fatalf("err = %v", err)
+	for _, stray := range []string{"run.sh", "assets/tool.exe", "notes", "licenses/x/secret.pem", "LICENSE"} {
+		o.Dir = writeTree(t, map[string]string{"index.html": "<html></html>", stray: "x"})
+		if _, err := Build(o); err == nil || !strings.Contains(err.Error(), "file type not allowed") {
+			t.Fatalf("%s: err = %v", stray, err)
+		}
 	}
 }
 
@@ -278,7 +303,7 @@ func TestVerifyRejectsTampering(t *testing.T) {
 		"changed file": func(e map[string][]byte) []string { e["app/index.html"] = []byte("<html>evil</html>"); return nil },
 		"extra file": func(e map[string][]byte) []string {
 			e["app/evil.js"] = []byte("x")
-			return entryNames(e)
+			return append(entryNames(e), "app/evil.js")
 		},
 		"missing file": func(e map[string][]byte) []string { delete(e, "app/assets/app-1.js"); return nil },
 		"swapped file": func(e map[string][]byte) []string {
@@ -356,17 +381,6 @@ func TestVerifyRejectsTampering(t *testing.T) {
 			}
 		})
 	}
-	// An entry the signed manifest does not list is refused for that reason,
-	// not merely because the archive is malformed.
-	t.Run("extra file is not in the manifest", func(t *testing.T) {
-		data := rebuild(t, b.Zip, func(e map[string][]byte) []string {
-			e["app/evil.js"] = []byte("x")
-			return entryNames(e)
-		})
-		if _, err := Verify(data, keys); err == nil || !strings.Contains(err.Error(), "do not match the manifest") {
-			t.Fatalf("err = %v, want the manifest mismatch", err)
-		}
-	})
 	t.Run("untrusted key", func(t *testing.T) {
 		if _, err := Verify(b.Zip, []ed25519.PublicKey{otherPub, {1, 2}}); err == nil {
 			t.Fatal("bundle accepted without its key")
@@ -478,7 +492,7 @@ func TestValidPath(t *testing.T) {
 			t.Errorf("%q should be valid", p)
 		}
 	}
-	for _, p := range []string{"", "/abs", "a//b", "a/./b", "a/../b", "..", ".", "a/", `a\b`, "a\x00b", "a\x7f", "a\nb", "\xff", "a:b", "a.", "a /b", "dir/CON", "dir/nul.txt", "Com1.js", "lpt9", strings.Repeat("a", maxPathLen+1)} {
+	for _, p := range []string{"", "/abs", "a//b", "a/./b", "a/../b", "..", ".", "a/", `a\b`, "a\x00b", "a\x7f", "a\nb", "\xff", "a:b", ".hidden", "a/.well-known/x", "a/.b/c.js", "a.", "a /b", "dir/CON", "dir/nul.txt", "Com1.js", "lpt9", strings.Repeat("a", maxPathLen+1)} {
 		if ValidPath(p) {
 			t.Errorf("%q should be invalid", p)
 		}

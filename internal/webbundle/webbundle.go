@@ -3,7 +3,7 @@
 // doc/desktop-trusted-client.md). A bundle is one zip: manifest.json (file
 // hashes, version and compatibility numbers), manifest.sig (Ed25519 over the
 // exact manifest bytes) and app/<path> for the files the desktop client
-// serves. Dotfiles and dotted directories are rejected. The API reference stays in the server
+// serves. Dotfiles are rejected. The API reference stays in the server
 // embed and is left out of the signed bundle.
 //
 // The desktop host implements the same verification in Rust; the limits and
@@ -294,6 +294,9 @@ func (c *appCollector) visit(path string, d fs.DirEntry, err error) error {
 	if err := rejectDotfile(rel); err != nil {
 		return err
 	}
+	if err := rejectUnknownType(rel); err != nil {
+		return err
+	}
 	data, err := readAppFile(path, rel)
 	if err != nil {
 		return err
@@ -313,8 +316,9 @@ func omitFromSignedBundle(rel string) bool {
 	return rel == "api-docs.html" || strings.HasPrefix(base, "apiDocs-")
 }
 
-// rejectDotfile stops placeholders such as .gitkeep, and anything below a
-// dotted directory such as .well-known/, from being signed.
+// rejectDotfile stops hidden files and directories (.gitkeep, .well-known/x,
+// .vite/manifest.json) from being signed. Every path segment is checked, not
+// just the file name: a dotted directory is as hidden as a dotted file.
 func rejectDotfile(rel string) error {
 	for _, seg := range strings.Split(rel, "/") {
 		if strings.HasPrefix(seg, ".") {
@@ -322,6 +326,29 @@ func rejectDotfile(rel string) error {
 		}
 	}
 	return nil
+}
+
+// signedExtensions are the file types the web build emits. Anything else in
+// the build output is a stray file that must not ride along under the release
+// signature, so the build fails closed and a new asset type is added here
+// deliberately.
+var signedExtensions = map[string]bool{
+	".html": true, ".js": true, ".css": true, ".json": true, ".webmanifest": true,
+	".svg": true, ".png": true, ".woff": true, ".woff2": true, ".wasm": true,
+	".tgz": true, ".txt": true,
+}
+
+// rejectUnknownType allows the extensions above, plus the extensionless or
+// oddly suffixed LICENSE and NOTICE texts the build ships under licenses/.
+func rejectUnknownType(rel string) error {
+	base := path.Base(rel)
+	if signedExtensions[strings.ToLower(path.Ext(base))] {
+		return nil
+	}
+	if strings.HasPrefix(rel, "licenses/") && (strings.HasPrefix(base, "LICENSE") || strings.HasPrefix(base, "NOTICE")) {
+		return nil
+	}
+	return fmt.Errorf("file type not allowed in signed web bundle: %s", rel)
 }
 
 // readWebApp loads the desktop files below o.Dir, within the bundle's size
