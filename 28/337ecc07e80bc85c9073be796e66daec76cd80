@@ -1,0 +1,55 @@
+doc/architecture.md
+  s_2c4958b733b3de::t_20f319cd83129a 38
+doc/desktop-trusted-client.md
+  s_2c4958b733b3de::t_07393f07681a46 100-101,713
+doc/moderation.md
+  s_2c4958b733b3de::t_c32265ce746348 32,137,548-550
+doc/operations.md
+  s_3077c68dc2ac1a::t_1556d4aca52a07 845,1174,1187
+doc/roles-and-permissions.md
+  s_3077c68dc2ac1a::t_384a10d1574a7f 140,186,274,340-341
+web/src/i18n/de.json
+  s_fd333282a44890::t_ccddb2b31ddc0e 210,266,416,974,986,1364,1471,1484,1563,1586,1589-1590,1603,1780-1781,1884,1886,2101,2105,2765,2807,3031,3113-3114,3181,3330,3342-3352,3601,3657,3663-3664,4297,4321,4326,4334-4336,4408-4409,4428,4466,4526,4595-4596,4601,4603,4607,4819,4874,4958
+web/src/i18n/en.json
+  s_9ea9b80938525a::t_12148fa958a484 258,355,857,891,895,898,1347,1364,1383-1384,1486,1586,1605,1865,1909,2027,2101,2105,2196,2200,2204,2208,3615,3685,3692,3977,3998,4879
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "28337ecc07e80bc85c9073be796e66daec76cd80",
+  "prompts": {},
+  "sessions": {
+    "s_2c4958b733b3de": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7d85c1db7643c1c3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3077c68dc2ac1a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aeb9709308f6320cc",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_9ea9b80938525a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae04b83a3614554fa",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_fd333282a44890": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa8f1abc344bf6c30",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
