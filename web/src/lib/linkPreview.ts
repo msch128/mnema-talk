@@ -15,7 +15,8 @@ function hasPreviewContent(data: LinkPreview | null): LinkPreview | null {
 
 function isTransientPreviewError(err: unknown): boolean {
   const status = isRecord(err) && typeof err.status === 'number' ? err.status : 0
-  return !status || status === 429 || status >= 500
+  // 401/403: the session ended or the member lost access, which says nothing about the link.
+  return !status || status === 401 || status === 403 || status === 429 || status >= 500
 }
 
 function pruneCache() {

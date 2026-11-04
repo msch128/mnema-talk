@@ -55,6 +55,12 @@ describe('isLocalAddress', () => {
       expect(isLocalAddress(a), a).toBe(false)
     }
   })
+  it('does not mistake a public hostname that starts like an address for a LAN one', () => {
+    for (const host of ['fchat.example.com', 'fdroid.example.org', '10.example.com', '127.example.net']) {
+      expect(isLocalAddress(host), host).toBe(false)
+    }
+    expect(isLocalAddress('localhost')).toBe(true)
+  })
 })
 
 describe('screenViewersFor', () => {

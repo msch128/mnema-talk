@@ -267,9 +267,14 @@ export function dayStart(date: string, offsetDays = 0): string {
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + offsetDays).toISOString()
 }
 
-/** Local timezone offset as [+-]HH:MM. */
-export function localTimezoneOffset(): string {
-  const offsetMin = -new Date().getTimezoneOffset()
+/**
+ * Local timezone offset as [+-]HH:MM. With a day (YYYY-MM-DD) it is the offset in
+ * force on that day, which differs from today's across a daylight-saving change.
+ */
+export function localTimezoneOffset(day?: string): string {
+  const m = day ? DATE.exec(day) : null
+  const at = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12) : new Date()
+  const offsetMin = -at.getTimezoneOffset()
   const sign = offsetMin >= 0 ? '+' : '-'
   const abs = Math.abs(offsetMin)
   const hours = String(Math.floor(abs / 60)).padStart(2, '0')
@@ -332,7 +337,7 @@ export function buildSearchParams(p: ParsedSearch, lookup: SearchLookup, extra: 
   if (filters.before) params.set('before_date', dayStart(filters.before, 1))
   if (filters.during) {
     params.set('during', filters.during)
-    params.set('tz', localTimezoneOffset())
+    params.set('tz', localTimezoneOffset(filters.during))
   }
   if (filters.author) params.set('author', filters.author)
   if (filters.filename) params.set('filename', filters.filename)
