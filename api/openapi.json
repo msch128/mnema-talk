@@ -31621,7 +31621,7 @@
     },
     "/api/events/{id}/rsvp": {
       "delete": {
-        "description": "Removes caller's RSVP from the event.",
+        "description": "Removes caller's RSVP from the event. A role slot the caller held is given up too, and its waitlist moves up.",
         "operationId": "deleteCommunityEventRSVP",
         "parameters": [
           {
@@ -31668,7 +31668,7 @@
         ]
       },
       "put": {
-        "description": "Sets caller's response to going, interested, or not_going. Case, surrounding spaces and a space or hyphen instead of the underscore are tolerated (\"Not Going\").",
+        "description": "Sets caller's response to going, interested, or not_going. Case, surrounding spaces and a space or hyphen instead of the underscore are tolerated (\"Not Going\"). A sign-up for a role counts as going, so any other answer also gives up the caller's role slot and moves its waitlist up.",
         "operationId": "setCommunityEventRSVP",
         "parameters": [
           {
