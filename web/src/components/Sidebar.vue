@@ -12,13 +12,8 @@ import ChannelPermissionsDialog from './ChannelPermissionsDialog.vue'
 import ChannelWebhooksDialog from './ChannelWebhooksDialog.vue'
 import { usePermissionsStore } from '../stores/permissions'
 import EditNameDialog from './EditNameDialog.vue'
+import { SidebarChannelRow, SidebarCategoryHeader, SidebarDragGhost, SidebarServerMenu, SidebarEventsEntry, SidebarWikiEntry, SidebarDmSection } from './sidebarParts'
 import ContextMenu from './ContextMenu.vue'
-import SidebarChannelRow from './SidebarChannelRow.vue'
-import SidebarCategoryHeader from './SidebarCategoryHeader.vue'
-import SidebarDragGhost from './SidebarDragGhost.vue'
-import SidebarServerMenu from './SidebarServerMenu.vue'
-import SidebarEventsEntry from './SidebarEventsEntry.vue'
-import SidebarDmSection from './SidebarDmSection.vue'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
 import { refuseFullTalk } from '../lib/talks'
@@ -279,6 +274,7 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
     >
       <SidebarDmSection />
       <SidebarEventsEntry />
+      <SidebarWikiEntry />
       <div class="shrink-0">
         <!-- Uncategorized channels first (headless section), then the categories -->
         <section

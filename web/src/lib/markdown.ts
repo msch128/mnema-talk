@@ -22,12 +22,14 @@ export type { TextRule, RoleMention }
 
 /** Longer text is shown as it is, unformatted: parsing is for chat messages, not documents. */
 export const MAX_MARKDOWN_CHARS = 6000
+/** The longest wiki page (50 KB, doc/wiki.md): a document, parsed up to this length. */
+export const MAX_DOCUMENT_CHARS = 51_200
 
-function parse(content: string): Block[] {
+function parse(content: string, limit = MAX_MARKDOWN_CHARS): Block[] {
   // NUL characters carry no text and are dropped, so they cannot split tokens.
   // eslint-disable-next-line no-control-regex
   const text = content.replace(/\u0000/g, '')
-  return text.length > MAX_MARKDOWN_CHARS ? [{ t: 'p', c: [{ t: 'text', v: text }] }] : parseBlocks(text)
+  return text.length > limit ? [{ t: 'p', c: [{ t: 'text', v: text }] }] : parseBlocks(text)
 }
 
 /**
@@ -36,17 +38,24 @@ function parse(content: string): Block[] {
  *   @here) are highlighted as mentions.
  * - me: the reader's username; mentions of them get .md-mention-me.
  * - roles: the roles the message mentions (by the server), drawn as pills.
+ * - document, rules: a wiki page: the longer limit and its own text rules.
  */
 export function renderMarkdown(
   content: string | null | undefined,
-  { known = null, me = '', roles = [] }: { known?: ReadonlySet<string> | null; me?: string; roles?: readonly RoleMention[] } = {}
+  { known = null, me = '', roles = [], document = false, rules: extra = [] }: {
+    known?: ReadonlySet<string> | null; me?: string; roles?: readonly RoleMention[]
+    /** A document (a wiki page): parsed up to MAX_DOCUMENT_CHARS instead of the chat limit. */
+    document?: boolean
+    /** More text rules for this render only. */
+    rules?: readonly TextRule[]
+  } = {}
 ): string {
   if (!content) return ''
-  const rules: TextRule[] = [...registeredTextRules()]
+  const rules: TextRule[] = [...registeredTextRules(), ...extra]
   const roleRule = roleMentionRule(roles)
   if (roleRule) rules.push(roleRule)
   rules.push(userMentionRule(known, me))
-  return renderBlocks(applyTextRulesToBlocks(parse(content), rules))
+  return renderBlocks(applyTextRulesToBlocks(parse(content, document ? MAX_DOCUMENT_CHARS : MAX_MARKDOWN_CHARS), rules))
 }
 
 /**

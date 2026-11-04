@@ -44,6 +44,21 @@ This page covers using the wiki and running it. The API is in the
   characters) and unique among the pages, ignoring case, so `[[Title]]` names
   one page.
 
+## In the app
+
+- The sidebar has a **Wiki** entry beside Events (shown when the server has the
+  wiki and you may view it). It opens the wiki over the app at `/wiki`; a page
+  is at `/wiki/<address>`, its history at `/wiki/<address>/history`, its editor
+  at `/wiki/<address>/edit`. Back closes it.
+- On the left is the page tree (fold and unfold branches); the open page's
+  parents are always unfolded. On the right is the start page (top pages and
+  recent changes), a page, its editor, its history, the search or, for managers,
+  the deleted pages.
+- The editor has a toolbar (heading, bold, italic, code, list, quote, link, link
+  to a wiki page), a live preview, the size against 50 KB and an optional
+  summary of the change. Closing it with unsaved text asks first.
+- Search starts at three characters and shows the words around the match.
+
 ## Writing
 
 Pages use the same Markdown as messages (headings up to level 3, lists, quotes,
@@ -63,9 +78,10 @@ page exists, and follows a renamed page).
   address; links and bookmarks keep working, and the old address is not free
   for another page.
 - Saving needs the revision you started from. If somebody saved meanwhile, the
-  save is **refused** (nothing is overwritten) and you open the page again and
-  apply your change to the new version. The refusal is `409` with the stable
-  code `STALE_REVISION`.
+  save is **refused** (nothing is overwritten; `409` with the stable code
+  `STALE_REVISION`). The editor then shows what the
+  other person changed and lets you save your text on top of it (a revision like
+  any other, so theirs stays in the history) or take their version.
 - Each member may make 20 wiki changes a minute.
 
 ## History and undoing vandalism
@@ -80,8 +96,9 @@ between two (a line diff) and restores one.
 - *Revert vandalism* is two clicks: open *History*, pick the last good revision,
   *Restore*. Lock the page afterwards if it keeps happening.
 - A page keeps its **latest 100 revisions**. Older ones are pruned after a save,
-  except a revision that one of the kept revisions is a restore of. The history
-  therefore never loses the thing a recent restore points to.
+  except the last revision of every editor and day for 90 days, and a revision
+  that one of the kept revisions is a restore of. One account saving over and
+  over therefore cannot push everybody else's good revisions out of the history.
 - **Deleting** a page only takes it out of the wiki: it keeps its address and
   all revisions, and a manager restores it from *Deleted pages*. A page with
   subpages is not deleted until they are moved or deleted.
