@@ -5,11 +5,11 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/msch128/mnema-talk/internal/config"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 

@@ -99,7 +99,7 @@ func TestBotAccessShowsOnlyGrantedChannels(t *testing.T) {
 	a := newApp(t, false)
 	owner := a.seedAdmin()
 	open := a.createChannel(owner, "open", "text")
-	other := a.createChannel(owner, "other", "text")
+	a.createChannel(owner, "other", "text")
 	b := createBot(t, owner, "helper")
 	path := "/api/admin/bots/" + b.ID.String()
 
@@ -117,7 +117,6 @@ func TestBotAccessShowsOnlyGrantedChannels(t *testing.T) {
 	if len(acc.Channels) != 1 || acc.Channels[0].ChannelID != open || !acc.Channels[0].Permissions.Has(perm.ViewChannel|perm.SendMessages) {
 		t.Fatalf("access: %s", res.body)
 	}
-	_ = other
 }
 
 func TestBotTokens(t *testing.T) {
