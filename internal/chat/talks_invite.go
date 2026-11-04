@@ -29,7 +29,10 @@ type InviteToTalkRequest struct {
 // conversation dm and returns the context to post with.
 func (h *Handler) dmSendContext(r *http.Request, dm uuid.UUID) (context.Context, error) {
 	ch, err := LoadChannel(r.Context(), h.DB, dm)
-	if err != nil || ch.Type != channelKindDM {
+	if err != nil {
+		return nil, err
+	}
+	if ch.Type != channelKindDM {
 		return nil, errChannelNotFound
 	}
 	return h.sendContext(r, dm, perm.SendMessages)

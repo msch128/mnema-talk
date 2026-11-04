@@ -61,6 +61,19 @@ func TestPostTalkInviteOnlyMapsAMissingTalkToNotFound(t *testing.T) {
 	}
 }
 
+func TestDMSendContextOnlyMapsAMissingConversationToNotFound(t *testing.T) {
+	w := newTalksWorld(t)
+	h := &Handler{DB: w.p}
+	r := chatRequest(w.alice, "", nil, "").WithContext(canceledContext())
+	if _, err := h.dmSendContext(r, w.lobby.ID); err == nil || errors.Is(err, errChannelNotFound) {
+		t.Fatalf("err = %v; a database failure must not read as not found", err)
+	}
+	r = chatRequest(w.alice, "", nil, "")
+	if _, err := h.dmSendContext(r, uuid.New()); !errors.Is(err, errChannelNotFound) {
+		t.Fatalf("unknown conversation: err = %v; want not found", err)
+	}
+}
+
 func TestFollowingAgainMovesAThreadToTheFront(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()

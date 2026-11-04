@@ -205,15 +205,52 @@ func channelMediaKeys(ctx context.Context, q db.Querier, ids []uuid.UUID) ([]str
 }
 
 // DeleteChannelsTx deletes the channels and, by cascade, their messages inside
-// tx and returns the storage keys of the media attached to those messages. The
-// caller locks the channels first and removes the objects after the commit.
+// tx and returns the storage keys of the media attached to those messages and
+// of the avatars of the incoming webhooks' bot accounts. The caller locks the
+// channels first and removes the objects after the commit.
 func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string, error) {
 	keys, err := channelMediaKeys(ctx, tx, ids)
 	if err != nil {
 		return nil, err
 	}
+	// The webhook rows go with the channels by cascade, which leaves their
+	// hidden bot accounts behind: nothing would ever reference them again.
+	rows, err := tx.Query(ctx, `SELECT bot_user_id FROM webhooks WHERE channel_id = ANY($1)`, ids)
+	if err != nil {
+		return nil, fmt.Errorf("list webhook bots: %w", err)
+	}
+	botIDs, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("list webhook bots: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = ANY($1)`, ids); err != nil {
 		return nil, fmt.Errorf("delete channel: %w", err)
+	}
+	avatars, err := deleteOrphanBotAccounts(ctx, tx, botIDs)
+	return append(keys, avatars...), err
+}
+
+// deleteOrphanBotAccounts removes the webhook bot accounts that no longer have
+// a webhook or any message (a webhook posts into its own channel only, so after
+// that channel is gone none is left) and returns their avatar storage keys: the
+// media rows go with the account.
+func deleteOrphanBotAccounts(ctx context.Context, tx pgx.Tx, botIDs []uuid.UUID) ([]string, error) {
+	if len(botIDs) == 0 {
+		return nil, nil
+	}
+	var keys []string
+	err := collectKeys(ctx, tx, &keys, `
+		SELECT m.s3_key FROM media m JOIN users u ON u.avatar_s3_key = m.id::text
+		WHERE u.id = ANY($1) AND u.is_bot AND NOT m.is_deleted
+		  AND NOT EXISTS (SELECT 1 FROM messages x WHERE x.user_id = u.id)`, botIDs)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM users u WHERE u.id = ANY($1) AND u.is_bot
+		  AND NOT EXISTS (SELECT 1 FROM webhooks w WHERE w.bot_user_id = u.id)
+		  AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.user_id = u.id)`, botIDs); err != nil {
+		return nil, fmt.Errorf("delete webhook bot accounts: %w", err)
 	}
 	return keys, nil
 }

@@ -405,8 +405,6 @@ func TestExecuteAppliesTheWebhooksSettings(t *testing.T) {
 	set(`{"allow_embeds":false}`)
 	wantStatus(t, post(embed), 400, "embeds off")
 	wantStatus(t, post(`{"content":"plain"}`), 200, "plain with embeds off")
-	form, ct := avatarForm()
-	_ = form
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 	_ = mw.WriteField("payload_json", `{"content":"x"}`)
@@ -416,7 +414,6 @@ func TestExecuteAppliesTheWebhooksSettings(t *testing.T) {
 	part, _ := mw.CreatePart(hd)
 	_, _ = part.Write(png)
 	_ = mw.Close()
-	_ = ct
 	file := func() *httptest.ResponseRecorder {
 		return f.serve(f.h, "POST", path, bytes.NewReader(buf.Bytes()), map[string]string{"Content-Type": mw.FormDataContentType()})
 	}
