@@ -96,11 +96,21 @@ func (s *Service) ListReminders(ctx context.Context, sub perm.Subject) ([]Remind
 	if err != nil {
 		return nil, fmt.Errorf("list reminders: %w", err)
 	}
+	var ids []uuid.UUID
+	for _, r := range stored {
+		if r.message != nil {
+			ids = append(ids, *r.message)
+		}
+	}
+	refs, err := s.loadRefs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]Reminder, 0, len(stored))
 	for _, r := range stored {
 		e := Reminder{ID: r.id, RemindAt: r.remindAt, CreatedAt: r.createdAt, DeliveredAt: r.deliveredAt}
-		if r.message != nil {
-			if e.Message, err = s.visibleRef(ctx, sub, *r.message); err != nil {
+		if r.message != nil && refs[*r.message] != nil {
+			if e.Message, err = s.visible(ctx, sub, refs[*r.message]); err != nil {
 				return nil, err
 			}
 			e.Available = e.Message != nil
