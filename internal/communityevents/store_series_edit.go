@@ -11,13 +11,15 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// followingEvents lists the open occurrences from index i on (the first being
-// occurrence i itself), oldest first. Cancelled and finished ones are left alone.
-func followingEvents(ctx context.Context, tx pgx.Tx, seriesID uuid.UUID, i int) ([]followingEvent, error) {
+// followingEvents lists the open occurrences from index i on, oldest first.
+// Cancelled and finished ones are left alone, except occurrence i itself when
+// withTarget is set: an edit names it, whatever state it is in (as an edit of
+// that one event alone would change it).
+func followingEvents(ctx context.Context, tx pgx.Tx, seriesID uuid.UUID, i int, withTarget bool) ([]followingEvent, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id, series_index, start_time, cover_media_id FROM events
-		WHERE series_id = $1 AND series_index >= $2 AND status IN ('scheduled', 'active')
-		ORDER BY series_index`, seriesID, i)
+		WHERE series_id = $1 AND series_index >= $2 AND (status IN ('scheduled', 'active') OR (series_index = $2 AND $3))
+		ORDER BY series_index`, seriesID, i, withTarget)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +54,8 @@ func (s *Store) UpdateFollowing(ctx context.Context, ev *CommunityEvent, req Upd
 		if err := saveTemplate(ctx, tx, r); err != nil {
 			return err
 		}
-		changed, err = rewriteFollowing(ctx, tx, r, ev.Series.Index, req)
+		timeOnly := req.StartTime != nil && sameLocalDate(ev.StartTime, *req.StartTime, r.Zone)
+		changed, err = rewriteFollowing(ctx, tx, r, ev.Series.Index, req, timeOnly)
 		return err
 	})
 	return changed, err
@@ -101,16 +104,23 @@ func withTimeOfDay(anchor, t time.Time, loc *time.Location) time.Time {
 	return time.Date(y, m, d, n.Hour(), n.Minute(), n.Second(), n.Nanosecond(), loc).UTC()
 }
 
-// rewriteFollowing writes the template into the open occurrences from index i on; each keeps its own start unless the edit moved the anchor.
-func rewriteFollowing(ctx context.Context, tx pgx.Tx, r seriesRow, i int, req UpdateEventRequest) ([]uuid.UUID, error) {
-	list, err := followingEvents(ctx, tx, r.ID, i)
+// rewriteFollowing writes the template into the open occurrences from index i
+// on (and occurrence i itself); each keeps its own start unless the edit moved
+// the anchor. An edit that moves only the time of day (timeOnly) gives each
+// occurrence the new time on its own day: the days of the occurrences before a
+// later anchor are not on the anchor's pattern and stay where they are.
+func rewriteFollowing(ctx context.Context, tx pgx.Tx, r seriesRow, i int, req UpdateEventRequest, timeOnly bool) ([]uuid.UUID, error) {
+	list, err := followingEvents(ctx, tx, r.ID, i, true)
 	if err != nil {
 		return nil, err
 	}
 	changed := make([]uuid.UUID, 0, len(list))
 	for _, f := range list {
 		start := f.Start
-		if req.StartTime != nil {
+		switch {
+		case timeOnly:
+			start = withTimeOfDay(f.Start, *req.StartTime, r.Zone)
+		case req.StartTime != nil:
 			start = r.start(f.Index)
 		}
 		if err := rewriteOccurrence(ctx, tx, r, f, start, req); err != nil {
@@ -157,7 +167,7 @@ func rewriteOccurrence(ctx context.Context, tx pgx.Tx, r seriesRow, f followingE
 		       start_time = CASE WHEN $11 THEN $4::timestamptz ELSE start_time END,
 		       end_time = CASE WHEN $11 THEN $5::timestamptz ELSE end_time END,
 		       reminder_sent_at = CASE WHEN $11 AND start_time <> $4::timestamptz THEN NULL ELSE reminder_sent_at END,
-		       status = CASE WHEN NOT $11 THEN status
+		       status = CASE WHEN NOT $11 OR status = 'cancelled' THEN status
 		                     WHEN $4::timestamptz > NOW() THEN 'scheduled'
 		                     WHEN COALESCE($5::timestamptz, $4::timestamptz + `+defaultEventDuration+`) <= NOW() THEN 'completed'
 		                     ELSE 'active' END,
@@ -230,11 +240,12 @@ var errNothingOpen = errors.New("no open occurrence")
 // SetSeriesRoles makes the role list the series' template, so occurrences
 // created later start with it, and gives it to the open occurrences after ev
 // that have no sign-ups. An occurrence with sign-ups keeps its roles (they are
-// counted in skipped); ev's own roles are set by SetRoles.
-func (s *Store) SetSeriesRoles(ctx context.Context, ev *CommunityEvent, in []RoleInput) (updated, skipped int, err error) {
+// counted in skipped); ev's own roles are set by SetRoles. It returns the
+// occurrences that got the roles.
+func (s *Store) SetSeriesRoles(ctx context.Context, ev *CommunityEvent, in []RoleInput) (updated []uuid.UUID, skipped int, err error) {
 	roles, err := validateRoles(stripIDs(in))
 	if err != nil {
-		return 0, 0, err
+		return nil, 0, err
 	}
 	err = s.inTx(ctx, func(tx pgx.Tx) error {
 		updated, skipped, err = setSeriesRolesTx(ctx, tx, ev, roles)
@@ -243,26 +254,26 @@ func (s *Store) SetSeriesRoles(ctx context.Context, ev *CommunityEvent, in []Rol
 	return updated, skipped, err
 }
 
-func setSeriesRolesTx(ctx context.Context, tx pgx.Tx, ev *CommunityEvent, roles []RoleInput) (updated, skipped int, err error) {
+func setSeriesRolesTx(ctx context.Context, tx pgx.Tx, ev *CommunityEvent, roles []RoleInput) (updated []uuid.UUID, skipped int, err error) {
 	r, err := lockSeries(ctx, tx, ev.Series.ID)
 	if err != nil {
-		return 0, 0, err
+		return nil, 0, err
 	}
 	raw, _ := json.Marshal(roles)
 	if _, err := tx.Exec(ctx, `UPDATE event_series SET roles = $2 WHERE id = $1`, r.ID, raw); err != nil {
-		return 0, 0, err
+		return nil, 0, err
 	}
-	list, err := followingEvents(ctx, tx, r.ID, ev.Series.Index+1)
+	list, err := followingEvents(ctx, tx, r.ID, ev.Series.Index+1, false)
 	if err != nil {
-		return 0, 0, err
+		return nil, 0, err
 	}
 	for _, f := range list {
 		ok, err := replaceRoles(ctx, tx, f.ID, roles)
 		if err != nil {
-			return 0, 0, err
+			return nil, 0, err
 		}
 		if ok {
-			updated++
+			updated = append(updated, f.ID)
 		} else {
 			skipped++
 		}

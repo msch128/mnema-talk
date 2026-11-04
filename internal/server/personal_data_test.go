@@ -84,6 +84,13 @@ var eraseStatementsAfter = []string{
 	                ELSE e END ORDER BY ord)
 	                FROM jsonb_array_elements(snapshot->'context') WITH ORDINALITY AS t(e, ord)), '[]'::jsonb))
 	WHERE snapshot::text LIKE '%' || $1::text || '%'`,
+	`UPDATE channels SET leader_id = NULL WHERE leader_id = $1`,
+	`UPDATE messages SET pinned_by = NULL WHERE pinned_by = $1`,
+	`UPDATE users SET banned_by = NULL WHERE banned_by = $1`,
+	`UPDATE users SET timeout_by = NULL WHERE timeout_by = $1`,
+	`UPDATE custom_emoji SET created_by = NULL WHERE created_by = $1`,
+	`UPDATE discord_imports SET created_by = NULL WHERE created_by = $1`,
+	`UPDATE discord_imports SET undone_by = NULL WHERE undone_by = $1`,
 	`DELETE FROM login_unlock_requests WHERE LOWER(username) = LOWER($1)`,
 	`SELECT set_config('mnema.audit_scrub', 'on', true)`,
 	`UPDATE audit_log SET

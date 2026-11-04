@@ -416,3 +416,25 @@ func TestLiveCandidateRefusedByPion(t *testing.T) {
 		t.Fatalf("refusal not logged: %s", logs.String())
 	}
 }
+
+// Chrome hides the host address behind a srflx candidate as raddr 0.0.0.0 (or
+// ::) with rport 0. The related address is informational, so the candidate
+// stands or falls with its own address.
+func TestSrflxCandidateWithHiddenRelatedAddressIsAccepted(t *testing.T) {
+	for _, rel := range []string{"0.0.0.0", "::"} {
+		c := "candidate:842163049 1 udp 1677729535 198.51.100.7 46154 typ srflx raddr " + rel + " rport 0"
+		if err := vetRemoteCandidate(c, false); err != nil {
+			t.Errorf("raddr %s refused: %v", rel, err)
+		}
+		// Its own address is still vetted.
+		bad := "candidate:842163049 1 udp 1677729535 169.254.1.1 46154 typ srflx raddr " + rel + " rport 0"
+		if err := vetRemoteCandidate(bad, false); err == nil {
+			t.Errorf("link-local srflx with raddr %s accepted", rel)
+		}
+		p := &Peer{}
+		got := mustVet(t, p, sdpHead+"a=candidate:"+strings.TrimPrefix(c, "candidate:")+"\r\n")
+		if !strings.Contains(got, "198.51.100.7 46154 typ srflx") {
+			t.Errorf("answer SDP lost srflx candidate with raddr %s: %q", rel, got)
+		}
+	}
+}

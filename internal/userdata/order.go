@@ -60,6 +60,13 @@ const (
 	OrderDMAddedBy
 	OrderDMCreatedBy
 	OrderScrubReports
+	OrderTalkLeader
+	OrderPinnedBy
+	OrderBannedBy
+	OrderTimeoutBy
+	OrderEmoji
+	OrderDiscordImportCreatedBy
+	OrderDiscordImportUndoneBy
 	OrderLoginUnlock
 	OrderAuditFlag
 	OrderScrubAudit

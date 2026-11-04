@@ -124,7 +124,8 @@ func (h *Handler) setRoles(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		extra["scope"], extra["occurrences_updated"], extra["occurrences_skipped"] = "following", updated, skipped
+		h.broadcastIDs(r, updated)
+		extra["scope"], extra["occurrences_updated"], extra["occurrences_skipped"] = "following", len(updated), skipped
 	}
 	h.auditRoster(r, ev, "roles_set", extra)
 	return h.finishRoster(w, r, ev.ID, promoted)
