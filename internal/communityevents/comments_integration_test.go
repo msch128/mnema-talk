@@ -178,7 +178,7 @@ func TestACommentTellsTheCreatorAndAttendeesButNotTheAuthorOrAMutedMember(t *tes
 	author := f.user(t, "author", "user")
 	goer, interested, notGoing, muted, signedUp := f.user(t, "goer", "user"), f.user(t, "interested", "user"), f.user(t, "notgoing", "user"), f.user(t, "muted", "user"), f.user(t, "signedup", "user")
 	for u, resp := range map[*auth.User]string{goer: RSVPGoing, interested: RSVPInterested, notGoing: RSVPNotGoing, muted: RSVPGoing, author: RSVPGoing} {
-		if err := f.s.SetRSVP(context.Background(), f.event.ID, u.ID, resp); err != nil {
+		if _, err := f.s.SetRSVP(context.Background(), f.event.ID, u.ID, resp); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -254,7 +254,7 @@ func TestCommentsOfATalkEventStayWithThoseWhoCanViewTheTalk(t *testing.T) {
 		t.Fatalf("a Talk event's comment goes to the Talk's viewers only, got %d channel broadcasts", chans)
 	}
 	// A recipient who lost sight of the Talk is told nothing.
-	if err := f.s.SetRSVP(context.Background(), f.event.ID, stranger.ID, RSVPGoing); err != nil {
+	if _, err := f.s.SetRSVP(context.Background(), f.event.ID, stranger.ID, RSVPGoing); err != nil {
 		t.Fatal(err)
 	}
 	ev, _ := f.s.Get(context.Background(), f.event.ID, nil)
@@ -390,7 +390,7 @@ func TestNoticesSpareBlockersAndThoseWhoDoNotWantToBeDisturbed(t *testing.T) {
 	ctx := context.Background()
 	author, blocker, dnd, first, interested := f.user(t, "author", "user"), f.user(t, "blocker", "user"), f.user(t, "dnd", "user"), f.user(t, "going", "user"), f.user(t, "interested", "user")
 	for u, resp := range map[*auth.User]string{blocker: RSVPGoing, dnd: RSVPGoing, first: RSVPGoing, interested: RSVPInterested} {
-		if err := f.s.SetRSVP(ctx, f.event.ID, u.ID, resp); err != nil {
+		if _, err := f.s.SetRSVP(ctx, f.event.ID, u.ID, resp); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -451,7 +451,7 @@ func TestTheToastHonoursAMutedTalkAndTheCutIsMadeAfterTheViewFilter(t *testing.T
 	f.h.Perms.Invalidate()
 	author, muted, failing, ok := f.user(t, "author", "user"), f.user(t, "muted", "user"), f.user(t, "failing", "user"), f.user(t, "ok", "user")
 	for _, u := range []*auth.User{muted, failing, ok} {
-		if err := f.s.SetRSVP(ctx, f.event.ID, u.ID, RSVPGoing); err != nil {
+		if _, err := f.s.SetRSVP(ctx, f.event.ID, u.ID, RSVPGoing); err != nil {
 			t.Fatal(err)
 		}
 	}
