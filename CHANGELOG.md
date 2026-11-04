@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.8.3](https://github.com/msch128/mnema-talk/compare/v2.8.2...v2.8.3) (2026-11-04)
+
+
+### Bug Fixes
+
+* accept srflx candidates whose related address is hidden as 0.0.0.0 ([#625](https://github.com/msch128/mnema-talk/issues/625)) ([4068b6c](https://github.com/msch128/mnema-talk/commit/4068b6c99953925875cf9bd4283dcc139f7bbcd4))
+* clear every reference to a deleted account that other rows hold ([#628](https://github.com/msch128/mnema-talk/issues/628)) ([4068b6c](https://github.com/msch128/mnema-talk/commit/4068b6c99953925875cf9bd4283dcc139f7bbcd4))
+* close no sockets when the session sweep is rolled back ([#627](https://github.com/msch128/mnema-talk/issues/627)) ([4068b6c](https://github.com/msch128/mnema-talk/commit/4068b6c99953925875cf9bd4283dcc139f7bbcd4))
+* count channel errors of the auto-delete sweep as job failures ([#630](https://github.com/msch128/mnema-talk/issues/630)) ([4068b6c](https://github.com/msch128/mnema-talk/commit/4068b6c99953925875cf9bd4283dcc139f7bbcd4))
+* free the role slot when a member changes or withdraws their RSVP ([#626](https://github.com/msch128/mnema-talk/issues/626)) ([4068b6c](https://github.com/msch128/mnema-talk/commit/4068b6c99953925875cf9bd4283dcc139f7bbcd4))
+* keep a comment sent while the first page of comments is loading ([#624](https://github.com/msch128/mnema-talk/issues/624)) ([4068b6c](https://github.com/msch128/mnema-talk/commit/4068b6c99953925875cf9bd4283dcc139f7bbcd4))
+* keep series edits consistent across occurrences ([#629](https://github.com/msch128/mnema-talk/issues/629)) ([4068b6c](https://github.com/msch128/mnema-talk/commit/4068b6c99953925875cf9bd4283dcc139f7bbcd4))
+
 ## [2.8.2](https://github.com/msch128/mnema-talk/compare/v2.8.1...v2.8.2) (2026-11-03)
 
 
