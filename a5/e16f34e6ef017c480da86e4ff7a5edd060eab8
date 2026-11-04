@@ -1,0 +1,29 @@
+internal/auth/session_sweep.go
+  s_6951ddd344b092::t_daf647d09c63ce 50-54
+internal/auth/session_sweep_integration_test.go
+  s_b68584b4d61d47::t_9165a9d5b6f889 100-101,104-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a5e16f34e6ef017c480da86e4ff7a5edd060eab8",
+  "prompts": {},
+  "sessions": {
+    "s_6951ddd344b092": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa278c1fcc3f7a80c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_b68584b4d61d47": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a996484c0a6d2471a",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
