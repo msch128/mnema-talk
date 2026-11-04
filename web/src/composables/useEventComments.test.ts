@@ -69,6 +69,18 @@ describe('useEventComments', () => {
     expect(list.loadingMore.value).toBe(false)
   })
 
+  it('keeps a comment sent while the first page was still loading', async () => {
+    let answer!: (p: ReturnType<typeof page>) => void
+    vi.mocked(api.fetchComments).mockReturnValueOnce(new Promise(r => { answer = r }))
+    vi.mocked(api.postComment).mockResolvedValueOnce(c1)
+    const list = useEventComments(ref(fixtureId(1)))
+    const loading = list.load()
+    expect(await list.send('hello')).toBe(true)
+    answer(page([c2, c3], false))
+    await loading
+    expect(list.comments.value).toEqual([c2, c3, c1])
+  })
+
   it('drops the answer of a load that was overtaken', async () => {
     let release!: (v: ReturnType<typeof page>) => void
     vi.mocked(api.fetchComments).mockImplementationOnce(() => new Promise(r => { release = r }))

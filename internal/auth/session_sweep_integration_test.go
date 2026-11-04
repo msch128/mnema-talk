@@ -97,8 +97,13 @@ func TestSweepFailuresLeaveSessionsAndPushDevicesAlone(t *testing.T) {
 
 			broken := authHookPool(t, e.p, &authQueryHook{match: query, cancel: true})
 			s := &Sessions{DB: broken, Secret: e.s.Secret, TTL: e.s.TTL}
-			if _, err := s.SweepSessions(context.Background()); err == nil {
+			jtis, err := s.SweepSessions(context.Background())
+			if err == nil {
 				t.Fatal("a failed sweep reported success")
+			}
+			// Rolled back means signed out for nobody: the caller closes sockets of what it gets.
+			if len(jtis) != 0 {
+				t.Errorf("a failed sweep reported %v as signed out", jtis)
 			}
 			// The sweep is one transaction: nothing was half done.
 			var rows int

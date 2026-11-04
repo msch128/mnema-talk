@@ -9,7 +9,7 @@ import (
 )
 
 // @Summary Set RSVP response for an event
-// @Description Sets caller's response to going, interested, or not_going. Case, surrounding spaces and a space or hyphen instead of the underscore are tolerated ("Not Going").
+// @Description Sets caller's response to going, interested, or not_going. Case, surrounding spaces and a space or hyphen instead of the underscore are tolerated ("Not Going"). A sign-up for a role counts as going, so any other answer also gives up the caller's role slot and moves its waitlist up.
 // @ID setCommunityEventRSVP
 // @Tags Events
 // @Accept json
@@ -46,7 +46,8 @@ func (h *Handler) setRSVP(w http.ResponseWriter, r *http.Request) error {
 	if resp != RSVPGoing && resp != RSVPInterested && resp != RSVPNotGoing {
 		return httpx.ErrInvalidInput("response must be going, interested, or not_going")
 	}
-	if err := h.Store.SetRSVP(r.Context(), id, user.ID, resp); err != nil {
+	promoted, err := h.Store.SetRSVP(r.Context(), id, user.ID, resp)
+	if err != nil {
 		return err
 	}
 	updated, err := h.Store.Get(r.Context(), id, &user.ID)
@@ -54,12 +55,13 @@ func (h *Handler) setRSVP(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.broadcast(updated)
+	h.notifyPromoted(r, updated, promoted)
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }
 
 // @Summary Delete RSVP response for an event
-// @Description Removes caller's RSVP from the event.
+// @Description Removes caller's RSVP from the event. A role slot the caller held is given up too, and its waitlist moves up.
 // @ID deleteCommunityEventRSVP
 // @Tags Events
 // @Produce json
@@ -81,7 +83,8 @@ func (h *Handler) deleteRSVP(w http.ResponseWriter, r *http.Request) error {
 	if err := h.requireViewable(r, ev); err != nil {
 		return err
 	}
-	if err := h.Store.DeleteRSVP(r.Context(), id, user.ID); err != nil {
+	promoted, err := h.Store.DeleteRSVP(r.Context(), id, user.ID)
+	if err != nil {
 		return err
 	}
 	updated, err := h.Store.Get(r.Context(), id, &user.ID)
@@ -89,6 +92,7 @@ func (h *Handler) deleteRSVP(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.broadcast(updated)
+	h.notifyPromoted(r, updated, promoted)
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }

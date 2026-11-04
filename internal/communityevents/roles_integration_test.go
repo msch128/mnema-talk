@@ -765,3 +765,34 @@ func TestWithoutAPermissionServiceOnlyTheOwnerAndTheCreatorManageTheRoster(t *te
 		t.Fatalf("owner: %v", err)
 	}
 }
+
+// An answer other than going gives up the slot and the waitlist moves up.
+func TestChangingOrWithdrawingTheRSVPFreesTheRoleSlot(t *testing.T) {
+	ctx := context.Background()
+	for name, act := range map[string]func(f *rosterFixture, u *auth.User) ([]Promotion, error){
+		"not going": func(f *rosterFixture, u *auth.User) ([]Promotion, error) {
+			return f.s.SetRSVP(ctx, f.event.ID, u.ID, RSVPNotGoing)
+		},
+		"interested": func(f *rosterFixture, u *auth.User) ([]Promotion, error) {
+			return f.s.SetRSVP(ctx, f.event.ID, u.ID, RSVPInterested)
+		},
+		"withdrawn": func(f *rosterFixture, u *auth.User) ([]Promotion, error) {
+			return f.s.DeleteRSVP(ctx, f.event.ID, u.ID)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newRosterFixture(t)
+			roles := f.setRoles(t, role("Tank", 1))
+			a, b := f.user(t, "a", "user"), f.user(t, "b", "user")
+			f.signUp(t, a, roles[0].ID)
+			f.signUp(t, b, roles[0].ID)
+			promoted, err := act(f, a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if f.state(t, a) != "none" || f.state(t, b) != SignupConfirmed || len(promoted) != 1 || promoted[0].UserID != b.ID {
+				t.Fatalf("a should give up the slot and b move up: a=%s b=%s %+v", f.state(t, a), f.state(t, b), promoted)
+			}
+		})
+	}
+}

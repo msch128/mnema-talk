@@ -47,7 +47,11 @@ func (s *Sessions) SweepSessions(ctx context.Context) ([]string, error) {
 		return endSessions(ctx, tx, jtis, expires)
 	})
 	s.pruneTouched()
-	return jtis, err
+	if err != nil {
+		// Rolled back: no session ended, so none may have its sockets closed.
+		return nil, err
+	}
+	return jtis, nil
 }
 
 // RunSessionSweep signs out inactive sessions every interval until ctx ends.

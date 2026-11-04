@@ -49,6 +49,8 @@ func chatEraseSteps() []userdata.Step {
 		{Order: userdata.OrderDMMembers, SQL: `DELETE FROM dm_members WHERE user_id = $1`},
 		{Order: userdata.OrderDMAddedBy, SQL: `UPDATE dm_members SET added_by = NULL WHERE added_by = $1`},
 		{Order: userdata.OrderDMCreatedBy, SQL: `UPDATE channels SET dm_created_by = NULL WHERE dm_created_by = $1`},
+		{Order: userdata.OrderTalkLeader, SQL: `UPDATE channels SET leader_id = NULL WHERE leader_id = $1`},
+		{Order: userdata.OrderPinnedBy, SQL: `UPDATE messages SET pinned_by = NULL WHERE pinned_by = $1`},
 		{Order: userdata.OrderScrubReports, SQL: scrubReportCopies, Arg: userdata.ArgIDAndName},
 	}
 }

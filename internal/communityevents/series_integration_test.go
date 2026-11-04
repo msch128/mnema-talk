@@ -579,3 +579,93 @@ func TestAMonthlySeriesEditedAtItsClampedOccurrenceKeepsTheDayWhenOnlyTheTimeMov
 		t.Fatalf("a new date is a new anchor: %v", again[2].Start)
 	}
 }
+
+// updatedIDs lists the events announced as updated so far.
+func (f *rosterFixture) updatedIDs(skip int) map[uuid.UUID]bool {
+	out := map[uuid.UUID]bool{}
+	for _, e := range f.rec.Snapshot()[skip:] {
+		if ev, ok := e.Payload.(*CommunityEvent); ok {
+			out[ev.ID] = true
+		}
+	}
+	return out
+}
+
+func TestRolesOfTheFollowingOccurrencesAreAnnouncedToClients(t *testing.T) {
+	f := newRosterFixture(t)
+	first := f.startSeries(t, weeklyBody)
+	list := f.occurrences(t, first.Series.ID)
+	f.event = &CommunityEvent{ID: list[1].ID}
+	before := len(f.rec.Snapshot())
+	if _, err := f.callQuery(t, f.owner, f.h.setRoles, http.MethodPut, `{"roles":[{"name":"Tank","capacity":1}]}`, "scope=following"); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.rec.Snapshot()) == before {
+		t.Fatal("nothing was announced")
+	}
+	seen := f.updatedIDs(before)
+	for _, o := range list[2:] {
+		if !seen[o.ID] {
+			t.Fatalf("occurrence %d got new roles but clients were not told", o.Index)
+		}
+	}
+}
+
+// A time-only edit of an earlier occurrence, after the series was re-anchored
+// on a later one, moves the time of day and nothing else of the occurrences in
+// between: they keep their days.
+func TestATimeOnlyEditKeepsTheDaysOfOccurrencesBeforeTheAnchor(t *testing.T) {
+	f := newRosterFixture(t)
+	first := f.startSeries(t, weeklyBody)
+	list := f.occurrences(t, first.Series.ID)
+	if len(list) < 6 {
+		t.Fatalf("need six occurrences, have %d", len(list))
+	}
+	zone, _ := time.LoadLocation("Europe/Berlin")
+	// Re-anchor on occurrence 4, a day later.
+	f.event = &CommunityEvent{ID: list[4].ID}
+	moved := list[4].Start.Add(24 * time.Hour).Format(time.RFC3339)
+	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, fmt.Sprintf(`{"start_time":%q}`, moved), "scope=following"); err != nil {
+		t.Fatal(err)
+	}
+	// Then move only the time of day, starting at occurrence 2.
+	f.event = &CommunityEvent{ID: list[2].ID}
+	later := list[2].Start.Add(2 * time.Hour).Format(time.RFC3339)
+	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, fmt.Sprintf(`{"start_time":%q}`, later), "scope=following"); err != nil {
+		t.Fatal(err)
+	}
+	got := f.occurrences(t, first.Series.ID)
+	for _, i := range []int{2, 3} {
+		wantDay := list[i].Start.In(zone).Format("2006-01-02")
+		if day := got[i].Start.In(zone).Format("2006-01-02"); day != wantDay {
+			t.Fatalf("occurrence %d moved from %s to %s", i, wantDay, day)
+		}
+		if h := got[i].Start.In(zone).Hour(); h != list[2].Start.In(zone).Add(2*time.Hour).Hour() {
+			t.Fatalf("occurrence %d is at %d h, the new time of day was not applied", i, h)
+		}
+	}
+}
+
+// "This and following" on an occurrence that is over changes it as well.
+func TestFollowingEditOfAnOccurrenceThatIsOverChangesItToo(t *testing.T) {
+	f := newRosterFixture(t)
+	first := f.startSeries(t, weeklyBody)
+	list := f.occurrences(t, first.Series.ID)
+	past := time.Now().Add(-48 * time.Hour)
+	if _, err := f.p.Exec(context.Background(), `UPDATE events SET start_time = $2, end_time = $3, status = 'completed' WHERE id = $1`, list[0].ID, past, past.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	f.event = &CommunityEvent{ID: list[0].ID}
+	if _, err := f.callQuery(t, f.owner, f.h.updateEvent, http.MethodPatch, `{"title":"Renamed"}`, "scope=following"); err != nil {
+		t.Fatal(err)
+	}
+	got := f.occurrences(t, first.Series.ID)
+	for _, o := range got {
+		if o.Title != "Renamed" {
+			t.Fatalf("occurrence %d (%s) is still %q", o.Index, o.Status, o.Title)
+		}
+	}
+	if got[0].Status != StatusCompleted {
+		t.Fatalf("the past occurrence stays completed: %s", got[0].Status)
+	}
+}
