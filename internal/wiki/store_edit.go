@@ -229,8 +229,11 @@ func reparent(ctx context.Context, tx pgx.Tx, cur *Page, parent uuid.UUID) (bool
 	if err != nil {
 		return false, err
 	}
-	_, err = tx.Exec(ctx, `UPDATE wiki_pages SET parent_id = $2, position = $3 WHERE id = $1`, cur.ID, target, pos)
-	return true, err
+	if _, err = tx.Exec(ctx, `UPDATE wiki_pages SET parent_id = $2, position = $3 WHERE id = $1`, cur.ID, target, pos); err != nil {
+		return false, err
+	}
+	cur.ParentID, cur.Position = target, pos // a position named with the move is compared with where the page is now
+	return true, nil
 }
 
 // RestoreRevision makes revision rev the page's text again, as a new revision.

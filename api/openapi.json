@@ -39981,6 +39981,16 @@
             },
             "description": "INVALID_INPUT"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
           "403": {
             "content": {
               "application/json": {
@@ -39989,7 +39999,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN"
+            "description": "FORBIDDEN: missing View wiki or Edit wiki, or cross-origin request rejected."
           },
           "409": {
             "content": {
@@ -40030,6 +40040,16 @@
               }
             },
             "description": "RATE_LIMITED: too many writes, or the member's daily number of pictures or bytes is reached."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
           },
           "503": {
             "content": {
@@ -40127,7 +40147,7 @@
                 }
               }
             },
-            "description": "CONFLICT: the address is taken, or the page limit or depth is reached."
+            "description": "CONFLICT: the address or title is taken, or the page limit or depth is reached."
           },
           "429": {
             "content": {
@@ -40432,7 +40452,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing Read, Edit wiki or (to rename or move) Manage wiki as well, the page is locked, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing View wiki, Edit wiki or (to rename or move) Manage wiki as well, the page is locked, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -40452,7 +40472,7 @@
                 }
               }
             },
-            "description": "STALE_REVISION: the page changed meanwhile. CONFLICT: the address is taken, or the move passes the depth limit or goes under the page itself."
+            "description": "STALE_REVISION: the page changed meanwhile. CONFLICT: the address or title is taken, or the move passes the depth limit or goes under the page itself."
           },
           "429": {
             "content": {
@@ -40927,7 +40947,7 @@
                 }
               }
             },
-            "description": "STALE_REVISION: the page changed meanwhile."
+            "description": "STALE_REVISION: the page changed meanwhile. CONFLICT: another page has that title now."
           },
           "429": {
             "content": {
@@ -41033,7 +41053,7 @@
                 }
               }
             },
-            "description": "CONFLICT: the page is not deleted, or the page limit is reached."
+            "description": "CONFLICT: the page is not deleted, its title is used by another page, or the page limit is reached."
           },
           "429": {
             "content": {
@@ -41077,7 +41097,7 @@
     },
     "/api/wiki/search": {
       "get": {
-        "description": "Pages whose title or text contains q (at least two characters), titles first, at most 30, with a few words around the match. Deleted pages are never found. Needs View wiki.",
+        "description": "Pages whose title or text contains q (at least three characters), titles first, at most 30, with a few words around the match. Deleted pages are never found. Needs View wiki.",
         "operationId": "searchWiki",
         "parameters": [
           {

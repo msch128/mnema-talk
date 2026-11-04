@@ -67,11 +67,13 @@ func (h *Handler) MountUploads(r chi.Router) {
 // @Param image formData file true "Picture file (at most 5 MB)"
 // @Success 201 {object} Image
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing View wiki or Edit wiki, or cross-origin request rejected."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the wiki holds its most pictures."
 // @Failure 413 {object} httpx.ErrorResponse "PAYLOAD_TOO_LARGE"
 // @Failure 415 {object} httpx.ErrorResponse "UNSUPPORTED_MEDIA_TYPE"
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many writes, or the member's daily number of pictures or bytes is reached."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: file storage is not configured or full, or the server is busy redrawing pictures."
 // @Router /api/wiki/images [post]
 func (h *Handler) uploadImage(w http.ResponseWriter, r *http.Request) error {
