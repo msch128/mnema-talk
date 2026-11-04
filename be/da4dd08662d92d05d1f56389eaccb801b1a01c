@@ -1,0 +1,19 @@
+internal/communityevents/roles_integration_test.go
+  s_48a96648676e62::t_127df9aba1776c 793-794
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "beda4dd08662d92d05d1f56389eaccb801b1a01c",
+  "prompts": {},
+  "sessions": {
+    "s_48a96648676e62": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a72f590789c0e0f8d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
