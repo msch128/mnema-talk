@@ -104,6 +104,7 @@ func verifyFixedDocument(t *testing.T, res obj) {
 	if _, ok := paths["/api/users/@me"]; !ok {
 		t.Errorf("expected /api/users/@me path to exist")
 	}
+	assertFixedOperation(t, paths["/api/users/@me"].(obj)["get"].(obj))
 
 	schemas := res["components"].(obj)["schemas"].(obj)
 	nf := schemas["NullableField"].(obj)
@@ -199,4 +200,32 @@ func TestOpenAPIFixErrors(t *testing.T) {
 	// Test non-object path item
 	paths := obj{"/test": "not-an-obj"}
 	fixPaths(paths)
+}
+
+// assertFixedOperation checks the per-operation fixes: an explicit empty
+// security list, request bodies without the siblings swag adds to a $ref and
+// marked required, error bodies reduced to JSON and string bodies to their
+// non-JSON media types.
+func assertFixedOperation(t *testing.T, op obj) {
+	t.Helper()
+	if sec, ok := op["security"].([]any); !ok || len(sec) != 0 {
+		t.Errorf("security = %v; want an empty list", op["security"])
+	}
+	rb := op["requestBody"].(obj)
+	if rb["required"] != true {
+		t.Errorf("a body with required properties must be required: %v", rb)
+	}
+	schema := rb["content"].(obj)["multipart/form-data"].(obj)["schema"].(obj)
+	if _, ok := schema["summary"]; ok {
+		t.Errorf("the summary next to a $ref was kept: %v", schema)
+	}
+	responses := op["responses"].(obj)
+	errBody := responses["400"].(obj)["content"].(obj)
+	if len(errBody) != 1 || errBody["application/json"] == nil {
+		t.Errorf("error body media types = %v; want application/json only", errBody)
+	}
+	okBody := responses["200"].(obj)["content"].(obj)
+	if _, ok := okBody["application/json"]; ok || okBody["text/plain"] == nil {
+		t.Errorf("string body media types = %v; want text/plain without application/json", okBody)
+	}
 }

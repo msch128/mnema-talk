@@ -95,7 +95,7 @@ func embedURLChar(r rune) bool {
 	return r == 0x7f
 }
 
-// link validates a link: absolute http(s) with a host, at most 2048 bytes.
+// embedLink validates a link: absolute http(s) with a host, at most 2048 bytes.
 // Embed links are only ever shown as links, never loaded.
 func embedLink(field, s string) (string, error) {
 	s = strings.TrimSpace(s)

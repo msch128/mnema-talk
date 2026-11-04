@@ -117,7 +117,7 @@ func TestACallTheCallerHangsUpOnLeavesAMissedCall(t *testing.T) {
 }
 
 func TestACallNobodyAnswersLeavesAMissedCallButStaysOpenForLateJoiners(t *testing.T) {
-	c := startedCall(t, 30*time.Millisecond)
+	c := startedCall(t, 250*time.Millisecond)
 	c.calls.OnPresence(c.alice.ID, c.talk, true)
 	deadline := time.Now().Add(5 * time.Second)
 	for c.missedMessagesOrZero() == 0 && time.Now().Before(deadline) {

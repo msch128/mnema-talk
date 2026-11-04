@@ -2,7 +2,6 @@ package later
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"unicode/utf8"
@@ -35,23 +34,40 @@ type MessageRef struct {
 // loadRef reads a message with what a reminder shows of it. It returns nil
 // when the message does not exist.
 func (s *Service) loadRef(ctx context.Context, id uuid.UUID) (*MessageRef, error) {
-	var m MessageRef
-	var content string
-	err := s.DB.QueryRow(ctx, `
+	refs, err := s.loadRefs(ctx, []uuid.UUID{id})
+	return refs[id], err
+}
+
+// loadRefs is loadRef for several messages in one query; a message that does
+// not exist is missing from the result.
+func (s *Service) loadRefs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*MessageRef, error) {
+	rows, err := s.DB.Query(ctx, `
 		SELECT m.id, m.channel_id, m.parent_id, c.name, m.in_dm, COALESCE(m.author_name, u.display_name), m.content
 		FROM messages m JOIN channels c ON c.id = m.channel_id JOIN users u ON u.id = m.user_id
-		WHERE m.id = $1`, id).Scan(&m.ID, &m.ChannelID, &m.ParentID, &m.ChannelName, &m.DM, &m.Author, &content)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
-	}
+		WHERE m.id = ANY($1)`, ids)
 	if err != nil {
 		return nil, fmt.Errorf("load message: %w", err)
 	}
-	m.Snippet = cut(content, snippetRunes)
-	if m.DM {
-		m.ChannelName = ""
+	refs, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (*MessageRef, error) {
+		var m MessageRef
+		var content string
+		if err := row.Scan(&m.ID, &m.ChannelID, &m.ParentID, &m.ChannelName, &m.DM, &m.Author, &content); err != nil {
+			return nil, err
+		}
+		m.Snippet = cut(content, snippetRunes)
+		if m.DM {
+			m.ChannelName = ""
+		}
+		return &m, nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("load message: %w", err)
 	}
-	return &m, nil
+	out := make(map[uuid.UUID]*MessageRef, len(refs))
+	for _, ref := range refs {
+		out[ref.ID] = ref
+	}
+	return out, nil
 }
 
 func cut(s string, limit int) string {
@@ -98,8 +114,17 @@ func (s *Service) activeUser(ctx context.Context, user uuid.UUID) (*auth.User, b
 // visibleRef returns the message when sub may see it now, nil otherwise.
 func (s *Service) visibleRef(ctx context.Context, sub perm.Subject, id uuid.UUID) (*MessageRef, error) {
 	ref, err := s.loadRef(ctx, id)
-	if err != nil || ref == nil {
+	if err != nil {
 		return nil, err
+	}
+	return s.visible(ctx, sub, ref)
+}
+
+// visible returns ref when sub may see its channel now; nil (a missing
+// message) and a hidden message both answer nil.
+func (s *Service) visible(ctx context.Context, sub perm.Subject, ref *MessageRef) (*MessageRef, error) {
+	if ref == nil {
+		return nil, nil
 	}
 	ok, err := s.canView(ctx, sub, ref.ChannelID)
 	if err != nil || !ok {
