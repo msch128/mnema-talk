@@ -1,0 +1,29 @@
+internal/poll/anonymous_race_integration_test.go
+  s_4410d239e72ea2::t_a770c2818d8cf1 1-57
+internal/poll/store.go
+  s_9ea9b80938525a::t_b12270c48052e2 78-84,91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "247a29b8b01258d8df8b33dc685a2c5055f24ee9",
+  "prompts": {},
+  "sessions": {
+    "s_4410d239e72ea2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9eda0e5f9a6c10d3",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_9ea9b80938525a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae04b83a3614554fa",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
