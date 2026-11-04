@@ -57,11 +57,83 @@ describe('wiki navigation', () => {
     expect(currentRoute.value.view).not.toBe('wiki')
   })
 
-  it('goes back in the history when the app has one', () => {
-    navigate('/')
-    navigate('/wiki')
-    const back = vi.spyOn(window.history, 'back').mockImplementation(() => {})
+  it('goes back past every wiki page that was opened since the wiki was', () => {
+    navigate('/', { replace: true })
+    navigate('/c/general')
+    openWiki()
+    openWiki('rules')
+    openWiki('faq')
+    const go = vi.spyOn(window.history, 'go').mockImplementation(() => {})
     closeWiki()
-    expect(back).toHaveBeenCalled()
+    expect(go).toHaveBeenCalledWith(-3)
+  })
+
+  it('goes back one entry when the wiki was opened by the entry before it', () => {
+    navigate('/c/general')
+    openWiki()
+    const go = vi.spyOn(window.history, 'go').mockImplementation(() => {})
+    closeWiki()
+    expect(go).toHaveBeenCalledWith(-1)
+  })
+
+  it('does not walk out of the app when the wiki was the first thing opened', () => {
+    window.history.replaceState({ idx: 0 }, '', '/wiki/faq')
+    currentRoute.value = parseRoute('/wiki/faq')
+    openWiki('rules')
+    const go = vi.spyOn(window.history, 'go').mockImplementation(() => {})
+    closeWiki()
+    expect(go).not.toHaveBeenCalled()
+    expect(currentRoute.value.view).toBe('root')
+  })
+})
+
+describe('Back and Forward with an unsaved draft', () => {
+  function pop(idx: number, path: string) {
+    window.history.replaceState({ idx }, '', path)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }
+
+  it('put the browser back, ask, and move on only when the member agrees', async () => {
+    openWiki()
+    openWiki('faq')
+    wikiDirty.value = true
+    const go = vi.spyOn(window.history, 'go').mockImplementation(() => {})
+    const here = window.location.pathname
+    // The browser went Back one entry.
+    const at = window.history.state.idx
+    pop(at - 1, '/wiki')
+    expect(go).toHaveBeenCalledWith(1)
+    pop(at, here) // the browser reports the step back to where it was
+    expect(currentRoute.value).toMatchObject({ wiki: { mode: 'page', slug: 'faq' } })
+    expect(pendingConfirm.value).not.toBeNull()
+    pendingConfirm.value?.resolve(true)
+    await vi.waitFor(() => expect(go).toHaveBeenCalledWith(-1))
+    expect(wikiDirty.value).toBe(false)
+    pop(at - 1, '/wiki') // and the second step, now allowed
+    expect(currentRoute.value).toMatchObject({ wiki: { mode: 'home' } })
+  })
+
+  it('stay where they are when the member keeps editing', async () => {
+    openWiki()
+    openWiki('faq')
+    wikiDirty.value = true
+    const go = vi.spyOn(window.history, 'go').mockImplementation(() => {})
+    const at = window.history.state.idx
+    const here = window.location.pathname
+    pop(at - 1, '/wiki')
+    pop(at, here)
+    pendingConfirm.value?.resolve(false)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(go).toHaveBeenCalledTimes(1)
+    expect(wikiDirty.value).toBe(true)
+    expect(currentRoute.value).toMatchObject({ wiki: { mode: 'page', slug: 'faq' } })
+  })
+
+  it('follow the browser at once when nothing is unsaved', () => {
+    openWiki()
+    openWiki('faq')
+    pop(window.history.state.idx - 1, '/wiki')
+    expect(currentRoute.value).toMatchObject({ wiki: { mode: 'home' } })
   })
 })

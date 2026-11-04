@@ -42,14 +42,15 @@ function toggle(node: WikiNode) {
     <p v-if="wiki.treeLoaded && !wiki.treeFailed && rows.length === 0" class="px-2 py-2 text-xs italic text-mnema-tertiary" data-testid="wiki-tree-empty">{{ $t('wiki.noPages') }}</p>
     <p v-if="wiki.treeFailed" class="px-2 py-2 text-xs text-mnema-danger" role="alert">{{ $t('wiki.treeFailed') }}</p>
 
-    <ul class="space-y-px" role="tree">
-      <li v-for="node in rows" :key="node.id" role="treeitem" :aria-level="node.depth" :aria-expanded="node.children.length ? !collapsed.has(node.id) : undefined">
+    <ul class="space-y-px">
+      <li v-for="node in rows" :key="node.id" :data-depth="node.depth">
         <div :class="['flex items-center rounded-md transition-colors hover:bg-mnema-hover', slug === node.slug ? 'bg-mnema-hover' : '']" :style="{ paddingLeft: `${(node.depth - 1) * 14}px` }">
           <button
             v-if="node.children.length"
             type="button"
             class="flex h-7 w-6 shrink-0 items-center justify-center text-mnema-tertiary hover:text-mnema-text focus-ring"
             :aria-label="$t(collapsed.has(node.id) ? 'wiki.expand' : 'wiki.collapse', { title: node.title })"
+            :aria-expanded="!collapsed.has(node.id)"
             @click="toggle(node)"
           >
             <ChevronRight v-if="collapsed.has(node.id)" class="h-3.5 w-3.5" />

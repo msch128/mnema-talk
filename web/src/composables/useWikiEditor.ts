@@ -1,11 +1,16 @@
 // The state and the saving of the wiki editor: the text being written, whether
 // it differs from what was read, the size, and what happens when somebody saved
-// meanwhile (the server refuses the save and nothing is overwritten).
+// meanwhile (the server refuses the save and nothing is overwritten). What is
+// written is also kept in the tab's session storage, so a reload brings it back.
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { caughtErrorMessage, isApiError } from '../lib/api'
+import { caughtErrorMessage } from '../lib/api'
 import { changeWikiPage, createWikiPage, fetchWikiPage, type WikiPage } from '../lib/wikiApi'
+import { wikiDraftKey, type WikiDraft } from '../lib/wikiDraft'
+import { isStaleRevision } from '../lib/wikiErrors'
 import { goWiki, wikiDirty } from '../lib/wikiNav'
 import { t } from '../i18n'
+import { useAuthStore } from '../stores/auth'
+import { keepWikiDraft, resumableDraft } from './useWikiDraft'
 import { useWikiStore } from '../stores/wiki'
 
 export const MAX_BYTES = 50 * 1024
@@ -23,16 +28,28 @@ function submitEditor(page: WikiPage | null, baseRev: number, f: EditorFields): 
   return changeWikiPage(page.slug, { base_rev: baseRev, title: f.title, content: f.content, ...summary })
 }
 
+/** The text fields of the editor, from a draft that came back or from the page; `reset` goes back to the page. */
+function editorFields(page: WikiPage | null, parentId: string | null, start: WikiDraft | null) {
+  const fresh: WikiDraft = { title: page?.title ?? '', content: page?.content ?? '', summary: '', slug: '', parent: parentId ?? '', baseRev: page?.rev ?? 0 }
+  const from = start ?? fresh
+  const fields = {
+    title: ref(from.title), content: ref(from.content), summary: ref(from.summary),
+    slug: ref(from.slug), parent: ref(from.parent), baseRev: ref(from.baseRev)
+  }
+  function reset() {
+    for (const key of Object.keys(fresh) as (keyof WikiDraft)[]) Object.assign(fields[key], { value: fresh[key] })
+  }
+  return { ...fields, reset }
+}
+
 export function useWikiEditor(page: WikiPage | null, parentId: string | null = null) {
   const wiki = useWikiStore()
-  const title = ref(page?.title ?? '')
-  const content = ref(page?.content ?? '')
-  const summary = ref('')
-  const slug = ref('')
-  const parent = ref(parentId ?? '')
-  const baseRev = ref(page?.rev ?? 0)
+  const draftKey = wikiDraftKey(useAuthStore().user?.id ?? '', page?.slug ?? null)
+  const start = resumableDraft(draftKey, page)
+  const { title, content, summary, slug, parent, baseRev, reset } = editorFields(page, parentId, start)
   const error = ref('')
   const busy = ref(false)
+  const restored = ref(!!start) // the text of a draft from before a reload is back in the fields
   // The page as it is now when somebody saved after this editor was opened.
   const theirs = ref<WikiPage | null>(null)
 
@@ -42,10 +59,12 @@ export function useWikiEditor(page: WikiPage | null, parentId: string | null = n
   const canSave = computed(() => !busy.value && !tooLong.value && title.value.trim() !== '' && (page ? dirty.value : true))
 
   watch(dirty, value => { wikiDirty.value = value }, { immediate: true })
+  const draft = keepWikiDraft(draftKey, { title, content, summary, slug, parent, baseRev }, dirty)
   onBeforeUnmount(() => { wikiDirty.value = false })
 
   function leave(target: WikiPage) {
     wikiDirty.value = false
+    draft.drop()
     void goWiki({ mode: 'page', slug: target.slug }, true)
   }
 
@@ -69,7 +88,7 @@ export function useWikiEditor(page: WikiPage | null, parentId: string | null = n
   }
 
   async function explain(e: unknown) {
-    if (page && isApiError(e) && e.status === 409 && /changed since you opened it/.test(e.message)) {
+    if (page && isStaleRevision(e)) {
       try {
         theirs.value = await fetchWikiPage(page.slug)
         return
@@ -93,5 +112,12 @@ export function useWikiEditor(page: WikiPage | null, parentId: string | null = n
     leave(latest)
   }
 
-  return { title, content, summary, slug, parent, error, busy, theirs, bytes, tooLong, dirty, canSave, save, saveOnTop, takeTheirs }
+  /** Drops the text of the draft that came back after a reload and starts again from the page. */
+  function discardDraft() {
+    draft.drop()
+    reset()
+    restored.value = false
+  }
+
+  return { title, content, summary, slug, parent, error, busy, theirs, restored, bytes, tooLong, dirty, canSave, save, saveOnTop, takeTheirs, discardDraft }
 }

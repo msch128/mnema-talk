@@ -12,8 +12,7 @@ import { usePermissionsStore } from '../stores/permissions'
 import { roleColorCss } from '../lib/permissions'
 import { roleColors as vRoleColors } from '../directives/roleColor'
 import { wikiLinkRule } from '../lib/wikiLinks'
-import { navigate } from '../lib/router'
-import { wikiPath } from '../lib/wikiPaths'
+import { goWiki } from '../lib/wikiNav'
 import type { WikiPageSummary } from '../lib/wikiApi'
 
 const props = defineProps({
@@ -77,7 +76,7 @@ function onClick(event: MouseEvent) {
   if (confirmLink(event, target)) return
   const wiki = target?.closest<HTMLElement>('.md-wikilink[data-wiki]')
   if (wiki?.dataset.wiki) {
-    navigate(wikiPath({ mode: 'page', slug: wiki.dataset.wiki }))
+    void goWiki({ mode: 'page', slug: wiki.dataset.wiki })
     return
   }
   const mention = target?.closest<HTMLElement>('.md-mention[data-mention]')
@@ -118,7 +117,7 @@ function isSpoilerElement(target: EventTarget | null): target is Element {
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter' && event.target instanceof HTMLElement && event.target.dataset.wiki) {
     event.preventDefault()
-    navigate(wikiPath({ mode: 'page', slug: event.target.dataset.wiki }))
+    void goWiki({ mode: 'page', slug: event.target.dataset.wiki })
     return
   }
   if (event.key === 'Enter' && event.target instanceof HTMLElement && event.target.dataset.mention) {

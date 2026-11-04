@@ -18,7 +18,7 @@ import WikiDiff from './WikiDiff.vue'
 const props = defineProps<{ page: WikiPage | null; parentId?: string | null }>()
 const wiki = useWikiStore()
 const editor = useWikiEditor(props.page, props.parentId ?? null)
-const { title, content, summary, slug, parent, error, busy, theirs, bytes, tooLong, canSave } = editor
+const { title, content, summary, slug, parent, error, busy, theirs, restored, bytes, tooLong, canSave } = editor
 const area = ref<HTMLTextAreaElement | null>(null)
 const preview = ref(false)
 
@@ -63,6 +63,10 @@ function cancel() {
 <template>
   <form class="mx-auto flex h-full max-w-5xl flex-col gap-3 px-6 py-5 max-md:px-4" data-testid="wiki-editor" @submit.prevent="editor.save()">
     <h1 class="sr-only">{{ $t(page ? 'wiki.editing' : 'wiki.newPage') }}</h1>
+    <p v-if="restored" class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-mnema-raised px-3 py-2 text-xs text-mnema-muted" role="status" data-testid="wiki-draft-restored">
+      <span class="min-w-0 flex-1">{{ $t('wiki.draftRestored') }}</span>
+      <button type="button" class="btn btn-ghost btn-sm" data-testid="wiki-draft-discard" @click="editor.discardDraft()">{{ $t('wiki.draftDiscard') }}</button>
+    </p>
     <label class="flex flex-col gap-1 text-sm">
       <span class="font-medium text-mnema-text">{{ $t('wiki.titleLabel') }}</span>
       <input v-model="title" type="text" maxlength="100" required :class="[FIELD, 'text-base']" data-testid="wiki-title-input" :placeholder="$t('wiki.titlePlaceholder')" />

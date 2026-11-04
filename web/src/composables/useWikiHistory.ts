@@ -1,9 +1,10 @@
 // The history of a wiki page: its revisions, newest first, one chosen revision
 // with the change it made, and restoring it as a new revision.
 import { computed, ref, watch } from 'vue'
-import { caughtErrorMessage, isApiError } from '../lib/api'
+import { caughtErrorMessage } from '../lib/api'
 import { confirm } from '../lib/confirm'
 import { fetchWikiRevision, fetchWikiRevisions, restoreWikiRevision, type WikiPage, type WikiRevision } from '../lib/wikiApi'
+import { isStaleRevision } from '../lib/wikiErrors'
 import { goWiki } from '../lib/wikiNav'
 import { t } from '../i18n'
 import { useToastStore } from '../stores/toast'
@@ -24,7 +25,7 @@ export function useWikiHistory(page: () => WikiPage) {
   const busy = ref(false)
 
   const latest = computed(() => revisions.value[0]?.rev ?? page().rev)
-  const mayRestore = computed(() => wiki.canEdit && (!page().locked || wiki.canManage))
+  const mayRestore = computed(() => wiki.canEdit && !page().deleted_at && (!page().locked || wiki.canManage))
 
   async function load(before?: number) {
     loading.value = true
@@ -41,7 +42,11 @@ export function useWikiHistory(page: () => WikiPage) {
     }
   }
 
+  // Only the last choice may show: an answer for an earlier click is dropped.
+  let choice = 0
+
   async function choose(rev: number) {
+    const mine = ++choice
     chosen.value = null
     previous.value = null
     try {
@@ -49,9 +54,11 @@ export function useWikiHistory(page: () => WikiPage) {
         fetchWikiRevision(page().slug, rev),
         rev > 1 ? fetchWikiRevision(page().slug, rev - 1).catch(() => null) : Promise.resolve(null)
       ])
+      if (mine !== choice) return
       chosen.value = current
       previous.value = before?.content ?? ''
     } catch (error) {
+      if (mine !== choice) return
       toasts.error(caughtErrorMessage(error, t('wiki.revisionFailed')))
     }
   }
@@ -67,7 +74,7 @@ export function useWikiHistory(page: () => WikiPage) {
       toasts.success(t('wiki.restoredRevision', { n: rev }))
       void goWiki({ mode: 'page', slug: next.slug }, true)
     } catch (error) {
-      toasts.error(isApiError(error) && error.status === 409 ? t('wiki.restoreStale') : caughtErrorMessage(error, t('wiki.actionFailed')))
+      toasts.error(isStaleRevision(error) ? t('wiki.restoreStale') : caughtErrorMessage(error, t('wiki.actionFailed')))
       void load()
     } finally {
       busy.value = false

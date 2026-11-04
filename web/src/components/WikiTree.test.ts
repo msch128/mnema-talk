@@ -23,21 +23,21 @@ describe('WikiTree', () => {
   it('shows the live pages nested, without the deleted ones', () => {
     const w = mount(WikiTree)
     expect(pages(w)).toEqual(['guides', 'raid', 'loot', 'rules'])
-    expect(w.get('[data-wiki-page="loot"]').element.closest('li')?.getAttribute('aria-level')).toBe('3')
+    expect(w.get('[data-wiki-page="loot"]').element.closest('li')?.getAttribute('data-depth')).toBe('3')
     expect(w.get('[data-wiki-page="rules"]').text()).toContain('Rules')
   })
 
   it('folds and unfolds a branch', async () => {
     const w = mount(WikiTree)
-    await w.get('li[aria-level="1"] button[aria-label]').trigger('click')
+    await w.get('li[data-depth="1"] button[aria-label]').trigger('click')
     expect(pages(w)).toEqual(['guides', 'rules'])
-    await w.get('li[aria-level="1"] button[aria-label]').trigger('click')
+    await w.get('li[data-depth="1"] button[aria-label]').trigger('click')
     expect(pages(w)).toEqual(['guides', 'raid', 'loot', 'rules'])
   })
 
   it('opens the branch of the page on screen', async () => {
     const w = mount(WikiTree)
-    await w.get('li[aria-level="1"] button[aria-label]').trigger('click')
+    await w.get('li[data-depth="1"] button[aria-label]').trigger('click')
     navigate('/wiki/loot')
     await w.vm.$nextTick()
     expect(pages(w)).toEqual(['guides', 'raid', 'loot', 'rules'])

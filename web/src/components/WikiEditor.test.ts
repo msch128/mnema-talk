@@ -5,6 +5,7 @@ import WikiEditor from './WikiEditor.vue'
 import { ApiError } from '../lib/api'
 import { currentRoute, navigate } from '../lib/router'
 import { wikiDirty } from '../lib/wikiNav'
+import { loadWikiDraft, saveWikiDraft, wikiDraftKey } from '../lib/wikiDraft'
 import { useWikiStore } from '../stores/wiki'
 import { EDIT_WIKI, grantWiki, summary, VIEW_WIKI, wikiPage } from '../wiki.fixture'
 
@@ -26,6 +27,7 @@ beforeEach(() => {
   api.fetchWikiTree.mockResolvedValue([])
   grantWiki(VIEW_WIKI | EDIT_WIKI)
   wikiDirty.value = false
+  sessionStorage.clear()
   navigate('/wiki/new', { replace: true })
 })
 
@@ -107,7 +109,7 @@ describe('editing a page', () => {
   })
 
   it('shows the difference when somebody saved meanwhile, and nothing is overwritten', async () => {
-    api.changeWikiPage.mockRejectedValueOnce(new ApiError(409, 'CONFLICT', STALE))
+    api.changeWikiPage.mockRejectedValueOnce(new ApiError(409, 'STALE_REVISION', STALE))
     api.fetchWikiPage.mockResolvedValue(wikiPage({ rev: 4, content: 'theirs', updated_by: { id: 'u2', username: 'bo', display_name: 'Bo' } }))
     const { w, field } = open(wikiPage())
     await field('text-input').setValue('mine')
@@ -126,7 +128,7 @@ describe('editing a page', () => {
   })
 
   it('can take their version instead', async () => {
-    api.changeWikiPage.mockRejectedValueOnce(new ApiError(409, 'CONFLICT', STALE))
+    api.changeWikiPage.mockRejectedValueOnce(new ApiError(409, 'STALE_REVISION', STALE))
     api.fetchWikiPage.mockResolvedValue(wikiPage({ rev: 4, content: 'theirs' }))
     const { w, field } = open(wikiPage())
     await field('text-input').setValue('mine')
@@ -139,7 +141,7 @@ describe('editing a page', () => {
   })
 
   it('shows an ordinary failure, also when the newer page cannot be read', async () => {
-    api.changeWikiPage.mockRejectedValue(new ApiError(409, 'CONFLICT', STALE))
+    api.changeWikiPage.mockRejectedValue(new ApiError(409, 'STALE_REVISION', STALE))
     api.fetchWikiPage.mockRejectedValue(new Error('offline'))
     const { w, field } = open(wikiPage())
     await field('text-input').setValue('mine')
@@ -198,5 +200,88 @@ describe('the toolbar and the preview', () => {
     const options = field('parent-input').findAll('option').map(o => o.text())
     expect(options).toContain('Level 4')
     expect(options).not.toContain('Level 5')
+  })
+})
+
+describe('a conflict is told by its code, not by its words', () => {
+  it('shows a plain failure for another refusal that happens to use the same sentence', async () => {
+    api.changeWikiPage.mockRejectedValueOnce(new ApiError(409, 'CONFLICT', STALE))
+    const { w, field } = open(wikiPage())
+    await field('text-input').setValue('mine')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(w.find('[data-testid="wiki-conflict"]').exists()).toBe(false)
+    expect(field('error').text()).toContain('changed since you opened it')
+    expect(api.fetchWikiPage).not.toHaveBeenCalled()
+  })
+})
+
+describe('an unsaved draft', () => {
+  const key = wikiDraftKey('', 'faq')
+
+  it('is kept in the session while writing and gone once the editor is left', async () => {
+    vi.useFakeTimers()
+    try {
+      const { w, field } = open(wikiPage())
+      await field('text-input').setValue('half a thought')
+      expect(loadWikiDraft(key)).toBeNull()
+      vi.advanceTimersByTime(500)
+      expect(loadWikiDraft(key)).toMatchObject({ content: 'half a thought', title: 'FAQ', baseRev: 3 })
+      w.unmount()
+      expect(loadWikiDraft(key)).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('comes back after a reload, says so, and saves on top of the revision it started from', async () => {
+    saveWikiDraft(key, { title: 'FAQ', content: 'before the reload', summary: 'wip', slug: '', parent: '', baseRev: 2 })
+    api.changeWikiPage.mockResolvedValue(wikiPage({ rev: 4 }))
+    const { w, field } = open(wikiPage())
+    expect((field('text-input').element as HTMLTextAreaElement).value).toBe('before the reload')
+    expect(w.find('[data-testid="wiki-draft-restored"]').exists()).toBe(true)
+    expect(wikiDirty.value).toBe(true)
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(api.changeWikiPage).toHaveBeenCalledWith('faq', { base_rev: 2, title: 'FAQ', content: 'before the reload', summary: 'wip' })
+    expect(loadWikiDraft(key)).toBeNull()
+  })
+
+  it('can be dropped for the text of the page', async () => {
+    saveWikiDraft(key, { title: 'Other', content: 'before the reload', summary: '', slug: '', parent: '', baseRev: 3 })
+    const { w, field } = open(wikiPage({ content: 'on the page' }))
+    await field('draft-discard').trigger('click')
+    expect((field('text-input').element as HTMLTextAreaElement).value).toBe('on the page')
+    expect((field('title-input').element as HTMLInputElement).value).toBe('FAQ')
+    expect(w.find('[data-testid="wiki-draft-restored"]').exists()).toBe(false)
+    expect(wikiDirty.value).toBe(false)
+    expect(loadWikiDraft(key)).toBeNull()
+  })
+
+  it('is ignored when it says what the page already says', () => {
+    saveWikiDraft(key, { title: 'FAQ', content: wikiPage().content, summary: '', slug: '', parent: '', baseRev: 1 })
+    const { w } = open(wikiPage())
+    expect(w.find('[data-testid="wiki-draft-restored"]').exists()).toBe(false)
+  })
+
+  it('asks the browser before the tab closes, only while there is something unsaved', async () => {
+    const { field } = open(wikiPage())
+    const clean = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(clean)
+    expect(clean.defaultPrevented).toBe(false)
+    await field('text-input').setValue('changed')
+    const dirty = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(dirty)
+    expect(dirty.defaultPrevented).toBe(true)
+    expect(loadWikiDraft(key)).toMatchObject({ content: 'changed' })
+  })
+
+  it('stops asking once the editor is gone', async () => {
+    const { w, field } = open(wikiPage())
+    await field('text-input').setValue('changed')
+    w.unmount()
+    const event = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
   })
 })

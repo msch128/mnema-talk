@@ -85,6 +85,11 @@ function historyIndex() {
   return typeof idx === 'number' && Number.isInteger(idx) ? idx : 0
 }
 
+/** How many entries this app pushed before the current one (0 on the first). */
+export function historyDepth(): number {
+  return typeof window === 'undefined' ? 0 : historyIndex()
+}
+
 /** True when the previous history entry was created by this app. */
 export function canGoBackInApp() {
   return typeof window !== 'undefined' && historyIndex() > 0
@@ -105,6 +110,7 @@ export function navigateTo(path: string, opts: boolean | { replace?: boolean } =
     path = '/'
   }
   currentRoute.value = parseRoute(path)
+  lastIndex = historyIndex()
 }
 
 /** Address of a message in a voice channel's chat. */
@@ -220,8 +226,40 @@ export function consumePendingRoute() {
   return null
 }
 
+/**
+ * Something that holds unsaved work and wants to be asked before Back or
+ * Forward drops it: `dirty` says whether it does, `ask` is the question (true
+ * when the work may go).
+ */
+export interface LeaveGuard { dirty: () => boolean; ask: () => Promise<boolean> }
+
+let leaveGuard: LeaveGuard | null = null
+let lastIndex = typeof window !== 'undefined' ? historyIndex() : 0
+// Pops this file caused itself, to put the browser back where it was.
+let undoing = 0
+
+export function setLeaveGuard(guard: LeaveGuard | null) {
+  leaveGuard = guard
+}
+
 if (typeof window !== 'undefined') {
   window.addEventListener('popstate', () => {
+    const index = historyIndex()
+    if (undoing > 0) {
+      undoing--
+      lastIndex = index
+      return
+    }
+    const step = index - lastIndex
+    const guard = leaveGuard
+    if (guard && step !== 0 && guard.dirty()) {
+      // The browser already moved: go back to the entry that is still on screen, ask, and move again on a yes.
+      undoing++
+      window.history.go(-step)
+      void guard.ask().then(ok => { if (ok) window.history.go(step) })
+      return
+    }
+    lastIndex = index
     currentRoute.value = parseRoute(window.location.pathname)
   })
 }

@@ -109,7 +109,7 @@ describe('WikiHistory', () => {
   })
 
   it('says the page moved on when the restore is stale, and reloads the list', async () => {
-    api.restoreWikiRevision.mockRejectedValue(new ApiError(409, 'CONFLICT', 'the page changed since you opened it; open it again and apply your change to the new version'))
+    api.restoreWikiRevision.mockRejectedValue(new ApiError(409, 'STALE_REVISION', 'the page changed since you opened it; open it again and apply your change to the new version'))
     const w = await open()
     await w.get('[data-rev="2"]').trigger('click')
     await flushPromises()
