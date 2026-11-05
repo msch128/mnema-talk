@@ -36,7 +36,7 @@ type TwoFactorState struct {
 	RecoveryCodesRemaining int
 }
 
-func (s *Sessions) twoFactorState(ctx context.Context, q db.Querier, id uuid.UUID) (TwoFactorState, error) {
+func (s *Sessions) TwoFactorState(ctx context.Context, q db.Querier, id uuid.UUID) (TwoFactorState, error) {
 	var st TwoFactorState
 	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM user_totp WHERE user_id = $1 AND confirmed_at IS NOT NULL),
 		(SELECT COUNT(*) FROM recovery_codes WHERE user_id = $1 AND used_at IS NULL)`, id).

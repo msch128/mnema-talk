@@ -49,7 +49,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 
 // announceRegistered audits a new account and tells the clients about it.
 func (h *Handler) announceRegistered(ctx context.Context, u *User) {
-	h.auditUser(ctx, u, "auth.register")
+	h.AuditUser(ctx, u, "auth.register")
 	if h.Events != nil {
 		h.Events.Broadcast(events.MemberJoined, u.Public())
 	}
@@ -102,7 +102,7 @@ func (h *Handler) logoutAll(w http.ResponseWriter, r *http.Request) error {
 	if err := RevokeSessions(r.Context(), h.Sessions.DB, u.ID); err != nil {
 		return err
 	}
-	h.auditUser(r.Context(), u, "auth.logout_all")
+	h.AuditUser(r.Context(), u, "auth.logout_all")
 	// Open WebSockets were authenticated with the old version; close them.
 	if h.Live != nil {
 		h.Live.DisconnectUser(u.ID)

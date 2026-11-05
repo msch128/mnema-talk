@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/account"
 	"github.com/msch128/mnema-talk/internal/userdata"
 )
 
@@ -177,9 +178,9 @@ func TestArchiveFilesStayInTheOriginalOrder(t *testing.T) {
 	}
 }
 
-func personalDataHandler() *auth.Handler {
-	h := auth.NewHandler(&auth.Sessions{}, nil)
-	(&components{authH: h}).wirePersonalData()
+func personalDataHandler() *account.API {
+	h := account.New(auth.NewHandler(&auth.Sessions{}, nil))
+	(&components{account: h}).wirePersonalData()
 	return h
 }
 

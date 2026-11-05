@@ -1,4 +1,4 @@
-package auth
+package account
 
 import (
 	"archive/zip"
@@ -14,7 +14,7 @@ import (
 // Channel names appear only for channels the person can still view. Each file
 // is built when it is written, so profile and emoji images land just before
 // their JSON and messages.json is not held in memory.
-func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Writer) error {
+func (h *API) writeArchive(ctx context.Context, user uuid.UUID, out io.Writer) error {
 	z := &zipFiles{}
 	files, err := h.archiveFiles(ctx, user, z)
 	if err != nil {
@@ -45,7 +45,7 @@ func writeReadme(z *zipFiles) error {
 	return err
 }
 
-func (h *Handler) archiveFiles(ctx context.Context, user uuid.UUID, z *zipFiles) ([]userdata.File, error) {
+func (h *API) archiveFiles(ctx context.Context, user uuid.UUID, z *zipFiles) ([]userdata.File, error) {
 	channels, err := h.viewableChannels(ctx, user)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (h *Handler) archiveFiles(ctx context.Context, user uuid.UUID, z *zipFiles)
 
 // ExportFileNames is the archive's data files in write order, without
 // README.txt and without truncated.json.
-func (h *Handler) ExportFileNames(ctx context.Context, user uuid.UUID) ([]string, error) {
+func (h *API) ExportFileNames(ctx context.Context, user uuid.UUID) ([]string, error) {
 	files, err := h.archiveFiles(ctx, user, &zipFiles{})
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func exportLimits() userdata.Limits {
 	}
 }
 
-func (h *Handler) ownExportFiles(ctx context.Context, user uuid.UUID, channels userdata.Channels, z *zipFiles) []userdata.File {
+func (h *API) ownExportFiles(ctx context.Context, user uuid.UUID, channels userdata.Channels, z *zipFiles) []userdata.File {
 	q := h.Sessions.DB
 	return []userdata.File{
 		plainFile("profile.json", userdata.FileProfile, func() (any, error) {

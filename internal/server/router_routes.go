@@ -102,6 +102,7 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 		j.Use(httpx.MaxBody(httpx.DefaultMaxBody))
 		c.authH.MountAuthenticated(j)
 		c.members.MountAuthenticated(j)
+		c.account.MountAuthenticated(j)
 		j.Get("/webrtc/config", webrtcConfig(c.cfg, c.d.TURN))
 		j.Post("/webrtc/probe", httpx.Handle(c.systemH.connectionProbe))
 		j.Get("/webrtc/speedtest", httpx.Handle(c.systemH.downloadSpeedTest))

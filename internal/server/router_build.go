@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/account"
 	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
@@ -73,6 +74,7 @@ type components struct {
 	auditLog *audit.Log
 	authH    *auth.Handler
 	members  *memberadmin.API
+	account  *account.API
 	chatH    *chat.Handler
 	rolesH   *roles.Handler
 	importH  *discordimport.Handler
@@ -145,12 +147,11 @@ func (c *components) newCore() {
 	c.authH.Perms = c.permSvc
 	c.authH.Audit = c.auditLog
 	c.authH.Lifetime = c.ctx
-	c.members = memberadmin.New(c.authH)
 	c.startAuthJobs()
 	if d.Store != nil {
 		c.authH.Objects = d.Store
 		c.authH.ObjectMissing = media.IsMissingObject
-		go c.authH.RunExportSweep(c.ctx, 0)
+		go c.account.RunExportSweep(c.ctx, 0)
 	}
 	go chat.RunSlowModePrune(c.ctx, d.DB, time.Hour)
 	c.newChat()

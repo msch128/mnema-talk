@@ -1,4 +1,4 @@
-package auth
+package account
 
 import (
 	"archive/zip"
@@ -29,7 +29,7 @@ type emojiRow struct {
 	Key string `db:"s3_key"`
 }
 
-func (h *Handler) exportEmoji(ctx context.Context, z *zipFiles, user uuid.UUID) (capped, error) {
+func (h *API) exportEmoji(ctx context.Context, z *zipFiles, user uuid.UUID) (capped, error) {
 	rows, cut, err := fetchRows[emojiRow](ctx, h.Sessions.DB, exportMaxRows, `
 		SELECT id, name, content_type, animated, size_bytes, created_at, s3_key
 		FROM custom_emoji WHERE created_by = $1 ORDER BY created_at LIMIT $2`, user)

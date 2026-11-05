@@ -92,6 +92,7 @@ var trees = []layered{
 		importers: map[string][]string{
 			// slashcmd runs the same timeout, ban and kick actions as the routes.
 			"memberadmin": {"internal/server", "internal/slashcmd", "internal/auth"},
+			"account":     {"internal/server", "internal/auth"},
 		},
 	},
 }

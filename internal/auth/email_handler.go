@@ -74,7 +74,7 @@ func (h *Handler) accountInfo(ctx context.Context, id uuid.UUID) (AccountInfo, e
 	if err != nil {
 		return AccountInfo{}, err
 	}
-	tf, err := h.Sessions.twoFactorState(ctx, h.Sessions.DB, id)
+	tf, err := h.Sessions.TwoFactorState(ctx, h.Sessions.DB, id)
 	if err != nil {
 		return AccountInfo{}, err
 	}
@@ -146,7 +146,7 @@ func (h *Handler) setEmail(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.auditUser(r.Context(), u, "auth.email_set")
+	h.AuditUser(r.Context(), u, "auth.email_set")
 	var sent *bool
 	if !verified && h.mailEnabled() {
 		// The address is stored by now: a refused mail must not turn the
@@ -198,7 +198,7 @@ func (h *Handler) removeEmailHandler(w http.ResponseWriter, r *http.Request) err
 	if err := removeEmail(r.Context(), h.Sessions.DB, u.ID); err != nil {
 		return err
 	}
-	h.auditUser(r.Context(), u, "auth.email_remove")
+	h.AuditUser(r.Context(), u, "auth.email_remove")
 	return h.writeAccountInfo(w, r, u.ID)
 }
 
@@ -307,7 +307,7 @@ func (h *Handler) verifyEmail(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if u, err := GetUser(r.Context(), h.Sessions.DB, id); err == nil {
-		h.auditUser(r.Context(), u, "auth.email_verified")
+		h.AuditUser(r.Context(), u, "auth.email_verified")
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

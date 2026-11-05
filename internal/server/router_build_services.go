@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/account"
+	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
@@ -108,12 +110,21 @@ func (c *components) newEvents() {
 	}
 }
 
-// startAuthJobs runs the account sweeps that live as long as the server: ban
-// and status expiry, the session sweep and the unlock worker.
+// startAuthJobs builds the split-out auth route sets and runs the account
+// sweeps that live as long as the server: ban and status expiry, the session
+// sweep and the unlock worker.
 func (c *components) startAuthJobs() {
+	c.newAuthAPIs()
 	go c.members.RunBanExpiry(c.ctx, time.Minute)
 	go c.authH.RunStatusExpiry(c.ctx, 0)
 	go c.authH.RunSessionSweep(c.ctx, auth.DefaultSessionSweepEvery)
 	// `mnema-talk unlock` runs in another process and queues requests here.
 	go c.authH.RunUnlockWorker(c.ctx, auth.UnlockPollInterval)
+}
+
+// newAuthAPIs builds the route sets split out of package auth: the member-admin
+// routes and the account export and deletion routes.
+func (c *components) newAuthAPIs() {
+	c.members = memberadmin.New(c.authH)
+	c.account = account.New(c.authH)
 }

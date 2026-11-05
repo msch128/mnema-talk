@@ -1,6 +1,6 @@
 //go:build integration
 
-package auth
+package account
 
 import (
 	"archive/zip"
@@ -13,6 +13,8 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+
+	"github.com/msch128/mnema-talk/internal/auth"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -72,11 +74,11 @@ func (m *memStore) count() int {
 	return len(m.data)
 }
 
-func exportFixture(t *testing.T) (*Handler, *db.Pool, *User, *memStore, uuid.UUID) {
+func exportFixture(t *testing.T) (*API, *db.Pool, *auth.User, *memStore, uuid.UUID) {
 	t.Helper()
 	pool, _, member := authFixture(t)
 	store := newMemStore()
-	h := NewHandler(&Sessions{DB: pool, Secret: "export-test-secret-export-test-secret"}, nil)
+	h := New(auth.NewHandler(&auth.Sessions{DB: pool, Secret: "export-test-secret-export-test-secret"}, nil))
 	h.Objects = store
 	var channel uuid.UUID
 	if err := pool.QueryRow(context.Background(), `INSERT INTO channels (name, type) VALUES ('room', 'text') RETURNING id`).Scan(&channel); err != nil {
@@ -101,7 +103,7 @@ type exportedDoc struct {
 	} `json:"messages"`
 }
 
-func runExport(t *testing.T, h *Handler, user uuid.UUID) (uuid.UUID, error) {
+func runExport(t *testing.T, h *API, user uuid.UUID) (uuid.UUID, error) {
 	t.Helper()
 	id, _, err := h.claimExport(context.Background(), user)
 	if err != nil {
@@ -200,12 +202,12 @@ type failingWriter struct {
 
 func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("client gone") }
 
-func download(h *Handler, user *User, w http.ResponseWriter, site string) {
+func download(h *API, user *auth.User, w http.ResponseWriter, site string) {
 	r := httptest.NewRequest(http.MethodGet, "/api/users/me/export/download", nil)
 	if site != "" {
 		r.Header.Set("Sec-Fetch-Site", site)
 	}
-	httpx.Handle(h.downloadExport).ServeHTTP(w, r.WithContext(WithUser(r.Context(), user)))
+	httpx.Handle(h.downloadExport).ServeHTTP(w, r.WithContext(auth.WithUser(r.Context(), user)))
 }
 
 func TestDownloadRefusesRequestsFromOtherSitesAndDoesNotBurnTheExport(t *testing.T) {

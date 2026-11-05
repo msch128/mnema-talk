@@ -1,20 +1,14 @@
-package auth
+package account
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/userdata"
 )
-
-// deletedUsernamePrefix starts the placeholder name of a deleted account. No
-// new account may take a name with it (see ValidateUsername).
-const deletedUsernamePrefix = "deleted-"
 
 // Account deletion keeps one row: the account itself, anonymised, so that its
 // messages still have an author and threads stay readable. Everything else
@@ -85,7 +79,7 @@ func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error)
 	return eraseWith(ctx, tx, id, personalFallback)
 }
 
-func (h *Handler) eraseOwnAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error) {
+func (h *API) eraseOwnAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error) {
 	return eraseWith(ctx, tx, id, h.personalData())
 }
 
@@ -103,7 +97,7 @@ func eraseWith(ctx context.Context, tx pgx.Tx, id uuid.UUID, reg *userdata.Regis
 	if err != nil {
 		return nil, err
 	}
-	if _, err := tx.Exec(ctx, anonymise, id, deletedUsernamePrefix+shortID(id)); err != nil {
+	if _, err := tx.Exec(ctx, anonymise, id, auth.DeletedUsernamePrefix+shortID(id)); err != nil {
 		return nil, fmt.Errorf("anonymise account: %w", err)
 	}
 	return &erased{keys: keys, unpins: unpins}, nil
@@ -120,7 +114,7 @@ func mergedEraseSteps(reg *userdata.Registry) []userdata.Step {
 
 func runErase(ctx context.Context, tx pgx.Tx, id uuid.UUID, name string, steps []userdata.Step) ([]string, error) {
 	var keys []string
-	tomb := deletedUsernamePrefix + shortID(id)
+	tomb := auth.DeletedUsernamePrefix + shortID(id)
 	for _, st := range steps {
 		got, err := execErase(ctx, tx, st, eraseArgs(st.Arg, id, name, tomb))
 		if err != nil {
@@ -159,16 +153,3 @@ func eraseArgs(kind userdata.Arg, id uuid.UUID, name, tomb string) []any {
 }
 
 func shortID(id uuid.UUID) string { return fmt.Sprintf("%x", id[:6]) }
-
-// refuseDeleted makes a deleted account look like one that never existed to
-// every administrative action: it cannot be enabled, given a password, banned,
-// timed out or given roles again. The database enforces the same with a
-// trigger, so no code path can revive a tombstone.
-func refuseDeleted(ctx context.Context, q db.Querier, id uuid.UUID) error {
-	var deleted bool
-	err := q.QueryRow(ctx, `SELECT deleted_at IS NOT NULL FROM users WHERE id = $1`, id).Scan(&deleted)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && deleted) {
-		return httpx.ErrNotFound("user not found")
-	}
-	return err
-}

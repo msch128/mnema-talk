@@ -45,8 +45,6 @@ type recovery struct {
 	// confirmation mails' perAddress budget.
 	resetPerAccount *httpx.RateLimiter
 	resendPerUser   *httpx.RateLimiter
-	// downloadPerUser bounds export downloads.
-	downloadPerUser *httpx.RateLimiter
 	slots           chan struct{}
 	wg              sync.WaitGroup
 }
@@ -62,7 +60,6 @@ func newRecovery() *recovery {
 		resetPerAccount: httpx.NewRateLimiter(tokensPerHour, time.Hour),
 		optionsPerIP:    httpx.NewRateLimiter(120, 15*time.Minute).Named("auth_options"),
 		resendPerUser:   httpx.NewRateLimiter(1, time.Minute),
-		downloadPerUser: httpx.NewRateLimiter(10, time.Hour).Named("export_download"),
 		slots:           make(chan struct{}, mailJobs),
 	}
 }
@@ -83,8 +80,6 @@ func (h *Handler) mountAccount(r chi.Router) {
 	r.Post("/users/me/email/remove", httpx.Handle(h.removeEmailHandler))
 	r.Post("/users/me/email/resend", httpx.Handle(h.resendVerification))
 	h.mountTwoFactor(r)
-	h.mountExport(r)
-	r.Post("/users/me/delete", httpx.Handle(h.deleteAccount))
 }
 
 // mailEnabled reports whether account e-mails can be sent.
@@ -149,3 +144,14 @@ func (h *Handler) sendMail(ctx context.Context, msg mailer.Message) error {
 	}
 	return err
 }
+
+// TrackJob registers a background job (an export build, say) that Drain waits
+// for, and returns the function that reports it finished.
+func (h *Handler) TrackJob() (done func()) {
+	h.rec.wg.Add(1)
+	return h.rec.wg.Done
+}
+
+// JobContext is the parent of a background job: the server's lifetime when it
+// was given, so shutdown cancels the job.
+func (h *Handler) JobContext() context.Context { return h.jobContext() }

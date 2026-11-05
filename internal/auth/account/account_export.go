@@ -1,4 +1,4 @@
-package auth
+package account
 
 import (
 	"context"
@@ -9,7 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/msch128/mnema-talk/internal/auth"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -29,32 +30,6 @@ const (
 	exportSweepEvery = 15 * time.Minute
 )
 
-// ExportStatus is where the caller's data export stands.
-type ExportStatus struct {
-	// State is none, pending, ready, failed, downloaded or expired.
-	State       string     `json:"state" enums:"none,pending,ready,failed,downloaded,expired"`
-	RequestedAt *time.Time `json:"requested_at,omitempty" binding:"optional" format:"date-time"`
-	// ExpiresAt is when a ready export stops being downloadable.
-	ExpiresAt *time.Time `json:"expires_at,omitempty" binding:"optional" format:"date-time"`
-	SizeBytes int64      `json:"size_bytes"`
-	// NextRequestAt is when a new export may be requested; omitted if now.
-	NextRequestAt *time.Time `json:"next_request_at,omitempty" binding:"optional" format:"date-time"`
-}
-
-// ExportRequest is the body of POST /api/users/me/export.
-type ExportRequest struct {
-	CurrentPassword string `json:"current_password" format:"password"`
-	// Code is a current authenticator or recovery code; needed only while
-	// two-factor sign-in is on.
-	Code string `json:"code,omitempty" maxLength:"32" binding:"optional"`
-}
-
-func (h *Handler) mountExport(r chi.Router) {
-	r.Post("/users/me/export", httpx.Handle(h.requestExport))
-	r.Get("/users/me/export", httpx.Handle(h.exportStatus))
-	r.With(h.rec.downloadPerUser.By(UserKey)).Get("/users/me/export/download", httpx.Handle(h.downloadExport))
-}
-
 // requestExport handles POST /api/users/me/export.
 //
 // @Summary Request an export of my data
@@ -64,8 +39,8 @@ func (h *Handler) mountExport(r chi.Router) {
 // @Accept json
 // @Produce json
 // @Security cookieAuth
-// @Param request body ExportRequest true "Request body."
-// @Success 202 {object} ExportStatus "Accepted; the export is being built."
+// @Param request body auth.ExportRequest true "Request body."
+// @Success 202 {object} auth.ExportStatus "Accepted; the export is being built."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: wrong password or code, or cross-origin request rejected."
@@ -75,9 +50,9 @@ func (h *Handler) mountExport(r chi.Router) {
 // @Header 503 {integer} Retry-After "Seconds until the client may retry (when every export slot is busy)."
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: object storage is not available, or every export slot is busy; no export was started and none counts toward the daily limit."
 // @Router /api/users/me/export [post]
-func (h *Handler) requestExport(w http.ResponseWriter, r *http.Request) error {
-	u := UserFrom(r.Context())
-	var req ExportRequest
+func (h *API) requestExport(w http.ResponseWriter, r *http.Request) error {
+	u := auth.UserFrom(r.Context())
+	var req auth.ExportRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -100,7 +75,7 @@ func (h *Handler) requestExport(w http.ResponseWriter, r *http.Request) error {
 		busy.RetryAfter = exportBusyRetry
 		return busy
 	}
-	h.auditUser(r.Context(), u, "auth.export_request")
+	h.AuditUser(r.Context(), u, "auth.export_request")
 	st, err := h.exportState(r.Context(), u.ID)
 	if err != nil {
 		return err
@@ -113,7 +88,7 @@ func (h *Handler) requestExport(w http.ResponseWriter, r *http.Request) error {
 // claimExport records a new export unless one was requested in the last 24
 // hours (failed ones do not count). A per-account advisory lock makes check
 // and insert one step, so parallel requests cannot all pass.
-func (h *Handler) claimExport(ctx context.Context, user uuid.UUID) (id uuid.UUID, wait time.Duration, err error) {
+func (h *API) claimExport(ctx context.Context, user uuid.UUID) (id uuid.UUID, wait time.Duration, err error) {
 	err = pgx.BeginFunc(ctx, h.Sessions.DB, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('export:' || $1::text, 0))`, user); err != nil {
 			return err
@@ -135,20 +110,20 @@ func (h *Handler) claimExport(ctx context.Context, user uuid.UUID) (id uuid.UUID
 // buildExportInBackground starts building the export. It reports false, after
 // marking the export failed (which does not count toward the daily limit),
 // when every build slot is taken.
-func (h *Handler) buildExportInBackground(id, user uuid.UUID) bool {
+func (h *API) buildExportInBackground(id, user uuid.UUID) bool {
 	select {
 	case h.exportSlots <- struct{}{}:
 	default:
 		h.failExport(context.Background(), id)
 		return false
 	}
-	h.rec.wg.Add(1)
+	done := h.TrackJob()
 	go func() {
 		defer func() {
 			<-h.exportSlots
-			h.rec.wg.Done()
+			done()
 		}()
-		ctx, cancel := context.WithTimeout(h.jobContext(), exportBuildTimeout)
+		ctx, cancel := context.WithTimeout(h.JobContext(), exportBuildTimeout)
 		defer cancel()
 		if err := h.buildExport(ctx, id, user); err != nil {
 			slog.Warn("data export failed", "err", err)
@@ -158,20 +133,20 @@ func (h *Handler) buildExportInBackground(id, user uuid.UUID) bool {
 	return true
 }
 
-func (h *Handler) failExport(ctx context.Context, id uuid.UUID) {
+func (h *API) failExport(ctx context.Context, id uuid.UUID) {
 	_, _ = h.Sessions.DB.Exec(ctx, `UPDATE data_exports SET status = 'failed' WHERE id = $1`, id)
 }
 
 // exportState reads the caller's newest export.
-func (h *Handler) exportState(ctx context.Context, user uuid.UUID) (ExportStatus, error) {
-	var st ExportStatus
+func (h *API) exportState(ctx context.Context, user uuid.UUID) (auth.ExportStatus, error) {
+	var st auth.ExportStatus
 	var status string
 	var requested, expires time.Time
 	var hasKey, downloaded bool
 	err := h.Sessions.DB.QueryRow(ctx, `SELECT status, requested_at, COALESCE(expires_at, 'epoch'), size_bytes, s3_key IS NOT NULL, downloaded_at IS NOT NULL
 		FROM data_exports WHERE user_id = $1 ORDER BY requested_at DESC LIMIT 1`, user).Scan(&status, &requested, &expires, &st.SizeBytes, &hasKey, &downloaded)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ExportStatus{State: "none"}, nil
+		return auth.ExportStatus{State: "none"}, nil
 	}
 	if err != nil {
 		return st, err
@@ -207,15 +182,15 @@ func exportStateName(status string, hasKey, downloaded bool, expires time.Time) 
 // @Tags Users
 // @Produce json
 // @Security cookieAuth
-// @Success 200 {object} ExportStatus "Export status."
+// @Success 200 {object} auth.ExportStatus "Export status."
 // @Header 200 {string} Cache-Control "no-store"
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/users/me/export [get]
-func (h *Handler) exportStatus(w http.ResponseWriter, r *http.Request) error {
-	st, err := h.exportState(r.Context(), UserFrom(r.Context()).ID)
+func (h *API) exportStatus(w http.ResponseWriter, r *http.Request) error {
+	st, err := h.exportState(r.Context(), auth.UserFrom(r.Context()).ID)
 	if err != nil {
 		return err
 	}
@@ -242,7 +217,7 @@ func (h *Handler) exportStatus(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/users/me/export/download [get]
-func (h *Handler) downloadExport(w http.ResponseWriter, r *http.Request) error {
+func (h *API) downloadExport(w http.ResponseWriter, r *http.Request) error {
 	if h.Objects == nil {
 		return httpx.ErrUnavailable("exports need object storage")
 	}
@@ -252,7 +227,7 @@ func (h *Handler) downloadExport(w http.ResponseWriter, r *http.Request) error {
 	if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" && site != "none" {
 		return httpx.ErrForbidden("the download can only be started from this site")
 	}
-	u := UserFrom(r.Context())
+	u := auth.UserFrom(r.Context())
 	id, key, err := h.claimDownload(r.Context(), u.ID)
 	if err != nil {
 		return err
@@ -274,14 +249,14 @@ func (h *Handler) downloadExport(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	h.finishDownload(r.Context(), id, key)
-	h.auditUser(r.Context(), u, "auth.export_download")
+	h.AuditUser(r.Context(), u, "auth.export_download")
 	return nil
 }
 
 // claimDownload reserves the newest ready export for one download at a time.
 // A reservation that was never finished (a crashed request) lapses after ten
 // minutes.
-func (h *Handler) claimDownload(ctx context.Context, user uuid.UUID) (uuid.UUID, string, error) {
+func (h *API) claimDownload(ctx context.Context, user uuid.UUID) (uuid.UUID, string, error) {
 	var id uuid.UUID
 	var key string
 	err := h.Sessions.DB.QueryRow(ctx, `UPDATE data_exports SET claimed_at = NOW()
@@ -296,19 +271,19 @@ func (h *Handler) claimDownload(ctx context.Context, user uuid.UUID) (uuid.UUID,
 	return id, key, err
 }
 
-func (h *Handler) releaseDownload(ctx context.Context, id uuid.UUID) {
+func (h *API) releaseDownload(ctx context.Context, id uuid.UUID) {
 	_, _ = h.Sessions.DB.Exec(context.WithoutCancel(ctx), `UPDATE data_exports SET claimed_at = NULL WHERE id = $1`, id)
 }
 
 // finishDownload spends the export after the whole file was sent.
-func (h *Handler) finishDownload(ctx context.Context, id uuid.UUID, key string) {
+func (h *API) finishDownload(ctx context.Context, id uuid.UUID, key string) {
 	_, _ = h.Sessions.DB.Exec(context.WithoutCancel(ctx), `UPDATE data_exports SET downloaded_at = NOW() WHERE id = $1`, id)
 	_ = h.dropExportFile(ctx, id, key)
 }
 
 // dropExportFile removes the stored file, then forgets its key. A failure
 // keeps the key, so the next sweep tries again.
-func (h *Handler) dropExportFile(ctx context.Context, id uuid.UUID, key string) error {
+func (h *API) dropExportFile(ctx context.Context, id uuid.UUID, key string) error {
 	if err := h.Objects.Delete(context.WithoutCancel(ctx), key); err != nil {
 		slog.Warn("export file not removed", "err", err)
 		return err
@@ -320,7 +295,7 @@ func (h *Handler) dropExportFile(ctx context.Context, id uuid.UUID, key string) 
 // RunExportSweep removes finished exports that were downloaded or expired,
 // marks builds that never finished as failed and forgets old rows, until ctx
 // ends.
-func (h *Handler) RunExportSweep(ctx context.Context, every time.Duration) {
+func (h *API) RunExportSweep(ctx context.Context, every time.Duration) {
 	if every <= 0 {
 		every = exportSweepEvery
 	}
@@ -342,7 +317,7 @@ func (h *Handler) RunExportSweep(ctx context.Context, every time.Duration) {
 	}
 }
 
-func (h *Handler) sweepExports(ctx context.Context) error {
+func (h *API) sweepExports(ctx context.Context) error {
 	db := h.Sessions.DB
 	_, markErr := db.Exec(ctx, `UPDATE data_exports SET status = 'failed' WHERE status = 'pending' AND requested_at < NOW() - INTERVAL '30 minutes'`)
 	rows, err := db.Query(ctx, `SELECT id, s3_key FROM data_exports WHERE s3_key IS NOT NULL AND (expires_at < NOW() OR downloaded_at IS NOT NULL) LIMIT 200`)

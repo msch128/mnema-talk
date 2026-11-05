@@ -13,8 +13,8 @@ import (
 // or blocked sign-ins of the same account, so guessing cannot flood the log.
 const failureAuditEvery = time.Minute
 
-// auditUser records an event about a signed-in or just-registered user.
-func (h *Handler) auditUser(ctx context.Context, u *User, action string) {
+// AuditUser records an event about a signed-in or just-registered user.
+func (h *Handler) AuditUser(ctx context.Context, u *User, action string) {
 	if h.Audit == nil {
 		return
 	}
