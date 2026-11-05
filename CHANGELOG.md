@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.5](https://github.com/msch128/mnema-talk/compare/v2.9.4...v2.9.5) (2026-11-05)
+
+
+### Code Refactoring
+
+* move the shared chat model, lookups and permission guard into chat/core ([#702](https://github.com/msch128/mnema-talk/issues/702)) ([0b4d3a7](https://github.com/msch128/mnema-talk/commit/0b4d3a77617e5b4c9a3d9f87a15c62be5aba6e6f))
+
 ## [2.9.4](https://github.com/msch128/mnema-talk/compare/v2.9.3...v2.9.4) (2026-11-05)
 
 
