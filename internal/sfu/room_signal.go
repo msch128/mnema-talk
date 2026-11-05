@@ -237,6 +237,7 @@ func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webr
 		if err != nil {
 			return nil, nil, err
 		}
+		vt.expectBind()
 		recipientTrack = vt
 	}
 	return recipientTrack, vt, nil

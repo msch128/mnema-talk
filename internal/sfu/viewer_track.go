@@ -37,9 +37,12 @@ type viewerTrack struct {
 	// share has), which automatic never exceeds.
 	fit int
 	// ad chooses the layer of a viewer who left it to the server (pref < 0).
-	ad         *adapter
-	closed     bool
-	started    bool
+	ad      *adapter
+	closed  bool
+	started bool
+	// unbound: the track is added to the viewer's connection but the browser
+	// has not answered yet, so Pion has nothing to write to (see expectBind).
+	unbound    bool
 	lastKeyAsk time.Time
 	// since is when the track was made, the stall clock until a first packet.
 	since time.Time
@@ -312,6 +315,9 @@ func (vt *viewerTrack) writeLocked(idx int, src *rtp.Packet, now time.Time) (swi
 		return false, false, -1
 	}
 	eff = vt.eff
+	if vt.unbound {
+		return false, false, eff
+	}
 	drop, switched, ask := vt.checkLayerTransition(idx, src, now)
 	if drop {
 		return false, ask, eff
