@@ -8,6 +8,14 @@ on:
   push:
     branches: [main]
   pull_request:
+    # release-please's PRs only bump these files and are opened with
+    # GITHUB_TOKEN, so a pull_request run for them never gets a job ("workflow
+    # file issue") and shows up red. release.yml mirrors the CodeQL result of
+    # the tested commit for them instead; main is analysed on the push.
+    paths-ignore:
+      - CHANGELOG.md
+      - version.txt
+      - .release-please-manifest.json
   schedule:
     - cron: "17 4 * * 1"
 
