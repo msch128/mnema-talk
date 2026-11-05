@@ -1,0 +1,35 @@
+internal/chat/botapi.go
+  s_db63cd4785d2fa::t_d68445106be1ba 104
+internal/chat/core/guard.go
+  s_db63cd4785d2fa::t_11d8ffaaa203f3 101-111
+internal/chat/forward.go
+  s_db63cd4785d2fa::t_1d095af938d899 221
+internal/chat/handler_forum.go
+  s_db63cd4785d2fa::t_6593cccaac75c1 102,213
+internal/chat/handler_forum_extras.go
+  s_db63cd4785d2fa::t_a3b39b465b38b5 11,69,203,241
+internal/chat/handler_forum_tags.go
+  s_db63cd4785d2fa::t_cb8392d8685181 10,36
+internal/chat/handler_lookup.go
+  s_db63cd4785d2fa::t_1d6496d444c47e 79,166
+internal/chat/reports_handler.go
+  s_db63cd4785d2fa::t_0ade560c2f265b 71
+internal/chat/saved.go
+  s_db63cd4785d2fa::t_23d3ceff917df0 253
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3c3e928a8677cd62ba70ceb9f39cfc89d25a775e",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
