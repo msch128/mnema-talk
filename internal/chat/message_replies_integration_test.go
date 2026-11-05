@@ -22,7 +22,7 @@ func TestBulkDeleteKeepsRepliesOfOtherMembersInTheAuditTrail(t *testing.T) {
 	if err := f.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('replier','Replier','test-only-unused') RETURNING id`).Scan(&other); err != nil {
 		t.Fatal(err)
 	}
-	reply, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: other, Content: "reply", ParentID: &f.m})
+	reply, err := messages.CreateMessage(ctx, f.p, messages.NewMessage{ChannelID: f.c.ID, UserID: other, Content: "reply", ParentID: &f.m})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestMessageTimestampIsTakenAtInsert(t *testing.T) {
 		if _, err := tx.Exec(ctx, `SELECT pg_sleep(0.05)`); err != nil {
 			return err
 		}
-		id, err := messages.CreateMessage(ctx, tx, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "late"})
+		id, err := messages.CreateMessage(ctx, tx, messages.NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "late"})
 		if err != nil {
 			return err
 		}
@@ -78,7 +78,7 @@ func TestEditDoesNotBlockThreadReplies(t *testing.T) {
 	}
 	short, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	if _, err := messages.CreateMessage(short, f.p, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "reply", ParentID: &f.m}); err != nil {
+	if _, err := messages.CreateMessage(short, f.p, messages.NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "reply", ParentID: &f.m}); err != nil {
 		t.Fatalf("a reply waits for the open edit of its root: %v", err)
 	}
 }

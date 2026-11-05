@@ -348,7 +348,7 @@ func TestTheLastMemberLeavingAGroupClosesTheRoomOfItsTalk(t *testing.T) {
 	leave := func(u *auth.User) {
 		t.Helper()
 		params := map[string]string{"id": dm.String(), "user": "@me"}
-		if err := h.DMs().LeaveDM(httptest.NewRecorder(), talkRequest(u, ``, params)); err != nil {
+		if err := h.DMs().ServeLeaveDM(httptest.NewRecorder(), talkRequest(u, ``, params)); err != nil {
 			t.Fatal(err)
 		}
 	}

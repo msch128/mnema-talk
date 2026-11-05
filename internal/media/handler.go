@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -32,7 +32,7 @@ type Handler struct {
 	// deleted automatically.
 	RetentionDays int
 	// Online resolves @here in an upload's caption; nil means nobody is online.
-	Online chat.OnlineSource
+	Online mentions.OnlineSource
 	// Perms decides who may upload to and download from which channel; nil
 	// imposes no channel limits (tests; the router always sets it).
 	Perms *perm.Service

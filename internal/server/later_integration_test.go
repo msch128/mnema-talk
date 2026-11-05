@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -103,11 +103,11 @@ func (f *laterFixture) scheduled(t *testing.T, c *client) []later.Scheduled {
 	return out.Items
 }
 
-func (f *laterFixture) history(t *testing.T, c *client, channel uuid.UUID) []chat.Message {
+func (f *laterFixture) history(t *testing.T, c *client, channel uuid.UUID) []core.Message {
 	t.Helper()
 	res := c.get("/api/channels/" + channel.String() + "/messages")
 	wantStatus(t, "history", res, http.StatusOK)
-	var msgs []chat.Message
+	var msgs []core.Message
 	res.decode(t, &msgs)
 	return msgs
 }
@@ -288,7 +288,7 @@ func TestScheduledMessageIsSentAsTheAuthorAtTheTime(t *testing.T) {
 	}
 	sent := false
 	for _, e := range f.a.events.Snapshot() {
-		if m, ok := e.Payload.(*chat.Message); ok && e.Type == events.MessageCreate && e.ChannelID == f.channel && m.Content == msgs[0].Content {
+		if m, ok := e.Payload.(*core.Message); ok && e.Type == events.MessageCreate && e.ChannelID == f.channel && m.Content == msgs[0].Content {
 			sent = true
 		}
 	}

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/emoji"
 )
 
@@ -36,7 +36,7 @@ func TestPinningHasABudgetPerMember(t *testing.T) {
 	f := newMessageModerationFixture(t, false)
 	id := f.a.send(f.user, f.channel, "pin me")
 	path := f.path("/messages/" + id.String() + "/pin")
-	for i := 0; i < chat.PinChangesPerMinute; i++ {
+	for i := 0; i < messages.PinChangesPerMinute; i++ {
 		method := http.MethodPut
 		if i%2 == 1 {
 			method = http.MethodDelete

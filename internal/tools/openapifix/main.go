@@ -27,7 +27,6 @@ import (
 	"iter"
 	"maps"
 	"os"
-	"reflect"
 	"slices"
 	"strings"
 )
@@ -97,32 +96,37 @@ var chatSubPackages = []string{
 }
 
 // renameChatSchemas gives the schemas of the chat sub-packages the "chat."
-// prefix and points every $ref at the new name. While the sub-packages are
-// introduced, a type that moved can be reached under both names (the old one
-// through a Go alias); the two schemas describe the same Go type, so they must
-// be identical once their references are renamed, and one of them is dropped.
-// Anything else colliding fails the run.
+// prefix and points every $ref at the new name. Two types of the same name in
+// different sub-packages would collide and fail the run: the API names them
+// all "chat.X", so a name must be unique across the chat packages.
 func renameChatSchemas(doc obj) error {
 	components, _ := doc["components"].(obj)
 	schemas, _ := components["schemas"].(obj)
 	renamed := map[string]string{}
-	for name := range schemas {
+	claimed := map[string]string{}
+	for _, name := range slices.Sorted(maps.Keys(schemas)) {
 		prefix, rest, ok := strings.Cut(name, ".")
-		if ok && slices.Contains(chatSubPackages, prefix) {
-			renamed[name] = "chat." + rest
+		if !ok || !slices.Contains(chatSubPackages, prefix) {
+			continue
 		}
+		to := "chat." + rest
+		if _, taken := schemas[to]; taken {
+			return fmt.Errorf("schema %s collides with %s", name, to)
+		}
+		if other, taken := claimed[to]; taken {
+			return fmt.Errorf("schemas %s and %s would both be %s", other, name, to)
+		}
+		claimed[to] = name
+		renamed[name] = to
 	}
 	if len(renamed) == 0 {
 		return nil
 	}
-	rewriteRefs(doc, renamed)
 	for from, to := range renamed {
-		if existing, taken := schemas[to]; taken && !reflect.DeepEqual(existing, schemas[from]) {
-			return fmt.Errorf("schema %s collides with a different %s", from, to)
-		}
 		schemas[to] = schemas[from]
 		delete(schemas, from)
 	}
+	rewriteRefs(doc, renamed)
 	return nil
 }
 

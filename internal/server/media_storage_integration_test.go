@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/media"
 )
 
@@ -23,7 +23,7 @@ func TestServeMissingObjectIsGone(t *testing.T) {
 	if res.status != http.StatusCreated {
 		t.Fatalf("upload: %d %s", res.status, res.body)
 	}
-	var m chat.Message
+	var m core.Message
 	res.decode(t, &m)
 	url := m.Attachments[0].URL
 

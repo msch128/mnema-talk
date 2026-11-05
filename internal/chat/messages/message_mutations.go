@@ -16,7 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// EditMessage changes the text of a message authored by userID and records
+// ServeEditMessage changes the text of a message authored by userID and records
 // its mentions again, in one transaction. Empty content is only allowed when
 // the message carries an attachment (like an upload without a caption).
 func EditMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) error {

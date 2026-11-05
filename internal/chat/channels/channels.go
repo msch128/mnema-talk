@@ -161,7 +161,7 @@ func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string
 	return append(keys, avatars...), err
 }
 
-// DeleteChannel removes a channel and, by cascade, its messages. It returns
+// ServeDeleteChannel removes a channel and, by cascade, its messages. It returns
 // the storage keys of the media attached to those messages.
 func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]string, error) {
 	var keys []string

@@ -38,7 +38,7 @@ func (a *API) dmSendContext(r *http.Request, dm uuid.UUID) (context.Context, err
 	if ch.Type != core.ChannelKindDM {
 		return nil, core.ErrChannelNotFound
 	}
-	return a.Messages.SendContext(r, dm, perm.SendMessages)
+	return a.Messages.ServeSendContext(r, dm, perm.SendMessages)
 }
 
 // talkName is the name of a voice channel; anything else is not found.

@@ -20,22 +20,24 @@ func TestLayoutAndCategoryChecks(t *testing.T) {
 	owner := perm.Subject{ID: uuid.New(), Owner: true}
 	ptr := func(id uuid.UUID) *uuid.UUID { return &id }
 
-	layout := func(chans ...ChannelPlacement) LayoutRequest { return LayoutRequest{Channels: chans} }
+	layout := func(chans ...channels.ChannelPlacement) channels.LayoutRequest {
+		return channels.LayoutRequest{Channels: chans}
+	}
 	for _, c := range []struct {
 		what string
-		req  LayoutRequest
+		req  channels.LayoutRequest
 		sub  perm.Subject
 		ok   bool
 	}{
-		{"within a plain category", layout(ChannelPlacement{ID: inPlain, CategoryID: ptr(plain)}), member, true},
-		{"unknown channel", layout(ChannelPlacement{ID: uuid.New()}), member, false},
-		{"hidden channel", layout(ChannelPlacement{ID: inHidden, CategoryID: ptr(hidden)}), member, false},
-		{"into a hidden category", layout(ChannelPlacement{ID: inPlain, CategoryID: ptr(hidden)}), member, false},
-		{"hidden category order", LayoutRequest{Categories: []CategoryOrder{{ID: hidden}}}, member, false},
-		{"visible category order", LayoutRequest{Categories: []CategoryOrder{{ID: plain}}}, member, true},
-		{"out of a restricted category", layout(ChannelPlacement{ID: inRestricted}), member, false},
-		{"into a restricted category", layout(ChannelPlacement{ID: inPlain, CategoryID: ptr(restricted)}), member, false},
-		{"the Owner moves anything", layout(ChannelPlacement{ID: inRestricted, CategoryID: ptr(plain)}), owner, true},
+		{"within a plain category", layout(channels.ChannelPlacement{ID: inPlain, CategoryID: ptr(plain)}), member, true},
+		{"unknown channel", layout(channels.ChannelPlacement{ID: uuid.New()}), member, false},
+		{"hidden channel", layout(channels.ChannelPlacement{ID: inHidden, CategoryID: ptr(hidden)}), member, false},
+		{"into a hidden category", layout(channels.ChannelPlacement{ID: inPlain, CategoryID: ptr(hidden)}), member, false},
+		{"hidden category order", channels.LayoutRequest{Categories: []channels.CategoryOrder{{ID: hidden}}}, member, false},
+		{"visible category order", channels.LayoutRequest{Categories: []channels.CategoryOrder{{ID: plain}}}, member, true},
+		{"out of a restricted category", layout(channels.ChannelPlacement{ID: inRestricted}), member, false},
+		{"into a restricted category", layout(channels.ChannelPlacement{ID: inPlain, CategoryID: ptr(restricted)}), member, false},
+		{"the Owner moves anything", layout(channels.ChannelPlacement{ID: inRestricted, CategoryID: ptr(plain)}), owner, true},
 	} {
 		if err := channels.CheckLayout(snap, c.sub, c.req); (err == nil) != c.ok {
 			t.Errorf("%s: %v", c.what, err)

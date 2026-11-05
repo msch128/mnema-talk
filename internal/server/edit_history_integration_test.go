@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -113,15 +112,15 @@ func TestEarlierVersionsAreNotSearchableNorInMessages(t *testing.T) {
 func TestAMessageKeepsAtMostFiftyVersions(t *testing.T) {
 	f := newMessageModerationFixture(t, false)
 	msg := f.a.send(f.user, f.channel, "version 0")
-	for i := 1; i <= chat.MaxEditVersions+5; i++ {
+	for i := 1; i <= messages.MaxEditVersions+5; i++ {
 		f.edit(f.user, msg, fmt.Sprintf("version %d", i))
 	}
 	var got editVersions
 	f.history(f.mod, msg).decode(t, &got)
-	if len(got.Edits) != chat.MaxEditVersions {
+	if len(got.Edits) != messages.MaxEditVersions {
 		t.Fatalf("kept %d versions", len(got.Edits))
 	}
-	last := chat.MaxEditVersions + 4
+	last := messages.MaxEditVersions + 4
 	if got.Edits[0].Content != fmt.Sprintf("version %d", last) || got.Edits[len(got.Edits)-1].Content != "version 5" {
 		t.Errorf("the oldest go first: newest %q oldest %q", got.Edits[0].Content, got.Edits[len(got.Edits)-1].Content)
 	}
@@ -199,7 +198,7 @@ func TestReadingEditHistoryIsRateLimitedPerMember(t *testing.T) {
 	msg := f.a.send(f.user, f.channel, "one")
 	f.edit(f.user, msg, "two")
 	deadline := time.Now().Add(time.Minute)
-	for i := 0; i < chat.EditHistoryRate; i++ {
+	for i := 0; i < messages.EditHistoryRate; i++ {
 		if res := f.history(f.mod, msg); res.status != http.StatusOK {
 			t.Fatalf("read %d: %d", i, res.status)
 		}

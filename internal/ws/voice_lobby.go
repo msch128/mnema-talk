@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -14,7 +14,7 @@ import (
 // LobbyOpener opens the temporary Talk a join of a Create-a-Talk lobby leads
 // to (implemented by chat.TalkManager).
 type LobbyOpener interface {
-	Open(ctx context.Context, user, lobby uuid.UUID) (*chat.ChannelInfo, error)
+	Open(ctx context.Context, user, lobby uuid.UUID) (*core.ChannelInfo, error)
 }
 
 // enterLobby answers a join of a lobby: it opens a temporary Talk and tells
@@ -23,7 +23,7 @@ type LobbyOpener interface {
 // Talk, so media setup and the SFU see nothing unusual. Only a member who may
 // join the lobby gets a Talk; the new Talk carries the lobby's permissions, and
 // that join checks them again.
-func (h *Hub) enterLobby(c *Client, lobby *chat.ChannelInfo) {
+func (h *Hub) enterLobby(c *Client, lobby *core.ChannelInfo) {
 	if !h.checkJoinPermission(c, lobby.ID) {
 		return
 	}

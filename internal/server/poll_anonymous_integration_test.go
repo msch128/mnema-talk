@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/poll"
 )
@@ -179,7 +179,7 @@ func TestAnonymousVoteIsInTheMembersExportOnlyAsParticipationAndTheirErasureKeep
 		t.Fatalf("poll_voters of the deleted member: %d", n)
 	}
 	wantStatus(t, "end", f.owner.post(f.base()+"/messages/"+m.ID.String()+"/poll/end", nil), http.StatusOK)
-	var msgs []chat.Message
+	var msgs []core.Message
 	f.bob.get(f.base()+"/messages").decode(t, &msgs)
 	if len(msgs) != 1 || msgs[0].Poll == nil || !sameInts(tallies(*msgs[0].Poll), []int{1, 1, 0}) || msgs[0].Poll.TotalVoters != 2 {
 		t.Fatalf("the counts changed with the erasure: %+v", msgs)
@@ -333,7 +333,7 @@ func TestRunningAnonymousPollHidesTheTallyUntilItEnds(t *testing.T) {
 	if !sameInts(tallies(d.Poll), []int{0, 0, 0}) || d.TotalVoters != 1 {
 		t.Fatalf("running detail: %+v", d)
 	}
-	var msgs []chat.Message
+	var msgs []core.Message
 	f.owner.get(f.base()+"/messages").decode(t, &msgs)
 	if len(msgs) != 1 || msgs[0].Poll == nil || !sameInts(tallies(*msgs[0].Poll), []int{0, 0, 0}) || msgs[0].Poll.TotalVoters != 1 {
 		t.Fatalf("running message list: %+v", msgs)
@@ -348,7 +348,7 @@ func TestRunningAnonymousPollHidesTheTallyUntilItEnds(t *testing.T) {
 // revealedTallies reads the per-option tally of a running anonymous poll, which
 // the API withholds until the poll ends: it moves the end into the past for the
 // read and puts it back.
-func (f pollFixture) revealedTallies(t *testing.T, m chat.Message) []int {
+func (f pollFixture) revealedTallies(t *testing.T, m core.Message) []int {
 	t.Helper()
 	var closes time.Time
 	if err := f.a.db.QueryRow(t.Context(), `SELECT closes_at FROM polls WHERE message_id = $1`, m.ID).Scan(&closes); err != nil {

@@ -7,7 +7,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -16,13 +17,13 @@ func (f *messageModerationFixture) pin(c *client, id uuid.UUID) response {
 	return c.do(http.MethodPut, f.path("/messages/"+id.String()+"/pin"), nil, nil)
 }
 
-func (f *messageModerationFixture) pinned(t *testing.T, c *client) []chat.Message {
+func (f *messageModerationFixture) pinned(t *testing.T, c *client) []core.Message {
 	t.Helper()
 	res := c.get(f.path("/pins"))
 	if res.status != http.StatusOK {
 		t.Fatalf("pins: %d %s", res.status, res.body)
 	}
-	var list []chat.Message
+	var list []core.Message
 	res.decode(t, &list)
 	return list
 }
@@ -64,15 +65,15 @@ func TestDeletingAPinnedMessageUnpinsIt(t *testing.T) {
 func TestAChannelKeepsAtMostFiftyPins(t *testing.T) {
 	f := newMessageModerationFixture(t, false)
 	var ids []uuid.UUID
-	for i := 0; i < chat.MaxPinsPerChannel+1; i++ {
+	for i := 0; i < messages.MaxPinsPerChannel+1; i++ {
 		ids = append(ids, f.a.send(f.user, f.channel, "note"))
 	}
-	for _, id := range ids[:chat.MaxPinsPerChannel] {
+	for _, id := range ids[:messages.MaxPinsPerChannel] {
 		if r := f.pin(f.mod, id); r.status != http.StatusOK {
 			t.Fatalf("pin: %d %s", r.status, r.body)
 		}
 	}
-	if r := f.pin(f.mod, ids[chat.MaxPinsPerChannel]); r.status != http.StatusConflict {
+	if r := f.pin(f.mod, ids[messages.MaxPinsPerChannel]); r.status != http.StatusConflict {
 		t.Fatalf("51st pin: %d %s", r.status, r.body)
 	}
 	// Pinning a message that is already pinned is not a new pin.
@@ -80,7 +81,7 @@ func TestAChannelKeepsAtMostFiftyPins(t *testing.T) {
 		t.Errorf("repeat pin: %d", r.status)
 	}
 	f.mod.do(http.MethodDelete, f.path("/messages/"+ids[0].String()+"/pin"), nil, nil)
-	if r := f.pin(f.mod, ids[chat.MaxPinsPerChannel]); r.status != http.StatusOK {
+	if r := f.pin(f.mod, ids[messages.MaxPinsPerChannel]); r.status != http.StatusOK {
 		t.Errorf("pin after a slot freed: %d", r.status)
 	}
 }
@@ -90,7 +91,7 @@ func TestPinsChangedIsAnnouncedOnceToTheChannel(t *testing.T) {
 	id := f.a.send(f.user, f.channel, "announce me")
 	f.pin(f.mod, id)
 	f.pin(f.mod, id)
-	var got []chat.PinsChanged
+	var got []messages.PinsChanged
 	for _, e := range f.a.events.Snapshot() {
 		if e.Type != events.PinsChanged {
 			continue
@@ -98,7 +99,7 @@ func TestPinsChangedIsAnnouncedOnceToTheChannel(t *testing.T) {
 		if e.ChannelID != f.channel {
 			t.Errorf("event not limited to the channel: %+v", e)
 		}
-		got = append(got, e.Payload.(chat.PinsChanged))
+		got = append(got, e.Payload.(messages.PinsChanged))
 	}
 	if len(got) != 1 || got[0].MessageID != id || !got[0].Pinned || got[0].ActorID != f.mod.user.ID {
 		t.Errorf("events %+v", got)

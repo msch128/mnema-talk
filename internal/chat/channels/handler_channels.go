@@ -28,7 +28,7 @@ import (
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/categories [post]
-func (a *API) CreateCategory(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeCreateCategory(w http.ResponseWriter, r *http.Request) error {
 	var req CreateCategoryRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
@@ -60,7 +60,7 @@ func (a *API) CreateCategory(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/categories/{id} [delete]
-func (a *API) DeleteCategory(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeDeleteCategory(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -142,7 +142,7 @@ func (a *API) CreateChannel(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/channels/{id}/duplicate [post]
-func (a *API) DuplicateChannel(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeDuplicateChannel(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -177,7 +177,7 @@ func (a *API) DuplicateChannel(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/channels/{id} [delete]
-func (a *API) DeleteChannel(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeDeleteChannel(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -267,7 +267,7 @@ func (a *API) UpdateChannel(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/categories/{id} [patch]
-func (a *API) RenameCategory(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeRenameCategory(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -307,7 +307,7 @@ func (a *API) RenameCategory(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/layout [put]
-func (a *API) ApplyLayout(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeApplyLayout(w http.ResponseWriter, r *http.Request) error {
 	var req LayoutRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err

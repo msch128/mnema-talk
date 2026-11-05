@@ -67,46 +67,46 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		if _, err := messages.GetMessage(ctx, p, f.m); err == nil {
 			t.Fatal("null content accepted")
 		}
-		if _, _, err := search.Search(ctx, p, SearchQuery{ChannelID: &f.c.ID, Limit: 10}); err == nil {
+		if _, _, err := search.Search(ctx, p, search.SearchQuery{ChannelID: &f.c.ID, Limit: 10}); err == nil {
 			t.Fatal("null search content accepted")
 		}
 	})
 	t.Run("attachments query", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT id,message_id FROM public.media`})
-		msgs := []Message{{ID: f.m}}
+		msgs := []core.Message{{ID: f.m}}
 		chattest.RequireError(t, messages.Enrich(ctx, p, msgs), "load attachments")
-		_, _, err := search.Search(ctx, p, SearchQuery{Text: "hello", Limit: 10})
+		_, _, err := search.Search(ctx, p, search.SearchQuery{Text: "hello", Limit: 10})
 		chattest.RequireError(t, err, "load attachments")
 	})
 	t.Run("attachment decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,NULL::text original_filename,'image/png'::text mime_type,1::bigint size_bytes,false is_deleted,NOW() created_at,0::smallint position FROM public.messages`})
-		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "NULL")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "NULL")
 	})
 	t.Run("attachment stream", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,'image.png'::text original_filename,'image/png'::text mime_type,1/(number-number) size_bytes,false is_deleted,NOW() created_at,0::smallint position FROM public.messages`})
-		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "division by zero")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "division by zero")
 	})
 	t.Run("reaction query", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_reactions": `SELECT id FROM public.messages`})
-		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "load reactions")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "load reactions")
 	})
 	t.Run("reaction decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_reactions": `SELECT id message_id,user_id,NULL::text emoji,created_at FROM public.messages`})
-		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "NULL")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "NULL")
 		_, err := messages.ReactionSummary(ctx, p, f.m)
 		chattest.RequireError(t, err, "NULL")
 	})
 	t.Run("reaction stream", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_reactions": `SELECT id message_id,user_id,(1/(number-number))::text emoji,created_at FROM public.messages`})
-		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "division by zero")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "division by zero")
 	})
 	t.Run("mention query", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_mentions": `SELECT id FROM public.messages`})
-		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "load mentions")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []core.Message{{ID: f.m}}), "load mentions")
 	})
 	t.Run("mention decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_mentions": `SELECT id message_id,'invalid-uuid'::text user_id FROM public.messages`})
-		if err := messages.Enrich(ctx, p, []Message{{ID: f.m}}); err == nil {
+		if err := messages.Enrich(ctx, p, []core.Message{{ID: f.m}}); err == nil {
 			t.Fatal("invalid mention UUID accepted")
 		}
 	})
@@ -160,12 +160,12 @@ func rejectChatWrite(t *testing.T, p *db.Pool, table, operation string) {
 }
 
 // byName is a mention set that notifies ids by name only.
-func byName(ids []uuid.UUID) MentionSet {
-	users := make([]MentionedUser, len(ids))
+func byName(ids []uuid.UUID) mentions.MentionSet {
+	users := make([]mentions.MentionedUser, len(ids))
 	for i, id := range ids {
-		users[i] = MentionedUser{ID: id, Kind: MentionKindName}
+		users[i] = mentions.MentionedUser{ID: id, Kind: core.MentionKindName}
 	}
-	return MentionSet{Users: users}
+	return mentions.MentionSet{Users: users}
 }
 
 func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
@@ -175,12 +175,12 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 		run                    func(chatFixture) error
 	}{
 		{"insert message", "messages", "INSERT", func(f chatFixture) error {
-			_, err := messages.InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "new"}, nil)
+			_, err := messages.InsertMessage(ctx, f.p, nil, messages.NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "new"}, nil)
 			return err
 		}},
 		{"insert mentions", "message_mentions", "INSERT", func(f chatFixture) error { return mentions.SaveMentionSet(ctx, f.p, f.m, byName([]uuid.UUID{f.u.ID})) }},
 		{"record mentions during message insert", "message_mentions", "DELETE", func(f chatFixture) error {
-			_, err := messages.InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "@all"}, nil)
+			_, err := messages.InsertMessage(ctx, f.p, nil, messages.NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "@all"}, nil)
 			return err
 		}},
 		{"edit message", "messages", "UPDATE", func(f chatFixture) error { return messages.EditMessage(ctx, f.p, nil, f.m, f.u.ID, "new") }},
@@ -194,13 +194,13 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			return channels.ApplyLayout(ctx, f.p, []CategoryOrder{{ID: cat.ID, SortOrder: 3}}, nil)
+			return channels.ApplyLayout(ctx, f.p, []channels.CategoryOrder{{ID: cat.ID, SortOrder: 3}}, nil)
 		}},
 		{"layout channel", "channels", "UPDATE", func(f chatFixture) error {
-			return channels.ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: f.c.ID, SortOrder: 2}})
+			return channels.ApplyLayout(ctx, f.p, nil, []channels.ChannelPlacement{{ID: f.c.ID, SortOrder: 2}})
 		}},
 		{"duplicate shift", "channels", "UPDATE", func(f chatFixture) error {
-			_, err := channels.CreateChannelWithStage(ctx, f.p, nil, "follower", ChannelTypeText, "", 1, false)
+			_, err := channels.CreateChannelWithStage(ctx, f.p, nil, "follower", core.ChannelTypeText, "", 1, false)
 			if err != nil {
 				return err
 			}
@@ -252,7 +252,7 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 	t.Run("attachment callback failure", func(t *testing.T) {
 		f := newChatFixture(t)
 		sentinel := errors.New("test attachment insert failed")
-		id, err := messages.InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "upload"}, func(tx pgx.Tx, id uuid.UUID) error { return sentinel })
+		id, err := messages.InsertMessage(ctx, f.p, nil, messages.NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "upload"}, func(tx pgx.Tx, id uuid.UUID) error { return sentinel })
 		if id != uuid.Nil || !errors.Is(err, sentinel) {
 			t.Fatalf("insert result = %s, %v", id, err)
 		}
@@ -384,7 +384,7 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 	})
 	t.Run("around newer half", func(t *testing.T) {
 		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, "AND (m.created_at, m.id) >") }, false)
-		_, err := messages.GetChannelMessages(ctx, p, f.c.ID, HistoryQuery{Limit: 10, Around: &f.m})
+		_, err := messages.GetChannelMessages(ctx, p, f.c.ID, core.HistoryQuery{Limit: 10, Around: &f.m})
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("newer half cancellation=%v", err)
 		}
@@ -411,7 +411,7 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 		h := &Handler{DB: p, Events: recorder}
 		r := chattest.Request(f.u, `{"content":"edited before disconnect"}`, map[string]string{"channelID": f.c.ID.String(), "messageID": f.m.String()}, "")
 		r = r.WithContext(auth.WithUser(copyChatRouteContext(ctx, r), f.u))
-		if err := h.messages().EditMessage(httptest.NewRecorder(), r); !errors.Is(err, context.Canceled) {
+		if err := h.messages().ServeEditMessage(httptest.NewRecorder(), r); !errors.Is(err, context.Canceled) {
 			t.Fatalf("post-edit cancellation=%v", err)
 		}
 		msg, err := messages.GetMessage(context.Background(), f.p, f.m)
@@ -433,7 +433,7 @@ func TestChatHandlerInsertFailureDoesNotPublish(t *testing.T) {
 	rejectChatWrite(t, f.p, "messages", "INSERT")
 	recorder := &events.Recorder{}
 	h := &Handler{DB: f.p, Events: recorder}
-	err := h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(f.u, `{"content":"new"}`, map[string]string{"channelID": f.c.ID.String()}, ""))
+	err := h.messages().ServeCreateMessage(httptest.NewRecorder(), chattest.Request(f.u, `{"content":"new"}`, map[string]string{"channelID": f.c.ID.String()}, ""))
 	chattest.RequireError(t, err, "test write rejected")
 	if len(recorder.Snapshot()) != 0 {
 		t.Fatal("failed message creation published an event")

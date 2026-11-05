@@ -6,19 +6,20 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
 func TestMessageOfReadsValuesAndPointersOnly(t *testing.T) {
-	m := Message{ID: uuid.New()}
+	m := core.Message{ID: uuid.New()}
 	if got, ok := messages.MessageOf(m); !ok || got.ID != m.ID {
 		t.Errorf("value: %v %v", got.ID, ok)
 	}
 	if got, ok := messages.MessageOf(&m); !ok || got.ID != m.ID {
 		t.Errorf("pointer: %v %v", got.ID, ok)
 	}
-	if _, ok := messages.MessageOf((*Message)(nil)); ok {
+	if _, ok := messages.MessageOf((*core.Message)(nil)); ok {
 		t.Error("a nil pointer is no message")
 	}
 	if _, ok := messages.MessageOf("text"); ok {
@@ -37,11 +38,11 @@ func TestTheFollowTapIgnoresWhatIsNoThreadReplyAndFailsClosedWithoutPermissions(
 	pub := &countingPublisher{}
 	tap := messages.NewFollowSync(context.Background(), nil, nil, pub)
 	root := uuid.New()
-	tap(uuid.New(), events.MessageUpdate, Message{ParentID: &root})
-	tap(uuid.New(), events.MessageCreate, Message{})
+	tap(uuid.New(), events.MessageUpdate, core.Message{ParentID: &root})
+	tap(uuid.New(), events.MessageCreate, core.Message{})
 	tap(uuid.New(), events.MessageCreate, "not a message")
 	// A thread reply without a permission service tells nobody (and needs no database to know it).
-	tap(uuid.New(), events.MessageCreate, &Message{ParentID: &root})
+	tap(uuid.New(), events.MessageCreate, &core.Message{ParentID: &root})
 	time.Sleep(50 * time.Millisecond)
 	if pub.sent != 0 {
 		t.Fatalf("%d events sent", pub.sent)

@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -22,7 +23,7 @@ import (
 
 type forumHandlerFn func(*forum.API, http.ResponseWriter, *http.Request) error
 
-func forumCtx(t *testing.T) (chatFixture, *Handler, *auth.User, *Channel) {
+func forumCtx(t *testing.T) (chatFixture, *Handler, *auth.User, *core.Channel) {
 	t.Helper()
 	f, h, mod := setupForumEnv(t)
 	return f, h, mod, createTestForum(t, f)
@@ -47,7 +48,7 @@ func forumDecode[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
 	return v
 }
 
-func forumMakePost(t *testing.T, h *Handler, u *auth.User, ch *Channel, title string, tags ...uuid.UUID) Message {
+func forumMakePost(t *testing.T, h *Handler, u *auth.User, ch *core.Channel, title string, tags ...uuid.UUID) core.Message {
 	t.Helper()
 	body, _ := json.Marshal(map[string]any{"title": title, "content": "body of " + title, "tag_ids": tags})
 	rec := httptest.NewRecorder()
@@ -55,13 +56,13 @@ func forumMakePost(t *testing.T, h *Handler, u *auth.User, ch *Channel, title st
 	if err != nil {
 		t.Fatalf("create post %q: %v", title, err)
 	}
-	return forumDecode[Message](t, rec)
+	return forumDecode[core.Message](t, rec)
 }
 
-func forumReply(t *testing.T, h *Handler, u *auth.User, ch *Channel, parent uuid.UUID) error {
+func forumReply(t *testing.T, h *Handler, u *auth.User, ch *core.Channel, parent uuid.UUID) error {
 	t.Helper()
 	body := fmt.Sprintf(`{"content":"reply","parent_id":"%s"}`, parent)
-	return h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(u, body, map[string]string{"channelID": ch.ID.String()}, ""))
+	return h.messages().ServeCreateMessage(httptest.NewRecorder(), chattest.Request(u, body, map[string]string{"channelID": ch.ID.String()}, ""))
 }
 
 func forumReplyID(t *testing.T, f chatFixture, parent uuid.UUID) uuid.UUID {
@@ -73,20 +74,20 @@ func forumReplyID(t *testing.T, f chatFixture, parent uuid.UUID) uuid.UUID {
 	return id
 }
 
-func forumListIDs(t *testing.T, h *Handler, u *auth.User, ch *Channel, query string) []uuid.UUID {
+func forumListIDs(t *testing.T, h *Handler, u *auth.User, ch *core.Channel, query string) []uuid.UUID {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	if err := h.forum().ServeListForumPosts(rec, chattest.Request(u, "", map[string]string{"channelID": ch.ID.String()}, query)); err != nil {
 		t.Fatalf("list %q: %v", query, err)
 	}
 	ids := []uuid.UUID{}
-	for _, m := range forumDecode[[]Message](t, rec) {
+	for _, m := range forumDecode[[]core.Message](t, rec) {
 		ids = append(ids, m.ID)
 	}
 	return ids
 }
 
-func requireIDs(t *testing.T, label string, got []uuid.UUID, want ...Message) {
+func requireIDs(t *testing.T, label string, got []uuid.UUID, want ...core.Message) {
 	t.Helper()
 	if len(got) != len(want) {
 		t.Fatalf("%s: got %d posts, want %d", label, len(got), len(want))
@@ -236,7 +237,7 @@ func TestForumTagCapAndPostTagLimit(t *testing.T) {
 
 func TestForumTagsAreChannelScoped(t *testing.T) {
 	f, h, mod, ch := forumCtx(t)
-	other, err := channels.CreateChannelWithStage(context.Background(), f.p, nil, "second-forum", ChannelTypeForum, "", 0, false)
+	other, err := channels.CreateChannelWithStage(context.Background(), f.p, nil, "second-forum", core.ChannelTypeForum, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +261,7 @@ func TestForumTagsAreChannelScoped(t *testing.T) {
 	if err := h.forum().ServeListForumTags(rec, chattest.Request(f.u, "", cp, "")); err != nil {
 		t.Fatal(err)
 	}
-	tags := forumDecode[[]ForumTag](t, rec)
+	tags := forumDecode[[]core.ForumTag](t, rec)
 	if len(tags) != 1 || tags[0].ID != own.ID {
 		t.Fatalf("listing leaked tags from another forum: %+v", tags)
 	}
@@ -274,15 +275,15 @@ func TestForumTagPartialUpdates(t *testing.T) {
 		t.Fatal(err)
 	}
 	newName, newEmoji, empty := "renamed", "B", ""
-	got, _, err := forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Name: &newName})
+	got, _, err := forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, forum.TagPatch{Name: &newName})
 	if err != nil || got.Name != "renamed" || got.Emoji != "A" {
 		t.Fatalf("name-only update = %+v, %v", got, err)
 	}
-	got, _, err = forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &newEmoji})
+	got, _, err = forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, forum.TagPatch{Emoji: &newEmoji})
 	if err != nil || got.Name != "renamed" || got.Emoji != "B" {
 		t.Fatalf("emoji-only update = %+v, %v", got, err)
 	}
-	got, _, err = forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &empty})
+	got, _, err = forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, forum.TagPatch{Emoji: &empty})
 	if err != nil || got.Emoji != "" {
 		t.Fatalf("clearing emoji = %+v, %v", got, err)
 	}
@@ -345,7 +346,7 @@ func TestForumListingOmitsRepliesAndStoreClampsLimit(t *testing.T) {
 	}
 	for _, mode := range []string{"newest", "activity"} {
 		for _, limit := range []int{0, 1000} {
-			posts, err := forum.ListForumPostsFiltered(context.Background(), f.p, ch.ID, forum.PostFilter{Sort: mode}, HistoryQuery{Limit: limit})
+			posts, err := forum.ListForumPostsFiltered(context.Background(), f.p, ch.ID, forum.PostFilter{Sort: mode}, core.HistoryQuery{Limit: limit})
 			if err != nil || len(posts) != 1 || posts[0].ID != a.ID {
 				t.Fatalf("%s/%d: got %d posts, err %v", mode, limit, len(posts), err)
 			}
@@ -369,7 +370,7 @@ func TestForumPostUpdateRules(t *testing.T) {
 
 	tagBody := fmt.Sprintf(`{"tag_ids":["%s"]}`, tag.ID)
 	rec, err := update(f.u, tagBody)
-	if err != nil || len(forumDecode[Message](t, rec).Tags) != 1 {
+	if err != nil || len(forumDecode[core.Message](t, rec).Tags) != 1 {
 		t.Fatalf("author tagging failed: %v", err)
 	}
 	if _, err := update(other, tagBody); err == nil {
@@ -379,7 +380,7 @@ func TestForumPostUpdateRules(t *testing.T) {
 		t.Fatal("author without Manage messages must not lock own post")
 	}
 	rec, err = update(f.u, `{"tag_ids":[]}`)
-	if err != nil || len(forumDecode[Message](t, rec).Tags) != 0 {
+	if err != nil || len(forumDecode[core.Message](t, rec).Tags) != 0 {
 		t.Fatalf("clearing tags failed: %v", err)
 	}
 	if _, err := update(mod, `{"is_locked":true}`); err != nil {
@@ -401,7 +402,7 @@ func TestForumPostUpdateRules(t *testing.T) {
 
 func TestForumPostUpdateRejectsRepliesAndOtherChannels(t *testing.T) {
 	f, h, _, ch := forumCtx(t)
-	other, err := channels.CreateChannelWithStage(context.Background(), f.p, nil, "elsewhere", ChannelTypeForum, "", 0, false)
+	other, err := channels.CreateChannelWithStage(context.Background(), f.p, nil, "elsewhere", core.ChannelTypeForum, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -452,7 +453,7 @@ func TestForumRepliesAndRootRulesInForums(t *testing.T) {
 		t.Fatal("replying to a reply must fail")
 	}
 	body := `{"title":"Sneaky","content":"root via messages"}`
-	if err := h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(f.u, body, cp, "")); err == nil {
+	if err := h.messages().ServeCreateMessage(httptest.NewRecorder(), chattest.Request(f.u, body, cp, "")); err == nil {
 		t.Fatal("root message through the plain endpoint must fail in a forum")
 	}
 	tp := map[string]string{"channelID": f.c.ID.String()}
@@ -495,7 +496,7 @@ func TestForumStoreErrorsOnCanceledContext(t *testing.T) {
 		"validate tags": func() error { return forum.ValidatePostTags(ctx, f.p, ch.ID, []uuid.UUID{uuid.New()}) },
 		"delete tag":    func() error { _, err := forum.DeleteForumTag(ctx, f.p, ch.ID, uuid.New()); return err },
 		"update tag": func() error {
-			_, _, err := forum.UpdateForumTag(ctx, f.p, ch.ID, uuid.New(), TagPatch{Name: &name})
+			_, _, err := forum.UpdateForumTag(ctx, f.p, ch.ID, uuid.New(), forum.TagPatch{Name: &name})
 			return err
 		},
 		"create tag": func() error {
@@ -503,11 +504,11 @@ func TestForumStoreErrorsOnCanceledContext(t *testing.T) {
 			return err
 		},
 		"list posts": func() error {
-			_, err := forum.ListForumPostsFiltered(ctx, f.p, ch.ID, forum.PostFilter{Sort: "newest"}, HistoryQuery{})
+			_, err := forum.ListForumPostsFiltered(ctx, f.p, ch.ID, forum.PostFilter{Sort: "newest"}, core.HistoryQuery{})
 			return err
 		},
 		"update post": func() error {
-			_, err := forum.UpdateForumPost(ctx, f.p, ch.ID, uuid.New(), PostActor{ID: f.u.ID, CanManage: true}, PostPatch{})
+			_, err := forum.UpdateForumPost(ctx, f.p, ch.ID, uuid.New(), forum.PostActor{ID: f.u.ID, CanManage: true}, forum.PostPatch{})
 			return err
 		},
 	}

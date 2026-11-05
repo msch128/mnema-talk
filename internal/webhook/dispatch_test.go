@@ -17,7 +17,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
@@ -37,9 +38,9 @@ func TestSignMatchesTheDocumentedScheme(t *testing.T) {
 
 func TestTranslate(t *testing.T) {
 	ch := uuid.New()
-	human := chat.Message{ID: uuid.New(), ChannelID: ch, Content: "hi"}
-	bot := chat.Message{ID: uuid.New(), ChannelID: ch, IsBot: true}
-	hook := chat.Message{ID: uuid.New(), ChannelID: ch, IsBot: true, IsWebhook: true}
+	human := core.Message{ID: uuid.New(), ChannelID: ch, Content: "hi"}
+	bot := core.Message{ID: uuid.New(), ChannelID: ch, IsBot: true}
+	hook := core.Message{ID: uuid.New(), ChannelID: ch, IsBot: true, IsWebhook: true}
 	cases := []struct {
 		name    string
 		typ     string
@@ -55,7 +56,7 @@ func TestTranslate(t *testing.T) {
 		{"update by an incoming webhook is delivered", "message_update", &hook, EventMessageUpdate},
 		{"create with another payload", "message_create", "text", ""},
 		{"delete", "message_delete", map[string]any{"id": 1}, EventMessageDelete},
-		{"reactions", "message_reaction", chat.ReactionResult{}, EventReactionsUpdate},
+		{"reactions", "message_reaction", messages.ReactionResult{}, EventReactionsUpdate},
 		{"voice", "voice_state_update", map[string]any{"action": "join"}, EventVoiceStateUpdate},
 		{"a new member is not offered", "member_joined", map[string]any{"id": 1}, ""},
 		{"typing", "typing", nil, ""},
@@ -181,7 +182,7 @@ func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 		{id: off, channel: chA, events: []string{EventMessageUpdate}},
 	}
 	d.routes.Store(&routes)
-	msg := chat.Message{ID: uuid.New(), ChannelID: chA}
+	msg := core.Message{ID: uuid.New(), ChannelID: chA}
 
 	d.Observe(chA, "message_create", &msg)
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 2 || !g[a] || !g[both] {
@@ -192,7 +193,7 @@ func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 		t.Fatalf("delete in B reached %v", g)
 	}
 	d.Observe(chA, "typing", nil)
-	d.Observe(chA, "message_reaction", chat.ReactionResult{})
+	d.Observe(chA, "message_reaction", messages.ReactionResult{})
 	// Events to everybody (no channel) belong to no webhook.
 	d.Observe(uuid.Nil, "message_create", &msg)
 	d.Observe(uuid.Nil, "member_joined", map[string]any{"id": 1})

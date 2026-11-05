@@ -10,7 +10,11 @@ import (
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/chat/reports"
+	"github.com/msch128/mnema-talk/internal/chat/saved"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/discordimport"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -28,22 +32,22 @@ func (c *components) newChat() {
 	d, cfg, hub := c.d, c.cfg, c.hub
 	c.chatH = &chat.Handler{
 		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog,
-		EditHistoryLimit: httpx.NewRateLimiter(chat.EditHistoryRate, time.Minute).Named("edit_history"),
-		PinLimit:         httpx.NewRateLimiter(chat.PinChangesPerMinute, time.Minute).Named("pin"),
-		FollowLimit:      httpx.NewRateLimiter(chat.ThreadFollowChangesPerMinute, time.Minute).Named("thread_follow"),
+		EditHistoryLimit: httpx.NewRateLimiter(messages.EditHistoryRate, time.Minute).Named("edit_history"),
+		PinLimit:         httpx.NewRateLimiter(messages.PinChangesPerMinute, time.Minute).Named("pin"),
+		FollowLimit:      httpx.NewRateLimiter(messages.ThreadFollowChangesPerMinute, time.Minute).Named("thread_follow"),
 		BlockLimit:       httpx.NewRateLimiter(blocks.BlockChangesPerMinute, time.Minute).Named("block"),
-		ReportLimit:      httpx.NewRateLimiter(chat.ReportsPerHour, time.Hour).Named("report"),
-		SavedLimit:       httpx.NewRateLimiter(chat.SavedChangesPerMinute, time.Minute).Named("saved"),
-		ForwardLimit:     httpx.NewRateLimiter(chat.ForwardsPerMinute, time.Minute).Named("forward"),
-		DMLimit:          httpx.NewRateLimiter(chat.NewDMsPerMinute, time.Minute).Named("dm_start"),
+		ReportLimit:      httpx.NewRateLimiter(reports.ReportsPerHour, time.Hour).Named("report"),
+		SavedLimit:       httpx.NewRateLimiter(saved.SavedChangesPerMinute, time.Minute).Named("saved"),
+		ForwardLimit:     httpx.NewRateLimiter(messages.ForwardsPerMinute, time.Minute).Named("forward"),
+		DMLimit:          httpx.NewRateLimiter(dm.NewDMsPerMinute, time.Minute).Named("dm_start"),
 	}
 	go messages.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
 	go poll.RunFold(c.ctx, d.DB, 10*time.Minute)
-	autoDelete := &chat.AutoDeleter{DB: d.DB, Events: c.pub, Audit: c.auditLog}
+	autoDelete := &channels.AutoDeleter{DB: d.DB, Events: c.pub, Audit: c.auditLog}
 	if d.Store != nil {
 		autoDelete.Objects = d.Store
 	}
-	go autoDelete.Run(c.ctx, chat.AutoDeleteEvery)
+	go autoDelete.Run(c.ctx, channels.AutoDeleteEvery)
 }
 
 // newImport builds the Discord structure import.

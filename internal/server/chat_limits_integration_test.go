@@ -9,7 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 )
 
 func TestReactionLimits(t *testing.T) {
@@ -22,7 +23,7 @@ func TestReactionLimits(t *testing.T) {
 		return c.post(path, map[string]string{"emoji": emoji})
 	}
 
-	for i := 0; i < chat.MaxReactionsPerUser; i++ {
+	for i := 0; i < messages.MaxReactionsPerUser; i++ {
 		if res := react(admin, fmt.Sprintf("e%d", i)); res.status != http.StatusOK {
 			t.Fatalf("reaction %d: %d %s", i, res.status, res.body)
 		}
@@ -41,12 +42,12 @@ func TestReactionLimits(t *testing.T) {
 
 	// Distinct emoji per message: two more users fill the message up to 50.
 	b, c := a.register(admin, "bert"), a.register(admin, "carla")
-	for i := 0; i < chat.MaxReactionsPerUser; i++ {
+	for i := 0; i < messages.MaxReactionsPerUser; i++ {
 		if res := react(b, fmt.Sprintf("b%d", i)); res.status != http.StatusOK {
 			t.Fatalf("bert reaction %d: %d %s", i, res.status, res.body)
 		}
 	}
-	for i := 0; i < chat.MaxEmojiPerMessage-2*chat.MaxReactionsPerUser; i++ {
+	for i := 0; i < messages.MaxEmojiPerMessage-2*messages.MaxReactionsPerUser; i++ {
 		if res := react(c, fmt.Sprintf("c%d", i)); res.status != http.StatusOK {
 			t.Fatalf("carla reaction %d: %d %s", i, res.status, res.body)
 		}
@@ -59,9 +60,9 @@ func TestReactionLimits(t *testing.T) {
 	if res.status != http.StatusOK {
 		t.Fatalf("join existing emoji: %d %s", res.status, res.body)
 	}
-	var out chat.ReactionResult
+	var out messages.ReactionResult
 	res.decode(t, &out)
-	if len(out.Reactions) != chat.MaxEmojiPerMessage || out.MessageID != msg {
+	if len(out.Reactions) != messages.MaxEmojiPerMessage || out.MessageID != msg {
 		t.Fatalf("summary has %d emoji for %s", len(out.Reactions), out.MessageID)
 	}
 
@@ -105,13 +106,13 @@ func TestEditToEmptyOnlyWithAttachment(t *testing.T) {
 	if up.status != http.StatusCreated {
 		t.Fatalf("upload: %d %s", up.status, up.body)
 	}
-	var m chat.Message
+	var m core.Message
 	up.decode(t, &m)
 	res := admin.put(base+m.ID.String(), map[string]string{"content": ""})
 	if res.status != http.StatusOK {
 		t.Fatalf("empty edit of an upload: %d %s", res.status, res.body)
 	}
-	var edited chat.Message
+	var edited core.Message
 	res.decode(t, &edited)
 	if edited.Content != "" || !edited.IsEdited || len(edited.Attachments) != 1 {
 		t.Fatalf("edited upload = %+v", edited)

@@ -33,7 +33,7 @@ type AutoDeleteRequest struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/channels/{id}/auto-delete [put]
-func (a *API) SetAutoDelete(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeSetAutoDelete(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err

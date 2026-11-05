@@ -136,7 +136,7 @@ func (a *API) GetThread(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// GetMessageByNumber handles GET /api/messages/by-number/{number}.
+// ServeGetMessageByNumber handles GET /api/messages/by-number/{number}.
 //
 // @Summary Get a message by its link number
 // @Description Resolves the short number used in links (/m/4821, /t/4821) to the message, including its channel_id and, for a thread reply, its parent_id.
@@ -153,7 +153,7 @@ func (a *API) GetThread(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/messages/by-number/{number} [get]
-func (a *API) GetMessageByNumber(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeGetMessageByNumber(w http.ResponseWriter, r *http.Request) error {
 	n, err := strconv.ParseInt(chi.URLParam(r, "number"), 10, 64)
 	if err != nil || n < 1 {
 		return httpx.ErrInvalidInput("invalid number")

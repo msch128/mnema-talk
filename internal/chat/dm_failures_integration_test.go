@@ -19,19 +19,19 @@ func TestDirectMessageOperationsReportDatabaseFailures(t *testing.T) {
 	if err := f.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('bob_dm', 'Bob', 'x') RETURNING id`).Scan(&bob); err != nil {
 		t.Fatal(err)
 	}
-	id, created, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob}})
+	id, created, err := dm.CreateDM(ctx, f.p, dm.NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob}})
 	if err != nil || !created {
 		t.Fatalf("setup: %v %v", created, err)
 	}
 	// A group needs members that exist and are eligible.
-	if _, _, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob, uuid.New()}}); err != dm.ErrDMStart {
+	if _, _, err := dm.CreateDM(ctx, f.p, dm.NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob, uuid.New()}}); err != dm.ErrDMStart {
 		t.Fatalf("group with an unknown member: %v", err)
 	}
 	var carol uuid.UUID
 	if err := f.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('carol_dm', 'Carol', 'x') RETURNING id`).Scan(&carol); err != nil {
 		t.Fatal(err)
 	}
-	g, _, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob, carol}})
+	g, _, err := dm.CreateDM(ctx, f.p, dm.NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob, carol}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestDirectMessageOperationsReportDatabaseFailures(t *testing.T) {
 			return err
 		},
 		"create": func() error {
-			_, _, err := dm.CreateDM(ctx, chattest.DriftPool(t, f.p, broken), NewDM{Creator: f.u.ID, Others: []uuid.UUID{carol}})
+			_, _, err := dm.CreateDM(ctx, chattest.DriftPool(t, f.p, broken), dm.NewDM{Creator: f.u.ID, Others: []uuid.UUID{carol}})
 			return err
 		},
 		"add": func() error {

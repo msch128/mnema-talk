@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -25,10 +26,10 @@ type forumTagFixture struct {
 	f         chatFixture
 	h         *Handler
 	mod       *auth.User
-	ch        *Channel
+	ch        *core.Channel
 	chParam   map[string]string
-	plain     *ForumTag
-	moderated *ForumTag
+	plain     *core.ForumTag
+	moderated *core.ForumTag
 }
 
 func newForumTagFixture(t *testing.T) forumTagFixture {
@@ -47,32 +48,32 @@ func newForumTagFixture(t *testing.T) forumTagFixture {
 	return forumTagFixture{f, h, mod, ch, map[string]string{"channelID": ch.ID.String()}, plain, moderated}
 }
 
-func (x forumTagFixture) createPost(t *testing.T, u *auth.User, title string, tagIDs ...uuid.UUID) (*Message, error) {
+func (x forumTagFixture) createPost(t *testing.T, u *auth.User, title string, tagIDs ...uuid.UUID) (*core.Message, error) {
 	t.Helper()
 	body, _ := json.Marshal(map[string]any{"title": title, "content": "body of " + title, "tag_ids": tagIDs})
 	rec := httptest.NewRecorder()
 	if err := x.h.forum().ServeCreateForumPost(rec, chattest.Request(u, string(body), x.chParam, "")); err != nil {
 		return nil, err
 	}
-	var m Message
+	var m core.Message
 	if err := json.Unmarshal(rec.Body.Bytes(), &m); err != nil {
 		t.Fatal(err)
 	}
 	return &m, nil
 }
 
-func (x forumTagFixture) patchPost(u *auth.User, post *Message, body string) error {
+func (x forumTagFixture) patchPost(u *auth.User, post *core.Message, body string) error {
 	params := map[string]string{"channelID": x.ch.ID.String(), "messageID": post.ID.String()}
 	return x.h.forum().ServeUpdateForumPost(httptest.NewRecorder(), chattest.Request(u, body, params, ""))
 }
 
-func (x forumTagFixture) list(t *testing.T, u *auth.User, query string) []Message {
+func (x forumTagFixture) list(t *testing.T, u *auth.User, query string) []core.Message {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	if err := x.h.forum().ServeListForumPosts(rec, chattest.Request(u, "", x.chParam, query)); err != nil {
 		t.Fatal(err)
 	}
-	var out []Message
+	var out []core.Message
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatal(err)
 	}
@@ -92,11 +93,11 @@ func TestForumTagColorOrderAndModeratedFlag(t *testing.T) {
 
 	// Colour and flag change on their own; an empty colour clears it.
 	green, off, empty := "green", false, ""
-	got, before, err := forum.UpdateForumTag(ctx, x.f.p, x.ch.ID, x.moderated.ID, TagPatch{Color: &green, Moderated: &off})
+	got, before, err := forum.UpdateForumTag(ctx, x.f.p, x.ch.ID, x.moderated.ID, forum.TagPatch{Color: &green, Moderated: &off})
 	if err != nil || got.Color != "green" || got.Moderated || !before.Moderated || before.Color != "" {
 		t.Fatalf("update: %+v before %+v err %v", got, before, err)
 	}
-	if got, _, err = forum.UpdateForumTag(ctx, x.f.p, x.ch.ID, x.plain.ID, TagPatch{Color: &empty}); err != nil || got.Color != "" || got.Name != "help" {
+	if got, _, err = forum.UpdateForumTag(ctx, x.f.p, x.ch.ID, x.plain.ID, forum.TagPatch{Color: &empty}); err != nil || got.Color != "" || got.Name != "help" {
 		t.Fatalf("clear colour: %+v %v", got, err)
 	}
 
@@ -207,7 +208,7 @@ func TestForumRequiredTag(t *testing.T) {
 		t.Fatal("the moderator can apply the moderated tag, so the requirement holds for them")
 	}
 
-	long := make([]byte, MaxForumGuidelinesLen+1)
+	long := make([]byte, forum.MaxForumGuidelinesLen+1)
 	for i := range long {
 		long[i] = 'a'
 	}
@@ -221,7 +222,7 @@ func TestForumPostTagLimitOnEdit(t *testing.T) {
 	x := newForumTagFixture(t)
 	ctx := context.Background()
 	ids := []uuid.UUID{x.plain.ID}
-	for i := 0; i < MaxPostTags; i++ {
+	for i := 0; i < core.MaxPostTags; i++ {
 		tag, err := forum.CreateForumTagSpec(ctx, x.f.p, x.ch.ID, forum.TagSpec{Name: fmt.Sprintf("t%d", i)})
 		if err != nil {
 			t.Fatal(err)
@@ -236,7 +237,7 @@ func TestForumPostTagLimitOnEdit(t *testing.T) {
 	if err := x.patchPost(x.f.u, post, string(over)); err == nil {
 		t.Fatal("more than MaxPostTags tags must be refused on edit")
 	}
-	ok, _ := json.Marshal(map[string]any{"tag_ids": ids[:MaxPostTags]})
+	ok, _ := json.Marshal(map[string]any{"tag_ids": ids[:core.MaxPostTags]})
 	if err := x.patchPost(x.f.u, post, string(ok)); err != nil {
 		t.Fatalf("MaxPostTags tags are allowed: %v", err)
 	}
@@ -303,7 +304,7 @@ func TestForumListPinnedSearchAndTagFilter(t *testing.T) {
 		t.Fatalf("two percent signs are literal text, not a wildcard, got %v", titles(got))
 	}
 	reply := fmt.Sprintf(`{"content":"the needle is here","parent_id":"%s"}`, newest.ID)
-	if err := x.h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(x.f.u, reply, x.chParam, "")); err != nil {
+	if err := x.h.messages().ServeCreateMessage(httptest.NewRecorder(), chattest.Request(x.f.u, reply, x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	if got := x.list(t, x.f.u, "q=needle"); len(got) != 1 || got[0].ID != newest.ID {
@@ -315,7 +316,7 @@ func TestForumListPinnedSearchAndTagFilter(t *testing.T) {
 	if got := x.list(t, x.f.u, "q=voice&tag_id="+x.plain.ID.String()); len(got) != 0 {
 		t.Fatalf("tag filter narrows the search: %v", titles(got))
 	}
-	long := make([]byte, MaxPostSearchLen+1)
+	long := make([]byte, forum.MaxPostSearchLen+1)
 	for i := range long {
 		long[i] = 'a'
 	}
@@ -324,7 +325,7 @@ func TestForumListPinnedSearchAndTagFilter(t *testing.T) {
 	}
 }
 
-func titles(ms []Message) []string {
+func titles(ms []core.Message) []string {
 	out := make([]string, len(ms))
 	for i, m := range ms {
 		if m.Title != nil {
@@ -364,11 +365,11 @@ func TestForumUnreadPostsAndMarkRead(t *testing.T) {
 
 	// A reply of someone else makes the member's own post unread; their own reply does not.
 	reply := fmt.Sprintf(`{"content":"an answer","parent_id":"%s"}`, mine.ID)
-	if err := x.h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(x.mod, reply, x.chParam, "")); err != nil {
+	if err := x.h.messages().ServeCreateMessage(httptest.NewRecorder(), chattest.Request(x.mod, reply, x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	own := fmt.Sprintf(`{"content":"my follow-up","parent_id":"%s"}`, post.ID)
-	if err := x.h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(x.f.u, own, x.chParam, "")); err != nil {
+	if err := x.h.messages().ServeCreateMessage(httptest.NewRecorder(), chattest.Request(x.f.u, own, x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	if unread, _ = forum.UnreadPostIDs(ctx, x.f.p, x.ch.ID, x.f.u.ID); len(unread) != 1 || unread[0] != mine.ID {
@@ -381,7 +382,7 @@ func TestForumUnreadPostsAndMarkRead(t *testing.T) {
 	if err := x.h.forum().MarkForumPostRead(rec, chattest.Request(x.f.u, "", params, "")); err != nil {
 		t.Fatal(err)
 	}
-	var out PostRead
+	var out forum.PostRead
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil || out.PreviousReadAt.IsZero() {
 		t.Fatalf("read response: %s %v", rec.Body.String(), err)
 	}
@@ -439,14 +440,14 @@ func TestForumExtrasHandlersReadSettingsUnreadAndRefuseWhatIsNotAForum(t *testin
 	ctx := context.Background()
 
 	// Settings are readable by every member who can view the forum.
-	if _, _, err := forum.UpdateForumSettings(ctx, x.f.p, x.ch.ID, ForumSettingsPatch{Guidelines: chattest.Ptr("Be kind.")}); err != nil {
+	if _, _, err := forum.UpdateForumSettings(ctx, x.f.p, x.ch.ID, forum.ForumSettingsPatch{Guidelines: chattest.Ptr("Be kind.")}); err != nil {
 		t.Fatal(err)
 	}
 	rec := httptest.NewRecorder()
 	if err := x.h.forum().ServeGetForumSettings(rec, chattest.Request(x.f.u, "", x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
-	var s ForumSettings
+	var s forum.ForumSettings
 	if err := json.Unmarshal(rec.Body.Bytes(), &s); err != nil || s.Guidelines != "Be kind." || s.RequireTag {
 		t.Fatalf("settings = %+v %v", s, err)
 	}
@@ -463,7 +464,7 @@ func TestForumExtrasHandlersReadSettingsUnreadAndRefuseWhatIsNotAForum(t *testin
 	if err := x.h.forum().ListUnreadForumPosts(rec, chattest.Request(x.f.u, "", x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
-	var unread UnreadForumPosts
+	var unread forum.UnreadForumPosts
 	if err := json.Unmarshal(rec.Body.Bytes(), &unread); err != nil || len(unread.PostIDs) != 1 || unread.PostIDs[0] != post.ID {
 		t.Fatalf("unread = %+v %v", unread, err)
 	}

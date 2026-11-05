@@ -12,7 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// DeleteCategory removes a category; its channels become uncategorized.
+// ServeDeleteCategory removes a category; its channels become uncategorized.
 func DeleteCategory(ctx context.Context, p *db.Pool, categoryID uuid.UUID) error {
 	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return DeleteCategoryTx(ctx, tx, categoryID) })
 }

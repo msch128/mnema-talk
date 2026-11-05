@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -30,9 +30,9 @@ type Importer struct {
 	Audit   *audit.Log
 	Fetcher *Fetcher
 	// Objects deletes the media of channels an undo removes; nil skips it.
-	Objects chat.ObjectDeleter
+	Objects core.ObjectDeleter
 	// Voice empties the voice room of a removed Talk; nil skips it.
-	Voice chat.VoiceRooms
+	Voice core.VoiceRooms
 	// Features reports whether this server has a feature (GET /api/health
 	// features); nil means none, so stages and forums map to Talks and text.
 	Features func(name string) bool

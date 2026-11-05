@@ -17,6 +17,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -30,7 +31,7 @@ type Services struct {
 	Perms  *perm.Service
 	Events events.Publisher
 	// Online resolves @here in a posted text; nil means nobody is online.
-	Online chat.OnlineSource
+	Online mentions.OnlineSource
 	// Members carries the moderation actions shared with the REST
 	// routes.
 	Members *memberadmin.API
@@ -81,7 +82,7 @@ func (s *Services) post(call slash.Call, content string, parent *uuid.UUID) (sla
 	if err := core.ValidateParent(ctx, s.DB, call.Channel, parent); err != nil {
 		return slash.Result{}, err
 	}
-	id, err := messages.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{
+	id, err := messages.InsertMessage(ctx, s.DB, s.Online, messages.NewMessage{
 		ChannelID: call.Channel, UserID: call.User.ID, Content: content, ParentID: parent,
 	}, nil)
 	if err != nil {

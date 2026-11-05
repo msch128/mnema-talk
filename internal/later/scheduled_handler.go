@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -102,7 +101,7 @@ func (s *Service) createScheduled(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	// A forum post needs a title and a scheduled message has none: only replies fit.
-	if info.Type == chat.ChannelTypeForum && req.ParentID == nil {
+	if info.Type == core.ChannelTypeForum && req.ParentID == nil {
 		return httpx.ErrInvalidInput("a forum post needs a title; schedule a reply in a post instead")
 	}
 	if err := messages.ValidateTarget(ctx, s.DB, ch, req.ParentID, req.ReplyToID); err != nil {

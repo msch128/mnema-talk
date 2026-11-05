@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -19,8 +19,8 @@ func testClient(h *Hub, u auth.User) *Client {
 	return c
 }
 
-func voiceCh() *chat.ChannelInfo {
-	return &chat.ChannelInfo{ID: uuid.New(), Type: chat.ChannelTypeVoice}
+func voiceCh() *core.ChannelInfo {
+	return &core.ChannelInfo{ID: uuid.New(), Type: core.ChannelTypeVoice}
 }
 
 func inRoom(h *Hub, chID, userID uuid.UUID) bool {

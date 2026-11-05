@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/webhook"
 )
 
@@ -41,13 +41,13 @@ func (a *app) exec(path string, body any, hdr map[string]string) response {
 	return a.anon().do(http.MethodPost, path, body, h)
 }
 
-func lastMessage(t *testing.T, a *app, c *client, channel uuid.UUID) chat.Message {
+func lastMessage(t *testing.T, a *app, c *client, channel uuid.UUID) core.Message {
 	t.Helper()
 	res := c.get("/api/channels/" + channel.String() + "/messages?limit=50")
 	if res.status != http.StatusOK {
 		t.Fatalf("messages: %d %s", res.status, res.body)
 	}
-	var msgs []chat.Message
+	var msgs []core.Message
 	res.decode(t, &msgs)
 	if len(msgs) == 0 {
 		t.Fatal("no messages")
@@ -79,7 +79,7 @@ func TestWebhookPostsAsTheWebhookNotAMember(t *testing.T) {
 	if res.status != http.StatusOK {
 		t.Fatalf("execute: %d %s", res.status, res.body)
 	}
-	var msg chat.Message
+	var msg core.Message
 	res.decode(t, &msg)
 	if !msg.IsBot || msg.DisplayName != "Pipeline" || msg.Content != "build **passed**" {
 		t.Fatalf("message %+v", msg)
@@ -198,7 +198,7 @@ func TestWebhookPayloadValidation(t *testing.T) {
 	h := makeHook(t, admin, ch, "bot")
 	a.router.Webhooks.SetLimits(1000, 1000)
 
-	long := strings.Repeat("x", chat.MaxMessageLen+1)
+	long := strings.Repeat("x", core.MaxMessageLen+1)
 	cases := []struct {
 		name string
 		body any

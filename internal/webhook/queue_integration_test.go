@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
@@ -133,8 +133,8 @@ func waitFor(t *testing.T, what string, cond func() bool) {
 	}
 }
 
-func message(ch uuid.UUID) *chat.Message {
-	return &chat.Message{ID: uuid.New(), ChannelID: ch, Content: "hi"}
+func message(ch uuid.UUID) *core.Message {
+	return &core.Message{ID: uuid.New(), ChannelID: ch, Content: "hi"}
 }
 
 func TestProcessDeliversAndSettles(t *testing.T) {

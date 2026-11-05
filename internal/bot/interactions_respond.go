@@ -7,8 +7,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/botapi"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -18,8 +18,8 @@ import (
 
 // ResponseData is the message of an interaction response.
 type ResponseData struct {
-	Content string         `json:"content" maxLength:"4000"`
-	Embeds  []chat.InEmbed `json:"embeds"`
+	Content string             `json:"content" maxLength:"4000"`
+	Embeds  []messages.InEmbed `json:"embeds"`
 	// Flags: 64 makes the response ephemeral, visible only to the member who ran
 	// the command (never stored).
 	Flags int `json:"flags" enums:"0,64"`
@@ -101,7 +101,7 @@ func (c *Commands) callback(w http.ResponseWriter, r *http.Request) error {
 // @Param interactionID path string true "Interaction ID." Format(uuid)
 // @Param token path string true "Interaction token from the INTERACTION_CREATE event."
 // @Param body body ResponseData true "The message."
-// @Success 201 {object} chat.Message "The posted message."
+// @Success 201 {object} core.Message "The posted message."
 // @Success 204 "Shown to the member only."
 // @Failure 400 {object} httpx.DiscordError "Invalid form body (50035) or empty message (50006)."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
@@ -147,7 +147,7 @@ func (c *Commands) claimFrom(r *http.Request, callback bool) (*interaction, erro
 // message is a validated response.
 type message struct {
 	content   string
-	embeds    []chat.Embed
+	embeds    []core.Embed
 	ephemeral bool
 }
 
@@ -161,7 +161,7 @@ func validate(d ResponseData) (*message, error) {
 }
 
 // respond posts the message of a response, or shows it to the invoker only.
-func (c *Commands) respond(r *http.Request, in *interaction, m message) (*chat.Message, error) {
+func (c *Commands) respond(r *http.Request, in *interaction, m message) (*core.Message, error) {
 	ctx := r.Context()
 	snap, _, err := botapi.CheckBotSend(ctx, c.Perms, c.DB, auth.UserFrom(ctx), in.channel)
 	if err != nil {
@@ -176,11 +176,11 @@ func (c *Commands) respond(r *http.Request, in *interaction, m message) (*chat.M
 	}
 	// A command response never mentions everyone; members are notified only
 	// when they can see the channel.
-	ctx = mentions.WithMentionPolicy(ctx, chat.MentionPolicy{
+	ctx = mentions.WithMentionPolicy(ctx, mentions.MentionPolicy{
 		NoEveryone: true,
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, in.channel).Has(perm.ViewChannel) },
 	})
-	id, err := messages.InsertMessage(ctx, c.DB, c.Online, chat.NewMessage{ChannelID: in.channel, UserID: in.botUser, Content: m.content, Embeds: m.embeds}, nil)
+	id, err := messages.InsertMessage(ctx, c.DB, c.Online, messages.NewMessage{ChannelID: in.channel, UserID: in.botUser, Content: m.content, Embeds: m.embeds}, nil)
 	if err != nil {
 		return nil, err
 	}

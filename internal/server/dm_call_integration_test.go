@@ -9,7 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
@@ -40,7 +41,7 @@ func (f *callFixture) start(t *testing.T) uuid.UUID {
 	t.Helper()
 	res := f.dmFixture.alice.post("/api/dms/"+f.dm.ID.String()+"/talk", nil)
 	wantStatus(t, "start a Talk", res, http.StatusCreated)
-	var out chat.StartTalkResponse
+	var out talks.StartTalkResponse
 	res.decode(t, &out)
 	return out.ChannelID
 }
@@ -62,7 +63,7 @@ func TestACallRingsTheConversationsMembersAndNobodyElse(t *testing.T) {
 	if !ok {
 		t.Fatal("Bob's client is not told about the call")
 	}
-	ring := decodeEvent[chat.DMCallRing](t, raw)
+	ring := decodeEvent[dm.DMCallRing](t, raw)
 	if ring.ConversationID != f.dm.ID || ring.TalkID != talk || ring.CallerID != f.dmFixture.alice.user.ID || ring.RingSeconds <= 0 {
 		t.Fatalf("ring = %+v", ring)
 	}
@@ -92,8 +93,8 @@ func TestACallRingsTheConversationsMembersAndNobodyElse(t *testing.T) {
 	}
 	// A client that connects while it rings finds the call in the list.
 	var listed []struct {
-		ID   uuid.UUID    `json:"id"`
-		Call *chat.DMCall `json:"call"`
+		ID   uuid.UUID  `json:"id"`
+		Call *dm.DMCall `json:"call"`
 	}
 	f.dmFixture.bob.get("/api/dms").decode(t, &listed)
 	if len(listed) != 1 || listed[0].Call == nil || !listed[0].Call.Ringing || listed[0].Call.TalkID != talk {
@@ -118,8 +119,8 @@ func TestJoiningStopsTheRingEverywhereAndHangingUpFirstLeavesAMissedCall(t *test
 		if !ok {
 			t.Fatalf("%s is not told the call was answered", name)
 		}
-		end := decodeEvent[chat.DMCallEnd](t, raw)
-		if end.Reason != chat.CallAnswered || !end.Active || end.UserID == nil || *end.UserID != f.dmFixture.bob.user.ID {
+		end := decodeEvent[dm.DMCallEnd](t, raw)
+		if end.Reason != dm.CallAnswered || !end.Active || end.UserID == nil || *end.UserID != f.dmFixture.bob.user.ID {
 			t.Fatalf("%s: end = %+v", name, end)
 		}
 	}
@@ -143,8 +144,8 @@ func TestACallTheCallerCancelsLeavesAMissedCallInTheConversation(t *testing.T) {
 	if !ok {
 		t.Fatal("Bob is not told the caller hung up")
 	}
-	end := decodeEvent[chat.DMCallEnd](t, raw)
-	if end.Reason != chat.CallCancelled || end.Active || end.MessageID == nil {
+	end := decodeEvent[dm.DMCallEnd](t, raw)
+	if end.Reason != dm.CallCancelled || end.Active || end.MessageID == nil {
 		t.Fatalf("end = %+v", end)
 	}
 	var page []struct {

@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/slash"
 )
@@ -78,11 +78,11 @@ func (f *builtinsFixture) names(c *client) map[string]bool {
 	return out
 }
 
-func (f *builtinsFixture) lastMessage(channel uuid.UUID) chat.Message {
+func (f *builtinsFixture) lastMessage(channel uuid.UUID) core.Message {
 	f.a.t.Helper()
 	res := f.owner.get("/api/channels/" + channel.String() + "/messages?limit=50")
 	wantStatus(f.a.t, "history", res, http.StatusOK)
-	var msgs []chat.Message
+	var msgs []core.Message
 	res.decode(f.a.t, &msgs)
 	if len(msgs) == 0 {
 		f.a.t.Fatal("channel has no messages")

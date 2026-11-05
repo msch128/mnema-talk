@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -190,7 +190,7 @@ func TestGatewayDeliversOnlyWhatTheBotMaySee(t *testing.T) {
 
 	msg := postMessage(t, f.owner, f.open, map[string]any{"content": "hello bots"})
 	seq, d := g.expect("MESSAGE_CREATE")
-	var m chat.Message
+	var m core.Message
 	_ = json.Unmarshal(d, &m)
 	if seq != 2 || m.ID != msg || m.Content != "hello bots" || m.ChannelID != f.open {
 		t.Fatalf("event: %d %s", seq, d)

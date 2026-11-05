@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -28,9 +28,9 @@ func botRoleOf(t *testing.T, c *client) perm.Role {
 	return perm.Role{}
 }
 
-func membersOf(t *testing.T, c *client) []chat.Member {
+func membersOf(t *testing.T, c *client) []core.Member {
 	t.Helper()
-	var list []chat.Member
+	var list []core.Member
 	res := c.get("/api/members")
 	wantStatus(t, "members", res, http.StatusOK)
 	res.decode(t, &list)
@@ -168,7 +168,7 @@ func TestMemberListShowsBotsAndNotWebhookAuthors(t *testing.T) {
 	off := createBot(t, owner, "sleeper")
 	wantStatus(t, "disable", owner.patch("/api/admin/bots/"+off.ID.String(), map[string]any{"disabled": true}), http.StatusOK)
 
-	var found *chat.Member
+	var found *core.Member
 	for _, m := range membersOf(t, owner) {
 		m := m
 		switch {

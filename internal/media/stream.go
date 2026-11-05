@@ -13,7 +13,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
@@ -34,7 +33,7 @@ type uploadTarget struct {
 	parentID  *uuid.UUID
 	replyToID *uuid.UUID
 	// post is set when the upload starts a forum post.
-	post *chat.PreparedPost
+	post *forum.PreparedPost
 }
 
 // storedUpload is a file already written to object storage.
@@ -170,7 +169,7 @@ func (h *Handler) validateTarget(ctx context.Context, chID uuid.UUID, fields map
 
 // prepareUploadPost checks the title and tags of an upload that starts a forum
 // post, by the rules of a post made from text.
-func (h *Handler) prepareUploadPost(ctx context.Context, chID uuid.UUID, t *uploadTarget, fields map[string]string) (*chat.PreparedPost, error) {
+func (h *Handler) prepareUploadPost(ctx context.Context, chID uuid.UUID, t *uploadTarget, fields map[string]string) (*forum.PreparedPost, error) {
 	if t.parentID != nil || t.replyToID != nil {
 		return nil, httpx.ErrInvalidInput("a reply has no title or tags")
 	}
@@ -178,7 +177,7 @@ func (h *Handler) prepareUploadPost(ctx context.Context, chID uuid.UUID, t *uplo
 	if err != nil {
 		return nil, err
 	}
-	if ch.Type != chat.ChannelTypeForum {
+	if ch.Type != core.ChannelTypeForum {
 		return nil, httpx.ErrInvalidInput("channel is not a forum channel")
 	}
 	tagIDs, err := parseTagIDs(fields["tag_ids"])

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/dm"
 )
 
 type dmMember struct {
@@ -361,7 +361,7 @@ func TestStartingDirectMessagesIsLimited(t *testing.T) {
 
 	// And ten new conversations a day, however fast the tries come.
 	g := newDMFixture(t, false)
-	for i := range chat.MaxNewDMsPerDay {
+	for i := range dm.MaxNewDMsPerDay {
 		if _, err := g.a.db.Exec(context.Background(), `
 			WITH c AS (INSERT INTO channels (number, name, type, dm_key, dm_created_by) OVERRIDING SYSTEM VALUE
 			           VALUES (nextval('dm_number_seq'), '', 'dm', $2, $1) RETURNING id)

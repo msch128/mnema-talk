@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/reports"
@@ -36,13 +37,13 @@ func TestPageCursorOfADeletedRowIsNotFound(t *testing.T) {
 	ctx := context.Background()
 	gone := uuid.New()
 
-	_, _, err := search.Search(ctx, f.p, SearchQuery{Text: "hello", Before: &gone, Limit: 5})
+	_, _, err := search.Search(ctx, f.p, search.SearchQuery{Text: "hello", Before: &gone, Limit: 5})
 	requireStatus(t, err, http.StatusNotFound)
-	_, _, err = search.Mentions(ctx, f.p, InboxQuery{User: f.u.ID, Before: &gone, Limit: 5})
+	_, _, err = search.Mentions(ctx, f.p, search.InboxQuery{User: f.u.ID, Before: &gone, Limit: 5})
 	requireStatus(t, err, http.StatusNotFound)
 	_, err = saved.ListSaved(ctx, f.p, f.u.ID, nil, &gone, 5)
 	requireStatus(t, err, http.StatusNotFound)
-	_, err = forum.ListForumPostsFiltered(ctx, f.p, f.c.ID, forum.PostFilter{Sort: "newest"}, HistoryQuery{Limit: 5, Before: &gone})
+	_, err = forum.ListForumPostsFiltered(ctx, f.p, f.c.ID, forum.PostFilter{Sort: "newest"}, core.HistoryQuery{Limit: 5, Before: &gone})
 	requireStatus(t, err, http.StatusNotFound)
 
 	h := &Handler{DB: f.p, Events: &events.Recorder{}}
@@ -50,7 +51,7 @@ func TestPageCursorOfADeletedRowIsNotFound(t *testing.T) {
 	requireStatus(t, err, http.StatusNotFound)
 
 	// A cursor that exists still pages.
-	if _, _, err := search.Search(ctx, f.p, SearchQuery{Text: "hello", Before: &f.m, Limit: 5}); err != nil {
+	if _, _, err := search.Search(ctx, f.p, search.SearchQuery{Text: "hello", Before: &f.m, Limit: 5}); err != nil {
 		t.Fatalf("search with a live cursor: %v", err)
 	}
 	if _, err := saved.SaveMessage(ctx, f.p, f.u.ID, f.m, nil); err != nil {
@@ -75,7 +76,7 @@ func TestReplyToARootDeletedMeanwhileIsAnInputError(t *testing.T) {
 	if _, err := f.p.Exec(ctx, `DELETE FROM messages WHERE id = $1`, f.m); err != nil {
 		t.Fatal(err)
 	}
-	_, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "late reply", ParentID: &f.m})
+	_, err := messages.CreateMessage(ctx, f.p, messages.NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "late reply", ParentID: &f.m})
 	requireStatus(t, err, http.StatusBadRequest)
 	chattest.RequireError(t, err, "parent message not found")
 }
@@ -89,7 +90,7 @@ func TestResolveAndDeleteReportStates(t *testing.T) {
 	if err := f.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('reporter_two', 'Reporter', 'x') RETURNING id`).Scan(&reporter); err != nil {
 		t.Fatal(err)
 	}
-	id, err := reports.FileReport(ctx, f.p, NewReport{Reporter: reporter, MessageID: f.m, Category: "spam"})
+	id, err := reports.FileReport(ctx, f.p, reports.NewReport{Reporter: reporter, MessageID: f.m, Category: "spam"})
 	if err != nil {
 		t.Fatal(err)
 	}

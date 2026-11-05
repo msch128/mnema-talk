@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -16,16 +16,16 @@ type fakeLobby struct {
 	err    error
 }
 
-func (f *fakeLobby) Open(_ context.Context, _, lobby uuid.UUID) (*chat.ChannelInfo, error) {
+func (f *fakeLobby) Open(_ context.Context, _, lobby uuid.UUID) (*core.ChannelInfo, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
 	f.opened = append(f.opened, lobby)
-	return &chat.ChannelInfo{ID: f.talk, Type: chat.ChannelTypeVoice}, nil
+	return &core.ChannelInfo{ID: f.talk, Type: core.ChannelTypeVoice}, nil
 }
 
-func lobbyRoom() *chat.ChannelInfo {
-	return &chat.ChannelInfo{ID: uuid.New(), Type: chat.ChannelTypeVoice, IsLobby: true}
+func lobbyRoom() *core.ChannelInfo {
+	return &core.ChannelInfo{ID: uuid.New(), Type: core.ChannelTypeVoice, IsLobby: true}
 }
 
 func TestJoiningALobbyOpensATalkAndNeverSeatsTheMemberInTheLobby(t *testing.T) {
@@ -48,7 +48,7 @@ func TestJoiningALobbyOpensATalkAndNeverSeatsTheMemberInTheLobby(t *testing.T) {
 		t.Fatalf("events: %v", got)
 	}
 	// The client then joins the new Talk like any other.
-	h.joinVoice(c, &chat.ChannelInfo{ID: lobby.talk, Type: chat.ChannelTypeVoice})
+	h.joinVoice(c, &core.ChannelInfo{ID: lobby.talk, Type: core.ChannelTypeVoice})
 	if !inRoom(h, lobby.talk, c.User.ID) || inRoom(h, room.ID, c.User.ID) {
 		t.Fatal("the member is in the new Talk and only there")
 	}

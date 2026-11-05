@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/pion/webrtc/v4"
@@ -18,7 +18,7 @@ import (
 //
 // Another connection of the same user in the same room is told
 // "joined_elsewhere"; one in a different room keeps its seat.
-func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
+func (h *Hub) joinVoice(c *Client, ch *core.ChannelInfo) {
 	h.seatVoice(c, ch, joinMode{evictReason: kickJoinedElsewhere})
 }
 
@@ -28,7 +28,7 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 // "voice_taken_over" instead of taking the voice back. A resume never fails
 // because of the user's own stale socket (a network flap): only a takeover
 // leaves the mark that refuses it.
-func (h *Hub) resumeVoice(c *Client, ch *chat.ChannelInfo) {
+func (h *Hub) resumeVoice(c *Client, ch *core.ChannelInfo) {
 	h.seatVoice(c, ch, joinMode{evictReason: kickJoinedElsewhere, resume: true})
 }
 
@@ -43,7 +43,7 @@ type joinMode struct {
 // takeOverVoice is a join the user confirmed to move their voice here: once
 // c is seated, every other connection of the user leaves voice (in this room
 // or any other) with "voice_taken_over". Their sockets stay up.
-func (h *Hub) takeOverVoice(c *Client, ch *chat.ChannelInfo) {
+func (h *Hub) takeOverVoice(c *Client, ch *core.ChannelInfo) {
 	// Without c.voiceMu: the others' voiceMu is taken one at a time below,
 	// and two takeovers that hold their own would wait on each other.
 	if h.seatVoice(c, ch, joinMode{evictReason: kickTakenOver}) {
@@ -59,7 +59,7 @@ const (
 
 // seatVoice is the join behind joinVoice, takeOverVoice and resumeVoice. It
 // reports whether c ended up seated.
-func (h *Hub) seatVoice(c *Client, ch *chat.ChannelInfo, mode joinMode) bool {
+func (h *Hub) seatVoice(c *Client, ch *core.ChannelInfo, mode joinMode) bool {
 	c.voiceMu.Lock()
 	defer c.voiceMu.Unlock()
 	if c.closed.Load() {
@@ -219,7 +219,7 @@ type voiceSeat struct {
 
 // takeSeat records c in ch's room. It refuses (telling the client) when the
 // hub is closing or the room is full.
-func (h *Hub) takeSeat(c *Client, ch *chat.ChannelInfo, rejoin bool) (voiceSeat, bool) {
+func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo, rejoin bool) (voiceSeat, bool) {
 	key := voiceKey{c.User.ID, ch.ID}
 	bypass := h.mayExceedLimit(c, ch) // before h.mu: it asks the permission cache
 	h.mu.Lock()
@@ -252,7 +252,7 @@ func (h *Hub) takeSeat(c *Client, ch *chat.ChannelInfo, rejoin bool) (voiceSeat,
 // mayExceedLimit reports whether c may take a seat in ch beyond its user
 // limit: Disconnect members in that Talk (Administrators and the Owner hold
 // every permission). Only asked for a Talk that has a limit.
-func (h *Hub) mayExceedLimit(c *Client, ch *chat.ChannelInfo) bool {
+func (h *Hub) mayExceedLimit(c *Client, ch *core.ChannelInfo) bool {
 	if ch.UserLimit <= 0 {
 		return false
 	}
@@ -260,7 +260,7 @@ func (h *Hub) mayExceedLimit(c *Client, ch *chat.ChannelInfo) bool {
 	return ok && snap != nil && c.can(snap, ch.ID, perm.DisconnectMembers)
 }
 
-func (h *Hub) isVoiceRoomFull(ch *chat.ChannelInfo, userID uuid.UUID) bool {
+func (h *Hub) isVoiceRoomFull(ch *core.ChannelInfo, userID uuid.UUID) bool {
 	if ch.UserLimit <= 0 {
 		return false
 	}

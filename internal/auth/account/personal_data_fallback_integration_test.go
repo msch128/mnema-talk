@@ -5,7 +5,7 @@ package account_test
 import (
 	"github.com/msch128/mnema-talk/internal/auth/account"
 	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/chat/account"
+	chataccount "github.com/msch128/mnema-talk/internal/chat/account"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/discordimport"
 	"github.com/msch128/mnema-talk/internal/emoji"
@@ -20,7 +20,7 @@ import (
 // they need the same domain registry the server installs.
 func init() {
 	r := &userdata.Registry{}
-	account.RegisterAccountData(r)
+	chataccount.RegisterAccountData(r)
 	later.RegisterAccountData(r)
 	communityevents.RegisterAccountData(r)
 	push.RegisterAccountData(r)

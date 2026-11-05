@@ -27,7 +27,7 @@ func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
 // @Param content formData string false "Optional caption." maxlength(4000)
 // @Param parent_id formData string false "Thread root message ID (reply in a thread)." Format(uuid)
 // @Param reply_to_id formData string false "Quoted message ID." Format(uuid)
-// @Success 201 {object} chat.Message "Created message."
+// @Success 201 {object} core.Message "Created message."
 // @Failure 400 {object} httpx.DiscordError "Invalid form body (50035)."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
 // @Failure 403 {object} httpx.DiscordError "Missing Permissions (50013)."

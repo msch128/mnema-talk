@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -55,7 +55,7 @@ func TestWebhookStandsOnItsOwn(t *testing.T) {
 		t.Fatalf("create: %d %s", res.status, res.body)
 	}
 	body, ct := multipartBody(t, map[string]any{"content": "chart", "allowed_mentions": map[string]any{"parse": []string{"everyone"}}}, map[string][]byte{"c.png": png1x1})
-	var m chat.Message
+	var m core.Message
 	res = a.exec(h.path+"?wait=true", body, map[string]string{"Content-Type": ct})
 	res.decode(t, &m)
 	if res.status != http.StatusOK || len(m.Attachments) != 1 {

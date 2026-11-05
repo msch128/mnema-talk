@@ -112,18 +112,18 @@ func TestSortOrderBeyondTheColumnIsRefused(t *testing.T) {
 	if _, err := channels.CreateCategory(ctx, f.p, "big", 3_000_000_000); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("category: %v", err)
 	}
-	if _, err := channels.CreateChannelWithStage(ctx, f.p, nil, "big", ChannelTypeText, "", -3_000_000_000, false); apiStatus(err) != http.StatusBadRequest {
+	if _, err := channels.CreateChannelWithStage(ctx, f.p, nil, "big", core.ChannelTypeText, "", -3_000_000_000, false); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("channel: %v", err)
 	}
-	cat, err := channels.CreateCategory(ctx, f.p, "ok", MaxSortOrder)
+	cat, err := channels.CreateCategory(ctx, f.p, "ok", channels.MaxSortOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = channels.ApplyLayout(ctx, f.p, []CategoryOrder{{ID: cat.ID, SortOrder: 3_000_000_000}}, nil)
+	err = channels.ApplyLayout(ctx, f.p, []channels.CategoryOrder{{ID: cat.ID, SortOrder: 3_000_000_000}}, nil)
 	if apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("category order: %v", err)
 	}
-	err = channels.ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: f.c.ID, SortOrder: 3_000_000_000}})
+	err = channels.ApplyLayout(ctx, f.p, nil, []channels.ChannelPlacement{{ID: f.c.ID, SortOrder: 3_000_000_000}})
 	if apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("channel placement: %v", err)
 	}
@@ -146,7 +146,7 @@ func TestChannelInADeletedCategoryIsRefusedNotAFailure(t *testing.T) {
 	}
 	done := make(chan error, 1)
 	go func() {
-		_, err := channels.CreateChannelWithStage(ctx, f.p, &cat.ID, "late", ChannelTypeText, "", 0, false)
+		_, err := channels.CreateChannelWithStage(ctx, f.p, &cat.ID, "late", core.ChannelTypeText, "", 0, false)
 		done <- err
 	}()
 	waitForBlockedStatement(t, f.p)
@@ -170,7 +170,7 @@ func TestDeletingACategoryKeepsRoleAndMemberOverwrites(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ch, err := channels.CreateChannelWithStage(ctx, f.p, &cat.ID, "inside", ChannelTypeText, "", 0, false)
+	ch, err := channels.CreateChannelWithStage(ctx, f.p, &cat.ID, "inside", core.ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +203,7 @@ func TestFavouritesReportOnlyWhatChanged(t *testing.T) {
 	ctx := context.Background()
 	var dms []uuid.UUID
 	for _, name := range []string{"fav_a", "fav_b", "fav_c"} {
-		id, _, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{newMember(t, f, name)}})
+		id, _, err := dm.CreateDM(ctx, f.p, dm.NewDM{Creator: f.u.ID, Others: []uuid.UUID{newMember(t, f, name)}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -244,7 +244,7 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
 	bob, carol := newMember(t, f, "lock_bob"), newMember(t, f, "lock_carol")
-	group, _, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob, carol}})
+	group, _, err := dm.CreateDM(ctx, f.p, dm.NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob, carol}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +290,7 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 		t.Fatal(err)
 	}
 	blocked(func() error {
-		_, _, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{erin, bob}})
+		_, _, err := dm.CreateDM(ctx, f.p, dm.NewDM{Creator: f.u.ID, Others: []uuid.UUID{erin, bob}})
 		return err
 	})
 }
