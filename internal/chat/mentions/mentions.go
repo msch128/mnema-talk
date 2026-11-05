@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/mention"
 )
@@ -55,14 +56,6 @@ type OnlineSource interface {
 // ParseMentions returns the lower-cased names mentioned in content, each once,
 // including the keywords "all" and "here" (see the mention package).
 func ParseMentions(content string) []string { return mention.Names(content) }
-
-// Why a user is mentioned (message_mentions.kind). A lower kind wins when a
-// user is reached more than one way.
-const (
-	MentionKindName  int16 = 0 // @username
-	MentionKindGroup int16 = 1 // @all, @here
-	MentionKindRole  int16 = 2 // @Role
-)
 
 // MentionedUser is a user a message notifies and why.
 type MentionedUser struct {

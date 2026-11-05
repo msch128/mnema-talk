@@ -41,9 +41,9 @@ type Member = core.Member
 
 const MentionAll = mentions.MentionAll
 const MentionHere = mentions.MentionHere
-const MentionKindGroup = mentions.MentionKindGroup
-const MentionKindName = mentions.MentionKindName
-const MentionKindRole = mentions.MentionKindRole
+const MentionKindGroup = core.MentionKindGroup
+const MentionKindName = core.MentionKindName
+const MentionKindRole = core.MentionKindRole
 
 type MentionPolicy = mentions.MentionPolicy
 type MentionRole = mentions.MentionRole

@@ -82,7 +82,7 @@ func addRoleMentions(ctx context.Context, q db.Querier, set MentionSet, roles []
 			continue
 		}
 		have[id] = true
-		set.Users = append(set.Users, MentionedUser{ID: id, Kind: MentionKindRole})
+		set.Users = append(set.Users, MentionedUser{ID: id, Kind: core.MentionKindRole})
 	}
 	return set, nil
 }
