@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import type { Page, Locator } from '@playwright/test'
 
 // The invite-only sign-up allows ten registrations an hour from one address and
@@ -97,10 +97,20 @@ export function trackPeerConnections(): void {
   localStorage.setItem('mnema_noise', 'off')
   const Native = window.RTCPeerConnection
   window.__pcs = []
+  window.__pcTimings = []
   window.RTCPeerConnection = class extends Native {
     constructor(...args: ConstructorParameters<typeof RTCPeerConnection>) {
       super(...args)
       window.__pcs.push(this)
+      // Milliseconds from creation, per milestone: told apart because a Firefox connection reaches
+      // "connected" within ms while its ICE gathering only completes after ~11 s (seen in CI server logs).
+      const t0 = performance.now()
+      const timing: Record<string, number> = {}
+      window.__pcTimings.push(timing)
+      const mark = (name: string) => { timing[name] ??= Math.round(performance.now() - t0) }
+      this.addEventListener('iceconnectionstatechange', () => { if (this.iceConnectionState === 'connected') mark('iceConnected') })
+      this.addEventListener('connectionstatechange', () => { if (this.connectionState === 'connected') mark('connected') })
+      this.addEventListener('icegatheringstatechange', () => { if (this.iceGatheringState === 'complete') mark('gatheringComplete') })
     }
   }
 }
@@ -137,6 +147,9 @@ export async function expectCallConnected(page: Page, timeout: number) {
   const state = () => page.evaluate(() => window.__pcs.at(-1)?.connectionState)
   try {
     await expect.poll(state, { timeout }).toBe('connected')
+    // Setup times per browser in the CI log, so a slow join shows up as a number before it shows up as a timeout.
+    const timing = await page.evaluate(() => window.__pcTimings.at(-1)).catch(() => undefined)
+    console.log(`[call timing] ${test.info().project.name} ${test.info().title}: ${JSON.stringify(timing)}`)
   } catch (err) {
     const summary = await callSummary(page).catch((e: unknown) => `unavailable: ${String(e)}`)
     throw new Error(`call not connected within ${timeout} ms: ${summary}\n${String(err)}`, { cause: err })
