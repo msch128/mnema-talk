@@ -38,7 +38,7 @@ func newLayoutWorld(t *testing.T, cats, chans int) layoutWorld {
 		w.cats = append(w.cats, c.ID)
 	}
 	for i := 0; i < chans; i++ {
-		c, err := CreateChannel(context.Background(), p, nil, fmt.Sprintf("ch-%d", i), ChannelTypeText, "", i)
+		c, err := CreateChannelWithStage(context.Background(), p, nil, fmt.Sprintf("ch-%d", i), ChannelTypeText, "", i, false)
 		if err != nil {
 			t.Fatal(err)
 		}

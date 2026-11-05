@@ -141,13 +141,9 @@ func lockCategory(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) error {
 	return err
 }
 
-func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int) (*Channel, error) {
-	return CreateChannelWithStage(ctx, p, categoryID, name, chType, topic, sortOrder, false)
-}
-
-// CreateChannelWithStage is CreateChannel that can make the new channel a
-// Stage in the same transaction, so a request that cannot be a Stage (a text
-// channel) creates nothing.
+// CreateChannelWithStage adds a channel to categoryID (or to no category) and,
+// with asStage, makes it a Stage in the same transaction, so a request that
+// cannot be a Stage (a text channel) creates nothing.
 func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int, asStage bool) (*Channel, error) {
 	name, topic, err := cleanChannelInputs(name, topic, chType)
 	if err != nil {

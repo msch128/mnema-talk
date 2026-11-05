@@ -59,7 +59,7 @@ func newTalksWorld(t *testing.T) *talksWorld {
 		t.Fatal(err)
 	}
 	w.category = cat.ID
-	w.lobby, err = CreateChannel(ctx, p, &cat.ID, "Create a Talk", ChannelTypeVoice, "", 5)
+	w.lobby, err = CreateChannelWithStage(ctx, p, &cat.ID, "Create a Talk", ChannelTypeVoice, "", 5, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,14 +179,14 @@ func TestOpeningATalkCopiesTheLobbyAndNumbersFromOne(t *testing.T) {
 func TestOnlyALobbyOpensTalksAndOnlyUpToTheCap(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	plain, err := CreateChannel(ctx, w.p, &w.category, "Plain", ChannelTypeVoice, "", 9)
+	plain, err := CreateChannelWithStage(ctx, w.p, &w.category, "Plain", ChannelTypeVoice, "", 9, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := w.mgr.Open(ctx, w.alice.ID, plain.ID); !errors.Is(err, errNotLobby) {
 		t.Fatalf("a plain Talk opens none: %v", err)
 	}
-	text, _ := CreateChannel(ctx, w.p, nil, "text", ChannelTypeText, "", 0)
+	text, _ := CreateChannelWithStage(ctx, w.p, nil, "text", ChannelTypeText, "", 0, false)
 	if err := SetLobby(ctx, w.p, text.ID, true); err == nil {
 		t.Fatal("a text channel cannot be a lobby")
 	}
@@ -424,7 +424,7 @@ func TestAnInviteCardGrantsNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A Talk only Alice may see or join.
-	private, err := CreateChannel(ctx, w.p, nil, "Leads", ChannelTypeVoice, "", 1)
+	private, err := CreateChannelWithStage(ctx, w.p, nil, "Leads", ChannelTypeVoice, "", 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -630,7 +630,7 @@ func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
 	if err := h.inviteToTalk(rec(), talkRequest(w.alice, body, map[string]string{"id": uuid.NewString()})); err == nil {
 		t.Fatal("unknown Talk")
 	}
-	text, _ := CreateChannel(ctx, w.p, nil, "plain-text", ChannelTypeText, "", 0)
+	text, _ := CreateChannelWithStage(ctx, w.p, nil, "plain-text", ChannelTypeText, "", 0, false)
 	notDM := `{"conversation_id":"` + text.ID.String() + `"}`
 	if err := h.inviteToTalk(rec(), talkRequest(w.alice, notDM, id)); !errors.Is(err, errChannelNotFound) {
 		t.Fatalf("a channel is no conversation: %v", err)

@@ -220,7 +220,7 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 			return ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: f.c.ID, SortOrder: 2}})
 		}},
 		{"duplicate shift", "channels", "UPDATE", func(f chatFixture) error {
-			_, err := CreateChannel(ctx, f.p, nil, "follower", ChannelTypeText, "", 1)
+			_, err := CreateChannelWithStage(ctx, f.p, nil, "follower", ChannelTypeText, "", 1, false)
 			if err != nil {
 				return err
 			}

@@ -30,7 +30,7 @@ func setupForumEnv(t *testing.T) (chatFixture, *Handler, *auth.User) {
 
 func createTestForum(t *testing.T, f chatFixture) *Channel {
 	t.Helper()
-	ch, err := CreateChannel(context.Background(), f.p, nil, "general-forum", ChannelTypeForum, "Forum topic", 0)
+	ch, err := CreateChannelWithStage(context.Background(), f.p, nil, "general-forum", ChannelTypeForum, "Forum topic", 0, false)
 	if err != nil {
 		t.Fatalf("create forum channel: %v", err)
 	}

@@ -273,7 +273,7 @@ func TestChannelEditsAreAllOrNothing(t *testing.T) {
 		t.Fatalf("channels named text-stage = %d, %v; want none", n, err)
 	}
 
-	voice, err := CreateChannel(ctx, f.p, nil, "talk", ChannelTypeVoice, "", 0)
+	voice, err := CreateChannelWithStage(ctx, f.p, nil, "talk", ChannelTypeVoice, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

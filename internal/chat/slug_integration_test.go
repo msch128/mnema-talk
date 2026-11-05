@@ -23,7 +23,7 @@ func slugWorld(t *testing.T) (context.Context, *db.Pool) {
 
 func mustCreate(t *testing.T, ctx context.Context, p *db.Pool, name string, typ ChannelType) *Channel {
 	t.Helper()
-	ch, err := CreateChannel(ctx, p, nil, name, typ, "", 0)
+	ch, err := CreateChannelWithStage(ctx, p, nil, name, typ, "", 0, false)
 	if err != nil {
 		t.Fatalf("create %q: %v", name, err)
 	}
@@ -112,7 +112,7 @@ func TestChannelSlugsStayUniqueUnderConcurrentCreates(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if ch, err := CreateChannel(ctx, p, nil, "Same", ChannelTypeText, "", i); err == nil {
+			if ch, err := CreateChannelWithStage(ctx, p, nil, "Same", ChannelTypeText, "", i, false); err == nil {
 				slugs[i] = ch.Slug
 			}
 		}()

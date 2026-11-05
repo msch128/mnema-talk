@@ -18,7 +18,7 @@ import (
 func TestDeletingAChannelRemovesItsWebhookBotAccount(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	ch, err := CreateChannel(ctx, f.p, nil, "hooked", ChannelTypeText, "", 0)
+	ch, err := CreateChannelWithStage(ctx, f.p, nil, "hooked", ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestDeletingAChannelRemovesItsWebhookBotAccount(t *testing.T) {
 func TestDeletingAChannelReportsWebhookBotCleanupFailures(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	ch, err := CreateChannel(ctx, f.p, nil, "hooked-faults", ChannelTypeText, "", 0)
+	ch, err := CreateChannelWithStage(ctx, f.p, nil, "hooked-faults", ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
