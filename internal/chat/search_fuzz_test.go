@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 )
 
 // FuzzBuildSearchSQL checks that whatever the text and the filters are, the
@@ -130,7 +131,7 @@ func FuzzParseMentions(f *testing.F) {
 	}
 	f.Fuzz(func(t *testing.T, content string) {
 		seen := map[string]bool{}
-		for _, n := range ParseMentions(content) {
+		for _, n := range mentions.ParseMentions(content) {
 			if len(n) < 2 || len(n) > 32 || n != strings.ToLower(n) || seen[n] || strings.HasSuffix(n, ".") || strings.HasSuffix(n, "-") {
 				t.Fatalf("bad mention %q from %q", n, content)
 			}

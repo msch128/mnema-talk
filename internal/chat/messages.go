@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -80,7 +81,7 @@ func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
 		ids[i] = m.ID
 	}
 	for _, load := range []func(context.Context, *db.Pool, []Message, map[uuid.UUID]int, []uuid.UUID) error{
-		loadAttachments, loadReactions, loadMentions, loadMentionRoles, loadPolls, loadForumPostDetails,
+		loadAttachments, loadReactions, loadMentions, mentions.LoadMentionRoles, loadPolls, loadForumPostDetails,
 	} {
 		if err := load(ctx, p, msgs, idx, ids); err != nil {
 			return err

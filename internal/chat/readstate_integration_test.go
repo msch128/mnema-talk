@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 )
 
 // A message that reaches the member several ways (by name, through a role,
@@ -37,7 +38,7 @@ func TestReadStatesCountAMessageAddressedSeveralWaysOnce(t *testing.T) {
 		Users: []MentionedUser{{ID: f.u.ID, Kind: MentionKindName}, {ID: f.u.ID, Kind: MentionKindRole}},
 		Roles: []uuid.UUID{role},
 	}
-	if err := saveMentionSet(ctx, f.p, reply, set); err != nil {
+	if err := mentions.SaveMentionSet(ctx, f.p, reply, set); err != nil {
 		t.Fatal(err)
 	}
 

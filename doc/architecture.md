@@ -620,7 +620,7 @@ with a `kind` (by name, `@all`/`@here`, through a role) and the mentioned roles
 in `message_role_mentions` (migration 0036), so a pill survives a role rename.
 Webhooks and bots mention roles too, subject to `allowed_mentions`. An author
 without the right to mention everyone notifies at most 50 members per message
-([`mentions_cap.go`](../internal/chat/mentions_cap.go)).
+([`mentions_cap.go`](../internal/chat/mentions/mentions_cap.go)).
 
 **Search.** `GET /api/search` runs trigram-indexed substring matching on
 message text (`pg_trgm`, one index since migration 0038) with filters (channel,

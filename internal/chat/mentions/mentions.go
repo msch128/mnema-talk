@@ -1,4 +1,4 @@
-package chat
+package mentions
 
 import (
 	"context"
@@ -176,9 +176,9 @@ func RecordMentions(ctx context.Context, q db.Querier, src OnlineSource, message
 	if src != nil {
 		online = src.OnlineUserIDs()
 	}
-	set, err := resolveMentionSet(ctx, q, content, authorID, online)
+	set, err := ResolveMentionSet(ctx, q, content, authorID, online)
 	if err != nil {
 		return err
 	}
-	return saveMentionSet(ctx, q, messageID, set)
+	return SaveMentionSet(ctx, q, messageID, set)
 }

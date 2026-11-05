@@ -2,6 +2,7 @@ package chat
 
 import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 )
 
 // Aliases for symbols that moved into sub-packages while internal/chat is split
@@ -29,6 +30,7 @@ const MaxChannelNameLen = core.MaxChannelNameLen
 const MaxForumTagEmojiLen = core.MaxForumTagEmojiLen
 const MaxForumTagNameLen = core.MaxForumTagNameLen
 const MaxForumTags = core.MaxForumTags
+const MaxMentionRecipients = mentions.MaxMentionRecipients
 const MaxMessageLen = core.MaxMessageLen
 const MaxPostTags = core.MaxPostTags
 const MaxPostTitleLen = core.MaxPostTitleLen
@@ -36,7 +38,19 @@ const MaxTopicLen = core.MaxTopicLen
 
 type MediaAttachment = core.MediaAttachment
 type Member = core.Member
+
+const MentionAll = mentions.MentionAll
+const MentionHere = mentions.MentionHere
+const MentionKindGroup = mentions.MentionKindGroup
+const MentionKindName = mentions.MentionKindName
+const MentionKindRole = mentions.MentionKindRole
+
+type MentionPolicy = mentions.MentionPolicy
+type MentionRole = mentions.MentionRole
+type MentionSet = mentions.MentionSet
+type MentionedUser = mentions.MentionedUser
 type Message = core.Message
+type OnlineSource = mentions.OnlineSource
 type Poll = core.Poll
 type PollOption = core.PollOption
 type ReactionSummary = core.ReactionSummary
