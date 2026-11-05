@@ -41,7 +41,9 @@ const MaxMentionRecipients = mentions.MaxMentionRecipients
 const MaxMessageLen = core.MaxMessageLen
 const MaxPostTags = core.MaxPostTags
 const MaxPostTitleLen = core.MaxPostTitleLen
+const MaxSlowModeSeconds = core.MaxSlowModeSeconds
 const MaxTopicLen = core.MaxTopicLen
+const MaxUnansweredDMMessages = core.MaxUnansweredDMMessages
 
 type MediaAttachment = core.MediaAttachment
 type Member = core.Member

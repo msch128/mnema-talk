@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -101,7 +102,7 @@ func removeDMMember(ctx context.Context, tx pgx.Tx, id, user uuid.UUID) ([]uuid.
 	if _, err := tx.Exec(ctx, `DELETE FROM channel_reads WHERE channel_id = $1 AND user_id = $2`, id, user); err != nil {
 		return nil, err
 	}
-	return DMMemberIDs(ctx, tx, id)
+	return core.DMMemberIDs(ctx, tx, id)
 }
 
 // deleteEmptyDM removes a conversation without members with its messages and

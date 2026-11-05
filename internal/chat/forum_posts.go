@@ -17,7 +17,7 @@ import (
 // CleanPostTitle validates and sanitizes a forum post title.
 func CleanPostTitle(title string) (string, error) {
 	if strings.TrimSpace(title) == "" {
-		return "", errPostTitleRequired
+		return "", core.ErrPostTitleRequired
 	}
 	return httpx.CleanText("title", title, MaxPostTitleLen, true)
 }

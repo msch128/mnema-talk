@@ -1,4 +1,4 @@
-package chat
+package core
 
 import (
 	"context"
@@ -19,10 +19,10 @@ const MaxUnansweredDMMessages = 2
 
 // errDMSend is the refusal of a direct message the rules do not allow. Whatever
 // the reason, the answer is the same text (see dm.go), so none can be probed.
-var errDMSend = httpx.ErrForbidden("Couldn't send this message.")
+var ErrDMSend = httpx.ErrForbidden("Couldn't send this message.")
 
 // errPostTitleRequired answers a forum post without a title.
-var errPostTitleRequired = httpx.ErrInvalidInput("title is required for forum posts")
+var ErrPostTitleRequired = httpx.ErrInvalidInput("title is required for forum posts")
 
 // DMMemberIDs lists the members of a conversation (empty if there is none).
 func DMMemberIDs(ctx context.Context, q db.Querier, id uuid.UUID) ([]uuid.UUID, error) {

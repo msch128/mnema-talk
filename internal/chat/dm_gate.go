@@ -39,7 +39,7 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 			return err
 		}
 	} else if kind == "forum" && (nm.Title == nil || *nm.Title == "") {
-		return errPostTitleRequired
+		return core.ErrPostTitleRequired
 	}
 	if nm.WebhookID == nil && !slowModeExempt(ctx) {
 		return enforceSlowMode(ctx, tx, nm.ChannelID, nm.UserID, seconds)
@@ -80,7 +80,7 @@ func loadDMState(ctx context.Context, tx pgx.Tx, id uuid.UUID) (dmState, error) 
 	if err != nil {
 		return st, fmt.Errorf("load direct message: %w", err)
 	}
-	st.members, err = DMMemberIDs(ctx, tx, id)
+	st.members, err = core.DMMemberIDs(ctx, tx, id)
 	return st, err
 }
 
@@ -89,7 +89,7 @@ func loadDMState(ctx context.Context, tx pgx.Tx, id uuid.UUID) (dmState, error) 
 // errDMSend, which says nothing about why.
 func gateDM(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 	if nm.WebhookID != nil {
-		return errDMSend // webhooks and bots never write in a conversation
+		return core.ErrDMSend // webhooks and bots never write in a conversation
 	}
 	st, err := loadDMState(ctx, tx, nm.ChannelID)
 	if err != nil {
@@ -142,7 +142,7 @@ func checkDMReachable(ctx context.Context, tx pgx.Tx, sender uuid.UUID, others [
 		return fmt.Errorf("check direct message: %w", err)
 	}
 	if !on || active == 0 || (!group && (active != len(others) || blocked > 0)) {
-		return errDMSend
+		return core.ErrDMSend
 	}
 	return nil
 }

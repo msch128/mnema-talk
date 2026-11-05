@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 func TestDirectMessageOperationsReportDatabaseFailures(t *testing.T) {
@@ -50,7 +51,7 @@ func TestDirectMessageOperationsReportDatabaseFailures(t *testing.T) {
 			return err
 		},
 		"leave":      func() error { _, _, err := LeaveDM(ctx, chattest.DriftPool(t, f.p, broken), g, f.u.ID); return err },
-		"member ids": func() error { _, err := DMMemberIDs(ctx, chattest.DriftPool(t, f.p, broken), id); return err },
+		"member ids": func() error { _, err := core.DMMemberIDs(ctx, chattest.DriftPool(t, f.p, broken), id); return err },
 		"get policy": func() error {
 			_, err := GetDMPolicy(ctx, chattest.DriftPool(t, f.p, map[string]string{"users": `SELECT NULL::uuid AS id`}), f.u.ID)
 			return err
