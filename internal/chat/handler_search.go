@@ -102,28 +102,6 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// ReactionRequest is the body of POST /api/messages/{messageID}/reactions.
-type ReactionRequest struct {
-	// Emoji has no whitespace, control characters, '<' or '>'.
-	Emoji string `json:"emoji" maxLength:"32"`
-}
-
-// ReactionResult is the reaction summary after a toggle.
-type ReactionResult struct {
-	MessageID uuid.UUID `json:"message_id" format:"uuid"`
-	// ChannelID is the channel of the message.
-	ChannelID uuid.UUID         `json:"channel_id" format:"uuid"`
-	Reactions []ReactionSummary `json:"reactions"`
-}
-
-// Thread is a root message with a page of its replies.
-type Thread struct {
-	Root    *Message  `json:"root"`
-	Replies []Message `json:"replies"`
-	// Following: replies of this thread notify the caller. Servers before 1.1 do not send it.
-	Following bool `json:"following" binding:"optional"`
-}
-
 // SearchResult is one page of search hits.
 type SearchResult struct {
 	Messages []Message `json:"messages"`
