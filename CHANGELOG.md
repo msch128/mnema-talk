@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.9.8](https://github.com/msch128/mnema-talk/compare/v2.9.7...v2.9.8) (2026-11-05)
+
+
+### Code Refactoring
+
+* move the account export and erasure into auth/account ([#710](https://github.com/msch128/mnema-talk/issues/710)) ([41152a3](https://github.com/msch128/mnema-talk/commit/41152a3d57ca870750936c2cedd2ae40a58fba5a))
+* move the account export and erasure into auth/account ([#710](https://github.com/msch128/mnema-talk/issues/710)) ([41152a3](https://github.com/msch128/mnema-talk/commit/41152a3d57ca870750936c2cedd2ae40a58fba5a))
+
 ## [2.9.7](https://github.com/msch128/mnema-talk/compare/v2.9.6...v2.9.7) (2026-11-05)
 
 
