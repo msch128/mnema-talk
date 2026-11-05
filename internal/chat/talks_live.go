@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
@@ -159,7 +160,7 @@ func (m *TalkManager) remove(ctx context.Context, ch uuid.UUID, reason string) e
 	if err != nil {
 		return fmt.Errorf("look up temporary Talk: %w", err)
 	}
-	keys, err := DeleteChannel(ctx, m.DB, ch)
+	keys, err := channels.DeleteChannel(ctx, m.DB, ch)
 	if err != nil {
 		return err
 	}

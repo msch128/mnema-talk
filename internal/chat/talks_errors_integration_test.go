@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
@@ -41,13 +42,13 @@ func TestATransientLookupErrorDoesNotCountAsAnAlreadyRemovedTalk(t *testing.T) {
 func TestFillTalkFieldsReportsFailures(t *testing.T) {
 	w := newTalksWorld(t)
 	ch := &Channel{ID: w.lobby.ID}
-	if err := FillTalkFields(canceledContext(), w.p, ch); err == nil {
+	if err := channels.FillTalkFields(canceledContext(), w.p, ch); err == nil {
 		t.Fatal("a failed query was swallowed")
 	}
-	if err := FillTalkFields(context.Background(), w.p, ch); err != nil || !ch.IsLobby {
+	if err := channels.FillTalkFields(context.Background(), w.p, ch); err != nil || !ch.IsLobby {
 		t.Fatalf("err = %v, lobby = %v", err, ch.IsLobby)
 	}
-	if err := FillTalkFields(context.Background(), w.p, &Channel{ID: uuid.New()}); !errors.Is(err, core.ErrChannelNotFound) {
+	if err := channels.FillTalkFields(context.Background(), w.p, &Channel{ID: uuid.New()}); !errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("err = %v; want not found", err)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 )
 
 // A handler built without a permission service (unit tests of other
@@ -14,7 +15,7 @@ func TestHandlerWithoutPermissionsLimitsNothing(t *testing.T) {
 	r := httptest.NewRequest("GET", "/", nil)
 	cats := []Category{{ID: uuid.New(), Channels: []Channel{{ID: uuid.New()}}}}
 	uncat := []Channel{{ID: uuid.New()}}
-	gotCats, gotUncat, err := visibleHierarchy(h.Perms, r, cats, uncat)
+	gotCats, gotUncat, err := channels.VisibleHierarchy(h.Perms, r, cats, uncat)
 	if err != nil || len(gotCats) != 1 || len(gotCats[0].Channels) != 1 || len(gotUncat) != 1 {
 		t.Fatalf("hierarchy: %+v %+v %v", gotCats, gotUncat, err)
 	}

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
@@ -36,7 +37,7 @@ func TestLayoutAndCategoryChecks(t *testing.T) {
 		{"into a restricted category", layout(ChannelPlacement{ID: inPlain, CategoryID: ptr(restricted)}), member, false},
 		{"the Owner moves anything", layout(ChannelPlacement{ID: inRestricted, CategoryID: ptr(plain)}), owner, true},
 	} {
-		if err := checkLayout(snap, c.sub, c.req); (err == nil) != c.ok {
+		if err := channels.CheckLayout(snap, c.sub, c.req); (err == nil) != c.ok {
 			t.Errorf("%s: %v", c.what, err)
 		}
 	}
@@ -53,7 +54,7 @@ func TestLayoutAndCategoryChecks(t *testing.T) {
 		{"restricted category, plain member", restricted, member, false},
 		{"restricted category, Owner", restricted, owner, true},
 	} {
-		if err := checkWholeCategory(snap, c.sub, c.id); (err == nil) != c.ok {
+		if err := channels.CheckWholeCategory(snap, c.sub, c.id); (err == nil) != c.ok {
 			t.Errorf("%s: %v", c.what, err)
 		}
 	}

@@ -1,9 +1,10 @@
-package chat
+package channels
 
 import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -11,10 +12,10 @@ import (
 // ViewAsChannel is a channel of the preview: what a member holding only
 // @everyone and the previewed role would see and may do there.
 type ViewAsChannel struct {
-	ID     uuid.UUID   `json:"id" format:"uuid"`
-	Number int64       `json:"number"`
-	Name   string      `json:"name" maxLength:"64"`
-	Type   ChannelType `json:"type"`
+	ID     uuid.UUID        `json:"id" format:"uuid"`
+	Number int64            `json:"number"`
+	Name   string           `json:"name" maxLength:"64"`
+	Type   core.ChannelType `json:"type"`
 	// CanJoin is true for a Talk the previewed member may connect to; always
 	// false for a text channel.
 	CanJoin bool `json:"can_join"`
@@ -51,7 +52,7 @@ type ViewAsRole struct {
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Role ID (@everyone included)." Format(uuid)
-// @Success 200 {object} ViewAsRole "Preview."
+// @Success 200 {object} channels.ViewAsRole "Preview."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage roles permission."
@@ -60,12 +61,12 @@ type ViewAsRole struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/roles/{id}/view-as [get]
-func (h *Handler) viewAsRole(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ViewAsRole(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	snap, err := h.Perms.Snapshot(r.Context())
+	snap, err := a.Guard.Perms.Snapshot(r.Context())
 	if err != nil {
 		return err
 	}
@@ -73,13 +74,13 @@ func (h *Handler) viewAsRole(w http.ResponseWriter, r *http.Request) error {
 	if !ok {
 		return httpx.ErrNotFound("role not found")
 	}
-	cats, uncat, err := GetServerHierarchy(r.Context(), h.DB)
+	cats, uncat, err := GetServerHierarchy(r.Context(), a.DB)
 	if err != nil {
 		return err
 	}
 	// Start from what the caller sees: the preview is an intersection, so it
 	// can never reveal a channel or category the caller has no access to.
-	cats, uncat, err = visibleHierarchy(h.Perms, r, cats, uncat)
+	cats, uncat, err = VisibleHierarchy(a.Guard.Perms, r, cats, uncat)
 	if err != nil {
 		return err
 	}
@@ -104,7 +105,7 @@ type roleView struct {
 }
 
 // channels keeps the channels the previewed member can view.
-func (v *roleView) channels(in []Channel) []ViewAsChannel {
+func (v *roleView) channels(in []core.Channel) []ViewAsChannel {
 	out := make([]ViewAsChannel, 0, len(in))
 	for _, ch := range in {
 		p := v.snap.Channel(v.sub, ch.ID)
@@ -113,7 +114,7 @@ func (v *roleView) channels(in []Channel) []ViewAsChannel {
 		}
 		out = append(out, ViewAsChannel{
 			ID: ch.ID, Number: ch.Number, Name: ch.Name, Type: ch.Type,
-			CanJoin:     ch.Type == ChannelTypeVoice && p.Has(perm.Connect),
+			CanJoin:     ch.Type == core.ChannelTypeVoice && p.Has(perm.Connect),
 			Permissions: channelPermissionKeys(p),
 		})
 	}

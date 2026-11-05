@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/testutil/presets"
 )
@@ -12,7 +13,7 @@ import (
 func TestClientSlowModePresetsPassValidation(t *testing.T) {
 	for _, s := range presets.Load(t).SlowModeSeconds {
 		t.Run(fmt.Sprint(s), func(t *testing.T) {
-			if _, _, err := validateChannelEdit(nil, nil, nil, &s); err != nil {
+			if _, _, err := channels.ValidateChannelEdit(nil, nil, nil, &s); err != nil {
 				t.Errorf("slow mode %d s: %v", s, err)
 			}
 		})

@@ -6,6 +6,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/testutil/pgfault"
 )
@@ -15,7 +16,7 @@ import (
 func TestDeleteCategoryReportsEveryDatabaseFailure(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	cat, err := CreateCategory(ctx, f.p, "kept", 0)
+	cat, err := channels.CreateCategory(ctx, f.p, "kept", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +27,7 @@ func TestDeleteCategoryReportsEveryDatabaseFailure(t *testing.T) {
 		"DELETE FROM categories",
 	} {
 		pool := &db.Pool{Pool: pgfault.Pool(t, f.p.Pool, &pgfault.Tracer{Query: query})}
-		if err := DeleteCategory(ctx, pool, cat.ID); err == nil {
+		if err := channels.DeleteCategory(ctx, pool, cat.ID); err == nil {
 			t.Fatalf("%q failing: the deletion reported success", query)
 		}
 	}

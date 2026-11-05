@@ -16,6 +16,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
@@ -38,7 +39,7 @@ type chatFixture struct {
 func newChatFixture(t *testing.T) chatFixture {
 	t.Helper()
 	p, u := chattest.NewMember(t)
-	c, err := CreateChannelWithStage(context.Background(), p, nil, "coverage-chat", ChannelTypeText, "", 0, false)
+	c, err := channels.CreateChannelWithStage(context.Background(), p, nil, "coverage-chat", ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,19 +61,22 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 	}{
 		{"load channel", func() error { _, e := core.LoadChannel(ctx, f.p, f.c.ID); return e }},
 		{"load message ref", func() error { _, e := core.LoadMessageRef(ctx, f.p, f.m); return e }},
-		{"hierarchy", func() error { _, _, e := GetServerHierarchy(ctx, f.p); return e }},
-		{"category creation", func() error { _, e := CreateCategory(ctx, f.p, "new", 0); return e }},
+		{"hierarchy", func() error { _, _, e := channels.GetServerHierarchy(ctx, f.p); return e }},
+		{"category creation", func() error { _, e := channels.CreateCategory(ctx, f.p, "new", 0); return e }},
 		{"channel category check", func() error {
-			_, e := CreateChannelWithStage(ctx, f.p, &f.c.ID, "new", ChannelTypeText, "", 0, false)
+			_, e := channels.CreateChannelWithStage(ctx, f.p, &f.c.ID, "new", ChannelTypeText, "", 0, false)
 			return e
 		}},
 		{"channel creation", func() error {
-			_, e := CreateChannelWithStage(ctx, f.p, nil, "new", ChannelTypeText, "", 0, false)
+			_, e := channels.CreateChannelWithStage(ctx, f.p, nil, "new", ChannelTypeText, "", 0, false)
 			return e
 		}},
-		{"category deletion", func() error { return DeleteCategory(ctx, f.p, f.c.ID) }},
-		{"channel update", func() error { _, e := EditChannel(ctx, f.p, f.c.ID, &name, &topic, &limit, nil, nil, nil); return e }},
-		{"category rename", func() error { _, err := RenameCategory(ctx, f.p, f.c.ID, name); return err }},
+		{"category deletion", func() error { return channels.DeleteCategory(ctx, f.p, f.c.ID) }},
+		{"channel update", func() error {
+			_, e := channels.EditChannel(ctx, f.p, f.c.ID, &name, &topic, &limit, nil, nil, nil)
+			return e
+		}},
+		{"category rename", func() error { _, err := channels.RenameCategory(ctx, f.p, f.c.ID, name); return err }},
 		{"members", func() error { _, e := core.GetAllMembers(ctx, f.p); return e }},
 		{"resolve mentions", func() error { _, e := mentions.ResolveMentionSet(ctx, f.p, "@all", f.u.ID, nil); return e }},
 		{"clear mentions", func() error { return mentions.SaveMentionSet(ctx, f.p, f.m, byName(nil)) }},
@@ -116,9 +120,9 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 	}
 	// Acquisition failure must prevent partially executed transactions.
 	for _, run := range []func() error{
-		func() error { _, e := DeleteChannel(ctx, f.p, f.c.ID); return e },
-		func() error { _, e := DuplicateChannel(ctx, f.p, f.c.ID); return e },
-		func() error { return ApplyLayout(ctx, f.p, nil, nil) },
+		func() error { _, e := channels.DeleteChannel(ctx, f.p, f.c.ID); return e },
+		func() error { _, e := channels.DuplicateChannel(ctx, f.p, f.c.ID); return e },
+		func() error { return channels.ApplyLayout(ctx, f.p, nil, nil) },
 		func() error {
 			_, e := messages.InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID}, nil)
 			return e
@@ -146,7 +150,7 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		name string
 		fn   handler
 	}{
-		{"list messages", h.messages().ListMessages}, {"create message", h.messages().CreateMessage}, {"edit message", h.messages().EditMessage}, {"delete message", h.messages().DeleteMessage}, {"toggle reaction", h.messages().ToggleReaction}, {"thread", h.messages().GetThread}, {"delete category", h.deleteCategory}, {"delete channel", h.deleteChannel}, {"duplicate channel", h.duplicateChannel}, {"update channel", h.updateChannel}, {"rename category", h.renameCategory},
+		{"list messages", h.messages().ListMessages}, {"create message", h.messages().CreateMessage}, {"edit message", h.messages().EditMessage}, {"delete message", h.messages().DeleteMessage}, {"toggle reaction", h.messages().ToggleReaction}, {"thread", h.messages().GetThread}, {"delete category", h.channels().DeleteCategory}, {"delete channel", h.channels().DeleteChannel}, {"duplicate channel", h.channels().DuplicateChannel}, {"update channel", h.channels().UpdateChannel}, {"rename category", h.channels().RenameCategory},
 	}
 	for _, c := range pathHandlers {
 		t.Run(c.name+" invalid path", func(t *testing.T) {
@@ -157,7 +161,7 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		name string
 		fn   handler
 	}{
-		{"create message", h.messages().CreateMessage}, {"edit message", h.messages().EditMessage}, {"reaction", h.messages().ToggleReaction}, {"create category", h.createCategory}, {"create channel", h.createChannel}, {"update channel", h.updateChannel}, {"rename category", h.renameCategory}, {"layout", h.applyLayout},
+		{"create message", h.messages().CreateMessage}, {"edit message", h.messages().EditMessage}, {"reaction", h.messages().ToggleReaction}, {"create category", h.channels().CreateCategory}, {"create channel", h.channels().CreateChannel}, {"update channel", h.channels().UpdateChannel}, {"rename category", h.channels().RenameCategory}, {"layout", h.channels().ApplyLayout},
 	}
 	for _, c := range decodeHandlers {
 		t.Run(c.name+" invalid JSON", func(t *testing.T) {
@@ -190,16 +194,16 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		{"thread root as cursor", h.messages().GetThread, "", "before=" + f.m.String(), valid, "message not found"},
 		{"number invalid", h.messages().GetMessageByNumber, "", "", map[string]string{"number": "bad"}, "invalid number"},
 		{"number absent", h.messages().GetMessageByNumber, "", "", map[string]string{"number": "99999"}, "message not found"},
-		{"category empty", h.createCategory, `{"name":""}`, "", valid, "name"},
-		{"category delete absent", h.deleteCategory, "", "", valid, "category not found"},
-		{"channel empty", h.createChannel, `{"name":""}`, "", valid, "name"},
-		{"channel delete absent", h.deleteChannel, "", "", map[string]string{"id": uuid.NewString()}, "channel not found"},
-		{"channel duplicate absent", h.duplicateChannel, "", "", map[string]string{"id": uuid.NewString()}, "channel not found"},
-		{"update bad topic", h.updateChannel, `{"topic":"` + strings.Repeat("a", 256) + `"}`, "", valid, "topic"},
-		{"rename bad name", h.renameCategory, `{"name":""}`, "", valid, "name"},
+		{"category empty", h.channels().CreateCategory, `{"name":""}`, "", valid, "name"},
+		{"category delete absent", h.channels().DeleteCategory, "", "", valid, "category not found"},
+		{"channel empty", h.channels().CreateChannel, `{"name":""}`, "", valid, "name"},
+		{"channel delete absent", h.channels().DeleteChannel, "", "", map[string]string{"id": uuid.NewString()}, "channel not found"},
+		{"channel duplicate absent", h.channels().DuplicateChannel, "", "", map[string]string{"id": uuid.NewString()}, "channel not found"},
+		{"update bad topic", h.channels().UpdateChannel, `{"topic":"` + strings.Repeat("a", 256) + `"}`, "", valid, "topic"},
+		{"rename bad name", h.channels().RenameCategory, `{"name":""}`, "", valid, "name"},
 		{"search bad ID", h.search, "", "channel_id=bad", valid, "channel_id"},
 		{"search empty", h.search, "", "", valid, "search term"},
-		{"layout missing category", h.applyLayout, `{"categories":[{"id":"` + uuid.NewString() + `","sort_order":1}]}`, "", valid, "category not found"},
+		{"layout missing category", h.channels().ApplyLayout, `{"categories":[{"id":"` + uuid.NewString() + `","sort_order":1}]}`, "", valid, "category not found"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -207,12 +211,12 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		})
 	}
 	body, _ := json.Marshal(LayoutRequest{Categories: make([]CategoryOrder, 501)})
-	chattest.RequireError(t, h.applyLayout(httptest.NewRecorder(), chattest.Request(f.u, string(body), nil, "")), "too many entries")
+	chattest.RequireError(t, h.channels().ApplyLayout(httptest.NewRecorder(), chattest.Request(f.u, string(body), nil, "")), "too many entries")
 	// Database cancellation must also propagate through HTTP handlers.
 	for _, c := range []struct {
 		name string
 		fn   handler
-	}{{"members", h.listMembers}, {"channels", h.listChannels}} {
+	}{{"members", h.listMembers}, {"channels", h.channels().ListChannels}} {
 		t.Run(c.name+" database error", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
@@ -227,14 +231,14 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 
 func TestChatDeleteCategoryHandlerAndVoicePreference(t *testing.T) {
 	f := newChatFixture(t)
-	cat, err := CreateCategory(context.Background(), f.p, "category", 0)
+	cat, err := channels.CreateCategory(context.Background(), f.p, "category", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	recorder := &events.Recorder{}
 	h := &Handler{DB: f.p, Events: recorder}
 	w := httptest.NewRecorder()
-	if err := h.deleteCategory(w, chattest.Request(f.u, "", map[string]string{"id": cat.ID.String()}, "")); err != nil {
+	if err := h.channels().DeleteCategory(w, chattest.Request(f.u, "", map[string]string{"id": cat.ID.String()}, "")); err != nil {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusNoContent || len(recorder.Snapshot()) != 1 || recorder.Snapshot()[0].Type != "channels_changed" {
@@ -245,7 +249,7 @@ func TestChatDeleteCategoryHandlerAndVoicePreference(t *testing.T) {
 	if h.voiceRooms() != voice {
 		t.Fatal("explicit voice rooms were not selected")
 	}
-	if err := h.deleteChannel(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"id": f.c.ID.String()}, "")); err != nil {
+	if err := h.channels().DeleteChannel(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"id": f.c.ID.String()}, "")); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Equal(voice.closed, []uuid.UUID{f.c.ID}) {
@@ -273,10 +277,10 @@ func (o *chatObjectFailure) DeleteBatch(context.Context, []string) error {
 func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	if _, err := CreateChannelWithStage(ctx, f.p, nil, "new", "unsupported", "", 0, false); err == nil {
+	if _, err := channels.CreateChannelWithStage(ctx, f.p, nil, "new", "unsupported", "", 0, false); err == nil {
 		t.Fatal("unsupported channel type accepted")
 	}
-	if _, err := CreateChannelWithStage(ctx, f.p, chattest.Ptr(uuid.New()), "new", ChannelTypeText, "", 0, false); err == nil {
+	if _, err := channels.CreateChannelWithStage(ctx, f.p, chattest.Ptr(uuid.New()), "new", ChannelTypeText, "", 0, false); err == nil {
 		t.Fatal("missing category accepted")
 	}
 	if err := messages.EditMessage(ctx, f.p, nil, uuid.New(), f.u.ID, "new"); err == nil {
@@ -315,17 +319,20 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 	}
 	for _, run := range []func() error{
 		func() error {
-			_, e := CreateChannelWithStage(ctx, f.p, nil, "name", ChannelTypeText, strings.Repeat("a", 256), 0, false)
+			_, e := channels.CreateChannelWithStage(ctx, f.p, nil, "name", ChannelTypeText, strings.Repeat("a", 256), 0, false)
 			return e
 		},
 		func() error {
 			topic := strings.Repeat("a", 256)
-			_, e := EditChannel(ctx, f.p, f.c.ID, nil, &topic, nil, nil, nil, nil)
+			_, e := channels.EditChannel(ctx, f.p, f.c.ID, nil, &topic, nil, nil, nil, nil)
 			return e
 		},
-		func() error { _, err := RenameCategory(ctx, f.p, uuid.New(), "new"); return err },
-		func() error { return ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: uuid.New()}}) },
-		func() error { _, e := EditChannel(ctx, f.p, uuid.New(), nil, nil, nil, nil, nil, nil); return e },
+		func() error { _, err := channels.RenameCategory(ctx, f.p, uuid.New(), "new"); return err },
+		func() error { return channels.ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: uuid.New()}}) },
+		func() error {
+			_, e := channels.EditChannel(ctx, f.p, uuid.New(), nil, nil, nil, nil, nil, nil)
+			return e
+		},
 	} {
 		if err := run(); err == nil {
 			t.Fatal("invalid resource accepted")

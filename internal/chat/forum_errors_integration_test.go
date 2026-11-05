@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -234,7 +235,7 @@ func TestForumTagCapAndPostTagLimit(t *testing.T) {
 
 func TestForumTagsAreChannelScoped(t *testing.T) {
 	f, h, mod, ch := forumCtx(t)
-	other, err := CreateChannelWithStage(context.Background(), f.p, nil, "second-forum", ChannelTypeForum, "", 0, false)
+	other, err := channels.CreateChannelWithStage(context.Background(), f.p, nil, "second-forum", ChannelTypeForum, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -399,7 +400,7 @@ func TestForumPostUpdateRules(t *testing.T) {
 
 func TestForumPostUpdateRejectsRepliesAndOtherChannels(t *testing.T) {
 	f, h, _, ch := forumCtx(t)
-	other, err := CreateChannelWithStage(context.Background(), f.p, nil, "elsewhere", ChannelTypeForum, "", 0, false)
+	other, err := channels.CreateChannelWithStage(context.Background(), f.p, nil, "elsewhere", ChannelTypeForum, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

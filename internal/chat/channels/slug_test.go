@@ -1,4 +1,4 @@
-package chat
+package channels
 
 import (
 	"strings"
@@ -71,10 +71,10 @@ func TestKeepsSlug(t *testing.T) {
 
 func TestTempTalkSlugIsFixedAndReserved(t *testing.T) {
 	id := uuid.MustParse("0f3a9c1e-1111-4222-8333-444455556666")
-	if got := TempTalkSlug(id); got != "talk-0f3a9c1e" || !tempSlugPattern.MatchString(got) {
+	if got := TempTalkSlug(id); got != "talk-0f3a9c1e" || !TempSlugPattern.MatchString(got) {
 		t.Fatalf("slug %q", got)
 	}
-	if tempSlugPattern.MatchString("talk-1") || tempSlugPattern.MatchString("talk-0f3a9c1") {
+	if TempSlugPattern.MatchString("talk-1") || TempSlugPattern.MatchString("talk-0f3a9c1") {
 		t.Fatal("pattern too wide")
 	}
 }

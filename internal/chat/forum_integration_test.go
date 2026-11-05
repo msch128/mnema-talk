@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -32,7 +33,7 @@ func setupForumEnv(t *testing.T) (chatFixture, *Handler, *auth.User) {
 
 func createTestForum(t *testing.T, f chatFixture) *Channel {
 	t.Helper()
-	ch, err := CreateChannelWithStage(context.Background(), f.p, nil, "general-forum", ChannelTypeForum, "Forum topic", 0, false)
+	ch, err := channels.CreateChannelWithStage(context.Background(), f.p, nil, "general-forum", ChannelTypeForum, "Forum topic", 0, false)
 	if err != nil {
 		t.Fatalf("create forum channel: %v", err)
 	}

@@ -254,7 +254,7 @@ anonymous polls that existed before 1.2 the same way (see
 
 `channels.auto_delete_days` (0, 1, 7, 30 or 90; a check constraint also
 forbids it on direct messages) is read by `chat.AutoDeleter`
-([`internal/chat/auto_delete.go`](../internal/chat/auto_delete.go)), a
+([`internal/chat/channels/auto_delete.go`](../internal/chat/channels/auto_delete.go)), a
 background loop started with the router. Each pass lists the channels that
 opted in and works through each in transactions of at most 200 messages:
 lock the expired rows (`FOR UPDATE ... SKIP LOCKED`, which also holds off

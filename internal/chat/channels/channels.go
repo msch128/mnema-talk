@@ -1,4 +1,4 @@
-package chat
+package channels
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-func populateChannels(ctx context.Context, p *db.Pool, categories []Category, categoryIdx map[uuid.UUID]int) ([]Channel, error) {
+func populateChannels(ctx context.Context, p *db.Pool, categories []core.Category, categoryIdx map[uuid.UUID]int) ([]core.Channel, error) {
 	chanRows, err := p.Query(ctx, `
 		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days,
 		       is_lobby, is_temp, leader_id, is_stage, COALESCE(slug, ''),
@@ -26,9 +26,9 @@ func populateChannels(ctx context.Context, p *db.Pool, categories []Category, ca
 	}
 	defer chanRows.Close()
 
-	uncategorized := make([]Channel, 0)
+	uncategorized := make([]core.Channel, 0)
 	for chanRows.Next() {
-		var ch Channel
+		var ch core.Channel
 		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays, &ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage, &ch.Slug, &ch.PreviousSlugs); err != nil {
 			return nil, err
 		}
@@ -45,7 +45,7 @@ func populateChannels(ctx context.Context, p *db.Pool, categories []Category, ca
 
 // GetServerHierarchy returns all categories with their nested channels, plus
 // uncategorized channels.
-func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel, error) {
+func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]core.Category, []core.Channel, error) {
 	categories, categoryIdx, err := loadCategories(ctx, p)
 	if err != nil {
 		return nil, nil, err
@@ -57,15 +57,15 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	return categories, uncategorized, nil
 }
 
-func cleanChannelInputs(name, topic string, chType ChannelType) (string, string, error) {
-	if chType != ChannelTypeText && chType != ChannelTypeVoice && chType != ChannelTypeForum {
+func cleanChannelInputs(name, topic string, chType core.ChannelType) (string, string, error) {
+	if chType != core.ChannelTypeText && chType != core.ChannelTypeVoice && chType != core.ChannelTypeForum {
 		return "", "", httpx.ErrInvalidInput("type must be 'text', 'voice' or 'forum'")
 	}
-	cleanName, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
+	cleanName, err := httpx.CleanText("name", name, core.MaxChannelNameLen, true)
 	if err != nil {
 		return "", "", err
 	}
-	cleanTopic, err := httpx.CleanText("topic", topic, MaxTopicLen, false)
+	cleanTopic, err := httpx.CleanText("topic", topic, core.MaxTopicLen, false)
 	if err != nil {
 		return "", "", err
 	}
@@ -89,7 +89,7 @@ func lockCategory(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) error {
 // CreateChannelWithStage adds a channel to categoryID (or to no category) and,
 // with asStage, makes it a Stage in the same transaction, so a request that
 // cannot be a Stage (a text channel) creates nothing.
-func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int, asStage bool) (*Channel, error) {
+func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType core.ChannelType, topic string, sortOrder int, asStage bool) (*core.Channel, error) {
 	name, topic, err := cleanChannelInputs(name, topic, chType)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UU
 	if err := CheckSortOrder(sortOrder); err != nil {
 		return nil, err
 	}
-	var ch Channel
+	var ch core.Channel
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		if err := lockCategory(ctx, tx, categoryID); err != nil {
 			return err
@@ -128,16 +128,16 @@ func CreateChannelWithStage(ctx context.Context, p *db.Pool, categoryID *uuid.UU
 }
 
 // assignAndFillSlugs gives ch the slug for its name and loads it into ch.
-func assignAndFillSlugs(ctx context.Context, tx pgx.Tx, ch *Channel) error {
+func assignAndFillSlugs(ctx context.Context, tx pgx.Tx, ch *core.Channel) error {
 	if err := assignSlug(ctx, tx, ch.ID, ch.Name); err != nil {
 		return err
 	}
 	return FillSlugs(ctx, tx, ch)
 }
 
-// channelMediaKeys returns the storage keys of the media attached to the
+// ChannelMediaKeys returns the storage keys of the media attached to the
 // messages of the given channels.
-func channelMediaKeys(ctx context.Context, q db.Querier, ids []uuid.UUID) ([]string, error) {
+func ChannelMediaKeys(ctx context.Context, q db.Querier, ids []uuid.UUID) ([]string, error) {
 	var keys []string
 	err := messages.CollectKeys(ctx, q, &keys, `
 		SELECT s3_key FROM media WHERE message_id IN
@@ -150,7 +150,7 @@ func channelMediaKeys(ctx context.Context, q db.Querier, ids []uuid.UUID) ([]str
 // of the avatars of the incoming webhooks' bot accounts. The caller locks the
 // channels first and removes the objects after the commit.
 func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string, error) {
-	keys, err := channelMediaKeys(ctx, tx, ids)
+	keys, err := ChannelMediaKeys(ctx, tx, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -205,12 +205,12 @@ const MaxUserLimit = 999
 // and Stage marks; nil keeps a field. The request is validated first and
 // applied in one transaction, so a request that fails in any part changes
 // nothing.
-func EditChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit, slowMode *int, lobby, stage *bool) (*Channel, error) {
-	name, topic, err := validateChannelEdit(name, topic, userLimit, slowMode)
+func EditChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit, slowMode *int, lobby, stage *bool) (*core.Channel, error) {
+	name, topic, err := ValidateChannelEdit(name, topic, userLimit, slowMode)
 	if err != nil {
 		return nil, err
 	}
-	var ch Channel
+	var ch core.Channel
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		return applyChannelEdit(ctx, tx, id, &ch, name, topic, userLimit, slowMode, lobby, stage)
 	})
@@ -229,7 +229,7 @@ func EditChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *str
 
 // applyChannelEdit writes the lobby and Stage marks and the validated fields
 // of one channel edit into ch.
-func applyChannelEdit(ctx context.Context, tx pgx.Tx, id uuid.UUID, ch *Channel, name, topic *string, userLimit, slowMode *int, lobby, isStage *bool) error {
+func applyChannelEdit(ctx context.Context, tx pgx.Tx, id uuid.UUID, ch *core.Channel, name, topic *string, userLimit, slowMode *int, lobby, isStage *bool) error {
 	if lobby != nil {
 		if err := SetLobby(ctx, tx, id, *lobby); err != nil {
 			return err
@@ -262,10 +262,10 @@ func channelEditMissed(ctx context.Context, p *db.Pool, id uuid.UUID, userLimit 
 	return core.ErrChannelNotFound
 }
 
-func validateChannelLimits(userLimit, slowMode *int) error {
+func ValidateChannelLimits(userLimit, slowMode *int) error {
 	if slowMode != nil {
-		if *slowMode < 0 || *slowMode > MaxSlowModeSeconds {
-			return httpx.ErrInvalidInput(fmt.Sprintf("slow_mode_seconds must be between 0 (off) and %d", MaxSlowModeSeconds))
+		if *slowMode < 0 || *slowMode > core.MaxSlowModeSeconds {
+			return httpx.ErrInvalidInput(fmt.Sprintf("slow_mode_seconds must be between 0 (off) and %d", core.MaxSlowModeSeconds))
 		}
 	}
 	if userLimit != nil {
@@ -280,7 +280,7 @@ func validateOptionalName(name *string) (*string, error) {
 	if name == nil {
 		return nil, nil
 	}
-	n, err := httpx.CleanText("name", *name, MaxChannelNameLen, true)
+	n, err := httpx.CleanText("name", *name, core.MaxChannelNameLen, true)
 	if err != nil {
 		return nil, err
 	}
@@ -291,17 +291,17 @@ func validateOptionalTopic(topic *string) (*string, error) {
 	if topic == nil {
 		return nil, nil
 	}
-	t, err := httpx.CleanText("topic", *topic, MaxTopicLen, false)
+	t, err := httpx.CleanText("topic", *topic, core.MaxTopicLen, false)
 	if err != nil {
 		return nil, err
 	}
 	return &t, nil
 }
 
-// validateChannelEdit checks the fields of a channel update and returns the
+// ValidateChannelEdit checks the fields of a channel update and returns the
 // cleaned name and topic (nil stays nil).
-func validateChannelEdit(name, topic *string, userLimit, slowMode *int) (*string, *string, error) {
-	if err := validateChannelLimits(userLimit, slowMode); err != nil {
+func ValidateChannelEdit(name, topic *string, userLimit, slowMode *int) (*string, *string, error) {
+	if err := ValidateChannelLimits(userLimit, slowMode); err != nil {
 		return nil, nil, err
 	}
 	validName, err := validateOptionalName(name)

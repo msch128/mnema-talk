@@ -1,13 +1,16 @@
-package chat
+package channels
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+)
 
 // Request and response bodies of the channel and category routes in handler_channels.go.
 
 // ChannelHierarchy is the response of GET /api/channels.
 type ChannelHierarchy struct {
-	Categories    []Category `json:"categories"`
-	Uncategorized []Channel  `json:"uncategorized"`
+	Categories    []core.Category `json:"categories"`
+	Uncategorized []core.Channel  `json:"uncategorized"`
 }
 
 // CreateCategoryRequest is the body of POST /api/admin/categories.
@@ -29,11 +32,11 @@ type RenamedCategory struct {
 
 // CreateChannelRequest is the body of POST /api/admin/channels.
 type CreateChannelRequest struct {
-	CategoryID *uuid.UUID  `json:"category_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
-	Name       string      `json:"name" minLength:"1" maxLength:"64"`
-	Type       ChannelType `json:"type" default:"text" binding:"optional"`
-	Topic      string      `json:"topic" maxLength:"255" binding:"optional"`
-	SortOrder  int         `json:"sort_order" binding:"optional"`
+	CategoryID *uuid.UUID       `json:"category_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
+	Name       string           `json:"name" minLength:"1" maxLength:"64"`
+	Type       core.ChannelType `json:"type" default:"text" binding:"optional"`
+	Topic      string           `json:"topic" maxLength:"255" binding:"optional"`
+	SortOrder  int              `json:"sort_order" binding:"optional"`
 	// IsStage creates the Talk as a Stage (voice channels only).
 	IsStage bool `json:"is_stage" binding:"optional"`
 }

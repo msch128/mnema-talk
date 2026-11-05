@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/emojitext"
 )
@@ -17,7 +18,7 @@ import (
 func TestReactionsInATalkChatTakeEveryEmoji(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	talk, err := CreateChannelWithStage(ctx, f.p, nil, "talk-chat", ChannelTypeVoice, "", 0, false)
+	talk, err := channels.CreateChannelWithStage(ctx, f.p, nil, "talk-chat", ChannelTypeVoice, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

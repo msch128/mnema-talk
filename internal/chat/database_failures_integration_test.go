@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
@@ -29,25 +30,25 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 	ctx := context.Background()
 	t.Run("category decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"categories": `SELECT gen_random_uuid() id, NULL::text name, 0 sort_order, NOW() created_at`})
-		_, _, err := GetServerHierarchy(ctx, p)
+		_, _, err := channels.GetServerHierarchy(ctx, p)
 		chattest.RequireError(t, err, "NULL")
 	})
 	t.Run("category stream error", func(t *testing.T) {
-		if _, err := CreateCategory(ctx, f.p, "error-stream", 0); err != nil {
+		if _, err := channels.CreateCategory(ctx, f.p, "error-stream", 0); err != nil {
 			t.Fatal(err)
 		}
 		p := chattest.DriftPool(t, f.p, map[string]string{"categories": `SELECT id,name,1/(sort_order-sort_order) sort_order,created_at FROM public.categories`})
-		_, _, err := GetServerHierarchy(ctx, p)
+		_, _, err := channels.GetServerHierarchy(ctx, p)
 		chattest.RequireError(t, err, "division by zero")
 	})
 	t.Run("channel query", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id FROM public.channels`})
-		_, _, err := GetServerHierarchy(ctx, p)
+		_, _, err := channels.GetServerHierarchy(ctx, p)
 		chattest.RequireError(t, err, "query channels")
 	})
 	t.Run("channel decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id,number,category_id,NULL::text name,type,topic,sort_order,created_at,user_limit,slow_mode_seconds,auto_delete_days,is_lobby,is_temp,leader_id,is_stage,slug FROM public.channels`})
-		_, _, err := GetServerHierarchy(ctx, p)
+		_, _, err := channels.GetServerHierarchy(ctx, p)
 		chattest.RequireError(t, err, "NULL")
 	})
 	t.Run("member decoding", func(t *testing.T) {
@@ -119,7 +120,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer tx.Rollback(ctx)
-		_, _, err = lockChannelGroup(ctx, tx, nil)
+		_, _, err = channels.LockChannelGroup(ctx, tx, nil)
 		chattest.RequireError(t, err, "lock channel group")
 	})
 	t.Run("channel group decoding", func(t *testing.T) {
@@ -129,7 +130,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer tx.Rollback(ctx)
-		_, _, err = lockChannelGroup(ctx, tx, nil)
+		_, _, err = channels.LockChannelGroup(ctx, tx, nil)
 		chattest.RequireError(t, err, "NULL")
 	})
 }
@@ -186,26 +187,26 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 			_, err := messages.DeleteMessageAs(ctx, f.p, f.m, f.u, f.u.IsAdmin())
 			return err
 		}},
-		{"delete channel", "channels", "DELETE", func(f chatFixture) error { _, err := DeleteChannel(ctx, f.p, f.c.ID); return err }},
+		{"delete channel", "channels", "DELETE", func(f chatFixture) error { _, err := channels.DeleteChannel(ctx, f.p, f.c.ID); return err }},
 		{"layout category", "categories", "UPDATE", func(f chatFixture) error {
-			cat, err := CreateCategory(ctx, f.p, "cat", 0)
+			cat, err := channels.CreateCategory(ctx, f.p, "cat", 0)
 			if err != nil {
 				return err
 			}
-			return ApplyLayout(ctx, f.p, []CategoryOrder{{ID: cat.ID, SortOrder: 3}}, nil)
+			return channels.ApplyLayout(ctx, f.p, []CategoryOrder{{ID: cat.ID, SortOrder: 3}}, nil)
 		}},
 		{"layout channel", "channels", "UPDATE", func(f chatFixture) error {
-			return ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: f.c.ID, SortOrder: 2}})
+			return channels.ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: f.c.ID, SortOrder: 2}})
 		}},
 		{"duplicate shift", "channels", "UPDATE", func(f chatFixture) error {
-			_, err := CreateChannelWithStage(ctx, f.p, nil, "follower", ChannelTypeText, "", 1, false)
+			_, err := channels.CreateChannelWithStage(ctx, f.p, nil, "follower", ChannelTypeText, "", 1, false)
 			if err != nil {
 				return err
 			}
-			_, err = DuplicateChannel(ctx, f.p, f.c.ID)
+			_, err = channels.DuplicateChannel(ctx, f.p, f.c.ID)
 			return err
 		}},
-		{"duplicate insert", "channels", "INSERT", func(f chatFixture) error { _, err := DuplicateChannel(ctx, f.p, f.c.ID); return err }},
+		{"duplicate insert", "channels", "INSERT", func(f chatFixture) error { _, err := channels.DuplicateChannel(ctx, f.p, f.c.ID); return err }},
 		{"add reaction", "message_reactions", "INSERT", func(f chatFixture) error {
 			_, err := messages.ToggleReactionAs(ctx, f.p, f.m, f.u.ID, "ok", true)
 			return err
@@ -266,8 +267,8 @@ func TestChatLockFailures(t *testing.T) {
 	ctx := context.Background()
 	p := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT number::int id FROM public.channels`, "messages": `SELECT id FROM public.messages`})
 	for _, run := range []func() error{
-		func() error { _, e := DeleteChannel(ctx, p, f.c.ID); return e },
-		func() error { _, e := DuplicateChannel(ctx, p, f.c.ID); return e },
+		func() error { _, e := channels.DeleteChannel(ctx, p, f.c.ID); return e },
+		func() error { _, e := channels.DuplicateChannel(ctx, p, f.c.ID); return e },
 		func() error { return messages.EditMessage(ctx, p, nil, f.m, f.u.ID, "new") },
 		func() error { _, e := messages.DeleteMessageAs(ctx, p, f.m, f.u, f.u.IsAdmin()); return e },
 	} {
@@ -282,7 +283,7 @@ func TestChatLockFailures(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(ctx)
-	if err := lockChannelLayout(ctx, tx); err != nil {
+	if err := channels.LockChannelLayout(ctx, tx); err != nil {
 		t.Fatal(err)
 	}
 	cfg := f.p.Config().Copy()
@@ -293,8 +294,8 @@ func TestChatLockFailures(t *testing.T) {
 	}
 	defer pool.Close()
 	blocked := &db.Pool{Pool: pool}
-	chattest.RequireError(t, ApplyLayout(ctx, blocked, nil, nil), "lock channel layout")
-	_, err = DuplicateChannel(ctx, blocked, f.c.ID)
+	chattest.RequireError(t, channels.ApplyLayout(ctx, blocked, nil, nil), "lock channel layout")
+	_, err = channels.DuplicateChannel(ctx, blocked, f.c.ID)
 	chattest.RequireError(t, err, "lock channel layout")
 }
 
@@ -305,7 +306,7 @@ func TestChatMissingRelationsFailTransactions(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT id FROM public.media`})
 		_, err := messages.DeleteMessageAs(ctx, p, f.m, f.u, f.u.IsAdmin())
 		chattest.RequireError(t, err, "collect media keys")
-		_, err = DeleteChannel(ctx, p, f.c.ID)
+		_, err = channels.DeleteChannel(ctx, p, f.c.ID)
 		chattest.RequireError(t, err, "collect media keys")
 	})
 	t.Run("count reaction query", func(t *testing.T) {
@@ -368,14 +369,14 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 	f := newChatFixture(t)
 	t.Run("duplicate group", func(t *testing.T) {
 		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, "WHERE category_id IS NOT DISTINCT") }, false)
-		_, err := DuplicateChannel(ctx, p, f.c.ID)
+		_, err := channels.DuplicateChannel(ctx, p, f.c.ID)
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("group lock cancellation=%v", err)
 		}
 	})
 	t.Run("duplicate permissions", func(t *testing.T) {
 		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, "INSERT INTO permission_overwrites") }, false)
-		_, err := DuplicateChannel(ctx, p, f.c.ID)
+		_, err := channels.DuplicateChannel(ctx, p, f.c.ID)
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("permission copy cancellation=%v", err)
 		}

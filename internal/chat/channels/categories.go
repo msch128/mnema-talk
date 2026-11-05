@@ -1,4 +1,4 @@
-package chat
+package channels
 
 import (
 	"context"
@@ -10,16 +10,16 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-func loadCategories(ctx context.Context, p *db.Pool) ([]Category, map[uuid.UUID]int, error) {
+func loadCategories(ctx context.Context, p *db.Pool) ([]core.Category, map[uuid.UUID]int, error) {
 	catRows, err := p.Query(ctx, `SELECT id, name, sort_order, created_at FROM categories ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("query categories: %w", err)
 	}
 	defer catRows.Close()
-	categories := make([]Category, 0)
+	categories := make([]core.Category, 0)
 	categoryIdx := make(map[uuid.UUID]int)
 	for catRows.Next() {
-		cat := Category{Channels: make([]Channel, 0)}
+		cat := core.Category{Channels: make([]core.Channel, 0)}
 		if err := catRows.Scan(&cat.ID, &cat.Name, &cat.SortOrder, &cat.CreatedAt); err != nil {
 			return nil, nil, err
 		}
@@ -29,15 +29,15 @@ func loadCategories(ctx context.Context, p *db.Pool) ([]Category, map[uuid.UUID]
 	return categories, categoryIdx, catRows.Err()
 }
 
-func CreateCategory(ctx context.Context, p *db.Pool, name string, sortOrder int) (*Category, error) {
-	name, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
+func CreateCategory(ctx context.Context, p *db.Pool, name string, sortOrder int) (*core.Category, error) {
+	name, err := httpx.CleanText("name", name, core.MaxChannelNameLen, true)
 	if err != nil {
 		return nil, err
 	}
 	if err := CheckSortOrder(sortOrder); err != nil {
 		return nil, err
 	}
-	cat := Category{Channels: make([]Channel, 0)}
+	cat := core.Category{Channels: make([]core.Channel, 0)}
 	err = p.QueryRow(ctx, `
 		INSERT INTO categories (name, sort_order) VALUES ($1, $2)
 		RETURNING id, name, sort_order, created_at`, name, sortOrder).
@@ -50,7 +50,7 @@ func CreateCategory(ctx context.Context, p *db.Pool, name string, sortOrder int)
 
 // RenameCategory changes a category's name.
 func RenameCategory(ctx context.Context, p *db.Pool, id uuid.UUID, name string) (string, error) {
-	name, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
+	name, err := httpx.CleanText("name", name, core.MaxChannelNameLen, true)
 	if err != nil {
 		return "", err
 	}

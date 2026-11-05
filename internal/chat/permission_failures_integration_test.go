@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -19,7 +20,7 @@ import (
 // (closed) instead of letting the request through.
 func TestHandlersFailClosedWithoutPermissionState(t *testing.T) {
 	f := newChatFixture(t)
-	cat, err := CreateCategory(context.Background(), f.p, "area", 0)
+	cat, err := channels.CreateCategory(context.Background(), f.p, "area", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +41,7 @@ func TestHandlersFailClosedWithoutPermissionState(t *testing.T) {
 		query  string
 	}{
 		{"members", func(r *http.Request) error { return h.listMembers(httptest.NewRecorder(), r) }, "", nil, ""},
-		{"channels", func(r *http.Request) error { return h.listChannels(httptest.NewRecorder(), r) }, "", nil, ""},
+		{"channels", func(r *http.Request) error { return h.channels().ListChannels(httptest.NewRecorder(), r) }, "", nil, ""},
 		{"history", func(r *http.Request) error { return h.messages().ListMessages(httptest.NewRecorder(), r) }, "", params, ""},
 		{"post", func(r *http.Request) error { return h.messages().CreateMessage(httptest.NewRecorder(), r) }, `{"content":"x"}`, params, ""},
 		{"edit", func(r *http.Request) error { return h.messages().EditMessage(httptest.NewRecorder(), r) }, `{"content":"x"}`, params, ""},
@@ -50,13 +51,13 @@ func TestHandlersFailClosedWithoutPermissionState(t *testing.T) {
 		{"by number", func(r *http.Request) error { return h.messages().GetMessageByNumber(httptest.NewRecorder(), r) }, "", map[string]string{"number": strconv.FormatInt(number, 10)}, ""},
 		{"search", func(r *http.Request) error { return h.search(httptest.NewRecorder(), r) }, "", nil, "q=x"},
 		{"search in a channel", func(r *http.Request) error { return h.search(httptest.NewRecorder(), r) }, "", nil, "q=x&channel_id=" + ch},
-		{"delete category", func(r *http.Request) error { return h.deleteCategory(httptest.NewRecorder(), r) }, "", catParams, ""},
-		{"rename category", func(r *http.Request) error { return h.renameCategory(httptest.NewRecorder(), r) }, `{"name":"y"}`, catParams, ""},
-		{"create in category", func(r *http.Request) error { return h.createChannel(httptest.NewRecorder(), r) }, `{"name":"n","category_id":"` + cat.ID.String() + `"}`, nil, ""},
-		{"layout", func(r *http.Request) error { return h.applyLayout(httptest.NewRecorder(), r) }, `{"categories":[{"id":"` + cat.ID.String() + `","sort_order":1}]}`, nil, ""},
-		{"duplicate", func(r *http.Request) error { return h.duplicateChannel(httptest.NewRecorder(), r) }, "", params, ""},
-		{"update channel", func(r *http.Request) error { return h.updateChannel(httptest.NewRecorder(), r) }, `{"name":"z"}`, params, ""},
-		{"delete channel", func(r *http.Request) error { return h.deleteChannel(httptest.NewRecorder(), r) }, "", params, ""},
+		{"delete category", func(r *http.Request) error { return h.channels().DeleteCategory(httptest.NewRecorder(), r) }, "", catParams, ""},
+		{"rename category", func(r *http.Request) error { return h.channels().RenameCategory(httptest.NewRecorder(), r) }, `{"name":"y"}`, catParams, ""},
+		{"create in category", func(r *http.Request) error { return h.channels().CreateChannel(httptest.NewRecorder(), r) }, `{"name":"n","category_id":"` + cat.ID.String() + `"}`, nil, ""},
+		{"layout", func(r *http.Request) error { return h.channels().ApplyLayout(httptest.NewRecorder(), r) }, `{"categories":[{"id":"` + cat.ID.String() + `","sort_order":1}]}`, nil, ""},
+		{"duplicate", func(r *http.Request) error { return h.channels().DuplicateChannel(httptest.NewRecorder(), r) }, "", params, ""},
+		{"update channel", func(r *http.Request) error { return h.channels().UpdateChannel(httptest.NewRecorder(), r) }, `{"name":"z"}`, params, ""},
+		{"delete channel", func(r *http.Request) error { return h.channels().DeleteChannel(httptest.NewRecorder(), r) }, "", params, ""},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			err := c.run(chattest.Request(f.u, c.body, c.params, c.query))

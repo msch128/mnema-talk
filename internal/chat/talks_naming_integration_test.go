@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 )
 
 func TestTalksAreNamedAfterTheLobbyAndKeepTheirNameOnRename(t *testing.T) {
@@ -26,7 +27,7 @@ func TestTalksAreNamedAfterTheLobbyAndKeepTheirNameOnRename(t *testing.T) {
 		t.Fatal(err)
 	}
 	renamed := "Study room"
-	if _, err := EditChannel(ctx, w.p, w.lobby.ID, &renamed, nil, nil, nil, nil, nil); err != nil {
+	if _, err := channels.EditChannel(ctx, w.p, w.lobby.ID, &renamed, nil, nil, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	second, err := w.mgr.Open(ctx, w.bob.ID, w.lobby.ID)
@@ -52,7 +53,7 @@ func TestTalkNameOfALongLobbyFitsTheLimit(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	long := strings.Repeat("\u00e4", MaxChannelNameLen)
-	if _, err := EditChannel(ctx, w.p, w.lobby.ID, &long, nil, nil, nil, nil, nil); err != nil {
+	if _, err := channels.EditChannel(ctx, w.p, w.lobby.ID, &long, nil, nil, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	ch, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)

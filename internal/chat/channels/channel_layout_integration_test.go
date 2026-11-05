@@ -1,6 +1,6 @@
 //go:build integration
 
-package chat
+package channels
 
 import (
 	"context"
@@ -39,7 +39,7 @@ func newLayoutWorld(t *testing.T, cats, chans int) layoutWorld {
 		w.cats = append(w.cats, c.ID)
 	}
 	for i := 0; i < chans; i++ {
-		c, err := CreateChannelWithStage(context.Background(), p, nil, fmt.Sprintf("ch-%d", i), ChannelTypeText, "", i, false)
+		c, err := CreateChannelWithStage(context.Background(), p, nil, fmt.Sprintf("ch-%d", i), core.ChannelTypeText, "", i, false)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -1,4 +1,4 @@
-package chat
+package channels
 
 import (
 	"context"
@@ -43,11 +43,11 @@ func validAutoDeleteDays(days int) bool {
 
 // SetAutoDelete changes how long a channel keeps its messages (0 = forever).
 // Direct messages never take part. It returns the channel as it is now.
-func SetAutoDelete(ctx context.Context, p *db.Pool, id uuid.UUID, days int) (*Channel, error) {
+func SetAutoDelete(ctx context.Context, p *db.Pool, id uuid.UUID, days int) (*core.Channel, error) {
 	if !validAutoDeleteDays(days) {
 		return nil, httpx.ErrInvalidInput("days must be 0 (off), 1, 7, 30 or 90")
 	}
-	var ch Channel
+	var ch core.Channel
 	err := p.QueryRow(ctx, `
 		UPDATE channels SET auto_delete_days = $2 WHERE id = $1 AND type <> 'dm'
 		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, days).
@@ -72,7 +72,7 @@ type AutoDeleter struct {
 	DB     *db.Pool
 	Events events.Publisher
 	// Objects deletes the attachments' stored files; nil leaves them.
-	Objects ObjectDeleter
+	Objects core.ObjectDeleter
 	// Audit records one entry per channel and run; nil records nothing.
 	Audit *audit.Log
 }

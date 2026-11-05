@@ -1,4 +1,4 @@
-package chat
+package channels
 
 import (
 	"context"
@@ -30,7 +30,7 @@ func SetLobby(ctx context.Context, p db.Querier, id uuid.UUID, lobby bool) error
 
 // FillTalkFields loads the lobby/temporary-Talk fields of ch, which the
 // create and update statements do not return.
-func FillTalkFields(ctx context.Context, p *db.Pool, ch *Channel) error {
+func FillTalkFields(ctx context.Context, p *db.Pool, ch *core.Channel) error {
 	err := p.QueryRow(ctx, `SELECT is_lobby, is_temp, leader_id, is_stage FROM channels WHERE id = $1`, ch.ID).Scan(&ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return core.ErrChannelNotFound

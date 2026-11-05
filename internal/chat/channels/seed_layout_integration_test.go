@@ -1,6 +1,6 @@
 //go:build integration
 
-package chat
+package channels
 
 import (
 	"context"

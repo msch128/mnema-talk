@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 )
 
 type channelRows struct {
@@ -59,7 +59,7 @@ func insertChannels(ctx context.Context, tx pgx.Tx, plan *Plan, c *created) erro
 		rows.ids, rows.categories, rows.names, rows.types, rows.topics, rows.orders, rows.limits, rows.slow, rows.stages); err != nil {
 		return fmt.Errorf("insert channels: %w", err)
 	}
-	if err := chat.AssignSlugs(ctx, tx, rows.ids, rows.names); err != nil {
+	if err := channels.AssignSlugs(ctx, tx, rows.ids, rows.names); err != nil {
 		return fmt.Errorf("assign channel slugs: %w", err)
 	}
 	c.channels = rows.ids

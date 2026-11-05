@@ -1,10 +1,11 @@
-package chat
+package channels
 
 import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -18,8 +19,8 @@ import (
 // @Accept json
 // @Produce json
 // @Security cookieAuth
-// @Param request body CreateCategoryRequest true "Request body."
-// @Success 201 {object} Category "Created category."
+// @Param request body channels.CreateCategoryRequest true "Request body."
+// @Success 201 {object} core.Category "Created category."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage channels permission, or cross-origin request rejected."
@@ -27,16 +28,16 @@ import (
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/categories [post]
-func (h *Handler) createCategory(w http.ResponseWriter, r *http.Request) error {
+func (a *API) CreateCategory(w http.ResponseWriter, r *http.Request) error {
 	var req CreateCategoryRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	cat, err := CreateCategory(r.Context(), h.DB, req.Name, req.SortOrder)
+	cat, err := CreateCategory(r.Context(), a.DB, req.Name, req.SortOrder)
 	if err != nil {
 		return err
 	}
-	h.channelsChanged()
+	a.ChannelsChanged()
 	httpx.WriteJSON(w, http.StatusCreated, cat)
 	return nil
 }
@@ -59,17 +60,17 @@ func (h *Handler) createCategory(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/categories/{id} [delete]
-func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
+func (a *API) DeleteCategory(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	if h.Perms == nil {
-		err = DeleteCategory(r.Context(), h.DB, id)
+	if a.Guard.Perms == nil {
+		err = DeleteCategory(r.Context(), a.DB, id)
 	} else {
 		sub := auth.UserFrom(r.Context()).Subject()
-		err = h.Perms.Locked(r.Context(), sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
-			if err := checkWholeCategory(snap, sub, id); err != nil {
+		err = a.Guard.Perms.Locked(r.Context(), sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
+			if err := CheckWholeCategory(snap, sub, id); err != nil {
 				return err
 			}
 			return DeleteCategoryTx(r.Context(), tx, id)
@@ -78,7 +79,7 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.structureChanged()
+	a.structureChanged()
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -92,8 +93,8 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
 // @Accept json
 // @Produce json
 // @Security cookieAuth
-// @Param request body CreateChannelRequest true "Request body."
-// @Success 201 {object} Channel "Created channel."
+// @Param request body channels.CreateChannelRequest true "Request body."
+// @Success 201 {object} core.Channel "Created channel."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage channels permission, or cross-origin request rejected."
@@ -101,24 +102,24 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/channels [post]
-func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
+func (a *API) CreateChannel(w http.ResponseWriter, r *http.Request) error {
 	var req CreateChannelRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
 	if req.Type == "" {
-		req.Type = ChannelTypeText
+		req.Type = core.ChannelTypeText
 	}
 	if req.CategoryID != nil {
-		if err := h.requireCategory(r, *req.CategoryID); err != nil {
+		if err := a.Guard.RequireCategory(r, *req.CategoryID); err != nil {
 			return err
 		}
 	}
-	ch, err := CreateChannelWithStage(r.Context(), h.DB, req.CategoryID, req.Name, req.Type, req.Topic, req.SortOrder, req.IsStage)
+	ch, err := CreateChannelWithStage(r.Context(), a.DB, req.CategoryID, req.Name, req.Type, req.Topic, req.SortOrder, req.IsStage)
 	if err != nil {
 		return err
 	}
-	h.structureChanged()
+	a.structureChanged()
 	httpx.WriteJSON(w, http.StatusCreated, ch)
 	return nil
 }
@@ -132,7 +133,7 @@ func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Resource ID." Format(uuid)
-// @Success 201 {object} Channel "Created channel."
+// @Success 201 {object} core.Channel "Created channel."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage channels permission, or cross-origin request rejected."
@@ -141,19 +142,19 @@ func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/channels/{id}/duplicate [post]
-func (h *Handler) duplicateChannel(w http.ResponseWriter, r *http.Request) error {
+func (a *API) DuplicateChannel(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	if err := h.require(r, id, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, id, perm.ViewChannel); err != nil {
 		return err
 	}
-	ch, err := DuplicateChannel(r.Context(), h.DB, id)
+	ch, err := DuplicateChannel(r.Context(), a.DB, id)
 	if err != nil {
 		return err
 	}
-	h.structureChanged()
+	a.structureChanged()
 	httpx.WriteJSON(w, http.StatusCreated, ch)
 	return nil
 }
@@ -176,24 +177,24 @@ func (h *Handler) duplicateChannel(w http.ResponseWriter, r *http.Request) error
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/channels/{id} [delete]
-func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
+func (a *API) DeleteChannel(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	if err := h.require(r, id, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, id, perm.ViewChannel); err != nil {
 		return err
 	}
-	keys, err := DeleteChannel(r.Context(), h.DB, id)
+	keys, err := DeleteChannel(r.Context(), a.DB, id)
 	if err != nil {
 		return err
 	}
 	// Nobody may stay connected to the voice room of a channel that is gone.
-	if v := h.voiceRooms(); v != nil {
+	if v := a.Voice; v != nil {
 		v.CloseVoiceChannel(id)
 	}
-	h.deleteObjects(r.Context(), keys)
-	h.structureChanged()
+	core.DeleteObjects(r.Context(), a.Objects, keys)
+	a.structureChanged()
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -208,8 +209,8 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Resource ID." Format(uuid)
-// @Param request body UpdateChannelRequest true "Request body."
-// @Success 200 {object} Channel "Updated channel."
+// @Param request body channels.UpdateChannelRequest true "Request body."
+// @Success 200 {object} core.Channel "Updated channel."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage channels permission, or cross-origin request rejected."
@@ -218,7 +219,7 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/channels/{id} [patch]
-func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
+func (a *API) UpdateChannel(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -227,20 +228,20 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if err := h.require(r, id, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, id, perm.ViewChannel); err != nil {
 		return err
 	}
-	ch, err := EditChannel(r.Context(), h.DB, id, req.Name, req.Topic, req.UserLimit, req.SlowModeSeconds, req.IsLobby, req.IsStage)
+	ch, err := EditChannel(r.Context(), a.DB, id, req.Name, req.Topic, req.UserLimit, req.SlowModeSeconds, req.IsLobby, req.IsStage)
 	if err != nil {
 		return err
 	}
-	if err := FillTalkFields(r.Context(), h.DB, ch); err != nil {
+	if err := FillTalkFields(r.Context(), a.DB, ch); err != nil {
 		return err
 	}
 	if req.IsStage != nil {
-		h.structureChanged() // the hub re-checks who may still send media
+		a.structureChanged() // the hub re-checks who may still send media
 	} else {
-		h.channelsChanged()
+		a.ChannelsChanged()
 	}
 	httpx.WriteJSON(w, http.StatusOK, ch)
 	return nil
@@ -256,8 +257,8 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Resource ID." Format(uuid)
-// @Param request body RenameCategoryRequest true "Request body."
-// @Success 200 {object} RenamedCategory "Renamed category."
+// @Param request body channels.RenameCategoryRequest true "Request body."
+// @Success 200 {object} channels.RenamedCategory "Renamed category."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage channels permission, or cross-origin request rejected."
@@ -266,7 +267,7 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/categories/{id} [patch]
-func (h *Handler) renameCategory(w http.ResponseWriter, r *http.Request) error {
+func (a *API) RenameCategory(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -275,14 +276,14 @@ func (h *Handler) renameCategory(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if err := h.requireCategory(r, id); err != nil {
+	if err := a.Guard.RequireCategory(r, id); err != nil {
 		return err
 	}
-	name, err := RenameCategory(r.Context(), h.DB, id, req.Name)
+	name, err := RenameCategory(r.Context(), a.DB, id, req.Name)
 	if err != nil {
 		return err
 	}
-	h.channelsChanged()
+	a.ChannelsChanged()
 	httpx.WriteJSON(w, http.StatusOK, RenamedCategory{ID: id, Name: name})
 	return nil
 }
@@ -296,7 +297,7 @@ func (h *Handler) renameCategory(w http.ResponseWriter, r *http.Request) error {
 // @Accept json
 // @Produce json
 // @Security cookieAuth
-// @Param request body LayoutRequest true "Request body."
+// @Param request body channels.LayoutRequest true "Request body."
 // @Success 204 "Success, no content."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
@@ -306,7 +307,7 @@ func (h *Handler) renameCategory(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/layout [put]
-func (h *Handler) applyLayout(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ApplyLayout(w http.ResponseWriter, r *http.Request) error {
 	var req LayoutRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
@@ -315,12 +316,12 @@ func (h *Handler) applyLayout(w http.ResponseWriter, r *http.Request) error {
 		return httpx.ErrInvalidInput("too many entries")
 	}
 	var err error
-	if h.Perms == nil {
-		err = ApplyLayout(r.Context(), h.DB, req.Categories, req.Channels)
+	if a.Guard.Perms == nil {
+		err = ApplyLayout(r.Context(), a.DB, req.Categories, req.Channels)
 	} else {
 		sub := auth.UserFrom(r.Context()).Subject()
-		err = h.Perms.Locked(r.Context(), sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
-			if err := checkLayout(snap, sub, req); err != nil {
+		err = a.Guard.Perms.Locked(r.Context(), sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
+			if err := CheckLayout(snap, sub, req); err != nil {
 				return err
 			}
 			return ApplyLayoutTx(r.Context(), tx, req.Categories, req.Channels)
@@ -329,7 +330,7 @@ func (h *Handler) applyLayout(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.structureChanged()
+	a.structureChanged()
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

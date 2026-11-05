@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
@@ -10,19 +11,28 @@ import (
 // Aliases for symbols that moved into sub-packages while internal/chat is split
 // by domain. They keep existing callers compiling and are deleted, with their
 // call sites rewritten, by the last step of the split.
+const AutoDeleteEvery = channels.AutoDeleteEvery
+
+type AutoDeleteRequest = channels.AutoDeleteRequest
+type AutoDeleter = channels.AutoDeleter
 type BulkDeleteRequest = messages.BulkDeleteRequest
 type BulkDeleteResult = messages.BulkDeleteResult
 type Category = core.Category
 type CategoryNotifySetting = readstate.CategoryNotifySetting
+type CategoryOrder = channels.CategoryOrder
 type Channel = core.Channel
+type ChannelHierarchy = channels.ChannelHierarchy
 type ChannelInfo = core.ChannelInfo
 type ChannelNotifySetting = readstate.ChannelNotifySetting
+type ChannelPlacement = channels.ChannelPlacement
 type ChannelType = core.ChannelType
 
 const ChannelTypeForum = core.ChannelTypeForum
 const ChannelTypeText = core.ChannelTypeText
 const ChannelTypeVoice = core.ChannelTypeVoice
 
+type CreateCategoryRequest = channels.CreateCategoryRequest
+type CreateChannelRequest = channels.CreateChannelRequest
 type CreateMessageRequest = messages.CreateMessageRequest
 type DeleteMessageRequest = messages.DeleteMessageRequest
 
@@ -46,6 +56,7 @@ const ForwardsPerMinute = messages.ForwardsPerMinute
 
 type HistoryQuery = core.HistoryQuery
 type InEmbed = messages.InEmbed
+type LayoutRequest = channels.LayoutRequest
 type MarkAllReadRequest = readstate.MarkAllReadRequest
 type MarkReadRequest = readstate.MarkReadRequest
 type MarkUnreadRequest = readstate.MarkUnreadRequest
@@ -57,6 +68,7 @@ const MaxChannelNameLen = core.MaxChannelNameLen
 const MaxEditVersions = messages.MaxEditVersions
 const MaxEmbeds = messages.MaxEmbeds
 const MaxEmojiPerMessage = messages.MaxEmojiPerMessage
+const MaxFormerSlugs = channels.MaxFormerSlugs
 const MaxForumTagEmojiLen = core.MaxForumTagEmojiLen
 const MaxForumTagNameLen = core.MaxForumTagNameLen
 const MaxForumTags = core.MaxForumTags
@@ -68,8 +80,11 @@ const MaxPostTags = core.MaxPostTags
 const MaxPostTitleLen = core.MaxPostTitleLen
 const MaxReactionsPerUser = messages.MaxReactionsPerUser
 const MaxSlowModeSeconds = core.MaxSlowModeSeconds
+const MaxSlugLength = channels.MaxSlugLength
+const MaxSortOrder = channels.MaxSortOrder
 const MaxTopicLen = core.MaxTopicLen
 const MaxUnansweredDMMessages = core.MaxUnansweredDMMessages
+const MaxUserLimit = channels.MaxUserLimit
 
 type MediaAttachment = core.MediaAttachment
 type Member = core.Member
@@ -111,6 +126,8 @@ type ReactionRequest = messages.ReactionRequest
 type ReactionResult = messages.ReactionResult
 type ReactionSummary = core.ReactionSummary
 type ReadState = readstate.ReadState
+type RenameCategoryRequest = channels.RenameCategoryRequest
+type RenamedCategory = channels.RenamedCategory
 type ReplyPreview = core.ReplyPreview
 type ServerNotify = readstate.ServerNotify
 type SetNotifyLevelRequest = readstate.SetNotifyLevelRequest
@@ -120,5 +137,9 @@ type ThreadFollow = messages.ThreadFollow
 
 const ThreadFollowChangesPerMinute = messages.ThreadFollowChangesPerMinute
 
+type UpdateChannelRequest = channels.UpdateChannelRequest
 type UserRef = core.UserRef
+type ViewAsCategory = channels.ViewAsCategory
+type ViewAsChannel = channels.ViewAsChannel
+type ViewAsRole = channels.ViewAsRole
 type VoiceRooms = core.VoiceRooms

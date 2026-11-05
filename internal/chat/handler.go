@@ -8,8 +8,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
@@ -88,10 +88,14 @@ func (h *Handler) messages() *messages.API {
 	}
 }
 
+// channels builds the channels API from the handler's fields.
+func (h *Handler) channels() *channels.API {
+	return &channels.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Objects: h.Objects, Voice: h.voiceRooms()}
+}
+
 // Mount registers the member-facing routes (RequireUser must already apply).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/members", httpx.Handle(h.listMembers))
-	r.Get("/channels", httpx.Handle(h.listChannels))
 	blocks.API{DB: h.DB, Events: h.Events, Limit: h.BlockLimit}.Mount(r)
 	h.mountReports(r)
 	h.mountSaved(r)
@@ -101,6 +105,7 @@ func (h *Handler) Mount(r chi.Router) {
 	h.messages().Mount(r)
 	r.Get("/search", httpx.Handle(h.search))
 	r.Get("/mentions", httpx.Handle(h.mentionsInbox))
+	h.channels().Mount(r)
 	readstate.API{DB: h.DB, Events: h.Events, Guard: h.guard()}.Mount(r)
 }
 
@@ -108,17 +113,7 @@ func (h *Handler) Mount(r chi.Router) {
 // permission applies).
 func (h *Handler) MountAdmin(r chi.Router) {
 	h.mountReportsAdmin(r)
-	r.With(auth.RequirePerm(h.Perms, perm.ManageRoles)).Get("/roles/{id}/view-as", httpx.Handle(h.viewAsRole))
-	r = r.With(auth.RequirePerm(h.Perms, perm.ManageChannels))
-	r.Post("/categories", httpx.Handle(h.createCategory))
-	r.Delete("/categories/{id}", httpx.Handle(h.deleteCategory))
-	r.Post("/channels", httpx.Handle(h.createChannel))
-	r.Delete("/channels/{id}", httpx.Handle(h.deleteChannel))
-	r.Patch("/channels/{id}", httpx.Handle(h.updateChannel))
-	r.Put("/channels/{id}/auto-delete", httpx.Handle(h.setAutoDelete))
-	r.Post("/channels/{id}/duplicate", httpx.Handle(h.duplicateChannel))
-	r.Patch("/categories/{id}", httpx.Handle(h.renameCategory))
-	r.Put("/layout", httpx.Handle(h.applyLayout))
+	h.channels().MountAdmin(r)
 }
 
 // listMembers handles GET /api/members.
@@ -182,31 +177,4 @@ func enrichMembers(members []Member, roles map[uuid.UUID][]uuid.UUID, timeouts m
 		}
 	}
 	return out
-}
-
-// listChannels handles GET /api/channels.
-//
-// @Summary List categories and channels
-// @Description Only the channels the caller may view; a category shows when its own permissions allow it or any of its channels is visible.
-// @ID listChannels
-// @Tags Channels
-// @Produce json
-// @Security cookieAuth
-// @Success 200 {object} ChannelHierarchy "Channel hierarchy."
-// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
-// @Header 429 {integer} Retry-After "Seconds until the client may retry."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Router /api/channels [get]
-func (h *Handler) listChannels(w http.ResponseWriter, r *http.Request) error {
-	cats, uncat, err := GetServerHierarchy(r.Context(), h.DB)
-	if err != nil {
-		return err
-	}
-	cats, uncat, err = visibleHierarchy(h.Perms, r, cats, uncat)
-	if err != nil {
-		return err
-	}
-	httpx.WriteJSON(w, http.StatusOK, ChannelHierarchy{Categories: cats, Uncategorized: uncat})
-	return nil
 }

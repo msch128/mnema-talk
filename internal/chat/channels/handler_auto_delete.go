@@ -1,4 +1,4 @@
-package chat
+package channels
 
 import (
 	"net/http"
@@ -23,8 +23,8 @@ type AutoDeleteRequest struct {
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Resource ID." Format(uuid)
-// @Param request body AutoDeleteRequest true "Request body."
-// @Success 200 {object} Channel "Updated channel."
+// @Param request body channels.AutoDeleteRequest true "Request body."
+// @Success 200 {object} core.Channel "Updated channel."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or days other than 0, 1, 7, 30, 90."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage channels permission, or cross-origin request rejected."
@@ -33,7 +33,7 @@ type AutoDeleteRequest struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/channels/{id}/auto-delete [put]
-func (h *Handler) setAutoDelete(w http.ResponseWriter, r *http.Request) error {
+func (a *API) SetAutoDelete(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -42,14 +42,14 @@ func (h *Handler) setAutoDelete(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if err := h.require(r, id, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, id, perm.ViewChannel); err != nil {
 		return err
 	}
-	ch, err := SetAutoDelete(r.Context(), h.DB, id, req.Days)
+	ch, err := SetAutoDelete(r.Context(), a.DB, id, req.Days)
 	if err != nil {
 		return err
 	}
-	h.channelsChanged()
+	a.ChannelsChanged()
 	httpx.WriteJSON(w, http.StatusOK, ch)
 	return nil
 }

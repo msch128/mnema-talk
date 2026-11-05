@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -107,21 +108,21 @@ func TestBotReactionsAreSetNotToggled(t *testing.T) {
 func TestSortOrderBeyondTheColumnIsRefused(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	if _, err := CreateCategory(ctx, f.p, "big", 3_000_000_000); apiStatus(err) != http.StatusBadRequest {
+	if _, err := channels.CreateCategory(ctx, f.p, "big", 3_000_000_000); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("category: %v", err)
 	}
-	if _, err := CreateChannelWithStage(ctx, f.p, nil, "big", ChannelTypeText, "", -3_000_000_000, false); apiStatus(err) != http.StatusBadRequest {
+	if _, err := channels.CreateChannelWithStage(ctx, f.p, nil, "big", ChannelTypeText, "", -3_000_000_000, false); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("channel: %v", err)
 	}
-	cat, err := CreateCategory(ctx, f.p, "ok", MaxSortOrder)
+	cat, err := channels.CreateCategory(ctx, f.p, "ok", MaxSortOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ApplyLayout(ctx, f.p, []CategoryOrder{{ID: cat.ID, SortOrder: 3_000_000_000}}, nil)
+	err = channels.ApplyLayout(ctx, f.p, []CategoryOrder{{ID: cat.ID, SortOrder: 3_000_000_000}}, nil)
 	if apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("category order: %v", err)
 	}
-	err = ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: f.c.ID, SortOrder: 3_000_000_000}})
+	err = channels.ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: f.c.ID, SortOrder: 3_000_000_000}})
 	if apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("channel placement: %v", err)
 	}
@@ -130,7 +131,7 @@ func TestSortOrderBeyondTheColumnIsRefused(t *testing.T) {
 func TestChannelInADeletedCategoryIsRefusedNotAFailure(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	cat, err := CreateCategory(ctx, f.p, "doomed", 0)
+	cat, err := channels.CreateCategory(ctx, f.p, "doomed", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,12 +140,12 @@ func TestChannelInADeletedCategoryIsRefusedNotAFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	if err := DeleteCategoryTx(ctx, tx, cat.ID); err != nil {
+	if err := channels.DeleteCategoryTx(ctx, tx, cat.ID); err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan error, 1)
 	go func() {
-		_, err := CreateChannelWithStage(ctx, f.p, &cat.ID, "late", ChannelTypeText, "", 0, false)
+		_, err := channels.CreateChannelWithStage(ctx, f.p, &cat.ID, "late", ChannelTypeText, "", 0, false)
 		done <- err
 	}()
 	waitForBlockedStatement(t, f.p)
@@ -164,11 +165,11 @@ func TestChannelInADeletedCategoryIsRefusedNotAFailure(t *testing.T) {
 func TestDeletingACategoryKeepsRoleAndMemberOverwrites(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	cat, err := CreateCategory(ctx, f.p, "private", 0)
+	cat, err := channels.CreateCategory(ctx, f.p, "private", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ch, err := CreateChannelWithStage(ctx, f.p, &cat.ID, "inside", ChannelTypeText, "", 0, false)
+	ch, err := channels.CreateChannelWithStage(ctx, f.p, &cat.ID, "inside", ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +183,7 @@ func TestDeletingACategoryKeepsRoleAndMemberOverwrites(t *testing.T) {
 	if _, err := f.p.Exec(ctx, `INSERT INTO permission_overwrites (category_id, user_id, allow, deny) VALUES ($1, $2, 2, 0)`, cat.ID, f.u.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := DeleteCategory(ctx, f.p, cat.ID); err != nil {
+	if err := channels.DeleteCategory(ctx, f.p, cat.ID); err != nil {
 		t.Fatal(err)
 	}
 	var roles, users int

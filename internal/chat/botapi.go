@@ -52,7 +52,7 @@ func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels [get]
 func (h *Handler) botListChannels(w http.ResponseWriter, r *http.Request) error {
-	return h.listChannels(w, r)
+	return h.channels().ListChannels(w, r)
 }
 
 // botListMessages handles GET /api/bot/v1/channels/{channelID}/messages.

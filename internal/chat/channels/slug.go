@@ -1,4 +1,4 @@
-package chat
+package channels
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"golang.org/x/text/unicode/norm"
 )
@@ -66,9 +67,9 @@ func truncate(s string, n int) string {
 // are dropped and free again (their old links stop resolving).
 const MaxFormerSlugs = 10
 
-// tempSlugPattern is the fixed slug of a temporary Talk: "talk-" and the first
+// TempSlugPattern is the fixed slug of a temporary Talk: "talk-" and the first
 // 8 hex characters of its id. Name-based slugs never take this shape.
-var tempSlugPattern = regexp.MustCompile(`^talk-[0-9a-f]{8}$`)
+var TempSlugPattern = regexp.MustCompile(`^talk-[0-9a-f]{8}$`)
 
 // suffixLengths are the id characters tried, in turn, as a collision suffix.
 var suffixLengths = []int{6, 8, 12, 32}
@@ -77,10 +78,10 @@ var suffixLengths = []int{6, 8, 12, 32}
 // on a rename and is never recorded in the slug history: a leader who may
 // rename a Talk but not manage channels can learn nothing about other slugs.
 func TempTalkSlug(id uuid.UUID) string {
-	return "talk-" + hexOf(id)[:8]
+	return "talk-" + HexOf(id)[:8]
 }
 
-func hexOf(id uuid.UUID) string { return strings.ReplaceAll(id.String(), "-", "") }
+func HexOf(id uuid.UUID) string { return strings.ReplaceAll(id.String(), "-", "") }
 
 // slugCandidate is the n-th choice for base (n counts from 0): base itself,
 // then base-<first 6, 8, 12 ... characters of the channel's own id>. The
@@ -91,7 +92,7 @@ func slugCandidate(base string, id uuid.UUID, n int) string {
 	if n <= 0 {
 		return base
 	}
-	suffix := "-" + hexOf(id)[:suffixLengths[n-1]]
+	suffix := "-" + HexOf(id)[:suffixLengths[n-1]]
 	return strings.Trim(truncate(base, MaxSlugLength-len(suffix)), "-") + suffix
 }
 
@@ -125,7 +126,7 @@ func assignSlug(ctx context.Context, tx pgx.Tx, id uuid.UUID, name string) error
 		return nil
 	}
 	base := Slugify(name)
-	if tempSlugPattern.MatchString(base) {
+	if TempSlugPattern.MatchString(base) {
 		base += "-x"
 	}
 	if current != nil && keepsSlug(*current, base, id) {
@@ -199,7 +200,7 @@ func AssignSlugs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID, names []string
 }
 
 // FillSlugs loads the slug and the former slugs of ch.
-func FillSlugs(ctx context.Context, q db.Querier, ch *Channel) error {
+func FillSlugs(ctx context.Context, q db.Querier, ch *core.Channel) error {
 	var slug *string
 	if err := q.QueryRow(ctx, `SELECT slug FROM channels WHERE id = $1`, ch.ID).Scan(&slug); err != nil {
 		return fmt.Errorf("load slug: %w", err)

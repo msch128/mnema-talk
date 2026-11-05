@@ -1,4 +1,4 @@
-package chat
+package channels
 
 import (
 	"context"
@@ -45,7 +45,7 @@ func ApplyLayout(ctx context.Context, p *db.Pool, cats []CategoryOrder, chans []
 
 // ApplyLayoutTx is ApplyLayout inside a transaction.
 func ApplyLayoutTx(ctx context.Context, tx pgx.Tx, cats []CategoryOrder, chans []ChannelPlacement) error {
-	if err := lockChannelLayout(ctx, tx); err != nil {
+	if err := LockChannelLayout(ctx, tx); err != nil {
 		return err
 	}
 	if err := orderCategories(ctx, tx, cats); err != nil {
@@ -153,9 +153,7 @@ const channelLayoutLockID = 0x6d6e6c6179
 
 // LockChannelLayout takes the layout lock for the rest of the transaction, for
 // callers that append to the layout (the Discord import).
-func LockChannelLayout(ctx context.Context, tx pgx.Tx) error { return lockChannelLayout(ctx, tx) }
-
-func lockChannelLayout(ctx context.Context, tx pgx.Tx) error {
+func LockChannelLayout(ctx context.Context, tx pgx.Tx) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, channelLayoutLockID); err != nil {
 		return fmt.Errorf("lock channel layout: %w", err)
 	}
@@ -167,13 +165,13 @@ func lockChannelLayout(ctx context.Context, tx pgx.Tx) error {
 // (its category, or the uncategorized channels). Messages, reactions and
 // per-user state (read position, notification level) are not copied. Channel
 // names need not be unique, so the copy keeps the source name unchanged.
-func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Channel, error) {
-	var ch *Channel
+func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*core.Channel, error) {
+	var ch *core.Channel
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := lockChannelLayout(ctx, tx); err != nil {
+		if err := LockChannelLayout(ctx, tx); err != nil {
 			return err
 		}
-		src, err := lockSourceChannel(ctx, tx, sourceID)
+		src, err := LockSourceChannel(ctx, tx, sourceID)
 		if err != nil {
 			return err
 		}
@@ -181,7 +179,7 @@ func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Cha
 		if err != nil {
 			return err
 		}
-		ch, err = insertChannelCopy(ctx, tx, src, newOrder, false)
+		ch, err = InsertChannelCopy(ctx, tx, src, newOrder, false)
 		return err
 	})
 	if err != nil {
@@ -190,8 +188,8 @@ func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Cha
 	return ch, nil
 }
 
-func lockSourceChannel(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*Channel, error) {
-	var src Channel
+func LockSourceChannel(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*core.Channel, error) {
+	var src core.Channel
 	err := tx.QueryRow(ctx, `
 		SELECT id, category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds
 		FROM channels WHERE id = $1 AND type <> 'dm' FOR UPDATE`, id).
@@ -207,8 +205,8 @@ func lockSourceChannel(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*Channel, 
 
 // makeRoomBelow shifts the channels after src in its group (in the order
 // GET /api/channels lists it) down and returns the sort order for the copy.
-func makeRoomBelow(ctx context.Context, tx pgx.Tx, src *Channel) (int, error) {
-	ids, orders, err := lockChannelGroup(ctx, tx, src.CategoryID)
+func makeRoomBelow(ctx context.Context, tx pgx.Tx, src *core.Channel) (int, error) {
+	ids, orders, err := LockChannelGroup(ctx, tx, src.CategoryID)
 	if err != nil {
 		return 0, err
 	}
@@ -230,10 +228,10 @@ func makeRoomBelow(ctx context.Context, tx pgx.Tx, src *Channel) (int, error) {
 	return newOrder, nil
 }
 
-// insertChannelCopy creates the copy of src at sortOrder, with the same
+// InsertChannelCopy creates the copy of src at sortOrder, with the same
 // permission overwrites: a copy of a private channel stays private.
-func insertChannelCopy(ctx context.Context, tx pgx.Tx, src *Channel, sortOrder int, temp bool) (*Channel, error) {
-	var ch Channel
+func InsertChannelCopy(ctx context.Context, tx pgx.Tx, src *core.Channel, sortOrder int, temp bool) (*core.Channel, error) {
+	var ch core.Channel
 	err := tx.QueryRow(ctx, `
 		INSERT INTO channels (category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds) VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
@@ -260,9 +258,9 @@ func insertChannelCopy(ctx context.Context, tx pgx.Tx, src *Channel, sortOrder i
 	return &ch, nil
 }
 
-// lockChannelGroup locks the channels of one category (nil: the
+// LockChannelGroup locks the channels of one category (nil: the
 // uncategorized ones) and returns their IDs and sort orders in display order.
-func lockChannelGroup(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) ([]uuid.UUID, []int, error) {
+func LockChannelGroup(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) ([]uuid.UUID, []int, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id, sort_order FROM channels
 		WHERE category_id IS NOT DISTINCT FROM $1 AND type <> 'dm'

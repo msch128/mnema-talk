@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -36,7 +37,7 @@ func newFixture(t *testing.T) fixture {
 	if err := p.QueryRow(context.Background(), `INSERT INTO users (username, display_name, password_hash) VALUES ($1, $2, 'test-only-unused') RETURNING id, created_at`, u.Username, u.DisplayName).Scan(&u.ID, &u.CreatedAt); err != nil {
 		t.Fatal(err)
 	}
-	c, err := chat.CreateChannelWithStage(context.Background(), p, nil, "polls", chat.ChannelTypeText, "", 0, false)
+	c, err := channels.CreateChannelWithStage(context.Background(), p, nil, "polls", chat.ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
