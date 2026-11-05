@@ -60,7 +60,7 @@ func (d *Daemon) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if version == "" {
 			version = "1.0.1"
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"Config": map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{"Image": "sha256:running", "Config": map[string]any{
 			"Image": d.Image, "Labels": map[string]string{"org.opencontainers.image.version": version},
 		}})
 	case r.Method == http.MethodPost && r.URL.Path == "/images/create":

@@ -175,26 +175,54 @@ func (s *Server) verifyAll(ctx context.Context, targets []Target, want update.Se
 // swap pulls the verified digests, moves the local tags onto them and asks the
 // recreator to restart. It runs after the 202; failures are logged and leave
 // the app running its old container (the recreator is not called unless every
-// pull and tag worked).
+// pull and tag worked). When a later container fails, the tags that already
+// moved are put back on the images the containers run, so no restart brings
+// up part of the stack on the new release.
 func (s *Server) swap(plan []verified) {
 	ctx, cancel := context.WithTimeout(context.Background(), swapTimeout)
 	defer cancel()
+	var moved []verified
 	for _, v := range plan {
 		repo := imageverify.DaemonRepository(v.result.Repository)
 		if err := s.Engine.Pull(ctx, repo, v.result.Digest); err != nil {
 			s.Log.Error("update aborted: pull of the verified image failed", "image", v.result.Ref(), "err", err)
+			s.restoreTags(moved)
 			return
 		}
 		if err := s.Engine.Tag(ctx, repo, v.result.Digest, v.tag); err != nil {
 			s.Log.Error("update aborted: tagging the verified image failed", "image", v.result.Ref(), "err", err)
+			s.restoreTags(moved)
 			return
 		}
+		moved = append(moved, v)
 	}
 	if err := s.Recreator.Recreate(ctx); err != nil {
 		s.Log.Error("update failed: the recreator reported an error", "err", err)
 		return
 	}
 	s.Log.Info("update done", "images", len(plan))
+}
+
+// restoreTags moves the tags of an aborted update back, last first so a tag
+// shared by two containers ends on the image it had before the update. It
+// uses its own deadline because the swap's may be what ran out.
+func (s *Server) restoreTags(moved []verified) {
+	if len(moved) == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), verifyTimeout)
+	defer cancel()
+	for i := len(moved) - 1; i >= 0; i-- {
+		v := moved[i]
+		repo := imageverify.DaemonRepository(v.result.Repository)
+		if v.target.ImageID == "" {
+			s.Log.Error("TAG NOT RESTORED: the container's image id is unknown; the local tag points at the new image", "container", v.target.Name, "tag", repo+":"+v.tag)
+			continue
+		}
+		if err := s.Engine.TagImage(ctx, v.target.ImageID, repo, v.tag); err != nil {
+			s.Log.Error("TAG NOT RESTORED: the local tag still points at the new image", "container", v.target.Name, "tag", repo+":"+v.tag, "err", err)
+		}
+	}
 }
 
 // checkVersion guards against rollback: a valid signature says who built an

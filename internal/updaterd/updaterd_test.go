@@ -132,9 +132,10 @@ type stubEngine struct {
 	err     error
 }
 
-func (s stubEngine) Targets(context.Context, string) ([]Target, error) { return s.targets, s.err }
-func (stubEngine) Pull(context.Context, string, string) error          { return nil }
-func (stubEngine) Tag(context.Context, string, string, string) error   { return nil }
+func (s stubEngine) Targets(context.Context, string) ([]Target, error)    { return s.targets, s.err }
+func (stubEngine) Pull(context.Context, string, string) error             { return nil }
+func (stubEngine) Tag(context.Context, string, string, string) error      { return nil }
+func (stubEngine) TagImage(context.Context, string, string, string) error { return nil }
 
 type failVerifier struct{}
 

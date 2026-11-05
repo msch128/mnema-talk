@@ -4,10 +4,12 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/imageverify"
+	"github.com/msch128/mnema-talk/internal/updaterd/daemontest"
 )
 
 // versionVerifier reports a validly signed image of the given release.
@@ -85,5 +87,71 @@ func TestSwapDoesNotTagOrRestartWhenThePullFails(t *testing.T) {
 	}
 	if srv.busy {
 		t.Fatal("the slot stays taken after a failed swap")
+	}
+}
+
+// partialEngine lets the first container's tag move and fails the second
+// one's, recording every call so the test can see what was put back.
+type partialEngine struct {
+	stubEngine
+	calls []string
+	tags  int
+}
+
+func (e *partialEngine) Pull(_ context.Context, repo, _ string) error {
+	e.calls = append(e.calls, "pull "+repo)
+	return nil
+}
+
+func (e *partialEngine) Tag(_ context.Context, repo, _, tag string) error {
+	e.tags++
+	if e.tags == 2 {
+		return context.DeadlineExceeded
+	}
+	e.calls = append(e.calls, "tag "+repo+":"+tag)
+	return nil
+}
+
+func (e *partialEngine) TagImage(_ context.Context, imageID, repo, tag string) error {
+	e.calls = append(e.calls, "restore "+imageID+" "+repo+":"+tag)
+	return nil
+}
+
+// When a later container's tag cannot be moved, the tags that already moved go
+// back to the images the containers run. Otherwise the next recreate or a
+// plain restart would bring up part of the stack on the new release.
+func TestSwapPutsMovedTagsBackWhenALaterContainerFails(t *testing.T) {
+	eng := &partialEngine{stubEngine: stubEngine{targets: []Target{
+		{Name: "app", Image: "r/x:1", ImageID: "sha256:old-app", RunningVersion: "1.0.0"},
+		{Name: "worker", Image: "r/x:2", ImageID: "sha256:old-worker", RunningVersion: "1.0.0"},
+	}}}
+	rc := &countingRecreator{}
+	srv := &Server{Token: token, Engine: eng, Verifier: okVerifier{}, Recreator: rc, Log: quiet(), Background: func(f func()) { f() }}
+	if rec := post(srv, "Bearer "+token); rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if rc.n != 0 {
+		t.Fatal("a failed swap must not restart anything")
+	}
+	want := []string{"pull r/x", "tag r/x:1", "pull r/x", "restore sha256:old-app r/x:1"}
+	if !slices.Equal(eng.calls, want) {
+		t.Fatalf("calls = %q, want %q", eng.calls, want)
+	}
+}
+
+// The real client reads the id of the image a container runs and can tag a
+// local image by that id, which is what putting a tag back needs.
+func TestDockerReadsTheRunningImageIDAndTagsByIt(t *testing.T) {
+	d := daemontest.New(t, "r/x:1")
+	eng := NewDocker(d.Socket)
+	targets, err := eng.Targets(context.Background(), "mnema-talk")
+	if err != nil || len(targets) != 1 || targets[0].ImageID != "sha256:running" {
+		t.Fatalf("targets = %+v, err = %v", targets, err)
+	}
+	if err := eng.TagImage(context.Background(), targets[0].ImageID, "r/x", "1"); err != nil {
+		t.Fatal(err)
+	}
+	if got := d.Log(); got[len(got)-1] != "tag sha256:running -> r/x:1" {
+		t.Fatalf("log = %q", got)
 	}
 }

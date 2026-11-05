@@ -45,7 +45,7 @@ func TestDockerClientReportsEngineErrors(t *testing.T) {
 	if _, err := d.Targets(ctx, "s"); err == nil || !strings.Contains(err.Error(), "HTTP 500") || len(err.Error()) > 300 {
 		t.Errorf("Targets: %v", err)
 	}
-	if _, _, err := d.configImage(ctx, "abc"); err == nil {
+	if _, _, _, err := d.configImage(ctx, "abc"); err == nil {
 		t.Error("inspect error not reported")
 	}
 	if err := d.Pull(ctx, "r/x", "sha256:1"); err == nil {
@@ -68,7 +68,7 @@ func TestDockerClientReportsEngineErrors(t *testing.T) {
 	if err := gone.Tag(ctx, "r/x", "sha256:1", "1.0"); err == nil {
 		t.Error("an unreachable daemon must be an error")
 	}
-	if _, _, err := gone.configImage(ctx, "abc"); err == nil {
+	if _, _, _, err := gone.configImage(ctx, "abc"); err == nil {
 		t.Error("an unreachable daemon must be an error")
 	}
 }
