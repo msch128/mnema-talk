@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -184,11 +185,11 @@ func (h *Handler) prepareUploadPost(ctx context.Context, chID uuid.UUID, t *uplo
 	if err != nil {
 		return nil, err
 	}
-	canManage, err := chat.CanManageMessages(ctx, h.Perms, auth.UserFrom(ctx), chID)
+	canManage, err := forum.CanManageMessages(ctx, h.Perms, auth.UserFrom(ctx), chID)
 	if err != nil {
 		return nil, err
 	}
-	return chat.PreparePost(ctx, h.DB, chID, canManage, fields["title"], tagIDs)
+	return forum.PreparePost(ctx, h.DB, chID, canManage, fields["title"], tagIDs)
 }
 
 // parseTagIDs reads a comma-separated list of tag ids.

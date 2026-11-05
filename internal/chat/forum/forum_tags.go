@@ -1,4 +1,4 @@
-package chat
+package forum
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -37,7 +38,7 @@ func CleanTagColor(color string) (string, error) {
 
 // CleanTagName validates and sanitizes a forum tag name.
 func CleanTagName(name string) (string, error) {
-	return httpx.CleanText("name", name, MaxForumTagNameLen, true)
+	return httpx.CleanText("name", name, core.MaxForumTagNameLen, true)
 }
 
 // CleanTagEmoji validates and sanitizes an optional tag emoji.
@@ -45,14 +46,14 @@ func CleanTagEmoji(emoji string) (string, error) {
 	if emoji == "" {
 		return "", nil
 	}
-	return httpx.CleanText("emoji", emoji, MaxForumTagEmojiLen, true)
+	return httpx.CleanText("emoji", emoji, core.MaxForumTagEmojiLen, true)
 }
 
 // forumTagColumns is the column list every tag query returns, in ForumTag.scan order.
 const forumTagColumns = `id, channel_id, name, emoji, color, position, moderated, created_at`
 
-// ListForumTags loads all tags defined in channelID in the forum's own order.
-func ListForumTags(ctx context.Context, q db.Querier, channelID uuid.UUID) ([]ForumTag, error) {
+// ServeListForumTags loads all tags defined in channelID in the forum's own order.
+func ListForumTags(ctx context.Context, q db.Querier, channelID uuid.UUID) ([]core.ForumTag, error) {
 	rows, err := q.Query(ctx, `
 		SELECT `+forumTagColumns+`
 		FROM forum_tags WHERE channel_id = $1 ORDER BY position ASC, name ASC`, channelID)
@@ -60,9 +61,9 @@ func ListForumTags(ctx context.Context, q db.Querier, channelID uuid.UUID) ([]Fo
 		return nil, fmt.Errorf("list forum tags: %w", err)
 	}
 	defer rows.Close()
-	tags := make([]ForumTag, 0)
+	tags := make([]core.ForumTag, 0)
 	for rows.Next() {
-		var t ForumTag
+		var t core.ForumTag
 		if err := t.Scan(rows); err != nil {
 			return nil, err
 		}
@@ -80,7 +81,7 @@ type TagSpec struct {
 }
 
 // CreateForumTagSpec adds a new tag at the end of channelID's order, enforcing the 20-tag cap.
-func CreateForumTagSpec(ctx context.Context, p *db.Pool, channelID uuid.UUID, spec TagSpec) (*ForumTag, error) {
+func CreateForumTagSpec(ctx context.Context, p *db.Pool, channelID uuid.UUID, spec TagSpec) (*core.ForumTag, error) {
 	cleanName, err := CleanTagName(spec.Name)
 	if err != nil {
 		return nil, err
@@ -94,7 +95,7 @@ func CreateForumTagSpec(ctx context.Context, p *db.Pool, channelID uuid.UUID, sp
 		return nil, err
 	}
 
-	var tag ForumTag
+	var tag core.ForumTag
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// Lock the channel row so concurrent creates cannot pass the cap together.
 		if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR UPDATE`, channelID); err != nil {
@@ -104,7 +105,7 @@ func CreateForumTagSpec(ctx context.Context, p *db.Pool, channelID uuid.UUID, sp
 		if err := tx.QueryRow(ctx, `SELECT COUNT(*), COALESCE(MAX(position), 0) FROM forum_tags WHERE channel_id = $1`, channelID).Scan(&count, &last); err != nil {
 			return err
 		}
-		if count >= MaxForumTags {
+		if count >= core.MaxForumTags {
 			return errTooManyForumTags
 		}
 		return tag.Scan(tx.QueryRow(ctx, `
@@ -154,11 +155,11 @@ func (p TagPatch) clean() (TagPatch, error) {
 	return out, nil
 }
 
-// UpdateForumTag updates the set fields of a tag and returns the tag as it was
+// ServeUpdateForumTag updates the set fields of a tag and returns the tag as it was
 // before the change next to the new one. A single statement writes only the
 // fields that are set, so two admins changing different fields of one tag
 // cannot undo each other.
-func UpdateForumTag(ctx context.Context, q db.Querier, channelID, tagID uuid.UUID, patch TagPatch) (updated, previous *ForumTag, err error) {
+func UpdateForumTag(ctx context.Context, q db.Querier, channelID, tagID uuid.UUID, patch TagPatch) (updated, previous *core.ForumTag, err error) {
 	if patch.empty() {
 		return nil, nil, httpx.ErrInvalidInput("no fields to update")
 	}
@@ -167,7 +168,7 @@ func UpdateForumTag(ctx context.Context, q db.Querier, channelID, tagID uuid.UUI
 		return nil, nil, err
 	}
 
-	var tag, old ForumTag
+	var tag, old core.ForumTag
 	err = q.QueryRow(ctx, `
 		UPDATE forum_tags t SET name = COALESCE($3, o.name), emoji = COALESCE($4, o.emoji),
 		       color = COALESCE($5, o.color), moderated = COALESCE($6, o.moderated)
@@ -190,9 +191,9 @@ func UpdateForumTag(ctx context.Context, q db.Querier, channelID, tagID uuid.UUI
 	return &tag, &old, nil
 }
 
-// ReorderForumTags puts the tags of channelID in the order of tagIDs, which
+// ServeReorderForumTags puts the tags of channelID in the order of tagIDs, which
 // must name every tag of the forum exactly once.
-func ReorderForumTags(ctx context.Context, p *db.Pool, channelID uuid.UUID, tagIDs []uuid.UUID) ([]ForumTag, error) {
+func ReorderForumTags(ctx context.Context, p *db.Pool, channelID uuid.UUID, tagIDs []uuid.UUID) ([]core.ForumTag, error) {
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR UPDATE`, channelID); err != nil {
 			return err
@@ -216,7 +217,7 @@ func ReorderForumTags(ctx context.Context, p *db.Pool, channelID uuid.UUID, tagI
 	return ListForumTags(ctx, p, channelID)
 }
 
-func sameTagSet(current []ForumTag, ids []uuid.UUID) bool {
+func sameTagSet(current []core.ForumTag, ids []uuid.UUID) bool {
 	if len(current) != len(ids) {
 		return false
 	}
@@ -233,9 +234,9 @@ func sameTagSet(current []ForumTag, ids []uuid.UUID) bool {
 	return true
 }
 
-// DeleteForumTag removes a tag from the channel and returns what it was.
-func DeleteForumTag(ctx context.Context, q db.Querier, channelID, tagID uuid.UUID) (*ForumTag, error) {
-	var tag ForumTag
+// ServeDeleteForumTag removes a tag from the channel and returns what it was.
+func DeleteForumTag(ctx context.Context, q db.Querier, channelID, tagID uuid.UUID) (*core.ForumTag, error) {
+	var tag core.ForumTag
 	err := tag.Scan(q.QueryRow(ctx, `
 		DELETE FROM forum_tags WHERE id = $1 AND channel_id = $2
 		RETURNING `+forumTagColumns, tagID, channelID))
@@ -253,7 +254,7 @@ func ValidatePostTags(ctx context.Context, q db.Querier, channelID uuid.UUID, ta
 	if len(tagIDs) == 0 {
 		return nil
 	}
-	if len(tagIDs) > MaxPostTags {
+	if len(tagIDs) > core.MaxPostTags {
 		return errTooManyPostTags
 	}
 	// Ensure all tag IDs belong to this channel

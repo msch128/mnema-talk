@@ -1,4 +1,4 @@
-package chat
+package forum
 
 import (
 	"context"
@@ -31,7 +31,7 @@ type ForumSettingsPatch struct {
 	Guidelines *string
 }
 
-// GetForumSettings returns the settings of a forum; a forum nobody configured has the defaults.
+// ServeGetForumSettings returns the settings of a forum; a forum nobody configured has the defaults.
 func GetForumSettings(ctx context.Context, q db.Querier, channelID uuid.UUID) (ForumSettings, error) {
 	var s ForumSettings
 	err := q.QueryRow(ctx, `SELECT require_tag, guidelines FROM forum_settings WHERE channel_id = $1`, channelID).
@@ -45,7 +45,7 @@ func GetForumSettings(ctx context.Context, q db.Querier, channelID uuid.UUID) (F
 	return s, nil
 }
 
-// UpdateForumSettings changes the set fields and returns the settings before and after.
+// ServeUpdateForumSettings changes the set fields and returns the settings before and after.
 func UpdateForumSettings(ctx context.Context, p *db.Pool, channelID uuid.UUID, patch ForumSettingsPatch) (updated, previous ForumSettings, err error) {
 	if patch.RequireTag == nil && patch.Guidelines == nil {
 		return updated, previous, httpx.ErrInvalidInput("no fields to update")

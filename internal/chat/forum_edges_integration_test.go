@@ -17,6 +17,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -33,17 +34,17 @@ func TestForumTagNameConflictIsReported(t *testing.T) {
 	f, _, _ := setupForumEnv(t)
 	ch := createTestForum(t, f)
 	ctx := context.Background()
-	if _, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "Bug"}); err != nil {
+	if _, err := forum.CreateForumTagSpec(ctx, f.p, ch.ID, forum.TagSpec{Name: "Bug"}); err != nil {
 		t.Fatal(err)
 	}
-	_, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "Bug"})
+	_, err := forum.CreateForumTagSpec(ctx, f.p, ch.ID, forum.TagSpec{Name: "Bug"})
 	requireAPIStatus(t, err, http.StatusConflict)
-	other, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "Question"})
+	other, err := forum.CreateForumTagSpec(ctx, f.p, ch.ID, forum.TagSpec{Name: "Question"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	name := "Bug"
-	_, _, err = UpdateForumTag(ctx, f.p, ch.ID, other.ID, TagPatch{Name: &name})
+	_, _, err = forum.UpdateForumTag(ctx, f.p, ch.ID, other.ID, TagPatch{Name: &name})
 	requireAPIStatus(t, err, http.StatusConflict)
 }
 
@@ -51,7 +52,7 @@ func TestForumTagUpdatesDoNotOverwriteEachOther(t *testing.T) {
 	f, _, _ := setupForumEnv(t)
 	ch := createTestForum(t, f)
 	ctx := context.Background()
-	tag, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "old", Emoji: "A"})
+	tag, err := forum.CreateForumTagSpec(ctx, f.p, ch.ID, forum.TagSpec{Name: "old", Emoji: "A"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,12 +62,12 @@ func TestForumTagUpdatesDoNotOverwriteEachOther(t *testing.T) {
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 	name, emoji := "new", "B"
-	if _, _, err := UpdateForumTag(ctx, tx, ch.ID, tag.ID, TagPatch{Name: &name}); err != nil {
+	if _, _, err := forum.UpdateForumTag(ctx, tx, ch.ID, tag.ID, TagPatch{Name: &name}); err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan error, 1)
 	go func() {
-		_, _, err := UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &emoji})
+		_, _, err := forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &emoji})
 		done <- err
 	}()
 	waitForBlockedStatement(t, f.p) // the second patch has read the tag and waits for the row
@@ -76,7 +77,7 @@ func TestForumTagUpdatesDoNotOverwriteEachOther(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
-	tags, err := ListForumTags(ctx, f.p, ch.ID)
+	tags, err := forum.ListForumTags(ctx, f.p, ch.ID)
 	if err != nil || len(tags) != 1 || tags[0].Name != "new" || tags[0].Emoji != "B" {
 		t.Fatalf("tags = %+v, %v; want name new and emoji B", tags, err)
 	}
@@ -98,12 +99,12 @@ func TestForumModerationIsAudited(t *testing.T) {
 	chParam := map[string]string{"channelID": ch.ID.String()}
 
 	rec := httptest.NewRecorder()
-	if err := h.createForumTag(rec, chattest.Request(mod, `{"name":"bugs"}`, chParam, "")); err != nil {
+	if err := h.forum().ServeCreateForumTag(rec, chattest.Request(mod, `{"name":"bugs"}`, chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	tag := forumDecode[ForumTag](t, rec)
 	tagParam := map[string]string{"channelID": ch.ID.String(), "tagID": tag.ID.String()}
-	if err := h.updateForumTag(httptest.NewRecorder(), chattest.Request(mod, `{"name":"defects"}`, tagParam, "")); err != nil {
+	if err := h.forum().ServeUpdateForumTag(httptest.NewRecorder(), chattest.Request(mod, `{"name":"defects"}`, tagParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	var details string
@@ -114,20 +115,20 @@ func TestForumModerationIsAudited(t *testing.T) {
 	if err := json.Unmarshal([]byte(details), &d); err != nil || d["previous_name"] != "bugs" || d["name"] != "defects" {
 		t.Fatalf("update details = %s, %v", details, err)
 	}
-	if err := h.deleteForumTag(httptest.NewRecorder(), chattest.Request(mod, "", tagParam, "")); err != nil {
+	if err := h.forum().ServeDeleteForumTag(httptest.NewRecorder(), chattest.Request(mod, "", tagParam, "")); err != nil {
 		t.Fatal(err)
 	}
 
 	post := forumMakePost(t, h, f.u, ch, "Mine")
 	postParam := map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}
 	// The author's own edit is not a moderation action.
-	if err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(f.u, `{"title":"Mine v2"}`, postParam, "")); err != nil {
+	if err := h.forum().ServeUpdateForumPost(httptest.NewRecorder(), chattest.Request(f.u, `{"title":"Mine v2"}`, postParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	if got := auditCount(t, f, "forum.post_update"); got != 0 {
 		t.Fatalf("author edit audited %d times", got)
 	}
-	if err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(mod, `{"is_locked":true}`, postParam, "")); err != nil {
+	if err := h.forum().ServeUpdateForumPost(httptest.NewRecorder(), chattest.Request(mod, `{"is_locked":true}`, postParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	for action, want := range map[string]int{"forum.tag_create": 1, "forum.tag_update": 1, "forum.tag_delete": 1, "forum.post_update": 1} {
@@ -144,7 +145,7 @@ func TestForumPostPatchChecksTheLockUnderTheRowLock(t *testing.T) {
 	ctx := context.Background()
 
 	empty := httptest.NewRecorder()
-	err := h.updateForumPost(empty, chattest.Request(f.u, `{}`, map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}, ""))
+	err := h.forum().ServeUpdateForumPost(empty, chattest.Request(f.u, `{}`, map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}, ""))
 	requireAPIStatus(t, err, http.StatusBadRequest)
 
 	tx, err := f.p.Begin(ctx)
@@ -158,7 +159,7 @@ func TestForumPostPatchChecksTheLockUnderTheRowLock(t *testing.T) {
 	title := "renamed while locked"
 	done := make(chan error, 1)
 	go func() {
-		_, err := UpdateForumPost(ctx, f.p, ch.ID, post.ID, PostActor{ID: f.u.ID}, PostPatch{Title: &title})
+		_, err := forum.UpdateForumPost(ctx, f.p, ch.ID, post.ID, PostActor{ID: f.u.ID}, PostPatch{Title: &title})
 		done <- err
 	}()
 	waitForBlockedStatement(t, f.p) // the author's request saw the post unlocked
@@ -182,7 +183,7 @@ func TestForumActivityPagingUsesTheSeenCursorActivity(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	newest := forumMakePost(t, h, f.u, ch, "newest")
 
-	page1, err := ListForumPostsFiltered(ctx, f.p, ch.ID, PostFilter{}, HistoryQuery{Limit: 2})
+	page1, err := forum.ListForumPostsFiltered(ctx, f.p, ch.ID, forum.PostFilter{}, HistoryQuery{Limit: 2})
 	if err != nil || len(page1) != 2 || page1[0].ID != newest.ID || page1[1].ID != middle.ID {
 		t.Fatalf("page 1 = %v, %v", page1, err)
 	}
@@ -191,7 +192,7 @@ func TestForumActivityPagingUsesTheSeenCursorActivity(t *testing.T) {
 	if err := forumReply(t, h, f.u, ch, middle.ID); err != nil {
 		t.Fatal(err)
 	}
-	page2, err := ListForumPostsFiltered(ctx, f.p, ch.ID, PostFilter{}, HistoryQuery{Limit: 2, Before: &cursor.ID, BeforeActivity: cursor.LastActivityAt})
+	page2, err := forum.ListForumPostsFiltered(ctx, f.p, ch.ID, forum.PostFilter{}, HistoryQuery{Limit: 2, Before: &cursor.ID, BeforeActivity: cursor.LastActivityAt})
 	if err != nil || len(page2) != 1 || page2[0].ID != older.ID {
 		t.Fatalf("page 2 = %v, %v; want only the older post", page2, err)
 	}
@@ -199,7 +200,7 @@ func TestForumActivityPagingUsesTheSeenCursorActivity(t *testing.T) {
 
 func TestForumPostListRejectsUnknownSort(t *testing.T) {
 	f, h, _, ch := forumCtx(t)
-	err := h.listForumPosts(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"channelID": ch.ID.String()}, url.Values{"sort": {"oldest"}}.Encode()))
+	err := h.forum().ServeListForumPosts(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"channelID": ch.ID.String()}, url.Values{"sort": {"oldest"}}.Encode()))
 	requireAPIStatus(t, err, http.StatusBadRequest)
 }
 

@@ -15,11 +15,12 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
-type forumHandlerFn func(*Handler, http.ResponseWriter, *http.Request) error
+type forumHandlerFn func(*forum.API, http.ResponseWriter, *http.Request) error
 
 func forumCtx(t *testing.T) (chatFixture, *Handler, *auth.User, *Channel) {
 	t.Helper()
@@ -50,7 +51,7 @@ func forumMakePost(t *testing.T, h *Handler, u *auth.User, ch *Channel, title st
 	t.Helper()
 	body, _ := json.Marshal(map[string]any{"title": title, "content": "body of " + title, "tag_ids": tags})
 	rec := httptest.NewRecorder()
-	err := h.createForumPost(rec, chattest.Request(u, string(body), map[string]string{"channelID": ch.ID.String()}, ""))
+	err := h.forum().ServeCreateForumPost(rec, chattest.Request(u, string(body), map[string]string{"channelID": ch.ID.String()}, ""))
 	if err != nil {
 		t.Fatalf("create post %q: %v", title, err)
 	}
@@ -75,7 +76,7 @@ func forumReplyID(t *testing.T, f chatFixture, parent uuid.UUID) uuid.UUID {
 func forumListIDs(t *testing.T, h *Handler, u *auth.User, ch *Channel, query string) []uuid.UUID {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	if err := h.listForumPosts(rec, chattest.Request(u, "", map[string]string{"channelID": ch.ID.String()}, query)); err != nil {
+	if err := h.forum().ServeListForumPosts(rec, chattest.Request(u, "", map[string]string{"channelID": ch.ID.String()}, query)); err != nil {
 		t.Fatalf("list %q: %v", query, err)
 	}
 	ids := []uuid.UUID{}
@@ -128,29 +129,29 @@ func forumBadTagCases(e forumBadEnv) []forumBadCase {
 	longEmoji := `{"name":"x","emoji":"` + strings.Repeat("e", 33) + `"}`
 	bad := map[string]string{"channelID": "nope"}
 	return []forumBadCase{
-		{"list tags bad channel id", (*Handler).listForumTags, e.mod, "", bad, "", ""},
-		{"list tags on text channel", (*Handler).listForumTags, e.mod, "", map[string]string{"channelID": e.textID}, "", "not a forum"},
-		{"list tags unknown channel", (*Handler).listForumTags, e.mod, "", map[string]string{"channelID": e.gone}, "", ""},
-		{"create tag bad channel id", (*Handler).createForumTag, e.mod, `{"name":"x"}`, bad, "", ""},
-		{"create tag on text channel", (*Handler).createForumTag, e.mod, `{"name":"x"}`, map[string]string{"channelID": e.textID}, "", "not a forum"},
-		{"create tag broken json", (*Handler).createForumTag, e.mod, `{`, e.ch(), "", ""},
-		{"create tag blank name", (*Handler).createForumTag, e.mod, `{"name":"   "}`, e.ch(), "", ""},
-		{"create tag long name", (*Handler).createForumTag, e.mod, longName, e.ch(), "", ""},
-		{"create tag long emoji", (*Handler).createForumTag, e.mod, longEmoji, e.ch(), "", ""},
-		{"update tag bad channel id", (*Handler).updateForumTag, e.mod, `{"name":"y"}`, e.tagParams("nope", e.tagID), "", ""},
-		{"update tag bad tag id", (*Handler).updateForumTag, e.mod, `{"name":"y"}`, e.tagParams(e.chID, "nope"), "", ""},
-		{"update tag by member", (*Handler).updateForumTag, e.member, `{"name":"y"}`, e.tagParams(e.chID, e.tagID), "", ""},
-		{"update tag on text channel", (*Handler).updateForumTag, e.mod, `{"name":"y"}`, e.tagParams(e.textID, e.tagID), "", "not a forum"},
-		{"update tag broken json", (*Handler).updateForumTag, e.mod, `[`, e.tagParams(e.chID, e.tagID), "", ""},
-		{"update tag without fields", (*Handler).updateForumTag, e.mod, `{}`, e.tagParams(e.chID, e.tagID), "", "no fields"},
-		{"update unknown tag", (*Handler).updateForumTag, e.mod, `{"name":"y"}`, e.tagParams(e.chID, e.gone), "", "not found"},
-		{"update tag blank name", (*Handler).updateForumTag, e.mod, `{"name":" "}`, e.tagParams(e.chID, e.tagID), "", ""},
-		{"update tag long emoji", (*Handler).updateForumTag, e.mod, longEmoji, e.tagParams(e.chID, e.tagID), "", ""},
-		{"delete tag bad channel id", (*Handler).deleteForumTag, e.mod, "", e.tagParams("nope", e.tagID), "", ""},
-		{"delete tag bad tag id", (*Handler).deleteForumTag, e.mod, "", e.tagParams(e.chID, "nope"), "", ""},
-		{"delete tag by member", (*Handler).deleteForumTag, e.member, "", e.tagParams(e.chID, e.tagID), "", ""},
-		{"delete tag on text channel", (*Handler).deleteForumTag, e.mod, "", e.tagParams(e.textID, e.tagID), "", "not a forum"},
-		{"delete unknown tag", (*Handler).deleteForumTag, e.mod, "", e.tagParams(e.chID, e.gone), "", "not found"},
+		{"list tags bad channel id", (*forum.API).ServeListForumTags, e.mod, "", bad, "", ""},
+		{"list tags on text channel", (*forum.API).ServeListForumTags, e.mod, "", map[string]string{"channelID": e.textID}, "", "not a forum"},
+		{"list tags unknown channel", (*forum.API).ServeListForumTags, e.mod, "", map[string]string{"channelID": e.gone}, "", ""},
+		{"create tag bad channel id", (*forum.API).ServeCreateForumTag, e.mod, `{"name":"x"}`, bad, "", ""},
+		{"create tag on text channel", (*forum.API).ServeCreateForumTag, e.mod, `{"name":"x"}`, map[string]string{"channelID": e.textID}, "", "not a forum"},
+		{"create tag broken json", (*forum.API).ServeCreateForumTag, e.mod, `{`, e.ch(), "", ""},
+		{"create tag blank name", (*forum.API).ServeCreateForumTag, e.mod, `{"name":"   "}`, e.ch(), "", ""},
+		{"create tag long name", (*forum.API).ServeCreateForumTag, e.mod, longName, e.ch(), "", ""},
+		{"create tag long emoji", (*forum.API).ServeCreateForumTag, e.mod, longEmoji, e.ch(), "", ""},
+		{"update tag bad channel id", (*forum.API).ServeUpdateForumTag, e.mod, `{"name":"y"}`, e.tagParams("nope", e.tagID), "", ""},
+		{"update tag bad tag id", (*forum.API).ServeUpdateForumTag, e.mod, `{"name":"y"}`, e.tagParams(e.chID, "nope"), "", ""},
+		{"update tag by member", (*forum.API).ServeUpdateForumTag, e.member, `{"name":"y"}`, e.tagParams(e.chID, e.tagID), "", ""},
+		{"update tag on text channel", (*forum.API).ServeUpdateForumTag, e.mod, `{"name":"y"}`, e.tagParams(e.textID, e.tagID), "", "not a forum"},
+		{"update tag broken json", (*forum.API).ServeUpdateForumTag, e.mod, `[`, e.tagParams(e.chID, e.tagID), "", ""},
+		{"update tag without fields", (*forum.API).ServeUpdateForumTag, e.mod, `{}`, e.tagParams(e.chID, e.tagID), "", "no fields"},
+		{"update unknown tag", (*forum.API).ServeUpdateForumTag, e.mod, `{"name":"y"}`, e.tagParams(e.chID, e.gone), "", "not found"},
+		{"update tag blank name", (*forum.API).ServeUpdateForumTag, e.mod, `{"name":" "}`, e.tagParams(e.chID, e.tagID), "", ""},
+		{"update tag long emoji", (*forum.API).ServeUpdateForumTag, e.mod, longEmoji, e.tagParams(e.chID, e.tagID), "", ""},
+		{"delete tag bad channel id", (*forum.API).ServeDeleteForumTag, e.mod, "", e.tagParams("nope", e.tagID), "", ""},
+		{"delete tag bad tag id", (*forum.API).ServeDeleteForumTag, e.mod, "", e.tagParams(e.chID, "nope"), "", ""},
+		{"delete tag by member", (*forum.API).ServeDeleteForumTag, e.member, "", e.tagParams(e.chID, e.tagID), "", ""},
+		{"delete tag on text channel", (*forum.API).ServeDeleteForumTag, e.mod, "", e.tagParams(e.textID, e.tagID), "", "not a forum"},
+		{"delete unknown tag", (*forum.API).ServeDeleteForumTag, e.mod, "", e.tagParams(e.chID, e.gone), "", "not found"},
 	}
 }
 
@@ -161,28 +162,28 @@ func forumBadPostCases(e forumBadEnv) []forumBadCase {
 	foreignTagUpdate := fmt.Sprintf(`{"tag_ids":["%s"]}`, e.gone)
 	text := map[string]string{"channelID": e.textID}
 	return []forumBadCase{
-		{"list posts bad channel id", (*Handler).listForumPosts, e.member, "", map[string]string{"channelID": "nope"}, "", ""},
-		{"list posts on text channel", (*Handler).listForumPosts, e.member, "", text, "", "not a forum"},
-		{"list posts bad tag filter", (*Handler).listForumPosts, e.member, "", e.ch(), "tag_id=zzz", "tag_id"},
-		{"list posts bad cursor", (*Handler).listForumPosts, e.member, "", e.ch(), "before=zzz", "before"},
-		{"create post bad channel id", (*Handler).createForumPost, e.member, okBody, map[string]string{"channelID": "nope"}, "", ""},
-		{"create post on text channel", (*Handler).createForumPost, e.member, okBody, text, "", "not a forum"},
-		{"create post broken json", (*Handler).createForumPost, e.member, `{`, e.ch(), "", ""},
-		{"create post long title", (*Handler).createForumPost, e.member, longTitle, e.ch(), "", ""},
-		{"create post foreign tag", (*Handler).createForumPost, e.member, foreignTag, e.ch(), "", "tag does not belong"},
-		{"update post bad channel id", (*Handler).updateForumPost, e.member, `{"title":"x"}`, e.postParams("nope", e.msgID), "", ""},
-		{"update post bad message id", (*Handler).updateForumPost, e.member, `{"title":"x"}`, e.postParams(e.chID, "nope"), "", ""},
-		{"update post on text channel", (*Handler).updateForumPost, e.member, `{"title":"x"}`, e.postParams(e.textID, e.msgID), "", "not a forum"},
-		{"update post broken json", (*Handler).updateForumPost, e.member, `{`, e.postParams(e.chID, e.msgID), "", ""},
-		{"update unknown post", (*Handler).updateForumPost, e.member, `{"title":"x"}`, e.postParams(e.chID, e.gone), "", "not found"},
-		{"update post blank title", (*Handler).updateForumPost, e.member, `{"title":"  "}`, e.postParams(e.chID, e.msgID), "", ""},
-		{"update post foreign tag", (*Handler).updateForumPost, e.member, foreignTagUpdate, e.postParams(e.chID, e.msgID), "", "tag does not belong"},
+		{"list posts bad channel id", (*forum.API).ServeListForumPosts, e.member, "", map[string]string{"channelID": "nope"}, "", ""},
+		{"list posts on text channel", (*forum.API).ServeListForumPosts, e.member, "", text, "", "not a forum"},
+		{"list posts bad tag filter", (*forum.API).ServeListForumPosts, e.member, "", e.ch(), "tag_id=zzz", "tag_id"},
+		{"list posts bad cursor", (*forum.API).ServeListForumPosts, e.member, "", e.ch(), "before=zzz", "before"},
+		{"create post bad channel id", (*forum.API).ServeCreateForumPost, e.member, okBody, map[string]string{"channelID": "nope"}, "", ""},
+		{"create post on text channel", (*forum.API).ServeCreateForumPost, e.member, okBody, text, "", "not a forum"},
+		{"create post broken json", (*forum.API).ServeCreateForumPost, e.member, `{`, e.ch(), "", ""},
+		{"create post long title", (*forum.API).ServeCreateForumPost, e.member, longTitle, e.ch(), "", ""},
+		{"create post foreign tag", (*forum.API).ServeCreateForumPost, e.member, foreignTag, e.ch(), "", "tag does not belong"},
+		{"update post bad channel id", (*forum.API).ServeUpdateForumPost, e.member, `{"title":"x"}`, e.postParams("nope", e.msgID), "", ""},
+		{"update post bad message id", (*forum.API).ServeUpdateForumPost, e.member, `{"title":"x"}`, e.postParams(e.chID, "nope"), "", ""},
+		{"update post on text channel", (*forum.API).ServeUpdateForumPost, e.member, `{"title":"x"}`, e.postParams(e.textID, e.msgID), "", "not a forum"},
+		{"update post broken json", (*forum.API).ServeUpdateForumPost, e.member, `{`, e.postParams(e.chID, e.msgID), "", ""},
+		{"update unknown post", (*forum.API).ServeUpdateForumPost, e.member, `{"title":"x"}`, e.postParams(e.chID, e.gone), "", "not found"},
+		{"update post blank title", (*forum.API).ServeUpdateForumPost, e.member, `{"title":"  "}`, e.postParams(e.chID, e.msgID), "", ""},
+		{"update post foreign tag", (*forum.API).ServeUpdateForumPost, e.member, foreignTagUpdate, e.postParams(e.chID, e.msgID), "", "tag does not belong"},
 	}
 }
 
 func TestForumHandlersRejectBadRequests(t *testing.T) {
 	f, h, mod, ch := forumCtx(t)
-	tag, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "known"})
+	tag, err := forum.CreateForumTagSpec(context.Background(), f.p, ch.ID, forum.TagSpec{Name: "known"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +195,7 @@ func TestForumHandlersRejectBadRequests(t *testing.T) {
 	cases := append(forumBadTagCases(env), forumBadPostCases(env)...)
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.fn(h, httptest.NewRecorder(), chattest.Request(tc.user, tc.body, tc.params, tc.query))
+			err := tc.fn(h.forum(), httptest.NewRecorder(), chattest.Request(tc.user, tc.body, tc.params, tc.query))
 			if err == nil {
 				t.Fatal("expected an error")
 			}
@@ -209,18 +210,18 @@ func TestForumTagCapAndPostTagLimit(t *testing.T) {
 	f, h, mod, ch := forumCtx(t)
 	ids := make([]uuid.UUID, 0, 20)
 	for i := 0; i < 20; i++ {
-		tag, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: fmt.Sprintf("t%02d", i)})
+		tag, err := forum.CreateForumTagSpec(context.Background(), f.p, ch.ID, forum.TagSpec{Name: fmt.Sprintf("t%02d", i)})
 		if err != nil {
 			t.Fatal(err)
 		}
 		ids = append(ids, tag.ID)
 	}
 	cp := map[string]string{"channelID": ch.ID.String()}
-	err := h.createForumTag(httptest.NewRecorder(), chattest.Request(mod, `{"name":"overflow"}`, cp, ""))
+	err := h.forum().ServeCreateForumTag(httptest.NewRecorder(), chattest.Request(mod, `{"name":"overflow"}`, cp, ""))
 	chattest.RequireError(t, err, "at most 20 tags")
 
 	body, _ := json.Marshal(map[string]any{"title": "Too tagged", "content": "c", "tag_ids": ids[:6]})
-	err = h.createForumPost(httptest.NewRecorder(), chattest.Request(f.u, string(body), cp, ""))
+	err = h.forum().ServeCreateForumPost(httptest.NewRecorder(), chattest.Request(f.u, string(body), cp, ""))
 	chattest.RequireError(t, err, "at most 5 tags")
 
 	post := forumMakePost(t, h, f.u, ch, "Five tags", ids[:5]...)
@@ -229,7 +230,7 @@ func TestForumTagCapAndPostTagLimit(t *testing.T) {
 	}
 	pp := map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}
 	body, _ = json.Marshal(map[string]any{"tag_ids": ids[:6]})
-	err = h.updateForumPost(httptest.NewRecorder(), chattest.Request(f.u, string(body), pp, ""))
+	err = h.forum().ServeUpdateForumPost(httptest.NewRecorder(), chattest.Request(f.u, string(body), pp, ""))
 	chattest.RequireError(t, err, "at most 5 tags")
 }
 
@@ -239,24 +240,24 @@ func TestForumTagsAreChannelScoped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	foreign, err := CreateForumTagSpec(context.Background(), f.p, other.ID, TagSpec{Name: "foreign"})
+	foreign, err := forum.CreateForumTagSpec(context.Background(), f.p, other.ID, forum.TagSpec{Name: "foreign"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	own, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "own"})
+	own, err := forum.CreateForumTagSpec(context.Background(), f.p, ch.ID, forum.TagSpec{Name: "own"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	cp := map[string]string{"channelID": ch.ID.String()}
 	body := fmt.Sprintf(`{"title":"t","content":"c","tag_ids":["%s"]}`, foreign.ID)
-	chattest.RequireError(t, h.createForumPost(httptest.NewRecorder(), chattest.Request(f.u, body, cp, "")), "tag does not belong")
+	chattest.RequireError(t, h.forum().ServeCreateForumPost(httptest.NewRecorder(), chattest.Request(f.u, body, cp, "")), "tag does not belong")
 
 	tp := map[string]string{"channelID": ch.ID.String(), "tagID": foreign.ID.String()}
-	chattest.RequireError(t, h.updateForumTag(httptest.NewRecorder(), chattest.Request(mod, `{"name":"x"}`, tp, "")), "not found")
-	chattest.RequireError(t, h.deleteForumTag(httptest.NewRecorder(), chattest.Request(mod, "", tp, "")), "not found")
+	chattest.RequireError(t, h.forum().ServeUpdateForumTag(httptest.NewRecorder(), chattest.Request(mod, `{"name":"x"}`, tp, "")), "not found")
+	chattest.RequireError(t, h.forum().ServeDeleteForumTag(httptest.NewRecorder(), chattest.Request(mod, "", tp, "")), "not found")
 
 	rec := httptest.NewRecorder()
-	if err := h.listForumTags(rec, chattest.Request(f.u, "", cp, "")); err != nil {
+	if err := h.forum().ServeListForumTags(rec, chattest.Request(f.u, "", cp, "")); err != nil {
 		t.Fatal(err)
 	}
 	tags := forumDecode[[]ForumTag](t, rec)
@@ -268,20 +269,20 @@ func TestForumTagsAreChannelScoped(t *testing.T) {
 func TestForumTagPartialUpdates(t *testing.T) {
 	f, _, _, ch := forumCtx(t)
 	ctx := context.Background()
-	tag, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "orig", Emoji: "A"})
+	tag, err := forum.CreateForumTagSpec(ctx, f.p, ch.ID, forum.TagSpec{Name: "orig", Emoji: "A"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	newName, newEmoji, empty := "renamed", "B", ""
-	got, _, err := UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Name: &newName})
+	got, _, err := forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Name: &newName})
 	if err != nil || got.Name != "renamed" || got.Emoji != "A" {
 		t.Fatalf("name-only update = %+v, %v", got, err)
 	}
-	got, _, err = UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &newEmoji})
+	got, _, err = forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &newEmoji})
 	if err != nil || got.Name != "renamed" || got.Emoji != "B" {
 		t.Fatalf("emoji-only update = %+v, %v", got, err)
 	}
-	got, _, err = UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &empty})
+	got, _, err = forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &empty})
 	if err != nil || got.Emoji != "" {
 		t.Fatalf("clearing emoji = %+v, %v", got, err)
 	}
@@ -289,7 +290,7 @@ func TestForumTagPartialUpdates(t *testing.T) {
 
 func TestForumDeletingTagKeepsPostsAndClearsFilter(t *testing.T) {
 	f, h, mod, ch := forumCtx(t)
-	tag, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "doomed"})
+	tag, err := forum.CreateForumTagSpec(context.Background(), f.p, ch.ID, forum.TagSpec{Name: "doomed"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +300,7 @@ func TestForumDeletingTagKeepsPostsAndClearsFilter(t *testing.T) {
 
 	tp := map[string]string{"channelID": ch.ID.String(), "tagID": tag.ID.String()}
 	rec := httptest.NewRecorder()
-	if err := h.deleteForumTag(rec, chattest.Request(mod, "", tp, "")); err != nil {
+	if err := h.forum().ServeDeleteForumTag(rec, chattest.Request(mod, "", tp, "")); err != nil {
 		t.Fatal(err)
 	}
 	if rec.Code != http.StatusNoContent {
@@ -344,7 +345,7 @@ func TestForumListingOmitsRepliesAndStoreClampsLimit(t *testing.T) {
 	}
 	for _, mode := range []string{"newest", "activity"} {
 		for _, limit := range []int{0, 1000} {
-			posts, err := ListForumPostsFiltered(context.Background(), f.p, ch.ID, PostFilter{Sort: mode}, HistoryQuery{Limit: limit})
+			posts, err := forum.ListForumPostsFiltered(context.Background(), f.p, ch.ID, forum.PostFilter{Sort: mode}, HistoryQuery{Limit: limit})
 			if err != nil || len(posts) != 1 || posts[0].ID != a.ID {
 				t.Fatalf("%s/%d: got %d posts, err %v", mode, limit, len(posts), err)
 			}
@@ -355,7 +356,7 @@ func TestForumListingOmitsRepliesAndStoreClampsLimit(t *testing.T) {
 func TestForumPostUpdateRules(t *testing.T) {
 	f, h, mod, ch := forumCtx(t)
 	other := forumNewUser(t, f, "forum_other")
-	tag, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "t1"})
+	tag, err := forum.CreateForumTagSpec(context.Background(), f.p, ch.ID, forum.TagSpec{Name: "t1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -363,7 +364,7 @@ func TestForumPostUpdateRules(t *testing.T) {
 	pp := map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}
 	update := func(u *auth.User, body string) (*httptest.ResponseRecorder, error) {
 		rec := httptest.NewRecorder()
-		return rec, h.updateForumPost(rec, chattest.Request(u, body, pp, ""))
+		return rec, h.forum().ServeUpdateForumPost(rec, chattest.Request(u, body, pp, ""))
 	}
 
 	tagBody := fmt.Sprintf(`{"tag_ids":["%s"]}`, tag.ID)
@@ -415,7 +416,7 @@ func TestForumPostUpdateRejectsRepliesAndOtherChannels(t *testing.T) {
 	}
 	for name, params := range cases {
 		t.Run(name, func(t *testing.T) {
-			err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(f.u, `{"title":"x"}`, params, ""))
+			err := h.forum().ServeUpdateForumPost(httptest.NewRecorder(), chattest.Request(f.u, `{"title":"x"}`, params, ""))
 			chattest.RequireError(t, err, "not found")
 		})
 	}
@@ -425,15 +426,15 @@ func TestForumPostUpdateWithoutPermissionService(t *testing.T) {
 	f, _, mod, ch := forumCtx(t)
 	h := &Handler{DB: f.p, Events: &events.Recorder{}}
 	other := forumNewUser(t, f, "forum_plain")
-	post, err := CreateForumPost(context.Background(), f.p, nil, ch.ID, f.u.ID, false, "Legacy", "content", nil)
+	post, err := forum.CreateForumPost(context.Background(), f.p, nil, ch.ID, f.u.ID, false, "Legacy", "content", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	pp := map[string]string{"channelID": ch.ID.String(), "messageID": post.String()}
-	if err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(other, `{"title":"x"}`, pp, "")); err == nil {
+	if err := h.forum().ServeUpdateForumPost(httptest.NewRecorder(), chattest.Request(other, `{"title":"x"}`, pp, "")); err == nil {
 		t.Fatal("plain member must not edit someone else's post")
 	}
-	if err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(mod, `{"is_locked":true}`, pp, "")); err != nil {
+	if err := h.forum().ServeUpdateForumPost(httptest.NewRecorder(), chattest.Request(mod, `{"is_locked":true}`, pp, "")); err != nil {
 		t.Fatalf("admin role should manage posts: %v", err)
 	}
 }
@@ -455,31 +456,31 @@ func TestForumRepliesAndRootRulesInForums(t *testing.T) {
 		t.Fatal("root message through the plain endpoint must fail in a forum")
 	}
 	tp := map[string]string{"channelID": f.c.ID.String()}
-	if err := h.createForumPost(httptest.NewRecorder(), chattest.Request(f.u, body, tp, "")); err == nil {
+	if err := h.forum().ServeCreateForumPost(httptest.NewRecorder(), chattest.Request(f.u, body, tp, "")); err == nil {
 		t.Fatal("forum post endpoint must refuse text channels")
 	}
 }
 
 func TestForumValidationHelpers(t *testing.T) {
-	if _, err := CleanTagName(strings.Repeat("é", 21)); err == nil {
+	if _, err := forum.CleanTagName(strings.Repeat("é", 21)); err == nil {
 		t.Fatal("21-rune tag name accepted")
 	}
-	if got, err := CleanTagName("  ok  "); err != nil || got != "ok" {
+	if got, err := forum.CleanTagName("  ok  "); err != nil || got != "ok" {
 		t.Fatalf("CleanTagName = %q, %v", got, err)
 	}
-	if got, err := CleanTagEmoji(""); err != nil || got != "" {
+	if got, err := forum.CleanTagEmoji(""); err != nil || got != "" {
 		t.Fatalf("empty emoji = %q, %v", got, err)
 	}
-	if _, err := CleanTagEmoji(strings.Repeat("e", 33)); err == nil {
+	if _, err := forum.CleanTagEmoji(strings.Repeat("e", 33)); err == nil {
 		t.Fatal("33-byte emoji accepted")
 	}
-	if _, err := CleanPostTitle(strings.Repeat("t", 101)); err == nil {
+	if _, err := forum.CleanPostTitle(strings.Repeat("t", 101)); err == nil {
 		t.Fatal("101-char title accepted")
 	}
-	if _, err := CleanPostTitle(" \t "); err == nil {
+	if _, err := forum.CleanPostTitle(" \t "); err == nil {
 		t.Fatal("blank title accepted")
 	}
-	if got, err := CleanPostTitle(strings.Repeat("\u00fc", 100)); err != nil || got == "" {
+	if got, err := forum.CleanPostTitle(strings.Repeat("\u00fc", 100)); err != nil || got == "" {
 		t.Fatalf("100-rune title rejected: %v", err)
 	}
 }
@@ -490,20 +491,23 @@ func TestForumStoreErrorsOnCanceledContext(t *testing.T) {
 	cancel()
 	name := "x"
 	calls := map[string]func() error{
-		"list tags":     func() error { _, err := ListForumTags(ctx, f.p, ch.ID); return err },
-		"validate tags": func() error { return ValidatePostTags(ctx, f.p, ch.ID, []uuid.UUID{uuid.New()}) },
-		"delete tag":    func() error { _, err := DeleteForumTag(ctx, f.p, ch.ID, uuid.New()); return err },
+		"list tags":     func() error { _, err := forum.ListForumTags(ctx, f.p, ch.ID); return err },
+		"validate tags": func() error { return forum.ValidatePostTags(ctx, f.p, ch.ID, []uuid.UUID{uuid.New()}) },
+		"delete tag":    func() error { _, err := forum.DeleteForumTag(ctx, f.p, ch.ID, uuid.New()); return err },
 		"update tag": func() error {
-			_, _, err := UpdateForumTag(ctx, f.p, ch.ID, uuid.New(), TagPatch{Name: &name})
+			_, _, err := forum.UpdateForumTag(ctx, f.p, ch.ID, uuid.New(), TagPatch{Name: &name})
 			return err
 		},
-		"create tag": func() error { _, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "x"}); return err },
+		"create tag": func() error {
+			_, err := forum.CreateForumTagSpec(ctx, f.p, ch.ID, forum.TagSpec{Name: "x"})
+			return err
+		},
 		"list posts": func() error {
-			_, err := ListForumPostsFiltered(ctx, f.p, ch.ID, PostFilter{Sort: "newest"}, HistoryQuery{})
+			_, err := forum.ListForumPostsFiltered(ctx, f.p, ch.ID, forum.PostFilter{Sort: "newest"}, HistoryQuery{})
 			return err
 		},
 		"update post": func() error {
-			_, err := UpdateForumPost(ctx, f.p, ch.ID, uuid.New(), PostActor{ID: f.u.ID, CanManage: true}, PostPatch{})
+			_, err := forum.UpdateForumPost(ctx, f.p, ch.ID, uuid.New(), PostActor{ID: f.u.ID, CanManage: true}, PostPatch{})
 			return err
 		},
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/chat/reports"
@@ -112,6 +113,11 @@ func (h *Handler) search() *search.API {
 	return &search.API{DB: h.DB, Guard: h.guard()}
 }
 
+// forum builds the forum API from the handler's fields.
+func (h *Handler) forum() *forum.API {
+	return &forum.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Audit: h.Audit, Online: h.Online, Messages: h.messages()}
+}
+
 // Mount registers the member-facing routes (RequireUser must already apply).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/members", httpx.Handle(h.listMembers))
@@ -120,7 +126,7 @@ func (h *Handler) Mount(r chi.Router) {
 	h.mountSaved(r)
 	h.DMs().Mount(r)
 	h.mountTalks(r)
-	h.mountForum(r)
+	h.forum().Mount(r)
 	h.messages().Mount(r)
 	h.search().Mount(r)
 	h.channels().Mount(r)
