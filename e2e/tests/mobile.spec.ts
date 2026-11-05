@@ -102,9 +102,17 @@ async function expectTouchSize(page: Page, name: string | RegExp) {
   expect(box.height, `${String(name)} height`).toBeGreaterThanOrEqual(MIN_TARGET)
 }
 
+// Right after a reload the first channel is still being selected, and every
+// change of the active channel closes the drawer (App.vue), so a tap that lands
+// before that selection is undone by it: the drawer stays inert, ratio 0. Tap
+// again until the drawer is open; a closed drawer is `inert`, so an open one is
+// never toggled away.
 async function openDrawer(page: Page) {
-  await page.getByTestId('open-nav').tap()
-  await expect(page.getByTestId('channel-drawer')).toBeInViewport({ ratio: 0.9 })
+  const drawer = page.getByTestId('channel-drawer')
+  await expect(async () => {
+    if (await drawer.evaluate(el => el.hasAttribute('inert'))) await page.getByTestId('open-nav').tap()
+    await expect(drawer).toBeInViewport({ ratio: 0.9, timeout: 2_000 })
+  }).toPass({ timeout: 15_000 })
 }
 
 test('phone: sign in, drawer, message, thread, settings, Talk', async ({ page, browserName }) => {
@@ -342,8 +350,7 @@ test('phone: the drawer row opens a Talk chat without joining', async ({ page })
   expect(voice.status).toBe(201)
   const channelSlug = responseString(voice, 'slug')
   await page.reload()
-  await page.getByTestId('open-nav').tap()
-  await expect(page.getByTestId('channel-drawer')).toBeInViewport({ ratio: 0.9 })
+  await openDrawer(page)
   const chatButton = page.locator('[data-channel-item]', { has: page.locator('[data-channel-type="voice"]', { hasText: name }) }).getByRole('button', { name: 'Chat öffnen' })
   await expect(chatButton).toBeVisible()
   const box = await bounds(chatButton)
