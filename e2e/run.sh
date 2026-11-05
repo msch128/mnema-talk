@@ -49,14 +49,12 @@ UDP_MIN="${E2E_UDP_PORT:-$(free_port udp)}"
 if [ "$UDP_MIN" -gt 65480 ]; then UDP_MIN=50100; fi
 UDP_MAX=$((UDP_MIN + 50))
 # The built-in TURN relay (relay-call.spec.ts) needs a port that is free for
-# both UDP and TCP; the kernel hands out the TCP one and the UDP side is checked.
+# both UDP and TCP and outside the WebRTC UDP range (the server refuses a
+# WEBRTC_BUILTIN_TURN_PORT inside it); see e2e/ports.sh.
 TURN_PORT="${E2E_TURN_PORT:-}"
 if [ -z "$TURN_PORT" ]; then
-  for _ in $(seq 1 20); do
-    candidate="$(free_port tcp)"
-    if python3 -c "import socket,sys; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.bind(('127.0.0.1',int(sys.argv[1])))" "$candidate" 2>/dev/null; then TURN_PORT="$candidate"; break; fi
-  done
-  [ -n "$TURN_PORT" ] || { echo "no port free for TURN over UDP and TCP" >&2; exit 1; }
+  . "$ROOT/e2e/ports.sh"
+  TURN_PORT="$(pick_turn_port "$UDP_MIN" "$UDP_MAX")" || { echo "no port free for TURN over UDP and TCP" >&2; exit 1; }
 fi
 PROJECT="${E2E_PROJECT:-mnema-e2e-$$}"
 BIN="$ROOT/bin/mnema-talk-e2e"
