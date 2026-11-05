@@ -1,0 +1,19 @@
+AGENTS.md
+  s_f6edaac6c70960::t_3ec981c1dd10d8 155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "475651b9f7eb1d63efb3c9af1fb99ff5c5c3e0de",
+  "prompts": {},
+  "sessions": {
+    "s_f6edaac6c70960": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aedccab7bc6622020",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
