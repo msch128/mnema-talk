@@ -56,26 +56,55 @@ func freeUDPRange(t *testing.T, n int) uint16 {
 	return 0
 }
 
-// freeRelayPort returns a port free for both UDP and TCP.
-func freeRelayPort(t *testing.T) int {
+// freeRelayPort returns a port free for both UDP and TCP that lies outside
+// the SFU's media port range lo-hi: the relay refuses to start inside it, and
+// a port the range test just released is exactly what the OS hands out next.
+func freeRelayPort(t *testing.T, lo, hi uint16) int {
+	t.Helper()
+	return pickRelayPort(t, lo, hi, func() int { return int(freeUDPPort(t)) })
+}
+
+// pickRelayPort draws candidates from next until one is outside lo-hi and
+// also free for TCP.
+func pickRelayPort(t *testing.T, lo, hi uint16, next func() int) int {
 	t.Helper()
 	for range 50 {
-		port := int(freeUDPPort(t))
+		port := next()
+		if port >= int(lo) && port <= int(hi) {
+			continue
+		}
 		l, err := net.Listen("tcp4", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
 		if err == nil {
 			_ = l.Close()
 			return port
 		}
 	}
-	t.Fatal("no port free for UDP and TCP")
+	t.Fatal("no port free for UDP and TCP outside the media port range")
 	return 0
+}
+
+// A relay port drawn inside the SFU's media range is skipped, not used; this
+// pins the collision that made TestRelayOnlyClientsExchangeAudio flaky.
+func TestPickRelayPortSkipsMediaRange(t *testing.T) {
+	lo := int(freeUDPRange(t, 21))
+	outside := int(freeUDPPort(t))
+	for outside >= lo-1 && outside <= lo+21 {
+		outside = int(freeUDPPort(t))
+	}
+	seq := []int{lo, lo + 10, lo + 20, outside}
+	i := 0
+	got := pickRelayPort(t, uint16(lo), uint16(lo+20), func() int { i++; return seq[i-1] })
+	if got != outside {
+		t.Fatalf("picked %d, want %d (outside %d-%d)", got, outside, lo, lo+20)
+	}
 }
 
 // relayFor starts the built-in relay for s the way main does.
 func relayFor(t *testing.T, s *SFU) *turnrelay.Server {
 	t.Helper()
+	ep := s.Endpoints()
 	relay, err := turnrelay.Start(turnrelay.Options{
-		Port:     freeRelayPort(t),
+		Port:     freeRelayPort(t, ep.PortMin, ep.PortMax),
 		BindAddr: "127.0.0.1",
 		Target: func() turnrelay.Target {
 			ep := s.Endpoints()
