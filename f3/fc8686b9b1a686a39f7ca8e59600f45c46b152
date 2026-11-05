@@ -1,0 +1,265 @@
+internal/bot/interactions.go
+  s_e3e7e7812a5e9e::t_ca3529475c9079 14,28
+internal/bot/interactions_respond.go
+  s_db63cd4785d2fa::t_405a34ebecfe75 11,21-22,104,150,164,179,183
+internal/bot/rest_faults_integration_test.go
+  s_e3e7e7812a5e9e::t_fe782db6b50e86 122
+internal/chat/botapi/botapi.go
+  s_e3e7e7812a5e9e::t_5bd5e5800a4e9d 374
+internal/chat/channel_edges_integration_test.go
+  s_e3e7e7812a5e9e::t_c4717019226f3c 115,118,122,126,149,173,206,247,293
+internal/chat/channels/api.go
+  s_e3e7e7812a5e9e::t_2663ff0095c1d8 39-47
+internal/chat/channels/auto_delete.go
+  s_e3e7e7812a5e9e::t_ab62ea58ca35f7 44
+internal/chat/channels/categories.go
+  s_e3e7e7812a5e9e::t_db740afc230d2c 51
+internal/chat/channels/channel_layout.go
+  s_e3e7e7812a5e9e::t_1bf7f1d0608e9e 40,163
+internal/chat/channels/channels.go
+  s_e3e7e7812a5e9e::t_66897363880187 168,197
+internal/chat/channels/channels_categories.go
+  s_e3e7e7812a5e9e::t_dff9b25a914743 15
+internal/chat/channels/handler_auto_delete.go
+  s_e3e7e7812a5e9e::t_dde9cd2f82d16c 36
+internal/chat/channels/handler_channels.go
+  s_e3e7e7812a5e9e::t_b52123be34825d 31,63,105,145,180,222,270,310
+internal/chat/coherence_filters_test.go
+  s_e3e7e7812a5e9e::t_61473a5c79c3e6 15,20,24
+internal/chat/database_failures_integration_test.go
+  s_e3e7e7812a5e9e::t_aa4561b93c65c8 70,76,78,83,87,91,95,101,105,109,169,174,185,188,191,240,372,399,421
+internal/chat/dm/dm_handler.go
+  s_e3e7e7812a5e9e::t_a3a4ffef5f18be 18,282,299
+internal/chat/dm/dm_members.go
+  s_e3e7e7812a5e9e::t_633258fec4f670 76
+internal/chat/dm_calls_integration_test.go
+  s_e3e7e7812a5e9e::t_da4c01bbf55905 351
+internal/chat/dm_failures_integration_test.go
+  s_e3e7e7812a5e9e::t_7bfae6ac5f8325 22,27,34,47
+internal/chat/embeds_integration_test.go
+  s_e3e7e7812a5e9e::t_3b705e7011e7c9 10,18,20
+internal/chat/emoji_reaction_integration_test.go
+  s_e3e7e7812a5e9e::t_0ebcb5ad92cc36 12,22,26
+internal/chat/forum/handler_forum.go
+  s_e3e7e7812a5e9e::t_75d5a8463de8df 163,251
+internal/chat/forum_complete_integration_test.go
+  s_e3e7e7812a5e9e::t_48a5c61b9c8e8a 18,29,31-32,40,44,51,58,65,70,76,90,96,100,211,225,240,307,319,328,368,372,385,443,450,467
+internal/chat/forum_edges_integration_test.go
+  s_e3e7e7812a5e9e::t_5ebf034d9587af 20,48,66,71,106,163,187,196,254,262
+internal/chat/forum_errors_integration_test.go
+  s_e3e7e7812a5e9e::t_e242c20c1faaf5 18,26,51,59,62,65,77,84,90,240,264,278,282,286,349,373,383,405,456,499,504,508
+internal/chat/forum_integration_test.go
+  s_e3e7e7812a5e9e::t_21b3018c65ce52 16,36,38,62,132,148,173,192,211,232,238,247,272,342
+internal/chat/handler.go
+  s_db63cd4785d2fa::t_dc9399a22a7143 17,35,37,40,67,70,75,79,175,214-215
+internal/chat/handlers_integration_test.go
+  s_e3e7e7812a5e9e::t_b9576c3c1f58ae 36,43,47,68-72,82-85,87,91,95,101,110-113,131,157,168,187-194,199-207,210,217-218,245,256,287,296,299,303,310,313,316,320,326,335-337
+internal/chat/message_replies_integration_test.go
+  s_e3e7e7812a5e9e::t_196ea135d83f58 25,54,81
+internal/chat/messages/api.go
+  s_e3e7e7812a5e9e::t_45602242f1a736 45-47,55,64
+internal/chat/messages/forward.go
+  s_e3e7e7812a5e9e::t_faacd14071547c 175
+internal/chat/messages/handler_lookup.go
+  s_e3e7e7812a5e9e::t_e698280abcb4d8 16,37,139,156
+internal/chat/messages/handler_messages.go
+  s_e3e7e7812a5e9e::t_55f269450abdb2 75,95,109,163,184-185,223,243
+internal/chat/messages/message_mutations.go
+  s_e3e7e7812a5e9e::t_fece1d99025f90 19,89,180
+internal/chat/messages/messages.go
+  s_e3e7e7812a5e9e::t_041afe902c1e96 286,339
+internal/chat/messages/send_context.go
+  s_e3e7e7812a5e9e::t_8099cdc8ad650e 13,17,62
+internal/chat/moderation_failures_integration_test.go
+  s_e3e7e7812a5e9e::t_97ca464c5d3355 56
+internal/chat/page_cursor_integration_test.go
+  s_e3e7e7812a5e9e::t_18c7d622ac88b7 15,40,42,46,54,79,93
+internal/chat/permission_failures_integration_test.go
+  s_e3e7e7812a5e9e::t_d76b1de2fb4813 46-49,51,54-60
+internal/chat/permissions_checks_test.go
+  s_e3e7e7812a5e9e::t_f27060402ec0a7 23-25,28,32-40
+internal/chat/permissions_test.go
+  s_e3e7e7812a5e9e::t_41e4d8edb312ff 9,17-18,38
+internal/chat/readstate_integration_test.go
+  s_e3e7e7812a5e9e::t_2aca82b87e27b0 10,33,37,40-41
+internal/chat/reports_failures_integration_test.go
+  s_e3e7e7812a5e9e::t_bdac4ba17d2efb 21
+internal/chat/routes_test.go
+  s_e3e7e7812a5e9e::t_ec5c92a6b4f5ed 14,40
+internal/chat/slug_integration_test.go
+  s_e3e7e7812a5e9e::t_6ed378adbb190e 14,27,36,45,58,60,62-63,72,78,96,106,118,135,155-156,184,194-195,197,202,210-211,215,218,222
+internal/chat/stage_integration_test.go
+  s_e3e7e7812a5e9e::t_7afeb4c1eb74e4 21,25,29,63,94
+internal/chat/talks/talks_invite.go
+  s_e3e7e7812a5e9e::t_cd520f169f3109 41
+internal/chat/thread_follow_sync_test.go
+  s_e3e7e7812a5e9e::t_a43f62f0a006cd 9,15,22,41-42,45
+internal/chat/webhook_bot_cleanup_integration_test.go
+  s_e3e7e7812a5e9e::t_62ab3be8b096ee 12,24,41,70
+internal/discordimport/apply.go
+  s_e3e7e7812a5e9e::t_ba8f7cf0bcdf8d 15,33,35
+internal/discordimport/import_test.go
+  s_e3e7e7812a5e9e::t_0cf5a7733667e0 12,135
+internal/discordimport/plan.go
+  s_e3e7e7812a5e9e::t_2916743bd1ef96 15-16,190,259,263,267,308,310,312,322-324
+internal/later/faults_integration_test.go
+  s_e3e7e7812a5e9e::t_dd09ece4979bc6 13,38
+internal/later/scheduled_handler.go
+  s_e3e7e7812a5e9e::t_b6f697f2848f46 104
+internal/later/scheduled_send.go
+  s_e3e7e7812a5e9e::t_152b8d3ca8aa52 115
+internal/later/scheduled_validation_integration_test.go
+  s_e3e7e7812a5e9e::t_8ac188c478dc9c 19,42
+internal/later/service.go
+  s_e3e7e7812a5e9e::t_c0803ec6bc791a 15,60
+internal/media/botapi.go
+  s_db63cd4785d2fa::t_bb4699b1136301 30
+internal/media/forum_upload_integration_test.go
+  s_e3e7e7812a5e9e::t_ef57cf72996fd4 65
+internal/media/handler.go
+  s_e3e7e7812a5e9e::t_9c2daf6033d236 11,35
+internal/media/handler_upload.go
+  s_db63cd4785d2fa::t_4623784dbc49aa 119,163
+internal/media/staging.go
+  s_db63cd4785d2fa::t_7b74a080991f66 14,31,45,86
+internal/media/stream.go
+  s_e3e7e7812a5e9e::t_3f5dbf8f831ee2 36,172,180
+internal/poll/faults_integration_test.go
+  s_e3e7e7812a5e9e::t_5da91180bde2aa 16,40,51,178
+internal/poll/handler.go
+  s_db63cd4785d2fa::t_345ed55c97eef2 56
+internal/poll/service.go
+  s_e3e7e7812a5e9e::t_b79c18fa89b2e5 13-14,35,53,61,71,73,86,89,117
+internal/push/callkind_test.go
+  s_e3e7e7812a5e9e::t_ed61941fcdafef 7,13,16-21
+internal/push/event_reminder.go
+  s_e3e7e7812a5e9e::t_f46b2cbd24ed8d 59,77
+internal/push/fixture_integration_test.go
+  s_e3e7e7812a5e9e::t_11df32c45d1c80 13,99-100,110
+internal/push/recipients.go
+  s_e3e7e7812a5e9e::t_2d28e80bf1d737 10,30-31,34,101,109,111,113,120,142,144,146,178
+internal/push/recipients_test.go
+  s_e3e7e7812a5e9e::t_b608284ac862b8 8,15-16,21,24,30-38
+internal/push/service.go
+  s_e3e7e7812a5e9e::t_1acf236d134efe 13,67,88,99,101,103,157,161,168,179,220,251,263
+internal/push/service_integration_test.go
+  s_e3e7e7812a5e9e::t_2cada055b74a18 14,421
+internal/push/vapid_test.go
+  s_e3e7e7812a5e9e::t_d0db2310aa9837 13,99,102
+internal/server/auto_delete_integration_test.go
+  s_e3e7e7812a5e9e::t_d7589581829a12 13-14,39,57,62,84-85,231,268,286
+internal/server/bot_role_integration_test.go
+  s_e3e7e7812a5e9e::t_95c361c89cf7ed 13,31,33,171
+internal/server/botapi_integration_test.go
+  s_e3e7e7812a5e9e::t_e01800e18f753d 20-22,221,272,282,296,305,314,334,383,412
+internal/server/chat_limits_integration_test.go
+  s_e3e7e7812a5e9e::t_62ee9327be4db5 12-13,26,45,50,63,65,109,115
+internal/server/dm_call_integration_test.go
+  s_e3e7e7812a5e9e::t_e74d5abb109635 12-13,44,66,96-97,122-123,147-148
+internal/server/dm_group_integration_test.go
+  s_e3e7e7812a5e9e::t_04446eede71123 13,37,87
+internal/server/dm_integration_test.go
+  s_e3e7e7812a5e9e::t_7aeeb9bf608f58 13,364
+internal/server/edit_history_integration_test.go
+  s_e3e7e7812a5e9e::t_b2d06fff18e9fd 115,120,123,201
+internal/server/feature_limits_integration_test.go
+  s_e3e7e7812a5e9e::t_43b07feb5061ab 10,39
+internal/server/gateway_integration_test.go
+  s_e3e7e7812a5e9e::t_cfb0f8c5e725fb 16,193
+internal/server/later_integration_test.go
+  s_e3e7e7812a5e9e::t_dca5b4e1b088f9 13,106,110,291
+internal/server/media_storage_integration_test.go
+  s_e3e7e7812a5e9e::t_4f7a017bbfd3b4 12,26
+internal/server/mentions_automation_integration_test.go
+  s_e3e7e7812a5e9e::t_332d05e5a82992 10,31,35,39,86,104,112,131
+internal/server/message_pins_integration_test.go
+  s_e3e7e7812a5e9e::t_fb93ce9c8c039f 10-11,20,26,68,71,76,84,94,102
+internal/server/poll_account_integration_test.go
+  s_e3e7e7812a5e9e::t_163d70bc37a261 11,54,56
+internal/server/poll_anonymous_integration_test.go
+  s_e3e7e7812a5e9e::t_a0fe64c9895efc 16,182,336,351
+internal/server/poll_integration_test.go
+  s_e3e7e7812a5e9e::t_f1da5162a037c2 12,50,54,62,108,122,149
+internal/server/poll_votes_integration_test.go
+  s_e3e7e7812a5e9e::t_65e8d7f08ac417 14,20,27,36,38,153
+internal/server/reports_integration_test.go
+  s_e3e7e7812a5e9e::t_81e14fbb5e1611 14,113-114,116-117,177,211
+internal/server/router_build_services.go
+  s_e3e7e7812a5e9e::t_4c9a1804531021 10-11,13-14,32-34,36-39,43,47
+internal/server/router_talks.go
+  s_e3e7e7812a5e9e::t_18689913461fcd 17,19,27,38
+internal/server/slash_builtins_integration_test.go
+  s_e3e7e7812a5e9e::t_b8c5ff50b4cad6 15,81,85
+internal/server/view_as_role_integration_test.go
+  s_e3e7e7812a5e9e::t_72ef22297b8b4c 12,51,55,60-61,129
+internal/server/webhooks_access_integration_test.go
+  s_e3e7e7812a5e9e::t_dc4562bab5eb5c 13,58
+internal/server/webhooks_integration_test.go
+  s_e3e7e7812a5e9e::t_301ff18026b240 12,44,50,82,201
+internal/server/webhooks_posting_integration_test.go
+  s_e3e7e7812a5e9e::t_e9551c858b4ad6 15,61,78,127,165
+internal/slashcmd/slashcmd.go
+  s_e3e7e7812a5e9e::t_558ceb240e9053 20,34,85
+internal/tools/openapifix/main.go
+  s_db63cd4785d2fa::t_05ba3e09dec066 99-101,106-107,109-110,112-120,129
+internal/tools/openapifix/main_test.go
+  s_db63cd4785d2fa::t_7b962b2fe4690e 259-260,263
+internal/webhook/dispatch_delivery.go
+  s_e3e7e7812a5e9e::t_69b48339a80026 16,27,29,31
+internal/webhook/dispatch_test.go
+  s_e3e7e7812a5e9e::t_3527351def19ac 20-21,41-43,59,185,196
+internal/webhook/embeds.go
+  s_e3e7e7812a5e9e::t_d7f0ea1dbf0216 4,11-12,15,17
+internal/webhook/execute.go
+  s_db63cd4785d2fa::t_ba82df8bea6619 134,199,242,283,286,290,294,296,302,325
+internal/webhook/execute_mentions.go
+  s_e3e7e7812a5e9e::t_4ea91e49f29d4a 18-19,46
+internal/webhook/execute_request.go
+  s_e3e7e7812a5e9e::t_140d2edfe92d87 14,141
+internal/webhook/handler.go
+  s_e3e7e7812a5e9e::t_97270eca4973b4 12,31
+internal/webhook/queue_integration_test.go
+  s_e3e7e7812a5e9e::t_fafddca2c7eba5 18,136-137
+internal/webhook/webhook_test.go
+  s_e3e7e7812a5e9e::t_b6255b008c8118 11,83
+internal/ws/perms_nomodel_test.go
+  s_e3e7e7812a5e9e::t_0b4e7693e1f4c1 8,24
+internal/ws/perms_test.go
+  s_e3e7e7812a5e9e::t_5e519d991a7fd4 11,25,37-39,99
+internal/ws/stage_integration_test.go
+  s_e3e7e7812a5e9e::t_44ad5e3280bfc2 27
+internal/ws/voice.go
+  s_e3e7e7812a5e9e::t_6055b5fdd18080 68,70
+internal/ws/voice_join.go
+  s_e3e7e7812a5e9e::t_fc16b3732ed515 9,21,31,46,62,222,255,263
+internal/ws/voice_lobby.go
+  s_e3e7e7812a5e9e::t_911dc0405eb5e8 9,17,26
+internal/ws/voice_lobby_test.go
+  s_e3e7e7812a5e9e::t_77396f9d23ca4d 9,19,24,27-28,51
+internal/ws/voice_test.go
+  s_e3e7e7812a5e9e::t_23895b2bffbd29 11,22-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f3fc8686b9b1a686a39f7ca8e59600f45c46b152",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e3e7e7812a5e9e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa677880f9a6ee2ef",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
