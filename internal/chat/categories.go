@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -58,7 +59,7 @@ func RenameCategory(ctx context.Context, p *db.Pool, id uuid.UUID, name string) 
 		return "", fmt.Errorf("rename category: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return "", errCategoryNotFound
+		return "", core.ErrCategoryNotFound
 	}
 	return name, nil
 }

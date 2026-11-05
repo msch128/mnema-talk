@@ -225,12 +225,5 @@ func (h *Handler) markAllRead(w http.ResponseWriter, r *http.Request) error {
 
 // viewableCategories lists the categories the caller may see; nil means all.
 func (h *Handler) viewableCategories(r *http.Request) ([]uuid.UUID, error) {
-	if h.Perms == nil {
-		return nil, nil
-	}
-	snap, err := h.Perms.Snapshot(r.Context())
-	if err != nil {
-		return nil, err
-	}
-	return snap.VisibleCategories(auth.UserFrom(r.Context()).Subject()), nil
+	return h.guard().ViewableCategories(r)
 }

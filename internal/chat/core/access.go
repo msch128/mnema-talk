@@ -49,6 +49,10 @@ type MessageRef struct {
 	ParentID  *uuid.UUID
 }
 
+// ErrCategoryNotFound answers a request for a category that does not exist or
+// that the caller may not see.
+var ErrCategoryNotFound = httpx.ErrNotFound("category not found")
+
 var ErrMessageNotFound = httpx.ErrNotFound("message not found")
 
 // conversationReadableSQL is the condition "message m is in a conversation

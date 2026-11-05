@@ -79,7 +79,7 @@ func orderCategories(ctx context.Context, tx pgx.Tx, cats []CategoryOrder) error
 		return fmt.Errorf("order categories: %w", err)
 	}
 	if tag.RowsAffected() != int64(len(ids)) {
-		return errCategoryNotFound
+		return core.ErrCategoryNotFound
 	}
 	return nil
 }
