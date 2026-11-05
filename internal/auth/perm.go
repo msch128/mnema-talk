@@ -52,7 +52,7 @@ func guard(svc *perm.Service, ok func(perm.Set) error) func(http.Handler) http.H
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if err := checkGlobal(r.Context(), svc, UserFrom(r.Context()), ok); err != nil {
+			if err := CheckGlobal(r.Context(), svc, UserFrom(r.Context()), ok); err != nil {
 				httpx.WriteError(w, err)
 				return
 			}
@@ -61,12 +61,12 @@ func guard(svc *perm.Service, ok func(perm.Set) error) func(http.Handler) http.H
 	}
 }
 
-// checkGlobal is the one server-wide permission check behind the route guards
+// CheckGlobal is the one server-wide permission check behind the route guards
 // and RequirePermission: no session fails, without a permission service only
 // the Owner passes, otherwise ok judges the caller's global permissions. A
 // failure that is not an APIError (an unreadable permission state) is
 // sanitized, so every caller reports it the same way.
-func checkGlobal(ctx context.Context, svc *perm.Service, u *User, ok func(perm.Set) error) error {
+func CheckGlobal(ctx context.Context, svc *perm.Service, u *User, ok func(perm.Set) error) error {
 	if u == nil {
 		return errNoSession
 	}
@@ -85,21 +85,6 @@ func checkGlobal(ctx context.Context, svc *perm.Service, u *User, ok func(perm.S
 			err = httpx.ErrServer(err)
 		}
 		return err
-	}
-	return nil
-}
-
-// withRoles fills RoleIDs of the given users from the permission state.
-func (h *Handler) withRoles(r *http.Request, users []AdminUser) error {
-	if h.Perms == nil {
-		return nil
-	}
-	roles, err := h.Perms.MemberRoles(r.Context())
-	if err != nil {
-		return err
-	}
-	for i := range users {
-		users[i].RoleIDs = roles[users[i].ID]
 	}
 	return nil
 }

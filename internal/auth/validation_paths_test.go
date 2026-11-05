@@ -82,7 +82,7 @@ func TestAuthHandlersRejectMalformedJSON(t *testing.T) {
 	for name, handler := range map[string]httpx.HandlerFunc{
 		"login": h.login, "register": h.register, "password": h.changePassword,
 		"locale": h.setLocale, "profile": h.updateProfile, "presence": h.setPresence,
-		"status": h.setStatus, "invite": h.createInvite, "admin password": h.setUserPassword,
+		"status": h.setStatus,
 	} {
 		t.Run(name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{"))
@@ -99,12 +99,10 @@ func TestAuthHandlersRejectMalformedJSON(t *testing.T) {
 	}
 }
 
-func TestAdminHandlersRejectMalformedIDs(t *testing.T) {
+func TestProfileHandlerRejectsMalformedIDs(t *testing.T) {
 	h := NewHandler(&Sessions{}, nil)
 	for name, handler := range map[string]httpx.HandlerFunc{
-		"get": h.getUser, "delete invite": h.deleteInvite, "disable": h.disableUser,
-		"enable": h.enableUser, "revoke": h.revokeUserSessions, "reset": h.resetUserPassword,
-		"password": h.setUserPassword, "kick": h.kickUser, "status": h.setUserStatus,
+		"get": h.getUser,
 	} {
 		t.Run(name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/", nil)

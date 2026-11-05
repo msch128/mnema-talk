@@ -1,7 +1,7 @@
 # Moderation and the audit log
 
 This page describes moderation (timeouts, bans, kicking, message moderation,
-reports) and the audit log that records it. Code: [`internal/auth/moderation.go`](../internal/auth/moderation.go),
+reports) and the audit log that records it. Code: [`internal/auth/memberadmin/moderation.go`](../internal/auth/memberadmin/moderation.go),
 [`internal/perm`](../internal/perm/) and [`internal/audit`](../internal/audit/).
 Permissions and the hierarchy are in [roles-and-permissions.md](roles-and-permissions.md).
 

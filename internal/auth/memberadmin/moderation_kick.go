@@ -1,8 +1,10 @@
-package auth
+package memberadmin
 
 import (
 	"net/http"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/auth"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -23,8 +25,8 @@ type kickNotice struct {
 // RequirePermission is RequirePerm for code that is not a route (a slash
 // command): the caller must hold every permission of need server-wide, the
 // Owner always, and without a permission service only the Owner passes.
-func (h *Handler) RequirePermission(r *http.Request, need perm.Set) error {
-	return checkGlobal(r.Context(), h.Perms, UserFrom(r.Context()), func(p perm.Set) error {
+func (h *API) RequirePermission(r *http.Request, need perm.Set) error {
+	return auth.CheckGlobal(r.Context(), h.Perms, auth.UserFrom(r.Context()), func(p perm.Set) error {
 		if name := p.MissingName(need); name != "" {
 			return httpx.ErrForbidden("missing permission: " + name)
 		}
@@ -38,13 +40,13 @@ func (h *Handler) RequirePermission(r *http.Request, need perm.Set) error {
 // the account and they can sign in again at once. The caller has checked the
 // Kick members permission (RequirePermission); the role hierarchy is enforced
 // like for a ban, and nobody can kick the Owner or themselves.
-func (h *Handler) KickMember(r *http.Request, id uuid.UUID, reason string) error {
+func (h *API) KickMember(r *http.Request, id uuid.UUID, reason string) error {
 	reason, err := cleanReason(reason)
 	if err != nil {
 		return err
 	}
 	err = h.moderationTarget(r, id, func(q db.Querier) error {
-		if err := RevokeSessions(r.Context(), q, id); err != nil {
+		if err := auth.RevokeSessions(r.Context(), q, id); err != nil {
 			return err
 		}
 		_, err := q.Exec(r.Context(), `DELETE FROM push_subscriptions WHERE user_id = $1`, id)

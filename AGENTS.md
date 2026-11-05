@@ -62,7 +62,7 @@ mnema-talk/
 │   ├── config/              # Environment configuration loading + validation
 │   ├── db/                  # pgx pool, embedded versioned migrations (db/migrations/*.sql)
 │   ├── httpx/               # Middleware: security headers, CSRF origin check, rate limits, client IP
-│   ├── auth/                # Password hashing, sessions (token_version), invites, admin logic, permission guards
+│   ├── auth/                # Password hashing, sessions (token_version), sign-in, permission guards; memberadmin/ holds the member-admin routes (bans, kick, user admin, invites), mailtext/ the account mail texts
 │   ├── perm/                # Roles and permissions: bits, resolver (Snapshot), cache, hierarchy rules, role/overwrite store
 │   ├── roles/               # HTTP API for roles, member roles and channel overwrites; GET /api/permissions
 │   ├── webhook/             # Incoming (Discord execute format) and outgoing (signed, durable queue) webhooks

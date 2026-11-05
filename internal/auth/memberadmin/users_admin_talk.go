@@ -1,8 +1,11 @@
-package auth
+package memberadmin
 
 import (
 	"errors"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/msch128/mnema-talk/internal/auth"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -30,7 +33,7 @@ import (
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/kick [post]
-func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
+func (h *API) kickUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -38,7 +41,7 @@ func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 	// The target check and the kick run under the permission lock, like every
 	// other moderation action, so a role change cannot slip in between.
 	kicked := false
-	err = h.moderated(r, id, func(db.Querier) (err error) {
+	err = h.Moderated(r, id, func(db.Querier) (err error) {
 		kicked, err = h.kickUserFromVoice(r, id, uuid.Nil)
 		return err
 	})
@@ -46,7 +49,7 @@ func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 }
 
 // finishTalkKick maps the outcome of a Talk kick to the response.
-func (h *Handler) finishTalkKick(w http.ResponseWriter, err error, kicked bool) error {
+func (h *API) finishTalkKick(w http.ResponseWriter, err error, kicked bool) error {
 	if errors.Is(err, pgx.ErrNoRows) {
 		return httpx.ErrNotFound("user not found")
 	}
@@ -79,7 +82,7 @@ func (h *Handler) finishTalkKick(w http.ResponseWriter, err error, kicked bool) 
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{id}/voice/{userID}/disconnect [post]
-func (h *Handler) disconnectFromTalk(w http.ResponseWriter, r *http.Request) error {
+func (h *API) disconnectFromTalk(w http.ResponseWriter, r *http.Request) error {
 	ch, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -88,13 +91,13 @@ func (h *Handler) disconnectFromTalk(w http.ResponseWriter, r *http.Request) err
 	if err != nil {
 		return err
 	}
-	if h.Perms == nil && !UserFrom(r.Context()).IsAdmin() {
+	if h.Perms == nil && !auth.UserFrom(r.Context()).IsAdmin() {
 		return httpx.ErrForbidden("missing permission: disconnect_members")
 	}
 	kicked := false
-	err = h.moderated(r, id, func(db.Querier) (err error) {
+	err = h.Moderated(r, id, func(db.Querier) (err error) {
 		// Refused before anything is said about who sits in the Talk.
-		if err := h.Perms.RequireChannel(r.Context(), UserFrom(r.Context()).Subject(), ch, perm.ViewChannel|perm.DisconnectMembers); err != nil {
+		if err := h.Perms.RequireChannel(r.Context(), auth.UserFrom(r.Context()).Subject(), ch, perm.ViewChannel|perm.DisconnectMembers); err != nil {
 			return err
 		}
 		kicked, err = h.kickUserFromVoice(r, id, ch)
@@ -103,7 +106,7 @@ func (h *Handler) disconnectFromTalk(w http.ResponseWriter, r *http.Request) err
 	if err == nil && kicked {
 		// Outside the admin area, so the audit middleware does not see it.
 		e := audit.Entry{Action: "user.talk_kick", TargetType: "user", TargetID: id.String(), Details: map[string]any{"channel_id": ch.String()}}
-		if u, uerr := GetUser(r.Context(), h.Sessions.DB, id); uerr == nil {
+		if u, uerr := auth.GetUser(r.Context(), h.Sessions.DB, id); uerr == nil {
 			e.TargetName = u.Username
 		}
 		h.Audit.RecordOrLog(r.Context(), e)
@@ -113,11 +116,11 @@ func (h *Handler) disconnectFromTalk(w http.ResponseWriter, r *http.Request) err
 
 // kickUserFromVoice removes id from the Talks the caller may moderate; with
 // only set, from that Talk alone.
-func (h *Handler) kickUserFromVoice(r *http.Request, id, only uuid.UUID) (bool, error) {
+func (h *API) kickUserFromVoice(r *http.Request, id, only uuid.UUID) (bool, error) {
 	if h.Live == nil {
 		return false, nil
 	}
-	actor := UserFrom(r.Context()).Subject()
+	actor := auth.UserFrom(r.Context()).Subject()
 	kicked := false
 	for _, ch := range h.Live.VoiceChannels(id) {
 		if only != uuid.Nil && ch != only {
@@ -136,7 +139,7 @@ func (h *Handler) kickUserFromVoice(r *http.Request, id, only uuid.UUID) (bool, 
 	return kicked, nil
 }
 
-func (h *Handler) canModerateVoiceChannel(r *http.Request, actor perm.Subject, ch uuid.UUID) (bool, error) {
+func (h *API) canModerateVoiceChannel(r *http.Request, actor perm.Subject, ch uuid.UUID) (bool, error) {
 	err := h.Perms.RequireChannel(r.Context(), actor, ch, perm.ViewChannel|perm.DisconnectMembers)
 	if err == nil {
 		return true, nil
@@ -145,4 +148,11 @@ func (h *Handler) canModerateVoiceChannel(r *http.Request, actor perm.Subject, c
 		return false, err
 	}
 	return false, nil
+}
+
+// MountAuthenticated registers the one voice-admin route that lives beside the
+// Talk routes, not under /admin: it needs a session, and the permission is
+// checked per Talk.
+func (h *API) MountAuthenticated(r chi.Router) {
+	r.Post("/channels/{id}/voice/{userID}/disconnect", httpx.Handle(h.disconnectFromTalk))
 }

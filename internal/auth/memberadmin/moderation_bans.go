@@ -1,4 +1,4 @@
-package auth
+package memberadmin
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/auth"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -17,32 +19,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/worker"
 )
-
-// BanRequest is the body of POST /api/admin/users/{id}/ban.
-type BanRequest struct {
-	// Reason is shown to the member when they try to sign in; send an empty
-	// string for none.
-	Reason string `json:"reason" maxLength:"200"`
-	// DurationSeconds ends the ban by itself after that long (60 seconds to
-	// ten years); null or missing bans for good.
-	DurationSeconds *int `json:"duration_seconds" extensions:"x-nullable" binding:"optional"`
-	// RevokeInvite also revokes the invite the account registered with, so
-	// that code cannot create the account anew (default true).
-	RevokeInvite *bool `json:"revoke_invite" binding:"optional"`
-}
-
-// Ban is an active ban as the admin list shows it.
-type Ban struct {
-	UserID      uuid.UUID `json:"user_id" format:"uuid"`
-	Username    string    `json:"username"`
-	DisplayName string    `json:"display_name"`
-	Reason      string    `json:"reason"`
-	BannedAt    time.Time `json:"banned_at" format:"date-time"`
-	// BannedUntil is null for a ban without an end.
-	BannedUntil *time.Time `json:"banned_until" format:"date-time" extensions:"x-nullable"`
-	// BannedBy names the moderator; empty when that account is gone.
-	BannedBy string `json:"banned_by"`
-}
 
 func parseBanDuration(durationSeconds *int) (*time.Time, error) {
 	if durationSeconds == nil {
@@ -55,7 +31,7 @@ func parseBanDuration(durationSeconds *int) (*time.Time, error) {
 	return &t, nil
 }
 
-func (h *Handler) postBanCleanup(id uuid.UUID, until *time.Time, reason string) {
+func (h *API) postBanCleanup(id uuid.UUID, until *time.Time, reason string) {
 	// Tell them first; the connection closes a moment later so the notice
 	// is written. Their sessions are already dead, so nothing can be done
 	// with the socket meanwhile.
@@ -80,7 +56,7 @@ func (h *Handler) postBanCleanup(id uuid.UUID, until *time.Time, reason string) 
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "User ID." Format(uuid)
-// @Param request body BanRequest true "Request body."
+// @Param request body auth.BanRequest true "Request body."
 // @Success 204 "Success, no content."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
@@ -90,12 +66,12 @@ func (h *Handler) postBanCleanup(id uuid.UUID, until *time.Time, reason string) 
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/ban [post]
-func (h *Handler) banUser(w http.ResponseWriter, r *http.Request) error {
+func (h *API) banUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	var req BanRequest
+	var req auth.BanRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -108,7 +84,7 @@ func (h *Handler) banUser(w http.ResponseWriter, r *http.Request) error {
 
 // BanMember bans a member. The REST route and the /ban slash command both run
 // it; the caller has checked the Ban members permission (RequirePermission).
-func (h *Handler) BanMember(r *http.Request, id uuid.UUID, req BanRequest) error {
+func (h *API) BanMember(r *http.Request, id uuid.UUID, req auth.BanRequest) error {
 	reason, err := cleanReason(req.Reason)
 	if err != nil {
 		return err
@@ -117,7 +93,7 @@ func (h *Handler) BanMember(r *http.Request, id uuid.UUID, req BanRequest) error
 	if err != nil {
 		return err
 	}
-	actor := UserFrom(r.Context())
+	actor := auth.UserFrom(r.Context())
 	revoke := req.RevokeInvite == nil || *req.RevokeInvite
 	if revoke {
 		// Deleting an invite is Manage invites territory: a moderator who
@@ -173,7 +149,7 @@ func setBan(ctx context.Context, q db.Querier, id, by uuid.UUID, reason string, 
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/ban [delete]
-func (h *Handler) unbanUser(w http.ResponseWriter, r *http.Request) error {
+func (h *API) unbanUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -209,14 +185,14 @@ const clearBanSQL = `UPDATE users SET ` + clearBanColumns + ` WHERE id = $1`
 // @Tags Admin
 // @Produce json
 // @Security cookieAuth
-// @Success 200 {array} Ban "Bans."
+// @Success 200 {array} auth.Ban "Bans."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Ban members permission."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/bans [get]
-func (h *Handler) listBans(w http.ResponseWriter, r *http.Request) error {
+func (h *API) listBans(w http.ResponseWriter, r *http.Request) error {
 	rows, err := h.Sessions.DB.Query(r.Context(), `
 		SELECT u.id, u.username, u.display_name, u.ban_reason, u.banned_at, u.banned_until, COALESCE(b.username, '')
 		FROM users u LEFT JOIN users b ON b.id = u.banned_by
@@ -224,42 +200,19 @@ func (h *Handler) listBans(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	bans, err := pgx.CollectRows(rows, pgx.RowToStructByPos[Ban])
+	bans, err := pgx.CollectRows(rows, pgx.RowToStructByPos[auth.Ban])
 	if err != nil {
 		return err
 	}
 	if bans == nil {
-		bans = []Ban{}
+		bans = []auth.Ban{}
 	}
 	httpx.WriteJSON(w, http.StatusOK, bans)
 	return nil
 }
 
-// bannedError is the sign-in refusal for a banned account: the member sees
-// why and until when.
-func bannedError(ctx context.Context, p db.Querier, id uuid.UUID) error {
-	var reason string
-	var until *time.Time
-	err := p.QueryRow(ctx, `SELECT ban_reason, banned_until FROM users
-		WHERE id = $1 AND banned_at IS NOT NULL AND (banned_until IS NULL OR banned_until > NOW())`, id).Scan(&reason, &until)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrAccountDisabled
-	}
-	if err != nil {
-		return err
-	}
-	msg := "this account is banned"
-	if until != nil {
-		msg += " until " + until.UTC().Format("2006-01-02 15:04 UTC")
-	}
-	if reason != "" {
-		msg += ": " + reason
-	}
-	return httpx.NewAPIError(http.StatusForbidden, httpx.CodeAccountDisabled, msg)
-}
-
 // RunBanExpiry lifts bans whose time has come, every interval until ctx ends.
-func (h *Handler) RunBanExpiry(ctx context.Context, interval time.Duration) {
+func (h *API) RunBanExpiry(ctx context.Context, interval time.Duration) {
 	if h.Sessions == nil || h.Sessions.DB == nil {
 		return
 	}
@@ -279,7 +232,7 @@ func (h *Handler) RunBanExpiry(ctx context.Context, interval time.Duration) {
 
 // ExpireBans lifts the bans whose time has come. It returns the error it
 // logged; a row that cannot be read does not drop the ones that can.
-func (h *Handler) ExpireBans(ctx context.Context) error {
+func (h *API) ExpireBans(ctx context.Context) error {
 	rows, err := h.Sessions.DB.Query(ctx, `UPDATE users SET `+clearBanColumns+`
 		WHERE banned_at IS NOT NULL AND banned_until IS NOT NULL AND banned_until <= NOW()
 		RETURNING id, username, disabled_at IS NOT NULL`)

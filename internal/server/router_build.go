@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
@@ -71,6 +72,7 @@ type components struct {
 	pub      events.Publisher
 	auditLog *audit.Log
 	authH    *auth.Handler
+	members  *memberadmin.API
 	chatH    *chat.Handler
 	rolesH   *roles.Handler
 	importH  *discordimport.Handler
@@ -143,11 +145,8 @@ func (c *components) newCore() {
 	c.authH.Perms = c.permSvc
 	c.authH.Audit = c.auditLog
 	c.authH.Lifetime = c.ctx
-	go c.authH.RunBanExpiry(c.ctx, time.Minute)
-	go c.authH.RunStatusExpiry(c.ctx, 0)
-	go c.authH.RunSessionSweep(c.ctx, auth.DefaultSessionSweepEvery)
-	// `mnema-talk unlock` runs in another process and queues requests here.
-	go c.authH.RunUnlockWorker(c.ctx, auth.UnlockPollInterval)
+	c.members = memberadmin.New(c.authH)
+	c.startAuthJobs()
 	if d.Store != nil {
 		c.authH.Objects = d.Store
 		c.authH.ObjectMissing = media.IsMissingObject
@@ -222,7 +221,7 @@ func (c *components) newBots() {
 	c.botAuthn = bot.NewAuthenticator(d.DB)
 	c.botAuthn.Perms = c.permSvc
 	c.pollSvc = poll.NewService(poll.Service{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Audit: c.auditLog})
-	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc, slashcmd.Services{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Auth: c.authH, Chat: c.chatH, Audit: c.auditLog})})
+	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc, slashcmd.Services{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Members: c.members, Chat: c.chatH, Audit: c.auditLog})})
 	gw := gateway.New(gateway.Config{Auth: c.botAuthn, Perms: c.permSvc, DB: d.DB, PublicURL: c.cfg.PublicURL})
 	c.gw = gw
 	c.botH.OnRevoke = gw.Revoke

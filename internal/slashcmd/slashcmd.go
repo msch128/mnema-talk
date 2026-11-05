@@ -14,7 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -30,9 +30,9 @@ type Services struct {
 	Events events.Publisher
 	// Online resolves @here in a posted text; nil means nobody is online.
 	Online chat.OnlineSource
-	// Auth carries the profile and moderation actions shared with the REST
+	// Members carries the moderation actions shared with the REST
 	// routes.
-	Auth *auth.Handler
+	Members *memberadmin.API
 	// Audit records the moderation shortcuts; nil records nothing.
 	Audit *audit.Log
 
