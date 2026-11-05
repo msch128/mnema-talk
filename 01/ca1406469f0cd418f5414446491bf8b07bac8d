@@ -1,0 +1,19 @@
+e2e/tests/audio-stall.spec.ts
+  s_788e33b6feb8ee::t_166de5f703d457 44-45,47-48,50-53,55-60,73,97,108,114-126,130,132-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "01ca1406469f0cd418f5414446491bf8b07bac8d",
+  "prompts": {},
+  "sessions": {
+    "s_788e33b6feb8ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5f83035c83696f3c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
