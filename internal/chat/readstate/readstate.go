@@ -23,7 +23,7 @@ type ReadState struct {
 	NotifyLevel  NotifyLevel `json:"notify_level"`
 }
 
-// readStateSQL is the unread summary of every channel. Messages of members
+// ReadStateSQL is the unread summary of every channel. Messages of members
 // the caller blocked never count as mentions.
 func ReadStateSQL() string {
 	return `
@@ -126,7 +126,7 @@ func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, mess
 	return marked, err
 }
 
-// markReadTo moves the marker to at (the database's now when nil) and says
+// MarkReadTo moves the marker to at (the database's now when nil) and says
 // whether it wrote a row. With startMarker, a member without a marker gets one
 // (the first read starts the "new since" divider); without it, a row is
 // written only when another member's message sits between the marker (the

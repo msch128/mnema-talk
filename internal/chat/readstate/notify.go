@@ -24,7 +24,7 @@ const (
 	NotifyInherit  NotifyLevel = "inherit"
 )
 
-// maxMuteSeconds bounds a timed mute (366 days).
+// MaxMuteSeconds bounds a timed mute (366 days).
 const MaxMuteSeconds = 366 * 24 * 3600
 
 func (l NotifyLevel) valid() bool {
