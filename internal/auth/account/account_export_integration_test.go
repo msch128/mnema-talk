@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -78,7 +79,7 @@ func exportFixture(t *testing.T) (*API, *db.Pool, *auth.User, *memStore, uuid.UU
 	t.Helper()
 	pool, _, member := authFixture(t)
 	store := newMemStore()
-	h := New(auth.NewHandler(&auth.Sessions{DB: pool, Secret: "export-test-secret-export-test-secret"}, nil))
+	h := New(authn.NewHandler(&auth.Sessions{DB: pool, Secret: "export-test-secret-export-test-secret"}, nil))
 	h.Objects = store
 	var channel uuid.UUID
 	if err := pool.QueryRow(context.Background(), `INSERT INTO channels (name, type) VALUES ('room', 'text') RETURNING id`).Scan(&channel); err != nil {

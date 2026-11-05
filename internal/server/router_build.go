@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/auth/account"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
@@ -73,7 +74,7 @@ type components struct {
 	permSvc  *perm.Service
 	pub      events.Publisher
 	auditLog *audit.Log
-	authH    *auth.Handler
+	authH    *authn.Handler
 	members  *memberadmin.API
 	account  *account.API
 	chatH    *chat.Handler
@@ -142,13 +143,7 @@ func (c *components) newCore() {
 	c.auditLog = &audit.Log{DB: d.DB, Actor: auditActor, Viewer: auditViewer(c.permSvc)}
 	go c.auditLog.RunRetention(c.ctx, cfg.AuditRetentionDays, 6*time.Hour)
 
-	c.authH = auth.NewHandler(c.sessions, c.pub)
-	c.authH.Live = hub
-	c.authH.Names = d.Names
-	c.authH.Perms = c.permSvc
-	c.authH.Audit = c.auditLog
-	c.authH.Lifetime = c.ctx
-	c.startAuthJobs()
+	c.newAuth(hub)
 	if d.Store != nil {
 		c.authH.Objects = d.Store
 		c.authH.ObjectMissing = media.IsMissingObject

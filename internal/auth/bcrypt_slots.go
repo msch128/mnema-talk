@@ -62,8 +62,8 @@ func acquireBcryptCtx(ctx context.Context) (func(), error) {
 	}
 }
 
-// burnPasswordCheck spends the same bcrypt work as checking a real password.
-func burnPasswordCheck(ctx context.Context, password string) error {
+// BurnPasswordCheck spends the same bcrypt work as checking a real password.
+func BurnPasswordCheck(ctx context.Context, password string) error {
 	release, err := acquireBcryptCtx(ctx)
 	if err != nil {
 		return err
@@ -83,8 +83,8 @@ func checkPasswordCtx(ctx context.Context, password, hash string) (bool, error) 
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil, nil
 }
 
-// hashPasswordCtx is HashPassword with a bounded wait for a hashing slot.
-func hashPasswordCtx(ctx context.Context, password string) (string, error) {
+// HashPasswordCtx is HashPassword with a bounded wait for a hashing slot.
+func HashPasswordCtx(ctx context.Context, password string) (string, error) {
 	release, err := acquireBcryptCtx(ctx)
 	if err != nil {
 		return "", err
@@ -105,4 +105,19 @@ func HashPassword(password string) (string, error) {
 func CheckPassword(password, hash string) bool {
 	defer acquireBcrypt()()
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+}
+
+// OccupyHashingSlots takes every hashing slot and returns the function that
+// frees them. A test uses it to prove that a request is answered without
+// waiting for a password hash.
+func OccupyHashingSlots() (release func()) {
+	n := cap(bcryptSlots)
+	for i := 0; i < n; i++ {
+		bcryptSlots <- struct{}{}
+	}
+	return func() {
+		for i := 0; i < n; i++ {
+			<-bcryptSlots
+		}
+	}
 }

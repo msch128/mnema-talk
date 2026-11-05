@@ -8,7 +8,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 )
@@ -75,7 +75,7 @@ func printUnlockSuccess(out io.Writer, username string, all bool) {
 func waitForUnlock(ctx context.Context, q db.Querier, id int64, username string, all bool, out io.Writer) error {
 	deadline := time.Now().Add(unlockWait)
 	for {
-		pending, err := auth.UnlockRequestPending(ctx, q, id)
+		pending, err := authn.UnlockRequestPending(ctx, q, id)
 		if err != nil {
 			return err
 		}
@@ -96,8 +96,8 @@ func waitForUnlock(ctx context.Context, q db.Querier, id int64, username string,
 }
 
 func requestUnlock(ctx context.Context, q db.Querier, username string, all bool, out io.Writer) error {
-	id, err := auth.RequestUnlock(ctx, q, username, all)
-	if errors.Is(err, auth.ErrUnlockUnknownUser) {
+	id, err := authn.RequestUnlock(ctx, q, username, all)
+	if errors.Is(err, authn.ErrUnlockUnknownUser) {
 		return fmt.Errorf("no user named %q", username)
 	}
 	if err != nil {

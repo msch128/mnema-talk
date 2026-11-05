@@ -44,17 +44,17 @@ func TestMatchTOTPAcceptsOneStepOfClockSkewOnly(t *testing.T) {
 }
 
 func TestCodesAreNormalisedAndShapesTold(t *testing.T) {
-	if got := cleanCode(" ABCD-efgh jkmn\t"); got != "abcdefghjkmn" {
-		t.Fatalf("cleanCode: %q", got)
+	if got := CleanCode(" ABCD-efgh jkmn\t"); got != "abcdefghjkmn" {
+		t.Fatalf("CleanCode: %q", got)
 	}
-	if !isTOTPShape("012345") || isTOTPShape("12345") || isTOTPShape("12345a") || isTOTPShape("1234567") {
-		t.Fatal("isTOTPShape")
+	if !IsTOTPShape("012345") || IsTOTPShape("12345") || IsTOTPShape("12345a") || IsTOTPShape("1234567") {
+		t.Fatal("IsTOTPShape")
 	}
 }
 
 func TestOtpauthURICarriesWhatAppsNeed(t *testing.T) {
 	secret := []byte("12345678901234567890")
-	u, err := url.Parse(otpauthURI(secret, "max", "Mnema Talk"))
+	u, err := url.Parse(OtpauthURI(secret, "max", "Mnema Talk"))
 	if err != nil || u.Scheme != "otpauth" || u.Host != "totp" {
 		t.Fatalf("%v %v", u, err)
 	}

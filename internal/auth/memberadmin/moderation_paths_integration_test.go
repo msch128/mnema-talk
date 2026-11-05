@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -32,7 +33,7 @@ func modRequest(t *testing.T, h httpx.HandlerFunc, user *auth.User, body, id str
 
 func TestModerationHandlersRejectBadInput(t *testing.T) {
 	p, admin, member := authFixture(t)
-	h := New(auth.NewHandler(&auth.Sessions{DB: p, Secret: secret, TTL: time.Hour}, &events.Recorder{}))
+	h := New(authn.NewHandler(&auth.Sessions{DB: p, Secret: secret, TTL: time.Hour}, &events.Recorder{}))
 	for name, tc := range map[string]struct {
 		handler func(*API) httpx.HandlerFunc
 		body    string
@@ -71,7 +72,7 @@ func TestModerationPropagatesDatabaseFailures(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fault := authHookPool(t, p, &authQueryHook{match: tc.query, cancel: true})
-			h := New(auth.NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, &events.Recorder{}))
+			h := New(authn.NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, &events.Recorder{}))
 			w := authRequest(t, tc.handler(h), admin, tc.body, member.ID)
 			if w.Code != http.StatusInternalServerError {
 				t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
@@ -86,7 +87,7 @@ func TestBanExpiryFailuresAreSurvivable(t *testing.T) {
 
 	// A failing expiry run only logs.
 	fault := authHookPool(t, p, &authQueryHook{match: "UPDATE users SET banned_at = NULL, banned_until = NULL", cancel: true})
-	New(auth.NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, &events.Recorder{})).ExpireBans(ctx)
+	New(authn.NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, &events.Recorder{})).ExpireBans(ctx)
 }
 
 // A lifted or expired ban must not announce an account as enabled while an
@@ -95,7 +96,7 @@ func TestBanLiftBroadcastsTheRealDisabledState(t *testing.T) {
 	p, admin, member := authFixture(t)
 	ctx := context.Background()
 	rec := &events.Recorder{}
-	h := New(auth.NewHandler(&auth.Sessions{DB: p, Secret: secret, TTL: time.Hour}, rec))
+	h := New(authn.NewHandler(&auth.Sessions{DB: p, Secret: secret, TTL: time.Hour}, rec))
 	disabledOf := func(want string) any {
 		t.Helper()
 		evs := rec.Snapshot()

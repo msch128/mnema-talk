@@ -15,21 +15,21 @@ import (
 func (s *Sessions) AuthenticateRequest(r *http.Request) (*User, int, error) {
 	c, err := r.Cookie(s.CookieName())
 	if err != nil || c.Value == "" {
-		return nil, 0, errNoSession
+		return nil, 0, ErrNoSession
 	}
 	claims, err := ParseToken(c.Value, s.Secret)
 	if err != nil {
-		return nil, 0, errNoSession
+		return nil, 0, ErrNoSession
 	}
 	u, tv, err := sessionUser(r.Context(), s.DB, claims.UserID, claims.ID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, 0, errNoSession
+		return nil, 0, ErrNoSession
 	}
 	if err != nil {
 		return nil, 0, err
 	}
 	if tv != claims.TokenVersion {
-		return nil, 0, errNoSession
+		return nil, 0, ErrNoSession
 	}
 	s.touch(r, claims)
 	return u, claims.TokenVersion, nil

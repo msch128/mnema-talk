@@ -2,11 +2,9 @@ package auth
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/worker"
 )
 
 // DefaultSessionSweepEvery is how often the inactivity sweep runs. Requests
@@ -26,7 +24,7 @@ func (s *Sessions) SweepSessions(ctx context.Context) ([]string, error) {
 			   OR token_version <> (SELECT token_version FROM users WHERE id = user_sessions.user_id)`); err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, `DELETE FROM user_sessions WHERE `+inactiveSQL+` RETURNING jti, expires_at`)
+		rows, err := tx.Query(ctx, `DELETE FROM user_sessions WHERE `+InactiveSessionSQL+` RETURNING jti, expires_at`)
 		if err != nil {
 			return err
 		}
@@ -44,7 +42,7 @@ func (s *Sessions) SweepSessions(ctx context.Context) ([]string, error) {
 		if err := rows.Err(); err != nil {
 			return err
 		}
-		return endSessions(ctx, tx, jtis, expires)
+		return EndSessions(ctx, tx, jtis, expires)
 	})
 	s.pruneTouched()
 	if err != nil {
@@ -52,31 +50,4 @@ func (s *Sessions) SweepSessions(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 	return jtis, nil
-}
-
-// RunSessionSweep signs out inactive sessions every interval until ctx ends.
-func (h *Handler) RunSessionSweep(ctx context.Context, every time.Duration) {
-	if h.Sessions == nil || h.Sessions.DB == nil {
-		return
-	}
-	if every <= 0 {
-		every = DefaultSessionSweepEvery
-	}
-	t := time.NewTicker(every)
-	defer t.Stop()
-	for {
-		worker.Tick(worker.JobSessionSweep, func() error {
-			jtis, err := h.Sessions.SweepSessions(ctx)
-			if err != nil && ctx.Err() == nil {
-				slog.Warn("session inactivity sweep failed", "err", err)
-			}
-			h.disconnect(jtis)
-			return worker.IgnoreDone(ctx, err)
-		})
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-		}
-	}
 }

@@ -24,7 +24,7 @@ const (
 
 var (
 	errTwoFactorOn  = httpx.ErrConflict("two-factor sign-in is already on")
-	errTwoFactorOff = httpx.ErrConflict("two-factor sign-in is not on")
+	ErrTwoFactorOff = httpx.ErrConflict("two-factor sign-in is not on")
 	// ErrWrongCode answers every failed second step alike: wrong, replayed,
 	// used, expired and unknown challenges look the same.
 	ErrWrongCode = httpx.NewAPIError(401, httpx.CodeInvalidCredentials, "invalid or expired code")
@@ -36,6 +36,7 @@ type TwoFactorState struct {
 	RecoveryCodesRemaining int
 }
 
+// TwoFactorState reads whether and how the account signs in with a second factor.
 func (s *Sessions) TwoFactorState(ctx context.Context, q db.Querier, id uuid.UUID) (TwoFactorState, error) {
 	var st TwoFactorState
 	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM user_totp WHERE user_id = $1 AND confirmed_at IS NOT NULL),
@@ -47,9 +48,9 @@ func (s *Sessions) TwoFactorState(ctx context.Context, q db.Querier, id uuid.UUI
 	return st, err
 }
 
-// beginEnrolment stores a fresh pending secret (replacing an earlier pending
+// BeginEnrolment stores a fresh pending secret (replacing an earlier pending
 // one) and returns it. It refuses while two-factor sign-in is on.
-func (s *Sessions) beginEnrolment(ctx context.Context, q db.Querier, id uuid.UUID) ([]byte, error) {
+func (s *Sessions) BeginEnrolment(ctx context.Context, q db.Querier, id uuid.UUID) ([]byte, error) {
 	secret, err := newTOTPSecret()
 	if err != nil {
 		return nil, err
@@ -70,9 +71,9 @@ func (s *Sessions) beginEnrolment(ctx context.Context, q db.Querier, id uuid.UUI
 	return secret, nil
 }
 
-// confirmEnrolment checks the first code against the pending secret, turns
+// ConfirmEnrolment checks the first code against the pending secret, turns
 // two-factor sign-in on and returns the one-time recovery codes.
-func (s *Sessions) confirmEnrolment(ctx context.Context, tx pgx.Tx, id uuid.UUID, code string) ([]string, error) {
+func (s *Sessions) ConfirmEnrolment(ctx context.Context, tx pgx.Tx, id uuid.UUID, code string) ([]string, error) {
 	var sealed []byte
 	var confirmed bool
 	err := tx.QueryRow(ctx, `SELECT secret_enc, confirmed_at IS NOT NULL FROM user_totp WHERE user_id = $1 FOR UPDATE`, id).Scan(&sealed, &confirmed)
@@ -89,19 +90,19 @@ func (s *Sessions) confirmEnrolment(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	if err != nil {
 		return nil, err
 	}
-	step, ok := matchTOTP(secret, cleanCode(code), time.Now())
+	step, ok := matchTOTP(secret, CleanCode(code), time.Now())
 	if !ok {
 		return nil, ErrWrongCode
 	}
 	if _, err := tx.Exec(ctx, `UPDATE user_totp SET confirmed_at = NOW(), last_step = $2 WHERE user_id = $1`, id, step); err != nil {
 		return nil, err
 	}
-	return s.replaceRecoveryCodes(ctx, tx, id)
+	return s.ReplaceRecoveryCodes(ctx, tx, id)
 }
 
-// replaceRecoveryCodes deletes every recovery code of the account and makes
+// ReplaceRecoveryCodes deletes every recovery code of the account and makes
 // ten new ones; the plain codes are returned once and never stored.
-func (s *Sessions) replaceRecoveryCodes(ctx context.Context, q db.Querier, id uuid.UUID) ([]string, error) {
+func (s *Sessions) ReplaceRecoveryCodes(ctx context.Context, q db.Querier, id uuid.UUID) ([]string, error) {
 	if _, err := q.Exec(ctx, `DELETE FROM recovery_codes WHERE user_id = $1`, id); err != nil {
 		return nil, err
 	}
@@ -144,7 +145,7 @@ func formatRecoveryCode(code string) string {
 	return code[0:4] + "-" + code[4:8] + "-" + code[8:12]
 }
 
-// verifyFactor checks a code typed at sign-in or before a sensitive change:
+// VerifyFactor checks a code typed at sign-in or before a sensitive change:
 // six digits are an authenticator code (each step is accepted once), anything
 // else a recovery code (each is accepted once). usedRecovery tells which.
 //
@@ -152,27 +153,29 @@ func formatRecoveryCode(code string) string {
 // kind's daily budget is spent it is refused with a 429 without looking at the
 // code. Unreported is how many failures of the account the member has not been
 // told about yet, after this call.
-type factorResult struct {
+type FactorResult struct {
 	OK         bool
 	Recovery   bool
 	Unreported int
 }
 
-func (s *Sessions) verifyFactor(ctx context.Context, q db.Querier, id uuid.UUID, input string) (factorResult, error) {
-	code := cleanCode(input)
+// VerifyFactor checks an authenticator or recovery code for the account and
+// consumes a recovery code.
+func (s *Sessions) VerifyFactor(ctx context.Context, q db.Querier, id uuid.UUID, input string) (FactorResult, error) {
+	code := CleanCode(input)
 	kind, check := kindRecovery, s.useRecoveryCode
-	if isTOTPShape(code) {
+	if IsTOTPShape(code) {
 		kind, check = kindTOTP, s.verifyTOTP
 	}
 	if err := s.failureBudget(ctx, q, id, kind); err != nil {
-		return factorResult{}, err
+		return FactorResult{}, err
 	}
 	ok, err := check(ctx, q, id, code)
 	if err != nil || ok {
-		return factorResult{OK: ok, Recovery: ok && kind == kindRecovery}, err
+		return FactorResult{OK: ok, Recovery: ok && kind == kindRecovery}, err
 	}
 	n, err := s.noteFailure(ctx, q, id, kind)
-	return factorResult{Unreported: n}, err
+	return FactorResult{Unreported: n}, err
 }
 
 func (s *Sessions) verifyTOTP(ctx context.Context, q db.Querier, id uuid.UUID, code string) (bool, error) {
@@ -207,8 +210,8 @@ func (s *Sessions) useRecoveryCode(ctx context.Context, q db.Querier, id uuid.UU
 	return err == nil && tag.RowsAffected() == 1, err
 }
 
-// removeTwoFactor turns the second factor off and forgets everything about it.
-func removeTwoFactor(ctx context.Context, q db.Querier, id uuid.UUID) error {
+// RemoveTwoFactor turns the second factor off and forgets everything about it.
+func RemoveTwoFactor(ctx context.Context, q db.Querier, id uuid.UUID) error {
 	for _, stmt := range []string{
 		`DELETE FROM login_challenges WHERE user_id = $1`,
 		`DELETE FROM second_factor_failures WHERE user_id = $1`,

@@ -88,14 +88,17 @@ var trees = []layered{
 	{
 		root: authRoot,
 		allowed: map[string][]string{
-			"memberadmin": {},
+			// authn is the sign-in layer: handlers, two-factor, e-mail flows.
+			"authn":       {"mailtext"},
+			"memberadmin": {"authn"},
 			"mailtext":    {},
-			"account":     {},
+			"account":     {"authn"},
 		},
 		rootRestricted:   true,
-		rootMayImport:    []string{"mailtext"},
-		subMayImportRoot: []string{"memberadmin", "account"},
+		rootMayImport:    []string{},
+		subMayImportRoot: []string{"authn", "memberadmin", "account"},
 		importers: map[string][]string{
+			"authn": {"cmd/server", "internal/server", "internal/slashcmd", "internal/auth"},
 			// slashcmd runs the same timeout, ban and kick actions as the routes.
 			"memberadmin": {"internal/server", "internal/slashcmd", "internal/auth"},
 			"account":     {"internal/server", "internal/auth"},

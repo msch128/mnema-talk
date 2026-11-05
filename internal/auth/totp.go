@@ -22,7 +22,8 @@ const (
 	totpSkewSteps = 1
 )
 
-var totpEncoding = base32.StdEncoding.WithPadding(base32.NoPadding)
+// TotpEncoding is the base32 form of an authenticator secret, without padding.
+var TotpEncoding = base32.StdEncoding.WithPadding(base32.NoPadding)
 
 // newTOTPSecret returns 160 random bits.
 func newTOTPSecret() ([]byte, error) {
@@ -64,13 +65,13 @@ func matchTOTP(secret []byte, input string, now time.Time) (step int64, ok bool)
 	return step, ok
 }
 
-// otpauthURI is what authenticator apps read from the QR code. issuer is the
+// OtpauthURI is what authenticator apps read from the QR code. issuer is the
 // community's name; a colon would split the label, so it is dropped.
-func otpauthURI(secret []byte, username, issuer string) string {
+func OtpauthURI(secret []byte, username, issuer string) string {
 	issuer = strings.TrimSpace(strings.ReplaceAll(issuer, ":", " "))
 	label := url.PathEscape(issuer + ":" + username)
 	q := url.Values{}
-	q.Set("secret", totpEncoding.EncodeToString(secret))
+	q.Set("secret", TotpEncoding.EncodeToString(secret))
 	q.Set("issuer", issuer)
 	q.Set("algorithm", "SHA1")
 	q.Set("digits", fmt.Sprint(totpDigits))
@@ -78,13 +79,13 @@ func otpauthURI(secret []byte, username, issuer string) string {
 	return "otpauth://totp/" + label + "?" + q.Encode()
 }
 
-// cleanCode removes the spaces and dashes people type or copy into a code.
-func cleanCode(s string) string {
+// CleanCode removes the spaces and dashes people type or copy into a code.
+func CleanCode(s string) string {
 	return strings.ToLower(strings.NewReplacer(" ", "", "-", "", "\t", "").Replace(strings.TrimSpace(s)))
 }
 
-// isTOTPShape reports whether s looks like an authenticator code (six digits).
-func isTOTPShape(s string) bool {
+// IsTOTPShape reports whether s looks like an authenticator code (six digits).
+func IsTOTPShape(s string) bool {
 	if len(s) != totpDigits {
 		return false
 	}

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -296,7 +297,7 @@ func (h *API) resetUserTwoFactor(w http.ResponseWriter, r *http.Request) error {
 	if _, err := auth.TargetUser(r.Context(), h.Sessions.DB, id); err != nil {
 		return err
 	}
-	if err := auth.ResetTwoFactor(r.Context(), h.Sessions.DB, id); err != nil {
+	if err := authn.ResetTwoFactor(r.Context(), h.Sessions.DB, id); err != nil {
 		return err
 	}
 	if h.Live != nil {
