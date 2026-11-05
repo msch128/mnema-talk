@@ -120,7 +120,7 @@ func TestForumTagColorOrderAndModeratedFlag(t *testing.T) {
 	}
 
 	// A tag created later goes last.
-	last, err := CreateForumTag(ctx, x.f.p, x.ch.ID, "later", "")
+	last, err := CreateForumTagSpec(ctx, x.f.p, x.ch.ID, TagSpec{Name: "later"})
 	if err != nil || last.Position != 3 {
 		t.Fatalf("new tag position: %+v %v", last, err)
 	}
@@ -149,7 +149,7 @@ func TestForumModeratedTagsNeedManageMessages(t *testing.T) {
 		t.Fatal("author removed a moderated tag")
 	}
 	// Keeping the moderated tag while changing a plain one is fine.
-	other, err := CreateForumTag(context.Background(), x.f.p, x.ch.ID, "more", "")
+	other, err := CreateForumTagSpec(context.Background(), x.f.p, x.ch.ID, TagSpec{Name: "more"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +220,7 @@ func TestForumPostTagLimitOnEdit(t *testing.T) {
 	ctx := context.Background()
 	ids := []uuid.UUID{x.plain.ID}
 	for i := 0; i < MaxPostTags; i++ {
-		tag, err := CreateForumTag(ctx, x.f.p, x.ch.ID, fmt.Sprintf("t%d", i), "")
+		tag, err := CreateForumTagSpec(ctx, x.f.p, x.ch.ID, TagSpec{Name: fmt.Sprintf("t%d", i)})
 		if err != nil {
 			t.Fatal(err)
 		}

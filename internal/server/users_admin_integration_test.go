@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 )
@@ -138,13 +139,25 @@ func TestDisabledAccountLeavesMembersAndMentionsButPreservesHistory(t *testing.T
 	// A just-disabled user's socket may not yet have unregistered. Even a
 	// stale presence snapshot must not turn them into a new mention recipient.
 	online := []uuid.UUID{admin.user.ID, max.user.ID, moritz.user.ID, moritz.user.ID, uuid.New()}
+	// recipients stores the mentions of content the way a message does and
+	// reads back who would be notified.
+	recipients := func(content string) ([]uuid.UUID, error) {
+		if err := chat.RecordMentions(context.Background(), a.db, staticOnline(online), messageID, admin.user.ID, content); err != nil {
+			return nil, err
+		}
+		rows, err := a.db.Query(context.Background(), `SELECT user_id FROM message_mentions WHERE message_id = $1`, messageID)
+		if err != nil {
+			return nil, err
+		}
+		return pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	}
 	for _, content := range []string{"@here", "@all", "@here @MAX"} {
-		got, err := chat.ResolveMentions(context.Background(), a.db, content, admin.user.ID, online)
+		got, err := recipients(content)
 		if err != nil || len(got) != 1 || got[0] != moritz.user.ID {
 			t.Fatalf("active recipients for %q: %v, err=%v", content, got, err)
 		}
 	}
-	if got, err := chat.ResolveMentions(context.Background(), a.db, "@max", admin.user.ID, online); err != nil || len(got) != 0 {
+	if got, err := recipients("@max"); err != nil || len(got) != 0 {
 		t.Fatalf("disabled named recipient: %v, err=%v", got, err)
 	}
 
@@ -160,7 +173,7 @@ func TestDisabledAccountLeavesMembersAndMentionsButPreservesHistory(t *testing.T
 	if res := max.get("/api/auth/me"); res.status != http.StatusUnauthorized {
 		t.Fatalf("re-enabling revived a revoked session: %d", res.status)
 	}
-	if got, err := chat.ResolveMentions(context.Background(), a.db, "@here", admin.user.ID, online); err != nil ||
+	if got, err := recipients("@here"); err != nil ||
 		len(got) != 2 || !slices.Contains(got, max.user.ID) || !slices.Contains(got, moritz.user.ID) {
 		t.Fatalf("re-enabled mention recipient: %v, err=%v", got, err)
 	}
@@ -255,3 +268,8 @@ func TestAdminSetsChosenPassword(t *testing.T) {
 		t.Fatalf("admin changed own password via member route: %d", res.status)
 	}
 }
+
+// staticOnline is a fixed presence snapshot.
+type staticOnline []uuid.UUID
+
+func (s staticOnline) OnlineUserIDs() []uuid.UUID { return s }

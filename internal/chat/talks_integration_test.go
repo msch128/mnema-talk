@@ -63,7 +63,7 @@ func newTalksWorld(t *testing.T) *talksWorld {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := UpdateChannel(ctx, p, w.lobby.ID, nil, nil, ptr(4), nil); err != nil {
+	if _, err := EditChannel(ctx, p, w.lobby.ID, nil, nil, ptr(4), nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := SetLobby(ctx, p, w.lobby.ID, true); err != nil {

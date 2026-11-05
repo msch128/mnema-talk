@@ -30,12 +30,12 @@ func TestForumTagNameConflictIsReported(t *testing.T) {
 	f, _, _ := setupForumEnv(t)
 	ch := createTestForum(t, f)
 	ctx := context.Background()
-	if _, err := CreateForumTag(ctx, f.p, ch.ID, "Bug", ""); err != nil {
+	if _, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "Bug"}); err != nil {
 		t.Fatal(err)
 	}
-	_, err := CreateForumTag(ctx, f.p, ch.ID, "Bug", "")
+	_, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "Bug"})
 	requireAPIStatus(t, err, http.StatusConflict)
-	other, err := CreateForumTag(ctx, f.p, ch.ID, "Question", "")
+	other, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "Question"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestForumTagUpdatesDoNotOverwriteEachOther(t *testing.T) {
 	f, _, _ := setupForumEnv(t)
 	ch := createTestForum(t, f)
 	ctx := context.Background()
-	tag, err := CreateForumTag(ctx, f.p, ch.ID, "old", "A")
+	tag, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "old", Emoji: "A"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +179,7 @@ func TestForumActivityPagingUsesTheSeenCursorActivity(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	newest := forumMakePost(t, h, f.u, ch, "newest")
 
-	page1, err := ListForumPosts(ctx, f.p, ch.ID, "", nil, HistoryQuery{Limit: 2})
+	page1, err := ListForumPostsFiltered(ctx, f.p, ch.ID, PostFilter{}, HistoryQuery{Limit: 2})
 	if err != nil || len(page1) != 2 || page1[0].ID != newest.ID || page1[1].ID != middle.ID {
 		t.Fatalf("page 1 = %v, %v", page1, err)
 	}
@@ -188,7 +188,7 @@ func TestForumActivityPagingUsesTheSeenCursorActivity(t *testing.T) {
 	if err := forumReply(t, h, f.u, ch, middle.ID); err != nil {
 		t.Fatal(err)
 	}
-	page2, err := ListForumPosts(ctx, f.p, ch.ID, "", nil, HistoryQuery{Limit: 2, Before: &cursor.ID, BeforeActivity: cursor.LastActivityAt})
+	page2, err := ListForumPostsFiltered(ctx, f.p, ch.ID, PostFilter{}, HistoryQuery{Limit: 2, Before: &cursor.ID, BeforeActivity: cursor.LastActivityAt})
 	if err != nil || len(page2) != 1 || page2[0].ID != older.ID {
 		t.Fatalf("page 2 = %v, %v; want only the older post", page2, err)
 	}

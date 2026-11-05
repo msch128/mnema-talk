@@ -20,7 +20,7 @@ func TestUploadStartsAForumPost(t *testing.T) {
 	ctx := context.Background()
 	forum := uuid.New()
 	execMedia(t, f.p, `INSERT INTO channels(id,name,type) VALUES($1,'help','forum')`, forum)
-	tag, err := chat.CreateForumTag(ctx, f.p, forum, "bug", "")
+	tag, err := chat.CreateForumTagSpec(ctx, f.p, forum, chat.TagSpec{Name: "bug"})
 	if err != nil {
 		t.Fatal(err)
 	}

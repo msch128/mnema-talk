@@ -32,7 +32,7 @@ func mustCreate(t *testing.T, ctx context.Context, p *db.Pool, name string, typ 
 
 func mustRename(t *testing.T, ctx context.Context, p *db.Pool, id uuid.UUID, name string) *Channel {
 	t.Helper()
-	ch, err := UpdateChannel(ctx, p, id, &name, nil, nil, nil)
+	ch, err := EditChannel(ctx, p, id, &name, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("rename %q: %v", name, err)
 	}

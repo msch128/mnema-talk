@@ -179,7 +179,7 @@ func forumBadPostCases(e forumBadEnv) []forumBadCase {
 
 func TestForumHandlersRejectBadRequests(t *testing.T) {
 	f, h, mod, ch := forumCtx(t)
-	tag, err := CreateForumTag(context.Background(), f.p, ch.ID, "known", "")
+	tag, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "known"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,7 +206,7 @@ func TestForumTagCapAndPostTagLimit(t *testing.T) {
 	f, h, mod, ch := forumCtx(t)
 	ids := make([]uuid.UUID, 0, 20)
 	for i := 0; i < 20; i++ {
-		tag, err := CreateForumTag(context.Background(), f.p, ch.ID, fmt.Sprintf("t%02d", i), "")
+		tag, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: fmt.Sprintf("t%02d", i)})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -236,11 +236,11 @@ func TestForumTagsAreChannelScoped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	foreign, err := CreateForumTag(context.Background(), f.p, other.ID, "foreign", "")
+	foreign, err := CreateForumTagSpec(context.Background(), f.p, other.ID, TagSpec{Name: "foreign"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	own, err := CreateForumTag(context.Background(), f.p, ch.ID, "own", "")
+	own, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "own"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func TestForumTagsAreChannelScoped(t *testing.T) {
 func TestForumTagPartialUpdates(t *testing.T) {
 	f, _, _, ch := forumCtx(t)
 	ctx := context.Background()
-	tag, err := CreateForumTag(ctx, f.p, ch.ID, "orig", "A")
+	tag, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "orig", Emoji: "A"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,7 +286,7 @@ func TestForumTagPartialUpdates(t *testing.T) {
 
 func TestForumDeletingTagKeepsPostsAndClearsFilter(t *testing.T) {
 	f, h, mod, ch := forumCtx(t)
-	tag, err := CreateForumTag(context.Background(), f.p, ch.ID, "doomed", "")
+	tag, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "doomed"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +341,7 @@ func TestForumListingOmitsRepliesAndStoreClampsLimit(t *testing.T) {
 	}
 	for _, mode := range []string{"newest", "activity"} {
 		for _, limit := range []int{0, 1000} {
-			posts, err := ListForumPosts(context.Background(), f.p, ch.ID, mode, nil, HistoryQuery{Limit: limit})
+			posts, err := ListForumPostsFiltered(context.Background(), f.p, ch.ID, PostFilter{Sort: mode}, HistoryQuery{Limit: limit})
 			if err != nil || len(posts) != 1 || posts[0].ID != a.ID {
 				t.Fatalf("%s/%d: got %d posts, err %v", mode, limit, len(posts), err)
 			}
@@ -352,7 +352,7 @@ func TestForumListingOmitsRepliesAndStoreClampsLimit(t *testing.T) {
 func TestForumPostUpdateRules(t *testing.T) {
 	f, h, mod, ch := forumCtx(t)
 	other := forumNewUser(t, f, "forum_other")
-	tag, err := CreateForumTag(context.Background(), f.p, ch.ID, "t1", "")
+	tag, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "t1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -494,9 +494,9 @@ func TestForumStoreErrorsOnCanceledContext(t *testing.T) {
 			_, _, err := UpdateForumTag(ctx, f.p, ch.ID, uuid.New(), TagPatch{Name: &name})
 			return err
 		},
-		"create tag": func() error { _, err := CreateForumTag(ctx, f.p, ch.ID, "x", ""); return err },
+		"create tag": func() error { _, err := CreateForumTagSpec(ctx, f.p, ch.ID, TagSpec{Name: "x"}); return err },
 		"list posts": func() error {
-			_, err := ListForumPosts(ctx, f.p, ch.ID, "newest", nil, HistoryQuery{})
+			_, err := ListForumPostsFiltered(ctx, f.p, ch.ID, PostFilter{Sort: "newest"}, HistoryQuery{})
 			return err
 		},
 		"update post": func() error {

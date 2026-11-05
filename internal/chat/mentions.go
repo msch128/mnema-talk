@@ -36,7 +36,7 @@ type MentionPolicy struct {
 
 type mentionPolicyKey struct{}
 
-// WithMentionPolicy attaches the policy that ResolveMentions (and so
+// WithMentionPolicy attaches the policy that mention resolution (and so
 // InsertMessage and EditMessage) applies.
 func WithMentionPolicy(ctx context.Context, p MentionPolicy) context.Context {
 	return context.WithValue(ctx, mentionPolicyKey{}, p)
@@ -68,24 +68,6 @@ const (
 type MentionedUser struct {
 	ID   uuid.UUID
 	Kind int16
-}
-
-// ResolveMentions turns the mentions in content into user IDs: named users,
-// every active member for @all, active online users for @here and the members
-// of mentioned roles. The author is never mentioned by their own message.
-func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID uuid.UUID, online []uuid.UUID) ([]uuid.UUID, error) {
-	set, err := resolveMentionSet(ctx, q, content, authorID, online)
-	if err != nil {
-		return nil, err
-	}
-	ids := make([]uuid.UUID, len(set.Users))
-	for i, u := range set.Users {
-		ids[i] = u.ID
-	}
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	return ids, nil
 }
 
 func needsMentionQuery(targets mentionTargets, online []uuid.UUID) bool {
@@ -186,16 +168,6 @@ func queryMentioned(ctx context.Context, q db.Querier, t mentionTargets, online 
 		return nil, fmt.Errorf("resolve mentions: %w", err)
 	}
 	return found, nil
-}
-
-// SaveMentions replaces the stored mentions of messageID with userIDs, all
-// by name.
-func SaveMentions(ctx context.Context, q db.Querier, messageID uuid.UUID, userIDs []uuid.UUID) error {
-	users := make([]MentionedUser, len(userIDs))
-	for i, id := range userIDs {
-		users[i] = MentionedUser{ID: id, Kind: MentionKindName}
-	}
-	return saveMentionSet(ctx, q, messageID, MentionSet{Users: users})
 }
 
 // RecordMentions resolves and stores the mentions of a new or edited message.

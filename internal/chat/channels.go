@@ -262,16 +262,11 @@ const MaxUserLimit = 999
 // MaxSlowModeSeconds is the longest slow mode: 24 hours.
 const MaxSlowModeSeconds = 86400
 
-// UpdateChannel renames a channel, changes its topic, its member limit
-// (voice channels only; 0 removes it) and/or its slow mode (0 turns it off);
-// nil keeps a field.
-func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit, slowMode *int) (*Channel, error) {
-	return EditChannel(ctx, p, id, name, topic, userLimit, slowMode, nil, nil)
-}
-
-// EditChannel is UpdateChannel together with the lobby and Stage marks. The
-// request is validated first and applied in one transaction, so a request
-// that fails in any part changes nothing.
+// EditChannel renames a channel, changes its topic, its member limit (voice
+// channels only; 0 removes it), its slow mode (0 turns it off) and/or the lobby
+// and Stage marks; nil keeps a field. The request is validated first and
+// applied in one transaction, so a request that fails in any part changes
+// nothing.
 func EditChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit, slowMode *int, lobby, stage *bool) (*Channel, error) {
 	name, topic, err := validateChannelEdit(name, topic, userLimit, slowMode)
 	if err != nil {

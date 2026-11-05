@@ -90,13 +90,13 @@ func TestForumTagsLimit(t *testing.T) {
 	// Create 20 tags
 	for i := 0; i < 20; i++ {
 		name := fmt.Sprintf("tag-%02d", i)
-		if _, err := CreateForumTag(context.Background(), f.p, ch.ID, name, "🏷️"); err != nil {
+		if _, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: name, Emoji: "🏷️"}); err != nil {
 			t.Fatalf("failed to create tag %d: %v", i, err)
 		}
 	}
 
 	// 21st tag must fail
-	if _, err := CreateForumTag(context.Background(), f.p, ch.ID, "tag-overflow", "🏷️"); err == nil {
+	if _, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "tag-overflow", Emoji: "🏷️"}); err == nil {
 		t.Fatal("expected error on 21st tag")
 	}
 }
@@ -150,11 +150,11 @@ func TestForumPostTagsAndFiltering(t *testing.T) {
 	ch := createTestForum(t, f)
 	chParam := map[string]string{"channelID": ch.ID.String()}
 
-	tag1, err := CreateForumTag(context.Background(), f.p, ch.ID, "discussion", "💬")
+	tag1, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "discussion", Emoji: "💬"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	tag2, err := CreateForumTag(context.Background(), f.p, ch.ID, "feedback", "💡")
+	tag2, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "feedback", Emoji: "💡"})
 	if err != nil {
 		t.Fatal(err)
 	}

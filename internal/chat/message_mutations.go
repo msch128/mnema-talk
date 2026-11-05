@@ -84,16 +84,11 @@ func checkEditAutomod(ctx context.Context, p *db.Pool, messageID, userID uuid.UU
 	return automod.Of(p).Check(ctx, automod.Post{ChannelID: ref.ChannelID, UserID: userID, Content: content, MessageID: messageID})
 }
 
-// DeleteMessage removes a message (and its thread replies) if user is its
-// author or an admin. It returns the storage keys of the media that went with
-// it; their rows are removed by cascade, the caller deletes the objects.
-func DeleteMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User) ([]string, error) {
-	return DeleteMessageAs(ctx, p, messageID, user, user.IsAdmin())
-}
-
-// DeleteMessageAs is DeleteMessage where canManage says whether user may
-// delete other members' messages (the Manage messages permission in the
-// message's channel, or being the Owner).
+// DeleteMessageAs removes a message (and its thread replies) if user is its
+// author or canManage says they may delete other members' messages (the Manage
+// messages permission in the message's channel, or being the Owner). It returns
+// the storage keys of the media that went with it; their rows are removed by
+// cascade, the caller deletes the objects.
 func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User, canManage bool) ([]string, error) {
 	var keys []string
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
@@ -175,15 +170,11 @@ const (
 	errTooManyReactionsMsg = "too many reactions on this message"
 )
 
-// ToggleReaction adds or removes userID's reaction and returns the new summary.
-// Adding is refused with 409 CONFLICT beyond MaxReactionsPerUser per user or
-// MaxEmojiPerMessage distinct emoji per message.
-func ToggleReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string) ([]ReactionSummary, error) {
-	return ToggleReactionAs(ctx, p, messageID, userID, emoji, true)
-}
-
-// ToggleReactionAs is ToggleReaction where canAdd says whether userID may add
-// reactions; without it only taking back an existing one works (403 otherwise).
+// ToggleReactionAs adds or removes userID's reaction and returns the new
+// summary. canAdd says whether userID may add reactions; without it only taking
+// back an existing one works (403 otherwise). Adding is refused with 409
+// CONFLICT beyond MaxReactionsPerUser per user or MaxEmojiPerMessage distinct
+// emoji per message.
 func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool) ([]ReactionSummary, error) {
 	reactions, _, err := changeReaction(ctx, p, messageID, userID, emoji, canAdd, func(present bool) bool { return !present })
 	return reactions, err
