@@ -1,0 +1,69 @@
+internal/bot/interactions_respond.go
+  s_db63cd4785d2fa::t_c70e06534b7b89 11,177
+internal/chat/botapi.go
+  s_db63cd4785d2fa::t_b1f5eb9bee4b2f 14,267,312,352
+internal/chat/core_aliases.go
+  s_db63cd4785d2fa::t_29d913c0a01ff7 5,33,41-51,53
+internal/chat/database_failures_integration_test.go
+  s_db63cd4785d2fa::t_aaa7bac9b87c76 21,59,169,210
+internal/chat/handlers_integration_test.go
+  s_db63cd4785d2fa::t_c9456af5d7045f 21,69-71
+internal/chat/mentions/main_integration_test.go
+  s_db63cd4785d2fa::t_13c4806346ecd2 1-12
+internal/chat/mentions/mentions.go
+  s_db63cd4785d2fa::t_70514fc563cab5 1,198,211
+internal/chat/mentions/mentions_allowed.go
+  s_db63cd4785d2fa::t_16d9fa48066295 1
+internal/chat/mentions/mentions_cap.go
+  s_db63cd4785d2fa::t_509224c354aeaf 1
+internal/chat/mentions/mentions_cap_integration_test.go
+  s_db63cd4785d2fa::t_80732d100df46b 3,11-12,15,19,31,33,41,57,65,72
+internal/chat/mentions/mentions_roles.go
+  s_db63cd4785d2fa::t_f34fc8e01f58d0 1,12,234,272
+internal/chat/mentions/mentions_test.go
+  s_db63cd4785d2fa::t_9a7a4b6add0aed 1
+internal/chat/message_mutations.go
+  s_db63cd4785d2fa::t_d8a5b5d7e19bf3 13,69
+internal/chat/messages.go
+  s_db63cd4785d2fa::t_a5f23474e7eb60 14,84
+internal/chat/permissions.go
+  s_db63cd4785d2fa::t_5960a1ee661c6a 13,75
+internal/chat/post.go
+  s_db63cd4785d2fa::t_d3be482bca6ef3 16,98
+internal/chat/readstate_integration_test.go
+  s_db63cd4785d2fa::t_4735ae4362e009 10,41
+internal/chat/search_fuzz_test.go
+  s_db63cd4785d2fa::t_2830f6a2ea1987 8,134
+internal/repo/boundaries_test.go
+  s_db63cd4785d2fa::t_4530222c76c964 76
+internal/server/users_admin_integration_test.go
+  s_db63cd4785d2fa::t_52d95a48858074 15,142,147,163
+internal/webhook/execute.go
+  s_db63cd4785d2fa::t_6b62826c5c3f6d 17,254,259
+internal/webhook/execute_mentions.go
+  s_db63cd4785d2fa::t_bbef28a7817e61 9,40
+doc/architecture.md
+  s_db63cd4785d2fa::t_87452e40cb8054 623
+internal/chat/handler_readstate.go
+  s_db63cd4785d2fa::t_1ca517759f2f90 34
+internal/chat/permissions_test.go
+  s_db63cd4785d2fa::t_80c92d37bcf915 22
+internal/chat/readstate_visible.go
+  s_db63cd4785d2fa::t_302dd48cf2c64a 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b23ae80a476d1e1b5e15c56927853474e5686018",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
