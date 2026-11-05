@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -30,7 +31,7 @@ func setupForumEnv(t *testing.T) (chatFixture, *Handler, *auth.User) {
 
 func createTestForum(t *testing.T, f chatFixture) *Channel {
 	t.Helper()
-	ch, err := CreateChannel(context.Background(), f.p, nil, "general-forum", ChannelTypeForum, "Forum topic", 0)
+	ch, err := CreateChannelWithStage(context.Background(), f.p, nil, "general-forum", ChannelTypeForum, "Forum topic", 0, false)
 	if err != nil {
 		t.Fatalf("create forum channel: %v", err)
 	}
@@ -43,14 +44,14 @@ func TestForumTagsCRUD(t *testing.T) {
 	chParam := map[string]string{"channelID": ch.ID.String()}
 
 	// Non-admin cannot create tags (ManageChannels required)
-	req := chatRequest(f.u, `{"name":"bugs","emoji":"🐛"}`, chParam, "")
+	req := chattest.Request(f.u, `{"name":"bugs","emoji":"🐛"}`, chParam, "")
 	if err := h.createForumTag(httptest.NewRecorder(), req); err == nil {
 		t.Fatal("expected forbidden for normal user creating tag")
 	}
 
 	// Admin creates tag
 	rec := httptest.NewRecorder()
-	req = chatRequest(mod, `{"name":"bugs","emoji":"🐛"}`, chParam, "")
+	req = chattest.Request(mod, `{"name":"bugs","emoji":"🐛"}`, chParam, "")
 	if err := h.createForumTag(rec, req); err != nil {
 		t.Fatalf("admin create tag: %v", err)
 	}
@@ -65,7 +66,7 @@ func TestForumTagsCRUD(t *testing.T) {
 	// Update tag
 	tagParam := map[string]string{"channelID": ch.ID.String(), "tagID": tag.ID.String()}
 	rec = httptest.NewRecorder()
-	req = chatRequest(mod, `{"name":"critical-bugs","emoji":"🔥"}`, tagParam, "")
+	req = chattest.Request(mod, `{"name":"critical-bugs","emoji":"🔥"}`, tagParam, "")
 	if err := h.updateForumTag(rec, req); err != nil {
 		t.Fatalf("admin update tag: %v", err)
 	}
@@ -77,7 +78,7 @@ func TestForumTagsCRUD(t *testing.T) {
 	}
 
 	// Delete tag
-	req = chatRequest(mod, "", tagParam, "")
+	req = chattest.Request(mod, "", tagParam, "")
 	if err := h.deleteForumTag(httptest.NewRecorder(), req); err != nil {
 		t.Fatalf("admin delete tag: %v", err)
 	}
@@ -90,13 +91,13 @@ func TestForumTagsLimit(t *testing.T) {
 	// Create 20 tags
 	for i := 0; i < 20; i++ {
 		name := fmt.Sprintf("tag-%02d", i)
-		if _, err := CreateForumTag(context.Background(), f.p, ch.ID, name, "🏷️"); err != nil {
+		if _, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: name, Emoji: "🏷️"}); err != nil {
 			t.Fatalf("failed to create tag %d: %v", i, err)
 		}
 	}
 
 	// 21st tag must fail
-	if _, err := CreateForumTag(context.Background(), f.p, ch.ID, "tag-overflow", "🏷️"); err == nil {
+	if _, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "tag-overflow", Emoji: "🏷️"}); err == nil {
 		t.Fatal("expected error on 21st tag")
 	}
 }
@@ -107,20 +108,20 @@ func TestForumPostCreationAndValidation(t *testing.T) {
 	chParam := map[string]string{"channelID": ch.ID.String()}
 
 	// Empty title fails
-	req := chatRequest(f.u, `{"title":"","content":"First post content"}`, chParam, "")
+	req := chattest.Request(f.u, `{"title":"","content":"First post content"}`, chParam, "")
 	if err := h.createForumPost(httptest.NewRecorder(), req); err == nil {
 		t.Fatal("expected error with empty title")
 	}
 
 	// Empty content fails
-	req = chatRequest(f.u, `{"title":"Hello Forum","content":"   "}`, chParam, "")
+	req = chattest.Request(f.u, `{"title":"Hello Forum","content":"   "}`, chParam, "")
 	if err := h.createForumPost(httptest.NewRecorder(), req); err == nil {
 		t.Fatal("expected error with blank content")
 	}
 
 	// Valid post succeeds
 	rec := httptest.NewRecorder()
-	req = chatRequest(f.u, `{"title":"Getting Started","content":"Welcome to the new forum!"}`, chParam, "")
+	req = chattest.Request(f.u, `{"title":"Getting Started","content":"Welcome to the new forum!"}`, chParam, "")
 	if err := h.createForumPost(rec, req); err != nil {
 		t.Fatalf("create forum post: %v", err)
 	}
@@ -139,7 +140,7 @@ func TestForumPostCreationAndValidation(t *testing.T) {
 	}
 
 	// Ordinary message creation without title in forum channel must fail
-	reqMsg := chatRequest(f.u, `{"content":"Root message without title"}`, chParam, "")
+	reqMsg := chattest.Request(f.u, `{"content":"Root message without title"}`, chParam, "")
 	if err := h.createMessage(httptest.NewRecorder(), reqMsg); err == nil {
 		t.Fatal("expected root message without title in forum to fail")
 	}
@@ -150,11 +151,11 @@ func TestForumPostTagsAndFiltering(t *testing.T) {
 	ch := createTestForum(t, f)
 	chParam := map[string]string{"channelID": ch.ID.String()}
 
-	tag1, err := CreateForumTag(context.Background(), f.p, ch.ID, "discussion", "💬")
+	tag1, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "discussion", Emoji: "💬"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	tag2, err := CreateForumTag(context.Background(), f.p, ch.ID, "feedback", "💡")
+	tag2, err := CreateForumTagSpec(context.Background(), f.p, ch.ID, TagSpec{Name: "feedback", Emoji: "💡"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +163,7 @@ func TestForumPostTagsAndFiltering(t *testing.T) {
 	// Create post with tag1
 	rec := httptest.NewRecorder()
 	body1 := fmt.Sprintf(`{"title":"Discussion Post","content":"Content 1","tag_ids":["%s"]}`, tag1.ID)
-	if err := h.createForumPost(rec, chatRequest(f.u, body1, chParam, "")); err != nil {
+	if err := h.createForumPost(rec, chattest.Request(f.u, body1, chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	var p1 Message
@@ -175,13 +176,13 @@ func TestForumPostTagsAndFiltering(t *testing.T) {
 
 	// Create post with tag2
 	body2 := fmt.Sprintf(`{"title":"Feedback Post","content":"Content 2","tag_ids":["%s"]}`, tag2.ID)
-	if err := h.createForumPost(httptest.NewRecorder(), chatRequest(f.u, body2, chParam, "")); err != nil {
+	if err := h.createForumPost(httptest.NewRecorder(), chattest.Request(f.u, body2, chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 
 	// Filter by tag1
 	rec = httptest.NewRecorder()
-	if err := h.listForumPosts(rec, chatRequest(f.u, "", chParam, "tag_id="+tag1.ID.String())); err != nil {
+	if err := h.listForumPosts(rec, chattest.Request(f.u, "", chParam, "tag_id="+tag1.ID.String())); err != nil {
 		t.Fatal(err)
 	}
 	var filtered []Message
@@ -200,7 +201,7 @@ func TestForumPostLockingAndReplies(t *testing.T) {
 
 	// Create post
 	rec := httptest.NewRecorder()
-	if err := h.createForumPost(rec, chatRequest(f.u, `{"title":"Lock Test","content":"Topic"}`, chParam, "")); err != nil {
+	if err := h.createForumPost(rec, chattest.Request(f.u, `{"title":"Lock Test","content":"Topic"}`, chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	var post Message
@@ -210,33 +211,33 @@ func TestForumPostLockingAndReplies(t *testing.T) {
 	postParam := map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}
 
 	// Normal user cannot lock post
-	req := chatRequest(f.u, `{"is_locked":true}`, postParam, "")
+	req := chattest.Request(f.u, `{"is_locked":true}`, postParam, "")
 	if err := h.updateForumPost(httptest.NewRecorder(), req); err == nil {
 		t.Fatal("expected non-moderator lock to fail")
 	}
 
 	// Moderator locks post
 	rec = httptest.NewRecorder()
-	req = chatRequest(mod, `{"is_locked":true}`, postParam, "")
+	req = chattest.Request(mod, `{"is_locked":true}`, postParam, "")
 	if err := h.updateForumPost(rec, req); err != nil {
 		t.Fatalf("moderator lock post: %v", err)
 	}
 
 	// Normal user cannot reply to locked thread
 	replyBody := fmt.Sprintf(`{"content":"I want to reply","parent_id":"%s"}`, post.ID)
-	if err := h.createMessage(httptest.NewRecorder(), chatRequest(f.u, replyBody, chParam, "")); err == nil {
+	if err := h.createMessage(httptest.NewRecorder(), chattest.Request(f.u, replyBody, chParam, "")); err == nil {
 		t.Fatal("expected reply to locked post by normal user to fail")
 	}
 
 	// Moderator can reply to locked thread
 	rec = httptest.NewRecorder()
-	if err := h.createMessage(rec, chatRequest(mod, replyBody, chParam, "")); err != nil {
+	if err := h.createMessage(rec, chattest.Request(mod, replyBody, chParam, "")); err != nil {
 		t.Fatalf("expected moderator to reply to locked thread: %v", err)
 	}
 
 	// Activity sort: check that last_activity_at is updated
 	rec = httptest.NewRecorder()
-	if err := h.listForumPosts(rec, chatRequest(f.u, "", chParam, "sort=activity")); err != nil {
+	if err := h.listForumPosts(rec, chattest.Request(f.u, "", chParam, "sort=activity")); err != nil {
 		t.Fatal(err)
 	}
 	var listed []Message
@@ -261,7 +262,7 @@ func TestForumPostEditTagsPermissions(t *testing.T) {
 
 	// f.u creates a post
 	rec := httptest.NewRecorder()
-	if err := h.createForumPost(rec, chatRequest(f.u, `{"title":"Owner Post","content":"Mine"}`, chParam, "")); err != nil {
+	if err := h.createForumPost(rec, chattest.Request(f.u, `{"title":"Owner Post","content":"Mine"}`, chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	var post Message
@@ -272,18 +273,18 @@ func TestForumPostEditTagsPermissions(t *testing.T) {
 
 	// Author can edit post title
 	rec = httptest.NewRecorder()
-	if err := h.updateForumPost(rec, chatRequest(f.u, `{"title":"Updated Title"}`, postParam, "")); err != nil {
+	if err := h.updateForumPost(rec, chattest.Request(f.u, `{"title":"Updated Title"}`, postParam, "")); err != nil {
 		t.Fatalf("author update title: %v", err)
 	}
 
 	// other_user cannot edit post title
-	if err := h.updateForumPost(httptest.NewRecorder(), chatRequest(other, `{"title":"Hacked Title"}`, postParam, "")); err == nil {
+	if err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(other, `{"title":"Hacked Title"}`, postParam, "")); err == nil {
 		t.Fatal("expected other user editing post to fail")
 	}
 
 	// Moderator can edit post title
 	rec = httptest.NewRecorder()
-	if err := h.updateForumPost(rec, chatRequest(mod, `{"title":"Mod Edited Title"}`, postParam, "")); err != nil {
+	if err := h.updateForumPost(rec, chattest.Request(mod, `{"title":"Mod Edited Title"}`, postParam, "")); err != nil {
 		t.Fatalf("moderator update title: %v", err)
 	}
 }
@@ -304,10 +305,10 @@ func TestForumChannelPermissions(t *testing.T) {
 	}
 	h.Perms.Invalidate()
 
-	if err := h.listForumTags(httptest.NewRecorder(), chatRequest(f.u, "", chParam, "")); err == nil {
+	if err := h.listForumTags(httptest.NewRecorder(), chattest.Request(f.u, "", chParam, "")); err == nil {
 		t.Fatal("expected list tags to fail without ViewChannel")
 	}
-	if err := h.listForumPosts(httptest.NewRecorder(), chatRequest(f.u, "", chParam, "")); err == nil {
+	if err := h.listForumPosts(httptest.NewRecorder(), chattest.Request(f.u, "", chParam, "")); err == nil {
 		t.Fatal("expected list posts to fail without ViewChannel")
 	}
 
@@ -320,7 +321,7 @@ func TestForumChannelPermissions(t *testing.T) {
 	}
 	h.Perms.Invalidate()
 
-	if err := h.createForumPost(httptest.NewRecorder(), chatRequest(f.u, `{"title":"Blocked Post","content":"Can't post"}`, chParam, "")); err == nil {
+	if err := h.createForumPost(httptest.NewRecorder(), chattest.Request(f.u, `{"title":"Blocked Post","content":"Can't post"}`, chParam, "")); err == nil {
 		t.Fatal("expected create post to fail without SendMessages")
 	}
 }
@@ -331,7 +332,7 @@ func TestForumPostUpdateNeedsViewChannel(t *testing.T) {
 	chParam := map[string]string{"channelID": ch.ID.String()}
 
 	rec := httptest.NewRecorder()
-	if err := h.createForumPost(rec, chatRequest(f.u, `{"title":"Mine","content":"hello"}`, chParam, "")); err != nil {
+	if err := h.createForumPost(rec, chattest.Request(f.u, `{"title":"Mine","content":"hello"}`, chParam, "")); err != nil {
 		t.Fatalf("create post: %v", err)
 	}
 	var post Message
@@ -349,7 +350,7 @@ func TestForumPostUpdateNeedsViewChannel(t *testing.T) {
 	h.Perms.Invalidate()
 
 	postParam := map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}
-	err := h.updateForumPost(httptest.NewRecorder(), chatRequest(f.u, `{"title":"Renamed"}`, postParam, ""))
+	err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(f.u, `{"title":"Renamed"}`, postParam, ""))
 	if err == nil {
 		t.Fatal("author who can no longer view the forum must not edit the post")
 	}

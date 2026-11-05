@@ -92,8 +92,8 @@ type Embed struct {
 }
 
 var (
-	ErrBlocked   = errors.New("link target is not a public web address")
-	ErrNoPreview = errors.New("page has no preview")
+	ErrBlocked   = errors.New("link target is not a public web address") // also checked on every redirect
+	ErrNoPreview = errors.New("page has no preview")                     // fetched, but nothing to show
 	// errBusy means no fetch slot was free in time. It says nothing about
 	// the link, so it is never cached.
 	errBusy = errors.New("too many link previews in flight")

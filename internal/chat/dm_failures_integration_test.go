@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 )
 
 func TestDirectMessageOperationsReportDatabaseFailures(t *testing.T) {
@@ -35,20 +36,23 @@ func TestDirectMessageOperationsReportDatabaseFailures(t *testing.T) {
 
 	broken := map[string]string{"dm_members": `SELECT NULL::uuid AS channel_id`}
 	cases := map[string]func() error{
-		"list": func() error { _, err := ListDMs(ctx, driftPool(t, f.p, broken), f.u.ID, nil); return err },
+		"list": func() error { _, err := ListDMs(ctx, chattest.DriftPool(t, f.p, broken), f.u.ID, nil); return err },
 		"members": func() error {
-			_, err := ListDMs(ctx, driftPool(t, f.p, map[string]string{"users": `SELECT NULL::uuid AS id`}), f.u.ID, nil)
+			_, err := ListDMs(ctx, chattest.DriftPool(t, f.p, map[string]string{"users": `SELECT NULL::uuid AS id`}), f.u.ID, nil)
 			return err
 		},
 		"create": func() error {
-			_, _, err := CreateDM(ctx, driftPool(t, f.p, broken), NewDM{Creator: f.u.ID, Others: []uuid.UUID{carol}})
+			_, _, err := CreateDM(ctx, chattest.DriftPool(t, f.p, broken), NewDM{Creator: f.u.ID, Others: []uuid.UUID{carol}})
 			return err
 		},
-		"add":        func() error { _, err := AddDMMember(ctx, driftPool(t, f.p, broken), g, f.u.ID, uuid.New()); return err },
-		"leave":      func() error { _, _, err := LeaveDM(ctx, driftPool(t, f.p, broken), g, f.u.ID); return err },
-		"member ids": func() error { _, err := DMMemberIDs(ctx, driftPool(t, f.p, broken), id); return err },
+		"add": func() error {
+			_, err := AddDMMember(ctx, chattest.DriftPool(t, f.p, broken), g, f.u.ID, uuid.New())
+			return err
+		},
+		"leave":      func() error { _, _, err := LeaveDM(ctx, chattest.DriftPool(t, f.p, broken), g, f.u.ID); return err },
+		"member ids": func() error { _, err := DMMemberIDs(ctx, chattest.DriftPool(t, f.p, broken), id); return err },
 		"get policy": func() error {
-			_, err := GetDMPolicy(ctx, driftPool(t, f.p, map[string]string{"users": `SELECT NULL::uuid AS id`}), f.u.ID)
+			_, err := GetDMPolicy(ctx, chattest.DriftPool(t, f.p, map[string]string{"users": `SELECT NULL::uuid AS id`}), f.u.ID)
 			return err
 		},
 	}

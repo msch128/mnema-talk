@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -49,7 +50,7 @@ func (x forumTagFixture) createPost(t *testing.T, u *auth.User, title string, ta
 	t.Helper()
 	body, _ := json.Marshal(map[string]any{"title": title, "content": "body of " + title, "tag_ids": tagIDs})
 	rec := httptest.NewRecorder()
-	if err := x.h.createForumPost(rec, chatRequest(u, string(body), x.chParam, "")); err != nil {
+	if err := x.h.createForumPost(rec, chattest.Request(u, string(body), x.chParam, "")); err != nil {
 		return nil, err
 	}
 	var m Message
@@ -61,13 +62,13 @@ func (x forumTagFixture) createPost(t *testing.T, u *auth.User, title string, ta
 
 func (x forumTagFixture) patchPost(u *auth.User, post *Message, body string) error {
 	params := map[string]string{"channelID": x.ch.ID.String(), "messageID": post.ID.String()}
-	return x.h.updateForumPost(httptest.NewRecorder(), chatRequest(u, body, params, ""))
+	return x.h.updateForumPost(httptest.NewRecorder(), chattest.Request(u, body, params, ""))
 }
 
 func (x forumTagFixture) list(t *testing.T, u *auth.User, query string) []Message {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	if err := x.h.listForumPosts(rec, chatRequest(u, "", x.chParam, query)); err != nil {
+	if err := x.h.listForumPosts(rec, chattest.Request(u, "", x.chParam, query)); err != nil {
 		t.Fatal(err)
 	}
 	var out []Message
@@ -100,10 +101,10 @@ func TestForumTagColorOrderAndModeratedFlag(t *testing.T) {
 
 	// Reorder: a regular member may not, the list follows the new order, a partial list is refused.
 	order := fmt.Sprintf(`{"tag_ids":["%s","%s"]}`, x.moderated.ID, x.plain.ID)
-	if err := x.h.reorderForumTags(httptest.NewRecorder(), chatRequest(x.f.u, order, x.chParam, "")); err == nil {
+	if err := x.h.reorderForumTags(httptest.NewRecorder(), chattest.Request(x.f.u, order, x.chParam, "")); err == nil {
 		t.Fatal("a member without Manage channels must not reorder tags")
 	}
-	if err := x.h.reorderForumTags(httptest.NewRecorder(), chatRequest(x.mod, order, x.chParam, "")); err != nil {
+	if err := x.h.reorderForumTags(httptest.NewRecorder(), chattest.Request(x.mod, order, x.chParam, "")); err != nil {
 		t.Fatalf("reorder: %v", err)
 	}
 	tags, err := ListForumTags(ctx, x.f.p, x.ch.ID)
@@ -111,16 +112,16 @@ func TestForumTagColorOrderAndModeratedFlag(t *testing.T) {
 		t.Fatalf("order after reorder: %+v %v", tags, err)
 	}
 	partial := fmt.Sprintf(`{"tag_ids":["%s"]}`, x.plain.ID)
-	if err := x.h.reorderForumTags(httptest.NewRecorder(), chatRequest(x.mod, partial, x.chParam, "")); err == nil {
+	if err := x.h.reorderForumTags(httptest.NewRecorder(), chattest.Request(x.mod, partial, x.chParam, "")); err == nil {
 		t.Fatal("an order that misses a tag must be refused")
 	}
 	dup := fmt.Sprintf(`{"tag_ids":["%s","%s"]}`, x.plain.ID, x.plain.ID)
-	if err := x.h.reorderForumTags(httptest.NewRecorder(), chatRequest(x.mod, dup, x.chParam, "")); err == nil {
+	if err := x.h.reorderForumTags(httptest.NewRecorder(), chattest.Request(x.mod, dup, x.chParam, "")); err == nil {
 		t.Fatal("an order that repeats a tag must be refused")
 	}
 
 	// A tag created later goes last.
-	last, err := CreateForumTag(ctx, x.f.p, x.ch.ID, "later", "")
+	last, err := CreateForumTagSpec(ctx, x.f.p, x.ch.ID, TagSpec{Name: "later"})
 	if err != nil || last.Position != 3 {
 		t.Fatalf("new tag position: %+v %v", last, err)
 	}
@@ -149,7 +150,7 @@ func TestForumModeratedTagsNeedManageMessages(t *testing.T) {
 		t.Fatal("author removed a moderated tag")
 	}
 	// Keeping the moderated tag while changing a plain one is fine.
-	other, err := CreateForumTag(context.Background(), x.f.p, x.ch.ID, "more", "")
+	other, err := CreateForumTagSpec(context.Background(), x.f.p, x.ch.ID, TagSpec{Name: "more"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,11 +169,11 @@ func TestForumRequiredTag(t *testing.T) {
 	ctx := context.Background()
 	settingsParam := x.chParam
 
-	if err := x.h.updateForumSettings(httptest.NewRecorder(), chatRequest(x.f.u, `{"require_tag":true}`, settingsParam, "")); err == nil {
+	if err := x.h.updateForumSettings(httptest.NewRecorder(), chattest.Request(x.f.u, `{"require_tag":true}`, settingsParam, "")); err == nil {
 		t.Fatal("a member must not change the forum settings")
 	}
 	rec := httptest.NewRecorder()
-	if err := x.h.updateForumSettings(rec, chatRequest(x.mod, `{"require_tag":true,"guidelines":"Search first."}`, settingsParam, "")); err != nil {
+	if err := x.h.updateForumSettings(rec, chattest.Request(x.mod, `{"require_tag":true,"guidelines":"Search first."}`, settingsParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	got, err := GetForumSettings(ctx, x.f.p, x.ch.ID)
@@ -210,7 +211,7 @@ func TestForumRequiredTag(t *testing.T) {
 		long[i] = 'a'
 	}
 	body := fmt.Sprintf(`{"guidelines":%q}`, string(long))
-	if err := x.h.updateForumSettings(httptest.NewRecorder(), chatRequest(x.mod, body, settingsParam, "")); err == nil {
+	if err := x.h.updateForumSettings(httptest.NewRecorder(), chattest.Request(x.mod, body, settingsParam, "")); err == nil {
 		t.Fatal("over-long guidelines must be refused")
 	}
 }
@@ -220,7 +221,7 @@ func TestForumPostTagLimitOnEdit(t *testing.T) {
 	ctx := context.Background()
 	ids := []uuid.UUID{x.plain.ID}
 	for i := 0; i < MaxPostTags; i++ {
-		tag, err := CreateForumTag(ctx, x.f.p, x.ch.ID, fmt.Sprintf("t%d", i), "")
+		tag, err := CreateForumTagSpec(ctx, x.f.p, x.ch.ID, TagSpec{Name: fmt.Sprintf("t%d", i)})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -301,7 +302,7 @@ func TestForumListPinnedSearchAndTagFilter(t *testing.T) {
 		t.Fatalf("two percent signs are literal text, not a wildcard, got %v", titles(got))
 	}
 	reply := fmt.Sprintf(`{"content":"the needle is here","parent_id":"%s"}`, newest.ID)
-	if err := x.h.createMessage(httptest.NewRecorder(), chatRequest(x.f.u, reply, x.chParam, "")); err != nil {
+	if err := x.h.createMessage(httptest.NewRecorder(), chattest.Request(x.f.u, reply, x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	if got := x.list(t, x.f.u, "q=needle"); len(got) != 1 || got[0].ID != newest.ID {
@@ -317,7 +318,7 @@ func TestForumListPinnedSearchAndTagFilter(t *testing.T) {
 	for i := range long {
 		long[i] = 'a'
 	}
-	if err := x.h.listForumPosts(httptest.NewRecorder(), chatRequest(x.f.u, "", x.chParam, "q="+string(long))); err == nil {
+	if err := x.h.listForumPosts(httptest.NewRecorder(), chattest.Request(x.f.u, "", x.chParam, "q="+string(long))); err == nil {
 		t.Fatal("an over-long search must be refused")
 	}
 }
@@ -362,11 +363,11 @@ func TestForumUnreadPostsAndMarkRead(t *testing.T) {
 
 	// A reply of someone else makes the member's own post unread; their own reply does not.
 	reply := fmt.Sprintf(`{"content":"an answer","parent_id":"%s"}`, mine.ID)
-	if err := x.h.createMessage(httptest.NewRecorder(), chatRequest(x.mod, reply, x.chParam, "")); err != nil {
+	if err := x.h.createMessage(httptest.NewRecorder(), chattest.Request(x.mod, reply, x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	own := fmt.Sprintf(`{"content":"my follow-up","parent_id":"%s"}`, post.ID)
-	if err := x.h.createMessage(httptest.NewRecorder(), chatRequest(x.f.u, own, x.chParam, "")); err != nil {
+	if err := x.h.createMessage(httptest.NewRecorder(), chattest.Request(x.f.u, own, x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	if unread, _ = UnreadPostIDs(ctx, x.f.p, x.ch.ID, x.f.u.ID); len(unread) != 1 || unread[0] != mine.ID {
@@ -376,7 +377,7 @@ func TestForumUnreadPostsAndMarkRead(t *testing.T) {
 	// The handler refuses a reply id (not a post) and answers with the previous marker.
 	params := map[string]string{"channelID": x.ch.ID.String(), "messageID": mine.ID.String()}
 	rec := httptest.NewRecorder()
-	if err := x.h.markForumPostRead(rec, chatRequest(x.f.u, "", params, "")); err != nil {
+	if err := x.h.markForumPostRead(rec, chattest.Request(x.f.u, "", params, "")); err != nil {
 		t.Fatal(err)
 	}
 	var out PostRead
@@ -388,7 +389,7 @@ func TestForumUnreadPostsAndMarkRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	params["messageID"] = replyID.String()
-	if err := x.h.markForumPostRead(httptest.NewRecorder(), chatRequest(x.f.u, "", params, "")); err == nil {
+	if err := x.h.markForumPostRead(httptest.NewRecorder(), chattest.Request(x.f.u, "", params, "")); err == nil {
 		t.Fatal("a reply is not a post")
 	}
 }
@@ -399,10 +400,10 @@ func TestForumRulesReorderAndSolvedAreAudited(t *testing.T) {
 	ctx := context.Background()
 
 	order := fmt.Sprintf(`{"tag_ids":["%s","%s"]}`, x.moderated.ID, x.plain.ID)
-	if err := x.h.reorderForumTags(httptest.NewRecorder(), chatRequest(x.mod, order, x.chParam, "")); err != nil {
+	if err := x.h.reorderForumTags(httptest.NewRecorder(), chattest.Request(x.mod, order, x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
-	if err := x.h.updateForumSettings(httptest.NewRecorder(), chatRequest(x.mod, `{"require_tag":true,"guidelines":"Be kind."}`, x.chParam, "")); err != nil {
+	if err := x.h.updateForumSettings(httptest.NewRecorder(), chattest.Request(x.mod, `{"require_tag":true,"guidelines":"Be kind."}`, x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	post, err := x.createPost(t, x.f.u, "solved by a moderator", x.plain.ID)
@@ -437,11 +438,11 @@ func TestForumExtrasHandlersReadSettingsUnreadAndRefuseWhatIsNotAForum(t *testin
 	ctx := context.Background()
 
 	// Settings are readable by every member who can view the forum.
-	if _, _, err := UpdateForumSettings(ctx, x.f.p, x.ch.ID, ForumSettingsPatch{Guidelines: ptr("Be kind.")}); err != nil {
+	if _, _, err := UpdateForumSettings(ctx, x.f.p, x.ch.ID, ForumSettingsPatch{Guidelines: chattest.Ptr("Be kind.")}); err != nil {
 		t.Fatal(err)
 	}
 	rec := httptest.NewRecorder()
-	if err := x.h.getForumSettings(rec, chatRequest(x.f.u, "", x.chParam, "")); err != nil {
+	if err := x.h.getForumSettings(rec, chattest.Request(x.f.u, "", x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	var s ForumSettings
@@ -458,7 +459,7 @@ func TestForumExtrasHandlersReadSettingsUnreadAndRefuseWhatIsNotAForum(t *testin
 		t.Fatal(err)
 	}
 	rec = httptest.NewRecorder()
-	if err := x.h.listUnreadForumPosts(rec, chatRequest(x.f.u, "", x.chParam, "")); err != nil {
+	if err := x.h.listUnreadForumPosts(rec, chattest.Request(x.f.u, "", x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	var unread UnreadForumPosts
@@ -470,12 +471,12 @@ func TestForumExtrasHandlersReadSettingsUnreadAndRefuseWhatIsNotAForum(t *testin
 	textParam := map[string]string{"channelID": x.f.c.ID.String()}
 	postParam := map[string]string{"channelID": x.f.c.ID.String(), "messageID": post.ID.String()}
 	for name, err := range map[string]error{
-		"get settings":    x.h.getForumSettings(httptest.NewRecorder(), chatRequest(x.mod, "", textParam, "")),
-		"update settings": x.h.updateForumSettings(httptest.NewRecorder(), chatRequest(x.mod, `{"require_tag":true}`, textParam, "")),
-		"unread":          x.h.listUnreadForumPosts(httptest.NewRecorder(), chatRequest(x.mod, "", textParam, "")),
-		"mark read":       x.h.markForumPostRead(httptest.NewRecorder(), chatRequest(x.mod, "", postParam, "")),
-		"bad channel id":  x.h.getForumSettings(httptest.NewRecorder(), chatRequest(x.mod, "", map[string]string{"channelID": "nope"}, "")),
-		"bad post id":     x.h.markForumPostRead(httptest.NewRecorder(), chatRequest(x.mod, "", map[string]string{"channelID": x.ch.ID.String(), "messageID": "nope"}, "")),
+		"get settings":    x.h.getForumSettings(httptest.NewRecorder(), chattest.Request(x.mod, "", textParam, "")),
+		"update settings": x.h.updateForumSettings(httptest.NewRecorder(), chattest.Request(x.mod, `{"require_tag":true}`, textParam, "")),
+		"unread":          x.h.listUnreadForumPosts(httptest.NewRecorder(), chattest.Request(x.mod, "", textParam, "")),
+		"mark read":       x.h.markForumPostRead(httptest.NewRecorder(), chattest.Request(x.mod, "", postParam, "")),
+		"bad channel id":  x.h.getForumSettings(httptest.NewRecorder(), chattest.Request(x.mod, "", map[string]string{"channelID": "nope"}, "")),
+		"bad post id":     x.h.markForumPostRead(httptest.NewRecorder(), chattest.Request(x.mod, "", map[string]string{"channelID": x.ch.ID.String(), "messageID": "nope"}, "")),
 	} {
 		if err == nil {
 			t.Errorf("%s: expected an error", name)
@@ -493,9 +494,9 @@ func TestForumExtrasHandlersReadSettingsUnreadAndRefuseWhatIsNotAForum(t *testin
 	x.h.Perms.Invalidate()
 	hidden := map[string]string{"channelID": x.ch.ID.String(), "messageID": post.ID.String()}
 	for name, err := range map[string]error{
-		"get settings": x.h.getForumSettings(httptest.NewRecorder(), chatRequest(x.f.u, "", x.chParam, "")),
-		"unread":       x.h.listUnreadForumPosts(httptest.NewRecorder(), chatRequest(x.f.u, "", x.chParam, "")),
-		"mark read":    x.h.markForumPostRead(httptest.NewRecorder(), chatRequest(x.f.u, "", hidden, "")),
+		"get settings": x.h.getForumSettings(httptest.NewRecorder(), chattest.Request(x.f.u, "", x.chParam, "")),
+		"unread":       x.h.listUnreadForumPosts(httptest.NewRecorder(), chattest.Request(x.f.u, "", x.chParam, "")),
+		"mark read":    x.h.markForumPostRead(httptest.NewRecorder(), chattest.Request(x.f.u, "", hidden, "")),
 	} {
 		if err == nil {
 			t.Errorf("%s without View channel: expected an error", name)

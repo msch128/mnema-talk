@@ -16,6 +16,8 @@ const (
 	// MaxRoleCapacity is the largest capacity of a role.
 	MaxRoleCapacity = 1000
 
+	// SignupConfirmed holds a place in the role; SignupWaitlist waits for one
+	// to free up and is promoted in sign-up order.
 	SignupConfirmed = "confirmed"
 	SignupWaitlist  = "waitlist"
 )

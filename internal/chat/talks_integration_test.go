@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -59,11 +60,11 @@ func newTalksWorld(t *testing.T) *talksWorld {
 		t.Fatal(err)
 	}
 	w.category = cat.ID
-	w.lobby, err = CreateChannel(ctx, p, &cat.ID, "Create a Talk", ChannelTypeVoice, "", 5)
+	w.lobby, err = CreateChannelWithStage(ctx, p, &cat.ID, "Create a Talk", ChannelTypeVoice, "", 5, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := UpdateChannel(ctx, p, w.lobby.ID, nil, nil, ptr(4), nil); err != nil {
+	if _, err := EditChannel(ctx, p, w.lobby.ID, nil, nil, chattest.Ptr(4), nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := SetLobby(ctx, p, w.lobby.ID, true); err != nil {
@@ -179,14 +180,14 @@ func TestOpeningATalkCopiesTheLobbyAndNumbersFromOne(t *testing.T) {
 func TestOnlyALobbyOpensTalksAndOnlyUpToTheCap(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	plain, err := CreateChannel(ctx, w.p, &w.category, "Plain", ChannelTypeVoice, "", 9)
+	plain, err := CreateChannelWithStage(ctx, w.p, &w.category, "Plain", ChannelTypeVoice, "", 9, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := w.mgr.Open(ctx, w.alice.ID, plain.ID); !errors.Is(err, errNotLobby) {
 		t.Fatalf("a plain Talk opens none: %v", err)
 	}
-	text, _ := CreateChannel(ctx, w.p, nil, "text", ChannelTypeText, "", 0)
+	text, _ := CreateChannelWithStage(ctx, w.p, nil, "text", ChannelTypeText, "", 0, false)
 	if err := SetLobby(ctx, w.p, text.ID, true); err == nil {
 		t.Fatal("a text channel cannot be a lobby")
 	}
@@ -348,7 +349,7 @@ func TestTemporaryTalksStayOutOfTheSavedLayout(t *testing.T) {
 }
 
 func talkRequest(u *auth.User, body string, params map[string]string) *http.Request {
-	return chatRequest(u, body, params, "")
+	return chattest.Request(u, body, params, "")
 }
 
 func TestOnlyTheLeaderEditsATemporaryTalk(t *testing.T) {
@@ -424,7 +425,7 @@ func TestAnInviteCardGrantsNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A Talk only Alice may see or join.
-	private, err := CreateChannel(ctx, w.p, nil, "Leads", ChannelTypeVoice, "", 1)
+	private, err := CreateChannelWithStage(ctx, w.p, nil, "Leads", ChannelTypeVoice, "", 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -630,7 +631,7 @@ func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
 	if err := h.inviteToTalk(rec(), talkRequest(w.alice, body, map[string]string{"id": uuid.NewString()})); err == nil {
 		t.Fatal("unknown Talk")
 	}
-	text, _ := CreateChannel(ctx, w.p, nil, "plain-text", ChannelTypeText, "", 0)
+	text, _ := CreateChannelWithStage(ctx, w.p, nil, "plain-text", ChannelTypeText, "", 0, false)
 	notDM := `{"conversation_id":"` + text.ID.String() + `"}`
 	if err := h.inviteToTalk(rec(), talkRequest(w.alice, notDM, id)); !errors.Is(err, errChannelNotFound) {
 		t.Fatalf("a channel is no conversation: %v", err)
@@ -748,7 +749,7 @@ func TestDatabaseFailuresLeaveTheLiveStateIntactAndAreRetried(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A channels table that can be read but neither updated nor locked.
-	broken := driftPool(t, w.p, map[string]string{"channels": `SELECT DISTINCT id, name, is_temp, leader_id, type, category_id, user_limit, slow_mode_seconds FROM public.channels`})
+	broken := chattest.DriftPool(t, w.p, map[string]string{"channels": `SELECT DISTINCT id, name, is_temp, leader_id, type, category_id, user_limit, slow_mode_seconds FROM public.channels`})
 	m := NewTalkManager(&TalkManager{DB: broken, Events: w.rec, EmptyGrace: time.Hour})
 	t.Cleanup(m.stopTimers)
 	m.talks[talk.ID] = &liveTalk{leader: &w.alice.ID}
@@ -768,6 +769,6 @@ func TestDatabaseFailuresLeaveTheLiveStateIntactAndAreRetried(t *testing.T) {
 	if !w.exists(t, talk.ID) {
 		t.Fatal("the sweep removed a Talk it could not lock")
 	}
-	failing := NewTalkManager(&TalkManager{DB: driftPool(t, w.p, map[string]string{"channels": `SELECT 1 AS x WHERE false AND 1/0 = 1`}), Events: w.rec})
+	failing := NewTalkManager(&TalkManager{DB: chattest.DriftPool(t, w.p, map[string]string{"channels": `SELECT 1 AS x WHERE false AND 1/0 = 1`}), Events: w.rec})
 	failing.sweepStale(ctx)
 }

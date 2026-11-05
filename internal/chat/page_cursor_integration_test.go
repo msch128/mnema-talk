@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -36,11 +37,11 @@ func TestPageCursorOfADeletedRowIsNotFound(t *testing.T) {
 	requireStatus(t, err, http.StatusNotFound)
 	_, err = ListSaved(ctx, f.p, f.u.ID, nil, &gone, 5)
 	requireStatus(t, err, http.StatusNotFound)
-	_, err = ListForumPosts(ctx, f.p, f.c.ID, "newest", nil, HistoryQuery{Limit: 5, Before: &gone})
+	_, err = ListForumPostsFiltered(ctx, f.p, f.c.ID, PostFilter{Sort: "newest"}, HistoryQuery{Limit: 5, Before: &gone})
 	requireStatus(t, err, http.StatusNotFound)
 
 	h := &Handler{DB: f.p, Events: &events.Recorder{}}
-	err = h.listReports(httptest.NewRecorder(), chatRequest(f.u, "", nil, "before="+gone.String()))
+	err = h.listReports(httptest.NewRecorder(), chattest.Request(f.u, "", nil, "before="+gone.String()))
 	requireStatus(t, err, http.StatusNotFound)
 
 	// A cursor that exists still pages.
@@ -71,7 +72,7 @@ func TestReplyToARootDeletedMeanwhileIsAnInputError(t *testing.T) {
 	}
 	_, err := CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "late reply", ParentID: &f.m})
 	requireStatus(t, err, http.StatusBadRequest)
-	requireChatError(t, err, "parent message not found")
+	chattest.RequireError(t, err, "parent message not found")
 }
 
 // Closing a report answers with the closed report; closing it again conflicts
@@ -91,10 +92,10 @@ func TestResolveAndDeleteReportStates(t *testing.T) {
 	params := map[string]string{"id": id.String()}
 	resolve := func() (*httptest.ResponseRecorder, error) {
 		w := httptest.NewRecorder()
-		return w, h.resolveReport(w, chatRequest(f.u, `{"status":"resolved","note":"done"}`, params, ""))
+		return w, h.resolveReport(w, chattest.Request(f.u, `{"status":"resolved","note":"done"}`, params, ""))
 	}
 	del := func() error {
-		return h.deleteReport(httptest.NewRecorder(), chatRequest(f.u, "", params, ""))
+		return h.deleteReport(httptest.NewRecorder(), chattest.Request(f.u, "", params, ""))
 	}
 
 	requireStatus(t, del(), http.StatusConflict)

@@ -30,6 +30,9 @@ type Target struct {
 	// Image is the reference the container was created from, e.g.
 	// "ghcr.io/msch128/mnema-talk:1.0".
 	Image string
+	// ImageID is the id of the image the container runs. It still names that
+	// image after the tag has moved on, so a tag can be put back.
+	ImageID string
 }
 
 // Engine is the part of the Docker Engine API the updater uses. It pulls an
@@ -41,6 +44,9 @@ type Engine interface {
 	Pull(ctx context.Context, repository, digest string) error
 	// Tag makes repository:tag point at the already pulled repository@digest.
 	Tag(ctx context.Context, repository, digest, tag string) error
+	// TagImage makes repository:tag point at the local image imageID; it undoes
+	// a Tag when a later step of the same update fails.
+	TagImage(ctx context.Context, imageID, repository, tag string) error
 }
 
 // Docker talks to the Engine API over its Unix socket.
@@ -105,7 +111,7 @@ func (d *Docker) Targets(ctx context.Context, scope string) ([]Target, error) {
 	}
 	out := make([]Target, 0, len(list))
 	for _, c := range list {
-		image, version, err := d.configImage(ctx, c.ID)
+		image, imageID, version, err := d.configImage(ctx, c.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -113,32 +119,34 @@ func (d *Docker) Targets(ctx context.Context, scope string) ([]Target, error) {
 		if len(c.Names) > 0 {
 			name = strings.TrimPrefix(c.Names[0], "/")
 		}
-		out = append(out, Target{Name: name, Image: image, RunningVersion: version})
+		out = append(out, Target{Name: name, Image: image, ImageID: imageID, RunningVersion: version})
 	}
 	return out, nil
 }
 
-// configImage returns the reference a container was created from. The list
-// call shows the image id once the tag moved on, so inspect is needed.
-func (d *Docker) configImage(ctx context.Context, id string) (image, version string, err error) {
+// configImage returns the reference a container was created from, the id of
+// the image it runs and its release label. The list call shows the image id
+// once the tag moved on, so inspect is needed.
+func (d *Docker) configImage(ctx context.Context, id string) (image, imageID, version string, err error) {
 	res, err := d.do(ctx, http.MethodGet, "/containers/"+url.PathEscape(id)+"/json", nil)
 	if err != nil {
-		return "", "", fmt.Errorf("inspect container: %w", err)
+		return "", "", "", fmt.Errorf("inspect container: %w", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return "", "", engineError(res)
+		return "", "", "", engineError(res)
 	}
 	var c struct {
+		Image  string `json:"Image"`
 		Config struct {
 			Image  string            `json:"Image"`
 			Labels map[string]string `json:"Labels"`
 		} `json:"Config"`
 	}
 	if err := json.NewDecoder(io.LimitReader(res.Body, 4<<20)).Decode(&c); err != nil {
-		return "", "", fmt.Errorf("inspect container: %w", err)
+		return "", "", "", fmt.Errorf("inspect container: %w", err)
 	}
-	return c.Config.Image, c.Config.Labels["org.opencontainers.image.version"], nil
+	return c.Config.Image, c.Image, c.Config.Labels["org.opencontainers.image.version"], nil
 }
 
 // Pull implements Engine. The pull is a stream of JSON progress messages; an
@@ -174,7 +182,21 @@ func (d *Docker) Tag(ctx context.Context, repository, digest, tag string) error 
 	if repository == "" || digest == "" || tag == "" {
 		return errors.New("tag: repository, digest and tag are required")
 	}
-	res, err := d.do(ctx, http.MethodPost, "/images/"+repository+"@"+digest+"/tag", url.Values{"repo": {repository}, "tag": {tag}})
+	return d.tagSource(ctx, repository+"@"+digest, repository, tag)
+}
+
+// TagImage implements Engine.
+func (d *Docker) TagImage(ctx context.Context, imageID, repository, tag string) error {
+	if imageID == "" || repository == "" || tag == "" {
+		return errors.New("tag: image id, repository and tag are required")
+	}
+	return d.tagSource(ctx, imageID, repository, tag)
+}
+
+// tagSource points repository:tag at the local image named by source (a
+// repository@digest or an image id).
+func (d *Docker) tagSource(ctx context.Context, source, repository, tag string) error {
+	res, err := d.do(ctx, http.MethodPost, "/images/"+source+"/tag", url.Values{"repo": {repository}, "tag": {tag}})
 	if err != nil {
 		return fmt.Errorf("tag %s:%s: %w", repository, tag, err)
 	}

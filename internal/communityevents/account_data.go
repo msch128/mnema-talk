@@ -18,6 +18,8 @@ func RegisterAccountData(r *userdata.Registry) {
 	r.Register(d, d)
 }
 
+// Export writes the member's RSVPs, sign-ups and comments for the personal data
+// archive; each file is cut at the shared limits instead of failing the export.
 func (accountData) Export(ctx context.Context, q db.Querier, user uuid.UUID, _ userdata.Channels, limits userdata.Limits) ([]userdata.File, error) {
 	return []userdata.File{
 		rsvpFile(ctx, q, user, limits),
@@ -26,6 +28,9 @@ func (accountData) Export(ctx context.Context, q db.Querier, user uuid.UUID, _ u
 	}, nil
 }
 
+// Erase deletes what the member said on events (RSVPs, sign-ups, comments,
+// mutes) and detaches them from the events and series they created, which
+// stay for the community.
 func (accountData) Erase() []userdata.Step {
 	return []userdata.Step{
 		{Order: userdata.OrderRSVPs, SQL: `DELETE FROM event_rsvps WHERE user_id = $1`},

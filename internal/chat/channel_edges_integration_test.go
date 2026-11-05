@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -76,7 +77,7 @@ func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
 
 func TestAuditSnapshotIsEmptyWhenTheChannelCannotBeRead(t *testing.T) {
 	f := newChatFixture(t)
-	broken := driftPool(t, f.p, map[string]string{"channels": `SELECT id, name FROM public.channels`})
+	broken := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id, name FROM public.channels`})
 	h := &Handler{DB: broken, Audit: &audit.Log{DB: f.p}}
 	if s := h.snapshotMessage(context.Background(), f.m, false); s != nil {
 		t.Fatalf("snapshot without a channel lookup: %+v", s)
@@ -118,7 +119,7 @@ func TestSortOrderBeyondTheColumnIsRefused(t *testing.T) {
 	if _, err := CreateCategory(ctx, f.p, "big", 3_000_000_000); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("category: %v", err)
 	}
-	if _, err := CreateChannel(ctx, f.p, nil, "big", ChannelTypeText, "", -3_000_000_000); apiStatus(err) != http.StatusBadRequest {
+	if _, err := CreateChannelWithStage(ctx, f.p, nil, "big", ChannelTypeText, "", -3_000_000_000, false); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("channel: %v", err)
 	}
 	cat, err := CreateCategory(ctx, f.p, "ok", MaxSortOrder)
@@ -152,7 +153,7 @@ func TestChannelInADeletedCategoryIsRefusedNotAFailure(t *testing.T) {
 	}
 	done := make(chan error, 1)
 	go func() {
-		_, err := CreateChannel(ctx, f.p, &cat.ID, "late", ChannelTypeText, "", 0)
+		_, err := CreateChannelWithStage(ctx, f.p, &cat.ID, "late", ChannelTypeText, "", 0, false)
 		done <- err
 	}()
 	waitForBlockedStatement(t, f.p)
@@ -176,7 +177,7 @@ func TestDeletingACategoryKeepsRoleAndMemberOverwrites(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ch, err := CreateChannel(ctx, f.p, &cat.ID, "inside", ChannelTypeText, "", 0)
+	ch, err := CreateChannelWithStage(ctx, f.p, &cat.ID, "inside", ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

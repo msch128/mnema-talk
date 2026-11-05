@@ -9304,7 +9304,7 @@
             "type": "string"
           },
           "created_by": {
-            "description": "CreatedBy is the member who created it, kept for the record (null once\nthat account is gone). It grants nothing.",
+            "description": "CreatedBy is the administrator who created it, kept for the record (null once\nthat account is gone). It grants nothing.",
             "format": "uuid",
             "type": [
               "string",
@@ -9359,7 +9359,7 @@
             "type": "string"
           },
           "status": {
-            "description": "Status is \"active\", \"disabled\" (switched off by a member) or\n\"auto_disabled\" (switched off after repeated failures).",
+            "description": "Status is \"active\", \"disabled\" (switched off by an administrator) or\n\"auto_disabled\" (switched off after repeated failures).",
             "enum": [
               "active",
               "disabled",
@@ -9632,7 +9632,7 @@
             "type": "string"
           },
           "created_by": {
-            "description": "CreatedBy is the member who created it, kept for the record (null once\nthat account is gone). It grants nothing.",
+            "description": "CreatedBy is the administrator who created it, kept for the record (null once\nthat account is gone). It grants nothing.",
             "format": "uuid",
             "type": [
               "string",
@@ -9683,7 +9683,7 @@
             "type": "string"
           },
           "status": {
-            "description": "Status is \"active\", \"disabled\" (switched off by a member) or\n\"auto_disabled\" (switched off after repeated failures).",
+            "description": "Status is \"active\", \"disabled\" (switched off by an administrator) or\n\"auto_disabled\" (switched off after repeated failures).",
             "enum": [
               "active",
               "disabled",

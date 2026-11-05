@@ -84,11 +84,6 @@ type TagSpec struct {
 	Moderated bool
 }
 
-// CreateForumTag adds a plain tag (no colour, not moderated) to channelID.
-func CreateForumTag(ctx context.Context, p *db.Pool, channelID uuid.UUID, name, emoji string) (*ForumTag, error) {
-	return CreateForumTagSpec(ctx, p, channelID, TagSpec{Name: name, Emoji: emoji})
-}
-
 // CreateForumTagSpec adds a new tag at the end of channelID's order, enforcing the 20-tag cap.
 func CreateForumTagSpec(ctx context.Context, p *db.Pool, channelID uuid.UUID, spec TagSpec) (*ForumTag, error) {
 	cleanName, err := CleanTagName(spec.Name)
