@@ -3,20 +3,11 @@ package chat
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
-
-type Category struct {
-	ID        uuid.UUID `json:"id" format:"uuid"`
-	Name      string    `json:"name" maxLength:"64"`
-	SortOrder int       `json:"sort_order"`
-	Channels  []Channel `json:"channels"`
-	CreatedAt time.Time `json:"created_at" format:"date-time"`
-}
 
 func loadCategories(ctx context.Context, p *db.Pool) ([]Category, map[uuid.UUID]int, error) {
 	catRows, err := p.Query(ctx, `SELECT id, name, sort_order, created_at FROM categories ORDER BY sort_order, created_at`)
