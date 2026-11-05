@@ -1,5 +1,5 @@
-import type { Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks, audioDecodedIn } from './helpers'
+import type { BrowserContext, Page } from '@playwright/test'
+import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks, audioDecodedIn, expectTalkLive } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -82,11 +82,27 @@ async function signIn(page: Page, username: string, password: string) {
 // which the whole suite shares, so the second test reuses the first one's member.
 test.describe.configure({ mode: 'serial' })
 
+// A failed attempt must not leave its members in the Talk: the serial group
+// retries as a whole with the same Owner, whose still-listed session (the 30 s
+// voice grace period) would make the retry's join ask "take over the Talk
+// here?" and fail on that dialog instead of showing whether the call works.
+const opened: BrowserContext[] = []
+test.afterEach(async () => {
+  for (const ctx of opened.splice(0)) {
+    for (const page of ctx.pages()) {
+      const leave = page.getByRole('button', { name: 'Verlassen' }).first()
+      if (await leave.isVisible().catch(() => false)) await leave.click({ timeout: 2_000 }).catch(() => undefined)
+    }
+    await ctx.close().catch(() => undefined)
+  }
+})
+
 // Someone joins a Talk where another member is already talking: both must
 // hear each other (regression: the late joiner's microphone was never sent).
 test('a member joining an occupied Talk is heard and hears', async ({ browser }) => {
   const firstCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   const lateCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(firstCtx, lateCtx)
   await firstCtx.addInitScript(trackPeerConnections)
   await lateCtx.addInitScript(trackPeerConnections)
   await firstCtx.addInitScript(trackAudioFilters)
@@ -114,13 +130,13 @@ test('a member joining an occupied Talk is heard and hears', async ({ browser })
 
   const sidebarVoice = (page: Page) => page.locator('[data-channel-type="voice"]', { hasText: VOICE_CHANNEL })
   await sidebarVoice(first).click()
-  await expect.poll(() => first.evaluate(() => window.__pcs.at(-1)?.connectionState)).toBe('connected')
+  await expectTalkLive(first)
   await expect.poll(async () => (await filterState(first)).processed, { timeout: 15_000 }).toBeGreaterThan(0)
   const beforeLateJoin = (await filterState(first)).processed
 
   // The second member joins the occupied Talk.
   await sidebarVoice(late).click()
-  await expect.poll(() => late.evaluate(() => window.__pcs.at(-1)?.connectionState)).toBe('connected')
+  await expectTalkLive(late)
 
   // Audio flows both ways (the fake microphone sends a tone).
   for (const page of [first, late]) {
@@ -159,6 +175,7 @@ test('a member joining an occupied Talk is heard and hears', async ({ browser })
 test('a member who reloads inside the grace period is heard again and hears again', async ({ browser }) => {
   const firstCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   const secondCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(firstCtx, secondCtx)
   await firstCtx.addInitScript(trackPeerConnections)
   await secondCtx.addInitScript(trackPeerConnections)
   const first = await firstCtx.newPage()
@@ -173,12 +190,11 @@ test('a member who reloads inside the grace period is heard again and hears agai
   const sidebarVoice = (page: Page) => page.locator('[data-channel-type="voice"]', { hasText: channel })
   await sidebarVoice(first).click()
   await sidebarVoice(second).click()
-  const connected = (page: Page) => expect.poll(() => page.evaluate(() => window.__pcs.at(-1)?.connectionState), { timeout: 20_000 }).toBe('connected')
   const hearEachOther = async () => {
     for (const page of [first, second]) await expect.poll(() => audioDecodedIn(page), { timeout: 20_000 }).toBeGreaterThan(24_000)
   }
-  await connected(first)
-  await connected(second)
+  await expectTalkLive(first)
+  await expectTalkLive(second)
   await hearEachOther()
 
   for (const reloading of [first, second]) {
@@ -186,7 +202,7 @@ test('a member who reloads inside the grace period is heard again and hears agai
     const before = await other.evaluate(() => window.__pcs.length)
     await reloading.reload()
     // The reload rejoins the Talk by itself, well inside the grace period.
-    await connected(reloading)
+    await expectTalkLive(reloading)
     expect(await other.evaluate(() => window.__pcs.length)).toBe(before)
     await hearEachOther()
   }
