@@ -1,0 +1,61 @@
+internal/chat/block_sql_test.go
+  s_db63cd4785d2fa::t_c922f9bd3aff94 8,23
+internal/chat/core_aliases.go
+  s_db63cd4785d2fa::t_3455eef343615d 6,13,16,28,32-34,60-70,75,77-79
+internal/chat/dm.go
+  s_db63cd4785d2fa::t_5f799d418b5c3a 14,196
+internal/chat/handler.go
+  s_db63cd4785d2fa::t_d61e58a4515876 15,130
+internal/chat/handlers_integration_test.go
+  s_db63cd4785d2fa::t_0cae37495d4317 22,94,139,150,205,324,327,330
+internal/chat/post.go
+  s_db63cd4785d2fa::t_7ff2127d56db69 17,221
+internal/chat/presets_test.go
+  s_db63cd4785d2fa::t_83945da29ff6f4 7,25-26
+internal/chat/readstate/api.go
+  s_db63cd4785d2fa::t_f944dcde2a503c 1-33
+internal/chat/readstate/handler_notify.go
+  s_db63cd4785d2fa::t_1f0a22874f28b1 1,29-30,53-54,63,66,91,96,104,107,126-127,131,135,170,177,180,203,209,213,218,221
+internal/chat/readstate/handler_readstate.go
+  s_db63cd4785d2fa::t_77a3ad7d9b5c45 1,29-30,34,43,48,51,58,60,83-84,93,97,122-123,132,136,165-166,174
+internal/chat/readstate/handlers_integration_test.go
+  s_db63cd4785d2fa::t_41658e60ef4c7a 1-96
+internal/chat/readstate/notify.go
+  s_db63cd4785d2fa::t_edfd1c2e5d41f2 1,28,85
+internal/chat/readstate/notify_server.go
+  s_db63cd4785d2fa::t_b241a8296ffb7f 1
+internal/chat/readstate/notify_test.go
+  s_db63cd4785d2fa::t_835dedcebef9e6 1
+internal/chat/readstate/readstate.go
+  s_db63cd4785d2fa::t_ba8997198562d0 1,28,77,125,134
+internal/chat/readstate/readstate_visible.go
+  s_db63cd4785d2fa::t_eccec65ada7293 1
+internal/chat/readstate/visible_test.go
+  s_db63cd4785d2fa::t_0ca26eaff8ff48 1-18
+internal/chat/readstate_integration_test.go
+  s_db63cd4785d2fa::t_200216291fb651 11,46
+internal/push/event_reminder.go
+  s_db63cd4785d2fa::t_bfa958b93cf314 12,78
+internal/push/recipients.go
+  s_db63cd4785d2fa::t_2098da1db864f2 11,140
+internal/repo/boundaries_test.go
+  s_db63cd4785d2fa::t_7415b4dc7bf360 76
+internal/server/unread_scale_integration_test.go
+  s_db63cd4785d2fa::t_711246554ce09e 15,145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a4f7a45b6ef0938a05533c8b967df3f524707e8f",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
