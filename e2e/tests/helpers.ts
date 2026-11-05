@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
-import type { Page, Locator } from '@playwright/test'
+import type { BrowserContext, Page, Locator } from '@playwright/test'
 
 // The invite-only sign-up allows ten registrations an hour from one address and
 // the whole suite shares them, so specs that need a second member share one.
@@ -193,4 +193,21 @@ export async function leaveTalks(pages: Page[]) {
   }
   const last = pages.at(-1)
   if (last) await expect(last.locator('nav [data-voice-user]')).toHaveCount(0, { timeout: 15_000 })
+}
+
+/**
+ * Leaves every Talk the given contexts are in, then closes them. For the
+ * afterEach of a call spec: a failed attempt must not leave its members in the
+ * Talk, because the retry signs in as the same members and its join would meet
+ * the "take over the Talk here?" dialog (the old session stays listed for the
+ * 30 s voice grace period) instead of showing whether the call works.
+ */
+export async function leaveAndClose(contexts: BrowserContext[]) {
+  for (const ctx of contexts.splice(0)) {
+    for (const page of ctx.pages()) {
+      const leave = page.getByRole('button', { name: 'Verlassen' }).first()
+      if (await leave.isVisible().catch(() => false)) await leave.click({ timeout: 2_000 }).catch(() => undefined)
+    }
+    await ctx.close().catch(() => undefined)
+  }
 }

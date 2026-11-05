@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks, audioDecodedIn, expectTalkLive } from './helpers'
+import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks, audioDecodedIn, expectTalkLive, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -87,15 +87,7 @@ test.describe.configure({ mode: 'serial' })
 // voice grace period) would make the retry's join ask "take over the Talk
 // here?" and fail on that dialog instead of showing whether the call works.
 const opened: BrowserContext[] = []
-test.afterEach(async () => {
-  for (const ctx of opened.splice(0)) {
-    for (const page of ctx.pages()) {
-      const leave = page.getByRole('button', { name: 'Verlassen' }).first()
-      if (await leave.isVisible().catch(() => false)) await leave.click({ timeout: 2_000 }).catch(() => undefined)
-    }
-    await ctx.close().catch(() => undefined)
-  }
-})
+test.afterEach(() => leaveAndClose(opened))
 
 // Someone joins a Talk where another member is already talking: both must
 // hear each other (regression: the late joiner's microphone was never sent).

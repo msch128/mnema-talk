@@ -1,5 +1,5 @@
-import type { Browser, Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, suiteMember, trackPeerConnections, leaveTalks, audioDecodedIn } from './helpers'
+import type { Browser, BrowserContext, Page } from '@playwright/test'
+import { apiFetch, responseString, responseUserId, suiteMember, trackPeerConnections, leaveTalks, audioDecodedIn, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
@@ -37,10 +37,13 @@ async function safetyCode(page: Page): Promise<string | null> {
   return text && /^\d{5} \d{5} \d{5} \d{5}$/.test(text) ? text : null
 }
 
+const opened: BrowserContext[] = []
+
 // The member with the lowest id commits (removes, rotates), so the roles follow
 // the ids that this run's accounts happened to get.
 async function setup(browser: Browser, committerTiming: Timing, otherTiming: Timing, channel: string) {
   const contexts = await Promise.all([0, 1].map(() => browser.newContext({ permissions: ['microphone', 'camera'] })))
+  opened.push(...contexts)
   const [adminCtx, memberCtx] = contexts as [typeof contexts[0], typeof contexts[0]]
   for (const ctx of contexts) await ctx.addInitScript(trackPeerConnections)
   const admin = await adminCtx.newPage()
@@ -90,6 +93,7 @@ async function sameCode(pages: Page[], not: string | null = null) {
 }
 
 test.describe.configure({ mode: 'serial' })
+test.afterEach(() => leaveAndClose(opened))
 
 test('the media key rotates on its own and audio keeps flowing across it', async ({ browser }) => {
   const timing = { ...live, rotateMs: 7000 }
