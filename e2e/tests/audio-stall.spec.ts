@@ -41,6 +41,24 @@ const inboundEnergy = (page: Page) => page.evaluate(async () => {
   if (pc) (await pc.getStats()).forEach((s) => { if (s.type === 'inbound-rtp' && s.kind === 'audio' && typeof s.totalAudioEnergy === 'number') energy = (energy ?? 0) + s.totalAudioEnergy })
   return energy
 })
+// What a failure needs to be explained afterwards: both ends' audio stats, the sending track and the connection state, as plain data.
+const audioDiagnostics = (page: Page) => page.evaluate(async () => {
+  const pc = window.__pcs.at(-1)
+  if (!pc) return { pc: null }
+  const stats: Record<string, unknown>[] = []
+  ;(await pc.getStats()).forEach((s) => {
+    if ((s.type === 'outbound-rtp' || s.type === 'inbound-rtp') && s.kind === 'audio') {
+      const { type, bytesSent, packetsSent, bytesReceived, packetsReceived, packetsLost, jitter, totalAudioEnergy, totalSamplesDuration, concealedSamples, audioLevel, active, timestamp } = s
+      stats.push({ type, bytesSent, packetsSent, bytesReceived, packetsReceived, packetsLost, jitter, totalAudioEnergy, totalSamplesDuration, concealedSamples, audioLevel, active, timestamp })
+    }
+  })
+  const track = pc.getSenders().find(s => s.track?.kind === 'audio')?.track
+  return {
+    connection: pc.connectionState, ice: pc.iceConnectionState, signaling: pc.signalingState,
+    track: track ? { enabled: track.enabled, muted: track.muted, readyState: track.readyState, label: track.label } : null,
+    pcCount: window.__pcs.length, stats
+  }
+})
 const sendingTrackEnabled = (page: Page) => page.evaluate(() => window.__pcs.at(-1)?.getSenders().find(s => s.track?.kind === 'audio')?.track?.enabled ?? false)
 
 async function signIn(page: Page, username: string, password: string) {
@@ -52,7 +70,7 @@ async function signIn(page: Page, username: string, password: string) {
   await expect(dialog).toBeHidden()
 }
 
-test('a member whose audio engine never starts is told and is still heard', async ({ browser }) => {
+test('a member whose audio engine never starts is told and is still heard', async ({ browser, browserName }, testInfo) => {
   const stalledCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   const otherCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   await stalledCtx.addInitScript(trackPeerConnections)
@@ -75,24 +93,35 @@ test('a member whose audio engine never starts is told and is still heard', asyn
   await other.reload()
   await stalled.reload()
 
-  const sidebarVoice = (page: Page) => page.locator('[data-channel-type="voice"]', { hasText: channel })
-  await sidebarVoice(other).click()
-  await expectTalkLive(other)
-  await sidebarVoice(stalled).click()
-  await expectTalkLive(stalled)
+  try {
+    const sidebarVoice = (page: Page) => page.locator('[data-channel-type="voice"]', { hasText: channel })
+    await sidebarVoice(other).click()
+    await expectTalkLive(other)
+    await sidebarVoice(stalled).click()
+    await expectTalkLive(stalled)
 
-  // The member is told once, calmly, within the guard's few seconds.
-  await expect(stalled.getByText(/Die Audioverarbeitung hat in diesem Browser nicht gestartet/)).toHaveCount(1, { timeout: 15_000 })
+    // The member is told once, calmly, within the guard's few seconds.
+    await expect(stalled.getByText(/Die Audioverarbeitung hat in diesem Browser nicht gestartet/)).toHaveCount(1, { timeout: 15_000 })
 
-  // And the microphone goes out as it is: the voice gate cannot read a meter that never runs, so it stays open (a closed track sends silence, in as many bytes).
-  await expect.poll(() => sendingTrackEnabled(stalled), { timeout: 15_000 }).toBe(true)
-  if (await inboundEnergy(other) !== undefined) await expect.poll(async () => (await inboundEnergy(other)) ?? 0, { timeout: 15_000 }).toBeGreaterThan(0.001)
-  await expect.poll(async () => {
-    const before = { out: await outboundBytes(stalled), inn: await inboundBytes(other) }
-    await stalled.waitForTimeout(3000)
-    const delta = { out: (await outboundBytes(stalled)) - before.out, inn: (await inboundBytes(other)) - before.inn }
-    return Math.min(delta.out, delta.inn)
-  }, { timeout: 30_000, intervals: [500] }).toBeGreaterThan(6000)
+    // And the microphone goes out as it is: the voice gate cannot read a meter that never runs, so it stays open (a closed track sends silence, in as many bytes).
+    await expect.poll(() => sendingTrackEnabled(stalled), { timeout: 15_000 }).toBe(true)
+    // The tone must arrive as transport: Opus frames of a tone are several times the size of frames of silence, in every engine.
+    await expect.poll(async () => {
+      const before = { out: await outboundBytes(stalled), inn: await inboundBytes(other) }
+      await stalled.waitForTimeout(3000)
+      const delta = { out: (await outboundBytes(stalled)) - before.out, inn: (await inboundBytes(other)) - before.inn }
+      return Math.min(delta.out, delta.inn)
+    }, { timeout: 30_000, intervals: [500], message: 'the stalled member\'s microphone did not reach the other member as tone-sized audio (see the audio-diagnostics attachment)' }).toBeGreaterThan(6000)
+    // Where the engine measures energy at playout, it must agree. Firefox counts it only for audio it is actually playing, and its
+    // audio engine can be as stalled in CI as the stalled member's: there it is reported in the diagnostics, not asserted.
+    if (browserName !== 'firefox' && await inboundEnergy(other) !== undefined) await expect.poll(async () => (await inboundEnergy(other)) ?? 0, { timeout: 15_000 }).toBeGreaterThan(0.001)
+  } catch (err) {
+    await testInfo.attach('audio-diagnostics', {
+      body: JSON.stringify({ stalled: await audioDiagnostics(stalled).catch(String), other: await audioDiagnostics(other).catch(String) }, null, 2),
+      contentType: 'application/json'
+    })
+    throw err
+  }
 
   await leaveTalks([stalled, other])
   await stalledCtx.close()
