@@ -211,7 +211,7 @@ func ValidateEmoji(emoji string) (string, error) {
 	return validateEmoji(emoji, true)
 }
 
-// validateReactionRef is ValidateEmoji without the formatting-character rule,
+// ValidateReactionRef is ValidateEmoji without the formatting-character rule,
 // for the toggle and the delete route: a reaction stored before that rule must
 // stay removable by its owner. Adding re-checks the strict rule.
 func ValidateReactionRef(emoji string) (string, error) {

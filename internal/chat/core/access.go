@@ -42,7 +42,7 @@ func LoadChannel(ctx context.Context, p db.Querier, id uuid.UUID) (*ChannelInfo,
 	return ch, nil
 }
 
-// messageRef is the minimal context of an existing message.
+// MessageRef is the minimal context of an existing message.
 type MessageRef struct {
 	ChannelID uuid.UUID
 	AuthorID  uuid.UUID
@@ -55,7 +55,7 @@ var ErrCategoryNotFound = httpx.ErrNotFound("category not found")
 
 var ErrMessageNotFound = httpx.ErrNotFound("message not found")
 
-// conversationReadableSQL is the condition "message m is in a conversation
+// ConversationReadableSQL is the condition "message m is in a conversation
 // that the member user (a SQL parameter or expression) belongs to". A
 // conversation is readable by its members only, whatever the permission state
 // says, so every read of conversation messages (search, saved list) uses this
@@ -68,7 +68,7 @@ func ConversationReadableSQL(user string) string {
 // the previous page: its position is unknown, so the list must be reloaded.
 var errCursorGone = httpx.ErrNotFound("the page cursor no longer exists; reload the list")
 
-// cursorExists checks that the row a page cursor points at still exists
+// CursorExists checks that the row a page cursor points at still exists
 // (query selects it). Without that check a keyset comparison against a deleted
 // row is NULL and the page comes back empty with has_more=false, as if the
 // list had ended.
@@ -83,7 +83,7 @@ func CursorExists(ctx context.Context, q db.Querier, query string, args ...any) 
 	return nil
 }
 
-// messageCursorExists is cursorExists for a cursor that is a message id (nil:
+// MessageCursorExists is cursorExists for a cursor that is a message id (nil:
 // the first page).
 func MessageCursorExists(ctx context.Context, q db.Querier, before *uuid.UUID) error {
 	if before == nil {
@@ -105,7 +105,7 @@ func LoadMessageRef(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*Mess
 	return &ref, nil
 }
 
-// loadReferencedMessage loads the message a request refers to. A missing one
+// LoadReferencedMessage loads the message a request refers to. A missing one
 // is the caller's mistake (400 with notFound); any other failure is ours.
 func LoadReferencedMessage(ctx context.Context, p *db.Pool, id uuid.UUID, notFound string) (*MessageRef, error) {
 	ref, err := LoadMessageRef(ctx, p, id)

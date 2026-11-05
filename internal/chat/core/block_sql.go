@@ -1,6 +1,6 @@
 package core
 
-// blockExists is the user_blocks lookup shared by inboxes, unread counts and
+// BlockExists is the user_blocks lookup shared by inboxes, unread counts and
 // the conversation list. blockerPH is the member who blocked; authorExpr is
 // the message author. History search does not use it: the client collapses
 // those messages, and a block stays invisible to the member who was blocked.
@@ -10,7 +10,7 @@ func BlockExists(blockerPH, authorExpr string) string {
 	return "SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = " + blockerPH + " AND ub.blocked_id = " + authorExpr
 }
 
-// authorHiddenFrom drops a row whose author blockerPH has blocked.
+// AuthorHiddenFrom drops a row whose author blockerPH has blocked.
 func AuthorHiddenFrom(blockerPH, authorExpr string) string {
 	return "NOT EXISTS (" + BlockExists(blockerPH, authorExpr) + ")"
 }
