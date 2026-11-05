@@ -33,10 +33,7 @@ const (
 	MaxNewDMsPerDay = 10
 	// NewDMsPerMinute is how many conversations one member may try to start per minute.
 	NewDMsPerMinute = 3
-	// MaxUnansweredDMMessages is how many messages the member who started a
-	// conversation may send before anybody else has written in it.
-	MaxUnansweredDMMessages = 2
-	maxDMList               = 500
+	maxDMList       = 500
 )
 
 // The refusals of the direct message rules. Whatever the reason (a block, the
@@ -45,7 +42,6 @@ const (
 // probed through the API.
 var (
 	errDMStart      = httpx.ErrForbidden("Couldn't start this direct message.")
-	errDMSend       = httpx.ErrForbidden("Couldn't send this message.")
 	errDMNotFound   = httpx.ErrNotFound("direct message not found")
 	errDMDayLimit   = httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimited, "You have started enough direct messages for today. Try again tomorrow.")
 	errDMGroupLimit = httpx.ErrConflict(fmt.Sprintf("You are in %d group direct messages already. Leave one first.", MaxGroupDMsPerMember))

@@ -199,9 +199,6 @@ func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]stri
 // MaxUserLimit is the highest member limit a voice channel can have.
 const MaxUserLimit = 999
 
-// MaxSlowModeSeconds is the longest slow mode: 24 hours.
-const MaxSlowModeSeconds = 86400
-
 // EditChannel renames a channel, changes its topic, its member limit (voice
 // channels only; 0 removes it), its slow mode (0 turns it off) and/or the lobby
 // and Stage marks; nil keeps a field. The request is validated first and

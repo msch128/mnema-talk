@@ -13,15 +13,14 @@ import (
 )
 
 var (
-	errForumTagNotFound  = httpx.ErrNotFound("forum tag not found")
-	errTooManyForumTags  = httpx.ErrConflict("a forum channel can have at most 20 tags")
-	errTooManyPostTags   = httpx.ErrInvalidInput("a post can have at most 5 tags")
-	errTagWrongChannel   = httpx.ErrInvalidInput("tag does not belong to this channel")
-	errTagNameTaken      = httpx.ErrConflict("a tag with this name already exists")
-	errPostTitleRequired = httpx.ErrInvalidInput("title is required for forum posts")
-	errTagColorInvalid   = httpx.ErrInvalidInput("color must be one of: gray, red, orange, yellow, green, teal, blue, purple, pink")
-	errTagOrderMismatch  = httpx.ErrInvalidInput("tag_ids must list every tag of the forum exactly once")
-	errTagModerated      = httpx.ErrForbidden("missing permission to apply or remove moderated tags")
+	errForumTagNotFound = httpx.ErrNotFound("forum tag not found")
+	errTooManyForumTags = httpx.ErrConflict("a forum channel can have at most 20 tags")
+	errTooManyPostTags  = httpx.ErrInvalidInput("a post can have at most 5 tags")
+	errTagWrongChannel  = httpx.ErrInvalidInput("tag does not belong to this channel")
+	errTagNameTaken     = httpx.ErrConflict("a tag with this name already exists")
+	errTagColorInvalid  = httpx.ErrInvalidInput("color must be one of: gray, red, orange, yellow, green, teal, blue, purple, pink")
+	errTagOrderMismatch = httpx.ErrInvalidInput("tag_ids must list every tag of the forum exactly once")
+	errTagModerated     = httpx.ErrForbidden("missing permission to apply or remove moderated tags")
 )
 
 // ForumTagColors are the colours a tag can have: names of the palette the

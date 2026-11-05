@@ -11,15 +11,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// DMMemberIDs lists the members of a conversation (empty if there is none).
-func DMMemberIDs(ctx context.Context, q db.Querier, id uuid.UUID) ([]uuid.UUID, error) {
-	rows, err := q.Query(ctx, `SELECT user_id FROM dm_members WHERE channel_id = $1 ORDER BY joined_at, user_id`, id)
-	if err != nil {
-		return nil, fmt.Errorf("direct message members: %w", err)
-	}
-	return pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
-}
-
 // lockGroupDM locks a conversation the user is in and says whether it is a
 // group and how many members it has. Anybody else gets errDMNotFound.
 func lockGroupDM(ctx context.Context, tx pgx.Tx, id, user uuid.UUID) (group bool, members int, err error) {
