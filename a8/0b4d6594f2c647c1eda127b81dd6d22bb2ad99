@@ -1,0 +1,21 @@
+e2e/ci-audio-sink.sh
+  s_f055d1437f2ae6::t_cfdbde6a5fa8ec 11-15,20-22,24,28,35,39,41
+e2e/ci-install-deps.sh
+  s_f055d1437f2ae6::t_b1e38aeaa39270 31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a80b4d6594f2c647c1eda127b81dd6d22bb2ad99",
+  "prompts": {},
+  "sessions": {
+    "s_f055d1437f2ae6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a7e6c9c6310de1c97",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
