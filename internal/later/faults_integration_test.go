@@ -34,7 +34,7 @@ func newFixture(t *testing.T) fixture {
 	if err := p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('writer', 'Writer', 'test-only-unused') RETURNING id`).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
-	c, err := chat.CreateChannel(ctx, p, nil, "general", chat.ChannelTypeText, "", 0)
+	c, err := chat.CreateChannelWithStage(ctx, p, nil, "general", chat.ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

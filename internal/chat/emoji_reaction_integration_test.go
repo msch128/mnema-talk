@@ -16,7 +16,7 @@ import (
 func TestReactionsInATalkChatTakeEveryEmoji(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	talk, err := CreateChannel(ctx, f.p, nil, "talk-chat", ChannelTypeVoice, "", 0)
+	talk, err := CreateChannelWithStage(ctx, f.p, nil, "talk-chat", ChannelTypeVoice, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

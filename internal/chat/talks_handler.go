@@ -76,7 +76,7 @@ func (h *Handler) updateTalk(w http.ResponseWriter, r *http.Request) error {
 	if !h.Talks.IsLeader(id, auth.UserFrom(r.Context()).ID) {
 		return errNotTalkLeader
 	}
-	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, nil, req.UserLimit, nil)
+	ch, err := EditChannel(r.Context(), h.DB, id, req.Name, nil, req.UserLimit, nil, nil, nil)
 	if err != nil {
 		return err
 	}

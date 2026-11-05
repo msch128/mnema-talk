@@ -46,13 +46,9 @@ type PostFilter struct {
 // MaxPostSearchLen is the longest search text a list accepts.
 const MaxPostSearchLen = 100
 
-// ListForumPosts returns a page of root posts in channelID, ordered by latest activity or creation.
-func ListForumPosts(ctx context.Context, p *db.Pool, channelID uuid.UUID, sortMode string, tagID *uuid.UUID, q HistoryQuery) ([]Message, error) {
-	return ListForumPostsFiltered(ctx, p, channelID, PostFilter{Sort: sortMode, TagID: tagID}, q)
-}
-
-// ListForumPostsFiltered is ListForumPosts with a search text. Pinned posts
-// come first and only on the first page (no Before); the pages behind it hold
+// ListForumPostsFiltered returns a page of root posts in channelID, ordered by
+// latest activity or creation and narrowed by f's tag and search text. Pinned
+// posts come first and only on the first page (no Before); the pages behind it hold
 // the unpinned posts, so the cursor of the order never has to know about pins.
 func ListForumPostsFiltered(ctx context.Context, p *db.Pool, channelID uuid.UUID, f PostFilter, q HistoryQuery) ([]Message, error) {
 	newest, err := forumSortNewest(f.Sort)

@@ -37,7 +37,7 @@ func scheduleVia(t *testing.T, f fixture, s *Service, channel uuid.UUID, body ma
 func TestATopLevelMessageCannotBeScheduledIntoAForumChannel(t *testing.T) {
 	f := newFixture(t)
 	s := f.service(f.p)
-	forum, err := chat.CreateChannel(context.Background(), f.p, nil, "ideas", chat.ChannelTypeForum, "", 0)
+	forum, err := chat.CreateChannelWithStage(context.Background(), f.p, nil, "ideas", chat.ChannelTypeForum, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

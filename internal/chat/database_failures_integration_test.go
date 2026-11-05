@@ -54,7 +54,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 	})
 	t.Run("mention stream", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"users": `SELECT CASE WHEN voice_seconds >= 0 THEN (1/(voice_seconds-voice_seconds))::text::uuid ELSE id END id,username,disabled_at,NULL::timestamptz banned_at,NULL::timestamptz banned_until,NULL::timestamptz deleted_at,is_bot FROM public.users`})
-		_, err := ResolveMentions(ctx, p, "@all", f.u.ID, nil)
+		_, err := resolveMentionSet(ctx, p, "@all", f.u.ID, nil)
 		chattest.RequireError(t, err, "resolve mentions")
 	})
 	t.Run("message decoding", func(t *testing.T) {
@@ -154,6 +154,15 @@ func rejectChatWrite(t *testing.T, p *db.Pool, table, operation string) {
 	})
 }
 
+// byName is a mention set that notifies ids by name only.
+func byName(ids []uuid.UUID) MentionSet {
+	users := make([]MentionedUser, len(ids))
+	for i, id := range ids {
+		users[i] = MentionedUser{ID: id, Kind: MentionKindName}
+	}
+	return MentionSet{Users: users}
+}
+
 func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 	ctx := context.Background()
 	cases := []struct {
@@ -164,13 +173,13 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 			_, err := InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "new"}, nil)
 			return err
 		}},
-		{"insert mentions", "message_mentions", "INSERT", func(f chatFixture) error { return SaveMentions(ctx, f.p, f.m, []uuid.UUID{f.u.ID}) }},
+		{"insert mentions", "message_mentions", "INSERT", func(f chatFixture) error { return saveMentionSet(ctx, f.p, f.m, byName([]uuid.UUID{f.u.ID})) }},
 		{"record mentions during message insert", "message_mentions", "DELETE", func(f chatFixture) error {
 			_, err := InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "@all"}, nil)
 			return err
 		}},
 		{"edit message", "messages", "UPDATE", func(f chatFixture) error { return EditMessage(ctx, f.p, nil, f.m, f.u.ID, "new") }},
-		{"delete message", "messages", "DELETE", func(f chatFixture) error { _, err := DeleteMessage(ctx, f.p, f.m, f.u); return err }},
+		{"delete message", "messages", "DELETE", func(f chatFixture) error { _, err := DeleteMessageAs(ctx, f.p, f.m, f.u, f.u.IsAdmin()); return err }},
 		{"delete channel", "channels", "DELETE", func(f chatFixture) error { _, err := DeleteChannel(ctx, f.p, f.c.ID); return err }},
 		{"layout category", "categories", "UPDATE", func(f chatFixture) error {
 			cat, err := CreateCategory(ctx, f.p, "cat", 0)
@@ -183,7 +192,7 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 			return ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: f.c.ID, SortOrder: 2}})
 		}},
 		{"duplicate shift", "channels", "UPDATE", func(f chatFixture) error {
-			_, err := CreateChannel(ctx, f.p, nil, "follower", ChannelTypeText, "", 1)
+			_, err := CreateChannelWithStage(ctx, f.p, nil, "follower", ChannelTypeText, "", 1, false)
 			if err != nil {
 				return err
 			}
@@ -191,12 +200,12 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 			return err
 		}},
 		{"duplicate insert", "channels", "INSERT", func(f chatFixture) error { _, err := DuplicateChannel(ctx, f.p, f.c.ID); return err }},
-		{"add reaction", "message_reactions", "INSERT", func(f chatFixture) error { _, err := ToggleReaction(ctx, f.p, f.m, f.u.ID, "ok"); return err }},
+		{"add reaction", "message_reactions", "INSERT", func(f chatFixture) error { _, err := ToggleReactionAs(ctx, f.p, f.m, f.u.ID, "ok", true); return err }},
 		{"remove reaction", "message_reactions", "DELETE", func(f chatFixture) error {
 			if _, err := f.p.Exec(ctx, `INSERT INTO message_reactions(message_id,user_id,emoji)VALUES($1,$2,'ok')`, f.m, f.u.ID); err != nil {
 				return err
 			}
-			_, err := ToggleReaction(ctx, f.p, f.m, f.u.ID, "ok")
+			_, err := ToggleReactionAs(ctx, f.p, f.m, f.u.ID, "ok", true)
 			return err
 		}},
 	}
@@ -205,7 +214,7 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 			f := newChatFixture(t)
 			// DELETE triggers fire only when at least one mention already exists.
 			if c.table == "message_mentions" && c.operation == "DELETE" {
-				if err := SaveMentions(ctx, f.p, f.m, []uuid.UUID{f.u.ID}); err != nil {
+				if err := saveMentionSet(ctx, f.p, f.m, byName([]uuid.UUID{f.u.ID})); err != nil {
 					t.Fatal(err)
 				}
 				// The new message has no existing mentions: a statement trigger is
@@ -251,7 +260,7 @@ func TestChatLockFailures(t *testing.T) {
 		func() error { _, e := DeleteChannel(ctx, p, f.c.ID); return e },
 		func() error { _, e := DuplicateChannel(ctx, p, f.c.ID); return e },
 		func() error { return EditMessage(ctx, p, nil, f.m, f.u.ID, "new") },
-		func() error { _, e := DeleteMessage(ctx, p, f.m, f.u); return e },
+		func() error { _, e := DeleteMessageAs(ctx, p, f.m, f.u, f.u.IsAdmin()); return e },
 	} {
 		if err := run(); err == nil {
 			t.Fatal("incompatible locked row accepted")
@@ -285,7 +294,7 @@ func TestChatMissingRelationsFailTransactions(t *testing.T) {
 	ctx := context.Background()
 	t.Run("collect media keys", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT id FROM public.media`})
-		_, err := DeleteMessage(ctx, p, f.m, f.u)
+		_, err := DeleteMessageAs(ctx, p, f.m, f.u, f.u.IsAdmin())
 		chattest.RequireError(t, err, "collect media keys")
 		_, err = DeleteChannel(ctx, p, f.c.ID)
 		chattest.RequireError(t, err, "collect media keys")
@@ -294,12 +303,12 @@ func TestChatMissingRelationsFailTransactions(t *testing.T) {
 		// This updatable view still enforces the table's real foreign key.
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_reactions": `SELECT message_id,user_id,emoji FROM public.message_reactions`})
 		// Adding to this simple view reaches the real table and its FK.
-		_, err := ToggleReaction(ctx, p, f.m, uuid.New(), "ok")
+		_, err := ToggleReactionAs(ctx, p, f.m, uuid.New(), "ok", true)
 		chattest.RequireError(t, err, "add reaction")
 	})
 	t.Run("reaction lock", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"messages": `SELECT number::int id FROM public.messages`})
-		_, err := ToggleReaction(ctx, p, f.m, f.u.ID, "ok")
+		_, err := ToggleReactionAs(ctx, p, f.m, f.u.ID, "ok", true)
 		chattest.RequireError(t, err, "lock message")
 	})
 }
@@ -371,7 +380,7 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 	})
 	t.Run("reaction count", func(t *testing.T) {
 		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, "COUNT(*) FILTER (WHERE user_id") }, false)
-		_, err := ToggleReaction(ctx, p, f.m, f.u.ID, "ok")
+		_, err := ToggleReactionAs(ctx, p, f.m, f.u.ID, "ok", true)
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("reaction count cancellation=%v", err)
 		}

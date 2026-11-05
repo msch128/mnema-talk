@@ -37,7 +37,7 @@ func TestPageCursorOfADeletedRowIsNotFound(t *testing.T) {
 	requireStatus(t, err, http.StatusNotFound)
 	_, err = ListSaved(ctx, f.p, f.u.ID, nil, &gone, 5)
 	requireStatus(t, err, http.StatusNotFound)
-	_, err = ListForumPosts(ctx, f.p, f.c.ID, "newest", nil, HistoryQuery{Limit: 5, Before: &gone})
+	_, err = ListForumPostsFiltered(ctx, f.p, f.c.ID, PostFilter{Sort: "newest"}, HistoryQuery{Limit: 5, Before: &gone})
 	requireStatus(t, err, http.StatusNotFound)
 
 	h := &Handler{DB: f.p, Events: &events.Recorder{}}
