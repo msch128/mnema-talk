@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.7](https://github.com/msch128/mnema-talk/compare/v2.9.6...v2.9.7) (2026-11-05)
+
+
+### Bug Fixes
+
+* **e2e:** keep the TURN port out of the UDP range and reopen the drawer after the first channel loads ([#707](https://github.com/msch128/mnema-talk/issues/707)) ([3bbafb5](https://github.com/msch128/mnema-talk/commit/3bbafb5fdb9d95d8c806993cf77293d324500694))
+
 ## [2.9.6](https://github.com/msch128/mnema-talk/compare/v2.9.5...v2.9.6) (2026-11-05)
 
 
