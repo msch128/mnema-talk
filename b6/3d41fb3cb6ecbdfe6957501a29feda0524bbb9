@@ -1,0 +1,21 @@
+SECURITY.md
+  s_4d5632b48c0115::t_076f511951d8a8 8,12-14
+doc/product-status.md
+  s_4d5632b48c0115::t_3432b223371482 14,18-21,23-28,30,34-35,101-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b63d41fb3cb6ecbdfe6957501a29feda0524bbb9",
+  "prompts": {},
+  "sessions": {
+    "s_4d5632b48c0115": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a58c92b794b020d85",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
