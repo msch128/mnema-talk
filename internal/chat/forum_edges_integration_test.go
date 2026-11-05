@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -95,12 +96,12 @@ func TestForumModerationIsAudited(t *testing.T) {
 	chParam := map[string]string{"channelID": ch.ID.String()}
 
 	rec := httptest.NewRecorder()
-	if err := h.createForumTag(rec, chatRequest(mod, `{"name":"bugs"}`, chParam, "")); err != nil {
+	if err := h.createForumTag(rec, chattest.Request(mod, `{"name":"bugs"}`, chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	tag := forumDecode[ForumTag](t, rec)
 	tagParam := map[string]string{"channelID": ch.ID.String(), "tagID": tag.ID.String()}
-	if err := h.updateForumTag(httptest.NewRecorder(), chatRequest(mod, `{"name":"defects"}`, tagParam, "")); err != nil {
+	if err := h.updateForumTag(httptest.NewRecorder(), chattest.Request(mod, `{"name":"defects"}`, tagParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	var details string
@@ -111,20 +112,20 @@ func TestForumModerationIsAudited(t *testing.T) {
 	if err := json.Unmarshal([]byte(details), &d); err != nil || d["previous_name"] != "bugs" || d["name"] != "defects" {
 		t.Fatalf("update details = %s, %v", details, err)
 	}
-	if err := h.deleteForumTag(httptest.NewRecorder(), chatRequest(mod, "", tagParam, "")); err != nil {
+	if err := h.deleteForumTag(httptest.NewRecorder(), chattest.Request(mod, "", tagParam, "")); err != nil {
 		t.Fatal(err)
 	}
 
 	post := forumMakePost(t, h, f.u, ch, "Mine")
 	postParam := map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}
 	// The author's own edit is not a moderation action.
-	if err := h.updateForumPost(httptest.NewRecorder(), chatRequest(f.u, `{"title":"Mine v2"}`, postParam, "")); err != nil {
+	if err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(f.u, `{"title":"Mine v2"}`, postParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	if got := auditCount(t, f, "forum.post_update"); got != 0 {
 		t.Fatalf("author edit audited %d times", got)
 	}
-	if err := h.updateForumPost(httptest.NewRecorder(), chatRequest(mod, `{"is_locked":true}`, postParam, "")); err != nil {
+	if err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(mod, `{"is_locked":true}`, postParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	for action, want := range map[string]int{"forum.tag_create": 1, "forum.tag_update": 1, "forum.tag_delete": 1, "forum.post_update": 1} {
@@ -141,7 +142,7 @@ func TestForumPostPatchChecksTheLockUnderTheRowLock(t *testing.T) {
 	ctx := context.Background()
 
 	empty := httptest.NewRecorder()
-	err := h.updateForumPost(empty, chatRequest(f.u, `{}`, map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}, ""))
+	err := h.updateForumPost(empty, chattest.Request(f.u, `{}`, map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}, ""))
 	requireAPIStatus(t, err, http.StatusBadRequest)
 
 	tx, err := f.p.Begin(ctx)
@@ -196,7 +197,7 @@ func TestForumActivityPagingUsesTheSeenCursorActivity(t *testing.T) {
 
 func TestForumPostListRejectsUnknownSort(t *testing.T) {
 	f, h, _, ch := forumCtx(t)
-	err := h.listForumPosts(httptest.NewRecorder(), chatRequest(f.u, "", map[string]string{"channelID": ch.ID.String()}, url.Values{"sort": {"oldest"}}.Encode()))
+	err := h.listForumPosts(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"channelID": ch.ID.String()}, url.Values{"sort": {"oldest"}}.Encode()))
 	requireAPIStatus(t, err, http.StatusBadRequest)
 }
 
@@ -249,14 +250,14 @@ func TestAnchorLookupFailureIsNotAMissingMessage(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	q := url.Values{"before": {f.m.String()}}.Encode()
-	r := chatRequest(f.u, "", nil, q).WithContext(ctx)
+	r := chattest.Request(f.u, "", nil, q).WithContext(ctx)
 	if _, err := h.parseChannelMessageQuery(r, f.c.ID); err == nil || errors.Is(err, errMessageNotFound) {
 		t.Fatalf("channel anchor error = %v; want the lookup failure", err)
 	}
 	if _, err := h.parseThreadQuery(r, f.m); err == nil || errors.Is(err, errMessageNotFound) {
 		t.Fatalf("thread anchor error = %v; want the lookup failure", err)
 	}
-	live := chatRequest(f.u, "", nil, url.Values{"before": {uuid.NewString()}}.Encode())
+	live := chattest.Request(f.u, "", nil, url.Values{"before": {uuid.NewString()}}.Encode())
 	if _, err := h.parseChannelMessageQuery(live, f.c.ID); !errors.Is(err, errMessageNotFound) {
 		t.Fatalf("unknown anchor error = %v; want not found", err)
 	}

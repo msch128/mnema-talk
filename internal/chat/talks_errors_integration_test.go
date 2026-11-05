@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 )
 
 func canceledContext() context.Context {
@@ -64,11 +65,11 @@ func TestPostTalkInviteOnlyMapsAMissingTalkToNotFound(t *testing.T) {
 func TestDMSendContextOnlyMapsAMissingConversationToNotFound(t *testing.T) {
 	w := newTalksWorld(t)
 	h := &Handler{DB: w.p}
-	r := chatRequest(w.alice, "", nil, "").WithContext(canceledContext())
+	r := chattest.Request(w.alice, "", nil, "").WithContext(canceledContext())
 	if _, err := h.dmSendContext(r, w.lobby.ID); err == nil || errors.Is(err, errChannelNotFound) {
 		t.Fatalf("err = %v; a database failure must not read as not found", err)
 	}
-	r = chatRequest(w.alice, "", nil, "")
+	r = chattest.Request(w.alice, "", nil, "")
 	if _, err := h.dmSendContext(r, uuid.New()); !errors.Is(err, errChannelNotFound) {
 		t.Fatalf("unknown conversation: err = %v; want not found", err)
 	}
@@ -98,7 +99,7 @@ func TestFollowingAgainMovesAThreadToTheFront(t *testing.T) {
 	}
 	h := &Handler{DB: f.p}
 	rec := httptest.NewRecorder()
-	if err := h.listFollowedThreads(rec, chatRequest(f.u, "", nil, "")); err != nil {
+	if err := h.listFollowedThreads(rec, chattest.Request(f.u, "", nil, "")); err != nil {
 		t.Fatal(err)
 	}
 	body := rec.Body.String()

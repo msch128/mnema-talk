@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
@@ -47,7 +48,7 @@ func forumMakePost(t *testing.T, h *Handler, u *auth.User, ch *Channel, title st
 	t.Helper()
 	body, _ := json.Marshal(map[string]any{"title": title, "content": "body of " + title, "tag_ids": tags})
 	rec := httptest.NewRecorder()
-	err := h.createForumPost(rec, chatRequest(u, string(body), map[string]string{"channelID": ch.ID.String()}, ""))
+	err := h.createForumPost(rec, chattest.Request(u, string(body), map[string]string{"channelID": ch.ID.String()}, ""))
 	if err != nil {
 		t.Fatalf("create post %q: %v", title, err)
 	}
@@ -57,7 +58,7 @@ func forumMakePost(t *testing.T, h *Handler, u *auth.User, ch *Channel, title st
 func forumReply(t *testing.T, h *Handler, u *auth.User, ch *Channel, parent uuid.UUID) error {
 	t.Helper()
 	body := fmt.Sprintf(`{"content":"reply","parent_id":"%s"}`, parent)
-	return h.createMessage(httptest.NewRecorder(), chatRequest(u, body, map[string]string{"channelID": ch.ID.String()}, ""))
+	return h.createMessage(httptest.NewRecorder(), chattest.Request(u, body, map[string]string{"channelID": ch.ID.String()}, ""))
 }
 
 func forumReplyID(t *testing.T, f chatFixture, parent uuid.UUID) uuid.UUID {
@@ -72,7 +73,7 @@ func forumReplyID(t *testing.T, f chatFixture, parent uuid.UUID) uuid.UUID {
 func forumListIDs(t *testing.T, h *Handler, u *auth.User, ch *Channel, query string) []uuid.UUID {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	if err := h.listForumPosts(rec, chatRequest(u, "", map[string]string{"channelID": ch.ID.String()}, query)); err != nil {
+	if err := h.listForumPosts(rec, chattest.Request(u, "", map[string]string{"channelID": ch.ID.String()}, query)); err != nil {
 		t.Fatalf("list %q: %v", query, err)
 	}
 	ids := []uuid.UUID{}
@@ -191,7 +192,7 @@ func TestForumHandlersRejectBadRequests(t *testing.T) {
 	cases := append(forumBadTagCases(env), forumBadPostCases(env)...)
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.fn(h, httptest.NewRecorder(), chatRequest(tc.user, tc.body, tc.params, tc.query))
+			err := tc.fn(h, httptest.NewRecorder(), chattest.Request(tc.user, tc.body, tc.params, tc.query))
 			if err == nil {
 				t.Fatal("expected an error")
 			}
@@ -213,12 +214,12 @@ func TestForumTagCapAndPostTagLimit(t *testing.T) {
 		ids = append(ids, tag.ID)
 	}
 	cp := map[string]string{"channelID": ch.ID.String()}
-	err := h.createForumTag(httptest.NewRecorder(), chatRequest(mod, `{"name":"overflow"}`, cp, ""))
-	requireChatError(t, err, "at most 20 tags")
+	err := h.createForumTag(httptest.NewRecorder(), chattest.Request(mod, `{"name":"overflow"}`, cp, ""))
+	chattest.RequireError(t, err, "at most 20 tags")
 
 	body, _ := json.Marshal(map[string]any{"title": "Too tagged", "content": "c", "tag_ids": ids[:6]})
-	err = h.createForumPost(httptest.NewRecorder(), chatRequest(f.u, string(body), cp, ""))
-	requireChatError(t, err, "at most 5 tags")
+	err = h.createForumPost(httptest.NewRecorder(), chattest.Request(f.u, string(body), cp, ""))
+	chattest.RequireError(t, err, "at most 5 tags")
 
 	post := forumMakePost(t, h, f.u, ch, "Five tags", ids[:5]...)
 	if len(post.Tags) != 5 {
@@ -226,8 +227,8 @@ func TestForumTagCapAndPostTagLimit(t *testing.T) {
 	}
 	pp := map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}
 	body, _ = json.Marshal(map[string]any{"tag_ids": ids[:6]})
-	err = h.updateForumPost(httptest.NewRecorder(), chatRequest(f.u, string(body), pp, ""))
-	requireChatError(t, err, "at most 5 tags")
+	err = h.updateForumPost(httptest.NewRecorder(), chattest.Request(f.u, string(body), pp, ""))
+	chattest.RequireError(t, err, "at most 5 tags")
 }
 
 func TestForumTagsAreChannelScoped(t *testing.T) {
@@ -246,14 +247,14 @@ func TestForumTagsAreChannelScoped(t *testing.T) {
 	}
 	cp := map[string]string{"channelID": ch.ID.String()}
 	body := fmt.Sprintf(`{"title":"t","content":"c","tag_ids":["%s"]}`, foreign.ID)
-	requireChatError(t, h.createForumPost(httptest.NewRecorder(), chatRequest(f.u, body, cp, "")), "tag does not belong")
+	chattest.RequireError(t, h.createForumPost(httptest.NewRecorder(), chattest.Request(f.u, body, cp, "")), "tag does not belong")
 
 	tp := map[string]string{"channelID": ch.ID.String(), "tagID": foreign.ID.String()}
-	requireChatError(t, h.updateForumTag(httptest.NewRecorder(), chatRequest(mod, `{"name":"x"}`, tp, "")), "not found")
-	requireChatError(t, h.deleteForumTag(httptest.NewRecorder(), chatRequest(mod, "", tp, "")), "not found")
+	chattest.RequireError(t, h.updateForumTag(httptest.NewRecorder(), chattest.Request(mod, `{"name":"x"}`, tp, "")), "not found")
+	chattest.RequireError(t, h.deleteForumTag(httptest.NewRecorder(), chattest.Request(mod, "", tp, "")), "not found")
 
 	rec := httptest.NewRecorder()
-	if err := h.listForumTags(rec, chatRequest(f.u, "", cp, "")); err != nil {
+	if err := h.listForumTags(rec, chattest.Request(f.u, "", cp, "")); err != nil {
 		t.Fatal(err)
 	}
 	tags := forumDecode[[]ForumTag](t, rec)
@@ -296,7 +297,7 @@ func TestForumDeletingTagKeepsPostsAndClearsFilter(t *testing.T) {
 
 	tp := map[string]string{"channelID": ch.ID.String(), "tagID": tag.ID.String()}
 	rec := httptest.NewRecorder()
-	if err := h.deleteForumTag(rec, chatRequest(mod, "", tp, "")); err != nil {
+	if err := h.deleteForumTag(rec, chattest.Request(mod, "", tp, "")); err != nil {
 		t.Fatal(err)
 	}
 	if rec.Code != http.StatusNoContent {
@@ -360,7 +361,7 @@ func TestForumPostUpdateRules(t *testing.T) {
 	pp := map[string]string{"channelID": ch.ID.String(), "messageID": post.ID.String()}
 	update := func(u *auth.User, body string) (*httptest.ResponseRecorder, error) {
 		rec := httptest.NewRecorder()
-		return rec, h.updateForumPost(rec, chatRequest(u, body, pp, ""))
+		return rec, h.updateForumPost(rec, chattest.Request(u, body, pp, ""))
 	}
 
 	tagBody := fmt.Sprintf(`{"tag_ids":["%s"]}`, tag.ID)
@@ -412,8 +413,8 @@ func TestForumPostUpdateRejectsRepliesAndOtherChannels(t *testing.T) {
 	}
 	for name, params := range cases {
 		t.Run(name, func(t *testing.T) {
-			err := h.updateForumPost(httptest.NewRecorder(), chatRequest(f.u, `{"title":"x"}`, params, ""))
-			requireChatError(t, err, "not found")
+			err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(f.u, `{"title":"x"}`, params, ""))
+			chattest.RequireError(t, err, "not found")
 		})
 	}
 }
@@ -427,10 +428,10 @@ func TestForumPostUpdateWithoutPermissionService(t *testing.T) {
 		t.Fatal(err)
 	}
 	pp := map[string]string{"channelID": ch.ID.String(), "messageID": post.String()}
-	if err := h.updateForumPost(httptest.NewRecorder(), chatRequest(other, `{"title":"x"}`, pp, "")); err == nil {
+	if err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(other, `{"title":"x"}`, pp, "")); err == nil {
 		t.Fatal("plain member must not edit someone else's post")
 	}
-	if err := h.updateForumPost(httptest.NewRecorder(), chatRequest(mod, `{"is_locked":true}`, pp, "")); err != nil {
+	if err := h.updateForumPost(httptest.NewRecorder(), chattest.Request(mod, `{"is_locked":true}`, pp, "")); err != nil {
 		t.Fatalf("admin role should manage posts: %v", err)
 	}
 }
@@ -448,11 +449,11 @@ func TestForumRepliesAndRootRulesInForums(t *testing.T) {
 		t.Fatal("replying to a reply must fail")
 	}
 	body := `{"title":"Sneaky","content":"root via messages"}`
-	if err := h.createMessage(httptest.NewRecorder(), chatRequest(f.u, body, cp, "")); err == nil {
+	if err := h.createMessage(httptest.NewRecorder(), chattest.Request(f.u, body, cp, "")); err == nil {
 		t.Fatal("root message through the plain endpoint must fail in a forum")
 	}
 	tp := map[string]string{"channelID": f.c.ID.String()}
-	if err := h.createForumPost(httptest.NewRecorder(), chatRequest(f.u, body, tp, "")); err == nil {
+	if err := h.createForumPost(httptest.NewRecorder(), chattest.Request(f.u, body, tp, "")); err == nil {
 		t.Fatal("forum post endpoint must refuse text channels")
 	}
 }

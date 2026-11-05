@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 )
 
 func TestBulkDeleteKeepsRepliesOfOtherMembersInTheAuditTrail(t *testing.T) {
@@ -91,6 +92,6 @@ func TestReplyValidationDoesNotHideDatabaseErrors(t *testing.T) {
 		t.Errorf("ValidateReplyTarget: %v, want the context error", err)
 	}
 	missing := uuid.New()
-	requireChatError(t, ValidateParent(context.Background(), f.p, f.c.ID, &missing), "parent message not found")
-	requireChatError(t, ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing), "message to reply to not found")
+	chattest.RequireError(t, ValidateParent(context.Background(), f.p, f.c.ID, &missing), "parent message not found")
+	chattest.RequireError(t, ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing), "message to reply to not found")
 }

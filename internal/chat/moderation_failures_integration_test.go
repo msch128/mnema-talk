@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 )
 
 func TestBulkDeleteReportsDatabaseDrift(t *testing.T) {
@@ -19,7 +20,7 @@ func TestBulkDeleteReportsDatabaseDrift(t *testing.T) {
 		t.Fatal(err)
 	}
 	run := func(views map[string]string) error {
-		p := driftPool(t, f.p, views)
+		p := chattest.DriftPool(t, f.p, views)
 		return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 			_, _, err := takeLatestMessages(ctx, tx, f.c.ID, f.u.ID, 5, true)
 			return err
@@ -48,7 +49,7 @@ func TestSlowModeReportsDatabaseDrift(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
 	check := func(views map[string]string) error {
-		p := driftPool(t, f.p, views)
+		p := chattest.DriftPool(t, f.p, views)
 		return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return gatePost(ctx, tx, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID}) })
 	}
 	if err := check(map[string]string{"channels": `SELECT id FROM public.channels`}); err == nil || !strings.Contains(err.Error(), "load channel") {
