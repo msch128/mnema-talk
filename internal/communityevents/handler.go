@@ -38,6 +38,8 @@ type Handler struct {
 	quieter eventQuieter
 }
 
+// Mount registers the event routes on r, which already requires a signed-in
+// member; per-channel visibility is checked in the handlers, not by the router.
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/events", httpx.Handle(h.listEvents))
 	r.Post("/events", httpx.Handle(h.createEvent))

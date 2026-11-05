@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	// FreqWeekly, FreqBiweekly and FreqMonthly are the repeat rules of a series.
 	FreqWeekly   = "weekly"
 	FreqBiweekly = "biweekly"
 	FreqMonthly  = "monthly"

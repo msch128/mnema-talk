@@ -44,6 +44,7 @@ const (
 	reminderPushTimeout = 2 * time.Minute
 )
 
+// NewScheduler returns a Scheduler for h that ticks every 10 seconds.
 func NewScheduler(h *Handler) *Scheduler {
 	return &Scheduler{
 		Handler:  h,
@@ -51,6 +52,7 @@ func NewScheduler(h *Handler) *Scheduler {
 	}
 }
 
+// Start runs the scheduler in the background until ctx is cancelled.
 func (s *Scheduler) Start(ctx context.Context) {
 	go s.run(ctx)
 }

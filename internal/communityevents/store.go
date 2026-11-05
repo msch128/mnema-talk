@@ -18,6 +18,7 @@ type Store struct {
 	DB db.Querier
 }
 
+// NewStore returns a Store that reads and writes through q.
 func NewStore(q db.Querier) *Store {
 	return &Store{DB: q}
 }
@@ -91,6 +92,9 @@ func newUserRef(id uuid.UUID, username, displayName string, avatarKey *string) U
 	return ref
 }
 
+// Create inserts an event for creatorID. An event that already started (the
+// start is not in the future) is created active, so it never waits for the
+// scheduler to show up as running.
 func (s *Store) Create(ctx context.Context, req CreateEventRequest, creatorID uuid.UUID) (*CommunityEvent, error) {
 	status := StatusScheduled
 	now := time.Now()
@@ -110,6 +114,8 @@ func (s *Store) Create(ctx context.Context, req CreateEventRequest, creatorID uu
 	return row.toEvent(), nil
 }
 
+// Get loads one event with its RSVP counts, the caller's own answer (when
+// callerID is set) and its roles and sign-ups; an unknown id is a 404.
 func (s *Store) Get(ctx context.Context, id uuid.UUID, callerID *uuid.UUID) (*CommunityEvent, error) {
 	row, err := scanEvent(s.DB.QueryRow(ctx, `SELECT `+eventColumns+` FROM events WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -252,6 +258,7 @@ func (s *Store) DeleteRSVP(ctx context.Context, eventID, userID uuid.UUID) ([]Pr
 	return promoted, err
 }
 
+// ListRSVPs returns everyone who answered an event, the latest answer first.
 func (s *Store) ListRSVPs(ctx context.Context, eventID uuid.UUID) ([]RSVPItem, error) {
 	rows, err := s.DB.Query(ctx, `
 		SELECT u.id, u.username, u.display_name, u.avatar_s3_key, r.response, r.updated_at
