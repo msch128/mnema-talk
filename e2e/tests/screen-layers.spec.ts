@@ -43,6 +43,32 @@ const fakeScreen = () => {
   }
 }
 
+// The viewers keep their peer connections too, to say what the receiver did
+// when a picture never starts.
+const keepPeers = () => {
+  const Native = window.RTCPeerConnection
+  window.__pcs = []
+  window.RTCPeerConnection = class extends Native {
+    constructor(...args: ConstructorParameters<typeof RTCPeerConnection>) { super(...args); window.__pcs.push(this) }
+  }
+}
+
+// What a viewer's receiver did with the video it was sent. A picture that
+// never starts (0x0) is otherwise a bare timeout: this says whether packets
+// arrived, whether any frame decoded and how often a keyframe was asked for.
+async function received(page: Page): Promise<string> {
+  return page.evaluate(async () => {
+    const out: string[] = []
+    for (const pc of window.__pcs) {
+      for (const stat of (await pc.getStats()).values()) {
+        if (stat.type !== 'inbound-rtp' || stat.kind !== 'video') continue
+        out.push(`${stat.frameWidth ?? 0}x${stat.frameHeight ?? 0} packets=${stat.packetsReceived} lost=${stat.packetsLost} decoded=${stat.framesDecoded ?? 0} keys=${stat.keyFramesDecoded ?? 0} dropped=${stat.framesDropped ?? 0} plis=${stat.pliCount ?? 0} nacks=${stat.nackCount ?? 0} decoder=${stat.decoderImplementation ?? ''}`)
+      }
+    }
+    return out.join(' | ')
+  })
+}
+
 async function signIn(page: Page, username: string, password: string) {
   await page.goto('/')
   const dialog = page.getByRole('dialog')
@@ -130,6 +156,8 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 700 }, deviceScaleFactor: 1 })
   cleanups.push(() => sharerCtx.close(), () => aCtx.close(), () => bCtx.close())
   await sharerCtx.addInitScript(fakeScreen)
+  await aCtx.addInitScript(keepPeers)
+  await bCtx.addInitScript(keepPeers)
   const sharer = await sharerCtx.newPage()
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
@@ -174,7 +202,12 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   // Automatic gives each viewer the best layer its stage can use: A (2x
   // screen, large stage) the sharer's own 1280x720 picture, B (small stage)
   // a smaller one, which the label names.
-  await expect.poll(() => videoSize(a), { timeout: 30_000 }).toBe('1280x720')
+  try {
+    await expect.poll(() => videoSize(a), { timeout: 30_000 }).toBe('1280x720')
+  } catch (error) {
+    console.log(`[layers] A never showed the source; its receiver: ${await received(a).catch(() => 'unavailable')}`)
+    throw error
+  }
   await expect(a.getByTestId('screen-layer-label')).toHaveText('Automatisch (720p)', { timeout: 20_000 })
   await expect.poll(async () => Number((await videoSize(b)).split('x')[0]), { timeout: 30_000 }).toBeLessThan(1280)
   await expect(b.getByTestId('screen-layer-label')).toHaveText(/^Automatisch \(\d+p\)$/, { timeout: 20_000 })
