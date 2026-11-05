@@ -224,28 +224,6 @@ func (v *hierarchyView) viewable(in []Channel) ([]Channel, error) {
 	return out, nil
 }
 
-// visibleReadStates keeps the read states of viewable channels.
-func (h *Handler) visibleReadStates(r *http.Request, states []ReadState) ([]ReadState, error) {
-	visible, err := h.viewableChannels(r)
-	if err != nil {
-		return states, err
-	}
-	if visible == nil {
-		return states, nil
-	}
-	ok := make(map[uuid.UUID]bool, len(visible))
-	for _, id := range visible {
-		ok[id] = true
-	}
-	out := make([]ReadState, 0, len(states))
-	for _, s := range states {
-		if ok[s.ChannelID] {
-			out = append(out, s)
-		}
-	}
-	return out, nil
-}
-
 // requireCategory checks that the caller may see a category (a category that
 // does not exist is left to the operation itself to report).
 func (h *Handler) requireCategory(r *http.Request, id uuid.UUID) error {

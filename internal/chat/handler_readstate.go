@@ -31,7 +31,7 @@ func (h *Handler) readState(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if states, err = h.visibleReadStates(r, states); err != nil {
+	if states, err = visibleReadStates(h.guard(), r, states); err != nil {
 		return err
 	}
 	httpx.WriteJSON(w, http.StatusOK, states)
