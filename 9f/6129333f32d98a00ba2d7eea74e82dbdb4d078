@@ -1,0 +1,97 @@
+internal/chat/channel_edges_integration_test.go
+  s_db63cd4785d2fa::t_e6cf41f9ec285c 16,80
+internal/chat/chattest/chattest.go
+  s_3a2d4d42231329::t_e3a1bd4fd34000 1-73
+internal/chat/chattest/member.go
+  s_3a2d4d42231329::t_63787d1ac872ed 1-24
+internal/chat/database_failures_integration_test.go
+  s_db63cd4785d2fa::t_a21932c9a229ef 19,28,30,36,38,41,43,46,48,51,53,56,58,61,70,72,74,77-78,81-82,85-86,89-90,92,95-96,99-100,103,110,113,120,123,130,234,258,287,289,296,298,300,304,307,310,312,391,401,425-426
+internal/chat/dm_failures_integration_test.go
+  s_db63cd4785d2fa::t_0211899252487e 10,39,41,45,48-53,55
+internal/chat/forum_complete_integration_test.go
+  s_db63cd4785d2fa::t_20386838064fea 17,53,65,71,104,107,115,119,172,176,214,305,321,366,370,380,392,403,406,441,445,462,474-479,497-499
+internal/chat/forum_edges_integration_test.go
+  s_db63cd4785d2fa::t_d1d023a06e5e20 18,99,104,115,122,128,145,200,253,260
+internal/chat/forum_errors_integration_test.go
+  s_db63cd4785d2fa::t_b4192975f9ffb3 16,51,61,76,195,217-218,221-222,230-231,250,253-254,257,300,364,416-417,431,434,452,456
+internal/chat/forum_integration_test.go
+  s_db63cd4785d2fa::t_8cf0d608e64d44 14,47,54,69,81,111,117,124,143,166,179,185,204,214,221,228,234,240,265,276,281,287,308,311,324,335,353
+internal/chat/handlers_integration_test.go
+  s_db63cd4785d2fa::t_4f582f26b8aa44 19,36,140,151,196,200,209,227,238,285,288-289,327
+internal/chat/message_replies_integration_test.go
+  s_db63cd4785d2fa::t_efe50f6f0a3588 13,95-96
+internal/chat/moderation_failures_integration_test.go
+  s_db63cd4785d2fa::t_d81fdff20b1cf8 11,23,52
+internal/chat/page_cursor_integration_test.go
+  s_db63cd4785d2fa::t_2154ce60d214c3 14,44,75,95,98
+internal/chat/permission_failures_integration_test.go
+  s_db63cd4785d2fa::t_4c4341015cf77a 12,64
+internal/chat/reports_failures_integration_test.go
+  s_db63cd4785d2fa::t_7509ce08d12772 10,34-35
+internal/chat/routes_test.go
+  s_06fcde5dbef956::t_8a1a73c29212a5 1-70
+internal/chat/talks_errors_integration_test.go
+  s_db63cd4785d2fa::t_691a6e083478eb 13,68,72,102
+internal/chat/talks_integration_test.go
+  s_db63cd4785d2fa::t_d9386809186cae 20,352,752,772
+internal/chat/testdata/routes.golden
+  s_e3e7e7812a5e9e::t_8056ca8fabeee9 1-87
+internal/repo/boundaries_test.go
+  s_4d5632b48c0115::t_ecb79ab5d078fa 1-274
+internal/chat/category_types.go
+  s_db63cd4785d2fa::t_d62371dc0e6c38 1-15
+internal/chat/channel_types.go
+  s_db63cd4785d2fa::t_2c43f82aa8260c 1-63
+internal/chat/forum_types.go
+  s_db63cd4785d2fa::t_326515cec98c3d 1-30
+internal/chat/poll_types.go
+  s_db63cd4785d2fa::t_ca212029e0711e 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9f6129333f32d98a00ba2d7eea74e82dbdb4d078",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_3a2d4d42231329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5cd8a73a681f9a5e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_4d5632b48c0115": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a58c92b794b020d85",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e3e7e7812a5e9e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa677880f9a6ee2ef",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
