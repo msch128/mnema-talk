@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
@@ -47,7 +47,7 @@ func writePresence(ctx context.Context, l *audit.Log, q db.Querier, ev presenceE
 		return
 	}
 	// Fail closed: a Talk whose privacy is unknown is not audited.
-	if isDM, err := chat.IsDMTalk(ctx, q, ev.channel); err != nil || isDM {
+	if isDM, err := talks.IsDMTalk(ctx, q, ev.channel); err != nil || isDM {
 		if err != nil {
 			slog.Warn("audit log: presence not recorded, DM lookup failed", "channel", ev.channel, "err", err)
 		}

@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/reports"
 	"github.com/msch128/mnema-talk/internal/chat/saved"
 	"github.com/msch128/mnema-talk/internal/chat/search"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -124,6 +125,15 @@ func (h *Handler) saved() *saved.API {
 	return &saved.API{DB: h.DB, Events: h.Events, Guard: h.guard(), SavedLimit: h.SavedLimit}
 }
 
+// talks builds the Create-a-Talk API from the handler's fields. h.Calls may be
+// nil: a nil *dm.DMCalls rings nobody.
+func (h *Handler) talks() *talks.API {
+	return &talks.API{
+		DB: h.DB, Events: h.Events, Guard: h.guard(), Audit: h.Audit, Online: h.Online, Talks: h.Talks,
+		Calls: h.Calls, TalkLimit: h.TalkLimit, Messages: h.messages(), Channels: h.channels(),
+	}
+}
+
 // Mount registers the member-facing routes (RequireUser must already apply).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/members", httpx.Handle(h.listMembers))
@@ -131,7 +141,7 @@ func (h *Handler) Mount(r chi.Router) {
 	h.reports().Mount(r)
 	h.saved().Mount(r)
 	h.DMs().Mount(r)
-	h.mountTalks(r)
+	h.talks().Mount(r)
 	h.forum().Mount(r)
 	h.messages().Mount(r)
 	h.search().Mount(r)

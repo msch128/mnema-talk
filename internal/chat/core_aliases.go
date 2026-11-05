@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/reports"
 	"github.com/msch128/mnema-talk/internal/chat/saved"
 	"github.com/msch128/mnema-talk/internal/chat/search"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 )
 
 // Aliases for symbols that moved into sub-packages while internal/chat is split
@@ -66,6 +67,7 @@ type DMPrefsUpdated = dm.DMPrefsUpdated
 type DMSettings = dm.DMSettings
 
 const DefaultRingDuration = dm.DefaultRingDuration
+const DefaultTalkEmptyGrace = talks.DefaultTalkEmptyGrace
 
 type DeleteMessageRequest = messages.DeleteMessageRequest
 type DirectMessage = dm.DirectMessage
@@ -93,6 +95,7 @@ const ForwardsPerMinute = messages.ForwardsPerMinute
 type HistoryQuery = core.HistoryQuery
 type InEmbed = messages.InEmbed
 type InboxQuery = search.InboxQuery
+type InviteToTalkRequest = talks.InviteToTalkRequest
 type LayoutRequest = channels.LayoutRequest
 type MarkAllReadRequest = readstate.MarkAllReadRequest
 type MarkReadRequest = readstate.MarkReadRequest
@@ -129,6 +132,7 @@ const MaxSavedPerMember = saved.MaxSavedPerMember
 const MaxSlowModeSeconds = core.MaxSlowModeSeconds
 const MaxSlugLength = channels.MaxSlugLength
 const MaxSortOrder = channels.MaxSortOrder
+const MaxTempTalksPerLobby = talks.MaxTempTalksPerLobby
 const MaxTopicLen = core.MaxTopicLen
 const MaxUnansweredDMMessages = core.MaxUnansweredDMMessages
 const MaxUserLimit = channels.MaxUserLimit
@@ -231,8 +235,15 @@ type SetDMFavouritesRequest = dm.SetDMFavouritesRequest
 type SetDMHiddenRequest = dm.SetDMHiddenRequest
 type SetNotifyLevelRequest = readstate.SetNotifyLevelRequest
 type SetServerNotifyRequest = readstate.SetServerNotifyRequest
+type StartTalkResponse = talks.StartTalkResponse
 type TagPatch = forum.TagPatch
 type TagSpec = forum.TagSpec
+type TalkManager = talks.TalkManager
+
+const TalkRequestsPerMinute = talks.TalkRequestsPerMinute
+const TalkWindow = talks.TalkWindow
+const TalksPerWindow = talks.TalksPerWindow
+
 type Thread = messages.Thread
 type ThreadFollow = messages.ThreadFollow
 
@@ -243,6 +254,7 @@ type UpdateChannelRequest = channels.UpdateChannelRequest
 type UpdateForumSettingsRequest = forum.UpdateForumSettingsRequest
 type UpdateForumTagRequest = forum.UpdateForumTagRequest
 type UpdatePostRequest = forum.UpdatePostRequest
+type UpdateTalkRequest = talks.UpdateTalkRequest
 type UserRef = core.UserRef
 type ViewAsCategory = channels.ViewAsCategory
 type ViewAsChannel = channels.ViewAsChannel

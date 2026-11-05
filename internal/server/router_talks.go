@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -14,7 +15,7 @@ import (
 // hub's join/leave hook (next to the audit log's).
 func (c *components) newTalks() {
 	d := c.d
-	m := chat.NewTalkManager(&chat.TalkManager{
+	m := talks.NewTalkManager(&chat.TalkManager{
 		DB: d.DB, Events: c.pub, Perms: c.permSvc, Audit: c.auditLog, Voice: c.hub,
 		CreateLimit: httpx.NewRateLimiter(chat.TalksPerWindow, chat.TalkWindow).Named("talk_create"),
 	})

@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
@@ -138,7 +139,7 @@ func TestDuplicatedAndTemporaryChannelsGetSlugs(t *testing.T) {
 	if _, err := p.Exec(ctx, `INSERT INTO users (id, username, display_name, password_hash) VALUES ($1, 'slugleader', 'L', 'x')`, leader); err != nil {
 		t.Fatal(err)
 	}
-	talk, err := OpenTempTalk(ctx, p, lobby.ID, leader)
+	talk, err := talks.OpenTempTalk(ctx, p, lobby.ID, leader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +160,7 @@ func TestLeaderRenameOfATempTalkLeaksNothing(t *testing.T) {
 	if _, err := p.Exec(ctx, `INSERT INTO users (id, username, display_name, password_hash) VALUES ($1, 'slugleader', 'L', 'x')`, leader); err != nil {
 		t.Fatal(err)
 	}
-	talk, err := OpenTempTalk(ctx, p, lobby.ID, leader)
+	talk, err := talks.OpenTempTalk(ctx, p, lobby.ID, leader)
 	if err != nil {
 		t.Fatal(err)
 	}

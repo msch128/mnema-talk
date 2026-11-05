@@ -1,4 +1,4 @@
-package chat
+package talks
 
 import (
 	"context"
@@ -30,15 +30,15 @@ type InviteToTalkRequest struct {
 
 // dmSendContext checks that the caller may send in the direct message
 // conversation dm and returns the context to post with.
-func (h *Handler) dmSendContext(r *http.Request, dm uuid.UUID) (context.Context, error) {
-	ch, err := core.LoadChannel(r.Context(), h.DB, dm)
+func (a *API) dmSendContext(r *http.Request, dm uuid.UUID) (context.Context, error) {
+	ch, err := core.LoadChannel(r.Context(), a.DB, dm)
 	if err != nil {
 		return nil, err
 	}
 	if ch.Type != core.ChannelKindDM {
 		return nil, core.ErrChannelNotFound
 	}
-	return h.messages().SendContext(r, dm, perm.SendMessages)
+	return a.Messages.SendContext(r, dm, perm.SendMessages)
 }
 
 // talkName is the name of a voice channel; anything else is not found.
@@ -55,22 +55,22 @@ func talkName(ctx context.Context, q db.Querier, talk uuid.UUID) (string, error)
 }
 
 // postTalkInvite posts the invitation card for talk into dm as user.
-func (h *Handler) postTalkInvite(ctx context.Context, dm, user, talk uuid.UUID) (*Message, error) {
-	name, err := talkName(ctx, h.DB, talk)
+func (a *API) postTalkInvite(ctx context.Context, dm, user, talk uuid.UUID) (*core.Message, error) {
+	name, err := talkName(ctx, a.DB, talk)
 	if err != nil {
 		return nil, err
 	}
-	id, err := messages.InsertMessage(ctx, h.DB, h.Online, NewMessage{
-		ChannelID: dm, UserID: user, Embeds: []Embed{{Title: name, TalkID: &talk}},
+	id, err := messages.InsertMessage(ctx, a.DB, a.Online, messages.NewMessage{
+		ChannelID: dm, UserID: user, Embeds: []core.Embed{{Title: name, TalkID: &talk}},
 	}, nil)
 	if err != nil {
 		return nil, err
 	}
-	return messages.GetMessage(ctx, h.DB, id)
+	return messages.GetMessage(ctx, a.DB, id)
 }
 
 // inviteName is the Talk's name on the invitation card msg.
-func inviteName(msg *Message) string {
+func inviteName(msg *core.Message) string {
 	if len(msg.Embeds) == 0 {
 		return ""
 	}
@@ -87,8 +87,8 @@ func inviteName(msg *Message) string {
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Talk ID." Format(uuid)
-// @Param request body InviteToTalkRequest true "Request body."
-// @Success 201 {object} Message "The invitation message."
+// @Param request body talks.InviteToTalkRequest true "Request body."
+// @Success 201 {object} core.Message "The invitation message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: the caller cannot join the Talk or send in the conversation, or cross-origin request rejected."
@@ -97,7 +97,7 @@ func inviteName(msg *Message) string {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/talks/{id}/invites [post]
-func (h *Handler) inviteToTalk(w http.ResponseWriter, r *http.Request) error {
+func (a *API) inviteToTalk(w http.ResponseWriter, r *http.Request) error {
 	talk, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -106,19 +106,21 @@ func (h *Handler) inviteToTalk(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if err := h.require(r, talk, perm.ViewChannel|perm.Connect); err != nil {
+	if err := a.Guard.Require(r, talk, perm.ViewChannel|perm.Connect); err != nil {
 		return err
 	}
-	ctx, err := h.dmSendContext(r, req.ConversationID)
+	ctx, err := a.dmSendContext(r, req.ConversationID)
 	if err != nil {
 		return err
 	}
-	msg, err := h.postTalkInvite(ctx, req.ConversationID, auth.UserFrom(ctx).ID, talk)
+	msg, err := a.postTalkInvite(ctx, req.ConversationID, auth.UserFrom(ctx).ID, talk)
 	if err != nil {
 		return err
 	}
-	h.Events.BroadcastChannel(req.ConversationID, events.MessageCreate, msg)
-	h.Calls.Begin(req.ConversationID, talk, auth.UserFrom(ctx).ID, msg.ID, inviteName(msg))
+	a.Events.BroadcastChannel(req.ConversationID, events.MessageCreate, msg)
+	if a.Calls != nil {
+		a.Calls.Begin(req.ConversationID, talk, auth.UserFrom(ctx).ID, msg.ID, inviteName(msg))
+	}
 	httpx.WriteJSON(w, http.StatusCreated, msg)
 	return nil
 }

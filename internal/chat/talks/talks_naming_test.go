@@ -1,10 +1,12 @@
-package chat
+package talks
 
 import (
 	"strconv"
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 func TestLowestFreeTalkNumberIsPerBaseName(t *testing.T) {
@@ -33,7 +35,7 @@ func TestTempTalkBaseKeepsTheNumberWithinTheNameLimit(t *testing.T) {
 	for _, lobby := range []string{strings.Repeat("a", 200), strings.Repeat("\u00e4", 64), strings.Repeat("\U0001F600", 64), strings.Repeat("ab ", 40)} {
 		base := tempTalkBase(lobby)
 		name := fitTalkName(base, 999)
-		if utf8.RuneCountInString(name) > MaxChannelNameLen {
+		if utf8.RuneCountInString(name) > core.MaxChannelNameLen {
 			t.Fatalf("%q has %d runes", name, utf8.RuneCountInString(name))
 		}
 		if !utf8.ValidString(base) || strings.HasSuffix(base, " ") {
@@ -50,7 +52,7 @@ func TestFitTalkNameHoldsForLargeNumbers(t *testing.T) {
 	base := tempTalkBase(strings.Repeat("a", 200))
 	for _, n := range []int{1, 99, 100, 999, 1000, 123456} {
 		name := fitTalkName(base, n)
-		if utf8.RuneCountInString(name) > MaxChannelNameLen || !strings.HasSuffix(name, " "+strconv.Itoa(n)) {
+		if utf8.RuneCountInString(name) > core.MaxChannelNameLen || !strings.HasSuffix(name, " "+strconv.Itoa(n)) {
 			t.Fatalf("n=%d: %q (%d runes)", n, name, utf8.RuneCountInString(name))
 		}
 	}
