@@ -1,0 +1,111 @@
+AGENTS.md
+  s_f6edaac6c70960::t_09792fc4b5715c 65,93
+doc/security/audit-package.md
+  s_f6edaac6c70960::t_2ce2cba5b71749 640
+internal/auth/account/account_cq_integration_test.go
+  s_f6edaac6c70960::t_168133db80a601 3,18-19,324,357
+internal/auth/account/account_delete.go
+  s_f6edaac6c70960::t_dbc78fd1d0d38f 1,10-11,34,44-46,85,97,110
+internal/auth/account/account_erase.go
+  s_f6edaac6c70960::t_c0473f74944a4a 1,9,82,100,117
+internal/auth/account/account_erase_steps.go
+  s_f6edaac6c70960::t_1ccd5a51df0d54 1
+internal/auth/account/account_export.go
+  s_f6edaac6c70960::t_965d9086d50f7d 1,12-13,42-43,53-55,78,91,113,120,124,126,136,141-142,149,185,192-193,220,230,252,259,274,279,286,298,320
+internal/auth/account/account_export_activity.go
+  s_f6edaac6c70960::t_3114ea91229a2e 1,32
+internal/auth/account/account_export_archive.go
+  s_f6edaac6c70960::t_f70dcf9aa358d0 1,17,48,65,87
+internal/auth/account/account_export_banner.go
+  s_f6edaac6c70960::t_bb81500831b336 1,16,39,82
+internal/auth/account/account_export_build.go
+  s_f6edaac6c70960::t_9766a6b66b40e5 1,12-13,100,144,152,185,202-203
+internal/auth/account/account_export_data.go
+  s_f6edaac6c70960::t_f2e555e1003c69 1
+internal/auth/account/account_export_edits_integration_test.go
+  s_f6edaac6c70960::t_b9080c1c7deb20 3
+internal/auth/account/account_export_integration_test.go
+  s_f6edaac6c70960::t_0bdc3765a70724 3,17-18,77,81,106,205,210
+internal/auth/account/account_export_list.go
+  s_f6edaac6c70960::t_a1bff6e802530b 1
+internal/auth/account/account_export_sessions.go
+  s_f6edaac6c70960::t_9ba9329a18fdb7 1
+internal/auth/account/account_export_sweep_integration_test.go
+  s_f6edaac6c70960::t_ad521fc832a355 3
+internal/auth/account/account_export_uploads_integration_test.go
+  s_f6edaac6c70960::t_837dd5158ebf72 3
+internal/auth/account/account_personal.go
+  s_f6edaac6c70960::t_6f679fb4f13377 1,11,15,24
+internal/auth/account/api.go
+  s_f6edaac6c70960::t_22aaeaca01eaab 1-45
+internal/auth/account/fixture_integration_test.go
+  s_f6edaac6c70960::t_e375982ca2528e 1-121
+internal/auth/account/personal_data_fallback_integration_test.go
+  s_f6edaac6c70960::t_aa7b1293944bc2 3,6,32
+internal/auth/account/testhooks_integration.go
+  s_f6edaac6c70960::t_ff32228b1428c1 1-19
+internal/auth/account_mail.go
+  s_f6edaac6c70960::t_ed8fe198ed42ba 147-157
+internal/auth/account_types.go
+  s_f6edaac6c70960::t_75feca3e872083 1-35
+internal/auth/audit.go
+  s_f6edaac6c70960::t_5aac1e30a8ccdf 16-17
+internal/auth/deleted.go
+  s_f6edaac6c70960::t_3c045693dfd553 1-28
+internal/auth/email_handler.go
+  s_f6edaac6c70960::t_2206d4204cf31f 77,149,201,310
+internal/auth/email_mail_integration_test.go
+  s_f6edaac6c70960::t_b92cfa0325869b 1-63
+internal/auth/handler.go
+  s_f6edaac6c70960::t_766c4159e6a9fb 52,196
+internal/auth/handler_account.go
+  s_f6edaac6c70960::t_97c47c10b3ba58 52,105
+internal/auth/handler_profile.go
+  s_f6edaac6c70960::t_317583c97e57d4 130
+internal/auth/objectstore.go
+  s_f6edaac6c70960::t_e59ebf059f5d9d 1-15
+internal/auth/password_reset.go
+  s_f6edaac6c70960::t_c48dcfbd0d053b 155
+internal/auth/service.go
+  s_f6edaac6c70960::t_0a9c388880def7 214
+internal/auth/two_factor_failures.go
+  s_f6edaac6c70960::t_54738d7a8bb9b9 106
+internal/auth/two_factor_handler.go
+  s_f6edaac6c70960::t_3eb3082e0e6a92 162,202,257,299
+internal/auth/two_factor_login.go
+  s_f6edaac6c70960::t_b73b0942451a59 52,132,134
+internal/auth/two_factor_store.go
+  s_f6edaac6c70960::t_95240de53da3f4 39
+internal/auth/user_sessions_handler.go
+  s_f6edaac6c70960::t_538cd9a55d98d7 123,157
+internal/repo/boundaries_test.go
+  s_f6edaac6c70960::t_d81e2899772f65 95
+internal/server/account_export_integration_test.go
+  s_f6edaac6c70960::t_66b61c4496dec8 18,257
+internal/server/personal_data.go
+  s_f6edaac6c70960::t_85911133fc9479 29
+internal/server/personal_data_test.go
+  s_f6edaac6c70960::t_c871c1574e5ef6 9,181-183
+internal/server/router_build.go
+  s_f6edaac6c70960::t_c4c2a441c0cc43 14,77,154
+internal/server/router_build_services.go
+  s_f6edaac6c70960::t_79e5f2189200f8 8-9,113-115,117,124-130
+internal/server/router_routes.go
+  s_f6edaac6c70960::t_56c0eeb4b2bddf 105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4ee5aac48c991a59358733611406bc0ce7800653",
+  "prompts": {},
+  "sessions": {
+    "s_f6edaac6c70960": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aedccab7bc6622020",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
