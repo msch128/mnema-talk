@@ -39,8 +39,9 @@ Run `make check` before you push: it is what CI runs.
 - **Coverage:** at least 90 % in total and 80 % in every file, for Go and for
   the web app. Do not lower the gates.
 - **Limits:** production files stay under 400 lines, functions under 80 lines,
-  cognitive complexity 15 (Go and TypeScript). Refactor instead of adding an
-  exemption.
+  cognitive complexity 15 (Go and TypeScript). Packages stay under 30 production
+  files and keep the layer rules in `internal/repo/boundaries_test.go`. Refactor
+  instead of adding an exemption.
 - **Migrations** are new numbered files in `internal/db/migrations/`; never edit
   one that has shipped.
 - **Public API** (REST, WebSocket events, bot and webhook payloads, environment
