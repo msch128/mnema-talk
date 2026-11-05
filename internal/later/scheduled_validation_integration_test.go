@@ -15,8 +15,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -39,7 +39,7 @@ func scheduleVia(t *testing.T, f fixture, s *Service, channel uuid.UUID, body ma
 func TestATopLevelMessageCannotBeScheduledIntoAForumChannel(t *testing.T) {
 	f := newFixture(t)
 	s := f.service(f.p)
-	forum, err := channels.CreateChannelWithStage(context.Background(), f.p, nil, "ideas", chat.ChannelTypeForum, "", 0, false)
+	forum, err := channels.CreateChannelWithStage(context.Background(), f.p, nil, "ideas", core.ChannelTypeForum, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

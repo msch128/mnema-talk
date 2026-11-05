@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -16,8 +15,8 @@ import (
 // the defaults @username notifies members and @all and @here do not. The
 // request can only narrow that, never widen it. Nobody who cannot view the
 // channel is notified, whatever the settings say.
-func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMentions) (chat.MentionPolicy, error) {
-	policy := chat.MentionPolicy{NoEveryone: true, NoUsers: !rec.AllowUserMentions}
+func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMentions) (mentions.MentionPolicy, error) {
+	policy := mentions.MentionPolicy{NoEveryone: true, NoUsers: !rec.AllowUserMentions}
 	if am != nil {
 		if err := narrowMentions(&policy, rec, am); err != nil {
 			return policy, err
@@ -44,7 +43,7 @@ func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMen
 }
 
 // narrowMentions applies the request's allowed_mentions to the policy.
-func narrowMentions(policy *chat.MentionPolicy, rec *record, am *AllowedMentions) error {
+func narrowMentions(policy *mentions.MentionPolicy, rec *record, am *AllowedMentions) error {
 	wantUsers := slices.Contains(am.Parse, "users")
 	if wantUsers && len(am.Users) > 0 {
 		return formError("allowed_mentions: users cannot be in parse and listed at once")

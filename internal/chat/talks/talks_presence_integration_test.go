@@ -1,6 +1,6 @@
 //go:build integration
 
-package chat
+package talks
 
 import (
 	"testing"
@@ -41,18 +41,18 @@ func TestAnEmptyTalkWithAJoinOnItsWayIsNotRemoved(t *testing.T) {
 		t.Fatal(err)
 	}
 	w.mgr.OnPresence(w.bob.ID, talk.ID, true) // queued, not applied when the countdown ends
-	w.mgr.removeIfEmpty(talk.ID)
+	w.mgr.RemoveIfEmpty(talk.ID)
 	if !w.exists(t, talk.ID) {
 		t.Fatal("the countdown removed a Talk somebody was just joining")
 	}
 	for w.mgr.applyNext() {
 	}
-	w.mgr.removeIfEmpty(talk.ID)
+	w.mgr.RemoveIfEmpty(talk.ID)
 	if !w.exists(t, talk.ID) {
 		t.Fatal("an occupied Talk was removed")
 	}
 	w.leave(talk.ID, w.bob.ID)
-	w.mgr.removeIfEmpty(talk.ID)
+	w.mgr.RemoveIfEmpty(talk.ID)
 	if w.exists(t, talk.ID) {
 		t.Fatal("an empty Talk with nothing pending should go")
 	}

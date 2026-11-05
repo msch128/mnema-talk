@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/community"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -64,7 +64,7 @@ type Service struct {
 	Now func() time.Time
 
 	once     sync.Once
-	messages chan chat.Message
+	messages chan core.Message
 	jobs     chan job
 	co       *coalescer
 	ctx      context.Context
@@ -85,7 +85,7 @@ func (s *Service) init() {
 		if burst <= 0 {
 			burst = defaultBurst
 		}
-		s.messages = make(chan chat.Message, queueSize)
+		s.messages = make(chan core.Message, queueSize)
 		s.jobs = make(chan job, sendQueue)
 		s.co = newCoalescer(burst, s.Now)
 	})
@@ -96,11 +96,11 @@ func (s *Service) Observe(_ uuid.UUID, eventType string, payload any) {
 	if eventType != events.MessageCreate {
 		return
 	}
-	var msg chat.Message
+	var msg core.Message
 	switch v := payload.(type) {
-	case chat.Message:
+	case core.Message:
 		msg = v
-	case *chat.Message:
+	case *core.Message:
 		msg = *v
 	default:
 		return
@@ -154,18 +154,18 @@ func (s *Service) sendLoop(ctx context.Context) {
 
 // mentions reports whether msg mentions the member (also through @all or
 // @here) or replies to them.
-func mentions(msg chat.Message, user uuid.UUID) bool {
+func mentions(msg core.Message, user uuid.UUID) bool {
 	return slices.Contains(msg.Mentions, user) || replyTo(msg, user)
 }
 
-func replyTo(msg chat.Message, user uuid.UUID) bool {
+func replyTo(msg core.Message, user uuid.UUID) bool {
 	return msg.ReplyTo != nil && msg.ReplyTo.UserID == user
 }
 
 // addressed reports whether msg is addressed to the member itself: by name,
 // through a role they hold, or as a reply. @all and @here do not count; only
 // an addressed message gets through a mute.
-func addressed(msg chat.Message, user uuid.UUID, byName map[uuid.UUID]bool) bool {
+func addressed(msg core.Message, user uuid.UUID, byName map[uuid.UUID]bool) bool {
 	return byName[user] || replyTo(msg, user)
 }
 
@@ -176,7 +176,7 @@ func audienceAllows(followers map[uuid.UUID]bool, user uuid.UUID, addressed bool
 }
 
 // handle works out who is told about msg and queues their pushes.
-func (s *Service) handle(ctx context.Context, msg chat.Message) {
+func (s *Service) handle(ctx context.Context, msg core.Message) {
 	snap, err := s.Perms.Snapshot(ctx)
 	if err != nil {
 		slog.Warn("push: permission snapshot", "err", err)
@@ -217,7 +217,7 @@ func (s *Service) handle(ctx context.Context, msg chat.Message) {
 }
 
 // notify sends (or holds, see coalescer) the push of msg to each chosen member.
-func (s *Service) notify(ctx context.Context, msg chat.Message, chosen []candidate, byName map[uuid.UUID]bool) {
+func (s *Service) notify(ctx context.Context, msg core.Message, chosen []candidate, byName map[uuid.UUID]bool) {
 	if len(chosen) == 0 {
 		return
 	}
@@ -248,7 +248,7 @@ func (s *Service) notify(ctx context.Context, msg chat.Message, chosen []candida
 
 // callKind says whether msg is the card of a call ("ring") or the record of a
 // missed one ("missed"); "" for any other message.
-func callKind(msg chat.Message) string {
+func callKind(msg core.Message) string {
 	for _, e := range msg.Embeds {
 		switch {
 		case e.TalkID != nil:
@@ -260,7 +260,7 @@ func callKind(msg chat.Message) string {
 	return ""
 }
 
-func sender(msg chat.Message) string {
+func sender(msg core.Message) string {
 	if msg.DisplayName != "" {
 		return msg.DisplayName
 	}

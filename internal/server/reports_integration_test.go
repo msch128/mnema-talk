@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/reports"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -110,11 +110,11 @@ func TestAReportKeepsTheMessageAndItsContextForTheModerators(t *testing.T) {
 		t.Fatalf("message: %+v", d.Snapshot.Message)
 	}
 	ctx := d.Snapshot.Context
-	if len(ctx) != chat.ReportContextBefore+chat.ReportContextAfter {
-		t.Fatalf("context has %d messages, want %d", len(ctx), chat.ReportContextBefore+chat.ReportContextAfter)
+	if len(ctx) != reports.ReportContextBefore+reports.ReportContextAfter {
+		t.Fatalf("context has %d messages, want %d", len(ctx), reports.ReportContextBefore+reports.ReportContextAfter)
 	}
-	if ctx[0].Content != "line 15" || ctx[chat.ReportContextBefore-1].Content != "line 29" || ctx[chat.ReportContextBefore].Content != "later 00" {
-		t.Fatalf("context is not the messages around the reported one, oldest first: first %q, last before %q", ctx[0].Content, ctx[chat.ReportContextBefore-1].Content)
+	if ctx[0].Content != "line 15" || ctx[reports.ReportContextBefore-1].Content != "line 29" || ctx[reports.ReportContextBefore].Content != "later 00" {
+		t.Fatalf("context is not the messages around the reported one, oldest first: first %q, last before %q", ctx[0].Content, ctx[reports.ReportContextBefore-1].Content)
 	}
 
 	// The author deleting the message does not undo the report.
@@ -174,7 +174,7 @@ func TestReportingNeedsToSeeTheMessageAndNeverRevealsOneYouCannot(t *testing.T) 
 	visible := f.a.send(f.author, f.channel, "mine")
 	wantStatus(t, "own message", f.report(f.author, visible, "spam", ""), http.StatusBadRequest)
 	wantStatus(t, "unknown category", f.report(f.reporter, visible, "rude", ""), http.StatusBadRequest)
-	wantStatus(t, "long note", f.report(f.reporter, visible, "spam", strings.Repeat("x", chat.MaxReportNote+1)), http.StatusBadRequest)
+	wantStatus(t, "long note", f.report(f.reporter, visible, "spam", strings.Repeat("x", reports.MaxReportNote+1)), http.StatusBadRequest)
 	wantStatus(t, "signed out", f.report(f.a.anon(), visible, "spam", ""), http.StatusUnauthorized)
 }
 
@@ -208,7 +208,7 @@ func TestReportsAreDeduplicatedClosedOnceAndDeletedOnlyWhenClosed(t *testing.T) 
 
 func TestFilingReportsIsLimited(t *testing.T) {
 	f := newReportsFixture(t)
-	for i := range chat.MaxOpenReportsPerMember {
+	for i := range reports.MaxOpenReportsPerMember {
 		_, err := f.a.db.Exec(context.Background(), `
 			INSERT INTO message_reports (reporter_id, message_id, channel_id, kind, category, snapshot)
 			VALUES ($1, gen_random_uuid(), $2, 'channel', 'spam', '{}')`, f.reporter.user.ID, f.channel)

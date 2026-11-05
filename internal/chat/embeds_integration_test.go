@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 )
 
@@ -14,9 +15,9 @@ func TestMessageEmbedsRoundTripAndCorruption(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
 	title := "Run"
-	id, err := messages.InsertMessage(ctx, f.p, nil, NewMessage{
+	id, err := messages.InsertMessage(ctx, f.p, nil, messages.NewMessage{
 		ChannelID: f.c.ID, UserID: f.u.ID, Content: "x", AuthorName: "CI",
-		Embeds: []Embed{{Title: title, Fields: []EmbedField{{Name: "n", Value: "v", Inline: true}}}},
+		Embeds: []core.Embed{{Title: title, Fields: []core.EmbedField{{Name: "n", Value: "v", Inline: true}}}},
 	}, nil)
 	if err != nil {
 		t.Fatal(err)

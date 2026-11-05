@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -28,15 +28,15 @@ func TestWebhookRoleMentionsFollowAllowedMentions(t *testing.T) {
 	h := makeHook(t, f.owner, ch, "alerts")
 	f.a.router.Webhooks.SetLimits(1000, 1000)
 
-	send := func(body map[string]any) chat.Message {
+	send := func(body map[string]any) core.Message {
 		t.Helper()
 		res := f.a.exec(h.path+"?wait=true", body, nil)
 		wantStatus(t, "execute", res, http.StatusOK)
-		var m chat.Message
+		var m core.Message
 		res.decode(t, &m)
 		return m
 	}
-	notified := func(m chat.Message) bool { return len(m.Mentions) == 1 && m.Mentions[0] == member.user.ID }
+	notified := func(m core.Message) bool { return len(m.Mentions) == 1 && m.Mentions[0] == member.user.ID }
 	am := func(v map[string]any) map[string]any {
 		return map[string]any{"content": "page @Oncall now", "allowed_mentions": v}
 	}
@@ -83,7 +83,7 @@ func TestWebhookRoleMentionSkipsMembersWhoCannotView(t *testing.T) {
 
 	res := f.a.exec(h.path+"?wait=true", map[string]any{"content": "@Oncall", "allowed_mentions": map[string]any{"parse": []string{"roles"}}}, nil)
 	wantStatus(t, "execute", res, http.StatusOK)
-	var m chat.Message
+	var m core.Message
 	res.decode(t, &m)
 	if len(m.Mentions) != 1 || m.Mentions[0] != f.insider.user.ID {
 		t.Fatalf("only the member who can view the channel is notified: %+v", m.Mentions)
@@ -101,7 +101,7 @@ func TestBotRoleMentionsFollowPolicyOnSendAndEdit(t *testing.T) {
 	assignRoles(t, f.owner, member, crew, locked)
 	path := botPath(f.open, "/messages")
 
-	send := func(content string, am map[string]any) chat.Message {
+	send := func(content string, am map[string]any) core.Message {
 		t.Helper()
 		body := map[string]any{"content": content}
 		if am != nil {
@@ -109,7 +109,7 @@ func TestBotRoleMentionsFollowPolicyOnSendAndEdit(t *testing.T) {
 		}
 		res := f.client.post(path, body)
 		wantStatus(t, "send", res, http.StatusCreated)
-		var m chat.Message
+		var m core.Message
 		res.decode(t, &m)
 		return m
 	}
@@ -128,7 +128,7 @@ func TestBotRoleMentionsFollowPolicyOnSendAndEdit(t *testing.T) {
 	// An edit sends no allowed_mentions: the role mention goes away.
 	res := f.client.patch(path+"/"+m.ID.String(), map[string]any{"content": "@Oncall again"})
 	wantStatus(t, "edit", res, http.StatusOK)
-	var edited chat.Message
+	var edited core.Message
 	res.decode(t, &edited)
 	if len(edited.MentionRoles) != 0 || len(edited.Mentions) != 0 {
 		t.Fatalf("edit kept or added a role mention: %+v", edited)

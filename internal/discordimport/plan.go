@@ -12,7 +12,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/textcut"
@@ -186,7 +187,7 @@ func (b *builder) structure(src []SrcChan) {
 	b.plan.Categories = make([]PlanCategory, 0, len(cats))
 	for _, c := range cats {
 		b.plan.Categories = append(b.plan.Categories, PlanCategory{
-			SourceID: string(c.ID), Name: cleanName(c.Name, chat.MaxChannelNameLen, "Category"),
+			SourceID: string(c.ID), Name: cleanName(c.Name, core.MaxChannelNameLen, "Category"),
 			Overwrites: b.overwrites(c.Overwrite),
 		})
 	}
@@ -255,15 +256,15 @@ func (b *builder) channel(c SrcChan, cat *PlanCategory) PlanChannel {
 	kind, ok := sourceTypeNames[c.Type]
 	if !ok {
 		pc.Type = ""
-		b.plan.Skipped = append(b.plan.Skipped, fmt.Sprintf("%s (Discord channel type %d has no counterpart)", cleanName(c.Name, chat.MaxChannelNameLen, "channel"), c.Type))
+		b.plan.Skipped = append(b.plan.Skipped, fmt.Sprintf("%s (Discord channel type %d has no counterpart)", cleanName(c.Name, core.MaxChannelNameLen, "channel"), c.Type))
 		return pc
 	}
 	pc.SourceType = kind
-	pc.Name = cleanName(c.Name, chat.MaxChannelNameLen, "channel")
+	pc.Name = cleanName(c.Name, core.MaxChannelNameLen, "channel")
 	pc.Type = b.targetType(kind, &pc)
 	pc.Topic = b.topic(c, &pc)
 	if pc.Type == "voice" || pc.Type == "stage" {
-		pc.UserLimit = min(max(c.UserLimit, 0), chat.MaxUserLimit)
+		pc.UserLimit = min(max(c.UserLimit, 0), channels.MaxUserLimit)
 	} else {
 		pc.SlowModeSeconds = slowMode(c.RateLimit, &pc)
 	}
@@ -304,11 +305,11 @@ func (b *builder) topic(c SrcChan, pc *PlanChannel) string {
 		return ""
 	}
 	t := strings.TrimSpace(*c.Topic)
-	if utf8.RuneCountInString(t) > chat.MaxTopicLen {
+	if utf8.RuneCountInString(t) > core.MaxTopicLen {
 		pc.Notes = append(pc.Notes, "the topic was shortened")
-		t = truncate(t, chat.MaxTopicLen)
+		t = truncate(t, core.MaxTopicLen)
 	}
-	if clean, err := httpx.CleanText("topic", t, chat.MaxTopicLen, false); err == nil {
+	if clean, err := httpx.CleanText("topic", t, core.MaxTopicLen, false); err == nil {
 		return clean
 	}
 	return ""
@@ -318,9 +319,9 @@ func slowMode(seconds int, pc *PlanChannel) int {
 	if seconds <= 0 {
 		return 0
 	}
-	if seconds > chat.MaxSlowModeSeconds {
-		pc.Notes = append(pc.Notes, fmt.Sprintf("slow mode is capped at %d seconds", chat.MaxSlowModeSeconds))
-		return chat.MaxSlowModeSeconds
+	if seconds > core.MaxSlowModeSeconds {
+		pc.Notes = append(pc.Notes, fmt.Sprintf("slow mode is capped at %d seconds", core.MaxSlowModeSeconds))
+		return core.MaxSlowModeSeconds
 	}
 	return seconds
 }

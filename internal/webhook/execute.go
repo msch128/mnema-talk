@@ -12,7 +12,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
@@ -132,7 +131,7 @@ type ExecutePayload struct {
 	// other hosts. Set the avatar on the webhook instead.
 	AvatarURL string `json:"avatar_url"`
 	// Embeds are rich cards (at most 10).
-	Embeds []chat.Embed `json:"embeds"`
+	Embeds []core.Embed `json:"embeds"`
 	// AllowedMentions limits who is notified. Default: members mentioned by
 	// @username are, @all and @here are not.
 	AllowedMentions *AllowedMentions `json:"allowed_mentions"`
@@ -197,7 +196,7 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (*record,
 // @Param wait query bool false "Answer 200 with the created message instead of 204."
 // @Param thread_id query string false "ID of a root message of the channel: the post becomes a reply in its thread." Format(uuid)
 // @Param payload body ExecutePayload true "Message to post. At least one of content, embeds or files."
-// @Success 200 {object} chat.Message "The created message (wait=true)."
+// @Success 200 {object} core.Message "The created message (wait=true)."
 // @Success 204 "Posted."
 // @Failure 400 {object} DiscordError "Invalid payload (50035) or empty message (50006)."
 // @Failure 401 {object} DiscordError "Invalid Webhook Token (50027)."
@@ -240,7 +239,7 @@ func (h *Handler) execute(w http.ResponseWriter, r *http.Request) {
 
 // post validates and stores the message. It returns the stored message, or nil
 // without an error when the message was stored but could not be read back.
-func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*chat.Message, error) {
+func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*core.Message, error) {
 	ctx := r.Context()
 	req, err := h.readRequest(w, r, rec.botUserID)
 	if err != nil {
@@ -281,26 +280,26 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*ch
 }
 
 // build validates a parsed request into a message and the mention policy.
-func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *request) (*chat.NewMessage, chat.MentionPolicy, error) {
+func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *request) (*messages.NewMessage, mentions.MentionPolicy, error) {
 	content, name, embeds, err := validatePayloadContent(rec, req)
 	if err != nil {
-		return nil, chat.MentionPolicy{}, err
+		return nil, mentions.MentionPolicy{}, err
 	}
 	parent, err := h.threadParent(ctx, r, rec)
 	if err != nil {
-		return nil, chat.MentionPolicy{}, err
+		return nil, mentions.MentionPolicy{}, err
 	}
 	policy, err := h.mentionPolicy(ctx, rec, req.payload.AllowedMentions)
 	if err != nil {
-		return nil, chat.MentionPolicy{}, err
+		return nil, mentions.MentionPolicy{}, err
 	}
-	return &chat.NewMessage{
+	return &messages.NewMessage{
 		ChannelID: rec.ChannelID, UserID: rec.botUserID, Content: content, ParentID: parent,
 		WebhookID: &rec.ID, AuthorName: name, Embeds: embeds,
 	}, policy, nil
 }
 
-func validatePayloadContent(rec *record, req *request) (string, string, []chat.Embed, error) {
+func validatePayloadContent(rec *record, req *request) (string, string, []core.Embed, error) {
 	p := req.payload
 	content, err := core.ValidateContent(p.Content, true)
 	if err != nil {
@@ -323,7 +322,7 @@ func validatePayloadContent(rec *record, req *request) (string, string, []chat.E
 	return content, name, embeds, nil
 }
 
-func isEmptyPayload(content string, embeds []chat.Embed, filesCount int) bool {
+func isEmptyPayload(content string, embeds []core.Embed, filesCount int) bool {
 	return content == "" && len(embeds) == 0 && filesCount == 0
 }
 

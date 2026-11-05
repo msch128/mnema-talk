@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -57,7 +57,7 @@ type Service struct {
 	Perms  *perm.Service
 	Events events.Publisher
 	// Online resolves @here in a scheduled message; nil means nobody is online.
-	Online chat.OnlineSource
+	Online mentions.OnlineSource
 	// Push is nil when Web Push is off.
 	Push Notifier
 	// Now is the clock; nil means time.Now.

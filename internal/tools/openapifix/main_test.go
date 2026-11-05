@@ -234,9 +234,7 @@ func assertFixedOperation(t *testing.T, op obj) {
 func TestChatSubPackageSchemasKeepTheChatPrefix(t *testing.T) {
 	doc := obj{"components": obj{"schemas": obj{
 		"core.Message":       obj{"properties": obj{"poll": obj{"$ref": "#/components/schemas/core.Poll"}}},
-		"chat.Message":       obj{"properties": obj{"poll": obj{"$ref": "#/components/schemas/chat.Poll"}}},
 		"core.Poll":          obj{"type": "object"},
-		"chat.Poll":          obj{"type": "object"},
 		"messages.Pin":       obj{"type": "string"},
 		"blocks.BlockedUser": obj{"type": "object"},
 	}}}
@@ -258,10 +256,10 @@ func TestChatSubPackageSchemasKeepTheChatPrefix(t *testing.T) {
 	}
 
 	clash := obj{"components": obj{"schemas": obj{
-		"core.Thing": obj{"type": "string"},
-		"chat.Thing": obj{"type": "integer"},
+		"core.Thing":     obj{"type": "string"},
+		"messages.Thing": obj{"type": "integer"},
 	}}}
 	if err := renameChatSchemas(clash); err == nil {
-		t.Error("two different schemas of one name were merged")
+		t.Error("two schemas of one name were merged")
 	}
 }

@@ -69,7 +69,7 @@ mnema-talk/
 │   ├── ssrf/                # Guard for outbound requests to member-chosen addresses (outgoing webhooks)
 │   ├── metrics/             # Prometheus counters (no client library), feed /api/metrics and the live operator view
 │   ├── webbundle/           # Build, sign and verify the desktop client's web bundle (Ed25519)
-│   ├── chat/                # Channels, categories, messages, replies, pins, edit history, members; direct messages, blocks, reports, saved messages, forwarding, thread follow, search
+│   ├── chat/                # Channels, categories, messages, replies, pins, edit history, members; direct messages, blocks, reports, saved messages, forwarding, thread follow, search. The root package only wires the handler; the code lives in `core` (model, lookups, permission guard), `mentions`, `readstate`, `messages`, `channels`, `dm`, `reports`, `search`, `forum`, `saved`, `talks`, `botapi`, `account`, `blocks` and `stage`
 │   ├── audit/               # Append-only audit log with per-entry visibility classes
 │   ├── emoji/               # Custom emoji: storage, serving, admin API
 │   ├── emojitext/           # How a custom emoji is written in message text
@@ -152,6 +152,8 @@ mnema-talk/
 
    **Size and complexity limits (Go)**: production `.go` files max 400 lines, `_test.go` files max 800, functions max 80 lines and cognitive complexity 15 (gocognit). Generated files (`Code generated ... DO NOT EDIT`) are exempt. File and function length are enforced by `internal/repo/limits_test.go`, complexity by `make complexity-check` (part of `make lint` and CI). Both keep a shrinking allowlist of old offenders: never add entries or raise a limit, refactor instead.
 
+   **Package size and layers (Go)**: a package has at most 30 production `.go` files (`TestPackagesStayWithinFileCount` in `internal/repo/limits_test.go`; its allowlist only shrinks). When a package outgrows that, split it by domain, not by file type: one sub-package per sub-domain with its own small `API` struct (see `internal/chat/blocks`), shared types in a low `core` package, and consumer-defined interfaces instead of importing a sibling. `internal/chat` is layered (`internal/repo/boundaries_test.go` holds the allowed-import table: a lower layer never imports a higher one and siblings never import each other; `internal/auth` has its table for the later split). A new sub-package must be added to that table in the same PR.
+
    **Size and complexity limits (TypeScript)**: the same numbers. Production `.ts`/`.vue` files in `web/src` max 400 lines, `*.test.ts`, `*.fixture.ts` and e2e specs max 800, functions max 80 lines (raw span, blanks and comments count, like the Go check) and cognitive complexity 15 (`eslint-plugin-sonarjs`). All enforced by ESLint (`web/eslint.config.ts`, part of `npm run lint` and CI; Vue SFC script blocks included; generated `types/rest.ts` and `third_party/` are exempt). There is no allowlist: never add an exemption or raise a limit, refactor instead.
    README screenshots (`doc/images/`) come from invented demo data only; regenerate them with `scripts/screenshots/run.sh` when the UI changes visibly, never from a real instance.
 4. **Migrations**: add a **new numbered file** in `internal/db/migrations/` (e.g. `0003_<name>.sql`). **Never edit a migration that has already been applied**; they are embedded and run in order at startup.
@@ -229,7 +231,7 @@ State persists edits, reactions…
 - `web/src/stores/chat.js` — 5 bug fixes, last fix today (bug magnet); 15 commits/90d
 - `internal/server/server.go` — 4 bug fixes, last fix today (bug magnet); 9 commits/90d
 - `internal/config/config.go` — 4 bug fixes, last fix today (bug magnet); 9 commits/90d
-- `internal/chat/messages.go` — 4 bug fixes, last fix today (bug magnet); 9 commits/90d
+- `internal/chat/messages/messages.go` — 4 bug fixes, last fix today (bug magnet); 9 commits/90d
 
 ### Code health
 Three co-equal signals: code health 7.52/10 avg (Good), hotspot health 5.86/10 (declining), worst `web/src/components/ChatArea.vue` at 1.75/10 · maintainability 8.15/10 · performance risk 17 open static performance findings. Detail: `get_health()`.

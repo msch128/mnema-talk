@@ -1,4 +1,4 @@
-package chat
+package account
 
 import "github.com/msch128/mnema-talk/internal/userdata"
 

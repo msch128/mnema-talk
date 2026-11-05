@@ -18,7 +18,7 @@ func TestFilingAReportReportsDatabaseFailures(t *testing.T) {
 	if err := f.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('reporter_one', 'Reporter', 'x') RETURNING id`).Scan(&reporter); err != nil {
 		t.Fatal(err)
 	}
-	nr := NewReport{Reporter: reporter, MessageID: f.m, Category: "spam"}
+	nr := reports.NewReport{Reporter: reporter, MessageID: f.m, Category: "spam"}
 
 	cases := map[string]struct {
 		views map[string]string

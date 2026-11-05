@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 // A handler built without a permission service (unit tests of other
@@ -13,20 +14,11 @@ import (
 func TestHandlerWithoutPermissionsLimitsNothing(t *testing.T) {
 	h := &Handler{}
 	r := httptest.NewRequest("GET", "/", nil)
-	cats := []Category{{ID: uuid.New(), Channels: []Channel{{ID: uuid.New()}}}}
-	uncat := []Channel{{ID: uuid.New()}}
+	cats := []core.Category{{ID: uuid.New(), Channels: []core.Channel{{ID: uuid.New()}}}}
+	uncat := []core.Channel{{ID: uuid.New()}}
 	gotCats, gotUncat, err := channels.VisibleHierarchy(h.Perms, r, cats, uncat)
 	if err != nil || len(gotCats) != 1 || len(gotCats[0].Channels) != 1 || len(gotUncat) != 1 {
 		t.Fatalf("hierarchy: %+v %+v %v", gotCats, gotUncat, err)
-	}
-	if visible, err := h.viewableChannels(r); err != nil || visible != nil {
-		t.Fatalf("viewable: %v %v", visible, err)
-	}
-	if err := h.requireCategory(r, uuid.New()); err != nil {
-		t.Fatal(err)
-	}
-	if err := h.require(r, uuid.New(), 1); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -34,7 +26,7 @@ func TestHandlerWithoutPermissionsLimitsNothing(t *testing.T) {
 // caller cannot view; callers who see everything get the stored total.
 func TestEnrichMembersSubtractsHiddenMessages(t *testing.T) {
 	a, b := uuid.New(), uuid.New()
-	members := []Member{{ID: a, MessageCount: 10}, {ID: b, MessageCount: 3}}
+	members := []core.Member{{ID: a, MessageCount: 10}, {ID: b, MessageCount: 3}}
 	got := enrichMembers(members, nil, nil, map[uuid.UUID]int64{a: 4, b: 5})
 	if got[0].MessageCount != 6 || got[1].MessageCount != 0 {
 		t.Fatalf("counts: %d %d", got[0].MessageCount, got[1].MessageCount)

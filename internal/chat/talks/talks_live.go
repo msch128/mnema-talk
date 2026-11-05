@@ -1,4 +1,4 @@
-package chat
+package talks
 
 import (
 	"context"
@@ -101,11 +101,11 @@ func (m *TalkManager) armLocked(ch uuid.UUID, t *liveTalk) {
 	if t.timer != nil {
 		t.timer.Stop()
 	}
-	t.timer = time.AfterFunc(m.EmptyGrace, func() { m.removeIfEmpty(ch) })
+	t.timer = time.AfterFunc(m.EmptyGrace, func() { m.RemoveIfEmpty(ch) })
 }
 
-// removeIfEmpty deletes the temporary Talk ch unless someone is in it.
-func (m *TalkManager) removeIfEmpty(ch uuid.UUID) {
+// RemoveIfEmpty deletes the temporary Talk ch unless someone is in it.
+func (m *TalkManager) RemoveIfEmpty(ch uuid.UUID) {
 	m.mu.Lock()
 	t := m.talks[ch]
 	if t == nil || len(t.members) > 0 {

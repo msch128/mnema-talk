@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -28,7 +28,7 @@ type Handler struct {
 	// Perms decides who manages webhooks; nil imposes no limits (tests).
 	Perms *perm.Service
 	// Online resolves @here for the mentions of a message.
-	Online chat.OnlineSource
+	Online mentions.OnlineSource
 	// PublicURL is the address in the URLs shown to the creator.
 	PublicURL string
 	// Outgoing delivers events to outgoing webhooks; Policy is the address

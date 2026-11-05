@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -96,8 +96,8 @@ func (e *env) exec(sql string, args ...any) {
 }
 
 // message is a new message of author in channel, as the hub publishes it.
-func message(author member, channel uuid.UUID, content string, mentions ...member) chat.Message {
-	m := chat.Message{
+func message(author member, channel uuid.UUID, content string, mentions ...member) core.Message {
+	m := core.Message{
 		ID: uuid.New(), ChannelID: channel, UserID: author.id, Username: author.name, DisplayName: "Display " + author.name,
 		Content: content, Mentions: []uuid.UUID{}, CreatedAt: time.Now(),
 	}
@@ -107,7 +107,7 @@ func message(author member, channel uuid.UUID, content string, mentions ...membe
 	return m
 }
 
-func (e *env) publish(msg chat.Message) { e.svc.Observe(msg.ChannelID, events.MessageCreate, msg) }
+func (e *env) publish(msg core.Message) { e.svc.Observe(msg.ChannelID, events.MessageCreate, msg) }
 
 // pushedTo waits until count requests reached the device path, and returns them.
 func (e *env) pushedTo(path string, count int) []received {

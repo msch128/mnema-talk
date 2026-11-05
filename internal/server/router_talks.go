@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -14,9 +14,9 @@ import (
 // hub's join/leave hook (next to the audit log's).
 func (c *components) newTalks() {
 	d := c.d
-	m := chat.NewTalkManager(&chat.TalkManager{
+	m := talks.NewTalkManager(&talks.TalkManager{
 		DB: d.DB, Events: c.pub, Perms: c.permSvc, Audit: c.auditLog, Voice: c.hub,
-		CreateLimit: httpx.NewRateLimiter(chat.TalksPerWindow, chat.TalkWindow).Named("talk_create"),
+		CreateLimit: httpx.NewRateLimiter(talks.TalksPerWindow, talks.TalkWindow).Named("talk_create"),
 	})
 	if d.Store != nil {
 		m.Objects = d.Store
@@ -24,7 +24,7 @@ func (c *components) newTalks() {
 	go m.Run(c.ctx)
 	c.hub.Lobby = m
 	audited := c.hub.Presence
-	calls := dm.NewDMCalls(&chat.DMCalls{DB: d.DB, Events: c.pub, Online: c.chatH.Online, Members: c.hub.VoiceMembers})
+	calls := dm.NewDMCalls(&dm.DMCalls{DB: d.DB, Events: c.pub, Online: c.chatH.Online, Members: c.hub.VoiceMembers})
 	go calls.Run(c.ctx)
 	c.hub.Presence = func(user, channel uuid.UUID, joined bool) {
 		if audited != nil {
@@ -35,5 +35,5 @@ func (c *components) newTalks() {
 	}
 	c.chatH.Calls = calls
 	c.chatH.Talks = m
-	c.chatH.TalkLimit = httpx.NewRateLimiter(chat.TalkRequestsPerMinute, time.Minute).Named("talk")
+	c.chatH.TalkLimit = httpx.NewRateLimiter(talks.TalkRequestsPerMinute, time.Minute).Named("talk")
 }

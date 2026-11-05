@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	chatdm "github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
@@ -34,7 +34,7 @@ func TestAGroupTakesMembersUpToTenAndEveryoneLeavesIt(t *testing.T) {
 		WITH extra AS (
 		    INSERT INTO users (username, display_name, password_hash)
 		    SELECT 'filler' || n, 'Filler ' || n, 'x' FROM generate_series(1, $2::int) n RETURNING id)
-		INSERT INTO dm_members (channel_id, user_id) SELECT $1, id FROM extra`, dm.ID, chat.MaxDMMembers-4); err != nil {
+		INSERT INTO dm_members (channel_id, user_id) SELECT $1, id FROM extra`, dm.ID, chatdm.MaxDMMembers-4); err != nil {
 		t.Fatal(err)
 	}
 	one := f.a.register(f.admin, "onetoomany")
@@ -84,7 +84,7 @@ func TestNobodyAddsAMemberWhoBlockedTheInviterOrClosedTheirDoor(t *testing.T) {
 
 func TestAMemberIsInAtMostOneHundredGroups(t *testing.T) {
 	f := newDMFixture(t, false)
-	for i := range chat.MaxGroupDMsPerMember {
+	for i := range chatdm.MaxGroupDMsPerMember {
 		if _, err := f.a.db.Exec(context.Background(), `
 			WITH c AS (INSERT INTO channels (number, name, type, dm_created_by) OVERRIDING SYSTEM VALUE
 			           VALUES (nextval('dm_number_seq'), '', 'dm', $2) RETURNING id)

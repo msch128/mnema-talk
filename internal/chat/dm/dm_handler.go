@@ -15,7 +15,7 @@ import (
 func (a *API) mountDMs(r chi.Router) {
 	r.Get("/dms", httpx.Handle(a.listDMs))
 	r.Get("/dms/{id}", httpx.Handle(a.getDM))
-	r.Delete("/dms/{id}/members/{user}", httpx.Handle(a.LeaveDM))
+	r.Delete("/dms/{id}/members/{user}", httpx.Handle(a.ServeLeaveDM))
 	r.Get("/users/me/privacy", httpx.Handle(a.getPrivacy))
 	r.Put("/users/me/privacy", httpx.Handle(a.setPrivacy))
 	a.mountDMPrefs(r)
@@ -279,7 +279,7 @@ func (a *API) announceAdded(dm DirectMessage, added uuid.UUID) {
 	a.Events.SendToUsers(others, events.DMMemberAdded, DMMemberChange{DMID: dm.ID, Member: joined})
 }
 
-// LeaveDM handles DELETE /api/dms/{id}/members/@me.
+// ServeLeaveDM handles DELETE /api/dms/{id}/members/@me.
 //
 // @Summary Leave a group direct message
 // @Description Takes the caller out of a group conversation; they lose its history. When nobody is left the conversation and its messages and attachments are deleted. A conversation with one other person cannot be left (400): block the person instead. Sends dm_member_removed to the remaining members and the leaver's sessions.
@@ -296,7 +296,7 @@ func (a *API) announceAdded(dm DirectMessage, added uuid.UUID) {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/dms/{id}/members/{user} [delete]
-func (a *API) LeaveDM(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeLeaveDM(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err

@@ -20,11 +20,26 @@ const (
 	maxSourceLines = 400
 	maxTestLines   = 800
 	maxFuncLines   = 80
+	// maxPackageFiles is the soft cap of production files per package
+	// directory: a few cohesive types, about four times the median package.
+	maxPackageFiles = 30
 )
 
 // funcLengthAllowlist lists functions that still exceed maxFuncLines. It only
 // shrinks (entries are "directory function"): the test fails when an entry no longer needs to be listed.
 var funcLengthAllowlist = map[string]bool{}
+
+// packageFileAllowlist lists the package directories that still have more than
+// maxPackageFiles production files, with their current count and the reason.
+// It only shrinks: the test fails when an entry is within the cap, or grew.
+// Raising the cap or adding an entry needs an explicit decision, like the
+// coverage gates.
+var packageFileAllowlist = map[string]int{
+	"internal/sfu":             46, // one responsibility: Room, per-viewer forwarding, layers, NACK, BWE (never split the fan-out)
+	"internal/communityevents": 32, // model/store/handler/scheduler are cyclic until four edges are inverted
+	"internal/ws":              31, // one Hub with its client, voice, stage, perms and presence
+	"internal/auth":            48, // auth core: login, sessions, 2FA, step-up and the User context are one trust boundary
+}
 
 var generatedHeader = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)
 
@@ -141,6 +156,35 @@ func TestGoFunctionsStayWithinLengthLimit(t *testing.T) {
 	for key := range funcLengthAllowlist {
 		if !seen[key] {
 			t.Errorf("%s is within the limit now: remove it from funcLengthAllowlist", key)
+		}
+	}
+}
+
+// TestPackagesStayWithinFileCount keeps a package from becoming a god package:
+// split it by domain (see "Package size and layers" in AGENTS.md).
+func TestPackagesStayWithinFileCount(t *testing.T) {
+	root := repoRoot(t)
+	counts := map[string]int{}
+	for _, rel := range goFiles(t, root) {
+		if strings.HasSuffix(rel, "_test.go") {
+			continue
+		}
+		counts[filepath.ToSlash(filepath.Dir(rel))]++
+	}
+	for dir, n := range counts {
+		allowed, listed := packageFileAllowlist[dir]
+		switch {
+		case n > maxPackageFiles && !listed:
+			t.Errorf("%s has %d production files, the cap is %d: split it by domain", dir, n, maxPackageFiles)
+		case listed && n > allowed:
+			t.Errorf("%s grew to %d production files (allowlisted at %d): split it instead", dir, n, allowed)
+		}
+	}
+	for dir, allowed := range packageFileAllowlist {
+		if counts[dir] <= maxPackageFiles {
+			t.Errorf("%s is within the cap now (%d files): remove it from packageFileAllowlist", dir, counts[dir])
+		} else if counts[dir] < allowed {
+			t.Errorf("%s shrank to %d files: lower its packageFileAllowlist entry from %d", dir, counts[dir], allowed)
 		}
 	}
 }

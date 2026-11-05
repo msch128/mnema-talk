@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
@@ -29,15 +30,15 @@ func TestReadStatesCountAMessageAddressedSeveralWaysOnce(t *testing.T) {
 	}
 	// f.m is the member's own message; the other author replies to it and
 	// mentions the member by name and through the role.
-	reply, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: other, Content: "@coverage_member @rs-team", ReplyToID: &f.m})
+	reply, err := messages.CreateMessage(ctx, f.p, messages.NewMessage{ChannelID: f.c.ID, UserID: other, Content: "@coverage_member @rs-team", ReplyToID: &f.m})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: other, Content: "plain"}); err != nil {
+	if _, err := messages.CreateMessage(ctx, f.p, messages.NewMessage{ChannelID: f.c.ID, UserID: other, Content: "plain"}); err != nil {
 		t.Fatal(err)
 	}
-	set := MentionSet{
-		Users: []MentionedUser{{ID: f.u.ID, Kind: MentionKindName}, {ID: f.u.ID, Kind: MentionKindRole}},
+	set := mentions.MentionSet{
+		Users: []mentions.MentionedUser{{ID: f.u.ID, Kind: core.MentionKindName}, {ID: f.u.ID, Kind: core.MentionKindRole}},
 		Roles: []uuid.UUID{role},
 	}
 	if err := mentions.SaveMentionSet(ctx, f.p, reply, set); err != nil {

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -27,11 +27,11 @@ type candidate struct {
 	// message in it is meant for the member (not just a mention), and a
 	// mute still silences it.
 	dm           bool
-	channelLevel chat.NotifySetting
-	categoryLvl  chat.NotifySetting
+	channelLevel readstate.NotifySetting
+	categoryLvl  readstate.NotifySetting
 	// serverLvl is the member's server-wide default (never applied to a
 	// conversation); suppressAll ignores @all and @here.
-	serverLvl   chat.NotifySetting
+	serverLvl   readstate.NotifySetting
 	suppressAll bool
 	// silenced is set for a conversation when the member muted all direct
 	// messages and the conversation has no setting of its own: nothing is
@@ -98,7 +98,7 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 		}
 		c.channelLevel.Level, c.categoryLvl.Level, c.serverLvl.Level = levelOf(chLevel), levelOf(catLevel), levelOf(srvLevel)
 		if c.dm {
-			c.serverLvl, c.suppressAll = chat.NotifySetting{}, false
+			c.serverLvl, c.suppressAll = readstate.NotifySetting{}, false
 			c.silenced = muteAll && !c.channelLevel.Decides(c.now)
 		}
 		out = append(out, c)
@@ -106,18 +106,18 @@ func loadCandidates(ctx context.Context, q db.Querier, channelID, authorID uuid.
 	return out, rows.Err()
 }
 
-func levelOf(stored *string) chat.NotifyLevel {
+func levelOf(stored *string) readstate.NotifyLevel {
 	if stored == nil {
-		return chat.NotifyInherit
+		return readstate.NotifyInherit
 	}
-	return chat.NotifyLevel(*stored)
+	return readstate.NotifyLevel(*stored)
 }
 
 // mention reports whether msg counts as addressed to the member for the
 // notification level: a mention or reply, or any message of a conversation.
 // A member who suppresses @all and @here is only mentioned by name, through a
 // role or as a reply (byName, see namedMentions).
-func (c candidate) mention(msg chat.Message, byName map[uuid.UUID]bool) bool {
+func (c candidate) mention(msg core.Message, byName map[uuid.UUID]bool) bool {
 	if c.suppressAll {
 		return c.dm || addressed(msg, c.userID, byName)
 	}
@@ -139,11 +139,11 @@ func (c candidate) wants(mention, addressed bool) bool {
 		return false
 	}
 	switch readstate.ResolveNotify(c.now, c.channelLevel, c.categoryLvl, c.serverLvl) {
-	case chat.NotifyAll:
+	case readstate.NotifyAll:
 		return true
-	case chat.NotifyMentions:
+	case readstate.NotifyMentions:
 		return mention
-	case chat.NotifyMute:
+	case readstate.NotifyMute:
 		return addressed
 	}
 	return false
@@ -175,7 +175,7 @@ func threadAudience(ctx context.Context, q db.Querier, thread *uuid.UUID) (follo
 // role (not through @all or @here). When the stored mentions cannot be read
 // nobody counts as addressed, so a mute stays silent.
 func namedMentions(ctx context.Context, q db.Querier, messageID uuid.UUID) map[uuid.UUID]bool {
-	rows, err := q.Query(ctx, `SELECT user_id FROM message_mentions WHERE message_id = $1 AND kind <> $2`, messageID, chat.MentionKindGroup)
+	rows, err := q.Query(ctx, `SELECT user_id FROM message_mentions WHERE message_id = $1 AND kind <> $2`, messageID, core.MentionKindGroup)
 	if err != nil {
 		slog.Warn("push: load mentions", "err", err)
 		return nil

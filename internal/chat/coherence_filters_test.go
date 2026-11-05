@@ -12,16 +12,16 @@ import (
 
 func TestSearchHasPollEditAndIsPinned(t *testing.T) {
 	for has, want := range map[string]string{"poll": "FROM polls", "edit": "m.is_edited"} {
-		sql, _, err := search.BuildSearchSQL(SearchQuery{Has: has, Limit: 5})
+		sql, _, err := search.BuildSearchSQL(search.SearchQuery{Has: has, Limit: 5})
 		if err != nil || !strings.Contains(sql, want) {
 			t.Errorf("has=%s: %v %s", has, err, sql)
 		}
 	}
-	sql, _, err := search.BuildSearchSQL(SearchQuery{Is: "pinned", Limit: 5})
+	sql, _, err := search.BuildSearchSQL(search.SearchQuery{Is: "pinned", Limit: 5})
 	if err != nil || !strings.Contains(sql, "m.is_pinned") {
 		t.Errorf("is=pinned alone is a criterion: %v %s", err, sql)
 	}
-	if _, _, err := search.BuildSearchSQL(SearchQuery{Is: "unread", Limit: 5}); err == nil {
+	if _, _, err := search.BuildSearchSQL(search.SearchQuery{Is: "unread", Limit: 5}); err == nil {
 		t.Error("an unknown is value was accepted")
 	}
 }

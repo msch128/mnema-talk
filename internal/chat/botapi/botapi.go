@@ -1,4 +1,4 @@
-package chat
+package botapi
 
 import (
 	"context"
@@ -25,17 +25,17 @@ const intentGuildMembers = 1 << 1
 // must already apply). They reuse the member handlers, so the permission
 // checks are the same ones, decided for the bot's roles and overwrites.
 // send wraps the routes that post messages (the per-channel send limit).
-func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
-	r.Get("/channels", httpx.HandleDiscord(h.botListChannels))
-	r.Get("/channels/{channelID}/messages", httpx.HandleDiscord(h.botListMessages))
-	r.Get("/channels/{channelID}/messages/{messageID}", httpx.HandleDiscord(h.botGetMessage))
-	r.With(send).Post("/channels/{channelID}/messages", httpx.HandleDiscord(h.botCreateMessage))
-	r.Patch("/channels/{channelID}/messages/{messageID}", httpx.HandleDiscord(h.botEditMessage))
-	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.HandleDiscord(h.botDeleteMessage))
-	r.Put("/channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me", httpx.HandleDiscord(h.botAddReaction))
-	r.Delete("/channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me", httpx.HandleDiscord(h.botRemoveReaction))
-	r.Get("/members", httpx.HandleDiscord(h.botListMembers))
-	r.Get("/members/{userID}", httpx.HandleDiscord(h.botGetMember))
+func (a *API) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
+	r.Get("/channels", httpx.HandleDiscord(a.botListChannels))
+	r.Get("/channels/{channelID}/messages", httpx.HandleDiscord(a.botListMessages))
+	r.Get("/channels/{channelID}/messages/{messageID}", httpx.HandleDiscord(a.botGetMessage))
+	r.With(send).Post("/channels/{channelID}/messages", httpx.HandleDiscord(a.botCreateMessage))
+	r.Patch("/channels/{channelID}/messages/{messageID}", httpx.HandleDiscord(a.botEditMessage))
+	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.HandleDiscord(a.botDeleteMessage))
+	r.Put("/channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me", httpx.HandleDiscord(a.botAddReaction))
+	r.Delete("/channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me", httpx.HandleDiscord(a.botRemoveReaction))
+	r.Get("/members", httpx.HandleDiscord(a.botListMembers))
+	r.Get("/members/{userID}", httpx.HandleDiscord(a.botGetMember))
 }
 
 // botListChannels handles GET /api/bot/v1/channels.
@@ -46,13 +46,13 @@ func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
 // @Tags Bot API
 // @Produce json
 // @Security botAuth
-// @Success 200 {object} ChannelHierarchy "Visible categories and channels."
+// @Success 200 {object} channels.ChannelHierarchy "Visible categories and channels."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels [get]
-func (h *Handler) botListChannels(w http.ResponseWriter, r *http.Request) error {
-	return h.channels().ListChannels(w, r)
+func (a *API) botListChannels(w http.ResponseWriter, r *http.Request) error {
+	return a.Channels.ListChannels(w, r)
 }
 
 // botListMessages handles GET /api/bot/v1/channels/{channelID}/messages.
@@ -68,15 +68,15 @@ func (h *Handler) botListChannels(w http.ResponseWriter, r *http.Request) error 
 // @Param before query string false "Messages older than this message." Format(uuid)
 // @Param after query string false "Messages newer than this message." Format(uuid)
 // @Param around query string false "Messages around (and including) this message." Format(uuid)
-// @Success 200 {array} Message "A page of messages."
+// @Success 200 {array} core.Message "A page of messages."
 // @Failure 400 {object} httpx.DiscordError "Invalid form body (50035)."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
 // @Failure 404 {object} httpx.DiscordError "Unknown Channel (10003) or Unknown Message (10008)."
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages [get]
-func (h *Handler) botListMessages(w http.ResponseWriter, r *http.Request) error {
-	return h.messages().ListMessages(w, r)
+func (a *API) botListMessages(w http.ResponseWriter, r *http.Request) error {
+	return a.Messages.ListMessages(w, r)
 }
 
 // botGetMessage handles GET /api/bot/v1/channels/{channelID}/messages/{messageID}.
@@ -89,22 +89,22 @@ func (h *Handler) botListMessages(w http.ResponseWriter, r *http.Request) error 
 // @Security botAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param messageID path string true "Message ID." Format(uuid)
-// @Success 200 {object} Message "The message."
+// @Success 200 {object} core.Message "The message."
 // @Failure 400 {object} httpx.DiscordError "Invalid form body (50035)."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
 // @Failure 404 {object} httpx.DiscordError "Unknown Channel (10003) or Unknown Message (10008)."
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages/{messageID} [get]
-func (h *Handler) botGetMessage(w http.ResponseWriter, r *http.Request) error {
-	msgID, ref, err := h.messages().MessageInChannel(r)
+func (a *API) botGetMessage(w http.ResponseWriter, r *http.Request) error {
+	msgID, ref, err := a.Messages.MessageInChannel(r)
 	if err != nil {
 		return err
 	}
-	if err := h.require(r, ref.ChannelID, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, ref.ChannelID, perm.ViewChannel); err != nil {
 		return core.NotFoundUnlessFailure(err)
 	}
-	msg, err := messages.GetMessage(r.Context(), h.DB, msgID)
+	msg, err := messages.GetMessage(r.Context(), a.DB, msgID)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ type BotCreateMessageRequest struct {
 	// Content is the message text (Markdown), at most 4000 characters.
 	Content string `json:"content" maxLength:"4000"`
 	// Embeds are rich cards (at most 10).
-	Embeds []Embed `json:"embeds"`
+	Embeds []core.Embed `json:"embeds"`
 	// AllowedMentions limits who is notified. Default: members mentioned by
 	// @username are, @all and @here are not.
 	AllowedMentions *BotAllowedMentions `json:"allowed_mentions"`
@@ -150,7 +150,7 @@ type BotCreateMessageRequest struct {
 
 type rawBotMessage struct {
 	Content          string               `json:"content"`
-	Embeds           []InEmbed            `json:"embeds"`
+	Embeds           []messages.InEmbed   `json:"embeds"`
 	AllowedMentions  *BotAllowedMentions  `json:"allowed_mentions"`
 	MessageReference *BotMessageReference `json:"message_reference"`
 	ParentID         *uuid.UUID           `json:"parent_id"`
@@ -198,7 +198,7 @@ func decodeRawBotMessage(w http.ResponseWriter, r *http.Request) (*rawBotMessage
 
 // ValidateBotMessage checks the content and embeds a bot sends (a message or
 // a response to a command): the same rules, one message needs one of them.
-func ValidateBotMessage(rawContent string, rawEmbeds []InEmbed) (string, []Embed, error) {
+func ValidateBotMessage(rawContent string, rawEmbeds []messages.InEmbed) (string, []core.Embed, error) {
 	content, err := core.ValidateContent(rawContent, true)
 	if err != nil {
 		return "", nil, err
@@ -213,7 +213,7 @@ func ValidateBotMessage(rawContent string, rawEmbeds []InEmbed) (string, []Embed
 	return content, embeds, nil
 }
 
-func validateBotPayload(req *rawBotMessage) (string, []Embed, *uuid.UUID, error) {
+func validateBotPayload(req *rawBotMessage) (string, []core.Embed, *uuid.UUID, error) {
 	content, embeds, err := ValidateBotMessage(req.Content, req.Embeds)
 	if err != nil {
 		return "", nil, nil, err
@@ -235,8 +235,8 @@ func validateBotPayload(req *rawBotMessage) (string, []Embed, *uuid.UUID, error)
 // @Produce json
 // @Security botAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
-// @Param payload body BotCreateMessageRequest true "Message to post."
-// @Success 201 {object} Message "The created message."
+// @Param payload body botapi.BotCreateMessageRequest true "Message to post."
+// @Success 201 {object} core.Message "The created message."
 // @Failure 400 {object} httpx.DiscordError "Invalid form body (50035) or empty message (50006)."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
 // @Failure 403 {object} httpx.DiscordError "Missing Permissions (50013)."
@@ -244,13 +244,13 @@ func validateBotPayload(req *rawBotMessage) (string, []Embed, *uuid.UUID, error)
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages [post]
-func (h *Handler) botCreateMessage(w http.ResponseWriter, r *http.Request) error {
+func (a *API) botCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return err
 	}
-	snap, p, err := CheckBotSend(r.Context(), h.Perms, h.DB, user, chID)
+	snap, p, err := CheckBotSend(r.Context(), a.Guard.Perms, a.DB, user, chID)
 	if err != nil {
 		return err
 	}
@@ -262,17 +262,17 @@ func (h *Handler) botCreateMessage(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	if err := messages.ValidateTarget(r.Context(), h.DB, chID, req.ParentID, reply); err != nil {
+	if err := messages.ValidateTarget(r.Context(), a.DB, chID, req.ParentID, reply); err != nil {
 		return err
 	}
 	ctx := mentions.WithMentionPolicy(r.Context(), botMentionPolicy(snap, chID, p, req.AllowedMentions))
-	id, err := messages.InsertMessage(ctx, h.DB, h.Online, NewMessage{
+	id, err := messages.InsertMessage(ctx, a.DB, a.Online, messages.NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: reply, Embeds: embeds,
 	}, nil)
 	if err != nil {
 		return err
 	}
-	return messages.PublishMessage(w, r, h.DB, h.Events, id)
+	return messages.PublishMessage(w, r, a.DB, a.Events, id)
 }
 
 func parseAllowedUsers(rawIDs []string) []uuid.UUID {
@@ -285,7 +285,7 @@ func parseAllowedUsers(rawIDs []string) []uuid.UUID {
 	return ids
 }
 
-func applyAllowedMentions(policy *MentionPolicy, am *BotAllowedMentions) {
+func applyAllowedMentions(policy *mentions.MentionPolicy, am *BotAllowedMentions) {
 	if am == nil {
 		return
 	}
@@ -299,8 +299,8 @@ func applyAllowedMentions(policy *MentionPolicy, am *BotAllowedMentions) {
 // botMentionPolicy is the mention policy of a bot's message: what the bot may
 // do in the channel (p), narrowed by its allowed_mentions. The request can
 // only narrow the permissions, never widen them.
-func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllowedMentions) MentionPolicy {
-	policy := MentionPolicy{
+func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllowedMentions) mentions.MentionPolicy {
+	policy := mentions.MentionPolicy{
 		NoEveryone: true,
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) },
 	}
@@ -326,8 +326,8 @@ func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllo
 // @Security botAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param messageID path string true "Message ID." Format(uuid)
-// @Param request body EditMessageRequest true "New content."
-// @Success 200 {object} Message "The updated message."
+// @Param request body messages.EditMessageRequest true "New content."
+// @Success 200 {object} core.Message "The updated message."
 // @Failure 400 {object} httpx.DiscordError "Invalid form body (50035)."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
 // @Failure 403 {object} httpx.DiscordError "Missing Permissions (50013), or not the bot's own message."
@@ -335,15 +335,15 @@ func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllo
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages/{messageID} [patch]
-func (h *Handler) botEditMessage(w http.ResponseWriter, r *http.Request) error {
-	return h.messages().EditMessageWith(w, r, h.botEditContext)
+func (a *API) botEditMessage(w http.ResponseWriter, r *http.Request) error {
+	return a.Messages.EditMessageWith(w, r, a.botEditContext)
 }
 
 // botEditContext is the mention context of a bot's edit: the policy of its
 // sends (botMentionPolicy), so an edit never reaches more than a send does.
-func (h *Handler) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
+func (a *API) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
 	user := auth.UserFrom(r.Context())
-	snap, p, err := ChannelPermsOf(r.Context(), h.Perms, user, ch)
+	snap, p, err := ChannelPermsOf(r.Context(), a.Guard.Perms, user, ch)
 	if err != nil {
 		return nil, err
 	}
@@ -370,6 +370,6 @@ func (h *Handler) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages/{messageID} [delete]
-func (h *Handler) botDeleteMessage(w http.ResponseWriter, r *http.Request) error {
-	return h.messages().DeleteMessage(w, r)
+func (a *API) botDeleteMessage(w http.ResponseWriter, r *http.Request) error {
+	return a.Messages.DeleteMessage(w, r)
 }

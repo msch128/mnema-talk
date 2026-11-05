@@ -5,37 +5,37 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 var noon = time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
 
-func settingOf(level chat.NotifyLevel, until *time.Time) chat.NotifySetting {
-	return chat.NotifySetting{Level: level, MutedUntil: until}
+func settingOf(level readstate.NotifyLevel, until *time.Time) readstate.NotifySetting {
+	return readstate.NotifySetting{Level: level, MutedUntil: until}
 }
 
 func TestEffectiveNotificationLevelDecidesWhoIsTold(t *testing.T) {
 	later, earlier := noon.Add(time.Hour), noon.Add(-time.Hour)
-	inherit := settingOf(chat.NotifyInherit, nil)
+	inherit := settingOf(readstate.NotifyInherit, nil)
 	cases := []struct {
 		name              string
-		channel, category chat.NotifySetting
+		channel, category readstate.NotifySetting
 		presence          string
 		// plain: an ordinary message; atAll: @all or @here; addressed: a mention by name or role, or a reply.
 		plain, atAll, addressed bool
 	}{
 		{"nothing set means all messages", inherit, inherit, "online", true, true, true},
-		{"mentions only", settingOf(chat.NotifyMentions, nil), inherit, "online", false, true, true},
-		{"muted lets only what is addressed to the member through", settingOf(chat.NotifyMute, nil), inherit, "online", false, false, true},
-		{"muted for an hour", settingOf(chat.NotifyMute, &later), inherit, "online", false, false, true},
-		{"the mute ran out", settingOf(chat.NotifyMute, &earlier), inherit, "online", true, true, true},
-		{"the category decides when the channel does not", inherit, settingOf(chat.NotifyMentions, nil), "online", false, true, true},
-		{"the channel overrides a muted category", settingOf(chat.NotifyAll, nil), settingOf(chat.NotifyMute, nil), "online", true, true, true},
-		{"do not disturb silences everything, a mute or not", settingOf(chat.NotifyMute, nil), inherit, "dnd", false, false, false},
-		{"focus silences everything", settingOf(chat.NotifyAll, nil), inherit, "focus", false, false, false},
-		{"away still gets pushes", settingOf(chat.NotifyAll, nil), inherit, "away", true, true, true},
+		{"mentions only", settingOf(readstate.NotifyMentions, nil), inherit, "online", false, true, true},
+		{"muted lets only what is addressed to the member through", settingOf(readstate.NotifyMute, nil), inherit, "online", false, false, true},
+		{"muted for an hour", settingOf(readstate.NotifyMute, &later), inherit, "online", false, false, true},
+		{"the mute ran out", settingOf(readstate.NotifyMute, &earlier), inherit, "online", true, true, true},
+		{"the category decides when the channel does not", inherit, settingOf(readstate.NotifyMentions, nil), "online", false, true, true},
+		{"the channel overrides a muted category", settingOf(readstate.NotifyAll, nil), settingOf(readstate.NotifyMute, nil), "online", true, true, true},
+		{"do not disturb silences everything, a mute or not", settingOf(readstate.NotifyMute, nil), inherit, "dnd", false, false, false},
+		{"focus silences everything", settingOf(readstate.NotifyAll, nil), inherit, "focus", false, false, false},
+		{"away still gets pushes", settingOf(readstate.NotifyAll, nil), inherit, "away", true, true, true},
 	}
 	for _, c := range cases {
 		cand := candidate{presence: c.presence, channelLevel: c.channel, categoryLvl: c.category, now: noon}

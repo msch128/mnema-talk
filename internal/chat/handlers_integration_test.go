@@ -33,18 +33,18 @@ func TestMain(m *testing.M) { os.Exit(testutil.Main(m)) }
 type chatFixture struct {
 	p *db.Pool
 	u *auth.User
-	c *Channel
+	c *core.Channel
 	m uuid.UUID
 }
 
 func newChatFixture(t *testing.T) chatFixture {
 	t.Helper()
 	p, u := chattest.NewMember(t)
-	c, err := channels.CreateChannelWithStage(context.Background(), p, nil, "coverage-chat", ChannelTypeText, "", 0, false)
+	c, err := channels.CreateChannelWithStage(context.Background(), p, nil, "coverage-chat", core.ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m, err := messages.CreateMessage(context.Background(), p, NewMessage{ChannelID: c.ID, UserID: u.ID, Content: "hello world"})
+	m, err := messages.CreateMessage(context.Background(), p, messages.NewMessage{ChannelID: c.ID, UserID: u.ID, Content: "hello world"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,11 +65,11 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 		{"hierarchy", func() error { _, _, e := channels.GetServerHierarchy(ctx, f.p); return e }},
 		{"category creation", func() error { _, e := channels.CreateCategory(ctx, f.p, "new", 0); return e }},
 		{"channel category check", func() error {
-			_, e := channels.CreateChannelWithStage(ctx, f.p, &f.c.ID, "new", ChannelTypeText, "", 0, false)
+			_, e := channels.CreateChannelWithStage(ctx, f.p, &f.c.ID, "new", core.ChannelTypeText, "", 0, false)
 			return e
 		}},
 		{"channel creation", func() error {
-			_, e := channels.CreateChannelWithStage(ctx, f.p, nil, "new", ChannelTypeText, "", 0, false)
+			_, e := channels.CreateChannelWithStage(ctx, f.p, nil, "new", core.ChannelTypeText, "", 0, false)
 			return e
 		}},
 		{"category deletion", func() error { return channels.DeleteCategory(ctx, f.p, f.c.ID) }},
@@ -82,23 +82,26 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 		{"resolve mentions", func() error { _, e := mentions.ResolveMentionSet(ctx, f.p, "@all", f.u.ID, nil); return e }},
 		{"clear mentions", func() error { return mentions.SaveMentionSet(ctx, f.p, f.m, byName(nil)) }},
 		{"record mentions", func() error { return mentions.RecordMentions(ctx, f.p, nil, f.m, f.u.ID, "@all") }},
-		{"messages", func() error { _, e := messages.GetChannelMessages(ctx, f.p, f.c.ID, HistoryQuery{Limit: 2}); return e }},
+		{"messages", func() error {
+			_, e := messages.GetChannelMessages(ctx, f.p, f.c.ID, core.HistoryQuery{Limit: 2})
+			return e
+		}},
 		{"messages around", func() error {
-			_, e := messages.GetChannelMessages(ctx, f.p, f.c.ID, HistoryQuery{Limit: 2, Around: &f.m})
+			_, e := messages.GetChannelMessages(ctx, f.p, f.c.ID, core.HistoryQuery{Limit: 2, Around: &f.m})
 			return e
 		}},
 		{"messages before", func() error {
-			_, e := messages.GetChannelMessages(ctx, f.p, f.c.ID, HistoryQuery{Limit: 2, Before: &f.m})
+			_, e := messages.GetChannelMessages(ctx, f.p, f.c.ID, core.HistoryQuery{Limit: 2, Before: &f.m})
 			return e
 		}},
 		{"thread before", func() error {
-			_, e := messages.GetThreadReplies(ctx, f.p, f.m, HistoryQuery{Limit: 2, Before: &f.m})
+			_, e := messages.GetThreadReplies(ctx, f.p, f.m, core.HistoryQuery{Limit: 2, Before: &f.m})
 			return e
 		}},
 		{"message number", func() error { _, e := messages.GetMessageByNumber(ctx, f.p, 1); return e }},
 		{"message", func() error { _, e := messages.GetMessage(ctx, f.p, f.m); return e }},
 		{"insert", func() error {
-			_, e := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID})
+			_, e := messages.CreateMessage(ctx, f.p, messages.NewMessage{ChannelID: f.c.ID, UserID: f.u.ID})
 			return e
 		}},
 		{"collect keys", func() error {
@@ -107,7 +110,10 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 		}},
 		{"reaction summary", func() error { _, e := messages.ReactionSummary(ctx, f.p, f.m); return e }},
 		{"read states", func() error { _, e := readstate.GetReadStates(ctx, f.p, f.u); return e }},
-		{"search", func() error { _, _, e := search.Search(ctx, f.p, SearchQuery{Text: "hello", Limit: 2}); return e }},
+		{"search", func() error {
+			_, _, e := search.Search(ctx, f.p, search.SearchQuery{Text: "hello", Limit: 2})
+			return e
+		}},
 		{"publish", func() error {
 			return messages.PublishMessage(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil).WithContext(ctx), f.p, &events.Recorder{}, f.m)
 		}},
@@ -125,7 +131,7 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 		func() error { _, e := channels.DuplicateChannel(ctx, f.p, f.c.ID); return e },
 		func() error { return channels.ApplyLayout(ctx, f.p, nil, nil) },
 		func() error {
-			_, e := messages.InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID}, nil)
+			_, e := messages.InsertMessage(ctx, f.p, nil, messages.NewMessage{ChannelID: f.c.ID, UserID: f.u.ID}, nil)
 			return e
 		},
 		func() error { return messages.EditMessage(ctx, f.p, nil, f.m, f.u.ID, "changed") },
@@ -151,7 +157,7 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		name string
 		fn   handler
 	}{
-		{"list messages", h.messages().ListMessages}, {"create message", h.messages().CreateMessage}, {"edit message", h.messages().EditMessage}, {"delete message", h.messages().DeleteMessage}, {"toggle reaction", h.messages().ToggleReaction}, {"thread", h.messages().GetThread}, {"delete category", h.channels().DeleteCategory}, {"delete channel", h.channels().DeleteChannel}, {"duplicate channel", h.channels().DuplicateChannel}, {"update channel", h.channels().UpdateChannel}, {"rename category", h.channels().RenameCategory},
+		{"list messages", h.messages().ListMessages}, {"create message", h.messages().ServeCreateMessage}, {"edit message", h.messages().ServeEditMessage}, {"delete message", h.messages().DeleteMessage}, {"toggle reaction", h.messages().ToggleReaction}, {"thread", h.messages().GetThread}, {"delete category", h.channels().ServeDeleteCategory}, {"delete channel", h.channels().ServeDeleteChannel}, {"duplicate channel", h.channels().ServeDuplicateChannel}, {"update channel", h.channels().UpdateChannel}, {"rename category", h.channels().ServeRenameCategory},
 	}
 	for _, c := range pathHandlers {
 		t.Run(c.name+" invalid path", func(t *testing.T) {
@@ -162,7 +168,7 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		name string
 		fn   handler
 	}{
-		{"create message", h.messages().CreateMessage}, {"edit message", h.messages().EditMessage}, {"reaction", h.messages().ToggleReaction}, {"create category", h.channels().CreateCategory}, {"create channel", h.channels().CreateChannel}, {"update channel", h.channels().UpdateChannel}, {"rename category", h.channels().RenameCategory}, {"layout", h.channels().ApplyLayout},
+		{"create message", h.messages().ServeCreateMessage}, {"edit message", h.messages().ServeEditMessage}, {"reaction", h.messages().ToggleReaction}, {"create category", h.channels().ServeCreateCategory}, {"create channel", h.channels().CreateChannel}, {"update channel", h.channels().UpdateChannel}, {"rename category", h.channels().ServeRenameCategory}, {"layout", h.channels().ServeApplyLayout},
 	}
 	for _, c := range decodeHandlers {
 		t.Run(c.name+" invalid JSON", func(t *testing.T) {
@@ -181,38 +187,38 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		{"missing channel", h.messages().ListMessages, "", "", map[string]string{"channelID": uuid.NewString()}, "channel not found"},
 		{"bad anchor", h.messages().ListMessages, "", "before=bad", valid, "before"},
 		{"multiple anchors", h.messages().ListMessages, "", "before=" + f.m.String() + "&after=" + f.m.String(), valid, "only one"},
-		{"message bad content", h.messages().CreateMessage, `{"content":""}`, "", valid, "content"},
-		{"message missing parent", h.messages().CreateMessage, `{"content":"hi","parent_id":"` + uuid.NewString() + `"}`, "", valid, "parent"},
-		{"invalid message ID", h.messages().EditMessage, `{}`, "", map[string]string{"channelID": f.c.ID.String(), "messageID": "bad"}, "invalid"},
-		{"missing message", h.messages().EditMessage, `{}`, "", map[string]string{"channelID": f.c.ID.String(), "messageID": uuid.NewString()}, "message not found"},
-		{"edit invalid text", h.messages().EditMessage, `{"content":"` + strings.Repeat("a", 4001) + `"}`, "", valid, "content"},
-		{"edit empty", h.messages().EditMessage, `{"content":""}`, "", valid, "content"},
+		{"message bad content", h.messages().ServeCreateMessage, `{"content":""}`, "", valid, "content"},
+		{"message missing parent", h.messages().ServeCreateMessage, `{"content":"hi","parent_id":"` + uuid.NewString() + `"}`, "", valid, "parent"},
+		{"invalid message ID", h.messages().ServeEditMessage, `{}`, "", map[string]string{"channelID": f.c.ID.String(), "messageID": "bad"}, "invalid"},
+		{"missing message", h.messages().ServeEditMessage, `{}`, "", map[string]string{"channelID": f.c.ID.String(), "messageID": uuid.NewString()}, "message not found"},
+		{"edit invalid text", h.messages().ServeEditMessage, `{"content":"` + strings.Repeat("a", 4001) + `"}`, "", valid, "content"},
+		{"edit empty", h.messages().ServeEditMessage, `{"content":""}`, "", valid, "content"},
 		{"reaction invalid", h.messages().ToggleReaction, `{"emoji":"a b"}`, "", valid, "emoji"},
 		{"reaction missing", h.messages().ToggleReaction, `{"emoji":"ok"}`, "", map[string]string{"messageID": uuid.NewString()}, "message not found"},
 		{"thread missing", h.messages().GetThread, "", "", map[string]string{"messageID": uuid.NewString()}, "message not found"},
 		{"thread bad anchor", h.messages().GetThread, "", "before=bad", valid, "before"},
 		{"thread dual anchor", h.messages().GetThread, "", "before=" + f.m.String() + "&after=" + f.m.String(), valid, "only one"},
 		{"thread root as cursor", h.messages().GetThread, "", "before=" + f.m.String(), valid, "message not found"},
-		{"number invalid", h.messages().GetMessageByNumber, "", "", map[string]string{"number": "bad"}, "invalid number"},
-		{"number absent", h.messages().GetMessageByNumber, "", "", map[string]string{"number": "99999"}, "message not found"},
-		{"category empty", h.channels().CreateCategory, `{"name":""}`, "", valid, "name"},
-		{"category delete absent", h.channels().DeleteCategory, "", "", valid, "category not found"},
+		{"number invalid", h.messages().ServeGetMessageByNumber, "", "", map[string]string{"number": "bad"}, "invalid number"},
+		{"number absent", h.messages().ServeGetMessageByNumber, "", "", map[string]string{"number": "99999"}, "message not found"},
+		{"category empty", h.channels().ServeCreateCategory, `{"name":""}`, "", valid, "name"},
+		{"category delete absent", h.channels().ServeDeleteCategory, "", "", valid, "category not found"},
 		{"channel empty", h.channels().CreateChannel, `{"name":""}`, "", valid, "name"},
-		{"channel delete absent", h.channels().DeleteChannel, "", "", map[string]string{"id": uuid.NewString()}, "channel not found"},
-		{"channel duplicate absent", h.channels().DuplicateChannel, "", "", map[string]string{"id": uuid.NewString()}, "channel not found"},
+		{"channel delete absent", h.channels().ServeDeleteChannel, "", "", map[string]string{"id": uuid.NewString()}, "channel not found"},
+		{"channel duplicate absent", h.channels().ServeDuplicateChannel, "", "", map[string]string{"id": uuid.NewString()}, "channel not found"},
 		{"update bad topic", h.channels().UpdateChannel, `{"topic":"` + strings.Repeat("a", 256) + `"}`, "", valid, "topic"},
-		{"rename bad name", h.channels().RenameCategory, `{"name":""}`, "", valid, "name"},
+		{"rename bad name", h.channels().ServeRenameCategory, `{"name":""}`, "", valid, "name"},
 		{"search bad ID", h.search().ServeSearch, "", "channel_id=bad", valid, "channel_id"},
 		{"search empty", h.search().ServeSearch, "", "", valid, "search term"},
-		{"layout missing category", h.channels().ApplyLayout, `{"categories":[{"id":"` + uuid.NewString() + `","sort_order":1}]}`, "", valid, "category not found"},
+		{"layout missing category", h.channels().ServeApplyLayout, `{"categories":[{"id":"` + uuid.NewString() + `","sort_order":1}]}`, "", valid, "category not found"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			chattest.RequireError(t, c.fn(httptest.NewRecorder(), chattest.Request(f.u, c.body, c.params, c.query)), c.want)
 		})
 	}
-	body, _ := json.Marshal(LayoutRequest{Categories: make([]CategoryOrder, 501)})
-	chattest.RequireError(t, h.channels().ApplyLayout(httptest.NewRecorder(), chattest.Request(f.u, string(body), nil, "")), "too many entries")
+	body, _ := json.Marshal(channels.LayoutRequest{Categories: make([]channels.CategoryOrder, 501)})
+	chattest.RequireError(t, h.channels().ServeApplyLayout(httptest.NewRecorder(), chattest.Request(f.u, string(body), nil, "")), "too many entries")
 	// Database cancellation must also propagate through HTTP handlers.
 	for _, c := range []struct {
 		name string
@@ -239,7 +245,7 @@ func TestChatDeleteCategoryHandlerAndVoicePreference(t *testing.T) {
 	recorder := &events.Recorder{}
 	h := &Handler{DB: f.p, Events: recorder}
 	w := httptest.NewRecorder()
-	if err := h.channels().DeleteCategory(w, chattest.Request(f.u, "", map[string]string{"id": cat.ID.String()}, "")); err != nil {
+	if err := h.channels().ServeDeleteCategory(w, chattest.Request(f.u, "", map[string]string{"id": cat.ID.String()}, "")); err != nil {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusNoContent || len(recorder.Snapshot()) != 1 || recorder.Snapshot()[0].Type != "channels_changed" {
@@ -250,7 +256,7 @@ func TestChatDeleteCategoryHandlerAndVoicePreference(t *testing.T) {
 	if h.voiceRooms() != voice {
 		t.Fatal("explicit voice rooms were not selected")
 	}
-	if err := h.channels().DeleteChannel(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"id": f.c.ID.String()}, "")); err != nil {
+	if err := h.channels().ServeDeleteChannel(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"id": f.c.ID.String()}, "")); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Equal(voice.closed, []uuid.UUID{f.c.ID}) {
@@ -281,7 +287,7 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 	if _, err := channels.CreateChannelWithStage(ctx, f.p, nil, "new", "unsupported", "", 0, false); err == nil {
 		t.Fatal("unsupported channel type accepted")
 	}
-	if _, err := channels.CreateChannelWithStage(ctx, f.p, chattest.Ptr(uuid.New()), "new", ChannelTypeText, "", 0, false); err == nil {
+	if _, err := channels.CreateChannelWithStage(ctx, f.p, chattest.Ptr(uuid.New()), "new", core.ChannelTypeText, "", 0, false); err == nil {
 		t.Fatal("missing category accepted")
 	}
 	if err := messages.EditMessage(ctx, f.p, nil, uuid.New(), f.u.ID, "new"); err == nil {
@@ -290,37 +296,37 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 	if _, err := messages.DeleteMessageAs(ctx, f.p, uuid.New(), f.u, f.u.IsAdmin()); err == nil {
 		t.Fatal("absent message deleted")
 	}
-	if _, err := messages.GetThreadReplies(ctx, f.p, f.m, HistoryQuery{}); err != nil {
+	if _, err := messages.GetThreadReplies(ctx, f.p, f.m, core.HistoryQuery{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := messages.GetThreadReplies(ctx, f.p, f.m, HistoryQuery{Limit: 10, Before: &f.m}); err != nil {
+	if _, err := messages.GetThreadReplies(ctx, f.p, f.m, core.HistoryQuery{Limit: 10, Before: &f.m}); err != nil {
 		t.Fatal(err)
 	}
 	h := &Handler{DB: f.p, Events: &events.Recorder{}}
-	if err := h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(f.u, `{"content":"hi"}`, map[string]string{"channelID": uuid.NewString()}, "")); err == nil {
+	if err := h.messages().ServeCreateMessage(httptest.NewRecorder(), chattest.Request(f.u, `{"content":"hi"}`, map[string]string{"channelID": uuid.NewString()}, "")); err == nil {
 		t.Fatal("message posted in absent channel")
 	}
 	p := chattest.DriftPool(t, f.p, map[string]string{"messages": `SELECT id,number,channel_id,user_id,parent_id,NULL::text content,is_pinned,is_edited,created_at,updated_at,reply_to_id FROM public.messages`})
 	if err := (&Handler{DB: p}).messages().ListMessages(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"channelID": f.c.ID.String()}, "")); err == nil {
 		t.Fatal("undecodable history accepted")
 	}
-	if _, _, err := search.Search(ctx, f.p, SearchQuery{Text: strings.Repeat("a", 201)}); err == nil {
+	if _, _, err := search.Search(ctx, f.p, search.SearchQuery{Text: strings.Repeat("a", 201)}); err == nil {
 		t.Fatal("too-long query accepted")
 	}
-	if _, _, err := search.Search(ctx, f.p, SearchQuery{Text: "one", Has: "unknown"}); err == nil {
+	if _, _, err := search.Search(ctx, f.p, search.SearchQuery{Text: "one", Has: "unknown"}); err == nil {
 		t.Fatal("unknown attachment filter accepted")
 	}
-	if _, _, err := search.Search(ctx, f.p, SearchQuery{Text: "a b c d e f g h discarded", Limit: 10}); err != nil {
+	if _, _, err := search.Search(ctx, f.p, search.SearchQuery{Text: "a b c d e f g h discarded", Limit: 10}); err != nil {
 		t.Fatal(err)
 	}
 	for _, has := range []string{"file", "image", "link"} {
-		if _, _, err := search.Search(ctx, f.p, SearchQuery{Has: has, Limit: 10}); err != nil {
+		if _, _, err := search.Search(ctx, f.p, search.SearchQuery{Has: has, Limit: 10}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	for _, run := range []func() error{
 		func() error {
-			_, e := channels.CreateChannelWithStage(ctx, f.p, nil, "name", ChannelTypeText, strings.Repeat("a", 256), 0, false)
+			_, e := channels.CreateChannelWithStage(ctx, f.p, nil, "name", core.ChannelTypeText, strings.Repeat("a", 256), 0, false)
 			return e
 		},
 		func() error {
@@ -329,7 +335,9 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 			return e
 		},
 		func() error { _, err := channels.RenameCategory(ctx, f.p, uuid.New(), "new"); return err },
-		func() error { return channels.ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: uuid.New()}}) },
+		func() error {
+			return channels.ApplyLayout(ctx, f.p, nil, []channels.ChannelPlacement{{ID: uuid.New()}})
+		},
 		func() error {
 			_, e := channels.EditChannel(ctx, f.p, uuid.New(), nil, nil, nil, nil, nil, nil)
 			return e

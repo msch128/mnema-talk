@@ -12,8 +12,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -37,7 +37,7 @@ func newFixture(t *testing.T) fixture {
 	if err := p.QueryRow(context.Background(), `INSERT INTO users (username, display_name, password_hash) VALUES ($1, $2, 'test-only-unused') RETURNING id, created_at`, u.Username, u.DisplayName).Scan(&u.ID, &u.CreatedAt); err != nil {
 		t.Fatal(err)
 	}
-	c, err := channels.CreateChannelWithStage(context.Background(), p, nil, "polls", chat.ChannelTypeText, "", 0, false)
+	c, err := channels.CreateChannelWithStage(context.Background(), p, nil, "polls", core.ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func (f fixture) service(p *db.Pool) *Service {
 	return NewService(Service{DB: p, Events: &events.Recorder{}})
 }
 
-func (f fixture) newPoll(t *testing.T) *chat.Message {
+func (f fixture) newPoll(t *testing.T) *core.Message {
 	t.Helper()
 	msg, err := f.service(f.p).Create(context.Background(), f.user, f.channel, Input{Question: "Pizza?", Options: []string{"Yes", "No"}})
 	if err != nil {
@@ -175,7 +175,7 @@ func TestVotingReportsDatabaseFailuresInsteadOfHidingThem(t *testing.T) {
 func TestMessagesWithoutAPollHaveNoPollToAnnounceOrShow(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
-	id, err := messages.CreateMessage(ctx, f.p, chat.NewMessage{ChannelID: f.channel, UserID: f.user.ID, Content: "just words"})
+	id, err := messages.CreateMessage(ctx, f.p, messages.NewMessage{ChannelID: f.channel, UserID: f.user.ID, Content: "just words"})
 	if err != nil {
 		t.Fatal(err)
 	}

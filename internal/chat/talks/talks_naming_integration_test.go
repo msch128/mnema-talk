@@ -1,6 +1,6 @@
 //go:build integration
 
-package chat
+package talks
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 func TestTalksAreNamedAfterTheLobbyAndKeepTheirNameOnRename(t *testing.T) {
@@ -52,7 +53,7 @@ func TestTalksAreNamedAfterTheLobbyAndKeepTheirNameOnRename(t *testing.T) {
 func TestTalkNameOfALongLobbyFitsTheLimit(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	long := strings.Repeat("\u00e4", MaxChannelNameLen)
+	long := strings.Repeat("\u00e4", core.MaxChannelNameLen)
 	if _, err := channels.EditChannel(ctx, w.p, w.lobby.ID, &long, nil, nil, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +65,7 @@ func TestTalkNameOfALongLobbyFitsTheLimit(t *testing.T) {
 	if err := w.p.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, ch.ID).Scan(&name); err != nil {
 		t.Fatal(err)
 	}
-	if n := utf8.RuneCountInString(name); n > MaxChannelNameLen || !strings.HasSuffix(name, " 1") {
+	if n := utf8.RuneCountInString(name); n > core.MaxChannelNameLen || !strings.HasSuffix(name, " 1") {
 		t.Fatalf("name %q has %d runes", name, n)
 	}
 }

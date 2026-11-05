@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -32,9 +33,9 @@ func setupForumEnv(t *testing.T) (chatFixture, *Handler, *auth.User) {
 	return f, h, mod
 }
 
-func createTestForum(t *testing.T, f chatFixture) *Channel {
+func createTestForum(t *testing.T, f chatFixture) *core.Channel {
 	t.Helper()
-	ch, err := channels.CreateChannelWithStage(context.Background(), f.p, nil, "general-forum", ChannelTypeForum, "Forum topic", 0, false)
+	ch, err := channels.CreateChannelWithStage(context.Background(), f.p, nil, "general-forum", core.ChannelTypeForum, "Forum topic", 0, false)
 	if err != nil {
 		t.Fatalf("create forum channel: %v", err)
 	}
@@ -58,7 +59,7 @@ func TestForumTagsCRUD(t *testing.T) {
 	if err := h.forum().ServeCreateForumTag(rec, req); err != nil {
 		t.Fatalf("admin create tag: %v", err)
 	}
-	var tag ForumTag
+	var tag core.ForumTag
 	if err := json.Unmarshal(rec.Body.Bytes(), &tag); err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +129,7 @@ func TestForumPostCreationAndValidation(t *testing.T) {
 	if err := h.forum().ServeCreateForumPost(rec, req); err != nil {
 		t.Fatalf("create forum post: %v", err)
 	}
-	var post Message
+	var post core.Message
 	if err := json.Unmarshal(rec.Body.Bytes(), &post); err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +145,7 @@ func TestForumPostCreationAndValidation(t *testing.T) {
 
 	// Ordinary message creation without title in forum channel must fail
 	reqMsg := chattest.Request(f.u, `{"content":"Root message without title"}`, chParam, "")
-	if err := h.messages().CreateMessage(httptest.NewRecorder(), reqMsg); err == nil {
+	if err := h.messages().ServeCreateMessage(httptest.NewRecorder(), reqMsg); err == nil {
 		t.Fatal("expected root message without title in forum to fail")
 	}
 }
@@ -169,7 +170,7 @@ func TestForumPostTagsAndFiltering(t *testing.T) {
 	if err := h.forum().ServeCreateForumPost(rec, chattest.Request(f.u, body1, chParam, "")); err != nil {
 		t.Fatal(err)
 	}
-	var p1 Message
+	var p1 core.Message
 	if err := json.Unmarshal(rec.Body.Bytes(), &p1); err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +189,7 @@ func TestForumPostTagsAndFiltering(t *testing.T) {
 	if err := h.forum().ServeListForumPosts(rec, chattest.Request(f.u, "", chParam, "tag_id="+tag1.ID.String())); err != nil {
 		t.Fatal(err)
 	}
-	var filtered []Message
+	var filtered []core.Message
 	if err := json.Unmarshal(rec.Body.Bytes(), &filtered); err != nil {
 		t.Fatal(err)
 	}
@@ -207,7 +208,7 @@ func TestForumPostLockingAndReplies(t *testing.T) {
 	if err := h.forum().ServeCreateForumPost(rec, chattest.Request(f.u, `{"title":"Lock Test","content":"Topic"}`, chParam, "")); err != nil {
 		t.Fatal(err)
 	}
-	var post Message
+	var post core.Message
 	if err := json.Unmarshal(rec.Body.Bytes(), &post); err != nil {
 		t.Fatal(err)
 	}
@@ -228,13 +229,13 @@ func TestForumPostLockingAndReplies(t *testing.T) {
 
 	// Normal user cannot reply to locked thread
 	replyBody := fmt.Sprintf(`{"content":"I want to reply","parent_id":"%s"}`, post.ID)
-	if err := h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(f.u, replyBody, chParam, "")); err == nil {
+	if err := h.messages().ServeCreateMessage(httptest.NewRecorder(), chattest.Request(f.u, replyBody, chParam, "")); err == nil {
 		t.Fatal("expected reply to locked post by normal user to fail")
 	}
 
 	// Moderator can reply to locked thread
 	rec = httptest.NewRecorder()
-	if err := h.messages().CreateMessage(rec, chattest.Request(mod, replyBody, chParam, "")); err != nil {
+	if err := h.messages().ServeCreateMessage(rec, chattest.Request(mod, replyBody, chParam, "")); err != nil {
 		t.Fatalf("expected moderator to reply to locked thread: %v", err)
 	}
 
@@ -243,7 +244,7 @@ func TestForumPostLockingAndReplies(t *testing.T) {
 	if err := h.forum().ServeListForumPosts(rec, chattest.Request(f.u, "", chParam, "sort=activity")); err != nil {
 		t.Fatal(err)
 	}
-	var listed []Message
+	var listed []core.Message
 	if err := json.Unmarshal(rec.Body.Bytes(), &listed); err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +269,7 @@ func TestForumPostEditTagsPermissions(t *testing.T) {
 	if err := h.forum().ServeCreateForumPost(rec, chattest.Request(f.u, `{"title":"Owner Post","content":"Mine"}`, chParam, "")); err != nil {
 		t.Fatal(err)
 	}
-	var post Message
+	var post core.Message
 	if err := json.Unmarshal(rec.Body.Bytes(), &post); err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +339,7 @@ func TestForumPostUpdateNeedsViewChannel(t *testing.T) {
 	if err := h.forum().ServeCreateForumPost(rec, chattest.Request(f.u, `{"title":"Mine","content":"hello"}`, chParam, "")); err != nil {
 		t.Fatalf("create post: %v", err)
 	}
-	var post Message
+	var post core.Message
 	if err := json.Unmarshal(rec.Body.Bytes(), &post); err != nil {
 		t.Fatal(err)
 	}

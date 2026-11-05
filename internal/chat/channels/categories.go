@@ -48,7 +48,7 @@ func CreateCategory(ctx context.Context, p *db.Pool, name string, sortOrder int)
 	return &cat, nil
 }
 
-// RenameCategory changes a category's name.
+// ServeRenameCategory changes a category's name.
 func RenameCategory(ctx context.Context, p *db.Pool, id uuid.UUID, name string) (string, error) {
 	name, err := httpx.CleanText("name", name, core.MaxChannelNameLen, true)
 	if err != nil {

@@ -10,7 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
@@ -35,7 +36,7 @@ func (f autoDeleteFixture) age(t *testing.T, id uuid.UUID, days int) {
 
 func (f autoDeleteFixture) sweep(t *testing.T) {
 	t.Helper()
-	d := &chat.AutoDeleter{DB: f.a.db, Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
+	d := &channels.AutoDeleter{DB: f.a.db, Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
 	if err := d.Sweep(t.Context()); err != nil {
 		t.Fatal(err)
 	}
@@ -53,12 +54,12 @@ func TestOnlyChannelManagersSetAutoDeleteAndOnlyToKnownPeriods(t *testing.T) {
 	}
 	res := f.set(f.owner, f.channel, 30)
 	wantStatus(t, "owner", res, http.StatusOK)
-	var ch chat.Channel
+	var ch core.Channel
 	res.decode(t, &ch)
 	if ch.AutoDeleteDays != 30 {
 		t.Fatalf("channel: %+v", ch)
 	}
-	var list chat.ChannelHierarchy
+	var list channels.ChannelHierarchy
 	f.alice.get("/api/channels").decode(t, &list)
 	found := false
 	for _, c := range append(list.Uncategorized, flatten(list.Categories)...) {
@@ -80,8 +81,8 @@ func TestOnlyChannelManagersSetAutoDeleteAndOnlyToKnownPeriods(t *testing.T) {
 	}
 }
 
-func flatten(cats []chat.Category) []chat.Channel {
-	var out []chat.Channel
+func flatten(cats []core.Category) []core.Channel {
+	var out []core.Channel
 	for _, c := range cats {
 		out = append(out, c.Channels...)
 	}
@@ -227,7 +228,7 @@ func TestAutoDeleteLoopSweepsOnScheduleAndStops(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan struct{})
-	d := &chat.AutoDeleter{DB: f.a.db, Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
+	d := &channels.AutoDeleter{DB: f.a.db, Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
 	go func() { d.Run(ctx, 20*time.Millisecond); close(done) }()
 	deadline := time.Now().Add(10 * time.Second)
 	for f.exists(id) && time.Now().Before(deadline) {
@@ -264,7 +265,7 @@ func TestAutoDeleteSweepThatFailsKeepsMessagesAndAuditsNothing(t *testing.T) {
 		_, _ = f.a.db.Exec(context.Background(), `DROP TRIGGER IF EXISTS refuse_message_delete ON messages`)
 		_, _ = f.a.db.Exec(context.Background(), `DROP FUNCTION IF EXISTS refuse_message_delete()`)
 	})
-	d := &chat.AutoDeleter{DB: f.a.db, Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
+	d := &channels.AutoDeleter{DB: f.a.db, Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
 	if err := d.Sweep(ctx); err == nil {
 		t.Fatal("the sweep reported success although a channel failed")
 	}
@@ -282,7 +283,7 @@ func TestAutoDeleteWithoutObjectStorageOrEvents(t *testing.T) {
 	id := f.a.send(f.alice, f.channel, "old")
 	f.age(t, id, 8)
 	wantStatus(t, "7 days", f.set(f.owner, f.channel, 7), http.StatusOK)
-	d := &chat.AutoDeleter{DB: f.a.db}
+	d := &channels.AutoDeleter{DB: f.a.db}
 	if err := d.Sweep(t.Context()); err != nil {
 		t.Fatal(err)
 	}

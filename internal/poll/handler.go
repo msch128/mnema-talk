@@ -53,7 +53,7 @@ type VoteRequest struct {
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param request body CreateRequest true "Request body."
-// @Success 201 {object} chat.Message "The poll message."
+// @Success 201 {object} core.Message "The poll message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): question or options out of bounds, duplicate options, unknown duration."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."

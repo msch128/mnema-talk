@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
 )
@@ -138,7 +138,7 @@ func (h *Handler) readPart(ctx context.Context, part *multipart.Part, req *reque
 	case part.FormName() == "payload_json":
 		return true, h.readPayloadJSON(ctx, part, req)
 	case part.FormName() == "content" || part.FormName() == "username":
-		b, err := io.ReadAll(io.LimitReader(part, chat.MaxMessageLen*4+1))
+		b, err := io.ReadAll(io.LimitReader(part, core.MaxMessageLen*4+1))
 		if err != nil {
 			return false, h.Media.FormError(ctx, err)
 		}

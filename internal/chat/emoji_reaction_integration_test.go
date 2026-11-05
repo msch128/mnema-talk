@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/emojitext"
 )
@@ -18,11 +19,11 @@ import (
 func TestReactionsInATalkChatTakeEveryEmoji(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	talk, err := channels.CreateChannelWithStage(ctx, f.p, nil, "talk-chat", ChannelTypeVoice, "", 0, false)
+	talk, err := channels.CreateChannelWithStage(ctx, f.p, nil, "talk-chat", core.ChannelTypeVoice, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: talk.ID, UserID: f.u.ID, Content: "hello talk"})
+	msg, err := messages.CreateMessage(ctx, f.p, messages.NewMessage{ChannelID: talk.ID, UserID: f.u.ID, Content: "hello talk"})
 	if err != nil {
 		t.Fatal(err)
 	}

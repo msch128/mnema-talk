@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 func TestAnExportHoldsTheMembersOwnPollVotesAndNobodyElses(t *testing.T) {
@@ -51,9 +51,9 @@ func TestDeletingAnAccountRemovesItsVotesAndThePollsItPosted(t *testing.T) {
 
 	wantStatus(t, "delete alice", f.a.deleteAccount(f.alice, memberPassword, ""), http.StatusNoContent)
 
-	var msgs []chat.Message
+	var msgs []core.Message
 	f.bob.get(f.base()+"/messages").decode(t, &msgs)
-	byID := map[string]chat.Message{}
+	byID := map[string]core.Message{}
 	for _, m := range msgs {
 		byID[m.ID.String()] = m
 	}

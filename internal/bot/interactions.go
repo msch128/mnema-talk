@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -25,7 +25,7 @@ type Commands struct {
 	DB     *db.Pool
 	Perms  *perm.Service
 	Events events.Publisher
-	Online chat.OnlineSource
+	Online mentions.OnlineSource
 	// Deliver sends interactions to bots; required.
 	Deliver Deliverer
 	// Builtins are the server's own commands (internal/slash), listed and run

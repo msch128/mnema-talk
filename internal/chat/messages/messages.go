@@ -283,7 +283,7 @@ func GetThreadReplies(ctx context.Context, p *db.Pool, parentID uuid.UUID, q cor
 		LIMIT $2`, parentID, q.Limit)
 }
 
-// GetMessageByNumber returns one fully populated message by its link number.
+// ServeGetMessageByNumber returns one fully populated message by its link number.
 func GetMessageByNumber(ctx context.Context, p *db.Pool, number int64) (*core.Message, error) {
 	msgs, err := QueryMessages(ctx, p, MessageSelect+` WHERE m.number = $1`, number)
 	if err != nil {
@@ -336,7 +336,7 @@ type NewMessage struct {
 	Record bool
 }
 
-// CreateMessage inserts a message and returns its ID.
+// ServeCreateMessage inserts a message and returns its ID.
 func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID, error) {
 	var id uuid.UUID
 	embeds := []byte("[]")
