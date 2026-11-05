@@ -1,0 +1,19 @@
+internal/sfu/layers_test.go
+  s_a93cc6c5cc8bd9::t_6f77f2201253ec 667-731
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b9485bea55bbb473930303ddf12338932ddea794",
+  "prompts": {},
+  "sessions": {
+    "s_a93cc6c5cc8bd9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa98b0e1b7ca8cdbb",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
