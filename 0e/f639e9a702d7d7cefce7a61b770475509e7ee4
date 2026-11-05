@@ -1,0 +1,14 @@
+internal/chat/channels/slowmode_fuzz_test.go
+  h_0ff4f4713441f4 1,6,12,16-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0ef639e9a702d7d7cefce7a61b770475509e7ee4",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
