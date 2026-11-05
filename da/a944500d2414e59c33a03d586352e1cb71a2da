@@ -1,0 +1,133 @@
+cmd/server/main.go
+  s_db63cd4785d2fa::t_2dc68c744a0227 20,133
+doc/architecture.md
+  s_db63cd4785d2fa::t_d12329df1705cc 257
+internal/chat/botapi.go
+  s_db63cd4785d2fa::t_d74aa128a6feec 55
+internal/chat/category_delete_faults_integration_test.go
+  s_db63cd4785d2fa::t_6d53130dbc6b10 9,19,30
+internal/chat/channel_edges_integration_test.go
+  s_db63cd4785d2fa::t_47b331d97e1985 15,111,114,117,121,125,134,143,148,168,172,186
+internal/chat/channels/api.go
+  s_db63cd4785d2fa::t_81c1ea5d59cbc9 1-48
+internal/chat/channels/auto_delete.go
+  s_db63cd4785d2fa::t_eeecbdae05b892 1,46,50,75
+internal/chat/channels/categories.go
+  s_db63cd4785d2fa::t_356e02efec1198 1,13,19,22,32-33,40,53
+internal/chat/channels/channel_layout.go
+  s_db63cd4785d2fa::t_db2ebfd41b8662 1,48,156,168-169,171,174,182,191-192,208-209,231,233-234,261,263
+internal/chat/channels/channel_layout_integration_test.go
+  s_db63cd4785d2fa::t_1aee419946a429 3,42
+internal/chat/channels/channel_permissions.go
+  s_db63cd4785d2fa::t_2a220e8cab1205 1,15,17,27,55,67-68,81,85,98,100,156,158-160,166-168
+internal/chat/channels/channel_requests.go
+  s_db63cd4785d2fa::t_1085d389290da1 1,3-6,12-13,35-39
+internal/chat/channels/channel_talk_fields.go
+  s_db63cd4785d2fa::t_42d1b31a3215d8 1,33
+internal/chat/channels/channels.go
+  s_db63cd4785d2fa::t_d7bbff37865013 1,17,29,31,48,60-61,64,68,89,96,104,135,142,144,157,210,217-218,222,241,274,276-277,292,303,310,312-313
+internal/chat/channels/channels_categories.go
+  s_db63cd4785d2fa::t_29aab19660c195 1
+internal/chat/channels/channels_test.go
+  s_db63cd4785d2fa::t_4515de83f445d7 1
+internal/chat/channels/handler_auto_delete.go
+  s_db63cd4785d2fa::t_45374476338624 1,26-27,36,45,48,52
+internal/chat/channels/handler_channels.go
+  s_db63cd4785d2fa::t_beab8342869440 1,8,22-23,31,36,40,63,68-69,72-73,82,96-97,105,111,114,118,122,136,145,150,153,157,180,185,188,193,196-197,212-213,222,231,234,238,242,244,260-261,270,279,282,286,300,310,319-320,323-324,333
+internal/chat/channels/handler_list.go
+  s_db63cd4785d2fa::t_e7a3b52dff0446 1-34
+internal/chat/channels/seed_layout.go
+  s_db63cd4785d2fa::t_210ba67bd05950 1
+internal/chat/channels/seed_layout_integration_test.go
+  s_db63cd4785d2fa::t_af75dab6321fa1 3
+internal/chat/channels/seed_layout_test.go
+  s_db63cd4785d2fa::t_281d3f14a4ecae 1
+internal/chat/channels/slug.go
+  s_db63cd4785d2fa::t_a0042287a142cc 1,13,70,72,81,84,95,129,203
+internal/chat/channels/slug_test.go
+  s_db63cd4785d2fa::t_e2e01298b4d466 1,74,77
+internal/chat/channels/view_as_role.go
+  s_db63cd4785d2fa::t_e09295397626f2 1,7,15-18,55,64,69,77,83,108,117
+internal/chat/channels/webhook_bots.go
+  s_db63cd4785d2fa::t_5b5aed8d6ebd12 1
+internal/chat/core/voice_rooms.go
+  s_db63cd4785d2fa::t_14572a8f35b356 1
+internal/chat/core_aliases.go
+  s_db63cd4785d2fa::t_3c1c44e43e24f1 4,14-17,22,24,27,34-35,59,71,83-84,87,125,130-131,141,143-145
+internal/chat/database_failures_integration_test.go
+  s_db63cd4785d2fa::t_6e3bbec8a892a2 19,33,37,41,46,51,123,133,178,180,184,187,190,194,197,255-256,271,282-283,294,357,364
+internal/chat/dm_members.go
+  s_db63cd4785d2fa::t_c713a109665971 10,117
+internal/chat/emoji_reaction_integration_test.go
+  s_db63cd4785d2fa::t_59153c07923139 11,21
+internal/chat/forum_edges_integration_test.go
+  s_db63cd4785d2fa::t_d686f4bb399a4b 18,252,260,265,268,284
+internal/chat/forum_errors_integration_test.go
+  s_db63cd4785d2fa::t_c1f593bb7e1121 16,238,403
+internal/chat/forum_integration_test.go
+  s_db63cd4785d2fa::t_8fbbc145c3ae17 14,36
+internal/chat/handler.go
+  s_db63cd4785d2fa::t_922a1d423fef40 12,91-95,108,116
+internal/chat/handlers_integration_test.go
+  s_db63cd4785d2fa::t_d394b751307350 19,42,64-73,117-119,147,158,191-197,200,208,213,228,235,246,274,277,316,321,324-326
+internal/chat/permission_failures_integration_test.go
+  s_db63cd4785d2fa::t_3c44c7eaf20c3c 12,23,44,54-60
+internal/chat/permissions_checks_test.go
+  s_db63cd4785d2fa::t_98139e0edcfe29 7,40,57
+internal/chat/permissions_test.go
+  s_db63cd4785d2fa::t_672b7081790de0 8,18
+internal/chat/presets_test.go
+  s_db63cd4785d2fa::t_e6625a4ae172a3 7,16
+internal/chat/slug_integration_test.go
+  s_db63cd4785d2fa::t_bb1d785cbd385a 13,27,36,59,71,77,96,116,134,145,155,166-167,183,197,201
+internal/chat/stage_integration_test.go
+  s_db63cd4785d2fa::t_f6ec7767219f81 10,21,25,29,33,48,54,63,70,82,94
+internal/chat/talks.go
+  s_db63cd4785d2fa::t_11721091ec5a88 13,77,80,91,110,118
+internal/chat/talks_errors_integration_test.go
+  s_db63cd4785d2fa::t_89c689d6905fe6 13,45,48,51
+internal/chat/talks_handler.go
+  s_db63cd4785d2fa::t_2f77066848f247 10,79,83,92
+internal/chat/talks_integration_test.go
+  s_db63cd4785d2fa::t_7d0373270cfda1 20,60,65,69,72,151,164,185,192-193,341,430,636
+internal/chat/talks_live.go
+  s_db63cd4785d2fa::t_b9defc582c545e 14,163
+internal/chat/talks_naming_integration_test.go
+  s_db63cd4785d2fa::t_d4f20b77a3066e 12,30,56
+internal/chat/time_fuzz_test.go
+  s_db63cd4785d2fa::t_da3677f915381a 6-7,51
+internal/chat/webhook_bot_cleanup_integration_test.go
+  s_db63cd4785d2fa::t_6e9d19c89a85f8 11,23,44,69,86
+internal/discordimport/apply.go
+  s_db63cd4785d2fa::t_904af05a10135a 15,216
+internal/discordimport/apply_channels.go
+  s_db63cd4785d2fa::t_9bea198d32ebec 9,62
+internal/discordimport/undo.go
+  s_db63cd4785d2fa::t_748f3df58b9259 11,306
+internal/later/faults_integration_test.go
+  s_db63cd4785d2fa::t_e0208ea513ccbb 13,38
+internal/later/scheduled_validation_integration_test.go
+  s_db63cd4785d2fa::t_368d76e27cd2b5 19,42
+internal/poll/faults_integration_test.go
+  s_db63cd4785d2fa::t_1063e0531511b4 16,40
+internal/repo/boundaries_test.go
+  s_db63cd4785d2fa::t_326b87a87c45c9 76
+scripts/english-only-allowlist.txt
+  s_db63cd4785d2fa::t_150a65d4ab99d1 9,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "daa944500d2414e59c33a03d586352e1cb71a2da",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
