@@ -1,0 +1,19 @@
+.github/workflows/codeql.yml
+  s_4d5632b48c0115::t_60edbba1102317 11-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "10b9f99e9bd266434d50bbca42a531d0b11f4538",
+  "prompts": {},
+  "sessions": {
+    "s_4d5632b48c0115": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a58c92b794b020d85",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
