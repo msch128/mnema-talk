@@ -1,4 +1,6 @@
-package communityevents
+// Package recurrence is the repeat rule of an event series: which frequencies
+// exist, how a time zone name is read, and when the n-th occurrence starts.
+package recurrence
 
 import (
 	"time"
@@ -11,13 +13,6 @@ const (
 	FreqWeekly   = "weekly"
 	FreqBiweekly = "biweekly"
 	FreqMonthly  = "monthly"
-
-	// MaxSeriesOccurrences is the most occurrences a series ever creates.
-	MaxSeriesOccurrences = 200
-	// seriesHorizon is how far ahead occurrences are created.
-	seriesHorizon = 60 * 24 * time.Hour
-	// seriesTick is how often the scheduler looks at the series.
-	seriesTick = 10 * time.Minute
 )
 
 // ValidFrequency reports whether f is a supported frequency.

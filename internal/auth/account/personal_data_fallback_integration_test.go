@@ -6,7 +6,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth/account"
 	"github.com/msch128/mnema-talk/internal/bot"
 	chataccount "github.com/msch128/mnema-talk/internal/chat/account"
-	"github.com/msch128/mnema-talk/internal/communityevents"
+	"github.com/msch128/mnema-talk/internal/communityevents/accountdata"
 	"github.com/msch128/mnema-talk/internal/discordimport"
 	"github.com/msch128/mnema-talk/internal/emoji"
 	"github.com/msch128/mnema-talk/internal/later"
@@ -22,7 +22,7 @@ func init() {
 	r := &userdata.Registry{}
 	chataccount.RegisterAccountData(r)
 	later.RegisterAccountData(r)
-	communityevents.RegisterAccountData(r)
+	accountdata.Register(r)
 	push.RegisterAccountData(r)
 	wiki.RegisterAccountData(r)
 	bot.RegisterAccountData(r)

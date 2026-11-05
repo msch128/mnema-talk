@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/msch128/mnema-talk/internal/ws/mediaframe"
+
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
@@ -15,7 +17,7 @@ const maxMediaHandshakeBytes = 32 << 10
 
 // handleMediaHandshake relays an opaque handshake to the other connections in
 // the sender's current voice room. The content is opaque to the server and
-// never logged; only the framing is checked (see wellFormedHandshake).
+// never logged; only the framing is checked (see mediaframe.WellFormedHandshake).
 func (c *Client) handleMediaHandshake(payload json.RawMessage) {
 	var body struct {
 		ChannelID uuid.UUID `json:"channel_id"`
@@ -31,7 +33,7 @@ func (c *Client) handleMediaHandshake(payload json.RawMessage) {
 		return
 	}
 	raw, err := base64.StdEncoding.DecodeString(body.Wire)
-	if err != nil || len(raw) > maxMediaHandshakeBytes || !wellFormedHandshake(raw) {
+	if err != nil || len(raw) > maxMediaHandshakeBytes || !mediaframe.WellFormedHandshake(raw) {
 		metrics.MLSHandshakes.With("rejected").Inc()
 		return
 	}
