@@ -9,11 +9,16 @@ import (
 )
 
 const (
+	// StatusScheduled to StatusCancelled are the lifecycle of an event: the
+	// scheduler moves it from scheduled to active at its start and to
+	// completed after its end; a cancelled event is left as it is.
 	StatusScheduled = "scheduled"
 	StatusActive    = "active"
 	StatusCompleted = "completed"
 	StatusCancelled = "cancelled"
 
+	// RSVPGoing, RSVPInterested and RSVPNotGoing are a member's answer to an
+	// event; only going and interested members are notified about it.
 	RSVPGoing      = "going"
 	RSVPInterested = "interested"
 	RSVPNotGoing   = "not_going"

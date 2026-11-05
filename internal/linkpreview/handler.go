@@ -17,6 +17,9 @@ type Handler struct {
 	Fetcher *Fetcher
 }
 
+// Mount registers the card and image routes on r, which already requires a
+// signed-in member: the server fetches on the member's behalf, so anonymous
+// callers would make it an open proxy.
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/link-preview", httpx.Handle(h.preview))
 	r.Get("/link-preview/image", httpx.Handle(h.image))

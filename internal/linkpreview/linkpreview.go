@@ -92,7 +92,12 @@ type Embed struct {
 }
 
 var (
-	ErrBlocked   = errors.New("link target is not a public web address")
+	// ErrBlocked means the address is not a public web address (private,
+	// loopback or otherwise denied); it is checked again for every redirect.
+	ErrBlocked = errors.New("link target is not a public web address")
+	// ErrNoPreview means the address was fetched but offers nothing to
+	// show: not an HTML page, no title, or an image that is too large or no
+	// image type we proxy.
 	ErrNoPreview = errors.New("page has no preview")
 	// errBusy means no fetch slot was free in time. It says nothing about
 	// the link, so it is never cached.
@@ -134,6 +139,7 @@ type cacheEntry struct {
 	expires time.Time
 }
 
+// New returns a Fetcher with its fetch slots and caches ready to use.
 func New() *Fetcher {
 	f := &Fetcher{
 		slots:    make(chan struct{}, maxConcurrentFetches),

@@ -53,7 +53,7 @@ type Outgoing struct {
 	URL       string    `json:"url" maxLength:"2048"`
 	// Events are the subscribed event types (see doc/webhooks.md).
 	Events []string `json:"events"`
-	// Status is "active", "disabled" (switched off by a member) or
+	// Status is "active", "disabled" (switched off by an administrator) or
 	// "auto_disabled" (switched off after repeated failures).
 	Status              string `json:"status" enums:"active,disabled,auto_disabled"`
 	ConsecutiveFailures int    `json:"consecutive_failures" minimum:"0"`
@@ -65,7 +65,7 @@ type Outgoing struct {
 	LastError     *string    `json:"last_error" extensions:"x-nullable"`
 	LastAttemptAt *time.Time `json:"last_attempt_at" format:"date-time" extensions:"x-nullable"`
 	LastSuccessAt *time.Time `json:"last_success_at" format:"date-time" extensions:"x-nullable"`
-	// CreatedBy is the member who created it, kept for the record (null once
+	// CreatedBy is the administrator who created it, kept for the record (null once
 	// that account is gone). It grants nothing.
 	CreatedBy *uuid.UUID `json:"created_by" format:"uuid" extensions:"x-nullable"`
 	CreatedAt time.Time  `json:"created_at" format:"date-time"`
