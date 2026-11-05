@@ -1,0 +1,19 @@
+internal/chat/mentions_cap_integration_test.go
+  s_db63cd4785d2fa::t_3aca9156483206 11-12,15,19,31,33,41,57,65,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "70cf785a6635e52f6ea4e75b46dbc96f8af5e8e8",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
