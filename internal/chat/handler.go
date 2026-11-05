@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"time"
 
@@ -78,20 +77,10 @@ func (h *Handler) voiceRooms() VoiceRooms {
 	return v
 }
 
-// ObjectDeleter removes stored media objects (implemented by media.Store).
-type ObjectDeleter interface {
-	DeleteBatch(ctx context.Context, keys []string) error
-}
-
-// deleteObjects removes media objects after their rows are gone. A failure
-// only leaves an orphaned object behind, so it is logged, not returned.
+// deleteObjects removes media objects after their rows are gone; see
+// core.DeleteObjects.
 func (h *Handler) deleteObjects(ctx context.Context, keys []string) {
-	if h.Objects == nil || len(keys) == 0 {
-		return
-	}
-	if err := h.Objects.DeleteBatch(ctx, keys); err != nil {
-		slog.Warn("delete media objects", "count", len(keys), "err", err)
-	}
+	DeleteObjects(ctx, h.Objects, keys)
 }
 
 // Mount registers the member-facing routes (RequireUser must already apply).
