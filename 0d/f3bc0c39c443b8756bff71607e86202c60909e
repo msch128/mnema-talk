@@ -1,0 +1,19 @@
+e2e/tests/screen-layers.spec.ts
+  s_dbc91e00eb3c98::t_882b44d69b26c1 46-71,159-160,205-210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0df3bc0c39c443b8756bff71607e86202c60909e",
+  "prompts": {},
+  "sessions": {
+    "s_dbc91e00eb3c98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9c05a43070491062",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
