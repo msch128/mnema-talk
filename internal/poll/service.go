@@ -10,7 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -31,7 +32,7 @@ type Service struct {
 	Perms  *perm.Service
 	Events events.Publisher
 	// Online resolves @here in the question; nil means nobody is online.
-	Online chat.OnlineSource
+	Online mentions.OnlineSource
 	// Audit records a moderator ending someone else's poll; nil records nothing.
 	Audit *audit.Log
 
@@ -49,7 +50,7 @@ func NewService(s Service) *Service {
 // Create posts a poll to the channel as user and announces it like any
 // message. ctx comes from chat.SendContext, which already checked that the
 // user may send there and carries the mention policy for the question.
-func (s *Service) Create(ctx context.Context, user *auth.User, channel uuid.UUID, in Input) (*chat.Message, error) {
+func (s *Service) Create(ctx context.Context, user *auth.User, channel uuid.UUID, in Input) (*core.Message, error) {
 	c, err := in.clean()
 	if err != nil {
 		return nil, err
@@ -57,7 +58,7 @@ func (s *Service) Create(ctx context.Context, user *auth.User, channel uuid.UUID
 	if _, err := messages.ChannelForMessages(ctx, s.DB, channel); err != nil {
 		return nil, err
 	}
-	id, err := messages.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{ChannelID: channel, UserID: user.ID, Content: c.Question, ScreenText: c.Options},
+	id, err := messages.InsertMessage(ctx, s.DB, s.Online, messages.NewMessage{ChannelID: channel, UserID: user.ID, Content: c.Question, ScreenText: c.Options},
 		func(tx pgx.Tx, messageID uuid.UUID) error { return insertPoll(ctx, tx, messageID, c) })
 	if err != nil {
 		return nil, err
@@ -67,9 +68,9 @@ func (s *Service) Create(ctx context.Context, user *auth.User, channel uuid.UUID
 		// The poll exists: report it instead of an error that invites a retry
 		// and a second poll. Clients see it on their next load.
 		slog.Error("load created poll message failed", "message_id", id, "err", err)
-		return &chat.Message{
+		return &core.Message{
 			ID: id, ChannelID: channel, UserID: user.ID, Content: c.Question,
-			Attachments: []chat.MediaAttachment{}, Reactions: []chat.ReactionSummary{}, Mentions: []uuid.UUID{}, MentionRoles: []uuid.UUID{},
+			Attachments: []core.MediaAttachment{}, Reactions: []core.ReactionSummary{}, Mentions: []uuid.UUID{}, MentionRoles: []uuid.UUID{},
 		}, nil
 	}
 	s.Events.BroadcastChannel(channel, events.MessageCreate, msg)
@@ -82,10 +83,10 @@ func (s *Service) Create(ctx context.Context, user *auth.User, channel uuid.UUID
 type Update struct {
 	MessageID uuid.UUID `json:"message_id" format:"uuid"`
 	ChannelID uuid.UUID `json:"channel_id" format:"uuid"`
-	Poll      chat.Poll `json:"poll"`
+	Poll      core.Poll `json:"poll"`
 }
 
-func (s *Service) announce(ctx context.Context, channel, messageID uuid.UUID) (*chat.Poll, error) {
+func (s *Service) announce(ctx context.Context, channel, messageID uuid.UUID) (*core.Poll, error) {
 	p, err := messages.LoadPoll(ctx, s.DB, messageID)
 	if err != nil {
 		return nil, err
@@ -113,7 +114,7 @@ func (s *Service) announceOrLog(ctx context.Context, channel, messageID uuid.UUI
 
 // Detail is a poll with the caller's own votes.
 type Detail struct {
-	chat.Poll
+	core.Poll
 	// MyVotes are the options the caller voted for. It is always empty in an
 	// anonymous poll, which does not know the choice.
 	MyVotes []uuid.UUID `json:"my_votes" format:"uuid"`

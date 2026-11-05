@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -22,7 +22,7 @@ type permWorld struct {
 	f                             *permtest.Fixture
 	owner, insider, outsider      *Client
 	staff                         uuid.UUID
-	public, private, privateVoice *chat.ChannelInfo
+	public, private, privateVoice *core.ChannelInfo
 }
 
 func newPermWorld(t *testing.T) *permWorld {
@@ -34,9 +34,9 @@ func newPermWorld(t *testing.T) *permWorld {
 		f.RoleOverwrite(true, ch, f.EveryoneID(), 0, perm.ViewChannel)
 		f.RoleOverwrite(true, ch, w.staff, perm.ViewChannel, 0)
 	}
-	w.public = &chat.ChannelInfo{ID: pub, Type: chat.ChannelTypeVoice}
-	w.private = &chat.ChannelInfo{ID: priv, Type: chat.ChannelTypeText}
-	w.privateVoice = &chat.ChannelInfo{ID: privVoice, Type: chat.ChannelTypeVoice}
+	w.public = &core.ChannelInfo{ID: pub, Type: core.ChannelTypeVoice}
+	w.private = &core.ChannelInfo{ID: priv, Type: core.ChannelTypeText}
+	w.privateVoice = &core.ChannelInfo{ID: privVoice, Type: core.ChannelTypeVoice}
 	w.h = NewHub(nil, nil, nil, nil)
 	w.h.SetPermissions(f.Service())
 	t.Cleanup(w.h.Close)
@@ -96,7 +96,7 @@ func TestEventsFailClosedWhenPermissionsCannotBeLoaded(t *testing.T) {
 		t.Fatalf("events delivered without permissions: %v", got)
 	}
 	// And a Talk cannot be joined.
-	h.joinVoice(a, &chat.ChannelInfo{ID: ch, Type: chat.ChannelTypeVoice})
+	h.joinVoice(a, &core.ChannelInfo{ID: ch, Type: core.ChannelTypeVoice})
 	if inRoom(h, ch, a.User.ID) || count(drainTypes(t, a), "voice_kicked") != 1 {
 		t.Fatal("joined a Talk without permissions")
 	}

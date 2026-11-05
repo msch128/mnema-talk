@@ -1,4 +1,4 @@
-package chat
+package botapi
 
 import (
 	"net/http"
@@ -39,15 +39,15 @@ type memberVisibility struct {
 	mine map[uuid.UUID]perm.Set
 }
 
-func (h *Handler) memberVisibility(r *http.Request) (memberVisibility, error) {
-	snap, err := h.Perms.Snapshot(r.Context())
+func (a *API) memberVisibility(r *http.Request) (memberVisibility, error) {
+	snap, err := a.Guard.Perms.Snapshot(r.Context())
 	if err != nil {
 		return memberVisibility{}, err
 	}
 	return memberVisibility{snap: snap, mine: snap.ChannelPermissions(auth.UserFrom(r.Context()).Subject())}, nil
 }
 
-func (v memberVisibility) sees(m Member) bool {
+func (v memberVisibility) sees(m core.Member) bool {
 	sub := m.Subject()
 	for ch := range v.mine {
 		if v.snap.Channel(sub, ch).Has(perm.ViewChannel) {
@@ -57,20 +57,20 @@ func (v memberVisibility) sees(m Member) bool {
 	return false
 }
 
-func botMemberOf(m Member) BotMember {
+func botMemberOf(m core.Member) BotMember {
 	return BotMember{ID: m.ID, Username: m.Username, DisplayName: m.DisplayName, AvatarURL: m.AvatarURL, Bot: m.IsBot}
 }
 
 // visibleMembers lists the members the bot may know about.
-func (h *Handler) visibleMembers(r *http.Request) ([]BotMember, error) {
+func (a *API) visibleMembers(r *http.Request) ([]BotMember, error) {
 	if err := requireMemberIntent(r); err != nil {
 		return nil, err
 	}
-	members, err := core.GetAllMembers(r.Context(), h.DB)
+	members, err := core.GetAllMembers(r.Context(), a.DB)
 	if err != nil {
 		return nil, err
 	}
-	vis, err := h.memberVisibility(r)
+	vis, err := a.memberVisibility(r)
 	if err != nil {
 		return nil, err
 	}
@@ -91,14 +91,14 @@ func (h *Handler) visibleMembers(r *http.Request) ([]BotMember, error) {
 // @Tags Bot API
 // @Produce json
 // @Security botAuth
-// @Success 200 {array} BotMember "Members."
+// @Success 200 {array} botapi.BotMember "Members."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
 // @Failure 403 {object} httpx.DiscordError "The bot is not allowed to read members (50013)."
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/members [get]
-func (h *Handler) botListMembers(w http.ResponseWriter, r *http.Request) error {
-	out, err := h.visibleMembers(r)
+func (a *API) botListMembers(w http.ResponseWriter, r *http.Request) error {
+	out, err := a.visibleMembers(r)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func (h *Handler) botListMembers(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Security botAuth
 // @Param userID path string true "User ID." Format(uuid)
-// @Success 200 {object} BotMember "The member."
+// @Success 200 {object} botapi.BotMember "The member."
 // @Failure 400 {object} httpx.DiscordError "Invalid form body (50035)."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
 // @Failure 403 {object} httpx.DiscordError "The bot is not allowed to read members (50013)."
@@ -123,7 +123,7 @@ func (h *Handler) botListMembers(w http.ResponseWriter, r *http.Request) error {
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/members/{userID} [get]
-func (h *Handler) botGetMember(w http.ResponseWriter, r *http.Request) error {
+func (a *API) botGetMember(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "userID")
 	if err != nil {
 		return err
@@ -132,11 +132,11 @@ func (h *Handler) botGetMember(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	// One member is read and tested on its own, not picked from the whole list.
-	m, err := core.GetMember(r.Context(), h.DB, id)
+	m, err := core.GetMember(r.Context(), a.DB, id)
 	if err != nil {
 		return err
 	}
-	vis, err := h.memberVisibility(r)
+	vis, err := a.memberVisibility(r)
 	if err != nil {
 		return err
 	}

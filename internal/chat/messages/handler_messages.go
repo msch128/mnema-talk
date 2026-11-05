@@ -72,7 +72,7 @@ func (a *API) ListMessages(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// CreateMessage handles POST /api/channels/{channelID}/messages.
+// ServeCreateMessage handles POST /api/channels/{channelID}/messages.
 //
 // @Summary Post a message
 // @Description Works in text and voice channels (a voice channel's chat). Resolves mentions and broadcasts message_create. With attachment_ids the message carries those staged files (up to 10, at most 100 MB together); the text may then be empty.
@@ -92,7 +92,7 @@ func (a *API) ListMessages(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages [post]
-func (a *API) CreateMessage(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
@@ -106,7 +106,7 @@ func (a *API) CreateMessage(w http.ResponseWriter, r *http.Request) error {
 	if len(req.AttachmentIDs) > 0 {
 		need |= perm.AttachFiles
 	}
-	ctx, err := a.SendContext(r, chID, need)
+	ctx, err := a.ServeSendContext(r, chID, need)
 	if err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func (a *API) MessageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef, er
 	return msgID, ref, nil
 }
 
-// EditMessage handles PUT /api/channels/{channelID}/messages/{messageID}.
+// ServeEditMessage handles PUT /api/channels/{channelID}/messages/{messageID}.
 //
 // @Summary Edit own message
 // @Description Only the author may edit. The content may be empty when the message has an attachment. Broadcasts message_update.
@@ -181,8 +181,8 @@ func (a *API) MessageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef, er
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages/{messageID} [put]
-func (a *API) EditMessage(w http.ResponseWriter, r *http.Request) error {
-	return a.EditMessageWith(w, r, a.SendContext)
+func (a *API) ServeEditMessage(w http.ResponseWriter, r *http.Request) error {
+	return a.EditMessageWith(w, r, a.ServeSendContext)
 }
 
 // EditMessageWith is editMessage with the mention context of the caller's kind

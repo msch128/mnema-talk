@@ -73,7 +73,7 @@ func AddDMMember(ctx context.Context, p *db.Pool, id, adder, target uuid.UUID) (
 	return added, err
 }
 
-// LeaveDM takes user out of a group conversation. When nobody is left the
+// ServeLeaveDM takes user out of a group conversation. When nobody is left the
 // conversation and its messages go, and the storage keys of its attachments
 // are returned for the caller to delete. A conversation with one other person
 // cannot be left.

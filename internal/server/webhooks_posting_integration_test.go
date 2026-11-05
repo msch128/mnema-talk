@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/webhook"
 )
@@ -58,7 +58,7 @@ func TestWebhookMultipartWithFiles(t *testing.T) {
 	if res.status != http.StatusOK {
 		t.Fatalf("multipart: %d %s", res.status, res.body)
 	}
-	var msg chat.Message
+	var msg core.Message
 	res.decode(t, &msg)
 	if len(msg.Attachments) != 1 || msg.Attachments[0].MimeType != "image/png" || !msg.IsBot {
 		t.Fatalf("message %+v", msg)
@@ -75,7 +75,7 @@ func TestWebhookMultipartWithFiles(t *testing.T) {
 	_ = mw.WriteField("username", "Formy")
 	_ = mw.Close()
 	res = a.exec(h.path+"?wait=true", &buf, map[string]string{"Content-Type": mw.FormDataContentType()})
-	var m2 chat.Message
+	var m2 core.Message
 	res.decode(t, &m2)
 	if res.status != 200 || m2.DisplayName != "Formy" || m2.Content != "plain form" {
 		t.Fatalf("form fields: %d %s", res.status, res.body)
@@ -124,7 +124,7 @@ func TestWebhookMentionsAndThreads(t *testing.T) {
 	mentions := func(body map[string]any) []uuid.UUID {
 		t.Helper()
 		res := a.exec(h.path+"?wait=true", body, nil)
-		var m chat.Message
+		var m core.Message
 		res.decode(t, &m)
 		if res.status != 200 {
 			t.Fatalf("execute: %d %s", res.status, res.body)
@@ -162,7 +162,7 @@ func TestWebhookMentionsAndThreads(t *testing.T) {
 	// Threads: thread_id is a root message of the channel.
 	root := a.send(admin, ch, "root")
 	res := a.exec(h.path+"?wait=true&thread_id="+root.String(), map[string]any{"content": "in thread"}, nil)
-	var reply chat.Message
+	var reply core.Message
 	res.decode(t, &reply)
 	if res.status != 200 || reply.ParentID == nil || *reply.ParentID != root {
 		t.Fatalf("thread: %d %s", res.status, res.body)

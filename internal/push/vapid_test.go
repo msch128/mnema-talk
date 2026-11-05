@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
@@ -96,10 +96,10 @@ func TestDeliveryFailuresAreNamedByACodeNotByTheNetworkError(t *testing.T) {
 }
 
 func TestSenderNameFallsBackToTheUsername(t *testing.T) {
-	if got := sender(chat.Message{Username: "alice"}); got != "alice" {
+	if got := sender(core.Message{Username: "alice"}); got != "alice" {
 		t.Fatalf("%q", got)
 	}
-	if got := sender(chat.Message{Username: "alice", DisplayName: "Alice"}); got != "Alice" {
+	if got := sender(core.Message{Username: "alice", DisplayName: "Alice"}); got != "Alice" {
 		t.Fatalf("%q", got)
 	}
 }

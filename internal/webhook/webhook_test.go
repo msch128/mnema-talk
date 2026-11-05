@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -80,7 +80,7 @@ func embeds(t *testing.T, raw string) []inEmbed {
 	return in
 }
 
-func assertSanitizedEmbedFields(t *testing.T, e chat.Embed) {
+func assertSanitizedEmbedFields(t *testing.T, e core.Embed) {
 	t.Helper()
 	if e.Title != "T" {
 		t.Errorf("title = %q, want T", e.Title)

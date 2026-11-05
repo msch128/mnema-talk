@@ -30,6 +30,9 @@ type layered struct {
 	// allowed maps a sub-package to the sibling sub-packages it may import.
 	// A sub-package that exists on disk but is missing here fails the test.
 	allowed map[string][]string
+	// testAllowed lists extra sibling imports that tests (not production code)
+	// of a sub-package may make, because they exercise a flow across domains.
+	testAllowed map[string][]string
 	// rootMayImport lists the sub-packages the root package itself may import
 	// when rootRestricted; otherwise the root is the composition root and may
 	// import all of them.
@@ -71,11 +74,14 @@ var trees = []layered{
 			"talks":  {"core", "messages", "channels", "mentions", "stage"},
 			"botapi": {"core", "messages", "channels", "mentions"},
 			// account renders the userdata sections of every domain.
-			"account": {"core", "messages", "channels", "dm", "reports", "search", "forum", "saved"},
+			"account": {"core", "messages", "channels", "dm", "reports", "search", "forum", "saved", "talks", "botapi", "account"},
 		},
-		mustExist: []string{"blocks", "stage", "chattest", "core", "mentions", "readstate", "messages", "channels", "dm", "reports", "search", "forum", "saved"},
+		// talks never imports dm in production (CallStarter); its integration
+		// tests start conversations the real way.
+		testAllowed: map[string][]string{"talks": {"dm"}},
+		mustExist:   []string{"blocks", "stage", "chattest", "core", "mentions", "readstate", "messages", "channels", "dm", "reports", "search", "forum", "saved", "talks", "botapi", "account"},
 		importers: map[string][]string{
-			"botapi":  {"internal/server", "internal/chat"},
+			"botapi":  {"internal/server", "internal/chat", "internal/bot"},
 			"account": {"internal/server", "internal/chat"},
 		},
 	},
@@ -203,7 +209,10 @@ func checkEdge(t *testing.T, tree layered, from, fromSub, to string, testOnly bo
 		toSub := subOf(tree.root, to)
 		switch {
 		case !inTree(tree.root, from):
-			checkImporter(t, tree, from, to, toSub)
+			// Tests of other packages may wire what they exercise.
+			if !testOnly {
+				checkImporter(t, tree, from, to, toSub)
+			}
 		case fromSub == "" && toSub == "":
 			// root to root: a test importing itself.
 		case fromSub == "":
@@ -215,7 +224,7 @@ func checkEdge(t *testing.T, tree layered, from, fromSub, to string, testOnly bo
 				t.Errorf("%s must not import the root package %s (shared code belongs in core, or behind an interface the consumer defines)", from, to)
 			}
 		case toSub == fromSub:
-		case testOnly && toSub == "chattest":
+		case testOnly && (toSub == "chattest" || contains(tree.testAllowed[fromSub], toSub)):
 		default:
 			if !contains(tree.allowed[fromSub], toSub) {
 				t.Errorf("%s must not import %s (allowed: %v)", from, to, tree.allowed[fromSub])

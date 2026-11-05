@@ -1,4 +1,4 @@
-package chat
+package talks
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -36,9 +37,9 @@ type TalkManager struct {
 	// Audit records the removal of an empty Talk (by "system"); nil records nothing.
 	Audit *audit.Log
 	// Objects deletes the media of a removed Talk's chat; nil skips it.
-	Objects ObjectDeleter
+	Objects core.ObjectDeleter
 	// Voice disconnects stragglers from a removed Talk's room; nil skips it.
-	Voice VoiceRooms
+	Voice core.VoiceRooms
 	// CreateLimit caps the Talks one member opens (TalksPerWindow per
 	// TalkWindow); nil means no cap.
 	CreateLimit *httpx.RateLimiter
@@ -113,7 +114,7 @@ func (m *TalkManager) OnPresence(user, channel uuid.UUID, joined bool) {
 // Open creates a temporary Talk from lobbyID for user, who leads it. The
 // caller has checked that user may join the lobby; this is the limit and the
 // creation. The new Talk is removed again if nobody enters it.
-func (m *TalkManager) Open(ctx context.Context, user, lobbyID uuid.UUID) (*ChannelInfo, error) {
+func (m *TalkManager) Open(ctx context.Context, user, lobbyID uuid.UUID) (*core.ChannelInfo, error) {
 	if m.CreateLimit != nil {
 		if ok, _ := m.CreateLimit.Allow(user.String()); !ok {
 			return nil, httpx.ErrRateLimited()
@@ -124,13 +125,13 @@ func (m *TalkManager) Open(ctx context.Context, user, lobbyID uuid.UUID) (*Chann
 		return nil, err
 	}
 	m.register(ch.ID, user)
-	return &ChannelInfo{ID: ch.ID, Type: ch.Type, UserLimit: ch.UserLimit, SlowMode: ch.SlowModeSeconds}, nil
+	return &core.ChannelInfo{ID: ch.ID, Type: ch.Type, UserLimit: ch.UserLimit, SlowMode: ch.SlowModeSeconds}, nil
 }
 
 // OpenForDM creates a Talk that belongs to the conversation dm for user, who
 // leads it (see OpenDMTalk): no lobby is needed. Like Open it counts against
 // the member's limit and the Talk is removed again if nobody enters it.
-func (m *TalkManager) OpenForDM(ctx context.Context, user, dm uuid.UUID) (*ChannelInfo, error) {
+func (m *TalkManager) OpenForDM(ctx context.Context, user, dm uuid.UUID) (*core.ChannelInfo, error) {
 	if m.CreateLimit != nil {
 		if ok, _ := m.CreateLimit.Allow(user.String()); !ok {
 			return nil, httpx.ErrRateLimited()
@@ -141,7 +142,7 @@ func (m *TalkManager) OpenForDM(ctx context.Context, user, dm uuid.UUID) (*Chann
 		return nil, err
 	}
 	m.register(ch.ID, user)
-	return &ChannelInfo{ID: ch.ID, Type: ch.Type, UserLimit: ch.UserLimit, SlowMode: ch.SlowModeSeconds}, nil
+	return &core.ChannelInfo{ID: ch.ID, Type: ch.Type, UserLimit: ch.UserLimit, SlowMode: ch.SlowModeSeconds}, nil
 }
 
 // register starts following the new Talk and tells everyone who may see it.

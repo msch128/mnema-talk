@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
@@ -24,11 +24,11 @@ import (
 func translate(eventType string, payload any) (name string, data any, ok bool) {
 	switch eventType {
 	case events.MessageCreate, events.MessageUpdate:
-		var m chat.Message
+		var m core.Message
 		switch v := payload.(type) {
-		case chat.Message:
+		case core.Message:
 			m = v
-		case *chat.Message:
+		case *core.Message:
 			m = *v
 		default:
 			return "", nil, false

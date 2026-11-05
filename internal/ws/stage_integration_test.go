@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/stage"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -25,7 +24,7 @@ import (
 type dbStage struct {
 	p        *db.Pool
 	h        *Hub
-	ch       *chat.ChannelInfo
+	ch       *core.ChannelInfo
 	mod, amy *Client
 	bob      *Client
 	peers    map[*Client]*sfu.Peer

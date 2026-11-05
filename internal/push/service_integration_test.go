@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -418,7 +418,7 @@ func TestRegisteringRecordsTheSessionAndOlderDevicesOfEndedSessionsDrop(t *testi
 
 // stored writes the message and who it mentions how (0 by name, 1 through @all or @here, 2 through a role),
 // like the chat package does before the message reaches the hub.
-func (e *env) stored(msg chat.Message, kind int, who ...member) chat.Message {
+func (e *env) stored(msg core.Message, kind int, who ...member) core.Message {
 	e.t.Helper()
 	e.exec(`INSERT INTO messages (id, channel_id, user_id, content) VALUES ($1, $2, $3, $4)`, msg.ID, msg.ChannelID, msg.UserID, msg.Content)
 	for _, m := range who {

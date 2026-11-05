@@ -160,7 +160,7 @@ func (a *API) ServeCreateForumPost(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	ctx, err := a.Messages.SendContext(r, chID, perm.SendMessages)
+	ctx, err := a.Messages.ServeSendContext(r, chID, perm.SendMessages)
 	if err != nil {
 		return err
 	}
@@ -248,7 +248,7 @@ func (a *API) ServeUpdateForumPost(w http.ResponseWriter, r *http.Request) error
 func (a *API) postEditContext(r *http.Request, chID, msgID uuid.UUID, canManage bool, req UpdatePostRequest) (ctx context.Context, before *core.Message, err error) {
 	ctx = r.Context()
 	if !canManage && (req.Title != nil || req.TagIDs != nil || req.IsResolved != nil) {
-		if ctx, err = a.Messages.SendContext(r, chID, perm.SendMessages); err != nil {
+		if ctx, err = a.Messages.ServeSendContext(r, chID, perm.SendMessages); err != nil {
 			return nil, nil, err
 		}
 	}

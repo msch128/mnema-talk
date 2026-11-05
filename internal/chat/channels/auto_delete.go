@@ -41,7 +41,7 @@ func validAutoDeleteDays(days int) bool {
 	return false
 }
 
-// SetAutoDelete changes how long a channel keeps its messages (0 = forever).
+// ServeSetAutoDelete changes how long a channel keeps its messages (0 = forever).
 // Direct messages never take part. It returns the channel as it is now.
 func SetAutoDelete(ctx context.Context, p *db.Pool, id uuid.UUID, days int) (*core.Channel, error) {
 	if !validAutoDeleteDays(days) {

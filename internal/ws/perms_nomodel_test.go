@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 // A hub without a permission model (tests of unrelated features) limits nothing.
@@ -21,7 +21,7 @@ func TestHubWithoutPermissionsLimitsNothing(t *testing.T) {
 	if count(got, "message_create") != 1 || count(got, "permissions_changed") != 1 {
 		t.Fatalf("events: %v", got)
 	}
-	h.joinVoice(a, &chat.ChannelInfo{ID: ch, Type: chat.ChannelTypeVoice})
+	h.joinVoice(a, &core.ChannelInfo{ID: ch, Type: core.ChannelTypeVoice})
 	if !inRoom(h, ch, a.User.ID) {
 		t.Fatal("joining needs no permission without a model")
 	}

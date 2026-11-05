@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/testutil/pgfault"
@@ -20,7 +21,7 @@ import (
 func TestDeletingAChannelRemovesItsWebhookBotAccount(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	ch, err := channels.CreateChannelWithStage(ctx, f.p, nil, "hooked", ChannelTypeText, "", 0, false)
+	ch, err := channels.CreateChannelWithStage(ctx, f.p, nil, "hooked", core.ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +38,7 @@ func TestDeletingAChannelRemovesItsWebhookBotAccount(t *testing.T) {
 	if _, err := f.p.Exec(ctx, `INSERT INTO webhooks (channel_id, bot_user_id, name, token_hash) VALUES ($1, $2, 'hook', '\x00')`, ch.ID, bot); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: ch.ID, UserID: bot, Content: "from the hook"}); err != nil {
+	if _, err := messages.CreateMessage(ctx, f.p, messages.NewMessage{ChannelID: ch.ID, UserID: bot, Content: "from the hook"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -66,7 +67,7 @@ func TestDeletingAChannelRemovesItsWebhookBotAccount(t *testing.T) {
 func TestDeletingAChannelReportsWebhookBotCleanupFailures(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	ch, err := channels.CreateChannelWithStage(ctx, f.p, nil, "hooked-faults", ChannelTypeText, "", 0, false)
+	ch, err := channels.CreateChannelWithStage(ctx, f.p, nil, "hooked-faults", core.ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

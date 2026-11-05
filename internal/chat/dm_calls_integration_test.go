@@ -10,6 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/dm"
 	chatdm "github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -19,7 +21,7 @@ import (
 type callWorldDB struct {
 	*talksWorld
 	h     *Handler
-	calls *DMCalls
+	calls *dm.DMCalls
 	dm    uuid.UUID
 	talk  uuid.UUID
 }
@@ -28,14 +30,14 @@ type callWorldDB struct {
 func startedCall(t *testing.T, ring time.Duration) *callWorldDB {
 	t.Helper()
 	w := newTalksWorld(t)
-	calls := chatdm.NewDMCalls(&DMCalls{DB: w.p, Events: w.rec, Ring: ring})
+	calls := chatdm.NewDMCalls(&dm.DMCalls{DB: w.p, Events: w.rec, Ring: ring})
 	t.Cleanup(calls.Stop)
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr, Calls: calls}
-	dm, _, err := chatdm.CreateDM(context.Background(), w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(context.Background(), w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := h.startDMTalk(httptest.NewRecorder(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); err != nil {
+	if err := h.talks().StartDMTalk(httptest.NewRecorder(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); err != nil {
 		t.Fatal(err)
 	}
 	c := &callWorldDB{talksWorld: w, h: h, calls: calls, dm: dm}
@@ -75,7 +77,7 @@ func TestStartingATalkFromAConversationRingsIt(t *testing.T) {
 	if len(rings) != 1 || rings[0].ChannelID != c.dm {
 		t.Fatalf("rings = %+v", rings)
 	}
-	ring := rings[0].Payload.(DMCallRing)
+	ring := rings[0].Payload.(dm.DMCallRing)
 	if ring.TalkID == uuid.Nil || ring.CallerID != c.alice.ID || ring.TalkName != "Talk 1" || ring.MessageID == uuid.Nil {
 		t.Fatalf("ring = %+v", ring)
 	}
@@ -97,8 +99,8 @@ func TestACallTheCallerHangsUpOnLeavesAMissedCall(t *testing.T) {
 	if len(ends) != 1 {
 		t.Fatalf("ends = %+v", ends)
 	}
-	end := ends[0].Payload.(DMCallEnd)
-	if end.Reason != CallCancelled || end.Active || end.MessageID == nil {
+	end := ends[0].Payload.(dm.DMCallEnd)
+	if end.Reason != dm.CallCancelled || end.Active || end.MessageID == nil {
 		t.Fatalf("end = %+v", end)
 	}
 	if n := c.missedMessages(t); n != 1 {
@@ -106,7 +108,7 @@ func TestACallTheCallerHangsUpOnLeavesAMissedCall(t *testing.T) {
 	}
 	var created int
 	for _, e := range c.rec.Snapshot() {
-		if m, ok := e.Payload.(*Message); ok && e.Type == events.MessageCreate && m.ID == *end.MessageID && e.ChannelID == c.dm {
+		if m, ok := e.Payload.(*core.Message); ok && e.Type == events.MessageCreate && m.ID == *end.MessageID && e.ChannelID == c.dm {
 			created++
 		}
 	}
@@ -131,8 +133,8 @@ func TestACallNobodyAnswersLeavesAMissedCallButStaysOpenForLateJoiners(t *testin
 	if len(ends) != 1 {
 		t.Fatalf("ends = %+v", ends)
 	}
-	end := ends[0].Payload.(DMCallEnd)
-	if end.Reason != CallTimeout || !end.Active || end.MessageID == nil {
+	end := ends[0].Payload.(dm.DMCallEnd)
+	if end.Reason != dm.CallTimeout || !end.Active || end.MessageID == nil {
 		t.Fatalf("end = %+v", end)
 	}
 	if call := c.calls.Active(c.dm); call == nil || call.Ringing {
@@ -160,7 +162,7 @@ func TestAnAnsweredCallLeavesNoMissedCall(t *testing.T) {
 	c.calls.OnPresence(c.alice.ID, c.talk, true)
 	c.calls.OnPresence(c.bob.ID, c.talk, true)
 	ends := c.announce(events.DMCallEnd)
-	if len(ends) != 1 || ends[0].Payload.(DMCallEnd).Reason != CallAnswered || ends[0].Payload.(DMCallEnd).MessageID != nil {
+	if len(ends) != 1 || ends[0].Payload.(dm.DMCallEnd).Reason != dm.CallAnswered || ends[0].Payload.(dm.DMCallEnd).MessageID != nil {
 		t.Fatalf("ends = %+v", ends)
 	}
 	c.calls.OnPresence(c.alice.ID, c.talk, false)
@@ -168,14 +170,14 @@ func TestAnAnsweredCallLeavesNoMissedCall(t *testing.T) {
 	if n := c.missedMessages(t); n != 0 {
 		t.Fatalf("missed call messages = %d", n)
 	}
-	if ends := c.announce(events.DMCallEnd); len(ends) != 2 || ends[1].Payload.(DMCallEnd).Reason != CallEnded {
+	if ends := c.announce(events.DMCallEnd); len(ends) != 2 || ends[1].Payload.(dm.DMCallEnd).Reason != dm.CallEnded {
 		t.Fatalf("ends = %+v", ends)
 	}
 }
 
 func TestOnlyTheServerWritesTheCallMarks(t *testing.T) {
-	in := InEmbed{Title: "x"}
-	embeds, err := messages.SanitizeEmbeds([]InEmbed{in})
+	in := messages.InEmbed{Title: "x"}
+	embeds, err := messages.SanitizeEmbeds([]messages.InEmbed{in})
 	if err != nil || len(embeds) != 1 || embeds[0].Call != "" || embeds[0].TalkID != nil {
 		t.Fatalf("embeds = %+v, %v", embeds, err)
 	}
@@ -188,12 +190,12 @@ func TestACallNeedsNoLobbyAndItsTalkBelongsToTheConversation(t *testing.T) {
 		t.Fatal(err)
 	}
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
-	dm, _, err := chatdm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	rec := httptest.NewRecorder()
-	if err := h.startDMTalk(rec, talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); err != nil {
+	if err := h.talks().StartDMTalk(rec, talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); err != nil {
 		t.Fatalf("a fresh community has no lobby: %v", err)
 	}
 	var talk uuid.UUID
@@ -226,12 +228,12 @@ func TestACallNeedsNoLobbyAndItsTalkBelongsToTheConversation(t *testing.T) {
 		t.Errorf("the Owner holds %b in a Talk of a conversation they are not in", got)
 	}
 	// Empty, it goes away like any temporary Talk.
-	w.mgr.removeIfEmpty(talk)
+	w.mgr.RemoveIfEmpty(talk)
 	if w.exists(t, talk) {
 		t.Fatal("an empty Talk of a conversation should be removed")
 	}
 	// A second call in the same conversation reuses the lowest free number.
-	if err := h.startDMTalk(httptest.NewRecorder(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); err != nil {
+	if err := h.talks().StartDMTalk(httptest.NewRecorder(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); err != nil {
 		t.Fatal(err)
 	}
 	if err := w.p.QueryRow(ctx, `SELECT name FROM channels WHERE dm_id = $1`, dm).Scan(&name); err != nil || name != "Talk 1" {
@@ -242,7 +244,7 @@ func TestACallNeedsNoLobbyAndItsTalkBelongsToTheConversation(t *testing.T) {
 func TestTheTalkOfAConversationGoesWithIt(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	dm, _, err := chatdm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +270,7 @@ func TestACallerWhoMayNotConnectGetsNoTalkAndNoRing(t *testing.T) {
 	}
 	c.h.Perms.Invalidate()
 	before := len(c.rec.Snapshot())
-	err := c.h.startDMTalk(httptest.NewRecorder(), talkRequest(c.alice, ``, map[string]string{"id": c.dm.String()}))
+	err := c.h.talks().StartDMTalk(httptest.NewRecorder(), talkRequest(c.alice, ``, map[string]string{"id": c.dm.String()}))
 	if err == nil {
 		t.Fatal("a member who cannot join Talks started one")
 	}
@@ -283,10 +285,10 @@ func TestACallerWhoMayNotConnectGetsNoTalkAndNoRing(t *testing.T) {
 func startedCallWorld(t *testing.T) *callWorldDB {
 	t.Helper()
 	w := newTalksWorld(t)
-	calls := chatdm.NewDMCalls(&DMCalls{DB: w.p, Events: w.rec, Ring: time.Hour})
+	calls := chatdm.NewDMCalls(&dm.DMCalls{DB: w.p, Events: w.rec, Ring: time.Hour})
 	t.Cleanup(calls.Stop)
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr, Calls: calls}
-	dm, _, err := chatdm.CreateDM(context.Background(), w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(context.Background(), w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -297,7 +299,7 @@ func TestTheFilesOfAConversationsTalkGoWhenTheConversationDoes(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	carol := newTalksUser(t, w.p, "carol_t")
-	dm, _, err := chatdm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,7 +307,7 @@ func TestTheFilesOfAConversationsTalkGoWhenTheConversationDoes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := messages.InsertMessage(ctx, w.p, nil, NewMessage{ChannelID: talk.ID, UserID: w.alice.ID, Content: "look"}, nil)
+	msg, err := messages.InsertMessage(ctx, w.p, nil, messages.NewMessage{ChannelID: talk.ID, UserID: w.alice.ID, Content: "look"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,7 +336,7 @@ func TestTheLastMemberLeavingAGroupClosesTheRoomOfItsTalk(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	carol := newTalksUser(t, w.p, "carol_t")
-	dm, _, err := chatdm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -346,7 +348,7 @@ func TestTheLastMemberLeavingAGroupClosesTheRoomOfItsTalk(t *testing.T) {
 	leave := func(u *auth.User) {
 		t.Helper()
 		params := map[string]string{"id": dm.String(), "user": "@me"}
-		if err := h.DMs().LeaveDM(httptest.NewRecorder(), talkRequest(u, ``, params)); err != nil {
+		if err := h.DMs().ServeLeaveDM(httptest.NewRecorder(), talkRequest(u, ``, params)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -377,7 +379,7 @@ func TestLeavingASharedTalkOnlyTheCallerWasInCancelsTheRingAndLeavesAMissedCall(
 	if len(ends) != 1 {
 		t.Fatalf("ends = %+v", ends)
 	}
-	if end := ends[0].Payload.(DMCallEnd); end.Reason != CallCancelled || end.Active || end.MessageID == nil {
+	if end := ends[0].Payload.(dm.DMCallEnd); end.Reason != dm.CallCancelled || end.Active || end.MessageID == nil {
 		t.Fatalf("end = %+v", end)
 	}
 	if n := c.missedMessages(t); n != 1 {

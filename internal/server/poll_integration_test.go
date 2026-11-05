@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/poll"
@@ -47,11 +47,11 @@ func slashPoll(c *client, channel uuid.UUID, options map[string]any) response {
 }
 
 // createPoll posts a poll through the REST route and returns its message.
-func (f pollFixture) createPoll(t *testing.T, c *client, body map[string]any) chat.Message {
+func (f pollFixture) createPoll(t *testing.T, c *client, body map[string]any) core.Message {
 	t.Helper()
 	res := c.post(f.base()+"/polls", body)
 	wantStatus(t, "create poll", res, http.StatusCreated)
-	var m chat.Message
+	var m core.Message
 	res.decode(t, &m)
 	if m.Poll == nil {
 		t.Fatalf("no poll on the message: %s", res.body)
@@ -59,7 +59,7 @@ func (f pollFixture) createPoll(t *testing.T, c *client, body map[string]any) ch
 	return m
 }
 
-func (f pollFixture) basic(t *testing.T, c *client, extra map[string]any) chat.Message {
+func (f pollFixture) basic(t *testing.T, c *client, extra map[string]any) core.Message {
 	t.Helper()
 	body := map[string]any{"question": "Pizza or pasta?", "options": []string{"Pizza", "Pasta", "Both"}}
 	for k, v := range extra {
@@ -105,7 +105,7 @@ func TestPollCommandPostsAPollMessage(t *testing.T) {
 	}
 
 	history := f.bob.get(f.base() + "/messages")
-	var msgs []chat.Message
+	var msgs []core.Message
 	history.decode(t, &msgs)
 	if len(msgs) != 1 || msgs[0].ID != *out.MessageID || msgs[0].Content != "Where do we meet?" || msgs[0].UserID != f.alice.user.ID {
 		t.Fatalf("history: %s", history.body)
@@ -119,7 +119,7 @@ func TestPollCommandPostsAPollMessage(t *testing.T) {
 	}
 	var announced bool
 	for _, e := range f.a.events.Snapshot() {
-		if m, ok := e.Payload.(*chat.Message); ok && e.Type == events.MessageCreate && m.ID == *out.MessageID && m.Poll != nil {
+		if m, ok := e.Payload.(*core.Message); ok && e.Type == events.MessageCreate && m.ID == *out.MessageID && m.Poll != nil {
 			announced = true
 		}
 	}
@@ -146,7 +146,7 @@ func TestPollCommandRefusesBadInput(t *testing.T) {
 	} {
 		wantStatus(t, name, slashPoll(f.alice, f.channel, opts), http.StatusBadRequest)
 	}
-	var msgs []chat.Message
+	var msgs []core.Message
 	f.alice.get(f.base()+"/messages").decode(t, &msgs)
 	if len(msgs) != 0 {
 		t.Fatalf("a refused poll left %d messages", len(msgs))

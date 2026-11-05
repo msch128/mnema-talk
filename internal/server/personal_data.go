@@ -2,7 +2,7 @@ package server
 
 import (
 	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/account"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/discordimport"
 	"github.com/msch128/mnema-talk/internal/emoji"
@@ -17,7 +17,7 @@ import (
 // on the account handler. Auth does not import those domains.
 func (c *components) wirePersonalData() {
 	r := &userdata.Registry{}
-	chat.RegisterAccountData(r)
+	account.RegisterAccountData(r)
 	later.RegisterAccountData(r)
 	communityevents.RegisterAccountData(r)
 	push.RegisterAccountData(r)

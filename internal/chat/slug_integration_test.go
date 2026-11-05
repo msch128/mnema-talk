@@ -11,6 +11,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
@@ -22,7 +24,7 @@ func slugWorld(t *testing.T) (context.Context, *db.Pool) {
 	return context.Background(), p
 }
 
-func mustCreate(t *testing.T, ctx context.Context, p *db.Pool, name string, typ ChannelType) *Channel {
+func mustCreate(t *testing.T, ctx context.Context, p *db.Pool, name string, typ core.ChannelType) *core.Channel {
 	t.Helper()
 	ch, err := channels.CreateChannelWithStage(ctx, p, nil, name, typ, "", 0, false)
 	if err != nil {
@@ -31,7 +33,7 @@ func mustCreate(t *testing.T, ctx context.Context, p *db.Pool, name string, typ 
 	return ch
 }
 
-func mustRename(t *testing.T, ctx context.Context, p *db.Pool, id uuid.UUID, name string) *Channel {
+func mustRename(t *testing.T, ctx context.Context, p *db.Pool, id uuid.UUID, name string) *core.Channel {
 	t.Helper()
 	ch, err := channels.EditChannel(ctx, p, id, &name, nil, nil, nil, nil, nil)
 	if err != nil {
@@ -40,7 +42,7 @@ func mustRename(t *testing.T, ctx context.Context, p *db.Pool, id uuid.UUID, nam
 	return ch
 }
 
-func requireSlug(t *testing.T, ch *Channel, slug string, previous ...string) {
+func requireSlug(t *testing.T, ch *core.Channel, slug string, previous ...string) {
 	t.Helper()
 	if previous == nil {
 		previous = []string{}
@@ -53,12 +55,12 @@ func requireSlug(t *testing.T, ch *Channel, slug string, previous ...string) {
 func TestChannelSlugsFollowNamesAndKeepHistory(t *testing.T) {
 	ctx, p := slugWorld(t)
 
-	general := mustCreate(t, ctx, p, "General", ChannelTypeText)
+	general := mustCreate(t, ctx, p, "General", core.ChannelTypeText)
 	requireSlug(t, general, "general")
-	second := mustCreate(t, ctx, p, "general", ChannelTypeVoice)
+	second := mustCreate(t, ctx, p, "general", core.ChannelTypeVoice)
 	requireSlug(t, second, "general-"+channels.HexOf(second.ID)[:6])
-	requireSlug(t, mustCreate(t, ctx, p, "Gr\u00f6\u00dfe", ChannelTypeForum), "groesse")
-	requireSlug(t, mustCreate(t, ctx, p, "🎮", ChannelTypeText), "channel")
+	requireSlug(t, mustCreate(t, ctx, p, "Gr\u00f6\u00dfe", core.ChannelTypeForum), "groesse")
+	requireSlug(t, mustCreate(t, ctx, p, "🎮", core.ChannelTypeText), "channel")
 
 	// A rename that keeps the slug fitting does not grow the history.
 	requireSlug(t, mustRename(t, ctx, p, general.ID, "GENERAL!"), "general")
@@ -67,13 +69,13 @@ func TestChannelSlugsFollowNamesAndKeepHistory(t *testing.T) {
 	requireSlug(t, renamed, "lobby", "general")
 
 	// The freed slug is not handed to another channel: old links never move.
-	third := mustCreate(t, ctx, p, "General", ChannelTypeText)
+	third := mustCreate(t, ctx, p, "General", core.ChannelTypeText)
 	requireSlug(t, third, "general-"+channels.HexOf(third.ID)[:6])
 
 	// Renaming back takes the channel's own old slug again.
 	requireSlug(t, mustRename(t, ctx, p, general.ID, "general"), "general", "lobby")
 
-	var seen *Channel
+	var seen *core.Channel
 	_, uncategorized, err := channels.GetServerHierarchy(ctx, p)
 	if err != nil {
 		t.Fatal(err)
@@ -91,7 +93,7 @@ func TestChannelSlugsFollowNamesAndKeepHistory(t *testing.T) {
 
 func TestChannelSlugsGoWithTheChannel(t *testing.T) {
 	ctx, p := slugWorld(t)
-	a := mustCreate(t, ctx, p, "Lounge", ChannelTypeVoice)
+	a := mustCreate(t, ctx, p, "Lounge", core.ChannelTypeVoice)
 	mustRename(t, ctx, p, a.ID, "Hall")
 	if _, err := channels.DeleteChannel(ctx, p, a.ID); err != nil {
 		t.Fatal(err)
@@ -101,7 +103,7 @@ func TestChannelSlugsGoWithTheChannel(t *testing.T) {
 		t.Fatalf("slug rows left = %d, err %v", left, err)
 	}
 	// With the channel gone its slugs are free again.
-	requireSlug(t, mustCreate(t, ctx, p, "Lounge", ChannelTypeVoice), "lounge")
+	requireSlug(t, mustCreate(t, ctx, p, "Lounge", core.ChannelTypeVoice), "lounge")
 }
 
 func TestChannelSlugsStayUniqueUnderConcurrentCreates(t *testing.T) {
@@ -113,7 +115,7 @@ func TestChannelSlugsStayUniqueUnderConcurrentCreates(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if ch, err := channels.CreateChannelWithStage(ctx, p, nil, "Same", ChannelTypeText, "", i, false); err == nil {
+			if ch, err := channels.CreateChannelWithStage(ctx, p, nil, "Same", core.ChannelTypeText, "", i, false); err == nil {
 				slugs[i] = ch.Slug
 			}
 		}()
@@ -130,7 +132,7 @@ func TestChannelSlugsStayUniqueUnderConcurrentCreates(t *testing.T) {
 
 func TestDuplicatedAndTemporaryChannelsGetSlugs(t *testing.T) {
 	ctx, p := slugWorld(t)
-	lobby := mustCreate(t, ctx, p, "Create a Talk", ChannelTypeVoice)
+	lobby := mustCreate(t, ctx, p, "Create a Talk", core.ChannelTypeVoice)
 	if err := channels.SetLobby(ctx, p, lobby.ID, true); err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +140,7 @@ func TestDuplicatedAndTemporaryChannelsGetSlugs(t *testing.T) {
 	if _, err := p.Exec(ctx, `INSERT INTO users (id, username, display_name, password_hash) VALUES ($1, 'slugleader', 'L', 'x')`, leader); err != nil {
 		t.Fatal(err)
 	}
-	talk, err := OpenTempTalk(ctx, p, lobby.ID, leader)
+	talk, err := talks.OpenTempTalk(ctx, p, lobby.ID, leader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,8 +152,8 @@ func TestDuplicatedAndTemporaryChannelsGetSlugs(t *testing.T) {
 // rename would tell them which slugs other channels hold.
 func TestLeaderRenameOfATempTalkLeaksNothing(t *testing.T) {
 	ctx, p := slugWorld(t)
-	secret := mustCreate(t, ctx, p, "geheim", ChannelTypeText)
-	lobby := mustCreate(t, ctx, p, "Create a Talk", ChannelTypeVoice)
+	secret := mustCreate(t, ctx, p, "geheim", core.ChannelTypeText)
+	lobby := mustCreate(t, ctx, p, "Create a Talk", core.ChannelTypeVoice)
 	if err := channels.SetLobby(ctx, p, lobby.ID, true); err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +161,7 @@ func TestLeaderRenameOfATempTalkLeaksNothing(t *testing.T) {
 	if _, err := p.Exec(ctx, `INSERT INTO users (id, username, display_name, password_hash) VALUES ($1, 'slugleader', 'L', 'x')`, leader); err != nil {
 		t.Fatal(err)
 	}
-	talk, err := OpenTempTalk(ctx, p, lobby.ID, leader)
+	talk, err := talks.OpenTempTalk(ctx, p, lobby.ID, leader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +181,7 @@ func TestLeaderRenameOfATempTalkLeaksNothing(t *testing.T) {
 // No channel can take the shape of a temporary Talk's slug.
 func TestNameBasedSlugNeverLooksLikeATempTalk(t *testing.T) {
 	ctx, p := slugWorld(t)
-	ch := mustCreate(t, ctx, p, "Talk 0f3a9c1e", ChannelTypeText)
+	ch := mustCreate(t, ctx, p, "Talk 0f3a9c1e", core.ChannelTypeText)
 	if channels.TempSlugPattern.MatchString(ch.Slug) || ch.Slug != "talk-0f3a9c1e-x" {
 		t.Fatalf("slug %q", ch.Slug)
 	}
@@ -189,15 +191,15 @@ func TestNameBasedSlugNeverLooksLikeATempTalk(t *testing.T) {
 // gets the same slug whatever other channels exist.
 func TestCollisionSuffixIgnoresOtherChannels(t *testing.T) {
 	ctx, p := slugWorld(t)
-	mustCreate(t, ctx, p, "Plans", ChannelTypeText)
-	first := mustCreate(t, ctx, p, "Plans", ChannelTypeText)
+	mustCreate(t, ctx, p, "Plans", core.ChannelTypeText)
+	first := mustCreate(t, ctx, p, "Plans", core.ChannelTypeText)
 	for i := 0; i < 3; i++ {
-		mustCreate(t, ctx, p, "Plans", ChannelTypeText)
+		mustCreate(t, ctx, p, "Plans", core.ChannelTypeText)
 	}
 	if first.Slug != "plans-"+channels.HexOf(first.ID)[:6] {
 		t.Fatalf("slug %q", first.Slug)
 	}
-	last := mustCreate(t, ctx, p, "Plans", ChannelTypeText)
+	last := mustCreate(t, ctx, p, "Plans", core.ChannelTypeText)
 	if last.Slug != "plans-"+channels.HexOf(last.ID)[:6] {
 		t.Fatalf("slug %q", last.Slug)
 	}
@@ -205,18 +207,18 @@ func TestCollisionSuffixIgnoresOtherChannels(t *testing.T) {
 
 func TestSlugHistoryKeepsTheNewestTen(t *testing.T) {
 	ctx, p := slugWorld(t)
-	ch := mustCreate(t, ctx, p, "name 0", ChannelTypeText)
-	var last *Channel
+	ch := mustCreate(t, ctx, p, "name 0", core.ChannelTypeText)
+	var last *core.Channel
 	for i := 1; i <= 14; i++ {
 		last = mustRename(t, ctx, p, ch.ID, fmt.Sprintf("name %d", i))
 	}
-	if last.Slug != "name-14" || len(last.PreviousSlugs) != MaxFormerSlugs {
+	if last.Slug != "name-14" || len(last.PreviousSlugs) != channels.MaxFormerSlugs {
 		t.Fatalf("slug %q previous %v", last.Slug, last.PreviousSlugs)
 	}
-	if last.PreviousSlugs[0] != "name-4" || last.PreviousSlugs[MaxFormerSlugs-1] != "name-13" {
+	if last.PreviousSlugs[0] != "name-4" || last.PreviousSlugs[channels.MaxFormerSlugs-1] != "name-13" {
 		t.Fatalf("previous %v", last.PreviousSlugs)
 	}
 	// A dropped slug is free again.
-	other := mustCreate(t, ctx, p, "name 0", ChannelTypeText)
+	other := mustCreate(t, ctx, p, "name 0", core.ChannelTypeText)
 	requireSlug(t, other, "name-0")
 }

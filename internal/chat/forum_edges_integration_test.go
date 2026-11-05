@@ -17,6 +17,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -44,7 +45,7 @@ func TestForumTagNameConflictIsReported(t *testing.T) {
 		t.Fatal(err)
 	}
 	name := "Bug"
-	_, _, err = forum.UpdateForumTag(ctx, f.p, ch.ID, other.ID, TagPatch{Name: &name})
+	_, _, err = forum.UpdateForumTag(ctx, f.p, ch.ID, other.ID, forum.TagPatch{Name: &name})
 	requireAPIStatus(t, err, http.StatusConflict)
 }
 
@@ -62,12 +63,12 @@ func TestForumTagUpdatesDoNotOverwriteEachOther(t *testing.T) {
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 	name, emoji := "new", "B"
-	if _, _, err := forum.UpdateForumTag(ctx, tx, ch.ID, tag.ID, TagPatch{Name: &name}); err != nil {
+	if _, _, err := forum.UpdateForumTag(ctx, tx, ch.ID, tag.ID, forum.TagPatch{Name: &name}); err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan error, 1)
 	go func() {
-		_, _, err := forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, TagPatch{Emoji: &emoji})
+		_, _, err := forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, forum.TagPatch{Emoji: &emoji})
 		done <- err
 	}()
 	waitForBlockedStatement(t, f.p) // the second patch has read the tag and waits for the row
@@ -102,7 +103,7 @@ func TestForumModerationIsAudited(t *testing.T) {
 	if err := h.forum().ServeCreateForumTag(rec, chattest.Request(mod, `{"name":"bugs"}`, chParam, "")); err != nil {
 		t.Fatal(err)
 	}
-	tag := forumDecode[ForumTag](t, rec)
+	tag := forumDecode[core.ForumTag](t, rec)
 	tagParam := map[string]string{"channelID": ch.ID.String(), "tagID": tag.ID.String()}
 	if err := h.forum().ServeUpdateForumTag(httptest.NewRecorder(), chattest.Request(mod, `{"name":"defects"}`, tagParam, "")); err != nil {
 		t.Fatal(err)
@@ -159,7 +160,7 @@ func TestForumPostPatchChecksTheLockUnderTheRowLock(t *testing.T) {
 	title := "renamed while locked"
 	done := make(chan error, 1)
 	go func() {
-		_, err := forum.UpdateForumPost(ctx, f.p, ch.ID, post.ID, PostActor{ID: f.u.ID}, PostPatch{Title: &title})
+		_, err := forum.UpdateForumPost(ctx, f.p, ch.ID, post.ID, forum.PostActor{ID: f.u.ID}, forum.PostPatch{Title: &title})
 		done <- err
 	}()
 	waitForBlockedStatement(t, f.p) // the author's request saw the post unlocked
@@ -183,7 +184,7 @@ func TestForumActivityPagingUsesTheSeenCursorActivity(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	newest := forumMakePost(t, h, f.u, ch, "newest")
 
-	page1, err := forum.ListForumPostsFiltered(ctx, f.p, ch.ID, forum.PostFilter{}, HistoryQuery{Limit: 2})
+	page1, err := forum.ListForumPostsFiltered(ctx, f.p, ch.ID, forum.PostFilter{}, core.HistoryQuery{Limit: 2})
 	if err != nil || len(page1) != 2 || page1[0].ID != newest.ID || page1[1].ID != middle.ID {
 		t.Fatalf("page 1 = %v, %v", page1, err)
 	}
@@ -192,7 +193,7 @@ func TestForumActivityPagingUsesTheSeenCursorActivity(t *testing.T) {
 	if err := forumReply(t, h, f.u, ch, middle.ID); err != nil {
 		t.Fatal(err)
 	}
-	page2, err := forum.ListForumPostsFiltered(ctx, f.p, ch.ID, forum.PostFilter{}, HistoryQuery{Limit: 2, Before: &cursor.ID, BeforeActivity: cursor.LastActivityAt})
+	page2, err := forum.ListForumPostsFiltered(ctx, f.p, ch.ID, forum.PostFilter{}, core.HistoryQuery{Limit: 2, Before: &cursor.ID, BeforeActivity: cursor.LastActivityAt})
 	if err != nil || len(page2) != 1 || page2[0].ID != older.ID {
 		t.Fatalf("page 2 = %v, %v; want only the older post", page2, err)
 	}
@@ -250,7 +251,7 @@ func TestBulkDeleteSurvivesAFailingReplyRead(t *testing.T) {
 func TestChannelEditsAreAllOrNothing(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	if _, err := channels.CreateChannelWithStage(ctx, f.p, nil, "text-stage", ChannelTypeText, "", 0, true); err == nil {
+	if _, err := channels.CreateChannelWithStage(ctx, f.p, nil, "text-stage", core.ChannelTypeText, "", 0, true); err == nil {
 		t.Fatal("a text channel was created as a Stage")
 	}
 	var n int
@@ -258,7 +259,7 @@ func TestChannelEditsAreAllOrNothing(t *testing.T) {
 		t.Fatalf("channels named text-stage = %d, %v; want none", n, err)
 	}
 
-	voice, err := channels.CreateChannelWithStage(ctx, f.p, nil, "talk", ChannelTypeVoice, "", 0, false)
+	voice, err := channels.CreateChannelWithStage(ctx, f.p, nil, "talk", core.ChannelTypeVoice, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

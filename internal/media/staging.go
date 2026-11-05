@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -28,7 +28,7 @@ const (
 	stagedSweepInterval = 15 * time.Minute
 	// maxStagedPerMember bounds the unsent files one member holds at once
 	// (three full messages), so staging cannot be used as free storage.
-	maxStagedPerMember = 3 * chat.MaxAttachments
+	maxStagedPerMember = 3 * messages.MaxAttachments
 )
 
 // stageAttachment handles POST /api/channels/{channelID}/attachments.
@@ -42,7 +42,7 @@ const (
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param file formData file true "At most MAX_UPLOAD_MB (config); type is sniffed and checked against an allowlist."
-// @Success 201 {object} chat.MediaAttachment "The staged attachment."
+// @Success 201 {object} core.MediaAttachment "The staged attachment."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): no file, an empty file or too many unsent files."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages or Attach files permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
@@ -83,7 +83,7 @@ func (h *Handler) stageAttachment(w http.ResponseWriter, r *http.Request) error 
 	if err := h.insertStaged(ctx, chID, user.ID, in); err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusCreated, chat.MediaAttachment{
+	httpx.WriteJSON(w, http.StatusCreated, core.MediaAttachment{
 		ID: in.id, OriginalFilename: in.filename, MimeType: in.mime, SizeBytes: in.size, URL: "/api/media/" + in.id.String(),
 	})
 	return nil

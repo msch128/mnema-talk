@@ -17,7 +17,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/botapi"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -216,7 +218,7 @@ func TestBotAPIScope(t *testing.T) {
 	// Only the allowed channel is listed.
 	res := f.client.get(bot.BasePath + "/channels")
 	wantStatus(t, "channels", res, http.StatusOK)
-	var tree chat.ChannelHierarchy
+	var tree channels.ChannelHierarchy
 	res.decode(t, &tree)
 	var seen []uuid.UUID
 	for _, c := range tree.Uncategorized {
@@ -267,7 +269,7 @@ func TestBotAPIMessages(t *testing.T) {
 		"embeds": []map[string]any{{"title": "Run 42", "color": 65280, "fields": []map[string]any{{"name": "tests", "value": "812", "inline": true}}}},
 	})
 	wantStatus(t, "post", res, http.StatusCreated)
-	var m chat.Message
+	var m core.Message
 	res.decode(t, &m)
 	if m.UserID != f.bot.UserID || !m.IsBot || m.DisplayName != "helper" || len(m.Embeds) != 1 || m.Embeds[0].Title != "Run 42" {
 		t.Fatalf("message: %s", res.body)
@@ -277,7 +279,7 @@ func TestBotAPIMessages(t *testing.T) {
 	for name, body := range map[string]map[string]any{
 		"empty":      {"content": ""},
 		"bad embeds": {"embeds": []map[string]any{{"url": "javascript:alert(1)"}}},
-		"too long":   {"content": strings.Repeat("x", chat.MaxMessageLen+1)},
+		"too long":   {"content": strings.Repeat("x", core.MaxMessageLen+1)},
 	} {
 		res := c.post(botPath(f.open, "/messages"), body)
 		wantStatus(t, name, res, http.StatusBadRequest)
@@ -291,7 +293,7 @@ func TestBotAPIMessages(t *testing.T) {
 	wantStatus(t, "get", c.get(botPath(f.open, "/messages/"+m.ID.String())), http.StatusOK)
 	res = c.patch(botPath(f.open, "/messages/"+m.ID.String()), map[string]any{"content": "edited"})
 	wantStatus(t, "edit own", res, http.StatusOK)
-	var edited chat.Message
+	var edited core.Message
 	res.decode(t, &edited)
 	if edited.Content != "edited" || !edited.IsEdited {
 		t.Fatalf("edited: %s", res.body)
@@ -300,7 +302,7 @@ func TestBotAPIMessages(t *testing.T) {
 	wantStatus(t, "edit foreign", c.patch(botPath(f.open, "/messages/"+member.String()), map[string]any{"content": "x"}), http.StatusForbidden)
 	wantStatus(t, "delete foreign", c.delete(botPath(f.open, "/messages/"+member.String())), http.StatusForbidden)
 	res = c.msgs(f.open)
-	var page []chat.Message
+	var page []core.Message
 	res.decode(t, &page)
 	if len(page) != 2 {
 		t.Fatalf("history: %s", res.body)
@@ -309,7 +311,7 @@ func TestBotAPIMessages(t *testing.T) {
 	// Replies and threads.
 	res = c.post(botPath(f.open, "/messages"), map[string]any{"content": "reply", "message_reference": map[string]any{"message_id": member}})
 	wantStatus(t, "reply", res, http.StatusCreated)
-	var reply chat.Message
+	var reply core.Message
 	res.decode(t, &reply)
 	if reply.ReplyToID == nil || *reply.ReplyToID != member {
 		t.Fatalf("reply: %s", res.body)
@@ -329,7 +331,7 @@ func TestBotAPIReactions(t *testing.T) {
 	wantStatus(t, "add", f.client.put(path), http.StatusNoContent)
 	wantStatus(t, "add again", f.client.put(path), http.StatusNoContent)
 	count := func() int {
-		var m chat.Message
+		var m core.Message
 		res := f.client.get(botPath(f.open, "/messages/"+msg.String()))
 		res.decode(t, &m)
 		n := 0
@@ -378,7 +380,7 @@ func TestBotAPIUpload(t *testing.T) {
 	}
 	res := post(f.open, "a.png", "image/png", pngBytes)
 	wantStatus(t, "upload", res, http.StatusCreated)
-	var m chat.Message
+	var m core.Message
 	res.decode(t, &m)
 	if len(m.Attachments) != 1 || !m.IsBot || m.Content != "see attached" {
 		t.Fatalf("upload: %s", res.body)
@@ -407,7 +409,7 @@ func TestBotAPIMembersNeedTheIntent(t *testing.T) {
 
 	res := f.client.get(bot.BasePath + "/members")
 	wantStatus(t, "members", res, http.StatusOK)
-	var list []chat.BotMember
+	var list []botapi.BotMember
 	res.decode(t, &list)
 	names := map[string]bool{}
 	for _, m := range list {

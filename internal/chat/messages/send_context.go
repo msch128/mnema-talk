@@ -10,11 +10,11 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
-// SendContext checks need for the caller in ch and returns the request
+// ServeSendContext checks need for the caller in ch and returns the request
 // context carrying the mention policy that fits their permissions: @all and
 // @here only notify when they may mention everyone, and nobody is notified
 // about a message in a channel they cannot view.
-func (a *API) SendContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
+func (a *API) ServeSendContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
 	return SendContextFor(a.Guard.Perms, r.Context(), ch, need)
 }
 
@@ -59,7 +59,7 @@ func MentionableRoles(snap *perm.Snapshot, mayAll bool) []mentions.MentionRole {
 	return out
 }
 
-// SendContext is Handler.sendContext for a message that another feature creates for
+// ServeSendContext is Handler.sendContext for a message that another feature creates for
 // the caller (a built-in slash command, a poll): the caller needs need in ch.
 func SendContext(perms *perm.Service, r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
 	return SendContextFor(perms, r.Context(), ch, need)

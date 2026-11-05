@@ -119,7 +119,7 @@ func (e *env) restSetup(h *Commands) state {
 		e.t.Fatal(err)
 	}
 	st := state{bot: f, token: secret}
-	nm := chat.NewMessage{ChannelID: e.ch, UserID: e.owner.ID, Content: "hello"}
+	nm := messages.NewMessage{ChannelID: e.ch, UserID: e.owner.ID, Content: "hello"}
 	var err error
 	if st.msg, err = messages.CreateMessage(ctx, e.p, nm); err != nil {
 		e.t.Fatal(err)

@@ -11,20 +11,20 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/poll"
 )
 
-func (f pollFixture) vote(c *client, m chat.Message, ids ...uuid.UUID) response {
+func (f pollFixture) vote(c *client, m core.Message, ids ...uuid.UUID) response {
 	if ids == nil {
 		ids = []uuid.UUID{}
 	}
 	return c.put(f.base()+"/messages/"+m.ID.String()+"/poll/votes", map[string]any{"option_ids": ids})
 }
 
-func (f pollFixture) detail(t *testing.T, c *client, m chat.Message) poll.Detail {
+func (f pollFixture) detail(t *testing.T, c *client, m core.Message) poll.Detail {
 	t.Helper()
 	res := c.get(f.base() + "/messages/" + m.ID.String() + "/poll")
 	wantStatus(t, "get poll", res, http.StatusOK)
@@ -33,9 +33,9 @@ func (f pollFixture) detail(t *testing.T, c *client, m chat.Message) poll.Detail
 	return d
 }
 
-func (f pollFixture) optionID(m chat.Message, i int) uuid.UUID { return m.Poll.Options[i].ID }
+func (f pollFixture) optionID(m core.Message, i int) uuid.UUID { return m.Poll.Options[i].ID }
 
-func tallies(p chat.Poll) []int {
+func tallies(p core.Poll) []int {
 	out := make([]int, len(p.Options))
 	for i, o := range p.Options {
 		out[i] = o.Votes
@@ -150,7 +150,7 @@ func TestPollEndsEarlyByAuthorOrModeratorAndThenRefusesVotes(t *testing.T) {
 	}
 
 	// The tally stays and the message list says it is closed.
-	var msgs []chat.Message
+	var msgs []core.Message
 	f.alice.get(f.base()+"/messages").decode(t, &msgs)
 	if p := msgs[0].Poll; !p.Closed || !sameInts(tallies(*p), []int{0, 1, 0}) {
 		t.Fatalf("history: %+v", p)

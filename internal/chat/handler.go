@@ -9,15 +9,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
+	"github.com/msch128/mnema-talk/internal/chat/botapi"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/chat/forum"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/chat/reports"
 	"github.com/msch128/mnema-talk/internal/chat/saved"
 	"github.com/msch128/mnema-talk/internal/chat/search"
+	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -29,12 +32,12 @@ type Handler struct {
 	DB     *db.Pool
 	Events events.Publisher
 	// Objects deletes the media of removed messages and channels; nil skips it.
-	Objects ObjectDeleter
+	Objects core.ObjectDeleter
 	// Online resolves @here; nil means nobody is online.
-	Online OnlineSource
+	Online mentions.OnlineSource
 	// Voice empties the voice room of a deleted channel. When nil, Online is
 	// used if it implements VoiceRooms (the WebSocket hub does).
-	Voice VoiceRooms
+	Voice core.VoiceRooms
 	// Perms decides who may see and use which channel. nil imposes no
 	// channel limits (tests); the router always sets it, and without it the
 	// admin routes stay Owner-only.
@@ -61,19 +64,19 @@ type Handler struct {
 	// member; nil means no cap.
 	DMLimit *httpx.RateLimiter
 	// Talks runs the Create-a-Talk lobbies; nil switches the feature off.
-	Talks *TalkManager
+	Talks *talks.TalkManager
 	// Calls rings the members of a conversation when a Talk is started or shared
 	// in it; nil means no ringing (the invitation card is still posted).
-	Calls *DMCalls
+	Calls *dm.DMCalls
 	// TalkLimit caps Talk edits and invitations per member; nil means no cap.
 	TalkLimit *httpx.RateLimiter
 }
 
-func (h *Handler) voiceRooms() VoiceRooms {
+func (h *Handler) voiceRooms() core.VoiceRooms {
 	if h.Voice != nil {
 		return h.Voice
 	}
-	v, _ := h.Online.(VoiceRooms)
+	v, _ := h.Online.(core.VoiceRooms)
 	return v
 }
 
@@ -124,6 +127,21 @@ func (h *Handler) saved() *saved.API {
 	return &saved.API{DB: h.DB, Events: h.Events, Guard: h.guard(), SavedLimit: h.SavedLimit}
 }
 
+// talks builds the Create-a-Talk API from the handler's fields. h.Calls may be
+// nil: a nil *dm.DMCalls rings nobody.
+func (h *Handler) talks() *talks.API {
+	return &talks.API{
+		DB: h.DB, Events: h.Events, Guard: h.guard(), Audit: h.Audit, Online: h.Online, Talks: h.Talks,
+		Calls: h.Calls, TalkLimit: h.TalkLimit, Messages: h.messages(), Channels: h.channels(),
+	}
+}
+
+// MountBot registers the bot API routes (the bot authentication middleware must
+// already apply); see botapi.API.MountBot.
+func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
+	(&botapi.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Online: h.Online, Messages: h.messages(), Channels: h.channels()}).MountBot(r, send)
+}
+
 // Mount registers the member-facing routes (RequireUser must already apply).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/members", httpx.Handle(h.listMembers))
@@ -131,7 +149,7 @@ func (h *Handler) Mount(r chi.Router) {
 	h.reports().Mount(r)
 	h.saved().Mount(r)
 	h.DMs().Mount(r)
-	h.mountTalks(r)
+	h.talks().Mount(r)
 	h.forum().Mount(r)
 	h.messages().Mount(r)
 	h.search().Mount(r)
@@ -154,7 +172,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 // @Tags Users
 // @Produce json
 // @Security cookieAuth
-// @Success 200 {array} Member "Members."
+// @Success 200 {array} core.Member "Members."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -193,8 +211,8 @@ func (h *Handler) loadMemberPermissions(ctx context.Context) (map[uuid.UUID][]uu
 	return roles, snap.Timeouts(), nil
 }
 
-func enrichMembers(members []Member, roles map[uuid.UUID][]uuid.UUID, timeouts map[uuid.UUID]time.Time, hidden map[uuid.UUID]int64) []Member {
-	out := make([]Member, len(members))
+func enrichMembers(members []core.Member, roles map[uuid.UUID][]uuid.UUID, timeouts map[uuid.UUID]time.Time, hidden map[uuid.UUID]int64) []core.Member {
+	out := make([]core.Member, len(members))
 	for i, m := range members {
 		m.RoleIDs = roles[m.ID]
 		out[i] = m

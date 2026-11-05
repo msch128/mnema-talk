@@ -37,7 +37,7 @@ func CheckSortOrder(n int) error {
 	return nil
 }
 
-// ApplyLayout stores category order and channel placement in one
+// ServeApplyLayout stores category order and channel placement in one
 // transaction; an unknown category or channel rejects the whole change.
 func ApplyLayout(ctx context.Context, p *db.Pool, cats []CategoryOrder, chans []ChannelPlacement) error {
 	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return ApplyLayoutTx(ctx, tx, cats, chans) })
@@ -160,7 +160,7 @@ func LockChannelLayout(ctx context.Context, tx pgx.Tx) error {
 	return nil
 }
 
-// DuplicateChannel copies a channel's own properties (name, type, topic,
+// ServeDuplicateChannel copies a channel's own properties (name, type, topic,
 // category) into a new channel placed directly below it in the same group
 // (its category, or the uncategorized channels). Messages, reactions and
 // per-user state (read position, notification level) are not copied. Channel

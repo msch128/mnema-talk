@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/forum"
 )
 
@@ -63,7 +62,7 @@ func TestUploadStartsAForumPost(t *testing.T) {
 	}
 
 	// A required tag holds for uploads too.
-	if _, _, err := forum.UpdateForumSettings(ctx, f.p, forumID, chat.ForumSettingsPatch{RequireTag: ptr(true)}); err != nil {
+	if _, _, err := forum.UpdateForumSettings(ctx, f.p, forumID, forum.ForumSettingsPatch{RequireTag: ptr(true)}); err != nil {
 		t.Fatal(err)
 	}
 	if err := upload(forumID, formPart{name: "title", value: "No tag"}); err == nil {

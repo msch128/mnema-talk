@@ -18,15 +18,15 @@ func TestOnlyAPermanentTalkThatIsNoLobbyBecomesAStage(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	ctx := context.Background()
-	talk, err := channels.CreateChannelWithStage(ctx, p, nil, "Town hall", ChannelTypeVoice, "", 0, false)
+	talk, err := channels.CreateChannelWithStage(ctx, p, nil, "Town hall", core.ChannelTypeVoice, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	text, err := channels.CreateChannelWithStage(ctx, p, nil, "general", ChannelTypeText, "", 1, false)
+	text, err := channels.CreateChannelWithStage(ctx, p, nil, "general", core.ChannelTypeText, "", 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	lobby, err := channels.CreateChannelWithStage(ctx, p, nil, "Create a Talk", ChannelTypeVoice, "", 2, false)
+	lobby, err := channels.CreateChannelWithStage(ctx, p, nil, "Create a Talk", core.ChannelTypeVoice, "", 2, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func TestTheChannelListAndThePermissionStateKnowTheStage(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	ctx := context.Background()
-	talk, err := channels.CreateChannelWithStage(ctx, p, nil, "Town hall", ChannelTypeVoice, "", 0, false)
+	talk, err := channels.CreateChannelWithStage(ctx, p, nil, "Town hall", core.ChannelTypeVoice, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestTheDatabaseKeepsStagesApartFromLobbiesAndTemporaryTalks(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	ctx := context.Background()
-	talk, err := channels.CreateChannelWithStage(ctx, p, nil, "Town hall", ChannelTypeVoice, "", 0, false)
+	talk, err := channels.CreateChannelWithStage(ctx, p, nil, "Town hall", core.ChannelTypeVoice, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

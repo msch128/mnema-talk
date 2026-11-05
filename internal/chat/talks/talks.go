@@ -1,4 +1,4 @@
-package chat
+package talks
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -42,7 +43,7 @@ const tempTalkNumberDigits = 3
 // tempTalkBase is the lobby name as the stem of its temporary Talks' names,
 // cut on a rune boundary so "<base> <n>" fits MaxChannelNameLen.
 func tempTalkBase(lobbyName string) string {
-	room := MaxChannelNameLen - 1 - tempTalkNumberDigits
+	room := core.MaxChannelNameLen - 1 - tempTalkNumberDigits
 	if r := []rune(strings.TrimSpace(lobbyName)); len(r) > room {
 		return strings.TrimSpace(string(r[:room]))
 	}
@@ -71,8 +72,8 @@ func lowestFreeTalkNumber(base string, names []string) int {
 // leader. The copy keeps the lobby's category, member limit and permission
 // overwrites, so who may see and join it is exactly who may see the lobby.
 // It sorts right behind the lobby without moving any permanent channel.
-func OpenTempTalk(ctx context.Context, p *db.Pool, lobbyID, creator uuid.UUID) (*Channel, error) {
-	var ch *Channel
+func OpenTempTalk(ctx context.Context, p *db.Pool, lobbyID, creator uuid.UUID) (*core.Channel, error) {
+	var ch *core.Channel
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		if err := channels.LockChannelLayout(ctx, tx); err != nil {
 			return err
@@ -104,8 +105,8 @@ func OpenTempTalk(ctx context.Context, p *db.Pool, lobbyID, creator uuid.UUID) (
 // snapshot lets only the conversation's members see and join it (dm_id), so a
 // community needs no setup for calls in conversations. It is uncategorized and
 // goes with the conversation.
-func OpenDMTalk(ctx context.Context, p *db.Pool, dm, creator uuid.UUID) (*Channel, error) {
-	var ch *Channel
+func OpenDMTalk(ctx context.Context, p *db.Pool, dm, creator uuid.UUID) (*core.Channel, error) {
+	var ch *core.Channel
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		if err := channels.LockChannelLayout(ctx, tx); err != nil {
 			return err
@@ -115,7 +116,7 @@ func OpenDMTalk(ctx context.Context, p *db.Pool, dm, creator uuid.UUID) (*Channe
 			return err
 		}
 		id := uuid.New()
-		ch = &Channel{Slug: channels.TempTalkSlug(id), PreviousSlugs: []string{}, IsTemp: true, LeaderID: &creator}
+		ch = &core.Channel{Slug: channels.TempTalkSlug(id), PreviousSlugs: []string{}, IsTemp: true, LeaderID: &creator}
 		err = tx.QueryRow(ctx, `
 			INSERT INTO channels (id, category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds, dm_id, is_temp, leader_id, slug)
 			VALUES ($1, NULL, $2, 'voice', '', 0, 0, 0, $3, TRUE, $4, $5)
@@ -158,7 +159,7 @@ func nextDMTalkName(ctx context.Context, tx pgx.Tx, dm uuid.UUID) (string, error
 }
 
 // checkLobby refuses a channel that is no lobby or has too many open Talks.
-func checkLobby(ctx context.Context, tx pgx.Tx, lobby *Channel) error {
+func checkLobby(ctx context.Context, tx pgx.Tx, lobby *core.Channel) error {
 	var isLobby bool
 	var open int
 	if err := tx.QueryRow(ctx, `
@@ -166,7 +167,7 @@ func checkLobby(ctx context.Context, tx pgx.Tx, lobby *Channel) error {
 		       (SELECT count(*) FROM channels WHERE lobby_id = $1 AND is_temp)`, lobby.ID).Scan(&isLobby, &open); err != nil {
 		return fmt.Errorf("check lobby: %w", err)
 	}
-	if lobby.Type != ChannelTypeVoice || !isLobby {
+	if lobby.Type != core.ChannelTypeVoice || !isLobby {
 		return errNotLobby
 	}
 	if open >= MaxTempTalksPerLobby {
@@ -205,13 +206,13 @@ func nextTalkName(ctx context.Context, tx pgx.Tx, lobbyName string, category *uu
 // that n has more digits than tempTalkNumberDigits reserves.
 func fitTalkName(base string, n int) string {
 	num := strconv.Itoa(n)
-	if r := []rune(base); len(r)+1+len(num) > MaxChannelNameLen {
-		base = strings.TrimSpace(string(r[:MaxChannelNameLen-1-len(num)]))
+	if r := []rune(base); len(r)+1+len(num) > core.MaxChannelNameLen {
+		base = strings.TrimSpace(string(r[:core.MaxChannelNameLen-1-len(num)]))
 	}
 	return base + " " + num
 }
 
-func markTemp(ctx context.Context, tx pgx.Tx, ch *Channel, lobby, creator uuid.UUID) error {
+func markTemp(ctx context.Context, tx pgx.Tx, ch *core.Channel, lobby, creator uuid.UUID) error {
 	if _, err := tx.Exec(ctx, `UPDATE channels SET is_temp = TRUE, lobby_id = $2, leader_id = $3 WHERE id = $1`, ch.ID, lobby, creator); err != nil {
 		return fmt.Errorf("mark temporary Talk: %w", err)
 	}

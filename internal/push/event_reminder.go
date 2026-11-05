@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 )
 
@@ -57,7 +56,7 @@ func (s *Service) SendEventReminder(ctx context.Context, userID uuid.UUID, event
 // nothing to remind of.
 func (s *Service) talkMuted(ctx context.Context, userID, channelID uuid.UUID) (bool, error) {
 	var chLvl, catLvl, srvLvl *string
-	var chSetting, catSetting, srvSetting chat.NotifySetting
+	var chSetting, catSetting, srvSetting readstate.NotifySetting
 	var dbNow time.Time
 	err := s.DB.QueryRow(ctx, `
 		SELECT r.notify_level, r.muted_until, cn.notify_level, cn.muted_until, sn.notify_level, sn.muted_until, NOW()
@@ -75,7 +74,7 @@ func (s *Service) talkMuted(ctx context.Context, userID, channelID uuid.UUID) (b
 	chSetting.Level = levelOf(chLvl)
 	catSetting.Level = levelOf(catLvl)
 	srvSetting.Level = levelOf(srvLvl)
-	return readstate.ResolveNotify(dbNow, chSetting, catSetting, srvSetting) == chat.NotifyMute, nil
+	return readstate.ResolveNotify(dbNow, chSetting, catSetting, srvSetting) == readstate.NotifyMute, nil
 }
 
 // EventQuiet is eventQuiet for notices that are not pushes (the in-app toast

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -48,17 +48,17 @@ func newViewAsWorld(t *testing.T) viewAsWorld {
 	return w
 }
 
-func (w viewAsWorld) viewAs(t *testing.T, c *client, role uuid.UUID) chat.ViewAsRole {
+func (w viewAsWorld) viewAs(t *testing.T, c *client, role uuid.UUID) channels.ViewAsRole {
 	t.Helper()
 	res := c.get("/api/admin/roles/" + role.String() + "/view-as")
 	wantStatus(t, "view as", res, http.StatusOK)
-	var out chat.ViewAsRole
+	var out channels.ViewAsRole
 	res.decode(t, &out)
 	return out
 }
 
-func (w viewAsWorld) channels(out chat.ViewAsRole) map[uuid.UUID]chat.ViewAsChannel {
-	m := map[uuid.UUID]chat.ViewAsChannel{}
+func (w viewAsWorld) channels(out channels.ViewAsRole) map[uuid.UUID]channels.ViewAsChannel {
+	m := map[uuid.UUID]channels.ViewAsChannel{}
 	for _, ch := range out.Uncategorized {
 		m[ch.ID] = ch
 	}
@@ -126,7 +126,7 @@ func TestViewAsRoleNeverShowsMoreThanTheCallerCanSee(t *testing.T) {
 	}
 }
 
-func chanNames(out chat.ViewAsRole) []string {
+func chanNames(out channels.ViewAsRole) []string {
 	var names []string
 	for _, ch := range out.Uncategorized {
 		names = append(names, ch.Name)

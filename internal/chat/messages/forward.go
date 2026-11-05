@@ -172,7 +172,7 @@ func (a *API) forwardMessage(w http.ResponseWriter, r *http.Request) error {
 	if err := a.Guard.Require(r, root.channel, perm.ViewChannel); err != nil {
 		return refusedAsForward(err)
 	}
-	ctx, err := a.SendContext(r, req.ChannelID, perm.SendMessages)
+	ctx, err := a.ServeSendContext(r, req.ChannelID, perm.SendMessages)
 	if err != nil {
 		return refusedAsForward(err)
 	}

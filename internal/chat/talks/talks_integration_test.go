@@ -1,6 +1,6 @@
 //go:build integration
 
-package chat
+package talks
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -33,7 +34,7 @@ type talksWorld struct {
 	rec      *events.Recorder
 	mgr      *TalkManager
 	category uuid.UUID
-	lobby    *Channel
+	lobby    *core.Channel
 	alice    *auth.User
 	bob      *auth.User
 	closed   atomic.Int32
@@ -63,7 +64,7 @@ func newTalksWorld(t *testing.T) *talksWorld {
 		t.Fatal(err)
 	}
 	w.category = cat.ID
-	w.lobby, err = channels.CreateChannelWithStage(ctx, p, &cat.ID, "Create a Talk", ChannelTypeVoice, "", 5, false)
+	w.lobby, err = channels.CreateChannelWithStage(ctx, p, &cat.ID, "Create a Talk", core.ChannelTypeVoice, "", 5, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,6 +93,18 @@ func (m *TalkManager) applyEvent(ev presenceEvent) {
 	m.pending = append(m.pending, ev)
 	m.mu.Unlock()
 	m.applyNext()
+}
+
+// api is the Create-a-Talk API over the world, with the permission model, the
+// messages API that posts invitation cards and the channels API that announces
+// changes.
+func (w *talksWorld) api() *API {
+	g := core.Guard{Perms: perm.NewService(w.p)}
+	return &API{
+		DB: w.p, Events: w.rec, Guard: g, Talks: w.mgr,
+		Messages: &messages.API{DB: w.p, Events: w.rec, Guard: g},
+		Channels: &channels.API{DB: w.p, Events: w.rec, Guard: g},
+	}
 }
 
 func (w *talksWorld) join(ch, user uuid.UUID)  { w.mgr.applyEvent(presenceEvent{user, ch, true}) }
@@ -183,14 +196,14 @@ func TestOpeningATalkCopiesTheLobbyAndNumbersFromOne(t *testing.T) {
 func TestOnlyALobbyOpensTalksAndOnlyUpToTheCap(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	plain, err := channels.CreateChannelWithStage(ctx, w.p, &w.category, "Plain", ChannelTypeVoice, "", 9, false)
+	plain, err := channels.CreateChannelWithStage(ctx, w.p, &w.category, "Plain", core.ChannelTypeVoice, "", 9, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := w.mgr.Open(ctx, w.alice.ID, plain.ID); !errors.Is(err, errNotLobby) {
 		t.Fatalf("a plain Talk opens none: %v", err)
 	}
-	text, _ := channels.CreateChannelWithStage(ctx, w.p, nil, "text", ChannelTypeText, "", 0, false)
+	text, _ := channels.CreateChannelWithStage(ctx, w.p, nil, "text", core.ChannelTypeText, "", 0, false)
 	if err := channels.SetLobby(ctx, w.p, text.ID, true); err == nil {
 		t.Fatal("a text channel cannot be a lobby")
 	}
@@ -339,7 +352,7 @@ func TestTemporaryTalksStayOutOfTheSavedLayout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = channels.ApplyLayout(ctx, w.p, nil, []ChannelPlacement{{ID: talk.ID, CategoryID: nil, SortOrder: 99}, {ID: w.lobby.ID, CategoryID: &w.category, SortOrder: 7}})
+	err = channels.ApplyLayout(ctx, w.p, nil, []channels.ChannelPlacement{{ID: talk.ID, CategoryID: nil, SortOrder: 99}, {ID: w.lobby.ID, CategoryID: &w.category, SortOrder: 7}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -358,7 +371,7 @@ func talkRequest(u *auth.User, body string, params map[string]string) *http.Requ
 func TestOnlyTheLeaderEditsATemporaryTalk(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
+	h := w.api()
 	talk, _ := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
 	params := map[string]string{"id": talk.ID.String()}
 
@@ -395,15 +408,15 @@ func TestOnlyTheLeaderEditsATemporaryTalk(t *testing.T) {
 func TestStartingATalkFromAConversationPostsAnInvite(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
-	dm, _, err := dm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	h := w.api()
+	dm, _, err := dm.CreateDM(ctx, w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	params := map[string]string{"id": dm.String()}
 
 	rec := httptest.NewRecorder()
-	if err := h.startDMTalk(rec, talkRequest(w.alice, ``, params)); err != nil {
+	if err := h.StartDMTalk(rec, talkRequest(w.alice, ``, params)); err != nil {
 		t.Fatal(err)
 	}
 	var talk uuid.UUID
@@ -422,13 +435,13 @@ func TestStartingATalkFromAConversationPostsAnInvite(t *testing.T) {
 func TestAnInviteCardGrantsNothing(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
-	dm, _, err := dm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	h := w.api()
+	dm, _, err := dm.CreateDM(ctx, w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// A Talk only Alice may see or join.
-	private, err := channels.CreateChannelWithStage(ctx, w.p, nil, "Leads", ChannelTypeVoice, "", 1, false)
+	private, err := channels.CreateChannelWithStage(ctx, w.p, nil, "Leads", core.ChannelTypeVoice, "", 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,7 +453,7 @@ func TestAnInviteCardGrantsNothing(t *testing.T) {
 	if _, err := w.p.Exec(ctx, `INSERT INTO permission_overwrites (channel_id, user_id, allow) VALUES ($1, $2, $3)`, private.ID, w.alice.ID, int64(perm.ViewChannel|perm.Connect)); err != nil {
 		t.Fatal(err)
 	}
-	h.Perms.Invalidate()
+	h.Guard.Perms.Invalidate()
 	body := `{"conversation_id":"` + dm.String() + `"}`
 	params := map[string]string{"id": private.ID.String()}
 
@@ -452,7 +465,7 @@ func TestAnInviteCardGrantsNothing(t *testing.T) {
 		t.Fatalf("Alice may invite: %v", err)
 	}
 	// The card changed nothing about who may join: Bob still cannot.
-	got, err := h.Perms.Channel(ctx, w.bob.Subject(), private.ID)
+	got, err := h.Guard.Perms.Channel(ctx, w.bob.Subject(), private.ID)
 	if err == nil && got.Has(perm.ViewChannel|perm.Connect) {
 		t.Fatal("the invitation let Bob into the Talk")
 	}
@@ -587,12 +600,12 @@ func TestTalksOpenedDuringALobbyChangeEndUpWithTheNewRules(t *testing.T) {
 func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
+	h := w.api()
 	talk, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dm, _, err := dm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := dm.CreateDM(ctx, w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -634,7 +647,7 @@ func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
 	if err := h.inviteToTalk(rec(), talkRequest(w.alice, body, map[string]string{"id": uuid.NewString()})); err == nil {
 		t.Fatal("unknown Talk")
 	}
-	text, _ := channels.CreateChannelWithStage(ctx, w.p, nil, "plain-text", ChannelTypeText, "", 0, false)
+	text, _ := channels.CreateChannelWithStage(ctx, w.p, nil, "plain-text", core.ChannelTypeText, "", 0, false)
 	notDM := `{"conversation_id":"` + text.ID.String() + `"}`
 	if err := h.inviteToTalk(rec(), talkRequest(w.alice, notDM, id)); !errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("a channel is no conversation: %v", err)
@@ -650,21 +663,21 @@ func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
 	}
 
 	// Start a Talk: bad id, a channel instead of a conversation, a stranger, and the rate limit.
-	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": "nope"})); !invalid(err) {
+	if err := h.StartDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": "nope"})); !invalid(err) {
 		t.Fatalf("bad conversation id: %v", err)
 	}
-	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": text.ID.String()})); !errors.Is(err, core.ErrChannelNotFound) {
+	if err := h.StartDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": text.ID.String()})); !errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("a channel: %v", err)
 	}
-	if err := h.startDMTalk(rec(), talkRequest(carol, ``, map[string]string{"id": dm.String()})); err == nil {
+	if err := h.StartDMTalk(rec(), talkRequest(carol, ``, map[string]string{"id": dm.String()})); err == nil {
 		t.Fatal("a stranger started a Talk in a conversation")
 	}
 	w.mgr.CreateLimit = httpx.NewRateLimiter(1, TalkWindow)
-	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); err != nil {
+	if err := h.StartDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); err != nil {
 		t.Fatal(err)
 	}
 	var apiErr *httpx.APIError
-	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); !errors.As(err, &apiErr) || apiErr.Code != httpx.CodeRateLimited {
+	if err := h.StartDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": dm.String()})); !errors.As(err, &apiErr) || apiErr.Code != httpx.CodeRateLimited {
 		t.Fatalf("second Talk: %v", err)
 	}
 }
@@ -672,9 +685,10 @@ func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
 func TestTalkRoutesExistOnlyWithAManager(t *testing.T) {
 	w := newTalksWorld(t)
 	routes := func(manager *TalkManager) int {
-		h := &Handler{DB: w.p, Events: w.rec, Talks: manager, TalkLimit: httpx.NewRateLimiter(100, time.Minute)}
+		h := w.api()
+		h.Talks, h.TalkLimit = manager, httpx.NewRateLimiter(100, time.Minute)
 		r := chi.NewRouter()
-		h.mountTalks(r)
+		h.Mount(r)
 		return len(r.Routes())
 	}
 	if n := routes(nil); n != 0 {
@@ -689,14 +703,14 @@ func TestTheLiveStateIgnoresWhatItDoesNotKnowAndRecoversFromEmptiness(t *testing
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	w.join(uuid.New(), w.alice.ID) // a Talk nobody opened here
-	w.mgr.removeIfEmpty(uuid.New())
+	w.mgr.RemoveIfEmpty(uuid.New())
 
 	talk, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	w.join(talk.ID, w.alice.ID)
-	w.mgr.removeIfEmpty(talk.ID) // occupied: stays
+	w.mgr.RemoveIfEmpty(talk.ID) // occupied: stays
 	if !w.exists(t, talk.ID) {
 		t.Fatal("an occupied Talk was removed")
 	}
@@ -758,7 +772,7 @@ func TestDatabaseFailuresLeaveTheLiveStateIntactAndAreRetried(t *testing.T) {
 	m.talks[talk.ID] = &liveTalk{leader: &w.alice.ID}
 
 	m.persistLeader(talk.ID, &w.bob.ID) // the broadcast goes out although storing failed
-	m.removeIfEmpty(talk.ID)
+	m.RemoveIfEmpty(talk.ID)
 	m.mu.Lock()
 	kept := m.talks[talk.ID]
 	m.mu.Unlock()

@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -117,7 +116,7 @@ func (h *Handler) prepareUploadRequest(w http.ResponseWriter, r *http.Request, u
 }
 
 func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user *auth.User, in *storedUpload, target *uploadTarget) (uuid.UUID, error) {
-	nm := chat.NewMessage{
+	nm := messages.NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: target.content, ParentID: target.parentID, ReplyToID: target.replyToID, HasAttachment: true,
 	}
 	var storePost func(tx pgx.Tx, msgID uuid.UUID) error
@@ -161,7 +160,7 @@ func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user 
 // @Param reply_to_id formData string false "Quoted message ID." Format(uuid)
 // @Param title formData string false "In a forum channel: makes the message a post with this title (1 to 100 characters; not with parent_id or reply_to_id). A root message in a forum needs one." maxlength(100)
 // @Param tag_ids formData string false "With title: the post's tags, comma-separated IDs (at most 5, the forum's rules for moderated and required tags apply)."
-// @Success 201 {object} chat.Message "Created message."
+// @Success 201 {object} core.Message "Created message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages or Attach files permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."

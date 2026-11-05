@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -113,7 +112,7 @@ func (s *Service) post(ctx context.Context, d dueScheduled) (uuid.UUID, error) {
 	if err := messages.ValidateTarget(ctx, s.DB, d.channel, d.parent, d.replyTo); err != nil {
 		return uuid.Nil, err
 	}
-	return messages.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{
+	return messages.InsertMessage(ctx, s.DB, s.Online, messages.NewMessage{
 		ChannelID: d.channel, UserID: d.user, Content: d.content, ParentID: d.parent, ReplyToID: d.replyTo,
 	}, func(tx pgx.Tx, _ uuid.UUID) error {
 		tag, err := tx.Exec(ctx, `DELETE FROM scheduled_messages WHERE id = $1 AND state = 'pending' AND updated_at = $2`, d.id, d.updatedAt)

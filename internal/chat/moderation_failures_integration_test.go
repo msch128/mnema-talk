@@ -53,7 +53,7 @@ func TestSlowModeReportsDatabaseDrift(t *testing.T) {
 	check := func(views map[string]string) error {
 		p := chattest.DriftPool(t, f.p, views)
 		return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-			return messages.GatePost(ctx, tx, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID})
+			return messages.GatePost(ctx, tx, messages.NewMessage{ChannelID: f.c.ID, UserID: f.u.ID})
 		})
 	}
 	if err := check(map[string]string{"channels": `SELECT id FROM public.channels`}); err == nil || !strings.Contains(err.Error(), "load channel") {

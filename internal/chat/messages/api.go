@@ -42,8 +42,8 @@ type API struct {
 // Mount registers the message routes (RequireUser must already apply).
 func (a *API) Mount(r chi.Router) {
 	r.Get("/channels/{channelID}/messages", httpx.Handle(a.ListMessages))
-	r.Post("/channels/{channelID}/messages", httpx.Handle(a.CreateMessage))
-	r.Put("/channels/{channelID}/messages/{messageID}", httpx.Handle(a.EditMessage))
+	r.Post("/channels/{channelID}/messages", httpx.Handle(a.ServeCreateMessage))
+	r.Put("/channels/{channelID}/messages/{messageID}", httpx.Handle(a.ServeEditMessage))
 	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.Handle(a.DeleteMessage))
 	a.mountModeration(r)
 	a.mountForward(r)
@@ -61,5 +61,5 @@ func (a *API) Mount(r chi.Router) {
 	follow.Put("/threads/{threadID}/follow", httpx.Handle(a.putThreadFollow))
 	follow.Delete("/threads/{threadID}/follow", httpx.Handle(a.deleteThreadFollow))
 	r.Get("/threads/following", httpx.Handle(a.ListFollowedThreads))
-	r.Get("/messages/by-number/{number}", httpx.Handle(a.GetMessageByNumber))
+	r.Get("/messages/by-number/{number}", httpx.Handle(a.ServeGetMessageByNumber))
 }

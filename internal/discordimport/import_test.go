@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -132,7 +132,7 @@ func TestPlanMapsChannelKinds(t *testing.T) {
 	if by["Lobby"].UserLimit != 5 || by["rules"].Topic != "Read first" || by["rules"].SlowModeSeconds != 5 {
 		t.Fatalf("limits not kept: %+v %+v", by["Lobby"], by["rules"])
 	}
-	if got := by["general"].SlowModeSeconds; got != chat.MaxSlowModeSeconds {
+	if got := by["general"].SlowModeSeconds; got != core.MaxSlowModeSeconds {
 		t.Fatalf("slow mode must be capped, got %d", got)
 	}
 	if !by["staff"].Private || by["rules"].Private {
