@@ -1,0 +1,27 @@
+Makefile
+  s_fe1166ed5e0791::t_6a660f403fa3b4 94
+e2e/ports.sh
+  s_fe1166ed5e0791::t_8359f816120c58 1-22
+e2e/ports_test.sh
+  s_fe1166ed5e0791::t_7edb82728fe08d 1-26
+e2e/run.sh
+  s_fe1166ed5e0791::t_af59d9f3c93db3 52-53,56-57
+e2e/tests/mobile.spec.ts
+  s_fe1166ed5e0791::t_ffdf2e1c7ce32d 105-109,111-115,353
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "58a5f18553df8d01e46d33a431176bbc0cea1dfe",
+  "prompts": {},
+  "sessions": {
+    "s_fe1166ed5e0791": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a8d568653d168d4d7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
