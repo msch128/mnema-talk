@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.4](https://github.com/msch128/mnema-talk/compare/v2.9.3...v2.9.4) (2026-11-05)
+
+
+### Bug Fixes
+
+* **sfu:** a screen viewer's first keyframe must not pass before its track is bound ([#701](https://github.com/msch128/mnema-talk/issues/701)) ([397c079](https://github.com/msch128/mnema-talk/commit/397c0790a171ac69eb619a070bb4f95ce35865a9))
+
 ## [2.9.3](https://github.com/msch128/mnema-talk/compare/v2.9.2...v2.9.3) (2026-11-05)
 
 
