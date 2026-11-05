@@ -1,0 +1,19 @@
+doc/operations.md
+  s_3a2d4d42231329::t_e9a0cf3b378747 1262-1267
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "03f3b37c1765b7a948930970d67133911488ef26",
+  "prompts": {},
+  "sessions": {
+    "s_3a2d4d42231329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5cd8a73a681f9a5e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
