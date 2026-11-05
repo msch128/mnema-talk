@@ -1,0 +1,57 @@
+internal/chat/block_sql_test.go
+  s_db63cd4785d2fa::t_f520d5cc89e727 9,16,20,29
+internal/chat/core_aliases.go
+  s_db63cd4785d2fa::t_a793a5f47da5b5 7,49,51,83-84,110,121,175-179,187,224-225,231,233-235
+internal/chat/forum/api.go
+  s_db63cd4785d2fa::t_260fbf61eaf847 1-27
+internal/chat/forum/forum_posts.go
+  s_db63cd4785d2fa::t_bec8263ad3dbc5 1,13,24,52-53,60,81,89,126-127,131,150,201,203,212,244-245
+internal/chat/forum/forum_reads.go
+  s_db63cd4785d2fa::t_436c461bd4aace 1,16,18,43
+internal/chat/forum/forum_settings.go
+  s_db63cd4785d2fa::t_8a810758e47983 1,34,48
+internal/chat/forum/forum_tags.go
+  s_db63cd4785d2fa::t_78a76cd96c82f4 1,11,41,49,55-56,64,66,83-84,89,103,113,163,167,176,199,201,225,242-244,262
+internal/chat/forum/forum_test.go
+  s_db63cd4785d2fa::t_274b9e31ca51a3 1,9,27,32,53,58,75,96
+internal/chat/forum/handler_forum.go
+  s_db63cd4785d2fa::t_0541df46f466a7 1,54-62,65-66,70,76,91,97,102,105,117,132,140,150-151,157,163,167,174,178,182,185,196-197,203,213,216,223,227,231,237,239,248,251,255-256,263-264,281,304,309
+internal/chat/forum/handler_forum_extras.go
+  s_db63cd4785d2fa::t_94146473d8b672 1,41-46,49,58,63,68,71,74,82,92-93,99-100,109,113,117,124,130,135,138,144,154-155,161-162,170,174,178,183,192,197,202,205,208,216,226,231,240,243,246,250
+internal/chat/forum/handler_forum_tags.go
+  s_db63cd4785d2fa::t_e5ed29554b4eec 1,17,26,31,36,39,42,50,60-61,68,73,76,83,86,90-91,96,107-108,114,123,126,133,136,140-141,146,160,169,172,175,179-180,187-188,193,201
+internal/chat/forum_complete_integration_test.go
+  s_db63cd4785d2fa::t_49eb0a86236b46 18,39,43,54,66,72,89,95,99,105,108,111,116,120,125,154,173,177,180,200,215,225,322,353,357,361,374,381,393,404,407,442,446,463,475-480,498-500,509
+internal/chat/forum_edges_integration_test.go
+  s_db63cd4785d2fa::t_852f5a481864fe 20,37,40,42,47,55,65,70,80,102,107,118,125,131,148,162,186,195,203
+internal/chat/forum_errors_integration_test.go
+  s_db63cd4785d2fa::t_b300221ab08a61 18,23,54,79,132-154,165-180,186,198,213,220,224,233,243,247,253,256-257,260,272,277,281,285,293,303,348,359,367,419,429,434,437,459,465,468,471,474,477,480,483,494-496,498,501,503,507
+internal/chat/forum_integration_test.go
+  s_db63cd4785d2fa::t_838b8b1d77b7bd 16,51,58,73,85,97,103,115,121,128,157,161,169,182,188,207,218,225,243,268,279,284,290,311,314,327,338,356
+internal/chat/handler.go
+  s_db63cd4785d2fa::t_c1df80024b2831 15,116-120,129
+internal/chat/page_cursor_integration_test.go
+  s_db63cd4785d2fa::t_e61089b276220c 15,44
+internal/media/forum_upload_integration_test.go
+  s_db63cd4785d2fa::t_6190c1934e1940 13,22-24,34,37,40,47,54,61,66,69
+internal/media/stream.go
+  s_db63cd4785d2fa::t_ff3a12d61951ad 18,188,192
+internal/repo/boundaries_test.go
+  s_db63cd4785d2fa::t_ab355fecc2d12d 74,76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8babafb5fdb8c09581c474be0b7f78e59c194fb1",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
