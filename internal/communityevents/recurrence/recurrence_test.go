@@ -1,4 +1,4 @@
-package communityevents
+package recurrence
 
 import (
 	"testing"

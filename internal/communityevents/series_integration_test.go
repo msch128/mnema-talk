@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/communityevents/recurrence"
 )
 
 // occurrences lists the series' events by index: start, status, title.
@@ -67,7 +68,7 @@ const weeklyBody = `{"title":"Raid night","description":"d","start_time":%q,"end
 func TestARecurringEventCreatesItsOccurrencesAheadAndOnlyOnce(t *testing.T) {
 	f := newRosterFixture(t)
 	first := f.startSeries(t, weeklyBody)
-	if first.Series == nil || first.Series.Index != 0 || first.Series.Frequency != FreqWeekly || first.Series.Timezone != "Europe/Berlin" {
+	if first.Series == nil || first.Series.Index != 0 || first.Series.Frequency != recurrence.FreqWeekly || first.Series.Timezone != "Europe/Berlin" {
 		t.Fatalf("series info: %+v", first.Series)
 	}
 	list := f.occurrences(t, first.Series.ID)
@@ -419,7 +420,7 @@ func TestSeriesStoreRefusesWhatDoesNotExistOrIsInvalid(t *testing.T) {
 	if _, err := f.s.GenerateSeries(ctx, uuid.New(), time.Now()); err == nil {
 		t.Fatal("generating an unknown series fails")
 	}
-	if _, _, err := f.s.CreateSeries(ctx, CreateEventRequest{Title: "x", StartTime: time.Now().Add(time.Hour), Location: ptr("Hall")}, RecurrenceRequest{Frequency: FreqWeekly, Timezone: "Mars/Base"}, f.creator.ID); err == nil {
+	if _, _, err := f.s.CreateSeries(ctx, CreateEventRequest{Title: "x", StartTime: time.Now().Add(time.Hour), Location: ptr("Hall")}, RecurrenceRequest{Frequency: recurrence.FreqWeekly, Timezone: "Mars/Base"}, f.creator.ID); err == nil {
 		t.Fatal("an unknown zone is refused")
 	}
 }
@@ -452,7 +453,7 @@ func TestAFollowingEditWithTheStartUnchangedKeepsTheAnchor(t *testing.T) {
 	f := newRosterFixture(t)
 	ctx := context.Background()
 	jan31 := time.Date(2030, 1, 31, 12, 0, 0, 0, time.UTC)
-	ev, seriesID, err := f.s.CreateSeries(ctx, CreateEventRequest{Title: "Monthly", StartTime: jan31, Location: ptr("Hall")}, RecurrenceRequest{Frequency: FreqMonthly}, f.creator.ID)
+	ev, seriesID, err := f.s.CreateSeries(ctx, CreateEventRequest{Title: "Monthly", StartTime: jan31, Location: ptr("Hall")}, RecurrenceRequest{Frequency: recurrence.FreqMonthly}, f.creator.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -555,7 +556,7 @@ func TestTheTemplateTakesOnlyWhatAnEditNames(t *testing.T) {
 func TestAMonthlySeriesEditedAtItsClampedOccurrenceKeepsTheDayWhenOnlyTheTimeMoves(t *testing.T) {
 	f := newRosterFixture(t)
 	ctx := context.Background()
-	_, seriesID, err := f.s.CreateSeries(ctx, CreateEventRequest{Title: "Monthly", StartTime: time.Date(2030, 1, 31, 12, 0, 0, 0, time.UTC), Location: ptr("Hall")}, RecurrenceRequest{Frequency: FreqMonthly}, f.creator.ID)
+	_, seriesID, err := f.s.CreateSeries(ctx, CreateEventRequest{Title: "Monthly", StartTime: time.Date(2030, 1, 31, 12, 0, 0, 0, time.UTC), Location: ptr("Hall")}, RecurrenceRequest{Frequency: recurrence.FreqMonthly}, f.creator.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,7 +9,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/communityevents/recurrence"
 	"github.com/msch128/mnema-talk/internal/httpx"
+)
+
+const (
+	// MaxSeriesOccurrences is the most occurrences a series ever creates.
+	MaxSeriesOccurrences = 200
+	// seriesHorizon is how far ahead occurrences are created.
+	seriesHorizon = 60 * 24 * time.Hour
+	// seriesTick is how often the scheduler looks at the series.
+	seriesTick = 10 * time.Minute
 )
 
 // seriesRow is a series as the transactions see it.
@@ -52,7 +62,7 @@ func scanSeries(row pgx.Row) (seriesRow, error) {
 
 // start is the start of occurrence index i.
 func (r seriesRow) start(i int) time.Time {
-	return OccurrenceStart(r.Anchor, r.Zone, r.Frequency, i-r.AnchorIndex)
+	return recurrence.OccurrenceStart(r.Anchor, r.Zone, r.Frequency, i-r.AnchorIndex)
 }
 
 func lockSeries(ctx context.Context, tx pgx.Tx, id uuid.UUID) (seriesRow, error) {
@@ -66,7 +76,7 @@ func lockSeries(ctx context.Context, tx pgx.Tx, id uuid.UUID) (seriesRow, error)
 // CreateSeries creates a series whose first occurrence is the event req describes
 // and returns that occurrence. The following ones are created by GenerateSeries.
 func (s *Store) CreateSeries(ctx context.Context, req CreateEventRequest, rec RecurrenceRequest, creatorID uuid.UUID) (*CommunityEvent, uuid.UUID, error) {
-	loc, err := LoadZone(rec.Timezone)
+	loc, err := recurrence.LoadZone(rec.Timezone)
 	if err != nil {
 		return nil, uuid.Nil, err
 	}

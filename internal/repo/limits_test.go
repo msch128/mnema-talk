@@ -35,9 +35,7 @@ var funcLengthAllowlist = map[string]bool{}
 // Raising the cap or adding an entry needs an explicit decision, like the
 // coverage gates.
 var packageFileAllowlist = map[string]int{
-	"internal/sfu":             46, // one responsibility: Room, per-viewer forwarding, layers, NACK, BWE (never split the fan-out)
-	"internal/communityevents": 32, // model/store/handler/scheduler are cyclic until four edges are inverted
-	"internal/ws":              31, // one Hub with its client, voice, stage, perms and presence
+	"internal/sfu": 46, // one responsibility: Room, per-viewer forwarding, layers, NACK, BWE (never split the fan-out)
 }
 
 var generatedHeader = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)
