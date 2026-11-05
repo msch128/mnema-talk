@@ -1,0 +1,19 @@
+internal/linkpreview/linkpreview.go
+  s_1c8a3b2cf8dfba::t_4845821e5fb6c1 95-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fe41d28d3c3435339619d9a2455256064ca936bc",
+  "prompts": {},
+  "sessions": {
+    "s_1c8a3b2cf8dfba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2464aac93a3f5750",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
