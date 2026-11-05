@@ -14,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -217,7 +218,7 @@ func markReadAfterSend(ctx context.Context, p *db.Pool, pub events.Publisher, ms
 	if msg.ParentID != nil {
 		return
 	}
-	_, wrote, err := markReadTo(ctx, p, msg.UserID, msg.ChannelID, &msg.CreatedAt, false)
+	_, wrote, err := readstate.MarkReadTo(ctx, p, msg.UserID, msg.ChannelID, &msg.CreatedAt, false)
 	if err != nil {
 		slog.Warn("mark read after send failed", "channel", msg.ChannelID, "err", err)
 		return

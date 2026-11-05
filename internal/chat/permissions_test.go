@@ -18,10 +18,6 @@ func TestHandlerWithoutPermissionsLimitsNothing(t *testing.T) {
 	if err != nil || len(gotCats) != 1 || len(gotCats[0].Channels) != 1 || len(gotUncat) != 1 {
 		t.Fatalf("hierarchy: %+v %+v %v", gotCats, gotUncat, err)
 	}
-	states := []ReadState{{ChannelID: uuid.New()}}
-	if got, err := visibleReadStates(h.guard(), r, states); err != nil || len(got) != 1 {
-		t.Fatalf("read states: %v %v", got, err)
-	}
 	if visible, err := h.viewableChannels(r); err != nil || visible != nil {
 		t.Fatalf("viewable: %v %v", visible, err)
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 )
 
 // A message that reaches the member several ways (by name, through a role,
@@ -42,7 +43,7 @@ func TestReadStatesCountAMessageAddressedSeveralWaysOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	states, err := GetReadStates(ctx, f.p, f.u)
+	states, err := readstate.GetReadStates(ctx, f.p, f.u)
 	if err != nil {
 		t.Fatal(err)
 	}

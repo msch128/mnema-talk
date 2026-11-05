@@ -1,4 +1,4 @@
-package chat
+package readstate
 
 import (
 	"net/http"
@@ -26,12 +26,12 @@ import (
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/read-state [get]
-func (h *Handler) readState(w http.ResponseWriter, r *http.Request) error {
-	states, err := GetReadStates(r.Context(), h.DB, auth.UserFrom(r.Context()))
+func (a API) readState(w http.ResponseWriter, r *http.Request) error {
+	states, err := GetReadStates(r.Context(), a.DB, auth.UserFrom(r.Context()))
 	if err != nil {
 		return err
 	}
-	if states, err = visibleReadStates(h.guard(), r, states); err != nil {
+	if states, err = visibleReadStates(a.Guard, r, states); err != nil {
 		return err
 	}
 	httpx.WriteJSON(w, http.StatusOK, states)
@@ -40,24 +40,24 @@ func (h *Handler) readState(w http.ResponseWriter, r *http.Request) error {
 
 // channelParam returns the {channelID} of an existing channel (text or
 // voice: both have a chat and so a read state).
-func (h *Handler) channelParam(r *http.Request) (uuid.UUID, error) {
+func (a API) channelParam(r *http.Request) (uuid.UUID, error) {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return chID, err
 	}
-	if err := h.require(r, chID, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, chID, perm.ViewChannel); err != nil {
 		return chID, err
 	}
-	if _, err := core.LoadChannel(r.Context(), h.DB, chID); err != nil {
+	if _, err := core.LoadChannel(r.Context(), a.DB, chID); err != nil {
 		return chID, err
 	}
 	return chID, nil
 }
 
 // publishReadState tells the user's other sessions (tabs, devices) about it.
-func (h *Handler) publishReadState(userID, channelID uuid.UUID, payload map[string]any) {
+func (a API) publishReadState(userID, channelID uuid.UUID, payload map[string]any) {
 	payload["channel_id"] = channelID
-	h.Events.SendToUsers([]uuid.UUID{userID}, events.ReadState, payload)
+	a.Events.SendToUsers([]uuid.UUID{userID}, events.ReadState, payload)
 }
 
 // markRead handles POST /api/channels/{channelID}/read.
@@ -80,8 +80,8 @@ func (h *Handler) publishReadState(userID, channelID uuid.UUID, payload map[stri
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/read [post]
-func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) error {
-	chID, err := h.channelParam(r)
+func (a API) markRead(w http.ResponseWriter, r *http.Request) error {
+	chID, err := a.channelParam(r)
 	if err != nil {
 		return err
 	}
@@ -90,11 +90,11 @@ func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	at, err := MarkRead(r.Context(), h.DB, user.ID, chID, req.MessageID)
+	at, err := MarkRead(r.Context(), a.DB, user.ID, chID, req.MessageID)
 	if err != nil {
 		return err
 	}
-	h.publishReadState(user.ID, chID, map[string]any{"last_read_at": at, "unread_count": 0, "mention_count": 0})
+	a.publishReadState(user.ID, chID, map[string]any{"last_read_at": at, "unread_count": 0, "mention_count": 0})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -119,8 +119,8 @@ func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/unread [post]
-func (h *Handler) markUnread(w http.ResponseWriter, r *http.Request) error {
-	chID, err := h.channelParam(r)
+func (a API) markUnread(w http.ResponseWriter, r *http.Request) error {
+	chID, err := a.channelParam(r)
 	if err != nil {
 		return err
 	}
@@ -129,11 +129,11 @@ func (h *Handler) markUnread(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	at, err := MarkUnread(r.Context(), h.DB, user.ID, chID, req.MessageID)
+	at, err := MarkUnread(r.Context(), a.DB, user.ID, chID, req.MessageID)
 	if err != nil {
 		return err
 	}
-	h.publishReadState(user.ID, chID, map[string]any{"last_read_at": at, "refresh": true})
+	a.publishReadState(user.ID, chID, map[string]any{"last_read_at": at, "refresh": true})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -162,8 +162,8 @@ type FirstUnreadResponse struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/first-unread [get]
-func (h *Handler) firstUnread(w http.ResponseWriter, r *http.Request) error {
-	chID, err := h.channelParam(r)
+func (a API) firstUnread(w http.ResponseWriter, r *http.Request) error {
+	chID, err := a.channelParam(r)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (h *Handler) firstUnread(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return httpx.ErrInvalidInput("since must be an RFC 3339 time")
 	}
-	id, err := FirstUnread(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, chID, since)
+	id, err := FirstUnread(r.Context(), a.DB, auth.UserFrom(r.Context()).ID, chID, since)
 	if err != nil {
 		return err
 	}

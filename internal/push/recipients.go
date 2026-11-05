@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -136,7 +137,7 @@ func (c candidate) wants(mention, addressed bool) bool {
 	if quiet(c.presence) || c.silenced {
 		return false
 	}
-	switch chat.ResolveNotify(c.now, c.channelLevel, c.categoryLvl, c.serverLvl) {
+	switch readstate.ResolveNotify(c.now, c.channelLevel, c.categoryLvl, c.serverLvl) {
 	case chat.NotifyAll:
 		return true
 	case chat.NotifyMentions:

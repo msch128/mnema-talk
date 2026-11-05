@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -124,17 +125,9 @@ func (h *Handler) Mount(r chi.Router) {
 	follow.Delete("/threads/{threadID}/follow", httpx.Handle(h.deleteThreadFollow))
 	r.Get("/threads/following", httpx.Handle(h.listFollowedThreads))
 	r.Get("/messages/by-number/{number}", httpx.Handle(h.getMessageByNumber))
-	r.Get("/read-state", httpx.Handle(h.readState))
 	r.Get("/search", httpx.Handle(h.search))
 	r.Get("/mentions", httpx.Handle(h.mentionsInbox))
-	r.Post("/channels/{channelID}/read", httpx.Handle(h.markRead))
-	r.Post("/channels/{channelID}/unread", httpx.Handle(h.markUnread))
-	r.Get("/channels/{channelID}/first-unread", httpx.Handle(h.firstUnread))
-	r.Put("/channels/{channelID}/notifications", httpx.Handle(h.setNotifyLevel))
-	r.Put("/categories/{id}/notifications", httpx.Handle(h.setCategoryNotify))
-	r.Get("/notification-settings", httpx.Handle(h.notificationSettings))
-	r.Put("/notification-settings/server", httpx.Handle(h.setServerNotify))
-	r.Post("/read-state/read-all", httpx.Handle(h.markAllRead))
+	readstate.API{DB: h.DB, Events: h.Events, Guard: h.guard()}.Mount(r)
 }
 
 // MountAdmin registers channel and category management (the Manage channels

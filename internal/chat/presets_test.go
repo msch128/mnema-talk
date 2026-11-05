@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/testutil/presets"
 )
 
@@ -21,8 +22,8 @@ func TestClientSlowModePresetsPassValidation(t *testing.T) {
 // A timed mute of the notification menus stays inside the year the server allows.
 func TestClientMutePresetsFitTheServerLimit(t *testing.T) {
 	for _, m := range presets.Load(t).MuteMinutes {
-		if m <= 0 || m*60 > maxMuteSeconds {
-			t.Errorf("mute of %d min is outside 1 s to %d s", m, maxMuteSeconds)
+		if m <= 0 || m*60 > readstate.MaxMuteSeconds {
+			t.Errorf("mute of %d min is outside 1 s to %d s", m, readstate.MaxMuteSeconds)
 		}
 	}
 }

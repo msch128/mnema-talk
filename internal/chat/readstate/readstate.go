@@ -1,4 +1,4 @@
-package chat
+package readstate
 
 import (
 	"context"
@@ -25,7 +25,7 @@ type ReadState struct {
 
 // readStateSQL is the unread summary of every channel. Messages of members
 // the caller blocked never count as mentions.
-func readStateSQL() string {
+func ReadStateSQL() string {
 	return `
 		SELECT c.id, unread.n, addr.mentions, addr.addressed,
 		       cr.last_read_at,
@@ -74,7 +74,7 @@ func readStateSQL() string {
 // NotifyLevel is the effective level: the channel's own setting, else its
 // category's, else the member's server default, else "all"; an expired mute counts as none (see ResolveNotify).
 func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadState, error) {
-	rows, err := p.Query(ctx, readStateSQL(), user.ID, MentionKindGroup)
+	rows, err := p.Query(ctx, ReadStateSQL(), user.ID, core.MentionKindGroup)
 	if err != nil {
 		return nil, fmt.Errorf("read states: %w", err)
 	}
@@ -122,7 +122,7 @@ func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, mess
 		}
 		at = &t
 	}
-	marked, _, err := markReadTo(ctx, p, userID, channelID, at, true)
+	marked, _, err := MarkReadTo(ctx, p, userID, channelID, at, true)
 	return marked, err
 }
 
@@ -131,7 +131,7 @@ func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, mess
 // (the first read starts the "new since" divider); without it, a row is
 // written only when another member's message sits between the marker (the
 // sign-up time when there is none) and at.
-func markReadTo(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, at *time.Time, startMarker bool) (time.Time, bool, error) {
+func MarkReadTo(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, at *time.Time, startMarker bool) (time.Time, bool, error) {
 	// "Now" is the database's clock, the one messages.created_at comes from:
 	// the app's clock may lag it by a few milliseconds (separate containers,
 	// Docker Desktop's VM), which left the newest message unread.

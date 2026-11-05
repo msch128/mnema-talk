@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -192,7 +193,7 @@ func scanDM(row pgx.CollectableRow) (DirectMessage, error) {
 			d.MentionCount = 0 // muted for all conversations: nothing to highlight
 		}
 	}
-	d.NotifyLevel = ResolveNotify(now, level, NotifySetting{}, server)
+	d.NotifyLevel = readstate.ResolveNotify(now, level, NotifySetting{}, server)
 	if pos != nil {
 		p := int(*pos)
 		d.FavouritePosition = &p

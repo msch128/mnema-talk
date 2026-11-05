@@ -1,4 +1,4 @@
-package chat
+package readstate
 
 import (
 	"context"
@@ -25,7 +25,7 @@ const (
 )
 
 // maxMuteSeconds bounds a timed mute (366 days).
-const maxMuteSeconds = 366 * 24 * 3600
+const MaxMuteSeconds = 366 * 24 * 3600
 
 func (l NotifyLevel) valid() bool {
 	return l == NotifyAll || l == NotifyMentions || l == NotifyMute || l == NotifyInherit
@@ -82,7 +82,7 @@ func validateSetting(ctx context.Context, p *db.Pool, level NotifyLevel, until *
 	}
 	var ok bool
 	err := p.QueryRow(ctx, `SELECT $1::timestamptz > NOW() AND $1::timestamptz <= NOW() + make_interval(secs => $2)`,
-		*until, maxMuteSeconds).Scan(&ok)
+		*until, MaxMuteSeconds).Scan(&ok)
 	if err != nil {
 		return err
 	}

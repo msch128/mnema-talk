@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 )
 
 func TestBlockedAuthorsStayOutOfCounts(t *testing.T) {
@@ -19,7 +20,7 @@ func TestBlockedAuthorsStayOutOfCounts(t *testing.T) {
 	if !strings.Contains(inboxSQL(), inbox) {
 		t.Fatal("mentions inbox no longer drops a blocked author")
 	}
-	if !strings.Contains(readStateSQL(), inbox) {
+	if !strings.Contains(readstate.ReadStateSQL(), inbox) {
 		t.Fatal("unread counts no longer drop a blocked author")
 	}
 	if !strings.Contains(unreadPostsSQL(), forum) {

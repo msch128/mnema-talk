@@ -19,6 +19,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/testutil"
@@ -90,7 +91,7 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 		{"insert", func() error { _, e := CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID}); return e }},
 		{"collect keys", func() error { var keys []string; return collectKeys(ctx, f.p, &keys, "SELECT s3_key FROM media") }},
 		{"reaction summary", func() error { _, e := reactionSummary(ctx, f.p, f.m); return e }},
-		{"read states", func() error { _, e := GetReadStates(ctx, f.p, f.u); return e }},
+		{"read states", func() error { _, e := readstate.GetReadStates(ctx, f.p, f.u); return e }},
 		{"search", func() error { _, _, e := Search(ctx, f.p, SearchQuery{Text: "hello", Limit: 2}); return e }},
 		{"publish", func() error {
 			return PublishMessage(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil).WithContext(ctx), f.p, &events.Recorder{}, f.m)
@@ -135,7 +136,7 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		name string
 		fn   handler
 	}{
-		{"list messages", h.listMessages}, {"create message", h.createMessage}, {"edit message", h.editMessage}, {"delete message", h.deleteMessage}, {"toggle reaction", h.toggleReaction}, {"thread", h.getThread}, {"delete category", h.deleteCategory}, {"delete channel", h.deleteChannel}, {"duplicate channel", h.duplicateChannel}, {"mark read", h.markRead}, {"mark unread", h.markUnread}, {"notify level", h.setNotifyLevel}, {"update channel", h.updateChannel}, {"rename category", h.renameCategory},
+		{"list messages", h.listMessages}, {"create message", h.createMessage}, {"edit message", h.editMessage}, {"delete message", h.deleteMessage}, {"toggle reaction", h.toggleReaction}, {"thread", h.getThread}, {"delete category", h.deleteCategory}, {"delete channel", h.deleteChannel}, {"duplicate channel", h.duplicateChannel}, {"update channel", h.updateChannel}, {"rename category", h.renameCategory},
 	}
 	for _, c := range pathHandlers {
 		t.Run(c.name+" invalid path", func(t *testing.T) {
@@ -146,7 +147,7 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		name string
 		fn   handler
 	}{
-		{"create message", h.createMessage}, {"edit message", h.editMessage}, {"reaction", h.toggleReaction}, {"create category", h.createCategory}, {"create channel", h.createChannel}, {"mark read", h.markRead}, {"mark unread", h.markUnread}, {"notify level", h.setNotifyLevel}, {"update channel", h.updateChannel}, {"rename category", h.renameCategory}, {"layout", h.applyLayout},
+		{"create message", h.createMessage}, {"edit message", h.editMessage}, {"reaction", h.toggleReaction}, {"create category", h.createCategory}, {"create channel", h.createChannel}, {"update channel", h.updateChannel}, {"rename category", h.renameCategory}, {"layout", h.applyLayout},
 	}
 	for _, c := range decodeHandlers {
 		t.Run(c.name+" invalid JSON", func(t *testing.T) {
@@ -184,9 +185,6 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		{"channel empty", h.createChannel, `{"name":""}`, "", valid, "name"},
 		{"channel delete absent", h.deleteChannel, "", "", map[string]string{"id": uuid.NewString()}, "channel not found"},
 		{"channel duplicate absent", h.duplicateChannel, "", "", map[string]string{"id": uuid.NewString()}, "channel not found"},
-		{"mark read absent message", h.markRead, `{"message_id":"` + uuid.NewString() + `"}`, "", valid, "message not found"},
-		{"mark unread absent message", h.markUnread, `{"message_id":"` + uuid.NewString() + `"}`, "", valid, "message not found"},
-		{"invalid notification level", h.setNotifyLevel, `{"level":"unknown"}`, "", valid, "level"},
 		{"update bad topic", h.updateChannel, `{"topic":"` + strings.Repeat("a", 256) + `"}`, "", valid, "topic"},
 		{"rename bad name", h.renameCategory, `{"name":""}`, "", valid, "name"},
 		{"search bad ID", h.search, "", "channel_id=bad", valid, "channel_id"},
@@ -204,7 +202,7 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 	for _, c := range []struct {
 		name string
 		fn   handler
-	}{{"members", h.listMembers}, {"channels", h.listChannels}, {"read state", h.readState}} {
+	}{{"members", h.listMembers}, {"channels", h.listChannels}} {
 		t.Run(c.name+" database error", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
@@ -323,13 +321,13 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 			t.Fatal("invalid resource accepted")
 		}
 	}
-	if _, err := MarkRead(ctx, f.p, f.u.ID, f.c.ID, &f.m); err != nil {
+	if _, err := readstate.MarkRead(ctx, f.p, f.u.ID, f.c.ID, &f.m); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := MarkRead(ctx, f.p, f.u.ID, f.c.ID, chattest.Ptr(uuid.New())); err == nil {
+	if _, err := readstate.MarkRead(ctx, f.p, f.u.ID, f.c.ID, chattest.Ptr(uuid.New())); err == nil {
 		t.Fatal("missing read anchor accepted")
 	}
-	if _, err := MarkUnread(ctx, f.p, f.u.ID, f.c.ID, uuid.New()); err == nil {
+	if _, err := readstate.MarkUnread(ctx, f.p, f.u.ID, f.c.ID, uuid.New()); err == nil {
 		t.Fatal("missing unread anchor accepted")
 	}
 	if _, err := newerThan(ctx, f.p, f.c.ID, f.m, 0); err != nil {

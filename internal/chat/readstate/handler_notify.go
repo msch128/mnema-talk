@@ -1,4 +1,4 @@
-package chat
+package readstate
 
 import (
 	"net/http"
@@ -26,8 +26,8 @@ type MarkAllReadRequest struct {
 
 // publishReadStateRefresh tells all of the user's sessions to reload their read
 // states and notification settings.
-func (h *Handler) publishReadStateRefresh(userID uuid.UUID) {
-	h.Events.SendToUsers([]uuid.UUID{userID}, events.ReadState, map[string]any{"refresh": true})
+func (a API) publishReadStateRefresh(userID uuid.UUID) {
+	a.Events.SendToUsers([]uuid.UUID{userID}, events.ReadState, map[string]any{"refresh": true})
 }
 
 // setNotifyLevel handles PUT /api/channels/{channelID}/notifications.
@@ -50,8 +50,8 @@ func (h *Handler) publishReadStateRefresh(userID uuid.UUID) {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/notifications [put]
-func (h *Handler) setNotifyLevel(w http.ResponseWriter, r *http.Request) error {
-	chID, err := h.channelParam(r)
+func (a API) setNotifyLevel(w http.ResponseWriter, r *http.Request) error {
+	chID, err := a.channelParam(r)
 	if err != nil {
 		return err
 	}
@@ -60,10 +60,10 @@ func (h *Handler) setNotifyLevel(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	if err := SetNotifyLevel(r.Context(), h.DB, user.ID, chID, req.Level, req.MutedUntil); err != nil {
+	if err := SetNotifyLevel(r.Context(), a.DB, user.ID, chID, req.Level, req.MutedUntil); err != nil {
 		return err
 	}
-	h.publishReadStateRefresh(user.ID)
+	a.publishReadStateRefresh(user.ID)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -88,12 +88,12 @@ func (h *Handler) setNotifyLevel(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/categories/{id}/notifications [put]
-func (h *Handler) setCategoryNotify(w http.ResponseWriter, r *http.Request) error {
+func (a API) setCategoryNotify(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	if err := h.requireCategory(r, id); err != nil {
+	if err := a.Guard.RequireCategory(r, id); err != nil {
 		return err
 	}
 	var req SetNotifyLevelRequest
@@ -101,10 +101,10 @@ func (h *Handler) setCategoryNotify(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	if err := SetCategoryNotify(r.Context(), h.DB, user.ID, id, req.Level, req.MutedUntil); err != nil {
+	if err := SetCategoryNotify(r.Context(), a.DB, user.ID, id, req.Level, req.MutedUntil); err != nil {
 		return err
 	}
-	h.publishReadStateRefresh(user.ID)
+	a.publishReadStateRefresh(user.ID)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -123,16 +123,16 @@ func (h *Handler) setCategoryNotify(w http.ResponseWriter, r *http.Request) erro
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/notification-settings [get]
-func (h *Handler) notificationSettings(w http.ResponseWriter, r *http.Request) error {
-	visible, err := h.viewableChannels(r)
+func (a API) notificationSettings(w http.ResponseWriter, r *http.Request) error {
+	visible, err := a.Guard.ViewableChannels(r)
 	if err != nil {
 		return err
 	}
-	cats, err := h.viewableCategories(r)
+	cats, err := a.Guard.ViewableCategories(r)
 	if err != nil {
 		return err
 	}
-	out, err := GetNotificationSettings(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, visible, cats)
+	out, err := GetNotificationSettings(r.Context(), a.DB, auth.UserFrom(r.Context()).ID, visible, cats)
 	if err != nil {
 		return err
 	}
@@ -167,17 +167,17 @@ type SetServerNotifyRequest struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/notification-settings/server [put]
-func (h *Handler) setServerNotify(w http.ResponseWriter, r *http.Request) error {
+func (a API) setServerNotify(w http.ResponseWriter, r *http.Request) error {
 	var req SetServerNotifyRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
 	in := ServerNotify{Level: req.Level, MutedUntil: req.MutedUntil, SuppressEveryone: req.SuppressEveryone}
-	if err := SetServerNotify(r.Context(), h.DB, user.ID, in); err != nil {
+	if err := SetServerNotify(r.Context(), a.DB, user.ID, in); err != nil {
 		return err
 	}
-	h.publishReadStateRefresh(user.ID)
+	a.publishReadStateRefresh(user.ID)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -200,30 +200,25 @@ func (h *Handler) setServerNotify(w http.ResponseWriter, r *http.Request) error 
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/read-state/read-all [post]
-func (h *Handler) markAllRead(w http.ResponseWriter, r *http.Request) error {
+func (a API) markAllRead(w http.ResponseWriter, r *http.Request) error {
 	var req MarkAllReadRequest
 	if err := httpx.DecodeOptionalJSON(r, &req); err != nil {
 		return err
 	}
 	if req.CategoryID != nil {
-		if err := h.requireCategory(r, *req.CategoryID); err != nil {
+		if err := a.Guard.RequireCategory(r, *req.CategoryID); err != nil {
 			return err
 		}
 	}
-	visible, err := h.viewableChannels(r)
+	visible, err := a.Guard.ViewableChannels(r)
 	if err != nil {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	if err := MarkAllRead(r.Context(), h.DB, user.ID, visible, req.CategoryID); err != nil {
+	if err := MarkAllRead(r.Context(), a.DB, user.ID, visible, req.CategoryID); err != nil {
 		return err
 	}
-	h.publishReadStateRefresh(user.ID)
+	a.publishReadStateRefresh(user.ID)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
-}
-
-// viewableCategories lists the categories the caller may see; nil means all.
-func (h *Handler) viewableCategories(r *http.Request) ([]uuid.UUID, error) {
-	return h.guard().ViewableCategories(r)
 }

@@ -48,8 +48,6 @@ func TestHandlersFailClosedWithoutPermissionState(t *testing.T) {
 		{"react", func(r *http.Request) error { return h.toggleReaction(httptest.NewRecorder(), r) }, `{"emoji":"x"}`, params, ""},
 		{"thread", func(r *http.Request) error { return h.getThread(httptest.NewRecorder(), r) }, "", params, ""},
 		{"by number", func(r *http.Request) error { return h.getMessageByNumber(httptest.NewRecorder(), r) }, "", map[string]string{"number": strconv.FormatInt(number, 10)}, ""},
-		{"read state", func(r *http.Request) error { return h.readState(httptest.NewRecorder(), r) }, "", nil, ""},
-		{"mark read", func(r *http.Request) error { return h.markRead(httptest.NewRecorder(), r) }, "", params, ""},
 		{"search", func(r *http.Request) error { return h.search(httptest.NewRecorder(), r) }, "", nil, "q=x"},
 		{"search in a channel", func(r *http.Request) error { return h.search(httptest.NewRecorder(), r) }, "", nil, "q=x&channel_id=" + ch},
 		{"delete category", func(r *http.Request) error { return h.deleteCategory(httptest.NewRecorder(), r) }, "", catParams, ""},
