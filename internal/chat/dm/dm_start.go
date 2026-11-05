@@ -1,4 +1,4 @@
-package chat
+package dm
 
 import (
 	"net/http"
@@ -10,11 +10,11 @@ import (
 
 // AllowDMStart applies the per-member rate limit the POST /api/dms route has
 // as middleware, for callers that are not that route (the /msg command).
-func (h *Handler) AllowDMStart(r *http.Request) error {
-	if h.DMLimit == nil {
+func (a *API) AllowDMStart(r *http.Request) error {
+	if a.DMLimit == nil {
 		return nil
 	}
-	if ok, _ := h.DMLimit.Allow(auth.UserKey(r)); !ok {
+	if ok, _ := a.DMLimit.Allow(auth.UserKey(r)); !ok {
 		return httpx.ErrRateLimited()
 	}
 	return nil
@@ -25,22 +25,22 @@ func (h *Handler) AllowDMStart(r *http.Request) error {
 // REST route and the /msg slash command both run it, so the permission, the
 // community switch, the blocks and dm_policy of the others, the limits and the
 // one refusal text are the same.
-func (h *Handler) StartDM(r *http.Request, others []uuid.UUID) (dm DirectMessage, created bool, err error) {
-	if err := h.canStartDMs(r); err != nil {
+func (a *API) StartDM(r *http.Request, others []uuid.UUID) (dm DirectMessage, created bool, err error) {
+	if err := a.canStartDMs(r); err != nil {
 		return dm, false, err
 	}
 	me := auth.UserFrom(r.Context())
-	id, created, err := CreateDM(r.Context(), h.DB, NewDM{Creator: me.ID, Others: others})
+	id, created, err := CreateDM(r.Context(), a.DB, NewDM{Creator: me.ID, Others: others})
 	if err != nil {
 		return dm, false, err
 	}
-	dm, err = h.loadDM(r, id)
+	dm, err = a.loadDM(r, id)
 	if err != nil {
 		return dm, false, err
 	}
 	if created {
-		h.Perms.Invalidate()
-		h.announceDM(dm)
+		a.Guard.Perms.Invalidate()
+		a.announceDM(dm)
 	}
 	return dm, created, nil
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -23,7 +24,7 @@ func (c *components) newTalks() {
 	go m.Run(c.ctx)
 	c.hub.Lobby = m
 	audited := c.hub.Presence
-	calls := chat.NewDMCalls(&chat.DMCalls{DB: d.DB, Events: c.pub, Online: c.chatH.Online, Members: c.hub.VoiceMembers})
+	calls := dm.NewDMCalls(&chat.DMCalls{DB: d.DB, Events: c.pub, Online: c.chatH.Online, Members: c.hub.VoiceMembers})
 	go calls.Run(c.ctx)
 	c.hub.Presence = func(user, channel uuid.UUID, joined bool) {
 		if audited != nil {

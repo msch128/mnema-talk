@@ -1,4 +1,4 @@
-package chat
+package dm
 
 import (
 	"context"
@@ -25,7 +25,7 @@ func newCallWorld() *callWorld {
 
 // heard announces everything queued and returns the events it published.
 func (w *callWorld) heard() []events.Event {
-	for w.calls.announceNext(context.Background()) {
+	for w.calls.AnnounceNext(context.Background()) {
 	}
 	out := w.rec.Snapshot()
 	w.rec.Events = nil
@@ -36,7 +36,7 @@ func (w *callWorld) begin() { w.calls.Begin(w.dm, w.talk, w.caller, w.m, "Talk 1
 
 func TestACallRingsTheConversation(t *testing.T) {
 	w := newCallWorld()
-	t.Cleanup(w.calls.stop)
+	t.Cleanup(w.calls.Stop)
 	w.begin()
 	got := w.heard()
 	if len(got) != 1 || got[0].Type != events.DMCallRing || got[0].ChannelID != w.dm {
@@ -57,7 +57,7 @@ func TestACallRingsTheConversation(t *testing.T) {
 
 func TestTheCallerEnteringTheTalkDoesNotAnswerIt(t *testing.T) {
 	w := newCallWorld()
-	t.Cleanup(w.calls.stop)
+	t.Cleanup(w.calls.Stop)
 	w.begin()
 	w.heard()
 	w.calls.OnPresence(w.caller, w.talk, true)
@@ -72,7 +72,7 @@ func TestTheCallerEnteringTheTalkDoesNotAnswerIt(t *testing.T) {
 
 func TestAnsweringStopsTheRingAndTheLastToLeaveEndsTheCall(t *testing.T) {
 	w := newCallWorld()
-	t.Cleanup(w.calls.stop)
+	t.Cleanup(w.calls.Stop)
 	w.begin()
 	w.calls.OnPresence(w.caller, w.talk, true)
 	w.heard()
@@ -109,7 +109,7 @@ func TestAnsweringStopsTheRingAndTheLastToLeaveEndsTheCall(t *testing.T) {
 
 func TestACallToAnotherTalkReplacesTheRingingOne(t *testing.T) {
 	w := newCallWorld()
-	t.Cleanup(w.calls.stop)
+	t.Cleanup(w.calls.Stop)
 	w.begin()
 	w.heard()
 	other := uuid.New()
@@ -142,7 +142,7 @@ func TestWithoutTrackingCallsAreIgnored(t *testing.T) {
 
 func TestSharingATalkSomebodyIsInAlreadyRingsNobody(t *testing.T) {
 	w := newCallWorld()
-	t.Cleanup(w.calls.stop)
+	t.Cleanup(w.calls.Stop)
 	w.calls.Members = func(uuid.UUID) []uuid.UUID { return []uuid.UUID{w.caller, w.callee} }
 	w.begin()
 	if got := w.heard(); len(got) != 0 {
@@ -161,7 +161,7 @@ func TestSharingATalkSomebodyIsInAlreadyRingsNobody(t *testing.T) {
 
 func TestSharingATalkOnlyTheCallerIsInRings(t *testing.T) {
 	w := newCallWorld()
-	t.Cleanup(w.calls.stop)
+	t.Cleanup(w.calls.Stop)
 	w.calls.Members = func(uuid.UUID) []uuid.UUID { return []uuid.UUID{w.caller} }
 	w.begin()
 	if got := w.heard(); len(got) != 1 || got[0].Type != events.DMCallRing {
@@ -171,7 +171,7 @@ func TestSharingATalkOnlyTheCallerIsInRings(t *testing.T) {
 
 func TestACallWithPeopleInItIsNotAnnouncedAsOverByTheNextOne(t *testing.T) {
 	w := newCallWorld()
-	t.Cleanup(w.calls.stop)
+	t.Cleanup(w.calls.Stop)
 	w.begin()
 	w.calls.OnPresence(w.caller, w.talk, true)
 	w.calls.OnPresence(w.callee, w.talk, true)

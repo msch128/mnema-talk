@@ -135,22 +135,12 @@ func assignAndFillSlugs(ctx context.Context, tx pgx.Tx, ch *core.Channel) error 
 	return FillSlugs(ctx, tx, ch)
 }
 
-// ChannelMediaKeys returns the storage keys of the media attached to the
-// messages of the given channels.
-func ChannelMediaKeys(ctx context.Context, q db.Querier, ids []uuid.UUID) ([]string, error) {
-	var keys []string
-	err := messages.CollectKeys(ctx, q, &keys, `
-		SELECT s3_key FROM media WHERE message_id IN
-			(SELECT id FROM messages WHERE channel_id = ANY($1))`, ids)
-	return keys, err
-}
-
 // DeleteChannelsTx deletes the channels and, by cascade, their messages inside
 // tx and returns the storage keys of the media attached to those messages and
 // of the avatars of the incoming webhooks' bot accounts. The caller locks the
 // channels first and removes the objects after the commit.
 func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string, error) {
-	keys, err := ChannelMediaKeys(ctx, tx, ids)
+	keys, err := messages.ChannelMediaKeys(ctx, tx, ids)
 	if err != nil {
 		return nil, err
 	}

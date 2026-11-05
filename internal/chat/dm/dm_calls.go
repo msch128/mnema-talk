@@ -1,4 +1,4 @@
-package chat
+package dm
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -80,7 +82,7 @@ type DMCalls struct {
 	DB     *db.Pool
 	Events events.Publisher
 	// Online resolves @here for the messages it posts; nil means nobody.
-	Online OnlineSource
+	Online mentions.OnlineSource
 	// Members lists who is in a Talk now (the hub's voice room); nil means nobody.
 	Members func(talk uuid.UUID) []uuid.UUID
 	// Ring is how long a call rings; zero means the default.
@@ -119,20 +121,20 @@ func NewDMCalls(c *DMCalls) *DMCalls {
 
 // Run announces what the calls do until ctx ends.
 func (m *DMCalls) Run(ctx context.Context) {
-	defer m.stop()
+	defer m.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-m.wake:
-			for m.announceNext(ctx) {
+			for m.AnnounceNext(ctx) {
 			}
 		}
 	}
 }
 
-// stop cancels the ring timers.
-func (m *DMCalls) stop() {
+// Stop cancels the ring timers.
+func (m *DMCalls) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for _, c := range m.calls {
@@ -151,7 +153,7 @@ func (m *DMCalls) push(announce func(context.Context)) {
 	}
 }
 
-func (m *DMCalls) announceNext(ctx context.Context) bool {
+func (m *DMCalls) AnnounceNext(ctx context.Context) bool {
 	m.mu.Lock()
 	if len(m.queue) == 0 {
 		m.mu.Unlock()
@@ -339,8 +341,8 @@ func (m *DMCalls) finishLocked(c *dmCall, end DMCallEnd, missed ...func(context.
 func (m *DMCalls) recordMissed(ctx context.Context, c *dmCall) *uuid.UUID {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	id, err := messages.InsertMessage(ctx, m.DB, m.Online, NewMessage{
-		ChannelID: c.conversation, UserID: c.caller, Embeds: []Embed{{Title: c.name, Call: callMissed}}, Record: true,
+	id, err := messages.InsertMessage(ctx, m.DB, m.Online, messages.NewMessage{
+		ChannelID: c.conversation, UserID: c.caller, Embeds: []core.Embed{{Title: c.name, Call: callMissed}}, Record: true,
 	}, nil)
 	if err != nil {
 		slog.Warn("dm calls: record missed call", "conversation", c.conversation, "err", err)

@@ -1,4 +1,4 @@
-package chat
+package dm
 
 import (
 	"context"
@@ -41,7 +41,7 @@ const (
 // the other member's), the answer is the same text, so none of them can be
 // probed through the API.
 var (
-	errDMStart      = httpx.ErrForbidden("Couldn't start this direct message.")
+	ErrDMStart      = httpx.ErrForbidden("Couldn't start this direct message.")
 	errDMNotFound   = httpx.ErrNotFound("direct message not found")
 	errDMDayLimit   = httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimited, "You have started enough direct messages for today. Try again tomorrow.")
 	errDMGroupLimit = httpx.ErrConflict(fmt.Sprintf("You are in %d group direct messages already. Leave one first.", MaxGroupDMsPerMember))
@@ -73,10 +73,10 @@ type DirectMessage struct {
 	// UnreadCount counts top-level messages of others since the caller last
 	// read it; MentionCount those of them that mention the caller by name or
 	// reply to them.
-	UnreadCount  int         `json:"unread_count"`
-	MentionCount int         `json:"mention_count"`
-	LastReadAt   *time.Time  `json:"last_read_at" format:"date-time" extensions:"x-nullable"`
-	NotifyLevel  NotifyLevel `json:"notify_level"`
+	UnreadCount  int                   `json:"unread_count"`
+	MentionCount int                   `json:"mention_count"`
+	LastReadAt   *time.Time            `json:"last_read_at" format:"date-time" extensions:"x-nullable"`
+	NotifyLevel  readstate.NotifyLevel `json:"notify_level"`
 	// CanSend says whether the caller may write in it now: they hold Send
 	// direct messages, the community has direct messages on, and no timeout
 	// or pending rules apply. It says nothing about the other members; a
@@ -117,15 +117,15 @@ func (d DirectMessage) forOthers() DirectMessage {
 	// Both were worked out for the caller (their mute-all, their permissions).
 	// The client reads its own with the conversation, and meanwhile assumes
 	// nothing about the setting and nothing to send with.
-	d.NotifyLevel, d.CanSend = NotifyInherit, false
+	d.NotifyLevel, d.CanSend = readstate.NotifyInherit, false
 	d.LastMessage = nil // chosen by the caller's blocks; each member fetches their own
 	return d
 }
 
-// dmSelect repeats authorHiddenFrom three times (last activity, last message,
+// DmSelect repeats authorHiddenFrom three times (last activity, last message,
 // unread). The clauses are wrapped differently, so the text stays here;
 // block_sql_test.go checks it still matches the shared rule.
-const dmSelect = `
+const DmSelect = `
 	SELECT c.id, c.dm_key IS NULL, c.created_at,
 	       (SELECT MAX(m.created_at) FROM messages m WHERE m.channel_id = c.id AND NOT EXISTS (
 	           SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id)),
@@ -159,7 +159,7 @@ const dmSelect = `
 // ListDMs returns the caller's conversations, the most recently active first.
 // With only set, just that conversation (nil result: the caller is not in it).
 func ListDMs(ctx context.Context, p *db.Pool, user uuid.UUID, only *uuid.UUID) ([]DirectMessage, error) {
-	rows, err := p.Query(ctx, dmSelect+` ORDER BY 4 DESC NULLS LAST, c.created_at DESC, c.id LIMIT $3`, user, only, maxDMList)
+	rows, err := p.Query(ctx, DmSelect+` ORDER BY 4 DESC NULLS LAST, c.created_at DESC, c.id LIMIT $3`, user, only, maxDMList)
 	if err != nil {
 		return nil, fmt.Errorf("list direct messages: %w", err)
 	}
@@ -173,7 +173,7 @@ func ListDMs(ctx context.Context, p *db.Pool, user uuid.UUID, only *uuid.UUID) (
 // scanDM reads one row of dmSelect.
 func scanDM(row pgx.CollectableRow) (DirectMessage, error) {
 	var d DirectMessage
-	var level NotifySetting
+	var level readstate.NotifySetting
 	var now time.Time
 	var muteAll bool
 	var pos *int16
@@ -182,14 +182,14 @@ func scanDM(row pgx.CollectableRow) (DirectMessage, error) {
 	err := row.Scan(&d.ID, &d.Group, &d.CreatedAt, &d.LastMessageAt, &d.UnreadCount, &d.MentionCount,
 		&d.LastReadAt, &level.Level, &level.MutedUntil, &now, &d.Hidden, &pos, &muteAll,
 		&lastUser, &last.Text, &last.HasAttachment, &last.HasPoll, &last.Call)
-	server := NotifySetting{}
+	server := readstate.NotifySetting{}
 	if muteAll {
-		server.Level = NotifyMute
+		server.Level = readstate.NotifyMute
 		if !level.Decides(now) {
 			d.MentionCount = 0 // muted for all conversations: nothing to highlight
 		}
 	}
-	d.NotifyLevel = readstate.ResolveNotify(now, level, NotifySetting{}, server)
+	d.NotifyLevel = readstate.ResolveNotify(now, level, readstate.NotifySetting{}, server)
 	if pos != nil {
 		p := int(*pos)
 		d.FavouritePosition = &p
@@ -305,7 +305,7 @@ func createDMOnce(ctx context.Context, p *db.Pool, nd NewDM) (uuid.UUID, bool, e
 		if group {
 			locked = append(locked, nd.Others...)
 		}
-		if err := lockUsers(ctx, tx, locked); err != nil {
+		if err := LockUsers(ctx, tx, locked); err != nil {
 			return err
 		}
 		var key *string
@@ -344,10 +344,10 @@ func existingDM(ctx context.Context, tx pgx.Tx, key string, id *uuid.UUID) (foun
 	return err == nil, err
 }
 
-// lockUsers locks the user rows in a fixed order, so transactions that count
+// LockUsers locks the user rows in a fixed order, so transactions that count
 // the same members' conversations before adding to them run one after the
 // other and cannot deadlock on each other.
-func lockUsers(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) error {
+func LockUsers(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) error {
 	_, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE`, ids)
 	return err
 }
@@ -365,7 +365,7 @@ func checkDMStart(ctx context.Context, tx pgx.Tx, nd NewDM, group bool) error {
 	}
 	switch {
 	case eligible != len(nd.Others):
-		return errDMStart
+		return ErrDMStart
 	case today >= MaxNewDMsPerDay:
 		return errDMDayLimit
 	case group && groups >= MaxGroupDMsPerMember:

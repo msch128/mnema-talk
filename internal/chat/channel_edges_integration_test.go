@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -202,7 +203,7 @@ func TestFavouritesReportOnlyWhatChanged(t *testing.T) {
 	ctx := context.Background()
 	var dms []uuid.UUID
 	for _, name := range []string{"fav_a", "fav_b", "fav_c"} {
-		id, _, err := CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{newMember(t, f, name)}})
+		id, _, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{newMember(t, f, name)}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -211,7 +212,7 @@ func TestFavouritesReportOnlyWhatChanged(t *testing.T) {
 	a, b, c := dms[0], dms[1], dms[2]
 	changed := func(ids ...uuid.UUID) []uuid.UUID {
 		t.Helper()
-		got, err := SetDMFavourites(ctx, f.p, f.u.ID, ids)
+		got, err := dm.SetDMFavourites(ctx, f.p, f.u.ID, ids)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -243,7 +244,7 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
 	bob, carol := newMember(t, f, "lock_bob"), newMember(t, f, "lock_carol")
-	group, _, err := CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob, carol}})
+	group, _, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob, carol}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +254,7 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = hold.Rollback(ctx) }()
-	if err := lockUsers(ctx, hold, []uuid.UUID{dave}); err != nil {
+	if err := dm.LockUsers(ctx, hold, []uuid.UUID{dave}); err != nil {
 		t.Fatal(err)
 	}
 	blocked := func(run func() error) {
@@ -274,7 +275,7 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 		}
 	}
 	blocked(func() error {
-		added, err := AddDMMember(ctx, f.p, group, f.u.ID, dave)
+		added, err := dm.AddDMMember(ctx, f.p, group, f.u.ID, dave)
 		if err == nil && !added {
 			err = errors.New("not added")
 		}
@@ -285,11 +286,11 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := lockUsers(ctx, hold, []uuid.UUID{erin}); err != nil {
+	if err := dm.LockUsers(ctx, hold, []uuid.UUID{erin}); err != nil {
 		t.Fatal(err)
 	}
 	blocked(func() error {
-		_, _, err := CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{erin, bob}})
+		_, _, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{erin, bob}})
 		return err
 	})
 }

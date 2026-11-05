@@ -20,6 +20,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -395,7 +396,7 @@ func TestStartingATalkFromAConversationPostsAnInvite(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
-	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := dm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -422,7 +423,7 @@ func TestAnInviteCardGrantsNothing(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
-	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := dm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -591,7 +592,7 @@ func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := dm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}

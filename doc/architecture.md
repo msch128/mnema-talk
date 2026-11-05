@@ -166,7 +166,7 @@ webhooks, bot gateway); only Web Push listens (`DMTap`), and it pushes to
 members only, without a channel name. Bots and webhooks can neither open
 conversations nor write in them.
 
-**Starting and writing (the rules in `internal/chat/dm*.go`).**
+**Starting and writing (the rules in `internal/chat/dm/*.go`).**
 - Whatever the reason a conversation cannot be started or a message cannot be
   sent because of *another member* (a block in either direction, their
   `dm_policy` of `nobody`, a disabled or erased account, a bot, an unknown id)

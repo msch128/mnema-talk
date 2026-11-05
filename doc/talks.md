@@ -80,7 +80,7 @@ see the Talk sees it as unavailable.
 ### Ringing
 
 Starting a Talk from a conversation, or sharing a Talk into one ("Invite to my
-Talk"), also *rings* the conversation (`internal/chat/dm_calls.go`). Nothing
+Talk"), also *rings* the conversation (`internal/chat/dm/dm_calls.go`). Nothing
 about the room changes: it is still a Talk, and the card in the conversation
 still works. The ring is what makes the invitation visible where the member is:
 

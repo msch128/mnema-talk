@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 )
 
@@ -27,7 +28,7 @@ func TestBlockedAuthorsStayOutOfCounts(t *testing.T) {
 		t.Fatal("forum unread list no longer drops a blocked author")
 	}
 	for _, author := range []string{"m.user_id", "um.user_id"} {
-		if !strings.Contains(dmSelect, core.BlockExists("$1", author)) {
+		if !strings.Contains(dm.DmSelect, core.BlockExists("$1", author)) {
 			t.Fatalf("conversation list dropped the block rule for %s", author)
 		}
 	}

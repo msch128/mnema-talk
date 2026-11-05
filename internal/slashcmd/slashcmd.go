@@ -37,7 +37,7 @@ type Services struct {
 	// Audit records the moderation shortcuts; nil records nothing.
 	Audit *audit.Log
 
-	// Chat starts direct messages for /msg (chat.Handler.StartDM).
+	// Chat starts direct messages for /msg (chat.Handler.DMs().StartDM).
 	Chat *chat.Handler
 
 	nick *nickLimiter

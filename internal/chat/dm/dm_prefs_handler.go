@@ -1,4 +1,4 @@
-package chat
+package dm
 
 import (
 	"net/http"
@@ -10,11 +10,11 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-func (h *Handler) mountDMPrefs(r chi.Router) {
-	r.Put("/dms/{id}/hidden", httpx.Handle(h.setDMHidden))
-	r.Put("/dms/favourites", httpx.Handle(h.setDMFavourites))
-	r.Get("/users/me/dm-settings", httpx.Handle(h.getDMSettings))
-	r.Put("/users/me/dm-settings", httpx.Handle(h.putDMSettings))
+func (a *API) mountDMPrefs(r chi.Router) {
+	r.Put("/dms/{id}/hidden", httpx.Handle(a.setDMHidden))
+	r.Put("/dms/favourites", httpx.Handle(a.setDMFavourites))
+	r.Get("/users/me/dm-settings", httpx.Handle(a.getDMSettings))
+	r.Put("/users/me/dm-settings", httpx.Handle(a.putDMSettings))
 }
 
 // DMPrefsUpdated is the payload of dm_prefs_updated, sent to the member's own
@@ -23,12 +23,12 @@ type DMPrefsUpdated struct {
 	DMID *uuid.UUID `json:"dm_id" format:"uuid" extensions:"x-nullable"`
 }
 
-func (h *Handler) tellOwnSessions(user uuid.UUID, ids ...*uuid.UUID) {
-	if h.Events == nil {
+func (a *API) tellOwnSessions(user uuid.UUID, ids ...*uuid.UUID) {
+	if a.Events == nil {
 		return
 	}
 	for _, id := range ids {
-		h.Events.SendToUsers([]uuid.UUID{user}, events.DMPrefsUpdated, DMPrefsUpdated{DMID: id})
+		a.Events.SendToUsers([]uuid.UUID{user}, events.DMPrefsUpdated, DMPrefsUpdated{DMID: id})
 	}
 }
 
@@ -46,7 +46,7 @@ type SetDMHiddenRequest struct {
 // @Accept json
 // @Security cookieAuth
 // @Param id path string true "Conversation ID." Format(uuid)
-// @Param request body SetDMHiddenRequest true "Request body."
+// @Param request body dm.SetDMHiddenRequest true "Request body."
 // @Success 204 "Done."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
@@ -56,7 +56,7 @@ type SetDMHiddenRequest struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/dms/{id}/hidden [put]
-func (h *Handler) setDMHidden(w http.ResponseWriter, r *http.Request) error {
+func (a *API) setDMHidden(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -66,10 +66,10 @@ func (h *Handler) setDMHidden(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	me := auth.UserFrom(r.Context()).ID
-	if err := SetDMHidden(r.Context(), h.DB, me, id, req.Hidden); err != nil {
+	if err := SetDMHidden(r.Context(), a.DB, me, id, req.Hidden); err != nil {
 		return err
 	}
-	h.tellOwnSessions(me, &id)
+	a.tellOwnSessions(me, &id)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -89,7 +89,7 @@ type SetDMFavouritesRequest struct {
 // @Tags Direct messages
 // @Accept json
 // @Security cookieAuth
-// @Param request body SetDMFavouritesRequest true "Request body."
+// @Param request body dm.SetDMFavouritesRequest true "Request body."
 // @Success 204 "Done."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
@@ -98,13 +98,13 @@ type SetDMFavouritesRequest struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/dms/favourites [put]
-func (h *Handler) setDMFavourites(w http.ResponseWriter, r *http.Request) error {
+func (a *API) setDMFavourites(w http.ResponseWriter, r *http.Request) error {
 	var req SetDMFavouritesRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
 	me := auth.UserFrom(r.Context()).ID
-	changed, err := SetDMFavourites(r.Context(), h.DB, me, req.IDs)
+	changed, err := SetDMFavourites(r.Context(), a.DB, me, req.IDs)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (h *Handler) setDMFavourites(w http.ResponseWriter, r *http.Request) error 
 	for i := range changed {
 		ids[i] = &changed[i]
 	}
-	h.tellOwnSessions(me, ids...)
+	a.tellOwnSessions(me, ids...)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -125,14 +125,14 @@ func (h *Handler) setDMFavourites(w http.ResponseWriter, r *http.Request) error 
 // @Tags Direct messages
 // @Produce json
 // @Security cookieAuth
-// @Success 200 {object} DMSettings "The settings."
+// @Success 200 {object} dm.DMSettings "The settings."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/users/me/dm-settings [get]
-func (h *Handler) getDMSettings(w http.ResponseWriter, r *http.Request) error {
-	s, err := GetDMSettings(r.Context(), h.DB, auth.UserFrom(r.Context()).ID)
+func (a *API) getDMSettings(w http.ResponseWriter, r *http.Request) error {
+	s, err := GetDMSettings(r.Context(), a.DB, auth.UserFrom(r.Context()).ID)
 	if err != nil {
 		return err
 	}
@@ -149,24 +149,24 @@ func (h *Handler) getDMSettings(w http.ResponseWriter, r *http.Request) error {
 // @Accept json
 // @Produce json
 // @Security cookieAuth
-// @Param request body DMSettings true "Request body."
-// @Success 200 {object} DMSettings "The settings."
+// @Param request body dm.DMSettings true "Request body."
+// @Success 200 {object} dm.DMSettings "The settings."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/users/me/dm-settings [put]
-func (h *Handler) putDMSettings(w http.ResponseWriter, r *http.Request) error {
+func (a *API) putDMSettings(w http.ResponseWriter, r *http.Request) error {
 	var req DMSettings
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
 	me := auth.UserFrom(r.Context()).ID
-	if err := SetDMSettings(r.Context(), h.DB, me, req); err != nil {
+	if err := SetDMSettings(r.Context(), a.DB, me, req); err != nil {
 		return err
 	}
-	h.tellOwnSessions(me, nil)
+	a.tellOwnSessions(me, nil)
 	httpx.WriteJSON(w, http.StatusOK, req)
 	return nil
 }

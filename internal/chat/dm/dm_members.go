@@ -1,4 +1,4 @@
-package chat
+package dm
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -43,7 +43,7 @@ func checkAddable(ctx context.Context, tx pgx.Tx, id, adder, target uuid.UUID, n
 		return false, err
 	}
 	if eligible != 1 {
-		return false, errDMStart
+		return false, ErrDMStart
 	}
 	return true, nil
 }
@@ -61,7 +61,7 @@ func AddDMMember(ctx context.Context, p *db.Pool, id, adder, target uuid.UUID) (
 		}
 		// The target's group count is checked below; hold their row so a
 		// second add cannot count the same number meanwhile.
-		if err := lockUsers(ctx, tx, []uuid.UUID{target}); err != nil {
+		if err := LockUsers(ctx, tx, []uuid.UUID{target}); err != nil {
 			return err
 		}
 		if added, err = checkAddable(ctx, tx, id, adder, target, n); err != nil || !added {
@@ -114,7 +114,7 @@ func deleteEmptyDM(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]string, erro
 	if err != nil {
 		return nil, err
 	}
-	keys, err := channels.ChannelMediaKeys(ctx, tx, ids)
+	keys, err := messages.ChannelMediaKeys(ctx, tx, ids)
 	if err != nil {
 		return nil, err
 	}

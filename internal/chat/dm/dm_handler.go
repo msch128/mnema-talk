@@ -1,4 +1,4 @@
-package chat
+package dm
 
 import (
 	"net/http"
@@ -6,24 +6,25 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
-func (h *Handler) mountDMs(r chi.Router) {
-	r.Get("/dms", httpx.Handle(h.listDMs))
-	r.Get("/dms/{id}", httpx.Handle(h.getDM))
-	r.Delete("/dms/{id}/members/{user}", httpx.Handle(h.leaveDM))
-	r.Get("/users/me/privacy", httpx.Handle(h.getPrivacy))
-	r.Put("/users/me/privacy", httpx.Handle(h.setPrivacy))
-	h.mountDMPrefs(r)
+func (a *API) mountDMs(r chi.Router) {
+	r.Get("/dms", httpx.Handle(a.listDMs))
+	r.Get("/dms/{id}", httpx.Handle(a.getDM))
+	r.Delete("/dms/{id}/members/{user}", httpx.Handle(a.LeaveDM))
+	r.Get("/users/me/privacy", httpx.Handle(a.getPrivacy))
+	r.Put("/users/me/privacy", httpx.Handle(a.setPrivacy))
+	a.mountDMPrefs(r)
 	starts := r
-	if h.DMLimit != nil {
-		starts = r.With(h.DMLimit.By(auth.UserKey))
+	if a.DMLimit != nil {
+		starts = r.With(a.DMLimit.By(auth.UserKey))
 	}
-	starts.Post("/dms", httpx.Handle(h.createDM))
-	starts.Post("/dms/{id}/members", httpx.Handle(h.addDMMember))
+	starts.Post("/dms", httpx.Handle(a.createDM))
+	starts.Post("/dms/{id}/members", httpx.Handle(a.addDMMember))
 }
 
 // DMMemberChange is the payload of dm_member_added and dm_member_removed.
@@ -35,17 +36,17 @@ type DMMemberChange struct {
 
 // canStartDMs requires the caller to hold Send direct messages with the
 // community switch on and, for a new member, the write wait to be over.
-func (h *Handler) canStartDMs(r *http.Request) error {
-	if h.Perms == nil {
+func (a *API) canStartDMs(r *http.Request) error {
+	if a.Guard.Perms == nil {
 		return nil
 	}
-	snap, err := h.Perms.Snapshot(r.Context())
+	snap, err := a.Guard.Perms.Snapshot(r.Context())
 	if err != nil {
 		return err
 	}
 	sub := auth.UserFrom(r.Context()).Subject()
 	if !snap.CanStartDM(sub) {
-		return errDMStart
+		return ErrDMStart
 	}
 	if w := snap.NewMemberWaits(sub.ID).Write; w > 0 {
 		return perm.NewMemberWriteError(w)
@@ -61,19 +62,19 @@ func (h *Handler) canStartDMs(r *http.Request) error {
 // @Tags Direct messages
 // @Produce json
 // @Security cookieAuth
-// @Success 200 {array} DirectMessage "The caller's conversations."
+// @Success 200 {array} dm.DirectMessage "The caller's conversations."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/dms [get]
-func (h *Handler) listDMs(w http.ResponseWriter, r *http.Request) error {
-	dms, err := ListDMs(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, nil)
+func (a *API) listDMs(w http.ResponseWriter, r *http.Request) error {
+	dms, err := ListDMs(r.Context(), a.DB, auth.UserFrom(r.Context()).ID, nil)
 	if err != nil {
 		return err
 	}
-	h.markCanSend(r, dms)
-	h.markCalls(dms)
+	a.markCanSend(r, dms)
+	a.MarkCalls(dms)
 	if dms == nil {
 		dms = []DirectMessage{}
 	}
@@ -82,10 +83,10 @@ func (h *Handler) listDMs(w http.ResponseWriter, r *http.Request) error {
 }
 
 // markCanSend fills CanSend from the caller's permissions.
-func (h *Handler) markCanSend(r *http.Request, dms []DirectMessage) {
-	can := h.Perms == nil
+func (a *API) markCanSend(r *http.Request, dms []DirectMessage) {
+	can := a.Guard.Perms == nil
 	if !can {
-		if snap, err := h.Perms.Snapshot(r.Context()); err == nil {
+		if snap, err := a.Guard.Perms.Snapshot(r.Context()); err == nil {
 			can = snap.CanStartDM(auth.UserFrom(r.Context()).Subject())
 		}
 	}
@@ -94,10 +95,10 @@ func (h *Handler) markCanSend(r *http.Request, dms []DirectMessage) {
 	}
 }
 
-// markCalls fills Call from the calls that are going on.
-func (h *Handler) markCalls(dms []DirectMessage) {
+// MarkCalls fills Call from the calls that are going on.
+func (a *API) MarkCalls(dms []DirectMessage) {
 	for i := range dms {
-		dms[i].Call = h.Calls.Active(dms[i].ID)
+		dms[i].Call = a.Calls.Active(dms[i].ID)
 	}
 }
 
@@ -110,7 +111,7 @@ func (h *Handler) markCalls(dms []DirectMessage) {
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Conversation ID." Format(uuid)
-// @Success 200 {object} DirectMessage "The conversation."
+// @Success 200 {object} dm.DirectMessage "The conversation."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
@@ -118,12 +119,12 @@ func (h *Handler) markCalls(dms []DirectMessage) {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/dms/{id} [get]
-func (h *Handler) getDM(w http.ResponseWriter, r *http.Request) error {
+func (a *API) getDM(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	dm, err := h.loadDM(r, id)
+	dm, err := a.loadDM(r, id)
 	if err != nil {
 		return err
 	}
@@ -131,16 +132,16 @@ func (h *Handler) getDM(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *Handler) loadDM(r *http.Request, id uuid.UUID) (DirectMessage, error) {
-	dms, err := ListDMs(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, &id)
+func (a *API) loadDM(r *http.Request, id uuid.UUID) (DirectMessage, error) {
+	dms, err := ListDMs(r.Context(), a.DB, auth.UserFrom(r.Context()).ID, &id)
 	if err != nil {
 		return DirectMessage{}, err
 	}
 	if len(dms) == 0 {
 		return DirectMessage{}, errDMNotFound
 	}
-	h.markCanSend(r, dms)
-	h.markCalls(dms)
+	a.markCanSend(r, dms)
+	a.MarkCalls(dms)
 	return dms[0], nil
 }
 
@@ -160,9 +161,9 @@ type CreateDMRequest struct {
 // @Accept json
 // @Produce json
 // @Security cookieAuth
-// @Param request body CreateDMRequest true "Request body."
-// @Success 200 {object} DirectMessage "The existing conversation with that member."
-// @Success 201 {object} DirectMessage "The new conversation."
+// @Param request body dm.CreateDMRequest true "Request body."
+// @Success 200 {object} dm.DirectMessage "The existing conversation with that member."
+// @Success 201 {object} dm.DirectMessage "The new conversation."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: the conversation cannot be started (always the same text)."
@@ -171,12 +172,12 @@ type CreateDMRequest struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/dms [post]
-func (h *Handler) createDM(w http.ResponseWriter, r *http.Request) error {
+func (a *API) createDM(w http.ResponseWriter, r *http.Request) error {
 	var req CreateDMRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	dm, created, err := h.StartDM(r, req.UserIDs)
+	dm, created, err := a.StartDM(r, req.UserIDs)
 	if err != nil {
 		return err
 	}
@@ -189,8 +190,8 @@ func (h *Handler) createDM(w http.ResponseWriter, r *http.Request) error {
 }
 
 // announceDM tells every member's sessions about a conversation they are in.
-func (h *Handler) announceDM(dm DirectMessage) {
-	if h.Events == nil {
+func (a *API) announceDM(dm DirectMessage) {
+	if a.Events == nil {
 		return
 	}
 	ids := make([]uuid.UUID, len(dm.Members))
@@ -199,7 +200,7 @@ func (h *Handler) announceDM(dm DirectMessage) {
 	}
 	// Counts are the starter's to see; the others fetch their own.
 	dm = dm.forOthers()
-	h.Events.SendToUsers(ids, events.DMCreated, dm)
+	a.Events.SendToUsers(ids, events.DMCreated, dm)
 }
 
 // AddDMMemberRequest is the body of POST /api/dms/{id}/members.
@@ -217,8 +218,8 @@ type AddDMMemberRequest struct {
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Conversation ID." Format(uuid)
-// @Param request body AddDMMemberRequest true "Request body."
-// @Success 200 {object} DirectMessage "The conversation, with the new member."
+// @Param request body dm.AddDMMemberRequest true "Request body."
+// @Success 200 {object} dm.DirectMessage "The conversation, with the new member."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: the member cannot be added (always the same text)."
@@ -228,7 +229,7 @@ type AddDMMemberRequest struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/dms/{id}/members [post]
-func (h *Handler) addDMMember(w http.ResponseWriter, r *http.Request) error {
+func (a *API) addDMMember(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -237,31 +238,31 @@ func (h *Handler) addDMMember(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if _, err := h.loadDM(r, id); err != nil {
+	if _, err := a.loadDM(r, id); err != nil {
 		return err
 	}
-	if err := h.canStartDMs(r); err != nil {
+	if err := a.canStartDMs(r); err != nil {
 		return err
 	}
 	me := auth.UserFrom(r.Context()).ID
-	added, err := AddDMMember(r.Context(), h.DB, id, me, req.UserID)
+	added, err := AddDMMember(r.Context(), a.DB, id, me, req.UserID)
 	if err != nil {
 		return err
 	}
-	dm, err := h.loadDM(r, id)
+	dm, err := a.loadDM(r, id)
 	if err != nil {
 		return err
 	}
 	if added {
-		h.Perms.Invalidate()
-		h.announceAdded(dm, req.UserID)
+		a.Guard.Perms.Invalidate()
+		a.announceAdded(dm, req.UserID)
 	}
 	httpx.WriteJSON(w, http.StatusOK, dm)
 	return nil
 }
 
-func (h *Handler) announceAdded(dm DirectMessage, added uuid.UUID) {
-	if h.Events == nil {
+func (a *API) announceAdded(dm DirectMessage, added uuid.UUID) {
+	if a.Events == nil {
 		return
 	}
 	var others []uuid.UUID
@@ -274,11 +275,11 @@ func (h *Handler) announceAdded(dm DirectMessage, added uuid.UUID) {
 		}
 	}
 	dm = dm.forOthers()
-	h.Events.SendToUsers([]uuid.UUID{added}, events.DMCreated, dm)
-	h.Events.SendToUsers(others, events.DMMemberAdded, DMMemberChange{DMID: dm.ID, Member: joined})
+	a.Events.SendToUsers([]uuid.UUID{added}, events.DMCreated, dm)
+	a.Events.SendToUsers(others, events.DMMemberAdded, DMMemberChange{DMID: dm.ID, Member: joined})
 }
 
-// leaveDM handles DELETE /api/dms/{id}/members/@me.
+// LeaveDM handles DELETE /api/dms/{id}/members/@me.
 //
 // @Summary Leave a group direct message
 // @Description Takes the caller out of a group conversation; they lose its history. When nobody is left the conversation and its messages and attachments are deleted. A conversation with one other person cannot be left (400): block the person instead. Sends dm_member_removed to the remaining members and the leaver's sessions.
@@ -295,7 +296,7 @@ func (h *Handler) announceAdded(dm DirectMessage, added uuid.UUID) {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/dms/{id}/members/{user} [delete]
-func (h *Handler) leaveDM(w http.ResponseWriter, r *http.Request) error {
+func (a *API) LeaveDM(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
@@ -304,30 +305,30 @@ func (h *Handler) leaveDM(w http.ResponseWriter, r *http.Request) error {
 	if who := chi.URLParam(r, "user"); who != "@me" && who != user.ID.String() {
 		return httpx.ErrInvalidInput("you can only remove yourself: use @me")
 	}
-	talks, err := dmAndTalkIDs(r.Context(), h.DB, id)
+	talks, err := dmAndTalkIDs(r.Context(), a.DB, id)
 	if err != nil {
 		return err
 	}
-	remaining, keys, err := LeaveDM(r.Context(), h.DB, id, user.ID)
+	remaining, keys, err := LeaveDM(r.Context(), a.DB, id, user.ID)
 	if err != nil {
 		return err
 	}
 	if len(remaining) == 0 {
-		h.closeVoiceRooms(talks)
+		a.closeVoiceRooms(talks)
 	}
-	h.Perms.Invalidate()
-	h.deleteObjects(r.Context(), keys)
-	if h.Events != nil {
+	a.Guard.Perms.Invalidate()
+	core.DeleteObjects(r.Context(), a.Objects, keys)
+	if a.Events != nil {
 		left := DMMember{ID: user.ID, Username: user.Username, DisplayName: user.DisplayName}
-		h.Events.SendToUsers(append(remaining, user.ID), events.DMMemberRemoved, DMMemberChange{DMID: id, Member: left})
+		a.Events.SendToUsers(append(remaining, user.ID), events.DMMemberRemoved, DMMemberChange{DMID: id, Member: left})
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
 
 // closeVoiceRooms empties the live rooms of Talks that were deleted.
-func (h *Handler) closeVoiceRooms(ids []uuid.UUID) {
-	if v := h.voiceRooms(); v != nil {
+func (a *API) closeVoiceRooms(ids []uuid.UUID) {
+	if v := a.Voice; v != nil {
 		for _, id := range ids {
 			v.CloseVoiceChannel(id)
 		}
@@ -350,14 +351,14 @@ type Privacy struct {
 // @Tags Users
 // @Produce json
 // @Security cookieAuth
-// @Success 200 {object} Privacy "The settings."
+// @Success 200 {object} dm.Privacy "The settings."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/users/me/privacy [get]
-func (h *Handler) getPrivacy(w http.ResponseWriter, r *http.Request) error {
-	policy, err := GetDMPolicy(r.Context(), h.DB, auth.UserFrom(r.Context()).ID)
+func (a *API) getPrivacy(w http.ResponseWriter, r *http.Request) error {
+	policy, err := GetDMPolicy(r.Context(), a.DB, auth.UserFrom(r.Context()).ID)
 	if err != nil {
 		return err
 	}
@@ -374,20 +375,20 @@ func (h *Handler) getPrivacy(w http.ResponseWriter, r *http.Request) error {
 // @Accept json
 // @Produce json
 // @Security cookieAuth
-// @Param request body Privacy true "Request body."
-// @Success 200 {object} Privacy "The settings."
+// @Param request body dm.Privacy true "Request body."
+// @Success 200 {object} dm.Privacy "The settings."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/users/me/privacy [put]
-func (h *Handler) setPrivacy(w http.ResponseWriter, r *http.Request) error {
+func (a *API) setPrivacy(w http.ResponseWriter, r *http.Request) error {
 	var req Privacy
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if err := SetDMPolicy(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, req.DMPolicy); err != nil {
+	if err := SetDMPolicy(r.Context(), a.DB, auth.UserFrom(r.Context()).ID, req.DMPolicy); err != nil {
 		return err
 	}
 	httpx.WriteJSON(w, http.StatusOK, req)
