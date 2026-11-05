@@ -1,0 +1,19 @@
+e2e/ci-audio-sink.sh
+  s_788e33b6feb8ee::t_6e37595de818d8 6-10,13-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2c003b9bf1b01e8bb20c6e5a81fd68e69075ab3d",
+  "prompts": {},
+  "sessions": {
+    "s_788e33b6feb8ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5f83035c83696f3c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
