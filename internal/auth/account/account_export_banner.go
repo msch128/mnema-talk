@@ -1,4 +1,4 @@
-package auth
+package account
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 // exportProfileWithImages is profile.json plus the profile pictures: the
 // stored files go into the archive as avatar.<ext> and banner.<ext>, and
 // profile.json names them.
-func (h *Handler) exportProfileWithImages(ctx context.Context, z *zipFiles, user uuid.UUID) (map[string]any, error) {
+func (h *API) exportProfileWithImages(ctx context.Context, z *zipFiles, user uuid.UUID) (map[string]any, error) {
 	profile, err := exportProfile(ctx, h.Sessions.DB, user)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (h *Handler) exportProfileWithImages(ctx context.Context, z *zipFiles, user
 // exportProfileImage copies one profile picture (column holds the id of its
 // media row) into the archive and returns the file name, or "" when there is
 // no picture or it is gone from storage.
-func (h *Handler) exportProfileImage(ctx context.Context, z *zipFiles, user uuid.UUID, column, base string) (string, error) {
+func (h *API) exportProfileImage(ctx context.Context, z *zipFiles, user uuid.UUID, column, base string) (string, error) {
 	if h.Objects == nil {
 		return "", nil
 	}
@@ -79,7 +79,7 @@ func (h *Handler) exportProfileImage(ctx context.Context, z *zipFiles, user uuid
 // the file is gone from storage, which the export lists without it; any other
 // failure (a timeout, a server error) is returned, so the export fails and can
 // be requested again instead of being handed out incomplete.
-func (h *Handler) openExportObject(ctx context.Context, key string) (body io.ReadCloser, found bool, err error) {
+func (h *API) openExportObject(ctx context.Context, key string) (body io.ReadCloser, found bool, err error) {
 	body, err = h.Objects.GetObjectFrom(ctx, key, 0)
 	if err != nil {
 		if h.ObjectMissing != nil && h.ObjectMissing(err) {

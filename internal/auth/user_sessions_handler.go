@@ -120,7 +120,7 @@ func (h *Handler) revokeSession(w http.ResponseWriter, r *http.Request) error {
 	if len(jtis) == 0 {
 		return httpx.ErrNotFound("session not found")
 	}
-	h.auditUser(r.Context(), u, "auth.session_revoke")
+	h.AuditUser(r.Context(), u, "auth.session_revoke")
 	h.disconnect(jtis)
 	for _, jti := range jtis {
 		if jti == current {
@@ -154,7 +154,7 @@ func (h *Handler) revokeOtherSessions(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 	if len(jtis) > 0 {
-		h.auditUser(r.Context(), u, "auth.sessions_revoke_others")
+		h.AuditUser(r.Context(), u, "auth.sessions_revoke_others")
 	}
 	h.disconnect(jtis)
 	httpx.WriteJSON(w, http.StatusOK, RevokedSessions{Revoked: len(jtis)})

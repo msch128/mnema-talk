@@ -103,7 +103,7 @@ func (s *Sessions) takeNotice(ctx context.Context, q db.Querier, id uuid.UUID) (
 // streak, when the count reaches noticeAfter. Neither the log nor the mail
 // holds a code.
 func (h *Handler) raiseAlert(ctx context.Context, u *User) {
-	h.auditUser(ctx, u, "auth.two_factor_alert")
+	h.AuditUser(ctx, u, "auth.two_factor_alert")
 	if !h.mailEnabled() {
 		return
 	}

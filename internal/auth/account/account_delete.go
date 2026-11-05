@@ -1,12 +1,13 @@
-package auth
+package account
 
 import (
 	"context"
 	"errors"
-	"io"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/auth"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
@@ -14,29 +15,12 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// ObjectStore is the part of the object store the account flows use (uploads
-// to remove after a deletion, the export archive). media.Store satisfies it.
-type ObjectStore interface {
-	Upload(ctx context.Context, key string, body io.Reader, mimeType string, size int64) error
-	GetObjectFrom(ctx context.Context, key string, offset int64) (io.ReadCloser, error)
-	Delete(ctx context.Context, key string) error
-	DeleteBatch(ctx context.Context, keys []string) error
-}
-
 // deleteCleanupTimeout bounds what follows the commit of an account deletion:
 // removing its files and recording the deletion.
 const deleteCleanupTimeout = 30 * time.Second
 
 // errOwnerDelete explains why the one Owner account has no delete button.
 var errOwnerDelete = httpx.ErrForbidden("the Owner account cannot be deleted: ownership is not transferable, so the community would be left without an Owner")
-
-// DeleteAccountRequest is the body of POST /api/users/me/delete.
-type DeleteAccountRequest struct {
-	CurrentPassword string `json:"current_password" format:"password"`
-	// Code is a current authenticator code or an unused recovery code; needed
-	// only while two-factor sign-in is on.
-	Code string `json:"code,omitempty" maxLength:"32" binding:"optional"`
-}
 
 // deleteAccount handles POST /api/users/me/delete.
 //
@@ -47,7 +31,7 @@ type DeleteAccountRequest struct {
 // @Accept json
 // @Produce json
 // @Security cookieAuth
-// @Param request body DeleteAccountRequest true "Request body."
+// @Param request body auth.DeleteAccountRequest true "Request body."
 // @Success 204 "Account deleted."
 // @Header 204 {string} Set-Cookie "Expired session cookie that clears the session."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
@@ -57,9 +41,9 @@ type DeleteAccountRequest struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/users/me/delete [post]
-func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) error {
-	u := UserFrom(r.Context())
-	var req DeleteAccountRequest
+func (h *API) deleteAccount(w http.ResponseWriter, r *http.Request) error {
+	u := auth.UserFrom(r.Context())
+	var req auth.DeleteAccountRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -98,7 +82,7 @@ func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 // removeObjects deletes the account's files from the object store. The rows
 // are gone already, so a failure leaves orphans the Owner's orphan cleanup
 // finds; it is logged without the keys.
-func (h *Handler) removeObjects(ctx context.Context, keys []string) {
+func (h *API) removeObjects(ctx context.Context, keys []string) {
 	if len(keys) == 0 || h.Objects == nil {
 		return
 	}
@@ -110,7 +94,7 @@ func (h *Handler) removeObjects(ctx context.Context, keys []string) {
 // announceUnpins tells the channels that the erasure unpinned messages, so
 // open pin panels refetch. The payload has the shape of chat.PinsChanged; the
 // actor is the deleted account, without a name.
-func (h *Handler) announceUnpins(u *User, unpins []pinRef) {
+func (h *API) announceUnpins(u *auth.User, unpins []pinRef) {
 	if h.Events == nil {
 		return
 	}
@@ -123,7 +107,7 @@ func (h *Handler) announceUnpins(u *User, unpins []pinRef) {
 
 // endDeletedAccount ends what is live for the account and records the
 // deletion. The entry names the account by its id only.
-func (h *Handler) endDeletedAccount(ctx context.Context, u *User) {
+func (h *API) endDeletedAccount(ctx context.Context, u *auth.User) {
 	if h.Live != nil {
 		h.Live.KickFromVoice(u.ID)
 		h.Live.DisconnectUser(u.ID)

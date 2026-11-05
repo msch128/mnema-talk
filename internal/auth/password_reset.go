@@ -152,7 +152,7 @@ func (h *Handler) confirmPasswordReset(w http.ResponseWriter, r *http.Request) e
 		return err
 	}
 	h.ClearLoginLockout(u.Username, u.ID)
-	h.auditUser(r.Context(), u, "auth.password_reset_mail")
+	h.AuditUser(r.Context(), u, "auth.password_reset_mail")
 	if h.Live != nil {
 		h.Live.DisconnectUser(u.ID)
 	}

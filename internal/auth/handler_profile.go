@@ -127,7 +127,7 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.passwordFails.ResetFailures(key)
-	h.auditUser(r.Context(), u, "auth.password_change")
+	h.AuditUser(r.Context(), u, "auth.password_change")
 	// All other sessions are revoked by the version bump; keep this one alive.
 	if err := h.Sessions.Start(w, u, tv); err != nil {
 		return err

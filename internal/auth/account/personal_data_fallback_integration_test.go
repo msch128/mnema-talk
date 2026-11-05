@@ -1,9 +1,9 @@
 //go:build integration
 
-package auth_test
+package account_test
 
 import (
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/account"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/communityevents"
@@ -29,5 +29,5 @@ func init() {
 	discordimport.RegisterAccountData(r)
 	emoji.RegisterAccountData(r)
 	webhook.RegisterAccountData(r)
-	auth.SetPersonalDataFallback(r)
+	account.SetPersonalDataFallback(r)
 }

@@ -62,7 +62,7 @@ mnema-talk/
 │   ├── config/              # Environment configuration loading + validation
 │   ├── db/                  # pgx pool, embedded versioned migrations (db/migrations/*.sql)
 │   ├── httpx/               # Middleware: security headers, CSRF origin check, rate limits, client IP
-│   ├── auth/                # Password hashing, sessions (token_version), sign-in, permission guards; memberadmin/ holds the member-admin routes (bans, kick, user admin, invites), mailtext/ the account mail texts
+│   ├── auth/                # Password hashing, sessions (token_version), sign-in, permission guards; memberadmin/ holds the member-admin routes (bans, kick, user admin, invites), account/ the data export and erasure, mailtext/ the account mail texts
 │   ├── perm/                # Roles and permissions: bits, resolver (Snapshot), cache, hierarchy rules, role/overwrite store
 │   ├── roles/               # HTTP API for roles, member roles and channel overwrites; GET /api/permissions
 │   ├── webhook/             # Incoming (Discord execute format) and outgoing (signed, durable queue) webhooks
@@ -90,7 +90,7 @@ mnema-talk/
 │   ├── slashcmd/            # The built-ins besides /poll: /me, /shrug, /tableflip, /unflip, /spoiler, /nick, /thread, /msg, /timeout, /ban, /kick
 │   ├── poll/                # Polls and the /poll command
 │   ├── gateway/             # Bot gateway (Discord-style opcodes, intents, resume)
-│   ├── sfu/                 # Pion WebRTC SFU (audio/video/screenshare forwarding)
+│   ├── sfu/                 # Pion WebRTC SFU (audio/video/screenshare forwarding); one cohesive package on purpose, not split by file count
 │   ├── update/              # GitHub release check + client for the optional updater sidecar
 │   ├── updaterd/            # The updater sidecar (cmd/updater): verify, pull by digest, tag, restart
 │   ├── imageverify/         # cosign signature + SLSA provenance check of a release image

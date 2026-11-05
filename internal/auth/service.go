@@ -211,7 +211,7 @@ func ValidateUsername(username string) error {
 }
 
 func checkReservedUsername(username string) error {
-	if reservedUsernames[strings.ToLower(username)] || strings.HasPrefix(strings.ToLower(username), deletedUsernamePrefix) {
+	if reservedUsernames[strings.ToLower(username)] || strings.HasPrefix(strings.ToLower(username), DeletedUsernamePrefix) {
 		return httpx.ErrInvalidInput("this username is reserved")
 	}
 	return nil

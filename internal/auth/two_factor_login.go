@@ -49,7 +49,7 @@ func (h *Handler) secondFactorNeeded(ctx context.Context, id uuid.UUID) (bool, e
 	if h.twoFactor != nil {
 		return h.twoFactor(ctx, id)
 	}
-	st, err := h.Sessions.twoFactorState(ctx, h.Sessions.DB, id)
+	st, err := h.Sessions.TwoFactorState(ctx, h.Sessions.DB, id)
 	return st.Enabled, err
 }
 
@@ -129,9 +129,9 @@ func (h *Handler) completeSecondFactor(ctx context.Context, client, challenge, c
 	}
 	limiter.ResetFailures(key)
 	h.closeChallenge(ctx, challenge)
-	h.auditUser(ctx, u, "auth.login")
+	h.AuditUser(ctx, u, "auth.login")
 	if res.Recovery {
-		h.auditUser(ctx, u, "auth.recovery_code_used")
+		h.AuditUser(ctx, u, "auth.recovery_code_used")
 	}
 	return u, tv, 0, nil
 }

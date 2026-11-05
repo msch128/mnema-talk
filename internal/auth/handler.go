@@ -15,7 +15,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/userdata"
 )
 
 // Handler serves /api/auth/* and the profile endpoints under /api/users.
@@ -48,12 +47,9 @@ type Handler struct {
 	// failure; an export skips only the files that are gone. nil treats every
 	// error as a failure.
 	ObjectMissing func(error) bool
-	// personal is the other domains' export files and erasure statements.
-	personal *userdata.Registry
 	// Lifetime bounds the background jobs (data exports): they stop when it
 	// ends. nil means they run to completion.
-	Lifetime    context.Context
-	exportSlots chan struct{}
+	Lifetime context.Context
 	// PublicURL is the address the links in those mails point to.
 	PublicURL string
 	rec       *recovery
@@ -106,7 +102,6 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 		Events:      pub,
 		failureSeen: &sync.Map{},
 		rec:         newRecovery(),
-		exportSlots: make(chan struct{}, exportSlots),
 		factorLocks: new([64]sync.Mutex),
 		// Generous per address: a household or office shares one public IP.
 		loginPerIP:      httpx.NewRateLimiter(60, 15*time.Minute),
@@ -198,7 +193,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
 	if challenged, err := h.challengeIfNeeded(r.Context(), w, u, tv); challenged || err != nil {
 		return err
 	}
-	h.auditUser(r.Context(), u, "auth.login")
+	h.AuditUser(r.Context(), u, "auth.login")
 	if err := h.Sessions.Start(w, u, tv); err != nil {
 		return err
 	}

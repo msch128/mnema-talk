@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/auth/account"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -253,7 +254,7 @@ func TestExportNeedsTheSecondFactorAndExpires(t *testing.T) {
 	// The sweeper removes the file.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go a.router.accounts.RunExportSweep(ctx, 20*time.Millisecond)
+	go account.New(a.router.accounts).RunExportSweep(ctx, 20*time.Millisecond)
 	deadline := time.Now().Add(3 * time.Second)
 	for a.store.Len() != 0 && time.Now().Before(deadline) {
 		time.Sleep(20 * time.Millisecond)

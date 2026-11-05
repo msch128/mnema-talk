@@ -1,4 +1,4 @@
-package auth
+package account
 
 import (
 	"archive/zip"
@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/auth"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -95,7 +97,7 @@ This file was available for download once, for 24 hours.
 // buildExport streams the archive into object storage and marks the export
 // ready. A delete of the account while it runs wins: the file is removed
 // again. Nothing is buffered beyond one page of rows.
-func (h *Handler) buildExport(ctx context.Context, id, user uuid.UUID) error {
+func (h *API) buildExport(ctx context.Context, id, user uuid.UUID) error {
 	key := fmt.Sprintf("exports/%s/%s.zip", user, id)
 	pr, pw := io.Pipe()
 	counted := &budgetWriter{w: pw, max: exportMaxBytes}
@@ -139,7 +141,7 @@ func (z *zipFiles) add(name string, v any) error {
 
 // viewableChannels are the channels the person may still see, by the live
 // permission state. Without a permission service no channel name is revealed.
-func (h *Handler) viewableChannels(ctx context.Context, user uuid.UUID) (userdata.Channels, error) {
+func (h *API) viewableChannels(ctx context.Context, user uuid.UUID) (userdata.Channels, error) {
 	if h.Perms == nil {
 		return userdata.Channels{}, nil
 	}
@@ -147,7 +149,7 @@ func (h *Handler) viewableChannels(ctx context.Context, user uuid.UUID) (userdat
 	if err != nil {
 		return userdata.Channels{}, err
 	}
-	u, err := GetUser(ctx, h.Sessions.DB, user)
+	u, err := auth.GetUser(ctx, h.Sessions.DB, user)
 	if err != nil {
 		return userdata.Channels{}, err
 	}
@@ -180,7 +182,7 @@ func exportProfile(ctx context.Context, q db.Querier, user uuid.UUID) (map[strin
 		return nil, err
 	}
 	return map[string]any{
-		"id": user, "username": username, "display_name": display, "bio": bio, "owner": role == RoleAdmin,
+		"id": user, "username": username, "display_name": display, "bio": bio, "owner": role == auth.RoleAdmin,
 		"status_text": status, "language": locale, "chosen_presence": presence,
 		"email": email, "email_confirmed_at": verified, "created_at": created, "last_seen_at": lastSeen,
 		"rules_accepted_version": rules, "voice_seconds": voice, "message_count": count,
@@ -197,8 +199,8 @@ func collect[T any](ctx context.Context, q db.Querier, fn pgx.RowToFunc[T], sql 
 	return pgx.CollectRows(rows, fn)
 }
 
-func (h *Handler) exportSecurity(ctx context.Context, user uuid.UUID) (map[string]any, error) {
-	st, err := h.Sessions.twoFactorState(ctx, h.Sessions.DB, user)
+func (h *API) exportSecurity(ctx context.Context, user uuid.UUID) (map[string]any, error) {
+	st, err := h.Sessions.TwoFactorState(ctx, h.Sessions.DB, user)
 	if err != nil {
 		return nil, err
 	}

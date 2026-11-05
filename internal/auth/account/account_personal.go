@@ -1,4 +1,4 @@
-package auth
+package account
 
 import "github.com/msch128/mnema-talk/internal/userdata"
 
@@ -8,11 +8,11 @@ var personalFallback *userdata.Registry
 
 // SetPersonalData registers the domains that contribute export files and
 // erasure statements. The server calls it once, before it serves.
-func (h *Handler) SetPersonalData(r *userdata.Registry) {
+func (h *API) SetPersonalData(r *userdata.Registry) {
 	h.personal = r
 }
 
-func (h *Handler) personalData() *userdata.Registry {
+func (h *API) personalData() *userdata.Registry {
 	if h != nil && h.personal != nil {
 		return h.personal
 	}
@@ -21,6 +21,6 @@ func (h *Handler) personalData() *userdata.Registry {
 
 // ErasePlan is every erasure statement in the order it runs. The anonymise of
 // the account row follows the plan and is not part of it.
-func (h *Handler) ErasePlan() []userdata.Step {
+func (h *API) ErasePlan() []userdata.Step {
 	return mergedEraseSteps(h.personalData())
 }

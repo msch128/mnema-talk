@@ -637,7 +637,7 @@ permission check on the channel.
 | Content handling | `internal/media`, `imgproc` | Content sniffing, risky types served only as downloads, filename sanitising; avatars, banners and emoji decoded, bounded, re-encoded; pixel and frame budgets before decode |
 | Markdown rendering | `web/src/lib/markdown` | Tree of plain nodes, one HTML-producing module with attribute allow-lists; single `v-html` sink |
 | Audit log | `internal/audit` | Append-only (database trigger), visibility classes per action (`VisAuditors`, `VisChannel`, `VisPrivileged`), no secrets stored, scrub-only update path for account erasure |
-| Account erasure and export | `internal/auth/account_*` | Transactional, foreign-key-walking test, tombstone row guarded by a trigger |
+| Account erasure and export | `internal/auth/account` | Transactional, foreign-key-walking test, tombstone row guarded by a trigger |
 | Automod (1.2) | `internal/automod` | Word, link, raid and new-account rules, hits go to the report queue; DM hits store no text |
 | Secrets | `internal/config` | Environment only; production refuses weak secrets and wide trusted-proxy ranges; gitleaks in CI and pre-commit |
 | Supply chain | `.github/workflows`, `scripts/` | Actions pinned by commit SHA, compose images pinned by digest, cosign and provenance, `govulncheck`, `npm audit`, third-party notices |

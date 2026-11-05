@@ -26,5 +26,5 @@ func (c *components) wirePersonalData() {
 	discordimport.RegisterAccountData(r)
 	emoji.RegisterAccountData(r)
 	webhook.RegisterAccountData(r)
-	c.authH.SetPersonalData(r)
+	c.account.SetPersonalData(r)
 }

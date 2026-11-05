@@ -159,7 +159,7 @@ func (h *Handler) twoFactorEnable(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	h.clearCodeFailures(r, u.ID, req.Code)
-	h.auditUser(r.Context(), u, "auth.two_factor_enabled")
+	h.AuditUser(r.Context(), u, "auth.two_factor_enabled")
 	writeRecoveryCodes(w, codes)
 	return nil
 }
@@ -199,7 +199,7 @@ func (h *Handler) identity(w http.ResponseWriter, r *http.Request, u *User, pass
 	if h.lockedOut(w, r, u.ID, code) {
 		return false, nil
 	}
-	st, err := h.Sessions.twoFactorState(r.Context(), h.Sessions.DB, u.ID)
+	st, err := h.Sessions.TwoFactorState(r.Context(), h.Sessions.DB, u.ID)
 	if err != nil {
 		return false, err
 	}
@@ -254,7 +254,7 @@ func (h *Handler) twoFactorDisable(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	h.auditUser(r.Context(), u, "auth.two_factor_disabled")
+	h.AuditUser(r.Context(), u, "auth.two_factor_disabled")
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -296,7 +296,7 @@ func (h *Handler) twoFactorRegenerate(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	h.auditUser(r.Context(), u, "auth.recovery_codes_regenerated")
+	h.AuditUser(r.Context(), u, "auth.recovery_codes_regenerated")
 	writeRecoveryCodes(w, codes)
 	return nil
 }
