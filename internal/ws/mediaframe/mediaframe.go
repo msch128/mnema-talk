@@ -1,4 +1,6 @@
-package ws
+// Package mediaframe checks the shape of the handshake messages the hub relays
+// for end-to-end media keys, without reading their content.
+package mediaframe
 
 import "encoding/binary"
 
@@ -20,10 +22,10 @@ const (
 	capabilityBytes = 67 // 'M' 'C', bits u8, Ed25519 signature
 )
 
-// wellFormedHandshake reports whether raw has the framing of a key package,
+// WellFormedHandshake reports whether raw has the framing of a key package,
 // welcome or public message (a commit), a heartbeat or a capability message.
 // Private messages and group infos are never sent in this protocol.
-func wellFormedHandshake(raw []byte) bool {
+func WellFormedHandshake(raw []byte) bool {
 	if len(raw) >= 2 && raw[0] == 'M' {
 		switch raw[1] {
 		case 'H':
