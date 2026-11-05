@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -303,7 +303,7 @@ func removeChannels(ctx context.Context, tx pgx.Tx, chans []chanInfo) ([]string,
 	if len(ids) == 0 {
 		return nil, nil, nil
 	}
-	keys, err := chat.DeleteChannelsTx(ctx, tx, ids)
+	keys, err := channels.DeleteChannelsTx(ctx, tx, ids)
 	if err != nil {
 		return nil, nil, err
 	}

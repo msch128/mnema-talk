@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -134,7 +135,7 @@ func savedMessages(ctx context.Context, p *db.Pool, user uuid.UUID, saved []save
 	// A conversation is readable by its members only, whatever the permission
 	// state says (the Owner and Administrators included), so that rule is a
 	// membership test in SQL, as in search.
-	msgs, err := queryMessages(ctx, p, messageSelect+` WHERE m.id = ANY($1) AND (
+	msgs, err := messages.QueryMessages(ctx, p, messages.MessageSelect+` WHERE m.id = ANY($1) AND (
 		(NOT m.in_dm AND ($2::uuid[] IS NULL OR m.channel_id = ANY($2)))
 		OR (`+core.ConversationReadableSQL("$3")+`))`, ids, visible, user)
 	if err != nil {
@@ -194,7 +195,7 @@ func SaveMessage(ctx context.Context, p *db.Pool, user, messageID uuid.UUID, not
 // @Router /api/me/saved [get]
 func (h *Handler) listSaved(w http.ResponseWriter, r *http.Request) error {
 	var before *uuid.UUID
-	if _, err := queryIDs(r, "a message id", map[string]**uuid.UUID{"before": &before}); err != nil {
+	if _, err := messages.QueryIDs(r, "a message id", map[string]**uuid.UUID{"before": &before}); err != nil {
 		return err
 	}
 	visible, err := h.viewableChannels(r)
@@ -250,14 +251,14 @@ func (h *Handler) saveMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := h.require(r, ref.ChannelID, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
+		return core.NotFoundUnlessFailure(err)
 	}
 	me := auth.UserFrom(r.Context()).ID
 	entry, err := SaveMessage(r.Context(), h.DB, me, msgID, req.Note)
 	if err != nil {
 		return err
 	}
-	if entry.Message, err = GetMessage(r.Context(), h.DB, msgID); err != nil {
+	if entry.Message, err = messages.GetMessage(r.Context(), h.DB, msgID); err != nil {
 		return err
 	}
 	entry.Available = true

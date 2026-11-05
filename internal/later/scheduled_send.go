@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -102,17 +103,17 @@ func (s *Service) post(ctx context.Context, d dueScheduled) (uuid.UUID, error) {
 	if !ok {
 		return uuid.Nil, httpx.ErrForbidden("the account cannot send")
 	}
-	ctx, err = chat.SendContextFor(s.Perms, auth.WithUser(ctx, user), d.channel, perm.SendMessages)
+	ctx, err = messages.SendContextFor(s.Perms, auth.WithUser(ctx, user), d.channel, perm.SendMessages)
 	if err != nil {
 		return uuid.Nil, err
 	}
-	if _, err := chat.ChannelForMessages(ctx, s.DB, d.channel); err != nil {
+	if _, err := messages.ChannelForMessages(ctx, s.DB, d.channel); err != nil {
 		return uuid.Nil, err
 	}
-	if err := chat.ValidateTarget(ctx, s.DB, d.channel, d.parent, d.replyTo); err != nil {
+	if err := messages.ValidateTarget(ctx, s.DB, d.channel, d.parent, d.replyTo); err != nil {
 		return uuid.Nil, err
 	}
-	return chat.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{
+	return messages.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{
 		ChannelID: d.channel, UserID: d.user, Content: d.content, ParentID: d.parent, ReplyToID: d.replyTo,
 	}, func(tx pgx.Tx, _ uuid.UUID) error {
 		tag, err := tx.Exec(ctx, `DELETE FROM scheduled_messages WHERE id = $1 AND state = 'pending' AND updated_at = $2`, d.id, d.updatedAt)
@@ -141,7 +142,7 @@ func reasonFor(e *httpx.APIError) string {
 }
 
 func (s *Service) announceSent(ctx context.Context, d dueScheduled, messageID uuid.UUID) {
-	msg, err := chat.GetMessage(ctx, s.DB, messageID)
+	msg, err := messages.GetMessage(ctx, s.DB, messageID)
 	if err != nil {
 		slog.Warn("scheduled: load sent message", "err", err)
 		return

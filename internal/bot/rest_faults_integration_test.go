@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/media"
@@ -120,11 +121,11 @@ func (e *env) restSetup(h *Commands) state {
 	st := state{bot: f, token: secret}
 	nm := chat.NewMessage{ChannelID: e.ch, UserID: e.owner.ID, Content: "hello"}
 	var err error
-	if st.msg, err = chat.CreateMessage(ctx, e.p, nm); err != nil {
+	if st.msg, err = messages.CreateMessage(ctx, e.p, nm); err != nil {
 		e.t.Fatal(err)
 	}
 	nm.UserID, nm.Content = f.bot.UserID, "mine"
-	if st.own, err = chat.CreateMessage(ctx, e.p, nm); err != nil {
+	if st.own, err = messages.CreateMessage(ctx, e.p, nm); err != nil {
 		e.t.Fatal(err)
 	}
 	cmd, err := UpsertCommand(ctx, e.p, f.bot.ID, CommandInput{Name: "ping", Description: "pong", Options: []Option{

@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 )
 
 // The unread design must not cost the server more as the community grows:
@@ -142,7 +142,7 @@ func TestReadMarkersAreWrittenOnceAndOnlyWhenThereIsSomethingNewToRead(t *testin
 			go func() {
 				defer wg.Done()
 				for id := range work {
-					if _, err := chat.MarkRead(context.Background(), a.db, id, ch, nil); err != nil {
+					if _, err := readstate.MarkRead(context.Background(), a.db, id, ch, nil); err != nil {
 						t.Error(err)
 						return
 					}

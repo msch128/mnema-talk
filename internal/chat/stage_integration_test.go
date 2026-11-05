@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/stage"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -17,19 +18,19 @@ func TestOnlyAPermanentTalkThatIsNoLobbyBecomesAStage(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	ctx := context.Background()
-	talk, err := CreateChannelWithStage(ctx, p, nil, "Town hall", ChannelTypeVoice, "", 0, false)
+	talk, err := channels.CreateChannelWithStage(ctx, p, nil, "Town hall", ChannelTypeVoice, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	text, err := CreateChannelWithStage(ctx, p, nil, "general", ChannelTypeText, "", 1, false)
+	text, err := channels.CreateChannelWithStage(ctx, p, nil, "general", ChannelTypeText, "", 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	lobby, err := CreateChannelWithStage(ctx, p, nil, "Create a Talk", ChannelTypeVoice, "", 2, false)
+	lobby, err := channels.CreateChannelWithStage(ctx, p, nil, "Create a Talk", ChannelTypeVoice, "", 2, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := SetLobby(ctx, p, lobby.ID, true); err != nil {
+	if err := channels.SetLobby(ctx, p, lobby.ID, true); err != nil {
 		t.Fatal(err)
 	}
 	if err := stage.SetStage(ctx, p, talk.ID, true); err != nil {
@@ -44,13 +45,13 @@ func TestOnlyAPermanentTalkThatIsNoLobbyBecomesAStage(t *testing.T) {
 		t.Fatal("an unknown channel became a Stage")
 	}
 	// A Stage cannot become a lobby; a normal Talk can again once the Stage is lifted.
-	if err := SetLobby(ctx, p, talk.ID, true); err == nil {
+	if err := channels.SetLobby(ctx, p, talk.ID, true); err == nil {
 		t.Fatal("a Stage became a lobby")
 	}
 	if err := stage.SetStage(ctx, p, talk.ID, false); err != nil {
 		t.Fatal(err)
 	}
-	if err := SetLobby(ctx, p, talk.ID, true); err != nil {
+	if err := channels.SetLobby(ctx, p, talk.ID, true); err != nil {
 		t.Fatalf("a normal Talk becomes a lobby: %v", err)
 	}
 }
@@ -59,14 +60,14 @@ func TestTheChannelListAndThePermissionStateKnowTheStage(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	ctx := context.Background()
-	talk, err := CreateChannelWithStage(ctx, p, nil, "Town hall", ChannelTypeVoice, "", 0, false)
+	talk, err := channels.CreateChannelWithStage(ctx, p, nil, "Town hall", ChannelTypeVoice, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := stage.SetStage(ctx, p, talk.ID, true); err != nil {
 		t.Fatal(err)
 	}
-	cats, loose, err := GetServerHierarchy(ctx, p)
+	cats, loose, err := channels.GetServerHierarchy(ctx, p)
 	if err != nil || len(cats) != 0 || len(loose) != 1 || !loose[0].IsStage {
 		t.Fatalf("channel list: %+v %v", loose, err)
 	}
@@ -78,7 +79,7 @@ func TestTheChannelListAndThePermissionStateKnowTheStage(t *testing.T) {
 	if err != nil || !snap.IsStage(talk.ID) {
 		t.Fatalf("permission state: %v", err)
 	}
-	if err := FillTalkFields(ctx, p, talk); err != nil {
+	if err := channels.FillTalkFields(ctx, p, talk); err != nil {
 		t.Fatal(err)
 	}
 	if !talk.IsStage {
@@ -90,7 +91,7 @@ func TestTheDatabaseKeepsStagesApartFromLobbiesAndTemporaryTalks(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	ctx := context.Background()
-	talk, err := CreateChannelWithStage(ctx, p, nil, "Town hall", ChannelTypeVoice, "", 0, false)
+	talk, err := channels.CreateChannelWithStage(ctx, p, nil, "Town hall", ChannelTypeVoice, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}

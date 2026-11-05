@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.9.10](https://github.com/msch128/mnema-talk/compare/v2.9.9...v2.9.10) (2026-11-05)
+
+
+### Code Refactoring
+
+* move mention parsing, role mentions and the mention cap into chat/mentions ([#711](https://github.com/msch128/mnema-talk/issues/711)) ([1a94b89](https://github.com/msch128/mnema-talk/commit/1a94b89e8e1587c8a18201a4760d75ec39761247))
+
+## [2.9.9](https://github.com/msch128/mnema-talk/compare/v2.9.8...v2.9.9) (2026-11-05)
+
+
+### Bug Fixes
+
+* bound each pulseaudio install attempt in CI and fall back to archive.ubuntu.com ([#714](https://github.com/msch128/mnema-talk/issues/714)) ([533c49c](https://github.com/msch128/mnema-talk/commit/533c49cf9cca65fbf9a562edb239a04402e5678a))
+
 ## [2.9.8](https://github.com/msch128/mnema-talk/compare/v2.9.7...v2.9.8) (2026-11-05)
 
 

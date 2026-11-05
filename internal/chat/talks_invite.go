@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -37,7 +38,7 @@ func (h *Handler) dmSendContext(r *http.Request, dm uuid.UUID) (context.Context,
 	if ch.Type != core.ChannelKindDM {
 		return nil, core.ErrChannelNotFound
 	}
-	return h.sendContext(r, dm, perm.SendMessages)
+	return h.messages().SendContext(r, dm, perm.SendMessages)
 }
 
 // talkName is the name of a voice channel; anything else is not found.
@@ -59,13 +60,13 @@ func (h *Handler) postTalkInvite(ctx context.Context, dm, user, talk uuid.UUID) 
 	if err != nil {
 		return nil, err
 	}
-	id, err := InsertMessage(ctx, h.DB, h.Online, NewMessage{
+	id, err := messages.InsertMessage(ctx, h.DB, h.Online, NewMessage{
 		ChannelID: dm, UserID: user, Embeds: []Embed{{Title: name, TalkID: &talk}},
 	}, nil)
 	if err != nil {
 		return nil, err
 	}
-	return GetMessage(ctx, h.DB, id)
+	return messages.GetMessage(ctx, h.DB, id)
 }
 
 // inviteName is the Talk's name on the invitation card msg.

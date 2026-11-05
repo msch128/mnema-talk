@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -126,7 +127,7 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 		if err != nil {
 			return err
 		}
-		msgs, err = scanMessages(rows)
+		msgs, err = messages.ScanMessages(rows)
 		return err
 	})
 	if err = mapSearchError(err); err != nil {
@@ -136,7 +137,7 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 	if more {
 		msgs = msgs[:q.Limit]
 	}
-	if err := enrich(ctx, p, msgs); err != nil {
+	if err := messages.Enrich(ctx, p, msgs); err != nil {
 		return nil, false, err
 	}
 	return msgs, more, nil
@@ -159,7 +160,7 @@ func buildSearchSQL(q SearchQuery) (string, []any, error) {
 		order = "ORDER BY m.created_at ASC, m.id ASC"
 	}
 
-	sql := messageSelect + `
+	sql := messages.MessageSelect + `
 	JOIN channels c ON c.id = m.channel_id
 	WHERE ` + strings.Join(b.where, " AND ") + `
 	` + order + `

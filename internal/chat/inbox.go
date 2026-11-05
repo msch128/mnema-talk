@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -39,7 +40,7 @@ func Mentions(ctx context.Context, p *db.Pool, q InboxQuery) ([]Message, bool, e
 	if err := core.MessageCursorExists(ctx, p, q.Before); err != nil {
 		return nil, false, err
 	}
-	msgs, err := queryMessages(ctx, p, inboxSQL(), inboxArgs(q)...)
+	msgs, err := messages.QueryMessages(ctx, p, inboxSQL(), inboxArgs(q)...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -75,7 +76,7 @@ func inboxSQL() string {
 		UNION
 		(SELECT m.id, m.created_at FROM messages rm JOIN messages m ON m.reply_to_id = rm.id
 		  WHERE rm.user_id = $1` + tail + `
-	)` + messageSelect + `
+	)` + messages.MessageSelect + `
 		WHERE m.id IN (SELECT id FROM hits)
 		ORDER BY m.created_at DESC, m.id DESC LIMIT $2`
 }
@@ -100,7 +101,7 @@ func inboxSQL() string {
 // @Router /api/mentions [get]
 func (h *Handler) mentionsInbox(w http.ResponseWriter, r *http.Request) error {
 	q := InboxQuery{User: auth.UserFrom(r.Context()).ID, Limit: httpx.QueryLimit(r, "limit", inboxDefaultLimit, inboxMaxLimit)}
-	if _, err := queryIDs(r, "an id", map[string]**uuid.UUID{"before": &q.Before}); err != nil {
+	if _, err := messages.QueryIDs(r, "an id", map[string]**uuid.UUID{"before": &q.Before}); err != nil {
 		return err
 	}
 	var err error

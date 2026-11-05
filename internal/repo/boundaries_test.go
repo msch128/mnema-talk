@@ -56,10 +56,10 @@ var trees = []layered{
 			"chattest": {},
 			"stage":    {},
 			"core":     {},
-			"blocks":   {"core"},
-			"mentions": {"core"},
+			"blocks":   {"core", "mentions"},
+			"mentions": {"core", "mentions"},
 			// readstate resolves notify levels; nothing sideways.
-			"readstate": {"core"},
+			"readstate": {"core", "mentions"},
 			"messages":  {"core", "mentions", "readstate", "blocks", "stage"},
 			"channels":  {"core", "messages", "mentions", "readstate", "blocks", "stage"},
 			"dm":        {"core", "messages", "mentions", "readstate", "blocks"},
@@ -73,7 +73,7 @@ var trees = []layered{
 			// account renders the userdata sections of every domain.
 			"account": {"core", "messages", "channels", "dm"},
 		},
-		mustExist: []string{"blocks", "stage", "chattest", "core"},
+		mustExist: []string{"blocks", "stage", "chattest", "core", "mentions", "readstate", "messages", "channels", "dm"},
 		importers: map[string][]string{
 			"botapi":  {"internal/server", "internal/chat"},
 			"account": {"internal/server", "internal/chat"},

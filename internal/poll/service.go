@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -53,15 +54,15 @@ func (s *Service) Create(ctx context.Context, user *auth.User, channel uuid.UUID
 	if err != nil {
 		return nil, err
 	}
-	if _, err := chat.ChannelForMessages(ctx, s.DB, channel); err != nil {
+	if _, err := messages.ChannelForMessages(ctx, s.DB, channel); err != nil {
 		return nil, err
 	}
-	id, err := chat.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{ChannelID: channel, UserID: user.ID, Content: c.Question, ScreenText: c.Options},
+	id, err := messages.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{ChannelID: channel, UserID: user.ID, Content: c.Question, ScreenText: c.Options},
 		func(tx pgx.Tx, messageID uuid.UUID) error { return insertPoll(ctx, tx, messageID, c) })
 	if err != nil {
 		return nil, err
 	}
-	msg, err := chat.GetMessage(ctx, s.DB, id)
+	msg, err := messages.GetMessage(ctx, s.DB, id)
 	if err != nil {
 		// The poll exists: report it instead of an error that invites a retry
 		// and a second poll. Clients see it on their next load.
@@ -85,7 +86,7 @@ type Update struct {
 }
 
 func (s *Service) announce(ctx context.Context, channel, messageID uuid.UUID) (*chat.Poll, error) {
-	p, err := chat.LoadPoll(ctx, s.DB, messageID)
+	p, err := messages.LoadPoll(ctx, s.DB, messageID)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +122,7 @@ type Detail struct {
 }
 
 func (s *Service) detail(ctx context.Context, messageID, userID uuid.UUID) (Detail, error) {
-	p, err := chat.LoadPoll(ctx, s.DB, messageID)
+	p, err := messages.LoadPoll(ctx, s.DB, messageID)
 	if err != nil {
 		return Detail{}, err
 	}

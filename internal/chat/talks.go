@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -67,35 +67,6 @@ func lowestFreeTalkNumber(base string, names []string) int {
 	return n
 }
 
-// SetLobby marks a voice channel as a lobby or clears the mark. Temporary
-// Talks cannot be lobbies.
-func SetLobby(ctx context.Context, p db.Querier, id uuid.UUID, lobby bool) error {
-	tag, err := p.Exec(ctx, `UPDATE channels SET is_lobby = $2 WHERE id = $1 AND type = 'voice' AND NOT is_temp AND ($2 = FALSE OR NOT is_stage)`, id, lobby)
-	if err != nil {
-		return fmt.Errorf("set lobby: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		if _, lerr := core.LoadChannel(ctx, p, id); lerr == nil {
-			return httpx.ErrInvalidInput("only a permanent Talk that is no Stage can be a lobby")
-		}
-		return core.ErrChannelNotFound
-	}
-	return nil
-}
-
-// FillTalkFields loads the lobby/temporary-Talk fields of ch, which the
-// create and update statements do not return.
-func FillTalkFields(ctx context.Context, p *db.Pool, ch *Channel) error {
-	err := p.QueryRow(ctx, `SELECT is_lobby, is_temp, leader_id, is_stage FROM channels WHERE id = $1`, ch.ID).Scan(&ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return core.ErrChannelNotFound
-	}
-	if err != nil {
-		return fmt.Errorf("load talk fields: %w", err)
-	}
-	return nil
-}
-
 // OpenTempTalk creates a temporary Talk from lobbyID with creator as its
 // leader. The copy keeps the lobby's category, member limit and permission
 // overwrites, so who may see and join it is exactly who may see the lobby.
@@ -103,10 +74,10 @@ func FillTalkFields(ctx context.Context, p *db.Pool, ch *Channel) error {
 func OpenTempTalk(ctx context.Context, p *db.Pool, lobbyID, creator uuid.UUID) (*Channel, error) {
 	var ch *Channel
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := lockChannelLayout(ctx, tx); err != nil {
+		if err := channels.LockChannelLayout(ctx, tx); err != nil {
 			return err
 		}
-		lobby, err := lockSourceChannel(ctx, tx, lobbyID)
+		lobby, err := channels.LockSourceChannel(ctx, tx, lobbyID)
 		if err != nil {
 			return err
 		}
@@ -117,7 +88,7 @@ func OpenTempTalk(ctx context.Context, p *db.Pool, lobbyID, creator uuid.UUID) (
 		if err != nil {
 			return err
 		}
-		if ch, err = insertChannelCopy(ctx, tx, lobby, lobby.SortOrder, true); err != nil {
+		if ch, err = channels.InsertChannelCopy(ctx, tx, lobby, lobby.SortOrder, true); err != nil {
 			return err
 		}
 		return markTemp(ctx, tx, ch, lobbyID, creator)
@@ -136,7 +107,7 @@ func OpenTempTalk(ctx context.Context, p *db.Pool, lobbyID, creator uuid.UUID) (
 func OpenDMTalk(ctx context.Context, p *db.Pool, dm, creator uuid.UUID) (*Channel, error) {
 	var ch *Channel
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := lockChannelLayout(ctx, tx); err != nil {
+		if err := channels.LockChannelLayout(ctx, tx); err != nil {
 			return err
 		}
 		name, err := nextDMTalkName(ctx, tx, dm)
@@ -144,7 +115,7 @@ func OpenDMTalk(ctx context.Context, p *db.Pool, dm, creator uuid.UUID) (*Channe
 			return err
 		}
 		id := uuid.New()
-		ch = &Channel{Slug: TempTalkSlug(id), PreviousSlugs: []string{}, IsTemp: true, LeaderID: &creator}
+		ch = &Channel{Slug: channels.TempTalkSlug(id), PreviousSlugs: []string{}, IsTemp: true, LeaderID: &creator}
 		err = tx.QueryRow(ctx, `
 			INSERT INTO channels (id, category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds, dm_id, is_temp, leader_id, slug)
 			VALUES ($1, NULL, $2, 'voice', '', 0, 0, 0, $3, TRUE, $4, $5)

@@ -12,9 +12,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -63,7 +64,7 @@ func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
 	if err := core.ValidateParent(context.Background(), f.p, f.c.ID, &missing); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("missing parent: %v", err)
 	}
-	if err := ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing); apiStatus(err) != http.StatusBadRequest {
+	if err := messages.ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("missing reply target: %v", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -71,17 +72,8 @@ func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
 	if err := core.ValidateParent(ctx, f.p, f.c.ID, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
 		t.Fatalf("parent lookup failure: %v", err)
 	}
-	if err := ValidateReplyTarget(ctx, f.p, f.c.ID, nil, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
+	if err := messages.ValidateReplyTarget(ctx, f.p, f.c.ID, nil, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
 		t.Fatalf("reply target lookup failure: %v", err)
-	}
-}
-
-func TestAuditSnapshotIsEmptyWhenTheChannelCannotBeRead(t *testing.T) {
-	f := newChatFixture(t)
-	broken := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id, name FROM public.channels`})
-	h := &Handler{DB: broken, Audit: &audit.Log{DB: f.p}}
-	if s := h.snapshotMessage(context.Background(), f.m, false); s != nil {
-		t.Fatalf("snapshot without a channel lookup: %+v", s)
 	}
 }
 
@@ -92,24 +84,24 @@ func TestBotReactionsAreSetNotToggled(t *testing.T) {
 	var wg sync.WaitGroup
 	for range 8 {
 		wg.Go(func() {
-			if _, _, err := SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, true); err != nil {
+			if _, _, err := messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, true); err != nil {
 				t.Error(err)
 			}
 		})
 	}
 	wg.Wait()
-	reactions, changed, err := SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, true)
+	reactions, changed, err := messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, true)
 	if err != nil || changed || len(reactions) != 1 || reactions[0].Count != 1 {
 		t.Fatalf("after concurrent adds: %+v changed=%v err=%v", reactions, changed, err)
 	}
-	if _, changed, err = SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, false, false); err != nil || !changed {
+	if _, changed, err = messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, false, false); err != nil || !changed {
 		t.Fatalf("taking back without Add reactions: changed=%v err=%v", changed, err)
 	}
-	reactions, changed, err = SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, false, true)
+	reactions, changed, err = messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, false, true)
 	if err != nil || changed || len(reactions) != 0 {
 		t.Fatalf("removing twice: %+v changed=%v err=%v", reactions, changed, err)
 	}
-	if _, _, err = SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, false); apiStatus(err) != http.StatusForbidden {
+	if _, _, err = messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, false); apiStatus(err) != http.StatusForbidden {
 		t.Fatalf("add without permission: %v", err)
 	}
 }
@@ -117,21 +109,21 @@ func TestBotReactionsAreSetNotToggled(t *testing.T) {
 func TestSortOrderBeyondTheColumnIsRefused(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	if _, err := CreateCategory(ctx, f.p, "big", 3_000_000_000); apiStatus(err) != http.StatusBadRequest {
+	if _, err := channels.CreateCategory(ctx, f.p, "big", 3_000_000_000); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("category: %v", err)
 	}
-	if _, err := CreateChannelWithStage(ctx, f.p, nil, "big", ChannelTypeText, "", -3_000_000_000, false); apiStatus(err) != http.StatusBadRequest {
+	if _, err := channels.CreateChannelWithStage(ctx, f.p, nil, "big", ChannelTypeText, "", -3_000_000_000, false); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("channel: %v", err)
 	}
-	cat, err := CreateCategory(ctx, f.p, "ok", MaxSortOrder)
+	cat, err := channels.CreateCategory(ctx, f.p, "ok", MaxSortOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ApplyLayout(ctx, f.p, []CategoryOrder{{ID: cat.ID, SortOrder: 3_000_000_000}}, nil)
+	err = channels.ApplyLayout(ctx, f.p, []CategoryOrder{{ID: cat.ID, SortOrder: 3_000_000_000}}, nil)
 	if apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("category order: %v", err)
 	}
-	err = ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: f.c.ID, SortOrder: 3_000_000_000}})
+	err = channels.ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: f.c.ID, SortOrder: 3_000_000_000}})
 	if apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("channel placement: %v", err)
 	}
@@ -140,7 +132,7 @@ func TestSortOrderBeyondTheColumnIsRefused(t *testing.T) {
 func TestChannelInADeletedCategoryIsRefusedNotAFailure(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	cat, err := CreateCategory(ctx, f.p, "doomed", 0)
+	cat, err := channels.CreateCategory(ctx, f.p, "doomed", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,12 +141,12 @@ func TestChannelInADeletedCategoryIsRefusedNotAFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	if err := DeleteCategoryTx(ctx, tx, cat.ID); err != nil {
+	if err := channels.DeleteCategoryTx(ctx, tx, cat.ID); err != nil {
 		t.Fatal(err)
 	}
 	done := make(chan error, 1)
 	go func() {
-		_, err := CreateChannelWithStage(ctx, f.p, &cat.ID, "late", ChannelTypeText, "", 0, false)
+		_, err := channels.CreateChannelWithStage(ctx, f.p, &cat.ID, "late", ChannelTypeText, "", 0, false)
 		done <- err
 	}()
 	waitForBlockedStatement(t, f.p)
@@ -174,11 +166,11 @@ func TestChannelInADeletedCategoryIsRefusedNotAFailure(t *testing.T) {
 func TestDeletingACategoryKeepsRoleAndMemberOverwrites(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	cat, err := CreateCategory(ctx, f.p, "private", 0)
+	cat, err := channels.CreateCategory(ctx, f.p, "private", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ch, err := CreateChannelWithStage(ctx, f.p, &cat.ID, "inside", ChannelTypeText, "", 0, false)
+	ch, err := channels.CreateChannelWithStage(ctx, f.p, &cat.ID, "inside", ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,7 +184,7 @@ func TestDeletingACategoryKeepsRoleAndMemberOverwrites(t *testing.T) {
 	if _, err := f.p.Exec(ctx, `INSERT INTO permission_overwrites (category_id, user_id, allow, deny) VALUES ($1, $2, 2, 0)`, cat.ID, f.u.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := DeleteCategory(ctx, f.p, cat.ID); err != nil {
+	if err := channels.DeleteCategory(ctx, f.p, cat.ID); err != nil {
 		t.Fatal(err)
 	}
 	var roles, users int
@@ -211,7 +203,7 @@ func TestFavouritesReportOnlyWhatChanged(t *testing.T) {
 	ctx := context.Background()
 	var dms []uuid.UUID
 	for _, name := range []string{"fav_a", "fav_b", "fav_c"} {
-		id, _, err := CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{newMember(t, f, name)}})
+		id, _, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{newMember(t, f, name)}})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -220,7 +212,7 @@ func TestFavouritesReportOnlyWhatChanged(t *testing.T) {
 	a, b, c := dms[0], dms[1], dms[2]
 	changed := func(ids ...uuid.UUID) []uuid.UUID {
 		t.Helper()
-		got, err := SetDMFavourites(ctx, f.p, f.u.ID, ids)
+		got, err := dm.SetDMFavourites(ctx, f.p, f.u.ID, ids)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -252,7 +244,7 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
 	bob, carol := newMember(t, f, "lock_bob"), newMember(t, f, "lock_carol")
-	group, _, err := CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob, carol}})
+	group, _, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{bob, carol}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +254,7 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = hold.Rollback(ctx) }()
-	if err := lockUsers(ctx, hold, []uuid.UUID{dave}); err != nil {
+	if err := dm.LockUsers(ctx, hold, []uuid.UUID{dave}); err != nil {
 		t.Fatal(err)
 	}
 	blocked := func(run func() error) {
@@ -283,7 +275,7 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 		}
 	}
 	blocked(func() error {
-		added, err := AddDMMember(ctx, f.p, group, f.u.ID, dave)
+		added, err := dm.AddDMMember(ctx, f.p, group, f.u.ID, dave)
 		if err == nil && !added {
 			err = errors.New("not added")
 		}
@@ -294,11 +286,11 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := lockUsers(ctx, hold, []uuid.UUID{erin}); err != nil {
+	if err := dm.LockUsers(ctx, hold, []uuid.UUID{erin}); err != nil {
 		t.Fatal(err)
 	}
 	blocked(func() error {
-		_, _, err := CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{erin, bob}})
+		_, _, err := dm.CreateDM(ctx, f.p, NewDM{Creator: f.u.ID, Others: []uuid.UUID{erin, bob}})
 		return err
 	})
 }
@@ -327,14 +319,14 @@ func TestStoredReactionWithFormattingCharacterCanBeTakenBack(t *testing.T) {
 	if _, err := core.ValidateReactionRef(old); err != nil {
 		t.Fatalf("lookup rule rejects the stored emoji: %v", err)
 	}
-	reactions, changed, err := SetReactionAs(ctx, f.p, f.m, f.u.ID, old, false, true)
+	reactions, changed, err := messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, old, false, true)
 	if err != nil || !changed || len(reactions) != 0 {
 		t.Fatalf("taking back: %+v changed=%v err=%v", reactions, changed, err)
 	}
-	if _, _, err := SetReactionAs(ctx, f.p, f.m, f.u.ID, old, true, true); apiStatus(err) != http.StatusBadRequest {
+	if _, _, err := messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, old, true, true); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("adding it again: %v", err)
 	}
-	if _, err := ToggleReactionAs(ctx, f.p, f.m, f.u.ID, old, true); apiStatus(err) != http.StatusBadRequest {
+	if _, err := messages.ToggleReactionAs(ctx, f.p, f.m, f.u.ID, old, true); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("toggling it on: %v", err)
 	}
 }

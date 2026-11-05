@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -76,11 +77,11 @@ func (h *Handler) updateTalk(w http.ResponseWriter, r *http.Request) error {
 	if !h.Talks.IsLeader(id, auth.UserFrom(r.Context()).ID) {
 		return errNotTalkLeader
 	}
-	ch, err := EditChannel(r.Context(), h.DB, id, req.Name, nil, req.UserLimit, nil, nil, nil)
+	ch, err := channels.EditChannel(r.Context(), h.DB, id, req.Name, nil, req.UserLimit, nil, nil, nil)
 	if err != nil {
 		return err
 	}
-	if err := FillTalkFields(r.Context(), h.DB, ch); err != nil {
+	if err := channels.FillTalkFields(r.Context(), h.DB, ch); err != nil {
 		return err
 	}
 	// Fail closed: when the lookup fails the update goes unaudited, because
@@ -93,7 +94,7 @@ func (h *Handler) updateTalk(w http.ResponseWriter, r *http.Request) error {
 			ChannelID: &id, Details: map[string]any{"temporary": true, "user_limit": ch.UserLimit},
 		})
 	}
-	h.channelsChanged()
+	h.channels().ChannelsChanged()
 	httpx.WriteJSON(w, http.StatusOK, ch)
 	return nil
 }

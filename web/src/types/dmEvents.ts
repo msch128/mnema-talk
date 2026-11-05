@@ -1,5 +1,5 @@
-// Direct message events (internal/chat/dm*.go) and the calls that ring a
-// conversation (internal/chat/dm_calls.go). Runtime checks by event name.
+// Direct message events (internal/chat/dm/*.go) and the calls that ring a
+// conversation (internal/chat/dm/dm_calls.go). Runtime checks by event name.
 import type { ChatDMCall } from './rest'
 import { isChatNotifyLevel } from './rest'
 import { isIdentifier, isInteger, isRecord, isString, isTimestamp, isArrayOf, onlyFields, hasOwn } from './validation'

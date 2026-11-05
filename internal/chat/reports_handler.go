@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -68,7 +69,7 @@ func (h *Handler) reportMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := h.require(r, ref.ChannelID, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
+		return core.NotFoundUnlessFailure(err)
 	}
 	var req CreateReportRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
@@ -130,7 +131,7 @@ func (h *Handler) listReports(w http.ResponseWriter, r *http.Request) error {
 		return httpx.ErrInvalidInput("status must be open, resolved, dismissed or all")
 	}
 	var before *uuid.UUID
-	if _, err := queryIDs(r, "an id", map[string]**uuid.UUID{"before": &before}); err != nil {
+	if _, err := messages.QueryIDs(r, "an id", map[string]**uuid.UUID{"before": &before}); err != nil {
 		return err
 	}
 	limit := httpx.QueryLimit(r, "limit", 25, 100)

@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -173,15 +175,15 @@ func (c *Commands) respond(r *http.Request, in *interaction, m message) (*chat.M
 	}
 	// A command response never mentions everyone; members are notified only
 	// when they can see the channel.
-	ctx = chat.WithMentionPolicy(ctx, chat.MentionPolicy{
+	ctx = mentions.WithMentionPolicy(ctx, chat.MentionPolicy{
 		NoEveryone: true,
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, in.channel).Has(perm.ViewChannel) },
 	})
-	id, err := chat.InsertMessage(ctx, c.DB, c.Online, chat.NewMessage{ChannelID: in.channel, UserID: in.botUser, Content: m.content, Embeds: m.embeds}, nil)
+	id, err := messages.InsertMessage(ctx, c.DB, c.Online, chat.NewMessage{ChannelID: in.channel, UserID: in.botUser, Content: m.content, Embeds: m.embeds}, nil)
 	if err != nil {
 		return nil, err
 	}
-	msg, err := chat.GetMessage(ctx, c.DB, id)
+	msg, err := messages.GetMessage(ctx, c.DB, id)
 	if err != nil {
 		return nil, err
 	}

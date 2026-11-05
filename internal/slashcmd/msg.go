@@ -32,7 +32,7 @@ func (msgCommand) Available(snap *perm.Snapshot, user perm.Subject, _ uuid.UUID)
 	return snap != nil && snap.CanStartDM(user)
 }
 
-// Run starts the conversation through chat.Handler.StartDM, the service of the
+// Run starts the conversation through chat.Handler.DMs().StartDM, the service of the
 // REST route: Send direct messages, the community switch, blocks, the other
 // member's dm_policy and the limits apply, and every refusal about the other
 // member is the route's one text. The text is then sent under the
@@ -44,7 +44,7 @@ func (c msgCommand) Run(_ context.Context, call slash.Call) (slash.Result, error
 	if err != nil {
 		return slash.Result{}, err
 	}
-	h := c.svc.Chat
+	h := c.svc.Chat.DMs()
 	if err := h.AllowDMStart(call.Request); err != nil {
 		return slash.Result{}, err
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -17,7 +18,7 @@ import (
 // CleanPostTitle validates and sanitizes a forum post title.
 func CleanPostTitle(title string) (string, error) {
 	if strings.TrimSpace(title) == "" {
-		return "", errPostTitleRequired
+		return "", core.ErrPostTitleRequired
 	}
 	return httpx.CleanText("title", title, MaxPostTitleLen, true)
 }
@@ -118,8 +119,8 @@ var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 
 // listPinnedPosts returns the pinned posts matching where, most recently pinned first.
 func listPinnedPosts(ctx context.Context, p *db.Pool, where string, args []any) ([]Message, error) {
-	sql := messageSelect + " " + where + fmt.Sprintf(` AND m.is_pinned ORDER BY m.pinned_at DESC, m.id DESC LIMIT %d`, MaxPinsPerChannel)
-	return queryMessages(ctx, p, sql, args...)
+	sql := messages.MessageSelect + " " + where + fmt.Sprintf(` AND m.is_pinned ORDER BY m.pinned_at DESC, m.id DESC LIMIT %d`, MaxPinsPerChannel)
+	return messages.QueryMessages(ctx, p, sql, args...)
 }
 
 func listPostsByCreation(ctx context.Context, p *db.Pool, where string, args []any, before *uuid.UUID, limit int) ([]Message, error) {
@@ -128,8 +129,8 @@ func listPostsByCreation(ctx context.Context, p *db.Pool, where string, args []a
 		where += fmt.Sprintf(` AND (m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = $%d)`, len(args))
 	}
 	args = append(args, limit)
-	sql := messageSelect + " " + where + fmt.Sprintf(` ORDER BY m.created_at DESC, m.id DESC LIMIT $%d`, len(args))
-	return queryMessages(ctx, p, sql, args...)
+	sql := messages.MessageSelect + " " + where + fmt.Sprintf(` ORDER BY m.created_at DESC, m.id DESC LIMIT $%d`, len(args))
+	return messages.QueryMessages(ctx, p, sql, args...)
 }
 
 const activityExpr = `COALESCE((SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = m.id), m.created_at)`
@@ -151,8 +152,8 @@ func listPostsByActivity(ctx context.Context, p *db.Pool, where string, args []a
 		where += fmt.Sprintf(` AND (`+activityExpr+`, m.id) < (SELECT `+cursorActivityExpr+`, a.id FROM messages a WHERE a.id = $%d)`, len(args))
 	}
 	args = append(args, limit)
-	sql := messageSelect + " " + where + fmt.Sprintf(` ORDER BY `+activityExpr+` DESC, m.id DESC LIMIT $%d`, len(args))
-	return queryMessages(ctx, p, sql, args...)
+	sql := messages.MessageSelect + " " + where + fmt.Sprintf(` ORDER BY `+activityExpr+` DESC, m.id DESC LIMIT $%d`, len(args))
+	return messages.QueryMessages(ctx, p, sql, args...)
 }
 
 // PreparedPost is a forum post whose title and tags passed the forum's rules,
@@ -188,7 +189,7 @@ func (pp *PreparedPost) Store(ctx context.Context, userID uuid.UUID) func(tx pgx
 				return postTagError(err)
 			}
 		}
-		return SetThreadFollow(ctx, tx, userID, messageID, true)
+		return messages.SetThreadFollow(ctx, tx, userID, messageID, true)
 	}
 }
 
@@ -203,7 +204,7 @@ func CreateForumPost(ctx context.Context, p *db.Pool, online OnlineSource, chann
 	if err != nil {
 		return uuid.Nil, err
 	}
-	return InsertMessage(ctx, p, online, NewMessage{
+	return messages.InsertMessage(ctx, p, online, NewMessage{
 		ChannelID: channelID,
 		UserID:    userID,
 		Content:   validContent,
@@ -255,7 +256,7 @@ func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID uuid.
 	}
 	var pending *automod.Pending
 	if cleanTitle != nil {
-		if pending, err = screenText(ctx, p, channelID, actor.ID, messageID, *cleanTitle); err != nil {
+		if pending, err = messages.ScreenText(ctx, p, channelID, actor.ID, messageID, *cleanTitle); err != nil {
 			return nil, err
 		}
 	}
@@ -277,7 +278,7 @@ func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID uuid.
 	}
 	pending.Commit(ctx, messageID)
 
-	return GetMessage(ctx, p, messageID)
+	return messages.GetMessage(ctx, p, messageID)
 }
 
 func getForumPostAuthor(ctx context.Context, q db.Querier, channelID, messageID uuid.UUID, lock bool) (authorID uuid.UUID, locked bool, err error) {
@@ -376,7 +377,7 @@ func postTagIDs(ctx context.Context, q db.Querier, messageID uuid.UUID) ([]uuid.
 // postTagError maps a refused tag insert: a tag deleted after ValidatePostTags
 // looked at it is no longer a tag of this channel.
 func postTagError(err error) error {
-	if isForeignKeyViolation(err) {
+	if messages.IsForeignKeyViolation(err) {
 		return errTagWrongChannel
 	}
 	return fmt.Errorf("insert post tag: %w", err)
