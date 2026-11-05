@@ -1,0 +1,19 @@
+e2e/tests/late-join.spec.ts
+  s_3c562de13b6be6::t_3d3a368369dc2c 1-2,85-99,105,133,139,178,196-197,205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "360d7a6908f0fe0121326fe70c761a0406119d38",
+  "prompts": {},
+  "sessions": {
+    "s_3c562de13b6be6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-abb47ecada640079d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
