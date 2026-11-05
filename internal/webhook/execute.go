@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -299,7 +300,7 @@ func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *
 
 func validatePayloadContent(rec *record, req *request) (string, string, []chat.Embed, error) {
 	p := req.payload
-	content, err := chat.ValidateContent(p.Content, true)
+	content, err := core.ValidateContent(p.Content, true)
 	if err != nil {
 		return "", "", nil, formError(err.Error())
 	}
@@ -359,7 +360,7 @@ func (h *Handler) threadParent(ctx context.Context, r *http.Request, rec *record
 	if err != nil {
 		return nil, unknownThread{}
 	}
-	if err := chat.ValidateParent(ctx, h.DB, rec.ChannelID, &id); err != nil {
+	if err := core.ValidateParent(ctx, h.DB, rec.ChannelID, &id); err != nil {
 		// Only a rejected parent means the thread is gone; a database or
 		// context failure must surface as a retryable 5xx.
 		if ae, ok := httpx.AsAPIError(err); ok && ae.Status == http.StatusBadRequest {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -65,7 +66,7 @@ func (h *Handler) visibleMembers(r *http.Request) ([]BotMember, error) {
 	if err := requireMemberIntent(r); err != nil {
 		return nil, err
 	}
-	members, err := GetAllMembers(r.Context(), h.DB)
+	members, err := core.GetAllMembers(r.Context(), h.DB)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +132,7 @@ func (h *Handler) botGetMember(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	// One member is read and tested on its own, not picked from the whole list.
-	m, err := GetMember(r.Context(), h.DB, id)
+	m, err := core.GetMember(r.Context(), h.DB, id)
 	if err != nil {
 		return err
 	}
@@ -140,7 +141,7 @@ func (h *Handler) botGetMember(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if !vis.sees(*m) {
-		return errUnknownUser
+		return core.ErrUnknownUser
 	}
 	httpx.WriteJSON(w, http.StatusOK, botMemberOf(*m))
 	return nil

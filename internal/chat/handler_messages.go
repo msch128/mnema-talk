@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -20,7 +21,7 @@ func (h *Handler) validateListChannel(r *http.Request) (uuid.UUID, error) {
 	if err := h.require(r, chID, perm.ViewChannel); err != nil {
 		return uuid.Nil, err
 	}
-	if _, err := LoadChannel(r.Context(), h.DB, chID); err != nil {
+	if _, err := core.LoadChannel(r.Context(), h.DB, chID); err != nil {
 		return uuid.Nil, err
 	}
 	return chID, nil
@@ -28,7 +29,7 @@ func (h *Handler) validateListChannel(r *http.Request) (uuid.UUID, error) {
 
 func (h *Handler) parseChannelMessageQuery(r *http.Request, chID uuid.UUID) (HistoryQuery, error) {
 	// The anchor must be a root message of this channel.
-	return h.parseHistoryQuery(r, []string{"before", "after", "around"}, func(ref *messageRef) bool {
+	return h.parseHistoryQuery(r, []string{"before", "after", "around"}, func(ref *core.MessageRef) bool {
 		return ref.ChannelID == chID && ref.ParentID == nil
 	})
 }
@@ -115,7 +116,7 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	if err := validateAttachmentIDs(req.AttachmentIDs); err != nil {
 		return err
 	}
-	content, err := ValidateContent(req.Content, len(req.AttachmentIDs) > 0)
+	content, err := core.ValidateContent(req.Content, len(req.AttachmentIDs) > 0)
 	if err != nil {
 		return err
 	}
@@ -140,7 +141,7 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 
 // messageInChannel loads messageID and checks it belongs to the channel named in
 // the path, so URLs cannot mix channels.
-func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *messageRef, error) {
+func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef, error) {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return uuid.Nil, nil, err
@@ -149,12 +150,12 @@ func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *messageRef, err
 	if err != nil {
 		return uuid.Nil, nil, err
 	}
-	ref, err := loadMessageRef(r.Context(), h.DB, msgID)
+	ref, err := core.LoadMessageRef(r.Context(), h.DB, msgID)
 	if err != nil {
 		return uuid.Nil, nil, err
 	}
 	if ref.ChannelID != chID {
-		return uuid.Nil, nil, errMessageNotFound
+		return uuid.Nil, nil, core.ErrMessageNotFound
 	}
 	return msgID, ref, nil
 }
@@ -200,7 +201,7 @@ func (h *Handler) editMessageWith(w http.ResponseWriter, r *http.Request, ctxFor
 		return err
 	}
 	// Empty is allowed for a message with an attachment; EditMessage checks.
-	content, err := ValidateContent(req.Content, true)
+	content, err := core.ValidateContent(req.Content, true)
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -18,13 +19,14 @@ import (
 // This file is where the chat handlers ask the permission model. A Handler
 // without Perms (unit tests) imposes no limits; the router always sets it.
 
+// guard is the permission model's request-level checks (chat/core), built from
+// the Perms the handler is wired with.
+func (h *Handler) guard() core.Guard { return core.Guard{Perms: h.Perms} }
+
 // require checks that the caller holds need in channel ch. Without
 // ViewChannel the channel does not exist for them (404).
 func (h *Handler) require(r *http.Request, ch uuid.UUID, need perm.Set) error {
-	if h.Perms == nil {
-		return nil
-	}
-	return h.Perms.RequireChannel(r.Context(), auth.UserFrom(r.Context()).Subject(), ch, need)
+	return h.guard().Require(r, ch, need)
 }
 
 // notFoundUnlessFailure turns a refusal (the member may not view the message's
@@ -33,14 +35,14 @@ func (h *Handler) require(r *http.Request, ch uuid.UUID, need perm.Set) error {
 func notFoundUnlessFailure(err error) error {
 	var apiErr *httpx.APIError
 	if errors.As(err, &apiErr) {
-		return errMessageNotFound
+		return core.ErrMessageNotFound
 	}
 	return err
 }
 
 // channelPerms is what the caller may do in channel ch.
 func (h *Handler) channelPerms(r *http.Request, ch uuid.UUID) (perm.Set, error) {
-	return h.Perms.Channel(r.Context(), auth.UserFrom(r.Context()).Subject(), ch)
+	return h.guard().ChannelPerms(r, ch)
 }
 
 // sendContext checks need for the caller in ch and returns the request
@@ -78,26 +80,8 @@ func SendContextFor(perms *perm.Service, ctx context.Context, ch uuid.UUID, need
 
 // refusalFor turns a "missing permission" refusal into RULES_NOT_ACCEPTED when
 // the caller's rules acceptance is what took the permission away.
-//
-// need is what the refused action required; a new member's wait for it is
-// named when it is what took the permission away.
 func (h *Handler) refusalFor(r *http.Request, err error, need perm.Set) error {
-	var apiErr *httpx.APIError
-	if h.Perms == nil || !errors.As(err, &apiErr) || apiErr.Code != httpx.CodeForbidden {
-		return err
-	}
-	snap, serr := h.Perms.Snapshot(r.Context())
-	if serr != nil {
-		return err
-	}
-	uid := auth.UserFrom(r.Context()).ID
-	if snap.RulesPending(uid) {
-		return perm.ErrRulesNotAccepted
-	}
-	if nm := snap.NewMemberRefusal(uid, need); nm != nil {
-		return nm
-	}
-	return err
+	return h.guard().RefusalFor(r, err, need)
 }
 
 // MentionableRoles are the roles an author may mention: those marked
@@ -130,14 +114,7 @@ func UploadContext(perms *perm.Service, r *http.Request, ch uuid.UUID) (context.
 
 // viewableChannels lists the channels the caller may view; nil means all.
 func (h *Handler) viewableChannels(r *http.Request) ([]uuid.UUID, error) {
-	if h.Perms == nil {
-		return nil, nil
-	}
-	snap, err := h.Perms.Snapshot(r.Context())
-	if err != nil {
-		return nil, err
-	}
-	return snap.ViewableChannels(auth.UserFrom(r.Context()).Subject()), nil
+	return h.guard().ViewableChannels(r)
 }
 
 // hiddenMessageCounts counts messages per author over the channels the caller
@@ -271,20 +248,7 @@ func (h *Handler) visibleReadStates(r *http.Request, states []ReadState) ([]Read
 // requireCategory checks that the caller may see a category (a category that
 // does not exist is left to the operation itself to report).
 func (h *Handler) requireCategory(r *http.Request, id uuid.UUID) error {
-	if h.Perms == nil {
-		return nil
-	}
-	snap, err := h.Perms.Snapshot(r.Context())
-	if err != nil {
-		return err
-	}
-	if !snap.KnowsCategory(id) {
-		return nil
-	}
-	if !snap.CategoryVisible(auth.UserFrom(r.Context()).Subject(), id) {
-		return errCategoryNotFound
-	}
-	return nil
+	return h.guard().RequireCategory(r, id)
 }
 
 // checkWholeCategory is the check for deleting a category on a state read
@@ -296,7 +260,7 @@ func checkWholeCategory(snap *perm.Snapshot, sub perm.Subject, id uuid.UUID) err
 		return nil // the deletion itself reports a missing category
 	}
 	if !snap.CategoryVisible(sub, id) || !snap.CanSeeAllChannelsIn(sub, id) {
-		return errCategoryNotFound
+		return core.ErrCategoryNotFound
 	}
 	if snap.HasCategoryOverwrites(id) && !snap.Global(sub).Has(perm.Administrator) {
 		return httpx.ErrForbidden("deleting a category with permissions needs the Administrator permission")
@@ -309,7 +273,7 @@ func checkWholeCategory(snap *perm.Snapshot, sub perm.Subject, id uuid.UUID) err
 func checkLayout(snap *perm.Snapshot, sub perm.Subject, req LayoutRequest) error {
 	for _, c := range req.Categories {
 		if snap.KnowsCategory(c.ID) && !snap.CategoryVisible(sub, c.ID) {
-			return errCategoryNotFound
+			return core.ErrCategoryNotFound
 		}
 	}
 	for _, c := range req.Channels {
@@ -326,7 +290,7 @@ func targetCategoryVisible(snap *perm.Snapshot, sub perm.Subject, target *uuid.U
 	}
 	to := *target
 	if snap.KnowsCategory(to) && !snap.CategoryVisible(sub, to) {
-		return uuid.Nil, errCategoryNotFound
+		return uuid.Nil, core.ErrCategoryNotFound
 	}
 	return to, nil
 }

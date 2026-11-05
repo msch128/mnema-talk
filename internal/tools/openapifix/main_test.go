@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -227,5 +228,40 @@ func assertFixedOperation(t *testing.T, op obj) {
 	okBody := responses["200"].(obj)["content"].(obj)
 	if _, ok := okBody["application/json"]; ok || okBody["text/plain"] == nil {
 		t.Errorf("string body media types = %v; want text/plain without application/json", okBody)
+	}
+}
+
+func TestChatSubPackageSchemasKeepTheChatPrefix(t *testing.T) {
+	doc := obj{"components": obj{"schemas": obj{
+		"core.Message":       obj{"properties": obj{"poll": obj{"$ref": "#/components/schemas/core.Poll"}}},
+		"chat.Message":       obj{"properties": obj{"poll": obj{"$ref": "#/components/schemas/chat.Poll"}}},
+		"core.Poll":          obj{"type": "object"},
+		"chat.Poll":          obj{"type": "object"},
+		"messages.Pin":       obj{"type": "string"},
+		"blocks.BlockedUser": obj{"type": "object"},
+	}}}
+	if err := renameChatSchemas(doc); err != nil {
+		t.Fatal(err)
+	}
+	schemas := doc["components"].(obj)["schemas"].(obj)
+	var names []string
+	for name := range schemas {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	if want := []string{"blocks.BlockedUser", "chat.Message", "chat.Pin", "chat.Poll"}; !slices.Equal(names, want) {
+		t.Errorf("schemas = %v, want %v", names, want)
+	}
+	ref := schemas["chat.Message"].(obj)["properties"].(obj)["poll"].(obj)["$ref"]
+	if ref != "#/components/schemas/chat.Poll" {
+		t.Errorf("$ref = %v", ref)
+	}
+
+	clash := obj{"components": obj{"schemas": obj{
+		"core.Thing": obj{"type": "string"},
+		"chat.Thing": obj{"type": "integer"},
+	}}}
+	if err := renameChatSchemas(clash); err == nil {
+		t.Error("two different schemas of one name were merged")
 	}
 }

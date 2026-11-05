@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/stage"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/emojitext"
@@ -53,7 +54,7 @@ func newDBStage(t *testing.T) *dbStage {
 	}
 	s.h.Perms.Invalidate()
 	var err error
-	if s.ch, err = chat.LoadChannel(ctx, p, chID); err != nil || !s.ch.IsStage {
+	if s.ch, err = core.LoadChannel(ctx, p, chID); err != nil || !s.ch.IsStage {
 		t.Fatalf("stage channel: %+v, %v", s.ch, err)
 	}
 	for _, c := range []*Client{s.mod, s.amy, s.bob} {

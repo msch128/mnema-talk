@@ -330,8 +330,8 @@ jobs:
           set -euo pipefail
           case "$SHARD" in
             server) pkgs='./internal/server' ;;
-            realtime) pkgs='./internal/bot ./internal/chat' ;;
-            rest) pkgs="$(go list ./... | grep -v -E '/internal/(server|bot|chat)$' | tr '\n' ' ')" ;;
+            realtime) pkgs='./internal/bot ./internal/chat/...' ;;
+            rest) pkgs="$(go list ./... | grep -v -E '/internal/(server|bot)$|/internal/chat(/|$)' | tr '\n' ' ')" ;;
           esac
           make coverage-go-profile GO_PKGS="$pkgs" COVERAGE_OUT="coverage-$SHARD.out"
 

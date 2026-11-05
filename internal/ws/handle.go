@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -248,7 +248,7 @@ func (c *Client) handleDiag(payload json.RawMessage) {
 // permission model (tests) the database is asked.
 func (h *Hub) channelKnown(ctx context.Context, snap *perm.Snapshot, ch uuid.UUID) bool {
 	if snap == nil {
-		_, err := chat.LoadChannel(ctx, h.DB, ch)
+		_, err := core.LoadChannel(ctx, h.DB, ch)
 		return err == nil
 	}
 	return snap.KnowsChannel(ch) || snap.KnowsDM(ch)

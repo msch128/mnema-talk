@@ -9,6 +9,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -243,7 +244,7 @@ func (b *searchBuilder) addTerms(terms []searchTerm) {
 // elsewhere cannot make a conversation searchable by anybody else.
 func (b *searchBuilder) addScope(q SearchQuery) {
 	if q.Conversations {
-		b.where = append(b.where, conversationReadableSQL(b.addArg(q.Member)))
+		b.where = append(b.where, core.ConversationReadableSQL(b.addArg(q.Member)))
 		return
 	}
 	b.where = append(b.where, "NOT m.in_dm")

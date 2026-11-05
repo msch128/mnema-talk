@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/emojitext"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -71,7 +71,7 @@ func (c *Client) handleTalkReaction(ctx context.Context, payload json.RawMessage
 	if !h.reactionGate.allow(c.User.ID, time.Now(), reactionsPer, reactionWindow) {
 		return
 	}
-	emoji, err := chat.ValidateEmoji(in.Emoji)
+	emoji, err := core.ValidateEmoji(in.Emoji)
 	if err != nil {
 		return
 	}

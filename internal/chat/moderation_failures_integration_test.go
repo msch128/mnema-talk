@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 func TestBulkDeleteReportsDatabaseDrift(t *testing.T) {
@@ -73,7 +74,7 @@ func TestSlowModeReportsDatabaseDrift(t *testing.T) {
 	if _, err := f.p.Exec(ctx, `DELETE FROM channels WHERE id = $1`, f.c.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := check(nil); err != errChannelNotFound {
+	if err := check(nil); err != core.ErrChannelNotFound {
 		t.Fatalf("missing channel: %v", err)
 	}
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/testutil"
@@ -54,8 +55,8 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 		name string
 		run  func() error
 	}{
-		{"load channel", func() error { _, e := LoadChannel(ctx, f.p, f.c.ID); return e }},
-		{"load message ref", func() error { _, e := loadMessageRef(ctx, f.p, f.m); return e }},
+		{"load channel", func() error { _, e := core.LoadChannel(ctx, f.p, f.c.ID); return e }},
+		{"load message ref", func() error { _, e := core.LoadMessageRef(ctx, f.p, f.m); return e }},
 		{"hierarchy", func() error { _, _, e := GetServerHierarchy(ctx, f.p); return e }},
 		{"category creation", func() error { _, e := CreateCategory(ctx, f.p, "new", 0); return e }},
 		{"channel category check", func() error {
@@ -69,7 +70,7 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 		{"category deletion", func() error { return DeleteCategory(ctx, f.p, f.c.ID) }},
 		{"channel update", func() error { _, e := EditChannel(ctx, f.p, f.c.ID, &name, &topic, &limit, nil, nil, nil); return e }},
 		{"category rename", func() error { _, err := RenameCategory(ctx, f.p, f.c.ID, name); return err }},
-		{"members", func() error { _, e := GetAllMembers(ctx, f.p); return e }},
+		{"members", func() error { _, e := core.GetAllMembers(ctx, f.p); return e }},
 		{"resolve mentions", func() error { _, e := resolveMentionSet(ctx, f.p, "@all", f.u.ID, nil); return e }},
 		{"clear mentions", func() error { return saveMentionSet(ctx, f.p, f.m, byName(nil)) }},
 		{"record mentions", func() error { return RecordMentions(ctx, f.p, nil, f.m, f.u.ID, "@all") }},

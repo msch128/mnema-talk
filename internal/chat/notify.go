@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -115,7 +116,7 @@ func SetCategoryNotify(ctx context.Context, p *db.Pool, userID, categoryID uuid.
 		return err
 	}
 	if !exists {
-		return errCategoryNotFound
+		return core.ErrCategoryNotFound
 	}
 	_, err := p.Exec(ctx, `
 		INSERT INTO category_notify (user_id, category_id, notify_level, muted_until) VALUES ($1, $2, $3, $4)

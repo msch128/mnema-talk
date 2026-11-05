@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -86,7 +87,7 @@ func loadForwardRow(ctx context.Context, q rowQuerier, msgID uuid.UUID) (forward
 	var row forwardRow
 	err := q.QueryRow(ctx, `SELECT channel_id, forwarded, forward_of FROM messages WHERE id = $1`, msgID).Scan(&row.channel, &row.forwarded, &row.of)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return forwardRow{}, errMessageNotFound
+		return forwardRow{}, core.ErrMessageNotFound
 	}
 	if err != nil {
 		return forwardRow{}, fmt.Errorf("load message: %w", err)
@@ -108,7 +109,7 @@ func resolveForwardRoot(ctx context.Context, q rowQuerier, msgID uuid.UUID) (roo
 		return forwardRoot{}, false, nil
 	}
 	original, err := loadForwardRow(ctx, q, *row.of)
-	if errors.Is(err, errMessageNotFound) {
+	if errors.Is(err, core.ErrMessageNotFound) {
 		return forwardRoot{}, false, nil
 	}
 	if err != nil {
@@ -156,7 +157,7 @@ func (h *Handler) forwardMessage(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	comment, err := ValidateContent(req.Comment, true)
+	comment, err := core.ValidateContent(req.Comment, true)
 	if err != nil {
 		return err
 	}
@@ -214,7 +215,7 @@ func (h *Handler) getForwardQuote(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	if !row.forwarded {
-		return errMessageNotFound
+		return core.ErrMessageNotFound
 	}
 	if err := h.require(r, row.channel, perm.ViewChannel); err != nil {
 		return notFoundUnlessFailure(err)
@@ -234,8 +235,8 @@ func (h *Handler) getForwardQuote(w http.ResponseWriter, r *http.Request) error 
 // quoteFor reads the original for the caller; anything they may not see is
 // reported as unavailable.
 func (h *Handler) quoteFor(r *http.Request, original uuid.UUID) (ForwardQuote, error) {
-	ref, err := loadMessageRef(r.Context(), h.DB, original)
-	if errors.Is(err, errMessageNotFound) {
+	ref, err := core.LoadMessageRef(r.Context(), h.DB, original)
+	if errors.Is(err, core.ErrMessageNotFound) {
 		return ForwardQuote{Deleted: true}, nil
 	}
 	if err != nil {
