@@ -70,7 +70,7 @@ async function signIn(page: Page, username: string, password: string) {
   await expect(dialog).toBeHidden()
 }
 
-test('a member whose audio engine never starts is told and is still heard', async ({ browser, browserName }, testInfo) => {
+test('a member whose audio engine never starts is told and is still heard', async ({ browser }, testInfo) => {
   const stalledCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   const otherCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   await stalledCtx.addInitScript(trackPeerConnections)
@@ -112,9 +112,8 @@ test('a member whose audio engine never starts is told and is still heard', asyn
       const delta = { out: (await outboundBytes(stalled)) - before.out, inn: (await inboundBytes(other)) - before.inn }
       return Math.min(delta.out, delta.inn)
     }, { timeout: 30_000, intervals: [500], message: 'the stalled member\'s microphone did not reach the other member as tone-sized audio (see the audio-diagnostics attachment)' }).toBeGreaterThan(6000)
-    // Where the engine measures energy at playout, it must agree. Firefox counts it only for audio it is actually playing, and its
-    // audio engine can be as stalled in CI as the stalled member's: there it is reported in the diagnostics, not asserted.
-    if (browserName !== 'firefox' && await inboundEnergy(other) !== undefined) await expect.poll(async () => (await inboundEnergy(other)) ?? 0, { timeout: 15_000 }).toBeGreaterThan(0.001)
+    // The other member has a real audio output in this CI step (see ci.yml), so its decoded audio is played out and the energy counts it. Chromium and Firefox both report it; a silenced track would carry bytes but no energy.
+    if (await inboundEnergy(other) !== undefined) await expect.poll(async () => (await inboundEnergy(other)) ?? 0, { timeout: 15_000, message: 'the other member played no energy (see the audio-diagnostics attachment)' }).toBeGreaterThan(0.001)
   } catch (err) {
     await testInfo.attach('audio-diagnostics', {
       body: JSON.stringify({ stalled: await audioDiagnostics(stalled).catch(String), other: await audioDiagnostics(other).catch(String) }, null, 2),

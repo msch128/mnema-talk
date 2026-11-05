@@ -896,12 +896,13 @@ jobs:
           - browser: webkit
             only: "--project=webkit account-delete.spec.ts active-members.spec.ts audit.spec.ts bot-members.spec.ts bots.spec.ts browser-sealing.spec.ts crypto-state.spec.ts drafts.spec.ts layout.spec.ts mentions.spec.ts message-moderation.spec.ts moderation.spec.ts notifications.spec.ts onboarding.spec.ts polls.spec.ts pwa.spec.ts search.spec.ts sidebar-layout.spec.ts two-factor.spec.ts unread-jump.spec.ts upload-limit.spec.ts webhooks-outgoing.spec.ts webhooks-ui.spec.ts webhooks.spec.ts"
           # The runner has no audio output device, and Firefox then never starts an
-          # AudioContext: audio-stall.spec.ts is the real case of a member whose audio
-          # engine is dead (told, and still heard). The call specs that need the AI
-          # noise filter to run (late-join.spec.ts) follow with an audio device.
+          # AudioContext. The specs that need audio played out follow with an audio
+          # device: late-join.spec.ts (AI noise filter) and audio-stall.spec.ts, whose
+          # stalled member is stalled by its init script in every engine while the
+          # other member must really play what it hears (energy is counted at playout).
           - browser: firefox
-            only: "--project=firefox smoke.spec.ts browser-sealing.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts audio-stall.spec.ts relay-call.spec.ts"
-            withAudioDevice: "--project=firefox late-join.spec.ts"
+            only: "--project=firefox smoke.spec.ts browser-sealing.spec.ts key-lifecycle.spec.ts search.spec.ts mentions.spec.ts screenshare.spec.ts relay-call.spec.ts"
+            withAudioDevice: "--project=firefox late-join.spec.ts audio-stall.spec.ts"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
