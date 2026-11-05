@@ -1,4 +1,4 @@
-package chat
+package forum
 
 import (
 	"context"
@@ -51,29 +51,29 @@ type UpdatePostRequest struct {
 	IsResolved *bool `json:"is_resolved,omitempty" binding:"optional"`
 }
 
-func (h *Handler) mountForum(r chi.Router) {
-	r.Get("/channels/{channelID}/tags", httpx.Handle(h.listForumTags))
-	r.Post("/channels/{channelID}/tags", httpx.Handle(h.createForumTag))
-	r.Patch("/channels/{channelID}/tags/{tagID}", httpx.Handle(h.updateForumTag))
-	r.Delete("/channels/{channelID}/tags/{tagID}", httpx.Handle(h.deleteForumTag))
-	r.Get("/channels/{channelID}/posts", httpx.Handle(h.listForumPosts))
-	r.Post("/channels/{channelID}/posts", httpx.Handle(h.createForumPost))
-	r.Patch("/channels/{channelID}/posts/{messageID}", httpx.Handle(h.updateForumPost))
-	h.mountForumExtras(r)
+func (a *API) Mount(r chi.Router) {
+	r.Get("/channels/{channelID}/tags", httpx.Handle(a.ServeListForumTags))
+	r.Post("/channels/{channelID}/tags", httpx.Handle(a.ServeCreateForumTag))
+	r.Patch("/channels/{channelID}/tags/{tagID}", httpx.Handle(a.ServeUpdateForumTag))
+	r.Delete("/channels/{channelID}/tags/{tagID}", httpx.Handle(a.ServeDeleteForumTag))
+	r.Get("/channels/{channelID}/posts", httpx.Handle(a.ServeListForumPosts))
+	r.Post("/channels/{channelID}/posts", httpx.Handle(a.ServeCreateForumPost))
+	r.Patch("/channels/{channelID}/posts/{messageID}", httpx.Handle(a.ServeUpdateForumPost))
+	a.MountExtras(r)
 }
 
-func (h *Handler) requireForumChannel(r *http.Request, chID uuid.UUID) (*ChannelInfo, error) {
-	ch, err := core.LoadChannel(r.Context(), h.DB, chID)
+func (a *API) requireForumChannel(r *http.Request, chID uuid.UUID) (*core.ChannelInfo, error) {
+	ch, err := core.LoadChannel(r.Context(), a.DB, chID)
 	if err != nil {
 		return nil, err
 	}
-	if ch.Type != ChannelTypeForum {
+	if ch.Type != core.ChannelTypeForum {
 		return nil, httpx.ErrInvalidInput("channel is not a forum channel")
 	}
 	return ch, nil
 }
 
-// listForumPosts handles GET /api/channels/{channelID}/posts.
+// ServeListForumPosts handles GET /api/channels/{channelID}/posts.
 //
 // @Summary List forum posts
 // @Description Root posts in a forum channel, ordered by latest activity or creation. Supports tag filtering, text search and pagination. Pinned posts come first and only on the first page (no before); the pages behind it hold unpinned posts. Requires View channel.
@@ -88,21 +88,21 @@ func (h *Handler) requireForumChannel(r *http.Request, chID uuid.UUID) (*Channel
 // @Param limit query int false "Page size." default(50)
 // @Param before query string false "Posts older than this post." Format(uuid)
 // @Param before_activity query string false "With latest_activity order and before: the last_activity_at the client saw for the before post. Paging then continues exactly behind that position even when the post has got or lost a reply since." Format(date-time)
-// @Success 200 {array} Message "Posts."
+// @Success 200 {array} core.Message "Posts."
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
 // @Failure 401 {object} httpx.ErrorResponse "UNAUTHORIZED"
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the channel, or the before post (deleted since the previous page), does not exist."
 // @Router /api/channels/{channelID}/posts [get]
-func (h *Handler) listForumPosts(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeListForumPosts(w http.ResponseWriter, r *http.Request) error {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return err
 	}
-	if err := h.require(r, chID, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, chID, perm.ViewChannel); err != nil {
 		return core.NotFoundUnlessFailure(err)
 	}
-	if _, err := h.requireForumChannel(r, chID); err != nil {
+	if _, err := a.requireForumChannel(r, chID); err != nil {
 		return err
 	}
 	sortMode := r.URL.Query().Get("sort")
@@ -114,7 +114,7 @@ func (h *Handler) listForumPosts(w http.ResponseWriter, r *http.Request) error {
 		}
 		tagID = &id
 	}
-	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
+	q := core.HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
 	if rawBefore := r.URL.Query().Get("before"); rawBefore != "" {
 		id, err := uuid.Parse(rawBefore)
 		if err != nil {
@@ -129,7 +129,7 @@ func (h *Handler) listForumPosts(w http.ResponseWriter, r *http.Request) error {
 		}
 		q.BeforeActivity = &at
 	}
-	posts, err := ListForumPostsFiltered(r.Context(), h.DB, chID, PostFilter{Sort: sortMode, TagID: tagID, Search: r.URL.Query().Get("q")}, q)
+	posts, err := ListForumPostsFiltered(r.Context(), a.DB, chID, PostFilter{Sort: sortMode, TagID: tagID, Search: r.URL.Query().Get("q")}, q)
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func (h *Handler) listForumPosts(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// createForumPost handles POST /api/channels/{channelID}/posts.
+// ServeCreateForumPost handles POST /api/channels/{channelID}/posts.
 //
 // @Summary Create a forum post
 // @Description Creates a new post (thread root) with title, content and optional tags. Requires Send messages.
@@ -147,42 +147,42 @@ func (h *Handler) listForumPosts(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
-// @Param request body CreatePostRequest true "Request body."
-// @Success 201 {object} Message "Created post."
+// @Param request body forum.CreatePostRequest true "Request body."
+// @Success 201 {object} core.Message "Created post."
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
 // @Failure 401 {object} httpx.ErrorResponse "UNAUTHORIZED"
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
 // @Router /api/channels/{channelID}/posts [post]
-func (h *Handler) createForumPost(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeCreateForumPost(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return err
 	}
-	ctx, err := h.messages().SendContext(r, chID, perm.SendMessages)
+	ctx, err := a.Messages.SendContext(r, chID, perm.SendMessages)
 	if err != nil {
 		return err
 	}
-	if _, err := h.requireForumChannel(r, chID); err != nil {
+	if _, err := a.requireForumChannel(r, chID); err != nil {
 		return err
 	}
 	var req CreatePostRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	canManage, err := h.canManageMessages(r, user, chID)
+	canManage, err := a.canManageMessages(r, user, chID)
 	if err != nil {
 		return err
 	}
-	postID, err := CreateForumPost(ctx, h.DB, h.Online, chID, user.ID, canManage, req.Title, req.Content, req.TagIDs)
+	postID, err := CreateForumPost(ctx, a.DB, a.Online, chID, user.ID, canManage, req.Title, req.Content, req.TagIDs)
 	if err != nil {
 		return err
 	}
-	return messages.PublishMessage(w, r, h.DB, h.Events, postID)
+	return messages.PublishMessage(w, r, a.DB, a.Events, postID)
 }
 
-// updateForumPost handles PATCH /api/channels/{channelID}/posts/{messageID}.
+// ServeUpdateForumPost handles PATCH /api/channels/{channelID}/posts/{messageID}.
 //
 // @Summary Update a forum post
 // @Description Updates a post's title, tags, solved mark or lock status. The author or Manage messages for title, tags and the solved mark (not on a locked post, unless Manage messages); Manage messages for lock status and for applying or removing moderated tags. A forum that requires a tag refuses a post without one.
@@ -193,14 +193,14 @@ func (h *Handler) createForumPost(w http.ResponseWriter, r *http.Request) error 
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param messageID path string true "Message ID." Format(uuid)
-// @Param request body UpdatePostRequest true "Request body."
-// @Success 200 {object} Message "Updated post."
+// @Param request body forum.UpdatePostRequest true "Request body."
+// @Success 200 {object} core.Message "Updated post."
 // @Failure 400 {object} httpx.ErrorResponse "INVALID_INPUT"
 // @Failure 401 {object} httpx.ErrorResponse "UNAUTHORIZED"
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND"
 // @Router /api/channels/{channelID}/posts/{messageID} [patch]
-func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeUpdateForumPost(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
@@ -210,33 +210,33 @@ func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	if err := h.require(r, chID, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, chID, perm.ViewChannel); err != nil {
 		return core.NotFoundUnlessFailure(err)
 	}
-	if _, err := h.requireForumChannel(r, chID); err != nil {
+	if _, err := a.requireForumChannel(r, chID); err != nil {
 		return err
 	}
 	var req UpdatePostRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	canManage, err := h.canManageMessages(r, user, chID)
+	canManage, err := a.canManageMessages(r, user, chID)
 	if err != nil {
 		return err
 	}
-	ctx, before, err := h.postEditContext(r, chID, msgID, canManage, req)
+	ctx, before, err := a.postEditContext(r, chID, msgID, canManage, req)
 	if err != nil {
 		return err
 	}
-	msg, err := UpdateForumPost(ctx, h.DB, chID, msgID, PostActor{ID: user.ID, CanManage: canManage},
+	msg, err := UpdateForumPost(ctx, a.DB, chID, msgID, PostActor{ID: user.ID, CanManage: canManage},
 		PostPatch{Title: req.Title, TagIDs: req.TagIDs, IsLocked: req.IsLocked, IsResolved: req.IsResolved})
 	if err != nil {
 		return err
 	}
 	if canManage && msg.UserID != user.ID {
-		h.auditForumPost(ctx, chID, msg, before, req)
+		a.auditForumPost(ctx, chID, msg, before, req)
 	}
-	h.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
+	a.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
 }
@@ -245,23 +245,23 @@ func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error 
 // for the audit entry of a moderator's edit. An author who may no longer write
 // here (timeout, lost Send messages) does not get to rename or retag the post
 // either.
-func (h *Handler) postEditContext(r *http.Request, chID, msgID uuid.UUID, canManage bool, req UpdatePostRequest) (ctx context.Context, before *Message, err error) {
+func (a *API) postEditContext(r *http.Request, chID, msgID uuid.UUID, canManage bool, req UpdatePostRequest) (ctx context.Context, before *core.Message, err error) {
 	ctx = r.Context()
 	if !canManage && (req.Title != nil || req.TagIDs != nil || req.IsResolved != nil) {
-		if ctx, err = h.messages().SendContext(r, chID, perm.SendMessages); err != nil {
+		if ctx, err = a.Messages.SendContext(r, chID, perm.SendMessages); err != nil {
 			return nil, nil, err
 		}
 	}
-	if canManage && h.Audit != nil {
-		before, _ = messages.GetMessage(ctx, h.DB, msgID) // detail only: a miss leaves the entry without before values
+	if canManage && a.Audit != nil {
+		before, _ = messages.GetMessage(ctx, a.DB, msgID) // detail only: a miss leaves the entry without before values
 	}
 	return ctx, before, nil
 }
 
 // canManageMessages says whether user holds Manage messages in the channel (the
 // Owner does when there is no permission service).
-func (h *Handler) canManageMessages(r *http.Request, user *auth.User, chID uuid.UUID) (bool, error) {
-	return CanManageMessages(r.Context(), h.Perms, user, chID)
+func (a *API) canManageMessages(r *http.Request, user *auth.User, chID uuid.UUID) (bool, error) {
+	return CanManageMessages(r.Context(), a.Guard.Perms, user, chID)
 }
 
 // CanManageMessages is canManageMessages for callers outside the chat handler.
@@ -278,7 +278,7 @@ func CanManageMessages(ctx context.Context, perms *perm.Service, user *auth.User
 
 // auditForumPost records a moderator's change to another member's post: the
 // fields the request set, with the values before and after.
-func (h *Handler) auditForumPost(ctx context.Context, chID uuid.UUID, msg, before *Message, req UpdatePostRequest) {
+func (a *API) auditForumPost(ctx context.Context, chID uuid.UUID, msg, before *core.Message, req UpdatePostRequest) {
 	details := map[string]any{"channel_id": chID, "author_id": msg.UserID, "author_name": msg.Username}
 	if req.Title != nil {
 		details["title"] = msg.Title
@@ -301,12 +301,12 @@ func (h *Handler) auditForumPost(ctx context.Context, chID uuid.UUID, msg, befor
 			details["previous_tag_ids"] = tagIDsOf(before.Tags)
 		}
 	}
-	h.Audit.RecordOrLog(ctx, audit.Entry{
+	a.Audit.RecordOrLog(ctx, audit.Entry{
 		Action: "forum.post_update", TargetType: "message", TargetID: msg.ID.String(), ChannelID: &chID, Details: details,
 	})
 }
 
-func tagIDsOf(tags []ForumTag) []uuid.UUID {
+func tagIDsOf(tags []core.ForumTag) []uuid.UUID {
 	ids := make([]uuid.UUID, len(tags))
 	for i, t := range tags {
 		ids[i] = t.ID

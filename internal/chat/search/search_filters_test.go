@@ -1,4 +1,4 @@
-package chat
+package search
 
 import (
 	"strings"
@@ -26,11 +26,11 @@ func TestParseSearchTime(t *testing.T) {
 func TestSearchDateWindowMustBeNonEmpty(t *testing.T) {
 	a := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
 	b := a.Add(time.Hour)
-	if _, _, err := buildSearchSQL(SearchQuery{After: &a, BeforeDate: &b, Limit: 5}); err != nil {
+	if _, _, err := BuildSearchSQL(SearchQuery{After: &a, BeforeDate: &b, Limit: 5}); err != nil {
 		t.Fatalf("valid window: %v", err)
 	}
 	for _, w := range [][2]*time.Time{{&b, &a}, {&a, &a}} {
-		if _, _, err := buildSearchSQL(SearchQuery{After: w[0], BeforeDate: w[1], Limit: 5}); err == nil {
+		if _, _, err := BuildSearchSQL(SearchQuery{After: w[0], BeforeDate: w[1], Limit: 5}); err == nil {
 			t.Fatal("empty window accepted")
 		}
 	}
@@ -38,7 +38,7 @@ func TestSearchDateWindowMustBeNonEmpty(t *testing.T) {
 
 func TestSearchNewFiltersCountAsCriteriaAndStayParameterised(t *testing.T) {
 	u := uuid.New()
-	sql, args, err := buildSearchSQL(SearchQuery{Mentions: &u, Has: "video", Limit: 5})
+	sql, args, err := BuildSearchSQL(SearchQuery{Mentions: &u, Has: "video", Limit: 5})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,11 +51,11 @@ func TestSearchNewFiltersCountAsCriteriaAndStayParameterised(t *testing.T) {
 	d := time.Now()
 	for _, q := range []SearchQuery{{After: &d}, {BeforeDate: &d}} {
 		q.Limit = 5
-		if _, _, err := buildSearchSQL(q); err != nil {
+		if _, _, err := BuildSearchSQL(q); err != nil {
 			t.Fatalf("date-only search: %v", err)
 		}
 	}
-	if _, _, err := buildSearchSQL(SearchQuery{Limit: 5}); err == nil {
+	if _, _, err := BuildSearchSQL(SearchQuery{Limit: 5}); err == nil {
 		t.Fatal("empty search accepted")
 	}
 }
@@ -110,13 +110,13 @@ func TestSearchFiltersV3SQLAndCriteria(t *testing.T) {
 		"author":   {AuthorType: "bot", Limit: 5},
 		"embed":    {Has: "embed", Limit: 5},
 	} {
-		if _, _, err := buildSearchSQL(q); err != nil {
+		if _, _, err := BuildSearchSQL(q); err != nil {
 			t.Fatalf("%s alone: %v", name, err)
 		}
 	}
 
 	// Filename escaping and parameterisation
-	sql, args, err := buildSearchSQL(SearchQuery{Filename: "a_100%", Limit: 5})
+	sql, args, err := BuildSearchSQL(SearchQuery{Filename: "a_100%", Limit: 5})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func TestSearchFiltersV3SQLAndCriteria(t *testing.T) {
 
 	// Author types
 	for _, typ := range []string{"bot", "webhook", "member"} {
-		sql, _, err := buildSearchSQL(SearchQuery{AuthorType: typ, Limit: 5})
+		sql, _, err := BuildSearchSQL(SearchQuery{AuthorType: typ, Limit: 5})
 		if err != nil {
 			t.Fatalf("author=%s: %v", typ, err)
 		}
@@ -143,25 +143,25 @@ func TestSearchFiltersV3SQLAndCriteria(t *testing.T) {
 			t.Fatalf("author=member sql: %s", sql)
 		}
 	}
-	if _, _, err := buildSearchSQL(SearchQuery{AuthorType: "alien", Limit: 5}); err == nil {
+	if _, _, err := BuildSearchSQL(SearchQuery{AuthorType: "alien", Limit: 5}); err == nil {
 		t.Fatal("invalid author type accepted")
 	}
 
 	// Sorts and pagination with before
 	msgID := uuid.New()
-	sqlNew, _, err := buildSearchSQL(SearchQuery{Text: "hi", Before: &msgID, Sort: "newest", Limit: 5})
+	sqlNew, _, err := BuildSearchSQL(SearchQuery{Text: "hi", Before: &msgID, Sort: "newest", Limit: 5})
 	if err != nil || !strings.Contains(sqlNew, "ORDER BY m.created_at DESC") || !strings.Contains(sqlNew, "< (SELECT") {
 		t.Fatalf("sort newest: %v, sql: %s", err, sqlNew)
 	}
-	sqlOld, _, err := buildSearchSQL(SearchQuery{Text: "hi", Before: &msgID, Sort: "oldest", Limit: 5})
+	sqlOld, _, err := BuildSearchSQL(SearchQuery{Text: "hi", Before: &msgID, Sort: "oldest", Limit: 5})
 	if err != nil || !strings.Contains(sqlOld, "ORDER BY m.created_at ASC") || !strings.Contains(sqlOld, "> (SELECT") {
 		t.Fatalf("sort oldest: %v, sql: %s", err, sqlOld)
 	}
-	sqlRel, _, err := buildSearchSQL(SearchQuery{Text: "hi", Sort: "relevance", Limit: 5})
+	sqlRel, _, err := BuildSearchSQL(SearchQuery{Text: "hi", Sort: "relevance", Limit: 5})
 	if err != nil || !strings.Contains(sqlRel, "ORDER BY m.created_at DESC") {
 		t.Fatalf("sort relevance: %v, sql: %s", err, sqlRel)
 	}
-	if _, _, err := buildSearchSQL(SearchQuery{Text: "hi", Sort: "bad", Limit: 5}); err == nil {
+	if _, _, err := BuildSearchSQL(SearchQuery{Text: "hi", Sort: "bad", Limit: 5}); err == nil {
 		t.Fatal("invalid sort accepted")
 	}
 }
@@ -195,7 +195,7 @@ func TestParseSearchTerms(t *testing.T) {
 }
 
 func TestBuildSearchSQLPhraseAndExclusion(t *testing.T) {
-	sql, args, err := buildSearchSQL(SearchQuery{Text: `"short status" -Release`})
+	sql, args, err := BuildSearchSQL(SearchQuery{Text: `"short status" -Release`})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +210,7 @@ func TestBuildSearchSQLPhraseAndExclusion(t *testing.T) {
 	if !phrase || !excluded {
 		t.Fatalf("args %v", args)
 	}
-	if _, _, err := buildSearchSQL(SearchQuery{Text: "-Release"}); err == nil {
+	if _, _, err := BuildSearchSQL(SearchQuery{Text: "-Release"}); err == nil {
 		t.Fatal("an exclusion alone must not be a search")
 	}
 }
@@ -239,7 +239,7 @@ func TestSearchDayRefusesAmbiguousSignedOffsets(t *testing.T) {
 func TestSearchMediaFiltersIgnoreDeletedFiles(t *testing.T) {
 	for _, q := range []SearchQuery{{Has: "file"}, {Has: "image"}, {Has: "video"}, {Filename: "cat"}} {
 		q.Limit = 5
-		sql, _, err := buildSearchSQL(q)
+		sql, _, err := BuildSearchSQL(q)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -253,7 +253,7 @@ func TestSearchMediaFiltersIgnoreDeletedFiles(t *testing.T) {
 func TestSearchRelevanceSortsLikeNewest(t *testing.T) {
 	before := uuid.New()
 	for _, sort := range []string{"", "newest", "relevance"} {
-		sql, _, err := buildSearchSQL(SearchQuery{Text: "hi", Sort: sort, Before: &before, Limit: 5})
+		sql, _, err := BuildSearchSQL(SearchQuery{Text: "hi", Sort: sort, Before: &before, Limit: 5})
 		if err != nil {
 			t.Fatal(err)
 		}

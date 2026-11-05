@@ -1,4 +1,4 @@
-package chat
+package forum
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -20,7 +21,7 @@ func CleanPostTitle(title string) (string, error) {
 	if strings.TrimSpace(title) == "" {
 		return "", core.ErrPostTitleRequired
 	}
-	return httpx.CleanText("title", title, MaxPostTitleLen, true)
+	return httpx.CleanText("title", title, core.MaxPostTitleLen, true)
 }
 
 // forumSortNewest maps the sort query value of the post list to its order:
@@ -52,7 +53,7 @@ const MaxPostSearchLen = 100
 // latest activity or creation and narrowed by f's tag and search text. Pinned
 // posts come first and only on the first page (no Before); the pages behind it hold
 // the unpinned posts, so the cursor of the order never has to know about pins.
-func ListForumPostsFiltered(ctx context.Context, p *db.Pool, channelID uuid.UUID, f PostFilter, q HistoryQuery) ([]Message, error) {
+func ListForumPostsFiltered(ctx context.Context, p *db.Pool, channelID uuid.UUID, f PostFilter, q core.HistoryQuery) ([]core.Message, error) {
 	newest, err := forumSortNewest(f.Sort)
 	if err != nil {
 		return nil, err
@@ -73,7 +74,7 @@ func ListForumPostsFiltered(ctx context.Context, p *db.Pool, channelID uuid.UUID
 		return nil, err
 	}
 
-	var pinned []Message
+	var pinned []core.Message
 	if q.Before == nil {
 		if pinned, err = listPinnedPosts(ctx, p, whereClause, args); err != nil {
 			return nil, err
@@ -81,7 +82,7 @@ func ListForumPostsFiltered(ctx context.Context, p *db.Pool, channelID uuid.UUID
 	}
 	whereClause += ` AND NOT m.is_pinned`
 
-	var page []Message
+	var page []core.Message
 	if newest {
 		page, err = listPostsByCreation(ctx, p, whereClause, args, q.Before, limit)
 	} else {
@@ -118,12 +119,12 @@ func postFilterWhere(channelID uuid.UUID, f PostFilter) (string, []any, error) {
 var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 
 // listPinnedPosts returns the pinned posts matching where, most recently pinned first.
-func listPinnedPosts(ctx context.Context, p *db.Pool, where string, args []any) ([]Message, error) {
-	sql := messages.MessageSelect + " " + where + fmt.Sprintf(` AND m.is_pinned ORDER BY m.pinned_at DESC, m.id DESC LIMIT %d`, MaxPinsPerChannel)
+func listPinnedPosts(ctx context.Context, p *db.Pool, where string, args []any) ([]core.Message, error) {
+	sql := messages.MessageSelect + " " + where + fmt.Sprintf(` AND m.is_pinned ORDER BY m.pinned_at DESC, m.id DESC LIMIT %d`, messages.MaxPinsPerChannel)
 	return messages.QueryMessages(ctx, p, sql, args...)
 }
 
-func listPostsByCreation(ctx context.Context, p *db.Pool, where string, args []any, before *uuid.UUID, limit int) ([]Message, error) {
+func listPostsByCreation(ctx context.Context, p *db.Pool, where string, args []any, before *uuid.UUID, limit int) ([]core.Message, error) {
 	if before != nil {
 		args = append(args, *before)
 		where += fmt.Sprintf(` AND (m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = $%d)`, len(args))
@@ -142,7 +143,7 @@ const cursorActivityExpr = `COALESCE((SELECT MAX(r.created_at) FROM messages r W
 // activity it saw for the cursor post (BeforeActivity) gets exactly the posts
 // behind that position; without it the cursor's activity is read now, which
 // moves when the cursor post has since got or lost a reply.
-func listPostsByActivity(ctx context.Context, p *db.Pool, where string, args []any, q HistoryQuery, limit int) ([]Message, error) {
+func listPostsByActivity(ctx context.Context, p *db.Pool, where string, args []any, q core.HistoryQuery, limit int) ([]core.Message, error) {
 	switch {
 	case q.Before != nil && q.BeforeActivity != nil:
 		args = append(args, *q.BeforeActivity, *q.Before)
@@ -193,9 +194,9 @@ func (pp *PreparedPost) Store(ctx context.Context, userID uuid.UUID) func(tx pgx
 	}
 }
 
-// CreateForumPost creates a root post in channelID with title, message content, and tags.
+// ServeCreateForumPost creates a root post in channelID with title, message content, and tags.
 // canManage says whether the author holds Manage messages, which moderated tags need.
-func CreateForumPost(ctx context.Context, p *db.Pool, online OnlineSource, channelID, userID uuid.UUID, canManage bool, title, content string, tagIDs []uuid.UUID) (uuid.UUID, error) {
+func CreateForumPost(ctx context.Context, p *db.Pool, online mentions.OnlineSource, channelID, userID uuid.UUID, canManage bool, title, content string, tagIDs []uuid.UUID) (uuid.UUID, error) {
 	validContent, err := core.ValidateContent(content, false)
 	if err != nil {
 		return uuid.Nil, err
@@ -204,7 +205,7 @@ func CreateForumPost(ctx context.Context, p *db.Pool, online OnlineSource, chann
 	if err != nil {
 		return uuid.Nil, err
 	}
-	return messages.InsertMessage(ctx, p, online, NewMessage{
+	return messages.InsertMessage(ctx, p, online, messages.NewMessage{
 		ChannelID: channelID,
 		UserID:    userID,
 		Content:   validContent,
@@ -236,8 +237,8 @@ type PostActor struct {
 	CanManage bool
 }
 
-// UpdateForumPost updates a post's title, tags, lock or solved status.
-func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID uuid.UUID, actor PostActor, patch PostPatch) (*Message, error) {
+// ServeUpdateForumPost updates a post's title, tags, lock or solved status.
+func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID uuid.UUID, actor PostActor, patch PostPatch) (*core.Message, error) {
 	if patch.empty() {
 		return nil, httpx.ErrInvalidInput("no fields to update")
 	}

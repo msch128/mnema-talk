@@ -12,8 +12,12 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
+	"github.com/msch128/mnema-talk/internal/chat/reports"
+	"github.com/msch128/mnema-talk/internal/chat/saved"
+	"github.com/msch128/mnema-talk/internal/chat/search"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -100,18 +104,37 @@ func (h *Handler) DMs() *dm.API {
 	return &dm.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Objects: h.Objects, Voice: h.voiceRooms(), Calls: h.Calls, DMLimit: h.DMLimit}
 }
 
+// reports builds the reports API from the handler's fields.
+func (h *Handler) reports() *reports.API {
+	return &reports.API{DB: h.DB, Guard: h.guard(), Audit: h.Audit, ReportLimit: h.ReportLimit}
+}
+
+// search builds the search API from the handler's fields.
+func (h *Handler) search() *search.API {
+	return &search.API{DB: h.DB, Guard: h.guard()}
+}
+
+// forum builds the forum API from the handler's fields.
+func (h *Handler) forum() *forum.API {
+	return &forum.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Audit: h.Audit, Online: h.Online, Messages: h.messages()}
+}
+
+// saved builds the saved messages API from the handler's fields.
+func (h *Handler) saved() *saved.API {
+	return &saved.API{DB: h.DB, Events: h.Events, Guard: h.guard(), SavedLimit: h.SavedLimit}
+}
+
 // Mount registers the member-facing routes (RequireUser must already apply).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/members", httpx.Handle(h.listMembers))
 	blocks.API{DB: h.DB, Events: h.Events, Limit: h.BlockLimit}.Mount(r)
-	h.mountReports(r)
-	h.mountSaved(r)
+	h.reports().Mount(r)
+	h.saved().Mount(r)
 	h.DMs().Mount(r)
 	h.mountTalks(r)
-	h.mountForum(r)
+	h.forum().Mount(r)
 	h.messages().Mount(r)
-	r.Get("/search", httpx.Handle(h.search))
-	r.Get("/mentions", httpx.Handle(h.mentionsInbox))
+	h.search().Mount(r)
 	h.channels().Mount(r)
 	readstate.API{DB: h.DB, Events: h.Events, Guard: h.guard()}.Mount(r)
 }
@@ -119,7 +142,7 @@ func (h *Handler) Mount(r chi.Router) {
 // MountAdmin registers channel and category management (the Manage channels
 // permission applies).
 func (h *Handler) MountAdmin(r chi.Router) {
-	h.mountReportsAdmin(r)
+	h.reports().MountAdmin(r)
 	h.channels().MountAdmin(r)
 }
 

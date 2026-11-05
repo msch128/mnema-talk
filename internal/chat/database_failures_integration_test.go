@@ -21,6 +21,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/chat/search"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 )
@@ -66,7 +67,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		if _, err := messages.GetMessage(ctx, p, f.m); err == nil {
 			t.Fatal("null content accepted")
 		}
-		if _, _, err := Search(ctx, p, SearchQuery{ChannelID: &f.c.ID, Limit: 10}); err == nil {
+		if _, _, err := search.Search(ctx, p, SearchQuery{ChannelID: &f.c.ID, Limit: 10}); err == nil {
 			t.Fatal("null search content accepted")
 		}
 	})
@@ -74,7 +75,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT id,message_id FROM public.media`})
 		msgs := []Message{{ID: f.m}}
 		chattest.RequireError(t, messages.Enrich(ctx, p, msgs), "load attachments")
-		_, _, err := Search(ctx, p, SearchQuery{Text: "hello", Limit: 10})
+		_, _, err := search.Search(ctx, p, SearchQuery{Text: "hello", Limit: 10})
 		chattest.RequireError(t, err, "load attachments")
 	})
 	t.Run("attachment decoding", func(t *testing.T) {

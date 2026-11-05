@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/reports"
 )
 
 func TestFilingAReportReportsDatabaseFailures(t *testing.T) {
@@ -31,7 +32,7 @@ func TestFilingAReportReportsDatabaseFailures(t *testing.T) {
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := FileReport(ctx, chattest.DriftPool(t, f.p, c.views), nr)
+			_, err := reports.FileReport(ctx, chattest.DriftPool(t, f.p, c.views), nr)
 			chattest.RequireError(t, err, c.want)
 		})
 	}

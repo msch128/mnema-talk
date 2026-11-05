@@ -1,4 +1,4 @@
-package chat
+package forum
 
 import (
 	"context"
@@ -13,9 +13,9 @@ import (
 // maxUnreadPosts bounds the list of unread posts a client loads at once.
 const maxUnreadPosts = 200
 
-// unreadPostsSQL lists posts with something the member has not read. A reply
+// UnreadPostsSQL lists posts with something the member has not read. A reply
 // by someone they blocked does not count.
-func unreadPostsSQL() string {
+func UnreadPostsSQL() string {
 	return `
 		SELECT m.id
 		FROM messages m
@@ -40,7 +40,7 @@ func unreadPostsSQL() string {
 // newer than their last read of the post. A post they never opened counts from
 // the day they joined. Newest activity first.
 func UnreadPostIDs(ctx context.Context, p *db.Pool, channelID, userID uuid.UUID) ([]uuid.UUID, error) {
-	rows, err := p.Query(ctx, unreadPostsSQL(), channelID, userID, maxUnreadPosts)
+	rows, err := p.Query(ctx, UnreadPostsSQL(), channelID, userID, maxUnreadPosts)
 	if err != nil {
 		return nil, fmt.Errorf("unread posts: %w", err)
 	}

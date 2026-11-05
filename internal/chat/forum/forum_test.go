@@ -1,4 +1,4 @@
-package chat
+package forum
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 func TestCleanPostTitle(t *testing.T) {
@@ -23,12 +24,12 @@ func TestCleanPostTitle(t *testing.T) {
 		}
 	}
 
-	overlong := strings.Repeat("a", MaxPostTitleLen+1)
+	overlong := strings.Repeat("a", core.MaxPostTitleLen+1)
 	if _, err := CleanPostTitle(overlong); err == nil {
 		t.Error("expected error for overlong title")
 	}
 
-	exact := strings.Repeat("\u00e4", MaxPostTitleLen)
+	exact := strings.Repeat("\u00e4", core.MaxPostTitleLen)
 	if got, err := CleanPostTitle(exact); err != nil || got != exact {
 		t.Errorf("expected exact unicode title accepted: %v", err)
 	}
@@ -49,12 +50,12 @@ func TestCleanTagName(t *testing.T) {
 		}
 	}
 
-	overlong := strings.Repeat("x", MaxForumTagNameLen+1)
+	overlong := strings.Repeat("x", core.MaxForumTagNameLen+1)
 	if _, err := CleanTagName(overlong); err == nil {
 		t.Error("expected error for overlong tag name")
 	}
 
-	exact := strings.Repeat("\u00fc", MaxForumTagNameLen)
+	exact := strings.Repeat("\u00fc", core.MaxForumTagNameLen)
 	if got, err := CleanTagName(exact); err != nil || got != exact {
 		t.Errorf("expected exact tag name accepted: %v", err)
 	}
@@ -71,7 +72,7 @@ func TestCleanTagEmoji(t *testing.T) {
 		t.Errorf("expected emoji accepted: %v", err)
 	}
 
-	overlong := strings.Repeat("a", MaxForumTagEmojiLen+1)
+	overlong := strings.Repeat("a", core.MaxForumTagEmojiLen+1)
 	if _, err := CleanTagEmoji(overlong); err == nil {
 		t.Error("expected error for overlong emoji")
 	}
@@ -92,7 +93,7 @@ func TestPostTagErrorMapsAVanishedTag(t *testing.T) {
 
 func TestCleanTagEmojiCountsCharacters(t *testing.T) {
 	// 8 four-byte emoji: 32 bytes, so the limit counts characters, not bytes.
-	many := strings.Repeat("\U0001F41B", MaxForumTagEmojiLen)
+	many := strings.Repeat("\U0001F41B", core.MaxForumTagEmojiLen)
 	if got, err := CleanTagEmoji(many); err != nil || got != many {
 		t.Fatalf("emoji at the character limit rejected: %v", err)
 	}
