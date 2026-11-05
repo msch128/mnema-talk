@@ -75,7 +75,7 @@ mnema-talk/
 │   ├── emojitext/           # How a custom emoji is written in message text
 │   ├── imgproc/             # Shared image redrawing: GIF frames, PNG/GIF encoding, the profile banner (crop 3:1, strip metadata)
 │   ├── linkpreview/         # Link cards (title, description, image) fetched through the SSRF guard
-│   ├── mailer/              # Optional SMTP delivery of the account e-mails (texts live in internal/auth/locales)
+│   ├── mailer/              # Optional SMTP delivery of the account e-mails (texts live in internal/auth/mailtext)
 │   ├── mdplain/             # Markdown to plain text for push and previews
 │   ├── onboarding/          # Community name, rules and the acceptance gate for new members
 │   ├── opwarn/              # Operator warnings (configuration and deployment hints) for the System tab
