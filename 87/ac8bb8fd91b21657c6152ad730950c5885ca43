@@ -1,0 +1,21 @@
+internal/chat/readstate/notify.go
+  s_e3e7e7812a5e9e::t_63b8d95657559a 27
+internal/chat/readstate/readstate.go
+  s_e3e7e7812a5e9e::t_5ad8f8f023e180 26,129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87ac8bb8fd91b21657c6152ad730950c5885ca43",
+  "prompts": {},
+  "sessions": {
+    "s_e3e7e7812a5e9e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa677880f9a6ee2ef",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
