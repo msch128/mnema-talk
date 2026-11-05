@@ -1,4 +1,4 @@
-package chat
+package botapi
 
 import (
 	"net/http"
@@ -21,9 +21,9 @@ func extractEmojiParam(r *http.Request) (string, error) {
 }
 
 // setBotReaction adds (want) or removes the bot's reaction, idempotently.
-func (h *Handler) setBotReaction(w http.ResponseWriter, r *http.Request, want bool) error {
+func (a *API) setBotReaction(w http.ResponseWriter, r *http.Request, want bool) error {
 	user := auth.UserFrom(r.Context())
-	msgID, ref, err := h.messages().MessageInChannel(r)
+	msgID, ref, err := a.Messages.MessageInChannel(r)
 	if err != nil {
 		return err
 	}
@@ -31,19 +31,19 @@ func (h *Handler) setBotReaction(w http.ResponseWriter, r *http.Request, want bo
 	if err != nil {
 		return err
 	}
-	p, err := h.channelPerms(r, ref.ChannelID)
+	p, err := a.Guard.ChannelPerms(r, ref.ChannelID)
 	if err != nil {
 		return err
 	}
 	if !p.Has(perm.ViewChannel) {
 		return core.ErrMessageNotFound
 	}
-	reactions, changed, err := messages.SetReactionAs(r.Context(), h.DB, msgID, user.ID, emoji, want, p.Has(perm.AddReactions))
+	reactions, changed, err := messages.SetReactionAs(r.Context(), a.DB, msgID, user.ID, emoji, want, p.Has(perm.AddReactions))
 	if err != nil {
 		return err
 	}
 	if changed {
-		h.Events.BroadcastChannel(ref.ChannelID, events.MessageReaction, ReactionResult{
+		a.Events.BroadcastChannel(ref.ChannelID, events.MessageReaction, messages.ReactionResult{
 			MessageID: msgID, ChannelID: ref.ChannelID, Reactions: reactions,
 		})
 	}
@@ -70,8 +70,8 @@ func (h *Handler) setBotReaction(w http.ResponseWriter, r *http.Request, want bo
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages/{messageID}/reactions/{emoji}/at_me [put]
-func (h *Handler) botAddReaction(w http.ResponseWriter, r *http.Request) error {
-	return h.setBotReaction(w, r, true)
+func (a *API) botAddReaction(w http.ResponseWriter, r *http.Request) error {
+	return a.setBotReaction(w, r, true)
 }
 
 // botRemoveReaction handles DELETE /api/bot/v1/channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me.
@@ -91,6 +91,6 @@ func (h *Handler) botAddReaction(w http.ResponseWriter, r *http.Request) error {
 // @Failure 429 {object} httpx.DiscordRateLimit "Rate limited; see retry_after and Retry-After."
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages/{messageID}/reactions/{emoji}/at_me [delete]
-func (h *Handler) botRemoveReaction(w http.ResponseWriter, r *http.Request) error {
-	return h.setBotReaction(w, r, false)
+func (a *API) botRemoveReaction(w http.ResponseWriter, r *http.Request) error {
+	return a.setBotReaction(w, r, false)
 }

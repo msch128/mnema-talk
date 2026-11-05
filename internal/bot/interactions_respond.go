@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/botapi"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -152,7 +153,7 @@ type message struct {
 
 // validate checks the content and embeds of a response.
 func validate(d ResponseData) (*message, error) {
-	content, embeds, err := chat.ValidateBotMessage(d.Content, d.Embeds)
+	content, embeds, err := botapi.ValidateBotMessage(d.Content, d.Embeds)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func validate(d ResponseData) (*message, error) {
 // respond posts the message of a response, or shows it to the invoker only.
 func (c *Commands) respond(r *http.Request, in *interaction, m message) (*chat.Message, error) {
 	ctx := r.Context()
-	snap, _, err := chat.CheckBotSend(ctx, c.Perms, c.DB, auth.UserFrom(ctx), in.channel)
+	snap, _, err := botapi.CheckBotSend(ctx, c.Perms, c.DB, auth.UserFrom(ctx), in.channel)
 	if err != nil {
 		return nil, err
 	}

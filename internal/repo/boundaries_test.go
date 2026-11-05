@@ -74,14 +74,14 @@ var trees = []layered{
 			"talks":  {"core", "messages", "channels", "mentions", "stage"},
 			"botapi": {"core", "messages", "channels", "mentions"},
 			// account renders the userdata sections of every domain.
-			"account": {"core", "messages", "channels", "dm", "reports", "search", "forum", "saved", "talks"},
+			"account": {"core", "messages", "channels", "dm", "reports", "search", "forum", "saved", "talks", "botapi"},
 		},
 		// talks never imports dm in production (CallStarter); its integration
 		// tests start conversations the real way.
 		testAllowed: map[string][]string{"talks": {"dm"}},
-		mustExist:   []string{"blocks", "stage", "chattest", "core", "mentions", "readstate", "messages", "channels", "dm", "reports", "search", "forum", "saved", "talks"},
+		mustExist:   []string{"blocks", "stage", "chattest", "core", "mentions", "readstate", "messages", "channels", "dm", "reports", "search", "forum", "saved", "talks", "botapi"},
 		importers: map[string][]string{
-			"botapi":  {"internal/server", "internal/chat"},
+			"botapi":  {"internal/server", "internal/chat", "internal/bot"},
 			"account": {"internal/server", "internal/chat"},
 		},
 	},

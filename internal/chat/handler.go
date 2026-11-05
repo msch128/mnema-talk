@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
+	"github.com/msch128/mnema-talk/internal/chat/botapi"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
@@ -132,6 +133,12 @@ func (h *Handler) talks() *talks.API {
 		DB: h.DB, Events: h.Events, Guard: h.guard(), Audit: h.Audit, Online: h.Online, Talks: h.Talks,
 		Calls: h.Calls, TalkLimit: h.TalkLimit, Messages: h.messages(), Channels: h.channels(),
 	}
+}
+
+// MountBot registers the bot API routes (the bot authentication middleware must
+// already apply); see botapi.API.MountBot.
+func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
+	(&botapi.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Online: h.Online, Messages: h.messages(), Channels: h.channels()}).MountBot(r, send)
 }
 
 // Mount registers the member-facing routes (RequireUser must already apply).

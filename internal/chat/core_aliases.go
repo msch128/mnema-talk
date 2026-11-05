@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"github.com/msch128/mnema-talk/internal/chat/botapi"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
@@ -23,6 +24,10 @@ const AutoDeleteEvery = channels.AutoDeleteEvery
 
 type AutoDeleteRequest = channels.AutoDeleteRequest
 type AutoDeleter = channels.AutoDeleter
+type BotAllowedMentions = botapi.BotAllowedMentions
+type BotCreateMessageRequest = botapi.BotCreateMessageRequest
+type BotMember = botapi.BotMember
+type BotMessageReference = botapi.BotMessageReference
 type BulkDeleteRequest = messages.BulkDeleteRequest
 type BulkDeleteResult = messages.BulkDeleteResult
 
