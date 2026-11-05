@@ -143,6 +143,43 @@ func TestBuildRejectsAHiddenDirectory(t *testing.T) {
 	}
 }
 
+// Verify refuses paths that differ only in case (the desktop extracts to
+// case-insensitive file systems), so Build must refuse them too instead of
+// signing a bundle that can never be installed.
+func TestBuildRejectsPathsThatDifferOnlyInCase(t *testing.T) {
+	_, priv := testKey(t)
+	o := okOptions(t, priv)
+	o.Dir = t.TempDir()
+	for _, name := range []string{"index.html", "assets/Logo.png", "assets/logo.png"} {
+		p := filepath.Join(o.Dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(name), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if entries, _ := os.ReadDir(filepath.Join(o.Dir, "assets")); len(entries) < 2 {
+		t.Skip("case-insensitive file system cannot hold both files")
+	}
+	if _, err := Build(o); err == nil || !strings.Contains(err.Error(), "differ only in case") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestCollectorClaimFoldsCase(t *testing.T) {
+	c := &appCollector{folded: map[string]string{}}
+	if err := c.claim("assets/Logo.png"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.claim("assets/logo.png"); err == nil {
+		t.Fatal("second spelling accepted")
+	}
+	if err := c.claim("assets/other.png"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBuildAllowsOnlyTheWebBuildFileTypes(t *testing.T) {
 	_, priv := testKey(t)
 	o := okOptions(t, priv)
