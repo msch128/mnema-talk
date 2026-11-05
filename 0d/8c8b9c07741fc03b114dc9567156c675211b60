@@ -1,0 +1,19 @@
+internal/sfu/turn_relay_test.go
+  s_a345d8eda96fe6::t_dd0a40047ae624 59-76,78,81-82,84-88,90,96,98,267-284
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0d8c8b9c07741fc03b114dc9567156c675211b60",
+  "prompts": {},
+  "sessions": {
+    "s_a345d8eda96fe6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab1a77231be2dc7fc",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
