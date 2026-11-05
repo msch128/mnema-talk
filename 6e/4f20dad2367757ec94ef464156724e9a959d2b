@@ -1,0 +1,41 @@
+api/openapi.json
+  s_44828ade503d7d::t_435cdf48ba1ad0 9307,9362,9635,9686
+internal/communityevents/account_data.go
+  s_44828ade503d7d::t_e8177ce7405ccc 21-22,31-33
+internal/communityevents/handler.go
+  s_44828ade503d7d::t_ba12344128e99c 41-42
+internal/communityevents/model.go
+  s_44828ade503d7d::t_20faf6a39510ad 12-14,20-21
+internal/communityevents/model_roles.go
+  s_44828ade503d7d::t_405f59ba901ad7 19-20
+internal/communityevents/recurrence.go
+  s_44828ade503d7d::t_73f8160e216389 10
+internal/communityevents/scheduler.go
+  s_44828ade503d7d::t_f82feb3eaff6ba 47,55
+internal/communityevents/store.go
+  s_44828ade503d7d::t_cd5e0ac4b9386e 21,95-97,117-118,261
+internal/communityevents/store_scheduler.go
+  s_44828ade503d7d::t_9f961dd8ff67fe 20,28-29,37-38,46-48,88-89
+internal/linkpreview/handler.go
+  s_44828ade503d7d::t_e4ab6840a90ef3 20-22
+internal/linkpreview/linkpreview.go
+  s_44828ade503d7d::t_67281d44a9e8bf 95-100,142
+internal/webhook/outgoing_store.go
+  s_44828ade503d7d::t_6dbb8ace7130c0 56,68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6e4f20dad2367757ec94ef464156724e9a959d2b",
+  "prompts": {},
+  "sessions": {
+    "s_44828ade503d7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac82bbf5aff7b075d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
