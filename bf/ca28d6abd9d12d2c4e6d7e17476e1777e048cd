@@ -1,0 +1,21 @@
+internal/chat/handler.go
+  s_db63cd4785d2fa::t_6dbe3abd00b860 80-81,83
+internal/chat/objects.go
+  s_db63cd4785d2fa::t_9816a3738d3df6 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bfca28d6abd9d12d2c4e6d7e17476e1777e048cd",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
