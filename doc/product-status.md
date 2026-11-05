@@ -11,27 +11,28 @@ entire communication path.
 | Beta | Usable and maintained, but outstanding acceptance (for example platform signing) keeps it out of Supported. Expect rough edges. |
 | Planned | Requirements exist, but no qualified usable product path is available. |
 
-## Status at 1.2.0
+## Status at 2.9
 
 Mnema Talk 1.0 was the first release under the
 [API stability contract](api-stability.md): its public surfaces change
-incompatibly only in a major release. 1.1 and 1.2 keep that contract and only
-add to it (with one announced exception in 1.2.0 for automod report entries,
-see below). What the 1.x label does and does not say:
+incompatibly only in a major release. Every release since keeps that contract
+and only adds to it (one announced exception in 1.2.0 for automod report
+entries, see below); 2.0.0 was a major version for the built-in TURN relay and
+changed no API. What the label does and does not say:
 
-**Supported versions.** Security fixes go to the latest 1.x minor and, once a
-newer minor exists, to the previous minor for 90 days
-([SECURITY.md](../SECURITY.md#supported-versions)). Once 1.2.0 is published,
-that means 1.2.x and, for 90 days, 1.1.x; 1.0.x and older get no fixes. CI
-upgrades from 0.8.16, 0.9.0, 1.0.0 and 1.1.0 to prove the upgrade path; that is a
-test, not a support promise.
+**Supported versions.** Security fixes go to the latest minor release and,
+once a newer minor exists, to the previous minor for 90 days
+([SECURITY.md](../SECURITY.md#supported-versions)). At 2.9.x that means 2.9.x
+and, for 90 days after 2.9.0 (2026-11-04), 2.8.x. CI upgrades from 0.8.16,
+0.9.0, 1.0.0 and 1.1.0 to prove the upgrade path; that is a test, not a
+support promise. Per-version notes: [upgrade.md](upgrade.md).
 
-| Area | Category at 1.2.0 |
+| Area | Category at 2.9 |
 | --- | --- |
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
 | Direct messages (two to ten members), blocking and reports, saved messages, forwarding, thread follow, search filters v2, built-in slash commands, reading a Talk's chat without joining | Supported (surfaces introduced in 1.1) |
-| 1.2 surfaces: Talk lobbies and temporary Talks, Stages with talk power/raised hands/reactions, forum channels, community events incl. past events, Discord structure import with undo, automod, moderation history/notes, view as role, sessions + inactivity sign-out, operator status page, reminders/scheduled messages, anonymous polls, auto-delete, search filters v3 with phrases/-term, notification levels v2, DM list v2 with favourites and mute-all, speaking URLs, emoji shortcodes | Supported (new in 1.2, released 2026-10-26, not yet proven in long-term community use; covered by automated backend and web tests and database migrations 0059–0076) |
-| 2.x surfaces: recurring community events, the wiki (pages, revisions, locks, restore, pictures, search; permissions *Edit the wiki*, *Manage the wiki*, *View the wiki*) | Supported (new in 2.x, not yet proven in long-term community use; covered by automated backend, web and end-to-end tests and database migrations 0088–0090) |
+| 1.2 surfaces: Talk lobbies and temporary Talks, Stages with talk power/raised hands/reactions, forum channels, community events incl. past events, Discord structure import with undo, automod, moderation history/notes, view as role, sessions + inactivity sign-out, operator status page, reminders/scheduled messages, anonymous polls, auto-delete, search filters v3 with phrases/-term, notification levels v2, DM list v2 with favourites and mute-all, speaking URLs, emoji shortcodes | Supported (new in 1.2, released 2026-10-26; covered by automated backend and web tests and database migrations 0059–0076) |
+| 2.x surfaces: the built-in TURN relay (2.0), the setup assistant and the guided first run with *Test my connection* (2.2), several attachments per message and the reworked forum with tag colours, rules and solved posts (2.2), the community icon and Talks started from a direct message (2.2), taking over a call from another device (2.2), camera layers with a per-viewer camera cap and an optional voice upload limit (2.5, 2.6), raid protection, the vanity invite link and self-assignable roles (2.7), event roles with a waitlist, event comments and recurring events (2.8), the wiki with pages, revisions, locks, restore, pictures and search (2.9) | Supported (new in 2.x, released 2026-10-29 to 2026-11-04; covered by automated backend, web and end-to-end tests and database migrations 0077–0091) |
 | Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported for text chat, search and administration. Sealed calls pass on macOS WebKit locally; the CI WebKit job cannot run them because Playwright's Linux WebKit build has no encoded-media API (`RTCRtpScriptTransform`); see the limits there (not yet tested on real iOS or Android hardware). WebKit occasionally refuses to clone the media key message (`web/src/lib/media/guard.ts` retries once; if the retry fails the line stays keyless until the next key, the call no longer aborts; seen on macOS WebKit CI runners, not verified on real Safari devices). |
 | Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), operator status page, backup and restore, upgrade tested from 0.8.16, 0.9.0, 1.0.0 and 1.1.0, cosign-signed images, self-update that verifies the image's signature and provenance before it restarts the app | Supported |
 | Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones (no real iOS/Android hardware qualification). |
@@ -97,8 +98,8 @@ Other capabilities on this path, each with automated tests:
 
 Not covered by these tests: real 4K/60 capture, system audio from physical
 hardware, an external security audit and capacity beyond the recorded runs.
-Internal security reviews preceded 1.0 and 1.2 (see "Status at 1.2.0"); neither is
-an independent audit.
+Internal security reviews preceded 1.0 and 1.2; the 2.x line has no security
+review of its own in SECURITY.md, and none is an independent audit.
 
 ## Browsers
 
