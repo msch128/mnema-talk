@@ -22,6 +22,18 @@ async function signIn(page: Page, username: string, password: string) {
   await expect(dialog).toBeHidden()
 }
 
+// WebKit's fake microphone is a short beep every couple of seconds with silence
+// between. With the defaults the voice gate closes in the silence and Opus DTX
+// sends nothing, so how much audio arrives depends on how many beeps fall into
+// the wait (a passing run needs 10 to 20 s for two seconds of it, a slow one
+// misses the 20 s). The gate is held open and DTX is off, so the microphone
+// sends continuously and the spec waits for the frames, not for the beeps.
+const sendContinuously = () => {
+  localStorage.setItem('mnema_auto_sens', 'false')
+  localStorage.setItem('mnema_sens_threshold', '0')
+  localStorage.setItem('mnema_dtx', 'false')
+}
+
 // Every audio line of the call runs through a frame transform.
 const transforms = (page: Page) => page.evaluate(() => {
   const pc = window.__pcs.at(-1)
@@ -70,6 +82,7 @@ test('call media is sealed on every audio line and arrives decoded', async ({ br
   const [adminCtx, memberCtx] = contexts as [typeof contexts[0], typeof contexts[0]]
   for (const ctx of contexts) {
     await ctx.addInitScript(trackPeerConnections)
+    await ctx.addInitScript(sendContinuously)
   }
   const admin = await adminCtx.newPage()
   const member = await memberCtx.newPage()
