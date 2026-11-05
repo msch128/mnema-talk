@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/community"
@@ -75,7 +75,7 @@ type Deps struct {
 // Router holds the assembled handler and the hub (for shutdown/tests).
 type Router struct {
 	// accounts is drained on Close (tests also run its sweeps).
-	accounts *auth.Handler
+	accounts *authn.Handler
 	http.Handler
 	Hub *ws.Hub
 	// Webhooks is the incoming webhook handler (tests adjust its limits).

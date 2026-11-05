@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -354,7 +355,7 @@ func TestASecondDeletionRacingTheFirstAnswersNoContent(t *testing.T) {
 			}
 		},
 	}
-	h := New(auth.NewHandler(&auth.Sessions{DB: authHookPool(t, pool, hook), Secret: "export-test-secret-export-test-secret"}, nil))
+	h := New(authn.NewHandler(&auth.Sessions{DB: authHookPool(t, pool, hook), Secret: "export-test-secret-export-test-secret"}, nil))
 	w := authRequest(t, h.deleteAccount, member, `{"current_password":"`+testPassword+`"}`, uuid.Nil)
 	if w.Code != http.StatusNoContent {
 		t.Fatalf("%d %s", w.Code, w.Body)

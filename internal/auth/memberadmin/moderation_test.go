@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 )
 
 func TestBanExpiryNeedsADatabase(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
-		New(&auth.Handler{}).RunBanExpiry(context.Background(), time.Hour)
-		New(&auth.Handler{Sessions: &auth.Sessions{}}).RunBanExpiry(context.Background(), time.Hour)
+		New(&authn.Handler{}).RunBanExpiry(context.Background(), time.Hour)
+		New(&authn.Handler{Sessions: &auth.Sessions{}}).RunBanExpiry(context.Background(), time.Hour)
 		close(done)
 	}()
 	select {

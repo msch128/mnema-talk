@@ -32,9 +32,9 @@ const (
 	maxInviteCodeChars = 64
 )
 
-// usernamePattern is the lookup shape: every name an account can hold, legacy
+// UsernamePattern is the lookup shape: every name an account can hold, legacy
 // ones included (login, mentions and URLs accept all of them).
-var usernamePattern = regexp.MustCompile(`^[A-Za-z0-9_.-]{2,32}$`)
+var UsernamePattern = regexp.MustCompile(`^[A-Za-z0-9_.-]{2,32}$`)
 
 // newUsernamePattern is the rule for names chosen from now on: lowercase
 // letters, digits, '_' and '.', 2-32 characters. Dot placement is checked in
@@ -103,9 +103,9 @@ func SetLocale(ctx context.Context, p *db.Pool, userID uuid.UUID, locale string)
 	if !SupportedLocales[locale] {
 		return nil, httpx.ErrInvalidInput("locale must be de or en")
 	}
-	u, err := scanUser(p.QueryRow(ctx, `
+	u, err := ScanUser(p.QueryRow(ctx, `
 		UPDATE users SET locale = $1, updated_at = NOW() WHERE id = $2
-		RETURNING `+userColumns, locale, userID))
+		RETURNING `+UserColumns, locale, userID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("user not found")
 	}
@@ -201,7 +201,7 @@ func NormalizeUsername(username string) string {
 }
 
 // ValidateUsername enforces the policy for new names (registration). Accounts
-// that predate it keep their names; see usernamePattern.
+// that predate it keep their names; see UsernamePattern.
 func ValidateUsername(username string) error {
 	if !newUsernamePattern.MatchString(username) ||
 		strings.HasPrefix(username, ".") || strings.HasSuffix(username, ".") || strings.Contains(username, "..") {
@@ -220,16 +220,18 @@ func checkReservedUsername(username string) error {
 // validateExistingUsername accepts any name an account can already hold. The
 // ADMIN_USERNAME of a running install must keep booting.
 func validateExistingUsername(username string) error {
-	if !usernamePattern.MatchString(username) {
+	if !UsernamePattern.MatchString(username) {
 		return httpx.ErrInvalidInput("username must be 2-32 characters: letters, digits, '_', '.', '-'")
 	}
 	return checkReservedUsername(username)
 }
 
 // A status line whose time has passed reads as empty before RunStatusExpiry has cleared it.
-var userColumns = `id, username, display_name, bio, role, avatar_s3_key, ` + StatusSQLFor("") + `, presence, locale, created_at`
+var UserColumns = `id, username, display_name, bio, role, avatar_s3_key, ` + StatusSQLFor("") + `, presence, locale, created_at`
 
-func scanUser(row pgx.Row, extra ...any) (*User, error) {
+// ScanUser reads one users row selected with UserColumns; extra are the
+// destinations of any columns the query adds after them.
+func ScanUser(row pgx.Row, extra ...any) (*User, error) {
 	var u User
 	var avatar *string
 	dest := append([]any{&u.ID, &u.Username, &u.DisplayName, &u.Bio, &u.Role, &avatar, &u.StatusText, &u.StatusExpiresAt, &u.Presence, &u.Locale, &u.CreatedAt}, extra...)
@@ -242,7 +244,7 @@ func scanUser(row pgx.Row, extra ...any) (*User, error) {
 
 // GetUser loads a user by ID; it returns a 404 APIError if absent.
 func GetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
-	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1`, id))
+	u, err := ScanUser(p.QueryRow(ctx, `SELECT `+UserColumns+` FROM users WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("user not found")
 	}
@@ -253,25 +255,25 @@ func GetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 // disabled, banned or deleted account, or a bot, is a 404 APIError like a
 // missing one.
 func GetActiveUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
-	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1 AND `+ActiveSQL("")+` AND NOT is_bot`, id))
+	u, err := ScanUser(p.QueryRow(ctx, `SELECT `+UserColumns+` FROM users WHERE id = $1 AND `+ActiveSQL("")+` AND NOT is_bot`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("user not found")
 	}
 	return u, err
 }
 
-// inactiveSQL is true for a user_sessions row that has had no request for
+// InactiveSessionSQL is true for a user_sessions row that has had no request for
 // longer than the community's inactivity limit.
-const inactiveSQL = `last_active_at < NOW() - make_interval(days => (SELECT session_inactivity_days FROM instance_settings LIMIT 1))`
+const InactiveSessionSQL = `last_active_at < NOW() - make_interval(days => (SELECT session_inactivity_days FROM instance_settings LIMIT 1))`
 
 // sessionUser loads the user behind a session and its current token version.
 // A session whose jti was revoked by logout (or a bot account) does not load.
 func sessionUser(ctx context.Context, p *db.Pool, id uuid.UUID, jti string) (*User, int, error) {
 	var tv int
-	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+`, token_version FROM users
+	u, err := ScanUser(p.QueryRow(ctx, `SELECT `+UserColumns+`, token_version FROM users
 		WHERE id = $1 AND `+ActiveSQL("")+` AND NOT is_bot
 		AND NOT EXISTS (SELECT 1 FROM revoked_sessions WHERE jti = $2)
-		AND NOT EXISTS (SELECT 1 FROM user_sessions WHERE jti = $2 AND `+inactiveSQL+`)`, id, jti), &tv)
+		AND NOT EXISTS (SELECT 1 FROM user_sessions WHERE jti = $2 AND `+InactiveSessionSQL+`)`, id, jti), &tv)
 	return u, tv, err
 }
 
@@ -280,11 +282,11 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, i
 	var hash string
 	var tv int
 	var disabled bool
-	u, err := scanUser(p.QueryRow(ctx,
-		`SELECT `+userColumns+`, password_hash, token_version, `+InactiveSQL("")+` FROM users WHERE LOWER(username) = LOWER($1) AND NOT is_bot`,
+	u, err := ScanUser(p.QueryRow(ctx,
+		`SELECT `+UserColumns+`, password_hash, token_version, `+InactiveSQL("")+` FROM users WHERE LOWER(username) = LOWER($1) AND NOT is_bot`,
 		strings.TrimSpace(username)), &hash, &tv, &disabled)
 	if errors.Is(err, pgx.ErrNoRows) {
-		if err := burnPasswordCheck(ctx, password); err != nil {
+		if err := BurnPasswordCheck(ctx, password); err != nil {
 			return nil, 0, err
 		}
 		return nil, 0, ErrInvalidCredentials
@@ -303,4 +305,33 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, i
 		return nil, 0, bannedError(ctx, p, u.ID)
 	}
 	return u, tv, nil
+}
+
+// StatusSQLFor yields the status line and its expiry as two select columns of
+// the users table (prefix is its alias with a dot, or empty). A status past
+// its time reads as empty and without expiry, before the sweep has cleared it.
+func StatusSQLFor(prefix string) string {
+	live := "(" + prefix + "status_expires_at IS NULL OR " + prefix + "status_expires_at > NOW())"
+	return "CASE WHEN " + live + " THEN " + prefix + "status_text ELSE '' END, CASE WHEN " + live + " THEN " + prefix + "status_expires_at END"
+}
+
+// CheckUserPassword verifies password against userID's stored hash. A wrong
+// password returns ErrWrongPassword; a missing or disabled user does too
+// (after the same bcrypt work), so callers can't tell the cases apart.
+func CheckUserPassword(ctx context.Context, p *db.Pool, userID uuid.UUID, password string) error {
+	var hash string
+	err := p.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1 AND `+ActiveSQL("")+` AND NOT is_bot`, userID).Scan(&hash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		if err := BurnPasswordCheck(ctx, password); err != nil {
+			return err
+		}
+		return ErrWrongPassword
+	}
+	if err != nil {
+		return fmt.Errorf("load password hash: %w", err)
+	}
+	if !CheckPassword(password, hash) {
+		return ErrWrongPassword
+	}
+	return nil
 }

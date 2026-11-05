@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 )
@@ -48,7 +48,7 @@ func resetTwoFactorFor(ctx context.Context, pool *db.Pool, username string, out 
 	}
 	// The reset and its audit row commit together: no recovery action without a trail.
 	err = pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
-		if err := auth.ResetTwoFactorTx(ctx, tx, id); err != nil {
+		if err := authn.ResetTwoFactorTx(ctx, tx, id); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `INSERT INTO audit_log (action, target_type, target_id, target_name, details)

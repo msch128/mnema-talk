@@ -31,7 +31,7 @@ type AdminUser struct {
 
 // ListUsersForAdmin returns every account, admins first, then by name.
 func ListUsersForAdmin(ctx context.Context, p *db.Pool) ([]AdminUser, error) {
-	rows, err := p.Query(ctx, `SELECT `+userColumns+`, disabled_at IS NOT NULL, last_seen_at, banned_at IS NOT NULL,
+	rows, err := p.Query(ctx, `SELECT `+UserColumns+`, disabled_at IS NOT NULL, last_seen_at, banned_at IS NOT NULL,
 		       CASE WHEN timeout_until > NOW() THEN timeout_until END
 		FROM users WHERE NOT is_bot ORDER BY role = 'admin' DESC, LOWER(username)`)
 	if err != nil {
@@ -41,7 +41,7 @@ func ListUsersForAdmin(ctx context.Context, p *db.Pool) ([]AdminUser, error) {
 	users := make([]AdminUser, 0)
 	for rows.Next() {
 		var au AdminUser
-		u, err := scanUser(rows, &au.Disabled, &au.LastSeenAt, &au.Banned, &au.TimeoutUntil)
+		u, err := ScanUser(rows, &au.Disabled, &au.LastSeenAt, &au.Banned, &au.TimeoutUntil)
 		if err != nil {
 			return nil, err
 		}
@@ -54,7 +54,7 @@ func ListUsersForAdmin(ctx context.Context, p *db.Pool) ([]AdminUser, error) {
 // TargetUser loads the user an admin action applies to. Admin accounts are
 // never targets: the single administrator cannot lock themselves out.
 func TargetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
-	if err := refuseDeleted(ctx, p, id); err != nil {
+	if err := RefuseDeleted(ctx, p, id); err != nil {
 		return nil, err
 	}
 	u, err := GetUser(ctx, p, id)
@@ -62,7 +62,7 @@ func TargetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) 
 		return nil, err
 	}
 	if u.IsAdmin() {
-		return nil, errOwnerAction
+		return nil, ErrOwnerAction
 	}
 	return u, nil
 }
@@ -116,7 +116,7 @@ func storePassword(ctx context.Context, p *db.Pool, id uuid.UUID, hash string) e
 		if tag.RowsAffected() == 0 {
 			return httpx.ErrNotFound("user not found")
 		}
-		return dropTokens(ctx, tx, id, purposePasswordReset)
+		return DropTokens(ctx, tx, id, PurposePasswordReset)
 	})
 }
 
@@ -134,3 +134,6 @@ func SetPassword(ctx context.Context, p *db.Pool, id uuid.UUID, password string)
 	}
 	return storePassword(ctx, p, id, hash)
 }
+
+// ErrOwnerAction is the refusal of an admin action aimed at the Owner account.
+var ErrOwnerAction = httpx.ErrInvalidInput("this action is not available for the Owner account")

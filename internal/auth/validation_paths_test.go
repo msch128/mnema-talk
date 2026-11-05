@@ -10,9 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
 func assertSessionCookie(t *testing.T, c *http.Cookie, name string, secure bool) {
@@ -73,49 +71,6 @@ func TestTokenWithoutUserIDIsRejected(t *testing.T) {
 	}
 	if _, err := ParseToken(token, secret); err == nil || err.Error() != "token has no user id" {
 		t.Fatalf("missing identity = %v", err)
-	}
-}
-
-func TestAuthHandlersRejectMalformedJSON(t *testing.T) {
-	h := NewHandler(&Sessions{Secret: secret}, nil)
-	u := &User{ID: uuid.New()}
-	for name, handler := range map[string]httpx.HandlerFunc{
-		"login": h.login, "register": h.register, "password": h.changePassword,
-		"locale": h.setLocale, "profile": h.updateProfile, "presence": h.setPresence,
-		"status": h.setStatus,
-	} {
-		t.Run(name, func(t *testing.T) {
-			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{"))
-			r = r.WithContext(WithUser(r.Context(), u))
-			rc := chi.NewRouteContext()
-			rc.URLParams.Add("id", uuid.NewString())
-			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rc))
-			w := httptest.NewRecorder()
-			httpx.Handle(handler).ServeHTTP(w, r)
-			if w.Code != http.StatusBadRequest {
-				t.Fatalf("status = %d, body %s", w.Code, w.Body.String())
-			}
-		})
-	}
-}
-
-func TestProfileHandlerRejectsMalformedIDs(t *testing.T) {
-	h := NewHandler(&Sessions{}, nil)
-	for name, handler := range map[string]httpx.HandlerFunc{
-		"get": h.getUser,
-	} {
-		t.Run(name, func(t *testing.T) {
-			r := httptest.NewRequest(http.MethodPost, "/", nil)
-			rc := chi.NewRouteContext()
-			rc.URLParams.Add("id", "not-a-uuid")
-			rc.URLParams.Add("userID", "not-a-uuid")
-			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rc))
-			w := httptest.NewRecorder()
-			httpx.Handle(handler).ServeHTTP(w, r)
-			if w.Code != http.StatusBadRequest {
-				t.Fatalf("status = %d", w.Code)
-			}
-		})
 	}
 }
 

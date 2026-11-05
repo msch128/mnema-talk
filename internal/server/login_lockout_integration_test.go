@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 )
 
 type lockedUser struct {
@@ -74,16 +74,16 @@ func TestUnlockRequestFromCLIIsApplied(t *testing.T) {
 	lockOut(t, a, "max")
 	ctx := context.Background()
 
-	if _, err := auth.RequestUnlock(ctx, a.db, "nobody", false); err != auth.ErrUnlockUnknownUser {
+	if _, err := authn.RequestUnlock(ctx, a.db, "nobody", false); err != authn.ErrUnlockUnknownUser {
 		t.Fatalf("unknown user: %v", err)
 	}
-	id, err := auth.RequestUnlock(ctx, a.db, "MAX", false)
+	id, err := authn.RequestUnlock(ctx, a.db, "MAX", false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Now().Add(10 * time.Second)
 	for {
-		pending, err := auth.UnlockRequestPending(ctx, a.db, id)
+		pending, err := authn.UnlockRequestPending(ctx, a.db, id)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -101,12 +101,12 @@ func TestUnlockRequestFromCLIIsApplied(t *testing.T) {
 
 	// --all
 	lockOut(t, a, "max")
-	id, err = auth.RequestUnlock(ctx, a.db, "", true)
+	id, err = authn.RequestUnlock(ctx, a.db, "", true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for time.Now().Before(deadline.Add(10 * time.Second)) {
-		if pending, _ := auth.UnlockRequestPending(ctx, a.db, id); !pending {
+		if pending, _ := authn.UnlockRequestPending(ctx, a.db, id); !pending {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)

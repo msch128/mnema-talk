@@ -61,10 +61,10 @@ func (s *Sessions) pruneTouched() {
 	})
 }
 
-// endSessions signs the sessions out for good: their ids join revoked_sessions
+// EndSessions signs the sessions out for good: their ids join revoked_sessions
 // until their tokens would have expired anyway, and the push subscriptions of
 // those sessions go with them. The caller removes the user_sessions rows.
-func endSessions(ctx context.Context, q db.Querier, jtis []string, expires []time.Time) error {
+func EndSessions(ctx context.Context, q db.Querier, jtis []string, expires []time.Time) error {
 	if len(jtis) == 0 {
 		return nil
 	}

@@ -6,15 +6,15 @@
 // code that lets staff act on accounts.
 package memberadmin
 
-import "github.com/msch128/mnema-talk/internal/auth"
+import "github.com/msch128/mnema-talk/internal/auth/authn"
 
 // API serves the member-admin routes. It embeds the auth Handler on purpose:
 // the server fills Handler.Live, Perms, Events and the other collaborators
 // after construction, and the embedded pointer always sees the current values,
 // so the routes behave exactly as they did when they lived on the Handler.
 type API struct {
-	*auth.Handler
+	*authn.Handler
 }
 
 // New returns the member-admin routes of h.
-func New(h *auth.Handler) *API { return &API{Handler: h} }
+func New(h *authn.Handler) *API { return &API{Handler: h} }

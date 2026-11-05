@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -32,7 +33,7 @@ func TestMemberAdminHandlersPropagateDatabaseCancellation(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fault := authHookPool(t, p, &authQueryHook{match: tc.query, cancel: true})
-			h := New(auth.NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, &events.Recorder{}))
+			h := New(authn.NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, &events.Recorder{}))
 			w := authRequest(t, tc.handler(h), admin, tc.body, tc.id)
 			if w.Code != http.StatusInternalServerError {
 				t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
@@ -46,7 +47,7 @@ func TestMemberAdminHandlersPropagateDatabaseCancellation(t *testing.T) {
 
 func TestAdminKickRejectsMissingOrDisconnectedUser(t *testing.T) {
 	p, admin, member := authFixture(t)
-	h := New(auth.NewHandler(&auth.Sessions{DB: p}, &events.Recorder{}))
+	h := New(authn.NewHandler(&auth.Sessions{DB: p}, &events.Recorder{}))
 	for _, tc := range []struct {
 		id     uuid.UUID
 		status int

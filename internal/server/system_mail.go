@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/mailer"
 )
@@ -73,7 +74,7 @@ func (h *systemHandler) sendTestMail(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 	locale := owner.Locale
-	if err := h.mail.Send(r.Context(), auth.TestMail(to, locale, h.names.Get(r.Context()))); err != nil {
+	if err := h.mail.Send(r.Context(), authn.TestMail(to, locale, h.names.Get(r.Context()))); err != nil {
 		var se *mailer.SendError
 		if errors.As(err, &se) {
 			return httpx.ErrUnavailable(se.Error())
@@ -86,7 +87,7 @@ func (h *systemHandler) sendTestMail(w http.ResponseWriter, r *http.Request) err
 
 func (h *systemHandler) testMailRecipient(r *http.Request, owner *auth.User, explicit string) (string, error) {
 	if explicit != "" {
-		return auth.NormalizeEmail(explicit)
+		return authn.NormalizeEmail(explicit)
 	}
 	var stored *string
 	err := h.db.QueryRow(r.Context(), `SELECT email FROM users WHERE id = $1`, owner.ID).Scan(&stored)
