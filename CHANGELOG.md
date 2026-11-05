@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.9.3](https://github.com/msch128/mnema-talk/compare/v2.9.2...v2.9.3) (2026-11-05)
+
+
+### Bug Fixes
+
+* IsDMTalk reports lookup errors and the audit paths fail closed ([#686](https://github.com/msch128/mnema-talk/issues/686)) ([eb4954c](https://github.com/msch128/mnema-talk/commit/eb4954c6de7ef4328c3981af678c91ad280969ba))
+* refuse paths that differ only in case when building the signed bundle ([#683](https://github.com/msch128/mnema-talk/issues/683)) ([eb4954c](https://github.com/msch128/mnema-talk/commit/eb4954c6de7ef4328c3981af678c91ad280969ba))
+* **updater:** put moved tags back when a later container of the update fails ([#693](https://github.com/msch128/mnema-talk/issues/693)) ([eb4954c](https://github.com/msch128/mnema-talk/commit/eb4954c6de7ef4328c3981af678c91ad280969ba))
+
+
+### Code Refactoring
+
+* drop the chat wrappers only tests called and point the tests at the real API ([#691](https://github.com/msch128/mnema-talk/issues/691)) ([eb4954c](https://github.com/msch128/mnema-talk/commit/eb4954c6de7ef4328c3981af678c91ad280969ba))
+* guard the chat split with a route-table golden, shared test fixtures and an import-boundary test ([#689](https://github.com/msch128/mnema-talk/issues/689)) ([eb4954c](https://github.com/msch128/mnema-talk/commit/eb4954c6de7ef4328c3981af678c91ad280969ba))
+* move the account mail texts and language rule into auth/mailtext ([#684](https://github.com/msch128/mnema-talk/issues/684)) ([eb4954c](https://github.com/msch128/mnema-talk/commit/eb4954c6de7ef4328c3981af678c91ad280969ba))
+
 ## [2.9.2](https://github.com/msch128/mnema-talk/compare/v2.9.1...v2.9.2) (2026-11-05)
 
 
