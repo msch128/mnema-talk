@@ -1,0 +1,39 @@
+doc/architecture.md
+  s_db63cd4785d2fa::t_24662f4d2d4b96 34
+internal/chat/core_aliases.go
+  s_db63cd4785d2fa::t_a9ffde078c2015 12,127-128,219-225
+internal/chat/handler.go
+  s_e3e7e7812a5e9e::t_ce1fca0ca0ddee 19,122-126,132
+internal/chat/page_cursor_integration_test.go
+  s_db63cd4785d2fa::t_ebebe0c99beed9 18,43,56,59,66
+internal/chat/saved/api.go
+  s_e3e7e7812a5e9e::t_e632028b2d2cd9 1-19
+internal/chat/saved/saved.go
+  s_e3e7e7812a5e9e::t_65e71e4b382b0a 1,46-47,70-71,73-74,76-77,130,144,188,196,201,205,223-224,233,249,253,257,261,265,286,292,297,314-316
+internal/repo/boundaries_test.go
+  s_e3e7e7812a5e9e::t_8f59bec8897d74 74,76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "68f097e984ac441c7ec4f4b9bbee28a71d40b347",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_e3e7e7812a5e9e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aa677880f9a6ee2ef",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
