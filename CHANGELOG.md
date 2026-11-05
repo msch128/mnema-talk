@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.9](https://github.com/msch128/mnema-talk/compare/v2.9.8...v2.9.9) (2026-11-05)
+
+
+### Bug Fixes
+
+* bound each pulseaudio install attempt in CI and fall back to archive.ubuntu.com ([#714](https://github.com/msch128/mnema-talk/issues/714)) ([533c49c](https://github.com/msch128/mnema-talk/commit/533c49cf9cca65fbf9a562edb239a04402e5678a))
+
 ## [2.9.8](https://github.com/msch128/mnema-talk/compare/v2.9.7...v2.9.8) (2026-11-05)
 
 
