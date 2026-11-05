@@ -37,9 +37,12 @@ type viewerTrack struct {
 	// share has), which automatic never exceeds.
 	fit int
 	// ad chooses the layer of a viewer who left it to the server (pref < 0).
-	ad         *adapter
-	closed     bool
-	started    bool
+	ad      *adapter
+	closed  bool
+	started bool
+	// unbound: the track is added to the viewer's connection but the browser
+	// has not answered yet, so Pion has nothing to write to (see expectBind).
+	unbound    bool
 	lastKeyAsk time.Time
 	// since is when the track was made, the stall clock until a first packet.
 	since time.Time
@@ -63,6 +66,35 @@ type viewerTrack struct {
 	reported   QualityState
 	hasRep     bool
 	qualityOut newest[QualityState]
+}
+
+// expectBind makes the track wait for its connection to bind it. Pion's
+// WriteRTP succeeds without error while nothing is bound, so a keyframe sent
+// before the browser's answer would be counted as delivered and the viewer
+// would sit on undecodable delta frames (a picture that stays 0x0).
+func (vt *viewerTrack) expectBind() {
+	vt.mu.Lock()
+	vt.unbound = true
+	vt.mu.Unlock()
+}
+
+// Bind is Pion's call when the viewer's answer arrives. The keyframe asked for
+// when the viewer was added may have passed already, so ask again.
+func (vt *viewerTrack) Bind(t webrtc.TrackLocalContext) (webrtc.RTPCodecParameters, error) {
+	params, err := vt.TrackLocalStaticRTP.Bind(t)
+	if err != nil {
+		return params, err
+	}
+	vt.bound()
+	return params, nil
+}
+
+func (vt *viewerTrack) bound() {
+	vt.mu.Lock()
+	vt.unbound = false
+	vt.lastKeyAsk = time.Time{}
+	vt.mu.Unlock()
+	vt.retarget()
 }
 
 // close ends delivery; the track itself is torn down by Pion.
@@ -312,6 +344,9 @@ func (vt *viewerTrack) writeLocked(idx int, src *rtp.Packet, now time.Time) (swi
 		return false, false, -1
 	}
 	eff = vt.eff
+	if vt.unbound {
+		return false, false, eff
+	}
 	drop, switched, ask := vt.checkLayerTransition(idx, src, now)
 	if drop {
 		return false, ask, eff

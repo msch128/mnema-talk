@@ -635,3 +635,32 @@ func TestViewerKeyframeRequestGoesToItsLayer(t *testing.T) {
 	rig.group.detach(rig.infos[0])
 	rig.group.requestKeyframe(0)
 }
+
+// A keyframe that passes before the viewer's connection binds the track goes
+// nowhere (Pion reports success), so it must not count as delivered: the
+// viewer would then wait on delta frames it cannot decode.
+func TestKeyframeBeforeBindIsNotCountedAsDelivered(t *testing.T) {
+	useFakeClock(t)
+	rig := newLayerRig(t, "video/VP8", 1)
+	vt, out := rig.viewer(0)
+	vt.expectBind()
+	rig.asked(0)
+
+	rig.pkt(0, 1, 1, vp8Payload(true, true, 1, true, 1, 'k'))
+	rig.pkt(0, 2, 1, vp8Payload(false, true, 2, true, 1, 'd'))
+	if got := out.take(); len(got) != 0 {
+		t.Fatalf("packets reached an unbound track: %v", seqs(got))
+	}
+	if vt.state().Layer != -1 {
+		t.Fatal("the viewer was moved to a layer before it could receive it")
+	}
+
+	vt.bound()
+	if !rig.asked(0) {
+		t.Fatal("no keyframe was asked for when the track was bound")
+	}
+	rig.pkt(0, 3, 2, vp8Payload(true, true, 3, true, 2, 'k'))
+	if got := out.take(); len(got) != 1 || vt.state().Layer != 0 {
+		t.Fatalf("the keyframe after binding was not delivered: %v", seqs(got))
+	}
+}
