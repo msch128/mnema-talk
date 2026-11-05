@@ -4,7 +4,7 @@
 # Locale resources: the German UI, mail, push and seed texts.
 path: web/src/i18n/de.json | German UI strings (i18n resource)
 path: web/src/i18n/en.json | English UI strings that quote German terms next to their translation
-path: internal/auth/locales/mail.json | German account mails (locale resource)
+path: internal/auth/mailtext/locales/mail.json | German account mails (locale resource)
 path: internal/push/locales/texts.json | German push texts (locale resource)
 path: internal/chat/seed_layout.json | German default category and channel names, keyed by language (locale resource)
 

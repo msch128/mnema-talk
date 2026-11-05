@@ -1,36 +1,33 @@
-package auth
+package mailtext
 
 import (
-	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 )
 
-// defaultMailLocale is the instance default: the language of a mail when the
+// DefaultLocale is the instance default: the language of a mail when the
 // account has no stored language and the request names none we ship.
-const defaultMailLocale = "en"
+const DefaultLocale = "en"
 
-// mailLocale is the one rule every account mail follows (verification, reset,
+// Locale is the one rule every account mail follows (verification, reset,
 // security alert): the member's stored UI language if there is one, otherwise
 // the first language of the triggering request's Accept-Language header that
 // the app ships, otherwise the instance default. acceptLanguage is "" when no
-// request of the member triggered the mail.
-func mailLocale(stored, acceptLanguage string) string {
-	if SupportedLocales[stored] {
+// request of the member triggered the mail. supported is the set of UI
+// languages the app ships (auth.SupportedLocales).
+func Locale(stored, acceptLanguage string, supported map[string]bool) string {
+	if supported[stored] {
 		return stored
 	}
-	if l := preferredLocale(acceptLanguage); l != "" {
+	if l := preferredLocale(acceptLanguage, supported); l != "" {
 		return l
 	}
-	return defaultMailLocale
+	return DefaultLocale
 }
 
-// requestLanguage is the Accept-Language header of r, to be handed to mailLocale.
-func requestLanguage(r *http.Request) string { return r.Header.Get("Accept-Language") }
-
 // preferredLocale returns the supported language the header ranks highest, or "".
-func preferredLocale(header string) string {
+func preferredLocale(header string, supported map[string]bool) string {
 	type choice struct {
 		lang string
 		q    float64
@@ -45,7 +42,7 @@ func preferredLocale(header string) string {
 			}
 		}
 		primary, _, _ := strings.Cut(strings.ToLower(strings.TrimSpace(tag)), "-")
-		if q > 0 && SupportedLocales[primary] {
+		if q > 0 && supported[primary] {
 			choices = append(choices, choice{primary, q})
 		}
 	}
