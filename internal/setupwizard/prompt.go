@@ -73,7 +73,7 @@ func (p *prompter) askSecret(question string) (string, error) {
 	return p.ask(question, "")
 }
 
-// askRequiredURL asks until the answer is a usable public URL.
+// askPublicURL asks until the answer is a usable public URL.
 func (p *prompter) askPublicURL(def string) (string, error) {
 	for {
 		a, err := p.ask("Public address", def)
@@ -110,24 +110,43 @@ func (p *prompter) askMail() (SMTP, error) {
 	if err != nil || !yes {
 		return s, err
 	}
-	steps := []struct {
-		q    string
-		def  string
-		into *string
-	}{
-		{"SMTP server host", "", &s.Host},
-		{"SMTP port", "587", &s.Port},
-		{"Encryption (starttls, tls or plain)", "starttls", &s.TLS},
-		{"SMTP user name (empty for none)", "", &s.Username},
-		{"Sender address, e.g. Mnema Talk <noreply@example.org>", "", &s.From},
+	if s.Host, err = p.ask("SMTP server host (empty to skip mail)", ""); err != nil || s.Host == "" {
+		return SMTP{}, err
 	}
-	for _, st := range steps {
-		if *st.into, err = p.ask(st.q, st.def); err != nil {
-			return s, err
-		}
+	if err = p.askMailDetails(&s); err != nil {
+		return s, err
 	}
 	if s.Username != "" {
 		s.Password, err = p.askSecret("SMTP password")
 	}
 	return s, err
+}
+
+// askMailDetails asks for the rest of the mail setup after its host; the
+// encryption and the sender are asked again until the server would accept them.
+func (p *prompter) askMailDetails(s *SMTP) (err error) {
+	if s.Port, err = p.ask("SMTP port", "587"); err != nil {
+		return err
+	}
+	for {
+		if s.TLS, err = p.ask("Encryption (starttls, tls or plain)", "starttls"); err != nil {
+			return err
+		}
+		if err = validateSMTPTLS(s.TLS); err == nil {
+			break
+		}
+		fmt.Fprintln(p.out, "  "+err.Error())
+	}
+	if s.Username, err = p.ask("SMTP user name (empty for none)", ""); err != nil {
+		return err
+	}
+	for s.From == "" {
+		if s.From, err = p.ask("Sender address, e.g. Mnema Talk <noreply@example.org>", ""); err != nil {
+			return err
+		}
+		if s.From == "" {
+			fmt.Fprintln(p.out, "  mail needs a sender address")
+		}
+	}
+	return nil
 }

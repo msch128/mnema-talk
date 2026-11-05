@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
@@ -45,7 +46,7 @@ func (h *Handler) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies
 	s := &auditSnapshot{msg: msg}
 	// Fail closed: when the channel cannot be read, a direct message must not
 	// end up in the log with its text.
-	if err := h.DB.QueryRow(ctx, `SELECT name, type = 'dm' FROM channels WHERE id = $1`, msg.ChannelID).Scan(&s.channel, &s.dm); err != nil {
+	if s.channel, s.dm, err = channelAuditName(ctx, h.DB, msg.ChannelID); err != nil {
 		return nil
 	}
 	if s.dm {
@@ -67,28 +68,46 @@ func (h *Handler) fetchAuditedReplyIDs(ctx context.Context, parentID uuid.UUID) 
 // replyIDsForAudit reads, per message, the ids of its first maxAuditedReplies
 // thread replies. Ids only: replies are other members' messages, and one that
 // is deleted on its own gets its own entry with its text. A failure costs
-// detail only: the deletion must not fail.
+// detail only: the deletion must not fail, so inside a transaction the read
+// runs in a savepoint (a failed statement would abort the whole transaction).
 func replyIDsForAudit(ctx context.Context, q db.Querier, parentIDs []uuid.UUID) map[uuid.UUID][]uuid.UUID {
-	out := map[uuid.UUID][]uuid.UUID{}
+	var out map[uuid.UUID][]uuid.UUID
+	read := func(q db.Querier) (err error) {
+		out, err = readReplyIDs(ctx, q, parentIDs)
+		return err
+	}
+	var err error
+	if tx, ok := q.(pgx.Tx); ok {
+		err = pgx.BeginFunc(ctx, tx, func(sp pgx.Tx) error { return read(sp) })
+	} else {
+		err = read(q)
+	}
+	if err != nil {
+		slog.Warn("audit: read replies", "err", err)
+		return map[uuid.UUID][]uuid.UUID{}
+	}
+	return out
+}
+
+func readReplyIDs(ctx context.Context, q db.Querier, parentIDs []uuid.UUID) (map[uuid.UUID][]uuid.UUID, error) {
 	rows, err := q.Query(ctx, `
 		SELECT parent_id, id FROM (
 			SELECT parent_id, id, row_number() OVER (PARTITION BY parent_id ORDER BY created_at, id) AS rn
 			FROM messages WHERE parent_id = ANY($1)) v
 		WHERE rn <= $2 ORDER BY parent_id, rn`, parentIDs, maxAuditedReplies)
 	if err != nil {
-		slog.Warn("audit: read replies", "err", err)
-		return out
+		return nil, err
 	}
 	defer rows.Close()
+	out := map[uuid.UUID][]uuid.UUID{}
 	for rows.Next() {
 		var parent, reply uuid.UUID
 		if err := rows.Scan(&parent, &reply); err != nil {
-			slog.Warn("audit: read replies", "err", err)
-			return out
+			return nil, err
 		}
 		out[parent] = append(out[parent], reply)
 	}
-	return out
+	return out, rows.Err()
 }
 
 func attachmentList(m *Message) []map[string]any {
@@ -174,4 +193,10 @@ func (h *Handler) tellAuthor(s *auditSnapshot, by *auth.User, reason string) {
 	h.Events.SendToUsers([]uuid.UUID{s.msg.UserID}, events.ModerationNotice, map[string]any{
 		"kind": "message_deleted", "reason": reason, "channel_name": s.channel,
 	})
+}
+
+// channelAuditName reads a channel's name and whether it is a conversation.
+func channelAuditName(ctx context.Context, q db.Querier, id uuid.UUID) (name string, dm bool, err error) {
+	err = q.QueryRow(ctx, `SELECT name, type = 'dm' FROM channels WHERE id = $1`, id).Scan(&name, &dm)
+	return name, dm, err
 }

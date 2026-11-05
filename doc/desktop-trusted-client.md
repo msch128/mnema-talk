@@ -97,8 +97,8 @@ reaches the parser unauthenticated.
 ### Signing
 
 `cmd/webbundle` (package `internal/webbundle`, plain `crypto/ed25519`) has
-three commands: `build` (directory + key to zip), `verify` (zip + public key)
-and `keyid`. The release workflow runs it in a job after the image job:
+four commands: `build` (directory + key to zip), `verify` (zip + public key),
+`keyid` and `trust` (the signed trust statement, below). The release workflow runs it in a job after the image job:
 it builds the web app with `MNEMA_VERSION=<release>`, signs with the Actions
 secret `WEB_BUNDLE_SIGNING_KEY`, verifies the result against the public key
 committed in this repository (`web/desktop-signing.pub`) and attaches
@@ -710,7 +710,7 @@ notarized, because the project does not buy certificates. Consequences:
 SmartScreen and Gatekeeper warn on first run, and nothing ties the program to
 the publisher on the user's machine. Later updates are verified by the pinned
 minisign key instead.
-The release carries a `SHA256SUMS` file next to the ZIP, which is only
+The desktop release carries a `SHA256SUMS` file next to the ZIP, which is only
 protection against a corrupted download: it is published by the same account in
 the same release, so whoever can replace the ZIP can replace the checksums.
 It does not prove who built the file. Anyone who needs more than that builds the client from source. The bundle key pinned in the

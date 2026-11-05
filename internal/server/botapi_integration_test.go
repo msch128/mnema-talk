@@ -330,7 +330,6 @@ func TestBotAPIReactions(t *testing.T) {
 	wantStatus(t, "add again", f.client.put(path), http.StatusNoContent)
 	count := func() int {
 		var m chat.Message
-		f.owner.get("/api/channels/"+f.open.String()+"/messages").decode(t, &[]chat.Message{})
 		res := f.client.get(botPath(f.open, "/messages/"+msg.String()))
 		res.decode(t, &m)
 		n := 0
@@ -397,14 +396,12 @@ func TestBotAPIUpload(t *testing.T) {
 func TestBotAPIMembersNeedTheIntent(t *testing.T) {
 	f := newBotFixture(t, false)
 	max := f.a.register(f.owner, "max")
-	stranger := f.a.register(f.owner, "stranger")
+	f.a.register(f.owner, "stranger")
 	// max can see the bot's channel; the private channel's only viewer stays out of the list.
 	closed := f.a.createChannel(f.owner, "closed", "text")
 	private := createRole(t, f.owner, "Private", 0)
 	wantStatus(t, "private", putOverwrites(f.owner, "channels", closed,
 		overwrite("role", everyoneID(t, f.owner), 0, perm.ViewChannel), overwrite("role", private, perm.ViewChannel, 0)), http.StatusNoContent)
-	_ = max
-	_ = stranger
 	wantStatus(t, "without intent", f.client.get(bot.BasePath+"/members"), http.StatusForbidden)
 	wantStatus(t, "grant intent", f.owner.patch(f.botPath, map[string]any{"allowed_intents": bot.IntentGuildMembers}), http.StatusOK)
 

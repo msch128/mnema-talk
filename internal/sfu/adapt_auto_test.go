@@ -62,7 +62,7 @@ func TestAutoReturnsToTheSourceOnAFastLinkAfterATrouble(t *testing.T) {
 			t.Fatalf("severe loss: layer %d changed %v, want %d", layer, changed, trouble)
 		}
 	}
-	now, moves := runRamp(a, r, now, 600)
+	_, moves := runRamp(a, r, now, 600)
 	if a.layer != 0 {
 		t.Fatalf("on layer %d ten minutes after the trouble, moves %v", a.layer, moves)
 	}

@@ -182,20 +182,31 @@ func (h *Handler) listFollowedThreads(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	rows, err := h.DB.Query(r.Context(), `
+	ids, err := FollowedThreadIDs(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, visible, maxFollowedThreads)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, FollowedThreads{ThreadIDs: ids})
+	return nil
+}
+
+// FollowedThreadIDs lists the threads the member follows, newest follow first.
+// visible limits them to channels the member may see (nil: no limit). The
+// result is never nil, so it encodes as an empty list.
+func FollowedThreadIDs(ctx context.Context, q db.Querier, user uuid.UUID, visible []uuid.UUID, limit int) ([]uuid.UUID, error) {
+	rows, err := q.Query(ctx, `
 		SELECT f.thread_id FROM thread_follows f JOIN messages m ON m.id = f.thread_id
 		WHERE f.user_id = $1 AND f.following AND ($2::uuid[] IS NULL OR m.channel_id = ANY($2::uuid[]))
-		ORDER BY f.created_at DESC, f.thread_id LIMIT $3`, auth.UserFrom(r.Context()).ID, visible, maxFollowedThreads)
+		ORDER BY f.created_at DESC, f.thread_id LIMIT $3`, user, visible, limit)
 	if err != nil {
-		return fmt.Errorf("list followed threads: %w", err)
+		return nil, fmt.Errorf("list followed threads: %w", err)
 	}
 	ids, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
 	if err != nil {
-		return fmt.Errorf("list followed threads: %w", err)
+		return nil, fmt.Errorf("list followed threads: %w", err)
 	}
 	if ids == nil {
 		ids = []uuid.UUID{}
 	}
-	httpx.WriteJSON(w, http.StatusOK, FollowedThreads{ThreadIDs: ids})
-	return nil
+	return ids, nil
 }

@@ -108,8 +108,8 @@ func (o Options) normalize() (Options, error) {
 	if o.Language == "" {
 		o.Language = DefaultLanguage
 	}
-	if o.Language != "en" && o.Language != "de" {
-		return o, fmt.Errorf("language must be en or de, got %q", o.Language)
+	if err := validateLanguage(o.Language); err != nil {
+		return o, err
 	}
 	if o.AdminUsername == "" {
 		o.AdminUsername = DefaultAdminUsername
@@ -164,12 +164,22 @@ func (o Options) validateSMTP() error {
 	if s.From == "" {
 		return errors.New("mail needs a sender address (--smtp-from)")
 	}
-	switch s.TLS {
-	case "", "starttls", "tls", "plain":
-	default:
-		return fmt.Errorf("--smtp-tls must be starttls, tls or plain, got %q", s.TLS)
+	return validateSMTPTLS(s.TLS)
+}
+
+func validateLanguage(l string) error {
+	if l != "en" && l != "de" {
+		return fmt.Errorf("language must be en or de, got %q", l)
 	}
 	return nil
+}
+
+func validateSMTPTLS(v string) error {
+	switch v {
+	case "", "starttls", "tls", "plain":
+		return nil
+	}
+	return fmt.Errorf("--smtp-tls must be starttls, tls or plain, got %q", v)
 }
 
 // NormalizePublicURL turns what an operator types into the form PUBLIC_URL

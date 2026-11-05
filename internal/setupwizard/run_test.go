@@ -172,3 +172,30 @@ func TestSetupWritesToTheCurrentDirectoryByDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// An answer the server would refuse is asked again on the spot, instead of
+// failing after the last question with every answer lost.
+func TestInteractiveSetupAsksAgainForLanguageAndMailAnswersItWouldRefuse(t *testing.T) {
+	dir := t.TempDir()
+	answers := strings.Join([]string{
+		"n", "https://talk.example.org", "", // not a trial, address, owner: default
+		"fr", "DE", // language: rejected, then accepted in any case
+		"",                                                                                // LAN address: none
+		"y", "smtp.example.org", "", "ssl", "starttls", "", "", "Talk <talk@example.org>", // mail: bad encryption, then a missing sender
+		"", // updater: no
+	}, "\n") + "\n"
+	out, err := runSetup(t, answers, "--dir", dir, "--compose-template", repoCompose, "--skip-preflight")
+	if err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, ".env"))
+	cfg := asProductionConfig(t, string(raw))
+	if cfg.InitialLanguage != "de" || cfg.SMTP.Host != "smtp.example.org" {
+		t.Errorf("answers were not applied: %q %+v", cfg.InitialLanguage, cfg.SMTP)
+	}
+	for _, want := range []string{`language must be en or de, got "fr"`, `must be starttls, tls or plain, got "ssl"`, "mail needs a sender address"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+}

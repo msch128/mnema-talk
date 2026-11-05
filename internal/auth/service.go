@@ -112,6 +112,7 @@ func SetLocale(ctx context.Context, p *db.Pool, userID uuid.UUID, locale string)
 	return u, err
 }
 
+// IsAdmin reports whether u is the Owner (role "admin").
 func (u User) IsAdmin() bool { return u.Role == RoleAdmin }
 
 // Public is u as other members see it: the chosen presence stays private,

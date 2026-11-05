@@ -3,7 +3,6 @@ package sfu
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net"
 	"slices"
 	"strings"
@@ -75,30 +74,6 @@ func localAnnounceDNS(t *testing.T) *atomic.Int32 {
 		<-done
 	})
 	return state
-}
-
-func waitSFUCondition(t *testing.T, label string, condition func() bool) {
-	t.Helper()
-	timeout := time.After(5 * time.Second)
-	for {
-		if condition() {
-			return
-		}
-		select {
-		case <-timeout:
-			t.Fatalf("timed out waiting for %s", label)
-		case <-time.After(time.Millisecond):
-		}
-	}
-}
-
-func captureSFULog(t *testing.T) *synchronizedLogCapture {
-	t.Helper()
-	buf := &synchronizedLogCapture{}
-	old := slog.Default()
-	slog.SetDefault(slog.New(slog.NewTextHandler(buf, nil)))
-	t.Cleanup(func() { slog.SetDefault(old) })
-	return buf
 }
 
 func TestAnnounceRefreshTracksDNSAndPreservesAddressOnFailure(t *testing.T) {

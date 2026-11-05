@@ -3,7 +3,7 @@
 // doc/desktop-trusted-client.md). A bundle is one zip: manifest.json (file
 // hashes, version and compatibility numbers), manifest.sig (Ed25519 over the
 // exact manifest bytes) and app/<path> for the files the desktop client
-// serves. Dotfiles and dotted directories are rejected. The API reference stays in the server
+// serves. Dotfiles are rejected. The API reference stays in the server
 // embed and is left out of the signed bundle.
 //
 // The desktop host implements the same verification in Rust; the limits and
@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -294,6 +293,9 @@ func (c *appCollector) visit(path string, d fs.DirEntry, err error) error {
 	if err := rejectDotfile(rel); err != nil {
 		return err
 	}
+	if err := rejectUnknownType(rel); err != nil {
+		return err
+	}
 	data, err := readAppFile(path, rel)
 	if err != nil {
 		return err
@@ -303,24 +305,6 @@ func (c *appCollector) visit(path string, d fs.DirEntry, err error) error {
 		return fmt.Errorf("%s: bundle exceeds the size limits", rel)
 	}
 	c.contents[rel] = data
-	return nil
-}
-
-// omitFromSignedBundle leaves the server-only API reference out of the
-// desktop bundle. Vite names that entry's chunks apiDocs-<hash>.
-func omitFromSignedBundle(rel string) bool {
-	base := path.Base(rel)
-	return rel == "api-docs.html" || strings.HasPrefix(base, "apiDocs-")
-}
-
-// rejectDotfile stops placeholders such as .gitkeep, and anything below a
-// dotted directory such as .well-known/, from being signed.
-func rejectDotfile(rel string) error {
-	for _, seg := range strings.Split(rel, "/") {
-		if strings.HasPrefix(seg, ".") {
-			return fmt.Errorf("dotfile forbidden in signed web bundle: %s", rel)
-		}
-	}
 	return nil
 }
 

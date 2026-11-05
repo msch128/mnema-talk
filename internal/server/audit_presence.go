@@ -2,12 +2,12 @@ package server
 
 import (
 	"context"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"log/slog"
 
 	"github.com/google/uuid"
 
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 

@@ -94,13 +94,34 @@ func panicStack(stack []byte, limit int) string {
 	return out
 }
 
+// secretPathPrefixes name the routes that carry a secret as the path segment
+// after the next one: /api/webhooks/{id}/{token} and
+// /api/bot/v1/interactions/{interactionID}/{token}/...
+var secretPathPrefixes = []string{"/api/webhooks/", "/api/bot/v1/interactions/"}
+
 // LogPath is the path as it may appear in logs: the secret token of a webhook
-// execute URL (/api/webhooks/{id}/{token}) is replaced.
+// execute URL (/api/webhooks/{id}/{token}) and of a bot interaction response
+// URL (/api/bot/v1/interactions/{id}/{token}/callback) is replaced.
 func LogPath(path string) string {
-	if rest, ok := strings.CutPrefix(path, "/api/webhooks/"); ok {
-		if id, _, found := strings.Cut(rest, "/"); found {
-			return "/api/webhooks/" + id + "/[redacted]"
+	for _, prefix := range secretPathPrefixes {
+		rest, ok := strings.CutPrefix(path, prefix)
+		if !ok {
+			continue
 		}
+		id, afterID, found := strings.Cut(rest, "/")
+		if !found {
+			return path
+		}
+		token, tail, _ := strings.Cut(afterID, "/")
+		if token == "" {
+			return path
+		}
+		if prefix == "/api/webhooks/" {
+			tail = "" // a webhook URL is nothing but id and token
+		} else if tail != "" {
+			tail = "/" + tail
+		}
+		return prefix + id + "/[redacted]" + tail
 	}
 	return path
 }

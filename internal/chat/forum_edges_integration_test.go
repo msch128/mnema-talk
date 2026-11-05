@@ -220,6 +220,29 @@ func TestBulkDeleteSurvivesAFailingEditVersionRead(t *testing.T) {
 	}
 }
 
+func TestBulkDeleteSurvivesAFailingReplyRead(t *testing.T) {
+	f := newChatFixture(t)
+	ctx := context.Background()
+	err := pgx.BeginFunc(ctx, f.p, func(tx pgx.Tx) error {
+		// A column the reply read needs is gone: its statement fails and, without
+		// a savepoint, takes the transaction (and the deletion) down with it.
+		if _, err := tx.Exec(ctx, `ALTER TABLE messages RENAME COLUMN parent_id TO parent_id_gone`); err != nil {
+			return err
+		}
+		if got := replyIDsForAudit(ctx, tx, []uuid.UUID{f.m}); len(got) != 0 {
+			t.Fatalf("replies = %v; want none after a failed read", got)
+		}
+		var one int
+		if err := tx.QueryRow(ctx, `SELECT 1`).Scan(&one); err != nil {
+			t.Fatalf("the transaction is unusable after the failed read: %v", err)
+		}
+		return errRollBack // the rename must not outlive the test
+	})
+	if !errors.Is(err, errRollBack) {
+		t.Fatal(err)
+	}
+}
+
 func TestAnchorLookupFailureIsNotAMissingMessage(t *testing.T) {
 	f := newChatFixture(t)
 	h := &Handler{DB: f.p}

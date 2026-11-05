@@ -26,15 +26,12 @@ const (
 	MaxVanitySlug = 32
 )
 
-// vanityPattern: lowercase letters and digits, single hyphens between them.
+// asciiSlug is the character set a name may use before it is lower-cased.
 var asciiSlug = regexp.MustCompile(`^[A-Za-z0-9-]+$`)
 
+// vanityPattern: lowercase letters and digits, single hyphens between them.
 var vanityPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
-// reservedSlugs are words that name something of the app: its routes (the
-// API, the web app's top-level paths), its static files and the words people
-// expect to mean the service itself. A test keeps the list in step with the
-// routes of web/src/lib/router.ts and the files in web/public.
 // requireOwnerToOpen lets only the Owner make the link a public invite:
 // turning sign-ups on, or moving a link that takes sign-ups to another name,
 // opens registration to whoever knows the new address. An Administrator may
@@ -57,6 +54,10 @@ func (h *Handler) requireOwnerToOpen(r *http.Request, slug string, accepts bool)
 	return httpx.ErrForbidden("only the Owner can let the vanity link create accounts")
 }
 
+// reservedSlugs are words that name something of the app: its routes (the
+// API, the web app's top-level paths), its static files and the words people
+// expect to mean the service itself. A test keeps the list in step with the
+// routes of web/src/lib/router.ts and the files in web/public.
 var reservedSlugs = map[string]bool{
 	"admin": true, "api": true, "assets": true, "c": true, "dm": true, "docs": true,
 	"events": true, "favicon": true, "health": true, "help": true, "invite": true,

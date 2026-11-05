@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/bot"
-	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -477,7 +476,6 @@ func TestSlashCommandPermissions(t *testing.T) {
 	if !limited {
 		t.Fatal("running commands is not rate limited")
 	}
-	_ = gateway.OpDispatch
 }
 
 // A bot that lost its permission to send cannot answer an interaction.

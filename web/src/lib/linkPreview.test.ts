@@ -44,7 +44,7 @@ describe('fetchLinkPreview', () => {
     expect(api).toHaveBeenCalledTimes(2)
   })
 
-  it.each([null, 'synthetic', { status: 'bad' }, { status: 0 }, { status: 500 }])('retries network/server failures: %j', async error => {
+  it.each([null, 'synthetic', { status: 'bad' }, { status: 0 }, { status: 401 }, { status: 403 }, { status: 500 }])('retries network/server failures: %j', async error => {
     vi.mocked(api).mockRejectedValueOnce(error)
     expect(await fetchLinkPreview('https://retry.example')).toBeNull()
     vi.mocked(api).mockResolvedValueOnce({ title: 'synthetic' })

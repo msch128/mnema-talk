@@ -540,8 +540,9 @@ func TestGeneratorRefusesEverythingButUDP(t *testing.T) {
 }
 
 func TestProbeLoopReportsInStatus(t *testing.T) {
+	previous := probeFirstDelay
 	probeFirstDelay = 10 * time.Millisecond
-	t.Cleanup(func() { probeFirstDelay = 3 * time.Second })
+	t.Cleanup(func() { probeFirstDelay = previous })
 	port, sfu := freePort(t), listenUDP(t)
 	p := uint16(sfu.LocalAddr().(*net.UDPAddr).Port)
 	srv, err := Start(Options{Port: port, BindAddr: "127.0.0.1", PublicHost: "127.0.0.1", MayRelay: func(uuid.UUID) bool { return true },
@@ -580,7 +581,3 @@ func TestHostOf(t *testing.T) {
 		t.Errorf("hostOf = %q", got)
 	}
 }
-
-// A username that looks valid but whose password is wrong does not lift the
-// handshake limit of a TCP connection: only a request that passed the integrity
-// check does.

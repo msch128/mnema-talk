@@ -26,11 +26,6 @@ func (h *Handler) mountDMs(r chi.Router) {
 	starts.Post("/dms/{id}/members", httpx.Handle(h.addDMMember))
 }
 
-// DMStarted is what the other members of a new conversation, and the starter's
-// other sessions, hear: the conversation as its member sees it at the start.
-// It is the payload of dm_created.
-type DMStarted = DirectMessage
-
 // DMMemberChange is the payload of dm_member_added and dm_member_removed.
 type DMMemberChange struct {
 	DMID uuid.UUID `json:"dm_id" format:"uuid"`

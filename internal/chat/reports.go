@@ -204,3 +204,57 @@ func insertReport(ctx context.Context, p *db.Pool, nr NewReport, ref *messageRef
 	}
 	return id, err
 }
+
+// listReportRows reads one page of reports, newest first, from the row after
+// before (nil: the first page). status "all" lists every state.
+func listReportRows(ctx context.Context, q db.Querier, status string, before *uuid.UUID, limit int) ([]Report, error) {
+	rows, err := q.Query(ctx, reportSelect+reportFrom+`
+		WHERE ($1 = 'all' OR r.status = $1)
+		  AND ($2::uuid IS NULL OR (r.created_at, r.id) < (SELECT created_at, id FROM message_reports WHERE id = $2))
+		ORDER BY r.created_at DESC, r.id DESC LIMIT $3`, status, before, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list reports: %w", err)
+	}
+	reports, err := pgx.CollectRows(rows, scanReport)
+	if err != nil {
+		return nil, fmt.Errorf("list reports: %w", err)
+	}
+	return reports, nil
+}
+
+// loadReportDetail reads one report with its message snapshot.
+func loadReportDetail(ctx context.Context, q db.Querier, id uuid.UUID) (ReportDetail, error) {
+	rows, err := q.Query(ctx, reportSelect+`, r.snapshot`+reportFrom+` WHERE r.id = $1`, id)
+	if err != nil {
+		return ReportDetail{}, fmt.Errorf("get report: %w", err)
+	}
+	detail, err := pgx.CollectExactlyOneRow(rows, func(row pgx.CollectableRow) (ReportDetail, error) {
+		var snap ReportSnapshot
+		rep, err := scanReportWith(row, &snap)
+		return ReportDetail{Report: rep, Snapshot: snap}, err
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ReportDetail{}, errReportNotFound
+	}
+	if err != nil {
+		return ReportDetail{}, fmt.Errorf("get report: %w", err)
+	}
+	return detail, nil
+}
+
+// reportExists tells a missing report from one in the wrong state.
+func reportExists(ctx context.Context, q db.Querier, id uuid.UUID) (bool, error) {
+	var exists bool
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM message_reports WHERE id = $1)`, id).Scan(&exists)
+	return exists, err
+}
+
+// deleteClosedReport removes a report that is no longer open; an open one is
+// kept and reported as not deleted.
+func deleteClosedReport(ctx context.Context, q db.Querier, id uuid.UUID) (bool, error) {
+	tag, err := q.Exec(ctx, `DELETE FROM message_reports WHERE id = $1 AND status <> 'open'`, id)
+	if err != nil {
+		return false, fmt.Errorf("delete report: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
+}

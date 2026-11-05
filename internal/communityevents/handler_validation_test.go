@@ -1,6 +1,7 @@
 package communityevents
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -14,13 +15,16 @@ func TestValidateEventText(t *testing.T) {
 	if err := validateEventText("   ", "desc"); err == nil {
 		t.Fatal("expected error on whitespace title")
 	}
-	longTitle := string(make([]rune, 101))
+	longTitle := strings.Repeat("x", 101)
 	if err := validateEventText(longTitle, "desc"); err == nil {
 		t.Fatal("expected error on title > 100 runes")
 	}
-	longDesc := string(make([]rune, 2001))
+	longDesc := strings.Repeat("x", 2001)
 	if err := validateEventText("Valid Title", longDesc); err == nil {
 		t.Fatal("expected error on desc > 2000 runes")
+	}
+	if err := validateEventText(strings.Repeat("x", 100), strings.Repeat("x", 2000)); err != nil {
+		t.Fatalf("title of 100 and description of 2000 runes must pass: %v", err)
 	}
 	if err := validateEventText("Valid Title", "Valid description"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -59,9 +63,13 @@ func TestValidateEventLocationBasics(t *testing.T) {
 		t.Fatal("expected error when both channel and location are set")
 	}
 	// Free text location > 255 chars
-	longLoc := string(make([]rune, 256))
+	longLoc := strings.Repeat("x", 256)
 	if err := h.validateEventLocation(nil, nil, &longLoc); err == nil {
 		t.Fatal("expected error on location > 255 runes")
+	}
+	exactLoc := strings.Repeat("x", 255)
+	if err := h.validateEventLocation(nil, nil, &exactLoc); err != nil {
+		t.Fatalf("location of 255 runes must pass: %v", err)
 	}
 	// Valid free text location
 	if err := h.validateEventLocation(nil, nil, &loc); err != nil {

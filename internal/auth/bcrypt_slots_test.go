@@ -46,7 +46,13 @@ func TestQueuedHashingGivesUpWhenClientDisconnects(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { _, err := checkPasswordCtx(ctx, "x", "hash"); done <- err }()
-	time.Sleep(20 * time.Millisecond)
+	// Cancel only once the request is really queued behind the full slots.
+	for deadline := time.Now().Add(time.Second); bcryptWaiting.Load() == 0; {
+		if time.Now().After(deadline) {
+			t.Fatal("the request never queued for a hashing slot")
+		}
+		time.Sleep(time.Millisecond)
+	}
 	cancel()
 	select {
 	case err := <-done:
@@ -55,6 +61,9 @@ func TestQueuedHashingGivesUpWhenClientDisconnects(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("a cancelled request kept waiting for a hashing slot")
+	}
+	if n := bcryptWaiting.Load(); n != 0 {
+		t.Fatalf("waiting counter leaked after the cancel: %d", n)
 	}
 }
 

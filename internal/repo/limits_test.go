@@ -24,7 +24,6 @@ const (
 
 // funcLengthAllowlist lists functions that still exceed maxFuncLines. It only
 // shrinks (entries are "directory function"): the test fails when an entry no longer needs to be listed.
-// TODO: refactor these and delete the entries.
 var funcLengthAllowlist = map[string]bool{}
 
 var generatedHeader = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)

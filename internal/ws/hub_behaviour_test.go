@@ -538,9 +538,10 @@ func TestSessionRevokedCloseReplacesExpiredRealSocketWriteDeadline(t *testing.T)
 		defer close(done)
 		client := newClient(nil, conn, auth.User{}, 0)
 		defer client.close()
-		// At120s revalidation the90s ping's ten-second write deadline has
-		// already expired. Preserve the real Gorilla deadline state without
-		// shortening production timers or replacing the socket with a fake.
+		// By the time revalidation runs, the ten-second write deadline of
+		// the last ping has already expired. Preserve the real Gorilla
+		// deadline state without shortening production timers or replacing
+		// the socket with a fake.
 		if err := conn.SetWriteDeadline(time.Now().Add(-time.Minute)); err != nil {
 			t.Error("fixture write deadline could not be set")
 			return
@@ -557,7 +558,7 @@ func TestSessionRevokedCloseReplacesExpiredRealSocketWriteDeadline(t *testing.T)
 	_, _, err = conn.ReadMessage()
 	var closed *websocket.CloseError
 	if !errors.As(err, &closed) || closed.Code != websocket.ClosePolicyViolation || closed.Text != "session revoked" {
-		t.Fatal("expired socket write deadline prevented exact1008 session-revoked control frame")
+		t.Fatal("expired socket write deadline prevented the exact 1008 session-revoked control frame")
 	}
 	select {
 	case <-done:

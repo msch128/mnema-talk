@@ -4,10 +4,13 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
@@ -189,5 +192,69 @@ func TestTokenCheckClosesSessionsOfAnUnqualifiedMinter(t *testing.T) {
 	g.checkTokens(ctx)
 	if !s.conn.closed() || s.conn.closeCode != CloseAuthFailed {
 		t.Fatalf("a token of a minter without Manage bots kept its connection: %d", s.conn.closeCode)
+	}
+}
+
+// Events that arrive while IDENTIFY still checks the token must not reach the
+// bot before READY: the protocol (doc/bots.md) makes READY the first dispatch.
+func TestReadyIsTheFirstDispatchOfASession(t *testing.T) {
+	p := testutil.DB(t)
+	ctx := context.Background()
+	botID, tokens := newBotWithTokens(t, 1)
+	var userID uuid.UUID
+	if err := p.QueryRow(ctx, `SELECT user_id FROM bots WHERE id = $1`, botID).Scan(&userID); err != nil {
+		t.Fatal(err)
+	}
+	g := New(Config{DB: p})
+	creds := &bot.Credentials{
+		Bot:  auth.BotInfo{BotID: botID, TokenID: tokens[0], Intents: bot.AllIntents},
+		User: &auth.User{ID: userID, DisplayName: "gw"},
+	}
+	var intents int64 = bot.AllIntents
+	body, err := json.Marshal(Identify{Intents: &intents})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Hold the token check back until an event has been published.
+	lock, err := p.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = lock.Rollback(ctx) }()
+	if _, err := lock.Exec(ctx, `LOCK TABLE bot_tokens IN ACCESS EXCLUSIVE MODE`); err != nil {
+		t.Fatal(err)
+	}
+	c := newConnection(nil)
+	identified := make(chan *session, 1)
+	go func() { identified <- g.identify(c, body, creds) }()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		g.mu.Lock()
+		n := len(g.sessions)
+		g.mu.Unlock()
+		if n == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the session was never registered")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	broadcastToSessions(g.sessionsWith(bot.IntentGuildMessages), EventMessageCreate, json.RawMessage(`{}`))
+	if err := lock.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if s := <-identified; s == nil {
+		t.Fatal("identify failed")
+	}
+
+	var first frame
+	if err := json.Unmarshal(<-c.send, &first); err != nil {
+		t.Fatal(err)
+	}
+	if first.T == nil || *first.T != "READY" || first.S == nil || *first.S != 1 {
+		t.Fatalf("first dispatch = %+v, want READY with s=1", first)
 	}
 }

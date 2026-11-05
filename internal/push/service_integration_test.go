@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -152,17 +153,20 @@ func TestAHeldPushIsDroppedWhenTheMemberLosesTheChannelInsideTheWindow(t *testin
 	}
 	for name, change := range cases {
 		t.Run(name, func(t *testing.T) {
-			e := newEnvWith(t, http.StatusCreated, time.Second)
+			e := newEnvWith(t, http.StatusCreated, 300*time.Millisecond)
 			sw := &switchablePerms{}
 			sw.cur.Store(e.perms.Service())
 			e.svc.Perms = sw // set before the first message is published
 			alice, bob := e.member("alice"), e.member("bob")
 			e.publish(message(alice, e.general, "first"))
 			e.pushedTo("/device/bob", 1)
+			dropped := metrics.PushDeliveries.With("dropped").Load()
 			e.publish(message(alice, e.general, "held back"))
-			time.Sleep(50 * time.Millisecond) // let the second message reach the window
+			e.waitHeld(bob.id, e.general)
 			change(e, sw, bob)
-			time.Sleep(1500 * time.Millisecond) // the window ends
+			// The window ends and the recheck refuses the held push: the drop
+			// counter is the signal that nothing more will be sent.
+			waitFor(t, func() bool { return metrics.PushDeliveries.With("dropped").Load() > dropped }, "the held push to be dropped")
 			if n := len(e.requestsTo("/device/bob")); n != 1 {
 				t.Fatalf("%d pushes, want only the one sent before the change", n)
 			}
@@ -312,6 +316,18 @@ func TestADeletedAccountTakesItsDevicesAlong(t *testing.T) {
 	if n := countSubscriptions(e, bob.id); n != 0 {
 		t.Fatalf("%d subscriptions left", n)
 	}
+}
+
+// waitHeld blocks until the burst window holds a push for the member in the
+// channel, so a test changes the world only after the message is in the window.
+func (e *env) waitHeld(user, channel uuid.UUID) {
+	e.t.Helper()
+	waitFor(e.t, func() bool {
+		e.svc.co.mu.Lock()
+		defer e.svc.co.mu.Unlock()
+		en := e.svc.co.entries[key{user, channel}]
+		return en != nil && en.waiting != nil
+	}, "a push to wait in the burst window")
 }
 
 func countSubscriptions(e *env, user uuid.UUID) int {

@@ -205,17 +205,29 @@ func channelMediaKeys(ctx context.Context, q db.Querier, ids []uuid.UUID) ([]str
 }
 
 // DeleteChannelsTx deletes the channels and, by cascade, their messages inside
-// tx and returns the storage keys of the media attached to those messages. The
-// caller locks the channels first and removes the objects after the commit.
+// tx and returns the storage keys of the media attached to those messages and
+// of the avatars of the incoming webhooks' bot accounts. The caller locks the
+// channels first and removes the objects after the commit.
 func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string, error) {
 	keys, err := channelMediaKeys(ctx, tx, ids)
 	if err != nil {
 		return nil, err
 	}
+	// The webhook rows go with the channels by cascade, which leaves their
+	// hidden bot accounts behind: nothing would ever reference them again.
+	rows, err := tx.Query(ctx, `SELECT bot_user_id FROM webhooks WHERE channel_id = ANY($1)`, ids)
+	if err != nil {
+		return nil, fmt.Errorf("list webhook bots: %w", err)
+	}
+	botIDs, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("list webhook bots: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = ANY($1)`, ids); err != nil {
 		return nil, fmt.Errorf("delete channel: %w", err)
 	}
-	return keys, nil
+	avatars, err := deleteOrphanBotAccounts(ctx, tx, botIDs)
+	return append(keys, avatars...), err
 }
 
 // DeleteChannel removes a channel and, by cascade, its messages. It returns

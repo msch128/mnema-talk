@@ -71,10 +71,19 @@ export interface Verdict {
 
 const PRIVATE_V4 = /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.)/
 
-/** True for an address on a private, loopback, link-local or shared (CGNAT) network. */
+const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/
+const UNIQUE_LOCAL_V6 = /^f[cd][0-9a-f]{2}:/
+
+/**
+ * True for an address on a private, loopback, link-local or shared (CGNAT) network,
+ * or a name that stays on the LAN. A hostname like "fchat.example.com" or "10.example.com"
+ * is public: only literal addresses are matched by prefix.
+ */
 export function isLocalAddress(address: string): boolean {
   const a = address.toLowerCase()
-  return PRIVATE_V4.test(a) || a === '::1' || a.startsWith('fe80:') || a.startsWith('fc') || a.startsWith('fd') || a.endsWith('.local')
+  if (IPV4.test(a)) return PRIVATE_V4.test(a)
+  if (a.includes(':')) return a === '::1' || a.startsWith('fe80:') || UNIQUE_LOCAL_V6.test(a)
+  return a === 'localhost' || a.endsWith('.local')
 }
 
 const works = (p: PathResult) => p.outcome === 'ok'

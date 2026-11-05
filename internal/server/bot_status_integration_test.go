@@ -141,7 +141,7 @@ func TestBotPresenceUpdatesAreValidatedAndLimited(t *testing.T) {
 	early.waitClose(gateway.CloseNotAuthenticated)
 
 	// A bad status, a bad activity type and streaming (needs a URL) close with 4002.
-	for name, body := range map[string]map[string]any{
+	for _, body := range map[string]map[string]any{
 		"status":    {"status": "busy"},
 		"no status": {"activities": []map[string]any{}},
 		"type":      {"status": "online", "activities": []map[string]any{{"name": "x", "type": 9}}},
@@ -151,7 +151,6 @@ func TestBotPresenceUpdatesAreValidatedAndLimited(t *testing.T) {
 		g.identify("", 0)
 		g.send(gateway.OpPresenceUpdate, body)
 		g.waitClose(4002)
-		_ = name
 	}
 	// Let the presence changes of the connections above settle.
 	for {

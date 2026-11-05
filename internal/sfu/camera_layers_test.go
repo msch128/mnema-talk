@@ -198,7 +198,7 @@ func TestCameraLayersFollowEachViewersPicture(t *testing.T) {
 	}
 
 	// The sender was told the layers somebody needs: the thumbnail among them, and in the end the best layer.
-	waitFor(t, func() bool {
+	waitSFUCondition(t, "the best layer announced as wanted", func() bool {
 		mu.Lock()
 		defer mu.Unlock()
 		if len(wanted) == 0 {
@@ -409,13 +409,13 @@ func TestChangedLadderRecomputesWhatViewersPicturesFit(t *testing.T) {
 		defer vt.mu.Unlock()
 		return vt.fit
 	}
-	waitFor(t, func() bool { return fitOf() == 2 })
+	waitSFUCondition(t, "the viewer's fit to be layer 2", func() bool { return fitOf() == 2 })
 
 	// The camera is sent as two layers now: the same picture fits the second.
 	if err := r.SetCameraLayers(pub.id, []Layer{{1280, 720, 30}, {640, 360, 30}}); err != nil {
 		t.Fatal(err)
 	}
-	waitFor(t, func() bool { return fitOf() == 1 })
+	waitSFUCondition(t, "the fit to follow the new ladder", func() bool { return fitOf() == 1 })
 }
 
 // A viewer's picture size is kept whatever order things happen in: told before
@@ -443,7 +443,7 @@ func TestFitReportedBeforeTheCameraExistsDecidesTheStartingLayer(t *testing.T) {
 	r.mu.RLock()
 	g := r.cameraGroups[pub.id]
 	r.mu.RUnlock()
-	waitFor(t, func() bool {
+	waitSFUCondition(t, "the early fit to reach the viewer's track", func() bool {
 		vt := g.viewerFor(viewer.id)
 		if vt == nil {
 			return false

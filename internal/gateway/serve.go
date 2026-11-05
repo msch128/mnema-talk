@@ -125,7 +125,7 @@ func (g *Gateway) sendReady(s *session, creds *bot.Credentials) error {
 	if err != nil {
 		return err
 	}
-	s.enqueue("READY", ready)
+	s.enqueueReady(ready)
 	return nil
 }
 
@@ -173,7 +173,7 @@ func (g *Gateway) identify(c *connection, d json.RawMessage, header *bot.Credent
 		c.closeWith(code, reason)
 		return nil
 	}
-	s := &session{id: newSessionID(), botID: creds.Bot.BotID, userID: creds.User.ID, tokenID: creds.Bot.TokenID, intents: *req.Intents, startedAt: time.Now(), conn: c}
+	s := &session{id: newSessionID(), botID: creds.Bot.BotID, userID: creds.User.ID, tokenID: creds.Bot.TokenID, intents: *req.Intents, startedAt: time.Now(), conn: c, starting: true}
 	if !g.register(s) {
 		c.closeWith(CloseRateLimited, "Too many connections")
 		return nil

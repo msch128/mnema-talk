@@ -287,15 +287,26 @@ func (h *Handler) unsaveMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	me := auth.UserFrom(r.Context()).ID
-	tag, err := h.DB.Exec(r.Context(), `DELETE FROM saved_messages WHERE user_id = $1 AND message_id = $2`, me, msgID)
+	removed, err := RemoveSaved(r.Context(), h.DB, me, msgID)
 	if err != nil {
-		return fmt.Errorf("remove saved: %w", err)
+		return err
 	}
-	if tag.RowsAffected() == 1 {
+	if removed {
 		h.sendSaved(me, msgID, false)
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// RemoveSaved drops a message from the member's saved list. It reports whether
+// there was an entry, so only a real removal is announced to the member's
+// other sessions.
+func RemoveSaved(ctx context.Context, q db.Querier, user, messageID uuid.UUID) (bool, error) {
+	tag, err := q.Exec(ctx, `DELETE FROM saved_messages WHERE user_id = $1 AND message_id = $2`, user, messageID)
+	if err != nil {
+		return false, fmt.Errorf("remove saved: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
 }
 
 func (h *Handler) sendSaved(user, msgID uuid.UUID, saved bool) {

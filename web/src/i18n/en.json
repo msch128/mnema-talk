@@ -255,7 +255,7 @@
       "srvTemporaryTalksFollowTheirLobby": "Temporary Talks follow the permissions of their lobby.",
       "srvThatAddressIsAlreadyUsed": "That address is already used by a page or an old address of one.",
       "srvThatIsThePageAs": "The page already is that version.",
-      "srvTheAddressNeedsLowerCase": "The address needs lower-case letters, digits and single hyphens, and must not be a reserved word.",
+      "srvTheAddressNeedsLowerCase": "The address needs lowercase letters, digits and single hyphens, and must not be a reserved word.",
       "srvTheOwnerHasNoRoles": "The Owner has no roles to choose.",
       "srvThePageChangedSinceYou": "The page changed since you opened it. Open it again and apply your change to the new version.",
       "srvThePageIsNotDeleted": "The page isn’t deleted.",
@@ -352,7 +352,7 @@
       "srvEveryConfirmationStepMustBe": "Every confirmation step must be confirmed.",
       "srvExemptChannelsUnknownChannel": "Exempt channels: unknown channel {a}.",
       "srvExemptRolesUnknownRole": "Exempt roles: unknown role {a}.",
-      "srvExpiresAtIsTooFar": "“expires_at” is too far ahead.",
+      "srvExpiresAtIsTooFar": "“expires_at” is too far in the future.",
       "srvExpiresAtIsTooFar2": "“expires_at” is too far in the future.",
       "srvExpiresAtMustBeIn": "“expires_at” must be in the future.",
       "srvExpiresAtMustBeWithin": "“expires_at” must be within 8760 hours from now.",
@@ -854,7 +854,7 @@
     "gotIt": "Got it",
     "search": "Press Ctrl or Cmd + K to search every channel you can see.",
     "mention": "Type @ to mention someone and / for slash commands.",
-    "talk": "Click a Talk to join it right away. Nobody gets a call, it is a hangout spot."
+    "talk": "Click a Talk to join it right away. Nobody gets a call; it is a hangout spot."
   },
   "channel": {
     "create": "Create channel",
@@ -888,14 +888,14 @@
     "replyCount": "{count} replies",
     "activity": "Activity",
     "newPostTitle": "New post",
-    "titleLabel": "Post Title",
+    "titleLabel": "Post title",
     "titlePlaceholder": "What’s on your mind?",
     "tagsLabel": "Tags (up to 5)",
     "contentLabel": "First message",
-    "contentPlaceholder": "Provide more details or start the discussion…",
+    "contentPlaceholder": "Describe your topic or start the discussion…",
     "submitPost": "Post",
     "createFailed": "Couldn’t create the post. Try again.",
-    "manageTagsTitle": "Manage Forum Tags",
+    "manageTagsTitle": "Manage forum tags",
     "addTag": "Add tag",
     "add": "Add",
     "edit": "Edit",
@@ -1344,7 +1344,7 @@
     "filterUnsupported": "AI noise suppression is not available in this browser. Browser noise suppression is used instead.",
     "engineStalled": "Audio processing has not started in this browser, so your microphone is sent unprocessed. Check your audio output device.",
     "micTest": "Mic test",
-    "micTestStart": "Let’s check",
+    "micTestStart": "Test microphone",
     "micTestStop": "Stop testing",
     "micTestHint": "This test stays local and is not transmitted to others. You hear your own voice with your current filter applied. While testing, you are muted to others in the Talk.",
     "micTestActiveBadge": "Active (muted to others)",
@@ -1361,7 +1361,7 @@
     "switchChannelWarningHint": "Asks for confirmation before moving to a different Talk.",
     "switchChannelTitle": "Switch Talk?",
     "switchChannelPrompt": "Do you want to switch to the Talk “{channel}”?",
-    "switchChannelConfirm": "Switch channel",
+    "switchChannelConfirm": "Switch Talk",
     "soundsTitle": "Sound effects",
     "soundsHint": "Plays audio cues when joining, leaving, muting, and deafening.",
     "soundsVolume": "Sound effects volume",
@@ -1380,8 +1380,8 @@
     "sound_unmute": "Unmute",
     "sound_deafen": "Deafen",
     "sound_undeafen": "Undeafen",
-    "sound_ptt_start": "Push-to-talk activate",
-    "sound_ptt_stop": "Push-to-talk deactivate",
+    "sound_ptt_start": "Push-to-talk on",
+    "sound_ptt_stop": "Push-to-talk off",
     "inputVolume": "Input volume",
     "outputDevice": "Output device",
     "outputDeviceUnsupported": "This browser can’t pick an output device; the system default is used.",
@@ -1483,7 +1483,7 @@
       "introName": "Mnema Talk",
       "introAfter": " is a private, non-commercial software project for closed communities – with no profit motive, no advertising revenue and no business relationship. Accounts are issued only through personal invite codes.",
       "controller": "Controller (Art. 4(7) GDPR)",
-      "email": "Email contact",
+      "email": "E-mail contact",
       "emailUnset": "not specified by the operator",
       "country": "Country / jurisdiction",
       "status": "Project status",
@@ -1583,7 +1583,7 @@
     },
     "oss": {
       "heading": "5. Open-source credits",
-      "intro": "Mnema Talk is free software itself (GNU AGPL-3.0) and is built on free software. Here is everything we use and ship to you, with its license.",
+      "intro": "Mnema Talk is free software itself (GNU AGPL-3.0) and is built on free software. Here is everything we use and ship to you, with its licence.",
       "openSite": "Open {name}",
       "groups": {
         "browser": "In the web app (runs in your browser)",
@@ -1602,7 +1602,7 @@
       },
       "sourceBefore": "The complete source code of this software is at ",
       "sourceAfter": " (© Marius Schröder, GNU AGPL-3.0).",
-      "fullListBefore": "The complete list with every library, version and license text is in ",
+      "fullListBefore": "The complete list with every library, version and licence text is in ",
       "fullListAfter": " in the source code."
     },
     "footer": "© {year} {name} · All rights reserved"
@@ -1862,7 +1862,7 @@
       "migration": "Schema: {name} ({count} migrations)",
       "pendingMigrations": "{count} migration(s) not applied yet",
       "storageSize": "{total} in {files} files · attachments {attachments} · avatars {avatars}",
-      "calls": "Active talks",
+      "calls": "Active Talks",
       "participants": "Participants",
       "screenShares": "Screen shares",
       "cameras": "Cameras",
@@ -1906,7 +1906,7 @@
       "selfUpdateTitle": "Update the server now?",
       "selfUpdateButton": "Update now",
       "selfUpdateStarting": "Starting update…",
-      "selfUpdateWarning": "The server pulls the new image and restarts. Everyone is disconnected for about 30–60 seconds; running talks reconnect automatically afterwards.",
+      "selfUpdateWarning": "The server pulls the new image and restarts. Everyone is disconnected for about 30–60 seconds; running Talks reconnect automatically afterwards.",
       "selfUpdatePassword": "Your password to confirm",
       "selfUpdateRateLimited": "Not possible right now: an update is already running, or there were too many wrong passwords. Try again later.",
       "selfUpdateRunning": "Updating… The server restarts in a moment. Once the new version is up, the reload notice appears at the top.",
@@ -2024,7 +2024,7 @@
       "storage": "Object storage",
       "configured": "Configured",
       "notConfigured": "Not configured",
-      "storageUsed": "Used bytes",
+      "storageUsed": "Used storage",
       "diskFree": "Disk free space",
       "backup": "Backups & disaster recovery",
       "lastBackupAge": "Last backup",
@@ -2098,11 +2098,11 @@
           },
           "cgnat": {
             "detail": "This home connection has no public IPv4 address of its own (the address {address} is in the carrier-grade NAT range 100.64.0.0/10), so port forwarding cannot work and members outside your network cannot reach voice.",
-            "fix": "Home connection without own public IPv4 - port forwarding cannot work. Options: ask the internet provider for a public IPv4 address, run Mnema Talk on a VPS, or use an external relay (WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET). See “Can I host at home?” in doc/operations.md."
+            "fix": "Home connection without own public IPv4 – port forwarding cannot work. Options: ask the internet provider for a public IPv4 address, run Mnema Talk on a VPS, or use an external relay (WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET). See “Can I host at home?” in doc/operations.md."
           },
           "no_ipv4": {
             "detail": "No public IPv4 address was found but IPv6 works: this looks like a connection without its own public IPv4 (DS-Lite), so port forwarding cannot work and members outside your network cannot reach voice over IPv4.",
-            "fix": "Home connection without own public IPv4 - port forwarding cannot work. Options: ask the internet provider for a public IPv4 address, run Mnema Talk on a VPS, or use an external relay (WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET). See “Can I host at home?” in doc/operations.md."
+            "fix": "Home connection without own public IPv4 – port forwarding cannot work. Options: ask the internet provider for a public IPv4 address, run Mnema Talk on a VPS, or use an external relay (WEBRTC_TURN_URLS and WEBRTC_TURN_SECRET). See “Can I host at home?” in doc/operations.md."
           }
         },
         "public_url": {
@@ -2193,19 +2193,19 @@
           },
           "missing": {
             "detail": "No public voice address is known, so browsers are told the container’s own address.",
-            "fix": "Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address or dynamic-DNS name> in .env (add the LAN address after a comma for members on the same network), then docker compose up -d."
+            "fix": "Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address or dynamic-DNS name> in .env (add the LAN address after a comma for members on the same network), then run docker compose up -d."
           },
           "missing_detect_failed": {
             "detail": "No public voice address is known, so browsers are told the container’s own address. Automatic detection failed: {error}.",
-            "fix": "Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address or dynamic-DNS name> in .env (add the LAN address after a comma for members on the same network), then docker compose up -d."
+            "fix": "Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address or dynamic-DNS name> in .env (add the LAN address after a comma for members on the same network), then run docker compose up -d."
           },
           "missing_detect_failed_turn_only": {
             "detail": "No public voice address is known, so browsers are told the container’s own address. Automatic detection failed: {error}. Only the TURN relay can carry voice.",
-            "fix": "Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address or dynamic-DNS name> in .env (add the LAN address after a comma for members on the same network), then docker compose up -d."
+            "fix": "Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address or dynamic-DNS name> in .env (add the LAN address after a comma for members on the same network), then run docker compose up -d."
           },
           "missing_turn_only": {
             "detail": "No public voice address is known, so browsers are told the container’s own address. Only the TURN relay can carry voice.",
-            "fix": "Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address or dynamic-DNS name> in .env (add the LAN address after a comma for members on the same network), then docker compose up -d."
+            "fix": "Set WEBRTC_NAT_1TO1_IP=<your public IPv4 address or dynamic-DNS name> in .env (add the LAN address after a comma for members on the same network), then run docker compose up -d."
           }
         },
         "voice_udp": {
@@ -3612,7 +3612,7 @@
     "scheduled": "Scheduled",
     "completed": "Completed",
     "title": "Title",
-    "titlePlaceholder": "e.g. Game night or Community talk",
+    "titlePlaceholder": "e.g. Game night or Community Talk",
     "description": "Description",
     "descriptionPlaceholder": "What is this event about? (Markdown supported)",
     "startTime": "Start time",
@@ -3682,14 +3682,14 @@
       "leaveFailed": "Couldn’t remove your sign-up. Try again.",
       "removeFailed": "Couldn’t remove the member. Try again.",
       "editorTitle": "Roles & slots",
-      "editorHint": "Roles let members sign up for a place, for example Tank or Heal. A role with a capacity has a waitlist: when someone leaves, the next in line moves up.",
+      "editorHint": "Roles let members sign up for a slot, for example Tank or Heal. A role with a capacity has a waitlist: when someone leaves, the next in line moves up.",
       "emoji": "Emoji",
       "name": "Role name",
       "moveUp": "Move up",
       "moveDown": "Move down",
       "removeRole": "Remove role {name}",
       "unlimited": "Unlimited",
-      "capacity": "Places",
+      "capacity": "Slots",
       "members": {
         "one": "{count} member",
         "other": "{count} members"
@@ -3974,7 +3974,7 @@
     "offByOperator": "The operator turned push notifications off on this server.",
     "needsInstall": "On iPhone and iPad, push notifications work only for the installed app. Tap the Share button in Safari, choose Add to Home Screen, then open Mnema Talk from there.",
     "unsupported": "This browser can’t receive push notifications.",
-    "stateOn": "This device is notified about new messages even when Mnema Talk is closed. Your notification levels, mutes and Do Not Disturb apply.",
+    "stateOn": "This device is notified about new messages even when Mnema Talk is closed. Your notification levels, mutes and Do not disturb apply.",
     "stateOff": "Get notified on this device while Mnema Talk is closed. Your browser asks for permission first.",
     "stateBlocked": "Notifications are blocked for this site. Allow them in your browser’s site settings, then come back here.",
     "enable": "Turn on for this device",
@@ -3995,7 +3995,7 @@
     "testSent": "Test notification sent.",
     "testFailed": "Couldn’t deliver the test notification. Try again.",
     "previewFailed": "Couldn’t save the setting. Try again.",
-    "channelLevels": "Notifications while the page is open follow your channel levels and Do Not Disturb, too."
+    "channelLevels": "Notifications while the page is open follow your channel levels and Do not disturb, too."
   },
   "recovery": {
     "forgotLink": "Forgot your password?",
@@ -4876,7 +4876,7 @@
     "deleteBody": "The page leaves the wiki, but nothing is lost: people who manage the wiki can restore it with all its history.",
     "linkCopied": "Link copied.",
     "address": "Address",
-    "addressHint": "Lower-case letters, digits and hyphens. The old address keeps working.",
+    "addressHint": "Lowercase letters, digits and hyphens. The old address keeps working.",
     "parent": "Below",
     "topLevel": "Top level (no parent page)",
     "position": "Place among its siblings",

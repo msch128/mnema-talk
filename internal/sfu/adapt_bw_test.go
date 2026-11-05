@@ -251,8 +251,8 @@ func TestBandwidthEstimateMovesAnAutomaticViewerDown(t *testing.T) {
 		t.Fatalf("state %+v", vt.state())
 	}
 	second(5_000_000)
-	if vt.ad.bwHigh != 0 && vt.ad.bw.next != 0 {
-		t.Fatal("sample not consumed")
+	if vt.ad.bw != (bwSample{}) {
+		t.Fatalf("the sample was not consumed by the report: %+v", vt.ad.bw)
 	}
 	if got := rig.group.last[0].Load(); got < 1_500_000 {
 		t.Fatalf("layer 0 last rate %d", got)

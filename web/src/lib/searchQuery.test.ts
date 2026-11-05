@@ -141,7 +141,7 @@ describe('search filters v3', () => {
     const p = parseSearchQuery('during:2026-10-24 filename:budget.xlsx author:member')
     const { params } = buildSearchParams(p, lookup)
     expect(params.get('during')).toBe('2026-10-24')
-    expect(params.get('tz')).toBe(localTimezoneOffset())
+    expect(params.get('tz')).toBe(localTimezoneOffset('2026-10-24'))
     expect(params.get('filename')).toBe('budget.xlsx')
     expect(params.get('author')).toBe('member')
   })
@@ -150,6 +150,20 @@ describe('search filters v3', () => {
     const res = splitCommitted('author:bot during:2026-10-24 filename:report.pdf typing')
     expect(res.filters).toEqual({ author: 'bot', during: '2026-10-24', filename: 'report.pdf' })
     expect(res.rest).toBe('typing')
+  })
+
+  it('sends the offset of the searched day, not of today', () => {
+    const zone = process.env.TZ
+    process.env.TZ = 'Europe/Berlin'
+    try {
+      expect(localTimezoneOffset('2026-07-15')).toBe('+02:00')
+      expect(localTimezoneOffset('2026-01-15')).toBe('+01:00')
+      const summer = buildSearchParams(parseSearchQuery('during:2026-07-15'), lookup).params
+      const winter = buildSearchParams(parseSearchQuery('during:2026-01-15'), lookup).params
+      expect([summer.get('tz'), winter.get('tz')]).toEqual(['+02:00', '+01:00'])
+    } finally {
+      if (zone === undefined) delete process.env.TZ; else process.env.TZ = zone
+    }
   })
 
   it('formats timezone offset', () => {

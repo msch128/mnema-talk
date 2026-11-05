@@ -563,6 +563,12 @@ jobs:
         run: |
           set -euo pipefail
           "$RUNNER_TEMP/webbundle" verify -zip "bundle/mnema-web-$VERSION.zip" -pub web/desktop-signing.pub
+          # Belt and braces next to the tool's own rules: nothing hidden and no
+          # server-only API reference may sit in the signed archive.
+          if unzip -Z1 "bundle/mnema-web-$VERSION.zip" | grep -E '(^|/)\.|api-docs|apiDocs'; then
+            echo "::error::the signed bundle contains a hidden file or the API reference"
+            exit 1
+          fi
           {
             echo "### Desktop bundle $VERSION"
             echo
