@@ -1,4 +1,6 @@
-package communityevents
+// Package accountdata is community events in a personal-data export and an
+// erasure: the member's RSVPs, sign-ups and comments.
+package accountdata
 
 import (
 	"context"
@@ -12,8 +14,8 @@ import (
 // accountData is community events in an export and an erasure.
 type accountData struct{}
 
-// RegisterAccountData adds event RSVPs, sign-ups and comments.
-func RegisterAccountData(r *userdata.Registry) {
+// Register adds event RSVPs, sign-ups and comments.
+func Register(r *userdata.Registry) {
 	var d accountData
 	r.Register(d, d)
 }
