@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -32,18 +31,5 @@ func TestClientPresetsPassInviteValidation(t *testing.T) {
 		if err := req.validate(now); err != nil {
 			t.Errorf("invite edit uses %d: %v", n, err)
 		}
-	}
-}
-
-func TestClientPresetsPassModerationValidation(t *testing.T) {
-	for _, s := range presets.Load(t).ModerationSeconds {
-		t.Run(fmt.Sprint(s), func(t *testing.T) {
-			if err := validateTimeoutSeconds(s); err != nil {
-				t.Errorf("timeout: %v", err)
-			}
-			if _, err := parseBanDuration(&s); err != nil {
-				t.Errorf("ban: %v", err)
-			}
-		})
 	}
 }

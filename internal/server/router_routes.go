@@ -101,6 +101,7 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 	authed.Group(func(j chi.Router) {
 		j.Use(httpx.MaxBody(httpx.DefaultMaxBody))
 		c.authH.MountAuthenticated(j)
+		c.members.MountAuthenticated(j)
 		j.Get("/webrtc/config", webrtcConfig(c.cfg, c.d.TURN))
 		j.Post("/webrtc/probe", httpx.Handle(c.systemH.connectionProbe))
 		j.Get("/webrtc/speedtest", httpx.Handle(c.systemH.downloadSpeedTest))
@@ -168,7 +169,7 @@ func (c *components) mountAdmin(adm chi.Router) {
 func (c *components) mountAdminJSON(adm chi.Router) {
 	adm.Use(httpx.MaxBody(httpx.DefaultMaxBody))
 	c.auditLog.Mount(adm.With(auth.RequirePerm(c.permSvc, perm.ViewAuditLog)))
-	c.authH.MountAdmin(adm)
+	c.members.MountAdmin(adm)
 	c.chatH.MountAdmin(adm)
 	c.rolesH.MountAdmin(adm)
 	c.modH.MountAdmin(adm)

@@ -55,9 +55,9 @@ func (h *Handler) ClearAllLoginLockouts() {
 	h.loginPerIP.Clear(all)
 }
 
-// lockedAccounts returns the (lower-cased) accounts that are locked out now,
+// LockedAccounts returns the (lower-cased) accounts that are locked out now,
 // either account-wide or for at least one client address.
-func (h *Handler) lockedAccounts() map[string]bool {
+func (h *Handler) LockedAccounts() map[string]bool {
 	out := map[string]bool{}
 	for _, k := range h.accountFailures.LockedKeys() {
 		out[k] = true
@@ -70,7 +70,7 @@ func (h *Handler) lockedAccounts() map[string]bool {
 	return out
 }
 
-// clearUserLockout handles POST /api/admin/users/{id}/login-lockout/clear.
+// ClearUserLockout handles POST /api/admin/users/{id}/login-lockout/clear.
 //
 // @Summary Clear an account's login lockout
 // @Description Forgets the wrong-password counters and lockouts held in memory for the account (per client address, account-wide and the password-change lockout), so its owner can sign in at once. Owner only (403 otherwise). The same is possible from the host with `mnema-talk unlock <username>`.
@@ -88,7 +88,7 @@ func (h *Handler) lockedAccounts() map[string]bool {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/login-lockout/clear [post]
-func (h *Handler) clearUserLockout(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ClearUserLockout(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err

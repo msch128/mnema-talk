@@ -1,9 +1,11 @@
-package auth
+package memberadmin
 
 import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/auth"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -34,22 +36,6 @@ var (
 	errNotBanned      = httpx.ErrNotFound("this member is not banned")
 )
 
-// TimeoutRequest is the body of POST /api/admin/users/{id}/timeout.
-type TimeoutRequest struct {
-	// DurationSeconds is how long the member is silenced, from now.
-	DurationSeconds int `json:"duration_seconds" minimum:"5" maximum:"2419200"`
-	// Reason is shown to the member. Optional.
-	Reason string `json:"reason" maxLength:"200" binding:"optional"`
-}
-
-// TimeoutState is a member's timeout.
-type TimeoutState struct {
-	UserID uuid.UUID `json:"user_id" format:"uuid"`
-	// TimeoutUntil is when it ends.
-	TimeoutUntil time.Time `json:"timeout_until" format:"date-time"`
-	Reason       string    `json:"reason"`
-}
-
 // notice is what a member is told about a moderation action (WebSocket event
 // moderation_notice).
 type notice struct {
@@ -63,27 +49,27 @@ func cleanReason(s string) (string, error) {
 	return httpx.CleanText("reason", s, MaxReasonLen, false)
 }
 
-func (h *Handler) mountModeration(r chi.Router) {
-	r.With(RequirePerm(h.Perms, perm.TimeoutMembers)).Post("/users/{id}/timeout", httpx.Handle(h.timeoutUser))
-	r.With(RequirePerm(h.Perms, perm.TimeoutMembers)).Delete("/users/{id}/timeout", httpx.Handle(h.untimeoutUser))
-	bans := r.With(RequirePerm(h.Perms, perm.BanMembers))
+func (h *API) mountModeration(r chi.Router) {
+	r.With(auth.RequirePerm(h.Perms, perm.TimeoutMembers)).Post("/users/{id}/timeout", httpx.Handle(h.timeoutUser))
+	r.With(auth.RequirePerm(h.Perms, perm.TimeoutMembers)).Delete("/users/{id}/timeout", httpx.Handle(h.untimeoutUser))
+	bans := r.With(auth.RequirePerm(h.Perms, perm.BanMembers))
 	bans.Get("/bans", httpx.Handle(h.listBans))
 	bans.Post("/users/{id}/ban", httpx.Handle(h.banUser))
 	bans.Delete("/users/{id}/ban", httpx.Handle(h.unbanUser))
 }
 
-func (h *Handler) notify(id uuid.UUID, n notice) {
+func (h *API) notify(id uuid.UUID, n notice) {
 	if h.Events != nil {
 		h.Events.SendToUsers([]uuid.UUID{id}, events.ModerationNotice, n)
 	}
 }
 
 // moderationTarget is moderated() for actions that may never aim at oneself.
-func (h *Handler) moderationTarget(r *http.Request, id uuid.UUID, fn func(q db.Querier) error) error {
-	if u := UserFrom(r.Context()); u != nil && u.ID == id {
+func (h *API) moderationTarget(r *http.Request, id uuid.UUID, fn func(q db.Querier) error) error {
+	if u := auth.UserFrom(r.Context()); u != nil && u.ID == id {
 		return errSelfModeration
 	}
-	return h.moderated(r, id, fn)
+	return h.Moderated(r, id, fn)
 }
 
 // timeoutUser handles POST /api/admin/users/{id}/timeout.
@@ -96,8 +82,8 @@ func (h *Handler) moderationTarget(r *http.Request, id uuid.UUID, fn func(q db.Q
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "User ID." Format(uuid)
-// @Param request body TimeoutRequest true "Request body."
-// @Success 200 {object} TimeoutState "The timeout."
+// @Param request body auth.TimeoutRequest true "Request body."
+// @Success 200 {object} auth.TimeoutState "The timeout."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Timeout members permission, the member's highest role is not below yours, or the member is the Owner or yourself, or cross-origin request rejected."
@@ -106,12 +92,12 @@ func (h *Handler) moderationTarget(r *http.Request, id uuid.UUID, fn func(q db.Q
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/timeout [post]
-func (h *Handler) timeoutUser(w http.ResponseWriter, r *http.Request) error {
+func (h *API) timeoutUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	var req TimeoutRequest
+	var req auth.TimeoutRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -134,15 +120,15 @@ func validateTimeoutSeconds(seconds int) error {
 // slash command both run it, so the validation, the role hierarchy and what
 // the member and the live clients are told are the same; the caller has
 // checked the Timeout members permission (RequirePermission).
-func (h *Handler) TimeoutMember(r *http.Request, id uuid.UUID, req TimeoutRequest) (TimeoutState, error) {
+func (h *API) TimeoutMember(r *http.Request, id uuid.UUID, req auth.TimeoutRequest) (auth.TimeoutState, error) {
 	if err := validateTimeoutSeconds(req.DurationSeconds); err != nil {
-		return TimeoutState{}, err
+		return auth.TimeoutState{}, err
 	}
 	reason, err := cleanReason(req.Reason)
 	if err != nil {
-		return TimeoutState{}, err
+		return auth.TimeoutState{}, err
 	}
-	actor := UserFrom(r.Context())
+	actor := auth.UserFrom(r.Context())
 	var until time.Time
 	err = h.moderationTarget(r, id, func(q db.Querier) error {
 		return q.QueryRow(r.Context(), `UPDATE users SET timeout_until = NOW() + make_interval(secs => $2),
@@ -150,14 +136,14 @@ func (h *Handler) TimeoutMember(r *http.Request, id uuid.UUID, req TimeoutReques
 			WHERE id = $1 RETURNING timeout_until`, id, float64(req.DurationSeconds), reason, actor.ID).Scan(&until)
 	})
 	if err != nil {
-		return TimeoutState{}, err
+		return auth.TimeoutState{}, err
 	}
 	// Rebuild the permission state: the member's rights shrink now, and a
 	// Talk they are in ends for them.
 	h.Perms.Changed([]uuid.UUID{id})
 	h.notify(id, notice{Kind: "timeout", Until: &until, Seconds: req.DurationSeconds, Reason: reason})
 	h.Events.Broadcast(events.MemberTimeout, map[string]any{"id": id, "timeout_until": until})
-	return TimeoutState{UserID: id, TimeoutUntil: until, Reason: reason}, nil
+	return auth.TimeoutState{UserID: id, TimeoutUntil: until, Reason: reason}, nil
 }
 
 // untimeoutUser handles DELETE /api/admin/users/{id}/timeout.
@@ -178,7 +164,7 @@ func (h *Handler) TimeoutMember(r *http.Request, id uuid.UUID, req TimeoutReques
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/timeout [delete]
-func (h *Handler) untimeoutUser(w http.ResponseWriter, r *http.Request) error {
+func (h *API) untimeoutUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err

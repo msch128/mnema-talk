@@ -1,8 +1,10 @@
-package auth
+package memberadmin
 
 import (
 	"net/http"
 	"strings"
+
+	"github.com/msch128/mnema-talk/internal/auth"
 
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -17,23 +19,23 @@ import (
 // @Tags Admin
 // @Produce json
 // @Security cookieAuth
-// @Success 200 {array} AdminUser "Accounts."
+// @Success 200 {array} auth.AdminUser "Accounts."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage members or Manage roles permission."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users [get]
-func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) error {
-	users, err := ListUsersForAdmin(r.Context(), h.Sessions.DB)
+func (h *API) listUsers(w http.ResponseWriter, r *http.Request) error {
+	users, err := auth.ListUsersForAdmin(r.Context(), h.Sessions.DB)
 	if err != nil {
 		return err
 	}
 	if err := h.withRoles(r, users); err != nil {
 		return err
 	}
-	if u := UserFrom(r.Context()); u != nil && u.IsAdmin() {
-		locked := h.lockedAccounts()
+	if u := auth.UserFrom(r.Context()); u != nil && u.IsAdmin() {
+		locked := h.LockedAccounts()
 		for i := range users {
 			users[i].LoginLocked = locked[strings.ToLower(users[i].Username)]
 		}
@@ -60,12 +62,12 @@ func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/disable [post]
-func (h *Handler) disableUser(w http.ResponseWriter, r *http.Request) error {
+func (h *API) disableUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	if err := h.moderated(r, id, func(q db.Querier) error { return SetDisabled(r.Context(), q, id, true) }); err != nil {
+	if err := h.Moderated(r, id, func(q db.Querier) error { return auth.SetDisabled(r.Context(), q, id, true) }); err != nil {
 		return err
 	}
 	if h.Live != nil {
@@ -98,12 +100,12 @@ func (h *Handler) disableUser(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/enable [post]
-func (h *Handler) enableUser(w http.ResponseWriter, r *http.Request) error {
+func (h *API) enableUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	if err := h.moderated(r, id, func(q db.Querier) error { return SetDisabled(r.Context(), q, id, false) }); err != nil {
+	if err := h.Moderated(r, id, func(q db.Querier) error { return auth.SetDisabled(r.Context(), q, id, false) }); err != nil {
 		return err
 	}
 	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": false})
@@ -129,12 +131,12 @@ func (h *Handler) enableUser(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/sessions/revoke [post]
-func (h *Handler) revokeUserSessions(w http.ResponseWriter, r *http.Request) error {
+func (h *API) revokeUserSessions(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	if err := h.moderated(r, id, func(q db.Querier) error { return RevokeSessions(r.Context(), q, id) }); err != nil {
+	if err := h.Moderated(r, id, func(q db.Querier) error { return auth.RevokeSessions(r.Context(), q, id) }); err != nil {
 		return err
 	}
 	if h.Live != nil {
@@ -154,8 +156,8 @@ func (h *Handler) revokeUserSessions(w http.ResponseWriter, r *http.Request) err
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "User ID." Format(uuid)
-// @Param request body OwnerProof false "Owner confirmation."
-// @Success 200 {object} TemporaryPassword "Temporary password."
+// @Param request body auth.OwnerProof false "Owner confirmation."
+// @Success 200 {object} auth.TemporaryPassword "Temporary password."
 // @Header 200 {string} Cache-Control "no-store"
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
@@ -165,19 +167,19 @@ func (h *Handler) revokeUserSessions(w http.ResponseWriter, r *http.Request) err
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/password-reset [post]
-func (h *Handler) resetUserPassword(w http.ResponseWriter, r *http.Request) error {
+func (h *API) resetUserPassword(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	var req OwnerProof
+	var req auth.OwnerProof
 	if err := httpx.DecodeOptionalJSON(r, &req); err != nil {
 		return err
 	}
-	if ok, err := h.confirmOwner(w, r, req); !ok {
+	if ok, err := h.ConfirmOwner(w, r, req); !ok {
 		return err
 	}
-	password, err := ResetPassword(r.Context(), h.Sessions.DB, id)
+	password, err := auth.ResetPassword(r.Context(), h.Sessions.DB, id)
 	if err != nil {
 		return err
 	}
@@ -185,7 +187,7 @@ func (h *Handler) resetUserPassword(w http.ResponseWriter, r *http.Request) erro
 		h.Live.DisconnectUser(id)
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	httpx.WriteJSON(w, http.StatusOK, TemporaryPassword{Password: password})
+	httpx.WriteJSON(w, http.StatusOK, auth.TemporaryPassword{Password: password})
 	return nil
 }
 
@@ -199,7 +201,7 @@ func (h *Handler) resetUserPassword(w http.ResponseWriter, r *http.Request) erro
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "User ID." Format(uuid)
-// @Param request body SetPasswordRequest true "Request body."
+// @Param request body auth.SetPasswordRequest true "Request body."
 // @Success 204 "Success, no content."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
@@ -209,19 +211,19 @@ func (h *Handler) resetUserPassword(w http.ResponseWriter, r *http.Request) erro
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/password [post]
-func (h *Handler) setUserPassword(w http.ResponseWriter, r *http.Request) error {
+func (h *API) setUserPassword(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	var req SetPasswordRequest
+	var req auth.SetPasswordRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if ok, err := h.confirmOwner(w, r, req.OwnerProof); !ok {
+	if ok, err := h.ConfirmOwner(w, r, req.OwnerProof); !ok {
 		return err
 	}
-	if err := SetPassword(r.Context(), h.Sessions.DB, id, req.Password); err != nil {
+	if err := auth.SetPassword(r.Context(), h.Sessions.DB, id, req.Password); err != nil {
 		return err
 	}
 	if h.Live != nil {
@@ -241,8 +243,8 @@ func (h *Handler) setUserPassword(w http.ResponseWriter, r *http.Request) error 
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "User ID." Format(uuid)
-// @Param request body SetStatusRequest true "Request body."
-// @Success 200 {object} User "Updated user (public view unless it is the caller)."
+// @Param request body auth.SetStatusRequest true "Request body."
+// @Success 200 {object} auth.User "Updated user (public view unless it is the caller)."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage members permission, or the member's highest role is not below yours, or cross-origin request rejected."
@@ -251,24 +253,12 @@ func (h *Handler) setUserPassword(w http.ResponseWriter, r *http.Request) error 
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/status [put]
-func (h *Handler) setUserStatus(w http.ResponseWriter, r *http.Request) error {
+func (h *API) setUserStatus(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	return h.writeStatus(w, r, id, true)
-}
-
-// SetPasswordRequest is the body of POST /api/admin/users/{id}/password.
-type SetPasswordRequest struct {
-	Password string `json:"password" format:"password" minLength:"10"`
-	OwnerProof
-}
-
-// TemporaryPassword is the response of POST /api/admin/users/{id}/password-reset.
-type TemporaryPassword struct {
-	// Password is shown once; it is never stored in plain text.
-	Password string `json:"password"`
+	return h.WriteStatus(w, r, id, true)
 }
 
 // resetUserTwoFactor handles POST /api/admin/users/{id}/two-factor/reset.
@@ -281,7 +271,7 @@ type TemporaryPassword struct {
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "User ID." Format(uuid)
-// @Param request body OwnerProof false "Owner confirmation."
+// @Param request body auth.OwnerProof false "Owner confirmation."
 // @Success 204 "Success, no content."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
@@ -291,22 +281,22 @@ type TemporaryPassword struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/two-factor/reset [post]
-func (h *Handler) resetUserTwoFactor(w http.ResponseWriter, r *http.Request) error {
+func (h *API) resetUserTwoFactor(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	var req OwnerProof
+	var req auth.OwnerProof
 	if err := httpx.DecodeOptionalJSON(r, &req); err != nil {
 		return err
 	}
-	if ok, err := h.confirmOwner(w, r, req); !ok {
+	if ok, err := h.ConfirmOwner(w, r, req); !ok {
 		return err
 	}
-	if _, err := targetUser(r.Context(), h.Sessions.DB, id); err != nil {
+	if _, err := auth.TargetUser(r.Context(), h.Sessions.DB, id); err != nil {
 		return err
 	}
-	if err := ResetTwoFactor(r.Context(), h.Sessions.DB, id); err != nil {
+	if err := auth.ResetTwoFactor(r.Context(), h.Sessions.DB, id); err != nil {
 		return err
 	}
 	if h.Live != nil {

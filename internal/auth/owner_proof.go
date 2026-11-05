@@ -13,9 +13,9 @@ type OwnerProof struct {
 	Code string `json:"code,omitempty" maxLength:"32" binding:"optional"`
 }
 
-// confirmOwner re-authenticates the signed-in Owner before a takeover action
+// ConfirmOwner re-authenticates the signed-in Owner before a takeover action
 // with the same check, lockouts and errors as deleting an account. It reports
 // false when the response was already written.
-func (h *Handler) confirmOwner(w http.ResponseWriter, r *http.Request, proof OwnerProof) (bool, error) {
+func (h *Handler) ConfirmOwner(w http.ResponseWriter, r *http.Request, proof OwnerProof) (bool, error) {
 	return h.ConfirmIdentity(w, r, UserFrom(r.Context()), proof.CurrentPassword, proof.Code)
 }

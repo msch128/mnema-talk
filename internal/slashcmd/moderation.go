@@ -78,7 +78,7 @@ func (c modCommand) Available(snap *perm.Snapshot, user perm.Subject, _ uuid.UUI
 // Run checks the permission again on the server, then runs the route's
 // service and records the action.
 func (c modCommand) Run(ctx context.Context, call slash.Call) (slash.Result, error) {
-	if err := c.svc.Auth.RequirePermission(call.Request, c.need); err != nil {
+	if err := c.svc.Members.RequirePermission(call.Request, c.need); err != nil {
 		return slash.Result{}, err
 	}
 	target := userOption(call, "member")
@@ -107,7 +107,7 @@ func timeoutCommand(svc *Services) modCommand {
 			if err != nil {
 				return "", nil, err
 			}
-			state, err := svc.Auth.TimeoutMember(call.Request, target, auth.TimeoutRequest{DurationSeconds: seconds, Reason: str(call, "reason")})
+			state, err := svc.Members.TimeoutMember(call.Request, target, auth.TimeoutRequest{DurationSeconds: seconds, Reason: str(call, "reason")})
 			if err != nil {
 				return "", nil, err
 			}
@@ -137,7 +137,7 @@ func banCommand(svc *Services) modCommand {
 				}
 				req.DurationSeconds = &seconds
 			}
-			if err := svc.Auth.BanMember(call.Request, target, req); err != nil {
+			if err := svc.Members.BanMember(call.Request, target, req); err != nil {
 				return "", nil, err
 			}
 			details := map[string]any{"reason": req.Reason}
@@ -163,7 +163,7 @@ func kickCommand(svc *Services) modCommand {
 			},
 		},
 		act: func(call slash.Call, target uuid.UUID) (string, map[string]any, error) {
-			if err := svc.Auth.KickMember(call.Request, target, str(call, "reason")); err != nil {
+			if err := svc.Members.KickMember(call.Request, target, str(call, "reason")); err != nil {
 				return "", nil, err
 			}
 			return "moderation.kick", map[string]any{"reason": str(call, "reason")}, nil

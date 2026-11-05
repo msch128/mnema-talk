@@ -270,12 +270,12 @@ func (h *Handler) setPresence(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/users/me/status [put]
 func (h *Handler) setStatus(w http.ResponseWriter, r *http.Request) error {
-	return h.writeStatus(w, r, UserFrom(r.Context()).ID, false)
+	return h.WriteStatus(w, r, UserFrom(r.Context()).ID, false)
 }
 
-// writeStatus sets userID's status line; moderating says it is another
+// WriteStatus sets userID's status line; moderating says it is another
 // member's, which needs the usual authority over them.
-func (h *Handler) writeStatus(w http.ResponseWriter, r *http.Request, userID uuid.UUID, moderating bool) error {
+func (h *Handler) WriteStatus(w http.ResponseWriter, r *http.Request, userID uuid.UUID, moderating bool) error {
 	var req SetStatusRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
@@ -283,7 +283,7 @@ func (h *Handler) writeStatus(w http.ResponseWriter, r *http.Request, userID uui
 	var u *User
 	var err error
 	if moderating {
-		err = h.moderated(r, userID, func(q db.Querier) (e error) {
+		err = h.Moderated(r, userID, func(q db.Querier) (e error) {
 			u, e = SetStatusText(r.Context(), q, userID, req.StatusText, nil)
 			return e
 		})

@@ -109,21 +109,3 @@ func TestCheckTargetFollowsTheHierarchy(t *testing.T) {
 		t.Error("a missing actor must not be allowed to act")
 	}
 }
-
-func TestWithRoles(t *testing.T) {
-	f := permtest.NewFixture()
-	role := f.Role(1, 0)
-	a, b := uuid.New(), uuid.New()
-	f.Assign(a, role)
-	users := []AdminUser{{User: User{ID: a}}, {User: User{ID: b}}}
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	if err := (&Handler{}).withRoles(r, users); err != nil || users[0].RoleIDs != nil {
-		t.Fatalf("no service: %v %v", err, users)
-	}
-	if err := (&Handler{Perms: f.Service()}).withRoles(r, users); err != nil || len(users[0].RoleIDs) != 1 || users[1].RoleIDs != nil {
-		t.Fatalf("roles: %v %+v", err, users)
-	}
-	if err := (&Handler{Perms: permtest.Unloadable()}).withRoles(r, users); err == nil {
-		t.Fatal("an unreadable state must fail")
-	}
-}

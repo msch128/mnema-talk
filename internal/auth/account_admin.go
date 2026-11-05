@@ -5,33 +5,13 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/perm"
 )
-
-// LiveControl acts on a user's live connections (implemented by the WebSocket hub).
-type LiveControl interface {
-	// KickFromVoice ends the user's voice presence; false if they were not in one.
-	KickFromVoice(userID uuid.UUID) bool
-	// VoiceChannels lists the Talks the user is in (or lingers in).
-	VoiceChannels(userID uuid.UUID) []uuid.UUID
-	// KickFromChannel ends the user's presence in one Talk.
-	KickFromChannel(userID, channelID uuid.UUID)
-	// DisconnectUser closes all of the user's live connections.
-	DisconnectUser(userID uuid.UUID)
-	// DisconnectSession closes the connections opened with one session id (a
-	// single sign-out); the user's other sessions stay.
-	DisconnectSession(jti string)
-	// SetPresence applies a newly chosen presence to the user's live status.
-	SetPresence(userID uuid.UUID, presence string)
-}
 
 // AdminUser is a user as the admin panel lists it.
 type AdminUser struct {
@@ -71,11 +51,9 @@ func ListUsersForAdmin(ctx context.Context, p *db.Pool) ([]AdminUser, error) {
 	return users, rows.Err()
 }
 
-var errOwnerAction = httpx.ErrInvalidInput("this action is not available for the Owner account")
-
-// targetUser loads the user an admin action applies to. Admin accounts are
+// TargetUser loads the user an admin action applies to. Admin accounts are
 // never targets: the single administrator cannot lock themselves out.
-func targetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
+func TargetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 	if err := refuseDeleted(ctx, p, id); err != nil {
 		return nil, err
 	}
@@ -91,7 +69,7 @@ func targetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) 
 
 // SetDisabled disables (and logs out) or re-enables a member.
 func SetDisabled(ctx context.Context, p db.Querier, id uuid.UUID, disabled bool) error {
-	if _, err := targetUser(ctx, p, id); err != nil {
+	if _, err := TargetUser(ctx, p, id); err != nil {
 		return err
 	}
 	if disabled {
@@ -106,7 +84,7 @@ func SetDisabled(ctx context.Context, p db.Querier, id uuid.UUID, disabled bool)
 // ResetPassword sets a random temporary password, ends all sessions and
 // returns the password once; it is never stored in plain text.
 func ResetPassword(ctx context.Context, p *db.Pool, id uuid.UUID) (string, error) {
-	if _, err := targetUser(ctx, p, id); err != nil {
+	if _, err := TargetUser(ctx, p, id); err != nil {
 		return "", err
 	}
 	b := make([]byte, 15)
@@ -147,7 +125,7 @@ func SetPassword(ctx context.Context, p *db.Pool, id uuid.UUID, password string)
 	if err := ValidatePassword(password); err != nil {
 		return err
 	}
-	if _, err := targetUser(ctx, p, id); err != nil {
+	if _, err := TargetUser(ctx, p, id); err != nil {
 		return err
 	}
 	hash, err := HashPassword(password)
@@ -155,67 +133,4 @@ func SetPassword(ctx context.Context, p *db.Pool, id uuid.UUID, password string)
 		return fmt.Errorf("hash password: %w", err)
 	}
 	return storePassword(ctx, p, id, hash)
-}
-
-func (h *Handler) mountUserAdmin(r chi.Router) {
-	r.With(RequireAnyPerm(h.Perms, perm.ManageMembers|perm.ManageRoles)).Get("/users", httpx.Handle(h.listUsers))
-	members := r.With(RequirePerm(h.Perms, perm.ManageMembers))
-	members.Post("/users/{id}/disable", httpx.Handle(h.disableUser))
-	members.Post("/users/{id}/enable", httpx.Handle(h.enableUser))
-	members.Post("/users/{id}/sessions/revoke", httpx.Handle(h.revokeUserSessions))
-	members.Put("/users/{id}/status", httpx.Handle(h.setUserStatus))
-	// Taking over an account is not a role's business: the Owner only.
-	r.With(RequireOwner).Post("/users/{id}/password", httpx.Handle(h.setUserPassword))
-	r.With(RequireOwner).Post("/users/{id}/password-reset", httpx.Handle(h.resetUserPassword))
-	r.With(RequireOwner).Post("/users/{id}/login-lockout/clear", httpx.Handle(h.clearUserLockout))
-	r.With(RequireOwner).Post("/users/{id}/two-factor/reset", httpx.Handle(h.resetUserTwoFactor))
-	r.With(RequirePerm(h.Perms, perm.DisconnectMembers)).Post("/users/{id}/kick", httpx.Handle(h.kickUser))
-	h.mountModeration(r)
-}
-
-// moderated runs fn on the member a moderation action aims at, after checking
-// that the caller may act on them. With a permission service the check and fn
-// run in one transaction under the permission lock, on the state as it is
-// inside it: a concurrent role change cannot move the target out of reach (or
-// the caller down) between the check and the write.
-func (h *Handler) moderated(r *http.Request, id uuid.UUID, fn func(q db.Querier) error) error {
-	ctx := r.Context()
-	actor := UserFrom(ctx)
-	if err := refuseDeleted(ctx, h.Sessions.DB, id); err != nil {
-		return err
-	}
-	if h.Perms == nil {
-		target, err := GetUser(ctx, h.Sessions.DB, id)
-		if err != nil {
-			return err
-		}
-		if err := checkTarget(nil, actor, target); err != nil {
-			return err
-		}
-		return fn(h.Sessions.DB)
-	}
-	return h.Perms.Locked(ctx, actor.Subject(), func(tx pgx.Tx, snap *perm.Snapshot) error {
-		target, err := GetUser(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		if err := checkTarget(snap, actor, target); err != nil {
-			return err
-		}
-		return fn(tx)
-	})
-}
-
-// checkTarget: never the Owner, only members below the caller's highest role.
-func checkTarget(snap *perm.Snapshot, actor, target *User) error {
-	if target.IsAdmin() {
-		return errOwnerAction
-	}
-	if actor == nil {
-		return errNoSession
-	}
-	if snap == nil || actor.IsAdmin() {
-		return nil
-	}
-	return snap.CanModerate(actor.Subject(), target.Subject())
 }

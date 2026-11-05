@@ -90,7 +90,8 @@ var trees = []layered{
 		rootMayImport:    []string{"mailtext"},
 		subMayImportRoot: []string{"memberadmin", "account"},
 		importers: map[string][]string{
-			"memberadmin": {"internal/server", "internal/auth"},
+			// slashcmd runs the same timeout, ban and kick actions as the routes.
+			"memberadmin": {"internal/server", "internal/slashcmd", "internal/auth"},
 		},
 	},
 }

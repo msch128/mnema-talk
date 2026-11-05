@@ -1,17 +1,19 @@
-package auth
+package memberadmin
 
 import (
 	"context"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/auth"
 )
 
 func TestBanExpiryNeedsADatabase(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
-		(&Handler{}).RunBanExpiry(context.Background(), time.Hour)
-		(&Handler{Sessions: &Sessions{}}).RunBanExpiry(context.Background(), time.Hour)
+		New(&auth.Handler{}).RunBanExpiry(context.Background(), time.Hour)
+		New(&auth.Handler{Sessions: &auth.Sessions{}}).RunBanExpiry(context.Background(), time.Hour)
 		close(done)
 	}()
 	select {
@@ -34,10 +36,10 @@ func TestReasonsAreCleaned(t *testing.T) {
 }
 
 func TestActiveConditionsQualifyTheTable(t *testing.T) {
-	if got := ActiveSQL(""); !strings.HasPrefix(got, "NOT (disabled_at IS NOT NULL") || !strings.Contains(got, "banned_until > NOW()") {
+	if got := auth.ActiveSQL(""); !strings.HasPrefix(got, "NOT (disabled_at IS NOT NULL") || !strings.Contains(got, "banned_until > NOW()") {
 		t.Fatal(got)
 	}
-	if got := InactiveSQL("u"); !strings.Contains(got, "u.disabled_at") || !strings.Contains(got, "u.banned_at") || strings.Contains(got, " banned_at") {
+	if got := auth.InactiveSQL("u"); !strings.Contains(got, "u.disabled_at") || !strings.Contains(got, "u.banned_at") || strings.Contains(got, " banned_at") {
 		t.Fatal(got)
 	}
 }

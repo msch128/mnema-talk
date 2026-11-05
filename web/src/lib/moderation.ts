@@ -33,7 +33,7 @@ export function moderate(kind: ModerationKind, target: ModerationTarget): Promis
   })
 }
 
-/** Server limits (internal/auth/moderation.go). */
+/** Server limits (internal/auth/memberadmin/moderation.go). */
 export const MIN_TIMEOUT_SECONDS = 5
 export const MAX_TIMEOUT_SECONDS = 28 * 24 * 3600
 export const MIN_BAN_SECONDS = 60

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
@@ -68,7 +69,7 @@ func TestModerationCommandsAreOfferedByPermission(t *testing.T) {
 // Run checks the permission itself, so a command reached without the menu
 // (a crafted request, a future caller) is refused before it touches anything.
 func TestModerationCommandsRefuseACallerWithoutThePermission(t *testing.T) {
-	svc := Services{Auth: &auth.Handler{}}
+	svc := Services{Members: memberadmin.New(&auth.Handler{})}
 	user := &auth.User{ID: uuid.New(), Role: auth.RoleUser}
 	req := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(auth.WithUser(context.Background(), user))
 	call := slash.Call{Request: req, User: user, Options: map[string]any{"member": uuid.New(), "duration": "5m"}}

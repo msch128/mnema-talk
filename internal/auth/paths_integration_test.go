@@ -198,15 +198,6 @@ func TestAuthHandlersPropagateDatabaseCancellation(t *testing.T) {
 		{"status", "UPDATE users SET status_text", `{"status_text":"busy"}`, func(h *Handler) httpx.HandlerFunc { return h.setStatus }, member.ID},
 		{"profile load", "FROM users WHERE id = $1", "", func(h *Handler) httpx.HandlerFunc { return h.getUser }, member.ID},
 		{"profile stats", "SELECT voice_seconds", "", func(h *Handler) httpx.HandlerFunc { return h.getUser }, member.ID},
-		{"invitation list", "FROM invites ORDER BY", "", func(h *Handler) httpx.HandlerFunc { return h.listInvites }, member.ID},
-		{"admin list", "ORDER BY role = 'admin' DESC", "", func(h *Handler) httpx.HandlerFunc { return h.listUsers }, member.ID},
-		{"disable", "UPDATE users SET disabled_at", "", func(h *Handler) httpx.HandlerFunc { return h.disableUser }, member.ID},
-		{"enable", "UPDATE users SET disabled_at", "", func(h *Handler) httpx.HandlerFunc { return h.enableUser }, member.ID},
-		{"revoke target load", "FROM users WHERE id = $1", "", func(h *Handler) httpx.HandlerFunc { return h.revokeUserSessions }, member.ID},
-		{"kick target load", "FROM users WHERE id = $1", "", func(h *Handler) httpx.HandlerFunc { return h.kickUser }, member.ID},
-		{"revoke write", "UPDATE users SET token_version", "", func(h *Handler) httpx.HandlerFunc { return h.revokeUserSessions }, member.ID},
-		{"admin set password", "UPDATE users SET password_hash", `{"password":"replacement-password","current_password":"` + testPassword + `"}`, func(h *Handler) httpx.HandlerFunc { return h.setUserPassword }, member.ID},
-		{"admin reset password", "UPDATE users SET password_hash", `{"current_password":"` + testPassword + `"}`, func(h *Handler) httpx.HandlerFunc { return h.resetUserPassword }, member.ID},
 		{"confirm password", "SELECT password_hash FROM users", "", nil, member.ID},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -405,19 +396,10 @@ func TestAdminSeedDatabaseFailuresAndGeneratedPassword(t *testing.T) {
 	}
 }
 
-func TestAdminKickRejectsMissingOrDisconnectedUser(t *testing.T) {
-	p, admin, member := authFixture(t)
+// Failed validation must return an API error and retain the current cookie.
+func TestChangePasswordValidationKeepsTheCookie(t *testing.T) {
+	p, _, member := authFixture(t)
 	h := NewHandler(&Sessions{DB: p}, &events.Recorder{})
-	for _, tc := range []struct {
-		id     uuid.UUID
-		status int
-	}{{uuid.New(), 404}, {member.ID, 400}} {
-		w := authRequest(t, h.kickUser, admin, "", tc.id)
-		if w.Code != tc.status {
-			t.Fatalf("kick status=%d want%d", w.Code, tc.status)
-		}
-	}
-	// Failed validation must return an API error and retain the current cookie.
 	w := authRequest(t, h.changePassword, member, `{"current_password":"unused","new_password":"short"}`, member.ID)
 	if w.Code != 400 || len(w.Result().Cookies()) != 0 {
 		t.Fatalf("password validation status=%d cookies=%d", w.Code, len(w.Result().Cookies()))

@@ -23,7 +23,7 @@ func TestClearLoginLockoutScopesToOneAccount(t *testing.T) {
 	h.unknownDevice.Allow("203.0.113.9|anna")
 	h.unknownDeviceTotal.Allow("max")
 
-	locked := h.lockedAccounts()
+	locked := h.LockedAccounts()
 	if !locked["max"] || !locked["anna"] || len(locked) != 2 {
 		t.Fatalf("locked = %v", locked)
 	}
@@ -50,12 +50,12 @@ func TestClearLoginLockoutScopesToOneAccount(t *testing.T) {
 	if ok, _ := h.loginFailures.IsLockedOut("203.0.113.9|anna"); !ok {
 		t.Error("other account was cleared")
 	}
-	if locked := h.lockedAccounts(); locked["max"] || !locked["anna"] {
+	if locked := h.LockedAccounts(); locked["max"] || !locked["anna"] {
 		t.Fatalf("locked after clear = %v", locked)
 	}
 	// Nil user id: only the name-keyed state is touched.
 	h.ClearLoginLockout("anna", uuid.Nil)
-	if len(h.lockedAccounts()) != 0 {
+	if len(h.LockedAccounts()) != 0 {
 		t.Fatal("anna still locked")
 	}
 }
@@ -68,7 +68,7 @@ func TestClearAllLoginLockouts(t *testing.T) {
 	}
 	h.loginPerIP.Allow("198.51.100.1")
 	h.ClearAllLoginLockouts()
-	if len(h.lockedAccounts()) != 0 || h.loginFailures.Len() != 0 || h.accountFailures.Len() != 0 {
+	if len(h.LockedAccounts()) != 0 || h.loginFailures.Len() != 0 || h.accountFailures.Len() != 0 {
 		t.Fatal("state survived ClearAllLoginLockouts")
 	}
 }
