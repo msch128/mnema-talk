@@ -62,6 +62,8 @@
     "vue-tsc": "3.3.14"
   },
   "overrides": {
+    "glob": "14.0.3",
+    "minimatch": "11.0.4",
     "postcss-selector-parser": "7.1.6"
   }
 }
