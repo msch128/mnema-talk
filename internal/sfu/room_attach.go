@@ -61,6 +61,7 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 	metrics.SFUPeerJoins.Inc()
 
 	go r.SignalPeerConnections()
+	r.watchConnecting(peer)
 
 	return peer
 }

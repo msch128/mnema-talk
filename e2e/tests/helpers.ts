@@ -123,7 +123,47 @@ export function audioDecodedIn(page: Page): Promise<number> {
 
 /** The page's own call is up: after a reload it rejoins by itself, and leaving before that leaves nothing for the server to end. */
 export async function expectTalkLive(page: Page) {
-  await expect.poll(() => page.evaluate(() => window.__pcs.at(-1)?.connectionState), { timeout: 20_000 }).toBe('connected')
+  await expectCallConnected(page, 20_000)
+}
+
+/**
+ * Waits for the page's current connection to be 'connected'. When it is not in
+ * time, the failure says how far it got (ICE and DTLS state, each candidate
+ * pair's checks, candidate types, never addresses), so a call stuck at
+ * 'connecting' is told apart from one that never gathered or never got an
+ * answer. The server logs the same for its side as "sfu peer still connecting".
+ */
+export async function expectCallConnected(page: Page, timeout: number) {
+  const state = () => page.evaluate(() => window.__pcs.at(-1)?.connectionState)
+  try {
+    await expect.poll(state, { timeout }).toBe('connected')
+  } catch (err) {
+    const summary = await callSummary(page).catch((e: unknown) => `unavailable: ${String(e)}`)
+    throw new Error(`call not connected within ${timeout} ms: ${summary}\n${String(err)}`, { cause: err })
+  }
+}
+
+function callSummary(page: Page): Promise<string> {
+  return page.evaluate(async () => {
+    const pc = window.__pcs.at(-1)
+    if (!pc) return 'no RTCPeerConnection'
+    const kinds = new Map<string, string>()
+    const pairs: string[] = []
+    const transports: string[] = []
+    const report = await pc.getStats()
+    report.forEach((s) => {
+      if (s.type === 'local-candidate' || s.type === 'remote-candidate') kinds.set(s.id, `${s.protocol}/${s.candidateType}`)
+    })
+    report.forEach((s) => {
+      if (s.type === 'candidate-pair') {
+        pairs.push(`${kinds.get(s.localCandidateId)}>${kinds.get(s.remoteCandidateId)} ${s.state} req=${s.requestsSent}/${s.requestsReceived} resp=${s.responsesReceived}/${s.responsesSent}${s.nominated ? ' nominated' : ''}`)
+      } else if (s.type === 'transport') {
+        transports.push(`dtls=${s.dtlsState} ice=${s.iceState ?? '?'}`)
+      }
+    })
+    return `connection=${pc.connectionState} ice=${pc.iceConnectionState} gathering=${pc.iceGatheringState} signaling=${pc.signalingState}`
+      + ` remoteDescription=${pc.remoteDescription ? 'set' : 'none'} pairs=[${pairs.join('; ')}] transport=[${transports.join('; ')}]`
+  })
 }
 
 /**
