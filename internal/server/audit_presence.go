@@ -46,7 +46,11 @@ func writePresence(ctx context.Context, l *audit.Log, q db.Querier, ev presenceE
 	if l == nil {
 		return
 	}
-	if chat.IsDMTalk(ctx, q, ev.channel) {
+	// Fail closed: a Talk whose privacy is unknown is not audited.
+	if isDM, err := chat.IsDMTalk(ctx, q, ev.channel); err != nil || isDM {
+		if err != nil {
+			slog.Warn("audit log: presence not recorded, DM lookup failed", "channel", ev.channel, "err", err)
+		}
 		return
 	}
 	var username, channel string

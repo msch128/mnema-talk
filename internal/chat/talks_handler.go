@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -82,7 +83,11 @@ func (h *Handler) updateTalk(w http.ResponseWriter, r *http.Request) error {
 	if err := FillTalkFields(r.Context(), h.DB, ch); err != nil {
 		return err
 	}
-	if !IsDMTalk(r.Context(), h.DB, id) {
+	// Fail closed: when the lookup fails the update goes unaudited, because
+	// auditing a conversation's Talk would leak who called whom.
+	if isDM, err := IsDMTalk(r.Context(), h.DB, id); err != nil {
+		slog.WarnContext(r.Context(), "talk update not audited: DM lookup failed", "channel", id, "err", err)
+	} else if !isDM {
 		h.Audit.RecordOrLog(r.Context(), audit.Entry{
 			Action: "channel.update", TargetType: "channel", TargetID: id.String(), TargetName: ch.Name,
 			ChannelID: &id, Details: map[string]any{"temporary": true, "user_limit": ch.UserLimit},

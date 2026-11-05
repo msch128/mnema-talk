@@ -162,11 +162,17 @@ func OpenDMTalk(ctx context.Context, p *db.Pool, dm, creator uuid.UUID) (*Channe
 
 // IsDMTalk reports whether the channel is a Talk that belongs to a
 // conversation. Nothing about such a Talk is audited: who called whom, and when,
-// is as private as the conversation (not even the Owner reads it).
-func IsDMTalk(ctx context.Context, q db.Querier, id uuid.UUID) bool {
+// is as private as the conversation (not even the Owner reads it). A channel
+// that no longer exists is no conversation's Talk (false, nil); any other
+// failure is returned so callers can fail closed and write nothing rather than
+// audit what may be private.
+func IsDMTalk(ctx context.Context, q db.Querier, id uuid.UUID) (bool, error) {
 	var is bool
 	err := q.QueryRow(ctx, `SELECT dm_id IS NOT NULL FROM channels WHERE id = $1`, id).Scan(&is)
-	return err == nil && is
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return is, err
 }
 
 // nextDMTalkName is "Talk n" for the lowest n the conversation's open Talks do not use.
