@@ -1,0 +1,19 @@
+internal/sfu/viewer_bind.go
+  s_0d985871720a72::t_dafe635ee21d91 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9d472deeebb336bc4f8e74d16dcd9077ee57ea67",
+  "prompts": {},
+  "sessions": {
+    "s_0d985871720a72": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-atrain-t-b03b05166df3c2ca",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
