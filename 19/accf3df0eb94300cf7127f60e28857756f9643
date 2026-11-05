@@ -1,0 +1,27 @@
+internal/chat/core/kinds.go
+  s_db63cd4785d2fa::t_8c52e58a09768e 1-9
+internal/chat/core_aliases.go
+  s_db63cd4785d2fa::t_24b4bb039adb73 44-46
+internal/chat/mentions/mentions.go
+  s_db63cd4785d2fa::t_71697630a67051 11,189
+internal/chat/mentions/mentions_cap_integration_test.go
+  s_db63cd4785d2fa::t_b0cdb29855b857 12,54
+internal/chat/mentions/mentions_roles.go
+  s_db63cd4785d2fa::t_844dcf5695d914 85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "19accf3df0eb94300cf7127f60e28857756f9643",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
