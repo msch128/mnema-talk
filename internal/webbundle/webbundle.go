@@ -262,7 +262,20 @@ type appCollector struct {
 	dir      string
 	exclude  []string
 	contents map[string][]byte
+	folded   map[string]string // lower-cased path -> path as found
 	total    int64
+}
+
+// claim registers rel and refuses a second path that differs only in case.
+// Verify rejects such bundles because the desktop extracts to case-insensitive
+// file systems, so Build must not sign one it could never ship.
+func (c *appCollector) claim(rel string) error {
+	key := strings.ToLower(rel)
+	if prev, ok := c.folded[key]; ok {
+		return fmt.Errorf("paths differ only in case: %s and %s", prev, rel)
+	}
+	c.folded[key] = rel
+	return nil
 }
 
 func (c *appCollector) exceedsLimits(dataLen int) bool {
@@ -296,6 +309,9 @@ func (c *appCollector) visit(path string, d fs.DirEntry, err error) error {
 	if err := rejectUnknownType(rel); err != nil {
 		return err
 	}
+	if err := c.claim(rel); err != nil {
+		return err
+	}
 	data, err := readAppFile(path, rel)
 	if err != nil {
 		return err
@@ -315,6 +331,7 @@ func readWebApp(o BuildOptions) (map[string][]byte, error) {
 		dir:      o.Dir,
 		exclude:  o.Exclude,
 		contents: make(map[string][]byte),
+		folded:   make(map[string]string),
 	}
 	if err := filepath.WalkDir(o.Dir, c.visit); err != nil {
 		return nil, err
