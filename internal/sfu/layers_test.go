@@ -635,3 +635,97 @@ func TestViewerKeyframeRequestGoesToItsLayer(t *testing.T) {
 	rig.group.detach(rig.infos[0])
 	rig.group.requestKeyframe(0)
 }
+
+// A keyframe that passes before the viewer's connection binds the track goes
+// nowhere (Pion reports success), so it must not count as delivered: the
+// viewer would then wait on delta frames it cannot decode.
+func TestKeyframeBeforeBindIsNotCountedAsDelivered(t *testing.T) {
+	useFakeClock(t)
+	rig := newLayerRig(t, "video/VP8", 1)
+	vt, out := rig.viewer(0)
+	vt.expectBind()
+	rig.asked(0)
+
+	rig.pkt(0, 1, 1, vp8Payload(true, true, 1, true, 1, 'k'))
+	rig.pkt(0, 2, 1, vp8Payload(false, true, 2, true, 1, 'd'))
+	if got := out.take(); len(got) != 0 {
+		t.Fatalf("packets reached an unbound track: %v", seqs(got))
+	}
+	if vt.state().Layer != -1 {
+		t.Fatal("the viewer was moved to a layer before it could receive it")
+	}
+
+	vt.bound()
+	if !rig.asked(0) {
+		t.Fatal("no keyframe was asked for when the track was bound")
+	}
+	rig.pkt(0, 3, 2, vp8Payload(true, true, 3, true, 2, 'k'))
+	if got := out.take(); len(got) != 1 || vt.state().Layer != 0 {
+		t.Fatalf("the keyframe after binding was not delivered: %v", seqs(got))
+	}
+}
+
+// Pion's WriteRTP reports success while the track is not bound to a
+// connection yet. With the track's real sink and a real answer, a keyframe
+// that passed before the answer must be asked for again, and the keyframe
+// that follows the answer must reach the viewer.
+func TestKeyframeBeforeRealBindIsAskedAgain(t *testing.T) {
+	useFakeClock(t)
+	rig := newLayerRig(t, "video/VP8", 1)
+	vt, err := rig.group.newViewer(uuid.New(), -1, 0, "track", "stream")
+	if err != nil {
+		t.Fatal(err)
+	}
+	vt.expectBind() // as recipientTrack does before the track is added
+	rig.group.addViewer(vt)
+	rig.asked(0)
+
+	server, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = server.Close() })
+	client, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = client.Close() })
+	if _, err := server.AddTrack(vt); err != nil {
+		t.Fatal(err)
+	}
+
+	// The keyframe arrives before the browser has answered.
+	rig.pkt(0, 1, 1, vp8Payload(true, true, 1, true, 1, 'k'))
+	if vt.state().Layer != -1 {
+		t.Fatal("a keyframe that went nowhere was counted as delivered")
+	}
+
+	offer, err := server.CreateOffer(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := server.SetLocalDescription(offer); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.SetRemoteDescription(offer); err != nil {
+		t.Fatal(err)
+	}
+	answer, err := client.CreateAnswer(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := client.SetLocalDescription(answer); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.SetRemoteDescription(answer); err != nil {
+		t.Fatal(err)
+	}
+
+	if !rig.asked(0) {
+		t.Fatal("the answer bound the track but no keyframe was asked for")
+	}
+	rig.pkt(0, 2, 2, vp8Payload(true, true, 2, true, 2, 'k'))
+	if vt.state().Layer != 0 {
+		t.Fatal("the keyframe after the answer was not forwarded")
+	}
+}
