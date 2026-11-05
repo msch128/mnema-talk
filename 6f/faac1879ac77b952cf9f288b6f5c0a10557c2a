@@ -1,0 +1,45 @@
+AGENTS.md
+  s_f6edaac6c70960::t_0c9b3ce5ddb725 87
+internal/auth/account/personal_data_fallback_integration_test.go
+  s_f6edaac6c70960::t_f5f9656e864a36 9,25
+internal/communityevents/accountdata/accountdata.go
+  s_f6edaac6c70960::t_da3abcb791fb9c 1-3,17-18
+internal/communityevents/handler_series.go
+  s_f6edaac6c70960::t_3cdda6f9601e0f 11,39
+internal/communityevents/recurrence/recurrence.go
+  s_f6edaac6c70960::t_c6d8a3d3e9e9cf 1-3
+internal/communityevents/recurrence/recurrence_test.go
+  s_f6edaac6c70960::t_af0136da96be18 1
+internal/communityevents/series_integration_test.go
+  s_f6edaac6c70960::t_731fb33181491b 14,71,423,456,559
+internal/communityevents/store_series.go
+  s_f6edaac6c70960::t_3fd7d4688d10b4 12,16-24,65,79
+internal/repo/limits_test.go
+  s_f6edaac6c70960::t_f3aa0514c106f5 38
+internal/server/personal_data.go
+  s_f6edaac6c70960::t_819cc5222a5c01 6,22
+internal/ws/media.go
+  s_f6edaac6c70960::t_af6b25652a48e6 7-8,20,36
+internal/ws/media_framing_test.go
+  s_f6edaac6c70960::t_cd669db74b0ce7 13-19
+internal/ws/mediaframe/mediaframe.go
+  s_f6edaac6c70960::t_b5fab2c36f3f54 1-3,25,28
+internal/ws/mediaframe/mediaframe_test.go
+  s_f6edaac6c70960::t_9808aa53fd2180 1-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6ffaac1879ac77b952cf9f288b6f5c0a10557c2a",
+  "prompts": {},
+  "sessions": {
+    "s_f6edaac6c70960": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aedccab7bc6622020",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
