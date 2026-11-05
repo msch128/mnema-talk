@@ -1,0 +1,25 @@
+AGENTS.md
+  s_db63cd4785d2fa::t_d982d494e9b5bf 72,155-156,234
+CONTRIBUTING.md
+  s_db63cd4785d2fa::t_432fe79bc8e947 42-44
+doc/architecture.md
+  s_db63cd4785d2fa::t_31374324f4cb40 34
+internal/repo/limits_test.go
+  s_db63cd4785d2fa::t_29b115232622f6 23-25,32-43,162-190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fe3bc563417224cbb5b909280dc618e0f8e61f3a",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
