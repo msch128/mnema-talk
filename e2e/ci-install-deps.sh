@@ -28,7 +28,7 @@ npm ci --no-audit --no-fund
 for attempt in $(seq 1 "$ATTEMPTS"); do
   if [ "$attempt" -gt 1 ] && [ -f /etc/apt/apt-mirrors.txt ]; then
     echo "==> attempt $attempt: switching to archive.ubuntu.com"
-    echo "http://archive.ubuntu.com/ubuntu/ priority:1" | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+    echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
   fi
   echo "==> attempt $attempt of $ATTEMPTS (limit ${ATTEMPT_SECONDS}s)"
   sudo dpkg --configure -a || true

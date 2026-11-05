@@ -8,27 +8,37 @@
 # Azure Ubuntu mirror sometimes trickles bytes, which apt's idle timeout never
 # catches, and a single 180s attempt then failed the whole job (exit 124). Later
 # attempts switch to archive.ubuntu.com and resume the partial downloads.
+#
+# The mirror list holds the bare URL: a "priority:1" suffix separated by a space
+# (apt wants a tab there) ends up inside the URL and every .deb request then
+# fails with "400 Bad Request" (run 42090807808). Downloads go to the same
+# ~/apt-archives as ci-install-deps.sh, which the workflow caches.
 set -euo pipefail
 
 ATTEMPTS="${ATTEMPTS:-3}"
 ATTEMPT_SECONDS="${ATTEMPT_SECONDS:-60}"
+ARCHIVES="$HOME/apt-archives"
 
-sudo tee /etc/apt/apt.conf.d/99ci-fast-fail-audio >/dev/null <<'APT'
+mkdir -p "$ARCHIVES/partial"
+
+sudo tee /etc/apt/apt.conf.d/99ci-fast-fail-audio >/dev/null <<APT
 Acquire::Retries "5";
 Acquire::http::Timeout "20";
 Acquire::https::Timeout "20";
+Dir::Cache::Archives "$ARCHIVES";
 APT
 
 installed=0
 for attempt in $(seq 1 "$ATTEMPTS"); do
   if [ "$attempt" -gt 1 ] && [ -f /etc/apt/apt-mirrors.txt ]; then
     echo "==> attempt $attempt: switching to archive.ubuntu.com"
-    echo "http://archive.ubuntu.com/ubuntu/ priority:1" | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+    echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
   fi
   echo "==> attempt $attempt of $ATTEMPTS (limit ${ATTEMPT_SECONDS}s)"
   sudo dpkg --configure -a || true
-  if sudo timeout -k 10 "$ATTEMPT_SECONDS" apt-get install -y --no-install-recommends pulseaudio pulseaudio-utils; then
+  if sudo timeout -k 10 "$ATTEMPT_SECONDS" apt-get install -y --fix-missing --no-install-recommends pulseaudio pulseaudio-utils; then
     installed=1
+    sudo chmod -R a+rX "$ARCHIVES"
     break
   fi
   echo "==> attempt $attempt did not finish" >&2
