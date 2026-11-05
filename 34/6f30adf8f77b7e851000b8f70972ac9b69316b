@@ -1,0 +1,23 @@
+internal/sfu/layers_test.go
+  s_b1683c1c26bd79::t_617a379fbbb8c1 638-666
+internal/sfu/room_signal.go
+  s_b1683c1c26bd79::t_3e513100376bbb 240
+internal/sfu/viewer_track.go
+  s_b1683c1c26bd79::t_e05f99dfb9d7ef 40-45,71-99,347-349
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "346f30adf8f77b7e851000b8f70972ac9b69316b",
+  "prompts": {},
+  "sessions": {
+    "s_b1683c1c26bd79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a1be2c5b4cad6bafe",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
