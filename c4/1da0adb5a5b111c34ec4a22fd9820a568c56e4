@@ -1,0 +1,21 @@
+web/package-lock.json
+  s_1c8a3b2cf8dfba::t_d38741b9eaf0bd 366-372,2811-2813,2817,2819,3395-3397,3401-3402,3405,3587-3589
+web/package.json
+  s_1c8a3b2cf8dfba::t_abf814f569ebf0 65-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c41da0adb5a5b111c34ec4a22fd9820a568c56e4",
+  "prompts": {},
+  "sessions": {
+    "s_1c8a3b2cf8dfba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a2464aac93a3f5750",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
