@@ -1,0 +1,19 @@
+e2e/tests/helpers.ts
+  s_788e33b6feb8ee::t_d621d5e5a01255 150-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f0dd635361a35eadca6da56d5e3169baefd910f8",
+  "prompts": {},
+  "sessions": {
+    "s_788e33b6feb8ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5f83035c83696f3c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
