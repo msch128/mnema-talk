@@ -1,4 +1,4 @@
-package chat
+package core
 
 import "github.com/google/uuid"
 

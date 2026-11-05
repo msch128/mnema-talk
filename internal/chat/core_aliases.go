@@ -121,3 +121,4 @@ type ThreadFollow = messages.ThreadFollow
 const ThreadFollowChangesPerMinute = messages.ThreadFollowChangesPerMinute
 
 type UserRef = core.UserRef
+type VoiceRooms = core.VoiceRooms
