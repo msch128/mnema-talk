@@ -1,6 +1,10 @@
 package sfu
 
-import "github.com/pion/webrtc/v4"
+import (
+	"time"
+
+	"github.com/pion/webrtc/v4"
+)
 
 // expectBind makes the track wait for its connection to bind it. Pion's
 // WriteRTP succeeds without error while nothing is bound, so a keyframe sent
