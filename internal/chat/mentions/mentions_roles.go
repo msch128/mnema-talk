@@ -1,4 +1,4 @@
-package chat
+package mentions
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
@@ -28,9 +29,9 @@ type MentionSet struct {
 	Roles []uuid.UUID
 }
 
-// resolveMentionSet resolves names, @all, @here and role mentions of content
+// ResolveMentionSet resolves names, @all, @here and role mentions of content
 // under the mention policy of ctx. The author is never mentioned.
-func resolveMentionSet(ctx context.Context, q db.Querier, content string, authorID uuid.UUID, online []uuid.UUID) (MentionSet, error) {
+func ResolveMentionSet(ctx context.Context, q db.Querier, content string, authorID uuid.UUID, online []uuid.UUID) (MentionSet, error) {
 	policy := mentionPolicyFrom(ctx)
 	hits := roleHits(content, policy.Roles)
 	names := capNames(ParseMentions(maskPhraseRoles(content, hits)))
@@ -229,8 +230,8 @@ func shadowed(h roleHit, hits []roleHit) bool {
 	return false
 }
 
-// saveMentionSet replaces the stored mentions and role mentions of messageID.
-func saveMentionSet(ctx context.Context, q db.Querier, messageID uuid.UUID, set MentionSet) error {
+// SaveMentionSet replaces the stored mentions and role mentions of messageID.
+func SaveMentionSet(ctx context.Context, q db.Querier, messageID uuid.UUID, set MentionSet) error {
 	if _, err := q.Exec(ctx, `DELETE FROM message_mentions WHERE message_id = $1`, messageID); err != nil {
 		return fmt.Errorf("clear mentions: %w", err)
 	}
@@ -267,8 +268,8 @@ func saveRoleMentions(ctx context.Context, q db.Querier, messageID uuid.UUID, ro
 	return nil
 }
 
-// loadMentionRoles fills msgs[].MentionRoles.
-func loadMentionRoles(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+// LoadMentionRoles fills msgs[].MentionRoles.
+func LoadMentionRoles(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `SELECT message_id, role_id FROM message_role_mentions WHERE message_id = ANY($1)`, ids)
 	if err != nil {
 		return fmt.Errorf("load role mentions: %w", err)

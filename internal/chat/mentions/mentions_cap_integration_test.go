@@ -1,6 +1,6 @@
 //go:build integration
 
-package chat
+package mentions
 
 import (
 	"context"
@@ -8,13 +8,15 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/db"
 )
 
-func seedMembers(t *testing.T, f chatFixture, n int) []uuid.UUID {
+func seedMembers(t *testing.T, p *db.Pool, n int) []uuid.UUID {
 	t.Helper()
 	ids := make([]uuid.UUID, n)
 	for i := range ids {
-		if err := f.p.QueryRow(context.Background(),
+		if err := p.QueryRow(context.Background(),
 			`INSERT INTO users (username, display_name, password_hash) VALUES ($1,$1,'test-only-unused') RETURNING id`,
 			fmt.Sprintf("member%03d", i)).Scan(&ids[i]); err != nil {
 			t.Fatal(err)
@@ -26,9 +28,9 @@ func seedMembers(t *testing.T, f chatFixture, n int) []uuid.UUID {
 // Without the right to mention everyone, a message notifies at most
 // MaxMentionRecipients members, however many names or role members it names.
 func TestMentionCapForAuthorsWithoutEveryone(t *testing.T) {
-	f := newChatFixture(t)
+	p, u := chattest.NewMember(t)
 	ctx := context.Background()
-	members := seedMembers(t, f, 200)
+	members := seedMembers(t, p, 200)
 	big := MentionRole{ID: uuid.New(), Name: "Members", Members: func() []uuid.UUID { return members }}
 
 	content := "@Members"
@@ -36,7 +38,7 @@ func TestMentionCapForAuthorsWithoutEveryone(t *testing.T) {
 		content += fmt.Sprintf(" @member%03d", i)
 	}
 	capped := WithMentionPolicy(ctx, MentionPolicy{NoEveryone: true, Roles: []MentionRole{big}})
-	set, err := resolveMentionSet(capped, f.p, content, f.u.ID, nil)
+	set, err := ResolveMentionSet(capped, p, content, u.ID, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +54,7 @@ func TestMentionCapForAuthorsWithoutEveryone(t *testing.T) {
 			t.Fatalf("a role member displaced a named user: %+v", u)
 		}
 	}
-	again, _ := resolveMentionSet(capped, f.p, content, f.u.ID, nil)
+	again, _ := ResolveMentionSet(capped, p, content, u.ID, nil)
 	for i := range set.Users {
 		if set.Users[i] != again.Users[i] {
 			t.Fatal("the capped recipients are not stable")
@@ -60,14 +62,14 @@ func TestMentionCapForAuthorsWithoutEveryone(t *testing.T) {
 	}
 
 	// A role alone is capped too.
-	set, err = resolveMentionSet(capped, f.p, "@Members", f.u.ID, nil)
+	set, err = ResolveMentionSet(capped, p, "@Members", u.ID, nil)
 	if err != nil || len(set.Users) != MaxMentionRecipients {
 		t.Fatalf("role expansion: %d members, %v", len(set.Users), err)
 	}
 
 	// Whoever may mention everyone is not capped.
 	open := WithMentionPolicy(ctx, MentionPolicy{Roles: []MentionRole{big}})
-	set, err = resolveMentionSet(open, f.p, "@Members @all", f.u.ID, nil)
+	set, err = ResolveMentionSet(open, p, "@Members @all", u.ID, nil)
 	if err != nil || len(set.Users) < 200 {
 		t.Fatalf("privileged author: %d members, %v", len(set.Users), err)
 	}

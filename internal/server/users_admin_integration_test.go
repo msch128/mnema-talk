@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 )
 
 type adminUser struct {
@@ -142,7 +142,7 @@ func TestDisabledAccountLeavesMembersAndMentionsButPreservesHistory(t *testing.T
 	// recipients stores the mentions of content the way a message does and
 	// reads back who would be notified.
 	recipients := func(content string) ([]uuid.UUID, error) {
-		if err := chat.RecordMentions(context.Background(), a.db, staticOnline(online), messageID, admin.user.ID, content); err != nil {
+		if err := mentions.RecordMentions(context.Background(), a.db, staticOnline(online), messageID, admin.user.ID, content); err != nil {
 			return nil, err
 		}
 		rows, err := a.db.Query(context.Background(), `SELECT user_id FROM message_mentions WHERE message_id = $1`, messageID)

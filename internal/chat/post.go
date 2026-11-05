@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -94,7 +95,7 @@ func insertMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, nm New
 	if err != nil {
 		return uuid.Nil, err
 	}
-	if err := RecordMentions(ctx, tx, online, id, nm.UserID, nm.Content); err != nil {
+	if err := mentions.RecordMentions(ctx, tx, online, id, nm.UserID, nm.Content); err != nil {
 		return uuid.Nil, err
 	}
 	if nm.ParentID != nil {

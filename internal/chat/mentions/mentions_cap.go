@@ -1,4 +1,4 @@
-package chat
+package mentions
 
 import (
 	"bytes"

@@ -10,6 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/emojitext"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -65,7 +66,7 @@ func editMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, messageI
 		WHERE id = $2`, content, messageID); err != nil {
 		return fmt.Errorf("update message: %w", err)
 	}
-	return RecordMentions(ctx, tx, online, messageID, userID, content)
+	return mentions.RecordMentions(ctx, tx, online, messageID, userID, content)
 }
 
 // checkEditAutomod applies the automod rules to the new text of an edit. Only

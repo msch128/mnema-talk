@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -71,7 +72,7 @@ func SendContextFor(perms *perm.Service, ctx context.Context, ch uuid.UUID, need
 	}
 	ctx = WithSlowModeExempt(ctx, p.Has(perm.ManageMessages))
 	ctx = withNewMemberWriteWait(ctx, snap.NewMemberWaits(sub.ID).Write)
-	return WithMentionPolicy(ctx, MentionPolicy{
+	return mentions.WithMentionPolicy(ctx, MentionPolicy{
 		NoEveryone: !p.Has(perm.MentionEveryone),
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) },
 		Roles:      MentionableRoles(snap, p.Has(perm.MentionEveryone)),

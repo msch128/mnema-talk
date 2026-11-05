@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 )
@@ -55,7 +56,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 	})
 	t.Run("mention stream", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"users": `SELECT CASE WHEN voice_seconds >= 0 THEN (1/(voice_seconds-voice_seconds))::text::uuid ELSE id END id,username,disabled_at,NULL::timestamptz banned_at,NULL::timestamptz banned_until,NULL::timestamptz deleted_at,is_bot FROM public.users`})
-		_, err := resolveMentionSet(ctx, p, "@all", f.u.ID, nil)
+		_, err := mentions.ResolveMentionSet(ctx, p, "@all", f.u.ID, nil)
 		chattest.RequireError(t, err, "resolve mentions")
 	})
 	t.Run("message decoding", func(t *testing.T) {
@@ -174,7 +175,7 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 			_, err := InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "new"}, nil)
 			return err
 		}},
-		{"insert mentions", "message_mentions", "INSERT", func(f chatFixture) error { return saveMentionSet(ctx, f.p, f.m, byName([]uuid.UUID{f.u.ID})) }},
+		{"insert mentions", "message_mentions", "INSERT", func(f chatFixture) error { return mentions.SaveMentionSet(ctx, f.p, f.m, byName([]uuid.UUID{f.u.ID})) }},
 		{"record mentions during message insert", "message_mentions", "DELETE", func(f chatFixture) error {
 			_, err := InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "@all"}, nil)
 			return err
@@ -215,7 +216,7 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 			f := newChatFixture(t)
 			// DELETE triggers fire only when at least one mention already exists.
 			if c.table == "message_mentions" && c.operation == "DELETE" {
-				if err := saveMentionSet(ctx, f.p, f.m, byName([]uuid.UUID{f.u.ID})); err != nil {
+				if err := mentions.SaveMentionSet(ctx, f.p, f.m, byName([]uuid.UUID{f.u.ID})); err != nil {
 					t.Fatal(err)
 				}
 				// The new message has no existing mentions: a statement trigger is

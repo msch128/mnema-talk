@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -263,7 +264,7 @@ func (h *Handler) botCreateMessage(w http.ResponseWriter, r *http.Request) error
 	if err := ValidateTarget(r.Context(), h.DB, chID, req.ParentID, reply); err != nil {
 		return err
 	}
-	ctx := WithMentionPolicy(r.Context(), botMentionPolicy(snap, chID, p, req.AllowedMentions))
+	ctx := mentions.WithMentionPolicy(r.Context(), botMentionPolicy(snap, chID, p, req.AllowedMentions))
 	id, err := InsertMessage(ctx, h.DB, h.Online, NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: reply, Embeds: embeds,
 	}, nil)
@@ -308,7 +309,7 @@ func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllo
 	// the request asked for them. An edit sends no allowed_mentions, so it
 	// never adds role mentions.
 	if am != nil {
-		policy.Roles = AllowedRoles(MentionableRoles(snap, p.Has(perm.MentionEveryone)), am.Parse, am.Roles)
+		policy.Roles = mentions.AllowedRoles(MentionableRoles(snap, p.Has(perm.MentionEveryone)), am.Parse, am.Roles)
 	}
 	return policy
 }
@@ -348,7 +349,7 @@ func (h *Handler) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (
 	if err := snap.Deny(user.Subject(), p, need); err != nil {
 		return nil, err
 	}
-	return WithMentionPolicy(r.Context(), botMentionPolicy(snap, ch, p, nil)), nil
+	return mentions.WithMentionPolicy(r.Context(), botMentionPolicy(snap, ch, p, nil)), nil
 }
 
 // botDeleteMessage handles DELETE /api/bot/v1/channels/{channelID}/messages/{messageID}.

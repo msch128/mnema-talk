@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -36,7 +37,7 @@ func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMen
 		// A webhook is an admin tool: its own settings, not a user's rights,
 		// decide. Mentionable roles always; every custom role with
 		// "allow @all/@here".
-		policy.Roles = chat.AllowedRoles(chat.MentionableRoles(snap, rec.AllowEveryone), am.Parse, am.Roles)
+		policy.Roles = mentions.AllowedRoles(chat.MentionableRoles(snap, rec.AllowEveryone), am.Parse, am.Roles)
 	}
 	return policy, nil
 }

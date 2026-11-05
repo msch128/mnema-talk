@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/testutil"
@@ -71,9 +72,9 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 		{"channel update", func() error { _, e := EditChannel(ctx, f.p, f.c.ID, &name, &topic, &limit, nil, nil, nil); return e }},
 		{"category rename", func() error { _, err := RenameCategory(ctx, f.p, f.c.ID, name); return err }},
 		{"members", func() error { _, e := core.GetAllMembers(ctx, f.p); return e }},
-		{"resolve mentions", func() error { _, e := resolveMentionSet(ctx, f.p, "@all", f.u.ID, nil); return e }},
-		{"clear mentions", func() error { return saveMentionSet(ctx, f.p, f.m, byName(nil)) }},
-		{"record mentions", func() error { return RecordMentions(ctx, f.p, nil, f.m, f.u.ID, "@all") }},
+		{"resolve mentions", func() error { _, e := mentions.ResolveMentionSet(ctx, f.p, "@all", f.u.ID, nil); return e }},
+		{"clear mentions", func() error { return mentions.SaveMentionSet(ctx, f.p, f.m, byName(nil)) }},
+		{"record mentions", func() error { return mentions.RecordMentions(ctx, f.p, nil, f.m, f.u.ID, "@all") }},
 		{"messages", func() error { _, e := GetChannelMessages(ctx, f.p, f.c.ID, HistoryQuery{Limit: 2}); return e }},
 		{"messages around", func() error {
 			_, e := GetChannelMessages(ctx, f.p, f.c.ID, HistoryQuery{Limit: 2, Around: &f.m})
