@@ -1,0 +1,19 @@
+doc/upgrade.md
+  s_3a2d4d42231329::t_fe10ab934c997f 75-192,296
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "925e94b7142c87ea1b824e36ee58dc0b8ac11757",
+  "prompts": {},
+  "sessions": {
+    "s_3a2d4d42231329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5cd8a73a681f9a5e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
