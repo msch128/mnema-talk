@@ -79,7 +79,7 @@ func (h *Handler) viewAsRole(w http.ResponseWriter, r *http.Request) error {
 	}
 	// Start from what the caller sees: the preview is an intersection, so it
 	// can never reveal a channel or category the caller has no access to.
-	cats, uncat, err = h.visibleHierarchy(r, cats, uncat)
+	cats, uncat, err = visibleHierarchy(h.Perms, r, cats, uncat)
 	if err != nil {
 		return err
 	}

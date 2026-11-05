@@ -64,12 +64,6 @@ type Handler struct {
 	TalkLimit *httpx.RateLimiter
 }
 
-// VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
-type VoiceRooms interface {
-	// CloseVoiceChannel disconnects everyone from the channel's voice room.
-	CloseVoiceChannel(channelID uuid.UUID)
-}
-
 func (h *Handler) voiceRooms() VoiceRooms {
 	if h.Voice != nil {
 		return h.Voice
@@ -209,7 +203,7 @@ func (h *Handler) listChannels(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	cats, uncat, err = h.visibleHierarchy(r, cats, uncat)
+	cats, uncat, err = visibleHierarchy(h.Perms, r, cats, uncat)
 	if err != nil {
 		return err
 	}
