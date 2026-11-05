@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.9.2](https://github.com/msch128/mnema-talk/compare/v2.9.1...v2.9.2) (2026-11-05)
+
+
+### Bug Fixes
+
+* keep hidden directories and stray file types out of the signed bundle ([#668](https://github.com/msch128/mnema-talk/issues/668)) ([3aa36a3](https://github.com/msch128/mnema-talk/commit/3aa36a3268b5ea3348298d9c249a81ff2efc4b6b))
+
+
+### Code Refactoring
+
+* move the bot, webhook, emoji and Discord import erasure statements into their domains ([#670](https://github.com/msch128/mnema-talk/issues/670)) ([3aa36a3](https://github.com/msch128/mnema-talk/commit/3aa36a3268b5ea3348298d9c249a81ff2efc4b6b))
+* move the raw SQL of chat's saved, follow, report, Talk invite and audit handlers into store functions ([#676](https://github.com/msch128/mnema-talk/issues/676)) ([3aa36a3](https://github.com/msch128/mnema-talk/commit/3aa36a3268b5ea3348298d9c249a81ff2efc4b6b))
+* share one byte formatter across the admin tabs ([#645](https://github.com/msch128/mnema-talk/issues/645)) ([3aa36a3](https://github.com/msch128/mnema-talk/commit/3aa36a3268b5ea3348298d9c249a81ff2efc4b6b))
+
 ## [2.9.1](https://github.com/msch128/mnema-talk/compare/v2.9.0...v2.9.1) (2026-11-04)
 
 
