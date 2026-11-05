@@ -52,10 +52,6 @@ func CleanTagEmoji(emoji string) (string, error) {
 // forumTagColumns is the column list every tag query returns, in ForumTag.scan order.
 const forumTagColumns = `id, channel_id, name, emoji, color, position, moderated, created_at`
 
-func (t *ForumTag) scan(row pgx.Row) error {
-	return row.Scan(&t.ID, &t.ChannelID, &t.Name, &t.Emoji, &t.Color, &t.Position, &t.Moderated, &t.CreatedAt)
-}
-
 // ListForumTags loads all tags defined in channelID in the forum's own order.
 func ListForumTags(ctx context.Context, q db.Querier, channelID uuid.UUID) ([]ForumTag, error) {
 	rows, err := q.Query(ctx, `

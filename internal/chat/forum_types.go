@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 const (
@@ -27,4 +28,9 @@ type ForumTag struct {
 	// Moderated tags are applied and removed only by members with Manage messages.
 	Moderated bool      `json:"moderated"`
 	CreatedAt time.Time `json:"created_at" format:"date-time"`
+}
+
+// scan reads one forum_tags row selected with forumTagColumns.
+func (t *ForumTag) scan(row pgx.Row) error {
+	return row.Scan(&t.ID, &t.ChannelID, &t.Name, &t.Emoji, &t.Color, &t.Position, &t.Moderated, &t.CreatedAt)
 }
