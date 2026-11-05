@@ -147,6 +147,9 @@ export async function expectCallConnected(page: Page, timeout: number) {
   const state = () => page.evaluate(() => window.__pcs.at(-1)?.connectionState)
   try {
     await expect.poll(state, { timeout }).toBe('connected')
+    // Setup times per browser in the CI log, so a slow join shows up as a number before it shows up as a timeout.
+    const timing = await page.evaluate(() => window.__pcTimings.at(-1)).catch(() => undefined)
+    console.log(`[call timing] ${test.info().project.name} ${test.info().title}: ${JSON.stringify(timing)}`)
   } catch (err) {
     const summary = await callSummary(page).catch((e: unknown) => `unavailable: ${String(e)}`)
     throw new Error(`call not connected within ${timeout} ms: ${summary}\n${String(err)}`, { cause: err })
