@@ -1,0 +1,25 @@
+.github/workflows/ci.yml
+  s_788e33b6feb8ee::t_53ebb08cc2aa20 899-902,904-905
+e2e/browser.d.ts
+  s_788e33b6feb8ee::t_157d1eeedd78d6 6
+e2e/tests/audio-stall.spec.ts
+  s_788e33b6feb8ee::t_008f14c3a6276f 73,115-116
+e2e/tests/helpers.ts
+  s_788e33b6feb8ee::t_86c41a78c99c12 2,100,105-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "729d6f8b2b22651f8e368a27dd5264ec3bf9c11d",
+  "prompts": {},
+  "sessions": {
+    "s_788e33b6feb8ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5f83035c83696f3c",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
