@@ -1,0 +1,21 @@
+internal/webbundle/webbundle.go
+  s_d1f01a4bf73681::t_3b29979c86cc94 265,269-280,312-314,334
+internal/webbundle/webbundle_test.go
+  s_d1f01a4bf73681::t_e2183fcfae6ad3 146-182
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8962bcad1ff1765c878268a6b36fbe83d4f447f9",
+  "prompts": {},
+  "sessions": {
+    "s_d1f01a4bf73681": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acae886110d84f7b8",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
