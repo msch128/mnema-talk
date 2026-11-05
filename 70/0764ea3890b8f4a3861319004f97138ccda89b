@@ -1,0 +1,33 @@
+internal/bot/interactions_respond.go
+  s_db63cd4785d2fa::t_79337845b87073 11,156,166
+internal/chat/botapi/api.go
+  s_db63cd4785d2fa::t_2ab4c361f9fe8d 1-26
+internal/chat/botapi/botapi.go
+  s_db63cd4785d2fa::t_2b475337d3dff6 1,28-38,49,54-55,71,78-79,92,99-100,104,107,141,153,201,216,238-239,247,253,265,269,275,288,302-303,329-330,338-339,344,346,373-374
+internal/chat/botapi/botapi_members.go
+  s_db63cd4785d2fa::t_a67576da740ec8 1,42-43,50,60,65,69,73,94,100-101,118,126,135,139
+internal/chat/botapi/botapi_reactions.go
+  s_db63cd4785d2fa::t_4ec37ccd2a35d0 1,24,26,34,41,46,73-74,94-95
+internal/chat/core_aliases.go
+  s_db63cd4785d2fa::t_e9bdf2c02a7d65 4,27-30
+internal/chat/handler.go
+  s_db63cd4785d2fa::t_fc5256a9ced61e 12,138-143
+internal/repo/boundaries_test.go
+  s_db63cd4785d2fa::t_5d7bd6604f65c5 77,82,84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "700764ea3890b8f4a3861319004f97138ccda89b",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
