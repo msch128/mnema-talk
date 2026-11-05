@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -15,7 +16,7 @@ func extractEmojiParam(r *http.Request) (string, error) {
 	if decoded, err := url.PathUnescape(raw); err == nil {
 		raw = decoded
 	}
-	return validateReactionRef(raw)
+	return core.ValidateReactionRef(raw)
 }
 
 // setBotReaction adds (want) or removes the bot's reaction, idempotently.
@@ -34,7 +35,7 @@ func (h *Handler) setBotReaction(w http.ResponseWriter, r *http.Request, want bo
 		return err
 	}
 	if !p.Has(perm.ViewChannel) {
-		return errMessageNotFound
+		return core.ErrMessageNotFound
 	}
 	reactions, changed, err := SetReactionAs(r.Context(), h.DB, msgID, user.ID, emoji, want, p.Has(perm.AddReactions))
 	if err != nil {

@@ -1,4 +1,4 @@
-package chat
+package core
 
 import (
 	"strings"
@@ -214,7 +214,7 @@ func ValidateEmoji(emoji string) (string, error) {
 // validateReactionRef is ValidateEmoji without the formatting-character rule,
 // for the toggle and the delete route: a reaction stored before that rule must
 // stay removable by its owner. Adding re-checks the strict rule.
-func validateReactionRef(emoji string) (string, error) {
+func ValidateReactionRef(emoji string) (string, error) {
 	return validateEmoji(emoji, false)
 }
 

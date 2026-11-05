@@ -1,4 +1,4 @@
-package chat
+package core
 
 import (
 	"time"
@@ -16,7 +16,7 @@ const (
 	// channelKindDM is the type a direct message conversation has in the
 	// channels table (dm.go). It is deliberately not a ChannelType: it is never
 	// a channel type to create or one the API lists with the channels.
-	channelKindDM = "dm"
+	ChannelKindDM = "dm"
 
 	MaxChannelNameLen = 64
 	MaxTopicLen       = 255

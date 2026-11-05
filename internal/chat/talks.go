@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -74,10 +75,10 @@ func SetLobby(ctx context.Context, p db.Querier, id uuid.UUID, lobby bool) error
 		return fmt.Errorf("set lobby: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		if _, lerr := LoadChannel(ctx, p, id); lerr == nil {
+		if _, lerr := core.LoadChannel(ctx, p, id); lerr == nil {
 			return httpx.ErrInvalidInput("only a permanent Talk that is no Stage can be a lobby")
 		}
-		return errChannelNotFound
+		return core.ErrChannelNotFound
 	}
 	return nil
 }
@@ -87,7 +88,7 @@ func SetLobby(ctx context.Context, p db.Querier, id uuid.UUID, lobby bool) error
 func FillTalkFields(ctx context.Context, p *db.Pool, ch *Channel) error {
 	err := p.QueryRow(ctx, `SELECT is_lobby, is_temp, leader_id, is_stage FROM channels WHERE id = $1`, ch.ID).Scan(&ch.IsLobby, &ch.IsTemp, &ch.LeaderID, &ch.IsStage)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return errChannelNotFound
+		return core.ErrChannelNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("load talk fields: %w", err)

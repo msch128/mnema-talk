@@ -64,7 +64,7 @@ func ListForumTags(ctx context.Context, q db.Querier, channelID uuid.UUID) ([]Fo
 	tags := make([]ForumTag, 0)
 	for rows.Next() {
 		var t ForumTag
-		if err := t.scan(rows); err != nil {
+		if err := t.Scan(rows); err != nil {
 			return nil, err
 		}
 		tags = append(tags, t)
@@ -108,7 +108,7 @@ func CreateForumTagSpec(ctx context.Context, p *db.Pool, channelID uuid.UUID, sp
 		if count >= MaxForumTags {
 			return errTooManyForumTags
 		}
-		return tag.scan(tx.QueryRow(ctx, `
+		return tag.Scan(tx.QueryRow(ctx, `
 			INSERT INTO forum_tags (channel_id, name, emoji, color, moderated, position) VALUES ($1, $2, $3, $4, $5, $6)
 			RETURNING `+forumTagColumns,
 			channelID, cleanName, cleanEmoji, cleanColor, spec.Moderated, last+1))
@@ -237,7 +237,7 @@ func sameTagSet(current []ForumTag, ids []uuid.UUID) bool {
 // DeleteForumTag removes a tag from the channel and returns what it was.
 func DeleteForumTag(ctx context.Context, q db.Querier, channelID, tagID uuid.UUID) (*ForumTag, error) {
 	var tag ForumTag
-	err := tag.scan(q.QueryRow(ctx, `
+	err := tag.Scan(q.QueryRow(ctx, `
 		DELETE FROM forum_tags WHERE id = $1 AND channel_id = $2
 		RETURNING `+forumTagColumns, tagID, channelID))
 	if errors.Is(err, pgx.ErrNoRows) {

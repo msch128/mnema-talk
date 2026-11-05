@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -131,7 +132,7 @@ func reportContext(ctx context.Context, p *db.Pool, channelID, messageID uuid.UU
 		}
 	}
 	if snap.Message.ID != messageID {
-		return snap, errMessageNotFound
+		return snap, core.ErrMessageNotFound
 	}
 	return snap, nil
 }
@@ -152,7 +153,7 @@ func FileReport(ctx context.Context, p *db.Pool, nr NewReport) (uuid.UUID, error
 	if !reportCategories[nr.Category] {
 		return uuid.Nil, httpx.ErrInvalidInput("category must be spam, harassment, illegal or other")
 	}
-	ref, err := loadMessageRef(ctx, p, nr.MessageID)
+	ref, err := core.LoadMessageRef(ctx, p, nr.MessageID)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -174,7 +175,7 @@ func FileReport(ctx context.Context, p *db.Pool, nr NewReport) (uuid.UUID, error
 	return insertReport(ctx, p, nr, ref, kind, name, raw)
 }
 
-func insertReport(ctx context.Context, p *db.Pool, nr NewReport, ref *messageRef, kind, name string, snapshot []byte) (uuid.UUID, error) {
+func insertReport(ctx context.Context, p *db.Pool, nr NewReport, ref *core.MessageRef, kind, name string, snapshot []byte) (uuid.UUID, error) {
 	var id uuid.UUID
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR NO KEY UPDATE`, nr.Reporter); err != nil {

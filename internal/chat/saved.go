@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -87,7 +88,7 @@ type savedRow struct {
 // last entry of the previous page.
 func ListSaved(ctx context.Context, p *db.Pool, user uuid.UUID, visible []uuid.UUID, before *uuid.UUID, limit int) (SavedPage, error) {
 	if before != nil {
-		if err := cursorExists(ctx, p, `SELECT 1 FROM saved_messages WHERE user_id = $1 AND message_id = $2`, user, *before); err != nil {
+		if err := core.CursorExists(ctx, p, `SELECT 1 FROM saved_messages WHERE user_id = $1 AND message_id = $2`, user, *before); err != nil {
 			return SavedPage{}, err
 		}
 	}
@@ -135,7 +136,7 @@ func savedMessages(ctx context.Context, p *db.Pool, user uuid.UUID, saved []save
 	// membership test in SQL, as in search.
 	msgs, err := queryMessages(ctx, p, messageSelect+` WHERE m.id = ANY($1) AND (
 		(NOT m.in_dm AND ($2::uuid[] IS NULL OR m.channel_id = ANY($2)))
-		OR (`+conversationReadableSQL("$3")+`))`, ids, visible, user)
+		OR (`+core.ConversationReadableSQL("$3")+`))`, ids, visible, user)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +245,7 @@ func (h *Handler) saveMessage(w http.ResponseWriter, r *http.Request) error {
 		}
 		req.Note = &note
 	}
-	ref, err := loadMessageRef(r.Context(), h.DB, msgID)
+	ref, err := core.LoadMessageRef(r.Context(), h.DB, msgID)
 	if err != nil {
 		return err
 	}

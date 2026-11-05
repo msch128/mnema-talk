@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -25,12 +26,12 @@ func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 	var seconds int
 	err := tx.QueryRow(ctx, `SELECT type, slow_mode_seconds FROM channels WHERE id = $1`, nm.ChannelID).Scan(&kind, &seconds)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return errChannelNotFound
+		return core.ErrChannelNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("load channel: %w", err)
 	}
-	if kind == channelKindDM {
+	if kind == core.ChannelKindDM {
 		return gateDM(ctx, tx, nm)
 	}
 	if nm.ParentID != nil {
@@ -104,7 +105,7 @@ func gateDM(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 		}
 	}
 	if !isMember {
-		return errChannelNotFound
+		return core.ErrChannelNotFound
 	}
 	if err := checkDMReachable(ctx, tx, nm.UserID, others, st.group); err != nil {
 		return err

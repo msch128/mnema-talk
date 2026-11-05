@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -29,12 +30,12 @@ type InviteToTalkRequest struct {
 // dmSendContext checks that the caller may send in the direct message
 // conversation dm and returns the context to post with.
 func (h *Handler) dmSendContext(r *http.Request, dm uuid.UUID) (context.Context, error) {
-	ch, err := LoadChannel(r.Context(), h.DB, dm)
+	ch, err := core.LoadChannel(r.Context(), h.DB, dm)
 	if err != nil {
 		return nil, err
 	}
-	if ch.Type != channelKindDM {
-		return nil, errChannelNotFound
+	if ch.Type != core.ChannelKindDM {
+		return nil, core.ErrChannelNotFound
 	}
 	return h.sendContext(r, dm, perm.SendMessages)
 }
@@ -44,7 +45,7 @@ func talkName(ctx context.Context, q db.Querier, talk uuid.UUID) (string, error)
 	var name string
 	err := q.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1 AND type = 'voice'`, talk).Scan(&name)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", errChannelNotFound
+		return "", core.ErrChannelNotFound
 	}
 	if err != nil {
 		return "", fmt.Errorf("load talk for invite: %w", err)

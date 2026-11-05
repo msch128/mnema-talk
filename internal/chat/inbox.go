@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -35,7 +36,7 @@ type InboxQuery struct {
 // Mentions returns one page of the caller's mentions inbox and whether older
 // entries exist. Messages by the user themselves never appear.
 func Mentions(ctx context.Context, p *db.Pool, q InboxQuery) ([]Message, bool, error) {
-	if err := messageCursorExists(ctx, p, q.Before); err != nil {
+	if err := core.MessageCursorExists(ctx, p, q.Before); err != nil {
 		return nil, false, err
 	}
 	msgs, err := queryMessages(ctx, p, inboxSQL(), inboxArgs(q)...)
@@ -66,7 +67,7 @@ func inboxSQL() string {
 	visible := "($3::uuid[] IS NULL OR m.channel_id = ANY($3::uuid[]))"
 	cursor := "($4::uuid IS NULL OR (m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = $4))"
 	// A member the caller blocked leaves no entry, whatever they mention.
-	unblocked := authorHiddenFrom("$1", "m.user_id")
+	unblocked := core.AuthorHiddenFrom("$1", "m.user_id")
 	tail := " AND NOT m.in_dm AND m.user_id <> $1 AND " + unblocked + " AND " + visible + " AND " + cursor + " ORDER BY m.created_at DESC, m.id DESC LIMIT $2)"
 	return `WITH hits AS (
 		(SELECT m.id, m.created_at FROM message_mentions mm JOIN messages m ON m.id = mm.message_id

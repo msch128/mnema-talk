@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -66,7 +67,7 @@ func (h *Hub) voiceRooms(c *Client, snap *perm.Snapshot) map[string]any {
 
 // voiceChannel returns chID if it exists and is a voice channel.
 func (h *Hub) voiceChannel(ctx context.Context, chID uuid.UUID) (*chat.ChannelInfo, bool) {
-	ch, err := chat.LoadChannel(ctx, h.DB, chID)
+	ch, err := core.LoadChannel(ctx, h.DB, chID)
 	if err != nil || ch.Type != chat.ChannelTypeVoice {
 		return nil, false
 	}

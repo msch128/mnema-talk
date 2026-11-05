@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -113,7 +114,7 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 	if err != nil {
 		return nil, false, err
 	}
-	if err := messageCursorExists(ctx, p, q.Before); err != nil {
+	if err := core.MessageCursorExists(ctx, p, q.Before); err != nil {
 		return nil, false, err
 	}
 	var msgs []Message

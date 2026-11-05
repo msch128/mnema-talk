@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -33,7 +34,7 @@ func (h *Handler) require(r *http.Request, ch uuid.UUID, need perm.Set) error {
 func notFoundUnlessFailure(err error) error {
 	var apiErr *httpx.APIError
 	if errors.As(err, &apiErr) {
-		return errMessageNotFound
+		return core.ErrMessageNotFound
 	}
 	return err
 }

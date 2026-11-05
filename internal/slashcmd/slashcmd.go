@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -69,14 +70,14 @@ func (s *Services) post(call slash.Call, content string, parent *uuid.UUID) (sla
 	if err != nil {
 		return slash.Result{}, err
 	}
-	content, err = chat.ValidateContent(content, false)
+	content, err = core.ValidateContent(content, false)
 	if err != nil {
 		return slash.Result{}, err
 	}
 	if _, err := chat.ChannelForMessages(ctx, s.DB, call.Channel); err != nil {
 		return slash.Result{}, err
 	}
-	if err := chat.ValidateParent(ctx, s.DB, call.Channel, parent); err != nil {
+	if err := core.ValidateParent(ctx, s.DB, call.Channel, parent); err != nil {
 		return slash.Result{}, err
 	}
 	id, err := chat.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{

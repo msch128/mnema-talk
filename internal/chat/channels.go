@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/stage"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -180,7 +181,7 @@ func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]stri
 		var one int
 		err := tx.QueryRow(ctx, `SELECT 1 FROM channels WHERE id = $1 AND type <> 'dm' FOR UPDATE`, channelID).Scan(&one)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return errChannelNotFound
+			return core.ErrChannelNotFound
 		}
 		if err != nil {
 			return fmt.Errorf("lock channel: %w", err)
@@ -256,11 +257,11 @@ func applyChannelEdit(ctx context.Context, tx pgx.Tx, id uuid.UUID, ch *Channel,
 // channel that is not a voice one, or no such channel.
 func channelEditMissed(ctx context.Context, p *db.Pool, id uuid.UUID, userLimit *int) error {
 	if userLimit != nil && *userLimit > 0 {
-		if _, err := LoadChannel(ctx, p, id); err == nil {
+		if _, err := core.LoadChannel(ctx, p, id); err == nil {
 			return httpx.ErrInvalidInput("user_limit applies to voice channels only")
 		}
 	}
-	return errChannelNotFound
+	return core.ErrChannelNotFound
 }
 
 func validateChannelLimits(userLimit, slowMode *int) error {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 func canceledContext() context.Context {
@@ -45,7 +46,7 @@ func TestFillTalkFieldsReportsFailures(t *testing.T) {
 	if err := FillTalkFields(context.Background(), w.p, ch); err != nil || !ch.IsLobby {
 		t.Fatalf("err = %v, lobby = %v", err, ch.IsLobby)
 	}
-	if err := FillTalkFields(context.Background(), w.p, &Channel{ID: uuid.New()}); !errors.Is(err, errChannelNotFound) {
+	if err := FillTalkFields(context.Background(), w.p, &Channel{ID: uuid.New()}); !errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("err = %v; want not found", err)
 	}
 }
@@ -54,10 +55,10 @@ func TestPostTalkInviteOnlyMapsAMissingTalkToNotFound(t *testing.T) {
 	w := newTalksWorld(t)
 	h := &Handler{DB: w.p}
 	_, err := h.postTalkInvite(canceledContext(), uuid.New(), w.alice.ID, w.lobby.ID)
-	if err == nil || errors.Is(err, errChannelNotFound) {
+	if err == nil || errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("err = %v; a database failure must not read as not found", err)
 	}
-	if _, err := h.postTalkInvite(context.Background(), uuid.New(), w.alice.ID, uuid.New()); !errors.Is(err, errChannelNotFound) {
+	if _, err := h.postTalkInvite(context.Background(), uuid.New(), w.alice.ID, uuid.New()); !errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("err = %v; want not found", err)
 	}
 }
@@ -66,11 +67,11 @@ func TestDMSendContextOnlyMapsAMissingConversationToNotFound(t *testing.T) {
 	w := newTalksWorld(t)
 	h := &Handler{DB: w.p}
 	r := chattest.Request(w.alice, "", nil, "").WithContext(canceledContext())
-	if _, err := h.dmSendContext(r, w.lobby.ID); err == nil || errors.Is(err, errChannelNotFound) {
+	if _, err := h.dmSendContext(r, w.lobby.ID); err == nil || errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("err = %v; a database failure must not read as not found", err)
 	}
 	r = chattest.Request(w.alice, "", nil, "")
-	if _, err := h.dmSendContext(r, uuid.New()); !errors.Is(err, errChannelNotFound) {
+	if _, err := h.dmSendContext(r, uuid.New()); !errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("unknown conversation: err = %v; want not found", err)
 	}
 }

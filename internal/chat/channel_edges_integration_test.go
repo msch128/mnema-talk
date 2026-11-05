@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -59,7 +60,7 @@ func apiStatus(err error) int {
 func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
 	f := newChatFixture(t)
 	missing := uuid.New()
-	if err := ValidateParent(context.Background(), f.p, f.c.ID, &missing); apiStatus(err) != http.StatusBadRequest {
+	if err := core.ValidateParent(context.Background(), f.p, f.c.ID, &missing); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("missing parent: %v", err)
 	}
 	if err := ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing); apiStatus(err) != http.StatusBadRequest {
@@ -67,7 +68,7 @@ func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := ValidateParent(ctx, f.p, f.c.ID, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
+	if err := core.ValidateParent(ctx, f.p, f.c.ID, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
 		t.Fatalf("parent lookup failure: %v", err)
 	}
 	if err := ValidateReplyTarget(ctx, f.p, f.c.ID, nil, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
@@ -305,11 +306,11 @@ func TestGroupLimitCountsAreSerializedPerAddedMember(t *testing.T) {
 func TestGetMemberReadsOneVisibleMember(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	m, err := GetMember(ctx, f.p, f.u.ID)
+	m, err := core.GetMember(ctx, f.p, f.u.ID)
 	if err != nil || m.ID != f.u.ID || m.Username != f.u.Username {
 		t.Fatalf("member: %+v %v", m, err)
 	}
-	if _, err := GetMember(ctx, f.p, uuid.New()); !errors.Is(err, errUnknownUser) {
+	if _, err := core.GetMember(ctx, f.p, uuid.New()); !errors.Is(err, core.ErrUnknownUser) {
 		t.Fatalf("unknown member: %v", err)
 	}
 }
@@ -323,7 +324,7 @@ func TestStoredReactionWithFormattingCharacterCanBeTakenBack(t *testing.T) {
 	if _, err := f.p.Exec(ctx, `INSERT INTO message_reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)`, f.m, f.u.ID, old); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := validateReactionRef(old); err != nil {
+	if _, err := core.ValidateReactionRef(old); err != nil {
 		t.Fatalf("lookup rule rejects the stored emoji: %v", err)
 	}
 	reactions, changed, err := SetReactionAs(ctx, f.p, f.m, f.u.ID, old, false, true)

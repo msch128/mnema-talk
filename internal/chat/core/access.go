@@ -1,4 +1,4 @@
-package chat
+package core
 
 import (
 	"context"
@@ -27,14 +27,14 @@ type ChannelInfo struct {
 	IsStage bool
 }
 
-var errChannelNotFound = httpx.ErrNotFound("channel not found")
+var ErrChannelNotFound = httpx.ErrNotFound("channel not found")
 
 // LoadChannel fetches a channel's type; a missing channel is a 404.
 func LoadChannel(ctx context.Context, p db.Querier, id uuid.UUID) (*ChannelInfo, error) {
 	ch := &ChannelInfo{ID: id}
 	err := p.QueryRow(ctx, `SELECT type, user_limit, slow_mode_seconds, is_lobby, is_stage FROM channels WHERE id = $1`, id).Scan(&ch.Type, &ch.UserLimit, &ch.SlowMode, &ch.IsLobby, &ch.IsStage)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, errChannelNotFound
+		return nil, ErrChannelNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("load channel: %w", err)
@@ -43,20 +43,20 @@ func LoadChannel(ctx context.Context, p db.Querier, id uuid.UUID) (*ChannelInfo,
 }
 
 // messageRef is the minimal context of an existing message.
-type messageRef struct {
+type MessageRef struct {
 	ChannelID uuid.UUID
 	AuthorID  uuid.UUID
 	ParentID  *uuid.UUID
 }
 
-var errMessageNotFound = httpx.ErrNotFound("message not found")
+var ErrMessageNotFound = httpx.ErrNotFound("message not found")
 
 // conversationReadableSQL is the condition "message m is in a conversation
 // that the member user (a SQL parameter or expression) belongs to". A
 // conversation is readable by its members only, whatever the permission state
 // says, so every read of conversation messages (search, saved list) uses this
 // one rule.
-func conversationReadableSQL(user string) string {
+func ConversationReadableSQL(user string) string {
 	return "m.in_dm AND EXISTS (SELECT 1 FROM dm_members dm WHERE dm.channel_id = m.channel_id AND dm.user_id = " + user + ")"
 }
 
@@ -68,7 +68,7 @@ var errCursorGone = httpx.ErrNotFound("the page cursor no longer exists; reload 
 // (query selects it). Without that check a keyset comparison against a deleted
 // row is NULL and the page comes back empty with has_more=false, as if the
 // list had ended.
-func cursorExists(ctx context.Context, q db.Querier, query string, args ...any) error {
+func CursorExists(ctx context.Context, q db.Querier, query string, args ...any) error {
 	var ok bool
 	if err := q.QueryRow(ctx, "SELECT EXISTS ("+query+")", args...).Scan(&ok); err != nil {
 		return fmt.Errorf("check page cursor: %w", err)
@@ -81,19 +81,19 @@ func cursorExists(ctx context.Context, q db.Querier, query string, args ...any) 
 
 // messageCursorExists is cursorExists for a cursor that is a message id (nil:
 // the first page).
-func messageCursorExists(ctx context.Context, q db.Querier, before *uuid.UUID) error {
+func MessageCursorExists(ctx context.Context, q db.Querier, before *uuid.UUID) error {
 	if before == nil {
 		return nil
 	}
-	return cursorExists(ctx, q, `SELECT 1 FROM messages WHERE id = $1`, *before)
+	return CursorExists(ctx, q, `SELECT 1 FROM messages WHERE id = $1`, *before)
 }
 
-func loadMessageRef(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*messageRef, error) {
-	var ref messageRef
+func LoadMessageRef(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*MessageRef, error) {
+	var ref MessageRef
 	err := p.QueryRow(ctx, `SELECT channel_id, user_id, parent_id FROM messages WHERE id = $1`, messageID).
 		Scan(&ref.ChannelID, &ref.AuthorID, &ref.ParentID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, errMessageNotFound
+		return nil, ErrMessageNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("load message: %w", err)
@@ -103,9 +103,9 @@ func loadMessageRef(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*mess
 
 // loadReferencedMessage loads the message a request refers to. A missing one
 // is the caller's mistake (400 with notFound); any other failure is ours.
-func loadReferencedMessage(ctx context.Context, p *db.Pool, id uuid.UUID, notFound string) (*messageRef, error) {
-	ref, err := loadMessageRef(ctx, p, id)
-	if errors.Is(err, errMessageNotFound) {
+func LoadReferencedMessage(ctx context.Context, p *db.Pool, id uuid.UUID, notFound string) (*MessageRef, error) {
+	ref, err := LoadMessageRef(ctx, p, id)
+	if errors.Is(err, ErrMessageNotFound) {
 		return nil, httpx.ErrInvalidInput(notFound)
 	}
 	return ref, err
@@ -117,7 +117,7 @@ func ValidateParent(ctx context.Context, p *db.Pool, channelID uuid.UUID, parent
 	if parentID == nil {
 		return nil
 	}
-	ref, err := loadReferencedMessage(ctx, p, *parentID, "parent message not found")
+	ref, err := LoadReferencedMessage(ctx, p, *parentID, "parent message not found")
 	if err != nil {
 		return err
 	}

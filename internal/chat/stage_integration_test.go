@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/stage"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
@@ -69,7 +70,7 @@ func TestTheChannelListAndThePermissionStateKnowTheStage(t *testing.T) {
 	if err != nil || len(cats) != 0 || len(loose) != 1 || !loose[0].IsStage {
 		t.Fatalf("channel list: %+v %v", loose, err)
 	}
-	info, err := LoadChannel(ctx, p, talk.ID)
+	info, err := core.LoadChannel(ctx, p, talk.ID)
 	if err != nil || !info.IsStage {
 		t.Fatalf("channel info: %+v %v", info, err)
 	}

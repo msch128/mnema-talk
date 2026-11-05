@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/automod"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -24,12 +25,12 @@ import (
 // channel has a text chat, voice channels included (the chat next to the
 // Talk), so this only checks that it exists.
 func ChannelForMessages(ctx context.Context, p *db.Pool, chID uuid.UUID) (*ChannelInfo, error) {
-	return LoadChannel(ctx, p, chID)
+	return core.LoadChannel(ctx, p, chID)
 }
 
 // ValidateTarget checks a new message's thread parent and quoted reply target.
 func ValidateTarget(ctx context.Context, p *db.Pool, chID uuid.UUID, parentID, replyToID *uuid.UUID) error {
-	if err := ValidateParent(ctx, p, chID, parentID); err != nil {
+	if err := core.ValidateParent(ctx, p, chID, parentID); err != nil {
 		return err
 	}
 	return ValidateReplyTarget(ctx, p, chID, parentID, replyToID)
@@ -250,7 +251,7 @@ func queryIDs(r *http.Request, what string, dst map[string]**uuid.UUID) (int, er
 // (before, after, around), and checks the anchor message with valid. An anchor
 // that does not exist or does not fit is errMessageNotFound; a failing lookup
 // stays the error it is.
-func (h *Handler) parseHistoryQuery(r *http.Request, names []string, valid func(*messageRef) bool) (HistoryQuery, error) {
+func (h *Handler) parseHistoryQuery(r *http.Request, names []string, valid func(*core.MessageRef) bool) (HistoryQuery, error) {
 	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
 	slots := map[string]**uuid.UUID{"before": &q.Before, "after": &q.After, "around": &q.Around}
 	wanted := map[string]**uuid.UUID{}
@@ -265,12 +266,12 @@ func (h *Handler) parseHistoryQuery(r *http.Request, names []string, valid func(
 		return q, httpx.ErrInvalidInput("use only one of " + strings.Join(names[:len(names)-1], ", ") + " or " + names[len(names)-1])
 	}
 	if anchor := firstID(q.Before, q.After, q.Around); anchor != nil {
-		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
+		ref, err := core.LoadMessageRef(r.Context(), h.DB, *anchor)
 		if err != nil {
 			return q, err
 		}
 		if !valid(ref) {
-			return q, errMessageNotFound
+			return q, core.ErrMessageNotFound
 		}
 	}
 	return q, nil

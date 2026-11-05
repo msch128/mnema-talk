@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -51,7 +52,7 @@ func SetAutoDelete(ctx context.Context, p *db.Pool, id uuid.UUID, days int) (*Ch
 		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds, auto_delete_days`, id, days).
 		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds, &ch.AutoDeleteDays)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, errChannelNotFound
+		return nil, core.ErrChannelNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("set auto-delete: %w", err)

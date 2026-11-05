@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -52,7 +53,7 @@ func readStateSQL() string {
 		    WHERE m.channel_id = c.id AND m.user_id <> $1
 		      AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
 		      AND (mm.message_id IS NOT NULL OR orig.user_id = $1)
-		      AND ` + authorHiddenFrom("$1", "m.user_id") + `
+		      AND ` + core.AuthorHiddenFrom("$1", "m.user_id") + `
 		) addr
 		WHERE c.type <> 'dm'
 		ORDER BY c.id`

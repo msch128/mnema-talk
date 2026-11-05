@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -196,7 +197,7 @@ func lockSourceChannel(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*Channel, 
 		FROM channels WHERE id = $1 AND type <> 'dm' FOR UPDATE`, id).
 		Scan(&src.ID, &src.CategoryID, &src.Name, &src.Type, &src.Topic, &src.SortOrder, &src.UserLimit, &src.SlowModeSeconds)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, errChannelNotFound
+		return nil, core.ErrChannelNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("lock channel: %w", err)
@@ -213,7 +214,7 @@ func makeRoomBelow(ctx context.Context, tx pgx.Tx, src *Channel) (int, error) {
 	}
 	srcIdx := slices.Index(ids, src.ID)
 	if srcIdx < 0 { // cannot happen: the source row is locked
-		return 0, errChannelNotFound
+		return 0, core.ErrChannelNotFound
 	}
 
 	newOrder, shifted := placeBelow(orders, srcIdx)

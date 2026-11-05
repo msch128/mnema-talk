@@ -1,4 +1,4 @@
-package chat
+package core
 
 import (
 	"time"
@@ -31,6 +31,6 @@ type ForumTag struct {
 }
 
 // scan reads one forum_tags row selected with forumTagColumns.
-func (t *ForumTag) scan(row pgx.Row) error {
+func (t *ForumTag) Scan(row pgx.Row) error {
 	return row.Scan(&t.ID, &t.ChannelID, &t.Name, &t.Emoji, &t.Color, &t.Position, &t.Moderated, &t.CreatedAt)
 }

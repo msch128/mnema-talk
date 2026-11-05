@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -91,7 +92,7 @@ func (s *Service) createScheduled(w http.ResponseWriter, r *http.Request) error 
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	content, err := chat.ValidateContent(req.Content, false)
+	content, err := core.ValidateContent(req.Content, false)
 	if err != nil {
 		return err
 	}
@@ -145,7 +146,7 @@ func (s *Service) updateScheduled(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	if req.Content != nil {
-		c, err := chat.ValidateContent(*req.Content, false)
+		c, err := core.ValidateContent(*req.Content, false)
 		if err != nil {
 			return err
 		}

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -61,7 +62,7 @@ func (h *Handler) mountForum(r chi.Router) {
 }
 
 func (h *Handler) requireForumChannel(r *http.Request, chID uuid.UUID) (*ChannelInfo, error) {
-	ch, err := LoadChannel(r.Context(), h.DB, chID)
+	ch, err := core.LoadChannel(r.Context(), h.DB, chID)
 	if err != nil {
 		return nil, err
 	}
