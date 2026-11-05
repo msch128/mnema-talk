@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/discordimport"
@@ -153,7 +154,7 @@ func (c *components) newCore() {
 		c.authH.ObjectMissing = media.IsMissingObject
 		go c.account.RunExportSweep(c.ctx, 0)
 	}
-	go chat.RunSlowModePrune(c.ctx, d.DB, time.Hour)
+	go messages.RunSlowModePrune(c.ctx, d.DB, time.Hour)
 	c.newChat()
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub, Audit: c.auditLog, SelfRoleLimit: httpx.NewRateLimiter(6, time.Minute).Named("self_roles")}
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
@@ -253,12 +254,6 @@ func (c *components) addTap(f func(ch uuid.UUID, eventType string, payload any))
 		}
 		f(ch, eventType, payload)
 	}
-}
-
-// tapThreadFollows tells open clients which threads they follow after a reply
-// made them follow it (see chat.NewFollowSync).
-func (c *components) tapThreadFollows() {
-	c.addTap(chat.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub))
 }
 
 // newPush builds Web Push: the key pair, the sender, the handler for the

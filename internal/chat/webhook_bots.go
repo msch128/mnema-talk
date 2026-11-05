@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 )
 
 // deleteOrphanBotAccounts removes the webhook bot accounts that no longer have
@@ -17,7 +18,7 @@ func deleteOrphanBotAccounts(ctx context.Context, tx pgx.Tx, botIDs []uuid.UUID)
 		return nil, nil
 	}
 	var keys []string
-	err := collectKeys(ctx, tx, &keys, `
+	err := messages.CollectKeys(ctx, tx, &keys, `
 		SELECT m.s3_key FROM media m JOIN users u ON u.avatar_s3_key = m.id::text
 		WHERE u.id = ANY($1) AND u.is_bot AND NOT m.is_deleted
 		  AND NOT EXISTS (SELECT 1 FROM messages x WHERE x.user_id = u.id)`, botIDs)

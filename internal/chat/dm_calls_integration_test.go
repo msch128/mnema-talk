@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -173,7 +174,7 @@ func TestAnAnsweredCallLeavesNoMissedCall(t *testing.T) {
 
 func TestOnlyTheServerWritesTheCallMarks(t *testing.T) {
 	in := InEmbed{Title: "x"}
-	embeds, err := SanitizeEmbeds([]InEmbed{in})
+	embeds, err := messages.SanitizeEmbeds([]InEmbed{in})
 	if err != nil || len(embeds) != 1 || embeds[0].Call != "" || embeds[0].TalkID != nil {
 		t.Fatalf("embeds = %+v, %v", embeds, err)
 	}
@@ -303,7 +304,7 @@ func TestTheFilesOfAConversationsTalkGoWhenTheConversationDoes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := InsertMessage(ctx, w.p, nil, NewMessage{ChannelID: talk.ID, UserID: w.alice.ID, Content: "look"}, nil)
+	msg, err := messages.InsertMessage(ctx, w.p, nil, NewMessage{ChannelID: talk.ID, UserID: w.alice.ID, Content: "look"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

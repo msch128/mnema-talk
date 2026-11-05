@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -220,7 +221,7 @@ func deleteExpired(ctx context.Context, tx pgx.Tx, removed []expiredMessage, key
 	for i, g := range removed {
 		ids[i] = g.id
 	}
-	if err := collectKeys(ctx, tx, keys, `
+	if err := messages.CollectKeys(ctx, tx, keys, `
 		SELECT s3_key FROM media WHERE message_id IN
 			(SELECT id FROM messages WHERE id = ANY($1) OR parent_id = ANY($1))`, ids); err != nil {
 		return err

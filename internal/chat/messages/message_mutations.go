@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -19,13 +19,13 @@ import (
 // EditMessage changes the text of a message authored by userID and records
 // its mentions again, in one transaction. Empty content is only allowed when
 // the message carries an attachment (like an upload without a caption).
-func EditMessage(ctx context.Context, p *db.Pool, online OnlineSource, messageID, userID uuid.UUID, content string) error {
+func EditMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) error {
 	pending, err := checkEditAutomod(ctx, p, messageID, userID, content)
 	if err != nil {
 		return err
 	}
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		return editMessageTx(ctx, tx, online, messageID, userID, content)
+		return EditMessageTx(ctx, tx, online, messageID, userID, content)
 	})
 	if err == nil {
 		pending.Commit(ctx, messageID)
@@ -33,9 +33,9 @@ func EditMessage(ctx context.Context, p *db.Pool, online OnlineSource, messageID
 	return err
 }
 
-// editMessageTx checks that userID may edit the message, keeps the replaced
+// EditMessageTx checks that userID may edit the message, keeps the replaced
 // version and stores the new text with its mentions.
-func editMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, messageID, userID uuid.UUID, content string) error {
+func EditMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) error {
 	var author uuid.UUID
 	var hasMedia, isPoll, forwarded bool
 	err := tx.QueryRow(ctx, `
@@ -104,7 +104,7 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 		if err := checkDeleteAuthorized(user, author, ownerContent, canManage); err != nil {
 			return err
 		}
-		if err := collectKeys(ctx, tx, &keys, `
+		if err := CollectKeys(ctx, tx, &keys, `
 			SELECT s3_key FROM media WHERE message_id IN
 				(SELECT id FROM messages WHERE id = $1 OR parent_id = $1)`, messageID); err != nil {
 			return err
@@ -150,8 +150,8 @@ func checkDeleteAuthorized(user *auth.User, author uuid.UUID, ownerContent, canM
 	return nil
 }
 
-// collectKeys appends the first column of query's rows to keys.
-func collectKeys(ctx context.Context, q db.Querier, keys *[]string, query string, args ...any) error {
+// CollectKeys appends the first column of query's rows to keys.
+func CollectKeys(ctx context.Context, q db.Querier, keys *[]string, query string, args ...any) error {
 	rows, err := q.Query(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("collect media keys: %w", err)
@@ -177,7 +177,7 @@ const (
 // back an existing one works (403 otherwise). Adding is refused with 409
 // CONFLICT beyond MaxReactionsPerUser per user or MaxEmojiPerMessage distinct
 // emoji per message.
-func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool) ([]ReactionSummary, error) {
+func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool) ([]core.ReactionSummary, error) {
 	reactions, _, err := changeReaction(ctx, p, messageID, userID, emoji, canAdd, func(present bool) bool { return !present })
 	return reactions, err
 }
@@ -185,14 +185,14 @@ func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UU
 // SetReactionAs makes userID's reaction present (want) or absent, whatever it
 // was: asking for the state it already has changes nothing (changed false).
 // canAdd and the limits are as for ToggleReactionAs.
-func SetReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, want, canAdd bool) (reactions []ReactionSummary, changed bool, err error) {
+func SetReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, want, canAdd bool) (reactions []core.ReactionSummary, changed bool, err error) {
 	return changeReaction(ctx, p, messageID, userID, emoji, canAdd, func(bool) bool { return want })
 }
 
 // changeReaction moves userID's reaction to the state target picks from the
 // current one, under the message's row lock, which serializes all changes to
 // one message so concurrent adds cannot overshoot the limits.
-func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool, target func(present bool) bool) ([]ReactionSummary, bool, error) {
+func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool, target func(present bool) bool) ([]core.ReactionSummary, bool, error) {
 	changed := false
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// The row lock serializes toggles on one message, so concurrent
@@ -220,7 +220,7 @@ func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 	if err != nil {
 		return nil, false, err
 	}
-	reactions, err := reactionSummary(ctx, p, messageID)
+	reactions, err := ReactionSummary(ctx, p, messageID)
 	return reactions, changed, err
 }
 
@@ -276,9 +276,9 @@ func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, em
 	return nil
 }
 
-// reactionSummary loads one message's reactions, in the order they were first given.
-func reactionSummary(ctx context.Context, p *db.Pool, messageID uuid.UUID) ([]ReactionSummary, error) {
-	msgs := []Message{{Reactions: []ReactionSummary{}}}
+// ReactionSummary loads one message's reactions, in the order they were first given.
+func ReactionSummary(ctx context.Context, p *db.Pool, messageID uuid.UUID) ([]core.ReactionSummary, error) {
+	msgs := []core.Message{{Reactions: []core.ReactionSummary{}}}
 	if err := loadReactions(ctx, p, msgs, map[uuid.UUID]int{messageID: 0}, []uuid.UUID{messageID}); err != nil {
 		return nil, err
 	}

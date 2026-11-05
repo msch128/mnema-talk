@@ -1,15 +1,16 @@
-package chat
+package messages
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
 // LoadPoll returns the poll of a message, or nil when it has none.
-func LoadPoll(ctx context.Context, q db.Querier, messageID uuid.UUID) (*Poll, error) {
+func LoadPoll(ctx context.Context, q db.Querier, messageID uuid.UUID) (*core.Poll, error) {
 	polls, err := loadPollsFor(ctx, q, []uuid.UUID{messageID})
 	if err != nil {
 		return nil, err
@@ -18,7 +19,7 @@ func LoadPoll(ctx context.Context, q db.Querier, messageID uuid.UUID) (*Poll, er
 }
 
 // loadPolls fills msgs[].Poll for the messages that have one.
-func loadPolls(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadPolls(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	polls, err := loadPollsFor(ctx, p, ids)
 	if err != nil {
 		return err
@@ -29,8 +30,8 @@ func loadPolls(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUI
 	return nil
 }
 
-func loadPollsFor(ctx context.Context, q db.Querier, ids []uuid.UUID) (map[uuid.UUID]*Poll, error) {
-	out := map[uuid.UUID]*Poll{}
+func loadPollsFor(ctx context.Context, q db.Querier, ids []uuid.UUID) (map[uuid.UUID]*core.Poll, error) {
+	out := map[uuid.UUID]*core.Poll{}
 	rows, err := q.Query(ctx, `
 		SELECT message_id, multiple, anonymous, closes_at, closes_at <= clock_timestamp(),
 		       CASE WHEN anonymous THEN anon_voters
@@ -42,7 +43,7 @@ func loadPollsFor(ctx context.Context, q db.Querier, ids []uuid.UUID) (map[uuid.
 	defer rows.Close()
 	for rows.Next() {
 		var id uuid.UUID
-		p := &Poll{Options: []PollOption{}}
+		p := &core.Poll{Options: []core.PollOption{}}
 		if err := rows.Scan(&id, &p.Multiple, &p.Anonymous, &p.ClosesAt, &p.Closed, &p.TotalVoters); err != nil {
 			return nil, err
 		}
@@ -65,7 +66,7 @@ func loadPollsFor(ctx context.Context, q db.Querier, ids []uuid.UUID) (map[uuid.
 // moment someone is seen voting would give away their choice in a small
 // audience, so the tally appears when the poll ends, here and in the
 // poll_update that carries it.
-func loadPollOptions(ctx context.Context, q db.Querier, polls map[uuid.UUID]*Poll) error {
+func loadPollOptions(ctx context.Context, q db.Querier, polls map[uuid.UUID]*core.Poll) error {
 	ids := make([]uuid.UUID, 0, len(polls))
 	for id := range polls {
 		ids = append(ids, id)
@@ -88,7 +89,7 @@ func loadPollOptions(ctx context.Context, q db.Querier, polls map[uuid.UUID]*Pol
 	defer rows.Close()
 	for rows.Next() {
 		var pollID uuid.UUID
-		var o PollOption
+		var o core.PollOption
 		if err := rows.Scan(&pollID, &o.ID, &o.Label, &o.Votes, &o.Voters); err != nil {
 			return err
 		}

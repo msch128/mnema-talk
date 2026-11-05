@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -75,7 +76,7 @@ func (h *Handler) botListChannels(w http.ResponseWriter, r *http.Request) error 
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages [get]
 func (h *Handler) botListMessages(w http.ResponseWriter, r *http.Request) error {
-	return h.listMessages(w, r)
+	return h.messages().ListMessages(w, r)
 }
 
 // botGetMessage handles GET /api/bot/v1/channels/{channelID}/messages/{messageID}.
@@ -96,14 +97,14 @@ func (h *Handler) botListMessages(w http.ResponseWriter, r *http.Request) error 
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages/{messageID} [get]
 func (h *Handler) botGetMessage(w http.ResponseWriter, r *http.Request) error {
-	msgID, ref, err := h.messageInChannel(r)
+	msgID, ref, err := h.messages().MessageInChannel(r)
 	if err != nil {
 		return err
 	}
 	if err := h.require(r, ref.ChannelID, perm.ViewChannel); err != nil {
 		return core.NotFoundUnlessFailure(err)
 	}
-	msg, err := GetMessage(r.Context(), h.DB, msgID)
+	msg, err := messages.GetMessage(r.Context(), h.DB, msgID)
 	if err != nil {
 		return err
 	}
@@ -175,7 +176,7 @@ func CheckBotSend(ctx context.Context, ps *perm.Service, p *db.Pool, user *auth.
 	if err := perm.CheckChannel(set, perm.SendMessages); err != nil {
 		return nil, 0, err
 	}
-	if _, err := ChannelForMessages(ctx, p, chID); err != nil {
+	if _, err := messages.ChannelForMessages(ctx, p, chID); err != nil {
 		return nil, 0, err
 	}
 	return snap, set, nil
@@ -202,7 +203,7 @@ func ValidateBotMessage(rawContent string, rawEmbeds []InEmbed) (string, []Embed
 	if err != nil {
 		return "", nil, err
 	}
-	embeds, err := SanitizeEmbeds(rawEmbeds)
+	embeds, err := messages.SanitizeEmbeds(rawEmbeds)
 	if err != nil {
 		return "", nil, httpx.ErrInvalidInput(err.Error())
 	}
@@ -261,17 +262,17 @@ func (h *Handler) botCreateMessage(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	if err := ValidateTarget(r.Context(), h.DB, chID, req.ParentID, reply); err != nil {
+	if err := messages.ValidateTarget(r.Context(), h.DB, chID, req.ParentID, reply); err != nil {
 		return err
 	}
 	ctx := mentions.WithMentionPolicy(r.Context(), botMentionPolicy(snap, chID, p, req.AllowedMentions))
-	id, err := InsertMessage(ctx, h.DB, h.Online, NewMessage{
+	id, err := messages.InsertMessage(ctx, h.DB, h.Online, NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: reply, Embeds: embeds,
 	}, nil)
 	if err != nil {
 		return err
 	}
-	return PublishMessage(w, r, h.DB, h.Events, id)
+	return messages.PublishMessage(w, r, h.DB, h.Events, id)
 }
 
 func parseAllowedUsers(rawIDs []string) []uuid.UUID {
@@ -309,7 +310,7 @@ func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllo
 	// the request asked for them. An edit sends no allowed_mentions, so it
 	// never adds role mentions.
 	if am != nil {
-		policy.Roles = mentions.AllowedRoles(MentionableRoles(snap, p.Has(perm.MentionEveryone)), am.Parse, am.Roles)
+		policy.Roles = mentions.AllowedRoles(messages.MentionableRoles(snap, p.Has(perm.MentionEveryone)), am.Parse, am.Roles)
 	}
 	return policy
 }
@@ -335,7 +336,7 @@ func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllo
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages/{messageID} [patch]
 func (h *Handler) botEditMessage(w http.ResponseWriter, r *http.Request) error {
-	return h.editMessageWith(w, r, h.botEditContext)
+	return h.messages().EditMessageWith(w, r, h.botEditContext)
 }
 
 // botEditContext is the mention context of a bot's edit: the policy of its
@@ -370,5 +371,5 @@ func (h *Handler) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages/{messageID} [delete]
 func (h *Handler) botDeleteMessage(w http.ResponseWriter, r *http.Request) error {
-	return h.deleteMessage(w, r)
+	return h.messages().DeleteMessage(w, r)
 }

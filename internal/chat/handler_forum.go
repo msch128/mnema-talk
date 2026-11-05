@@ -10,6 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -159,7 +160,7 @@ func (h *Handler) createForumPost(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	ctx, err := h.sendContext(r, chID, perm.SendMessages)
+	ctx, err := h.messages().SendContext(r, chID, perm.SendMessages)
 	if err != nil {
 		return err
 	}
@@ -178,7 +179,7 @@ func (h *Handler) createForumPost(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	return PublishMessage(w, r, h.DB, h.Events, postID)
+	return messages.PublishMessage(w, r, h.DB, h.Events, postID)
 }
 
 // updateForumPost handles PATCH /api/channels/{channelID}/posts/{messageID}.
@@ -247,12 +248,12 @@ func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error 
 func (h *Handler) postEditContext(r *http.Request, chID, msgID uuid.UUID, canManage bool, req UpdatePostRequest) (ctx context.Context, before *Message, err error) {
 	ctx = r.Context()
 	if !canManage && (req.Title != nil || req.TagIDs != nil || req.IsResolved != nil) {
-		if ctx, err = h.sendContext(r, chID, perm.SendMessages); err != nil {
+		if ctx, err = h.messages().SendContext(r, chID, perm.SendMessages); err != nil {
 			return nil, nil, err
 		}
 	}
 	if canManage && h.Audit != nil {
-		before, _ = GetMessage(ctx, h.DB, msgID) // detail only: a miss leaves the entry without before values
+		before, _ = messages.GetMessage(ctx, h.DB, msgID) // detail only: a miss leaves the entry without before values
 	}
 	return ctx, before, nil
 }

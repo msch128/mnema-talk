@@ -16,7 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
-	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -211,7 +211,7 @@ func TestBulkDeleteSurvivesAFailingEditVersionRead(t *testing.T) {
 		if _, err := tx.Exec(ctx, `ALTER TABLE message_edits RENAME TO message_edits_gone`); err != nil {
 			return err
 		}
-		gone, _, err := takeLatestMessages(ctx, tx, f.c.ID, f.u.ID, 5, true)
+		gone, _, err := messages.TakeLatestMessages(ctx, tx, f.c.ID, f.u.ID, 5, true)
 		if err != nil || len(gone) == 0 {
 			t.Fatalf("takeLatestMessages = %d messages, %v", len(gone), err)
 		}
@@ -231,7 +231,7 @@ func TestBulkDeleteSurvivesAFailingReplyRead(t *testing.T) {
 		if _, err := tx.Exec(ctx, `ALTER TABLE messages RENAME COLUMN parent_id TO parent_id_gone`); err != nil {
 			return err
 		}
-		if got := replyIDsForAudit(ctx, tx, []uuid.UUID{f.m}); len(got) != 0 {
+		if got := messages.ReplyIDsForAudit(ctx, tx, []uuid.UUID{f.m}); len(got) != 0 {
 			t.Fatalf("replies = %v; want none after a failed read", got)
 		}
 		var one int
@@ -242,25 +242,6 @@ func TestBulkDeleteSurvivesAFailingReplyRead(t *testing.T) {
 	})
 	if !errors.Is(err, errRollBack) {
 		t.Fatal(err)
-	}
-}
-
-func TestAnchorLookupFailureIsNotAMissingMessage(t *testing.T) {
-	f := newChatFixture(t)
-	h := &Handler{DB: f.p}
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	q := url.Values{"before": {f.m.String()}}.Encode()
-	r := chattest.Request(f.u, "", nil, q).WithContext(ctx)
-	if _, err := h.parseChannelMessageQuery(r, f.c.ID); err == nil || errors.Is(err, core.ErrMessageNotFound) {
-		t.Fatalf("channel anchor error = %v; want the lookup failure", err)
-	}
-	if _, err := h.parseThreadQuery(r, f.m); err == nil || errors.Is(err, core.ErrMessageNotFound) {
-		t.Fatalf("thread anchor error = %v; want the lookup failure", err)
-	}
-	live := chattest.Request(f.u, "", nil, url.Values{"before": {uuid.NewString()}}.Encode())
-	if _, err := h.parseChannelMessageQuery(live, f.c.ID); !errors.Is(err, core.ErrMessageNotFound) {
-		t.Fatalf("unknown anchor error = %v; want not found", err)
 	}
 }
 

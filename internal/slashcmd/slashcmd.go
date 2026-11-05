@@ -17,6 +17,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -66,7 +67,7 @@ func Commands(s Services) []slash.Builtin {
 // caller has to send there (chat.SendContext inside); mentions in the text are
 // resolved like in a message written in the composer.
 func (s *Services) post(call slash.Call, content string, parent *uuid.UUID) (slash.Result, error) {
-	ctx, err := chat.SendContext(s.Perms, call.Request, call.Channel, perm.SendMessages)
+	ctx, err := messages.SendContext(s.Perms, call.Request, call.Channel, perm.SendMessages)
 	if err != nil {
 		return slash.Result{}, err
 	}
@@ -74,19 +75,19 @@ func (s *Services) post(call slash.Call, content string, parent *uuid.UUID) (sla
 	if err != nil {
 		return slash.Result{}, err
 	}
-	if _, err := chat.ChannelForMessages(ctx, s.DB, call.Channel); err != nil {
+	if _, err := messages.ChannelForMessages(ctx, s.DB, call.Channel); err != nil {
 		return slash.Result{}, err
 	}
 	if err := core.ValidateParent(ctx, s.DB, call.Channel, parent); err != nil {
 		return slash.Result{}, err
 	}
-	id, err := chat.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{
+	id, err := messages.InsertMessage(ctx, s.DB, s.Online, chat.NewMessage{
 		ChannelID: call.Channel, UserID: call.User.ID, Content: content, ParentID: parent,
 	}, nil)
 	if err != nil {
 		return slash.Result{}, err
 	}
-	msg, err := chat.GetMessage(ctx, s.DB, id)
+	msg, err := messages.GetMessage(ctx, s.DB, id)
 	if err != nil {
 		return slash.Result{}, err
 	}

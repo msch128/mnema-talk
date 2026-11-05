@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/stage"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -138,7 +139,7 @@ func assignAndFillSlugs(ctx context.Context, tx pgx.Tx, ch *Channel) error {
 // messages of the given channels.
 func channelMediaKeys(ctx context.Context, q db.Querier, ids []uuid.UUID) ([]string, error) {
 	var keys []string
-	err := collectKeys(ctx, q, &keys, `
+	err := messages.CollectKeys(ctx, q, &keys, `
 		SELECT s3_key FROM media WHERE message_id IN
 			(SELECT id FROM messages WHERE channel_id = ANY($1))`, ids)
 	return keys, err

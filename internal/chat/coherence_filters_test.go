@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 )
 
 func TestSearchHasPollEditAndIsPinned(t *testing.T) {
@@ -25,16 +26,16 @@ func TestSearchHasPollEditAndIsPinned(t *testing.T) {
 }
 
 func TestEditHistoryViewsCountOncePerReaderAndMessageInAWindow(t *testing.T) {
-	var v historyViews
+	var v messages.HistoryViews
 	reader, other, msg := uuid.New(), uuid.New(), uuid.New()
 	now := time.Now()
-	if !v.first(reader, msg, now) || v.first(reader, msg, now.Add(time.Minute)) {
+	if !v.First(reader, msg, now) || v.First(reader, msg, now.Add(time.Minute)) {
 		t.Fatal("the second read inside the window counts again")
 	}
-	if !v.first(other, msg, now) {
+	if !v.First(other, msg, now) {
 		t.Error("another reader is a new entry")
 	}
-	if !v.first(reader, msg, now.Add(editViewAuditEvery+time.Second)) {
+	if !v.First(reader, msg, now.Add(messages.EditViewAuditEvery+time.Second)) {
 		t.Error("a read after the window is a new entry")
 	}
 }

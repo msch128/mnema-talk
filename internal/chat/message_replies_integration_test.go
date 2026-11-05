@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 )
 
 func TestBulkDeleteKeepsRepliesOfOtherMembersInTheAuditTrail(t *testing.T) {
@@ -21,20 +22,20 @@ func TestBulkDeleteKeepsRepliesOfOtherMembersInTheAuditTrail(t *testing.T) {
 	if err := f.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('replier','Replier','test-only-unused') RETURNING id`).Scan(&other); err != nil {
 		t.Fatal(err)
 	}
-	reply, err := CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: other, Content: "reply", ParentID: &f.m})
+	reply, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: other, Content: "reply", ParentID: &f.m})
 	if err != nil {
 		t.Fatal(err)
 	}
-	var gone []deletedMessage
+	var gone []messages.DeletedMessage
 	err = pgx.BeginFunc(ctx, f.p, func(tx pgx.Tx) error {
 		var err error
-		gone, _, err = takeLatestMessages(ctx, tx, f.c.ID, f.u.ID, 10, true)
+		gone, _, err = messages.TakeLatestMessages(ctx, tx, f.c.ID, f.u.ID, 10, true)
 		return err
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(gone) != 1 || len(gone[0].replyIDs) != 1 || gone[0].replyIDs[0] != reply {
+	if len(gone) != 1 || len(gone[0].ReplyIDs) != 1 || gone[0].ReplyIDs[0] != reply {
 		t.Fatalf("deleted = %+v, want the root with reply %s", gone, reply)
 	}
 }
@@ -50,7 +51,7 @@ func TestMessageTimestampIsTakenAtInsert(t *testing.T) {
 		if _, err := tx.Exec(ctx, `SELECT pg_sleep(0.05)`); err != nil {
 			return err
 		}
-		id, err := CreateMessage(ctx, tx, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "late"})
+		id, err := messages.CreateMessage(ctx, tx, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "late"})
 		if err != nil {
 			return err
 		}
@@ -72,12 +73,12 @@ func TestEditDoesNotBlockThreadReplies(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	if err := editMessageTx(ctx, tx, nil, f.m, f.u.ID, "edited"); err != nil {
+	if err := messages.EditMessageTx(ctx, tx, nil, f.m, f.u.ID, "edited"); err != nil {
 		t.Fatal(err)
 	}
 	short, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	if _, err := CreateMessage(short, f.p, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "reply", ParentID: &f.m}); err != nil {
+	if _, err := messages.CreateMessage(short, f.p, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "reply", ParentID: &f.m}); err != nil {
 		t.Fatalf("a reply waits for the open edit of its root: %v", err)
 	}
 }
@@ -89,10 +90,10 @@ func TestReplyValidationDoesNotHideDatabaseErrors(t *testing.T) {
 	if err := core.ValidateParent(ctx, f.p, f.c.ID, &f.m); !errors.Is(err, context.Canceled) {
 		t.Errorf("ValidateParent: %v, want the context error", err)
 	}
-	if err := ValidateReplyTarget(ctx, f.p, f.c.ID, nil, &f.m); !errors.Is(err, context.Canceled) {
+	if err := messages.ValidateReplyTarget(ctx, f.p, f.c.ID, nil, &f.m); !errors.Is(err, context.Canceled) {
 		t.Errorf("ValidateReplyTarget: %v, want the context error", err)
 	}
 	missing := uuid.New()
 	chattest.RequireError(t, core.ValidateParent(context.Background(), f.p, f.c.ID, &missing), "parent message not found")
-	chattest.RequireError(t, ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing), "message to reply to not found")
+	chattest.RequireError(t, messages.ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing), "message to reply to not found")
 }

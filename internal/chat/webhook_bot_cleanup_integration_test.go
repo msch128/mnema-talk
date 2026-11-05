@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/testutil/pgfault"
 )
@@ -35,7 +36,7 @@ func TestDeletingAChannelRemovesItsWebhookBotAccount(t *testing.T) {
 	if _, err := f.p.Exec(ctx, `INSERT INTO webhooks (channel_id, bot_user_id, name, token_hash) VALUES ($1, $2, 'hook', '\x00')`, ch.ID, bot); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateMessage(ctx, f.p, NewMessage{ChannelID: ch.ID, UserID: bot, Content: "from the hook"}); err != nil {
+	if _, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: ch.ID, UserID: bot, Content: "from the hook"}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -31,7 +32,7 @@ const (
 // replies notify them. Only members who really follow are told, and members who can no longer view the channel are
 // skipped, and the lookup runs off the publishing path.
 func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher) func(channel uuid.UUID, eventType string, payload any) {
-	queue := make(chan Message, followSyncQueue)
+	queue := make(chan core.Message, followSyncQueue)
 	for range followSyncWorkers {
 		go func() {
 			for {
@@ -48,7 +49,7 @@ func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub eve
 		if eventType != events.MessageCreate {
 			return
 		}
-		msg, ok := messageOf(payload)
+		msg, ok := MessageOf(payload)
 		if !ok || msg.ParentID == nil {
 			return
 		}
@@ -60,19 +61,19 @@ func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub eve
 	}
 }
 
-func messageOf(payload any) (Message, bool) {
+func MessageOf(payload any) (core.Message, bool) {
 	switch v := payload.(type) {
-	case Message:
+	case core.Message:
 		return v, true
-	case *Message:
+	case *core.Message:
 		if v != nil {
 			return *v, true
 		}
 	}
-	return Message{}, false
+	return core.Message{}, false
 }
 
-func syncFollowers(parent context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher, msg Message) {
+func syncFollowers(parent context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher, msg core.Message) {
 	ctx, cancel := context.WithTimeout(parent, followSyncTimeout)
 	defer cancel()
 	thread := *msg.ParentID
@@ -88,7 +89,7 @@ func syncFollowers(parent context.Context, p *db.Pool, perms *perm.Service, pub 
 	rows, err := p.Query(ctx, `
 		SELECT f.user_id FROM thread_follows f
 		WHERE f.thread_id = $1 AND f.following AND f.user_id IN (`+replyFollowersSQL+`)`,
-		thread, msg.UserID, msg.ID, MentionKindGroup)
+		thread, msg.UserID, msg.ID, core.MentionKindGroup)
 	if err != nil {
 		slog.Warn("thread follow sync", "err", err)
 		return

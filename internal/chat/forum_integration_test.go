@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -134,14 +135,14 @@ func TestForumPostCreationAndValidation(t *testing.T) {
 	}
 
 	// Creator should automatically follow the thread
-	following, err := IsFollowingThread(context.Background(), f.p, f.u.ID, post.ID)
+	following, err := messages.IsFollowingThread(context.Background(), f.p, f.u.ID, post.ID)
 	if err != nil || !following {
 		t.Fatalf("expected creator to follow post thread: %v", err)
 	}
 
 	// Ordinary message creation without title in forum channel must fail
 	reqMsg := chattest.Request(f.u, `{"content":"Root message without title"}`, chParam, "")
-	if err := h.createMessage(httptest.NewRecorder(), reqMsg); err == nil {
+	if err := h.messages().CreateMessage(httptest.NewRecorder(), reqMsg); err == nil {
 		t.Fatal("expected root message without title in forum to fail")
 	}
 }
@@ -225,13 +226,13 @@ func TestForumPostLockingAndReplies(t *testing.T) {
 
 	// Normal user cannot reply to locked thread
 	replyBody := fmt.Sprintf(`{"content":"I want to reply","parent_id":"%s"}`, post.ID)
-	if err := h.createMessage(httptest.NewRecorder(), chattest.Request(f.u, replyBody, chParam, "")); err == nil {
+	if err := h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(f.u, replyBody, chParam, "")); err == nil {
 		t.Fatal("expected reply to locked post by normal user to fail")
 	}
 
 	// Moderator can reply to locked thread
 	rec = httptest.NewRecorder()
-	if err := h.createMessage(rec, chattest.Request(mod, replyBody, chParam, "")); err != nil {
+	if err := h.messages().CreateMessage(rec, chattest.Request(mod, replyBody, chParam, "")); err != nil {
 		t.Fatalf("expected moderator to reply to locked thread: %v", err)
 	}
 

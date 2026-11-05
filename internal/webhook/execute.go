@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -257,7 +258,7 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*ch
 		return nil, err
 	}
 	ctx = mentions.WithMentionPolicy(ctx, policy)
-	id, err := chat.InsertMessage(ctx, h.DB, h.Online, *nm, func(tx pgx.Tx, msgID uuid.UUID) error {
+	id, err := messages.InsertMessage(ctx, h.DB, h.Online, *nm, func(tx pgx.Tx, msgID uuid.UUID) error {
 		for _, f := range req.files {
 			if err := h.Media.RecordFile(ctx, tx, f, rec.botUserID, rec.ChannelID, msgID); err != nil {
 				return err
@@ -271,7 +272,7 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*ch
 	}
 	// The message is committed: a failed read-back (a cancelled request, a
 	// database hiccup) must not turn the post into an error the sender retries.
-	msg, err := chat.GetMessage(context.WithoutCancel(ctx), h.DB, id)
+	msg, err := messages.GetMessage(context.WithoutCancel(ctx), h.DB, id)
 	if err != nil {
 		slog.Error("webhook message stored but not read back", "message_id", id, "err", err)
 		return nil, nil

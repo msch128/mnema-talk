@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"errors"
@@ -25,14 +25,14 @@ const PinChangesPerMinute = 60
 
 var errTooManyPins = httpx.ErrConflict(fmt.Sprintf("a channel can keep at most %d pinned messages; unpin one first", MaxPinsPerChannel))
 
-func (h *Handler) mountPins(r chi.Router) {
-	r.Get("/channels/{channelID}/pins", httpx.Handle(h.listPins))
+func (a *API) mountPins(r chi.Router) {
+	r.Get("/channels/{channelID}/pins", httpx.Handle(a.listPins))
 	changes := r
-	if h.PinLimit != nil {
-		changes = r.With(h.PinLimit.By(auth.UserKey))
+	if a.PinLimit != nil {
+		changes = r.With(a.PinLimit.By(auth.UserKey))
 	}
-	changes.Put("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.pinMessage))
-	changes.Delete("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(h.unpinMessage))
+	changes.Put("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(a.pinMessage))
+	changes.Delete("/channels/{channelID}/messages/{messageID}/pin", httpx.Handle(a.unpinMessage))
 }
 
 // PinsChanged is the payload of the pins_changed event: a message of the
@@ -45,8 +45,8 @@ type PinsChanged struct {
 	ActorID   uuid.UUID `json:"actor_id" format:"uuid"`
 	ActorName string    `json:"actor_name"`
 	// PinnedAt and PinnedBy are set when the message was pinned.
-	PinnedAt *time.Time `json:"pinned_at,omitempty" binding:"optional" format:"date-time"`
-	PinnedBy *UserRef   `json:"pinned_by,omitempty" binding:"optional"`
+	PinnedAt *time.Time    `json:"pinned_at,omitempty" binding:"optional" format:"date-time"`
+	PinnedBy *core.UserRef `json:"pinned_by,omitempty" binding:"optional"`
 }
 
 // listPins handles GET /api/channels/{channelID}/pins.
@@ -58,7 +58,7 @@ type PinsChanged struct {
 // @Produce json
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
-// @Success 200 {array} Message "The pinned messages."
+// @Success 200 {array} core.Message "The pinned messages."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
@@ -66,12 +66,12 @@ type PinsChanged struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/pins [get]
-func (h *Handler) listPins(w http.ResponseWriter, r *http.Request) error {
-	chID, err := h.validateListChannel(r)
+func (a *API) listPins(w http.ResponseWriter, r *http.Request) error {
+	chID, err := a.validateListChannel(r)
 	if err != nil {
 		return err
 	}
-	msgs, err := queryMessages(r.Context(), h.DB, messageSelect+`
+	msgs, err := QueryMessages(r.Context(), a.DB, MessageSelect+`
 		WHERE m.channel_id = $1 AND m.is_pinned
 		ORDER BY m.pinned_at DESC NULLS LAST, m.id DESC
 		LIMIT $2`, chID, MaxPinsPerChannel)
@@ -92,7 +92,7 @@ func (h *Handler) listPins(w http.ResponseWriter, r *http.Request) error {
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param messageID path string true "Message ID." Format(uuid)
-// @Success 200 {object} Message "The message."
+// @Success 200 {object} core.Message "The message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage messages permission in the channel, or cross-origin request rejected."
@@ -102,8 +102,8 @@ func (h *Handler) listPins(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages/{messageID}/pin [put]
-func (h *Handler) pinMessage(w http.ResponseWriter, r *http.Request) error {
-	return h.setPinned(w, r, true)
+func (a *API) pinMessage(w http.ResponseWriter, r *http.Request) error {
+	return a.setPinned(w, r, true)
 }
 
 // unpinMessage handles DELETE /api/channels/{channelID}/messages/{messageID}/pin.
@@ -116,7 +116,7 @@ func (h *Handler) pinMessage(w http.ResponseWriter, r *http.Request) error {
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param messageID path string true "Message ID." Format(uuid)
-// @Success 200 {object} Message "The message."
+// @Success 200 {object} core.Message "The message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage messages permission in the channel, or cross-origin request rejected."
@@ -125,11 +125,11 @@ func (h *Handler) pinMessage(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages/{messageID}/pin [delete]
-func (h *Handler) unpinMessage(w http.ResponseWriter, r *http.Request) error {
-	return h.setPinned(w, r, false)
+func (a *API) unpinMessage(w http.ResponseWriter, r *http.Request) error {
+	return a.setPinned(w, r, false)
 }
 
-func (h *Handler) setPinned(w http.ResponseWriter, r *http.Request, pinned bool) error {
+func (a *API) setPinned(w http.ResponseWriter, r *http.Request, pinned bool) error {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return err
@@ -140,7 +140,7 @@ func (h *Handler) setPinned(w http.ResponseWriter, r *http.Request, pinned bool)
 	}
 	actor := auth.UserFrom(r.Context())
 	changed := false
-	err = h.asModerator(r, chID, func(tx pgx.Tx, _ *perm.Snapshot) error {
+	err = a.asModerator(r, chID, func(tx pgx.Tx, _ *perm.Snapshot) error {
 		var err error
 		changed, err = writePin(r, tx, pinTarget{channel: chID, message: msgID, by: actor.ID}, pinned)
 		return err
@@ -148,12 +148,12 @@ func (h *Handler) setPinned(w http.ResponseWriter, r *http.Request, pinned bool)
 	if err != nil {
 		return err
 	}
-	msg, err := GetMessage(r.Context(), h.DB, msgID)
+	msg, err := GetMessage(r.Context(), a.DB, msgID)
 	if err != nil {
 		return err
 	}
 	if changed {
-		h.announcePin(r, msg, actor, pinned)
+		a.announcePin(r, msg, actor, pinned)
 	}
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
@@ -198,21 +198,21 @@ func writePin(r *http.Request, tx pgx.Tx, t pinTarget, pinned bool) (bool, error
 	return true, nil
 }
 
-func (h *Handler) announcePin(r *http.Request, msg *Message, actor *auth.User, pinned bool) {
+func (a *API) announcePin(r *http.Request, msg *core.Message, actor *auth.User, pinned bool) {
 	action := "message.unpin"
 	if pinned {
 		action = "message.pin"
 	}
 	chID := msg.ChannelID
-	h.Audit.RecordOrLog(r.Context(), audit.Entry{
+	a.Audit.RecordOrLog(r.Context(), audit.Entry{
 		Action: action, TargetType: "message", TargetID: msg.ID.String(), ChannelID: &chID,
 		Details: map[string]any{"channel_id": chID, "author_id": msg.UserID, "author_name": msg.Username, "content": audit.Content(msg.Content)},
 	})
-	if h.Events == nil {
+	if a.Events == nil {
 		return
 	}
-	h.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
-	h.Events.BroadcastChannel(chID, events.PinsChanged, PinsChanged{
+	a.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
+	a.Events.BroadcastChannel(chID, events.PinsChanged, PinsChanged{
 		ChannelID: chID, MessageID: msg.ID, Pinned: pinned, ActorID: actor.ID, ActorName: actor.DisplayName,
 		PinnedAt: msg.PinnedAt, PinnedBy: msg.PinnedBy,
 	})

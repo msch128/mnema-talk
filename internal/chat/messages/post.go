@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 // ChannelForMessages loads the channel a new message is posted to. Every
 // channel has a text chat, voice channels included (the chat next to the
 // Talk), so this only checks that it exists.
-func ChannelForMessages(ctx context.Context, p *db.Pool, chID uuid.UUID) (*ChannelInfo, error) {
+func ChannelForMessages(ctx context.Context, p *db.Pool, chID uuid.UUID) (*core.ChannelInfo, error) {
 	return core.LoadChannel(ctx, p, chID)
 }
 
@@ -41,7 +41,7 @@ func ValidateTarget(ctx context.Context, p *db.Pool, chID uuid.UUID, parentID, r
 // InsertMessage stores a validated message and its mentions in one
 // transaction. also, when set, runs in the same transaction (e.g. to record
 // an attachment).
-func InsertMessage(ctx context.Context, p *db.Pool, online OnlineSource, nm NewMessage, also func(tx pgx.Tx, messageID uuid.UUID) error) (uuid.UUID, error) {
+func InsertMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, nm NewMessage, also func(tx pgx.Tx, messageID uuid.UUID) error) (uuid.UUID, error) {
 	pending, err := checkAutomod(ctx, p, nm)
 	if err != nil {
 		return uuid.Nil, err
@@ -79,17 +79,17 @@ func checkAutomod(ctx context.Context, p *db.Pool, nm NewMessage) (*automod.Pend
 	return automod.Of(p).Check(ctx, automod.Post{ChannelID: nm.ChannelID, UserID: nm.UserID, Content: content, HasAttachment: nm.HasAttachment})
 }
 
-// screenText applies the automod rules to member-written text that is not a
+// ScreenText applies the automod rules to member-written text that is not a
 // message body (a forum title edit, a tag name). messageID is the post being
 // edited, or uuid.Nil.
-func screenText(ctx context.Context, p *db.Pool, channelID, userID, messageID uuid.UUID, text string) (*automod.Pending, error) {
+func ScreenText(ctx context.Context, p *db.Pool, channelID, userID, messageID uuid.UUID, text string) (*automod.Pending, error) {
 	return automod.Of(p).Check(ctx, automod.Post{ChannelID: channelID, UserID: userID, Content: text, MessageID: messageID})
 }
 
 // insertMessageTx stores the message, its mentions and, for a thread reply,
 // the follows it implies.
-func insertMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, nm NewMessage) (uuid.UUID, error) {
-	if err := gatePost(ctx, tx, nm); err != nil {
+func insertMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, nm NewMessage) (uuid.UUID, error) {
+	if err := GatePost(ctx, tx, nm); err != nil {
 		return uuid.Nil, err
 	}
 	id, err := CreateMessage(ctx, tx, nm)
@@ -170,7 +170,7 @@ func enforceSlowMode(ctx context.Context, tx pgx.Tx, channelID, userID uuid.UUID
 // PruneSlowMode forgets post times older than the longest slow mode: they can
 // no longer hold anybody back.
 func PruneSlowMode(ctx context.Context, q db.Querier) (int64, error) {
-	tag, err := q.Exec(ctx, `DELETE FROM slow_mode_posts WHERE last_post_at < clock_timestamp() - make_interval(secs => $1)`, float64(MaxSlowModeSeconds))
+	tag, err := q.Exec(ctx, `DELETE FROM slow_mode_posts WHERE last_post_at < clock_timestamp() - make_interval(secs => $1)`, float64(core.MaxSlowModeSeconds))
 	return tag.RowsAffected(), err
 }
 
@@ -214,7 +214,7 @@ func PublishMessage(w http.ResponseWriter, r *http.Request, p *db.Pool, pub even
 // when someone else's message sits between the marker and this one (see
 // MarkRead), and tells the author's other sessions to re-read. A failure only leaves the
 // marker where it was.
-func markReadAfterSend(ctx context.Context, p *db.Pool, pub events.Publisher, msg *Message) {
+func markReadAfterSend(ctx context.Context, p *db.Pool, pub events.Publisher, msg *core.Message) {
 	if msg.ParentID != nil {
 		return
 	}
@@ -230,9 +230,9 @@ func markReadAfterSend(ctx context.Context, p *db.Pool, pub events.Publisher, ms
 	pub.SendToUsers([]uuid.UUID{msg.UserID}, events.ReadState, map[string]any{"channel_id": msg.ChannelID, "refresh": true})
 }
 
-// queryIDs parses the named optional UUID query parameters into their
+// QueryIDs parses the named optional UUID query parameters into their
 // destinations and returns how many were given.
-func queryIDs(r *http.Request, what string, dst map[string]**uuid.UUID) (int, error) {
+func QueryIDs(r *http.Request, what string, dst map[string]**uuid.UUID) (int, error) {
 	n := 0
 	for name, d := range dst {
 		raw := r.URL.Query().Get(name)
@@ -253,14 +253,14 @@ func queryIDs(r *http.Request, what string, dst map[string]**uuid.UUID) (int, er
 // (before, after, around), and checks the anchor message with valid. An anchor
 // that does not exist or does not fit is errMessageNotFound; a failing lookup
 // stays the error it is.
-func (h *Handler) parseHistoryQuery(r *http.Request, names []string, valid func(*core.MessageRef) bool) (HistoryQuery, error) {
-	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
+func (a *API) parseHistoryQuery(r *http.Request, names []string, valid func(*core.MessageRef) bool) (core.HistoryQuery, error) {
+	q := core.HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
 	slots := map[string]**uuid.UUID{"before": &q.Before, "after": &q.After, "around": &q.Around}
 	wanted := map[string]**uuid.UUID{}
 	for _, name := range names {
 		wanted[name] = slots[name]
 	}
-	anchors, err := queryIDs(r, "a message id", wanted)
+	anchors, err := QueryIDs(r, "a message id", wanted)
 	if err != nil {
 		return q, err
 	}
@@ -268,7 +268,7 @@ func (h *Handler) parseHistoryQuery(r *http.Request, names []string, valid func(
 		return q, httpx.ErrInvalidInput("use only one of " + strings.Join(names[:len(names)-1], ", ") + " or " + names[len(names)-1])
 	}
 	if anchor := firstID(q.Before, q.After, q.Around); anchor != nil {
-		ref, err := core.LoadMessageRef(r.Context(), h.DB, *anchor)
+		ref, err := core.LoadMessageRef(r.Context(), a.DB, *anchor)
 		if err != nil {
 			return q, err
 		}

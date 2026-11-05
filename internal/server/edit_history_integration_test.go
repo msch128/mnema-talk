@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -150,7 +151,7 @@ func TestRetentionDropsOnlyVersionsReplacedLongAgo(t *testing.T) {
 		`UPDATE message_edits SET replaced_at = NOW() - INTERVAL '40 days' WHERE content = 'one'`); err != nil {
 		t.Fatal(err)
 	}
-	n, err := chat.PruneEditHistory(context.Background(), f.a.db, 30)
+	n, err := messages.PruneEditHistory(context.Background(), f.a.db, 30)
 	if err != nil || n != 1 {
 		t.Fatalf("pruned %d, %v", n, err)
 	}
@@ -159,7 +160,7 @@ func TestRetentionDropsOnlyVersionsReplacedLongAgo(t *testing.T) {
 	if len(got.Edits) != 1 || got.Edits[0].Content != "two" {
 		t.Fatalf("remaining: %+v", got)
 	}
-	if again, _ := chat.PruneEditHistory(context.Background(), f.a.db, 30); again != 0 {
+	if again, _ := messages.PruneEditHistory(context.Background(), f.a.db, 30); again != 0 {
 		t.Errorf("a second run deleted %d", again)
 	}
 }
@@ -173,13 +174,13 @@ func TestTheRetentionWorkerPrunesInTheBackgroundOnlyWhenEnabled(t *testing.T) {
 	}
 	ctx, stop := context.WithCancel(context.Background())
 	defer stop()
-	chat.RunEditHistoryRetention(ctx, f.a.db, 0, time.Millisecond) // disabled: returns at once, deletes nothing
+	messages.RunEditHistoryRetention(ctx, f.a.db, 0, time.Millisecond) // disabled: returns at once, deletes nothing
 	if n := f.a.countRows(`SELECT COUNT(*) FROM message_edits`); n != 1 {
 		t.Fatalf("a disabled worker deleted: %d", n)
 	}
 	done := make(chan struct{})
 	go func() {
-		chat.RunEditHistoryRetention(ctx, f.a.db, 30, time.Millisecond)
+		messages.RunEditHistoryRetention(ctx, f.a.db, 30, time.Millisecond)
 		close(done)
 	}()
 	deadline := time.Now().Add(5 * time.Second)

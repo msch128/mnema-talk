@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -16,10 +16,10 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// messageSelect loads messages with author, reply count and the quoted reply
+// MessageSelect loads messages with author, reply count and the quoted reply
 // preview in one round trip. rm/ru are the replied-to message and its author;
 // the quoted snippet sent with every reply is bounded to 200 characters.
-const messageSelect = `
+const MessageSelect = `
 	SELECT m.id, m.number, m.channel_id, m.user_id, m.parent_id, u.username, COALESCE(m.author_name, u.display_name), u.avatar_s3_key,
 	       m.content, m.is_pinned, m.is_edited,
 	       (SELECT COUNT(*) FROM messages r WHERE r.parent_id = m.id),
@@ -37,11 +37,11 @@ const messageSelect = `
 	LEFT JOIN users ru ON ru.id = rm.user_id
 	LEFT JOIN users pu ON pu.id = m.pinned_by AND m.is_pinned`
 
-func scanMessages(rows pgx.Rows) ([]Message, error) {
+func ScanMessages(rows pgx.Rows) ([]core.Message, error) {
 	defer rows.Close()
-	msgs := make([]Message, 0)
+	msgs := make([]core.Message, 0)
 	for rows.Next() {
-		m := Message{Attachments: make([]MediaAttachment, 0), Reactions: make([]ReactionSummary, 0), Mentions: make([]uuid.UUID, 0), MentionRoles: make([]uuid.UUID, 0)}
+		m := core.Message{Attachments: make([]core.MediaAttachment, 0), Reactions: make([]core.ReactionSummary, 0), Mentions: make([]uuid.UUID, 0), MentionRoles: make([]uuid.UUID, 0)}
 		var avatar *string
 		var r rawReplyFields
 		var embeds []byte
@@ -55,7 +55,7 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 			return nil, err
 		}
 		var err error
-		if m.Embeds, err = decodeEmbeds(embeds); err != nil {
+		if m.Embeds, err = DecodeEmbeds(embeds); err != nil {
 			return nil, err
 		}
 		m.AvatarURL = auth.AvatarURL(avatar)
@@ -69,8 +69,8 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 	return msgs, rows.Err()
 }
 
-// enrich loads attachments, reactions, mentions and polls for msgs.
-func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
+// Enrich loads attachments, reactions, mentions and polls for msgs.
+func Enrich(ctx context.Context, p *db.Pool, msgs []core.Message) error {
 	if len(msgs) == 0 {
 		return nil
 	}
@@ -80,7 +80,7 @@ func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
 		idx[m.ID] = i
 		ids[i] = m.ID
 	}
-	for _, load := range []func(context.Context, *db.Pool, []Message, map[uuid.UUID]int, []uuid.UUID) error{
+	for _, load := range []func(context.Context, *db.Pool, []core.Message, map[uuid.UUID]int, []uuid.UUID) error{
 		loadAttachments, loadReactions, loadMentions, mentions.LoadMentionRoles, loadPolls, loadForumPostDetails,
 	} {
 		if err := load(ctx, p, msgs, idx, ids); err != nil {
@@ -92,7 +92,7 @@ func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
 
 // loadAttachments fills msgs[].Attachments; idx maps a message ID to its
 // position in msgs.
-func loadAttachments(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadAttachments(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT id, message_id, original_filename, mime_type, size_bytes, is_deleted
 		FROM media WHERE message_id = ANY($1) ORDER BY position, created_at`, ids)
@@ -101,7 +101,7 @@ func loadAttachments(ctx context.Context, p *db.Pool, msgs []Message, idx map[uu
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var a MediaAttachment
+		var a core.MediaAttachment
 		var msgID uuid.UUID
 		if err := rows.Scan(&a.ID, &msgID, &a.OriginalFilename, &a.MimeType, &a.SizeBytes, &a.IsDeleted); err != nil {
 			return err
@@ -112,7 +112,7 @@ func loadAttachments(ctx context.Context, p *db.Pool, msgs []Message, idx map[uu
 	return rows.Err()
 }
 
-func loadReactions(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadReactions(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT message_id, emoji, COUNT(*), array_agg(user_id ORDER BY created_at)
 		FROM message_reactions WHERE message_id = ANY($1)
@@ -122,7 +122,7 @@ func loadReactions(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var r ReactionSummary
+		var r core.ReactionSummary
 		var msgID uuid.UUID
 		if err := rows.Scan(&msgID, &r.Emoji, &r.Count, &r.Users); err != nil {
 			return err
@@ -132,7 +132,7 @@ func loadReactions(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid
 	return rows.Err()
 }
 
-func loadMentions(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadMentions(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `SELECT message_id, user_id FROM message_mentions WHERE message_id = ANY($1)`, ids)
 	if err != nil {
 		return fmt.Errorf("load mentions: %w", err)
@@ -148,16 +148,16 @@ func loadMentions(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.
 	return rows.Err()
 }
 
-func queryMessages(ctx context.Context, p *db.Pool, sql string, args ...any) ([]Message, error) {
+func QueryMessages(ctx context.Context, p *db.Pool, sql string, args ...any) ([]core.Message, error) {
 	rows, err := p.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query messages: %w", err)
 	}
-	msgs, err := scanMessages(rows)
+	msgs, err := ScanMessages(rows)
 	if err != nil {
 		return nil, err
 	}
-	return msgs, enrich(ctx, p, msgs)
+	return msgs, Enrich(ctx, p, msgs)
 }
 
 // rootCursor is the (created_at, id) position of an anchor message; the id
@@ -165,25 +165,25 @@ func queryMessages(ctx context.Context, p *db.Pool, sql string, args ...any) ([]
 const rootCursor = `(SELECT created_at, id FROM messages WHERE id = $2)`
 
 // GetChannelMessages returns a page of root messages, always oldest first.
-func GetChannelMessages(ctx context.Context, p *db.Pool, channelID uuid.UUID, q HistoryQuery) ([]Message, error) {
+func GetChannelMessages(ctx context.Context, p *db.Pool, channelID uuid.UUID, q core.HistoryQuery) ([]core.Message, error) {
 	switch {
 	case q.Before != nil:
 		return olderThan(ctx, p, channelID, *q.Before, q.Limit, false)
 	case q.After != nil:
-		return newerThan(ctx, p, channelID, *q.After, q.Limit)
+		return NewerThan(ctx, p, channelID, *q.After, q.Limit)
 	case q.Around != nil:
 		// Half the page before the anchor (including it), the rest after.
 		older, err := olderThan(ctx, p, channelID, *q.Around, q.Limit/2+1, true)
 		if err != nil {
 			return nil, err
 		}
-		newer, err := newerThan(ctx, p, channelID, *q.Around, q.Limit-len(older))
+		newer, err := NewerThan(ctx, p, channelID, *q.Around, q.Limit-len(older))
 		if err != nil {
 			return nil, err
 		}
 		return append(older, newer...), nil
 	}
-	msgs, err := queryMessages(ctx, p, messageSelect+`
+	msgs, err := QueryMessages(ctx, p, MessageSelect+`
 		WHERE m.channel_id = $1 AND m.parent_id IS NULL
 		ORDER BY m.created_at DESC, m.id DESC
 		LIMIT $2`, channelID, q.Limit)
@@ -194,12 +194,12 @@ func GetChannelMessages(ctx context.Context, p *db.Pool, channelID uuid.UUID, q 
 	return msgs, nil
 }
 
-func olderThan(ctx context.Context, p *db.Pool, channelID, anchor uuid.UUID, limit int, inclusive bool) ([]Message, error) {
+func olderThan(ctx context.Context, p *db.Pool, channelID, anchor uuid.UUID, limit int, inclusive bool) ([]core.Message, error) {
 	op := "<"
 	if inclusive {
 		op = "<="
 	}
-	msgs, err := queryMessages(ctx, p, messageSelect+`
+	msgs, err := QueryMessages(ctx, p, MessageSelect+`
 		WHERE m.channel_id = $1 AND m.parent_id IS NULL AND (m.created_at, m.id) `+op+` `+rootCursor+`
 		ORDER BY m.created_at DESC, m.id DESC
 		LIMIT $3`, channelID, anchor, limit)
@@ -210,23 +210,23 @@ func olderThan(ctx context.Context, p *db.Pool, channelID, anchor uuid.UUID, lim
 	return msgs, nil
 }
 
-func newerThan(ctx context.Context, p *db.Pool, channelID, anchor uuid.UUID, limit int) ([]Message, error) {
+func NewerThan(ctx context.Context, p *db.Pool, channelID, anchor uuid.UUID, limit int) ([]core.Message, error) {
 	if limit <= 0 {
-		return []Message{}, nil
+		return []core.Message{}, nil
 	}
-	return queryMessages(ctx, p, messageSelect+`
+	return QueryMessages(ctx, p, MessageSelect+`
 		WHERE m.channel_id = $1 AND m.parent_id IS NULL AND (m.created_at, m.id) > `+rootCursor+`
 		ORDER BY m.created_at ASC, m.id ASC
 		LIMIT $3`, channelID, anchor, limit)
 }
 
-func reverse(msgs []Message) {
+func reverse(msgs []core.Message) {
 	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
 		msgs[i], msgs[j] = msgs[j], msgs[i]
 	}
 }
 
-func isSameThreadContext(refParentID, parentID, replyTo *uuid.UUID) bool {
+func IsSameThreadContext(refParentID, parentID, replyTo *uuid.UUID) bool {
 	if refParentID == nil && parentID == nil {
 		return true // both root messages
 	}
@@ -249,19 +249,19 @@ func ValidateReplyTarget(ctx context.Context, p *db.Pool, channelID uuid.UUID, p
 	if err != nil {
 		return err
 	}
-	if ref.ChannelID != channelID || !isSameThreadContext(ref.ParentID, parentID, replyTo) {
+	if ref.ChannelID != channelID || !IsSameThreadContext(ref.ParentID, parentID, replyTo) {
 		return httpx.ErrInvalidInput("can only reply to a message in the same conversation")
 	}
 	return nil
 }
 
 // GetThreadReplies returns a page of replies of a root message, oldest first.
-func GetThreadReplies(ctx context.Context, p *db.Pool, parentID uuid.UUID, q HistoryQuery) ([]Message, error) {
+func GetThreadReplies(ctx context.Context, p *db.Pool, parentID uuid.UUID, q core.HistoryQuery) ([]core.Message, error) {
 	if q.Limit <= 0 {
 		q.Limit = 50
 	}
 	if q.Before != nil {
-		msgs, err := queryMessages(ctx, p, messageSelect+`
+		msgs, err := QueryMessages(ctx, p, MessageSelect+`
 			WHERE m.parent_id = $1 AND (m.created_at, m.id) < `+rootCursor+`
 			ORDER BY m.created_at DESC, m.id DESC
 			LIMIT $3`, parentID, *q.Before, q.Limit)
@@ -272,20 +272,20 @@ func GetThreadReplies(ctx context.Context, p *db.Pool, parentID uuid.UUID, q His
 		return msgs, nil
 	}
 	if q.After != nil {
-		return queryMessages(ctx, p, messageSelect+`
+		return QueryMessages(ctx, p, MessageSelect+`
 			WHERE m.parent_id = $1 AND (m.created_at, m.id) > `+rootCursor+`
 			ORDER BY m.created_at ASC, m.id ASC
 			LIMIT $3`, parentID, *q.After, q.Limit)
 	}
-	return queryMessages(ctx, p, messageSelect+`
+	return QueryMessages(ctx, p, MessageSelect+`
 		WHERE m.parent_id = $1
 		ORDER BY m.created_at ASC, m.id ASC
 		LIMIT $2`, parentID, q.Limit)
 }
 
 // GetMessageByNumber returns one fully populated message by its link number.
-func GetMessageByNumber(ctx context.Context, p *db.Pool, number int64) (*Message, error) {
-	msgs, err := queryMessages(ctx, p, messageSelect+` WHERE m.number = $1`, number)
+func GetMessageByNumber(ctx context.Context, p *db.Pool, number int64) (*core.Message, error) {
+	msgs, err := QueryMessages(ctx, p, MessageSelect+` WHERE m.number = $1`, number)
 	if err != nil {
 		return nil, err
 	}
@@ -296,8 +296,8 @@ func GetMessageByNumber(ctx context.Context, p *db.Pool, number int64) (*Message
 }
 
 // GetMessage returns one fully populated message.
-func GetMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*Message, error) {
-	msgs, err := queryMessages(ctx, p, messageSelect+` WHERE m.id = $1`, messageID)
+func GetMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*core.Message, error) {
+	msgs, err := QueryMessages(ctx, p, MessageSelect+` WHERE m.id = $1`, messageID)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +320,7 @@ type NewMessage struct {
 	// WebhookID, AuthorName and Embeds are set for webhook messages only.
 	WebhookID  *uuid.UUID
 	AuthorName string
-	Embeds     []Embed
+	Embeds     []core.Embed
 	// HasAttachment is set for an upload (automod's new-account rule looks at it).
 	HasAttachment bool
 	// Title is set for root messages in a forum channel.
@@ -366,7 +366,7 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, core.ErrChannelNotFound
 	}
-	if isForeignKeyViolation(err) && nm.ParentID != nil {
+	if IsForeignKeyViolation(err) && nm.ParentID != nil {
 		// The thread root was deleted after ValidateParent looked at it.
 		return uuid.Nil, httpx.ErrInvalidInput("parent message not found")
 	}
@@ -376,10 +376,10 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	return id, nil
 }
 
-// isForeignKeyViolation reports whether err is the database refusing a row
+// IsForeignKeyViolation reports whether err is the database refusing a row
 // because the row it refers to is gone (SQLSTATE 23503): a concurrent delete
 // won against a reference that was validated moments earlier.
-func isForeignKeyViolation(err error) bool {
+func IsForeignKeyViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23503"
 }

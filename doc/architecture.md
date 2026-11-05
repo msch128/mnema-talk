@@ -31,7 +31,7 @@ in PostgreSQL; uploads, avatars and profile banners live in S3-compatible object
 | [`internal/httpx`](../internal/httpx/middleware.go) | Middleware: request IDs, security headers (CSP, HSTS in production), CORS, CSRF origin check, body limits, rate limits ([`ratelimit.go`](../internal/httpx/ratelimit.go)), client IP from trusted proxies ([`request.go`](../internal/httpx/request.go)), JSON errors. |
 | [`internal/auth`](../internal/auth/service.go) | Password hashing, signed session cookies with a per-user `token_version` (revocation), login lockout, invite codes, admin seeding, user administration, password re-authentication for sensitive actions ([`reauth.go`](../internal/auth/reauth.go)). |
 | [`internal/perm`](../internal/perm/perm.go), [`internal/roles`](../internal/roles/handler.go) | Roles and permissions: the permission bits, the in-memory `Snapshot` that resolves base, role and overwrite permissions (and the hierarchy rules), the cache with live invalidation, and the HTTP API for roles, member roles and channel overwrites. See [roles-and-permissions.md](roles-and-permissions.md). |
-| [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions (by name, `@all`/`@here` and `@Role`, with a fan-out cap) and the mentions inbox, read state, notification levels ([`notify.go`](../internal/chat/readstate/notify.go)), search ([`search.go`](../internal/chat/search.go), filters in [`search_filters.go`](../internal/chat/search_filters.go)), members. Since 1.1 also direct messages (`dm*.go`), blocks ([`blocks/blocks.go`](../internal/chat/blocks/blocks.go)), reports ([`reports.go`](../internal/chat/reports.go)), saved messages ([`saved.go`](../internal/chat/saved.go)), forwarding ([`forward.go`](../internal/chat/forward.go)) and thread follow ([`thread_follow.go`](../internal/chat/thread_follow.go)). |
+| [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions (by name, `@all`/`@here` and `@Role`, with a fan-out cap) and the mentions inbox, read state, notification levels ([`notify.go`](../internal/chat/readstate/notify.go)), search ([`search.go`](../internal/chat/search.go), filters in [`search_filters.go`](../internal/chat/search_filters.go)), members. Since 1.1 also direct messages (`dm*.go`), blocks ([`blocks/blocks.go`](../internal/chat/blocks/blocks.go)), reports ([`reports.go`](../internal/chat/reports.go)), saved messages ([`saved.go`](../internal/chat/saved.go)), forwarding ([`forward.go`](../internal/chat/messages/forward.go)) and thread follow ([`thread_follow.go`](../internal/chat/messages/thread_follow.go)). |
 | [`internal/later`](../internal/later/service.go) | Reminders and scheduled messages: private per-member lists, the sweep that delivers and sends them, and their REST routes (see "Reminders and scheduled messages"). |
 | [`internal/automod`](../internal/automod/rule.go), [`internal/moderation`](../internal/moderation/automod_rules.go) | Automod (1.2): rules compiled once per configuration version and checked in the send and sign-up paths (mention spam, new accounts, raid protection, word and link lists); a hit blocks or flags a message and adds an entry to the reports queue. `moderation` is the REST surface of the rules and of the per-member moderation history with private moderator notes. See [moderation.md](moderation.md). |
 | [`internal/communityevents`](../internal/communityevents/handler.go) | Community events (1.2): events, RSVPs, cover images, the scheduler that starts events and sends reminders 15 minutes ahead. See [events.md](events.md). |
@@ -73,10 +73,10 @@ in PostgreSQL; uploads, avatars and profile banners live in S3-compatible object
    at most 100 MB together. A staged file nobody sends is deleted after six
    hours by [`media.SweepStaged`](../internal/media/staging.go). The request passes the CSRF origin check, the session check
    and the per-user rate limit.
-2. [`chat.InsertMessage`](../internal/chat/post.go) stores the message and its
+2. [`messages.InsertMessage`](../internal/chat/messages/post.go) stores the message and its
    mentions in one transaction (an upload's media row, or the claim of the
    staged files, joins the same transaction).
-3. [`chat.PublishMessage`](../internal/chat/post.go) loads the stored message,
+3. [`messages.PublishMessage`](../internal/chat/messages/post.go) loads the stored message,
    broadcasts `message_create` through the `events.Publisher` and answers 201.
 4. The hub writes the event to every open WebSocket; the
    [chat store](../web/src/stores/chat.ts) inserts it, updates unread and
@@ -320,7 +320,7 @@ the worker loads the account (disabled, banned and deleted accounts do not
 send), builds the same send context as a request (`chat.SendContextFor`, so a
 changed role, channel overwrite, pending rules or a timeout apply), validates
 the reply and thread target again and inserts the message with
-`chat.InsertMessage`, whose transaction applies slow mode and the direct message
+`messages.InsertMessage`, whose transaction applies slow mode and the direct message
 rules (blocks, closed conversations). The scheduled row is deleted in the same
 transaction, so a message is neither sent twice nor lost half-way, and a row
 edited meanwhile is not sent in its old version. A refusal turns the row into a
@@ -609,7 +609,7 @@ threads). `PUT`/`DELETE /api/threads/{id}/follow` change it; an explicit
 unfollow is kept and a later reply does not undo it, but a reply that mentions
 the member by name or quotes their message still reaches them. A change, and
 a reply that makes someone follow, is sent to that member's own sessions as
-`thread_follow_updated` (a hub tap, [`thread_follow_sync.go`](../internal/chat/thread_follow_sync.go)), and
+`thread_follow_updated` (a hub tap, [`thread_follow_sync.go`](../internal/chat/messages/thread_follow_sync.go)), and
 `GET /api/threads/following` lists the followed threads for clients. The
 in-page OS notification shows the message text only when the member's
 "show message text" setting is on and the operator has not set

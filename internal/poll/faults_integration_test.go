@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -164,7 +165,7 @@ func TestVotingReportsDatabaseFailuresInsteadOfHidingThem(t *testing.T) {
 		}
 	}
 	// None of it changed the poll.
-	got, err := chat.LoadPoll(ctx, f.p, m.ID)
+	got, err := messages.LoadPoll(ctx, f.p, m.ID)
 	if err != nil || got.TotalVoters != 0 {
 		t.Fatalf("poll after the failures: %+v, %v", got, err)
 	}
@@ -173,7 +174,7 @@ func TestVotingReportsDatabaseFailuresInsteadOfHidingThem(t *testing.T) {
 func TestMessagesWithoutAPollHaveNoPollToAnnounceOrShow(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
-	id, err := chat.CreateMessage(ctx, f.p, chat.NewMessage{ChannelID: f.channel, UserID: f.user.ID, Content: "just words"})
+	id, err := messages.CreateMessage(ctx, f.p, chat.NewMessage{ChannelID: f.channel, UserID: f.user.ID, Content: "just words"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"net/http"
@@ -13,7 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
-// toggleReaction handles POST /api/messages/{messageID}/reactions.
+// ToggleReaction handles POST /api/messages/{messageID}/reactions.
 //
 // @Summary Toggle a reaction
 // @Description Adds the caller's reaction, or removes it if already present. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409 CONFLICT beyond that). Broadcasts message_reaction.
@@ -23,8 +23,8 @@ import (
 // @Produce json
 // @Security cookieAuth
 // @Param messageID path string true "Message ID." Format(uuid)
-// @Param request body ReactionRequest true "Request body."
-// @Success 200 {object} ReactionResult "Resulting reactions."
+// @Param request body messages.ReactionRequest true "Request body."
+// @Success 200 {object} messages.ReactionResult "Resulting reactions."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Add reactions permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
@@ -34,7 +34,7 @@ import (
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/messages/{messageID}/reactions [post]
-func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ToggleReaction(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())
 	msgID, err := httpx.PathUUID(r, "messageID")
 	if err != nil {
@@ -48,11 +48,11 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	ref, err := core.LoadMessageRef(r.Context(), h.DB, msgID)
+	ref, err := core.LoadMessageRef(r.Context(), a.DB, msgID)
 	if err != nil {
 		return err
 	}
-	p, err := h.channelPerms(r, ref.ChannelID)
+	p, err := a.Guard.ChannelPerms(r, ref.ChannelID)
 	if err != nil {
 		return err
 	}
@@ -60,22 +60,22 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 		return core.ErrMessageNotFound
 	}
 	// Taking back an own reaction stays possible without the permission.
-	reactions, err := ToggleReactionAs(r.Context(), h.DB, msgID, user.ID, emoji, p.Has(perm.AddReactions))
+	reactions, err := ToggleReactionAs(r.Context(), a.DB, msgID, user.ID, emoji, p.Has(perm.AddReactions))
 	if err != nil {
-		return h.refusalFor(r, err, perm.AddReactions)
+		return a.Guard.RefusalFor(r, err, perm.AddReactions)
 	}
 	payload := ReactionResult{MessageID: msgID, ChannelID: ref.ChannelID, Reactions: reactions}
-	h.Events.BroadcastChannel(ref.ChannelID, events.MessageReaction, payload)
+	a.Events.BroadcastChannel(ref.ChannelID, events.MessageReaction, payload)
 	httpx.WriteJSON(w, http.StatusOK, payload)
 	return nil
 }
 
-func (h *Handler) loadThreadRoot(r *http.Request, msgID uuid.UUID) (*Message, error) {
-	root, err := GetMessage(r.Context(), h.DB, msgID)
+func (a *API) loadThreadRoot(r *http.Request, msgID uuid.UUID) (*core.Message, error) {
+	root, err := GetMessage(r.Context(), a.DB, msgID)
 	if err != nil {
 		return nil, err
 	}
-	if err := h.require(r, root.ChannelID, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, root.ChannelID, perm.ViewChannel); err != nil {
 		return nil, core.NotFoundUnlessFailure(err)
 	}
 	// Only a root message has a thread; a reply is not one.
@@ -85,13 +85,13 @@ func (h *Handler) loadThreadRoot(r *http.Request, msgID uuid.UUID) (*Message, er
 	return root, nil
 }
 
-func (h *Handler) parseThreadQuery(r *http.Request, msgID uuid.UUID) (HistoryQuery, error) {
-	return h.parseHistoryQuery(r, []string{"before", "after"}, func(ref *core.MessageRef) bool {
+func (a *API) parseThreadQuery(r *http.Request, msgID uuid.UUID) (core.HistoryQuery, error) {
+	return a.parseHistoryQuery(r, []string{"before", "after"}, func(ref *core.MessageRef) bool {
 		return ref.ParentID != nil && *ref.ParentID == msgID
 	})
 }
 
-// getThread handles GET /api/messages/{messageID}/thread.
+// GetThread handles GET /api/messages/{messageID}/thread.
 //
 // @Summary Get a thread
 // @Description The root message plus a page of replies, oldest first. Use at most one of before, after (reply IDs). The message must be a root message; a reply has no thread (404).
@@ -103,7 +103,7 @@ func (h *Handler) parseThreadQuery(r *http.Request, msgID uuid.UUID) (HistoryQue
 // @Param limit query int false "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 100." minimum(1) maximum(100) default(50)
 // @Param before query string false "Replies older than this reply." Format(uuid)
 // @Param after query string false "Replies newer than this reply." Format(uuid)
-// @Success 200 {object} Thread "Thread."
+// @Success 200 {object} messages.Thread "Thread."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
@@ -111,24 +111,24 @@ func (h *Handler) parseThreadQuery(r *http.Request, msgID uuid.UUID) (HistoryQue
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/messages/{messageID}/thread [get]
-func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
+func (a *API) GetThread(w http.ResponseWriter, r *http.Request) error {
 	msgID, err := httpx.PathUUID(r, "messageID")
 	if err != nil {
 		return err
 	}
-	root, err := h.loadThreadRoot(r, msgID)
+	root, err := a.loadThreadRoot(r, msgID)
 	if err != nil {
 		return err
 	}
-	q, err := h.parseThreadQuery(r, msgID)
+	q, err := a.parseThreadQuery(r, msgID)
 	if err != nil {
 		return err
 	}
-	replies, err := GetThreadReplies(r.Context(), h.DB, msgID, q)
+	replies, err := GetThreadReplies(r.Context(), a.DB, msgID, q)
 	if err != nil {
 		return err
 	}
-	following, err := IsFollowingThread(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, msgID)
+	following, err := IsFollowingThread(r.Context(), a.DB, auth.UserFrom(r.Context()).ID, msgID)
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// getMessageByNumber handles GET /api/messages/by-number/{number}.
+// GetMessageByNumber handles GET /api/messages/by-number/{number}.
 //
 // @Summary Get a message by its link number
 // @Description Resolves the short number used in links (/m/4821, /t/4821) to the message, including its channel_id and, for a thread reply, its parent_id.
@@ -145,7 +145,7 @@ func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Security cookieAuth
 // @Param number path int true "Message number." minimum(1)
-// @Success 200 {object} Message "Message."
+// @Success 200 {object} core.Message "Message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
@@ -153,16 +153,16 @@ func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/messages/by-number/{number} [get]
-func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) error {
+func (a *API) GetMessageByNumber(w http.ResponseWriter, r *http.Request) error {
 	n, err := strconv.ParseInt(chi.URLParam(r, "number"), 10, 64)
 	if err != nil || n < 1 {
 		return httpx.ErrInvalidInput("invalid number")
 	}
-	msg, err := GetMessageByNumber(r.Context(), h.DB, n)
+	msg, err := GetMessageByNumber(r.Context(), a.DB, n)
 	if err != nil {
 		return err
 	}
-	if err := h.require(r, msg.ChannelID, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, msg.ChannelID, perm.ViewChannel); err != nil {
 		return core.NotFoundUnlessFailure(err)
 	}
 	httpx.WriteJSON(w, http.StatusOK, msg)
@@ -179,14 +179,14 @@ type ReactionRequest struct {
 type ReactionResult struct {
 	MessageID uuid.UUID `json:"message_id" format:"uuid"`
 	// ChannelID is the channel of the message.
-	ChannelID uuid.UUID         `json:"channel_id" format:"uuid"`
-	Reactions []ReactionSummary `json:"reactions"`
+	ChannelID uuid.UUID              `json:"channel_id" format:"uuid"`
+	Reactions []core.ReactionSummary `json:"reactions"`
 }
 
 // Thread is a root message with a page of its replies.
 type Thread struct {
-	Root    *Message  `json:"root"`
-	Replies []Message `json:"replies"`
+	Root    *core.Message  `json:"root"`
+	Replies []core.Message `json:"replies"`
 	// Following: replies of this thread notify the caller. Servers before 1.1 do not send it.
 	Following bool `json:"following" binding:"optional"`
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -162,7 +163,7 @@ func threadAudience(ctx context.Context, q db.Querier, thread *uuid.UUID) (follo
 	if thread == nil {
 		return nil, true
 	}
-	followers, err := chat.ThreadFollowers(ctx, q, *thread)
+	followers, err := messages.ThreadFollowers(ctx, q, *thread)
 	if err != nil {
 		slog.Warn("push: load thread followers", "err", err)
 		return nil, false

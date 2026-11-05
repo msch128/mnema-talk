@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -25,7 +26,7 @@ type auditSnapshot struct {
 	// dm marks a message of a direct message conversation: nothing of it is
 	// ever audited (doc/moderation.md).
 	dm      bool
-	msg     *Message
+	msg     *core.Message
 	channel string
 	replies []uuid.UUID
 	// edits are the replaced versions of an edited message, kept because
@@ -35,42 +36,42 @@ type auditSnapshot struct {
 
 // snapshotMessage reads what the audit log needs to know about a message. A
 // failure only costs detail: the action itself must not fail because of it.
-func (h *Handler) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies bool) *auditSnapshot {
-	if h.Audit == nil {
+func (a *API) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies bool) *auditSnapshot {
+	if a.Audit == nil {
 		return nil
 	}
-	msg, err := GetMessage(ctx, h.DB, id)
+	msg, err := GetMessage(ctx, a.DB, id)
 	if err != nil {
 		return nil
 	}
 	s := &auditSnapshot{msg: msg}
 	// Fail closed: when the channel cannot be read, a direct message must not
 	// end up in the log with its text.
-	if s.channel, s.dm, err = channelAuditName(ctx, h.DB, msg.ChannelID); err != nil {
+	if s.channel, s.dm, err = channelAuditName(ctx, a.DB, msg.ChannelID); err != nil {
 		return nil
 	}
 	if s.dm {
-		return &auditSnapshot{dm: true, msg: &Message{UserID: msg.UserID}}
+		return &auditSnapshot{dm: true, msg: &core.Message{UserID: msg.UserID}}
 	}
 	if withReplies && msg.ReplyCount > 0 {
-		s.replies = h.fetchAuditedReplyIDs(ctx, id)
+		s.replies = a.fetchAuditedReplyIDs(ctx, id)
 	}
 	if withReplies && msg.IsEdited {
-		s.edits = editVersionsForAuditDetail(ctx, h.DB, []uuid.UUID{id})[id]
+		s.edits = editVersionsForAuditDetail(ctx, a.DB, []uuid.UUID{id})[id]
 	}
 	return s
 }
 
-func (h *Handler) fetchAuditedReplyIDs(ctx context.Context, parentID uuid.UUID) []uuid.UUID {
-	return replyIDsForAudit(ctx, h.DB, []uuid.UUID{parentID})[parentID]
+func (a *API) fetchAuditedReplyIDs(ctx context.Context, parentID uuid.UUID) []uuid.UUID {
+	return ReplyIDsForAudit(ctx, a.DB, []uuid.UUID{parentID})[parentID]
 }
 
-// replyIDsForAudit reads, per message, the ids of its first maxAuditedReplies
+// ReplyIDsForAudit reads, per message, the ids of its first maxAuditedReplies
 // thread replies. Ids only: replies are other members' messages, and one that
 // is deleted on its own gets its own entry with its text. A failure costs
 // detail only: the deletion must not fail, so inside a transaction the read
 // runs in a savepoint (a failed statement would abort the whole transaction).
-func replyIDsForAudit(ctx context.Context, q db.Querier, parentIDs []uuid.UUID) map[uuid.UUID][]uuid.UUID {
+func ReplyIDsForAudit(ctx context.Context, q db.Querier, parentIDs []uuid.UUID) map[uuid.UUID][]uuid.UUID {
 	var out map[uuid.UUID][]uuid.UUID
 	read := func(q db.Querier) (err error) {
 		out, err = readReplyIDs(ctx, q, parentIDs)
@@ -110,7 +111,7 @@ func readReplyIDs(ctx context.Context, q db.Querier, parentIDs []uuid.UUID) (map
 	return out, rows.Err()
 }
 
-func attachmentList(m *Message) []map[string]any {
+func attachmentList(m *core.Message) []map[string]any {
 	out := make([]map[string]any, 0, len(m.Attachments))
 	for _, a := range m.Attachments {
 		out = append(out, map[string]any{"id": a.ID, "filename": a.OriginalFilename, "mime_type": a.MimeType, "size_bytes": a.SizeBytes})
@@ -134,7 +135,7 @@ func (s *auditSnapshot) details() map[string]any {
 
 // auditDelete records the deletion of a message, by its author or by a
 // moderator.
-func (h *Handler) auditDelete(ctx context.Context, user *auth.User, id uuid.UUID, s *auditSnapshot, reason string) {
+func (a *API) auditDelete(ctx context.Context, user *auth.User, id uuid.UUID, s *auditSnapshot, reason string) {
 	if s != nil && s.dm {
 		return
 	}
@@ -152,11 +153,11 @@ func (h *Handler) auditDelete(ctx context.Context, user *auth.User, id uuid.UUID
 		e.TargetName = s.channel
 		e.ChannelID = &s.msg.ChannelID
 	}
-	h.Audit.RecordOrLog(ctx, e)
+	a.Audit.RecordOrLog(ctx, e)
 }
 
 // auditEdit records an edit with the text before and after.
-func (h *Handler) auditEdit(ctx context.Context, id uuid.UUID, s *auditSnapshot, after string) {
+func (a *API) auditEdit(ctx context.Context, id uuid.UUID, s *auditSnapshot, after string) {
 	if s == nil || s.dm {
 		return
 	}
@@ -164,7 +165,7 @@ func (h *Handler) auditEdit(ctx context.Context, id uuid.UUID, s *auditSnapshot,
 	delete(d, "content")
 	d["before"] = audit.Content(s.msg.Content)
 	d["after"] = audit.Content(after)
-	h.Audit.RecordOrLog(ctx, audit.Entry{Action: "message.edit", TargetType: "message", TargetID: id.String(), TargetName: s.channel, ChannelID: &s.msg.ChannelID, Details: d})
+	a.Audit.RecordOrLog(ctx, audit.Entry{Action: "message.edit", TargetType: "message", TargetID: id.String(), TargetName: s.channel, ChannelID: &s.msg.ChannelID, Details: d})
 }
 
 // DeleteMessageRequest is the optional body of DELETE
@@ -186,11 +187,11 @@ func deleteReason(r *http.Request) (string, error) {
 }
 
 // tellAuthor lets the author know that a moderator removed their message.
-func (h *Handler) tellAuthor(s *auditSnapshot, by *auth.User, reason string) {
-	if s == nil || s.msg.UserID == by.ID || h.Events == nil {
+func (a *API) tellAuthor(s *auditSnapshot, by *auth.User, reason string) {
+	if s == nil || s.msg.UserID == by.ID || a.Events == nil {
 		return
 	}
-	h.Events.SendToUsers([]uuid.UUID{s.msg.UserID}, events.ModerationNotice, map[string]any{
+	a.Events.SendToUsers([]uuid.UUID{s.msg.UserID}, events.ModerationNotice, map[string]any{
 		"kind": "message_deleted", "reason": reason, "channel_name": s.channel,
 	})
 }

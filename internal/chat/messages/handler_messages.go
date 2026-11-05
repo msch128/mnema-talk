@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -13,28 +13,28 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
-func (h *Handler) validateListChannel(r *http.Request) (uuid.UUID, error) {
+func (a *API) validateListChannel(r *http.Request) (uuid.UUID, error) {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return uuid.Nil, err
 	}
-	if err := h.require(r, chID, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, chID, perm.ViewChannel); err != nil {
 		return uuid.Nil, err
 	}
-	if _, err := core.LoadChannel(r.Context(), h.DB, chID); err != nil {
+	if _, err := core.LoadChannel(r.Context(), a.DB, chID); err != nil {
 		return uuid.Nil, err
 	}
 	return chID, nil
 }
 
-func (h *Handler) parseChannelMessageQuery(r *http.Request, chID uuid.UUID) (HistoryQuery, error) {
+func (a *API) parseChannelMessageQuery(r *http.Request, chID uuid.UUID) (core.HistoryQuery, error) {
 	// The anchor must be a root message of this channel.
-	return h.parseHistoryQuery(r, []string{"before", "after", "around"}, func(ref *core.MessageRef) bool {
+	return a.parseHistoryQuery(r, []string{"before", "after", "around"}, func(ref *core.MessageRef) bool {
 		return ref.ChannelID == chID && ref.ParentID == nil
 	})
 }
 
-// listMessages handles GET /api/channels/{channelID}/messages.
+// ListMessages handles GET /api/channels/{channelID}/messages.
 //
 // @Summary List channel messages
 // @Description Top-level messages only, oldest first within the page. Without an anchor returns the newest page. Use at most one of before, after, around; the anchor must be a root message of this channel.
@@ -47,7 +47,7 @@ func (h *Handler) parseChannelMessageQuery(r *http.Request, chID uuid.UUID) (His
 // @Param before query string false "Messages older than this message." Format(uuid)
 // @Param after query string false "Messages newer than this message." Format(uuid)
 // @Param around query string false "Messages around (and including) this message." Format(uuid)
-// @Success 200 {array} Message "A page of messages."
+// @Success 200 {array} core.Message "A page of messages."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
@@ -55,16 +55,16 @@ func (h *Handler) parseChannelMessageQuery(r *http.Request, chID uuid.UUID) (His
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages [get]
-func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) error {
-	chID, err := h.validateListChannel(r)
+func (a *API) ListMessages(w http.ResponseWriter, r *http.Request) error {
+	chID, err := a.validateListChannel(r)
 	if err != nil {
 		return err
 	}
-	q, err := h.parseChannelMessageQuery(r, chID)
+	q, err := a.parseChannelMessageQuery(r, chID)
 	if err != nil {
 		return err
 	}
-	msgs, err := GetChannelMessages(r.Context(), h.DB, chID, q)
+	msgs, err := GetChannelMessages(r.Context(), a.DB, chID, q)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// createMessage handles POST /api/channels/{channelID}/messages.
+// CreateMessage handles POST /api/channels/{channelID}/messages.
 //
 // @Summary Post a message
 // @Description Works in text and voice channels (a voice channel's chat). Resolves mentions and broadcasts message_create. With attachment_ids the message carries those staged files (up to 10, at most 100 MB together); the text may then be empty.
@@ -82,8 +82,8 @@ func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
-// @Param request body CreateMessageRequest true "Request body."
-// @Success 201 {object} Message "Created message."
+// @Param request body messages.CreateMessageRequest true "Request body."
+// @Success 201 {object} core.Message "Created message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
@@ -92,7 +92,7 @@ func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages [post]
-func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
+func (a *API) CreateMessage(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
@@ -106,11 +106,11 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	if len(req.AttachmentIDs) > 0 {
 		need |= perm.AttachFiles
 	}
-	ctx, err := h.sendContext(r, chID, need)
+	ctx, err := a.SendContext(r, chID, need)
 	if err != nil {
 		return err
 	}
-	if _, err := ChannelForMessages(ctx, h.DB, chID); err != nil {
+	if _, err := ChannelForMessages(ctx, a.DB, chID); err != nil {
 		return err
 	}
 	if err := validateAttachmentIDs(req.AttachmentIDs); err != nil {
@@ -120,7 +120,7 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := ValidateTarget(ctx, h.DB, chID, req.ParentID, req.ReplyToID); err != nil {
+	if err := ValidateTarget(ctx, a.DB, chID, req.ParentID, req.ReplyToID); err != nil {
 		return err
 	}
 	var claim func(pgx.Tx, uuid.UUID) error
@@ -129,19 +129,19 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 			return claimAttachments(ctx, tx, msgID, user.ID, chID, req.AttachmentIDs)
 		}
 	}
-	id, err := InsertMessage(ctx, h.DB, h.Online, NewMessage{
+	id, err := InsertMessage(ctx, a.DB, a.Online, NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
 		HasAttachment: len(req.AttachmentIDs) > 0,
 	}, claim)
 	if err != nil {
 		return err
 	}
-	return PublishMessage(w, r, h.DB, h.Events, id)
+	return PublishMessage(w, r, a.DB, a.Events, id)
 }
 
-// messageInChannel loads messageID and checks it belongs to the channel named in
+// MessageInChannel loads messageID and checks it belongs to the channel named in
 // the path, so URLs cannot mix channels.
-func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef, error) {
+func (a *API) MessageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef, error) {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return uuid.Nil, nil, err
@@ -150,7 +150,7 @@ func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef
 	if err != nil {
 		return uuid.Nil, nil, err
 	}
-	ref, err := core.LoadMessageRef(r.Context(), h.DB, msgID)
+	ref, err := core.LoadMessageRef(r.Context(), a.DB, msgID)
 	if err != nil {
 		return uuid.Nil, nil, err
 	}
@@ -160,7 +160,7 @@ func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef
 	return msgID, ref, nil
 }
 
-// editMessage handles PUT /api/channels/{channelID}/messages/{messageID}.
+// EditMessage handles PUT /api/channels/{channelID}/messages/{messageID}.
 //
 // @Summary Edit own message
 // @Description Only the author may edit. The content may be empty when the message has an attachment. Broadcasts message_update.
@@ -171,8 +171,8 @@ func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param messageID path string true "Message ID." Format(uuid)
-// @Param request body EditMessageRequest true "Request body."
-// @Success 200 {object} Message "Updated message."
+// @Param request body messages.EditMessageRequest true "Request body."
+// @Success 200 {object} core.Message "Updated message."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: you are not the author, or cross-origin request rejected."
@@ -181,14 +181,14 @@ func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages/{messageID} [put]
-func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) error {
-	return h.editMessageWith(w, r, h.sendContext)
+func (a *API) EditMessage(w http.ResponseWriter, r *http.Request) error {
+	return a.EditMessageWith(w, r, a.SendContext)
 }
 
-// editMessageWith is editMessage with the mention context of the caller's kind
+// EditMessageWith is editMessage with the mention context of the caller's kind
 // (member or bot) supplied by ctxFor.
-func (h *Handler) editMessageWith(w http.ResponseWriter, r *http.Request, ctxFor func(*http.Request, uuid.UUID, perm.Set) (context.Context, error)) error {
-	msgID, ref, err := h.messageInChannel(r)
+func (a *API) EditMessageWith(w http.ResponseWriter, r *http.Request, ctxFor func(*http.Request, uuid.UUID, perm.Set) (context.Context, error)) error {
+	msgID, ref, err := a.MessageInChannel(r)
 	if err != nil {
 		return err
 	}
@@ -206,21 +206,21 @@ func (h *Handler) editMessageWith(w http.ResponseWriter, r *http.Request, ctxFor
 		return err
 	}
 	userID := auth.UserFrom(r.Context()).ID
-	before := h.snapshotMessage(r.Context(), msgID, false)
-	if err := EditMessage(ctx, h.DB, h.Online, msgID, userID, content); err != nil {
+	before := a.snapshotMessage(r.Context(), msgID, false)
+	if err := EditMessage(ctx, a.DB, a.Online, msgID, userID, content); err != nil {
 		return err
 	}
-	h.auditEdit(r.Context(), msgID, before, content)
-	msg, err := GetMessage(r.Context(), h.DB, msgID)
+	a.auditEdit(r.Context(), msgID, before, content)
+	msg, err := GetMessage(r.Context(), a.DB, msgID)
 	if err != nil {
 		return err
 	}
-	h.Events.BroadcastChannel(msg.ChannelID, events.MessageUpdate, msg)
+	a.Events.BroadcastChannel(msg.ChannelID, events.MessageUpdate, msg)
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
 }
 
-// deleteMessage handles DELETE /api/channels/{channelID}/messages/{messageID}.
+// DeleteMessage handles DELETE /api/channels/{channelID}/messages/{messageID}.
 //
 // @Summary Delete a message
 // @Description The author, or a member with the Manage messages permission in the channel (the Owner always). Also deletes the message's thread replies and attachments. A moderator may send a JSON body {"reason": "..."} (up to 200 characters); the reason goes to the audit log and to the author, who is told through a moderation_notice event. Broadcasts message_delete.
@@ -230,7 +230,7 @@ func (h *Handler) editMessageWith(w http.ResponseWriter, r *http.Request, ctxFor
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param messageID path string true "Message ID." Format(uuid)
-// @Param request body DeleteMessageRequest false "Optional body with a reason."
+// @Param request body messages.DeleteMessageRequest false "Optional body with a reason."
 // @Success 204 "Success, no content."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
@@ -240,13 +240,13 @@ func (h *Handler) editMessageWith(w http.ResponseWriter, r *http.Request, ctxFor
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages/{messageID} [delete]
-func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
-	msgID, ref, err := h.messageInChannel(r)
+func (a *API) DeleteMessage(w http.ResponseWriter, r *http.Request) error {
+	msgID, ref, err := a.MessageInChannel(r)
 	if err != nil {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	p, err := h.channelPerms(r, ref.ChannelID)
+	p, err := a.Guard.ChannelPerms(r, ref.ChannelID)
 	if err != nil {
 		return err
 	}
@@ -257,15 +257,15 @@ func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	snap := h.snapshotMessage(r.Context(), msgID, true)
-	keys, err := DeleteMessageAs(r.Context(), h.DB, msgID, user, p.Has(perm.ManageMessages))
+	snap := a.snapshotMessage(r.Context(), msgID, true)
+	keys, err := DeleteMessageAs(r.Context(), a.DB, msgID, user, p.Has(perm.ManageMessages))
 	if err != nil {
 		return err
 	}
-	h.auditDelete(r.Context(), user, msgID, snap, reason)
-	h.tellAuthor(snap, user, reason)
-	h.deleteObjects(r.Context(), keys)
-	h.Events.BroadcastChannel(ref.ChannelID, events.MessageDelete, map[string]any{"id": msgID, "channel_id": ref.ChannelID, "parent_id": ref.ParentID})
+	a.auditDelete(r.Context(), user, msgID, snap, reason)
+	a.tellAuthor(snap, user, reason)
+	core.DeleteObjects(r.Context(), a.Objects, keys)
+	a.Events.BroadcastChannel(ref.ChannelID, events.MessageDelete, map[string]any{"id": msgID, "channel_id": ref.ChannelID, "parent_id": ref.ParentID})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

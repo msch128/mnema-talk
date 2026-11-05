@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 )
 
 func canceledContext() context.Context {
@@ -79,28 +80,28 @@ func TestDMSendContextOnlyMapsAMissingConversationToNotFound(t *testing.T) {
 func TestFollowingAgainMovesAThreadToTheFront(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	second, err := CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "second"})
+	second, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "second"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, id := range []uuid.UUID{f.m, second} {
-		if err := SetThreadFollow(ctx, f.p, f.u.ID, id, true); err != nil {
+		if err := messages.SetThreadFollow(ctx, f.p, f.u.ID, id, true); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := SetThreadFollow(ctx, f.p, f.u.ID, f.m, false); err != nil {
+	if err := messages.SetThreadFollow(ctx, f.p, f.u.ID, f.m, false); err != nil {
 		t.Fatal(err)
 	}
-	if err := SetThreadFollow(ctx, f.p, f.u.ID, f.m, true); err != nil {
+	if err := messages.SetThreadFollow(ctx, f.p, f.u.ID, f.m, true); err != nil {
 		t.Fatal(err)
 	}
 	// Following twice keeps the position.
-	if err := SetThreadFollow(ctx, f.p, f.u.ID, f.m, true); err != nil {
+	if err := messages.SetThreadFollow(ctx, f.p, f.u.ID, f.m, true); err != nil {
 		t.Fatal(err)
 	}
 	h := &Handler{DB: f.p}
 	rec := httptest.NewRecorder()
-	if err := h.listFollowedThreads(rec, chattest.Request(f.u, "", nil, "")); err != nil {
+	if err := h.messages().ListFollowedThreads(rec, chattest.Request(f.u, "", nil, "")); err != nil {
 		t.Fatal(err)
 	}
 	body := rec.Body.String()

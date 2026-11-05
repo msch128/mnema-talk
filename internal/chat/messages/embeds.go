@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 // Discord's embed limits, which Mnema Talk applies as well.
@@ -119,12 +121,12 @@ func embedLink(field, s string) (string, error) {
 
 // SanitizeEmbeds validates and converts the embeds of a payload. Embeds with
 // nothing to show are dropped.
-func SanitizeEmbeds(in []InEmbed) ([]Embed, error) {
+func SanitizeEmbeds(in []InEmbed) ([]core.Embed, error) {
 	if len(in) > MaxEmbeds {
 		return nil, FormError(fmt.Sprintf("embeds: at most %d embeds are allowed", MaxEmbeds))
 	}
 	total := 0
-	out := make([]Embed, 0, len(in))
+	out := make([]core.Embed, 0, len(in))
 	for i, e := range in {
 		em, n, err := sanitizeOneEmbed(fmt.Sprintf("embeds[%d]", i), e)
 		if err != nil {
@@ -146,13 +148,13 @@ func SanitizeEmbeds(in []InEmbed) ([]Embed, error) {
 // that add up to the per-message text budget.
 type embedBuilder struct {
 	at    string
-	em    Embed
+	em    core.Embed
 	chars int
 }
 
 func (b *embedBuilder) count(s string) { b.chars += utf8.RuneCountInString(s) }
 
-func sanitizeOneEmbed(at string, e InEmbed) (Embed, int, error) {
+func sanitizeOneEmbed(at string, e InEmbed) (core.Embed, int, error) {
 	b := &embedBuilder{at: at}
 	steps := []func(InEmbed) error{
 		b.heading, b.color, b.timestamp, b.footer, b.image, b.thumbnail, b.author, b.fields,
@@ -211,18 +213,18 @@ func (b *embedBuilder) footer(e InEmbed) error {
 	if err != nil || t == "" {
 		return err
 	}
-	b.em.Footer = &EmbedFooter{Text: t}
+	b.em.Footer = &core.EmbedFooter{Text: t}
 	b.count(t)
 	return nil
 }
 
 // mediaLink validates the URL of an image or thumbnail; an empty URL yields no media.
-func (b *embedBuilder) mediaLink(field, raw string) (*EmbedMedia, error) {
+func (b *embedBuilder) mediaLink(field, raw string) (*core.EmbedMedia, error) {
 	u, err := embedLink(b.at+field, raw)
 	if err != nil || u == "" {
 		return nil, err
 	}
-	return &EmbedMedia{URL: u}, nil
+	return &core.EmbedMedia{URL: u}, nil
 }
 
 func (b *embedBuilder) image(e InEmbed) (err error) {
@@ -254,7 +256,7 @@ func (b *embedBuilder) author(e InEmbed) error {
 		return err
 	}
 	if name != "" {
-		b.em.Author = &EmbedAuthor{Name: name, URL: u}
+		b.em.Author = &core.EmbedAuthor{Name: name, URL: u}
 		b.count(name)
 	}
 	return nil
@@ -277,7 +279,7 @@ func (b *embedBuilder) fields(e InEmbed) error {
 		if name == "" || value == "" {
 			return FormError(fat + " needs a name and a value")
 		}
-		b.em.Fields = append(b.em.Fields, EmbedField{Name: name, Value: value, Inline: f.Inline})
+		b.em.Fields = append(b.em.Fields, core.EmbedField{Name: name, Value: value, Inline: f.Inline})
 		b.count(name)
 		b.count(value)
 	}

@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"net/http"
@@ -12,7 +12,7 @@ import (
 )
 
 func TestModerationNeedsThePermissionService(t *testing.T) {
-	h := &Handler{}
+	h := &API{}
 	err := h.asModerator(httptest.NewRequest(http.MethodPost, "/", nil), uuid.New(), func(pgx.Tx, *perm.Snapshot) error {
 		t.Fatal("ran without a permission check")
 		return nil

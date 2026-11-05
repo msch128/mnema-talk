@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/emojitext"
 )
 
@@ -20,7 +21,7 @@ func TestReactionsInATalkChatTakeEveryEmoji(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := CreateMessage(ctx, f.p, NewMessage{ChannelID: talk.ID, UserID: f.u.ID, Content: "hello talk"})
+	msg, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: talk.ID, UserID: f.u.ID, Content: "hello talk"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,15 +33,15 @@ func TestReactionsInATalkChatTakeEveryEmoji(t *testing.T) {
 	custom := emojitext.Token("party", emojiID)
 	emojis := []string{"🎉", "🥳", "👍🏽", "👨‍👩‍👧", "🏳️‍🌈", "🇩🇪", "1️⃣", "🧑🏽‍❤️‍💋‍🧑🏿", custom}
 	for _, e := range emojis {
-		if _, err := ToggleReactionAs(ctx, f.p, msg, f.u.ID, e, true); err != nil {
+		if _, err := messages.ToggleReactionAs(ctx, f.p, msg, f.u.ID, e, true); err != nil {
 			t.Fatalf("react with %q in the Talk chat: %v", e, err)
 		}
 	}
-	got, err := reactionSummary(ctx, f.p, msg)
+	got, err := messages.ReactionSummary(ctx, f.p, msg)
 	if err != nil || len(got) != len(emojis) {
 		t.Fatalf("reactions %+v err=%v, want %d", got, err, len(emojis))
 	}
-	if _, err := ToggleReactionAs(ctx, f.p, msg, f.u.ID, emojitext.Token("gone", uuid.New()), true); apiStatus(err) != http.StatusBadRequest {
+	if _, err := messages.ToggleReactionAs(ctx, f.p, msg, f.u.ID, emojitext.Token("gone", uuid.New()), true); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("a custom emoji that does not exist: %v", err)
 	}
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -62,7 +63,7 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 		Conversations: v.Get("dm") == "true",
 		Member:        auth.UserFrom(r.Context()).ID,
 	}
-	if _, err := queryIDs(r, "an id", map[string]**uuid.UUID{"channel_id": &q.ChannelID, "author_id": &q.AuthorID, "before": &q.Before, "mentions": &q.Mentions}); err != nil {
+	if _, err := messages.QueryIDs(r, "an id", map[string]**uuid.UUID{"channel_id": &q.ChannelID, "author_id": &q.AuthorID, "before": &q.Before, "mentions": &q.Mentions}); err != nil {
 		return err
 	}
 	var err error

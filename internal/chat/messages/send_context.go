@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -10,12 +10,12 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
-// sendContext checks need for the caller in ch and returns the request
+// SendContext checks need for the caller in ch and returns the request
 // context carrying the mention policy that fits their permissions: @all and
 // @here only notify when they may mention everyone, and nobody is notified
 // about a message in a channel they cannot view.
-func (h *Handler) sendContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
-	return SendContextFor(h.Perms, r.Context(), ch, need)
+func (a *API) SendContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
+	return SendContextFor(a.Guard.Perms, r.Context(), ch, need)
 }
 
 // SendContextFor is SendContext for work that runs without a request (a
@@ -36,7 +36,7 @@ func SendContextFor(perms *perm.Service, ctx context.Context, ch uuid.UUID, need
 	}
 	ctx = WithSlowModeExempt(ctx, p.Has(perm.ManageMessages))
 	ctx = withNewMemberWriteWait(ctx, snap.NewMemberWaits(sub.ID).Write)
-	return mentions.WithMentionPolicy(ctx, MentionPolicy{
+	return mentions.WithMentionPolicy(ctx, mentions.MentionPolicy{
 		NoEveryone: !p.Has(perm.MentionEveryone),
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) },
 		Roles:      MentionableRoles(snap, p.Has(perm.MentionEveryone)),
@@ -47,14 +47,14 @@ func SendContextFor(perms *perm.Service, ctx context.Context, ch uuid.UUID, need
 // mentionable, or every custom role for an author who may mention everyone
 // (the Owner and Administrators always may). @everyone and the roles the
 // server manages for bots cannot be mentioned by name.
-func MentionableRoles(snap *perm.Snapshot, mayAll bool) []MentionRole {
-	var out []MentionRole
+func MentionableRoles(snap *perm.Snapshot, mayAll bool) []mentions.MentionRole {
+	var out []mentions.MentionRole
 	for _, r := range snap.Roles() {
 		if r.Everyone || r.Managed || !(r.Mentionable || mayAll) {
 			continue
 		}
 		id := r.ID
-		out = append(out, MentionRole{ID: id, Name: r.Name, Members: func() []uuid.UUID { return snap.RoleMembers(id) }})
+		out = append(out, mentions.MentionRole{ID: id, Name: r.Name, Members: func() []uuid.UUID { return snap.RoleMembers(id) }})
 	}
 	return out
 }

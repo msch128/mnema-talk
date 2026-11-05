@@ -8,6 +8,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -84,7 +85,7 @@ func (s *Service) createScheduled(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	ctx, err := chat.SendContext(s.Perms, r, ch, perm.SendMessages)
+	ctx, err := messages.SendContext(s.Perms, r, ch, perm.SendMessages)
 	if err != nil {
 		return err
 	}
@@ -96,7 +97,7 @@ func (s *Service) createScheduled(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	info, err := chat.ChannelForMessages(ctx, s.DB, ch)
+	info, err := messages.ChannelForMessages(ctx, s.DB, ch)
 	if err != nil {
 		return err
 	}
@@ -104,7 +105,7 @@ func (s *Service) createScheduled(w http.ResponseWriter, r *http.Request) error 
 	if info.Type == chat.ChannelTypeForum && req.ParentID == nil {
 		return httpx.ErrInvalidInput("a forum post needs a title; schedule a reply in a post instead")
 	}
-	if err := chat.ValidateTarget(ctx, s.DB, ch, req.ParentID, req.ReplyToID); err != nil {
+	if err := messages.ValidateTarget(ctx, s.DB, ch, req.ParentID, req.ReplyToID); err != nil {
 		return err
 	}
 	out, err := s.AddScheduled(ctx, NewScheduled{

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/slash"
 )
@@ -41,7 +41,7 @@ func (Command) Available(*perm.Snapshot, perm.Subject, uuid.UUID) bool { return 
 
 // Run posts the poll.
 func (c Command) Run(_ context.Context, call slash.Call) (slash.Result, error) {
-	ctx, err := chat.SendContext(c.Service.Perms, call.Request, call.Channel, perm.SendMessages)
+	ctx, err := messages.SendContext(c.Service.Perms, call.Request, call.Channel, perm.SendMessages)
 	if err != nil {
 		return slash.Result{}, err
 	}

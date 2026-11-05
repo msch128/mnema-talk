@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -25,22 +26,22 @@ const (
 	MaxModerationReason = 200
 )
 
-func (h *Handler) mountModeration(r chi.Router) {
-	h.mountPins(r)
-	r.Post("/channels/{channelID}/messages/bulk-delete", httpx.Handle(h.bulkDelete))
+func (a *API) mountModeration(r chi.Router) {
+	a.mountPins(r)
+	r.Post("/channels/{channelID}/messages/bulk-delete", httpx.Handle(a.bulkDelete))
 }
 
 // asModerator runs fn in a transaction under the permission lock after
 // checking, on the state inside that transaction, that the caller may view
 // the channel and manage its messages. The check and the write cannot be
 // separated by a concurrent role or overwrite change.
-func (h *Handler) asModerator(r *http.Request, channelID uuid.UUID, fn func(tx pgx.Tx, snap *perm.Snapshot) error) error {
-	if h.Perms == nil {
+func (a *API) asModerator(r *http.Request, channelID uuid.UUID, fn func(tx pgx.Tx, snap *perm.Snapshot) error) error {
+	if a.Guard.Perms == nil {
 		return httpx.ErrForbidden("moderation needs the permission service")
 	}
 	ctx := r.Context()
 	actor := auth.UserFrom(ctx)
-	return h.Perms.Locked(ctx, actor.Subject(), func(tx pgx.Tx, snap *perm.Snapshot) error {
+	return a.Guard.Perms.Locked(ctx, actor.Subject(), func(tx pgx.Tx, snap *perm.Snapshot) error {
 		if !snap.KnowsChannel(channelID) && !snap.IsOwner(actor.Subject()) {
 			return perm.ErrChannelHidden
 		}
@@ -66,8 +67,8 @@ type BulkDeleteResult struct {
 	Deleted int `json:"deleted"`
 }
 
-// deletedMessage is what the audit log keeps of a message a bulk delete took.
-type deletedMessage struct {
+// DeletedMessage is what the audit log keeps of a message a bulk delete took.
+type DeletedMessage struct {
 	id          uuid.UUID
 	parentID    *uuid.UUID
 	content     string
@@ -75,7 +76,7 @@ type deletedMessage struct {
 	attachments []map[string]any
 	edits       []map[string]any
 	// replyIDs are the thread replies of other members that go with it.
-	replyIDs []uuid.UUID
+	ReplyIDs []uuid.UUID
 }
 
 func parseBulkDeleteRequest(r *http.Request) (uuid.UUID, BulkDeleteRequest, string, error) {
@@ -121,8 +122,8 @@ func verifyBulkDeleteTarget(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot,
 // @Produce json
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
-// @Param request body BulkDeleteRequest true "Request body."
-// @Success 200 {object} BulkDeleteResult "How many messages went."
+// @Param request body messages.BulkDeleteRequest true "Request body."
+// @Success 200 {object} messages.BulkDeleteResult "How many messages went."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage messages permission in the channel, or the member's highest role is not below yours, or cross-origin request rejected."
@@ -131,30 +132,30 @@ func verifyBulkDeleteTarget(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot,
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages/bulk-delete [post]
-func (h *Handler) bulkDelete(w http.ResponseWriter, r *http.Request) error {
+func (a *API) bulkDelete(w http.ResponseWriter, r *http.Request) error {
 	chID, req, reason, err := parseBulkDeleteRequest(r)
 	if err != nil {
 		return err
 	}
 	ctx := r.Context()
 	actor := auth.UserFrom(ctx)
-	var gone []deletedMessage
+	var gone []DeletedMessage
 	var keys []string
 	var channelName, targetName string
-	err = h.asModerator(r, chID, func(tx pgx.Tx, snap *perm.Snapshot) error {
+	err = a.asModerator(r, chID, func(tx pgx.Tx, snap *perm.Snapshot) error {
 		var err error
 		if targetName, err = verifyBulkDeleteTarget(ctx, tx, snap, *actor, req.UserID); err != nil {
 			return err
 		}
 		_ = tx.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, chID).Scan(&channelName)
-		gone, keys, err = takeLatestMessages(ctx, tx, chID, req.UserID, req.Count, snap.IsOwner(actor.Subject()))
+		gone, keys, err = TakeLatestMessages(ctx, tx, chID, req.UserID, req.Count, snap.IsOwner(actor.Subject()))
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	h.deleteObjects(ctx, keys)
-	h.announceBulkDelete(ctx, bulkDeleteReport{
+	core.DeleteObjects(ctx, a.Objects, keys)
+	a.announceBulkDelete(ctx, bulkDeleteReport{
 		chID: chID, channelName: channelName, targetName: targetName, actor: actor,
 		req: req, reason: reason, gone: gone,
 	})
@@ -171,13 +172,13 @@ type bulkDeleteReport struct {
 	actor       *auth.User
 	req         BulkDeleteRequest
 	reason      string
-	gone        []deletedMessage
+	gone        []DeletedMessage
 }
 
-func (h *Handler) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
+func (a *API) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 	chID, req := rep.chID, rep.req
 	for _, m := range rep.gone {
-		h.Events.BroadcastChannel(chID, events.MessageDelete, map[string]any{"id": m.id, "channel_id": chID, "parent_id": m.parentID})
+		a.Events.BroadcastChannel(chID, events.MessageDelete, map[string]any{"id": m.id, "channel_id": chID, "parent_id": m.parentID})
 		d := map[string]any{
 			"channel_id": chID, "channel_name": rep.channelName, "author_id": req.UserID, "author_name": rep.targetName,
 			"content": audit.Content(m.content), "attachments": m.attachments, "sent_at": m.createdAt,
@@ -189,23 +190,23 @@ func (h *Handler) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) 
 		if len(m.edits) > 0 {
 			d["edit_versions"] = m.edits
 		}
-		if len(m.replyIDs) > 0 {
-			d["reply_ids"] = m.replyIDs
+		if len(m.ReplyIDs) > 0 {
+			d["reply_ids"] = m.ReplyIDs
 		}
-		h.Audit.RecordOrLog(ctx, audit.Entry{Action: "message.delete", TargetType: "message", TargetID: m.id.String(), TargetName: rep.channelName, ChannelID: &chID, Details: d})
+		a.Audit.RecordOrLog(ctx, audit.Entry{Action: "message.delete", TargetType: "message", TargetID: m.id.String(), TargetName: rep.channelName, ChannelID: &chID, Details: d})
 	}
-	h.Audit.RecordOrLog(ctx, audit.Entry{
+	a.Audit.RecordOrLog(ctx, audit.Entry{
 		Action: "moderation.bulk_delete", TargetType: "user", TargetID: req.UserID.String(), TargetName: rep.targetName, ChannelID: &chID,
 		Details: map[string]any{"channel_id": chID, "channel_name": rep.channelName, "requested": req.Count, "deleted": len(rep.gone), "reason": rep.reason},
 	})
 	if len(rep.gone) > 0 && req.UserID != rep.actor.ID {
-		h.Events.SendToUsers([]uuid.UUID{req.UserID}, events.ModerationNotice, map[string]any{
+		a.Events.SendToUsers([]uuid.UUID{req.UserID}, events.ModerationNotice, map[string]any{
 			"kind": "messages_deleted", "reason": rep.reason, "channel_name": rep.channelName, "count": len(rep.gone),
 		})
 	}
 }
 
-func queryLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, n int, byOwner bool) ([]deletedMessage, error) {
+func queryLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, n int, byOwner bool) ([]DeletedMessage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT m.id, m.parent_id, m.content, m.created_at FROM messages m
 		WHERE m.channel_id = $1 AND m.user_id = $2
@@ -215,8 +216,8 @@ func queryLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID,
 	if err != nil {
 		return nil, fmt.Errorf("select messages: %w", err)
 	}
-	gone, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (deletedMessage, error) {
-		var m deletedMessage
+	gone, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (DeletedMessage, error) {
+		var m DeletedMessage
 		err := row.Scan(&m.id, &m.parentID, &m.content, &m.createdAt)
 		return m, err
 	})
@@ -226,7 +227,7 @@ func queryLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID,
 	return gone, nil
 }
 
-func attachDeletedMedia(gone []deletedMessage, byMessage map[uuid.UUID][]map[string]any) {
+func attachDeletedMedia(gone []DeletedMessage, byMessage map[uuid.UUID][]map[string]any) {
 	for i := range gone {
 		gone[i].attachments = byMessage[gone[i].id]
 		if gone[i].attachments == nil {
@@ -235,11 +236,11 @@ func attachDeletedMedia(gone []deletedMessage, byMessage map[uuid.UUID][]map[str
 	}
 }
 
-// takeLatestMessages deletes the n latest messages of a member in a channel
+// TakeLatestMessages deletes the n latest messages of a member in a channel
 // inside tx and returns what the audit log needs of them and the storage keys
 // of their attachments (and those of the replies that go with them). Messages
 // with a reply of the Owner stay unless the Owner asks.
-func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, n int, byOwner bool) ([]deletedMessage, []string, error) {
+func TakeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, n int, byOwner bool) ([]DeletedMessage, []string, error) {
 	gone, err := queryLatestMessages(ctx, tx, chID, userID, n, byOwner)
 	if err != nil || len(gone) == 0 {
 		return gone, nil, err
@@ -254,10 +255,10 @@ func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, 
 	}
 	attachDeletedMedia(gone, byMessage)
 	versions := editVersionsForAuditDetail(ctx, tx, ids)
-	replies := replyIDsForAudit(ctx, tx, ids)
+	replies := ReplyIDsForAudit(ctx, tx, ids)
 	for i := range gone {
 		gone[i].edits = versions[gone[i].id]
-		gone[i].replyIDs = replies[gone[i].id]
+		gone[i].ReplyIDs = replies[gone[i].id]
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = ANY($1)`, ids); err != nil {
 		return nil, nil, fmt.Errorf("delete messages: %w", err)

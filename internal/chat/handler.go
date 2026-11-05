@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -42,7 +43,7 @@ type Handler struct {
 	// FollowLimit caps thread follow changes per member; nil means no cap.
 	FollowLimit *httpx.RateLimiter
 
-	historyViews historyViews
+	historyViews messages.HistoryViews
 	// BlockLimit caps blocking and unblocking per member; nil means no cap.
 	BlockLimit *httpx.RateLimiter
 	// ReportLimit caps message reports per member; nil means no cap.
@@ -83,37 +84,27 @@ func (h *Handler) deleteObjects(ctx context.Context, keys []string) {
 	core.DeleteObjects(ctx, h.Objects, keys)
 }
 
+// messages builds the messages API from the handler's fields. The edit-history
+// memory is shared, so every API built here counts the same reads.
+func (h *Handler) messages() *messages.API {
+	return &messages.API{
+		DB: h.DB, Events: h.Events, Guard: h.guard(), Objects: h.Objects, Online: h.Online, Audit: h.Audit,
+		Views: &h.historyViews, EditHistoryLimit: h.EditHistoryLimit, PinLimit: h.PinLimit,
+		FollowLimit: h.FollowLimit, ForwardLimit: h.ForwardLimit,
+	}
+}
+
 // Mount registers the member-facing routes (RequireUser must already apply).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/members", httpx.Handle(h.listMembers))
 	r.Get("/channels", httpx.Handle(h.listChannels))
-	r.Get("/channels/{channelID}/messages", httpx.Handle(h.listMessages))
-	r.Post("/channels/{channelID}/messages", httpx.Handle(h.createMessage))
-	r.Put("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.editMessage))
-	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.deleteMessage))
-	h.mountModeration(r)
 	blocks.API{DB: h.DB, Events: h.Events, Limit: h.BlockLimit}.Mount(r)
 	h.mountReports(r)
 	h.mountSaved(r)
-	h.mountForward(r)
 	h.mountDMs(r)
 	h.mountTalks(r)
 	h.mountForum(r)
-	history := r
-	if h.EditHistoryLimit != nil {
-		history = r.With(h.EditHistoryLimit.By(auth.UserKey))
-	}
-	history.Get("/channels/{channelID}/messages/{messageID}/edits", httpx.Handle(h.getEditHistory))
-	r.Post("/messages/{messageID}/reactions", httpx.Handle(h.toggleReaction))
-	r.Get("/messages/{messageID}/thread", httpx.Handle(h.getThread))
-	follow := r
-	if h.FollowLimit != nil {
-		follow = r.With(h.FollowLimit.By(auth.UserKey))
-	}
-	follow.Put("/threads/{threadID}/follow", httpx.Handle(h.putThreadFollow))
-	follow.Delete("/threads/{threadID}/follow", httpx.Handle(h.deleteThreadFollow))
-	r.Get("/threads/following", httpx.Handle(h.listFollowedThreads))
-	r.Get("/messages/by-number/{number}", httpx.Handle(h.getMessageByNumber))
+	h.messages().Mount(r)
 	r.Get("/search", httpx.Handle(h.search))
 	r.Get("/mentions", httpx.Handle(h.mentionsInbox))
 	readstate.API{DB: h.DB, Events: h.Events, Guard: h.guard()}.Mount(r)

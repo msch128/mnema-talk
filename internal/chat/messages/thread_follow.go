@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -50,7 +51,7 @@ func followOnReply(ctx context.Context, tx pgx.Tx, replyID, threadID, replier uu
 		INSERT INTO thread_follows (user_id, thread_id)
 		SELECT DISTINCT u, $1::uuid FROM (`+replyFollowersSQL+`
 		) people
-		ON CONFLICT (user_id, thread_id) DO NOTHING`, threadID, replier, replyID, MentionKindGroup)
+		ON CONFLICT (user_id, thread_id) DO NOTHING`, threadID, replier, replyID, core.MentionKindGroup)
 	if err != nil {
 		return fmt.Errorf("follow thread: %w", err)
 	}
@@ -108,7 +109,7 @@ func ThreadFollowers(ctx context.Context, q db.Querier, threadID uuid.UUID) (map
 // @Produce json
 // @Security cookieAuth
 // @Param threadID path string true "ID of the thread's root message." Format(uuid)
-// @Success 200 {object} ThreadFollow "The follow state."
+// @Success 200 {object} messages.ThreadFollow "The follow state."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed ID."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such thread, or its channel is hidden from the caller."
@@ -116,8 +117,8 @@ func ThreadFollowers(ctx context.Context, q db.Querier, threadID uuid.UUID) (map
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/threads/{threadID}/follow [put]
-func (h *Handler) putThreadFollow(w http.ResponseWriter, r *http.Request) error {
-	return h.changeThreadFollow(w, r, true)
+func (a *API) putThreadFollow(w http.ResponseWriter, r *http.Request) error {
+	return a.changeThreadFollow(w, r, true)
 }
 
 // deleteThreadFollow handles DELETE /api/threads/{threadID}/follow.
@@ -129,7 +130,7 @@ func (h *Handler) putThreadFollow(w http.ResponseWriter, r *http.Request) error 
 // @Produce json
 // @Security cookieAuth
 // @Param threadID path string true "ID of the thread's root message." Format(uuid)
-// @Success 200 {object} ThreadFollow "The follow state."
+// @Success 200 {object} messages.ThreadFollow "The follow state."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed ID."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such thread, or its channel is hidden from the caller."
@@ -137,25 +138,25 @@ func (h *Handler) putThreadFollow(w http.ResponseWriter, r *http.Request) error 
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/threads/{threadID}/follow [delete]
-func (h *Handler) deleteThreadFollow(w http.ResponseWriter, r *http.Request) error {
-	return h.changeThreadFollow(w, r, false)
+func (a *API) deleteThreadFollow(w http.ResponseWriter, r *http.Request) error {
+	return a.changeThreadFollow(w, r, false)
 }
 
-func (h *Handler) changeThreadFollow(w http.ResponseWriter, r *http.Request, following bool) error {
+func (a *API) changeThreadFollow(w http.ResponseWriter, r *http.Request, following bool) error {
 	id, err := httpx.PathUUID(r, "threadID")
 	if err != nil {
 		return err
 	}
-	root, err := h.loadThreadRoot(r, id)
+	root, err := a.loadThreadRoot(r, id)
 	if err != nil {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	if err := SetThreadFollow(r.Context(), h.DB, user.ID, id, following); err != nil {
+	if err := SetThreadFollow(r.Context(), a.DB, user.ID, id, following); err != nil {
 		return err
 	}
-	if h.Events != nil {
-		h.Events.SendToUsers([]uuid.UUID{user.ID}, events.ThreadFollowUpdated, map[string]any{
+	if a.Events != nil {
+		a.Events.SendToUsers([]uuid.UUID{user.ID}, events.ThreadFollowUpdated, map[string]any{
 			"thread_id": id, "channel_id": root.ChannelID, "following": following,
 		})
 	}
@@ -163,7 +164,7 @@ func (h *Handler) changeThreadFollow(w http.ResponseWriter, r *http.Request, fol
 	return nil
 }
 
-// listFollowedThreads handles GET /api/threads/following.
+// ListFollowedThreads handles GET /api/threads/following.
 //
 // @Summary Threads the caller follows
 // @Description The root message IDs of the threads the caller follows in channels they may view, newest follow first, at most 500. A client uses it to decide which thread replies notify.
@@ -171,18 +172,18 @@ func (h *Handler) changeThreadFollow(w http.ResponseWriter, r *http.Request, fol
 // @Tags Messages
 // @Produce json
 // @Security cookieAuth
-// @Success 200 {object} FollowedThreads "Followed threads."
+// @Success 200 {object} messages.FollowedThreads "Followed threads."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/threads/following [get]
-func (h *Handler) listFollowedThreads(w http.ResponseWriter, r *http.Request) error {
-	visible, err := h.viewableChannels(r)
+func (a *API) ListFollowedThreads(w http.ResponseWriter, r *http.Request) error {
+	visible, err := a.Guard.ViewableChannels(r)
 	if err != nil {
 		return err
 	}
-	ids, err := FollowedThreadIDs(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, visible, maxFollowedThreads)
+	ids, err := FollowedThreadIDs(r.Context(), a.DB, auth.UserFrom(r.Context()).ID, visible, maxFollowedThreads)
 	if err != nil {
 		return err
 	}

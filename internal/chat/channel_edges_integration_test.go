@@ -12,9 +12,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -63,7 +62,7 @@ func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
 	if err := core.ValidateParent(context.Background(), f.p, f.c.ID, &missing); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("missing parent: %v", err)
 	}
-	if err := ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing); apiStatus(err) != http.StatusBadRequest {
+	if err := messages.ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("missing reply target: %v", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -71,17 +70,8 @@ func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
 	if err := core.ValidateParent(ctx, f.p, f.c.ID, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
 		t.Fatalf("parent lookup failure: %v", err)
 	}
-	if err := ValidateReplyTarget(ctx, f.p, f.c.ID, nil, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
+	if err := messages.ValidateReplyTarget(ctx, f.p, f.c.ID, nil, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
 		t.Fatalf("reply target lookup failure: %v", err)
-	}
-}
-
-func TestAuditSnapshotIsEmptyWhenTheChannelCannotBeRead(t *testing.T) {
-	f := newChatFixture(t)
-	broken := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id, name FROM public.channels`})
-	h := &Handler{DB: broken, Audit: &audit.Log{DB: f.p}}
-	if s := h.snapshotMessage(context.Background(), f.m, false); s != nil {
-		t.Fatalf("snapshot without a channel lookup: %+v", s)
 	}
 }
 
@@ -92,24 +82,24 @@ func TestBotReactionsAreSetNotToggled(t *testing.T) {
 	var wg sync.WaitGroup
 	for range 8 {
 		wg.Go(func() {
-			if _, _, err := SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, true); err != nil {
+			if _, _, err := messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, true); err != nil {
 				t.Error(err)
 			}
 		})
 	}
 	wg.Wait()
-	reactions, changed, err := SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, true)
+	reactions, changed, err := messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, true)
 	if err != nil || changed || len(reactions) != 1 || reactions[0].Count != 1 {
 		t.Fatalf("after concurrent adds: %+v changed=%v err=%v", reactions, changed, err)
 	}
-	if _, changed, err = SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, false, false); err != nil || !changed {
+	if _, changed, err = messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, false, false); err != nil || !changed {
 		t.Fatalf("taking back without Add reactions: changed=%v err=%v", changed, err)
 	}
-	reactions, changed, err = SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, false, true)
+	reactions, changed, err = messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, false, true)
 	if err != nil || changed || len(reactions) != 0 {
 		t.Fatalf("removing twice: %+v changed=%v err=%v", reactions, changed, err)
 	}
-	if _, _, err = SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, false); apiStatus(err) != http.StatusForbidden {
+	if _, _, err = messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, emoji, true, false); apiStatus(err) != http.StatusForbidden {
 		t.Fatalf("add without permission: %v", err)
 	}
 }
@@ -327,14 +317,14 @@ func TestStoredReactionWithFormattingCharacterCanBeTakenBack(t *testing.T) {
 	if _, err := core.ValidateReactionRef(old); err != nil {
 		t.Fatalf("lookup rule rejects the stored emoji: %v", err)
 	}
-	reactions, changed, err := SetReactionAs(ctx, f.p, f.m, f.u.ID, old, false, true)
+	reactions, changed, err := messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, old, false, true)
 	if err != nil || !changed || len(reactions) != 0 {
 		t.Fatalf("taking back: %+v changed=%v err=%v", reactions, changed, err)
 	}
-	if _, _, err := SetReactionAs(ctx, f.p, f.m, f.u.ID, old, true, true); apiStatus(err) != http.StatusBadRequest {
+	if _, _, err := messages.SetReactionAs(ctx, f.p, f.m, f.u.ID, old, true, true); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("adding it again: %v", err)
 	}
-	if _, err := ToggleReactionAs(ctx, f.p, f.m, f.u.ID, old, true); apiStatus(err) != http.StatusBadRequest {
+	if _, err := messages.ToggleReactionAs(ctx, f.p, f.m, f.u.ID, old, true); apiStatus(err) != http.StatusBadRequest {
 		t.Fatalf("toggling it on: %v", err)
 	}
 }

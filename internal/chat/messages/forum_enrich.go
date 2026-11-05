@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -6,19 +6,20 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
 // loadForumPostDetails enriches messages with forum post titles, lock states,
 // tags, and last activity timestamps.
-func loadForumPostDetails(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadForumPostDetails(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	if err := loadPostTitlesAndLocks(ctx, p, msgs, idx, ids); err != nil {
 		return err
 	}
 	return loadPostTags(ctx, p, msgs, idx, ids)
 }
 
-func loadPostTitlesAndLocks(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadPostTitlesAndLocks(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT m.id, m.title, m.is_locked, m.is_resolved,
 		       (SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = m.id) AS last_reply_at
@@ -49,13 +50,13 @@ func loadPostTitlesAndLocks(ctx context.Context, p *db.Pool, msgs []Message, idx
 			msgs[i].LastActivityAt = &msgs[i].CreatedAt
 		}
 		if msgs[i].Title != nil && msgs[i].Tags == nil {
-			msgs[i].Tags = make([]ForumTag, 0)
+			msgs[i].Tags = make([]core.ForumTag, 0)
 		}
 	}
 	return rows.Err()
 }
 
-func loadPostTags(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadPostTags(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT pt.message_id, ft.id, ft.channel_id, ft.name, ft.emoji, ft.color, ft.position, ft.moderated, ft.created_at
 		FROM forum_post_tags pt
@@ -68,13 +69,13 @@ func loadPostTags(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.
 	defer rows.Close()
 	for rows.Next() {
 		var msgID uuid.UUID
-		var tag ForumTag
+		var tag core.ForumTag
 		if err := rows.Scan(&msgID, &tag.ID, &tag.ChannelID, &tag.Name, &tag.Emoji, &tag.Color, &tag.Position, &tag.Moderated, &tag.CreatedAt); err != nil {
 			return err
 		}
 		if i, ok := idx[msgID]; ok {
 			if msgs[i].Tags == nil {
-				msgs[i].Tags = make([]ForumTag, 0)
+				msgs[i].Tags = make([]core.ForumTag, 0)
 			}
 			msgs[i].Tags = append(msgs[i].Tags, tag)
 		}

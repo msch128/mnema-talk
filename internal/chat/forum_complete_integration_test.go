@@ -302,7 +302,7 @@ func TestForumListPinnedSearchAndTagFilter(t *testing.T) {
 		t.Fatalf("two percent signs are literal text, not a wildcard, got %v", titles(got))
 	}
 	reply := fmt.Sprintf(`{"content":"the needle is here","parent_id":"%s"}`, newest.ID)
-	if err := x.h.createMessage(httptest.NewRecorder(), chattest.Request(x.f.u, reply, x.chParam, "")); err != nil {
+	if err := x.h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(x.f.u, reply, x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	if got := x.list(t, x.f.u, "q=needle"); len(got) != 1 || got[0].ID != newest.ID {
@@ -363,11 +363,11 @@ func TestForumUnreadPostsAndMarkRead(t *testing.T) {
 
 	// A reply of someone else makes the member's own post unread; their own reply does not.
 	reply := fmt.Sprintf(`{"content":"an answer","parent_id":"%s"}`, mine.ID)
-	if err := x.h.createMessage(httptest.NewRecorder(), chattest.Request(x.mod, reply, x.chParam, "")); err != nil {
+	if err := x.h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(x.mod, reply, x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	own := fmt.Sprintf(`{"content":"my follow-up","parent_id":"%s"}`, post.ID)
-	if err := x.h.createMessage(httptest.NewRecorder(), chattest.Request(x.f.u, own, x.chParam, "")); err != nil {
+	if err := x.h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(x.f.u, own, x.chParam, "")); err != nil {
 		t.Fatal(err)
 	}
 	if unread, _ = UnreadPostIDs(ctx, x.f.p, x.ch.ID, x.f.u.ID); len(unread) != 1 || unread[0] != mine.ID {

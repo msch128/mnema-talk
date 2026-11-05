@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
@@ -58,7 +59,7 @@ func forumMakePost(t *testing.T, h *Handler, u *auth.User, ch *Channel, title st
 func forumReply(t *testing.T, h *Handler, u *auth.User, ch *Channel, parent uuid.UUID) error {
 	t.Helper()
 	body := fmt.Sprintf(`{"content":"reply","parent_id":"%s"}`, parent)
-	return h.createMessage(httptest.NewRecorder(), chattest.Request(u, body, map[string]string{"channelID": ch.ID.String()}, ""))
+	return h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(u, body, map[string]string{"channelID": ch.ID.String()}, ""))
 }
 
 func forumReplyID(t *testing.T, f chatFixture, parent uuid.UUID) uuid.UUID {
@@ -307,7 +308,7 @@ func TestForumDeletingTagKeepsPostsAndClearsFilter(t *testing.T) {
 		t.Fatalf("filter by deleted tag returned %d posts", len(got))
 	}
 	requireIDs(t, "all posts survive", forumListIDs(t, h, f.u, ch, "sort=newest"), plain, tagged)
-	msg, err := GetMessage(context.Background(), f.p, tagged.ID)
+	msg, err := messages.GetMessage(context.Background(), f.p, tagged.ID)
 	if err != nil || len(msg.Tags) != 0 {
 		t.Fatalf("post still carries tags: %+v, %v", msg, err)
 	}
@@ -449,7 +450,7 @@ func TestForumRepliesAndRootRulesInForums(t *testing.T) {
 		t.Fatal("replying to a reply must fail")
 	}
 	body := `{"title":"Sneaky","content":"root via messages"}`
-	if err := h.createMessage(httptest.NewRecorder(), chattest.Request(f.u, body, cp, "")); err == nil {
+	if err := h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(f.u, body, cp, "")); err == nil {
 		t.Fatal("root message through the plain endpoint must fail in a forum")
 	}
 	tp := map[string]string{"channelID": f.c.ID.String()}

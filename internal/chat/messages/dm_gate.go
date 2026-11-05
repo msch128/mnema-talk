@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -15,13 +15,13 @@ import (
 )
 
 var errDMWait = httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimited,
-	fmt.Sprintf("Wait for a reply before you send more than %d messages.", MaxUnansweredDMMessages))
+	fmt.Sprintf("Wait for a reply before you send more than %d messages.", core.MaxUnansweredDMMessages))
 
-// gatePost applies what a new message needs besides the permission checks of
+// GatePost applies what a new message needs besides the permission checks of
 // the request, inside the transaction that stores it: slow mode in a channel,
 // the direct message rules in a conversation. It runs for every way a message
 // is created (members, uploads, polls, commands), so none can go around it.
-func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
+func GatePost(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 	var kind string
 	var seconds int
 	err := tx.QueryRow(ctx, `SELECT type, slow_mode_seconds FROM channels WHERE id = $1`, nm.ChannelID).Scan(&kind, &seconds)
@@ -154,7 +154,7 @@ func countDMMessage(ctx context.Context, tx pgx.Tx, nm NewMessage, st dmState) e
 	case st.replied || nm.Record:
 		return nil
 	case st.creator != nil && *st.creator == nm.UserID:
-		if st.sent >= MaxUnansweredDMMessages {
+		if st.sent >= core.MaxUnansweredDMMessages {
 			return errDMWait
 		}
 		_, err := tx.Exec(ctx, `UPDATE channels SET dm_creator_sent = dm_creator_sent + 1 WHERE id = $1`, nm.ChannelID)

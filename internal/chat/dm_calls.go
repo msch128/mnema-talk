@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 )
@@ -338,14 +339,14 @@ func (m *DMCalls) finishLocked(c *dmCall, end DMCallEnd, missed ...func(context.
 func (m *DMCalls) recordMissed(ctx context.Context, c *dmCall) *uuid.UUID {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	id, err := InsertMessage(ctx, m.DB, m.Online, NewMessage{
+	id, err := messages.InsertMessage(ctx, m.DB, m.Online, NewMessage{
 		ChannelID: c.conversation, UserID: c.caller, Embeds: []Embed{{Title: c.name, Call: callMissed}}, Record: true,
 	}, nil)
 	if err != nil {
 		slog.Warn("dm calls: record missed call", "conversation", c.conversation, "err", err)
 		return nil
 	}
-	msg, err := GetMessage(ctx, m.DB, id)
+	msg, err := messages.GetMessage(ctx, m.DB, id)
 	if err != nil {
 		slog.Warn("dm calls: load missed call", "message", id, "err", err)
 		return &id

@@ -19,6 +19,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 )
@@ -61,7 +62,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 	})
 	t.Run("message decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"messages": `SELECT id,number,channel_id,user_id,parent_id,NULL::text content,is_pinned,is_edited,created_at,updated_at,reply_to_id FROM public.messages`})
-		if _, err := GetMessage(ctx, p, f.m); err == nil {
+		if _, err := messages.GetMessage(ctx, p, f.m); err == nil {
 			t.Fatal("null content accepted")
 		}
 		if _, _, err := Search(ctx, p, SearchQuery{ChannelID: &f.c.ID, Limit: 10}); err == nil {
@@ -71,45 +72,45 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 	t.Run("attachments query", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT id,message_id FROM public.media`})
 		msgs := []Message{{ID: f.m}}
-		chattest.RequireError(t, enrich(ctx, p, msgs), "load attachments")
+		chattest.RequireError(t, messages.Enrich(ctx, p, msgs), "load attachments")
 		_, _, err := Search(ctx, p, SearchQuery{Text: "hello", Limit: 10})
 		chattest.RequireError(t, err, "load attachments")
 	})
 	t.Run("attachment decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,NULL::text original_filename,'image/png'::text mime_type,1::bigint size_bytes,false is_deleted,NOW() created_at,0::smallint position FROM public.messages`})
-		chattest.RequireError(t, enrich(ctx, p, []Message{{ID: f.m}}), "NULL")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "NULL")
 	})
 	t.Run("attachment stream", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT gen_random_uuid() id,id message_id,'image.png'::text original_filename,'image/png'::text mime_type,1/(number-number) size_bytes,false is_deleted,NOW() created_at,0::smallint position FROM public.messages`})
-		chattest.RequireError(t, enrich(ctx, p, []Message{{ID: f.m}}), "division by zero")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "division by zero")
 	})
 	t.Run("reaction query", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_reactions": `SELECT id FROM public.messages`})
-		chattest.RequireError(t, enrich(ctx, p, []Message{{ID: f.m}}), "load reactions")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "load reactions")
 	})
 	t.Run("reaction decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_reactions": `SELECT id message_id,user_id,NULL::text emoji,created_at FROM public.messages`})
-		chattest.RequireError(t, enrich(ctx, p, []Message{{ID: f.m}}), "NULL")
-		_, err := reactionSummary(ctx, p, f.m)
+		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "NULL")
+		_, err := messages.ReactionSummary(ctx, p, f.m)
 		chattest.RequireError(t, err, "NULL")
 	})
 	t.Run("reaction stream", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_reactions": `SELECT id message_id,user_id,(1/(number-number))::text emoji,created_at FROM public.messages`})
-		chattest.RequireError(t, enrich(ctx, p, []Message{{ID: f.m}}), "division by zero")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "division by zero")
 	})
 	t.Run("mention query", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_mentions": `SELECT id FROM public.messages`})
-		chattest.RequireError(t, enrich(ctx, p, []Message{{ID: f.m}}), "load mentions")
+		chattest.RequireError(t, messages.Enrich(ctx, p, []Message{{ID: f.m}}), "load mentions")
 	})
 	t.Run("mention decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_mentions": `SELECT id message_id,'invalid-uuid'::text user_id FROM public.messages`})
-		if err := enrich(ctx, p, []Message{{ID: f.m}}); err == nil {
+		if err := messages.Enrich(ctx, p, []Message{{ID: f.m}}); err == nil {
 			t.Fatal("invalid mention UUID accepted")
 		}
 	})
 	t.Run("collect key decoding", func(t *testing.T) {
 		var keys []string
-		chattest.RequireError(t, collectKeys(ctx, f.p, &keys, "SELECT NULL::text"), "collect media keys")
+		chattest.RequireError(t, messages.CollectKeys(ctx, f.p, &keys, "SELECT NULL::text"), "collect media keys")
 	})
 	t.Run("channel group query", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id FROM public.channels`})
@@ -172,16 +173,19 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 		run                    func(chatFixture) error
 	}{
 		{"insert message", "messages", "INSERT", func(f chatFixture) error {
-			_, err := InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "new"}, nil)
+			_, err := messages.InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "new"}, nil)
 			return err
 		}},
 		{"insert mentions", "message_mentions", "INSERT", func(f chatFixture) error { return mentions.SaveMentionSet(ctx, f.p, f.m, byName([]uuid.UUID{f.u.ID})) }},
 		{"record mentions during message insert", "message_mentions", "DELETE", func(f chatFixture) error {
-			_, err := InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "@all"}, nil)
+			_, err := messages.InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "@all"}, nil)
 			return err
 		}},
-		{"edit message", "messages", "UPDATE", func(f chatFixture) error { return EditMessage(ctx, f.p, nil, f.m, f.u.ID, "new") }},
-		{"delete message", "messages", "DELETE", func(f chatFixture) error { _, err := DeleteMessageAs(ctx, f.p, f.m, f.u, f.u.IsAdmin()); return err }},
+		{"edit message", "messages", "UPDATE", func(f chatFixture) error { return messages.EditMessage(ctx, f.p, nil, f.m, f.u.ID, "new") }},
+		{"delete message", "messages", "DELETE", func(f chatFixture) error {
+			_, err := messages.DeleteMessageAs(ctx, f.p, f.m, f.u, f.u.IsAdmin())
+			return err
+		}},
 		{"delete channel", "channels", "DELETE", func(f chatFixture) error { _, err := DeleteChannel(ctx, f.p, f.c.ID); return err }},
 		{"layout category", "categories", "UPDATE", func(f chatFixture) error {
 			cat, err := CreateCategory(ctx, f.p, "cat", 0)
@@ -202,12 +206,15 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 			return err
 		}},
 		{"duplicate insert", "channels", "INSERT", func(f chatFixture) error { _, err := DuplicateChannel(ctx, f.p, f.c.ID); return err }},
-		{"add reaction", "message_reactions", "INSERT", func(f chatFixture) error { _, err := ToggleReactionAs(ctx, f.p, f.m, f.u.ID, "ok", true); return err }},
+		{"add reaction", "message_reactions", "INSERT", func(f chatFixture) error {
+			_, err := messages.ToggleReactionAs(ctx, f.p, f.m, f.u.ID, "ok", true)
+			return err
+		}},
 		{"remove reaction", "message_reactions", "DELETE", func(f chatFixture) error {
 			if _, err := f.p.Exec(ctx, `INSERT INTO message_reactions(message_id,user_id,emoji)VALUES($1,$2,'ok')`, f.m, f.u.ID); err != nil {
 				return err
 			}
-			_, err := ToggleReactionAs(ctx, f.p, f.m, f.u.ID, "ok", true)
+			_, err := messages.ToggleReactionAs(ctx, f.p, f.m, f.u.ID, "ok", true)
 			return err
 		}},
 	}
@@ -234,7 +241,7 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 				rejectChatWrite(t, f.p, c.table, c.operation)
 			}
 			chattest.RequireError(t, c.run(f), "test write rejected")
-			msg, err := GetMessage(ctx, f.p, f.m)
+			msg, err := messages.GetMessage(ctx, f.p, f.m)
 			if err != nil || msg.Content != "hello world" {
 				t.Fatalf("rollback changed original: %v, %v", msg, err)
 			}
@@ -243,7 +250,7 @@ func TestChatTransactionalWriteFailuresRollback(t *testing.T) {
 	t.Run("attachment callback failure", func(t *testing.T) {
 		f := newChatFixture(t)
 		sentinel := errors.New("test attachment insert failed")
-		id, err := InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "upload"}, func(tx pgx.Tx, id uuid.UUID) error { return sentinel })
+		id, err := messages.InsertMessage(ctx, f.p, nil, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "upload"}, func(tx pgx.Tx, id uuid.UUID) error { return sentinel })
 		if id != uuid.Nil || !errors.Is(err, sentinel) {
 			t.Fatalf("insert result = %s, %v", id, err)
 		}
@@ -261,8 +268,8 @@ func TestChatLockFailures(t *testing.T) {
 	for _, run := range []func() error{
 		func() error { _, e := DeleteChannel(ctx, p, f.c.ID); return e },
 		func() error { _, e := DuplicateChannel(ctx, p, f.c.ID); return e },
-		func() error { return EditMessage(ctx, p, nil, f.m, f.u.ID, "new") },
-		func() error { _, e := DeleteMessageAs(ctx, p, f.m, f.u, f.u.IsAdmin()); return e },
+		func() error { return messages.EditMessage(ctx, p, nil, f.m, f.u.ID, "new") },
+		func() error { _, e := messages.DeleteMessageAs(ctx, p, f.m, f.u, f.u.IsAdmin()); return e },
 	} {
 		if err := run(); err == nil {
 			t.Fatal("incompatible locked row accepted")
@@ -296,7 +303,7 @@ func TestChatMissingRelationsFailTransactions(t *testing.T) {
 	ctx := context.Background()
 	t.Run("collect media keys", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"media": `SELECT id FROM public.media`})
-		_, err := DeleteMessageAs(ctx, p, f.m, f.u, f.u.IsAdmin())
+		_, err := messages.DeleteMessageAs(ctx, p, f.m, f.u, f.u.IsAdmin())
 		chattest.RequireError(t, err, "collect media keys")
 		_, err = DeleteChannel(ctx, p, f.c.ID)
 		chattest.RequireError(t, err, "collect media keys")
@@ -305,12 +312,12 @@ func TestChatMissingRelationsFailTransactions(t *testing.T) {
 		// This updatable view still enforces the table's real foreign key.
 		p := chattest.DriftPool(t, f.p, map[string]string{"message_reactions": `SELECT message_id,user_id,emoji FROM public.message_reactions`})
 		// Adding to this simple view reaches the real table and its FK.
-		_, err := ToggleReactionAs(ctx, p, f.m, uuid.New(), "ok", true)
+		_, err := messages.ToggleReactionAs(ctx, p, f.m, uuid.New(), "ok", true)
 		chattest.RequireError(t, err, "add reaction")
 	})
 	t.Run("reaction lock", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"messages": `SELECT number::int id FROM public.messages`})
-		_, err := ToggleReactionAs(ctx, p, f.m, f.u.ID, "ok", true)
+		_, err := messages.ToggleReactionAs(ctx, p, f.m, f.u.ID, "ok", true)
 		chattest.RequireError(t, err, "lock message")
 	})
 }
@@ -375,14 +382,14 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 	})
 	t.Run("around newer half", func(t *testing.T) {
 		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, "AND (m.created_at, m.id) >") }, false)
-		_, err := GetChannelMessages(ctx, p, f.c.ID, HistoryQuery{Limit: 10, Around: &f.m})
+		_, err := messages.GetChannelMessages(ctx, p, f.c.ID, HistoryQuery{Limit: 10, Around: &f.m})
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("newer half cancellation=%v", err)
 		}
 	})
 	t.Run("reaction count", func(t *testing.T) {
 		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, "COUNT(*) FILTER (WHERE user_id") }, false)
-		_, err := ToggleReactionAs(ctx, p, f.m, f.u.ID, "ok", true)
+		_, err := messages.ToggleReactionAs(ctx, p, f.m, f.u.ID, "ok", true)
 		if !errors.Is(err, context.Canceled) {
 			t.Fatalf("reaction count cancellation=%v", err)
 		}
@@ -392,7 +399,7 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 		h := &Handler{DB: p, Events: &events.Recorder{}}
 		r := chattest.Request(f.u, "", map[string]string{"messageID": f.m.String()}, "")
 		r = r.WithContext(copyChatRouteContext(ctx, r))
-		if err := h.getThread(httptest.NewRecorder(), r); !errors.Is(err, context.Canceled) {
+		if err := h.messages().GetThread(httptest.NewRecorder(), r); !errors.Is(err, context.Canceled) {
 			t.Fatalf("thread page cancellation=%v", err)
 		}
 	})
@@ -402,10 +409,10 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 		h := &Handler{DB: p, Events: recorder}
 		r := chattest.Request(f.u, `{"content":"edited before disconnect"}`, map[string]string{"channelID": f.c.ID.String(), "messageID": f.m.String()}, "")
 		r = r.WithContext(auth.WithUser(copyChatRouteContext(ctx, r), f.u))
-		if err := h.editMessage(httptest.NewRecorder(), r); !errors.Is(err, context.Canceled) {
+		if err := h.messages().EditMessage(httptest.NewRecorder(), r); !errors.Is(err, context.Canceled) {
 			t.Fatalf("post-edit cancellation=%v", err)
 		}
-		msg, err := GetMessage(context.Background(), f.p, f.m)
+		msg, err := messages.GetMessage(context.Background(), f.p, f.m)
 		if err != nil || msg.Content != "edited before disconnect" {
 			t.Fatalf("committed edit lost: %v,%v", msg, err)
 		}
@@ -424,7 +431,7 @@ func TestChatHandlerInsertFailureDoesNotPublish(t *testing.T) {
 	rejectChatWrite(t, f.p, "messages", "INSERT")
 	recorder := &events.Recorder{}
 	h := &Handler{DB: f.p, Events: recorder}
-	err := h.createMessage(httptest.NewRecorder(), chattest.Request(f.u, `{"content":"new"}`, map[string]string{"channelID": f.c.ID.String()}, ""))
+	err := h.messages().CreateMessage(httptest.NewRecorder(), chattest.Request(f.u, `{"content":"new"}`, map[string]string{"channelID": f.c.ID.String()}, ""))
 	chattest.RequireError(t, err, "test write rejected")
 	if len(recorder.Snapshot()) != 0 {
 		t.Fatal("failed message creation published an event")

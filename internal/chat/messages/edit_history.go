@@ -1,4 +1,4 @@
-package chat
+package messages
 
 import (
 	"context"
@@ -134,27 +134,27 @@ func editVersionsForAuditDetail(ctx context.Context, q db.Querier, ids []uuid.UU
 	return out
 }
 
-// editViewAuditEvery is how long one member's reads of one message's history
+// EditViewAuditEvery is how long one member's reads of one message's history
 // count as a single audit entry.
-const editViewAuditEvery = 10 * time.Minute
+const EditViewAuditEvery = 10 * time.Minute
 
-// historyViews remembers recent edit-history reads so that reopening the
+// HistoryViews remembers recent edit-history reads so that reopening the
 // dialog does not flood the audit log.
-type historyViews struct {
+type HistoryViews struct {
 	mu   sync.Mutex
 	seen map[string]time.Time
 }
 
-// first reports whether this is the first read of the message by the member
+// First reports whether this is the first read of the message by the member
 // within editViewAuditEvery, and records it.
-func (v *historyViews) first(actor, msg uuid.UUID, now time.Time) bool {
+func (v *HistoryViews) First(actor, msg uuid.UUID, now time.Time) bool {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	if v.seen == nil {
 		v.seen = map[string]time.Time{}
 	}
 	for k, t := range v.seen {
-		if now.Sub(t) >= editViewAuditEvery {
+		if now.Sub(t) >= EditViewAuditEvery {
 			delete(v.seen, k)
 		}
 	}
@@ -168,15 +168,15 @@ func (v *historyViews) first(actor, msg uuid.UUID, now time.Time) bool {
 
 // auditHistoryView records that a moderator read another member's earlier
 // versions of a message.
-func (h *Handler) auditHistoryView(ctx context.Context, actor *auth.User, msgID uuid.UUID, versions int) {
-	if h.Audit == nil || !h.historyViews.first(actor.ID, msgID, time.Now()) {
+func (a *API) auditHistoryView(ctx context.Context, actor *auth.User, msgID uuid.UUID, versions int) {
+	if a.Audit == nil || !a.Views.First(actor.ID, msgID, time.Now()) {
 		return
 	}
-	s := h.snapshotMessage(ctx, msgID, false)
+	s := a.snapshotMessage(ctx, msgID, false)
 	if s == nil || s.msg.UserID == actor.ID {
 		return
 	}
-	h.Audit.RecordOrLog(ctx, audit.Entry{
+	a.Audit.RecordOrLog(ctx, audit.Entry{
 		Action: "message.edit_history_view", TargetType: "message", TargetID: msgID.String(), TargetName: s.channel, ChannelID: &s.msg.ChannelID,
 		Details: map[string]any{"channel_id": s.msg.ChannelID, "channel_name": s.channel, "author_id": s.msg.UserID, "author_name": s.msg.Username, "versions": versions},
 	})
@@ -192,7 +192,7 @@ func (h *Handler) auditHistoryView(ctx context.Context, actor *auth.User, msgID 
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param messageID path string true "Message ID." Format(uuid)
-// @Success 200 {object} MessageEditHistory "Earlier versions, newest first."
+// @Success 200 {object} messages.MessageEditHistory "Earlier versions, newest first."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage messages permission in the channel."
@@ -201,32 +201,32 @@ func (h *Handler) auditHistoryView(ctx context.Context, actor *auth.User, msgID 
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages/{messageID}/edits [get]
-func (h *Handler) getEditHistory(w http.ResponseWriter, r *http.Request) error {
+func (a *API) getEditHistory(w http.ResponseWriter, r *http.Request) error {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return err
 	}
 	// Permissions first: a member who cannot see the channel learns nothing
 	// about which messages exist in it.
-	if h.Perms == nil {
+	if a.Guard.Perms == nil {
 		return httpx.ErrForbidden("edit history needs the permission service")
 	}
-	p, err := h.channelPerms(r, chID)
+	p, err := a.Guard.ChannelPerms(r, chID)
 	if err != nil {
 		return err
 	}
 	if err := perm.CheckChannel(p, perm.ViewChannel|perm.ManageMessages); err != nil {
 		return err
 	}
-	msgID, _, err := h.messageInChannel(r)
+	msgID, _, err := a.MessageInChannel(r)
 	if err != nil {
 		return err
 	}
-	history, err := loadEditHistory(r.Context(), h.DB, msgID)
+	history, err := loadEditHistory(r.Context(), a.DB, msgID)
 	if err != nil {
 		return err
 	}
-	h.auditHistoryView(r.Context(), auth.UserFrom(r.Context()), msgID, len(history.Edits))
+	a.auditHistoryView(r.Context(), auth.UserFrom(r.Context()), msgID, len(history.Edits))
 	httpx.WriteJSON(w, http.StatusOK, history)
 	return nil
 }

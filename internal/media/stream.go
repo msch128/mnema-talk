@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -155,7 +156,7 @@ func (h *Handler) validateTarget(ctx context.Context, chID uuid.UUID, fields map
 		}
 		*dst = &id
 	}
-	if err := chat.ValidateTarget(ctx, h.DB, chID, t.parentID, t.replyToID); err != nil {
+	if err := messages.ValidateTarget(ctx, h.DB, chID, t.parentID, t.replyToID); err != nil {
 		return nil, err
 	}
 	if fields["title"] != "" || fields["tag_ids"] != "" {
