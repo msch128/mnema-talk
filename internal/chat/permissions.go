@@ -10,7 +10,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 // This file is where the chat handlers ask the permission model. A Handler
@@ -19,28 +18,6 @@ import (
 // guard is the permission model's request-level checks (chat/core), built from
 // the Perms the handler is wired with.
 func (h *Handler) guard() core.Guard { return core.Guard{Perms: h.Perms} }
-
-// require checks that the caller holds need in channel ch. Without
-// ViewChannel the channel does not exist for them (404).
-func (h *Handler) require(r *http.Request, ch uuid.UUID, need perm.Set) error {
-	return h.guard().Require(r, ch, need)
-}
-
-// channelPerms is what the caller may do in channel ch.
-func (h *Handler) channelPerms(r *http.Request, ch uuid.UUID) (perm.Set, error) {
-	return h.guard().ChannelPerms(r, ch)
-}
-
-// refusalFor turns a "missing permission" refusal into RULES_NOT_ACCEPTED when
-// the caller's rules acceptance is what took the permission away.
-func (h *Handler) refusalFor(r *http.Request, err error, need perm.Set) error {
-	return h.guard().RefusalFor(r, err, need)
-}
-
-// viewableChannels lists the channels the caller may view; nil means all.
-func (h *Handler) viewableChannels(r *http.Request) ([]uuid.UUID, error) {
-	return h.guard().ViewableChannels(r)
-}
 
 // hiddenMessageCounts counts messages per author over the channels the caller
 // may not view; nil when there are none (the stored totals apply). Only the
@@ -80,10 +57,4 @@ func MessageCountsByAuthor(ctx context.Context, q db.Querier, channels []uuid.UU
 		out[c.User] = c.N
 	}
 	return out, nil
-}
-
-// requireCategory checks that the caller may see a category (a category that
-// does not exist is left to the operation itself to report).
-func (h *Handler) requireCategory(r *http.Request, id uuid.UUID) error {
-	return h.guard().RequireCategory(r, id)
 }

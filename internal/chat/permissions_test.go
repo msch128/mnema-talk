@@ -20,15 +20,6 @@ func TestHandlerWithoutPermissionsLimitsNothing(t *testing.T) {
 	if err != nil || len(gotCats) != 1 || len(gotCats[0].Channels) != 1 || len(gotUncat) != 1 {
 		t.Fatalf("hierarchy: %+v %+v %v", gotCats, gotUncat, err)
 	}
-	if visible, err := h.viewableChannels(r); err != nil || visible != nil {
-		t.Fatalf("viewable: %v %v", visible, err)
-	}
-	if err := h.requireCategory(r, uuid.New()); err != nil {
-		t.Fatal(err)
-	}
-	if err := h.require(r, uuid.New(), 1); err != nil {
-		t.Fatal(err)
-	}
 }
 
 // A member's total shown to a caller drops the messages in channels the
