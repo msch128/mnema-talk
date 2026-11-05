@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.6](https://github.com/msch128/mnema-talk/compare/v2.9.5...v2.9.6) (2026-11-05)
+
+
+### Code Refactoring
+
+* move the member-admin routes into auth/memberadmin ([#703](https://github.com/msch128/mnema-talk/issues/703)) ([d29446c](https://github.com/msch128/mnema-talk/commit/d29446c8c2eeca11b53850e3b23103ec3962931f))
+
 ## [2.9.5](https://github.com/msch128/mnema-talk/compare/v2.9.4...v2.9.5) (2026-11-05)
 
 
