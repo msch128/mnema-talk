@@ -70,6 +70,7 @@ const NotifyMentions = readstate.NotifyMentions
 const NotifyMute = readstate.NotifyMute
 
 type NotifySetting = readstate.NotifySetting
+type ObjectDeleter = core.ObjectDeleter
 type OnlineSource = mentions.OnlineSource
 type Poll = core.Poll
 type PollOption = core.PollOption

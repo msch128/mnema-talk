@@ -80,7 +80,7 @@ func (h *Handler) voiceRooms() VoiceRooms {
 // deleteObjects removes media objects after their rows are gone; see
 // core.DeleteObjects.
 func (h *Handler) deleteObjects(ctx context.Context, keys []string) {
-	DeleteObjects(ctx, h.Objects, keys)
+	core.DeleteObjects(ctx, h.Objects, keys)
 }
 
 // Mount registers the member-facing routes (RequireUser must already apply).
