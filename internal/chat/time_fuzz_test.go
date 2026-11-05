@@ -3,6 +3,8 @@ package chat
 import (
 	"testing"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 )
 
 // FuzzParseSearchDay checks the "during" day and its time zone: never a panic,
@@ -46,7 +48,7 @@ func FuzzSlowModeLimit(f *testing.F) {
 		f.Add(n)
 	}
 	f.Fuzz(func(t *testing.T, n int) {
-		err := validateChannelLimits(nil, &n)
+		err := channels.ValidateChannelLimits(nil, &n)
 		if ok := n >= 0 && n <= MaxSlowModeSeconds; ok != (err == nil) {
 			t.Fatalf("slow mode %d: error %v", n, err)
 		}

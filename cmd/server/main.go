@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/debugsrv"
@@ -130,7 +130,7 @@ func runWithContext(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := chat.LocalizeSeedLayout(ctx, pool, cfg.InitialLanguage); err != nil {
+	if _, err := channels.LocalizeSeedLayout(ctx, pool, cfg.InitialLanguage); err != nil {
 		return err
 	}
 

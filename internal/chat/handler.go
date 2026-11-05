@@ -2,16 +2,18 @@ package chat
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -42,7 +44,7 @@ type Handler struct {
 	// FollowLimit caps thread follow changes per member; nil means no cap.
 	FollowLimit *httpx.RateLimiter
 
-	historyViews historyViews
+	historyViews messages.HistoryViews
 	// BlockLimit caps blocking and unblocking per member; nil means no cap.
 	BlockLimit *httpx.RateLimiter
 	// ReportLimit caps message reports per member; nil means no cap.
@@ -63,12 +65,6 @@ type Handler struct {
 	TalkLimit *httpx.RateLimiter
 }
 
-// VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
-type VoiceRooms interface {
-	// CloseVoiceChannel disconnects everyone from the channel's voice room.
-	CloseVoiceChannel(channelID uuid.UUID)
-}
-
 func (h *Handler) voiceRooms() VoiceRooms {
 	if h.Voice != nil {
 		return h.Voice
@@ -77,81 +73,54 @@ func (h *Handler) voiceRooms() VoiceRooms {
 	return v
 }
 
-// ObjectDeleter removes stored media objects (implemented by media.Store).
-type ObjectDeleter interface {
-	DeleteBatch(ctx context.Context, keys []string) error
+// deleteObjects removes media objects after their rows are gone; see
+// core.DeleteObjects.
+func (h *Handler) deleteObjects(ctx context.Context, keys []string) {
+	core.DeleteObjects(ctx, h.Objects, keys)
 }
 
-// deleteObjects removes media objects after their rows are gone. A failure
-// only leaves an orphaned object behind, so it is logged, not returned.
-func (h *Handler) deleteObjects(ctx context.Context, keys []string) {
-	if h.Objects == nil || len(keys) == 0 {
-		return
+// messages builds the messages API from the handler's fields. The edit-history
+// memory is shared, so every API built here counts the same reads.
+func (h *Handler) messages() *messages.API {
+	return &messages.API{
+		DB: h.DB, Events: h.Events, Guard: h.guard(), Objects: h.Objects, Online: h.Online, Audit: h.Audit,
+		Views: &h.historyViews, EditHistoryLimit: h.EditHistoryLimit, PinLimit: h.PinLimit,
+		FollowLimit: h.FollowLimit, ForwardLimit: h.ForwardLimit,
 	}
-	if err := h.Objects.DeleteBatch(ctx, keys); err != nil {
-		slog.Warn("delete media objects", "count", len(keys), "err", err)
-	}
+}
+
+// channels builds the channels API from the handler's fields.
+func (h *Handler) channels() *channels.API {
+	return &channels.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Objects: h.Objects, Voice: h.voiceRooms()}
+}
+
+// DMs is the direct message API of this handler, for the services that start
+// conversations on a member's behalf (the /msg command).
+func (h *Handler) DMs() *dm.API {
+	return &dm.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Objects: h.Objects, Voice: h.voiceRooms(), Calls: h.Calls, DMLimit: h.DMLimit}
 }
 
 // Mount registers the member-facing routes (RequireUser must already apply).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/members", httpx.Handle(h.listMembers))
-	r.Get("/channels", httpx.Handle(h.listChannels))
-	r.Get("/channels/{channelID}/messages", httpx.Handle(h.listMessages))
-	r.Post("/channels/{channelID}/messages", httpx.Handle(h.createMessage))
-	r.Put("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.editMessage))
-	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.deleteMessage))
-	h.mountModeration(r)
 	blocks.API{DB: h.DB, Events: h.Events, Limit: h.BlockLimit}.Mount(r)
 	h.mountReports(r)
 	h.mountSaved(r)
-	h.mountForward(r)
-	h.mountDMs(r)
+	h.DMs().Mount(r)
 	h.mountTalks(r)
 	h.mountForum(r)
-	history := r
-	if h.EditHistoryLimit != nil {
-		history = r.With(h.EditHistoryLimit.By(auth.UserKey))
-	}
-	history.Get("/channels/{channelID}/messages/{messageID}/edits", httpx.Handle(h.getEditHistory))
-	r.Post("/messages/{messageID}/reactions", httpx.Handle(h.toggleReaction))
-	r.Get("/messages/{messageID}/thread", httpx.Handle(h.getThread))
-	follow := r
-	if h.FollowLimit != nil {
-		follow = r.With(h.FollowLimit.By(auth.UserKey))
-	}
-	follow.Put("/threads/{threadID}/follow", httpx.Handle(h.putThreadFollow))
-	follow.Delete("/threads/{threadID}/follow", httpx.Handle(h.deleteThreadFollow))
-	r.Get("/threads/following", httpx.Handle(h.listFollowedThreads))
-	r.Get("/messages/by-number/{number}", httpx.Handle(h.getMessageByNumber))
-	r.Get("/read-state", httpx.Handle(h.readState))
+	h.messages().Mount(r)
 	r.Get("/search", httpx.Handle(h.search))
 	r.Get("/mentions", httpx.Handle(h.mentionsInbox))
-	r.Post("/channels/{channelID}/read", httpx.Handle(h.markRead))
-	r.Post("/channels/{channelID}/unread", httpx.Handle(h.markUnread))
-	r.Get("/channels/{channelID}/first-unread", httpx.Handle(h.firstUnread))
-	r.Put("/channels/{channelID}/notifications", httpx.Handle(h.setNotifyLevel))
-	r.Put("/categories/{id}/notifications", httpx.Handle(h.setCategoryNotify))
-	r.Get("/notification-settings", httpx.Handle(h.notificationSettings))
-	r.Put("/notification-settings/server", httpx.Handle(h.setServerNotify))
-	r.Post("/read-state/read-all", httpx.Handle(h.markAllRead))
+	h.channels().Mount(r)
+	readstate.API{DB: h.DB, Events: h.Events, Guard: h.guard()}.Mount(r)
 }
 
 // MountAdmin registers channel and category management (the Manage channels
 // permission applies).
 func (h *Handler) MountAdmin(r chi.Router) {
 	h.mountReportsAdmin(r)
-	r.With(auth.RequirePerm(h.Perms, perm.ManageRoles)).Get("/roles/{id}/view-as", httpx.Handle(h.viewAsRole))
-	r = r.With(auth.RequirePerm(h.Perms, perm.ManageChannels))
-	r.Post("/categories", httpx.Handle(h.createCategory))
-	r.Delete("/categories/{id}", httpx.Handle(h.deleteCategory))
-	r.Post("/channels", httpx.Handle(h.createChannel))
-	r.Delete("/channels/{id}", httpx.Handle(h.deleteChannel))
-	r.Patch("/channels/{id}", httpx.Handle(h.updateChannel))
-	r.Put("/channels/{id}/auto-delete", httpx.Handle(h.setAutoDelete))
-	r.Post("/channels/{id}/duplicate", httpx.Handle(h.duplicateChannel))
-	r.Patch("/categories/{id}", httpx.Handle(h.renameCategory))
-	r.Put("/layout", httpx.Handle(h.applyLayout))
+	h.channels().MountAdmin(r)
 }
 
 // listMembers handles GET /api/members.
@@ -215,31 +184,4 @@ func enrichMembers(members []Member, roles map[uuid.UUID][]uuid.UUID, timeouts m
 		}
 	}
 	return out
-}
-
-// listChannels handles GET /api/channels.
-//
-// @Summary List categories and channels
-// @Description Only the channels the caller may view; a category shows when its own permissions allow it or any of its channels is visible.
-// @ID listChannels
-// @Tags Channels
-// @Produce json
-// @Security cookieAuth
-// @Success 200 {object} ChannelHierarchy "Channel hierarchy."
-// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
-// @Header 429 {integer} Retry-After "Seconds until the client may retry."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Router /api/channels [get]
-func (h *Handler) listChannels(w http.ResponseWriter, r *http.Request) error {
-	cats, uncat, err := GetServerHierarchy(r.Context(), h.DB)
-	if err != nil {
-		return err
-	}
-	cats, uncat, err = h.visibleHierarchy(r, cats, uncat)
-	if err != nil {
-		return err
-	}
-	httpx.WriteJSON(w, http.StatusOK, ChannelHierarchy{Categories: cats, Uncategorized: uncat})
-	return nil
 }

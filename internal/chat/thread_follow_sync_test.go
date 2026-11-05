@@ -6,21 +6,22 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
 func TestMessageOfReadsValuesAndPointersOnly(t *testing.T) {
 	m := Message{ID: uuid.New()}
-	if got, ok := messageOf(m); !ok || got.ID != m.ID {
+	if got, ok := messages.MessageOf(m); !ok || got.ID != m.ID {
 		t.Errorf("value: %v %v", got.ID, ok)
 	}
-	if got, ok := messageOf(&m); !ok || got.ID != m.ID {
+	if got, ok := messages.MessageOf(&m); !ok || got.ID != m.ID {
 		t.Errorf("pointer: %v %v", got.ID, ok)
 	}
-	if _, ok := messageOf((*Message)(nil)); ok {
+	if _, ok := messages.MessageOf((*Message)(nil)); ok {
 		t.Error("a nil pointer is no message")
 	}
-	if _, ok := messageOf("text"); ok {
+	if _, ok := messages.MessageOf("text"); ok {
 		t.Error("another payload is no message")
 	}
 }
@@ -34,7 +35,7 @@ func (c *countingPublisher) SendToUsers([]uuid.UUID, string, any) { c.sent++ }
 
 func TestTheFollowTapIgnoresWhatIsNoThreadReplyAndFailsClosedWithoutPermissions(t *testing.T) {
 	pub := &countingPublisher{}
-	tap := NewFollowSync(context.Background(), nil, nil, pub)
+	tap := messages.NewFollowSync(context.Background(), nil, nil, pub)
 	root := uuid.New()
 	tap(uuid.New(), events.MessageUpdate, Message{ParentID: &root})
 	tap(uuid.New(), events.MessageCreate, Message{})

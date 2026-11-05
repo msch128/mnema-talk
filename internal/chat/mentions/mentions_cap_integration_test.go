@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
@@ -50,7 +51,7 @@ func TestMentionCapForAuthorsWithoutEveryone(t *testing.T) {
 	}
 	// Named users come before role members, in a stable order.
 	for _, u := range set.Users {
-		if u.Kind != MentionKindName {
+		if u.Kind != core.MentionKindName {
 			t.Fatalf("a role member displaced a named user: %+v", u)
 		}
 	}

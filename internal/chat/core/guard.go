@@ -98,3 +98,14 @@ func (g Guard) RequireCategory(r *http.Request, id uuid.UUID) error {
 	}
 	return nil
 }
+
+// NotFoundUnlessFailure turns a refusal (the member may not view the message's
+// channel) into the message's own 404, so it looks like any missing message,
+// and passes real failures (an unreadable permission state) through.
+func NotFoundUnlessFailure(err error) error {
+	var apiErr *httpx.APIError
+	if errors.As(err, &apiErr) {
+		return ErrMessageNotFound
+	}
+	return err
+}

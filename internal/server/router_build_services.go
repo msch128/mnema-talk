@@ -10,6 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/discordimport"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -36,7 +37,7 @@ func (c *components) newChat() {
 		ForwardLimit:     httpx.NewRateLimiter(chat.ForwardsPerMinute, time.Minute).Named("forward"),
 		DMLimit:          httpx.NewRateLimiter(chat.NewDMsPerMinute, time.Minute).Named("dm_start"),
 	}
-	go chat.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
+	go messages.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
 	go poll.RunFold(c.ctx, d.DB, 10*time.Minute)
 	autoDelete := &chat.AutoDeleter{DB: d.DB, Events: c.pub, Audit: c.auditLog}
 	if d.Store != nil {
@@ -127,4 +128,10 @@ func (c *components) startAuthJobs() {
 func (c *components) newAuthAPIs() {
 	c.members = memberadmin.New(c.authH)
 	c.account = account.New(c.authH)
+}
+
+// tapThreadFollows tells open clients which threads they follow after a reply
+// made them follow it (see chat.NewFollowSync).
+func (c *components) tapThreadFollows() {
+	c.addTap(messages.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub))
 }

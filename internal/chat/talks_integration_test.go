@@ -17,8 +17,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -56,19 +58,19 @@ func newTalksWorld(t *testing.T) *talksWorld {
 	testutil.Reset(t, p)
 	ctx := context.Background()
 	w := &talksWorld{p: p, rec: &events.Recorder{}}
-	cat, err := CreateCategory(ctx, p, "Voice", 0)
+	cat, err := channels.CreateCategory(ctx, p, "Voice", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	w.category = cat.ID
-	w.lobby, err = CreateChannelWithStage(ctx, p, &cat.ID, "Create a Talk", ChannelTypeVoice, "", 5, false)
+	w.lobby, err = channels.CreateChannelWithStage(ctx, p, &cat.ID, "Create a Talk", ChannelTypeVoice, "", 5, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := EditChannel(ctx, p, w.lobby.ID, nil, nil, chattest.Ptr(4), nil, nil, nil); err != nil {
+	if _, err := channels.EditChannel(ctx, p, w.lobby.ID, nil, nil, chattest.Ptr(4), nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := SetLobby(ctx, p, w.lobby.ID, true); err != nil {
+	if err := channels.SetLobby(ctx, p, w.lobby.ID, true); err != nil {
 		t.Fatal(err)
 	}
 	w.alice, w.bob = newTalksUser(t, p, "alice_t"), newTalksUser(t, p, "bob_t")
@@ -147,7 +149,7 @@ func TestOpeningATalkCopiesTheLobbyAndNumbersFromOne(t *testing.T) {
 	}
 
 	// The lowest free number is used again once a Talk is gone.
-	if _, err := DeleteChannel(ctx, w.p, first.ID); err != nil {
+	if _, err := channels.DeleteChannel(ctx, w.p, first.ID); err != nil {
 		t.Fatal(err)
 	}
 	third, err := w.mgr.Open(ctx, w.alice.ID, w.lobby.ID)
@@ -160,7 +162,7 @@ func TestOpeningATalkCopiesTheLobbyAndNumbersFromOne(t *testing.T) {
 		t.Fatalf("third = %q; want the freed Create a Talk 1", name3)
 	}
 	// The channel list marks the lobby and the temporary Talks.
-	cats, _, err := GetServerHierarchy(ctx, w.p)
+	cats, _, err := channels.GetServerHierarchy(ctx, w.p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,15 +183,15 @@ func TestOpeningATalkCopiesTheLobbyAndNumbersFromOne(t *testing.T) {
 func TestOnlyALobbyOpensTalksAndOnlyUpToTheCap(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	plain, err := CreateChannelWithStage(ctx, w.p, &w.category, "Plain", ChannelTypeVoice, "", 9, false)
+	plain, err := channels.CreateChannelWithStage(ctx, w.p, &w.category, "Plain", ChannelTypeVoice, "", 9, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := w.mgr.Open(ctx, w.alice.ID, plain.ID); !errors.Is(err, errNotLobby) {
 		t.Fatalf("a plain Talk opens none: %v", err)
 	}
-	text, _ := CreateChannelWithStage(ctx, w.p, nil, "text", ChannelTypeText, "", 0, false)
-	if err := SetLobby(ctx, w.p, text.ID, true); err == nil {
+	text, _ := channels.CreateChannelWithStage(ctx, w.p, nil, "text", ChannelTypeText, "", 0, false)
+	if err := channels.SetLobby(ctx, w.p, text.ID, true); err == nil {
 		t.Fatal("a text channel cannot be a lobby")
 	}
 	for i := 0; i < MaxTempTalksPerLobby; i++ {
@@ -337,7 +339,7 @@ func TestTemporaryTalksStayOutOfTheSavedLayout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ApplyLayout(ctx, w.p, nil, []ChannelPlacement{{ID: talk.ID, CategoryID: nil, SortOrder: 99}, {ID: w.lobby.ID, CategoryID: &w.category, SortOrder: 7}})
+	err = channels.ApplyLayout(ctx, w.p, nil, []ChannelPlacement{{ID: talk.ID, CategoryID: nil, SortOrder: 99}, {ID: w.lobby.ID, CategoryID: &w.category, SortOrder: 7}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -394,7 +396,7 @@ func TestStartingATalkFromAConversationPostsAnInvite(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
-	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := dm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -421,12 +423,12 @@ func TestAnInviteCardGrantsNothing(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
-	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := dm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// A Talk only Alice may see or join.
-	private, err := CreateChannelWithStage(ctx, w.p, nil, "Leads", ChannelTypeVoice, "", 1, false)
+	private, err := channels.CreateChannelWithStage(ctx, w.p, nil, "Leads", ChannelTypeVoice, "", 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -590,7 +592,7 @@ func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := dm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -632,7 +634,7 @@ func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
 	if err := h.inviteToTalk(rec(), talkRequest(w.alice, body, map[string]string{"id": uuid.NewString()})); err == nil {
 		t.Fatal("unknown Talk")
 	}
-	text, _ := CreateChannelWithStage(ctx, w.p, nil, "plain-text", ChannelTypeText, "", 0, false)
+	text, _ := channels.CreateChannelWithStage(ctx, w.p, nil, "plain-text", ChannelTypeText, "", 0, false)
 	notDM := `{"conversation_id":"` + text.ID.String() + `"}`
 	if err := h.inviteToTalk(rec(), talkRequest(w.alice, notDM, id)); !errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("a channel is no conversation: %v", err)

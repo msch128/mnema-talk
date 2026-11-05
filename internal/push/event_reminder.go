@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 )
 
 // SendEventReminder pushes an event reminder to the member's devices,
@@ -74,7 +75,7 @@ func (s *Service) talkMuted(ctx context.Context, userID, channelID uuid.UUID) (b
 	chSetting.Level = levelOf(chLvl)
 	catSetting.Level = levelOf(catLvl)
 	srvSetting.Level = levelOf(srvLvl)
-	return chat.ResolveNotify(dbNow, chSetting, catSetting, srvSetting) == chat.NotifyMute, nil
+	return readstate.ResolveNotify(dbNow, chSetting, catSetting, srvSetting) == chat.NotifyMute, nil
 }
 
 // EventQuiet is eventQuiet for notices that are not pushes (the in-app toast

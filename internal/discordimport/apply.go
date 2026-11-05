@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -212,7 +213,7 @@ type created struct {
 }
 
 func (im *Importer) insertPlan(ctx context.Context, tx pgx.Tx, plan *Plan, sub perm.Subject, actorName string) (*Record, error) {
-	if err := chat.LockChannelLayout(ctx, tx); err != nil {
+	if err := channels.LockChannelLayout(ctx, tx); err != nil {
 		return nil, err
 	}
 	c := &created{roleBySrc: map[string]uuid.UUID{}, catBySrc: map[string]uuid.UUID{}, chanBySrc: map[string]uuid.UUID{}}

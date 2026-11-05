@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -70,7 +71,7 @@ func TestReplyToARootDeletedMeanwhileIsAnInputError(t *testing.T) {
 	if _, err := f.p.Exec(ctx, `DELETE FROM messages WHERE id = $1`, f.m); err != nil {
 		t.Fatal(err)
 	}
-	_, err := CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "late reply", ParentID: &f.m})
+	_, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID, Content: "late reply", ParentID: &f.m})
 	requireStatus(t, err, http.StatusBadRequest)
 	chattest.RequireError(t, err, "parent message not found")
 }

@@ -56,14 +56,6 @@ type OnlineSource interface {
 // including the keywords "all" and "here" (see the mention package).
 func ParseMentions(content string) []string { return mention.Names(content) }
 
-// Why a user is mentioned (message_mentions.kind). A lower kind wins when a
-// user is reached more than one way.
-const (
-	MentionKindName  int16 = 0 // @username
-	MentionKindGroup int16 = 1 // @all, @here
-	MentionKindRole  int16 = 2 // @Role
-)
-
 // MentionedUser is a user a message notifies and why.
 type MentionedUser struct {
 	ID   uuid.UUID

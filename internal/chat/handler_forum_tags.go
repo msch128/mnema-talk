@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -32,7 +34,7 @@ func (h *Handler) listForumTags(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := h.require(r, chID, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
+		return core.NotFoundUnlessFailure(err)
 	}
 	if _, err := h.requireForumChannel(r, chID); err != nil {
 		return err
@@ -128,7 +130,7 @@ func (h *Handler) updateForumTag(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if err := h.screenTag(r, chID, deref(req.Name), deref(req.Emoji)); err != nil {
+	if err := h.screenTag(r, chID, messages.Deref(req.Name), messages.Deref(req.Emoji)); err != nil {
 		return err
 	}
 	tag, before, err := UpdateForumTag(r.Context(), h.DB, chID, tagID, TagPatch{Name: req.Name, Emoji: req.Emoji, Color: req.Color, Moderated: req.Moderated})
@@ -183,7 +185,7 @@ func (h *Handler) deleteForumTag(w http.ResponseWriter, r *http.Request) error {
 // screenTag applies the automod rules to a tag's name and emoji; a tag is text
 // every member of the forum reads.
 func (h *Handler) screenTag(r *http.Request, chID uuid.UUID, texts ...string) error {
-	_, err := screenText(r.Context(), h.DB, chID, auth.UserFrom(r.Context()).ID, uuid.Nil, strings.Join(texts, "\n"))
+	_, err := messages.ScreenText(r.Context(), h.DB, chID, auth.UserFrom(r.Context()).ID, uuid.Nil, strings.Join(texts, "\n"))
 	return err
 }
 

@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/testutil/pgfault"
 )
@@ -18,7 +20,7 @@ import (
 func TestDeletingAChannelRemovesItsWebhookBotAccount(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	ch, err := CreateChannelWithStage(ctx, f.p, nil, "hooked", ChannelTypeText, "", 0, false)
+	ch, err := channels.CreateChannelWithStage(ctx, f.p, nil, "hooked", ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,11 +37,11 @@ func TestDeletingAChannelRemovesItsWebhookBotAccount(t *testing.T) {
 	if _, err := f.p.Exec(ctx, `INSERT INTO webhooks (channel_id, bot_user_id, name, token_hash) VALUES ($1, $2, 'hook', '\x00')`, ch.ID, bot); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CreateMessage(ctx, f.p, NewMessage{ChannelID: ch.ID, UserID: bot, Content: "from the hook"}); err != nil {
+	if _, err := messages.CreateMessage(ctx, f.p, NewMessage{ChannelID: ch.ID, UserID: bot, Content: "from the hook"}); err != nil {
 		t.Fatal(err)
 	}
 
-	keys, err := DeleteChannel(ctx, f.p, ch.ID)
+	keys, err := channels.DeleteChannel(ctx, f.p, ch.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +66,7 @@ func TestDeletingAChannelRemovesItsWebhookBotAccount(t *testing.T) {
 func TestDeletingAChannelReportsWebhookBotCleanupFailures(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	ch, err := CreateChannelWithStage(ctx, f.p, nil, "hooked-faults", ChannelTypeText, "", 0, false)
+	ch, err := channels.CreateChannelWithStage(ctx, f.p, nil, "hooked-faults", ChannelTypeText, "", 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +83,7 @@ func TestDeletingAChannelReportsWebhookBotCleanupFailures(t *testing.T) {
 		"DELETE FROM users u",
 	} {
 		pool := &db.Pool{Pool: pgfault.Pool(t, f.p.Pool, &pgfault.Tracer{Query: query})}
-		if _, err := DeleteChannel(ctx, pool, ch.ID); err == nil {
+		if _, err := channels.DeleteChannel(ctx, pool, ch.ID); err == nil {
 			t.Fatalf("%q failing: the deletion reported success", query)
 		}
 	}

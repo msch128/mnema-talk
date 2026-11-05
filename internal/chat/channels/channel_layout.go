@@ -1,0 +1,303 @@
+package channels
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"slices"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/httpx"
+)
+
+// CategoryOrder and ChannelPlacement describe a drag-and-drop result.
+type CategoryOrder struct {
+	ID        uuid.UUID `json:"id" format:"uuid"`
+	SortOrder int       `json:"sort_order"`
+}
+
+type ChannelPlacement struct {
+	ID         uuid.UUID  `json:"id" format:"uuid"`
+	CategoryID *uuid.UUID `json:"category_id" format:"uuid" extensions:"x-nullable"`
+	SortOrder  int        `json:"sort_order"`
+}
+
+// MaxSortOrder bounds the sort order of a category or channel. The columns
+// are 32-bit, and the bound leaves room to shift a whole group by one.
+const MaxSortOrder = 1 << 30
+
+// CheckSortOrder refuses a sort order outside -MaxSortOrder..MaxSortOrder.
+func CheckSortOrder(n int) error {
+	if n < -MaxSortOrder || n > MaxSortOrder {
+		return httpx.ErrInvalidInput(fmt.Sprintf("sort_order must be between %d and %d", -MaxSortOrder, MaxSortOrder))
+	}
+	return nil
+}
+
+// ApplyLayout stores category order and channel placement in one
+// transaction; an unknown category or channel rejects the whole change.
+func ApplyLayout(ctx context.Context, p *db.Pool, cats []CategoryOrder, chans []ChannelPlacement) error {
+	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return ApplyLayoutTx(ctx, tx, cats, chans) })
+}
+
+// ApplyLayoutTx is ApplyLayout inside a transaction.
+func ApplyLayoutTx(ctx context.Context, tx pgx.Tx, cats []CategoryOrder, chans []ChannelPlacement) error {
+	if err := LockChannelLayout(ctx, tx); err != nil {
+		return err
+	}
+	if err := orderCategories(ctx, tx, cats); err != nil {
+		return err
+	}
+	return placeChannels(ctx, tx, chans)
+}
+
+// orderCategories sets every sort order in one statement. When an ID repeats,
+// the last entry wins; an unknown category rejects the whole change.
+func orderCategories(ctx context.Context, tx pgx.Tx, cats []CategoryOrder) error {
+	last := map[uuid.UUID]int64{}
+	for _, c := range cats {
+		if err := CheckSortOrder(c.SortOrder); err != nil {
+			return err
+		}
+		last[c.ID] = int64(c.SortOrder)
+	}
+	if len(last) == 0 {
+		return nil
+	}
+	ids, orders := make([]uuid.UUID, 0, len(last)), make([]int64, 0, len(last))
+	for id, order := range last {
+		ids, orders = append(ids, id), append(orders, order)
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE categories c SET sort_order = v.sort_order
+		FROM unnest($1::uuid[], $2::bigint[]) AS v(id, sort_order)
+		WHERE c.id = v.id`, ids, orders)
+	if err != nil {
+		return fmt.Errorf("order categories: %w", err)
+	}
+	if tag.RowsAffected() != int64(len(ids)) {
+		return core.ErrCategoryNotFound
+	}
+	return nil
+}
+
+// placeChannels moves every channel in one statement. When an ID repeats, the
+// last entry wins; an unknown channel or category rejects the whole change.
+func placeChannels(ctx context.Context, tx pgx.Tx, chans []ChannelPlacement) error {
+	last := map[uuid.UUID]ChannelPlacement{}
+	for _, c := range chans {
+		if err := CheckSortOrder(c.SortOrder); err != nil {
+			return err
+		}
+		last[c.ID] = c
+	}
+	if err := dropTempTalks(ctx, tx, last); err != nil {
+		return err
+	}
+	if len(last) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(last))
+	parents := make([]*uuid.UUID, 0, len(last))
+	orders := make([]int64, 0, len(last))
+	for id, c := range last {
+		ids, parents, orders = append(ids, id), append(parents, c.CategoryID), append(orders, int64(c.SortOrder))
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE channels ch SET category_id = v.category_id, sort_order = v.sort_order
+		FROM unnest($1::uuid[], $2::uuid[], $3::bigint[]) AS v(id, category_id, sort_order)
+		WHERE ch.id = v.id AND ch.type <> 'dm'
+		  AND (v.category_id IS NULL OR EXISTS (SELECT 1 FROM categories WHERE id = v.category_id))`,
+		ids, parents, orders)
+	if err != nil {
+		return fmt.Errorf("place channels: %w", err)
+	}
+	if tag.RowsAffected() != int64(len(ids)) {
+		return httpx.ErrNotFound("channel or category not found")
+	}
+	return nil
+}
+
+// dropTempTalks removes the temporary Talks from a layout change: they come
+// and go on their own and never become part of the saved layout.
+func dropTempTalks(ctx context.Context, tx pgx.Tx, placements map[uuid.UUID]ChannelPlacement) error {
+	if len(placements) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(placements))
+	for id := range placements {
+		ids = append(ids, id)
+	}
+	rows, err := tx.Query(ctx, `SELECT id FROM channels WHERE id = ANY($1) AND is_temp`, ids)
+	if err != nil {
+		return fmt.Errorf("find temporary Talks: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		delete(placements, id)
+	}
+	return rows.Err()
+}
+
+// channelLayoutLockID is the transaction-scoped advisory lock that serialises
+// changes to channel placement (layout drags and duplications), so they never
+// interleave and cannot deadlock on each other's row locks.
+const channelLayoutLockID = 0x6d6e6c6179
+
+// LockChannelLayout takes the layout lock for the rest of the transaction, for
+// callers that append to the layout (the Discord import).
+func LockChannelLayout(ctx context.Context, tx pgx.Tx) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, channelLayoutLockID); err != nil {
+		return fmt.Errorf("lock channel layout: %w", err)
+	}
+	return nil
+}
+
+// DuplicateChannel copies a channel's own properties (name, type, topic,
+// category) into a new channel placed directly below it in the same group
+// (its category, or the uncategorized channels). Messages, reactions and
+// per-user state (read position, notification level) are not copied. Channel
+// names need not be unique, so the copy keeps the source name unchanged.
+func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*core.Channel, error) {
+	var ch *core.Channel
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if err := LockChannelLayout(ctx, tx); err != nil {
+			return err
+		}
+		src, err := LockSourceChannel(ctx, tx, sourceID)
+		if err != nil {
+			return err
+		}
+		newOrder, err := makeRoomBelow(ctx, tx, src)
+		if err != nil {
+			return err
+		}
+		ch, err = InsertChannelCopy(ctx, tx, src, newOrder, false)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ch, nil
+}
+
+func LockSourceChannel(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*core.Channel, error) {
+	var src core.Channel
+	err := tx.QueryRow(ctx, `
+		SELECT id, category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds
+		FROM channels WHERE id = $1 AND type <> 'dm' FOR UPDATE`, id).
+		Scan(&src.ID, &src.CategoryID, &src.Name, &src.Type, &src.Topic, &src.SortOrder, &src.UserLimit, &src.SlowModeSeconds)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, core.ErrChannelNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("lock channel: %w", err)
+	}
+	return &src, nil
+}
+
+// makeRoomBelow shifts the channels after src in its group (in the order
+// GET /api/channels lists it) down and returns the sort order for the copy.
+func makeRoomBelow(ctx context.Context, tx pgx.Tx, src *core.Channel) (int, error) {
+	ids, orders, err := LockChannelGroup(ctx, tx, src.CategoryID)
+	if err != nil {
+		return 0, err
+	}
+	srcIdx := slices.Index(ids, src.ID)
+	if srcIdx < 0 { // cannot happen: the source row is locked
+		return 0, core.ErrChannelNotFound
+	}
+
+	newOrder, shifted := placeBelow(orders, srcIdx)
+	batch := &pgx.Batch{}
+	for i, order := range shifted {
+		batch.Queue(`UPDATE channels SET sort_order = $2 WHERE id = $1`, ids[srcIdx+1+i], order)
+	}
+	if batch.Len() > 0 {
+		if err := tx.SendBatch(ctx, batch).Close(); err != nil {
+			return 0, fmt.Errorf("shift channels: %w", err)
+		}
+	}
+	return newOrder, nil
+}
+
+// InsertChannelCopy creates the copy of src at sortOrder, with the same
+// permission overwrites: a copy of a private channel stays private.
+func InsertChannelCopy(ctx context.Context, tx pgx.Tx, src *core.Channel, sortOrder int, temp bool) (*core.Channel, error) {
+	var ch core.Channel
+	err := tx.QueryRow(ctx, `
+		INSERT INTO channels (category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds) VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
+		src.CategoryID, src.Name, src.Type, src.Topic, sortOrder, src.UserLimit, src.SlowModeSeconds).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
+	if err != nil {
+		return nil, fmt.Errorf("duplicate channel: %w", err)
+	}
+	if temp {
+		// A temporary Talk gets its fixed slug and no history.
+		if _, err := tx.Exec(ctx, `UPDATE channels SET slug = $2 WHERE id = $1`, ch.ID, TempTalkSlug(ch.ID)); err != nil {
+			return nil, fmt.Errorf("set Talk slug: %w", err)
+		}
+		ch.Slug, ch.PreviousSlugs = TempTalkSlug(ch.ID), []string{}
+	} else if err := assignAndFillSlugs(ctx, tx, &ch); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO permission_overwrites (channel_id, role_id, user_id, allow, deny)
+		SELECT $1, role_id, user_id, allow, deny FROM permission_overwrites WHERE channel_id = $2`,
+		ch.ID, src.ID); err != nil {
+		return nil, fmt.Errorf("copy permissions: %w", err)
+	}
+	return &ch, nil
+}
+
+// LockChannelGroup locks the channels of one category (nil: the
+// uncategorized ones) and returns their IDs and sort orders in display order.
+func LockChannelGroup(ctx context.Context, tx pgx.Tx, categoryID *uuid.UUID) ([]uuid.UUID, []int, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT id, sort_order FROM channels
+		WHERE category_id IS NOT DISTINCT FROM $1 AND type <> 'dm'
+		ORDER BY sort_order, created_at, id
+		FOR UPDATE`, categoryID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("lock channel group: %w", err)
+	}
+	defer rows.Close()
+	var ids []uuid.UUID
+	var orders []int
+	for rows.Next() {
+		var id uuid.UUID
+		var order int
+		if err := rows.Scan(&id, &order); err != nil {
+			return nil, nil, err
+		}
+		ids = append(ids, id)
+		orders = append(orders, order)
+	}
+	return ids, orders, rows.Err()
+}
+
+// placeBelow computes the sort order of a channel inserted directly after
+// orders[src], where orders are a group's sort orders in display order
+// (sort_order, then created_at). It returns the new channel's sort order and
+// the new sort orders of every channel after src: each moves down by one, and
+// further where needed so it still sorts strictly after its predecessor (a
+// tie would be broken by created_at, putting an older channel above the copy).
+func placeBelow(orders []int, src int) (int, []int) {
+	newOrder := orders[src] + 1
+	shifted := make([]int, 0, len(orders)-src-1)
+	prev := newOrder
+	for _, o := range orders[src+1:] {
+		next := max(o+1, prev+1)
+		shifted = append(shifted, next)
+		prev = next
+	}
+	return newOrder, shifted
+}

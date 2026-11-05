@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -59,11 +60,11 @@ func (h *Handler) stageAttachment(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	ctx, err := chat.UploadContext(h.Perms, r, chID)
+	ctx, err := messages.UploadContext(h.Perms, r, chID)
 	if err != nil {
 		return err
 	}
-	if _, err := chat.ChannelForMessages(ctx, h.DB, chID); err != nil {
+	if _, err := messages.ChannelForMessages(ctx, h.DB, chID); err != nil {
 		return err
 	}
 	req, err := h.prepareUploadRequest(w, r, user)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 )
 
 func TestSlowModePostTimesArePruned(t *testing.T) {
@@ -22,7 +23,7 @@ func TestSlowModePostTimesArePruned(t *testing.T) {
 	if _, err := f.p.Exec(ctx, `INSERT INTO slow_mode_posts (channel_id, user_id, last_post_at) VALUES ($1, $2, NOW() - INTERVAL '25 hours'), ($1, $3, NOW() - INTERVAL '1 minute')`, f.c.ID, f.u.ID, other); err != nil {
 		t.Fatal(err)
 	}
-	if n, err := PruneSlowMode(ctx, f.p); err != nil || n != 1 {
+	if n, err := messages.PruneSlowMode(ctx, f.p); err != nil || n != 1 {
 		t.Fatalf("pruned %d, %v", n, err)
 	}
 
@@ -32,7 +33,7 @@ func TestSlowModePostTimesArePruned(t *testing.T) {
 	}
 	rctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
-	go func() { RunSlowModePrune(rctx, f.p, 5*time.Millisecond); close(done) }()
+	go func() { messages.RunSlowModePrune(rctx, f.p, 5*time.Millisecond); close(done) }()
 	deadline := time.Now().Add(2 * time.Second)
 	for {
 		var left int
@@ -52,12 +53,12 @@ func TestSlowModePostTimesArePruned(t *testing.T) {
 	// A failing prune is an error (the loop only logs it).
 	cctx, ccancel := context.WithCancel(ctx)
 	ccancel()
-	if _, err := PruneSlowMode(cctx, f.p); err == nil {
+	if _, err := messages.PruneSlowMode(cctx, f.p); err == nil {
 		t.Fatal("prune on a cancelled context succeeded")
 	}
 	ectx, ecancel := context.WithCancel(ctx)
 	go func() { time.Sleep(20 * time.Millisecond); ecancel() }()
-	RunSlowModePrune(ectx, closedQuerier{}, time.Millisecond)
+	messages.RunSlowModePrune(ectx, closedQuerier{}, time.Millisecond)
 }
 
 // closedQuerier fails every statement.

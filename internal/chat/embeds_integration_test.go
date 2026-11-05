@@ -6,20 +6,22 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 )
 
 func TestMessageEmbedsRoundTripAndCorruption(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
 	title := "Run"
-	id, err := InsertMessage(ctx, f.p, nil, NewMessage{
+	id, err := messages.InsertMessage(ctx, f.p, nil, NewMessage{
 		ChannelID: f.c.ID, UserID: f.u.ID, Content: "x", AuthorName: "CI",
 		Embeds: []Embed{{Title: title, Fields: []EmbedField{{Name: "n", Value: "v", Inline: true}}}},
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m, err := GetMessage(ctx, f.p, id)
+	m, err := messages.GetMessage(ctx, f.p, id)
 	if err != nil {
 		t.Fatalf("get message: %v", err)
 	}
@@ -37,7 +39,7 @@ func TestMessageEmbedsRoundTripAndCorruption(t *testing.T) {
 	if _, err := f.p.Exec(ctx, `UPDATE messages SET embeds = '{"title": 1}' WHERE id = $1`, id); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := GetMessage(ctx, f.p, id); err == nil {
+	if _, err := messages.GetMessage(ctx, f.p, id); err == nil {
 		t.Fatal("expected error decoding damaged embeds")
 	} else if !strings.Contains(err.Error(), "decode embeds") {
 		t.Fatalf("damaged embeds: %v", err)

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 )
 
 func TestBulkDeleteReportsDatabaseDrift(t *testing.T) {
@@ -23,7 +24,7 @@ func TestBulkDeleteReportsDatabaseDrift(t *testing.T) {
 	run := func(views map[string]string) error {
 		p := chattest.DriftPool(t, f.p, views)
 		return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-			_, _, err := takeLatestMessages(ctx, tx, f.c.ID, f.u.ID, 5, true)
+			_, _, err := messages.TakeLatestMessages(ctx, tx, f.c.ID, f.u.ID, 5, true)
 			return err
 		})
 	}
@@ -51,7 +52,9 @@ func TestSlowModeReportsDatabaseDrift(t *testing.T) {
 	ctx := context.Background()
 	check := func(views map[string]string) error {
 		p := chattest.DriftPool(t, f.p, views)
-		return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return gatePost(ctx, tx, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID}) })
+		return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+			return messages.GatePost(ctx, tx, NewMessage{ChannelID: f.c.ID, UserID: f.u.ID})
+		})
 	}
 	if err := check(map[string]string{"channels": `SELECT id FROM public.channels`}); err == nil || !strings.Contains(err.Error(), "load channel") {
 		t.Fatalf("channel drift: %v", err)

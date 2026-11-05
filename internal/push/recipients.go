@@ -8,6 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -136,7 +138,7 @@ func (c candidate) wants(mention, addressed bool) bool {
 	if quiet(c.presence) || c.silenced {
 		return false
 	}
-	switch chat.ResolveNotify(c.now, c.channelLevel, c.categoryLvl, c.serverLvl) {
+	switch readstate.ResolveNotify(c.now, c.channelLevel, c.categoryLvl, c.serverLvl) {
 	case chat.NotifyAll:
 		return true
 	case chat.NotifyMentions:
@@ -161,7 +163,7 @@ func threadAudience(ctx context.Context, q db.Querier, thread *uuid.UUID) (follo
 	if thread == nil {
 		return nil, true
 	}
-	followers, err := chat.ThreadFollowers(ctx, q, *thread)
+	followers, err := messages.ThreadFollowers(ctx, q, *thread)
 	if err != nil {
 		slog.Warn("push: load thread followers", "err", err)
 		return nil, false

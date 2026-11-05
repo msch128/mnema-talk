@@ -10,6 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	chatdm "github.com/msch128/mnema-talk/internal/chat/dm"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -26,10 +28,10 @@ type callWorldDB struct {
 func startedCall(t *testing.T, ring time.Duration) *callWorldDB {
 	t.Helper()
 	w := newTalksWorld(t)
-	calls := NewDMCalls(&DMCalls{DB: w.p, Events: w.rec, Ring: ring})
-	t.Cleanup(calls.stop)
+	calls := chatdm.NewDMCalls(&DMCalls{DB: w.p, Events: w.rec, Ring: ring})
+	t.Cleanup(calls.Stop)
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr, Calls: calls}
-	dm, _, err := CreateDM(context.Background(), w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(context.Background(), w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +47,7 @@ func startedCall(t *testing.T, ring time.Duration) *callWorldDB {
 
 // announce runs the queued announcements and returns the events of type typ.
 func (c *callWorldDB) announce(typ string) []events.Event {
-	for c.calls.announceNext(context.Background()) {
+	for c.calls.AnnounceNext(context.Background()) {
 	}
 	var out []events.Event
 	for _, e := range c.rec.Snapshot() {
@@ -77,11 +79,11 @@ func TestStartingATalkFromAConversationRingsIt(t *testing.T) {
 	if ring.TalkID == uuid.Nil || ring.CallerID != c.alice.ID || ring.TalkName != "Talk 1" || ring.MessageID == uuid.Nil {
 		t.Fatalf("ring = %+v", ring)
 	}
-	listed, err := ListDMs(context.Background(), c.p, c.bob.ID, nil)
+	listed, err := chatdm.ListDMs(context.Background(), c.p, c.bob.ID, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.h.markCalls(listed)
+	c.h.DMs().MarkCalls(listed)
 	if len(listed) != 1 || listed[0].Call == nil || !listed[0].Call.Ringing || listed[0].Call.TalkID != ring.TalkID {
 		t.Fatalf("the conversation list carries the call: %+v", listed)
 	}
@@ -121,7 +123,7 @@ func TestACallNobodyAnswersLeavesAMissedCallButStaysOpenForLateJoiners(t *testin
 	c.calls.OnPresence(c.alice.ID, c.talk, true)
 	deadline := time.Now().Add(5 * time.Second)
 	for c.missedMessagesOrZero() == 0 && time.Now().Before(deadline) {
-		for c.calls.announceNext(context.Background()) {
+		for c.calls.AnnounceNext(context.Background()) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -173,7 +175,7 @@ func TestAnAnsweredCallLeavesNoMissedCall(t *testing.T) {
 
 func TestOnlyTheServerWritesTheCallMarks(t *testing.T) {
 	in := InEmbed{Title: "x"}
-	embeds, err := SanitizeEmbeds([]InEmbed{in})
+	embeds, err := messages.SanitizeEmbeds([]InEmbed{in})
 	if err != nil || len(embeds) != 1 || embeds[0].Call != "" || embeds[0].TalkID != nil {
 		t.Fatalf("embeds = %+v, %v", embeds, err)
 	}
@@ -186,7 +188,7 @@ func TestACallNeedsNoLobbyAndItsTalkBelongsToTheConversation(t *testing.T) {
 		t.Fatal(err)
 	}
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
-	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +242,7 @@ func TestACallNeedsNoLobbyAndItsTalkBelongsToTheConversation(t *testing.T) {
 func TestTheTalkOfAConversationGoesWithIt(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,10 +283,10 @@ func TestACallerWhoMayNotConnectGetsNoTalkAndNoRing(t *testing.T) {
 func startedCallWorld(t *testing.T) *callWorldDB {
 	t.Helper()
 	w := newTalksWorld(t)
-	calls := NewDMCalls(&DMCalls{DB: w.p, Events: w.rec, Ring: time.Hour})
-	t.Cleanup(calls.stop)
+	calls := chatdm.NewDMCalls(&DMCalls{DB: w.p, Events: w.rec, Ring: time.Hour})
+	t.Cleanup(calls.Stop)
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr, Calls: calls}
-	dm, _, err := CreateDM(context.Background(), w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(context.Background(), w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +297,7 @@ func TestTheFilesOfAConversationsTalkGoWhenTheConversationDoes(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	carol := newTalksUser(t, w.p, "carol_t")
-	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -303,7 +305,7 @@ func TestTheFilesOfAConversationsTalkGoWhenTheConversationDoes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg, err := InsertMessage(ctx, w.p, nil, NewMessage{ChannelID: talk.ID, UserID: w.alice.ID, Content: "look"}, nil)
+	msg, err := messages.InsertMessage(ctx, w.p, nil, NewMessage{ChannelID: talk.ID, UserID: w.alice.ID, Content: "look"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,7 +316,7 @@ func TestTheFilesOfAConversationsTalkGoWhenTheConversationDoes(t *testing.T) {
 	}
 	var keys []string
 	for _, u := range []*auth.User{w.alice, w.bob, carol} {
-		_, got, err := LeaveDM(ctx, w.p, dm, u.ID)
+		_, got, err := chatdm.LeaveDM(ctx, w.p, dm, u.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -332,7 +334,7 @@ func TestTheLastMemberLeavingAGroupClosesTheRoomOfItsTalk(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	carol := newTalksUser(t, w.p, "carol_t")
-	dm, _, err := CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -344,7 +346,7 @@ func TestTheLastMemberLeavingAGroupClosesTheRoomOfItsTalk(t *testing.T) {
 	leave := func(u *auth.User) {
 		t.Helper()
 		params := map[string]string{"id": dm.String(), "user": "@me"}
-		if err := h.leaveDM(httptest.NewRecorder(), talkRequest(u, ``, params)); err != nil {
+		if err := h.DMs().LeaveDM(httptest.NewRecorder(), talkRequest(u, ``, params)); err != nil {
 			t.Fatal(err)
 		}
 	}
