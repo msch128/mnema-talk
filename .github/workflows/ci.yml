@@ -47,15 +47,31 @@ jobs:
         with:
           persist-credentials: false
 
+      # The archive is cached under its version and checksum so a GitHub release
+      # download outage cannot fail the scan; the checksum is verified either way.
+      - name: Restore gitleaks archive
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/gitleaks-archive
+          key: gitleaks-${{ env.GITLEAKS_VERSION }}-${{ env.GITLEAKS_SHA256 }}
       - name: Install gitleaks (pinned, checksum verified)
         run: |
           set -euo pipefail
           archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          curl --fail --silent --show-error --location --retry 3 \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}" \
-            --output "$RUNNER_TEMP/$archive"
-          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
-          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" gitleaks
+          dir="$RUNNER_TEMP/gitleaks-archive"
+          mkdir -p "$dir"
+          if ! echo "${GITLEAKS_SHA256}  $dir/$archive" | sha256sum --check --strict 2>/dev/null; then
+            # Retry with backoff: the release CDN answers 5xx now and then.
+            for attempt in 1 2 3 4 5; do
+              curl --fail --silent --show-error --location --connect-timeout 20 --max-time 120 \
+                "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}" \
+                --output "$dir/$archive" && break
+              [ "$attempt" -lt 5 ] || { echo "gitleaks download failed after $attempt attempts" >&2; exit 1; }
+              sleep $((attempt * 10))
+            done
+            echo "${GITLEAKS_SHA256}  $dir/$archive" | sha256sum --check --strict
+          fi
+          tar -xzf "$dir/$archive" -C "$RUNNER_TEMP" gitleaks
           "$RUNNER_TEMP/gitleaks" version
 
       - name: gitleaks
