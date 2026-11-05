@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/chat/reports"
+	"github.com/msch128/mnema-talk/internal/chat/saved"
 	"github.com/msch128/mnema-talk/internal/chat/search"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -118,12 +119,17 @@ func (h *Handler) forum() *forum.API {
 	return &forum.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Audit: h.Audit, Online: h.Online, Messages: h.messages()}
 }
 
+// saved builds the saved messages API from the handler's fields.
+func (h *Handler) saved() *saved.API {
+	return &saved.API{DB: h.DB, Events: h.Events, Guard: h.guard(), SavedLimit: h.SavedLimit}
+}
+
 // Mount registers the member-facing routes (RequireUser must already apply).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/members", httpx.Handle(h.listMembers))
 	blocks.API{DB: h.DB, Events: h.Events, Limit: h.BlockLimit}.Mount(r)
 	h.reports().Mount(r)
-	h.mountSaved(r)
+	h.saved().Mount(r)
 	h.DMs().Mount(r)
 	h.mountTalks(r)
 	h.forum().Mount(r)

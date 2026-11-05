@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/reports"
+	"github.com/msch128/mnema-talk/internal/chat/saved"
 	"github.com/msch128/mnema-talk/internal/chat/search"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -39,7 +40,7 @@ func TestPageCursorOfADeletedRowIsNotFound(t *testing.T) {
 	requireStatus(t, err, http.StatusNotFound)
 	_, _, err = search.Mentions(ctx, f.p, InboxQuery{User: f.u.ID, Before: &gone, Limit: 5})
 	requireStatus(t, err, http.StatusNotFound)
-	_, err = ListSaved(ctx, f.p, f.u.ID, nil, &gone, 5)
+	_, err = saved.ListSaved(ctx, f.p, f.u.ID, nil, &gone, 5)
 	requireStatus(t, err, http.StatusNotFound)
 	_, err = forum.ListForumPostsFiltered(ctx, f.p, f.c.ID, forum.PostFilter{Sort: "newest"}, HistoryQuery{Limit: 5, Before: &gone})
 	requireStatus(t, err, http.StatusNotFound)
@@ -52,17 +53,17 @@ func TestPageCursorOfADeletedRowIsNotFound(t *testing.T) {
 	if _, _, err := search.Search(ctx, f.p, SearchQuery{Text: "hello", Before: &f.m, Limit: 5}); err != nil {
 		t.Fatalf("search with a live cursor: %v", err)
 	}
-	if _, err := SaveMessage(ctx, f.p, f.u.ID, f.m, nil); err != nil {
+	if _, err := saved.SaveMessage(ctx, f.p, f.u.ID, f.m, nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ListSaved(ctx, f.p, f.u.ID, nil, &f.m, 5); err != nil {
+	if _, err := saved.ListSaved(ctx, f.p, f.u.ID, nil, &f.m, 5); err != nil {
 		t.Fatalf("saved list with a live cursor: %v", err)
 	}
 	// Unsaving the cursor entry makes it gone for the saved list.
 	if _, err := f.p.Exec(ctx, `DELETE FROM saved_messages WHERE user_id = $1`, f.u.ID); err != nil {
 		t.Fatal(err)
 	}
-	_, err = ListSaved(ctx, f.p, f.u.ID, nil, &f.m, 5)
+	_, err = saved.ListSaved(ctx, f.p, f.u.ID, nil, &f.m, 5)
 	requireStatus(t, err, http.StatusNotFound)
 }
 

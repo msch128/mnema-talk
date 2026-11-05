@@ -9,6 +9,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/chat/reports"
+	"github.com/msch128/mnema-talk/internal/chat/saved"
 	"github.com/msch128/mnema-talk/internal/chat/search"
 )
 
@@ -123,6 +124,8 @@ const MaxPostTags = core.MaxPostTags
 const MaxPostTitleLen = core.MaxPostTitleLen
 const MaxReactionsPerUser = messages.MaxReactionsPerUser
 const MaxReportNote = reports.MaxReportNote
+const MaxSavedNoteLen = saved.MaxSavedNoteLen
+const MaxSavedPerMember = saved.MaxSavedPerMember
 const MaxSlowModeSeconds = core.MaxSlowModeSeconds
 const MaxSlugLength = channels.MaxSlugLength
 const MaxSortOrder = channels.MaxSortOrder
@@ -213,6 +216,13 @@ type ReportsPage = reports.ReportsPage
 const ReportsPerHour = reports.ReportsPerHour
 
 type ResolveReportRequest = reports.ResolveReportRequest
+type SaveRequest = saved.SaveRequest
+
+const SavedChangesPerMinute = saved.SavedChangesPerMinute
+
+type SavedMessage = saved.SavedMessage
+type SavedPage = saved.SavedPage
+type SavedUpdated = saved.SavedUpdated
 type SearchQuery = search.SearchQuery
 type SearchResult = search.SearchResult
 type SearchRoot = search.SearchRoot

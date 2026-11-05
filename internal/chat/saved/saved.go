@@ -1,4 +1,4 @@
-package chat
+package saved
 
 import (
 	"context"
@@ -43,8 +43,8 @@ type SavedMessage struct {
 	SavedAt time.Time `json:"saved_at" format:"date-time"`
 	// Available is false when the caller may no longer see the message; then
 	// Message is absent and nothing but the id and the note is sent.
-	Available bool     `json:"available"`
-	Message   *Message `json:"message,omitempty" binding:"optional"`
+	Available bool          `json:"available"`
+	Message   *core.Message `json:"message,omitempty" binding:"optional"`
 }
 
 // SavedPage is one page of the saved list, newest first.
@@ -67,14 +67,14 @@ type SaveRequest struct {
 	Note *string `json:"note" binding:"optional" maxLength:"200" extensions:"x-nullable"`
 }
 
-func (h *Handler) mountSaved(r chi.Router) {
-	r.Get("/me/saved", httpx.Handle(h.listSaved))
+func (a *API) Mount(r chi.Router) {
+	r.Get("/me/saved", httpx.Handle(a.listSaved))
 	changes := r
-	if h.SavedLimit != nil {
-		changes = r.With(h.SavedLimit.By(auth.UserKey))
+	if a.SavedLimit != nil {
+		changes = r.With(a.SavedLimit.By(auth.UserKey))
 	}
-	changes.Put("/me/saved/{messageID}", httpx.Handle(h.saveMessage))
-	changes.Delete("/me/saved/{messageID}", httpx.Handle(h.unsaveMessage))
+	changes.Put("/me/saved/{messageID}", httpx.Handle(a.saveMessage))
+	changes.Delete("/me/saved/{messageID}", httpx.Handle(a.unsaveMessage))
 }
 
 type savedRow struct {
@@ -127,7 +127,7 @@ func ListSaved(ctx context.Context, p *db.Pool, user uuid.UUID, visible []uuid.U
 }
 
 // savedMessages loads the messages of saved that the user may see.
-func savedMessages(ctx context.Context, p *db.Pool, user uuid.UUID, saved []savedRow, visible []uuid.UUID) (map[uuid.UUID]*Message, error) {
+func savedMessages(ctx context.Context, p *db.Pool, user uuid.UUID, saved []savedRow, visible []uuid.UUID) (map[uuid.UUID]*core.Message, error) {
 	ids := make([]uuid.UUID, len(saved))
 	for i, s := range saved {
 		ids[i] = s.id
@@ -141,7 +141,7 @@ func savedMessages(ctx context.Context, p *db.Pool, user uuid.UUID, saved []save
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[uuid.UUID]*Message, len(msgs))
+	out := make(map[uuid.UUID]*core.Message, len(msgs))
 	for i := range msgs {
 		out[msgs[i].ID] = &msgs[i]
 	}
@@ -185,7 +185,7 @@ func SaveMessage(ctx context.Context, p *db.Pool, user, messageID uuid.UUID, not
 // @Security cookieAuth
 // @Param limit query int false "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 100." minimum(1) maximum(100) default(50)
 // @Param before query string false "Page back: only entries older than this saved message." Format(uuid)
-// @Success 200 {object} SavedPage "One page of the saved list."
+// @Success 200 {object} saved.SavedPage "One page of the saved list."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
@@ -193,16 +193,16 @@ func SaveMessage(ctx context.Context, p *db.Pool, user, messageID uuid.UUID, not
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/me/saved [get]
-func (h *Handler) listSaved(w http.ResponseWriter, r *http.Request) error {
+func (a *API) listSaved(w http.ResponseWriter, r *http.Request) error {
 	var before *uuid.UUID
 	if _, err := messages.QueryIDs(r, "a message id", map[string]**uuid.UUID{"before": &before}); err != nil {
 		return err
 	}
-	visible, err := h.viewableChannels(r)
+	visible, err := a.Guard.ViewableChannels(r)
 	if err != nil {
 		return err
 	}
-	page, err := ListSaved(r.Context(), h.DB, auth.UserFrom(r.Context()).ID, visible, before, httpx.QueryLimit(r, "limit", 50, 100))
+	page, err := ListSaved(r.Context(), a.DB, auth.UserFrom(r.Context()).ID, visible, before, httpx.QueryLimit(r, "limit", 50, 100))
 	if err != nil {
 		return err
 	}
@@ -220,8 +220,8 @@ func (h *Handler) listSaved(w http.ResponseWriter, r *http.Request) error {
 // @Produce json
 // @Security cookieAuth
 // @Param messageID path string true "Message ID." Format(uuid)
-// @Param request body SaveRequest false "Optional note."
-// @Success 200 {object} SavedMessage "The saved entry."
+// @Param request body saved.SaveRequest false "Optional note."
+// @Success 200 {object} saved.SavedMessage "The saved entry."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
@@ -230,7 +230,7 @@ func (h *Handler) listSaved(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/me/saved/{messageID} [put]
-func (h *Handler) saveMessage(w http.ResponseWriter, r *http.Request) error {
+func (a *API) saveMessage(w http.ResponseWriter, r *http.Request) error {
 	msgID, err := httpx.PathUUID(r, "messageID")
 	if err != nil {
 		return err
@@ -246,23 +246,23 @@ func (h *Handler) saveMessage(w http.ResponseWriter, r *http.Request) error {
 		}
 		req.Note = &note
 	}
-	ref, err := core.LoadMessageRef(r.Context(), h.DB, msgID)
+	ref, err := core.LoadMessageRef(r.Context(), a.DB, msgID)
 	if err != nil {
 		return err
 	}
-	if err := h.require(r, ref.ChannelID, perm.ViewChannel); err != nil {
+	if err := a.Guard.Require(r, ref.ChannelID, perm.ViewChannel); err != nil {
 		return core.NotFoundUnlessFailure(err)
 	}
 	me := auth.UserFrom(r.Context()).ID
-	entry, err := SaveMessage(r.Context(), h.DB, me, msgID, req.Note)
+	entry, err := SaveMessage(r.Context(), a.DB, me, msgID, req.Note)
 	if err != nil {
 		return err
 	}
-	if entry.Message, err = messages.GetMessage(r.Context(), h.DB, msgID); err != nil {
+	if entry.Message, err = messages.GetMessage(r.Context(), a.DB, msgID); err != nil {
 		return err
 	}
 	entry.Available = true
-	h.sendSaved(me, msgID, true)
+	a.sendSaved(me, msgID, true)
 	httpx.WriteJSON(w, http.StatusOK, entry)
 	return nil
 }
@@ -283,18 +283,18 @@ func (h *Handler) saveMessage(w http.ResponseWriter, r *http.Request) error {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/me/saved/{messageID} [delete]
-func (h *Handler) unsaveMessage(w http.ResponseWriter, r *http.Request) error {
+func (a *API) unsaveMessage(w http.ResponseWriter, r *http.Request) error {
 	msgID, err := httpx.PathUUID(r, "messageID")
 	if err != nil {
 		return err
 	}
 	me := auth.UserFrom(r.Context()).ID
-	removed, err := RemoveSaved(r.Context(), h.DB, me, msgID)
+	removed, err := RemoveSaved(r.Context(), a.DB, me, msgID)
 	if err != nil {
 		return err
 	}
 	if removed {
-		h.sendSaved(me, msgID, false)
+		a.sendSaved(me, msgID, false)
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
@@ -311,8 +311,8 @@ func RemoveSaved(ctx context.Context, q db.Querier, user, messageID uuid.UUID) (
 	return tag.RowsAffected() == 1, nil
 }
 
-func (h *Handler) sendSaved(user, msgID uuid.UUID, saved bool) {
-	if h.Events != nil {
-		h.Events.SendToUsers([]uuid.UUID{user}, events.SavedUpdated, SavedUpdated{MessageID: msgID, Saved: saved})
+func (a *API) sendSaved(user, msgID uuid.UUID, saved bool) {
+	if a.Events != nil {
+		a.Events.SendToUsers([]uuid.UUID{user}, events.SavedUpdated, SavedUpdated{MessageID: msgID, Saved: saved})
 	}
 }
