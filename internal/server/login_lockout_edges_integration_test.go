@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 )
 
 func TestLoginLockoutEdges(t *testing.T) {
@@ -17,7 +18,7 @@ func TestLoginLockoutEdges(t *testing.T) {
 		t.Fatalf("bad id: %d", res.status)
 	}
 
-	h := auth.NewHandler(&auth.Sessions{DB: a.db}, a.events)
+	h := authn.NewHandler(&auth.Sessions{DB: a.db}, a.events)
 	ctx := context.Background()
 
 	// A queued request for an account that no longer exists still applies.
@@ -34,12 +35,12 @@ func TestLoginLockoutEdges(t *testing.T) {
 	if _, err := h.ProcessUnlockRequests(cancelled); err == nil {
 		t.Fatal("process ignored the cancelled context")
 	}
-	if _, err := auth.RequestUnlock(cancelled, a.db, "x", false); err == nil {
+	if _, err := authn.RequestUnlock(cancelled, a.db, "x", false); err == nil {
 		t.Fatal("request ignored the cancelled context")
 	}
-	if _, err := auth.RequestUnlock(cancelled, a.db, "", true); err == nil {
+	if _, err := authn.RequestUnlock(cancelled, a.db, "", true); err == nil {
 		t.Fatal("request --all ignored the cancelled context")
 	}
 	// The worker stops with its context.
-	h.RunUnlockWorker(cancelled, auth.UnlockPollInterval)
+	h.RunUnlockWorker(cancelled, authn.UnlockPollInterval)
 }

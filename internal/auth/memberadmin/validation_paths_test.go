@@ -10,13 +10,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
 const secret = "0123456789abcdef0123456789abcdef"
 
 func TestMemberAdminHandlersRejectMalformedJSON(t *testing.T) {
-	h := New(auth.NewHandler(&auth.Sessions{Secret: secret}, nil))
+	h := New(authn.NewHandler(&auth.Sessions{Secret: secret}, nil))
 	u := &auth.User{ID: uuid.New()}
 	for name, handler := range map[string]httpx.HandlerFunc{
 		"invite": h.createInvite, "admin password": h.setUserPassword,
@@ -37,7 +38,7 @@ func TestMemberAdminHandlersRejectMalformedJSON(t *testing.T) {
 }
 
 func TestMemberAdminHandlersRejectMalformedIDs(t *testing.T) {
-	h := New(auth.NewHandler(&auth.Sessions{}, nil))
+	h := New(authn.NewHandler(&auth.Sessions{}, nil))
 	for name, handler := range map[string]httpx.HandlerFunc{
 		"delete invite": h.deleteInvite, "disable": h.disableUser,
 		"enable": h.enableUser, "revoke": h.revokeUserSessions, "reset": h.resetUserPassword,

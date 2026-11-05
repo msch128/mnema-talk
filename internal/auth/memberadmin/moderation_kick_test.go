@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -25,20 +26,20 @@ func requestAs(u *auth.User) *http.Request {
 func TestRequirePermissionAdmitsOnlyWhoHoldsIt(t *testing.T) {
 	owner := &auth.User{ID: uuid.New(), Role: auth.RoleAdmin}
 	member := &auth.User{ID: uuid.New(), Role: auth.RoleUser}
-	if err := New(&auth.Handler{}).RequirePermission(requestAs(nil), perm.KickMembers); err == nil {
+	if err := New(&authn.Handler{}).RequirePermission(requestAs(nil), perm.KickMembers); err == nil {
 		t.Error("no session passed")
 	}
 	// Without a permission service only the Owner passes.
-	if err := New(&auth.Handler{}).RequirePermission(requestAs(owner), perm.KickMembers); err != nil {
+	if err := New(&authn.Handler{}).RequirePermission(requestAs(owner), perm.KickMembers); err != nil {
 		t.Errorf("Owner: %v", err)
 	}
-	if err := New(&auth.Handler{}).RequirePermission(requestAs(member), perm.KickMembers); err == nil {
+	if err := New(&authn.Handler{}).RequirePermission(requestAs(member), perm.KickMembers); err == nil {
 		t.Error("member passed without a permission service")
 	}
 	f := permtest.NewFixture()
 	holder := uuid.New()
 	f.Assign(holder, f.Role(1, perm.KickMembers))
-	h := New(&auth.Handler{Perms: f.Service()})
+	h := New(&authn.Handler{Perms: f.Service()})
 	if err := h.RequirePermission(requestAs(&auth.User{ID: holder, Role: auth.RoleUser}), perm.KickMembers); err != nil {
 		t.Errorf("holder: %v", err)
 	}
@@ -49,7 +50,7 @@ func TestRequirePermissionAdmitsOnlyWhoHoldsIt(t *testing.T) {
 }
 
 func TestRequirePermissionSanitizesAnUnreadablePermissionState(t *testing.T) {
-	h := New(&auth.Handler{Perms: permtest.Unloadable()})
+	h := New(&authn.Handler{Perms: permtest.Unloadable()})
 	err := h.RequirePermission(requestAs(&auth.User{ID: uuid.New(), Role: auth.RoleUser}), perm.KickMembers)
 	apiErr, ok := httpx.AsAPIError(err)
 	if !ok || apiErr.Status != http.StatusInternalServerError {

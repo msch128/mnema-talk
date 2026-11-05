@@ -62,7 +62,7 @@ mnema-talk/
 │   ├── config/              # Environment configuration loading + validation
 │   ├── db/                  # pgx pool, embedded versioned migrations (db/migrations/*.sql)
 │   ├── httpx/               # Middleware: security headers, CSRF origin check, rate limits, client IP
-│   ├── auth/                # Password hashing, sessions (token_version), sign-in, permission guards; memberadmin/ holds the member-admin routes (bans, kick, user admin, invites), account/ the data export and erasure, mailtext/ the account mail texts
+│   ├── auth/                # Password hashing, sessions (token_version), sign-in kernel (users, sessions, tokens, stores); authn/ holds the sign-in handlers, two-factor and e-mail flows, memberadmin/ holds the member-admin routes (bans, kick, user admin, invites), account/ the data export and erasure, mailtext/ the account mail texts
 │   ├── perm/                # Roles and permissions: bits, resolver (Snapshot), cache, hierarchy rules, role/overwrite store
 │   ├── roles/               # HTTP API for roles, member roles and channel overwrites; GET /api/permissions
 │   ├── webhook/             # Incoming (Discord execute format) and outgoing (signed, durable queue) webhooks
@@ -84,7 +84,7 @@ mnema-talk/
 │   ├── media/               # Uploads (MIME sniffing), authenticated media serving, retention
 │   ├── s3/                  # S3 client
 │   ├── events/              # Event types / publishing to the hub
-│   ├── ws/                  # Real-time WebSocket hub (events, presence)
+│   ├── ws/                  # Real-time WebSocket hub (events, presence); mediaframe/ checks the media-key handshake framing
 │   ├── bot/                 # Bot accounts, tokens, bot API authentication, slash commands (doc/bots.md)
 │   ├── slash/               # Built-in slash commands: the registry and the Builtin interface (doc/bots.md)
 │   ├── slashcmd/            # The built-ins besides /poll: /me, /shrug, /tableflip, /unflip, /spoiler, /nick, /thread, /msg, /timeout, /ban, /kick
@@ -152,7 +152,7 @@ mnema-talk/
 
    **Size and complexity limits (Go)**: production `.go` files max 400 lines, `_test.go` files max 800, functions max 80 lines and cognitive complexity 15 (gocognit). Generated files (`Code generated ... DO NOT EDIT`) are exempt. File and function length are enforced by `internal/repo/limits_test.go`, complexity by `make complexity-check` (part of `make lint` and CI). Both keep a shrinking allowlist of old offenders: never add entries or raise a limit, refactor instead.
 
-   **Package size and layers (Go)**: a package has at most 30 production `.go` files (`TestPackagesStayWithinFileCount` in `internal/repo/limits_test.go`; its allowlist only shrinks). When a package outgrows that, split it by domain, not by file type: one sub-package per sub-domain with its own small `API` struct (see `internal/chat/blocks`), shared types in a low `core` package, and consumer-defined interfaces instead of importing a sibling. `internal/chat` is layered (`internal/repo/boundaries_test.go` holds the allowed-import table: a lower layer never imports a higher one and siblings never import each other; `internal/auth` has its table for the later split). A new sub-package must be added to that table in the same PR.
+   **Package size and layers (Go)**: a package has at most 30 production `.go` files (`TestPackagesStayWithinFileCount` in `internal/repo/limits_test.go`; its allowlist only shrinks). When a package outgrows that, split it by domain, not by file type: one sub-package per sub-domain with its own small `API` struct (see `internal/chat/blocks`), shared types in a low `core` package, and consumer-defined interfaces instead of importing a sibling. `internal/chat` and `internal/auth` are layered (`internal/repo/boundaries_test.go` holds the allowed-import table: a lower layer never imports a higher one and siblings never import each other). A new sub-package must be added to that table in the same PR.
 
    **Size and complexity limits (TypeScript)**: the same numbers. Production `.ts`/`.vue` files in `web/src` max 400 lines, `*.test.ts`, `*.fixture.ts` and e2e specs max 800, functions max 80 lines (raw span, blanks and comments count, like the Go check) and cognitive complexity 15 (`eslint-plugin-sonarjs`). All enforced by ESLint (`web/eslint.config.ts`, part of `npm run lint` and CI; Vue SFC script blocks included; generated `types/rest.ts` and `third_party/` are exempt). There is no allowlist: never add an exemption or raise a limit, refactor instead.
    README screenshots (`doc/images/`) come from invented demo data only; regenerate them with `scripts/screenshots/run.sh` when the UI changes visibly, never from a real instance.

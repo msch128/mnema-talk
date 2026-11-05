@@ -20,12 +20,12 @@ import (
 //   - recoveryFailuresPerDay: failed recovery codes, a separate and much higher
 //     budget: a recovery code has about 59 bits, so guessing is infeasible, and
 //     the limit exists to bound the work, not to lock the owner out.
-//   - noticeAfter: this many failures not yet reported make the next
+//   - NoticeAfter: this many failures not yet reported make the next
 //     successful sign-in show a security notice, and send one e-mail.
 const (
 	totpFailuresPerDay     = 20
 	recoveryFailuresPerDay = 100
-	noticeAfter            = 5
+	NoticeAfter            = 5
 	failureWindow          = 24 * time.Hour
 	failureKeep            = 30 * 24 * time.Hour
 )
@@ -86,37 +86,21 @@ func (s *Sessions) noteFailure(ctx context.Context, q db.Querier, id uuid.UUID, 
 	return n, err
 }
 
-// takeNotice marks every unreported failure as reported and returns the notice
-// to show, or nil when fewer than noticeAfter had piled up.
-func (s *Sessions) takeNotice(ctx context.Context, q db.Querier, id uuid.UUID) (*SecurityNotice, error) {
+// TakeNotice marks every unreported failure as reported and returns the notice
+// to show, or nil when fewer than NoticeAfter had piled up.
+func (s *Sessions) TakeNotice(ctx context.Context, q db.Querier, id uuid.UUID) (*SecurityNotice, error) {
 	var n int
 	err := q.QueryRow(ctx, `WITH marked AS (UPDATE second_factor_failures SET noticed = TRUE
 		WHERE user_id = $1 AND NOT noticed RETURNING 1) SELECT COUNT(*) FROM marked`, id).Scan(&n)
-	if err != nil || n < noticeAfter {
+	if err != nil || n < NoticeAfter {
 		return nil, err
 	}
 	return &SecurityNotice{FailedAttempts: n}, nil
 }
 
-// raiseAlert audits the failure streak and, when the account has a confirmed
-// address and the server can send mail, tells its owner. It runs once per
-// streak, when the count reaches noticeAfter. Neither the log nor the mail
-// holds a code.
-func (h *Handler) raiseAlert(ctx context.Context, u *User) {
-	h.AuditUser(ctx, u, "auth.two_factor_alert")
-	if !h.mailEnabled() {
-		return
-	}
-	h.background(func(bg context.Context) {
-		st, err := loadEmailState(bg, h.Sessions.DB, u.ID)
-		if err != nil || st.Address == "" || !st.Verified {
-			return
-		}
-		_ = h.sendMail(bg, h.alertMail(bg, st.Address, mailLocale(st.Locale, ""), st.Username))
-	})
-}
-
-func logFailureError(err error) {
+// LogFailureError logs a failure of the second-factor bookkeeping without
+// letting it change the answer to the member.
+func LogFailureError(err error) {
 	if err != nil {
 		slog.Warn("second-factor failure bookkeeping failed", "err", err)
 	}

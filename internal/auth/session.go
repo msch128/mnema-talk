@@ -14,7 +14,8 @@ type contextKey int
 
 const userKey contextKey = iota
 
-var errNoSession = httpx.ErrUnauthorized("authentication required")
+// ErrNoSession is the refusal of a request that carries no valid session.
+var ErrNoSession = httpx.ErrUnauthorized("authentication required")
 
 // Sessions issues and validates the HttpOnly session cookie. The token never
 // touches JavaScript, so an XSS bug cannot exfiltrate it.

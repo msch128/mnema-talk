@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/auth/authn"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/userdata"
 )
@@ -18,7 +19,7 @@ import (
 // other collaborators after construction, and the embedded pointer always sees
 // the current values.
 type API struct {
-	*auth.Handler
+	*authn.Handler
 	// personal is the other domains' export files and erasure statements.
 	personal *userdata.Registry
 	// exportSlots bounds the exports built at once.
@@ -28,7 +29,7 @@ type API struct {
 }
 
 // New returns the account routes of h.
-func New(h *auth.Handler) *API {
+func New(h *authn.Handler) *API {
 	return &API{
 		Handler:         h,
 		exportSlots:     make(chan struct{}, exportSlots),

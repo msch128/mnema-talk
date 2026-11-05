@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/communityevents/recurrence"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -35,7 +36,7 @@ func (h *Handler) createOrStartSeries(r *http.Request, req CreateEventRequest, u
 		return h.Store.Create(r.Context(), req, userID)
 	}
 	rec := *req.Recurrence
-	if !ValidFrequency(rec.Frequency) {
+	if !recurrence.ValidFrequency(rec.Frequency) {
 		return nil, httpx.ErrInvalidInput("frequency must be weekly, biweekly or monthly")
 	}
 	if rec.Until != nil && !rec.Until.After(req.StartTime) {

@@ -41,7 +41,7 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 		return nil, err
 	}
 
-	hash, err := hashPasswordCtx(ctx, password)
+	hash, err := HashPasswordCtx(ctx, password)
 	if errors.Is(err, ErrServerBusy) || (err != nil && ctx.Err() != nil) {
 		return nil, err
 	}
@@ -133,10 +133,10 @@ func insertInvitedUser(ctx context.Context, tx pgx.Tx, username, displayName, ha
 		return nil, ErrUsernameTaken
 	}
 
-	user, err := scanUser(tx.QueryRow(ctx, `
+	user, err := ScanUser(tx.QueryRow(ctx, `
 		INSERT INTO users (username, display_name, password_hash, role, invite_id)
 		VALUES ($1, $2, $3, 'user', $4)
-		RETURNING `+userColumns, username, displayName, hash, inviteID))
+		RETURNING `+UserColumns, username, displayName, hash, inviteID))
 	if err != nil {
 		// Also covers a concurrent sign-up racing past the check above,
 		// whichever unique index on the username catches it.
@@ -194,7 +194,7 @@ func ChangePassword(ctx context.Context, p *db.Pool, userID uuid.UUID, current, 
 			WHERE id = $2 RETURNING token_version`, newHash, userID).Scan(&tv); err != nil {
 			return err
 		}
-		return dropTokens(ctx, tx, userID, purposePasswordReset)
+		return DropTokens(ctx, tx, userID, PurposePasswordReset)
 	})
 	return tv, err
 }
@@ -206,7 +206,7 @@ func RevokeSessions(ctx context.Context, p db.Querier, userID uuid.UUID) error {
 			UPDATE users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1
 		)
 		UPDATE account_tokens SET used_at = NOW()
-		WHERE user_id = $1 AND purpose = $2 AND used_at IS NULL`, userID, purposePasswordReset)
+		WHERE user_id = $1 AND purpose = $2 AND used_at IS NULL`, userID, PurposePasswordReset)
 	return err
 }
 
@@ -220,11 +220,11 @@ func UpdateProfile(ctx context.Context, p *db.Pool, userID uuid.UUID, displayNam
 	if err != nil {
 		return nil, err
 	}
-	return scanUser(p.QueryRow(ctx, `
+	return ScanUser(p.QueryRow(ctx, `
 		UPDATE users
 		SET display_name = CASE WHEN $1 = '' THEN LEFT(username, 24) ELSE $1 END, bio = $2, updated_at = NOW()
 		WHERE id = $3
-		RETURNING `+userColumns, displayName, bio, userID))
+		RETURNING `+UserColumns, displayName, bio, userID))
 }
 
 // UpdateDisplayName changes only the display name; the bio and everything else
@@ -234,11 +234,11 @@ func UpdateDisplayName(ctx context.Context, p *db.Pool, userID uuid.UUID, displa
 	if err != nil {
 		return nil, err
 	}
-	u, err := scanUser(p.QueryRow(ctx, `
+	u, err := ScanUser(p.QueryRow(ctx, `
 		UPDATE users
 		SET display_name = CASE WHEN $1 = '' THEN LEFT(username, 24) ELSE $1 END, updated_at = NOW()
 		WHERE id = $2
-		RETURNING `+userColumns, displayName, userID))
+		RETURNING `+UserColumns, displayName, userID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("user not found")
 	}
@@ -255,9 +255,9 @@ func SetPresence(ctx context.Context, p *db.Pool, userID uuid.UUID, presence str
 	if !ValidPresence(presence) {
 		return nil, httpx.ErrInvalidInput("presence must be online, away, dnd or focus")
 	}
-	u, err := scanUser(p.QueryRow(ctx, `
+	u, err := ScanUser(p.QueryRow(ctx, `
 		UPDATE users SET presence = $1, updated_at = NOW() WHERE id = $2
-		RETURNING `+userColumns, presence, userID))
+		RETURNING `+UserColumns, presence, userID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("user not found")
 	}
@@ -295,9 +295,9 @@ func SetStatusText(ctx context.Context, p db.Querier, userID uuid.UUID, text str
 	if err != nil {
 		return nil, err
 	}
-	u, err := scanUser(p.QueryRow(ctx, `
+	u, err := ScanUser(p.QueryRow(ctx, `
 		UPDATE users SET status_text = $1, status_expires_at = $3, updated_at = NOW() WHERE id = $2
-		RETURNING `+userColumns, text, userID, expiresAt))
+		RETURNING `+UserColumns, text, userID, expiresAt))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("user not found")
 	}

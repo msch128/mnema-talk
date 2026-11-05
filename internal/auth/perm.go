@@ -68,7 +68,7 @@ func guard(svc *perm.Service, ok func(perm.Set) error) func(http.Handler) http.H
 // sanitized, so every caller reports it the same way.
 func CheckGlobal(ctx context.Context, svc *perm.Service, u *User, ok func(perm.Set) error) error {
 	if u == nil {
-		return errNoSession
+		return ErrNoSession
 	}
 	if svc == nil {
 		if !u.IsAdmin() {

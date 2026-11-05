@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -40,16 +39,18 @@ func (s *Sessions) deviceKey() []byte {
 	return m.Sum(nil)
 }
 
-func (s *Sessions) deviceMAC(account string, uid uuid.UUID, gen int, exp int64) string {
+// DeviceMAC signs a known-device cookie value for account (the tests forge
+// cookies with it).
+func (s *Sessions) DeviceMAC(account string, uid uuid.UUID, gen int, exp int64) string {
 	m := hmac.New(sha256.New, s.deviceKey())
 	m.Write([]byte(knownDeviceContext + account + "|" + uid.String() + "|" + strconv.Itoa(gen) + "|" + strconv.FormatInt(exp, 10)))
 	return base64.RawURLEncoding.EncodeToString(m.Sum(nil))
 }
 
-// deviceClaims returns the user id and generation (the user's token_version at
+// DeviceClaims returns the user id and generation (the user's token_version at
 // issue time) of a valid, unexpired known-device cookie for account. Whether
 // they are still current is checked against the database by isKnownDevice.
-func (s *Sessions) deviceClaims(r *http.Request, account string) (uuid.UUID, int, bool) {
+func (s *Sessions) DeviceClaims(r *http.Request, account string) (uuid.UUID, int, bool) {
 	c, err := r.Cookie(s.deviceCookieName(account))
 	if err != nil {
 		return uuid.Nil, 0, false
@@ -70,7 +71,7 @@ func (s *Sessions) deviceClaims(r *http.Request, account string) (uuid.UUID, int
 	if err != nil || time.Now().Unix() > exp {
 		return uuid.Nil, 0, false
 	}
-	if !hmac.Equal([]byte(parts[3]), []byte(s.deviceMAC(account, uid, gen, exp))) {
+	if !hmac.Equal([]byte(parts[3]), []byte(s.DeviceMAC(account, uid, gen, exp))) {
 		return uuid.Nil, 0, false
 	}
 	return uid, gen, true
@@ -80,40 +81,16 @@ func (s *Sessions) deviceClaims(r *http.Request, account string) (uuid.UUID, int
 // and the user's current token_version: a password change or reset, "log out
 // everywhere", an administrator revoking sessions and disabling the account
 // all bump it, which retires every device cookie issued before.
-func (s *Sessions) markDevice(w http.ResponseWriter, account string, uid uuid.UUID, gen int) {
+func (s *Sessions) MarkDevice(w http.ResponseWriter, account string, uid uuid.UUID, gen int) {
 	exp := time.Now().Add(knownDeviceTTL).Unix()
 	http.SetCookie(w, &http.Cookie{
 		Name: s.deviceCookieName(account),
 		Value: uid.String() + "." + strconv.Itoa(gen) + "." + strconv.FormatInt(exp, 10) +
-			"." + s.deviceMAC(account, uid, gen, exp),
+			"." + s.DeviceMAC(account, uid, gen, exp),
 		Path:     "/api/auth",
 		HttpOnly: true,
 		Secure:   s.Secure,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(knownDeviceTTL.Seconds()),
 	})
-}
-
-// accountGeneration loads the id and token_version of an enabled account.
-func (h *Handler) accountGeneration(ctx context.Context, account string) (uuid.UUID, int, error) {
-	if h.generation != nil {
-		return h.generation(ctx, account)
-	}
-	var id uuid.UUID
-	var gen int
-	err := h.Sessions.DB.QueryRow(ctx, `SELECT id, token_version FROM users
-		WHERE LOWER(username) = $1 AND `+ActiveSQL("")+` AND NOT is_bot`, account).Scan(&id, &gen)
-	return id, gen, err
-}
-
-// isKnownDevice reports whether r carries a known-device cookie that is still
-// valid for account: signed, unexpired, issued to this user and not retired by
-// a later password change, reset, revocation or disabling.
-func (h *Handler) isKnownDevice(r *http.Request, account string) bool {
-	uid, gen, ok := h.Sessions.deviceClaims(r, account)
-	if !ok {
-		return false
-	}
-	id, current, err := h.accountGeneration(r.Context(), account)
-	return err == nil && id == uid && current == gen
 }

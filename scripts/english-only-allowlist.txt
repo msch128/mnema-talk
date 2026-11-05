@@ -58,7 +58,7 @@ path: web/src/lib/errorDetails.test.ts | asserts German UI output
 path: web/src/lib/rtcStats.test.ts | asserts German UI output
 path: web/src/stores/stores.test.ts | asserts German UI output
 path: web/src/stores/toast.test.ts | asserts German UI output
-path: internal/auth/mail_locale_test.go | asserts the German mail texts
+path: internal/auth/authn/mail_locale_test.go | asserts the German mail texts
 path: internal/push/payload_test.go | asserts the German push texts
 path: internal/server/account_email_edges_integration_test.go | asserts the German mail subjects
 

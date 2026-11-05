@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.9.11](https://github.com/msch128/mnema-talk/compare/v2.9.10...v2.9.11) (2026-11-05)
+
+
+### Code Refactoring
+
+* drop the chat compatibility aliases and name the API handler methods distinctly ([95748c9](https://github.com/msch128/mnema-talk/commit/95748c910e56c8e88e8838dc0fb9b5227433c384))
+* drop the chat Handler's one-line permission wrappers only tests called ([95748c9](https://github.com/msch128/mnema-talk/commit/95748c910e56c8e88e8838dc0fb9b5227433c384))
+* move categories, channels, layout, slugs and auto-delete into chat/channels ([4240060](https://github.com/msch128/mnema-talk/commit/424006070da5e5e03668183b97fa47058073ad59))
+* move Create-a-Talk (lobbies, temporary Talks, invitations) into chat/talks ([95748c9](https://github.com/msch128/mnema-talk/commit/95748c910e56c8e88e8838dc0fb9b5227433c384))
+* move direct messages into chat/dm ([4240060](https://github.com/msch128/mnema-talk/commit/424006070da5e5e03668183b97fa47058073ad59))
+* move forum channels (posts, tags, settings) into chat/forum ([31121ae](https://github.com/msch128/mnema-talk/commit/31121aee2d821cd004e36830cca489d2e4fd7f36))
+* move message reports into chat/reports ([31121ae](https://github.com/msch128/mnema-talk/commit/31121aee2d821cd004e36830cca489d2e4fd7f36))
+* move messages, pins, reactions, threads and the posting pipeline into chat/messages ([4240060](https://github.com/msch128/mnema-talk/commit/424006070da5e5e03668183b97fa47058073ad59))
+* move read markers and notification settings into chat/readstate ([4240060](https://github.com/msch128/mnema-talk/commit/424006070da5e5e03668183b97fa47058073ad59))
+* move saved messages into chat/saved ([31121ae](https://github.com/msch128/mnema-talk/commit/31121aee2d821cd004e36830cca489d2e4fd7f36))
+* move search and the mentions inbox into chat/search ([31121ae](https://github.com/msch128/mnema-talk/commit/31121aee2d821cd004e36830cca489d2e4fd7f36))
+* move the account data export and erase sections into chat/account ([95748c9](https://github.com/msch128/mnema-talk/commit/95748c910e56c8e88e8838dc0fb9b5227433c384))
+* move the bot REST API handlers into chat/botapi ([95748c9](https://github.com/msch128/mnema-talk/commit/95748c910e56c8e88e8838dc0fb9b5227433c384))
+* move the sign-in handlers into auth/authn and bring auth under the package-size cap ([#724](https://github.com/msch128/mnema-talk/issues/724)) ([ad5062c](https://github.com/msch128/mnema-talk/commit/ad5062c7fce500b05d29db5ef63c380369d3b371))
+
 ## [2.9.10](https://github.com/msch128/mnema-talk/compare/v2.9.9...v2.9.10) (2026-11-05)
 
 

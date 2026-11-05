@@ -14,7 +14,7 @@ import (
 )
 
 // The moderation shortcuts run the same service functions as the admin REST
-// routes (auth.Handler.TimeoutMember, BanMember, KickMember), which enforce the
+// routes (authn.Handler.TimeoutMember, BanMember, KickMember), which enforce the
 // role hierarchy, the Owner's protection and the limits. What the routes get
 // from their middleware is repeated here: the global permission is checked by
 // RequirePermission before anything else, and the audit entry that the route

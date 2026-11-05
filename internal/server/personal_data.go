@@ -3,7 +3,7 @@ package server
 import (
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat/account"
-	"github.com/msch128/mnema-talk/internal/communityevents"
+	"github.com/msch128/mnema-talk/internal/communityevents/accountdata"
 	"github.com/msch128/mnema-talk/internal/discordimport"
 	"github.com/msch128/mnema-talk/internal/emoji"
 	"github.com/msch128/mnema-talk/internal/later"
@@ -19,7 +19,7 @@ func (c *components) wirePersonalData() {
 	r := &userdata.Registry{}
 	account.RegisterAccountData(r)
 	later.RegisterAccountData(r)
-	communityevents.RegisterAccountData(r)
+	accountdata.Register(r)
 	push.RegisterAccountData(r)
 	wiki.RegisterAccountData(r)
 	bot.RegisterAccountData(r)
