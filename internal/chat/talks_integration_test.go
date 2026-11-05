@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -633,11 +634,11 @@ func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
 	}
 	text, _ := CreateChannelWithStage(ctx, w.p, nil, "plain-text", ChannelTypeText, "", 0, false)
 	notDM := `{"conversation_id":"` + text.ID.String() + `"}`
-	if err := h.inviteToTalk(rec(), talkRequest(w.alice, notDM, id)); !errors.Is(err, errChannelNotFound) {
+	if err := h.inviteToTalk(rec(), talkRequest(w.alice, notDM, id)); !errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("a channel is no conversation: %v", err)
 	}
 	// A card for a text channel is refused: only Talks are invitable.
-	if _, err := h.postTalkInvite(ctx, dm, w.alice.ID, text.ID); !errors.Is(err, errChannelNotFound) {
+	if _, err := h.postTalkInvite(ctx, dm, w.alice.ID, text.ID); !errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("invitation to a text channel: %v", err)
 	}
 	// Someone who is not in the conversation cannot invite into it.
@@ -650,7 +651,7 @@ func TestTalkRequestsAreValidatedAndRefusedCalmly(t *testing.T) {
 	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": "nope"})); !invalid(err) {
 		t.Fatalf("bad conversation id: %v", err)
 	}
-	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": text.ID.String()})); !errors.Is(err, errChannelNotFound) {
+	if err := h.startDMTalk(rec(), talkRequest(w.alice, ``, map[string]string{"id": text.ID.String()})); !errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("a channel: %v", err)
 	}
 	if err := h.startDMTalk(rec(), talkRequest(carol, ``, map[string]string{"id": dm.String()})); err == nil {

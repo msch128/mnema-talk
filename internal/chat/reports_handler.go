@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -62,7 +63,7 @@ func (h *Handler) reportMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	ref, err := loadMessageRef(r.Context(), h.DB, msgID)
+	ref, err := core.LoadMessageRef(r.Context(), h.DB, msgID)
 	if err != nil {
 		return err
 	}
@@ -134,7 +135,7 @@ func (h *Handler) listReports(w http.ResponseWriter, r *http.Request) error {
 	}
 	limit := httpx.QueryLimit(r, "limit", 25, 100)
 	if before != nil {
-		if err := cursorExists(r.Context(), h.DB, `SELECT 1 FROM message_reports WHERE id = $1`, *before); err != nil {
+		if err := core.CursorExists(r.Context(), h.DB, `SELECT 1 FROM message_reports WHERE id = $1`, *before); err != nil {
 			return err
 		}
 	}

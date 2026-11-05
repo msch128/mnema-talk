@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -243,7 +244,7 @@ func ValidateReplyTarget(ctx context.Context, p *db.Pool, channelID uuid.UUID, p
 	if replyTo == nil {
 		return nil
 	}
-	ref, err := loadReferencedMessage(ctx, p, *replyTo, "message to reply to not found")
+	ref, err := core.LoadReferencedMessage(ctx, p, *replyTo, "message to reply to not found")
 	if err != nil {
 		return err
 	}
@@ -288,7 +289,7 @@ func GetMessageByNumber(ctx context.Context, p *db.Pool, number int64) (*Message
 		return nil, err
 	}
 	if len(msgs) == 0 {
-		return nil, errMessageNotFound
+		return nil, core.ErrMessageNotFound
 	}
 	return &msgs[0], nil
 }
@@ -300,7 +301,7 @@ func GetMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*Message,
 		return nil, err
 	}
 	if len(msgs) == 0 {
-		return nil, errMessageNotFound
+		return nil, core.ErrMessageNotFound
 	}
 	return &msgs[0], nil
 }
@@ -362,7 +363,7 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 		FROM channels c WHERE c.id = $1
 		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds, nm.ForwardOf, nm.Title, nm.IsLocked).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return uuid.Nil, errChannelNotFound
+		return uuid.Nil, core.ErrChannelNotFound
 	}
 	if isForeignKeyViolation(err) && nm.ParentID != nil {
 		// The thread root was deleted after ValidateParent looked at it.

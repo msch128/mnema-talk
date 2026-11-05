@@ -11,6 +11,10 @@
 //     `security: []` (the document has no root-level security requirement);
 //   - a request body whose schema has required properties (multipart forms)
 //     is marked required;
+//   - the schemas of internal/chat's domain sub-packages (core, messages, ...)
+//     keep the "chat." names they had before the package was split, so the
+//     published document and the generated web types do not depend on how the
+//     Go code is organised;
 //   - the empty externalDocs object and the `uniqueItems: false` noise go.
 //
 // Usage: openapifix <swag output> <target file>
@@ -23,6 +27,7 @@ import (
 	"iter"
 	"maps"
 	"os"
+	"reflect"
 	"slices"
 	"strings"
 )
@@ -71,6 +76,9 @@ func run(in, out string) error {
 		return err
 	}
 	cleanExternalDocs(doc)
+	if err := renameChatSchemas(doc); err != nil {
+		return err
+	}
 	if err := walk(doc); err != nil {
 		return err
 	}
@@ -78,6 +86,64 @@ func run(in, out string) error {
 		fixPaths(paths)
 	}
 	return writeDocument(out, doc)
+}
+
+// chatSubPackages are the Go package names of internal/chat's domain
+// sub-packages (see internal/repo/boundaries_test.go). swag names a schema after
+// its package, but the API calls all of them "chat.X".
+var chatSubPackages = []string{
+	"core", "mentions", "readstate", "messages", "channels", "dm", "search",
+	"reports", "forum", "saved", "talks", "botapi", "account",
+}
+
+// renameChatSchemas gives the schemas of the chat sub-packages the "chat."
+// prefix and points every $ref at the new name. While the sub-packages are
+// introduced, a type that moved can be reached under both names (the old one
+// through a Go alias); the two schemas describe the same Go type, so they must
+// be identical once their references are renamed, and one of them is dropped.
+// Anything else colliding fails the run.
+func renameChatSchemas(doc obj) error {
+	components, _ := doc["components"].(obj)
+	schemas, _ := components["schemas"].(obj)
+	renamed := map[string]string{}
+	for name := range schemas {
+		prefix, rest, ok := strings.Cut(name, ".")
+		if ok && slices.Contains(chatSubPackages, prefix) {
+			renamed[name] = "chat." + rest
+		}
+	}
+	if len(renamed) == 0 {
+		return nil
+	}
+	rewriteRefs(doc, renamed)
+	for from, to := range renamed {
+		if existing, taken := schemas[to]; taken && !reflect.DeepEqual(existing, schemas[from]) {
+			return fmt.Errorf("schema %s collides with a different %s", from, to)
+		}
+		schemas[to] = schemas[from]
+		delete(schemas, from)
+	}
+	return nil
+}
+
+func rewriteRefs(v any, renamed map[string]string) {
+	switch v := v.(type) {
+	case obj:
+		if ref, ok := v["$ref"].(string); ok {
+			if name, found := strings.CutPrefix(ref, "#/components/schemas/"); found {
+				if to, ok := renamed[name]; ok {
+					v["$ref"] = "#/components/schemas/" + to
+				}
+			}
+		}
+		for _, c := range v {
+			rewriteRefs(c, renamed)
+		}
+	case []any:
+		for _, c := range v {
+			rewriteRefs(c, renamed)
+		}
+	}
 }
 
 // readDocument parses swag's output and checks that it is OpenAPI 3.1.

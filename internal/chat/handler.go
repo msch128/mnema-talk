@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -168,7 +169,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/members [get]
 func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
-	members, err := GetAllMembers(r.Context(), h.DB)
+	members, err := core.GetAllMembers(r.Context(), h.DB)
 	if err != nil {
 		return err
 	}

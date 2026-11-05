@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
@@ -26,7 +27,7 @@ func unreadPostsSQL() string {
 		        UNION ALL SELECT c.created_at, c.user_id FROM messages c WHERE c.parent_id = m.id
 		    ) x
 		    WHERE x.user_id <> $2
-		      AND ` + authorHiddenFrom("$2", "x.user_id") + `
+		      AND ` + core.AuthorHiddenFrom("$2", "x.user_id") + `
 		      AND x.created_at > COALESCE(r.last_read_at, me.created_at)
 		) news
 		WHERE m.channel_id = $1 AND m.parent_id IS NULL AND news.at IS NOT NULL

@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 )
@@ -49,7 +50,7 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 	})
 	t.Run("member decoding", func(t *testing.T) {
 		p := chattest.DriftPool(t, f.p, map[string]string{"users": `SELECT id,username,NULL::text display_name,bio,role,avatar_s3_key,status_text,NULL::timestamptz status_expires_at,created_at,voice_seconds,message_count,disabled_at,NULL::timestamptz banned_at,NULL::timestamptz banned_until,NULL::timestamptz deleted_at,is_bot FROM public.users`})
-		_, err := GetAllMembers(ctx, p)
+		_, err := core.GetAllMembers(ctx, p)
 		chattest.RequireError(t, err, "NULL")
 	})
 	t.Run("mention stream", func(t *testing.T) {

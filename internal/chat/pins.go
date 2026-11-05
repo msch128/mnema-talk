@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -171,7 +172,7 @@ func writePin(r *http.Request, tx pgx.Tx, t pinTarget, pinned bool) (bool, error
 	var current bool
 	err := tx.QueryRow(ctx, `SELECT is_pinned FROM messages WHERE id = $1 AND channel_id = $2 FOR NO KEY UPDATE`, t.message, t.channel).Scan(&current)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false, errMessageNotFound
+		return false, core.ErrMessageNotFound
 	}
 	if err != nil {
 		return false, fmt.Errorf("load message: %w", err)

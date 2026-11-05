@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -251,14 +252,14 @@ func TestAnchorLookupFailureIsNotAMissingMessage(t *testing.T) {
 	cancel()
 	q := url.Values{"before": {f.m.String()}}.Encode()
 	r := chattest.Request(f.u, "", nil, q).WithContext(ctx)
-	if _, err := h.parseChannelMessageQuery(r, f.c.ID); err == nil || errors.Is(err, errMessageNotFound) {
+	if _, err := h.parseChannelMessageQuery(r, f.c.ID); err == nil || errors.Is(err, core.ErrMessageNotFound) {
 		t.Fatalf("channel anchor error = %v; want the lookup failure", err)
 	}
-	if _, err := h.parseThreadQuery(r, f.m); err == nil || errors.Is(err, errMessageNotFound) {
+	if _, err := h.parseThreadQuery(r, f.m); err == nil || errors.Is(err, core.ErrMessageNotFound) {
 		t.Fatalf("thread anchor error = %v; want the lookup failure", err)
 	}
 	live := chattest.Request(f.u, "", nil, url.Values{"before": {uuid.NewString()}}.Encode())
-	if _, err := h.parseChannelMessageQuery(live, f.c.ID); !errors.Is(err, errMessageNotFound) {
+	if _, err := h.parseChannelMessageQuery(live, f.c.ID); !errors.Is(err, core.ErrMessageNotFound) {
 		t.Fatalf("unknown anchor error = %v; want not found", err)
 	}
 }

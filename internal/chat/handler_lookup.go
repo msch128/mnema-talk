@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -43,11 +44,11 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	emoji, err := validateReactionRef(req.Emoji)
+	emoji, err := core.ValidateReactionRef(req.Emoji)
 	if err != nil {
 		return err
 	}
-	ref, err := loadMessageRef(r.Context(), h.DB, msgID)
+	ref, err := core.LoadMessageRef(r.Context(), h.DB, msgID)
 	if err != nil {
 		return err
 	}
@@ -56,7 +57,7 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if !p.Has(perm.ViewChannel) {
-		return errMessageNotFound
+		return core.ErrMessageNotFound
 	}
 	// Taking back an own reaction stays possible without the permission.
 	reactions, err := ToggleReactionAs(r.Context(), h.DB, msgID, user.ID, emoji, p.Has(perm.AddReactions))
@@ -79,13 +80,13 @@ func (h *Handler) loadThreadRoot(r *http.Request, msgID uuid.UUID) (*Message, er
 	}
 	// Only a root message has a thread; a reply is not one.
 	if root.ParentID != nil {
-		return nil, errMessageNotFound
+		return nil, core.ErrMessageNotFound
 	}
 	return root, nil
 }
 
 func (h *Handler) parseThreadQuery(r *http.Request, msgID uuid.UUID) (HistoryQuery, error) {
-	return h.parseHistoryQuery(r, []string{"before", "after"}, func(ref *messageRef) bool {
+	return h.parseHistoryQuery(r, []string{"before", "after"}, func(ref *core.MessageRef) bool {
 		return ref.ParentID != nil && *ref.ParentID == msgID
 	})
 }

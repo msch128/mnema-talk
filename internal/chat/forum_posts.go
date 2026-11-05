@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/automod"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -63,7 +64,7 @@ func ListForumPostsFiltered(ctx context.Context, p *db.Pool, channelID uuid.UUID
 		limit = 100
 	}
 
-	if err := messageCursorExists(ctx, p, q.Before); err != nil {
+	if err := core.MessageCursorExists(ctx, p, q.Before); err != nil {
 		return nil, err
 	}
 	whereClause, args, err := postFilterWhere(channelID, f)
@@ -194,7 +195,7 @@ func (pp *PreparedPost) Store(ctx context.Context, userID uuid.UUID) func(tx pgx
 // CreateForumPost creates a root post in channelID with title, message content, and tags.
 // canManage says whether the author holds Manage messages, which moderated tags need.
 func CreateForumPost(ctx context.Context, p *db.Pool, online OnlineSource, channelID, userID uuid.UUID, canManage bool, title, content string, tagIDs []uuid.UUID) (uuid.UUID, error) {
-	validContent, err := ValidateContent(content, false)
+	validContent, err := core.ValidateContent(content, false)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -288,7 +289,7 @@ func getForumPostAuthor(ctx context.Context, q db.Querier, channelID, messageID 
 	}
 	err = q.QueryRow(ctx, query, messageID).Scan(&curChannelID, &authorID, &parentID, &locked)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (curChannelID != channelID || parentID != nil)) {
-		return uuid.Nil, false, errMessageNotFound
+		return uuid.Nil, false, core.ErrMessageNotFound
 	}
 	if err != nil {
 		return uuid.Nil, false, fmt.Errorf("load post: %w", err)

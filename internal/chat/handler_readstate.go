@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -47,7 +48,7 @@ func (h *Handler) channelParam(r *http.Request) (uuid.UUID, error) {
 	if err := h.require(r, chID, perm.ViewChannel); err != nil {
 		return chID, err
 	}
-	if _, err := LoadChannel(r.Context(), h.DB, chID); err != nil {
+	if _, err := core.LoadChannel(r.Context(), h.DB, chID); err != nil {
 		return chID, err
 	}
 	return chID, nil

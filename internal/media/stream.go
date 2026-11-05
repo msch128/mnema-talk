@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -138,7 +139,7 @@ func (f *uploadForm) storeFile(part *multipart.Part) (err error) {
 
 // validateTarget checks the caption and the thread/reply target.
 func (h *Handler) validateTarget(ctx context.Context, chID uuid.UUID, fields map[string]string) (*uploadTarget, error) {
-	content, err := chat.ValidateContent(fields["content"], true)
+	content, err := core.ValidateContent(fields["content"], true)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +172,7 @@ func (h *Handler) prepareUploadPost(ctx context.Context, chID uuid.UUID, t *uplo
 	if t.parentID != nil || t.replyToID != nil {
 		return nil, httpx.ErrInvalidInput("a reply has no title or tags")
 	}
-	ch, err := chat.LoadChannel(ctx, h.DB, chID)
+	ch, err := core.LoadChannel(ctx, h.DB, chID)
 	if err != nil {
 		return nil, err
 	}

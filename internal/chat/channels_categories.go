@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -53,7 +54,7 @@ func DeleteCategoryTx(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID) erro
 	var one int
 	err := tx.QueryRow(ctx, `SELECT 1 FROM categories WHERE id = $1 FOR UPDATE`, categoryID).Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return errCategoryNotFound
+		return core.ErrCategoryNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("lock category: %w", err)
@@ -69,5 +70,3 @@ func DeleteCategoryTx(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID) erro
 	}
 	return nil
 }
-
-var errCategoryNotFound = httpx.ErrNotFound("category not found")

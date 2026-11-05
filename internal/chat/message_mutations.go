@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/automod"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/emojitext"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -41,7 +42,7 @@ func editMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, messageI
 		       EXISTS (SELECT 1 FROM polls WHERE message_id = messages.id), forwarded
 		FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&author, &hasMedia, &isPoll, &forwarded)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return errMessageNotFound
+		return core.ErrMessageNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("load message: %w", err)
@@ -53,7 +54,7 @@ func editMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, messageI
 		return httpx.ErrInvalidInput("a poll cannot be edited; delete it and ask again")
 	}
 	if content == "" && !hasMedia && !forwarded {
-		_, err := ValidateContent(content, false)
+		_, err := core.ValidateContent(content, false)
 		return err
 	}
 	if err := recordReplacedVersion(ctx, tx, messageID); err != nil {
@@ -71,8 +72,8 @@ func editMessageTx(ctx context.Context, tx pgx.Tx, online OnlineSource, messageI
 // the author's own edit is checked; whoever else tries gets the refusal of the
 // edit itself.
 func checkEditAutomod(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, content string) (*automod.Pending, error) {
-	ref, err := loadMessageRef(ctx, p, messageID)
-	if errors.Is(err, errMessageNotFound) {
+	ref, err := core.LoadMessageRef(ctx, p, messageID)
+	if errors.Is(err, core.ErrMessageNotFound) {
 		return nil, nil // the edit itself answers 404
 	}
 	if err != nil {
@@ -130,7 +131,7 @@ func lockMessageForDelete(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (
 		               WHERE r.parent_id = m.id AND ru.role = 'admin')
 		FROM messages m WHERE m.id = $1 FOR UPDATE OF m`, messageID).Scan(&author, &ownerContent)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return uuid.Nil, false, errMessageNotFound
+		return uuid.Nil, false, core.ErrMessageNotFound
 	}
 	if err != nil {
 		return uuid.Nil, false, fmt.Errorf("lock message: %w", err)
@@ -210,7 +211,7 @@ func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 		if !canAdd {
 			return httpx.ErrForbidden("missing permission: add reactions")
 		}
-		if _, err := ValidateEmoji(emoji); err != nil {
+		if _, err := core.ValidateEmoji(emoji); err != nil {
 			return err
 		}
 		return addReaction(ctx, tx, messageID, userID, emoji)
@@ -244,7 +245,7 @@ func lockMessage(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) error {
 	var one int
 	err := tx.QueryRow(ctx, `SELECT 1 FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return errMessageNotFound
+		return core.ErrMessageNotFound
 	}
 	if err != nil {
 		return fmt.Errorf("lock message: %w", err)

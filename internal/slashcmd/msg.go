@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/slash"
 )
@@ -40,7 +40,7 @@ func (msgCommand) Available(snap *perm.Snapshot, user perm.Subject, _ uuid.UUID)
 func (c msgCommand) Run(_ context.Context, call slash.Call) (slash.Result, error) {
 	// The text is checked before the conversation exists, so a message that
 	// cannot be sent leaves no empty direct message behind.
-	text, err := chat.ValidateContent(str(call, "text"), false)
+	text, err := core.ValidateContent(str(call, "text"), false)
 	if err != nil {
 		return slash.Result{}, err
 	}

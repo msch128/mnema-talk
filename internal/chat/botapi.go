@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -196,7 +197,7 @@ func decodeRawBotMessage(w http.ResponseWriter, r *http.Request) (*rawBotMessage
 // ValidateBotMessage checks the content and embeds a bot sends (a message or
 // a response to a command): the same rules, one message needs one of them.
 func ValidateBotMessage(rawContent string, rawEmbeds []InEmbed) (string, []Embed, error) {
-	content, err := ValidateContent(rawContent, true)
+	content, err := core.ValidateContent(rawContent, true)
 	if err != nil {
 		return "", nil, err
 	}

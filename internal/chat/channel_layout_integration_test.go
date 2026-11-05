@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/testutil"
 	"github.com/msch128/mnema-talk/internal/testutil/stmtcount"
@@ -177,7 +178,7 @@ func TestApplyLayoutRejectsUnknownEntriesAsAWhole(t *testing.T) {
 			t.Fatalf("%s: channel order changed to %d", c.name, got)
 		}
 	}
-	if err := ApplyLayout(ctx, w.p, []CategoryOrder{{ghost, 1}}, nil); !errors.Is(err, errCategoryNotFound) {
+	if err := ApplyLayout(ctx, w.p, []CategoryOrder{{ghost, 1}}, nil); !errors.Is(err, core.ErrCategoryNotFound) {
 		t.Fatalf("unknown category error = %v", err)
 	}
 }
