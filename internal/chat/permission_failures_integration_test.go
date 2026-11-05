@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
@@ -60,7 +61,7 @@ func TestHandlersFailClosedWithoutPermissionState(t *testing.T) {
 		{"delete channel", func(r *http.Request) error { return h.deleteChannel(httptest.NewRecorder(), r) }, "", params, ""},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			err := c.run(chatRequest(f.u, c.body, c.params, c.query))
+			err := c.run(chattest.Request(f.u, c.body, c.params, c.query))
 			if err == nil {
 				t.Fatal("the handler let the request through without a permission state")
 			}

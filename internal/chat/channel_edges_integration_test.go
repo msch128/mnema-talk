@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -76,7 +77,7 @@ func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
 
 func TestAuditSnapshotIsEmptyWhenTheChannelCannotBeRead(t *testing.T) {
 	f := newChatFixture(t)
-	broken := driftPool(t, f.p, map[string]string{"channels": `SELECT id, name FROM public.channels`})
+	broken := chattest.DriftPool(t, f.p, map[string]string{"channels": `SELECT id, name FROM public.channels`})
 	h := &Handler{DB: broken, Audit: &audit.Log{DB: f.p}}
 	if s := h.snapshotMessage(context.Background(), f.m, false); s != nil {
 		t.Fatalf("snapshot without a channel lookup: %+v", s)

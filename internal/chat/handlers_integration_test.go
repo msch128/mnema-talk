@@ -14,9 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/testutil"
@@ -33,12 +33,7 @@ type chatFixture struct {
 
 func newChatFixture(t *testing.T) chatFixture {
 	t.Helper()
-	p := testutil.DB(t)
-	testutil.Reset(t, p)
-	u := &auth.User{Username: "coverage_member", DisplayName: "Coverage Member", Role: auth.RoleUser}
-	if err := p.QueryRow(context.Background(), `INSERT INTO users (username, display_name, password_hash) VALUES ($1,$2,'test-only-unused') RETURNING id, created_at`, u.Username, u.DisplayName).Scan(&u.ID, &u.CreatedAt); err != nil {
-		t.Fatal(err)
-	}
+	p, u := chattest.NewMember(t)
 	c, err := CreateChannel(context.Background(), p, nil, "coverage-chat", ChannelTypeText, "", 0)
 	if err != nil {
 		t.Fatal(err)
@@ -48,24 +43,6 @@ func newChatFixture(t *testing.T) chatFixture {
 		t.Fatal(err)
 	}
 	return chatFixture{p: p, u: u, c: c, m: m}
-}
-
-func chatRequest(u *auth.User, body string, params map[string]string, query string) *http.Request {
-	r := httptest.NewRequest(http.MethodPost, "/?"+query, strings.NewReader(body))
-	r.Header.Set("Content-Type", "application/json")
-	route := chi.NewRouteContext()
-	for key, value := range params {
-		route.URLParams.Add(key, value)
-	}
-	ctx := context.WithValue(auth.WithUser(r.Context(), u), chi.RouteCtxKey, route)
-	return r.WithContext(ctx)
-}
-
-func requireChatError(t *testing.T, err error, text string) {
-	t.Helper()
-	if err == nil || !strings.Contains(err.Error(), text) {
-		t.Fatalf("error = %v; want containing %q", err, text)
-	}
 }
 
 func TestChatCanceledDatabaseOperations(t *testing.T) {
@@ -154,7 +131,7 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 	}
 	for _, c := range pathHandlers {
 		t.Run(c.name+" invalid path", func(t *testing.T) {
-			requireChatError(t, c.fn(httptest.NewRecorder(), chatRequest(f.u, "{}", nil, "")), "invalid")
+			chattest.RequireError(t, c.fn(httptest.NewRecorder(), chattest.Request(f.u, "{}", nil, "")), "invalid")
 		})
 	}
 	decodeHandlers := []struct {
@@ -165,7 +142,7 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 	}
 	for _, c := range decodeHandlers {
 		t.Run(c.name+" invalid JSON", func(t *testing.T) {
-			if e := c.fn(httptest.NewRecorder(), chatRequest(f.u, "{", valid, "")); e == nil {
+			if e := c.fn(httptest.NewRecorder(), chattest.Request(f.u, "{", valid, "")); e == nil {
 				t.Fatal("malformed JSON accepted")
 			}
 		})
@@ -210,11 +187,11 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			requireChatError(t, c.fn(httptest.NewRecorder(), chatRequest(f.u, c.body, c.params, c.query)), c.want)
+			chattest.RequireError(t, c.fn(httptest.NewRecorder(), chattest.Request(f.u, c.body, c.params, c.query)), c.want)
 		})
 	}
 	body, _ := json.Marshal(LayoutRequest{Categories: make([]CategoryOrder, 501)})
-	requireChatError(t, h.applyLayout(httptest.NewRecorder(), chatRequest(f.u, string(body), nil, "")), "too many entries")
+	chattest.RequireError(t, h.applyLayout(httptest.NewRecorder(), chattest.Request(f.u, string(body), nil, "")), "too many entries")
 	// Database cancellation must also propagate through HTTP handlers.
 	for _, c := range []struct {
 		name string
@@ -223,7 +200,7 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		t.Run(c.name+" database error", func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
-			r := chatRequest(f.u, "", valid, "")
+			r := chattest.Request(f.u, "", valid, "")
 			r = r.WithContext(auth.WithUser(ctx, f.u))
 			if err := c.fn(httptest.NewRecorder(), r); !errors.Is(err, context.Canceled) {
 				t.Fatalf("error=%v", err)
@@ -241,7 +218,7 @@ func TestChatDeleteCategoryHandlerAndVoicePreference(t *testing.T) {
 	recorder := &events.Recorder{}
 	h := &Handler{DB: f.p, Events: recorder}
 	w := httptest.NewRecorder()
-	if err := h.deleteCategory(w, chatRequest(f.u, "", map[string]string{"id": cat.ID.String()}, "")); err != nil {
+	if err := h.deleteCategory(w, chattest.Request(f.u, "", map[string]string{"id": cat.ID.String()}, "")); err != nil {
 		t.Fatal(err)
 	}
 	if w.Code != http.StatusNoContent || len(recorder.Snapshot()) != 1 || recorder.Snapshot()[0].Type != "channels_changed" {
@@ -252,7 +229,7 @@ func TestChatDeleteCategoryHandlerAndVoicePreference(t *testing.T) {
 	if h.voiceRooms() != voice {
 		t.Fatal("explicit voice rooms were not selected")
 	}
-	if err := h.deleteChannel(httptest.NewRecorder(), chatRequest(f.u, "", map[string]string{"id": f.c.ID.String()}, "")); err != nil {
+	if err := h.deleteChannel(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"id": f.c.ID.String()}, "")); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Equal(voice.closed, []uuid.UUID{f.c.ID}) {
@@ -283,7 +260,7 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 	if _, err := CreateChannel(ctx, f.p, nil, "new", "unsupported", "", 0); err == nil {
 		t.Fatal("unsupported channel type accepted")
 	}
-	if _, err := CreateChannel(ctx, f.p, ptr(uuid.New()), "new", ChannelTypeText, "", 0); err == nil {
+	if _, err := CreateChannel(ctx, f.p, chattest.Ptr(uuid.New()), "new", ChannelTypeText, "", 0); err == nil {
 		t.Fatal("missing category accepted")
 	}
 	if err := EditMessage(ctx, f.p, nil, uuid.New(), f.u.ID, "new"); err == nil {
@@ -299,11 +276,11 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 		t.Fatal(err)
 	}
 	h := &Handler{DB: f.p, Events: &events.Recorder{}}
-	if err := h.createMessage(httptest.NewRecorder(), chatRequest(f.u, `{"content":"hi"}`, map[string]string{"channelID": uuid.NewString()}, "")); err == nil {
+	if err := h.createMessage(httptest.NewRecorder(), chattest.Request(f.u, `{"content":"hi"}`, map[string]string{"channelID": uuid.NewString()}, "")); err == nil {
 		t.Fatal("message posted in absent channel")
 	}
-	p := driftPool(t, f.p, map[string]string{"messages": `SELECT id,number,channel_id,user_id,parent_id,NULL::text content,is_pinned,is_edited,created_at,updated_at,reply_to_id FROM public.messages`})
-	if err := (&Handler{DB: p}).listMessages(httptest.NewRecorder(), chatRequest(f.u, "", map[string]string{"channelID": f.c.ID.String()}, "")); err == nil {
+	p := chattest.DriftPool(t, f.p, map[string]string{"messages": `SELECT id,number,channel_id,user_id,parent_id,NULL::text content,is_pinned,is_edited,created_at,updated_at,reply_to_id FROM public.messages`})
+	if err := (&Handler{DB: p}).listMessages(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"channelID": f.c.ID.String()}, "")); err == nil {
 		t.Fatal("undecodable history accepted")
 	}
 	if _, _, err := Search(ctx, f.p, SearchQuery{Text: strings.Repeat("a", 201)}); err == nil {
@@ -341,7 +318,7 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 	if _, err := MarkRead(ctx, f.p, f.u.ID, f.c.ID, &f.m); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := MarkRead(ctx, f.p, f.u.ID, f.c.ID, ptr(uuid.New())); err == nil {
+	if _, err := MarkRead(ctx, f.p, f.u.ID, f.c.ID, chattest.Ptr(uuid.New())); err == nil {
 		t.Fatal("missing read anchor accepted")
 	}
 	if _, err := MarkUnread(ctx, f.p, f.u.ID, f.c.ID, uuid.New()); err == nil {
@@ -354,5 +331,3 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 		t.Fatal("nil text not empty")
 	}
 }
-
-func ptr[T any](v T) *T { return &v }
