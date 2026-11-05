@@ -48,24 +48,36 @@ func newHarness(t *testing.T, o harnessOpts) *harness {
 	h.clock.Store(time.Now().UnixNano())
 	port := uint16(h.sfu.LocalAddr().(*net.UDPAddr).Port)
 	h.target.Store(&Target{LocalIPs: []net.IP{net.IPv4(127, 0, 0, 1)}, Announced: o.announced, PortMin: port, PortMax: port})
-	probe, err := net.ListenPacket("udp4", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	relayPort := probe.LocalAddr().(*net.UDPAddr).Port
-	_ = probe.Close()
 	if o.mayRelay == nil {
 		o.mayRelay = func(uuid.UUID) bool { return true }
 	}
-	h.srv, err = Start(Options{
-		Port: relayPort, BindAddr: "127.0.0.1",
-		Target:   func() Target { return *h.target.Load() },
-		MayRelay: o.mayRelay,
-		Limits:   o.limits,
-		Now:      func() time.Time { return time.Unix(0, h.clock.Load()) },
-	})
-	if err != nil {
-		t.Fatal(err)
+	// The port is probed and released before Start binds it, so another test
+	// binary can take it in between (UDP or TCP). Start then still succeeds
+	// on the other transport; retry until both are bound.
+	var err error
+	for attempt := 0; ; attempt++ {
+		probe, perr := net.ListenPacket("udp4", "127.0.0.1:0")
+		if perr != nil {
+			t.Fatal(perr)
+		}
+		relayPort := probe.LocalAddr().(*net.UDPAddr).Port
+		_ = probe.Close()
+		h.srv, err = Start(Options{
+			Port: relayPort, BindAddr: "127.0.0.1",
+			Target:   func() Target { return *h.target.Load() },
+			MayRelay: o.mayRelay,
+			Limits:   o.limits,
+			Now:      func() time.Time { return time.Unix(0, h.clock.Load()) },
+		})
+		if err == nil && h.srv.status.TCP {
+			break
+		}
+		if err == nil {
+			_ = h.srv.Close()
+		}
+		if attempt == 9 {
+			t.Fatalf("no free UDP+TCP port after %d tries: %v", attempt+1, err)
+		}
 	}
 	t.Cleanup(func() { _ = h.srv.Close() })
 	return h
@@ -148,7 +160,15 @@ func TestRelaysBothWaysToTheSFUOnly(t *testing.T) {
 	if !ok || string(got) != "to-client" {
 		t.Fatalf("client received %q (ok=%v)", got, ok)
 	}
-	if metrics.TURNRelayedPackets.With("to_sfu").Load()-toSFU != 1 || metrics.TURNRelayedPackets.With("from_sfu").Load()-fromSFU != 1 {
+	// The guard counts a packet after handing it on, so the receiver can win
+	// the race; wait for the counters instead of reading them once.
+	counted := func() bool {
+		return metrics.TURNRelayedPackets.With("to_sfu").Load()-toSFU == 1 && metrics.TURNRelayedPackets.With("from_sfu").Load()-fromSFU == 1
+	}
+	for deadline := time.Now().Add(2 * time.Second); !counted() && time.Now().Before(deadline); {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !counted() {
 		t.Fatal("the relayed packets were not counted, one in each direction")
 	}
 	if src.String() != h.sfuAddr().String() {
