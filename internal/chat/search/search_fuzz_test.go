@@ -1,4 +1,4 @@
-package chat
+package search
 
 import (
 	"strings"
@@ -25,7 +25,7 @@ func FuzzBuildSearchSQL(f *testing.F) {
 	f.Fuzz(func(t *testing.T, text, has, is string) {
 		id := uuid.New()
 		q := SearchQuery{Text: text, Has: has, Is: is, ChannelID: &id, Limit: 10, Visible: []uuid.UUID{id}}
-		sql, args, err := buildSearchSQL(q)
+		sql, args, err := BuildSearchSQL(q)
 		if err != nil {
 			if sql != "" || args != nil {
 				t.Fatalf("error with output: %v", err)
@@ -49,7 +49,7 @@ func FuzzBuildSearchSQL(f *testing.F) {
 			}
 		}
 		q.Text = strings.Join(canon, " ")
-		want, wantArgs, err := buildSearchSQL(q)
+		want, wantArgs, err := BuildSearchSQL(q)
 		if err != nil {
 			t.Fatalf("canonical query rejected: %v", err)
 		}

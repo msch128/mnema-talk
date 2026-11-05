@@ -8,6 +8,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/chat/reports"
+	"github.com/msch128/mnema-talk/internal/chat/search"
 )
 
 // Aliases for symbols that moved into sub-packages while internal/chat is split
@@ -85,6 +86,7 @@ const ForwardsPerMinute = messages.ForwardsPerMinute
 
 type HistoryQuery = core.HistoryQuery
 type InEmbed = messages.InEmbed
+type InboxQuery = search.InboxQuery
 type LayoutRequest = channels.LayoutRequest
 type MarkAllReadRequest = readstate.MarkAllReadRequest
 type MarkReadRequest = readstate.MarkReadRequest
@@ -134,6 +136,7 @@ type MentionPolicy = mentions.MentionPolicy
 type MentionRole = mentions.MentionRole
 type MentionSet = mentions.MentionSet
 type MentionedUser = mentions.MentionedUser
+type MentionsPage = search.MentionsPage
 type Message = core.Message
 type MessageEdit = messages.MessageEdit
 type MessageEditHistory = messages.MessageEditHistory
@@ -197,6 +200,9 @@ type ReportsPage = reports.ReportsPage
 const ReportsPerHour = reports.ReportsPerHour
 
 type ResolveReportRequest = reports.ResolveReportRequest
+type SearchQuery = search.SearchQuery
+type SearchResult = search.SearchResult
+type SearchRoot = search.SearchRoot
 type ServerNotify = readstate.ServerNotify
 type SetDMFavouritesRequest = dm.SetDMFavouritesRequest
 type SetDMHiddenRequest = dm.SetDMHiddenRequest

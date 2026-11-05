@@ -1,4 +1,4 @@
-package chat
+package search
 
 import (
 	"context"
@@ -110,15 +110,15 @@ type SearchQuery struct {
 }
 
 // Search returns one page of matching messages and whether more exist.
-func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, error) {
-	sql, args, err := buildSearchSQL(q)
+func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]core.Message, bool, error) {
+	sql, args, err := BuildSearchSQL(q)
 	if err != nil {
 		return nil, false, err
 	}
 	if err := core.MessageCursorExists(ctx, p, q.Before); err != nil {
 		return nil, false, err
 	}
-	var msgs []Message
+	var msgs []core.Message
 	err = pgx.BeginTxFunc(ctx, p, pgx.TxOptions{AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, "SET LOCAL statement_timeout = '"+searchStatementTimeout+"'"); err != nil {
 			return err
@@ -143,8 +143,8 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 	return msgs, more, nil
 }
 
-// buildSearchSQL validates the query and turns it into SQL with its arguments.
-func buildSearchSQL(q SearchQuery) (string, []any, error) {
+// BuildSearchSQL validates the query and turns it into SQL with its arguments.
+func BuildSearchSQL(q SearchQuery) (string, []any, error) {
 	terms, err := validateSearchTerms(q)
 	if err != nil {
 		return "", nil, err

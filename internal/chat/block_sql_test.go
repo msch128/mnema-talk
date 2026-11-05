@@ -7,6 +7,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
+	"github.com/msch128/mnema-talk/internal/chat/search"
 )
 
 func TestBlockedAuthorsStayOutOfCounts(t *testing.T) {
@@ -18,7 +19,7 @@ func TestBlockedAuthorsStayOutOfCounts(t *testing.T) {
 	if core.AuthorHiddenFrom("$2", "x.user_id") != forum {
 		t.Fatalf("forum rule = %q", core.AuthorHiddenFrom("$2", "x.user_id"))
 	}
-	if !strings.Contains(inboxSQL(), inbox) {
+	if !strings.Contains(search.InboxSQL(), inbox) {
 		t.Fatal("mentions inbox no longer drops a blocked author")
 	}
 	if !strings.Contains(readstate.ReadStateSQL(), inbox) {

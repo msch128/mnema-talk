@@ -14,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/reports"
+	"github.com/msch128/mnema-talk/internal/chat/search"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -33,9 +34,9 @@ func TestPageCursorOfADeletedRowIsNotFound(t *testing.T) {
 	ctx := context.Background()
 	gone := uuid.New()
 
-	_, _, err := Search(ctx, f.p, SearchQuery{Text: "hello", Before: &gone, Limit: 5})
+	_, _, err := search.Search(ctx, f.p, SearchQuery{Text: "hello", Before: &gone, Limit: 5})
 	requireStatus(t, err, http.StatusNotFound)
-	_, _, err = Mentions(ctx, f.p, InboxQuery{User: f.u.ID, Before: &gone, Limit: 5})
+	_, _, err = search.Mentions(ctx, f.p, InboxQuery{User: f.u.ID, Before: &gone, Limit: 5})
 	requireStatus(t, err, http.StatusNotFound)
 	_, err = ListSaved(ctx, f.p, f.u.ID, nil, &gone, 5)
 	requireStatus(t, err, http.StatusNotFound)
@@ -47,7 +48,7 @@ func TestPageCursorOfADeletedRowIsNotFound(t *testing.T) {
 	requireStatus(t, err, http.StatusNotFound)
 
 	// A cursor that exists still pages.
-	if _, _, err := Search(ctx, f.p, SearchQuery{Text: "hello", Before: &f.m, Limit: 5}); err != nil {
+	if _, _, err := search.Search(ctx, f.p, SearchQuery{Text: "hello", Before: &f.m, Limit: 5}); err != nil {
 		t.Fatalf("search with a live cursor: %v", err)
 	}
 	if _, err := SaveMessage(ctx, f.p, f.u.ID, f.m, nil); err != nil {

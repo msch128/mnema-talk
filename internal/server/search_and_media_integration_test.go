@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/search"
 )
 
 // The channel in the path of an edit must be the message's channel, even for
@@ -119,7 +119,7 @@ func TestSearchConcurrencyIsCappedPerUser(t *testing.T) {
 	// Hold the user's slots the way two slow searches would.
 	var releases []func()
 	for i := 0; i < 2; i++ {
-		release, ok := chat.AcquireSearchSlot(max.user.ID)
+		release, ok := search.AcquireSearchSlot(max.user.ID)
 		if !ok {
 			t.Fatal("slot unavailable")
 		}

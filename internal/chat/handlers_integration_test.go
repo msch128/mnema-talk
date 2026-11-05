@@ -22,6 +22,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
+	"github.com/msch128/mnema-talk/internal/chat/search"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/testutil"
@@ -106,7 +107,7 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 		}},
 		{"reaction summary", func() error { _, e := messages.ReactionSummary(ctx, f.p, f.m); return e }},
 		{"read states", func() error { _, e := readstate.GetReadStates(ctx, f.p, f.u); return e }},
-		{"search", func() error { _, _, e := Search(ctx, f.p, SearchQuery{Text: "hello", Limit: 2}); return e }},
+		{"search", func() error { _, _, e := search.Search(ctx, f.p, SearchQuery{Text: "hello", Limit: 2}); return e }},
 		{"publish", func() error {
 			return messages.PublishMessage(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil).WithContext(ctx), f.p, &events.Recorder{}, f.m)
 		}},
@@ -201,8 +202,8 @@ func TestChatHandlerValidationAndErrors(t *testing.T) {
 		{"channel duplicate absent", h.channels().DuplicateChannel, "", "", map[string]string{"id": uuid.NewString()}, "channel not found"},
 		{"update bad topic", h.channels().UpdateChannel, `{"topic":"` + strings.Repeat("a", 256) + `"}`, "", valid, "topic"},
 		{"rename bad name", h.channels().RenameCategory, `{"name":""}`, "", valid, "name"},
-		{"search bad ID", h.search, "", "channel_id=bad", valid, "channel_id"},
-		{"search empty", h.search, "", "", valid, "search term"},
+		{"search bad ID", h.search().ServeSearch, "", "channel_id=bad", valid, "channel_id"},
+		{"search empty", h.search().ServeSearch, "", "", valid, "search term"},
 		{"layout missing category", h.channels().ApplyLayout, `{"categories":[{"id":"` + uuid.NewString() + `","sort_order":1}]}`, "", valid, "category not found"},
 	}
 	for _, c := range cases {
@@ -303,17 +304,17 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 	if err := (&Handler{DB: p}).messages().ListMessages(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"channelID": f.c.ID.String()}, "")); err == nil {
 		t.Fatal("undecodable history accepted")
 	}
-	if _, _, err := Search(ctx, f.p, SearchQuery{Text: strings.Repeat("a", 201)}); err == nil {
+	if _, _, err := search.Search(ctx, f.p, SearchQuery{Text: strings.Repeat("a", 201)}); err == nil {
 		t.Fatal("too-long query accepted")
 	}
-	if _, _, err := Search(ctx, f.p, SearchQuery{Text: "one", Has: "unknown"}); err == nil {
+	if _, _, err := search.Search(ctx, f.p, SearchQuery{Text: "one", Has: "unknown"}); err == nil {
 		t.Fatal("unknown attachment filter accepted")
 	}
-	if _, _, err := Search(ctx, f.p, SearchQuery{Text: "a b c d e f g h discarded", Limit: 10}); err != nil {
+	if _, _, err := search.Search(ctx, f.p, SearchQuery{Text: "a b c d e f g h discarded", Limit: 10}); err != nil {
 		t.Fatal(err)
 	}
 	for _, has := range []string{"file", "image", "link"} {
-		if _, _, err := Search(ctx, f.p, SearchQuery{Has: has, Limit: 10}); err != nil {
+		if _, _, err := search.Search(ctx, f.p, SearchQuery{Has: has, Limit: 10}); err != nil {
 			t.Fatal(err)
 		}
 	}

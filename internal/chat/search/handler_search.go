@@ -1,16 +1,17 @@
-package chat
+package search
 
 import (
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
-// search handles GET /api/search.
+// ServeSearch handles GET /api/search.
 //
 // @Summary Search messages
 // @Description Text channels and voice channels' chats (with dm=true, the caller's direct messages instead), newest first (or by sort). Every term (max 8) must occur case-insensitively; a quoted phrase is one term and a leading minus excludes messages containing it. At least one of q, channel_id, author_id, mentions, has, is, after, before_date, during, filename or author is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.
@@ -34,7 +35,7 @@ import (
 // @Param sort query string false "Sort order: newest (default) or oldest. relevance is accepted as an alias of newest: search has no ranking." Enums(newest,oldest,relevance)
 // @Param dm query boolean false "Search the caller's direct message conversations instead of channels. Only conversations the caller is in are searched; channel_id may name one of them." default(false)
 // @Param limit query int false "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 50." minimum(1) maximum(50) default(25)
-// @Success 200 {object} SearchResult "One page of results."
+// @Success 200 {object} search.SearchResult "One page of results."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the before cursor no longer exists (it was deleted since the previous page); reload the list."
@@ -42,7 +43,7 @@ import (
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/search [get]
-func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
+func (a *API) ServeSearch(w http.ResponseWriter, r *http.Request) error {
 	v := r.URL.Query()
 	authorType := v.Get("author")
 	if authorType == "" {
@@ -78,11 +79,11 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	if q.Visible, err = h.viewableChannels(r); err != nil {
+	if q.Visible, err = a.Guard.ViewableChannels(r); err != nil {
 		return err
 	}
 	if q.ChannelID != nil {
-		if err := h.require(r, *q.ChannelID, perm.ViewChannel); err != nil {
+		if err := a.Guard.Require(r, *q.ChannelID, perm.ViewChannel); err != nil {
 			return err
 		}
 	}
@@ -91,11 +92,11 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 		return errSearchBusy
 	}
 	defer release()
-	msgs, more, err := Search(r.Context(), h.DB, q)
+	msgs, more, err := Search(r.Context(), a.DB, q)
 	if err != nil {
 		return err
 	}
-	roots, err := searchRoots(r.Context(), h.DB, msgs)
+	roots, err := searchRoots(r.Context(), a.DB, msgs)
 	if err != nil {
 		return err
 	}
@@ -105,8 +106,8 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 
 // SearchResult is one page of search hits.
 type SearchResult struct {
-	Messages []Message `json:"messages"`
-	HasMore  bool      `json:"has_more"`
+	Messages []core.Message `json:"messages"`
+	HasMore  bool           `json:"has_more"`
 	// Roots maps a reply hit's parent_id to its thread root.
 	Roots map[string]SearchRoot `json:"roots"`
 }

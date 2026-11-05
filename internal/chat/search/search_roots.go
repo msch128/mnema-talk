@@ -1,9 +1,10 @@
-package chat
+package search
 
 import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
@@ -20,7 +21,7 @@ type SearchRoot struct {
 
 // searchRoots loads the thread roots of the reply hits, keyed by root id. The
 // root lives in the reply's channel, so it is as visible as the hit itself.
-func searchRoots(ctx context.Context, p *db.Pool, msgs []Message) (map[string]SearchRoot, error) {
+func searchRoots(ctx context.Context, p *db.Pool, msgs []core.Message) (map[string]SearchRoot, error) {
 	roots := map[string]SearchRoot{}
 	ids := make([]uuid.UUID, 0)
 	seen := map[uuid.UUID]bool{}
