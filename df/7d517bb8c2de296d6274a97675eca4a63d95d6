@@ -1,0 +1,49 @@
+internal/chat/channel_edges_integration_test.go
+  s_44828ade503d7d::t_b73d30ff0e93c7 121,155,179
+internal/chat/channel_layout_integration_test.go
+  s_44828ade503d7d::t_4706b4c997fc38 41
+internal/chat/channels.go
+  s_44828ade503d7d::t_81cb2c6f557b8b 144-146
+internal/chat/database_failures_integration_test.go
+  s_44828ade503d7d::t_d77ad3c89cbec4 223
+internal/chat/emoji_reaction_integration_test.go
+  s_44828ade503d7d::t_22a583adb10c35 19
+internal/chat/forum_edges_integration_test.go
+  s_44828ade503d7d::t_947fbe5c23a921 276
+internal/chat/forum_errors_integration_test.go
+  s_44828ade503d7d::t_bdf61ee3387e9c 235,400
+internal/chat/forum_integration_test.go
+  s_44828ade503d7d::t_8632f063c4f416 33
+internal/chat/handlers_integration_test.go
+  s_44828ade503d7d::t_f91cd3a2bdaaa5 42,84-91,289,292,331
+internal/chat/slug_integration_test.go
+  s_44828ade503d7d::t_e5337af73bf7c2 26,115
+internal/chat/stage_integration_test.go
+  s_44828ade503d7d::t_a99e5d4bb03b39 19,23,27,61,92
+internal/chat/talks_integration_test.go
+  s_44828ade503d7d::t_0f68c66ec24771 62,182,189,427,633
+internal/chat/webhook_bot_cleanup_integration_test.go
+  s_44828ade503d7d::t_93fa1a3093345b 21,67
+internal/later/faults_integration_test.go
+  s_44828ade503d7d::t_5edddb48ce2720 37
+internal/later/scheduled_validation_integration_test.go
+  s_44828ade503d7d::t_3a142477b7eeb6 40
+internal/poll/faults_integration_test.go
+  s_44828ade503d7d::t_43dbedc208e2ac 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df7d517bb8c2de296d6274a97675eca4a63d95d6",
+  "prompts": {},
+  "sessions": {
+    "s_44828ade503d7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac82bbf5aff7b075d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
