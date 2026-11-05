@@ -72,6 +72,124 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 2.x: every minor since 2.0.0
+
+Each 2.x minor is an ordinary update (procedure above, backup first). None
+breaks the public API: [api-stability.md](api-stability.md) still holds, and
+2.x only adds endpoints, fields and events. Patch releases (2.1.1, 2.5.1, 2.8.1
+to 2.8.3, 2.9.1) fix bugs and change nothing to configure; 2.8.2 and 2.9.1 only
+change what the signed desktop bundle contains. The migrations are listed
+in the migration table below. Taking several minors at once applies
+their migrations in order. Newest first.
+
+#### After 2.9.1 (next release)
+
+Migration 0091 adds four indexes (see the table); it changes no behaviour and
+needs no setting. Building them takes a moment on a very large database.
+
+#### 2.9.0 (wiki)
+
+- **Migrations 0089 and 0090.** New tables only (`wiki_pages`, `wiki_revisions`,
+  `wiki_redirects`, `wiki_images`) and trigram indexes for the wiki search.
+- **Three new permissions, set by migration 0089.** *View the wiki* is turned on
+  for @everyone; *Edit the wiki* and *Manage the wiki* go to every role that
+  already holds *Timeout members* (not @everyone, not bot roles). Nobody else
+  can edit until a role is given the permission. See [Wiki](wiki.md).
+- No new environment variable. Erasing an account keeps the wiki pages and
+  revisions and any picture a page still shows, detached from the person; see
+  [Wiki](wiki.md#privacy). A reverse proxy needs no rule for `/wiki`.
+
+#### 2.8.0 (events)
+
+- **Migrations 0086, 0087 and 0088.** New tables (`event_roles`,
+  `event_signups`, `event_comments`, `event_comment_mutes`, `event_series`) and
+  a series link on events. Existing events stay single, without roles or
+  comments.
+- Event role templates ship **disabled**; nothing shows to members until an
+  administrator enables one. Recurring events repeat weekly, every two weeks or
+  monthly. See [Events](events.md).
+- No new environment variable. 2.8.1 limits what an image may decode to before
+  it is processed and counts background-job failures in
+  `mnema_job_errors_total` ([operations.md](operations.md)).
+
+#### 2.7.0 (raid protection, vanity link, self-assignable roles)
+
+- **Migrations 0083, 0084 and 0085.** Settings columns and `roles.self_assignable`.
+  Everything defaults to off: no lockdown, no sign-up limit, no minimum age, no
+  vanity link, no self-assignable role.
+- **New permission *Bypass new member limits*, set by migration 0083** on every
+  role that holds *Timeout members*. Without it, a role's members wait out the
+  minimum age once an administrator turns that setting on. See
+  [Moderation](moderation.md#raid-protection).
+- The vanity link `/join/<name>` is served by the app itself and shows only the
+  community name; forward it like every other path ([Reverse proxy](reverse-proxy.md)).
+
+#### 2.6.0 (voice limits)
+
+- No migration. New optional `VOICE_UPLOAD_LIMIT_MBIT` (default `0`, no limit):
+  with a value, the server steps viewers down screen and camera layers to stay
+  under that upload. Metrics `mnema_sfu_upload_*` appear.
+- Microphones now use Opus DTX: a quiet speaker stops sending a stream of
+  packets. Nothing to configure; members see no change except lower traffic.
+- The admin Status tab gains a capacity panel, and *Test my connection* shows an
+  upload hint from a bounded download. See [operations.md](operations.md).
+
+#### 2.5.0 (cameras as layers)
+
+- No migration, no setting. Cameras are sent as layers and a viewer receives
+  only the cameras on screen, with a server cap per viewer. Server and web app
+  must be the same release (they are one image); a desktop client picks the
+  change up with the signed bundle of the new release.
+- The retransmission history is sized in bytes and shrinks with load, with a
+  budget per subscriber. This lowers memory under load; no setting.
+
+#### 2.4.0 (load behaviour)
+
+- No migration. New optional `PPROF_ADDR` (default empty, off): serves Go
+  profiles on a loopback `host:port`; the server refuses to start with an
+  address that is not loopback.
+- The server reads the container memory limit and keeps its heap within 85 %
+  of it (`GOMEMLIMIT` set in the environment wins), and asks for 4 MiB UDP
+  socket buffers. The kernel's `net.core.rmem_max` and `wmem_max` cap what it
+  gets; see [Deployment](deployment.md#udp-socket-buffers-and-the-memory-limit).
+
+#### 2.3.0
+
+No migration, no setting. Server error sentences are translated in the web
+app (English and German). A client that matches an error's English `message`
+should read the stable `error.code` instead.
+
+#### 2.2.0 (the large one)
+
+- **Migrations 0079 to 0082.** A Talk started from a direct message belongs to
+  that conversation (`channels.dm_id`); community icon columns; staged
+  attachments (`media.staged`, `media.position`); the forum rework. Columns and
+  tables only; existing rows keep their defaults.
+- **Several attachments per message (up to 10).** The composer uploads first and
+  a message claims the files. Staged files no message claimed are deleted after
+  6 hours.
+- **A start with missing settings now stops with the complete list.** The log
+  line *Mnema Talk cannot start - fix these settings in .env:* names every
+  required setting that is missing or still a placeholder, and the process
+  exits with status 78. `mnema-talk setup --check` prints it without starting. The
+  `.env.example` and `docker-compose.yml` of the release were reorganised
+  (required settings first); your existing files keep working.
+- New optional `WEBRTC_LAN_IP` (default empty): the host's LAN address,
+  announced next to the public one so members on the same network reach voice
+  on a router without NAT loopback. Entries must be IPv4 addresses a neighbour
+  could reach; anything else stops the start.
+- The updater trusts the Docker Hub mirror (`docker.io/msch128/mnema-talk`)
+  next to GHCR and pulls from the registry of the running image. A fork that
+  sets `UPDATER_IMAGE_REPOSITORY` drops the mirror. See [Updating](updating.md).
+- `mnema-talk setup` (guided assistant) and the Owner's *Get started* checklist
+  are new; nothing in an existing install changes.
+
+#### 2.1.0
+
+No migration, no setting. Invites can be edited (expiry, use limit), Discord
+roles can be mapped to existing roles on import, and the composer grows with
+its text and takes pasted or dropped files.
+
 ### 1.2.x → next release
 
 Update with the procedure above and take the backup first. Nothing in `.env` has to change.
@@ -175,6 +293,7 @@ of the pre-update backup (see "Rollback" above).
 | 0088 | `event_series`: recurring events; occurrences are ordinary events linked to their series (see [events](events.md)). Existing events stay single. |
 | 0089 | The wiki tables: pages, revisions and redirects, one tree per community. Adds tables only. |
 | 0090 | `wiki_images`: marks the media rows used as wiki pictures. Adds a table and an index only. |
+| 0091 | Indexes on `saved_messages (message_id)`, `forum_post_reads (post_id)`, `message_reminders (message_id)` and `thread_follows (thread_id)`, which replaces the partial `idx_thread_follows_thread`: deleting a message no longer scans those tables. Building them briefly slows writes to them on a very large database. |
 
 The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 
