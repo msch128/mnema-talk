@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.9.12](https://github.com/msch128/mnema-talk/compare/v2.9.11...v2.9.12) (2026-11-05)
+
+
+### Bug Fixes
+
+* use a bare archive.ubuntu.com mirror URL in the CI apt fallback ([#723](https://github.com/msch128/mnema-talk/issues/723)) ([31c2bd5](https://github.com/msch128/mnema-talk/commit/31c2bd5f49ed68991b643d23c525a44f5156dc81))
+
+
+### Code Refactoring
+
+* bring communityevents and ws under the package-size cap ([#725](https://github.com/msch128/mnema-talk/issues/725)) ([ea43185](https://github.com/msch128/mnema-talk/commit/ea431858b54a2548f06d5b4e38daff5d6ac161b7))
+
 ## [2.9.11](https://github.com/msch128/mnema-talk/compare/v2.9.10...v2.9.11) (2026-11-05)
 
 
