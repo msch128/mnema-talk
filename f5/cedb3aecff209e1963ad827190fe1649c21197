@@ -1,0 +1,39 @@
+internal/chat/talks.go
+  s_44828ade503d7d::t_af9a8a25ca427b 165-169,172-175
+internal/chat/talks_handler.go
+  s_f6edaac6c70960::t_d105f30f4d8b0c 4,86-90
+internal/server/audit_presence_test.go
+  s_3a2d4d42231329::t_3f9a42d15a028c 5,9-13,27-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f5cedb3aecff209e1963ad827190fe1649c21197",
+  "prompts": {},
+  "sessions": {
+    "s_3a2d4d42231329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a5cd8a73a681f9a5e",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_44828ade503d7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ac82bbf5aff7b075d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_f6edaac6c70960": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aedccab7bc6622020",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
