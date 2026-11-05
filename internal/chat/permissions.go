@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -28,17 +27,6 @@ func (h *Handler) guard() core.Guard { return core.Guard{Perms: h.Perms} }
 // ViewChannel the channel does not exist for them (404).
 func (h *Handler) require(r *http.Request, ch uuid.UUID, need perm.Set) error {
 	return h.guard().Require(r, ch, need)
-}
-
-// notFoundUnlessFailure turns a refusal (the member may not view the message's
-// channel) into the message's own 404, so it looks like any missing message,
-// and passes real failures (an unreadable permission state) through.
-func notFoundUnlessFailure(err error) error {
-	var apiErr *httpx.APIError
-	if errors.As(err, &apiErr) {
-		return core.ErrMessageNotFound
-	}
-	return err
 }
 
 // channelPerms is what the caller may do in channel ch.

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -32,7 +33,7 @@ func (h *Handler) listForumTags(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := h.require(r, chID, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
+		return core.NotFoundUnlessFailure(err)
 	}
 	if _, err := h.requireForumChannel(r, chID); err != nil {
 		return err

@@ -68,7 +68,7 @@ func (h *Handler) reportMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := h.require(r, ref.ChannelID, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
+		return core.NotFoundUnlessFailure(err)
 	}
 	var req CreateReportRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {

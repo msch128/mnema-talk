@@ -76,7 +76,7 @@ func (h *Handler) loadThreadRoot(r *http.Request, msgID uuid.UUID) (*Message, er
 		return nil, err
 	}
 	if err := h.require(r, root.ChannelID, perm.ViewChannel); err != nil {
-		return nil, notFoundUnlessFailure(err)
+		return nil, core.NotFoundUnlessFailure(err)
 	}
 	// Only a root message has a thread; a reply is not one.
 	if root.ParentID != nil {
@@ -163,7 +163,7 @@ func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 	if err := h.require(r, msg.ChannelID, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
+		return core.NotFoundUnlessFailure(err)
 	}
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil

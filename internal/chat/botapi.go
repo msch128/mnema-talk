@@ -101,7 +101,7 @@ func (h *Handler) botGetMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := h.require(r, ref.ChannelID, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
+		return core.NotFoundUnlessFailure(err)
 	}
 	msg, err := GetMessage(r.Context(), h.DB, msgID)
 	if err != nil {

@@ -99,7 +99,7 @@ func (h *Handler) listForumPosts(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := h.require(r, chID, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
+		return core.NotFoundUnlessFailure(err)
 	}
 	if _, err := h.requireForumChannel(r, chID); err != nil {
 		return err
@@ -210,7 +210,7 @@ func (h *Handler) updateForumPost(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	if err := h.require(r, chID, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
+		return core.NotFoundUnlessFailure(err)
 	}
 	if _, err := h.requireForumChannel(r, chID); err != nil {
 		return err

@@ -250,7 +250,7 @@ func (h *Handler) saveMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := h.require(r, ref.ChannelID, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
+		return core.NotFoundUnlessFailure(err)
 	}
 	me := auth.UserFrom(r.Context()).ID
 	entry, err := SaveMessage(r.Context(), h.DB, me, msgID, req.Note)

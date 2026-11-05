@@ -218,7 +218,7 @@ func (h *Handler) getForwardQuote(w http.ResponseWriter, r *http.Request) error 
 		return core.ErrMessageNotFound
 	}
 	if err := h.require(r, row.channel, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
+		return core.NotFoundUnlessFailure(err)
 	}
 	if row.of == nil {
 		httpx.WriteJSON(w, http.StatusOK, ForwardQuote{Deleted: true})
