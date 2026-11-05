@@ -1,0 +1,27 @@
+internal/ws/mediaframe/mediaframe.go
+  s_f6edaac6c70960::t_b5fab2c36f3f54 1-28
+AGENTS.md
+  s_f6edaac6c70960::t_0c9b3ce5ddb725 87
+internal/ws/media_framing_test.go
+  s_f6edaac6c70960::t_cd669db74b0ce7 13-19
+internal/ws/mediaframe/mediaframe_test.go
+  s_f6edaac6c70960::t_9808aa53fd2180 1-45
+internal/ws/media.go
+  s_f6edaac6c70960::t_af6b25652a48e6 7-8,20,36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "064a139d2aec82eee659bc218834483d362ccb77",
+  "prompts": {},
+  "sessions": {
+    "s_f6edaac6c70960": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-aedccab7bc6622020",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
