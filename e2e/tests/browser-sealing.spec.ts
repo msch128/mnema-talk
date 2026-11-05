@@ -81,7 +81,6 @@ async function lacksFrameTransformOnLinuxWebKit(browser: Browser) {
 
 test('call media is sealed on every audio line and arrives decoded', async ({ browser }) => {
   test.skip(await lacksFrameTransformOnLinuxWebKit(browser), 'Playwright Linux WebKit has no RTCRtpScriptTransform; calls cannot be sealed there')
-  const t0 = Date.now(); const lap = (what: string) => console.log(`TIMING ${what} ${Date.now() - t0} ms`)
   const contexts = await Promise.all([0, 1].map(() => browser.newContext({ permissions: ['microphone', 'camera'] })))
   opened.push(...contexts)
   const [adminCtx, memberCtx] = contexts as [typeof contexts[0], typeof contexts[0]]
@@ -96,7 +95,6 @@ test('call media is sealed on every audio line and arrives decoded', async ({ br
   await memberFor(admin, member)
   await admin.reload()
 
-  lap('signed in and member ready')
   // The engine has what sealing needs.
   for (const page of [admin, member]) {
     expect(await page.evaluate(() => typeof RTCRtpScriptTransform)).toBe('function')
@@ -111,7 +109,6 @@ test('call media is sealed on every audio line and arrives decoded', async ({ br
     await expect.poll(async () => (await transforms(page))?.senders.length, { timeout: 15_000 }).toBeGreaterThan(0)
   }
 
-  lap('connected and transforms present')
   // Nothing goes out, and nothing comes in, outside the frame transform.
   for (const page of [admin, member]) {
     const lines = await transforms(page)
@@ -125,7 +122,6 @@ test('call media is sealed on every audio line and arrives decoded', async ({ br
     await expect.poll(() => audioDecodedIn(page), { timeout: 20_000 }).toBeGreaterThan(2 * 48_000)
   }
 
-  lap('audio decoded on both')
   // Both ended up with the same keys, which the safety code shows.
   const code = async (page: Page) => {
     await page.getByTestId('voice-panel-ping').click()
@@ -137,7 +133,6 @@ test('call media is sealed on every audio line and arrives decoded', async ({ br
   }
   await expect.poll(async () => (await code(admin)) === (await code(member)), { timeout: 30_000 }).toBe(true)
 
-  lap('safety codes agree')
   await leaveTalks([admin, member])
   await adminCtx.close()
   await memberCtx.close()
