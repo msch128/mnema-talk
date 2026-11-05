@@ -1,0 +1,21 @@
+internal/chat/core/voice_rooms.go
+  s_db63cd4785d2fa::t_d70e224dcb2c20 1
+internal/chat/core_aliases.go
+  s_db63cd4785d2fa::t_b45fce17efe7c8 124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "59319af41b2bb34a01e8fb87d460062b7f285083",
+  "prompts": {},
+  "sessions": {
+    "s_db63cd4785d2fa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-af8120c5ffaae3583",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
