@@ -56,26 +56,46 @@ func freeUDPRange(t *testing.T, n int) uint16 {
 	return 0
 }
 
-// freeRelayPort returns a port free for both UDP and TCP.
-func freeRelayPort(t *testing.T) int {
+// pickRelayPort takes candidates from next until one lies outside the media
+// port range min-max (the server refuses a TURN port inside it, and a relay
+// bound there would also steal a media port), and returns it. It gives up after
+// a bounded number of candidates.
+func pickRelayPort(next func() (int, bool), min, max uint16) (int, bool) {
+	for range 100 {
+		port, ok := next()
+		if !ok || (port >= int(min) && port <= int(max)) {
+			continue
+		}
+		return port, true
+	}
+	return 0, false
+}
+
+// freeRelayPort returns a port free for both UDP and TCP and outside the media
+// port range min-max.
+func freeRelayPort(t *testing.T, min, max uint16) int {
 	t.Helper()
-	for range 50 {
+	port, ok := pickRelayPort(func() (int, bool) {
 		port := int(freeUDPPort(t))
 		l, err := net.Listen("tcp4", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
-		if err == nil {
-			_ = l.Close()
-			return port
+		if err != nil {
+			return 0, false
 		}
+		_ = l.Close()
+		return port, true
+	}, min, max)
+	if !ok {
+		t.Fatal("no port free for UDP and TCP outside the media range")
 	}
-	t.Fatal("no port free for UDP and TCP")
-	return 0
+	return port
 }
 
 // relayFor starts the built-in relay for s the way main does.
 func relayFor(t *testing.T, s *SFU) *turnrelay.Server {
 	t.Helper()
+	ep := s.Endpoints()
 	relay, err := turnrelay.Start(turnrelay.Options{
-		Port:     freeRelayPort(t),
+		Port:     freeRelayPort(t, ep.PortMin, ep.PortMax),
 		BindAddr: "127.0.0.1",
 		Target: func() turnrelay.Target {
 			ep := s.Endpoints()
@@ -243,4 +263,22 @@ func newRelayAllocation(t *testing.T, relay *turnrelay.Server) (*turn.Client, er
 		return nil, err
 	}
 	return c, nil
+}
+
+// A TURN port candidate inside the media range is skipped, however often the
+// source offers one; the first port outside it wins.
+func TestPickRelayPortSkipsTheMediaRange(t *testing.T) {
+	seq := []int{40000, 40010, 40020, 39999, 40021, 45000}
+	i := 0
+	port, ok := pickRelayPort(func() (int, bool) {
+		p := seq[i]
+		i++
+		return p, true
+	}, 40000, 40020)
+	if !ok || port != 39999 {
+		t.Fatalf("port = %d, ok = %v, want 39999", port, ok)
+	}
+	if _, ok := pickRelayPort(func() (int, bool) { return 40005, true }, 40000, 40020); ok {
+		t.Fatal("a source that only offers in-range ports must give up")
+	}
 }
