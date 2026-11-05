@@ -17,11 +17,11 @@ const MaxSlowModeSeconds = 86400
 // conversation may send before anybody else has written in it.
 const MaxUnansweredDMMessages = 2
 
-// errDMSend is the refusal of a direct message the rules do not allow. Whatever
+// ErrDMSend is the refusal of a direct message the rules do not allow. Whatever
 // the reason, the answer is the same text (see dm.go), so none can be probed.
 var ErrDMSend = httpx.ErrForbidden("Couldn't send this message.")
 
-// errPostTitleRequired answers a forum post without a title.
+// ErrPostTitleRequired answers a forum post without a title.
 var ErrPostTitleRequired = httpx.ErrInvalidInput("title is required for forum posts")
 
 // DMMemberIDs lists the members of a conversation (empty if there is none).
