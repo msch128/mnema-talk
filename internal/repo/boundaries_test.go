@@ -71,9 +71,9 @@ var trees = []layered{
 			"talks":  {"core", "messages", "channels", "mentions", "stage"},
 			"botapi": {"core", "messages", "channels", "mentions"},
 			// account renders the userdata sections of every domain.
-			"account": {"core", "messages", "channels", "dm"},
+			"account": {"core", "messages", "channels", "dm", "reports"},
 		},
-		mustExist: []string{"blocks", "stage", "chattest", "core", "mentions", "readstate", "messages", "channels", "dm"},
+		mustExist: []string{"blocks", "stage", "chattest", "core", "mentions", "readstate", "messages", "channels", "dm", "reports"},
 		importers: map[string][]string{
 			"botapi":  {"internal/server", "internal/chat"},
 			"account": {"internal/server", "internal/chat"},

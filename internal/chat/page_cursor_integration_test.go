@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/chat/reports"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -42,7 +43,7 @@ func TestPageCursorOfADeletedRowIsNotFound(t *testing.T) {
 	requireStatus(t, err, http.StatusNotFound)
 
 	h := &Handler{DB: f.p, Events: &events.Recorder{}}
-	err = h.listReports(httptest.NewRecorder(), chattest.Request(f.u, "", nil, "before="+gone.String()))
+	err = h.reports().ListReports(httptest.NewRecorder(), chattest.Request(f.u, "", nil, "before="+gone.String()))
 	requireStatus(t, err, http.StatusNotFound)
 
 	// A cursor that exists still pages.
@@ -85,7 +86,7 @@ func TestResolveAndDeleteReportStates(t *testing.T) {
 	if err := f.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('reporter_two', 'Reporter', 'x') RETURNING id`).Scan(&reporter); err != nil {
 		t.Fatal(err)
 	}
-	id, err := FileReport(ctx, f.p, NewReport{Reporter: reporter, MessageID: f.m, Category: "spam"})
+	id, err := reports.FileReport(ctx, f.p, NewReport{Reporter: reporter, MessageID: f.m, Category: "spam"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,10 +94,10 @@ func TestResolveAndDeleteReportStates(t *testing.T) {
 	params := map[string]string{"id": id.String()}
 	resolve := func() (*httptest.ResponseRecorder, error) {
 		w := httptest.NewRecorder()
-		return w, h.resolveReport(w, chattest.Request(f.u, `{"status":"resolved","note":"done"}`, params, ""))
+		return w, h.reports().ResolveReport(w, chattest.Request(f.u, `{"status":"resolved","note":"done"}`, params, ""))
 	}
 	del := func() error {
-		return h.deleteReport(httptest.NewRecorder(), chattest.Request(f.u, "", params, ""))
+		return h.reports().DeleteReport(httptest.NewRecorder(), chattest.Request(f.u, "", params, ""))
 	}
 
 	requireStatus(t, del(), http.StatusConflict)

@@ -7,6 +7,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
+	"github.com/msch128/mnema-talk/internal/chat/reports"
 )
 
 // Aliases for symbols that moved into sub-packages while internal/chat is split
@@ -44,6 +45,7 @@ type CreateCategoryRequest = channels.CreateCategoryRequest
 type CreateChannelRequest = channels.CreateChannelRequest
 type CreateDMRequest = dm.CreateDMRequest
 type CreateMessageRequest = messages.CreateMessageRequest
+type CreateReportRequest = reports.CreateReportRequest
 type DMCall = dm.DMCall
 type DMCallEnd = dm.DMCallEnd
 type DMCallRing = dm.DMCallRing
@@ -106,10 +108,12 @@ const MaxMentionRecipients = mentions.MaxMentionRecipients
 const MaxMessageLen = core.MaxMessageLen
 const MaxModerationReason = messages.MaxModerationReason
 const MaxNewDMsPerDay = dm.MaxNewDMsPerDay
+const MaxOpenReportsPerMember = reports.MaxOpenReportsPerMember
 const MaxPinsPerChannel = messages.MaxPinsPerChannel
 const MaxPostTags = core.MaxPostTags
 const MaxPostTitleLen = core.MaxPostTitleLen
 const MaxReactionsPerUser = messages.MaxReactionsPerUser
+const MaxReportNote = reports.MaxReportNote
 const MaxSlowModeSeconds = core.MaxSlowModeSeconds
 const MaxSlugLength = channels.MaxSlugLength
 const MaxSortOrder = channels.MaxSortOrder
@@ -138,6 +142,7 @@ type NewDM = dm.NewDM
 const NewDMsPerMinute = dm.NewDMsPerMinute
 
 type NewMessage = messages.NewMessage
+type NewReport = reports.NewReport
 type NotificationSettings = readstate.NotificationSettings
 
 const NotifyAll = readstate.NotifyAll
@@ -165,6 +170,33 @@ type ReadState = readstate.ReadState
 type RenameCategoryRequest = channels.RenameCategoryRequest
 type RenamedCategory = channels.RenamedCategory
 type ReplyPreview = core.ReplyPreview
+type Report = reports.Report
+type ReportAttachment = reports.ReportAttachment
+
+const ReportContextAfter = reports.ReportContextAfter
+const ReportContextBefore = reports.ReportContextBefore
+
+type ReportDetail = reports.ReportDetail
+
+const ReportDismissed = reports.ReportDismissed
+
+type ReportFiled = reports.ReportFiled
+
+const ReportKindChannel = reports.ReportKindChannel
+const ReportKindDM = reports.ReportKindDM
+const ReportOpen = reports.ReportOpen
+
+type ReportParty = reports.ReportParty
+
+const ReportResolved = reports.ReportResolved
+
+type ReportSnapshot = reports.ReportSnapshot
+type ReportedMessage = reports.ReportedMessage
+type ReportsPage = reports.ReportsPage
+
+const ReportsPerHour = reports.ReportsPerHour
+
+type ResolveReportRequest = reports.ResolveReportRequest
 type ServerNotify = readstate.ServerNotify
 type SetDMFavouritesRequest = dm.SetDMFavouritesRequest
 type SetDMHiddenRequest = dm.SetDMHiddenRequest

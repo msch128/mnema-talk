@@ -14,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
+	"github.com/msch128/mnema-talk/internal/chat/reports"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -100,11 +101,16 @@ func (h *Handler) DMs() *dm.API {
 	return &dm.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Objects: h.Objects, Voice: h.voiceRooms(), Calls: h.Calls, DMLimit: h.DMLimit}
 }
 
+// reports builds the reports API from the handler's fields.
+func (h *Handler) reports() *reports.API {
+	return &reports.API{DB: h.DB, Guard: h.guard(), Audit: h.Audit, ReportLimit: h.ReportLimit}
+}
+
 // Mount registers the member-facing routes (RequireUser must already apply).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/members", httpx.Handle(h.listMembers))
 	blocks.API{DB: h.DB, Events: h.Events, Limit: h.BlockLimit}.Mount(r)
-	h.mountReports(r)
+	h.reports().Mount(r)
 	h.mountSaved(r)
 	h.DMs().Mount(r)
 	h.mountTalks(r)
@@ -119,7 +125,7 @@ func (h *Handler) Mount(r chi.Router) {
 // MountAdmin registers channel and category management (the Manage channels
 // permission applies).
 func (h *Handler) MountAdmin(r chi.Router) {
-	h.mountReportsAdmin(r)
+	h.reports().MountAdmin(r)
 	h.channels().MountAdmin(r)
 }
 
