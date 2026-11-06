@@ -1,8 +1,8 @@
 package db
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -63,16 +63,27 @@ func TestEmbeddedMigrationsAreNumbered(t *testing.T) {
 	}
 }
 
-func TestUpgradeDocListsAll12Migrations(t *testing.T) {
+func TestUpgradeDocListsEveryMigrationFrom1_2(t *testing.T) {
 	data, err := os.ReadFile("../../doc/upgrade.md")
 	if err != nil {
 		t.Fatal(err)
 	}
 	content := string(data)
-	for i := 59; i <= 75; i++ {
-		num := fmt.Sprintf("%04d", i)
-		if !strings.Contains(content, "| "+num+" |") {
-			t.Errorf("doc/upgrade.md does not document migration %s in the 1.2 table", num)
+	files, err := MigrationFiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range files {
+		num, _, _ := strings.Cut(name, "_")
+		if n, err := strconv.Atoi(num); err != nil || n < 59 {
+			continue
 		}
+		if !strings.Contains(content, "| "+num+" |") {
+			t.Errorf("doc/upgrade.md does not document migration %s", name)
+		}
+	}
+	// 0060 is an intentional gap: the table row says so.
+	if !strings.Contains(content, "| 0060 | Unused") {
+		t.Error("doc/upgrade.md must explain the intentional gap at 0060")
 	}
 }

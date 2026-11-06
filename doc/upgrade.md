@@ -333,7 +333,14 @@ of the pre-update backup (see "Rollback" above).
 | 0090 | `wiki_images`: marks the media rows used as wiki pictures. Adds a table and an index only. |
 | 0091 | Indexes on `saved_messages (message_id)`, `forum_post_reads (post_id)`, `message_reminders (message_id)` and `thread_follows (thread_id)`, which replaces the partial `idx_thread_follows_thread`: deleting a message no longer scans those tables. Building them briefly slows writes to them on a very large database. |
 | 0092 | `scheduled_messages.attempts` and `retry_at`: count failed sends and delay the next try. Adds two columns only; existing rows start at zero. |
+| 0093 | `messages_user_idx` on `messages (user_id)`: lookups by author (the inbox, the `from:` search filter, account export, erasure) no longer scan the whole table. Adds an index only. |
+| 0094 | Indexes on the referencing columns of foreign keys that lacked one (`poll_anon_ballots`, `channel_reads`, `message_reactions`, `messages`, `events`, `scheduled_messages`), so deleting a parent row no longer scans the child table. Adds indexes only. |
+| 0095 | Deletes event cover pictures that stayed behind as channel-less media rows when their channel was deleted (older than a day and attached to no event). The files stay in storage until the orphan sweep removes them. |
+| 0096 | `upload_usage`: the per-member daily upload budget is booked in its own table, so deleting a file or message no longer refunds the bytes. Adds a table and an index only. |
 | 0097 | Adds *Manage reports* and *Kick members* to the built-in Moderator and Admin roles. Changes permission bits of those two roles only. |
+| 0098 | `messages.counted`: messages in the chat of a conversation's call are left out of the public message total. Existing rows are marked and the totals on `users.message_count` are recomputed. |
+| 0099 | `users.public_voice_seconds`: the public time in Talks counts only stays in Talks everyone can see. It starts at zero; `voice_seconds` stays as the private total. |
+| 0100 | `message_nonces`: the client nonce that makes a repeated send of a message return the first one (feature `messages.nonce`). Adds a table and two indexes; rows older than a day are pruned. |
 
 The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 
