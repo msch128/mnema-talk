@@ -18,7 +18,11 @@
   },
   "app": {
     "checking": "Checking your session…",
-    "retrying": "Server not reachable right now – trying again…"
+    "retrying": "Server not reachable right now – trying again…",
+    "tryAgain": "Try again",
+    "trying": "Trying…",
+    "lastTried": "Last tried {when}",
+    "lastTriedNow": "just now"
   },
   "resize": {
     "default": "Resize",

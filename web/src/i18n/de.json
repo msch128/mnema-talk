@@ -18,7 +18,11 @@
   },
   "app": {
     "checking": "Verbindung wird geprüft …",
-    "retrying": "Server gerade nicht erreichbar – neuer Versuch …"
+    "retrying": "Server gerade nicht erreichbar – neuer Versuch …",
+    "tryAgain": "Erneut versuchen",
+    "trying": "Versuche es …",
+    "lastTried": "Zuletzt versucht: {when}",
+    "lastTriedNow": "gerade eben"
   },
   "resize": {
     "default": "Breite anpassen",

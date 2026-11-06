@@ -58,6 +58,8 @@ import { useCompactLayout } from './composables/useCompactLayout'
 import { usePushBridge } from './composables/usePushBridge'
 import { usePttHint } from './composables/usePttHint'
 import { useTitleBadge } from './composables/useTitleBadge'
+import { useSessionCheck } from './composables/useSessionCheck'
+import ServerUnreachable from './components/ServerUnreachable.vue'
 import { VOICE_CHAT_HEIGHT, STAGE_MIN_HEIGHT } from './lib/voiceChatPanel'
 
 const authStore = useAuthStore()
@@ -72,14 +74,10 @@ const serverFeatures = useServerFeaturesStore()
 const recovery = recoveryFromLocation(window.location.pathname, window.location.hash)
 const leaveRecovery = () => window.location.assign('/')
 let alive = true
-let authRetryTimer: ReturnType<typeof setTimeout> | undefined
-let cancelAuthRetry: (() => void) | undefined
 onBeforeUnmount(() => {
   alive = false
   routing.dispose()
-  clearTimeout(authRetryTimer)
-  cancelAuthRetry?.()
-  cancelAuthRetry = undefined
+  sessionCheck.dispose()
 })
 const { resumeVoiceSession, resumeRemoteAudio, leaveVoiceChannel, rejoinAfterReconnect } = useWebRTC()
 
@@ -195,35 +193,13 @@ watch(() => chatStore.isConnected, connected => {
   resumeVoiceSession().catch(() => {})
 })
 
-// Session check at start-up. checkAuth() answers null when the server can't
-// tell (rate limited, down, no network): that is not "signed out", so keep
-// the loading screen and try again instead of showing the login form.
-const authRetrying = ref(false)
-const AUTH_RETRY_MAX_MS = 15000
-
-async function checkAuthUntilKnown(delay = 1000) {
-  let result = await authStore.checkAuth()
-  if (!alive) return null
-  while (result === null) {
-    authRetrying.value = true
-    await new Promise<void>(resolve => {
-      cancelAuthRetry = resolve
-      authRetryTimer = setTimeout(resolve, delay)
-    })
-    cancelAuthRetry = undefined
-    authRetryTimer = undefined
-    if (!alive) return null
-    delay = Math.min(delay * 2, AUTH_RETRY_MAX_MS)
-    result = await authStore.checkAuth()
-    if (!alive) return null
-  }
-  authRetrying.value = false
-  return result
-}
+// Session check at start-up (see useSessionCheck): an unanswered check is not
+// "signed out", so the unreachable screen stays and keeps trying.
+const sessionCheck = useSessionCheck(() => authStore.checkAuth())
 
 onBeforeUnmount(startDesktopGaming())
 onMounted(async () => {
-  const isAuthed = await checkAuthUntilKnown()
+  const isAuthed = await sessionCheck.run()
   if (!alive) return
   authChecked.value = true
   if (isAuthed) {
@@ -239,6 +215,12 @@ onMounted(async () => {
     <RecoveryPage v-if="recovery" :link="recovery" @done="leaveRecovery" />
 
     <!-- Session check still running: minimal loading state, no data fetching -->
+    <ServerUnreachable
+      v-else-if="!authChecked && sessionCheck.retrying.value"
+      :trying="sessionCheck.trying.value"
+      :last-tried-at="sessionCheck.lastTriedAt.value"
+      @retry="sessionCheck.retryNow"
+    />
     <div
       v-else-if="!authChecked"
       class="flex-1 flex flex-col items-center justify-center gap-3"
@@ -248,7 +230,7 @@ onMounted(async () => {
       <div class="w-10 h-10 rounded-lg bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-base animate-pulse">
         M
       </div>
-      <span class="text-sm text-mnema-tertiary">{{ $t(authRetrying ? 'app.retrying' : 'app.checking') }}</span>
+      <span class="text-sm text-mnema-tertiary">{{ $t('app.checking') }}</span>
     </div>
 
     <!-- Unauthenticated: login / invite registration -->
