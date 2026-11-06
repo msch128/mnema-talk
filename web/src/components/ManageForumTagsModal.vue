@@ -34,6 +34,7 @@ const adding = ref(false)
 const editingId = ref<string | null>(null)
 const busyId = ref<string | null>(null)
 const isSaving = ref(false)
+const reordering = ref(false)
 
 // Escape while a tag is being edited leaves edit mode; the dialog stays open.
 function onDialogClose() {
@@ -88,9 +89,11 @@ async function removeTag(tag: ForumTag) {
 async function move(index: number, by: -1 | 1) {
   const ids = props.tags.map(tag => tag.id)
   const other = index + by
-  if (other < 0 || other >= ids.length) return
+  if (reordering.value || other < 0 || other >= ids.length) return
   ;[ids[index], ids[other]] = [ids[other]!, ids[index]!]
+  reordering.value = true
   await run(t('forum.reorderFailed'), async () => { await reorderForumTags(props.channelId, ids) })
+  reordering.value = false
 }
 </script>
 
@@ -120,10 +123,10 @@ async function move(index: number, by: -1 | 1) {
                 <Lock v-if="tag.moderated" class="h-3.5 w-3.5 shrink-0 text-mnema-tertiary" :aria-label="$t('forum.moderatedTag')" v-tooltip="$t('forum.moderatedTag')" />
               </div>
               <div class="flex shrink-0 items-center">
-                <button type="button" class="btn btn-icon h-8 w-8 max-md:h-10 max-md:w-10" :disabled="index === 0" :aria-label="$t('forum.moveUp')" v-tooltip="$t('forum.moveUp')" @click="move(index, -1)">
+                <button type="button" class="btn btn-icon h-8 w-8 max-md:h-10 max-md:w-10" :disabled="reordering || index === 0" :aria-label="$t('forum.moveUp')" v-tooltip="$t('forum.moveUp')" @click="move(index, -1)">
                   <ArrowUp class="h-3.5 w-3.5" />
                 </button>
-                <button type="button" class="btn btn-icon h-8 w-8 max-md:h-10 max-md:w-10" :disabled="index === tags.length - 1" :aria-label="$t('forum.moveDown')" v-tooltip="$t('forum.moveDown')" @click="move(index, 1)">
+                <button type="button" class="btn btn-icon h-8 w-8 max-md:h-10 max-md:w-10" :disabled="reordering || index === tags.length - 1" :aria-label="$t('forum.moveDown')" v-tooltip="$t('forum.moveDown')" @click="move(index, 1)">
                   <ArrowDown class="h-3.5 w-3.5" />
                 </button>
                 <button type="button" class="btn btn-icon h-8 w-8 max-md:h-10 max-md:w-10" :aria-label="$t('forum.edit')" v-tooltip="$t('forum.edit')" @click="editingId = tag.id; adding = false">

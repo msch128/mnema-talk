@@ -27,7 +27,9 @@ describe('category header activity', () => {
   })
 
   it('shows a mention count or an unread dot only while collapsed', () => {
-    expect(header({ collapsed: true, mentions: 4, unreadChannels: 2 }).find('[data-testid="category-mentions"]').text()).toBe('4')
+    expect(header({ collapsed: true, mentions: 4, unreadChannels: 2 }).find('[data-testid="category-mentions"] [aria-hidden="true"]').text()).toBe('4')
+    expect(header({ collapsed: true, mentions: 4 }).find('[data-testid="category-mentions"] .sr-only').text()).toContain('4')
+    expect(header({ collapsed: true, mentions: 4 }).find('[data-testid="category-mentions"]').attributes('aria-label')).toBeUndefined()
     expect(header({ collapsed: true, mentions: 4, unreadChannels: 2 }).find('[data-testid="category-unread"]').exists()).toBe(false)
     expect(header({ collapsed: true, unreadChannels: 2 }).find('[data-testid="category-unread"]').exists()).toBe(true)
     expect(header({ collapsed: false, mentions: 4, unreadChannels: 2 }).find('[data-testid="category-mentions"]').exists()).toBe(false)

@@ -3,7 +3,7 @@
 // or nothing, a timed or open-ended mute of the whole server, and whether
 // @all and @here are ignored. Channels and categories can override all of it
 // (right-click them in the sidebar). Every choice is saved at once and says "Saved".
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { BellOff, Bell } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import { useChatStore } from '../stores/chat'
@@ -18,7 +18,16 @@ const chatStore = useChatStore()
 const pref = usePreferenceSave()
 
 type ServerLevel = 'all' | 'mentions' | 'mute'
-const server = computed(() => chatStore.notifySettings.server)
+interface Pending { level: ServerLevel; muted_until: string | null; suppress_everyone: boolean }
+const fromStore = (): Pending => {
+  const s = chatStore.notifySettings.server
+  return { level: s.level as ServerLevel, muted_until: s.muted_until ?? null, suppress_everyone: s.suppress_everyone }
+}
+// What the member has chosen so far. Every click builds on it and shows at once;
+// the store only catches up after the PUT, so reading it would undo quick clicks.
+const server = ref<Pending>(fromStore())
+let inflight = 0
+watch(() => chatStore.notifySettings.server, () => { if (inflight === 0) server.value = fromStore() }, { deep: true })
 const muted = computed(() => server.value.level === 'mute')
 const levels: Array<{ id: ServerLevel; label: string }> = [
   { id: 'all', label: t('notifications.all') },
@@ -31,22 +40,35 @@ const muteStatus = computed(() =>
     : t('notifications.muteServerForever')
 )
 
-async function save(level: ServerLevel, mutedUntil: string | null, suppress: boolean) {
-  await pref.run(async () => {
-    if (!await chatStore.setServerNotification(level, mutedUntil, suppress)) throw new Error(t('notifications.serverSaveFailed'))
+let queue: Promise<unknown> | null = null
+
+async function persist(next: Pending) {
+  const ok = await pref.run(async () => {
+    if (!await chatStore.setServerNotification(next.level, next.muted_until, next.suppress_everyone)) throw new Error(t('notifications.serverSaveFailed'))
   })
+  inflight--
+  if (!ok && inflight === 0) server.value = fromStore()
+}
+
+// Saves run one after another; the first starts at once.
+function save(next: Pending) {
+  server.value = next
+  inflight++
+  const run = queue ? queue.then(() => persist(next)) : persist(next)
+  queue = run
+  void run.finally(() => { if (queue === run) queue = null })
 }
 
 function chooseLevel(level: ServerLevel) {
-  void save(level, null, server.value.suppress_everyone)
+  save({ ...server.value, level, muted_until: null })
 }
 
 function muteFor(ms: number | null) {
-  void save('mute', ms === null ? null : new Date(Date.now() + ms).toISOString(), server.value.suppress_everyone)
+  save({ ...server.value, level: 'mute', muted_until: ms === null ? null : new Date(Date.now() + ms).toISOString() })
 }
 
 function toggleSuppress() {
-  void save(server.value.level as ServerLevel, server.value.muted_until, !server.value.suppress_everyone)
+  save({ ...server.value, suppress_everyone: !server.value.suppress_everyone })
 }
 
 const rowClass = (on: boolean) => [

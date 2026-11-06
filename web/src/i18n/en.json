@@ -1047,7 +1047,10 @@
     "replyingTo": "Replying to",
     "openThread": "Open thread",
     "addReaction": "Add reaction",
-    "reaction": "Reaction {emoji}",
+    "reaction": {
+      "one": "{emoji}: {count} reaction",
+      "other": "{emoji}: {count} reactions"
+    },
     "edit": "Edit message",
     "delete": "Delete message",
     "bot": "Bot",

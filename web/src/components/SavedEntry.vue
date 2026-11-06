@@ -49,10 +49,10 @@ async function startNote() {
 
 async function saveNote() {
   const note = draft.value.trim()
-  editing.value = false
-  if (note === props.entry.note) return
+  if (note === props.entry.note) { editing.value = false; return }
   try {
     await saved.save(props.entry.message_id, note)
+    editing.value = false
   } catch (error) {
     toasts.error(caughtErrorMessage(error, t('saved.saveFailed')))
   }

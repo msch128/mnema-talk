@@ -45,6 +45,24 @@ describe('WelcomeProfileStep', () => {
     expect(w.emitted('done')).toHaveLength(1)
   })
 
+  it('saves a name and bio without the spaces around them', async () => {
+    const update = vi.spyOn(useAuthStore(), 'updateProfile').mockResolvedValue(userFixture())
+    const w = step()
+    await w.get('#welcome-displayname').setValue('  Ada L  ')
+    await w.get('#welcome-bio').setValue(' Maths\n')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(update).toHaveBeenCalledWith({ displayName: 'Ada L', bio: 'Maths' })
+  })
+
+  it('does not save when only spaces were added', async () => {
+    const update = vi.spyOn(useAuthStore(), 'updateProfile')
+    const w = step()
+    await w.get('#welcome-displayname').setValue('Ada  ')
+    await w.get('form').trigger('submit')
+    expect(update).not.toHaveBeenCalled()
+  })
+
   it('stays on the step and says so when saving fails', async () => {
     vi.spyOn(useAuthStore(), 'updateProfile').mockRejectedValue(new Error('no'))
     const w = step()

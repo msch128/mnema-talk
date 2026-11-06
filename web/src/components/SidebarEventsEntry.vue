@@ -20,7 +20,6 @@ onMounted(() => {
     <button
       type="button"
       class="group flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-sm font-medium text-mnema-secondary hover:bg-mnema-hover hover:text-mnema-text transition-colors cursor-pointer"
-      :aria-label="$t('events.events')"
       @click="openEvents()"
     >
       <div class="flex items-center gap-2 min-w-0">

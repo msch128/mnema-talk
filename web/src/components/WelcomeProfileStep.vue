@@ -37,10 +37,12 @@ async function onAvatar(e: Event) {
 
 async function save() {
   const user = auth.user
-  if (user && (displayName.value !== user.display_name || bio.value !== user.bio)) {
+  const name = displayName.value.trim()
+  const about = bio.value.trim()
+  if (user && (name !== user.display_name || about !== user.bio)) {
     saving.value = true
     try {
-      await auth.updateProfile({ displayName: displayName.value, bio: bio.value })
+      await auth.updateProfile({ displayName: name, bio: about })
     } catch (err) {
       toasts.error(caughtErrorMessage(err, t('profile.saveFailed')))
       return
