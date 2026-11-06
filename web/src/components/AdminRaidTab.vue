@@ -104,7 +104,7 @@ onMounted(() => raid.load())
         </template>
       </div>
 
-      <form class="space-y-6" data-testid="raid-form" @submit.prevent="form.save" @keydown="form.onKeydown">
+      <form class="space-y-6 rounded-lg border border-mnema-hairline bg-mnema-surface p-4" data-testid="raid-form" @submit.prevent="form.save" @keydown="form.onKeydown">
         <div class="space-y-2">
           <h4 class="text-sm font-semibold text-mnema-text">{{ $t('raid.throttle.title') }}</h4>
           <p class="text-xs text-mnema-tertiary">{{ $t('raid.throttle.hint') }}</p>
@@ -136,7 +136,7 @@ onMounted(() => raid.load())
           </div>
         </div>
 
-        <UnsavedChangesBar sticky save-testid="raid-save" :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset" />
+        <UnsavedChangesBar inline save-testid="raid-save" :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset" />
       </form>
     </template>
   </section>
