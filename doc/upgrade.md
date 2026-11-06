@@ -9,6 +9,22 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Public message and talk totals (migrations 0098 and 0099)
+
+The totals on a profile and in the member list are public, so they no longer
+include anything that is private to a few people.
+
+- **Messages.** The chat of a conversation's call is as private as the
+  conversation and is no longer counted in a member's message total
+  (`messages.counted`, decided when the message is written). Migration 0098
+  recomputes every total once; members who wrote in calls see a lower number.
+- **Talk time.** `voice_seconds` and `user_stats` now show a separate public
+  total that only counts stays in Talks visible to `@everyone` (decided when
+  the stay starts). The stored history cannot tell public from hidden time, so
+  the public total **starts at zero with this version** and counts from then
+  on. The old private total stays in the database (and the data export); it is
+  not shown to other members.
+
 ## Broad trusted proxies
 
 `TRUSTED_PROXY_CIDRS` entries wider than an IPv4 `/24` or an IPv6 `/64` used

@@ -43,10 +43,10 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 	h.mu.Lock()
 	_, wasIn := h.voice[chID][userID]
 	since, hadSince := h.voiceSince[key]
-	private := h.privateSeat[key]
+	class := h.seatClasses[key]
 	if wasIn {
 		delete(h.voiceSince, key)
-		delete(h.privateSeat, key)
+		delete(h.seatClasses, key)
 		delete(h.voiceMute, key)
 		h.stage.forget(key) // under the lock: no grant can land after it
 	}
@@ -65,7 +65,7 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 		}
 		h.BroadcastChannel(chID, events.VoiceStateUpdate, map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
 		if hadSince {
-			h.addVoiceTime(userID, chID, time.Since(since), private)
+			h.addVoiceTime(userID, chID, time.Since(since), class)
 		}
 	}
 }

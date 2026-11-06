@@ -64,13 +64,30 @@ func (g *voiceGate) forget(userID uuid.UUID) {
 
 // pendingVoiceTime is voice time of one user not written yet.
 type pendingVoiceTime struct {
-	secs      int64
+	secs int64
+	// public is the part of secs that counts in the public total.
+	public    int64
 	channel   uuid.UUID
 	lastWrite time.Time
 	timer     *time.Timer
 	// idle drops the entry once it has held nothing for a while.
 	idle *time.Timer
 }
+
+// seatClass says how the time of a stay in a Talk counts.
+type seatClass uint8
+
+const (
+	// seatPublic: the Talk is visible to @everyone; the time counts in the
+	// public total (and the private one).
+	seatPublic seatClass = iota
+	// seatLimited: some members cannot see the Talk; the time counts in the
+	// private total only, so the public one never reveals a hidden Talk.
+	seatLimited
+	// seatPrivate: the call of a conversation (or a Talk whose state could
+	// not be read); never counted.
+	seatPrivate
+)
 
 // voiceTimes debounces the writes of voice_seconds.
 type voiceTimes struct {
@@ -83,16 +100,21 @@ type voiceTimes struct {
 // spaced voiceTimeFlushEvery apart: a stay ending sooner after the last write
 // waits for a timer (or the hub's shutdown) and is written together with
 // whatever follows in the same Talk; a stay in a different Talk first writes
-// the held time of the previous one. private marks a stay in a conversation's
-// call (decided when the seat was taken), which is never counted.
-func (h *Hub) addVoiceTime(userID, chID uuid.UUID, d time.Duration, private bool) {
+// the held time of the previous one. class says how the stay counts (decided
+// when the seat was taken): a conversation's call never does, a Talk some
+// members cannot see only in the private total.
+func (h *Hub) addVoiceTime(userID, chID uuid.UUID, d time.Duration, class seatClass) {
 	secs := int64(d / time.Second)
 	// Time in the call of a conversation stays private: the total is public.
-	if h.DB == nil || secs <= 0 || private {
+	if h.DB == nil || secs <= 0 || class == seatPrivate {
 		return
 	}
+	var public int64
+	if class == seatPublic {
+		public = secs
+	}
 	h.flushConflictingVoiceTime(userID, chID)
-	if h.recordPendingVoiceTime(userID, chID, secs) {
+	if h.recordPendingVoiceTime(userID, chID, secs, public) {
 		h.flushVoiceTime(userID)
 	}
 }
@@ -120,11 +142,12 @@ func (h *Hub) getOrCreatePendingVoiceTime(userID uuid.UUID) *pendingVoiceTime {
 	return p
 }
 
-func (h *Hub) recordPendingVoiceTime(userID, chID uuid.UUID, secs int64) bool {
+func (h *Hub) recordPendingVoiceTime(userID, chID uuid.UUID, secs, public int64) bool {
 	h.vtimes.mu.Lock()
 	defer h.vtimes.mu.Unlock()
 	p := h.getOrCreatePendingVoiceTime(userID)
 	p.secs += secs
+	p.public += public
 	p.channel = chID
 	if p.idle != nil {
 		p.idle.Stop()
@@ -148,8 +171,8 @@ func (h *Hub) flushVoiceTime(userID uuid.UUID) {
 		h.vtimes.mu.Unlock()
 		return
 	}
-	secs, chID := p.secs, p.channel
-	p.secs, p.lastWrite = 0, time.Now()
+	secs, public, chID := p.secs, p.public, p.channel
+	p.secs, p.public, p.lastWrite = 0, 0, time.Now()
 	if p.timer != nil {
 		p.timer.Stop()
 		p.timer = nil
@@ -159,26 +182,29 @@ func (h *Hub) flushVoiceTime(userID uuid.UUID) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	var total int64
-	err := h.DB.QueryRow(ctx, `UPDATE users SET voice_seconds = voice_seconds + $1 WHERE id = $2 RETURNING voice_seconds`,
-		secs, userID).Scan(&total)
+	err := h.DB.QueryRow(ctx, `UPDATE users SET voice_seconds = voice_seconds + $1, public_voice_seconds = public_voice_seconds + $3
+		WHERE id = $2 RETURNING public_voice_seconds`, secs, userID, public).Scan(&total)
 	if err != nil {
 		slog.Warn("record voice time", "user", userID, "err", err)
-		h.restorePendingVoiceTime(userID, chID, secs)
+		h.restorePendingVoiceTime(userID, chID, secs, public)
 		return
 	}
 	h.pruneWhenIdle(userID)
-	// A total that just grew by a stay in a Talk reveals that stay, so only
-	// those who can view that Talk learn it.
-	h.BroadcastChannel(chID, events.UserStats, map[string]any{"user_id": userID, "voice_seconds": total})
+	// Only the public total is shown, and it only grew by a stay in a Talk
+	// everyone can see; time in other Talks announces nothing.
+	if public > 0 {
+		h.BroadcastChannel(chID, events.UserStats, map[string]any{"user_id": userID, "voice_seconds": total})
+	}
 }
 
 // restorePendingVoiceTime puts seconds whose write failed back, so the next
 // flush (a retry timer, a later stay or the shutdown) writes them again.
-func (h *Hub) restorePendingVoiceTime(userID, chID uuid.UUID, secs int64) {
+func (h *Hub) restorePendingVoiceTime(userID, chID uuid.UUID, secs, public int64) {
 	h.vtimes.mu.Lock()
 	defer h.vtimes.mu.Unlock()
 	p := h.getOrCreatePendingVoiceTime(userID)
 	p.secs += secs
+	p.public += public
 	p.channel = chID
 	if p.idle != nil {
 		p.idle.Stop()
@@ -224,10 +250,21 @@ func (h *Hub) flushAllVoiceTime() {
 	}
 }
 
-// isDMTalk reports whether ch is the Talk of a conversation. When the
-// permission state cannot be read it counts as one: the stay's time is then
-// kept out of the public total rather than leaked into it.
-func (h *Hub) isDMTalk(ch uuid.UUID) bool {
+// classifySeat decides how a stay in ch counts. When the permission state
+// cannot be read the stay is not counted at all: it is kept out of the public
+// total rather than leaked into it.
+func (h *Hub) classifySeat(ch uuid.UUID) seatClass {
 	snap, ok := h.permSnapshot(ch)
-	return !ok || (snap != nil && snap.IsDMTalk(ch))
+	switch {
+	case !ok:
+		return seatPrivate
+	case snap == nil:
+		return seatPublic // no permission model (tests): everything is open
+	case snap.IsDMTalk(ch):
+		return seatPrivate
+	case snap.EveryoneCanView(ch):
+		return seatPublic
+	default:
+		return seatLimited
+	}
 }

@@ -248,12 +248,12 @@ func (h *Hub) Close() {
 	// own clean-up no longer reaches removePresence to bank them.
 	now := time.Now()
 	stays := make(map[voiceKey]time.Duration, len(h.voiceSince))
-	private := make(map[voiceKey]bool, len(h.privateSeat))
+	classes := make(map[voiceKey]seatClass, len(h.seatClasses))
 	for key, since := range h.voiceSince {
 		stays[key] = now.Sub(since)
-		private[key] = h.privateSeat[key]
+		classes[key] = h.seatClasses[key]
 		delete(h.voiceSince, key)
-		delete(h.privateSeat, key)
+		delete(h.seatClasses, key)
 	}
 	clients := make([]*Client, 0, len(h.clients))
 	online := make([]uuid.UUID, 0, len(h.online))
@@ -276,7 +276,7 @@ func (h *Hub) Close() {
 	// database is still open: the connections' own clean-up runs after the
 	// server has moved on to closing it.
 	for key, d := range stays {
-		h.addVoiceTime(key.user, key.ch, d, private[key])
+		h.addVoiceTime(key.user, key.ch, d, classes[key])
 	}
 	h.flushAllVoiceTime()
 	h.recordLastSeen(online...)

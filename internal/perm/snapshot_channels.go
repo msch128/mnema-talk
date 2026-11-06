@@ -120,6 +120,34 @@ func (s *Snapshot) channelPerms(sub Subject, ch uuid.UUID) Set {
 	return s.hold(sub.ID, p)
 }
 
+// EveryoneCanView reports whether every member sees ch through @everyone
+// alone, with no role and no member overwrite: the Talks whose use may be
+// shown to the whole community. A conversation or its call never is, and a
+// channel the snapshot does not know counts as not visible.
+func (s *Snapshot) EveryoneCanView(ch uuid.UUID) bool {
+	cat, ok := s.channelCat[ch]
+	if !ok || s.IsPrivate(ch) {
+		return false
+	}
+	p := s.everyone
+	if p.Has(Administrator) {
+		return true
+	}
+	apply := func(sc *scope) {
+		if sc == nil {
+			return
+		}
+		if ow, ok := sc.roles[s.everyoneID]; ok {
+			p = p&^ow.deny | ow.allow
+		}
+	}
+	if cat != uuid.Nil {
+		apply(s.categoryOv[cat])
+	}
+	apply(s.channelOv[ch])
+	return p.Has(ViewChannel)
+}
+
 // CategoryPerms is what sub holds under a category's own overwrites: the
 // server-wide permissions with those overwrites applied, so a bit the category
 // denies them does not count as held.

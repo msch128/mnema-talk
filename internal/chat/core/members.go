@@ -53,7 +53,7 @@ var ErrUnknownUser = httpx.ErrNotFound("unknown user").WithDiscordCode(httpx.Dis
 func queryMembers(ctx context.Context, p *db.Pool, extra string, args ...any) ([]Member, error) {
 	rows, err := p.Query(ctx, `
 		SELECT u.id, u.username, u.display_name, u.bio, u.role, u.avatar_s3_key, `+auth.StatusSQLFor("u.")+`, u.created_at,
-		       u.voice_seconds, u.message_count, b.id IS NOT NULL, b.created_by
+		       u.public_voice_seconds, u.message_count, b.id IS NOT NULL, b.created_by
 		FROM users u LEFT JOIN bots b ON b.user_id = u.id
 		WHERE `+auth.ActiveSQL("u")+` AND (NOT u.is_bot OR (b.id IS NOT NULL AND NOT b.disabled)) `+extra+`
 		ORDER BY CASE WHEN u.role = 'admin' THEN 0 ELSE 1 END, u.display_name`, args...)

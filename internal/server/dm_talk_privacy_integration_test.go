@@ -225,3 +225,27 @@ func TestMessagesInAConversationsCallDoNotMoveThePublicTotal(t *testing.T) {
 		}
 	}
 }
+
+// Talk time on a profile and in the member list is the public total: time in
+// Talks some members cannot see stays out of it.
+func TestMembersAndProfilesShowThePublicTalkTime(t *testing.T) {
+	f := newCallFixture(t)
+	alice := f.dmFixture.alice
+	if _, err := f.a.db.Exec(context.Background(), `UPDATE users SET voice_seconds = 100, public_voice_seconds = 7 WHERE id = $1`, alice.user.ID); err != nil {
+		t.Fatal(err)
+	}
+	var prof struct {
+		VoiceSeconds int64 `json:"voice_seconds"`
+	}
+	f.dmFixture.bob.get("/api/users/"+alice.user.ID.String()).decode(t, &prof)
+	var members []struct {
+		ID           uuid.UUID `json:"id"`
+		VoiceSeconds int64     `json:"voice_seconds"`
+	}
+	f.dmFixture.bob.get("/api/members").decode(t, &members)
+	for _, m := range members {
+		if m.ID == alice.user.ID && (m.VoiceSeconds != 7 || prof.VoiceSeconds != 7) {
+			t.Fatalf("member list shows %d, profile %d seconds, want the public 7", m.VoiceSeconds, prof.VoiceSeconds)
+		}
+	}
+}
