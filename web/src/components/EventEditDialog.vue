@@ -9,7 +9,8 @@ import { caughtErrorMessage } from '../lib/api'
 import { t } from '../i18n'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useEventRoles } from '../composables/useEventRoles'
-import { useEventCover } from '../composables/useEventCover'
+import { normaliseImage, useStagedImage } from '../composables/useStagedImage'
+import type { ImageChange } from '../composables/useStagedImage'
 import { useRosterDraft } from '../composables/useRosterDraft'
 import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import type { SaveContext } from '../composables/useSettingsDraft'
@@ -35,7 +36,7 @@ const emit = defineEmits<{
   saved: [event: CommunityEvent]
 }>()
 
-type EventDraft = EventFields & { cover: string; roles: string }
+type EventDraft = EventFields & { cover: ImageChange; roles: string }
 
 const eventsStore = useEventsStore()
 const chatStore = useChatStore()
@@ -50,7 +51,6 @@ const existing = computed(() => props.event ?? created.value)
 const isEdit = computed(() => !!existing.value)
 const ids = { title: useId(), description: useId(), start: useId(), end: useId() }
 
-const cover = useEventCover(() => existing.value?.cover_url)
 const roster = useRosterDraft(() => existing.value?.roles)
 
 // A new event may repeat; an occurrence of a series may be changed for itself or for it and the later ones.
@@ -77,10 +77,10 @@ async function writeEvent(fields: EventFields): Promise<CommunityEvent> {
   return inSeries.value ? eventsStore.update(current.id, changes, scope.value) : eventsStore.update(current.id, changes)
 }
 
-async function writeCover(current: CommunityEvent): Promise<CommunityEvent> {
+async function writeCover(current: CommunityEvent, change: ImageChange): Promise<CommunityEvent> {
   try {
-    if (cover.removeStored.value) return await eventsStore.deleteCover(current.id)
-    if (cover.file.value) return await eventsStore.uploadCover(current.id, cover.file.value)
+    if (change === 'remove') return await eventsStore.deleteCover(current.id)
+    if (change) return await eventsStore.uploadCover(current.id, change)
     return current
   } catch (err) {
     // The event itself is saved; only the cover is missing.
@@ -111,7 +111,7 @@ async function write({ changed, commit, draft }: SaveContext<EventDraft>) {
     commit(wasEdit ? eventKeys : EVENT_FIELD_KEYS)
   }
   if (changed.includes('cover')) {
-    result = await writeCover(result)
+    result = await writeCover(result, draft.cover)
     commit(['cover'])
   }
   if (features.eventRoles && changed.includes('roles')) {
@@ -121,8 +121,9 @@ async function write({ changed, commit, draft }: SaveContext<EventDraft>) {
 }
 
 const form = useSettingsDraft<EventDraft>({
-  source: () => ({ ...fieldsOf(existing.value), cover: '', roles: roster.savedKey.value }),
+  source: () => ({ ...fieldsOf(existing.value), cover: null, roles: roster.savedKey.value }),
   normalisers: {
+    cover: normaliseImage,
     title: normalise.text,
     locationText: normalise.text,
     // Only a new event repeats; once it exists the choice is spent.
@@ -138,13 +139,12 @@ const form = useSettingsDraft<EventDraft>({
 })
 const { draft } = form
 
-// The cover and the roster live in their own state; the draft carries what they are.
-watch(cover.marker, marker => { draft.cover = marker })
+// The roster lives in its own state; the draft carries its key.
+const cover = useStagedImage({ get: () => draft.cover, set: value => { draft.cover = value }, savedUrl: () => existing.value?.cover_url ?? '' })
 watch(roster.key, key => { draft.roles = key })
 
 function reset() {
   form.reset()
-  cover.reset()
   roster.reset()
 }
 
@@ -282,7 +282,7 @@ const voiceChannels = computed(() => chatStore.allChannels.filter(c => c.type ==
         </div>
       </div>
 
-      <EventCoverField :preview="cover.preview.value" @pick="cover.pick" @remove="cover.remove" />
+      <EventCoverField :preview="cover.previewUrl.value || null" @pick="cover.pick" @remove="cover.remove" />
 
       <EventRolesEditor v-if="features.eventRoles" v-model="roster.rows.value" v-model:removals="roster.removals.value" />
 
