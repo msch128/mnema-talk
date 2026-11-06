@@ -171,6 +171,9 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) error {
 	if err := auth.LoadStats(r.Context(), h.Sessions.DB, u); err != nil {
 		return err
 	}
+	if err := h.hideUnseenMessages(r.Context(), u); err != nil {
+		return err
+	}
 	if err := auth.LoadBanner(r.Context(), h.Sessions.DB, u); err != nil {
 		return err
 	}
@@ -299,5 +302,19 @@ func (h *Handler) WriteStatus(w http.ResponseWriter, r *http.Request, userID uui
 		u = &pub
 	}
 	httpx.WriteJSON(w, http.StatusOK, u)
+	return nil
+}
+
+// hideUnseenMessages takes the messages in channels the caller cannot see out
+// of u's total, as the member list does.
+func (h *Handler) hideUnseenMessages(ctx context.Context, u *auth.User) error {
+	if h.HiddenMessages == nil {
+		return nil
+	}
+	hidden, err := h.HiddenMessages(ctx, auth.UserFrom(ctx).Subject())
+	if err != nil {
+		return err
+	}
+	u.MessageCount = max(u.MessageCount-hidden[u.ID], 0)
 	return nil
 }

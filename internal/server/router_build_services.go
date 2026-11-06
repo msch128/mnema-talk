@@ -1,9 +1,11 @@
 package server
 
 import (
+	"context"
 	"slices"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/auth/account"
 	"github.com/msch128/mnema-talk/internal/auth/authn"
@@ -21,6 +23,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/moderation"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/poll"
 	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/wiki"
@@ -125,6 +128,7 @@ func (c *components) newAuth(hub *ws.Hub) {
 	c.authH.Live = hub
 	c.authH.Names = c.d.Names
 	c.authH.Perms = c.permSvc
+	c.authH.HiddenMessages = c.hiddenMessageCounts
 	c.authH.Audit = c.auditLog
 	c.authH.Lifetime = c.ctx
 	c.newAuthAPIs()
@@ -146,4 +150,18 @@ func (c *components) newAuthAPIs() {
 // made them follow it (see chat.NewFollowSync).
 func (c *components) tapThreadFollows() {
 	c.addTap(messages.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub))
+}
+
+// hiddenMessageCounts counts, per author, the messages in channels the viewer
+// cannot see (the member list and a profile subtract them from the totals).
+func (c *components) hiddenMessageCounts(ctx context.Context, viewer perm.Subject) (map[uuid.UUID]int64, error) {
+	snap, err := c.permSvc.Snapshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	hidden := snap.HiddenChannels(viewer)
+	if len(hidden) == 0 {
+		return nil, nil
+	}
+	return chat.MessageCountsByAuthor(ctx, c.d.DB, hidden)
 }
