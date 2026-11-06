@@ -8,8 +8,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -78,10 +80,18 @@ func (a *API) updateTalk(w http.ResponseWriter, r *http.Request) error {
 	if !a.Talks.IsLeader(id, auth.UserFrom(r.Context()).ID) {
 		return errNotTalkLeader
 	}
+	// A name is text every member reads: the automod rules apply as to a message.
+	var pending *automod.Pending
+	if req.Name != nil {
+		if pending, err = messages.ScreenText(r.Context(), a.DB, id, auth.UserFrom(r.Context()).ID, uuid.Nil, *req.Name); err != nil {
+			return err
+		}
+	}
 	ch, err := channels.EditChannel(r.Context(), a.DB, id, req.Name, nil, req.UserLimit, nil, nil, nil)
 	if err != nil {
 		return err
 	}
+	pending.Commit(r.Context(), uuid.Nil)
 	if err := channels.FillTalkFields(r.Context(), a.DB, ch); err != nil {
 		return err
 	}

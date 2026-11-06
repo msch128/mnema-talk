@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -105,8 +106,9 @@ func (a *API) ServeUpdateForumSettings(w http.ResponseWriter, r *http.Request) e
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	var pending *automod.Pending
 	if req.Guidelines != nil {
-		if err := a.screenTag(r, chID, *req.Guidelines); err != nil {
+		if pending, err = a.screenTag(r, chID, *req.Guidelines); err != nil {
 			return err
 		}
 	}
@@ -114,6 +116,7 @@ func (a *API) ServeUpdateForumSettings(w http.ResponseWriter, r *http.Request) e
 	if err != nil {
 		return err
 	}
+	pending.Commit(r.Context(), uuid.Nil)
 	a.Audit.RecordOrLog(r.Context(), audit.Entry{
 		Action: "forum.settings_update", TargetType: "channel", TargetID: chID.String(), ChannelID: &chID,
 		Details: map[string]any{

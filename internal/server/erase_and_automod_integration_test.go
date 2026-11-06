@@ -156,3 +156,21 @@ func TestRetractionUsesTheSnapshotFromBeforeTheChange(t *testing.T) {
 	}
 	t.Fatal("the member who lost the Talk was not told to drop the event")
 }
+
+func TestFlagRulesSeeForumTagNamesAndGuidelines(t *testing.T) {
+	f := newAutomodFixture(t)
+	f.age(f.member)
+	f.addRule(wordRule("words", "flag", "spam"))
+	assignRoles(t, f.admin, f.member, createRole(t, f.admin, "builders", perm.ManageChannels))
+	forum := f.a.createChannel(f.admin, "ideas", "forum")
+	base := "/api/channels/" + forum.String()
+
+	wantStatus(t, "flagged tag", f.member.post(base+"/tags", map[string]any{"name": "spam"}), http.StatusCreated)
+	if q := f.queue(); len(q) != 1 || q[0].AutomodRule != "words" || q[0].AutomodOutcome != "flagged" {
+		t.Fatalf("queue after a flagged tag name = %+v; want one open flagged entry", q)
+	}
+	wantStatus(t, "flagged guidelines", f.member.patch(base+"/forum-settings", map[string]any{"guidelines": "no spam"}), http.StatusOK)
+	if q := f.queue(); len(q) != 1 || q[0].HitCount != 2 {
+		t.Fatalf("queue after flagged guidelines = %+v; want the entry counted up to 2", q)
+	}
+}
