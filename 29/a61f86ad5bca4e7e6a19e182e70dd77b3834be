@@ -1,0 +1,31 @@
+web/src/components/SidebarCategoryHeader.vue
+  s_06fcde5dbef956::t_0451dd788d3237 81
+web/src/components/SidebarDmSection.vue
+  s_06fcde5dbef956::t_b2ce4cffb7e1f4 174
+web/src/components/WikiHome.vue
+  s_06fcde5dbef956::t_c24f025c26588a 32
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_41f1123adbd741 139,144-152,168,292,601-602,759-762,1847,3431-3432,3560,3562,3820-3823,4080-4083,4153-4156,4217,4403-4406,4609,4615,4621,4683-4684,4688,4909-4910
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_ad81d6272001a1 139,144-152,168,292,601-602,759-762,3431-3432,3560,3562,3820-3823,4080-4083,4153-4156,4403-4406,4609,4615,4621,4683-4684,4688,4909-4910
+web/src/i18n/plurals.test.ts
+  s_06fcde5dbef956::t_cd9b7c6b536d01 1-23
+web/src/lib/settingsDialog.test.ts
+  s_06fcde5dbef956::t_893d3c1a710c65 97-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "29a61f86ad5bca4e7e6a19e182e70dd77b3834be",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
