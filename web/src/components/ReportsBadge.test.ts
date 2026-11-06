@@ -107,6 +107,16 @@ describe('open reports badge', () => {
     expect(w.get('[data-testid="reports-badge"]').text()).toContain('4')
   })
 
+  it('shortens a large count to 99+ while the screen reader hears the whole number', async () => {
+    usePermissionsStore().info = info(PERMISSION_BITS.manage_reports)
+    mountMenu()
+    await flushPromises()
+    reportsOpenEvent(150)
+    await flushPromises()
+    expect(w.get('[data-testid="reports-badge"] [aria-hidden="true"]').text()).toBe('99+')
+    expect(w.get('[data-testid="reports-badge"] .sr-only').text()).toBe('150 open reports')
+  })
+
   it('stays hidden when the community switched reports off', async () => {
     usePermissionsStore().info = info(PERMISSION_BITS.manage_reports)
     useServerFeaturesStore().list = []

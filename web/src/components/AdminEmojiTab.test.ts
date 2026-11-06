@@ -143,3 +143,75 @@ describe('EmojiGlyph', () => {
     expect(apiMock).toHaveBeenCalledWith('/api/emoji', expect.anything())
   })
 })
+
+describe('AdminEmojiTab on a phone and on errors', () => {
+  it('offers rename and delete as a labelled menu on a phone', async () => {
+    const { useCompactLayout } = await import('../composables/useCompactLayout')
+    useCompactLayout().isCompact.value = true
+    const w = mount(AdminEmojiTab, { attachTo: document.body })
+    await flushPromises()
+    expect(w.find('button[aria-label="Rename :blob:"]').exists()).toBe(false)
+    const open = async () => {
+      await w.get('[data-testid="row-actions"]').trigger('click')
+      await w.vm.$nextTick(); await w.vm.$nextTick()
+    }
+    const pick = (re: RegExp) => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(el => re.test(el.textContent ?? ''))?.click()
+    await open()
+    pick(/Rename/)
+    await flushPromises()
+    expect(w.find('[data-testid="emoji-rename-input"]').exists()).toBe(true)
+    document.body.innerHTML = ''
+    const w2 = mount(AdminEmojiTab, { attachTo: document.body })
+    await flushPromises()
+    confirmMock.mockResolvedValueOnce(true)
+    await w2.get('[data-testid="row-actions"]').trigger('click')
+    await w2.vm.$nextTick(); await w2.vm.$nextTick()
+    pick(/Delete/)
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledWith(`/api/admin/emoji/${ID}`, { method: 'DELETE' })
+    useCompactLayout().isCompact.value = false
+    document.body.innerHTML = ''
+  })
+
+  it('cancels a rename without saving', async () => {
+    const w = mount(AdminEmojiTab)
+    await flushPromises()
+    await w.get('button[aria-label="Rename :blob:"]').trigger('click')
+    await w.get('button[aria-label="Cancel"]').trigger('click')
+    expect(w.find('[data-testid="emoji-rename-input"]').exists()).toBe(false)
+    expect(apiMock).not.toHaveBeenCalledWith(`/api/admin/emoji/${ID}`, expect.anything())
+  })
+
+  it('shows an error and keeps the form editing when a rename fails', async () => {
+    const w = mount(AdminEmojiTab)
+    await flushPromises()
+    apiMock.mockRejectedValueOnce(new Error('taken'))
+    await w.get('button[aria-label="Rename :blob:"]').trigger('click')
+    await w.get('[data-testid="emoji-rename-input"]').setValue('other')
+    await w.get('[data-testid="emoji-row"] form').trigger('submit')
+    await flushPromises()
+    expect(useToastStore().toasts.length).toBe(1)
+    expect(w.find('[data-testid="emoji-rename-input"]').exists()).toBe(true)
+  })
+
+  it('shows an error and keeps the chosen file when an upload fails', async () => {
+    const w = mount(AdminEmojiTab)
+    await flushPromises()
+    const input = w.get<HTMLInputElement>('[data-testid="emoji-file"]')
+    Object.defineProperty(input.element, 'files', { value: [new File(['x'], 'ok.png', { type: 'image/png' })], configurable: true })
+    await input.trigger('change')
+    apiMock.mockRejectedValueOnce(new Error('too big'))
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(useToastStore().toasts.length).toBe(1)
+    expect(w.get('[data-testid="emoji-file-name"]').text()).toBe('ok.png')
+  })
+
+  it('opens the file picker from the choose button', async () => {
+    const w = mount(AdminEmojiTab)
+    await flushPromises()
+    const click = vi.spyOn(w.get<HTMLInputElement>('[data-testid="emoji-file"]').element, 'click')
+    await w.get('[data-testid="emoji-choose"]').trigger('click')
+    expect(click).toHaveBeenCalled()
+  })
+})
