@@ -77,7 +77,7 @@ async function welcomeFlowPhase(a: Page, b: Page, bCtx: BrowserContext, channelI
   })).status).toBe(200)
   await b.reload()
   await expect(dialog.getByRole('heading', { name: 'Die Regeln' })).toBeVisible()
-  await expect(dialog.getByTestId('welcome-progress')).toHaveText('Schritt 1 von 1')
+  await expect(dialog.getByTestId('welcome-progress')).toHaveCount(0)
   await expect(dialog.getByTestId('welcome-rules')).toContainText('Be kinder.')
   await dialog.getByRole('button', { name: 'Ich akzeptiere die Regeln' }).click()
   await expect(dialog).toBeHidden()
