@@ -139,7 +139,7 @@ const sizeText = (att: MediaAttachment) => formatFileSize(att.size_bytes, locale
       <div v-if="!bare(att)" :class="s.footer">
         <div :class="s.name">
           <FileText :class="s.icon" />
-          <a :href="att.url" target="_blank" :class="s.link">
+          <a :href="att.url" target="_blank" rel="noopener noreferrer" :class="s.link">
             {{ att.original_filename }}
           </a>
         </div>

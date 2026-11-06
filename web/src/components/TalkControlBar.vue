@@ -169,10 +169,10 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       data-testid="talk-mute"
       :class="[icon, !canSpeak ? blockedButton : voiceStore.isMuted ? danger : neutral]"
       :aria-pressed="voiceStore.isMuted ? 'true' : 'false'"
-      :disabled="!canSpeak"
+      :aria-disabled="!canSpeak ? 'true' : undefined"
       v-tooltip="!canSpeak ? speakHint : voiceStore.isMuted ? t('voice.unmute') : t('voice.mute')"
       v-bind="menus.mic.on"
-      @click="voiceStore.toggleMute"
+      @click="canSpeak && voiceStore.toggleMute()"
     >
       <MicOff v-if="voiceStore.isMuted" class="w-5 h-5" aria-hidden="true" />
       <Mic v-else class="w-5 h-5" aria-hidden="true" />

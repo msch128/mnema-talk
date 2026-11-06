@@ -56,9 +56,13 @@ describe('the call controls on a Stage', () => {
     const voice = inStage(SPEAKING)
     wrapper = mount(TalkControlBar)
     await nextTick()
-    expect(wrapper.get('[data-testid="talk-mute"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="talk-mute"]').attributes('aria-disabled')).toBe('true')
     const camera = wrapper.findAll('button').filter(b => b.attributes('disabled') !== undefined)
-    expect(camera.length).toBeGreaterThanOrEqual(3)
+    // Still focusable, so a keyboard user reaches the reason; a click does nothing.
+    expect(wrapper.get('[data-testid="talk-mute"]').attributes('disabled')).toBeUndefined()
+    await wrapper.get('[data-testid="talk-mute"]').trigger('click')
+    expect(voice.isMuted).toBe(true)
+    expect(camera.length).toBeGreaterThanOrEqual(2)
     // Whoever joins without talk power starts muted.
     expect(voice.isMuted).toBe(true)
     // "Not allowed" is the quiet grey, never the red of "muted".
