@@ -525,3 +525,16 @@ func TestACommandAnAdminSwitchedOffStaysOffWhateverTheBotDoes(t *testing.T) {
 	wantStatus(t, "register again", c.post(base, pingCommand), http.StatusOK)
 	stillOff("registering it again")
 }
+
+func TestRunningACommandBeforeAcceptingTheRulesAsksForTheRules(t *testing.T) {
+	f := newBotFixture(t, false)
+	max := f.a.register(f.owner, "max")
+	wantStatus(t, "register", f.client.post(bot.BasePath+"/commands", pingCommand), http.StatusOK)
+	cmd := channelCommands(t, max, f.open)[0]
+	setRules(t, f.owner, "# Rules\nBe kind.", false)
+
+	res := max.post("/api/channels/"+f.open.String()+"/interactions", map[string]any{"command_id": cmd.ID, "options": map[string]any{"text": "hi"}})
+	if res.status != http.StatusForbidden || res.code(t) != "RULES_NOT_ACCEPTED" {
+		t.Fatalf("run before accepting: %d %s", res.status, res.body)
+	}
+}
