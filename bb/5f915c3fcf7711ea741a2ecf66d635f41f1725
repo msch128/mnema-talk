@@ -1,0 +1,49 @@
+doc/upgrade.md
+  s_06fcde5dbef956::t_cc63a1fa6f0a27 12-27
+internal/auth/account/account_erase.go
+  s_06fcde5dbef956::t_e2b1496603b46e 45
+internal/auth/service_accounts.go
+  s_06fcde5dbef956::t_9bcb31f0fcf825 307-309,311
+internal/chat/core/members.go
+  s_06fcde5dbef956::t_535b6ff83ae5e3 56
+internal/db/migrations/0099_public_voice_seconds.sql
+  s_06fcde5dbef956::t_d21ead145f2f70 1-8
+internal/perm/snapshot_channels.go
+  s_06fcde5dbef956::t_7261ead4df131e 123-150
+internal/perm/snapshot_test.go
+  s_06fcde5dbef956::t_2997d2cd960b20 390-417
+internal/server/dm_talk_privacy_integration_test.go
+  s_06fcde5dbef956::t_06c7b4150e0635 228-251
+internal/ws/hub.go
+  s_06fcde5dbef956::t_096b56af2bacfb 82-84,165
+internal/ws/hub_database_integration_test.go
+  s_06fcde5dbef956::t_bb81948201e44b 85,100
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_3c2a3a58db4ec1 251,254,256,279
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_ef164820485c4a 225,245-246
+internal/ws/voice_presence.go
+  s_06fcde5dbef956::t_da7ed0763ccaf7 46,49,68
+internal/ws/voice_seat_private_test.go
+  s_06fcde5dbef956::t_86128820a8c1d9 44,46-84
+internal/ws/voicegate.go
+  s_06fcde5dbef956::t_ebc4f5b759cbc1 67-69,77-91,103-106,109,112-115,117,145,150,174-175,185-186,189,193-197,202,207,253-256,258-269
+internal/ws/voicetime_integration_test.go
+  s_06fcde5dbef956::t_7853dd35836198 26,30-31,45-46,73-76,122-123,158,167-216
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bb5f915c3fcf7711ea741a2ecf66d635f41f1725",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
