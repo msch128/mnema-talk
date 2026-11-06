@@ -149,7 +149,9 @@ func (c *components) newAuthAPIs() {
 // tapThreadFollows tells open clients which threads they follow after a reply
 // made them follow it (see chat.NewFollowSync).
 func (c *components) tapThreadFollows() {
-	c.addTap(messages.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub))
+	sync := messages.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub)
+	c.addTap(sync)
+	c.addDMTap(sync) // a call's chat has threads too; the update goes to the followers only
 }
 
 // hiddenMessageCount counts the messages one author has in channels the viewer

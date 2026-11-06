@@ -142,3 +142,13 @@ func TestTimeInACallWhoseConversationWasDeletedMidCallIsNotInThePublicVoiceTotal
 		t.Fatalf("voice_seconds = %d (%v), want 0", secs, err)
 	}
 }
+
+func TestAThreadReplyInACallChatTellsTheRootsAuthorTheyFollowIt(t *testing.T) {
+	f := newCallFixture(t)
+	talk := f.start(t)
+	root := f.a.send(f.dmFixture.alice, talk, "root")
+	wantStatus(t, "reply", f.dmFixture.bob.post("/api/channels/"+talk.String()+"/messages", map[string]any{"content": "reply", "parent_id": root.String()}), http.StatusCreated)
+	if _, ok := f.alice.expect(events.ThreadFollowUpdated, 5*time.Second); !ok {
+		t.Fatal("the root's author was not told about following the thread")
+	}
+}

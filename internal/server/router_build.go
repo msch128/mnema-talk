@@ -251,6 +251,18 @@ func (c *components) addTap(f func(ch uuid.UUID, eventType string, payload any))
 	}
 }
 
+// addDMTap is addTap for the events of conversations and their Talks, which
+// reach no webhook or bot.
+func (c *components) addDMTap(f func(ch uuid.UUID, eventType string, payload any)) {
+	prev := c.hub.DMTap
+	c.hub.DMTap = func(ch uuid.UUID, eventType string, payload any) {
+		if prev != nil {
+			prev(ch, eventType, payload)
+		}
+		f(ch, eventType, payload)
+	}
+}
+
 // newPush builds Web Push: the key pair, the sender, the handler for the
 // devices API and, when push is on, the delivery service that taps the hub's
 // events. Requests go only to push services, through the SSRF-guarded client
@@ -273,7 +285,7 @@ func (c *components) newPush() error {
 			Sender: &push.Sender{Keys: keys, Subject: push.Subject(cfg.PushVAPIDSubject, cfg.PublicURL), HTTP: client},
 		}
 		c.addTap(svc.Observe)
-		c.hub.DMTap = svc.Observe // conversations reach no webhook or bot, only push to their members
+		c.addDMTap(svc.Observe) // conversations reach no webhook or bot, only push to their members
 		go svc.Run(c.ctx)
 		h.Keys, h.Service = keys, svc
 		pusher = svc
