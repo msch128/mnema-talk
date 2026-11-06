@@ -174,3 +174,18 @@ func TestFlagRulesSeeForumTagNamesAndGuidelines(t *testing.T) {
 		t.Fatalf("queue after flagged guidelines = %+v; want the entry counted up to 2", q)
 	}
 }
+
+func TestAForumPageCursorMustBeAPostOfThatForum(t *testing.T) {
+	f := newAutomodFixture(t)
+	forum := f.a.createChannel(f.admin, "ideas", "forum")
+	other := f.a.createChannel(f.admin, "elsewhere", "forum")
+	post := newForumPost(t, f.member, forum, "Mine")
+	elsewhere := newForumPost(t, f.member, other, "Not here")
+	chat := f.a.send(f.admin, f.general, "a message in a channel")
+	list := "/api/channels/" + forum.String() + "/posts?before="
+
+	wantStatus(t, "a post of this forum", f.member.get(list+post.String()), http.StatusOK)
+	wantStatus(t, "a post of another forum", f.member.get(list+elsewhere.String()), http.StatusNotFound)
+	wantStatus(t, "a chat message", f.member.get(list+chat.String()), http.StatusNotFound)
+	wantStatus(t, "no such message", f.member.get(list+uuid.NewString()), http.StatusNotFound)
+}
