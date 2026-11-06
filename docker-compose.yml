@@ -98,6 +98,9 @@ services:
       - MEDIA_MAX_TOTAL_MB=${MEDIA_MAX_TOTAL_MB:-0}
       - MEDIA_MIN_FREE_MB=${MEDIA_MIN_FREE_MB:-1024}
       - MEDIA_DISK_PATH=${MEDIA_DISK_PATH:-}
+      # Written by scripts/backup.sh (mounted below); Admin > Status shows the
+      # last backup and its restore test. Empty = not reported.
+      - BACKUP_STATUS_FILE=${BACKUP_STATUS_FILE:-/backup-status/status.json}
       - LINK_PREVIEWS_ENABLED=${LINK_PREVIEWS_ENABLED:-true}
       - API_DOCS_ENABLED=${API_DOCS_ENABLED:-false}
       - PUSH_ENABLED=${PUSH_ENABLED:-true}
@@ -161,6 +164,10 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=${APP_TMP_SIZE:-64m}
+    # The backup status scripts/backup.sh writes (times, size and the restore
+    # test, no secrets), read-only. Docker creates the folder when it is missing.
+    volumes:
+      - ./backup-status:/backup-status:ro
     # Runs as uid 10001 on unprivileged ports: no capabilities needed.
     cap_drop:
       - ALL

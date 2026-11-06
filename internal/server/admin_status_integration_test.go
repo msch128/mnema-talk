@@ -94,8 +94,8 @@ func TestAdminStatusPayloadAndHardening(t *testing.T) {
 		t.Fatalf("expected positive database size, got %+v", st.Database.SizeBytes)
 	}
 
-	if st.Backup.LastBackupAge != "unknown" || st.Backup.LastRestoreTestAge != "unknown" {
-		t.Fatalf("expected unknown backup ages, got %+v", st.Backup)
+	if st.Backup.State != "not_configured" || st.Backup.Warn || st.Backup.LastBackupAt != nil || st.Backup.RestoreTest != "none" {
+		t.Fatalf("expected an unreported backup without BACKUP_STATUS_FILE, got %+v", st.Backup)
 	}
 	if st.Backup.Hint != "doc/operations.md#backups-and-restore" {
 		t.Fatalf("unexpected backup hint: %q", st.Backup.Hint)

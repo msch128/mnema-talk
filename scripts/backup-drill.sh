@@ -45,6 +45,8 @@ export COMPOSE_FILE="docker-compose.yml:isolated.yml"
 export BACKUP_DIR="$DEPLOY/backups"
 cp "$ROOT/docker-compose.yml" "$DEPLOY/"
 cp -R "$ROOT/scripts" "$DEPLOY/scripts"
+# Created by the operator, not by Docker (root), so the cleanup can remove it.
+mkdir -m 755 "$DEPLOY/backup-status"
 cat >"$DEPLOY/.env" <<EOF
 MNEMA_IMAGE=$START_IMAGE
 APP_ENV=production
@@ -171,9 +173,15 @@ echo "==> backup"
 scripts/backup.sh
 SNAPSHOT="$(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -name '20*' | head -n 1)"
 [ -f "$SNAPSHOT/COMPLETE" ] || { echo "backup is incomplete" >&2; exit 1; }
+jq -e '.format == 1 and .restore_test.result == "passed"' backup-status/status.json >/dev/null \
+  || { echo "backup.sh did not report a passed restore test" >&2; exit 1; }
 
 echo "==> changing data after the backup"
 login
+if [ "$START_IMAGE" = "$IMAGE" ]; then
+  api "$BASE/api/admin/status" | jq -e '.backup.state == "ok" and .backup.restore_test == "passed" and .backup.warn == false' >/dev/null \
+    || { echo "Admin > Status does not show the backup" >&2; exit 1; }
+fi
 post_message "$AFTER"
 
 if [ "$START_IMAGE" != "$IMAGE" ]; then

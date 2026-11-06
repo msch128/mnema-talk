@@ -4713,14 +4713,32 @@ export const decodeServerActivityStatus = decoder("server.ActivityStatus", isSer
 export type ServerBackupStatus = {
   hint: string
   last_backup_age: string
+  last_backup_age_seconds?: number
+  last_backup_at?: string
   last_restore_test_age: string
+  restore_test: "passed" | "failed" | "skipped" | "none"
+  restore_test_age_seconds?: number
+  size_bytes?: number
+  stale: boolean
+  stale_after_hours: number
+  state: "ok" | "not_configured" | "missing" | "invalid"
+  warn: boolean
 }
 
 export function isServerBackupStatus(value: unknown): value is ServerBackupStatus {
   return isRecord(value)
     && (hasOwn(value, "hint") && isString(value["hint"]))
     && (hasOwn(value, "last_backup_age") && isString(value["last_backup_age"]))
+    && (!hasOwn(value, "last_backup_age_seconds") || isInteger(value["last_backup_age_seconds"]))
+    && (!hasOwn(value, "last_backup_at") || isString(value["last_backup_at"]))
     && (hasOwn(value, "last_restore_test_age") && isString(value["last_restore_test_age"]))
+    && (hasOwn(value, "restore_test") && (value["restore_test"] === "passed" || value["restore_test"] === "failed" || value["restore_test"] === "skipped" || value["restore_test"] === "none"))
+    && (!hasOwn(value, "restore_test_age_seconds") || isInteger(value["restore_test_age_seconds"]))
+    && (!hasOwn(value, "size_bytes") || isInteger(value["size_bytes"]))
+    && (hasOwn(value, "stale") && typeof value["stale"] === 'boolean')
+    && (hasOwn(value, "stale_after_hours") && isInteger(value["stale_after_hours"]))
+    && (hasOwn(value, "state") && (value["state"] === "ok" || value["state"] === "not_configured" || value["state"] === "missing" || value["state"] === "invalid"))
+    && (hasOwn(value, "warn") && typeof value["warn"] === 'boolean')
 }
 
 export const decodeServerBackupStatus = decoder("server.BackupStatus", isServerBackupStatus)
@@ -4758,7 +4776,9 @@ export type ServerCapacityEstimate = {
   per_member_millicores: number
   plan_cores: number
   scale: number
+  scenarios: Array<ServerCapacityScenario>
   status: "ok" | "busy" | "memory"
+  upload_limit_mbps: number
 }
 
 export function isServerCapacityEstimate(value: unknown): value is ServerCapacityEstimate {
@@ -4768,10 +4788,39 @@ export function isServerCapacityEstimate(value: unknown): value is ServerCapacit
     && (hasOwn(value, "per_member_millicores") && (typeof value["per_member_millicores"] === 'number' && Number.isFinite(value["per_member_millicores"])))
     && (hasOwn(value, "plan_cores") && (typeof value["plan_cores"] === 'number' && Number.isFinite(value["plan_cores"])))
     && (hasOwn(value, "scale") && (typeof value["scale"] === 'number' && Number.isFinite(value["scale"])))
+    && (hasOwn(value, "scenarios") && isArrayOf(value["scenarios"], item => isServerCapacityScenario(item)))
     && (hasOwn(value, "status") && (value["status"] === "ok" || value["status"] === "busy" || value["status"] === "memory"))
+    && (hasOwn(value, "upload_limit_mbps") && isInteger(value["upload_limit_mbps"]))
 }
 
 export const decodeServerCapacityEstimate = decoder("server.CapacityEstimate", isServerCapacityEstimate)
+
+export type ServerCapacityScenario = {
+  basis: "measured" | "derived"
+  cpu_cores: number
+  extrapolated: boolean
+  id: "chat" | "broadcast" | "conversation" | "screen" | "video"
+  limit: "cpu" | "memory" | "upload"
+  measured_up_to: number
+  members: number
+  memory_bytes: number
+  upload_mbps: number
+}
+
+export function isServerCapacityScenario(value: unknown): value is ServerCapacityScenario {
+  return isRecord(value)
+    && (hasOwn(value, "basis") && (value["basis"] === "measured" || value["basis"] === "derived"))
+    && (hasOwn(value, "cpu_cores") && (typeof value["cpu_cores"] === 'number' && Number.isFinite(value["cpu_cores"])))
+    && (hasOwn(value, "extrapolated") && typeof value["extrapolated"] === 'boolean')
+    && (hasOwn(value, "id") && (value["id"] === "chat" || value["id"] === "broadcast" || value["id"] === "conversation" || value["id"] === "screen" || value["id"] === "video"))
+    && (hasOwn(value, "limit") && (value["limit"] === "cpu" || value["limit"] === "memory" || value["limit"] === "upload"))
+    && (hasOwn(value, "measured_up_to") && isInteger(value["measured_up_to"]))
+    && (hasOwn(value, "members") && isInteger(value["members"]))
+    && (hasOwn(value, "memory_bytes") && isInteger(value["memory_bytes"]))
+    && (hasOwn(value, "upload_mbps") && (typeof value["upload_mbps"] === 'number' && Number.isFinite(value["upload_mbps"])))
+}
+
+export const decodeServerCapacityScenario = decoder("server.CapacityScenario", isServerCapacityScenario)
 
 export type ServerCapacityStatus = {
   collecting: boolean

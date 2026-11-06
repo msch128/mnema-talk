@@ -61,6 +61,9 @@ type Input struct {
 	Peers int
 	// RSSBytes and MemoryLimit; a zero limit means unknown.
 	RSSBytes, MemoryLimit uint64
+	// UploadLimitMbps is the upload the server may use for media
+	// (VOICE_UPLOAD_LIMIT_MBIT); 0 means unknown.
+	UploadLimitMbps float64
 }
 
 // Result is the estimate.
@@ -78,6 +81,9 @@ type Result struct {
 	PlanCores float64
 	// Status is StatusOK, StatusBusy (already past the plan) or StatusMemory.
 	Status string
+	// Scenarios is how many people one Talk of each scenario can hold; empty
+	// unless Status is StatusOK.
+	Scenarios []ScenarioFit
 }
 
 // modelled is the CPU the cost model predicts for the observed traffic.
@@ -115,6 +121,7 @@ func Estimate(in Input) Result {
 		r.Status = StatusBusy
 	default:
 		r.MoreMembers = int(spare / per)
+		r.Scenarios = FitAll(in, plan, s)
 	}
 	return r
 }

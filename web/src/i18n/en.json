@@ -2030,9 +2030,20 @@
       "backup": "Backups & disaster recovery",
       "lastBackupAge": "Last backup",
       "lastRestoreTestAge": "Last restore test",
-      "backupHostManaged": "Host-managed",
-      "backupDocsHint": "Backups run on the host; see",
       "backupDocsLink": "operations guide",
+      "backupDocs": "Backups run on the host; see the {link}.",
+      "backupStale": "Older than {hours} h: check the backup job on the host.",
+      "restoreTest": {
+        "passed": "Passed, {age}",
+        "failed": "Failed, {age}: this backup may not restore",
+        "skipped": "Not run (RESTORE_TEST=0)",
+        "none": "–"
+      },
+      "backupState": {
+        "not_configured": "Not reported. The server learns about backups from the status file scripts/backup.sh writes: set BACKUP_STATUS_FILE and mount the backup-status folder read-only, as the bundled docker-compose.yml does.",
+        "missing": "No backup reported yet. Run scripts/backup.sh on the host, for example nightly; it writes backup-status/status.json, which this tab reads.",
+        "invalid": "The backup status file cannot be read. Run scripts/backup.sh again; it rewrites the file."
+      },
       "activity": "Live activity",
       "activeSessions": "Active sessions",
       "connectedWs": "Connected WebSocket clients",
@@ -2251,15 +2262,47 @@
         "memoryNoLimit": "{used} (no limit set)",
         "mediaValue": "{mbps} Mbit/s · {pps} packets/s",
         "callsValue": "{members} · {shares}",
-        "estimateOk": {
-          "one": "Estimate: this server can take about {count} more member, each watching a screen share.",
-          "other": "Estimate: this server can take about {count} more members, each watching a screen share."
+        "estimateHeading": "With what is free now, one Talk can hold about:",
+        "scenario": {
+          "chat": {
+            "label": "Text chat only",
+            "detail": "everyone online, one in ten writing"
+          },
+          "broadcast": {
+            "label": "Listening",
+            "detail": "3 speakers, everyone else listens"
+          },
+          "conversation": {
+            "label": "Conversation",
+            "detail": "everyone talks at once"
+          },
+          "screen": {
+            "label": "Screen share",
+            "detail": "1 share and 3 speakers, everyone else watches"
+          },
+          "video": {
+            "label": "Video call",
+            "detail": "everyone talks with the camera on"
+          }
         },
+        "people": "about {count}",
+        "limitedBy": "limited by {limit}",
+        "limit": {
+          "cpu": "CPU",
+          "memory": "memory",
+          "upload": "upload"
+        },
+        "upload": "{mbps} Mbit/s upload",
+        "measuredUpTo": "measured up to {count}",
+        "beyondMeasured": "beyond the largest measured run ({count})",
+        "derived": "derived from measured costs",
+        "uploadUnknown": "Upload is not counted: set VOICE_UPLOAD_LIMIT_MBIT to the upload of your line to include it.",
+        "note": "An estimate, not a promise: it plans at half of the CPU ({cores} cores) and {basis}. Details: {link}.",
+        "benchmarkLink": "doc/benchmark.md",
         "estimate_busy": "Estimate: the server is already past half of its CPU; do not plan for more members until it is quieter.",
         "estimate_memory": "Estimate: memory is nearly full; raise APP_MEM_LIMIT before more members join.",
         "basisObserved": "it uses this server’s measured CPU cost per packet ({scale} times the benchmark)",
         "basisTable": "it uses the benchmark values, because there is too little traffic to measure this server",
-        "assumption": "An estimate, not a promise. It counts CPU only: it assumes each new member watches one 1.5 Mbit/s screen share next to 3 speakers, costing {cost} millicores of CPU, and plans at half of the CPU ({cores} cores). Memory and upload bandwidth are not part of it, apart from the switch when memory is nearly full; {basis}. Details: doc/benchmark.md.",
         "members": {
           "one": "{count} member",
           "other": "{count} members"

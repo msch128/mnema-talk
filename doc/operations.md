@@ -113,6 +113,7 @@ General rules:
 | `UPLOAD_QUOTA_MB_PER_DAY` | `2048` | What one account (member, bot or webhook) may upload in any rolling 24 hours; further uploads answer 429. Deleted files still count. `0` turns the budget off. |
 | `MEDIA_MAX_TOTAL_MB` | `0` | Pauses all uploads (503) once the stored media reaches this size. `0` = no cap. |
 | `MEDIA_MIN_FREE_MB` / `MEDIA_DISK_PATH` | `1024` / empty | Pauses uploads (503) while the filesystem at `MEDIA_DISK_PATH` has less than this much free. The app can only see disks it has mounted: with the bundled SeaweedFS container, mount its data volume read-only into the app and point `MEDIA_DISK_PATH` at it, or watch the volume from outside. Empty path = off. |
+| `BACKUP_STATUS_FILE` | empty (compose: `/backup-status/status.json`) | The status file `scripts/backup.sh` writes after each backup, as the app sees it: an absolute path, anything else is rejected at startup. The bundled compose file mounts `./backup-status` there read-only. Admin → Status shows the age of the last backup and its restore test ([Backups and restore](#backups-and-restore)); empty = *not reported*. |
 | `EMOJI_MAX` | `200` | How many custom emoji the community may hold, 0-2000. `0` allows no new ones; existing ones keep working. Each is at most 256 KiB in object storage (`emoji/`). |
 | `MEDIA_RETENTION_DAYS` | `0` | `0` = never delete media automatically. A positive number deletes media older than that many days. Negative values are rejected. |
 | `EDIT_HISTORY_RETENTION_DAYS` | `0` | `0` = keep the earlier versions of edited messages (at most 50 per message; members with Manage messages can read them). A positive number deletes versions replaced longer ago than that many days. Negative values are rejected. |
@@ -222,7 +223,7 @@ logs at 3 x 10 MB.
 
 | Script | Variables |
 |---|---|
-| [`scripts/backup.sh`](../scripts/backup.sh) | `BACKUP_DIR` (default `$HOME/mnema-talk-backups`), `KEEP_DAYS` (14), `BACKUP_ALLOW_IN_REPO=1` |
+| [`scripts/backup.sh`](../scripts/backup.sh) | `BACKUP_DIR` (default `$HOME/mnema-talk-backups`), `KEEP_DAYS` (14), `BACKUP_ALLOW_IN_REPO=1`, `RESTORE_TEST` (1; 0 skips the restore test), `BACKUP_STATUS_DIR` (default `./backup-status`) |
 | [`scripts/health-check.sh`](../scripts/health-check.sh) | `MNEMA_URL` (default `http://127.0.0.1:8080`), `HEALTH_TIMEOUT` (5 s), `ALERT_WEBHOOK_URL` |
 
 ## Reverse proxy and `TRUSTED_PROXY_CIDRS`
@@ -727,6 +728,38 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
   recovery remains separate from a server backup.
 - Nightly via cron, see the backup section above.
 
+**Restore test and status report.** After the services are back, `backup.sh`
+runs `restore.sh <new backup> --verify`: it imports the dump into a throwaway,
+network-isolated PostgreSQL container and removes it again, so the live
+database is never touched (`RESTORE_TEST=0` skips this). It then writes
+`backup-status/status.json` in the deployment directory (`BACKUP_STATUS_DIR`),
+atomically and world-readable, without secrets:
+
+```json
+{"format":1,"last_backup_at":"2026-11-06T02:30:02Z","size_bytes":52428800,"restore_test":{"result":"passed","at":"2026-11-06T02:31:10Z"}}
+```
+
+`result` is `passed`, `failed` or `skipped`. A failed restore test keeps the
+backup, prunes nothing and makes the script exit non-zero, so cron reports it.
+A failed backup leaves the previous status file as it was. The bundled
+`docker-compose.yml` mounts `./backup-status` read-only at `/backup-status` and
+sets `BACKUP_STATUS_FILE`; with your own compose file add both:
+
+```yaml
+    environment:
+      - BACKUP_STATUS_FILE=/backup-status/status.json
+    volumes:
+      - ./backup-status:/backup-status:ro
+```
+
+Admin → Status → *Backups & disaster recovery* then shows the age and size of
+the last backup and the restore test. It warns when the backup is older than
+36 hours (a nightly run was missed) or the restore test failed. Without
+`BACKUP_STATUS_FILE` it says *not reported*; with it but before the first
+backup, *no backup reported yet*. When Docker created `backup-status` (as root,
+on the first `up` before any backup) and the script runs as another user, the
+script writes the file through a short-lived container instead.
+
 ## Verifying a release image
 
 Release images on GHCR (`ghcr.io/msch128/mnema-talk`, every tag of a release)
@@ -868,11 +901,11 @@ The **Admin → Status** tab provides an operator status overview in a single vi
 - **Server version & updates**: Running binary version, git commit, Go runtime version, update availability, and auto-deploy container image status.
 - **Database**: Reachability, database size (`pg_database_size`), applied migration count, and latest migration file.
 - **Object storage & disk**: S3-compatible storage reachability and used media bytes, plus free disk space on the data/upload volume (`MEDIA_DISK_PATH`) when configured and statable.
-- **Backups**: Status of host-level backups and restore verification drills (see [Backups and restore](#backups-and-restore)).
+- **Backups**: age and size of the last host-level backup and the result of its restore test, as `scripts/backup.sh` reports them; a warning when the backup is older than 36 hours or the test failed (see [Backups and restore](#backups-and-restore)).
 - **Live activity**: Active sessions, connected WebSocket clients, active Talks, and current voice participants.
 - **Operator warnings**: Active configuration warnings collected by the server (e.g. broad trusted proxies, WebRTC reachability).
 - **Setup checks**: a green, amber, red and neutral list of what a new installation needs (below).
-- **Capacity**: live CPU, memory and media rates, and an estimate of how many more members the server can take (below).
+- **Capacity**: live CPU, memory and media rates, and per kind of Talk an estimate of how many people fit and what runs out first (below).
 - **Test my connection**: a button that checks, from the browser you are using, whether voice reaches the server (below).
 
 ### Setup checks
@@ -937,24 +970,46 @@ server sends (Mbit/s and packets/s) and the members and screen shares in calls.
 It works with no traffic at all; in the first seconds after a start, before
 the first measurement, it says it is collecting.
 
-Below that it prints an **estimate**: about how many more members the server
-can take, each watching one 1.5 Mbit/s screen share next to three speakers. It
-uses the cost model of [the benchmark](benchmark.md#the-model): 22 µs of one
-core per packet sent, 72 µs per packet received, 0.57 ms per second per member.
-It plans at half of the CPU, because bursts lose packets well before 100 %. With
-substantial traffic (5,000 packets/s sent or more) the panel compares the CPU
-the media actually used (the process CPU minus about 0.08 core the server spends
-with no media at all) with what the model predicts and scales the per-member
-cost by that factor (between 0.5 and 4), so a slower or faster host gives its
-own number; with less traffic it uses the table values and says so. When the
-server is already past half of its CPU the panel says that instead of a number,
-and when resident memory is above 85 % of the limit it says memory comes first.
+Below that it prints an **estimate**: for each kind of Talk, about how many
+people one Talk can hold on the CPU, memory and upload that are free now, and
+which of them runs out first:
 
-The estimate counts **CPU only**. It ignores the upload bandwidth (see [the
-sizing table](benchmark.md#sizing-table)), relayed packets (+12 µs each) and how
-memory grows with more members, apart from the 85 % switch; the assumption line
-under it says so. CPU quotas are read from the container's cgroup (v2 `cpu.max`
-or v1 `cpu.cfs_quota_us`); without one the host's cores count.
+| Row | Shape | Basis |
+|---|---|---|
+| Text chat only | members online in a text channel, one in ten writing 0.2 messages/s | the chat runs (measured up to 1,000) |
+| Listening | 3 speakers, everyone else listens | measured up to 100 |
+| Conversation | everyone talks at once (continuous speech) | derived from the measured costs |
+| Screen share | one 1.5 Mbit/s share and 3 speakers, everyone else watches | measured up to 100 |
+| Video call | everyone talks with the camera on and sees up to 24 others | derived from the measured costs |
+
+How each row is computed, from which measurement, is in [the
+benchmark](benchmark.md#the-scenarios-in-admin--status). A row shows *measured
+up to N*, *beyond the largest measured run* when the figure goes past it, or
+*derived* when the shape was never run as a whole.
+
+- **CPU** uses the cost model of [the benchmark](benchmark.md#the-model): 22 µs
+  of one core per packet sent, 72 µs per packet received, 0.57 ms per second per
+  member. It plans at half of the CPU, because bursts lose packets well before
+  100 %, minus what the server uses now. With substantial traffic (5,000
+  packets/s sent or more) the panel compares the CPU the media actually used
+  (the process CPU minus about 0.08 core the server spends with no media at
+  all) with what the model predicts and scales the media cost by that factor
+  (between 0.5 and 4), so a slower or faster host gives its own numbers; with
+  less traffic it uses the table values and says so. Text chat is not scaled.
+- **Memory** counts 1.3 times the measured peak heap per member against what is
+  left below 85 % of the container limit (`APP_MEM_LIMIT`).
+- **Upload** is counted only when `VOICE_UPLOAD_LIMIT_MBIT` is set: the row then
+  stops at that rate. Otherwise each row shows the upload it would need, and a
+  line under the table says how to include it; on a home line upload is
+  usually the first limit.
+
+When the server is already past half of its CPU the panel says that instead of
+numbers, and when resident memory is above 85 % of the limit it says memory
+comes first. Relayed packets (+12 µs each through the built-in TURN) and
+several Talks at once are not part of it. CPU quotas are read from the
+container's cgroup (v2 `cpu.max` or v1 `cpu.cfs_quota_us`); without one the
+host's cores count. The fields are in `GET /api/admin/status/capacity`
+(`estimate.scenarios`).
 
 ### Test my connection
 
