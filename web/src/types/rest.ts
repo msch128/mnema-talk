@@ -3358,7 +3358,7 @@ export type DiscordimportPlan = {
   roles: Array<DiscordimportPlanRole>
   server_name: string
   skipped: Array<string>
-  skipped_hints: Array<DiscordimportHint>
+  skipped_hints?: Array<DiscordimportHint>
   source_name: string
   template_name: string
 }
@@ -3378,7 +3378,7 @@ export function isDiscordimportPlan(value: unknown): value is DiscordimportPlan 
     && (hasOwn(value, "roles") && isArrayOf(value["roles"], item => isDiscordimportPlanRole(item)))
     && (hasOwn(value, "server_name") && isString(value["server_name"]))
     && (hasOwn(value, "skipped") && isArrayOf(value["skipped"], item => isString(item)))
-    && (hasOwn(value, "skipped_hints") && isArrayOf(value["skipped_hints"], item => isDiscordimportHint(item)))
+    && (!hasOwn(value, "skipped_hints") || isArrayOf(value["skipped_hints"], item => isDiscordimportHint(item)))
     && (hasOwn(value, "source_name") && isString(value["source_name"]))
     && (hasOwn(value, "template_name") && isString(value["template_name"]))
 }
@@ -3404,7 +3404,7 @@ export type DiscordimportPlanChannel = {
   category: string
   category_source_id: string
   name: string
-  note_hints: Array<DiscordimportHint>
+  note_hints?: Array<DiscordimportHint>
   notes: Array<string>
   overwrites: Array<DiscordimportPlanOverwrite>
   private: boolean
@@ -3421,7 +3421,7 @@ export function isDiscordimportPlanChannel(value: unknown): value is Discordimpo
     && (hasOwn(value, "category") && isString(value["category"]))
     && (hasOwn(value, "category_source_id") && isString(value["category_source_id"]))
     && (hasOwn(value, "name") && isString(value["name"], 64))
-    && (hasOwn(value, "note_hints") && isArrayOf(value["note_hints"], item => isDiscordimportHint(item)))
+    && (!hasOwn(value, "note_hints") || isArrayOf(value["note_hints"], item => isDiscordimportHint(item)))
     && (hasOwn(value, "notes") && isArrayOf(value["notes"], item => isString(item)))
     && (hasOwn(value, "overwrites") && isArrayOf(value["overwrites"], item => isDiscordimportPlanOverwrite(item)))
     && (hasOwn(value, "private") && typeof value["private"] === 'boolean')
@@ -4748,13 +4748,13 @@ export type ServerBackupStatus = {
   last_backup_age_seconds?: number
   last_backup_at?: string
   last_restore_test_age: string
-  restore_test: "passed" | "failed" | "skipped" | "none"
+  restore_test?: "passed" | "failed" | "skipped" | "none"
   restore_test_age_seconds?: number
   size_bytes?: number
-  stale: boolean
-  stale_after_hours: number
-  state: "ok" | "not_configured" | "missing" | "invalid"
-  warn: boolean
+  stale?: boolean
+  stale_after_hours?: number
+  state?: "ok" | "not_configured" | "missing" | "invalid"
+  warn?: boolean
 }
 
 export function isServerBackupStatus(value: unknown): value is ServerBackupStatus {
@@ -4764,13 +4764,13 @@ export function isServerBackupStatus(value: unknown): value is ServerBackupStatu
     && (!hasOwn(value, "last_backup_age_seconds") || isInteger(value["last_backup_age_seconds"]))
     && (!hasOwn(value, "last_backup_at") || isString(value["last_backup_at"]))
     && (hasOwn(value, "last_restore_test_age") && isString(value["last_restore_test_age"]))
-    && (hasOwn(value, "restore_test") && (value["restore_test"] === "passed" || value["restore_test"] === "failed" || value["restore_test"] === "skipped" || value["restore_test"] === "none"))
+    && (!hasOwn(value, "restore_test") || (value["restore_test"] === "passed" || value["restore_test"] === "failed" || value["restore_test"] === "skipped" || value["restore_test"] === "none"))
     && (!hasOwn(value, "restore_test_age_seconds") || isInteger(value["restore_test_age_seconds"]))
     && (!hasOwn(value, "size_bytes") || isInteger(value["size_bytes"]))
-    && (hasOwn(value, "stale") && typeof value["stale"] === 'boolean')
-    && (hasOwn(value, "stale_after_hours") && isInteger(value["stale_after_hours"]))
-    && (hasOwn(value, "state") && (value["state"] === "ok" || value["state"] === "not_configured" || value["state"] === "missing" || value["state"] === "invalid"))
-    && (hasOwn(value, "warn") && typeof value["warn"] === 'boolean')
+    && (!hasOwn(value, "stale") || typeof value["stale"] === 'boolean')
+    && (!hasOwn(value, "stale_after_hours") || isInteger(value["stale_after_hours"]))
+    && (!hasOwn(value, "state") || (value["state"] === "ok" || value["state"] === "not_configured" || value["state"] === "missing" || value["state"] === "invalid"))
+    && (!hasOwn(value, "warn") || typeof value["warn"] === 'boolean')
 }
 
 export const decodeServerBackupStatus = decoder("server.BackupStatus", isServerBackupStatus)
@@ -4808,9 +4808,9 @@ export type ServerCapacityEstimate = {
   per_member_millicores: number
   plan_cores: number
   scale: number
-  scenarios: Array<ServerCapacityScenario>
+  scenarios?: Array<ServerCapacityScenario>
   status: "ok" | "busy" | "memory"
-  upload_limit_mbps: number
+  upload_limit_mbps?: number
 }
 
 export function isServerCapacityEstimate(value: unknown): value is ServerCapacityEstimate {
@@ -4820,9 +4820,9 @@ export function isServerCapacityEstimate(value: unknown): value is ServerCapacit
     && (hasOwn(value, "per_member_millicores") && (typeof value["per_member_millicores"] === 'number' && Number.isFinite(value["per_member_millicores"])))
     && (hasOwn(value, "plan_cores") && (typeof value["plan_cores"] === 'number' && Number.isFinite(value["plan_cores"])))
     && (hasOwn(value, "scale") && (typeof value["scale"] === 'number' && Number.isFinite(value["scale"])))
-    && (hasOwn(value, "scenarios") && isArrayOf(value["scenarios"], item => isServerCapacityScenario(item)))
+    && (!hasOwn(value, "scenarios") || isArrayOf(value["scenarios"], item => isServerCapacityScenario(item)))
     && (hasOwn(value, "status") && (value["status"] === "ok" || value["status"] === "busy" || value["status"] === "memory"))
-    && (hasOwn(value, "upload_limit_mbps") && isInteger(value["upload_limit_mbps"]))
+    && (!hasOwn(value, "upload_limit_mbps") || isInteger(value["upload_limit_mbps"]))
 }
 
 export const decodeServerCapacityEstimate = decoder("server.CapacityEstimate", isServerCapacityEstimate)

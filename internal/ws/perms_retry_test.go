@@ -59,3 +59,23 @@ func TestMemberWhoLostConnectIsRemovedAfterAFailedStateLoad(t *testing.T) {
 		t.Fatalf("the member's events: %v", got)
 	}
 }
+
+// Retrying for a long outage doubles the wait up to the cap and stays there;
+// it never wraps around into a negative wait, which would retry in a tight loop.
+func TestPermRetryWaitStaysWithinTheCapAfterManyFailures(t *testing.T) {
+	r := permRetry{base: time.Second}
+	var last time.Duration
+	for i := range 70 {
+		wait := r.nextWait()
+		if wait <= 0 || wait > permRetryMax {
+			t.Fatalf("failure %d: wait %v, want within (0, %v]", i+1, wait, permRetryMax)
+		}
+		if wait < last {
+			t.Fatalf("failure %d: wait %v shrank from %v", i+1, wait, last)
+		}
+		last = wait
+	}
+	if last != permRetryMax {
+		t.Fatalf("wait after 70 failures = %v, want the cap %v", last, permRetryMax)
+	}
+}

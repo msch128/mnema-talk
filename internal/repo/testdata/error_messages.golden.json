@@ -18,6 +18,7 @@
   "A group direct message holds at most %d members.",
   "Cannot send an empty message",
   "Couldn't forward this message.",
+  "Couldn't react to this message.",
   "Couldn't send this message.",
   "Couldn't start this direct message.",
   "Discord could not be reached; try again later",

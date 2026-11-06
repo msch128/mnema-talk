@@ -90,7 +90,7 @@ const view = computed(() => {
     media: t(`${p}mediaValue`, { mbps: num(c.egress_mbps), pps: num(c.egress_pps, 0) }),
     calls: t(`${p}callsValue`, { members: t(`${p}members`, { count: c.peers }), shares: t(`${p}shares`, { count: c.screen_shares }) }),
     verdict: e.status === 'ok' ? t(`${p}estimateHeading`) : t(`${p}estimate_${e.status}`),
-    scenarios: e.status === 'ok' ? e.scenarios.map(scenarioRow) : [],
+    scenarios: e.status === 'ok' ? (e.scenarios ?? []).map(scenarioRow) : [],
     uploadUnknown: e.status === 'ok' && e.upload_limit_mbps === 0,
     note: noteParts(e.plan_cores, basis)
   }

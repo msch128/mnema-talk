@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { useServerFeaturesStore } from './serverFeatures'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore, TYPING_EXPIRY_MS } from './chat'
 import { useAuthStore } from './auth'
@@ -61,6 +62,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-01-01T12:00:00Z'))
   setActivePinia(createPinia())
+  useServerFeaturesStore().list = ['messages.nonce']
   http.handle = url => url === '/api/channels' ? { categories: [], uncategorized: [ch] } : []
   vi.mocked(api).mockClear()
   vi.stubGlobal('WebSocket', Socket)

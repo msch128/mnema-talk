@@ -21,6 +21,10 @@ const MaxUnansweredDMMessages = 2
 // the reason, the answer is the same text (see dm.go), so none can be probed.
 var ErrDMSend = httpx.ErrForbidden("Couldn't send this message.")
 
+// ErrDMReact is the refusal of a new reaction in a conversation the rules close
+// (a block between the two members). Like ErrDMSend it does not say why.
+var ErrDMReact = httpx.ErrForbidden("Couldn't react to this message.")
+
 // ErrPostTitleRequired answers a forum post without a title.
 var ErrPostTitleRequired = httpx.ErrInvalidInput("title is required for forum posts")
 

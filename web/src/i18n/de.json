@@ -247,6 +247,7 @@
       "srvAGroupDirectMessageHolds": "Eine Gruppen-Direktnachricht hat höchstens {a} Mitglieder.",
       "srvCannotSendAnEmptyMessage": "Eine leere Nachricht kann nicht gesendet werden.",
       "srvCouldnTForwardThisMessage": "Die Nachricht konnte nicht weitergeleitet werden.",
+      "srvCouldnTReactToThisMessage": "Auf diese Nachricht konnte nicht reagiert werden.",
       "srvCouldnTSendThisMessage": "Die Nachricht konnte nicht gesendet werden.",
       "srvCouldnTStartThisDirect": "Die Direktnachricht konnte nicht gestartet werden.",
       "srvDiscordCouldNotBeReached": "Discord war nicht erreichbar. Versuche es später erneut.",

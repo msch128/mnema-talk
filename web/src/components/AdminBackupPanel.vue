@@ -29,6 +29,9 @@ const docs = computed(() => {
   return { before, after }
 })
 
+// A server before the backup status sends only the two ages as text (no state): show those as they are.
+const legacy = computed(() => props.backup.state === undefined)
+
 const view = computed(() => {
   const b = props.backup
   if (b.state !== 'ok' || b.last_backup_age_seconds === undefined) return null
@@ -42,12 +45,22 @@ const view = computed(() => {
 </script>
 
 <template>
-  <div class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline space-y-3" data-testid="status-backup" :data-warn="backup.warn">
+  <div class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline space-y-3" data-testid="status-backup" :data-warn="backup.warn ?? false">
     <div class="flex items-center gap-2">
       <ShieldCheck class="w-4 h-4 text-mnema-accent shrink-0" aria-hidden="true" />
       <span class="text-xs uppercase font-semibold font-mono text-mnema-tertiary tracking-wider">{{ $t('admin.operatorStatus.backup') }}</span>
     </div>
-    <dl v-if="view" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+    <dl v-if="legacy" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm" data-testid="backup-legacy">
+      <div>
+        <dt class="text-mnema-tertiary text-xs">{{ $t('admin.operatorStatus.lastBackupAge') }}</dt>
+        <dd class="mt-0.5 text-mnema-text">{{ backup.last_backup_age }}</dd>
+      </div>
+      <div>
+        <dt class="text-mnema-tertiary text-xs">{{ $t('admin.operatorStatus.lastRestoreTestAge') }}</dt>
+        <dd class="mt-0.5 text-mnema-text">{{ backup.last_restore_test_age }}</dd>
+      </div>
+    </dl>
+    <dl v-else-if="view" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
       <div>
         <dt class="text-mnema-tertiary text-xs">{{ $t('admin.operatorStatus.lastBackupAge') }}</dt>
         <dd class="mt-0.5 flex items-center gap-1.5 text-mnema-text" data-testid="backup-last-age">
@@ -65,7 +78,7 @@ const view = computed(() => {
         <p v-if="backup.restore_test === 'failed'" class="mt-1 text-xs text-mnema-muted" data-testid="backup-restore-failed">{{ $t('admin.operatorStatus.restoreFailed') }}</p>
       </div>
     </dl>
-    <p v-else class="text-sm text-mnema-text" data-testid="backup-not-reported" :data-state="backup.state">{{ $t(`admin.operatorStatus.backupState.${backup.state}`) }}</p>
+    <p v-else-if="backup.state" class="text-sm text-mnema-text" data-testid="backup-not-reported" :data-state="backup.state">{{ $t(`admin.operatorStatus.backupState.${backup.state}`) }}</p>
     <p class="text-xs text-mnema-muted" data-testid="backup-hint">{{ docs.before }}<a :href="`${SOURCE_URL}/blob/main/${backup.hint}`" target="_blank" rel="noopener noreferrer" class="text-mnema-accent hover:underline">{{ $t('admin.operatorStatus.backupDocsLink') }}</a>{{ docs.after }}</p>
   </div>
 </template>

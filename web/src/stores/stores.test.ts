@@ -1,4 +1,5 @@
 import { required } from '../store-test-support.fixture'
+import { useServerFeaturesStore } from './serverFeatures'
 import { fixtureId } from '../test-fixtures.fixture'
 const CHANNEL_ID = fixtureId(2)
 import { channelFixture, messageFixture, userFixture } from '../test-fixtures.fixture'
@@ -13,6 +14,7 @@ import { setLocale } from '../i18n'
 beforeEach(() => {
   setLocale('de')
   setActivePinia(createPinia())
+  useServerFeaturesStore().list = ['messages.nonce']
   vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockImplementation(async () => new Response('[]', { status: 200 })))
 })
 

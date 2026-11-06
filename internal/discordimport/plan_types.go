@@ -29,7 +29,7 @@ type Plan struct {
 	// Skipped lists template channels that have no counterpart (threads and the like).
 	Skipped []string `json:"skipped"`
 	// SkippedHints are the same entries as structured hints for translation.
-	SkippedHints []Hint `json:"skipped_hints"`
+	SkippedHints []Hint `json:"skipped_hints" binding:"optional"`
 	// DroppedBits names every Discord permission dropped from the roles and overwrites.
 	DroppedBits          []string `json:"dropped_bits"`
 	AdministratorDropped bool     `json:"administrator_dropped"`
@@ -70,7 +70,7 @@ type PlanChannel struct {
 	Overwrites      []PlanOverwrite `json:"overwrites"`
 	Notes           []string        `json:"notes"`
 	// NoteHints are the notes as structured hints (same order) for translation.
-	NoteHints []Hint `json:"note_hints"`
+	NoteHints []Hint `json:"note_hints" binding:"optional"`
 }
 
 // PlanOverwrite is a permission overwrite of a new category or channel.
