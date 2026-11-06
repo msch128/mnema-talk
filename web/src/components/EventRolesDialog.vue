@@ -31,7 +31,7 @@ const form = useSettingsDraft<{ roster: string }>({
       await saveRoles(props.event.id, roster.rows.value, roster.removals.value, roster.sync, props.event.series ? scope.value : undefined)
       roster.removals.value = []
     } catch (err) {
-      throw new Error(caughtErrorMessage(err, t('events.roles.saveFailed')))
+      throw new Error(caughtErrorMessage(err, t('events.roles.saveFailed')), { cause: err })
     }
   },
   saved: () => {

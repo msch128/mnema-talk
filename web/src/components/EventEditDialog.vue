@@ -84,7 +84,7 @@ async function writeCover(current: CommunityEvent): Promise<CommunityEvent> {
     return current
   } catch (err) {
     // The event itself is saved; only the cover is missing.
-    throw new Error(caughtErrorMessage(err, t(created.value ? 'events.coverFailed' : 'events.saveFailed')))
+    throw new Error(caughtErrorMessage(err, t(created.value ? 'events.coverFailed' : 'events.saveFailed')), { cause: err })
   }
 }
 
@@ -95,7 +95,7 @@ async function writeRoles(current: CommunityEvent): Promise<CommunityEvent> {
     return out
   } catch (err) {
     // The event is saved; the roles are not. The next save retries them.
-    throw new Error(caughtErrorMessage(err, t('events.roles.saveFailed')))
+    throw new Error(caughtErrorMessage(err, t('events.roles.saveFailed')), { cause: err })
   }
 }
 

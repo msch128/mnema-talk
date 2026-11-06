@@ -85,7 +85,7 @@ async function writeTag(failure: string, work: () => Promise<void>, done: string
   try {
     await work()
   } catch (err) {
-    throw new Error(caughtErrorMessage(err, failure))
+    throw new Error(caughtErrorMessage(err, failure), { cause: err })
   }
   adding.value = false
   editingId.value = null
