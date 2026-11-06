@@ -88,42 +88,87 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### Upgrading to 3.0.0
+
+3.0.0 is the major release that collects the changes of 2.9.2 to 2.9.19 which
+touch the public API ([api-stability.md](api-stability.md#300-changes)).
+Update as usual (backup first, then the procedure above). It works from any
+2.9.x; an older 2.x applies the migrations of every release in between.
+
+**What runs automatically** (migrations 0092 to 0100, in order, at startup):
+
+- **0092** adds `attempts` and `retry_at` to `scheduled_messages`. A scheduled
+  message whose send keeps failing on the server's side is retried with
+  growing pauses and, after five tries, kept as a failed draft instead of
+  being retried every 15 seconds for ever.
+- **0093** indexes `messages(user_id)`. It is a plain `CREATE INDEX`, which
+  blocks writes to `messages` while it builds, like 0091. On a large database
+  update at a quiet time.
+- **0094** adds seven indexes on foreign keys, so deleting a channel, member,
+  poll or media row no longer scans the referencing table (same note as 0093
+  for the build).
+- **0095** deletes media rows of event covers whose event is gone (older than a
+  day). The stored objects are removed by the next orphan sweep.
+- **0096** creates `upload_usage`. The daily upload budget **resets at the
+  upgrade** and from then on no longer refunds the bytes of deleted files or
+  messages. Community icons, covers, avatars and banners no longer count;
+  wiki images do.
+- **0097** gives the built-in **Moderator** and **Admin** roles *Manage
+  reports* and *Kick members*. Only the roles the seed of migration 0034
+  created are changed (recognised by their creation together with 0034; a role
+  you renamed still counts, a custom or imported role with the same name, @everyone
+  and bot roles do not), and permissions are only added. Untick them on the
+  role afterwards if you do not want them.
+- **0098** takes the chat of a conversation's call out of the public message
+  totals and recomputes every total once (see
+  [Public message and talk totals](#public-message-and-talk-totals-migrations-0098-and-0099)).
+- **0099** counts public talk time separately (`public_voice_seconds`); the
+  public total **restarts at 0**.
+- **0100** creates `message_nonces` for the offline outbox: a message written
+  while offline is sent again after reconnecting without being posted twice.
+  Entries are pruned after 24 hours.
+
+**What you do** (only with your own compose file; the bundled
+`docker-compose.yml` already has both):
+
+- Mount the status folder read-only into the app, `./backup-status:/backup-status:ro`,
+  and set `BACKUP_STATUS_FILE=/backup-status/status.json`. Admin > Status then
+  shows the last backup and its restore test instead of "unknown".
+- Copy the new `scripts/backup.sh` next to your deployment. After each backup it
+  writes `backup-status/status.json` (the folder can be changed with
+  `BACKUP_STATUS_DIR`) and, by default, test-imports the dump into a throwaway
+  database first; `RESTORE_TEST=0` skips that test. See
+  [Backups and restore](operations.md#backups-and-restore).
+
+**Clients.** The web app updates with the server. Use desktop client 1.3.4 or
+newer. Bots and webhook consumers should read the
+[3.0.0 changes](api-stability.md#300-changes); the most visible are the `404`
+for deleting a command an admin disabled, the 50-command cap that now includes
+disabled commands, and the `nonce` field on messages.
+
+**Rollback.** The migrations are forward-only, so an older binary cannot run on
+the migrated database. To go back, stop the stack and restore the backup you
+took before the update (see [Rollback](#rollback)).
+
 ### 2.x: every minor since 2.0.0
 
 Each 2.x minor is an ordinary update (procedure above, backup first). None
 breaks the public API: [api-stability.md](api-stability.md) still holds, and
-2.x only adds endpoints, fields and events. Patch releases (2.1.1, 2.5.1, 2.8.1
-to 2.8.3, 2.9.1) fix bugs and change nothing to configure; 2.8.2 and 2.9.1 only
-change what the signed desktop bundle contains. The migrations are listed
+2.x only adds endpoints, fields and events. Most patch releases (2.1.1, 2.5.1, 2.8.1
+to 2.8.3, 2.9.1) fix bugs and need no configuration; 2.8.2 and 2.9.1 only
+change what the signed desktop bundle contains. The patches 2.9.2 to 2.9.19
+added migrations and one operator step; see [Upgrading to 3.0.0](#upgrading-to-300). The migrations are listed
 in the migration table below. Taking several minors at once applies
 their migrations in order. Newest first.
 
-#### After 2.9.1 (next release)
+#### 2.9.2 to 2.9.19
 
-Migration 0097 gives the built-in **Moderator** and **Admin** roles the
-permissions *Manage reports* and *Kick members*, which they lacked: members
-holding those roles can now read and close reports and use `/kick`. Only an
-ordinary role named Moderator or Admin that still holds *Timeout members* is
-changed (a role you renamed or stripped of it, custom roles, @everyone and bot
-roles are not), and permissions are only added, so nothing you set is lost. If
-you do not want a role to have them, untick them on the role after the update.
-
-Migration 0091 adds four indexes (see the table); it changes no behaviour and
-needs no setting. Building them takes a moment on a very large database.
-Migration 0092 adds two columns to `scheduled_messages`; a scheduled message
-whose send keeps failing on the server's side is now retried with growing
-pauses and, after five tries, kept as a failed draft instead of being retried
-every 15 seconds for ever.
-
-Admin > Status now shows the last backup and its restore test instead of
-"unknown". `scripts/backup.sh` writes `backup-status/status.json` in the
-deployment directory after each backup and, by default, test-imports the dump
-into a throwaway database first (`RESTORE_TEST=0` skips that). The bundled
-`docker-compose.yml` mounts that folder read-only into the app and sets
-`BACKUP_STATUS_FILE`; with your own compose file, add both (see
-[Backups and restore](operations.md#backups-and-restore)). Copy the new
-`scripts/backup.sh` next to your deployment too. The capacity panel lists,
-per kind of Talk, how many people fit and what runs out first.
+The patch releases after 2.9.1 changed behaviour and the schema in small steps
+(migrations 0091 to 0100); all of it is described under
+[Upgrading to 3.0.0](#upgrading-to-300) above, because a server that skips
+straight from 2.9.1 to 3.0.0 applies them together. Migration 0091 adds four
+indexes (see the table); it changes no behaviour and needs no setting, and
+building them takes a moment on a very large database.
 
 #### 2.9.0 (wiki)
 

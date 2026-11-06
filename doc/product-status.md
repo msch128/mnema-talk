@@ -136,8 +136,8 @@ What it took:
   join (before any device is requested) instead of joining with microphone,
   camera and screen switched off.
 - **Linux WebKit in CI cannot take part in a sealed call.** This is the engine
-  build, not the app. Playwright's Linux WebKit (26.6 in 1.63, 27.2 in 1.64.1, in
-  both cases the version of its macOS build) reports `RTCPeerConnection` and `getUserMedia`, but
+  build, not the app. Playwright's Linux WebKit (26.6 up to Playwright 1.63, 27.2 since 1.64, in
+  both cases the version of its macOS build; the pinned version is in `e2e/package.json`) reports `RTCPeerConnection` and `getUserMedia`, but
   `RTCRtpScriptTransform`, `RTCRtpSender.prototype.createEncodedStreams` and
   `RTCEncodedAudioFrame` are all `undefined` (checked on x64 and arm64 Linux
   with both versions; the macOS build has `RTCRtpScriptTransform` and `RTCEncodedAudioFrame`). With
@@ -149,7 +149,7 @@ What it took:
   again. Every spec that joins a call (calls, screen share, Talk chat, roles
   rights) stays out of `e2e (webkit 1/2)` and `e2e (webkit 2/2)` and runs in
   four short `e2e (webkit-macos-calls, <group>)` jobs on macOS runners, not a required check.
-- **WebKit 27.2, `<select>` and the style policy.** Playwright 1.64's WebKit
+- **WebKit 27.2, `<select>` and the style policy.** Playwright's WebKit since 1.64
   (27.2) reports one `style-src-attr` violation for every `<select>` a page
   builds (empty sample, the script that created the select as source; the
   browser's own shadow tree sets an inline style). Nothing is refused: a page
@@ -159,7 +159,7 @@ What it took:
   Chromium and Firefox jobs run the same code and still fail on any
   `style-src-attr` event). Not yet checked in a release Safari 27.
 - **Firefox, navigations the driver loses.** On Linux Firefox (Playwright 1.63
-  and later) `page.goto` sometimes never resolves although the server answered
+  and later, pinned in `e2e/package.json`) `page.goto` sometimes never resolves although the server answered
   200 and `document.readyState` is `complete`: the driver's frame stays on
   about:blank (no `navigated` event; 3 to 12 of 40 navigations of a bare page
   on a 2-CPU container). Not specific to this app; the e2e fixtures retry the
