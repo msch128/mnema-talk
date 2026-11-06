@@ -114,3 +114,31 @@ func TestTimeInAConversationsCallIsNotInThePublicVoiceTotal(t *testing.T) {
 		t.Fatalf("voice_seconds = %d (%v), want 0", secs, err)
 	}
 }
+
+// The call is private from the moment the seat is taken: when the
+// conversation is deleted mid-call (its Talk goes with it), the stay is still
+// kept out of the public voice total.
+func TestTimeInACallWhoseConversationWasDeletedMidCallIsNotInThePublicVoiceTotal(t *testing.T) {
+	f := newCallFixture(t)
+	talk := f.start(t)
+	conn, _, err := f.dmFixture.alice.dialWS(f.a.origin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.send(events.ClientVoiceJoin, map[string]any{"channel_id": talk})
+	if _, ok := f.bob.expect(events.DMCallRing, 3*time.Second); !ok {
+		t.Fatal("no ring")
+	}
+	time.Sleep(1200 * time.Millisecond)
+	ctx := context.Background()
+	if _, err := f.a.db.Exec(ctx, `DELETE FROM channels WHERE id = $1`, talk); err != nil {
+		t.Fatal(err)
+	}
+	f.a.router.Hub.Perms.Invalidate()
+	conn.send(events.ClientVoiceLeave, nil)
+	time.Sleep(time.Second)
+	var secs int64
+	if err := f.a.db.QueryRow(ctx, `SELECT voice_seconds FROM users WHERE id = $1`, f.dmFixture.alice.user.ID).Scan(&secs); err != nil || secs != 0 {
+		t.Fatalf("voice_seconds = %d (%v), want 0", secs, err)
+	}
+}

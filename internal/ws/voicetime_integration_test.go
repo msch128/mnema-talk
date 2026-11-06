@@ -23,12 +23,12 @@ func TestVoiceTimeWritesAreDebouncedAndFlushedOnClose(t *testing.T) {
 		return n
 	}
 	ch := uuid.New()
-	h.addVoiceTime(u.ID, ch, 3*time.Second) // the first write is immediate
+	h.addVoiceTime(u.ID, ch, 3*time.Second, false) // the first write is immediate
 	if total() != 3 {
 		t.Fatalf("total = %d, want 3", total())
 	}
-	h.addVoiceTime(u.ID, ch, 4*time.Second) // inside the window: held back
-	h.addVoiceTime(u.ID, ch, 5*time.Second)
+	h.addVoiceTime(u.ID, ch, 4*time.Second, false) // inside the window: held back
+	h.addVoiceTime(u.ID, ch, 5*time.Second, false)
 	if total() != 3 {
 		t.Fatalf("total = %d after held stays, want 3", total())
 	}
@@ -42,8 +42,8 @@ func TestVoiceTimeFlushWritesWhatIsHeld(t *testing.T) {
 	p := testutil.DB(t)
 	u := wsFixtureUser(t, p)
 	h := NewHub(p, nil, nil, nil)
-	h.addVoiceTime(u.ID, uuid.New(), time.Second)
-	h.addVoiceTime(u.ID, uuid.New(), 2*time.Second)
+	h.addVoiceTime(u.ID, uuid.New(), time.Second, false)
+	h.addVoiceTime(u.ID, uuid.New(), 2*time.Second, false)
 	h.flushVoiceTime(u.ID)
 	var n int64
 	if err := p.QueryRow(context.Background(), `SELECT voice_seconds FROM users WHERE id=$1`, u.ID).Scan(&n); err != nil || n != 3 {
@@ -70,10 +70,10 @@ func TestVoiceTimeIsAnnouncedOnlyToTheTalkItWasSpentIn(t *testing.T) {
 		got = append(got, seen{ch, payload.(map[string]any)["voice_seconds"].(int64)})
 	}
 	hidden, visible := uuid.New(), uuid.New()
-	h.addVoiceTime(u.ID, hidden, 3*time.Second)  // written at once
-	h.addVoiceTime(u.ID, hidden, 4*time.Second)  // held back
-	h.addVoiceTime(u.ID, visible, 5*time.Second) // another Talk: the held 4 s go out first, to the hidden Talk
-	h.addVoiceTime(u.ID, visible, 6*time.Second) // held back in the visible Talk
+	h.addVoiceTime(u.ID, hidden, 3*time.Second, false)  // written at once
+	h.addVoiceTime(u.ID, hidden, 4*time.Second, false)  // held back
+	h.addVoiceTime(u.ID, visible, 5*time.Second, false) // another Talk: the held 4 s go out first, to the hidden Talk
+	h.addVoiceTime(u.ID, visible, 6*time.Second, false) // held back in the visible Talk
 	h.flushVoiceTime(u.ID)
 	want := []seen{{hidden, 3}, {hidden, 7}, {visible, 18}}
 	if len(got) != len(want) {
@@ -119,8 +119,8 @@ func TestVoiceTimeSurvivesAFailedWrite(t *testing.T) {
 	u := wsFixtureUser(t, p)
 	h := NewHub(p, nil, nil, nil)
 	ch := uuid.New()
-	h.addVoiceTime(u.ID, ch, 3*time.Second) // written at once
-	h.addVoiceTime(u.ID, ch, 4*time.Second) // held back
+	h.addVoiceTime(u.ID, ch, 3*time.Second, false) // written at once
+	h.addVoiceTime(u.ID, ch, 4*time.Second, false) // held back
 
 	ctx := context.Background()
 	if _, err := p.Exec(ctx, `CREATE FUNCTION fail_voice_write() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'write refused'; END $$`); err != nil {
@@ -155,7 +155,7 @@ func TestVoiceTimeEntryIsDroppedOnceIdle(t *testing.T) {
 	p := testutil.DB(t)
 	u := wsFixtureUser(t, p)
 	h := NewHub(p, nil, nil, nil)
-	h.addVoiceTime(u.ID, uuid.New(), 3*time.Second)
+	h.addVoiceTime(u.ID, uuid.New(), 3*time.Second, false)
 	h.pruneWhenIdle(u.ID)
 	h.vtimes.mu.Lock()
 	idle := h.vtimes.m[u.ID].idle

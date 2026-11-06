@@ -222,6 +222,7 @@ type voiceSeat struct {
 func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo, rejoin bool) (voiceSeat, bool) {
 	key := voiceKey{c.User.ID, ch.ID}
 	bypass := h.mayExceedLimit(c, ch) // before h.mu: it asks the permission cache
+	private := h.isDMTalk(ch.ID)
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.closed {
@@ -238,6 +239,9 @@ func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo, rejoin bool) (voiceSeat,
 	_, present := h.voice[ch.ID][c.User.ID]
 	rejoin = rejoin || present
 	h.recordVoiceJoinTimeLocked(key, rejoin, now)
+	if !rejoin || private {
+		h.privateSeat[key] = private
+	}
 
 	profile := h.profileLocked(c)
 	h.voice[ch.ID][c.User.ID] = profile
@@ -258,6 +262,14 @@ func (h *Hub) mayExceedLimit(c *Client, ch *core.ChannelInfo) bool {
 	}
 	snap, ok := h.permSnapshot(ch.ID)
 	return ok && snap != nil && c.can(snap, ch.ID, perm.DisconnectMembers)
+}
+
+// isDMTalk reports whether ch is the Talk of a conversation. When the
+// permission state cannot be read it counts as one: the stay's time is then
+// kept out of the public total rather than leaked into it.
+func (h *Hub) isDMTalk(ch uuid.UUID) bool {
+	snap, ok := h.permSnapshot(ch)
+	return !ok || (snap != nil && snap.IsDMTalk(ch))
 }
 
 func (h *Hub) isVoiceRoomFull(ch *core.ChannelInfo, userID uuid.UUID) bool {
