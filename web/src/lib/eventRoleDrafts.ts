@@ -64,3 +64,14 @@ export function inputsOf(drafts: readonly RoleDraft[], keepIds = true): RoleInpu
   }
   return out
 }
+
+/**
+ * The roster an editor holds, as text: roles in order with their trimmed names, emoji and
+ * capacity, plus the roles marked for removal. Two rosters are the same when this is.
+ */
+export function rosterKey(drafts: readonly RoleDraft[], removals: readonly RoleRemoval[] = []): string {
+  return JSON.stringify({
+    rows: drafts.map(d => [d.id ?? '', d.name.trim(), d.emoji.trim(), d.capacity ?? null]),
+    removals: removals.map(r => r.id).sort()
+  })
+}

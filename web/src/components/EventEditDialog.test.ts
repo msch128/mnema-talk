@@ -11,6 +11,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { setLocale } from '../i18n'
 import { categoryFixture, channelFixture, fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import type { CommunityEvent } from '../types/domain'
+import { pendingConfirm } from '../lib/confirm'
 
 function makeEvent(overrides: Partial<CommunityEvent> = {}): CommunityEvent {
   return {
@@ -45,6 +46,7 @@ describe('EventEditDialog', () => {
   })
 
   afterEach(() => {
+    pendingConfirm.value = null
     wrapper?.unmount()
     wrapper = undefined
   })
@@ -59,6 +61,8 @@ describe('EventEditDialog', () => {
   }
 
   const titleInput = () => wrapper?.find('input[type="text"]')
+  const saveButton = () => wrapper!.get('[data-testid="unsaved-save"]')
+  const barError = () => wrapper!.get('[data-testid="unsaved-error"]').text()
 
   it('rejects an empty title without calling the API', async () => {
     const create = vi.spyOn(useEventsStore(), 'create')
@@ -182,8 +186,9 @@ describe('EventEditDialog', () => {
     const store = useEventsStore()
     const update = vi.spyOn(store, 'update').mockResolvedValue(existing)
     wrapper = mount(EventEditDialog, { props: { event: existing } })
+    expect(saveButton().attributes('disabled')).toBeDefined()
     await submit()
-    expect(update).toHaveBeenCalledWith(fixtureId(1), {})
+    expect(update).not.toHaveBeenCalled()
     await wrapper.find('input[data-max-chars="255"]').setValue('Room 2')
     await submit()
     expect(update).toHaveBeenLastCalledWith(fixtureId(1), { channel_id: null, location: 'Room 2' })
@@ -256,13 +261,13 @@ describe('EventEditDialog', () => {
     Object.defineProperty(input.element, 'files', { value: [new File(['x'], 'cover.png', { type: 'image/png' })], configurable: true })
     await input.trigger('change')
     await submit()
-    expect(wrapper.find('.text-red-400').text()).toBe('too large')
+    expect(barError()).toContain('too large')
+    expect(barError()).toContain('Some changes were saved')
     expect(wrapper.emitted('close')).toBeUndefined()
 
     await submit()
     expect(create).toHaveBeenCalledTimes(1)
-    expect(update).toHaveBeenCalledTimes(1)
-    expect(update.mock.calls[0]![0]).toBe(created.id)
+    expect(update).not.toHaveBeenCalled()
     expect(upload).toHaveBeenCalledTimes(2)
     expect(wrapper.emitted('saved')).toHaveLength(1)
     expect(wrapper.emitted('close')).toHaveLength(1)
@@ -291,6 +296,103 @@ describe('EventEditDialog', () => {
     wrapper.unmount()
     wrapper = undefined
     expect(revoke).toHaveBeenCalledTimes(2)
+  })
+
+  describe('one save model', () => {
+    const cancelButton = () => wrapper!.findAll('button').find(b => b.text() === 'Cancel')!
+    async function answer(yes: boolean) {
+      await flushPromises()
+      pendingConfirm.value?.resolve(yes)
+      await flushPromises()
+    }
+
+    it('keeps the create button labelled Create and closes at once while nothing is typed', async () => {
+      wrapper = mount(EventEditDialog)
+      expect(wrapper.find('button[type="submit"]').text()).toBe('Create event')
+      await cancelButton().trigger('click')
+      await flushPromises()
+      expect(pendingConfirm.value).toBeNull()
+      expect(wrapper.emitted('close')).toHaveLength(1)
+    })
+
+    it('asks before closing a create dialog with typed input', async () => {
+      wrapper = mount(EventEditDialog, { attachTo: document.body })
+      await titleInput()?.setValue('Party')
+      await cancelButton().trigger('click')
+      await flushPromises()
+      expect(pendingConfirm.value?.title).toBe('Discard changes?')
+      await answer(false)
+      expect(wrapper.emitted('close')).toBeUndefined()
+      await cancelButton().trigger('click')
+      await answer(true)
+      expect(wrapper.emitted('close')).toHaveLength(1)
+    })
+
+    it('edits with a Save that is off until something changed, and Reset brings the old values back', async () => {
+      wrapper = mount(EventEditDialog, { props: { event: makeEvent({ location: 'Hall' }) } })
+      expect(saveButton().attributes('disabled')).toBeDefined()
+      await titleInput()?.setValue('  Game Night ')
+      expect(saveButton().attributes('disabled')).toBeDefined()
+      await titleInput()?.setValue('Game Night II')
+      expect(saveButton().attributes('disabled')).toBeUndefined()
+      await wrapper.get('[data-testid="unsaved-reset"]').trigger('click')
+      expect((titleInput()?.element as HTMLInputElement).value).toBe('Game Night')
+      expect(saveButton().attributes('disabled')).toBeDefined()
+    })
+
+    it('asks before an edit dialog with unsaved changes is closed', async () => {
+      wrapper = mount(EventEditDialog, { props: { event: makeEvent({ location: 'Hall' }) }, attachTo: document.body })
+      await titleInput()?.setValue('Other')
+      await wrapper.get('[data-dialog-close]').trigger('click')
+      await answer(false)
+      expect(wrapper.emitted('close')).toBeUndefined()
+      await wrapper.get('[data-dialog-close]').trigger('click')
+      await answer(true)
+      expect(wrapper.emitted('close')).toHaveLength(1)
+    })
+
+    it('counts the cover and the roles as unsaved changes', async () => {
+      useServerFeaturesStore().list = ['events', 'events.roles']
+      const existing = eventWithRoles({ roles: [roleFixture(1)], location: 'Hall', cover_url: '/c.png' })
+      wrapper = mount(EventEditDialog, { props: { event: existing } })
+      await flushPromises()
+      expect(saveButton().attributes('disabled')).toBeDefined()
+      await wrapper.find('button[aria-label="Remove cover"]').trigger('click')
+      expect(saveButton().attributes('disabled')).toBeUndefined()
+      await wrapper.get('[data-testid="unsaved-reset"]').trigger('click')
+      expect(wrapper.find('img').exists()).toBe(true)
+      expect(saveButton().attributes('disabled')).toBeDefined()
+      await wrapper.get('[data-testid="event-role-name"]').setValue('Renamed')
+      expect(saveButton().attributes('disabled')).toBeUndefined()
+      await wrapper.get('[data-testid="event-role-name"]').setValue(roleFixture(1).name)
+      expect(saveButton().attributes('disabled')).toBeDefined()
+    })
+
+    it('writes event, cover and roles by separate calls and keeps only the failed part unsaved', async () => {
+      useServerFeaturesStore().list = ['events', 'events.roles']
+      const existing = eventWithRoles({ roles: [roleFixture(1)], location: 'Hall', cover_url: '/c.png' })
+      const store = useEventsStore()
+      const update = vi.spyOn(store, 'update').mockResolvedValue(existing)
+      const del = vi.spyOn(store, 'deleteCover').mockRejectedValue(new Error('storage offline'))
+      const setRoles = vi.spyOn(store, 'setRoles').mockResolvedValue(existing)
+      wrapper = mount(EventEditDialog, { props: { event: existing } })
+      await titleInput()?.setValue('Renamed')
+      await wrapper.find('button[aria-label="Remove cover"]').trigger('click')
+      await wrapper.get('[data-testid="event-role-name"]').setValue('Other')
+      await submit()
+      expect(barError()).toContain('Some changes were saved, the rest was not')
+      expect(barError()).toContain('storage offline')
+      expect(wrapper.emitted('close')).toBeUndefined()
+      expect(setRoles).not.toHaveBeenCalled()
+
+      del.mockResolvedValue(existing)
+      await submit()
+      expect(update).toHaveBeenCalledTimes(1)
+      expect(del).toHaveBeenCalledTimes(2)
+      expect(setRoles).toHaveBeenCalledTimes(1)
+      expect(useToastStore().toasts.some(t => t.text === 'Event updated')).toBe(true)
+      expect(wrapper.emitted('close')).toHaveLength(1)
+    })
   })
 
   describe('roles', () => {
@@ -368,7 +470,7 @@ describe('EventEditDialog', () => {
       await wrapper.get('[data-testid="event-role-add"]').trigger('click')
       await wrapper.get('[data-testid="event-role-name"]').setValue('Tank')
       await submit()
-      expect(wrapper.find('.text-red-400').text()).toContain('two roles are called Tank')
+      expect(barError()).toContain('two roles are called Tank')
       expect(wrapper.emitted('close')).toBeUndefined()
       await submit()
       expect(setRoles).toHaveBeenCalledTimes(2)
@@ -445,7 +547,11 @@ describe('EventEditDialog', () => {
       wrapper = mount(EventEditDialog, { props: { event: existing } })
       expect(wrapper.find('[data-testid="scope-choice"]').exists()).toBe(true)
       await submit()
+      expect(update).not.toHaveBeenCalled()
+      await titleInput()?.setValue('Renamed')
+      await submit()
       expect(update).toHaveBeenLastCalledWith(fixtureId(1), expect.anything(), 'this')
+      await titleInput()?.setValue('Renamed again')
       await wrapper.get('[data-testid="scope-following"]').setValue(true)
       await submit()
       expect(update).toHaveBeenLastCalledWith(fixtureId(1), expect.anything(), 'following')

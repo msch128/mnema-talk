@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, useId } from 'vue'
-import { Image as ImageIcon, Trash2 } from '@lucide/vue'
+import { computed, ref, useId, watch } from 'vue'
 import BaseDialog from './BaseDialog.vue'
 import { useEventsStore } from '../stores/events'
 import { useChatStore } from '../stores/chat'
@@ -9,15 +8,24 @@ import type { CommunityEvent } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { t } from '../i18n'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { draftsOf } from '../lib/eventRoleDrafts'
-import type { RoleDraft, RoleRemoval } from '../lib/eventRoleDrafts'
 import { useEventRoles } from '../composables/useEventRoles'
+import { useEventCover } from '../composables/useEventCover'
+import { useRosterDraft } from '../composables/useRosterDraft'
+import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import type { SaveContext } from '../composables/useSettingsDraft'
+import { changedFields, EVENT_FIELD_KEYS, fieldsOf, payloadOf, validateFields } from '../lib/eventPayload'
+import type { EventFields } from '../lib/eventPayload'
+import EventCoverField from './EventCoverField.vue'
 import EventRolesEditor from './EventRolesEditor.vue'
 import EventRepeatFields from './EventRepeatFields.vue'
 import ScopeChoice from './ScopeChoice.vue'
-import { browserZone, untilIso } from '../lib/eventRecurrence'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
 import type { Scope } from '../lib/eventRecurrence'
 
+// Create and edit an event. Editing is one draft with one Save (doc/settings-ux.md):
+// the fields, the cover and the roles are all part of what is unsaved, and each is
+// written by its own call, so a failure after the first leaves only the rest unsaved.
+// Creating asks before it drops typed input, and its button stays "Create".
 const props = defineProps<{
   event?: CommunityEvent | null
 }>()
@@ -27,139 +35,30 @@ const emit = defineEmits<{
   saved: [event: CommunityEvent]
 }>()
 
+type EventDraft = EventFields & { cover: string; roles: string }
+
 const eventsStore = useEventsStore()
 const chatStore = useChatStore()
 const toast = useToastStore()
+const features = useServerFeaturesStore()
+const { save: saveRoles } = useEventRoles()
 
 // An event this dialog created itself: when the cover upload failed after the
 // create, the next submit updates it instead of creating a duplicate.
 const created = ref<CommunityEvent | null>(null)
 const existing = computed(() => props.event ?? created.value)
 const isEdit = computed(() => !!existing.value)
-const ids = {
-  title: useId(), description: useId(), start: useId(), end: useId()
-}
-const title = ref(props.event?.title || '')
-const description = ref(props.event?.description || '')
+const ids = { title: useId(), description: useId(), start: useId(), end: useId() }
 
-function toLocalIso(dateStr?: string | null): string {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-const startTime = ref(toLocalIso(props.event?.start_time))
-const endTime = ref(toLocalIso(props.event?.end_time))
-
-const locationType = ref<'talk' | 'text'>(props.event?.channel_id ? 'talk' : 'text')
-const channelId = ref(props.event?.channel_id || '')
-const locationText = ref(props.event?.location || '')
-
-const coverFile = ref<File | null>(null)
-const coverPreview = ref<string | null>(props.event?.cover_url || null)
-const removeExistingCover = ref(false)
-
-const features = useServerFeaturesStore()
-const roleRows = ref<RoleDraft[]>(draftsOf(props.event?.roles ?? []))
-const roleRemovals = ref<RoleRemoval[]>([])
-const { save: saveRoles } = useEventRoles()
-// Only when the editor changed something: a title edit must not send back the
-// role list as it was when the dialog opened (it may have changed since).
-const initialRoles = JSON.stringify(roleRows.value)
-const rolesTouched = computed(() => roleRemovals.value.length > 0 || JSON.stringify(roleRows.value) !== initialRoles)
+const cover = useEventCover(() => existing.value?.cover_url)
+const roster = useRosterDraft(() => existing.value?.roles)
 
 // A new event may repeat; an occurrence of a series may be changed for itself or for it and the later ones.
-const repeat = ref('')
-const repeatUntil = ref('')
 const scope = ref<Scope>('this')
 const inSeries = computed(() => !!existing.value?.series)
-
-const saving = ref(false)
-const error = ref('')
-
-const voiceChannels = computed(() => chatStore.allChannels.filter(c => c.type === 'voice'))
-
-// The preview of a picked file is an object URL that must be released again.
-let previewUrl: string | null = null
-function releasePreview() {
-  if (previewUrl) URL.revokeObjectURL(previewUrl)
-  previewUrl = null
-}
-onBeforeUnmount(releasePreview)
-
-function onCoverSelected(e: Event) {
-  const target = e.target as HTMLInputElement
-  if (target.files && target.files[0]) {
-    releasePreview()
-    coverFile.value = target.files[0]
-    previewUrl = URL.createObjectURL(target.files[0])
-    coverPreview.value = previewUrl
-    removeExistingCover.value = false
-  }
-}
-
-function removeCover() {
-  releasePreview()
-  coverFile.value = null
-  coverPreview.value = null
-  if (props.event?.cover_url) {
-    removeExistingCover.value = true
-  }
-}
-
-function validateForm(trimmedTitle: string): string | null {
-  if (!trimmedTitle) return t('events.errTitle')
-  if (!startTime.value) return t('events.errStart')
-  const startIso = new Date(startTime.value).toISOString()
-  const endIso = endTime.value ? new Date(endTime.value).toISOString() : null
-  if (endIso && new Date(endIso) < new Date(startIso)) return t('events.errEnd')
-  if (locationType.value === 'talk' && !channelId.value) return t('events.selectTalk')
-  if (locationType.value === 'text' && !locationText.value.trim()) return t('events.errLocation')
-  return null
-}
-
-function buildPayload(trimmedTitle: string) {
-  const full = {
-    title: trimmedTitle,
-    description: description.value,
-    start_time: new Date(startTime.value).toISOString(),
-    end_time: endTime.value ? new Date(endTime.value).toISOString() : null,
-    channel_id: locationType.value === 'talk' ? channelId.value : null,
-    location: locationType.value === 'text' ? locationText.value.trim() : null,
-    ...(!isEdit.value && features.eventRecurrence && repeat.value ? { recurrence: recurrence() } : {})
-  }
-  return full
-}
-
-/** An edit names only what changed, so an untouched start or place cannot re-anchor a series. */
-function changedFields(full: ReturnType<typeof buildPayload>, current: CommunityEvent) {
-  const same = (a: string | null | undefined, b: string | null | undefined) => (a ? new Date(a).getTime() : null) === (b ? new Date(b).getTime() : null)
-  return {
-    ...(full.title !== current.title ? { title: full.title } : {}),
-    ...(full.description !== current.description ? { description: full.description } : {}),
-    ...(!same(full.start_time, current.start_time) ? { start_time: full.start_time } : {}),
-    ...(!same(full.end_time, current.end_time) ? { end_time: full.end_time } : {}),
-    ...((full.channel_id ?? null) !== (current.channel_id ?? null) || (full.location ?? null) !== (current.location ?? null) ? { channel_id: full.channel_id, location: full.location } : {})
-  }
-}
-
-function recurrence() {
-  const zone = browserZone()
-  const until = untilIso(repeatUntil.value)
-  return { frequency: repeat.value as 'weekly' | 'biweekly' | 'monthly', ...(zone ? { timezone: zone } : {}), ...(until ? { until } : {}) }
-}
-
-async function applyCover(id: string, current: CommunityEvent): Promise<CommunityEvent> {
-  if (removeExistingCover.value) return eventsStore.deleteCover(id)
-  if (coverFile.value) return eventsStore.uploadCover(id, coverFile.value)
-  return current
-}
-
-function saveEvent(id: string, payload: ReturnType<typeof changedFields>) {
-  return inSeries.value ? eventsStore.update(id, payload, scope.value) : eventsStore.update(id, payload)
-}
+const createError = ref('')
+let wasEdit = false
+let result: CommunityEvent | null = null
 
 /** Roles chosen while creating a series are its template; an existing occurrence follows the scope. */
 function rolesScope(): Scope | undefined {
@@ -167,63 +66,110 @@ function rolesScope(): Scope | undefined {
   return inSeries.value ? scope.value : undefined
 }
 
-async function submit() {
-  error.value = ''
-  const trimmedTitle = title.value.trim()
-  const validationErr = validateForm(trimmedTitle)
-  if (validationErr) {
-    error.value = validationErr
-    return
+async function writeEvent(fields: EventFields): Promise<CommunityEvent> {
+  const payload = payloadOf(fields, !isEdit.value && features.eventRecurrence)
+  const current = existing.value
+  if (!current) {
+    created.value = await eventsStore.create(payload)
+    return created.value
   }
+  const changes = changedFields(payload, current)
+  return inSeries.value ? eventsStore.update(current.id, changes, scope.value) : eventsStore.update(current.id, changes)
+}
 
-  saving.value = true
+async function writeCover(current: CommunityEvent): Promise<CommunityEvent> {
   try {
-    const payload = buildPayload(trimmedTitle)
-    const current = existing.value
-    let result: CommunityEvent
-    if (current) {
-      result = await saveEvent(current.id, changedFields(payload, current))
-    } else {
-      result = await eventsStore.create(payload)
-      created.value = result
-    }
-    try {
-      result = await applyCover(result.id, result)
-    } catch (err) {
-      // The event itself is saved; only the cover is missing.
-      error.value = created.value ? caughtErrorMessage(err, t('events.coverFailed')) : caughtErrorMessage(err, t('events.saveFailed'))
-      return
-    }
-    if (features.eventRoles && rolesTouched.value) {
-      try {
-        result = await saveRoles(result.id, roleRows.value, roleRemovals.value, state => { roleRows.value = state.rows; roleRemovals.value = state.removals }, rolesScope())
-        roleRemovals.value = []
-      } catch (err) {
-        // The event is saved; the roles are not. The next submit retries them.
-        error.value = caughtErrorMessage(err, t('events.roles.saveFailed'))
-        return
-      }
-    }
-    toast.success(current ? t('events.updated') : t('events.created'))
-    emit('saved', result)
-    emit('close')
+    if (cover.removeStored.value) return await eventsStore.deleteCover(current.id)
+    if (cover.file.value) return await eventsStore.uploadCover(current.id, cover.file.value)
+    return current
   } catch (err) {
-    error.value = caughtErrorMessage(err, t('events.saveFailed'))
-  } finally {
-    saving.value = false
+    // The event itself is saved; only the cover is missing.
+    throw new Error(caughtErrorMessage(err, t(created.value ? 'events.coverFailed' : 'events.saveFailed')))
   }
 }
+
+async function writeRoles(current: CommunityEvent): Promise<CommunityEvent> {
+  try {
+    const out = await saveRoles(current.id, roster.rows.value, roster.removals.value, roster.sync, rolesScope())
+    roster.removals.value = []
+    return out
+  } catch (err) {
+    // The event is saved; the roles are not. The next save retries them.
+    throw new Error(caughtErrorMessage(err, t('events.roles.saveFailed')))
+  }
+}
+
+/** The event, then its cover, then its roles; each part that went through counts as saved. */
+async function write({ changed, commit, draft }: SaveContext<EventDraft>) {
+  const problem = validateFields(draft)
+  if (problem) throw new Error(problem)
+  wasEdit = isEdit.value
+  result = existing.value
+  const eventKeys = EVENT_FIELD_KEYS.filter(k => changed.includes(k))
+  if (!result || eventKeys.length > 0) {
+    result = await writeEvent(draft)
+    commit(wasEdit ? eventKeys : EVENT_FIELD_KEYS)
+  }
+  if (changed.includes('cover')) {
+    result = await writeCover(result)
+    commit(['cover'])
+  }
+  if (features.eventRoles && changed.includes('roles')) {
+    result = await writeRoles(result)
+    commit(['roles'], { roles: roster.key.value })
+  }
+}
+
+const form = useSettingsDraft<EventDraft>({
+  source: () => ({ ...fieldsOf(existing.value), cover: '', roles: roster.savedKey.value }),
+  normalisers: {
+    title: normalise.text,
+    locationText: normalise.text,
+    // Only a new event repeats; once it exists the choice is spent.
+    repeat: v => (isEdit.value ? '' : v),
+    repeatUntil: v => (isEdit.value ? '' : v)
+  },
+  save: write,
+  saved: () => {
+    toast.success(wasEdit ? t('events.updated') : t('events.created'))
+    if (result) emit('saved', result)
+    emit('close')
+  }
+})
+const { draft } = form
+
+// The cover and the roster live in their own state; the draft carries what they are.
+watch(cover.marker, marker => { draft.cover = marker })
+watch(roster.key, key => { draft.roles = key })
+
+function reset() {
+  form.reset()
+  cover.reset()
+  roster.reset()
+}
+
+/** Create: a blank or invalid form says what is missing instead of staying silent. */
+function submit() {
+  createError.value = ''
+  if (!form.canSave.value && !isEdit.value) createError.value = validateFields(draft) ?? ''
+  else void form.save()
+}
+
+const voiceChannels = computed(() => chatStore.allChannels.filter(c => c.type === 'voice'))
 </script>
 
 <template>
   <BaseDialog
     :title="isEdit ? $t('events.editTitle') : $t('events.createTitle')"
     panel-class="max-w-lg"
+    :guard="form.guard"
     @close="emit('close')"
   >
-    <form class="flex flex-col gap-4 p-6" @submit.prevent="submit">
-      <div v-if="error" class="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">
-        {{ error }}
+    <template #default="{ close }">
+    <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submit" @keydown="form.onKeydown">
+      <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
+      <div v-if="createError || (!isEdit && form.error.value)" role="alert" class="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">
+        {{ createError || form.error.value }}
       </div>
 
       <!-- Title -->
@@ -233,7 +179,7 @@ async function submit() {
         </label>
         <input
           :id="ids.title"
-          v-model="title"
+          v-model="draft.title"
           type="text"
           v-max-chars="100"
           required
@@ -249,7 +195,7 @@ async function submit() {
         </label>
         <textarea
           :id="ids.description"
-          v-model="description"
+          v-model="draft.description"
           rows="3"
           v-max-chars="2000"
           :placeholder="$t('events.descriptionPlaceholder')"
@@ -265,7 +211,7 @@ async function submit() {
           </label>
           <input
             :id="ids.start"
-            v-model="startTime"
+            v-model="draft.startTime"
             type="datetime-local"
             required
             class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text focus:outline-hidden"
@@ -277,14 +223,14 @@ async function submit() {
           </label>
           <input
             :id="ids.end"
-            v-model="endTime"
+            v-model="draft.endTime"
             type="datetime-local"
             class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text focus:outline-hidden"
           />
         </div>
       </div>
 
-      <EventRepeatFields v-if="!isEdit && features.eventRecurrence" v-model:repeat="repeat" v-model:until="repeatUntil" />
+      <EventRepeatFields v-if="!isEdit && features.eventRecurrence" v-model:repeat="draft.repeat" v-model:until="draft.repeatUntil" />
 
       <!-- Location Type -->
       <div>
@@ -294,7 +240,7 @@ async function submit() {
         <div class="mb-2 flex gap-4">
           <label class="flex items-center gap-2 text-sm text-mnema-text cursor-pointer">
             <input
-              v-model="locationType"
+              v-model="draft.locationType"
               type="radio"
               value="talk"
               class="accent-mnema-accent"
@@ -303,7 +249,7 @@ async function submit() {
           </label>
           <label class="flex items-center gap-2 text-sm text-mnema-text cursor-pointer">
             <input
-              v-model="locationType"
+              v-model="draft.locationType"
               type="radio"
               value="text"
               class="accent-mnema-accent"
@@ -312,9 +258,9 @@ async function submit() {
           </label>
         </div>
 
-        <div v-if="locationType === 'talk'">
+        <div v-if="draft.locationType === 'talk'">
           <select
-            v-model="channelId"
+            v-model="draft.channelId"
             :aria-label="$t('events.locationTalk')"
             class="w-full rounded-lg border border-mnema-border bg-mnema-surface px-3 py-2 text-sm text-mnema-text focus:outline-hidden"
           >
@@ -326,7 +272,7 @@ async function submit() {
         </div>
         <div v-else>
           <input
-            v-model="locationText"
+            v-model="draft.locationText"
             :aria-label="$t('events.locationText')"
             type="text"
             v-max-chars="255"
@@ -336,65 +282,33 @@ async function submit() {
         </div>
       </div>
 
-      <!-- Cover Image -->
-      <div>
-        <span class="mb-1 block text-sm font-medium text-mnema-text">
-          {{ $t('events.coverImage') }}
-        </span>
-        <div v-if="coverPreview" class="relative mb-2 aspect-[3/1] w-full shrink-0 overflow-hidden rounded-lg border border-mnema-border bg-mnema-surface">
-          <img :src="coverPreview" :alt="t('events.coverAlt')" class="h-full w-full object-cover" />
-          <button
-            type="button"
-            :aria-label="$t('events.removeCover')"
-            class="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80 transition-colors"
-            @click="removeCover"
-          >
-            <Trash2 class="w-4 h-4" />
-          </button>
-        </div>
-        <div class="flex items-center gap-3">
-          <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-mnema-border bg-mnema-surface px-3 py-1.5 text-sm font-medium text-mnema-text hover:bg-mnema-hover transition-colors">
-            <ImageIcon class="w-4 h-4 text-mnema-tertiary" />
-            <span>{{ coverPreview ? $t('events.changeCover') : $t('events.uploadCover') }}</span>
-            <input
-              type="file"
-              accept="image/*"
-              class="hidden"
-              @change="onCoverSelected"
-            />
-          </label>
-          <button
-            v-if="coverPreview"
-            type="button"
-            class="text-sm text-red-400 hover:underline"
-            @click="removeCover"
-          >
-            {{ $t('events.removeCover') }}
-          </button>
-        </div>
-      </div>
+      <EventCoverField :preview="cover.preview.value" @pick="cover.pick" @remove="cover.remove" />
 
-      <EventRolesEditor v-if="features.eventRoles" v-model="roleRows" v-model:removals="roleRemovals" />
+      <EventRolesEditor v-if="features.eventRoles" v-model="roster.rows.value" v-model:removals="roster.removals.value" />
 
       <ScopeChoice v-if="isEdit && inSeries" v-model="scope" :hint="$t('events.scope.editHint')" />
 
-      <!-- Actions -->
-      <div class="mt-4 flex justify-end gap-3 border-t border-mnema-hairline pt-4">
-        <button
-          type="button"
-          class="rounded-lg border border-mnema-border px-4 py-2 text-sm font-medium text-mnema-text hover:bg-mnema-hover transition-colors"
-          @click="emit('close')"
-        >
+      </div>
+
+      <UnsavedChangesBar
+        v-if="isEdit"
+        :dirty="form.dirty.value"
+        :can-save="form.canSave.value"
+        :saving="form.saving.value"
+        :error="form.error.value"
+        :save-label="$t('events.save')"
+        @save="submit"
+        @reset="reset"
+      />
+      <div v-else class="flex shrink-0 justify-end gap-3 border-t border-mnema-hairline px-6 py-4">
+        <button type="button" class="rounded-lg border border-mnema-border px-4 py-2 text-sm font-medium text-mnema-text hover:bg-mnema-hover transition-colors" data-testid="event-cancel" @click="close">
           {{ $t('common.cancel') }}
         </button>
-        <button
-          type="submit"
-          :disabled="saving"
-          class="rounded-lg bg-mnema-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity"
-        >
-          {{ isEdit ? $t('events.save') : $t('events.create') }}
+        <button type="submit" :disabled="form.saving.value" class="rounded-lg bg-mnema-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 transition-opacity">
+          {{ $t('events.create') }}
         </button>
       </div>
     </form>
+    </template>
   </BaseDialog>
 </template>
