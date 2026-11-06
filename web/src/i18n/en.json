@@ -5126,6 +5126,7 @@
     "edit": "Edit",
     "cancel": "Discard",
     "retry": "Try again",
+    "expired": "it may have arrived earlier, so it was not sent again by itself",
     "editLabel": "Edit the message that hasn’t been sent yet"
   }
 }

@@ -76,7 +76,7 @@ function saveEdit(nonce: string) {
         </span>
         <button v-if="item.status === 'failed'" type="button" class="text-mnema-muted hover:text-mnema-text underline-offset-2 hover:underline" :aria-label="$t('outbox.retryFor', { excerpt: excerpt(item.content) })" @click="chatStore.retryPending(item.nonce)">{{ $t('outbox.retry') }}</button>
         <template v-if="item.status !== 'sending'">
-          <button v-if="!item.attempted" type="button" class="text-mnema-muted hover:text-mnema-text underline-offset-2 hover:underline" :aria-label="$t('outbox.editFor', { excerpt: excerpt(item.content) })" @click="startEdit(item.nonce, item.content)">{{ $t('outbox.edit') }}</button>
+          <button v-if="!item.possiblyDelivered" type="button" class="text-mnema-muted hover:text-mnema-text underline-offset-2 hover:underline" :aria-label="$t('outbox.editFor', { excerpt: excerpt(item.content) })" @click="startEdit(item.nonce, item.content)">{{ $t('outbox.edit') }}</button>
           <span v-else class="text-mnema-tertiary">{{ $t('outbox.noEdit') }}</span>
           <button type="button" class="text-mnema-muted hover:text-mnema-text underline-offset-2 hover:underline" :aria-label="$t('outbox.discardFor', { excerpt: excerpt(item.content) })" @click="chatStore.cancelPending(item.nonce)">{{ $t('outbox.cancel') }}</button>
         </template>
