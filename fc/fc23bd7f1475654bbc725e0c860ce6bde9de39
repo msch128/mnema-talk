@@ -1,0 +1,23 @@
+web/src/stores/chat/notifySettings.ts
+  s_06fcde5dbef956::t_f90089c58af2a1 9,136
+web/src/stores/chat/readState.ts
+  s_06fcde5dbef956::t_a136553362f661 9-26,30-32,35,38-42,71
+web/src/stores/chatReadStateRace.test.ts
+  s_06fcde5dbef956::t_3bf1fbb8dbbc6d 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fcfc23bd7f1475654bbc725e0c860ce6bde9de39",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
