@@ -158,18 +158,37 @@ func (h *Hub) greet(c *Client, before, after string) {
 // pacer queues the bulk part of a greeting without flooding the send buffer:
 // it waits while the buffer is more than half full, so a large snapshot
 // neither drops the client as too slow nor leaves it no room for the
-// broadcasts that arrive meanwhile. One writeWait budget covers the whole
-// greeting. A client that stays stuck past it gets the ordinary slow-client
+// broadcasts that arrive meanwhile. One writeWait budget measures a stall, not
+// the total time: it starts over whenever the client has drained some of its
+// buffer. A client that stays stuck past it gets the ordinary slow-client
 // treatment, and a client that is gone ends the greeting at once so readPump
 // can unregister it.
 type pacer struct {
 	c        *Client
 	deadline *time.Timer
 	tick     *time.Ticker
+	wait     time.Duration
+	queued   int // length of the send buffer at the last look
 }
 
-func newPacer(c *Client) *pacer {
-	return &pacer{c: c, deadline: time.NewTimer(writeWait), tick: time.NewTicker(time.Millisecond)}
+func newPacer(c *Client) *pacer { return newPacerWait(c, writeWait) }
+
+func newPacerWait(c *Client, wait time.Duration) *pacer {
+	return &pacer{c: c, deadline: time.NewTimer(wait), tick: time.NewTicker(time.Millisecond), wait: wait}
+}
+
+// progressed restarts the stall budget when the client drained since the last look.
+func (p *pacer) progressed(queued int) {
+	if queued < p.queued {
+		if !p.deadline.Stop() {
+			select {
+			case <-p.deadline.C:
+			default:
+			}
+		}
+		p.deadline.Reset(p.wait)
+	}
+	p.queued = queued
 }
 
 func (p *pacer) stop() {
@@ -180,7 +199,12 @@ func (p *pacer) stop() {
 // send queues one event; false means the greeting must stop.
 func (p *pacer) send(eventType string, payload any) bool {
 	c := p.c
-	for len(c.send) > cap(c.send)/2 {
+	for {
+		queued := len(c.send)
+		p.progressed(queued)
+		if queued <= cap(c.send)/2 {
+			break
+		}
 		if c.gone.Load() {
 			return false
 		}
@@ -194,5 +218,6 @@ func (p *pacer) send(eventType string, payload any) bool {
 		}
 	}
 	c.SendEvent(eventType, payload)
+	p.queued = len(c.send)
 	return !c.gone.Load()
 }
