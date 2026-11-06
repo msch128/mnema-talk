@@ -168,8 +168,9 @@ func (w layerWriter) WriteRTP(p *rtp.Packet) error {
 }
 
 // syncChoice brings a freshly registered track to the viewer's current choice,
-// which may have changed while the track was made.
-func (vt *viewerTrack) syncChoice(pref, fit int) {
+// which may have changed while the track was made. It reports whether it had
+// to change anything.
+func (vt *viewerTrack) syncChoice(pref, fit int) bool {
 	vt.mu.Lock()
 	prefDiffers, fitDiffers := vt.pref != pref, vt.fit != max(fit, 0)
 	vt.mu.Unlock()
@@ -179,4 +180,5 @@ func (vt *viewerTrack) syncChoice(pref, fit int) {
 	if fitDiffers {
 		vt.setFit(fit)
 	}
+	return prefDiffers || fitDiffers
 }

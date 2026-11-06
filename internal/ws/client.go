@@ -46,6 +46,9 @@ type Client struct {
 	done     chan struct{}
 	doneOnce sync.Once
 	closed   atomic.Bool
+	// gone is set once the connection is torn down (write error, slow client,
+	// kick), before the client is unregistered; bulk senders stop on it.
+	gone atomic.Bool
 
 	// idle is set by the client after a while without input; it turns an
 	// "online" user into "away" while all of their connections are idle.
@@ -95,6 +98,7 @@ func newClient(h *Hub, conn *websocket.Conn, user auth.User, tokenVersion int) *
 
 // close tears the connection down once; readPump then unregisters the client.
 func (c *Client) close() {
+	c.gone.Store(true)
 	c.closeOnce.Do(func() {
 		if c.conn != nil {
 			_ = c.conn.Close()
@@ -123,10 +127,15 @@ func (c *Client) deliver(data []byte) {
 	case c.send <- data:
 		metrics.WSEventsSent.Inc()
 	default:
-		metrics.WSDropped.With("slow_client").Inc()
-		if c.closing.CompareAndSwap(false, true) {
-			go c.close()
-		}
+		c.dropSlow()
+	}
+}
+
+// dropSlow disconnects a client that cannot keep up, once.
+func (c *Client) dropSlow() {
+	metrics.WSDropped.With("slow_client").Inc()
+	if c.closing.CompareAndSwap(false, true) {
+		go c.close()
 	}
 }
 
