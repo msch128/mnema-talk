@@ -1,0 +1,21 @@
+web/src/components/DmPolish.test.ts
+  s_06fcde5dbef956::t_959d488558d34c 340-353
+web/src/components/SidebarDmSection.vue
+  s_06fcde5dbef956::t_bf10a8642c1157 174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c831a03e88cb76f7c7751c55d1c404a341807869",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
