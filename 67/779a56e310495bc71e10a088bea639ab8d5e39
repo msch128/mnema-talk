@@ -1,0 +1,35 @@
+web/src/components/CreateChannelModal.test.ts
+  s_06fcde5dbef956::t_3fc9778617cd89 12,42,216-238
+web/src/components/CreateChannelModal.vue
+  s_06fcde5dbef956::t_ba88664a8e971a 11,46-47,109-110,259,274
+web/src/components/CreateForumPostModal.test.ts
+  s_06fcde5dbef956::t_f41c81c1c50aec 7,49-50,289-310
+web/src/components/CreateForumPostModal.vue
+  s_06fcde5dbef956::t_3c971dc1dc371c 17,54-56,116-117,214,221
+web/src/components/EditNameDialog.test.ts
+  s_06fcde5dbef956::t_4df6cbe130cd3a 191-214
+web/src/components/EditNameDialog.vue
+  s_06fcde5dbef956::t_65e43bdbd569f8 15-16,115-118,134,188,193
+web/src/components/PollDialog.test.ts
+  s_06fcde5dbef956::t_36c62e229fc1c7 8,40,137-161
+web/src/components/PollDialog.vue
+  s_06fcde5dbef956::t_56f5b5a12532d1 13,29-31,75-76,160,169
+web/src/composables/useDiscardGuard.ts
+  s_06fcde5dbef956::t_3beac980f3cc9a 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "67779a56e310495bc71e10a088bea639ab8d5e39",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
