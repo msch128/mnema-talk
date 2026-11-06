@@ -1,0 +1,21 @@
+web/src/components/ConnectionBanner.test.ts
+  s_06fcde5dbef956::t_0ba2513d006d90 7-8,87-97
+web/src/components/ConnectionBanner.vue
+  s_06fcde5dbef956::t_5cfcf2280d1199 55-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "30614ad8c2d77c7275f86715df730bee29a52537",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
