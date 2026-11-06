@@ -1,0 +1,35 @@
+doc/operations.md
+  s_06fcde5dbef956::t_e26afaafada199 878
+internal/server/health.go
+  s_06fcde5dbef956::t_cb5a34b590b288 80-83
+internal/server/health_test.go
+  s_06fcde5dbef956::t_edaf76cba04851 9,137-140,148-150
+web/src/components/AdminNav.test.ts
+  s_06fcde5dbef956::t_c85a356b1c460f 15
+web/src/components/ReportsAndPrivacy.test.ts
+  s_06fcde5dbef956::t_2850b966b9fe32 281,293
+web/src/components/ReportsBadge.test.ts
+  s_06fcde5dbef956::t_054529c97d95de 14,19,36-37,39,66-86
+web/src/components/ReportsBadge.vue
+  s_06fcde5dbef956::t_e1ce6c094be6ab 9
+web/src/stores/reportsOpen.ts
+  s_06fcde5dbef956::t_447bf68a682089 4,12-15,20-21,31-37,44-47,58
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_6e536dc051a583 73-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "617b75b2f46de0d1c5512b2e6b87573cfa186894",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
