@@ -1,0 +1,37 @@
+internal/automod/engine.go
+  s_06fcde5dbef956::t_728910202b323b 182
+internal/chat/messages/audit.go
+  s_06fcde5dbef956::t_895ce7f04af353 199-200,202
+internal/perm/newmember.go
+  s_06fcde5dbef956::t_fac86507e629f5 27-29
+internal/perm/snapshot_channels.go
+  s_06fcde5dbef956::t_f970895ec50060 83-91
+internal/perm/snapshot_dm.go
+  s_06fcde5dbef956::t_a4dfa47d8072d5 40-47
+internal/server/dm_talk_privacy_integration_test.go
+  s_06fcde5dbef956::t_534478194309f9 1-116
+internal/webhook/handler.go
+  s_06fcde5dbef956::t_fa96214986654a 106
+internal/ws/event_scope.go
+  s_06fcde5dbef956::t_a6705bb5ddf49f 63
+internal/ws/perms.go
+  s_06fcde5dbef956::t_85faf46819912e 67-69
+internal/ws/voicegate.go
+  s_06fcde5dbef956::t_fdc91f2eac6147 92-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "42d4eab7b0cacbdd8ac73a7b9362dcb7effa1709",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
