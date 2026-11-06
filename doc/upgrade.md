@@ -86,6 +86,10 @@ their migrations in order. Newest first.
 
 Migration 0091 adds four indexes (see the table); it changes no behaviour and
 needs no setting. Building them takes a moment on a very large database.
+Migration 0092 adds two columns to `scheduled_messages`; a scheduled message
+whose send keeps failing on the server's side is now retried with growing
+pauses and, after five tries, kept as a failed draft instead of being retried
+every 15 seconds for ever.
 
 #### 2.9.0 (wiki)
 
@@ -294,6 +298,7 @@ of the pre-update backup (see "Rollback" above).
 | 0089 | The wiki tables: pages, revisions and redirects, one tree per community. Adds tables only. |
 | 0090 | `wiki_images`: marks the media rows used as wiki pictures. Adds a table and an index only. |
 | 0091 | Indexes on `saved_messages (message_id)`, `forum_post_reads (post_id)`, `message_reminders (message_id)` and `thread_follows (thread_id)`, which replaces the partial `idx_thread_follows_thread`: deleting a message no longer scans those tables. Building them briefly slows writes to them on a very large database. |
+| 0092 | `scheduled_messages.attempts` and `retry_at`: count failed sends and delay the next try. Adds two columns only; existing rows start at zero. |
 
 The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 
