@@ -314,7 +314,9 @@ when they happened.
 
 IDENTIFY lists the **intents** the bot wants, using Discord's bit numbers; the
 admin sets the intents a bot is *allowed* to ask for (Bots tab), and asking for
-more closes with `4014`. Intents choose event classes. **Which channels an
+more closes with `4014`. Shrinking the allowed intents later closes the
+bot's open sessions that asked for more with `4014` as well; the bot reconnects
+with fewer intents. Intents choose event classes. **Which channels an
 event comes from is not an intent**: every event is checked, at the moment it
 is sent, against what the bot's roles and overwrites let it view, so a bot
 never receives an event of a channel it cannot see, a private channel included,
@@ -324,7 +326,7 @@ and loses a channel's events the moment its access ends.
 |---|---|---|
 | `GUILDS` | 1 | `CHANNELS_UPDATE` `{}`: the channel layout or the bot's access changed, fetch `GET /channels` again |
 | `GUILD_MEMBERS` | 2 | `GUILD_MEMBER_ADD` (`id`, `username`, `display_name`, `avatar_url`), for new members who share a channel with the bot |
-| `GUILD_MESSAGES` | 512 | `MESSAGE_CREATE`, `MESSAGE_UPDATE` (the message, as in the REST API), `MESSAGE_DELETE` (`id`, `channel_id`, `parent_id`) |
+| `GUILD_MESSAGES` | 512 | `MESSAGE_CREATE` (the message, as in the REST API; it carries the sender's `nonce` when the sender sent one), `MESSAGE_UPDATE` (the message), `MESSAGE_DELETE` (`id`, `channel_id`, `parent_id`) |
 | `GUILD_MESSAGE_REACTIONS` | 1024 | `MESSAGE_REACTIONS_UPDATE` (`message_id`, `channel_id`, `reactions`: the new summary) |
 
 The bot's own messages are dispatched to it as well. Message content is always
@@ -404,7 +406,10 @@ overwrite; `POST` adds or updates one by name; `GET`, `DELETE
 ```
 
 Names are 1 to 32 lowercase letters, digits, `-` or `_`; at most 50 commands
-per bot and 10 options per command. Option types: `3` string, `4` integer,
+per bot and 10 options per command. Commands an admin disabled are kept by a
+bulk `PUT` and count toward the 50 (more is a `400`); `DELETE /commands/{id}` of
+a command an admin disabled answers `404`, so a bot cannot remove (or re-create)
+what the admin switched off. Option types: `3` string, `4` integer,
 `5` boolean, `6` user (a member's ID), `7` channel (an ID); required options
 come first. A text option may list `choices` (at most 25, each 1 to 100
 characters, unique): the composer shows them as a list and the server refuses
@@ -584,7 +589,9 @@ them in 1.1, and the gateway's `MESSAGE_CREATE`, the outgoing webhook events
 and every bot REST route never carry a message of a conversation: a bot is
 never a member, so it holds no permission there, and the hub does not show
 conversation events to the gateway or to outgoing webhooks. A future intent
-for direct messages to a bot is not part of 1.1.
+for direct messages to a bot is not part of 1.1. The chat of a conversation's
+call counts as part of the conversation: since 3.0.0 its events reach no bot
+and no outgoing webhook either.
 
 A forwarded message reaches a bot as an ordinary message: its `content` is the
 forwarder's comment (possibly empty) and `forward: {forwarded: true}`. Neither

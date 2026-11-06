@@ -84,7 +84,7 @@ there, see [Browsers](product-status.md#browsers); the call specs run in four sh
 `e2e (webkit-macos-calls, <group>)` jobs on fresh macOS runners (its own workflow,
 `ci-macos-calls.yml`, so a timeout there never holds back a release), which start PostgreSQL and
 SeaweedFS as local processes with `E2E_NO_DOCKER=1` and are killed from inside by a watchdog after 13 minutes if wedged; neither is a required
-check; the macOS jobs leave out the two specs that encode a 1080p or three-layer simulcast screen share (`screen-layers.spec.ts` and the stream-quality spec of `talk-extras.spec.ts`): the two-core hosted runner wedges on them, and Chromium and Linux WebKit cover those paths; Playwright stays at 1.63.0 because the WebKit 27.2 of 1.64.x reports a `style-src-attr` violation whenever a `<select>` is added to a page under `style-src-attr 'none'`, which the CSP guard in the specs rightly fails on); **Firefox** runs a smoke subset
+check; the macOS jobs leave out the two specs that encode a 1080p or three-layer simulcast screen share (`screen-layers.spec.ts` and the stream-quality spec of `talk-extras.spec.ts`): the two-core hosted runner wedges on them, and Chromium and Linux WebKit cover those paths; the Playwright version is pinned exactly in `e2e/package.json`; the WebKit 27.2 it ships since 1.64 reports a `style-src-attr` violation for every `<select>`, which the e2e fixtures ignore in WebKit only, see [product status](product-status.md)); **Firefox** runs a smoke subset
 (sign-in, chat, search, mentions, sealed Talk, key rotation, screen share) as
 `e2e (firefox)`. Neither is a required check yet. Engine differences the specs
 account for: Firefox has no context-level camera/microphone grants (its fake

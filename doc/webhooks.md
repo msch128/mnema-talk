@@ -157,7 +157,7 @@ and whether it is enabled. Deleting the channel deletes it.
 
 | Event | When | `d` |
 |---|---|---|
-| `MESSAGE_CREATE` | a message is posted in the channel (messages posted by an incoming webhook are not sent, so two webhooks cannot feed each other) | the message, as in `GET /api/channels/{id}/messages` |
+| `MESSAGE_CREATE` | a message is posted in the channel (messages posted by an incoming webhook are not sent, so two webhooks cannot feed each other) | the message, as in `GET /api/channels/{id}/messages`; it carries `nonce` when the sender's client sent one (the id of an offline-outbox send, see [api-stability.md](api-stability.md#300-changes)) |
 | `MESSAGE_UPDATE` | a message is edited | the message |
 
 | `MESSAGE_DELETE` | a message is deleted | `{id, channel_id, parent_id}` |
@@ -175,7 +175,9 @@ because the receiver may not be allowed to see the original. A pinned message
 carries `pinned_at` and `pinned_by` like any message payload.
 
 Outgoing webhooks never receive messages of direct message conversations, and
-an incoming webhook cannot post into one: webhooks belong to channels.
+an incoming webhook cannot post into one: webhooks belong to channels. Since
+3.0.0 that includes the chat of a conversation's call: neither webhooks nor bots
+get events of it.
 
 ### The request
 

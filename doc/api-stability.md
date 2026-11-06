@@ -1,10 +1,11 @@
 # API stability
 
-From 1.0.0 Mnema Talk follows [semantic versioning](https://semver.org) for the
-surfaces listed here. A client, bot, webhook consumer, dashboard or alert that
-works against `1.x` keeps working against every later `1.y` and `1.y.z`. Only a
-new major version (`2.0.0`) may remove or change them incompatibly, and it says
-so in the changelog.
+Mnema Talk follows [semantic versioning](https://semver.org) for the surfaces
+listed here. A client, bot, webhook consumer, dashboard or alert that works
+against `3.x` keeps working against every later `3.y` and `3.y.z`. Only a new
+major version (`4.0.0`) may remove or change them incompatibly, and it says so
+in the changelog. The same promise held for `1.x` and `2.x`; `3.0.0` is the
+major release that carries the changes listed in [3.0.0 changes](#300-changes).
 
 This page is the contract. If something is not on the public list, it can change
 in any release.
@@ -29,7 +30,7 @@ In 1.1 they were `blocks`, `dm`, `reports`, `saved`, `forward`,
 `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`,
 `ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`
 (`internal/server/health.go`). A name never changes meaning and is never
-removed in 1.x; a client treats a missing list as "none" (a 1.0.x server sends
+removed within a major version; a client treats a missing list as "none" (a 1.0.x server sends
 no list) and hides what is not listed. A new feature adds a name, never a
 `web_client_api` bump.
 
@@ -41,6 +42,60 @@ bit never changes ([roles and permissions](roles-and-permissions.md)).
 Documented behaviour is part of the contract, such as permission checks, limits
 that the OpenAPI document or the docs state, and the default of
 `MEDIA_RETENTION_DAYS=0`.
+
+## 3.0.0 changes
+
+`3.0.0` is a major release, so it may change documented behaviour. A client,
+bot or webhook consumer written against 2.x should check these points; none
+renames or removes a path or a field, and every addition is optional.
+
+**Values that mean something different**
+
+- `voice_seconds` is the **public** talk time only (stays in Talks that
+  `@everyone` can see) and **restarts at 0** with this release. It applies to
+  `GET /api/users/{id}`, the member list and the `user_stats` event. The
+  private total stays in the database and the data export.
+- `message_count` on a profile excludes direct messages and the chat of a
+  conversation's call, and subtracts channels the viewer cannot see.
+
+**Status codes and refusals**
+
+- Bot `DELETE /api/bot/v1/commands/{id}` of a command an admin disabled answers
+  `404`.
+- Bulk `PUT /api/bot/v1/commands` keeps the commands an admin disabled and counts
+  them toward the 50-command cap; over the cap it answers `400`.
+- A gateway session is closed with `4014` when the allowed intents shrink below
+  what it asked for.
+- `DELETE /api/events/{id}/signup` on an event the caller cannot see, or
+  without a sign-up, answers `404`.
+- A search, mentions or forum cursor that points at something the caller cannot
+  see answers `404`.
+- Moderation notes (`POST`, `PUT`) answer `403` for the Owner and for a member
+  the caller does not outrank.
+- A reaction in a blocked 1:1 direct message answers `403`.
+
+**Delivery**
+
+- Events of a conversation's call (its chat and its call messages) no longer
+  reach bots (gateway, bot API) or outgoing webhooks.
+
+**Messages: idempotent send**
+
+- `POST /api/channels/{id}/messages` accepts an optional `nonce` (UUID). A
+  second send of the same nonce by the same author answers `200` with the
+  first message; if that message was deleted since, `410` with code
+  `MESSAGE_DELETED`; a nonce already used in another channel is `400`. Nonces
+  are kept for 24 hours.
+- The `nonce` is part of the message in the `message_create` event, the bot
+  gateway's `MESSAGE_CREATE` and the outgoing webhook payload.
+
+**Additions**
+
+- `GET /api/admin/reports/open-count` and the WebSocket event `reports_open`
+  (sent to members holding *Manage reports*) carry the number of open reports.
+- The data export gains `public_voice_seconds`.
+- The admin status response gains backup and capacity fields (operator view,
+  not part of the stable surface above).
 
 ## What is not public
 

@@ -46,9 +46,11 @@ const (
 // @Description - `permissions_changed`: no payload; refetch GET /api/permissions and GET /api/channels. Sent to the users whose roles or permissions may have changed (everybody after a channel, category, overwrite or @everyone change).
 // @Description - `roles_changed`: no payload; refetch GET /api/roles and GET /api/members (a role was created, edited, deleted, reordered or assigned).
 // @Description - `emoji_changed`: no payload; refetch GET /api/emoji (a custom emoji was added, renamed or deleted).
+// @Description - `community_updated`: `{community_name, community_icon}` after the community name or icon changed (`community_icon` is empty after removal).
+// @Description - `reports_open`: `{open}`, only to sessions holding Manage reports: the number of open reports, sent whenever a report is filed, closed or raised by Automod.
 // @Description - `member_joined`: public User of a newly registered member.
 // @Description - `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.
-// @Description - `user_stats`: `{user_id, voice_seconds}` after a voice stay ends; voice_seconds is the time in Talks @everyone can see.
+// @Description - `user_stats`: `{user_id, voice_seconds}` after a voice stay ends; voice_seconds is the public talk time (stays in Talks @everyone can see; restarts at 0 in 3.0.0).
 // @Description - `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline; for a bot that set an activity also `activity: {type, name}` (Discord activity type).
 // @Description - `voice_state_update`: `{action: "join", channel_id, user, started_at}` or `{action: "leave", channel_id, user_id}`.
 // @Description - `typing`: `{channel_id, user_id}` (to everyone except the typist).
