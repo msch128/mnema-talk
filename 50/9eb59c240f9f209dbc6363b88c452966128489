@@ -1,0 +1,21 @@
+web/src/composables/useDialog.ts
+  s_06fcde5dbef956::t_b2a810335f65c5 53-54
+web/src/stores/chatSuppressEveryone.test.ts
+  s_06fcde5dbef956::t_5b801ca2b8467a 1-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "509eb59c240f9f209dbc6363b88c452966128489",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
