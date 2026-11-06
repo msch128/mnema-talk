@@ -79,11 +79,13 @@ defineExpose({ guard: form.guard })
     <div class="space-y-4 p-4">
       <label class="block text-sm text-mnema-text">
         <span class="mb-1 block text-xs font-medium text-mnema-muted">{{ $t('common.name') }}</span>
-        <input v-model="draft.name" type="text" v-max-chars="80" class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-3 py-1.5 text-sm text-mnema-text" />
+        <input v-model="draft.name" type="text" v-max-chars="80" :aria-invalid="errors.name ? 'true' : undefined" :aria-describedby="errors.name ? 'outgoing-name-error' : undefined" class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-3 py-1.5 text-sm text-mnema-text" />
+        <span v-if="errors.name" id="outgoing-name-error" class="mt-1 block text-xs text-mnema-danger" data-testid="outgoing-name-error">{{ errors.name }}</span>
       </label>
       <label class="block text-sm text-mnema-text">
         <span class="mb-1 block text-xs font-medium text-mnema-muted">{{ $t('webhooks.url') }}</span>
-        <input v-model="draft.url" type="url" maxlength="2048" :placeholder="'https://example.org/hook'" class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-3 py-1.5 font-mono text-sm text-mnema-text" />
+        <input v-model="draft.url" type="url" maxlength="2048" :aria-invalid="errors.url ? 'true' : undefined" :aria-describedby="errors.url ? 'outgoing-url-error' : undefined" :placeholder="'https://example.org/hook'" class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-3 py-1.5 font-mono text-sm text-mnema-text" />
+        <span v-if="errors.url" id="outgoing-url-error" class="mt-1 block text-xs text-mnema-danger" data-testid="outgoing-url-error">{{ errors.url }}</span>
       </label>
       <fieldset>
         <legend class="mb-1 text-xs font-medium text-mnema-muted">{{ $t('webhooks.eventsLabel') }}</legend>
