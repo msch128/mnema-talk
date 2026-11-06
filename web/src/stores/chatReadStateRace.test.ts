@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore } from './chat'
-import { channelFixture, fixtureId, readStateFixture } from '../test-fixtures.fixture'
+import { categoryFixture, channelFixture, fixtureId, readStateFixture } from '../test-fixtures.fixture'
 
 const pending = vi.hoisted(() => [] as { url: string; resolve: (value: unknown) => void }[])
 
@@ -42,5 +42,38 @@ describe('read state answers that arrive late', () => {
     getPending()[0]?.resolve([readStateFixture({ channel_id: X, unread_count: 9 })])
     await older
     expect(chat.readStates[X]?.unread_count).toBe(1)
+  })
+
+  it('keep the fresh counts of channels outside the category that was marked read', async () => {
+    const chat = useChatStore()
+    const inside = fixtureId(4)
+    chat.categories = [categoryFixture({ id: 'cat', channels: [channelFixture({ id: inside })] }), categoryFixture({ id: 'other', channels: [channelFixture({ id: X })] })]
+    chat.readStates = { [inside]: readStateFixture({ channel_id: inside, unread_count: 2 }), [X]: readStateFixture({ channel_id: X, unread_count: 0 }) }
+    const fetched = chat.fetchReadState()
+    const marking = chat.markAllRead('cat')
+    await Promise.resolve()
+    pending.find(p => p.url === '/api/read-state/read-all')?.resolve({})
+    await marking
+    getPending()[0]?.resolve([readStateFixture({ channel_id: inside, unread_count: 2 }), readStateFixture({ channel_id: X, unread_count: 5 })])
+    await fetched
+    expect(chat.readStates[X]?.unread_count).toBe(5)
+    expect(chat.readStates[inside]?.unread_count).toBe(0)
+  })
+
+  it('move the new-since divider to the kept answer when a newer fetch overtakes the unread mark', async () => {
+    const chat = useChatStore()
+    chat.activeChannel = channelFixture({ id: X })
+    chat.readStates = { [X]: readStateFixture({ channel_id: X, last_read_at: '2026-01-01T00:00:00Z' }) }
+    chat.activeChannelLastReadAt = '2026-01-01T00:00:00Z'
+    const marking = chat.markChannelUnread(X, 'm1')
+    pending.find(p => p.url === `/api/channels/${X}/unread`)?.resolve({})
+    await vi.waitFor(() => expect(getPending()).toHaveLength(1))
+    const newer = chat.fetchReadState()
+    getPending()[0]?.resolve([readStateFixture({ channel_id: X, last_read_at: '2026-01-01T00:00:00Z' })])
+    await new Promise(r => setTimeout(r, 0))
+    getPending()[1]?.resolve([readStateFixture({ channel_id: X, last_read_at: '2026-02-02T00:00:00Z' })])
+    await newer
+    await marking
+    expect(chat.activeChannelLastReadAt).toBe('2026-02-02T00:00:00Z')
   })
 })

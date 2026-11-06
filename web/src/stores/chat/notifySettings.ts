@@ -133,7 +133,7 @@ export async function markAllRead(cx: Cx, categoryId?: string) {
   const unreadDms = categoryId ? [] : cs.dms.value.filter(d => (next[d.id]?.unread_count ?? 0) > 0)
   for (const dm of unreadDms) next[dm.id] = { ...next[dm.id]!, unread_count: 0, mention_count: 0, last_read_at: now }
   cs.readStates.value = next
-  noteReadStateCleared(cx, Object.keys(next))
+  noteReadStateCleared(cx, [...(scope || []).map(ch => ch.id), ...unreadDms.map(dm => dm.id)])
   try {
     await Promise.all(unreadDms.map(dm => api(`/api/channels/${dm.id}/read`, { method: 'POST' })))
     await api('/api/read-state/read-all', { method: 'POST', json: categoryId ? { category_id: categoryId } : {} })
