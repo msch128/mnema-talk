@@ -121,6 +121,9 @@ describe('EventsModal', () => {
     perms.info = makePermsInfo(33554432) // manage_events
     wrapper = mount(EventsModal)
     expect(wrapper.text()).toContain('Create event')
+    // The shared primary button keeps the label readable on the accent colour.
+    const create = wrapper.findAll('button').find(b => b.attributes('aria-label') === 'Create event')
+    expect(create?.classes()).toEqual(expect.arrayContaining(['btn', 'btn-primary']))
   })
 
   it('explains what events are in the empty state and offers creating one to those who may', async () => {

@@ -232,6 +232,8 @@ watch(() => props.modelValue, (open) => {
     selectedIndex.value = 0
     currentSort.value = 'newest'
     nextTick(() => {
+      // A reopened modal keeps the last query: select it so typing replaces it.
+      document.querySelector<HTMLInputElement>('[data-search-input]')?.select()
       if (hasCriteria.value) performSearch()
     })
   } else {

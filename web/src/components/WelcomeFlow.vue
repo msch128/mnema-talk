@@ -44,7 +44,7 @@ const quiet = 'btn btn-ghost'
     <template #default="{ titleId }">
       <header class="flex items-start justify-between gap-3 border-b border-mnema-hairline bg-mnema-raised px-5 py-4">
         <div class="min-w-0">
-          <p class="font-mono text-xs text-mnema-tertiary" data-testid="welcome-progress">{{ $t('welcome.progress', { current: stepNumber, total }) }}</p>
+          <p v-if="total > 1" class="font-mono text-xs text-mnema-tertiary" data-testid="welcome-progress">{{ $t('welcome.progress', { current: stepNumber, total }) }}</p>
           <h2 :id="titleId" class="text-lg font-semibold text-mnema-text" data-testid="welcome-title">{{ $t(`welcome.${step}.title`, { name: onboarding.state.community_name || 'Mnema Talk' }) }}</h2>
         </div>
         <button v-if="canClose" type="button" data-dialog-close class="btn btn-icon shrink-0" :aria-label="$t('welcome.close')" @click="close">

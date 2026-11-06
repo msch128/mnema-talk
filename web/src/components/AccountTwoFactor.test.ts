@@ -36,6 +36,25 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
+describe('two-factor focus and errors', () => {
+  it('focuses the password field on the next step and scrolls a wrong code into view', async () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    const w = mount(AccountTwoFactor, { attachTo: document.body })
+    useAccountStore().info = off
+    await flushPromises()
+    await w.get('[data-testid="two-factor-start"]').trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(w.get('[data-testid="two-factor-password"]').element)
+
+    apiMock.mockRejectedValueOnce(new Error('Wrong password'))
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
+    w.unmount()
+  })
+})
+
 describe('turning two-factor sign-in on', () => {
   it('walks through password, QR code, first code and recovery codes', async () => {
     const w = mountWith(off)

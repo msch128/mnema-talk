@@ -73,12 +73,13 @@ export function formatClock(seconds: number | null | undefined): string {
   return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`
 }
 
-/** A total: { key, params } for $t, e.g. "12 h 4 min", "45 min", "< 1 min". */
+/** A total: { key, params } for $t, e.g. "12 h 4 min", "45 min", "< 1 min", "None yet" for zero. */
 export function totalParts(seconds: number | null | undefined): { key: string; params: Record<string, number> } {
   const s = Math.max(0, Math.floor(seconds || 0))
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
   if (h) return { key: 'activity.hoursMinutes', params: { h, m } }
   if (m) return { key: 'activity.minutes', params: { m } }
+  if (s === 0) return { key: 'activity.none', params: {} }
   return { key: 'activity.underMinute', params: {} }
 }

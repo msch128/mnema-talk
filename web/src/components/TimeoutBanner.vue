@@ -68,9 +68,9 @@ onBeforeUnmount(stop)
     <Clock class="h-4 w-4 shrink-0 text-mnema-warning" />
     <span class="min-w-0 truncate text-mnema-text">
       {{ $t('moderation.bannerText') }}
-      <span v-if="permissions.timeoutReason" class="text-mnema-muted">{{ permissions.timeoutReason }}</span>
+      <span v-if="permissions.timeoutReason" class="text-mnema-muted">{{ $t('moderation.bannerReason', { reason: permissions.timeoutReason }) }}</span>
     </span>
-    <span data-testid="timeout-remaining" class="ml-auto font-mono text-xs tabular-nums text-mnema-text">{{ formatRemaining(remaining) }}</span>
+    <span data-testid="timeout-remaining" aria-hidden="true" class="ml-auto font-mono text-xs tabular-nums text-mnema-text">{{ formatRemaining(remaining) }}</span>
   </div>
   <!-- For administrators: a running lockdown -->
   <RaidLockdownBanner />
