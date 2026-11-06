@@ -28,6 +28,8 @@ type Hub struct {
 	// imposes no limits and exists for tests that do not exercise
 	// permissions; the router always sets it (see SetPermissions).
 	Perms *perm.Service
+	// permRetry re-enforces permission changes whose state failed to load.
+	permRetry permRetry
 	// Tap, when set, sees every event the hub publishes (channel is uuid.Nil
 	// for events to everybody), before delivery. Outgoing webhooks listen
 	// here. It must not block.
