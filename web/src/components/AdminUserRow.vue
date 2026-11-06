@@ -2,7 +2,7 @@
 import { computed, type PropType } from 'vue'
 import type { AdminUser } from '../types/domain'
 import type { VoiceSnapshot } from '../types/events'
-import { KeyRound, UserX, UserCheck, PhoneOff, LogOut, Volume2, Shield, ShieldOff, LockOpen } from '@lucide/vue'
+import { KeyRound, TimerOff, UserX, UserCheck, PhoneOff, LogOut, Volume2, Shield, ShieldOff, LockOpen } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
@@ -10,6 +10,8 @@ import { useAuthStore } from '../stores/auth'
 import { t, locale } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
 import { roleColorCss } from '../lib/permissions'
+import { now, useServerClock } from '../lib/clock'
+import { moderationOffer, liftTimeout } from '../lib/moderationActions'
 
 // One account of the admin user table: who they are, their state and the
 // actions the signed-in member may take (by permission and rank). The
@@ -53,11 +55,16 @@ function formatDateTime(dt: string | null | undefined) {
   }
 }
 
-// A timeout that has not run out yet; the list refreshes through the member events.
+// A timeout that has not run out yet. The live member (kept current by the
+// member events) wins over the row's own data, so a lifted timeout shows at once.
+useServerClock(() => !!(chatStore.members.find(m => m.id === props.user.id)?.timeout_until ?? props.user.timeout_until))
 const timedOutUntil = computed(() => {
-  const until = props.user.timeout_until
-  return until && Date.parse(until) > Date.now() ? until : null
+  const live = chatStore.members.find(m => m.id === props.user.id)
+  const until = live ? live.timeout_until : props.user.timeout_until
+  return until && Date.parse(until) > now.value ? until : null
 })
+// Lifting needs Timeout members and a higher rank, like setting one.
+const canLiftTimeout = computed(() => !!timedOutUntil.value && moderationOffer(props.user).timeout)
 
 // What the signed-in member may do with this account, by permission and rank.
 function canModerate() {
@@ -189,6 +196,18 @@ function roles() {
           @click="emit('clear-lockout')"
         >
           <LockOpen class="w-4 h-4" />
+        </button>
+
+        <button
+          v-if="canLiftTimeout"
+          data-testid="action-remove-timeout"
+          type="button"
+          class="btn btn-icon btn-sm hover:text-mnema-text"
+          :title="$t('moderation.removeTimeout')"
+          :aria-label="$t('moderation.removeTimeout')"
+          @click="liftTimeout(user)"
+        >
+          <TimerOff class="w-4 h-4" />
         </button>
 
         <button
