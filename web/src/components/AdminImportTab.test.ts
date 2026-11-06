@@ -125,7 +125,7 @@ describe('AdminImportTab', () => {
 
     // Step 3: type the name or IMPORT; nothing has been written until now.
     expect(writes()).toHaveLength(0)
-    expect(w.get('[data-testid="import-step-3"]').text()).toContain('Type the server name “Home Base” or IMPORT')
+    expect(w.get('[data-testid="import-step-3"]').text()).toContain('Type the Discord server name “Home Base” or IMPORT')
     const run = w.get<HTMLButtonElement>('[data-testid="import-run"]')
     expect(run.element.disabled).toBe(true)
     await w.get('[data-testid="import-confirm-text"]').setValue('import')
