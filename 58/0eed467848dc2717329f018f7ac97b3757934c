@@ -1,0 +1,23 @@
+internal/media/staging.go
+  s_06fcde5dbef956::t_086ad37d93b6de 155-156,170-175,178-179,188-190,200-210
+internal/server/attachments_integration_test.go
+  s_06fcde5dbef956::t_9b7a3d4e417667 186,223,254-274
+internal/server/upload_limit_integration_test.go
+  s_06fcde5dbef956::t_cc87c6c51c2ba7 153-174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "580eed467848dc2717329f018f7ac97b3757934c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
