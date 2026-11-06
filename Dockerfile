@@ -15,7 +15,7 @@
 # ==========================================================
 
 # --- Stage 1: frontend ---
-FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS web
+FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS web
 WORKDIR /web
 
 COPY web/package.json web/package-lock.json ./
@@ -31,7 +31,7 @@ COPY version.txt /version.txt
 RUN MNEMA_VERSION="${VERSION}" npm run build
 
 # --- Stage 2: Go binary ---
-FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine@sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine@sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18 AS builder
 WORKDIR /src
 
 COPY go.mod go.sum ./
@@ -66,14 +66,14 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # --- Stage 3: runtime files, prepared on the build machine ---
 # CA bundle, time zone data and /etc/passwd are the same on every
 # architecture, so they are assembled here and copied into the target image.
-FROM --platform=$BUILDPLATFORM alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS rootfs
+FROM --platform=$BUILDPLATFORM alpine:3.24.4@sha256:93b41ef40b1677fce8fcc64ff4af09daddfacf5040afde618bc46c1e2d1cc7d4 AS rootfs
 RUN apk add --no-cache ca-certificates tzdata
 # Least-privilege runtime user. The binary writes nothing to disk except
 # multipart upload temp files in /tmp; media lives in S3, data in PostgreSQL.
 RUN adduser -D -H -u 10001 app
 
 # --- Stage 4: runtime ---
-FROM alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+FROM alpine:3.24.4@sha256:93b41ef40b1677fce8fcc64ff4af09daddfacf5040afde618bc46c1e2d1cc7d4
 COPY --from=rootfs /etc/passwd /etc/group /etc/shadow /etc/
 COPY --from=rootfs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=rootfs /usr/share/zoneinfo /usr/share/zoneinfo
