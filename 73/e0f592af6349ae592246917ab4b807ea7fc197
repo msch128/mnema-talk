@@ -1,0 +1,31 @@
+web/src/components/AdminBansTab.test.ts
+  s_06fcde5dbef956::t_0e33e931aaf81b 107-114
+web/src/components/AdminBansTab.vue
+  s_06fcde5dbef956::t_2fc4c5eb4a11f7 83
+web/src/components/AdminCategoryHeader.vue
+  s_06fcde5dbef956::t_af1fe7cef6e7e0 39-40,50-51,60-61,70-71
+web/src/components/AdminChannelRow.vue
+  s_06fcde5dbef956::t_fddc945743e214 48-49,59-60,69-70,79-80
+web/src/components/AdminLayoutTab.test.ts
+  s_06fcde5dbef956::t_0b51cc496a64fc 430-448
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_d77830fd972f5b 2497-2503,3845-3846
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_a1ea15d746238b 2497-2503,3845-3846
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "73e0f592af6349ae592246917ab4b807ea7fc197",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
