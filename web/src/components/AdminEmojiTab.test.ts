@@ -6,6 +6,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import AdminEmojiTab from './AdminEmojiTab.vue'
 import EmojiGlyph from './EmojiGlyph.vue'
 import { setLocale } from '../i18n'
+import { useToastStore } from '../stores/toast'
 import { useEmojiStore } from '../stores/emoji'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -72,6 +73,7 @@ describe('AdminEmojiTab', () => {
     await w.get('[data-testid="emoji-row"] form').trigger('submit')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`/api/admin/emoji/${ID}`, expect.objectContaining({ method: 'PATCH', json: { name: 'blobby' } }))
+    expect(useToastStore().toasts.map(x => x.text)).toEqual(['Emoji renamed'])
   })
 
   it('blocks a rename that breaks the name rules and points to them', async () => {

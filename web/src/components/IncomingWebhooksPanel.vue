@@ -115,6 +115,7 @@ async function remove(hook: Webhook) {
     await api(`/api/admin/webhooks/${hook.id}`, { method: 'DELETE' })
     hooks.value = hooks.value.filter(h => h.id !== hook.id)
     if (revealed.value?.id === hook.id) revealed.value = null
+    toasts.success(t('webhooks.deleted'))
   } catch (e) {
     showError(e)
   }

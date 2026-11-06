@@ -237,6 +237,7 @@ describe('AdminRolesTab', () => {
     await flushPromises()
     await w.find('[aria-label="Move Middle up"]').trigger('click')
     expect(apiMock).toHaveBeenCalledWith('/api/admin/roles/order', { method: 'PUT', json: { role_ids: [roles[1]!.id, roles[0]!.id, roles[2]!.id] } })
+    expect(toastTexts()).toContain('Role order changed')
     apiMock.mockClear()
     // drag Bottom onto Middle
     await row(w, 'Bottom').trigger('dragstart')
@@ -267,6 +268,7 @@ describe('AdminRolesTab', () => {
     await w.find('[aria-label="Move Middle up"]').trigger('click')
     await flushPromises()
     expect(toastTexts()).toContain('x')
+    expect(toastTexts()).not.toContain('Role order changed')
   })
 
   it('shows roles above the member’s rank read-only and locks permissions they lack', async () => {

@@ -84,6 +84,7 @@ async function remove() {
   if (!ok) return
   try {
     await api(`/api/admin/reports/${props.id}`, { method: 'DELETE' })
+    toasts.success(t('reports.admin.deleted'))
     emit('changed')
   } catch (error) {
     toasts.error(caughtErrorMessage(error, t('reports.admin.deleteFailed')))

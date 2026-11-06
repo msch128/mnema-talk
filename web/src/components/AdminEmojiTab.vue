@@ -66,6 +66,7 @@ async function saveRename(id: string) {
   try {
     await store.rename(id, next)
     editing.value = null
+    toasts.success(t('emoji.admin.renamed'))
   } catch (e) {
     showError(e)
   }

@@ -214,6 +214,7 @@ describe('AdminReportsTab', () => {
     await w.get('[data-testid="report-delete"]').trigger('click')
     await flushPromises()
     expect(seen).toContain(`DELETE /api/admin/reports/${fixtureId(10)}`)
+    expect(useToastStore().toasts.map(x => x.text)).toContain('Report deleted.')
   })
 
   it('goes back to the list and tells when a report cannot be read', async () => {

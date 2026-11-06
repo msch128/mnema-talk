@@ -137,6 +137,7 @@ describe('BotTokensPanel', () => {
     await w.get('[data-action="revoke"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`${base}/${fixtureId(31)}`, { method: 'DELETE' })
+    expect(toastTexts()).toEqual(['Token revoked.'])
   })
 
   it('reports a revoke failure and a load failure', async () => {
