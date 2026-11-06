@@ -7,7 +7,7 @@
 //   node scripts/compat-baseline.ts v1.0.0 v2.0.0 v2.9.12 v2.9.18
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 export interface CompatSchema {
   $ref?: string
@@ -47,11 +47,10 @@ export interface CompatBaseline {
   eventTypes: string[]
 }
 
-const root = fileURLToPath(new URL('../../', import.meta.url))
-const outDir = fileURLToPath(new URL('../src/compat/baselines/', import.meta.url))
+const here = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
 function git(...args: string[]): string {
-  return execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+  return execFileSync('git', args, { cwd: here('../../'), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
 }
 
 export function tagExists(tag: string): boolean {
@@ -142,12 +141,13 @@ function healthFeatures(source: string): string[] | undefined {
   return /var Features = \[\]string\{/.test(source) ? literals(source, /var Features = \[\]string\{/) : undefined
 }
 
-export function extractBaseline(tag: string): CompatBaseline {
-  const doc = JSON.parse(git('show', `${tag}:api/openapi.json`)) as Json
-  const healthSource = git('show', `${tag}:internal/server/health.go`)
-  const events = git('show', `${tag}:web/src/types/events.ts`)
-  const webClientApi = Number(/const WebClientAPI = (\d+)/.exec(healthSource)?.[1] ?? 1)
-  const features = healthFeatures(healthSource)
+export interface BaselineSources { openapi: string, healthGo: string, eventsTs: string }
+
+/** The baseline of a release (or of the working tree) from the three files it is read from. */
+export function baselineFrom(version: string, { openapi, healthGo, eventsTs }: BaselineSources): CompatBaseline {
+  const doc = JSON.parse(openapi) as Json
+  const webClientApi = Number(/const WebClientAPI = (\d+)/.exec(healthGo)?.[1] ?? 1)
+  const features = healthFeatures(healthGo)
   const operations: Record<string, CompatOperation> = {}
   const paths = isObject(doc['paths']) ? doc['paths'] : {}
   for (const [path, item] of Object.entries(paths)) {
@@ -160,16 +160,25 @@ export function extractBaseline(tag: string): CompatBaseline {
   const components = isObject(doc['components']) && isObject(doc['components']['schemas']) ? doc['components']['schemas'] : {}
   const schemas = Object.fromEntries(Object.entries(components).sort(([a], [b]) => a.localeCompare(b)).map(([name, s]) => [name, compact(s)]))
   return {
-    version: tag,
+    version,
     web_client_api: webClientApi,
-    health: { status: 'ok', version: tag.replace(/^v/, ''), web_client_api: webClientApi, community_name: 'Compat', ...(features ? { features } : {}) },
+    health: { status: 'ok', version: version.replace(/^v/, ''), web_client_api: webClientApi, community_name: 'Compat', ...(features ? { features } : {}) },
     operations: Object.fromEntries(Object.entries(operations).sort(([a], [b]) => a.localeCompare(b))),
     schemas,
-    eventTypes: literals(events, /const SERVER_EVENT_TYPES = new Set<string>\(\[/).sort()
+    eventTypes: literals(eventsTs, /const SERVER_EVENT_TYPES = new Set<string>\(\[/).sort()
   }
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+export function extractBaseline(tag: string): CompatBaseline {
+  return baselineFrom(tag, {
+    openapi: git('show', `${tag}:api/openapi.json`),
+    healthGo: git('show', `${tag}:internal/server/health.go`),
+    eventsTs: git('show', `${tag}:web/src/types/events.ts`)
+  })
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const outDir = here('../src/compat/baselines/')
   mkdirSync(outDir, { recursive: true })
   for (const tag of process.argv.slice(2)) {
     writeFileSync(`${outDir}${tag}.json`, JSON.stringify(extractBaseline(tag)) + '\n')

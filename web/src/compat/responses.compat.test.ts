@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import * as rest from '../types/rest'
 import { decodeServerHealth } from '../types/rest'
 import { allBaselines } from './baselines'
+import { headBaseline } from './head.fixture'
 import { synthesize } from './contract'
 import { responseGaps } from './allowlist'
 
@@ -16,7 +17,7 @@ function decoderFor(schema: string): Decode | undefined {
 
 const gapsOf = (version: string) => new Map(responseGaps.filter(gap => gap.versions.includes(version)).map(gap => [gap.schema, gap.reason]))
 
-describe.each(allBaselines)('answers of server $version', baseline => {
+describe.each([...allBaselines, headBaseline()])('answers of server $version', baseline => {
   const gaps = gapsOf(baseline.version)
 
   it('the health answer passes', () => {
