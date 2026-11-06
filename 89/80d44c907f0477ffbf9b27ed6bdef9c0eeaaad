@@ -1,0 +1,25 @@
+web/src/components/VoiceChatPanel.test.ts
+  s_06fcde5dbef956::t_3541dcc40c7005 109
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_c5f6a43a125680 419
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_44ee15924313e1 419,5087
+web/src/lib/errorSentencesB.ts
+  s_06fcde5dbef956::t_7af42cc0380cb0 119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8980d44c907f0477ffbf9b27ed6bdef9c0eeaaad",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
