@@ -127,6 +127,10 @@ func (h *Handler) storeImage(ctx context.Context, user uuid.UUID, pic *imgproc.P
 			VALUES ($1, $2, $3, $4, $5, $6, $7)`, id, user, h.MediaBucket, key, "wiki"+ext, pic.ContentType, len(pic.Data)); err != nil {
 			return fmt.Errorf("insert wiki picture: %w", err)
 		}
+		// Like every other upload, the picture counts against the member's daily bytes.
+		if err := media.RecordUploadUsage(ctx, q, user, int64(len(pic.Data))); err != nil {
+			return err
+		}
 		_, err := q.Exec(ctx, `INSERT INTO wiki_images (media_id) VALUES ($1)`, id)
 		return err
 	})

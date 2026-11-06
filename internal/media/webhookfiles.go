@@ -34,7 +34,7 @@ func (h *Handler) RecordFile(ctx context.Context, tx pgx.Tx, f *StoredFile, uplo
 		f.id, uploader, channel, message, h.Bucket, f.key, f.filename, f.mime, f.size); err != nil {
 		return err
 	}
-	return recordUploadUsage(ctx, tx, uploader, f.size)
+	return RecordUploadUsage(ctx, tx, uploader, f.size)
 }
 
 // FormError maps a failure reading a request body to the error to answer with.

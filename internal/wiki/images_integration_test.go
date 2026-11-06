@@ -175,3 +175,22 @@ func TestParallelUploadsCannotPassTheCapTogether(t *testing.T) {
 		t.Fatalf("%d went through, %d pictures, %d objects", ok, w.pictureCount(t), mem.Len())
 	}
 }
+
+func TestAWikiPictureCountsAgainstTheMembersDailyUploadBudget(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	pic := &imgproc.Picture{Data: make([]byte, 600<<10), ContentType: "image/png"}
+	h := &Handler{Store: w.s, MediaStore: media.NewMemoryStore(), MediaBucket: "b"}
+	if _, err := h.storeImage(ctx, w.alice, pic); err != nil {
+		t.Fatal(err)
+	}
+	uploads := &media.Handler{DB: w.p, Quota: media.Quota{PerUserBytes: 1 << 20}}
+	if _, err := uploads.ReserveUpload(ctx, w.alice, 600<<10); err == nil {
+		t.Fatal("a second 600 KB upload passed a 1 MB daily budget after a wiki picture of 600 KB")
+	}
+	if release, err := uploads.ReserveUpload(ctx, w.bob, 600<<10); err != nil {
+		t.Fatalf("somebody else is not held back by it: %v", err)
+	} else {
+		release()
+	}
+}
