@@ -20,13 +20,30 @@ func (p *Peer) SetAnswer(answer webrtc.SessionDescription) error {
 		return err
 	}
 	answer.SDP = vetted
+	before := remoteState{p.PC.SignalingState(), p.PC.CurrentRemoteDescription()}
 	if err := p.PC.SetRemoteDescription(answer); err != nil {
-		p.forgetAnswerCandidates(added)
+		// Pion applies the description (and adds its candidates) before some
+		// of its later failure points; only an untouched connection gets the
+		// budget back.
+		if before.unchanged(p.PC) {
+			p.forgetAnswerCandidates(added)
+		}
 		return err
 	}
 	p.applyEarlyCandidates()
 	p.requestPendingSignal()
 	return nil
+}
+
+// remoteState is what a connection shows of its remote description, taken
+// before an answer to tell whether a refused answer was applied nonetheless.
+type remoteState struct {
+	signaling webrtc.SignalingState
+	current   *webrtc.SessionDescription
+}
+
+func (s remoteState) unchanged(pc *webrtc.PeerConnection) bool {
+	return pc.SignalingState() == s.signaling && pc.CurrentRemoteDescription() == s.current
 }
 
 func (r *Room) SignalPeerConnections() {
