@@ -1,0 +1,37 @@
+web/src/components/AdminUsersTab.test.ts
+  s_06fcde5dbef956::t_b49f8f5141ae75 133-154
+web/src/components/AdminUsersTab.vue
+  s_06fcde5dbef956::t_2fcc39a9aa489e 13,24-25,38-39,41,179-185
+web/src/components/AdminVanityLink.test.ts
+  s_06fcde5dbef956::t_10d0ec92427f88 113-126
+web/src/components/AdminVanityLink.vue
+  s_06fcde5dbef956::t_548d19259d12f4 13,26,38,42,84,87-88,107
+web/src/components/ChannelPermissionsDialog.test.ts
+  s_06fcde5dbef956::t_e65f4024cad22d 243-257
+web/src/components/ChannelPermissionsDialog.vue
+  s_06fcde5dbef956::t_e8101c2167beae 20,128-129,158-160
+web/src/components/ForumPostHeader.test.ts
+  s_06fcde5dbef956::t_5d9858f679d46b 243-257
+web/src/components/ForumPostHeader.vue
+  s_06fcde5dbef956::t_bd5c508e58d080 40-41,66,69-70,87,188-192,195
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_120eb399c1b0c8 993-994,1831-1832,2500-2501
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_1289b949f92015 993-994,1831-1832,2500-2501
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "10b7a585b59a9e87b1e0348b1f65a579e5952337",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
