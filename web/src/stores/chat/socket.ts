@@ -18,7 +18,7 @@ import { fetchNotificationSettings } from './notifySettings'
 import { fetchFollowedThreads } from './threadFollow'
 import { loadNotifyPreview } from '../../lib/notifyPreview'
 import { openThread } from './threads'
-import { outboxReconnected } from './outbox'
+import { outboxReconnected, restoreOutbox } from './outbox'
 
 const PING_INTERVAL_MS = 5000
 // A hidden tab only needs to learn that the socket died before the next push is missed; the server pings every 30 s itself.
@@ -211,6 +211,7 @@ export function initWebSocket(cx: Cx) {
   const { cs, authStore } = cx
   const accountId = authStore.user?.id
   if (cs.ws.value || !accountId) return
+  restoreOutbox(cx)
   const generation = ++cs.socketGeneration
   installGlobalSearch()
 

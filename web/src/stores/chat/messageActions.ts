@@ -6,7 +6,7 @@ import { useEmojiStore } from '../emoji'
 import { assertCommunity, type Cx } from './state'
 import { applyToMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
 import { landSent, newNonce, postText, postWithReplyFallback, withEmojiTokens, type TextSend } from './messagePost'
-import { enqueue, hasQueued, isNetworkFailure } from './outbox'
+import { echoedMessage, enqueue, hasQueued, isNetworkFailure } from './outbox'
 import { closeThread } from './threads'
 
 /**
@@ -26,7 +26,10 @@ export async function sendMessage(cx: Cx, content: string, parentId: string | nu
   try {
     msg = await postText(channelId, send)
   } catch (error) {
-    if (!attachmentIds.length && isNetworkFailure(error) && cs.communityGeneration === community) return enqueue(cx, channelId, send)
+    if (!attachmentIds.length && isNetworkFailure(error) && cs.communityGeneration === community) {
+      // The answer was lost, but the server's event may already have brought the message: nothing to keep then.
+      return echoedMessage(cx, send.nonce) ?? enqueue(cx, channelId, send)
+    }
     throw error
   }
   assertCommunity(cx, community)

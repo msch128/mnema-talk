@@ -120,7 +120,11 @@ function outboxState() {
     // Conversations whose queue is being sent right now.
     outboxBusy: new Set<string>(),
     outboxTimer: undefined as Timer | undefined,
-    outboxDelay: 5000
+    outboxDelay: 5000,
+    // The account whose stored messages were brought back this sign-in.
+    outboxRestoredFor: null as string | null,
+    // Nonces of the author's own sends the server announced lately (see noteEcho).
+    echoed: new Map<string, { at: number; msg: Message }>()
   }
 }
 

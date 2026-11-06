@@ -30,7 +30,7 @@ import { applyPoll } from './polls'
 import { onPinnedMaybeDeleted, onPinsChanged } from './pins'
 import { onTalkLeader } from './talks'
 import { closeThread } from './threads'
-import { settlePending } from './outbox'
+import { noteEcho } from './outbox'
 import { clearTypingForUser, handleTypingEvent } from './typing'
 
 type Payload<K extends ServerEventType> = ServerEventPayloads[K]
@@ -131,7 +131,7 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   const { cs, authStore } = cx
   signalForumPosts(cx, p.channel_id)
   // The author's own send coming back: it replaces the pending copy in place.
-  settlePending(cx, p.nonce)
+  noteEcho(cx, p)
   countReply(cx, p)
   insertMessage(cx, p)
   noteDmMessage(cx, p)

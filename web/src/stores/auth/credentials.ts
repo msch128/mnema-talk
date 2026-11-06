@@ -3,6 +3,7 @@ import { api, ApiError } from '../../lib/api'
 import { releaseThisDevice } from '../../lib/webPush'
 import { resetNotifyPreview } from '../../lib/notifyPreview'
 import { clearAllDrafts, beginDraftSession } from '../../lib/drafts'
+import { clearStoredOutbox } from '../chat/outboxStorage'
 import { decodeUser, decodeUserEnvelope, type User } from '../../types/domain'
 import { decodeAuthTwoFactorLoginResult, isAuthTwoFactorChallenge, type AuthSecurityNotice } from '../../types/rest'
 import type { Decoder } from '../../types/validation'
@@ -143,6 +144,7 @@ async function logout({ core, user }: AuthDeps) {
   resetNotifyPreview()
   // Unsent messages stay on this device only while the account is signed in.
   clearAllDrafts()
+  clearStoredOutbox()
   const session = sessionSnapshot()
   await queueCookieRequest(async () => {
     // This browser must not keep receiving the account's messages once someone else may sign in here.
@@ -175,6 +177,7 @@ export function createAuthActions(deps: AuthDeps) {
       user.value = null
       resetNotifyPreview()
       clearAllDrafts()
+      clearStoredOutbox()
       core.s.cookieAccountId = undefined
     }
   }

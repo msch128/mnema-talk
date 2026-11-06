@@ -5,6 +5,7 @@ import PendingMessages from './PendingMessages.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { setLocale, t } from '../i18n'
+import type { PendingMessage } from '../stores/chat/outboxTypes'
 import { userFixture } from '../test-fixtures.fixture'
 
 beforeEach(() => {
@@ -13,9 +14,12 @@ beforeEach(() => {
   useAuthStore().user = userFixture({ id: 'me' })
 })
 
-function pending(status: 'waiting' | 'failed' | 'sending' = 'waiting', error = '') {
+function pending(status: 'waiting' | 'failed' | 'sending' = 'waiting', error = '', extra: Partial<PendingMessage> = {}) {
   const chat = useChatStore()
-  chat.outbox = [{ nonce: 'n1', channelId: 'c1', userId: 'me', parentId: null, replyToId: null, content: 'hello', createdAt: '2026-01-01T12:00:00Z', status, error }]
+  chat.outbox = [{
+    nonce: 'n1', channelId: 'c1', userId: 'me', parentId: null, replyToId: null, content: 'hello', createdAt: '2026-01-01T12:00:00Z', status, error,
+    cause: 'offline', attempts: 0, attempted: false, notBefore: 0, ...extra
+  }]
   return mount(PendingMessages, { props: { channelId: 'c1' }, global: { directives: { tooltip: () => undefined } } })
 }
 
@@ -24,13 +28,43 @@ describe('a message that has not been sent yet', () => {
     const view = pending()
     expect(view.text()).toContain('hello')
     expect(view.text()).toContain(t('outbox.waiting'))
-    expect(view.find('[role="alert"]').exists()).toBe(false)
+    expect(view.find('.text-mnema-danger').exists()).toBe(false)
+  })
+
+  it('says it will retry, not that it waits for the connection, when the server was the problem', () => {
+    const view = pending('waiting', '', { cause: 'server' })
+    expect(view.text()).toContain(t('outbox.retrying'))
+    expect(view.text()).not.toContain(t('outbox.waiting'))
   })
 
   it('shows the reason in the error colour only once the server refused it, with a retry', () => {
     const view = pending('failed', 'missing permission')
-    expect(view.get('[role="alert"]').text()).toContain('missing permission')
+    expect(view.get('.text-mnema-danger').text()).toContain('missing permission')
     expect(view.text()).toContain(t('outbox.retry'))
+  })
+
+  it('announces all pending messages in one live region instead of one per row', () => {
+    const chat = useChatStore()
+    const view = pending()
+    chat.outbox = [...chat.outbox, { ...chat.outbox[0]!, nonce: 'n2' }, { ...chat.outbox[0]!, nonce: 'n3', status: 'failed', error: 'x' }]
+    return view.vm.$nextTick().then(() => {
+      expect(view.findAll('[role="status"], [role="alert"]')).toHaveLength(1)
+      expect(view.get('[role="status"]').text()).toBe(`${t('outbox.summaryWaitingMany', { count: 2 })}. ${t('outbox.summaryFailed', { count: 1 })}`)
+    })
+  })
+
+  it('names the message in the buttons, so a list of them is not "Edit, Discard, Edit, Discard"', () => {
+    const view = pending('failed', 'no', { content: 'x'.repeat(60) })
+    const labels = view.findAll('button').map(b => b.attributes('aria-label'))
+    const excerpt = `${'x'.repeat(40)}…`
+    expect(labels).toEqual([t('outbox.retryFor', { excerpt }), t('outbox.editFor', { excerpt }), t('outbox.discardFor', { excerpt })])
+  })
+
+  it('offers only discarding once a try may have arrived, with a calm hint', () => {
+    const view = pending('waiting', '', { attempted: true })
+    expect(view.text()).not.toContain(t('outbox.edit'))
+    expect(view.text()).toContain(t('outbox.noEdit'))
+    expect(view.text()).toContain(t('outbox.cancel'))
   })
 
   it('does not offer to edit or discard while the request is out', () => {

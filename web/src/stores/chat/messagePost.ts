@@ -50,13 +50,13 @@ export function landSent(cx: Cx, msg: Message) {
 export interface TextSend { content: string; parentId: string | null; replyToId: string | null; nonce: string; attachmentIds?: readonly string[] }
 
 /** One text POST. The nonce makes a repeat of it (after a lost answer) return the first message. */
-export function postText(channelId: string, send: TextSend): Promise<Message> {
+export function postText(channelId: string, send: TextSend, signal?: AbortSignal): Promise<Message> {
   return postWithReplyFallback(send.replyToId, reply => {
     const json: CreateMessageRequest = { content: withEmojiTokens(send.content.trim()), nonce: send.nonce }
     if (send.attachmentIds?.length) json.attachment_ids = [...send.attachmentIds]
     if (send.parentId) json.parent_id = send.parentId
     if (reply) json.reply_to_id = reply
-    return api(`/api/channels/${channelId}/messages`, { method: 'POST', json, decode: decodeMessage })
+    return api(`/api/channels/${channelId}/messages`, { method: 'POST', json, decode: decodeMessage, ...(signal ? { signal } : {}) })
   })
 }
 

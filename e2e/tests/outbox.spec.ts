@@ -74,3 +74,25 @@ test('a pending message can be discarded before it is ever sent', async ({ brows
     await context.close()
   }
 })
+
+test('a message written offline survives a reload and is sent when the member is back', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1400, height: 900 } })
+  const page = await context.newPage()
+  try {
+    await signIn(page)
+    const id = responseString(await apiFetch(page, 'POST', '/api/admin/channels', { name: `${CHANNEL}-c`, type: 'text' }), 'id')
+    await page.goto(`/c/${id}`)
+    const composer = page.getByRole('textbox', { name: `Nachricht an #${CHANNEL}-c` })
+    await expect(composer).toBeVisible()
+    await context.setOffline(true)
+    await composer.fill('kept over a reload')
+    await composer.press('Enter')
+    await expect(page.getByTestId('pending-message')).toHaveCount(1)
+    await context.setOffline(false)
+    await page.reload()
+    await expect(page.getByText('kept over a reload', { exact: true })).toHaveCount(1, { timeout: 60_000 })
+    await expect(page.getByTestId('pending-message')).toHaveCount(0, { timeout: 60_000 })
+  } finally {
+    await context.close()
+  }
+})
