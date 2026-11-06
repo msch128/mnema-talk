@@ -179,7 +179,7 @@ func (e *Engine) Check(ctx context.Context, p Post) (*Pending, error) {
 	if snap.IsBot(p.UserID) || snap.Global(perm.Subject{ID: p.UserID}).Has(perm.Administrator) {
 		return nil, nil
 	}
-	pend := &Pending{e: e, post: p, dm: snap.IsDM(p.ChannelID)}
+	pend := &Pending{e: e, post: p, dm: snap.IsPrivate(p.ChannelID)}
 	if err := e.evaluate(ctx, set, pend, snap.RoleIDs(p.UserID)); err != nil || len(pend.hits) == 0 {
 		return nil, err
 	}
