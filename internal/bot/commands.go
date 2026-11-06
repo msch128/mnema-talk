@@ -249,7 +249,7 @@ func replaceCommandsTx(ctx context.Context, tx pgx.Tx, botID uuid.UUID, names []
 	if err := lockBot(ctx, tx, botID); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM bot_commands WHERE bot_id = $1 AND NOT (name = ANY($2))`, botID, names); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM bot_commands WHERE bot_id = $1 AND NOT (name = ANY($2)) AND NOT disabled`, botID, names); err != nil {
 		return err
 	}
 	for _, in := range ins {
@@ -300,6 +300,19 @@ var errCommandNotFound = httpx.ErrNotFound("command not found")
 // DeleteCommand removes one command.
 func DeleteCommand(ctx context.Context, q db.Querier, botID, id uuid.UUID) error {
 	tag, err := q.Exec(ctx, `DELETE FROM bot_commands WHERE id = $1 AND bot_id = $2`, id, botID)
+	if err != nil {
+		return fmt.Errorf("delete command: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return errCommandNotFound
+	}
+	return nil
+}
+
+// DeleteOwnCommand is how a bot removes one of its commands: a command an
+// admin switched off stays, so registering it again cannot bring it back on.
+func DeleteOwnCommand(ctx context.Context, q db.Querier, botID, id uuid.UUID) error {
+	tag, err := q.Exec(ctx, `DELETE FROM bot_commands WHERE id = $1 AND bot_id = $2 AND NOT disabled`, id, botID)
 	if err != nil {
 		return fmt.Errorf("delete command: %w", err)
 	}

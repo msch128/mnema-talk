@@ -88,7 +88,7 @@ func verifyCommandValidationErrors(t *testing.T, c *botClient, base string) {
 	wantStatus(t, "too many options", c.post(base, map[string]any{"name": "x", "description": "x", "options": many}), http.StatusBadRequest)
 }
 
-func verifyBulkCommandOverwrite(t *testing.T, c *botClient, base string) {
+func verifyBulkCommandOverwrite(t *testing.T, f *botFixture, c *botClient, base string) {
 	t.Helper()
 	res := c.putJSON(base, []map[string]any{{"name": "ping", "description": "bulk"}, {"name": "help", "description": "Help"}})
 	wantStatus(t, "replace", res, http.StatusOK)
@@ -101,10 +101,13 @@ func verifyBulkCommandOverwrite(t *testing.T, c *botClient, base string) {
 		tooMany[i] = map[string]any{"name": fmt.Sprintf("c%d", i), "description": "x"}
 	}
 	wantStatus(t, "replace over the limit", c.putJSON(base, tooMany), http.StatusBadRequest)
+	// An empty replace removes the bot's own commands, not the one an admin switched off.
 	res = c.putJSON(base, []map[string]any{})
-	if got := commandsOf(t, res); len(got) != 0 {
+	got = commandsOf(t, res)
+	if len(got) != 1 || got[0].Name != "ping" || !got[0].Disabled {
 		t.Fatalf("empty replace: %s", res.body)
 	}
+	wantStatus(t, "admin delete", f.owner.delete(f.botPath+"/commands/"+got[0].ID.String()), http.StatusNoContent)
 }
 
 func verifyCommandDeletion(t *testing.T, f *botFixture, c *botClient, base string) {
@@ -148,7 +151,7 @@ func TestBotCommandRegistration(t *testing.T) {
 		t.Fatalf("disabled flag lost: %+v", got)
 	}
 
-	verifyBulkCommandOverwrite(t, c, base)
+	verifyBulkCommandOverwrite(t, f, c, base)
 
 	// The limit for single registrations.
 	for i := 0; i < bot.MaxCommands; i++ {
@@ -499,4 +502,26 @@ func TestSlashCommandResponseNeedsSendPermission(t *testing.T) {
 	if res.status != http.StatusNotFound && res.status != http.StatusForbidden {
 		t.Fatalf("answered without permission: %d %s", res.status, res.body)
 	}
+}
+
+func TestACommandAnAdminSwitchedOffStaysOffWhateverTheBotDoes(t *testing.T) {
+	f := newBotFixture(t, false)
+	c := f.client
+	base := bot.BasePath + "/commands"
+	wantStatus(t, "register", c.post(base, pingCommand), http.StatusOK)
+	id := commandsOf(t, f.owner.get(f.botPath+"/commands"))[0].ID
+	wantStatus(t, "disable", f.owner.patch(f.botPath+"/commands/"+id.String(), map[string]any{"disabled": true}), http.StatusOK)
+	stillOff := func(what string) {
+		t.Helper()
+		if got := commandsOf(t, c.get(base)); len(got) != 1 || got[0].ID != id || !got[0].Disabled {
+			t.Fatalf("after %s: %+v; want the disabled ping", what, got)
+		}
+	}
+
+	wantStatus(t, "bot delete", c.delete(base+"/"+id.String()), http.StatusNotFound)
+	stillOff("the bot deleted it")
+	wantStatus(t, "bulk replace with none", c.putJSON(base, []map[string]any{}), http.StatusOK)
+	stillOff("an empty bulk replace")
+	wantStatus(t, "register again", c.post(base, pingCommand), http.StatusOK)
+	stillOff("registering it again")
 }

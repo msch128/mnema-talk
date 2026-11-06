@@ -24582,7 +24582,7 @@
     },
     "/api/bot/v1/commands/{commandID}": {
       "delete": {
-        "description": "Removes one of the bot's own commands. Members stop seeing it in the composer at once.",
+        "description": "Removes one of the bot's own commands, except one an admin switched off (404; the admin deletes those). Members stop seeing it in the composer at once.",
         "operationId": "botDeleteCommand",
         "parameters": [
           {
