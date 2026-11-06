@@ -84,6 +84,14 @@ their migrations in order. Newest first.
 
 #### After 2.9.1 (next release)
 
+Migration 0097 gives the built-in **Moderator** and **Admin** roles the
+permissions *Manage reports* and *Kick members*, which they lacked: members
+holding those roles can now read and close reports and use `/kick`. Only an
+ordinary role named Moderator or Admin that still holds *Timeout members* is
+changed (a role you renamed or stripped of it, custom roles, @everyone and bot
+roles are not), and permissions are only added, so nothing you set is lost. If
+you do not want a role to have them, untick them on the role after the update.
+
 Migration 0091 adds four indexes (see the table); it changes no behaviour and
 needs no setting. Building them takes a moment on a very large database.
 Migration 0092 adds two columns to `scheduled_messages`; a scheduled message
@@ -309,6 +317,7 @@ of the pre-update backup (see "Rollback" above).
 | 0090 | `wiki_images`: marks the media rows used as wiki pictures. Adds a table and an index only. |
 | 0091 | Indexes on `saved_messages (message_id)`, `forum_post_reads (post_id)`, `message_reminders (message_id)` and `thread_follows (thread_id)`, which replaces the partial `idx_thread_follows_thread`: deleting a message no longer scans those tables. Building them briefly slows writes to them on a very large database. |
 | 0092 | `scheduled_messages.attempts` and `retry_at`: count failed sends and delay the next try. Adds two columns only; existing rows start at zero. |
+| 0097 | Adds *Manage reports* and *Kick members* to the built-in Moderator and Admin roles. Changes permission bits of those two roles only. |
 
 The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 
