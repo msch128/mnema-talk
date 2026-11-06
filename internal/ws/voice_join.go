@@ -222,6 +222,7 @@ type voiceSeat struct {
 func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo, rejoin bool) (voiceSeat, bool) {
 	key := voiceKey{c.User.ID, ch.ID}
 	bypass := h.mayExceedLimit(c, ch) // before h.mu: it asks the permission cache
+	private := h.isDMTalk(ch.ID)
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.closed {
@@ -238,6 +239,9 @@ func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo, rejoin bool) (voiceSeat,
 	_, present := h.voice[ch.ID][c.User.ID]
 	rejoin = rejoin || present
 	h.recordVoiceJoinTimeLocked(key, rejoin, now)
+	if !rejoin || private {
+		h.privateSeat[key] = private
+	}
 
 	profile := h.profileLocked(c)
 	h.voice[ch.ID][c.User.ID] = profile

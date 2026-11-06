@@ -83,14 +83,12 @@ type voiceTimes struct {
 // spaced voiceTimeFlushEvery apart: a stay ending sooner after the last write
 // waits for a timer (or the hub's shutdown) and is written together with
 // whatever follows in the same Talk; a stay in a different Talk first writes
-// the held time of the previous one.
-func (h *Hub) addVoiceTime(userID, chID uuid.UUID, d time.Duration) {
+// the held time of the previous one. private marks a stay in a conversation's
+// call (decided when the seat was taken), which is never counted.
+func (h *Hub) addVoiceTime(userID, chID uuid.UUID, d time.Duration, private bool) {
 	secs := int64(d / time.Second)
-	if h.DB == nil || secs <= 0 {
-		return
-	}
 	// Time in the call of a conversation stays private: the total is public.
-	if snap, ok := h.permSnapshot(chID); ok && snap != nil && snap.IsDMTalk(chID) {
+	if h.DB == nil || secs <= 0 || private {
 		return
 	}
 	h.flushConflictingVoiceTime(userID, chID)
@@ -224,4 +222,12 @@ func (h *Hub) flushAllVoiceTime() {
 	for _, id := range ids {
 		h.flushVoiceTime(id)
 	}
+}
+
+// isDMTalk reports whether ch is the Talk of a conversation. When the
+// permission state cannot be read it counts as one: the stay's time is then
+// kept out of the public total rather than leaked into it.
+func (h *Hub) isDMTalk(ch uuid.UUID) bool {
+	snap, ok := h.permSnapshot(ch)
+	return !ok || (snap != nil && snap.IsDMTalk(ch))
 }

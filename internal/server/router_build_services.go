@@ -128,7 +128,7 @@ func (c *components) newAuth(hub *ws.Hub) {
 	c.authH.Live = hub
 	c.authH.Names = c.d.Names
 	c.authH.Perms = c.permSvc
-	c.authH.HiddenMessages = c.hiddenMessageCounts
+	c.authH.HiddenMessages = c.hiddenMessageCount
 	c.authH.Audit = c.auditLog
 	c.authH.Lifetime = c.ctx
 	c.newAuthAPIs()
@@ -149,19 +149,33 @@ func (c *components) newAuthAPIs() {
 // tapThreadFollows tells open clients which threads they follow after a reply
 // made them follow it (see chat.NewFollowSync).
 func (c *components) tapThreadFollows() {
-	c.addTap(messages.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub))
+	sync := messages.NewFollowSync(c.ctx, c.d.DB, c.permSvc, c.pub)
+	c.addTap(sync)
+	c.addDMTap(sync) // a call's chat has threads too; the update goes to the followers only
 }
 
-// hiddenMessageCounts counts, per author, the messages in channels the viewer
-// cannot see (the member list and a profile subtract them from the totals).
-func (c *components) hiddenMessageCounts(ctx context.Context, viewer perm.Subject) (map[uuid.UUID]int64, error) {
+// hiddenMessageCount counts the messages one author has in channels the viewer
+// cannot see (a profile subtracts them from the total).
+func (c *components) hiddenMessageCount(ctx context.Context, viewer perm.Subject, author uuid.UUID) (int64, error) {
 	snap, err := c.permSvc.Snapshot(ctx)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	hidden := snap.HiddenChannels(viewer)
 	if len(hidden) == 0 {
-		return nil, nil
+		return 0, nil
 	}
-	return chat.MessageCountsByAuthor(ctx, c.d.DB, hidden)
+	return chat.MessageCountByAuthor(ctx, c.d.DB, author, hidden)
+}
+
+// addDMTap is addTap for the events of conversations and their Talks, which
+// reach no webhook or bot.
+func (c *components) addDMTap(f func(ch uuid.UUID, eventType string, payload any)) {
+	prev := c.hub.DMTap
+	c.hub.DMTap = func(ch uuid.UUID, eventType string, payload any) {
+		if prev != nil {
+			prev(ch, eventType, payload)
+		}
+		f(ch, eventType, payload)
+	}
 }

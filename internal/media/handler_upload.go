@@ -130,11 +130,13 @@ func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user 
 				return err
 			}
 		}
-		_, err := tx.Exec(ctx, `
+		if _, err := tx.Exec(ctx, `
 			INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			in.id, user.ID, chID, msgID, h.Bucket, in.key, in.filename, in.mime, in.size)
-		return err
+			in.id, user.ID, chID, msgID, h.Bucket, in.key, in.filename, in.mime, in.size); err != nil {
+			return err
+		}
+		return recordUploadUsage(ctx, tx, user.ID, in.size)
 	})
 	if err != nil {
 		// The object must not outlive a failed DB write.

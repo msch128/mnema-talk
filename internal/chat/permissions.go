@@ -38,6 +38,16 @@ func (h *Handler) hiddenMessageCounts(r *http.Request) (map[uuid.UUID]int64, err
 	return MessageCountsByAuthor(r.Context(), h.DB, hidden)
 }
 
+// MessageCountByAuthor counts one author's messages inside the channels (the
+// messages_user_idx index leads with the author).
+func MessageCountByAuthor(ctx context.Context, q db.Querier, author uuid.UUID, channels []uuid.UUID) (int64, error) {
+	var n int64
+	if err := q.QueryRow(ctx, `SELECT COUNT(*) FROM messages WHERE user_id = $1 AND channel_id = ANY($2::uuid[])`, author, channels).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count hidden messages: %w", err)
+	}
+	return n, nil
+}
+
 // MessageCountsByAuthor counts the messages per author inside the channels.
 func MessageCountsByAuthor(ctx context.Context, q db.Querier, channels []uuid.UUID) (map[uuid.UUID]int64, error) {
 	rows, err := q.Query(ctx, `SELECT user_id, COUNT(*) FROM messages WHERE channel_id = ANY($1::uuid[]) GROUP BY user_id`, channels)

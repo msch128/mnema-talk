@@ -28,10 +28,10 @@ type Handler struct {
 	// change is stored: bots hold no session of the web app, so their gateway
 	// connections are closed through it. Optional.
 	OnAccountEnded func(userID uuid.UUID)
-	// HiddenMessages counts, per author, the messages in channels the viewer
+	// HiddenMessages counts the messages of one author in channels the viewer
 	// cannot see, so a profile's total does not reveal activity there. nil
 	// subtracts nothing.
-	HiddenMessages func(ctx context.Context, viewer perm.Subject) (map[uuid.UUID]int64, error)
+	HiddenMessages func(ctx context.Context, viewer perm.Subject, author uuid.UUID) (int64, error)
 	// Perms decides who may use the admin routes beyond the Owner. nil means
 	// only the Owner may.
 	Perms *perm.Service
