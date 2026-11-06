@@ -1,6 +1,6 @@
 import type { CreateMessageRequest, Message } from '../../types/domain'
 import { decodeMessage } from '../../types/domain'
-import { api, isApiError } from '../../lib/api'
+import { api, errorMessage, isApiError } from '../../lib/api'
 import { encodeShortcodes } from '../../lib/customEmoji'
 import { t } from '../../i18n'
 import { useEmojiStore } from '../emoji'
@@ -13,17 +13,24 @@ export function withEmojiTokens(text: string): string {
   return encodeShortcodes(text, useEmojiStore().byName)
 }
 
+// The server's sentences when the reply target is gone or lies in another conversation (English, stable).
+const REPLY_TARGET_SENTENCES = ['message to reply to not found', 'can only reply to a message in the same conversation']
+
+/** The refusal of the reply target. Any other 400 is about something else and would fail again without it. The error text is localized, so it is compared with the localized sentences. */
+function isReplyTargetRefusal(error: unknown): boolean {
+  return isApiError(error) && error.status === 400 && REPLY_TARGET_SENTENCES.some(sentence => errorMessage('INVALID_INPUT', sentence) === error.message)
+}
+
 /**
- * Posts with the reply target; when the server refuses the request as invalid
- * (the message replied to is gone, as with a restored draft), posts once more
- * without it. A request that is invalid for another reason fails the same way
- * again and its error reaches the caller.
+ * Posts with the reply target; when the server refuses that target (the message
+ * replied to is gone, as with a restored draft), posts once more without it.
+ * Any other refusal is final and its error reaches the caller at once.
  */
 export async function postWithReplyFallback<T>(replyToId: string | null, post: (replyToId: string | null) => Promise<T>): Promise<T> {
   try {
     return await post(replyToId)
   } catch (error) {
-    if (!replyToId || !isApiError(error) || error.status !== 400) throw error
+    if (!replyToId || !isReplyTargetRefusal(error)) throw error
     const posted = await post(null)
     showToast(t('chat.replyTargetGone'))
     return posted
