@@ -67,7 +67,7 @@ func newBotWithTokens(t *testing.T, n int) (botID uuid.UUID, tokens []uuid.UUID)
 	if err := p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash, role, is_bot) VALUES ($1, 'gw', '!', 'user', TRUE) RETURNING id`, "bot-"+uuid.NewString()[:8]).Scan(&user); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.QueryRow(ctx, `INSERT INTO bots (user_id, name) VALUES ($1, 'gw') RETURNING id`, user).Scan(&botID); err != nil {
+	if err := p.QueryRow(ctx, `INSERT INTO bots (user_id, name, allowed_intents) VALUES ($1, 'gw', $2) RETURNING id`, user, int64(bot.AllIntents)).Scan(&botID); err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; i < n; i++ {
@@ -256,5 +256,52 @@ func TestReadyIsTheFirstDispatchOfASession(t *testing.T) {
 	}
 	if first.T == nil || *first.T != "READY" || first.S == nil || *first.S != 1 {
 		t.Fatalf("first dispatch = %+v, want READY with s=1", first)
+	}
+}
+
+// A bot that looked up its credentials at the upgrade and identifies after an
+// admin removed an intent must not get READY with that intent, and a running
+// session loses its connection once its intents are no longer allowed.
+func TestRemovedIntentsAreRefusedAtIdentifyAndEndRunningSessions(t *testing.T) {
+	p := testutil.DB(t)
+	ctx := context.Background()
+	botID, tokens := newBotWithTokens(t, 1)
+	var userID uuid.UUID
+	if err := p.QueryRow(ctx, `SELECT user_id FROM bots WHERE id = $1`, botID).Scan(&userID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Exec(ctx, `UPDATE bots SET allowed_intents = $2 WHERE id = $1`, botID, int64(bot.AllIntents)); err != nil {
+		t.Fatal(err)
+	}
+	g := New(Config{DB: p})
+	// The credentials as the upgrade looked them up, before the PATCH.
+	creds := &bot.Credentials{
+		Bot:  auth.BotInfo{BotID: botID, TokenID: tokens[0], Intents: bot.AllIntents},
+		User: &auth.User{ID: userID, DisplayName: "gw"},
+	}
+	intents := int64(bot.IntentGuildMessages)
+	body, err := json.Marshal(Identify{Intents: &intents})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A running session whose intents get removed ends within a sweep.
+	running := g.identify(newConnection(nil), body, creds)
+	if running == nil {
+		t.Fatal("identify with allowed intents failed")
+	}
+	if _, err := p.Exec(ctx, `UPDATE bots SET allowed_intents = 0 WHERE id = $1`, botID); err != nil {
+		t.Fatal(err)
+	}
+	g.checkTokens(ctx)
+	if c := running.conn; c == nil || !c.closed() || c.closeCode != CloseDisallowedIntents {
+		t.Fatal("a session keeps intents that are no longer allowed")
+	}
+
+	// IDENTIFY after the PATCH and Revoke, with stale header credentials.
+	g.Revoke(botID, nil)
+	c := newConnection(nil)
+	if s := g.identify(c, body, creds); s != nil || !c.closed() || c.closeCode != CloseDisallowedIntents {
+		t.Fatalf("identify with a removed intent: session=%v code=%d", s, c.closeCode)
 	}
 }
