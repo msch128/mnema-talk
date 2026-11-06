@@ -1,0 +1,31 @@
+web/src/components/AdminUserRow.vue
+  s_06fcde5dbef956::t_29791cd23189c5 13,60,64
+web/src/components/AdminUserRowRemoveTimeout.test.ts
+  s_06fcde5dbef956::t_53103cd55faaef 2-3,29-31,65-75
+web/src/components/MemberRow.vue
+  s_06fcde5dbef956::t_f9cc5d5c9b8f50 13,42-43,46
+web/src/components/MemberRowTimeout.test.ts
+  s_06fcde5dbef956::t_1c371d38f98185 1-2,21-23,46-56
+web/src/composables/useMessageMenu.test.ts
+  s_06fcde5dbef956::t_9b3b977cd7f798 232-238
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_5f2617c2e81b80 175-177,179
+web/src/lib/moderationActions.ts
+  s_06fcde5dbef956::t_b7a6ccc4a3bc4e 5,33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "77ca32b27c9e64fe6af6c4267002054a80b912ff",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
