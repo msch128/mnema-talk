@@ -10,6 +10,7 @@ import {
   draftProblem, draftRequest, emptyDraft, isPollDuration
 } from '../lib/polls'
 import { t } from '../i18n'
+import { useDiscardGuard } from '../composables/useDiscardGuard'
 
 // Asks a question with 2 to 10 answers (the composer's poll button, and /poll
 // from the command menu). The server checks everything again.
@@ -24,6 +25,9 @@ const draft = reactive(emptyDraft())
 const busy = ref(false)
 const error = ref('')
 const list = ref<HTMLElement | null>(null)
+
+// Closing with a typed question or answer asks first.
+const guard = useDiscardGuard(() => draft.question.trim() !== '' || draft.options.some(o => o.trim() !== ''))
 
 const problem = computed(() => draftProblem(draft))
 const canAdd = computed(() => draft.options.length < POLL_MAX_OPTIONS)
@@ -68,7 +72,8 @@ async function submit() {
 </script>
 
 <template>
-  <BaseDialog :title="$t('poll.createTitle')" panel-class="max-w-lg" @close="emit('close')">
+  <BaseDialog :title="$t('poll.createTitle')" panel-class="max-w-lg" :guard="guard" @close="emit('close')">
+    <template #default="{ close }">
     <form class="space-y-6 overflow-y-auto p-6 max-md:p-5" data-testid="poll-dialog" @submit.prevent="submit">
       <div v-if="error" role="alert" class="flex items-center gap-2 rounded-lg border border-mnema-danger/30 bg-mnema-danger/10 p-2.5 text-sm text-mnema-danger">
         <AlertCircle class="h-4 w-4 shrink-0" />
@@ -152,7 +157,7 @@ async function submit() {
 
       <div class="flex flex-wrap items-center justify-end gap-3 border-t border-mnema-hairline pt-5">
         <span v-if="problemText" class="max-sm:w-full sm:mr-auto text-xs text-mnema-tertiary" data-testid="poll-problem">{{ problemText }}</span>
-        <button type="button" class="btn btn-ghost whitespace-nowrap" @click="emit('close')">{{ $t('common.cancel') }}</button>
+        <button type="button" class="btn btn-ghost whitespace-nowrap" @click="close">{{ $t('common.cancel') }}</button>
         <button
           type="submit"
           :disabled="!!problem || busy"
@@ -161,5 +166,6 @@ async function submit() {
         >{{ $t('poll.post') }}</button>
       </div>
     </form>
+    </template>
   </BaseDialog>
 </template>

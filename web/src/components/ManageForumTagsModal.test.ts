@@ -7,6 +7,7 @@ import { setLocale } from '../i18n'
 import * as forumApi from '../lib/forumApi'
 import { pendingConfirm } from '../lib/confirm'
 import { ApiError } from '../lib/api'
+import { useToastStore } from '../stores/toast'
 import type { ForumTag } from '../types/domain'
 import { forumTagFixture } from '../test-fixtures.fixture'
 
@@ -77,7 +78,68 @@ describe('ManageForumTagsModal', () => {
     expect(wrapper.emitted('close')).toBeUndefined()
     expect(editor().exists()).toBe(false)
     escape()
+    await flushPromises()
     expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('asks before Escape drops a tag edit and keeps editing on "Keep editing"', async () => {
+    mountModal()
+    await wrapper.get('button[aria-label="Edit"]').trigger('click')
+    await nameInput().setValue('changed')
+    escape()
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    await answerConfirm(false)
+    expect(editor().exists()).toBe(true)
+    expect(wrapper.emitted('close')).toBeUndefined()
+    escape()
+    await answerConfirm(true)
+    expect(editor().exists()).toBe(false)
+  })
+
+  it('asks before Cancel drops a typed new tag', async () => {
+    mountModal()
+    await wrapper.get('[data-testid="forum-add-tag"]').trigger('click')
+    await nameInput().setValue('typed')
+    await editor().findAll('button').find(b => b.text() === 'Cancel')!.trigger('click')
+    await answerConfirm(false)
+    expect(editor().exists()).toBe(true)
+    await editor().findAll('button').find(b => b.text() === 'Cancel')!.trigger('click')
+    await answerConfirm(true)
+    expect(editor().exists()).toBe(false)
+  })
+
+  it('asks before the close button drops unsaved rules', async () => {
+    mountModal()
+    await wrapper.get('#forum-guidelines').setValue('Rules')
+    await wrapper.findAll('button').find(b => b.text() === 'Close')!.trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    await answerConfirm(false)
+    expect(wrapper.emitted('close')).toBeUndefined()
+  })
+
+  it('keeps Save off for an unchanged tag and confirms create, update, delete and reorder with a toast', async () => {
+    vi.mocked(forumApi.createForumTag).mockResolvedValue(tag(3))
+    vi.mocked(forumApi.updateForumTag).mockResolvedValue(tag(1))
+    vi.mocked(forumApi.deleteForumTag).mockResolvedValue(undefined)
+    vi.mocked(forumApi.reorderForumTags).mockResolvedValue([])
+    const toasts = useToastStore()
+    mountModal()
+    await wrapper.get('button[aria-label="Edit"]').trigger('click')
+    expect(wrapper.get('[data-testid="forum-tag-save"]').attributes('disabled')).toBeDefined()
+    await nameInput().setValue('renamed')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    await wrapper.get('[data-testid="forum-add-tag"]').trigger('click')
+    await nameInput().setValue('new')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    await rows()[0]!.get('button[aria-label="Move down"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('button[aria-label="Delete"]').trigger('click')
+    await answerConfirm(true)
+    expect(toasts.toasts.map(x => x.text)).toEqual(['Tag saved', 'Tag added', 'Tag order saved', 'Tag deleted'])
   })
 
   it('adds a trimmed tag with colour and moderated flag and reports the change', async () => {
@@ -174,9 +236,10 @@ describe('ManageForumTagsModal', () => {
     vi.mocked(forumApi.updateForumTag).mockRejectedValue(new Error('nope'))
     mountModal()
     await wrapper.get('button[aria-label="Edit"]').trigger('click')
+    await nameInput().setValue('other')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(wrapper.text()).toContain('nope')
+    expect(wrapper.get('[data-testid="unsaved-error"]').text()).toContain('nope')
     expect(editor().exists()).toBe(true)
     expect(wrapper.emitted('updated')).toBeUndefined()
   })

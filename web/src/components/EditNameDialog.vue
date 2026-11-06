@@ -12,7 +12,8 @@ import { useToastStore } from '../stores/toast'
 import { nextSortOrder } from '../lib/channelLayout'
 import { confirmAutoDelete } from '../lib/autoDelete'
 import { saveKeys } from '../composables/draftGuard'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { confirmDiscard, normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { useLeaveGuard } from '../composables/draftGuard'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import SlowModePicker from './SlowModePicker.vue'
@@ -111,7 +112,10 @@ async function submit() {
   await form.save()
 }
 
-const guard = () => isCreate.value || form.guard()
+// A new category asks before it drops a typed name; an edit asks while it has unsaved changes.
+const typedName = computed(() => isCreate.value && createName.value.trim() !== '')
+useLeaveGuard(typedName)
+const guard = async () => (isCreate.value ? !typedName.value || confirmDiscard() : form.guard())
 
 // Ctrl/Cmd+S and Enter go through submit, so the auto-delete confirmation still runs.
 const onKeydown = saveKeys(submit)
@@ -127,6 +131,7 @@ const label = 'text-xs font-medium text-mnema-tertiary uppercase tracking-wider 
 
 <template>
   <BaseDialog :title="title" :guard="guard" @close="emit('close')">
+    <template #default="{ close }">
     <form class="flex min-h-0 flex-1 flex-col" data-testid="edit-name-form" @submit.prevent="submit" @keydown="onKeydown">
       <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
         <div v-if="createError" role="alert" class="p-2.5 rounded-lg bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm">
@@ -180,10 +185,11 @@ const label = 'text-xs font-medium text-mnema-tertiary uppercase tracking-wider 
       </div>
 
       <div v-if="isCreate" class="flex items-center justify-end gap-2 border-t border-mnema-hairline bg-mnema-raised px-5 py-3">
-        <button type="button" class="btn btn-secondary h-9" @click="emit('close')">{{ $t('common.cancel') }}</button>
+        <button type="button" class="btn btn-secondary h-9" @click="close">{{ $t('common.cancel') }}</button>
         <button type="submit" :disabled="creating || !createName.trim()" class="btn btn-primary h-9 disabled:cursor-not-allowed">{{ $t('common.create') }}</button>
       </div>
       <UnsavedChangesBar v-else :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="submit" @reset="form.reset" />
     </form>
+    </template>
   </BaseDialog>
 </template>

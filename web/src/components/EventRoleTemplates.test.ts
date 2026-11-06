@@ -6,6 +6,7 @@ import EventRoleTemplates from './EventRoleTemplates.vue'
 import { useToastStore } from '../stores/toast'
 import { setLocale } from '../i18n'
 import * as api from '../lib/eventRolesApi'
+import { pendingConfirm } from '../lib/confirm'
 import { blankDraft } from '../lib/eventRoleDrafts'
 import type { RoleDraft } from '../lib/eventRoleDrafts'
 
@@ -27,7 +28,8 @@ beforeEach(() => {
   setLocale('en')
   vi.clearAllMocks()
 })
-afterEach(() => wrapper?.unmount())
+afterEach(() => { pendingConfirm.value = null; wrapper?.unmount() })
+const toasts = () => useToastStore().toasts.map(t => t.text)
 
 describe('EventRoleTemplates', () => {
   it('lists the templates with their roles; only a custom one can be deleted', () => {
@@ -37,21 +39,47 @@ describe('EventRoleTemplates', () => {
     expect(wrapper.findAll('button[aria-label^="Delete template"]')).toHaveLength(1)
   })
 
-  it('switches a preset on and tells the editor to read the list again', async () => {
+  it('shows each template as on or off with a button that names the action, not a switch', () => {
+    mountIt()
+    expect(wrapper.find('[role="switch"]').exists()).toBe(false)
+    const rows = wrapper.findAll('[data-testid="event-role-template-row"]')
+    expect(rows[0]!.get('[data-testid="event-template-state"]').text()).toBe('Off')
+    expect(rows[0]!.get('[data-testid="event-template-toggle"]').text()).toBe('Turn on')
+    expect(rows[1]!.get('[data-testid="event-template-state"]').text()).toBe('On')
+    expect(rows[1]!.get('[data-testid="event-template-toggle"]').text()).toBe('Turn off')
+  })
+
+  it('turns a preset on when pressed, confirms with a toast and tells the editor to read the list again', async () => {
     vi.mocked(api.setRoleTemplateEnabled).mockResolvedValue(templates[0]!)
     mountIt()
-    await wrapper.findAll('[role="switch"]')[0]!.trigger('click')
+    await wrapper.findAll('[data-testid="event-template-toggle"]')[0]!.trigger('click')
     await flushPromises()
     expect(api.setRoleTemplateEnabled).toHaveBeenCalledWith('p1', true)
     expect(wrapper.emitted('changed')).toHaveLength(1)
+    expect(toasts()).toContain('Template “Party of five” is on')
+    await wrapper.findAll('[data-testid="event-template-toggle"]')[1]!.trigger('click')
+    await flushPromises()
+    expect(api.setRoleTemplateEnabled).toHaveBeenLastCalledWith('c1', false)
+    expect(toasts()).toContain('Template “Movie night” is off')
   })
 
-  it('deletes a custom template', async () => {
+  it('asks before deleting a custom template, then deletes it and confirms', async () => {
     vi.mocked(api.deleteRoleTemplate).mockResolvedValue()
     mountIt()
     await wrapper.get('button[aria-label^="Delete template"]').trigger('click')
     await flushPromises()
+    expect(pendingConfirm.value?.excerpt).toBe('Movie night')
+    expect(api.deleteRoleTemplate).not.toHaveBeenCalled()
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(api.deleteRoleTemplate).not.toHaveBeenCalled()
+
+    await wrapper.get('button[aria-label^="Delete template"]').trigger('click')
+    await flushPromises()
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
     expect(api.deleteRoleTemplate).toHaveBeenCalledWith('c1')
+    expect(toasts()).toContain('Template “Movie night” deleted')
   })
 
   it('saves the roles of the editor as a template, without their ids, once it has a name', async () => {
@@ -63,6 +91,7 @@ describe('EventRoleTemplates', () => {
     await save.trigger('click')
     await flushPromises()
     expect(api.createRoleTemplate).toHaveBeenCalledWith('Raid', [{ name: 'Tank', capacity: 1 }])
+    expect(toasts()).toContain('Template “Raid” saved')
     expect((wrapper.get('[data-testid="event-template-name"]').element as HTMLInputElement).value).toBe('')
   })
 
@@ -76,6 +105,8 @@ describe('EventRoleTemplates', () => {
     mountIt()
     await wrapper.get('button[aria-label^="Delete template"]').trigger('click')
     await flushPromises()
-    expect(useToastStore().toasts.map(t => t.text).join()).toContain('conflict')
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(toasts().join()).toContain('conflict')
   })
 })

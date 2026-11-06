@@ -9,6 +9,7 @@ import BaseDialog from './BaseDialog.vue'
 import { setLocale } from '../i18n'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
+import { pendingConfirm } from '../lib/confirm'
 
 vi.mock('../lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api')>()),
@@ -38,6 +39,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  pendingConfirm.value = null
   wrapper?.unmount()
 })
 
@@ -210,4 +212,27 @@ it('switches back to existing categories and text type, and forwards shell close
   await w.get('#channel-category').setValue(chat.categories[0]!.id)
   w.getComponent(BaseDialog).vm.$emit('close')
   expect(w.emitted('close')).toHaveLength(1)
+})
+
+it('asks before Cancel or Escape drops a typed channel name, and not for an empty form', async () => {
+  const w = mountModal()
+  const cancel = () => w.findAll('button').find(b => b.text() === 'Cancel')!
+  await cancel().trigger('click')
+  await flushPromises()
+  expect(pendingConfirm.value).toBeNull()
+  expect(w.emitted('close')).toHaveLength(1)
+
+  await w.find<HTMLInputElement>('#channel-name')!.setValue('games')
+  await cancel().trigger('click')
+  await flushPromises()
+  expect(pendingConfirm.value?.title).toBe('Discard changes?')
+  pendingConfirm.value?.resolve(false)
+  await flushPromises()
+  expect(w.emitted('close')).toHaveLength(1)
+
+  await cancel().trigger('click')
+  await flushPromises()
+  pendingConfirm.value?.resolve(true)
+  await flushPromises()
+  expect(w.emitted('close')).toHaveLength(2)
 })

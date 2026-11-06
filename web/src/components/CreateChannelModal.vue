@@ -8,6 +8,7 @@ import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
 import { nextSortOrder } from '../lib/channelLayout'
+import { useDiscardGuard } from '../composables/useDiscardGuard'
 import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps({
@@ -42,6 +43,8 @@ const isCreatingCategory = ref(false)
 const newCategoryName = ref('')
 const error = ref('')
 const isSubmitting = ref(false)
+// Closing with a typed name, topic or category asks first.
+const guard = useDiscardGuard(() => channelName.value.trim() !== '' || channelTopic.value.trim() !== '' || newCategoryName.value.trim() !== '')
 
 // Slugify helper for text channels
 function formatName(val: string) {
@@ -103,7 +106,8 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <BaseDialog :title="$t('channel.createTitle')" @close="emit('close')">
+  <BaseDialog :title="$t('channel.createTitle')" :guard="guard" @close="emit('close')">
+    <template #default="{ close }">
     <form @submit.prevent="handleSubmit" class="p-5 space-y-4 overflow-y-auto">
       <!-- Error -->
       <div v-if="error" role="alert" class="p-2.5 rounded-lg bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-2">
@@ -252,7 +256,7 @@ async function handleSubmit() {
       <div class="pt-3 flex items-center justify-end gap-2 border-t border-mnema-hairline">
         <button
           type="button"
-          @click="emit('close')"
+          @click="close"
           class="btn btn-secondary h-8"
         >
           {{ $t('common.cancel') }}
@@ -267,5 +271,6 @@ async function handleSubmit() {
         </button>
       </div>
     </form>
+    </template>
   </BaseDialog>
 </template>

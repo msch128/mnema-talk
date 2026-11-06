@@ -9,8 +9,10 @@ import { api, caughtErrorMessage } from '../lib/api'
 import { decodeModerationHistory, decodeModerationNote, type ModerationHistory, type ModerationHistoryEvent, type ModerationNote } from '../types/rest'
 import { durationLabel } from '../lib/moderation'
 import { confirm } from '../lib/confirm'
+import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
 
 const NOTE_MAX = 1000
 
@@ -25,8 +27,6 @@ const failed = ref(false)
 const draft = ref('')
 const draftStrike = ref(false)
 const editingId = ref('')
-const editText = ref('')
-const editStrike = ref(false)
 const busy = ref(false)
 
 const base = computed(() => `/api/admin/users/${props.userId}/moderation`)
@@ -68,19 +68,36 @@ async function add() {
   }
 }
 
-function startEdit(note: ModerationNote) {
-  editingId.value = note.id
-  editText.value = note.body
-  editStrike.value = note.strike
-}
-
-async function saveEdit() {
-  const body = editText.value.trim()
-  if (!body) return
-  const json = { body, strike: editStrike.value }
-  if (await run(() => api(`${base.value}/notes/${editingId.value}`, { method: 'PUT', json, decode: decodeModerationNote }), t('modHistory.saveFailed'))) {
+// Editing a note is a draft with its own bar: Save is off until the note differs, and
+// leaving (Cancel, Escape, another note) asks while there are unsaved changes.
+const edit = useSettingsDraft<{ body: string; strike: boolean }>({
+  source: () => {
+    const note = history.value?.notes.find(n => n.id === editingId.value)
+    return { body: note?.body ?? '', strike: note?.strike ?? false }
+  },
+  normalisers: { body: normalise.text, strike: normalise.flag },
+  validate: d => (d.body.trim() ? {} : { body: t('modHistory.noteLabel') }),
+  save: async ({ draft }) => {
+    const json = { body: draft.body.trim(), strike: draft.strike }
+    await api(`${base.value}/notes/${editingId.value}`, { method: 'PUT', json, decode: decodeModerationNote })
+    await load()
+  },
+  saved: () => {
+    toasts.success(t('draft.saved'))
     editingId.value = ''
   }
+})
+
+async function startEdit(note: ModerationNote) {
+  if (editingId.value && !(await edit.guard())) return
+  edit.reset()
+  editingId.value = note.id
+}
+
+async function cancelEdit() {
+  if (!(await edit.guard())) return
+  edit.reset()
+  editingId.value = ''
 }
 
 async function remove(note: ModerationNote) {
@@ -138,11 +155,23 @@ onMounted(load)
         <ul v-else class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
           <li v-for="note in history.notes" :key="note.id" :data-note="note.id" class="space-y-1 px-3 py-2.5 text-sm">
             <template v-if="editingId === note.id">
-              <textarea v-model="editText" rows="2" v-max-chars="NOTE_MAX" :aria-label="$t('modHistory.noteLabel')" data-testid="mod-note-edit-input" class="w-full rounded-md border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"></textarea>
-              <label class="flex items-center gap-2 text-sm text-mnema-text"><input v-model="editStrike" type="checkbox" /><span>{{ $t('modHistory.asStrike') }}</span></label>
-              <div class="flex gap-2">
-                <button type="button" :disabled="busy || !editText.trim()" class="btn btn-primary btn-sm" data-testid="mod-note-save" @click="saveEdit">{{ $t('common.save') }}</button>
-                <button type="button" class="btn btn-ghost btn-sm" @click="editingId = ''">{{ $t('common.cancel') }}</button>
+              <div class="space-y-2" @keydown="edit.onKeydown" @keydown.esc.stop="cancelEdit">
+                <textarea v-model="edit.draft.body" rows="2" v-max-chars="NOTE_MAX" :aria-label="$t('modHistory.noteLabel')" data-testid="mod-note-edit-input" class="w-full rounded-md border border-mnema-border-field bg-mnema-canvas px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"></textarea>
+                <label class="flex items-center gap-2 text-sm text-mnema-text"><input v-model="edit.draft.strike" type="checkbox" /><span>{{ $t('modHistory.asStrike') }}</span></label>
+                <UnsavedChangesBar
+                  inline
+                  :dirty="edit.dirty.value"
+                  :can-save="edit.canSave.value"
+                  :saving="edit.saving.value"
+                  :error="edit.error.value"
+                  save-testid="mod-note-save"
+                  @save="edit.save"
+                  @reset="edit.reset"
+                >
+                  <template #extra>
+                    <button type="button" class="btn btn-ghost btn-sm" @click="cancelEdit">{{ $t('common.cancel') }}</button>
+                  </template>
+                </UnsavedChangesBar>
               </div>
             </template>
             <template v-else>

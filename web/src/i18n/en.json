@@ -944,7 +944,6 @@
     "requireTagNoTags": "Add a tag first. Until then, nothing is required.",
     "guidelinesTitle": "Guidelines",
     "guidelinesPlaceholder": "What belongs here, and what does not. Shown above the new-post form.",
-    "settingsFailed": "Couldn’t save the rules. Try again.",
     "tagsTitle": "Tags",
     "tagsIntro": "Tags sort the posts of this forum. Members choose up to 5 per post and can filter by them.",
     "deleteTagTitle": "Delete this tag?",
@@ -990,7 +989,12 @@
       "other": "{count} new replies"
     },
     "jumpToUnread": "Jump to first unread",
-    "removeFile": "Remove file"
+    "removeFile": "Remove file",
+    "settingsSaved": "Forum rules saved",
+    "tagAdded": "Tag added",
+    "tagUpdated": "Tag saved",
+    "tagDeleted": "Tag deleted",
+    "tagsReordered": "Tag order saved"
   },
   "members": {
     "title": "Members",
@@ -3712,7 +3716,20 @@
       "templateFailed": "Couldn’t change the template. Try again.",
       "invalid": "Every role needs its own name of up to 40 characters, and a capacity from 1 to 1000 or none.",
       "saveFailed": "Couldn’t save the roles. Try again.",
-      "dialogTitle": "Roles & slots"
+      "dialogTitle": "Roles & slots",
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "turnOnTemplate": "Turn on template {name}",
+      "turnOffTemplate": "Turn off template {name}",
+      "templateOn": "Template “{name}” is on",
+      "templateOff": "Template “{name}” is off",
+      "templateSaved": "Template “{name}” saved",
+      "templateDeleted": "Template “{name}” deleted",
+      "deleteTemplateTitle": "Delete this template?",
+      "deleteTemplateBody": "Events that already use its roles keep them.",
+      "stateOn": "On",
+      "stateOff": "Off",
+      "saved": "Roles saved"
     },
     "rolePromoted": "You moved up from the waitlist: {role} – {title}",
     "roleRemoved": "You were removed from {role} – {title}",
@@ -4979,6 +4996,7 @@
     "missingBody": "It may have been deleted, or the address is wrong.",
     "loadFailed": "The page couldn’t be loaded.",
     "noEdit": "You can’t edit this page.",
-    "pageLockedNoEdit": "This page is locked. Only people who manage the wiki can change it."
+    "pageLockedNoEdit": "This page is locked. Only people who manage the wiki can change it.",
+    "moved": "Page updated."
   }
 }
