@@ -69,6 +69,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     eventRoles: computed(() => has('events.roles')),
     eventRecurrence: computed(() => has('events.recurrence')),
     wiki: computed(() => has('wiki')),
-    notifyLevelsV2: computed(() => has('notify.levels.v2'))
+    notifyLevelsV2: computed(() => has('notify.levels.v2')),
+    messageNonce: computed(() => has('messages.nonce'))
   }
 })

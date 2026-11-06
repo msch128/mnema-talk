@@ -4,6 +4,7 @@ import { api, isApiError } from '../../lib/api'
 import { encodeShortcodes } from '../../lib/customEmoji'
 import { t } from '../../i18n'
 import { useEmojiStore } from '../emoji'
+import { useServerFeaturesStore } from '../serverFeatures'
 import type { Cx } from './state'
 import { countReply, insertMessage, showToast } from './messageWindow'
 
@@ -55,7 +56,11 @@ export interface TextSend { content: string; parentId: string | null; replyToId:
 /** `onStatus` hears the answer's HTTP status: 200 means the nonce was replayed (an earlier try had been stored), 201 a new message. */
 export function postText(channelId: string, send: TextSend, signal?: AbortSignal, onStatus?: (status: number) => void): Promise<Message> {
   return postWithReplyFallback(send.replyToId, reply => {
-    const json: CreateMessageRequest = { content: withEmojiTokens(send.content.trim()), nonce: send.nonce }
+    const json: CreateMessageRequest = { content: withEmojiTokens(send.content.trim()) }
+    // Servers before the nonce (no "messages.nonce" feature) reject unknown JSON fields, so it is only sent to
+    // a server that lists it. Without it the outbox still sends, but a resend after a lost answer cannot be
+    // de-duplicated there and may post the message twice; that is accepted on an older server.
+    if (useServerFeaturesStore().messageNonce) json.nonce = send.nonce
     if (send.attachmentIds?.length) json.attachment_ids = [...send.attachmentIds]
     if (send.parentId) json.parent_id = send.parentId
     if (reply) json.reply_to_id = reply

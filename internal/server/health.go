@@ -73,6 +73,10 @@ var Features = []string{
 	"wiki",
 	"notify.levels.v2",
 	"dm.v2",
+	// "messages.nonce": POST /api/channels/{id}/messages accepts a client nonce
+	// and answers a repeat of it with the first message. Older servers reject
+	// the unknown field, so a client sends it only when this is listed.
+	"messages.nonce",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is

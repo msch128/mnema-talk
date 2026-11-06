@@ -132,3 +132,19 @@ func TestDesktopCompatFileMatchesServerContract(t *testing.T) {
 		t.Fatalf("web/desktop-compat.json declares web_client_api %d, server advertises %d", c.WebClientAPI, WebClientAPI)
 	}
 }
+
+func TestHealthListsTheMessageNonceFeature(t *testing.T) {
+	hc := &healthCheck{ttl: time.Hour, ping: func(context.Context) error { return nil }}
+	rec := httptest.NewRecorder()
+	health(hc, "1.2.3", nil).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
+	var body Health
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range body.Features {
+		if f == "messages.nonce" {
+			return
+		}
+	}
+	t.Fatalf("features %v lack messages.nonce, which web clients need before they send a nonce", body.Features)
+}
