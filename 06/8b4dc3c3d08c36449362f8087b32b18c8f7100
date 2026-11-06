@@ -1,0 +1,21 @@
+e2e/tests/notifications.spec.ts
+  s_06fcde5dbef956::t_a60594dccc9ca0 76
+e2e/tests/onboarding.spec.ts
+  s_06fcde5dbef956::t_c05cc72d3fe4e4 80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "068b4dc3c3d08c36449362f8087b32b18c8f7100",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
