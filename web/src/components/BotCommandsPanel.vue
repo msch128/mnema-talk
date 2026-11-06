@@ -1,6 +1,8 @@
 <script setup lang="ts">
-// Slash commands a bot registered: switch off or delete. Members see a
-// command in channels where the bot can view and send.
+// Slash commands a bot registered: turn off or on, or delete. These are actions
+// that run when pressed (doc/settings-ux.md), not fields of the bot's draft, so
+// they are buttons with a toast rather than switches. Members see a command in
+// channels where the bot can view and send.
 import { ref, onMounted } from 'vue'
 import { SquareSlash, Trash2 } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
@@ -18,6 +20,7 @@ const props = defineProps({
 const toasts = useToastStore()
 const commands = ref<BotCommand[]>([])
 const loaded = ref(false)
+const busy = ref('')
 const base = `/api/admin/bots/${props.botId}/commands`
 
 function fail(e: unknown) {
@@ -34,17 +37,17 @@ async function load() {
   }
 }
 
-async function setDisabled(command: BotCommand, event: Event) {
-  const input = event.target as HTMLInputElement
-  const disabled = !input.checked
+async function toggle(command: BotCommand) {
+  const disabled = !command.disabled
+  busy.value = command.id
   try {
     const updated = await api(`${base}/${command.id}`, { method: 'PATCH', json: { disabled }, decode: decodeBotCommand })
     commands.value = commands.value.map(c => (c.id === updated.id ? updated : c))
+    toasts.success(t(updated.disabled ? 'bots.commands.turnedOff' : 'bots.commands.turnedOn', { name: updated.name }))
   } catch (e) {
     fail(e)
-    // Vue does not re-patch `checked` when the bound value is unchanged, so restore the box by hand.
-    input.checked = disabled
-    await load()
+  } finally {
+    busy.value = ''
   }
 }
 
@@ -54,6 +57,7 @@ async function remove(command: BotCommand) {
   try {
     await api(`${base}/${command.id}`, { method: 'DELETE' })
     commands.value = commands.value.filter(c => c.id !== command.id)
+    toasts.success(t('bots.commands.deleted', { name: command.name }))
   } catch (e) {
     fail(e)
   }
@@ -73,10 +77,15 @@ onMounted(load)
           <p class="truncate font-mono text-sm text-mnema-text">/{{ command.name }}</p>
           <p class="truncate text-xs text-mnema-tertiary">{{ command.description }} <span class="whitespace-nowrap">- {{ $t('bots.commands.options', { count: command.options.length }) }}</span></p>
         </div>
-        <label class="flex items-center gap-2 text-sm text-mnema-text">
-          <input type="checkbox" :checked="!command.disabled" :aria-label="$t('bots.commands.enabledFor', { name: command.name })" @change="setDisabled(command, $event)" />
-          <span>{{ command.disabled ? $t('bots.disabled') : $t('bots.enabled') }}</span>
-        </label>
+        <span :class="['text-xs', command.disabled ? 'text-mnema-tertiary' : 'text-mnema-accent']" data-testid="bot-command-state">{{ command.disabled ? $t('bots.disabled') : $t('bots.enabled') }}</span>
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm"
+          :disabled="busy === command.id"
+          :aria-label="$t(command.disabled ? 'bots.commands.turnOnFor' : 'bots.commands.turnOffFor', { name: command.name })"
+          data-action="toggle"
+          @click="toggle(command)"
+        >{{ command.disabled ? $t('bots.commands.turnOn') : $t('bots.commands.turnOff') }}</button>
         <button type="button" class="btn btn-icon btn-sm hover:text-mnema-danger" :aria-label="$t('bots.commands.deleteFor', { name: command.name })" data-action="delete" @click="remove(command)"><Trash2 class="h-4 w-4" /></button>
       </li>
     </ul>
