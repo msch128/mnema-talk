@@ -62,6 +62,14 @@ describe('SearchModal', () => {
     expect(document.activeElement).toBe(document.querySelector<HTMLInputElement>('[data-search-input]')!)
   })
 
+  it('selects the previous query when the modal is reopened', async () => {
+    searchText.value = 'old query'
+    await open()
+    const input = document.querySelector<HTMLInputElement>('[data-search-input]')!
+    expect(input.value).toBe('old query')
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, 9])
+  })
+
   it('closes on Escape and returns focus to the opener', async () => {
     await open()
     document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
