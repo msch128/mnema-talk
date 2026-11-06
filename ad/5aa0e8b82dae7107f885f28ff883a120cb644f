@@ -1,0 +1,23 @@
+internal/automod/automod_fuzz_test.go
+  s_06fcde5dbef956::t_3cecdf6aedaf9f 55
+internal/automod/compile.go
+  s_06fcde5dbef956::t_2bb0c864707919 110
+internal/automod/compile_test.go
+  s_06fcde5dbef956::t_6b2b6e883f55e5 286-297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ad5aa0e8b82dae7107f885f28ff883a120cb644f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
