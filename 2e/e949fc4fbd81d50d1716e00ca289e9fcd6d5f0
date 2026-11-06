@@ -1,0 +1,31 @@
+internal/reportcount/reportcount_test.go
+  s_06fcde5dbef956::t_c98b18d0136b75 1-64
+scripts/upgrade-drill-data.sh
+  s_06fcde5dbef956::t_aadfdbc9265511 92-94,138-139
+web/src/components/AdminEmojiTab.test.ts
+  s_06fcde5dbef956::t_253e400aa557f6 146-217
+web/src/components/AdminLayoutRows.test.ts
+  s_06fcde5dbef956::t_c43c4c07334c1c 1-126
+web/src/components/AdminUserRowActions.test.ts
+  s_06fcde5dbef956::t_54432d1ea1c60d 1-93
+web/src/components/ReportsBadge.test.ts
+  s_06fcde5dbef956::t_530ea3aecb6ffa 110-119
+web/src/stores/chat/outboxStorage.test.ts
+  s_06fcde5dbef956::t_fce4889a6a0141 1-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2ee949fc4fbd81d50d1716e00ca289e9fcd6d5f0",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
