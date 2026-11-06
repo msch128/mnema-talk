@@ -213,10 +213,11 @@ async function deliver(cx: Cx, entry: PendingMessage): Promise<'next' | 'stop'> 
   const abort = new AbortController()
   const timer = setTimeout(() => abort.abort(), SEND_TIMEOUT_MS)
   try {
-    const msg = await postText(current.channelId, current, abort.signal)
+    let replayed = false
+    const msg = await postText(current.channelId, current, abort.signal, status => { replayed = status === 200 })
     if (community !== cs.communityGeneration) return 'stop'
     settlePending(cx, current.nonce)
-    landSent(cx, msg, current.possiblyDelivered)
+    landSent(cx, msg, replayed)
     return 'next'
   } catch (error) {
     if (community !== cs.communityGeneration) return 'stop'

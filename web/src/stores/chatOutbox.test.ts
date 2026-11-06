@@ -33,7 +33,7 @@ class Socket {
 }
 
 /** The state of the network: while down, every message POST fails like a dropped connection. */
-const net = { down: true, refuse: null as ApiError | null, posted: [] as { content: string; nonce: string }[], gate: null as Promise<void> | null }
+const net = { down: true, refuse: null as ApiError | null, posted: [] as { content: string; nonce: string }[], gate: null as Promise<void> | null, status: 201 }
 
 function stored(content: string, nonce: string, id: string): Message {
   return messageFixture({ id, channel_id: ch.id, user_id: me.id, content, nonce })
@@ -56,6 +56,7 @@ beforeEach(() => {
   net.refuse = null
   net.posted = []
   net.gate = null
+  net.status = 201
   let n = 100
   http.handle = (url, opts) => {
     if (!url.endsWith('/messages') || opts?.method !== 'POST') return url === '/api/channels' ? { categories: [], uncategorized: [ch] } : []
@@ -66,7 +67,7 @@ beforeEach(() => {
     const message = stored(json.content, json.nonce, fixtureId(n++))
     return net.gate ? net.gate.then(() => message) : message
   }
-  vi.mocked(api).mockReset().mockImplementation((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)) as never)
+  vi.mocked(api).mockReset().mockImplementation((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)).then(body => { options?.onStatus?.(net.status); return body }) as never)
   vi.stubGlobal('WebSocket', Socket)
   vi.stubGlobal('Notification', undefined)
   vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -579,6 +580,7 @@ describe('the read marker after a send', () => {
     await chat.sendMessage('old', null, null, [], ch.id)
     chat.readStates = { [ch.id]: { ...lastRead } }
     net.down = false
+    net.status = 200
     answerWithOld()
     chat.retryPending(required(chat.outbox[0]).nonce)
     await tick()
@@ -591,12 +593,24 @@ describe('the read marker after a send', () => {
     await chat.sendMessage('old', null, null, [], ch.id)
     chat.readStates = { [ch.id]: { ...lastRead } }
     net.down = false
+    net.status = 200
     http.handle = (url, opts) => url.endsWith('/messages') && opts?.method === 'POST'
       ? messageFixture({ id: fixtureId(70), channel_id: ch.id, user_id: me.id, content: 'old', created_at: '2026-01-15T00:00:00Z' })
       : []
     chat.retryPending(required(chat.outbox[0]).nonce)
     await tick()
     expect(chat.readStates[ch.id]).toMatchObject({ last_read_at: '2026-02-01T00:00:00Z', unread_count: 3 })
+  })
+
+  it('moves the marker for a fresh message sent from the outbox even when the marker carries this device\'s clock', async () => {
+    const chat = setup()
+    await chat.sendMessage('later', null, null, [], ch.id)
+    chat.readStates = { [ch.id]: { ...lastRead, last_read_at: '2026-03-01T00:00:00Z' } }
+    net.down = false
+    answerWithOld()
+    chat.retryPending(required(chat.outbox[0]).nonce)
+    await tick()
+    expect(chat.readStates[ch.id]).toMatchObject({ last_read_at: '2026-01-01T00:00:00Z', unread_count: 0, mention_count: 0 })
   })
 
   it('still follows a fresh message whose server time is behind this device clock', async () => {

@@ -93,6 +93,8 @@ export interface ApiOptions {
   /** GETs only: join an identical request that is already in flight instead of sending another. For reads whose answer does not depend on when they were asked. */
   dedupe?: boolean
   onUploadProgress?: (loaded: number, total: number) => void
+  /** Told the HTTP status of a successful answer (a create endpoint says 200 for a replay and 201 for a new record). */
+  onStatus?: (status: number) => void
   /** A queued session request may become stale before its HTTP response: return false to keep a 401 from ending the current session. */
   shouldNotifyUnauthorized?: () => boolean
 }
@@ -220,6 +222,7 @@ export function createApiClient(transport: ApiTransport): ApiClient {
       if (error.code === 'RULES_NOT_ACCEPTED') for (const { handler } of [...rulesHandlers]) handler()
       throw error
     }
+    options.onStatus?.(response.status)
     return decode ? decode(body) : body
   }
   return Object.freeze({
