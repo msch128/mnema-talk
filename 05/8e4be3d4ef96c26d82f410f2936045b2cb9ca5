@@ -1,0 +1,61 @@
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_6b93f615864755 686
+Makefile
+  s_06fcde5dbef956::t_cedb486177b55f 221
+SECURITY.md
+  s_06fcde5dbef956::t_75471003e34f6d 8,13-14
+doc/api-stability.md
+  s_06fcde5dbef956::t_6c5f1ab59eab5b 31-33
+doc/development.md
+  s_06fcde5dbef956::t_a3951381990015 62,146
+doc/product-status.md
+  s_06fcde5dbef956::t_39f92291c8a092 14,18-19,21-22,26-28,31,38
+doc/upgrade.md
+  s_06fcde5dbef956::t_ae961a2dc67edb 118-120
+scripts/drill-common.sh
+  s_06fcde5dbef956::t_5088b8c2018283 8-12
+scripts/english-only-allowlist.txt
+  s_06fcde5dbef956::t_957f6679eae598 55
+scripts/tests/test_drill_versions.py
+  s_06fcde5dbef956::t_b499a4768e764f 47
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_c42b079123e92b 5118
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_950718554ba4a8 5118
+web/src/stores/chat/messageActions.ts
+  s_06fcde5dbef956::t_edd3adcced12e9 6,28-29,31,33
+web/src/stores/chat/messagePost.ts
+  s_06fcde5dbef956::t_21aa62dcfe88b6 58-64
+web/src/stores/chat/outbox.ts
+  s_06fcde5dbef956::t_c9dece87cd2eea 8,150,173-175
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_a12390f4d96837 76-77
+web/src/stores/chatInstance.test.ts
+  s_06fcde5dbef956::t_3c100baff3ee7d 7,16
+web/src/stores/chatOutbox.test.ts
+  s_06fcde5dbef956::t_bea9fc349678b1 6,38,58-59,67,256-268,310-354
+web/src/stores/chatStoreBehaviour.test.ts
+  s_06fcde5dbef956::t_0961ff1cec6664 69
+web/src/stores/chatStoreDefensive.test.ts
+  s_06fcde5dbef956::t_d5b16acbddc046 66
+web/src/stores/serverFeatures.ts
+  s_06fcde5dbef956::t_a91864ad669b66 49-60,62
+web/src/stores/stores.test.ts
+  s_06fcde5dbef956::t_906670b0e4ca57 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "058e4be3d4ef96c26d82f410f2936045b2cb9ca5",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
