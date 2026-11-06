@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/reportcount"
 )
 
 const raidReason = "Automod: raid protection"
@@ -40,6 +41,7 @@ func (e *Engine) OnJoin(ctx context.Context, userID uuid.UUID) {
 	}
 	e.announceTimeouts(restricted, set.raid.Config.RestrictSeconds, raidReason)
 	if started {
+		reportcount.Announce(ctx, e.DB, e.Events)
 		e.Audit.RecordOrLog(context.Background(), audit.Entry{
 			ActorName: "Automod", Action: "automod.raid", TargetType: "automod_rule", TargetID: set.raid.ID.String(), TargetName: set.raid.Name,
 			Details: map[string]any{"restricted": len(restricted), "restrict_seconds": set.raid.Config.RestrictSeconds},

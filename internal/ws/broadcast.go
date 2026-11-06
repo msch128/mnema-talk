@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 type Event struct {
@@ -67,6 +68,27 @@ func (h *Hub) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {
 	defer h.mu.RUnlock()
 	for c := range h.clients {
 		if want[c.User.ID] {
+			c.deliver(data)
+		}
+	}
+}
+
+// BroadcastPerm sends an event to every connection whose user holds all of need
+// server-wide right now (the Owner always). A permission state that cannot be
+// loaded fails closed: nobody receives the event.
+func (h *Hub) BroadcastPerm(need perm.Set, eventType string, payload any) {
+	data := encode(eventType, payload)
+	if data == nil {
+		return
+	}
+	snap, ok := h.permSnapshot(uuid.Nil)
+	if !ok {
+		return
+	}
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for c := range h.clients {
+		if snap == nil || snap.Global(c.subject()).Has(need) {
 			c.deliver(data)
 		}
 	}

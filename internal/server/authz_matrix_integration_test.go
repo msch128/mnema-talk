@@ -227,6 +227,7 @@ var adminMatrix = map[string]string{
 	"PUT /api/admin/raid":                                    "Admin",
 	"PUT /api/admin/raid/lockdown":                           "Admin",
 	"GET /api/admin/reports":                                 "Admin,Rep",
+	"GET /api/admin/reports/open-count":                      "Admin,Rep",
 	"DELETE /api/admin/reports/{id}":                         "Admin,Rep",
 	"GET /api/admin/reports/{id}":                            "Admin,Rep",
 	"POST /api/admin/reports/{id}/resolve":                   "Admin,Rep",

@@ -316,6 +316,12 @@ closed one, which removes the copy. The reporter is not notified of the
 outcome. Reading a report needs only this permission, not access to the
 channel: a report of a private channel is readable by its handlers.
 
+The number of open reports shows as a small amber count on the community
+header and the **Admin console** menu entry, for these members only. It is
+read once from `GET /api/admin/reports/open-count` and then follows the
+`reports_open` WebSocket event, which the server sends only to sessions that
+hold *Manage reports* whenever a report is filed, closed or raised by Automod.
+
 - **Audited without text.** `report.create`, `report.resolve` and
   `report.delete` are in the audit log for the Owner and Administrators only,
   with the category and ids but never message text or the note.

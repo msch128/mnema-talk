@@ -109,7 +109,7 @@ func (h *Handler) DMs() *dm.API {
 
 // reports builds the reports API from the handler's fields.
 func (h *Handler) reports() *reports.API {
-	return &reports.API{DB: h.DB, Guard: h.guard(), Audit: h.Audit, ReportLimit: h.ReportLimit}
+	return &reports.API{DB: h.DB, Guard: h.guard(), Audit: h.Audit, ReportLimit: h.ReportLimit, Events: h.Events}
 }
 
 // search builds the search API from the handler's fields.

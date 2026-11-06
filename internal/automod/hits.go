@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/reportcount"
 )
 
 // ageCache remembers when accounts were created: the creation time never
@@ -64,6 +65,8 @@ type snapshotMessage struct {
 func (e *Engine) record(ctx context.Context, p Post, dm bool, r *compiled, outcome string, message uuid.UUID) {
 	if err := e.insertHit(ctx, p, dm, r, outcome, message); err != nil {
 		slog.Error("automod hit not recorded", "rule", r.Name, "err", err)
+	} else {
+		reportcount.Announce(ctx, e.DB, e.Events)
 	}
 	if r.TimeoutSeconds > 0 {
 		e.timeout(ctx, p.UserID, r.TimeoutSeconds, "Automod: "+r.Name)

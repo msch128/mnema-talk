@@ -65,6 +65,7 @@ admin DELETE /categories/{id}
 admin DELETE /channels/{id}
 admin DELETE /reports/{id}
 admin GET /reports
+admin GET /reports/open-count
 admin GET /reports/{id}
 admin GET /roles/{id}/view-as
 admin PATCH /categories/{id}

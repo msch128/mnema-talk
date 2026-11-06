@@ -2124,6 +2124,17 @@ export function isChatNotifyLevel(value: unknown): value is ChatNotifyLevel {
 
 export const decodeChatNotifyLevel = decoder("chat.NotifyLevel", isChatNotifyLevel)
 
+export type ChatOpenCountResponse = {
+  open: number
+}
+
+export function isChatOpenCountResponse(value: unknown): value is ChatOpenCountResponse {
+  return isRecord(value)
+    && (hasOwn(value, "open") && isInteger(value["open"]))
+}
+
+export const decodeChatOpenCountResponse = decoder("chat.OpenCountResponse", isChatOpenCountResponse)
+
 export type ChatPoll = {
   anonymous: boolean
   closed: boolean
