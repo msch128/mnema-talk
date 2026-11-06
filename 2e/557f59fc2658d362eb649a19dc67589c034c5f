@@ -1,0 +1,37 @@
+README.md
+  s_06fcde5dbef956::t_49cf32ed968339 97
+api/openapi.json
+  s_06fcde5dbef956::t_427cee039b9ad5 41468
+doc/api-stability.md
+  s_06fcde5dbef956::t_3d9f30456b1f9c 3-8,33,46-99
+doc/bots.md
+  s_06fcde5dbef956::t_c8daf30975d944 317-319,329,409-412,592-594
+doc/development.md
+  s_06fcde5dbef956::t_28e305ddabf74f 87
+doc/product-status.md
+  s_06fcde5dbef956::t_3825b7e7b6221d 139-140,152,162
+doc/security/audit-package.md
+  s_06fcde5dbef956::t_c735e17d17a3be 253,256,277,287-288,309,311,315,334,380,387,390-391,395,411,417,419,422-423,436,440-443,449-453,456-457,461-463,465,469-470,513,522,531,535-538,541-546,571,576-577,580,596-597,600,663-679,682
+doc/upgrade.md
+  s_06fcde5dbef956::t_6e55003fb97b16 91-152,157-160,164-171
+doc/webhooks.md
+  s_06fcde5dbef956::t_187bea1cdb5f72 160,178-180
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_ee786b4030f1b1 49-50,53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2e557f59fc2658d362eb649a19dc67589c034c5f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
