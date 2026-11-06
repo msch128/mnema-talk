@@ -1,0 +1,27 @@
+api/openapi.json
+  s_06fcde5dbef956::t_66e3abb4b3cf41 32126
+internal/chat/forum/forum_posts.go
+  s_06fcde5dbef956::t_1c1fdedb7b0a5e 69,97-106
+internal/communityevents/handler_signup.go
+  s_06fcde5dbef956::t_49bc75fd7832c1 42,58,66-71
+internal/communityevents/roles_integration_test.go
+  s_06fcde5dbef956::t_b116f3ff90ca34 445-448,459-471
+internal/server/erase_and_automod_integration_test.go
+  s_06fcde5dbef956::t_4a9678be5c91ad 177-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c9f0cefa1fc8b4ab312c1a7ff3c0b4113bbb1b7e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
