@@ -109,10 +109,20 @@ function scheduleReconnect(cx: Cx) {
 
 /** "Jetzt versuchen": skip the wait and reconnect immediately. */
 export function retryNow(cx: Cx) {
+  reconnectNow(cx, true)
+}
+
+/**
+ * Visibility and network events reconnect too, but must not restart a connect
+ * that is likely still going well: a socket that has been connecting for less
+ * than half the connect timeout is left alone. The user's own request always wins.
+ */
+function reconnectNow(cx: Cx, replaceConnecting: boolean) {
   const { cs } = cx
   if (cs.isConnected.value) return
   if (cs.ws.value) {
-    // Not connected, yet a socket is set: it is still connecting and stuck, or the user would not be asking. Replace it.
+    if (!replaceConnecting && Date.now() - cs.connectStartedAt < CONNECT_TIMEOUT_MS / 2) return
+    // Not connected, yet a socket is set: it is still connecting and stuck, or the caller would not be asking. Replace it.
     clearTimeout(cs.connectTimer)
     ++cs.socketGeneration
     detachSocket(cs.ws.value)
@@ -212,6 +222,7 @@ export function initWebSocket(cx: Cx) {
   socket.onclose = (event?: { code?: number }) => handleSocketClose(cx, session, event)
 
   cs.ws.value = socket
+  cs.connectStartedAt = Date.now()
   clearTimeout(cs.connectTimer)
   cs.connectTimer = setTimeout(() => {
     if (!isCurrentSession(cx, session) || cs.isConnected.value) return
@@ -267,7 +278,7 @@ export function installVisibilityRetry(cx: Cx) {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         if (authStore.isAuthenticated && (!cs.ws.value || !cs.isConnected.value)) {
-          retryNow(cx)
+          reconnectNow(cx, false)
         } else if (cs.isConnected.value) {
           sendWSEvent(cx, 'ping', { t: Date.now() })
         }
@@ -278,7 +289,7 @@ export function installVisibilityRetry(cx: Cx) {
     // The network is back: reconnect at once, or find out whether a socket that looks open still works.
     window.addEventListener('online', () => {
       if (!authStore.isAuthenticated) return
-      if (!cs.ws.value || !cs.isConnected.value) retryNow(cx)
+      if (!cs.ws.value || !cs.isConnected.value) reconnectNow(cx, false)
       else sendWSEvent(cx, 'ping', { t: Date.now() })
     })
   }

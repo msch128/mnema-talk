@@ -77,10 +77,7 @@ func (h *Handler) JoinShareInfo(r *http.Request, slug string) (info ShareInfo, o
 	if !joinSlugPattern.MatchString(slug) {
 		return ShareInfo{}, false, nil
 	}
-	if allowed, _ := h.previewPerIP.Allow(httpx.ClientIPKey(r)); !allowed {
-		return ShareInfo{}, false, nil
-	}
-	if allowed, _ := h.previewPerSite.Allow(httpx.ClientAggregateKey(r)); !allowed {
+	if allowed, _, _ := h.admitPreview(r); !allowed {
 		return ShareInfo{}, false, nil
 	}
 	p, err := h.lookupJoin(r.Context(), slug)

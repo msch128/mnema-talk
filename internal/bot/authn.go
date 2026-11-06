@@ -193,7 +193,10 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 			httpx.WriteDiscordError(w, err)
 			return
 		}
-		if allowed, retry := a.global.Allow(c.Bot.BotID.String()); !allowed {
+		// Charged on TryAllow: LimitSends gives the hit back when the send
+		// budget refuses the request, so refused sends in one channel do not
+		// use up the budget of the bot's other calls.
+		if allowed, retry := a.global.TryAllow(c.Bot.BotID.String()); !allowed {
 			httpx.WriteDiscordRateLimit(w, retry, true)
 			return
 		}
@@ -210,6 +213,7 @@ func (a *Authenticator) LimitSends(channelParam func(*http.Request) string) func
 			// A parameter that is no UUID is refused by the handler.
 			if b, ch := auth.BotFrom(r.Context()), channelParam(r); b != nil && ch != "" {
 				if allowed, retry := a.sends.Allow(b.BotID.String() + ":" + ch); !allowed {
+					a.global.Refund(b.BotID.String())
 					httpx.WriteDiscordRateLimit(w, retry, false)
 					return
 				}

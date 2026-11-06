@@ -27,7 +27,17 @@ function setup() {
   return useChatStore()
 }
 
+// The store listens on window and document for its whole life: drop the listeners of each test's store.
+const listeners: Array<[EventTarget, string, EventListenerOrEventListenerObject]> = []
+
 beforeEach(() => {
+  for (const target of [window, document]) {
+    const add = target.addEventListener.bind(target)
+    vi.spyOn(target, 'addEventListener').mockImplementation((type: string, fn: EventListenerOrEventListenerObject, opts?: boolean | AddEventListenerOptions) => {
+      listeners.push([target, type, fn])
+      add(type, fn, opts)
+    })
+  }
   setActivePinia(createPinia())
   FakeSocket.instances = []
   vi.stubGlobal('WebSocket', Object.assign(FakeSocket, { OPEN: 1 }))
@@ -35,6 +45,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
+  for (const [target, type, fn] of listeners.splice(0)) target.removeEventListener(type, fn)
   vi.useRealTimers()
   vi.unstubAllGlobals()
 })
@@ -72,6 +84,25 @@ describe('a websocket connect that never opens', () => {
     expect(chat.isConnected).toBe(true)
     required(FakeSocket.instances[0]).drop()
     expect(chat.isConnected).toBe(true)
+    chat.closeWebSocket()
+  })
+
+  it.each(['online', 'visibilitychange'])('a %s event leaves a young connect alone and replaces one past half the timeout', async (event) => {
+    const chat = setup()
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+    chat.initWebSocket()
+    const fire = () => (event === 'online' ? window : document).dispatchEvent(new Event(event))
+    await vi.advanceTimersByTimeAsync(2000)
+    fire()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(FakeSocket.instances).toHaveLength(1)
+    expect(required(FakeSocket.instances[0]).closed).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(3500)
+    fire()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(required(FakeSocket.instances[0]).closed).toBe(true)
+    expect(FakeSocket.instances).toHaveLength(2)
     chat.closeWebSocket()
   })
 })

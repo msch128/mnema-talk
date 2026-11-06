@@ -148,18 +148,45 @@ func (rl *RateLimiter) By(keyFn func(*http.Request) string) func(http.Handler) h
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if key := keyFn(r); key != "" {
 				if ok, retry := rl.Allow(key); !ok {
-					name := rl.name
-					if name == "" {
-						name = "other"
-					}
-					metrics.RateLimitHits.With(name).Inc()
-					writeRateLimited(w, retry)
+					rl.WriteRefused(w, retry)
 					return
 				}
 			}
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// WriteRefused counts a refusal of this limiter and answers 429 with Retry-After.
+func (rl *RateLimiter) WriteRefused(w http.ResponseWriter, retry time.Duration) {
+	name := rl.name
+	if name == "" {
+		name = "other"
+	}
+	metrics.RateLimitHits.With(name).Inc()
+	writeRateLimited(w, retry)
+}
+
+// TryChain charges one request against two limiters and only keeps the charge
+// when both grant it: a request the second limiter refuses gives the first
+// one's hit back, and a request the first refuses never reaches the second, so
+// refused traffic uses up neither budget. An empty key skips its limiter. When
+// refused, the limiter that refused and its retry time come back.
+func TryChain(first *RateLimiter, firstKey string, second *RateLimiter, secondKey string) (ok bool, refusedBy *RateLimiter, retry time.Duration) {
+	if firstKey != "" {
+		if ok, retry := first.TryAllow(firstKey); !ok {
+			return false, first, retry
+		}
+	}
+	if secondKey != "" {
+		if ok, retry := second.TryAllow(secondKey); !ok {
+			if firstKey != "" {
+				first.Refund(firstKey)
+			}
+			return false, second, retry
+		}
+	}
+	return true, nil, 0
 }
 
 // BySafeMethod applies reads to GET, HEAD and OPTIONS requests and writes to

@@ -113,3 +113,38 @@ func (s *interactionStore) countBot(id uuid.UUID) int {
 	}
 	return n
 }
+
+// A send the channel budget refuses gives its hit on the bot's global budget
+// back, so a bot hammering one full channel keeps its budget for other calls.
+func TestARefusedSendDoesNotUseUpTheGlobalBudget(t *testing.T) {
+	a := NewAuthenticator(nil)
+	a.SetLimits(3, 1)
+	b := &auth.BotInfo{BotID: uuid.New()}
+	ch := uuid.NewString()
+	r := chi.NewRouter()
+	r.With(a.LimitSends(ChannelParam)).Post("/channels/{channelID}/messages", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	send := func() int {
+		// What Middleware does for every authenticated request.
+		if ok, _ := a.global.TryAllow(b.BotID.String()); !ok {
+			return http.StatusTooManyRequests
+		}
+		req := httptest.NewRequest(http.MethodPost, "/channels/"+ch+"/messages", nil)
+		req = req.WithContext(auth.WithBot(req.Context(), b))
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	if code := send(); code != http.StatusNoContent {
+		t.Fatalf("first send: %d", code)
+	}
+	for i := 0; i < 10; i++ {
+		if code := send(); code != http.StatusTooManyRequests {
+			t.Fatalf("send %d over the channel budget: %d", i, code)
+		}
+	}
+	if ok, _ := a.global.TryAllow(b.BotID.String()); !ok {
+		t.Fatal("refused sends used up the global budget")
+	}
+}
