@@ -613,5 +613,6 @@
   "you have %d open reports; wait for the moderators to handle some",
   "you have already voted in this anonymous poll; a vote there cannot be changed",
   "you have no message in this channel to start a thread on",
-  "you may not join Talks in this community"
+  "you may not join Talks in this community",
+  "you need a role of your own to create roles: a new role goes below your highest one"
 ]
