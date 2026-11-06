@@ -134,7 +134,7 @@ function jump() {
 <template>
   <section v-if="post" class="shrink-0 space-y-2 border-b border-mnema-hairline bg-mnema-canvas px-4 py-3" data-testid="forum-post-header">
     <div class="flex items-start gap-2">
-      <form v-if="editingTitle" class="flex min-w-0 flex-1 items-center gap-1" @submit.prevent="saveTitle" @keydown.esc.stop.prevent="editingTitle = false">
+      <form v-if="editingTitle" data-local-escape class="flex min-w-0 flex-1 items-center gap-1" @submit.prevent="saveTitle" @keydown.esc.stop.prevent="editingTitle = false">
         <input
           ref="titleInput"
           v-model="titleDraft"

@@ -21,14 +21,18 @@ const chat = useChatStore()
 const status = ref<OperatorStatus | null>(null)
 const loading = ref(false)
 
+// Refreshes overlap (the tab opens with two); only the latest one writes the result.
+let refreshSeq = 0
 async function refresh() {
+  const mine = ++refreshSeq
   loading.value = true
   try {
-    status.value = await api('/api/admin/status', { decode: decodeOperatorStatus })
+    const next = await api('/api/admin/status', { decode: decodeOperatorStatus })
+    if (mine === refreshSeq) status.value = next
   } catch (e) {
-    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
+    if (mine === refreshSeq) toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
   } finally {
-    loading.value = false
+    if (mine === refreshSeq) loading.value = false
   }
 }
 

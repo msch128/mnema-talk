@@ -47,7 +47,7 @@ const chatStore = useChatStore()
 const features = useServerFeaturesStore()
 const permissions = usePermissionsStore()
 // The upload limit is told before a file is picked, not after it was refused.
-const uploadLabel = computed(() => (permissions.maxUploadMb ? t('chat.uploadMax', { size: permissions.maxUploadMb }) : t('chat.upload')))
+const uploadLabel = computed(() => (isCompact.value ? t('chat.moreActions') : permissions.maxUploadMb ? t('chat.uploadMax', { size: permissions.maxUploadMb }) : t('chat.upload')))
 const text = useDraftModel(() => props.modelValue, value => emit('update:modelValue', value))
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -171,7 +171,7 @@ function handleKeyDown(e: KeyboardEvent) {
       >
         <Plus class="w-5 h-5" />
       </button>
-      <ContextMenu v-if="isCompact" v-model="plusMenuOpen" :anchor="plusButton" :items="plusItems" :aria-label="$t('chat.upload')" />
+      <ContextMenu v-if="isCompact" v-model="plusMenuOpen" :anchor="plusButton" :items="plusItems" :aria-label="$t('chat.moreActions')" />
 
       <!-- Poll Button -->
       <button

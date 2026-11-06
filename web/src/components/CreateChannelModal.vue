@@ -70,13 +70,18 @@ async function handleSubmit() {
     error.value = t('channel.nameRequired')
     return
   }
+  // A blank name for a new category must not quietly fall back to the previous one.
+  if (isCreatingCategory.value && !newCategoryName.value.trim()) {
+    error.value = t('channel.categoryNameRequired')
+    return
+  }
 
   isSubmitting.value = true
   try {
     let catId = selectedCategoryId.value || null
 
     // If a new category was chosen inline
-    if (isCreatingCategory.value && newCategoryName.value.trim()) {
+    if (isCreatingCategory.value) {
       const newCat = await chatStore.createCategory(newCategoryName.value.trim(), nextSortOrder(chatStore.categories))
       catId = newCat.id
       // A retry after a failed channel create reuses this category.

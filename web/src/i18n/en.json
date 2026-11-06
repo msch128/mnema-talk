@@ -881,6 +881,7 @@
     "topic": "Topic (optional)",
     "topicPlaceholder": "What is this about?",
     "nameRequired": "Enter a name.",
+    "categoryNameRequired": "Enter a name for the new category, or choose an existing one.",
     "createFailed": "Couldn’t create the channel. Try again."
   },
   "forum": {
@@ -3754,6 +3755,7 @@
         "other": "{count} members are signed up. Move them to:"
       },
       "moveTo": "Another role",
+      "moveNoTarget": "There is no other saved role to move them to. Add another role, save the event, then remove this one.",
       "removeRoleConfirm": "Remove and move",
       "addRole": "Add role",
       "fromTemplate": "Use a template…",

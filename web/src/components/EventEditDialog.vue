@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, useId } from 'vue'
-import { Image as ImageIcon, Trash2 } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import { useEventsStore } from '../stores/events'
 import { useChatStore } from '../stores/chat'
@@ -14,6 +13,7 @@ import type { RoleDraft, RoleRemoval } from '../lib/eventRoleDrafts'
 import { useEventRoles } from '../composables/useEventRoles'
 import EventRolesEditor from './EventRolesEditor.vue'
 import EventRepeatFields from './EventRepeatFields.vue'
+import EventCoverField from './EventCoverField.vue'
 import ScopeChoice from './ScopeChoice.vue'
 import { browserZone, untilIso } from '../lib/eventRecurrence'
 import type { Scope } from '../lib/eventRecurrence'
@@ -89,15 +89,12 @@ function releasePreview() {
 }
 onBeforeUnmount(releasePreview)
 
-function onCoverSelected(e: Event) {
-  const target = e.target as HTMLInputElement
-  if (target.files && target.files[0]) {
-    releasePreview()
-    coverFile.value = target.files[0]
-    previewUrl = URL.createObjectURL(target.files[0])
-    coverPreview.value = previewUrl
-    removeExistingCover.value = false
-  }
+function onCoverPicked(file: File) {
+  releasePreview()
+  coverFile.value = file
+  previewUrl = URL.createObjectURL(file)
+  coverPreview.value = previewUrl
+  removeExistingCover.value = false
 }
 
 function removeCover() {
@@ -222,7 +219,7 @@ async function submit() {
     @close="emit('close')"
   >
     <form class="flex flex-col gap-4 p-6" @submit.prevent="submit">
-      <div v-if="error" class="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">
+      <div v-if="error" role="alert" class="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">
         {{ error }}
       </div>
 
@@ -337,42 +334,7 @@ async function submit() {
       </div>
 
       <!-- Cover Image -->
-      <div>
-        <span class="mb-1 block text-sm font-medium text-mnema-text">
-          {{ $t('events.coverImage') }}
-        </span>
-        <div v-if="coverPreview" class="relative mb-2 aspect-[3/1] w-full shrink-0 overflow-hidden rounded-lg border border-mnema-border bg-mnema-surface">
-          <img :src="coverPreview" :alt="t('events.coverAlt')" class="h-full w-full object-cover" />
-          <button
-            type="button"
-            :aria-label="$t('events.removeCover')"
-            class="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80 transition-colors"
-            @click="removeCover"
-          >
-            <Trash2 class="w-4 h-4" />
-          </button>
-        </div>
-        <div class="flex items-center gap-3">
-          <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-mnema-border bg-mnema-surface px-3 py-1.5 text-sm font-medium text-mnema-text hover:bg-mnema-hover transition-colors">
-            <ImageIcon class="w-4 h-4 text-mnema-tertiary" />
-            <span>{{ coverPreview ? $t('events.changeCover') : $t('events.uploadCover') }}</span>
-            <input
-              type="file"
-              accept="image/*"
-              class="hidden"
-              @change="onCoverSelected"
-            />
-          </label>
-          <button
-            v-if="coverPreview"
-            type="button"
-            class="text-sm text-red-400 hover:underline"
-            @click="removeCover"
-          >
-            {{ $t('events.removeCover') }}
-          </button>
-        </div>
-      </div>
+      <EventCoverField :preview="coverPreview" @pick="onCoverPicked" @remove="removeCover" />
 
       <EventRolesEditor v-if="features.eventRoles" v-model="roleRows" v-model:removals="roleRemovals" />
 

@@ -78,6 +78,18 @@ describe('FirstRunCard', () => {
     expect(talkSettingsFor.value).toBe(fixtureId(7))
   })
 
+  it('creates one invite when the invite step is clicked twice', async () => {
+    apiMock.mockResolvedValue(checklist())
+    const w = mountCard()
+    await flushPromises()
+    apiMock.mockReset()
+    apiMock.mockReturnValue(new Promise(() => undefined))
+    await w.get('[data-testid="first-run-invite"]').trigger('click')
+    await w.get('[data-testid="first-run-invite"]').trigger('click')
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    expect(w.get('[data-testid="first-run-invite"]').attributes('disabled')).toBeDefined()
+  })
+
   it('creates a week-long invite, copies its link and reads the checklist again', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })

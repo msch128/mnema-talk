@@ -69,7 +69,7 @@ const confirm = () => run(async () => {
 
 const turnOff = () => run(async () => {
   await disableTwoFactor(password.value, code.value)
-  await account.load()
+  await account.load().catch(() => undefined)
   toasts.success(t('security.twoFactor.off'))
   go('idle')
 })

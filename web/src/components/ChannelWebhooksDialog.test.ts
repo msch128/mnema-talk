@@ -19,6 +19,7 @@ describe('ChannelWebhooksDialog tabs', () => {
     const panel = document.body.querySelector('[role="tabpanel"]')!
     expect(panel.getAttribute('aria-labelledby')).toBe(tabs[0]!.id)
     expect(tabs[0]!.getAttribute('aria-controls')).toBe(panel.id)
+    expect(tabs[1]!.hasAttribute('aria-controls')).toBe(false)
     w.unmount()
   })
 

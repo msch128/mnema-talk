@@ -132,6 +132,7 @@ const when = (iso: string) => dateTime(iso, locale.value)
           :aria-label="$t('saved.notePlaceholder')"
           :placeholder="$t('saved.notePlaceholder')"
           class="min-w-0 flex-1 rounded-md border border-mnema-border bg-mnema-surface px-2 py-1 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:border-mnema-accent focus:outline-hidden"
+          data-local-escape
           @keydown.esc.stop="editing = false"
         >
         <button type="submit" data-testid="saved-note-save" class="btn btn-icon h-7 w-7 text-mnema-accent" :aria-label="$t('saved.saveNote')">
