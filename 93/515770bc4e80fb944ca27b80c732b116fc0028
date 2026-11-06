@@ -1,0 +1,49 @@
+api/openapi.json
+  s_06fcde5dbef956::t_7e7a9ee2821ade 2954,3595,5951
+internal/chat/core/forum_types.go
+  s_06fcde5dbef956::t_311f77561236b8 27,29
+internal/chat/readstate/notify.go
+  s_06fcde5dbef956::t_51eaa723a868c2 148
+internal/discordimport/plan_types.go
+  s_06fcde5dbef956::t_aa24712d9f786c 24,27,105
+internal/onboarding/settings.go
+  s_06fcde5dbef956::t_4d3994ebf49a12 45,48
+internal/server/ops.go
+  s_06fcde5dbef956::t_3c064514e26bf5 79-80
+internal/server/public.go
+  s_06fcde5dbef956::t_6d7fe0833e4a28 45-46,50
+internal/server/system.go
+  s_06fcde5dbef956::t_29aa3a0941e11e 139
+web/src/compat/allowlist.ts
+  s_06fcde5dbef956::t_d7f29b1afd520b 13
+web/src/components/AdminSystemOperations.test.ts
+  s_06fcde5dbef956::t_e48aab26a4e663 132
+web/src/components/DiscordImportConfirm.vue
+  s_06fcde5dbef956::t_a8e0978fb011c0 74-75
+web/src/components/DiscordImportPreview.vue
+  s_06fcde5dbef956::t_870834248d8d7e 37,53,119
+web/src/components/ForumTagPicker.vue
+  s_06fcde5dbef956::t_feb8ec66f21c7c 22,54
+web/src/stores/chat/notifySettings.ts
+  s_06fcde5dbef956::t_0d0ac4f07066a2 8,22
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_fa20ee1f928377 13-23,92
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_440ffaa4201f9c 1743,1745,1755,1757,2111,2118,3356-3357,3376-3377,3491,3506,4167,4170,4179,4182,4996-4998,5013-5015,5118,5124,5139,5145,5423,5438
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "93515770bc4e80fb944ca27b80c732b116fc0028",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
