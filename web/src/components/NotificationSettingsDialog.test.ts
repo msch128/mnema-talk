@@ -48,12 +48,16 @@ describe('server notification settings', () => {
   it('mutes the server for an hour, eight hours, a day or until turned back on', async () => {
     const set = open()
     await byId('notify-server-mute-1h').trigger('click')
+    await vi.advanceTimersByTimeAsync(0)
     expect(set).toHaveBeenLastCalledWith('mute', new Date(NOW.getTime() + 3_600_000).toISOString(), false)
     await byId('notify-server-mute-8h').trigger('click')
+    await vi.advanceTimersByTimeAsync(0)
     expect(set).toHaveBeenLastCalledWith('mute', new Date(NOW.getTime() + 8 * 3_600_000).toISOString(), false)
     await byId('notify-server-mute-24h').trigger('click')
+    await vi.advanceTimersByTimeAsync(0)
     expect(set).toHaveBeenLastCalledWith('mute', new Date(NOW.getTime() + 24 * 3_600_000).toISOString(), false)
     await byId('notify-server-mute-forever').trigger('click')
+    await vi.advanceTimersByTimeAsync(0)
     expect(set).toHaveBeenLastCalledWith('mute', null, false)
     expect(byId('notify-server-mute-15m').exists()).toBe(false)
   })
@@ -86,6 +90,20 @@ describe('server notification settings', () => {
     set.mockResolvedValue(false)
     await byId('notify-server-mentions').trigger('click')
     await vi.waitFor(() => expect(useToastStore().toasts.some(t => t.text.includes('notification settings'))).toBe(true))
+  })
+
+  it('keeps quick successive choices together while the first save is still running', async () => {
+    const set = open()
+    let release!: (ok: boolean) => void
+    set.mockImplementationOnce(() => new Promise<boolean>(r => { release = r }))
+    await byId('notify-server-mentions').trigger('click')
+    await byId('notify-server-suppress').trigger('click')
+    expect(byId('notify-server-mentions').attributes('aria-checked')).toBe('true')
+    expect(byId('notify-server-suppress').attributes('aria-checked')).toBe('true')
+    expect(set).toHaveBeenCalledTimes(1)
+    release(true)
+    await vi.waitFor(() => expect(set).toHaveBeenCalledTimes(2))
+    expect(set).toHaveBeenLastCalledWith('mentions', null, true)
   })
 
   it('closes with the button', async () => {
