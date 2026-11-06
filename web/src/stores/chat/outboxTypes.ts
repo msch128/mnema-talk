@@ -24,4 +24,7 @@ export interface PendingMessage {
   possiblyDelivered: boolean
   /** Not before this time (ms since epoch): the server asked to wait (slow mode). 0: no wait. */
   notBefore: number
+  /** While status is 'sending': the tab whose request is out, and since when (ms since epoch). Other tabs do not send it before that request had time to end. */
+  owner?: string | undefined
+  sendingSince?: number | undefined
 }

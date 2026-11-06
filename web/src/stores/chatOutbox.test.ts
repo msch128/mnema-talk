@@ -7,6 +7,7 @@ import { required } from '../store-test-support.fixture'
 import { ApiError, type ApiOptions } from '../lib/api'
 import { DRAFT_SESSION_KEY, beginDraftSession, clearAllDrafts } from '../lib/drafts'
 import type { Message } from '../types/domain'
+import { t } from '../i18n'
 
 // What a member sees when they write while the connection is down.
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
@@ -32,7 +33,7 @@ class Socket {
 }
 
 /** The state of the network: while down, every message POST fails like a dropped connection. */
-const net = { down: true, refuse: null as ApiError | null, posted: [] as { content: string; nonce: string }[] }
+const net = { down: true, refuse: null as ApiError | null, posted: [] as { content: string; nonce: string }[], gate: null as Promise<void> | null }
 
 function stored(content: string, nonce: string, id: string): Message {
   return messageFixture({ id, channel_id: ch.id, user_id: me.id, content, nonce })
@@ -54,6 +55,7 @@ beforeEach(() => {
   net.down = true
   net.refuse = null
   net.posted = []
+  net.gate = null
   let n = 100
   http.handle = (url, opts) => {
     if (!url.endsWith('/messages') || opts?.method !== 'POST') return url === '/api/channels' ? { categories: [], uncategorized: [ch] } : []
@@ -61,7 +63,8 @@ beforeEach(() => {
     if (net.refuse) throw net.refuse
     const json = opts.json as { content: string; nonce: string }
     net.posted.push({ content: json.content, nonce: json.nonce })
-    return stored(json.content, json.nonce, fixtureId(n++))
+    const message = stored(json.content, json.nonce, fixtureId(n++))
+    return net.gate ? net.gate.then(() => message) : message
   }
   vi.mocked(api).mockReset().mockImplementation((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)) as never)
   vi.stubGlobal('WebSocket', Socket)
@@ -436,6 +439,60 @@ describe('two tabs that are offline at the same time', () => {
   })
 })
 
+const posts = () => vi.mocked(api).mock.calls.filter(([url, options]) => url.endsWith('/messages') && options?.method === 'POST').length
+/** What the storage event would tell the other tabs: every stored message as it is now. */
+const tellOtherTabs = () => { for (const k of Object.keys(localStorage).filter(key => key.startsWith('mnema.outbox.'))) storageEvent(k, localStorage.getItem(k)) }
+
+describe('two tabs that share one waiting message', () => {
+  it('do not hand it back and forth while both are offline', async () => {
+    const tabA = setup()
+    tabA.initWebSocket()
+    required(Socket.latest).onopen?.()
+    const tabB = newTab()
+    tabB.initWebSocket()
+    required(Socket.latest).onopen?.()
+    await tabA.sendMessage('shared', null, null, [], ch.id)
+    for (let second = 0; second < 300; second++) {
+      await vi.advanceTimersByTimeAsync(1000)
+      for (const tab of [tabA, tabB]) tab.handleWSEvent({ type: 'pong', payload: { t: Date.now() } })
+      tellOtherTabs()
+    }
+    // Backed-off tries of two tabs: a few dozen at most in five minutes, not one per event.
+    expect(posts()).toBeLessThan(40)
+  })
+
+  it('send it once, not once per tab, when it is back online and one tab has the request out', async () => {
+    const tabA = setup()
+    tabA.initWebSocket()
+    const tabB = newTab()
+    tabB.initWebSocket()
+    await tabA.sendMessage('shared', null, null, [], ch.id)
+    tellOtherTabs()
+    const before = posts()
+    let release = () => {}
+    net.gate = new Promise<void>(resolve => { release = resolve })
+    await connectAgain(tabA)
+    tellOtherTabs()
+    await connectAgain(tabB)
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(posts() - before).toBe(1)
+    release()
+    await tick()
+    expect(net.posted).toHaveLength(1)
+  })
+
+  it('send what another tab was sending when that tab never answers, after the request could have ended', async () => {
+    const entry = { nonce: 'n-dead', channelId: ch.id, userId: me.id, content: 'left behind', parentId: null, replyToId: null, createdAt: new Date().toISOString(), status: 'sending', error: '', cause: 'offline', attempts: 0, possiblyDelivered: true, notBefore: 0, owner: 'closed-tab', sendingSince: Date.now() }
+    localStorage.setItem('mnema.outbox.' + me.id + '.n-dead', JSON.stringify(entry))
+    const chat = setup()
+    await connectAgain(chat)
+    await stayConnected(chat, 12000)
+    expect(net.posted).toEqual([])
+    await stayConnected(chat, 32000)
+    expect(net.posted.map(p => p.nonce)).toEqual(['n-dead'])
+  })
+})
+
 describe('messages kept longer than the server remembers their nonce', () => {
   const stale = (over: object) => {
     const entry = { nonce: 'n-old', channelId: ch.id, userId: me.id, content: 'old text', parentId: null, replyToId: null, createdAt: new Date(Date.now() - 25 * HOUR).toISOString(), status: 'waiting', error: '', cause: 'offline', attempts: 0, possiblyDelivered: true, notBefore: 0, ...over }
@@ -470,6 +527,14 @@ describe('messages kept longer than the server remembers their nonce', () => {
     expect(net.posted[0]?.nonce).not.toBe('n-old')
   })
 
+  it('are marked as possibly arrived also when they had already failed, and the retry says so', async () => {
+    stale({ status: 'failed', error: 'The server refused it' })
+    const chat = setup()
+    await connectAgain(chat)
+    expect(net.posted).toEqual([])
+    expect(required(chat.outbox[0]).error).toBe(t('outbox.expired'))
+  })
+
   it('are marked before a try when they grow old while the page stays open', async () => {
     const chat = setup()
     await chat.sendMessage('long wait', null, null, [], ch.id)
@@ -501,15 +566,31 @@ describe('signing out in another tab', () => {
   })
 })
 
-describe('a repeated send that answers with an old message', () => {
-  it('does not move the read marker backwards', async () => {
-    const chat = setup()
-    chat.readStates = { [ch.id]: { channel_id: ch.id, notify_level: 'all', unread_count: 3, mention_count: 1, last_read_at: '2026-02-01T00:00:00Z' } }
-    net.down = false
+describe('the read marker after a send', () => {
+  const lastRead = { channel_id: ch.id, notify_level: 'all' as const, unread_count: 3, mention_count: 1, last_read_at: '2026-02-01T00:00:00Z' }
+  const answerWithOld = () => {
     http.handle = (url, opts) => url.endsWith('/messages') && opts?.method === 'POST'
       ? messageFixture({ id: fixtureId(70), channel_id: ch.id, user_id: me.id, content: 'old', created_at: '2026-01-01T00:00:00Z' })
       : []
+  }
+
+  it('does not move backwards when a repeated send answers with the old message', async () => {
+    const chat = setup()
     await chat.sendMessage('old', null, null, [], ch.id)
+    chat.readStates = { [ch.id]: { ...lastRead } }
+    net.down = false
+    answerWithOld()
+    chat.retryPending(required(chat.outbox[0]).nonce)
+    await tick()
     expect(chat.readStates[ch.id]).toMatchObject({ last_read_at: '2026-02-01T00:00:00Z', unread_count: 3, mention_count: 1 })
+  })
+
+  it('still follows a fresh message whose server time is behind this device clock', async () => {
+    const chat = setup()
+    chat.readStates = { [ch.id]: { ...lastRead } }
+    net.down = false
+    answerWithOld()
+    await chat.sendMessage('fresh', null, null, [], ch.id)
+    expect(chat.readStates[ch.id]).toMatchObject({ last_read_at: '2026-01-01T00:00:00Z', unread_count: 0, mention_count: 0 })
   })
 })

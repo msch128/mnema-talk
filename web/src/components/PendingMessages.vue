@@ -7,6 +7,7 @@ import { Clock, Loader2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { t } from '../i18n'
 import type { PendingMessage } from '../stores/chat/outboxTypes'
+import { unsafeToRepeat } from '../stores/chat/outbox'
 import MessageEditor from './MessageEditor.vue'
 
 const props = defineProps<{ channelId: string; parentId?: string | null; compact?: boolean }>()
@@ -36,6 +37,9 @@ function waitingText(item: PendingMessage) {
   if (item.status === 'sending') return t('outbox.sending')
   return t(item.cause === 'server' ? 'outbox.retrying' : 'outbox.waiting')
 }
+
+/** Too old for the server to recognise a repeat: trying again posts the text anew, which may be a second copy. */
+const mayDuplicate = (item: PendingMessage) => unsafeToRepeat(item, Date.now())
 
 function startEdit(nonce: string, content: string) {
   editing.value = nonce
@@ -68,13 +72,13 @@ function saveEdit(nonce: string) {
     <template v-else>
       <p class="text-message whitespace-pre-wrap break-words text-mnema-muted">{{ item.content }}</p>
       <div class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-        <span v-if="item.status === 'failed'" class="text-mnema-danger">{{ $t('outbox.failed', { reason: item.error }) }}</span>
+        <span v-if="item.status === 'failed'" class="text-mnema-danger">{{ $t('outbox.failed', { reason: mayDuplicate(item) ? $t('outbox.expired') : item.error }) }}</span>
         <span v-else class="flex items-center gap-1 text-mnema-tertiary">
           <Loader2 v-if="item.status === 'sending'" class="w-3 h-3 animate-spin" />
           <Clock v-else class="w-3 h-3" />
           {{ waitingText(item) }}
         </span>
-        <button v-if="item.status === 'failed'" type="button" class="text-mnema-muted hover:text-mnema-text underline-offset-2 hover:underline" :aria-label="$t('outbox.retryFor', { excerpt: excerpt(item.content) })" @click="chatStore.retryPending(item.nonce)">{{ $t('outbox.retry') }}</button>
+        <button v-if="item.status === 'failed'" type="button" class="text-mnema-muted hover:text-mnema-text underline-offset-2 hover:underline" :aria-label="$t(mayDuplicate(item) ? 'outbox.retryAnywayFor' : 'outbox.retryFor', { excerpt: excerpt(item.content) })" @click="chatStore.retryPending(item.nonce)">{{ $t(mayDuplicate(item) ? 'outbox.retryAnyway' : 'outbox.retry') }}</button>
         <template v-if="item.status !== 'sending'">
           <button v-if="!item.possiblyDelivered" type="button" class="text-mnema-muted hover:text-mnema-text underline-offset-2 hover:underline" :aria-label="$t('outbox.editFor', { excerpt: excerpt(item.content) })" @click="startEdit(item.nonce, item.content)">{{ $t('outbox.edit') }}</button>
           <span v-else class="text-mnema-tertiary">{{ $t('outbox.noEdit') }}</span>

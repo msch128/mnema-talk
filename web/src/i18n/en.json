@@ -5126,6 +5126,8 @@
     "edit": "Edit",
     "cancel": "Discard",
     "retry": "Try again",
+    "retryAnyway": "Send again anyway",
+    "retryAnywayFor": "Send the message again, even though it may already have arrived: {excerpt}",
     "expired": "it may have arrived earlier, so it was not sent again by itself",
     "editLabel": "Edit the message that hasn’t been sent yet"
   }

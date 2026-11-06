@@ -103,3 +103,28 @@ describe('messages kept on this device', () => {
     expect(() => clearStoredOutbox()).not.toThrow()
   })
 })
+
+describe('what the device keeps for an account', () => {
+  const entriesOf = () => Object.keys(localStorage).filter(k => k.startsWith(OUTBOX_KEY_PREFIX + 'u1.'))
+
+  it('does not grow past the limit: the oldest messages that are left out are removed from storage', () => {
+    for (let i = 0; i < 53; i++) saveStoredEntry(pending({ nonce: `m${String(i).padStart(2, '0')}`, createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, i)).toISOString() }))
+    const loaded = loadStoredOutbox('u1')
+    expect(loaded).toHaveLength(50)
+    expect(entriesOf()).toHaveLength(50)
+    expect(localStorage.getItem(OUTBOX_KEY_PREFIX + 'u1.m00')).toBeNull()
+    expect(loadStoredOutbox('u1').map(m => m.nonce)[0]).toBe('m03')
+  })
+
+  it('still load per-message entries when the older single list is unreadable, and drop that list', () => {
+    saveStoredEntry(pending({ nonce: 'fine' }))
+    localStorage.setItem(OUTBOX_KEY_PREFIX + 'u1', '{not json')
+    expect(loadStoredOutbox('u1').map(m => m.nonce)).toEqual(['fine'])
+    expect(localStorage.getItem(OUTBOX_KEY_PREFIX + 'u1')).toBeNull()
+  })
+
+  it('keep another tab\'s sending mark with who set it and when', () => {
+    raw('u1', [{ ...pending(), status: 'sending', owner: 'tab-x', sendingSince: 1234 }])
+    expect(loadStoredOutbox('u1')[0]).toMatchObject({ status: 'sending', owner: 'tab-x', sendingSince: 1234 })
+  })
+})
