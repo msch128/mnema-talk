@@ -239,7 +239,10 @@ func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo, rejoin bool) (voiceSeat,
 	_, present := h.voice[ch.ID][c.User.ID]
 	rejoin = rejoin || present
 	h.recordVoiceJoinTimeLocked(key, rejoin, now)
-	if !rejoin || private {
+	// A resuming stay keeps how it was classified at its start: a failed
+	// permission lookup now (which counts as private) must not hide the
+	// whole stay's voice time.
+	if _, known := h.privateSeat[key]; !rejoin || !known {
 		h.privateSeat[key] = private
 	}
 
