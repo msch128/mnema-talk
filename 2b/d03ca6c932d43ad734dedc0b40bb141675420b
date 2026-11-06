@@ -1,0 +1,25 @@
+internal/chat/forum/handler_forum_extras.go
+  s_06fcde5dbef956::t_a845f0ce84278c 11,109,111,119
+internal/chat/forum/handler_forum_tags.go
+  s_06fcde5dbef956::t_4aa1ac458945c2 10,84-85,92,136-137,144,192-195
+internal/chat/talks/talks_handler.go
+  s_06fcde5dbef956::t_e668ab2f5cec91 11,14,83-89,94
+web/src/components/ThreadEmbedContext.test.ts
+  s_06fcde5dbef956::t_8cc586b4a5da38 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2bd03ca6c932d43ad734dedc0b40bb141675420b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
