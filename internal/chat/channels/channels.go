@@ -136,14 +136,20 @@ func assignAndFillSlugs(ctx context.Context, tx pgx.Tx, ch *core.Channel) error 
 }
 
 // DeleteChannelsTx deletes the channels and, by cascade, their messages inside
-// tx and returns the storage keys of the media attached to those messages and
-// of the avatars of the incoming webhooks' bot accounts. The caller locks the
-// channels first and removes the objects after the commit.
+// tx and returns the storage keys of the media attached to those messages, of
+// the covers of their events and of the avatars of the incoming webhooks' bot
+// accounts. The caller locks the channels first and removes the objects after
+// the commit.
 func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string, error) {
 	keys, err := messages.ChannelMediaKeys(ctx, tx, ids)
 	if err != nil {
 		return nil, err
 	}
+	covers, err := messages.DeleteEventCovers(ctx, tx, ids)
+	if err != nil {
+		return nil, err
+	}
+	keys = append(keys, covers...)
 	// The webhook rows go with the channels by cascade, which leaves their
 	// hidden bot accounts behind: nothing would ever reference them again.
 	rows, err := tx.Query(ctx, `SELECT bot_user_id FROM webhooks WHERE channel_id = ANY($1)`, ids)
