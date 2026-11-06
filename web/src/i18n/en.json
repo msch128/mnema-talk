@@ -2318,10 +2318,6 @@
     "layoutSaved": "Layout saved successfully",
     "addChannelTo": "Add channel to {name}",
     "hasUnsavedLayout": "Unsaved changes to channel order.",
-    "moveUp": "Move up",
-    "moveDown": "Move down",
-    "renameChannel": "Edit channel",
-    "renameCategory": "Edit category",
     "editChannelTitle": "Edit channel “{name}”",
     "editCategoryTitle": "Edit category “{name}”",
     "channelNameLabel": "Channel name",
@@ -2498,7 +2494,13 @@
     "deleteInviteNamed": "Delete invite {code}",
     "copyLinkFor": "Copy link for invite {code}",
     "mediaLoadFailed": "Couldn’t load the media list. Try again.",
-    "usersLoadFailed": "Couldn’t load the members. Try again."
+    "usersLoadFailed": "Couldn’t load the members. Try again.",
+    "moveUpNamed": "Move {name} up",
+    "moveDownNamed": "Move {name} down",
+    "renameChannelNamed": "Edit channel {name}",
+    "renameCategoryNamed": "Edit category {name}",
+    "deleteChannelNamed": "Delete channel {name}",
+    "deleteCategoryNamed": "Delete category {name}"
   },
   "profile": {
     "addedBy": "Added by {name}",
@@ -3840,7 +3842,8 @@
     "slowModeCustom": "Custom",
     "slowModeUnit": "Unit",
     "noBansHint": "Banned members are listed here, and you can lift a ban.",
-    "bansLoadFailed": "Couldn’t load the bans. Try again."
+    "bansLoadFailed": "Couldn’t load the bans. Try again.",
+    "unbanNamed": "Unban {name}"
   },
   "editHistory": {
     "menu": "Edit history",

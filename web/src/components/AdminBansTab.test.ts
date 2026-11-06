@@ -104,4 +104,12 @@ describe('AdminBansTab', () => {
     expect(toastTexts()).toContain('denied')
     expect(w.findAll('[data-testid^="ban-"]')).toHaveLength(2)
   })
+
+  it('names the member on the unban button', async () => {
+    apiMock.mockResolvedValue(bans())
+    const w = mount(AdminBansTab)
+    await flushPromises()
+    const labels = w.findAll('[data-testid="unban"]').map(b => b.attributes('aria-label'))
+    expect(labels).toEqual(['Unban The Troll', 'Unban quiet'])
+  })
 })

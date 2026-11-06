@@ -36,8 +36,8 @@ const emit = defineEmits<{ move: [direction: number]; rename: []; delete: []; 'a
         type="button"
         :disabled="index === 0"
         class="btn btn-icon btn-sm hover:text-mnema-text"
-        :title="$t('admin.moveUp')"
-        :aria-label="$t('admin.moveUp')"
+        :title="$t('admin.moveUpNamed', { name: category.name })"
+        :aria-label="$t('admin.moveUpNamed', { name: category.name })"
         @click="emit('move', -1)"
       >
         <ArrowUp class="w-3.5 h-3.5" />
@@ -47,8 +47,8 @@ const emit = defineEmits<{ move: [direction: number]; rename: []; delete: []; 'a
         type="button"
         :disabled="index === count - 1"
         class="btn btn-icon btn-sm hover:text-mnema-text"
-        :title="$t('admin.moveDown')"
-        :aria-label="$t('admin.moveDown')"
+        :title="$t('admin.moveDownNamed', { name: category.name })"
+        :aria-label="$t('admin.moveDownNamed', { name: category.name })"
         @click="emit('move', 1)"
       >
         <ArrowDown class="w-3.5 h-3.5" />
@@ -57,8 +57,8 @@ const emit = defineEmits<{ move: [direction: number]; rename: []; delete: []; 'a
         data-testid="rename-category"
         type="button"
         class="btn btn-icon btn-sm hover:text-mnema-text"
-        :title="$t('admin.renameCategory')"
-        :aria-label="$t('admin.renameCategory')"
+        :title="$t('admin.renameCategoryNamed', { name: category.name })"
+        :aria-label="$t('admin.renameCategoryNamed', { name: category.name })"
         @click="emit('rename')"
       >
         <Edit2 class="w-3.5 h-3.5" />
@@ -67,8 +67,8 @@ const emit = defineEmits<{ move: [direction: number]; rename: []; delete: []; 'a
         data-testid="delete-category"
         type="button"
         class="btn btn-icon btn-sm hover:text-mnema-danger"
-        :title="$t('sidebar.deleteCategory')"
-        :aria-label="$t('sidebar.deleteCategory')"
+        :title="$t('admin.deleteCategoryNamed', { name: category.name })"
+        :aria-label="$t('admin.deleteCategoryNamed', { name: category.name })"
         @click="emit('delete')"
       >
         <Trash2 class="w-3.5 h-3.5" />

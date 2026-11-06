@@ -2318,10 +2318,6 @@
     "layoutSaved": "Layout erfolgreich gespeichert",
     "addChannelTo": "Kanal zu {name} hinzufügen",
     "hasUnsavedLayout": "Ungespeicherte Änderungen an der Kanalreihenfolge.",
-    "moveUp": "Nach oben",
-    "moveDown": "Nach unten",
-    "renameChannel": "Kanal bearbeiten",
-    "renameCategory": "Kategorie bearbeiten",
     "editChannelTitle": "Kanal „{name}“ bearbeiten",
     "editCategoryTitle": "Kategorie „{name}“ bearbeiten",
     "channelNameLabel": "Kanalname",
@@ -2498,7 +2494,13 @@
     "deleteInviteNamed": "Einladung {code} löschen",
     "copyLinkFor": "Link zur Einladung {code} kopieren",
     "mediaLoadFailed": "Die Medienliste konnte nicht geladen werden. Versuch es noch einmal.",
-    "usersLoadFailed": "Die Mitglieder konnten nicht geladen werden. Versuch es noch einmal."
+    "usersLoadFailed": "Die Mitglieder konnten nicht geladen werden. Versuch es noch einmal.",
+    "moveUpNamed": "{name} nach oben",
+    "moveDownNamed": "{name} nach unten",
+    "renameChannelNamed": "Kanal {name} bearbeiten",
+    "renameCategoryNamed": "Kategorie {name} bearbeiten",
+    "deleteChannelNamed": "Kanal {name} löschen",
+    "deleteCategoryNamed": "Kategorie {name} löschen"
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -3840,7 +3842,8 @@
     "slowModeCustom": "Eigener Wert",
     "slowModeUnit": "Einheit",
     "noBansHint": "Gesperrte Mitglieder erscheinen hier, und du kannst eine Sperre aufheben.",
-    "bansLoadFailed": "Die Sperren konnten nicht geladen werden. Versuche es noch einmal."
+    "bansLoadFailed": "Die Sperren konnten nicht geladen werden. Versuche es noch einmal.",
+    "unbanNamed": "{name} entsperren"
   },
   "editHistory": {
     "menu": "Bearbeitungsverlauf",
