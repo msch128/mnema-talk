@@ -91,6 +91,16 @@ whose send keeps failing on the server's side is now retried with growing
 pauses and, after five tries, kept as a failed draft instead of being retried
 every 15 seconds for ever.
 
+Admin > Status now shows the last backup and its restore test instead of
+"unknown". `scripts/backup.sh` writes `backup-status/status.json` in the
+deployment directory after each backup and, by default, test-imports the dump
+into a throwaway database first (`RESTORE_TEST=0` skips that). The bundled
+`docker-compose.yml` mounts that folder read-only into the app and sets
+`BACKUP_STATUS_FILE`; with your own compose file, add both (see
+[Backups and restore](operations.md#backups-and-restore)). Copy the new
+`scripts/backup.sh` next to your deployment too. The capacity panel lists,
+per kind of Talk, how many people fit and what runs out first.
+
 #### 2.9.0 (wiki)
 
 - **Migrations 0089 and 0090.** New tables only (`wiki_pages`, `wiki_revisions`,

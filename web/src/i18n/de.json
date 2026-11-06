@@ -2034,9 +2034,21 @@
       "backup": "Backups & Wiederherstellung",
       "lastBackupAge": "Letztes Backup",
       "lastRestoreTestAge": "Letzter Wiederherstellungstest",
-      "backupHostManaged": "Vom Host verwaltet",
-      "backupDocsHint": "Backups laufen auf dem Host; siehe",
       "backupDocsLink": "Betriebshandbuch",
+      "backupDocs": "Backups laufen auf dem Host; siehe {link}.",
+      "backupStale": "Älter als {hours} h: Prüfe den Backup-Job auf dem Host.",
+      "restoreFailed": "Dieses Backup lässt sich womöglich nicht wiederherstellen: siehe das Backup-Protokoll auf dem Host.",
+      "restoreTest": {
+        "passed": "Bestanden, {age}",
+        "failed": "Fehlgeschlagen, {age}",
+        "skipped": "Nicht ausgeführt (RESTORE_TEST=0)",
+        "none": "–"
+      },
+      "backupState": {
+        "not_configured": "Nicht gemeldet. Der Server erfährt von Backups über die Statusdatei, die scripts/backup.sh schreibt: Setze BACKUP_STATUS_FILE und binde ihren Ordner schreibgeschützt ein, wie es die mitgelieferte Compose-Datei tut.",
+        "missing": "Noch kein Backup gemeldet. Führe scripts/backup.sh auf dem Host aus, zum Beispiel nächtlich; es schreibt die Statusdatei, die dieser Tab liest.",
+        "invalid": "Die Backup-Statusdatei lässt sich nicht lesen. Führe scripts/backup.sh erneut aus; es schreibt die Datei neu."
+      },
       "activity": "Live-Aktivität",
       "activeSessions": "Aktive Sitzungen",
       "connectedWs": "Verbundene WebSocket-Clients",
@@ -2255,15 +2267,47 @@
         "memoryNoLimit": "{used} (kein Limit gesetzt)",
         "mediaValue": "{mbps} Mbit/s · {pps} Pakete/s",
         "callsValue": "{members} · {shares}",
-        "estimateOk": {
-          "one": "Schätzung: Dieser Server kann etwa {count} weiteres Mitglied aufnehmen, das eine Bildschirmfreigabe sieht.",
-          "other": "Schätzung: Dieser Server kann etwa {count} weitere Mitglieder aufnehmen, die je eine Bildschirmfreigabe sehen."
+        "estimateHeading": "Mit dem, was gerade frei ist, fasst ein Talk etwa:",
+        "scenario": {
+          "chat": {
+            "label": "Nur Textchat",
+            "detail": "alle online, jede zehnte Person schreibt"
+          },
+          "broadcast": {
+            "label": "Zuhören",
+            "detail": "3 Sprechende, alle anderen hören zu"
+          },
+          "conversation": {
+            "label": "Gespräch",
+            "detail": "alle sprechen gleichzeitig"
+          },
+          "screen": {
+            "label": "Bildschirmfreigabe",
+            "detail": "1 Freigabe und 3 Sprechende, alle anderen schauen zu"
+          },
+          "video": {
+            "label": "Videoanruf",
+            "detail": "alle sprechen mit eingeschalteter Kamera"
+          }
         },
+        "people": "etwa {count}",
+        "limitedBy": "begrenzt durch {limit}",
+        "limit": {
+          "cpu": "CPU",
+          "memory": "Speicher",
+          "upload": "Upload"
+        },
+        "upload": "{mbps} Mbit/s Upload",
+        "measuredUpTo": "gemessen bis {count}",
+        "beyondMeasured": "über dem größten Messlauf ({count})",
+        "derived": "aus gemessenen Kosten abgeleitet",
+        "uploadUnknown": "Der Upload zählt nicht mit: Setze VOICE_UPLOAD_LIMIT_MBIT auf den Upload deiner Leitung, um ihn einzubeziehen.",
+        "note": "Eine Schätzung, keine Zusage: Sie plant mit der Hälfte der CPU ({cores} Kerne) und {basis}. Einzelheiten: {link}.",
+        "benchmarkLink": "doc/benchmark.md",
         "estimate_busy": "Schätzung: Der Server ist schon über der Hälfte seiner CPU; plane keine weiteren Mitglieder ein, bis es ruhiger ist.",
         "estimate_memory": "Schätzung: Der Speicher ist fast voll; erhöhe APP_MEM_LIMIT, bevor weitere Mitglieder dazukommen.",
         "basisObserved": "sie nutzt die gemessenen CPU-Kosten pro Paket dieses Servers ({scale}-mal der Benchmark)",
         "basisTable": "sie nutzt die Werte des Benchmarks, weil zu wenig Verkehr zum Messen dieses Servers da ist",
-        "assumption": "Eine Schätzung, keine Zusage. Sie zählt nur die CPU: Angenommen wird, dass jedes neue Mitglied eine Bildschirmfreigabe mit 1,5 Mbit/s neben 3 Sprechenden sieht und {cost} Millicores CPU kostet; geplant wird mit der Hälfte der CPU ({cores} Kerne). Speicher und Upload gehen nicht ein, außer dem Umschalten, wenn der Speicher fast voll ist; {basis}. Einzelheiten: doc/benchmark.md.",
         "members": {
           "one": "{count} Mitglied",
           "other": "{count} Mitglieder"

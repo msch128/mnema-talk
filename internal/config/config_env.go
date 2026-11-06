@@ -157,6 +157,7 @@ func (r *envReader) numericSettings(cfg *Config) (portMin, portMax uint16) {
 	cfg.MediaMaxTotalMB = r.int("MEDIA_MAX_TOTAL_MB", 0)
 	cfg.MediaMinFreeMB = r.int("MEDIA_MIN_FREE_MB", 1024)
 	cfg.MediaDiskPath = r.get("MEDIA_DISK_PATH", "")
+	cfg.BackupStatusFile = r.get("BACKUP_STATUS_FILE", "")
 	portMin = r.port("WEBRTC_UDP_PORT_MIN", 50000)
 	portMax = r.port("WEBRTC_UDP_PORT_MAX", 50050)
 	cfg.WebRTCUDPMuxPort = r.port("WEBRTC_UDP_MUX_PORT", portMin)

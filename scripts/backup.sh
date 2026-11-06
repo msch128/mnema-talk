@@ -2,12 +2,19 @@
 # Consistent compose backup; app/retention and SeaweedFS pause temporarily.
 # Run from the deployment directory. BACKUP_DIR defaults outside the checkout;
 # KEEP_DAYS=14 prunes only complete validated older backups after success.
+# RESTORE_TEST=1 (default) then imports the dump into a throwaway database
+# (restore.sh --verify, never the live one); 0 skips it. The result goes to
+# BACKUP_STATUS_DIR/status.json (default ./backup-status), which the app reads
+# read-only for Admin > Status (BACKUP_STATUS_FILE).
 set -euo pipefail
 # shellcheck source=scripts/backup-common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/backup-common.sh"
 BACKUP_DIR=${BACKUP_DIR:-$HOME/mnema-talk-backups}
 KEEP_DAYS=${KEEP_DAYS:-14}
 [[ "$KEEP_DAYS" =~ ^[0-9]+$ ]] || backup_fail 'KEEP_DAYS must be a nonnegative integer'
+RESTORE_TEST=${RESTORE_TEST:-1}
+[[ "$RESTORE_TEST" =~ ^[01]$ ]] || backup_fail 'RESTORE_TEST must be 1 or 0'
+BACKUP_STATUS_DIR=${BACKUP_STATUS_DIR:-./backup-status}
 [ "${SEAWEED_LIVE:-0}" = 0 ] || backup_fail 'SEAWEED_LIVE is incompatible with consistent backups; unset it'
 [ -f .env ] && [ ! -L .env ] || backup_fail 'a regular .env is required'
 if [ "${BACKUP_ALLOW_IN_REPO:-0}" != 1 ] && command -v git >/dev/null 2>&1; then
@@ -20,7 +27,30 @@ fi
 umask 077
 mkdir -p "$BACKUP_DIR"
 maintenance_lock
-app_resume=false seaweed_resume=false dest=''
+app_resume=false seaweed_resume=false dest='' complete=false
+alpine=alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+# The status file holds no secrets: times, size and the restore test result.
+# It is written next to the old one and renamed, so the app never reads half.
+write_backup_status() {
+  local size=0 file json tmp
+  for file in "$dest"/*; do size=$((size + $(wc -c < "$file"))); done
+  json=$(printf '{"format":1,"last_backup_at":"%s","size_bytes":%s,"restore_test":{"result":"%s"%s}}' \
+    "$created" "$size" "$1" "${2:+,\"at\":\"$2\"}")
+  # The app (another uid) reads it: a new directory is world-readable.
+  if [ ! -e "$BACKUP_STATUS_DIR" ]; then (umask 022 && mkdir -p "$BACKUP_STATUS_DIR") || return 1; fi
+  [ -d "$BACKUP_STATUS_DIR" ] || return 1
+  if [ -w "$BACKUP_STATUS_DIR" ]; then
+    tmp=$(mktemp "$BACKUP_STATUS_DIR/.status.XXXXXX") || return 1
+    if ! printf '%s\n' "$json" > "$tmp" || ! chmod 644 "$tmp" || ! mv -f "$tmp" "$BACKUP_STATUS_DIR/status.json"; then
+      rm -f "$tmp"
+      return 1
+    fi
+    return 0
+  fi
+  # Docker created the folder as root for the app's mount: write through a container.
+  printf '%s\n' "$json" | docker run --rm -i --network none -v "$(cd "$BACKUP_STATUS_DIR" && pwd)":/out "$alpine" \
+    sh -c 'cat > /out/.status.new && chmod 644 /out/.status.new && mv -f /out/.status.new /out/status.json'
+}
 cleanup() {
   status=$?
   trap - EXIT INT TERM
@@ -36,7 +66,7 @@ cleanup() {
     if ! service_start app; then status=1; fi
   fi
   rmdir .mnema-maintenance.lock
-  [ "$status" = 0 ] || echo 'backup failed; incomplete directories are not restore points' >&2
+  [ "$status" = 0 ] || [ "$complete" = true ] || echo 'backup failed; incomplete directories are not restore points' >&2
   exit "$status"
 }
 trap cleanup EXIT
@@ -57,12 +87,13 @@ if [ "$seaweed_resume" = true ]; then docker compose stop -t 60 seaweedfs >/dev/
 [ "$(service_running "$seaweed")" = false ] || backup_fail 'seaweedfs did not stop'
 docker compose exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner' </dev/null | gzip > "$dest/postgres.sql.gz"
 docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -v ON_ERROR_STOP=1 -c "SELECT filename, checksum FROM schema_migrations ORDER BY filename"' </dev/null > "$dest/schema.txt"
-docker run --rm --network none --volumes-from "$seaweed":ro -v "$(cd "$dest" && pwd)":/out alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a sh -c 'tar czf /out/seaweedfs.tar.gz -C /data . && chmod 600 /out/seaweedfs.tar.gz && chown "$1:$2" /out/seaweedfs.tar.gz' sh "$(id -u)" "$(id -g)"
+docker run --rm --network none --volumes-from "$seaweed":ro -v "$(cd "$dest" && pwd)":/out "$alpine" sh -c 'tar czf /out/seaweedfs.tar.gz -C /data . && chmod 600 /out/seaweedfs.tar.gz && chown "$1:$2" /out/seaweedfs.tar.gz' sh "$(id -u)" "$(id -g)"
 cp .env "$dest/env"
 docker compose config --no-interpolate </dev/null > "$dest/compose.yaml"
+created=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 {
   echo format=mnema-backup-v1
-  printf 'created_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf 'created_utc=%s\n' "$created"
   printf 'app_image_id=%s\n' "$(docker inspect -f '{{.Image}}' "$app")"
   printf 'postgres_image_id=%s\n' "$(docker inspect -f '{{.Image}}' "$postgres")"
   printf 'seaweedfs_image_id=%s\n' "$(docker inspect -f '{{.Image}}' "$seaweed")"
@@ -74,8 +105,24 @@ printf 'mnema-backup-v1\n' > "$dest/COMPLETE"
 # Recover service availability before pruning; failure leaves older backups intact.
 if [ "$seaweed_resume" = true ]; then service_start seaweedfs; seaweed_resume=false; fi
 if [ "$app_resume" = true ]; then service_start app; app_resume=false; fi
-while IFS= read -r -d '' old; do
-  [ "$old" != "$dest" ] || continue
-  if backup_validate "$old" 0 >/dev/null 2>&1; then rm -rf -- "$old"; fi
-done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -name '20*' -mtime +"$KEEP_DAYS" -print0)
-echo "backup complete: $dest"
+complete=true restore_test=skipped restore_at=''
+if [ "$RESTORE_TEST" = 1 ]; then
+  echo "restore test: importing $dest into a throwaway database"
+  if bash "$(dirname "${BASH_SOURCE[0]}")/restore.sh" "$dest" --verify; then restore_test=passed; else restore_test=failed; fi
+  restore_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+fi
+status_written=true
+if ! write_backup_status "$restore_test" "$restore_at"; then
+  status_written=false
+  echo "WARNING: could not write $BACKUP_STATUS_DIR/status.json; Admin > Status will not show this backup" >&2
+fi
+# A backup that failed its restore test is no reason to drop the older ones.
+if [ "$restore_test" != failed ]; then
+  while IFS= read -r -d '' old; do
+    [ "$old" != "$dest" ] || continue
+    if backup_validate "$old" 0 >/dev/null 2>&1; then rm -rf -- "$old"; fi
+  done < <(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -name '20*' -mtime +"$KEEP_DAYS" -print0)
+fi
+echo "backup complete: $dest (restore test: $restore_test)"
+[ "$restore_test" != failed ] || backup_fail 'restore test FAILED: this backup may not be restorable; older backups were kept'
+[ "$status_written" = true ] || exit 1

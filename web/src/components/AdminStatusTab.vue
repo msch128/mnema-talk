@@ -6,7 +6,6 @@ import { api, caughtErrorMessage } from '../lib/api'
 import type { OperatorStatus } from '../types/domain'
 import { decodeOperatorStatus } from '../types/domain'
 import { useToastStore } from '../stores/toast'
-import { SOURCE_URL } from '../lib/thirdParty'
 import { describeWarning } from '../lib/operatorWarnings'
 import { describeCheck } from '../lib/setupChecks'
 import { formatBytes as formatBytesIn } from '../lib/byteUnits'
@@ -15,6 +14,7 @@ import { useChatStore } from '../stores/chat'
 import { reportWebSocket } from '../lib/wsReport'
 import ConnectionTest from './ConnectionTest.vue'
 import AdminCapacityPanel from './AdminCapacityPanel.vue'
+import AdminBackupPanel from './AdminBackupPanel.vue'
 
 const toasts = useToastStore()
 const chat = useChatStore()
@@ -259,28 +259,6 @@ onMounted(async () => {
     </div>
 
     <!-- Backups & Recovery -->
-    <div v-if="backup" class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline space-y-3" data-testid="status-backup">
-      <div class="flex items-center gap-2">
-        <ShieldCheck class="w-4 h-4 text-mnema-accent shrink-0" />
-        <span class="text-xs uppercase font-semibold font-mono text-mnema-tertiary tracking-wider">{{ $t('admin.operatorStatus.backup') }}</span>
-      </div>
-      <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-        <div>
-          <dt class="text-mnema-tertiary text-xs">{{ $t('admin.operatorStatus.lastBackupAge') }}</dt>
-          <dd class="font-mono text-mnema-text mt-0.5" data-testid="backup-last-age">{{ backup.last_backup_age }}</dd>
-        </div>
-        <div>
-          <dt class="text-mnema-tertiary text-xs">{{ $t('admin.operatorStatus.lastRestoreTestAge') }}</dt>
-          <dd class="font-mono text-mnema-text mt-0.5" data-testid="backup-last-restore">{{ backup.last_restore_test_age }}</dd>
-        </div>
-        <div>
-          <dt class="text-mnema-tertiary text-xs">{{ $t('admin.operatorStatus.backupHostManaged') }}</dt>
-          <dd class="text-xs text-mnema-muted mt-0.5" data-testid="backup-hint">
-            <span>{{ $t('admin.operatorStatus.backupDocsHint') }} </span>
-            <a :href="`${SOURCE_URL}/blob/main/${backup.hint}`" target="_blank" rel="noopener noreferrer" class="text-mnema-accent hover:underline">{{ $t('admin.operatorStatus.backupDocsLink') }}</a>
-          </dd>
-        </div>
-      </dl>
-    </div>
+    <AdminBackupPanel v-if="backup" :backup="backup" />
   </section>
 </template>

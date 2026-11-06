@@ -52,6 +52,10 @@ type Config struct {
 	MediaMaxTotalMB     int
 	MediaMinFreeMB      int
 	MediaDiskPath       string
+	// BackupStatusFile (BACKUP_STATUS_FILE) is the status file scripts/backup.sh
+	// writes after each backup, mounted read-only into the container; the
+	// Status tab shows its age and restore test. Empty = not reported.
+	BackupStatusFile string
 	// TURN relay for clients behind restrictive NATs (coturn with
 	// use-auth-secret / static-auth-secret = WebRTCTURNSecret).
 	WebRTCTURNURLs   []string

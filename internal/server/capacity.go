@@ -55,12 +55,41 @@ type CapacityEstimate struct {
 	PlanCores float64 `json:"plan_cores"`
 	// Status is ok, busy (past the plan already) or memory (RSS near the limit).
 	Status string `json:"status" enums:"ok,busy,memory"`
+	// UploadLimitMbps is VOICE_UPLOAD_LIMIT_MBIT, the upload the scenarios
+	// may use; 0 when it is not set and upload is only reported, not limited.
+	UploadLimitMbps int `json:"upload_limit_mbps"`
+	// Scenarios is how many people one Talk of each kind can hold on what is
+	// left of the plan; empty unless Status is ok.
+	Scenarios []CapacityScenario `json:"scenarios"`
+}
+
+// CapacityScenario is one row of the estimate: the largest Talk of one kind.
+type CapacityScenario struct {
+	// ID: chat (text only), broadcast (3 speakers, the rest listen),
+	// conversation (everyone talks), screen (one share and 3 speakers, the
+	// rest watch), video (everyone talks with the camera on).
+	ID string `json:"id" enums:"chat,broadcast,conversation,screen,video"`
+	// Members is how many people fit.
+	Members int `json:"members"`
+	// Limit is the resource the next person would exceed.
+	Limit string `json:"limit" enums:"cpu,memory,upload"`
+	// CPUCores, UploadMbps and MemoryBytes are the cost at Members.
+	CPUCores    float64 `json:"cpu_cores"`
+	UploadMbps  float64 `json:"upload_mbps"`
+	MemoryBytes uint64  `json:"memory_bytes"`
+	// Basis is measured when the shape was run in doc/benchmark.md, derived
+	// when it is built from the measured costs.
+	Basis string `json:"basis" enums:"measured,derived"`
+	// MeasuredUpTo is the largest clean run of the shape (0 for derived).
+	MeasuredUpTo int `json:"measured_up_to"`
+	// Extrapolated is true when Members is beyond MeasuredUpTo.
+	Extrapolated bool `json:"extrapolated"`
 }
 
 // capacityStatus handles GET /api/admin/status/capacity.
 //
 // @Summary Server capacity
-// @Description Live CPU, memory and media rates of the server over the last minute and an estimate of how many more members it can take, each watching a screen share. The estimate uses the cost model of doc/benchmark.md, scaled by this host's observed CPU per packet when there is enough traffic; it is an estimate for planning, not a promise. Owner or Administrator only (403 otherwise).
+// @Description Live CPU, memory and media rates of the server over the last minute, an estimate of how many more members it can take, each watching a screen share, and per usage scenario how many people one Talk can hold, with the resource that runs out first. The estimate uses the cost model of doc/benchmark.md, scaled by this host's observed CPU per packet when there is enough traffic; it is an estimate for planning, not a promise. Owner or Administrator only (403 otherwise).
 // @ID getAdminCapacity
 // @Tags Admin
 // @Produce json
@@ -87,7 +116,11 @@ func (h *systemHandler) capacitySnapshot() CapacityStatus {
 	st := averageSamples(samples[max(0, len(samples)-capacityWindow):])
 	st.CPUCores = capacity.Cores(cgroupRoot)
 	st.MemoryLimitBytes = capacity.MemoryLimit(cgroupRoot)
-	st.Estimate = capacityEstimate(st)
+	upload := 0
+	if h.cfg != nil {
+		upload = h.cfg.VoiceUploadLimitMbit
+	}
+	st.Estimate = capacityEstimate(st, upload)
 	return st
 }
 
@@ -119,14 +152,24 @@ func averageSamples(s []OpsSample) CapacityStatus {
 	return st
 }
 
-func capacityEstimate(st CapacityStatus) CapacityEstimate {
+func capacityEstimate(st CapacityStatus, uploadLimitMbps int) CapacityEstimate {
 	r := capacity.Estimate(capacity.Input{
 		Cores: st.CPUCores, UsedCores: st.CPUUsedCores,
 		EgressPPS: float64(st.EgressPPS), IngressPPS: float64(st.IngressPPS),
 		Peers: st.Peers, RSSBytes: st.RSSBytes, MemoryLimit: st.MemoryLimitBytes,
+		UploadLimitMbps: float64(uploadLimitMbps),
 	})
-	return CapacityEstimate{
+	e := CapacityEstimate{
 		MoreMembers: r.MoreMembers, Basis: r.Basis, Scale: r.Scale,
 		PerMemberMillicores: r.PerMemberCores * 1000, PlanCores: r.PlanCores, Status: r.Status,
+		UploadLimitMbps: uploadLimitMbps, Scenarios: make([]CapacityScenario, 0, len(r.Scenarios)),
 	}
+	for _, s := range r.Scenarios {
+		e.Scenarios = append(e.Scenarios, CapacityScenario{
+			ID: s.Scenario.ID, Members: s.Fit.Members, Limit: s.Fit.Limit,
+			CPUCores: s.Fit.Load.Cores, UploadMbps: s.Fit.Load.UploadMbps, MemoryBytes: uint64(s.Fit.Load.MemoryBytes),
+			Basis: s.Scenario.Basis, MeasuredUpTo: s.Scenario.MeasuredUpTo, Extrapolated: s.Fit.Extrapolated,
+		})
+	}
+	return e
 }

@@ -64,8 +64,9 @@ class MaintenanceTests(unittest.TestCase):
         self.log = self.root/'calls.jsonl'
         self.backups = self.root/'backups'
         self.env = dict(os.environ, PATH=str(self.bin)+os.pathsep+os.environ['PATH'], BACKUP_DIR=str(self.backups), FAKE_STATE=str(self.state), FAKE_LOG=str(self.log))
-    def run_script(self, name, *args, fail=''):
-        return subprocess.run(['bash',str(ROOT/'scripts'/name),*map(str,args)], cwd=self.deploy, env=dict(self.env,FAIL_AT=fail), capture_output=True, text=True, timeout=15)
+    def run_script(self, name, *args, fail='', **extra):
+        return subprocess.run(['bash',str(ROOT/'scripts'/name),*map(str,args)], cwd=self.deploy, env=dict(self.env,FAIL_AT=fail,**extra), capture_output=True, text=True, timeout=15)
+    def status(self): return json.loads((self.deploy/'backup-status'/'status.json').read_text())
     def calls(self): return [json.loads(x) for x in self.log.read_text().splitlines()]
     def good_backup(self):
         r=self.run_script('backup.sh'); self.assertEqual(r.returncode,0,r.stderr)
@@ -169,5 +170,49 @@ class MaintenanceTests(unittest.TestCase):
         self.log.write_text('')
         self.assertNotEqual(self.run_script('restore.sh',backup,'--yes','--allow-legacy').returncode,0)
         self.assertEqual(self.calls(),[])
+    def test_backup_reports_its_time_size_and_passed_restore_test(self):
+        backup=self.good_backup(); st=self.status(); calls=self.calls()
+        created=next(l.split('=',1)[1] for l in (backup/'manifest').read_text().splitlines() if l.startswith('created_utc='))
+        self.assertEqual(st['format'],1); self.assertEqual(st['last_backup_at'],created)
+        self.assertEqual(st['size_bytes'],sum(p.stat().st_size for p in backup.iterdir()))
+        self.assertEqual(st['restore_test']['result'],'passed'); self.assertRegex(st['restore_test']['at'],r'^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$')
+        self.assertEqual((self.deploy/'backup-status'/'status.json').stat().st_mode&0o777,0o644)
+        self.assertEqual((self.deploy/'backup-status').stat().st_mode&0o777,0o755)
+        self.assertEqual(list((self.deploy/'backup-status').iterdir()),[self.deploy/'backup-status'/'status.json'])
+        # The test runs after the app is back, on a throwaway container only.
+        start=max(i for i,c in enumerate(calls) if c[:2]==['compose','start'] and c[-1]=='app')
+        verify=next(i for i,c in enumerate(calls) if c[0]=='run' and any(a.startswith('postgres:18-alpine') for a in c))
+        self.assertLess(start,verify)
+        self.assertFalse(any(c[:2]==['compose','exec'] for c in calls[verify:]))
+    def test_failed_restore_test_is_reported_and_keeps_older_backups(self):
+        previous=self.good_backup(); old=self.backups/'20200101-000000'; previous.rename(old); os.utime(old,(0,0))
+        r=self.run_script('backup.sh',fail='verify-import')
+        self.assertNotEqual(r.returncode,0); self.assertIn('restore test FAILED',r.stderr)
+        self.assertNotIn('incomplete directories',r.stderr)
+        self.assertEqual(self.status()['restore_test']['result'],'failed')
+        self.assertTrue(old.exists())
+        self.assertTrue(all((p/'COMPLETE').exists() for p in self.backups.iterdir()))
+        self.assertTrue(json.loads(self.state.read_text())['app'])
+    def test_restore_test_can_be_skipped_and_failed_backups_keep_the_last_status(self):
+        r=self.run_script('backup.sh',RESTORE_TEST='0'); self.assertEqual(r.returncode,0,r.stderr)
+        self.assertEqual(self.status()['restore_test'],{'result':'skipped'})
+        self.assertFalse(any(c[0]=='run' and any(a.startswith('postgres:18-alpine') for a in c) for c in self.calls()))
+        before=(self.deploy/'backup-status'/'status.json').read_text()
+        self.assertNotEqual(self.run_script('backup.sh',fail='dump').returncode,0)
+        self.assertEqual((self.deploy/'backup-status'/'status.json').read_text(),before)
+        self.assertNotEqual(self.run_script('backup.sh',RESTORE_TEST='yes').returncode,0)
+    @unittest.skipIf(os.geteuid()==0,'root writes everywhere')
+    def test_root_owned_status_directory_is_written_through_a_container(self):
+        folder=self.deploy/'backup-status'; folder.mkdir(); folder.chmod(0o555); self.addCleanup(folder.chmod,0o755)
+        r=self.run_script('backup.sh'); self.assertEqual(r.returncode,0,r.stderr)
+        write=[c for c in self.calls() if c[0]=='run' and '-i' in c]
+        self.assertEqual(len(write),1); self.assertIn(f'{folder.resolve()}:/out',write[0]); self.assertIn('none',write[0])
+        self.assertIn('/out/status.json',write[0][-1])
+    def test_unwritable_status_directory_warns_but_keeps_the_backup(self):
+        (self.deploy/'backup-status').write_text('not a directory')
+        r=self.run_script('backup.sh')
+        self.assertNotEqual(r.returncode,0); self.assertIn('could not write',r.stderr)
+        self.assertTrue(any((p/'COMPLETE').exists() for p in self.backups.iterdir()))
+        self.assertTrue(json.loads(self.state.read_text())['app'])
 
 if __name__=='__main__': unittest.main()

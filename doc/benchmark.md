@@ -306,6 +306,38 @@ silence) is why DTX is off when the noise filter is set to Off and can be
 switched off in Audio settings. The sizing table above assumes continuous
 speakers (50 packets/s each), which is the conservative case.
 
+### The scenarios in Admin > Status
+
+The capacity panel of Admin > Status ([operations](operations.md#capacity))
+turns the measurements above into one row per kind of Talk: the largest Talk of
+N people whose CPU, memory and upload fit into what is free. Nothing in it is
+measured anew; each row comes from the runs above, as follows (packets/s, with
+6.5 kbit per video packet and 50 packets/s per speaker).
+
+| Row | Ingress packets/s | Egress packets/s | Memory per person | Source |
+|---|---|---|---|---|
+| Text chat only | none | none | 61 kB resident | CPU fitted on the chat runs as 0.148 ms·N + 0.522 µs·N² per second (100 sessions 0.02 cores, 1,000 sessions 0.67; it predicts 0.09 for 300, as measured); memory from 47 MB at 100 to 102 MB at 1,000 sessions |
+| Listening: 3 speakers | 150 | 150·(N−1) | 1.3 × 1.28 MB | the "3 speakers" rows; heap 128 MB at 100 members |
+| Conversation: everyone talks | 50·N | 50·N·(N−1) | 1.3 × 1.28 MB | derived: N continuous speakers instead of 3 (with DTX real calls send fewer packets, see above) |
+| Screen share + 3 speakers | 381 | 381·(N−1) | 1.3 × 2.32 MB | the "3 speakers + screen" rows; heap 232 MB at 100 members |
+| Video call: every camera on | N·(50 + 485) | N·(50·(N−1) + 77·min(N−1, 24)) | 1.3 × 3.42 MB | derived: each camera sends all three layers at their caps (2.5 Mbit/s, 500 and 150 kbit/s, 485 packets/s together) and each member receives the others at the 360p layer (500 kbit/s, 77 packets/s), at most 24 cameras; heap per member from 10 cameras at 50 members on 2.5.0 (171 MB) |
+
+CPU is the model above (22 µs per egress packet, 72 µs per ingress packet,
+0.57 ms per member per second), scaled by the host's own factor when there is
+enough traffic, against half of the cores minus what the server uses now.
+Memory is 1.3 times the heap per person (the working rule above; the 250 MB
+base is already in the server's resident memory) against 85 % of the
+container limit minus the resident memory now. Upload is 1.3 times the media
+the server sends; it limits a row only when `VOICE_UPLOAD_LIMIT_MBIT` says how
+fast the line is. The first two rows and the screen share were run up to 100
+members (chat up to 1,000); the panel says so when a figure goes beyond that.
+The conversation and the video call were never run as such: their rows say
+*derived*. On the N100 of this page, idle, with the default 1 GB memory limit
+and no upload limit, that gives about 1,770 people in text chat (CPU), 450
+listening (memory), 40 in a conversation (CPU), 210 watching a screen share
+(CPU, needing about 440 Mbit/s of upload) and 20 in a video call (CPU, about
+270 Mbit/s).
+
 ### Where the packet loss comes from
 
 The shapes with loss all have a screen share and several cameras with 50 to
