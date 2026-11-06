@@ -2043,15 +2043,16 @@
       "backupDocsLink": "Betriebshandbuch",
       "backupDocs": "Backups laufen auf dem Host; siehe {link}.",
       "backupStale": "Älter als {hours} h: Prüfe den Backup-Job auf dem Host.",
+      "restoreFailed": "Dieses Backup lässt sich womöglich nicht wiederherstellen: siehe das Backup-Protokoll auf dem Host.",
       "restoreTest": {
         "passed": "Bestanden, {age}",
-        "failed": "Fehlgeschlagen, {age}: Dieses Backup lässt sich womöglich nicht wiederherstellen",
+        "failed": "Fehlgeschlagen, {age}",
         "skipped": "Nicht ausgeführt (RESTORE_TEST=0)",
         "none": "–"
       },
       "backupState": {
-        "not_configured": "Nicht gemeldet. Der Server erfährt von Backups über die Statusdatei, die scripts/backup.sh schreibt: Setze BACKUP_STATUS_FILE und binde den Ordner backup-status schreibgeschützt ein, wie es die mitgelieferte docker-compose.yml tut.",
-        "missing": "Noch kein Backup gemeldet. Führe scripts/backup.sh auf dem Host aus, zum Beispiel nächtlich; es schreibt backup-status/status.json, das dieser Tab liest.",
+        "not_configured": "Nicht gemeldet. Der Server erfährt von Backups über die Statusdatei, die scripts/backup.sh schreibt: Setze BACKUP_STATUS_FILE und binde ihren Ordner schreibgeschützt ein, wie es die mitgelieferte Compose-Datei tut.",
+        "missing": "Noch kein Backup gemeldet. Führe scripts/backup.sh auf dem Host aus, zum Beispiel nächtlich; es schreibt die Statusdatei, die dieser Tab liest.",
         "invalid": "Die Backup-Statusdatei lässt sich nicht lesen. Führe scripts/backup.sh erneut aus; es schreibt die Datei neu."
       },
       "activity": "Live-Aktivität",

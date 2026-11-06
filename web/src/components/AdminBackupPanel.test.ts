@@ -40,6 +40,15 @@ describe('AdminBackupPanel', () => {
     expect(w.text()).not.toContain('unknown')
   })
 
+  it('rounds the ages, so a test a minute after the backup reads the same, and says just now as ago', () => {
+    let w = show(reported({ restore_test_age_seconds: 7 * HOUR - 60 }))
+    expect(w.get('[data-testid="backup-last-restore"]').text()).toBe('Passed, 7 hr. ago')
+    w.unmount()
+    w = show(reported({ last_backup_age_seconds: 20, restore_test_age_seconds: 5 }))
+    expect(w.get('[data-testid="backup-last-age"]').text()).toBe('0 min. ago · 50 MB')
+    expect(w.get('[data-testid="backup-last-restore"]').text()).toBe('Passed, 0 min. ago')
+  })
+
   it('warns when the backup is older than the threshold', () => {
     const w = show(reported({ stale: true, warn: true, last_backup_age_seconds: 50 * HOUR, restore_test_age_seconds: 50 * HOUR }))
     expect(w.get('[data-testid="backup-last-age"]').text()).toContain('2 days ago')
@@ -51,12 +60,14 @@ describe('AdminBackupPanel', () => {
     let w = show(reported({ warn: true, restore_test: 'failed' }))
     const restore = w.get('[data-testid="backup-last-restore"]')
     expect(restore.attributes('data-result')).toBe('failed')
-    expect(restore.text()).toBe('Failed, 7 hr. ago: this backup may not restore')
+    expect(restore.text()).toBe('Failed, 7 hr. ago')
+    expect(w.get('[data-testid="backup-restore-failed"]').text()).toContain('may not restore')
     expect(restore.classes()).toContain('text-mnema-warning')
     w.unmount()
     const skipped = reported({ restore_test: 'skipped' })
     delete skipped.restore_test_age_seconds
     w = show(skipped)
+    expect(w.find('[data-testid="backup-restore-failed"]').exists()).toBe(false)
     expect(w.get('[data-testid="backup-last-restore"]').text()).toBe('Not run (RESTORE_TEST=0)')
   })
 
