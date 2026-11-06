@@ -204,7 +204,7 @@ describe('chat store history paging', () => {
     vi.stubGlobal('fetch', fetchMock)
     await chat.sendMessage('hey', null, 'gone')
     expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(JSON.parse(String(required(fetchMock.mock.calls[1])[1]?.body))).toEqual({ content: 'hey' })
+    expect(JSON.parse(String(required(fetchMock.mock.calls[1])[1]?.body))).toEqual({ content: 'hey', nonce: expect.any(String) })
   })
 
   it('reports the refusal when the message is invalid for another reason too', async () => {
@@ -222,7 +222,7 @@ describe('chat store history paging', () => {
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => new Response(JSON.stringify(messageFixture({ channel_id: CHANNEL_ID })), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
     await chat.sendMessage('hey', null, 'orig')
-    expect(JSON.parse(String(required(fetchMock.mock.calls[0])[1]?.body))).toEqual({ content: 'hey', reply_to_id: 'orig' })
+    expect(JSON.parse(String(required(fetchMock.mock.calls[0])[1]?.body))).toEqual({ content: 'hey', reply_to_id: 'orig', nonce: expect.any(String) })
     await chat.uploadMedia(new File(['x'], 'fixture.txt'), '', null, 'orig')
     const form = required(fetchMock.mock.calls[1])[1]?.body
     if (!(form instanceof FormData)) throw new Error('Expected multipart upload request')

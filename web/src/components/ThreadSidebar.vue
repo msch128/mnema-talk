@@ -11,6 +11,7 @@ import ThreadRootCard from './ThreadRootCard.vue'
 import ForumPostHeader from './ForumPostHeader.vue'
 import ThreadReply from './ThreadReply.vue'
 import BlockedMessageRow from './BlockedMessageRow.vue'
+import PendingMessages from './PendingMessages.vue'
 import { useBlocksStore } from '../stores/blocks'
 import { useDmChat } from '../composables/useDmChat'
 import ThreadComposer from './ThreadComposer.vue'
@@ -320,6 +321,7 @@ async function handleSendReply() {
         @edit-step="(step, e) => ownNav.step(step, e, reply)"
       />
       </template>
+      <PendingMessages v-if="chatStore.activeThread" :channel-id="threadChannel" :parent-id="chatStore.activeThread.id" compact />
     </div>
 
     <div v-if="isLockedForMe" class="p-3 bg-amber-400/10 border-t border-mnema-hairline flex items-center gap-2 text-xs text-amber-400 shrink-0">

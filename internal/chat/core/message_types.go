@@ -61,7 +61,11 @@ type Message struct {
 	// themselves.
 	MentionRoles []uuid.UUID `json:"mention_roles" binding:"optional" format:"uuid"`
 	CreatedAt    time.Time   `json:"created_at" format:"date-time"`
-	UpdatedAt    time.Time   `json:"updated_at" format:"date-time"`
+	// Nonce is the id the author's client put on this send. Only the
+	// message_create event and the reply to that send carry it, so the
+	// client can replace its pending copy; history never does.
+	Nonce     *uuid.UUID `json:"nonce,omitempty" binding:"optional" format:"uuid"`
+	UpdatedAt time.Time  `json:"updated_at" format:"date-time"`
 	// IsBot is true for messages posted by a webhook. Their author is a
 	// hidden bot account; DisplayName is the webhook's name or the username
 	// the sender gave for this message.

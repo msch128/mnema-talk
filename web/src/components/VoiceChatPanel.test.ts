@@ -106,7 +106,7 @@ describe('VoiceChatPanel', () => {
     await flushPromises()
     const post = calls.find(c => c.method === 'POST' && c.url === `/api/channels/${fixtureId(10)}/messages`)
     expect(post).toBeTruthy()
-    expect(JSON.parse(String(requireValue(post).body))).toEqual({ content: 'hallo Talk' })
+    expect(JSON.parse(String(requireValue(post).body))).toEqual({ content: 'hallo Talk', nonce: expect.any(String) })
     expect(box.element.value).toBe('')
     expect(chat.messages.map(m => m.content)).toEqual(['hallo Talk'])
     await nextTick()

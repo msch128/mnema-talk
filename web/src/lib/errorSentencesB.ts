@@ -116,6 +116,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['no community icon is set', 'srvNoCommunityIconIsSet'],
   ['no fields to update', 'srvNoFieldsToUpdate'],
   ['no update available', 'srvNoUpdateAvailable'],
+  ['nonce was already used in another conversation', 'srvNonceUsedElsewhere'],
   ['not a public image address', 'srvNotAPublicImageAddress'],
   ['note contains invalid characters', 'fieldInvalidChars', [], { field: 'note' }],
   ['note is required', 'fieldRequired', [], { field: 'note' }],

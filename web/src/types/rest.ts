@@ -1443,6 +1443,7 @@ export const decodeChatCreateForumTagRequest = decoder("chat.CreateForumTagReque
 export type ChatCreateMessageRequest = {
   attachment_ids?: Array<string>
   content: string
+  nonce?: string
   parent_id?: string | null
   reply_to_id?: string | null
 }
@@ -1451,6 +1452,7 @@ export function isChatCreateMessageRequest(value: unknown): value is ChatCreateM
   return isRecord(value)
     && (!hasOwn(value, "attachment_ids") || isArrayOf(value["attachment_ids"], item => isIdentifier(item)))
     && (hasOwn(value, "content") && isString(value["content"], 4000))
+    && (!hasOwn(value, "nonce") || isIdentifier(value["nonce"]))
     && (!hasOwn(value, "parent_id") || (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
     && (!hasOwn(value, "reply_to_id") || (isIdentifier(value["reply_to_id"]) || value["reply_to_id"] === null))
 }
@@ -2017,6 +2019,7 @@ export type ChatMessage = {
   last_activity_at?: string
   mention_roles?: Array<string>
   mentions: Array<string>
+  nonce?: string
   number: number
   parent_id?: string
   pinned_at?: string
@@ -2053,6 +2056,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (!hasOwn(value, "last_activity_at") || isTimestamp(value["last_activity_at"]))
     && (!hasOwn(value, "mention_roles") || isArrayOf(value["mention_roles"], item => isIdentifier(item)))
     && (hasOwn(value, "mentions") && isArrayOf(value["mentions"], item => isIdentifier(item)))
+    && (!hasOwn(value, "nonce") || isIdentifier(value["nonce"]))
     && (hasOwn(value, "number") && isInteger(value["number"]))
     && (!hasOwn(value, "parent_id") || isIdentifier(value["parent_id"]))
     && (!hasOwn(value, "pinned_at") || isTimestamp(value["pinned_at"]))
@@ -3625,13 +3629,13 @@ export function isGatewayInfo(value: unknown): value is GatewayInfo {
 export const decodeGatewayInfo = decoder("gateway.Info", isGatewayInfo)
 
 export type HttpxAPIError = {
-  code: "INVALID_INPUT" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "FORBIDDEN" | "ACCOUNT_DISABLED" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "RULES_NOT_ACCEPTED" | "STALE_REVISION" | "UNAVAILABLE" | "INTERNAL_ERROR"
+  code: "INVALID_INPUT" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "FORBIDDEN" | "ACCOUNT_DISABLED" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "RULES_NOT_ACCEPTED" | "STALE_REVISION" | "MESSAGE_DELETED" | "UNAVAILABLE" | "INTERNAL_ERROR"
   message: string
 }
 
 export function isHttpxAPIError(value: unknown): value is HttpxAPIError {
   return isRecord(value)
-    && (hasOwn(value, "code") && (value["code"] === "INVALID_INPUT" || value["code"] === "UNAUTHORIZED" || value["code"] === "INVALID_CREDENTIALS" || value["code"] === "FORBIDDEN" || value["code"] === "ACCOUNT_DISABLED" || value["code"] === "NOT_FOUND" || value["code"] === "CONFLICT" || value["code"] === "PAYLOAD_TOO_LARGE" || value["code"] === "UNSUPPORTED_MEDIA_TYPE" || value["code"] === "RATE_LIMITED" || value["code"] === "RULES_NOT_ACCEPTED" || value["code"] === "STALE_REVISION" || value["code"] === "UNAVAILABLE" || value["code"] === "INTERNAL_ERROR"))
+    && (hasOwn(value, "code") && (value["code"] === "INVALID_INPUT" || value["code"] === "UNAUTHORIZED" || value["code"] === "INVALID_CREDENTIALS" || value["code"] === "FORBIDDEN" || value["code"] === "ACCOUNT_DISABLED" || value["code"] === "NOT_FOUND" || value["code"] === "CONFLICT" || value["code"] === "PAYLOAD_TOO_LARGE" || value["code"] === "UNSUPPORTED_MEDIA_TYPE" || value["code"] === "RATE_LIMITED" || value["code"] === "RULES_NOT_ACCEPTED" || value["code"] === "STALE_REVISION" || value["code"] === "MESSAGE_DELETED" || value["code"] === "UNAVAILABLE" || value["code"] === "INTERNAL_ERROR"))
     && (hasOwn(value, "message") && isString(value["message"]))
 }
 

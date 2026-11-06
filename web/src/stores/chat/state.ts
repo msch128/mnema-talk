@@ -6,6 +6,7 @@ import { platform, type PlatformSocket } from '../../lib/platform'
 import { createKeyedThrottle } from '../../lib/chatLogic'
 import type { useAuthStore } from '../auth'
 import type { useVoiceStore } from '../voice'
+import type { PendingMessage } from './outboxTypes'
 import { MARK_READ_INTERVAL_MS, type EphemeralNote, type PinNotice, type ProfilePreview, type ThreadRoot, type Timer, type TypingUser } from './types'
 
 /** No stored settings: every channel follows the server default, which is "all messages". */
@@ -112,6 +113,21 @@ function dmState() {
   }
 }
 
+/** Messages written while the connection was down, waiting to be sent (see outbox.ts). */
+function outboxState() {
+  return {
+    outbox: ref<PendingMessage[]>([]),
+    // Conversations whose queue is being sent right now.
+    outboxBusy: new Set<string>(),
+    outboxTimer: undefined as Timer | undefined,
+    outboxDelay: 5000,
+    // The account whose stored messages were brought back this sign-in.
+    outboxRestoredFor: null as string | null,
+    // Nonces of the author's own sends the server announced lately (see noteEcho).
+    echoed: new Map<string, { at: number; msg: Message }>()
+  }
+}
+
 /** Socket generations, timers and the handlers the voice layer installs. */
 function socketState() {
   return {
@@ -180,6 +196,7 @@ export function createChatState(markRead: (channelId: string) => void) {
     ...channelState(),
     ...memberState(),
     ...dmState(),
+    ...outboxState(),
     ...socketState(),
     ...syncState(markRead)
   }

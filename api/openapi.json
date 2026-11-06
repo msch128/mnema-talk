@@ -2445,6 +2445,11 @@
             "maxLength": 4000,
             "type": "string"
           },
+          "nonce": {
+            "description": "Nonce is an optional random id the client makes per send. Sending the\nsame nonce again (a retry after a lost connection) returns the first\nmessage with 200 instead of posting a second one.",
+            "format": "uuid",
+            "type": "string"
+          },
           "parent_id": {
             "description": "ParentID must be a root message of the same channel (thread reply).",
             "format": "uuid",
@@ -3435,6 +3440,11 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "nonce": {
+            "description": "Nonce is the id the author's client put on this send. Only the\nmessage_create event and the reply to that send carry it, so the\nclient can replace its pending copy; history never does.",
+            "format": "uuid",
+            "type": "string"
           },
           "number": {
             "description": "Number is the message's short, stable link number (/m/4821).",
@@ -6144,6 +6154,7 @@
               "RATE_LIMITED",
               "RULES_NOT_ACCEPTED",
               "STALE_REVISION",
+              "MESSAGE_DELETED",
               "UNAVAILABLE",
               "INTERNAL_ERROR"
             ],
@@ -26485,6 +26496,16 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The message already created with this nonce (a retried send)."
+          },
           "201": {
             "content": {
               "application/json": {
@@ -26534,6 +26555,16 @@
               }
             },
             "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "MESSAGE_DELETED: the message sent with this nonce was deleted since; it is not posted again."
           },
           "429": {
             "content": {

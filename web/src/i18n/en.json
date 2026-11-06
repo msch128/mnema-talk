@@ -118,6 +118,7 @@
       "RATE_LIMITED": "Too many requests – wait a moment",
       "RULES_NOT_ACCEPTED": "Accept the community rules first",
       "STALE_REVISION": "The page changed after you opened it",
+      "MESSAGE_DELETED": "This message was deleted",
       "UNAVAILABLE": "The service isn’t available right now",
       "INTERNAL_ERROR": "Internal server error",
       "INVALID_INPUT": "Some of the details are not valid. Check them and try again.",
@@ -416,6 +417,8 @@
       "srvNoCommunityIconIsSet": "No community icon is set.",
       "srvNoFieldsToUpdate": "There is nothing to update.",
       "srvNoUpdateAvailable": "No update is available.",
+      "srvMessageDeletedNotResent": "This message was deleted and is not sent again.",
+      "srvNonceUsedElsewhere": "This message was already sent in another conversation.",
       "srvNotAPublicImageAddress": "That isn’t the address of a public image.",
       "srvNoteNotFound": "That note wasn’t found.",
       "srvNothingToChangeSendExpires": "Nothing to change. Send “expires_at” or “max_uses”.",
@@ -5084,5 +5087,23 @@
     "noEdit": "You can’t edit this page.",
     "pageLockedNoEdit": "This page is locked. Only people who manage the wiki can change it.",
     "moved": "Page updated."
+  },
+  "outbox": {
+    "waiting": "Waiting to send · goes out when you’re back online",
+    "retrying": "Waiting to send · trying again shortly",
+    "noEdit": "It may already have arrived, so it can only be discarded.",
+    "editFor": "Edit the message: {excerpt}",
+    "discardFor": "Discard the message: {excerpt}",
+    "retryFor": "Try sending the message again: {excerpt}",
+    "summaryWaiting": "{count} message waiting to be sent",
+    "summaryWaitingMany": "{count} messages waiting to be sent",
+    "summaryFailed": "{count} message not sent",
+    "summaryFailedMany": "{count} messages not sent",
+    "sending": "Sending…",
+    "failed": "Not sent: {reason}",
+    "edit": "Edit",
+    "cancel": "Discard",
+    "retry": "Try again",
+    "editLabel": "Edit the message that hasn’t been sent yet"
   }
 }

@@ -19,6 +19,7 @@ import { fetchNotificationSettings } from './notifySettings'
 import { fetchFollowedThreads } from './threadFollow'
 import { loadNotifyPreview } from '../../lib/notifyPreview'
 import { openThread } from './threads'
+import { outboxReconnected, restoreOutbox } from './outbox'
 
 const PING_INTERVAL_MS = 5000
 // A hidden tab only needs to learn that the socket died before the next push is missed; the server pings every 30 s itself.
@@ -85,6 +86,8 @@ function resyncState(cx: Cx) {
   const channel = cs.activeChannel.value
   if (channel && channel.type === 'text' && !cs.hasMoreAfter.value) void refreshLatest(cx, channel.id)
   if (cs.activeThread.value) openThread(cx, cs.activeThread.value)
+  // Messages written while the link was down go out now, in order.
+  outboxReconnected(cx)
 }
 
 async function attemptReconnect(cx: Cx) {
@@ -210,6 +213,7 @@ export function initWebSocket(cx: Cx) {
   const { cs, authStore } = cx
   const accountId = authStore.user?.id
   if (cs.ws.value || !accountId) return
+  restoreOutbox(cx)
   const generation = ++cs.socketGeneration
   installGlobalSearch()
 

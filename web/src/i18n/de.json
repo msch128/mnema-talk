@@ -118,6 +118,7 @@
       "RATE_LIMITED": "Zu viele Anfragen – bitte kurz warten",
       "RULES_NOT_ACCEPTED": "Bitte akzeptiere zuerst die Regeln der Community",
       "STALE_REVISION": "Die Seite hat sich geändert, seit du sie geöffnet hast",
+      "MESSAGE_DELETED": "Diese Nachricht wurde gelöscht",
       "UNAVAILABLE": "Der Dienst ist gerade nicht verfügbar",
       "INTERNAL_ERROR": "Interner Serverfehler",
       "INVALID_INPUT": "Einige Angaben sind ungültig. Prüfe sie und versuche es noch einmal.",
@@ -416,6 +417,8 @@
       "srvNoCommunityIconIsSet": "Es ist kein Community-Icon festgelegt.",
       "srvNoFieldsToUpdate": "Es gibt nichts zu aktualisieren.",
       "srvNoUpdateAvailable": "Es ist kein Update verfügbar.",
+      "srvMessageDeletedNotResent": "Diese Nachricht wurde gelöscht und wird nicht erneut gesendet.",
+      "srvNonceUsedElsewhere": "Diese Nachricht wurde bereits in einer anderen Unterhaltung gesendet.",
       "srvNotAPublicImageAddress": "Das ist nicht die Adresse eines öffentlichen Bildes.",
       "srvNoteNotFound": "Diese Notiz wurde nicht gefunden.",
       "srvNothingToChangeSendExpires": "Nichts zu ändern. Sende „expires_at“ oder „max_uses“.",
@@ -5084,5 +5087,23 @@
     "noEdit": "Du kannst diese Seite nicht bearbeiten.",
     "pageLockedNoEdit": "Diese Seite ist gesperrt. Nur wer das Wiki verwaltet, kann sie ändern.",
     "moved": "Seite aktualisiert."
+  },
+  "outbox": {
+    "waiting": "Ausstehend · wird gesendet, sobald du wieder online bist",
+    "retrying": "Ausstehend · wird gleich erneut versucht",
+    "noEdit": "Sie ist vielleicht schon angekommen, deshalb kannst du sie nur verwerfen.",
+    "editFor": "Nachricht bearbeiten: {excerpt}",
+    "discardFor": "Nachricht verwerfen: {excerpt}",
+    "retryFor": "Nachricht erneut senden: {excerpt}",
+    "summaryWaiting": "{count} Nachricht ist ausstehend",
+    "summaryWaitingMany": "{count} Nachrichten sind ausstehend",
+    "summaryFailed": "{count} Nachricht nicht gesendet",
+    "summaryFailedMany": "{count} Nachrichten nicht gesendet",
+    "sending": "Wird gesendet …",
+    "failed": "Nicht gesendet: {reason}",
+    "edit": "Bearbeiten",
+    "cancel": "Verwerfen",
+    "retry": "Erneut versuchen",
+    "editLabel": "Noch nicht gesendete Nachricht bearbeiten"
   }
 }

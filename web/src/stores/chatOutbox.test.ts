@@ -1,0 +1,392 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { useChatStore } from './chat'
+import { useAuthStore } from './auth'
+import { channelFixture, messageFixture, userFixture, fixtureId } from '../test-fixtures.fixture'
+import { required } from '../store-test-support.fixture'
+import { ApiError, type ApiOptions } from '../lib/api'
+import type { Message } from '../types/domain'
+
+// What a member sees when they write while the connection is down.
+const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
+vi.mock('../lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../lib/api')>()),
+  api: vi.fn((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)))
+}))
+import { api } from '../lib/api'
+
+const ch = channelFixture({ id: fixtureId(2) })
+const me = userFixture({ id: fixtureId(1), username: 'me', presence: 'online' })
+const tick = async () => { for (let i = 0; i < 20; i++) await Promise.resolve() }
+const offline = () => new ApiError(0, 'NETWORK', 'Network error')
+
+class Socket {
+  static latest: Socket | null = null
+  onopen: (() => void) | null = null
+  onclose: (() => void) | null = null
+  onmessage: ((event: { data: string }) => void) | null = null
+  send = vi.fn<(data: string) => void>()
+  close = vi.fn()
+  constructor(public url: string) { Socket.latest = this }
+}
+
+/** The state of the network: while down, every message POST fails like a dropped connection. */
+const net = { down: true, refuse: null as ApiError | null, posted: [] as { content: string; nonce: string }[] }
+
+function stored(content: string, nonce: string, id: string): Message {
+  return messageFixture({ id, channel_id: ch.id, user_id: me.id, content, nonce })
+}
+
+function setup() {
+  const chat = useChatStore()
+  useAuthStore().user = { ...me }
+  chat.activeChannel = { ...ch }
+  chat.uncategorized = [ch]
+  chat.members = [me]
+  return chat
+}
+
+beforeEach(() => {
+  localStorage.clear()
+  vi.useFakeTimers()
+  setActivePinia(createPinia())
+  net.down = true
+  net.refuse = null
+  net.posted = []
+  let n = 100
+  http.handle = (url, opts) => {
+    if (!url.endsWith('/messages') || opts?.method !== 'POST') return url === '/api/channels' ? { categories: [], uncategorized: [ch] } : []
+    if (net.down) throw offline()
+    if (net.refuse) throw net.refuse
+    const json = opts.json as { content: string; nonce: string }
+    net.posted.push({ content: json.content, nonce: json.nonce })
+    return stored(json.content, json.nonce, fixtureId(n++))
+  }
+  vi.mocked(api).mockReset().mockImplementation((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)) as never)
+  vi.stubGlobal('WebSocket', Socket)
+  vi.stubGlobal('Notification', undefined)
+  vi.spyOn(console, 'warn').mockImplementation(() => {})
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+  Socket.latest = null
+  vi.spyOn(window, 'addEventListener')
+  vi.spyOn(document, 'addEventListener')
+})
+afterEach(() => {
+  useChatStore().closeWebSocket()
+  vi.clearAllTimers()
+  vi.useRealTimers()
+  for (const [type, listener, options] of vi.mocked(window.addEventListener).mock.calls) window.removeEventListener(type, listener, options)
+  for (const [type, listener, options] of vi.mocked(document.addEventListener).mock.calls) document.removeEventListener(type, listener, options)
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
+/** Lets time pass with the socket answering its pings, so only the outbox is under test. */
+async function stayConnected(chat: ReturnType<typeof setup>, ms: number) {
+  for (let spent = 0; spent < ms; spent += 4000) {
+    await vi.advanceTimersByTimeAsync(4000)
+    chat.handleWSEvent({ type: 'pong', payload: { t: Date.now() } })
+  }
+}
+
+async function connectAgain(chat: ReturnType<typeof setup>) {
+  net.down = false
+  chat.initWebSocket()
+  required(Socket.latest).onopen?.()
+  await tick()
+}
+
+describe('writing while the connection is down', () => {
+  it('keeps the message as pending instead of failing, so the composer can clear', async () => {
+    const chat = setup()
+    const sent = await chat.sendMessage('hello', null, null, [], ch.id)
+    expect(sent).toBeTruthy()
+    expect(chat.outbox.map(p => [p.content, p.status])).toEqual([['hello', 'waiting']])
+    expect(chat.messages).toEqual([])
+  })
+
+  it('still reports a refusal by the server and keeps nothing', async () => {
+    const chat = setup()
+    net.down = false
+    net.refuse = new ApiError(403, 'FORBIDDEN', 'missing permission')
+    await expect(chat.sendMessage('nope', null, null, [], ch.id)).rejects.toMatchObject({ status: 403 })
+    expect(chat.outbox).toEqual([])
+  })
+
+  it('does not keep a message with attachments: it fails as before', async () => {
+    const chat = setup()
+    await expect(chat.sendMessage('with file', null, null, [fixtureId(40)], ch.id)).rejects.toMatchObject({ code: 'NETWORK' })
+    expect(chat.outbox).toEqual([])
+  })
+
+  it('sends what waited once the connection returns, in the order it was written and only once', async () => {
+    const chat = setup()
+    await chat.sendMessage('first', null, null, [], ch.id)
+    await chat.sendMessage('second', null, null, [], ch.id)
+    await chat.sendMessage('third', null, null, [], ch.id)
+    expect(chat.outbox).toHaveLength(3)
+    await connectAgain(chat)
+    expect(net.posted.map(p => p.content)).toEqual(['first', 'second', 'third'])
+    expect(new Set(net.posted.map(p => p.nonce)).size).toBe(3)
+    expect(chat.outbox).toEqual([])
+    expect(chat.messages.map(m => m.content)).toEqual(['first', 'second', 'third'])
+    // Nothing is sent again later.
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(net.posted).toHaveLength(3)
+  })
+
+  it('tries again by itself while the socket stays up, keeping the order', async () => {
+    const chat = setup()
+    await chat.sendMessage('a', null, null, [], ch.id)
+    await chat.sendMessage('b', null, null, [], ch.id)
+    await vi.advanceTimersByTimeAsync(6000)
+    expect(net.posted).toEqual([])
+    net.down = false
+    await vi.advanceTimersByTimeAsync(40_000)
+    expect(net.posted.map(p => p.content)).toEqual(['a', 'b'])
+    expect(chat.outbox).toEqual([])
+  })
+
+  it('queues a new message behind pending ones even when the network is back, so the order holds', async () => {
+    const chat = setup()
+    await chat.sendMessage('early', null, null, [], ch.id)
+    net.down = false
+    const sent = await chat.sendMessage('late', null, null, [], ch.id)
+    expect(sent).toBeTruthy()
+    await tick()
+    expect(net.posted.map(p => p.content)).toEqual(['early', 'late'])
+  })
+
+  it('replaces the pending message in place when the server announces it with its nonce, and never posts it again', async () => {
+    const chat = setup()
+    await chat.sendMessage('echoed', null, null, [], ch.id)
+    const nonce = required(chat.outbox[0]).nonce
+    chat.handleWSEvent({ type: 'message_create', payload: stored('echoed', nonce, fixtureId(60)) })
+    expect(chat.outbox).toEqual([])
+    expect(chat.messages.map(m => m.id)).toEqual([fixtureId(60)])
+    net.down = false
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(net.posted).toEqual([])
+    expect(chat.messages).toHaveLength(1)
+  })
+
+  it('lets the member discard a pending message before it is sent', async () => {
+    const chat = setup()
+    await chat.sendMessage('oops', null, null, [], ch.id)
+    await chat.sendMessage('keep', null, null, [], ch.id)
+    chat.cancelPending(required(chat.outbox[0]).nonce)
+    await connectAgain(chat)
+    expect(net.posted.map(p => p.content)).toEqual(['keep'])
+  })
+
+  it('lets the member change the text of a pending message no request has left for, and an emptied text discards it', async () => {
+    const chat = setup()
+    await chat.sendMessage('first try', null, null, [], ch.id)
+    await chat.sendMessage('typo', null, null, [], ch.id)
+    await chat.sendMessage('remove me', null, null, [], ch.id)
+    chat.editPending(required(chat.outbox[1]).nonce, '  fixed  ')
+    chat.editPending(required(chat.outbox[2]).nonce, '   ')
+    expect(chat.outbox.map(p => p.content)).toEqual(['first try', 'fixed'])
+    await connectAgain(chat)
+    expect(net.posted.map(p => p.content)).toEqual(['first try', 'fixed'])
+  })
+
+  it('does not let the member change a message whose first try may have arrived, as the retry would return the old text', async () => {
+    const chat = setup()
+    await chat.sendMessage('sent into the void', null, null, [], ch.id)
+    const nonce = required(chat.outbox[0]).nonce
+    chat.editPending(nonce, 'different text')
+    expect(chat.outbox.map(p => p.content)).toEqual(['sent into the void'])
+    // A refusal says it was not stored: then the text may change again.
+    net.down = false
+    net.refuse = new ApiError(403, 'FORBIDDEN', 'missing permission')
+    await connectAgain(chat)
+    expect(chat.outbox.map(p => p.status)).toEqual(['failed'])
+    chat.editPending(nonce, 'different text')
+    expect(chat.outbox.map(p => p.content)).toEqual(['different text'])
+  })
+
+  it('marks a message the server refuses as failed, offers a retry, and goes on with the next', async () => {
+    const chat = setup()
+    await chat.sendMessage('refused', null, null, [], ch.id)
+    await chat.sendMessage('fine', null, null, [], ch.id)
+    net.down = false
+    const refusal = new ApiError(403, 'FORBIDDEN', 'missing permission')
+    const accept = http.handle
+    http.handle = (url, opts) => (opts?.json as { content?: string } | undefined)?.content === 'refused' ? (() => { throw refusal })() : accept(url, opts)
+    chat.initWebSocket()
+    required(Socket.latest).onopen?.()
+    await tick()
+    expect(chat.outbox.map(p => [p.content, p.status])).toEqual([['refused', 'failed']])
+    expect(net.posted.map(p => p.content)).toEqual(['fine'])
+    http.handle = accept
+    chat.retryPending(required(chat.outbox[0]).nonce)
+    await tick()
+    expect(chat.outbox).toEqual([])
+    expect(net.posted.map(p => p.content)).toEqual(['fine', 'refused'])
+  })
+
+  it('keeps a thread reply in its thread and sends it with its parent', async () => {
+    const chat = setup()
+    const root = fixtureId(70)
+    await chat.sendThreadReply(root, ch.id, 'in thread')
+    expect(chat.outbox.map(p => [p.parentId, p.channelId])).toEqual([[root, ch.id]])
+    await connectAgain(chat)
+    const last = vi.mocked(api).mock.calls.filter(([, o]) => o?.method === 'POST').at(-1)
+    expect(last?.[1]?.json).toMatchObject({ content: 'in thread', parent_id: root })
+  })
+
+  it('drops pending messages of the previous community on a switch and sends nothing', async () => {
+    const chat = setup()
+    await chat.sendMessage('left behind', null, null, [], ch.id)
+    chat.resetCommunityState()
+    expect(chat.outbox).toEqual([])
+    net.down = false
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(net.posted).toEqual([])
+  })
+})
+
+describe('when the server is the problem, not the connection', () => {
+  it('shows a message as not sent after five failed tries instead of blocking the conversation for ever', async () => {
+    const chat = setup()
+    await chat.sendMessage('poison', null, null, [], ch.id)
+    await chat.sendMessage('behind it', null, null, [], ch.id)
+    const accept = http.handle
+    http.handle = (url, opts) => (opts?.json as { content?: string } | undefined)?.content === 'poison' ? (() => { throw new ApiError(500, 'INTERNAL_ERROR', 'boom') })() : accept(url, opts)
+    await connectAgain(chat)
+    // While the server only failed, the message waits and keeps its place in line.
+    expect(chat.outbox.map(p => [p.status, p.cause])).toEqual([['waiting', 'server'], ['waiting', 'offline']])
+    expect(net.posted).toEqual([])
+    await stayConnected(chat, 120_000)
+    expect(chat.outbox.map(p => [p.content, p.status])).toEqual([['poison', 'failed']])
+    expect(net.posted.map(p => p.content)).toEqual(['behind it'])
+  })
+
+  it('stops after five tries when the answer cannot be read at all', async () => {
+    const chat = setup()
+    await chat.sendMessage('garbled', null, null, [], ch.id)
+    net.down = false
+    net.refuse = new Error('bad json') as unknown as ApiError
+    await connectAgain(chat)
+    await stayConnected(chat, 120_000)
+    expect(chat.outbox.map(p => p.status)).toEqual(['failed'])
+    expect(vi.mocked(api).mock.calls.filter(([, o]) => o?.method === 'POST')).toHaveLength(5 + 1)
+  })
+
+  it('waits the time a slow-mode refusal names, and keeps the order', async () => {
+    const chat = setup()
+    await chat.sendMessage('one', null, null, [], ch.id)
+    await chat.sendMessage('two', null, null, [], ch.id)
+    net.down = false
+    net.refuse = new ApiError(429, 'RATE_LIMITED', 'slow mode: wait 20 s before posting again', 20, true)
+    await connectAgain(chat)
+    net.refuse = null
+    const calls = () => vi.mocked(api).mock.calls.filter(([, o]) => o?.method === 'POST').length
+    const before = calls()
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(calls()).toBe(before)
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(net.posted.map(p => p.content)).toEqual(['one', 'two'])
+    expect(chat.outbox).toEqual([])
+  })
+
+  it('drops a message quietly when the server says it was deleted meanwhile', async () => {
+    const chat = setup()
+    await chat.sendMessage('purged', null, null, [], ch.id)
+    net.down = false
+    net.refuse = new ApiError(410, 'MESSAGE_DELETED', 'this message was deleted and is not sent again')
+    await connectAgain(chat)
+    expect(chat.outbox).toEqual([])
+    expect(chat.messages).toEqual([])
+  })
+
+  it('treats a request that hangs as a lost connection and tries again', async () => {
+    const chat = setup()
+    await chat.sendMessage('slow line', null, null, [], ch.id)
+    const respond = http.handle
+    let hung = true
+    vi.mocked(api).mockImplementation((url: string, options?: ApiOptions) => hung && options?.method === 'POST'
+      ? new Promise((_, reject) => options.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))))
+      : Promise.resolve(respond(url, options)) as never)
+    net.down = false
+    chat.initWebSocket()
+    required(Socket.latest).onopen?.()
+    await vi.advanceTimersByTimeAsync(16_000)
+    expect(chat.outbox.map(p => [p.status, p.cause])).toEqual([['waiting', 'offline']])
+    hung = false
+    await vi.advanceTimersByTimeAsync(40_000)
+    expect(net.posted.map(p => p.content)).toEqual(['slow line'])
+    expect(chat.outbox).toEqual([])
+  })
+})
+
+describe('when the server announces the message before the request fails', () => {
+  it('does not queue a second copy of a message that is already there', async () => {
+    const chat = setup()
+    const nonces: string[] = []
+    http.handle = (url, opts) => {
+      if (opts?.method !== 'POST') return []
+      const nonce = (opts.json as { nonce: string }).nonce
+      nonces.push(nonce)
+      // The event beats the failing answer.
+      chat.handleWSEvent({ type: 'message_create', payload: stored('raced', nonce, fixtureId(61)) })
+      throw offline()
+    }
+    const sent = await chat.sendMessage('raced', null, null, [], ch.id)
+    expect(sent).toBeTruthy()
+    expect(chat.outbox).toEqual([])
+    expect(chat.messages.map(m => m.id)).toEqual([fixtureId(61)])
+  })
+})
+
+describe('after the page was closed or the session ended', () => {
+  const keep = () => {
+    const raw = { ...localStorage }
+    return Object.keys(raw).filter(k => k.startsWith('mnema.outbox.'))
+  }
+
+  it('sends what was written offline once the member is back, after a reload', async () => {
+    const chat = setup()
+    await chat.sendMessage('written on the train', null, null, [], ch.id)
+    expect(keep()).toHaveLength(1)
+    // A reload: a new store, the same browser storage.
+    setActivePinia(createPinia())
+    const again = setup()
+    expect(again.outbox).toEqual([])
+    await connectAgain(again)
+    expect(net.posted.map(p => p.content)).toEqual(['written on the train'])
+    expect(again.outbox).toEqual([])
+    expect(keep()).toEqual([])
+  })
+
+  it('keeps it through a community switch or an expired session and sends it for the same account later', async () => {
+    const chat = setup()
+    await chat.sendMessage('still mine', null, null, [], ch.id)
+    chat.resetCommunityState()
+    expect(chat.outbox).toEqual([])
+    expect(keep()).toHaveLength(1)
+    await connectAgain(chat)
+    expect(net.posted.map(p => p.content)).toEqual(['still mine'])
+  })
+
+  it('never hands it to another account', async () => {
+    const chat = setup()
+    await chat.sendMessage('private', null, null, [], ch.id)
+    setActivePinia(createPinia())
+    useAuthStore().user = { ...me, id: fixtureId(9) }
+    const other = useChatStore()
+    other.activeChannel = { ...ch }
+    await connectAgain(other)
+    expect(net.posted).toEqual([])
+    expect(other.outbox).toEqual([])
+  })
+
+  it('removes it from this browser when the member signs out', async () => {
+    const chat = setup()
+    await chat.sendMessage('shared computer', null, null, [], ch.id)
+    expect(keep()).toHaveLength(1)
+    await useAuthStore().logout()
+    expect(keep()).toEqual([])
+  })
+})
