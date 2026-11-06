@@ -282,7 +282,7 @@ describe('AdminDashboard reports tab', () => {
     http.handle = url => (url === '/api/admin/reports/open-count' ? { open: 2 } : url.startsWith('/api/admin/reports') ? { has_more: false, reports: [] } : [])
     const w = mount(AdminDashboard, { global, attachTo: document.body, shallow: false })
     await flushPromises()
-    expect(document.querySelector('[data-badge="reports"]')?.textContent).toBe('2')
+    expect(document.querySelector('[data-testid="tab-reports"] [data-testid="reports-badge"]')?.textContent).toContain('2')
     w.unmount()
   })
 

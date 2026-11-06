@@ -111,12 +111,10 @@ function backToList() {
   void nextTick(() => document.querySelector<HTMLElement>('[data-testid=admin-tabs] [aria-current=page]')?.focus())
 }
 
-// The open-report count beside "Reports" is the one the badges outside the
-// console show too: it follows the server's reports_open event, and a tab that
-// closed a report asks once more, in case the event is slow.
+// The open-report count beside "Reports" (ReportsBadge) follows the server's
+// reports_open event; a tab that closed a report asks once more, in case the
+// event is slow.
 const reportsOpen = useReportsOpenStore()
-const badges = computed<Partial<Record<AdminTab, string>>>(() =>
-  reportsOpen.visible > 0 ? { reports: String(reportsOpen.visible) } : {})
 
 // Focus starts on the dialog itself: no focus frame on a nav item or a button that was not asked for.
 const focusDialog = (root: HTMLElement) => root
@@ -158,14 +156,14 @@ watch(activeTab, (tab) => {
         <!-- Desktop sidebar -->
         <aside v-if="!isCompact" class="flex w-56 shrink-0 flex-col border-r border-mnema-hairline bg-mnema-canvas/40">
           <div class="min-h-0 flex-1 overflow-y-auto">
-            <AdminNav :tabs="TABS" :active="activeTab" :badges="badges" @select="select" />
+            <AdminNav :tabs="TABS" :active="activeTab" @select="select" />
           </div>
           <p class="truncate border-t border-mnema-hairline px-4 py-3 font-mono text-xs text-mnema-tertiary" data-testid="admin-signed-in">{{ signedInAs }}</p>
         </aside>
 
         <!-- Phone: the list of sections, or the chosen one -->
         <div v-if="onList" class="min-h-0 flex-1 overflow-y-auto">
-          <AdminNav :tabs="TABS" :active="activeTab" :badges="badges" list @select="select" />
+          <AdminNav :tabs="TABS" :active="activeTab" list @select="select" />
           <p class="px-5 pb-6 font-mono text-xs text-mnema-tertiary">{{ signedInAs }}</p>
         </div>
         <!-- The padding is the inner box's, so a sticky action bar sits flush with the bottom edge. -->
