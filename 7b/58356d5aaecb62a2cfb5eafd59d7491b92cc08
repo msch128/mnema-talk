@@ -1,0 +1,31 @@
+doc/api-stability.md
+  s_06fcde5dbef956::t_11d97f6202a171 190-202
+web/scripts/compat-baseline.ts
+  s_06fcde5dbef956::t_19330ef0a0a4cf 12,14,39,69
+web/src/compat/allowlist.ts
+  s_06fcde5dbef956::t_45ee00f8dd8576 34-37
+web/src/compat/contract.ts
+  s_06fcde5dbef956::t_b22a3c0e42ac90 4,39-40
+web/src/compat/requests.compat.test.ts
+  s_06fcde5dbef956::t_990c04cb70f6d3 1-240
+web/src/compat/types.ts
+  s_06fcde5dbef956::t_dac65ca75a1742 1-38
+web/src/compat/wire.fixture.ts
+  s_06fcde5dbef956::t_932b022c447a7f 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7b58356d5aaecb62a2cfb5eafd59d7491b92cc08",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
