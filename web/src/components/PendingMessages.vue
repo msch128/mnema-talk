@@ -2,7 +2,7 @@
 // Text messages the member wrote while the connection was down. They show at
 // the end of the conversation in muted text until they are sent; a refusal is
 // the only thing that turns red. Each can be edited or discarded meanwhile.
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { Clock, Loader2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { t } from '../i18n'
@@ -22,8 +22,8 @@ const summary = computed(() => {
   const failed = items.value.filter(p => p.status === 'failed').length
   const waiting = items.value.length - failed
   const parts: string[] = []
-  if (waiting) parts.push(t(waiting === 1 ? 'outbox.summaryWaiting' : 'outbox.summaryWaitingMany', { count: waiting }))
-  if (failed) parts.push(t(failed === 1 ? 'outbox.summaryFailed' : 'outbox.summaryFailedMany', { count: failed }))
+  if (waiting) parts.push(t('outbox.summaryWaiting', { count: waiting }))
+  if (failed) parts.push(t('outbox.summaryFailed', { count: failed }))
   return parts.join('. ')
 })
 
@@ -41,19 +41,30 @@ function waitingText(item: PendingMessage) {
 /** Too old for the server to recognise a repeat: trying again posts the text anew, which may be a second copy. */
 const mayDuplicate = (item: PendingMessage) => unsafeToRepeat(item, Date.now())
 
+// While the editor is open the queue holds this message back, so the old text is not sent meanwhile.
 function startEdit(nonce: string, content: string) {
+  stopEdit()
+  chatStore.beginEditPending(nonce)
   editing.value = nonce
   draft.value = content
+}
+
+function stopEdit() {
+  if (editing.value) chatStore.endEditPending(editing.value)
+  editing.value = null
 }
 
 function saveEdit(nonce: string) {
   chatStore.editPending(nonce, draft.value)
   editing.value = null
 }
+
+onBeforeUnmount(stopEdit)
 </script>
 
 <template>
-  <p v-if="items.length" class="sr-only" role="status" data-testid="pending-live">{{ summary }}</p>
+  <!-- Always mounted: a live region that appears together with its text is often not announced. -->
+  <p class="sr-only" role="status" data-testid="pending-live">{{ summary }}</p>
   <div
     v-for="item in items"
     :key="item.nonce"
@@ -67,7 +78,7 @@ function saveEdit(nonce: string) {
       :compact="compact"
       :label="$t('outbox.editLabel')"
       @save="saveEdit(item.nonce)"
-      @cancel="editing = null"
+      @cancel="stopEdit"
     />
     <template v-else>
       <p class="text-message whitespace-pre-wrap break-words text-mnema-muted">{{ item.content }}</p>

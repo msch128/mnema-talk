@@ -196,6 +196,33 @@ describe('writing while the connection is down', () => {
     expect(net.posted.map(p => p.content)).toEqual(['first try', 'fixed'])
   })
 
+  it('holds the queue while the member edits a pending message, then sends the saved text', async () => {
+    const chat = setup()
+    await chat.sendMessage('first', null, null, [], ch.id)
+    await chat.sendMessage('typo', null, null, [], ch.id)
+    const nonce = required(chat.outbox[1]).nonce
+    chat.beginEditPending(nonce)
+    await connectAgain(chat)
+    await stayConnected(chat, 40_000)
+    expect(net.posted.map(p => p.content)).toEqual(['first'])
+    chat.editPending(nonce, 'fixed')
+    await tick()
+    expect(net.posted.map(p => p.content)).toEqual(['first', 'fixed'])
+  })
+
+  it('sends the old text after the member cancels the edit', async () => {
+    const chat = setup()
+    await chat.sendMessage('as written', null, null, [], ch.id)
+    const nonce = required(chat.outbox[0]).nonce
+    chat.beginEditPending(nonce)
+    await connectAgain(chat)
+    await stayConnected(chat, 40_000)
+    expect(net.posted).toEqual([])
+    chat.endEditPending(nonce)
+    await tick()
+    expect(net.posted.map(p => p.content)).toEqual(['as written'])
+  })
+
   it('does not let the member change a message whose first try may have arrived, as the retry would return the old text', async () => {
     const chat = setup()
     await chat.sendMessage('sent into the void', null, null, [], ch.id)
@@ -249,6 +276,22 @@ describe('writing while the connection is down', () => {
     net.down = false
     await vi.advanceTimersByTimeAsync(60_000)
     expect(net.posted).toEqual([])
+  })
+})
+
+describe('a first send on a stalled network', () => {
+  it('ends after the send timeout and waits in the outbox instead of locking the composer', async () => {
+    const chat = setup()
+    vi.mocked(api).mockImplementation((_url: string, options?: ApiOptions) =>
+      new Promise((_, reject) => options?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))))
+    let settled = false
+    const sending = chat.sendMessage('stuck', null, null, [], ch.id).then(r => { settled = true; return r })
+    await vi.advanceTimersByTimeAsync(14_000)
+    expect(settled).toBe(false)
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(settled).toBe(true)
+    expect(await sending).toBeTruthy()
+    expect(chat.outbox.map(p => [p.content, p.status, p.possiblyDelivered])).toEqual([['stuck', 'waiting', true]])
   })
 })
 

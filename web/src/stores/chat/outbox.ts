@@ -146,8 +146,26 @@ export function cancelPending(cx: Cx, nonce: string) {
   settlePending(cx, nonce)
 }
 
-/** Changes the text of a message that no request with this text has left for. An emptied text cancels it. */
+/** The editor is open on this message: its conversation holds back, so the queue cannot send the old text meanwhile. */
+export function beginEditPending(cx: Cx, nonce: string) {
+  cx.cs.outboxEditing.add(nonce)
+}
+
+/** The editor closed without saving: the held conversation goes on. */
+export function endEditPending(cx: Cx, nonce: string) {
+  if (cx.cs.outboxEditing.delete(nonce)) void flushOutbox(cx)
+}
+
+/** Changes the text of a message that no request with this text has left for. An emptied text cancels it. Saving also ends the hold begun by beginEditPending. */
 export function editPending(cx: Cx, nonce: string, content: string) {
+  try {
+    saveEdit(cx, nonce, content)
+  } finally {
+    endEditPending(cx, nonce)
+  }
+}
+
+function saveEdit(cx: Cx, nonce: string, content: string) {
   const text = content.trim()
   const entry = cx.cs.outbox.value.find(p => p.nonce === nonce)
   // After a try that may have arrived, the server would return the old text for this nonce.
@@ -191,7 +209,7 @@ async function flushConversation(cx: Cx, channelId: string) {
     for (;;) {
       const next = cs.outbox.value.find(p => p.channelId === channelId && p.status !== 'failed')
       // Another tab's request is out for the first one: the order holds, so this tab waits. The server asked to wait (slow mode): everything behind it waits too.
-      if (next?.status !== 'waiting' || next.notBefore > Date.now() || (await deliver(cx, next)) === 'stop') return
+      if (next?.status !== 'waiting' || cs.outboxEditing.has(next.nonce) || next.notBefore > Date.now() || (await deliver(cx, next)) === 'stop') return
     }
   } finally {
     cs.outboxBusy.delete(channelId)
@@ -327,4 +345,5 @@ export function resetOutbox(cx: Cx) {
   cx.cs.outboxDelay = RETRY_START_MS
   cx.cs.outbox.value = []
   cx.cs.outboxBusy.clear()
+  cx.cs.outboxEditing.clear()
 }
