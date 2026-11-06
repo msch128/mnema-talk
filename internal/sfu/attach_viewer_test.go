@@ -126,6 +126,42 @@ func TestAChoiceMadeWhileTheTrackIsAttachedIsKept(t *testing.T) {
 	}
 }
 
+// A choice made just after the attach round read the viewer's choice, but
+// before it applied it, is not reverted to the older one.
+func TestANewerChoiceIsNotRevertedByTheAttachRound(t *testing.T) {
+	rig := newAttachRig(t)
+	peer, pub := rig.viewer, rig.info.SenderID
+	rig.room.mu.Lock()
+	if rig.room.groups == nil {
+		rig.room.groups = map[uuid.UUID]*layerGroup{}
+	}
+	rig.room.groups[pub] = rig.group
+	rig.room.mu.Unlock()
+	if err := rig.room.SetScreenQuality(peer.ID, pub, 1); err != nil {
+		t.Fatal(err)
+	}
+	once := false
+	peer.attachStep = func(step string) {
+		if step != "viewer-choice-read" || once {
+			return
+		}
+		once = true
+		if err := rig.room.SetScreenQuality(peer.ID, pub, 2); err != nil {
+			t.Error(err)
+		}
+	}
+	if !rig.room.addSender(peer, "screen", rig.info) {
+		t.Fatal("track not added")
+	}
+	vt := rig.group.viewerFor(peer.ID)
+	vt.mu.Lock()
+	pref := vt.pref
+	vt.mu.Unlock()
+	if pref != 2 {
+		t.Fatalf("viewer has quality %d, want the newer choice 2", pref)
+	}
+}
+
 // A rejected answer must not use up the candidates it carried.
 func TestARefusedAnswerLeavesItsCandidatesUnused(t *testing.T) {
 	rig := newAttachRig(t)

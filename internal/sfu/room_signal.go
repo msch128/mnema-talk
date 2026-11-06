@@ -244,11 +244,18 @@ func (r *Room) attachViewer(peer *Peer, trackID string, info *TrackInfo, vt *vie
 		return false
 	}
 	// A change of the viewer's choice made before vt was registered found no
-	// viewer to apply to.
-	r.mu.RLock()
-	pref, fit := r.viewerChoiceLocked(peer.ID, info)
-	r.mu.RUnlock()
-	vt.syncChoice(pref, fit)
+	// viewer to apply to. A change racing with this read applies itself to vt
+	// after the read, possibly before the sync below: the choice is read again
+	// after every sync, so a stale one never stays.
+	for {
+		r.mu.RLock()
+		pref, fit := r.viewerChoiceLocked(peer.ID, info)
+		r.mu.RUnlock()
+		peer.step("viewer-choice-read")
+		if !vt.syncChoice(pref, fit) {
+			break
+		}
+	}
 	peer.step("viewer-added")
 	if !peer.putViewerTrack(trackID, vt) {
 		// The peer was released while this round ran.
