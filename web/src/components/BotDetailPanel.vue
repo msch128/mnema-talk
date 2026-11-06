@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// One bot: name, on/off, allowed intents and roles are one draft with one Save
-// (doc/settings-ux.md); avatar, delete, the access preview, tokens and commands
-// are actions that run when used.
+// One bot: avatar, name, on/off, allowed intents and roles are one draft with one
+// Save (doc/settings-ux.md); delete, tokens and commands are actions in their own
+// sections after it, and the access preview only reads.
 import { ref } from 'vue'
 import { ImagePlus, Trash2 } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
@@ -12,7 +12,8 @@ import { BOT_INTENTS, botInitial, hasIntent, toggleIntent } from '../lib/bots'
 import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
+import type { ImageChange } from '../composables/useStagedImage'
+import { normaliseImage, useStagedImage } from '../composables/useStagedImage'
 import BotRolesPanel from './BotRolesPanel.vue'
 import UnsavedChangesBar from './UnsavedChangesBar.vue'
 import BotAccessPanel from './BotAccessPanel.vue'
@@ -33,22 +34,28 @@ function fail(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
 }
 
-interface BotForm { name: string; enabled: boolean; intents: number; roles: string[] }
+interface BotForm { avatar: ImageChange; name: string; enabled: boolean; intents: number; roles: string[] }
 
-// Name, on/off, intents and roles are one form with one Save; avatar, tokens and delete are actions.
 const form = useSettingsDraft<BotForm>({
-  source: () => ({ name: props.bot.name, enabled: !props.bot.disabled, intents: props.bot.allowed_intents, roles: [...props.bot.role_ids] }),
-  normalisers: { name: normalise.text, enabled: normalise.flag, roles: normalise.set },
+  source: () => ({ avatar: null, name: props.bot.name, enabled: !props.bot.disabled, intents: props.bot.allowed_intents, roles: [...props.bot.role_ids] }),
+  normalisers: { avatar: normaliseImage, name: normalise.text, enabled: normalise.flag, roles: normalise.set },
   validate: draft => (normalise.text(draft.name) ? {} : { name: t('bots.nameRequired') }),
-  // Defined order: the bot itself (name, switch, intents) in one call, then its roles.
+  // Defined order: the avatar, the bot itself (name, switch, intents) in one call, then its roles.
   save: async ({ changed, draft, commit }) => {
+    if (draft.avatar instanceof File) {
+      const body = new FormData()
+      body.append('avatar', draft.avatar)
+      emit('updated', await api(`${base}/avatar`, { method: 'POST', form: body, decode: decodeBotBot }))
+      commit(['avatar'], { avatar: null })
+      draft.avatar = null
+    }
     const json: { name?: string; allowed_intents?: number; disabled?: boolean } = {}
     if (changed.includes('name')) json.name = normalise.text(draft.name)
     if (changed.includes('enabled')) json.disabled = !draft.enabled
     if (changed.includes('intents')) json.allowed_intents = draft.intents
     if (Object.keys(json).length > 0) {
       emit('updated', await api(base, { method: 'PATCH', json, decode: decodeBotBot }))
-      commit(changed.filter(k => k !== 'roles'))
+      commit(changed.filter(k => k !== 'roles' && k !== 'avatar'))
     }
     if (changed.includes('roles')) {
       emit('updated', await api(`${base}/roles`, { method: 'PUT', json: { role_ids: draft.roles }, decode: decodeBotBot }))
@@ -59,25 +66,13 @@ const form = useSettingsDraft<BotForm>({
   saved: () => { toasts.success(t('bots.saved')) }
 })
 const { draft, errors } = form
+const avatar = useStagedImage({ get: () => draft.avatar, set: value => { draft.avatar = value }, savedUrl: () => props.bot.avatar_url ?? '' })
 
 function setIntent(bit: number, on: boolean) {
   draft.intents = toggleIntent(draft.intents, bit, on)
 }
 
 defineExpose({ guard: form.guard })
-
-async function setAvatar(event: Event) {
-  const { file, tooBig } = pickImage(event.target as HTMLInputElement)
-  if (tooBig) toasts.error(t('profile.avatarTooBig', { size: IMAGE_UPLOAD_MAX_MB }))
-  if (!file) return
-  const form = new FormData()
-  form.append('avatar', file)
-  try {
-    emit('updated', await api(`${base}/avatar`, { method: 'POST', form, decode: decodeBotBot }))
-  } catch (e) {
-    fail(e)
-  }
-}
 
 async function remove() {
   const ok = await confirm({ title: t('bots.deleteTitle', { name: props.bot.name }), body: t('bots.deleteBody'), confirmLabel: t('common.delete'), danger: true })
@@ -95,7 +90,7 @@ async function remove() {
 <template>
   <div class="min-w-0 stack-6" :aria-label="$t('bots.detail', { name: bot.name })" role="group" data-testid="bot-detail" @keydown="form.onKeydown">
     <div class="flex flex-wrap items-center gap-3">
-      <img v-if="bot.avatar_url" :src="bot.avatar_url" alt="" class="h-12 w-12 shrink-0 rounded-full object-cover" />
+      <img v-if="avatar.previewUrl.value" :src="avatar.previewUrl.value" alt="" class="h-12 w-12 shrink-0 rounded-full object-cover" data-testid="bot-avatar-preview" />
       <span v-else class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-mnema-raised text-lg font-semibold text-mnema-muted" aria-hidden="true">{{ botInitial(bot.name) }}</span>
       <label class="min-w-0 flex-1 stack-1">
         <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('common.name') }}</span>
@@ -105,9 +100,10 @@ async function remove() {
       <label class="flex cursor-pointer items-center gap-1.5 rounded-md border border-mnema-border-strong px-3 py-1.5 text-sm text-mnema-text transition hover:bg-mnema-hover">
         <ImagePlus class="h-4 w-4" aria-hidden="true" />
         <span>{{ $t('bots.avatar') }}</span>
-        <input type="file" accept="image/*" class="sr-only" :aria-label="$t('bots.avatarFor', { name: bot.name })" data-testid="bot-avatar" @change="setAvatar" />
+        <input type="file" accept="image/*" class="sr-only" :aria-label="$t('bots.avatarFor', { name: bot.name })" data-testid="bot-avatar" @change="avatar.pick" />
       </label>
     </div>
+    <p v-if="draft.avatar" class="-mt-4 text-xs text-mnema-accent" data-testid="bot-avatar-pending">{{ $t('draft.imagePending') }}</p>
 
     <label class="flex items-center gap-2 text-sm text-mnema-text">
       <input v-model="draft.enabled" type="checkbox" data-testid="bot-enabled" />

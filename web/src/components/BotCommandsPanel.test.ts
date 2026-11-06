@@ -52,24 +52,31 @@ describe('BotCommandsPanel', () => {
     expect((await mountPanel([])).text()).toContain('has not registered any commands')
   })
 
-  it('switches a command off and on', async () => {
+  it('turns a command off and on with a button and confirms each', async () => {
     const w = await mountPanel()
+    const first = () => w.findAll('[data-testid="bot-command"]')[0]!
+    expect(w.find('input[type="checkbox"]').exists()).toBe(false)
+    expect(first().get('[data-action="toggle"]').text()).toBe('Turn off')
     apiMock.mockResolvedValueOnce(command(1, { disabled: true }))
-    await w.findAll('input[type="checkbox"]')[0]?.setValue(false)
+    await first().get('[data-action="toggle"]').trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`${base}/${fixtureId(41)}`, expect.objectContaining({ method: 'PATCH', json: { disabled: true } }))
-    expect(w.findAll('[data-testid="bot-command"]')[0]?.text()).toContain('Disabled')
+    expect(first().get('[data-testid="bot-command-state"]').text()).toBe('Disabled')
+    expect(first().get('[data-action="toggle"]').text()).toBe('Turn on')
+    apiMock.mockResolvedValueOnce(command(1))
+    await first().get('[data-action="toggle"]').trigger('click')
+    await flushPromises()
+    expect(apiMock).toHaveBeenLastCalledWith(`${base}/${fixtureId(41)}`, expect.objectContaining({ json: { disabled: false } }))
+    expect(toastTexts()).toEqual(['/cmd1 is off.', '/cmd1 is on.'])
   })
 
-  it('reloads and reports when switching fails', async () => {
+  it('reports a refused change and keeps the state', async () => {
     const w = await mountPanel()
     apiMock.mockRejectedValueOnce(new Error('patch failed'))
-    apiMock.mockResolvedValueOnce([command(1)])
-    await w.findAll('input[type="checkbox"]')[0]?.setValue(false)
+    await w.findAll('[data-action="toggle"]')[0]?.trigger('click')
     await flushPromises()
-    expect(toastTexts()).toContain('patch failed')
-    expect((w.findAll('input[type="checkbox"]')[0]!.element as HTMLInputElement).checked).toBe(true)
-    expect(w.findAll('[data-testid="bot-command"]')).toHaveLength(1)
+    expect(toastTexts()).toEqual(['patch failed'])
+    expect(w.findAll('[data-testid="bot-command-state"]')[0]?.text()).toBe('Enabled')
   })
 
   it('deletes after confirming', async () => {
@@ -84,6 +91,7 @@ describe('BotCommandsPanel', () => {
     await flushPromises()
     expect(apiMock).toHaveBeenCalledWith(`${base}/${fixtureId(41)}`, { method: 'DELETE' })
     expect(w.findAll('[data-testid="bot-command"]')).toHaveLength(1)
+    expect(toastTexts()).toEqual(['/cmd1 deleted.'])
   })
 
   it('reports delete and load failures', async () => {
