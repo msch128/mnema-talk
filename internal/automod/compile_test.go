@@ -283,3 +283,15 @@ func TestMentionsOverTheNameLimitDoNotCount(t *testing.T) {
 		t.Fatalf("distinctMentions = %d, want 1 (only the real name)", n)
 	}
 }
+
+func TestALinkGluedToInvisibleCharactersIsStillALink(t *testing.T) {
+	for _, msg := range []string{"x​https://evil.example", "x́https://evil.example", "x­https://evil.example", "x⁠https://evil.example", "x\ufeffhttps://evil.example", "xhttps://evil.example"} {
+		got := links(msg)
+		if len(got) != 1 || !got[0].ok || got[0].host != "evil.example" {
+			t.Errorf("links(%q) = %v, want the host evil.example", msg, got)
+		}
+		if !linksRule(LinksBlockAll).matchesLinks(msg) {
+			t.Errorf("block-all rule let %q through", msg)
+		}
+	}
+}
