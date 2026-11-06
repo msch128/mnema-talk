@@ -67,12 +67,18 @@ func scanRole(row pgx.Row) (Role, error) {
 const roleColumns = `id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb, bot_user_id, self_assignable, description`
 
 // CreateRole adds a role at the bottom of the hierarchy (just above
-// @everyone), so it is always below the actor's own highest role.
+// @everyone, and above the managed bot block while that sits at the bottom),
+// always strictly below the actor's own highest role. An actor without a role
+// of their own (ManageRoles only through @everyone) is refused, as they could
+// not manage what they created; the Owner is exempt.
 func (s *Service) CreateRole(ctx context.Context, actor Subject, in RoleInput) (Role, error) {
 	var created Role
 	err := s.mutate(ctx, actor, ManageRoles, func(tx pgx.Tx, snap *Snapshot) ([]uuid.UUID, error) {
 		if len(snap.roles) >= maxRoles {
 			return nil, httpx.ErrConflict("too many roles")
+		}
+		if !snap.IsOwner(actor) && snap.TopPosition(actor) < 1 {
+			return nil, errNoRoleOfOwn
 		}
 		name, color, perms, err := checkNewRole(snap, actor, in)
 		if err != nil {
@@ -153,6 +159,7 @@ func newRolePosition(snap *Snapshot, actor Subject) int {
 }
 
 var (
+	errNoRoleOfOwn  = httpx.ErrForbidden("you need a role of your own to create roles: a new role goes below your highest one")
 	errRoleNotFound = httpx.ErrNotFound("role not found")
 	errManagedName  = httpx.ErrInvalidInput("this role is managed: it cannot be renamed")
 	errManagedHeld  = httpx.ErrInvalidInput("this role is managed: only bots hold it")

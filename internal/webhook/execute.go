@@ -210,11 +210,7 @@ func (h *Handler) execute(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if ok, retry := h.perWebhook.Allow(rec.ID.String()); !ok {
-		writeDiscordRateLimit(w, retry)
-		return
-	}
-	if ok, retry := h.perChannel.Allow(rec.ChannelID.String()); !ok {
+	if ok, retry := h.admit(rec); !ok {
 		writeDiscordRateLimit(w, retry)
 		return
 	}
@@ -235,6 +231,21 @@ func (h *Handler) execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// admit charges one request against the webhook's and its channel's limits.
+// Only a request that passes both is charged to either: one the channel limit
+// refuses gives the webhook's hit back, and a refused one never uses up the
+// budget of the requests behind it.
+func (h *Handler) admit(rec *record) (bool, time.Duration) {
+	if ok, retry := h.perWebhook.TryAllow(rec.ID.String()); !ok {
+		return false, retry
+	}
+	if ok, retry := h.perChannel.TryAllow(rec.ChannelID.String()); !ok {
+		h.perWebhook.Refund(rec.ID.String())
+		return false, retry
+	}
+	return true, 0
 }
 
 // post validates and stores the message. It returns the stored message, or nil

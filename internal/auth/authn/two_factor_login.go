@@ -56,7 +56,8 @@ func (h *Handler) openChallenge(ctx context.Context, id uuid.UUID, tokenVersion 
 	return auth.TwoFactorChallenge{TwoFactorRequired: true, Challenge: plain, ExpiresIn: int(challengeTTL.Seconds())}, err
 }
 
-// claimChallenge counts one attempt on the challenge and returns whom it
+// claimChallenge counts one attempt on the challenge (the caller releases it
+// again when the lockout turns the request away) and returns whom it
 // belongs to. Unknown, expired and used-up challenges all yield ErrWrongCode.
 func (h *Handler) claimChallenge(ctx context.Context, plain string) (uuid.UUID, int, error) {
 	if !auth.WellFormedToken(plain) {
@@ -71,6 +72,12 @@ func (h *Handler) claimChallenge(ctx context.Context, plain string) (uuid.UUID, 
 		return uuid.Nil, 0, auth.ErrWrongCode
 	}
 	return id, tv, err
+}
+
+// releaseAttempt gives back the attempt claimChallenge counted for a request
+// the lockout turned away, so waiting out a lock does not use up the challenge.
+func (h *Handler) releaseAttempt(ctx context.Context, plain string) {
+	_, _ = h.Sessions.DB.Exec(ctx, `UPDATE login_challenges SET attempts = attempts - 1 WHERE token_hash = $1 AND attempts > 0`, auth.HashToken(plain))
 }
 
 func (h *Handler) closeChallenge(ctx context.Context, plain string) {
@@ -90,6 +97,7 @@ func (h *Handler) completeSecondFactor(ctx context.Context, client, challenge, c
 	limiter, key := h.factorLimiter(id, client, code)
 	defer h.lockFactor(id)()
 	if locked, retry := limiter.IsLockedOut(key); locked {
+		h.releaseAttempt(ctx, challenge) // turned away before it counts
 		return nil, 0, retry, nil
 	}
 	u, err := h.activeUserAtVersion(ctx, id, tv)

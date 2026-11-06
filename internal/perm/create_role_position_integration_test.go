@@ -82,3 +82,31 @@ func TestCreateRoleStaysBelowTheCreatorsTopRole(t *testing.T) {
 		t.Fatalf("new role at %d, not below X at %d", pos(y.ID), pos(x.ID))
 	}
 }
+
+// Hierarchy: roles are only created and managed strictly below one's own top
+// role. A member who holds ManageRoles only through @everyone has no role of
+// their own, so a role they created would sit above nothing they may manage:
+// the request is refused instead of making a role nobody but the Owner can
+// edit or delete.
+func TestCreateRoleRefusedWithoutARoleOfOwn(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	managers := perm.ManageRoles
+	if _, err := w.svc.UpdateRole(ctx, w.owner, w.everyone, perm.RoleInput{Permissions: &managers}); err != nil {
+		t.Fatal(err)
+	}
+	name := "Dead end"
+	_, err := w.svc.CreateRole(ctx, w.member, perm.RoleInput{Name: &name})
+	if got := apiCode(err); got != 403 {
+		t.Fatalf("create without a role of one's own: status %d (%v), want 403", got, err)
+	}
+	roles, err := w.svc.Roles(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range roles {
+		if r.Name == name {
+			t.Fatalf("role %q was created anyway at position %d", name, r.Position)
+		}
+	}
+}

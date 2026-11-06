@@ -226,7 +226,10 @@ func validateExistingUsername(username string) error {
 	return checkReservedUsername(username)
 }
 
-// A status line whose time has passed reads as empty before RunStatusExpiry has cleared it.
+// UserColumns are the users columns ScanUser reads. They include the private
+// chosen presence: payloads about anyone but the caller go through
+// User.Public. A status line whose time has passed reads as empty before
+// RunStatusExpiry has cleared it.
 var UserColumns = `id, username, display_name, bio, role, avatar_s3_key, ` + StatusSQLFor("") + `, presence, locale, created_at`
 
 // ScanUser reads one users row selected with UserColumns; extra are the
