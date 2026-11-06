@@ -1,0 +1,33 @@
+doc/operations.md
+  s_06fcde5dbef956::t_d3332b52a142e2 113
+internal/db/migrations/0096_upload_usage.sql
+  s_06fcde5dbef956::t_0fadff1ce69476 1-10
+internal/media/handler_upload.go
+  s_06fcde5dbef956::t_c10c462ac35b62 133,136-139
+internal/media/quota.go
+  s_06fcde5dbef956::t_12c07d5636096a 12-13,24-26,39-40,92-93,136-153
+internal/media/staging.go
+  s_06fcde5dbef956::t_63db184b11536d 107,110-113,157,171-175,178,187
+internal/media/webhookfiles.go
+  s_06fcde5dbef956::t_8e0f1b6224c395 31,34-37
+internal/server/attachments_integration_test.go
+  s_06fcde5dbef956::t_2709633f6c1ff5 186,223,255,260-262,269-270
+internal/server/upload_limit_integration_test.go
+  s_06fcde5dbef956::t_144ac24ab48dd7 6,176-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b4b1965dfe07ec7821f7a2c5537b5d612e98f135",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
