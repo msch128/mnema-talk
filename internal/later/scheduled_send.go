@@ -20,6 +20,14 @@ import (
 // sendTimeout bounds the sending of one scheduled message.
 const sendTimeout = 20 * time.Second
 
+const (
+	// maxSendAttempts is how many times a send may fail for a reason of our
+	// own before the message becomes a failed draft.
+	maxSendAttempts = 5
+	// retryBase is the pause after the first failure; it doubles each time.
+	retryBase = 30 * time.Second
+)
+
 // errSuperseded stops a send whose scheduled message was edited, moved or
 // deleted since it was read: the new state decides.
 var errSuperseded = errors.New("scheduled message changed")
@@ -32,18 +40,19 @@ type dueScheduled struct {
 	replyTo   *uuid.UUID
 	content   string
 	updatedAt time.Time
+	attempts  int
 }
 
 func (s *Service) loadDue(ctx context.Context) ([]dueScheduled, error) {
 	rows, err := s.DB.Query(ctx, `
-		SELECT id, user_id, channel_id, parent_id, reply_to_id, content, updated_at FROM scheduled_messages
-		WHERE state = 'pending' AND send_at <= clock_timestamp() ORDER BY send_at, id LIMIT $1`, batch)
+		SELECT id, user_id, channel_id, parent_id, reply_to_id, content, updated_at, attempts FROM scheduled_messages
+		WHERE state = 'pending' AND send_at <= clock_timestamp() AND (retry_at IS NULL OR retry_at <= clock_timestamp()) ORDER BY send_at, id LIMIT $1`, batch)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (dueScheduled, error) {
 		var d dueScheduled
-		return d, row.Scan(&d.id, &d.user, &d.channel, &d.parent, &d.replyTo, &d.content, &d.updatedAt)
+		return d, row.Scan(&d.id, &d.user, &d.channel, &d.parent, &d.replyTo, &d.content, &d.updatedAt, &d.attempts)
 	})
 }
 
@@ -71,7 +80,8 @@ func (s *Service) sendScheduled(ctx context.Context) error {
 // permission model, slow mode, timeouts, the direct message rules and blocks all
 // apply now, as for a message typed at this moment. A refusal turns the
 // message into a failed draft and tells the author; a failure of our own (the
-// database) leaves it waiting for the next round.
+// database) leaves it waiting for a later round, with growing pauses, and turns
+// it into a failed draft after maxSendAttempts tries.
 func (s *Service) sendOne(ctx context.Context, d dueScheduled) {
 	id, err := s.post(ctx, d)
 	switch {
@@ -84,11 +94,32 @@ func (s *Service) sendOne(ctx context.Context, d dueScheduled) {
 			s.fail(ctx, d, reasonFor(apiErr))
 			return
 		}
-		// ctx is the per-message context: a timeout of the send itself must show
-		// in the log, only a stopping service stays quiet.
-		if errors.Is(err, context.DeadlineExceeded) || ctx.Err() == nil {
-			slog.Warn("scheduled: send", "err", err, "id", d.id)
+		// ctx is the per-message context: a timeout of the send itself counts
+		// and shows in the log, only a stopping service stays quiet and
+		// leaves the message untouched.
+		if ctx.Err() != nil && !errors.Is(err, context.DeadlineExceeded) {
+			return
 		}
+		slog.Warn("scheduled: send", "err", err, "id", d.id, "attempt", d.attempts+1)
+		s.retryLater(d)
+	}
+}
+
+// retryLater books another try after a pause, or gives up on the message. It
+// runs on its own context: the send may have used up its own.
+func (s *Service) retryLater(d dueScheduled) {
+	ctx, cancel := context.WithTimeout(context.Background(), sendTimeout)
+	defer cancel()
+	if d.attempts+1 >= maxSendAttempts {
+		s.fail(ctx, d, ReasonRefused)
+		return
+	}
+	pause := retryBase << d.attempts
+	_, err := s.DB.Exec(ctx, `
+		UPDATE scheduled_messages SET attempts = attempts + 1, retry_at = clock_timestamp() + make_interval(secs => $3)
+		WHERE id = $1 AND state = 'pending' AND updated_at = $2`, d.id, d.updatedAt, pause.Seconds())
+	if err != nil {
+		slog.Warn("scheduled: book retry", "err", err, "id", d.id)
 	}
 }
 

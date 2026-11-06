@@ -169,6 +169,8 @@ func (s *Service) UpdateScheduled(ctx context.Context, user, id uuid.UUID, p Sch
 				send_at = COALESCE($4, send_at),
 				state = CASE WHEN $4::timestamptz IS NOT NULL THEN 'pending' ELSE state END,
 				failure_reason = CASE WHEN $4::timestamptz IS NOT NULL THEN '' ELSE failure_reason END,
+				attempts = CASE WHEN $4::timestamptz IS NOT NULL THEN 0 ELSE attempts END,
+				retry_at = CASE WHEN $4::timestamptz IS NOT NULL THEN NULL ELSE retry_at END,
 				updated_at = clock_timestamp()
 			WHERE id = $1 AND user_id = $2 RETURNING channel_id`, id, user, p.Content, p.SendAt).Scan(&channel)
 		if errors.Is(err, pgx.ErrNoRows) {

@@ -29,8 +29,9 @@ const (
 // clients current. A reply makes the root's author, the replier and the members
 // it mentions follow the thread (see followOnReply), so their sessions are told
 // with thread_follow_updated; the clients decide from that list which thread
-// replies notify them. Only members who really follow are told, and members who can no longer view the channel are
-// skipped, and the lookup runs off the publishing path.
+// replies notify them. Only members who really follow and can still view the
+// channel are told. The lookup runs off the publishing path, so a failed one
+// is logged and that reply's update is lost; the next list load shows the follow.
 func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher) func(channel uuid.UUID, eventType string, payload any) {
 	queue := make(chan core.Message, followSyncQueue)
 	for range followSyncWorkers {
@@ -108,5 +109,8 @@ func syncFollowers(parent context.Context, p *db.Pool, perms *perm.Service, pub 
 		pub.SendToUsers([]uuid.UUID{user}, events.ThreadFollowUpdated, map[string]any{
 			"thread_id": thread, "channel_id": msg.ChannelID, "following": true,
 		})
+	}
+	if err := rows.Err(); err != nil {
+		slog.Warn("thread follow sync", "err", err)
 	}
 }
