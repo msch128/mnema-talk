@@ -182,7 +182,7 @@ describe('ThreadSidebar replies', () => {
 
   it('sends with Enter, keeps Shift+Enter for new lines and ignores blank input', async () => {
     const chat = setup()
-    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(null)
+    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(msg('sent', 'me', { parent_id: 'root' }))
     await textarea().setValue('   ')
     key(textarea(), { key: 'Enter' })
     await flushPromises()
@@ -193,20 +193,20 @@ describe('ThreadSidebar replies', () => {
     expect(send).not.toHaveBeenCalled()
     expect(key(textarea(), { key: 'Enter' }).defaultPrevented).toBe(true)
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('hello thread', null, [])
+    expect(send).toHaveBeenCalledWith('root', 'ch1', 'hello thread', null, [])
     expect(textarea().element.value).toBe('')
   })
 
   it('sends as a reply to the chosen message, then clears the target', async () => {
     const chat = setup()
-    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(null)
+    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(msg('sent', 'me', { parent_id: 'root' }))
     key(w.find<HTMLElement>('[data-reply-id="r3"]'), { key: 'r' })
     await nextTick()
     expect(w.text()).toContain('Antwort an')
     await textarea().setValue('genau')
     key(textarea(), { key: 'Enter' })
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('genau', 'r3', [])
+    expect(send).toHaveBeenCalledWith('root', 'ch1', 'genau', 'r3', [])
     expect(w.text()).not.toContain('Antwort an')
   })
 
@@ -234,7 +234,7 @@ describe('ThreadSidebar replies', () => {
 
   it('sends the staged files with the reply and clears the reply target', async () => {
     const chat = setup()
-    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(null)
+    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(msg('sent', 'me', { parent_id: 'root' }))
     vi.mocked(stageAttachment).mockResolvedValue(staged('att1'))
     key(w.find<HTMLElement>('[data-reply-id="r1"]'), { key: 'r' })
     await nextTick()
@@ -242,9 +242,38 @@ describe('ThreadSidebar replies', () => {
     await flushPromises()
     key(replyComposer(), { key: 'Enter' })
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('', 'r1', ['att1'])
+    expect(send).toHaveBeenCalledWith('root', 'ch1', '', 'r1', ['att1'])
     expect(w.text()).not.toContain('Antwort an')
     expect(w.find('[data-testid="attachment-tray"]').exists()).toBe(false)
+  })
+
+  it('sends the reply to the thread it was written in when another thread is opened during the upload', async () => {
+    const chat = setup()
+    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(msg('sent', 'me', { parent_id: 'root' }))
+    let finish!: (file: ReturnType<typeof staged>) => void
+    vi.mocked(stageAttachment).mockImplementation(() => new Promise(resolve => { finish = resolve }))
+    pickFiles([new File(['x'], 'a.png', { type: 'image/png' })])
+    await flushPromises()
+    key(replyComposer(), { key: 'Enter' })
+    await flushPromises()
+    chat.activeThread = msg('other', 'u2')
+    await nextTick()
+    finish(staged('att1'))
+    await flushPromises()
+    expect(send).toHaveBeenCalledWith('root', 'ch1', '', null, ['att1'])
+  })
+
+  it('keeps the text and the staged files when nothing was posted', async () => {
+    const chat = setup()
+    vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(null)
+    vi.mocked(stageAttachment).mockResolvedValue(staged('att1'))
+    pickFiles([new File(['x'], 'a.png', { type: 'image/png' })])
+    await flushPromises()
+    await replyComposer().setValue('wichtig')
+    key(replyComposer(), { key: 'Enter' })
+    await flushPromises()
+    expect(replyComposer().element.value).toBe('wichtig')
+    expect(w.find('[data-testid="attachment-tray"]').exists()).toBe(true)
   })
 
   it('jumps to the replied message, or says it is gone', async () => {
@@ -333,14 +362,14 @@ describe('ThreadSidebar complete interactions', () => {
 
   it('guards concurrent sends while keeping the draft editable', async () => {
     const chat = setup()
-    let sent!: (message: null) => void
-    const send = vi.spyOn(chat, 'sendThreadReply').mockImplementation(() => new Promise<null>(resolve => { sent = resolve }))
+    let sent!: (message: Message) => void
+    const send = vi.spyOn(chat, 'sendThreadReply').mockImplementation(() => new Promise<Message>(resolve => { sent = resolve }))
     await replyComposer().setValue('hello')
     key(replyComposer(), { key: 'Enter' })
     key(replyComposer(), { key: 'Enter' })
     expect(send).toHaveBeenCalledTimes(1)
     await replyComposer().setValue('keep')
-    sent(null)
+    sent(msg('sent', 'me', { parent_id: 'root' }))
     await flushPromises()
     const input = w.find<HTMLInputElement>('input[type=file]').element
     const picker = vi.spyOn(input, 'click').mockImplementation(() => {})
@@ -449,7 +478,7 @@ describe('ThreadSidebar complete interactions', () => {
   it('selects mention suggestions with keyboard and mouse, then inserts emoji', async () => {
     const chat = setup()
     chat.members = [userFixture({ username: 'anna', display_name: 'Anna' })]
-    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(null)
+    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue(msg('sent', 'me', { parent_id: 'root' }))
     await replyComposer().setValue('@a')
     replyComposer().element.selectionStart = 2
     await replyComposer().trigger('click')
@@ -612,7 +641,7 @@ describe('ThreadSidebar races and deleted authors', () => {
   it('keeps the draft of the thread that is open when a send of another thread returns', async () => {
     const chat = setup()
     let done!: () => void
-    vi.spyOn(chat, 'sendThreadReply').mockImplementation(() => new Promise(res => { done = () => res(null) }))
+    vi.spyOn(chat, 'sendThreadReply').mockImplementation(() => new Promise(res => { done = () => res(msg('sent', 'me', { parent_id: 'root' })) }))
     await textarea().setValue('for A')
     key(textarea(), { key: 'Enter' })
     await nextTick()

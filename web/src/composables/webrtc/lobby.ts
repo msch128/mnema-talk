@@ -32,6 +32,16 @@ function settle(cx: Cx, talk: string | null) {
   pending.resolve(talk)
 }
 
+// Bumped whenever a lobby join is given up, so a join that is already past its
+// wait (fetching the new Talk) sees that it was cancelled.
+let lobbyGeneration = 0
+
+/** Gives up a lobby join in progress: another Talk was joined, or the call was left. */
+export function cancelPendingLobby(cx: Cx) {
+  lobbyGeneration++
+  settle(cx, null)
+}
+
 /** Asks the server to open a Talk from the lobby; resolves to its id, or null when none opened. */
 function openFromLobby(cx: Cx, lobbyId: string): Promise<string | null> {
   settle(cx, null)
@@ -66,11 +76,13 @@ export function lobbyRefused(cx: Cx, p: ServerEventPayloads['voice_kicked']): bo
 
 /** Opens a Talk from the lobby and joins it. join is the ordinary join of a Talk. */
 export async function joinViaLobby(cx: Cx, lobbyId: string, join: (talkId: string) => Promise<void>) {
+  const generation = lobbyGeneration
   const talk = await openFromLobby(cx, lobbyId)
-  if (!talk) return
+  if (!talk || generation !== lobbyGeneration) return
   // The new Talk is not in the channel list or the permissions yet; the join
   // needs both (it checks Connect for the Talk).
   await Promise.all([cx.chat.fetchChannels(), usePermissionsStore().load()])
+  if (generation !== lobbyGeneration) return
   const channel = cx.chat.allChannels.find(c => c.id === talk)
   if (channel) cx.chat.selectChannel(channel)
   cx.voice.activeView = 'voice'

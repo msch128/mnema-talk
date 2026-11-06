@@ -9,7 +9,7 @@ import { t } from '../../i18n'
 import type { SubscribeRequest, ServerEventPayloads } from '../../types/events'
 import { loadIceServers } from './iceServers'
 import { withAudioSettings } from './audioNotice'
-import { isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
+import { cancelPendingLobby, isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
 import { resumeRemoteAudio as resumeRemotePlayback } from './remoteAudio'
 import { closeMediaRoom, mediaConnectionAnnounced, openMediaRoom, resetMediaAnnouncements } from './mediaRoom'
 import type { Cx } from './state'
@@ -129,6 +129,8 @@ export async function joinVoiceChannel(cx: Cx, channelId: string, opts: JoinOpti
     registerSignalingHandlers(cx)
     return joinViaLobby(cx, channelId, talkId => joinVoiceChannel(cx, talkId, { takeover }))
   }
+  // A lobby join still waiting for its Talk must not pull the member away from this one later.
+  cancelPendingLobby(cx)
   const refusal = sealingRefusal()
   if (refusal && await refusal) return
   const { voice, chat, st } = cx
@@ -237,6 +239,7 @@ function forgetOwnSeat({ voice }: Cx) {
 }
 
 export function leaveVoiceChannel(cx: Cx) {
+  cancelPendingLobby(cx)
   endCall(cx, { notifyServer: true })
 }
 
