@@ -112,7 +112,7 @@ describe('AdminImportTab', () => {
 
     // Step 1: what is added, and that nothing existing changes.
     expect(w.get('[data-testid="import-step-1"]').text()).toBe(
-      'This adds 1 category, 2 channels and 2 roles at the end of your server. Nothing existing is changed, renamed or removed.'
+      'This adds 1 category, 2 channels and 2 roles at the end of your community. Nothing existing is changed, renamed or removed.'
     )
     await w.get('[data-testid="import-next"]').trigger('click')
 

@@ -100,7 +100,7 @@ describe('LoginModal', () => {
     await w.find<HTMLInputElement>('#login-invite')!.setValue('team-code')
     await submit(w)
     await flushPromises()
-    expect(w.find('[role="alert"]')!.text()).toBe('The password needs at least 10 characters')
+    expect(w.find('[role="alert"]')!.text()).toBe('The password needs at least 10 characters.')
     expect(apiMock.mock.calls.filter(([path]) => path === '/api/auth/register')).toEqual([])
   })
 
