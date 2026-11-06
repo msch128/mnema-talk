@@ -14,7 +14,7 @@ import {
   streamBitrate,
   streamTuning
 } from '../lib/streamQuality'
-import { t } from '../i18n'
+import { locale, t } from '../i18n'
 
 const emit = defineEmits<{ close: [] }>()
 
@@ -72,7 +72,7 @@ function checkIfCustomMatchesPreset() {
 
 const estimatedBitrateDisplay = computed(() => {
   const bps = streamBitrate({ resolution: selectedResolution.value, fps: selectedFps.value })
-  const mbps = (bps / 1_000_000).toFixed(1)
+  const mbps = new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(bps / 1_000_000)
   return `${mbps} Mbit/s`
 })
 

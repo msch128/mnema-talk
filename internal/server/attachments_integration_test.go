@@ -251,3 +251,22 @@ func TestTheSingleFileUploadStillWorks(t *testing.T) {
 		t.Fatalf("message: %s", res.body)
 	}
 }
+
+func TestUploadUsageOlderThanTheBudgetWindowIsPruned(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	ch := a.createChannel(admin, "medien", "text")
+	ctx := context.Background()
+	a.stage(admin, ch, "recent.png")
+	a.stage(admin, ch, "old.png")
+	if _, err := a.db.Exec(ctx, `UPDATE upload_usage SET created_at = NOW() - INTERVAL '25 hours' WHERE ctid = (SELECT ctid FROM upload_usage LIMIT 1)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := media.SweepStaged(ctx, a.db, a.store, 6*time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	var rows int
+	if err := a.db.QueryRow(ctx, `SELECT count(*) FROM upload_usage`).Scan(&rows); err != nil || rows != 1 {
+		t.Fatalf("usage rows left = %d, %v; want only the one inside the budget window", rows, err)
+	}
+}

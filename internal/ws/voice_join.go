@@ -62,7 +62,7 @@ const (
 func (h *Hub) seatVoice(c *Client, ch *core.ChannelInfo, mode joinMode) bool {
 	c.voiceMu.Lock()
 	defer c.voiceMu.Unlock()
-	if c.closed.Load() {
+	if c.closed.Load() || c.ending.Load() {
 		return false
 	}
 	if !h.checkJoinPermission(c, ch.ID) {
@@ -222,6 +222,7 @@ type voiceSeat struct {
 func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo, rejoin bool) (voiceSeat, bool) {
 	key := voiceKey{c.User.ID, ch.ID}
 	bypass := h.mayExceedLimit(c, ch) // before h.mu: it asks the permission cache
+	private := h.isDMTalk(ch.ID)
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.closed {
@@ -238,6 +239,12 @@ func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo, rejoin bool) (voiceSeat,
 	_, present := h.voice[ch.ID][c.User.ID]
 	rejoin = rejoin || present
 	h.recordVoiceJoinTimeLocked(key, rejoin, now)
+	// A resuming stay keeps how it was classified at its start: a failed
+	// permission lookup now (which counts as private) must not hide the
+	// whole stay's voice time.
+	if _, known := h.privateSeat[key]; !rejoin || !known {
+		h.privateSeat[key] = private
+	}
 
 	profile := h.profileLocked(c)
 	h.voice[ch.ID][c.User.ID] = profile

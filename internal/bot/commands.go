@@ -249,8 +249,16 @@ func replaceCommandsTx(ctx context.Context, tx pgx.Tx, botID uuid.UUID, names []
 	if err := lockBot(ctx, tx, botID); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM bot_commands WHERE bot_id = $1 AND NOT (name = ANY($2))`, botID, names); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM bot_commands WHERE bot_id = $1 AND NOT (name = ANY($2)) AND NOT disabled`, botID, names); err != nil {
 		return err
+	}
+	// Commands an admin switched off survive the replace; they count toward the cap.
+	var kept int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM bot_commands WHERE bot_id = $1 AND NOT (name = ANY($2))`, botID, names).Scan(&kept); err != nil {
+		return err
+	}
+	if kept+len(names) > MaxCommands {
+		return httpx.ErrInvalidInput(fmt.Sprintf("a bot can have at most %d commands", MaxCommands))
 	}
 	for _, in := range ins {
 		if _, err := upsert(ctx, tx, botID, in); err != nil {
@@ -300,6 +308,19 @@ var errCommandNotFound = httpx.ErrNotFound("command not found")
 // DeleteCommand removes one command.
 func DeleteCommand(ctx context.Context, q db.Querier, botID, id uuid.UUID) error {
 	tag, err := q.Exec(ctx, `DELETE FROM bot_commands WHERE id = $1 AND bot_id = $2`, id, botID)
+	if err != nil {
+		return fmt.Errorf("delete command: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return errCommandNotFound
+	}
+	return nil
+}
+
+// DeleteOwnCommand is how a bot removes one of its commands: a command an
+// admin switched off stays, so registering it again cannot bring it back on.
+func DeleteOwnCommand(ctx context.Context, q db.Querier, botID, id uuid.UUID) error {
+	tag, err := q.Exec(ctx, `DELETE FROM bot_commands WHERE id = $1 AND bot_id = $2 AND NOT disabled`, id, botID)
 	if err != nil {
 		return fmt.Errorf("delete command: %w", err)
 	}

@@ -110,7 +110,7 @@ func readNote(r *http.Request) (NoteRequest, error) {
 // addNote handles POST /api/admin/users/{id}/moderation/notes.
 //
 // @Summary Add a moderator note
-// @Description Writes a private note about a member, optionally counted as a strike. Only moderators with Manage reports see it; the member never does, and it is not in their data export. At most 100 notes per member. Recorded in the audit log as moderation.note_add (without the text).
+// @Description Writes a private note about a member, optionally counted as a strike. Needs a highest role above the member's (never the Owner). Only moderators with Manage reports see it; the member never does, and it is not in their data export. At most 100 notes per member. Recorded in the audit log as moderation.note_add (without the text).
 // @ID addModerationNote
 // @Tags Moderation
 // @Accept json
@@ -121,7 +121,7 @@ func readNote(r *http.Request) (NoteRequest, error) {
 // @Success 201 {object} Note "The note."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage reports permission, or the member is yourself."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage reports permission, the member is yourself, the Owner, or not ranked below you."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
 // @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the member already has 100 notes."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
@@ -129,7 +129,7 @@ func readNote(r *http.Request) (NoteRequest, error) {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/moderation/notes [post]
 func (h *Handler) addNote(w http.ResponseWriter, r *http.Request) error {
-	subject, err := h.subject(r)
+	subject, err := h.writeSubject(r)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (h *Handler) loadNote(ctx context.Context, subject, id uuid.UUID, actor *au
 // editNote handles PUT /api/admin/users/{id}/moderation/notes/{noteID}.
 //
 // @Summary Edit your moderator note
-// @Description Changes the text or the strike flag of a note you wrote. Nobody edits another moderator's note. Needs Manage reports. Recorded in the audit log as moderation.note_edit (without the text).
+// @Description Changes the text or the strike flag of a note you wrote, while the member's highest role is still below yours. Nobody edits another moderator's note. Needs Manage reports. Recorded in the audit log as moderation.note_edit (without the text).
 // @ID editModerationNote
 // @Tags Moderation
 // @Accept json
@@ -214,7 +214,7 @@ func (h *Handler) loadNote(ctx context.Context, subject, id uuid.UUID, actor *au
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/moderation/notes/{noteID} [put]
 func (h *Handler) editNote(w http.ResponseWriter, r *http.Request) error {
-	subject, err := h.subject(r)
+	subject, err := h.writeSubject(r)
 	if err != nil {
 		return err
 	}

@@ -273,7 +273,7 @@ func (c *components) newPush() error {
 			Sender: &push.Sender{Keys: keys, Subject: push.Subject(cfg.PushVAPIDSubject, cfg.PublicURL), HTTP: client},
 		}
 		c.addTap(svc.Observe)
-		c.hub.DMTap = svc.Observe // conversations reach no webhook or bot, only push to their members
+		c.addDMTap(svc.Observe) // conversations reach no webhook or bot, only push to their members
 		go svc.Run(c.ctx)
 		h.Keys, h.Service = keys, svc
 		pusher = svc

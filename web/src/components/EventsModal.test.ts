@@ -121,6 +121,9 @@ describe('EventsModal', () => {
     perms.info = makePermsInfo(33554432) // manage_events
     wrapper = mount(EventsModal)
     expect(wrapper.text()).toContain('Create event')
+    // The shared primary button keeps the label readable on the accent colour.
+    const create = wrapper.findAll('button').find(b => b.attributes('aria-label') === 'Create event')
+    expect(create?.classes()).toEqual(expect.arrayContaining(['btn', 'btn-primary']))
   })
 
   it('explains what events are in the empty state and offers creating one to those who may', async () => {
@@ -239,5 +242,41 @@ describe('EventsModal', () => {
     await new Promise(resolve => setTimeout(resolve, 20))
     expect(wrapper.findComponent({ name: 'EventDetailModal' }).exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'EventEditDialog' }).exists()).toBe(true)
+  })
+
+  it('says the events could not be loaded, with a retry, instead of claiming there are none', async () => {
+    const store = useEventsStore()
+    const load = vi.spyOn(store, 'load').mockImplementation(async () => { store.error = 'boom' })
+    wrapper = mount(EventsModal, { attachTo: document.body })
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="events-error"]').exists()).toBe(true))
+    expect(wrapper.text()).not.toContain('No upcoming events')
+    load.mockClear()
+    await wrapper.find('[data-testid="state-retry"]').trigger('click')
+    expect(load).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a failed past list off the upcoming tab', async () => {
+    const store = useEventsStore()
+    vi.spyOn(store, 'load').mockResolvedValue()
+    vi.spyOn(store, 'loadPast').mockImplementation(async () => { store.pastError = 'boom' })
+    wrapper = mount(EventsModal, { attachTo: document.body })
+    await wrapper.findAll('button').find(b => b.text().includes('Past'))?.trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="events-error"]').exists()).toBe(true))
+    await wrapper.findAll('button').find(b => b.text().includes('Upcoming'))?.trigger('click')
+    expect(wrapper.find('[data-testid="events-error"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('No upcoming events')
+  })
+
+  it('does the same on the past tab and retries the past page', async () => {
+    const store = useEventsStore()
+    vi.spyOn(store, 'load').mockResolvedValue()
+    const loadPast = vi.spyOn(store, 'loadPast').mockImplementation(async () => { store.pastError = 'boom' })
+    wrapper = mount(EventsModal, { attachTo: document.body })
+    await wrapper.findAll('button').find(b => b.text().includes('Past'))?.trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="events-error"]').exists()).toBe(true))
+    expect(wrapper.text()).not.toContain('No past events')
+    loadPast.mockClear()
+    await wrapper.find('[data-testid="state-retry"]').trigger('click')
+    expect(loadPast).toHaveBeenCalledTimes(1)
   })
 })

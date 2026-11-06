@@ -95,6 +95,15 @@ describe('EventRoleTemplates', () => {
     expect((wrapper.get('[data-testid="event-template-name"]').element as HTMLInputElement).value).toBe('')
   })
 
+  it('keeps the typed template name when saving failed', async () => {
+    vi.mocked(api.createRoleTemplate).mockRejectedValue(new Error('conflict'))
+    mountIt()
+    await wrapper.get('[data-testid="event-template-name"]').setValue('Raid')
+    await wrapper.get('[data-testid="event-template-save"]').trigger('click')
+    await flushPromises()
+    expect((wrapper.get('[data-testid="event-template-name"]').element as HTMLInputElement).value).toBe('Raid')
+  })
+
   it('does not save invalid or empty role lists and reports a failure', async () => {
     mountIt({ rows: [{ ...blankDraft(), name: '' }] })
     await wrapper.get('[data-testid="event-template-name"]').setValue('X')

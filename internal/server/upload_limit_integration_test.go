@@ -3,6 +3,7 @@
 package server
 
 import (
+	"github.com/google/uuid"
 	"net/http"
 	"strings"
 	"testing"
@@ -148,5 +149,51 @@ func TestUploadLimitAppliesToWebhooks(t *testing.T) {
 	body, ct = multipartBody(t, map[string]any{"content": "x"}, map[string][]byte{"c.png": png1x1})
 	if res := a.exec(h.path+"?wait=true", body, map[string]string{"Content-Type": ct}); res.status != http.StatusOK {
 		t.Fatalf("webhook under the limit: %d %s", res.status, res.body)
+	}
+}
+
+func TestRemovingAnUnsentFileDoesNotRefundTheDailyUploadBudget(t *testing.T) {
+	a := newAppWithConfig(t, func(c *config.Config) { c.UploadQuotaMBPerDay = 1 })
+	owner := a.seedAdmin()
+	member := a.register(owner, "alice")
+	ch := a.createChannel(owner, "general", "text")
+	staging := "/api/channels/" + ch.String() + "/attachments"
+	big := 600 << 10
+
+	res := member.uploadParts(staging, pngFile(big))
+	if res.status != http.StatusCreated {
+		t.Fatalf("first 600 KB under 1 MB a day: %d %s", res.status, res.body)
+	}
+	var f stagedFile
+	res.decode(t, &f)
+	if res := member.delete(staging + "/" + f.ID.String()); res.status != http.StatusNoContent {
+		t.Fatalf("remove: %d %s", res.status, res.body)
+	}
+	if res := member.uploadParts(staging, pngFile(big)); res.status != http.StatusTooManyRequests {
+		t.Fatalf("second 600 KB after removing the first: %d %s; deleted files still count", res.status, res.body)
+	}
+}
+
+func TestDeletingTheMessageDoesNotRefundTheDailyUploadBudget(t *testing.T) {
+	a := newAppWithConfig(t, func(c *config.Config) { c.UploadQuotaMBPerDay = 1 })
+	owner := a.seedAdmin()
+	member := a.register(owner, "alice")
+	ch := a.createChannel(owner, "general", "text")
+	upload := "/api/channels/" + ch.String() + "/upload"
+	big := 600 << 10
+
+	res := member.uploadParts(upload, pngFile(big))
+	if res.status != http.StatusCreated {
+		t.Fatalf("first 600 KB under 1 MB a day: %d %s", res.status, res.body)
+	}
+	var m struct {
+		ID uuid.UUID `json:"id"`
+	}
+	res.decode(t, &m)
+	if res := member.delete("/api/channels/" + ch.String() + "/messages/" + m.ID.String()); res.status != http.StatusNoContent {
+		t.Fatalf("delete message: %d %s", res.status, res.body)
+	}
+	if res := member.uploadParts(upload, pngFile(big)); res.status != http.StatusTooManyRequests {
+		t.Fatalf("second 600 KB after deleting the message: %d %s; deleted messages still count", res.status, res.body)
 	}
 }

@@ -110,4 +110,12 @@ describe('changing the password', () => {
     await fill('valid-password')
     expect(wrapper.find('input[data-testid="password-code"]').exists()).toBe(false)
   })
+
+  it('drops an old error when the change is cancelled', async () => {
+    await fill('a'.repeat(MIN_PASSWORD_LENGTH - 1))
+    await wrapper.get('form').trigger('submit')
+    expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+    await button('common.cancel').trigger('click')
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+  })
 })

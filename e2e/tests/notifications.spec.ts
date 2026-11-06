@@ -73,7 +73,7 @@ test('notification levels, timed mutes, category badges and mark all read', asyn
     await expect(member.getByTestId('category-unread')).toBeVisible()
     await expect(member).toHaveTitle(/^• /)
     expect((await post(two, `hello @${suiteMember.username}`)).status).toBe(201)
-    await expect(member.getByTestId('category-mentions')).toHaveText('1')
+    await expect(member.getByTestId('category-mentions').locator('[aria-hidden="true"]')).toHaveText('1')
     await expect(member).toHaveTitle(/^\(1\) /)
     await toggle.click()
 

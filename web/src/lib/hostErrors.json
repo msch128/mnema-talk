@@ -22,7 +22,7 @@
   },
   {
    "id": "httpsOrigin",
-   "text": "Use an HTTPS origin without credentials, a path or query.",
+   "text": "Use a web address (https://…) without a user name or password.",
    "clients": [
     "rust",
     "linux"

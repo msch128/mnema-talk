@@ -80,6 +80,15 @@ describe('EventRolesEditor', () => {
     expect(rows.value).toHaveLength(MAX_EVENT_ROLES)
   })
 
+  it('explains why a role with sign-ups cannot go when no other saved role exists', async () => {
+    rows.value = draftsOf([roleFixture(1, { name: 'Tank', confirmed: 2 })])
+    await mountEditor()
+    await wrapper.findAll('button[aria-label^="Remove role"]')[0]!.trigger('click')
+    const ask = wrapper.get('[data-testid="event-role-move"]')
+    expect(ask.find('select').exists()).toBe(false)
+    expect(ask.get('[data-testid="event-role-move-none"]').text()).toContain('no other saved role')
+  })
+
   it('asks where the members of a role go before it is removed, and records the removal', async () => {
     rows.value = draftsOf([roleFixture(1, { name: 'Tank', confirmed: 2 }), roleFixture(2, { name: 'DPS' })])
     await mountEditor()

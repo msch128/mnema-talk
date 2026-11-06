@@ -14,6 +14,7 @@ describe('clock', () => {
     expect(secondsSince(null, at)).toBe(0)
   })
   it('splits totals into hours and minutes', () => {
+    expect(totalParts(0)).toEqual({ key: 'activity.none', params: {} })
     expect(totalParts(30)).toEqual({ key: 'activity.underMinute', params: {} })
     expect(totalParts(45 * 60)).toEqual({ key: 'activity.minutes', params: { m: 45 } })
     expect(totalParts(12 * 3600 + 4 * 60)).toEqual({ key: 'activity.hoursMinutes', params: { h: 12, m: 4 } })
@@ -35,7 +36,7 @@ describe('server clock synchronization', () => {
     vi.advanceTimersByTime(1000)
     expect(clock.now.value).toBe(Date.parse('2026-10-07T12:00:11Z'))
     expect(clock.secondsSince('2026-10-07T12:00:10Z')).toBe(1)
-    expect(clock.totalParts(undefined)).toEqual({ key: 'activity.underMinute', params: {} })
+    expect(clock.totalParts(undefined)).toEqual({ key: 'activity.none', params: {} })
     release()
     expect(vi.getTimerCount()).toBe(0)
     vi.useRealTimers()

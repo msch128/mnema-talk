@@ -12,6 +12,7 @@ import { useToastStore } from '../stores/toast'
 import { useChatStore } from '../stores/chat'
 import { t, locale } from '../i18n'
 import OutgoingWebhookForm from './OutgoingWebhookForm.vue'
+import StatePanel from './StatePanel.vue'
 
 const props = defineProps({
   channelId: { type: String, required: true }
@@ -21,6 +22,7 @@ const toasts = useToastStore()
 const chat = useChatStore()
 const hooks = ref<OutgoingWebhook[]>([])
 const loaded = ref(false)
+const loadFailed = ref(false)
 const secret = ref<{ id: string; value: string } | null>(null)
 const deliveries = ref<{ id: string; list: WebhookDelivery[] } | null>(null)
 const testResult = ref<{ id: string; delivery: WebhookDelivery } | null>(null)
@@ -38,8 +40,11 @@ function showError(e: unknown) {
 async function load() {
   try {
     hooks.value = await api(listPath.value, { decode: arrayDecoder('outgoing webhooks', isOutgoingWebhook) })
+    loadFailed.value = false
   } catch (e) {
-    showError(e)
+    loadFailed.value = true
+    // The panel says it while there are no webhooks; a toast only for a failed reload.
+    if (hooks.value.length) showError(e)
   } finally {
     loaded.value = true
   }
@@ -153,7 +158,8 @@ onMounted(load)
     <OutgoingWebhookForm v-if="form" :key="form.hook?.id ?? 'new'" ref="formRef" :channel-id="channelId" :hook="form.hook" @saved="onSaved" @cancel="form = null" />
     <button v-else type="button" class="btn btn-secondary" data-testid="outgoing-new" @click="openForm()">{{ $t('webhooks.newOutgoing') }}</button>
 
-    <p v-if="loaded && !hooks.length" class="text-sm text-mnema-tertiary">{{ $t('webhooks.emptyOutgoing') }}</p>
+    <StatePanel v-if="loadFailed && !hooks.length" state="error" retryable data-testid="outgoing-load-failed" @retry="load">{{ $t('webhooks.loadFailed') }}</StatePanel>
+    <p v-else-if="loaded && !hooks.length" class="text-sm text-mnema-tertiary">{{ $t('webhooks.emptyOutgoing') }}</p>
     <ul v-if="hooks.length" class="divide-y divide-mnema-hairline overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
       <li v-for="hook in hooks" :key="hook.id" class="space-y-2 p-3" data-testid="outgoing-webhook">
         <div class="flex flex-wrap items-center gap-2">

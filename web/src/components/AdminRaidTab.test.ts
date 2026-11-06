@@ -89,6 +89,17 @@ describe('the raid protection tab', () => {
   it('says when the settings cannot be loaded', async () => {
     apiMock.mockRejectedValue(new Error('down'))
     const w = await mountTab()
-    expect(w.get('[role="alert"]').text()).toBe('Couldn’t load the raid protection settings.')
+    expect(w.get('[role="alert"]').text()).toContain('Couldn’t load the raid protection settings.')
+  })
+
+  it('offers a retry when the raid settings do not load', async () => {
+    apiMock.mockReset().mockRejectedValue(new Error('down'))
+    const w = await mountTab()
+    expect(w.find('[data-testid="raid-error"]').exists()).toBe(true)
+    expect(w.find('[data-testid="lockdown-card"]').exists()).toBe(false)
+    apiMock.mockReset().mockResolvedValue(settings)
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="lockdown-card"]').exists()).toBe(true)
   })
 })

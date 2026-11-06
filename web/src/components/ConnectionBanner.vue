@@ -4,9 +4,11 @@
 import { ref, computed, watch, onBeforeUnmount, onMounted } from 'vue'
 import { WifiOff, RefreshCw, Check } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
+import { useToastStore } from '../stores/toast'
 import { visibleInterval } from '../lib/pageVisibility'
 
 const chatStore = useChatStore()
+const toasts = useToastStore()
 
 // The browser knows the network is gone long before a dead socket is noticed
 // (a TCP connection can take close to a minute to fail), so its offline state
@@ -28,6 +30,7 @@ let hideTimer: ReturnType<typeof setTimeout> | undefined
 const secondsLeft = computed(() => Math.max(0, Math.ceil((chatStore.nextRetryAt - now.value) / 1000)))
 
 watch(lost, (isLost, wasLost) => {
+  toasts.setConnectionDown(isLost)
   if (isLost) {
     justReconnected.value = false
     clearTimeout(hideTimer)
@@ -49,6 +52,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('online', goOnline)
   tick?.()
   clearTimeout(hideTimer)
+  // Without the banner nothing explains a dropped connection, so network errors show again.
+  toasts.setConnectionDown(false)
 })
 </script>
 
@@ -61,7 +66,7 @@ onBeforeUnmount(() => {
   >
     <WifiOff class="h-4 w-4 shrink-0 text-mnema-warning" />
     <span class="min-w-0 truncate text-mnema-text">{{ $t(browserOffline ? 'connection.offline' : 'connection.lost') }}</span>
-    <span v-if="chatStore.reconnectAttempt > 0" class="hidden truncate font-mono text-xs tabular-nums text-mnema-tertiary sm:inline">
+    <span v-if="chatStore.reconnectAttempt > 0" aria-hidden="true" class="hidden truncate font-mono text-xs tabular-nums text-mnema-tertiary sm:inline">
       {{ $t('connection.nextTry', { seconds: secondsLeft, attempt: chatStore.reconnectAttempt }) }}
     </span>
     <span class="flex-1"></span>

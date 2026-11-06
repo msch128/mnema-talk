@@ -45,8 +45,8 @@ const emit = defineEmits<{
         type="button"
         :disabled="index === 0"
         class="btn btn-icon btn-sm hover:text-mnema-text"
-        :title="$t('admin.moveUp')"
-        :aria-label="$t('admin.moveUp')"
+        :title="$t('admin.moveUpNamed', { name: channel.name })"
+        :aria-label="$t('admin.moveUpNamed', { name: channel.name })"
         @click.stop="emit('move', -1)"
       >
         <ArrowUp class="w-3.5 h-3.5" />
@@ -56,8 +56,8 @@ const emit = defineEmits<{
         type="button"
         :disabled="index === count - 1"
         class="btn btn-icon btn-sm hover:text-mnema-text"
-        :title="$t('admin.moveDown')"
-        :aria-label="$t('admin.moveDown')"
+        :title="$t('admin.moveDownNamed', { name: channel.name })"
+        :aria-label="$t('admin.moveDownNamed', { name: channel.name })"
         @click.stop="emit('move', 1)"
       >
         <ArrowDown class="w-3.5 h-3.5" />
@@ -66,8 +66,8 @@ const emit = defineEmits<{
         data-testid="rename-channel"
         type="button"
         class="btn btn-icon btn-sm hover:text-mnema-text"
-        :title="$t('admin.renameChannel')"
-        :aria-label="$t('admin.renameChannel')"
+        :title="$t('admin.renameChannelNamed', { name: channel.name })"
+        :aria-label="$t('admin.renameChannelNamed', { name: channel.name })"
         @click.stop="emit('rename')"
       >
         <Edit2 class="w-3.5 h-3.5" />
@@ -76,8 +76,8 @@ const emit = defineEmits<{
         data-testid="delete-channel"
         type="button"
         class="btn btn-icon btn-sm hover:text-mnema-danger"
-        :title="$t('sidebar.deleteChannel')"
-        :aria-label="$t('sidebar.deleteChannel')"
+        :title="$t('admin.deleteChannelNamed', { name: channel.name })"
+        :aria-label="$t('admin.deleteChannelNamed', { name: channel.name })"
         @click.stop="emit('delete')"
       >
         <Trash2 class="w-3.5 h-3.5" />

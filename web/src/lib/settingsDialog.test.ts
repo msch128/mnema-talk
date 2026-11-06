@@ -94,3 +94,11 @@ describe('focusSettingsField', () => {
     expect(focusSettingsField(document.getElementById('r') as HTMLElement, 'noise')).toBe(false)
   })
 })
+
+describe('settings tab labels', () => {
+  it.each(['en', 'de'] as const)('every tab has a %s label', async (code) => {
+    const { default: messages } = await import(`../i18n/${code}.json`, { with: { type: 'json' } })
+    const labels = (messages as { settings: { tab: Record<string, string> } }).settings.tab
+    for (const tab of SETTINGS_TABS) expect(labels[tab], tab).toBeTruthy()
+  })
+})

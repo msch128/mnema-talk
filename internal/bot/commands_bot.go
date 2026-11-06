@@ -111,7 +111,7 @@ func (c *Commands) botCreate(w http.ResponseWriter, r *http.Request) error {
 // botDelete handles DELETE /api/bot/v1/commands/{commandID}.
 //
 // @Summary Delete a command
-// @Description Removes one of the bot's own commands. Members stop seeing it in the composer at once.
+// @Description Removes one of the bot's own commands, except one an admin switched off (404; the admin deletes those). Members stop seeing it in the composer at once.
 // @ID botDeleteCommand
 // @Tags Bot API
 // @Security botAuth
@@ -128,7 +128,7 @@ func (c *Commands) botDelete(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := DeleteCommand(r.Context(), c.DB, auth.BotFrom(r.Context()).BotID, id); err != nil {
+	if err := DeleteOwnCommand(r.Context(), c.DB, auth.BotFrom(r.Context()).BotID, id); err != nil {
 		return err
 	}
 	w.WriteHeader(http.StatusNoContent)

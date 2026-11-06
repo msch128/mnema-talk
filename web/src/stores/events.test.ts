@@ -299,7 +299,7 @@ describe('past events', () => {
     apiMock.mockRejectedValueOnce(new Error('offline'))
     const store = useEventsStore()
     await store.loadPast()
-    expect(store.error).toBe('offline')
+    expect(store.pastError).toBe('offline')
     expect(store.pastLoading).toBe(false)
     expect(store.pastLoaded).toBe(false)
   })
@@ -308,7 +308,7 @@ describe('past events', () => {
     apiMock.mockRejectedValueOnce('boom')
     const store = useEventsStore()
     await store.loadPast()
-    expect(store.error).toBe(t('events.loadFailed'))
+    expect(store.pastError).toBe(t('events.loadFailed'))
   })
 
   it('does nothing while the feature is off', async () => {

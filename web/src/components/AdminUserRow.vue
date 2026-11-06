@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PropType } from 'vue'
+import { computed, type PropType } from 'vue'
 import type { AdminUser } from '../types/domain'
 import type { VoiceSnapshot } from '../types/events'
 import { KeyRound, UserX, UserCheck, PhoneOff, LogOut, Volume2, Shield, ShieldOff, LockOpen } from '@lucide/vue'
@@ -52,6 +52,12 @@ function formatDateTime(dt: string | null | undefined) {
     return String(dt)
   }
 }
+
+// A timeout that has not run out yet; the list refreshes through the member events.
+const timedOutUntil = computed(() => {
+  const until = props.user.timeout_until
+  return until && Date.parse(until) > Date.now() ? until : null
+})
 
 // What the signed-in member may do with this account, by permission and rank.
 function canModerate() {
@@ -120,6 +126,13 @@ function roles() {
           class="px-2 py-0.5 rounded-sm text-xs font-medium bg-mnema-danger/10 text-mnema-danger border border-mnema-danger/20"
         >
           {{ $t('admin.userDisabled') }}
+        </span>
+        <span
+          v-else-if="timedOutUntil"
+          data-testid="user-status"
+          class="px-2 py-0.5 rounded-sm text-xs font-medium bg-mnema-warning/10 text-mnema-warning border border-mnema-warning/25"
+        >
+          {{ $t('admin.userTimedOut', { time: formatDateTime(timedOutUntil) }) }}
         </span>
         <span
           v-else

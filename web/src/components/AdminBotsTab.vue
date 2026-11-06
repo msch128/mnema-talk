@@ -14,11 +14,13 @@ import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 import BotDetailPanel from './BotDetailPanel.vue'
 import EmptyState from './EmptyState.vue'
+import StatePanel from './StatePanel.vue'
 
 const permissions = usePermissionsStore()
 const toasts = useToastStore()
 const bots = ref<BotBot[]>([])
 const loaded = ref(false)
+const failed = ref(false)
 const selectedId = ref<string | null>(null)
 const detail = ref<{ guard: () => Promise<boolean> } | null>(null)
 const newName = ref('')
@@ -36,8 +38,11 @@ function roleNames(bot: BotBot): string[] {
 async function load() {
   try {
     bots.value = await api('/api/admin/bots', { decode: arrayDecoder('bots', isBotBot) })
+    failed.value = false
   } catch (e) {
-    fail(e)
+    failed.value = true
+    // The panel says it while there are no bots; a toast only for a failed reload.
+    if (bots.value.length) fail(e)
   } finally {
     loaded.value = true
   }
@@ -97,7 +102,8 @@ onMounted(async () => {
             <span>{{ $t('bots.new') }}</span>
           </button>
         </form>
-        <EmptyState v-if="loaded && !bots.length" :icon="Bot" :text="$t('bots.empty')" :hint="$t('bots.emptyHint')" class="rounded-lg border border-mnema-hairline bg-mnema-surface" />
+        <StatePanel v-if="failed && !bots.length" state="error" retryable class="rounded-lg border border-mnema-hairline bg-mnema-surface" data-testid="bots-error" @retry="load">{{ $t('bots.loadFailed') }}</StatePanel>
+        <EmptyState v-else-if="loaded && !bots.length" :icon="Bot" :text="$t('bots.empty')" :hint="$t('bots.emptyHint')" class="rounded-lg border border-mnema-hairline bg-mnema-surface" />
         <ul v-if="bots.length" :aria-label="$t('bots.list')" class="overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
           <li v-for="bot in bots" :key="bot.id" :class="['border-b border-mnema-hairline last:border-b-0', selectedId === bot.id ? 'bg-mnema-accent-subtle' : '']" data-testid="bot-row">
             <button type="button" class="flex w-full items-start gap-3 p-3 text-left" :aria-pressed="selectedId === bot.id" @click="select(bot.id)">

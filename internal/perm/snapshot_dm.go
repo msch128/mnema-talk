@@ -37,6 +37,14 @@ func (s *Snapshot) KnowsDM(ch uuid.UUID) bool { _, ok := s.dms[ch]; return ok }
 // IsDM reports whether ch is a direct message conversation.
 func (s *Snapshot) IsDM(ch uuid.UUID) bool { return s.KnowsDM(ch) }
 
+// IsDMTalk reports whether ch is a Talk started from a conversation.
+func (s *Snapshot) IsDMTalk(ch uuid.UUID) bool { _, ok := s.dmTalks[ch]; return ok }
+
+// IsPrivate reports whether ch is a conversation or a Talk of one: what is
+// said there is private to the conversation's members, so it is neither
+// audited, nor moderated by rules, nor shown to webhooks.
+func (s *Snapshot) IsPrivate(ch uuid.UUID) bool { return s.IsDM(ch) || s.IsDMTalk(ch) }
+
 // DMMembers lists the members of a conversation.
 func (s *Snapshot) DMMembers(ch uuid.UUID) []uuid.UUID {
 	out := make([]uuid.UUID, 0, len(s.dms[ch]))

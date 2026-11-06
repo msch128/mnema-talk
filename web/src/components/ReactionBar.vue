@@ -65,7 +65,8 @@ function gone(reaction: ReactionSummary) {
           ? 'bg-mnema-accent/20 border-mnema-accent/40 text-mnema-accent font-semibold'
           : 'bg-mnema-surface hover:bg-mnema-band border-mnema-border text-mnema-muted'
       ]"
-      v-tooltip="$t('chat.reaction', { emoji: plainEmojiText(r.emoji) })"
+      :aria-label="$t('chat.reaction', { emoji: plainEmojiText(r.emoji), count: r.count })"
+      v-tooltip.visual="$t('chat.reaction', { emoji: plainEmojiText(r.emoji), count: r.count })"
     >
       <span><EmojiGlyph :value="r.emoji" /></span>
       <span class="text-xs font-mono">{{ r.count }}</span>

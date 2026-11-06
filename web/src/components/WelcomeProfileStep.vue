@@ -38,7 +38,7 @@ async function onAvatar(e: Event) {
 }
 
 // Typed name or bio that Continue would store: Skip asks before dropping it.
-const typed = () => !!auth.user && (displayName.value !== auth.user.display_name || bio.value !== auth.user.bio)
+const typed = () => !!auth.user && (displayName.value.trim() !== auth.user.display_name || bio.value.trim() !== auth.user.bio)
 
 async function skip() {
   if (typed() && !await confirmDiscard()) return
@@ -46,10 +46,12 @@ async function skip() {
 }
 
 async function save() {
+  const name = displayName.value.trim()
+  const about = bio.value.trim()
   if (typed()) {
     saving.value = true
     try {
-      await auth.updateProfile({ displayName: displayName.value, bio: bio.value })
+      await auth.updateProfile({ displayName: name, bio: about })
     } catch (err) {
       toasts.error(caughtErrorMessage(err, t('profile.saveFailed')))
       return

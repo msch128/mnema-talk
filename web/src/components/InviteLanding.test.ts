@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import { ApiError, type ApiOptions } from '../lib/api'
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
@@ -87,7 +87,7 @@ describe('InviteLanding', () => {
     it('falls back to asking for a code when the link was switched off meanwhile', async () => {
       apiMock.mockResolvedValue({ valid: true, community_name: 'Owls', accepts_signups: true })
       const w = await landing('/join/owls')
-      apiMock.mockRejectedValue(new Error('invalid invite code'))
+      apiMock.mockRejectedValue(new ApiError(400, 'INVALID_INPUT', 'Invalid invite code.'))
       await w.get('#login-username').setValue('newbie')
       await w.get('input[type="password"]').setValue('correct-horse-battery')
       await w.get('form').trigger('submit')

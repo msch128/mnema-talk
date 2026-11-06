@@ -192,7 +192,7 @@ func (c *Commands) channelForInvoke(r *http.Request, user *auth.User) (uuid.UUID
 	if err != nil {
 		return uuid.Nil, nil, err
 	}
-	if err := perm.CheckChannel(snap.Channel(user.Subject(), ch), perm.SendMessages); err != nil {
+	if err := snap.Deny(user.Subject(), snap.Channel(user.Subject(), ch), perm.SendMessages); err != nil {
 		return uuid.Nil, nil, err
 	}
 	return ch, snap, nil

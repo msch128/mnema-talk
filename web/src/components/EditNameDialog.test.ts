@@ -48,6 +48,19 @@ describe('EditNameDialog', () => {
     expect(useToastStore().toasts.map(t => t.text)).toEqual(['Kategorie erstellt'])
   })
 
+  it('creates one category when Enter is pressed twice while the first is pending', async () => {
+    const chat = useChatStore()
+    let finish: (c: ReturnType<typeof categoryFixture>) => void = () => undefined
+    chat.createCategory = vi.fn(() => new Promise<ReturnType<typeof categoryFixture>>(resolve => { finish = resolve }))
+    wrapper = mount(EditNameDialog, { ...mountOpts, props: { kind: 'category' } })
+    await wrapper.find<HTMLInputElement>('#edit-name')!.setValue('Projekte')
+    await wrapper.find('form')!.trigger('submit')
+    await wrapper.find('form')!.trigger('submit')
+    expect(chat.createCategory).toHaveBeenCalledTimes(1)
+    finish(categoryFixture({ id: "00000000-0000-4000-8000-0000000003f1", name: 'Projekte' }))
+    await flushPromises()
+  })
+
   it("shows why a new category could not be created", async () => {
     const chat = useChatStore()
     chat.createCategory = vi.fn(() => Promise.reject(new Error('')))

@@ -36,6 +36,11 @@ describe('server reasons reach the user in their language', () => {
     expect(errorMessage(code, message)).toMatch(expected)
   })
 
+  it('does not double the full stop after a ban reason that ends with one', () => {
+    expect(errorMessage('FORBIDDEN', 'this account is banned: Spam.')).toMatch(/gesperrt: Spam\.$/)
+    expect(errorMessage('FORBIDDEN', 'this account is banned until 5 Nov: Spam.')).not.toContain('..')
+  })
+
   it('shows the generic text plus the server words for an unknown reason', () => {
     const text = errorMessage('CONFLICT', 'something brand new happened')
     expect(text).toContain('Das gibt es bereits')

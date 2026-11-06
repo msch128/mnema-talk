@@ -44,15 +44,17 @@ func ReadStateSQL() string {
 		      AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
 		) unread
 		CROSS JOIN LATERAL (
-		    SELECT count(*) FILTER (WHERE orig.user_id = $1 OR (mm.message_id IS NOT NULL
+		    SELECT count(*) FILTER (WHERE COALESCE(rt.mine, FALSE) OR (mm.message_id IS NOT NULL
 		               AND (mm.kind <> $2 OR NOT COALESCE(sn.suppress_everyone, FALSE)))) AS mentions,
-		           count(*) FILTER (WHERE orig.user_id = $1 OR (mm.message_id IS NOT NULL AND mm.kind <> $2)) AS addressed
+		           count(*) FILTER (WHERE COALESCE(rt.mine, FALSE) OR (mm.message_id IS NOT NULL AND mm.kind <> $2)) AS addressed
 		    FROM messages m
 		    LEFT JOIN message_mentions mm ON mm.message_id = m.id AND mm.user_id = $1
-		    LEFT JOIN messages orig ON orig.id = m.reply_to_id
+		    LEFT JOIN LATERAL (
+		        SELECT orig.user_id = $1 AS mine FROM messages orig
+		        WHERE orig.id = m.reply_to_id OFFSET 0) rt ON TRUE
 		    WHERE m.channel_id = c.id AND m.user_id <> $1
 		      AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
-		      AND (mm.message_id IS NOT NULL OR orig.user_id = $1)
+		      AND (mm.message_id IS NOT NULL OR COALESCE(rt.mine, FALSE))
 		      AND ` + core.AuthorHiddenFrom("$1", "m.user_id") + `
 		) addr
 		WHERE c.type <> 'dm'

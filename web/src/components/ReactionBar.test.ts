@@ -36,6 +36,13 @@ describe('ReactionBar', () => {
     expect(requireValue(other).attributes('aria-pressed')).toBe('false')
   })
 
+  it('names each badge with its emoji and count', () => {
+    const w = mount(ReactionBar, { props: { reactions } })
+    const [first, second] = w.findAll('button[aria-pressed]')
+    expect(requireValue(first).attributes('aria-label')).toBe('👍: 2 reactions')
+    expect(requireValue(second).attributes('aria-label')).toBe('🔥: 1 reaction')
+  })
+
   it('emits toggle for a badge and toggle-picker for the add button', async () => {
     const w = mount(ReactionBar, { props: { reactions } })
     await requireValue(w.findAll('button[aria-pressed]')[1]).trigger('click')

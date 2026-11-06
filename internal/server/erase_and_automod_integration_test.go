@@ -156,3 +156,36 @@ func TestRetractionUsesTheSnapshotFromBeforeTheChange(t *testing.T) {
 	}
 	t.Fatal("the member who lost the Talk was not told to drop the event")
 }
+
+func TestFlagRulesSeeForumTagNamesAndGuidelines(t *testing.T) {
+	f := newAutomodFixture(t)
+	f.age(f.member)
+	f.addRule(wordRule("words", "flag", "spam"))
+	assignRoles(t, f.admin, f.member, createRole(t, f.admin, "builders", perm.ManageChannels))
+	forum := f.a.createChannel(f.admin, "ideas", "forum")
+	base := "/api/channels/" + forum.String()
+
+	wantStatus(t, "flagged tag", f.member.post(base+"/tags", map[string]any{"name": "spam"}), http.StatusCreated)
+	if q := f.queue(); len(q) != 1 || q[0].AutomodRule != "words" || q[0].AutomodOutcome != "flagged" {
+		t.Fatalf("queue after a flagged tag name = %+v; want one open flagged entry", q)
+	}
+	wantStatus(t, "flagged guidelines", f.member.patch(base+"/forum-settings", map[string]any{"guidelines": "no spam"}), http.StatusOK)
+	if q := f.queue(); len(q) != 1 || q[0].HitCount != 2 {
+		t.Fatalf("queue after flagged guidelines = %+v; want the entry counted up to 2", q)
+	}
+}
+
+func TestAForumPageCursorMustBeAPostOfThatForum(t *testing.T) {
+	f := newAutomodFixture(t)
+	forum := f.a.createChannel(f.admin, "ideas", "forum")
+	other := f.a.createChannel(f.admin, "elsewhere", "forum")
+	post := newForumPost(t, f.member, forum, "Mine")
+	elsewhere := newForumPost(t, f.member, other, "Not here")
+	chat := f.a.send(f.admin, f.general, "a message in a channel")
+	list := "/api/channels/" + forum.String() + "/posts?before="
+
+	wantStatus(t, "a post of this forum", f.member.get(list+post.String()), http.StatusOK)
+	wantStatus(t, "a post of another forum", f.member.get(list+elsewhere.String()), http.StatusNotFound)
+	wantStatus(t, "a chat message", f.member.get(list+chat.String()), http.StatusNotFound)
+	wantStatus(t, "no such message", f.member.get(list+uuid.NewString()), http.StatusNotFound)
+}

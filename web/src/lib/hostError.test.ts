@@ -17,6 +17,7 @@ const TOO_OLD = 'This server is too old for this desktop client (needs 0.9.0 or 
 const SENT = [
   'Enter an HTTPS instance address.',
   'Invalid instance address.',
+  'Use a web address (https://…) without a user name or password.',
   'Use an HTTPS origin without credentials, a path or query.',
   'Unable to initialize HTTPS.',
   REFUSED,

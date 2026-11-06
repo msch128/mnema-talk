@@ -48,6 +48,7 @@ async function saveCurrent() {
   const roles = inputsOf(props.rows, false)
   const label = name.value.trim()
   if (!roles || roles.length === 0 || !label) return
+  // The name stays when saving failed, so it can be tried again.
   if (await run(() => createRoleTemplate(label, roles), t('events.roles.templateSaved', { name: label }))) name.value = ''
 }
 </script>

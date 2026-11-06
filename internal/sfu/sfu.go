@@ -137,6 +137,11 @@ type Peer struct {
 	lastCapped []uuid.UUID
 	// vtReleased is set by releaseViewerTracks; no viewer track is added after.
 	vtReleased bool
+	// gen orders this peer against the earlier and later peers of the same
+	// user (see layerGroup.addViewer); attachStep is a test seam called
+	// between the steps of addSender.
+	gen        uint64
+	attachStep func(step string)
 	// lostMu guards onLost and lost (see OnLost).
 	lostMu sync.Mutex
 	onLost func()

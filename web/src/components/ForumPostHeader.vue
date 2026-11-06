@@ -37,6 +37,8 @@ const savingTags = ref(false)
 const forumTags = ref<ForumTag[]>([])
 const settings = ref<ForumSettings>({ require_tag: false, guidelines: '' })
 const tagError = ref('')
+// The tags (or the forum's settings) could not be read: the picker would otherwise claim there are none.
+const tagsFailed = ref(false)
 
 async function startTitle() {
   if (!post.value) return
@@ -61,10 +63,11 @@ async function saveTitle() {
 
 async function loadForum() {
   const channelId = actions.channelId.value
+  tagsFailed.value = false
   try {
     ;[forumTags.value, settings.value] = await Promise.all([fetchForumTags(channelId), fetchForumSettings(channelId)])
-  } catch (err) {
-    console.warn('Failed to load the forum tags:', err)
+  } catch {
+    tagsFailed.value = true
   }
 }
 
@@ -81,7 +84,7 @@ const needsTag = computed(() => settings.value.require_tag && usable.value.lengt
 const tagsValid = computed(() => !needsTag.value || tagDraft.value.length > 0)
 
 async function saveTags() {
-  if (!tagsValid.value || savingTags.value) return
+  if (!tagsValid.value || tagsFailed.value || savingTags.value) return
   savingTags.value = true
   if (await actions.retag(tagDraft.value)) editingTags.value = false
   savingTags.value = false
@@ -131,7 +134,7 @@ function jump() {
 <template>
   <section v-if="post" class="shrink-0 space-y-2 border-b border-mnema-hairline bg-mnema-canvas px-4 py-3" data-testid="forum-post-header">
     <div class="flex items-start gap-2">
-      <form v-if="editingTitle" class="flex min-w-0 flex-1 items-center gap-1" @submit.prevent="saveTitle" @keydown.esc.stop.prevent="editingTitle = false">
+      <form v-if="editingTitle" data-local-escape class="flex min-w-0 flex-1 items-center gap-1" @submit.prevent="saveTitle" @keydown.esc.stop.prevent="editingTitle = false">
         <input
           ref="titleInput"
           v-model="titleDraft"
@@ -182,10 +185,14 @@ function jump() {
 
     <div v-if="editingTags" class="space-y-2 rounded-lg border border-mnema-hairline bg-mnema-surface/50 p-2.5" data-testid="forum-tag-edit">
       <ForumTagPicker v-model="tagDraft" label-id="post-header-tags" :tags="forumTags" :can-moderate="actions.canModerate.value" :required="needsTag" />
-      <p v-if="forumTags.length === 0" class="text-xs text-mnema-tertiary">{{ $t('forum.noTags') }}</p>
+      <p v-if="tagsFailed" class="flex flex-wrap items-center gap-2 text-xs text-mnema-tertiary" role="alert" data-testid="forum-tags-error">
+        <span>{{ $t('forum.tagsLoadFailed') }}</span>
+        <button type="button" class="btn btn-ghost btn-sm" data-testid="forum-tags-retry" @click="loadForum">{{ $t('common.retry') }}</button>
+      </p>
+      <p v-else-if="forumTags.length === 0" class="text-xs text-mnema-tertiary">{{ $t('forum.noTags') }}</p>
       <div class="flex justify-end gap-2">
         <button type="button" class="btn btn-secondary px-3 py-1.5 text-xs" @click="editingTags = false">{{ $t('common.cancel') }}</button>
-        <button type="button" data-testid="forum-tags-save" :disabled="!tagsValid || savingTags" class="btn btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs" @click="saveTags">
+        <button type="button" data-testid="forum-tags-save" :disabled="!tagsValid || tagsFailed || savingTags" class="btn btn-primary flex items-center gap-1.5 px-3 py-1.5 text-xs" @click="saveTags">
           <Loader2 v-if="savingTags" class="h-3.5 w-3.5 animate-spin" />
           <span>{{ $t('common.save') }}</span>
         </button>

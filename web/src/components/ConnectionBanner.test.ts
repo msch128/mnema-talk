@@ -4,7 +4,8 @@ import { setActivePinia, createPinia } from 'pinia'
 import { nextTick } from 'vue'
 import ConnectionBanner from './ConnectionBanner.vue'
 import { useChatStore } from '../stores/chat'
-import { setLocale } from '../i18n'
+import { useToastStore } from '../stores/toast'
+import { setLocale, t } from '../i18n'
 
 beforeEach(() => {
   setLocale('de')
@@ -38,6 +39,8 @@ describe('ConnectionBanner', () => {
     expect(banner.attributes('role')).toBe('status')
     expect(banner.text()).toContain('Verbindung getrennt – verbinde neu …')
     expect(banner.text()).toContain('nächster Versuch in 4 s · Versuch 3')
+    const ticking = banner.findAll('span').find(el => el.text().includes('nächster Versuch'))
+    expect(ticking?.attributes('aria-hidden')).toBe('true')
 
     const retry = vi.spyOn(chat, 'retryNow').mockImplementation(() => {})
     await w.find('[data-testid="connection-retry"]').trigger('click')
@@ -80,4 +83,15 @@ it('clears countdown and restored-hide timers on unmount or another drop', async
   const timeoutCalls = clearTimeoutSpy.mock.calls.length
   w.unmount(); expect(clearIntervalSpy.mock.calls.length).toBe(intervalCalls + 1); expect(clearTimeoutSpy.mock.calls.length).toBe(timeoutCalls + 1)
   clearIntervalSpy.mockRestore(); clearTimeoutSpy.mockRestore()
+})
+
+it('lets network errors show again once the banner is gone', async () => {
+  const chat = useChatStore()
+  chat.isConnected = false
+  chat.wasConnected = true
+  const toasts = useToastStore()
+  const w = mount(ConnectionBanner)
+  expect(toasts.error(t('errors.network'))).toBeNull()
+  w.unmount()
+  expect(toasts.error(t('errors.network'))).not.toBeNull()
 })

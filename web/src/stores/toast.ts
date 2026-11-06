@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { t } from '../i18n'
 
 export type ToastType = 'info' | 'success' | 'error'
 export interface ToastAction { label: string; onClick: () => void | Promise<void> }
@@ -22,12 +23,23 @@ export const useToastStore = defineStore('toast', () => {
   // The time each running timer still has left, kept while it is paused.
   const left = new Map<number, { ms: number; since: number }>()
   let seq = 0
+  // While the connection banner is up, "can't reach the server" would only repeat it.
+  const connectionDown = ref(false)
+  const networkIds = new Set<number>()
 
   function dismiss(id: number) {
     clearTimeout(timers.get(id))
     timers.delete(id)
     left.delete(id)
+    networkIds.delete(id)
     toasts.value = toasts.value.filter(t => t.id !== id)
+  }
+
+  /** The connection banner tells the member already; its toasts go when the link is back. */
+  function setConnectionDown(down: boolean) {
+    connectionDown.value = down
+    if (down) return
+    for (const id of [...networkIds]) dismiss(id)
   }
 
   function arm(id: number, ms: number) {
@@ -54,10 +66,13 @@ export const useToastStore = defineStore('toast', () => {
   /** push({ type, text, detail, action: { label, onClick }, duration }) → id */
   function push({ type = 'info', text, detail = '', action = null, secondary = null, duration }: ToastInput = {}) {
     if (!text) return null
+    const isNetwork = type === 'error' && text === t('errors.network')
+    if (isNetwork && connectionDown.value) return null
     // The same error shown already is not shown again: a burst of refused requests is one message.
     const same = type === 'error' && !action && toasts.value.find(t => t.type === 'error' && !t.action && t.text === text && t.detail === detail)
     if (same) return same.id
     const id = ++seq
+    if (isNetwork) networkIds.add(id)
     toasts.value = [...toasts.value, { id, type, text, detail, action, secondary }].slice(-MAX_VISIBLE)
     const ms = duration ?? (type === 'error' ? 0 : action ? ACTION_DISMISS_MS : AUTO_DISMISS_MS)
     if (ms > 0) arm(id, ms)
@@ -72,5 +87,5 @@ export const useToastStore = defineStore('toast', () => {
   const success = (text: string, o?: ToastOptions) => push({ ...o, type: 'success', text })
   const error = (text: string, o?: ToastOptions) => push({ ...o, type: 'error', text })
 
-  return { toasts, push, dismiss, pause, resume, info, success, error }
+  return { toasts, setConnectionDown, push, dismiss, pause, resume, info, success, error }
 })

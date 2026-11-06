@@ -36,12 +36,12 @@ func TestUploadQuotaPerUserRollingWindow(t *testing.T) {
 	// 600 used, 600 more would pass 1000.
 	requireAPIError(t, uploadOf(t, f, 600), http.StatusTooManyRequests)
 
-	// Deleting the file does not give the budget back.
-	execMedia(t, f.p, `UPDATE media SET is_deleted = TRUE WHERE uploader_id = $1`, f.user.ID)
+	// Deleting the file, row and all, does not give the budget back.
+	execMedia(t, f.p, `DELETE FROM media WHERE uploader_id = $1`, f.user.ID)
 	requireAPIError(t, uploadOf(t, f, 600), http.StatusTooManyRequests)
 
 	// Uploads older than the window no longer count.
-	execMedia(t, f.p, `UPDATE media SET created_at = NOW() - INTERVAL '25 hours' WHERE uploader_id = $1`, f.user.ID)
+	execMedia(t, f.p, `UPDATE upload_usage SET created_at = NOW() - INTERVAL '25 hours' WHERE user_id = $1`, f.user.ID)
 	if err := uploadOf(t, f, 600); err != nil {
 		t.Fatalf("upload after the window passed: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestUploadQuotaIsPerAccountAndOffByDefault(t *testing.T) {
 	f.h.MaxUploadBytes = 1 << 20
 	other := uuid.New()
 	execMedia(t, f.p, `INSERT INTO users(id,username,display_name,password_hash,role) VALUES($1,'other','Other','x','user')`, other)
-	execMedia(t, f.p, `INSERT INTO media(id,uploader_id,s3_bucket,s3_key,original_filename,mime_type,size_bytes) VALUES($1,$2,'b','k','a','text/plain',900)`, uuid.New(), other)
+	execMedia(t, f.p, `INSERT INTO upload_usage(user_id,bytes) VALUES($1,900)`, other)
 
 	f.h.Quota = Quota{PerUserBytes: 1000}
 	if _, err := f.h.ReserveUpload(context.Background(), f.user.ID, 900); err != nil {

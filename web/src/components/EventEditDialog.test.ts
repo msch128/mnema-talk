@@ -70,6 +70,7 @@ describe('EventEditDialog', () => {
     await titleInput()?.setValue('   ')
     await submit()
     expect(wrapper.find('.text-red-400').text()).toBe('Enter a title.')
+    expect(wrapper.find('[role="alert"]').text()).toBe('Enter a title.')
     expect(create).not.toHaveBeenCalled()
   })
 

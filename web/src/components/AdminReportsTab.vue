@@ -13,6 +13,7 @@ import { relativeTime } from '../lib/bots'
 import { useChatStore } from '../stores/chat'
 import AdminReportDetail from './AdminReportDetail.vue'
 import EmptyState from './EmptyState.vue'
+import StatePanel from './StatePanel.vue'
 import UserAvatar from './UserAvatar.vue'
 
 const PAGE = 25
@@ -26,12 +27,14 @@ const status = ref<StatusFilter>('open')
 const reports = ref<ChatReport[]>([])
 const hasMore = ref(false)
 const loading = ref(false)
+const failed = ref(false)
 const selected = ref<string | null>(null)
 let seq = 0
 
 async function load(more = false) {
   const mine = ++seq
   loading.value = true
+  if (!more) failed.value = false
   const params = new URLSearchParams({ status: status.value, limit: String(PAGE) })
   const last = reports.value[reports.value.length - 1]
   if (more && last) params.set('before', last.id)
@@ -40,8 +43,12 @@ async function load(more = false) {
     if (mine !== seq) return
     reports.value = more ? [...reports.value, ...page.reports] : page.reports
     hasMore.value = page.has_more
+    failed.value = false
   } catch (error) {
-    if (mine === seq) toasts.error(caughtErrorMessage(error, t('reports.admin.loadFailed')))
+    if (mine !== seq) return
+    failed.value = true
+    // The panel says it while there are no reports; a toast only for a failed reload or page.
+    if (reports.value.length) toasts.error(caughtErrorMessage(error, t('reports.admin.loadFailed')))
   } finally {
     if (mine === seq) loading.value = false
   }
@@ -100,7 +107,8 @@ onMounted(() => load())
     <AdminReportDetail v-if="selected" :id="selected" @back="selected = null" @changed="onChanged" />
 
     <div v-else class="space-y-2">
-      <EmptyState v-if="!reports.length && !loading" :icon="Flag" :text="$t('reports.admin.empty')" :hint="$t('reports.admin.emptyHint')" class="rounded-lg border border-mnema-hairline bg-mnema-surface" data-testid="reports-empty" />
+      <StatePanel v-if="failed && !reports.length" state="error" retryable class="rounded-lg border border-mnema-hairline bg-mnema-surface" data-testid="reports-error" @retry="load()">{{ $t('reports.admin.loadFailed') }}</StatePanel>
+      <EmptyState v-else-if="!reports.length && !loading" :icon="Flag" :text="$t('reports.admin.empty')" :hint="$t('reports.admin.emptyHint')" class="rounded-lg border border-mnema-hairline bg-mnema-surface" data-testid="reports-empty" />
       <button
         v-for="report in reports"
         :key="report.id"

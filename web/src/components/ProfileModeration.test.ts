@@ -86,6 +86,15 @@ describe('ProfileModerationTab', () => {
     expect((w.get('[data-testid="mod-note-input"]').element as HTMLTextAreaElement).value).toBe('')
   })
 
+  it('offers no way to write a note about a member the viewer does not outrank', async () => {
+    const w = mount(ProfileModerationTab, { props: { userId: subject.id, canWrite: false }, global })
+    await flushPromises()
+    expect(w.find('[data-testid="mod-note-add"]').exists()).toBe(false)
+    expect(w.find('[data-testid="mod-note-edit"]').exists()).toBe(false)
+    expect(w.findAll('[data-note]')).toHaveLength(2)
+    expect(w.find('[data-testid="mod-note-delete"]').exists()).toBe(true)
+  })
+
   it('lets the author edit and delete their note and nobody else', async () => {
     const w = mount(ProfileModerationTab, { props: { userId: subject.id }, global })
     await flushPromises()
@@ -124,8 +133,13 @@ describe('ProfileModerationTab', () => {
     http.handle = () => { throw new Error('nope') }
     const w = mount(ProfileModerationTab, { props: { userId: subject.id }, global })
     await flushPromises()
-    expect(w.get('[role="alert"]').text()).toBe('Couldn’t load the moderation history.')
-    expect(useToastStore().toasts).toHaveLength(1)
+    expect(w.get('[role="alert"]').text()).toContain('Couldn’t load the moderation history.')
+    expect(useToastStore().toasts).toHaveLength(0)
+    http.handle = () => history
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="mod-history-error"]').exists()).toBe(false)
+    expect(w.find('[data-testid="mod-notes-empty"], [data-note]').exists()).toBe(true)
   })
 })
 

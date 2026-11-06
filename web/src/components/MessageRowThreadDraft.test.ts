@@ -30,5 +30,8 @@ describe('thread entry point', () => {
     await row.setProps({ msg: messageFixture({ id: 'm1', reply_count: 2 }) })
     expect(row.text()).toContain('2 replies')
     expect(row.find('[data-testid="thread-draft"]').exists()).toBe(true)
+    // Full-strength text: a faded label fell below readable contrast.
+    const label = row.findAll('span').find(el => el.text().startsWith('Open thread'))
+    expect(label?.classes()).not.toContain('opacity-75')
   })
 })

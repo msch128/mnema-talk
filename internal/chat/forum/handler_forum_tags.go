@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -80,13 +81,15 @@ func (a *API) ServeCreateForumTag(w http.ResponseWriter, r *http.Request) error 
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if err := a.screenTag(r, chID, req.Name, req.Emoji); err != nil {
+	pending, err := a.screenTag(r, chID, req.Name, req.Emoji)
+	if err != nil {
 		return err
 	}
 	tag, err := CreateForumTagSpec(r.Context(), a.DB, chID, TagSpec{Name: req.Name, Emoji: req.Emoji, Color: req.Color, Moderated: req.Moderated})
 	if err != nil {
 		return err
 	}
+	pending.Commit(r.Context(), uuid.Nil)
 	a.auditForumTag(r, "forum.tag_create", chID, tag, nil)
 	a.Events.BroadcastChannel(chID, events.ForumTagsChanged, map[string]any{"channel_id": chID})
 	httpx.WriteJSON(w, http.StatusCreated, tag)
@@ -130,13 +133,15 @@ func (a *API) ServeUpdateForumTag(w http.ResponseWriter, r *http.Request) error 
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if err := a.screenTag(r, chID, messages.Deref(req.Name), messages.Deref(req.Emoji)); err != nil {
+	pending, err := a.screenTag(r, chID, messages.Deref(req.Name), messages.Deref(req.Emoji))
+	if err != nil {
 		return err
 	}
 	tag, before, err := UpdateForumTag(r.Context(), a.DB, chID, tagID, TagPatch{Name: req.Name, Emoji: req.Emoji, Color: req.Color, Moderated: req.Moderated})
 	if err != nil {
 		return err
 	}
+	pending.Commit(r.Context(), uuid.Nil)
 	a.auditForumTag(r, "forum.tag_update", chID, tag, before)
 	a.Events.BroadcastChannel(chID, events.ForumTagsChanged, map[string]any{"channel_id": chID})
 	httpx.WriteJSON(w, http.StatusOK, tag)
@@ -184,9 +189,10 @@ func (a *API) ServeDeleteForumTag(w http.ResponseWriter, r *http.Request) error 
 
 // screenTag applies the automod rules to a tag's name and emoji; a tag is text
 // every member of the forum reads.
-func (a *API) screenTag(r *http.Request, chID uuid.UUID, texts ...string) error {
-	_, err := messages.ScreenText(r.Context(), a.DB, chID, auth.UserFrom(r.Context()).ID, uuid.Nil, strings.Join(texts, "\n"))
-	return err
+// A flag rule's hits are returned pending: the caller commits them once the
+// text is stored.
+func (a *API) screenTag(r *http.Request, chID uuid.UUID, texts ...string) (*automod.Pending, error) {
+	return messages.ScreenText(r.Context(), a.DB, chID, auth.UserFrom(r.Context()).ID, uuid.Nil, strings.Join(texts, "\n"))
 }
 
 // auditForumTag records a tag change; before is the tag as it was (updates only).

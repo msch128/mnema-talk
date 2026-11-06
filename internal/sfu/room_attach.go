@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +13,9 @@ import (
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 )
+
+// peerGen numbers the peers in the order they were made.
+var peerGen atomic.Uint64
 
 // attachPeer makes conn the user's connection in the room, replacing an
 // earlier one. It only wires callbacks and maps: nothing in it waits.
@@ -28,6 +32,7 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 		SendOffer: sendOffer,
 		SendICE:   sendICE,
 		room:      r,
+		gen:       peerGen.Add(1),
 
 		allowLoopbackCands: r.allowLoopbackCands,
 	}

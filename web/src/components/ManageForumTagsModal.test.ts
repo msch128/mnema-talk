@@ -288,6 +288,19 @@ describe('ManageForumTagsModal', () => {
     expect(wrapper.emitted('updated')).toHaveLength(2)
   })
 
+  it('ignores a second move while the first is still being saved', async () => {
+    let finish!: () => void
+    vi.mocked(forumApi.reorderForumTags).mockImplementation(() => new Promise(r => { finish = () => r([]) }))
+    mountModal([tag(1), tag(2), tag(3)])
+    await rows()[1]!.get('button[aria-label="Move up"]').trigger('click')
+    expect(rows()[1]!.get('button[aria-label="Move down"]').attributes('disabled')).toBeDefined()
+    await rows()[2]!.get('button[aria-label="Move up"]').trigger('click')
+    expect(forumApi.reorderForumTags).toHaveBeenCalledTimes(1)
+    finish()
+    await flushPromises()
+    expect(rows()[1]!.get('button[aria-label="Move down"]').attributes('disabled')).toBeUndefined()
+  })
+
   it('saves the rules and passes the new settings up', async () => {
     const saved = { require_tag: true, guidelines: 'Be kind.' }
     vi.mocked(forumApi.updateForumSettings).mockResolvedValue(saved)

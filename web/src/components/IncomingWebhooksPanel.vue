@@ -53,7 +53,6 @@ async function load() {
     hooks.value = await api(base.value, { decode: arrayDecoder('webhooks', isWebhook) })
   } catch (e) {
     loadFailed.value = true
-    showError(e)
   } finally {
     loaded.value = true
   }

@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -14,17 +15,35 @@ import (
 // Candidates inside the answer's SDP get the same vetting and budget as
 // trickled ones (see vetAnswerCandidates).
 func (p *Peer) SetAnswer(answer webrtc.SessionDescription) error {
-	vetted, err := p.vetAnswerCandidates(answer.SDP)
+	vetted, added, err := p.vetAnswerCandidates(answer.SDP)
 	if err != nil {
 		return err
 	}
 	answer.SDP = vetted
+	before := remoteState{p.PC.SignalingState(), p.PC.CurrentRemoteDescription()}
 	if err := p.PC.SetRemoteDescription(answer); err != nil {
+		// Pion applies the description (and adds its candidates) before some
+		// of its later failure points; only an untouched connection gets the
+		// budget back.
+		if before.unchanged(p.PC) {
+			p.forgetAnswerCandidates(added)
+		}
 		return err
 	}
 	p.applyEarlyCandidates()
 	p.requestPendingSignal()
 	return nil
+}
+
+// remoteState is what a connection shows of its remote description, taken
+// before an answer to tell whether a refused answer was applied nonetheless.
+type remoteState struct {
+	signaling webrtc.SignalingState
+	current   *webrtc.SessionDescription
+}
+
+func (s remoteState) unchanged(pc *webrtc.PeerConnection) bool {
+	return pc.SignalingState() == s.signaling && pc.CurrentRemoteDescription() == s.current
 }
 
 func (r *Room) SignalPeerConnections() {
@@ -198,14 +217,10 @@ func (r *Room) addSender(peer *Peer, trackID string, info *TrackInfo) bool {
 	}
 	delete(peer.addTrackFailed, trackID)
 	if vt != nil {
-		if !peer.putViewerTrack(trackID, vt) {
-			// The peer was released while this round ran.
+		if !r.attachViewer(peer, trackID, info, vt) {
 			_ = peer.PC.RemoveTrack(sender)
 			return false
 		}
-		// The new viewer waits for a keyframe of its layer, which
-		// addViewer asks for.
-		info.group.addViewer(vt)
 		go r.forwardRTCP(sender, vt.viewerKeyframe, vt.observeReportWithBandwidth)
 		return true
 	}
@@ -217,6 +232,55 @@ func (r *Room) addSender(peer *Peer, trackID string, info *TrackInfo) bool {
 	return true
 }
 
+// attachViewer registers vt with its group, then with the peer. The group
+// comes first: once the peer lists vt, a release finds and removes it, and
+// the peer's release can no longer fall between the two steps and leave a
+// closed track registered. It reports false when the peer was released or a
+// newer peer of the user already has a track.
+func (r *Room) attachViewer(peer *Peer, trackID string, info *TrackInfo, vt *viewerTrack) bool {
+	peer.step("viewer-made")
+	// The new viewer waits for a keyframe of its layer, which addViewer asks for.
+	if !info.group.addViewer(vt) {
+		return false
+	}
+	// A change of the viewer's choice made before vt was registered found no
+	// viewer to apply to. A change racing with this read applies itself to vt
+	// after the read, possibly before the sync below: the choice is read again
+	// after every sync, so a stale one never stays.
+	for {
+		r.mu.RLock()
+		pref, fit := r.viewerChoiceLocked(peer.ID, info)
+		r.mu.RUnlock()
+		peer.step("viewer-choice-read")
+		if !vt.syncChoice(pref, fit) {
+			break
+		}
+	}
+	peer.step("viewer-added")
+	if !peer.putViewerTrack(trackID, vt) {
+		// The peer was released while this round ran.
+		info.group.removeViewer(vt)
+		return false
+	}
+	return true
+}
+
+func (p *Peer) step(name string) {
+	if p.attachStep != nil {
+		p.attachStep(name)
+	}
+}
+
+// viewerChoiceLocked is the layer choice and picture fit viewer has for info
+// now. r.mu is held.
+func (r *Room) viewerChoiceLocked(viewer uuid.UUID, info *TrackInfo) (pref, fit int) {
+	if info.Source == SourceScreen {
+		return r.subs[viewer].screenQuality(info.SenderID), r.subs[viewer].screenFit(info.SenderID)
+	}
+	// A camera has no picker: it is always automatic, bounded by its picture's size.
+	return -1, r.cameraFitLocked(viewer, info.SenderID)
+}
+
 // recipientTrack picks what the peer's PeerConnection gets for info: the
 // shared track, or a per-viewer layer switcher for screen shares.
 func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webrtc.TrackLocal, *viewerTrack, error) {
@@ -224,19 +288,18 @@ func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webr
 	var vt *viewerTrack
 	if info.group != nil {
 		r.mu.RLock()
-		// A camera has no picker: it is always automatic, bounded by its picture's size.
-		pref, fit, streamID := -1, r.cameraFitLocked(peer.ID, info.SenderID), CameraStreamPrefix+info.SenderID.String()
+		pref, fit := r.viewerChoiceLocked(peer.ID, info)
+		r.mu.RUnlock()
+		streamID := CameraStreamPrefix + info.SenderID.String()
 		if info.Source == SourceScreen {
-			pref = r.subs[peer.ID].screenQuality(info.SenderID)
-			fit = r.subs[peer.ID].screenFit(info.SenderID)
 			streamID = info.SenderID.String()
 		}
-		r.mu.RUnlock()
 		var err error
 		vt, err = info.group.newViewer(peer.ID, pref, fit, trackID, streamID)
 		if err != nil {
 			return nil, nil, err
 		}
+		vt.gen = peer.gen
 		vt.expectBind()
 		recipientTrack = vt
 	}

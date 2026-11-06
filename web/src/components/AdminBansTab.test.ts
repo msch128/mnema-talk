@@ -55,7 +55,7 @@ describe('AdminBansTab', () => {
     apiMock.mockRejectedValueOnce(new Error('boom'))
     const failed = mount(AdminBansTab)
     await flushPromises()
-    expect(toastTexts()).toContain('boom')
+    expect(toastTexts()).toEqual([])
     expect(failed.text()).not.toContain('Nobody is banned.')
     expect(failed.get('[data-testid="bans-error"]').text()).toContain('Couldn’t load the bans.')
     apiMock.mockResolvedValueOnce(bans())
@@ -103,5 +103,13 @@ describe('AdminBansTab', () => {
     await flushPromises()
     expect(toastTexts()).toContain('denied')
     expect(w.findAll('[data-testid^="ban-"]')).toHaveLength(2)
+  })
+
+  it('names the member on the unban button', async () => {
+    apiMock.mockResolvedValue(bans())
+    const w = mount(AdminBansTab)
+    await flushPromises()
+    const labels = w.findAll('[data-testid="unban"]').map(b => b.attributes('aria-label'))
+    expect(labels).toEqual(['Unban The Troll', 'Unban quiet'])
   })
 })

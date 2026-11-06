@@ -2,6 +2,7 @@
 // The settings of one incoming webhook (avatar, name and what its posts may do)
 // as one draft with one Save (doc/settings-ux.md). A new URL and deleting are
 // actions on the row and run at once.
+import { useId } from 'vue'
 import type { PropType } from 'vue'
 import { api } from '../lib/api'
 import { decodeWebhook } from '../types/webhooks'
@@ -69,6 +70,8 @@ function memberName(id: string | null): string {
   return m ? (m.display_name || m.username) : t('webhooks.unknownMember')
 }
 
+const nameErrorId = useId()
+
 defineExpose({ guard: form.guard })
 </script>
 
@@ -85,11 +88,13 @@ defineExpose({ guard: form.guard })
         </label>
         <span v-if="draft.avatar" class="text-xs text-mnema-accent" data-testid="incoming-avatar-pending">{{ $t('draft.imagePending') }}</span>
       </div>
-      <label class="block">
-        <span class="mb-1 block text-xs font-medium text-mnema-muted">{{ $t('common.name') }}</span>
-        <input v-model="draft.name" type="text" v-max-chars="80" :aria-invalid="errors.name ? 'true' : undefined" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text" data-testid="incoming-edit-name" />
-        <span v-if="errors.name" class="mt-1 block text-xs text-mnema-danger">{{ errors.name }}</span>
-      </label>
+      <div>
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-mnema-muted">{{ $t('common.name') }}</span>
+          <input v-model="draft.name" type="text" v-max-chars="80" :aria-invalid="errors.name ? 'true' : undefined" :aria-describedby="errors.name ? nameErrorId : undefined" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text" data-testid="incoming-edit-name" />
+        </label>
+        <span v-if="errors.name" :id="nameErrorId" class="mt-1 block text-xs text-mnema-danger">{{ errors.name }}</span>
+      </div>
       <p class="text-xs text-mnema-tertiary" data-testid="incoming-audit">{{ $t('webhooks.createdBy', { name: memberName(hook.created_by) }) }}</p>
       <label v-for="key in SETTINGS" :key="key" class="flex items-center gap-2">
         <input v-model="draft[key]" type="checkbox" :data-setting="key" />

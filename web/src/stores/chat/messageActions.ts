@@ -47,11 +47,11 @@ function markReadBySending({ cs }: Cx, msg: Message) {
 }
 
 /** Posts a message; attachmentIds are files staged with the attachment tray, shown in that order. */
-export async function sendMessage(cx: Cx, content: string, parentId: string | null = null, replyToId: string | null = null, attachmentIds: readonly string[] = []) {
+export async function sendMessage(cx: Cx, content: string, parentId: string | null = null, replyToId: string | null = null, attachmentIds: readonly string[] = [], targetChannelId?: string) {
   const { cs } = cx
   const community = cs.communityGeneration
-  if (!cs.activeChannel.value || (!content.trim() && !attachmentIds.length)) return null
-  const channelId = cs.activeChannel.value.id
+  const channelId = targetChannelId ?? cs.activeChannel.value?.id
+  if (!channelId || (!content.trim() && !attachmentIds.length)) return null
   const msg = await postWithReplyFallback(replyToId, reply => {
     const json: CreateMessageRequest = { content: withEmojiTokens(content.trim()) }
     if (attachmentIds.length) json.attachment_ids = [...attachmentIds]

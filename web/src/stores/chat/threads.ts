@@ -61,10 +61,9 @@ export function closeThread(cx: Cx) {
   cs.isThreadLoading.value = false
 }
 
-export async function sendThreadReply(cx: Cx, content: string, replyToId: string | null = null, attachmentIds: readonly string[] = []) {
-  const { cs } = cx
-  if (!cs.activeThread.value) return null
-  return sendMessage(cx, content, cs.activeThread.value.id, replyToId, attachmentIds)
+/** The thread and its channel are the caller's, captured when the send started: the reader may open another thread while files upload. */
+export async function sendThreadReply(cx: Cx, threadId: string, channelId: string, content: string, replyToId: string | null = null, attachmentIds: readonly string[] = []) {
+  return sendMessage(cx, content, threadId, replyToId, attachmentIds, channelId)
 }
 
 export async function uploadThreadMedia(cx: Cx, file: File, content = '', replyToId: string | null = null) {

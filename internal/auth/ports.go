@@ -18,6 +18,10 @@ type LiveControl interface {
 	VoiceChannels(userID uuid.UUID) []uuid.UUID
 	// KickFromChannel ends the user's presence in one Talk.
 	KickFromChannel(userID, channelID uuid.UUID)
+	// EndingUser stops the user's open connections from acting (seating in a
+	// Talk, any event they send) while a notice is still being flushed to
+	// them; DisconnectUser follows a moment later.
+	EndingUser(userID uuid.UUID)
 	// DisconnectUser closes all of the user's live connections.
 	DisconnectUser(userID uuid.UUID)
 	// DisconnectSession closes the connections opened with one session id (a

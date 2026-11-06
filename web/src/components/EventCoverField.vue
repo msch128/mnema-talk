@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Image as ImageIcon, Trash2 } from '@lucide/vue'
 
 // The cover of an event form: a preview, a picker and Remove. Nothing is stored here;
-// the form uploads or deletes the cover when it is saved.
+// the form uploads or deletes the cover when it is saved. The file input stays out of
+// the tab order and a real button opens it, so the keyboard can reach it.
 defineProps<{ preview: string | null }>()
 const emit = defineEmits<{ pick: [event: Event]; remove: [] }>()
+const fileInput = ref<HTMLInputElement | null>(null)
 </script>
 
 <template>
@@ -24,11 +27,16 @@ const emit = defineEmits<{ pick: [event: Event]; remove: [] }>()
       </button>
     </div>
     <div class="flex items-center gap-3">
-      <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-mnema-border bg-mnema-surface px-3 py-1.5 text-sm font-medium text-mnema-text hover:bg-mnema-hover transition-colors">
+      <input ref="fileInput" type="file" accept="image/*" tabindex="-1" aria-hidden="true" data-testid="event-cover-file" class="sr-only" @change="emit('pick', $event)" />
+      <button
+        type="button"
+        data-testid="event-cover-choose"
+        class="flex cursor-pointer items-center gap-2 rounded-lg border border-mnema-border bg-mnema-surface px-3 py-1.5 text-sm font-medium text-mnema-text hover:bg-mnema-hover transition-colors"
+        @click="fileInput?.click()"
+      >
         <ImageIcon class="w-4 h-4 text-mnema-tertiary" />
         <span>{{ preview ? $t('events.changeCover') : $t('events.uploadCover') }}</span>
-        <input type="file" accept="image/*" class="hidden" @change="emit('pick', $event)" />
-      </label>
+      </button>
       <button v-if="preview" type="button" class="text-sm text-red-400 hover:underline" @click="emit('remove')">
         {{ $t('events.removeCover') }}
       </button>

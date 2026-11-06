@@ -103,3 +103,8 @@ it('shows no confirmation when both ways of copying fail', async () => {
   expect(wrapper.get('[data-testid="copy-error"]').text()).toBe('Kopieren')
   wrapper.unmount()
 })
+it('puts the cursor in the address field when the page opens', async () => {
+  const wrapper = mount(DesktopSelector, { attachTo: document.body }); await flushPromises()
+  expect(document.activeElement).toBe(wrapper.get('input').element)
+  wrapper.unmount()
+})

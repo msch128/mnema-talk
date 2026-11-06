@@ -115,7 +115,7 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]core.Message, boo
 	if err != nil {
 		return nil, false, err
 	}
-	if err := core.MessageCursorExists(ctx, p, q.Before); err != nil {
+	if err := searchCursorExists(ctx, p, q); err != nil {
 		return nil, false, err
 	}
 	var msgs []core.Message
@@ -166,4 +166,17 @@ func BuildSearchSQL(q SearchQuery) (string, []any, error) {
 	` + order + `
 	LIMIT ` + b.addArg(q.Limit+1)
 	return sql, b.args, nil
+}
+
+// searchCursorExists checks the page cursor against what the caller may read
+// (the scope of the search itself), so a cursor that is merely hidden from
+// them answers exactly like one that does not exist.
+func searchCursorExists(ctx context.Context, p *db.Pool, q SearchQuery) error {
+	if q.Before == nil {
+		return nil
+	}
+	b := &searchBuilder{}
+	b.addScope(q)
+	query := "SELECT 1 FROM messages m WHERE " + strings.Join(b.where, " AND ") + " AND m.id = " + b.addArg(*q.Before)
+	return core.CursorExists(ctx, p, query, b.args...)
 }

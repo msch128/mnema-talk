@@ -10,6 +10,7 @@ import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
+import StatePanel from './StatePanel.vue'
 import AdminUserRow from './AdminUserRow.vue'
 import AdminResetPasswordDialog from './AdminResetPasswordDialog.vue'
 import AdminResetTwoFactorDialog from './AdminResetTwoFactorDialog.vue'
@@ -20,6 +21,8 @@ const permissions = usePermissionsStore()
 const rolesModalUser = ref<AdminUser | null>(null)
 
 const users = ref<AdminUser[]>([])
+const loaded = ref(false)
+const failed = ref(false)
 const resetUser = ref<AdminUser | null>(null)
 const resetTwoFactorUser = ref<AdminUser | null>(null)
 const userSearch = ref('')
@@ -32,8 +35,12 @@ async function refreshUsers() {
   try {
     users.value = await api('/api/admin/users', { decode: arrayDecoder('admin users', isAuthAdminUser) })
     permissions.setMemberRoles(users.value)
+    failed.value = false
+    loaded.value = true
   } catch (e) {
-    showError(e)
+    failed.value = true
+    // The panel says it until the first load worked; a toast only for a failed reload.
+    if (loaded.value) showError(e)
   }
 }
 
@@ -170,7 +177,13 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody class="divide-y divide-mnema-hairline max-md:block">
-            <tr v-if="!filteredUsers.length" class="max-md:block">
+            <tr v-if="!loaded" class="max-md:block">
+              <td colspan="6" class="max-md:block">
+                <StatePanel v-if="failed" state="error" retryable data-testid="users-error" @retry="refreshUsers">{{ $t('admin.usersLoadFailed') }}</StatePanel>
+                <StatePanel v-else state="loading" />
+              </td>
+            </tr>
+            <tr v-else-if="!filteredUsers.length" class="max-md:block">
               <td colspan="6" class="max-md:block p-6 text-center text-mnema-tertiary italic">
                 {{ $t('admin.noUsersFound') }}
               </td>
