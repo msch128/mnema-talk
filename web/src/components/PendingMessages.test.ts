@@ -18,7 +18,7 @@ function pending(status: 'waiting' | 'failed' | 'sending' = 'waiting', error = '
   const chat = useChatStore()
   chat.outbox = [{
     nonce: 'n1', channelId: 'c1', userId: 'me', parentId: null, replyToId: null, content: 'hello', createdAt: '2026-01-01T12:00:00Z', status, error,
-    cause: 'offline', attempts: 0, attempted: false, notBefore: 0, ...extra
+    cause: 'offline', attempts: 0, possiblyDelivered: false, notBefore: 0, ...extra
   }]
   return mount(PendingMessages, { props: { channelId: 'c1' }, global: { directives: { tooltip: () => undefined } } })
 }
@@ -61,7 +61,7 @@ describe('a message that has not been sent yet', () => {
   })
 
   it('offers only discarding once a try may have arrived, with a calm hint', () => {
-    const view = pending('waiting', '', { attempted: true })
+    const view = pending('waiting', '', { possiblyDelivered: true })
     expect(view.text()).not.toContain(t('outbox.edit'))
     expect(view.text()).toContain(t('outbox.noEdit'))
     expect(view.text()).toContain(t('outbox.cancel'))

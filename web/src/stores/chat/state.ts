@@ -123,6 +123,8 @@ function outboxState() {
     outboxDelay: 5000,
     // The account whose stored messages were brought back this sign-in.
     outboxRestoredFor: null as string | null,
+    // Stops following the other tabs' stored messages and the end of the session.
+    outboxStop: undefined as (() => void) | undefined,
     // Nonces of the author's own sends the server announced lately (see noteEcho).
     echoed: new Map<string, { at: number; msg: Message }>()
   }

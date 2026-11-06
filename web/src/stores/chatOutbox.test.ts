@@ -5,6 +5,7 @@ import { useAuthStore } from './auth'
 import { channelFixture, messageFixture, userFixture, fixtureId } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
 import { ApiError, type ApiOptions } from '../lib/api'
+import { DRAFT_SESSION_KEY, beginDraftSession, clearAllDrafts } from '../lib/drafts'
 import type { Message } from '../types/domain'
 
 // What a member sees when they write while the connection is down.
@@ -197,13 +198,13 @@ describe('writing while the connection is down', () => {
     const nonce = required(chat.outbox[0]).nonce
     chat.editPending(nonce, 'different text')
     expect(chat.outbox.map(p => p.content)).toEqual(['sent into the void'])
-    // A refusal says it was not stored: then the text may change again.
+    // A rate limit, a session or a CSRF refusal comes before the server looks at the nonce: it says nothing about the first try.
     net.down = false
     net.refuse = new ApiError(403, 'FORBIDDEN', 'missing permission')
     await connectAgain(chat)
     expect(chat.outbox.map(p => p.status)).toEqual(['failed'])
     chat.editPending(nonce, 'different text')
-    expect(chat.outbox.map(p => p.content)).toEqual(['different text'])
+    expect(chat.outbox.map(p => p.content)).toEqual(['sent into the void'])
   })
 
   it('marks a message the server refuses as failed, offers a retry, and goes on with the next', async () => {
@@ -388,5 +389,127 @@ describe('after the page was closed or the session ended', () => {
     expect(keep()).toHaveLength(1)
     await useAuthStore().logout()
     expect(keep()).toEqual([])
+  })
+})
+
+const HOUR = 3600_000
+const storageEvent = (key: string, newValue: string | null) => window.dispatchEvent(new StorageEvent('storage', { key, newValue }))
+const newTab = () => { setActivePinia(createPinia()); return setup() }
+
+describe('two tabs that are offline at the same time', () => {
+  const keys = () => Object.keys(localStorage).filter(k => k.startsWith('mnema.outbox.'))
+
+  it('keep both tabs\' messages and send each of them after a reload', async () => {
+    const tabA = setup()
+    await tabA.sendMessage('from tab A', null, null, [], ch.id)
+    const tabB = newTab()
+    await tabB.sendMessage('from tab B', null, null, [], ch.id)
+    expect(keys()).toHaveLength(2)
+    const reloaded = newTab()
+    await connectAgain(reloaded)
+    expect(net.posted.map(p => p.content).sort()).toEqual(['from tab A', 'from tab B'])
+  })
+
+  it('show the message the other tab wrote, and forget it when that tab sent or discarded it', async () => {
+    const tabA = setup()
+    const tabB = newTab()
+    tabB.initWebSocket()
+    await tabA.sendMessage('written in A', null, null, [], ch.id)
+    const key = required(keys()[0])
+    storageEvent(key, localStorage.getItem(key))
+    expect(tabB.outbox.map(p => p.content)).toEqual(['written in A'])
+    tabA.cancelPending(required(tabA.outbox[0]).nonce)
+    storageEvent(key, null)
+    expect(tabB.outbox).toEqual([])
+  })
+
+  it('leave what a tab discarded alone when another tab settles a different message', async () => {
+    const tabA = setup()
+    await tabA.sendMessage('one', null, null, [], ch.id)
+    await tabA.sendMessage('two', null, null, [], ch.id)
+    const tabB = newTab()
+    tabB.initWebSocket()
+    for (const k of keys()) storageEvent(k, localStorage.getItem(k))
+    tabB.cancelPending(required(tabB.outbox[0]).nonce)
+    expect(keys()).toHaveLength(1)
+    expect(JSON.parse(localStorage.getItem(required(keys()[0])) ?? '{}')).toMatchObject({ content: 'two' })
+  })
+})
+
+describe('messages kept longer than the server remembers their nonce', () => {
+  const stale = (over: object) => {
+    const entry = { nonce: 'n-old', channelId: ch.id, userId: me.id, content: 'old text', parentId: null, replyToId: null, createdAt: new Date(Date.now() - 25 * HOUR).toISOString(), status: 'waiting', error: '', cause: 'offline', attempts: 0, possiblyDelivered: true, notBefore: 0, ...over }
+    localStorage.setItem('mnema.outbox.' + me.id + '.' + entry.nonce, JSON.stringify(entry))
+  }
+
+  it('are not sent again by themselves when they may have arrived: they show as not sent', async () => {
+    stale({})
+    const chat = setup()
+    await connectAgain(chat)
+    expect(net.posted).toEqual([])
+    expect(chat.outbox.map(p => [p.content, p.status])).toEqual([['old text', 'failed']])
+  })
+
+  it('are still sent when no try had reached the server', async () => {
+    stale({ possiblyDelivered: false })
+    const chat = setup()
+    await connectAgain(chat)
+    expect(net.posted.map(p => p.content)).toEqual(['old text'])
+  })
+
+  it('are dropped after a week, and a retry of an expired one is a new send with a new nonce', async () => {
+    stale({ nonce: 'n-week', createdAt: new Date(Date.now() - 8 * 24 * HOUR).toISOString() })
+    stale({})
+    const chat = setup()
+    await connectAgain(chat)
+    expect(chat.outbox.map(p => p.nonce)).toEqual(['n-old'])
+    expect(localStorage.getItem('mnema.outbox.' + me.id + '.n-week')).toBeNull()
+    chat.retryPending('n-old')
+    await tick()
+    expect(net.posted).toHaveLength(1)
+    expect(net.posted[0]?.nonce).not.toBe('n-old')
+  })
+
+  it('are marked before a try when they grow old while the page stays open', async () => {
+    const chat = setup()
+    await chat.sendMessage('long wait', null, null, [], ch.id)
+    await vi.advanceTimersByTimeAsync(24 * HOUR)
+    net.down = false
+    await connectAgain(chat)
+    expect(net.posted).toEqual([])
+    expect(chat.outbox.map(p => p.status)).toEqual(['failed'])
+  })
+})
+
+describe('signing out in another tab', () => {
+  it('does not let this tab write its waiting messages back, and empties them here', async () => {
+    beginDraftSession(me.id)
+    try {
+      const chat = setup()
+      chat.initWebSocket()
+      await chat.sendMessage('before sign-out', null, null, [], ch.id)
+      expect(chat.outbox).toHaveLength(1)
+      // The other tab signed out: the session token and the stored messages are gone.
+      localStorage.clear()
+      storageEvent(DRAFT_SESSION_KEY, null)
+      expect(chat.outbox).toEqual([])
+      await chat.sendMessage('after sign-out', null, null, [], ch.id).catch(() => {})
+      expect(Object.keys(localStorage).filter(k => k.startsWith('mnema.outbox.'))).toEqual([])
+    } finally {
+      clearAllDrafts()
+    }
+  })
+})
+
+describe('a repeated send that answers with an old message', () => {
+  it('does not move the read marker backwards', async () => {
+    const chat = setup()
+    chat.readStates = { [ch.id]: { channel_id: ch.id, notify_level: 'all', unread_count: 3, mention_count: 1, last_read_at: '2026-02-01T00:00:00Z' } }
+    net.down = false
+    http.handle = (url, opts) => url.endsWith('/messages') && opts?.method === 'POST'
+      ? messageFixture({ id: fixtureId(70), channel_id: ch.id, user_id: me.id, content: 'old', created_at: '2026-01-01T00:00:00Z' })
+      : []
+    await chat.sendMessage('old', null, null, [], ch.id)
+    expect(chat.readStates[ch.id]).toMatchObject({ last_read_at: '2026-02-01T00:00:00Z', unread_count: 3, mention_count: 1 })
   })
 })

@@ -4,8 +4,9 @@ import { t } from '../../i18n'
 import type { Message } from '../../types/domain'
 import type { Cx } from './state'
 import type { PendingMessage } from './outboxTypes'
-import { landSent, postText, type TextSend } from './messagePost'
-import { loadStoredOutbox, saveStoredOutbox } from './outboxStorage'
+import { draftSessionAlive, onDraftSessionEnd } from '../../lib/drafts'
+import { landSent, newNonce, postText, type TextSend } from './messagePost'
+import { KEEP_MAX_MS, REPEAT_SAFE_MS, loadStoredOutbox, nonceOfKey, readStoredEntry, removeStoredEntry, saveStoredEntry } from './outboxStorage'
 
 // The outbox keeps text messages that could not be sent because the connection
 // was down, and sends them again, in order per conversation, once it is back.
@@ -14,6 +15,11 @@ import { loadStoredOutbox, saveStoredOutbox } from './outboxStorage'
 // keeps failing as before). The nonce each message carries makes a repeat
 // harmless: if the first try had reached the server, the server returns that
 // message instead of posting a second one (or says it was deleted meanwhile).
+// The server forgets a nonce after a day, so what may have arrived is not sent
+// again by itself near that age (see REPEAT_SAFE_MS in outboxStorage.ts).
+// Tabs share the stored messages: each tab writes only the messages it changed
+// and follows the others through the storage event. Two tabs may try the same
+// message; the nonce makes that safe, and the echo is shown once.
 
 const RETRY_START_MS = 5000
 const RETRY_MAX_MS = 30000
@@ -34,11 +40,33 @@ function isServerTrouble(error: unknown): boolean {
   return !isApiError(error) || error.status >= 500
 }
 
-/** Replaces the pending list, and keeps this browser's copy of the signed-in account's messages in step. */
+/** Replaces the pending list, and keeps this browser's copy of the signed-in account's messages in step: only the messages that changed here are written or removed. */
 function commit(cx: Cx, next: PendingMessage[]) {
+  // The session ended in another tab (sign-out): nothing may be written back.
+  if (!draftSessionAlive()) return
+  const prev = cx.cs.outbox.value
   cx.cs.outbox.value = next
   const uid = cx.authStore.user?.id
-  if (uid) saveStoredOutbox(uid, next)
+  if (!uid) return
+  const kept = new Set(next.map(p => p.nonce))
+  for (const p of prev) if (p.userId === uid && !kept.has(p.nonce)) removeStoredEntry(uid, p.nonce)
+  for (const p of next) if (p.userId === uid && !prev.includes(p)) saveStoredEntry(p)
+}
+
+const age = (p: PendingMessage, now: number) => {
+  const created = Date.parse(p.createdAt)
+  return Number.isNaN(created) ? 0 : now - created
+}
+
+/** Too old to be sent by itself: it may have arrived, and the server no longer recognises its nonce. */
+const unsafeToRepeat = (p: PendingMessage, now: number) => p.possiblyDelivered && age(p, now) > REPEAT_SAFE_MS
+
+/** Marks as not sent what must not be repeated any more, and drops what is far too old. */
+function expire(cx: Cx, now = Date.now()) {
+  const list = cx.cs.outbox.value
+  if (!list.some(p => age(p, now) > KEEP_MAX_MS || (p.status !== 'failed' && unsafeToRepeat(p, now)))) return
+  commit(cx, list.filter(p => age(p, now) <= KEEP_MAX_MS)
+    .map(p => p.status !== 'failed' && unsafeToRepeat(p, now) ? { ...p, status: 'failed' as const, error: t('outbox.expired') } : p))
 }
 
 /** Is a message of this conversation waiting? A new one then queues behind it, so the order holds. */
@@ -52,7 +80,7 @@ export function enqueue(cx: Cx, channelId: string, send: TextSend, behindOthers 
   commit(cx, [...cs.outbox.value, {
     nonce: send.nonce, channelId, userId: authStore.user?.id ?? '', parentId: send.parentId, replyToId: send.replyToId,
     content: send.content.trim(), createdAt: new Date().toISOString(), status: 'waiting', error: '',
-    cause: 'offline', attempts: 0, attempted: !behindOthers, notBefore: 0
+    cause: 'offline', attempts: 0, possiblyDelivered: !behindOthers, notBefore: 0
   }])
   scheduleRetry(cx)
   if (behindOthers) void flushOutbox(cx)
@@ -100,13 +128,20 @@ export function editPending(cx: Cx, nonce: string, content: string) {
   const text = content.trim()
   const entry = cx.cs.outbox.value.find(p => p.nonce === nonce)
   // After a try that may have arrived, the server would return the old text for this nonce.
-  if (!entry || entry.status === 'sending' || entry.attempted) return
+  if (!entry || entry.status === 'sending' || entry.possiblyDelivered) return
   if (!text) { cancelPending(cx, nonce); return }
   change(cx, nonce, { content: text })
 }
 
 /** A message the server refused can be tried again (after an edit, say). */
 export function retryPending(cx: Cx, nonce: string) {
+  const entry = cx.cs.outbox.value.find(p => p.nonce === nonce)
+  if (entry && unsafeToRepeat(entry, Date.now())) {
+    // The server forgot this nonce, so this is a new send, which is what the member asks for.
+    const fresh = { ...entry, nonce: newNonce(), createdAt: new Date().toISOString(), possiblyDelivered: false }
+    commit(cx, cx.cs.outbox.value.map(p => p === entry ? fresh : p))
+    nonce = fresh.nonce
+  }
   change(cx, nonce, { status: 'waiting', error: '', attempts: 0, notBefore: 0 })
   scheduleRetry(cx)
   void flushOutbox(cx)
@@ -145,7 +180,9 @@ async function deliver(cx: Cx, entry: PendingMessage): Promise<'next' | 'stop'> 
   const { cs, authStore } = cx
   if (entry.userId !== authStore.user?.id) { settlePending(cx, entry.nonce); return 'next' }
   const community = cs.communityGeneration
-  change(cx, entry.nonce, { status: 'sending', attempted: true, notBefore: 0 })
+  expire(cx)
+  if (!cs.outbox.value.some(p => p.nonce === entry.nonce && p.status === 'waiting')) return 'next'
+  change(cx, entry.nonce, { status: 'sending', notBefore: 0 })
   // Edits made while it waited are in the stored entry, not in the copy this loop found.
   const current = cs.outbox.value.find(p => p.nonce === entry.nonce) ?? entry
   // A request that hangs would keep the whole conversation's queue busy.
@@ -168,8 +205,10 @@ async function deliver(cx: Cx, entry: PendingMessage): Promise<'next' | 'stop'> 
 /** What an attempt that did not succeed means for the message: wait, drop it, or show it as not sent. */
 function failedAttempt(cx: Cx, entry: PendingMessage, error: unknown): 'next' | 'stop' {
   const nonce = entry.nonce
+  // Cut off, unanswered or failed without a usable answer: the server may have stored it. A refusal (4xx) says nothing about earlier tries.
+  const possiblyDelivered = entry.possiblyDelivered || isNetworkFailure(error) || isServerTrouble(error)
   if (isNetworkFailure(error)) {
-    change(cx, nonce, { status: 'waiting', cause: 'offline' })
+    change(cx, nonce, { status: 'waiting', cause: 'offline', possiblyDelivered })
     return 'stop'
   }
   if (isApiError(error) && error.code === 'MESSAGE_DELETED') {
@@ -179,18 +218,16 @@ function failedAttempt(cx: Cx, entry: PendingMessage, error: unknown): 'next' | 
   }
   if (isApiError(error) && error.status === 429 && error.retryAfter !== null) {
     // Slow mode and rate limits: the composer waits the named time, so does the outbox. The message was not stored.
-    change(cx, nonce, { status: 'waiting', cause: 'server', attempted: false, notBefore: Date.now() + error.retryAfter * 1000 })
+    change(cx, nonce, { status: 'waiting', cause: 'server', possiblyDelivered, notBefore: Date.now() + error.retryAfter * 1000 })
     return 'stop'
   }
   const attempts = entry.attempts + 1
   const later = isServerTrouble(error) || (isApiError(error) && error.status === 429)
   if (later && attempts < MAX_SERVER_ATTEMPTS) {
-    change(cx, nonce, { status: 'waiting', cause: 'server', attempts })
+    change(cx, nonce, { status: 'waiting', cause: 'server', attempts, possiblyDelivered })
     return 'stop'
   }
-  // A refusal says the message was not stored; after a server failure it might have been.
-  const refused = !isServerTrouble(error)
-  change(cx, nonce, { status: 'failed', error: caughtErrorMessage(error, t('chat.sendFailed')), attempts, attempted: refused ? false : entry.attempted })
+  change(cx, nonce, { status: 'failed', error: caughtErrorMessage(error, t('chat.sendFailed')), attempts, possiblyDelivered })
   return 'next'
 }
 
@@ -217,18 +254,47 @@ export function restoreOutbox(cx: Cx) {
   const uid = authStore.user?.id
   if (!uid || cs.outboxRestoredFor === uid) return
   cs.outboxRestoredFor = uid
+  followOtherTabs(cx)
   const known = new Set(cs.outbox.value.map(p => p.nonce))
   const back = loadStoredOutbox(uid).filter(p => !known.has(p.nonce))
   if (!back.length) return
-  commit(cx, [...cs.outbox.value, ...back].sort((a, b) => a.createdAt.localeCompare(b.createdAt)))
+  commit(cx, [...cs.outbox.value, ...back].sort(byCreation))
+  expire(cx)
   scheduleRetry(cx)
   void flushOutbox(cx)
+}
+
+const byCreation = (a: PendingMessage, b: PendingMessage) => a.createdAt.localeCompare(b.createdAt)
+
+/** What another tab does to the account's stored messages shows here too, and a sign-out elsewhere empties this tab's list. */
+function followOtherTabs(cx: Cx) {
+  const { cs } = cx
+  cs.outboxStop?.()
+  const stopEnd = onDraftSessionEnd(() => { cs.outbox.value = [] })
+  const onStorage = (event: StorageEvent) => adoptFromStorage(cx, event)
+  window.addEventListener('storage', onStorage)
+  cs.outboxStop = () => { stopEnd(); window.removeEventListener('storage', onStorage) }
+}
+
+function adoptFromStorage(cx: Cx, event: StorageEvent) {
+  const { cs } = cx
+  const uid = cx.authStore.user?.id
+  const nonce = uid ? nonceOfKey(uid, event.key) : null
+  if (!uid || !nonce || !draftSessionAlive()) return
+  const incoming = readStoredEntry(uid, event.key ?? '', event.newValue)
+  // This tab's own request for it is out: its answer settles it. A removal elsewhere still counts.
+  if (incoming && cs.outbox.value.some(p => p.nonce === nonce && p.status === 'sending')) return
+  const rest = cs.outbox.value.filter(p => p.nonce !== nonce)
+  cs.outbox.value = incoming ? [...rest, incoming].sort(byCreation) : rest
+  if (incoming) { scheduleRetry(cx); void flushOutbox(cx) }
 }
 
 /** Drops everything that waits in memory (another community or account); what this browser stored for the account stays for its next sign-in. */
 export function resetOutbox(cx: Cx) {
   cx.cs.outboxRestoredFor = null
   cx.cs.echoed.clear()
+  cx.cs.outboxStop?.()
+  cx.cs.outboxStop = undefined
   clearTimeout(cx.cs.outboxTimer)
   cx.cs.outboxTimer = undefined
   cx.cs.outboxDelay = RETRY_START_MS

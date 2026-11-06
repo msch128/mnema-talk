@@ -54,6 +54,10 @@ func TestBuiltInRolesGetReportsAndKickOnUpgrade(t *testing.T) {
 	if _, err := tx.Exec(ctx, `UPDATE roles SET permissions = $2, color = $3, hoist = TRUE WHERE id = $1`, copycat, int64(perm.TimeoutMembers), admin.color); err != nil {
 		t.Fatal(err)
 	}
+	// The Owner recoloured the seeded Admin and made it mentionable: still the seeded role.
+	if _, err := tx.Exec(ctx, `UPDATE roles SET color = 255, hoist = FALSE, mentionable = TRUE WHERE id = $1`, admin.id); err != nil {
+		t.Fatal(err)
+	}
 	beforeOthers := []roleRow{readRole(t, ctx, tx, custom), readRole(t, ctx, tx, lookalike), readRole(t, ctx, tx, bot), readRole(t, ctx, tx, imported), readRole(t, ctx, tx, copycat)}
 	everyone := everyonePerms(t, ctx, tx)
 

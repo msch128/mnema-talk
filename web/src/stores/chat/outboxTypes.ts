@@ -16,8 +16,12 @@ export interface PendingMessage {
   cause: 'offline' | 'server'
   /** Failed tries of the server-side kind (5xx, unreadable answer); too many make it failed. */
   attempts: number
-  /** A request with this text may have reached the server, so a changed text could not replace it: it can only be discarded. */
-  attempted: boolean
+  /**
+   * A request with this text may have reached the server (it was cut off, never answered, or the server failed), so a changed text
+   * could not replace it: it can only be discarded. Once set it stays: a later refusal (rate limit, session, CSRF) is answered
+   * before the server looks at the nonce and says nothing about the earlier try.
+   */
+  possiblyDelivered: boolean
   /** Not before this time (ms since epoch): the server asked to wait (slow mode). 0: no wait. */
   notBefore: number
 }
