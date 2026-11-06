@@ -1,0 +1,55 @@
+web/src/components/AccountEmail.test.ts
+  s_06fcde5dbef956::t_42d330b6463205 53-58
+web/src/components/AccountEmail.vue
+  s_06fcde5dbef956::t_254ea51e0b8ae2 118
+web/src/components/AudioSettingsPanel.test.ts
+  s_06fcde5dbef956::t_3d163a9d046ec5 2,465-469,473-481,488-515
+web/src/components/AudioSettingsPanel.vue
+  s_06fcde5dbef956::t_186def14769045 5,19-25
+web/src/components/DesktopGamingOverlay.test.ts
+  s_06fcde5dbef956::t_e05b4a0992e84b 7-9,16,113-119
+web/src/components/DesktopGamingOverlay.vue
+  s_06fcde5dbef956::t_3594efeb6562c5 9-10,45,53-55,162
+web/src/components/DmInfoDialog.vue
+  s_06fcde5dbef956::t_2890c325b0781f 13,32-33,112,119
+web/src/components/DmSidebarAndDialogs.test.ts
+  s_06fcde5dbef956::t_062330684eb294 14,277,289
+web/src/components/ProfilePassword.test.ts
+  s_06fcde5dbef956::t_00982be16e4eba 47-53
+web/src/components/ProfilePassword.vue
+  s_06fcde5dbef956::t_705e5cdd1057e8 3,93-94
+web/src/components/WelcomeProfileStep.test.ts
+  s_06fcde5dbef956::t_1982950c589e2c 9,65-80,95
+web/src/components/WelcomeProfileStep.vue
+  s_06fcde5dbef956::t_3a787dda2cbc22 10,32,40-47,49,104
+web/src/composables/useDmListActions.test.ts
+  s_06fcde5dbef956::t_17f731eab73cf6 1-41
+web/src/composables/useDmListActions.ts
+  s_06fcde5dbef956::t_1d345f6eb63583 15-16,18,21,34
+web/src/composables/useMuteMenu.test.ts
+  s_06fcde5dbef956::t_4a2481346a9f04 4,120-135
+web/src/composables/useMuteMenu.ts
+  s_06fcde5dbef956::t_20e0202185e4ce 8,44,50-54
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_7ed504eb212943 2516,4028
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_782d65a59e2782 2516,4028
+web/src/stores/voiceSettings.ts
+  s_06fcde5dbef956::t_51b0649d2f9bd2 137-140,143,162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a04a454591b038c72c09324dfe645dc3e2e9546c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
