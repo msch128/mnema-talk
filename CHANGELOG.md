@@ -1,5 +1,46 @@
 # Changelog
 
+## [2.9.19](https://github.com/msch128/mnema-talk/compare/v2.9.18...v2.9.19) (2026-11-06)
+
+
+### Bug Fixes
+
+* a message sent twice with the same client nonce is stored once ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* a retried message that was deleted meanwhile is not posted again ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* a retried send is not answered for someone who lost the channel, and the Moderator grant survives a recoloured role ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* a tab follows another tab's outcome for a shared offline message ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* a Talk hidden mid-stay no longer counts its whole time publicly ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* admin rows on phones offer a labelled actions menu ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* built-in Moderator and Admin roles can handle reports and kick ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* Discord import hints are shown in the admin's language ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* e2e for messages written offline (kept, sent once on reconnect, discardable) ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* End timeout is in the phone actions menu of the admin user row ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* German offline notice and gaming chords read in the app language ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* Go and web import hint code lists must stay the same set ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* import hint fixtures and test strings match the merged contract ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* messages in a conversation's call no longer count publicly ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* messages written offline are kept and sent when the connection returns ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* messages written offline survive a reload and a failing server no longer blocks the queue ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* moderators see open reports outside the console ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* offline messages of several tabs no longer overwrite each other, expire with the server's nonce, and follow sign-out ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* offline tabs no longer send a shared message in a loop, and old failed messages say they may be duplicates ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* only a replayed send keeps the read marker where it is ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* only the seeded Moderator and Admin roles get reports and kick ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* repeated automod hits no longer re-announce the open reports ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* schema-drift fixtures follow the public talk time column ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* shortcut hints match the keyboard of the device ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* the data export includes public_voice_seconds and the docs say what voice_seconds counts ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* the desktop's first start asks for an address or invite link ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* the invite example in the desktop address field is a link the host accepts ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* the message menu can time out or kick its author ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* the Moderator grant of 0097 only reaches roles created when 0034 seeded them ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* the nonce refusal has a translated message, voice chat test expects the nonce ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* the public talk time counts only Talks everyone can see ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* the retry's visibility check sits in its own helper ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* the unreachable page can retry now and says when it last tried ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* timeout indicators expire on their own and the message menu covers bots ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+* timeouts are visible and can be lifted where moderators look ([ee46b3d](https://github.com/msch128/mnema-talk/commit/ee46b3dbf9877464566ecbc2522b30fd1b32fe89))
+
 ## [2.9.18](https://github.com/msch128/mnema-talk/compare/v2.9.17...v2.9.18) (2026-11-06)
 
 
