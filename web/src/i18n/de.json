@@ -2376,7 +2376,6 @@
     "copied": "Kopiert",
     "linkCopied": "Link kopiert",
     "copyFailed": "Das Kopieren hat nicht geklappt. Kopiere den Link von Hand:",
-    "deleteInvite": "Einladung löschen",
     "deleteInviteTitle": "Einladung {code} löschen?",
     "deleteInviteBody": "Der Code funktioniert danach nicht mehr.",
     "inviteDeleted": "Einladung gelöscht",
@@ -2491,8 +2490,12 @@
       "usesInvalid": "Gib eine ganze Zahl von mindestens den bisherigen {used} Nutzungen bis {max} ein.",
       "usesHint": "Bisher {used} genutzt. Das Limit kann nicht darunter liegen.",
       "saved": "Einladung aktualisiert.",
-      "edit": "Einladung bearbeiten"
-    }
+      "editNamed": "Einladung {code} bearbeiten"
+    },
+    "invitesLoadFailed": "Die Einladungen konnten nicht geladen werden. Versuch es noch einmal.",
+    "deleteInviteNamed": "Einladung {code} löschen",
+    "copyLinkFor": "Link zur Einladung {code} kopieren",
+    "mediaLoadFailed": "Die Medienliste konnte nicht geladen werden. Versuch es noch einmal."
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -3960,7 +3963,8 @@
       "deleteTitle": "Befehl /{name} löschen?",
       "deleteBody": "Der Bot kann ihn erneut registrieren."
     },
-    "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten."
+    "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten.",
+    "loadFailed": "Die Bots konnten nicht geladen werden. Versuch es noch einmal."
   },
   "appSettings": {
     "installTitle": "Installieren",

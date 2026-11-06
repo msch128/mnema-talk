@@ -2376,7 +2376,6 @@
     "copied": "Copied",
     "linkCopied": "Link copied",
     "copyFailed": "Couldn’t copy. Copy the link by hand:",
-    "deleteInvite": "Delete invite",
     "deleteInviteTitle": "Delete invite {code}?",
     "deleteInviteBody": "The code stops working right away.",
     "inviteDeleted": "Invite deleted",
@@ -2491,8 +2490,12 @@
       "usesInvalid": "Enter a whole number from at least the {used} uses so far up to {max}.",
       "usesHint": "{used} used so far. The limit cannot be lower than that.",
       "saved": "Invite updated.",
-      "edit": "Edit invite"
-    }
+      "editNamed": "Edit invite {code}"
+    },
+    "invitesLoadFailed": "Couldn’t load the invites. Try again.",
+    "deleteInviteNamed": "Delete invite {code}",
+    "copyLinkFor": "Copy link for invite {code}",
+    "mediaLoadFailed": "Couldn’t load the media list. Try again."
   },
   "profile": {
     "addedBy": "Added by {name}",
@@ -3960,7 +3963,8 @@
       "deleteTitle": "Delete command /{name}?",
       "deleteBody": "The bot can register it again."
     },
-    "emptyHint": "Name a bot above to create it and get its token."
+    "emptyHint": "Name a bot above to create it and get its token.",
+    "loadFailed": "Couldn’t load the bots. Try again."
   },
   "appSettings": {
     "installTitle": "Install",
