@@ -1,0 +1,25 @@
+internal/ws/hub.go
+  s_06fcde5dbef956::t_0e5c0cb3e566dd 31-32
+internal/ws/perms.go
+  s_06fcde5dbef956::t_fb60d25d2f498c 6,175-188,192,197-265
+internal/ws/perms_retry_test.go
+  s_06fcde5dbef956::t_b74ff33a5dcd21 1-61
+internal/ws/perms_test.go
+  s_06fcde5dbef956::t_aadf28b3a63965 92-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e8a4aa74f8f96ee2cd3f68193459b11f977b78d6",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
