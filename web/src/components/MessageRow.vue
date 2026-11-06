@@ -179,7 +179,7 @@ defineExpose({ el: row })
       v-else
       :user="msg"
       size="md"
-      :class="['absolute! left-4 max-md:left-2 cursor-pointer hover:opacity-85 transition', msg.reply_to ? 'top-6' : 'top-1']"
+      :class="['absolute left-4 max-md:left-2 cursor-pointer hover:opacity-85 transition', msg.reply_to ? 'top-6' : 'top-1']"
       @click="emit('open-profile')"
     />
 
