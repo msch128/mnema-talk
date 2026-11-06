@@ -1,0 +1,45 @@
+internal/bot/authn.go
+  s_06fcde5dbef956::t_0a9137f71037de 196-199,216
+internal/onboarding/sharepage.go
+  s_06fcde5dbef956::t_09173f340573aa 46
+web/src/stores/connectTimeout.test.ts
+  s_06fcde5dbef956::t_fa3761a4ad84b7 92
+  s_06fcde5dbef956::t_3abaacee593bd2 89-91,93-107
+  s_06fcde5dbef956::t_31a6d2163b734e 30-32,34-40,48-49
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_37682c12cfcd29 112-120,124-125,225,281,292
+internal/onboarding/handler.go
+  s_06fcde5dbef956::t_09173f340573aa 62-63,88-105
+  s_06fcde5dbef956::t_b8b1df2b96a5d5 13
+internal/later/scheduled_send.go
+  s_06fcde5dbef956::t_4a44727095096f 97-101
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_37682c12cfcd29 125
+internal/httpx/ratelimit.go
+  s_06fcde5dbef956::t_09173f340573aa 151,160-190
+  s_06fcde5dbef956::t_5c0d83d7ca4d43 191
+internal/onboarding/vanity_public.go
+  s_06fcde5dbef956::t_09173f340573aa 80
+internal/onboarding/preview_budget_test.go
+  s_06fcde5dbef956::t_17a8a240d24b0e 1-70
+internal/later/scheduled_retry_integration_test.go
+  s_06fcde5dbef956::t_9abea92bea4770 32-62
+internal/bot/limits_test.go
+  s_06fcde5dbef956::t_7ccc2f7920ca10 116-150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a22df9541290950f49e2ecc1e81445111b6a693f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
