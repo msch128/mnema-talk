@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import MemberRow from './MemberRow.vue'
 import { usePermissionsStore } from '../stores/permissions'
@@ -17,6 +17,9 @@ function row(timeoutUntil?: string) {
   const member = { ...userFixture({ username: 'ada' }), ...(timeoutUntil ? { timeout_until: timeoutUntil } : {}) }
   return mount(MemberRow, { props: { member } })
 }
+
+enableAutoUnmount(afterEach)
+afterEach(() => { vi.useRealTimers() })
 
 beforeEach(() => {
   setLocale('en')
@@ -39,5 +42,16 @@ describe('member list timeout indicator', () => {
   it('keeps a timeout private from members who cannot moderate', () => {
     allow(0)
     expect(row(future()).find('[data-testid="member-timed-out"]').exists()).toBe(false)
+  })
+
+  it('drops the clock by itself when the timeout runs out', async () => {
+    vi.useFakeTimers()
+    allow(PERMISSION_BITS.timeout_members)
+    const w = row(new Date(Date.now() + 5000).toISOString())
+    expect(w.find('[data-testid="member-timed-out"]').exists()).toBe(true)
+    await vi.advanceTimersByTimeAsync(6000)
+    await flushPromises()
+    expect(w.find('[data-testid="member-timed-out"]').exists()).toBe(false)
+    w.unmount()
   })
 })

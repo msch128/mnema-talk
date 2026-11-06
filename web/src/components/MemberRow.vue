@@ -10,6 +10,7 @@ import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
 import { t, locale } from '../i18n'
 import { activityText } from '../lib/presence'
+import { now, useServerClock } from '../lib/clock'
 import UserAvatar from './UserAvatar.vue'
 import ActivityStats from './ActivityStats.vue'
 import BotBadge from './BotBadge.vue'
@@ -38,9 +39,11 @@ const subline = computed(() => {
 
 // A running timeout is moderation business: only those who may time members
 // out see it in the list (the member themselves is told by the banner).
+// The shared clock ticks while a timeout is pending, so it disappears when it runs out.
+useServerClock(() => !!props.member.timeout_until)
 const timedOutText = computed(() => {
   const until = props.member.timeout_until
-  if (!until || Date.parse(until) <= Date.now() || !permissions.can('timeout_members')) return ''
+  if (!until || Date.parse(until) <= now.value || !permissions.can('timeout_members')) return ''
   return t('admin.userTimedOut', { time: new Date(until).toLocaleString(locale.value) })
 })
 </script>

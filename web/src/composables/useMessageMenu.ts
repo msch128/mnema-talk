@@ -172,9 +172,11 @@ function messageItems(msg: Message, deps: MenuDeps): ContextMenuItem[] {
 }
 
 // Timeout and kick for the author, behind the same permission and rank checks
-// as the member menu; never for one's own messages, bots or the Owner.
+// as the member menu; never for one's own messages or the Owner. Bot accounts
+// are members and can be timed out like anyone; webhook messages have no member
+// and so no entry.
 function authorModerationItems(msg: Message, actions: MessageActions): ContextMenuItem[] {
-  if (actions.isOwn(msg) || msg.is_bot) return []
+  if (actions.isOwn(msg)) return []
   const author = useChatStore().members.find(m => m.id === msg.user_id)
   if (!author || author.role === 'admin') return []
   const mod = buildAuthorModerationItems(author)

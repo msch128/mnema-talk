@@ -10,6 +10,7 @@ import { useAuthStore } from '../stores/auth'
 import { t, locale } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
 import { roleColorCss } from '../lib/permissions'
+import { now, useServerClock } from '../lib/clock'
 import { moderationOffer, liftTimeout } from '../lib/moderationActions'
 
 // One account of the admin user table: who they are, their state and the
@@ -56,10 +57,11 @@ function formatDateTime(dt: string | null | undefined) {
 
 // A timeout that has not run out yet. The live member (kept current by the
 // member events) wins over the row's own data, so a lifted timeout shows at once.
+useServerClock(() => !!(chatStore.members.find(m => m.id === props.user.id)?.timeout_until ?? props.user.timeout_until))
 const timedOutUntil = computed(() => {
   const live = chatStore.members.find(m => m.id === props.user.id)
   const until = live ? live.timeout_until : props.user.timeout_until
-  return until && Date.parse(until) > Date.now() ? until : null
+  return until && Date.parse(until) > now.value ? until : null
 })
 // Lifting needs Timeout members and a higher rank, like setting one.
 const canLiftTimeout = computed(() => !!timedOutUntil.value && moderationOffer(props.user).timeout)

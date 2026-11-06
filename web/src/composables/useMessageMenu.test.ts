@@ -229,4 +229,11 @@ describe('useMessageMenu author moderation', () => {
     chat.members = [{ ...author, timeout_until: new Date(Date.now() + 60_000).toISOString() } as never]
     expect(labels(menu.itemsFor(theirs))).toContain('End timeout')
   })
+
+  it('offers a timeout for a bot account like for any member, but nothing for a webhook post', async () => {
+    const menu = await setup(PERMISSION_BITS.timeout_members)
+    chat.members = [{ ...author, is_bot: true } as never]
+    expect(labels(menu.itemsFor({ ...theirs, is_bot: true }))).toContain('Time out…')
+    expect(labels(menu.itemsFor({ ...theirs, user_id: 'webhook-1', is_bot: true }))).not.toContain('Time out…')
+  })
 })

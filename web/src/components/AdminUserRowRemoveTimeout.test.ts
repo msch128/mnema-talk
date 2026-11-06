@@ -1,6 +1,6 @@
 import type { ApiOptions } from '../lib/api'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import AdminUserRow from './AdminUserRow.vue'
 import { useChatStore } from '../stores/chat'
@@ -25,6 +25,9 @@ function mountRow(timeout?: string) {
   const user = { ...member(), ...(timeout ? { timeout_until: timeout } : {}) }
   return { user, w: mount(AdminUserRow, { props: { user }, global: { stubs: { UserAvatar: true } } }) }
 }
+
+enableAutoUnmount(afterEach)
+afterEach(() => { vi.useRealTimers() })
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -58,5 +61,16 @@ describe('admin user row remove timeout', () => {
     await w.vm.$nextTick()
     expect(w.get('[data-testid="user-status"]').text()).toBe('Active')
     expect(w.find('[data-testid="action-remove-timeout"]').exists()).toBe(false)
+  })
+
+  it('takes the End timeout button away when the timeout runs out', async () => {
+    vi.useFakeTimers()
+    allow(PERMISSION_BITS.timeout_members)
+    const { w } = mountRow(new Date(Date.now() + 5000).toISOString())
+    expect(w.find('[data-testid="action-remove-timeout"]').exists()).toBe(true)
+    await vi.advanceTimersByTimeAsync(6000)
+    await flushPromises()
+    expect(w.find('[data-testid="action-remove-timeout"]').exists()).toBe(false)
+    w.unmount()
   })
 })
