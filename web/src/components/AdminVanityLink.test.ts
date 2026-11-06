@@ -110,4 +110,18 @@ describe('AdminVanityLink', () => {
       expect(apiMock).toHaveBeenLastCalledWith('/api/admin/vanity-link', { method: 'PUT', json: { slug: 'hawks', accepts_signups: false }, decode: expect.any(Function) })
     })
   })
+
+  it('keeps the section with an error and a retry when the address cannot be loaded', async () => {
+    useAuthStore().user = userFixture({ role: 'admin' })
+    apiMock.mockRejectedValue(new Error('down'))
+    const w = mount(AdminVanityLink)
+    await flushPromises()
+    expect(w.find('[data-testid="vanity-link"]').exists()).toBe(true)
+    expect(w.find('[data-testid="vanity-error"]').exists()).toBe(true)
+    expect(w.find('[data-testid="vanity-slug"]').exists()).toBe(false)
+    apiMock.mockReset().mockResolvedValue({ slug: 'clan', accepts_signups: false, path: '/join/clan' })
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find<HTMLInputElement>('[data-testid="vanity-slug"]').element.value).toBe('clan')
+  })
 })

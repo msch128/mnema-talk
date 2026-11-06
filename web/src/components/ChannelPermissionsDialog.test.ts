@@ -240,4 +240,19 @@ describe('ChannelPermissionsDialog', () => {
     await flushPromises()
     expect(w.emitted('close')).toHaveLength(1)
   })
+
+  it('says the permissions could not be loaded, with a retry that loads them again', async () => {
+    setup({ kind: 'channel' }).unmount() // only to fill the stores
+    apiMock.mockReset().mockRejectedValue(new Error('down'))
+    const w = mount(ChannelPermissionsDialog, { props: { kind: 'channel', target: channel } })
+    await flushPromises()
+    expect(w.find('[data-testid="overwrites-error"]').exists()).toBe(true)
+    expect(w.find('[data-entry]').exists()).toBe(false)
+    apiMock.mockReset().mockResolvedValue({ overwrites: [{ type: 'member', id: max.id, allow: 0, deny: PERMISSION_BITS.speak }] })
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="overwrites-error"]').exists()).toBe(false)
+    expect(w.findAll('[data-entry]')).toHaveLength(1)
+    w.unmount()
+  })
 })

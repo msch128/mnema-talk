@@ -990,7 +990,8 @@
       "other": "{count} neue Antworten"
     },
     "jumpToUnread": "Zur ersten ungelesenen",
-    "removeFile": "Datei entfernen"
+    "removeFile": "Datei entfernen",
+    "tagsLoadFailed": "Die Tags konnten nicht geladen werden."
   },
   "members": {
     "title": "Mitglieder",
@@ -1827,7 +1828,8 @@
       "removed": "Kurzlink entfernt.",
       "copy": "Link kopieren",
       "copied": "Kopiert",
-      "copyFailed": "Der Link konnte nicht kopiert werden."
+      "copyFailed": "Der Link konnte nicht kopiert werden.",
+      "loadFailed": "Die Einladungsadresse konnte nicht geladen werden. Versuch es noch einmal."
     },
     "tabs": {
       "users": "Mitglieder",
@@ -2495,7 +2497,8 @@
     "invitesLoadFailed": "Die Einladungen konnten nicht geladen werden. Versuch es noch einmal.",
     "deleteInviteNamed": "Einladung {code} löschen",
     "copyLinkFor": "Link zur Einladung {code} kopieren",
-    "mediaLoadFailed": "Die Medienliste konnte nicht geladen werden. Versuch es noch einmal."
+    "mediaLoadFailed": "Die Medienliste konnte nicht geladen werden. Versuch es noch einmal.",
+    "usersLoadFailed": "Die Mitglieder konnten nicht geladen werden. Versuch es noch einmal."
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",

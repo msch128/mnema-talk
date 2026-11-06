@@ -17,6 +17,7 @@ import { useToastStore } from '../stores/toast'
 import { CHANNEL_PERMISSION_KEYS, PERMISSION_BITS } from '../lib/permissions'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
+import StatePanel from './StatePanel.vue'
 import PermissionToggles from './PermissionToggles.vue'
 import UnsavedChangesBar from './UnsavedChangesBar.vue'
 
@@ -124,6 +125,8 @@ function makePrivate() {
 }
 
 async function load() {
+  failed.value = false
+  loaded.value = false
   try {
     const body = await api(base.value, { decode: decodeOverwritesBody })
     stored.value = body.overwrites
@@ -152,7 +155,9 @@ onMounted(load)
       <p class="text-sm text-mnema-tertiary">{{ kind === 'channel' ? $t('overwrites.hintChannel') : $t('overwrites.hintCategory') }}</p>
       <p class="text-xs text-mnema-tertiary">{{ $t('overwrites.ownerNote') }}</p>
 
-      <div v-if="loaded && !failed" class="grid gap-4 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
+      <StatePanel v-if="failed" state="error" retryable data-testid="overwrites-error" @retry="load">{{ $t('overwrites.loadFailed') }}</StatePanel>
+      <StatePanel v-else-if="!loaded" state="loading" />
+      <div v-else class="grid gap-4 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
         <div class="space-y-3">
           <ul :aria-label="$t('overwrites.subjects')" class="overflow-hidden rounded-lg border border-mnema-hairline bg-mnema-surface">
             <li v-if="!entries.length" class="p-3 text-sm text-mnema-tertiary">{{ $t('overwrites.empty') }}</li>

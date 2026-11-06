@@ -990,7 +990,8 @@
       "other": "{count} new replies"
     },
     "jumpToUnread": "Jump to first unread",
-    "removeFile": "Remove file"
+    "removeFile": "Remove file",
+    "tagsLoadFailed": "Couldn’t load the tags."
   },
   "members": {
     "title": "Members",
@@ -1827,7 +1828,8 @@
       "removed": "Vanity link removed.",
       "copy": "Copy link",
       "copied": "Copied",
-      "copyFailed": "Couldn’t copy the link."
+      "copyFailed": "Couldn’t copy the link.",
+      "loadFailed": "Couldn’t load the invite address. Try again."
     },
     "tabs": {
       "users": "Members",
@@ -2495,7 +2497,8 @@
     "invitesLoadFailed": "Couldn’t load the invites. Try again.",
     "deleteInviteNamed": "Delete invite {code}",
     "copyLinkFor": "Copy link for invite {code}",
-    "mediaLoadFailed": "Couldn’t load the media list. Try again."
+    "mediaLoadFailed": "Couldn’t load the media list. Try again.",
+    "usersLoadFailed": "Couldn’t load the members. Try again."
   },
   "profile": {
     "addedBy": "Added by {name}",
