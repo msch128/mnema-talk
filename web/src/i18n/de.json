@@ -2553,6 +2553,7 @@
     "mediaLoadFailed": "Die Medienliste konnte nicht geladen werden. Versuche es noch einmal.",
     "usersLoadFailed": "Die Mitglieder konnten nicht geladen werden. Versuche es noch einmal.",
     "moveUpNamed": "{name} nach oben",
+    "rowActionsNamed": "Aktionen für {name}",
     "moveDownNamed": "{name} nach unten",
     "renameChannelNamed": "Kanal {name} bearbeiten",
     "renameCategoryNamed": "Kategorie {name} bearbeiten",

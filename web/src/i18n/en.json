@@ -2553,6 +2553,7 @@
     "mediaLoadFailed": "Couldn’t load the media list. Try again.",
     "usersLoadFailed": "Couldn’t load the members. Try again.",
     "moveUpNamed": "Move {name} up",
+    "rowActionsNamed": "Actions for {name}",
     "moveDownNamed": "Move {name} down",
     "renameChannelNamed": "Edit channel {name}",
     "renameCategoryNamed": "Edit category {name}",

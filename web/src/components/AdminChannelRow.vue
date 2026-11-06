@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { Channel } from '../types/domain'
+import { useCompactLayout } from '../composables/useCompactLayout'
+import type { ContextMenuItem } from './menuTypes'
+import RowActionsMenu from './RowActionsMenu.vue'
+import { t } from '../i18n'
 import { Trash2, Edit2, ArrowUp, ArrowDown, Hash, Volume2, MessagesSquare, GripVertical } from '@lucide/vue'
 
 // One channel of the layout editor: draggable, with arrows, rename and delete.
 // Its drag events stop here, so the category around it keeps only its own.
-defineProps({
+const props = defineProps({
   channel: { type: Object as PropType<Channel>, required: true },
   index: { type: Number, required: true },
   count: { type: Number, required: true }
@@ -18,6 +22,18 @@ const emit = defineEmits<{
   dragend: []
   drop: [event: DragEvent]
 }>()
+
+const { isCompact } = useCompactLayout()
+// On a phone the icons have no tooltip: the same actions as one labelled menu.
+function menuItems(): ContextMenuItem[] {
+  const name = props.channel.name
+  return [
+    { id: 'up', label: t('admin.moveUpNamed', { name }), icon: ArrowUp, disabled: props.index === 0, action: () => emit('move', -1) },
+    { id: 'down', label: t('admin.moveDownNamed', { name }), icon: ArrowDown, disabled: props.index === props.count - 1, action: () => emit('move', 1) },
+    { id: 'rename', label: t('admin.renameChannelNamed', { name }), icon: Edit2, action: () => emit('rename') },
+    { id: 'delete', label: t('admin.deleteChannelNamed', { name }), icon: Trash2, danger: true, action: () => emit('delete') }
+  ]
+}
 </script>
 
 <template>
@@ -39,7 +55,8 @@ const emit = defineEmits<{
       <span v-if="channel.topic" class="max-md:hidden text-xs text-mnema-tertiary truncate">({{ channel.topic }})</span>
     </div>
 
-    <div class="flex items-center gap-1 shrink-0">
+    <RowActionsMenu v-if="isCompact" :items="menuItems()" :label="$t('admin.rowActionsNamed', { name: channel.name })" />
+    <div v-else class="flex items-center gap-1 shrink-0">
       <button
         data-testid="move-up-channel"
         type="button"
