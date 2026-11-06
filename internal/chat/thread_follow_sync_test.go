@@ -9,6 +9,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 func TestMessageOfReadsValuesAndPointersOnly(t *testing.T) {
@@ -32,6 +33,7 @@ type countingPublisher struct {
 	sent int
 }
 
+func (c *countingPublisher) BroadcastPerm(perm.Set, string, any)  {}
 func (c *countingPublisher) SendToUsers([]uuid.UUID, string, any) { c.sent++ }
 
 func TestTheFollowTapIgnoresWhatIsNoThreadReplyAndFailsClosedWithoutPermissions(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -116,5 +117,45 @@ func TestAnInvalidateDuringAReloadIsNotLost(t *testing.T) {
 	}
 	if e.checked.Load() != 0 {
 		t.Fatal("the reload marked its stale rules as checked, so the next call would not load again")
+	}
+}
+
+// A member who keeps breaking the same rule has one open entry that counts up:
+// the moderators' open-reports badge is told once, when the entry is opened,
+// and not again for every repeat hit.
+func TestRepeatedHitsOfOneRuleAnnounceTheOpenReportsOnce(t *testing.T) {
+	p := newStore(t)
+	ctx := context.Background()
+	rec := &events.Recorder{}
+	e := New(p, perm.NewService(p), rec, nil)
+	bob, carol := newUser(t, p, "hit_bob"), newUser(t, p, "hit_carol")
+	var channel uuid.UUID
+	if err := p.QueryRow(ctx, `INSERT INTO channels (name, type) VALUES ('hits', 'text') RETURNING id`).Scan(&channel); err != nil {
+		t.Fatal(err)
+	}
+	rule := &compiled{Rule: Rule{Name: "No links"}}
+	count := func() int {
+		n := 0
+		for _, ev := range rec.Snapshot() {
+			if ev.Type == events.ReportsOpen {
+				n++
+			}
+		}
+		return n
+	}
+
+	for range 3 {
+		e.record(ctx, Post{ChannelID: channel, UserID: bob, Content: "http://x"}, false, rule, "blocked", uuid.Nil)
+	}
+	if got := count(); got != 1 {
+		t.Fatalf("%d reports_open events after three hits of one member, want 1", got)
+	}
+	e.record(ctx, Post{ChannelID: channel, UserID: carol, Content: "http://x"}, false, rule, "blocked", uuid.Nil)
+	if got := count(); got != 2 {
+		t.Fatalf("%d reports_open events after a second member's first hit, want 2", got)
+	}
+	var hits int
+	if err := p.QueryRow(ctx, `SELECT hit_count FROM message_reports WHERE reported_user_id = $1`, bob).Scan(&hits); err != nil || hits != 3 {
+		t.Fatalf("hit_count = %d (%v), want 3", hits, err)
 	}
 }

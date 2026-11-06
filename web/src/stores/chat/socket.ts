@@ -4,6 +4,7 @@ import type { ServerEventPayloads, ClientEventPayloads } from '../../types/event
 import { useEmojiStore } from '../emoji'
 import { usePermissionsStore } from '../permissions'
 import { useBlocksStore } from '../blocks'
+import { useReportsOpenStore } from '../reportsOpen'
 import { useServerFeaturesStore } from '../serverFeatures'
 import { installGlobalSearch, uninstallGlobalSearch } from '../../lib/globalSearch'
 import { visibleInterval } from '../../lib/pageVisibility'
@@ -69,6 +70,7 @@ function resyncState(cx: Cx) {
   const permissions = usePermissionsStore()
   permissions.load()
   permissions.loadRoles()
+  void useReportsOpenStore().load()
   void useEmojiStore().load()
   fetchChannels(cx)
   fetchMembers(cx)

@@ -4533,6 +4533,10 @@
   },
   "reports": {
     "menu": "Nachricht melden",
+    "openBadge": {
+      "one": "{count} offene Meldung",
+      "other": "{count} offene Meldungen"
+    },
     "title": "Nachricht melden",
     "intro": "Melde den Moderatoren diese Nachricht von {name}. Sie sehen eine Kopie von ihr und den Nachrichten drumherum.",
     "reason": "Grund",

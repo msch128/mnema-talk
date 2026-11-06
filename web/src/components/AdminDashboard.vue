@@ -4,12 +4,11 @@
 // sheet that opens on the list of sections and shows one section at a time.
 // Tabs stay alive while the dialog is open, so an unsaved draft survives a tab
 // switch; closing the console with an unsaved draft asks first (doc/settings-ux.md).
-import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { ArrowLeft, X } from '@lucide/vue'
 import { navigate } from '../lib/router'
 import { t } from '../i18n'
-import { api } from '../lib/api'
-import { decodeChatReportsPage } from '../types/rest'
+import { useReportsOpenStore } from '../stores/reportsOpen'
 import { ALL_TABS } from '../lib/adminNav'
 import type { AdminTab } from '../lib/adminNav'
 import { useCompactLayout } from '../composables/useCompactLayout'
@@ -112,23 +111,12 @@ function backToList() {
   void nextTick(() => document.querySelector<HTMLElement>('[data-testid=admin-tabs] [aria-current=page]')?.focus())
 }
 
-// The open-report count beside "Reports": one cheap look when the console opens,
-// and again whenever a report was closed.
-const openReports = ref(0)
-const openReportsMore = ref(false)
-async function loadOpenReports() {
-  if (!ALLOWED.reports()) return
-  try {
-    const page = await api('/api/admin/reports?status=open&limit=100', { decode: decodeChatReportsPage })
-    openReports.value = page.reports.length
-    openReportsMore.value = page.has_more
-  } catch {
-    openReports.value = 0
-  }
-}
-onMounted(() => { void loadOpenReports() })
+// The open-report count beside "Reports" is the one the badges outside the
+// console show too: it follows the server's reports_open event, and a tab that
+// closed a report asks once more, in case the event is slow.
+const reportsOpen = useReportsOpenStore()
 const badges = computed<Partial<Record<AdminTab, string>>>(() =>
-  openReports.value > 0 ? { reports: openReportsMore.value ? `${openReports.value}+` : String(openReports.value) } : {})
+  reportsOpen.visible > 0 ? { reports: String(reportsOpen.visible) } : {})
 
 // Focus starts on the dialog itself: no focus frame on a nav item or a button that was not asked for.
 const focusDialog = (root: HTMLElement) => root
@@ -184,7 +172,7 @@ watch(activeTab, (tab) => {
         <div v-else class="min-w-0 flex-1 overflow-y-auto">
           <div class="space-y-6 p-6 max-md:p-4">
             <KeepAlive>
-              <component :is="TAB_COMPONENTS[activeTab]" :key="activeTab" @changed="loadOpenReports" />
+              <component :is="TAB_COMPONENTS[activeTab]" :key="activeTab" @changed="reportsOpen.load()" />
             </KeepAlive>
           </div>
         </div>

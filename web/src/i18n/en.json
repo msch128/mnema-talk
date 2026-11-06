@@ -4533,6 +4533,10 @@
   },
   "reports": {
     "menu": "Report message",
+    "openBadge": {
+      "one": "{count} open report",
+      "other": "{count} open reports"
+    },
     "title": "Report message",
     "intro": "Tell the moderators about this message from {name}. They see a copy of it and of the messages around it.",
     "reason": "Reason",

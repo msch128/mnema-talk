@@ -149,6 +149,8 @@ export interface ServerEventPayloads {
   event_comment: { action: 'created' | 'updated' | 'deleted'; event_id: string; comment_id: string; comment?: CommunityeventsEventComment }
   /** A new comment on an event the member created or attends and did not mute. */
   event_comment_notice: { event_id: string; title: string; author_name: string; excerpt: string; channel_id?: string }
+  /** The open-report count changed; sent only to members who hold Manage reports. */
+  reports_open: { open: number }
   community_updated: { community_name: string; community_icon?: string } // the Owner renamed the community or changed its icon (community_icon: the new version, '' when removed)
 }
 
@@ -301,6 +303,7 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
     && (!hasOwn(payload, 'screen_layers') || (isInteger(payload['screen_layers']) && payload['screen_layers'] >= 0 && payload['screen_layers'] <= MAX_SCREEN_LAYERS))
     && (!hasOwn(payload, 'camera_layers') || (isInteger(payload['camera_layers']) && payload['camera_layers'] >= 0 && payload['camera_layers'] <= MAX_SCREEN_LAYERS))],
   ['system_update', payload => isString(payload['version'], 64)],
+  ['reports_open', payload => isInteger(payload['open']) && payload['open'] >= 0],
   ['presence_update', payload => isIdentifier(payload['user_id']) && isPresence(payload['status'])
     && (!hasOwn(payload, 'activity') || isBotActivity(payload['activity']))],
   ['typing', roomUser],
@@ -383,7 +386,7 @@ const SERVER_EVENT_TYPES = new Set<string>([
   'channels_changed', 'permissions_changed', 'roles_changed', 'emoji_changed', 'block_updated', 'saved_updated', 'reminder_update', 'scheduled_message_update', 'thread_follow_updated', 'dm_created', 'dm_member_added', 'dm_member_removed', 'dm_prefs_updated', 'dm_call_ring', 'dm_call_end', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'poll_update', 'pins_changed', 'interaction_response', 'user_update', 'member_timeout', 'member_roles_changed', 'moderation_notice', 'kicked', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
-  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'cameras_capped', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'event_signup_notice', 'event_comment', 'event_comment_notice', 'community_updated'
+  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'cameras_capped', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'event_signup_notice', 'event_comment', 'event_comment_notice', 'community_updated', 'reports_open'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

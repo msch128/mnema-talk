@@ -63,7 +63,8 @@
     "EventSignupNotice": "event_signup_notice",
     "EventComment": "event_comment",
     "EventCommentNotice": "event_comment_notice",
-    "CommunityUpdated": "community_updated"
+    "CommunityUpdated": "community_updated",
+    "ReportsOpen": "reports_open"
   },
   "client": {
     "ClientPing": "ping",

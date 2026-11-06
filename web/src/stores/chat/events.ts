@@ -7,6 +7,7 @@ import { useForwardQuotesStore } from '../forwardQuotes'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
+import { useReportsOpenStore } from '../reportsOpen'
 import { useEventsStore } from '../events'
 import { useEventCommentsStore } from '../eventComments'
 import { useOnboardingStore } from '../onboarding'
@@ -205,6 +206,8 @@ const HANDLERS: Handlers = {
     if (p && typeof p.community_icon === 'string') useServerFeaturesStore().setCommunityIcon(p.community_icon)
     void useOnboardingStore().reload()
   },
+  // A report was filed or closed (sent to members who hold Manage reports only).
+  reports_open: (_cx, p) => { if (p) useReportsOpenStore().set(p.open) },
   // An admin started an update: the server restarts in a moment.
   system_update: (_cx, p) => useAppVersionStore().setUpdating(p?.version),
   presence_snapshot: onPresenceSnapshot,

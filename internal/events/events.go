@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 type Publisher interface {
@@ -17,6 +18,10 @@ type Publisher interface {
 	BroadcastChannel(channelID uuid.UUID, eventType string, payload any)
 	// SendToUsers sends an event only to the given users' sessions.
 	SendToUsers(userIDs []uuid.UUID, eventType string, payload any)
+	// BroadcastPerm sends an event only to the sessions of members who hold
+	// every permission of need server-wide, judged when it is sent. Use it for
+	// what only moderators may know (the open-report count).
+	BroadcastPerm(need perm.Set, eventType string, payload any)
 }
 
 // Event is one recorded publication (used by tests).
@@ -26,6 +31,8 @@ type Event struct {
 	Recipients []uuid.UUID // nil means broadcast
 	// ChannelID is set for events limited to the viewers of a channel.
 	ChannelID uuid.UUID
+	// Need is set for events limited to holders of a server-wide permission.
+	Need perm.Set
 }
 
 // Recorder is an in-memory Publisher for tests.
@@ -44,6 +51,12 @@ func (r *Recorder) BroadcastChannel(channelID uuid.UUID, eventType string, paylo
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.Events = append(r.Events, Event{Type: eventType, Payload: payload, ChannelID: channelID})
+}
+
+func (r *Recorder) BroadcastPerm(need perm.Set, eventType string, payload any) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.Events = append(r.Events, Event{Type: eventType, Payload: payload, Need: need})
 }
 
 func (r *Recorder) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {

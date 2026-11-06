@@ -4,6 +4,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -18,4 +19,6 @@ type API struct {
 	Audit *audit.Log
 	// ReportLimit caps message reports per member; nil means no cap.
 	ReportLimit *httpx.RateLimiter
+	// Events tells moderators the open count changed; nil tells nobody.
+	Events events.Publisher
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/reportcount"
 )
 
 func (a *API) Mount(r chi.Router) {
@@ -29,6 +30,7 @@ func (a *API) Mount(r chi.Router) {
 func (a *API) MountAdmin(r chi.Router) {
 	r = r.With(auth.RequirePerm(a.Guard.Perms, perm.ManageReports))
 	r.Get("/reports", httpx.Handle(a.ListReports))
+	r.Get("/reports/open-count", httpx.Handle(a.OpenCount))
 	r.Get("/reports/{id}", httpx.Handle(a.GetReport))
 	r.Post("/reports/{id}/resolve", httpx.Handle(a.ResolveReport))
 	r.Delete("/reports/{id}", httpx.Handle(a.DeleteReport))
@@ -85,6 +87,7 @@ func (a *API) ReportMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	a.auditReport(r.Context(), id, req.Category)
+	reportcount.Announce(r.Context(), a.DB, a.Events)
 	httpx.WriteJSON(w, http.StatusCreated, ReportFiled{ID: id})
 	return nil
 }
@@ -260,6 +263,7 @@ func (a *API) ResolveReport(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	reportcount.Announce(r.Context(), a.DB, a.Events)
 	httpx.WriteJSON(w, http.StatusOK, rep)
 	return nil
 }
@@ -312,5 +316,34 @@ func (a *API) DeleteReport(w http.ResponseWriter, r *http.Request) error {
 		return a.reportClosedOrMissing(r.Context(), id, "close the report before deleting it")
 	}
 	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// OpenCountResponse is how many reports are open.
+type OpenCountResponse struct {
+	Open int `json:"open"`
+}
+
+// OpenCount handles GET /api/admin/reports/open-count.
+//
+// @Summary Count open reports
+// @Description How many reports are open, without the 100-entry cap of the list. Needs Manage reports (the Owner and Administrators always). The same number reaches the moderators' open sessions as the reports_open WebSocket event whenever a report is filed or closed.
+// @ID countOpenReports
+// @Tags Moderation
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {object} reports.OpenCountResponse "The open count."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Manage reports permission."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/reports/open-count [get]
+func (a *API) OpenCount(w http.ResponseWriter, r *http.Request) error {
+	n, err := reportcount.Open(r.Context(), a.DB)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, OpenCountResponse{Open: n})
 	return nil
 }

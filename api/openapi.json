@@ -3604,6 +3604,17 @@
           "NotifyInherit"
         ]
       },
+      "chat.OpenCountResponse": {
+        "properties": {
+          "open": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "open"
+        ],
+        "type": "object"
+      },
       "chat.Poll": {
         "properties": {
           "anonymous": {
@@ -17847,6 +17858,81 @@
           }
         ],
         "summary": "List reports",
+        "tags": [
+          "Moderation"
+        ]
+      }
+    },
+    "/api/admin/reports/open-count": {
+      "get": {
+        "description": "How many reports are open, without the 100-entry cap of the list. Needs Manage reports (the Owner and Administrators always). The same number reaches the moderators' open sessions as the reports_open WebSocket event whenever a report is filed or closed.",
+        "operationId": "countOpenReports",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.OpenCountResponse"
+                }
+              }
+            },
+            "description": "The open count."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing the Manage reports permission."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Count open reports",
         "tags": [
           "Moderation"
         ]
