@@ -37,8 +37,10 @@ type viewerTrack struct {
 	// share has), which automatic never exceeds.
 	fit int
 	// ad chooses the layer of a viewer who left it to the server (pref < 0).
-	ad      *adapter
-	closed  bool
+	ad     *adapter
+	closed bool
+	// gen is the generation of the peer the track was made for.
+	gen     uint64
 	started bool
 	// unbound: the track is added to the viewer's connection but the browser
 	// has not answered yet, so Pion has nothing to write to (see expectBind).
