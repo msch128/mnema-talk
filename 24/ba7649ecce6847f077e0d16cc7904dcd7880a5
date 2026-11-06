@@ -1,0 +1,35 @@
+web/src/components/DesktopSelector.test.ts
+  s_06fcde5dbef956::t_2eecfa31f3eac0 106-110
+web/src/components/DesktopSelector.vue
+  s_06fcde5dbef956::t_a9f449b120bdc8 2,11
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_c78afd4335b4d3 2989
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_2847ede0cce99e 2989
+web/src/lib/hostError.test.ts
+  s_06fcde5dbef956::t_316f90131704ad 20
+web/src/lib/hostError.ts
+  s_06fcde5dbef956::t_7cf6a7924c18c2 23
+web/src/lib/hostErrors.json
+  s_06fcde5dbef956::t_98fb970978e24d 25
+web/src/lib/native/trustedSocket.test.ts
+  s_06fcde5dbef956::t_93ff1766777ace 137-156
+web/src/lib/native/trustedSocket.ts
+  s_06fcde5dbef956::t_387b4919320539 12,22,44-45,49,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "24ba7649ecce6847f077e0d16cc7904dcd7880a5",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
