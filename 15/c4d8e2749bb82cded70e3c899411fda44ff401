@@ -1,0 +1,37 @@
+web/src/components/AdminAutomodTab.vue
+  s_06fcde5dbef956::t_c692ede63f6583 17-19,47-55,107-109
+web/src/components/AdminCategoryHeader.vue
+  s_06fcde5dbef956::t_990e62bc628826 4-7,11,17-29,40-41
+web/src/components/AdminChannelRow.vue
+  s_06fcde5dbef956::t_fc4a94a7f3b91d 4-7,12,25-36,58-59
+web/src/components/AdminEmojiTab.vue
+  s_06fcde5dbef956::t_df5ecd7ee8092d 11-13,79-87,186-187
+web/src/components/AdminInvitesTab.vue
+  s_06fcde5dbef956::t_3f0b23ac35fe23 13-15,76-84,212-213,233
+web/src/components/AdminRowsPhone.test.ts
+  s_06fcde5dbef956::t_1dc301f89dbc9c 1-93
+web/src/components/AdminUserRow.vue
+  s_06fcde5dbef956::t_c39bc31104ac61 11-12,14,25,75-91,138,189-190,286
+web/src/components/RowActionsMenu.vue
+  s_06fcde5dbef956::t_128836088800f2 1-35
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_ef3d40b0fb4057 2553
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_66eac8c76835f6 2553
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "15c4d8e2749bb82cded70e3c899411fda44ff401",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
