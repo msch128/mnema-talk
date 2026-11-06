@@ -255,10 +255,22 @@ describe('EventsModal', () => {
     expect(load).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps a failed past list off the upcoming tab', async () => {
+    const store = useEventsStore()
+    vi.spyOn(store, 'load').mockResolvedValue()
+    vi.spyOn(store, 'loadPast').mockImplementation(async () => { store.pastError = 'boom' })
+    wrapper = mount(EventsModal, { attachTo: document.body })
+    await wrapper.findAll('button').find(b => b.text().includes('Past'))?.trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="events-error"]').exists()).toBe(true))
+    await wrapper.findAll('button').find(b => b.text().includes('Upcoming'))?.trigger('click')
+    expect(wrapper.find('[data-testid="events-error"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('No upcoming events')
+  })
+
   it('does the same on the past tab and retries the past page', async () => {
     const store = useEventsStore()
     vi.spyOn(store, 'load').mockResolvedValue()
-    const loadPast = vi.spyOn(store, 'loadPast').mockImplementation(async () => { store.error = 'boom' })
+    const loadPast = vi.spyOn(store, 'loadPast').mockImplementation(async () => { store.pastError = 'boom' })
     wrapper = mount(EventsModal, { attachTo: document.body })
     await wrapper.findAll('button').find(b => b.text().includes('Past'))?.trigger('click')
     await vi.waitFor(() => expect(wrapper.find('[data-testid="events-error"]').exists()).toBe(true))

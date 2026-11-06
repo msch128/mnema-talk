@@ -176,7 +176,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
         </div>
 
         <StatePanel
-          v-else-if="displayedEvents.length === 0 && eventsStore.error"
+          v-else-if="displayedEvents.length === 0 && (activeTab === 'past' ? eventsStore.pastError : eventsStore.error)"
           state="error"
           retryable
           data-testid="events-error"

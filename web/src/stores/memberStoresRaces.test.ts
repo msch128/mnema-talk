@@ -133,7 +133,7 @@ describe('events store', () => {
     events.reset()
     reply.reject(new Error('late'))
     await late
-    expect(events.error).toBeNull()
+    expect(events.pastError).toBeNull()
     expect(events.pastLoaded).toBe(false)
   })
 
