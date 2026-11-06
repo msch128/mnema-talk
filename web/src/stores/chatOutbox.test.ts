@@ -585,6 +585,20 @@ describe('the read marker after a send', () => {
     expect(chat.readStates[ch.id]).toMatchObject({ last_read_at: '2026-02-01T00:00:00Z', unread_count: 3, mention_count: 1 })
   })
 
+  it('does not move backwards for a repeated send when this device clock is behind the server', async () => {
+    const chat = setup()
+    vi.setSystemTime(new Date('2025-12-01T00:00:00Z'))
+    await chat.sendMessage('old', null, null, [], ch.id)
+    chat.readStates = { [ch.id]: { ...lastRead } }
+    net.down = false
+    http.handle = (url, opts) => url.endsWith('/messages') && opts?.method === 'POST'
+      ? messageFixture({ id: fixtureId(70), channel_id: ch.id, user_id: me.id, content: 'old', created_at: '2026-01-15T00:00:00Z' })
+      : []
+    chat.retryPending(required(chat.outbox[0]).nonce)
+    await tick()
+    expect(chat.readStates[ch.id]).toMatchObject({ last_read_at: '2026-02-01T00:00:00Z', unread_count: 3 })
+  })
+
   it('still follows a fresh message whose server time is behind this device clock', async () => {
     const chat = setup()
     chat.readStates = { [ch.id]: { ...lastRead } }
@@ -592,5 +606,24 @@ describe('the read marker after a send', () => {
     answerWithOld()
     await chat.sendMessage('fresh', null, null, [], ch.id)
     expect(chat.readStates[ch.id]).toMatchObject({ last_read_at: '2026-01-01T00:00:00Z', unread_count: 0, mention_count: 0 })
+  })
+})
+
+describe('another tab\'s offline message', () => {
+  it('this tab follows the other tab\'s refusal and does not send it', async () => {
+    const chat = setup()
+    await connectAgain(chat)
+    net.posted = []
+    const key = 'mnema.outbox.' + me.id + '.n-shared'
+    const base = { nonce: 'n-shared', channelId: ch.id, userId: me.id, content: 'shared', parentId: null, replyToId: null, createdAt: new Date().toISOString(), error: '', cause: 'offline', attempts: 0, possiblyDelivered: false, notBefore: 0 }
+    const sending = JSON.stringify({ ...base, status: 'sending', owner: 'tab-A', sendingSince: Date.now() })
+    localStorage.setItem(key, sending); storageEvent(key, sending)
+    await tick()
+    const failed = JSON.stringify({ ...base, status: 'failed', error: 'missing permission', attempts: 1 })
+    localStorage.setItem(key, failed); storageEvent(key, failed)
+    await tick()
+    const afterFail = required(chat.outbox[0]).status
+    await stayConnected(chat, 60000)
+    expect({ afterFail, posted: net.posted.length, now: required(chat.outbox[0] ?? { status: 'gone' }).status, stored: JSON.parse(localStorage.getItem(key) ?? '{}').status }).toEqual({ afterFail: 'failed', posted: 0, now: 'failed', stored: 'failed' })
   })
 })

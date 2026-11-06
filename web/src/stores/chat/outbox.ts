@@ -216,7 +216,7 @@ async function deliver(cx: Cx, entry: PendingMessage): Promise<'next' | 'stop'> 
     const msg = await postText(current.channelId, current, abort.signal)
     if (community !== cs.communityGeneration) return 'stop'
     settlePending(cx, current.nonce)
-    landSent(cx, msg, current.possiblyDelivered ? current.createdAt : undefined)
+    landSent(cx, msg, current.possiblyDelivered)
     return 'next'
   } catch (error) {
     if (community !== cs.communityGeneration) return 'stop'
@@ -307,8 +307,8 @@ function adoptFromStorage(cx: Cx, event: StorageEvent) {
   const nonce = uid ? nonceOfKey(uid, event.key) : null
   if (!uid || !nonce || !draftSessionAlive()) return
   const incoming = readStoredEntry(uid, event.key ?? '', event.newValue)
-  // This tab's own request for it is out: its answer settles it. A removal elsewhere still counts.
-  if (incoming && cs.outbox.value.some(p => p.nonce === nonce && p.status === 'sending')) return
+  // This tab's own request for it is out: its answer settles it (another tab's mark does not hold back that tab's outcome). A removal elsewhere still counts.
+  if (incoming && cs.outbox.value.some(p => p.nonce === nonce && p.status === 'sending' && p.owner === cs.tabId)) return
   const rest = cs.outbox.value.filter(p => p.nonce !== nonce)
   cs.outbox.value = incoming ? [...rest, lapse(cx, incoming, Date.now())].sort(byCreation) : rest
   // Only this tab's own pace sends it: sending now would hand it back and forth between tabs that are offline.
