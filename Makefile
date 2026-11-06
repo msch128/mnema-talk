@@ -218,7 +218,7 @@ backup-drill: docker ## Back up, change, verify and restore a throwaway compose 
 postgres-upgrade-drill: docker ## Install like 0.4 (PostgreSQL 17), then check the guard and scripts/upgrade-postgres.sh
 	scripts/postgres-upgrade-drill.sh mnema-talk:local
 
-upgrade-drill: docker ## Install each supported released image (FROM_VERSIONS, default 0.8.16 and 0.9.0), seed data via the API, upgrade to the local build and verify (needs Docker and network access to GHCR)
+upgrade-drill: docker ## Install each supported released image (FROM_VERSIONS, default 0.8.16 to 2.9.12, see scripts/drill-common.sh), seed data via the API, upgrade to the local build and verify (needs Docker and network access to GHCR)
 	scripts/upgrade-drill.sh mnema-talk:local
 
 docker: ## Build the app image (mnema-talk:local, what compose runs by default)

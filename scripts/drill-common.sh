@@ -6,8 +6,9 @@
 # The releases every drill starts from unless FROM_VERSIONS says otherwise.
 # 0.8.16 is the last 0.8; 0.9.0 is the first release with notification levels,
 # role mentions and onboarding; 1.0.0 is the first stable release. Add each
-# later 1.x release here once it exists.
-DRILL_DEFAULT_FROM_VERSIONS='0.8.16 0.9.0 1.0.0 1.1.0'
+# later 1.x release here once it exists. 2.0.0 added the built-in TURN relay;
+# 2.9.12 is a late 2.9 release, the closest start to current main.
+DRILL_DEFAULT_FROM_VERSIONS='0.8.16 0.9.0 1.0.0 1.1.0 2.0.0 2.9.12'
 # The seed uses the roles, webhook and bot APIs, which start with 0.8.
 DRILL_MIN_FROM_VERSION='0.8.0'
 REGISTRY_IMAGE="${REGISTRY_IMAGE:-ghcr.io/msch128/mnema-talk}"

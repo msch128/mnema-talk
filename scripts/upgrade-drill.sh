@@ -9,7 +9,7 @@
 # is ok.
 #
 # Usage: scripts/upgrade-drill.sh [new-image]     (default mnema-talk:local; `make upgrade-drill`)
-#   FROM_VERSIONS="0.8.16 0.9.0"   released versions to upgrade from, one leg each,
+#   FROM_VERSIONS="0.8.16 2.9.12" released versions to upgrade from, one leg each,
 #                                  run one after the other (default: that list).
 #                                  CI runs one leg per job with FROM_VERSIONS=<one>.
 #   PREVIOUS_IMAGE=ghcr.io/msch128/mnema-talk:0.9.0   one leg from exactly this
