@@ -1,0 +1,21 @@
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_a84aff677e5057 242-245
+internal/ws/voice_seat_private_test.go
+  s_06fcde5dbef956::t_eb965ae15821e7 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "953e7e252ee5e0be6e8059c38caab2b73f63e43c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
