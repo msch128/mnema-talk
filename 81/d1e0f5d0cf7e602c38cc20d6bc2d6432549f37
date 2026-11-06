@@ -1,0 +1,23 @@
+internal/server/dm_talk_privacy_integration_test.go
+  s_06fcde5dbef956::t_c6f87fcb36086e 145-154
+internal/server/router_build.go
+  s_06fcde5dbef956::t_a42ac55578d2cc 254-265,288
+internal/server/router_build_services.go
+  s_06fcde5dbef956::t_f960e2e6a0c3c3 152-154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "81d1e0f5d0cf7e602c38cc20d6bc2d6432549f37",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
