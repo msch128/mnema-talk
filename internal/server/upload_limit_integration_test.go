@@ -3,6 +3,7 @@
 package server
 
 import (
+	"github.com/google/uuid"
 	"net/http"
 	"strings"
 	"testing"
@@ -170,5 +171,29 @@ func TestRemovingAnUnsentFileDoesNotRefundTheDailyUploadBudget(t *testing.T) {
 	}
 	if res := member.uploadParts(staging, pngFile(big)); res.status != http.StatusTooManyRequests {
 		t.Fatalf("second 600 KB after removing the first: %d %s; deleted files still count", res.status, res.body)
+	}
+}
+
+func TestDeletingTheMessageDoesNotRefundTheDailyUploadBudget(t *testing.T) {
+	a := newAppWithConfig(t, func(c *config.Config) { c.UploadQuotaMBPerDay = 1 })
+	owner := a.seedAdmin()
+	member := a.register(owner, "alice")
+	ch := a.createChannel(owner, "general", "text")
+	upload := "/api/channels/" + ch.String() + "/upload"
+	big := 600 << 10
+
+	res := member.uploadParts(upload, pngFile(big))
+	if res.status != http.StatusCreated {
+		t.Fatalf("first 600 KB under 1 MB a day: %d %s", res.status, res.body)
+	}
+	var m struct {
+		ID uuid.UUID `json:"id"`
+	}
+	res.decode(t, &m)
+	if res := member.delete("/api/channels/" + ch.String() + "/messages/" + m.ID.String()); res.status != http.StatusNoContent {
+		t.Fatalf("delete message: %d %s", res.status, res.body)
+	}
+	if res := member.uploadParts(upload, pngFile(big)); res.status != http.StatusTooManyRequests {
+		t.Fatalf("second 600 KB after deleting the message: %d %s; deleted messages still count", res.status, res.body)
 	}
 }

@@ -183,7 +183,7 @@ func TestStagedFilesCanBeRemovedAndAreCappedPerMember(t *testing.T) {
 	if res := bob.delete(path); res.status != http.StatusNoContent {
 		t.Fatalf("remove: %d %s", res.status, res.body)
 	}
-	if res := bob.get(f.URL); res.status != http.StatusGone {
+	if res := bob.get(f.URL); res.status != http.StatusNotFound {
 		t.Errorf("a removed file is gone: %d", res.status)
 	}
 	if a.store.Len() != 0 {
@@ -220,7 +220,7 @@ func TestUnsentStagedFilesAreSweptAfterTheTimeout(t *testing.T) {
 	if err != nil || n != 1 {
 		t.Fatalf("swept %d, %v; want only the stale unsent file", n, err)
 	}
-	if res := admin.get(stale.URL); res.status != http.StatusGone {
+	if res := admin.get(stale.URL); res.status != http.StatusNotFound {
 		t.Errorf("stale file: %d", res.status)
 	}
 	for _, f := range []stagedFile{fresh, sent} {
@@ -252,23 +252,21 @@ func TestTheSingleFileUploadStillWorks(t *testing.T) {
 	}
 }
 
-func TestRemovedUnsentFilesLeaveTheDatabaseOnceTheyNoLongerCountForTheBudget(t *testing.T) {
+func TestUploadUsageOlderThanTheBudgetWindowIsPruned(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 	ch := a.createChannel(admin, "medien", "text")
 	ctx := context.Background()
-	recent, old := a.stage(admin, ch, "recent.png"), a.stage(admin, ch, "old.png")
-	for _, f := range []stagedFile{recent, old} {
-		wantStatus(t, "remove", admin.delete("/api/channels/"+ch.String()+"/attachments/"+f.ID.String()), http.StatusNoContent)
-	}
-	if _, err := a.db.Exec(ctx, `UPDATE media SET created_at = NOW() - INTERVAL '25 hours' WHERE id = $1`, old.ID); err != nil {
+	a.stage(admin, ch, "recent.png")
+	a.stage(admin, ch, "old.png")
+	if _, err := a.db.Exec(ctx, `UPDATE upload_usage SET created_at = NOW() - INTERVAL '25 hours' WHERE ctid = (SELECT ctid FROM upload_usage LIMIT 1)`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := media.SweepStaged(ctx, a.db, a.store, 6*time.Hour); err != nil {
 		t.Fatal(err)
 	}
 	var rows int
-	if err := a.db.QueryRow(ctx, `SELECT count(*) FROM media WHERE id = ANY($1)`, []uuid.UUID{recent.ID, old.ID}).Scan(&rows); err != nil || rows != 1 {
-		t.Fatalf("rows left = %d, %v; want only the one inside the budget window", rows, err)
+	if err := a.db.QueryRow(ctx, `SELECT count(*) FROM upload_usage`).Scan(&rows); err != nil || rows != 1 {
+		t.Fatalf("usage rows left = %d, %v; want only the one inside the budget window", rows, err)
 	}
 }
