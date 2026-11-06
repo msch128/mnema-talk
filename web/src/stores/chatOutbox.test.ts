@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
 import { useServerFeaturesStore } from './serverFeatures'
+import { useToastStore } from './toast'
 import { channelFixture, messageFixture, userFixture, fixtureId } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
 import { ApiError, type ApiOptions } from '../lib/api'
@@ -34,7 +35,7 @@ class Socket {
 }
 
 /** The state of the network: while down, every message POST fails like a dropped connection. */
-const net = { down: true, refuse: null as ApiError | null, posted: [] as { content: string; nonce: string | undefined }[], gate: null as Promise<void> | null, status: 201 }
+const net = { down: true, refuse: null as ApiError | null, posted: [] as { content: string; nonce: string | undefined }[], gate: null as Promise<void> | null, status: 201, health: null as string[] | null }
 
 function stored(content: string, nonce: string, id: string): Message {
   return messageFixture({ id, channel_id: ch.id, user_id: me.id, content, nonce })
@@ -54,6 +55,8 @@ beforeEach(() => {
   vi.useFakeTimers()
   setActivePinia(createPinia())
   useServerFeaturesStore().list = ['messages.nonce']
+  useServerFeaturesStore().loaded = true
+  net.health = null
   net.down = true
   net.refuse = null
   net.posted = []
@@ -61,6 +64,7 @@ beforeEach(() => {
   net.status = 201
   let n = 100
   http.handle = (url, opts) => {
+    if (url === '/api/health') return net.health ? { features: net.health } : Promise.reject(offline())
     if (!url.endsWith('/messages') || opts?.method !== 'POST') return url === '/api/channels' ? { categories: [], uncategorized: [ch] } : []
     if (net.down) throw offline()
     if (net.refuse) throw net.refuse
@@ -249,6 +253,19 @@ describe('writing while the connection is down', () => {
     expect(chat.outbox.map(p => p.content)).toEqual(['sent into the void'])
   })
 
+  it('tells the member calmly when another tab sent the message while the editor was open', async () => {
+    const chat = setup()
+    await chat.sendMessage('written offline', null, null, [], ch.id)
+    const nonce = required(chat.outbox[0]).nonce
+    chat.beginEditPending(nonce)
+    // The other tab sent it: its removal reaches this tab through the shared storage.
+    chat.handleWSEvent({ type: 'message_create', payload: stored('written offline', nonce, fixtureId(70)) })
+    expect(chat.outbox).toEqual([])
+    const toasts = useToastStore()
+    chat.editPending(nonce, 'changed my mind')
+    expect(toasts.toasts.map(x => x.text)).toEqual([t('outbox.editTooLate')])
+  })
+
   it('marks a message the server refuses as failed, offers a retry, and goes on with the next', async () => {
     const chat = setup()
     await chat.sendMessage('refused', null, null, [], ch.id)
@@ -287,6 +304,51 @@ describe('writing while the connection is down', () => {
     net.down = false
     await vi.advanceTimersByTimeAsync(60_000)
     expect(net.posted).toEqual([])
+  })
+})
+
+describe('when the feature list could not be read at start', () => {
+  async function unknownServer() {
+    const features = useServerFeaturesStore()
+    features.list = []
+    features.loaded = false
+    await features.load()
+    expect(features.loaded).toBe(false)
+    return features
+  }
+
+  it('reads the list before deciding, so the nonce is not left out for the whole session', async () => {
+    const chat = setup()
+    await unknownServer()
+    net.down = false
+    net.health = ['messages.nonce']
+    await chat.sendMessage('after the restart', null, null, [], ch.id)
+    expect(net.posted.map(p => typeof p.nonce)).toEqual(['string'])
+  })
+
+  it('reads the list again when the socket reconnects', async () => {
+    const chat = setup()
+    const features = await unknownServer()
+    net.health = ['messages.nonce']
+    await connectAgain(chat)
+    expect(features.messageNonce).toBe(true)
+  })
+
+  it('does not resend a slow request of a server without nonce support, which would post the message twice', async () => {
+    const chat = setup()
+    await unknownServer()
+    net.down = false
+    let release: () => void = () => {}
+    net.gate = new Promise<void>(resolve => { release = resolve })
+    let settled = false
+    const sending = chat.sendMessage('slow but fine', null, null, [], ch.id).then(r => { settled = true; return r })
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(settled).toBe(false)
+    expect(chat.outbox).toEqual([])
+    release()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(await sending).toBeTruthy()
+    expect(net.posted.map(p => p.content)).toEqual(['slow but fine'])
   })
 })
 

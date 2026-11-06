@@ -5,6 +5,7 @@ import type { Message } from '../../types/domain'
 import type { Cx } from './state'
 import type { PendingMessage } from './outboxTypes'
 import { draftSessionAlive, onDraftSessionEnd } from '../../lib/drafts'
+import { showToast } from './messageWindow'
 import { landSent, newNonce, postText, type TextSend } from './messagePost'
 import { KEEP_MAX_MS, REPEAT_SAFE_MS, SEND_LEASE_MS, SEND_TIMEOUT_MS, loadStoredOutbox, nonceOfKey, readStoredEntry, removeStoredEntry, saveStoredEntry } from './outboxStorage'
 
@@ -146,7 +147,7 @@ export function cancelPending(cx: Cx, nonce: string) {
   settlePending(cx, nonce)
 }
 
-/** The editor is open on this message: its conversation holds back, so the queue cannot send the old text meanwhile. */
+/** The editor is open on this message: this tab's queue holds the conversation back, so it cannot send the old text meanwhile. The hold is per tab: another tab may still send the message, and saving then says so. */
 export function beginEditPending(cx: Cx, nonce: string) {
   cx.cs.outboxEditing.add(nonce)
 }
@@ -169,7 +170,9 @@ function saveEdit(cx: Cx, nonce: string, content: string) {
   const text = content.trim()
   const entry = cx.cs.outbox.value.find(p => p.nonce === nonce)
   // After a try that may have arrived, the server would return the old text for this nonce.
-  if (!entry || entry.status === 'sending' || entry.possiblyDelivered) return
+  // Sent from another tab meanwhile: say so instead of dropping the change silently.
+  if (!entry) { showToast(t('outbox.editTooLate')); return }
+  if (entry.status === 'sending' || entry.possiblyDelivered) return
   if (!text) { cancelPending(cx, nonce); return }
   change(cx, nonce, { content: text })
 }

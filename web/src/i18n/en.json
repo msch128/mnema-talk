@@ -5115,6 +5115,7 @@
     "waiting": "Waiting to send · goes out when you’re back online",
     "retrying": "Waiting to send · trying again shortly",
     "noEdit": "It may already have arrived, so it can only be discarded.",
+    "editTooLate": "That message was already sent, so your change wasn’t applied.",
     "editFor": "Edit the message: {excerpt}",
     "discardFor": "Discard the message: {excerpt}",
     "retryFor": "Try sending the message again: {excerpt}",

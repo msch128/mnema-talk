@@ -28,7 +28,9 @@ in any release.
 In 1.1 they were `blocks`, `dm`, `reports`, `saved`, `forward`,
 `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `search.filters.v3`, `talks.lobby`,
 `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`,
-`ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`
+`ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`;
+later releases add more, among them `messages.nonce` (the server de-duplicates a repeated send by its `nonce`;
+clients send `nonce` only when health lists it, as older servers reject unknown fields)
 (`internal/server/health.go`). A name never changes meaning and is never
 removed within a major version; a client treats a missing list as "none" (a 1.0.x server sends
 no list) and hides what is not listed. A new feature adds a name, never a

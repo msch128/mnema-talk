@@ -15,6 +15,7 @@ beforeEach(() => {
   setLocale('de')
   setActivePinia(createPinia())
   useServerFeaturesStore().list = ['messages.nonce']
+  useServerFeaturesStore().loaded = true
   vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockImplementation(async () => new Response('[]', { status: 200 })))
 })
 

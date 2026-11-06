@@ -55,6 +55,13 @@ export interface TextSend { content: string; parentId: string | null; replyToId:
 /** One text POST. The nonce makes a repeat of it (after a lost answer) return the first message. */
 /** `onStatus` hears the answer's HTTP status: 200 means the nonce was replayed (an earlier try had been stored), 201 a new message. */
 export function postText(channelId: string, send: TextSend, signal?: AbortSignal, onStatus?: (status: number) => void): Promise<Message> {
+  // The list may have failed to load at start; without it the nonce would be left out for the whole session.
+  const features = useServerFeaturesStore()
+  if (features.loaded) return postLoaded(channelId, send, signal, onStatus)
+  return features.ensureLoaded().then(() => postLoaded(channelId, send, signal, onStatus))
+}
+
+function postLoaded(channelId: string, send: TextSend, signal?: AbortSignal, onStatus?: (status: number) => void): Promise<Message> {
   return postWithReplyFallback(send.replyToId, reply => {
     const json: CreateMessageRequest = { content: withEmojiTokens(send.content.trim()) }
     // Servers before the nonce (no "messages.nonce" feature) reject unknown JSON fields, so it is only sent to

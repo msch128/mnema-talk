@@ -52,6 +52,7 @@ path: web/src/composables/useChannelLayout.test.ts | asserts German UI output
 path: web/src/composables/useWebRTC.signaling.test.ts | asserts German UI output
 path: web/src/i18n/i18n.test.ts | asserts German UI output
 path: web/src/i18n/noHardcodedText.test.ts | asserts German UI output
+path: web/src/i18n/plurals.test.ts | asserts German plural forms
 path: web/src/lib/api.test.ts | asserts German UI output
 path: web/src/lib/deletedUser.test.ts | asserts German UI output
 path: web/src/lib/errorDetails.test.ts | asserts German UI output

@@ -5115,6 +5115,7 @@
     "waiting": "Ausstehend · wird gesendet, sobald du wieder online bist",
     "retrying": "Ausstehend · wird gleich erneut versucht",
     "noEdit": "Sie ist vielleicht schon angekommen, deshalb kannst du sie nur verwerfen.",
+    "editTooLate": "Die Nachricht wurde schon gesendet, deine Änderung wurde deshalb nicht übernommen.",
     "editFor": "Nachricht bearbeiten: {excerpt}",
     "discardFor": "Nachricht verwerfen: {excerpt}",
     "retryFor": "Nachricht erneut senden: {excerpt}",

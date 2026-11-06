@@ -115,8 +115,9 @@ Update as usual (backup first, then the procedure above). It works from any
   wiki images do.
 - **0097** gives the built-in **Moderator** and **Admin** roles *Manage
   reports* and *Kick members*. Only the roles the seed of migration 0034
-  created are changed (recognised by their creation together with 0034; a role
-  you renamed still counts, a custom or imported role with the same name, @everyone
+  created are changed (a role still named Moderator or Admin, the oldest with that
+  name, still holding *Timeout members* and created together with 0034;
+  a role you renamed, a custom or imported role with the same name, @everyone
   and bot roles do not), and permissions are only added. Untick them on the
   role afterwards if you do not want them.
 - **0098** takes the chat of a conversation's call out of the public message
