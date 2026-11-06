@@ -1,0 +1,23 @@
+web/src/components/DesktopSelector.test.ts
+  s_06fcde5dbef956::t_4e01debd3bf0eb 114-117
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_abcc6a4afd94b1 3010
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_343702399d2008 3010
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ee1b0897424b1f0e470f2d117d480f88eda02dcd",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
