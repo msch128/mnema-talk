@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import AdminBackupPanel from './AdminBackupPanel.vue'
 import { setLocale } from '../i18n'
+import deMessages from '../i18n/de.json'
 import type { ServerBackupStatus } from '../types/rest'
 
 const HOUR = 3600
@@ -84,8 +85,10 @@ describe('AdminBackupPanel', () => {
     w.unmount()
     setLocale('de')
     w = show(reported())
-    expect(w.get('[data-testid="backup-hint"]').text()).toBe('Backups laufen auf dem Host; siehe Betriebshandbuch.')
-    expect(w.get('[data-testid="backup-last-restore"]').text()).toBe('Bestanden, vor 7 Std.')
-    expect(w.text()).toContain('Letztes Backup')
+    const de = deMessages.admin.operatorStatus
+    expect(w.get('[data-testid="backup-hint"]').text()).toBe(de.backupDocs.replace('{link}', de.backupDocsLink))
+    expect(w.get('[data-testid="backup-hint"]').text()).toMatch(/ \S+\.$/)
+    expect(w.get('[data-testid="backup-last-restore"]').text()).toBe(de.restoreTest.passed.replace('{age}', 'vor 7 Std.'))
+    expect(w.text()).toContain(de.lastBackupAge)
   })
 })
