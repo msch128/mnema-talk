@@ -2033,15 +2033,16 @@
       "backupDocsLink": "operations guide",
       "backupDocs": "Backups run on the host; see the {link}.",
       "backupStale": "Older than {hours} h: check the backup job on the host.",
+      "restoreFailed": "This backup may not restore: see the backup log on the host.",
       "restoreTest": {
         "passed": "Passed, {age}",
-        "failed": "Failed, {age}: this backup may not restore",
+        "failed": "Failed, {age}",
         "skipped": "Not run (RESTORE_TEST=0)",
         "none": "–"
       },
       "backupState": {
-        "not_configured": "Not reported. The server learns about backups from the status file scripts/backup.sh writes: set BACKUP_STATUS_FILE and mount the backup-status folder read-only, as the bundled docker-compose.yml does.",
-        "missing": "No backup reported yet. Run scripts/backup.sh on the host, for example nightly; it writes backup-status/status.json, which this tab reads.",
+        "not_configured": "Not reported. The server learns about backups from the status file scripts/backup.sh writes: set BACKUP_STATUS_FILE and mount its folder read-only, as the bundled compose file does.",
+        "missing": "No backup reported yet. Run scripts/backup.sh on the host, for example nightly; it writes the status file this tab reads.",
         "invalid": "The backup status file cannot be read. Run scripts/backup.sh again; it rewrites the file."
       },
       "activity": "Live activity",

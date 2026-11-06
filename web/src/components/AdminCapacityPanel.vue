@@ -106,7 +106,7 @@ const view = computed(() => {
       <Gauge class="w-4 h-4 text-mnema-accent shrink-0" aria-hidden="true" />
       <span class="text-xs uppercase font-semibold font-mono text-mnema-tertiary tracking-wider">{{ $t('admin.operatorStatus.capacity.heading') }}</span>
     </div>
-    <dl class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+    <dl class="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
       <div>
         <dt class="text-mnema-tertiary text-xs">{{ $t('admin.operatorStatus.capacity.cpu') }}</dt>
         <dd class="font-mono text-mnema-text" data-testid="capacity-cpu">{{ view.cpu }}</dd>
@@ -127,12 +127,13 @@ const view = computed(() => {
     <div class="pt-3 border-t border-mnema-hairline space-y-2">
       <p class="text-sm font-medium text-mnema-text" :data-status="view.status" data-testid="capacity-estimate">{{ view.verdict }}</p>
       <ul v-if="view.scenarios.length" class="divide-y divide-mnema-hairline" data-testid="capacity-scenarios">
-        <li v-for="row in view.scenarios" :key="row.id" class="py-2.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1" :data-testid="`capacity-scenario-${row.id}`">
+        <!-- Phone: the figure follows the label on the left; from sm up it sits in a right-aligned column. -->
+        <li v-for="row in view.scenarios" :key="row.id" class="py-2.5 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-x-4" :data-testid="`capacity-scenario-${row.id}`">
           <div class="min-w-0">
             <p class="text-sm text-mnema-text">{{ row.label }} <span class="text-mnema-muted">– {{ row.detail }}</span></p>
             <p class="text-xs text-mnema-tertiary" data-testid="capacity-scenario-basis">{{ row.basis }}</p>
           </div>
-          <div class="text-right ml-auto">
+          <div class="flex flex-wrap items-baseline gap-x-2 sm:block sm:shrink-0 sm:text-right">
             <p class="font-mono text-sm text-mnema-text" data-testid="capacity-scenario-people">{{ row.people }}</p>
             <p class="text-xs text-mnema-muted" data-testid="capacity-scenario-cost">{{ row.cost }}</p>
           </div>
