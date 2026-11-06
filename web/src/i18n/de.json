@@ -3700,6 +3700,7 @@
         "other": "{count} Mitglieder sind angemeldet. Verschiebe sie nach:"
       },
       "moveTo": "Andere Rolle",
+      "moveNoTarget": "Es gibt keine andere gespeicherte Rolle zum Verschieben. Füge eine weitere Rolle hinzu, speichere das Event und entferne dann diese.",
       "removeRoleConfirm": "Entfernen und verschieben",
       "addRole": "Rolle hinzufügen",
       "fromTemplate": "Vorlage verwenden …",

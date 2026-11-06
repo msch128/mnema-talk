@@ -107,11 +107,12 @@ function pickTemplate(e: Event) {
 
         <div v-if="asking === row.key" class="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-amber-400/10 p-2 text-sm text-amber-300" data-testid="event-role-move">
           <span>{{ $t('events.roles.moveMembers', { count: row.members }) }}</span>
-          <select v-model="moveTo" :aria-label="$t('events.roles.moveTo')" class="h-9 rounded-lg border border-mnema-border bg-mnema-surface px-2 text-sm text-mnema-text max-md:h-11">
+          <p v-if="targets.length === 0" class="basis-full text-xs" data-testid="event-role-move-none">{{ $t('events.roles.moveNoTarget') }}</p>
+          <select v-else v-model="moveTo" :aria-label="$t('events.roles.moveTo')" class="h-9 rounded-lg border border-mnema-border bg-mnema-surface px-2 text-sm text-mnema-text max-md:h-11">
             <option value="" disabled>{{ $t('events.roles.moveTo') }}</option>
             <option v-for="t in targets" :key="t.key" :value="t.id">{{ t.name }}</option>
           </select>
-          <button type="button" class="btn btn-secondary px-3 py-1.5 text-xs max-md:min-h-11" :disabled="!moveTo" @click="confirmMove(row)">{{ $t('events.roles.removeRoleConfirm') }}</button>
+          <button v-if="targets.length" type="button" class="btn btn-secondary px-3 py-1.5 text-xs max-md:min-h-11" :disabled="!moveTo" @click="confirmMove(row)">{{ $t('events.roles.removeRoleConfirm') }}</button>
           <button type="button" class="btn btn-secondary px-3 py-1.5 text-xs max-md:min-h-11" @click="asking = null">{{ $t('common.cancel') }}</button>
         </div>
       </li>

@@ -3700,6 +3700,7 @@
         "other": "{count} members are signed up. Move them to:"
       },
       "moveTo": "Another role",
+      "moveNoTarget": "There is no other saved role to move them to. Add another role, save the event, then remove this one.",
       "removeRoleConfirm": "Remove and move",
       "addRole": "Add role",
       "fromTemplate": "Use a template…",
