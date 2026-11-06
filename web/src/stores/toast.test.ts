@@ -2,6 +2,7 @@ import { required } from '../store-test-support.fixture'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useToastStore } from './toast'
+import { t } from '../i18n'
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -29,6 +30,20 @@ describe('toast store', () => {
     expect(toasts.toasts).toHaveLength(1)
     toasts.error('Etwas anderes')
     expect(toasts.toasts).toHaveLength(2)
+  })
+
+  it('does not repeat the connection banner with a network toast and clears it on reconnect', () => {
+    const toasts = useToastStore()
+    toasts.error('Server nicht erreichbar')
+    toasts.setConnectionDown(true)
+    expect(toasts.error(t('errors.network'))).toBeNull()
+    toasts.setConnectionDown(false)
+    toasts.error(t('errors.network'))
+    toasts.error('Etwas anderes')
+    expect(toasts.toasts).toHaveLength(3)
+    toasts.setConnectionDown(true)
+    toasts.setConnectionDown(false)
+    expect(toasts.toasts.map(x => x.text)).toEqual(['Server nicht erreichbar', 'Etwas anderes'])
   })
 
   it('shows an identical error again when it carries an action', () => {

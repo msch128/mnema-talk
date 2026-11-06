@@ -28,11 +28,13 @@ func (h *Handler) DiscardFile(ctx context.Context, f *StoredFile) { h.discard(ct
 
 // RecordFile attaches a stored file to a message inside tx.
 func (h *Handler) RecordFile(ctx context.Context, tx pgx.Tx, f *StoredFile, uploader, channel, message uuid.UUID) error {
-	_, err := tx.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		f.id, uploader, channel, message, h.Bucket, f.key, f.filename, f.mime, f.size)
-	return err
+		f.id, uploader, channel, message, h.Bucket, f.key, f.filename, f.mime, f.size); err != nil {
+		return err
+	}
+	return RecordUploadUsage(ctx, tx, uploader, f.size)
 }
 
 // FormError maps a failure reading a request body to the error to answer with.

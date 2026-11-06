@@ -80,6 +80,15 @@ func (s *Snapshot) Channel(sub Subject, ch uuid.UUID) Set {
 	if dm, ok := s.dmTalks[ch]; ok && !s.dms[dm][sub.ID] {
 		return 0 // a Talk of a conversation: its members only, not even the Owner
 	}
+	p := s.channelPerms(sub, ch)
+	if s.IsDMTalk(ch) && !s.IsOwner(sub) {
+		p &^= dmTalkMask // the chat of a call is as private as the conversation: nobody moderates it
+	}
+	return p
+}
+
+// channelPerms is Channel for a channel or Talk that is not a conversation.
+func (s *Snapshot) channelPerms(sub Subject, ch uuid.UUID) Set {
 	if s.IsOwner(sub) {
 		return All
 	}

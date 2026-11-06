@@ -71,6 +71,18 @@ beforeEach(() => {
 })
 afterEach(() => { document.body.innerHTML = '' })
 
+describe('WelcomeFlow with a single step', () => {
+  it('shows no "Step 1 of 1" counter', async () => {
+    server = state({ rules_text: 'Be kind', rules_version: 2, rules_pending: true })
+    account('2020-01-01T00:00:00Z')
+    useChatStore().notificationPermission = 'granted'
+    const w = await flow()
+    expect(title()).toBe('The rules')
+    expect(document.querySelector('[data-testid="welcome-progress"]')).toBeNull()
+    w.unmount()
+  })
+})
+
 describe('WelcomeFlow on a first run', () => {
   it('walks welcome, rules, profile and notifications, then opens the start channel', async () => {
     server = state({ rules_text: 'Be kind', rules_version: 2, rules_pending: true, start_channel_id: START.id })
@@ -180,7 +192,7 @@ describe('WelcomeFlow rules', () => {
     account('2020-01-01T00:00:00Z')
     await flow()
     expect(title()).toBe('The rules')
-    expect(document.body.textContent).toContain('Step 1 of 1')
+    expect(document.body.textContent).not.toContain('Step 1 of 1')
     expect(document.querySelector('[data-dialog-close]')).toBeNull()
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     document.querySelector('[role="dialog"]')?.parentElement?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
@@ -237,6 +249,6 @@ describe('WelcomeFlow after an upgrade', () => {
     account('2020-01-01T00:00:00Z')
     await flow()
     expect(title()).toBe('The rules')
-    expect(document.body.textContent).toContain('Step 1 of 1')
+    expect(document.body.textContent).not.toContain('Step 1 of 1')
   })
 })

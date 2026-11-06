@@ -10,6 +10,7 @@ import { joinLink } from '../lib/inviteLink'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
+import StatePanel from './StatePanel.vue'
 
 const MIN_SLUG = 3
 const MAX_SLUG = 32
@@ -22,6 +23,7 @@ const slug = ref('')
 const accepts = ref(false)
 const saved = ref({ slug: '', accepts: false })
 const loaded = ref(false)
+const failed = ref(false)
 const busy = ref(false)
 const copied = ref(false)
 
@@ -33,10 +35,11 @@ const dirty = computed(() => renamed.value || (slug.value.trim() !== '' && accep
 const tooShort = computed(() => slug.value.trim() !== '' && slug.value.trim().length < MIN_SLUG)
 
 async function load() {
+  failed.value = false
   try {
     adopt(await api('/api/admin/vanity-link', { decode: decodeOnboardingVanitySettings }))
   } catch (e) {
-    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
+    failed.value = true
   }
 }
 
@@ -77,10 +80,11 @@ onMounted(load)
 </script>
 
 <template>
-  <section v-if="loaded" class="space-y-3 rounded-lg border border-mnema-hairline p-4" data-testid="vanity-link">
+  <section v-if="loaded || failed" class="space-y-3 rounded-lg border border-mnema-hairline p-4" data-testid="vanity-link">
     <h4 class="text-sm font-semibold text-mnema-text">{{ $t('admin.vanity.title') }}</h4>
     <p class="text-xs text-mnema-tertiary">{{ $t('admin.vanity.hint') }}</p>
-    <form class="space-y-3" @submit.prevent="save">
+    <StatePanel v-if="!loaded" state="error" retryable data-testid="vanity-error" @retry="load">{{ $t('admin.vanity.loadFailed') }}</StatePanel>
+    <form v-else class="space-y-3" @submit.prevent="save">
       <div class="space-y-1">
         <label for="vanity-slug" class="block text-xs font-medium text-mnema-muted font-mono uppercase tracking-wider">{{ $t('admin.vanity.slug') }}</label>
         <div class="flex max-w-md items-center gap-2">
@@ -99,7 +103,7 @@ onMounted(load)
       <p v-else class="text-xs text-mnema-tertiary" data-testid="vanity-owner-note">{{ $t('admin.vanity.ownerOnly') }}</p>
       <button type="submit" class="btn btn-primary" :disabled="busy || !dirty || tooShort" data-testid="vanity-save">{{ $t('common.save') }}</button>
     </form>
-    <div v-if="fullLink" class="flex items-center gap-2" data-testid="vanity-full">
+    <div v-if="loaded && fullLink" class="flex items-center gap-2" data-testid="vanity-full">
       <code class="min-w-0 flex-1 truncate rounded-md bg-mnema-canvas px-2 py-1.5 text-xs text-mnema-text" data-testid="vanity-url">{{ fullLink }}</code>
       <button type="button" class="btn btn-secondary" :aria-label="$t('admin.vanity.copy')" data-testid="vanity-copy" @click="copy">
         <Check v-if="copied" class="h-4 w-4" aria-hidden="true" />

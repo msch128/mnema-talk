@@ -36,6 +36,25 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
+describe('two-factor focus and errors', () => {
+  it('focuses the password field on the next step and scrolls a wrong code into view', async () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    const w = mount(AccountTwoFactor, { attachTo: document.body })
+    useAccountStore().info = off
+    await flushPromises()
+    await w.get('[data-testid="two-factor-start"]').trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(w.get('[data-testid="two-factor-password"]').element)
+
+    apiMock.mockRejectedValueOnce(new Error('Wrong password'))
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
+    w.unmount()
+  })
+})
+
 describe('turning two-factor sign-in on', () => {
   it('walks through password, QR code, first code and recovery codes', async () => {
     const w = mountWith(off)
@@ -109,6 +128,18 @@ describe('with two-factor sign-in on', () => {
     expect(apiMock).toHaveBeenCalledWith('/api/users/me/2fa/disable', expect.objectContaining({ json: { current_password: 'member-password-123', code: 'abcd-efgh-jkmm' } }))
     expect(useToastStore().toasts.at(-1)?.text).toBe('Two-factor sign-in is off.')
     expect(w.find('[data-testid="two-factor-start"]').exists()).toBe(true)
+  })
+
+  it('still reports it off when reloading the account fails afterwards', async () => {
+    const w = mountWith(on)
+    await w.get('[data-testid="two-factor-off"]').trigger('click')
+    apiMock.mockImplementation(async path => { if (path.endsWith('/2fa/disable')) return undefined; throw new Error('offline') })
+    await w.get('[data-testid="two-factor-password"]').setValue('member-password-123')
+    await w.get('[data-testid="two-factor-code"]').setValue('abcd-efgh-jkmm')
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(useToastStore().toasts.at(-1)?.text).toBe('Two-factor sign-in is off.')
+    expect(w.find('[data-testid="two-factor-code"]').exists()).toBe(false)
   })
 
   it('makes new recovery codes and warns when few are left', async () => {

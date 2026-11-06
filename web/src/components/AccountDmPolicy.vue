@@ -8,6 +8,7 @@ import { decodeChatPrivacy, type ChatPrivacy } from '../types/rest'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import RadioCard from './RadioCard.vue'
+import StatePanel from './StatePanel.vue'
 
 const toasts = useToastStore()
 const emit = defineEmits<{ saved: [] }>()
@@ -71,4 +72,5 @@ onMounted(load)
       />
     </div>
   </div>
+  <StatePanel v-else state="loading" data-testid="dm-policy-loading" />
 </template>

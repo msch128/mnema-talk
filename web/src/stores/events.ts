@@ -111,12 +111,14 @@ export const useEventsStore = defineStore('communityEvents', () => {
   const events = ref<CommunityEvent[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
+  // The past list fails on its own, so its error is not shown on the upcoming tab.
+  const pastError = ref<string | null>(null)
 
   const enabled = computed(() => features.events)
   const upcomingCount = computed(() => (enabled.value ? events.value.filter(isOngoing).length : 0))
   const upcomingEvents = computed(() => events.value.filter(isOngoing)
     .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()))
-  const past = usePastEvents(enabled, error)
+  const past = usePastEvents(enabled, pastError)
   const pastEvents = computed(() => [...events.value.filter(e => !isOngoing(e)), ...past.fetched.value.filter(o => !events.value.some(e => e.id === o.id))]
     .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime()))
 
@@ -151,12 +153,10 @@ export const useEventsStore = defineStore('communityEvents', () => {
     return item
   }
 
-  const dropEvent = (id: string) => {
-    events.value = events.value.filter(e => e.id !== id); past.remove(id)
-  }
+  const dropEvent = (id: string) => { events.value = events.value.filter(e => e.id !== id); past.remove(id) }
   const roster = eventRosterActions(act, dropEvent)
   return {
-    events, loading, error, enabled, upcomingCount, upcomingEvents, pastEvents, pastLoading: past.loading, pastLoaded: past.loaded, pastHasMore: past.hasMore, load, loadPast: past.load,
+    events, loading, error, pastError, enabled, upcomingCount, upcomingEvents, pastEvents, pastLoading: past.loading, pastLoaded: past.loaded, pastHasMore: past.hasMore, load, loadPast: past.load,
     create: (data: CreateEventRequest) => act(() => apiCreate(data)),
     setRSVP: (id: string, resp: 'going' | 'interested' | 'not_going') => act(() => apiSetRSVP(id, resp)),
     deleteRSVP: (id: string) => act(() => apiDeleteRSVP(id)),
@@ -181,7 +181,7 @@ export const useEventsStore = defineStore('communityEvents', () => {
       events.value = []
       past.reset()
       loading.value = false
-      error.value = null
+      error.value = pastError.value = null
     }
   }
 })

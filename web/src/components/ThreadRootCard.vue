@@ -104,7 +104,7 @@ const formatDate = (dateStr?: string) => dateTime(dateStr, locale.value)
     />
     <MarkdownContent v-else-if="root.content" :content="root.content" :mention-roles="root.mention_roles ?? []" />
     <p v-else-if="isRemovedMessage(root)" data-testid="message-removed" class="text-sm italic text-mnema-tertiary">{{ $t('chat.messageRemoved') }}</p>
-    <MessageEmbeds :embeds="root.embeds ?? []" />
+    <MessageEmbeds :embeds="root.embeds ?? []" :author="root.display_name || root.username || ''" :author-id="root.user_id ?? ''" :channel-id="root.channel_id ?? ''" />
     <!-- A poll that started the thread keeps its options, votes and time left here -->
     <PollCard v-if="root.poll" :msg="root as Message" />
     <span v-if="root.is_edited" class="block text-xs text-mnema-tertiary italic">{{ $t('chat.edited') }}</span>

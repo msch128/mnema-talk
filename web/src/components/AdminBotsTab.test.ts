@@ -126,9 +126,10 @@ describe('AdminBotsTab', () => {
     expect(w.find('[data-testid="bot-detail"]').exists()).toBe(true)
     apiMock.mockReset()
     apiMock.mockRejectedValue(new Error('load failed'))
-    mount(AdminBotsTab)
+    const failed = mount(AdminBotsTab)
     await flushPromises()
-    expect(useToastStore().toasts.map(t => t.text)).toContain('load failed')
+    expect(failed.find('[data-testid="bots-error"]').exists()).toBe(true)
+    expect(useToastStore().toasts.map(t => t.text)).not.toContain('load failed')
   })
 
   it('ignores role ids the store does not know', async () => {
@@ -136,5 +137,18 @@ describe('AdminBotsTab', () => {
     usePermissionsStore()
     const w = await mountTab()
     expect(w.get('[data-testid="bot-row"]').text()).toContain('No role')
+  })
+
+  it('says the bots could not be loaded, with a retry, instead of "no bots"', async () => {
+    apiMock.mockImplementation(async path => {
+      if (path === '/api/admin/bots') throw new Error('down')
+      return []
+    })
+    const w = await mountTab()
+    expect(w.find('[data-testid="bots-error"]').exists()).toBe(true)
+    expect(w.text()).not.toContain('No bots yet')
+    apiMock.mockClear()
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    expect(apiMock).toHaveBeenCalledWith('/api/admin/bots', expect.anything())
   })
 })

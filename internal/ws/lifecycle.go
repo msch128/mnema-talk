@@ -143,12 +143,15 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if !h.admitPending(c) {
 		return
 	}
+	// The writer runs before the greeting is queued: a large greeting (one
+	// media state per publisher) would overflow the send buffer otherwise.
+	// It ends with the client's done channel when the handshake fails.
+	go c.writePump()
 	if !h.confirmHandshake(r, c, user.ID, tv) {
 		h.cancelPending(c)
 		return
 	}
 	metrics.WSConnections.Inc()
-	go c.writePump()
 	go c.readPump()
 }
 
@@ -245,9 +248,12 @@ func (h *Hub) Close() {
 	// own clean-up no longer reaches removePresence to bank them.
 	now := time.Now()
 	stays := make(map[voiceKey]time.Duration, len(h.voiceSince))
+	private := make(map[voiceKey]bool, len(h.privateSeat))
 	for key, since := range h.voiceSince {
 		stays[key] = now.Sub(since)
+		private[key] = h.privateSeat[key]
 		delete(h.voiceSince, key)
+		delete(h.privateSeat, key)
 	}
 	clients := make([]*Client, 0, len(h.clients))
 	online := make([]uuid.UUID, 0, len(h.online))
@@ -270,7 +276,7 @@ func (h *Hub) Close() {
 	// database is still open: the connections' own clean-up runs after the
 	// server has moved on to closing it.
 	for key, d := range stays {
-		h.addVoiceTime(key.user, key.ch, d)
+		h.addVoiceTime(key.user, key.ch, d, private[key])
 	}
 	h.flushAllVoiceTime()
 	h.recordLastSeen(online...)

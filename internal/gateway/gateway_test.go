@@ -229,6 +229,19 @@ func TestDeliverInteractionNeedsALiveSession(t *testing.T) {
 	}
 }
 
+func TestInteractionSkipsAConnectionThatIsAlreadyClosing(t *testing.T) {
+	g := New(Config{})
+	b := uuid.New()
+	older := &session{id: "o", botID: b, conn: newConnection(nil), startedAt: time.Now().Add(-time.Hour)}
+	newer := &session{id: "n", botID: b, conn: newConnection(nil), startedAt: time.Now()}
+	g.register(older)
+	g.register(newer)
+	newer.conn.closeWith(CloseRateLimited, "Rate limited")
+	if !g.DeliverInteraction(b, json.RawMessage(`{}`)) || older.seq != 1 || newer.seq != 0 {
+		t.Fatalf("the healthy older session gets it: older %d, closing newer %d", older.seq, newer.seq)
+	}
+}
+
 // socketPair gives a server-side connection (with its writer running) and
 // the client's socket.
 func socketPair(t *testing.T) (*connection, *websocket.Conn) {
@@ -419,5 +432,24 @@ func TestStartingSessionTakesNothingBeforeReady(t *testing.T) {
 	}
 	if !g.DeliverInteraction(b, json.RawMessage(`{}`)) {
 		t.Fatal("a session past READY takes interactions")
+	}
+}
+
+// A bot that widened its allowed intents and then identified must not be cut
+// off by a token check whose query ran before the widening.
+func TestSessionIdentifiedAfterTheIntentQueryIsNotClosedByIt(t *testing.T) {
+	g := New(Config{})
+	botID, tok := uuid.New(), uuid.New()
+	queried := time.Now()
+	old := &session{id: "old", botID: botID, tokenID: tok, intents: 3, startedAt: queried.Add(-time.Minute), conn: newConnection(nil)}
+	late := &session{id: "late", botID: botID, tokenID: tok, intents: 3, startedAt: queried.Add(time.Second), conn: newConnection(nil)}
+	g.register(old)
+	g.register(late)
+	g.closeOverreaching(map[uuid.UUID]int64{tok: 1}, queried)
+	if !old.conn.closed() {
+		t.Fatal("a session older than the query keeps intents the bot no longer has")
+	}
+	if late.conn.closed() {
+		t.Fatal("a session identified after the query was judged by the outdated intents")
 	}
 }

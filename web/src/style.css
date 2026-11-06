@@ -365,11 +365,14 @@
   }
 
   /* Small controls keep their look but get a 44px touch area (no layout change). */
-  button,
-  [role='button'],
-  [role='menuitem'],
-  [role='tab'] {
-    position: relative;
+  /* In @layer base so Tailwind's absolute/fixed/sticky utilities still win. */
+  @layer base {
+    button,
+    [role='button'],
+    [role='menuitem'],
+    [role='tab'] {
+      position: relative;
+    }
   }
   button::after,
   [role='button']::after,

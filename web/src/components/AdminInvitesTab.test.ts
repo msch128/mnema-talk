@@ -63,12 +63,14 @@ describe('AdminInvitesTab', () => {
     expect(row(w, 'soon-code').text()).toContain('valid until')
   })
 
-  it('shows the empty state and keeps going when loading fails', async () => {
+  it('shows the load error, not the empty state, and keeps the form when loading fails', async () => {
     apiMock.mockRejectedValue(new Error('boom'))
     const w = mount(AdminInvitesTab)
     await flushPromises()
-    expect(w.text()).toContain('No invites yet.')
-    expect(toastTexts()).toContain('boom')
+    expect(w.text()).toContain('Couldn’t load the invites')
+    expect(w.text()).not.toContain('No invites yet.')
+    expect(w.find('[data-testid="invite-form"]').exists()).toBe(true)
+    expect(toastTexts()).toEqual([])
   })
 
   it('creates an invite with the typed limits and reloads', async () => {
@@ -150,7 +152,7 @@ describe('AdminInvitesTab', () => {
     await showAll(w)
 
     confirmMock.mockResolvedValueOnce(false)
-    await row(w, 'gone-code').find('button[aria-label="Delete invite"]')!.trigger('click')
+    await row(w, 'gone-code').find('button[aria-label="Delete invite gone-code"]')!.trigger('click')
     await flushPromises()
     expect(confirmMock.mock.calls[0]![0]!).toMatchObject({ danger: true })
     expect(confirmMock.mock.calls[0]![0]!.title).toContain('gone-code')
@@ -158,7 +160,7 @@ describe('AdminInvitesTab', () => {
 
     confirmMock.mockResolvedValueOnce(true)
     apiMock.mockResolvedValueOnce(null)
-    await row(w, 'gone-code').find('button[aria-label="Delete invite"]')!.trigger('click')
+    await row(w, 'gone-code').find('button[aria-label="Delete invite gone-code"]')!.trigger('click')
     await flushPromises()
     expect(apiMock).toHaveBeenLastCalledWith("/api/admin/invites/00000000-0000-4000-8000-000000000404", { method: 'DELETE' })
     expect(row(w, 'gone-code')).toBeUndefined()
@@ -173,7 +175,7 @@ describe('AdminInvitesTab', () => {
     await showAll(w)
     confirmMock.mockResolvedValueOnce(true)
     apiMock.mockRejectedValueOnce(new Error('invite not found'))
-    await row(w, 'open-code').find('button[aria-label="Delete invite"]')!.trigger('click')
+    await row(w, 'open-code').find('button[aria-label="Delete invite open-code"]')!.trigger('click')
     await flushPromises()
     expect(rows(w)).toHaveLength(4)
     expect(toastTexts()).toContain('invite not found')
@@ -255,5 +257,28 @@ describe('AdminInvitesTab', () => {
     expect(row(w, 'soon-code').text()).toContain('Uses: 1, no limit')
     expect(document.body.querySelector('[data-testid="edit-invite-form"]')).toBeNull()
     w.unmount()
+  })
+
+  it('says the invites could not be loaded, with a retry, instead of "no invites"', async () => {
+    apiMock.mockRejectedValue(new Error('down'))
+    const w = mount(AdminInvitesTab)
+    await flushPromises()
+    expect(w.find('[data-testid="invites-error"]').exists()).toBe(true)
+    expect(w.text()).not.toContain('No invites yet')
+    apiMock.mockReset().mockResolvedValue(invites())
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledWith('/api/admin/invites', expect.anything())
+    expect(w.find('[data-testid="invites-error"]').exists()).toBe(false)
+  })
+
+  it('names the invite on its copy, edit and delete buttons', async () => {
+    apiMock.mockResolvedValue(invites())
+    const w = mount(AdminInvitesTab)
+    await flushPromises()
+    const r = row(w, 'open-code')
+    expect(r.find('button[aria-label="Copy link for invite open-code"]').exists()).toBe(true)
+    expect(r.get('[data-testid="invite-edit"]').attributes('aria-label')).toBe('Edit invite open-code')
+    expect(r.find('button[aria-label="Delete invite open-code"]').exists()).toBe(true)
   })
 })

@@ -26,6 +26,11 @@ describe('MessageAttachments', () => {
     expect(w.text()).toContain('0 B')
   })
 
+  it('opens a file link without giving the page to the target', () => {
+    const w = mount(MessageAttachments, { props: { attachments: [file] } })
+    expect(w.get('a[target="_blank"]').attributes('rel')).toBe('noopener noreferrer')
+  })
+
   it('uses the chat layout when an untyped parent supplies an unknown variant', () => {
     // Dynamic component boundaries can still originate in external JS. Keep
     // the fixture contract typed and model only the malformed layout option.

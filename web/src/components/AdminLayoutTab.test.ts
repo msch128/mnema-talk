@@ -427,3 +427,22 @@ describe('layout save and create races', () => {
     expect(calls.filter(c => c.path === '/api/admin/categories')).toHaveLength(0)
   })
 })
+
+describe('layout editor button names', () => {
+  it('names the channel and the category on their repeated row buttons', async () => {
+    vi.spyOn(useChatStore(), 'fetchChannels').mockResolvedValue(undefined)
+    apiMock.mockResolvedValue(tree())
+    const w = keep(mount(AdminLayoutTab))
+    await flushPromises()
+    const category = tree().categories[0]!
+    const channel = category.channels![0]!
+    const row = w.get(`[data-testid="channel-item-${channel.id}"]`)
+    for (const testid of ['move-up-channel', 'move-down-channel', 'rename-channel', 'delete-channel']) {
+      expect(row.get(`[data-testid="${testid}"]`).attributes('aria-label'), testid).toContain(channel.name)
+    }
+    const header = w.get(`[data-testid="category-item-${category.id}"]`)
+    for (const testid of ['move-up-category', 'move-down-category', 'rename-category', 'delete-category']) {
+      expect(header.get(`[data-testid="${testid}"]`).attributes('aria-label'), testid).toContain(category.name)
+    }
+  })
+})

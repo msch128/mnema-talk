@@ -117,7 +117,7 @@ async function removeComment(c: EventComment) {
                 </button>
               </span>
             </div>
-            <form v-if="editingId === c.id" class="mt-1 flex flex-col gap-2" @submit.prevent="saveEdit(c)" @keydown.esc.stop="editingId = null">
+            <form v-if="editingId === c.id" data-local-escape class="mt-1 flex flex-col gap-2" @submit.prevent="saveEdit(c)" @keydown.esc.stop="editingId = null">
               <textarea v-model="editText" v-max-chars="MAX" rows="2" data-testid="comment-edit-input" :aria-label="$t('events.commentEdit')" class="w-full resize-y rounded-lg border border-mnema-border bg-mnema-canvas p-2 text-sm text-mnema-text focus:outline-hidden focus:border-mnema-accent"></textarea>
               <div class="flex justify-end gap-2">
                 <button type="button" class="btn btn-secondary px-3 py-1.5 text-xs max-md:min-h-11" @click="editingId = null">{{ $t('common.cancel') }}</button>

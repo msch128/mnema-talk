@@ -60,7 +60,7 @@ func publishScoped(h *Hub, data []byte, scope eventScope, view uuid.UUID, eventT
 	// Outgoing webhooks only hear what is really published: after the
 	// publication is authorized and live, never before.
 	if view != uuid.Nil {
-		if scope.snap != nil && scope.snap.IsDM(view) {
+		if scope.snap != nil && scope.snap.IsPrivate(view) {
 			h.dmTapped(view, eventType, payload)
 		} else {
 			h.tapped(view, eventType, payload)

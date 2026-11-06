@@ -121,6 +121,7 @@ async function clearStatus() {
           :aria-label="$t('profile.status')"
           :placeholder="$t('profile.statusPlaceholder')"
           class="min-w-0 flex-1 rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
+          data-local-escape
           @keydown.esc.stop.prevent="cancelEditStatus"
         />
         <span class="w-10 text-right text-xs tabular-nums text-mnema-tertiary">{{ charCount(draft.status) }}/{{ MAX_STATUS }}</span>

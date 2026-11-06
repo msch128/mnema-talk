@@ -3,7 +3,7 @@
 // it on with a QR code and a first code, keep ten recovery codes, make new
 // ones or turn it off again. Every change needs the password and, once it is
 // on, a current code.
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { Loader2, ShieldCheck, ShieldOff } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
 import { disableTwoFactor, enableTwoFactor, newRecoveryCodes, setupTwoFactor } from '../lib/accountApi'
@@ -35,12 +35,21 @@ const remaining = computed(() => account.info?.recovery_codes_remaining ?? 0)
 // The Owner holds every permission, so their account gets the nudge.
 const recommend = computed(() => authStore.isAdmin && !enabled.value && step.value === 'idle')
 
+const root = ref<HTMLElement | null>(null)
+
 function go(next: Step) {
   password.value = ''
   code.value = ''
   error.value = ''
   step.value = next
+  // The step's own field is where the member continues; keyboard users should not have to find it.
+  void nextTick(() => root.value?.querySelector<HTMLElement>('form input')?.focus())
 }
+
+// A wrong code can sit below the fold of the settings pane.
+watch(error, message => {
+  if (message) void nextTick(() => root.value?.querySelector('[role="alert"]')?.scrollIntoView({ block: 'nearest' }))
+})
 
 async function run(action: () => Promise<void>) {
   error.value = ''
@@ -69,7 +78,7 @@ const confirm = () => run(async () => {
 
 const turnOff = () => run(async () => {
   await disableTwoFactor(password.value, code.value)
-  await account.load()
+  await account.load().catch(() => undefined)
   toasts.success(t('security.twoFactor.off'))
   go('idle')
 })
@@ -87,7 +96,7 @@ function finish() {
 </script>
 
 <template>
-  <section class="settings-card" data-testid="account-two-factor" aria-labelledby="security-2fa-title">
+  <section ref="root" class="settings-card" data-testid="account-two-factor" aria-labelledby="security-2fa-title">
     <div>
       <h3 id="security-2fa-title" class="settings-title">{{ $t('security.twoFactor.title') }}</h3>
       <p class="settings-help">{{ $t('security.twoFactor.intro') }}</p>

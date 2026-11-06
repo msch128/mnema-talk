@@ -143,13 +143,13 @@ describe('ScreenShareModal', () => {
 })
 
 describe('ScreenShareModal custom selection and dismissal', () => {
-  it('displays every supported quality combination in Mbit/s', async () => {
+  it('displays every supported quality combination in Mbit/s with the language\'s decimal mark', async () => {
     w = mount(ScreenShareModal)
     for (const resolution of STREAM_RESOLUTIONS) {
       await w.get(`[data-testid="resolution-btn-${resolution}"]`).trigger('click')
       for (const fps of STREAM_FRAME_RATES) {
         await w.get(`[data-testid="fps-btn-${fps}"]`).trigger('click')
-        const expected = `${(streamBitrate({ resolution, fps }) / 1_000_000).toFixed(1)} Mbit/s`
+        const expected = `${(streamBitrate({ resolution, fps }) / 1_000_000).toFixed(1).replace('.', ',')} Mbit/s`
         expect(w.text()).toContain(expected)
       }
     }

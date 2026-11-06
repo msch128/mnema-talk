@@ -196,8 +196,9 @@ func (a *API) tellAuthor(s *auditSnapshot, by *auth.User, reason string) {
 	})
 }
 
-// channelAuditName reads a channel's name and whether it is a conversation.
+// channelAuditName reads a channel's name and whether it is private: a conversation or
+// a Talk of one.
 func channelAuditName(ctx context.Context, q db.Querier, id uuid.UUID) (name string, dm bool, err error) {
-	err = q.QueryRow(ctx, `SELECT name, type = 'dm' FROM channels WHERE id = $1`, id).Scan(&name, &dm)
+	err = q.QueryRow(ctx, `SELECT name, type = 'dm' OR dm_id IS NOT NULL FROM channels WHERE id = $1`, id).Scan(&name, &dm)
 	return name, dm, err
 }

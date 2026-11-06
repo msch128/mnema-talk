@@ -20461,7 +20461,7 @@
     },
     "/api/admin/users/{id}/moderation/notes": {
       "post": {
-        "description": "Writes a private note about a member, optionally counted as a strike. Only moderators with Manage reports see it; the member never does, and it is not in their data export. At most 100 notes per member. Recorded in the audit log as moderation.note_add (without the text).",
+        "description": "Writes a private note about a member, optionally counted as a strike. Needs a highest role above the member's (never the Owner). Only moderators with Manage reports see it; the member never does, and it is not in their data export. At most 100 notes per member. Recorded in the audit log as moderation.note_add (without the text).",
         "operationId": "addModerationNote",
         "parameters": [
           {
@@ -20525,7 +20525,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing the Manage reports permission, or the member is yourself."
+            "description": "FORBIDDEN: missing the Manage reports permission, the member is yourself, the Owner, or not ranked below you."
           },
           "404": {
             "content": {
@@ -20697,7 +20697,7 @@
         ]
       },
       "put": {
-        "description": "Changes the text or the strike flag of a note you wrote. Nobody edits another moderator's note. Needs Manage reports. Recorded in the audit log as moderation.note_edit (without the text).",
+        "description": "Changes the text or the strike flag of a note you wrote, while the member's highest role is still below yours. Nobody edits another moderator's note. Needs Manage reports. Recorded in the audit log as moderation.note_edit (without the text).",
         "operationId": "editModerationNote",
         "parameters": [
           {
@@ -24712,7 +24712,7 @@
     },
     "/api/bot/v1/commands/{commandID}": {
       "delete": {
-        "description": "Removes one of the bot's own commands. Members stop seeing it in the composer at once.",
+        "description": "Removes one of the bot's own commands, except one an admin switched off (404; the admin deletes those). Members stop seeing it in the composer at once.",
         "operationId": "botDeleteCommand",
         "parameters": [
           {
@@ -32253,7 +32253,7 @@
     },
     "/api/events/{id}/signup": {
       "delete": {
-        "description": "Removes the caller's sign-up and moves the role's waitlist up. Always allowed, also on a finished event and for a member who can no longer view the event (a Talk they lost access to): such a member gets 204 instead of the event. The RSVP stays as it is.",
+        "description": "Removes the caller's sign-up and moves the role's waitlist up. Always allowed, also on a finished event and for a member who can no longer view the event (a Talk they lost access to) but had a sign-up: such a member gets 204 instead of the event. Without a sign-up an event the caller cannot view is 404, as everywhere. The RSVP stays as it is.",
         "operationId": "leaveCommunityEventRole",
         "parameters": [
           {

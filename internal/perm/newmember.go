@@ -24,6 +24,9 @@ const (
 	speakMask = Speak | Video // camera and screen share count as speaking
 	// dmCallMask is what the speak wait takes in the call of a conversation.
 	dmCallMask = Connect | Speak | Video
+	// dmTalkMask is what nobody but the Owner holds in the chat of such a call
+	// (a conversation's members hold none of it in the conversation itself).
+	dmTalkMask = ManageMessages | MentionEveryone
 )
 
 // mask is what the waits take from the member.

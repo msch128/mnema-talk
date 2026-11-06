@@ -29,6 +29,7 @@ function pick(id: string) {
           :placeholder="$t('forum.searchPlaceholder')"
           v-max-chars="100"
           class="h-9 w-full rounded-lg border border-mnema-border bg-mnema-surface pl-8 pr-8 text-sm text-mnema-text placeholder:text-mnema-tertiary focus:outline-hidden focus:border-mnema-accent max-md:h-11 [&::-webkit-search-cancel-button]:hidden"
+          data-local-escape
           @keydown.esc.stop="search = ''"
         />
         <button

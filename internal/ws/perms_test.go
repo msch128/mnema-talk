@@ -89,11 +89,11 @@ func TestEventsFailClosedWhenPermissionsCannotBeLoaded(t *testing.T) {
 		t.Fatalf("outgoing webhooks heard events nobody was sent: %v", tapped)
 	}
 	h.PermissionsChanged(nil)
-	if got := drainTypes(t, a); len(got) != 0 {
-		t.Fatalf("events delivered without permissions: %v", got)
-	}
-	if got := drainTypes(t, b); len(got) != 0 {
-		t.Fatalf("events delivered without permissions: %v", got)
+	// Only the payload-free refresh request goes out: it discloses nothing.
+	for _, c := range []*Client{a, b} {
+		if got := drainTypes(t, c); len(got) != 1 || got[0] != "permissions_changed" {
+			t.Fatalf("events delivered without permissions: %v", got)
+		}
 	}
 	// And a Talk cannot be joined.
 	h.joinVoice(a, &core.ChannelInfo{ID: ch, Type: core.ChannelTypeVoice})

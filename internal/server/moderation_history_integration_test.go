@@ -17,6 +17,7 @@ type historyFixture struct {
 	admin, mod, mod2, timeoutOnly, deputy *client
 	auditor, member, other                *client
 	general                               uuid.UUID
+	readers                               uuid.UUID
 }
 
 func newHistoryFixture(t *testing.T) *historyFixture {
@@ -28,6 +29,7 @@ func newHistoryFixture(t *testing.T) *historyFixture {
 	f.timeoutOnly, f.deputy = a.register(admin, "hammer"), a.register(admin, "deputy")
 	f.auditor, f.member, f.other = a.register(admin, "auditor"), a.register(admin, "chatty"), a.register(admin, "bystander")
 	readers := createRole(t, admin, "queue readers", perm.ManageReports)
+	f.readers = readers
 	assignRoles(t, admin, f.mod, readers)
 	assignRoles(t, admin, f.mod2, readers)
 	assignRoles(t, admin, f.timeoutOnly, createRole(t, admin, "hammers", perm.TimeoutMembers|perm.BanMembers|perm.KickMembers|perm.ManageMembers|perm.ManageMessages))
@@ -318,4 +320,19 @@ func TestEveryHistoryRouteIsInTheAuditTableAndTheQueueStaysOpenToReaders(t *test
 			t.Errorf("%s: %d entries, %v", action, n, err)
 		}
 	}
+}
+
+func TestNotesCannotBeWrittenAboutTheOwnerOrAnEqualRank(t *testing.T) {
+	f := newHistoryFixture(t)
+	note := map[string]any{"body": "text", "strike": true}
+	wantStatus(t, "note on the Owner", f.mod.post(f.path(f.admin, "/notes"), note), http.StatusForbidden)
+	wantStatus(t, "note on a peer", f.mod.post(f.path(f.mod2, "/notes"), note), http.StatusForbidden)
+	own := f.addNote(f.mod, f.member, "fine", false)
+	// Rank is checked again on edits: the member rose to the moderator's rank since.
+	assignRoles(t, f.admin, f.member, f.readers)
+	wantStatus(t, "edit about a peer", f.mod.put(f.path(f.member, "/notes/"+own.String()), note), http.StatusForbidden)
+	// Reading stays open to everyone with Manage reports.
+	wantStatus(t, "history of the Owner", f.mod.get(f.path(f.admin, "")), http.StatusOK)
+	wantStatus(t, "history of a peer", f.mod.get(f.path(f.mod2, "")), http.StatusOK)
+	wantStatus(t, "the Owner writes", f.admin.post(f.path(f.mod, "/notes"), note), http.StatusCreated)
 }

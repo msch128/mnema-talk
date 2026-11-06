@@ -62,11 +62,11 @@ describe('IncomingWebhooksPanel', () => {
     expect((await mountPanel([])).text()).toContain('No incoming webhooks')
   })
 
-  it('reports a failed load', async () => {
+  it('shows a failed first load in the panel only, without a toast', async () => {
     apiMock.mockRejectedValueOnce(new Error('boom'))
     mount(IncomingWebhooksPanel, { props: { channelId } })
     await flushPromises()
-    expect(toastTexts()).toContain('boom')
+    expect(toastTexts()).toEqual([])
   })
 
   it('shows a failed load with a retry instead of the empty text', async () => {
@@ -238,6 +238,9 @@ describe('IncomingWebhooksPanel', () => {
     await name.setValue('   ')
     expect(w.find('[data-testid="webhook-settings"]').text()).toContain('A bot needs a name.')
     expect(save()).toBeDefined()
+    const described = name.attributes('aria-describedby')!
+    expect(name.attributes('aria-invalid')).toBe('true')
+    expect(w.find(`[id="${described}"]`).text()).toBe('A bot needs a name.')
     await name.setValue('  Deploys ')
     apiMock.mockRejectedValueOnce(new Error('name taken'))
     await w.find('[data-testid="unsaved-save"]').trigger('click')
@@ -337,11 +340,24 @@ describe('OutgoingWebhooksPanel', () => {
     expect(w.find('input[data-event="MEMBER_ADD"]').exists()).toBe(false)
   })
 
-  it('reports a failed load', async () => {
+  it('shows a failed first load in the panel only, without a toast', async () => {
     apiMock.mockRejectedValueOnce(new Error('boom'))
     mount(OutgoingWebhooksPanel, { props: { channelId } })
     await flushPromises()
-    expect(toastTexts()).toContain('boom')
+    expect(toastTexts()).toEqual([])
+  })
+
+  it('shows a failed load with a retry instead of "No outgoing webhooks yet"', async () => {
+    apiMock.mockRejectedValueOnce(new Error('boom'))
+    const w = mount(OutgoingWebhooksPanel, { props: { channelId } })
+    await flushPromises()
+    expect(w.text()).not.toContain('No outgoing webhooks')
+    expect(w.find('[data-testid="outgoing-load-failed"]').exists()).toBe(true)
+    apiMock.mockResolvedValueOnce([out(1)])
+    await w.find('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="outgoing-load-failed"]').exists()).toBe(false)
+    expect(w.findAll('[data-testid="outgoing-webhook"]')).toHaveLength(1)
   })
 
   it('creates a webhook, picks events and shows the secret once', async () => {

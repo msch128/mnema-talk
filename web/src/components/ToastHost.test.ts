@@ -25,6 +25,12 @@ describe('ToastHost', () => {
     expect(w.findAll('[data-toast]')).toHaveLength(1)
   })
 
+  it('sits above the composer on desktop widths', () => {
+    const w = mount(ToastHost)
+    expect(w.classes()).toContain('bottom-24')
+    expect(w.classes()).toContain('max-md:top-3')
+  })
+
   it('runs a toast action once and dismisses the toast', async () => {
     const toasts = useToastStore()
     let called = 0

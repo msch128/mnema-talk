@@ -109,6 +109,17 @@ describe('UserBar voice status panel', () => {
 })
 
 describe('UserBar presence and status', () => {
+  it('shows that it is reconnecting instead of Online while the socket is down', async () => {
+    const { w, chat } = setup()
+    chat.wasConnected = true
+    chat.isConnected = true
+    await nextTick()
+    expect(w.find('[data-testid="own-subline"]')!.text()).not.toBe('Verbinde …')
+    chat.isConnected = false
+    await nextTick()
+    expect(w.find('[data-testid="own-subline"]')!.text()).toBe('Verbinde …')
+  })
+
   it('shows the status text, else the live presence', async () => {
     const { w, chat, auth } = setup()
     chat.presenceById = { '00000000-0000-4000-8000-0000000003e8': 'dnd' }

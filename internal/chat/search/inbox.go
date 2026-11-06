@@ -37,7 +37,7 @@ type InboxQuery struct {
 // Mentions returns one page of the caller's mentions inbox and whether older
 // entries exist. Messages by the user themselves never appear.
 func Mentions(ctx context.Context, p *db.Pool, q InboxQuery) ([]core.Message, bool, error) {
-	if err := core.MessageCursorExists(ctx, p, q.Before); err != nil {
+	if err := inboxCursorExists(ctx, p, q); err != nil {
 		return nil, false, err
 	}
 	msgs, err := messages.QueryMessages(ctx, p, InboxSQL(), inboxArgs(q)...)
@@ -114,4 +114,14 @@ func (a *API) ServeMentions(w http.ResponseWriter, r *http.Request) error {
 	}
 	httpx.WriteJSON(w, http.StatusOK, MentionsPage{Messages: msgs, HasMore: more})
 	return nil
+}
+
+// inboxCursorExists checks the page cursor against the channels the inbox
+// reads, so a hidden message answers like a missing one.
+func inboxCursorExists(ctx context.Context, p *db.Pool, q InboxQuery) error {
+	if q.Before == nil {
+		return nil
+	}
+	return core.CursorExists(ctx, p, `SELECT 1 FROM messages m
+		WHERE m.id = $1 AND NOT m.in_dm AND ($2::uuid[] IS NULL OR m.channel_id = ANY($2::uuid[]))`, *q.Before, q.Visible)
 }

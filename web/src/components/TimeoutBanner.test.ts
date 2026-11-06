@@ -36,7 +36,9 @@ describe('TimeoutBanner', () => {
     permissions.info = info('2026-01-01T12:00:03Z', 'calm down')
     await vi.advanceTimersByTimeAsync(0)
     expect(w.get('[data-testid="timeout-banner"]').text()).toContain('You are timed out.')
-    expect(w.get('[data-testid="timeout-banner"]').text()).toContain('calm down')
+    expect(w.get('[data-testid="timeout-banner"]').text()).toContain('Reason: calm down')
+    // The per-second countdown is kept out of the live region's announcements.
+    expect(w.get('[data-testid="timeout-remaining"]').attributes('aria-hidden')).toBe('true')
     expect(w.get('[data-testid="timeout-remaining"]').text()).toBe('0:03')
     await vi.advanceTimersByTimeAsync(1000)
     expect(w.get('[data-testid="timeout-remaining"]').text()).toBe('0:02')

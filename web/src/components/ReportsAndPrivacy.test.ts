@@ -144,9 +144,23 @@ describe('AdminReportsTab', () => {
 
   it('reports a failed load', async () => {
     http.handle = () => { throw new Error('offline') }
-    mount(AdminReportsTab, { global })
+    const w = mount(AdminReportsTab, { global })
     await flushPromises()
-    expect(useToastStore().toasts.map(t => t.text)).toEqual(['offline'])
+    expect(w.find('[data-testid="reports-error"]').exists()).toBe(true)
+    expect(useToastStore().toasts).toHaveLength(0)
+  })
+
+  it('says the reports could not be loaded, with a retry, instead of "no reports"', async () => {
+    http.handle = () => { throw new Error('offline') }
+    const w = mount(AdminReportsTab, { global })
+    await flushPromises()
+    expect(w.find('[data-testid="reports-error"]').exists()).toBe(true)
+    expect(w.find('[data-testid="reports-empty"]').exists()).toBe(false)
+    http.handle = () => ({ reports: [], has_more: false })
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="reports-error"]').exists()).toBe(false)
+    expect(w.find('[data-testid="reports-empty"]').exists()).toBe(true)
   })
 
   it('drops the previous filter reports when switching filters fails to load', async () => {
@@ -313,6 +327,14 @@ describe('AccountDmPolicy', () => {
     expect(useToastStore().toasts.map(t => t.text)).toEqual(['Couldn’t save the setting. Try again.'])
     http.handle = () => { throw new Error('offline') }
     expect(mount(AccountDmPolicy, { global }).find('[data-testid="dm-policy"]').exists()).toBe(false)
+  })
+
+  it('shows a loading line until the choice is read', async () => {
+    http.handle = () => new Promise(() => undefined)
+    const w = mount(AccountDmPolicy, { global })
+    await flushPromises()
+    expect(w.find('[data-testid="dm-policy-loading"]').exists()).toBe(true)
+    expect(w.find('[data-testid="dm-policy"]').exists()).toBe(false)
   })
 
   it('tells when the choice cannot be read and loads it on retry', async () => {

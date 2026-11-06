@@ -4,6 +4,7 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/msch128/mnema-talk/internal/config"
 	"net/http"
 	"testing"
 	"time"
@@ -24,9 +25,11 @@ type callFixture struct {
 	oldBob, strangerWS *wsConn
 }
 
-func newCallFixture(t *testing.T) *callFixture {
+func newCallFixture(t *testing.T) *callFixture { return newCallFixtureWith(t, nil) }
+
+func newCallFixtureWith(t *testing.T, adjust func(*config.Config)) *callFixture {
 	t.Helper()
-	f := &callFixture{dmFixture: newDMFixture(t, true)}
+	f := &callFixture{dmFixture: newDMFixtureWith(t, true, adjust)}
 	f.dm = f.dmFixture.alice.mustDM(t, f.dmFixture.bob)
 	wantStatus(t, "first words", f.dmFixture.alice.dmPost(f.dm.ID, "hello"), http.StatusCreated)
 	f.alice = f.dmFixture.alice.dialLiveWSQuery(f.a.origin(), "?dm=1")

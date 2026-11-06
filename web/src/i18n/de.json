@@ -136,20 +136,20 @@
       "cancelled": "abgesagt"
     },
     "detail": {
-      "invalidInvite": "Ungültiger Einladungscode",
+      "invalidInvite": "Ungültiger Einladungscode.",
       "vanityOwnerOnly": "Nur der Owner kann mit dem Kurzlink Konten erstellen lassen.",
       "vanityChars": "Der Linkname darf nur Kleinbuchstaben, Ziffern und einzelne Bindestriche dazwischen enthalten.",
       "vanityLength": "Der Linkname muss {min} bis {max} Zeichen lang sein.",
       "vanityReserved": "Dieser Linkname ist reserviert. Wähle einen anderen.",
-      "inviteExpired": "Der Einladungscode ist abgelaufen",
-      "inviteUsedUp": "Der Einladungscode wurde bereits zu oft verwendet",
-      "usernameTaken": "Dieser Benutzername ist bereits vergeben",
-      "wrongPassword": "Das aktuelle Passwort ist falsch",
-      "passwordMin": "Das Passwort muss mindestens {count} Zeichen haben",
-      "passwordMax": "Das Passwort ist zu lang",
-      "usernameFormat": "Benutzername: 2–32 Zeichen, nur Kleinbuchstaben, Ziffern, _ und .; kein . am Anfang oder Ende, nie zwei . hintereinander",
-      "fieldMax": "{field}: höchstens {count} Zeichen",
-      "fileTooBig": "Die Datei ist größer als {size} MB",
+      "inviteExpired": "Der Einladungscode ist abgelaufen.",
+      "inviteUsedUp": "Der Einladungscode wurde bereits zu oft verwendet.",
+      "usernameTaken": "Dieser Benutzername ist bereits vergeben.",
+      "wrongPassword": "Das aktuelle Passwort ist falsch.",
+      "passwordMin": "Das Passwort muss mindestens {count} Zeichen haben.",
+      "passwordMax": "Das Passwort ist zu lang.",
+      "usernameFormat": "Benutzername: 2–32 Zeichen, nur Kleinbuchstaben, Ziffern, _ und .; kein . am Anfang oder Ende, nie zwei . hintereinander.",
+      "fieldMax": "{field}: höchstens {count} Zeichen.",
+      "fileTooBig": "Die Datei ist größer als {size} MB.",
       "missingPermission": "Dafür fehlt dir die Berechtigung.",
       "srvAPageCannotMoveUnder": "Eine Seite kann nicht unter sich selbst oder eine ihrer Unterseiten verschoben werden.",
       "srvAWikiPageHoldsAtMost": "Eine Wiki-Seite fasst höchstens 50 KB Text.",
@@ -165,7 +165,7 @@
       "newMemberSpeak": "Du bist neu hier: Sprechen kannst du in {time}.",
       "newMemberWrite": "Du bist neu hier: Schreiben kannst du in {time}.",
       "signupsPaused": "Anmeldungen sind vorerst pausiert. Versuche es später noch einmal.",
-      "slowMode": "Langsammodus: bitte warte noch {seconds} s",
+      "slowMode": "Langsammodus: bitte warte noch {seconds} s.",
       "rateWait": "Das war gerade etwas viel. Versuche es in {time} noch einmal.",
       "linkInvalid": "Dieser Link ist ungültig oder abgelaufen.",
       "emailInvalid": "Gib eine gültige E-Mail-Adresse ein.",
@@ -289,7 +289,7 @@
       "srvATagWithThisName": "Ein Tag mit diesem Namen gibt es schon.",
       "srvAWordIsTooLong": "Ein Wort ist zu lang.",
       "srvAWordNeedsAtLeast": "Ein Wort braucht außer * mindestens einen Buchstaben oder eine Ziffer.",
-      "srvAcceptTheCommunityRulesFirst": "Bitte akzeptiere zuerst die Regeln der Community",
+      "srvAcceptTheCommunityRulesFirst": "Bitte akzeptiere zuerst die Regeln der Community.",
       "srvActionMustBeBlockOr": "Die Aktion muss „block“ oder „flag“ sein.",
       "srvAddAnEMailAddress": "Hinterlege eine E-Mail-Adresse in deinem Konto oder nenne einen Empfänger.",
       "srvAfterMustBeEarlierThan": "„after“ muss vor „before_date“ liegen.",
@@ -686,6 +686,7 @@
     "offline": "Du bist offline – Nachrichten kommen erst wieder an, wenn das Netzwerk zurück ist.",
     "nextTry": "nächster Versuch in {seconds} s · Versuch {attempt}",
     "retryNow": "Jetzt versuchen",
+    "reconnectingShort": "Verbinde …",
     "restored": "Wieder verbunden"
   },
   "update": {
@@ -755,7 +756,10 @@
     "markReadFailed": "Das Markieren als gelesen hat nicht geklappt. Versuche es noch einmal.",
     "markAllRead": "Alle als gelesen markieren",
     "allMarkedRead": "Alle als gelesen markiert",
-    "categoryMentions": "{n} Erwähnungen in dieser Kategorie",
+    "categoryMentions": {
+      "one": "{count} Erwähnung in dieser Kategorie",
+      "other": "{count} Erwähnungen in dieser Kategorie"
+    },
     "categoryUnread": "Ungelesene Nachrichten in dieser Kategorie",
     "copyLink": "Link kopieren",
     "copiedLink": "Link kopiert",
@@ -881,6 +885,7 @@
     "topic": "Thema (optional)",
     "topicPlaceholder": "Worum geht es hier?",
     "nameRequired": "Bitte gib einen Namen an.",
+    "categoryNameRequired": "Gib einen Namen für die neue Kategorie an oder wähle eine vorhandene.",
     "createFailed": "Der Kanal konnte nicht erstellt werden. Versuche es noch einmal."
   },
   "forum": {
@@ -990,7 +995,8 @@
       "other": "{count} neue Antworten"
     },
     "jumpToUnread": "Zur ersten ungelesenen",
-    "removeFile": "Datei entfernen"
+    "removeFile": "Datei entfernen",
+    "tagsLoadFailed": "Die Tags konnten nicht geladen werden."
   },
   "members": {
     "title": "Mitglieder",
@@ -1045,7 +1051,10 @@
     "replyingTo": "Antwort an",
     "openThread": "Thread öffnen",
     "addReaction": "Reaktion hinzufügen",
-    "reaction": "Reaktion {emoji}",
+    "reaction": {
+      "one": "{emoji}: {count} Reaktion",
+      "other": "{emoji}: {count} Reaktionen"
+    },
     "edit": "Nachricht bearbeiten",
     "delete": "Nachricht löschen",
     "bot": "Bot",
@@ -1827,7 +1836,8 @@
       "removed": "Kurzlink entfernt.",
       "copy": "Link kopieren",
       "copied": "Kopiert",
-      "copyFailed": "Der Link konnte nicht kopiert werden."
+      "copyFailed": "Der Link konnte nicht kopiert werden.",
+      "loadFailed": "Die Einladungsadresse konnte nicht geladen werden. Versuche es noch einmal."
     },
     "tabs": {
       "users": "Mitglieder",
@@ -1840,7 +1850,7 @@
       "bans": "Sperren",
       "bots": "Bots",
       "onboarding": "Willkommen & Regeln",
-      "access": "Anmeldung & Nachrichten",
+      "access": "Zugang",
       "emoji": "Emoji",
       "reports": "Meldungen",
       "automod": "Automod",
@@ -2327,6 +2337,7 @@
     "status": "Status",
     "actions": "Aktionen",
     "userActive": "Aktiv",
+    "userTimedOut": "In Auszeit bis {time}",
     "userDisabled": "Deaktiviert",
     "never": "Nie",
     "inVoice": "Im Talk",
@@ -2360,10 +2371,6 @@
     "layoutSaved": "Layout erfolgreich gespeichert",
     "addChannelTo": "Kanal zu {name} hinzufügen",
     "hasUnsavedLayout": "Ungespeicherte Änderungen an der Kanalreihenfolge.",
-    "moveUp": "Nach oben",
-    "moveDown": "Nach unten",
-    "renameChannel": "Kanal bearbeiten",
-    "renameCategory": "Kategorie bearbeiten",
     "editChannelTitle": "Kanal „{name}“ bearbeiten",
     "editCategoryTitle": "Kategorie „{name}“ bearbeiten",
     "channelNameLabel": "Kanalname",
@@ -2420,7 +2427,6 @@
     "copied": "Kopiert",
     "linkCopied": "Link kopiert",
     "copyFailed": "Das Kopieren hat nicht geklappt. Kopiere den Link von Hand:",
-    "deleteInvite": "Einladung löschen",
     "deleteInviteTitle": "Einladung {code} löschen?",
     "deleteInviteBody": "Der Code funktioniert danach nicht mehr.",
     "inviteDeleted": "Einladung gelöscht",
@@ -2497,7 +2503,8 @@
       "openReports": "{count} offen"
     },
     "access": {
-      "saved": "Gespeichert."
+      "saved": "Gespeichert.",
+      "loadFailed": "Die Zugangseinstellungen konnten nicht geladen werden. Versuche es noch einmal."
     },
     "maxUsesLabel": "Nutzungen",
     "maxUsesPlaceholder": "Unbegrenzt",
@@ -2534,8 +2541,19 @@
       "usesInvalid": "Gib eine ganze Zahl von mindestens den bisherigen {used} Nutzungen bis {max} ein.",
       "usesHint": "Bisher {used} genutzt. Das Limit kann nicht darunter liegen.",
       "saved": "Einladung aktualisiert.",
-      "edit": "Einladung bearbeiten"
-    }
+      "editNamed": "Einladung {code} bearbeiten"
+    },
+    "invitesLoadFailed": "Die Einladungen konnten nicht geladen werden. Versuche es noch einmal.",
+    "deleteInviteNamed": "Einladung {code} löschen",
+    "copyLinkFor": "Link zur Einladung {code} kopieren",
+    "mediaLoadFailed": "Die Medienliste konnte nicht geladen werden. Versuche es noch einmal.",
+    "usersLoadFailed": "Die Mitglieder konnten nicht geladen werden. Versuche es noch einmal.",
+    "moveUpNamed": "{name} nach oben",
+    "moveDownNamed": "{name} nach unten",
+    "renameChannelNamed": "Kanal {name} bearbeiten",
+    "renameCategoryNamed": "Kategorie {name} bearbeiten",
+    "deleteChannelNamed": "Kanal {name} löschen",
+    "deleteCategoryNamed": "Kategorie {name} löschen"
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -2956,13 +2974,15 @@
       "deleteTitle": ":{name}: löschen?",
       "deleteBody": "Bestehende Nachrichten und Reaktionen zeigen :name: ab jetzt als Text. Das lässt sich nicht rückgängig machen.",
       "animated": "Animiert",
-      "rename": "Umbenennen",
       "nameRules": "2 bis 32 Zeichen: a–z, 0–9 und _",
       "empty": "Noch keine eigenen Emojis.",
       "full": "Das Limit ist erreicht. Lösche ein Emoji, um Platz zu schaffen.",
       "choose": "Datei wählen",
       "noFile": "Noch keine Datei",
-      "emptyHint": "Lade oben ein Bild hoch, um das erste hinzuzufügen."
+      "emptyHint": "Lade oben ein Bild hoch, um das erste hinzuzufügen.",
+      "loadFailed": "Die eigenen Emojis konnten nicht geladen werden. Versuche es noch einmal.",
+      "renameNamed": ":{name}: umbenennen",
+      "deleteNamed": ":{name}: löschen"
     }
   },
   "activity": {
@@ -2971,6 +2991,7 @@
     "messages": "Nachrichten",
     "hoursMinutes": "{h} Std. {m} Min.",
     "minutes": "{m} Min.",
+    "none": "Noch keine",
     "underMinute": "< 1 Min.",
     "summary": "{voice} im Talk · {messages} Nachrichten"
   },
@@ -2987,7 +3008,7 @@
     "hostError": {
       "enterAddress": "Gib eine HTTPS-Adresse für den Server ein.",
       "invalidAddress": "Das ist keine gültige Serveradresse.",
-      "httpsOrigin": "Verwende eine HTTPS-Adresse ohne Zugangsdaten, Pfad oder Parameter.",
+      "httpsOrigin": "Verwende eine Webadresse mit https:// ohne Benutzername und Passwort.",
       "initHttps": "Auf diesem Computer konnten keine sicheren Verbindungen eingerichtet werden.",
       "refused": "Der Server hat die Verbindung abgelehnt. Prüfe Adresse und Port.",
       "timeout": "Der Server hat nicht rechtzeitig geantwortet. Prüfe Adresse, Port und dein Netzwerk.",
@@ -3466,8 +3487,8 @@
     "botRoleHint": "Verwaltete Rolle eines Bots: sie lässt sich nicht entfernen.",
     "botRoleNote": "„{name}“ ist die eigene Rolle eines Bots. Sie entsteht mit dem Bot, folgt seinem Namen und wird mit ihm gelöscht; nur dieser Bot hat sie, und sie lässt sich nicht von Hand umbenennen, jemand anderem geben, dem Bot wegnehmen oder löschen. Farbe und Rechte kannst du ändern. Niemand kann einem Bot Rechte geben, die er selbst nicht hat, und nur der Owner kann einen Bot erhöhen.",
     "viewAs": {
-      "open": "Server als {name} ansehen",
-      "title": "Server als {name}",
+      "open": "Community als {name} ansehen",
+      "title": "Community als {name}",
       "subtitle": "Nur Vorschau. Nichts ändert sich und niemand wird nachgeahmt.",
       "loading": "Lädt …",
       "sidebar": "Kanäle, die diese Rolle sieht",
@@ -3595,9 +3616,9 @@
     "title": "Loslegen mit {name}",
     "progress": "{done} von {total} erledigt",
     "allSet": "Deine Community ist startklar",
-    "allSetHint": "Alles Wichtige ist erledigt. Du kannst diese Liste im Servermenü wieder öffnen.",
+    "allSetHint": "Alles Wichtige ist erledigt. Du kannst diese Liste im Community-Menü wieder öffnen.",
     "finish": "Fertig",
-    "hide": "Checkliste ausblenden. Das Servermenü holt sie zurück.",
+    "hide": "Checkliste ausblenden. Das Community-Menü holt sie zurück.",
     "reopen": "Checkliste „Loslegen“",
     "done": "Erledigt",
     "todo": "Noch offen",
@@ -3744,6 +3765,7 @@
         "other": "{count} Mitglieder sind angemeldet. Verschiebe sie nach:"
       },
       "moveTo": "Andere Rolle",
+      "moveNoTarget": "Es gibt keine andere gespeicherte Rolle zum Verschieben. Füge eine weitere Rolle hinzu, speichere das Event und entferne dann diese.",
       "removeRoleConfirm": "Entfernen und verschieben",
       "addRole": "Rolle hinzufügen",
       "fromTemplate": "Vorlage verwenden …",
@@ -3824,6 +3846,7 @@
     "timeoutRemovedToast": "Auszeit für {name} beendet.",
     "failed": "Die Aktion konnte nicht ausgeführt werden. Versuche es noch einmal.",
     "bannerText": "Du bist in Auszeit.",
+    "bannerReason": "Grund: {reason}",
     "noticeTimeout": "Du wurdest für {duration} in Auszeit geschickt",
     "noticeTimeoutRemoved": "Deine Auszeit wurde beendet.",
     "noticeBan": "Du wurdest gesperrt",
@@ -3854,7 +3877,10 @@
     },
     "noticeMessageDeleted": "Deine Nachricht in {channel} wurde vom Moderationsteam entfernt",
     "noticeMessagesDeleted": "{count} deiner Nachrichten in {channel} wurden vom Moderationsteam entfernt",
-    "bulkDeleted": "{count} Nachrichten von {name} gelöscht.",
+    "bulkDeleted": {
+      "one": "{count} Nachricht von {name} gelöscht.",
+      "other": "{count} Nachrichten von {name} gelöscht."
+    },
     "deleteTitle": "Nachricht löschen",
     "deleteBody": "Die Person erfährt es samt Grund. Das Audit-Log behält den Text.",
     "bulkTitle": "Letzte Nachrichten von {name} löschen",
@@ -3875,7 +3901,8 @@
     "slowModeCustom": "Eigener Wert",
     "slowModeUnit": "Einheit",
     "noBansHint": "Gesperrte Mitglieder erscheinen hier, und du kannst eine Sperre aufheben.",
-    "bansLoadFailed": "Die Sperren konnten nicht geladen werden. Versuche es noch einmal."
+    "bansLoadFailed": "Die Sperren konnten nicht geladen werden. Versuche es noch einmal.",
+    "unbanNamed": "{name} entsperren"
   },
   "editHistory": {
     "menu": "Bearbeitungsverlauf",
@@ -4001,7 +4028,8 @@
       "deleteTitle": "Befehl /{name} löschen?",
       "deleteBody": "Der Bot kann ihn erneut registrieren."
     },
-    "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten."
+    "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten.",
+    "loadFailed": "Die Bots konnten nicht geladen werden. Versuche es noch einmal."
   },
   "appSettings": {
     "installTitle": "Installieren",
@@ -4111,7 +4139,10 @@
       "loginIntro": "Gib den sechsstelligen Code deiner Authenticator-App ein, oder einen Recovery-Code.",
       "verify": "Bestätigen",
       "back": "Zurück",
-      "notice": "Seit deiner letzten Anmeldung wurden {count} falsche Codes für dein Konto eingegeben.",
+      "notice": {
+        "one": "Seit deiner letzten Anmeldung wurde {count} falscher Code für dein Konto eingegeben.",
+        "other": "Seit deiner letzten Anmeldung wurden {count} falsche Codes für dein Konto eingegeben."
+      },
       "noticeHint": "Möglicherweise kennt jemand dein Passwort. Ändere es unter Konto & Sicherheit und prüfe deine Recovery-Codes."
     },
     "privacy": {
@@ -4181,7 +4212,10 @@
     "add": "Zur Gruppe hinzufügen",
     "empty": "Noch keine Gespräche",
     "showMore": "{n} weitere anzeigen",
-    "unreadTotal": "{n} ungelesene Direktnachrichten",
+    "unreadTotal": {
+      "one": "{count} ungelesene Direktnachricht",
+      "other": "{count} ungelesene Direktnachrichten"
+    },
     "info": "Gesprächsinfo",
     "you": "Du",
     "alone": "Nur du",
@@ -4242,7 +4276,7 @@
     "markRead": "Als gelesen markieren",
     "mute": "Gespräch stummschalten",
     "unmute": "Stummschaltung aufheben",
-    "find": "Gespräch suchen oder beginnen",
+    "find": "Gespräch suchen",
     "findStart": "Beginnen",
     "findNone": "Kein Treffer",
     "prefsFailed": "Die Liste konnte nicht geändert werden. Versuche es noch einmal.",
@@ -4428,7 +4462,10 @@
     "tabs": "Profilbereiche",
     "tabProfile": "Profil",
     "tabModeration": "Moderation",
-    "strikeCount": "{count} Verwarnungen",
+    "strikeCount": {
+      "one": "{count} Verwarnung",
+      "other": "{count} Verwarnungen"
+    },
     "privacy": "Das sehen nur Moderatoren. Das Mitglied bekommt es nie zu sehen, und es ist nicht Teil seines Datenexports.",
     "roles": "Rollen",
     "loadFailed": "Der Moderationsverlauf konnte nicht geladen werden.",
@@ -4631,19 +4668,19 @@
       "title": "Discord-Struktur importieren",
       "step": "Schritt {n} von 3",
       "back": "Zurück",
-      "step1": "Das fügt {categories}, {channels} und {roles} am Ende deines Servers hinzu. Bestehendes wird nicht verändert, umbenannt oder entfernt.",
+      "step1": "Das fügt {categories}, {channels} und {roles} am Ende deiner Community hinzu. Bestehendes wird nicht verändert, umbenannt oder entfernt.",
       "step1Yes": "Ja, hinzufügen",
       "step2": "Die neuen Rollen erhalten genau diese Berechtigungen und keine anderen. Sie werden unter allen bestehenden Rollen angelegt, und keine davon ist Administrator.",
       "step2Dropped": "Verworfen, weil Mnema Talk keine sichere Entsprechung hat: {list}",
       "step2AdminDropped": "Die Administrator-Berechtigung von Discord wird bei jeder Rolle verworfen.",
       "step2Yes": "Ja, diese Berechtigungen verwenden",
-      "step3Named": "Letzter Schritt. Gib zur Bestätigung den Servernamen „{name}“ oder IMPORT ein.",
+      "step3Named": "Letzter Schritt. Gib zur Bestätigung den Namen des Discord-Servers „{name}“ oder IMPORT ein.",
       "step3": "Letzter Schritt. Gib zur Bestätigung IMPORT ein.",
       "typeLabel": "Bestätigung",
       "go": "Jetzt importieren",
       "working": "Importiert …",
       "failed": "Der Import ist fehlgeschlagen.",
-      "stale": "Die Vorlage oder dieser Server hat sich seit der Vorschau geändert. Lade die Vorschau neu.",
+      "stale": "Die Vorlage oder diese Community hat sich seit der Vorschau geändert. Lade die Vorschau neu.",
       "done": "Importiert: {summary}. Unten lässt sich das rückgängig machen.",
       "step2Mapped": "{source} wird nicht angelegt. Die Kanaleinstellungen gehen an {name}, deren Rechte sich nicht ändern."
     },
@@ -4705,11 +4742,12 @@
       "privacy": "Privatsphäre",
       "data": "Export & Löschen",
       "app": "Benachrichtigungen & Installation",
-      "audio": "Ton & Mikrofon"
+      "audio": "Ton & Mikrofon",
+      "roles": "Rollen"
     },
     "privacyEmpty": "Auf diesem Server gibt es hier nichts einzustellen.",
     "notifyLink": "Auswählen, was dich benachrichtigt",
-    "notifyLinkHint": "Welche Nachrichten dich benachrichtigen, stellst du für den ganzen Server und pro Kanal ein (die Glocke in der Kopfzeile). Push unten liefert sie nur an dieses Gerät."
+    "notifyLinkHint": "Welche Nachrichten dich benachrichtigen, stellst du für die ganze Community und pro Kanal ein (die Glocke in der Kopfzeile). Push unten liefert sie nur an dieses Gerät."
   },
   "ctxMenu": {
     "systemDefault": "Systemstandard",
@@ -4930,8 +4968,8 @@
     "firstPage": "Erste Seite schreiben",
     "topPages": "Seiten",
     "subpageCount": {
-      "one": "{n} Unterseite",
-      "other": "{n} Unterseiten"
+      "one": "{count} Unterseite",
+      "other": "{count} Unterseiten"
     },
     "recent": "Zuletzt geändert",
     "discardTitle": "Änderungen verwerfen?",

@@ -47,6 +47,8 @@ describe('SidebarEventsEntry', () => {
     expect(wrapper.find('button').exists()).toBe(true)
     expect(wrapper.text()).toContain('Events')
     expect(wrapper.text()).toContain('1')
+    // The visible name and badge are the accessible name, so the count is read out.
+    expect(wrapper.get('button').attributes('aria-label')).toBeUndefined()
   })
 
   it('asks for the events list instead of drawing it inside the (phone) drawer', async () => {

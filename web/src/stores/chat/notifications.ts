@@ -19,6 +19,8 @@ export function messageMentionsMe(cx: Cx, msg: Message) {
   const { authStore } = cx
   const me = authStore.user
   if (!me || !msg) return false
+  // "Ignore @all/@here" for the whole community: only what names me still counts.
+  if (cx.cs.notifySettings.value.server.suppress_everyone) return messageMentionsMeDirectly(cx, msg)
   if (msg.reply_to?.user_id === me.id) return true
   if (Array.isArray(msg.mentions)) return msg.mentions.includes(me.id)
   return mentionsUser(msg.content || '', me.username)

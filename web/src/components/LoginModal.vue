@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage, isApiError } from '../lib/api'
 import { decodeAuthAuthOptions } from '../types/rest'
 import { computed, ref, onMounted, useId } from 'vue'
 import { LogIn, UserPlus } from '@lucide/vue'
@@ -99,6 +99,13 @@ async function loadOptions() {
   }
 }
 
+// Only the server turning the invite itself down sends the person to the code field;
+// a taken name or a weak password keeps the vanity link and its code.
+function inviteRefused(err: unknown) {
+  if (!isApiError(err) || err.code !== 'INVALID_INPUT') return false
+  return ['invalidInvite', 'inviteExpired', 'inviteUsedUp'].some(key => err.message === t(`errors.detail.${key}`))
+}
+
 async function handleSubmit() {
   // Autofill and native accessibility may update input.value without an input
   // event. Snapshot the displayed fields before any reactive/async work, then
@@ -138,7 +145,7 @@ async function handleSubmit() {
       }
     }
   } catch (err) {
-    if (isRegister.value && vanityCode.value) {
+    if (isRegister.value && vanityCode.value && inviteRefused(err)) {
       vanityRefused.value = true
       inviteCode.value = ''
     }

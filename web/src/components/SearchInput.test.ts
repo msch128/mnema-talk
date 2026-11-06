@@ -49,6 +49,13 @@ describe('SearchInput', () => {
     expect(wrapper.find('[data-search-chip]').classes().join(' ')).toContain('danger')
   })
 
+  it('reports the suggestion list as expanded only while it is shown', async () => {
+    make()
+    expect(field().getAttribute('aria-expanded')).toBe('false')
+    await type('from:ad')
+    expect(field().getAttribute('aria-expanded')).toBe('true')
+  })
+
   it('offers suggestions, navigates them with the keyboard and picks one', async () => {
     make()
     await type('from:ad')

@@ -6,14 +6,56 @@ import { assertCommunity, type Cx } from './state'
 
 const decodeReadStates = arrayDecoder('read states', isChatReadState)
 
-export async function fetchReadState(cx: Cx) {
+// One counter orders fetch starts and local clears. An answer that is not from
+// the newest fetch is dropped, and a channel cleared here after its fetch began
+// keeps the local state: the answer predates the clear and would bring the badge back.
+const sequencing = new WeakMap<object, { counter: number; latest: number; cleared: Map<string, number>; newest: Promise<unknown> | null }>()
+
+function sequenceOf(cs: object) {
+  let seq = sequencing.get(cs)
+  if (!seq) sequencing.set(cs, seq = { counter: 0, latest: 0, cleared: new Map(), newest: null })
+  return seq
+}
+
+/** Notes that the badges of these channels were cleared here just now. */
+export function noteReadStateCleared(cx: Cx, channelIds: readonly string[]) {
+  const seq = sequenceOf(cx.cs)
+  seq.counter++
+  for (const id of channelIds) seq.cleared.set(id, seq.counter)
+}
+
+export function fetchReadState(cx: Cx) {
+  const seq = sequenceOf(cx.cs)
+  const request = loadReadState(cx)
+  seq.newest = request
+  return request
+}
+
+/** Resolves once the newest read-state fetch has landed (a fetch that was overtaken is not the answer). */
+async function newestReadStateSettled(cx: Cx) {
+  const seq = sequenceOf(cx.cs)
+  for (let seen = null; seen !== seq.newest;) {
+    seen = seq.newest
+    await seen
+  }
+}
+
+async function loadReadState(cx: Cx) {
   const { cs } = cx
   const community = cs.communityGeneration
+  const seq = sequenceOf(cs)
+  const started = ++seq.counter
+  seq.latest = started
   try {
     const data = await api('/api/read-state', { decode: decodeReadStates })
-    if (community !== cs.communityGeneration) return {}
+    if (community !== cs.communityGeneration || seq.latest !== started) return {}
     const map: Record<string, ReadState> = {}
     for (const item of data) {
+      const local = cs.readStates.value[item.channel_id]
+      if (local && (seq.cleared.get(item.channel_id) ?? 0) > started) {
+        map[item.channel_id] = { ...local, notify_level: item.notify_level }
+        continue
+      }
       map[item.channel_id] = {
         channel_id: item.channel_id,
         unread_count: item.unread_count || 0,
@@ -42,6 +84,7 @@ export async function markChannelRead(cx: Cx, channelId: string): Promise<boolea
   const { cs } = cx
   if (!channelId) return false
   if (cs.suppressAutoReadFor === channelId) cs.suppressAutoReadFor = null
+  noteReadStateCleared(cx, [channelId])
 
   const prev = cs.readStates.value[channelId] || { channel_id: channelId, notify_level: 'all' as const, unread_count: 0, mention_count: 0, last_read_at: null }
   cs.readStates.value = {
@@ -113,6 +156,8 @@ export async function markChannelUnread(cx: Cx, channelId: string, messageId: st
     throw e
   }
   await fetchReadState(cx)
+  // A newer fetch may have overtaken ours; the divider follows the answer that was kept.
+  await newestReadStateSettled(cx)
   assertCommunity(cx, community)
   if (channelId === cs.activeChannel.value?.id) {
     // The "new since" divider moves to the chosen message.

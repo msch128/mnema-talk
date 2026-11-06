@@ -4,6 +4,7 @@ import { Calendar, Check, HelpCircle, MapPin, Plus, Volume2 } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import RepeatBadge from './RepeatBadge.vue'
 import EmptyState from './EmptyState.vue'
+import StatePanel from './StatePanel.vue'
 import EventDetailModal from './EventDetailModal.vue'
 import EventEditDialog from './EventEditDialog.vue'
 import UserAvatar from './UserAvatar.vue'
@@ -55,6 +56,11 @@ watch(() => [props.focusEventId, props.focusSeq], () => { void showWanted(props.
 watch(activeTab, tab => {
   if (tab === 'past' && !eventsStore.pastLoaded) void eventsStore.loadPast()
 })
+
+function retryLoad() {
+  if (activeTab.value === 'past') void eventsStore.loadPast()
+  else void eventsStore.load()
+}
 
 const displayedEvents = computed(() => {
   return activeTab.value === 'upcoming' ? eventsStore.upcomingEvents : eventsStore.pastEvents
@@ -125,7 +131,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
       <button
         v-if="permissions.can('manage_events')"
         type="button"
-        class="flex items-center justify-center gap-1 rounded-md bg-mnema-accent px-2.5 py-1 text-xs font-semibold text-white hover:opacity-90 transition-opacity max-md:h-9 max-md:w-9 max-md:p-0"
+        class="btn btn-primary btn-sm gap-1 max-md:h-9 max-md:w-9 max-md:p-0"
         :aria-label="$t('events.create')"
         @click="creatingEvent = true"
       >
@@ -168,6 +174,16 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
         <div v-if="(activeTab === 'past' ? eventsStore.pastLoading && !eventsStore.pastLoaded : eventsStore.loading) && displayedEvents.length === 0" class="py-8 text-center text-sm text-mnema-tertiary" role="status">
           {{ $t('common.loading') }}
         </div>
+
+        <StatePanel
+          v-else-if="displayedEvents.length === 0 && (activeTab === 'past' ? eventsStore.pastError : eventsStore.error)"
+          state="error"
+          retryable
+          data-testid="events-error"
+          @retry="retryLoad"
+        >
+          {{ $t('events.loadFailed') }}
+        </StatePanel>
 
         <EmptyState
           v-else-if="displayedEvents.length === 0"

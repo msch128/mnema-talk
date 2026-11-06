@@ -5,6 +5,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/msch128/mnema-talk/internal/config"
 	"net/http"
 	"strings"
 	"testing"
@@ -71,9 +72,11 @@ type dmFixture struct {
 	alice, bob, carol, dave *client
 }
 
-func newDMFixture(t *testing.T, withHub bool) *dmFixture {
+func newDMFixture(t *testing.T, withHub bool) *dmFixture { return newDMFixtureWith(t, withHub, nil) }
+
+func newDMFixtureWith(t *testing.T, withHub bool, adjust func(*config.Config)) *dmFixture {
 	t.Helper()
-	a := newApp(t, withHub)
+	a := newAppWith(t, withHub, adjust)
 	admin := a.seedAdmin()
 	return &dmFixture{a: a, admin: admin,
 		alice: a.register(admin, "alice"), bob: a.register(admin, "bobby"), carol: a.register(admin, "carol"), dave: a.register(admin, "davey")}

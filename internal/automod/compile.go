@@ -107,7 +107,7 @@ func (c *compiled) matchesWords(content string) bool {
 	return c.words != nil && c.words.MatchString(fold(content))
 }
 
-var linkToken = regexp.MustCompile(`(?i)\b(?:https?://|www\.)[^\s<>"'\x60]+`)
+var linkToken = regexp.MustCompile(`(?i)(?:https?://|\bwww\.)[^\s<>"'\x60]+`)
 
 // link is a link-like token of a message: its host, or ok false when the
 // token cannot be read (which counts against it, never for it).

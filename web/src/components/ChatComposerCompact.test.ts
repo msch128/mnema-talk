@@ -54,6 +54,11 @@ describe('the composer on a wide screen', () => {
 describe('the composer on a phone', () => {
   beforeEach(() => { compact.value = true })
 
+  it('names the plus button for the menu it opens, not for the upload alone', () => {
+    const w = mountComposer()
+    expect(w.get('[data-testid="composer-plus"]').attributes('aria-label')).toBe('More actions')
+  })
+
   it('puts file, poll and send later behind one plus button', async () => {
     useServerFeaturesStore().list = ['messages.scheduled']
     const w = mountComposer()

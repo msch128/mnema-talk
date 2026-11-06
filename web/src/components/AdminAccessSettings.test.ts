@@ -48,4 +48,16 @@ describe('AdminAccessSettings', () => {
     }))
     expect(w.get<HTMLInputElement>('[data-testid="inactivity-days"]').element.value).toBe('30')
   })
+
+  it('keeps the lockdown reachable and offers a retry when the access settings do not load', async () => {
+    apiMock.mockImplementation(path => (path === '/api/admin/raid' ? Promise.resolve(raid) : Promise.reject(new Error('down'))))
+    const w = mount(AdminAccessSettings)
+    await flushPromises()
+    expect(w.find('[data-testid="access-error"]').exists()).toBe(true)
+    expect(w.find('[data-testid="access-settings"]').exists()).toBe(false)
+    expect(w.find('[data-testid="lockdown-start"]').exists()).toBe(true)
+    apiMock.mockClear()
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    expect(apiMock).toHaveBeenCalledWith('/api/admin/onboarding', expect.anything())
+  })
 })

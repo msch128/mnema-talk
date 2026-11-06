@@ -28,6 +28,8 @@ type Hub struct {
 	// imposes no limits and exists for tests that do not exercise
 	// permissions; the router always sets it (see SetPermissions).
 	Perms *perm.Service
+	// permRetry re-enforces permission changes whose state failed to load.
+	permRetry permRetry
 	// Tap, when set, sees every event the hub publishes (channel is uuid.Nil
 	// for events to everybody), before delivery. Outgoing webhooks listen
 	// here. It must not block.
@@ -77,6 +79,9 @@ type Hub struct {
 	// voiceSince is when a user joined a voice room; roomSince is when each
 	// room got its first member. Both survive the grace period.
 	voiceSince map[voiceKey]time.Time
+	// privateSeat marks the seats of a conversation's call, decided when the
+	// seat is taken: the Talk may be gone by the time the stay ends.
+	privateSeat map[voiceKey]bool
 	// voiceMute is the mute/deafen state of a user in a voice room.
 	voiceMute map[voiceKey]MuteState
 	roomSince map[uuid.UUID]time.Time
@@ -156,9 +161,10 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 		voice:    map[uuid.UUID]map[uuid.UUID]auth.User{},
 		grace:    map[voiceKey]*graceLeave{},
 
-		voiceSince: map[voiceKey]time.Time{},
-		voiceMute:  map[voiceKey]MuteState{},
-		roomSince:  map[uuid.UUID]time.Time{},
+		voiceSince:  map[voiceKey]time.Time{},
+		privateSeat: map[voiceKey]bool{},
+		voiceMute:   map[voiceKey]MuteState{},
+		roomSince:   map[uuid.UUID]time.Time{},
 
 		VoiceGrace: DefaultVoiceGrace,
 	}

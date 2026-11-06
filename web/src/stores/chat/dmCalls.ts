@@ -75,6 +75,8 @@ export function announceInviteUnlessRung(cx: Cx, msg: Message) {
   if (!talkId || !msg.user_id) return
   setTimeout(() => {
     if (useDmCallsStore().active[msg.channel_id]?.messageId === msg.id) return
+    // The ring would have kept quiet for do-not-disturb and a muted conversation; so does this.
+    if (isQuiet(cx.authStore.user?.presence) || notificationLevel(cx, msg.channel_id) === 'mute') return
     notifyIncomingCall(cx, { conversationId: msg.channel_id, talkId, messageId: msg.id, callerId: msg.user_id, talkName: '' })
   }, RING_GRACE_MS)
 }

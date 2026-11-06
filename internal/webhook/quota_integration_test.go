@@ -9,7 +9,6 @@ import (
 	"net/textproto"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/media"
 )
 
@@ -39,21 +38,21 @@ func TestWebhookUploadQuota(t *testing.T) {
 
 	// Over its daily budget: refused before anything is stored.
 	f.h.Media.Quota = media.Quota{PerUserBytes: 5000}
-	if _, err := f.p.Exec(t.Context(), `INSERT INTO media(id,uploader_id,s3_bucket,s3_key,original_filename,mime_type,size_bytes) VALUES($1,$2,'b','k','a','text/plain',4990)`, uuid.New(), rec.botUserID); err != nil {
+	if _, err := f.p.Exec(t.Context(), `INSERT INTO upload_usage(user_id,bytes) VALUES($1,4990)`, rec.botUserID); err != nil {
 		t.Fatal(err)
 	}
 	wantStatus(t, f.serve(f.h, "POST", path, bytes.NewReader(body), hdr), 429, "over the daily budget")
 	if f.store.Len() != 0 {
 		t.Fatalf("a refused upload was stored: %d", f.store.Len())
 	}
-	if _, err := f.p.Exec(t.Context(), `DELETE FROM media`); err != nil {
+	if _, err := f.p.Exec(t.Context(), `DELETE FROM upload_usage`); err != nil {
 		t.Fatal(err)
 	}
 	wantStatus(t, f.serve(f.h, "POST", path, bytes.NewReader(body), hdr), 204, "within the budget")
 
 	// No Content-Length: the worst case (the whole body limit) is reserved, so a
 	// small budget refuses it even though the real body is tiny.
-	if _, err := f.p.Exec(t.Context(), `DELETE FROM media`); err != nil {
+	if _, err := f.p.Exec(t.Context(), `DELETE FROM upload_usage`); err != nil {
 		t.Fatal(err)
 	}
 	wantStatus(t, f.serve(f.h, "POST", path, io.MultiReader(bytes.NewReader(body)), hdr), 429, "unknown length")

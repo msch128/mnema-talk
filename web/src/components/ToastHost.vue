@@ -22,7 +22,7 @@ function runAction(toast: Toast, which: 'action' | 'secondary' = 'action') {
 
 <template>
   <div
-    class="pointer-events-none fixed bottom-5 right-5 z-60 flex w-[360px] max-w-[calc(100vw-2.5rem)] flex-col gap-2 max-md:bottom-auto max-md:top-3 max-md:right-3 max-md:left-3 max-md:w-auto max-md:max-w-none"
+    class="pointer-events-none fixed bottom-24 right-5 z-60 flex w-[360px] max-w-[calc(100vw-2.5rem)] flex-col gap-2 max-md:bottom-auto max-md:top-3 max-md:right-3 max-md:left-3 max-md:w-auto max-md:max-w-none"
     aria-live="polite"
   >
     <div

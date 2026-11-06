@@ -442,8 +442,10 @@ func TestATalkEventRosterIsHiddenFromMembersWhoCannotViewTheTalk(t *testing.T) {
 	if _, err := f.call(t, stranger, f.h.signUp, http.MethodPut, fmt.Sprintf(`{"role_id":%q}`, roles[0].ID), nil); err == nil {
 		t.Fatal("a member who cannot view the Talk must not sign up")
 	}
-	if rec, err := f.call(t, stranger, f.h.leaveSignup, http.MethodDelete, "", nil); err != nil || rec.Code != http.StatusNoContent || rec.Body.Len() != 0 {
-		t.Fatalf("leaving reveals nothing of the event: %v %d %s", err, rec.Code, rec.Body.String())
+	if _, err := f.call(t, stranger, f.h.leaveSignup, http.MethodDelete, "", nil); err == nil {
+		t.Fatal("leaving an event the member cannot see and never joined must answer like a missing event, not 204")
+	} else if api, ok := httpx.AsAPIError(err); !ok || api.Status != http.StatusNotFound {
+		t.Fatalf("leaving reveals nothing of the event: %v", err)
 	}
 	// A promoted member who lost sight of the Talk is told nothing.
 	ev, _ := f.s.Get(context.Background(), f.event.ID, nil)

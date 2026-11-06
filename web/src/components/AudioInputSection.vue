@@ -93,6 +93,7 @@ function handleKeyRecord(e: KeyboardEvent) {
               ref="keyButton"
               type="button"
               data-testid="ptt-key-button"
+              :data-local-escape="isRecordingPttKey ? '' : undefined"
               :class="['btn', isRecordingPttKey ? 'btn-primary animate-pulse' : 'btn-secondary font-mono']"
               @click="isRecordingPttKey = true"
               @keydown="handleKeyRecord"

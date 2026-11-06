@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, onBeforeUnmount, onMounted } from 'vue'
 import { t } from '../i18n'
 import { platform } from '../lib/platform'
 import { localizeHostError } from '../lib/hostError'
@@ -8,6 +8,7 @@ import { copyText } from '../lib/copyText'
 const address = ref('')
 const verified = platform.trustedApp()
 const addressInput = ref<HTMLInputElement | null>(null)
+onMounted(() => addressInput.value?.focus())
 const busy = ref(false)
 const error = ref('')
 const rawError = ref('')

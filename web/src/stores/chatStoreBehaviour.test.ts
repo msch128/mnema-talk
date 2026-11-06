@@ -92,13 +92,23 @@ afterEach(() => {
 })
 
 describe('chat actions and loaded copies', () => {
+  it('posts a thread reply to the thread and channel it names, not to whatever is open now', async () => {
+    const chat = setup(), root = message({ id: fixtureId(10) })
+    chat.activeThread = message({ id: fixtureId(20) })
+    http.handle = () => message({ id: fixtureId(21), parent_id: root.id })
+    await chat.sendThreadReply(root.id, ch.id, 'reply')
+    expect(api).toHaveBeenLastCalledWith(`/api/channels/${ch.id}/messages`, expect.objectContaining({ json: { content: 'reply', parent_id: root.id } }))
+    chat.closeThread()
+    expect(await chat.sendThreadReply(root.id, ch.id, 'still sent')).not.toBeNull()
+  })
+
   it('sends trimmed replies, counts HTTP/WS echoes once and uploads ordered thread fields', async () => {
     const chat = setup(), root = message({ id: fixtureId(10) })
     chat.messages = [root]
     chat.activeThread = { ...root }
     const reply = message({ id: fixtureId(11), parent_id: root.id })
     http.handle = () => reply
-    expect(await chat.sendThreadReply('  reply  ', fixtureId(12))).toEqual(reply)
+    expect(await chat.sendThreadReply(root.id, ch.id, '  reply  ', fixtureId(12))).toEqual(reply)
     expect(api).toHaveBeenLastCalledWith(`/api/channels/${ch.id}/messages`, expect.objectContaining({ json: { content: 'reply', parent_id: root.id, reply_to_id: fixtureId(12) } }))
     chat.handleWSEvent({ type: 'message_create', payload: reply })
     expect(chat.messages[0]?.reply_count).toBe(1)
@@ -113,7 +123,6 @@ describe('chat actions and loaded copies', () => {
     expect(await chat.uploadThreadMedia(file, 'caption', fixtureId(12))).toEqual(uploaded)
     expect(chat.threadReplies.map(m => m.id)).toEqual([reply.id, uploaded.id])
     chat.closeThread()
-    expect(await chat.sendThreadReply('no thread')).toBeNull()
     expect(await chat.uploadThreadMedia(file)).toBeNull()
     expect(await chat.sendMessage(' ')).toBeNull()
     chat.activeChannel = null

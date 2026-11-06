@@ -139,7 +139,29 @@ func (s *Store) Get(ctx context.Context, id uuid.UUID, callerID *uuid.UUID) (*Co
 // copy. A changed start or end re-derives the status from the new times
 // (cancelled events stay cancelled) and re-arms the reminder.
 func (s *Store) Update(ctx context.Context, id uuid.UUID, req UpdateEventRequest) (*CommunityEvent, error) {
-	row, err := scanEvent(s.DB.QueryRow(ctx, `
+	var row eventRow
+	err := s.inTx(ctx, func(tx pgx.Tx) error {
+		var err error
+		row, err = updateEvent(ctx, tx, id, req)
+		if err != nil || (req.ChannelID == nil && req.Location == nil) {
+			return err
+		}
+		// The cover follows the event's place in the same transaction, so a
+		// failure here never leaves the event moved and the cover behind.
+		if _, err := tx.Exec(ctx, `UPDATE media SET channel_id = $2 WHERE id = $1`, row.CoverMediaID, row.ChannelID); err != nil {
+			return fmt.Errorf("move event cover: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.Get(ctx, id, nil)
+}
+
+// updateEvent runs the update statement of Update inside tx.
+func updateEvent(ctx context.Context, tx pgx.Tx, id uuid.UUID, req UpdateEventRequest) (eventRow, error) {
+	row, err := scanEvent(tx.QueryRow(ctx, `
 		UPDATE events SET
 		    title = COALESCE($2, title),
 		    description = COALESCE($3, description),
@@ -159,17 +181,12 @@ func (s *Store) Update(ctx context.Context, id uuid.UUID, req UpdateEventRequest
 		id, req.Title, req.Description, req.StartTime, req.ClearEndTime, req.EndTime, req.ChannelID, req.Location,
 	))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, httpx.ErrNotFound("event not found")
+		return row, httpx.ErrNotFound("event not found")
 	}
 	if err != nil {
-		return nil, fmt.Errorf("update event: %w", err)
+		return row, fmt.Errorf("update event: %w", err)
 	}
-	if req.ChannelID != nil || req.Location != nil {
-		if _, err := s.DB.Exec(ctx, `UPDATE media SET channel_id = $2 WHERE id = $1`, row.CoverMediaID, row.ChannelID); err != nil {
-			return nil, fmt.Errorf("move event cover: %w", err)
-		}
-	}
-	return s.Get(ctx, id, nil)
+	return row, nil
 }
 
 // Cancel marks a scheduled or active event cancelled. An event that is
@@ -206,11 +223,18 @@ func (s *Store) ClearCover(ctx context.Context, id uuid.UUID) (*uuid.UUID, error
 
 func (s *Store) swapCover(ctx context.Context, id uuid.UUID, mediaID *uuid.UUID) (*uuid.UUID, error) {
 	var prev *uuid.UUID
+	// A new cover takes the channel of the event row locked here, in the same
+	// statement: an event moved while the file was uploading must not leave its
+	// cover in the old channel.
 	err := s.DB.QueryRow(ctx, `
-		UPDATE events e SET cover_media_id = $2, updated_at = NOW()
-		FROM (SELECT id, cover_media_id FROM events WHERE id = $1 FOR UPDATE) old
-		WHERE e.id = old.id
-		RETURNING old.cover_media_id`, id, mediaID).Scan(&prev)
+		WITH old AS (SELECT id, cover_media_id FROM events WHERE id = $1 FOR UPDATE),
+		upd AS (
+		    UPDATE events e SET cover_media_id = $2::uuid, updated_at = NOW()
+		    FROM old WHERE e.id = old.id
+		    RETURNING old.cover_media_id AS prev, e.channel_id),
+		mv AS (
+		    UPDATE media SET channel_id = upd.channel_id FROM upd WHERE media.id = $2::uuid)
+		SELECT prev FROM upd`, id, mediaID).Scan(&prev)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("event not found")
 	}

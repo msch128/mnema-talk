@@ -3,6 +3,7 @@ package ws
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -64,9 +65,9 @@ func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload an
 		return
 	}
 	dm := snap != nil && snap.IsDM(channelID)
-	if dm {
-		// A conversation's events go to its members only: never to webhooks
-		// or bots, and not to a client that does not know conversations.
+	if snap != nil && snap.IsPrivate(channelID) {
+		// A conversation's (or its Talk's) events go to its members only:
+		// never to webhooks or bots.
 		h.dmTapped(channelID, eventType, payload)
 	} else {
 		h.tapped(channelID, eventType, payload) // only what is really published
@@ -164,10 +165,6 @@ func (c *Client) notifyPermissions() {
 // longer connect to or view their Talk is removed from it at once, and the media they may still send is narrowed to
 // what they may. nil userIDs means everybody.
 func (h *Hub) PermissionsChanged(userIDs []uuid.UUID) {
-	snap, ok := h.permSnapshot(uuid.Nil)
-	if !ok {
-		return
-	}
 	want := wantUserIDs(userIDs)
 	h.mu.RLock()
 	clients := filterPermClients(h.clients, want)
@@ -175,11 +172,95 @@ func (h *Hub) PermissionsChanged(userIDs []uuid.UUID) {
 	for _, c := range clients {
 		c.notifyPermissions()
 	}
+	h.enforcePermissions(userIDs)
+}
+
+// enforcePermissions removes members from Talks and stages they may no longer
+// use. When the permission state cannot be loaded (it was just invalidated),
+// the users are remembered and tried again with a growing pause: nothing else
+// would re-check them.
+func (h *Hub) enforcePermissions(userIDs []uuid.UUID) {
+	snap, ok := h.permSnapshot(uuid.Nil)
+	if !ok {
+		h.permRetry.add(userIDs, h.enforcePendingPermissions)
+		return
+	}
+	h.permRetry.succeeded()
 	if h.Perms == nil {
 		return
 	}
+	want := wantUserIDs(userIDs)
 	h.sweepStages(snap, want)
 	h.enforceVoiceAccess(snap, want)
+}
+
+func (h *Hub) enforcePendingPermissions() {
+	if h.isClosed() {
+		return
+	}
+	h.enforcePermissions(h.permRetry.take())
+}
+
+// permRetry remembers whose permissions still have to be enforced after a
+// failed load. The zero value is ready; base is the first pause (1 s).
+type permRetry struct {
+	mu      sync.Mutex
+	users   map[uuid.UUID]bool
+	all     bool
+	timer   *time.Timer
+	attempt int
+	base    time.Duration
+}
+
+const permRetryMax = time.Minute
+
+func (r *permRetry) add(userIDs []uuid.UUID, run func()) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if userIDs == nil {
+		r.all = true
+	} else {
+		if r.users == nil {
+			r.users = map[uuid.UUID]bool{}
+		}
+		for _, id := range userIDs {
+			r.users[id] = true
+		}
+	}
+	if r.timer != nil {
+		return // a retry is already scheduled and will take the merged set
+	}
+	wait := r.base
+	if wait <= 0 {
+		wait = time.Second
+	}
+	wait = min(wait<<r.attempt, permRetryMax)
+	r.attempt++
+	r.timer = time.AfterFunc(wait, run)
+}
+
+// take hands over the pending users (nil: everybody) and lets the next failure
+// schedule a new retry.
+func (r *permRetry) take() []uuid.UUID {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.timer = nil
+	if r.all {
+		r.all, r.users = false, nil
+		return nil
+	}
+	out := make([]uuid.UUID, 0, len(r.users))
+	for id := range r.users {
+		out = append(out, id)
+	}
+	r.users = nil
+	return out
+}
+
+func (r *permRetry) succeeded() {
+	r.mu.Lock()
+	r.attempt = 0
+	r.mu.Unlock()
 }
 
 func filterPermClients(clients map[*Client]struct{}, want map[uuid.UUID]bool) []*Client {

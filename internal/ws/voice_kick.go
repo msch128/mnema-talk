@@ -132,6 +132,22 @@ func (h *Hub) drainChannelPresence(chID uuid.UUID) ([]voiceKey, []uuid.UUID) {
 	return graces, rest
 }
 
+// EndingUser marks every open connection of userID as ending: the account is
+// being banned or kicked, so the connections stay open to flush the notice but
+// drop what they receive and cannot take a seat in a Talk. DisconnectUser
+// closes them a moment later.
+func (h *Hub) EndingUser(userID uuid.UUID) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for _, set := range []map[*Client]struct{}{h.clients, h.pending} {
+		for c := range set {
+			if c.User.ID == userID {
+				c.ending.Store(true)
+			}
+		}
+	}
+}
+
 // DisconnectUser closes every live connection of userID.
 func (h *Hub) DisconnectUser(userID uuid.UUID) {
 	h.mu.Lock()

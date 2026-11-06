@@ -33,8 +33,12 @@ func parseBanDuration(durationSeconds *int) (*time.Time, error) {
 
 func (h *API) postBanCleanup(id uuid.UUID, until *time.Time, reason string) {
 	// Tell them first; the connection closes a moment later so the notice
-	// is written. Their sessions are already dead, so nothing can be done
-	// with the socket meanwhile.
+	// is written. Their sessions are already dead, but an open socket could
+	// still send frames (a voice join would re-seat them), so it stops acting
+	// before the notice goes out.
+	if h.Live != nil {
+		h.Live.EndingUser(id)
+	}
 	h.notify(id, notice{Kind: "ban", Until: until, Reason: reason})
 	if h.OnAccountEnded != nil {
 		h.OnAccountEnded(id)

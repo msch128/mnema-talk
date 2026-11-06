@@ -68,21 +68,23 @@ func (g *Gateway) removeLocked(id string, s *session) {
 
 // validTokens returns which of the tokens are still good: not revoked, not
 // expired, of a bot that is neither disabled nor banned, and issued by someone
-// who may still act as the bot.
-func (g *Gateway) validTokens(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
+// who may still act as the bot. Each good token maps to the intents its bot
+// may use right now.
+func (g *Gateway) validTokens(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]int64, error) {
 	type liveToken struct {
 		ID, BotUser uuid.UUID
 		Minter      *uuid.UUID
+		Allowed     int64
 	}
 	var live []liveToken
 	rows, err := g.DB.Query(ctx, `
-		SELECT t.id, b.user_id, t.created_by FROM bot_tokens t JOIN bots b ON b.id = t.bot_id JOIN users u ON u.id = b.user_id
+		SELECT t.id, b.user_id, t.created_by, b.allowed_intents FROM bot_tokens t JOIN bots b ON b.id = t.bot_id JOIN users u ON u.id = b.user_id
 		WHERE t.id = ANY($1) AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > NOW()) AND NOT b.disabled
 		  AND `+auth.ActiveSQL("u"), ids)
 	if err == nil {
 		live, err = pgx.CollectRows(rows, pgx.RowToStructByPos[liveToken])
 	}
-	valid := make(map[uuid.UUID]bool, len(live))
+	valid := make(map[uuid.UUID]int64, len(live))
 	for _, t := range live {
 		// The person who issued the token must still qualify (see bot.Authenticator).
 		// A failed check (database trouble) keeps the session; only a clear no ends it.
@@ -91,7 +93,7 @@ func (g *Gateway) validTokens(ctx context.Context, ids []uuid.UUID) (map[uuid.UU
 				continue
 			}
 		}
-		valid[t.ID] = true
+		valid[t.ID] = t.Allowed
 	}
 	return valid, err
 }
@@ -112,15 +114,36 @@ func (g *Gateway) checkTokens(ctx context.Context) {
 	if len(ids) == 0 || g.DB == nil {
 		return
 	}
+	queried := time.Now()
 	valid, err := g.validTokens(ctx, ids)
 	if err != nil {
 		slog.Warn("gateway token check", "err", err)
 		return
 	}
 	for _, id := range ids {
-		if !valid[id] {
+		if _, ok := valid[id]; !ok {
 			g.revokeToken(id)
 		}
+	}
+	g.closeOverreaching(valid, queried)
+}
+
+// closeOverreaching ends the sessions that hold intents their bot's
+// allowed_intents no longer cover, with close code 4014 as at IDENTIFY. allowed
+// was read at queried: a session that identified after that was admitted
+// against newer intents and is left to the next round.
+func (g *Gateway) closeOverreaching(allowed map[uuid.UUID]int64, queried time.Time) {
+	g.mu.Lock()
+	var victims []*session
+	for id, s := range g.sessions {
+		if a, ok := allowed[s.tokenID]; ok && s.intents&^a != 0 && !s.startedAt.After(queried) {
+			victims = append(victims, s)
+			g.removeLocked(id, s)
+		}
+	}
+	g.mu.Unlock()
+	for _, s := range victims {
+		s.closeConn(CloseDisallowedIntents, "Disallowed intents")
 	}
 }
 
@@ -148,17 +171,26 @@ func (g *Gateway) stillGood(ctx context.Context, s *session) bool {
 	g.mu.Unlock()
 	if g.DB != nil {
 		valid, err := g.validTokens(ctx, []uuid.UUID{tokenID})
-		if err == nil && valid[tokenID] {
-			return true
+		if a, ok := valid[tokenID]; err == nil && ok {
+			if s.intents&^a == 0 {
+				return true
+			}
+			g.removeSession(s)
+			s.closeConn(CloseDisallowedIntents, "Disallowed intents")
+			return false
 		}
 	}
+	g.removeSession(s)
+	s.closeConn(CloseAuthFailed, "Authentication failed")
+	return false
+}
+
+func (g *Gateway) removeSession(s *session) {
 	g.mu.Lock()
 	if g.sessions[s.id] == s {
 		g.removeLocked(s.id, s)
 	}
 	g.mu.Unlock()
-	s.closeConn(CloseAuthFailed, "Authentication failed")
-	return false
 }
 
 func (g *Gateway) revokeToken(tokenID uuid.UUID) {

@@ -141,6 +141,20 @@ describe('the saved messages tab', () => {
     expect(w.find('[data-testid="saved-note-input"]').exists()).toBe(false)
   })
 
+  it('keeps the note editor and its text open when saving the note fails', async () => {
+    serve(page([entry(30, 'one')]))
+    const w = mountSaved()
+    await openPanel(w)
+    await w.find('[data-testid="saved-note-edit"]').trigger('click')
+    await w.find('[data-testid="saved-note-input"]').setValue('later')
+    apiMock.mockRejectedValueOnce(new Error('offline'))
+    await w.find('form').trigger('submit')
+    await flushPromises()
+    const input = w.find('[data-testid="saved-note-input"]')
+    expect(input.exists()).toBe(true)
+    expect((input.element as HTMLInputElement).value).toBe('later')
+  })
+
   it('pages older entries behind the last one shown', async () => {
     serve(page([entry(30, 'one')], true))
     const w = mountSaved()

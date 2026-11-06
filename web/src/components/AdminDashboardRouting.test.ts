@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import type { ApiOptions } from '../lib/api'
@@ -117,6 +118,16 @@ describe('dashboard on a phone', () => {
     await w.get('[data-testid="admin-back"]').trigger('click')
     expect(w.get('h2').text()).toBe('Admin console')
     expect(w.find('[data-testid="tab-system"]').attributes('aria-current')).toBe('page')
+  })
+
+  it('puts the focus on the section just left when going back to the list', async () => {
+    isCompact.value = true
+    apiMock.mockResolvedValue([])
+    const w = keep(mount(AdminDashboard, { attachTo: document.body, global: { stubs: { AdminUsersTab: true, AdminSystemTab: true } } }))
+    await w.get('[data-testid="tab-system"]').trigger('click')
+    await w.get('[data-testid="admin-back"]').trigger('click')
+    await nextTick(); await nextTick()
+    expect(document.activeElement).toBe(w.get('[data-testid="tab-system"]').element)
   })
 
   it('opens the section named by the address straight away', () => {

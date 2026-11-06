@@ -14,6 +14,7 @@ import { t } from '../i18n'
 import { useSettingsDraft } from '../composables/useSettingsDraft'
 import UnsavedChangesBar from './UnsavedChangesBar.vue'
 import AdminRaidTab from './AdminRaidTab.vue'
+import StatePanel from './StatePanel.vue'
 
 const MIN_DAYS = 1
 const MAX_DAYS = 365
@@ -21,6 +22,7 @@ const MAX_DAYS = 365
 const toasts = useToastStore()
 const features = useServerFeaturesStore()
 const loaded = ref<OnboardingSettings | null>(null)
+const failed = ref(false)
 
 interface AccessForm {
   // The community's switch for direct messages (existing conversations stay readable when it is off).
@@ -59,10 +61,13 @@ const { draft, errors } = form
 const daysInvalid = computed(() => !!errors.value.inactivityDays)
 
 async function load() {
+  failed.value = false
   try {
     loaded.value = await api('/api/admin/onboarding', { decode: decodeOnboardingSettings })
   } catch (e) {
-    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
+    failed.value = true
+    // The panel says it while nothing is loaded; a toast only for a failed reload.
+    if (loaded.value) toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
   }
 }
 
@@ -70,8 +75,9 @@ onMounted(load)
 </script>
 
 <template>
-  <div v-if="loaded" class="space-y-10">
-    <form class="space-y-5" data-testid="access-settings" @submit.prevent="form.save" @keydown="form.onKeydown">
+  <div class="space-y-10">
+    <StatePanel v-if="failed && !loaded" state="error" retryable data-testid="access-error" @retry="load">{{ $t('admin.access.loadFailed') }}</StatePanel>
+    <form v-else-if="loaded" class="space-y-5" data-testid="access-settings" @submit.prevent="form.save" @keydown="form.onKeydown">
       <h3 class="flex items-center gap-2 text-sm font-semibold text-mnema-text uppercase font-mono tracking-wider">
         <KeyRound class="w-4 h-4 text-mnema-accent" />
         <span>{{ $t('admin.tabs.access') }}</span>
@@ -94,7 +100,7 @@ onMounted(load)
 
       <UnsavedChangesBar sticky save-testid="access-save" :dirty="form.dirty.value" :can-save="form.canSave.value" :saving="form.saving.value" :error="form.error.value" @save="form.save" @reset="form.reset" />
     </form>
-    <!-- Sign-up limit, lockdown and the waiting times of new members: the other half of who gets in and what they may do first -->
+    <!-- Sign-up limit, lockdown (reachable even when the form above did not load: the lockdown is for a raid) and the waiting times of new members: the other half of who gets in and what they may do first -->
     <AdminRaidTab />
   </div>
 </template>

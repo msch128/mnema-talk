@@ -9,7 +9,7 @@ import { Channel, invoke } from '@tauri-apps/api/core'
 type HostEvent =
   | { id: number; kind: 'open' }
   | { id: number; kind: 'message'; data: string }
-  | { id: number; kind: 'close' }
+  | { id: number; kind: 'close'; code?: number }
 
 export class TrustedSocket {
   readonly CONNECTING = 0
@@ -19,7 +19,7 @@ export class TrustedSocket {
   readyState = 0
   onopen: (() => void) | null = null
   onmessage: ((event: { data: string }) => void) | null = null
-  onclose: (() => void) | null = null
+  onclose: ((event: { code?: number }) => void) | null = null
   private id: number | null = null
   private closeRequested = false
   private closeSent = false
@@ -41,14 +41,15 @@ export class TrustedSocket {
     } else if (event.kind === 'message') {
       if (this.readyState === 1) this.onmessage?.({ data: event.data })
     } else {
-      this.finish()
+      // Older hosts send no code; the page then handles the close as before.
+      this.finish(event.code)
     }
   }
 
-  private finish() {
+  private finish(code?: number) {
     if (this.readyState === 3) return
     this.readyState = 3
-    this.onclose?.()
+    this.onclose?.(code === undefined ? {} : { code })
   }
 
   private hostClose() {
