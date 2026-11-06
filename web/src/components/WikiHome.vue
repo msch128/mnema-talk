@@ -29,7 +29,7 @@ const wiki = useWikiStore()
           <li v-for="node in wiki.tree" :key="node.id">
             <button type="button" class="flex w-full flex-col rounded-lg border border-mnema-border bg-mnema-elevated/60 px-4 py-3 text-left transition-colors hover:bg-mnema-hover focus-ring" @click="goWiki({ mode: 'page', slug: node.slug })">
               <span class="truncate font-medium text-mnema-text">{{ node.title }}</span>
-              <span v-if="node.children.length" class="text-xs text-mnema-tertiary">{{ $t('wiki.subpageCount', { n: node.children.length }) }}</span>
+              <span v-if="node.children.length" class="text-xs text-mnema-tertiary">{{ $t('wiki.subpageCount', { count: node.children.length }) }}</span>
             </button>
           </li>
         </ul>

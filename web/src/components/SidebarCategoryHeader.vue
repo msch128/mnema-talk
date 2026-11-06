@@ -78,7 +78,7 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
         v-if="collapsed && mentions > 0"
         data-testid="category-mentions"
         class="ml-auto px-1.5 py-0.5 rounded-full bg-mnema-danger text-white text-xs font-bold leading-none min-w-[18px] text-center normal-case tracking-normal"
-        :aria-label="$t('sidebar.categoryMentions', { n: mentions })"
+        :aria-label="$t('sidebar.categoryMentions', { count: mentions })"
       >{{ mentions }}</span>
       <span
         v-else-if="collapsed && unreadChannels > 0"

@@ -171,7 +171,7 @@ function onDragEnd() {
           v-if="collapsed && unreadTotal > 0"
           variant="mention"
           class="ml-auto normal-case tracking-normal"
-          :aria-label="$t('dm.unreadTotal', { n: unreadTotal })"
+          :aria-label="$t('dm.unreadTotal', { count: unreadTotal })"
         >{{ unreadTotal }}</Badge>
       </button>
       <button

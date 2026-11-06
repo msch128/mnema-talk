@@ -136,20 +136,20 @@
       "cancelled": "cancelled"
     },
     "detail": {
-      "invalidInvite": "Invalid invite code",
+      "invalidInvite": "Invalid invite code.",
       "vanityOwnerOnly": "Only the Owner can let the vanity link create accounts.",
       "vanityChars": "The link name may only hold lowercase letters, digits and single hyphens between them.",
       "vanityLength": "The link name must be {min} to {max} characters.",
       "vanityReserved": "This link name is reserved. Choose another one.",
-      "inviteExpired": "The invite code has expired",
-      "inviteUsedUp": "The invite code has been used too many times",
-      "usernameTaken": "That username is already taken",
-      "wrongPassword": "The current password is wrong",
-      "passwordMin": "The password needs at least {count} characters",
-      "passwordMax": "The password is too long",
-      "usernameFormat": "Username: 2–32 characters, lowercase letters, digits, _ and . only; no . at the start or end, no two . in a row",
-      "fieldMax": "{field}: at most {count} characters",
-      "fileTooBig": "The file is larger than {size} MB",
+      "inviteExpired": "The invite code has expired.",
+      "inviteUsedUp": "The invite code has been used too many times.",
+      "usernameTaken": "That username is already taken.",
+      "wrongPassword": "The current password is wrong.",
+      "passwordMin": "The password needs at least {count} characters.",
+      "passwordMax": "The password is too long.",
+      "usernameFormat": "Username: 2–32 characters, lowercase letters, digits, _ and . only; no . at the start or end, no two . in a row.",
+      "fieldMax": "{field}: at most {count} characters.",
+      "fileTooBig": "The file is larger than {size} MB.",
       "missingPermission": "You don’t have permission to do that.",
       "srvAPageCannotMoveUnder": "A page can’t move under itself or one of its subpages.",
       "srvAWikiPageHoldsAtMost": "A wiki page holds at most 50 KB of text.",
@@ -165,7 +165,7 @@
       "newMemberSpeak": "New here: you can speak in {time}.",
       "newMemberWrite": "New here: you can write in {time}.",
       "signupsPaused": "Sign-ups are paused for now. Try again later.",
-      "slowMode": "Slow mode: wait {seconds} s before posting again",
+      "slowMode": "Slow mode: wait {seconds} s before posting again.",
       "rateWait": "That was a lot at once. Try again in {time}.",
       "linkInvalid": "This link is invalid or has expired.",
       "emailInvalid": "Enter a valid e-mail address.",
@@ -289,7 +289,7 @@
       "srvATagWithThisName": "A tag with this name already exists.",
       "srvAWordIsTooLong": "A word is too long.",
       "srvAWordNeedsAtLeast": "A word needs at least one letter or digit besides *.",
-      "srvAcceptTheCommunityRulesFirst": "Accept the community rules first",
+      "srvAcceptTheCommunityRulesFirst": "Accept the community rules first.",
       "srvActionMustBeBlockOr": "The action must be “block” or “flag”.",
       "srvAddAnEMailAddress": "Add an e-mail address to your account or name a recipient.",
       "srvAfterMustBeEarlierThan": "“after” must be earlier than “before_date”.",
@@ -598,8 +598,8 @@
       "srvImageCannotBeRead": "The image can’t be read.",
       "srvBanned": "This account is banned.",
       "srvBannedUntil": "This account is banned until {a}.",
-      "srvBannedUntilReason": "This account is banned until {a}: {b}",
-      "srvBannedReason": "This account is banned: {a}",
+      "srvBannedUntilReason": "This account is banned until {a}: {b}.",
+      "srvBannedReason": "This account is banned: {a}.",
       "srvCloseReportFirst": "Close the report before deleting it.",
       "srvReportAlreadyClosed": "This report is already closed.",
       "srvAfterRfc3339": "“after” must be a timestamp in RFC 3339 format.",
@@ -756,7 +756,10 @@
     "markReadFailed": "Couldn’t mark as read. Try again.",
     "markAllRead": "Mark all as read",
     "allMarkedRead": "All marked as read",
-    "categoryMentions": "{n} mentions in this category",
+    "categoryMentions": {
+      "one": "{count} mention in this category",
+      "other": "{count} mentions in this category"
+    },
     "categoryUnread": "Unread messages in this category",
     "copyLink": "Copy link",
     "copiedLink": "Link copied",
@@ -3425,8 +3428,8 @@
     "botRoleHint": "Managed role of one bot: it cannot be removed.",
     "botRoleNote": "“{name}” is a bot’s own role. It is created with the bot, follows its name and is deleted with it; only that bot holds it, and it cannot be renamed, given to anyone else, removed from the bot or deleted by hand. You can change its colour and permissions. Nobody can give a bot permissions they lack themselves, and only the Owner can make a bot elevated.",
     "viewAs": {
-      "open": "View server as {name}",
-      "title": "Server as {name}",
+      "open": "View community as {name}",
+      "title": "Community as {name}",
       "subtitle": "Read-only preview. Nothing changes and nobody is impersonated.",
       "loading": "Loading…",
       "sidebar": "Channels this role can see",
@@ -3554,9 +3557,9 @@
     "title": "Get started with {name}",
     "progress": "{done} of {total} done",
     "allSet": "Your community is ready",
-    "allSetHint": "Everything you needed is done. You can reopen this list from the server menu.",
+    "allSetHint": "Everything you needed is done. You can reopen this list from the community menu.",
     "finish": "Done",
-    "hide": "Hide the checklist. The server menu brings it back.",
+    "hide": "Hide the checklist. The community menu brings it back.",
     "reopen": "Get started checklist",
     "done": "Done",
     "todo": "Still to do",
@@ -3814,7 +3817,10 @@
     },
     "noticeMessageDeleted": "Your message in {channel} was removed by someone with moderator rights",
     "noticeMessagesDeleted": "{count} of your messages in {channel} were removed by someone with moderator rights",
-    "bulkDeleted": "{count} messages from {name} deleted.",
+    "bulkDeleted": {
+      "one": "{count} message from {name} deleted.",
+      "other": "{count} messages from {name} deleted."
+    },
     "deleteTitle": "Delete message",
     "deleteBody": "The author is told, with the reason. The audit log keeps the text.",
     "bulkTitle": "Delete the latest messages of {name}",
@@ -4071,7 +4077,10 @@
       "loginIntro": "Enter the six-digit code from your authenticator app, or a recovery code.",
       "verify": "Verify",
       "back": "Back",
-      "notice": "{count} wrong codes were entered for your account since you last signed in.",
+      "notice": {
+        "one": "{count} wrong code was entered for your account since you last signed in.",
+        "other": "{count} wrong codes were entered for your account since you last signed in."
+      },
       "noticeHint": "Somebody may know your password. Change it under Account & security and check your recovery codes."
     },
     "privacy": {
@@ -4141,7 +4150,10 @@
     "add": "Add to group",
     "empty": "No conversations yet",
     "showMore": "Show {n} more",
-    "unreadTotal": "{n} unread direct messages",
+    "unreadTotal": {
+      "one": "{count} unread direct message",
+      "other": "{count} unread direct messages"
+    },
     "info": "Conversation info",
     "you": "You",
     "alone": "Only you",
@@ -4388,7 +4400,10 @@
     "tabs": "Profile sections",
     "tabProfile": "Profile",
     "tabModeration": "Moderation",
-    "strikeCount": "{count} strikes",
+    "strikeCount": {
+      "one": "{count} strike",
+      "other": "{count} strikes"
+    },
     "privacy": "Only moderators see this. The member is never shown it and it is not part of their data export.",
     "roles": "Roles",
     "loadFailed": "Couldn’t load the moderation history.",
@@ -4591,19 +4606,19 @@
       "title": "Import Discord structure",
       "step": "Step {n} of 3",
       "back": "Back",
-      "step1": "This adds {categories}, {channels} and {roles} at the end of your server. Nothing existing is changed, renamed or removed.",
+      "step1": "This adds {categories}, {channels} and {roles} at the end of your community. Nothing existing is changed, renamed or removed.",
       "step1Yes": "Yes, add them",
       "step2": "The new roles get exactly these permissions and no others. They are created below all your existing roles, and none of them is an Administrator.",
       "step2Dropped": "Dropped, because Mnema Talk has no safe equivalent: {list}",
       "step2AdminDropped": "Discord’s Administrator permission is dropped from every role.",
       "step2Yes": "Yes, use these permissions",
-      "step3Named": "Last step. Type the server name “{name}” or IMPORT to confirm.",
+      "step3Named": "Last step. Type the Discord server name “{name}” or IMPORT to confirm.",
       "step3": "Last step. Type IMPORT to confirm.",
       "typeLabel": "Confirmation",
       "go": "Import now",
       "working": "Importing…",
       "failed": "The import failed.",
-      "stale": "The template or this server changed since the preview. Preview it again.",
+      "stale": "The template or this community changed since the preview. Preview it again.",
       "done": "Imported {summary}. You can undo it below.",
       "step2Mapped": "{source} is not created. Its channel settings go to {name}, whose permissions do not change."
     },
@@ -4665,11 +4680,12 @@
       "privacy": "Privacy",
       "data": "Export & delete",
       "app": "Notifications & install",
-      "audio": "Sound & microphone"
+      "audio": "Sound & microphone",
+      "roles": "Roles"
     },
     "privacyEmpty": "There is nothing to set here on this server.",
     "notifyLink": "Choose what notifies you",
-    "notifyLinkHint": "Which messages notify you is set for the whole server and per channel (the bell in its header). Push below only delivers them to this device."
+    "notifyLinkHint": "Which messages notify you is set for the whole community and per channel (the bell in its header). Push below only delivers them to this device."
   },
   "ctxMenu": {
     "systemDefault": "System default",
@@ -4890,8 +4906,8 @@
     "firstPage": "Write the first page",
     "topPages": "Pages",
     "subpageCount": {
-      "one": "{n} subpage",
-      "other": "{n} subpages"
+      "one": "{count} subpage",
+      "other": "{count} subpages"
     },
     "recent": "Changed lately",
     "discardTitle": "Discard your changes?",
