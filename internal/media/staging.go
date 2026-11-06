@@ -110,7 +110,7 @@ func (h *Handler) insertStaged(ctx context.Context, chID, userID uuid.UUID, in *
 			in.id, userID, chID, h.Bucket, in.key, in.filename, in.mime, in.size); err != nil {
 			return err
 		}
-		return recordUploadUsage(ctx, tx, userID, in.size)
+		return RecordUploadUsage(ctx, tx, userID, in.size)
 	})
 	if err != nil {
 		// The object must not outlive a failed DB write or a refused file.

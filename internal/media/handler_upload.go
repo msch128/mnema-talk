@@ -136,7 +136,7 @@ func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user 
 			in.id, user.ID, chID, msgID, h.Bucket, in.key, in.filename, in.mime, in.size); err != nil {
 			return err
 		}
-		return recordUploadUsage(ctx, tx, user.ID, in.size)
+		return RecordUploadUsage(ctx, tx, user.ID, in.size)
 	})
 	if err != nil {
 		// The object must not outlive a failed DB write.

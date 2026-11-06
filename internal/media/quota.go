@@ -134,10 +134,10 @@ func (q Quota) checkFreeSpace(size int64) error {
 	return nil
 }
 
-// recordUploadUsage books an upload against the account's daily budget, in the
+// RecordUploadUsage books an upload against the account's daily budget, in the
 // transaction that writes its media row. The row outlives the file and its
 // message: deleting either must not refund the budget.
-func recordUploadUsage(ctx context.Context, tx pgx.Tx, userID uuid.UUID, size int64) error {
+func RecordUploadUsage(ctx context.Context, tx pgx.Tx, userID uuid.UUID, size int64) error {
 	if _, err := tx.Exec(ctx, `INSERT INTO upload_usage (user_id, bytes) VALUES ($1, $2)`, userID, size); err != nil {
 		return fmt.Errorf("record upload usage: %w", err)
 	}
