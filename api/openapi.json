@@ -5718,7 +5718,6 @@
           "roles",
           "server_name",
           "skipped",
-          "skipped_hints",
           "source_name",
           "template_name"
         ],
@@ -5808,7 +5807,6 @@
           "category",
           "category_source_id",
           "name",
-          "note_hints",
           "notes",
           "overwrites",
           "private",
@@ -8101,7 +8099,7 @@
             "type": "integer"
           },
           "state": {
-            "description": "State is ok (a backup was reported), not_configured (BACKUP_STATUS_FILE\nis empty), missing (no backup has written the file yet) or invalid.",
+            "description": "State, Warn, Stale, StaleAfterHours and RestoreTest are optional in the\ncontract: a server before the backup status sends only the deprecated ages.\nState is ok (a backup was reported), not_configured (BACKUP_STATUS_FILE\nis empty), missing (no backup has written the file yet) or invalid.",
             "enum": [
               "ok",
               "not_configured",
@@ -8118,12 +8116,7 @@
         "required": [
           "hint",
           "last_backup_age",
-          "last_restore_test_age",
-          "restore_test",
-          "stale",
-          "stale_after_hours",
-          "state",
-          "warn"
+          "last_restore_test_age"
         ],
         "type": "object"
       },
@@ -8240,9 +8233,7 @@
           "per_member_millicores",
           "plan_cores",
           "scale",
-          "scenarios",
-          "status",
-          "upload_limit_mbps"
+          "status"
         ],
         "type": "object"
       },

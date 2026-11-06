@@ -43,6 +43,15 @@ async function show(cap: ServerCapacityStatus) {
 }
 
 describe('AdminCapacityPanel', () => {
+  it('still shows the live figures of a server whose estimate has no scenarios', async () => {
+    const older = fixture().estimate
+    delete older.scenarios
+    delete older.upload_limit_mbps
+    const w = await show(fixture({ estimate: older }))
+    expect(w.get('[data-testid="capacity-cpu"]').text()).toBe('0.46 of 4 cores')
+    expect(w.findAll('[data-testid="capacity-scenarios"] > li')).toHaveLength(0)
+  })
+
   it('shows the live figures and the estimate with its assumption line', async () => {
     const w = await show(fixture())
     expect(w.get('[data-testid="capacity-cpu"]').text()).toBe('0.46 of 4 cores')

@@ -17,7 +17,7 @@ function reported(over: Partial<ServerBackupStatus> = {}): ServerBackupStatus {
   }
 }
 
-function unreported(state: ServerBackupStatus['state']): ServerBackupStatus {
+function unreported(state: NonNullable<ServerBackupStatus['state']>): ServerBackupStatus {
   return { state, warn: false, stale: false, stale_after_hours: 36, restore_test: 'none', last_backup_age: state, last_restore_test_age: state, hint: 'doc/operations.md#backups-and-restore' }
 }
 
@@ -31,6 +31,12 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers() })
 
 describe('AdminBackupPanel', () => {
+  it('shows the plain ages of a server that sends no backup state', () => {
+    const w = show({ last_backup_age: 'unknown', last_restore_test_age: 'unknown', hint: 'doc/operations.md#backups-and-restore' })
+    expect(w.get('[data-testid="backup-legacy"]').text()).toContain('unknown')
+    expect(w.find('[data-testid="backup-not-reported"]').exists()).toBe(false)
+  })
+
   it('shows the age and size of the last backup and the passed restore test', () => {
     const w = show(reported())
     expect(w.get('[data-testid="backup-last-age"]').text()).toBe('7 hr. ago · 50 MB')
@@ -72,7 +78,7 @@ describe('AdminBackupPanel', () => {
   })
 
   it('explains how to turn the report on instead of a placeholder', () => {
-    const cases: Array<[ServerBackupStatus['state'], string]> = [
+    const cases: Array<[NonNullable<ServerBackupStatus['state']>, string]> = [
       ['not_configured', 'set BACKUP_STATUS_FILE'],
       ['missing', 'Run scripts/backup.sh on the host'],
       ['invalid', 'cannot be read'],

@@ -57,10 +57,10 @@ type CapacityEstimate struct {
 	Status string `json:"status" enums:"ok,busy,memory"`
 	// UploadLimitMbps is VOICE_UPLOAD_LIMIT_MBIT, the upload the scenarios
 	// may use; 0 when it is not set and upload is only reported, not limited.
-	UploadLimitMbps int `json:"upload_limit_mbps"`
+	UploadLimitMbps int `json:"upload_limit_mbps" binding:"optional"`
 	// Scenarios is how many people one Talk of each kind can hold on what is
 	// left of the plan; empty unless Status is ok.
-	Scenarios []CapacityScenario `json:"scenarios"`
+	Scenarios []CapacityScenario `json:"scenarios" binding:"optional"`
 }
 
 // CapacityScenario is one row of the estimate: the largest Talk of one kind.
