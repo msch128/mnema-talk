@@ -55,8 +55,12 @@ func (h *API) KickMember(r *http.Request, id uuid.UUID, reason string) error {
 	if err != nil {
 		return err
 	}
-	// Tell them first; their sessions are dead already, so nothing can be done
-	// with the socket meanwhile.
+	// Tell them first; their sessions are dead already, but an open socket
+	// could still send frames (a voice join would re-seat them), so it stops
+	// acting before the notice goes out.
+	if h.Live != nil {
+		h.Live.EndingUser(id)
+	}
 	if h.Events != nil {
 		h.Events.SendToUsers([]uuid.UUID{id}, events.Kicked, kickNotice{Reason: reason})
 	}

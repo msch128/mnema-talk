@@ -34,6 +34,10 @@ type Client struct {
 	// closing is set by the first deliver that finds the buffer full, so a
 	// slow client's later events don't each start another close.
 	closing atomic.Bool
+	// ending is set when the account is being banned or kicked: the
+	// connection stays open for the notice but no longer acts (see
+	// Hub.EndingUser).
+	ending atomic.Bool
 
 	// send is never closed: SendEvent runs from goroutines other than the
 	// read loop (SFU callbacks, admin kicks), and a send on a closed channel

@@ -62,7 +62,7 @@ const (
 func (h *Hub) seatVoice(c *Client, ch *core.ChannelInfo, mode joinMode) bool {
 	c.voiceMu.Lock()
 	defer c.voiceMu.Unlock()
-	if c.closed.Load() {
+	if c.closed.Load() || c.ending.Load() {
 		return false
 	}
 	if !h.checkJoinPermission(c, ch.ID) {
