@@ -29,12 +29,14 @@ const presenceButton = ref<HTMLButtonElement | null>(null)
 
 const me = computed<Partial<User>>(() => authStore.user || {})
 // What others see; before the first snapshot arrives, the own choice.
+const connectionLost = computed(() => chatStore.wasConnected && !chatStore.isConnected)
 const myStatus = computed(() => {
+  if (connectionLost.value) return 'offline'
   const live = chatStore.presenceOf(me.value.id ?? null)
   return live === 'offline' ? me.value.presence || 'online' : live
 })
 // Second line: the status text, else the presence.
-const subline = computed(() => me.value.status_text || t(`presence.${myStatus.value}`))
+const subline = computed(() => connectionLost.value ? t('connection.reconnectingShort') : me.value.status_text || t(`presence.${myStatus.value}`))
 
 function togglePresence() {
   menuOpen.value = false

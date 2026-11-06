@@ -686,6 +686,7 @@
     "offline": "Du bist offline – Nachrichten kommen erst wieder an, wenn das Netzwerk zurück ist.",
     "nextTry": "nächster Versuch in {seconds} s · Versuch {attempt}",
     "retryNow": "Jetzt versuchen",
+    "reconnectingShort": "Verbinde …",
     "restored": "Wieder verbunden"
   },
   "update": {

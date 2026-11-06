@@ -686,6 +686,7 @@
     "offline": "You are offline – messages cannot be sent or received until the network is back.",
     "nextTry": "next try in {seconds} s · attempt {attempt}",
     "retryNow": "Retry now",
+    "reconnectingShort": "Connecting…",
     "restored": "Reconnected"
   },
   "update": {
