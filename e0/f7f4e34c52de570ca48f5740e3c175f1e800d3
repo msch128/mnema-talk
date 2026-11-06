@@ -1,0 +1,21 @@
+web/src/components/AdminRowsPhone.test.ts
+  s_06fcde5dbef956::t_9fc6ffc96a2f76 35,40,61-70
+web/src/components/AdminUserRow.vue
+  s_06fcde5dbef956::t_7aa3e99ab54b75 88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e0f7f4e34c52de570ca48f5740e3c175f1e800d3",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
