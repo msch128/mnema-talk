@@ -748,6 +748,7 @@ auto-delete; search SQL (all user input travels as parameters); and no new
 * **Frame metadata:** codec headers (H.264 parameter sets and slice headers, VP8 payload header) are readable but authenticated; sizes and timing are visible to the SFU.
 * **Replay by an active SFU:** a layer stream a receiver has not seen yet starts a fresh replay window, so an active SFU can feed old recorded frames of that layer.
 * **Rate limiter and lockout state is in memory** and cleared on restart.
+* **Hub state is in memory** (presence, voice rooms and the 30 second voice grace, bot gateway sessions and their replay buffers): a restart drops it and clients reconnect and rejoin.
 * **Regroup nuisance (RT-6):** two colluding members or the server can make a quiet listener regroup; backoff-limited.
 * **Audit log keeps deleted and edited message text** for moderation; operators must name it in their privacy notice. Direct messages are not audited.
 * **Attachments keep metadata** (stored as uploaded); only avatars, banners and emoji are re-encoded.
