@@ -2453,7 +2453,8 @@
       "openReports": "{count} offen"
     },
     "access": {
-      "saved": "Gespeichert."
+      "saved": "Gespeichert.",
+      "loadFailed": "Die Zugangseinstellungen konnten nicht geladen werden. Versuch es noch einmal."
     },
     "maxUsesLabel": "Nutzungen",
     "maxUsesPlaceholder": "Unbegrenzt",
@@ -2912,13 +2913,15 @@
       "deleteTitle": ":{name}: löschen?",
       "deleteBody": "Bestehende Nachrichten und Reaktionen zeigen :name: ab jetzt als Text. Das lässt sich nicht rückgängig machen.",
       "animated": "Animiert",
-      "rename": "Umbenennen",
       "nameRules": "2 bis 32 Zeichen: a–z, 0–9 und _",
       "empty": "Noch keine eigenen Emojis.",
       "full": "Das Limit ist erreicht. Lösche ein Emoji, um Platz zu schaffen.",
       "choose": "Datei wählen",
       "noFile": "Noch keine Datei",
-      "emptyHint": "Lade oben ein Bild hoch, um das erste hinzuzufügen."
+      "emptyHint": "Lade oben ein Bild hoch, um das erste hinzuzufügen.",
+      "loadFailed": "Die eigenen Emojis konnten nicht geladen werden. Versuch es noch einmal.",
+      "renameNamed": ":{name}: umbenennen",
+      "deleteNamed": ":{name}: löschen"
     }
   },
   "activity": {

@@ -34,6 +34,7 @@ export function usePastEvents(enabled: Readonly<Ref<boolean>>, error: Ref<string
     if (!enabled.value || loading.value || (more && !hasMore.value)) return
     const mine = generation
     loading.value = true
+    if (!more) error.value = null
     try {
       const page = await fetchPast(more ? (cursor ?? null) : null)
       if (mine !== generation) return

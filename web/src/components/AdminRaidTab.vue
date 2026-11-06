@@ -15,6 +15,7 @@ import { withCurrent } from '../lib/automod'
 import presets from '../lib/presets.json'
 import { locale, t } from '../i18n'
 import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import StatePanel from './StatePanel.vue'
 
 const MAX_LIMIT = 1000
 const MAX_WINDOW = 1440
@@ -78,7 +79,7 @@ onMounted(() => raid.load())
       <p class="text-xs text-mnema-tertiary">{{ $t('raid.hint') }}</p>
     </div>
 
-    <p v-if="raid.failed" role="alert" class="text-sm text-mnema-danger">{{ $t('raid.loadFailed') }}</p>
+    <StatePanel v-if="raid.failed" state="error" retryable data-testid="raid-error" @retry="raid.load()">{{ $t('raid.loadFailed') }}</StatePanel>
     <template v-else-if="raid.settings">
       <div class="space-y-3 rounded-lg border border-mnema-hairline bg-mnema-surface p-4" data-testid="lockdown-card">
         <h4 class="text-sm font-semibold text-mnema-text">{{ $t('raid.lockdown.title') }}</h4>

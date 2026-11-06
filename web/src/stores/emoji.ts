@@ -18,6 +18,8 @@ export const useEmojiStore = defineStore('emoji', () => {
   const limit = ref(0)
   // False until the first list arrived: an unknown emoji is only "gone" once the list is known.
   const loaded = ref(false)
+  // True when the last attempt to read the list failed (cleared by the next success).
+  const failed = ref(false)
   const byId = computed(() => new Map(items.value.map(e => [e.id, e])))
   const byName = computed(() => new Map(items.value.map(e => [e.name, e])))
 
@@ -29,8 +31,10 @@ export const useEmojiStore = defineStore('emoji', () => {
       items.value = list.emoji.map(e => ({ id: e.id, name: e.name, animated: e.animated, url: e.url, ...(e.still_url ? { still_url: e.still_url } : {}) }))
       limit.value = list.limit
       loaded.value = true
+      failed.value = false
     } catch {
       // The list on screen stays; the next emoji_changed or reconnect asks again.
+      failed.value = true
     }
   }
 
@@ -52,5 +56,5 @@ export const useEmojiStore = defineStore('emoji', () => {
     await load()
   }
 
-  return { items, limit, loaded, byId, byName, load, upload, rename, remove }
+  return { items, limit, loaded, failed, byId, byName, load, upload, rename, remove }
 })

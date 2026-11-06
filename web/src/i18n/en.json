@@ -2453,7 +2453,8 @@
       "openReports": "{count} open"
     },
     "access": {
-      "saved": "Saved."
+      "saved": "Saved.",
+      "loadFailed": "Couldn’t load the access settings. Try again."
     },
     "maxUsesLabel": "Uses",
     "maxUsesPlaceholder": "Unlimited",
@@ -2912,13 +2913,15 @@
       "deleteTitle": "Delete :{name}:?",
       "deleteBody": "Existing messages and reactions show :name: as text from now on. This can’t be undone.",
       "animated": "Animated",
-      "rename": "Rename",
       "nameRules": "2 to 32 characters: a–z, 0–9 and _",
       "empty": "No custom emoji yet.",
       "full": "The limit is reached. Delete an emoji to make room.",
       "choose": "Choose file",
       "noFile": "No file yet",
-      "emptyHint": "Upload an image above to add the first one."
+      "emptyHint": "Upload an image above to add the first one.",
+      "loadFailed": "Couldn’t load the custom emoji. Try again.",
+      "renameNamed": "Rename :{name}:",
+      "deleteNamed": "Delete :{name}:"
     }
   },
   "activity": {
