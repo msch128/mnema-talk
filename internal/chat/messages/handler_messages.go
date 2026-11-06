@@ -113,12 +113,7 @@ func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	// since the first attempt must not see a stored message turn into 403.
 	// Seeing the channel is still required: someone who lost access gets the
 	// normal refusal, not the message.
-	if req.Nonce != nil {
-		if _, err := a.ServeSendContext(r, chID, perm.ViewChannel); err != nil {
-			return err
-		}
-	}
-	if replayed, err := a.replayNonce(w, r, user.ID, chID, req.Nonce); replayed || err != nil {
+	if replayed, err := a.replayIfVisible(w, r, user.ID, chID, req.Nonce); replayed || err != nil {
 		return err
 	}
 	ctx, err := a.ServeSendContext(r, chID, need)
@@ -311,4 +306,15 @@ type CreateMessageRequest struct {
 // EditMessageRequest is the body of PUT /api/channels/{channelID}/messages/{messageID}.
 type EditMessageRequest struct {
 	Content string `json:"content" minLength:"1" maxLength:"4000"`
+}
+
+// replayIfVisible is replayNonce for a caller who may still see the channel.
+func (a *API) replayIfVisible(w http.ResponseWriter, r *http.Request, userID, chID uuid.UUID, nonce *uuid.UUID) (bool, error) {
+	if nonce == nil {
+		return false, nil
+	}
+	if _, err := a.ServeSendContext(r, chID, perm.ViewChannel); err != nil {
+		return false, err
+	}
+	return a.replayNonce(w, r, userID, chID, nonce)
 }
