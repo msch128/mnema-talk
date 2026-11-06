@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.20](https://github.com/msch128/mnema-talk/compare/v2.9.19...v2.9.20) (2026-11-06)
+
+
+### Bug Fixes
+
+* send the message nonce only to servers that list it ([#756](https://github.com/msch128/mnema-talk/issues/756)) ([cf86ad3](https://github.com/msch128/mnema-talk/commit/cf86ad3fb051c9fb97c48a4c90d9af3a433daaec))
+
 ## [2.9.19](https://github.com/msch128/mnema-talk/compare/v2.9.18...v2.9.19) (2026-11-06)
 
 
