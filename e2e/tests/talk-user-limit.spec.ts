@@ -1,6 +1,10 @@
-import type { Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, trackPeerConnections, expectTalkLive, leaveTalks } from './helpers'
+import type { BrowserContext, Page } from '@playwright/test'
+import { apiFetch, responseString, suiteMember, trackPeerConnections, expectTalkLive, leaveTalks, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
@@ -22,7 +26,9 @@ async function signIn(page: Page, username: string, password: string) {
 // told the Talk is full instead of being let into a failing join.
 test('a full Talk shows N/limit and turns members away', async ({ browser }) => {
   const adminCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(adminCtx)
   const memberCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(memberCtx)
   await adminCtx.addInitScript(trackPeerConnections)
   const admin = await adminCtx.newPage()
   const member = await memberCtx.newPage()

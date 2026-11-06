@@ -1,6 +1,10 @@
-import type { Page, Browser } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, responseUserId, bounds, suiteMember, leaveTalks, trackPeerConnections, expectTalkLive } from './helpers'
+import type { BrowserContext, Page, Browser } from '@playwright/test'
+import { apiFetch, awaitApiBudget, responseString, responseUserId, bounds, suiteMember, leaveTalks, trackPeerConnections, expectTalkLive, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
@@ -105,7 +109,9 @@ async function shot(page: Page, name: string) {
 // Two members (A: the admin, B: the file's member) in a new Talk.
 async function twoMembers(browser: Browser, tag: string, { pip = false, sound = false } = {}) {
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
+  opened.push(aCtx)
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
+  opened.push(bCtx)
   for (const ctx of [aCtx, bCtx]) await ctx.addInitScript(sound ? fakeDisplayMediaWithSound : fakeDisplayMedia)
   for (const ctx of [aCtx, bCtx]) await ctx.addInitScript(trackPeerConnections)
   if (pip) await aCtx.addInitScript(fakePictureInPicture)

@@ -1,6 +1,10 @@
-import type { Page } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, suiteMember, leaveTalks, expectTalkLive, trackPeerConnections, audioDecodedIn } from './helpers'
+import type { BrowserContext, Page } from '@playwright/test'
+import { apiFetch, awaitApiBudget, responseString, suiteMember, leaveTalks, expectTalkLive, trackPeerConnections, audioDecodedIn, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 // A call whose browsers may only use the TURN relay built into the server
 // (iceTransportPolicy 'relay', as behind a firewall that drops direct UDP):
@@ -54,7 +58,9 @@ test('a call over the built-in TURN relay carries audio both ways', async ({ bro
   test.setTimeout(180_000)
   const ctxOptions = { permissions: ['microphone' as const], viewport: { width: 1400, height: 900 } }
   const aCtx = await browser.newContext(ctxOptions)
+  opened.push(aCtx)
   const bCtx = await browser.newContext(ctxOptions)
+  opened.push(bCtx)
   for (const ctx of [aCtx, bCtx]) {
     await ctx.addInitScript(trackPeerConnections)
     await ctx.addInitScript(forceRelay)

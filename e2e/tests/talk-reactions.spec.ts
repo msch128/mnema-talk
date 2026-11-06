@@ -1,6 +1,10 @@
-import type { Page } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, suiteMember, expectTalkLive, leaveTalks, trackPeerConnections } from './helpers'
+import type { BrowserContext, Page } from '@playwright/test'
+import { apiFetch, awaitApiBudget, responseString, suiteMember, expectTalkLive, leaveTalks, trackPeerConnections, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 // Live reactions of a Talk: every quick reaction, and the full emoji picker
 // ("more") with its search, for standard and custom emoji, each shown to the
@@ -44,7 +48,9 @@ test('every quick reaction and the picker reach the other member of a Talk', asy
   test.setTimeout(240_000)
   const ctxOptions = { permissions: ['microphone' as const], viewport: { width: 1400, height: 900 } }
   const aCtx = await browser.newContext(ctxOptions)
+  opened.push(aCtx)
   const bCtx = await browser.newContext(ctxOptions)
+  opened.push(bCtx)
   await aCtx.addInitScript(trackPeerConnections)
   await bCtx.addInitScript(trackPeerConnections)
   const a = await aCtx.newPage()

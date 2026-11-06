@@ -1,6 +1,10 @@
-import type { Page } from '@playwright/test'
-import { apiFetch, responseString, leaveTalks } from './helpers'
+import type { BrowserContext, Page } from '@playwright/test'
+import { apiFetch, responseString, leaveTalks, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 // A Talk's chat can be read and written from the Talk's row without joining
 // the Talk: no microphone request, not in the participant list, until Join.
@@ -25,6 +29,7 @@ const mediaRequests = (page: Page) => page.evaluate(() => (window as unknown as 
 
 test('read and write a Talk chat from its row, then join from the header', async ({ browser }) => {
   const ctx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
+  opened.push(ctx)
   // Counts every request for the microphone or camera.
   await ctx.addInitScript(() => {
     const w = window as unknown as { __media: number }

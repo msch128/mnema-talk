@@ -1,6 +1,10 @@
 import { test, expect } from './fixtures'
 import type { BrowserContext, Page } from '@playwright/test'
-import { apiFetch, awaitApiBudget, expectTalkLive, leaveTalks, responseString, responseUserId, trackPeerConnections } from './helpers'
+import { apiFetch, awaitApiBudget, expectTalkLive, leaveTalks, responseString, responseUserId, trackPeerConnections, leaveAndClose } from './helpers'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 // A Talk started in a direct message rings the other member (doc/talks.md,
 // "Start a Talk from a direct message"): an incoming call card wherever they
@@ -44,7 +48,9 @@ const shared = { calleeId: '', dm: '' }
 /** The Owner and a member of this spec's own, a conversation between them. There is no Talk lobby: a call works on a fresh community. */
 async function world(browser: import('@playwright/test').Browser): Promise<World> {
   const ownerCtx = await browser.newContext(OPTIONS)
+  opened.push(ownerCtx)
   const calleeCtx = await browser.newContext(OPTIONS)
+  opened.push(calleeCtx)
   for (const ctx of [ownerCtx, calleeCtx]) await ctx.addInitScript(trackPeerConnections)
   const owner = await ownerCtx.newPage()
   const callee = await calleeCtx.newPage()

@@ -1,6 +1,10 @@
-import type { Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks, expectTalkLive } from './helpers'
+import type { BrowserContext, Page } from '@playwright/test'
+import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks, expectTalkLive, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
@@ -72,7 +76,9 @@ async function signIn(page: Page, username: string, password: string) {
 
 test('a member whose audio engine never starts is told and is still heard', async ({ browser }, testInfo) => {
   const stalledCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(stalledCtx)
   const otherCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(otherCtx)
   await stalledCtx.addInitScript(trackPeerConnections)
   await stalledCtx.addInitScript(stallAudioEngine)
   await otherCtx.addInitScript(trackPeerConnections)
