@@ -1,0 +1,25 @@
+web/src/components/EventsModal.test.ts
+  s_06fcde5dbef956::t_332c7b9712941e 124-126
+web/src/components/EventsModal.vue
+  s_06fcde5dbef956::t_848367d0f3dfc4 128
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_a946597ffb34d9 270
+web/src/components/MessageRowThreadDraft.test.ts
+  s_06fcde5dbef956::t_1607ba74c185f2 33-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bb32e1c9b21365e96054ef5d3fb4ecd76b1a6974",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
