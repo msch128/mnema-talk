@@ -2986,7 +2986,7 @@
     "hostError": {
       "enterAddress": "Gib eine HTTPS-Adresse für den Server ein.",
       "invalidAddress": "Das ist keine gültige Serveradresse.",
-      "httpsOrigin": "Verwende eine HTTPS-Adresse ohne Zugangsdaten, Pfad oder Parameter.",
+      "httpsOrigin": "Verwende eine Webadresse (https://…) ohne Benutzername und Passwort.",
       "initHttps": "Auf diesem Computer konnten keine sicheren Verbindungen eingerichtet werden.",
       "refused": "Der Server hat die Verbindung abgelehnt. Prüfe Adresse und Port.",
       "timeout": "Der Server hat nicht rechtzeitig geantwortet. Prüfe Adresse, Port und dein Netzwerk.",

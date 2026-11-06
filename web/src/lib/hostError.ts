@@ -20,7 +20,7 @@ interface Rule {
 const rules: Rule[] = [
   { match: /^Enter an HTTPS instance address\.$/, text: () => t('nativeDesktop.hostError.enterAddress') },
   { match: /^Invalid instance address\.$/, text: () => t('nativeDesktop.hostError.invalidAddress') },
-  { match: /^Use an HTTPS origin without credentials, a path or query\.$/, text: () => t('nativeDesktop.hostError.httpsOrigin') },
+  { match: /^(?:Use a web address \(https:\/\/…\) without a user name or password|Use an HTTPS origin without credentials, a path or query)\.$/, text: () => t('nativeDesktop.hostError.httpsOrigin') },
   { match: /^Unable to initialize HTTPS\.$/, text: () => t('nativeDesktop.hostError.initHttps') },
   { match: /^The instance refused the connection\. Check the address and the port\.$/, text: () => t('nativeDesktop.hostError.refused') },
   { match: /^The instance did not answer in time\. Check the address, the port and your network\.$/, text: () => t('nativeDesktop.hostError.timeout') },
