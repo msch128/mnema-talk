@@ -60,8 +60,10 @@ function statusFixture(overrides: Partial<OperatorStatus> = {}): OperatorStatus 
     },
     disk_free_bytes: 10737418240,
     backup: {
-      last_backup_age: 'unknown',
-      last_restore_test_age: 'unknown',
+      state: 'ok', warn: false, stale: false, stale_after_hours: 36,
+      last_backup_at: '2026-11-06T02:30:00Z', last_backup_age_seconds: 7 * 3600, size_bytes: 1_610_612_736,
+      restore_test: 'passed', restore_test_age_seconds: 7 * 3600,
+      last_backup_age: '7h0m0s', last_restore_test_age: '7h0m0s',
       hint: 'doc/operations.md#backups-and-restore',
     },
     activity: {
@@ -116,9 +118,9 @@ describe('AdminStatusTab', () => {
     expect(w.find('[data-testid="storage-used-bytes"]').text()).toBe('4 MB')
     expect(w.find('[data-testid="storage-disk-free"]').text()).toBe('10 GB')
 
-    expect(w.find('[data-testid="backup-last-age"]').text()).toBe('unknown')
-    expect(w.find('[data-testid="backup-last-restore"]').text()).toBe('unknown')
-    expect(w.find('[data-testid="backup-hint"]').text()).toContain('operations guide')
+    expect(w.find('[data-testid="backup-last-age"]').text()).toBe('7 hr. ago · 1.5 GB')
+    expect(w.find('[data-testid="backup-last-restore"]').text()).toBe('Passed, 7 hr. ago')
+    expect(w.find('[data-testid="backup-hint"]').text()).toBe('Backups run on the host; see the operations guide.')
 
     expect(w.find('[data-testid="activity-active-sessions"]').text()).toBe('3')
     expect(w.find('[data-testid="activity-connected-ws"]').text()).toBe('5')

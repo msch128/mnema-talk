@@ -191,8 +191,9 @@ simultaneous viewers solves that where a faster CPU does not.
 
 Three tools help you check your own server against these rows. **Admin >
 Status** has a capacity panel with the live CPU, memory and outgoing traffic of
-the server and an estimate of how many more members with a screen share it can
-take. **Test my connection** (Settings > Audio, and the Status tab) reports
+the server and, per kind of Talk (listening, everyone talking, a screen share,
+a video call, text only), about how many people fit and whether CPU, memory or
+upload runs out first. **Test my connection** (Settings > Audio, and the Status tab) reports
 roughly the server's upload and what it means in members with a screen share,
 when you run it from outside the server's network. And
 `VOICE_UPLOAD_LIMIT_MBIT` (off by default, see [operations](operations.md))

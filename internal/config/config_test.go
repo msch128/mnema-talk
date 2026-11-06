@@ -638,6 +638,7 @@ func TestUploadRelayAndMetricsValidation(t *testing.T) {
 		"pprof on all addresses": {"PPROF_ADDR": "0.0.0.0:6060"},
 		"pprof without a host":   {"PPROF_ADDR": ":6060"},
 		"pprof public host":      {"PPROF_ADDR": "192.0.2.1:6060"},
+		"relative backup status": {"BACKUP_STATUS_FILE": "backup-status/status.json"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			env := base()
@@ -657,8 +658,9 @@ func TestUploadRelayAndMetricsValidation(t *testing.T) {
 	env["METRICS_TOKEN"] = strings.Repeat("m", 24)
 	env["PPROF_ADDR"] = "127.0.0.1:6060"
 	env["VOICE_UPLOAD_LIMIT_MBIT"] = "200"
+	env["BACKUP_STATUS_FILE"] = "/backup-status/status.json"
 	cfg, err := FromEnv(lookup(env))
-	if err != nil || cfg.AppEnv != "development" || cfg.MaxUploadMB != 2048 || cfg.PprofAddr != "127.0.0.1:6060" || cfg.VoiceUploadLimitMbit != 200 {
+	if err != nil || cfg.AppEnv != "development" || cfg.MaxUploadMB != 2048 || cfg.PprofAddr != "127.0.0.1:6060" || cfg.VoiceUploadLimitMbit != 200 || cfg.BackupStatusFile != "/backup-status/status.json" {
 		t.Fatalf("valid boundary settings: cfg=%v err=%v", cfg, err)
 	}
 }

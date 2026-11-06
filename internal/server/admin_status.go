@@ -46,14 +46,6 @@ type StorageStatus struct {
 	UsedBytes  *int64 `json:"used_bytes,omitempty" binding:"optional"`
 }
 
-// BackupStatus reports backup age and verification status. The app runs
-// isolated in containers, so backups are executed on the host.
-type BackupStatus struct {
-	LastBackupAge      string `json:"last_backup_age" example:"unknown"`
-	LastRestoreTestAge string `json:"last_restore_test_age" example:"unknown"`
-	Hint               string `json:"hint" example:"doc/operations.md#backups-and-restore"`
-}
-
 // ActivityStatus reports live sessions, websocket connections and Talks.
 type ActivityStatus struct {
 	ActiveSessions            int `json:"active_sessions"`
@@ -97,13 +89,9 @@ func (h *systemHandler) operatorSnapshot(ctx context.Context, origin string) Ope
 		AutoDeploy: h.selfUpdateStatus(upd),
 		Database:   h.operatorDBStatus(ctx),
 		Storage:    h.operatorStorageStatus(ctx),
-		Backup: BackupStatus{
-			LastBackupAge:      "unknown",
-			LastRestoreTestAge: "unknown",
-			Hint:               "doc/operations.md#backups-and-restore",
-		},
-		Activity: h.operatorActivityStatus(),
-		Warnings: h.operatorWarnings(),
+		Backup:     h.operatorBackupStatus(time.Now()),
+		Activity:   h.operatorActivityStatus(),
+		Warnings:   h.operatorWarnings(),
 	}
 
 	st.Setup = h.setupChecks(st, origin)

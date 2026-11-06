@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/netip"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -61,6 +62,9 @@ func (c *Config) validateOptionalSecrets() error {
 	}
 	if err := c.validateVoiceLimit(); err != nil {
 		return err
+	}
+	if c.BackupStatusFile != "" && !filepath.IsAbs(c.BackupStatusFile) {
+		return fmt.Errorf("BACKUP_STATUS_FILE must be an absolute path inside the container (or empty)")
 	}
 	return c.validateSMTP()
 }

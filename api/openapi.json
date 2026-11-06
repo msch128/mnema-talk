@@ -8007,18 +8007,69 @@
             "type": "string"
           },
           "last_backup_age": {
-            "example": "unknown",
+            "description": "LastBackupAge and LastRestoreTestAge are the ages as Go durations\n(\"7h29m\"), or the state when there is none. Deprecated: use the fields above.",
+            "example": "7h29m",
+            "type": "string"
+          },
+          "last_backup_age_seconds": {
+            "type": "integer"
+          },
+          "last_backup_at": {
+            "description": "LastBackupAt, LastBackupAgeSeconds and SizeBytes are set with state ok.",
             "type": "string"
           },
           "last_restore_test_age": {
-            "example": "unknown",
+            "example": "7h29m",
             "type": "string"
+          },
+          "restore_test": {
+            "description": "RestoreTest is passed, failed or skipped (RESTORE_TEST=0) with state\nok, and none otherwise; RestoreTestAgeSeconds is set for passed and failed.",
+            "enum": [
+              "passed",
+              "failed",
+              "skipped",
+              "none"
+            ],
+            "type": "string"
+          },
+          "restore_test_age_seconds": {
+            "type": "integer"
+          },
+          "size_bytes": {
+            "type": "integer"
+          },
+          "stale": {
+            "description": "Stale is true when the last backup is older than StaleAfterHours.",
+            "type": "boolean"
+          },
+          "stale_after_hours": {
+            "example": 36,
+            "type": "integer"
+          },
+          "state": {
+            "description": "State is ok (a backup was reported), not_configured (BACKUP_STATUS_FILE\nis empty), missing (no backup has written the file yet) or invalid.",
+            "enum": [
+              "ok",
+              "not_configured",
+              "missing",
+              "invalid"
+            ],
+            "type": "string"
+          },
+          "warn": {
+            "description": "Warn is true when the backup is stale or its restore test failed.",
+            "type": "boolean"
           }
         },
         "required": [
           "hint",
           "last_backup_age",
-          "last_restore_test_age"
+          "last_restore_test_age",
+          "restore_test",
+          "stale",
+          "stale_after_hours",
+          "state",
+          "warn"
         ],
         "type": "object"
       },
@@ -8108,6 +8159,13 @@
             "description": "Scale is this host's observed CPU cost divided by the model's.",
             "type": "number"
           },
+          "scenarios": {
+            "description": "Scenarios is how many people one Talk of each kind can hold on what is\nleft of the plan; empty unless Status is ok.",
+            "items": {
+              "$ref": "#/components/schemas/server.CapacityScenario"
+            },
+            "type": "array"
+          },
           "status": {
             "description": "Status is ok, busy (past the plan already) or memory (RSS near the limit).",
             "enum": [
@@ -8116,6 +8174,10 @@
               "memory"
             ],
             "type": "string"
+          },
+          "upload_limit_mbps": {
+            "description": "UploadLimitMbps is VOICE_UPLOAD_LIMIT_MBIT, the upload the scenarios\nmay use; 0 when it is not set and upload is only reported, not limited.",
+            "type": "integer"
           }
         },
         "required": [
@@ -8124,7 +8186,75 @@
           "per_member_millicores",
           "plan_cores",
           "scale",
-          "status"
+          "scenarios",
+          "status",
+          "upload_limit_mbps"
+        ],
+        "type": "object"
+      },
+      "server.CapacityScenario": {
+        "properties": {
+          "basis": {
+            "description": "Basis is measured when the shape was run in doc/benchmark.md, derived\nwhen it is built from the measured costs.",
+            "enum": [
+              "measured",
+              "derived"
+            ],
+            "type": "string"
+          },
+          "cpu_cores": {
+            "description": "CPUCores, UploadMbps and MemoryBytes are the cost at Members.",
+            "type": "number"
+          },
+          "extrapolated": {
+            "description": "Extrapolated is true when Members is beyond MeasuredUpTo.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "ID: chat (text only), broadcast (3 speakers, the rest listen),\nconversation (everyone talks), screen (one share and 3 speakers, the\nrest watch), video (everyone talks with the camera on).",
+            "enum": [
+              "chat",
+              "broadcast",
+              "conversation",
+              "screen",
+              "video"
+            ],
+            "type": "string"
+          },
+          "limit": {
+            "description": "Limit is the resource the next person would exceed.",
+            "enum": [
+              "cpu",
+              "memory",
+              "upload"
+            ],
+            "type": "string"
+          },
+          "measured_up_to": {
+            "description": "MeasuredUpTo is the largest clean run of the shape (0 for derived).",
+            "type": "integer"
+          },
+          "members": {
+            "description": "Members is how many people fit.",
+            "type": "integer"
+          },
+          "memory_bytes": {
+            "type": "integer"
+          },
+          "upload_mbps": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "basis",
+          "cpu_cores",
+          "extrapolated",
+          "id",
+          "limit",
+          "measured_up_to",
+          "members",
+          "memory_bytes",
+          "upload_mbps"
         ],
         "type": "object"
       },
@@ -18650,7 +18780,7 @@
     },
     "/api/admin/status/capacity": {
       "get": {
-        "description": "Live CPU, memory and media rates of the server over the last minute and an estimate of how many more members it can take, each watching a screen share. The estimate uses the cost model of doc/benchmark.md, scaled by this host's observed CPU per packet when there is enough traffic; it is an estimate for planning, not a promise. Owner or Administrator only (403 otherwise).",
+        "description": "Live CPU, memory and media rates of the server over the last minute, an estimate of how many more members it can take, each watching a screen share, and per usage scenario how many people one Talk can hold, with the resource that runs out first. The estimate uses the cost model of doc/benchmark.md, scaled by this host's observed CPU per packet when there is enough traffic; it is an estimate for planning, not a promise. Owner or Administrator only (403 otherwise).",
         "operationId": "getAdminCapacity",
         "responses": {
           "200": {
