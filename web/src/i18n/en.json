@@ -416,6 +416,7 @@
       "srvNoCommunityIconIsSet": "No community icon is set.",
       "srvNoFieldsToUpdate": "There is nothing to update.",
       "srvNoUpdateAvailable": "No update is available.",
+      "srvNonceUsedElsewhere": "This message was already sent in another conversation.",
       "srvNotAPublicImageAddress": "That isn’t the address of a public image.",
       "srvNoteNotFound": "That note wasn’t found.",
       "srvNothingToChangeSendExpires": "Nothing to change. Send “expires_at” or “max_uses”.",
@@ -5083,7 +5084,7 @@
   },
   "outbox": {
     "waiting": "Waiting to send · goes out when you’re back online",
-    "sending": "Sending …",
+    "sending": "Sending…",
     "failed": "Not sent: {reason}",
     "edit": "Edit",
     "cancel": "Discard",
