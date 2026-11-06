@@ -406,7 +406,7 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     wrapper = mount(App, { shallow: true })
     await flushPromises()
     expect(wrapper.findComponent({ name: 'InviteLanding' }).exists()).toBe(false)
-    expect(wrapper.text()).toContain('neuer Versuch')
+    expect(wrapper.findComponent({ name: 'ServerUnreachable' }).exists()).toBe(true)
     for (const delay of [1000, 2000, 4000, 8000, 15000, 15000]) await vi.advanceTimersByTimeAsync(delay)
     await flushPromises()
     expect(auth.checkAuth).toHaveBeenCalledTimes(7)

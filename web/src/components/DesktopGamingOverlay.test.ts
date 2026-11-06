@@ -13,7 +13,7 @@ let wrapper: ReturnType<typeof mount<typeof DesktopGamingOverlay>> | undefined
 let snapshot: GamingSnapshot
 const chord = (key: number, alt = false) => ({ key, alt, control: false, shift: false })
 beforeEach(() => {
-  vi.useFakeTimers(); vi.clearAllMocks(); setActivePinia(createPinia())
+  setLocale('en'); vi.useFakeTimers(); vi.clearAllMocks(); setActivePinia(createPinia())
   snapshot = { active: true, overlay: false, settings: { enabled: true, sidepeek_opacity: 55, overlay: chord(77, true), mute: chord(78, true), deafen: chord(68, true), ptt: chord(32), games: ['Wow.exe'] }, voice: { clock: 0, scope: null, connected: true, account: null, channel: null, muted: false, deafened: false, sharing: false, ptt_mode: false, members: Array.from({ length: 14 }, (_, i) => ({ id: String(i), name: `Player ${i}`, speaking: i === 0, muted: i === 1, sharing: i === 2 })) } }
   ipc.invoke.mockImplementation((command: string) => Promise.resolve(command === 'desktop_gaming_snapshot' ? structuredClone(snapshot) : undefined))
   Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'sidepeek')
