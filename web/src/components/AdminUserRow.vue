@@ -8,7 +8,10 @@ import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
 import { t, locale } from '../i18n'
+import { useCompactLayout } from '../composables/useCompactLayout'
+import type { ContextMenuItem } from './menuTypes'
 import UserAvatar from './UserAvatar.vue'
+import RowActionsMenu from './RowActionsMenu.vue'
 import { roleColorCss } from '../lib/permissions'
 
 // One account of the admin user table: who they are, their state and the
@@ -19,6 +22,7 @@ const props = defineProps({
 })
 const emit = defineEmits<{ kick: []; 'clear-lockout': []; roles: []; 'toggle-disable': []; 'reset-login': []; 'reset-two-factor': []; 'revoke-sessions': [] }>()
 
+const { isCompact } = useCompactLayout()
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const permissions = usePermissionsStore()
@@ -68,6 +72,23 @@ function canGiveRoles() {
   const u = props.user
   return u.role !== 'admin' && permissions.can('manage_roles') && permissions.outranksMember(u.id) && u.id !== authStore.user?.id
 }
+// On a phone the icons have no tooltip: the same actions as one labelled menu.
+function menuItems(): ContextMenuItem[] {
+  const u = props.user
+  const items: ContextMenuItem[] = []
+  if (inVoice() && permissions.can('disconnect_members')) items.push({ id: 'kick', label: t('admin.kickFromVoice'), icon: PhoneOff, action: () => emit('kick') })
+  if (permissions.isOwner && u.login_locked) items.push({ id: 'clear-lockout', label: t('admin.clearLoginLockout'), icon: LockOpen, action: () => emit('clear-lockout') })
+  if (canGiveRoles()) items.push({ id: 'roles', label: t('memberRoles.edit'), icon: Shield, action: () => emit('roles') })
+  if (canModerate()) {
+    items.push({ id: 'disable', label: u.disabled ? t('admin.enableUser') : t('admin.disableUser'), icon: u.disabled ? UserCheck : UserX, danger: !u.disabled, action: () => emit('toggle-disable') })
+    if (permissions.isOwner) {
+      items.push({ id: 'reset-password', label: t('admin.resetPassword'), icon: KeyRound, action: () => emit('reset-login') })
+      items.push({ id: 'reset-two-factor', label: t('admin.resetTwoFactor'), icon: ShieldOff, action: () => emit('reset-two-factor') })
+    }
+    items.push({ id: 'revoke-sessions', label: t('admin.revokeSessions'), icon: LogOut, action: () => emit('revoke-sessions') })
+  }
+  return items
+}
 function roles() {
   return (props.user.role_ids ?? []).map(id => permissions.roleById(id)).filter(role => role !== undefined)
 }
@@ -114,7 +135,7 @@ function roles() {
 
     <!-- Last Seen -->
     <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1 text-xs text-mnema-muted whitespace-nowrap">
-      <span data-testid="user-lastseen">{{ formatDateTime(user.last_seen_at) }}</span>
+      <span class="md:hidden">{{ $t('admin.lastSeen') }}: </span><span data-testid="user-lastseen">{{ formatDateTime(user.last_seen_at) }}</span>
     </td>
 
     <!-- Status -->
@@ -165,6 +186,8 @@ function roles() {
     <!-- Actions -->
     <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1 text-right whitespace-nowrap">
       <div class="flex flex-wrap items-center justify-end gap-1 md:flex-nowrap max-md:justify-start">
+        <RowActionsMenu v-if="isCompact" :items="menuItems()" :label="$t('admin.rowActionsNamed', { name: user.display_name || user.username })" />
+        <template v-else>
         <!-- Kick from voice -->
         <button
           v-if="inVoice() && permissions.can('disconnect_members')"
@@ -259,6 +282,7 @@ function roles() {
           >
             <LogOut class="w-4 h-4" />
           </button>
+        </template>
         </template>
       </div>
     </td>

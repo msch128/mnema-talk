@@ -1,15 +1,32 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { Category } from '../types/domain'
+import { useCompactLayout } from '../composables/useCompactLayout'
+import type { ContextMenuItem } from './menuTypes'
+import RowActionsMenu from './RowActionsMenu.vue'
+import { t } from '../i18n'
 import { Trash2, Edit2, ArrowUp, ArrowDown, GripVertical, Plus } from '@lucide/vue'
 
 // The header of a category in the layout editor: name, count and its arrows, rename and delete.
-defineProps({
+const props = defineProps({
   category: { type: Object as PropType<Category>, required: true },
   index: { type: Number, required: true },
   count: { type: Number, required: true }
 })
 const emit = defineEmits<{ move: [direction: number]; rename: []; delete: []; 'add-channel': [] }>()
+
+const { isCompact } = useCompactLayout()
+// On a phone the icons have no tooltip: the same actions as one labelled menu.
+function menuItems(): ContextMenuItem[] {
+  const name = props.category.name
+  return [
+    { id: 'add', label: t('admin.addChannelTo', { name }), icon: Plus, action: () => emit('add-channel') },
+    { id: 'up', label: t('admin.moveUpNamed', { name }), icon: ArrowUp, disabled: props.index === 0, action: () => emit('move', -1) },
+    { id: 'down', label: t('admin.moveDownNamed', { name }), icon: ArrowDown, disabled: props.index === props.count - 1, action: () => emit('move', 1) },
+    { id: 'rename', label: t('admin.renameCategoryNamed', { name }), icon: Edit2, action: () => emit('rename') },
+    { id: 'delete', label: t('admin.deleteCategoryNamed', { name }), icon: Trash2, danger: true, action: () => emit('delete') }
+  ]
+}
 </script>
 
 <template>
@@ -20,7 +37,8 @@ const emit = defineEmits<{ move: [direction: number]; rename: []; delete: []; 'a
       <span class="text-xs text-mnema-tertiary font-mono">({{ category.channels?.length || 0 }})</span>
     </div>
 
-    <div class="flex items-center gap-1 shrink-0">
+    <RowActionsMenu v-if="isCompact" :items="menuItems()" :label="$t('admin.rowActionsNamed', { name: category.name })" />
+    <div v-else class="flex items-center gap-1 shrink-0">
       <button
         data-testid="add-channel-category"
         type="button"

@@ -8,6 +8,9 @@ import { emojiImage } from '../lib/customEmoji'
 import { useEmojiStore, prefersReducedMotion } from '../stores/emoji'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
+import { useCompactLayout } from '../composables/useCompactLayout'
+import type { ContextMenuItem } from './menuTypes'
+import RowActionsMenu from './RowActionsMenu.vue'
 import EmptyState from './EmptyState.vue'
 import StatePanel from './StatePanel.vue'
 
@@ -71,6 +74,15 @@ async function saveRename(id: string) {
   } catch (e) {
     showError(e)
   }
+}
+
+const { isCompact } = useCompactLayout()
+// On a phone the icons have no tooltip: rename and delete as one labelled menu.
+function emojiMenu(e: { id: string; name: string }): ContextMenuItem[] {
+  return [
+    { id: 'rename', label: t('emoji.admin.renameNamed', { name: e.name }), icon: Pencil, action: () => startRename(e.id, e.name) },
+    { id: 'delete', label: t('emoji.admin.deleteNamed', { name: e.name }), icon: Trash2, danger: true, action: () => { void remove(e.id, e.name) } }
+  ]
 }
 
 async function remove(id: string, emojiName: string) {
@@ -171,7 +183,8 @@ onMounted(() => { void store.load() })
           <span v-else class="font-mono text-mnema-text truncate">:{{ e.name }}:</span>
           <span v-if="e.animated" class="text-xs text-mnema-tertiary">{{ $t('emoji.admin.animated') }}</span>
         </div>
-        <div v-if="editing !== e.id" class="flex items-center gap-3 shrink-0">
+        <RowActionsMenu v-if="editing !== e.id && isCompact" :items="emojiMenu(e)" :label="$t('admin.rowActionsNamed', { name: `:${e.name}:` })" />
+        <div v-else-if="editing !== e.id" class="flex items-center gap-3 shrink-0">
           <button type="button" class="text-mnema-tertiary hover:text-mnema-accent transition" :title="$t('emoji.admin.renameNamed', { name: e.name })" :aria-label="$t('emoji.admin.renameNamed', { name: e.name })" @click="startRename(e.id, e.name)">
             <Pencil class="w-4 h-4" />
           </button>
