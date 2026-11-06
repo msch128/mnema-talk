@@ -153,9 +153,7 @@ export const useEventsStore = defineStore('communityEvents', () => {
     return item
   }
 
-  const dropEvent = (id: string) => {
-    events.value = events.value.filter(e => e.id !== id); past.remove(id)
-  }
+  const dropEvent = (id: string) => { events.value = events.value.filter(e => e.id !== id); past.remove(id) }
   const roster = eventRosterActions(act, dropEvent)
   return {
     events, loading, error, pastError, enabled, upcomingCount, upcomingEvents, pastEvents, pastLoading: past.loading, pastLoaded: past.loaded, pastHasMore: past.hasMore, load, loadPast: past.load,
