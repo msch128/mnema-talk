@@ -1,0 +1,43 @@
+web/src/components/MessageAttachments.test.ts
+  s_06fcde5dbef956::t_d0b161ae3eb027 29-33
+web/src/components/MessageAttachments.vue
+  s_06fcde5dbef956::t_7ebc5f013ffd6b 142
+web/src/components/ScreenShareModal.test.ts
+  s_06fcde5dbef956::t_5c440b2db71573 146,152
+web/src/components/ScreenShareModal.vue
+  s_06fcde5dbef956::t_db670fdebbb0f3 17,75
+web/src/components/SearchInput.test.ts
+  s_06fcde5dbef956::t_a495226928b847 52-58
+web/src/components/SearchInput.vue
+  s_06fcde5dbef956::t_0a252db52de6de 172
+web/src/components/SidebarCategoryHeader.vue
+  s_06fcde5dbef956::t_d557175a4d67a8 81
+web/src/components/SidebarEventsEntry.test.ts
+  s_06fcde5dbef956::t_a2fe550500ac24 50-51
+web/src/components/SidebarNotifications.test.ts
+  s_06fcde5dbef956::t_37d2a73ab3287c 30-32
+web/src/components/StageControls.test.ts
+  s_06fcde5dbef956::t_ddd7c6920ef4fc 59,61-65
+web/src/components/TalkControlBar.vue
+  s_06fcde5dbef956::t_e847a1de6cef44 172,175
+web/src/components/WelcomeProfileStep.test.ts
+  s_06fcde5dbef956::t_074d892f35650e 48-65
+web/src/components/WelcomeProfileStep.vue
+  s_06fcde5dbef956::t_71d2e7dc31328a 40-42,45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "76e4dcf7a98cc41df423ca2db863c572bde97db3",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
