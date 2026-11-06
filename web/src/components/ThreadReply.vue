@@ -144,7 +144,7 @@ const { pickerId, editingId, editText } = props.actions
 
         <MarkdownContent v-else-if="reply.content" :content="reply.content" :mention-roles="reply.mention_roles ?? []" class="mt-0.5" />
         <p v-else-if="isRemovedMessage(reply)" data-testid="message-removed" class="mt-0.5 text-sm italic text-mnema-tertiary">{{ $t('chat.messageRemoved') }}</p>
-        <MessageEmbeds v-if="editingId !== reply.id" :embeds="reply.embeds ?? []" />
+        <MessageEmbeds v-if="editingId !== reply.id" :embeds="reply.embeds ?? []" :author="reply.display_name || reply.username" :author-id="reply.user_id" :channel-id="reply.channel_id" />
 
         <!-- Reply Attachments -->
         <MessageAttachments :attachments="reply.attachments" variant="reply" :message="reply" />
