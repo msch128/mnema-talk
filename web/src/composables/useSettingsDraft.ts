@@ -7,6 +7,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { caughtErrorMessage } from '../lib/api'
 import { confirmDiscard, saveKeys, useLeaveGuard } from './draftGuard'
 import { t } from '../i18n'
+import { formatShortcut } from '../lib/shortcuts'
 
 /** Per-field normalisers: values that mean the same thing compare as equal. A normaliser also sees the whole state, for fields that only matter next to another one. */
 export type Normalisers<T> = { [K in keyof T]?: (value: T[K], state: T) => unknown }
@@ -57,9 +58,8 @@ export interface SettingsDraftOptions<T extends object> {
   blocked?: () => boolean
 }
 
-const isMac = typeof navigator !== 'undefined' && /mac|iphone|ipad/i.test(navigator.platform)
-/** The save shortcut as shown to people. */
-export const saveShortcutLabel = isMac ? '⌘S' : 'Ctrl+S'
+/** The save shortcut as shown to people (⌘S on a Mac, Ctrl+S / Strg+S elsewhere). */
+export const saveShortcutLabel = (): string => formatShortcut(['mod', 'S'])
 
 const copy = <V>(value: V): V => (Array.isArray(value) ? ([...value] as V) : value)
 

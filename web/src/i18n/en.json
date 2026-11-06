@@ -857,7 +857,7 @@
   "tips": {
     "label": "Tip",
     "gotIt": "Got it",
-    "search": "Press Ctrl or Cmd + K to search every channel you can see.",
+    "search": "Press {keys} to search every channel you can see.",
     "mention": "Type @ to mention someone and / for slash commands.",
     "talk": "Click a Talk to join it right away. Nobody gets a call; it is a hangout spot."
   },
@@ -4911,8 +4911,14 @@
   },
   "shortcuts": {
     "title": "Keyboard shortcuts",
-    "subtitle": "Everything you can do without the mouse. Open this list with ? or Ctrl/Cmd + /.",
+    "subtitle": "Everything you can do without the mouse. Open this list with ? or {keys}.",
     "or": "or",
+    "key": {
+      "mod": "Ctrl",
+      "Alt": "Alt",
+      "Shift": "Shift",
+      "Ctrl": "Ctrl"
+    },
     "notSet": "not set",
     "group": {
       "general": "Everywhere",

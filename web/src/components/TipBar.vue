@@ -3,6 +3,7 @@
 import { onBeforeUnmount, onMounted, watch } from 'vue'
 import { Lightbulb, X } from '@lucide/vue'
 import { useOnboardingTips } from '../composables/useOnboardingTips'
+import { formatShortcut } from '../lib/shortcuts'
 import { searchOpen } from '../lib/globalSearch'
 import { useVoiceStore } from '../stores/voice'
 import type { TipId } from '../lib/onboardingTips'
@@ -37,7 +38,7 @@ onBeforeUnmount(() => document.removeEventListener('input', onInput))
     data-testid="tip-bar"
   >
     <Lightbulb class="w-4 h-4 text-mnema-accent shrink-0" />
-    <p class="min-w-0 flex-1 text-mnema-muted">{{ $t(`tips.${activeTip}`) }}</p>
+    <p class="min-w-0 flex-1 text-mnema-muted">{{ $t(`tips.${activeTip}`, { keys: formatShortcut(['mod', 'K']) }) }}</p>
     <button
       type="button"
       class="btn btn-ghost btn-sm shrink-0"

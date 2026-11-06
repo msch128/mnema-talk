@@ -857,7 +857,7 @@
   "tips": {
     "label": "Tipp",
     "gotIt": "Verstanden",
-    "search": "Mit Strg oder Cmd + K durchsuchst du alle Kanäle, die du sehen kannst.",
+    "search": "Mit {keys} durchsuchst du alle Kanäle, die du sehen kannst.",
     "mention": "Mit @ erwähnst du jemanden, mit / startest du Slash-Befehle.",
     "talk": "Ein Klick auf einen Talk tritt sofort bei. Niemand wird angerufen, es ist ein offener Raum zum Reden."
   },
@@ -4911,8 +4911,14 @@
   },
   "shortcuts": {
     "title": "Tastenkürzel",
-    "subtitle": "Alles, was du ohne Maus tun kannst. Diese Liste öffnest du mit ? oder Strg/Cmd + /.",
+    "subtitle": "Alles, was du ohne Maus tun kannst. Diese Liste öffnest du mit ? oder {keys}.",
     "or": "oder",
+    "key": {
+      "mod": "Strg",
+      "Alt": "Alt",
+      "Shift": "Umschalt",
+      "Ctrl": "Strg"
+    },
     "notSet": "nicht gewählt",
     "group": {
       "general": "Überall",

@@ -37,9 +37,17 @@ function typeInto(attrs: Record<string, string>, data: string) {
 describe('TipBar', () => {
   it('shows the first tip and dismisses it on request', async () => {
     const w = mountBar()
-    expect(w.get('[data-testid="tip-bar"]').text()).toContain('Ctrl or Cmd + K')
+    expect(w.get('[data-testid="tip-bar"]').text()).toContain('Ctrl+K')
     await w.get('[data-testid="tip-dismiss"]').trigger('click')
     expect(dismissed).toEqual(['search'])
+  })
+
+  it('names the search key the way the keyboard is labelled on a Mac', () => {
+    vi.stubGlobal('navigator', { platform: 'MacIntel', userAgent: '' })
+    const w = mountBar()
+    expect(w.get('[data-testid="tip-bar"]').text()).toContain('⌘K')
+    expect(w.get('[data-testid="tip-bar"]').text()).not.toContain('Ctrl')
+    vi.unstubAllGlobals()
   })
 
   it('has no tip before the welcome flow is done', () => {

@@ -1,6 +1,7 @@
 // The keyboard shortcuts the app really has, for the cheat sheet. Add a row
 // here when a shortcut is added (and its label under "shortcuts" in the
 // language files); a key that is not handled somewhere is not listed.
+import { t } from '../i18n'
 
 /** A key as shown: "mod" is Ctrl, or ⌘ on a Mac; anything else is the key itself. */
 export type KeyName = string
@@ -66,9 +67,18 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
   }
 ]
 
-/** How a key is written on this machine. */
-export function keyLabel(key: KeyName, mac: boolean): string {
-  return key === 'mod' ? (mac ? '⌘' : 'Ctrl') : key
+const MAC_SYMBOLS: Readonly<Record<string, string>> = { mod: '⌘', Alt: '⌥', Shift: '⇧', Ctrl: '⌃' }
+const NAMED_KEYS = new Set(['mod', 'Alt', 'Shift', 'Ctrl'])
+
+/** How a key is written on this machine: ⌘ ⌥ ⇧ on a Mac, the localised word (Ctrl/Strg) elsewhere. */
+export function keyLabel(key: KeyName, mac: boolean, translate: typeof t = t): string {
+  if (mac && key in MAC_SYMBOLS) return MAC_SYMBOLS[key] as string
+  return NAMED_KEYS.has(key) ? translate(`shortcuts.key.${key}`) : key
+}
+
+/** A whole combo as one phrase: "⌘K" on a Mac, "Ctrl+K" / "Strg+K" elsewhere. */
+export function formatShortcut(keys: KeyCombo, mac: boolean = isMac(), translate: typeof t = t): string {
+  return keys.map(k => keyLabel(k, mac, translate)).join(mac ? '' : '+')
 }
 
 export function isMac(): boolean {

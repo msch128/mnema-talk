@@ -43,7 +43,7 @@ test('the shortcut list opens with Ctrl+/ and ?, from the account menu, and not 
     await page.keyboard.press('Control+/')
     const dialog = page.getByTestId('shortcuts-dialog')
     await expect(dialog).toBeVisible()
-    await expect(dialog.locator('[data-shortcut="search"] kbd')).toHaveText([/^(Ctrl|⌘)$/, 'K'])
+    await expect(dialog.locator('[data-shortcut="search"] kbd')).toHaveText([/^(Ctrl|Strg|⌘)$/, 'K'])
     await expect(dialog.locator('[data-shortcut="reply"] kbd')).toHaveText(['R'])
     await page.keyboard.press('Control+/')
     await expect(dialog).toBeHidden()
