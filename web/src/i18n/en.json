@@ -944,7 +944,6 @@
     "requireTagNoTags": "Add a tag first. Until then, nothing is required.",
     "guidelinesTitle": "Guidelines",
     "guidelinesPlaceholder": "What belongs here, and what does not. Shown above the new-post form.",
-    "settingsFailed": "Couldn’t save the rules. Try again.",
     "tagsTitle": "Tags",
     "tagsIntro": "Tags sort the posts of this forum. Members choose up to 5 per post and can filter by them.",
     "deleteTagTitle": "Delete this tag?",
@@ -990,7 +989,12 @@
       "other": "{count} new replies"
     },
     "jumpToUnread": "Jump to first unread",
-    "removeFile": "Remove file"
+    "removeFile": "Remove file",
+    "settingsSaved": "Forum rules saved",
+    "tagAdded": "Tag added",
+    "tagUpdated": "Tag saved",
+    "tagDeleted": "Tag deleted",
+    "tagsReordered": "Tag order saved"
   },
   "members": {
     "title": "Members",

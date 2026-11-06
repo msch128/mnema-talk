@@ -944,7 +944,6 @@
     "requireTagNoTags": "Lege zuerst einen Tag an. Bis dahin ist nichts erforderlich.",
     "guidelinesTitle": "Richtlinien",
     "guidelinesPlaceholder": "Was hierher gehört und was nicht. Wird über dem Formular für neue Beiträge angezeigt.",
-    "settingsFailed": "Die Regeln konnten nicht gespeichert werden. Versuche es noch einmal.",
     "tagsTitle": "Tags",
     "tagsIntro": "Tags ordnen die Beiträge dieses Forums. Mitglieder wählen bis zu 5 pro Beitrag und können danach filtern.",
     "deleteTagTitle": "Diesen Tag löschen?",
@@ -990,7 +989,12 @@
       "other": "{count} neue Antworten"
     },
     "jumpToUnread": "Zur ersten ungelesenen",
-    "removeFile": "Datei entfernen"
+    "removeFile": "Datei entfernen",
+    "settingsSaved": "Forumregeln gespeichert",
+    "tagAdded": "Tag hinzugefügt",
+    "tagUpdated": "Tag gespeichert",
+    "tagDeleted": "Tag gelöscht",
+    "tagsReordered": "Reihenfolge der Tags gespeichert"
   },
   "members": {
     "title": "Mitglieder",

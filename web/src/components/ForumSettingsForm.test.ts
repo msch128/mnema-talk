@@ -5,6 +5,7 @@ import ForumSettingsForm from './ForumSettingsForm.vue'
 import { setLocale } from '../i18n'
 import * as forumApi from '../lib/forumApi'
 import { useToastStore } from '../stores/toast'
+import { pendingConfirm } from '../lib/confirm'
 
 vi.mock('../lib/forumApi', () => ({ updateForumSettings: vi.fn() }))
 
@@ -44,14 +45,41 @@ describe('ForumSettingsForm', () => {
     expect((w.get('#forum-guidelines').element as HTMLTextAreaElement).value).toBe('Draft rules')
   })
 
-  it('reports a failed save as a toast and keeps the form dirty', async () => {
+  it('reports a failed save inline and keeps the form dirty', async () => {
     vi.mocked(forumApi.updateForumSettings).mockRejectedValue(new Error('refused'))
     const w = mountForm()
     await w.get('[data-testid="forum-require-tag"]').trigger('click')
     await w.get('[data-testid="forum-settings-save"]').trigger('click')
     await flushPromises()
-    expect(useToastStore().toasts.map(x => x.text).join()).toContain('refused')
+    expect(w.get('[data-testid="unsaved-error"]').text()).toContain('refused')
     expect(w.emitted('saved')).toBeUndefined()
     expect(w.get('[data-testid="forum-settings-save"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('saves trimmed guidelines, confirms with a toast and is clean again', async () => {
+    vi.mocked(forumApi.updateForumSettings).mockResolvedValue({ require_tag: false, guidelines: 'Rules' })
+    const w = mountForm()
+    await w.get('#forum-guidelines').setValue('  Rules  ')
+    await w.get('[data-testid="forum-settings-save"]').trigger('click')
+    await flushPromises()
+    expect(forumApi.updateForumSettings).toHaveBeenCalledWith('c1', { require_tag: false, guidelines: 'Rules' })
+    expect(useToastStore().toasts.map(x => x.text)).toContain('Forum rules saved')
+    expect(w.emitted('saved')).toHaveLength(1)
+    expect(w.get('[data-testid="forum-settings-save"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('does not count surrounding whitespace as a change', async () => {
+    const w = mountForm({ require_tag: false, guidelines: 'Rules' })
+    await w.get('#forum-guidelines').setValue('  Rules ')
+    expect(w.get('[data-testid="forum-settings-save"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('shows the unsaved bar and Reset while dirty', async () => {
+    const w = mountForm()
+    await w.get('#forum-guidelines').setValue('x')
+    expect(w.text()).toContain('You have unsaved changes')
+    await w.get('[data-testid="unsaved-reset"]').trigger('click')
+    expect((w.get('#forum-guidelines').element as HTMLTextAreaElement).value).toBe('')
+    expect(pendingConfirm.value).toBeNull()
   })
 })
