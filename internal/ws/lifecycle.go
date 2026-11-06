@@ -48,7 +48,7 @@ const (
 // @Description - `emoji_changed`: no payload; refetch GET /api/emoji (a custom emoji was added, renamed or deleted).
 // @Description - `member_joined`: public User of a newly registered member.
 // @Description - `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.
-// @Description - `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.
+// @Description - `user_stats`: `{user_id, voice_seconds}` after a voice stay ends; voice_seconds is the time in Talks @everyone can see.
 // @Description - `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline; for a bot that set an activity also `activity: {type, name}` (Discord activity type).
 // @Description - `voice_state_update`: `{action: "join", channel_id, user, started_at}` or `{action: "leave", channel_id, user_id}`.
 // @Description - `typing`: `{channel_id, user_id}` (to everyone except the typist).
