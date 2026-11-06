@@ -5,6 +5,7 @@ import PollDialog from './PollDialog.vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { setLocale, i18nPlugin } from '../i18n'
+import { pendingConfirm } from '../lib/confirm'
 import { channelFixture, fixtureId, messageFixture } from '../test-fixtures.fixture'
 
 const CH = fixtureId(2)
@@ -36,6 +37,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  pendingConfirm.value = null
   vi.unstubAllGlobals()
   document.body.innerHTML = ''
 })
@@ -131,5 +133,30 @@ describe('PollDialog', () => {
     await w.findAll('button').find(b => b.text() === 'Cancel')!.trigger('click')
     expect(w.emitted('close')).toHaveLength(1)
     expect(requests).toEqual([])
+  })
+
+  it('asks before Cancel or Escape drops a typed question, and not for an empty dialog', async () => {
+    const w = mountDialog()
+    const cancel = () => w.findAll('button').find(b => b.text() === 'Cancel')!
+    await cancel().trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value).toBeNull()
+    expect(w.emitted('close')).toHaveLength(1)
+
+    await w.get('#poll-question').setValue('Lunch?')
+    await cancel().trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(w.emitted('close')).toHaveLength(1)
+
+    await answers(w)[0]!.setValue('Pizza')
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(w.emitted('close')).toHaveLength(2)
   })
 })
