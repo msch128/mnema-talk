@@ -5584,6 +5584,22 @@
         ],
         "type": "object"
       },
+      "discordimport.Hint": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {},
+            "type": "object"
+          }
+        },
+        "required": [
+          "code",
+          "params"
+        ],
+        "type": "object"
+      },
       "discordimport.Plan": {
         "properties": {
           "administrator_dropped": {
@@ -5653,6 +5669,13 @@
             },
             "type": "array"
           },
+          "skipped_hints": {
+            "description": "SkippedHints are the same entries as structured hints for translation.",
+            "items": {
+              "$ref": "#/components/schemas/discordimport.Hint"
+            },
+            "type": "array"
+          },
           "source_name": {
             "type": "string"
           },
@@ -5674,6 +5697,7 @@
           "roles",
           "server_name",
           "skipped",
+          "skipped_hints",
           "source_name",
           "template_name"
         ],
@@ -5714,6 +5738,13 @@
           "name": {
             "maxLength": 64,
             "type": "string"
+          },
+          "note_hints": {
+            "description": "NoteHints are the notes as structured hints (same order) for translation.",
+            "items": {
+              "$ref": "#/components/schemas/discordimport.Hint"
+            },
+            "type": "array"
           },
           "notes": {
             "items": {
@@ -5756,6 +5787,7 @@
           "category",
           "category_source_id",
           "name",
+          "note_hints",
           "notes",
           "overwrites",
           "private",
