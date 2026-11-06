@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.14](https://github.com/msch128/mnema-talk/compare/v2.9.13...v2.9.14) (2026-11-06)
+
+
+### Bug Fixes
+
+* scheduled-send timeouts, reconnect events, chained limiter refunds ([#738](https://github.com/msch128/mnema-talk/issues/738)) ([57aca59](https://github.com/msch128/mnema-talk/commit/57aca5991fb6691e4547d9bf26d32c8ffa55f512))
+
 ## [2.9.13](https://github.com/msch128/mnema-talk/compare/v2.9.12...v2.9.13) (2026-11-06)
 
 
