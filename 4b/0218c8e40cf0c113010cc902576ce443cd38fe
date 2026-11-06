@@ -1,0 +1,59 @@
+web/src/components/AdminAccessSettings.vue
+  s_06fcde5dbef956::t_9945427ba05b84 69-70
+web/src/components/AdminAuditTab.test.ts
+  s_06fcde5dbef956::t_fddad6f676a09d 155-156
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_f2f3c787ec219a 68-69
+web/src/components/AdminBansTab.test.ts
+  s_06fcde5dbef956::t_78ded16f8755dd 58
+web/src/components/AdminBansTab.vue
+  s_06fcde5dbef956::t_e2f1b5e2fc472d 29-30
+web/src/components/AdminBotsTab.test.ts
+  s_06fcde5dbef956::t_9ef333d7ec40bb 129,131-132
+web/src/components/AdminBotsTab.vue
+  s_06fcde5dbef956::t_69956fd5d2ac4b 44-45
+web/src/components/AdminDashboard.test.ts
+  s_06fcde5dbef956::t_57d966091e8ddc 602,606-607
+web/src/components/AdminInvitesTab.test.ts
+  s_06fcde5dbef956::t_f8d5c467faa704 73
+web/src/components/AdminInvitesTab.vue
+  s_06fcde5dbef956::t_6df14281c9ef96 48-49
+web/src/components/AdminMediaTab.vue
+  s_06fcde5dbef956::t_1e57afa411b79d 42
+web/src/components/AdminReportsTab.vue
+  s_06fcde5dbef956::t_c34eed72db3731 50-51
+web/src/components/AdminUsersTab.vue
+  s_06fcde5dbef956::t_1515434b6bbc93 42-43
+web/src/components/ChannelPermissionsDialog.test.ts
+  s_06fcde5dbef956::t_e15321c286657d 162-163
+web/src/components/ChannelPermissionsDialog.vue
+  s_06fcde5dbef956::t_11bebb36e3bc58 11
+web/src/components/ChatArea.test.ts
+  s_06fcde5dbef956::t_a95b5a07b6e610 292,327
+web/src/components/ChatAreaBoundaries.test.ts
+  s_06fcde5dbef956::t_eb6e7902bebead 124
+web/src/components/OutgoingWebhooksPanel.vue
+  s_06fcde5dbef956::t_a8226363c0ac61 46-47
+web/src/components/ProfileModeration.test.ts
+  s_06fcde5dbef956::t_fca79dd5813f05 137
+web/src/components/ReportsAndPrivacy.test.ts
+  s_06fcde5dbef956::t_2414221dbcf6c8 147,149-150
+web/src/components/WebhookPanels.test.ts
+  s_06fcde5dbef956::t_770db07eddf03b 65,69,343,347
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4b0218c8e40cf0c113010cc902576ce443cd38fe",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
