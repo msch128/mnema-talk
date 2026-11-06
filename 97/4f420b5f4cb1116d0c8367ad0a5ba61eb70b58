@@ -1,0 +1,21 @@
+web/src/components/LoginModal.vue
+  s_06fcde5dbef956::t_f98e9ce0176f57 2,102-108,148
+web/src/components/LoginModal.vanity.test.ts
+  s_06fcde5dbef956::t_b0551b12c6788b 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "974f420b5f4cb1116d0c8367ad0a5ba61eb70b58",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
