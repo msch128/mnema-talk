@@ -152,7 +152,8 @@ func (h *Handler) unstageAttachment(w http.ResponseWriter, r *http.Request) erro
 	}
 	var key string
 	err = h.DB.QueryRow(r.Context(), `
-		DELETE FROM media WHERE id = $1 AND channel_id = $2 AND uploader_id = $3 AND staged RETURNING s3_key`,
+		UPDATE media SET is_deleted = TRUE, staged = FALSE
+		WHERE id = $1 AND channel_id = $2 AND uploader_id = $3 AND staged RETURNING s3_key`,
 		id, chID, user.ID).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return httpx.ErrNotFound("attachment not found")
@@ -166,12 +167,16 @@ func (h *Handler) unstageAttachment(w http.ResponseWriter, r *http.Request) erro
 }
 
 // SweepStaged deletes staged files older than olderThan that no message
-// claimed, and returns how many it removed. The rows go first: a file whose
-// row is gone can no longer be claimed, and a failed object delete leaves
-// an orphan the orphan scan reports.
+// claimed, and returns how many it removed. The rows are marked deleted
+// first: a file marked so can no longer be claimed, and a failed object delete
+// leaves an orphan the orphan scan reports. A marked row stays until it is
+// older than the upload budget's window, because the per-member daily budget
+// counts what was uploaded, not what is kept ("Deleted files still count"):
+// removing the row at once would let an upload and remove loop go around it.
 func SweepStaged(ctx context.Context, p *db.Pool, store Store, olderThan time.Duration) (int, error) {
 	rows, err := p.Query(ctx, `
-		DELETE FROM media WHERE staged AND created_at < NOW() - make_interval(secs => $1)
+		UPDATE media SET is_deleted = TRUE, staged = FALSE
+		WHERE staged AND created_at < NOW() - make_interval(secs => $1)
 		RETURNING s3_key`, olderThan.Seconds())
 	if err != nil {
 		return 0, fmt.Errorf("sweep staged attachments: %w", err)
@@ -180,6 +185,9 @@ func SweepStaged(ctx context.Context, p *db.Pool, store Store, olderThan time.Du
 	if err != nil {
 		return 0, fmt.Errorf("sweep staged attachments: %w", err)
 	}
+	if err := purgeSpentUnsent(ctx, p); err != nil {
+		return len(keys), err
+	}
 	if len(keys) == 0 {
 		return 0, nil
 	}
@@ -187,6 +195,17 @@ func SweepStaged(ctx context.Context, p *db.Pool, store Store, olderThan time.Du
 		return len(keys), fmt.Errorf("delete staged objects: %w", err)
 	}
 	return len(keys), nil
+}
+
+// purgeSpentUnsent drops the rows of removed unsent files once they no longer
+// count against the daily upload budget.
+func purgeSpentUnsent(ctx context.Context, p *db.Pool) error {
+	if _, err := p.Exec(ctx, `
+		DELETE FROM media WHERE is_deleted AND NOT staged AND message_id IS NULL AND created_at < $1`,
+		time.Now().Add(-quotaWindow)); err != nil {
+		return fmt.Errorf("purge removed unsent attachments: %w", err)
+	}
+	return nil
 }
 
 // StartStagedSweep removes unsent staged attachments after stagedTimeout.
