@@ -32,12 +32,12 @@ async function open(w: ReturnType<typeof mount>) {
   await nextTick()
 }
 
-function userRow() {
+function userRow(timeoutUntil?: string) {
   const permissions = usePermissionsStore()
   vi.spyOn(permissions, 'can').mockReturnValue(true)
   vi.spyOn(permissions, 'outranksMember').mockReturnValue(true)
   Object.defineProperty(permissions, 'isOwner', { value: true })
-  const user = { ...member(), id: 'u-2', username: 'mira', display_name: 'Mira', role: 'member' }
+  const user = { ...member(), id: 'u-2', username: 'mira', display_name: 'Mira', role: 'member', ...(timeoutUntil ? { timeout_until: timeoutUntil } : {}) }
   const w = mount(AdminUserRow, { props: { user }, attachTo: document.body, global: { stubs: { UserAvatar: true } } })
   return w
 }
@@ -56,6 +56,16 @@ describe('admin user row on a phone', () => {
     const revoke = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(el => /End sessions/.test(el.textContent ?? ''))
     revoke?.click()
     expect(w.emitted('revoke-sessions')).toHaveLength(1)
+  })
+
+  it('offers End timeout in the menu for a timed-out member, and only then', async () => {
+    const w = userRow(new Date(Date.now() + 3_600_000).toISOString())
+    await open(w)
+    expect(menuLabels()).toContain('End timeout')
+    document.body.innerHTML = ''
+    const plain = userRow()
+    await open(plain)
+    expect(menuLabels()).not.toContain('End timeout')
   })
 
   it('names the last-seen column inline, since the heading is gone', () => {

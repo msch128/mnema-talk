@@ -85,6 +85,7 @@ function menuItems(): ContextMenuItem[] {
   const items: ContextMenuItem[] = []
   if (inVoice() && permissions.can('disconnect_members')) items.push({ id: 'kick', label: t('admin.kickFromVoice'), icon: PhoneOff, action: () => emit('kick') })
   if (permissions.isOwner && u.login_locked) items.push({ id: 'clear-lockout', label: t('admin.clearLoginLockout'), icon: LockOpen, action: () => emit('clear-lockout') })
+  if (canLiftTimeout.value) items.push({ id: 'remove-timeout', label: t('moderation.removeTimeout'), icon: TimerOff, action: () => void liftTimeout(props.user) })
   if (canGiveRoles()) items.push({ id: 'roles', label: t('memberRoles.edit'), icon: Shield, action: () => emit('roles') })
   if (canModerate()) {
     items.push({ id: 'disable', label: u.disabled ? t('admin.enableUser') : t('admin.disableUser'), icon: u.disabled ? UserCheck : UserX, danger: !u.disabled, action: () => emit('toggle-disable') })
