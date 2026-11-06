@@ -27,8 +27,8 @@ const plan: DiscordimportPlan = {
   server_name: 'Home Base',
   categories: [{ source_id: '1', name: 'Info', overwrites: [] }],
   channels: [
-    { source_id: '2', category_source_id: '1', category: 'Info', name: 'rules', type: 'text', source_type: 'text', topic: '', slow_mode_seconds: 0, user_limit: 0, private: false, overwrites: [], notes: [] },
-    { source_id: '3', category_source_id: '', category: '', name: 'Lobby', type: 'voice', source_type: 'voice', topic: '', slow_mode_seconds: 0, user_limit: 5, private: true, overwrites: [], notes: ['a stage channel becomes a Talk'] }
+    { source_id: '2', category_source_id: '1', category: 'Info', name: 'rules', type: 'text', source_type: 'text', topic: '', slow_mode_seconds: 0, user_limit: 0, private: false, overwrites: [], notes: [], note_hints: [] },
+    { source_id: '3', category_source_id: '', category: '', name: 'Lobby', type: 'voice', source_type: 'voice', topic: '', slow_mode_seconds: 0, user_limit: 5, private: true, overwrites: [], notes: ['a stage channel becomes a Talk'], note_hints: [{ code: 'stage_to_talk', params: {} }] }
   ],
   roles: [
     { source_id: '12', name: 'Moderator', source_name: 'Moderator', color: 65280, hoist: false, mentionable: true, permissions: 8, permission_keys: ['kick_members', 'ban_members'], dropped: ['MOVE_MEMBERS'], administrator_dropped: false, suggested_role_id: null },
@@ -37,7 +37,7 @@ const plan: DiscordimportPlan = {
   mapped_roles: [],
   mappable_roles: [],
   everyone: { permission_keys: ['view_channel'], dropped: [], applied: false },
-  skipped: ['a thread (Discord channel type 11 has no counterpart)'],
+  skipped: ['a thread (Discord channel type 11 has no counterpart)'], skipped_hints: [{ code: 'channel_type_unsupported', params: { name: 'a thread', type: 11 } }],
   dropped_bits: ['ADMINISTRATOR', 'MOVE_MEMBERS'],
   administrator_dropped: true,
   counts: { categories: 1, channels: 2, roles: 2 },

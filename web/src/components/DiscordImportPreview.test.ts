@@ -65,7 +65,7 @@ describe('DiscordImportPreview', () => {
 
   const withHints = (): DiscordimportPlan => ({
     ...base,
-    channels: [{ source_id: '2', category_source_id: '', category: '', name: 'Bühne', type: 'voice', source_type: 'stage', topic: '', slow_mode_seconds: 0, user_limit: 0, private: false, overwrites: [], notes: ['a stage channel becomes a Talk', 'slow mode is capped at 21600 seconds'], note_hints: [{ code: 'stage_to_talk', params: {} }, { code: 'slow_mode_capped', params: { seconds: 21600 } }] }],
+    channels: [{ source_id: '2', category_source_id: '', category: '', name: 'Stage', type: 'voice', source_type: 'stage', topic: '', slow_mode_seconds: 0, user_limit: 0, private: false, overwrites: [], notes: ['a stage channel becomes a Talk', 'slow mode is capped at 21600 seconds'], note_hints: [{ code: 'stage_to_talk', params: {} }, { code: 'slow_mode_capped', params: { seconds: 21600 } }] }],
     skipped: ['a thread (Discord channel type 11 has no counterpart)'],
     skipped_hints: [{ code: 'channel_type_unsupported', params: { name: 'a thread', type: 11 } }]
   })
@@ -73,9 +73,9 @@ describe('DiscordImportPreview', () => {
   it('shows notes and skipped channels in the German admin\'s language', () => {
     setLocale('de')
     const w = mount(DiscordImportPreview, { props: { plan: withHints() } })
-    expect(w.text()).toContain('ein Stage-Kanal wird ein Talk')
-    expect(w.text()).toContain('der Langsam-Modus wird auf 21600 Sekunden begrenzt')
-    expect(w.get('[data-testid="import-skipped"]').text()).toContain('a thread (der Discord-Kanaltyp 11 hat hier keine Entsprechung)')
+    expect(w.text()).toContain(t('discordImport.note.stage_to_talk'))
+    expect(w.text()).toContain(t('discordImport.note.slow_mode_capped', { seconds: 21600 }))
+    expect(w.get('[data-testid="import-skipped"]').text()).toContain(t('discordImport.skipped.channel_type_unsupported', { name: 'a thread', type: 11 }))
     expect(w.text()).not.toContain('becomes a Talk')
   })
 

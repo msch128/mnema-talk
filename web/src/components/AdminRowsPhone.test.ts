@@ -37,7 +37,7 @@ function userRow(timeoutUntil?: string) {
   vi.spyOn(permissions, 'can').mockReturnValue(true)
   vi.spyOn(permissions, 'outranksMember').mockReturnValue(true)
   Object.defineProperty(permissions, 'isOwner', { value: true })
-  const user = { ...member(), id: 'u-2', username: 'mira', display_name: 'Mira', role: 'member', ...(timeoutUntil ? { timeout_until: timeoutUntil } : {}) }
+  const user = { ...member(), id: 'u-2', username: 'mira', display_name: 'Mira', role: 'user' as const, ...(timeoutUntil ? { timeout_until: timeoutUntil } : {}) }
   const w = mount(AdminUserRow, { props: { user }, attachTo: document.body, global: { stubs: { UserAvatar: true } } })
   return w
 }

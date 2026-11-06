@@ -31,7 +31,7 @@ function planFor(map: Record<string, string>): DiscordimportPlan {
     code: 'AbCdEf123456', template_name: 'Hub', source_name: 'Hub', server_name: '', categories: [], channels: [],
     roles: created, mapped_roles: all.filter(r => map[r.source_id]).map(r => ({ source_id: r.source_id, source_name: r.source_name, role_id: map[r.source_id] ?? '', role_name: r.source_id === '13' ? 'Admin' : 'Mods' })),
     mappable_roles: [{ id: ADMIN_ID, name: 'Admin' }, { id: MODS_ID, name: 'Mods' }],
-    everyone: { permission_keys: [], dropped: [], applied: false }, skipped: [], dropped_bits: [], administrator_dropped: false,
+    everyone: { permission_keys: [], dropped: [], applied: false }, skipped: [], skipped_hints: [], dropped_bits: [], administrator_dropped: false,
     counts: { categories: 0, channels: 0, roles: created.length }, hash: `h-${Object.keys(map).sort().join('+')}`
   }
 }

@@ -85,7 +85,7 @@ function sameNameHint(role: DiscordimportPlanRole): string {
               <span class="text-mnema-text">{{ ch.name }}</span>
               <Lock v-if="ch.private" class="h-3 w-3 shrink-0" :aria-label="$t('discordImport.private')" />
               <span v-if="ch.user_limit" class="text-xs text-mnema-tertiary">{{ $t('discordImport.limit', { n: ch.user_limit }) }}</span>
-              <span v-for="(note, i) in ch.notes" :key="note" class="text-xs text-mnema-tertiary">· {{ importHintText('note', ch.note_hints?.[i], note) }}</span>
+              <span v-for="(note, i) in ch.notes" :key="note" class="text-xs text-mnema-tertiary">· {{ importHintText('note', ch.note_hints?.[i], note) }}</span> <!-- i18n-ignore: hint kind, not text -->
             </li>
           </ul>
         </div>
@@ -141,7 +141,7 @@ function sameNameHint(role: DiscordimportPlanRole): string {
 
     <section v-if="plan.skipped.length" class="rounded-lg border border-mnema-hairline bg-mnema-surface px-4 py-3 text-xs text-mnema-tertiary" data-testid="import-skipped">
       <div class="font-medium text-mnema-muted">{{ $t('discordImport.skippedTitle') }}</div>
-      <ul><li v-for="(s, i) in plan.skipped" :key="s">{{ importHintText('skipped', plan.skipped_hints?.[i], s) }}</li></ul>
+      <ul><li v-for="(s, i) in plan.skipped" :key="s">{{ importHintText('skipped', plan.skipped_hints?.[i], s) }}</li></ul> <!-- i18n-ignore: hint kind, not text -->
     </section>
   </div>
 </template>
