@@ -87,6 +87,17 @@ describe('CreateChannelModal', () => {
     expect(vi.mocked(chat.createChannel).mock.calls[0]![0]!.categoryId).toBe("00000000-0000-4000-8000-0000000003ed")
   })
 
+  it('asks for a name instead of using the previous category when the new category is blank', async () => {
+    const w = mountModal({ initialCategoryId: '00000000-0000-4000-8000-0000000003eb' })
+    await typeButton(w, '+ New category').trigger('click')
+    await w.find<HTMLInputElement>('#channel-name')!.setValue('roadmap')
+    await w.find('form')!.trigger('submit')
+    await flushPromises()
+    expect(w.find('[role="alert"]').text()).toContain('new category')
+    expect(chat.createChannel).not.toHaveBeenCalled()
+    expect(chat.createCategory).not.toHaveBeenCalled()
+  })
+
   it('appends an inline category after the highest sort order', async () => {
     chat.categories = [categoryFixture({ id: '00000000-0000-4000-8000-0000000003ea', name: 'Games', sort_order: 0 }), categoryFixture({ id: '00000000-0000-4000-8000-0000000003eb', name: 'Work', sort_order: 5 })]
     const w = mountModal()
@@ -140,16 +151,6 @@ describe('CreateChannelModal', () => {
     expect(w.findAll('fieldset .truncate')).toHaveLength(0)
     expect(w.get('fieldset').text()).toContain('Text channel')
     expect(w.get('fieldset').text()).toContain('Voice, video, screen share')
-  })
-
-  it('ignores an empty inline category', async () => {
-    const w = mountModal()
-    await typeButton(w, '+ New category').trigger('click')
-    await w.find<HTMLInputElement>('#channel-name')!.setValue('roadmap')
-    await w.find('form')!.trigger('submit')
-    await flushPromises()
-    expect(chat.createCategory).not.toHaveBeenCalled()
-    expect(vi.mocked(chat.createChannel).mock.calls[0]![0]!.categoryId).toBe('00000000-0000-4000-8000-0000000003ea')
   })
 
   it('refuses a name that slugifies to nothing', async () => {

@@ -881,6 +881,7 @@
     "topic": "Thema (optional)",
     "topicPlaceholder": "Worum geht es hier?",
     "nameRequired": "Bitte gib einen Namen an.",
+    "categoryNameRequired": "Gib einen Namen für die neue Kategorie an oder wähle eine vorhandene.",
     "createFailed": "Der Kanal konnte nicht erstellt werden. Versuche es noch einmal."
   },
   "forum": {

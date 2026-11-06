@@ -881,6 +881,7 @@
     "topic": "Topic (optional)",
     "topicPlaceholder": "What is this about?",
     "nameRequired": "Enter a name.",
+    "categoryNameRequired": "Enter a name for the new category, or choose an existing one.",
     "createFailed": "Couldn’t create the channel. Try again."
   },
   "forum": {
