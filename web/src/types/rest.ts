@@ -3618,13 +3618,13 @@ export function isGatewayInfo(value: unknown): value is GatewayInfo {
 export const decodeGatewayInfo = decoder("gateway.Info", isGatewayInfo)
 
 export type HttpxAPIError = {
-  code: "INVALID_INPUT" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "FORBIDDEN" | "ACCOUNT_DISABLED" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "RULES_NOT_ACCEPTED" | "STALE_REVISION" | "UNAVAILABLE" | "INTERNAL_ERROR"
+  code: "INVALID_INPUT" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "FORBIDDEN" | "ACCOUNT_DISABLED" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "RULES_NOT_ACCEPTED" | "STALE_REVISION" | "MESSAGE_DELETED" | "UNAVAILABLE" | "INTERNAL_ERROR"
   message: string
 }
 
 export function isHttpxAPIError(value: unknown): value is HttpxAPIError {
   return isRecord(value)
-    && (hasOwn(value, "code") && (value["code"] === "INVALID_INPUT" || value["code"] === "UNAUTHORIZED" || value["code"] === "INVALID_CREDENTIALS" || value["code"] === "FORBIDDEN" || value["code"] === "ACCOUNT_DISABLED" || value["code"] === "NOT_FOUND" || value["code"] === "CONFLICT" || value["code"] === "PAYLOAD_TOO_LARGE" || value["code"] === "UNSUPPORTED_MEDIA_TYPE" || value["code"] === "RATE_LIMITED" || value["code"] === "RULES_NOT_ACCEPTED" || value["code"] === "STALE_REVISION" || value["code"] === "UNAVAILABLE" || value["code"] === "INTERNAL_ERROR"))
+    && (hasOwn(value, "code") && (value["code"] === "INVALID_INPUT" || value["code"] === "UNAUTHORIZED" || value["code"] === "INVALID_CREDENTIALS" || value["code"] === "FORBIDDEN" || value["code"] === "ACCOUNT_DISABLED" || value["code"] === "NOT_FOUND" || value["code"] === "CONFLICT" || value["code"] === "PAYLOAD_TOO_LARGE" || value["code"] === "UNSUPPORTED_MEDIA_TYPE" || value["code"] === "RATE_LIMITED" || value["code"] === "RULES_NOT_ACCEPTED" || value["code"] === "STALE_REVISION" || value["code"] === "MESSAGE_DELETED" || value["code"] === "UNAVAILABLE" || value["code"] === "INTERNAL_ERROR"))
     && (hasOwn(value, "message") && isString(value["message"]))
 }
 

@@ -96,6 +96,9 @@ func insertMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSourc
 	if err != nil {
 		return uuid.Nil, err
 	}
+	if err := recordNonce(ctx, tx, nm, id); err != nil {
+		return uuid.Nil, err
+	}
 	if err := mentions.RecordMentions(ctx, tx, online, id, nm.UserID, nm.Content); err != nil {
 		return uuid.Nil, err
 	}
@@ -174,7 +177,8 @@ func PruneSlowMode(ctx context.Context, q db.Querier) (int64, error) {
 	return tag.RowsAffected(), err
 }
 
-// RunSlowModePrune prunes every interval until ctx ends.
+// RunSlowModePrune prunes slow mode post times and old send nonces every
+// interval until ctx ends.
 func RunSlowModePrune(ctx context.Context, q db.Querier, every time.Duration) {
 	t := time.NewTicker(every)
 	defer t.Stop()
@@ -185,6 +189,9 @@ func RunSlowModePrune(ctx context.Context, q db.Querier, every time.Duration) {
 		case <-t.C:
 			worker.Tick(worker.JobSlowMode, func() error {
 				_, err := PruneSlowMode(ctx, q)
+				if err == nil {
+					_, err = PruneNonces(ctx, q)
+				}
 				if err != nil && ctx.Err() == nil {
 					slog.Warn("slow mode prune failed", "err", err)
 				}

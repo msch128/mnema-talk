@@ -3,11 +3,14 @@
 package server
 
 import (
+	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
@@ -97,5 +100,49 @@ func TestSimultaneousSendsOfOneNonceStoreOneMessage(t *testing.T) {
 	}
 	if n := f.messageCount(f.channel); n != 1 || created != 1 {
 		t.Fatalf("%d messages stored, %d created answers; want 1 and 1", n, created)
+	}
+}
+
+func TestRetryingADeletedMessageSaysDeletedAndDoesNotPostItAgain(t *testing.T) {
+	f := newPollFixture(t)
+	nonce := uuid.New()
+	var m core.Message
+	first := sendWithNonce(f, f.alice, f.channel, "purged", nonce)
+	wantStatus(t, "first send", first, http.StatusCreated)
+	first.decode(t, &m)
+	wantStatus(t, "moderator deletes it", f.owner.delete(f.base()+"/messages/"+m.ID.String()), http.StatusNoContent)
+
+	retry := sendWithNonce(f, f.alice, f.channel, "purged", nonce)
+	wantStatus(t, "retry", retry, http.StatusGone)
+	if want := `"code":"MESSAGE_DELETED"`; !strings.Contains(string(retry.body), want) {
+		t.Fatalf("retry body %s lacks %s", retry.body, want)
+	}
+	if n := f.messageCount(f.channel); n != 0 {
+		t.Fatalf("%d messages stored, want 0: the retry must not undo the deletion", n)
+	}
+}
+
+func TestRetryOfAStoredMessageSucceedsAfterTheAuthorLostTheRightToWrite(t *testing.T) {
+	f := newPollFixture(t)
+	nonce := uuid.New()
+	wantStatus(t, "first send", sendWithNonce(f, f.alice, f.channel, "arrived", nonce), http.StatusCreated)
+	wantStatus(t, "timeout", f.owner.post("/api/admin/users/"+f.alice.user.ID.String()+"/timeout", map[string]any{"duration_seconds": 3600}), http.StatusOK)
+
+	wantStatus(t, "a new message is refused", sendWithNonce(f, f.alice, f.channel, "new", uuid.New()), http.StatusForbidden)
+	wantStatus(t, "the retry still gets its message", sendWithNonce(f, f.alice, f.channel, "arrived", nonce), http.StatusOK)
+}
+
+func TestOldNoncesArePruned(t *testing.T) {
+	f := newPollFixture(t)
+	nonce := uuid.New()
+	wantStatus(t, "send", sendWithNonce(f, f.alice, f.channel, "old", nonce), http.StatusCreated)
+	if _, err := f.a.db.Exec(context.Background(), `UPDATE message_nonces SET created_at = now() - interval '2 days'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := messages.PruneNonces(context.Background(), f.a.db); err != nil {
+		t.Fatal(err)
+	}
+	if n := f.a.countRows(`SELECT COUNT(*) FROM message_nonces`); n != 0 {
+		t.Fatalf("%d nonce rows left, want 0", n)
 	}
 }

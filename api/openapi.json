@@ -6143,6 +6143,7 @@
               "RATE_LIMITED",
               "RULES_NOT_ACCEPTED",
               "STALE_REVISION",
+              "MESSAGE_DELETED",
               "UNAVAILABLE",
               "INTERNAL_ERROR"
             ],
@@ -26468,6 +26469,16 @@
               }
             },
             "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "MESSAGE_DELETED: the message sent with this nonce was deleted since; it is not posted again."
           },
           "429": {
             "content": {

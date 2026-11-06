@@ -111,6 +111,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['this link name is reserved', 'vanityReserved', []],
   ['this member is not banned', 'srvThisMemberIsNotBanned'],
   ['this message is already reported', 'srvThisMessageIsAlreadyReported'],
+  ['this message was deleted and is not sent again', 'srvMessageDeletedNotResent'],
   ['this page is locked; only holders of Manage wiki can change it', 'srvThisPageIsLockedOnly'],
   ['this poll takes one answer', 'pollOneAnswer', []],
   ['this post is locked', 'srvThisPostIsLocked'],

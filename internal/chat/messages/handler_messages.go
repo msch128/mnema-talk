@@ -85,6 +85,7 @@ func (a *API) ListMessages(w http.ResponseWriter, r *http.Request) error {
 // @Param request body messages.CreateMessageRequest true "Request body."
 // @Success 201 {object} core.Message "Created message."
 // @Success 200 {object} core.Message "The message already created with this nonce (a retried send)."
+// @Failure 410 {object} httpx.ErrorResponse "MESSAGE_DELETED: the message sent with this nonce was deleted since; it is not posted again."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
@@ -107,11 +108,14 @@ func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	if len(req.AttachmentIDs) > 0 {
 		need |= perm.AttachFiles
 	}
-	ctx, err := a.ServeSendContext(r, chID, need)
-	if err != nil {
+	// A retry is answered before the permission check: it only ever returns
+	// the caller's own message in this channel, and a member whose rights
+	// changed since the first attempt must not see a stored message turn into 403.
+	if replayed, err := a.replayNonce(w, r, user.ID, chID, req.Nonce); replayed || err != nil {
 		return err
 	}
-	if replayed, err := a.replayNonce(w, r, user.ID, chID, req.Nonce); replayed || err != nil {
+	ctx, err := a.ServeSendContext(r, chID, need)
+	if err != nil {
 		return err
 	}
 	if _, err := ChannelForMessages(ctx, a.DB, chID); err != nil {
