@@ -2951,7 +2951,9 @@
           "channel_id",
           "created_at",
           "id",
-          "name"
+          "moderated",
+          "name",
+          "position"
         ],
         "type": "object"
       },
@@ -3592,7 +3594,8 @@
         },
         "required": [
           "categories",
-          "channels"
+          "channels",
+          "server"
         ],
         "type": "object"
       },
@@ -5710,9 +5713,12 @@
           "dropped_bits",
           "everyone",
           "hash",
+          "mappable_roles",
+          "mapped_roles",
           "roles",
           "server_name",
           "skipped",
+          "skipped_hints",
           "source_name",
           "template_name"
         ],
@@ -5802,6 +5808,7 @@
           "category",
           "category_source_id",
           "name",
+          "note_hints",
           "notes",
           "overwrites",
           "private",
@@ -5948,7 +5955,8 @@
           "permission_keys",
           "permissions",
           "source_id",
-          "source_name"
+          "source_name",
+          "suggested_role_id"
         ],
         "type": "object"
       },
@@ -7072,8 +7080,10 @@
         },
         "required": [
           "community_name",
+          "direct_messages_enabled",
           "rules_text",
           "rules_version",
+          "session_inactivity_days",
           "start_channel_id",
           "welcome_text"
         ],
@@ -8091,7 +8101,7 @@
             "type": "integer"
           },
           "state": {
-            "description": "State, Warn, Stale, StaleAfterHours and RestoreTest are optional in the\ncontract: a server before the backup status sends only the deprecated ages.\nState is ok (a backup was reported), not_configured (BACKUP_STATUS_FILE\nis empty), missing (no backup has written the file yet) or invalid.",
+            "description": "State is ok (a backup was reported), not_configured (BACKUP_STATUS_FILE\nis empty), missing (no backup has written the file yet) or invalid.",
             "enum": [
               "ok",
               "not_configured",
@@ -8108,7 +8118,12 @@
         "required": [
           "hint",
           "last_backup_age",
-          "last_restore_test_age"
+          "last_restore_test_age",
+          "restore_test",
+          "stale",
+          "stale_after_hours",
+          "state",
+          "warn"
         ],
         "type": "object"
       },
@@ -8225,7 +8240,9 @@
           "per_member_millicores",
           "plan_cores",
           "scale",
-          "status"
+          "scenarios",
+          "status",
+          "upload_limit_mbps"
         ],
         "type": "object"
       },
@@ -8559,6 +8576,9 @@
           }
         },
         "required": [
+          "address_detection",
+          "builtin_turn",
+          "clock_check",
           "legal_version",
           "media_retention_days",
           "operator_country",
@@ -8767,11 +8787,13 @@
           "cpu_millicores",
           "db_connections_acquired",
           "egress_bps",
+          "egress_pps",
           "errors_5xx",
           "goroutines",
           "heap_bytes",
           "ice_failures",
           "ingress_bps",
+          "ingress_pps",
           "online_users",
           "peers",
           "requests",
@@ -9272,6 +9294,7 @@
           }
         },
         "required": [
+          "builtin_turn",
           "cameras",
           "enabled",
           "media_connections",

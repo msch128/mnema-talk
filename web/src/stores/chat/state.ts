@@ -10,17 +10,8 @@ import type { PendingMessage } from './outboxTypes'
 import { MARK_READ_INTERVAL_MS, type EphemeralNote, type PinNotice, type ProfilePreview, type ThreadRoot, type Timer, type TypingUser } from './types'
 
 /** No stored settings: every channel follows the server default, which is "all messages". */
-export type StoredNotificationSettings = NotificationSettings & { server: NonNullable<NotificationSettings['server']> }
-
-const DEFAULT_SERVER_NOTIFY: StoredNotificationSettings['server'] = { level: 'all', muted_until: null, suppress_everyone: false }
-
-export function emptyNotificationSettings(): StoredNotificationSettings {
-  return { channels: [], categories: [], server: { ...DEFAULT_SERVER_NOTIFY } }
-}
-
-/** A server before 1.1 sends no server-wide level: it then follows the default, like no stored setting. */
-export function withServerDefault(settings: NotificationSettings): StoredNotificationSettings {
-  return { ...settings, server: settings.server ?? { ...DEFAULT_SERVER_NOTIFY } }
+export function emptyNotificationSettings(): NotificationSettings {
+  return { channels: [], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } }
 }
 
 type Handler<K extends keyof ServerEventPayloads> = ((payload: ServerEventPayloads[K]) => void | Promise<void>) | null
@@ -89,7 +80,7 @@ function memberState() {
     // Read states per channel: channel_id -> { channel_id, unread_count, mention_count, last_read_at, notify_level }
     readStates: ref<Record<string, ReadState>>({}),
     // The caller's stored notification settings (the read states carry the effective level).
-    notifySettings: ref<StoredNotificationSettings>(emptyNotificationSettings()),
+    notifySettings: ref<NotificationSettings>(emptyNotificationSettings()),
     // Re-reads read states and settings when the next timed mute runs out.
     notifyExpiryTimer: undefined as Timer | undefined,
     activeChannelLastReadAt: ref<string | null>(null),

@@ -76,8 +76,8 @@ type OpsSample struct {
 	EgressBps     uint64 `json:"egress_bps"`
 	IngressBps    uint64 `json:"ingress_bps"`
 	// EgressPPS and IngressPPS are RTP packets per second over the interval.
-	EgressPPS     uint64 `json:"egress_pps" binding:"optional"`
-	IngressPPS    uint64 `json:"ingress_pps" binding:"optional"`
+	EgressPPS     uint64 `json:"egress_pps"`
+	IngressPPS    uint64 `json:"ingress_pps"`
 	Requests      uint64 `json:"requests"`
 	Errors5xx     uint64 `json:"errors_5xx"`
 	ICEFailures   uint64 `json:"ice_failures"`

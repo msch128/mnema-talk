@@ -4,6 +4,7 @@ import { ShieldCheck, Scale, Server, Lock, Cookie, Code, ExternalLink } from '@l
 import BaseDialog from './BaseDialog.vue'
 import { t } from '../i18n'
 import { decodeServerLegal } from '../types/rest'
+import '../lib/compat/olderServers'
 import { THIRD_PARTY, NOTICES_FILE, NOTICES_URL, SOURCE_URL } from '../lib/thirdParty'
 
 const emit = defineEmits<{ close: [] }>()

@@ -5,6 +5,7 @@ import { allBaselines } from './baselines'
 import { headBaseline } from './head.fixture'
 import { synthesize } from './contract'
 import { responseGaps } from './allowlist'
+import '../lib/compat/olderServers'
 
 type Decode = (value: unknown) => unknown
 

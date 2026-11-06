@@ -3,13 +3,14 @@
 import type { ModerationNotice } from '../lib/moderation'
 import type { Message, Poll, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
 import type { ChatUserRef, CommunityeventsCommunityEvent, CommunityeventsEventComment } from './rest'
+import '../lib/compat/olderServers'
 import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel, isCommunityeventsCommunityEvent } from './rest'
 import type { StageHand, StageTalkPower, TalkReaction } from './stageEvents'
 import { STAGE_EVENT_CHECKS } from './stageEvents'
 import { NOTICE_EVENT_CHECKS } from './noticeEvents'
 import type { DirectMessageMember, DirectMessageRef, DmCallEnd, DmCallRing } from './dmEvents'
 import { DM_EVENT_CHECKS } from './dmEvents'
-import { ContractError, onlyFields, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
+import { ContractError, onlyFields, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf, normalise } from './validation'
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue | undefined }
 export interface MediaState { channel_id: string; user_id: string; screen: boolean; camera: boolean }
@@ -389,10 +390,18 @@ const SERVER_EVENT_TYPES = new Set<string>([
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'cameras_capped', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'talk_leader', 'talk_moved', 'stage_hand', 'stage_talk_power', 'talk_reaction', 'media_handshake', 'forum_tags_changed', 'event_update', 'event_delete', 'event_reminder', 'event_signup_notice', 'event_comment', 'event_comment_notice', 'community_updated', 'reports_open'
 ])
 
+/** A message event of an older server lacks what lib/compat/olderServers.ts fills for messages in answers. */
+function withMessageDefaults(value: unknown): unknown {
+  if (!isRecord(value) || (value['type'] !== 'message_create' && value['type'] !== 'message_update')) return value
+  const payload = normalise(isChatMessage, value['payload'])
+  return payload === value['payload'] ? value : { ...value, payload }
+}
+
 /** Unknown event names stay ignorable for forward compatibility; malformed
  * known events never reach stores. No payload is included in the error. */
 export function decodeServerEvent(value: unknown): ServerEvent | null {
   if (isRecord(value) && typeof value['type'] === 'string' && !SERVER_EVENT_TYPES.has(value['type'])) return null
-  if (!isServerEvent(value)) throw new ContractError('WebSocket event') // i18n-ignore: schema name
-  return value
+  const event = withMessageDefaults(value)
+  if (!isServerEvent(event)) throw new ContractError('WebSocket event') // i18n-ignore: schema name
+  return event
 }

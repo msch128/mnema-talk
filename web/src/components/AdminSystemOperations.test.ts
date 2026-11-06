@@ -129,7 +129,7 @@ describe('admin system operational failures', () => {
     ['switched off', { active: false, enabled: false }, 'Off'],
   ])('shows the built-in TURN relay: %s', async (_name, change, text) => {
     const st = systemStatus()
-    Object.assign(st.health.voice.builtin_turn ?? {}, change)
+    Object.assign(st.health.voice.builtin_turn, change)
     const w = await openSystem(st)
     expect(w.find('[data-testid="system-builtin-turn"]').text()).toContain(text)
   })

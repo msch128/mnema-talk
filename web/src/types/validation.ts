@@ -56,15 +56,45 @@ export class ContractError extends Error {
 
 export type Decoder<T> = (value: unknown) => T
 
+type Normaliser = (value: unknown) => unknown
+const itemNormalisers = new Map<unknown, Normaliser>()
+const listNormalisers = new Map<unknown, Normaliser>()
+
+/**
+ * Answers of older servers lack fields the current contract requires; lib/compat/olderServers.ts registers,
+ * per guard, what fills them (before the guard runs). A list normaliser sees the whole list (it may need the
+ * position of an item); without one, the item normaliser runs on each item.
+ */
+export function registerNormaliser(guard: unknown, item: Normaliser, list?: Normaliser): void {
+  itemNormalisers.set(guard, item)
+  if (list) listNormalisers.set(guard, list)
+}
+
+/** The value with the documented defaults of older servers filled in; the value itself when nothing is registered. */
+export function normalise(guard: unknown, value: unknown): unknown {
+  return itemNormalisers.get(guard)?.(value) ?? value
+}
+
+function normaliseList(guard: unknown, value: unknown): unknown {
+  const list = listNormalisers.get(guard)
+  if (list) return list(value)
+  return Array.isArray(value) && itemNormalisers.has(guard) ? value.map(item => normalise(guard, item)) : value
+}
+
 export function decoder<T>(schema: string, guard: (value: unknown) => value is T): Decoder<T> {
   return value => {
-    if (!guard(value)) throw new ContractError(schema)
-    return value
+    const filled = normalise(guard, value)
+    if (!guard(filled)) throw new ContractError(schema)
+    return filled
   }
 }
 
 export function arrayDecoder<T>(schema: string, guard: (value: unknown) => value is T): Decoder<T[]> {
-  return decoder(schema, (value): value is T[] => isArrayOf(value, guard))
+  return value => {
+    const filled = normaliseList(guard, value)
+    if (!isArrayOf(filled, guard)) throw new ContractError(schema)
+    return filled
+  }
 }
 
 export function nullableDecoder<T>(decode: Decoder<T>): Decoder<T | null> {

@@ -19,7 +19,7 @@ const selected = defineModel<string[]>({ required: true })
 const full = computed(() => selected.value.length >= MAX_POST_TAGS)
 
 function frozen(tag: ForumTag): boolean {
-  return (tag.moderated ?? false) && !props.canModerate
+  return tag.moderated && !props.canModerate
 }
 
 function toggle(tag: ForumTag) {
@@ -51,7 +51,7 @@ function toggle(tag: ForumTag) {
         selectable
         :selected="selected.includes(tag.id)"
         :disabled="frozen(tag) || (!selected.includes(tag.id) && full)"
-        :locked="tag.moderated ?? false"
+        :locked="tag.moderated"
         @toggle="toggle"
       />
     </div>

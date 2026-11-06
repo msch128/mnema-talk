@@ -5,7 +5,7 @@
 import type { NotifyLevel, ReadState } from '../../types/domain'
 import { decodeNotificationSettings } from '../../types/domain'
 import { api } from '../../lib/api'
-import { assertCommunity, withServerDefault, type Cx } from './state'
+import { assertCommunity, type Cx } from './state'
 import { fetchReadState, noteReadStateCleared } from './readState'
 
 // setTimeout takes a 32-bit delay; a longer wait is re-armed when it fires.
@@ -19,7 +19,7 @@ export async function fetchNotificationSettings(cx: Cx) {
   try {
     const data = await api('/api/notification-settings', { decode: decodeNotificationSettings })
     if (community !== cs.communityGeneration) return
-    cs.notifySettings.value = withServerDefault(data)
+    cs.notifySettings.value = data
     armExpiryTimer(cx)
   } catch (e) {
     console.warn('Failed to fetch notification settings:', e)

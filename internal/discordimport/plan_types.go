@@ -21,15 +21,15 @@ type Plan struct {
 	Roles []PlanRole `json:"roles"`
 	// MappedRoles are the Discord roles the administrator mapped onto an
 	// existing role: nothing is created for them.
-	MappedRoles []PlanMappedRole `json:"mapped_roles" binding:"optional"`
+	MappedRoles []PlanMappedRole `json:"mapped_roles"`
 	// MappableRoles are the existing roles the importer may map a Discord
 	// role onto (highest first); the roles a role_map may name.
-	MappableRoles []RoleChoice `json:"mappable_roles" binding:"optional"`
+	MappableRoles []RoleChoice `json:"mappable_roles"`
 	Everyone      EveryoneInfo `json:"everyone"`
 	// Skipped lists template channels that have no counterpart (threads and the like).
 	Skipped []string `json:"skipped"`
 	// SkippedHints are the same entries as structured hints for translation.
-	SkippedHints []Hint `json:"skipped_hints" binding:"optional"`
+	SkippedHints []Hint `json:"skipped_hints"`
 	// DroppedBits names every Discord permission dropped from the roles and overwrites.
 	DroppedBits          []string `json:"dropped_bits"`
 	AdministratorDropped bool     `json:"administrator_dropped"`
@@ -70,7 +70,7 @@ type PlanChannel struct {
 	Overwrites      []PlanOverwrite `json:"overwrites"`
 	Notes           []string        `json:"notes"`
 	// NoteHints are the notes as structured hints (same order) for translation.
-	NoteHints []Hint `json:"note_hints" binding:"optional"`
+	NoteHints []Hint `json:"note_hints"`
 }
 
 // PlanOverwrite is a permission overwrite of a new category or channel.
@@ -102,7 +102,7 @@ type PlanRole struct {
 	AdministratorDropped bool     `json:"administrator_dropped"`
 	// SuggestedRoleID is the existing role with the same name (ignoring case)
 	// the administrator may map this role onto; null when there is none.
-	SuggestedRoleID *uuid.UUID `json:"suggested_role_id" binding:"optional" format:"uuid" extensions:"x-nullable"`
+	SuggestedRoleID *uuid.UUID `json:"suggested_role_id" format:"uuid" extensions:"x-nullable"`
 }
 
 // PlanMappedRole is a Discord role mapped onto an existing role.
