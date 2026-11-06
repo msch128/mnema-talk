@@ -1,0 +1,23 @@
+web/src/stores/chat/messagePost.ts
+  s_06fcde5dbef956::t_c6f0f2b20c8918 33,36-37,45-46,49
+web/src/stores/chat/outbox.ts
+  s_06fcde5dbef956::t_380c95dee89ede 219,310-311
+web/src/stores/chatOutbox.test.ts
+  s_06fcde5dbef956::t_ea10c8985450a6 588-601,611-629
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "88ceb65247d88f3e4f20056840966790b9b68680",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
