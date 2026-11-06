@@ -108,3 +108,9 @@ it('puts the cursor in the address field when the page opens', async () => {
   expect(document.activeElement).toBe(wrapper.get('input').element)
   wrapper.unmount()
 })
+it('asks for an address or an invite link, with both forms as the example', async () => {
+  const wrapper = mount(DesktopSelector); await flushPromises()
+  expect(wrapper.get('label[for="native-server-url"]').text()).toBe('Adresse oder Einladungslink')
+  expect(wrapper.get('input').attributes('placeholder')).toBe('talk.example.org oder https://talk.example.org/invite/abc')
+  wrapper.unmount()
+})

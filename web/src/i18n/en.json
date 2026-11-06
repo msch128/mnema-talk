@@ -3004,10 +3004,10 @@
     "connectError": "This server is unavailable or does not support this DEV build.",
     "dev": "DEV development build",
     "connectCommunity": "Connect to your community.",
-    "address": "Server address",
+    "address": "Address or invite link",
     "checking": "Checking connection…",
     "connect": "Connect",
-    "placeholder": "talk.example.org",
+    "placeholder": "talk.example.org or https://talk.example.org/invite/abc",
     "hostError": {
       "enterAddress": "Enter an HTTPS address for the server.",
       "invalidAddress": "That is not a valid server address.",

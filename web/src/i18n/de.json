@@ -3004,10 +3004,10 @@
     "connectError": "Dieser Server ist nicht erreichbar oder unterstützt diese DEV-Version nicht.",
     "dev": "DEV-Entwicklungsversion",
     "connectCommunity": "Mit deiner Community verbinden.",
-    "address": "Serveradresse",
+    "address": "Adresse oder Einladungslink",
     "checking": "Verbindung wird geprüft …",
     "connect": "Verbinden",
-    "placeholder": "talk.example.org",
+    "placeholder": "talk.example.org oder https://talk.example.org/invite/abc",
     "hostError": {
       "enterAddress": "Gib eine HTTPS-Adresse für den Server ein.",
       "invalidAddress": "Das ist keine gültige Serveradresse.",
