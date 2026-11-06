@@ -39,7 +39,7 @@ async function refresh() {
   if (s.status === 'fulfilled') stats.value = s.value || { ...EMPTY_STATS }
   else showError(s.reason)
   if (m.status === 'fulfilled') mediaItems.value = m.value || []
-  else showError(m.reason)
+  else if (mediaItems.value.length) showError(m.reason)
   mediaFailed.value = m.status === 'rejected'
   loaded.value = true
 }

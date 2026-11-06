@@ -76,6 +76,8 @@ export function lobbyRefused(cx: Cx, p: ServerEventPayloads['voice_kicked']): bo
 
 /** Opens a Talk from the lobby and joins it. join is the ordinary join of a Talk. */
 export async function joinViaLobby(cx: Cx, lobbyId: string, join: (talkId: string) => Promise<void>) {
+  // A second lobby replaces the first: the first must not join anything when it is settled.
+  cancelPendingLobby(cx)
   const generation = lobbyGeneration
   const talk = await openFromLobby(cx, lobbyId)
   if (!talk || generation !== lobbyGeneration) return

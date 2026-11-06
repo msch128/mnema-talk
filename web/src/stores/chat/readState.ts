@@ -9,11 +9,11 @@ const decodeReadStates = arrayDecoder('read states', isChatReadState)
 // One counter orders fetch starts and local clears. An answer that is not from
 // the newest fetch is dropped, and a channel cleared here after its fetch began
 // keeps the local state: the answer predates the clear and would bring the badge back.
-const sequencing = new WeakMap<object, { counter: number; latest: number; cleared: Map<string, number> }>()
+const sequencing = new WeakMap<object, { counter: number; latest: number; cleared: Map<string, number>; newest: Promise<unknown> | null }>()
 
 function sequenceOf(cs: object) {
   let seq = sequencing.get(cs)
-  if (!seq) sequencing.set(cs, seq = { counter: 0, latest: 0, cleared: new Map() })
+  if (!seq) sequencing.set(cs, seq = { counter: 0, latest: 0, cleared: new Map(), newest: null })
   return seq
 }
 
@@ -24,7 +24,23 @@ export function noteReadStateCleared(cx: Cx, channelIds: readonly string[]) {
   for (const id of channelIds) seq.cleared.set(id, seq.counter)
 }
 
-export async function fetchReadState(cx: Cx) {
+export function fetchReadState(cx: Cx) {
+  const seq = sequenceOf(cx.cs)
+  const request = loadReadState(cx)
+  seq.newest = request
+  return request
+}
+
+/** Resolves once the newest read-state fetch has landed (a fetch that was overtaken is not the answer). */
+async function newestReadStateSettled(cx: Cx) {
+  const seq = sequenceOf(cx.cs)
+  for (let seen = null; seen !== seq.newest;) {
+    seen = seq.newest
+    await seen
+  }
+}
+
+async function loadReadState(cx: Cx) {
   const { cs } = cx
   const community = cs.communityGeneration
   const seq = sequenceOf(cs)
@@ -140,6 +156,8 @@ export async function markChannelUnread(cx: Cx, channelId: string, messageId: st
     throw e
   }
   await fetchReadState(cx)
+  // A newer fetch may have overtaken ours; the divider follows the answer that was kept.
+  await newestReadStateSettled(cx)
   assertCommunity(cx, community)
   if (channelId === cs.activeChannel.value?.id) {
     // The "new since" divider moves to the chosen message.

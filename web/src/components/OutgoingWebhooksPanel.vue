@@ -43,7 +43,8 @@ async function load() {
     loadFailed.value = false
   } catch (e) {
     loadFailed.value = true
-    showError(e)
+    // The panel says it while there are no webhooks; a toast only for a failed reload.
+    if (hooks.value.length) showError(e)
   } finally {
     loaded.value = true
   }

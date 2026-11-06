@@ -62,11 +62,11 @@ describe('IncomingWebhooksPanel', () => {
     expect((await mountPanel([])).text()).toContain('No incoming webhooks')
   })
 
-  it('reports a failed load', async () => {
+  it('shows a failed first load in the panel only, without a toast', async () => {
     apiMock.mockRejectedValueOnce(new Error('boom'))
     mount(IncomingWebhooksPanel, { props: { channelId } })
     await flushPromises()
-    expect(toastTexts()).toContain('boom')
+    expect(toastTexts()).toEqual([])
   })
 
   it('shows a failed load with a retry instead of the empty text', async () => {
@@ -340,11 +340,11 @@ describe('OutgoingWebhooksPanel', () => {
     expect(w.find('input[data-event="MEMBER_ADD"]').exists()).toBe(false)
   })
 
-  it('reports a failed load', async () => {
+  it('shows a failed first load in the panel only, without a toast', async () => {
     apiMock.mockRejectedValueOnce(new Error('boom'))
     mount(OutgoingWebhooksPanel, { props: { channelId } })
     await flushPromises()
-    expect(toastTexts()).toContain('boom')
+    expect(toastTexts()).toEqual([])
   })
 
   it('shows a failed load with a retry instead of "No outgoing webhooks yet"', async () => {

@@ -101,7 +101,7 @@ describe('ChatArea attachment tray', () => {
     key({ key: 'Enter' })
     await flushPromises()
     expect(send).toHaveBeenCalledTimes(1)
-    expect(send).toHaveBeenCalledWith('three pictures', null, null, ['att1', 'att2', 'att3'])
+    expect(send).toHaveBeenCalledWith('three pictures', null, null, ['att1', 'att2', 'att3'], 'ch1')
     expect(cards()).toHaveLength(0)
     expect(composer().element.value).toBe('')
   })
@@ -114,7 +114,24 @@ describe('ChatArea attachment tray', () => {
     expect(sendButton.attributes('disabled')).toBeUndefined()
     await sendButton.trigger('click')
     await flushPromises()
-    expect(send).toHaveBeenCalledWith('', null, null, ['att1'])
+    expect(send).toHaveBeenCalledWith('', null, null, ['att1'], 'ch1')
+  })
+
+  it('posts to the channel the message was written in when the member switches during the upload', async () => {
+    const send = setup()
+    let finish!: () => void
+    vi.mocked(stageAttachment).mockImplementationOnce(async (_c, file) => {
+      await new Promise<void>(r => { finish = r })
+      return staged('late', file.name)
+    })
+    paste([image('slow.png')])
+    await composer().setValue('for the lobby')
+    key({ key: 'Enter' })
+    await flushPromises()
+    useChatStore().activeChannel = channelFixture({ id: 'ch2', name: 'other', type: 'text' })
+    finish()
+    await flushPromises()
+    expect(send).toHaveBeenCalledWith('for the lobby', null, null, ['late'], 'ch1')
   })
 
   it('keeps Send disabled with neither text nor files', () => {

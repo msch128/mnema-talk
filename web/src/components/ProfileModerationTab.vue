@@ -42,7 +42,6 @@ async function load() {
     failed.value = false
   } catch (error) {
     failed.value = true
-    toasts.error(caughtErrorMessage(error, t('modHistory.loadFailed')))
   }
 }
 

@@ -144,9 +144,10 @@ describe('AdminReportsTab', () => {
 
   it('reports a failed load', async () => {
     http.handle = () => { throw new Error('offline') }
-    mount(AdminReportsTab, { global })
+    const w = mount(AdminReportsTab, { global })
     await flushPromises()
-    expect(useToastStore().toasts.map(t => t.text)).toEqual(['offline'])
+    expect(w.find('[data-testid="reports-error"]').exists()).toBe(true)
+    expect(useToastStore().toasts).toHaveLength(0)
   })
 
   it('says the reports could not be loaded, with a retry, instead of "no reports"', async () => {

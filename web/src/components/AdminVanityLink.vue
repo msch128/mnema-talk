@@ -40,7 +40,6 @@ async function load() {
     adopt(await api('/api/admin/vanity-link', { decode: decodeOnboardingVanitySettings }))
   } catch (e) {
     failed.value = true
-    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
   }
 }
 

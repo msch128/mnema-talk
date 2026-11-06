@@ -47,7 +47,8 @@ async function load(more = false) {
   } catch (error) {
     if (mine !== seq) return
     failed.value = true
-    toasts.error(caughtErrorMessage(error, t('reports.admin.loadFailed')))
+    // The panel says it while there are no reports; a toast only for a failed reload or page.
+    if (reports.value.length) toasts.error(caughtErrorMessage(error, t('reports.admin.loadFailed')))
   } finally {
     if (mine === seq) loading.value = false
   }

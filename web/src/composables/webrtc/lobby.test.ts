@@ -110,6 +110,25 @@ describe('Create-a-Talk lobbies in the call layer', () => {
     expect(voice.activeView).toBe('chat')
   })
 
+  it('lets a second lobby replace a first one that is already fetching its Talk', async () => {
+    const OTHER = fixtureId(12)
+    const { cx, chat } = world([{ id: LOBBY, is_lobby: true }, { id: OTHER, is_lobby: true }, { id: TALK }])
+    let fetched!: () => void
+    chat.fetchChannels.mockImplementationOnce(() => new Promise<void>(resolve => { fetched = resolve }))
+    const joinFirst = vi.fn(async () => {})
+    const joinSecond = vi.fn(async () => {})
+    const first = joinViaLobby(cx, LOBBY, joinFirst)
+    lobbyMoved(cx, { from_channel_id: LOBBY, channel_id: TALK })
+    await vi.advanceTimersByTimeAsync(0)
+    const second = joinViaLobby(cx, OTHER, joinSecond)
+    fetched()
+    await first
+    expect(joinFirst).not.toHaveBeenCalled()
+    lobbyMoved(cx, { from_channel_id: OTHER, channel_id: TALK })
+    await second
+    expect(joinSecond).toHaveBeenCalledWith(TALK)
+  })
+
   it('joins nothing when it is cancelled while the new Talk is being fetched', async () => {
     const { cx, chat } = world()
     let fetched!: () => void

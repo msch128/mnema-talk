@@ -45,7 +45,8 @@ async function loadInvites() {
     loaded.value = true
   } catch (e) {
     failed.value = true
-    showError(e)
+    // The panel says it until the first load worked; a toast only for a failed reload.
+    if (loaded.value) showError(e)
   }
 }
 

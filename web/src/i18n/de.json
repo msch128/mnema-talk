@@ -598,8 +598,8 @@
       "srvImageCannotBeRead": "Das Bild kann nicht gelesen werden.",
       "srvBanned": "Dieses Konto ist gesperrt.",
       "srvBannedUntil": "Dieses Konto ist bis {a} gesperrt.",
-      "srvBannedUntilReason": "Dieses Konto ist bis {a} gesperrt: {b}.",
-      "srvBannedReason": "Dieses Konto ist gesperrt: {a}.",
+      "srvBannedUntilReason": "Dieses Konto ist bis {a} gesperrt: {b}",
+      "srvBannedReason": "Dieses Konto ist gesperrt: {a}",
       "srvCloseReportFirst": "Schließe die Meldung, bevor du sie löschst.",
       "srvReportAlreadyClosed": "Diese Meldung ist bereits abgeschlossen.",
       "srvAfterRfc3339": "„after“ muss ein Zeitstempel im Format RFC 3339 sein.",
@@ -1837,7 +1837,7 @@
       "copy": "Link kopieren",
       "copied": "Kopiert",
       "copyFailed": "Der Link konnte nicht kopiert werden.",
-      "loadFailed": "Die Einladungsadresse konnte nicht geladen werden. Versuch es noch einmal."
+      "loadFailed": "Die Einladungsadresse konnte nicht geladen werden. Versuche es noch einmal."
     },
     "tabs": {
       "users": "Mitglieder",
@@ -2504,7 +2504,7 @@
     },
     "access": {
       "saved": "Gespeichert.",
-      "loadFailed": "Die Zugangseinstellungen konnten nicht geladen werden. Versuch es noch einmal."
+      "loadFailed": "Die Zugangseinstellungen konnten nicht geladen werden. Versuche es noch einmal."
     },
     "maxUsesLabel": "Nutzungen",
     "maxUsesPlaceholder": "Unbegrenzt",
@@ -2543,11 +2543,11 @@
       "saved": "Einladung aktualisiert.",
       "editNamed": "Einladung {code} bearbeiten"
     },
-    "invitesLoadFailed": "Die Einladungen konnten nicht geladen werden. Versuch es noch einmal.",
+    "invitesLoadFailed": "Die Einladungen konnten nicht geladen werden. Versuche es noch einmal.",
     "deleteInviteNamed": "Einladung {code} löschen",
     "copyLinkFor": "Link zur Einladung {code} kopieren",
-    "mediaLoadFailed": "Die Medienliste konnte nicht geladen werden. Versuch es noch einmal.",
-    "usersLoadFailed": "Die Mitglieder konnten nicht geladen werden. Versuch es noch einmal.",
+    "mediaLoadFailed": "Die Medienliste konnte nicht geladen werden. Versuche es noch einmal.",
+    "usersLoadFailed": "Die Mitglieder konnten nicht geladen werden. Versuche es noch einmal.",
     "moveUpNamed": "{name} nach oben",
     "moveDownNamed": "{name} nach unten",
     "renameChannelNamed": "Kanal {name} bearbeiten",
@@ -2980,7 +2980,7 @@
       "choose": "Datei wählen",
       "noFile": "Noch keine Datei",
       "emptyHint": "Lade oben ein Bild hoch, um das erste hinzuzufügen.",
-      "loadFailed": "Die eigenen Emojis konnten nicht geladen werden. Versuch es noch einmal.",
+      "loadFailed": "Die eigenen Emojis konnten nicht geladen werden. Versuche es noch einmal.",
       "renameNamed": ":{name}: umbenennen",
       "deleteNamed": ":{name}: löschen"
     }
@@ -4029,7 +4029,7 @@
       "deleteBody": "Der Bot kann ihn erneut registrieren."
     },
     "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten.",
-    "loadFailed": "Die Bots konnten nicht geladen werden. Versuch es noch einmal."
+    "loadFailed": "Die Bots konnten nicht geladen werden. Versuche es noch einmal."
   },
   "appSettings": {
     "installTitle": "Installieren",

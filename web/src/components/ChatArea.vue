@@ -184,7 +184,7 @@ async function handleSend() {
   try {
     const ids = files && composer.value?.tray.count.value ? await files.prepare() : []
     if (!ids) return
-    await chatStore.sendMessage(text, null, replyTo, ids)
+    await chatStore.sendMessage(text, null, replyTo, ids, sentIn)
     files?.clear()
     limits.sent(sentIn, slow)
     if (stillIn(sentIn)) {

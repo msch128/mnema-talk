@@ -599,11 +599,12 @@ describe('AdminDashboard - load errors', () => {
     expect(w.text()).toContain('1 MB')
   })
 
-  it('shows a toast when the user list cannot be loaded', async () => {
+  it('shows the panel, not a toast, when the user list cannot be loaded', async () => {
     apiMock.mockImplementationOnce(() => Promise.reject(new Error('users down')))
     const w = await createWrapper()
     const toasts = useToastStore()
-    expect(toasts.toasts.map(t => t.text)).toContain('users down')
+    expect(toasts.toasts.map(t => t.text)).not.toContain('users down')
+    expect(w.find('[data-testid="users-error"]').exists()).toBe(true)
     expect(w.findAll('[data-testid="user-row"]')).toHaveLength(0)
   })
 })
