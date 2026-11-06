@@ -1,0 +1,35 @@
+internal/later/scheduled_retry_integration_test.go
+  s_06fcde5dbef956::t_43f748c3d2b4dd 1-76
+internal/push/recipients.go
+  s_06fcde5dbef956::t_b00a91f8fa3115 193-196
+internal/later/scheduled.go
+  s_06fcde5dbef956::t_ec49bf535c473a 172-173
+doc/upgrade.md
+  s_06fcde5dbef956::t_e3254cddbef4ef 89-92,301
+internal/chat/messages/thread_follow_sync.go
+  s_06fcde5dbef956::t_e3254cddbef4ef 32-34
+  s_06fcde5dbef956::t_b00a91f8fa3115 113-115
+internal/repo/rowserr_test.go
+  s_06fcde5dbef956::t_84a4b488bec97c 53-61,70,87-96
+  s_06fcde5dbef956::t_7fc8aea0455369 1-52,62-69,71-86,97-114
+internal/later/scheduled_send.go
+  s_06fcde5dbef956::t_ec49bf535c473a 23-30,43,48-49,55,83-84,97-101,103-122
+internal/db/migrations/0092_scheduled_send_attempts.sql
+  s_06fcde5dbef956::t_ec49bf535c473a 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "49e8afc375e3cd96fbcf3e4fdbcf4b0b29a91cc8",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
