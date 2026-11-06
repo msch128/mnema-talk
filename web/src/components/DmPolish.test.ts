@@ -337,6 +337,20 @@ describe('folding the section', () => {
     await flushPromises()
     expect(rows(w)).toEqual([withAda.id])
   })
+
+  it('reads the unread total of a folded section out as words, not as a bare number', async () => {
+    const chat = setup()
+    chat.dms = [withAda]
+    chat.dmSettingsLoaded = true
+    chat.dmSettings = { mute_all: false, list_collapsed: true }
+    chat.readStates = { [withAda.id]: { channel_id: withAda.id, unread_count: 3, mention_count: 0, notify_level: 'all', last_read_at: null } }
+    const w = mount(SidebarDmSection, { global })
+    await flushPromises()
+    const toggle = w.get('[data-testid="dm-toggle"]')
+    expect(toggle.find('[aria-label]').exists()).toBe(false)
+    expect(toggle.get('.sr-only').text()).toBe('3 unread direct messages')
+    expect(toggle.get('span[aria-hidden="true"]').text()).toBe('3')
+  })
 })
 
 describe('events from another device', () => {
