@@ -1,0 +1,41 @@
+web/src/components/AdminAccessSettings.test.ts
+  s_06fcde5dbef956::t_36cec2c17f874a 51-62
+web/src/components/AdminAccessSettings.vue
+  s_06fcde5dbef956::t_2cfce1e3701e65 17,25,64,68,77-79,102
+web/src/components/AdminEmojiTab.test.ts
+  s_06fcde5dbef956::t_4c9d76aaa6e168 70,80,96,100,123-142
+web/src/components/AdminEmojiTab.vue
+  s_06fcde5dbef956::t_4074b5b4fdc2ef 12,27,150-152,174,177
+web/src/components/AdminRaidTab.test.ts
+  s_06fcde5dbef956::t_d75fe9e3b36c6c 92-103
+web/src/components/AdminRaidTab.vue
+  s_06fcde5dbef956::t_9b928b15d19095 18,82
+web/src/components/EventsModal.test.ts
+  s_06fcde5dbef956::t_b8ce05f5f0f2bf 243-266
+web/src/components/EventsModal.vue
+  s_06fcde5dbef956::t_86d45da1cffea2 7,60-64,178-187
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_eecea2fc5b73eb 2456-2457,2921-2924
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_a93d9f260621e4 2456-2457,2921-2924
+web/src/stores/emoji.ts
+  s_06fcde5dbef956::t_de7d34d897c19a 21-22,34,37,59
+web/src/stores/eventsPast.ts
+  s_06fcde5dbef956::t_91648f549081eb 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ffe2e2cc8299f4a12dc4766f7cc36b619efce908",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
