@@ -108,7 +108,7 @@ describe('backup status of a server before the structured status', () => {
   it('reads the state from the two ages', () => {
     expect(decodeServerBackupStatus(old)).toMatchObject({
       state: 'ok', warn: false, stale: false, stale_after_hours: 36, last_backup_age_seconds: 26940,
-      restore_test: 'passed', restore_test_age_seconds: 3930, last_backup_age: '7h29m'
+      restore_test: 'none', restore_test_age_seconds: 3930, last_backup_age: '7h29m'
     })
   })
 

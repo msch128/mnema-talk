@@ -104,7 +104,8 @@ function backupFacts(status: Rec): Rec {
     warn: stale,
     stale,
     stale_after_hours: STALE_AFTER_HOURS,
-    restore_test: restoreAge === undefined ? 'none' : 'passed',
+    // An older server never said whether its last restore test passed, so no result is claimed.
+    restore_test: 'none',
     ...(backupAge === undefined ? {} : { last_backup_age_seconds: backupAge }),
     ...(restoreAge === undefined ? {} : { restore_test_age_seconds: restoreAge })
   }
