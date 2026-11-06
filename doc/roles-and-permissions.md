@@ -131,9 +131,9 @@ the own role is a convenient place for "this bot may post in #alerts").
 | Ban members | Ban and unban members below your highest role, list the bans | no |
 | Manage emoji | Upload, rename and delete the custom emoji of the community (bit `1 << 20`) | no |
 | Send direct messages | Start direct messages and write in them; reading one you are in never needs it. On for @everyone (migration 0050 adds it to existing databases); a timeout takes it, an administrator can withhold it from new members or onboarding roles (bit `1 << 22`) | no |
-| Manage reports | Read and close member reports of messages, with the copy and context they kept (bit `1 << 21`, [moderation](moderation.md#blocking-and-reports)). Off for @everyone | no |
-| Kick members | Sign members below your highest role out everywhere and drop them from their Talk, with no lasting sanction (bit `1 << 23`, [moderation](moderation.md#kicks)). Off for @everyone and every seeded role; Administrators and the Owner have it implicitly | no |
-| Manage stage | Give and take talk power in a Stage and answer raised hands; holders can always speak there (bit `1 << 24`, [Talks](talks.md#stages)). Off for @everyone and every seeded role; Administrators and the Owner have it implicitly. It is channel-scoped, so it can be allowed for one Stage only | yes |
+| Manage reports | Read and close member reports of messages, with the copy and context they kept (bit `1 << 21`, [moderation](moderation.md#blocking-and-reports)). Off for @everyone. Granted to the seeded Moderator and Admin by migration 0097; Administrators and the Owner have it implicitly | no |
+| Kick members | Sign members below your highest role out everywhere and drop them from their Talk, with no lasting sanction (bit `1 << 23`, [moderation](moderation.md#kicks)). Off for @everyone. Granted to the seeded Moderator and Admin by migration 0097; Administrators and the Owner have it implicitly | no |
+| Manage stage | Give and take talk power in a Stage and answer raised hands; holders can always speak there (bit `1 << 24`, [Talks](talks.md#stages)). Off for @everyone. Granted to the seeded Moderator and Admin by migration 0097; Administrators and the Owner have it implicitly. It is channel-scoped, so it can be allowed for one Stage only | yes |
 | Manage events | Create, edit and cancel community events, and upload or remove their cover images (bit `1 << 25`, [events](events.md)). Granted to roles holding *Timeout members* (seeded Moderator and Admin) by migration 0070; Administrators and the Owner have it implicitly | no |
 | Bypass new member limits | Write, react and speak at once, without waiting out the minimum membership age of [raid protection](moderation.md#raid-protection) (bit `1 << 26`). Separate from the slow mode exemption, which *Manage messages* gives. Granted to roles holding *Timeout members* (seeded Moderator and Admin) by migration 0083; Administrators and the Owner have it implicitly | no |
 | Edit the wiki | Create and edit [wiki](wiki.md) pages and restore earlier revisions (bit `1 << 27`). Off for @everyone. Granted to roles holding *Timeout members* by migration 0089; Administrators and the Owner have it implicitly. A timeout and the new-member wait of raid protection take it away like *Send messages*. Never allowed for a self-assignable role | no |
@@ -151,7 +151,7 @@ role either: it is the one account with `users.role = 'admin'`.
 | Who | What it is | Permissions |
 |---|---|---|
 | Member | `@everyone` (position 0, every member has it) | *View channels, Send messages, Attach files, Add reactions, Mention @all and @here, Connect, Speak, Video, Send direct messages, View the wiki* (`perm.DefaultEveryone`) |
-| Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log, Manage events, Bypass new member limits, Edit the wiki, Manage the wiki* |
+| Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log, Manage events, Bypass new member limits, Edit the wiki, Manage the wiki, Manage reports, Kick members* |
 | Admin | Seeded role, hoisted, not managed, not mentionable, above Moderator when both are new | Moderator's permissions, plus *Manage channels, Manage roles, Manage invites, Manage members, Ban members* |
 | Owner | The account `users.role = 'admin'`, not a role | Every permission, plus the Owner-only powers |
 
@@ -159,13 +159,23 @@ Neither seeded role has *Administrator*, *Manage bots* or *Manage webhooks*.
 *Administrator* grants every permission and ignores channel overwrites, so it
 is not how Admin is modelled.
 
-Migration 0034 inserts the two roles on a fresh install and on an upgrade.
+Migration 0034 inserts the two roles on a fresh install and on an upgrade; migration 0097 then adds *Manage reports* and *Kick members* to them (see below).
 Nobody is assigned, including the Owner, so the upgrade does not grant those
 permissions. `@everyone` is left as it was. A role already named Moderator or
 Admin is skipped: its permissions, position and members stay, and roles that
 already exist are not reordered. A missing name is inserted at
 `max(position) + 1`, Moderator first and then Admin. They are ordinary roles,
 so the Owner can rename or delete them.
+
+Migration 0097 adds *Manage reports* and *Kick members* to Moderator and Admin, so
+they can read and close reports and use `/kick`. Roles carry no flag that marks
+them as built in, and the Owner may rename them, so the migration picks an
+ordinary role (not @everyone, not a bot role) named Moderator or Admin that
+still holds *Timeout members*. It only adds bits, so running it again changes
+nothing. A role you renamed, a custom role, @everyone and bot roles are left
+alone; if you want them to handle reports or kick, tick the two permissions
+yourself. To take the permissions away again, untick them on the role: the
+migration runs once.
 
 Before roles existed every member could do exactly what `@everyone` holds,
 and only the admin account could do the rest.

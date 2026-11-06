@@ -192,9 +192,9 @@ func assertSeededStarterRoles(t *testing.T, ctx context.Context, q db.Querier) (
 	pair[0] = readNamed(t, ctx, q, "Moderator")
 	pair[1] = readNamed(t, ctx, q, "Admin")
 	// Migration 0070 later grants Manage events to every role that can time
-	// members out, which both seeded roles can; migration 0083 does the same for Bypass new member limits and 0089 for Edit and Manage the wiki.
-	assertEmptySeed(t, pair[0], moderatorBits()|perm.ManageEvents|perm.BypassNewMemberLimits|perm.EditWiki|perm.ManageWiki, moderatorAmber)
-	assertEmptySeed(t, pair[1], adminBits()|perm.ManageEvents|perm.BypassNewMemberLimits|perm.EditWiki|perm.ManageWiki, adminBlue)
+	// members out, which both seeded roles can; migration 0083 does the same for Bypass new member limits and 0089 for Edit and Manage the wiki; 0097 adds Manage reports and Kick members.
+	assertEmptySeed(t, pair[0], moderatorBits()|perm.ManageEvents|perm.BypassNewMemberLimits|perm.EditWiki|perm.ManageWiki|perm.ManageReports|perm.KickMembers, moderatorAmber)
+	assertEmptySeed(t, pair[1], adminBits()|perm.ManageEvents|perm.BypassNewMemberLimits|perm.EditWiki|perm.ManageWiki|perm.ManageReports|perm.KickMembers, adminBlue)
 	var below int
 	err := q.QueryRow(ctx, `SELECT COALESCE(MAX(position), 0) FROM roles WHERE id <> $1 AND id <> $2`, pair[0].id, pair[1].id).Scan(&below)
 	if err != nil {
