@@ -110,8 +110,10 @@ jobs:
           kill "$watchdog_pid" 2>/dev/null || true
           exit "$status"
 
+      # Also after a green job: a spec that failed its first attempt and passed
+      # on retry keeps the trace and screenshot of the failed attempt here.
       - name: Upload Playwright traces and screenshots
-        if: failure()
+        if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-results-webkit-macos-${{ matrix.group.name }}
