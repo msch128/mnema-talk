@@ -67,3 +67,50 @@ func TestGreetingWithManyPublishersReachesTheClientIntact(t *testing.T) {
 		t.Fatalf("first event = %q, want server_info", first)
 	}
 }
+
+// A client that vanishes in the middle of a big greeting is unregistered
+// within moments; the handler does not sit waiting for buffer room that a
+// dead writer will never free.
+func TestClientThatLeavesDuringABigGreetingIsUnregisteredPromptly(t *testing.T) {
+	const publishers, perRoom = 400, 10
+	h, voiceSFU := newSFUHub(t)
+	h.Sessions = fakeAuth{user: auth.User{ID: uuid.New(), Username: "viewer"}}
+	t.Cleanup(h.Close)
+	for r := 0; r < publishers/perRoom; r++ {
+		ch := uuid.New()
+		for i := 0; i < perRoom; i++ {
+			user := uuid.New()
+			if _, _, err := voiceSFU.Join(ch, user, func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {}); err != nil {
+				t.Fatal(err)
+			}
+			if err := voiceSFU.Room(ch).PublishTestVideo(user, "camera"); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	srv := httptest.NewServer(http.HandlerFunc(h.HandleWebSocket))
+	t.Cleanup(srv.Close)
+	h.Origins = []string{srv.URL}
+	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http"), http.Header{"Origin": []string{srv.URL}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := conn.ReadMessage(); err != nil {
+		t.Fatal(err)
+	}
+	_ = conn.Close()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		h.mu.RLock()
+		left := len(h.clients) + len(h.pending)
+		h.mu.RUnlock()
+		if left == 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("%d client(s) still registered 2s after the client left", left)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
