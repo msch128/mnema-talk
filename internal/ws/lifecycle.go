@@ -143,12 +143,15 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if !h.admitPending(c) {
 		return
 	}
+	// The writer runs before the greeting is queued: a large greeting (one
+	// media state per publisher) would overflow the send buffer otherwise.
+	// It ends with the client's done channel when the handshake fails.
+	go c.writePump()
 	if !h.confirmHandshake(r, c, user.ID, tv) {
 		h.cancelPending(c)
 		return
 	}
 	metrics.WSConnections.Inc()
-	go c.writePump()
 	go c.readPump()
 }
 

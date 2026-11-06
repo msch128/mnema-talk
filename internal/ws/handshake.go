@@ -146,7 +146,28 @@ func (h *Hub) greet(c *Client, before, after string) {
 	}
 	for chID, states := range visibleTo(c, snap, h.SFU.AllMediaStates()) {
 		for uid, st := range states {
-			c.SendEvent(events.WebrtcMediaState, mediaStatePayload(chID, uid, st))
+			c.sendPaced(events.WebrtcMediaState, mediaStatePayload(chID, uid, st))
 		}
 	}
+}
+
+// sendPaced queues one event of a bulk greeting without flooding the send
+// buffer: it waits while the buffer is more than half full, so a large
+// snapshot neither drops the client as too slow nor leaves it no room for the
+// broadcasts that arrive meanwhile. A client that stays stuck for writeWait
+// gets the ordinary slow-client treatment.
+func (c *Client) sendPaced(eventType string, payload any) {
+	deadline := time.NewTimer(writeWait)
+	defer deadline.Stop()
+	for len(c.send) > cap(c.send)/2 {
+		select {
+		case <-c.done:
+			return
+		case <-deadline.C:
+			c.SendEvent(eventType, payload)
+			return
+		case <-time.After(time.Millisecond):
+		}
+	}
+	c.SendEvent(eventType, payload)
 }

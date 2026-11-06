@@ -229,6 +229,19 @@ func TestDeliverInteractionNeedsALiveSession(t *testing.T) {
 	}
 }
 
+func TestInteractionSkipsAConnectionThatIsAlreadyClosing(t *testing.T) {
+	g := New(Config{})
+	b := uuid.New()
+	older := &session{id: "o", botID: b, conn: newConnection(nil), startedAt: time.Now().Add(-time.Hour)}
+	newer := &session{id: "n", botID: b, conn: newConnection(nil), startedAt: time.Now()}
+	g.register(older)
+	g.register(newer)
+	newer.conn.closeWith(CloseRateLimited, "Rate limited")
+	if !g.DeliverInteraction(b, json.RawMessage(`{}`)) || older.seq != 1 || newer.seq != 0 {
+		t.Fatalf("the healthy older session gets it: older %d, closing newer %d", older.seq, newer.seq)
+	}
+}
+
 // socketPair gives a server-side connection (with its writer running) and
 // the client's socket.
 func socketPair(t *testing.T) (*connection, *websocket.Conn) {

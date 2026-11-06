@@ -36,6 +36,9 @@ func (c *Client) readPump() {
 // dispatchFrame routes one received frame. It reports false when the
 // connection must end.
 func (c *Client) dispatchFrame(budget *eventBudget, message []byte) bool {
+	if c.ending.Load() {
+		return true // being banned or kicked: the notice flushes, nothing is acted on
+	}
 	// Per-connection flood guard: excess events are dropped.
 	now := time.Now()
 	if !budget.allowFrame(now) {
