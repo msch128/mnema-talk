@@ -59,6 +59,9 @@ describe('api', () => {
       mockFetch(401, { error: { code: 'INVALID_CREDENTIALS', message: 'invalid username or password' } })
       await apiFailure(api('/api/auth/login', { method: 'POST', json: {} }))
       expect(listener).toHaveBeenCalledTimes(1)
+      // A wrong second-factor code is the same: no session ended, so drafts and other tabs stay untouched.
+      await apiFailure(api('/api/auth/login/2fa', { method: 'POST', json: {} }))
+      expect(listener).toHaveBeenCalledTimes(1)
     } finally { off() }
   })
 
