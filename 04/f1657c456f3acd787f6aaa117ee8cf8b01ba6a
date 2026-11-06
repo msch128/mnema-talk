@@ -1,0 +1,27 @@
+web/src/components/DesktopGamingOverlay.test.ts
+  s_06fcde5dbef956::t_d48b1401c01c87 16
+web/src/components/ServerUnreachable.test.ts
+  s_06fcde5dbef956::t_8ca8cfa0b5a7ba 35-39
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_7a1191afdd44bf 23
+web/src/lib/desktopGaming.test.ts
+  s_06fcde5dbef956::t_7bd0ef4d1232b0 15,96,103-110
+web/src/lib/desktopGaming.ts
+  s_06fcde5dbef956::t_f4cdda7ab90122 7,122-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "04f1657c456f3acd787f6aaa117ee8cf8b01ba6a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
