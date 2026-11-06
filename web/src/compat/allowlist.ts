@@ -31,7 +31,10 @@ export const responseGaps: ReadonlyArray<{ schema: string, versions: readonly st
 ]
 
 /** Endpoints newer than some releases. `expectOldStatus` is what such a server answers; the app must cope with it (hide the feature or fall back). */
-export const newEndpoints: ReadonlyArray<{ method: string, path: string, expectOldStatus: number, reason: string }> = []
+export const newEndpoints: ReadonlyArray<{ method: string, path: string, expectOldStatus: number, reason: string }> = [
+  { method: 'GET', path: '/api/threads/following', expectOldStatus: 404, reason: 'asked on every connect; a 404 leaves the followed list unknown and the notification rules as they were (stores/chat/threadFollow.ts)' },
+  { method: 'GET', path: '/api/admin/vanity-link', expectOldStatus: 404, reason: 'added in 2.x; the Administrator tab then shows its load-failed state with a retry (components/AdminVanityLink.vue)' }
+]
 
 /** WebSocket events added since the oldest baseline. A client ignores unknown names, so an entry says the app copes without it. */
 export const newEvents: readonly string[] = ['reports_open']

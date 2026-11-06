@@ -9,43 +9,9 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-export interface CompatSchema {
-  $ref?: string
-  type?: string | string[]
-  format?: string
-  enum?: unknown[]
-  minLength?: number
-  maxLength?: number
-  minimum?: number
-  maximum?: number
-  minItems?: number
-  maxItems?: number
-  pattern?: string
-  items?: CompatSchema
-  properties?: Record<string, CompatSchema>
-  required?: string[]
-  additionalProperties?: boolean | CompatSchema
-}
+import type { CompatBaseline, CompatOperation, CompatSchema } from '../src/compat/types.ts'
 
-export interface CompatOperation {
-  /** The JSON request body, if the operation takes one. */
-  body?: CompatSchema
-  query: string[]
-  /** Path parameters that must be UUIDs; the server answers 400 to anything else. */
-  uuid: string[]
-  /** The JSON answer of the success status, if it has one. */
-  ok?: CompatSchema
-  okStatus: number
-}
-
-export interface CompatBaseline {
-  version: string
-  web_client_api: number
-  health: { status: string, version: string, web_client_api: number, community_name: string, features?: string[] }
-  operations: Record<string, CompatOperation>
-  schemas: Record<string, CompatSchema>
-  eventTypes: string[]
-}
+export type { CompatBaseline, CompatOperation, CompatSchema }
 
 const here = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
@@ -70,7 +36,7 @@ export function compact(raw: unknown): CompatSchema {
   if (!isObject(raw)) return {}
   const out: CompatSchema = {}
   if (typeof raw['$ref'] === 'string') out.$ref = raw['$ref'].replace('#/components/schemas/', '')
-  if (typeof raw['type'] === 'string' || Array.isArray(raw['type'])) out.type = raw['type'] as string | string[]
+  if (typeof raw['type'] === 'string' || Array.isArray(raw['type'])) out.type = raw['type']
   if (typeof raw['format'] === 'string') out.format = raw['format']
   if (Array.isArray(raw['enum'])) out.enum = raw['enum']
   for (const key of ['minLength', 'maxLength', 'minimum', 'maximum', 'minItems', 'maxItems'] as const) {
@@ -100,7 +66,7 @@ function flatten(into: CompatSchema, parts: unknown[]) {
     }
     into.properties = { ...piece.properties, ...into.properties }
     into.required = [...new Set([...(into.required ?? []), ...(piece.required ?? [])])].sort()
-    into.type ??= piece.type
+    if (piece.type !== undefined) into.type ??= piece.type
   }
 }
 

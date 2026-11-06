@@ -1,7 +1,7 @@
 // What an older server release promised, read from its committed baseline
 // (scripts/compat-baseline.ts): finding an operation, checking a request body
 // against its schema and building sample answers. Test support only.
-import type { CompatBaseline, CompatOperation, CompatSchema } from '../../scripts/compat-baseline.ts'
+import type { CompatBaseline, CompatOperation, CompatSchema } from './types'
 
 export type { CompatBaseline, CompatOperation, CompatSchema }
 
@@ -36,13 +36,8 @@ export function findOperation(baseline: CompatBaseline, method: string, path: st
 function resolve(baseline: CompatBaseline, schema: CompatSchema | string | undefined): CompatSchema {
   if (typeof schema === 'string') return baseline.schemas[schema] ?? {}
   if (!schema) return {}
-  if (schema.$ref) return { ...resolve(baseline, schema.$ref), ...omit(schema) }
-  return schema
-}
-
-function omit(schema: CompatSchema): CompatSchema {
-  const { $ref: _ref, ...rest } = schema
-  return rest
+  const { $ref, ...own } = schema
+  return $ref ? { ...resolve(baseline, $ref), ...own } : schema
 }
 
 function typesOf(schema: CompatSchema): string[] {
