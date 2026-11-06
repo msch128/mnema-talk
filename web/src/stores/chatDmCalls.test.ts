@@ -172,6 +172,16 @@ describe('the messages of a call', () => {
     expect(shown[0]).toMatchObject({ title: 'Ada is calling you', channelId: conversation, messageId: invite })
   })
 
+  it.each([
+    ['do not disturb', { presence: 'dnd' as const }],
+    ['a muted conversation', { level: 'mute' as const }]
+  ])('do not announce the card late during %s', (_name, options) => {
+    const chat = setup({ away: true, ...options })
+    chat.handleWSEvent({ type: 'message_create', payload: callMessage({ title: 'Talk 1', talk_id: talk }) })
+    vi.advanceTimersByTime(1600)
+    expect(shown).toEqual([])
+  })
+
   it('stay quiet when the ring for the card is tracked, whatever became of it', () => {
     const chat = setup({ away: true })
     chat.handleWSEvent({ type: 'message_create', payload: callMessage({ title: 'Talk 1', talk_id: talk }) })
