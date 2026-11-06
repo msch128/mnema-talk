@@ -126,9 +126,10 @@ describe('AdminBotsTab', () => {
     expect(w.find('[data-testid="bot-detail"]').exists()).toBe(true)
     apiMock.mockReset()
     apiMock.mockRejectedValue(new Error('load failed'))
-    mount(AdminBotsTab)
+    const failed = mount(AdminBotsTab)
     await flushPromises()
-    expect(useToastStore().toasts.map(t => t.text)).toContain('load failed')
+    expect(failed.find('[data-testid="bots-error"]').exists()).toBe(true)
+    expect(useToastStore().toasts.map(t => t.text)).not.toContain('load failed')
   })
 
   it('ignores role ids the store does not know', async () => {

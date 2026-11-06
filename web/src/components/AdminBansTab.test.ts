@@ -55,7 +55,7 @@ describe('AdminBansTab', () => {
     apiMock.mockRejectedValueOnce(new Error('boom'))
     const failed = mount(AdminBansTab)
     await flushPromises()
-    expect(toastTexts()).toContain('boom')
+    expect(toastTexts()).toEqual([])
     expect(failed.text()).not.toContain('Nobody is banned.')
     expect(failed.get('[data-testid="bans-error"]').text()).toContain('Couldn’t load the bans.')
     apiMock.mockResolvedValueOnce(bans())

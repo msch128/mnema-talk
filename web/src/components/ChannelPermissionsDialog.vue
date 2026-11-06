@@ -8,7 +8,7 @@ import type { PropType } from 'vue'
 import { ref, computed, onMounted } from 'vue'
 import { useSettingsDraft } from '../composables/useSettingsDraft'
 import { Trash2, Lock } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api } from '../lib/api'
 import { decodeOverwritesBody } from '../types/domain'
 import type { Overwrite } from '../types/domain'
 import { usePermissionsStore } from '../stores/permissions'
@@ -134,7 +134,6 @@ async function load() {
     selected.value = entries.value[0] ? key(entries.value[0]) : null
   } catch (e) {
     failed.value = true
-    toasts.error(caughtErrorMessage(e, t('overwrites.loadFailed')))
   } finally {
     loaded.value = true
   }

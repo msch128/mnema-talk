@@ -152,7 +152,8 @@ describe('AdminAuditTab', () => {
     apiMock.mockRejectedValueOnce(new Error('boom'))
     const w = mount(AdminAuditTab)
     await flushPromises()
-    expect(useToastStore().toasts.map(t => t.text)).toContain('boom')
+    expect(w.find('[data-testid="audit-error"]').exists()).toBe(true)
+    expect(useToastStore().toasts).toHaveLength(0)
     let release: (v: unknown) => void = () => {}
     apiMock.mockReturnValueOnce(new Promise(r => { release = r }))
     await w.find('form').trigger('submit')

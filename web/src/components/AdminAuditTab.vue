@@ -65,7 +65,8 @@ async function load(more: boolean) {
   } catch (e) {
     if (mine !== request) return
     failed.value = true
-    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
+    // The panel says it while there are no entries; a toast only for a failed reload or page.
+    if (entries.value.length) toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
   } finally {
     if (mine === request) loading.value = false
   }

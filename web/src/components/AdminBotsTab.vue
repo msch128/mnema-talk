@@ -41,7 +41,8 @@ async function load() {
     failed.value = false
   } catch (e) {
     failed.value = true
-    fail(e)
+    // The panel says it while there are no bots; a toast only for a failed reload.
+    if (bots.value.length) fail(e)
   } finally {
     loaded.value = true
   }

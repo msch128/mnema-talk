@@ -66,7 +66,8 @@ async function load() {
     loaded.value = await api('/api/admin/onboarding', { decode: decodeOnboardingSettings })
   } catch (e) {
     failed.value = true
-    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
+    // The panel says it while nothing is loaded; a toast only for a failed reload.
+    if (loaded.value) toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
   }
 }
 

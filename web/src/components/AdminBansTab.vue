@@ -26,7 +26,8 @@ async function load() {
     failed.value = false
   } catch (e) {
     failed.value = true
-    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
+    // The panel says it while the list is empty; a toast only for a failed reload.
+    if (bans.value.length) toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
   } finally {
     loading.value = false
   }

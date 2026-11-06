@@ -134,7 +134,7 @@ describe('ProfileModerationTab', () => {
     const w = mount(ProfileModerationTab, { props: { userId: subject.id }, global })
     await flushPromises()
     expect(w.get('[role="alert"]').text()).toContain('Couldn’t load the moderation history.')
-    expect(useToastStore().toasts).toHaveLength(1)
+    expect(useToastStore().toasts).toHaveLength(0)
     http.handle = () => history
     await w.get('[data-testid="state-retry"]').trigger('click')
     await flushPromises()

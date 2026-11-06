@@ -70,7 +70,7 @@ describe('AdminInvitesTab', () => {
     expect(w.text()).toContain('Couldn’t load the invites')
     expect(w.text()).not.toContain('No invites yet.')
     expect(w.find('[data-testid="invite-form"]').exists()).toBe(true)
-    expect(toastTexts()).toContain('boom')
+    expect(toastTexts()).toEqual([])
   })
 
   it('creates an invite with the typed limits and reloads', async () => {
