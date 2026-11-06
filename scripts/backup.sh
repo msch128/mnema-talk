@@ -28,7 +28,7 @@ umask 077
 mkdir -p "$BACKUP_DIR"
 maintenance_lock
 app_resume=false seaweed_resume=false dest='' complete=false
-alpine=alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+alpine=alpine:3.24.4@sha256:93b41ef40b1677fce8fcc64ff4af09daddfacf5040afde618bc46c1e2d1cc7d4
 # The status file holds no secrets: times, size and the restore test result.
 # It is written next to the old one and renamed, so the app never reads half.
 write_backup_status() {

@@ -1,5 +1,3 @@
-# Deferred: chrislusf/seaweedfs stays on 4.48 for 1.2 (4.50 was one day old with
-# listen, raft and fsync behaviour changes); re-check at least 2 weeks after 4.50.
 # Weekly dependency updates, grouped so each ecosystem yields one PR.
 # Security updates are opened immediately regardless of this schedule.
 # Go and npm updates wait 5 days after a release (cooldown) so a hijacked or
