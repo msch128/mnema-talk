@@ -79,7 +79,7 @@ async function savePassword() {
       <div class="flex justify-end items-center gap-2 pt-1">
         <button
           type="button"
-          @click="isChangingPassword = false; currentPassword = newPassword = newPasswordRepeat = code = ''"
+          @click="isChangingPassword = false; passwordError = ''; currentPassword = newPassword = newPasswordRepeat = code = ''"
           class="btn btn-ghost"
         >
           {{ $t('common.cancel') }}

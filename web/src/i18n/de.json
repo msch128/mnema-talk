@@ -1045,7 +1045,10 @@
     "replyingTo": "Antwort an",
     "openThread": "Thread öffnen",
     "addReaction": "Reaktion hinzufügen",
-    "reaction": "Reaktion {emoji}",
+    "reaction": {
+      "one": "{emoji}: {count} Reaktion",
+      "other": "{emoji}: {count} Reaktionen"
+    },
     "edit": "Nachricht bearbeiten",
     "delete": "Nachricht löschen",
     "bot": "Bot",
