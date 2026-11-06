@@ -48,4 +48,14 @@ describe('AdminAccessSettings', () => {
     }))
     expect(w.get<HTMLInputElement>('[data-testid="inactivity-days"]').element.value).toBe('30')
   })
+
+  it('keeps one sticky bar on the screen: the sign-up limits save from their own card', async () => {
+    const w = mount(AdminAccessSettings)
+    await flushPromises()
+    const bars = w.findAll('[data-testid="unsaved-bar"]')
+    expect(bars).toHaveLength(2)
+    expect(bars.filter(bar => bar.classes().includes('sticky'))).toHaveLength(1)
+    expect(w.get('[data-testid="raid-form"]').classes()).toContain('border')
+    expect(w.get('[data-testid="raid-form"] [data-testid="unsaved-bar"]').classes()).not.toContain('sticky')
+  })
 })

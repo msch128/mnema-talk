@@ -229,11 +229,16 @@ describe('layout editing recovery and unsaved order', () => {
     apiMock.mockRejectedValueOnce(new Error('save denied'))
     await w.find('[data-testid="save-layout-button"]').trigger('click')
     await flushPromises()
-    expect(errors()).toContain('save denied')
+    // Said in the bar next to the order, not only in a toast.
+    expect(w.get('[data-testid="unsaved-error"]').text()).toBe('save denied')
     expect(w.text()).toContain('You have unsaved changes')
     expect(
       w.find('[data-testid="save-layout-button"]').attributes('disabled'),
     ).toBeUndefined()
+    // A retry clears the message.
+    await w.find('[data-testid="save-layout-button"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="unsaved-error"]').exists()).toBe(false)
   })
   it('retains a local edit when its follow-up channel reload fails', async () => {
     const w = await openLayout()

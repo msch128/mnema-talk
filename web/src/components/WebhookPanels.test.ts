@@ -184,6 +184,7 @@ describe('IncomingWebhooksPanel', () => {
     await flushPromises()
     expect(w.findAll('[data-testid="incoming-webhook"]')).toHaveLength(1)
     expect(w.find('[data-testid="revealed-url"]').exists()).toBe(false)
+    expect(toastTexts()).toEqual(['Webhook deleted.'])
 
     confirmMock.mockResolvedValueOnce(true)
     apiMock.mockResolvedValueOnce(undefined)
@@ -541,6 +542,7 @@ describe('OutgoingWebhooksPanel', () => {
     await flushPromises()
     expect(w.findAll('[data-testid="outgoing-webhook"]')).toHaveLength(2)
     expect(w.find('[data-testid="revealed-secret"]').exists()).toBe(false)
+    expect(toastTexts()).toEqual(['Webhook deleted.'])
     confirmMock.mockResolvedValueOnce(true)
     apiMock.mockResolvedValueOnce(undefined)
     await row(w, 1).find('button[aria-label="Delete Out 2"]').trigger('click')

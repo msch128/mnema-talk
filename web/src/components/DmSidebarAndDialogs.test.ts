@@ -11,7 +11,7 @@ import { useBlocksStore } from '../stores/blocks'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
-import { i18nPlugin, setLocale } from '../i18n'
+import { i18nPlugin, setLocale, t as tr } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
 import { dmFixture, dmMemberFixture } from '../dm.fixture'
@@ -274,6 +274,7 @@ describe('DmInfoDialog', () => {
     await flushPromises()
     expect(useBlocksStore().isBlocked(ada.id)).toBe(true)
     expect(w.find('[data-testid="dm-unblock"]').exists()).toBe(true)
+    expect(useToastStore().toasts.map(x => x.text)).toContain(tr('blocks.blocked', { name: 'Ada' }))
   })
 
   it('lifts a block from the info of a conversation of two, and closes the add dialog', async () => {
@@ -285,6 +286,7 @@ describe('DmInfoDialog', () => {
     await w.get('[data-testid="dm-unblock"]').trigger('click')
     await flushPromises()
     expect(useBlocksStore().isBlocked(ada.id)).toBe(false)
+    expect(useToastStore().toasts.map(x => x.text)).toContain(tr('blocks.unblocked', { name: 'Ada' }))
     const crowd = mount(DmInfoDialog, { props: { dm: group }, global, attachTo: document.body })
     await crowd.get('[data-testid="dm-add-member"]').trigger('click')
     ;[...document.querySelectorAll<HTMLElement>('[data-testid="dm-create"] button')].find(b => b.textContent?.trim() === 'Cancel')!.click()

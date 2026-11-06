@@ -52,6 +52,7 @@ async function remove(rule: AutomodRule) {
   if (!ok) return
   try {
     await api(`/api/admin/automod/rules/${rule.id}`, { method: 'DELETE' })
+    toasts.success(t('automod.deleted'))
     await load()
   } catch (error) {
     toasts.error(caughtErrorMessage(error, t('automod.deleteFailed')))

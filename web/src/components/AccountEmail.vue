@@ -115,7 +115,7 @@ async function resend() {
         <button type="button" class="btn btn-ghost" @click="start('view')">{{ $t('common.cancel') }}</button>
         <button type="submit" :disabled="busy" :class="['btn', mode === 'remove' ? 'btn-danger-solid' : 'btn-primary']" data-testid="account-email-submit">
           <Loader2 v-if="busy" class="h-3.5 w-3.5 animate-spin" /><Mail v-else class="h-3.5 w-3.5" />
-          <span>{{ $t(mode === 'edit' ? 'common.save' : 'security.email.remove') }}</span>
+          <span>{{ $t(mode === 'edit' ? 'security.email.changeAction' : 'security.email.remove') }}</span>
         </button>
       </div>
     </form>

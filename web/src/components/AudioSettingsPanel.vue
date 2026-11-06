@@ -2,7 +2,7 @@
 // The audio section of the settings dialog: the microphone check first, then
 // output, filter and how you speak, then Fine-tune behind a disclosure. Every
 // change applies at once and says "Saved" (a personal preference, doc/settings-ux.md).
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useWebRTC } from '../composables/useWebRTC'
 import { usePreferenceSave } from '../composables/usePreferenceSave'
 import { useVoiceStore } from '../stores/voice'
@@ -16,8 +16,13 @@ import ConnectionTest from './ConnectionTest.vue'
 
 const voice = useVoiceStore()
 const pref = usePreferenceSave()
-// Every control stores through saveSettings; the indicator follows it.
-voice.$onAction(({ name, after }) => { if (name === 'saveSettings') after(pref.flash) })
+// Every write, from a control or from the volume and device watchers, bumps
+// settingsWrites; the indicator follows that one counter. Push to talk without a
+// key is not done yet (the key is asked for next), so it stays quiet.
+watch(() => voice.settingsWrites, () => {
+  if (voice.inputMode === 'ptt' && !voice.pttKey) return
+  pref.flash()
+})
 const { refreshAudioDevices, stopMicTest } = useWebRTC()
 
 // Listing devices does not request capture. A local test needs its own action.

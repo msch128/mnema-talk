@@ -60,7 +60,26 @@ describe('AdminVanityLink', () => {
     apiMock.mockRejectedValue(new Error('This link name is reserved.'))
     await w.get('form').trigger('submit')
     await flushPromises()
-    expect(useToastStore().toasts.some(x => x.type === 'error')).toBe(true)
+    // The refusal is said inline in the bar, next to the form.
+    expect(w.get('[data-testid="unsaved-error"]').text()).toBe('This link name is reserved.')
+  })
+
+  it('shows what is unsaved, takes it back on Reset and saves with Ctrl+S', async () => {
+    const w = await mountLink({ slug: 'owls', accepts_signups: false, path: '/join/owls' })
+    expect(w.find('[data-testid="unsaved-reset"]').exists()).toBe(false)
+    await w.get('[data-testid="vanity-slug"]').setValue('hawks')
+    expect(w.get('[data-testid="unsaved-status"]').text()).toBe('You have unsaved changes')
+    await w.get('[data-testid="unsaved-reset"]').trigger('click')
+    expect(w.get<HTMLInputElement>('[data-testid="vanity-slug"]').element.value).toBe('owls')
+    // Only the case and spaces differ: nothing to save.
+    await w.get('[data-testid="vanity-slug"]').setValue(' OWLS ')
+    expect(w.get('[data-testid="vanity-save"]').attributes('disabled')).toBeDefined()
+    await w.get('[data-testid="vanity-slug"]').setValue('hawks')
+    apiMock.mockResolvedValue({ slug: 'hawks', accepts_signups: false, path: '/join/hawks' })
+    await w.get('form').trigger('keydown', { key: 's', ctrlKey: true })
+    await flushPromises()
+    expect(apiMock).toHaveBeenLastCalledWith('/api/admin/vanity-link', expect.objectContaining({ method: 'PUT' }))
+    expect(w.find('[data-testid="unsaved-reset"]').exists()).toBe(false)
   })
 
   it('removes the link by saving an empty name', async () => {

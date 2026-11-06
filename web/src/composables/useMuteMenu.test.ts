@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore } from '../stores/chat'
+import { useToastStore } from '../stores/toast'
 import type { ContextMenuItem } from '../components/menuTypes'
 import { t } from '../i18n'
 import { categoryFixture, channelFixture } from '../test-fixtures.fixture'
@@ -114,5 +115,21 @@ describe('notification menu', () => {
 
     chat.notifySettings = { channels: [{ channel_id: 'c1', level: 'mute', muted_until: null }], categories: [], server: { level: 'all', muted_until: null, suppress_everyone: false } }
     expect(submenu(notifyMenuItems({ kind: 'channel', id: 'c1' })).value).toBeTruthy()
+  })
+})
+
+describe('a mute that did not go through', () => {
+  it('says so in a toast, and stays quiet when it did', async () => {
+    const chat = useChatStore()
+    const toasts = useToastStore()
+    const set = vi.spyOn(chat, 'setNotificationLevel').mockResolvedValue(false)
+    const mute = () => notifyMenuItems({ kind: 'channel', id: 'c1' }).find(i => i.id === 'notify-nothing')!.action?.()
+    mute()
+    await vi.waitFor(() => expect(toasts.toasts.map(x => x.text)).toEqual([t('notifications.serverSaveFailed')]))
+    toasts.toasts = []
+    set.mockResolvedValue(true)
+    mute()
+    await vi.waitFor(() => expect(set).toHaveBeenCalledTimes(2))
+    expect(toasts.toasts).toEqual([])
   })
 })

@@ -1,5 +1,5 @@
 import { requireValue } from '../test-fixtures.fixture'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
@@ -462,20 +462,56 @@ describe('AudioSettingsPanel as a section of the settings', () => {
 })
 
 describe('AudioSettingsPanel saves at once', () => {
-  it('says "Saved" whenever a control stored a setting', async () => {
+  let voice!: ReturnType<typeof useVoiceStore>
+  let wrapper!: ReturnType<typeof mount<typeof AudioSettingsPanel>>
+  const indicator = () => wrapper.find('[data-testid="saved-indicator"]').text()
+
+  beforeEach(() => {
     vi.useFakeTimers()
     localStorage.clear()
     setActivePinia(createPinia())
-    const voice = useVoiceStore()
-    const wrapper = mount(AudioSettingsPanel, mountOpts)
-    const indicator = () => wrapper.find('[data-testid="saved-indicator"]').text()
+    voice = useVoiceStore()
+    wrapper = mount(AudioSettingsPanel, mountOpts)
+  })
+  afterEach(() => {
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it('says "Saved" whenever a control stored a setting', async () => {
     expect(indicator()).toBe('')
     voice.saveSettings()
     await nextTick()
     expect(indicator()).toBe(t('draft.saved'))
     await vi.advanceTimersByTimeAsync(2500)
     expect(indicator()).toBe('')
-    wrapper.unmount()
-    vi.useRealTimers()
+  })
+
+  it.each([
+    ['the noise mode', () => voice.setNoiseMode('browser')],
+    ['a sound effect toggle', () => voice.toggleSoundEvent('join')]
+  ])('says "Saved" for %s', async (_name, change) => {
+    change()
+    await nextTick()
+    expect(indicator()).toBe(t('draft.saved'))
+  })
+
+  it.each([
+    ['the output volume', () => { voice.outputVolume = 40 }],
+    ['the input volume', () => { voice.inputVolume = 60 }],
+    ['the output device', () => { voice.selectedOutputDeviceId = 'speakers' }]
+  ])('says "Saved" for %s, which a watcher stores', async (_name, change) => {
+    change()
+    await nextTick()
+    await nextTick()
+    expect(indicator()).toBe(t('draft.saved'))
+  })
+
+  it('stays quiet while push to talk still has no key', async () => {
+    voice.inputMode = 'ptt'
+    voice.pttKey = ''
+    voice.saveSettings()
+    await nextTick()
+    expect(indicator()).toBe('')
   })
 })
