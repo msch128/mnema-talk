@@ -1,0 +1,57 @@
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_9f4b645565ad6b 18,316
+web/src/components/PendingMessages.test.ts
+  s_06fcde5dbef956::t_06be792c24e614 1-67
+web/src/components/PendingMessages.vue
+  s_06fcde5dbef956::t_425a0f266ec012 1-61
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_118d4b5339fc0f 14,324
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_15d6052338a66a 5083-5091
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_1643e94684564b 5083-5091
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_4f590859fbe81d 23,78-79,150-152
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_49a68e1b6bda97 33,133-134
+web/src/stores/chat/messageActions.ts
+  s_06fcde5dbef956::t_2f3730d6d386b9 1,3,7-9,13-15,22-31,33,52
+web/src/stores/chat/messagePost.ts
+  s_06fcde5dbef956::t_257f4f9073ab87 1-71
+web/src/stores/chat/outbox.ts
+  s_06fcde5dbef956::t_76c6345588b03b 1-151
+web/src/stores/chat/outboxTypes.ts
+  s_06fcde5dbef956::t_1d8b6421fa0f69 1-15
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_1e3a9bf66547b0 22,57
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_179e99a079d510 21,87-88
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_7717255ac45337 9,116-126,195
+web/src/stores/chatOutbox.test.ts
+  s_06fcde5dbef956::t_47d83f5284a7ac 1-223
+web/src/stores/chatStoreBehaviour.test.ts
+  s_06fcde5dbef956::t_3832c85f511f04 100,112
+web/src/stores/chatStoreDefensive.test.ts
+  s_06fcde5dbef956::t_b2ae71f7115b11 129
+web/src/stores/stores.test.ts
+  s_06fcde5dbef956::t_2e17b315392147 207,225
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_20a7dd926d82d5 1446,1455,2022,2059
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bd81783feeb53632198431906e9d152e4e178275",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
