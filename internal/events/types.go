@@ -100,6 +100,10 @@ const (
 	// CommunityUpdated announces the community's name after the Owner changed
 	// it, so open tabs retitle themselves without a reload.
 	CommunityUpdated = "community_updated"
+	// ReportsOpen carries how many reports are open now ({"open": n}). It goes
+	// only to the sessions of members who hold Manage reports (the Owner
+	// always), whenever a report is filed or closed.
+	ReportsOpen = "reports_open"
 )
 
 // Client-to-server events.

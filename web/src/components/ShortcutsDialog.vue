@@ -3,7 +3,7 @@
 // The list is lib/shortcuts; the push-to-talk key is the member's own.
 import { computed } from 'vue'
 import BaseDialog from './BaseDialog.vue'
-import { SHORTCUT_GROUPS, isMac, keyLabel, type KeyCombo, type Shortcut } from '../lib/shortcuts'
+import { SHORTCUT_GROUPS, formatShortcut, isMac, keyLabel, type KeyCombo, type Shortcut } from '../lib/shortcuts'
 import { pttKeyLabel } from '../lib/pttKey'
 import { useVoiceStore } from '../stores/voice'
 
@@ -16,7 +16,7 @@ const combosOf = (item: Shortcut): readonly KeyCombo[] => (item.id === 'ptt' ? p
 </script>
 
 <template>
-  <BaseDialog :title="$t('shortcuts.title')" :subtitle="$t('shortcuts.subtitle')" panel-class="max-w-3xl" sheet @close="emit('close')">
+  <BaseDialog :title="$t('shortcuts.title')" :subtitle="$t('shortcuts.subtitle', { keys: formatShortcut(['mod', '/'], mac) })" panel-class="max-w-3xl" sheet @close="emit('close')">
     <div class="min-h-0 flex-1 overflow-y-auto p-6 max-md:p-4" data-testid="shortcuts-dialog">
       <div class="grid gap-x-10 gap-y-7 md:grid-cols-2">
         <section v-for="group in SHORTCUT_GROUPS" :key="group.id" :aria-labelledby="`shortcuts-${group.id}`" :data-testid="`shortcuts-group-${group.id}`">

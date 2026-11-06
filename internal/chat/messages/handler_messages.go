@@ -84,6 +84,8 @@ func (a *API) ListMessages(w http.ResponseWriter, r *http.Request) error {
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param request body messages.CreateMessageRequest true "Request body."
 // @Success 201 {object} core.Message "Created message."
+// @Success 200 {object} core.Message "The message already created with this nonce (a retried send)."
+// @Failure 410 {object} httpx.ErrorResponse "MESSAGE_DELETED: the message sent with this nonce was deleted since; it is not posted again."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
@@ -105,6 +107,14 @@ func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	need := perm.SendMessages
 	if len(req.AttachmentIDs) > 0 {
 		need |= perm.AttachFiles
+	}
+	// A retry is answered before the Send check: it only ever returns the
+	// caller's own message in this channel, and a member who was timed out
+	// since the first attempt must not see a stored message turn into 403.
+	// Seeing the channel is still required: someone who lost access gets the
+	// normal refusal, not the message.
+	if replayed, err := a.replayIfVisible(w, r, user.ID, chID, req.Nonce); replayed || err != nil {
+		return err
 	}
 	ctx, err := a.ServeSendContext(r, chID, need)
 	if err != nil {
@@ -131,12 +141,17 @@ func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	}
 	id, err := InsertMessage(ctx, a.DB, a.Online, NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
-		HasAttachment: len(req.AttachmentIDs) > 0,
+		HasAttachment: len(req.AttachmentIDs) > 0, Nonce: req.Nonce,
 	}, claim)
+	if IsNonceConflict(err) {
+		// A concurrent send of the same nonce won the race.
+		_, err = a.replayNonce(w, r, user.ID, chID, req.Nonce)
+		return err
+	}
 	if err != nil {
 		return err
 	}
-	return PublishMessage(w, r, a.DB, a.Events, id)
+	return PublishMessageNonce(w, r, a.DB, a.Events, id, req.Nonce)
 }
 
 // MessageInChannel loads messageID and checks it belongs to the channel named in
@@ -282,9 +297,24 @@ type CreateMessageRequest struct {
 	ParentID *uuid.UUID `json:"parent_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
 	// ReplyToID must be a message of the same conversation (quoted reply).
 	ReplyToID *uuid.UUID `json:"reply_to_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
+	// Nonce is an optional random id the client makes per send. Sending the
+	// same nonce again (a retry after a lost connection) returns the first
+	// message with 200 instead of posting a second one.
+	Nonce *uuid.UUID `json:"nonce,omitempty" format:"uuid" binding:"optional"`
 }
 
 // EditMessageRequest is the body of PUT /api/channels/{channelID}/messages/{messageID}.
 type EditMessageRequest struct {
 	Content string `json:"content" minLength:"1" maxLength:"4000"`
+}
+
+// replayIfVisible is replayNonce for a caller who may still see the channel.
+func (a *API) replayIfVisible(w http.ResponseWriter, r *http.Request, userID, chID uuid.UUID, nonce *uuid.UUID) (bool, error) {
+	if nonce == nil {
+		return false, nil
+	}
+	if _, err := a.ServeSendContext(r, chID, perm.ViewChannel); err != nil {
+		return false, err
+	}
+	return a.replayNonce(w, r, userID, chID, nonce)
 }

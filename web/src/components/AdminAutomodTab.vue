@@ -14,6 +14,9 @@ import { now, useServerClock } from '../lib/clock'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
 import AutomodRuleDialog from './AutomodRuleDialog.vue'
+import { useCompactLayout } from '../composables/useCompactLayout'
+import type { ContextMenuItem } from './menuTypes'
+import RowActionsMenu from './RowActionsMenu.vue'
 import EmptyState from './EmptyState.vue'
 import { useReloadOnActivate } from '../composables/useReloadOnActivate'
 
@@ -39,6 +42,15 @@ async function load() {
     failed.value = true
     toasts.error(caughtErrorMessage(error, t('automod.loadFailed')))
   }
+}
+
+const { isCompact } = useCompactLayout()
+// On a phone the icons have no tooltip: edit and delete as one labelled menu.
+function ruleMenu(rule: AutomodRule): ContextMenuItem[] {
+  return [
+    { id: 'edit', label: t('automod.edit', { name: ruleLabel(rule) }), icon: Pencil, action: () => { editing.value = { rule, kind: rule.kind } } },
+    { id: 'delete', label: t('automod.deleteRule', { name: ruleLabel(rule) }), icon: Trash2, danger: true, action: () => { void remove(rule) } }
+  ]
 }
 
 async function remove(rule: AutomodRule) {
@@ -92,8 +104,9 @@ onMounted(load)
           </p>
           <p class="text-xs text-mnema-tertiary wrap-break-word" data-testid="rule-summary">{{ ruleSummary(rule) }}</p>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm max-md:min-h-11" :aria-label="$t('automod.edit', { name: ruleLabel(rule) })" data-testid="rule-edit" @click="editing = { rule, kind: rule.kind }"><Pencil class="h-4 w-4" /></button>
-        <button type="button" class="btn btn-ghost btn-sm max-md:min-h-11 hover:text-mnema-danger" :aria-label="$t('automod.deleteRule', { name: ruleLabel(rule) })" data-testid="rule-delete" @click="remove(rule)"><Trash2 class="h-4 w-4" /></button>
+        <RowActionsMenu v-if="isCompact" :items="ruleMenu(rule)" :label="$t('admin.rowActionsNamed', { name: ruleLabel(rule) })" />
+        <button v-if="!isCompact" type="button" class="btn btn-ghost btn-sm max-md:min-h-11" :aria-label="$t('automod.edit', { name: ruleLabel(rule) })" data-testid="rule-edit" @click="editing = { rule, kind: rule.kind }"><Pencil class="h-4 w-4" /></button>
+        <button v-if="!isCompact" type="button" class="btn btn-ghost btn-sm max-md:min-h-11 hover:text-mnema-danger" :aria-label="$t('automod.deleteRule', { name: ruleLabel(rule) })" data-testid="rule-delete" @click="remove(rule)"><Trash2 class="h-4 w-4" /></button>
       </li>
     </ul>
 

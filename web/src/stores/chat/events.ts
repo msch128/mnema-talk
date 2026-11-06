@@ -7,6 +7,7 @@ import { useForwardQuotesStore } from '../forwardQuotes'
 import { usePermissionsStore } from '../permissions'
 import { useAppVersionStore } from '../appVersion'
 import { useBlocksStore } from '../blocks'
+import { useReportsOpenStore } from '../reportsOpen'
 import { useEventsStore } from '../events'
 import { useEventCommentsStore } from '../eventComments'
 import { useOnboardingStore } from '../onboarding'
@@ -30,6 +31,7 @@ import { applyPoll } from './polls'
 import { onPinnedMaybeDeleted, onPinsChanged } from './pins'
 import { onTalkLeader } from './talks'
 import { closeThread } from './threads'
+import { noteEcho } from './outbox'
 import { clearTypingForUser, handleTypingEvent } from './typing'
 
 type Payload<K extends ServerEventType> = ServerEventPayloads[K]
@@ -129,6 +131,8 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   if (!p) return
   const { cs, authStore } = cx
   signalForumPosts(cx, p.channel_id)
+  // The author's own send coming back: it replaces the pending copy in place.
+  noteEcho(cx, p)
   countReply(cx, p)
   insertMessage(cx, p)
   noteDmMessage(cx, p)
@@ -205,6 +209,8 @@ const HANDLERS: Handlers = {
     if (p && typeof p.community_icon === 'string') useServerFeaturesStore().setCommunityIcon(p.community_icon)
     void useOnboardingStore().reload()
   },
+  // A report was filed or closed (sent to members who hold Manage reports only).
+  reports_open: (_cx, p) => { if (p) useReportsOpenStore().set(p.open) },
   // An admin started an update: the server restarts in a moment.
   system_update: (_cx, p) => useAppVersionStore().setUpdating(p?.version),
   presence_snapshot: onPresenceSnapshot,

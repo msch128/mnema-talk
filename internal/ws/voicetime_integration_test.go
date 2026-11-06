@@ -23,12 +23,12 @@ func TestVoiceTimeWritesAreDebouncedAndFlushedOnClose(t *testing.T) {
 		return n
 	}
 	ch := uuid.New()
-	h.addVoiceTime(u.ID, ch, 3*time.Second, false) // the first write is immediate
+	h.addVoiceTime(u.ID, ch, 3*time.Second, seatPublic) // the first write is immediate
 	if total() != 3 {
 		t.Fatalf("total = %d, want 3", total())
 	}
-	h.addVoiceTime(u.ID, ch, 4*time.Second, false) // inside the window: held back
-	h.addVoiceTime(u.ID, ch, 5*time.Second, false)
+	h.addVoiceTime(u.ID, ch, 4*time.Second, seatPublic) // inside the window: held back
+	h.addVoiceTime(u.ID, ch, 5*time.Second, seatPublic)
 	if total() != 3 {
 		t.Fatalf("total = %d after held stays, want 3", total())
 	}
@@ -42,8 +42,8 @@ func TestVoiceTimeFlushWritesWhatIsHeld(t *testing.T) {
 	p := testutil.DB(t)
 	u := wsFixtureUser(t, p)
 	h := NewHub(p, nil, nil, nil)
-	h.addVoiceTime(u.ID, uuid.New(), time.Second, false)
-	h.addVoiceTime(u.ID, uuid.New(), 2*time.Second, false)
+	h.addVoiceTime(u.ID, uuid.New(), time.Second, seatPublic)
+	h.addVoiceTime(u.ID, uuid.New(), 2*time.Second, seatPublic)
 	h.flushVoiceTime(u.ID)
 	var n int64
 	if err := p.QueryRow(context.Background(), `SELECT voice_seconds FROM users WHERE id=$1`, u.ID).Scan(&n); err != nil || n != 3 {
@@ -70,10 +70,10 @@ func TestVoiceTimeIsAnnouncedOnlyToTheTalkItWasSpentIn(t *testing.T) {
 		got = append(got, seen{ch, payload.(map[string]any)["voice_seconds"].(int64)})
 	}
 	hidden, visible := uuid.New(), uuid.New()
-	h.addVoiceTime(u.ID, hidden, 3*time.Second, false)  // written at once
-	h.addVoiceTime(u.ID, hidden, 4*time.Second, false)  // held back
-	h.addVoiceTime(u.ID, visible, 5*time.Second, false) // another Talk: the held 4 s go out first, to the hidden Talk
-	h.addVoiceTime(u.ID, visible, 6*time.Second, false) // held back in the visible Talk
+	h.addVoiceTime(u.ID, hidden, 3*time.Second, seatPublic)  // written at once
+	h.addVoiceTime(u.ID, hidden, 4*time.Second, seatPublic)  // held back
+	h.addVoiceTime(u.ID, visible, 5*time.Second, seatPublic) // another Talk: the held 4 s go out first, to the hidden Talk
+	h.addVoiceTime(u.ID, visible, 6*time.Second, seatPublic) // held back in the visible Talk
 	h.flushVoiceTime(u.ID)
 	want := []seen{{hidden, 3}, {hidden, 7}, {visible, 18}}
 	if len(got) != len(want) {
@@ -119,8 +119,8 @@ func TestVoiceTimeSurvivesAFailedWrite(t *testing.T) {
 	u := wsFixtureUser(t, p)
 	h := NewHub(p, nil, nil, nil)
 	ch := uuid.New()
-	h.addVoiceTime(u.ID, ch, 3*time.Second, false) // written at once
-	h.addVoiceTime(u.ID, ch, 4*time.Second, false) // held back
+	h.addVoiceTime(u.ID, ch, 3*time.Second, seatPublic) // written at once
+	h.addVoiceTime(u.ID, ch, 4*time.Second, seatPublic) // held back
 
 	ctx := context.Background()
 	if _, err := p.Exec(ctx, `CREATE FUNCTION fail_voice_write() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'write refused'; END $$`); err != nil {
@@ -155,12 +155,62 @@ func TestVoiceTimeEntryIsDroppedOnceIdle(t *testing.T) {
 	p := testutil.DB(t)
 	u := wsFixtureUser(t, p)
 	h := NewHub(p, nil, nil, nil)
-	h.addVoiceTime(u.ID, uuid.New(), 3*time.Second, false)
+	h.addVoiceTime(u.ID, uuid.New(), 3*time.Second, seatPublic)
 	h.pruneWhenIdle(u.ID)
 	h.vtimes.mu.Lock()
 	idle := h.vtimes.m[u.ID].idle
 	h.vtimes.mu.Unlock()
 	if idle == nil {
 		t.Fatal("no idle timer after a write")
+	}
+}
+
+// The public talk time counts only stays in Talks everyone can see: time in a
+// Talk some members cannot see adds to the private total alone (and announces
+// nothing), time in a conversation's call to neither.
+func TestPublicVoiceTimeCountsOnlyTalksEveryoneCanSee(t *testing.T) {
+	p := testutil.DB(t)
+	u := wsFixtureUser(t, p)
+	ctx := context.Background()
+	announced := 0
+	totals := func() (private, public int64) {
+		t.Helper()
+		if err := p.QueryRow(ctx, `SELECT voice_seconds, public_voice_seconds FROM users WHERE id = $1`, u.ID).Scan(&private, &public); err != nil {
+			t.Fatal(err)
+		}
+		return private, public
+	}
+	for _, tc := range []struct {
+		name                    string
+		class                   seatClass
+		wantPrivate, wantPublic int64
+		wantAnnounced           int
+	}{
+		{"a Talk hidden from some members", seatLimited, 5, 0, 0},
+		{"the call of a conversation", seatPrivate, 5, 0, 0},
+		{"a Talk everyone can see", seatPublic, 12, 7, 1},
+	} {
+		h := NewHub(p, nil, nil, nil)
+		h.Tap = func(_ uuid.UUID, eventType string, payload any) {
+			if eventType == "user_stats" {
+				announced++
+				if got := payload.(map[string]any)["voice_seconds"].(int64); got != 7 {
+					t.Errorf("%s: announced total %d, want the public total 7", tc.name, got)
+				}
+			}
+		}
+		secs := 5 * time.Second
+		if tc.class == seatPublic {
+			secs = 7 * time.Second
+		}
+		h.addVoiceTime(u.ID, uuid.New(), secs, tc.class)
+		h.flushVoiceTime(u.ID)
+		if private, public := totals(); private != tc.wantPrivate || public != tc.wantPublic {
+			t.Errorf("%s: private %d public %d, want private %d public %d", tc.name, private, public, tc.wantPrivate, tc.wantPublic)
+		}
+		if announced != tc.wantAnnounced {
+			t.Errorf("%s: %d announcements, want %d", tc.name, announced, tc.wantAnnounced)
+		}
+		h.Close()
 	}
 }

@@ -4,12 +4,13 @@ import type { Member } from '../types/domain'
 // One member in the member list: avatar with live status, display name and
 // a second line (Talk, status text or presence). Click opens the profile.
 import { computed } from 'vue'
-import { Crown, Volume2 } from '@lucide/vue'
+import { Clock, Crown, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
-import { t } from '../i18n'
+import { t, locale } from '../i18n'
 import { activityText } from '../lib/presence'
+import { now, useServerClock } from '../lib/clock'
 import UserAvatar from './UserAvatar.vue'
 import ActivityStats from './ActivityStats.vue'
 import BotBadge from './BotBadge.vue'
@@ -34,6 +35,16 @@ const subline = computed(() => {
   if (offline.value) return ''
   if (activity.value) return activityText(activity.value)
   return props.member.status_text || (props.member.role === 'admin' ? t(`presence.${status.value}`) : '')
+})
+
+// A running timeout is moderation business: only those who may time members
+// out see it in the list (the member themselves is told by the banner).
+// The shared clock ticks while a timeout is pending, so it disappears when it runs out.
+useServerClock(() => !!props.member.timeout_until)
+const timedOutText = computed(() => {
+  const until = props.member.timeout_until
+  if (!until || Date.parse(until) <= now.value || !permissions.can('timeout_members')) return ''
+  return t('admin.userTimedOut', { time: new Date(until).toLocaleString(locale.value) })
 })
 </script>
 
@@ -72,6 +83,7 @@ const subline = computed(() => {
           :style="nameColor && !offline ? { color: nameColor } : undefined"
         >{{ member.display_name || member.username }}</span>
         <BotBadge v-if="member.is_bot" />
+        <Clock v-if="timedOutText" class="h-3.5 w-3.5 shrink-0 text-mnema-warning" data-testid="member-timed-out" role="img" v-tooltip="timedOutText" :aria-label="timedOutText" />
         <Crown v-if="member.role === 'admin'" class="h-3.5 w-3.5 shrink-0 text-mnema-amber" />
       </div>
 

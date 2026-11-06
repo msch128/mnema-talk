@@ -387,3 +387,31 @@ func TestServiceChecks(t *testing.T) {
 		t.Fatalf("no state and no database: %v", err)
 	}
 }
+
+// A Talk whose use is shown to the whole community must be one every member
+// sees through @everyone alone: a role or member overwrite that lets a few in
+// does not make it public.
+func TestEveryoneCanViewOnlyWhatEveryoneSees(t *testing.T) {
+	f := permtest.NewFixture()
+	cat := f.Category()
+	open := f.Channel(cat)
+	secret := f.Channel(cat)
+	f.RoleOverwrite(true, secret, f.EveryoneID(), 0, ViewChannel)
+	vip := f.Role(1, 0)
+	f.RoleOverwrite(true, secret, vip, ViewChannel, 0) // a role sees it, @everyone does not
+	hiddenCat := f.Category()
+	inHiddenCategory := f.Channel(hiddenCat)
+	f.RoleOverwrite(false, hiddenCat, f.EveryoneID(), 0, ViewChannel)
+	dm := f.DM(uuid.New(), uuid.New())
+
+	s := f.Snapshot()
+	for name, tc := range map[string]struct {
+		ch   uuid.UUID
+		want bool
+	}{"open channel": {open, true}, "hidden by a channel overwrite": {secret, false}, "hidden by its category": {inHiddenCategory, false},
+		"unknown channel": {uuid.New(), false}, "conversation": {dm, false}, "call of a conversation": {f.DMTalk(dm), false}} {
+		if got := s.EveryoneCanView(tc.ch); got != tc.want {
+			t.Errorf("%s: EveryoneCanView = %v, want %v", name, got, tc.want)
+		}
+	}
+}

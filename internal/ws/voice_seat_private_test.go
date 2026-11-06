@@ -41,9 +41,82 @@ func TestResumedStayInAPublicTalkStaysPublicWhenPermissionsAreUnavailable(t *tes
 		t.Fatal("no seat on resume")
 	}
 	h.mu.RLock()
-	private := h.privateSeat[key]
+	class := h.seatClasses[key]
 	h.mu.RUnlock()
-	if private {
-		t.Fatal("the resumed stay of a public Talk was marked private")
+	if class != seatPublic {
+		t.Fatalf("the resumed stay of a public Talk was classed %d, want public", class)
+	}
+}
+
+// How a stay counts is decided when the seat is taken: a Talk everyone can see
+// counts publicly, a Talk some members cannot see only in the private total,
+// the call of a conversation (and a Talk whose permissions cannot be read) not
+// at all.
+func TestASeatCountsByWhoCanSeeItsTalk(t *testing.T) {
+	f := permtest.NewFixture()
+	open := f.Channel(uuid.Nil)
+	hidden := f.Channel(uuid.Nil)
+	f.RoleOverwrite(true, hidden, f.EveryoneID(), 0, perm.ViewChannel)
+	dm := f.DM(uuid.New(), uuid.New())
+	call := f.DMTalk(dm)
+	var failing atomic.Bool
+	svc := perm.NewServiceFrom(func(context.Context, time.Time) (*perm.Snapshot, error) {
+		if failing.Load() {
+			return nil, errors.New("database busy")
+		}
+		return f.Snapshot(), nil
+	})
+	h := NewHub(nil, nil, nil, nil)
+	h.SetPermissions(svc)
+	t.Cleanup(h.Close)
+
+	for name, tc := range map[string]struct {
+		ch   uuid.UUID
+		want seatClass
+	}{"open Talk": {open, seatPublic}, "Talk hidden from @everyone": {hidden, seatLimited}, "call of a conversation": {call, seatPrivate}} {
+		if got := h.classifySeat(tc.ch); got != tc.want {
+			t.Errorf("%s: class %d, want %d", name, got, tc.want)
+		}
+	}
+	svc.Invalidate()
+	failing.Store(true)
+	if got := h.classifySeat(open); got != seatPrivate {
+		t.Errorf("unreadable permissions: class %d, want private", got)
+	}
+}
+
+// A Talk that becomes hidden from @everyone during a stay no longer counts the
+// whole stay publicly: the stricter of the start and the end class applies, and
+// a permission lookup that fails at the end counts as limited, never private.
+func TestAStayEndingInAHiddenTalkDoesNotCountPublicly(t *testing.T) {
+	f := permtest.NewFixture()
+	talk := f.Channel(uuid.Nil)
+	var failing atomic.Bool
+	svc := perm.NewServiceFrom(func(context.Context, time.Time) (*perm.Snapshot, error) {
+		if failing.Load() {
+			return nil, errors.New("database busy")
+		}
+		return f.Snapshot(), nil
+	})
+	h := NewHub(nil, nil, nil, nil)
+	h.SetPermissions(svc)
+	t.Cleanup(h.Close)
+
+	if got := h.settleSeat(talk, seatPublic); got != seatPublic {
+		t.Fatalf("an unchanged open Talk settled as %d, want public", got)
+	}
+	failing.Store(true)
+	svc.Invalidate()
+	if got := h.settleSeat(talk, seatPublic); got != seatLimited {
+		t.Fatalf("a failed lookup at the end settled as %d, want limited", got)
+	}
+	failing.Store(false)
+	f.RoleOverwrite(true, talk, f.EveryoneID(), 0, perm.ViewChannel)
+	svc.Invalidate()
+	if got := h.settleSeat(talk, seatPublic); got != seatLimited {
+		t.Fatalf("a Talk hidden mid-stay settled as %d, want limited", got)
+	}
+	if got := h.settleSeat(talk, seatPrivate); got != seatPrivate {
+		t.Fatalf("a private stay settled as %d, want private", got)
 	}
 }

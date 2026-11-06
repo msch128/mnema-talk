@@ -15,6 +15,7 @@ import EphemeralNotes from './EphemeralNotes.vue'
 import PinNotices from './PinNotices.vue'
 import MessageRow from './MessageRow.vue'
 import BlockedMessageRow from './BlockedMessageRow.vue'
+import PendingMessages from './PendingMessages.vue'
 import { useMessageActions } from '../composables/useMessageActions'
 import { useDmChat } from '../composables/useDmChat'
 import { viewerState } from '../composables/useMediaViewer'
@@ -312,6 +313,7 @@ const groupedIds = computed(() => {
         @jump="jumpToReplied(msg)"
       />
       </template>
+      <PendingMessages v-if="chatStore.activeChannel && !chatStore.hasMoreAfter" :channel-id="chatStore.activeChannel.id" />
     </div>
 
     <!-- The "new since" divider is above the viewport -->

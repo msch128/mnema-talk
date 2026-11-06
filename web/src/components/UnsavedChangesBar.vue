@@ -39,7 +39,7 @@ const emit = defineEmits<{ save: []; reset: [] }>()
           :data-testid="saveTestid"
           :disabled="!canSave"
           :aria-busy="saving ? 'true' : undefined"
-          :title="$t('draft.shortcut', { keys: saveShortcutLabel })"
+          :title="$t('draft.shortcut', { keys: saveShortcutLabel() })"
           @click="emit('save')"
         >{{ saving ? $t('draft.saving') : saveLabel || $t('common.save') }}</button>
       </div>

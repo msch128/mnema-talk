@@ -145,7 +145,7 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) error {
 // getUser handles GET /api/users/{userID}.
 //
 // @Summary Get a user profile
-// @Description Includes voice_seconds, message_count and the banner_url of the profile banner. Other users are returned without the private presence choice.
+// @Description Includes voice_seconds (time in Talks @everyone can see, the part others may see), message_count and the banner_url of the profile banner. Other users are returned without the private presence choice.
 // @ID getUser
 // @Tags Users
 // @Produce json

@@ -279,7 +279,7 @@ describe('AdminDashboard reports tab', () => {
     useAuthStore().user = userFixture({ id: fixtureId(1) })
     usePermissionsStore().info = { owner: false, permissions: PERMISSION_BITS.manage_reports, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [], channels: [] }
     useServerFeaturesStore().list = ['reports']
-    http.handle = url => (url.startsWith('/api/admin/reports') ? { has_more: false, reports: [report(10), report(11)] } : [])
+    http.handle = url => (url === '/api/admin/reports/open-count' ? { open: 2 } : url.startsWith('/api/admin/reports') ? { has_more: false, reports: [] } : [])
     const w = mount(AdminDashboard, { global, attachTo: document.body, shallow: false })
     await flushPromises()
     expect(document.querySelector('[data-badge="reports"]')?.textContent).toBe('2')

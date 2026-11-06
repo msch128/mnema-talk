@@ -108,3 +108,12 @@ it('puts the cursor in the address field when the page opens', async () => {
   expect(document.activeElement).toBe(wrapper.get('input').element)
   wrapper.unmount()
 })
+it('asks for an address or an invite link, with both forms as the example', async () => {
+  const wrapper = mount(DesktopSelector); await flushPromises()
+  expect(wrapper.get('label[for="native-server-url"]').text()).toBe('Adresse oder Einladungslink')
+  const placeholder = wrapper.get('input').attributes('placeholder') ?? ''
+  expect(placeholder).toBe('talk.example.org oder https://talk.example.org/invite/abc123xyz')
+  // The desktop host accepts invite codes of 6 to 64 characters: the example must be one it would take.
+  expect(placeholder.match(/\/invite\/([A-Za-z0-9_-]+)/)?.[1]).toMatch(/^[A-Za-z0-9_-]{6,64}$/)
+  wrapper.unmount()
+})

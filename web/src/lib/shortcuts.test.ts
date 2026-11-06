@@ -1,14 +1,48 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { isMac, keyLabel, SHORTCUT_GROUPS } from './shortcuts'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { formatShortcut, isMac, keyLabel, SHORTCUT_GROUPS } from './shortcuts'
+import { setLocale } from '../i18n'
 
-afterEach(() => vi.unstubAllGlobals())
+beforeEach(() => setLocale('en'))
+afterEach(() => {
+  vi.unstubAllGlobals()
+  setLocale('en')
+})
 
 describe('keyLabel', () => {
   it('writes the modifier the way the machine calls it and leaves other keys alone', () => {
     expect(keyLabel('mod', true)).toBe('⌘')
     expect(keyLabel('mod', false)).toBe('Ctrl')
+    expect(keyLabel('Alt', true)).toBe('⌥')
     expect(keyLabel('K', true)).toBe('K')
     expect(keyLabel('Shift', false)).toBe('Shift')
+  })
+})
+
+describe('formatShortcut', () => {
+  it('writes ⌘K and ⌥↑ on a Mac, in any language', () => {
+    for (const locale of ['en', 'de'] as const) {
+      setLocale(locale)
+      expect(formatShortcut(['mod', 'K'], true)).toBe('⌘K')
+      expect(formatShortcut(['Alt', '↑'], true)).toBe('⌥↑')
+      expect(formatShortcut(['Shift', 'Enter'], true)).toBe('⇧Enter')
+    }
+  })
+
+  it('writes Ctrl+K in English and Strg+K in German elsewhere', () => {
+    setLocale('en')
+    expect(formatShortcut(['mod', 'K'], false)).toBe('Ctrl+K')
+    expect(formatShortcut(['Shift', 'F10'], false)).toBe('Shift+F10')
+    setLocale('de')
+    expect(formatShortcut(['mod', 'K'], false)).toBe('Strg+K')
+    expect(formatShortcut(['Shift', 'F10'], false)).toBe('Umschalt+F10')
+    expect(formatShortcut(['?'], false)).toBe('?')
+  })
+
+  it('follows the device when no platform is given', () => {
+    vi.stubGlobal('navigator', { platform: 'MacIntel', userAgent: '' })
+    expect(formatShortcut(['mod', 'K'])).toBe('⌘K')
+    vi.stubGlobal('navigator', { platform: 'Win32', userAgent: '' })
+    expect(formatShortcut(['mod', 'K'])).toBe('Ctrl+K')
   })
 })
 

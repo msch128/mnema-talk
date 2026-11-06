@@ -2,6 +2,7 @@
 // the member context menu and the profile so both offer the same things. The
 // server decides again on every request; this only decides what to offer.
 import { api, caughtErrorMessage } from './api'
+import { serverOffset } from './clock'
 import { moderate } from './moderation'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
@@ -29,7 +30,7 @@ export function moderationOffer(member: ModerationSubject): ModerationOffer {
   const self = useAuthStore().user?.id === member.id
   const reachable = !self && member.role !== 'admin' && permissions.outranksMember(member.id)
   const until = useChatStore().members.find(m => m.id === member.id)?.timeout_until
-  const timedOut = !!until && Date.parse(until) > Date.now()
+  const timedOut = !!until && Date.parse(until) > Date.now() + serverOffset.value
   const canTimeout = reachable && permissions.can('timeout_members')
   return { timeout: canTimeout, removeTimeout: canTimeout && timedOut, ban: reachable && permissions.can('ban_members') }
 }

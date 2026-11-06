@@ -321,7 +321,7 @@ function sessionItems(member: MenuMember): ContextMenuItem[] {
   ]
 }
 
-function timeoutAndBanItems(member: MenuMember, offer: ReturnType<typeof moderationOffer>): ContextMenuItem[] {
+function timeoutAndBanItems(member: MenuMember, offer: ReturnType<typeof moderationOffer>, withBan = true): ContextMenuItem[] {
   const items: ContextMenuItem[] = []
   if (offer.timeout) {
     items.push({ id: 'timeout', label: t('moderation.timeoutAction'), icon: Clock, danger: true, action: () => { void openTimeout(member) } })
@@ -329,7 +329,7 @@ function timeoutAndBanItems(member: MenuMember, offer: ReturnType<typeof moderat
   if (offer.removeTimeout) {
     items.push({ id: 'untimeout', label: t('moderation.removeTimeout'), icon: Clock, action: () => { void liftTimeout(member) } })
   }
-  if (offer.ban) {
+  if (offer.ban && withBan) {
     items.push({ id: 'ban', label: t('moderation.banAction'), icon: Gavel, danger: true, action: () => { void openBan(member) } })
   }
   return items
@@ -360,6 +360,13 @@ function moderationItems(member: MenuMember, isSelf: boolean): ContextMenuItem[]
   items.push(...timeoutAndBanItems(member, offer))
   if (canModerate) items.push(...sessionItems(member))
   return items
+}
+
+/** Kick (out of their Talk) and timeout for the author of a message, as far as the viewer may; no ban, no sessions. */
+export function buildAuthorModerationItems(member: MenuMember): ContextMenuItem[] {
+  const reachable = isMemberReachable(member, useAuthStore().user?.id === member.id)
+  const kickTalk = reachable ? disconnectableTalk(member.id) : null
+  return [...(kickTalk ? kickItems(member, kickTalk) : []), ...timeoutAndBanItems(member, moderationOffer(member), false)]
 }
 
 /** ctx: { refresh } so the volume slider re-renders its value. */

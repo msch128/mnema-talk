@@ -48,10 +48,24 @@ function sessionAlive(): boolean {
   return !ended
 }
 
+const endListeners = new Set<() => void>()
+
+/** Calls back when this tab learns that its session ended or was replaced elsewhere (the unsent outbox follows the same rule). Returns the way to stop listening. */
+export function onDraftSessionEnd(listener: () => void): () => void {
+  endListeners.add(listener)
+  return () => { endListeners.delete(listener) }
+}
+
+/** False once the session this tab belongs to was ended or replaced in another tab. */
+export function draftSessionAlive(): boolean {
+  return sessionAlive()
+}
+
 function endSession() {
   ended = true
   unsaved = false
   state.value = { uid: null, items: {} }
+  endListeners.forEach(listener => listener())
 }
 
 function newToken(uid: string) {

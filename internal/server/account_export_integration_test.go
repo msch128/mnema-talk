@@ -92,6 +92,9 @@ func TestAnExportHoldsOnlyTheMembersOwnData(t *testing.T) {
 	admin.post("/api/admin/users/"+alice.user.ID.String()+"/enable", nil)
 	alice = a.login("alice", memberPassword)
 	a.setEmail(alice, "alice@example.org")
+	if _, err := a.db.Exec(context.Background(), `UPDATE users SET voice_seconds = 100, public_voice_seconds = 7 WHERE id = $1`, alice.user.ID); err != nil {
+		t.Fatal(err)
+	}
 	// Alice loses sight of the backroom after writing there.
 	everyone := everyoneID(t, admin)
 	if res := putOverwrites(admin, "channels", hidden, overwrite("role", everyone, 0, perm.ViewChannel)); res.status != http.StatusNoContent {
@@ -168,6 +171,13 @@ func TestAnExportHoldsOnlyTheMembersOwnData(t *testing.T) {
 	}
 	if !strings.Contains(files["profile.json"], "alice@example.org") {
 		t.Error("her own address belongs in her export")
+	}
+	var profile struct {
+		VoiceSeconds       int64 `json:"voice_seconds"`
+		PublicVoiceSeconds int64 `json:"public_voice_seconds"`
+	}
+	if err := json.Unmarshal([]byte(files["profile.json"]), &profile); err != nil || profile.VoiceSeconds != 100 || profile.PublicVoiceSeconds != 7 {
+		t.Errorf("profile talk time = %+v (%v), want 100 in all Talks and 7 in public ones", profile, err)
 	}
 
 	// Nothing of anybody else, anywhere in the archive.

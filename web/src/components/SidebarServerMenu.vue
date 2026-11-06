@@ -14,6 +14,7 @@ import { t } from '../i18n'
 import { useDismissable } from '../composables/useDismissable'
 import { useCommunityName } from '../composables/useCommunityName'
 import { useCommunityIcon } from '../composables/useCommunityIcon'
+import ReportsBadge from './ReportsBadge.vue'
 
 // The server header (48px, aligned with the channel header) and its dropdown:
 // admin console, creating channels and categories, the legal notices.
@@ -144,6 +145,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
         <span class="font-semibold text-nav text-mnema-text truncate">{{ serverName }}</span>
         <span class="text-xs text-mnema-tertiary truncate">{{ subtitle }}</span>
       </span>
+      <ReportsBadge />
       <X v-if="menuOpen" class="w-4 h-4 text-mnema-muted shrink-0" />
       <ChevronDown v-else class="w-4 h-4 text-mnema-muted shrink-0" />
       <span
@@ -171,6 +173,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
             data-testid="admin-update-badge"
             class="ml-auto rounded-full bg-mnema-accent/15 px-2 py-0.5 text-xs font-semibold text-mnema-accent"
           >{{ $t('update.badge', { version: versionStore.adminUpdate?.latest_version }) }}</span>
+          <ReportsBadge :class="updateHint ? '' : 'ml-auto'" />
           <Crown class="w-4 h-4 text-mnema-amber shrink-0" />
         </button>
         <button v-if="firstRun.state?.hidden" type="button" role="menuitem" tabindex="-1" :class="menuItemClass" data-testid="menu-first-run" @click="runMenuAction(reopenChecklist)">

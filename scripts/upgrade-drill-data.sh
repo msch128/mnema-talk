@@ -89,8 +89,9 @@ seed_090() {
 # Bypass new member limits (bit 1 << 26) to every role that holds Timeout
 # members (bit 1 << 18), and migration 0089 gives View the wiki (bit 1 << 29) to
 # @everyone and Edit the wiki and Manage the wiki (bits 1 << 27 and 1 << 28) to
-# the roles that hold Timeout members.
-ROLES_JQ='def strip($bit): (. as $p | if (($p / $bit | floor) % 2) == 1 then $p - $bit else $p end); map({id, name, color, permissions: (.permissions | strip(4194304) | strip(33554432) | strip(67108864) | strip(134217728) | strip(268435456) | strip(536870912)), mentionable, position}) | sort_by(.id)'
+# the roles that hold Timeout members. Migration 0097 gives the seeded Moderator
+# and Admin roles Manage reports (1 << 21) and Kick members (1 << 23).
+ROLES_JQ='def strip($bit): (. as $p | if (($p / $bit | floor) % 2) == 1 then $p - $bit else $p end); map({id, name, color, permissions: (.permissions | strip(4194304) | strip(33554432) | strip(67108864) | strip(134217728) | strip(268435456) | strip(536870912) | strip(2097152) | strip(8388608)), mentionable, position}) | sort_by(.id)'
 # Holds Manage events exactly when it can time members out.
 EVENTS_GRANT_JQ='all(.[]; (((.permissions / 33554432 | floor) % 2) == 1) == (((.permissions / 262144 | floor) % 2) == 1))'
 # Holds Bypass new member limits exactly when it can time members out.
@@ -134,6 +135,8 @@ verify_roles() {
     fail 'Edit the wiki and Manage the wiki do not match Timeout members after the upgrade (migration 0089)'
   api cool_guy "$BASE/api/roles" | jq -e 'any(.[]; ((.permissions / 536870912 | floor) % 2) == 1)' >/dev/null ||
     fail 'no role holds View the wiki after the upgrade (migration 0089 gives it to @everyone)'
+  api cool_guy "$BASE/api/roles" | jq -e 'any(.[]; .name == "Moderator" and ((.permissions / 2097152 | floor) % 2) == 1 and ((.permissions / 8388608 | floor) % 2) == 1)' >/dev/null ||
+    fail 'the Moderator role lacks Manage reports or Kick members after the upgrade (migration 0097)'
   [ "$(api cool_guy "$BASE/api/admin/channels/$PROJECTS/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$OVERWRITES_BEFORE" ] ||
     fail 'the channel overwrites changed'
   [ "$(api cool_guy "$BASE/api/admin/categories/$CATEGORY/overwrites" | jq -S '.overwrites | sort_by(.id)')" = "$CATEGORY_OVERWRITES_BEFORE" ] ||

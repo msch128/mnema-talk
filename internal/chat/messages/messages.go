@@ -334,6 +334,9 @@ type NewMessage struct {
 	// "missed call" note): it does not count towards the cap on a starter's
 	// unanswered messages in a conversation.
 	Record bool
+	// Nonce is the client's id for this send; a second send with it returns
+	// the first message (message_nonces, migration 0100).
+	Nonce *uuid.UUID
 }
 
 // ServeCreateMessage inserts a message and returns its ID.

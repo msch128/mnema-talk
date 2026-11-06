@@ -96,6 +96,9 @@ func insertMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSourc
 	if err != nil {
 		return uuid.Nil, err
 	}
+	if err := recordNonce(ctx, tx, nm, id); err != nil {
+		return uuid.Nil, err
+	}
 	if err := mentions.RecordMentions(ctx, tx, online, id, nm.UserID, nm.Content); err != nil {
 		return uuid.Nil, err
 	}
@@ -174,7 +177,8 @@ func PruneSlowMode(ctx context.Context, q db.Querier) (int64, error) {
 	return tag.RowsAffected(), err
 }
 
-// RunSlowModePrune prunes every interval until ctx ends.
+// RunSlowModePrune prunes slow mode post times and old send nonces every
+// interval until ctx ends.
 func RunSlowModePrune(ctx context.Context, q db.Querier, every time.Duration) {
 	t := time.NewTicker(every)
 	defer t.Stop()
@@ -185,6 +189,9 @@ func RunSlowModePrune(ctx context.Context, q db.Querier, every time.Duration) {
 		case <-t.C:
 			worker.Tick(worker.JobSlowMode, func() error {
 				_, err := PruneSlowMode(ctx, q)
+				if err == nil {
+					_, err = PruneNonces(ctx, q)
+				}
 				if err != nil && ctx.Err() == nil {
 					slog.Warn("slow mode prune failed", "err", err)
 				}
@@ -197,10 +204,18 @@ func RunSlowModePrune(ctx context.Context, q db.Querier, every time.Duration) {
 // PublishMessage loads a stored message, broadcasts message_create and
 // writes it as the 201 response.
 func PublishMessage(w http.ResponseWriter, r *http.Request, p *db.Pool, pub events.Publisher, id uuid.UUID) error {
+	return PublishMessageNonce(w, r, p, pub, id, nil)
+}
+
+// PublishMessageNonce is PublishMessage for a send that carried a client
+// nonce: the event and the reply echo it back so the author's client can
+// replace the pending copy it shows.
+func PublishMessageNonce(w http.ResponseWriter, r *http.Request, p *db.Pool, pub events.Publisher, id uuid.UUID, nonce *uuid.UUID) error {
 	msg, err := GetMessage(r.Context(), p, id)
 	if err != nil {
 		return err
 	}
+	msg.Nonce = nonce
 	pub.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
 	markReadAfterSend(r.Context(), p, pub, msg)
 	httpx.WriteJSON(w, http.StatusCreated, msg)

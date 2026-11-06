@@ -48,7 +48,7 @@ const (
 // @Description - `emoji_changed`: no payload; refetch GET /api/emoji (a custom emoji was added, renamed or deleted).
 // @Description - `member_joined`: public User of a newly registered member.
 // @Description - `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.
-// @Description - `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.
+// @Description - `user_stats`: `{user_id, voice_seconds}` after a voice stay ends; voice_seconds is the time in Talks @everyone can see.
 // @Description - `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline; for a bot that set an activity also `activity: {type, name}` (Discord activity type).
 // @Description - `voice_state_update`: `{action: "join", channel_id, user, started_at}` or `{action: "leave", channel_id, user_id}`.
 // @Description - `typing`: `{channel_id, user_id}` (to everyone except the typist).
@@ -248,12 +248,12 @@ func (h *Hub) Close() {
 	// own clean-up no longer reaches removePresence to bank them.
 	now := time.Now()
 	stays := make(map[voiceKey]time.Duration, len(h.voiceSince))
-	private := make(map[voiceKey]bool, len(h.privateSeat))
+	classes := make(map[voiceKey]seatClass, len(h.seatClasses))
 	for key, since := range h.voiceSince {
 		stays[key] = now.Sub(since)
-		private[key] = h.privateSeat[key]
+		classes[key] = h.seatClasses[key]
 		delete(h.voiceSince, key)
-		delete(h.privateSeat, key)
+		delete(h.seatClasses, key)
 	}
 	clients := make([]*Client, 0, len(h.clients))
 	online := make([]uuid.UUID, 0, len(h.online))
@@ -276,7 +276,7 @@ func (h *Hub) Close() {
 	// database is still open: the connections' own clean-up runs after the
 	// server has moved on to closing it.
 	for key, d := range stays {
-		h.addVoiceTime(key.user, key.ch, d, private[key])
+		h.addVoiceTime(key.user, key.ch, d, h.settleSeat(key.ch, classes[key]))
 	}
 	h.flushAllVoiceTime()
 	h.recordLastSeen(online...)

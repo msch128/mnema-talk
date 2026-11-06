@@ -53,12 +53,12 @@ func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
 		chattest.RequireError(t, err, "NULL")
 	})
 	t.Run("member decoding", func(t *testing.T) {
-		p := chattest.DriftPool(t, f.p, map[string]string{"users": `SELECT id,username,NULL::text display_name,bio,role,avatar_s3_key,status_text,NULL::timestamptz status_expires_at,created_at,voice_seconds,message_count,disabled_at,NULL::timestamptz banned_at,NULL::timestamptz banned_until,NULL::timestamptz deleted_at,is_bot FROM public.users`})
+		p := chattest.DriftPool(t, f.p, map[string]string{"users": `SELECT id,username,NULL::text display_name,bio,role,avatar_s3_key,status_text,NULL::timestamptz status_expires_at,created_at,public_voice_seconds,message_count,disabled_at,NULL::timestamptz banned_at,NULL::timestamptz banned_until,NULL::timestamptz deleted_at,is_bot FROM public.users`})
 		_, err := core.GetAllMembers(ctx, p)
 		chattest.RequireError(t, err, "NULL")
 	})
 	t.Run("mention stream", func(t *testing.T) {
-		p := chattest.DriftPool(t, f.p, map[string]string{"users": `SELECT CASE WHEN voice_seconds >= 0 THEN (1/(voice_seconds-voice_seconds))::text::uuid ELSE id END id,username,disabled_at,NULL::timestamptz banned_at,NULL::timestamptz banned_until,NULL::timestamptz deleted_at,is_bot FROM public.users`})
+		p := chattest.DriftPool(t, f.p, map[string]string{"users": `SELECT CASE WHEN public_voice_seconds >= 0 THEN (1/(public_voice_seconds-public_voice_seconds))::text::uuid ELSE id END id,username,disabled_at,NULL::timestamptz banned_at,NULL::timestamptz banned_until,NULL::timestamptz deleted_at,is_bot FROM public.users`})
 		_, err := mentions.ResolveMentionSet(ctx, p, "@all", f.u.ID, nil)
 		chattest.RequireError(t, err, "resolve mentions")
 	})

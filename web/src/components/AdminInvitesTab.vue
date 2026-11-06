@@ -10,6 +10,9 @@ import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 import presets from '../lib/presets.json'
+import { useCompactLayout } from '../composables/useCompactLayout'
+import type { ContextMenuItem } from './menuTypes'
+import RowActionsMenu from './RowActionsMenu.vue'
 import EmptyState from './EmptyState.vue'
 import StatePanel from './StatePanel.vue'
 import EditInviteDialog from './EditInviteDialog.vue'
@@ -68,6 +71,15 @@ async function createInvite() {
     creating.value = false
   }
   await loadInvites()
+}
+
+const { isCompact } = useCompactLayout()
+// On a phone the icons have no tooltip: edit and delete as one labelled menu.
+function inviteMenu(inv: Invite): ContextMenuItem[] {
+  return [
+    { id: 'edit', label: t('admin.editInvite.editNamed', { code: inv.code }), icon: Pencil, action: () => { editing.value = inv } },
+    { id: 'delete', label: t('admin.deleteInviteNamed', { code: inv.code }), icon: Trash2, danger: true, action: () => { void deleteInvite(inv) } }
+  ]
 }
 
 async function deleteInvite(inv: Invite) {
@@ -197,6 +209,8 @@ onMounted(loadInvites)
             <Copy v-else class="w-4 h-4" />
             <span>{{ copiedCode === inv.code ? $t('admin.copied') : $t('admin.copyLink') }}</span>
           </button>
+          <RowActionsMenu v-if="isCompact" :items="inviteMenu(inv)" :label="$t('admin.rowActionsNamed', { name: inv.code })" />
+          <template v-else>
           <button
             type="button"
             class="text-mnema-tertiary hover:text-mnema-text transition"
@@ -216,6 +230,7 @@ onMounted(loadInvites)
           >
             <Trash2 class="w-4 h-4" />
           </button>
+          </template>
         </div>
       </div>
     </div>

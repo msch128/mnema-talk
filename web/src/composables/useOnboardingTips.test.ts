@@ -54,7 +54,7 @@ afterEach(() => { vi.restoreAllMocks() })
 describe('tips', () => {
   it('show one at a time, in order, and each stays closed once dismissed', async () => {
     const w = await bar()
-    expect(w.text()).toContain('Press Ctrl or Cmd + K')
+    expect(w.text()).toContain('Press Ctrl+K')
     await w.get('[data-testid="tip-dismiss"]').trigger('click')
     await flushPromises()
     expect(puts).toEqual([{ dismissed_tips: ['search'] }])

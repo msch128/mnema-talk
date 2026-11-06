@@ -19,6 +19,7 @@ import { emptyNotificationSettings, type Cx } from './state'
 import { resetWindow, setWindow } from './messageWindow'
 import { closeWebSocket } from './socket'
 import { closeThread } from './threads'
+import { resetOutbox } from './outbox'
 
 /** Drops what the stores keep of the signed-in member: saved list, quotes, events, onboarding record, first-run checklist, account dialog. */
 export function resetMemberStores() {
@@ -53,6 +54,7 @@ export function resetCommunityState(cx: Cx) {
   ++cs.memberRevision
   ++cs.reconnectCheckSeq
   closeWebSocket(cx)
+  resetOutbox(cx)
   closeThread(cx)
   cs.followedThreads.value = new Set()
   cs.followKnown.value = false

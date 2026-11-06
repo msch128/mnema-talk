@@ -9,6 +9,22 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Public message and talk totals (migrations 0098 and 0099)
+
+The totals on a profile and in the member list are public, so they no longer
+include anything that is private to a few people.
+
+- **Messages.** The chat of a conversation's call is as private as the
+  conversation and is no longer counted in a member's message total
+  (`messages.counted`, decided when the message is written). Migration 0098
+  recomputes every total once; members who wrote in calls see a lower number.
+- **Talk time.** `voice_seconds` and `user_stats` now show a separate public
+  total that only counts stays in Talks visible to `@everyone` (decided when
+  the stay starts). The stored history cannot tell public from hidden time, so
+  the public total **starts at zero with this version** and counts from then
+  on. The old private total stays in the database (and the data export); it is
+  not shown to other members.
+
 ## Broad trusted proxies
 
 `TRUSTED_PROXY_CIDRS` entries wider than an IPv4 `/24` or an IPv6 `/64` used
@@ -83,6 +99,14 @@ in the migration table below. Taking several minors at once applies
 their migrations in order. Newest first.
 
 #### After 2.9.1 (next release)
+
+Migration 0097 gives the built-in **Moderator** and **Admin** roles the
+permissions *Manage reports* and *Kick members*, which they lacked: members
+holding those roles can now read and close reports and use `/kick`. Only an
+ordinary role named Moderator or Admin that still holds *Timeout members* is
+changed (a role you renamed or stripped of it, custom roles, @everyone and bot
+roles are not), and permissions are only added, so nothing you set is lost. If
+you do not want a role to have them, untick them on the role after the update.
 
 Migration 0091 adds four indexes (see the table); it changes no behaviour and
 needs no setting. Building them takes a moment on a very large database.
@@ -309,6 +333,7 @@ of the pre-update backup (see "Rollback" above).
 | 0090 | `wiki_images`: marks the media rows used as wiki pictures. Adds a table and an index only. |
 | 0091 | Indexes on `saved_messages (message_id)`, `forum_post_reads (post_id)`, `message_reminders (message_id)` and `thread_follows (thread_id)`, which replaces the partial `idx_thread_follows_thread`: deleting a message no longer scans those tables. Building them briefly slows writes to them on a very large database. |
 | 0092 | `scheduled_messages.attempts` and `retry_at`: count failed sends and delay the next try. Adds two columns only; existing rows start at zero. |
+| 0097 | Adds *Manage reports* and *Kick members* to the built-in Moderator and Admin roles. Changes permission bits of those two roles only. |
 
 The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 

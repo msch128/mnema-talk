@@ -83,7 +83,8 @@ type User struct {
 	// caller's own account; others see the live one from the hub.
 	Presence string `json:"presence,omitempty" binding:"optional" enums:"online,away,dnd,focus"`
 	// Activity totals, filled where they are shown (members, profiles):
-	// time spent in voice rooms (finished stays) and messages sent.
+	// time spent in voice rooms @everyone can see (finished stays) and messages
+	// sent.
 	VoiceSeconds int64 `json:"voice_seconds,omitempty" binding:"optional"`
 	MessageCount int64 `json:"message_count,omitempty" binding:"optional"`
 	// RulesPending is true while the caller has to accept the community rules

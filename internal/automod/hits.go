@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/reportcount"
 )
 
 // ageCache remembers when accounts were created: the creation time never
@@ -62,21 +63,25 @@ type snapshotMessage struct {
 // It never fails the message: the queue is a best-effort record, logged when
 // it cannot be written.
 func (e *Engine) record(ctx context.Context, p Post, dm bool, r *compiled, outcome string, message uuid.UUID) {
-	if err := e.insertHit(ctx, p, dm, r, outcome, message); err != nil {
+	opened, err := e.insertHit(ctx, p, dm, r, outcome, message)
+	if err != nil {
 		slog.Error("automod hit not recorded", "rule", r.Name, "err", err)
+	} else if opened {
+		// A repeat hit only counts up the open entry: the badge is unchanged.
+		reportcount.Announce(ctx, e.DB, e.Events)
 	}
 	if r.TimeoutSeconds > 0 {
 		e.timeout(ctx, p.UserID, r.TimeoutSeconds, "Automod: "+r.Name)
 	}
 }
 
-func (e *Engine) insertHit(ctx context.Context, p Post, dm bool, r *compiled, outcome string, message uuid.UUID) error {
+func (e *Engine) insertHit(ctx context.Context, p Post, dm bool, r *compiled, outcome string, message uuid.UUID) (opened bool, err error) {
 	var username, display, channelName string
-	err := e.DB.QueryRow(ctx, `
+	err = e.DB.QueryRow(ctx, `
 		SELECT u.username, u.display_name, c.name FROM users u, channels c WHERE u.id = $1 AND c.id = $2`,
 		p.UserID, p.ChannelID).Scan(&username, &display, &channelName)
 	if err != nil {
-		return err
+		return false, err
 	}
 	kind, content := "channel", p.Content
 	if dm {
@@ -89,21 +94,24 @@ func (e *Engine) insertHit(ctx context.Context, p Post, dm bool, r *compiled, ou
 		"context": []any{},
 	})
 	if err != nil {
-		return err
+		return false, err
 	}
 	var msgID *uuid.UUID
 	if message != uuid.Nil {
 		msgID = &message
 	}
-	// One open entry per member and rule: further hits only count up.
-	_, err = e.DB.Exec(ctx, `
+	// One open entry per member and rule: further hits only count up. xmax is
+	// 0 on a row that was just inserted, so opened says a new entry joined the
+	// queue (and the open count changed).
+	err = e.DB.QueryRow(ctx, `
 		INSERT INTO message_reports (reporter_id, reported_user_id, message_id, channel_id, kind, channel_name, category, snapshot,
 		                             source, automod_rule, automod_outcome)
 		VALUES (NULL, $1, $2, $3, $4, $5, 'automod', $6, 'automod', $7, $8)
 		ON CONFLICT (reported_user_id, automod_rule) WHERE source = 'automod' AND status = 'open' AND reported_user_id IS NOT NULL
-		DO UPDATE SET hit_count = message_reports.hit_count + 1`,
-		p.UserID, msgID, p.ChannelID, kind, channelName, raw, r.Name, outcome)
-	return err
+		DO UPDATE SET hit_count = message_reports.hit_count + 1
+		RETURNING (xmax = 0)`,
+		p.UserID, msgID, p.ChannelID, kind, channelName, raw, r.Name, outcome).Scan(&opened)
+	return opened, err
 }
 
 // timeout silences the member for seconds (or leaves a longer timeout alone)

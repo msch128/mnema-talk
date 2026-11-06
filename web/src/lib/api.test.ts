@@ -36,6 +36,15 @@ describe('api', () => {
     expect(init.body).toBe('{"a":1}')
   })
 
+  it('tells the caller the status of a successful answer', async () => {
+    const seen: number[] = []
+    for (const status of [200, 201]) {
+      mockFetch(status, { ok: true })
+      await api('/api/x', { method: 'POST', json: {}, onStatus: s => seen.push(s) })
+    }
+    expect(seen).toEqual([200, 201])
+  })
+
   it('returns null for 204', async () => {
     mockFetch(204, null)
     expect(await api('/api/x', { method: 'DELETE' })).toBeNull()

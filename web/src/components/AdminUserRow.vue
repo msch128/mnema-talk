@@ -2,14 +2,19 @@
 import { computed, type PropType } from 'vue'
 import type { AdminUser } from '../types/domain'
 import type { VoiceSnapshot } from '../types/events'
-import { KeyRound, UserX, UserCheck, PhoneOff, LogOut, Volume2, Shield, ShieldOff, LockOpen } from '@lucide/vue'
+import { KeyRound, TimerOff, UserX, UserCheck, PhoneOff, LogOut, Volume2, Shield, ShieldOff, LockOpen } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
 import { t, locale } from '../i18n'
+import { useCompactLayout } from '../composables/useCompactLayout'
+import type { ContextMenuItem } from './menuTypes'
 import UserAvatar from './UserAvatar.vue'
+import RowActionsMenu from './RowActionsMenu.vue'
 import { roleColorCss } from '../lib/permissions'
+import { now, useServerClock } from '../lib/clock'
+import { moderationOffer, liftTimeout } from '../lib/moderationActions'
 
 // One account of the admin user table: who they are, their state and the
 // actions the signed-in member may take (by permission and rank). The
@@ -19,6 +24,7 @@ const props = defineProps({
 })
 const emit = defineEmits<{ kick: []; 'clear-lockout': []; roles: []; 'toggle-disable': []; 'reset-login': []; 'reset-two-factor': []; 'revoke-sessions': [] }>()
 
+const { isCompact } = useCompactLayout()
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const permissions = usePermissionsStore()
@@ -53,11 +59,16 @@ function formatDateTime(dt: string | null | undefined) {
   }
 }
 
-// A timeout that has not run out yet; the list refreshes through the member events.
+// A timeout that has not run out yet. The live member (kept current by the
+// member events) wins over the row's own data, so a lifted timeout shows at once.
+useServerClock(() => !!(chatStore.members.find(m => m.id === props.user.id)?.timeout_until ?? props.user.timeout_until))
 const timedOutUntil = computed(() => {
-  const until = props.user.timeout_until
-  return until && Date.parse(until) > Date.now() ? until : null
+  const live = chatStore.members.find(m => m.id === props.user.id)
+  const until = live ? live.timeout_until : props.user.timeout_until
+  return until && Date.parse(until) > now.value ? until : null
 })
+// Lifting needs Timeout members and a higher rank, like setting one.
+const canLiftTimeout = computed(() => !!timedOutUntil.value && moderationOffer(props.user).timeout)
 
 // What the signed-in member may do with this account, by permission and rank.
 function canModerate() {
@@ -67,6 +78,24 @@ function canModerate() {
 function canGiveRoles() {
   const u = props.user
   return u.role !== 'admin' && permissions.can('manage_roles') && permissions.outranksMember(u.id) && u.id !== authStore.user?.id
+}
+// On a phone the icons have no tooltip: the same actions as one labelled menu.
+function menuItems(): ContextMenuItem[] {
+  const u = props.user
+  const items: ContextMenuItem[] = []
+  if (inVoice() && permissions.can('disconnect_members')) items.push({ id: 'kick', label: t('admin.kickFromVoice'), icon: PhoneOff, action: () => emit('kick') })
+  if (permissions.isOwner && u.login_locked) items.push({ id: 'clear-lockout', label: t('admin.clearLoginLockout'), icon: LockOpen, action: () => emit('clear-lockout') })
+  if (canLiftTimeout.value) items.push({ id: 'remove-timeout', label: t('moderation.removeTimeout'), icon: TimerOff, action: () => void liftTimeout(props.user) })
+  if (canGiveRoles()) items.push({ id: 'roles', label: t('memberRoles.edit'), icon: Shield, action: () => emit('roles') })
+  if (canModerate()) {
+    items.push({ id: 'disable', label: u.disabled ? t('admin.enableUser') : t('admin.disableUser'), icon: u.disabled ? UserCheck : UserX, danger: !u.disabled, action: () => emit('toggle-disable') })
+    if (permissions.isOwner) {
+      items.push({ id: 'reset-password', label: t('admin.resetPassword'), icon: KeyRound, action: () => emit('reset-login') })
+      items.push({ id: 'reset-two-factor', label: t('admin.resetTwoFactor'), icon: ShieldOff, action: () => emit('reset-two-factor') })
+    }
+    items.push({ id: 'revoke-sessions', label: t('admin.revokeSessions'), icon: LogOut, action: () => emit('revoke-sessions') })
+  }
+  return items
 }
 function roles() {
   return (props.user.role_ids ?? []).map(id => permissions.roleById(id)).filter(role => role !== undefined)
@@ -114,7 +143,7 @@ function roles() {
 
     <!-- Last Seen -->
     <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1 text-xs text-mnema-muted whitespace-nowrap">
-      <span data-testid="user-lastseen">{{ formatDateTime(user.last_seen_at) }}</span>
+      <span class="md:hidden">{{ $t('admin.lastSeen') }}: </span><span data-testid="user-lastseen">{{ formatDateTime(user.last_seen_at) }}</span>
     </td>
 
     <!-- Status -->
@@ -165,6 +194,8 @@ function roles() {
     <!-- Actions -->
     <td class="py-3 px-4 max-md:block max-md:px-0 max-md:py-1 text-right whitespace-nowrap">
       <div class="flex flex-wrap items-center justify-end gap-1 md:flex-nowrap max-md:justify-start">
+        <RowActionsMenu v-if="isCompact" :items="menuItems()" :label="$t('admin.rowActionsNamed', { name: user.display_name || user.username })" />
+        <template v-else>
         <!-- Kick from voice -->
         <button
           v-if="inVoice() && permissions.can('disconnect_members')"
@@ -189,6 +220,18 @@ function roles() {
           @click="emit('clear-lockout')"
         >
           <LockOpen class="w-4 h-4" />
+        </button>
+
+        <button
+          v-if="canLiftTimeout"
+          data-testid="action-remove-timeout"
+          type="button"
+          class="btn btn-icon btn-sm hover:text-mnema-text"
+          :title="$t('moderation.removeTimeout')"
+          :aria-label="$t('moderation.removeTimeout')"
+          @click="liftTimeout(user)"
+        >
+          <TimerOff class="w-4 h-4" />
         </button>
 
         <button
@@ -259,6 +302,7 @@ function roles() {
           >
             <LogOut class="w-4 h-4" />
           </button>
+        </template>
         </template>
       </div>
     </td>

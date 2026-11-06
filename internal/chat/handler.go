@@ -109,7 +109,7 @@ func (h *Handler) DMs() *dm.API {
 
 // reports builds the reports API from the handler's fields.
 func (h *Handler) reports() *reports.API {
-	return &reports.API{DB: h.DB, Guard: h.guard(), Audit: h.Audit, ReportLimit: h.ReportLimit}
+	return &reports.API{DB: h.DB, Guard: h.guard(), Audit: h.Audit, ReportLimit: h.ReportLimit, Events: h.Events}
 }
 
 // search builds the search API from the handler's fields.
@@ -167,7 +167,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 // listMembers handles GET /api/members.
 //
 // @Summary List members
-// @Description Active accounts, the Owner first, then by display name, with voice_seconds and message_count. Enabled bots are members too (is_bot, added_by) and hold the built-in Bot role; incoming-webhook authors are not listed. Disabled accounts remain available in the admin account list and historical messages. Presence and locale are not filled.
+// @Description Active accounts, the Owner first, then by display name, with voice_seconds (time in Talks @everyone can see) and message_count. Enabled bots are members too (is_bot, added_by) and hold the built-in Bot role; incoming-webhook authors are not listed. Disabled accounts remain available in the admin account list and historical messages. Presence and locale are not filled.
 // @ID listMembers
 // @Tags Users
 // @Produce json

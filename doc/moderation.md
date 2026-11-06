@@ -86,8 +86,8 @@ a `kicked` WebSocket event (`{"reason": "..."}`) and the web app shows a calm
 note; the connection closes a moment later.
 
 The permission is *Kick members* (bit `1 << 23`). It is off for @everyone and
-for every seeded role, so by default only the Owner and Administrators can
-kick. The role hierarchy is enforced like for a ban: a highest role strictly
+on for the seeded Moderator and Admin (migration 0097), so by default those
+roles, Administrators and the Owner can kick. The role hierarchy is enforced like for a ban: a highest role strictly
 above the member's, never the Owner, never oneself. The only way to kick is
 the built-in `/kick @member [reason]` command (`POST
 /api/channels/{id}/interactions`, [bots](bots.md#built-in-commands-and-polls)):
@@ -315,6 +315,12 @@ report as `resolved` or `dismissed` with an optional note, and can delete a
 closed one, which removes the copy. The reporter is not notified of the
 outcome. Reading a report needs only this permission, not access to the
 channel: a report of a private channel is readable by its handlers.
+
+The number of open reports shows as a small amber count on the community
+header and the **Admin console** menu entry, for these members only. It is
+read once from `GET /api/admin/reports/open-count` and then follows the
+`reports_open` WebSocket event, which the server sends only to sessions that
+hold *Manage reports* whenever a report is filed, closed or raised by Automod.
 
 - **Audited without text.** `report.create`, `report.resolve` and
   `report.delete` are in the audit log for the Owner and Administrators only,
@@ -573,7 +579,9 @@ the [Defaults](roles-and-permissions.md#defaults) section: Member is
 `@everyone` with `perm.DefaultEveryone`, Moderator and Admin are the seeded
 roles, and the Owner is the account `users.role = 'admin'`. There is no User
 role and no Owner role. Neither seeded role holds the *Administrator* bit.
-`TestStarterRolesAreSeededEmpty` checks those bits.
+Both hold *Manage reports* and *Kick members* (migration 0097).
+`TestStarterRolesAreSeededEmpty` checks those bits and
+`TestBuiltInModeratorAndAdminHandleReportsAndKick` the report queue and `/kick`.
 
 `TestTimeoutTakesPostingAndSpeakingButNotReading` builds its own "admin" with
 the *Administrator* bit. That user is separate from the seeded Admin role.

@@ -20,6 +20,7 @@ import { messageMentionsMe, refreshNotificationPermission, requestNotificationPe
 import { dismissEphemeral, resetCommunityState } from './chat/reset'
 import { dismissPinNotice, fetchPins } from './chat/pins'
 import { dmActions } from './chat/dmActions'
+import { cancelPending, editPending, retryPending } from './chat/outbox'
 
 export type { EphemeralNote, ProfilePreview, ThreadRoot } from './chat/types'
 export { MARK_READ_INTERVAL_MS, TYPING_EXPIRY_MS } from './chat/types'
@@ -74,7 +75,8 @@ function exposedState(cs: ChatState) {
     followedThreads: cs.followedThreads,
     followKnown: cs.followKnown,
     threadReplies: cs.threadReplies,
-    isThreadLoading: cs.isThreadLoading
+    isThreadLoading: cs.isThreadLoading,
+    outbox: cs.outbox
   }
 }
 
@@ -145,6 +147,9 @@ function exposedActions(cx: Cx) {
     fetchFollowedThreads: bind(fetchFollowedThreads),
     closeThread: bind(closeThread),
     sendThreadReply: bind(sendThreadReply),
+    cancelPending: bind(cancelPending),
+    editPending: bind(editPending),
+    retryPending: bind(retryPending),
     uploadThreadMedia: bind(uploadThreadMedia),
     initWebSocket: bind(initWebSocket),
     closeWebSocket: bind(closeWebSocket),

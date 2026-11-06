@@ -18,7 +18,11 @@
   },
   "app": {
     "checking": "Verbindung wird geprüft …",
-    "retrying": "Server gerade nicht erreichbar – neuer Versuch …"
+    "retrying": "Server gerade nicht erreichbar – neuer Versuch …",
+    "tryAgain": "Erneut versuchen",
+    "trying": "Wird versucht …",
+    "lastTried": "Zuletzt versucht: {when}",
+    "lastTriedNow": "gerade eben"
   },
   "resize": {
     "default": "Breite anpassen",
@@ -118,6 +122,7 @@
       "RATE_LIMITED": "Zu viele Anfragen – bitte kurz warten",
       "RULES_NOT_ACCEPTED": "Bitte akzeptiere zuerst die Regeln der Community",
       "STALE_REVISION": "Die Seite hat sich geändert, seit du sie geöffnet hast",
+      "MESSAGE_DELETED": "Diese Nachricht wurde gelöscht",
       "UNAVAILABLE": "Der Dienst ist gerade nicht verfügbar",
       "INTERNAL_ERROR": "Interner Serverfehler",
       "INVALID_INPUT": "Einige Angaben sind ungültig. Prüfe sie und versuche es noch einmal.",
@@ -416,6 +421,8 @@
       "srvNoCommunityIconIsSet": "Es ist kein Community-Icon festgelegt.",
       "srvNoFieldsToUpdate": "Es gibt nichts zu aktualisieren.",
       "srvNoUpdateAvailable": "Es ist kein Update verfügbar.",
+      "srvMessageDeletedNotResent": "Diese Nachricht wurde gelöscht und wird nicht erneut gesendet.",
+      "srvNonceUsedElsewhere": "Diese Nachricht wurde bereits in einer anderen Unterhaltung gesendet.",
       "srvNotAPublicImageAddress": "Das ist nicht die Adresse eines öffentlichen Bildes.",
       "srvNoteNotFound": "Diese Notiz wurde nicht gefunden.",
       "srvNothingToChangeSendExpires": "Nichts zu ändern. Sende „expires_at“ oder „max_uses“.",
@@ -857,7 +864,7 @@
   "tips": {
     "label": "Tipp",
     "gotIt": "Verstanden",
-    "search": "Mit Strg oder Cmd + K durchsuchst du alle Kanäle, die du sehen kannst.",
+    "search": "Mit {keys} durchsuchst du alle Kanäle, die du sehen kannst.",
     "mention": "Mit @ erwähnst du jemanden, mit / startest du Slash-Befehle.",
     "talk": "Ein Klick auf einen Talk tritt sofort bei. Niemand wird angerufen, es ist ein offener Raum zum Reden."
   },
@@ -2550,6 +2557,7 @@
     "mediaLoadFailed": "Die Medienliste konnte nicht geladen werden. Versuche es noch einmal.",
     "usersLoadFailed": "Die Mitglieder konnten nicht geladen werden. Versuche es noch einmal.",
     "moveUpNamed": "{name} nach oben",
+    "rowActionsNamed": "Aktionen für {name}",
     "moveDownNamed": "{name} nach unten",
     "renameChannelNamed": "Kanal {name} bearbeiten",
     "renameCategoryNamed": "Kategorie {name} bearbeiten",
@@ -3004,10 +3012,10 @@
     "connectError": "Dieser Server ist nicht erreichbar oder unterstützt diese DEV-Version nicht.",
     "dev": "DEV-Entwicklungsversion",
     "connectCommunity": "Mit deiner Community verbinden.",
-    "address": "Serveradresse",
+    "address": "Adresse oder Einladungslink",
     "checking": "Verbindung wird geprüft …",
     "connect": "Verbinden",
-    "placeholder": "talk.example.org",
+    "placeholder": "talk.example.org oder https://talk.example.org/invite/abc123xyz",
     "hostError": {
       "enterAddress": "Gib eine HTTPS-Adresse für den Server ein.",
       "invalidAddress": "Das ist keine gültige Serveradresse.",
@@ -4533,6 +4541,10 @@
   },
   "reports": {
     "menu": "Nachricht melden",
+    "openBadge": {
+      "one": "{count} offene Meldung",
+      "other": "{count} offene Meldungen"
+    },
     "title": "Nachricht melden",
     "intro": "Melde den Moderatoren diese Nachricht von {name}. Sie sehen eine Kopie von ihr und den Nachrichten drumherum.",
     "reason": "Grund",
@@ -4683,6 +4695,17 @@
     "everyoneTitle": "@everyone von Discord",
     "everyoneBody": "Nur zur Information: Deine eigene @everyone-Rolle bleibt unverändert. Bei Discord hatte sie: {list}",
     "skippedTitle": "Übersprungen, hier ohne Entsprechung",
+    "note": {
+      "announcement_to_text": "ein Ankündigungskanal wird ein Textkanal",
+      "stage_to_talk": "ein Stage-Kanal wird ein Talk",
+      "forum_to_text": "ein Forumkanal wird ein Textkanal",
+      "topic_shortened": "das Thema wurde gekürzt",
+      "slow_mode_capped": "der Langsam-Modus wird auf {seconds} Sekunden begrenzt",
+      "age_restriction_not_imported": "die Altersbeschränkung wird nicht übernommen"
+    },
+    "skipped": {
+      "channel_type_unsupported": "{name} (der Discord-Kanaltyp {type} hat hier keine Entsprechung)"
+    },
     "review": "Prüfen und importieren …",
     "history": {
       "title": "Frühere Importe",
@@ -4911,8 +4934,14 @@
   },
   "shortcuts": {
     "title": "Tastenkürzel",
-    "subtitle": "Alles, was du ohne Maus tun kannst. Diese Liste öffnest du mit ? oder Strg/Cmd + /.",
+    "subtitle": "Alles, was du ohne Maus tun kannst. Diese Liste öffnest du mit ? oder {keys}.",
     "or": "oder",
+    "key": {
+      "mod": "Strg",
+      "Alt": "Alt",
+      "Shift": "Umschalt",
+      "Ctrl": "Strg"
+    },
     "notSet": "nicht gewählt",
     "group": {
       "general": "Überall",
@@ -5080,5 +5109,26 @@
     "noEdit": "Du kannst diese Seite nicht bearbeiten.",
     "pageLockedNoEdit": "Diese Seite ist gesperrt. Nur wer das Wiki verwaltet, kann sie ändern.",
     "moved": "Seite aktualisiert."
+  },
+  "outbox": {
+    "waiting": "Ausstehend · wird gesendet, sobald du wieder online bist",
+    "retrying": "Ausstehend · wird gleich erneut versucht",
+    "noEdit": "Sie ist vielleicht schon angekommen, deshalb kannst du sie nur verwerfen.",
+    "editFor": "Nachricht bearbeiten: {excerpt}",
+    "discardFor": "Nachricht verwerfen: {excerpt}",
+    "retryFor": "Nachricht erneut senden: {excerpt}",
+    "summaryWaiting": "{count} Nachricht ist ausstehend",
+    "summaryWaitingMany": "{count} Nachrichten sind ausstehend",
+    "summaryFailed": "{count} Nachricht nicht gesendet",
+    "summaryFailedMany": "{count} Nachrichten nicht gesendet",
+    "sending": "Wird gesendet …",
+    "failed": "Nicht gesendet: {reason}",
+    "edit": "Bearbeiten",
+    "cancel": "Verwerfen",
+    "retry": "Erneut versuchen",
+    "retryAnyway": "Trotzdem erneut senden",
+    "retryAnywayFor": "Die Nachricht erneut senden, obwohl sie schon angekommen sein kann: {excerpt}",
+    "expired": "sie ist möglicherweise schon angekommen und wurde deshalb nicht von selbst erneut gesendet",
+    "editLabel": "Noch nicht gesendete Nachricht bearbeiten"
   }
 }

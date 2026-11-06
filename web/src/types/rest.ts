@@ -1443,6 +1443,7 @@ export const decodeChatCreateForumTagRequest = decoder("chat.CreateForumTagReque
 export type ChatCreateMessageRequest = {
   attachment_ids?: Array<string>
   content: string
+  nonce?: string
   parent_id?: string | null
   reply_to_id?: string | null
 }
@@ -1451,6 +1452,7 @@ export function isChatCreateMessageRequest(value: unknown): value is ChatCreateM
   return isRecord(value)
     && (!hasOwn(value, "attachment_ids") || isArrayOf(value["attachment_ids"], item => isIdentifier(item)))
     && (hasOwn(value, "content") && isString(value["content"], 4000))
+    && (!hasOwn(value, "nonce") || isIdentifier(value["nonce"]))
     && (!hasOwn(value, "parent_id") || (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
     && (!hasOwn(value, "reply_to_id") || (isIdentifier(value["reply_to_id"]) || value["reply_to_id"] === null))
 }
@@ -2017,6 +2019,7 @@ export type ChatMessage = {
   last_activity_at?: string
   mention_roles?: Array<string>
   mentions: Array<string>
+  nonce?: string
   number: number
   parent_id?: string
   pinned_at?: string
@@ -2053,6 +2056,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (!hasOwn(value, "last_activity_at") || isTimestamp(value["last_activity_at"]))
     && (!hasOwn(value, "mention_roles") || isArrayOf(value["mention_roles"], item => isIdentifier(item)))
     && (hasOwn(value, "mentions") && isArrayOf(value["mentions"], item => isIdentifier(item)))
+    && (!hasOwn(value, "nonce") || isIdentifier(value["nonce"]))
     && (hasOwn(value, "number") && isInteger(value["number"]))
     && (!hasOwn(value, "parent_id") || isIdentifier(value["parent_id"]))
     && (!hasOwn(value, "pinned_at") || isTimestamp(value["pinned_at"]))
@@ -2123,6 +2127,17 @@ export function isChatNotifyLevel(value: unknown): value is ChatNotifyLevel {
 }
 
 export const decodeChatNotifyLevel = decoder("chat.NotifyLevel", isChatNotifyLevel)
+
+export type ChatOpenCountResponse = {
+  open: number
+}
+
+export function isChatOpenCountResponse(value: unknown): value is ChatOpenCountResponse {
+  return isRecord(value)
+    && (hasOwn(value, "open") && isInteger(value["open"]))
+}
+
+export const decodeChatOpenCountResponse = decoder("chat.OpenCountResponse", isChatOpenCountResponse)
 
 export type ChatPoll = {
   anonymous: boolean
@@ -3316,6 +3331,19 @@ export function isDiscordimportEveryoneInfo(value: unknown): value is Discordimp
 
 export const decodeDiscordimportEveryoneInfo = decoder("discordimport.EveryoneInfo", isDiscordimportEveryoneInfo)
 
+export type DiscordimportHint = {
+  code: string
+  params: Record<string, unknown>
+}
+
+export function isDiscordimportHint(value: unknown): value is DiscordimportHint {
+  return isRecord(value)
+    && (hasOwn(value, "code") && isString(value["code"]))
+    && (hasOwn(value, "params") && isRecord(value["params"]))
+}
+
+export const decodeDiscordimportHint = decoder("discordimport.Hint", isDiscordimportHint)
+
 export type DiscordimportPlan = {
   administrator_dropped: boolean
   categories: Array<DiscordimportPlanCategory>
@@ -3330,6 +3358,7 @@ export type DiscordimportPlan = {
   roles: Array<DiscordimportPlanRole>
   server_name: string
   skipped: Array<string>
+  skipped_hints: Array<DiscordimportHint>
   source_name: string
   template_name: string
 }
@@ -3349,6 +3378,7 @@ export function isDiscordimportPlan(value: unknown): value is DiscordimportPlan 
     && (hasOwn(value, "roles") && isArrayOf(value["roles"], item => isDiscordimportPlanRole(item)))
     && (hasOwn(value, "server_name") && isString(value["server_name"]))
     && (hasOwn(value, "skipped") && isArrayOf(value["skipped"], item => isString(item)))
+    && (hasOwn(value, "skipped_hints") && isArrayOf(value["skipped_hints"], item => isDiscordimportHint(item)))
     && (hasOwn(value, "source_name") && isString(value["source_name"]))
     && (hasOwn(value, "template_name") && isString(value["template_name"]))
 }
@@ -3374,6 +3404,7 @@ export type DiscordimportPlanChannel = {
   category: string
   category_source_id: string
   name: string
+  note_hints: Array<DiscordimportHint>
   notes: Array<string>
   overwrites: Array<DiscordimportPlanOverwrite>
   private: boolean
@@ -3390,6 +3421,7 @@ export function isDiscordimportPlanChannel(value: unknown): value is Discordimpo
     && (hasOwn(value, "category") && isString(value["category"]))
     && (hasOwn(value, "category_source_id") && isString(value["category_source_id"]))
     && (hasOwn(value, "name") && isString(value["name"], 64))
+    && (hasOwn(value, "note_hints") && isArrayOf(value["note_hints"], item => isDiscordimportHint(item)))
     && (hasOwn(value, "notes") && isArrayOf(value["notes"], item => isString(item)))
     && (hasOwn(value, "overwrites") && isArrayOf(value["overwrites"], item => isDiscordimportPlanOverwrite(item)))
     && (hasOwn(value, "private") && typeof value["private"] === 'boolean')
@@ -3614,13 +3646,13 @@ export function isGatewayInfo(value: unknown): value is GatewayInfo {
 export const decodeGatewayInfo = decoder("gateway.Info", isGatewayInfo)
 
 export type HttpxAPIError = {
-  code: "INVALID_INPUT" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "FORBIDDEN" | "ACCOUNT_DISABLED" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "RULES_NOT_ACCEPTED" | "STALE_REVISION" | "UNAVAILABLE" | "INTERNAL_ERROR"
+  code: "INVALID_INPUT" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "FORBIDDEN" | "ACCOUNT_DISABLED" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "RULES_NOT_ACCEPTED" | "STALE_REVISION" | "MESSAGE_DELETED" | "UNAVAILABLE" | "INTERNAL_ERROR"
   message: string
 }
 
 export function isHttpxAPIError(value: unknown): value is HttpxAPIError {
   return isRecord(value)
-    && (hasOwn(value, "code") && (value["code"] === "INVALID_INPUT" || value["code"] === "UNAUTHORIZED" || value["code"] === "INVALID_CREDENTIALS" || value["code"] === "FORBIDDEN" || value["code"] === "ACCOUNT_DISABLED" || value["code"] === "NOT_FOUND" || value["code"] === "CONFLICT" || value["code"] === "PAYLOAD_TOO_LARGE" || value["code"] === "UNSUPPORTED_MEDIA_TYPE" || value["code"] === "RATE_LIMITED" || value["code"] === "RULES_NOT_ACCEPTED" || value["code"] === "STALE_REVISION" || value["code"] === "UNAVAILABLE" || value["code"] === "INTERNAL_ERROR"))
+    && (hasOwn(value, "code") && (value["code"] === "INVALID_INPUT" || value["code"] === "UNAUTHORIZED" || value["code"] === "INVALID_CREDENTIALS" || value["code"] === "FORBIDDEN" || value["code"] === "ACCOUNT_DISABLED" || value["code"] === "NOT_FOUND" || value["code"] === "CONFLICT" || value["code"] === "PAYLOAD_TOO_LARGE" || value["code"] === "UNSUPPORTED_MEDIA_TYPE" || value["code"] === "RATE_LIMITED" || value["code"] === "RULES_NOT_ACCEPTED" || value["code"] === "STALE_REVISION" || value["code"] === "MESSAGE_DELETED" || value["code"] === "UNAVAILABLE" || value["code"] === "INTERNAL_ERROR"))
     && (hasOwn(value, "message") && isString(value["message"]))
 }
 
