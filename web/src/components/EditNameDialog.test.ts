@@ -51,7 +51,7 @@ describe('EditNameDialog', () => {
   it('creates one category when Enter is pressed twice while the first is pending', async () => {
     const chat = useChatStore()
     let finish: (c: ReturnType<typeof categoryFixture>) => void = () => undefined
-    chat.createCategory = vi.fn(() => new Promise(resolve => { finish = resolve }))
+    chat.createCategory = vi.fn(() => new Promise<ReturnType<typeof categoryFixture>>(resolve => { finish = resolve }))
     wrapper = mount(EditNameDialog, { ...mountOpts, props: { kind: 'category' } })
     await wrapper.find<HTMLInputElement>('#edit-name')!.setValue('Projekte')
     await wrapper.find('form')!.trigger('submit')
