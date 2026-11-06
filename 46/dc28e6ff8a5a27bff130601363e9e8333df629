@@ -1,0 +1,21 @@
+AGENTS.md
+  s_06fcde5dbef956::t_602f92993478dd 158
+doc/settings-ux.md
+  s_06fcde5dbef956::t_ee8036ad5157ba 4-13,26-36,46-47,74-76,82-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "46dc28e6ff8a5a27bff130601363e9e8333df629",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
