@@ -4,6 +4,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC, setGamingPttLease } from '../composables/useWebRTC'
 import { platform } from './platform'
+import { formatShortcut } from './shortcuts'
 
 export interface GamingChord { key: number; alt: boolean; control: boolean; shift: boolean }
 export interface GamingSettings { enabled: boolean; sidepeek_opacity: number; overlay: GamingChord; mute: GamingChord; deafen: GamingChord; ptt: GamingChord; games: string[] }
@@ -118,7 +119,8 @@ function leaseIsLive(detail: object, now: number): boolean {
 }
 export function chordText(chord: GamingChord): string {
   const key = chord.key === 32 ? 'Space' : chord.key >= 112 && chord.key <= 135 ? `F${chord.key - 111}` : String.fromCharCode(chord.key)
-  return [chord.control && 'Ctrl', chord.alt && 'Alt', chord.shift && 'Shift', key].filter(Boolean).join('+')
+  const modifiers = [chord.control && 'Ctrl', chord.alt && 'Alt', chord.shift && 'Shift'].filter(Boolean) as string[]
+  return formatShortcut([...modifiers, key])
 }
 function gamingKey(code: string): number {
   if (/^Key[A-Z]$/.test(code)) return code.charCodeAt(3)

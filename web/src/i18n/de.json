@@ -20,7 +20,7 @@
     "checking": "Verbindung wird geprüft …",
     "retrying": "Server gerade nicht erreichbar – neuer Versuch …",
     "tryAgain": "Erneut versuchen",
-    "trying": "Versuche es …",
+    "trying": "Wird versucht …",
     "lastTried": "Zuletzt versucht: {when}",
     "lastTriedNow": "gerade eben"
   },

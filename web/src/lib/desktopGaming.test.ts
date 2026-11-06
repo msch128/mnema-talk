@@ -12,6 +12,7 @@ vi.mock('../stores/auth', () => ({ useAuthStore: () => auth }))
 vi.mock('../stores/chat', () => ({ useChatStore: () => chat }))
 vi.mock('../stores/voice', () => ({ useVoiceStore: () => voice }))
 vi.mock('../composables/useWebRTC', () => ({ setGamingPttLease: mocks.lease, useWebRTC: () => ({ stopScreenShare: mocks.stop }) }))
+import { setLocale } from '../i18n'
 import { chordFromKey, chordText, gamingSurface, startDesktopGaming } from './desktopGaming'
 let stop = () => {}
 function event(action: string, scope: unknown, token = 'test-window') { const issued = performance.now(); window.dispatchEvent(new CustomEvent('mnema-gaming-command', { detail: { token, scope, action, issued, expires: issued + 150 } })) }
@@ -92,9 +93,18 @@ describe('desktop gaming session bridge', () => {
   })
 })
 it('captures supported chords and rejects reserved keys', () => {
+  setLocale('en')
   for (const [code, key] of [['KeyM', 77], ['Digit4', 52], ['F24', 135], ['Space', 32]] as const) expect(chordFromKey(new KeyboardEvent('keydown', { code }))).toMatchObject({ key })
   for (const options of [{ code: 'AltLeft' }, { code: 'KeyM', metaKey: true }, { code: 'F4', altKey: true }, { code: 'Space', altKey: true }]) expect(chordFromKey(new KeyboardEvent('keydown', options))).toBeNull()
   expect(chordText({ key: 77, alt: true, control: false, shift: false })).toBe('Alt+M')
   expect(chordText({ key: 32, alt: false, control: true, shift: true })).toBe('Ctrl+Shift+Space')
   expect(chordText({ key: 112, alt: false, control: false, shift: false })).toBe('F1')
+})
+it('writes chord modifiers in the app language', () => {
+  setLocale('de')
+  try {
+    expect(chordText({ key: 32, alt: true, control: true, shift: true })).toBe('Strg+Alt+Umschalt+Space')
+  } finally {
+    setLocale('en')
+  }
 })

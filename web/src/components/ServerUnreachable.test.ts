@@ -32,6 +32,11 @@ describe('ServerUnreachable', () => {
     expect(w.get('[data-testid="last-tried"]').text()).toBe('Last tried 3 min. ago')
   })
 
+  it('names a running try in German as a state, not as a command', () => {
+    setLocale('de')
+    expect(mountIt({ trying: true, lastTriedAt: NOW }).get('[data-testid="try-again"]').text()).toBe('Wird versucht …')
+  })
+
   it('speaks German and shows no last-try line before the first try', () => {
     setLocale('de')
     const w = mountIt({ trying: false, lastTriedAt: NOW })
