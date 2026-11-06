@@ -1,0 +1,21 @@
+web/src/components/OutgoingWebhookForm.test.ts
+  s_06fcde5dbef956::t_e769f6d95677cd 1-33
+web/src/components/OutgoingWebhookForm.vue
+  s_06fcde5dbef956::t_f84cd47bb3d420 82-83,87-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ccba240d31edc384edf4a5a2fc749c31117f606",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
