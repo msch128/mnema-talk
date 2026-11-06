@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.15](https://github.com/msch128/mnema-talk/compare/v2.9.14...v2.9.15) (2026-11-06)
+
+
+### Bug Fixes
+
+* real backup status with a restore test, and a capacity estimate per kind of Talk ([#743](https://github.com/msch128/mnema-talk/issues/743)) ([4b89b80](https://github.com/msch128/mnema-talk/commit/4b89b80404b2a9204ef4863ab4fedf33b8f9f76f))
+
 ## [2.9.14](https://github.com/msch128/mnema-talk/compare/v2.9.13...v2.9.14) (2026-11-06)
 
 
