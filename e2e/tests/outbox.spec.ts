@@ -60,6 +60,7 @@ test('a pending message can be discarded before it is ever sent', async ({ brows
     const id = responseString(await apiFetch(page, 'POST', '/api/admin/channels', { name: `${CHANNEL}-b`, type: 'text' }), 'id')
     await page.goto(`/c/${id}`)
     const composer = page.getByRole('textbox', { name: `Nachricht an #${CHANNEL}-b` })
+    await expect(composer).toBeVisible()
     await context.setOffline(true)
     await composer.fill('never sent')
     await composer.press('Enter')
@@ -68,7 +69,9 @@ test('a pending message can be discarded before it is ever sent', async ({ brows
     await pending.getByRole('button', { name: 'Verwerfen' }).click()
     await expect(pending).toHaveCount(0)
     await context.setOffline(false)
-    await page.waitForTimeout(8000)
+    // Back online, a reload shows the conversation without the discarded message.
+    await page.reload()
+    await expect(composer).toBeVisible()
     await expect(page.getByText('never sent', { exact: true })).toHaveCount(0)
   } finally {
     await context.close()
