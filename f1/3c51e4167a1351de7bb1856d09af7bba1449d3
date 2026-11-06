@@ -1,0 +1,37 @@
+web/scripts/compat-baseline.test.ts
+  s_06fcde5dbef956::t_94216ad2393c21 1-24
+web/scripts/compat-baseline.ts
+  s_06fcde5dbef956::t_8523a3a6abcb24 1-178
+web/src/compat/allowlist.ts
+  s_06fcde5dbef956::t_c5cbc620182571 1-37
+web/src/compat/baselines/index.ts
+  s_06fcde5dbef956::t_c50e560735470a 1-8
+web/src/compat/baselines/v1.0.0.json
+  s_06fcde5dbef956::t_ff16f2a990ae2b 1
+web/src/compat/baselines/v2.0.0.json
+  s_06fcde5dbef956::t_bca8bea8925ddb 1
+web/src/compat/baselines/v2.9.12.json
+  s_06fcde5dbef956::t_ae35c0b103a22e 1
+web/src/compat/baselines/v2.9.18.json
+  s_06fcde5dbef956::t_27870822ed4598 1
+web/src/compat/contract.ts
+  s_06fcde5dbef956::t_d8fa9f83bbc3cc 1-134
+web/src/compat/responses.compat.test.ts
+  s_06fcde5dbef956::t_805e3d6ac7bbc8 1-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f13c51e4167a1351de7bb1856d09af7bba1449d3",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
