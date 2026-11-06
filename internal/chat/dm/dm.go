@@ -129,9 +129,7 @@ const DmSelect = `
 	SELECT c.id, c.dm_key IS NULL, c.created_at,
 	       (SELECT MAX(m.created_at) FROM messages m WHERE m.channel_id = c.id AND NOT EXISTS (
 	           SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id)),
-	       count(um.id) FILTER (WHERE um.parent_id IS NULL),
-	       count(um.id) FILTER (WHERE orig.user_id = $1 OR EXISTS (
-	           SELECT 1 FROM message_mentions mm WHERE mm.message_id = um.id AND mm.user_id = $1)),
+	       u.unread, u.mentions,
 	       cr.last_read_at, COALESCE(cr.notify_level, 'inherit'), cr.muted_until, NOW(),
 	       me.hidden_at IS NOT NULL, me.favourite_pos, usr.dm_mute_all,
 	       lm.user_id, COALESCE(lm.text, ''), COALESCE(lm.has_media, FALSE), COALESCE(lm.has_poll, FALSE), COALESCE(lm.call_kind, '')
@@ -148,13 +146,15 @@ const DmSelect = `
 	    WHERE m.channel_id = c.id AND NOT EXISTS (
 	        SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = m.user_id)
 	    ORDER BY m.created_at DESC LIMIT 1) lm ON TRUE
-	LEFT JOIN messages um ON um.channel_id = c.id AND um.user_id <> $1
-	     AND um.created_at > COALESCE(cr.last_read_at, me.joined_at)
-	     AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = um.user_id)
-	LEFT JOIN messages orig ON orig.id = um.reply_to_id
-	WHERE c.type = 'dm' AND ($2::uuid IS NULL OR c.id = $2)
-	GROUP BY c.id, me.joined_at, me.hidden_at, me.favourite_pos, usr.dm_mute_all, cr.last_read_at, cr.notify_level,
-	         cr.muted_until, lm.user_id, lm.text, lm.has_media, lm.has_poll, lm.call_kind`
+	CROSS JOIN LATERAL (
+	    SELECT count(*) FILTER (WHERE um.parent_id IS NULL) AS unread,
+	           count(*) FILTER (WHERE COALESCE((SELECT orig.user_id = $1 FROM messages orig WHERE orig.id = um.reply_to_id), FALSE)
+	               OR EXISTS (SELECT 1 FROM message_mentions mm WHERE mm.message_id = um.id AND mm.user_id = $1)) AS mentions
+	    FROM messages um
+	    WHERE um.channel_id = c.id AND um.user_id <> $1
+	      AND um.created_at > COALESCE(cr.last_read_at, me.joined_at)
+	      AND NOT EXISTS (SELECT 1 FROM user_blocks ub WHERE ub.blocker_id = $1 AND ub.blocked_id = um.user_id)) u
+	WHERE c.type = 'dm' AND ($2::uuid IS NULL OR c.id = $2)`
 
 // ListDMs returns the caller's conversations, the most recently active first.
 // With only set, just that conversation (nil result: the caller is not in it).
