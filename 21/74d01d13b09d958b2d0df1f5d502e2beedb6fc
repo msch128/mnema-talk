@@ -1,0 +1,19 @@
+web/src/components/ThreadEmbedContext.test.ts
+  s_06fcde5dbef956::t_8cc586b4a5da38 1-32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2174d01d13b09d958b2d0df1f5d502e2beedb6fc",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
