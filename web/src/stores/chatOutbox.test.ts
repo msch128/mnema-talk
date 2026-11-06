@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
+import { useServerFeaturesStore } from './serverFeatures'
 import { channelFixture, messageFixture, userFixture, fixtureId } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
 import { ApiError, type ApiOptions } from '../lib/api'
@@ -33,7 +34,7 @@ class Socket {
 }
 
 /** The state of the network: while down, every message POST fails like a dropped connection. */
-const net = { down: true, refuse: null as ApiError | null, posted: [] as { content: string; nonce: string }[], gate: null as Promise<void> | null, status: 201 }
+const net = { down: true, refuse: null as ApiError | null, posted: [] as { content: string; nonce: string | undefined }[], gate: null as Promise<void> | null, status: 201 }
 
 function stored(content: string, nonce: string, id: string): Message {
   return messageFixture({ id, channel_id: ch.id, user_id: me.id, content, nonce })
@@ -52,6 +53,7 @@ beforeEach(() => {
   localStorage.clear()
   vi.useFakeTimers()
   setActivePinia(createPinia())
+  useServerFeaturesStore().list = ['messages.nonce']
   net.down = true
   net.refuse = null
   net.posted = []
@@ -62,9 +64,9 @@ beforeEach(() => {
     if (!url.endsWith('/messages') || opts?.method !== 'POST') return url === '/api/channels' ? { categories: [], uncategorized: [ch] } : []
     if (net.down) throw offline()
     if (net.refuse) throw net.refuse
-    const json = opts.json as { content: string; nonce: string }
+    const json = opts.json as { content: string; nonce?: string }
     net.posted.push({ content: json.content, nonce: json.nonce })
-    const message = stored(json.content, json.nonce, fixtureId(n++))
+    const message = stored(json.content, json.nonce ?? fixtureId(n), fixtureId(n++))
     return net.gate ? net.gate.then(() => message) : message
   }
   vi.mocked(api).mockReset().mockImplementation((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)).then(body => { options?.onStatus?.(net.status); return body }) as never)
@@ -116,6 +118,15 @@ describe('writing while the connection is down', () => {
     net.refuse = new ApiError(403, 'FORBIDDEN', 'missing permission')
     await expect(chat.sendMessage('nope', null, null, [], ch.id)).rejects.toMatchObject({ status: 403 })
     expect(chat.outbox).toEqual([])
+  })
+
+  it('sends the nonce only to a server that lists messages.nonce (older ones reject unknown fields)', async () => {
+    const chat = setup()
+    net.down = false
+    await chat.sendMessage('new server', null, null, [], ch.id)
+    useServerFeaturesStore().list = []
+    await chat.sendMessage('old server', null, null, [], ch.id)
+    expect(net.posted.map(p => [p.content, typeof p.nonce])).toEqual([['new server', 'string'], ['old server', 'undefined']])
   })
 
   it('does not keep a message with attachments: it fails as before', async () => {
