@@ -127,6 +127,20 @@ describe('AdminStatusTab', () => {
     expect(w.find('[data-testid="status-warnings"]').exists()).toBe(false)
   })
 
+  it('shows the answer of the latest refresh when an older one arrives last', async () => {
+    let older: (v: OperatorStatus) => void = () => undefined
+    let newer: (v: OperatorStatus) => void = () => undefined
+    apiMock.mockReturnValueOnce(new Promise(resolve => { older = resolve }))
+    apiMock.mockReturnValueOnce(new Promise(resolve => { newer = resolve }))
+    const w = keep(mount(AdminStatusTab))
+    await flushPromises()
+    newer(statusFixture({ version: { current: '2.0.0', revision: 'new', go_version: 'go1' } }))
+    await flushPromises()
+    older(statusFixture({ version: { current: '1.0.0', revision: 'old', go_version: 'go1' } }))
+    await flushPromises()
+    expect(w.get('[data-testid="version-current"]').text()).toBe('2.0.0')
+  })
+
   it('renders available updates and operator warnings', async () => {
     apiMock.mockResolvedValue(statusFixture({
       update: {

@@ -19,14 +19,16 @@ const toast = useToastStore()
 const name = ref('')
 const busy = ref(false)
 
-async function run(work: () => Promise<unknown>, failure: string) {
-  if (busy.value) return
+async function run(work: () => Promise<unknown>, failure: string): Promise<boolean> {
+  if (busy.value) return false
   busy.value = true
   try {
     await work()
     emit('changed')
+    return true
   } catch (err) {
     toast.error(caughtErrorMessage(err, failure))
+    return false
   } finally {
     busy.value = false
   }
@@ -38,8 +40,8 @@ const remove = (tpl: RoleTemplate) => run(() => deleteRoleTemplate(tpl.id), t('e
 async function saveCurrent() {
   const roles = inputsOf(props.rows, false)
   if (!roles || roles.length === 0 || !name.value.trim()) return
-  await run(() => createRoleTemplate(name.value.trim(), roles), t('events.roles.templateFailed'))
-  name.value = ''
+  // The name stays when saving failed, so it can be tried again.
+  if (await run(() => createRoleTemplate(name.value.trim(), roles), t('events.roles.templateFailed'))) name.value = ''
 }
 </script>
 

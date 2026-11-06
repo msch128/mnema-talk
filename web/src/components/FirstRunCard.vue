@@ -2,7 +2,7 @@
 // The Owner's calm "Get started" checklist under the channel header. The server
 // ticks the steps from real state (stores/firstRun); closing it keeps it one
 // click away in the server menu.
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Check, Circle, X } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { decodeInvite } from '../types/domain'
@@ -33,7 +33,10 @@ const lobbies = computed(() => chat.allChannels.filter(c => c.is_lobby).length)
 onMounted(() => { void firstRun.ensureLoaded() })
 watch(lobbies, () => { void firstRun.reload() })
 
+const inviting = ref(false)
 async function createInvite() {
+  if (inviting.value) return
+  inviting.value = true
   try {
     const invite = await api('/api/admin/invites', { method: 'POST', json: { max_uses: INVITE_USES, expires_in_hours: INVITE_HOURS }, decode: decodeInvite })
     const link = `${window.location.origin}/?invite=${encodeURIComponent(invite.code)}`
@@ -46,6 +49,8 @@ async function createInvite() {
     await firstRun.reload()
   } catch (e) {
     toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
+  } finally {
+    inviting.value = false
   }
 }
 
@@ -85,7 +90,7 @@ const actions: Record<string, () => void> = {
         <span :class="['min-w-0 flex-1 truncate', step.done ? 'text-mnema-tertiary line-through' : 'text-mnema-text']" v-tooltip="$t(`firstRun.step.${step.id}.hint`)">
           {{ $t(`firstRun.step.${step.id}.label`) }}<span v-if="step.optional" class="text-mnema-tertiary"> ({{ $t('firstRun.optional') }})</span>
         </span>
-        <button v-if="!step.done" type="button" class="btn btn-ghost btn-sm shrink-0" :data-testid="`first-run-${step.id}`" @click="actions[step.id]?.()">{{ $t(`firstRun.step.${step.id}.action`) }}</button>
+        <button v-if="!step.done" type="button" class="btn btn-ghost btn-sm shrink-0" :disabled="step.id === 'invite' && inviting" :data-testid="`first-run-${step.id}`" @click="actions[step.id]?.()">{{ $t(`firstRun.step.${step.id}.action`) }}</button>
       </li>
     </ul>
   </section>
