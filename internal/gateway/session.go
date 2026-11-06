@@ -61,7 +61,7 @@ func (s *session) enqueueReady(d json.RawMessage) {
 func (s *session) accepting() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.conn != nil && !s.starting
+	return s.conn != nil && !s.conn.closed() && !s.starting
 }
 
 func (s *session) pushLocked(name string, d json.RawMessage) {
@@ -122,7 +122,7 @@ func (s *session) detachedSince() (at time.Time, live bool) {
 func (s *session) live() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.conn != nil
+	return s.conn != nil && !s.conn.closed()
 }
 
 func (s *session) expired(now time.Time, window time.Duration) bool {
