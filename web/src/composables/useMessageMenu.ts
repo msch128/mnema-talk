@@ -25,6 +25,7 @@ import { caughtErrorMessage } from '../lib/api'
 import { copyToClipboard } from '../lib/clipboard'
 import { messageSafetyItems } from './dmMenuItems'
 import { boxOf, type AnchorBox } from '../lib/floatingPosition'
+import { buildAuthorModerationItems } from './useNavMenus'
 import { clampChars } from '../lib/textLength'
 
 export { toggleSavedMessage }
@@ -166,7 +167,20 @@ function messageItems(msg: Message, deps: MenuDeps): ContextMenuItem[] {
       action: () => { void moderateMessages({ kind: 'bulk', channelId, userId: msg.user_id, name: msg.display_name || msg.username }) }
     })
   }
+  items.push(...authorModerationItems(msg, actions))
   return items
+}
+
+// Timeout and kick for the author, behind the same permission and rank checks
+// as the member menu; never for one's own messages or the Owner. Bot accounts
+// are members and can be timed out like anyone; webhook messages have no member
+// and so no entry.
+function authorModerationItems(msg: Message, actions: MessageActions): ContextMenuItem[] {
+  if (actions.isOwn(msg)) return []
+  const author = useChatStore().members.find(m => m.id === msg.user_id)
+  if (!author || author.role === 'admin') return []
+  const mod = buildAuthorModerationItems(author)
+  return mod.length ? [{ type: 'separator' }, ...mod] : []
 }
 
 /**
