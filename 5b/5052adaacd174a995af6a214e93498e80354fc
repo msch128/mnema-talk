@@ -1,0 +1,37 @@
+api/openapi.json
+  s_06fcde5dbef956::t_6c0b3c78b0cb92 8102,8119,8236
+internal/discordimport/plan_types.go
+  s_06fcde5dbef956::t_4540eabe33a9e3 32,73
+internal/server/admin_backup.go
+  s_06fcde5dbef956::t_b22a1890a1c4c0 16-17,20,22,24-25,32
+internal/server/capacity.go
+  s_06fcde5dbef956::t_fa253f49d97a94 60,63
+web/src/components/AdminBackupPanel.test.ts
+  s_06fcde5dbef956::t_955bac87b4190b 20,34-39,81
+web/src/components/AdminBackupPanel.vue
+  s_06fcde5dbef956::t_c914370925c24b 32-34,48,53-63,81
+web/src/components/AdminCapacityPanel.test.ts
+  s_06fcde5dbef956::t_ed7bd71cb18fc7 46-54
+web/src/components/AdminCapacityPanel.vue
+  s_06fcde5dbef956::t_12f70549c13da4 93
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_fbc1250e9b9b80 3361,3381,3407,3424,4751,4754-4757,4767,4770-4773,4811,4813,4823,4825
+web/src/types/restOlderServers.test.ts
+  s_06fcde5dbef956::t_a2d9914e90d746 1-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5b5052adaacd174a995af6a214e93498e80354fc",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
