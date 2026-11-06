@@ -5080,5 +5080,14 @@
     "noEdit": "Du kannst diese Seite nicht bearbeiten.",
     "pageLockedNoEdit": "Diese Seite ist gesperrt. Nur wer das Wiki verwaltet, kann sie ändern.",
     "moved": "Seite aktualisiert."
+  },
+  "outbox": {
+    "waiting": "Ausstehend · wird gesendet, sobald du wieder online bist",
+    "sending": "Wird gesendet …",
+    "failed": "Nicht gesendet: {reason}",
+    "edit": "Bearbeiten",
+    "cancel": "Verwerfen",
+    "retry": "Erneut versuchen",
+    "editLabel": "Noch nicht gesendete Nachricht bearbeiten"
   }
 }

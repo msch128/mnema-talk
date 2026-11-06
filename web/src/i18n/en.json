@@ -5080,5 +5080,14 @@
     "noEdit": "You can’t edit this page.",
     "pageLockedNoEdit": "This page is locked. Only people who manage the wiki can change it.",
     "moved": "Page updated."
+  },
+  "outbox": {
+    "waiting": "Waiting to send · goes out when you’re back online",
+    "sending": "Sending …",
+    "failed": "Not sent: {reason}",
+    "edit": "Edit",
+    "cancel": "Discard",
+    "retry": "Try again",
+    "editLabel": "Edit the message that hasn’t been sent yet"
   }
 }

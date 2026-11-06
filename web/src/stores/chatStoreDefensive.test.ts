@@ -126,7 +126,7 @@ describe('optional values and defensive public actions', () => {
     }
     await chat.uploadMedia(new File(['x'], 'synthetic.txt'))
     await chat.sendMessage('root')
-    expect(api).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ json: { content: 'root' } }))
+    expect(api).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({ json: { content: 'root', nonce: expect.any(String) } }))
     // ReactionResult permits omission of the reactions member.
     http.handle = () => ({})
     await chat.toggleReaction(message().id, '👍')

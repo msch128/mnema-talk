@@ -97,7 +97,7 @@ describe('chat actions and loaded copies', () => {
     chat.activeThread = message({ id: fixtureId(20) })
     http.handle = () => message({ id: fixtureId(21), parent_id: root.id })
     await chat.sendThreadReply(root.id, ch.id, 'reply')
-    expect(api).toHaveBeenLastCalledWith(`/api/channels/${ch.id}/messages`, expect.objectContaining({ json: { content: 'reply', parent_id: root.id } }))
+    expect(api).toHaveBeenLastCalledWith(`/api/channels/${ch.id}/messages`, expect.objectContaining({ json: { content: 'reply', parent_id: root.id, nonce: expect.any(String) } }))
     chat.closeThread()
     expect(await chat.sendThreadReply(root.id, ch.id, 'still sent')).not.toBeNull()
   })
@@ -109,7 +109,7 @@ describe('chat actions and loaded copies', () => {
     const reply = message({ id: fixtureId(11), parent_id: root.id })
     http.handle = () => reply
     expect(await chat.sendThreadReply(root.id, ch.id, '  reply  ', fixtureId(12))).toEqual(reply)
-    expect(api).toHaveBeenLastCalledWith(`/api/channels/${ch.id}/messages`, expect.objectContaining({ json: { content: 'reply', parent_id: root.id, reply_to_id: fixtureId(12) } }))
+    expect(api).toHaveBeenLastCalledWith(`/api/channels/${ch.id}/messages`, expect.objectContaining({ json: { content: 'reply', parent_id: root.id, reply_to_id: fixtureId(12), nonce: expect.any(String) } }))
     chat.handleWSEvent({ type: 'message_create', payload: reply })
     expect(chat.messages[0]?.reply_count).toBe(1)
     expect(chat.activeThread?.reply_count).toBe(1)

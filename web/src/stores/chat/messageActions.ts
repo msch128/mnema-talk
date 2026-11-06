@@ -1,69 +1,36 @@
-import type { CreateMessageRequest, Message } from '../../types/domain'
+import type { Message } from '../../types/domain'
 import { decodeMessage, decodeReactionResult } from '../../types/domain'
-import { api, isApiError } from '../../lib/api'
-import { encodeShortcodes } from '../../lib/customEmoji'
+import { api } from '../../lib/api'
 import { resolveReaction } from '../../lib/reactionEmoji'
-import { t } from '../../i18n'
 import { useEmojiStore } from '../emoji'
 import { assertCommunity, type Cx } from './state'
-import { applyToMessage, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow, showToast } from './messageWindow'
+import { applyToMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
+import { landSent, newNonce, postText, postWithReplyFallback, withEmojiTokens, type TextSend } from './messagePost'
+import { enqueue, hasQueued, isNetworkFailure } from './outbox'
 import { closeThread } from './threads'
 
-/** Typed :name: of known custom emoji become their stable token. */
-function withEmojiTokens(text: string): string {
-  return encodeShortcodes(text, useEmojiStore().byName)
-}
-
 /**
- * Posts with the reply target; when the server refuses the request as invalid
- * (the message replied to is gone, as with a restored draft), posts once more
- * without it. A request that is invalid for another reason fails the same way
- * again and its error reaches the caller.
+ * Posts a message; attachmentIds are files staged with the attachment tray, shown in that order.
+ * A text message that cannot be sent because the connection is down is kept in the outbox
+ * (see outbox.ts) and answers with that pending entry; the composer clears as for a sent one.
  */
-async function postWithReplyFallback<T>(replyToId: string | null, post: (replyToId: string | null) => Promise<T>): Promise<T> {
-  try {
-    return await post(replyToId)
-  } catch (error) {
-    if (!replyToId || !isApiError(error) || error.status !== 400) throw error
-    const posted = await post(null)
-    showToast(t('chat.replyTargetGone'))
-    return posted
-  }
-}
-
-// Writing a message means having read everything before it: the server moves
-// the marker to the message (and tells the other sessions); this does the same
-// here at once. The "new since" divider is dropped, so the "Jump to first
-// unread" pill goes, and only what others post afterwards counts again.
-// Thread replies are no channel messages and change nothing.
-function markReadBySending({ cs }: Cx, msg: Message) {
-  if (msg.parent_id) return
-  const prev = cs.readStates.value[msg.channel_id] || { channel_id: msg.channel_id, notify_level: 'all' as const, unread_count: 0, mention_count: 0, last_read_at: null }
-  cs.readStates.value = {
-    ...cs.readStates.value,
-    [msg.channel_id]: { ...prev, unread_count: 0, mention_count: 0, last_read_at: msg.created_at }
-  }
-  if (msg.channel_id === cs.activeChannel.value?.id) cs.activeChannelLastReadAt.value = msg.created_at
-}
-
-/** Posts a message; attachmentIds are files staged with the attachment tray, shown in that order. */
 export async function sendMessage(cx: Cx, content: string, parentId: string | null = null, replyToId: string | null = null, attachmentIds: readonly string[] = [], targetChannelId?: string) {
   const { cs } = cx
   const community = cs.communityGeneration
   const channelId = targetChannelId ?? cs.activeChannel.value?.id
   if (!channelId || (!content.trim() && !attachmentIds.length)) return null
-  const msg = await postWithReplyFallback(replyToId, reply => {
-    const json: CreateMessageRequest = { content: withEmojiTokens(content.trim()) }
-    if (attachmentIds.length) json.attachment_ids = [...attachmentIds]
-    if (parentId) json.parent_id = parentId
-    if (reply) json.reply_to_id = reply
-    return api(`/api/channels/${channelId}/messages`, { method: 'POST', json, decode: decodeMessage })
-  })
+  const send: TextSend = { content, parentId, replyToId, nonce: newNonce(), attachmentIds }
+  // Files are not kept for later; a message with them fails as it always did.
+  if (!attachmentIds.length && hasQueued(cx, channelId)) return enqueue(cx, channelId, send, true)
+  let msg: Message
+  try {
+    msg = await postText(channelId, send)
+  } catch (error) {
+    if (!attachmentIds.length && isNetworkFailure(error) && cs.communityGeneration === community) return enqueue(cx, channelId, send)
+    throw error
+  }
   assertCommunity(cx, community)
-  // The WebSocket echo is de-duplicated by insertMessage / countReply.
-  countReply(cx, msg)
-  insertMessage(cx, msg)
-  markReadBySending(cx, msg)
+  landSent(cx, msg)
   return msg
 }
 
@@ -82,9 +49,7 @@ export async function uploadMedia(cx: Cx, file: File, content = '', parentId: st
     return api(`/api/channels/${channelId}/upload`, { method: 'POST', form, decode: decodeMessage })
   })
   assertCommunity(cx, community)
-  countReply(cx, msg)
-  insertMessage(cx, msg)
-  markReadBySending(cx, msg)
+  landSent(cx, msg)
   return msg
 }
 
