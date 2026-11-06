@@ -50,8 +50,6 @@ export function useDialog(containerRef: Ref<HTMLElement | null>, { onClose, init
     const root = containerRef.value
     if (!root) return
     if (e.key === 'Escape') {
-      // Inline editors mark themselves so Escape cancels them, not the dialog.
-      if ((e.target as Element | null)?.closest?.('[data-local-escape]')) return
       e.stopPropagation()
       e.preventDefault()
       onClose?.()

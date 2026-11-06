@@ -190,13 +190,14 @@ async function handleSendReply() {
   const thread = chatStore.activeThread
   const threadId = thread?.id
   if (!thread) return
+  const channelId = threadChannel.value
   const target = replyingTo.value?.id || null
   const files = composer.value?.tray.hold() ?? null
   isSending.value = true
   try {
     const ids = files && composer.value?.tray.count.value ? await files.prepare() : []
     if (!ids) return
-    const sent = await chatStore.sendThreadReply(thread.id, thread.channel_id, text, target, ids)
+    const sent = await chatStore.sendThreadReply(thread.id, channelId, text, target, ids)
     // Nothing was posted: keep the tray and the draft for another try.
     if (!sent) return
     files?.clear()

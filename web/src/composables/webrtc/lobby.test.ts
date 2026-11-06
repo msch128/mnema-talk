@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRtcState, type Cx } from './state'
-import { isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
+import { cancelPendingLobby, isLobby, joinViaLobby, lobbyMoved, lobbyRefused } from './lobby'
 import { useToastStore } from '../../stores/toast'
 import { setLocale } from '../../i18n'
 import { fixtureId } from '../../test-fixtures.fixture'
@@ -96,5 +96,32 @@ describe('Create-a-Talk lobbies in the call layer', () => {
     expect(join).not.toHaveBeenCalled()
     expect(useToastStore().toasts).toHaveLength(1)
     expect(cx.st.pendingLobby).toBeNull()
+  })
+
+  it('joins nothing once the wait was cancelled, even if the server answers later', async () => {
+    const { cx, voice } = world()
+    const join = vi.fn(async () => {})
+    const joined = joinViaLobby(cx, LOBBY, join)
+    cancelPendingLobby(cx)
+    lobbyMoved(cx, { from_channel_id: LOBBY, channel_id: TALK })
+    await joined
+    expect(join).not.toHaveBeenCalled()
+    expect(navigate).not.toHaveBeenCalled()
+    expect(voice.activeView).toBe('chat')
+  })
+
+  it('joins nothing when it is cancelled while the new Talk is being fetched', async () => {
+    const { cx, chat } = world()
+    let fetched!: () => void
+    chat.fetchChannels.mockImplementation(() => new Promise<void>(resolve => { fetched = resolve }))
+    const join = vi.fn(async () => {})
+    const joined = joinViaLobby(cx, LOBBY, join)
+    lobbyMoved(cx, { from_channel_id: LOBBY, channel_id: TALK })
+    await vi.advanceTimersByTimeAsync(0)
+    cancelPendingLobby(cx)
+    fetched()
+    await joined
+    expect(join).not.toHaveBeenCalled()
+    expect(navigate).not.toHaveBeenCalled()
   })
 })
