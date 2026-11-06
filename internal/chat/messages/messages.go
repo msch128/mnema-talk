@@ -334,6 +334,9 @@ type NewMessage struct {
 	// "missed call" note): it does not count towards the cap on a starter's
 	// unanswered messages in a conversation.
 	Record bool
+	// Nonce is the client's id for this send; a second send with it returns
+	// the first message (migration 0100).
+	Nonce *uuid.UUID
 }
 
 // ServeCreateMessage inserts a message and returns its ID.
@@ -358,11 +361,11 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	// conversations' own sequence, so the public numbering shows nothing of
 	// what is said in private (migration 0050).
 	err := q.QueryRow(ctx, `
-		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds, forward_of, forwarded, title, is_locked, created_at) OVERRIDING SYSTEM VALUE
+		INSERT INTO messages (number, in_dm, channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds, forward_of, forwarded, title, is_locked, client_nonce, created_at) OVERRIDING SYSTEM VALUE
 		SELECT CASE WHEN c.type = 'dm' THEN nextval('dm_number_seq') ELSE nextval(pg_get_serial_sequence('messages', 'number')) END,
-		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8, $9::uuid, $9::uuid IS NOT NULL, $10, $11, clock_timestamp()
+		       c.type = 'dm', c.id, $2, $3, $4, $5, $6, $7, $8, $9::uuid, $9::uuid IS NOT NULL, $10, $11, $12, clock_timestamp()
 		FROM channels c WHERE c.id = $1
-		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds, nm.ForwardOf, nm.Title, nm.IsLocked).Scan(&id)
+		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds, nm.ForwardOf, nm.Title, nm.IsLocked, nm.Nonce).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, core.ErrChannelNotFound
 	}

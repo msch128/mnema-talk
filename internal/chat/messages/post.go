@@ -197,10 +197,18 @@ func RunSlowModePrune(ctx context.Context, q db.Querier, every time.Duration) {
 // PublishMessage loads a stored message, broadcasts message_create and
 // writes it as the 201 response.
 func PublishMessage(w http.ResponseWriter, r *http.Request, p *db.Pool, pub events.Publisher, id uuid.UUID) error {
+	return PublishMessageNonce(w, r, p, pub, id, nil)
+}
+
+// PublishMessageNonce is PublishMessage for a send that carried a client
+// nonce: the event and the reply echo it back so the author's client can
+// replace the pending copy it shows.
+func PublishMessageNonce(w http.ResponseWriter, r *http.Request, p *db.Pool, pub events.Publisher, id uuid.UUID, nonce *uuid.UUID) error {
 	msg, err := GetMessage(r.Context(), p, id)
 	if err != nil {
 		return err
 	}
+	msg.Nonce = nonce
 	pub.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
 	markReadAfterSend(r.Context(), p, pub, msg)
 	httpx.WriteJSON(w, http.StatusCreated, msg)
