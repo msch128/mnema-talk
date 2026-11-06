@@ -1,0 +1,25 @@
+.release-please-manifest.json
+  s_06fcde5dbef956::t_9769539dcc9e21 1
+CHANGELOG.md
+  s_06fcde5dbef956::t_a1ea839c5bf07d 3-9
+version.txt
+  s_06fcde5dbef956::t_f3a15766939204 1
+web/src/touchLayout.test.ts
+  s_06fcde5dbef956::t_179d4df0ed0178 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "12d2c354393b7369b0da2e332d3a99fc928b13f8",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
