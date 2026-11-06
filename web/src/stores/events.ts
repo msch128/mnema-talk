@@ -183,8 +183,7 @@ export const useEventsStore = defineStore('communityEvents', () => {
       events.value = []
       past.reset()
       loading.value = false
-      error.value = null
-      pastError.value = null
+      error.value = pastError.value = null
     }
   }
 })
