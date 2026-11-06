@@ -1,0 +1,23 @@
+internal/chat/messages/dm_gate.go
+  s_06fcde5dbef956::t_a7b4191fc392ee 150-171
+internal/chat/messages/message_mutations.go
+  s_06fcde5dbef956::t_9010c3785c7045 218-220
+internal/server/blocks_integration_test.go
+  s_06fcde5dbef956::t_04ab5198139deb 149-174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0c96f1d31d5214f2e8a1c68d0af46f1af390b859",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
