@@ -43,7 +43,18 @@ func TestBuiltInRolesGetReportsAndKickOnUpgrade(t *testing.T) {
 	if _, err := tx.Exec(ctx, `UPDATE roles SET permissions = $2, managed = TRUE, bot_user_id = gen_random_uuid() WHERE id = $1`, bot, int64(perm.TimeoutMembers)); err != nil {
 		t.Fatal(err)
 	}
-	beforeOthers := []roleRow{readRole(t, ctx, tx, custom), readRole(t, ctx, tx, lookalike), readRole(t, ctx, tx, bot)}
+	// Imported roles that share a built-in name and hold Timeout members (what a
+	// Discord import maps moderate-members to): another colour, or the seed's
+	// colour but created later. Neither is the seeded role.
+	imported := insertPlainRole(t, ctx, tx, "Moderator", 23)
+	if _, err := tx.Exec(ctx, `UPDATE roles SET permissions = $2, color = 255, hoist = TRUE WHERE id = $1`, imported, int64(perm.TimeoutMembers)); err != nil {
+		t.Fatal(err)
+	}
+	copycat := insertPlainRole(t, ctx, tx, "Admin", 24)
+	if _, err := tx.Exec(ctx, `UPDATE roles SET permissions = $2, color = $3, hoist = TRUE WHERE id = $1`, copycat, int64(perm.TimeoutMembers), admin.color); err != nil {
+		t.Fatal(err)
+	}
+	beforeOthers := []roleRow{readRole(t, ctx, tx, custom), readRole(t, ctx, tx, lookalike), readRole(t, ctx, tx, bot), readRole(t, ctx, tx, imported), readRole(t, ctx, tx, copycat)}
 	everyone := everyonePerms(t, ctx, tx)
 
 	if _, err := tx.Exec(ctx, reportsKickSQL); err != nil {
