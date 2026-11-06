@@ -9,6 +9,7 @@ import { useMessageMenu } from './useMessageMenu'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { setLocale } from '../i18n'
+import { PERMISSION_BITS } from '../lib/permissions'
 
 const msg = messageFixture({ id: 'm1', content: 'hello world', user_id: 'me' })
 
@@ -194,5 +195,38 @@ describe('useMessageMenu positioning', () => {
     const menu = useMessageMenu({ actions: makeActions(), reply: vi.fn() })
     menu.show(0, 0, [{ label: 'x' }])
     expect(menu.state.value).toEqual({ open: true, x: 0, y: 0, anchor: null, items: [{ label: 'x' }] })
+  })
+})
+
+describe('useMessageMenu author moderation', () => {
+  const author = { id: 'u2', username: 'max', display_name: 'Max', role: 'user' as const }
+  const theirs = messageFixture({ id: 'm2', content: 'hi', user_id: 'u2' })
+
+  async function setup(bits: number, own = false) {
+    const { usePermissionsStore } = await import('../stores/permissions')
+    const { useAuthStore } = await import('../stores/auth')
+    useAuthStore().user = { ...author, id: 'me' } as never
+    usePermissionsStore().info = { owner: false, permissions: bits, max_upload_mb: 50, role_ids: [], top_position: 5, catalog: [], channels: [] }
+    chat.members = [author as never]
+    return useMessageMenu({ actions: makeActions({ own }), reply: vi.fn() })
+  }
+
+  it('offers a timeout for the author to a moderator who outranks them', async () => {
+    const menu = await setup(PERMISSION_BITS.timeout_members)
+    expect(labels(menu.itemsFor(theirs))).toContain('Time out…')
+  })
+
+  it('offers nothing without the permission, for own messages or for the Owner', async () => {
+    expect(labels((await setup(0)).itemsFor(theirs))).not.toContain('Time out…')
+    expect(labels((await setup(PERMISSION_BITS.timeout_members, true)).itemsFor(theirs))).not.toContain('Time out…')
+    const menu = await setup(PERMISSION_BITS.timeout_members)
+    chat.members = [{ ...author, role: 'admin' } as never]
+    expect(labels(menu.itemsFor(theirs))).not.toContain('Time out…')
+  })
+
+  it('offers to end a running timeout', async () => {
+    const menu = await setup(PERMISSION_BITS.timeout_members)
+    chat.members = [{ ...author, timeout_until: new Date(Date.now() + 60_000).toISOString() } as never]
+    expect(labels(menu.itemsFor(theirs))).toContain('End timeout')
   })
 })
