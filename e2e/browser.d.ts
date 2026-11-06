@@ -1,4 +1,4 @@
-import type { CryptoStateStore } from '../web/src/lib/crypto/stateStore'
+export {}
 
 declare global {
   interface Window {
@@ -8,7 +8,5 @@ declare global {
     __dfnNodes: Array<{ node: AudioWorkletNode & { filterStats?: { processedFrames: number } }; failed: boolean; why: string }>
     __micRequests: number
     __pip: { requests: number; exits: number }
-    openStore: (fresh: string) => Promise<CryptoStateStore>
-    store: CryptoStateStore
   }
 }

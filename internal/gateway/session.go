@@ -67,14 +67,21 @@ func (s *session) accepting() bool {
 func (s *session) pushLocked(name string, d json.RawMessage) {
 	s.seq++
 	data := dispatch(s.seq, name, d)
-	if len(s.ring) >= bufferSize {
-		copy(s.ring, s.ring[1:])
-		s.ring = s.ring[:len(s.ring)-1]
+	e := entry{seq: s.seq, data: data}
+	if len(s.ring) < bufferSize {
+		s.ring = append(s.ring, e)
+	} else {
+		s.ring[(s.seq-1)%bufferSize] = e
 	}
-	s.ring = append(s.ring, entry{seq: s.seq, data: data})
 	if s.conn != nil {
 		s.conn.trySend(data)
 	}
+}
+
+// oldestLocked is the sequence number of the oldest event still kept. Event n
+// lives in slot (n-1) mod bufferSize, so the ring needs no shifting.
+func (s *session) oldestLocked() int64 {
+	return s.seq - int64(len(s.ring)) + 1
 }
 
 func dispatch(seq int64, name string, d json.RawMessage) []byte {
@@ -143,13 +150,11 @@ func (s *session) resumeOn(c *connection, seq int64) (replaced *connection, ok b
 		return nil, false
 	}
 	if seq < s.seq {
-		if len(s.ring) == 0 || s.ring[0].seq > seq+1 {
+		if s.oldestLocked() > seq+1 {
 			return nil, false
 		}
-		for _, e := range s.ring {
-			if e.seq > seq {
-				c.trySend(e.data)
-			}
+		for n := seq + 1; n <= s.seq; n++ {
+			c.trySend(s.ring[(n-1)%bufferSize].data)
 		}
 	}
 	// RESUMED carries the session's current sequence number without using one.

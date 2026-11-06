@@ -49,8 +49,8 @@ func dataOf(t *testing.T, s *session) []int64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var seqs []int64
-	for _, e := range s.ring {
-		seqs = append(seqs, e.seq)
+	for n := s.oldestLocked(); n <= s.seq; n++ {
+		seqs = append(seqs, s.ring[(n-1)%bufferSize].seq)
 	}
 	return seqs
 }

@@ -584,6 +584,7 @@
       "srvYouHaveOpenReportsWait": "Du hast {a} offene Meldungen. Warte, bis die Moderatoren einige bearbeitet haben.",
       "srvYouHaveNoMessageIn": "Du hast in diesem Kanal keine Nachricht, an der du einen Thread beginnen könntest.",
       "srvYouMayNotJoinTalks": "Du darfst Talks in dieser Community nicht beitreten.",
+      "srvYouNeedARoleOf": "Du brauchst eine eigene Rolle, um Rollen zu erstellen. Eine neue Rolle steht unter deiner höchsten.",
       "fieldRequired": "{field} ist erforderlich.",
       "fieldInvalidChars": "{field} enthält unzulässige Zeichen.",
       "fieldControlChars": "{field} enthält Steuerzeichen.",

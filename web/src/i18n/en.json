@@ -584,6 +584,7 @@
       "srvYouHaveOpenReportsWait": "You have {a} open reports. Wait for the moderators to handle some.",
       "srvYouHaveNoMessageIn": "You have no message in this channel to start a thread on.",
       "srvYouMayNotJoinTalks": "You’re not allowed to join Talks in this community.",
+      "srvYouNeedARoleOf": "You need a role of your own to create roles. A new role goes below your highest one.",
       "fieldRequired": "{field} is required.",
       "fieldInvalidChars": "{field} contains characters that aren’t allowed.",
       "fieldControlChars": "{field} contains control characters.",

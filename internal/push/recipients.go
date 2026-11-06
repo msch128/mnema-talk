@@ -190,5 +190,9 @@ func namedMentions(ctx context.Context, q db.Querier, messageID uuid.UUID) map[u
 		}
 		out[id] = true
 	}
+	if err := rows.Err(); err != nil {
+		slog.Warn("push: read mentions", "err", err)
+		return nil
+	}
 	return out
 }

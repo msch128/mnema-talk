@@ -212,5 +212,6 @@ export const ROWS: readonly SentenceRow[] = [
   ['you have %d open reports; wait for the moderators to handle some', 'srvYouHaveOpenReportsWait'],
   ['you have already voted in this anonymous poll; a vote there cannot be changed', 'pollAlreadyVoted', []],
   ['you have no message in this channel to start a thread on', 'srvYouHaveNoMessageIn'],
-  ['you may not join Talks in this community', 'srvYouMayNotJoinTalks']
+  ['you may not join Talks in this community', 'srvYouMayNotJoinTalks'],
+  ['you need a role of your own to create roles: a new role goes below your highest one', 'srvYouNeedARoleOf']
 ]

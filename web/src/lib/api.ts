@@ -93,7 +93,7 @@ export interface ApiOptions {
   /** GETs only: join an identical request that is already in flight instead of sending another. For reads whose answer does not depend on when they were asked. */
   dedupe?: boolean
   onUploadProgress?: (loaded: number, total: number) => void
-  /** A queued session request may become stale before its HTTP response. */
+  /** A queued session request may become stale before its HTTP response: return false to keep a 401 from ending the current session. */
   shouldNotifyUnauthorized?: () => boolean
 }
 
@@ -164,6 +164,9 @@ function buildApiRequest(options: ApiOptions): ApiRequest {
   }
 }
 
+/** Sign-in steps answer 401 for wrong credentials or a wrong or expired code: no session existed, so none ended. */
+const SIGN_IN_STEPS: ReadonlySet<string> = new Set(['/api/auth/login', '/api/auth/login/2fa'])
+
 function handleUnauthorizedNotification(
   path: string,
   status: number,
@@ -172,7 +175,7 @@ function handleUnauthorizedNotification(
   currentHandlers: Set<{ readonly handler: UnauthorizedHandler }>,
   targetHandlers: { readonly handler: UnauthorizedHandler }[]
 ) {
-  if (status !== 401 || path === '/api/auth/login') return
+  if (status !== 401 || SIGN_IN_STEPS.has(path)) return
   if (shouldNotify && !shouldNotify()) return
   for (const subscription of targetHandlers) {
     if (currentHandlers.has(subscription)) {

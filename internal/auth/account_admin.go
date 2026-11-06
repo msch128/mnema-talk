@@ -13,7 +13,8 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// AdminUser is a user as the admin panel lists it.
+// AdminUser is a user as the admin panel lists it, without the account's
+// private presence choice (see User.Public).
 type AdminUser struct {
 	User
 	// RoleIDs are the account's custom roles, highest first.
@@ -45,7 +46,7 @@ func ListUsersForAdmin(ctx context.Context, p *db.Pool) ([]AdminUser, error) {
 		if err != nil {
 			return nil, err
 		}
-		au.User = *u
+		au.User = u.Public() // the chosen presence stays private to its owner
 		users = append(users, au)
 	}
 	return users, rows.Err()

@@ -128,8 +128,9 @@ func (h *Hub) notePresenceLocked(c *Client) {
 // greet tells the member they are connected, outside the hub lock.
 func (h *Hub) greet(c *Client, before, after string) {
 	slog.Info("ws connected", "user", c.User.Username)
-	h.announcePresence(c.User.ID, before, after)
+	// server_info leads: the broadcast below can reach this very connection.
 	c.SendEvent(events.ServerInfo, h.serverInfo())
+	h.announcePresence(c.User.ID, before, after)
 	c.SendEvent(events.PresenceSnapshot, h.presenceSnapshot())
 	h.sendBotActivities(c)
 	// Talks the member may not view stay invisible: who sits in them, since

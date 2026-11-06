@@ -286,7 +286,8 @@ describe('reconnect lifecycle variants', () => {
     Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
     chat.initWebSocket()
     chat.retryNow()
-    expect(checking).not.toHaveBeenCalled()
+    // A socket still connecting does not block the retry: it is replaced, after the session check.
+    expect(checking).toHaveBeenCalledTimes(1)
   })
 })
 
