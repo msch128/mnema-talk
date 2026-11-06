@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.9.18](https://github.com/msch128/mnema-talk/compare/v2.9.17...v2.9.18) (2026-11-06)
+
+
+### Bug Fixes
+
+* every settings change confirms itself, one bar per screen ([#741](https://github.com/msch128/mnema-talk/issues/741)) ([4108bfe](https://github.com/msch128/mnema-talk/commit/4108bfece03909aafa22fa03ca18826009bb916f))
+* forum, event and wiki forms follow the one save model ([#742](https://github.com/msch128/mnema-talk/issues/742)) ([4108bfe](https://github.com/msch128/mnema-talk/commit/4108bfece03909aafa22fa03ca18826009bb916f))
+* one save model per screen, images staged until Save ([#744](https://github.com/msch128/mnema-talk/issues/744)) ([4108bfe](https://github.com/msch128/mnema-talk/commit/4108bfece03909aafa22fa03ca18826009bb916f))
+
 ## [2.9.17](https://github.com/msch128/mnema-talk/compare/v2.9.16...v2.9.17) (2026-11-06)
 
 
