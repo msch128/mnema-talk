@@ -1,0 +1,91 @@
+internal/capacity/scenarios.go
+  s_06fcde5dbef956::t_54fe5d107f417f 1-183
+  s_06fcde5dbef956::t_19b4275fb909c8 184-211
+internal/backupstatus/backupstatus.go
+  s_06fcde5dbef956::t_43b1cbc46f599b 1-129
+internal/backupstatus/backupstatus_test.go
+  s_06fcde5dbef956::t_7f88d63758773f 1-97
+internal/capacity/scenarios_test.go
+  s_06fcde5dbef956::t_00156a47d91ede 1-122
+web/src/components/AdminBackupPanel.test.ts
+  s_06fcde5dbef956::t_820ea6d7721ed0 1-89
+  s_06fcde5dbef956::t_f788f998dfc1f0 90-91
+web/src/components/AdminBackupPanel.vue
+  s_06fcde5dbef956::t_f6715c2b247cbf 1-63
+.env.example
+  s_06fcde5dbef956::t_26fa076bcd617c 306-309
+.gitignore
+  s_06fcde5dbef956::t_80ff24a7eb5d18 35
+api/openapi.json
+  s_06fcde5dbef956::t_7dac5297d3c8f8 8010-8018,8022-8032,8034-8061,8067-8072,8162-8168,8177-8180,8189-8257,18783
+doc/architecture.md
+  s_06fcde5dbef956::t_721179e4802960 58-59
+doc/benchmark.md
+  s_06fcde5dbef956::t_5a2fb0e3ce64ed 309-340
+doc/deployment.md
+  s_06fcde5dbef956::t_ba5a3240723c18 194-196
+doc/operations.md
+  s_06fcde5dbef956::t_ca64a8d7dcfe31 116,226,731-762,904,908,973-1012
+doc/upgrade.md
+  s_06fcde5dbef956::t_4be91228ff26a8 94-103
+docker-compose.yml
+  s_06fcde5dbef956::t_60e5441f7eeacc 101-103,167-170
+internal/capacity/capacity.go
+  s_06fcde5dbef956::t_be1131df3eb389 64-66,84-86,124
+internal/config/config.go
+  s_06fcde5dbef956::t_66b45cba3e6dc3 55-58
+internal/config/config_env.go
+  s_06fcde5dbef956::t_4cabb2f1b1a365 160
+internal/config/config_test.go
+  s_06fcde5dbef956::t_2ffffebad8a331 641,661,663
+internal/config/config_validate.go
+  s_06fcde5dbef956::t_d0ba9c42b76d1a 9,66-68
+internal/server/admin_backup.go
+  s_06fcde5dbef956::t_5456fd2648e752 1-65
+internal/server/admin_backup_test.go
+  s_06fcde5dbef956::t_739ab7f1c1f5c3 1-52
+internal/server/admin_status.go
+  s_06fcde5dbef956::t_ae5cea50d8cc98 92-94
+internal/server/admin_status_integration_test.go
+  s_06fcde5dbef956::t_b351972dc3a26d 97-98
+internal/server/capacity.go
+  s_06fcde5dbef956::t_b45ea6cdd16cb2 58-86,92,119-123,155,160,162,165-172,174
+internal/server/capacity_test.go
+  s_06fcde5dbef956::t_b3bdd226d8dd89 6-7,31,35,39,52-83
+scripts/backup-drill.sh
+  s_06fcde5dbef956::t_4071bd4be0ac27 48-49,176-177,181-184
+scripts/backup.sh
+  s_06fcde5dbef956::t_d6ef41224cc199 5-8,15-17,30-53,69,90,93,96,108-128
+scripts/tests/test_backup_restore.py
+  s_06fcde5dbef956::t_4dd22628d9d09d 67-69,173-216
+web/src/components/AdminCapacityPanel.test.ts
+  s_06fcde5dbef956::t_75bbbf803ee02b 6,14-24,29,52-82,93,96-97,99,107-111,130
+web/src/components/AdminCapacityPanel.vue
+  s_06fcde5dbef956::t_dc9324dc0b25ae 2-4,9-10,14,53-77,92-95,127,129-142
+web/src/components/AdminStatusTab.test.ts
+  s_06fcde5dbef956::t_7c9c8f055eed5e 63-66,121-123
+web/src/components/AdminStatusTab.vue
+  s_06fcde5dbef956::t_cb2a861ac4ab39 17,262
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_eb29d8ac45480a 2034-2046,2265-2293,2295-2301
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_13fef35958ab12 2034-2046,2265-2293,2295-2301
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_c02cb0c8adc345 4716-4717,4719-4725,4732-4733,4735-4741,4779,4781,4791,4793,4798-4824
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b3f7f7e864194a1f36bb985b968e1e4949dbceda",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
