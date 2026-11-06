@@ -1,0 +1,21 @@
+web/src/components/AccountTwoFactor.test.ts
+  s_06fcde5dbef956::t_34cd6e27a74bc8 39-57
+web/src/components/AccountTwoFactor.vue
+  s_06fcde5dbef956::t_0a20dd07ac37e7 6,38-39,45-46,49-53,99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ec2a67050b139e0239063dd56fc2acab19689dc",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
