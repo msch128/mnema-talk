@@ -1,0 +1,37 @@
+web/src/components/PendingMessages.test.ts
+  s_06fcde5dbef956::t_520e4a8ed6ff0d 1,11-13,55,88,105-133
+web/src/components/PendingMessages.vue
+  s_06fcde5dbef956::t_457379886beed8 5,25-26,44,46-47,52-56,61-62,66-67,81
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_5609e74d6a52cf 2510,4942-4943,5120-5132
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_d9dc9011443638 2510,4942-4943,5120-5132
+web/src/i18n/plurals.test.ts
+  s_06fcde5dbef956::t_77efc6055c02a0 14-20,28-29
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_9805ad7b5358c2 23,152-153
+web/src/stores/chat/messageActions.ts
+  s_06fcde5dbef956::t_85cd47bb5412bb 10,27-29,31,38-39
+web/src/stores/chat/outbox.ts
+  s_06fcde5dbef956::t_637e8ca76f3f8d 149-159,161-168,212,348
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_b9ba2507dae864 124-125
+web/src/stores/chatOutbox.test.ts
+  s_06fcde5dbef956::t_8b813415e02cba 199-225,282-297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2a47afaaa3dcbad7e98db027949e587a7d45840d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
