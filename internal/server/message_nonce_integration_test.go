@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 func sendWithNonce(f pollFixture, c *client, channel uuid.UUID, content string, nonce uuid.UUID) response {
@@ -130,6 +131,22 @@ func TestRetryOfAStoredMessageSucceedsAfterTheAuthorLostTheRightToWrite(t *testi
 
 	wantStatus(t, "a new message is refused", sendWithNonce(f, f.alice, f.channel, "new", uuid.New()), http.StatusForbidden)
 	wantStatus(t, "the retry still gets its message", sendWithNonce(f, f.alice, f.channel, "arrived", nonce), http.StatusOK)
+}
+
+func TestRetryDoesNotReturnTheMessageToSomeoneWhoLostAccessToTheChannel(t *testing.T) {
+	f := newPollFixture(t)
+	nonce := uuid.New()
+	wantStatus(t, "first send", sendWithNonce(f, f.alice, f.channel, "arrived", nonce), http.StatusCreated)
+	everyone := everyoneID(t, f.owner)
+	wantStatus(t, "hide the channel", putOverwrites(f.owner, "channels", f.channel, overwrite("role", everyone, 0, perm.ViewChannel)), http.StatusNoContent)
+
+	res := sendWithNonce(f, f.alice, f.channel, "arrived", nonce)
+	if res.status != http.StatusForbidden && res.status != http.StatusNotFound {
+		t.Fatalf("retry after losing access: status %d %s, want the normal refusal", res.status, res.body)
+	}
+	if strings.Contains(string(res.body), "arrived") {
+		t.Fatalf("the refusal leaks the message: %s", res.body)
+	}
 }
 
 func TestOldNoncesArePruned(t *testing.T) {

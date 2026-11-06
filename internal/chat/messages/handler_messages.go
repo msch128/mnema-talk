@@ -108,9 +108,16 @@ func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	if len(req.AttachmentIDs) > 0 {
 		need |= perm.AttachFiles
 	}
-	// A retry is answered before the permission check: it only ever returns
-	// the caller's own message in this channel, and a member whose rights
-	// changed since the first attempt must not see a stored message turn into 403.
+	// A retry is answered before the Send check: it only ever returns the
+	// caller's own message in this channel, and a member who was timed out
+	// since the first attempt must not see a stored message turn into 403.
+	// Seeing the channel is still required: someone who lost access gets the
+	// normal refusal, not the message.
+	if req.Nonce != nil {
+		if _, err := a.ServeSendContext(r, chID, perm.ViewChannel); err != nil {
+			return err
+		}
+	}
 	if replayed, err := a.replayNonce(w, r, user.ID, chID, req.Nonce); replayed || err != nil {
 		return err
 	}
