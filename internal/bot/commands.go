@@ -258,7 +258,7 @@ func replaceCommandsTx(ctx context.Context, tx pgx.Tx, botID uuid.UUID, names []
 		return err
 	}
 	if kept+len(names) > MaxCommands {
-		return httpx.ErrInvalidInput(fmt.Sprintf("a bot can have at most %d commands, counting the ones an admin switched off", MaxCommands))
+		return httpx.ErrInvalidInput(fmt.Sprintf("a bot can have at most %d commands", MaxCommands))
 	}
 	for _, in := range ins {
 		if _, err := upsert(ctx, tx, botID, in); err != nil {

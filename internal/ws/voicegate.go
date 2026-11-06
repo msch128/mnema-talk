@@ -223,3 +223,11 @@ func (h *Hub) flushAllVoiceTime() {
 		h.flushVoiceTime(id)
 	}
 }
+
+// isDMTalk reports whether ch is the Talk of a conversation. When the
+// permission state cannot be read it counts as one: the stay's time is then
+// kept out of the public total rather than leaked into it.
+func (h *Hub) isDMTalk(ch uuid.UUID) bool {
+	snap, ok := h.permSnapshot(ch)
+	return !ok || (snap != nil && snap.IsDMTalk(ch))
+}

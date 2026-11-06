@@ -167,3 +167,15 @@ func (c *components) hiddenMessageCount(ctx context.Context, viewer perm.Subject
 	}
 	return chat.MessageCountByAuthor(ctx, c.d.DB, author, hidden)
 }
+
+// addDMTap is addTap for the events of conversations and their Talks, which
+// reach no webhook or bot.
+func (c *components) addDMTap(f func(ch uuid.UUID, eventType string, payload any)) {
+	prev := c.hub.DMTap
+	c.hub.DMTap = func(ch uuid.UUID, eventType string, payload any) {
+		if prev != nil {
+			prev(ch, eventType, payload)
+		}
+		f(ch, eventType, payload)
+	}
+}

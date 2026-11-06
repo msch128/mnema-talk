@@ -264,14 +264,6 @@ func (h *Hub) mayExceedLimit(c *Client, ch *core.ChannelInfo) bool {
 	return ok && snap != nil && c.can(snap, ch.ID, perm.DisconnectMembers)
 }
 
-// isDMTalk reports whether ch is the Talk of a conversation. When the
-// permission state cannot be read it counts as one: the stay's time is then
-// kept out of the public total rather than leaked into it.
-func (h *Hub) isDMTalk(ch uuid.UUID) bool {
-	snap, ok := h.permSnapshot(ch)
-	return !ok || (snap != nil && snap.IsDMTalk(ch))
-}
-
 func (h *Hub) isVoiceRoomFull(ch *core.ChannelInfo, userID uuid.UUID) bool {
 	if ch.UserLimit <= 0 {
 		return false
