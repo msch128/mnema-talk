@@ -187,14 +187,18 @@ async function handleSendReply() {
   if (isReplyBlocked(text)) return
 
   // The thread and target of this send: the reader may be elsewhere or typing on when it lands.
-  const threadId = chatStore.activeThread?.id
+  const thread = chatStore.activeThread
+  const threadId = thread?.id
+  if (!thread) return
   const target = replyingTo.value?.id || null
   const files = composer.value?.tray.hold() ?? null
   isSending.value = true
   try {
     const ids = files && composer.value?.tray.count.value ? await files.prepare() : []
     if (!ids) return
-    await chatStore.sendThreadReply(text, target, ids)
+    const sent = await chatStore.sendThreadReply(thread.id, thread.channel_id, text, target, ids)
+    // Nothing was posted: keep the tray and the draft for another try.
+    if (!sent) return
     files?.clear()
     if (chatStore.activeThread?.id === threadId) {
       if (replyInput.value.trim() === text) replyInput.value = ''

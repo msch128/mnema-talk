@@ -178,12 +178,13 @@ async function handleSend() {
   isSending.value = true
   const sentIn = chatStore.activeChannel?.id
   const slow = limits.rule()
+  const replyTo = replyingTo.value?.id || null
   // The files belong to the conversation they were added in, even if the member moves on while they upload.
   const files = composer.value?.tray.hold() ?? null
   try {
     const ids = files && composer.value?.tray.count.value ? await files.prepare() : []
     if (!ids) return
-    await chatStore.sendMessage(text, null, replyingTo.value?.id || null, ids)
+    await chatStore.sendMessage(text, null, replyTo, ids)
     files?.clear()
     limits.sent(sentIn, slow)
     if (stillIn(sentIn)) {
