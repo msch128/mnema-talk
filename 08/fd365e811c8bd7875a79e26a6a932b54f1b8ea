@@ -1,0 +1,47 @@
+e2e/tests/outbox.spec.ts
+  s_06fcde5dbef956::t_cda6153c321030 77-98
+web/src/components/PendingMessages.test.ts
+  s_06fcde5dbef956::t_dc4d89979f12eb 8,17,19-22,31-37,42,46-69
+web/src/components/PendingMessages.vue
+  s_06fcde5dbef956::t_31c2e65f1c2815 8-9,19-39,52,71-72,75,77,79-81
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_6c6407a71f6086 5089-5097
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_2206274107bbf9 5089-5097
+web/src/stores/auth/credentials.ts
+  s_06fcde5dbef956::t_24d97444f8521e 6,147,180
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_91a5b014a0c1a4 33,134
+web/src/stores/chat/messageActions.ts
+  s_06fcde5dbef956::t_1b683c58f80165 9,29-32
+web/src/stores/chat/messagePost.ts
+  s_06fcde5dbef956::t_27c1f27b3ef770 53,59
+web/src/stores/chat/outbox.ts
+  s_06fcde5dbef956::t_c8f0e77205811f 2,4,8,12-16,20-24,26,28,32-41,52,54-56,68,74-90,98,102-103,110,134-135,148,151-153,155,162-177,180-194,200-205,211-225,228,230-231
+web/src/stores/chat/outboxStorage.ts
+  s_06fcde5dbef956::t_519ae98bbfc0a1 1-73
+web/src/stores/chat/outboxTypes.ts
+  s_06fcde5dbef956::t_a43041a034276d 1,12,15-22
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_f7085ee87eac5f 21,214
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_9ceab60a206534 123-127
+web/src/stores/chatOutbox.test.ts
+  s_06fcde5dbef956::t_56828b6b7ae260 50,65,84-91,182,184,187-189,191-206,249-392
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "08fd365e811c8bd7875a79e26a6a932b54f1b8ea",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
