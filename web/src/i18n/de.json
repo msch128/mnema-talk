@@ -2424,9 +2424,6 @@
       "iconChange": "Icon ändern",
       "iconRemove": "Entfernen",
       "iconHint": "Für alle sichtbar, auch vor der Anmeldung: in der Serverliste der Desktop-App, in der Seitenleiste, als Tab- und Homescreen-Icon und in Link-Vorschauen. PNG, JPEG, WebP oder GIF, mindestens 128×128 Pixel; es wird auf das mittlere Quadrat zugeschnitten.",
-      "iconSaved": "Icon gespeichert.",
-      "iconRemoved": "Icon entfernt.",
-      "iconFailed": "Das Icon konnte nicht geändert werden.",
       "iconTooBig": "Das Bild ist größer als {size} MB."
     },
     "mail": {
@@ -3969,10 +3966,16 @@
       "hint": "Mitglieder sehen einen Befehl in den Kanälen, in denen der Bot sehen und schreiben kann. Schalte einen aus, um ihn zu verbergen, ohne ihn zu löschen.",
       "empty": "Dieser Bot hat keine Befehle registriert.",
       "options": "{count} Optionen",
-      "enabledFor": "Befehl {name} aktiv",
       "deleteFor": "Befehl {name} löschen",
       "deleteTitle": "Befehl /{name} löschen?",
-      "deleteBody": "Der Bot kann ihn erneut registrieren."
+      "deleteBody": "Der Bot kann ihn erneut registrieren.",
+      "turnOff": "Ausschalten",
+      "turnOn": "Einschalten",
+      "turnOffFor": "Befehl {name} ausschalten",
+      "turnOnFor": "Befehl {name} einschalten",
+      "turnedOff": "/{name} ist ausgeschaltet.",
+      "turnedOn": "/{name} ist eingeschaltet.",
+      "deleted": "/{name} gelöscht."
     },
     "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten."
   },
@@ -4643,6 +4646,7 @@
     }
   },
   "draft": {
+    "imagePending": "Nur eine Vorschau: wird beim Speichern übernommen.",
     "unsaved": "Ungespeicherte Änderungen",
     "reset": "Zurücksetzen",
     "saving": "Speichern …",

@@ -2424,9 +2424,6 @@
       "iconChange": "Change icon",
       "iconRemove": "Remove",
       "iconHint": "Shown to everyone, also before sign-in: in the server list of the desktop app, in the sidebar, as the tab and home-screen icon and in link previews. PNG, JPEG, WebP or GIF, at least 128×128 pixels; it is cropped to the centre square.",
-      "iconSaved": "Icon saved.",
-      "iconRemoved": "Icon removed.",
-      "iconFailed": "Couldn’t change the icon.",
       "iconTooBig": "The picture is larger than {size} MB."
     },
     "mail": {
@@ -3966,13 +3963,19 @@
     },
     "commands": {
       "title": "Slash commands",
-      "hint": "Members see a command in the channels where the bot can view and send. Switch one off to hide it without deleting it.",
+      "hint": "Members see a command in the channels where the bot can view and send. Turn one off to hide it without deleting it.",
       "empty": "This bot has not registered any commands.",
       "options": "{count} options",
-      "enabledFor": "Command {name} enabled",
       "deleteFor": "Delete command {name}",
       "deleteTitle": "Delete command /{name}?",
-      "deleteBody": "The bot can register it again."
+      "deleteBody": "The bot can register it again.",
+      "turnOff": "Turn off",
+      "turnOn": "Turn on",
+      "turnOffFor": "Turn off command {name}",
+      "turnOnFor": "Turn on command {name}",
+      "turnedOff": "/{name} is off.",
+      "turnedOn": "/{name} is on.",
+      "deleted": "/{name} deleted."
     },
     "emptyHint": "Name a bot above to create it and get its token."
   },
@@ -4643,6 +4646,7 @@
     }
   },
   "draft": {
+    "imagePending": "Preview only: applied when you save.",
     "unsaved": "You have unsaved changes",
     "reset": "Reset",
     "saving": "Saving…",
