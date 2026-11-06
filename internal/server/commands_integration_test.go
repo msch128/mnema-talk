@@ -538,3 +538,25 @@ func TestRunningACommandBeforeAcceptingTheRulesAsksForTheRules(t *testing.T) {
 		t.Fatalf("run before accepting: %d %s", res.status, res.body)
 	}
 }
+
+func TestReplacingCommandsCannotExceedTheCapWithTheOnesAnAdminSwitchedOff(t *testing.T) {
+	f := newBotFixture(t, false)
+	f.a.router.Bots.SetLimits(1000, 1000)
+	c := f.client
+	base := bot.BasePath + "/commands"
+	full := func(prefix string) []map[string]any {
+		out := make([]map[string]any, bot.MaxCommands)
+		for i := range out {
+			out[i] = map[string]any{"name": fmt.Sprintf("%s%d", prefix, i), "description": "x"}
+		}
+		return out
+	}
+	res := c.putJSON(base, full("a"))
+	wantStatus(t, "fill to the cap", res, http.StatusOK)
+	id := commandsOf(t, res)[0].ID
+	wantStatus(t, "disable one", f.owner.patch(f.botPath+"/commands/"+id.String(), map[string]any{"disabled": true}), http.StatusOK)
+	wantStatus(t, "replace with a full new set", c.putJSON(base, full("b")), http.StatusBadRequest)
+	if got := commandsOf(t, c.get(base)); len(got) != bot.MaxCommands {
+		t.Fatalf("the refused replace changed the commands: %d left", len(got))
+	}
+}
