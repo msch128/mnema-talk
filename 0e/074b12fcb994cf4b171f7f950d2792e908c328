@@ -1,0 +1,25 @@
+web/src/components/WikiMove.test.ts
+  s_06fcde5dbef956::t_aa813bb6f9b311 8-10,17,21,91,100-140
+web/src/components/WikiMove.vue
+  s_06fcde5dbef956::t_64fa88e7cb152c 4-5,12-13,21-50,85,88,93,100,102-114
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_7814af8cd26f6c 4987-4988
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_ee5f96af5c15f4 4987-4988
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0e074b12fcb994cf4b171f7f950d2792e908c328",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
