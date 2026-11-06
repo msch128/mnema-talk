@@ -2284,6 +2284,7 @@
     "status": "Status",
     "actions": "Actions",
     "userActive": "Active",
+    "userTimedOut": "Timed out until {time}",
     "userDisabled": "Disabled",
     "never": "Never",
     "inVoice": "In a Talk",
