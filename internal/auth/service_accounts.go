@@ -304,8 +304,9 @@ func SetStatusText(ctx context.Context, p db.Querier, userID uuid.UUID, text str
 	return u, err
 }
 
-// LoadStats fills u's activity totals. The message total is the maintained
-// counter, which leaves out direct messages (migration 0050).
+// LoadStats fills u's public activity totals: the talk time of Talks everyone
+// can see (migration 0099) and the maintained message counter, which leaves
+// out direct messages and the chat of their calls (migrations 0050, 0098).
 func LoadStats(ctx context.Context, p *db.Pool, u *User) error {
-	return p.QueryRow(ctx, `SELECT voice_seconds, message_count FROM users WHERE id = $1`, u.ID).Scan(&u.VoiceSeconds, &u.MessageCount)
+	return p.QueryRow(ctx, `SELECT public_voice_seconds, message_count FROM users WHERE id = $1`, u.ID).Scan(&u.VoiceSeconds, &u.MessageCount)
 }

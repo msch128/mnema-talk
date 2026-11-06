@@ -82,7 +82,7 @@ func TestWSDatabaseBookkeepingAndChannelChecks(t *testing.T) {
 	if _, ok := h.voiceChannel(context.Background(), uuid.New()); ok {
 		t.Fatal("unknown channel accepted")
 	}
-	h.addVoiceTime(u.ID, uuid.New(), 2500*time.Millisecond, false)
+	h.addVoiceTime(u.ID, uuid.New(), 2500*time.Millisecond, seatPublic)
 	var total int64
 	if err := p.QueryRow(context.Background(), `SELECT voice_seconds FROM users WHERE id=$1`, u.ID).Scan(&total); err != nil || total != 2 {
 		t.Fatalf("voice total=%d, %v", total, err)
@@ -97,7 +97,7 @@ func TestWSDatabaseBookkeepingAndChannelChecks(t *testing.T) {
 	}
 	broken := NewHub(closedWSFixturePool(t, p), nil, nil, nil)
 	b := testClient(broken, u)
-	broken.addVoiceTime(u.ID, uuid.New(), time.Second, false)
+	broken.addVoiceTime(u.ID, uuid.New(), time.Second, seatPublic)
 	broken.unregister(b)
 	if broken.OnlineCount() != 0 || len(sentEvents(t, b, "user_stats")) != 0 {
 		t.Fatal("database failure retained connection or invented statistics")

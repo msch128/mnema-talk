@@ -187,7 +187,7 @@ conversations nor write in them.
   reads its whole history.
 
 **What is never done with conversations.** They are not audited (an edit or
-deletion leaves no `message.*` entry with text), not counted in `message_count`,
+deletion leaves no `message.*` entry with text), not counted in `message_count` (nor is the chat of their calls, migration 0098),
 not in the mentions inbox or the channels' read states (`GET /api/dms` carries
 its own unread and mention counts), not searchable except by their members
 (`dm=true`), not shown in the admin media list, and not listed by the

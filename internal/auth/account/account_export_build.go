@@ -169,11 +169,11 @@ func exportProfile(ctx context.Context, q db.Querier, user uuid.UUID) (map[strin
 	var username, display, bio, role, status, locale, presence string
 	var email *string
 	var verified, lastSeen, created *time.Time
-	var rules, voice, count int64
+	var rules, voice, publicVoice, count int64
 	var onboarding json.RawMessage
 	err := q.QueryRow(ctx, `SELECT username, display_name, bio, role, status_text, locale, presence, email, email_verified_at,
-		last_seen_at, created_at, rules_accepted_version, voice_seconds, message_count, onboarding FROM users WHERE id = $1`, user).
-		Scan(&username, &display, &bio, &role, &status, &locale, &presence, &email, &verified, &lastSeen, &created, &rules, &voice, &count, &onboarding)
+		last_seen_at, created_at, rules_accepted_version, voice_seconds, public_voice_seconds, message_count, onboarding FROM users WHERE id = $1`, user).
+		Scan(&username, &display, &bio, &role, &status, &locale, &presence, &email, &verified, &lastSeen, &created, &rules, &voice, &publicVoice, &count, &onboarding)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func exportProfile(ctx context.Context, q db.Querier, user uuid.UUID) (map[strin
 		"id": user, "username": username, "display_name": display, "bio": bio, "owner": role == auth.RoleAdmin,
 		"status_text": status, "language": locale, "chosen_presence": presence,
 		"email": email, "email_confirmed_at": verified, "created_at": created, "last_seen_at": lastSeen,
-		"rules_accepted_version": rules, "voice_seconds": voice, "message_count": count,
+		"rules_accepted_version": rules, "voice_seconds": voice, "public_voice_seconds": publicVoice, "message_count": count,
 		"onboarding": onboarding, "roles": roles,
 	}, nil
 }

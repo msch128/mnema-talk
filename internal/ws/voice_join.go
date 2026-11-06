@@ -222,7 +222,7 @@ type voiceSeat struct {
 func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo, rejoin bool) (voiceSeat, bool) {
 	key := voiceKey{c.User.ID, ch.ID}
 	bypass := h.mayExceedLimit(c, ch) // before h.mu: it asks the permission cache
-	private := h.isDMTalk(ch.ID)
+	class := h.classifySeat(ch.ID)
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.closed {
@@ -242,8 +242,8 @@ func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo, rejoin bool) (voiceSeat,
 	// A resuming stay keeps how it was classified at its start: a failed
 	// permission lookup now (which counts as private) must not hide the
 	// whole stay's voice time.
-	if _, known := h.privateSeat[key]; !rejoin || !known {
-		h.privateSeat[key] = private
+	if _, known := h.seatClasses[key]; !rejoin || !known {
+		h.seatClasses[key] = class
 	}
 
 	profile := h.profileLocked(c)

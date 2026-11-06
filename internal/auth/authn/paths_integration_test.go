@@ -28,7 +28,7 @@ func TestAuthHandlersPropagateDatabaseCancellation(t *testing.T) {
 		{"presence", "UPDATE users SET presence", `{"presence":"away"}`, func(h *Handler) httpx.HandlerFunc { return h.setPresence }, member.ID},
 		{"status", "UPDATE users SET status_text", `{"status_text":"busy"}`, func(h *Handler) httpx.HandlerFunc { return h.setStatus }, member.ID},
 		{"profile load", "FROM users WHERE id = $1", "", func(h *Handler) httpx.HandlerFunc { return h.getUser }, member.ID},
-		{"profile stats", "SELECT voice_seconds", "", func(h *Handler) httpx.HandlerFunc { return h.getUser }, member.ID},
+		{"profile stats", "SELECT public_voice_seconds", "", func(h *Handler) httpx.HandlerFunc { return h.getUser }, member.ID},
 		{"confirm password", "SELECT password_hash FROM users", "", nil, member.ID},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

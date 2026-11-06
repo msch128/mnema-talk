@@ -79,9 +79,9 @@ type Hub struct {
 	// voiceSince is when a user joined a voice room; roomSince is when each
 	// room got its first member. Both survive the grace period.
 	voiceSince map[voiceKey]time.Time
-	// privateSeat marks the seats of a conversation's call, decided when the
-	// seat is taken: the Talk may be gone by the time the stay ends.
-	privateSeat map[voiceKey]bool
+	// seatClasses says how a seat's time counts, decided when the seat is
+	// taken: the Talk may be gone by the time the stay ends.
+	seatClasses map[voiceKey]seatClass
 	// voiceMute is the mute/deafen state of a user in a voice room.
 	voiceMute map[voiceKey]MuteState
 	roomSince map[uuid.UUID]time.Time
@@ -162,7 +162,7 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 		grace:    map[voiceKey]*graceLeave{},
 
 		voiceSince:  map[voiceKey]time.Time{},
-		privateSeat: map[voiceKey]bool{},
+		seatClasses: map[voiceKey]seatClass{},
 		voiceMute:   map[voiceKey]MuteState{},
 		roomSince:   map[uuid.UUID]time.Time{},
 
