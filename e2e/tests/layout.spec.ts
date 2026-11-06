@@ -123,9 +123,11 @@ test('a channel with an image opens at the newest message even when the image lo
     const form = new FormData()
     form.append('file', new Blob([new Uint8Array(png)], { type: 'image/png' }), 'bild.png')
     const res = await fetch(`/api/channels/${id}/upload`, { method: 'POST', body: form, credentials: 'same-origin' })
-    return res.status
+    return { status: res.status, body: (await res.text()).slice(0, 500) }
   }, { id, png })
-  expect(uploaded).toBe(201)
+  // A refused upload says why in the report instead of only "400 != 201".
+  await test.info().attach('upload-response', { body: `${uploaded.status} ${uploaded.body}`, contentType: 'text/plain' })
+  expect(uploaded.status, `upload answered: ${uploaded.body}`).toBe(201)
   expect((await apiFetch(page, 'POST', `/api/channels/${id}/messages`, { content: 'Das Letzte' })).status).toBe(201)
 
   // The picture arrives a second after the list was first laid out.

@@ -40,6 +40,7 @@ export default defineConfig({
     // A page that does not load fails within this, with the requests it waited for (tests/navigation-diagnostics.ts), instead of waiting for the test timeout.
     navigationTimeout: 45_000,
     locale: 'de-DE',
+    // Every attempt is traced and the failed ones are kept, so a first attempt that fails and a retry that passes still leaves its trace (CI uploads test-results even on a green job).
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
