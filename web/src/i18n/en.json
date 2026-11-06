@@ -949,7 +949,6 @@
     "requireTagNoTags": "Add a tag first. Until then, nothing is required.",
     "guidelinesTitle": "Guidelines",
     "guidelinesPlaceholder": "What belongs here, and what does not. Shown above the new-post form.",
-    "settingsFailed": "Couldn’t save the rules. Try again.",
     "tagsTitle": "Tags",
     "tagsIntro": "Tags sort the posts of this forum. Members choose up to 5 per post and can filter by them.",
     "deleteTagTitle": "Delete this tag?",
@@ -996,6 +995,11 @@
     },
     "jumpToUnread": "Jump to first unread",
     "removeFile": "Remove file",
+    "settingsSaved": "Forum rules saved",
+    "tagAdded": "Tag added",
+    "tagUpdated": "Tag saved",
+    "tagDeleted": "Tag deleted",
+    "tagsReordered": "Tag order saved",
     "tagsLoadFailed": "Couldn’t load the tags."
   },
   "members": {
@@ -2470,9 +2474,6 @@
       "iconChange": "Change icon",
       "iconRemove": "Remove",
       "iconHint": "Shown to everyone, also before sign-in: in the server list of the desktop app, in the sidebar, as the tab and home-screen icon and in link previews. PNG, JPEG, WebP or GIF, at least 128×128 pixels; it is cropped to the centre square.",
-      "iconSaved": "Icon saved.",
-      "iconRemoved": "Icon removed.",
-      "iconFailed": "Couldn’t change the icon.",
       "iconTooBig": "The picture is larger than {size} MB."
     },
     "mail": {
@@ -2575,6 +2576,7 @@
     "saveFailed": "Couldn’t save your profile. Try again.",
     "password": "Password",
     "changePassword": "Change",
+    "changePasswordAction": "Change password",
     "currentPassword": "Current password",
     "newPassword": "New password (at least {count} characters)",
     "repeatPassword": "Repeat new password",
@@ -2971,6 +2973,7 @@
       "add": "Add emoji",
       "added": "Emoji added",
       "deleted": "Emoji deleted",
+      "renamed": "Emoji renamed",
       "deleteTitle": "Delete :{name}:?",
       "deleteBody": "Existing messages and reactions show :name: as text from now on. This can’t be undone.",
       "animated": "Animated",
@@ -3470,6 +3473,7 @@
     "list": "Roles",
     "nameRequired": "Give the role a name.",
     "reorderFailed": "Couldn’t change the order. Try again.",
+    "reordered": "Role order changed",
     "uploadLimit": "Max upload size",
     "uploadInherit": "Inherit",
     "uploadHint": "Leave empty to use the global limit. A member gets the highest limit of their roles, never above the server maximum.",
@@ -3566,6 +3570,7 @@
     "deleteTitle": "Delete {name}?",
     "deleteBody": "Its URL stops working at once. Messages it posted stay.",
     "deleteOutgoingBody": "Events waiting for it are dropped.",
+    "deleted": "Webhook deleted.",
     "newOutgoing": "New outgoing webhook",
     "url": "Target URL",
     "eventsLabel": "Events",
@@ -3777,7 +3782,20 @@
       "templateFailed": "Couldn’t change the template. Try again.",
       "invalid": "Every role needs its own name of up to 40 characters, and a capacity from 1 to 1000 or none.",
       "saveFailed": "Couldn’t save the roles. Try again.",
-      "dialogTitle": "Roles & slots"
+      "dialogTitle": "Roles & slots",
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "turnOnTemplate": "Turn on template {name}",
+      "turnOffTemplate": "Turn off template {name}",
+      "templateOn": "Template “{name}” is on",
+      "templateOff": "Template “{name}” is off",
+      "templateSaved": "Template “{name}” saved",
+      "templateDeleted": "Template “{name}” deleted",
+      "deleteTemplateTitle": "Delete this template?",
+      "deleteTemplateBody": "Events that already use its roles keep them.",
+      "stateOn": "On",
+      "stateOff": "Off",
+      "saved": "Roles saved"
     },
     "rolePromoted": "You moved up from the waitlist: {role} – {title}",
     "roleRemoved": "You were removed from {role} – {title}",
@@ -4008,7 +4026,8 @@
       "revoke": "Revoke",
       "revokeFor": "Revoke token {name}",
       "revokeTitle": "Revoke token {name}?",
-      "revokeBody": "Programs using this token are rejected from now on. This cannot be undone."
+      "revokeBody": "Programs using this token are rejected from now on. This cannot be undone.",
+      "revoked": "Token revoked."
     },
     "secret": {
       "title": "Token for {name}",
@@ -4020,13 +4039,19 @@
     },
     "commands": {
       "title": "Slash commands",
-      "hint": "Members see a command in the channels where the bot can view and send. Switch one off to hide it without deleting it.",
+      "hint": "Members see a command in the channels where the bot can view and send. Turn one off to hide it without deleting it.",
       "empty": "This bot has not registered any commands.",
       "options": "{count} options",
-      "enabledFor": "Command {name} enabled",
       "deleteFor": "Delete command {name}",
       "deleteTitle": "Delete command /{name}?",
-      "deleteBody": "The bot can register it again."
+      "deleteBody": "The bot can register it again.",
+      "turnOff": "Turn off",
+      "turnOn": "Turn on",
+      "turnOffFor": "Turn off command {name}",
+      "turnOnFor": "Turn on command {name}",
+      "turnedOff": "/{name} is off.",
+      "turnedOn": "/{name} is on.",
+      "deleted": "/{name} deleted."
     },
     "emptyHint": "Name a bot above to create it and get its token.",
     "loadFailed": "Couldn’t load the bots. Try again."
@@ -4096,6 +4121,7 @@
       "address": "E-mail address",
       "add": "Add address",
       "change": "Change",
+      "changeAction": "Change e-mail",
       "remove": "Remove",
       "resend": "Send confirmation again",
       "resent": "Confirmation e-mail sent.",
@@ -4422,6 +4448,7 @@
     "saveFailed": "Couldn’t save the rule. Try again.",
     "loadFailed": "Couldn’t load the rules.",
     "deleteFailed": "Couldn’t delete the rule. Try again.",
+    "deleted": "Rule deleted.",
     "deleteTitle": "Delete the rule “{name}”?",
     "deleteBody": "It stops working at once. The entries it already made in Reports stay.",
     "delete": "Delete rule",
@@ -4581,6 +4608,7 @@
       "deleteTitle": "Delete this report?",
       "deleteBody": "The report and its copy of the messages are removed for good.",
       "deleteFailed": "Couldn’t delete the report. Try again.",
+      "deleted": "Report deleted.",
       "closeFailed": "Couldn’t close the report. Try again.",
       "loadFailed": "Couldn’t load the reports. Try again.",
       "emptyHint": "When a member reports a message or automod flags one, it shows up here for you to look at.",
@@ -4707,6 +4735,7 @@
     }
   },
   "draft": {
+    "imagePending": "Preview only: applied when you save.",
     "unsaved": "You have unsaved changes",
     "reset": "Reset",
     "saving": "Saving…",
@@ -5049,6 +5078,7 @@
     "missingBody": "It may have been deleted, or the address is wrong.",
     "loadFailed": "The page couldn’t be loaded.",
     "noEdit": "You can’t edit this page.",
-    "pageLockedNoEdit": "This page is locked. Only people who manage the wiki can change it."
+    "pageLockedNoEdit": "This page is locked. Only people who manage the wiki can change it.",
+    "moved": "Page updated."
   }
 }

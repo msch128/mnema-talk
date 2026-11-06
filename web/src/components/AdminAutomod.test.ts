@@ -91,6 +91,7 @@ describe('AdminAutomodTab', () => {
     await w.get('[data-testid="rule-delete"]').trigger('click')
     await flushPromises()
     expect(http.calls.some(c => c.url === `/api/admin/automod/rules/${fixtureId(1)}` && c.options?.method === 'DELETE')).toBe(true)
+    expect(useToastStore().toasts.map(x => x.text)).toEqual(['Rule deleted.'])
   })
 
   it('tells when the rules cannot be loaded', async () => {

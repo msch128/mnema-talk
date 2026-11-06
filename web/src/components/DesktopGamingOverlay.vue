@@ -6,6 +6,8 @@ import { Mic, MicOff, Headphones, HeadphoneOff, Monitor, X, Settings } from '@lu
 import SwitchRow from './SwitchRow.vue'
 import GamingGameList from './GamingGameList.vue'
 import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import ToastHost from './ToastHost.vue'
+import { useToastStore } from '../stores/toast'
 import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import { checkGameName } from '../lib/gameList'
 import { chordFromKey, chordText, type GamingSettings, type GamingSnapshot } from '../lib/desktopGaming'
@@ -40,6 +42,7 @@ function addCandidate() {
 // for a real change, and closing the window with one asks first. The host polls
 // every 200 ms; the draft keeps what is being edited and follows the rest.
 const stored = (): GamingSettings => snapshot.value?.settings ?? { enabled: true, sidepeek_opacity: 55, overlay: NO_CHORD, mute: NO_CHORD, deafen: NO_CHORD, ptt: NO_CHORD, games: [] }
+const toasts = useToastStore()
 const form = useSettingsDraft<GamingSettings>({
   source: stored,
   normalisers: { games: normalise.set, sidepeek_opacity: normalise.count },
@@ -47,7 +50,9 @@ const form = useSettingsDraft<GamingSettings>({
   save: async ({ draft: next, commit }) => {
     await platform.invoke('desktop_gaming_settings', { settings: toPlain(next) })
     commit(Object.keys(next) as (keyof GamingSettings)[])
-  }
+  },
+  // This window is not the app, so it carries its own toasts.
+  saved: () => { toasts.success(t('draft.saved')) }
 })
 const { draft } = form
 // A name still being typed counts as a change: Save adds it first, so it is not lost.
@@ -154,6 +159,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(timer) })
     </form>
     <p v-if="error" role="alert" class="text-sm text-mnema-danger mt-3">{{ $t('gaming.error') }}</p>
   </section>
+  <ToastHost v-if="interactive" />
 </template>
 <style scoped>
 .gaming-surface {margin:8px;padding:14px;border-radius:12px;color:var(--color-mnema-text,#eee);background:rgba(18,20,28,var(--sidepeek-opacity,.55));border:none;font-size:13px}

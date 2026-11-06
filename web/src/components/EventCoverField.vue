@@ -2,16 +2,12 @@
 import { ref } from 'vue'
 import { Image as ImageIcon, Trash2 } from '@lucide/vue'
 
-// The cover picker of the event dialog: the file input stays out of the tab order
-// and a real button opens it, so the keyboard can reach it.
+// The cover of an event form: a preview, a picker and Remove. Nothing is stored here;
+// the form uploads or deletes the cover when it is saved. The file input stays out of
+// the tab order and a real button opens it, so the keyboard can reach it.
 defineProps<{ preview: string | null }>()
-const emit = defineEmits<{ pick: [file: File]; remove: [] }>()
+const emit = defineEmits<{ pick: [event: Event]; remove: [] }>()
 const fileInput = ref<HTMLInputElement | null>(null)
-
-function onSelected(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) emit('pick', file)
-}
 </script>
 
 <template>
@@ -31,7 +27,7 @@ function onSelected(e: Event) {
       </button>
     </div>
     <div class="flex items-center gap-3">
-      <input ref="fileInput" type="file" accept="image/*" tabindex="-1" aria-hidden="true" data-testid="event-cover-file" class="sr-only" @change="onSelected" />
+      <input ref="fileInput" type="file" accept="image/*" tabindex="-1" aria-hidden="true" data-testid="event-cover-file" class="sr-only" @change="emit('pick', $event)" />
       <button
         type="button"
         data-testid="event-cover-choose"

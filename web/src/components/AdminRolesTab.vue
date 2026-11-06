@@ -86,6 +86,7 @@ function canMove(index: number, delta: number) {
 async function commitOrder(ids: string[]) {
   try {
     await api('/api/admin/roles/order', { method: 'PUT', json: { role_ids: ids } })
+    toasts.success(t('roles.reordered'))
   } catch (e) {
     toasts.error(caughtErrorMessage(e, t('roles.reorderFailed')))
   }

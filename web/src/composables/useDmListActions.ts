@@ -12,12 +12,13 @@ export function useDmListActions() {
   const chat = useChatStore()
   const toasts = useToastStore()
 
-  async function guarded(work: Promise<unknown>) {
+  // A store action may also fail by answering false; both are said in a toast.
+  async function guarded(work: Promise<unknown>, failure = t('dm.prefsFailed')) {
     try {
-      await work
+      if (await work === false) toasts.error(failure)
     } catch (error) {
       console.warn('Failed to change the conversation list:', error)
-      toasts.error(t('dm.prefsFailed'))
+      toasts.error(failure)
     }
   }
 
@@ -30,7 +31,7 @@ export function useDmListActions() {
   function toggleMute(dm: ChatDirectMessage) {
     const muted = chat.notificationLevel(dm.id) === 'mute'
     const level = muted ? (chat.dmSettings.mute_all ? 'all' : 'inherit') : 'mute'
-    return guarded(chat.setNotificationLevel(dm.id, level))
+    return guarded(chat.setNotificationLevel(dm.id, level), t('notifications.serverSaveFailed'))
   }
 
   /** The entries of a conversation's context menu; position is its place among the favourites. */

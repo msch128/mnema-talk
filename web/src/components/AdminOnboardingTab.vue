@@ -4,7 +4,7 @@ import { charCount } from '../lib/textLength'
 // and the channel new members land in. Rules are Markdown; once they exist,
 // members must accept them before they may post, react, upload or join a Talk
 // (the Owner and bots are exempt). "Require re-acceptance" raises the version.
-// One draft, one Save.
+// One draft, one Save, the icon included: a picked icon is only a preview until Save.
 import { ref, computed, onMounted } from 'vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { decodeOnboardingSettings, type OnboardingSettings } from '../types/rest'
@@ -12,10 +12,12 @@ import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { useOnboardingStore } from '../stores/onboarding'
 import { ImagePlus, ScrollText, Trash2 } from '@lucide/vue'
+import type { ImageChange } from '../composables/useStagedImage'
+import { normaliseImage, useStagedImage } from '../composables/useStagedImage'
 import { t } from '../i18n'
 import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
+import { IMAGE_UPLOAD_MAX_MB } from '../lib/pickImage'
 import { communityIconUrl } from '../lib/communityIcon'
 import MarkdownContent from './MarkdownContent.vue'
 import UnsavedChangesBar from './UnsavedChangesBar.vue'
@@ -35,13 +37,9 @@ const loaded = ref<OnboardingSettings | null>(null)
 const previewing = ref<'' | 'welcome' | 'rules'>('')
 const loadFailed = ref(false)
 
-// The icon is stored on its own, as soon as it is picked (like avatars and banners), apart
-// from the draft below: it is not part of Save, and a change here leaves unsaved edits alone.
+// The saved icon; the server crops uploads to the centre square.
 const iconVersion = ref('')
 const iconInput = ref<HTMLInputElement | null>(null)
-const iconBusy = ref(false)
-// The server crops uploads to the centre square.
-const iconUrl = computed(() => communityIconUrl(iconVersion.value, 128))
 
 interface CommunityForm {
   name: string
@@ -49,6 +47,7 @@ interface CommunityForm {
   rules: string
   startChannel: string
   reaccept: boolean
+  icon: ImageChange
 }
 
 // Everything on this screen is one draft; the community is changed by Save only (doc/settings-ux.md).
@@ -58,10 +57,12 @@ const form = useSettingsDraft<CommunityForm>({
     welcome: loaded.value?.welcome_text ?? '',
     rules: loaded.value?.rules_text ?? '',
     startChannel: loaded.value?.start_channel_id ?? '',
-    reaccept: false
+    reaccept: false,
+    icon: null
   }),
   normalisers: {
     name: normalise.text,
+    icon: normaliseImage,
     // Re-acceptance only counts while there are rules to accept, as only then it is sent.
     reaccept: (value, state) => value && state.rules.trim() !== ''
   },
@@ -71,7 +72,15 @@ const form = useSettingsDraft<CommunityForm>({
     return found
   },
   blocked: () => !loaded.value,
+  // Defined order: the icon has its own call, then the texts.
   save: async ({ draft, changed, commit }) => {
+    if (changed.includes('icon')) {
+      await saveIcon(draft.icon)
+      commit(['icon'], { icon: null })
+      draft.icon = null
+    }
+    const texts = changed.filter(k => k !== 'icon')
+    if (texts.length === 0) return
     loaded.value = await api('/api/admin/onboarding', {
       method: 'PUT',
       json: {
@@ -81,7 +90,7 @@ const form = useSettingsDraft<CommunityForm>({
       decode: decodeOnboardingSettings
     })
     // The box is a one-off request: it is cleared once the rules were re-announced.
-    commit(changed, { reaccept: false })
+    commit(texts, { reaccept: false })
     draft.reaccept = false
   },
   saved: async () => {
@@ -91,6 +100,14 @@ const form = useSettingsDraft<CommunityForm>({
   }
 })
 const { draft, errors } = form
+
+const icon = useStagedImage({
+  get: () => draft.icon,
+  set: value => { draft.icon = value },
+  savedUrl: () => communityIconUrl(iconVersion.value, 128),
+  tooBigMessage: () => t('admin.onboarding.iconTooBig', { size: IMAGE_UPLOAD_MAX_MB })
+})
+const iconUrl = icon.previewUrl
 
 const textChannels = computed(() => chat.allChannels.filter(c => c.type === 'text'))
 const hasRules = computed(() => draft.rules.trim() !== '')
@@ -112,32 +129,13 @@ function adoptIcon(s: OnboardingSettings) {
   features.setCommunityIcon(iconVersion.value)
 }
 
-async function onIconSelected(e: Event) {
-  const { file, tooBig } = pickImage(e.target as HTMLInputElement)
-  if (tooBig) toasts.error(t('admin.onboarding.iconTooBig', { size: IMAGE_UPLOAD_MAX_MB }))
-  if (!file) return
-  const body = new FormData()
-  body.append('icon', file)
-  iconBusy.value = true
-  try {
+async function saveIcon(change: ImageChange) {
+  if (change instanceof File) {
+    const body = new FormData()
+    body.append('icon', change)
     adoptIcon(await api('/api/admin/community/icon', { method: 'PUT', form: body, decode: decodeOnboardingSettings }))
-    toasts.success(t('admin.onboarding.iconSaved'))
-  } catch (err) {
-    toasts.error(caughtErrorMessage(err, t('admin.onboarding.iconFailed')))
-  } finally {
-    iconBusy.value = false
-  }
-}
-
-async function removeIcon() {
-  iconBusy.value = true
-  try {
+  } else {
     adoptIcon(await api('/api/admin/community/icon', { method: 'DELETE', decode: decodeOnboardingSettings }))
-    toasts.success(t('admin.onboarding.iconRemoved'))
-  } catch (err) {
-    toasts.error(caughtErrorMessage(err, t('admin.onboarding.iconFailed')))
-  } finally {
-    iconBusy.value = false
   }
 }
 
@@ -166,17 +164,18 @@ onMounted(load)
         <img v-if="iconUrl" :src="iconUrl" alt="" class="h-16 w-16 shrink-0 rounded-xl border border-mnema-hairline object-cover" data-testid="community-icon-preview" />
         <span v-else class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-mnema-mint/30 bg-mnema-band text-xl font-semibold text-mnema-mint" aria-hidden="true">M</span>
         <div class="flex flex-wrap items-center gap-2">
-          <button type="button" class="btn btn-secondary" :disabled="iconBusy" :aria-busy="iconBusy" data-testid="community-icon-change" @click="iconInput?.click()">
+          <button type="button" class="btn btn-secondary" :disabled="form.saving.value" data-testid="community-icon-change" @click="iconInput?.click()">
             <ImagePlus class="h-4 w-4" aria-hidden="true" />
             <span>{{ iconUrl ? $t('admin.onboarding.iconChange') : $t('admin.onboarding.iconUpload') }}</span>
           </button>
-          <button v-if="iconUrl" type="button" class="btn btn-secondary" :disabled="iconBusy" data-testid="community-icon-remove" @click="removeIcon">
+          <button v-if="iconUrl" type="button" class="btn btn-secondary" :disabled="form.saving.value" data-testid="community-icon-remove" @click="icon.remove">
             <Trash2 class="h-4 w-4" aria-hidden="true" />
             <span>{{ $t('admin.onboarding.iconRemove') }}</span>
           </button>
-          <input ref="iconInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" data-testid="community-icon-input" @change="onIconSelected" />
+          <input ref="iconInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden" data-testid="community-icon-input" @change="icon.pick" />
         </div>
       </div>
+      <p v-if="draft.icon" class="text-xs text-mnema-accent" data-testid="community-icon-pending">{{ $t('draft.imagePending') }}</p>
       <p class="text-xs text-mnema-tertiary">{{ $t('admin.onboarding.iconHint') }}</p>
     </div>
 

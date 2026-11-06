@@ -10,6 +10,7 @@ import { useAuthStore } from '../stores/auth'
 import { useBlocksStore } from '../stores/blocks'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { useDmActions } from '../composables/useDmActions'
 import { confirm } from '../lib/confirm'
 import { DM_MAX_MEMBERS, dmPeers, dmTitle } from '../lib/dm'
 import { caughtErrorMessage } from '../lib/api'
@@ -28,6 +29,8 @@ const authStore = useAuthStore()
 const blocks = useBlocksStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
+// Blocking and unblocking say so in a toast, like everywhere else.
+const { toggleBlock } = useDmActions()
 
 const adding = ref(false)
 const title = computed(() => dmTitle(props.dm, authStore.user?.id))
@@ -106,14 +109,14 @@ function openProfile(member: ChatDirectMessage['members'][number]) {
           type="button"
           data-testid="dm-block"
           class="btn btn-secondary flex h-9 items-center justify-center hover:border-mnema-danger hover:text-mnema-danger max-md:h-11"
-          @click="blocks.block(peer.id)"
+          @click="toggleBlock(peer)"
         >{{ $t('blocks.block') }}</button>
         <button
           v-else-if="blocks.enabled"
           type="button"
           data-testid="dm-unblock"
           class="btn btn-secondary flex h-9 items-center justify-center max-md:h-11"
-          @click="blocks.unblock(peer.id)"
+          @click="toggleBlock(peer)"
         >{{ $t('blocks.unblock') }}</button>
       </template>
     </div>

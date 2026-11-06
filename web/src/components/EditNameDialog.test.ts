@@ -201,4 +201,28 @@ describe('EditNameDialog editing', () => {
     expect(chat.updateChannel).not.toHaveBeenCalled()
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
+
+  it('asks before Cancel drops a typed category name, and not for an empty one', async () => {
+    wrapper = mount(EditNameDialog, { ...mountOpts, attachTo: document.body, props: { kind: 'category' } })
+    const cancel = () => wrapper.findAll('button').find(b => b.text() === 'Abbrechen')!
+    await cancel().trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value).toBeNull()
+    expect(wrapper.emitted('close')).toHaveLength(1)
+
+    await wrapper.find<HTMLInputElement>('#edit-name')!.setValue('Projekte')
+    await cancel().trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Änderungen verwerfen?')
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(wrapper.emitted('close')).toHaveLength(1)
+
+    await cancel().trigger('click')
+    await flushPromises()
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(wrapper.emitted('close')).toHaveLength(2)
+    pendingConfirm.value = null
+  })
 })

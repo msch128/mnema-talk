@@ -4,11 +4,13 @@ import type { LaterScheduled } from '../types/rest'
 import { computed, ref } from 'vue'
 import { AlertTriangle, Hash, MessageCircle, Pencil, Trash2 } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
+import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
 import { earliestInputValue, fromLocalInputValue, isAcceptableTime, toLocalInputValue } from '../lib/laterTimes'
 import { dateTime } from '../lib/time'
 import { useLaterStore } from '../stores/later'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
 
 // One scheduled message in the "Reminders and scheduled" popover: its text,
 // where and when it goes, and the actions to edit, reschedule or delete it. A
@@ -20,52 +22,45 @@ const props = defineProps({
 const later = useLaterStore()
 const toasts = useToastStore()
 const editing = ref(false)
-const text = ref('')
-const when = ref('')
-// The input value as editing started. An untouched time is kept as it is and
-// never read back from local wall time: in the hour that repeats when daylight
-// saving ends, that would pick the other of the two equal clock times.
-const initialWhen = ref('')
-const busy = ref(false)
 const removing = ref(false)
-const error = ref('')
 
 const failed = computed(() => props.item.state === 'failed')
 const reasonKey = computed(() => (['slow_mode', 'not_allowed', 'unavailable'].includes(props.item.failure_reason) ? props.item.failure_reason : 'refused'))
 const whenText = computed(() => dateTime(props.item.send_at, locale.value))
 
+// The edit is a draft with its own bar. An untouched time is kept as it is and never
+// read back from local wall time: in the hour that repeats when daylight saving ends,
+// that would pick the other of the two equal clock times. A failed draft has no time
+// that still lies ahead; the member picks one to send it again.
+const form = useSettingsDraft<{ text: string; when: string }>({
+  source: () => ({ text: props.item.content, when: failed.value ? '' : toLocalInputValue(new Date(props.item.send_at)) }),
+  normalisers: { text: normalise.text, when: normalise.text },
+  validate: d => (d.text.trim() ? {} : { text: t('later.editText') }),
+  save: async ({ changes }) => {
+    const at = changes.when ? fromLocalInputValue(changes.when) : null
+    if (changes.when && (!at || !isAcceptableTime(at))) throw new Error(t('later.pastTime'))
+    await later.updateScheduled(props.item.id, {
+      ...(changes.text !== undefined && changes.text.trim() !== props.item.content ? { content: changes.text.trim() } : {}),
+      ...(at && (failed.value || at.getTime() !== new Date(props.item.send_at).getTime()) ? { at } : {})
+    })
+  },
+  saved: () => {
+    toasts.success(t('draft.saved'))
+    editing.value = false
+  }
+})
+const { draft } = form
+
 function startEdit() {
-  text.value = props.item.content
-  // A failed draft has no time that still lies ahead; the member picks one to send it again.
-  when.value = failed.value ? '' : toLocalInputValue(new Date(props.item.send_at))
-  initialWhen.value = when.value
-  error.value = ''
+  form.reset()
   editing.value = true
 }
 
-async function save() {
-  const content = text.value.trim()
-  if (!content || busy.value) return
-  const touched = failed.value || when.value !== initialWhen.value
-  const at = when.value && touched ? fromLocalInputValue(when.value) : null
-  if (when.value && touched && (!at || !isAcceptableTime(at))) {
-    error.value = t('later.pastTime')
-    return
-  }
-  busy.value = true
-  error.value = ''
-  try {
-    const timeChanged = at && (failed.value || at.getTime() !== new Date(props.item.send_at).getTime())
-    await later.updateScheduled(props.item.id, {
-      ...(content !== props.item.content ? { content } : {}),
-      ...(timeChanged ? { at } : {})
-    })
-    editing.value = false
-  } catch (e) {
-    error.value = caughtErrorMessage(e, t('later.scheduleFailed'))
-  } finally {
-    busy.value = false
-  }
+/** Cancel and Escape ask first while the edit holds unsaved changes. */
+async function cancel() {
+  if (!(await form.guard())) return
+  form.reset()
+  editing.value = false
 }
 
 async function remove() {
@@ -119,9 +114,9 @@ async function remove() {
         <Trash2 class="h-3.5 w-3.5" />
       </button>
     </div>
-    <form v-if="editing" class="mt-2 space-y-2" @submit.prevent="save">
+    <form v-if="editing" class="mt-2 space-y-2" @submit.prevent="form.save" @keydown="form.onKeydown" @keydown.esc.stop="cancel">
       <textarea
-        v-model="text"
+        v-model="draft.text"
         data-testid="scheduled-text"
         rows="3"
         v-max-chars="4000"
@@ -131,18 +126,27 @@ async function remove() {
       <label class="block text-xs text-mnema-tertiary">
         {{ failed ? $t('later.rescheduleLabel') : $t('later.customLabel') }}
         <input
-          v-model="when"
+          v-model="draft.when"
           type="datetime-local"
           data-testid="scheduled-when"
           :min="earliestInputValue()"
           class="mt-1 block rounded-md border border-mnema-border bg-mnema-surface px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-hidden"
         >
       </label>
-      <p v-if="error" role="alert" class="text-xs text-mnema-danger">{{ error }}</p>
-      <div class="flex justify-end gap-2">
-        <button type="button" class="btn btn-secondary h-8" @click="editing = false">{{ $t('common.cancel') }}</button>
-        <button type="submit" data-testid="scheduled-save" :disabled="!text.trim() || busy" class="btn btn-primary h-8">{{ $t('common.save') }}</button>
-      </div>
+      <UnsavedChangesBar
+        inline
+        :dirty="form.dirty.value"
+        :can-save="form.canSave.value"
+        :saving="form.saving.value"
+        :error="form.error.value"
+        save-testid="scheduled-save"
+        @save="form.save"
+        @reset="form.reset"
+      >
+        <template #extra>
+          <button type="button" class="btn btn-secondary h-8" @click="cancel">{{ $t('common.cancel') }}</button>
+        </template>
+      </UnsavedChangesBar>
     </form>
   </div>
 </template>

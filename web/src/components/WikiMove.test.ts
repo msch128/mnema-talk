@@ -5,15 +5,20 @@ import WikiMove from './WikiMove.vue'
 import { ApiError } from '../lib/api'
 import { currentRoute, navigate } from '../lib/router'
 import { useWikiStore } from '../stores/wiki'
+import { useToastStore } from '../stores/toast'
+import { setLocale } from '../i18n'
+import { pendingConfirm } from '../lib/confirm'
 import { EDIT_WIKI, grantWiki, MANAGE_WIKI, summary, VIEW_WIKI, wikiPage } from '../wiki.fixture'
 
 const api = vi.hoisted(() => ({ changeWikiPage: vi.fn(), fetchWikiTree: vi.fn() }))
 vi.mock('../lib/wikiApi', () => api)
 
 enableAutoUnmount(afterEach)
+afterEach(() => { pendingConfirm.value = null })
 
 beforeEach(() => {
   setActivePinia(createPinia())
+  setLocale('en')
   Object.values(api).forEach(fn => fn.mockReset())
   api.fetchWikiTree.mockResolvedValue([])
   grantWiki(VIEW_WIKI | EDIT_WIKI | MANAGE_WIKI)
@@ -83,13 +88,54 @@ describe('WikiMove', () => {
     await field(w, 'slug').setValue('taken')
     await w.get('form').trigger('submit')
     await flushPromises()
-    expect(field(w, 'error').text()).toContain('already used')
+    expect(w.get('[data-testid="unsaved-error"]').text()).toContain('already used')
     expect(w.emitted('done')).toBeUndefined()
   })
 
   it('cancels', async () => {
     const w = mount(WikiMove, { props: { page: wikiPage() } })
     await w.get('button[type="button"]').trigger('click')
+    expect(w.emitted('done')).toHaveLength(1)
+  })
+
+  it('keeps Save off while nothing differs and never sends an empty patch', async () => {
+    const w = mount(WikiMove, { props: { page: wikiPage({ position: 7 }) } })
+    const save = () => w.get('[data-testid="unsaved-save"]')
+    expect(save().attributes('disabled')).toBeDefined()
+    await field(w, 'slug').setValue('  faq ')
+    await field(w, 'position').setValue('')
+    expect(save().attributes('disabled')).toBeDefined()
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(api.changeWikiPage).not.toHaveBeenCalled()
+    await field(w, 'position').setValue(8)
+    expect(save().attributes('disabled')).toBeUndefined()
+    await field(w, 'slug').setValue('')
+    expect(save().attributes('disabled')).toBeDefined()
+  })
+
+  it('confirms a saved change with a toast', async () => {
+    api.changeWikiPage.mockResolvedValue(wikiPage({ parent_id: 'x' }))
+    const w = mount(WikiMove, { props: { page: wikiPage() } })
+    await field(w, 'parent').setValue('x')
+    await w.get('[data-testid="unsaved-save"]').trigger('click')
+    await flushPromises()
+    expect(useToastStore().toasts.map(t => t.text)).toContain('Page updated.')
+  })
+
+  it('asks before Cancel drops a change', async () => {
+    const w = mount(WikiMove, { props: { page: wikiPage() } })
+    await field(w, 'slug').setValue('other')
+    await w.get('button.btn-ghost').trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(w.emitted('done')).toBeUndefined()
+    await w.get('button.btn-ghost').trigger('click')
+    await flushPromises()
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
     expect(w.emitted('done')).toHaveLength(1)
   })
 })

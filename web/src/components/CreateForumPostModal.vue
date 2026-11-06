@@ -14,6 +14,7 @@ import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
 import { useComposerAssist } from '../composables/useComposerAssist'
+import { useDiscardGuard } from '../composables/useDiscardGuard'
 import BaseDialog from './BaseDialog.vue'
 import ForumTagPicker from './ForumTagPicker.vue'
 import EmojiButton from './EmojiButton.vue'
@@ -49,6 +50,9 @@ const isSubmitting = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const textArea = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(textArea, content)
+
+// Closing with typed input asks first.
+const guard = useDiscardGuard(() => title.value.trim() !== '' || content.value.trim() !== '' || files.value.length > 0 || selectedTagIds.value.length > 0)
 
 const titleTrimmed = computed(() => title.value.trim())
 const contentTrimmed = computed(() => content.value.trim())
@@ -109,7 +113,8 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <BaseDialog :title="$t('forum.newPostTitle')" panel-class="max-w-xl" sheet @close="emit('close')">
+  <BaseDialog :title="$t('forum.newPostTitle')" panel-class="max-w-xl" sheet :guard="guard" @close="emit('close')">
+    <template #default="{ close }">
     <form class="space-y-4 overflow-y-auto p-6 max-md:p-4" @submit.prevent="handleSubmit">
       <div v-if="error" role="alert" class="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
         <AlertCircle class="h-4 w-4 shrink-0" />
@@ -206,12 +211,13 @@ async function handleSubmit() {
       </div>
 
       <div class="flex justify-end gap-3 pt-2">
-        <button type="button" class="btn btn-secondary px-4 py-2 text-sm" @click="emit('close')">{{ $t('common.cancel') }}</button>
+        <button type="button" class="btn btn-secondary px-4 py-2 text-sm" @click="close">{{ $t('common.cancel') }}</button>
         <button type="submit" :disabled="!isValid || isSubmitting" data-testid="submit-post" class="btn btn-primary flex items-center gap-2 px-4 py-2 text-sm">
           <Loader2 v-if="isSubmitting" class="h-4 w-4 animate-spin" />
           <span>{{ $t('forum.submitPost') }}</span>
         </button>
       </div>
     </form>
+    </template>
   </BaseDialog>
 </template>

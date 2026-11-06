@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { i18nPlugin, setLocale, t } from '../i18n'
 import { userFixture } from '../test-fixtures.fixture'
+import { pendingConfirm } from '../lib/confirm'
 
 function step() {
   return mount(WelcomeProfileStep, { global: { plugins: [i18nPlugin] } })
@@ -79,6 +80,22 @@ describe('WelcomeProfileStep', () => {
     expect(w.emitted('skip')).toHaveLength(1)
   })
 
+  it('asks before a skip drops a typed name or bio', async () => {
+    const w = step()
+    await w.get('#welcome-bio').setValue('Maths')
+    await w.get('[data-testid="welcome-skip"]').trigger('click')
+    await flushPromises()
+    expect(w.emitted('skip')).toBeUndefined()
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(w.emitted('skip')).toBeUndefined()
+    await w.get('[data-testid="welcome-skip"]').trigger('click')
+    await flushPromises()
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(w.emitted('skip')).toHaveLength(1)
+  })
+
   it('makes the avatar itself the way to change it', async () => {
     const w = step()
     const click = vi.spyOn(w.get<HTMLInputElement>('[data-testid="welcome-avatar"]').element, 'click')
@@ -93,6 +110,7 @@ describe('WelcomeProfileStep', () => {
     const file = new File(['x'], 'me.png', { type: 'image/png' })
     await pick(step(), file)
     expect(upload).toHaveBeenCalledWith(file)
+    expect(useToastStore().toasts.at(-1)?.text).toBe(t('profile.avatarSaved'))
   })
 
   it('refuses an image over 5 MB without uploading it', async () => {

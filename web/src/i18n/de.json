@@ -949,7 +949,6 @@
     "requireTagNoTags": "Lege zuerst einen Tag an. Bis dahin ist nichts erforderlich.",
     "guidelinesTitle": "Richtlinien",
     "guidelinesPlaceholder": "Was hierher gehört und was nicht. Wird über dem Formular für neue Beiträge angezeigt.",
-    "settingsFailed": "Die Regeln konnten nicht gespeichert werden. Versuche es noch einmal.",
     "tagsTitle": "Tags",
     "tagsIntro": "Tags ordnen die Beiträge dieses Forums. Mitglieder wählen bis zu 5 pro Beitrag und können danach filtern.",
     "deleteTagTitle": "Diesen Tag löschen?",
@@ -996,6 +995,11 @@
     },
     "jumpToUnread": "Zur ersten ungelesenen",
     "removeFile": "Datei entfernen",
+    "settingsSaved": "Forumregeln gespeichert",
+    "tagAdded": "Tag hinzugefügt",
+    "tagUpdated": "Tag gespeichert",
+    "tagDeleted": "Tag gelöscht",
+    "tagsReordered": "Reihenfolge der Tags gespeichert",
     "tagsLoadFailed": "Die Tags konnten nicht geladen werden."
   },
   "members": {
@@ -2470,9 +2474,6 @@
       "iconChange": "Icon ändern",
       "iconRemove": "Entfernen",
       "iconHint": "Für alle sichtbar, auch vor der Anmeldung: in der Serverliste der Desktop-App, in der Seitenleiste, als Tab- und Homescreen-Icon und in Link-Vorschauen. PNG, JPEG, WebP oder GIF, mindestens 128×128 Pixel; es wird auf das mittlere Quadrat zugeschnitten.",
-      "iconSaved": "Icon gespeichert.",
-      "iconRemoved": "Icon entfernt.",
-      "iconFailed": "Das Icon konnte nicht geändert werden.",
       "iconTooBig": "Das Bild ist größer als {size} MB."
     },
     "mail": {
@@ -2575,6 +2576,7 @@
     "saveFailed": "Das Profil konnte nicht gespeichert werden. Versuche es noch einmal.",
     "password": "Passwort",
     "changePassword": "Ändern",
+    "changePasswordAction": "Passwort ändern",
     "currentPassword": "Aktuelles Passwort",
     "newPassword": "Neues Passwort (mind. {count} Zeichen)",
     "repeatPassword": "Neues Passwort wiederholen",
@@ -2971,6 +2973,7 @@
       "add": "Emoji hinzufügen",
       "added": "Emoji hinzugefügt",
       "deleted": "Emoji gelöscht",
+      "renamed": "Emoji umbenannt",
       "deleteTitle": ":{name}: löschen?",
       "deleteBody": "Bestehende Nachrichten und Reaktionen zeigen :name: ab jetzt als Text. Das lässt sich nicht rückgängig machen.",
       "animated": "Animiert",
@@ -3470,6 +3473,7 @@
     "list": "Rollen",
     "nameRequired": "Gib der Rolle einen Namen.",
     "reorderFailed": "Die Reihenfolge konnte nicht geändert werden. Versuche es noch einmal.",
+    "reordered": "Rangfolge der Rollen geändert",
     "uploadLimit": "Max. Upload-Größe",
     "uploadInherit": "Erben",
     "uploadHint": "Leer lassen, um das globale Limit zu nutzen. Mitglieder erhalten das höchste Limit ihrer Rollen, nie mehr als das Server-Maximum.",
@@ -3566,6 +3570,7 @@
     "deleteTitle": "{name} löschen?",
     "deleteBody": "Seine URL funktioniert sofort nicht mehr. Bereits geschriebene Nachrichten bleiben.",
     "deleteOutgoingBody": "Ereignisse, die noch auf ihn warten, werden verworfen.",
+    "deleted": "Webhook gelöscht.",
     "newOutgoing": "Neuer ausgehender Webhook",
     "url": "Ziel-URL",
     "eventsLabel": "Ereignisse",
@@ -3777,7 +3782,20 @@
       "templateFailed": "Die Vorlage konnte nicht geändert werden. Versuche es erneut.",
       "invalid": "Jede Rolle braucht einen eigenen Namen mit höchstens 40 Zeichen und eine Kapazität von 1 bis 1000 oder keine.",
       "saveFailed": "Die Rollen konnten nicht gespeichert werden. Versuche es erneut.",
-      "dialogTitle": "Rollen & Plätze"
+      "dialogTitle": "Rollen & Plätze",
+      "turnOn": "Einschalten",
+      "turnOff": "Ausschalten",
+      "turnOnTemplate": "Vorlage {name} einschalten",
+      "turnOffTemplate": "Vorlage {name} ausschalten",
+      "templateOn": "Vorlage „{name}“ ist eingeschaltet",
+      "templateOff": "Vorlage „{name}“ ist ausgeschaltet",
+      "templateSaved": "Vorlage „{name}“ gespeichert",
+      "templateDeleted": "Vorlage „{name}“ gelöscht",
+      "deleteTemplateTitle": "Diese Vorlage löschen?",
+      "deleteTemplateBody": "Termine, die ihre Rollen schon verwenden, behalten sie.",
+      "stateOn": "An",
+      "stateOff": "Aus",
+      "saved": "Rollen gespeichert"
     },
     "rolePromoted": "Du bist von der Warteliste nachgerückt: {role} – {title}",
     "roleRemoved": "Du wurdest aus {role} entfernt – {title}",
@@ -4008,7 +4026,8 @@
       "revoke": "Widerrufen",
       "revokeFor": "Token {name} widerrufen",
       "revokeTitle": "Token {name} widerrufen?",
-      "revokeBody": "Programme mit diesem Token werden ab jetzt abgewiesen. Das lässt sich nicht rückgängig machen."
+      "revokeBody": "Programme mit diesem Token werden ab jetzt abgewiesen. Das lässt sich nicht rückgängig machen.",
+      "revoked": "Token widerrufen."
     },
     "secret": {
       "title": "Token für {name}",
@@ -4023,10 +4042,16 @@
       "hint": "Mitglieder sehen einen Befehl in den Kanälen, in denen der Bot sehen und schreiben kann. Schalte einen aus, um ihn zu verbergen, ohne ihn zu löschen.",
       "empty": "Dieser Bot hat keine Befehle registriert.",
       "options": "{count} Optionen",
-      "enabledFor": "Befehl {name} aktiv",
       "deleteFor": "Befehl {name} löschen",
       "deleteTitle": "Befehl /{name} löschen?",
-      "deleteBody": "Der Bot kann ihn erneut registrieren."
+      "deleteBody": "Der Bot kann ihn erneut registrieren.",
+      "turnOff": "Ausschalten",
+      "turnOn": "Einschalten",
+      "turnOffFor": "Befehl {name} ausschalten",
+      "turnOnFor": "Befehl {name} einschalten",
+      "turnedOff": "/{name} ist ausgeschaltet.",
+      "turnedOn": "/{name} ist eingeschaltet.",
+      "deleted": "/{name} gelöscht."
     },
     "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten.",
     "loadFailed": "Die Bots konnten nicht geladen werden. Versuche es noch einmal."
@@ -4096,6 +4121,7 @@
       "address": "E-Mail-Adresse",
       "add": "Adresse hinzufügen",
       "change": "Ändern",
+      "changeAction": "E-Mail ändern",
       "remove": "Entfernen",
       "resend": "Bestätigung erneut senden",
       "resent": "Bestätigungs-E-Mail gesendet.",
@@ -4422,6 +4448,7 @@
     "saveFailed": "Die Regel konnte nicht gespeichert werden. Versuche es noch einmal.",
     "loadFailed": "Die Regeln konnten nicht geladen werden.",
     "deleteFailed": "Die Regel konnte nicht gelöscht werden. Versuche es noch einmal.",
+    "deleted": "Regel gelöscht.",
     "deleteTitle": "Regel „{name}“ löschen?",
     "deleteBody": "Sie wirkt sofort nicht mehr. Die Einträge, die sie schon unter Meldungen angelegt hat, bleiben.",
     "delete": "Regel löschen",
@@ -4581,6 +4608,7 @@
       "deleteTitle": "Diese Meldung löschen?",
       "deleteBody": "Die Meldung und ihre Kopie der Nachrichten werden endgültig entfernt.",
       "deleteFailed": "Die Meldung konnte nicht gelöscht werden. Versuche es noch einmal.",
+      "deleted": "Meldung gelöscht.",
       "closeFailed": "Die Meldung konnte nicht abgeschlossen werden. Versuche es noch einmal.",
       "loadFailed": "Die Meldungen konnten nicht geladen werden. Versuche es noch einmal.",
       "emptyHint": "Wenn ein Mitglied eine Nachricht meldet oder Automod eine markiert, erscheint sie hier zur Prüfung.",
@@ -4707,6 +4735,7 @@
     }
   },
   "draft": {
+    "imagePending": "Nur eine Vorschau: wird beim Speichern übernommen.",
     "unsaved": "Ungespeicherte Änderungen",
     "reset": "Zurücksetzen",
     "saving": "Speichern …",
@@ -5049,6 +5078,7 @@
     "missingBody": "Vielleicht wurde sie gelöscht, oder die Adresse stimmt nicht.",
     "loadFailed": "Die Seite konnte nicht geladen werden.",
     "noEdit": "Du kannst diese Seite nicht bearbeiten.",
-    "pageLockedNoEdit": "Diese Seite ist gesperrt. Nur wer das Wiki verwaltet, kann sie ändern."
+    "pageLockedNoEdit": "Diese Seite ist gesperrt. Nur wer das Wiki verwaltet, kann sie ändern.",
+    "moved": "Seite aktualisiert."
   }
 }

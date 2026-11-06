@@ -208,45 +208,85 @@ describe('AdminOnboardingTab', () => {
       expect(w.find('[data-testid="community-icon-remove"]').exists()).toBe(true)
     })
 
-    it('uploads the picture as multipart without touching unsaved text', async () => {
+    const save = async (w: Awaited<ReturnType<typeof mountTab>>) => {
+      await w.get('[data-testid="onboarding-save"]').trigger('click')
+      await flushPromises()
+    }
+
+    it('only previews a picked picture and marks the form unsaved', async () => {
       const w = await mountTab()
-      await w.find('#onb-name').setValue('Unsaved')
-      apiMock.mockResolvedValue({ ...settings, community_icon: 'v2' })
+      apiMock.mockClear()
       await choose(w, new File(['png'], 'logo.png', { type: 'image/png' }))
-      const [path, options] = apiMock.mock.lastCall as [string, ApiOptions]
+      expect(apiMock).not.toHaveBeenCalled()
+      expect(w.get('[data-testid="community-icon-preview"]').attributes('src')).toMatch(/^blob:/)
+      expect(w.find('[data-testid="community-icon-pending"]').exists()).toBe(true)
+      expect(w.get('[data-testid="unsaved-status"]').text()).toBe('You have unsaved changes')
+      expect(w.get('[data-testid="onboarding-save"]').attributes('disabled')).toBeUndefined()
+    })
+
+    it('uploads the picked picture on Save as multipart, with the text in the same Save', async () => {
+      const w = await mountTab()
+      await w.find('#onb-name').setValue('Renamed')
+      await choose(w, new File(['png'], 'logo.png', { type: 'image/png' }))
+      apiMock.mockResolvedValueOnce({ ...settings, community_icon: 'v2' }).mockResolvedValueOnce({ ...settings, community_name: 'Renamed', community_icon: 'v2' })
+      await save(w)
+      const [path, options] = apiMock.mock.calls.at(-2) as [string, ApiOptions]
       expect(path).toBe('/api/admin/community/icon')
       expect(options.method).toBe('PUT')
       expect((options.form as FormData).get('icon')).toBeInstanceOf(File)
+      expect(apiMock.mock.lastCall?.[0]).toBe('/api/admin/onboarding')
       expect(w.get('[data-testid="community-icon-preview"]').attributes('src')).toBe('/api/community/icon?size=128&v=v2')
-      expect(w.find<HTMLInputElement>('#onb-name').element.value).toBe('Unsaved')
+      expect(w.find('[data-testid="community-icon-pending"]').exists()).toBe(false)
       expect(useServerFeaturesStore().communityIcon).toBe('v2')
-      expect(useToastStore().toasts.length).toBe(1)
+      expect(w.get('[data-testid="unsaved-status"]').text()).toBe('')
+      expect(useToastStore().toasts.map(t => t.text)).toEqual(['Welcome and rules saved.'])
     })
 
-    it('refuses a picture over the limit before any request', async () => {
+    it('saves only the icon when nothing else changed', async () => {
       const w = await mountTab()
+      await choose(w, new File(['png'], 'logo.png', { type: 'image/png' }))
       apiMock.mockClear()
-      await choose(w, new File([new Uint8Array(6 * 1024 * 1024)], 'big.png', { type: 'image/png' }))
-      expect(apiMock).not.toHaveBeenCalled()
-      expect(useToastStore().toasts[0]?.text).toContain('5 MB')
+      apiMock.mockResolvedValue({ ...settings, community_icon: 'v2' })
+      await save(w)
+      expect(apiMock.mock.calls.map(c => c[0])).toEqual(['/api/admin/community/icon'])
     })
 
-    it('reports a refused upload and keeps the icon', async () => {
+    it('Reset drops a picked picture and shows the saved icon again', async () => {
       const w = await mountTab({ ...settings, community_icon: 'v1' })
-      apiMock.mockRejectedValue(new Error('rejected'))
-      await choose(w, new File(['x'], 'logo.png', { type: 'image/png' }))
+      await choose(w, new File(['png'], 'logo.png', { type: 'image/png' }))
+      await w.get('[data-testid="unsaved-reset"]').trigger('click')
       expect(w.get('[data-testid="community-icon-preview"]').attributes('src')).toBe('/api/community/icon?size=128&v=v1')
-      expect(useToastStore().toasts.length).toBe(1)
+      expect(w.get('[data-testid="onboarding-save"]').attributes('disabled')).toBeDefined()
     })
 
-    it('removes the icon', async () => {
+    it('refuses a picture over the limit before staging it', async () => {
+      const w = await mountTab()
+      await choose(w, new File([new Uint8Array(6 * 1024 * 1024)], 'big.png', { type: 'image/png' }))
+      expect(useToastStore().toasts[0]?.text).toContain('5 MB')
+      expect(w.get('[data-testid="onboarding-save"]').attributes('disabled')).toBeDefined()
+    })
+
+    it('keeps the picture staged and says so in the bar when the upload is refused', async () => {
+      const w = await mountTab({ ...settings, community_icon: 'v1' })
+      await choose(w, new File(['x'], 'logo.png', { type: 'image/png' }))
+      apiMock.mockRejectedValue(new Error('rejected'))
+      await save(w)
+      expect(w.get('[data-testid="unsaved-error"]').text()).toBe('rejected')
+      expect(w.get('[data-testid="community-icon-preview"]').attributes('src')).toMatch(/^blob:/)
+      expect(useServerFeaturesStore().communityIcon).toBe('')
+    })
+
+    it('removes the icon on Save, not on click', async () => {
       const w = await mountTab({ ...settings, community_icon: 'v1' })
       useServerFeaturesStore().setCommunityIcon('v1')
-      apiMock.mockResolvedValue({ ...settings })
+      apiMock.mockClear()
       await w.get('[data-testid="community-icon-remove"]').trigger('click')
-      await flushPromises()
-      expect(apiMock).toHaveBeenLastCalledWith('/api/admin/community/icon', { method: 'DELETE', decode: expect.any(Function) })
+      expect(apiMock).not.toHaveBeenCalled()
       expect(w.find('[data-testid="community-icon-preview"]').exists()).toBe(false)
+      expect(useServerFeaturesStore().communityIcon).toBe('v1')
+      apiMock.mockResolvedValue({ ...settings })
+      await save(w)
+      expect(apiMock).toHaveBeenLastCalledWith('/api/admin/community/icon', { method: 'DELETE', decode: expect.any(Function) })
       expect(useServerFeaturesStore().communityIcon).toBe('')
     })
   })

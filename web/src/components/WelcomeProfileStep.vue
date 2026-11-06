@@ -7,6 +7,7 @@ import { caughtErrorMessage } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
+import { confirmDiscard } from '../composables/useSettingsDraft'
 import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
 import FormField from './FormField.vue'
 import UserAvatar from './UserAvatar.vue'
@@ -28,6 +29,7 @@ async function onAvatar(e: Event) {
   uploading.value = true
   try {
     await auth.uploadAvatar(file)
+    toasts.success(t('profile.avatarSaved'))
   } catch (err) {
     toasts.error(caughtErrorMessage(err, t('profile.avatarFailed')))
   } finally {
@@ -35,11 +37,18 @@ async function onAvatar(e: Event) {
   }
 }
 
+// Typed name or bio that Continue would store: Skip asks before dropping it.
+const typed = () => !!auth.user && (displayName.value.trim() !== auth.user.display_name || bio.value.trim() !== auth.user.bio)
+
+async function skip() {
+  if (typed() && !await confirmDiscard()) return
+  emit('skip')
+}
+
 async function save() {
-  const user = auth.user
   const name = displayName.value.trim()
   const about = bio.value.trim()
-  if (user && (name !== user.display_name || about !== user.bio)) {
+  if (typed()) {
     saving.value = true
     try {
       await auth.updateProfile({ displayName: name, bio: about })
@@ -94,7 +103,7 @@ async function save() {
       ></textarea>
     </FormField>
     <div class="flex justify-end gap-2">
-      <button type="button" class="btn btn-ghost" data-testid="welcome-skip" @click="emit('skip')">
+      <button type="button" class="btn btn-ghost" data-testid="welcome-skip" @click="skip">
         {{ $t('welcome.skip') }}
       </button>
       <button type="submit" :disabled="saving" class="btn btn-primary" data-testid="welcome-profile-save">

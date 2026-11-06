@@ -44,6 +44,13 @@ it('matches the server password minimum', () => {
 })
 
 describe('changing the password', () => {
+  it('names the submit button after the action, not "Save"', async () => {
+    await fill('valid-password')
+    const submit = wrapper.get('button[type="submit"]')
+    expect(submit.text()).toBe(t('profile.changePasswordAction'))
+    expect(submit.text()).not.toBe(t('common.save'))
+  })
+
   it('rejects passwords shorter than the server minimum', async () => {
     await fill('a'.repeat(MIN_PASSWORD_LENGTH - 1))
     const field = wrapper.get('input[autocomplete="new-password"]')

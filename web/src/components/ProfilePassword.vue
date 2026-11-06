@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Edit3, Loader2, Save } from '@lucide/vue'
+import { Edit3, KeyRound, Loader2 } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
 import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
@@ -90,8 +90,8 @@ async function savePassword() {
           class="btn btn-primary"
         >
           <Loader2 v-if="isSavingPassword" class="w-3.5 h-3.5 animate-spin" />
-          <Save v-else class="w-3.5 h-3.5" />
-          <span>{{ $t('common.save') }}</span>
+          <KeyRound v-else class="w-3.5 h-3.5" />
+          <span>{{ $t('profile.changePasswordAction') }}</span>
         </button>
       </div>
     </form>

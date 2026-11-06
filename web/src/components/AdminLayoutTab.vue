@@ -98,15 +98,26 @@ function moveChannelBy(categoryId: string | null, channel: Channel, direction: n
 
 const { onDragEnd, onCategoryDragStart, onCategoryDrop, onChannelDragStart, onChannelDrop } = useLayoutDrag(() => layout.value, reorder)
 
+// A refused save is said in the bar, next to the order it is about; what comes after it (reloading) is a toast.
+const layoutError = ref('')
+
+async function putLayout(sent: ChannelHierarchy): Promise<boolean> {
+  try {
+    await api('/api/admin/layout', { method: 'PUT', json: toLayoutPayload(sent) })
+    return true
+  } catch (e) {
+    layoutError.value = caughtErrorMessage(e, t('draft.saveFailed'))
+    return false
+  }
+}
+
 async function saveLayout() {
   if (isSavingLayout.value || !hasLayoutChanges.value) return
   isSavingLayout.value = true
+  layoutError.value = ''
   const sent = layout.value
   try {
-    await api('/api/admin/layout', {
-      method: 'PUT',
-      json: toLayoutPayload(sent)
-    })
+    if (!await putLayout(sent)) return
     // The server holds what was sent. A reorder made while the request ran
     // differs from it, stays unsaved and the reload below must not throw it away.
     savedOrder.value = orderOf(sent)
@@ -369,6 +380,7 @@ onMounted(() => loadChannelsData())
       :dirty="hasLayoutChanges"
       :can-save="hasLayoutChanges && !isSavingLayout"
       :saving="isSavingLayout"
+      :error="layoutError"
       @save="saveLayout"
       @reset="resetLayout"
     />

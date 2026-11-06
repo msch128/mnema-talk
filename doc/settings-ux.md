@@ -1,7 +1,16 @@
 # Settings: how a screen saves
 
 One screen, one rule. A settings screen either saves every field at once or saves
-every field with one explicit Save. It never mixes the two.
+every field with one explicit Save. It never mixes the two: a Save button promises
+that nothing on its form has been stored yet, and an instant control next to it
+breaks that promise ("did the icon save? why is Save still off?").
+
+This follows the common guidance: NN/g, *Toggle-Switch Guidelines*: "separate
+controls that produce instant results from those that require clicking a command
+button", toggles take effect immediately and never wait for Save; Apple and Material
+treat switches as instant and keep Save/Done for forms that commit several values at
+once. Discord's server settings stage everything behind a sticky "unsaved changes"
+bar while its user settings apply at once; we use the same split, in our own calm look.
 
 ## Which pattern
 
@@ -14,6 +23,17 @@ every field with one explicit Save. It never mixes the two.
 reset mail" and wizards (two-factor, import, export, delete account) do something
 once. They run when pressed, ask first when destructive, and report through a toast.
 They may sit on a draft screen; only the screen's *fields* follow its pattern.
+An action on a draft screen sits in its own titled section after the form, never
+among the fields, and is never shaped like a field: no switch, checkbox or select
+that writes on change. Every action confirms success (a toast, or the result shown
+in place, such as a revealed secret) and reports failure with a toast.
+
+**Images are fields.** An icon, avatar or banner on a draft screen is part of the
+draft: picking a file only shows a preview, Remove only marks it, and both are
+uploaded or deleted on Save (`useStagedImage`). Only a screen without a Save button
+may upload an image the moment it is picked, with a toast. The profile card is such a
+screen: avatar and banner are changed on the card itself, while name and bio open
+their own inline editor with its own bar.
 
 ## Draft + Save
 
@@ -23,6 +43,8 @@ Built from two shared parts, never a one-off variant:
   save lifecycle, the discard guard and Ctrl/Cmd+S.
 - `web/src/components/UnsavedChangesBar.vue`: the footer with "You have unsaved
   changes", Reset, Save and the inline error.
+- `web/src/composables/useStagedImage.ts`: an image field of the draft (`File`,
+  `'remove'` or `null` for unchanged), its preview and its normaliser.
 
 Rules:
 
@@ -49,12 +71,27 @@ Rules:
    channel order, a list of overwrites) still uses `UnsavedChangesBar` and
    `useLeaveGuard(dirty)`, with `dirty` computed by comparing with the saved state, never
    a hand-set flag.
+8. **Save confirms itself**: a success toast from `saved` (or the dialog closing with
+   one). One screen has one bar: a second draft on the same screen uses an `inline` bar
+   inside its own card, never a second sticky one.
 
 ## Immediate
 
 Use `usePreferenceSave().run(change)` and show `<SavedIndicator :visible="saved" />`
 where the setting sits. A failed change is reported with a toast and the control goes
-back to the real value. Do not add a Save button to such a screen.
+back to the real value. Do not add a Save button to such a screen. Every write of
+the screen shows the indicator, including sliders and device pickers that persist
+through a store watcher. A write that reports failure by a return value (not a throw)
+is checked and reported the same way.
+
+A one-off form that does something (change password, change e-mail, create a
+channel) names its button after the action ("Change password", "Create"), not
+"Save", and closing it with typed input asks first.
+
+`web/src/composables/settingsPatterns.test.ts` checks the parts that can be checked
+mechanically: a draft component never uses the immediate helpers, an image picker on
+a draft screen goes through `useStagedImage`, and a component with an unsaved bar
+tracks it with a draft or a leave guard.
 
 ## Choosing
 

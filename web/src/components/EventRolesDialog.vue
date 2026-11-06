@@ -1,56 +1,68 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Loader2 } from '@lucide/vue'
+import { ref, watch } from 'vue'
 import type { CommunityEvent } from '../types/domain'
-import { draftsOf } from '../lib/eventRoleDrafts'
-import type { RoleDraft, RoleRemoval } from '../lib/eventRoleDrafts'
 import { useEventRoles } from '../composables/useEventRoles'
+import { useRosterDraft } from '../composables/useRosterDraft'
+import { useSettingsDraft } from '../composables/useSettingsDraft'
 import { caughtErrorMessage } from '../lib/api'
+import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import EventRolesEditor from './EventRolesEditor.vue'
 import ScopeChoice from './ScopeChoice.vue'
+import UnsavedChangesBar from './UnsavedChangesBar.vue'
 import type { Scope } from '../lib/eventRecurrence'
 
 // The role editor on its own, for the creator of an event who may change the
-// roster without being allowed to edit the event.
+// roster without being allowed to edit the event. The roster is the draft: Save is
+// on when it differs from the event's roles, and closing with changes asks first.
 const props = defineProps<{ event: CommunityEvent }>()
 const emit = defineEmits<{ close: [] }>()
 
-const rows = ref<RoleDraft[]>(draftsOf(props.event.roles ?? []))
-const removals = ref<RoleRemoval[]>([])
+const toast = useToastStore()
+const roster = useRosterDraft(() => props.event.roles)
 const scope = ref<Scope>('this')
-const saving = ref(false)
-const error = ref('')
-const { save } = useEventRoles()
+const { save: saveRoles } = useEventRoles()
 
-async function submit() {
-  if (saving.value) return
-  saving.value = true
-  error.value = ''
-  try {
-    await save(props.event.id, rows.value, removals.value, state => { rows.value = state.rows; removals.value = state.removals }, props.event.series ? scope.value : undefined)
+const form = useSettingsDraft<{ roster: string }>({
+  source: () => ({ roster: roster.savedKey.value }),
+  save: async () => {
+    try {
+      await saveRoles(props.event.id, roster.rows.value, roster.removals.value, roster.sync, props.event.series ? scope.value : undefined)
+      roster.removals.value = []
+    } catch (err) {
+      throw new Error(caughtErrorMessage(err, t('events.roles.saveFailed')), { cause: err })
+    }
+  },
+  saved: () => {
+    toast.success(t('events.roles.saved'))
     emit('close')
-  } catch (err) {
-    error.value = caughtErrorMessage(err, t('events.roles.saveFailed'))
-  } finally {
-    saving.value = false
   }
+})
+watch(roster.key, key => { form.draft.roster = key })
+
+function reset() {
+  form.reset()
+  roster.reset()
 }
 </script>
 
 <template>
-  <BaseDialog :title="$t('events.roles.dialogTitle')" panel-class="max-w-lg" sheet @close="emit('close')">
-    <form class="flex flex-col gap-4 overflow-y-auto p-6 max-md:p-4" @submit.prevent="submit">
-      <div v-if="error" role="alert" class="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">{{ error }}</div>
-      <EventRolesEditor v-model="rows" v-model:removals="removals" />
-      <ScopeChoice v-if="event.series" v-model="scope" :hint="$t('events.scope.rolesHint')" />
-      <div class="flex justify-end gap-3 border-t border-mnema-hairline pt-4">
-        <button type="button" class="rounded-lg border border-mnema-border px-4 py-2 text-sm font-medium text-mnema-text hover:bg-mnema-hover max-md:min-h-11" @click="emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="submit" data-testid="event-roles-save" :disabled="saving" class="flex items-center gap-2 rounded-lg bg-mnema-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 max-md:min-h-11">
-          <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />{{ $t('common.save') }}
-        </button>
+  <BaseDialog :title="$t('events.roles.dialogTitle')" panel-class="max-w-lg" sheet :guard="form.guard" @close="emit('close')">
+    <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="form.save" @keydown="form.onKeydown">
+      <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6 max-md:p-4">
+        <EventRolesEditor v-model="roster.rows.value" v-model:removals="roster.removals.value" />
+        <ScopeChoice v-if="event.series" v-model="scope" :hint="$t('events.scope.rolesHint')" />
       </div>
+      <UnsavedChangesBar
+        :dirty="form.dirty.value"
+        :can-save="form.canSave.value"
+        :saving="form.saving.value"
+        :error="form.error.value"
+        save-testid="event-roles-save"
+        @save="form.save"
+        @reset="reset"
+      />
     </form>
   </BaseDialog>
 </template>

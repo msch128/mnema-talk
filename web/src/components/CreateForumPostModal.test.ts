@@ -4,6 +4,7 @@ import type { VueWrapper } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
+import { pendingConfirm } from '../lib/confirm'
 import CreateForumPostModal from './CreateForumPostModal.vue'
 import { setLocale } from '../i18n'
 import * as forumApi from '../lib/forumApi'
@@ -44,6 +45,8 @@ async function pick(w: VueWrapper, files: File[]) {
   Object.defineProperty(input.element, 'files', { value: files, configurable: true })
   await input.trigger('change')
 }
+
+afterEach(() => { pendingConfirm.value = null })
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -282,5 +285,27 @@ describe('CreateForumPostModal', () => {
     await area.trigger('input')
     await area.trigger('blur')
     expect(w.find('[data-testid="mention-suggestions"]').exists()).toBe(false)
+  })
+
+  it('closes at once while empty and asks before dropping typed input', async () => {
+    const w = mountModal()
+    const cancel = () => w.findAll('button').find(b => b.text() === 'Cancel')!
+    await cancel().trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value).toBeNull()
+    expect(w.emitted('close')).toHaveLength(1)
+
+    await w.get('#post-title').setValue('Draft title')
+    await cancel().trigger('click')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(w.emitted('close')).toHaveLength(1)
+    await w.get('[data-dialog-close]').trigger('click')
+    await flushPromises()
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(w.emitted('close')).toHaveLength(2)
   })
 })

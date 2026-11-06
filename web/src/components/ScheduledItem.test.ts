@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ScheduledItem from './ScheduledItem.vue'
@@ -6,6 +6,7 @@ import { useLaterStore } from '../stores/later'
 import { useToastStore } from '../stores/toast'
 import { setLocale, t } from '../i18n'
 import { toLocalInputValue } from '../lib/laterTimes'
+import { pendingConfirm } from '../lib/confirm'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 
 const inHours = (h: number) => new Date(Date.now() + h * 3600_000)
@@ -15,6 +16,7 @@ const item = (over: Record<string, unknown> = {}) => ({
 }) as never
 
 let later: ReturnType<typeof useLaterStore>
+afterEach(() => { pendingConfirm.value = null })
 beforeEach(() => {
   setLocale('en')
   setActivePinia(createPinia())
@@ -76,13 +78,52 @@ describe('ScheduledItem', () => {
     expect(patch.at).toBeInstanceOf(Date)
   })
 
-  it('sends an empty change when nothing changed', async () => {
+  it('keeps Save off and sends nothing while nothing changed', async () => {
     const update = vi.spyOn(later, 'updateScheduled').mockResolvedValue(item())
     const w = mountItem({ send_at: new Date(inHours(1).setSeconds(0, 0)).toISOString() })
     await w.get('[data-testid=scheduled-edit]').trigger('click')
+    expect(w.get('[data-testid=scheduled-save]').attributes('disabled')).toBeDefined()
+    await w.get('[data-testid=scheduled-text]').setValue('  good morning ')
+    expect(w.get('[data-testid=scheduled-save]').attributes('disabled')).toBeDefined()
     await w.get('form').trigger('submit')
     await flushPromises()
-    expect(update).toHaveBeenCalledWith(fixtureId(2), {})
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('confirms a saved edit with a toast and closes the editor', async () => {
+    vi.spyOn(later, 'updateScheduled').mockResolvedValue(item())
+    const w = mountItem()
+    await w.get('[data-testid=scheduled-edit]').trigger('click')
+    await w.get('[data-testid=scheduled-text]').setValue('new words')
+    await w.get('[data-testid=scheduled-save]').trigger('click')
+    await flushPromises()
+    expect(useToastStore().toasts.map(x => x.text)).toContain(t('draft.saved'))
+    expect(w.find('form').exists()).toBe(false)
+  })
+
+  it('asks before Escape or Cancel drops an edit, and not when nothing changed', async () => {
+    const w = mountItem()
+    await w.get('[data-testid=scheduled-edit]').trigger('click')
+    await w.get('[data-testid=scheduled-text]').trigger('keydown', { key: 'Escape' })
+    await flushPromises()
+    expect(pendingConfirm.value).toBeNull()
+    expect(w.find('form').exists()).toBe(false)
+
+    await w.get('[data-testid=scheduled-edit]').trigger('click')
+    await w.get('[data-testid=scheduled-text]').setValue('changed')
+    await w.get('[data-testid=scheduled-text]').trigger('keydown', { key: 'Escape' })
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe(t('draft.discardTitle'))
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(w.find('form').exists()).toBe(true)
+    await w.findAll('button').find(b => b.text() === t('common.cancel'))!.trigger('click')
+    await flushPromises()
+    pendingConfirm.value?.resolve(true)
+    await flushPromises()
+    expect(w.find('form').exists()).toBe(false)
+    await w.get('[data-testid=scheduled-edit]').trigger('click')
+    expect((w.get('[data-testid=scheduled-text]').element as HTMLTextAreaElement).value).toBe('good morning')
   })
 
   it('asks a failed draft for a new time and sends it with the text', async () => {
@@ -120,11 +161,11 @@ describe('ScheduledItem', () => {
     vi.spyOn(later, 'updateScheduled').mockRejectedValue(new Error('boom'))
     const w = mountItem()
     await w.get('[data-testid=scheduled-edit]').trigger('click')
+    await w.get('[data-testid=scheduled-text]').setValue('other words')
     await w.get('form').trigger('submit')
     await flushPromises()
-    expect(w.get('[role=alert]').text()).not.toBe('')
-    await w.findAll('button').find(b => b.text() === t('common.cancel'))!.trigger('click')
-    expect(w.find('form').exists()).toBe(false)
+    expect(w.get('[role=alert]').text()).toBe('boom')
+    expect(w.find('form').exists()).toBe(true)
   })
 
   it('sends one delete however often the button is pressed', async () => {

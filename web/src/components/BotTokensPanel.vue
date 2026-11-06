@@ -84,6 +84,7 @@ async function revoke(token: BotToken) {
   if (!ok) return
   try {
     await api(`${base}/${token.id}`, { method: 'DELETE' })
+    toasts.success(t('bots.tokens.revoked'))
     await load()
   } catch (e) {
     fail(e)

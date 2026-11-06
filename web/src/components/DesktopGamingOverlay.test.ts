@@ -4,13 +4,16 @@ import { setLocale } from '../i18n'
 import DesktopGamingOverlay from './DesktopGamingOverlay.vue'
 import type { GamingSnapshot } from '../lib/desktopGaming'
 import { pendingConfirm } from '../lib/confirm'
+import { createPinia, setActivePinia } from 'pinia'
+import { useToastStore } from '../stores/toast'
+import { t } from '../i18n'
 const ipc = vi.hoisted(() => ({ invoke: vi.fn() }))
 vi.mock('@tauri-apps/api/core', async importOriginal => ({ ...await importOriginal<typeof import('@tauri-apps/api/core')>(), invoke: ipc.invoke }))
 let wrapper: ReturnType<typeof mount<typeof DesktopGamingOverlay>> | undefined
 let snapshot: GamingSnapshot
 const chord = (key: number, alt = false) => ({ key, alt, control: false, shift: false })
 beforeEach(() => {
-  vi.useFakeTimers(); vi.clearAllMocks()
+  vi.useFakeTimers(); vi.clearAllMocks(); setActivePinia(createPinia())
   snapshot = { active: true, overlay: false, settings: { enabled: true, sidepeek_opacity: 55, overlay: chord(77, true), mute: chord(78, true), deafen: chord(68, true), ptt: chord(32), games: ['Wow.exe'] }, voice: { clock: 0, scope: null, connected: true, account: null, channel: null, muted: false, deafened: false, sharing: false, ptt_mode: false, members: Array.from({ length: 14 }, (_, i) => ({ id: String(i), name: `Player ${i}`, speaking: i === 0, muted: i === 1, sharing: i === 2 })) } }
   ipc.invoke.mockImplementation((command: string) => Promise.resolve(command === 'desktop_gaming_snapshot' ? structuredClone(snapshot) : undefined))
   Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'sidepeek')
@@ -106,6 +109,13 @@ describe('native gaming surfaces', () => {
     await ask().trigger('click'); await flushPromises(); expect(w.find('[role="status"]').exists()).toBe(true)
     ipc.invoke.mockImplementation((command: string) => command === 'desktop_gaming_snapshot' ? Promise.resolve(structuredClone(snapshot)) : Promise.reject(new Error('old host')))
     await ask().trigger('click'); await flushPromises(); expect(w.find('[role="status"]').exists()).toBe(true)
+  })
+  it('confirms a saved draft with a toast, and not before Save', async () => {
+    const w = await open(true); await w.findAll('button')[0]!.trigger('click'); await w.get('[data-testid="gaming-enabled"]').trigger('click')
+    const toasts = useToastStore(); expect(toasts.toasts).toEqual([])
+    await w.get('form').trigger('submit'); await flushPromises()
+    expect(toasts.toasts.map(x => x.text)).toEqual([t('draft.saved')])
+    expect(w.text()).toContain(t('draft.saved'))
   })
   it('shows save failures without discarding the draft and clears unavailable snapshots', async () => {
     const w = await open(true); await w.findAll('button')[0]!.trigger('click'); await w.get('[data-testid="gaming-enabled"]').trigger('click')

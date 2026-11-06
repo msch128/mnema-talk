@@ -3,17 +3,16 @@
 // shown once (the server keeps only a hash), so it is revealed right after
 // creating or regenerating, with a copy button.
 import { ref, computed, onMounted } from 'vue'
-import { Copy, KeyRound, Trash2, ImagePlus, SlidersHorizontal } from '@lucide/vue'
+import { Copy, KeyRound, Trash2, SlidersHorizontal } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { arrayDecoder } from '../types/validation'
-import { isWebhook, decodeCreatedWebhook, decodeWebhook } from '../types/webhooks'
+import { isWebhook, decodeCreatedWebhook } from '../types/webhooks'
 import type { Webhook } from '../types/webhooks'
 import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import StatePanel from './StatePanel.vue'
 import IncomingWebhookEditor from './IncomingWebhookEditor.vue'
-import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
 import { initialOf } from '../lib/initial'
 
 const props = defineProps({
@@ -114,20 +113,7 @@ async function remove(hook: Webhook) {
     await api(`/api/admin/webhooks/${hook.id}`, { method: 'DELETE' })
     hooks.value = hooks.value.filter(h => h.id !== hook.id)
     if (revealed.value?.id === hook.id) revealed.value = null
-  } catch (e) {
-    showError(e)
-  }
-}
-
-async function setAvatar(hook: Webhook, event: Event) {
-  const { file, tooBig } = pickImage(event.target as HTMLInputElement)
-  if (tooBig) toasts.error(t('profile.avatarTooBig', { size: IMAGE_UPLOAD_MAX_MB }))
-  if (!file) return
-  const form = new FormData()
-  form.append('avatar', file)
-  try {
-    const updated = await api(`/api/admin/webhooks/${hook.id}/avatar`, { method: 'POST', form, decode: decodeWebhook })
-    hooks.value = hooks.value.map(h => (h.id === updated.id ? updated : h))
+    toasts.success(t('webhooks.deleted'))
   } catch (e) {
     showError(e)
   }
@@ -175,10 +161,6 @@ onMounted(load)
           <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.settingsFor', { name: hook.name })" :aria-expanded="settingsOpen === hook.id" @click="toggleSettings(hook.id)">
             <SlidersHorizontal class="h-4 w-4" />
           </button>
-          <label class="cursor-pointer rounded-sm p-1.5 transition hover:text-mnema-text" :title="$t('webhooks.avatar')">
-            <ImagePlus class="h-4 w-4" aria-hidden="true" />
-            <input type="file" accept="image/*" class="sr-only" :aria-label="$t('webhooks.avatarFor', { name: hook.name })" @change="setAvatar(hook, $event)" />
-          </label>
           <button type="button" class="btn btn-icon btn-sm hover:text-mnema-text" v-tooltip="$t('webhooks.regenerateFor', { name: hook.name })" @click="regenerate(hook)">
             <KeyRound class="h-4 w-4" />
           </button>
