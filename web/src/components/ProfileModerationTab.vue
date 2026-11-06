@@ -11,6 +11,7 @@ import { durationLabel } from '../lib/moderation'
 import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
+import StatePanel from './StatePanel.vue'
 
 const NOTE_MAX = 1000
 
@@ -118,7 +119,7 @@ onMounted(load)
     <p class="flex items-start gap-1.5 text-xs text-mnema-tertiary">
       <Lock class="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" /><span>{{ $t('modHistory.privacy') }}</span>
     </p>
-    <p v-if="failed" role="alert" class="text-sm text-mnema-danger">{{ $t('modHistory.loadFailed') }}</p>
+    <StatePanel v-if="failed" state="error" retryable data-testid="mod-history-error" @retry="load">{{ $t('modHistory.loadFailed') }}</StatePanel>
     <Loader2 v-else-if="!history" class="h-5 w-5 animate-spin text-mnema-accent" />
 
     <template v-else>

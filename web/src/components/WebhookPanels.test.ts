@@ -344,6 +344,19 @@ describe('OutgoingWebhooksPanel', () => {
     expect(toastTexts()).toContain('boom')
   })
 
+  it('shows a failed load with a retry instead of "No outgoing webhooks yet"', async () => {
+    apiMock.mockRejectedValueOnce(new Error('boom'))
+    const w = mount(OutgoingWebhooksPanel, { props: { channelId } })
+    await flushPromises()
+    expect(w.text()).not.toContain('No outgoing webhooks')
+    expect(w.find('[data-testid="outgoing-load-failed"]').exists()).toBe(true)
+    apiMock.mockResolvedValueOnce([out(1)])
+    await w.find('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="outgoing-load-failed"]').exists()).toBe(false)
+    expect(w.findAll('[data-testid="outgoing-webhook"]')).toHaveLength(1)
+  })
+
   it('creates a webhook, picks events and shows the secret once', async () => {
     const w = await mountPanel([])
     await w.find('[data-testid="outgoing-new"]').trigger('click')
