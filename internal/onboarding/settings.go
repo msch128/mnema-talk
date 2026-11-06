@@ -42,10 +42,10 @@ type Settings struct {
 	// DirectMessagesEnabled is the community's switch for direct messages
 	// (default on). Off: existing conversations stay readable and members
 	// can neither start new ones nor write in them.
-	DirectMessagesEnabled bool `json:"direct_messages_enabled"`
+	DirectMessagesEnabled bool `json:"direct_messages_enabled" binding:"optional"`
 	// SessionInactivityDays is how many days without an authenticated request
 	// sign a session out (1 to 365, default 7). Inactivity, not age.
-	SessionInactivityDays int `json:"session_inactivity_days" minimum:"1" maximum:"365"`
+	SessionInactivityDays int `json:"session_inactivity_days" binding:"optional" minimum:"1" maximum:"365"`
 	// CommunityIcon is the version of the community icon (GET
 	// /api/community/icon), empty while none is set. It changes with every
 	// upload. Set with PUT /api/admin/community/icon, not with the settings.

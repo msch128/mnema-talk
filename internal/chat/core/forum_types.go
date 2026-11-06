@@ -24,9 +24,9 @@ type ForumTag struct {
 	// Color is a name from ForumTagColors, or empty for the plain look.
 	Color string `json:"color,omitempty" binding:"optional" enums:"gray,red,orange,yellow,green,teal,blue,purple,pink"`
 	// Position is the tag's place in the forum's own order (1 is first).
-	Position int `json:"position"`
+	Position int `json:"position" binding:"optional"`
 	// Moderated tags are applied and removed only by members with Manage messages.
-	Moderated bool      `json:"moderated"`
+	Moderated bool      `json:"moderated" binding:"optional"`
 	CreatedAt time.Time `json:"created_at" format:"date-time"`
 }
 

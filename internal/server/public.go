@@ -42,12 +42,12 @@ type Legal struct {
 	// for its own address at startup (WEBRTC_AUTO_ANNOUNCE); ClockCheck is
 	// true when it compares its clock with NTP servers (CLOCK_CHECK_ENABLED).
 	// Both reveal only the server's IP address.
-	AddressDetection bool `json:"address_detection"`
-	ClockCheck       bool `json:"clock_check"`
+	AddressDetection bool `json:"address_detection" binding:"optional"`
+	ClockCheck       bool `json:"clock_check" binding:"optional"`
 	// BuiltinTURN is true when the TURN relay inside the server process is
 	// offered to members (WEBRTC_BUILTIN_TURN); the policy then describes it
 	// as part of this server. TURNServers lists the external ones.
-	BuiltinTURN  bool   `json:"builtin_turn"`
+	BuiltinTURN  bool   `json:"builtin_turn" binding:"optional"`
 	LegalVersion string `json:"legal_version"`
 }
 

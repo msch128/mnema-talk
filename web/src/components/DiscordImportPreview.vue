@@ -34,7 +34,7 @@ function permName(key: string): string { return t(`perm.${key}.name`) }
 
 const shownRoles = computed(() => props.roles ?? props.plan.roles)
 const createdCount = computed(() => shownRoles.value.filter(r => !roleMap.value[r.source_id]).length)
-const canMap = computed(() => props.plan.mappable_roles.length > 0)
+const canMap = computed(() => (props.plan.mappable_roles?.length ?? 0) > 0)
 
 function pick(sourceId: string, event: Event) {
   const next = { ...roleMap.value }
@@ -50,7 +50,7 @@ function takenElsewhere(sourceId: string, roleId: string): boolean {
 }
 
 function targetName(roleId: string): string {
-  return props.plan.mappable_roles.find(r => r.id === roleId)?.name ?? ''
+  return props.plan.mappable_roles?.find(r => r.id === roleId)?.name ?? ''
 }
 
 function sameNameHint(role: DiscordimportPlanRole): string {
@@ -116,7 +116,7 @@ function sameNameHint(role: DiscordimportPlanRole): string {
             >
               <option value="">{{ $t('discordImport.map.create') }}</option>
               <optgroup :label="$t('discordImport.map.group')">
-                <option v-for="target in plan.mappable_roles" :key="target.id" :value="target.id" :disabled="takenElsewhere(role.source_id, target.id)">{{ target.name }}</option>
+                <option v-for="target in plan.mappable_roles ?? []" :key="target.id" :value="target.id" :disabled="takenElsewhere(role.source_id, target.id)">{{ target.name }}</option>
               </optgroup>
             </select>
           </div>

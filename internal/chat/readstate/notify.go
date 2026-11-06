@@ -145,7 +145,7 @@ type NotificationSettings struct {
 	Channels   []ChannelNotifySetting  `json:"channels"`
 	Categories []CategoryNotifySetting `json:"categories"`
 	// Server is the member's server-wide default (always present).
-	Server ServerNotify `json:"server"`
+	Server ServerNotify `json:"server" binding:"optional"`
 }
 
 // settingRows lists the user's active settings of one table. A nil allowed

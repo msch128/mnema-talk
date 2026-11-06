@@ -71,8 +71,8 @@ async function run() {
             <span class="text-mnema-muted">: {{ role.permission_keys.length ? role.permission_keys.map(permName).join(', ') : $t('discordImport.noPermissions') }}</span>
           </li>
         </ul>
-        <ul v-if="plan.mapped_roles.length" class="space-y-1 rounded-lg border border-mnema-hairline bg-mnema-surface p-3 text-sm" data-testid="import-step-2-mapped">
-          <li v-for="role in plan.mapped_roles" :key="role.source_id" class="text-mnema-muted">
+        <ul v-if="plan.mapped_roles?.length" class="space-y-1 rounded-lg border border-mnema-hairline bg-mnema-surface p-3 text-sm" data-testid="import-step-2-mapped">
+          <li v-for="role in plan.mapped_roles ?? []" :key="role.source_id" class="text-mnema-muted">
             {{ $t('discordImport.confirm.step2Mapped', { source: role.source_name, name: role.role_name }) }}
           </li>
         </ul>

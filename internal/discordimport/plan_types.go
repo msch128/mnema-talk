@@ -21,10 +21,10 @@ type Plan struct {
 	Roles []PlanRole `json:"roles"`
 	// MappedRoles are the Discord roles the administrator mapped onto an
 	// existing role: nothing is created for them.
-	MappedRoles []PlanMappedRole `json:"mapped_roles"`
+	MappedRoles []PlanMappedRole `json:"mapped_roles" binding:"optional"`
 	// MappableRoles are the existing roles the importer may map a Discord
 	// role onto (highest first); the roles a role_map may name.
-	MappableRoles []RoleChoice `json:"mappable_roles"`
+	MappableRoles []RoleChoice `json:"mappable_roles" binding:"optional"`
 	Everyone      EveryoneInfo `json:"everyone"`
 	// Skipped lists template channels that have no counterpart (threads and the like).
 	Skipped []string `json:"skipped"`
@@ -102,7 +102,7 @@ type PlanRole struct {
 	AdministratorDropped bool     `json:"administrator_dropped"`
 	// SuggestedRoleID is the existing role with the same name (ignoring case)
 	// the administrator may map this role onto; null when there is none.
-	SuggestedRoleID *uuid.UUID `json:"suggested_role_id" format:"uuid" extensions:"x-nullable"`
+	SuggestedRoleID *uuid.UUID `json:"suggested_role_id" binding:"optional" format:"uuid" extensions:"x-nullable"`
 }
 
 // PlanMappedRole is a Discord role mapped onto an existing role.

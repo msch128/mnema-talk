@@ -2951,9 +2951,7 @@
           "channel_id",
           "created_at",
           "id",
-          "moderated",
-          "name",
-          "position"
+          "name"
         ],
         "type": "object"
       },
@@ -3594,8 +3592,7 @@
         },
         "required": [
           "categories",
-          "channels",
-          "server"
+          "channels"
         ],
         "type": "object"
       },
@@ -5713,8 +5710,6 @@
           "dropped_bits",
           "everyone",
           "hash",
-          "mappable_roles",
-          "mapped_roles",
           "roles",
           "server_name",
           "skipped",
@@ -5953,8 +5948,7 @@
           "permission_keys",
           "permissions",
           "source_id",
-          "source_name",
-          "suggested_role_id"
+          "source_name"
         ],
         "type": "object"
       },
@@ -7078,10 +7072,8 @@
         },
         "required": [
           "community_name",
-          "direct_messages_enabled",
           "rules_text",
           "rules_version",
-          "session_inactivity_days",
           "start_channel_id",
           "welcome_text"
         ],
@@ -8567,9 +8559,6 @@
           }
         },
         "required": [
-          "address_detection",
-          "builtin_turn",
-          "clock_check",
           "legal_version",
           "media_retention_days",
           "operator_country",
@@ -8778,13 +8767,11 @@
           "cpu_millicores",
           "db_connections_acquired",
           "egress_bps",
-          "egress_pps",
           "errors_5xx",
           "goroutines",
           "heap_bytes",
           "ice_failures",
           "ingress_bps",
-          "ingress_pps",
           "online_users",
           "peers",
           "requests",
@@ -9285,7 +9272,6 @@
           }
         },
         "required": [
-          "builtin_turn",
           "cameras",
           "enabled",
           "media_connections",

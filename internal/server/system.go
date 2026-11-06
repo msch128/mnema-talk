@@ -136,7 +136,7 @@ type VoiceHealth struct {
 	TURNConfigured bool `json:"turn_configured"`
 	STUNConfigured bool `json:"stun_configured"`
 	// BuiltinTURN reports the TURN relay built into the server.
-	BuiltinTURN BuiltinTURNHealth `json:"builtin_turn"`
+	BuiltinTURN BuiltinTURNHealth `json:"builtin_turn" binding:"optional"`
 }
 
 // BuiltinTURNHealth reports the TURN relay built into the server

@@ -1740,9 +1740,9 @@ export type ChatForumTag = {
   created_at: string
   emoji?: string
   id: string
-  moderated: boolean
+  moderated?: boolean
   name: string
-  position: number
+  position?: number
 }
 
 export function isChatForumTag(value: unknown): value is ChatForumTag {
@@ -1752,9 +1752,9 @@ export function isChatForumTag(value: unknown): value is ChatForumTag {
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (!hasOwn(value, "emoji") || isString(value["emoji"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
-    && (hasOwn(value, "moderated") && typeof value["moderated"] === 'boolean')
+    && (!hasOwn(value, "moderated") || typeof value["moderated"] === 'boolean')
     && (hasOwn(value, "name") && isString(value["name"], 20))
-    && (hasOwn(value, "position") && isInteger(value["position"]))
+    && (!hasOwn(value, "position") || isInteger(value["position"]))
 }
 
 export const decodeChatForumTag = decoder("chat.ForumTag", isChatForumTag)
@@ -2108,14 +2108,14 @@ export const decodeChatMessageEditHistory = decoder("chat.MessageEditHistory", i
 export type ChatNotificationSettings = {
   categories: Array<ChatCategoryNotifySetting>
   channels: Array<ChatChannelNotifySetting>
-  server: ChatServerNotify
+  server?: ChatServerNotify
 }
 
 export function isChatNotificationSettings(value: unknown): value is ChatNotificationSettings {
   return isRecord(value)
     && (hasOwn(value, "categories") && isArrayOf(value["categories"], item => isChatCategoryNotifySetting(item)))
     && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isChatChannelNotifySetting(item)))
-    && (hasOwn(value, "server") && isChatServerNotify(value["server"]))
+    && (!hasOwn(value, "server") || isChatServerNotify(value["server"]))
 }
 
 export const decodeChatNotificationSettings = decoder("chat.NotificationSettings", isChatNotificationSettings)
@@ -3353,8 +3353,8 @@ export type DiscordimportPlan = {
   dropped_bits: Array<string>
   everyone: DiscordimportEveryoneInfo
   hash: string
-  mappable_roles: Array<DiscordimportRoleChoice>
-  mapped_roles: Array<DiscordimportPlanMappedRole>
+  mappable_roles?: Array<DiscordimportRoleChoice>
+  mapped_roles?: Array<DiscordimportPlanMappedRole>
   roles: Array<DiscordimportPlanRole>
   server_name: string
   skipped: Array<string>
@@ -3373,8 +3373,8 @@ export function isDiscordimportPlan(value: unknown): value is DiscordimportPlan 
     && (hasOwn(value, "dropped_bits") && isArrayOf(value["dropped_bits"], item => isString(item)))
     && (hasOwn(value, "everyone") && isDiscordimportEveryoneInfo(value["everyone"]))
     && (hasOwn(value, "hash") && isString(value["hash"]))
-    && (hasOwn(value, "mappable_roles") && isArrayOf(value["mappable_roles"], item => isDiscordimportRoleChoice(item)))
-    && (hasOwn(value, "mapped_roles") && isArrayOf(value["mapped_roles"], item => isDiscordimportPlanMappedRole(item)))
+    && (!hasOwn(value, "mappable_roles") || isArrayOf(value["mappable_roles"], item => isDiscordimportRoleChoice(item)))
+    && (!hasOwn(value, "mapped_roles") || isArrayOf(value["mapped_roles"], item => isDiscordimportPlanMappedRole(item)))
     && (hasOwn(value, "roles") && isArrayOf(value["roles"], item => isDiscordimportPlanRole(item)))
     && (hasOwn(value, "server_name") && isString(value["server_name"]))
     && (hasOwn(value, "skipped") && isArrayOf(value["skipped"], item => isString(item)))
@@ -3488,7 +3488,7 @@ export type DiscordimportPlanRole = {
   permissions: number
   source_id: string
   source_name: string
-  suggested_role_id: string | null
+  suggested_role_id?: string | null
 }
 
 export function isDiscordimportPlanRole(value: unknown): value is DiscordimportPlanRole {
@@ -3503,7 +3503,7 @@ export function isDiscordimportPlanRole(value: unknown): value is DiscordimportP
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
     && (hasOwn(value, "source_id") && isString(value["source_id"]))
     && (hasOwn(value, "source_name") && isString(value["source_name"]))
-    && (hasOwn(value, "suggested_role_id") && (isIdentifier(value["suggested_role_id"]) || value["suggested_role_id"] === null))
+    && (!hasOwn(value, "suggested_role_id") || (isIdentifier(value["suggested_role_id"]) || value["suggested_role_id"] === null))
 }
 
 export const decodeDiscordimportPlanRole = decoder("discordimport.PlanRole", isDiscordimportPlanRole)
@@ -4164,10 +4164,10 @@ export const decodeOnboardingJoinPreview = decoder("onboarding.JoinPreview", isO
 export type OnboardingSettings = {
   community_icon?: string
   community_name: string
-  direct_messages_enabled: boolean
+  direct_messages_enabled?: boolean
   rules_text: string
   rules_version: number
-  session_inactivity_days: number
+  session_inactivity_days?: number
   start_channel_id: string | null
   welcome_text: string
 }
@@ -4176,10 +4176,10 @@ export function isOnboardingSettings(value: unknown): value is OnboardingSetting
   return isRecord(value)
     && (!hasOwn(value, "community_icon") || isString(value["community_icon"]))
     && (hasOwn(value, "community_name") && isString(value["community_name"], 60))
-    && (hasOwn(value, "direct_messages_enabled") && typeof value["direct_messages_enabled"] === 'boolean')
+    && (!hasOwn(value, "direct_messages_enabled") || typeof value["direct_messages_enabled"] === 'boolean')
     && (hasOwn(value, "rules_text") && isString(value["rules_text"], 10000))
     && (hasOwn(value, "rules_version") && (isInteger(value["rules_version"]) && value["rules_version"] >= 0))
-    && (hasOwn(value, "session_inactivity_days") && (isInteger(value["session_inactivity_days"]) && value["session_inactivity_days"] >= 1 && value["session_inactivity_days"] <= 365))
+    && (!hasOwn(value, "session_inactivity_days") || (isInteger(value["session_inactivity_days"]) && value["session_inactivity_days"] >= 1 && value["session_inactivity_days"] <= 365))
     && (hasOwn(value, "start_channel_id") && (isIdentifier(value["start_channel_id"]) || value["start_channel_id"] === null))
     && (hasOwn(value, "welcome_text") && isString(value["welcome_text"], 4000))
 }
@@ -4993,9 +4993,9 @@ export function isServerIceServer(value: unknown): value is ServerIceServer {
 export const decodeServerIceServer = decoder("server.IceServer", isServerIceServer)
 
 export type ServerLegal = {
-  address_detection: boolean
-  builtin_turn: boolean
-  clock_check: boolean
+  address_detection?: boolean
+  builtin_turn?: boolean
+  clock_check?: boolean
   legal_version: string
   media_retention_days: number
   operator_country: string
@@ -5010,9 +5010,9 @@ export type ServerLegal = {
 
 export function isServerLegal(value: unknown): value is ServerLegal {
   return isRecord(value)
-    && (hasOwn(value, "address_detection") && typeof value["address_detection"] === 'boolean')
-    && (hasOwn(value, "builtin_turn") && typeof value["builtin_turn"] === 'boolean')
-    && (hasOwn(value, "clock_check") && typeof value["clock_check"] === 'boolean')
+    && (!hasOwn(value, "address_detection") || typeof value["address_detection"] === 'boolean')
+    && (!hasOwn(value, "builtin_turn") || typeof value["builtin_turn"] === 'boolean')
+    && (!hasOwn(value, "clock_check") || typeof value["clock_check"] === 'boolean')
     && (hasOwn(value, "legal_version") && isString(value["legal_version"]))
     && (hasOwn(value, "media_retention_days") && isInteger(value["media_retention_days"]))
     && (hasOwn(value, "operator_country") && isString(value["operator_country"]))
@@ -5115,13 +5115,13 @@ export type ServerOpsSample = {
   cpu_millicores: number
   db_connections_acquired: number
   egress_bps: number
-  egress_pps: number
+  egress_pps?: number
   errors_5xx: number
   goroutines: number
   heap_bytes: number
   ice_failures: number
   ingress_bps: number
-  ingress_pps: number
+  ingress_pps?: number
   online_users: number
   peers: number
   requests: number
@@ -5136,13 +5136,13 @@ export function isServerOpsSample(value: unknown): value is ServerOpsSample {
     && (hasOwn(value, "cpu_millicores") && isInteger(value["cpu_millicores"]))
     && (hasOwn(value, "db_connections_acquired") && isInteger(value["db_connections_acquired"]))
     && (hasOwn(value, "egress_bps") && isInteger(value["egress_bps"]))
-    && (hasOwn(value, "egress_pps") && isInteger(value["egress_pps"]))
+    && (!hasOwn(value, "egress_pps") || isInteger(value["egress_pps"]))
     && (hasOwn(value, "errors_5xx") && isInteger(value["errors_5xx"]))
     && (hasOwn(value, "goroutines") && isInteger(value["goroutines"]))
     && (hasOwn(value, "heap_bytes") && isInteger(value["heap_bytes"]))
     && (hasOwn(value, "ice_failures") && isInteger(value["ice_failures"]))
     && (hasOwn(value, "ingress_bps") && isInteger(value["ingress_bps"]))
-    && (hasOwn(value, "ingress_pps") && isInteger(value["ingress_pps"]))
+    && (!hasOwn(value, "ingress_pps") || isInteger(value["ingress_pps"]))
     && (hasOwn(value, "online_users") && isInteger(value["online_users"]))
     && (hasOwn(value, "peers") && isInteger(value["peers"]))
     && (hasOwn(value, "requests") && isInteger(value["requests"]))
@@ -5420,7 +5420,7 @@ export function isServerUpdateStatus(value: unknown): value is ServerUpdateStatu
 export const decodeServerUpdateStatus = decoder("server.UpdateStatus", isServerUpdateStatus)
 
 export type ServerVoiceHealth = {
-  builtin_turn: ServerBuiltinTURNHealth
+  builtin_turn?: ServerBuiltinTURNHealth
   cameras: number
   enabled: boolean
   media_connections: number
@@ -5435,7 +5435,7 @@ export type ServerVoiceHealth = {
 
 export function isServerVoiceHealth(value: unknown): value is ServerVoiceHealth {
   return isRecord(value)
-    && (hasOwn(value, "builtin_turn") && isServerBuiltinTURNHealth(value["builtin_turn"]))
+    && (!hasOwn(value, "builtin_turn") || isServerBuiltinTURNHealth(value["builtin_turn"]))
     && (hasOwn(value, "cameras") && isInteger(value["cameras"]))
     && (hasOwn(value, "enabled") && typeof value["enabled"] === 'boolean')
     && (hasOwn(value, "media_connections") && isInteger(value["media_connections"]))
