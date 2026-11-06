@@ -61,7 +61,7 @@ onBeforeUnmount(() => {
   >
     <WifiOff class="h-4 w-4 shrink-0 text-mnema-warning" />
     <span class="min-w-0 truncate text-mnema-text">{{ $t(browserOffline ? 'connection.offline' : 'connection.lost') }}</span>
-    <span v-if="chatStore.reconnectAttempt > 0" class="hidden truncate font-mono text-xs tabular-nums text-mnema-tertiary sm:inline">
+    <span v-if="chatStore.reconnectAttempt > 0" aria-hidden="true" class="hidden truncate font-mono text-xs tabular-nums text-mnema-tertiary sm:inline">
       {{ $t('connection.nextTry', { seconds: secondsLeft, attempt: chatStore.reconnectAttempt }) }}
     </span>
     <span class="flex-1"></span>

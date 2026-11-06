@@ -3780,6 +3780,7 @@
     "timeoutRemovedToast": "Timeout for {name} ended.",
     "failed": "Couldn’t complete the action. Try again.",
     "bannerText": "You are timed out.",
+    "bannerReason": "Reason: {reason}",
     "noticeTimeout": "You were timed out for {duration}",
     "noticeTimeoutRemoved": "Your timeout was lifted.",
     "noticeBan": "You were banned",

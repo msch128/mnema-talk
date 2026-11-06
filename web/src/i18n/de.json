@@ -3780,6 +3780,7 @@
     "timeoutRemovedToast": "Auszeit für {name} beendet.",
     "failed": "Die Aktion konnte nicht ausgeführt werden. Versuche es noch einmal.",
     "bannerText": "Du bist in Auszeit.",
+    "bannerReason": "Grund: {reason}",
     "noticeTimeout": "Du wurdest für {duration} in Auszeit geschickt",
     "noticeTimeoutRemoved": "Deine Auszeit wurde beendet.",
     "noticeBan": "Du wurdest gesperrt",

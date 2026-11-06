@@ -38,6 +38,8 @@ describe('ConnectionBanner', () => {
     expect(banner.attributes('role')).toBe('status')
     expect(banner.text()).toContain('Verbindung getrennt – verbinde neu …')
     expect(banner.text()).toContain('nächster Versuch in 4 s · Versuch 3')
+    const ticking = banner.findAll('span').find(el => el.text().includes('nächster Versuch'))
+    expect(ticking?.attributes('aria-hidden')).toBe('true')
 
     const retry = vi.spyOn(chat, 'retryNow').mockImplementation(() => {})
     await w.find('[data-testid="connection-retry"]').trigger('click')
