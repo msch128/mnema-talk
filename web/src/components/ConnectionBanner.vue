@@ -52,6 +52,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('online', goOnline)
   tick?.()
   clearTimeout(hideTimer)
+  // Without the banner nothing explains a dropped connection, so network errors show again.
+  toasts.setConnectionDown(false)
 })
 </script>
 
