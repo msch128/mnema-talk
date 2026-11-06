@@ -1,0 +1,39 @@
+e2e/tests/shortcuts-cheatsheet.spec.ts
+  s_06fcde5dbef956::t_d25a1134cf9697 46
+web/src/components/ShortcutsDialog.vue
+  s_06fcde5dbef956::t_ea914fdf1e5963 6,19
+web/src/components/TipBar.test.ts
+  s_06fcde5dbef956::t_23eae3c34b9378 40,45-52
+web/src/components/TipBar.vue
+  s_06fcde5dbef956::t_37ec74fd9cc243 6,41
+web/src/components/UnsavedChangesBar.vue
+  s_06fcde5dbef956::t_58bdfebdac91b6 42
+web/src/composables/useOnboardingTips.test.ts
+  s_06fcde5dbef956::t_2b65d4b2342061 57
+web/src/composables/useSettingsDraft.ts
+  s_06fcde5dbef956::t_dfb88548c44fe1 10,61-62
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_ebcbf6cc237180 860,4914,4916-4921
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_2a5314b4123338 860,4914,4916-4921
+web/src/lib/shortcuts.test.ts
+  s_06fcde5dbef956::t_3febeb959f1bed 1-3,5-9,15,21-48
+web/src/lib/shortcuts.ts
+  s_06fcde5dbef956::t_7f134dccdf6e6c 4,70-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cb33de7391518ecef3ab49a830ed26e12d87f3da",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
