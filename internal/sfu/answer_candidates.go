@@ -14,23 +14,38 @@ import "github.com/pion/sdp/v3"
 // parsed form, so what is vetted is exactly what Pion would read, whatever line
 // endings or stray characters the sender chose. An SDP that does not parse is
 // refused. Dropped candidates are logged like trickled ones.
-func (p *Peer) vetAnswerCandidates(raw string) (string, error) {
+//
+// It also returns the keys it newly counted, for forgetAnswerCandidates when
+// Pion then refuses the answer.
+func (p *Peer) vetAnswerCandidates(raw string) (string, []string, error) {
 	var desc sdp.SessionDescription
 	if err := desc.Unmarshal([]byte(raw)); err != nil {
-		return "", err
+		return "", nil, err
 	}
 	p.candMu.Lock()
 	defer p.candMu.Unlock()
-	desc.Attributes = p.keepVettedCandidates(desc.Attributes)
+	var added []string
+	desc.Attributes = p.keepVettedCandidates(desc.Attributes, &added)
 	for _, media := range desc.MediaDescriptions {
-		media.Attributes = p.keepVettedCandidates(media.Attributes)
+		media.Attributes = p.keepVettedCandidates(media.Attributes, &added)
 	}
 	out, err := desc.Marshal()
-	return string(out), err
+	return string(out), added, err
+}
+
+// forgetAnswerCandidates takes back the candidates of an answer Pion did not
+// accept: they never reached it, so a later answer or a trickled copy must
+// still be able to bring them.
+func (p *Peer) forgetAnswerCandidates(keys []string) {
+	p.candMu.Lock()
+	defer p.candMu.Unlock()
+	for _, key := range keys {
+		delete(p.cands.seen, key)
+	}
 }
 
 // keepVettedCandidates filters candidate attributes. The caller holds candMu.
-func (p *Peer) keepVettedCandidates(attrs []sdp.Attribute) []sdp.Attribute {
+func (p *Peer) keepVettedCandidates(attrs []sdp.Attribute, added *[]string) []sdp.Attribute {
 	kept := attrs[:0]
 	for _, a := range attrs {
 		if a.Key != "candidate" {
@@ -49,6 +64,9 @@ func (p *Peer) keepVettedCandidates(attrs []sdp.Attribute) []sdp.Attribute {
 		}
 		if p.takeCandidateBudget(key) != nil {
 			continue
+		}
+		if key != "" {
+			*added = append(*added, key)
 		}
 		kept = append(kept, a)
 	}

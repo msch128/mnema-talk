@@ -42,9 +42,21 @@ func (g *layerGroup) newViewer(viewer uuid.UUID, pref, fit int, trackID, streamI
 }
 
 // addViewer starts delivering to vt and asks for the keyframe it waits for.
-func (g *layerGroup) addViewer(vt *viewerTrack) {
+// It refuses, and closes, a track that is closed already or that belongs to an
+// older peer of the user than the one registered: a late round of a replaced
+// connection must not take the live viewer's place. It reports whether vt
+// was registered.
+func (g *layerGroup) addViewer(vt *viewerTrack) bool {
+	vt.mu.Lock()
+	dead := vt.closed
+	vt.mu.Unlock()
 	g.mu.Lock()
 	old := g.viewers[vt.viewer]
+	if dead || (old != nil && old != vt && old.gen > vt.gen) {
+		g.mu.Unlock()
+		vt.close()
+		return false
+	}
 	g.viewers[vt.viewer] = vt
 	g.publishViewersLocked()
 	g.mu.Unlock()
@@ -53,6 +65,7 @@ func (g *layerGroup) addViewer(vt *viewerTrack) {
 	}
 	vt.retarget()
 	g.refreshWanted()
+	return true
 }
 
 // removeViewer stops delivering to vt.
@@ -152,4 +165,18 @@ type layerWriter struct {
 func (w layerWriter) WriteRTP(p *rtp.Packet) error {
 	w.group.write(w.layer, p)
 	return nil
+}
+
+// syncChoice brings a freshly registered track to the viewer's current choice,
+// which may have changed while the track was made.
+func (vt *viewerTrack) syncChoice(pref, fit int) {
+	vt.mu.Lock()
+	prefDiffers, fitDiffers := vt.pref != pref, vt.fit != max(fit, 0)
+	vt.mu.Unlock()
+	if prefDiffers {
+		vt.setPref(pref)
+	}
+	if fitDiffers {
+		vt.setFit(fit)
+	}
 }

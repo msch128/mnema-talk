@@ -17,7 +17,7 @@ const sdpHead = "v=0\r\no=- 1 1 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\nm=audio 9 UDP/
 
 func mustVet(t *testing.T, p *Peer, sdp string) string {
 	t.Helper()
-	got, err := p.vetAnswerCandidates(sdp)
+	got, _, err := p.vetAnswerCandidates(sdp)
 	if err != nil {
 		t.Fatalf("vet: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestVetAnswerCandidatesFiltersSessionLevelCandidates(t *testing.T) {
 }
 
 func TestVetAnswerCandidatesRefusesUnparsableSDP(t *testing.T) {
-	if _, err := (&Peer{}).vetAnswerCandidates("not an sdp"); err == nil {
+	if _, _, err := (&Peer{}).vetAnswerCandidates("not an sdp"); err == nil {
 		t.Fatal("garbage accepted")
 	}
 }
@@ -99,7 +99,7 @@ func TestVetAnswerCandidatesSurviveOddLineEndings(t *testing.T) {
 		"LF only":      strings.ReplaceAll(sdpHead+bad+"\r\n", "\r\n", "\n"),
 		"CR before LF": sdpHead + "\r\r\n" + bad + "\r\n",
 	} {
-		got, err := (&Peer{}).vetAnswerCandidates(sdp)
+		got, _, err := (&Peer{}).vetAnswerCandidates(sdp)
 		if err == nil && strings.Contains(got, "169.254.9.9") {
 			t.Errorf("%s: refused candidate survived: %q", name, got)
 		}
