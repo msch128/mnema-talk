@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.9.13](https://github.com/msch128/mnema-talk/compare/v2.9.12...v2.9.13) (2026-11-06)
+
+
+### Bug Fixes
+
+* check rows.Err in row loops and bound scheduled-send retries ([ca012f2](https://github.com/msch128/mnema-talk/commit/ca012f2f8105d5e98d5f77711dd0a1c457ab3f5f))
+* close four review findings in admin list, role creation, 2FA lockout and webhook limits ([ca012f2](https://github.com/msch128/mnema-talk/commit/ca012f2f8105d5e98d5f77711dd0a1c457ab3f5f))
+* server_info leads the connect events; O(1) gateway replay ring ([ca012f2](https://github.com/msch128/mnema-talk/commit/ca012f2f8105d5e98d5f77711dd0a1c457ab3f5f))
+* wrong 2FA code keeps the session, stuck websocket connect recovers, drop unused crypto state store ([ca012f2](https://github.com/msch128/mnema-talk/commit/ca012f2f8105d5e98d5f77711dd0a1c457ab3f5f))
+
+
+### Documentation
+
+* say that migration numbers may have gaps ([ca012f2](https://github.com/msch128/mnema-talk/commit/ca012f2f8105d5e98d5f77711dd0a1c457ab3f5f))
+
 ## [2.9.12](https://github.com/msch128/mnema-talk/compare/v2.9.11...v2.9.12) (2026-11-05)
 
 
