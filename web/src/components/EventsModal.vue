@@ -125,7 +125,7 @@ async function quickRSVP(event: CommunityEvent, response: 'going' | 'interested'
       <button
         v-if="permissions.can('manage_events')"
         type="button"
-        class="flex items-center justify-center gap-1 rounded-md bg-mnema-accent px-2.5 py-1 text-xs font-semibold text-white hover:opacity-90 transition-opacity max-md:h-9 max-md:w-9 max-md:p-0"
+        class="btn btn-primary btn-sm gap-1 max-md:h-9 max-md:w-9 max-md:p-0"
         :aria-label="$t('events.create')"
         @click="creatingEvent = true"
       >

@@ -267,7 +267,7 @@ defineExpose({ el: row })
         >
           <MessageSquare class="w-4 h-4 text-mnema-accent" />
           <span v-if="msg.reply_count > 0">{{ $t('chat.replies', { count: msg.reply_count }) }}</span>
-          <span class="text-xs opacity-75 font-mono ml-0.5">{{ $t('chat.openThread') }} &rarr;</span>
+          <span class="text-xs font-mono ml-0.5">{{ $t('chat.openThread') }} &rarr;</span>
           <span v-if="threadDraft" class="shrink-0 rounded-sm bg-mnema-surface px-1 text-[10px] font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="thread-draft">{{ $t('sidebar.draft') }}</span>
         </button>
       </div>
