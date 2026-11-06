@@ -121,3 +121,17 @@ describe('useDialog', () => {
     expect(document.activeElement).toBe(document.body)
   })
 })
+
+describe('useDialog local Escape', () => {
+  it('leaves Escape to an inline editor marked data-local-escape', () => {
+    const { root, close } = setup('<form data-local-escape><input id="edit"></form><button id="other">x</button>')
+    const edit = root.value!.querySelector('#edit')!
+    const inner = vi.fn()
+    edit.addEventListener('keydown', inner)
+    edit.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(inner).toHaveBeenCalled()
+    expect(close).not.toHaveBeenCalled()
+    root.value!.querySelector('#other')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+})
