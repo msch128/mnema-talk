@@ -1,0 +1,39 @@
+api/openapi.json
+  s_06fcde5dbef956::t_a5f1eee0a2b323 5587-5602,5672-5678,5700,5742-5748,5790
+internal/discordimport/hints.go
+  s_06fcde5dbef956::t_74011133419ad2 1-41
+internal/discordimport/hints_test.go
+  s_06fcde5dbef956::t_0b6116091e5d12 1-43
+internal/discordimport/plan.go
+  s_06fcde5dbef956::t_2bbad24a43b78b 63,252,259-261,274,285,291,297,311,325
+internal/discordimport/plan_types.go
+  s_06fcde5dbef956::t_7ecd47fc386974 31-32,72-73
+web/src/components/DiscordImportPreview.test.ts
+  s_06fcde5dbef956::t_961dc4dc5c1f6a 6-7,17,40-41,54-90
+web/src/components/DiscordImportPreview.vue
+  s_06fcde5dbef956::t_3e6e05916cade5 9,88,144
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_658a7c0f8a3b37 4686-4696
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_fd8a0ab59669ab 4686-4696
+web/src/lib/discordImportHints.ts
+  s_06fcde5dbef956::t_f81467dff465e1 1-23
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_a591f66165645c 3319-3331,3346,3366,3392,3409
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1afb8742e5f493e6af8f417e87ee4cb594d0fb98",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
