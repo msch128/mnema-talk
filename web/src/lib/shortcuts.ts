@@ -68,7 +68,7 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
 ]
 
 const MAC_SYMBOLS: Readonly<Record<string, string>> = { mod: '⌘', Alt: '⌥', Shift: '⇧', Ctrl: '⌃' }
-const NAMED_KEYS = new Set(['mod', 'Alt', 'Shift', 'Ctrl'])
+const NAMED_KEYS = new Set(['mod', 'Alt', 'Shift', 'Ctrl', 'Space'])
 
 /** How a key is written on this machine: ⌘ ⌥ ⇧ on a Mac, the localised word (Ctrl/Strg) elsewhere. */
 export function keyLabel(key: KeyName, mac: boolean, translate: typeof t = t): string {

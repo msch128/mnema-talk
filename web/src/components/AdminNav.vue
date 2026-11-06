@@ -6,6 +6,7 @@ import { computed } from 'vue'
 import type { Component } from 'vue'
 import type { AdminTab } from '../lib/adminNav'
 import { NAV_GROUPS } from '../lib/adminNav'
+import ReportsBadge from './ReportsBadge.vue'
 import { Users, FolderTree, Link, HardDrive, Server, Shield, ScrollText, Gavel, Bot, Sparkles, Smile, KeyRound, Flag, ShieldCheck, Activity, Download, ChevronRight } from '@lucide/vue'
 
 const ICONS: Record<AdminTab, Component> = {
@@ -19,8 +20,6 @@ const props = defineProps<{
   active: AdminTab
   // 'list' is the phone's section list: larger rows with a chevron.
   list?: boolean
-  // A short count shown beside a tab (open reports).
-  badges?: Partial<Record<AdminTab, string>>
 }>()
 const emit = defineEmits<{ select: [tab: AdminTab] }>()
 
@@ -52,7 +51,8 @@ const groups = computed(() => NAV_GROUPS
         >
           <component :is="ICONS[tab]" :class="['h-4 w-4 shrink-0', list || active === tab ? 'text-mnema-accent' : '']" aria-hidden="true" />
           <span data-tab-label class="min-w-0 flex-1 truncate">{{ $t(`admin.tabs.${tab}`) }}</span>
-          <span v-if="badges?.[tab]" :data-badge="tab" class="rounded-full bg-mnema-amber/20 px-1.5 text-xs font-semibold text-mnema-amber" :aria-label="$t('admin.nav.openReports', { count: badges[tab] ?? '' })">{{ badges[tab] }}</span>
+          <!-- The open-report count is the one the badges outside the console show: same cap (99+), same spoken sentence. -->
+          <ReportsBadge v-if="tab === 'reports'" />
           <ChevronRight v-if="list" class="h-4 w-4 shrink-0 text-mnema-tertiary" aria-hidden="true" />
         </button>
       </div>

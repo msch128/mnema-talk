@@ -103,7 +103,7 @@ it('captures supported chords and rejects reserved keys', () => {
 it('writes chord modifiers in the app language', () => {
   setLocale('de')
   try {
-    expect(chordText({ key: 32, alt: true, control: true, shift: true })).toBe('Strg+Alt+Umschalt+Space')
+    expect(chordText({ key: 32, alt: true, control: true, shift: true })).toBe('Strg+Alt+Umschalt+Leertaste')
   } finally {
     setLocale('en')
   }

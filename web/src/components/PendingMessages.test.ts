@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import PendingMessages from './PendingMessages.vue'
@@ -7,6 +7,9 @@ import { useAuthStore } from '../stores/auth'
 import { setLocale, t } from '../i18n'
 import type { PendingMessage } from '../stores/chat/outboxTypes'
 import { userFixture } from '../test-fixtures.fixture'
+
+// A saved edit lets the queue go on at once: the request it starts never answers here.
+vi.mock('../lib/api', async importOriginal => ({ ...(await importOriginal<typeof import('../lib/api')>()), api: vi.fn(() => new Promise(() => {})) }))
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -49,7 +52,7 @@ describe('a message that has not been sent yet', () => {
     chat.outbox = [...chat.outbox, { ...chat.outbox[0]!, nonce: 'n2' }, { ...chat.outbox[0]!, nonce: 'n3', status: 'failed', error: 'x' }]
     return view.vm.$nextTick().then(() => {
       expect(view.findAll('[role="status"], [role="alert"]')).toHaveLength(1)
-      expect(view.get('[role="status"]').text()).toBe(`${t('outbox.summaryWaitingMany', { count: 2 })}. ${t('outbox.summaryFailed', { count: 1 })}`)
+      expect(view.get('[role="status"]').text()).toBe(`${t('outbox.summaryWaiting', { count: 2 })}. ${t('outbox.summaryFailed', { count: 1 })}`)
     })
   })
 
@@ -82,7 +85,7 @@ describe('a message that has not been sent yet', () => {
   })
 
   it('lets the member change the text before it is sent', async () => {
-    const view = pending()
+    const view = pending('waiting', '', { createdAt: new Date().toISOString() })
     await view.findAll('button').find(b => b.text() === t('outbox.edit'))!.trigger('click')
     const editor = view.get('[data-testid="message-editor"]')
     await editor.setValue('hello, fixed')
@@ -97,5 +100,34 @@ describe('a message that has not been sent yet', () => {
     const view = pending()
     chat.outbox = [...chat.outbox, { ...chat.outbox[0]!, nonce: 'n2', parentId: 'root' }, { ...chat.outbox[0]!, nonce: 'n3', channelId: 'c2' }]
     return view.vm.$nextTick().then(() => expect(view.findAll('[data-testid="pending-message"]')).toHaveLength(1))
+  })
+})
+
+describe('the announcement region', () => {
+  it('stays mounted while the list is empty and only its text changes, so the first message is announced', async () => {
+    const chat = useChatStore()
+    const view = pending()
+    const region = view.get('[role="status"]').element
+    chat.outbox = []
+    await view.vm.$nextTick()
+    expect(view.get('[role="status"]').element).toBe(region)
+    expect(region.textContent).toBe('')
+    chat.outbox = [{ nonce: 'n9', channelId: 'c1', userId: 'me', parentId: null, replyToId: null, content: 'again', createdAt: '2026-01-01T12:00:00Z', status: 'waiting', error: '', cause: 'offline', attempts: 0, possiblyDelivered: false, notBefore: 0 }]
+    await view.vm.$nextTick()
+    expect(view.get('[role="status"]').element).toBe(region)
+    expect(region.textContent).toBe(t('outbox.summaryWaiting', { count: 1 }))
+  })
+})
+
+describe('editing holds the message back', () => {
+  it('tells the store while the editor is open and releases it on cancel', async () => {
+    const chat = useChatStore()
+    const begin = vi.spyOn(chat, 'beginEditPending')
+    const end = vi.spyOn(chat, 'endEditPending')
+    const view = pending()
+    await view.findAll('button').find(b => b.text() === t('outbox.edit'))!.trigger('click')
+    expect(begin).toHaveBeenCalledWith('n1')
+    view.unmount()
+    expect(end).toHaveBeenCalledWith('n1')
   })
 })

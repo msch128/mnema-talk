@@ -7,6 +7,9 @@ import AccountSessions from './AccountSessions.vue'
 import { setLocale } from '../i18n'
 import { pendingConfirm } from '../lib/confirm'
 import { useAccountStore } from '../stores/account'
+import { useAuthStore } from '../stores/auth'
+import { useChatStore } from '../stores/chat'
+import { userFixture } from '../test-fixtures.fixture'
 import { useToastStore } from '../stores/toast'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
@@ -111,6 +114,17 @@ describe('AccountSessions', () => {
     expect(assign).toHaveBeenCalledWith('/')
     expect(account.dialogOpen).toBe(false)
     vi.unstubAllGlobals()
+  })
+
+  it('asks about unsent messages before ending this device\'s session, and keeps it when declined', async () => {
+    useAuthStore().user = userFixture({ id: 'me' })
+    useChatStore().outbox = [{ nonce: 'n1', channelId: 'c1', userId: 'me', parentId: null, replyToId: null, content: 'x', createdAt: '2026-01-01T12:00:00Z', status: 'waiting', error: '', cause: 'offline', attempts: 0, possiblyDelivered: false, notBefore: 0 }]
+    const w = await open()
+    await w.findAll('[data-testid="session-sign-out"]')[0]!.trigger('click')
+    await answer(true)
+    expect(pendingConfirm.value?.title).toBe('1 unsent message will be discarded')
+    await answer(false)
+    expect(apiMock).not.toHaveBeenCalledWith(`/api/auth/sessions/${laptop.id}`, expect.anything())
   })
 
   it('shows a load failure instead of an empty list', async () => {
