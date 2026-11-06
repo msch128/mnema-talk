@@ -194,3 +194,34 @@ func TestAnOutgoingWebhookDoesNotHearACallChat(t *testing.T) {
 	f.a.send(f.dmFixture.alice, talk, "private words")
 	rc.none(t)
 }
+
+// What is said in the chat of a conversation's call is as private as the
+// conversation: the public message total, in the member list and on the
+// profile, does not move for it, whoever looks (a member of the conversation,
+// who can see the call, or the Owner, who cannot).
+func TestMessagesInAConversationsCallDoNotMoveThePublicTotal(t *testing.T) {
+	f := newCallFixture(t)
+	alice := f.dmFixture.alice
+	talk := f.start(t)
+	open := f.a.createChannel(f.admin, "general", "text")
+	f.a.send(alice, open, "hi")
+	f.a.send(alice, talk, "in the call")
+	f.a.send(alice, talk, "again")
+
+	for name, viewer := range map[string]*client{"conversation member": f.dmFixture.bob, "owner": f.admin} {
+		var prof struct {
+			MessageCount int64 `json:"message_count"`
+		}
+		viewer.get("/api/users/"+alice.user.ID.String()).decode(t, &prof)
+		var members []struct {
+			ID           uuid.UUID `json:"id"`
+			MessageCount int64     `json:"message_count"`
+		}
+		viewer.get("/api/members").decode(t, &members)
+		for _, m := range members {
+			if m.ID == alice.user.ID && (m.MessageCount != 1 || prof.MessageCount != 1) {
+				t.Errorf("%s sees %d in the member list and %d on the profile, want 1", name, m.MessageCount, prof.MessageCount)
+			}
+		}
+	}
+}
