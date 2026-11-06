@@ -114,6 +114,7 @@ func (g *Gateway) checkTokens(ctx context.Context) {
 	if len(ids) == 0 || g.DB == nil {
 		return
 	}
+	queried := time.Now()
 	valid, err := g.validTokens(ctx, ids)
 	if err != nil {
 		slog.Warn("gateway token check", "err", err)
@@ -124,16 +125,18 @@ func (g *Gateway) checkTokens(ctx context.Context) {
 			g.revokeToken(id)
 		}
 	}
-	g.closeOverreaching(valid)
+	g.closeOverreaching(valid, queried)
 }
 
 // closeOverreaching ends the sessions that hold intents their bot's
-// allowed_intents no longer cover, with close code 4014 as at IDENTIFY.
-func (g *Gateway) closeOverreaching(allowed map[uuid.UUID]int64) {
+// allowed_intents no longer cover, with close code 4014 as at IDENTIFY. allowed
+// was read at queried: a session that identified after that was admitted
+// against newer intents and is left to the next round.
+func (g *Gateway) closeOverreaching(allowed map[uuid.UUID]int64, queried time.Time) {
 	g.mu.Lock()
 	var victims []*session
 	for id, s := range g.sessions {
-		if a, ok := allowed[s.tokenID]; ok && s.intents&^a != 0 {
+		if a, ok := allowed[s.tokenID]; ok && s.intents&^a != 0 && !s.startedAt.After(queried) {
 			victims = append(victims, s)
 			g.removeLocked(id, s)
 		}

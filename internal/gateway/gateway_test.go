@@ -434,3 +434,22 @@ func TestStartingSessionTakesNothingBeforeReady(t *testing.T) {
 		t.Fatal("a session past READY takes interactions")
 	}
 }
+
+// A bot that widened its allowed intents and then identified must not be cut
+// off by a token check whose query ran before the widening.
+func TestSessionIdentifiedAfterTheIntentQueryIsNotClosedByIt(t *testing.T) {
+	g := New(Config{})
+	botID, tok := uuid.New(), uuid.New()
+	queried := time.Now()
+	old := &session{id: "old", botID: botID, tokenID: tok, intents: 3, startedAt: queried.Add(-time.Minute), conn: newConnection(nil)}
+	late := &session{id: "late", botID: botID, tokenID: tok, intents: 3, startedAt: queried.Add(time.Second), conn: newConnection(nil)}
+	g.register(old)
+	g.register(late)
+	g.closeOverreaching(map[uuid.UUID]int64{tok: 1}, queried)
+	if !old.conn.closed() {
+		t.Fatal("a session older than the query keeps intents the bot no longer has")
+	}
+	if late.conn.closed() {
+		t.Fatal("a session identified after the query was judged by the outdated intents")
+	}
+}

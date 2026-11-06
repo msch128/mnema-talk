@@ -144,30 +144,55 @@ func (h *Hub) greet(c *Client, before, after string) {
 	if h.SFU == nil {
 		return
 	}
+	pace := newPacer(c)
+	defer pace.stop()
 	for chID, states := range visibleTo(c, snap, h.SFU.AllMediaStates()) {
 		for uid, st := range states {
-			c.sendPaced(events.WebrtcMediaState, mediaStatePayload(chID, uid, st))
+			if !pace.send(events.WebrtcMediaState, mediaStatePayload(chID, uid, st)) {
+				return
+			}
 		}
 	}
 }
 
-// sendPaced queues one event of a bulk greeting without flooding the send
-// buffer: it waits while the buffer is more than half full, so a large
-// snapshot neither drops the client as too slow nor leaves it no room for the
-// broadcasts that arrive meanwhile. A client that stays stuck for writeWait
-// gets the ordinary slow-client treatment.
-func (c *Client) sendPaced(eventType string, payload any) {
-	deadline := time.NewTimer(writeWait)
-	defer deadline.Stop()
+// pacer queues the bulk part of a greeting without flooding the send buffer:
+// it waits while the buffer is more than half full, so a large snapshot
+// neither drops the client as too slow nor leaves it no room for the
+// broadcasts that arrive meanwhile. One writeWait budget covers the whole
+// greeting. A client that stays stuck past it gets the ordinary slow-client
+// treatment, and a client that is gone ends the greeting at once so readPump
+// can unregister it.
+type pacer struct {
+	c        *Client
+	deadline *time.Timer
+	tick     *time.Ticker
+}
+
+func newPacer(c *Client) *pacer {
+	return &pacer{c: c, deadline: time.NewTimer(writeWait), tick: time.NewTicker(time.Millisecond)}
+}
+
+func (p *pacer) stop() {
+	p.deadline.Stop()
+	p.tick.Stop()
+}
+
+// send queues one event; false means the greeting must stop.
+func (p *pacer) send(eventType string, payload any) bool {
+	c := p.c
 	for len(c.send) > cap(c.send)/2 {
+		if c.gone.Load() {
+			return false
+		}
 		select {
 		case <-c.done:
-			return
-		case <-deadline.C:
-			c.SendEvent(eventType, payload)
-			return
-		case <-time.After(time.Millisecond):
+			return false
+		case <-p.deadline.C:
+			c.dropSlow()
+			return false
+		case <-p.tick.C:
 		}
 	}
 	c.SendEvent(eventType, payload)
+	return !c.gone.Load()
 }

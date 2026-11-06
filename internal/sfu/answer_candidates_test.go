@@ -142,3 +142,45 @@ func TestSetAnswerKeepsRefusedCandidatesOutOfTheICEAgent(t *testing.T) {
 		t.Fatal("the acceptable candidate was dropped as well")
 	}
 }
+
+// An answer Pion applies before it fails (here: no fingerprint) has already
+// handed its candidates to the ICE agent, so they stay counted against the
+// peer's budget.
+func TestAnswerFailingAfterPionAppliedItKeepsItsCandidatesCounted(t *testing.T) {
+	s := newTestSFU(t)
+	c := newClient(t)
+	offers := make(chan webrtc.SessionDescription, 4)
+	_, peer, err := s.Join(uuid.New(), c.id, func(o webrtc.SessionDescription) { offers <- o }, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.pc.SetRemoteDescription(<-offers); err != nil {
+		t.Fatal(err)
+	}
+	answer, err := c.pc.CreateAnswer(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.pc.SetLocalDescription(answer); err != nil {
+		t.Fatal(err)
+	}
+	var lines []string
+	for _, l := range strings.Split(answer.SDP, "\r\n") {
+		if !strings.HasPrefix(l, "a=fingerprint") {
+			lines = append(lines, l)
+		}
+	}
+	answer.SDP = strings.Join(lines, "\r\n") + candidateLine("192.0.2.9") + "\r\n"
+	if err := peer.SetAnswer(answer); err == nil {
+		t.Fatal("an answer without a fingerprint was accepted")
+	}
+	if peer.PC.RemoteDescription() == nil || !strings.Contains(peer.PC.RemoteDescription().SDP, "192.0.2.9") {
+		t.Fatal("Pion did not apply the answer; the test no longer reaches a post-apply failure")
+	}
+	peer.candMu.Lock()
+	used := len(peer.cands.seen)
+	peer.candMu.Unlock()
+	if used != 1 {
+		t.Fatalf("%d candidates counted, want the 1 Pion already holds", used)
+	}
+}
