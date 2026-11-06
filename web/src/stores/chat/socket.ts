@@ -24,6 +24,16 @@ const PING_INTERVAL_MS = 5000
 const PING_HIDDEN_INTERVAL_MS = 30000
 // A socket that answered no ping for this long is dead, even if the browser still reports it open.
 const PONG_TIMEOUT_MS = 15000
+// A connect that has not opened by now is stuck (half-open TCP after a network change); the browser's own give-up takes minutes.
+const CONNECT_TIMEOUT_MS = 10000
+
+/** Stops listening to a socket and closes it: close handshakes never finish on a dead connection. */
+function detachSocket(socket: PlatformSocket) {
+  socket.onopen = null
+  socket.onmessage = null
+  socket.onclose = null
+  socket.close()
+}
 
 function startPingHeartbeat(cx: Cx, session: SocketSession) {
   const { cs } = cx
@@ -34,10 +44,7 @@ function startPingHeartbeat(cx: Cx, session: SocketSession) {
     // Judge the last ping actually sent: throttled timers (hidden tab, sleep) stretch the gap between ticks.
     if (cs.lastPingAt > cs.lastPongAt && Date.now() - cs.lastPingAt > PONG_TIMEOUT_MS) {
       // Close handshakes never finish on a half-open connection: drop the socket and reconnect now.
-      session.socket.onopen = null
-      session.socket.onmessage = null
-      session.socket.onclose = null
-      session.socket.close()
+      detachSocket(session.socket)
       handleSocketClose(cx, session)
       return
     }
@@ -103,7 +110,14 @@ function scheduleReconnect(cx: Cx) {
 /** "Jetzt versuchen": skip the wait and reconnect immediately. */
 export function retryNow(cx: Cx) {
   const { cs } = cx
-  if (cs.isConnected.value || cs.ws.value) return
+  if (cs.isConnected.value) return
+  if (cs.ws.value) {
+    // Not connected, yet a socket is set: it is still connecting and stuck, or the user would not be asking. Replace it.
+    clearTimeout(cs.connectTimer)
+    ++cs.socketGeneration
+    detachSocket(cs.ws.value)
+    cs.ws.value = null
+  }
   clearTimeout(cs.reconnectTimer)
   cs.nextRetryAt.value = Date.now()
   attemptReconnect(cx)
@@ -123,6 +137,7 @@ function isCurrentSession(cx: Cx, session: SocketSession): boolean {
 function handleSocketOpen(cx: Cx, session: SocketSession) {
   if (!isCurrentSession(cx, session)) return
   const { cs } = cx
+  clearTimeout(cs.connectTimer)
   cs.isConnected.value = true
   cs.wasConnected.value = true
   cs.reconnectAttempt.value = 0
@@ -155,6 +170,7 @@ function handleSocketClose(
   if (cs.ws.value !== session.socket || cs.socketGeneration !== session.generation) return
   cs.suppressedPresence.clear()
   cs.isConnected.value = false
+  clearTimeout(cs.connectTimer)
   stopPingHeartbeat(cx)
   cs.ws.value = null
   if (authStore.user?.id !== session.accountId) return
@@ -167,7 +183,7 @@ function handleSocketClose(
     cs.nextRetryAt.value = 0
     return
   }
-  // Exponential backoff; a revoked session (401) stops the loop.
+  // Exponential backoff; attemptReconnect checks the session first and ends the loop when it is gone.
   scheduleReconnect(cx)
 }
 
@@ -196,6 +212,12 @@ export function initWebSocket(cx: Cx) {
   socket.onclose = (event?: { code?: number }) => handleSocketClose(cx, session, event)
 
   cs.ws.value = socket
+  clearTimeout(cs.connectTimer)
+  cs.connectTimer = setTimeout(() => {
+    if (!isCurrentSession(cx, session) || cs.isConnected.value) return
+    detachSocket(socket)
+    handleSocketClose(cx, session)
+  }, CONNECT_TIMEOUT_MS)
 }
 
 export function closeWebSocket(cx: Cx) {
@@ -207,6 +229,7 @@ export function closeWebSocket(cx: Cx) {
   cs.wasConnected.value = false
   cs.reconnectAttempt.value = 0
   clearTimeout(cs.reconnectTimer)
+  clearTimeout(cs.connectTimer)
   stopPingHeartbeat(cx)
   if (cs.ws.value) {
     cs.ws.value.onclose = null
