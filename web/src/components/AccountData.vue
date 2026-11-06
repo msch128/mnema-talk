@@ -5,6 +5,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Download, Loader2, Trash2 } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
+import { confirmDiscardUnsent } from '../lib/unsentGuard'
 import { deleteAccount as eraseAccount, exportStatus, requestExport as askForExport } from '../lib/accountApi'
 import type { AuthExportStatus } from '../types/rest'
 import { locale, t } from '../i18n'
@@ -76,6 +77,7 @@ const requestExport = () => run(async () => {
 })
 
 const deleteAccount = () => run(async () => {
+  if (!await confirmDiscardUnsent(t('security.privacy.deleteConfirm'))) return
   await eraseAccount(password.value, code.value)
   // The server ended the session; leave nothing of this account in the page.
   authStore.resetLocalSession()

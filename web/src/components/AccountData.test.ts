@@ -7,6 +7,8 @@ import AccountData from './AccountData.vue'
 import { setLocale } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
+import { useChatStore } from '../stores/chat'
+import { pendingConfirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { userFixture } from '../test-fixtures.fixture'
 
@@ -135,6 +137,23 @@ describe('account deletion', () => {
     expect(apiMock).toHaveBeenLastCalledWith('/api/users/me/delete', { method: 'POST', json: { current_password: 'member-password-123' } })
     expect(useAuthStore().user).toBeNull()
     expect(assign).toHaveBeenCalledWith('/')
+  })
+
+  it('asks about unsent messages first and deletes nothing when the member declines', async () => {
+    const w = mountWith(none)
+    await flushPromises()
+    useChatStore().outbox = [{ nonce: 'n1', channelId: 'c1', userId: useAuthStore().user!.id, parentId: null, replyToId: null, content: 'x', createdAt: '2026-01-01T12:00:00Z', status: 'waiting', error: '', cause: 'offline', attempts: 0, possiblyDelivered: false, notBefore: 0 }]
+    await w.get('[data-testid="delete-start"]').trigger('click')
+    await w.get('[data-testid="delete-name"]').setValue('max')
+    await w.get('[data-testid="privacy-password"]').setValue('member-password-123')
+    apiMock.mockClear()
+    await w.get('form').trigger('submit')
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('1 unsent message will be discarded')
+    pendingConfirm.value?.resolve(false)
+    await flushPromises()
+    expect(apiMock).not.toHaveBeenCalledWith('/api/users/me/delete', expect.anything())
+    expect(useAuthStore().user).not.toBeNull()
   })
 
   it('keeps everything when the password is wrong', async () => {
