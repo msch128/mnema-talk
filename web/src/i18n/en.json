@@ -4695,6 +4695,17 @@
     "everyoneTitle": "Discord’s @everyone",
     "everyoneBody": "For information only: your own @everyone role is not changed. Discord’s had: {list}",
     "skippedTitle": "Skipped, no counterpart here",
+    "note": {
+      "announcement_to_text": "an announcement channel becomes a text channel",
+      "stage_to_talk": "a stage channel becomes a Talk",
+      "forum_to_text": "a forum channel becomes a text channel",
+      "topic_shortened": "the topic was shortened",
+      "slow_mode_capped": "slow mode is capped at {seconds} seconds",
+      "age_restriction_not_imported": "the age restriction is not imported"
+    },
+    "skipped": {
+      "channel_type_unsupported": "{name} (Discord channel type {type} has no counterpart)"
+    },
     "review": "Review and import…",
     "history": {
       "title": "Earlier imports",

@@ -60,7 +60,7 @@ type Inputs struct {
 func BuildPlan(t *Template, in Inputs) *Plan {
 	p := &Plan{
 		Code: t.Code, TemplateName: strings.TrimSpace(t.Name), SourceName: strings.TrimSpace(t.Guild.Name),
-		ServerName: in.ServerName, Skipped: []string{},
+		ServerName: in.ServerName, Skipped: []string{}, SkippedHints: []Hint{},
 	}
 	b := &builder{plan: p, in: in, roleBySrc: map[string]*PlanRole{}, mappedBySrc: map[string]RoleChoice{}, dropped: map[string]bool{}}
 	b.roles(t.Guild.Roles)
@@ -249,14 +249,16 @@ var sourceTypeNames = map[int]string{
 // channel plans one channel. Unsupported kinds are recorded as skipped and
 // planned with an empty Type, which the caller filters out in finish.
 func (b *builder) channel(c SrcChan, cat *PlanCategory) PlanChannel {
-	pc := PlanChannel{SourceID: string(c.ID), Notes: []string{}}
+	pc := PlanChannel{SourceID: string(c.ID), Notes: []string{}, NoteHints: []Hint{}}
 	if cat != nil {
 		pc.CategorySourceID, pc.Category = cat.SourceID, cat.Name
 	}
 	kind, ok := sourceTypeNames[c.Type]
 	if !ok {
 		pc.Type = ""
-		b.plan.Skipped = append(b.plan.Skipped, fmt.Sprintf("%s (Discord channel type %d has no counterpart)", cleanName(c.Name, core.MaxChannelNameLen, "channel"), c.Type))
+		name := cleanName(c.Name, core.MaxChannelNameLen, "channel")
+		b.plan.Skipped = append(b.plan.Skipped, fmt.Sprintf("%s (Discord channel type %d has no counterpart)", name, c.Type))
+		b.plan.SkippedHints = append(b.plan.SkippedHints, hint(SkipChannelTypeUnsupported, map[string]any{"name": name, "type": c.Type}))
 		return pc
 	}
 	pc.SourceType = kind
@@ -269,7 +271,7 @@ func (b *builder) channel(c SrcChan, cat *PlanCategory) PlanChannel {
 		pc.SlowModeSeconds = slowMode(c.RateLimit, &pc)
 	}
 	if c.NSFW {
-		pc.Notes = append(pc.Notes, "the age restriction is not imported")
+		pc.note(NoteAgeRestriction, "the age restriction is not imported", nil)
 	}
 	pc.Overwrites = b.overwrites(c.Overwrite)
 	pc.Private = hidesFromEveryone(pc.Overwrites)
@@ -280,19 +282,19 @@ func (b *builder) channel(c SrcChan, cat *PlanCategory) PlanChannel {
 func (b *builder) targetType(kind string, pc *PlanChannel) string {
 	switch kind {
 	case "announcement":
-		pc.Notes = append(pc.Notes, "an announcement channel becomes a text channel")
+		pc.note(NoteAnnouncementToText, "an announcement channel becomes a text channel", nil)
 		return "text"
 	case "stage":
 		if b.in.Caps.Stage {
 			return "stage"
 		}
-		pc.Notes = append(pc.Notes, "a stage channel becomes a Talk")
+		pc.note(NoteStageToTalk, "a stage channel becomes a Talk", nil)
 		return "voice"
 	case "forum":
 		if b.in.Caps.Forum {
 			return "forum"
 		}
-		pc.Notes = append(pc.Notes, "a forum channel becomes a text channel")
+		pc.note(NoteForumToText, "a forum channel becomes a text channel", nil)
 		return "text"
 	case "voice":
 		return "voice"
@@ -306,7 +308,7 @@ func (b *builder) topic(c SrcChan, pc *PlanChannel) string {
 	}
 	t := strings.TrimSpace(*c.Topic)
 	if utf8.RuneCountInString(t) > core.MaxTopicLen {
-		pc.Notes = append(pc.Notes, "the topic was shortened")
+		pc.note(NoteTopicShortened, "the topic was shortened", nil)
 		t = truncate(t, core.MaxTopicLen)
 	}
 	if clean, err := httpx.CleanText("topic", t, core.MaxTopicLen, false); err == nil {
@@ -320,7 +322,7 @@ func slowMode(seconds int, pc *PlanChannel) int {
 		return 0
 	}
 	if seconds > core.MaxSlowModeSeconds {
-		pc.Notes = append(pc.Notes, fmt.Sprintf("slow mode is capped at %d seconds", core.MaxSlowModeSeconds))
+		pc.note(NoteSlowModeCapped, fmt.Sprintf("slow mode is capped at %d seconds", core.MaxSlowModeSeconds), map[string]any{"seconds": core.MaxSlowModeSeconds})
 		return core.MaxSlowModeSeconds
 	}
 	return seconds

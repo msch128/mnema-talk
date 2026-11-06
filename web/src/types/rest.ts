@@ -3331,6 +3331,19 @@ export function isDiscordimportEveryoneInfo(value: unknown): value is Discordimp
 
 export const decodeDiscordimportEveryoneInfo = decoder("discordimport.EveryoneInfo", isDiscordimportEveryoneInfo)
 
+export type DiscordimportHint = {
+  code: string
+  params: Record<string, unknown>
+}
+
+export function isDiscordimportHint(value: unknown): value is DiscordimportHint {
+  return isRecord(value)
+    && (hasOwn(value, "code") && isString(value["code"]))
+    && (hasOwn(value, "params") && isRecord(value["params"]))
+}
+
+export const decodeDiscordimportHint = decoder("discordimport.Hint", isDiscordimportHint)
+
 export type DiscordimportPlan = {
   administrator_dropped: boolean
   categories: Array<DiscordimportPlanCategory>
@@ -3345,6 +3358,7 @@ export type DiscordimportPlan = {
   roles: Array<DiscordimportPlanRole>
   server_name: string
   skipped: Array<string>
+  skipped_hints: Array<DiscordimportHint>
   source_name: string
   template_name: string
 }
@@ -3364,6 +3378,7 @@ export function isDiscordimportPlan(value: unknown): value is DiscordimportPlan 
     && (hasOwn(value, "roles") && isArrayOf(value["roles"], item => isDiscordimportPlanRole(item)))
     && (hasOwn(value, "server_name") && isString(value["server_name"]))
     && (hasOwn(value, "skipped") && isArrayOf(value["skipped"], item => isString(item)))
+    && (hasOwn(value, "skipped_hints") && isArrayOf(value["skipped_hints"], item => isDiscordimportHint(item)))
     && (hasOwn(value, "source_name") && isString(value["source_name"]))
     && (hasOwn(value, "template_name") && isString(value["template_name"]))
 }
@@ -3389,6 +3404,7 @@ export type DiscordimportPlanChannel = {
   category: string
   category_source_id: string
   name: string
+  note_hints: Array<DiscordimportHint>
   notes: Array<string>
   overwrites: Array<DiscordimportPlanOverwrite>
   private: boolean
@@ -3405,6 +3421,7 @@ export function isDiscordimportPlanChannel(value: unknown): value is Discordimpo
     && (hasOwn(value, "category") && isString(value["category"]))
     && (hasOwn(value, "category_source_id") && isString(value["category_source_id"]))
     && (hasOwn(value, "name") && isString(value["name"], 64))
+    && (hasOwn(value, "note_hints") && isArrayOf(value["note_hints"], item => isDiscordimportHint(item)))
     && (hasOwn(value, "notes") && isArrayOf(value["notes"], item => isString(item)))
     && (hasOwn(value, "overwrites") && isArrayOf(value["overwrites"], item => isDiscordimportPlanOverwrite(item)))
     && (hasOwn(value, "private") && typeof value["private"] === 'boolean')

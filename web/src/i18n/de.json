@@ -4695,6 +4695,17 @@
     "everyoneTitle": "@everyone von Discord",
     "everyoneBody": "Nur zur Information: Deine eigene @everyone-Rolle bleibt unverändert. Bei Discord hatte sie: {list}",
     "skippedTitle": "Übersprungen, hier ohne Entsprechung",
+    "note": {
+      "announcement_to_text": "ein Ankündigungskanal wird ein Textkanal",
+      "stage_to_talk": "ein Stage-Kanal wird ein Talk",
+      "forum_to_text": "ein Forumkanal wird ein Textkanal",
+      "topic_shortened": "das Thema wurde gekürzt",
+      "slow_mode_capped": "der Langsam-Modus wird auf {seconds} Sekunden begrenzt",
+      "age_restriction_not_imported": "die Altersbeschränkung wird nicht übernommen"
+    },
+    "skipped": {
+      "channel_type_unsupported": "{name} (der Discord-Kanaltyp {type} hat hier keine Entsprechung)"
+    },
     "review": "Prüfen und importieren …",
     "history": {
       "title": "Frühere Importe",
