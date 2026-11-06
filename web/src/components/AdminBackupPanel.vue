@@ -7,13 +7,20 @@ import { ShieldCheck, TriangleAlert } from '@lucide/vue'
 import type { ServerBackupStatus } from '../types/rest'
 import { SOURCE_URL } from '../lib/thirdParty'
 import { formatBytes } from '../lib/byteUnits'
-import { relative } from '../lib/time'
 import { t, locale } from '../i18n'
 
 const props = defineProps<{ backup: ServerBackupStatus }>()
 
 const p = 'admin.operatorStatus.'
-const ago = (seconds: number) => relative(Date.now() - seconds * 1000, locale.value)
+// Rounded, not truncated: a restore test a minute after a 7-hour-old backup reads "7 hr. ago" too.
+const STEPS: Array<[Intl.RelativeTimeFormatUnit, number]> = [['day', 86400], ['hour', 3600], ['minute', 60]]
+function ago(seconds: number): string {
+  const words = new Intl.RelativeTimeFormat(locale.value, { numeric: 'always', style: 'short' })
+  for (const [unit, size] of STEPS) {
+    if (seconds >= size) return words.format(-Math.round(seconds / size), unit)
+  }
+  return words.format(-0, 'minute') // "0 min. ago", not "in 0 min."
+}
 
 // The sentence around the guide link, split where the link goes.
 const docs = computed(() => {
@@ -55,6 +62,7 @@ const view = computed(() => {
           <TriangleAlert v-if="backup.restore_test === 'failed'" class="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>{{ view.restore }}</span>
         </dd>
+        <p v-if="backup.restore_test === 'failed'" class="mt-1 text-xs text-mnema-muted" data-testid="backup-restore-failed">{{ $t('admin.operatorStatus.restoreFailed') }}</p>
       </div>
     </dl>
     <p v-else class="text-sm text-mnema-text" data-testid="backup-not-reported" :data-state="backup.state">{{ $t(`admin.operatorStatus.backupState.${backup.state}`) }}</p>
