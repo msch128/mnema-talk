@@ -3008,7 +3008,7 @@
     "hostError": {
       "enterAddress": "Enter an HTTPS address for the server.",
       "invalidAddress": "That is not a valid server address.",
-      "httpsOrigin": "Use an HTTPS address without credentials, path or query.",
+      "httpsOrigin": "Use a web address (https://…) without a user name or password.",
       "initHttps": "Secure connections could not be set up on this computer.",
       "refused": "The server refused the connection. Check the address and the port.",
       "timeout": "The server did not answer in time. Check the address, the port and your network.",

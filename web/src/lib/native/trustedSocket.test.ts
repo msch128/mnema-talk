@@ -134,3 +134,23 @@ it('finishes only once when a failed send races the close event', async () => {
   await flush()
   expect(onclose).toHaveBeenCalledTimes(1)
 })
+
+it('passes the close code of the host to the page so a replaced tab does not reconnect', async () => {
+  const socket = new TrustedSocket()
+  const onclose = vi.fn()
+  socket.onclose = onclose
+  emit({ id: 5, kind: 'open' })
+  opened(5); await flush()
+  emit({ id: 5, kind: 'close', code: 4001 })
+  expect(onclose).toHaveBeenCalledWith({ code: 4001 })
+})
+
+it('closes without a code when an older host does not send one', async () => {
+  const socket = new TrustedSocket()
+  const onclose = vi.fn()
+  socket.onclose = onclose
+  emit({ id: 6, kind: 'open' })
+  opened(6); await flush()
+  emit({ id: 6, kind: 'close' })
+  expect(onclose).toHaveBeenCalledWith({})
+})
