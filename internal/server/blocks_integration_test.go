@@ -146,3 +146,29 @@ func TestABlockedMembersMentionsAndRepliesLeaveNoTraceForTheBlocker(t *testing.T
 		t.Errorf("after unblocking the earlier mentions are back: %d, want 4", n)
 	}
 }
+
+func TestABlockStopsReactionsInAConversationInBothDirections(t *testing.T) {
+	f := newDMFixture(t, false)
+	dm := f.alice.mustDM(t, f.bob)
+	res := f.alice.dmPost(dm.ID, "hello")
+	wantStatus(t, "alice writes", res, http.StatusCreated)
+	var msg struct{ ID uuid.UUID }
+	res.decode(t, &msg)
+	react := func(c *client) response {
+		return c.post("/api/messages/"+msg.ID.String()+"/reactions", map[string]string{"emoji": "👍"})
+	}
+	wantStatus(t, "bob reacts", react(f.bob), http.StatusOK)
+
+	wantStatus(t, "alice blocks bob", f.alice.put("/api/me/blocks/"+f.bob.user.ID.String(), nil), http.StatusNoContent)
+	// Bob's earlier reaction can still be taken back; a new one is refused for both sides.
+	wantStatus(t, "bob takes his reaction back", react(f.bob), http.StatusOK)
+	wantStatus(t, "bob is blocked", react(f.bob), http.StatusForbidden)
+	wantStatus(t, "alice blocked bob", react(f.alice), http.StatusForbidden)
+
+	// A group conversation is not stopped by a block between two members.
+	group := f.carol.mustDM(t, f.alice, f.bob)
+	res = f.carol.dmPost(group.ID, "hi all")
+	wantStatus(t, "carol writes", res, http.StatusCreated)
+	res.decode(t, &msg)
+	wantStatus(t, "bob reacts in the group", react(f.bob), http.StatusOK)
+}

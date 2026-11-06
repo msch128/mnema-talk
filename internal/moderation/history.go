@@ -140,6 +140,25 @@ func (h *Handler) subject(r *http.Request) (uuid.UUID, error) {
 	return id, nil
 }
 
+// writeSubject is subject for the routes that change something: on top of
+// reading, the caller must outrank the member (never the Owner, never a peer),
+// as for every other moderation action. Reading the history stays open to
+// everyone with Manage reports.
+func (h *Handler) writeSubject(r *http.Request) (uuid.UUID, error) {
+	id, err := h.subject(r)
+	if err != nil {
+		return id, err
+	}
+	snap, err := h.Perms.Snapshot(r.Context())
+	if err != nil {
+		return id, err
+	}
+	if err := snap.CanModerate(auth.UserFrom(r.Context()).Subject(), perm.Subject{ID: id}); err != nil {
+		return id, err
+	}
+	return id, nil
+}
+
 // auditEvents reads the timeline entries from the audit log. Only a fixed set
 // of actions is read, and of their details only the reason and the length.
 func (h *Handler) auditEvents(ctx context.Context, id uuid.UUID) ([]HistoryEvent, error) {

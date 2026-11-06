@@ -150,3 +150,25 @@ func TestUploadLimitAppliesToWebhooks(t *testing.T) {
 		t.Fatalf("webhook under the limit: %d %s", res.status, res.body)
 	}
 }
+
+func TestRemovingAnUnsentFileDoesNotRefundTheDailyUploadBudget(t *testing.T) {
+	a := newAppWithConfig(t, func(c *config.Config) { c.UploadQuotaMBPerDay = 1 })
+	owner := a.seedAdmin()
+	member := a.register(owner, "alice")
+	ch := a.createChannel(owner, "general", "text")
+	staging := "/api/channels/" + ch.String() + "/attachments"
+	big := 600 << 10
+
+	res := member.uploadParts(staging, pngFile(big))
+	if res.status != http.StatusCreated {
+		t.Fatalf("first 600 KB under 1 MB a day: %d %s", res.status, res.body)
+	}
+	var f stagedFile
+	res.decode(t, &f)
+	if res := member.delete(staging + "/" + f.ID.String()); res.status != http.StatusNoContent {
+		t.Fatalf("remove: %d %s", res.status, res.body)
+	}
+	if res := member.uploadParts(staging, pngFile(big)); res.status != http.StatusTooManyRequests {
+		t.Fatalf("second 600 KB after removing the first: %d %s; deleted files still count", res.status, res.body)
+	}
+}

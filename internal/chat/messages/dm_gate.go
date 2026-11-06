@@ -147,6 +147,28 @@ func checkDMReachable(ctx context.Context, tx pgx.Tx, sender uuid.UUID, others [
 	return nil
 }
 
+// checkDMReactionAllowed refuses a new reaction under a message of a
+// conversation with one other person when either side blocked the other: a
+// block stops writing in both directions, and a reaction is writing. Taking a
+// reaction back never goes through here.
+func checkDMReactionAllowed(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID) error {
+	var blocked bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM messages m
+			JOIN channels c ON c.id = m.channel_id AND c.type = $3 AND c.dm_key IS NOT NULL
+			JOIN dm_members o ON o.channel_id = c.id AND o.user_id <> $2
+			JOIN user_blocks b ON (b.blocker_id = o.user_id AND b.blocked_id = $2) OR (b.blocker_id = $2 AND b.blocked_id = o.user_id)
+			WHERE m.id = $1)`, messageID, userID, core.ChannelKindDM).Scan(&blocked)
+	if err != nil {
+		return fmt.Errorf("check direct message block: %w", err)
+	}
+	if blocked {
+		return core.ErrDMSend
+	}
+	return nil
+}
+
 // countDMMessage keeps the cap on the starter's messages before anybody
 // answers, in counters that deleting messages does not reset.
 func countDMMessage(ctx context.Context, tx pgx.Tx, nm NewMessage, st dmState) error {

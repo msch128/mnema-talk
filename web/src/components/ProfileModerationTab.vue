@@ -16,7 +16,9 @@ import StatePanel from './StatePanel.vue'
 const NOTE_MAX = 1000
 
 const props = defineProps({
-  userId: { type: String, required: true }
+  userId: { type: String, required: true },
+  // Writing notes needs a highest role above the member's (the server checks it too); reading does not.
+  canWrite: { type: Boolean, default: true }
 })
 const emit = defineEmits<{ strikes: [count: number] }>()
 
@@ -125,7 +127,7 @@ onMounted(load)
     <template v-else>
       <section :aria-label="$t('modHistory.notes')" class="space-y-2">
         <h4 class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('modHistory.notes') }}</h4>
-        <form class="space-y-2" @submit.prevent="add">
+        <form v-if="canWrite" class="space-y-2" @submit.prevent="add">
           <label for="mod-note" class="sr-only">{{ $t('modHistory.noteLabel') }}</label>
           <textarea id="mod-note" v-model="draft" rows="2" v-max-chars="NOTE_MAX" :placeholder="$t('modHistory.notePlaceholder')" data-testid="mod-note-input" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-2 text-sm text-mnema-text outline-hidden focus:border-mnema-accent"></textarea>
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -152,8 +154,8 @@ onMounted(load)
                 <span v-if="note.strike" class="rounded-sm bg-mnema-danger/15 px-1.5 py-0.5 font-semibold text-mnema-danger" data-testid="mod-note-strike-badge">{{ $t('modHistory.strike') }}</span>
               </p>
               <p class="whitespace-pre-wrap wrap-break-word text-mnema-body-ink">{{ note.body }}</p>
-              <div v-if="note.mine || note.can_delete" class="flex gap-3 text-xs">
-                <button v-if="note.mine" type="button" class="text-mnema-accent hover:underline" data-testid="mod-note-edit" @click="startEdit(note)">{{ $t('modHistory.edit') }}</button>
+              <div v-if="(note.mine && canWrite) || note.can_delete" class="flex gap-3 text-xs">
+                <button v-if="note.mine && canWrite" type="button" class="text-mnema-accent hover:underline" data-testid="mod-note-edit" @click="startEdit(note)">{{ $t('modHistory.edit') }}</button>
                 <button v-if="note.can_delete" type="button" class="text-mnema-danger hover:underline" data-testid="mod-note-delete" @click="remove(note)">{{ $t('modHistory.delete') }}</button>
               </div>
             </template>

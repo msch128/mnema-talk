@@ -39,7 +39,7 @@ func (h *Handler) signUp(w http.ResponseWriter, r *http.Request) error {
 }
 
 // @Summary Leave the role of an event
-// @Description Removes the caller's sign-up and moves the role's waitlist up. Always allowed, also on a finished event and for a member who can no longer view the event (a Talk they lost access to): such a member gets 204 instead of the event. The RSVP stays as it is.
+// @Description Removes the caller's sign-up and moves the role's waitlist up. Always allowed, also on a finished event and for a member who can no longer view the event (a Talk they lost access to) but had a sign-up: such a member gets 204 instead of the event. Without a sign-up an event the caller cannot view is 404, as everywhere. The RSVP stays as it is.
 // @ID leaveCommunityEventRole
 // @Tags Events
 // @Produce json
@@ -55,7 +55,7 @@ func (h *Handler) leaveSignup(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	_, promoted, err := h.Store.Leave(r.Context(), id, user.ID)
+	left, promoted, err := h.Store.Leave(r.Context(), id, user.ID)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,12 @@ func (h *Handler) leaveSignup(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if h.requireViewable(r, ev) != nil {
+	if viewErr := h.requireViewable(r, ev); viewErr != nil {
+		// Nothing was left: answer as for any event the caller cannot see, so
+		// the 204 does not tell that the event exists.
+		if left == nil {
+			return viewErr
+		}
 		h.broadcast(ev)
 		h.notifyPromoted(r, ev, promoted)
 		w.WriteHeader(http.StatusNoContent)

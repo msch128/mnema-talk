@@ -426,7 +426,10 @@ reasons, role changes and Talk kicks: handling a report needs the history. Grant
 *Manage reports* with that in mind.
 
 `GET /api/admin/users/{id}/moderation`, `POST .../moderation/notes`,
-`PUT` and `DELETE .../moderation/notes/{noteID}`, all *Manage reports*.
+`PUT` and `DELETE .../moderation/notes/{noteID}`, all *Manage reports*. Reading
+is open to every holder; writing a note (`POST`, `PUT`) also needs a highest role
+strictly above the member's, and never about the Owner, like every other
+moderation action (403).
 
 ### Moderator notes are moderator data
 

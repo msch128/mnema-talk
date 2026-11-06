@@ -103,6 +103,8 @@ async function handleMessage() {
 // the private notes about them (never shown to the member, never for yourself).
 const tab = ref<'profile' | 'moderation'>('profile')
 const strikes = ref(0)
+/** The Owner and members at or above the viewer's rank get no new notes (the server refuses them). */
+const canWriteNotes = computed(() => profileUser.value.role !== 'admin' && permissions.outranksMember(profileId.value))
 const hasModerationTab = computed(() => features.moderationHistory && permissions.can('manage_reports') && !isSelf.value && !isBot.value && !!profileId.value)
 
 // Current voice hangout channel of this user
@@ -248,7 +250,7 @@ async function handleMention() {
             </button>
           </div>
 
-          <ProfileModerationTab v-if="hasModerationTab" v-show="tab === 'moderation'" class="mt-3" :user-id="profileId" @strikes="strikes = $event" />
+          <ProfileModerationTab v-if="hasModerationTab" v-show="tab === 'moderation'" class="mt-3" :user-id="profileId" :can-write="canWriteNotes" @strikes="strikes = $event" />
 
           <ProfileMemberActions v-if="!isSelf" v-show="tab === 'profile' || !hasModerationTab" :profile-user="profileUser" :is-bot="isBot" />
           <div v-show="tab === 'profile' || !hasModerationTab" class="mt-5 divide-y divide-mnema-hairline [&>*]:py-4 [&>:first-child]:pt-0 [&>:last-child]:pb-0">

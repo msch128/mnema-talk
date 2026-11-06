@@ -66,7 +66,7 @@ func ListForumPostsFiltered(ctx context.Context, p *db.Pool, channelID uuid.UUID
 		limit = 100
 	}
 
-	if err := core.MessageCursorExists(ctx, p, q.Before); err != nil {
+	if err := forumCursorExists(ctx, p, channelID, q.Before); err != nil {
 		return nil, err
 	}
 	whereClause, args, err := postFilterWhere(channelID, f)
@@ -92,6 +92,16 @@ func ListForumPostsFiltered(ctx context.Context, p *db.Pool, channelID uuid.UUID
 		return nil, err
 	}
 	return append(pinned, page...), nil
+}
+
+// forumCursorExists checks that the cursor is a post of this forum: a message
+// of another channel answers like a missing one, so a cursor cannot tell
+// whether a message elsewhere exists.
+func forumCursorExists(ctx context.Context, p *db.Pool, channelID uuid.UUID, before *uuid.UUID) error {
+	if before == nil {
+		return nil
+	}
+	return core.CursorExists(ctx, p, `SELECT 1 FROM messages WHERE id = $1 AND channel_id = $2 AND parent_id IS NULL`, *before, channelID)
 }
 
 // postFilterWhere is the WHERE clause (and its arguments) of the root posts of
