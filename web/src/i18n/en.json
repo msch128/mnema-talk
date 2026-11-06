@@ -3007,7 +3007,7 @@
     "address": "Address or invite link",
     "checking": "Checking connection…",
     "connect": "Connect",
-    "placeholder": "talk.example.org or https://talk.example.org/invite/abc",
+    "placeholder": "talk.example.org or https://talk.example.org/invite/abc123xyz",
     "hostError": {
       "enterAddress": "Enter an HTTPS address for the server.",
       "invalidAddress": "That is not a valid server address.",
