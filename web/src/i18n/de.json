@@ -2928,6 +2928,7 @@
     "messages": "Nachrichten",
     "hoursMinutes": "{h} Std. {m} Min.",
     "minutes": "{m} Min.",
+    "none": "Noch keine",
     "underMinute": "< 1 Min.",
     "summary": "{voice} im Talk · {messages} Nachrichten"
   },

@@ -2928,6 +2928,7 @@
     "messages": "Messages",
     "hoursMinutes": "{h} h {m} min",
     "minutes": "{m} min",
+    "none": "None yet",
     "underMinute": "< 1 min",
     "summary": "{voice} in Talks · {messages} messages"
   },
