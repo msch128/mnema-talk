@@ -65,7 +65,7 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 		}
 		h.BroadcastChannel(chID, events.VoiceStateUpdate, map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
 		if hadSince {
-			h.addVoiceTime(userID, chID, time.Since(since), class)
+			h.addVoiceTime(userID, chID, time.Since(since), h.settleSeat(chID, class))
 		}
 	}
 }

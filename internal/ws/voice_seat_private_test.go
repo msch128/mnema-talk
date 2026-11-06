@@ -84,3 +84,39 @@ func TestASeatCountsByWhoCanSeeItsTalk(t *testing.T) {
 		t.Errorf("unreadable permissions: class %d, want private", got)
 	}
 }
+
+// A Talk that becomes hidden from @everyone during a stay no longer counts the
+// whole stay publicly: the stricter of the start and the end class applies, and
+// a permission lookup that fails at the end counts as limited, never private.
+func TestAStayEndingInAHiddenTalkDoesNotCountPublicly(t *testing.T) {
+	f := permtest.NewFixture()
+	talk := f.Channel(uuid.Nil)
+	var failing atomic.Bool
+	svc := perm.NewServiceFrom(func(context.Context, time.Time) (*perm.Snapshot, error) {
+		if failing.Load() {
+			return nil, errors.New("database busy")
+		}
+		return f.Snapshot(), nil
+	})
+	h := NewHub(nil, nil, nil, nil)
+	h.SetPermissions(svc)
+	t.Cleanup(h.Close)
+
+	if got := h.settleSeat(talk, seatPublic); got != seatPublic {
+		t.Fatalf("an unchanged open Talk settled as %d, want public", got)
+	}
+	failing.Store(true)
+	svc.Invalidate()
+	if got := h.settleSeat(talk, seatPublic); got != seatLimited {
+		t.Fatalf("a failed lookup at the end settled as %d, want limited", got)
+	}
+	failing.Store(false)
+	f.RoleOverwrite(true, talk, f.EveryoneID(), 0, perm.ViewChannel)
+	svc.Invalidate()
+	if got := h.settleSeat(talk, seatPublic); got != seatLimited {
+		t.Fatalf("a Talk hidden mid-stay settled as %d, want limited", got)
+	}
+	if got := h.settleSeat(talk, seatPrivate); got != seatPrivate {
+		t.Fatalf("a private stay settled as %d, want private", got)
+	}
+}

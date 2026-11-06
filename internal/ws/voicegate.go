@@ -254,10 +254,23 @@ func (h *Hub) flushAllVoiceTime() {
 // cannot be read the stay is not counted at all: it is kept out of the public
 // total rather than leaked into it.
 func (h *Hub) classifySeat(ch uuid.UUID) seatClass {
+	return h.classifyWith(ch, seatPrivate)
+}
+
+// settleSeat decides how a stay that is ending counts: the stricter of how it
+// was classed at its start and how the Talk is classed now, so a Talk hidden
+// from @everyone mid-stay does not count its whole time publicly. A failed
+// lookup now counts as limited: it keeps the time out of the public total
+// without discarding a stay that began in the open.
+func (h *Hub) settleSeat(ch uuid.UUID, start seatClass) seatClass {
+	return max(start, h.classifyWith(ch, seatLimited))
+}
+
+func (h *Hub) classifyWith(ch uuid.UUID, onFailure seatClass) seatClass {
 	snap, ok := h.permSnapshot(ch)
 	switch {
 	case !ok:
-		return seatPrivate
+		return onFailure
 	case snap == nil:
 		return seatPublic // no permission model (tests): everything is open
 	case snap.IsDMTalk(ch):

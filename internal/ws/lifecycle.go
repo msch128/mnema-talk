@@ -276,7 +276,7 @@ func (h *Hub) Close() {
 	// database is still open: the connections' own clean-up runs after the
 	// server has moved on to closing it.
 	for key, d := range stays {
-		h.addVoiceTime(key.user, key.ch, d, classes[key])
+		h.addVoiceTime(key.user, key.ch, d, h.settleSeat(key.ch, classes[key]))
 	}
 	h.flushAllVoiceTime()
 	h.recordLastSeen(online...)
