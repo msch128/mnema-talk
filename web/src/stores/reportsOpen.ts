@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { api } from '../lib/api'
-import { decodeChatOpenCountResponse } from '../types/rest'
+import { decodeChatOpenCountResponse, decodeChatReportsPage } from '../types/rest'
 import { usePermissionsStore } from './permissions'
 import { useServerFeaturesStore } from './serverFeatures'
 
@@ -9,11 +9,16 @@ import { useServerFeaturesStore } from './serverFeatures'
 // member who holds Manage reports may ask (anyone else would get a 403), so
 // the count is read once when that permission is held, again after a socket
 // reconnect, and then follows the reports_open event the server sends to such
-// members only. Losing the permission or the reports feature clears it.
+// members only. Losing the permission or the reports feature clears it. A
+// server without "reports.open_count" has no such route (its path reads as a
+// report id and answers 400), so the first page of the open reports is counted
+// instead, and a longer list shows as "n+".
 export const useReportsOpenStore = defineStore('reportsOpen', () => {
   const permissions = usePermissionsStore()
   const features = useServerFeaturesStore()
   const count = ref(0)
+  // True when the count is only a lower bound (the fallback saw more than one page).
+  const more = ref(false)
   let generation = 0
 
   const allowed = computed(() => features.reports && permissions.can('manage_reports'))
@@ -23,14 +28,23 @@ export const useReportsOpenStore = defineStore('reportsOpen', () => {
   function set(open: number) {
     generation++
     count.value = Number.isFinite(open) && open > 0 ? Math.floor(open) : 0
+    more.value = false
+  }
+
+  async function fetchCount(): Promise<{ open: number, more: boolean }> {
+    if (features.reportsOpenCount) return { ...await api('/api/admin/reports/open-count', { decode: decodeChatOpenCountResponse }), more: false }
+    const page = await api('/api/admin/reports?status=open&limit=100', { decode: decodeChatReportsPage })
+    return { open: page.reports.length, more: page.has_more }
   }
 
   async function load() {
     if (!allowed.value) return
     const mine = ++generation
     try {
-      const res = await api('/api/admin/reports/open-count', { decode: decodeChatOpenCountResponse })
-      if (mine === generation) count.value = res.open
+      const res = await fetchCount()
+      if (mine !== generation) return
+      count.value = res.open
+      more.value = res.more
     } catch {
       // The badge is a hint: keep what is shown, the next event or reconnect corrects it.
     }
@@ -41,5 +55,5 @@ export const useReportsOpenStore = defineStore('reportsOpen', () => {
     else set(0)
   }, { immediate: true })
 
-  return { count, visible, set, load }
+  return { count, more, visible, set, load }
 })

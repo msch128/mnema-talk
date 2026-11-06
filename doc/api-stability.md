@@ -189,6 +189,19 @@ a variable, or widening a value range (a larger maximum a response may carry).
 - **Desktop client:** `web/desktop-compat.json` and the server's `web_client_api`
   are checked against each other by tests. The desktop repository pins the
   bridge side in its own tests.
+- **The web app against older servers:** the desktop client loads the web app
+  of the newest release it has seen and connects to servers back to
+  `min_server_version`. `web/src/compat/` holds what `v1.0.0`, `v2.0.0`,
+  `v2.9.12` and `v2.9.18` promised (OpenAPI contract, health features, events;
+  made by `node scripts/compat-baseline.ts <tag>...`) and runs the app's own
+  stores and forms against it in the normal `vitest` run: every request body
+  must fit that release's schema (the server rejects unknown fields), every
+  endpoint must exist there, and every answer a release sends must pass the
+  app's decoders. So a **new request field, a new endpoint or a new required
+  response field needs a health feature the app waits for**, or an entry in
+  `web/src/compat/allowlist.ts` that says what the app does on a server without
+  it (hide the view, fall back to the older route, show the load error). An
+  allowlist entry that is no longer needed fails the test until it is removed.
 - **Everything else** is reviewed: a pull request that touches a public surface
   says so, and the commit type reflects the change.
 

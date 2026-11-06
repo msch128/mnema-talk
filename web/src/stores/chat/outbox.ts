@@ -4,6 +4,7 @@ import { t } from '../../i18n'
 import type { Message } from '../../types/domain'
 import type { Cx } from './state'
 import type { PendingMessage } from './outboxTypes'
+import { useServerFeaturesStore } from '../serverFeatures'
 import { draftSessionAlive, onDraftSessionEnd } from '../../lib/drafts'
 import { showToast } from './messageWindow'
 import { landSent, newNonce, postText, type TextSend } from './messagePost'
@@ -62,8 +63,15 @@ const age = (p: PendingMessage, now: number) => {
   return Number.isNaN(created) ? 0 : now - created
 }
 
-/** Too old to be sent by itself: it may have arrived, and the server no longer recognises its nonce. */
-export const unsafeToRepeat = (p: PendingMessage, now: number) => p.possiblyDelivered && age(p, now) > REPEAT_SAFE_MS
+/** The server answered /api/health and lists no "messages.nonce": it takes a repeat for a second message. */
+function nonceUnsupported(): boolean {
+  const features = useServerFeaturesStore()
+  return features.loaded && !features.messageNonce
+}
+
+/** Not to be sent by itself: it may have arrived, and the server no longer recognises its nonce (a day) or never did. */
+export const unsafeToRepeat = (p: PendingMessage, now: number) =>
+  p.possiblyDelivered && (age(p, now) > REPEAT_SAFE_MS || nonceUnsupported())
 
 /** Marks as not sent what must not be repeated any more, and drops what is far too old. */
 function expire(cx: Cx, now = Date.now()) {

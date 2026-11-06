@@ -77,6 +77,10 @@ var Features = []string{
 	// and answers a repeat of it with the first message. Older servers reject
 	// the unknown field, so a client sends it only when this is listed.
 	"messages.nonce",
+	// "reports.open_count": GET /api/admin/reports/open-count. Older servers
+	// read that path as a report id and answer 400, so a client asks for the
+	// count only when this is listed.
+	"reports.open_count",
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is

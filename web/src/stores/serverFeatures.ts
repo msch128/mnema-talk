@@ -82,6 +82,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     eventRecurrence: computed(() => has('events.recurrence')),
     wiki: computed(() => has('wiki')),
     notifyLevelsV2: computed(() => has('notify.levels.v2')),
-    messageNonce: computed(() => has('messages.nonce'))
+    messageNonce: computed(() => has('messages.nonce')),
+    reportsOpenCount: computed(() => has('reports.open_count'))
   }
 })

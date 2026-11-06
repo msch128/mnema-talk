@@ -6,7 +6,7 @@ import { computed } from 'vue'
 import { useReportsOpenStore } from '../stores/reportsOpen'
 
 const reports = useReportsOpenStore()
-const shown = computed(() => (reports.visible > 99 ? '99+' : String(reports.visible)))
+const shown = computed(() => (reports.visible > 99 ? '99+' : reports.more ? `${reports.visible}+` : String(reports.visible)))
 </script>
 
 <template>

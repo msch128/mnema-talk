@@ -610,6 +610,35 @@ describe('two tabs that share one waiting message', () => {
   })
 })
 
+describe('on a server that does not know the nonce', () => {
+  const oldServer = () => {
+    const features = useServerFeaturesStore()
+    features.list = []
+    features.loaded = true
+  }
+
+  it('does not send by itself what a lost connection may have delivered: it shows as not sent, and sending again is the member\'s choice', async () => {
+    oldServer()
+    const chat = setup()
+    await chat.sendMessage('maybe there', null, null, [], ch.id)
+    await connectAgain(chat)
+    expect(net.posted).toEqual([])
+    expect(chat.outbox.map(p => [p.content, p.status, p.error])).toEqual([['maybe there', 'failed', t('outbox.expired')]])
+    chat.retryPending(required(chat.outbox[0]).nonce)
+    await tick()
+    expect(net.posted.map(p => p.content)).toEqual(['maybe there'])
+    expect(chat.outbox).toEqual([])
+  })
+
+  it('still sends what no try had reached the server with', async () => {
+    oldServer()
+    localStorage.setItem('mnema.outbox.' + me.id + '.n-new', JSON.stringify({ nonce: 'n-new', channelId: ch.id, userId: me.id, content: 'never sent', parentId: null, replyToId: null, createdAt: new Date().toISOString(), status: 'waiting', error: '', cause: 'offline', attempts: 0, possiblyDelivered: false, notBefore: 0 }))
+    const chat = setup()
+    await connectAgain(chat)
+    expect(net.posted.map(p => p.content)).toEqual(['never sent'])
+  })
+})
+
 describe('messages kept longer than the server remembers their nonce', () => {
   const stale = (over: object) => {
     const entry = { nonce: 'n-old', channelId: ch.id, userId: me.id, content: 'old text', parentId: null, replyToId: null, createdAt: new Date(Date.now() - 25 * HOUR).toISOString(), status: 'waiting', error: '', cause: 'offline', attempts: 0, possiblyDelivered: true, notBefore: 0, ...over }
