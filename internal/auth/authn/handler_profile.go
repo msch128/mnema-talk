@@ -311,10 +311,10 @@ func (h *Handler) hideUnseenMessages(ctx context.Context, u *auth.User) error {
 	if h.HiddenMessages == nil {
 		return nil
 	}
-	hidden, err := h.HiddenMessages(ctx, auth.UserFrom(ctx).Subject())
+	hidden, err := h.HiddenMessages(ctx, auth.UserFrom(ctx).Subject(), u.ID)
 	if err != nil {
 		return err
 	}
-	u.MessageCount = max(u.MessageCount-hidden[u.ID], 0)
+	u.MessageCount = max(u.MessageCount-hidden, 0)
 	return nil
 }
