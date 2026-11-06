@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.16](https://github.com/msch128/mnema-talk/compare/v2.9.15...v2.9.16) (2026-11-06)
+
+
+### Bug Fixes
+
+* calmer Status panels on phones and rounded backup ages ([#748](https://github.com/msch128/mnema-talk/issues/748)) ([7124a57](https://github.com/msch128/mnema-talk/commit/7124a5755be583d68cd77cadc1b92bcab320d5a5))
+
 ## [2.9.15](https://github.com/msch128/mnema-talk/compare/v2.9.14...v2.9.15) (2026-11-06)
 
 
