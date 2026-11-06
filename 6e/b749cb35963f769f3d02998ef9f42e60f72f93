@@ -1,0 +1,25 @@
+web/src/components/EventRolesEditor.test.ts
+  s_06fcde5dbef956::t_572b7e12b234d6 83-91
+web/src/components/EventRolesEditor.vue
+  s_06fcde5dbef956::t_ebeb21bad83a53 110-111,115
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_e502bb2c51c0bb 3703
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_3e974309b98ac5 3703
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6eb749cb35963f769f3d02998ef9f42e60f72f93",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
