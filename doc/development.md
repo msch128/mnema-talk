@@ -59,7 +59,7 @@ make e2e               # Playwright (Chromium) against the real binary, see belo
 make load-test         # voice/screen-share load test, see loadtest/README.md
 make load-test-host    # static chat/voice load-test tools for the server host (linux amd64 + arm64)
 make test-loadtest     # format, vet and tests of the load-test tools (own module)
-make upgrade-drill     # 0.8.16, 0.9.0, 1.0.0 and 1.1.0 images -> this build with seeded data (FROM_VERSIONS=1.0.0 for one)
+make upgrade-drill     # 0.8.16, 0.9.0, 1.0.0, 1.1.0, 2.0.0 and 2.9.12 images -> this build with seeded data (FROM_VERSIONS=1.0.0 for one)
 make backup-drill      # backup -> change -> restore on a throwaway stack (FROM_VERSION=1.0.0: back up on that release, restore into this build, check the downgrade refusal)
 make postgres-upgrade-drill # the one-time PostgreSQL 17 -> 18 move
 ```
@@ -143,7 +143,7 @@ these jobs in parallel (rough wall times with warm caches):
 | `govulncheck` | Go vulnerability scan | 1–2 min |
 | `frontend` | eslint, strict TypeScript, contract drift, vitest with coverage, build, `npm audit` | 2–3 min |
 | `docker` | Image build for linux/amd64 + linux/arm64 (`docker-image`, not pushed), then smoke, install, backup, PostgreSQL upgrade drills and image scan | 6–9 min |
-| `upgrade-drill (<version>)` | One leg per supported source release (0.8.16, 0.9.0, 1.0.0, 1.1.0): install it, seed data through its API, upgrade to this build, back up and restore, check the old release refuses the migrated data | per leg, in parallel |
+| `upgrade-drill (<version>)` | One leg per supported source release (0.8.16, 0.9.0, 1.0.0, 1.1.0, 2.0.0, 2.9.12): install it, seed data through its API, upgrade to this build, back up and restore, check the old release refuses the migrated data | per leg, in parallel |
 | `e2e` | Verdict of four `e2e-shard (i/4)` jobs: Playwright against the real binary, each shard with its own stack and Owner; all specs on Chromium plus the phone projects. `e2e-report` merges the shards' blob reports into one HTML report artifact | 8–11 min |
 | `e2e (webkit 1/2)`, `e2e (webkit 2/2)`, `e2e (firefox)`, `e2e (webkit-macos-calls, <group>)` | Other engines, see above; not required checks | in parallel |
 
