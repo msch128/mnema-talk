@@ -84,6 +84,7 @@ const createError = ref('')
 const creating = ref(false)
 
 async function create() {
+  if (creating.value) return
   createError.value = ''
   const trimmed = createName.value.trim()
   if (!trimmed) {
