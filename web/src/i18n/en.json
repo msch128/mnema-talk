@@ -4984,6 +4984,7 @@
     "missingBody": "It may have been deleted, or the address is wrong.",
     "loadFailed": "The page couldn’t be loaded.",
     "noEdit": "You can’t edit this page.",
-    "pageLockedNoEdit": "This page is locked. Only people who manage the wiki can change it."
+    "pageLockedNoEdit": "This page is locked. Only people who manage the wiki can change it.",
+    "moved": "Page updated."
   }
 }

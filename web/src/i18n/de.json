@@ -4984,6 +4984,7 @@
     "missingBody": "Vielleicht wurde sie gelöscht, oder die Adresse stimmt nicht.",
     "loadFailed": "Die Seite konnte nicht geladen werden.",
     "noEdit": "Du kannst diese Seite nicht bearbeiten.",
-    "pageLockedNoEdit": "Diese Seite ist gesperrt. Nur wer das Wiki verwaltet, kann sie ändern."
+    "pageLockedNoEdit": "Diese Seite ist gesperrt. Nur wer das Wiki verwaltet, kann sie ändern.",
+    "moved": "Seite aktualisiert."
   }
 }
