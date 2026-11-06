@@ -64,9 +64,9 @@ func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload an
 		return
 	}
 	dm := snap != nil && snap.IsDM(channelID)
-	if dm {
-		// A conversation's events go to its members only: never to webhooks
-		// or bots, and not to a client that does not know conversations.
+	if snap != nil && snap.IsPrivate(channelID) {
+		// A conversation's (or its Talk's) events go to its members only:
+		// never to webhooks or bots.
 		h.dmTapped(channelID, eventType, payload)
 	} else {
 		h.tapped(channelID, eventType, payload) // only what is really published

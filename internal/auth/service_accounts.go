@@ -304,9 +304,8 @@ func SetStatusText(ctx context.Context, p db.Querier, userID uuid.UUID, text str
 	return u, err
 }
 
-// LoadStats fills u's activity totals.
+// LoadStats fills u's activity totals. The message total is the maintained
+// counter, which leaves out direct messages (migration 0050).
 func LoadStats(ctx context.Context, p *db.Pool, u *User) error {
-	return p.QueryRow(ctx, `
-		SELECT voice_seconds, (SELECT COUNT(*) FROM messages WHERE user_id = $1)
-		FROM users WHERE id = $1`, u.ID).Scan(&u.VoiceSeconds, &u.MessageCount)
+	return p.QueryRow(ctx, `SELECT voice_seconds, message_count FROM users WHERE id = $1`, u.ID).Scan(&u.VoiceSeconds, &u.MessageCount)
 }

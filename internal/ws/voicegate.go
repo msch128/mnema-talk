@@ -89,6 +89,10 @@ func (h *Hub) addVoiceTime(userID, chID uuid.UUID, d time.Duration) {
 	if h.DB == nil || secs <= 0 {
 		return
 	}
+	// Time in the call of a conversation stays private: the total is public.
+	if snap, ok := h.permSnapshot(chID); ok && snap != nil && snap.IsDMTalk(chID) {
+		return
+	}
 	h.flushConflictingVoiceTime(userID, chID)
 	if h.recordPendingVoiceTime(userID, chID, secs) {
 		h.flushVoiceTime(userID)
