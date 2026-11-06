@@ -164,7 +164,7 @@ func checkDMReactionAllowed(ctx context.Context, tx pgx.Tx, messageID, userID uu
 		return fmt.Errorf("check direct message block: %w", err)
 	}
 	if blocked {
-		return core.ErrDMSend
+		return core.ErrDMReact
 	}
 	return nil
 }

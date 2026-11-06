@@ -21,6 +21,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['A group direct message holds at most %d members.', 'srvAGroupDirectMessageHolds'],
   ['Cannot send an empty message', 'srvCannotSendAnEmptyMessage'],
   ['Couldn\'t forward this message.', 'srvCouldnTForwardThisMessage'],
+  ['Couldn\'t react to this message.', 'srvCouldnTReactToThisMessage'],
   ['Couldn\'t send this message.', 'srvCouldnTSendThisMessage'],
   ['Couldn\'t start this direct message.', 'srvCouldnTStartThisDirect'],
   ['Discord could not be reached; try again later', 'srvDiscordCouldNotBeReached'],

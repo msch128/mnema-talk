@@ -26547,7 +26547,7 @@
                 }
               }
             },
-            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation, or the nonce was already used by this member in another conversation."
           },
           "401": {
             "content": {
@@ -34924,7 +34924,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing the Add reactions permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
+            "description": "FORBIDDEN: missing the Add reactions permission in the channel, a block between the two members of a one-to-one direct message (a new reaction is refused; taking one back still works), or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
           },
           "404": {
             "content": {

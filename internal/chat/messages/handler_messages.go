@@ -86,7 +86,7 @@ func (a *API) ListMessages(w http.ResponseWriter, r *http.Request) error {
 // @Success 201 {object} core.Message "Created message."
 // @Success 200 {object} core.Message "The message already created with this nonce (a retried send)."
 // @Failure 410 {object} httpx.ErrorResponse "MESSAGE_DELETED: the message sent with this nonce was deleted since; it is not posted again."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation, or the nonce was already used by this member in another conversation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing the Send messages permission in the channel, or cross-origin request rejected. RULES_NOT_ACCEPTED: the member has not accepted the community rules yet."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."

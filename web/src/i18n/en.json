@@ -247,6 +247,7 @@
       "srvAGroupDirectMessageHolds": "A group direct message holds at most {a} members.",
       "srvCannotSendAnEmptyMessage": "Can’t send an empty message.",
       "srvCouldnTForwardThisMessage": "Couldn’t forward this message.",
+      "srvCouldnTReactToThisMessage": "Couldn’t react to this message.",
       "srvCouldnTSendThisMessage": "Couldn’t send this message.",
       "srvCouldnTStartThisDirect": "Couldn’t start this direct message.",
       "srvDiscordCouldNotBeReached": "Discord couldn’t be reached. Try again later.",
