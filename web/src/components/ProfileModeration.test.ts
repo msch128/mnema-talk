@@ -187,9 +187,47 @@ describe('ProfileModerationTab details', () => {
     await w.get('[data-testid="mod-note-save"]').trigger('click')
     expect(http.calls.some(c => c.options?.method === 'PUT')).toBe(false)
     const cancel = w.findAll('[data-note] button').find(b => b.text() === 'Cancel')!
+    confirmMock.mockResolvedValueOnce(true)
     await cancel.trigger('click')
+    await flushPromises()
     expect(w.find('[data-testid="mod-note-edit-input"]').exists()).toBe(false)
     expect(w.get('[data-note]').text()).toContain('note 1')
+  })
+
+  it('keeps Save off until the note differs and confirms a saved edit with a toast', async () => {
+    const w = await load([], [note(1)])
+    await w.get('[data-testid="mod-note-edit"]').trigger('click')
+    const save = () => w.get('[data-testid="mod-note-save"]')
+    expect(save().attributes('disabled')).toBeDefined()
+    await w.get('[data-testid="mod-note-edit-input"]').setValue('  note 1 ')
+    expect(save().attributes('disabled')).toBeDefined()
+    await w.get('[data-testid="mod-note-edit-input"]').setValue('note 1, more')
+    expect(save().attributes('disabled')).toBeUndefined()
+    await save().trigger('click')
+    await flushPromises()
+    expect(useToastStore().toasts.map(x => x.text)).toContain('Saved')
+    expect(w.find('[data-testid="mod-note-edit-input"]').exists()).toBe(false)
+  })
+
+  it('asks before Escape drops a changed note and closes at once for an unchanged one', async () => {
+    const w = await load([], [note(1)])
+    await w.get('[data-testid="mod-note-edit"]').trigger('click')
+    await w.get('[data-testid="mod-note-edit-input"]').trigger('keydown', { key: 'Escape' })
+    await flushPromises()
+    expect(confirmMock).not.toHaveBeenCalled()
+    expect(w.find('[data-testid="mod-note-edit-input"]').exists()).toBe(false)
+
+    await w.get('[data-testid="mod-note-edit"]').trigger('click')
+    await w.get('[data-testid="mod-note-edit-input"]').setValue('changed')
+    confirmMock.mockResolvedValueOnce(false)
+    await w.get('[data-testid="mod-note-edit-input"]').trigger('keydown', { key: 'Escape' })
+    await flushPromises()
+    expect(confirmMock).toHaveBeenCalledTimes(1)
+    expect(w.find('[data-testid="mod-note-edit-input"]').exists()).toBe(true)
+    confirmMock.mockResolvedValueOnce(true)
+    await w.get('[data-testid="mod-note-edit-input"]').trigger('keydown', { key: 'Escape' })
+    await flushPromises()
+    expect(w.find('[data-testid="mod-note-edit-input"]').exists()).toBe(false)
   })
 
   it('toasts when deleting a note fails and leaves the note in place', async () => {
