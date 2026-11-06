@@ -85,10 +85,18 @@ func TestAProfileTotalLeavesOutConversationsAndChannelsTheViewerCannotSee(t *tes
 		MessageCount int64     `json:"message_count"`
 	}
 	bob.get("/api/members").decode(t, &members)
+	found := false
 	for _, m := range members {
-		if m.ID == alice.user.ID && (m.MessageCount != 1 || prof.MessageCount != m.MessageCount) {
+		if m.ID != alice.user.ID {
+			continue
+		}
+		found = true
+		if m.MessageCount != 1 || prof.MessageCount != m.MessageCount {
 			t.Fatalf("member list shows %d, profile shows %d, want 1", m.MessageCount, prof.MessageCount)
 		}
+	}
+	if !found {
+		t.Fatal("alice is not in the member list")
 	}
 }
 
@@ -151,4 +159,38 @@ func TestAThreadReplyInACallChatTellsTheRootsAuthorTheyFollowIt(t *testing.T) {
 	if _, ok := f.alice.expect(events.ThreadFollowUpdated, 5*time.Second); !ok {
 		t.Fatal("the root's author was not told about following the thread")
 	}
+}
+
+func TestConversationMembersStillReceiveTheCallChatLive(t *testing.T) {
+	f := newCallFixture(t)
+	talk := f.start(t)
+	f.a.send(f.dmFixture.alice, talk, "in the call chat")
+	if _, ok := f.bob.expect(events.MessageCreate, 5*time.Second); !ok {
+		t.Fatal("bob did not receive the call chat message live")
+	}
+	if _, ok := f.strangerWS.expect(events.MessageCreate, 500*time.Millisecond); ok {
+		t.Fatal("a non-member received the call chat message")
+	}
+}
+
+// An outgoing webhook hears public channels only: even one pointed at the
+// call's chat (inserted past the admin API, which refuses it) gets nothing.
+func TestAnOutgoingWebhookDoesNotHearACallChat(t *testing.T) {
+	f := newCallFixtureWith(t, allowLoopback)
+	f.a.router.Webhooks.Outgoing.SetBackoff([]time.Duration{5 * time.Millisecond})
+	f.a.router.Webhooks.SetLimits(1000, 1000)
+	talk := f.start(t)
+	open := f.a.createChannel(f.admin, "alerts", "text")
+	rc := newReceiver(t, nil)
+	hook := makeOutgoing(t, f.admin, open, rc.srv.URL+"/hook", "MESSAGE_CREATE")
+	f.a.send(f.admin, open, "control")
+	rc.next(t) // the hook works on a public channel
+	if _, err := f.a.db.Exec(context.Background(), `UPDATE outgoing_webhooks SET channel_id = $1 WHERE id = $2`, talk, hook.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.a.router.Webhooks.Outgoing.Reload(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	f.a.send(f.dmFixture.alice, talk, "private words")
+	rc.none(t)
 }
