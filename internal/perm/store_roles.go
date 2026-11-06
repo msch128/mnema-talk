@@ -77,9 +77,6 @@ func (s *Service) CreateRole(ctx context.Context, actor Subject, in RoleInput) (
 		if len(snap.roles) >= maxRoles {
 			return nil, httpx.ErrConflict("too many roles")
 		}
-		if !snap.IsOwner(actor) && snap.TopPosition(actor) < 1 {
-			return nil, errNoRoleOfOwn
-		}
 		name, color, perms, err := checkNewRole(snap, actor, in)
 		if err != nil {
 			return nil, err
@@ -109,8 +106,12 @@ func (s *Service) CreateRole(ctx context.Context, actor Subject, in RoleInput) (
 }
 
 // checkNewRole validates the name, colour and permissions of a role to create
-// (absent fields default to empty) and that the actor may hand those out.
+// (absent fields default to empty) and that the actor may hand those out and
+// has a role of their own to place it below.
 func checkNewRole(snap *Snapshot, actor Subject, in RoleInput) (name string, color int, perms Set, err error) {
+	if !snap.IsOwner(actor) && snap.TopPosition(actor) < 1 {
+		return "", 0, 0, errNoRoleOfOwn
+	}
 	if in.Name != nil {
 		name = *in.Name
 	}
