@@ -1,0 +1,25 @@
+web/src/stores/chat/dmCalls.ts
+  s_06fcde5dbef956::t_666948170c0043 78-79
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_272d1367b52665 22-23
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_a9a50be4f670d0 193,200
+web/src/composables/webrtc/lobby.test.ts
+  s_06fcde5dbef956::t_a8c2c13eda00ab 4,100-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3bad7e759ca3999f7edd5719e7072c245e58724a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
