@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -133,7 +134,10 @@ func TestDesktopCompatFileMatchesServerContract(t *testing.T) {
 	}
 }
 
-func TestHealthListsTheMessageNonceFeature(t *testing.T) {
+// A client asks for these only when the server lists them: an older server
+// rejects the unknown field (messages.nonce) or reads the path as a report id
+// (reports.open_count).
+func TestHealthListsTheFeaturesWebClientsWaitFor(t *testing.T) {
 	hc := &healthCheck{ttl: time.Hour, ping: func(context.Context) error { return nil }}
 	rec := httptest.NewRecorder()
 	health(hc, "1.2.3", nil).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
@@ -141,10 +145,9 @@ func TestHealthListsTheMessageNonceFeature(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
-	for _, f := range body.Features {
-		if f == "messages.nonce" {
-			return
+	for _, want := range []string{"messages.nonce", "reports.open_count"} {
+		if !slices.Contains(body.Features, want) {
+			t.Errorf("features %v lack %s, which web clients need before they use it", body.Features, want)
 		}
 	}
-	t.Fatalf("features %v lack messages.nonce, which web clients need before they send a nonce", body.Features)
 }

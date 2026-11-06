@@ -12,7 +12,7 @@ beforeEach(() => {
   setActivePinia(createPinia())
   setLocale('en')
   usePermissionsStore().info = { owner: false, permissions: PERMISSION_BITS.manage_reports, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [], channels: [] }
-  useServerFeaturesStore().list = ['reports']
+  useServerFeaturesStore().list = ['reports', 'reports.open_count']
 })
 
 const nav = () => mount(AdminNav, { props: { tabs: ['users', 'reports'], active: 'users' }, global: { plugins: [i18nPlugin] } })

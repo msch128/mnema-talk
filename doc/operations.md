@@ -875,7 +875,7 @@ committed statement and public key.
   the optional features this build has, so a newer web app can hide what an
   older server lacks. In 1.1 it holds `blocks`, `dm`, `reports`, `saved`,
   `forward`, `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`;
-  1.2 adds `search.filters.v3`, `talks.lobby`, `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`, `ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`; later releases add `events.roles`, `events.recurrence` and `wiki`;
+  1.2 adds `search.filters.v3`, `talks.lobby`, `status.expiry`, `reminders`, `messages.scheduled`, `polls.anonymous`, `channels.auto_delete`, `automod`, `moderation.history`, `ops.status`, `import.discord`, `talks.stage`, `talks.reactions`, `channels.forum`, `events`, `notify.levels.v2` and `dm.v2`; later releases add `events.roles`, `events.recurrence`, `wiki`, `messages.nonce` and `reports.open_count`;
   names never change meaning ([api-stability.md](api-stability.md)). A 1.0.x
   server sends no list. The compose
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)
