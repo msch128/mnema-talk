@@ -1,6 +1,10 @@
-import type { Page } from '@playwright/test'
-import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks, expectTalkLive } from './helpers'
+import type { BrowserContext, Page } from '@playwright/test'
+import { apiFetch, responseString, suiteMember, trackPeerConnections, leaveTalks, expectTalkLive, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 // The connection panel's "audio sent" must grow while the microphone sends.
 // The call has the browser's fake microphone, so it runs in CI only.
@@ -29,7 +33,9 @@ async function panelPacketsSent(page: Page): Promise<number> {
 
 test('the connection panel counts audio packets up while the microphone sends', async ({ browser }) => {
   const ctxA = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(ctxA)
   const ctxB = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(ctxB)
   await ctxA.addInitScript(trackPeerConnections)
   await ctxB.addInitScript(trackPeerConnections)
   const admin = await ctxA.newPage()

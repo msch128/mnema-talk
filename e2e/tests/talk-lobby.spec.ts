@@ -1,6 +1,10 @@
-import type { Page } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, suiteMember, leaveTalks, expectTalkLive, trackPeerConnections } from './helpers'
+import type { BrowserContext, Page } from '@playwright/test'
+import { apiFetch, awaitApiBudget, responseString, suiteMember, leaveTalks, expectTalkLive, trackPeerConnections, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 // Create-a-Talk lobbies (doc/talks.md). Joining a lobby opens a temporary Talk;
 // the opener leads it; when the leader leaves, the member present longest does.
@@ -26,7 +30,9 @@ test('joining a lobby opens a Talk, its leader hands over, and the empty Talk go
   test.setTimeout(240_000) // two calls, a hand-over and the removal grace
   const ctxOptions = { permissions: ['microphone' as const], viewport: { width: 1400, height: 900 } }
   const aCtx = await browser.newContext(ctxOptions)
+  opened.push(aCtx)
   const bCtx = await browser.newContext(ctxOptions)
+  opened.push(bCtx)
   // expectTalkLive reads window.__pcs, which this records.
   for (const ctx of [aCtx, bCtx]) await ctx.addInitScript(trackPeerConnections)
   const a = await aCtx.newPage()

@@ -1,6 +1,10 @@
-import type { Page } from '@playwright/test'
-import { apiFetch, trackPeerConnections, expectTalkLive, leaveTalks } from './helpers'
+import type { BrowserContext, Page } from '@playwright/test'
+import { apiFetch, trackPeerConnections, expectTalkLive, leaveTalks, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
@@ -27,7 +31,9 @@ const peerCount = (page: Page) => page.evaluate(() => window.__pcs.length)
 // there and only the call; the first can take it back, which moves it again.
 test('a call moves between two sessions of one account', async ({ browser }) => {
   const ctxA = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(ctxA)
   const ctxB = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(ctxB)
   await ctxA.addInitScript(trackPeerConnections)
   await ctxB.addInitScript(trackPeerConnections)
   const a = await ctxA.newPage()

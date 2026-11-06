@@ -1,7 +1,11 @@
-import type { Page } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, trackPeerConnections, leaveTalks } from './helpers'
+import type { BrowserContext, Page } from '@playwright/test'
+import { apiFetch, responseString, responseUserId, trackPeerConnections, leaveTalks, leaveAndClose } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from './fixtures'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'cool_guy'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
@@ -59,7 +63,9 @@ const sending = (page: Page) => page.evaluate(() => {
 
 test('changing frame rate in a running stream keeps the stream, the capture and the viewer\'s picture', async ({ browser }) => {
   const sharerCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(sharerCtx)
   const viewerCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  opened.push(viewerCtx)
   await sharerCtx.addInitScript(trackPeerConnections)
   await sharerCtx.addInitScript(fakeDisplayMedia)
   const sharer = await sharerCtx.newPage()

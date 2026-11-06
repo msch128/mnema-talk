@@ -1,6 +1,10 @@
-import type { Page } from '@playwright/test'
-import { apiFetch, awaitApiBudget, responseString, suiteMember, expectTalkLive, leaveTalks, trackPeerConnections } from './helpers'
+import type { BrowserContext, Page } from '@playwright/test'
+import { apiFetch, awaitApiBudget, responseString, suiteMember, expectTalkLive, leaveTalks, trackPeerConnections, leaveAndClose } from './helpers'
 import { test, expect } from './fixtures'
+
+// A failed attempt must not leave its members in the Talk: the retry signs in as the same members and its join would meet the "take over the Talk here?" dialog.
+const opened: BrowserContext[] = []
+test.afterEach(() => leaveAndClose(opened))
 
 // Stages (doc/talks.md): the audience cannot speak until a Stage manager gives
 // them talk power; a raised hand is answered with one click; reactions float
@@ -25,7 +29,9 @@ async function signIn(page: Page, username: string, password: string) {
 test('the audience of a Stage asks to speak, is accepted, and reacts', async ({ browser }) => {
   const ctxOptions = { permissions: ['microphone' as const], viewport: { width: 1400, height: 900 } }
   const aCtx = await browser.newContext(ctxOptions)
+  opened.push(aCtx)
   const bCtx = await browser.newContext(ctxOptions)
+  opened.push(bCtx)
   await aCtx.addInitScript(trackPeerConnections)
   await bCtx.addInitScript(trackPeerConnections)
   const a = await aCtx.newPage()
