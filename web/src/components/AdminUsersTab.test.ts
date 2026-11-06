@@ -130,3 +130,25 @@ describe('admin account recovery and cancellation', () => {
     expect(w.text()).toContain('2026-01-01T00:00:00Z')
   })
 })
+
+describe('admin members list states', () => {
+  it('shows neither "no users" while loading nor after a failed load, but an error with a retry', async () => {
+    let settle: (v: unknown) => void = () => undefined
+    apiMock.mockReturnValueOnce(new Promise(resolve => { settle = resolve }))
+    const w = keep(mount(AdminUsersTab))
+    await flushPromises()
+    expect(w.text()).not.toContain('No members found')
+    settle([member()])
+    apiMock.mockReset().mockRejectedValue(new Error('down'))
+    const failing = keep(mount(AdminUsersTab))
+    await flushPromises()
+    expect(failing.find('[data-testid="users-error"]').exists()).toBe(true)
+    expect(failing.text()).not.toContain('No members found')
+    apiMock.mockReset().mockResolvedValue([member()])
+    await failing.get('[data-testid="state-retry"]').trigger('click')
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledWith('/api/admin/users', expect.anything())
+    expect(failing.find('[data-testid="users-error"]').exists()).toBe(false)
+    expect(failing.findAll('[data-testid="user-row"]')).toHaveLength(1)
+  })
+})

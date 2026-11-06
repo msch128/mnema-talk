@@ -990,7 +990,8 @@
       "other": "{count} neue Antworten"
     },
     "jumpToUnread": "Zur ersten ungelesenen",
-    "removeFile": "Datei entfernen"
+    "removeFile": "Datei entfernen",
+    "tagsLoadFailed": "Die Tags konnten nicht geladen werden."
   },
   "members": {
     "title": "Mitglieder",
@@ -1827,7 +1828,8 @@
       "removed": "Kurzlink entfernt.",
       "copy": "Link kopieren",
       "copied": "Kopiert",
-      "copyFailed": "Der Link konnte nicht kopiert werden."
+      "copyFailed": "Der Link konnte nicht kopiert werden.",
+      "loadFailed": "Die Einladungsadresse konnte nicht geladen werden. Versuch es noch einmal."
     },
     "tabs": {
       "users": "Mitglieder",
@@ -2359,10 +2361,6 @@
     "layoutSaved": "Layout erfolgreich gespeichert",
     "addChannelTo": "Kanal zu {name} hinzufügen",
     "hasUnsavedLayout": "Ungespeicherte Änderungen an der Kanalreihenfolge.",
-    "moveUp": "Nach oben",
-    "moveDown": "Nach unten",
-    "renameChannel": "Kanal bearbeiten",
-    "renameCategory": "Kategorie bearbeiten",
     "editChannelTitle": "Kanal „{name}“ bearbeiten",
     "editCategoryTitle": "Kategorie „{name}“ bearbeiten",
     "channelNameLabel": "Kanalname",
@@ -2419,7 +2417,6 @@
     "copied": "Kopiert",
     "linkCopied": "Link kopiert",
     "copyFailed": "Das Kopieren hat nicht geklappt. Kopiere den Link von Hand:",
-    "deleteInvite": "Einladung löschen",
     "deleteInviteTitle": "Einladung {code} löschen?",
     "deleteInviteBody": "Der Code funktioniert danach nicht mehr.",
     "inviteDeleted": "Einladung gelöscht",
@@ -2496,7 +2493,8 @@
       "openReports": "{count} offen"
     },
     "access": {
-      "saved": "Gespeichert."
+      "saved": "Gespeichert.",
+      "loadFailed": "Die Zugangseinstellungen konnten nicht geladen werden. Versuch es noch einmal."
     },
     "maxUsesLabel": "Nutzungen",
     "maxUsesPlaceholder": "Unbegrenzt",
@@ -2533,8 +2531,19 @@
       "usesInvalid": "Gib eine ganze Zahl von mindestens den bisherigen {used} Nutzungen bis {max} ein.",
       "usesHint": "Bisher {used} genutzt. Das Limit kann nicht darunter liegen.",
       "saved": "Einladung aktualisiert.",
-      "edit": "Einladung bearbeiten"
-    }
+      "editNamed": "Einladung {code} bearbeiten"
+    },
+    "invitesLoadFailed": "Die Einladungen konnten nicht geladen werden. Versuch es noch einmal.",
+    "deleteInviteNamed": "Einladung {code} löschen",
+    "copyLinkFor": "Link zur Einladung {code} kopieren",
+    "mediaLoadFailed": "Die Medienliste konnte nicht geladen werden. Versuch es noch einmal.",
+    "usersLoadFailed": "Die Mitglieder konnten nicht geladen werden. Versuch es noch einmal.",
+    "moveUpNamed": "{name} nach oben",
+    "moveDownNamed": "{name} nach unten",
+    "renameChannelNamed": "Kanal {name} bearbeiten",
+    "renameCategoryNamed": "Kategorie {name} bearbeiten",
+    "deleteChannelNamed": "Kanal {name} löschen",
+    "deleteCategoryNamed": "Kategorie {name} löschen"
   },
   "profile": {
     "addedBy": "Hinzugefügt von {name}",
@@ -2955,13 +2964,15 @@
       "deleteTitle": ":{name}: löschen?",
       "deleteBody": "Bestehende Nachrichten und Reaktionen zeigen :name: ab jetzt als Text. Das lässt sich nicht rückgängig machen.",
       "animated": "Animiert",
-      "rename": "Umbenennen",
       "nameRules": "2 bis 32 Zeichen: a–z, 0–9 und _",
       "empty": "Noch keine eigenen Emojis.",
       "full": "Das Limit ist erreicht. Lösche ein Emoji, um Platz zu schaffen.",
       "choose": "Datei wählen",
       "noFile": "Noch keine Datei",
-      "emptyHint": "Lade oben ein Bild hoch, um das erste hinzuzufügen."
+      "emptyHint": "Lade oben ein Bild hoch, um das erste hinzuzufügen.",
+      "loadFailed": "Die eigenen Emojis konnten nicht geladen werden. Versuch es noch einmal.",
+      "renameNamed": ":{name}: umbenennen",
+      "deleteNamed": ":{name}: löschen"
     }
   },
   "activity": {
@@ -3874,7 +3885,8 @@
     "slowModeCustom": "Eigener Wert",
     "slowModeUnit": "Einheit",
     "noBansHint": "Gesperrte Mitglieder erscheinen hier, und du kannst eine Sperre aufheben.",
-    "bansLoadFailed": "Die Sperren konnten nicht geladen werden. Versuche es noch einmal."
+    "bansLoadFailed": "Die Sperren konnten nicht geladen werden. Versuche es noch einmal.",
+    "unbanNamed": "{name} entsperren"
   },
   "editHistory": {
     "menu": "Bearbeitungsverlauf",
@@ -4000,7 +4012,8 @@
       "deleteTitle": "Befehl /{name} löschen?",
       "deleteBody": "Der Bot kann ihn erneut registrieren."
     },
-    "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten."
+    "emptyHint": "Gib oben einem Bot einen Namen, um ihn anzulegen und sein Token zu erhalten.",
+    "loadFailed": "Die Bots konnten nicht geladen werden. Versuch es noch einmal."
   },
   "appSettings": {
     "installTitle": "Installieren",

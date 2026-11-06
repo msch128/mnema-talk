@@ -155,4 +155,15 @@ describe('AdminMediaTab', () => {
     expect(apiMock).toHaveBeenCalledTimes(1)
     expect(toasts().at(-1)!.type).toBe('error')
   })
+
+  it('says the media list could not be loaded, with a retry, instead of "no media"', async () => {
+    serve({ fail: { '/api/admin/media?': 'list down' } })
+    const w = mount(AdminMediaTab)
+    await flushPromises()
+    expect(w.find('[data-testid="media-error"]').exists()).toBe(true)
+    expect(w.text()).not.toContain('No media yet')
+    apiMock.mockClear()
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    expect(apiMock).toHaveBeenCalledWith(expect.stringContaining('/api/admin/media?'), expect.anything())
+  })
 })

@@ -11,6 +11,7 @@ import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 import presets from '../lib/presets.json'
 import EmptyState from './EmptyState.vue'
+import StatePanel from './StatePanel.vue'
 import EditInviteDialog from './EditInviteDialog.vue'
 import AdminVanityLink from './AdminVanityLink.vue'
 import { usePermissionsStore } from '../stores/permissions'
@@ -19,6 +20,8 @@ const toasts = useToastStore()
 const permissions = usePermissionsStore()
 
 const invites = ref<Invite[]>([])
+const loaded = ref(false)
+const failed = ref(false)
 const newInviteUses = ref<string | number>('')
 // A week is the default: an invite that never runs out is a choice, not what an empty form gives.
 const DEFAULT_DAYS = 7
@@ -38,7 +41,10 @@ function showError(e: unknown) {
 async function loadInvites() {
   try {
     invites.value = await api('/api/admin/invites', { decode: arrayDecoder('invites', isAuthInvite) })
+    failed.value = false
+    loaded.value = true
   } catch (e) {
+    failed.value = true
     showError(e)
   }
 }
@@ -169,7 +175,9 @@ onMounted(loadInvites)
     </form>
 
     <div class="bg-mnema-surface rounded-lg border border-mnema-hairline overflow-hidden divide-y divide-mnema-hairline">
-      <EmptyState v-if="!visible.length" :icon="Link" :text="$t('admin.noInvites')" :hint="$t('admin.noInvitesHint')" />
+      <StatePanel v-if="!loaded && failed" state="error" retryable data-testid="invites-error" @retry="loadInvites">{{ $t('admin.invitesLoadFailed') }}</StatePanel>
+      <StatePanel v-else-if="!loaded" state="loading" />
+      <EmptyState v-else-if="!visible.length" :icon="Link" :text="$t('admin.noInvites')" :hint="$t('admin.noInvitesHint')" />
       <div v-for="inv in visible" :key="inv.id" :class="['px-4 py-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-sm', spent(inv) && 'opacity-70']">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0 flex-1 basis-64">
           <span class="font-mono bg-mnema-elevated border border-mnema-border px-2 py-0.5 rounded-sm text-mnema-text font-semibold break-all">{{ inv.code }}</span>
@@ -181,6 +189,7 @@ onMounted(loadInvites)
           <button
             type="button"
             class="flex items-center gap-1.5 text-mnema-accent hover:text-mnema-accent-hover transition font-medium"
+            :aria-label="copiedCode === inv.code ? $t('admin.copied') : $t('admin.copyLinkFor', { code: inv.code })"
             @click="copyInviteLink(inv.code)"
           >
             <Check v-if="copiedCode === inv.code" class="w-4 h-4" />
@@ -191,8 +200,8 @@ onMounted(loadInvites)
             type="button"
             class="text-mnema-tertiary hover:text-mnema-text transition"
             data-testid="invite-edit"
-            :title="$t('admin.editInvite.edit')"
-            :aria-label="$t('admin.editInvite.edit')"
+            :title="$t('admin.editInvite.editNamed', { code: inv.code })"
+            :aria-label="$t('admin.editInvite.editNamed', { code: inv.code })"
             @click="editing = inv"
           >
             <Pencil class="w-4 h-4" />
@@ -200,8 +209,8 @@ onMounted(loadInvites)
           <button
             type="button"
             class="text-mnema-tertiary hover:text-mnema-danger transition"
-            :title="$t('admin.deleteInvite')"
-            :aria-label="$t('admin.deleteInvite')"
+            :title="$t('admin.deleteInviteNamed', { code: inv.code })"
+            :aria-label="$t('admin.deleteInviteNamed', { code: inv.code })"
             @click="deleteInvite(inv)"
           >
             <Trash2 class="w-4 h-4" />

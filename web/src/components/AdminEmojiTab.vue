@@ -9,6 +9,7 @@ import { useEmojiStore, prefersReducedMotion } from '../stores/emoji'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import EmptyState from './EmptyState.vue'
+import StatePanel from './StatePanel.vue'
 
 const store = useEmojiStore()
 const toasts = useToastStore()
@@ -23,7 +24,7 @@ const draft = ref('')
 const NAME_RE = /^[a-z0-9_]{2,32}$/
 const nameOk = computed(() => NAME_RE.test(name.value.trim().toLowerCase()))
 const draftOk = computed(() => NAME_RE.test(draft.value.trim().toLowerCase()))
-const full = computed(() => store.items.length >= store.limit)
+const full = computed(() => store.loaded && store.items.length >= store.limit)
 
 function showError(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
@@ -146,7 +147,9 @@ onMounted(() => { void store.load() })
     <p v-if="full" class="text-xs text-mnema-danger">{{ $t('emoji.admin.full') }}</p>
 
     <div class="bg-mnema-surface rounded-lg border border-mnema-hairline overflow-hidden divide-y divide-mnema-hairline">
-      <EmptyState v-if="!store.items.length" :icon="Smile" :text="$t('emoji.admin.empty')" :hint="$t('emoji.admin.emptyHint')" />
+      <StatePanel v-if="!store.loaded && store.failed" state="error" retryable data-testid="emoji-error" @retry="store.load()">{{ $t('emoji.admin.loadFailed') }}</StatePanel>
+      <StatePanel v-else-if="!store.loaded" state="loading" />
+      <EmptyState v-else-if="!store.items.length" :icon="Smile" :text="$t('emoji.admin.empty')" :hint="$t('emoji.admin.emptyHint')" />
       <div v-for="e in store.items" :key="e.id" class="px-4 py-2 flex items-center justify-between gap-3 text-sm" data-testid="emoji-row">
         <div class="flex items-center gap-3 min-w-0">
           <img :src="emojiImage(e, prefersReducedMotion()).src" :alt="`:${e.name}:`" class="h-8 w-8 object-contain shrink-0" />
@@ -168,10 +171,10 @@ onMounted(() => { void store.load() })
           <span v-if="e.animated" class="text-xs text-mnema-tertiary">{{ $t('emoji.admin.animated') }}</span>
         </div>
         <div v-if="editing !== e.id" class="flex items-center gap-3 shrink-0">
-          <button type="button" class="text-mnema-tertiary hover:text-mnema-accent transition" :title="$t('emoji.admin.rename')" :aria-label="$t('emoji.admin.rename')" @click="startRename(e.id, e.name)">
+          <button type="button" class="text-mnema-tertiary hover:text-mnema-accent transition" :title="$t('emoji.admin.renameNamed', { name: e.name })" :aria-label="$t('emoji.admin.renameNamed', { name: e.name })" @click="startRename(e.id, e.name)">
             <Pencil class="w-4 h-4" />
           </button>
-          <button type="button" class="text-mnema-tertiary hover:text-mnema-danger transition" :title="$t('common.delete')" :aria-label="$t('common.delete')" @click="remove(e.id, e.name)">
+          <button type="button" class="text-mnema-tertiary hover:text-mnema-danger transition" :title="$t('emoji.admin.deleteNamed', { name: e.name })" :aria-label="$t('emoji.admin.deleteNamed', { name: e.name })" @click="remove(e.id, e.name)">
             <Trash2 class="w-4 h-4" />
           </button>
         </div>

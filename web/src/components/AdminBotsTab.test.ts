@@ -137,4 +137,17 @@ describe('AdminBotsTab', () => {
     const w = await mountTab()
     expect(w.get('[data-testid="bot-row"]').text()).toContain('No role')
   })
+
+  it('says the bots could not be loaded, with a retry, instead of "no bots"', async () => {
+    apiMock.mockImplementation(async path => {
+      if (path === '/api/admin/bots') throw new Error('down')
+      return []
+    })
+    const w = await mountTab()
+    expect(w.find('[data-testid="bots-error"]').exists()).toBe(true)
+    expect(w.text()).not.toContain('No bots yet')
+    apiMock.mockClear()
+    await w.get('[data-testid="state-retry"]').trigger('click')
+    expect(apiMock).toHaveBeenCalledWith('/api/admin/bots', expect.anything())
+  })
 })

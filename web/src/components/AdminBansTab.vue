@@ -80,6 +80,7 @@ onMounted(load)
         <button
           type="button"
           data-testid="unban"
+          :aria-label="$t('moderation.unbanNamed', { name: ban.display_name || ban.username })"
           class="flex shrink-0 items-center gap-1.5 font-medium text-mnema-accent transition hover:text-mnema-accent-hover"
           @click="unban(ban)"
         >
