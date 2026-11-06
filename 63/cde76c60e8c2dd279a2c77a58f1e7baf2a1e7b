@@ -1,0 +1,37 @@
+api/openapi.json
+  s_06fcde5dbef956::t_ca9ac95a6b0957 26550,34927
+internal/chat/core/shared_rules.go
+  s_06fcde5dbef956::t_d5883130240ae0 24-27
+internal/chat/messages/dm_gate.go
+  s_06fcde5dbef956::t_4f2ff85fe0622c 167
+internal/chat/messages/handler_lookup.go
+  s_06fcde5dbef956::t_0857dbb8e66e1a 30
+internal/chat/messages/handler_messages.go
+  s_06fcde5dbef956::t_df8188bceac2fe 89
+internal/repo/testdata/error_messages.golden.json
+  s_06fcde5dbef956::t_f5a1e87edcf86d 21
+internal/server/dm_integration_test.go
+  s_06fcde5dbef956::t_c40b86e231ccd0 259-265
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_7c1bc568ae373f 250
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_dc8971d8fa56ad 250
+web/src/lib/errorSentencesA.ts
+  s_06fcde5dbef956::t_29341acdbeecd1 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "63cde76c60e8c2dd279a2c77a58f1e7baf2a1e7b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
