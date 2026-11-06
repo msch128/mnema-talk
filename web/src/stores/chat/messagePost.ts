@@ -30,11 +30,11 @@ export async function postWithReplyFallback<T>(replyToId: string | null, post: (
 }
 
 /** Writing a message means having read everything before it: the server moves the marker (and tells the other sessions); this does the same here at once. Thread replies change nothing, and neither does a message older than the marker (the answer to a repeated send). */
-export function markReadBySending({ cs }: Cx, msg: Message) {
+export function markReadBySending({ cs }: Cx, msg: Message, repeatOf?: string) {
   if (msg.parent_id) return
   const prev = cs.readStates.value[msg.channel_id] || { channel_id: msg.channel_id, notify_level: 'all' as const, unread_count: 0, mention_count: 0, last_read_at: null }
-  // A repeated send answers with the old message: the marker only moves forward.
-  if (prev.last_read_at && Date.parse(prev.last_read_at) > Date.parse(msg.created_at)) return
+  // The answer to a repeated send is the old message, written before this send began: it must not pull the marker back. A fresh message always moves it (the server's clock and the marker's are not compared).
+  if (repeatOf && prev.last_read_at && Date.parse(msg.created_at) < Date.parse(repeatOf) && Date.parse(prev.last_read_at) > Date.parse(msg.created_at)) return
   cs.readStates.value = {
     ...cs.readStates.value,
     [msg.channel_id]: { ...prev, unread_count: 0, mention_count: 0, last_read_at: msg.created_at }
@@ -42,11 +42,11 @@ export function markReadBySending({ cs }: Cx, msg: Message) {
   if (msg.channel_id === cs.activeChannel.value?.id) cs.activeChannelLastReadAt.value = msg.created_at
 }
 
-/** A message the server accepted joins the window. The WebSocket echo is de-duplicated by insertMessage / countReply. */
-export function landSent(cx: Cx, msg: Message) {
+/** A message the server accepted joins the window. `repeatOf` is when the send first began, for a send that is a repeat. The WebSocket echo is de-duplicated by insertMessage / countReply. */
+export function landSent(cx: Cx, msg: Message, repeatOf?: string) {
   countReply(cx, msg)
   insertMessage(cx, msg)
-  markReadBySending(cx, msg)
+  markReadBySending(cx, msg, repeatOf)
 }
 
 export interface TextSend { content: string; parentId: string | null; replyToId: string | null; nonce: string; attachmentIds?: readonly string[] }

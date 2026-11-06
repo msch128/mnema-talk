@@ -116,6 +116,8 @@ function dmState() {
 /** Messages written while the connection was down, waiting to be sent (see outbox.ts). */
 function outboxState() {
   return {
+    /** Names this tab in the "sending" mark it writes with a message, so other tabs leave that message to it (see outbox.ts). */
+    tabId: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
     outbox: ref<PendingMessage[]>([]),
     // Conversations whose queue is being sent right now.
     outboxBusy: new Set<string>(),

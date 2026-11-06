@@ -88,3 +88,34 @@ func TestBuiltInRolesGetReportsAndKickOnUpgrade(t *testing.T) {
 		t.Fatalf("a second run changed the Moderator:\n got  %+v\n want %+v", got, again)
 	}
 }
+
+// A seeded Moderator the Owner renamed does not pass the grant on to a
+// "Moderator" created much later, and a role of that name from before 0034
+// is no seed either.
+func TestRenamedSeedDoesNotGrantALaterModerator(t *testing.T) {
+	p := starterDB(t)
+	ctx := context.Background()
+	if err := p.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	tx := beginRolledBack(t, p)
+	mod := readNamed(t, ctx, tx, "Moderator")
+	// 0034 ran a month ago; the seeded roles date from then.
+	if _, err := tx.Exec(ctx, `UPDATE schema_migrations SET applied_at = NOW() - INTERVAL '30 days' WHERE filename = '0034_starter_roles.sql'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE roles SET created_at = NOW() - INTERVAL '30 days', name = 'Mods', permissions = $2 WHERE id = $1`, mod.id, int64(moderatorBits())); err != nil {
+		t.Fatal(err)
+	}
+	later := insertPlainRole(t, ctx, tx, "Moderator", 30)
+	if _, err := tx.Exec(ctx, `UPDATE roles SET permissions = $2 WHERE id = $1`, later, int64(perm.TimeoutMembers)); err != nil {
+		t.Fatal(err)
+	}
+	before := readRole(t, ctx, tx, later)
+	if _, err := tx.Exec(ctx, reportsKickSQL); err != nil {
+		t.Fatal(err)
+	}
+	if got := readRole(t, ctx, tx, later); got != before {
+		t.Fatalf("the later Moderator changed:\n got  %+v\n want %+v", got, before)
+	}
+}

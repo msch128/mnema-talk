@@ -13,6 +13,10 @@ import type { PendingMessage } from './outboxTypes'
 
 export const OUTBOX_KEY_PREFIX = 'mnema.outbox.'
 const MAX_KEPT = 50
+/** A request that gets no answer for this long counts as a lost connection. */
+export const SEND_TIMEOUT_MS = 15000
+/** Another tab's "sending" mark holds this long: its request has ended by then, answered or timed out. */
+export const SEND_LEASE_MS = SEND_TIMEOUT_MS + 5000
 const MAX_TEXT = 4000
 
 /**
@@ -42,12 +46,17 @@ function asPending(value: unknown, uid: string): PendingMessage | null {
   const content = text(v['content'])
   if (!nonce || !channelId || !content || v['userId'] !== uid) return null
   const interrupted = v['status'] === 'sending'
+  const owner = text(v['owner'])
+  const since = typeof v['sendingSince'] === 'number' ? v['sendingSince'] : null
+  // A "sending" mark stays what it is (another tab's request may be out); outbox.ts decides whether it still holds.
+  const leased = interrupted && owner !== null && since !== null
   return {
     nonce, channelId, userId: uid, content: clampChars(content, MAX_TEXT),
     parentId: text(v['parentId']), replyToId: text(v['replyToId']),
     createdAt: text(v['createdAt']) ?? new Date().toISOString(),
     // Whatever was in flight when the page went away is waiting again, and may have arrived.
-    status: v['status'] === 'failed' ? 'failed' : 'waiting',
+    status: v['status'] === 'failed' ? 'failed' : leased ? 'sending' : 'waiting',
+    ...(leased ? { owner, sendingSince: since } : {}),
     error: typeof v['error'] === 'string' ? v['error'].slice(0, 300) : '',
     cause: v['cause'] === 'server' ? 'server' : 'offline',
     attempts: typeof v['attempts'] === 'number' ? v['attempts'] : 0,
@@ -89,7 +98,10 @@ export function loadStoredOutbox(uid: string): PendingMessage[] {
       if (one) found.push(one)
     }
     found.push(...takeLegacyList(uid))
-    return found.sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(-MAX_KEPT)
+    found.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    // What is left out here must not stay in storage: it would come back at every load.
+    found.slice(0, Math.max(0, found.length - MAX_KEPT)).forEach(p => removeStoredEntry(uid, p.nonce))
+    return found.slice(-MAX_KEPT)
   } catch {
     return []
   }
@@ -97,12 +109,18 @@ export function loadStoredOutbox(uid: string): PendingMessage[] {
 
 /** Older versions kept the account's whole list under one key: its messages move to a key each, and the key goes. */
 function takeLegacyList(uid: string): PendingMessage[] {
-  const parsed: unknown = JSON.parse(localStorage.getItem(legacyKey(uid)) || '[]')
-  if (!Array.isArray(parsed)) return []
-  const items = parsed.map(item => asPending(item, uid)).filter((p): p is PendingMessage => p !== null)
-  items.forEach(saveStoredEntry)
-  localStorage.removeItem(legacyKey(uid))
-  return items
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(legacyKey(uid)) || '[]')
+    if (!Array.isArray(parsed)) return []
+    const items = parsed.map(item => asPending(item, uid)).filter((p): p is PendingMessage => p !== null)
+    items.forEach(saveStoredEntry)
+    localStorage.removeItem(legacyKey(uid))
+    return items
+  } catch {
+    // Unreadable: it can never be read, and must not hide the per-message entries.
+    try { localStorage.removeItem(legacyKey(uid)) } catch { /* storage blocked */ }
+    return []
+  }
 }
 
 /** Stores one pending message under its own key. */

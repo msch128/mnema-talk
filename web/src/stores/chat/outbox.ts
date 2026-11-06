@@ -6,7 +6,7 @@ import type { Cx } from './state'
 import type { PendingMessage } from './outboxTypes'
 import { draftSessionAlive, onDraftSessionEnd } from '../../lib/drafts'
 import { landSent, newNonce, postText, type TextSend } from './messagePost'
-import { KEEP_MAX_MS, REPEAT_SAFE_MS, loadStoredOutbox, nonceOfKey, readStoredEntry, removeStoredEntry, saveStoredEntry } from './outboxStorage'
+import { KEEP_MAX_MS, REPEAT_SAFE_MS, SEND_LEASE_MS, SEND_TIMEOUT_MS, loadStoredOutbox, nonceOfKey, readStoredEntry, removeStoredEntry, saveStoredEntry } from './outboxStorage'
 
 // The outbox keeps text messages that could not be sent because the connection
 // was down, and sends them again, in order per conversation, once it is back.
@@ -19,12 +19,15 @@ import { KEEP_MAX_MS, REPEAT_SAFE_MS, loadStoredOutbox, nonceOfKey, readStoredEn
 // again by itself near that age (see REPEAT_SAFE_MS in outboxStorage.ts).
 // Tabs share the stored messages: each tab writes only the messages it changed
 // and follows the others through the storage event. Two tabs may try the same
-// message; the nonce makes that safe, and the echo is shown once.
+// message; the nonce makes that safe, and the echo is shown once. To keep it
+// to one sender in practice, a tab marks the message "sending" (with its tab id
+// and the time) while its request is out; other tabs show it but leave it
+// alone until that mark is older than a request can last. Adopting what
+// another tab wrote never sends by itself: only a tab's own timer or the
+// reconnect does, so tabs cannot hand a message back and forth.
 
 const RETRY_START_MS = 5000
 const RETRY_MAX_MS = 30000
-/** A request that gets no answer for this long counts as a lost connection. */
-const SEND_TIMEOUT_MS = 15000
 /** A server that keeps failing for one message is not "offline": after this many tries it is shown as not sent. */
 const MAX_SERVER_ATTEMPTS = 5
 const ECHO_MEMORY_MS = 60000
@@ -59,15 +62,35 @@ const age = (p: PendingMessage, now: number) => {
 }
 
 /** Too old to be sent by itself: it may have arrived, and the server no longer recognises its nonce. */
-const unsafeToRepeat = (p: PendingMessage, now: number) => p.possiblyDelivered && age(p, now) > REPEAT_SAFE_MS
+export const unsafeToRepeat = (p: PendingMessage, now: number) => p.possiblyDelivered && age(p, now) > REPEAT_SAFE_MS
 
 /** Marks as not sent what must not be repeated any more, and drops what is far too old. */
 function expire(cx: Cx, now = Date.now()) {
   const list = cx.cs.outbox.value
-  if (!list.some(p => age(p, now) > KEEP_MAX_MS || (p.status !== 'failed' && unsafeToRepeat(p, now)))) return
+  const expired = t('outbox.expired')
+  // A failed one too: its error (a refusal, say) says nothing about the repeat it would now be.
+  const lapsed = (p: PendingMessage) => unsafeToRepeat(p, now) && (p.status !== 'failed' || p.error !== expired)
+  if (!list.some(p => age(p, now) > KEEP_MAX_MS || lapsed(p))) return
   commit(cx, list.filter(p => age(p, now) <= KEEP_MAX_MS)
-    .map(p => p.status !== 'failed' && unsafeToRepeat(p, now) ? { ...p, status: 'failed' as const, error: t('outbox.expired') } : p))
+    .map(p => lapsed(p) ? { ...p, status: 'failed' as const, error: expired, ...released } : p))
 }
+
+const released = { owner: undefined, sendingSince: undefined }
+
+/** Another tab's "sending" mark holds while its request can still be out. After that, the message waits again and may have arrived. Marks of this tab are its own requests. */
+function lapse({ cs }: Cx, p: PendingMessage, now: number): PendingMessage {
+  if (p.status !== 'sending' || p.owner === cs.tabId || now - (p.sendingSince ?? 0) < SEND_LEASE_MS) return p
+  return { ...p, status: 'waiting', possiblyDelivered: true, ...released }
+}
+
+function reclaimLapsed(cx: Cx) {
+  const now = Date.now()
+  const list = cx.cs.outbox.value
+  if (list.some(p => lapse(cx, p, now) !== p)) commit(cx, list.map(p => lapse(cx, p, now)))
+}
+
+/** What this tab may send, or must wait for another tab's request on. */
+const isDue = ({ cs }: Cx, p: PendingMessage) => p.status === 'waiting' || (p.status === 'sending' && p.owner !== cs.tabId)
 
 /** Is a message of this conversation waiting? A new one then queues behind it, so the order holds. */
 export function hasQueued({ cs }: Cx, channelId: string): boolean {
@@ -142,13 +165,14 @@ export function retryPending(cx: Cx, nonce: string) {
     commit(cx, cx.cs.outbox.value.map(p => p === entry ? fresh : p))
     nonce = fresh.nonce
   }
-  change(cx, nonce, { status: 'waiting', error: '', attempts: 0, notBefore: 0 })
+  change(cx, nonce, { status: 'waiting', error: '', attempts: 0, notBefore: 0, ...released })
   scheduleRetry(cx)
   void flushOutbox(cx)
 }
 
 /** Sends what is waiting, each conversation in the order it was written. */
 export async function flushOutbox(cx: Cx) {
+  reclaimLapsed(cx)
   const channels = new Set(cx.cs.outbox.value.filter(p => p.status === 'waiting').map(p => p.channelId))
   await Promise.all([...channels].map(id => flushConversation(cx, id)))
 }
@@ -165,9 +189,9 @@ async function flushConversation(cx: Cx, channelId: string) {
   cs.outboxBusy.add(channelId)
   try {
     for (;;) {
-      const next = cs.outbox.value.find(p => p.channelId === channelId && p.status === 'waiting')
-      // The server asked to wait (slow mode): everything behind it waits too.
-      if (!next || next.notBefore > Date.now() || (await deliver(cx, next)) === 'stop') return
+      const next = cs.outbox.value.find(p => p.channelId === channelId && p.status !== 'failed')
+      // Another tab's request is out for the first one: the order holds, so this tab waits. The server asked to wait (slow mode): everything behind it waits too.
+      if (next?.status !== 'waiting' || next.notBefore > Date.now() || (await deliver(cx, next)) === 'stop') return
     }
   } finally {
     cs.outboxBusy.delete(channelId)
@@ -182,7 +206,7 @@ async function deliver(cx: Cx, entry: PendingMessage): Promise<'next' | 'stop'> 
   const community = cs.communityGeneration
   expire(cx)
   if (!cs.outbox.value.some(p => p.nonce === entry.nonce && p.status === 'waiting')) return 'next'
-  change(cx, entry.nonce, { status: 'sending', notBefore: 0 })
+  change(cx, entry.nonce, { status: 'sending', notBefore: 0, owner: cs.tabId, sendingSince: Date.now() })
   // Edits made while it waited are in the stored entry, not in the copy this loop found.
   const current = cs.outbox.value.find(p => p.nonce === entry.nonce) ?? entry
   // A request that hangs would keep the whole conversation's queue busy.
@@ -192,7 +216,7 @@ async function deliver(cx: Cx, entry: PendingMessage): Promise<'next' | 'stop'> 
     const msg = await postText(current.channelId, current, abort.signal)
     if (community !== cs.communityGeneration) return 'stop'
     settlePending(cx, current.nonce)
-    landSent(cx, msg)
+    landSent(cx, msg, current.possiblyDelivered ? current.createdAt : undefined)
     return 'next'
   } catch (error) {
     if (community !== cs.communityGeneration) return 'stop'
@@ -208,7 +232,7 @@ function failedAttempt(cx: Cx, entry: PendingMessage, error: unknown): 'next' | 
   // Cut off, unanswered or failed without a usable answer: the server may have stored it. A refusal (4xx) says nothing about earlier tries.
   const possiblyDelivered = entry.possiblyDelivered || isNetworkFailure(error) || isServerTrouble(error)
   if (isNetworkFailure(error)) {
-    change(cx, nonce, { status: 'waiting', cause: 'offline', possiblyDelivered })
+    change(cx, nonce, { status: 'waiting', cause: 'offline', possiblyDelivered, ...released })
     return 'stop'
   }
   if (isApiError(error) && error.code === 'MESSAGE_DELETED') {
@@ -218,23 +242,23 @@ function failedAttempt(cx: Cx, entry: PendingMessage, error: unknown): 'next' | 
   }
   if (isApiError(error) && error.status === 429 && error.retryAfter !== null) {
     // Slow mode and rate limits: the composer waits the named time, so does the outbox. The message was not stored.
-    change(cx, nonce, { status: 'waiting', cause: 'server', possiblyDelivered, notBefore: Date.now() + error.retryAfter * 1000 })
+    change(cx, nonce, { status: 'waiting', cause: 'server', possiblyDelivered, notBefore: Date.now() + error.retryAfter * 1000, ...released })
     return 'stop'
   }
   const attempts = entry.attempts + 1
   const later = isServerTrouble(error) || (isApiError(error) && error.status === 429)
   if (later && attempts < MAX_SERVER_ATTEMPTS) {
-    change(cx, nonce, { status: 'waiting', cause: 'server', attempts, possiblyDelivered })
+    change(cx, nonce, { status: 'waiting', cause: 'server', attempts, possiblyDelivered, ...released })
     return 'stop'
   }
-  change(cx, nonce, { status: 'failed', error: caughtErrorMessage(error, t('chat.sendFailed')), attempts, possiblyDelivered })
+  change(cx, nonce, { status: 'failed', error: caughtErrorMessage(error, t('chat.sendFailed')), attempts, possiblyDelivered, ...released })
   return 'next'
 }
 
 /** While something waits, try again every few seconds, slower each time (the reconnect sends sooner). */
 function scheduleRetry(cx: Cx) {
   const { cs } = cx
-  const waiting = cs.outbox.value.filter(p => p.status === 'waiting')
+  const waiting = cs.outbox.value.filter(p => isDue(cx, p))
   if (cs.outboxTimer || !waiting.length) return
   // A wait the server named is honoured: each conversation sends in order, so only its first waiting message counts.
   const heads = new Map<string, number>()
@@ -256,7 +280,8 @@ export function restoreOutbox(cx: Cx) {
   cs.outboxRestoredFor = uid
   followOtherTabs(cx)
   const known = new Set(cs.outbox.value.map(p => p.nonce))
-  const back = loadStoredOutbox(uid).filter(p => !known.has(p.nonce))
+  const now = Date.now()
+  const back = loadStoredOutbox(uid).filter(p => !known.has(p.nonce)).map(p => lapse(cx, p, now))
   if (!back.length) return
   commit(cx, [...cs.outbox.value, ...back].sort(byCreation))
   expire(cx)
@@ -285,8 +310,9 @@ function adoptFromStorage(cx: Cx, event: StorageEvent) {
   // This tab's own request for it is out: its answer settles it. A removal elsewhere still counts.
   if (incoming && cs.outbox.value.some(p => p.nonce === nonce && p.status === 'sending')) return
   const rest = cs.outbox.value.filter(p => p.nonce !== nonce)
-  cs.outbox.value = incoming ? [...rest, incoming].sort(byCreation) : rest
-  if (incoming) { scheduleRetry(cx); void flushOutbox(cx) }
+  cs.outbox.value = incoming ? [...rest, lapse(cx, incoming, Date.now())].sort(byCreation) : rest
+  // Only this tab's own pace sends it: sending now would hand it back and forth between tabs that are offline.
+  if (incoming) scheduleRetry(cx)
 }
 
 /** Drops everything that waits in memory (another community or account); what this browser stored for the account stays for its next sign-in. */

@@ -5126,6 +5126,8 @@
     "edit": "Bearbeiten",
     "cancel": "Verwerfen",
     "retry": "Erneut versuchen",
+    "retryAnyway": "Trotzdem erneut senden",
+    "retryAnywayFor": "Die Nachricht erneut senden, obwohl sie schon angekommen sein kann: {excerpt}",
     "expired": "sie ist möglicherweise schon angekommen und wurde deshalb nicht von selbst erneut gesendet",
     "editLabel": "Noch nicht gesendete Nachricht bearbeiten"
   }
