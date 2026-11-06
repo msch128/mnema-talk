@@ -1,4 +1,5 @@
 import type { Message } from '../types/domain'
+import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { fixtureId, requireValue } from '../test-fixtures.fixture'
 import { channelFixture, messageFixture, userFixture, categoryFixture, readStateFixture } from '../test-fixtures.fixture'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
@@ -43,6 +44,7 @@ beforeEach(() => {
   localStorage.clear()
   setLocale('de')
   setActivePinia(createPinia())
+  useServerFeaturesStore().list = ['messages.nonce']
   calls = []
   vi.stubGlobal('fetch', vi.fn<typeof fetch>(async (url, init) => {
     calls.push({ url: String(url), method: init?.method || 'GET', body: init?.body })
