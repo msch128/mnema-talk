@@ -134,8 +134,13 @@ export function useVoiceSettings() {
   const feedback = loadFeedbackSettings()
   const audio = loadAudioProcessingSettings()
 
+  // Counts the writes. Every change, whether a control calls saveSettings or a
+  // watcher below does, passes here, so one observer can confirm them all.
+  const settingsWrites = ref(0)
+
   function saveSettings() {
     persistVoiceSettings(input, feedback, audio)
+    settingsWrites.value += 1
   }
 
   function toggleSoundEvent(eventName: SoundEvent) {
@@ -154,6 +159,7 @@ export function useVoiceSettings() {
     ...feedback,
     ...audio,
     saveSettings,
+    settingsWrites,
     toggleSoundEvent
   }
 }

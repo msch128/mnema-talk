@@ -50,6 +50,12 @@ describe('the e-mail address', () => {
     }))
   })
 
+  it('names the submit button after the action, not "Save"', async () => {
+    mountWith(false)
+    await startEdit()
+    expect(wrapper.get('[data-testid="account-email-submit"]').text()).toBe(t('security.email.changeAction'))
+  })
+
   it('does not submit without a code while two-factor sign-in is on', async () => {
     mountWith(true)
     await startEdit()

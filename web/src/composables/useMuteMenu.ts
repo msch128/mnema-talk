@@ -5,6 +5,7 @@ import { BellOff, Bell } from '@lucide/vue'
 import type { NotifyLevel } from '../types/domain'
 import type { ContextMenuItem } from '../components/menuTypes'
 import { useChatStore } from '../stores/chat'
+import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 import { clockTimeOptions } from '../lib/time'
 
@@ -40,10 +41,15 @@ export function storedSetting(target: NotifyTarget): { level: NotifyLevel; muted
   return { level: found?.level ?? 'inherit', muted_until: found?.muted_until ?? null }
 }
 
-function apply(target: NotifyTarget, level: NotifyLevel, until: string | null) {
+function write(target: NotifyTarget, level: NotifyLevel, until: string | null) {
   const chatStore = useChatStore()
   if (target.kind === 'channel') return chatStore.setNotificationLevel(target.id, level, until)
   return chatStore.setCategoryNotificationLevel(target.id, level, until)
+}
+
+// The store answers false instead of throwing; a failure is said in a toast.
+async function apply(target: NotifyTarget, level: NotifyLevel, until: string | null) {
+  if (!await write(target, level, until)) useToastStore().error(t('notifications.serverSaveFailed'))
 }
 
 /** What "my default" means for a target right now: its category's setting for a channel in one, else the server-wide one. */
