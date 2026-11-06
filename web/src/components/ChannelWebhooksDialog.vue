@@ -36,7 +36,7 @@ async function select(id: (typeof TABS)[number]) {
           role="tab"
           :id="`webhooks-tab-${id}`"
           :aria-selected="tab === id"
-          :aria-controls="`webhooks-panel-${id}`"
+          :aria-controls="tab === id ? `webhooks-panel-${id}` : undefined"
           :tabindex="tab === id ? 0 : -1"
           :class="['-mb-px rounded-t-md border-b-2 px-3 py-1.5 text-sm transition', tab === id ? 'border-mnema-accent font-semibold text-mnema-text' : 'border-transparent text-mnema-muted hover:text-mnema-text']"
           @click="select(id)"

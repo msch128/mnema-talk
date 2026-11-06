@@ -109,7 +109,7 @@ function select(tab: AdminTab) {
 }
 function backToList() {
   showList.value = true
-  void nextTick(() => document.querySelector<HTMLElement>('[data-testid=admin-tabs] [aria-pressed=true]')?.focus())
+  void nextTick(() => document.querySelector<HTMLElement>('[data-testid=admin-tabs] [aria-current=page]')?.focus())
 }
 
 // The open-report count beside "Reports": one cheap look when the console opens,

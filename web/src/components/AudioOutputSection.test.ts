@@ -44,3 +44,14 @@ describe('message sounds setting', () => {
     expect(wrapper.find('[data-testid="message-sounds"]').exists()).toBe(false)
   })
 })
+
+describe('output device without browser support', () => {
+  it('does not label a select that is not there', () => {
+    const previous = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'setSinkId')
+    Reflect.deleteProperty(HTMLMediaElement.prototype, 'setSinkId')
+    const wrapper = mountSection()
+    expect(wrapper.find('select#audio-output-device').exists()).toBe(false)
+    expect(wrapper.find('label[for="audio-output-device"]').exists()).toBe(false)
+    if (previous) Object.defineProperty(HTMLMediaElement.prototype, 'setSinkId', previous)
+  })
+})

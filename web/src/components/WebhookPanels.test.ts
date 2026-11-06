@@ -238,6 +238,9 @@ describe('IncomingWebhooksPanel', () => {
     await name.setValue('   ')
     expect(w.find('[data-testid="webhook-settings"]').text()).toContain('A bot needs a name.')
     expect(save()).toBeDefined()
+    const described = name.attributes('aria-describedby')!
+    expect(name.attributes('aria-invalid')).toBe('true')
+    expect(w.find(`[id="${described}"]`).text()).toBe('A bot needs a name.')
     await name.setValue('  Deploys ')
     apiMock.mockRejectedValueOnce(new Error('name taken'))
     await w.find('[data-testid="unsaved-save"]').trigger('click')

@@ -40,7 +40,8 @@ function previewMessageSound() {
 
     <div class="settings-card">
       <div class="stack-2">
-        <label for="audio-output-device" class="settings-row-title block">{{ $t('audio.outputDevice') }}</label>
+        <label v-if="outputSelectable" for="audio-output-device" class="settings-row-title block">{{ $t('audio.outputDevice') }}</label>
+        <div v-else class="settings-row-title">{{ $t('audio.outputDevice') }}</div>
         <select
           v-if="outputSelectable"
           id="audio-output-device"
