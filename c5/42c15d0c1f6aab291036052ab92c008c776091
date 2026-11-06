@@ -1,0 +1,29 @@
+internal/media/handler_upload.go
+  s_06fcde5dbef956::t_8067b9e2a4f342 139
+internal/media/quota.go
+  s_06fcde5dbef956::t_16b4f1888a4f92 137,140
+internal/media/staging.go
+  s_06fcde5dbef956::t_b7ba8de87c93f5 113
+internal/media/webhookfiles.go
+  s_06fcde5dbef956::t_98d3c68ac64f0c 37
+internal/wiki/images.go
+  s_06fcde5dbef956::t_b2e60aa4baf231 130-133
+internal/wiki/images_integration_test.go
+  s_06fcde5dbef956::t_fbc440c7d9d20c 178-196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c542c15d0c1f6aab291036052ab92c008c776091",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
