@@ -29,6 +29,37 @@ func breakMessageInserts(t *testing.T, f fixture) {
 	})
 }
 
+// expiredCtx reports an exhausted deadline through Err while the database
+// calls still run, so a failure that does not wrap context.DeadlineExceeded
+// (a closed connection, EOF) meets a per-message context that has run out.
+type expiredCtx struct{ context.Context }
+
+func (expiredCtx) Err() error { return context.DeadlineExceeded }
+
+func TestASendThatRanOutOfTimeAndFailedOtherwiseStillCountsAnAttempt(t *testing.T) {
+	f := newFixture(t)
+	s := f.service(f.p)
+	ctx := context.Background()
+	breakMessageInserts(t, f)
+	if _, err := f.p.Exec(ctx, `INSERT INTO scheduled_messages (user_id, channel_id, content, send_at) VALUES ($1, $2, 'x', NOW() - INTERVAL '1 minute')`, f.user, f.channel); err != nil {
+		t.Fatal(err)
+	}
+	due, err := s.loadDue(ctx)
+	if err != nil || len(due) != 1 {
+		t.Fatalf("loadDue: %v, %d rows", err, len(due))
+	}
+
+	s.sendOne(expiredCtx{ctx}, due[0])
+
+	var attempts int
+	if err := f.p.QueryRow(ctx, `SELECT attempts FROM scheduled_messages`).Scan(&attempts); err != nil {
+		t.Fatal(err)
+	}
+	if attempts != 1 {
+		t.Fatalf("attempts after a send that timed out: %d, want 1", attempts)
+	}
+}
+
 func TestAMessageThatKeepsFailingToSendBacksOffAndEndsAsAFailedDraft(t *testing.T) {
 	f := newFixture(t)
 	s := f.service(f.p)

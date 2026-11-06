@@ -10,6 +10,7 @@
 package onboarding
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -58,8 +59,8 @@ func NewHandler(pool *db.Pool, perms *perm.Service) *Handler {
 // MountPublic registers the route that needs no session.
 func (h *Handler) MountPublic(r chi.Router) {
 	h.mountPublicIcon(r)
-	r.With(h.previewPerSite.By(httpx.ClientAggregateKey), h.previewPerIP.PerIP).Get("/join/{slug}", httpx.Handle(h.previewJoin))
-	r.With(h.previewPerSite.By(httpx.ClientAggregateKey), h.previewPerIP.PerIP).Get("/invites/{code}", httpx.Handle(h.previewInvite))
+	r.With(h.limitPreview).Get("/join/{slug}", httpx.Handle(h.previewJoin))
+	r.With(h.limitPreview).Get("/invites/{code}", httpx.Handle(h.previewInvite))
 }
 
 // Mount registers the routes every signed-in member may call.
@@ -83,4 +84,22 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	owner := r.With(auth.RequireOwner)
 	owner.Get("/first-run", httpx.Handle(h.getFirstRun))
 	owner.Put("/first-run", httpx.Handle(h.putFirstRun))
+}
+
+// admitPreview charges a preview request to the caller's own budget and to the
+// budget of its whole site (an IPv6 /48), and only keeps the charges when both
+// grant it. On a refusal it names the limiter that refused.
+func (h *Handler) admitPreview(r *http.Request) (bool, *httpx.RateLimiter, time.Duration) {
+	return httpx.TryChain(h.previewPerIP, httpx.ClientIPKey(r), h.previewPerSite, httpx.ClientAggregateKey(r))
+}
+
+// limitPreview refuses a preview request that is over either budget.
+func (h *Handler) limitPreview(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ok, by, retry := h.admitPreview(r); !ok {
+			by.WriteRefused(w, retry)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

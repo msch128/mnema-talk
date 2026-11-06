@@ -94,10 +94,11 @@ func (s *Service) sendOne(ctx context.Context, d dueScheduled) {
 			s.fail(ctx, d, reasonFor(apiErr))
 			return
 		}
-		// ctx is the per-message context: a timeout of the send itself counts
-		// and shows in the log, only a stopping service stays quiet and
-		// leaves the message untouched.
-		if ctx.Err() != nil && !errors.Is(err, context.DeadlineExceeded) {
+		// ctx is the per-message context: once its own deadline ran out, any
+		// failure (a closed connection, EOF) counts as an attempt of the send.
+		// Only a cancelled context means the service is stopping; that stays
+		// quiet and leaves the message untouched.
+		if errors.Is(ctx.Err(), context.Canceled) {
 			return
 		}
 		slog.Warn("scheduled: send", "err", err, "id", d.id, "attempt", d.attempts+1)

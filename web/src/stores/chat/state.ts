@@ -122,6 +122,7 @@ function socketState() {
     lastPingAt: 0,
     reconnectTimer: undefined as Timer | undefined,
     connectTimer: undefined as Timer | undefined,
+    connectStartedAt: 0,
     reconnectDelay: 1000,
     webrtcOfferHandler: null as Handler<'webrtc_offer'>,
     webrtcCandidateHandler: null as Handler<'webrtc_candidate'>,

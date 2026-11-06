@@ -8,7 +8,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/mdplain"
 	"github.com/msch128/mnema-talk/internal/textcut"
 )
@@ -44,10 +43,7 @@ func (h *Handler) InviteShareInfo(r *http.Request, code string) (info ShareInfo,
 	if !previewCodePattern.MatchString(code) {
 		return ShareInfo{}, false, nil
 	}
-	if allowed, _ := h.previewPerIP.Allow(httpx.ClientIPKey(r)); !allowed {
-		return ShareInfo{}, false, nil
-	}
-	if allowed, _ := h.previewPerSite.Allow(httpx.ClientAggregateKey(r)); !allowed {
+	if allowed, _, _ := h.admitPreview(r); !allowed {
 		return ShareInfo{}, false, nil
 	}
 	row, err := h.lookupInvite(r.Context(), code)
