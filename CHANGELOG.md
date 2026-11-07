@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.0](https://github.com/msch128/mnema-talk/compare/v2.9.21...v3.0.0) (2026-11-07)
+
+
+### Documentation
+
+* the 3.0.0 upgrade notes cover the patches up to 2.9.21 ([#760](https://github.com/msch128/mnema-talk/issues/760)) ([d8f597d](https://github.com/msch128/mnema-talk/commit/d8f597de119a6274d7c9f85533a30af08a6d33a8))
+
 ## [2.9.21](https://github.com/msch128/mnema-talk/compare/v2.9.20...v2.9.21) (2026-11-07)
 
 
