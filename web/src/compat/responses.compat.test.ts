@@ -3,7 +3,7 @@ import * as rest from '../types/rest'
 import { decodeServerHealth } from '../types/rest'
 import { allBaselines } from './baselines'
 import { headBaseline } from './head.fixture'
-import { synthesize } from './contract'
+import { synthesize } from './contract.fixture'
 import { responseGaps } from './allowlist'
 import '../lib/compat/olderServers'
 

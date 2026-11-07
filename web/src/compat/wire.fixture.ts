@@ -3,7 +3,7 @@
 // release promised (see requests.compat.test.ts).
 import { ApiError, type ApiOptions } from '../lib/api'
 import { newEndpoints, responseGaps } from './allowlist'
-import { bodyViolations, findOperation, synthesize, type CompatBaseline } from './contract'
+import { bodyViolations, findOperation, synthesize, type CompatBaseline } from './contract.fixture'
 
 type Options = ApiOptions & { decode?: (value: unknown) => unknown }
 

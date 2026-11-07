@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { baselineFrom } from '../../scripts/compat-baseline.ts'
-import type { CompatBaseline } from './contract'
+import type { CompatBaseline } from './contract.fixture'
 
 // Vitest runs from web/, the repository root is its parent.
 const read = (path: string) => readFileSync(resolve(process.cwd(), '..', path), 'utf8')

@@ -1,4 +1,4 @@
-import type { CompatBaseline } from '../contract'
+import type { CompatBaseline } from '../types'
 import v100 from './v1.0.0.json'
 import v200 from './v2.0.0.json'
 import v2912 from './v2.9.12.json'
