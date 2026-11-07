@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.9.21](https://github.com/msch128/mnema-talk/compare/v2.9.20...v2.9.21) (2026-11-07)
+
+
+### Bug Fixes
+
+* a reaction refused by a block gets its own sentence, and the API text names blocks and nonces ([b33fc85](https://github.com/msch128/mnema-talk/commit/b33fc85ba345e8c39688095941e74b8d44931828))
+* ask before signing out or deleting the account discards unsent messages ([b33fc85](https://github.com/msch128/mnema-talk/commit/b33fc85ba345e8c39688095941e74b8d44931828))
+* cap the permission retry backoff so it cannot overflow ([b33fc85](https://github.com/msch128/mnema-talk/commit/b33fc85ba345e8c39688095941e74b8d44931828))
+* count open reports on servers without the open-count route ([b33fc85](https://github.com/msch128/mnema-talk/commit/b33fc85ba345e8c39688095941e74b8d44931828))
+* do not resend a possibly delivered message to a server without nonce, retry without the reply only for the reply refusal ([b33fc85](https://github.com/msch128/mnema-talk/commit/b33fc85ba345e8c39688095941e74b8d44931828))
+* nonce follows the server's features after a failed first health check; 3.0 docs, drills from 2.9.19 ([b33fc85](https://github.com/msch128/mnema-talk/commit/b33fc85ba345e8c39688095941e74b8d44931828))
+* pending messages survive a stalled send, an open edit and screen readers ([b33fc85](https://github.com/msch128/mnema-talk/commit/b33fc85ba345e8c39688095941e74b8d44931828))
+* reuse the shared reports badge in the admin nav and translate the space key ([b33fc85](https://github.com/msch128/mnema-talk/commit/b33fc85ba345e8c39688095941e74b8d44931828))
+* the web app reads status, backup and import responses of older servers ([b33fc85](https://github.com/msch128/mnema-talk/commit/b33fc85ba345e8c39688095941e74b8d44931828))
+
+
+### Documentation
+
+* upgrade notes and API contract for 3.0.0 ([b33fc85](https://github.com/msch128/mnema-talk/commit/b33fc85ba345e8c39688095941e74b8d44931828))
+
 ## [2.9.20](https://github.com/msch128/mnema-talk/compare/v2.9.19...v2.9.20) (2026-11-06)
 
 
