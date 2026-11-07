@@ -100,8 +100,16 @@ export function useSettingsDraft<T extends object>(options: SettingsDraftOptions
     refreshSavedKeys()
   }
 
-  async function save(): Promise<boolean> {
-    if (!canSave.value) return false
+  let inFlight: Promise<boolean> | null = null
+  function save(): Promise<boolean> {
+    if (!canSave.value) return Promise.resolve(false)
+    const run = write()
+    inFlight = run
+    void run.finally(() => { if (inFlight === run) inFlight = null })
+    return run
+  }
+
+  async function write(): Promise<boolean> {
     const keys = [...changed.value]
     const changes: Partial<T> = {}
     for (const k of keys) changes[k] = copy(draft[k])
@@ -134,10 +142,11 @@ export function useSettingsDraft<T extends object>(options: SettingsDraftOptions
 
   /** True when nothing is lost by leaving: the draft is clean or the member agreed. */
   async function guard(): Promise<boolean> {
+    if (inFlight) await inFlight
     return !dirty.value || confirmDiscard()
   }
 
-  useLeaveGuard(dirty)
+  useLeaveGuard(dirty, () => inFlight)
 
   return { draft, dirty, changed, errors, valid, saving, error, canSave, save, reset, guard, onKeydown }
 }
