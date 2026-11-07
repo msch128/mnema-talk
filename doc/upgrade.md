@@ -90,7 +90,7 @@ until the new release has passed your application checks.
 
 ### Upgrading to 3.0.0
 
-3.0.0 is the major release that collects the changes of 2.9.2 to 2.9.19 which
+3.0.0 is the major release that collects the changes of 2.9.2 to 2.9.21 which
 touch the public API ([api-stability.md](api-stability.md#300-changes)).
 Update as usual (backup first, then the procedure above). It works from any
 2.9.x; an older 2.x applies the migrations of every release in between.
@@ -157,12 +157,12 @@ Each 2.x minor is an ordinary update (procedure above, backup first). None
 breaks the public API: [api-stability.md](api-stability.md) still holds, and
 2.x only adds endpoints, fields and events. Most patch releases (2.1.1, 2.5.1, 2.8.1
 to 2.8.3, 2.9.1) fix bugs and need no configuration; 2.8.2 and 2.9.1 only
-change what the signed desktop bundle contains. The patches 2.9.2 to 2.9.19
+change what the signed desktop bundle contains. The patches 2.9.2 to 2.9.21
 added migrations and one operator step; see [Upgrading to 3.0.0](#upgrading-to-300). The migrations are listed
 in the migration table below. Taking several minors at once applies
 their migrations in order. Newest first.
 
-#### 2.9.2 to 2.9.19
+#### 2.9.2 to 2.9.21
 
 The patch releases after 2.9.1 changed behaviour and the schema in small steps
 (migrations 0091 to 0100); all of it is described under
