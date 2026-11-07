@@ -16,7 +16,7 @@ import {
   isServerCapacityEstimate, isServerCapacityStatus, isServerLegal, isServerOperatorStatus, isServerOpsSample, isServerOpsStatus,
   isServerSystemHealth, isServerSystemStatus, isServerVoiceHealth
 } from '../../types/rest'
-import { isRecord, registerNormaliser } from '../../types/validation'
+import { isRecord, normalise, registerNormaliser } from '../../types/validation'
 
 type Rec = Record<string, unknown>
 
@@ -148,3 +148,10 @@ registerNormaliser(isServerBackupStatus, backupStatus)
 registerNormaliser(isServerOperatorStatus, operatorStatus)
 registerNormaliser(isServerCapacityEstimate, capacityEstimate)
 registerNormaliser(isServerCapacityStatus, capacityStatus)
+
+/** A message event (message_create / message_update) of an older server lacks what is filled for messages in answers. */
+export function withMessageDefaults(value: unknown): unknown {
+  if (!isRecord(value) || (value['type'] !== 'message_create' && value['type'] !== 'message_update')) return value
+  const payload = normalise(isChatMessage, value['payload'])
+  return payload === value['payload'] ? value : { ...value, payload }
+}
