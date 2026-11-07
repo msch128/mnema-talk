@@ -1,0 +1,23 @@
+web/src/composables/draftGuard.ts
+  s_06fcde5dbef956::t_b4349926e89ad0 9,33-39,43-48
+web/src/composables/useSettingsDraft.test.ts
+  s_06fcde5dbef956::t_e2efca4c3c5b33 239-289
+web/src/composables/useSettingsDraft.ts
+  s_06fcde5dbef956::t_df52b6a4c009b8 103-112,145,149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "357085ac8c3dbf7e048b4a0e54945c746e3d9f05",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
