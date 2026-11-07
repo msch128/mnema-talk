@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
 import { useServerFeaturesStore } from './serverFeatures'
+import { useToastStore } from './toast'
 import { channelFixture, messageFixture, userFixture, fixtureId } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
 import { ApiError, type ApiOptions } from '../lib/api'
@@ -34,7 +35,7 @@ class Socket {
 }
 
 /** The state of the network: while down, every message POST fails like a dropped connection. */
-const net = { down: true, refuse: null as ApiError | null, posted: [] as { content: string; nonce: string | undefined }[], gate: null as Promise<void> | null, status: 201 }
+const net = { down: true, refuse: null as ApiError | null, posted: [] as { content: string; nonce: string | undefined }[], gate: null as Promise<void> | null, status: 201, health: null as string[] | null }
 
 function stored(content: string, nonce: string, id: string): Message {
   return messageFixture({ id, channel_id: ch.id, user_id: me.id, content, nonce })
@@ -54,6 +55,8 @@ beforeEach(() => {
   vi.useFakeTimers()
   setActivePinia(createPinia())
   useServerFeaturesStore().list = ['messages.nonce']
+  useServerFeaturesStore().loaded = true
+  net.health = null
   net.down = true
   net.refuse = null
   net.posted = []
@@ -61,6 +64,7 @@ beforeEach(() => {
   net.status = 201
   let n = 100
   http.handle = (url, opts) => {
+    if (url === '/api/health') return net.health ? { features: net.health } : Promise.reject(offline())
     if (!url.endsWith('/messages') || opts?.method !== 'POST') return url === '/api/channels' ? { categories: [], uncategorized: [ch] } : []
     if (net.down) throw offline()
     if (net.refuse) throw net.refuse
@@ -207,6 +211,33 @@ describe('writing while the connection is down', () => {
     expect(net.posted.map(p => p.content)).toEqual(['first try', 'fixed'])
   })
 
+  it('holds the queue while the member edits a pending message, then sends the saved text', async () => {
+    const chat = setup()
+    await chat.sendMessage('first', null, null, [], ch.id)
+    await chat.sendMessage('typo', null, null, [], ch.id)
+    const nonce = required(chat.outbox[1]).nonce
+    chat.beginEditPending(nonce)
+    await connectAgain(chat)
+    await stayConnected(chat, 40_000)
+    expect(net.posted.map(p => p.content)).toEqual(['first'])
+    chat.editPending(nonce, 'fixed')
+    await tick()
+    expect(net.posted.map(p => p.content)).toEqual(['first', 'fixed'])
+  })
+
+  it('sends the old text after the member cancels the edit', async () => {
+    const chat = setup()
+    await chat.sendMessage('as written', null, null, [], ch.id)
+    const nonce = required(chat.outbox[0]).nonce
+    chat.beginEditPending(nonce)
+    await connectAgain(chat)
+    await stayConnected(chat, 40_000)
+    expect(net.posted).toEqual([])
+    chat.endEditPending(nonce)
+    await tick()
+    expect(net.posted.map(p => p.content)).toEqual(['as written'])
+  })
+
   it('does not let the member change a message whose first try may have arrived, as the retry would return the old text', async () => {
     const chat = setup()
     await chat.sendMessage('sent into the void', null, null, [], ch.id)
@@ -220,6 +251,19 @@ describe('writing while the connection is down', () => {
     expect(chat.outbox.map(p => p.status)).toEqual(['failed'])
     chat.editPending(nonce, 'different text')
     expect(chat.outbox.map(p => p.content)).toEqual(['sent into the void'])
+  })
+
+  it('tells the member calmly when another tab sent the message while the editor was open', async () => {
+    const chat = setup()
+    await chat.sendMessage('written offline', null, null, [], ch.id)
+    const nonce = required(chat.outbox[0]).nonce
+    chat.beginEditPending(nonce)
+    // The other tab sent it: its removal reaches this tab through the shared storage.
+    chat.handleWSEvent({ type: 'message_create', payload: stored('written offline', nonce, fixtureId(70)) })
+    expect(chat.outbox).toEqual([])
+    const toasts = useToastStore()
+    chat.editPending(nonce, 'changed my mind')
+    expect(toasts.toasts.map(x => x.text)).toEqual([t('outbox.editTooLate')])
   })
 
   it('marks a message the server refuses as failed, offers a retry, and goes on with the next', async () => {
@@ -260,6 +304,67 @@ describe('writing while the connection is down', () => {
     net.down = false
     await vi.advanceTimersByTimeAsync(60_000)
     expect(net.posted).toEqual([])
+  })
+})
+
+describe('when the feature list could not be read at start', () => {
+  async function unknownServer() {
+    const features = useServerFeaturesStore()
+    features.list = []
+    features.loaded = false
+    await features.load()
+    expect(features.loaded).toBe(false)
+    return features
+  }
+
+  it('reads the list before deciding, so the nonce is not left out for the whole session', async () => {
+    const chat = setup()
+    await unknownServer()
+    net.down = false
+    net.health = ['messages.nonce']
+    await chat.sendMessage('after the restart', null, null, [], ch.id)
+    expect(net.posted.map(p => typeof p.nonce)).toEqual(['string'])
+  })
+
+  it('reads the list again when the socket reconnects', async () => {
+    const chat = setup()
+    const features = await unknownServer()
+    net.health = ['messages.nonce']
+    await connectAgain(chat)
+    expect(features.messageNonce).toBe(true)
+  })
+
+  it('does not resend a slow request of a server without nonce support, which would post the message twice', async () => {
+    const chat = setup()
+    await unknownServer()
+    net.down = false
+    let release: () => void = () => {}
+    net.gate = new Promise<void>(resolve => { release = resolve })
+    let settled = false
+    const sending = chat.sendMessage('slow but fine', null, null, [], ch.id).then(r => { settled = true; return r })
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(settled).toBe(false)
+    expect(chat.outbox).toEqual([])
+    release()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(await sending).toBeTruthy()
+    expect(net.posted.map(p => p.content)).toEqual(['slow but fine'])
+  })
+})
+
+describe('a first send on a stalled network', () => {
+  it('ends after the send timeout and waits in the outbox instead of locking the composer', async () => {
+    const chat = setup()
+    vi.mocked(api).mockImplementation((_url: string, options?: ApiOptions) =>
+      new Promise((_, reject) => options?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))))
+    let settled = false
+    const sending = chat.sendMessage('stuck', null, null, [], ch.id).then(r => { settled = true; return r })
+    await vi.advanceTimersByTimeAsync(14_000)
+    expect(settled).toBe(false)
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(settled).toBe(true)
+    expect(await sending).toBeTruthy()
+    expect(chat.outbox.map(p => [p.content, p.status, p.possiblyDelivered])).toEqual([['stuck', 'waiting', true]])
   })
 })
 
@@ -502,6 +607,35 @@ describe('two tabs that share one waiting message', () => {
     expect(net.posted).toEqual([])
     await stayConnected(chat, 32000)
     expect(net.posted.map(p => p.nonce)).toEqual(['n-dead'])
+  })
+})
+
+describe('on a server that does not know the nonce', () => {
+  const oldServer = () => {
+    const features = useServerFeaturesStore()
+    features.list = []
+    features.loaded = true
+  }
+
+  it('does not send by itself what a lost connection may have delivered: it shows as not sent, and sending again is the member\'s choice', async () => {
+    oldServer()
+    const chat = setup()
+    await chat.sendMessage('maybe there', null, null, [], ch.id)
+    await connectAgain(chat)
+    expect(net.posted).toEqual([])
+    expect(chat.outbox.map(p => [p.content, p.status, p.error])).toEqual([['maybe there', 'failed', t('outbox.expired')]])
+    chat.retryPending(required(chat.outbox[0]).nonce)
+    await tick()
+    expect(net.posted.map(p => p.content)).toEqual(['maybe there'])
+    expect(chat.outbox).toEqual([])
+  })
+
+  it('still sends what no try had reached the server with', async () => {
+    oldServer()
+    localStorage.setItem('mnema.outbox.' + me.id + '.n-new', JSON.stringify({ nonce: 'n-new', channelId: ch.id, userId: me.id, content: 'never sent', parentId: null, replyToId: null, createdAt: new Date().toISOString(), status: 'waiting', error: '', cause: 'offline', attempts: 0, possiblyDelivered: false, notBefore: 0 }))
+    const chat = setup()
+    await connectAgain(chat)
+    expect(net.posted.map(p => p.content)).toEqual(['never sent'])
   })
 })
 

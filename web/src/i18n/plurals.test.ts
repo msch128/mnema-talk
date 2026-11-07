@@ -11,7 +11,13 @@ describe('counted messages', () => {
     ['sidebar.categoryMentions', 1, '1 mention in this category'],
     ['moderation.bulkDeleted', 1, '1 message from Ada deleted.'],
     ['security.twoFactor.notice', 1, '1 wrong code was entered for your account since you last signed in.'],
-    ['wiki.subpageCount', 2, '2 subpages']
+    ['wiki.subpageCount', 2, '2 subpages'],
+    ['outbox.summaryWaiting', 1, '1 message waiting to be sent'],
+    ['outbox.summaryWaiting', 2, '2 messages waiting to be sent'],
+    ['outbox.summaryFailed', 1, '1 message not sent'],
+    ['outbox.summaryFailed', 3, '3 messages not sent'],
+    ['outbox.discardOnLeaveTitle', 1, '1 unsent message will be discarded'],
+    ['outbox.discardOnLeaveTitle', 4, '4 unsent messages will be discarded']
   ])('%s with %i reads in the right number', (key, count, text) => {
     expect(t(key, { count, name: 'Ada' })).toBe(text)
   })
@@ -19,5 +25,7 @@ describe('counted messages', () => {
   it('uses the German singular', () => {
     setLocale('de')
     expect(t('modHistory.strikeCount', { count: 1 })).toBe('1 Verwarnung')
+    expect(t('outbox.discardOnLeaveTitle', { count: 1 })).toBe('1 ungesendete Nachricht wird verworfen')
+    expect(t('outbox.discardOnLeaveTitle', { count: 2 })).toBe('2 ungesendete Nachrichten werden verworfen')
   })
 })

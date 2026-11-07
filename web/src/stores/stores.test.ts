@@ -15,6 +15,7 @@ beforeEach(() => {
   setLocale('de')
   setActivePinia(createPinia())
   useServerFeaturesStore().list = ['messages.nonce']
+  useServerFeaturesStore().loaded = true
   vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockImplementation(async () => new Response('[]', { status: 200 })))
 })
 
@@ -209,13 +210,13 @@ describe('chat store history paging', () => {
     expect(JSON.parse(String(required(fetchMock.mock.calls[1])[1]?.body))).toEqual({ content: 'hey', nonce: expect.any(String) })
   })
 
-  it('reports the refusal when the message is invalid for another reason too', async () => {
+  it('reports a refusal that is not about the reply at once, without a second try', async () => {
     const chat = useChatStore()
     chat.activeChannel = channelFixture({ id: CHANNEL_ID, type: 'text' })
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => new Response(JSON.stringify({ error: { code: 'INVALID_INPUT', message: 'content too long' } }), { status: 400 }))
     vi.stubGlobal('fetch', fetchMock)
     await expect(chat.sendMessage('hey', null, 'orig')).rejects.toMatchObject({ status: 400 })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('sends reply_to_id with messages and uploads', async () => {

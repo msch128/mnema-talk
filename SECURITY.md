@@ -5,13 +5,13 @@
 Mnema Talk is a small, self-hosted, non-commercial project. Security fixes go
 to:
 
-- the **latest minor release** (for example the newest `2.y.z`), and
+- the **latest minor release** (for example the newest `3.y.z`), and
 - the **previous minor release for 90 days** after the newer minor was
   published, so an operator has a quarter to move up.
 
 Fixes land on `main` first and reach those lines as patch releases. With 2.9
-published, 2.9.x is the latest line and 2.8.x gets fixes for 90 days after the
-2.9.0 release. `1.x` and older releases get no fixes, and neither do forks or
+published, 3.0.x is the latest line and 2.9.x gets fixes for 90 days after the
+3.0.0 release. `2.8.x` and older releases get no fixes, and neither do forks or
 unreleased commits. Update to a supported line
 ([doc/upgrade.md](doc/upgrade.md)). Desktop clients refuse
 web bundles below the release that carries the latest marked security fix, see

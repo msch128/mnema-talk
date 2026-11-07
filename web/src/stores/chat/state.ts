@@ -121,6 +121,8 @@ function outboxState() {
     outbox: ref<PendingMessage[]>([]),
     // Conversations whose queue is being sent right now.
     outboxBusy: new Set<string>(),
+    /** Pending messages the member has open in the editor: their conversation waits until the edit is saved or cancelled. */
+    outboxEditing: new Set<string>(),
     outboxTimer: undefined as Timer | undefined,
     outboxDelay: 5000,
     // The account whose stored messages were brought back this sign-in.

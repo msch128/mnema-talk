@@ -230,13 +230,25 @@ func (r *permRetry) add(userIDs []uuid.UUID, run func()) {
 	if r.timer != nil {
 		return // a retry is already scheduled and will take the merged set
 	}
+	r.timer = time.AfterFunc(r.nextWait(), run)
+}
+
+// nextWait doubles the wait with every failed attempt up to permRetryMax. The
+// attempt counter stops once the cap is reached: shifting by an ever growing
+// count would overflow into a negative wait (a tight retry loop).
+func (r *permRetry) nextWait() time.Duration {
 	wait := r.base
 	if wait <= 0 {
 		wait = time.Second
 	}
-	wait = min(wait<<r.attempt, permRetryMax)
+	for i := 0; i < r.attempt && wait < permRetryMax; i++ {
+		wait *= 2
+	}
+	if wait >= permRetryMax {
+		return permRetryMax
+	}
 	r.attempt++
-	r.timer = time.AfterFunc(wait, run)
+	return wait
 }
 
 // take hands over the pending users (nil: everybody) and lets the next failure

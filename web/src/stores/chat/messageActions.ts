@@ -3,10 +3,12 @@ import { decodeMessage, decodeReactionResult } from '../../types/domain'
 import { api } from '../../lib/api'
 import { resolveReaction } from '../../lib/reactionEmoji'
 import { useEmojiStore } from '../emoji'
+import { useServerFeaturesStore } from '../serverFeatures'
 import { assertCommunity, type Cx } from './state'
 import { applyToMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
 import { landSent, newNonce, postText, postWithReplyFallback, withEmojiTokens, type TextSend } from './messagePost'
 import { echoedMessage, enqueue, hasQueued, isNetworkFailure } from './outbox'
+import { SEND_TIMEOUT_MS } from './outboxStorage'
 import { closeThread } from './threads'
 
 /**
@@ -23,14 +25,22 @@ export async function sendMessage(cx: Cx, content: string, parentId: string | nu
   // Files are not kept for later; a message with them fails as it always did.
   if (!attachmentIds.length && hasQueued(cx, channelId)) return enqueue(cx, channelId, send, true)
   let msg: Message
+  const features = useServerFeaturesStore()
+  if (!features.loaded) await features.ensureLoaded()
+  // A stalled network must not lock the composer: a text-only first try ends like the outbox's, and then waits there.
+  // Only when the server de-duplicates by nonce: otherwise the resend of a request that was merely slow would post the message twice, so the composer waits for the request instead.
+  const abort = new AbortController()
+  const timer = attachmentIds.length || !features.messageNonce ? undefined : setTimeout(() => abort.abort(), SEND_TIMEOUT_MS)
   try {
-    msg = await postText(channelId, send)
+    msg = await postText(channelId, send, attachmentIds.length ? undefined : abort.signal)
   } catch (error) {
     if (!attachmentIds.length && isNetworkFailure(error) && cs.communityGeneration === community) {
       // The answer was lost, but the server's event may already have brought the message: nothing to keep then.
       return echoedMessage(cx, send.nonce) ?? enqueue(cx, channelId, send)
     }
     throw error
+  } finally {
+    clearTimeout(timer)
   }
   assertCommunity(cx, community)
   landSent(cx, msg)

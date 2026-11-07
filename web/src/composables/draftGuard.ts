@@ -6,7 +6,7 @@ import { computed, inject, onBeforeUnmount, onMounted, provide, shallowReactive 
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
 
-interface ScopeMember { dirty: Ref<boolean> }
+interface ScopeMember { dirty: Ref<boolean>, settled: () => Promise<unknown> | null }
 interface DraftScope { members: Set<ScopeMember> }
 const SCOPE: InjectionKey<DraftScope> = Symbol('settings-draft-scope')
 
@@ -30,13 +30,22 @@ export function provideDraftScope() {
   const scope: DraftScope = { members: shallowReactive(new Set<ScopeMember>()) }
   provide(SCOPE, scope)
   const dirty = computed(() => [...scope.members].some(m => m.dirty.value))
-  return { dirty, guard: async () => !dirty.value || confirmDiscard() }
+  // A save still on its way is not a change to lose: wait for it, then ask only about what is left.
+  const guard = async () => {
+    const pending = [...scope.members].map(m => m.settled()).filter(p => p !== null)
+    if (pending.length > 0) await Promise.all(pending)
+    return !dirty.value || confirmDiscard()
+  }
+  return { dirty, guard }
 }
 
 
-/** Registers a draft with the surrounding scope (if any) and warns the browser while it is unsaved. */
-export function useLeaveGuard(dirty: Ref<boolean>) {
-  const member: ScopeMember = { dirty }
+/**
+ * Registers a draft with the surrounding scope (if any) and warns the browser while it is unsaved.
+ * `settled` is the save in flight (null when none), so closing right after Save waits for it instead of asking.
+ */
+export function useLeaveGuard(dirty: Ref<boolean>, settled: () => Promise<unknown> | null = () => null) {
+  const member: ScopeMember = { dirty, settled }
   const scope = inject(SCOPE, null)
   scope?.members.add(member)
   const beforeUnload = (e: BeforeUnloadEvent) => { if (dirty.value) e.preventDefault() }

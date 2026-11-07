@@ -683,7 +683,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        from: ['0.8.16', '0.9.0', '1.0.0', '1.1.0', '2.0.0', '2.9.12']
+        from: ['0.8.16', '0.9.0', '1.0.0', '1.1.0', '2.0.0', '2.9.12', '2.9.19']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -822,8 +822,10 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # Also after a green job: a spec that failed its first attempt and passed
+      # on retry keeps the trace and screenshot of the failed attempt here.
       - name: Upload Playwright traces and screenshots
-        if: failure()
+        if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-results-${{ matrix.shard }}
@@ -1006,8 +1008,10 @@ jobs:
           E2E_ONLY: ${{ matrix.withAudioDevice }}
         run: e2e/run.sh
 
+      # Also after a green job: a spec that failed its first attempt and passed
+      # on retry keeps the trace and screenshot of the failed attempt here.
       - name: Upload Playwright traces and screenshots
-        if: failure()
+        if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-results-${{ matrix.browser }}-${{ strategy.job-index }}

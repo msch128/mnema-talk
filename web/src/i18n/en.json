@@ -247,6 +247,7 @@
       "srvAGroupDirectMessageHolds": "A group direct message holds at most {a} members.",
       "srvCannotSendAnEmptyMessage": "Can’t send an empty message.",
       "srvCouldnTForwardThisMessage": "Couldn’t forward this message.",
+      "srvCouldnTReactToThisMessage": "Couldn’t react to this message.",
       "srvCouldnTSendThisMessage": "Couldn’t send this message.",
       "srvCouldnTStartThisDirect": "Couldn’t start this direct message.",
       "srvDiscordCouldNotBeReached": "Discord couldn’t be reached. Try again later.",
@@ -2507,8 +2508,7 @@
       "integrations": "Integrations",
       "operations": "Operations",
       "back": "Back to sections",
-      "signedIn": "Signed in as {name}",
-      "openReports": "{count} open"
+      "signedIn": "Signed in as {name}"
     },
     "access": {
       "saved": "Saved.",
@@ -4940,7 +4940,8 @@
       "mod": "Ctrl",
       "Alt": "Alt",
       "Shift": "Shift",
-      "Ctrl": "Ctrl"
+      "Ctrl": "Ctrl",
+      "Space": "Space"
     },
     "notSet": "not set",
     "group": {
@@ -5114,13 +5115,23 @@
     "waiting": "Waiting to send · goes out when you’re back online",
     "retrying": "Waiting to send · trying again shortly",
     "noEdit": "It may already have arrived, so it can only be discarded.",
+    "editTooLate": "That message was already sent, so your change wasn’t applied.",
     "editFor": "Edit the message: {excerpt}",
     "discardFor": "Discard the message: {excerpt}",
     "retryFor": "Try sending the message again: {excerpt}",
-    "summaryWaiting": "{count} message waiting to be sent",
-    "summaryWaitingMany": "{count} messages waiting to be sent",
-    "summaryFailed": "{count} message not sent",
-    "summaryFailedMany": "{count} messages not sent",
+    "summaryWaiting": {
+      "one": "{count} message waiting to be sent",
+      "other": "{count} messages waiting to be sent"
+    },
+    "summaryFailed": {
+      "one": "{count} message not sent",
+      "other": "{count} messages not sent"
+    },
+    "discardOnLeaveTitle": {
+      "one": "{count} unsent message will be discarded",
+      "other": "{count} unsent messages will be discarded"
+    },
+    "discardOnLeaveBody": "Messages that are still waiting to be sent are kept on this device only while you’re signed in. Leaving now discards them for good.",
     "sending": "Sending…",
     "failed": "Not sent: {reason}",
     "edit": "Edit",

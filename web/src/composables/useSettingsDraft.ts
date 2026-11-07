@@ -58,6 +58,21 @@ export interface SettingsDraftOptions<T extends object> {
   blocked?: () => boolean
 }
 
+/** The save on its way, if any: what closing waits for before it asks about unsaved changes. */
+function inFlight() {
+  let current: Promise<boolean> | null = null
+  return {
+    current: () => current,
+    /** `next` right away when nothing is on its way, else once the save has finished (whatever its outcome). */
+    then: <R>(next: () => Promise<R>): Promise<R> => current ? current.then(next, next) : next(),
+    track(run: Promise<boolean>) {
+      current = run
+      void run.finally(() => { if (current === run) current = null })
+      return run
+    }
+  }
+}
+
 /** The save shortcut as shown to people (⌘S on a Mac, Ctrl+S / Strg+S elsewhere). */
 export const saveShortcutLabel = (): string => formatShortcut(['mod', 'S'])
 
@@ -100,8 +115,10 @@ export function useSettingsDraft<T extends object>(options: SettingsDraftOptions
     refreshSavedKeys()
   }
 
-  async function save(): Promise<boolean> {
-    if (!canSave.value) return false
+  const flight = inFlight()
+  const save = (): Promise<boolean> => canSave.value ? flight.track(write()) : Promise.resolve(false)
+
+  async function write(): Promise<boolean> {
     const keys = [...changed.value]
     const changes: Partial<T> = {}
     for (const k of keys) changes[k] = copy(draft[k])
@@ -133,11 +150,9 @@ export function useSettingsDraft<T extends object>(options: SettingsDraftOptions
   const onKeydown = saveKeys(save)
 
   /** True when nothing is lost by leaving: the draft is clean or the member agreed. */
-  async function guard(): Promise<boolean> {
-    return !dirty.value || confirmDiscard()
-  }
+  const guard = (): Promise<boolean> => flight.then(async () => !dirty.value || confirmDiscard())
 
-  useLeaveGuard(dirty)
+  useLeaveGuard(dirty, flight.current)
 
   return { draft, dirty, changed, errors, valid, saving, error, canSave, save, reset, guard, onKeydown }
 }

@@ -4,7 +4,9 @@ import { t } from '../../i18n'
 import type { Message } from '../../types/domain'
 import type { Cx } from './state'
 import type { PendingMessage } from './outboxTypes'
+import { useServerFeaturesStore } from '../serverFeatures'
 import { draftSessionAlive, onDraftSessionEnd } from '../../lib/drafts'
+import { showToast } from './messageWindow'
 import { landSent, newNonce, postText, type TextSend } from './messagePost'
 import { KEEP_MAX_MS, REPEAT_SAFE_MS, SEND_LEASE_MS, SEND_TIMEOUT_MS, loadStoredOutbox, nonceOfKey, readStoredEntry, removeStoredEntry, saveStoredEntry } from './outboxStorage'
 
@@ -61,8 +63,15 @@ const age = (p: PendingMessage, now: number) => {
   return Number.isNaN(created) ? 0 : now - created
 }
 
-/** Too old to be sent by itself: it may have arrived, and the server no longer recognises its nonce. */
-export const unsafeToRepeat = (p: PendingMessage, now: number) => p.possiblyDelivered && age(p, now) > REPEAT_SAFE_MS
+/** The server answered /api/health and lists no "messages.nonce": it takes a repeat for a second message. */
+function nonceUnsupported(): boolean {
+  const features = useServerFeaturesStore()
+  return features.loaded && !features.messageNonce
+}
+
+/** Not to be sent by itself: it may have arrived, and the server no longer recognises its nonce (a day) or never did. */
+export const unsafeToRepeat = (p: PendingMessage, now: number) =>
+  p.possiblyDelivered && (age(p, now) > REPEAT_SAFE_MS || nonceUnsupported())
 
 /** Marks as not sent what must not be repeated any more, and drops what is far too old. */
 function expire(cx: Cx, now = Date.now()) {
@@ -146,12 +155,32 @@ export function cancelPending(cx: Cx, nonce: string) {
   settlePending(cx, nonce)
 }
 
-/** Changes the text of a message that no request with this text has left for. An emptied text cancels it. */
+/** The editor is open on this message: this tab's queue holds the conversation back, so it cannot send the old text meanwhile. The hold is per tab: another tab may still send the message, and saving then says so. */
+export function beginEditPending(cx: Cx, nonce: string) {
+  cx.cs.outboxEditing.add(nonce)
+}
+
+/** The editor closed without saving: the held conversation goes on. */
+export function endEditPending(cx: Cx, nonce: string) {
+  if (cx.cs.outboxEditing.delete(nonce)) void flushOutbox(cx)
+}
+
+/** Changes the text of a message that no request with this text has left for. An emptied text cancels it. Saving also ends the hold begun by beginEditPending. */
 export function editPending(cx: Cx, nonce: string, content: string) {
+  try {
+    saveEdit(cx, nonce, content)
+  } finally {
+    endEditPending(cx, nonce)
+  }
+}
+
+function saveEdit(cx: Cx, nonce: string, content: string) {
   const text = content.trim()
   const entry = cx.cs.outbox.value.find(p => p.nonce === nonce)
   // After a try that may have arrived, the server would return the old text for this nonce.
-  if (!entry || entry.status === 'sending' || entry.possiblyDelivered) return
+  // Sent from another tab meanwhile: say so instead of dropping the change silently.
+  if (!entry) { showToast(t('outbox.editTooLate')); return }
+  if (entry.status === 'sending' || entry.possiblyDelivered) return
   if (!text) { cancelPending(cx, nonce); return }
   change(cx, nonce, { content: text })
 }
@@ -191,7 +220,7 @@ async function flushConversation(cx: Cx, channelId: string) {
     for (;;) {
       const next = cs.outbox.value.find(p => p.channelId === channelId && p.status !== 'failed')
       // Another tab's request is out for the first one: the order holds, so this tab waits. The server asked to wait (slow mode): everything behind it waits too.
-      if (next?.status !== 'waiting' || next.notBefore > Date.now() || (await deliver(cx, next)) === 'stop') return
+      if (next?.status !== 'waiting' || cs.outboxEditing.has(next.nonce) || next.notBefore > Date.now() || (await deliver(cx, next)) === 'stop') return
     }
   } finally {
     cs.outboxBusy.delete(channelId)
@@ -327,4 +356,5 @@ export function resetOutbox(cx: Cx) {
   cx.cs.outboxDelay = RETRY_START_MS
   cx.cs.outbox.value = []
   cx.cs.outboxBusy.clear()
+  cx.cs.outboxEditing.clear()
 }

@@ -250,10 +250,10 @@ permission check on the channel.
 
 ### REST routes
 
-261 operations on 209 paths, grouped by API tag.
+319 operations on 252 paths, grouped by API tag.
 
 
-#### Admin (49)
+#### Admin (54)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
@@ -274,6 +274,7 @@ permission check on the channel.
 | POST | `/api/admin/import/discord/preview` | Session + admin-area permission | Preview a Discord server import |
 | GET | `/api/admin/invites` | Session + admin-area permission | List invites |
 | POST | `/api/admin/invites` | Session + admin-area permission | Create an invite |
+| PATCH | `/api/admin/invites/{id}` | Session + admin-area permission | Change an invite's expiry or use limit |
 | DELETE | `/api/admin/invites/{id}` | Session + admin-area permission | Delete an invite |
 | PUT | `/api/admin/layout` | Session + admin-area permission | Apply category order and channel placement |
 | GET | `/api/admin/media` | Session + admin-area permission | List all media, newest first |
@@ -283,6 +284,8 @@ permission check on the channel.
 | GET | `/api/admin/media/stats` | Session + admin-area permission | Storage totals |
 | DELETE | `/api/admin/media/{id}` | Session + admin-area permission | Delete a media object |
 | GET | `/api/admin/status` | Session + admin-area permission | Operator status |
+| GET | `/api/admin/status/capacity` | Session + admin-area permission | Server capacity |
+| POST | `/api/admin/status/websocket` | Session + admin-area permission | Report the admin's WebSocket |
 | GET | `/api/admin/system` | Session + admin-area permission | System status |
 | POST | `/api/admin/system/check` | Session + admin-area permission | Check for a new release now |
 | POST | `/api/admin/system/mail/test` | Session + admin-area permission | Send a test e-mail |
@@ -303,11 +306,13 @@ permission check on the channel.
 | POST | `/api/admin/users/{id}/timeout` | Session + admin-area permission | Time out a member |
 | DELETE | `/api/admin/users/{id}/timeout` | Session + admin-area permission | End a member's timeout |
 | POST | `/api/admin/users/{id}/two-factor/reset` | Session + admin-area permission | Reset a member's two-factor sign-in |
+| PATCH | `/api/channels/{channelID}/forum-settings` | Session | Update a forum's settings |
 | POST | `/api/channels/{channelID}/tags` | Session | Create a forum tag |
+| PUT | `/api/channels/{channelID}/tags/order` | Session | Reorder a forum's tags |
 | PATCH | `/api/channels/{channelID}/tags/{tagID}` | Session | Update a forum tag |
 | DELETE | `/api/channels/{channelID}/tags/{tagID}` | Session | Delete a forum tag |
 
-#### Auth (15)
+#### Auth (16)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
@@ -326,6 +331,7 @@ permission check on the channel.
 | POST | `/api/auth/sessions/revoke-others` | Session | Sign out all my other sessions |
 | DELETE | `/api/auth/sessions/{id}` | Session | Sign out one of my sessions |
 | GET | `/api/invites/{code}` | None (public) | Preview an invite |
+| GET | `/api/join/{slug}` | None (public) | Preview a vanity invite link |
 
 #### Bot API (19)
 
@@ -371,18 +377,22 @@ permission check on the channel.
 | DELETE | `/api/admin/bots/{id}/tokens/{tokenID}` | Session + admin-area permission | Revoke a token |
 | POST | `/api/admin/bots/{id}/tokens/{tokenID}/regenerate` | Session + admin-area permission | Regenerate a token |
 
-#### Channels (15)
+#### Channels (19)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
 | PUT | `/api/categories/{id}/notifications` | Session | Set category notification level |
 | GET | `/api/channels` | Session | List categories and channels |
 | GET | `/api/channels/{channelID}/first-unread` | Session | First unread message of a channel |
+| GET | `/api/channels/{channelID}/forum-settings` | Session | Get a forum's settings |
 | PUT | `/api/channels/{channelID}/notifications` | Session | Set channel notification level |
 | GET | `/api/channels/{channelID}/posts` | Session | List forum posts |
+| GET | `/api/channels/{channelID}/posts/unread` | Session | List a forum's unread posts |
+| PUT | `/api/channels/{channelID}/posts/{messageID}/read` | Session | Mark a forum post read |
 | POST | `/api/channels/{channelID}/read` | Session | Mark a channel read |
 | GET | `/api/channels/{channelID}/tags` | Session | List forum tags |
 | POST | `/api/channels/{channelID}/unread` | Session | Mark unread from a message |
+| POST | `/api/channels/{id}/voice/{userID}/disconnect` | Session | Disconnect a member from a Talk |
 | POST | `/api/dms/{id}/talk` | Session | Start a Talk from a direct message conversation |
 | GET | `/api/notification-settings` | Session | Notification settings |
 | PUT | `/api/notification-settings/server` | Session | Set server notification default |
@@ -398,15 +408,19 @@ permission check on the channel.
 | GET | `/api/channels/{channelID}/commands` | Session | List the slash commands of a channel |
 | POST | `/api/channels/{channelID}/interactions` | Session | Run a slash command |
 
-#### Direct messages (5)
+#### Direct messages (9)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
 | GET | `/api/dms` | Session | List direct messages |
 | POST | `/api/dms` | Session | Start a direct message |
+| PUT | `/api/dms/favourites` | Session | Set the caller's favourite direct messages |
 | GET | `/api/dms/{id}` | Session | Get a direct message |
+| PUT | `/api/dms/{id}/hidden` | Session | Close or reopen a direct message in the caller's list |
 | POST | `/api/dms/{id}/members` | Session | Add a member to a group direct message |
 | DELETE | `/api/dms/{id}/members/{user}` | Session | Leave a group direct message |
+| GET | `/api/users/me/dm-settings` | Session | Read the direct message settings |
+| PUT | `/api/users/me/dm-settings` | Session | Set the direct message settings |
 
 #### Emoji (6)
 
@@ -419,25 +433,41 @@ permission check on the channel.
 | GET | `/api/emoji/{id}/image` | Session | Custom emoji image |
 | GET | `/api/emoji/{id}/still` | Session | Custom emoji still frame |
 
-#### Events (10)
+#### Events (24)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
+| GET | `/api/event-role-templates` | Session | List role templates |
+| POST | `/api/event-role-templates` | Session | Create a role template |
+| PATCH | `/api/event-role-templates/{templateID}` | Session | Update a role template |
+| DELETE | `/api/event-role-templates/{templateID}` | Session | Delete a role template |
 | GET | `/api/events` | Session | List community events |
 | POST | `/api/events` | Session | Create a community event |
 | GET | `/api/events/{id}` | Session | Get a community event |
 | PATCH | `/api/events/{id}` | Session | Update a community event |
 | POST | `/api/events/{id}/cancel` | Session | Cancel a community event |
+| GET | `/api/events/{id}/comments` | Session | List the comments of an event |
+| POST | `/api/events/{id}/comments` | Session | Comment on an event |
+| PUT | `/api/events/{id}/comments/mute` | Session | Mute or unmute the notices of an event's comments |
+| PATCH | `/api/events/{id}/comments/{commentID}` | Session | Edit a comment |
+| DELETE | `/api/events/{id}/comments/{commentID}` | Session | Delete a comment |
 | POST | `/api/events/{id}/cover` | Session | Upload event cover image |
 | DELETE | `/api/events/{id}/cover` | Session | Remove event cover image |
+| PUT | `/api/events/{id}/roles` | Session | Set the roles of an event |
+| DELETE | `/api/events/{id}/roles/{roleID}` | Session | Delete a role of an event |
 | PUT | `/api/events/{id}/rsvp` | Session | Set RSVP response for an event |
 | DELETE | `/api/events/{id}/rsvp` | Session | Delete RSVP response for an event |
 | GET | `/api/events/{id}/rsvps` | Session | List RSVPs for an event |
+| PUT | `/api/events/{id}/signup` | Session | Sign up for a role of an event |
+| DELETE | `/api/events/{id}/signup` | Session | Leave the role of an event |
+| DELETE | `/api/events/{id}/signup/{userID}` | Session | Remove a member from the roster of an event |
 
-#### Media (4)
+#### Media (6)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
+| POST | `/api/channels/{channelID}/attachments` | Session | Upload an attachment for a message |
+| DELETE | `/api/channels/{channelID}/attachments/{id}` | Session | Remove an unsent attachment |
 | POST | `/api/channels/{channelID}/upload` | Session | Post a message with an attachment |
 | GET | `/api/link-preview` | Session | Link card for a URL |
 | GET | `/api/link-preview/image` | Session | Proxied preview image |
@@ -480,7 +510,7 @@ permission check on the channel.
 | PUT | `/api/threads/{threadID}/follow` | Session | Follow a thread |
 | DELETE | `/api/threads/{threadID}/follow` | Session | Unfollow a thread |
 
-#### Moderation (12)
+#### Moderation (13)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
@@ -489,6 +519,7 @@ permission check on the channel.
 | PUT | `/api/admin/automod/rules/{id}` | Session + admin-area permission | Replace an automod rule |
 | DELETE | `/api/admin/automod/rules/{id}` | Session + admin-area permission | Delete an automod rule |
 | GET | `/api/admin/reports` | Session + admin-area permission | List reports |
+| GET | `/api/admin/reports/open-count` | Session + admin-area permission | Count open reports |
 | GET | `/api/admin/reports/{id}` | Session + admin-area permission | Get a report |
 | DELETE | `/api/admin/reports/{id}` | Session + admin-area permission | Delete a report |
 | POST | `/api/admin/reports/{id}/resolve` | Session + admin-area permission | Close a report |
@@ -497,12 +528,22 @@ permission check on the channel.
 | PUT | `/api/admin/users/{id}/moderation/notes/{noteID}` | Session + admin-area permission | Edit your moderator note |
 | DELETE | `/api/admin/users/{id}/moderation/notes/{noteID}` | Session + admin-area permission | Delete a moderator note |
 
-#### Onboarding (5)
+#### Onboarding (15)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
+| PUT | `/api/admin/community/icon` | Session + admin-area permission | Set the community icon |
+| DELETE | `/api/admin/community/icon` | Session + admin-area permission | Remove the community icon |
+| GET | `/api/admin/first-run` | Session + admin-area permission | Read the Owner's first-run checklist |
+| PUT | `/api/admin/first-run` | Session + admin-area permission | Close, reopen or advance the Owner's first-run checklist |
 | GET | `/api/admin/onboarding` | Session + admin-area permission | Read the onboarding settings |
 | PUT | `/api/admin/onboarding` | Session + admin-area permission | Set the onboarding settings |
+| GET | `/api/admin/raid` | Session + admin-area permission | Read the raid protection settings |
+| PUT | `/api/admin/raid` | Session + admin-area permission | Set the raid protection settings |
+| PUT | `/api/admin/raid/lockdown` | Session + admin-area permission | Switch the lockdown on or off |
+| GET | `/api/admin/vanity-link` | Session + admin-area permission | Read the vanity invite link |
+| PUT | `/api/admin/vanity-link` | Session + admin-area permission | Set or remove the vanity invite link |
+| GET | `/api/community/icon` | None (public) | Community icon |
 | GET | `/api/onboarding` | Session | Read the onboarding state |
 | POST | `/api/onboarding/accept` | Session | Accept the community rules |
 | PUT | `/api/onboarding/tips` | Session | Store dismissed tips |
@@ -527,14 +568,16 @@ permission check on the channel.
 | DELETE | `/api/push/subscriptions/{id}` | Session | Turn push off for a device |
 | POST | `/api/push/test` | Session | Send a test push |
 
-#### Realtime (2)
+#### Realtime (4)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
 | GET | `/api/webrtc/config` | Session | ICE servers for voice |
+| POST | `/api/webrtc/probe` | Session | Answer a connection test |
+| GET | `/api/webrtc/speedtest` | Session | Download speed test |
 | GET | `/api/ws` | Session cookie on upgrade, origin check | WebSocket event stream |
 
-#### Roles (14)
+#### Roles (17)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
@@ -550,8 +593,11 @@ permission check on the channel.
 | GET | `/api/admin/upload-limit` | Session + admin-area permission | Read the global upload limit |
 | PUT | `/api/admin/upload-limit` | Session + admin-area permission | Set the global upload limit |
 | PUT | `/api/admin/users/{id}/roles` | Session + admin-area permission | Set a member's roles |
+| PUT | `/api/me/roles/{id}` | Session | Take a self-assignable role |
+| DELETE | `/api/me/roles/{id}` | Session | Drop a self-assignable role |
 | GET | `/api/permissions` | Session | Own permissions |
 | GET | `/api/roles` | Session | List roles |
+| GET | `/api/roles/self-assignable` | Session | List the roles members can choose |
 
 #### System (5)
 
@@ -614,9 +660,26 @@ permission check on the channel.
 | POST | `/api/admin/webhooks/{id}/token` | Session + admin-area permission | Regenerate a webhook's token |
 | POST | `/api/webhooks/{id}/{token}` | Secret in URL | Execute a webhook |
 
+#### Wiki (12)
+
+| Method | Path | Authentication | Summary |
+|---|---|---|---|
+| GET | `/api/wiki` | Session | List the wiki pages |
+| POST | `/api/wiki/images` | Session | Upload a wiki picture |
+| POST | `/api/wiki/pages` | Session | Create a wiki page |
+| GET | `/api/wiki/pages/{slug}` | Session | Get a wiki page |
+| PATCH | `/api/wiki/pages/{slug}` | Session | Change a wiki page |
+| DELETE | `/api/wiki/pages/{slug}` | Session | Delete a wiki page |
+| PUT | `/api/wiki/pages/{slug}/lock` | Session | Lock or unlock a wiki page |
+| GET | `/api/wiki/pages/{slug}/revisions` | Session | List the revisions of a wiki page |
+| GET | `/api/wiki/pages/{slug}/revisions/{rev}` | Session | Get one revision of a wiki page |
+| POST | `/api/wiki/pages/{slug}/revisions/{rev}/restore` | Session | Restore a revision of a wiki page |
+| POST | `/api/wiki/pages/{slug}/undelete` | Session | Restore a deleted wiki page |
+| GET | `/api/wiki/search` | Session | Search the wiki |
+
 ### WebSocket events
 
-**Server to client (55):** `block_updated`, `channels_changed`, `dm_created`, `dm_member_added`, `dm_member_removed`, `emoji_changed`, `event_delete`, `event_reminder`, `event_update`, `forum_tags_changed`, `interaction_response`, `kicked`, `media_handshake`, `member_joined`, `member_timeout`, `message_create`, `message_delete`, `message_reaction`, `message_update`, `moderation_notice`, `permissions_changed`, `pins_changed`, `poll_update`, `pong`, `presence_snapshot`, `presence_update`, `read_state`, `reminder_update`, `roles_changed`, `saved_updated`, `scheduled_message_update`, `screen_layers`, `screen_layers_wanted`, `screen_quality`, `screen_viewers`, `server_info`, `stage_hand`, `stage_talk_power`, `system_update`, `talk_leader`, `talk_moved`, `talk_reaction`, `thread_follow_updated`, `typing`, `user_stats`, `user_update`, `voice_kicked`, `voice_mute_state`, `voice_rooms`, `voice_snapshot`, `voice_speaking`, `voice_state_update`, `webrtc_candidate`, `webrtc_media_state`, `webrtc_offer`
+**Server to client (65):** `block_updated`, `cameras_capped`, `channels_changed`, `community_updated`, `dm_call_end`, `dm_call_ring`, `dm_created`, `dm_member_added`, `dm_member_removed`, `dm_prefs_updated`, `emoji_changed`, `event_comment`, `event_comment_notice`, `event_delete`, `event_reminder`, `event_signup_notice`, `event_update`, `forum_tags_changed`, `interaction_response`, `kicked`, `media_handshake`, `member_joined`, `member_roles_changed`, `member_timeout`, `message_create`, `message_delete`, `message_reaction`, `message_update`, `moderation_notice`, `permissions_changed`, `pins_changed`, `poll_update`, `pong`, `presence_snapshot`, `presence_update`, `read_state`, `reminder_update`, `reports_open`, `roles_changed`, `saved_updated`, `scheduled_message_update`, `screen_layers`, `screen_layers_wanted`, `screen_quality`, `screen_viewers`, `server_info`, `stage_hand`, `stage_talk_power`, `system_update`, `talk_leader`, `talk_moved`, `talk_reaction`, `thread_follow_updated`, `typing`, `user_stats`, `user_update`, `voice_kicked`, `voice_mute_state`, `voice_rooms`, `voice_snapshot`, `voice_speaking`, `voice_state_update`, `webrtc_candidate`, `webrtc_media_state`, `webrtc_offer`
 
 
 **Client to server (20):** `media_handshake`, `ping`, `presence_idle`, `stage_hand`, `stage_talk_power`, `talk_reaction`, `typing`, `voice_join`, `voice_leave`, `voice_mute_state`, `voice_speaking`, `webrtc_answer`, `webrtc_camera_stop`, `webrtc_candidate`, `webrtc_diag`, `webrtc_layers`, `webrtc_request_keyframe`, `webrtc_screenshare_start`, `webrtc_screenshare_stop`, `webrtc_subscribe`

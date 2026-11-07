@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { chordText } from './desktopGaming'
 import { formatShortcut, isMac, keyLabel, SHORTCUT_GROUPS } from './shortcuts'
 import { setLocale } from '../i18n'
 
@@ -36,6 +37,14 @@ describe('formatShortcut', () => {
     expect(formatShortcut(['mod', 'K'], false)).toBe('Strg+K')
     expect(formatShortcut(['Shift', 'F10'], false)).toBe('Umschalt+F10')
     expect(formatShortcut(['?'], false)).toBe('?')
+  })
+
+  it('writes the space bar in the reader\'s language, as the gaming shortcut chord does', () => {
+    setLocale('en')
+    expect(formatShortcut(['Ctrl', 'Space'], false)).toBe('Ctrl+Space')
+    setLocale('de')
+    expect(formatShortcut(['Ctrl', 'Space'], false)).toBe('Strg+Leertaste')
+    expect(chordText({ key: 32, control: true, alt: false, shift: false })).toBe('Strg+Leertaste')
   })
 
   it('follows the device when no platform is given', () => {

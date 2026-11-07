@@ -236,6 +236,57 @@ describe('discard guard', () => {
   })
 })
 
+describe('closing right after Save', () => {
+  it('waits for the save in flight instead of asking to discard it', async () => {
+    let release = () => {}
+    const { api } = setup({ save: () => new Promise<void>(resolve => { release = resolve }) })
+    api.draft.name = 'A'
+    const saving = api.save()
+    const leave = api.guard()
+    await flushPromises()
+    expect(pendingConfirm.value).toBeNull()
+    release()
+    await saving
+    expect(await leave).toBe(true)
+    expect(pendingConfirm.value).toBeNull()
+  })
+
+  it('still asks when the save in flight fails', async () => {
+    let fail = (_: Error) => {}
+    const { api } = setup({ save: () => new Promise<void>((_, reject) => { fail = reject }) })
+    api.draft.name = 'A'
+    const saving = api.save()
+    const leave = api.guard()
+    fail(new Error('offline'))
+    await saving
+    await flushPromises()
+    expect(pendingConfirm.value?.title).toBe('Discard changes?')
+    pendingConfirm.value?.resolve(false)
+    expect(await leave).toBe(false)
+  })
+
+  it('lets the surrounding scope wait for it too', async () => {
+    let scope!: ReturnType<typeof provideDraftScope>
+    let api!: ReturnType<typeof useSettingsDraft<Form>>
+    let release = () => {}
+    const Child = defineComponent({
+      setup() {
+        api = useSettingsDraft<Form>({ source: () => ({ name: 'a', limit: 0, roles: [], lobby: false }), save: () => new Promise<void>(resolve => { release = resolve }) })
+        return () => h('div')
+      }
+    })
+    mounted.push(mount(defineComponent({ setup() { scope = provideDraftScope(); return () => h(Child) } })))
+    api.draft.name = 'b'
+    const saving = api.save()
+    const leave = scope.guard()
+    await flushPromises()
+    expect(pendingConfirm.value).toBeNull()
+    release()
+    await saving
+    expect(await leave).toBe(true)
+  })
+})
+
 describe('draft scope', () => {
   it('knows whether any draft inside it is unsaved', async () => {
     let scope!: ReturnType<typeof provideDraftScope>

@@ -13,6 +13,8 @@ import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { systemStatus } from './systemStatus.fixture'
 import { setLocale, t } from '../i18n'
+import { pendingConfirm } from '../lib/confirm'
+import type { PendingMessage } from '../stores/chat/outboxTypes'
 const h = vi.hoisted(() => ({ stop: vi.fn() }))
 vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => ({ stopScreenShare: h.stop }) }))
 vi.mock('../lib/api', async original => ({ ...(await original<typeof import('../lib/api')>()), api: vi.fn() }))
@@ -77,6 +79,30 @@ it('wraps ArrowUp from no focus to the last item and keeps arrows inside one men
   sub.forEach(i => Object.defineProperty(i.element, 'offsetParent', { configurable: true, get: () => w.element }))
   sub.at(-1)!.element.focus(); await key('ArrowDown'); expect(document.activeElement).toBe(sub[0]!.element)
   sub[0]!.element.focus(); await key('ArrowUp'); expect(document.activeElement).toBe(sub.at(-1)!.element)
+})
+function unsent(count: number) {
+  const userId = useAuthStore().user!.id
+  useChatStore().outbox = Array.from({ length: count }, (_, i): PendingMessage => ({
+    nonce: `n${i}`, channelId: 'c1', userId, parentId: null, replyToId: null, content: 'x', createdAt: '2026-01-01T12:00:00Z', status: 'waiting',
+    error: '', cause: 'offline', attempts: 0, possiblyDelivered: false, notBefore: 0
+  }))
+}
+it('asks before signing out with unsent messages, and keeps the session when the member declines', async () => {
+  const logout = vi.spyOn(useAuthStore(), 'logout').mockResolvedValue()
+  unsent(2); mountMenu(); await flushPromises()
+  await item(t('account.signOut')).trigger('click'); await flushPromises()
+  expect(pendingConfirm.value?.title).toBe(t('outbox.discardOnLeaveTitle', { count: 2 }))
+  expect(logout).not.toHaveBeenCalled()
+  pendingConfirm.value?.resolve(false); await flushPromises()
+  expect(logout).not.toHaveBeenCalled()
+})
+it('signs out after the member confirms discarding the unsent messages', async () => {
+  const logout = vi.spyOn(useAuthStore(), 'logout').mockResolvedValue()
+  unsent(1); mountMenu(); await flushPromises()
+  await item(t('account.signOut')).trigger('click'); await flushPromises()
+  expect(pendingConfirm.value?.title).toBe(t('outbox.discardOnLeaveTitle', { count: 1 }))
+  pendingConfirm.value?.resolve(true); await flushPromises()
+  expect(logout).toHaveBeenCalledTimes(1)
 })
 it('tells the member when signing out fails', async () => {
   vi.spyOn(useAuthStore(), 'logout').mockRejectedValue(new Error('offline'))

@@ -11,30 +11,31 @@ entire communication path.
 | Beta | Usable and maintained, but outstanding acceptance (for example platform signing) keeps it out of Supported. Expect rough edges. |
 | Planned | Requirements exist, but no qualified usable product path is available. |
 
-## Status at 2.9
+## Status at 3.0
 
 Mnema Talk 1.0 was the first release under the
 [API stability contract](api-stability.md): its public surfaces change
-incompatibly only in a major release. Every release since keeps that contract
-and only adds to it (one announced exception in 1.2.0 for automod report
+incompatibly only in a major release. Every release up to 2.9 kept that contract
+and only added to it (one announced exception in 1.2.0 for automod report
 entries, see below); 2.0.0 was a major version for the built-in TURN relay and
-changed no API. What the label does and does not say:
+changed no API. 3.0.0 is a major release and contains the changes listed in
+[api-stability.md](api-stability.md#300-changes). What the label does and does not say:
 
 **Supported versions.** Security fixes go to the latest minor release and,
 once a newer minor exists, to the previous minor for 90 days
-([SECURITY.md](../SECURITY.md#supported-versions)). At 2.9.x that means 2.9.x
-and, for 90 days after 2.9.0 (2026-11-04), 2.8.x. CI upgrades from 0.8.16,
-0.9.0, 1.0.0, 1.1.0, 2.0.0 and 2.9.12 to prove the upgrade path; that is a test, not a
+([SECURITY.md](../SECURITY.md#supported-versions)). At 3.0.x that means 3.0.x
+and, for 90 days after 3.0.0, 2.9.x. CI upgrades from 0.8.16,
+0.9.0, 1.0.0, 1.1.0, 2.0.0, 2.9.12 and 2.9.19 to prove the upgrade path; that is a test, not a
 support promise. Per-version notes: [upgrade.md](upgrade.md).
 
-| Area | Category at 2.9 |
+| Area | Category at 3.0 |
 | --- | --- |
 | Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
 | Direct messages (two to ten members), blocking and reports, saved messages, forwarding, thread follow, search filters v2, built-in slash commands, reading a Talk's chat without joining | Supported (surfaces introduced in 1.1) |
 | 1.2 surfaces: Talk lobbies and temporary Talks, Stages with talk power/raised hands/reactions, forum channels, community events incl. past events, Discord structure import with undo, automod, moderation history/notes, view as role, sessions + inactivity sign-out, operator status page, reminders/scheduled messages, anonymous polls, auto-delete, search filters v3 with phrases/-term, notification levels v2, DM list v2 with favourites and mute-all, speaking URLs, emoji shortcodes | Supported (new in 1.2, released 2026-10-26; covered by automated backend and web tests and database migrations 0059–0076) |
 | 2.x surfaces: the built-in TURN relay (2.0), the setup assistant and the guided first run with *Test my connection* (2.2), several attachments per message and the reworked forum with tag colours, rules and solved posts (2.2), the community icon and Talks started from a direct message (2.2), taking over a call from another device (2.2), camera layers with a per-viewer camera cap and an optional voice upload limit (2.5, 2.6), raid protection, the vanity invite link and self-assignable roles (2.7), event roles with a waitlist, event comments and recurring events (2.8), the wiki with pages, revisions, locks, restore, pictures and search (2.9) | Supported (new in 2.x, released 2026-10-29 to 2026-11-04; covered by automated backend, web and end-to-end tests and database migrations 0077–0091) |
 | Browser app on WebKit (Safari, iOS, installed iOS web apps) and Firefox: text chat, search, voice, cameras and screen share with sealed media, as tested in [Browsers](#browsers) | Supported for text chat, search and administration. Sealed calls pass on macOS WebKit locally; the CI WebKit job cannot run them because Playwright's Linux WebKit build has no encoded-media API (`RTCRtpScriptTransform`); see the limits there (not yet tested on real iOS or Android hardware). WebKit occasionally refuses to clone the media key message (`web/src/lib/media/guard.ts` retries once; if the retry fails the line stays keyless until the next key, the call no longer aborts; seen on macOS WebKit CI runners, not verified on real Safari devices). |
-| Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), operator status page, backup and restore, upgrade tested from 0.8.16, 0.9.0, 1.0.0, 1.1.0, 2.0.0 and 2.9.12, cosign-signed images, self-update that verifies the image's signature and provenance before it restarts the app | Supported |
+| Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), operator status page, backup and restore, upgrade tested from 0.8.16, 0.9.0, 1.0.0, 1.1.0, 2.0.0, 2.9.12 and 2.9.19, cosign-signed images, self-update that verifies the image's signature and provenance before it restarts the app | Supported |
 | Native mobile apps, text end-to-end encryption | Not offered. Text stays readable by the server, by design. The browser app has a phone layout (channel list as a drawer, full-screen thread and member list, 44 px touch targets, safe areas) that is covered by the `mobile-*` e2e projects in Chromium and WebKit device emulation, not by tests on real phones (no real iOS/Android hardware qualification). |
 | Desktop client on Windows | Beta (unsigned, no Authenticode; SmartScreen warns; sealed media in WebView2 not verified on real Windows hardware) |
 | Desktop client on macOS and Linux | Beta (macOS: Apple silicon, ad-hoc signed, not notarised, Gatekeeper warns; Linux: Electron AppImage and .deb. Neither is qualified on real hardware. No gaming overlay. The Tauri host on Linux is not built) |
@@ -136,8 +137,8 @@ What it took:
   join (before any device is requested) instead of joining with microphone,
   camera and screen switched off.
 - **Linux WebKit in CI cannot take part in a sealed call.** This is the engine
-  build, not the app. Playwright's Linux WebKit (26.6 in 1.63, 27.2 in 1.64.1, in
-  both cases the version of its macOS build) reports `RTCPeerConnection` and `getUserMedia`, but
+  build, not the app. Playwright's Linux WebKit (26.6 up to Playwright 1.63, 27.2 since 1.64, in
+  both cases the version of its macOS build; the pinned version is in `e2e/package.json`) reports `RTCPeerConnection` and `getUserMedia`, but
   `RTCRtpScriptTransform`, `RTCRtpSender.prototype.createEncodedStreams` and
   `RTCEncodedAudioFrame` are all `undefined` (checked on x64 and arm64 Linux
   with both versions; the macOS build has `RTCRtpScriptTransform` and `RTCEncodedAudioFrame`). With
@@ -149,7 +150,7 @@ What it took:
   again. Every spec that joins a call (calls, screen share, Talk chat, roles
   rights) stays out of `e2e (webkit 1/2)` and `e2e (webkit 2/2)` and runs in
   four short `e2e (webkit-macos-calls, <group>)` jobs on macOS runners, not a required check.
-- **WebKit 27.2, `<select>` and the style policy.** Playwright 1.64's WebKit
+- **WebKit 27.2, `<select>` and the style policy.** Playwright's WebKit since 1.64
   (27.2) reports one `style-src-attr` violation for every `<select>` a page
   builds (empty sample, the script that created the select as source; the
   browser's own shadow tree sets an inline style). Nothing is refused: a page
@@ -159,7 +160,7 @@ What it took:
   Chromium and Firefox jobs run the same code and still fail on any
   `style-src-attr` event). Not yet checked in a release Safari 27.
 - **Firefox, navigations the driver loses.** On Linux Firefox (Playwright 1.63
-  and later) `page.goto` sometimes never resolves although the server answered
+  and later, pinned in `e2e/package.json`) `page.goto` sometimes never resolves although the server answered
   200 and `document.readyState` is `complete`: the driver's frame stays on
   about:blank (no `navigated` event; 3 to 12 of 40 navigations of a bare page
   on a 2-CPU container). Not specific to this app; the e2e fixtures retry the

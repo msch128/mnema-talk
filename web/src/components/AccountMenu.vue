@@ -12,6 +12,7 @@ import { useToastStore } from '../stores/toast'
 import { platform } from '../lib/platform'
 import { openSettings } from '../lib/settingsDialog'
 import { openShortcuts } from '../lib/shortcutsDialog'
+import { confirmDiscardUnsent } from '../lib/unsentGuard'
 import { notifyDialogOpen } from '../lib/notifyDialog'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useWebRTC } from '../composables/useWebRTC'
@@ -67,6 +68,7 @@ async function chooseLanguage(l: Locale) {
 
 async function signOut() {
   try {
+    if (!await confirmDiscardUnsent(t('account.signOut'))) return
     await authStore.logout()
   } catch (err) {
     toasts.error(caughtErrorMessage(err, t('errors.unknown')))

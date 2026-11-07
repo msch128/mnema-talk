@@ -4,6 +4,7 @@ import { flushPromises } from '@vue/test-utils'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
 import { useToastStore } from './toast'
+import { useServerFeaturesStore } from './serverFeatures'
 import { channelFixture, categoryFixture, messageFixture, userFixture, readStateFixture, fixtureId } from '../test-fixtures.fixture'
 const request = vi.hoisted(() => vi.fn())
 vi.mock('../lib/api', async original => ({ ...(await original<typeof import('../lib/api')>()), api: request }))
@@ -12,7 +13,7 @@ function deferred() {
   const promise = new Promise<unknown>(r => { resolve = r })
   return { promise, resolve }
 }
-beforeEach(() => { setActivePinia(createPinia()); vi.useFakeTimers(); request.mockReset() })
+beforeEach(() => { setActivePinia(createPinia()); useServerFeaturesStore().loaded = true; vi.useFakeTimers(); request.mockReset() })
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks() })
 function populated() {
   const chat = useChatStore(), channel = channelFixture(), message = messageFixture({ channel_id: channel.id }), user = userFixture()

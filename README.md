@@ -94,7 +94,7 @@ no accounts on someone else's platform.
   dimensions.
 - **Pinned messages** (with who pinned them and when), **polls**, **custom
   emoji** managed by the community (and `:shortcode` suggestions for standard emoji), **edit history** for moderators, **drafts**
-  that survive a reload and a **jump to the first unread message**.
+  that survive a reload, an **offline outbox** (messages written offline wait, can be edited or discarded, and go out once you're back) and a **jump to the first unread message**.
 - **Anonymous polls and channels that forget.** An anonymous poll stores only
   that a member voted and how many votes each answer has, never the choice
   (so a vote is final). A channel can opt in to auto-delete after 1, 7, 30 or

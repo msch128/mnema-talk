@@ -46,8 +46,20 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     return pending
   }
 
+  /**
+   * Waits for the feature list when it has not been read yet (the first read may have failed, as during a server restart), but only for
+   * `ms`: a send must not stall on a health check. Returns whether the list is known afterwards.
+   */
+  async function ensureLoaded(ms = 3000): Promise<boolean> {
+    if (loaded.value) return true
+    let timer: ReturnType<typeof setTimeout> | undefined
+    await Promise.race([load(), new Promise<void>(resolve => { timer = setTimeout(resolve, ms) })])
+    clearTimeout(timer)
+    return loaded.value
+  }
+
   return {
-    list, loaded, communityName, communityIcon, setCommunityIcon, has, load,
+    list, loaded, ensureLoaded, communityName, communityIcon, setCommunityIcon, has, load,
     dm: computed(() => has('dm')),
     dmV2: computed(() => has('dm.v2')),
     blocks: computed(() => has('blocks')),
@@ -70,6 +82,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     eventRecurrence: computed(() => has('events.recurrence')),
     wiki: computed(() => has('wiki')),
     notifyLevelsV2: computed(() => has('notify.levels.v2')),
-    messageNonce: computed(() => has('messages.nonce'))
+    messageNonce: computed(() => has('messages.nonce')),
+    reportsOpenCount: computed(() => has('reports.open_count'))
   }
 })

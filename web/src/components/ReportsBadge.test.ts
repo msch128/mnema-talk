@@ -11,11 +11,12 @@ import { tooltip } from '../directives/tooltip'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
 import { PERMISSION_BITS } from '../lib/permissions'
 
-const http = vi.hoisted(() => ({ urls: [] as string[], open: 0 }))
+const http = vi.hoisted(() => ({ urls: [] as string[], open: 0, listed: 0, more: false }))
 vi.mock('../lib/api', async importOriginal => ({
   ...(await importOriginal<typeof import('../lib/api')>()),
   api: vi.fn((url: string) => {
     http.urls.push(url)
+    if (url.startsWith('/api/admin/reports?')) return Promise.resolve({ has_more: http.more, reports: Array.from({ length: http.listed }, (_, i) => ({ id: i })) })
     return Promise.resolve(url === '/api/admin/reports/open-count' ? { open: http.open } : [])
   })
 }))
@@ -32,8 +33,10 @@ beforeEach(() => {
   setLocale('en')
   http.urls = []
   http.open = 0
+  http.listed = 0
+  http.more = false
   useAuthStore().user = userFixture({ id: fixtureId(1), role: 'user' })
-  useServerFeaturesStore().list = ['reports']
+  useServerFeaturesStore().list = ['reports', 'reports.open_count']
 })
 afterEach(() => {
   w?.unmount()
@@ -58,6 +61,27 @@ describe('open reports badge', () => {
     expect(badges).toHaveLength(2)
     expect(badges[1]?.text()).toContain('3')
     expect(badges[1]?.get('.sr-only').text()).toBe('3 open reports')
+  })
+
+  it('counts the open reports of a server without reports.open_count from the report list (its open-count path reads as a report id)', async () => {
+    usePermissionsStore().info = info(PERMISSION_BITS.manage_reports)
+    useServerFeaturesStore().list = ['reports']
+    http.listed = 3
+    mountMenu()
+    await flushPromises()
+    expect(http.urls).toContain('/api/admin/reports?status=open&limit=100')
+    expect(http.urls).not.toContain('/api/admin/reports/open-count')
+    expect(w.get('[data-testid="reports-badge"] [aria-hidden="true"]').text()).toBe('3')
+  })
+
+  it('shows "n+" when the list of open reports has another page', async () => {
+    usePermissionsStore().info = info(PERMISSION_BITS.manage_reports)
+    useServerFeaturesStore().list = ['reports']
+    http.listed = 3
+    http.more = true
+    mountMenu()
+    await flushPromises()
+    expect(w.get('[data-testid="reports-badge"] [aria-hidden="true"]').text()).toBe('3+')
   })
 
   it('says "1 open report" for a single one', async () => {

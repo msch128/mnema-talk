@@ -247,6 +247,7 @@
       "srvAGroupDirectMessageHolds": "Eine Gruppen-Direktnachricht hat höchstens {a} Mitglieder.",
       "srvCannotSendAnEmptyMessage": "Eine leere Nachricht kann nicht gesendet werden.",
       "srvCouldnTForwardThisMessage": "Die Nachricht konnte nicht weitergeleitet werden.",
+      "srvCouldnTReactToThisMessage": "Auf diese Nachricht konnte nicht reagiert werden.",
       "srvCouldnTSendThisMessage": "Die Nachricht konnte nicht gesendet werden.",
       "srvCouldnTStartThisDirect": "Die Direktnachricht konnte nicht gestartet werden.",
       "srvDiscordCouldNotBeReached": "Discord war nicht erreichbar. Versuche es später erneut.",
@@ -2507,8 +2508,7 @@
       "integrations": "Integrationen",
       "operations": "Betrieb",
       "back": "Zurück zu den Bereichen",
-      "signedIn": "Angemeldet als {name}",
-      "openReports": "{count} offen"
+      "signedIn": "Angemeldet als {name}"
     },
     "access": {
       "saved": "Gespeichert.",
@@ -4940,7 +4940,8 @@
       "mod": "Strg",
       "Alt": "Alt",
       "Shift": "Umschalt",
-      "Ctrl": "Strg"
+      "Ctrl": "Strg",
+      "Space": "Leertaste"
     },
     "notSet": "nicht gewählt",
     "group": {
@@ -5114,13 +5115,23 @@
     "waiting": "Ausstehend · wird gesendet, sobald du wieder online bist",
     "retrying": "Ausstehend · wird gleich erneut versucht",
     "noEdit": "Sie ist vielleicht schon angekommen, deshalb kannst du sie nur verwerfen.",
+    "editTooLate": "Die Nachricht wurde schon gesendet, deine Änderung wurde deshalb nicht übernommen.",
     "editFor": "Nachricht bearbeiten: {excerpt}",
     "discardFor": "Nachricht verwerfen: {excerpt}",
     "retryFor": "Nachricht erneut senden: {excerpt}",
-    "summaryWaiting": "{count} Nachricht ist ausstehend",
-    "summaryWaitingMany": "{count} Nachrichten sind ausstehend",
-    "summaryFailed": "{count} Nachricht nicht gesendet",
-    "summaryFailedMany": "{count} Nachrichten nicht gesendet",
+    "summaryWaiting": {
+      "one": "{count} Nachricht ist ausstehend",
+      "other": "{count} Nachrichten sind ausstehend"
+    },
+    "summaryFailed": {
+      "one": "{count} Nachricht nicht gesendet",
+      "other": "{count} Nachrichten nicht gesendet"
+    },
+    "discardOnLeaveTitle": {
+      "one": "{count} ungesendete Nachricht wird verworfen",
+      "other": "{count} ungesendete Nachrichten werden verworfen"
+    },
+    "discardOnLeaveBody": "Nachrichten, die noch auf das Senden warten, bleiben nur so lange auf diesem Gerät, wie du angemeldet bist. Wenn du jetzt gehst, gehen sie endgültig verloren.",
     "sending": "Wird gesendet …",
     "failed": "Nicht gesendet: {reason}",
     "edit": "Bearbeiten",

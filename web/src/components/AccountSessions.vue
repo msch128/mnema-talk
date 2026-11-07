@@ -6,6 +6,7 @@ import { computed, onMounted, ref } from 'vue'
 import { Bell, LogOut, Monitor } from '@lucide/vue'
 import { caughtErrorMessage } from '../lib/api'
 import { confirm } from '../lib/confirm'
+import { confirmDiscardUnsent } from '../lib/unsentGuard'
 import { listSessions, revokeOtherSessions, revokeSession } from '../lib/accountApi'
 import { relativeTime } from '../lib/bots'
 import type { AuthMemberSession } from '../types/rest'
@@ -65,6 +66,7 @@ const signOut = (s: AuthMemberSession) => run(async () => {
     confirmLabel: t('security.sessions.signOut'), danger: true
   })
   if (!ok) return
+  if (s.current && !await confirmDiscardUnsent(t('security.sessions.signOut'))) return
   await revokeSession(s.id)
   if (s.current) return leave()
   toasts.success(t('security.sessions.signedOut', { device: name(s) }))

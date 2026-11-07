@@ -3,6 +3,7 @@
 import type { ModerationNotice } from '../lib/moderation'
 import type { Message, Poll, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
 import type { ChatUserRef, CommunityeventsCommunityEvent, CommunityeventsEventComment } from './rest'
+import { withMessageDefaults } from '../lib/compat/olderServers'
 import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel, isCommunityeventsCommunityEvent } from './rest'
 import type { StageHand, StageTalkPower, TalkReaction } from './stageEvents'
 import { STAGE_EVENT_CHECKS } from './stageEvents'
@@ -393,6 +394,7 @@ const SERVER_EVENT_TYPES = new Set<string>([
  * known events never reach stores. No payload is included in the error. */
 export function decodeServerEvent(value: unknown): ServerEvent | null {
   if (isRecord(value) && typeof value['type'] === 'string' && !SERVER_EVENT_TYPES.has(value['type'])) return null
-  if (!isServerEvent(value)) throw new ContractError('WebSocket event') // i18n-ignore: schema name
-  return value
+  const event = withMessageDefaults(value)
+  if (!isServerEvent(event)) throw new ContractError('WebSocket event') // i18n-ignore: schema name
+  return event
 }

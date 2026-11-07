@@ -256,6 +256,13 @@ func TestABlockMakesAConversationReadOnlyInBothDirectionsWithoutSayingWhy(t *tes
 	if e := blocked.errorBody(t); e.Error.Message != "Couldn't send this message." {
 		t.Errorf("message %q", e.Error.Message)
 	}
+	// A reaction is refused with its own sentence, the same for both sides.
+	msgID := f.firstMessage(t, dm.ID).String()
+	react := map[string]string{"emoji": "👍"}
+	byBlocked, byBlocker := f.alice.post("/api/messages/"+msgID+"/reactions", react), f.bob.post("/api/messages/"+msgID+"/reactions", react)
+	if byBlocked.status != http.StatusForbidden || byBlocked.errorBody(t) != byBlocker.errorBody(t) || byBlocked.errorBody(t).Error.Message != "Couldn't react to this message." {
+		t.Errorf("reactions: blocked %d %s, blocker %d %s", byBlocked.status, byBlocked.body, byBlocker.status, byBlocker.body)
+	}
 	// Everything stays readable, and nothing says the conversation is blocked.
 	for _, c := range []*client{f.alice, f.bob} {
 		wantStatus(t, "read", c.get("/api/channels/"+dm.ID.String()+"/messages"), http.StatusOK)

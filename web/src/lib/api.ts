@@ -5,6 +5,7 @@ import { t } from '../i18n'
 import { formatDetailMessage } from './errorDetails'
 import { xhrUpload } from './xhrUpload'
 import { isRecord, type Decoder } from '../types/validation'
+import './compat/olderServers'
 
 const CODES = new Set([
   'INVALID_CREDENTIALS', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT', 'PAYLOAD_TOO_LARGE',

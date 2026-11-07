@@ -73,6 +73,8 @@ function resyncState(cx: Cx) {
   permissions.loadRoles()
   void useReportsOpenStore().load()
   void useEmojiStore().load()
+  // Not yet read (the server was restarting at start): sends need the list to carry their nonce.
+  void useServerFeaturesStore().load()
   fetchChannels(cx)
   fetchMembers(cx)
   fetchReadState(cx)

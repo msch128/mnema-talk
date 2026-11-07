@@ -63,6 +63,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-01-01T12:00:00Z'))
   setActivePinia(createPinia())
   useServerFeaturesStore().list = ['messages.nonce']
+  useServerFeaturesStore().loaded = true
   http.handle = url => url === '/api/channels' ? { categories: [], uncategorized: [ch] } : []
   vi.mocked(api).mockClear()
   vi.stubGlobal('WebSocket', Socket)
