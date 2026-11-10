@@ -1,0 +1,172 @@
+// One seeded run of the simulator: a chaotic phase in which the relay
+// interferes and the room changes, then a quiet phase in which the invariants
+// must come to hold.
+import { GroupChecks } from './groupSimChecks.fixture'
+import { GroupSim, SIM_START, type Fault } from './groupSim.fixture'
+import { fixtureId } from '../../test-fixtures.fixture'
+
+/** How long the relay interferes. */
+export const CHAOS_MS = 75_000
+/**
+ * How long the room may take to agree once the relay behaves. The slowest
+ * repair is a member that has to start over twice: the wait between two resets
+ * doubles from 10 s up to 60 s, and a member written off as silent comes back
+ * only after the absence limit.
+ */
+export const AGREE_WITHIN_MS = 240_000
+/** How long the agreement must then last, over a rotation and every member's renewal. */
+export const HOLD_MS = 60_000
+
+const HONEST: Fault = { drop: 0, duplicate: 0, slow: 0.2, stall: 0.03 }
+
+const FAULTS: readonly Fault[] = [
+  { drop: 0, duplicate: 0.05, slow: 0.2, stall: 0.02 },
+  { drop: 0.04, duplicate: 0.05, slow: 0.25, stall: 0.05 },
+  { drop: 0.12, duplicate: 0.1, slow: 0.3, stall: 0.08 },
+]
+
+export interface SimPlan {
+  /** The most members the room holds, 2 to 12; drawn from the seed when left out. */
+  members?: number
+  chaosMs?: number
+  /** How long the room may take to agree; AGREE_WITHIN_MS when left out. */
+  agreeWithinMs?: number
+  fault?: Fault
+  /**
+   * 'honest' is what the server does without an attacker: one ordered socket
+   * per member, nothing dropped or duplicated, only delay (and a socket that
+   * reconnects loses what was relayed meanwhile). 'hostile', the default, also
+   * reorders, duplicates and drops per recipient.
+   */
+  relay?: 'hostile' | 'honest'
+  /** What members may do while the relay interferes; everything when left out. */
+  actions?: readonly ActionKind[]
+}
+
+export interface SimResult {
+  seed: number
+  members: number
+  events: number
+  /** Virtual ms from the end of the interference until the room agreed; null if it never did. */
+  agreedAfterMs: number | null
+  violations: string[]
+  trace: string[]
+}
+
+export type ActionKind = 'join' | 'leave' | 'reload' | 'sleep' | 'reconnect'
+type Action = [kind: ActionKind, weight: number, run: () => void]
+
+function actions(sim: GroupSim, ids: readonly string[]): Action[] {
+  const absent = ids.filter(id => !sim.room.has(id))
+  const awake = sim.live().filter(member => !sim.asleep(member)).map(member => member.id)
+  const list: Action[] = []
+  if (absent.length) list.push(['join', 3, () => sim.join(sim.pick(absent))])
+  if (sim.room.size > 1) list.push(['leave', 2, () => sim.leave(sim.pick(sim.live()).id)])
+  if (!awake.length) return list
+  list.push(['reload', 2, () => sim.reload(sim.pick(awake), sim.draw() < 0.5)])
+  list.push(['sleep', 2, () => sim.sleep(sim.pick(awake), sim.between(2000, 20_000))])
+  list.push(['sleep', 1, () => sim.sleep(sim.pick(awake), sim.between(70_000, 90_000))])
+  list.push(['reconnect', 1, () => sim.reconnect(sim.pick(awake), sim.between(200, 6000))])
+  return list
+}
+
+function act(sim: GroupSim, ids: readonly string[], allowed: readonly ActionKind[] | undefined) {
+  const list = actions(sim, ids).filter(([kind]) => !allowed || allowed.includes(kind)).map(([, weight, run]) => [weight, run] as const)
+  if (!list.length) return
+  let roll = sim.draw() * list.reduce((sum, [weight]) => sum + weight, 0)
+  for (const [weight, run] of list) {
+    roll -= weight
+    if (roll < 0) return run()
+  }
+}
+
+function schedule(sim: GroupSim, ids: readonly string[], plan: SimPlan, chaosMs: number) {
+  const first = sim.between(1, ids.length)
+  for (const id of ids.slice(0, first)) sim.after(null, sim.between(0, 3000), () => sim.join(id))
+  const next = () => {
+    if (sim.now - SIM_START >= chaosMs) return
+    act(sim, ids, plan.actions)
+    sim.after(null, sim.between(500, 8000), next)
+  }
+  sim.after(null, sim.between(3000, 8000), next)
+}
+
+/** The relay behaves from now on, everyone is awake, and at least two members are here. */
+function calm(sim: GroupSim, ids: readonly string[]) {
+  sim.note('the relay stops interfering')
+  sim.fault = null
+  sim.wakeAll()
+  for (const id of ids) if (sim.room.size < 2 && !sim.room.has(id)) sim.join(id)
+}
+
+async function quietPhase(sim: GroupSim, checks: GroupChecks, within: number): Promise<number | null> {
+  const quietAt = sim.now
+  await sim.runUntil(quietAt + within, () => checks.agreed())
+  if (!checks.agreed()) {
+    sim.violation(`[1] the room did not agree within ${within} ms: ${checks.describe()}`)
+    return null
+  }
+  const agreedAfterMs = sim.now - quietAt
+  sim.note(`agreed after ${agreedAfterMs} ms`)
+  await sim.runUntil(sim.now + HOLD_MS)
+  // A commit may be on its way at this very moment: it lands within a few seconds.
+  await sim.runUntil(sim.now + 5000, () => checks.agreed())
+  if (!checks.agreed()) sim.violation(`[1] the room agreed and then split again: ${checks.describe()}`)
+  else await checks.sameKeys()
+  await checks.departedHoldNothing()
+  return agreedAfterMs
+}
+
+export async function runSeed(seed: number, plan: SimPlan = {}): Promise<SimResult> {
+  const checks = new GroupChecks()
+  const sim = new GroupSim(seed, checks)
+  checks.bind(sim)
+  try {
+    const members = plan.members ?? sim.between(2, 12)
+    const chaosMs = plan.chaosMs ?? CHAOS_MS
+    const ids = Array.from({ length: members }, (_, index) => fixtureId(index + 1))
+    sim.ordered = plan.relay === 'honest'
+    sim.fault = plan.fault ?? (sim.ordered ? HONEST : sim.pick(FAULTS))
+    sim.note(`seed ${seed}: up to ${members} members, ${plan.relay ?? 'hostile'} relay, faults ${JSON.stringify(sim.fault)}`)
+    schedule(sim, ids, plan, chaosMs)
+    await sim.runUntil(SIM_START + chaosMs)
+    calm(sim, ids)
+    const agreedAfterMs = await quietPhase(sim, checks, plan.agreeWithinMs ?? AGREE_WITHIN_MS)
+    return { seed, members, events: sim.events, agreedAfterMs, violations: [...sim.violations], trace: [...sim.trace] }
+  } finally {
+    await sim.dispose()
+  }
+}
+
+export interface Script {
+  /** Link latency per member number, in ms. */
+  latency: Record<number, number>
+  /** What happens, at which virtual ms; members are named by number. */
+  steps: readonly (readonly [at: number, action: 'join' | 'leave', member: number])[]
+  /** When the script is over and the room must come to agree. */
+  quietAt: number
+  agreeWithinMs?: number
+}
+
+/** A scripted run on the honest relay: fixed latencies, nothing dropped, duplicated or reordered. */
+export async function runScript(script: Script): Promise<SimResult> {
+  const checks = new GroupChecks()
+  const sim = new GroupSim(0, checks)
+  checks.bind(sim)
+  try {
+    sim.ordered = true
+    sim.latency = new Map(Object.entries(script.latency).map(([member, ms]) => [fixtureId(Number(member)), ms]))
+    for (const [at, action, member] of script.steps) sim.after(null, at, () => sim[action](fixtureId(member)))
+    await sim.runUntil(SIM_START + script.quietAt)
+    sim.note('the script is over')
+    const agreedAfterMs = await quietPhase(sim, checks, script.agreeWithinMs ?? AGREE_WITHIN_MS)
+    return { seed: 0, members: Object.keys(script.latency).length, events: sim.events, agreedAfterMs, violations: [...sim.violations], trace: [...sim.trace] }
+  } finally {
+    await sim.dispose()
+  }
+}
+
+/** A failure message a person can act on: the seed, what broke and the end of the trace. */
+export function report(result: SimResult, tail = 60): string {
+  return [`seed ${result.seed} (${result.members} members, ${result.events} events)`, ...result.violations, '--- trace (end) ---', ...result.trace.slice(-tail)].join('\n')
+}

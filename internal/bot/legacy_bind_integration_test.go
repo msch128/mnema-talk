@@ -71,8 +71,7 @@ func TestLegacyTokenIsBoundToTheBotsCreatorOnFirstUse(t *testing.T) {
 	tok, secret := legacyToken(t, e, b.ID)
 
 	svc := perm.NewService(e.p)
-	a := NewAuthenticator(e.p)
-	a.Perms = svc
+	a := NewAuthenticator(e.p, svc)
 	now := time.Now()
 	a.now = func() time.Time { return now }
 
@@ -116,8 +115,7 @@ func TestLegacyTokenFallsBackToTheOwnerAndNeverBreaks(t *testing.T) {
 		t.Fatal(err)
 	}
 	tok, secret := legacyToken(t, e, b.ID)
-	a := NewAuthenticator(e.p)
-	a.Perms = perm.NewService(e.p)
+	a := NewAuthenticator(e.p, perm.NewService(e.p))
 
 	if _, err := a.Lookup(ctx, secret); err != nil {
 		t.Fatalf("legacy token refused: %v", err)
@@ -151,8 +149,7 @@ func TestLegacyTokenStaysUnboundAndWorkingWhenNobodyQualifies(t *testing.T) {
 	if _, err := e.p.Exec(ctx, `UPDATE users SET disabled_at = NOW() WHERE id = $1`, e.owner.ID); err != nil {
 		t.Fatal(err)
 	}
-	a := NewAuthenticator(e.p)
-	a.Perms = perm.NewService(e.p)
+	a := NewAuthenticator(e.p, perm.NewService(e.p))
 	now := time.Now()
 	a.now = func() time.Time { return now }
 
@@ -187,8 +184,7 @@ func TestIssuedTokensAreNeverMarkedOrRebound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := NewAuthenticator(e.p)
-	a.Perms = perm.NewService(e.p)
+	a := NewAuthenticator(e.p, perm.NewService(e.p))
 	if _, err := a.Lookup(ctx, secret); err != nil {
 		t.Fatal(err)
 	}

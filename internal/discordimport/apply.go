@@ -175,6 +175,7 @@ func (im *Importer) Apply(ctx context.Context, sub perm.Subject, actorName strin
 		return nil, err
 	}
 	var rec *Record
+	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
 	err = im.Perms.Locked(ctx, sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
 		actor := snap.Global(sub)
 		if !actor.Has(perm.Administrator) {

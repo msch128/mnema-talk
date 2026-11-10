@@ -8,6 +8,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/auth/account"
 	"github.com/msch128/mnema-talk/internal/auth/authn"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/userdata"
 )
 
@@ -180,7 +181,7 @@ func TestArchiveFilesStayInTheOriginalOrder(t *testing.T) {
 }
 
 func personalDataHandler() *account.API {
-	h := account.New(authn.NewHandler(&auth.Sessions{}, nil))
+	h := account.New(authn.NewHandler(&auth.Sessions{}, permtest.NewFixture().Service(), nil))
 	(&components{account: h}).wirePersonalData()
 	return h
 }

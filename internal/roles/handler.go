@@ -26,6 +26,12 @@ type Handler struct {
 	SelfRoleLimit *httpx.RateLimiter
 }
 
+// New returns h ready to mount. It panics without Perms.
+func New(h Handler) *Handler {
+	perm.Must(h.Perms, "roles handler")
+	return &h
+}
+
 // Mount registers the routes every member may call (RequireUser applies).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/permissions", httpx.Handle(h.myPermissions))

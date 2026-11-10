@@ -51,6 +51,12 @@ type Handler struct {
 	UploadLimit *httpx.RateLimiter
 }
 
+// New returns h ready to mount. It panics without Perms.
+func New(h Handler) *Handler {
+	perm.Must(h.Perms, "emoji handler")
+	return &h
+}
+
 // Mount registers the routes every signed-in member may call.
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/emoji", httpx.Handle(h.listEmoji))

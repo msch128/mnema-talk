@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // Every event that bumps token_version retires the known-device cookies issued
@@ -20,7 +21,7 @@ import (
 func TestDeviceCookieDoesNotSurviveCredentialEvents(t *testing.T) {
 	p, admin, member := authFixture(t)
 	ctx := context.Background()
-	h := NewHandler(&auth.Sessions{DB: p, Secret: strings.Repeat("k", 32), TTL: time.Hour}, nil)
+	h := NewHandler(&auth.Sessions{DB: p, Secret: strings.Repeat("k", 32), TTL: time.Hour}, permtest.NewFixture().Service(), nil)
 
 	issue := func(id uuid.UUID, account string) *http.Cookie {
 		var tv int

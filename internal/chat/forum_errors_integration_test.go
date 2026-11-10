@@ -19,6 +19,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/forum"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 type forumHandlerFn func(*forum.API, http.ResponseWriter, *http.Request) error
@@ -425,7 +426,7 @@ func TestForumPostUpdateRejectsRepliesAndOtherChannels(t *testing.T) {
 
 func TestForumPostUpdateWithoutPermissionService(t *testing.T) {
 	f, _, mod, ch := forumCtx(t)
-	h := &Handler{DB: f.p, Events: &events.Recorder{}}
+	h := &Handler{DB: f.p, Perms: perm.NewService(f.p), Events: &events.Recorder{}}
 	other := forumNewUser(t, f, "forum_plain")
 	post, err := forum.CreateForumPost(context.Background(), f.p, nil, ch.ID, f.u.ID, false, "Legacy", "content", nil)
 	if err != nil {

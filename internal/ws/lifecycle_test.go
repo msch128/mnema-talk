@@ -17,7 +17,7 @@ import (
 // signalling callbacks, admin kicks). Unregistering must not make those
 // sends panic with "send on closed channel".
 func TestSendAfterUnregisterDoesNotPanic(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	for i := 0; i < 50; i++ {
 		c := newClient(h, nil, auth.User{ID: uuid.New(), Username: "u"}, 0)
 		h.register(c)
@@ -43,7 +43,7 @@ func TestSendAfterUnregisterDoesNotPanic(t *testing.T) {
 }
 
 func TestHubCloseTerminatesWebSocketAndRejectsNewConnections(t *testing.T) {
-	h := NewHub(nil, fakeAuth{user: auth.User{ID: uuid.New(), Username: "alice"}}, nil, nil)
+	h := NewHub(nil, fakeAuth{user: auth.User{ID: uuid.New(), Username: "alice"}}, nil, nil, openPerms())
 	srv := httptest.NewServer(http.HandlerFunc(h.HandleWebSocket))
 	t.Cleanup(srv.Close)
 	t.Cleanup(h.Close)
@@ -96,7 +96,7 @@ func TestHubCloseTerminatesWebSocketAndRejectsNewConnections(t *testing.T) {
 // Shutdown must not wait on voiceMu/transport cleanup, and a read loop
 // finishing later must never start another grace timer.
 func TestHubCloseDoesNotWaitOnVoiceCleanupOrRestartGrace(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	c := newClient(h, nil, auth.User{ID: uuid.New(), Username: "alice"}, 0)
 	h.register(c)
 	key := voiceKey{c.User.ID, uuid.New()}
@@ -120,7 +120,7 @@ func TestHubCloseDoesNotWaitOnVoiceCleanupOrRestartGrace(t *testing.T) {
 
 func TestHubCloseRacesRegistration(t *testing.T) {
 	for range 50 {
-		h := NewHub(nil, nil, nil, nil)
+		h := NewHub(nil, nil, nil, nil, openPerms())
 		c := newClient(h, nil, auth.User{ID: uuid.New(), Username: "alice"}, 0)
 		var group sync.WaitGroup
 		group.Add(2)
@@ -154,7 +154,7 @@ func (a shutdownAuth) AuthenticateRequest(*http.Request) (*auth.User, int, error
 
 func TestHubCloseDuringAuthenticationRejectsUpgrade(t *testing.T) {
 	a := shutdownAuth{entered: make(chan struct{}), release: make(chan struct{})}
-	h := NewHub(nil, a, nil, nil)
+	h := NewHub(nil, a, nil, nil, openPerms())
 	srv := httptest.NewServer(http.HandlerFunc(h.HandleWebSocket))
 	t.Cleanup(srv.Close)
 	var releaseOnce sync.Once

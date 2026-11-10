@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 func canceledContext() context.Context {
@@ -52,7 +53,7 @@ func TestFillTalkFieldsReportsFailures(t *testing.T) {
 
 func TestPostTalkInviteOnlyMapsAMissingTalkToNotFound(t *testing.T) {
 	w := newTalksWorld(t)
-	h := &API{DB: w.p}
+	h := &API{DB: w.p, Guard: core.NewGuard(perm.NewService(w.p))}
 	_, err := h.postTalkInvite(canceledContext(), uuid.New(), w.alice.ID, w.lobby.ID)
 	if err == nil || errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("err = %v; a database failure must not read as not found", err)
@@ -64,7 +65,7 @@ func TestPostTalkInviteOnlyMapsAMissingTalkToNotFound(t *testing.T) {
 
 func TestDMSendContextOnlyMapsAMissingConversationToNotFound(t *testing.T) {
 	w := newTalksWorld(t)
-	h := &API{DB: w.p}
+	h := &API{DB: w.p, Guard: core.NewGuard(perm.NewService(w.p))}
 	r := chattest.Request(w.alice, "", nil, "").WithContext(canceledContext())
 	if _, err := h.dmSendContext(r, w.lobby.ID); err == nil || errors.Is(err, core.ErrChannelNotFound) {
 		t.Fatalf("err = %v; a database failure must not read as not found", err)

@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 type disconnectRecorder struct {
@@ -45,7 +46,7 @@ func TestPasswordResetFollowUpNeverGetsLostToALaterReadFailure(t *testing.T) {
 	}
 
 	fault := authHookPool(t, p, &authQueryHook{match: "display_name, bio", cancel: true})
-	broken := NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, nil)
+	broken := NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, permtest.NewFixture().Service(), nil)
 	if w := confirmResetRequest(t, broken, token); w.Code != http.StatusInternalServerError {
 		t.Fatalf("faulty read: %d %s", w.Code, w.Body.String())
 	}
@@ -54,7 +55,7 @@ func TestPasswordResetFollowUpNeverGetsLostToALaterReadFailure(t *testing.T) {
 	}
 
 	live := &disconnectRecorder{}
-	h := NewHandler(&auth.Sessions{DB: p, Secret: secret, TTL: time.Hour}, nil)
+	h := NewHandler(&auth.Sessions{DB: p, Secret: secret, TTL: time.Hour}, permtest.NewFixture().Service(), nil)
 	h.Audit = &audit.Log{DB: p}
 	h.Live = live
 	if w := confirmResetRequest(t, h, token); w.Code != http.StatusNoContent {

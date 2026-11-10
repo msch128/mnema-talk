@@ -303,7 +303,8 @@ func (h *API) RunExportSweep(ctx context.Context, every time.Duration) {
 	defer t.Stop()
 	for {
 		worker.Tick(worker.JobExportSweep, func() error {
-			err := h.sweepExports(ctx)
+			// An online backup freezes the storage: wait for it to end.
+			err := h.Sessions.DB.OutsideBackup(ctx, func() error { return h.sweepExports(ctx) })
 			if err != nil && ctx.Err() == nil {
 				slog.Warn("export sweep failed", "err", err)
 			}

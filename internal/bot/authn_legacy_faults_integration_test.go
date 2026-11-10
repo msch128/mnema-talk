@@ -20,8 +20,7 @@ func legacyFixture(t *testing.T, dbFault, permFault *pgfault.Tracer) (*env, fixt
 	if _, err := e.p.Exec(context.Background(), `UPDATE bot_tokens SET created_by = NULL WHERE id = $1`, f.token.ID); err != nil {
 		t.Fatal(err)
 	}
-	a := NewAuthenticator(e.p)
-	a.Perms = perm.NewService(e.p)
+	a := NewAuthenticator(e.p, perm.NewService(e.p))
 	if dbFault != nil {
 		a.DB = &db.Pool{Pool: pgfault.Pool(t, e.p.Pool, dbFault)}
 	}

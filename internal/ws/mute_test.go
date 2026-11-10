@@ -32,8 +32,8 @@ func sentEvents(t *testing.T, c *Client, eventType string) []map[string]any {
 }
 
 func TestMutedMembersAreNeverShownSpeaking(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
-	chID := uuid.New()
+	h := NewHub(nil, nil, nil, nil, openPerms())
+	chID := openChannel()
 	user := auth.User{ID: uuid.New(), Username: "max"}
 	c := &Client{hub: h, User: user, send: make(chan []byte, 64)}
 	h.register(c)

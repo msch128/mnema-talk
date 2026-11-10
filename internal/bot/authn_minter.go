@@ -28,9 +28,6 @@ type minterVerdict struct {
 // to its likeliest issuer on first use (bindLegacy) and never refused for
 // lacking one. Failing to decide fails the request.
 func (a *Authenticator) CheckMinter(ctx context.Context, tokenID uuid.UUID, minter *uuid.UUID, botUser uuid.UUID) error {
-	if a.Perms == nil {
-		return nil
-	}
 	if minter == nil {
 		a.bindLegacy(ctx, tokenID, botUser)
 		return nil

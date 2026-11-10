@@ -14,7 +14,7 @@ import (
 func TestVoiceTimeWritesAreDebouncedAndFlushedOnClose(t *testing.T) {
 	p := testutil.DB(t)
 	u := wsFixtureUser(t, p)
-	h := NewHub(p, nil, nil, nil)
+	h := NewHub(p, nil, nil, nil, openPerms())
 	total := func() int64 {
 		var n int64
 		if err := p.QueryRow(context.Background(), `SELECT voice_seconds FROM users WHERE id=$1`, u.ID).Scan(&n); err != nil {
@@ -41,7 +41,7 @@ func TestVoiceTimeWritesAreDebouncedAndFlushedOnClose(t *testing.T) {
 func TestVoiceTimeFlushWritesWhatIsHeld(t *testing.T) {
 	p := testutil.DB(t)
 	u := wsFixtureUser(t, p)
-	h := NewHub(p, nil, nil, nil)
+	h := NewHub(p, nil, nil, nil, openPerms())
 	h.addVoiceTime(u.ID, uuid.New(), time.Second, seatPublic)
 	h.addVoiceTime(u.ID, uuid.New(), 2*time.Second, seatPublic)
 	h.flushVoiceTime(u.ID)
@@ -57,7 +57,7 @@ func TestVoiceTimeFlushWritesWhatIsHeld(t *testing.T) {
 func TestVoiceTimeIsAnnouncedOnlyToTheTalkItWasSpentIn(t *testing.T) {
 	p := testutil.DB(t)
 	u := wsFixtureUser(t, p)
-	h := NewHub(p, nil, nil, nil)
+	h := NewHub(p, nil, nil, nil, openPerms())
 	type seen struct {
 		ch    uuid.UUID
 		total int64
@@ -91,7 +91,7 @@ func TestVoiceTimeIsAnnouncedOnlyToTheTalkItWasSpentIn(t *testing.T) {
 func TestHubCloseBanksVoiceStaysInProgress(t *testing.T) {
 	p := testutil.DB(t)
 	u := wsFixtureUser(t, p)
-	h := NewHub(p, nil, nil, nil)
+	h := NewHub(p, nil, nil, nil, openPerms())
 	ch := uuid.New()
 	h.mu.Lock()
 	h.voiceSince[voiceKey{u.ID, ch}] = time.Now().Add(-90 * time.Second)
@@ -117,7 +117,7 @@ func TestHubCloseBanksVoiceStaysInProgress(t *testing.T) {
 func TestVoiceTimeSurvivesAFailedWrite(t *testing.T) {
 	p := testutil.DB(t)
 	u := wsFixtureUser(t, p)
-	h := NewHub(p, nil, nil, nil)
+	h := NewHub(p, nil, nil, nil, openPerms())
 	ch := uuid.New()
 	h.addVoiceTime(u.ID, ch, 3*time.Second, seatPublic) // written at once
 	h.addVoiceTime(u.ID, ch, 4*time.Second, seatPublic) // held back
@@ -154,7 +154,7 @@ func TestVoiceTimeSurvivesAFailedWrite(t *testing.T) {
 func TestVoiceTimeEntryIsDroppedOnceIdle(t *testing.T) {
 	p := testutil.DB(t)
 	u := wsFixtureUser(t, p)
-	h := NewHub(p, nil, nil, nil)
+	h := NewHub(p, nil, nil, nil, openPerms())
 	h.addVoiceTime(u.ID, uuid.New(), 3*time.Second, seatPublic)
 	h.pruneWhenIdle(u.ID)
 	h.vtimes.mu.Lock()
@@ -190,7 +190,7 @@ func TestPublicVoiceTimeCountsOnlyTalksEveryoneCanSee(t *testing.T) {
 		{"the call of a conversation", seatPrivate, 5, 0, 0},
 		{"a Talk everyone can see", seatPublic, 12, 7, 1},
 	} {
-		h := NewHub(p, nil, nil, nil)
+		h := NewHub(p, nil, nil, nil, openPerms())
 		h.Tap = func(_ uuid.UUID, eventType string, payload any) {
 			if eventType == "user_stats" {
 				announced++

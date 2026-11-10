@@ -249,10 +249,15 @@ func StartRetentionWorker(ctx context.Context, p *db.Pool, store Store, retentio
 	go runPeriodically(ctx, retentionFirstRun, retentionInterval, retentionTask(p, store, retentionDays))
 }
 
-// retentionTask keeps pruning policy separate from the worker's schedule.
+// retentionTask keeps pruning policy separate from the worker's schedule. It
+// holds off while an online backup runs.
 func retentionTask(p *db.Pool, store Store, retentionDays int) func(context.Context) {
 	return func(ctx context.Context) {
-		if _, err := PruneOlderThan(ctx, p, store, retentionDays); err != nil {
+		err := p.OutsideBackup(ctx, func() error {
+			_, err := PruneOlderThan(ctx, p, store, retentionDays)
+			return err
+		})
+		if err != nil {
 			slog.Error("media pruning failed", "err", err)
 		}
 	}

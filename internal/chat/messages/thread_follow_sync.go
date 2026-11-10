@@ -33,6 +33,7 @@ const (
 // channel are told. The lookup runs off the publishing path, so a failed one
 // is logged and that reply's update is lost; the next list load shows the follow.
 func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher) func(channel uuid.UUID, eventType string, payload any) {
+	perm.Must(perms, "thread follow sync")
 	queue := make(chan core.Message, followSyncQueue)
 	for range followSyncWorkers {
 		go func() {
@@ -79,9 +80,6 @@ func syncFollowers(parent context.Context, p *db.Pool, perms *perm.Service, pub 
 	defer cancel()
 	thread := *msg.ParentID
 	// Fail closed: without the current permissions nobody is told.
-	if perms == nil {
-		return
-	}
 	snap, err := perms.Snapshot(ctx)
 	if err != nil {
 		slog.Warn("thread follow sync: permissions", "err", err)

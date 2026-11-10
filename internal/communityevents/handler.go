@@ -38,6 +38,12 @@ type Handler struct {
 	quieter eventQuieter
 }
 
+// New returns h ready to mount. It panics without Perms.
+func New(h *Handler) *Handler {
+	perm.Must(h.Perms, "community events handler")
+	return h
+}
+
 // Mount registers the event routes on r, which already requires a signed-in
 // member; per-channel visibility is checked in the handlers, not by the router.
 func (h *Handler) Mount(r chi.Router) {
@@ -65,9 +71,6 @@ func (h *Handler) MountUploads(r chi.Router) {
 }
 
 func (h *Handler) canViewChannel(r *http.Request, channelID uuid.UUID) bool {
-	if h.Perms == nil {
-		return true
-	}
 	user := auth.UserFrom(r.Context())
 	snap, err := h.Perms.Snapshot(r.Context())
 	if err != nil {
@@ -346,9 +349,6 @@ func (h *Handler) cancelEvent(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) requireManageEvents(r *http.Request) error {
-	if h.Perms == nil {
-		return nil
-	}
 	user := auth.UserFrom(r.Context())
 	snap, err := h.Perms.Snapshot(r.Context())
 	if err != nil {

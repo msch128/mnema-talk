@@ -41,9 +41,6 @@ func (h *Handler) broadcastComment(ev *CommunityEvent, p CommentPayload) {
 // (a timeout, rules not yet accepted and a new member's hold take it away), in
 // the event's Talk when it has one.
 func (h *Handler) requireWrite(r *http.Request, ev *CommunityEvent) error {
-	if h.Perms == nil {
-		return nil
-	}
 	sub := auth.UserFrom(r.Context()).Subject()
 	if ev.ChannelID == nil {
 		return h.Perms.RequireGlobal(r.Context(), sub, perm.SendMessages)
@@ -61,9 +58,6 @@ func (h *Handler) canModerateComments(r *http.Request, ev *CommunityEvent) bool 
 	user := auth.UserFrom(r.Context())
 	if ev.CreatedBy != nil && *ev.CreatedBy == user.ID {
 		return true
-	}
-	if h.Perms == nil {
-		return user.Role == "admin"
 	}
 	snap, err := h.Perms.Snapshot(r.Context())
 	if err != nil {

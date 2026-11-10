@@ -12,12 +12,13 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/auth/authn"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 const secret = "0123456789abcdef0123456789abcdef"
 
 func TestMemberAdminHandlersRejectMalformedJSON(t *testing.T) {
-	h := New(authn.NewHandler(&auth.Sessions{Secret: secret}, nil))
+	h := New(authn.NewHandler(&auth.Sessions{Secret: secret}, permtest.NewFixture().Service(), nil))
 	u := &auth.User{ID: uuid.New()}
 	for name, handler := range map[string]httpx.HandlerFunc{
 		"invite": h.createInvite, "admin password": h.setUserPassword,
@@ -38,7 +39,7 @@ func TestMemberAdminHandlersRejectMalformedJSON(t *testing.T) {
 }
 
 func TestMemberAdminHandlersRejectMalformedIDs(t *testing.T) {
-	h := New(authn.NewHandler(&auth.Sessions{}, nil))
+	h := New(authn.NewHandler(&auth.Sessions{}, permtest.NewFixture().Service(), nil))
 	for name, handler := range map[string]httpx.HandlerFunc{
 		"delete invite": h.deleteInvite, "disable": h.disableUser,
 		"enable": h.enableUser, "revoke": h.revokeUserSessions, "reset": h.resetUserPassword,

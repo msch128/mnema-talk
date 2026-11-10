@@ -34,6 +34,7 @@ const orphanBatch = 1000
 // remove it deletes them as well. A media row marked deleted (pruned) no
 // longer refers to its object, so a leftover object of it counts too.
 func FindOrphans(ctx context.Context, p *db.Pool, store Store, remove bool) (*Orphans, error) {
+	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
 	sc := &orphanScan{ctx: ctx, pool: p, store: store, remove: remove, res: &Orphans{}}
 	cutoff := time.Now().Add(-orphanMinAge)
 	for _, prefix := range orphanPrefixes {
@@ -132,9 +133,14 @@ func StartOrphanScan(ctx context.Context, p *db.Pool, store Store) {
 }
 
 // orphanScanTask reports scan results without coupling the scan to its timer.
+// It holds off while an online backup runs: the storage is frozen then.
 func orphanScanTask(p *db.Pool, store Store) func(context.Context) {
 	return func(ctx context.Context) {
-		o, err := FindOrphans(ctx, p, store, false)
+		o := &Orphans{}
+		err := p.OutsideBackup(ctx, func() (err error) {
+			o, err = FindOrphans(ctx, p, store, false)
+			return err
+		})
 		if err != nil {
 			slog.Warn("orphaned media scan failed", "err", err)
 			return

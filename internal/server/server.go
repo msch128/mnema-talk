@@ -127,10 +127,32 @@ const jobsStopWait = 10 * time.Second
 const webhookStopWait = 10 * time.Second
 
 func NewRouter(d Deps) (*Router, error) {
+	c, cancel, err := assemble(d)
+	if err != nil {
+		return nil, err
+	}
+	return &Router{
+		Handler:         c.buildHandler(),
+		Hub:             c.hub,
+		Webhooks:        c.webhookH,
+		Bots:            c.botAuthn,
+		Gateway:         c.gw,
+		Later:           c.later,
+		Events:          c.eventsH,
+		EventsScheduler: c.eventsScheduler,
+		cancel:          func() { automod.Detach(d.DB, c.engine); cancel() },
+		outgoing:        c.outgoing,
+		accounts:        c.authH,
+	}, nil
+}
+
+// assemble builds every handler and background worker of the server. cancel
+// stops the workers.
+func assemble(d Deps) (*components, context.CancelFunc, error) {
 	cfg := d.Config
 	trusted, err := httpx.ParseCIDRs(cfg.TrustedProxies)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	parent := d.Context
 	if parent == nil {
@@ -145,7 +167,7 @@ func NewRouter(d Deps) (*Router, error) {
 	c.newCore()
 	if err := c.newMail(); err != nil {
 		cancel()
-		return nil, err
+		return nil, nil, err
 	}
 	c.newWebhooks()
 	c.newTalks()
@@ -153,13 +175,13 @@ func NewRouter(d Deps) (*Router, error) {
 	c.tapThreadFollows()
 	if err := c.newPush(); err != nil {
 		cancel()
-		return nil, err
+		return nil, nil, err
 	}
 	c.newEvents()
 	c.newWiki()
 	if err := c.newSystem(); err != nil {
 		cancel()
-		return nil, err
+		return nil, nil, err
 	}
 	c.newLinkPreviews()
 	c.perUser = httpx.NewRateLimiter(apiWritesPerMinute, time.Minute).Named("api_user")
@@ -167,18 +189,5 @@ func NewRouter(d Deps) (*Router, error) {
 	c.previewsPerUser = httpx.NewRateLimiter(120, time.Minute).Named("link_preview")
 	c.uploadsPerUser = httpx.NewRateLimiter(60, time.Minute).Named("upload")
 	c.newModeration()
-
-	return &Router{
-		Handler:         c.buildHandler(),
-		Hub:             c.hub,
-		Webhooks:        c.webhookH,
-		Bots:            c.botAuthn,
-		Gateway:         c.gw,
-		Later:           c.later,
-		Events:          c.eventsH,
-		EventsScheduler: c.eventsScheduler,
-		cancel:          func() { automod.Detach(d.DB, c.engine); cancel() },
-		outgoing:        c.outgoing,
-		accounts:        c.authH,
-	}, nil
+	return c, cancel, nil
 }

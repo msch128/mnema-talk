@@ -11,25 +11,15 @@ import (
 )
 
 // Moderated runs fn on the member a moderation action aims at, after checking
-// that the caller may act on them. With a permission service the check and fn
-// run in one transaction under the permission lock, on the state as it is
-// inside it: a concurrent role change cannot move the target out of reach (or
-// the caller down) between the check and the write.
+// that the caller may act on them. The check and fn run in one transaction
+// under the permission lock, on the state as it is inside it: a concurrent
+// role change cannot move the target out of reach (or the caller down) between
+// the check and the write.
 func (h *Handler) Moderated(r *http.Request, id uuid.UUID, fn func(q db.Querier) error) error {
 	ctx := r.Context()
 	actor := auth.UserFrom(ctx)
 	if err := auth.RefuseDeleted(ctx, h.Sessions.DB, id); err != nil {
 		return err
-	}
-	if h.Perms == nil {
-		target, err := auth.GetUser(ctx, h.Sessions.DB, id)
-		if err != nil {
-			return err
-		}
-		if err := checkTarget(nil, actor, target); err != nil {
-			return err
-		}
-		return fn(h.Sessions.DB)
 	}
 	return h.Perms.Locked(ctx, actor.Subject(), func(tx pgx.Tx, snap *perm.Snapshot) error {
 		target, err := auth.GetUser(ctx, tx, id)
@@ -51,7 +41,7 @@ func checkTarget(snap *perm.Snapshot, actor, target *auth.User) error {
 	if actor == nil {
 		return auth.ErrNoSession
 	}
-	if snap == nil || actor.IsAdmin() {
+	if actor.IsAdmin() {
 		return nil
 	}
 	return snap.CanModerate(actor.Subject(), target.Subject())

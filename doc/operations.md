@@ -91,6 +91,8 @@ General rules:
 |---|---|---|
 | `DATABASE_URL` | none (required) | PostgreSQL connection URL. Compose builds it from `POSTGRES_*` and the `postgres` service. In production a placeholder password in it is rejected. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `mnema` / none / `mnema_talk` | Compose only: initialise the `postgres` container and build `DATABASE_URL`. Changing them later does not change an existing database. |
+| `DB_MAX_CONNS` | `25` | Connections the server keeps to PostgreSQL at most, 1-1000. Keep it below the database's `max_connections` (100 in the bundled `postgres`), with room for `pg_dump` and `psql`. Raise it only when `mnema_db_acquires_waited_total` keeps growing under normal load. |
+| `DB_STATEMENT_TIMEOUT` | `15s` | Longest one database statement of a request may run, as a duration (`15s`, `2m`), 1s-1h; `0` = no limit. The database cancels a statement that runs longer and the request fails with an internal error, logged with `SQLSTATE 57014`; a message or forum search answers 429 instead (searches are limited to 5 s). See [Database limits](#database-limits). |
 | `POSTGRES_HOST_PORT` | `5432` | Dev only: loopback port published by `docker-compose.dev.yml`. |
 | `TEST_DATABASE_URL` | none | Integration tests only: use this database instead of starting one with Docker. |
 
@@ -223,7 +225,8 @@ logs at 3 x 10 MB.
 
 | Script | Variables |
 |---|---|
-| [`scripts/backup.sh`](../scripts/backup.sh) | `BACKUP_DIR` (default `$HOME/mnema-talk-backups`), `KEEP_DAYS` (14), `BACKUP_ALLOW_IN_REPO=1`, `RESTORE_TEST` (1; 0 skips the restore test), `BACKUP_STATUS_DIR` (default `./backup-status`) |
+| [`scripts/backup.sh`](../scripts/backup.sh) | `BACKUP_DIR` (default `$HOME/mnema-talk-backups`), `KEEP_DAYS` (14), `BACKUP_ALLOW_IN_REPO=1`, `RESTORE_TEST` (1; 0 skips the restore test), `BACKUP_STATUS_DIR` (default `./backup-status`), `BACKUP_MODE` (`cold`; `online` keeps the app running), `BACKUP_LOCK_WAIT` (600 s, online mode), `BACKUP_AGE_RECIPIENT` (empty = not encrypted) |
+| [`scripts/restore.sh`](../scripts/restore.sh) | `BACKUP_AGE_IDENTITY` (identity file for an encrypted backup), `SEAWEEDFS_VERIFY_IMAGE` (image for the media check of `--verify`, default: the one the backup names) |
 | [`scripts/health-check.sh`](../scripts/health-check.sh) | `MNEMA_URL` (default `http://127.0.0.1:8080`), `HEALTH_TIMEOUT` (5 s), `ALERT_WEBHOOK_URL` |
 
 ## Reverse proxy and `TRUSTED_PROXY_CIDRS`
@@ -654,6 +657,34 @@ cannot work. Your options:
 - **Forward UDP for the SFU** (`WEBRTC_UDP_PORT_MIN`-`MAX`, default
   `50000-50050/udp`) to the host. Forwarding an IPv6 port is not needed.
 
+## Database limits
+
+The server sets three limits on its own database connections. They are
+session settings of those connections, not of the database or the role, so
+`pg_dump`, `psql` and the backup and restore scripts are not affected.
+
+- **Pool size** (`DB_MAX_CONNS`, default 25). A request that finds no free
+  connection waits for one; `mnema_db_acquires_waited_total` counts those.
+- **Statement timeout** (`DB_STATEMENT_TIMEOUT`, default `15s`). One slow
+  statement can no longer hold a connection, and the locks it took, for as
+  long as it likes. A cancelled statement is logged with `SQLSTATE 57014`. If
+  that shows up for ordinary requests on a slow disk, raise the value before
+  switching it off with `0`.
+- **Idle in transaction** (fixed, 1 minute). A session that opened a
+  transaction and then runs nothing is ended by the database.
+
+Work that rightly takes longer has its own limit instead of the request one:
+
+| Work | Statement timeout |
+|---|---|
+| Schema migrations at startup (an index build on a large table) | none |
+| Message search and forum post search | 5 s, answered with 429 |
+| Data export, account deletion, deleting a channel, Discord import and its undo | 5 min |
+| Sweeps: auto-delete, unsent attachments, orphaned media, edit history retention | 5 min |
+
+The longer limits never undercut `DB_STATEMENT_TIMEOUT`: with a higher value,
+or with `0`, that one applies to this work as well.
+
 ## SeaweedFS S3 authentication
 
 The `seaweedfs` service writes an S3 identity file from `S3_ACCESS_KEY` /
@@ -693,6 +724,8 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
   database snapshot and volume copy. Active calls disconnect during this
   maintenance window. Other programs must not write to these stores during
   the backup. `SEAWEED_LIVE=1` is refused because it cannot guarantee this boundary.
+  This cold mode is the default; [`BACKUP_MODE=online`](#online-backup) keeps
+  the app running.
 - Success and failure resume only services that were running before backup.
   Restore resumes them after success; a failure after replacing data leaves
   app and SeaweedFS stopped to avoid serving a partial restore. Resolve the
@@ -706,6 +739,7 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
   damage; they do not authenticate an untrusted backup's SQL or configuration.
 - A backup contains `.env` with all secrets; the script refuses a
   `BACKUP_DIR` inside a git checkout unless `BACKUP_ALLOW_IN_REPO=1`.
+  [`BACKUP_AGE_RECIPIENT`](#encrypted-backups) encrypts it.
 - The scripts serialize maintenance using `.mnema-maintenance.lock` in the
   deployment directory. An uncatchable kill may leave this lock; confirm no
   maintenance process is running before removing it manually.
@@ -759,6 +793,69 @@ the last backup and the restore test. It warns when the backup is older than
 backup, *no backup reported yet*. When Docker created `backup-status` (as root,
 on the first `up` before any backup) and the script runs as another user, the
 script writes the file through a short-lived container instead.
+
+### Online backup
+
+```sh
+BACKUP_MODE=online BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
+```
+
+The app is not stopped: messages, presence and calls continue. Only the file
+storage is frozen (`docker compose pause seaweedfs`) while its volume is
+copied, so uploads and downloads wait for that long (seconds on a small
+instance, as long as the copy takes on a large one) and may time out; text
+chat and calls are not affected. The order makes the copy consistent:
+
+1. The script takes an advisory lock in PostgreSQL. The server's jobs that
+   delete stored files (channel auto-delete, media pruning, the sweep of
+   unsent attachments, the orphan report and the export sweep) wait while it
+   is held, and the script waits up to `BACKUP_LOCK_WAIT` seconds for one that
+   is running. The orphan cleanup (`POST /api/admin/media/orphans/cleanup`)
+   answers `409 CONFLICT` during a backup. Servers up to 3.0.0 do not know
+   the lock: their jobs keep running and can leave orphaned files behind.
+2. It freezes the storage, fixes one database snapshot, copies the storage
+   volume and lets the storage continue.
+3. `pg_dump` writes exactly that snapshot while the app is in use again.
+
+An upload stores its file before its database row is committed and a delete
+removes the row first, so every file the snapshot refers to is in the copy.
+The restore test proves it for each backup: `restore.sh --verify` starts a
+throwaway, network-isolated SeaweedFS on a copy of the media archive and
+reads every file the database refers to (`media-keys.txt`). That needs free
+disk space for the extracted media; `RESTORE_TEST=0` skips it together with
+the database import and is not recommended in online mode. Messages and
+uploads from after the snapshot are not in the backup. A member who deletes a
+message while the storage is frozen gets the row removed at once and the file
+later counted as an orphan (the daily orphan report in the log).
+
+An online backup directory is the same format (`format=mnema-backup-v1`) with
+additions only: the file `media-keys.txt` (one `bucket/key` per line) and the
+manifest lines `mode=online` and `media_keys_sha256=`. Restoring works the
+same way as for a cold backup. A script that was killed hard may leave the
+storage paused: `docker compose unpause seaweedfs`.
+
+### Encrypted backups
+
+Off by default. With one or more [age](https://age-encryption.org) public keys
+in `BACKUP_AGE_RECIPIENT` (separated by spaces; `age` must be installed on the
+host), the finished backup, after its restore test, is packed into one file
+`BACKUP_DIR/<timestamp>.tar.age` and the plain directory is removed. Only the
+matching identity (private key) can read it, so keep that key away from the
+server:
+
+```sh
+age-keygen -o mnema-backup.key          # on another machine; prints the public key
+BACKUP_AGE_RECIPIENT=age1... BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
+
+# Restore: the identity file comes back only for this
+BACKUP_AGE_IDENTITY=/root/mnema-backup.key ./scripts/restore.sh /srv/backups/mnema/20261110-033000-AbCdEf.tar.age --verify
+```
+
+`restore.sh` unpacks the file into a temporary folder next to it (allow the
+disk space), restores from it and removes the plain copy again. Retention
+(`KEEP_DAYS`) removes old `*.tar.age` files after a successful backup without
+opening them; each was validated before it was encrypted. Until the restore
+test has finished, the new backup lies unencrypted in `BACKUP_DIR`.
 
 ## Verifying a release image
 

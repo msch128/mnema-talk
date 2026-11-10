@@ -264,6 +264,14 @@ category never turns its channels public.
 Everything is decided on the server; the interface only hides what a member
 cannot do.
 
+Every part of the server that asks a permission question takes the permission
+service when it is built and refuses to be built without one (`perm.Must`): a
+handler wired without it stops the server at startup. A question that still
+reaches no service, or a state that cannot be loaded, fails the request; it
+never counts as "allowed". `internal/server` checks the wiring and walks the
+real router, so a new route with a channel in its path fails the tests until
+it is probed with a private channel or exempted with a reason.
+
 | Surface | Rule |
 |---|---|
 | `GET /api/channels` | Only viewable channels; a category shows if it is viewable or holds a viewable channel |

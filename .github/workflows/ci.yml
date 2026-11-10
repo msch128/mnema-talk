@@ -248,7 +248,9 @@ jobs:
         run: make test-loadtest
 
       # Mutation fuzzing of the parsers (search, mentions, durations, URL guard,
-      # versions) for 1 s each on top of the seed corpora that `go test` ran.
+      # versions, RTP and RTCP payloads, the layer rewrite, media key framing,
+      # GIF and WebP structure, link preview pages, TURN usernames) for 1 s each
+      # on top of the seed corpora that `go test` ran.
       - if: ${{ needs.changes.outputs.code == 'true' }}
         name: Fuzz smoke
         run: FUZZTIME=1s make fuzz-smoke
@@ -655,10 +657,15 @@ jobs:
         run: FRESH_PUBLIC_HOST=localhost scripts/fresh-install-check.sh mnema-talk:ci
 
       # scripts/backup.sh and restore.sh (--verify and --yes) end to end:
-      # seeded message and upload come back, later changes are gone.
+      # seeded message and upload come back, later changes are gone. Then
+      # BACKUP_MODE=online while uploads keep coming, encrypted with age,
+      # and every attachment of the restored messages must open.
       - if: ${{ needs.changes.outputs.code == 'true' }}
         name: Backup/restore drill (compose stack)
-        run: scripts/backup-drill.sh mnema-talk:ci
+        run: |
+          sudo apt-get install -y --no-install-recommends age >/dev/null
+          age --version
+          scripts/backup-drill.sh mnema-talk:ci
 
       # Mnema Talk 0.4 ran PostgreSQL 17 on another volume: the current
       # compose file must refuse to start on it, and upgrade-postgres.sh

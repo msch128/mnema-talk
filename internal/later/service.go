@@ -84,8 +84,9 @@ func (c *pruneClock) due(now time.Time) bool {
 	return true
 }
 
-// NewService returns s with its state.
+// NewService returns s with its state. It panics without Perms.
 func NewService(s Service) *Service {
+	perm.Must(s.Perms, "reminders and scheduled messages")
 	s.pruned = &pruneClock{}
 	s.changes = httpx.NewRateLimiter(changesPerMinute, time.Minute).Named("later_change")
 	if s.Now == nil {

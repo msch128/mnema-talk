@@ -10,7 +10,7 @@ import (
 // Outgoing webhooks hear only what is really published: a publication is
 // tapped once, and an event that cannot be encoded is tapped nowhere.
 func TestTapHearsOnlyRealPublications(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	t.Cleanup(h.Close)
 	var tapped []string
 	h.Tap = func(_ uuid.UUID, eventType string, _ any) { tapped = append(tapped, eventType) }

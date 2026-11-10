@@ -32,6 +32,12 @@ func TestMain(m *testing.M) {
 // packages use.
 func scratchPool(t *testing.T) *Pool {
 	t.Helper()
+	return scratchPoolWith(t, DefaultOptions())
+}
+
+// scratchPoolWith is scratchPool with the given pool limits.
+func scratchPoolWith(t *testing.T, opts Options) *Pool {
+	t.Helper()
 	dsn, err := pgtest.DSN()
 	if err != nil {
 		t.Fatalf("start postgres: %v", err)
@@ -62,7 +68,7 @@ func scratchPool(t *testing.T) *Pool {
 	// the shared database already installed there.
 	q.Set("search_path", schema+",public")
 	u.RawQuery = q.Encode()
-	p, err := Connect(ctx, u.String())
+	p, err := ConnectWith(ctx, u.String(), opts)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -44,8 +44,9 @@ type Services struct {
 	nick *nickLimiter
 }
 
-// Commands returns the commands in menu order.
+// Commands returns the commands in menu order. It panics without Perms.
 func Commands(s Services) []slash.Builtin {
+	perm.Must(s.Perms, "built-in slash commands")
 	s.nick = newNickLimiter()
 	svc := &s
 	list := []slash.Builtin{

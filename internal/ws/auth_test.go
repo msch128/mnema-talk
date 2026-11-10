@@ -32,7 +32,7 @@ func (f fakeAuth) AuthenticateRequest(*http.Request) (*auth.User, int, error) {
 func TestConnectionKeepsCookieTokenVersion(t *testing.T) {
 	user := auth.User{ID: uuid.New(), Username: "alice"}
 	a := &admissionAuth{user: user, tv: 7}
-	h := NewHub(nil, a, nil, nil)
+	h := NewHub(nil, a, nil, nil, openPerms())
 	srv := httptest.NewServer(http.HandlerFunc(h.HandleWebSocket))
 	defer srv.Close()
 	h.Origins = []string{srv.URL}
@@ -124,7 +124,7 @@ func TestWebSocketAdmissionRejectsRevocationDuringEitherCheck(t *testing.T) {
 		t.Run(fmt.Sprintf("check-%d", pauseAt), func(t *testing.T) {
 			a := &admissionAuth{user: auth.User{ID: uuid.New(), Username: "alice"}, tv: 7, pauseAt: pauseAt,
 				checked: make(chan struct{}), release: make(chan struct{})}
-			h := NewHub(nil, a, nil, nil)
+			h := NewHub(nil, a, nil, nil, openPerms())
 			done := make(chan struct{})
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				defer close(done)
@@ -216,7 +216,7 @@ func TestWebSocketAdmissionRejectsChangedIdentityVersionAndLookupFailure(t *test
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			a := &admissionAuth{user: user, tv: 7, freshUser: tc.user, freshTV: tc.tv, freshErr: tc.err}
-			h := NewHub(nil, a, nil, nil)
+			h := NewHub(nil, a, nil, nil, openPerms())
 			srv := httptest.NewServer(http.HandlerFunc(h.HandleWebSocket))
 			t.Cleanup(srv.Close)
 			t.Cleanup(h.Close)
@@ -244,7 +244,7 @@ func TestWebSocketAdmissionRejectsChangedIdentityVersionAndLookupFailure(t *test
 func TestHubCloseCancelsPendingAdmission(t *testing.T) {
 	a := &admissionAuth{user: auth.User{ID: uuid.New(), Username: "alice"}, pauseAt: 2,
 		checked: make(chan struct{}), release: make(chan struct{})}
-	h := NewHub(nil, a, nil, nil)
+	h := NewHub(nil, a, nil, nil, openPerms())
 	srv := httptest.NewServer(http.HandlerFunc(h.HandleWebSocket))
 	t.Cleanup(srv.Close)
 	t.Cleanup(h.Close)
@@ -282,7 +282,7 @@ func TestWebSocketAdmissionUsesFreshProfileAfterRecheck(t *testing.T) {
 	fresh := user
 	fresh.DisplayName = "Updated profile"
 	a := &admissionAuth{user: user, tv: 7, freshUser: &fresh}
-	h := NewHub(nil, a, nil, nil)
+	h := NewHub(nil, a, nil, nil, openPerms())
 	srv := httptest.NewServer(http.HandlerFunc(h.HandleWebSocket))
 	t.Cleanup(srv.Close)
 	t.Cleanup(h.Close)

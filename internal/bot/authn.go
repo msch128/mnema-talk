@@ -45,7 +45,7 @@ var errUnauthorized = httpx.ErrUnauthorized("401: Unauthorized")
 type Authenticator struct {
 	DB *db.Pool
 	// Perms re-checks on use that the person who issued a token may still
-	// act as its bot; nil skips the check (tests).
+	// act as its bot.
 	Perms    *perm.Service
 	failures *httpx.RateLimiter
 	global   *httpx.RateLimiter
@@ -59,10 +59,12 @@ type Authenticator struct {
 	bindTried map[uuid.UUID]time.Time
 }
 
-// NewAuthenticator returns an Authenticator with its rate limiters.
-func NewAuthenticator(p *db.Pool) *Authenticator {
+// NewAuthenticator returns an Authenticator with its rate limiters. It panics
+// on a nil permission service.
+func NewAuthenticator(p *db.Pool, perms *perm.Service) *Authenticator {
 	return &Authenticator{
 		DB:       p,
+		Perms:    perm.Must(perms, "bot authenticator"),
 		failures: httpx.NewRateLimiter(failedLimit, failedWindow).Named("bot_auth"),
 		global:   httpx.NewRateLimiter(globalLimit, globalWindow).Named("bot_api"),
 		sends:    httpx.NewRateLimiter(sendLimit, sendWindow).Named("bot_send"),

@@ -98,6 +98,8 @@ This file was available for download once, for 24 hours.
 // ready. A delete of the account while it runs wins: the file is removed
 // again. Nothing is buffered beyond one page of rows.
 func (h *API) buildExport(ctx context.Context, id, user uuid.UUID) error {
+	// A query streams its rows as fast as the upload takes them.
+	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
 	key := fmt.Sprintf("exports/%s/%s.zip", user, id)
 	pr, pw := io.Pipe()
 	counted := &budgetWriter{w: pw, max: exportMaxBytes}
@@ -140,11 +142,8 @@ func (z *zipFiles) add(name string, v any) error {
 }
 
 // viewableChannels are the channels the person may still see, by the live
-// permission state. Without a permission service no channel name is revealed.
+// permission state.
 func (h *API) viewableChannels(ctx context.Context, user uuid.UUID) (userdata.Channels, error) {
-	if h.Perms == nil {
-		return userdata.Channels{}, nil
-	}
 	snap, err := h.Perms.Snapshot(ctx)
 	if err != nil {
 		return userdata.Channels{}, err

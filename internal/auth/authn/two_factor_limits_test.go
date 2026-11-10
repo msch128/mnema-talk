@@ -8,12 +8,13 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // Wrong recovery-shaped codes on the signed-in proofs count against the
 // recovery limiter, like at sign-in, and never lock the authenticator step.
 func TestSignedInProofCountsFailuresLikeSignIn(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(nil, permtest.NewFixture().Service(), nil)
 	u := &auth.User{ID: uuid.New()}
 	r := httptest.NewRequest(http.MethodPost, "/", nil)
 	r.RemoteAddr = "192.0.2.50:1234"

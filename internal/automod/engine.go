@@ -48,7 +48,7 @@ type ruleSet struct {
 
 // New builds an engine; Attach makes the message and sign-up paths use it.
 func New(p *db.Pool, perms *perm.Service, pub events.Publisher, log *audit.Log) *Engine {
-	return &Engine{DB: p, Perms: perms, Events: pub, Audit: log, now: time.Now}
+	return &Engine{DB: p, Perms: perm.Must(perms, "automod engine"), Events: pub, Audit: log, now: time.Now}
 }
 
 var registry sync.Map // *db.Pool -> *Engine

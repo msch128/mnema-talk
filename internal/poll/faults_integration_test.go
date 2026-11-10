@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -45,7 +46,7 @@ func newFixture(t *testing.T) fixture {
 }
 
 func (f fixture) service(p *db.Pool) *Service {
-	return NewService(Service{DB: p, Events: &events.Recorder{}})
+	return NewService(Service{DB: p, Perms: perm.NewService(f.p), Events: &events.Recorder{}})
 }
 
 func (f fixture) newPoll(t *testing.T) *core.Message {
@@ -202,12 +203,12 @@ func TestAnnounceOrLogSwallowsAFailureAfterTheCommit(t *testing.T) {
 	m := f.newPoll(t)
 	ctx := context.Background()
 	rec := &events.Recorder{}
-	broken := NewService(Service{DB: drift(t, f.p, brokenPolls), Events: rec})
+	broken := NewService(Service{DB: drift(t, f.p, brokenPolls), Perms: perm.NewService(f.p), Events: rec})
 	broken.announceOrLog(ctx, f.channel, m.ID)
 	if n := len(rec.Snapshot()); n != 0 {
 		t.Fatalf("a failed announcement broadcast %d events", n)
 	}
-	good := NewService(Service{DB: f.p, Events: rec})
+	good := NewService(Service{DB: f.p, Perms: perm.NewService(f.p), Events: rec})
 	good.announceOrLog(ctx, f.channel, m.ID)
 	if n := len(rec.Snapshot()); n != 1 {
 		t.Fatalf("events after a working announcement = %d, want 1", n)

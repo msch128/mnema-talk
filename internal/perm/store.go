@@ -89,6 +89,9 @@ func (s *Service) LockedCreatingBot(ctx context.Context, actor Subject, fn func(
 }
 
 func (s *Service) locked(ctx context.Context, actor Subject, always bool, fn func(tx pgx.Tx, snap *Snapshot) error) error {
+	if s == nil {
+		return errNoService
+	}
 	if s.db == nil {
 		return errNoDatabase
 	}

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -28,13 +29,18 @@ type Config struct {
 	InitialLanguage      string
 	AdminInitialPassword string
 	DatabaseURL          string
-	S3Endpoint           string
-	S3Region             string
-	S3Bucket             string
-	S3AccessKey          string
-	S3SecretKey          string
-	S3ForcePathStyle     bool
-	MediaRetentionDays   int
+	// DBMaxConns (DB_MAX_CONNS) is the size of the database connection pool.
+	DBMaxConns int
+	// DBStatementTimeout (DB_STATEMENT_TIMEOUT) is the longest one database
+	// statement of a request may run; 0 sets no limit.
+	DBStatementTimeout time.Duration
+	S3Endpoint         string
+	S3Region           string
+	S3Bucket           string
+	S3AccessKey        string
+	S3SecretKey        string
+	S3ForcePathStyle   bool
+	MediaRetentionDays int
 	// AuditRetentionDays > 0 deletes audit log entries older than that many
 	// days; 0 (default) keeps them forever.
 	AuditRetentionDays int

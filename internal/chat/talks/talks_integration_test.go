@@ -99,7 +99,7 @@ func (m *TalkManager) applyEvent(ev presenceEvent) {
 // messages API that posts invitation cards and the channels API that announces
 // changes.
 func (w *talksWorld) api() *API {
-	g := core.Guard{Perms: perm.NewService(w.p)}
+	g := core.NewGuard(perm.NewService(w.p))
 	return &API{
 		DB: w.p, Events: w.rec, Guard: g, Talks: w.mgr,
 		Messages: &messages.API{DB: w.p, Events: w.rec, Guard: g},
@@ -767,7 +767,7 @@ func TestDatabaseFailuresLeaveTheLiveStateIntactAndAreRetried(t *testing.T) {
 	}
 	// A channels table that can be read but neither updated nor locked.
 	broken := chattest.DriftPool(t, w.p, map[string]string{"channels": `SELECT DISTINCT id, name, is_temp, leader_id, type, category_id, user_limit, slow_mode_seconds FROM public.channels`})
-	m := NewTalkManager(&TalkManager{DB: broken, Events: w.rec, EmptyGrace: time.Hour})
+	m := NewTalkManager(&TalkManager{DB: broken, Events: w.rec, Perms: perm.NewService(w.p), EmptyGrace: time.Hour})
 	t.Cleanup(m.stopTimers)
 	m.talks[talk.ID] = &liveTalk{leader: &w.alice.ID}
 
@@ -786,6 +786,6 @@ func TestDatabaseFailuresLeaveTheLiveStateIntactAndAreRetried(t *testing.T) {
 	if !w.exists(t, talk.ID) {
 		t.Fatal("the sweep removed a Talk it could not lock")
 	}
-	failing := NewTalkManager(&TalkManager{DB: chattest.DriftPool(t, w.p, map[string]string{"channels": `SELECT 1 AS x WHERE false AND 1/0 = 1`}), Events: w.rec})
+	failing := NewTalkManager(&TalkManager{DB: chattest.DriftPool(t, w.p, map[string]string{"channels": `SELECT 1 AS x WHERE false AND 1/0 = 1`}), Events: w.rec, Perms: perm.NewService(w.p)})
 	failing.sweepStale(ctx)
 }

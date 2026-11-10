@@ -265,8 +265,8 @@ func TestACallCannotBeStartedInsideTheSpeakWait(t *testing.T) {
 		t.Fatalf("a member unknown to the fixture but the Owner: %v", err)
 	}
 	var none *Service
-	if err := none.RequireCall(context.Background(), Subject{ID: newbie}); err != nil {
-		t.Fatal(err)
+	if err := none.RequireCall(context.Background(), Subject{ID: uuid.New(), Owner: true}); err == nil {
+		t.Fatal("a nil service let a call through")
 	}
 }
 

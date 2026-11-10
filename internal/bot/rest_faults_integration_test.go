@@ -113,9 +113,9 @@ func (e *env) restSetup(h *Commands) state {
 	if _, err := e.p.Exec(ctx, `UPDATE roles SET permissions = $1 WHERE id = $2`, int64(perm.SendMessages|perm.AddReactions|perm.AttachFiles), e.role); err != nil {
 		e.t.Fatal(err)
 	}
-	// A token the test knows.
+	// A token the test knows, issued by the Owner as the admin API records it.
 	secret, hash, hint := NewToken()
-	if _, err := e.p.Exec(ctx, `INSERT INTO bot_tokens (bot_id, name, token_hash, hint) VALUES ($1, 'rest', $2, $3)`, f.bot.ID, hash, hint); err != nil {
+	if _, err := e.p.Exec(ctx, `INSERT INTO bot_tokens (bot_id, name, token_hash, hint, created_by) VALUES ($1, 'rest', $2, $3, $4)`, f.bot.ID, hash, hint, e.owner.ID); err != nil {
 		e.t.Fatal(err)
 	}
 	st := state{bot: f, token: secret}
@@ -153,7 +153,7 @@ func (e *env) restSetup(h *Commands) state {
 func (e *env) restHandler(pool *db.Pool, deliver bool) (http.Handler, *Commands) {
 	perms := perm.NewService(pool)
 	rec := &events.Recorder{}
-	authn := NewAuthenticator(pool)
+	authn := NewAuthenticator(pool, perms)
 	authn.SetLimits(1_000_000, 1_000_000)
 	chatH := &chat.Handler{DB: pool, Events: rec, Perms: perms}
 	mediaH := &media.Handler{DB: pool, Store: e.store, Bucket: "b", MaxUploadBytes: 1 << 20, Events: rec, Perms: perms}

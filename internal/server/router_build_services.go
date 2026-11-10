@@ -58,13 +58,13 @@ func (c *components) newChat() {
 // newImport builds the Discord structure import.
 func (c *components) newImport() {
 	d, hub := c.d, c.hub
-	c.importH = &discordimport.Handler{
+	c.importH = discordimport.New(discordimport.Handler{
 		Perms: c.permSvc, Limit: httpx.NewRateLimiter(discordimport.ImportsPerMinute, time.Minute).Named("discord_import"),
 		Importer: &discordimport.Importer{
 			DB: d.DB, Perms: c.permSvc, Events: c.pub, Audit: c.auditLog, Voice: hub,
 			Features: func(name string) bool { return slices.Contains(Features, name) },
 		},
-	}
+	})
 }
 
 // newModeration builds the automod engine, makes the message and sign-up paths
@@ -72,7 +72,7 @@ func (c *components) newImport() {
 func (c *components) newModeration() {
 	c.engine = automod.New(c.d.DB, c.permSvc, c.pub, c.auditLog)
 	automod.Attach(c.d.DB, c.engine)
-	c.modH = &moderation.Handler{DB: c.d.DB, Perms: c.permSvc, Engine: c.engine}
+	c.modH = moderation.New(moderation.Handler{DB: c.d.DB, Perms: c.permSvc, Engine: c.engine})
 }
 
 // newLater builds reminders and scheduled messages; pusher is nil when Web
@@ -85,7 +85,7 @@ func (c *components) newLater(pusher later.Notifier) {
 // newWiki builds the wiki handler; its picture uploads reserve quota through
 // the media handler, so newCore must have run.
 func (c *components) newWiki() {
-	c.wikiH = &wiki.Handler{
+	c.wikiH = wiki.New(wiki.Handler{
 		Store:       wiki.NewStore(c.d.DB),
 		MediaStore:  c.d.Store,
 		MediaBucket: c.cfg.S3Bucket,
@@ -93,7 +93,7 @@ func (c *components) newWiki() {
 		Perms:       c.permSvc,
 		Audit:       c.auditLog,
 		WriteLimit:  httpx.NewRateLimiter(wiki.EditsPerMinute, time.Minute).Named("wiki"),
-	}
+	})
 }
 
 // newEvents builds the community events handler and starts its scheduler.
@@ -103,7 +103,7 @@ func (c *components) newEvents() {
 	if c.pushH != nil {
 		pushSvc = c.pushH.Service
 	}
-	c.eventsH = &communityevents.Handler{
+	c.eventsH = communityevents.New(&communityevents.Handler{
 		DB:           c.d.DB,
 		Store:        communityevents.NewStore(c.d.DB),
 		MediaStore:   c.d.Store,
@@ -113,7 +113,7 @@ func (c *components) newEvents() {
 		Audit:        c.auditLog,
 		Push:         pushSvc,
 		CommentLimit: httpx.NewRateLimiter(communityevents.CommentsPerMinute, time.Minute).Named("event_comment"),
-	}
+	})
 	c.eventsScheduler = communityevents.NewScheduler(c.eventsH)
 	if c.d.DB != nil { // router-only tests run without a database
 		c.eventsScheduler.Start(c.ctx)
@@ -124,10 +124,9 @@ func (c *components) newEvents() {
 // auth, and runs the account sweeps that live as long as the server: ban and
 // status expiry, the session sweep and the unlock worker.
 func (c *components) newAuth(hub *ws.Hub) {
-	c.authH = authn.NewHandler(c.sessions, c.pub)
+	c.authH = authn.NewHandler(c.sessions, c.permSvc, c.pub)
 	c.authH.Live = hub
 	c.authH.Names = c.d.Names
-	c.authH.Perms = c.permSvc
 	c.authH.HiddenMessages = c.hiddenMessageCount
 	c.authH.Audit = c.auditLog
 	c.authH.Lifetime = c.ctx

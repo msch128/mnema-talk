@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -46,13 +47,15 @@ func closedWSFixturePool(t *testing.T, p *db.Pool) *db.Pool {
 func TestWSDatabaseBookkeepingAndChannelChecks(t *testing.T) {
 	p := testutil.DB(t)
 	u := wsFixtureUser(t, p)
-	h := NewHub(p, nil, nil, nil)
+	perms := perm.NewService(p)
+	h := NewHub(p, nil, nil, nil, perms)
 	c := testClient(h, u)
 	observer := testClient(h, auth.User{ID: uuid.New()})
 	drainTypes(t, observer)
 	if tv, revoked, err := h.sessionState(context.Background(), u.ID, ""); err != nil || tv != 0 || revoked {
 		t.Fatalf("token version = %d, %v", tv, err)
 	}
+	var talk uuid.UUID
 	for _, kind := range []string{"text", "voice"} {
 		id := uuid.New()
 		if _, err := p.Exec(context.Background(), `INSERT INTO channels(id,name,type) VALUES($1,$2,$3)`, id, "ws-fixture-channel", kind); err != nil {
@@ -63,11 +66,13 @@ func TestWSDatabaseBookkeepingAndChannelChecks(t *testing.T) {
 				t.Error(err)
 			}
 		})
+		perms.Invalidate() // as creating a channel through the API does
 		_, ok := h.voiceChannel(context.Background(), id)
 		if ok != (kind == "voice") {
 			t.Fatalf("%s channel accepted as voice: %v", kind, ok)
 		}
 		if kind == "voice" {
+			talk = id
 			payload := []byte(`{"channel_id":"` + id.String() + `"}`)
 			c.handle("voice_join", payload)
 			if c.currentVoice() == nil || *c.currentVoice() != id {
@@ -82,7 +87,7 @@ func TestWSDatabaseBookkeepingAndChannelChecks(t *testing.T) {
 	if _, ok := h.voiceChannel(context.Background(), uuid.New()); ok {
 		t.Fatal("unknown channel accepted")
 	}
-	h.addVoiceTime(u.ID, uuid.New(), 2500*time.Millisecond, seatPublic)
+	h.addVoiceTime(u.ID, talk, 2500*time.Millisecond, seatPublic)
 	var total int64
 	if err := p.QueryRow(context.Background(), `SELECT voice_seconds FROM users WHERE id=$1`, u.ID).Scan(&total); err != nil || total != 2 {
 		t.Fatalf("voice total=%d, %v", total, err)
@@ -95,7 +100,7 @@ func TestWSDatabaseBookkeepingAndChannelChecks(t *testing.T) {
 	if err := p.QueryRow(context.Background(), `SELECT last_seen_at FROM users WHERE id=$1`, u.ID).Scan(&seen); err != nil || seen == nil {
 		t.Fatalf("last seen=%v, %v", seen, err)
 	}
-	broken := NewHub(closedWSFixturePool(t, p), nil, nil, nil)
+	broken := NewHub(closedWSFixturePool(t, p), nil, nil, nil, openPerms())
 	b := testClient(broken, u)
 	broken.addVoiceTime(u.ID, uuid.New(), time.Second, seatPublic)
 	broken.unregister(b)
@@ -114,7 +119,7 @@ func TestWSWriterPeriodicLifecycle(t *testing.T) {
 			t.Parallel()
 			u := wsFixtureUser(t, p)
 			server, remote := websocketPair(t)
-			h := NewHub(p, nil, nil, nil)
+			h := NewHub(p, nil, nil, nil, openPerms())
 			h.PingInterval, h.RevalidateInterval = 20*time.Millisecond, 300*time.Millisecond
 			c := newClient(h, server, u, 0)
 			if mode == "revoked" {
@@ -191,7 +196,7 @@ func TestWSWriterPeriodicLifecycle(t *testing.T) {
 func TestHubCloseRecordsLastSeenBeforeTheDatabaseCloses(t *testing.T) {
 	p := testutil.DB(t)
 	first, second := wsFixtureUser(t, p), wsFixtureUser(t, p)
-	h := NewHub(p, nil, nil, nil)
+	h := NewHub(p, nil, nil, nil, openPerms())
 	a, b := testClient(h, first), testClient(h, second)
 	h.Close()
 	for _, u := range []auth.User{first, second} {
@@ -209,7 +214,7 @@ func TestHubCloseRecordsLastSeenBeforeTheDatabaseCloses(t *testing.T) {
 	if err := p.QueryRow(context.Background(), `SELECT last_seen_at FROM users WHERE id=$1`, first.ID).Scan(&seen); err != nil || seen != nil {
 		t.Fatalf("clean-up after close wrote last seen again: %v, %v", seen, err)
 	}
-	broken := NewHub(closedWSFixturePool(t, p), nil, nil, nil)
+	broken := NewHub(closedWSFixturePool(t, p), nil, nil, nil, openPerms())
 	testClient(broken, first)
 	broken.Close()
 	if broken.OnlineCount() != 1 {

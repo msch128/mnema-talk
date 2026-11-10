@@ -768,6 +768,50 @@ volume is the count in `GET /api/read-state`, linear in the unread messages of
 a member who has been away for a long time (about 30 to 45 ms for 50,000);
 it is paid once per page load or reconnect, not per message.
 
+### The permission snapshot with 10,000 members
+
+Permission questions are answered from one in-memory snapshot
+(`internal/perm`). Every permission change drops it and the next question
+reads the whole state again: 13 queries in one read-only repeatable-read
+transaction. Everyday actions are among those changes (accepting the rules, a
+new conversation, a self-assigned role), so the cost of one load decides
+whether that design holds. The integration test in
+[`internal/server/perm_snapshot_scale_integration_test.go`](../internal/server/perm_snapshot_scale_integration_test.go)
+(`PERM_SNAPSHOT_SCALE=full go test -tags=integration -run TestAcceptingTheRulesTakesEffectAtOnce -v ./internal/server`;
+without the variable it runs a small community, as in CI) measures it with
+10,000 members, 30 roles, 20,000 role assignments and 5,000 conversations
+(10,000 conversation memberships), 9,500 of the members having accepted the
+rules. Three runs on an Apple M5 laptop (10 cores), PostgreSQL 18 in a local
+container, built without the race detector, while other work kept the machine
+busy (load average 7 to 11), so read the figures as upper bounds of an order
+of magnitude:
+
+| What | Run 1 | Run 2 | Run 3 |
+| --- | --- | --- | --- |
+| One load, nothing else going on (median of 20; slowest) | 13.6 ms; 24.7 ms | 12.2 ms; 22.2 ms | 13.5 ms; 17.4 ms |
+| Rows read by one load | 39,535 | 39,535 | 39,535 |
+| 500 members accept the rules one after the other: loads | 500 | 500 | 500 |
+| The same: total time | 8.4 s | 7.5 s | 7.8 s |
+| `POST /api/onboarding/accept`, p50 / p99 | 15 / 56 ms | 15 / 19 ms | 15 / 23 ms |
+| `POST /api/channels/{id}/messages` meanwhile (4 writers, about 85 messages/s), p50 / p99 | 20 / 80 ms | 19 / 34 ms | 20 / 35 ms |
+| The same without permission changes, p50 / p99 | 14 / 274 ms | 12 / 25 ms | 14 / 25 ms |
+
+Each acceptance costs exactly one full load, paid inside its own request, so
+500 acceptances cause 500 full loads and one acceptance takes about 15 ms, of
+which about 13 ms are the load: the hub is told about the change and asks for
+the new snapshot at once, so a message sent meanwhile waits for at most the
+load in progress. Loads never run side by side, which bounds this design at
+about 65 permission changes per second at this size. That adds about 6 ms to
+the median send and about 10 ms to its p99 in the two runs without an outlier
+(the 274 ms in run 1 fell into the phase without any permission change, so it
+is the busy machine, not the snapshot). Both figures stay well below the
+limits set for this design, 50 ms for one load and 200 ms for the p99 of
+sending during such a burst; the test fails above them when it runs at full
+size. The snapshot therefore stays one consistent, fully reloaded view. A load
+grows linearly with role assignments, conversation memberships and members who
+accepted the rules (about 0.35 ms per 1,000 rows here), so the design is worth
+another look at several times this size, or when a load is seen above 50 ms.
+
 ## Talks, sessions and operator status (1.2)
 
 **Lobbies, Talks and Stages.** A lobby channel (`channels.is_lobby`, migration 0059) opens a temporary Talk

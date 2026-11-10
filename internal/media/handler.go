@@ -33,8 +33,8 @@ type Handler struct {
 	RetentionDays int
 	// Online resolves @here in an upload's caption; nil means nobody is online.
 	Online mentions.OnlineSource
-	// Perms decides who may upload to and download from which channel; nil
-	// imposes no channel limits (tests; the router always sets it).
+	// Perms decides who may upload to and download from which channel, and
+	// how much. It is required (see New).
 	Perms *perm.Service
 	// Audit records removals the server does on its own (avatars it cannot
 	// redraw); nil records nothing.
@@ -43,6 +43,12 @@ type Handler struct {
 	Quota Quota
 
 	reserved reservations
+}
+
+// New returns h ready to mount. It panics without Perms.
+func New(h *Handler) *Handler {
+	perm.Must(h.Perms, "media handler")
+	return h
 }
 
 // UploadBodyLimit is the transport ceiling for upload routes: the file cap
@@ -70,9 +76,6 @@ func (h *Handler) limit(ctx context.Context) int64 {
 // memberLimit resolves what the signed-in member may upload: the Owner the
 // ceiling, others the highest role override or the global limit.
 func (h *Handler) memberLimit(ctx context.Context, sub perm.Subject) (int64, error) {
-	if h.Perms == nil {
-		return h.MaxUploadBytes, nil
-	}
 	v, err := h.Perms.UploadLimitBytes(ctx, sub)
 	if err != nil {
 		return 0, err

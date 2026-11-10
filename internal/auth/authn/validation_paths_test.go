@@ -11,10 +11,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestAuthHandlersRejectMalformedJSON(t *testing.T) {
-	h := NewHandler(&auth.Sessions{Secret: secret}, nil)
+	h := NewHandler(&auth.Sessions{Secret: secret}, permtest.NewFixture().Service(), nil)
 	u := &auth.User{ID: uuid.New()}
 	for name, handler := range map[string]httpx.HandlerFunc{
 		"login": h.login, "register": h.register, "password": h.changePassword,
@@ -37,7 +38,7 @@ func TestAuthHandlersRejectMalformedJSON(t *testing.T) {
 }
 
 func TestProfileHandlerRejectsMalformedIDs(t *testing.T) {
-	h := NewHandler(&auth.Sessions{}, nil)
+	h := NewHandler(&auth.Sessions{}, permtest.NewFixture().Service(), nil)
 	for name, handler := range map[string]httpx.HandlerFunc{
 		"get": h.getUser,
 	} {

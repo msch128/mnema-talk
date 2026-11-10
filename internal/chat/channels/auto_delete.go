@@ -93,7 +93,8 @@ func (a *AutoDeleter) Run(ctx context.Context, every time.Duration) {
 			return
 		case <-t.C:
 			worker.Tick(worker.JobAutoDelete, func() error {
-				err := a.Sweep(ctx)
+				// An online backup freezes the storage: wait for it to end.
+				err := a.DB.OutsideBackup(ctx, func() error { return a.Sweep(ctx) })
 				if err != nil && ctx.Err() == nil {
 					slog.Error("auto-delete sweep failed", "err", err)
 				}
@@ -105,6 +106,7 @@ func (a *AutoDeleter) Run(ctx context.Context, every time.Duration) {
 
 // Sweep runs one pass over all channels that have auto-delete on.
 func (a *AutoDeleter) Sweep(ctx context.Context) error {
+	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
 	rows, err := a.DB.Query(ctx, `SELECT id, name, auto_delete_days FROM channels WHERE auto_delete_days > 0 AND type <> 'dm'`)
 	if err != nil {
 		return fmt.Errorf("list auto-delete channels: %w", err)

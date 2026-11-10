@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // sockets records the sessions whose WebSockets were closed.
@@ -49,7 +50,7 @@ func TestSweepRunsInTheBackgroundAndClosesTheEndedSessionsSockets(t *testing.T) 
 	e.age(idle, 9*24*time.Hour)
 
 	live := &sockets{count: make(chan struct{}, 1)}
-	h := NewHandler(e.s, nil)
+	h := NewHandler(e.s, permtest.NewFixture().Service(), nil)
 	h.Live = live
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -76,7 +77,10 @@ func TestSweepRunsInTheBackgroundAndClosesTheEndedSessionsSockets(t *testing.T) 
 
 func TestSweepWithoutADatabaseReturnsAtOnce(t *testing.T) {
 	done := make(chan struct{})
-	go func() { NewHandler(&auth.Sessions{}, nil).RunSessionSweep(context.Background(), 0); close(done) }()
+	go func() {
+		NewHandler(&auth.Sessions{}, permtest.NewFixture().Service(), nil).RunSessionSweep(context.Background(), 0)
+		close(done)
+	}()
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second):

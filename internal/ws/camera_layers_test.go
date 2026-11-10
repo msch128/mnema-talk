@@ -127,7 +127,7 @@ func TestServerInfoAnnouncesCameraLayers(t *testing.T) {
 	if len(got) != 1 || got[0]["camera_layers"] != float64(sfu.MaxLayers) {
 		t.Fatalf("server_info with media: %+v", got)
 	}
-	plain := NewHub(nil, nil, nil, nil)
+	plain := NewHub(nil, nil, nil, nil, openPerms())
 	d := testClient(plain, auth.User{ID: uuid.New(), Username: "member"})
 	got = sentEvents(t, d, "server_info")
 	if _, ok := got[0]["camera_layers"]; len(got) != 1 || ok {

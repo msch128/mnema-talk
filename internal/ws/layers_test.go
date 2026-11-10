@@ -121,7 +121,7 @@ func TestLayersOutsideACallAreIgnored(t *testing.T) {
 	h.SFU.CloseRoom(ch.ID)
 	sendLayers(c, []sfu.Layer{{Width: 100, Height: 100, FPS: 30}}) // room gone
 
-	noSFU := NewHub(nil, nil, nil, nil)
+	noSFU := NewHub(nil, nil, nil, nil, openPerms())
 	d := testClient(noSFU, auth.User{ID: uuid.New(), Username: "plain"})
 	id := voiceCh().ID
 	d.setVoice(&id)
@@ -208,7 +208,7 @@ func TestServerInfoAnnouncesScreenLayers(t *testing.T) {
 		t.Fatalf("server_info with media: %+v", got)
 	}
 
-	plain := NewHub(nil, nil, nil, nil)
+	plain := NewHub(nil, nil, nil, nil, openPerms())
 	d := testClient(plain, auth.User{ID: uuid.New(), Username: "member"})
 	got = sentEvents(t, d, "server_info")
 	if len(got) != 1 {

@@ -14,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -50,7 +51,7 @@ func TestInvitePreviewBudgetIsPerClientAndIgnoresHitOrMiss(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	seedInvite(t, p)
-	h := NewHandler(p, nil)
+	h := NewHandler(p, perm.NewService(p))
 	h.previewPerIP = httpx.NewRateLimiter(3, time.Hour)
 	r := chi.NewRouter()
 	h.MountPublic(r)
@@ -83,7 +84,7 @@ func TestInvitePreviewBudgetAggregatesPerIPv6Site(t *testing.T) {
 	p := testutil.DB(t)
 	testutil.Reset(t, p)
 	seedInvite(t, p)
-	h := NewHandler(p, nil)
+	h := NewHandler(p, perm.NewService(p))
 	h.previewPerSite = httpx.NewRateLimiter(4, time.Hour)
 	r := chi.NewRouter()
 	h.MountPublic(r)
@@ -118,7 +119,7 @@ func TestInvitePreviewTreatsWeakLegacyCodesAsUnknown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := NewHandler(p, nil)
+	h := NewHandler(p, perm.NewService(p))
 	r := chi.NewRouter()
 	h.MountPublic(r)
 	weak := previewFrom(r, "203.0.113.1", "welcome")

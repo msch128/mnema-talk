@@ -155,7 +155,9 @@ func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 }
 
 // MessageInChannel loads messageID and checks it belongs to the channel named in
-// the path, so URLs cannot mix channels.
+// the path, so URLs cannot mix channels. The channel is asked first: one the
+// caller may not view answers like one that does not exist, whatever message
+// is named with it.
 func (a *API) MessageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef, error) {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
@@ -163,6 +165,9 @@ func (a *API) MessageInChannel(r *http.Request) (uuid.UUID, *core.MessageRef, er
 	}
 	msgID, err := httpx.PathUUID(r, "messageID")
 	if err != nil {
+		return uuid.Nil, nil, err
+	}
+	if err := a.Guard.Require(r, chID, perm.ViewChannel); err != nil {
 		return uuid.Nil, nil, err
 	}
 	ref, err := core.LoadMessageRef(r.Context(), a.DB, msgID)

@@ -93,6 +93,7 @@ func (a *API) requireForumChannel(r *http.Request, chID uuid.UUID) (*core.Channe
 // @Failure 401 {object} httpx.ErrorResponse "UNAUTHORIZED"
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the channel, or the before post (deleted since the previous page), does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests, or the search (q) took too long."
 // @Router /api/channels/{channelID}/posts [get]
 func (a *API) ServeListForumPosts(w http.ResponseWriter, r *http.Request) error {
 	chID, err := httpx.PathUUID(r, "channelID")
@@ -258,17 +259,13 @@ func (a *API) postEditContext(r *http.Request, chID, msgID uuid.UUID, canManage 
 	return ctx, before, nil
 }
 
-// canManageMessages says whether user holds Manage messages in the channel (the
-// Owner does when there is no permission service).
+// canManageMessages says whether user holds Manage messages in the channel.
 func (a *API) canManageMessages(r *http.Request, user *auth.User, chID uuid.UUID) (bool, error) {
 	return CanManageMessages(r.Context(), a.Guard.Perms, user, chID)
 }
 
 // CanManageMessages is canManageMessages for callers outside the chat handler.
 func CanManageMessages(ctx context.Context, perms *perm.Service, user *auth.User, chID uuid.UUID) (bool, error) {
-	if perms == nil {
-		return user.Role == "admin", nil
-	}
 	p, err := perms.Channel(ctx, user.Subject(), chID)
 	if err != nil {
 		return false, err

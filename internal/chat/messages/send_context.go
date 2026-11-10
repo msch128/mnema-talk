@@ -22,9 +22,6 @@ func (a *API) ServeSendContext(r *http.Request, ch uuid.UUID, need perm.Set) (co
 // scheduled message): ctx carries the author (auth.WithUser) and the
 // permission state is read now, so a later change of rights applies.
 func SendContextFor(perms *perm.Service, ctx context.Context, ch uuid.UUID, need perm.Set) (context.Context, error) {
-	if perms == nil {
-		return ctx, nil
-	}
 	snap, err := perms.ForChannel(ctx, ch)
 	if err != nil {
 		return nil, err

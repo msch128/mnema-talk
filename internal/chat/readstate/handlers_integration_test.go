@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
@@ -26,7 +27,7 @@ func TestReadStateHandlerValidationAndErrors(t *testing.T) {
 	p, u := chattest.NewMember(t)
 	channel := chattest.NewChannel(t, p, "readstate-chat")
 	message := chattest.NewMessage(t, p, channel, u.ID, "hello world")
-	a := API{DB: p, Events: &events.Recorder{}}
+	a := API{DB: p, Events: &events.Recorder{}, Guard: core.NewGuard(perm.NewService(p))}
 	valid := map[string]string{"channelID": channel.String(), "messageID": message.String(), "id": channel.String()}
 	type handler func(http.ResponseWriter, *http.Request) error
 

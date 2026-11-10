@@ -25,6 +25,16 @@ include anything that is private to a few people.
   on. The old private total stays in the database (and the data export); it is
   not shown to other members.
 
+## Database statement timeout
+
+From this release the server cancels a database statement of a request that
+runs longer than `DB_STATEMENT_TIMEOUT` (default `15s`) and ends its own
+sessions that sit idle inside a transaction for a minute. Nothing needs to be
+configured: migrations, the data export, the sweeps and bulk deletes keep
+longer limits of their own, and backups are not affected. `DB_MAX_CONNS`
+(default 25, the size the pool always had) is new as well. See
+[operations.md](operations.md#database-limits).
+
 ## Broad trusted proxies
 
 `TRUSTED_PROXY_CIDRS` entries wider than an IPv4 `/24` or an IPv6 `/64` used

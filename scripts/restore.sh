@@ -4,7 +4,11 @@
 set -euo pipefail
 # shellcheck source=scripts/backup-common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/backup-common.sh"
-src=${1:?usage: restore.sh <folder> [--yes|--verify] [--allow-legacy]}
+# shellcheck source=scripts/backup-online.sh
+source "$(dirname "${BASH_SOURCE[0]}")/backup-online.sh"
+# An encrypted backup (<timestamp>.tar.age) is unpacked next to itself with
+# BACKUP_AGE_IDENTITY=<age identity file>; the plain copy is removed at exit.
+src=${1:?usage: restore.sh <folder|file.tar.age> [--yes|--verify] [--allow-legacy]}
 shift
 mode='' legacy=0
 for arg in "$@"; do
@@ -14,15 +18,22 @@ for arg in "$@"; do
     *) backup_fail "unknown option: $arg" ;;
   esac
 done
+trap backup_discard_plain EXIT
+if [ -f "$src" ]; then
+  backup_decrypt "$src"
+  src=$backup_src
+fi
 src=$(cd "$src" && pwd)
 backup_validate "$src" "$legacy"
 if [ "$mode" = --verify ]; then
-  check_container=''
+  check_container='' media_container=''
   # shellcheck disable=SC2329 # Invoked by the EXIT trap.
   cleanup_verify() {
     status=$?
     trap - EXIT INT TERM
     if [ -n "$check_container" ]; then docker rm -f -v "$check_container" >/dev/null || status=1; fi
+    if [ -n "$media_container" ]; then docker rm -f -v "$media_container" >/dev/null || status=1; fi
+    backup_discard_plain
     exit "$status"
   }
   trap cleanup_verify EXIT
@@ -39,6 +50,7 @@ if [ "$mode" = --verify ]; then
   [ "$ready" = true ] || backup_fail 'isolated verification database did not become ready'
   gunzip -c "$src/postgres.sql.gz" | docker exec -i "$check_container" psql -U postgres -d mnema_verify -v ON_ERROR_STOP=1 -q >/dev/null
   docker exec "$check_container" psql -U postgres -d mnema_verify -At -v ON_ERROR_STOP=1 -c "SELECT 'users ' || count(*) FROM users UNION ALL SELECT 'channels ' || count(*) FROM channels UNION ALL SELECT 'messages ' || count(*) FROM messages UNION ALL SELECT 'media ' || count(*) FROM media UNION ALL SELECT 'migrations ' || count(*) FROM schema_migrations" </dev/null
+  if [ -f "$src/media-keys.txt" ]; then online_verify_media "$src"; fi
   echo 'structural verification passed; test login, object retrieval and device recovery on a separate restored deployment'
   exit 0
 fi
@@ -64,6 +76,7 @@ cleanup_restore() {
     echo 'restore failed after mutation: services remain stopped; resolve or restore a complete backup before starting' >&2
   fi
   rmdir .mnema-maintenance.lock
+  backup_discard_plain
   exit "$status"
 }
 trap cleanup_restore EXIT

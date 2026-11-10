@@ -35,12 +35,6 @@ func (h *Handler) requireRoster(r *http.Request, ev *CommunityEvent) error {
 	if ev.CreatedBy != nil && *ev.CreatedBy == user.ID {
 		return nil
 	}
-	if h.Perms == nil {
-		if user.Role == "admin" {
-			return nil
-		}
-		return httpx.ErrForbidden("only the event's creator and members who can manage events change its roles and sign-ups")
-	}
 	snap, err := h.Perms.Snapshot(r.Context())
 	if err != nil {
 		return err

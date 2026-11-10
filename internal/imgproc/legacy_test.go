@@ -37,14 +37,14 @@ func TestLegacyAvatarAllowsALargerCanvas(t *testing.T) {
 }
 
 // animatedWebP wraps the one frame of a 1x1 lossless WebP in an animation.
-func animatedWebP(t *testing.T) []byte {
+func animatedWebP(t testing.TB) []byte {
 	t.Helper()
 	return animatedWebPOn(t, 1, 1, 0, 0)
 }
 
 // animatedWebPOn is animatedWebP on a canvas of canvasW x canvasH pixels, with
 // the 1x1 frame at (2*x2, 2*y2).
-func animatedWebPOn(t *testing.T, canvasW, canvasH, x2, y2 int) []byte {
+func animatedWebPOn(t testing.TB, canvasW, canvasH, x2, y2 int) []byte {
 	t.Helper()
 	still, err := base64.StdEncoding.DecodeString("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==")
 	if err != nil {

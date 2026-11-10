@@ -20,13 +20,13 @@ func (a claimingAuth) SessionClaims(*http.Request) (string, time.Time) { return 
 
 func TestBindSessionTakesClaimsFromTheAuthenticator(t *testing.T) {
 	exp := time.Now().Add(time.Hour)
-	h := NewHub(nil, claimingAuth{id: "jti-1", exp: exp}, nil, nil)
+	h := NewHub(nil, claimingAuth{id: "jti-1", exp: exp}, nil, nil, openPerms())
 	c := newClient(h, nil, auth.User{}, 0)
 	h.bindSession(c, httptest.NewRequest(http.MethodGet, "/api/ws", nil))
 	if c.sessionID != "jti-1" || !c.sessionExp.Equal(exp) {
 		t.Fatalf("bound %q %v", c.sessionID, c.sessionExp)
 	}
-	plain := NewHub(nil, fakeAuth{}, nil, nil)
+	plain := NewHub(nil, fakeAuth{}, nil, nil, openPerms())
 	d := newClient(plain, nil, auth.User{}, 0)
 	plain.bindSession(d, httptest.NewRequest(http.MethodGet, "/api/ws", nil))
 	if d.sessionID != "" || !d.sessionExp.IsZero() {
@@ -50,7 +50,7 @@ func TestSessionExpiredOnlyWithAnExpiryInThePast(t *testing.T) {
 }
 
 func TestDisconnectSessionClosesOnlyMatchingConnections(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	u := auth.User{ID: uuid.New()}
 	mine, other := testClient(h, u), testClient(h, u)
 	mine.sessionID, other.sessionID = "session-a", "session-b"

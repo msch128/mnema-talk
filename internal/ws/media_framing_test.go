@@ -27,7 +27,7 @@ func mlsWire(format byte, n int) []byte {
 // counts them as rejected, while the content of a well-framed message stays
 // untouched.
 func TestMediaHandshakeRelayRefusesUnframedBlobs(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	room := voiceCh()
 	alice, bob := testClient(h, auth.User{ID: uuid.New()}), testClient(h, auth.User{ID: uuid.New()})
 	defer h.unregister(alice)

@@ -32,8 +32,8 @@ type Handler struct {
 	// cannot see, so a profile's total does not reveal activity there. nil
 	// subtracts nothing.
 	HiddenMessages func(ctx context.Context, viewer perm.Subject, author uuid.UUID) (int64, error)
-	// Perms decides who may use the admin routes beyond the Owner. nil means
-	// only the Owner may.
+	// Perms decides who may use the admin routes beyond the Owner and whom a
+	// moderator may act on. It is required (see NewHandler).
 	Perms *perm.Service
 	// Names is the community name the e-mails and authenticator entries use;
 	// nil means the product name.
@@ -101,9 +101,11 @@ const accountAttackWeight = 3
 
 // NewHandler builds the auth handler with every limiter at its production
 // setting; the limits and lockout tiers are explained where they are set below.
-func NewHandler(s *auth.Sessions, pub events.Publisher) *Handler {
+// It panics on a nil permission service.
+func NewHandler(s *auth.Sessions, perms *perm.Service, pub events.Publisher) *Handler {
 	h := &Handler{
 		Sessions:    s,
+		Perms:       perm.Must(perms, "auth handler"),
 		Events:      pub,
 		failureSeen: &sync.Map{},
 		rec:         newRecovery(),

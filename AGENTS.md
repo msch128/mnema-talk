@@ -107,7 +107,7 @@ mnema-talk/
 │   └── src/lib/             # Shared client modules: native/ (desktop IPC) and dfn/ (DeepFilterNet3)
 ├── scripts/git-hooks/       # pre-commit (gitleaks + gofmt); `make install-hooks`
 ├── scripts/smoke-image.sh   # Image smoke test on the production compose file (`make smoke`)
-├── scripts/backup-drill.sh  # Backup -> restore drill on a throwaway stack (`make backup-drill`)
+├── scripts/backup-drill.sh  # Backup -> restore drill on a throwaway stack (`make backup-drill`); online leg under load in backup-drill-online.sh
 ├── scripts/upgrade-drill.sh # Each supported release (GHCR) -> this build with seeded data (`make upgrade-drill`); shares scripts/drill-common.sh, upgrade-drill-data.sh
 ├── scripts/upgrade-postgres.sh # One-time PostgreSQL 17 -> 18 move (0.4 -> 0.5)
 ├── scripts/postgres-upgrade-drill.sh # Drill for it (`make postgres-upgrade-drill`)
@@ -117,7 +117,7 @@ mnema-talk/
 ├── scripts/check-agents-paths.mjs # Fails when AGENTS.md names a file or directory that does not exist (`make docs-check`, CI)
 ├── scripts/check-english-only.mjs # Fails on German outside the locale resources; exceptions in scripts/english-only-allowlist.txt (`make english-check`, CI)
 ├── deploy/monitoring/mnema-alerts.yml # Example Prometheus alert rules; promtool in CI, metric names checked against /api/metrics
-├── scripts/backup.sh, restore.sh # Backup and restore of database, media and configuration
+├── scripts/backup.sh, restore.sh # Backup and restore of database, media and configuration (cold by default, `BACKUP_MODE=online` in backup-online.sh, optional age encryption)
 ├── scripts/web-bundle-check.sh # Signs web/dist with a throwaway key and verifies it (`make web-bundle-check`)
 ├── scripts/security-floor.sh # Release step: raises the bundle security floor only on a `Security-Floor: raise` trailer
 ├── .github/workflows/

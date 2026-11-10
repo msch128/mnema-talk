@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func lookup(m map[string]string) func(string) (string, bool) {
@@ -707,6 +708,38 @@ func TestWebPushSettings(t *testing.T) {
 		}
 		if cfg.PushEnabled || cfg.PushPreviews != "off" || cfg.PushVAPIDSubject != subject {
 			t.Fatalf("%s: enabled=%v previews=%q subject=%q", subject, cfg.PushEnabled, cfg.PushPreviews, cfg.PushVAPIDSubject)
+		}
+	}
+}
+
+func TestDatabaseLimitsDefaultAndFollowTheEnvironment(t *testing.T) {
+	cfg, err := FromEnv(lookup(base()))
+	if err != nil || cfg.DBMaxConns != 25 || cfg.DBStatementTimeout != 15*time.Second {
+		t.Fatalf("defaults: %d connections, timeout %s (%v); want 25 and 15s", cfg.DBMaxConns, cfg.DBStatementTimeout, err)
+	}
+	env := base()
+	env["DB_MAX_CONNS"], env["DB_STATEMENT_TIMEOUT"] = "60", "2m"
+	cfg, err = FromEnv(lookup(env))
+	if err != nil || cfg.DBMaxConns != 60 || cfg.DBStatementTimeout != 2*time.Minute {
+		t.Fatalf("set: %d connections, timeout %s (%v); want 60 and 2m", cfg.DBMaxConns, cfg.DBStatementTimeout, err)
+	}
+	env["DB_STATEMENT_TIMEOUT"] = "0"
+	if cfg, err = FromEnv(lookup(env)); err != nil || cfg.DBStatementTimeout != 0 {
+		t.Fatalf("0 must switch the statement timeout off: %s (%v)", cfg.DBStatementTimeout, err)
+	}
+}
+
+func TestDatabaseLimitsOutOfRangeAreRejected(t *testing.T) {
+	for key, values := range map[string][]string{
+		"DB_MAX_CONNS":         {"0", "-3", "1001", "many"},
+		"DB_STATEMENT_TIMEOUT": {"15", "500ms", "2h", "-5s", "soon"},
+	} {
+		for _, v := range values {
+			env := base()
+			env[key] = v
+			if _, err := FromEnv(lookup(env)); err == nil || !strings.Contains(err.Error(), key) {
+				t.Errorf("%s=%q: %v; want an error naming the variable", key, v, err)
+			}
 		}
 	}
 }

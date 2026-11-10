@@ -23,13 +23,12 @@ func TestUploadLimitResolution(t *testing.T) {
 		t.Fatalf("limit above the ceiling: %d", got)
 	}
 
-	// Without the permission model the ceiling applies.
-	if got, err := h.memberLimit(ctx, perm.Subject{ID: uuid.New()}); err != nil || got != 4<<20 {
+	// Without the permission model nobody may upload anything.
+	if got, err := h.memberLimit(ctx, perm.Subject{ID: uuid.New(), Owner: true}); err == nil || got != 0 {
 		t.Fatalf("member limit without perms: %d %v", got, err)
 	}
-	c, body, err := h.GlobalLimit(ctx)
-	if err != nil || body != bodyLimit(4<<20) || h.limit(c) != 4<<20 {
-		t.Fatalf("global limit without perms: %d %v", body, err)
+	if _, _, err := h.GlobalLimit(ctx); err == nil {
+		t.Fatal("global limit without perms must fail")
 	}
 
 	// A permission state that cannot be read fails the request closed.

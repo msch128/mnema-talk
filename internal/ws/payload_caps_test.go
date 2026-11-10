@@ -62,7 +62,7 @@ func TestEventBudgetDropsOversizedOrdinaryPayloads(t *testing.T) {
 // Oversized frames of ordinary events are dropped before they are decoded or
 // reach a handler; frames of the large event types and sane ones still pass.
 func TestDispatchDropsOversizedFramesBeforeDecoding(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	c := testClient(h, auth.User{ID: uuid.New()})
 	drainTypes(t, c)
 	var budget eventBudget

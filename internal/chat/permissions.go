@@ -12,21 +12,18 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
-// This file is where the chat handlers ask the permission model. A Handler
-// without Perms (unit tests) imposes no limits; the router always sets it.
+// This file is where the chat handlers ask the permission model.
 
 // guard is the permission model's request-level checks (chat/core), built from
-// the Perms the handler is wired with.
-func (h *Handler) guard() core.Guard { return core.Guard{Perms: h.Perms} }
+// the Perms the handler is wired with. Every route set is mounted through it,
+// so a Handler without Perms panics when the router is built.
+func (h *Handler) guard() core.Guard { return core.NewGuard(h.Perms) }
 
 // hiddenMessageCounts counts messages per author over the channels the caller
 // may not view; nil when there are none (the stored totals apply). Only the
 // hidden channels are scanned: the stored total minus these is what the caller
 // may see.
 func (h *Handler) hiddenMessageCounts(r *http.Request) (map[uuid.UUID]int64, error) {
-	if h.Perms == nil {
-		return nil, nil
-	}
 	snap, err := h.Perms.Snapshot(r.Context())
 	if err != nil {
 		return nil, err

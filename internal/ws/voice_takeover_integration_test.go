@@ -35,8 +35,7 @@ func TestVoiceJoinFrameWithTakeoverMovesVoiceBetweenSessions(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	h := NewHub(p, nil, newSeatTestSFU(t), nil)
-	h.SetPermissions(perm.NewService(p))
+	h := NewHub(p, nil, newSeatTestSFU(t), nil, perm.NewService(p))
 	t.Cleanup(h.Close)
 	u := wsFixtureUser(t, p)
 	a, b := testClient(h, u), testClient(h, u)
@@ -86,8 +85,7 @@ func TestResumeFrameBeforeTheStaleSocketGoesSucceeds(t *testing.T) {
 	if err := p.QueryRow(context.Background(), `INSERT INTO channels (name, type) VALUES ('Talk', 'voice') RETURNING id`).Scan(&chID); err != nil {
 		t.Fatal(err)
 	}
-	h := NewHub(p, nil, newSeatTestSFU(t), nil)
-	h.SetPermissions(perm.NewService(p))
+	h := NewHub(p, nil, newSeatTestSFU(t), nil, perm.NewService(p))
 	t.Cleanup(h.Close)
 	u := wsFixtureUser(t, p)
 	stale, fresh := testClient(h, u), testClient(h, u)

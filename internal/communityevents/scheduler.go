@@ -151,9 +151,6 @@ func (s *Scheduler) dispatchReminder(ctx context.Context, r DueReminder) {
 }
 
 func (s *Scheduler) reminderSnapshot(ctx context.Context) (*perm.Snapshot, error) {
-	if s.Handler.Perms == nil {
-		return nil, nil
-	}
 	return s.Handler.Perms.Snapshot(ctx)
 }
 
