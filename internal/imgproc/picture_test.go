@@ -28,7 +28,7 @@ func pngOf(t *testing.T, w, h int) []byte {
 	return buf.Bytes()
 }
 
-func gifOf(t *testing.T, w, h, frames int) []byte {
+func gifOf(t testing.TB, w, h, frames int) []byte {
 	t.Helper()
 	pal := color.Palette{color.Black, color.White}
 	g := &gif.GIF{}
@@ -130,6 +130,53 @@ func TestBannerRejectsWhatItCannotTrust(t *testing.T) {
 				t.Fatalf("want ErrImage, got %v", err)
 			}
 		})
+	}
+}
+
+// The frame limit and the memory budget are checked on the count taken before
+// decoding, so a block the decoder reads in its own way must not hide frames
+// from that count.
+func TestFramesBehindABlockTheDecoderReadsItsOwnWayAreCounted(t *testing.T) {
+	long := gifOf(t, 600, 200, MaxFrames+50)
+	for name, hide := range map[string]func([]byte) []byte{
+		"empty application header": afterEmptyApplicationHeader,
+		"plain text of odd size":   afterOddPlainText,
+	} {
+		data := hide(long)
+		g, err := gif.DecodeAll(bytes.NewReader(data))
+		if err != nil || len(g.Image) != MaxFrames+50 {
+			t.Fatalf("%s: the decoder must read every frame of the fixture: %v", name, err)
+		}
+		if n := GIFFrames(data, len(data)); n != len(g.Image) {
+			t.Errorf("%s: %d frames counted, %d decoded", name, n, len(g.Image))
+		}
+		if _, err := ProcessBanner(data); err == nil {
+			t.Errorf("%s: an animation over the frame limit was accepted", name)
+		}
+		// Within the limit the same file is an ordinary animation.
+		if out, err := ProcessBanner(hide(gifOf(t, 600, 200, 3))); err != nil || GIFFrames(out.Data, MaxFrames) != 3 {
+			t.Errorf("%s: three frames came out as %v", name, err)
+		}
+	}
+}
+
+func TestGIFFramesRefusesWhatTheDecoderRefuses(t *testing.T) {
+	head := gifOf(t, 4, 4, 1)
+	head = head[:13+colorTableSize(head[10])]
+	for name, block := range map[string][]byte{
+		"unknown extension":                 {0x21, 0x42, 0x00, 0x3b},
+		"graphic control of another size":   {0x21, 0xf9, 0x05, 0, 0, 0, 0, 0, 0x00, 0x3b},
+		"graphic control with more blocks":  {0x21, 0xf9, 0x04, 0, 0, 0, 0, 0x01, 0, 0x00, 0x3b},
+		"extension cut off after its label": {0x21, 0xff},
+		"extension without a label":         {0x21},
+	} {
+		data := append(bytes.Clone(head), block...)
+		if _, err := gif.DecodeAll(bytes.NewReader(data)); err == nil {
+			t.Fatalf("%s: the decoder accepts the fixture", name)
+		}
+		if n := GIFFrames(data, 10); n != 0 {
+			t.Errorf("%s: %d frames counted", name, n)
+		}
 	}
 }
 

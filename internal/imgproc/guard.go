@@ -26,7 +26,9 @@ func DecodeGIF(data []byte, canvasOK func(image.Config) error, reject func(forma
 		return nil, cfg, reject("the animation is too large: canvas size times frames may not exceed %d million pixels", MaxAnimationPixels>>20)
 	}
 	g, err := gif.DecodeAll(bytes.NewReader(data))
-	if err != nil || len(g.Image) == 0 {
+	// The count is checked again on what was decoded: the limits above must
+	// hold for the frames that exist, not only for those the walk has seen.
+	if err != nil || len(g.Image) != n {
 		return nil, cfg, reject("the image cannot be read")
 	}
 	return g, cfg, nil
