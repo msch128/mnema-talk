@@ -195,8 +195,10 @@ smoke: docker ## Start the built image with the production compose file and chec
 fresh-install: docker ## Follow doc/deployment.md "Fresh install" in an empty directory with this build, then sign in as the Owner
 	scripts/fresh-install-check.sh mnema-talk:local
 
-docs-check: ## Relative links and anchors in README.md, SECURITY.md and doc/*.md, no merge-conflict markers, stale versions, setup check codes and ports in the docs (no network)
+docs-check: ## Relative links and anchors in README.md, SECURITY.md and doc/*.md, the paths AGENTS.md names, no merge-conflict markers, stale versions, setup check codes and ports in the docs (no network)
 	node scripts/check-doc-links.mjs
+	node --test scripts/check-agents-paths.test.mjs
+	node scripts/check-agents-paths.mjs
 	node scripts/check-conflict-markers.mjs
 	node --test scripts/check-onboarding-docs.test.mjs
 	node scripts/check-onboarding-docs.mjs
