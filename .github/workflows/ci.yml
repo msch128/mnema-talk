@@ -248,7 +248,9 @@ jobs:
         run: make test-loadtest
 
       # Mutation fuzzing of the parsers (search, mentions, durations, URL guard,
-      # versions) for 1 s each on top of the seed corpora that `go test` ran.
+      # versions, RTP and RTCP payloads, the layer rewrite, media key framing,
+      # GIF and WebP structure, link preview pages, TURN usernames) for 1 s each
+      # on top of the seed corpora that `go test` ran.
       - if: ${{ needs.changes.outputs.code == 'true' }}
         name: Fuzz smoke
         run: FUZZTIME=1s make fuzz-smoke

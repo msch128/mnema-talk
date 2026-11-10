@@ -13,7 +13,7 @@ import (
 	"github.com/pion/rtp"
 )
 
-func twccFeedback(t *testing.T) []byte {
+func twccFeedback(t testing.TB) []byte {
 	t.Helper()
 	fb := &rtcp.TransportLayerCC{
 		Header:     rtcp.Header{Count: rtcp.FormatTCC, Type: rtcp.TypeTransportSpecificFeedback, Length: 5},
@@ -30,7 +30,7 @@ func twccFeedback(t *testing.T) []byte {
 	return raw
 }
 
-func receiverReportBytes(t *testing.T) []byte {
+func receiverReportBytes(t testing.TB) []byte {
 	t.Helper()
 	raw, err := (&rtcp.ReceiverReport{SSRC: 1}).Marshal()
 	if err != nil {
