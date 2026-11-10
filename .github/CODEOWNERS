@@ -1,0 +1,22 @@
+# Owner of the paths where a mistake costs the most: permissions, sign-in,
+# media encryption, outbound requests, release and update verification, backup
+# and restore, CI, and the rules agents read.
+#
+# This file has no effect by itself. GitHub requests a review from the owner,
+# but a pull request only waits for it once main's ruleset has "Require review
+# from Code Owners" turned on, which is a repository setting.
+
+/web/src/lib/media/         @msch128
+/internal/perm/             @msch128
+/internal/auth/             @msch128
+/internal/ws/perms.go       @msch128
+/internal/ws/event_scope.go @msch128
+/internal/ws/mediaframe/    @msch128
+/internal/ssrf/             @msch128
+/internal/httpx/            @msch128
+/internal/imageverify/      @msch128
+/internal/updaterd/         @msch128
+/.github/workflows/         @msch128
+/scripts/backup.sh          @msch128
+/scripts/restore.sh         @msch128
+/AGENTS.md                  @msch128
