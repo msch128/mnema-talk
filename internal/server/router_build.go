@@ -116,10 +116,13 @@ type components struct {
 func (c *components) newCore() {
 	d, cfg := c.d, c.cfg
 	c.sessions = &auth.Sessions{
-		DB:     d.DB,
-		Secret: cfg.JWTSecret,
-		TTL:    time.Duration(cfg.SessionExpiryHours) * time.Hour,
-		Secure: cfg.SecureCookies(),
+		DB:              d.DB,
+		Secret:          cfg.JWTSecret,
+		PreviousSecret:  cfg.JWTSecretPrevious,
+		DataKey:         cfg.DataKey,
+		DataKeyPrevious: cfg.DataKeyPrevious,
+		TTL:             time.Duration(cfg.SessionExpiryHours) * time.Hour,
+		Secure:          cfg.SecureCookies(),
 	}
 	c.permSvc = d.Perms
 	if c.permSvc == nil {

@@ -37,6 +37,16 @@ func IssueToken(userID uuid.UUID, tokenVersion int, secret string, ttl time.Dura
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
 }
 
+// parseToken validates a session token signed with the session secret or,
+// while a rotation is under way, with the previous one.
+func (s *Sessions) parseToken(tokenString string) (*Claims, error) {
+	claims, err := ParseToken(tokenString, s.Secret)
+	if err != nil && s.PreviousSecret != "" {
+		return ParseToken(tokenString, s.PreviousSecret)
+	}
+	return claims, err
+}
+
 // ParseToken validates signature, algorithm, issuer and expiry.
 func ParseToken(tokenString, secret string) (*Claims, error) {
 	claims := &Claims{}

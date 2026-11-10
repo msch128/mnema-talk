@@ -9,6 +9,26 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Key rotation
+
+Nothing to do. An instance that sets none of the new variables stores and
+reads exactly what it did before: session cookies are signed with
+`JWT_SECRET`, and the authenticator secrets and recovery codes of two-factor
+sign-in stay under the keys derived from it, in the same format. No migration
+runs and no stored value is rewritten.
+
+New and optional: `JWT_SECRET_PREVIOUS` lets you replace the session secret
+without signing anyone out, `DATA_KEY` moves the second factor's data to a
+key of its own (with `DATA_KEY_PREVIOUS` while that one is replaced), and
+`mnema-talk rotate-keys` moves every stored authenticator secret to the
+current key. Replacing `JWT_SECRET` no longer forces a two-factor reset when
+the old value is named in `JWT_SECRET_PREVIOUS`. The steps are in
+[operations.md](operations.md#rotating-keys).
+
+Once `DATA_KEY` is set and secrets have been moved to it, an older release
+cannot read them: after a rollback to one, the affected accounts need
+`reset-2fa`. Without `DATA_KEY` a rollback is unaffected.
+
 ## Public message and talk totals (migrations 0098 and 0099)
 
 The totals on a profile and in the member list are public, so they no longer

@@ -82,20 +82,20 @@ func TestSecretsAreSealedPerAccount(t *testing.T) {
 	if string(sealed) == string(secret) || strings.Contains(string(sealed), string(secret)) {
 		t.Fatal("the secret must not be stored in the clear")
 	}
-	if got, err := s.openSecret(a, sealed); err != nil || string(got) != string(secret) {
+	if got, stale, err := s.openSecret(a, sealed); err != nil || stale || string(got) != string(secret) {
 		t.Fatalf("round trip: %v", err)
 	}
-	if _, err := s.openSecret(b, sealed); err == nil {
+	if _, _, err := s.openSecret(b, sealed); err == nil {
 		t.Fatal("a secret copied to another account must not open")
 	}
-	if _, err := (&Sessions{Secret: strings.Repeat("t", 40)}).openSecret(a, sealed); err == nil {
+	if _, _, err := (&Sessions{Secret: strings.Repeat("t", 40)}).openSecret(a, sealed); err == nil {
 		t.Fatal("another server secret must not open it")
 	}
-	if _, err := s.openSecret(a, sealed[:5]); err == nil {
+	if _, _, err := s.openSecret(a, sealed[:5]); err == nil {
 		t.Fatal("truncated data")
 	}
 	sealed[len(sealed)-1] ^= 1
-	if _, err := s.openSecret(a, sealed); err == nil {
+	if _, _, err := s.openSecret(a, sealed); err == nil {
 		t.Fatal("tampered data")
 	}
 }

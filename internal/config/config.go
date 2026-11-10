@@ -15,14 +15,22 @@ import (
 type Config struct {
 	// LogLevel overrides the log level: "debug", "info", "warn" or "error"
 	// (empty: info in production, debug otherwise).
-	LogLevel           string
-	Port               string
-	BindAddr           string
-	AppEnv             string
-	PublicURL          string
-	AllowedOrigins     []string
-	TrustedProxies     []string
-	JWTSecret          string
+	LogLevel       string
+	Port           string
+	BindAddr       string
+	AppEnv         string
+	PublicURL      string
+	AllowedOrigins []string
+	TrustedProxies []string
+	JWTSecret      string
+	// JWTSecretPrevious (JWT_SECRET_PREVIOUS) still verifies sessions signed
+	// before JWT_SECRET was rotated; nothing is signed with it.
+	JWTSecretPrevious string
+	// DataKey (DATA_KEY) seals authenticator secrets and keys recovery codes;
+	// empty means they stay under keys derived from JWT_SECRET.
+	// DataKeyPrevious (DATA_KEY_PREVIOUS) still reads what the last DataKey sealed.
+	DataKey            string
+	DataKeyPrevious    string
 	SessionExpiryHours int
 	AdminUsername      string
 	// InitialLanguage (INITIAL_LANGUAGE, en or de) names the default categories and channels of a brand-new installation.

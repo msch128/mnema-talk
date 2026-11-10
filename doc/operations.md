@@ -79,7 +79,10 @@ General rules:
 
 | Variable | Default | Meaning and validation |
 |---|---|---|
-| `JWT_SECRET` | none | Signs session cookies. In production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). In development an empty value means a random per-process secret (sessions reset on restart). Changing it logs everyone out. |
+| `JWT_SECRET` | none | Signs session cookies. In production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). In development an empty value means a random per-process secret (sessions reset on restart). Changing it logs everyone out unless the old value goes into `JWT_SECRET_PREVIOUS`: see [Rotating keys](#rotating-keys). |
+| `JWT_SECRET_PREVIOUS` | empty | The session secret you are replacing. Sessions and known-device cookies signed with it stay valid; nothing new is signed with it. Must differ from `JWT_SECRET`; in production/staging the same length and placeholder rule. |
+| `DATA_KEY` | empty | Seals the authenticator secrets of two-factor sign-in and keys the recovery codes. Empty = they stay under keys derived from `JWT_SECRET`, as in every earlier release. When set: never a session secret (current or previous), and in production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). |
+| `DATA_KEY_PREVIOUS` | empty | The `DATA_KEY` you are replacing: what it sealed stays readable until `mnema-talk rotate-keys` has moved it. Needs `DATA_KEY`, must differ from it, and follows the same rules. |
 | `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. An upper bound: a session that is not used for the inactivity limit (see "Sessions and inactivity sign-out") ends earlier. |
 | `INITIAL_LANGUAGE` | `en` | `de` or `en`: the language of the default categories and channels ("Text channels", "Voice hangouts", #general, #media, Lounge, Gaming 4K) on a brand-new installation. Used only when the database is still untouched (one account, no messages, the seeded names); an existing installation is never renamed. Any other value is rejected at startup. |
 | `ADMIN_USERNAME` | `admin` | The Owner account (all-powerful, cannot be restricted by anyone; see [roles-and-permissions.md](roles-and-permissions.md)), created on first start when none exists. |
@@ -389,6 +392,90 @@ days, default 7. A change applies to running sessions at once.
   the upgrade itself. A pre-upgrade session that has not made a request since
   is not listed yet, so "sign out all other sessions" does not reach it; use
   "Sign out everywhere" (or the admin action) to end those too.
+
+## Rotating keys
+
+Two secrets in `.env` protect accounts, and each can be replaced without
+signing anyone out or breaking two-factor sign-in:
+
+| Secret | Protects | While you rotate it |
+|---|---|---|
+| `JWT_SECRET` | Session cookies and the known-device cookie of the sign-in lockout | `JWT_SECRET_PREVIOUS` keeps verifying what the old secret signed |
+| `DATA_KEY` | Authenticator secrets (encrypted) and recovery codes (keyed hashes) in the database | `DATA_KEY_PREVIOUS` keeps reading what the old key sealed |
+
+An instance that sets neither `DATA_KEY` nor a previous value behaves as it
+always did: the keys for the second factor are derived from `JWT_SECRET`.
+Nothing has to be done after an update. Set `DATA_KEY` when you want to be
+able to replace the session secret on its own.
+
+Every stored authenticator secret names the data key it is under (the ones
+under the session secret carry no name, which is the format of earlier
+releases). A secret under a previous key is sealed again under the current
+one the next time its owner signs in with a code; `mnema-talk rotate-keys`
+does it for everyone at once. The command reads the same settings as the
+server, can run while the server does and may be repeated:
+
+```
+docker exec mnema-talk /usr/local/bin/mnema-talk rotate-keys
+```
+
+```
+Authenticator secrets: 3 moved to DATA_KEY, 0 were under it already.
+No authenticator secret is under a previous key any more.
+2 account(s) hold unused recovery codes. Codes made before the rotation are checked with the previous key and stop working when you remove it; ...
+```
+
+All secrets move in one transaction. When one of them cannot be read with any
+configured key, or anything else fails, the command changes nothing, exits
+with an error and names the accounts. Then a key is missing: do not remove
+anything yet.
+
+**Recovery codes cannot be moved**, because only their hash is stored. A
+recovery code works for as long as the key it was made under is still
+configured, as the current or the previous value. When you retire a key,
+recovery codes made under it stop working; the authenticator keeps working,
+and the member makes new codes in the account settings.
+
+Copy `.env` before you start, and keep a retired key for as long as you keep
+backups from its time: a restored database is sealed with the keys of the day
+it was taken (`scripts/backup.sh` stores `.env` with it).
+
+### Start using a data key
+
+1. Add `DATA_KEY=<openssl rand -hex 32>` to `.env`.
+2. `docker compose up -d`, then run `mnema-talk rotate-keys`.
+
+There is no previous key to name: the key the secrets were under is the one
+derived from `JWT_SECRET`, which is still configured. Recovery codes made
+before this step keep working until that session secret is retired.
+
+### Replace the session secret
+
+1. Move the current value to `JWT_SECRET_PREVIOUS` and put a new one
+   (`openssl rand -hex 32`) into `JWT_SECRET`.
+2. `docker compose up -d`, then run `mnema-talk rotate-keys`. Without a
+   `DATA_KEY` this moves the authenticator secrets to the new session secret;
+   with one there is nothing to move.
+3. Remove `JWT_SECRET_PREVIOUS` once the old sessions have expired:
+   `SESSION_EXPIRY_HOURS` after step 2 (30 days by default). Removing it
+   earlier signs out everyone who has not signed in since step 2, and nothing
+   else. Recovery codes made while the old secret keyed them stop working
+   then (see above).
+
+### Replace the data key
+
+1. Move the current value to `DATA_KEY_PREVIOUS` and put a new one into
+   `DATA_KEY`.
+2. `docker compose up -d`, then run `mnema-talk rotate-keys`.
+3. Tell members with two-factor sign-in to make new recovery codes, then
+   remove `DATA_KEY_PREVIOUS` and run `docker compose up -d` again.
+
+### A secret has leaked
+
+Do the same steps, but do not wait: replace the secret, run
+`mnema-talk rotate-keys`, and remove the previous value right away. For the
+session secret this signs everyone out, which is the point. Recovery codes
+made under the leaked key are gone with it.
 
 ## Web Push and the installable app
 
@@ -1445,9 +1532,11 @@ docker exec mnema-talk /usr/local/bin/mnema-talk reset-2fa OWNER_NAME
 ```
 
 Other members' second factor is reset by
-the Owner in Admin > Members. Rotating `JWT_SECRET` also makes every stored
-authenticator secret unreadable: each affected account has to be reset and
-enrol again, so rotate it only with that in mind.
+the Owner in Admin > Members. Replacing `JWT_SECRET` (or `DATA_KEY`) without
+naming the old value in `JWT_SECRET_PREVIOUS` (`DATA_KEY_PREVIOUS`) makes the
+stored authenticator secrets unreadable: put the old value back as the
+previous one, or reset each affected account so it can enrol again. See
+[Rotating keys](#rotating-keys).
 
 ### The Owner cannot sign in: "too many requests"
 

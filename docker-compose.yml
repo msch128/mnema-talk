@@ -84,6 +84,11 @@ services:
       # evade rate limits and the login lockout.
       - TRUSTED_PROXY_CIDRS=${TRUSTED_PROXY_CIDRS:-}
       - JWT_SECRET=${JWT_SECRET}
+      # Only while a secret is being replaced, and DATA_KEY to keep the second
+      # factor's data under a key of its own: doc/operations.md "Rotating keys".
+      - JWT_SECRET_PREVIOUS=${JWT_SECRET_PREVIOUS:-}
+      - DATA_KEY=${DATA_KEY:-}
+      - DATA_KEY_PREVIOUS=${DATA_KEY_PREVIOUS:-}
       - SESSION_EXPIRY_HOURS=${SESSION_EXPIRY_HOURS:-720}
       - DATABASE_URL=postgres://${POSTGRES_USER:-mnema}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-mnema_talk}?sslmode=disable
       - DB_MAX_CONNS=${DB_MAX_CONNS:-25}
