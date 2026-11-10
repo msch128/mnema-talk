@@ -36,9 +36,6 @@ func (a *API) mountModeration(r chi.Router) {
 // the channel and manage its messages. The check and the write cannot be
 // separated by a concurrent role or overwrite change.
 func (a *API) asModerator(r *http.Request, channelID uuid.UUID, fn func(tx pgx.Tx, snap *perm.Snapshot) error) error {
-	if a.Guard.Perms == nil {
-		return httpx.ErrForbidden("moderation needs the permission service")
-	}
 	ctx := r.Context()
 	actor := auth.UserFrom(ctx)
 	return a.Guard.Perms.Locked(ctx, actor.Subject(), func(tx pgx.Tx, snap *perm.Snapshot) error {

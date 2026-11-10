@@ -67,9 +67,6 @@ const permTimeout = 3 * time.Second
 // blocks for longer than permTimeout, the bound on reloading the permission
 // snapshot.
 func (g *Gateway) Observe(channel uuid.UUID, eventType string, payload any) {
-	if g.Perms == nil {
-		return
-	}
 	name, intent, ok := event(eventType)
 	if !ok {
 		return

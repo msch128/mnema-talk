@@ -22,7 +22,7 @@ func newSeatTestSFU(t *testing.T) *sfu.SFU {
 // replaces the first tab's media: the first tab must be told, not left on a
 // closed connection.
 func TestSecondConnectionJoiningTheSameRoomEvictsTheFirstFromVoice(t *testing.T) {
-	h := NewHub(nil, nil, newSeatTestSFU(t), nil)
+	h := NewHub(nil, nil, newSeatTestSFU(t), nil, openPerms())
 	ch := voiceCh()
 	user := auth.User{ID: uuid.New(), Username: "twotabs"}
 	a := testClient(h, user)
@@ -55,7 +55,7 @@ func TestSecondConnectionJoiningTheSameRoomEvictsTheFirstFromVoice(t *testing.T)
 // the first tab keeps its seat and its peer, and presence stays.
 func TestFailedJoinOfASecondTabLeavesTheFirstTabAlone(t *testing.T) {
 	s := newSeatTestSFU(t)
-	h := NewHub(nil, nil, s, nil)
+	h := NewHub(nil, nil, s, nil, openPerms())
 	ch := voiceCh()
 	user := auth.User{ID: uuid.New(), Username: "twotabsfail"}
 	a := testClient(h, user)
@@ -91,7 +91,7 @@ func TestFailedJoinOfASecondTabLeavesTheFirstTabAlone(t *testing.T) {
 // call while nobody can hear them: the seat is given up and the client told.
 func TestFailedSFUJoinGivesUpTheSeatAndTellsTheClient(t *testing.T) {
 	s := newSeatTestSFU(t)
-	h := NewHub(nil, nil, s, nil)
+	h := NewHub(nil, nil, s, nil, openPerms())
 	ch := voiceCh()
 	c := testClient(h, auth.User{ID: uuid.New(), Username: "nomedia"})
 	defer h.unregister(c)
@@ -120,7 +120,7 @@ func TestFailedSFUJoinGivesUpTheSeatAndTellsTheClient(t *testing.T) {
 // A join that resumed a lingering presence and was then refused must leave the
 // presence on a timer again, or nothing would ever remove it.
 func TestRefusedResumeOfALingeringPresenceRestartsTheGrace(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	h.VoiceGrace = time.Hour
 	ch := voiceCh()
 	uid := uuid.New()
@@ -149,7 +149,7 @@ func TestRefusedResumeOfALingeringPresenceRestartsTheGrace(t *testing.T) {
 // A mute written after the seat is gone (a kick between the read loop and the
 // lock) must not survive to taint the next stay.
 func TestMuteStateIsNotRecordedForAGoneSeat(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	ch := voiceCh()
 	c := testClient(h, auth.User{ID: uuid.New(), Username: "ghostmute"})
 	defer h.unregister(c)

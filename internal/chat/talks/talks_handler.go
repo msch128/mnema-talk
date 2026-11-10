@@ -145,18 +145,16 @@ func (a *API) StartDMTalk(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	user := auth.UserFrom(ctx)
-	if a.Guard.Perms != nil {
-		global, err := a.Guard.Perms.Global(ctx, user.Subject())
-		if err != nil {
-			return err
-		}
-		if !global.Has(perm.Connect) {
-			return errCannotConnect
-		}
-		// The call of a conversation follows the speak wait of a new member: no ringing one they cannot join.
-		if err := a.Guard.Perms.RequireCall(ctx, user.Subject()); err != nil {
-			return err
-		}
+	global, err := a.Guard.Perms.Global(ctx, user.Subject())
+	if err != nil {
+		return err
+	}
+	if !global.Has(perm.Connect) {
+		return errCannotConnect
+	}
+	// The call of a conversation follows the speak wait of a new member: no ringing one they cannot join.
+	if err := a.Guard.Perms.RequireCall(ctx, user.Subject()); err != nil {
+		return err
 	}
 	talk, err := a.Talks.OpenForDM(ctx, user.ID, dm)
 	if err != nil {

@@ -123,9 +123,9 @@ type Config struct {
 	PublicURL string
 }
 
-// New returns a Gateway; Run starts its housekeeping.
+// New returns a Gateway; Run starts its housekeeping. It panics without Perms.
 func New(c Config) *Gateway {
-	g := &Gateway{Auth: c.Auth, Perms: c.Perms, DB: c.DB, PublicURL: c.PublicURL}
+	g := &Gateway{Auth: c.Auth, Perms: perm.Must(c.Perms, "bot gateway"), DB: c.DB, PublicURL: c.PublicURL}
 	g.tm = Timings{Heartbeat: defaultHeartbeat, Identify: 10 * time.Second, Resume: 2 * time.Minute, TokenCheck: tokenCheckEvery}
 	g.upgrader = websocket.Upgrader{ReadBufferSize: 4096, WriteBufferSize: 4096}
 	g.ips = httpx.NewRateLimiter(30, time.Minute).Named("bot_gateway_ip")

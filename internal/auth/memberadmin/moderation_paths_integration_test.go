@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 func modRequest(t *testing.T, h httpx.HandlerFunc, user *auth.User, body, id string) *httptest.ResponseRecorder {
@@ -33,7 +34,7 @@ func modRequest(t *testing.T, h httpx.HandlerFunc, user *auth.User, body, id str
 
 func TestModerationHandlersRejectBadInput(t *testing.T) {
 	p, admin, member := authFixture(t)
-	h := New(authn.NewHandler(&auth.Sessions{DB: p, Secret: secret, TTL: time.Hour}, &events.Recorder{}))
+	h := New(authn.NewHandler(&auth.Sessions{DB: p, Secret: secret, TTL: time.Hour}, perm.NewService(p), &events.Recorder{}))
 	for name, tc := range map[string]struct {
 		handler func(*API) httpx.HandlerFunc
 		body    string
@@ -72,7 +73,7 @@ func TestModerationPropagatesDatabaseFailures(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fault := authHookPool(t, p, &authQueryHook{match: tc.query, cancel: true})
-			h := New(authn.NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, &events.Recorder{}))
+			h := New(authn.NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, perm.NewService(fault), &events.Recorder{}))
 			w := authRequest(t, tc.handler(h), admin, tc.body, member.ID)
 			if w.Code != http.StatusInternalServerError {
 				t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
@@ -87,7 +88,7 @@ func TestBanExpiryFailuresAreSurvivable(t *testing.T) {
 
 	// A failing expiry run only logs.
 	fault := authHookPool(t, p, &authQueryHook{match: "UPDATE users SET banned_at = NULL, banned_until = NULL", cancel: true})
-	New(authn.NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, &events.Recorder{})).ExpireBans(ctx)
+	New(authn.NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, perm.NewService(fault), &events.Recorder{})).ExpireBans(ctx)
 }
 
 // A lifted or expired ban must not announce an account as enabled while an
@@ -96,7 +97,7 @@ func TestBanLiftBroadcastsTheRealDisabledState(t *testing.T) {
 	p, admin, member := authFixture(t)
 	ctx := context.Background()
 	rec := &events.Recorder{}
-	h := New(authn.NewHandler(&auth.Sessions{DB: p, Secret: secret, TTL: time.Hour}, rec))
+	h := New(authn.NewHandler(&auth.Sessions{DB: p, Secret: secret, TTL: time.Hour}, perm.NewService(p), rec))
 	disabledOf := func(want string) any {
 		t.Helper()
 		evs := rec.Snapshot()

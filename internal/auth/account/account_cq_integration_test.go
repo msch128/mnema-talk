@@ -25,6 +25,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // archiveFile returns the named file of the one archive in the store.
@@ -355,7 +356,7 @@ func TestASecondDeletionRacingTheFirstAnswersNoContent(t *testing.T) {
 			}
 		},
 	}
-	h := New(authn.NewHandler(&auth.Sessions{DB: authHookPool(t, pool, hook), Secret: "export-test-secret-export-test-secret"}, nil))
+	h := New(authn.NewHandler(&auth.Sessions{DB: authHookPool(t, pool, hook), Secret: "export-test-secret-export-test-secret"}, permtest.NewFixture().Service(), nil))
 	w := authRequest(t, h.deleteAccount, member, `{"current_password":"`+testPassword+`"}`, uuid.Nil)
 	if w.Code != http.StatusNoContent {
 		t.Fatalf("%d %s", w.Code, w.Body)

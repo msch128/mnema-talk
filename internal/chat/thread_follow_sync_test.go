@@ -10,6 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestMessageOfReadsValuesAndPointersOnly(t *testing.T) {
@@ -36,14 +37,23 @@ type countingPublisher struct {
 func (c *countingPublisher) BroadcastPerm(perm.Set, string, any)  {}
 func (c *countingPublisher) SendToUsers([]uuid.UUID, string, any) { c.sent++ }
 
+func TestTheFollowTapNeedsAPermissionService(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("built a follow tap without a permission service")
+		}
+	}()
+	messages.NewFollowSync(context.Background(), nil, nil, &countingPublisher{})
+}
+
 func TestTheFollowTapIgnoresWhatIsNoThreadReplyAndFailsClosedWithoutPermissions(t *testing.T) {
 	pub := &countingPublisher{}
-	tap := messages.NewFollowSync(context.Background(), nil, nil, pub)
+	tap := messages.NewFollowSync(context.Background(), nil, permtest.Unloadable(), pub)
 	root := uuid.New()
 	tap(uuid.New(), events.MessageUpdate, core.Message{ParentID: &root})
 	tap(uuid.New(), events.MessageCreate, core.Message{})
 	tap(uuid.New(), events.MessageCreate, "not a message")
-	// A thread reply without a permission service tells nobody (and needs no database to know it).
+	// A thread reply whose permission state cannot be read tells nobody (and needs no database to know it).
 	tap(uuid.New(), events.MessageCreate, &core.Message{ParentID: &root})
 	time.Sleep(50 * time.Millisecond)
 	if pub.sent != 0 {

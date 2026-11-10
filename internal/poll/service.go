@@ -40,8 +40,9 @@ type Service struct {
 	creates *httpx.RateLimiter
 }
 
-// NewService returns s with its state.
+// NewService returns s with its state. It panics without Perms.
 func NewService(s Service) *Service {
+	perm.Must(s.Perms, "poll service")
 	s.votes = httpx.NewRateLimiter(votesPerMinute, time.Minute).Named("poll_vote")
 	s.creates = httpx.NewRateLimiter(createsPerMinute, time.Minute).Named("poll_create")
 	return &s

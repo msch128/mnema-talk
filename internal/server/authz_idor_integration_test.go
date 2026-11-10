@@ -3,9 +3,13 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,10 +49,15 @@ func TestEveryChannelScopedRouteHidesAPrivateChannelFromOutsiders(t *testing.T) 
 	res.decode(t, &tag)
 	m := msg.String()
 
-	probes := []struct {
-		what, method, path string
-		body               any
-	}{
+	probes := []channelProbe{
+		{"messages", "GET", tb + "/messages", nil},
+		{"send", "POST", tb + "/messages", map[string]any{"content": "x"}},
+		{"edit message", "PUT", tb + "/messages/" + m, map[string]any{"content": "x"}},
+		{"delete message", "DELETE", tb + "/messages/" + m, nil},
+		{"mark read", "POST", tb + "/read", map[string]any{"message_id": msg}},
+		{"mark unread", "POST", tb + "/unread", map[string]any{"message_id": msg}},
+		{"upload", "POST", tb + "/upload", nil},
+		{"notifications", "PUT", tb + "/notifications", map[string]any{"level": "mentions"}},
 		{"commands", "GET", tb + "/commands", nil},
 		{"first unread", "GET", tb + "/first-unread", nil},
 		{"edit history", "GET", tb + "/messages/" + m + "/edits", nil},
@@ -84,25 +93,119 @@ func TestEveryChannelScopedRouteHidesAPrivateChannelFromOutsiders(t *testing.T) 
 		{"order tags", "PUT", fb + "/tags/order", map[string]any{"tag_ids": []uuid.UUID{tag.ID}}},
 		{"voice disconnect", "POST", "/api/channels/" + text.String() + "/voice/" + f.insider.user.ID.String() + "/disconnect", nil},
 	}
-	out := f.outsider
+	// A member who manages channels and roles, but is not let into these two.
+	mod := f.a.register(f.owner, "moderator")
+	assignRoles(t, f.owner, mod, createRole(t, f.owner, "Channel mods", perm.ManageChannels|perm.ManageRoles))
+	ab := "/api/admin/channels/" + text.String()
+	adminProbes := []channelProbe{
+		{"edit channel", "PATCH", ab, map[string]any{"name": "renamed"}},
+		{"delete channel", "DELETE", ab, nil},
+		{"duplicate channel", "POST", ab + "/duplicate", map[string]any{}},
+		{"auto-delete", "PUT", ab + "/auto-delete", map[string]any{"days": 7}},
+		{"overwrites", "GET", ab + "/overwrites", nil},
+		{"set overwrites", "PUT", ab + "/overwrites", map[string]any{"overwrites": []any{}}},
+	}
+
+	hidden := []string{text.String(), forum.String()}
 	for _, p := range probes {
-		var body any = p.body
-		if p.what == "attachment upload" {
-			res := out.upload(p.path, "file", "a.png", "image/png", pngBytes, nil)
-			if res.status != http.StatusNotFound {
-				t.Errorf("%s as an outsider: %d %s", p.what, res.status, res.body)
-			}
+		p.mustLookNonexistent(t, f.outsider, hidden)
+	}
+	for _, p := range adminProbes {
+		p.mustLookNonexistent(t, mod, hidden)
+	}
+	requireEveryChannelRouteProbed(t, f.a, append(probes, adminProbes...))
+}
+
+// channelProbe is one request that names a channel the caller cannot see.
+type channelProbe struct {
+	what, method, path string
+	body               any
+}
+
+func (p channelProbe) send(c *client, path string) response {
+	if p.body == nil && p.method == http.MethodPost && (strings.HasSuffix(path, "/attachments") || strings.HasSuffix(path, "/upload")) {
+		return c.upload(path, "file", "a.png", "image/png", pngBytes, nil)
+	}
+	return c.do(p.method, path, p.body, nil)
+}
+
+// mustLookNonexistent sends the probe as c and requires a 404. A route with the
+// channel in its path must answer in the same bytes as the same request with a
+// channel id nobody has (perm.ErrChannelHidden, or the 404 of what the route
+// looks up in the channel), so the answer does not say the channel exists.
+func (p channelProbe) mustLookNonexistent(t *testing.T, c *client, hidden []string) {
+	t.Helper()
+	res := p.send(c, p.path)
+	if p.what == "voice disconnect" {
+		// The hierarchy check on the target comes first: still a refusal that
+		// says nothing about the channel.
+		if res.status != http.StatusForbidden {
+			t.Errorf("%s %s: %d %s, want 403", p.method, p.what, res.status, res.body)
+		}
+		return
+	}
+	if res.status != http.StatusNotFound {
+		t.Errorf("%s %s: %d %s, want 404", p.method, p.what, res.status, res.body)
+		return
+	}
+	unknown := p.path
+	for _, id := range hidden {
+		unknown = strings.ReplaceAll(unknown, id, uuid.NewString())
+	}
+	if unknown == p.path {
+		return // the route names the channel through one of its messages
+	}
+	if twin := p.send(c, unknown); twin.status != res.status || !bytes.Equal(twin.body, res.body) {
+		t.Errorf("%s %s: a hidden channel answers %d %s, an unknown one %d %s", p.method, p.what, res.status, res.body, twin.status, twin.body)
+	}
+}
+
+// channelRoutesNotProbed are the routes with a channel in their path that the
+// probes leave out, each with the reason a private channel stays hidden there.
+var channelRoutesNotProbed = map[string]string{
+	"GET /api/admin/channels/{id}/webhooks":           "Administrator only: whoever passes sees every channel, everybody else gets 403 for any id (adminMatrix)",
+	"POST /api/admin/channels/{id}/webhooks":          "Administrator only, as above",
+	"GET /api/admin/channels/{id}/outgoing-webhooks":  "Administrator only, as above",
+	"POST /api/admin/channels/{id}/outgoing-webhooks": "Administrator only, as above",
+
+	"GET /api/bot/v1/channels/{channelID}/messages":                                      "bot token, no member session: TestBotAPIScope",
+	"POST /api/bot/v1/channels/{channelID}/messages":                                     "bot token, as above",
+	"GET /api/bot/v1/channels/{channelID}/messages/{messageID}":                          "bot token, as above",
+	"PATCH /api/bot/v1/channels/{channelID}/messages/{messageID}":                        "bot token, as above",
+	"DELETE /api/bot/v1/channels/{channelID}/messages/{messageID}":                       "bot token, as above",
+	"PUT /api/bot/v1/channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me":    "bot token, as above",
+	"DELETE /api/bot/v1/channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me": "bot token, as above",
+	"POST /api/bot/v1/channels/{channelID}/upload":                                       "bot token, as above",
+}
+
+// requireEveryChannelRouteProbed walks the real router: a route that takes a
+// channel id is either probed with a private channel or listed, with a reason,
+// in channelRoutesNotProbed. A new channel route fails here until someone
+// decides which.
+func requireEveryChannelRouteProbed(t *testing.T, a *app, probes []channelProbe) {
+	t.Helper()
+	mounted := map[string]bool{}
+	for _, r := range apiRoutes(t, a) {
+		if !strings.Contains(r.pattern, "/channels/{") {
 			continue
 		}
-		want := http.StatusNotFound
-		if p.what == "voice disconnect" {
-			// The hierarchy check on the target comes first: still a refusal that
-			// says nothing about the channel.
-			want = http.StatusForbidden
+		mounted[r.String()] = true
+		shape := regexp.MustCompile("^" + strings.ReplaceAll(regexp.QuoteMeta(routeParam.ReplaceAllString(r.pattern, "\x00")), "\x00", "[^/]+") + "$")
+		probed := slices.ContainsFunc(probes, func(p channelProbe) bool { return p.method == r.method && shape.MatchString(p.path) })
+		reason, exempt := channelRoutesNotProbed[r.String()]
+		switch {
+		case probed && exempt:
+			t.Errorf("%s is probed and exempt (%s): drop the exemption", r, reason)
+		case !probed && !exempt:
+			t.Errorf("%s takes a channel id: probe it with a private channel, or add it to channelRoutesNotProbed with the reason it needs none", r)
 		}
-		res := out.do(p.method, p.path, body, nil)
-		if res.status != want {
-			t.Errorf("%s %s as an outsider: %d %s, want %d", p.method, p.what, res.status, res.body, want)
+	}
+	if len(mounted) < 40 {
+		t.Fatalf("walked only %d channel routes", len(mounted))
+	}
+	for route := range channelRoutesNotProbed {
+		if !mounted[route] {
+			t.Errorf("channelRoutesNotProbed names %s, which is not mounted", route)
 		}
 	}
 }

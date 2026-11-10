@@ -10,7 +10,7 @@ import (
 )
 
 func TestBotStatusIsShownAsMembersSeeIt(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	watcher := &Client{hub: h, User: auth.User{ID: uuid.New(), Username: "w"}, send: make(chan []byte, 16)}
 	h.register(watcher)
 	defer h.unregister(watcher)

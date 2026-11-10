@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -172,14 +171,14 @@ func (c *Client) handleTyping(ctx context.Context, channelID uuid.UUID) {
 	}
 	// Only someone who could send a message shows as typing, and only to
 	// those who can see the channel.
-	if c.canTypeInChannel(ctx, channelID) {
+	if c.canTypeInChannel(channelID) {
 		c.emitApplicationEvent(events.Typing, map[string]any{"channel_id": channelID, "user_id": c.User.ID}, true, nil, channelID)
 	}
 }
 
-func (c *Client) canTypeInChannel(ctx context.Context, channelID uuid.UUID) bool {
+func (c *Client) canTypeInChannel(channelID uuid.UUID) bool {
 	snap, ok := c.hub.permSnapshot(channelID)
-	if !ok || !c.hub.channelKnown(ctx, snap, channelID) {
+	if !ok || !channelKnown(snap, channelID) {
 		return false
 	}
 	return c.can(snap, channelID, perm.ViewChannel|perm.SendMessages)
@@ -244,12 +243,7 @@ func (c *Client) handleDiag(payload json.RawMessage) {
 }
 
 // channelKnown reports whether the channel exists. The permission snapshot
-// knows which do, so no query is needed per typing notice; without a
-// permission model (tests) the database is asked.
-func (h *Hub) channelKnown(ctx context.Context, snap *perm.Snapshot, ch uuid.UUID) bool {
-	if snap == nil {
-		_, err := core.LoadChannel(ctx, h.DB, ch)
-		return err == nil
-	}
+// knows which do, so no query is needed per typing notice.
+func channelKnown(snap *perm.Snapshot, ch uuid.UUID) bool {
 	return snap.KnowsChannel(ch) || snap.KnowsDM(ch)
 }

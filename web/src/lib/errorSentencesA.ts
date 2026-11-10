@@ -169,7 +169,6 @@ export const ROWS: readonly SentenceRow[] = [
   ['duration must look like 30m, 2h, 7d or 2w', 'srvDurationMustLookLike30m'],
   ['duration_seconds must be between %d and %d', 'srvDurationSecondsMustBeBetween'],
   ['during must be a YYYY-MM-DD date', 'srvDuringMustBeAYyyy'],
-  ['edit history needs the permission service', 'srvEditHistoryNeedsThePermission'],
   ['either channel_id (Talk) or location (text) must be set', 'srvEitherChannelIdTalkOr'],
   ['emoji contains invalid characters', 'fieldInvalidChars', [], { field: 'emoji' }],
   ['emoji has no still image', 'emojiGone', []],

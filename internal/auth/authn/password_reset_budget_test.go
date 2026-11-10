@@ -10,6 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 
 	"github.com/msch128/mnema-talk/internal/mailer"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 type noMail struct{}
@@ -19,7 +20,7 @@ func (noMail) Send(context.Context, mailer.Message) error { return nil }
 // Anyone can type any address into the reset form. That must not use up the
 // per-address budget of the confirmation mails of the account that owns it.
 func TestResetRequestsDoNotSpendTheConfirmationMailBudget(t *testing.T) {
-	h := NewHandler(&auth.Sessions{}, nil)
+	h := NewHandler(&auth.Sessions{}, permtest.NewFixture().Service(), nil)
 	h.Mail = noMail{}
 	// Fill the mail queue: the jobs are dropped, only the limiters are exercised.
 	for range cap(h.rec.slots) {

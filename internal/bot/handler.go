@@ -29,6 +29,12 @@ type Handler struct {
 	Events events.Publisher
 }
 
+// NewHandler returns h ready to mount. It panics without Perms.
+func NewHandler(h Handler) *Handler {
+	perm.Must(h.Perms, "bot handler")
+	return &h
+}
+
 // membersChanged makes every client reload the member list and the roles.
 func (h *Handler) membersChanged() {
 	if h.Events != nil {

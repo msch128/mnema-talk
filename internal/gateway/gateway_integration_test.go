@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -22,7 +23,7 @@ func TestMain(m *testing.M) { os.Exit(testutil.Main(m)) }
 // housekeeping pass, not a reason to throw bots out.
 func TestTokenCheckKeepsSessionsWhenTheDatabaseFails(t *testing.T) {
 	p := testutil.DB(t)
-	g := New(Config{DB: p})
+	g := New(Config{DB: p, Perms: perm.NewService(p)})
 	s := &session{id: "s", botID: uuid.New(), tokenID: uuid.New(), conn: newConnection(nil)}
 	g.register(s)
 	dead, cancel := context.WithCancel(context.Background())
@@ -55,8 +56,8 @@ func TestTokenCheckKeepsSessionsWhenTheDatabaseFails(t *testing.T) {
 		t.Fatal("a valid token lost its connection")
 	}
 	// Without sessions or database there is nothing to check.
-	New(Config{DB: p}).checkTokens(context.Background())
-	New(Config{}).checkTokens(context.Background())
+	New(Config{DB: p, Perms: perm.NewService(p)}).checkTokens(context.Background())
+	New(Config{Perms: permtest.NewFixture().Service()}).checkTokens(context.Background())
 }
 
 func newBotWithTokens(t *testing.T, n int) (botID uuid.UUID, tokens []uuid.UUID) {
@@ -89,7 +90,7 @@ func revokeInDB(t *testing.T, id uuid.UUID) {
 
 // A resume that raced a revocation ends the session, whichever came first.
 func TestAdoptEndsSessionsOfRevokedTokens(t *testing.T) {
-	g := New(Config{DB: testutil.DB(t)})
+	g := New(Config{DB: testutil.DB(t), Perms: perm.NewService(testutil.DB(t))})
 	ctx := context.Background()
 	botID, tok := newBotWithTokens(t, 3)
 	mk := func(token uuid.UUID) *session {
@@ -140,7 +141,7 @@ func TestAdoptEndsSessionsOfRevokedTokens(t *testing.T) {
 // Revoking while the session is being resumed: whatever the interleaving, the
 // session ends. Run with -race.
 func TestRevokeWhileResumingEndsTheSession(t *testing.T) {
-	g := New(Config{DB: testutil.DB(t)})
+	g := New(Config{DB: testutil.DB(t), Perms: perm.NewService(testutil.DB(t))})
 	botID, tok := newBotWithTokens(t, 2)
 	for i := 0; i < 100; i++ {
 		s := &session{id: newSessionID(), botID: botID, tokenID: tok[0], conn: newConnection(nil)}
@@ -184,9 +185,8 @@ func TestTokenCheckClosesSessionsOfAnUnqualifiedMinter(t *testing.T) {
 	if err := p.QueryRow(ctx, `INSERT INTO bot_tokens (bot_id, token_hash, hint, created_by) VALUES ($1, '\x02', 'abcd', $2) RETURNING id`, botID, minter).Scan(&tokenID); err != nil {
 		t.Fatal(err)
 	}
-	authn := bot.NewAuthenticator(p)
-	authn.Perms = perm.NewService(p)
-	g := New(Config{DB: p, Auth: authn})
+	authn := bot.NewAuthenticator(p, perm.NewService(p))
+	g := New(Config{DB: p, Auth: authn, Perms: authn.Perms})
 	s := &session{id: "m", botID: botID, userID: botUser, tokenID: tokenID, conn: newConnection(nil)}
 	g.register(s)
 	g.checkTokens(ctx)
@@ -205,7 +205,7 @@ func TestReadyIsTheFirstDispatchOfASession(t *testing.T) {
 	if err := p.QueryRow(ctx, `SELECT user_id FROM bots WHERE id = $1`, botID).Scan(&userID); err != nil {
 		t.Fatal(err)
 	}
-	g := New(Config{DB: p})
+	g := New(Config{DB: p, Perms: perm.NewService(p)})
 	creds := &bot.Credentials{
 		Bot:  auth.BotInfo{BotID: botID, TokenID: tokens[0], Intents: bot.AllIntents},
 		User: &auth.User{ID: userID, DisplayName: "gw"},
@@ -273,7 +273,7 @@ func TestRemovedIntentsAreRefusedAtIdentifyAndEndRunningSessions(t *testing.T) {
 	if _, err := p.Exec(ctx, `UPDATE bots SET allowed_intents = $2 WHERE id = $1`, botID, int64(bot.AllIntents)); err != nil {
 		t.Fatal(err)
 	}
-	g := New(Config{DB: p})
+	g := New(Config{DB: p, Perms: perm.NewService(p)})
 	// The credentials as the upgrade looked them up, before the PATCH.
 	creds := &bot.Credentials{
 		Bot:  auth.BotInfo{BotID: botID, TokenID: tokens[0], Intents: bot.AllIntents},

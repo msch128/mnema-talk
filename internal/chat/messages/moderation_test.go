@@ -7,17 +7,19 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 func TestModerationNeedsThePermissionService(t *testing.T) {
 	h := &API{}
-	err := h.asModerator(httptest.NewRequest(http.MethodPost, "/", nil), uuid.New(), func(pgx.Tx, *perm.Snapshot) error {
+	r := httptest.NewRequest(http.MethodPost, "/", nil)
+	r = r.WithContext(auth.WithUser(r.Context(), &auth.User{ID: uuid.New(), Role: "admin"}))
+	err := h.asModerator(r, uuid.New(), func(pgx.Tx, *perm.Snapshot) error {
 		t.Fatal("ran without a permission check")
 		return nil
 	})
-	if ae, ok := httpx.AsAPIError(err); !ok || ae.Status != http.StatusForbidden {
-		t.Fatalf("err = %v", err)
+	if err == nil {
+		t.Fatal("moderated without a permission service")
 	}
 }

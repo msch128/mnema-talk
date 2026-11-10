@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/chat/talks"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 var updateRoutes = flag.Bool("update-routes", false, "rewrite testdata/routes.golden")
@@ -37,7 +38,7 @@ func walkRoutes(t *testing.T, r chi.Router) []string {
 // `go test ./internal/chat -run TestRouteTableIsStable -update-routes`.
 func TestRouteTableIsStable(t *testing.T) {
 	// Every optional feature switched on, so no route is left out.
-	h := &Handler{Talks: &talks.TalkManager{}}
+	h := &Handler{Perms: permtest.NewFixture().Service(), Talks: &talks.TalkManager{}}
 	member, admin, bot := chi.NewRouter(), chi.NewRouter(), chi.NewRouter()
 	h.Mount(member)
 	h.MountAdmin(admin)

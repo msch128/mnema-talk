@@ -19,7 +19,7 @@ type talkEvent struct{ id, channel uuid.UUID }
 // before the change is taken here, while the notifier call still follows the
 // change directly: read later, a second change would already be in it.
 func (h *Handler) PermissionsChanged(userIDs []uuid.UUID) {
-	if h.Events == nil || h.Perms == nil {
+	if h.Events == nil {
 		return
 	}
 	prev := h.Perms.Previous()
@@ -80,7 +80,7 @@ func (h *Handler) RetractHidden(ctx context.Context, prev *perm.Snapshot, userID
 // retractFor sends event_delete for ev to the members who could see it where
 // it was (anyone, when it was not in a Talk) and cannot view its new Talk.
 func (h *Handler) retractFor(ctx context.Context, ev *CommunityEvent, from *uuid.UUID) error {
-	if ev.ChannelID == nil || h.Events == nil || h.Perms == nil {
+	if ev.ChannelID == nil || h.Events == nil {
 		return nil
 	}
 	snap, err := h.Perms.Snapshot(ctx)

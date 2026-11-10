@@ -59,7 +59,7 @@ func TestDeliverCountsSentAndSlowClients(t *testing.T) {
 }
 
 func TestMediaHandshakeCounters(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	sender := newClient(h, nil, auth.User{ID: uuid.New()}, 0)
 	room := uuid.New()
 	sender.setVoice(&room)

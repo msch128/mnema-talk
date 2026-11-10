@@ -30,8 +30,7 @@ func TestTokenStopsWhenItsMinterLosesAuthority(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := perm.NewService(e.p)
-	a := NewAuthenticator(e.p)
-	a.Perms = svc
+	a := NewAuthenticator(e.p, svc)
 	now := time.Now()
 	a.now = func() time.Time { return now }
 

@@ -91,9 +91,6 @@ func (h *API) disconnectFromTalk(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if h.Perms == nil && !auth.UserFrom(r.Context()).IsAdmin() {
-		return httpx.ErrForbidden("missing permission: disconnect_members")
-	}
 	kicked := false
 	err = h.Moderated(r, id, func(db.Querier) (err error) {
 		// Refused before anything is said about who sits in the Talk.

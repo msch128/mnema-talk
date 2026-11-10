@@ -271,8 +271,6 @@ func (h *Hub) classifyWith(ch uuid.UUID, onFailure seatClass) seatClass {
 	switch {
 	case !ok:
 		return onFailure
-	case snap == nil:
-		return seatPublic // no permission model (tests): everything is open
 	case snap.IsDMTalk(ch):
 		return seatPrivate
 	case snap.EveryoneCanView(ch):

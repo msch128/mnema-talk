@@ -208,9 +208,6 @@ func (a *API) getEditHistory(w http.ResponseWriter, r *http.Request) error {
 	}
 	// Permissions first: a member who cannot see the channel learns nothing
 	// about which messages exist in it.
-	if a.Guard.Perms == nil {
-		return httpx.ErrForbidden("edit history needs the permission service")
-	}
 	p, err := a.Guard.ChannelPerms(r, chID)
 	if err != nil {
 		return err

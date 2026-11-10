@@ -28,6 +28,12 @@ type Handler struct {
 	WriteLimit *httpx.RateLimiter
 }
 
+// New returns h ready to mount. It panics without Perms.
+func New(h Handler) *Handler {
+	perm.Must(h.Perms, "wiki handler")
+	return &h
+}
+
 // Mount registers the routes (RequireUser must already apply).
 func (h *Handler) Mount(r chi.Router) {
 	r.Get("/wiki", httpx.Handle(h.list))

@@ -91,7 +91,7 @@ func newSFUHub(t *testing.T) (*Hub, *sfu.SFU) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return NewHub(nil, nil, voiceSFU, nil), voiceSFU
+	return NewHub(nil, nil, voiceSFU, nil, openPerms()), voiceSFU
 }
 
 // startShare publishes a (media-less) screen share of c in its room and

@@ -37,9 +37,6 @@ type DMMemberChange struct {
 // canStartDMs requires the caller to hold Send direct messages with the
 // community switch on and, for a new member, the write wait to be over.
 func (a *API) canStartDMs(r *http.Request) error {
-	if a.Guard.Perms == nil {
-		return nil
-	}
 	snap, err := a.Guard.Perms.Snapshot(r.Context())
 	if err != nil {
 		return err
@@ -84,11 +81,9 @@ func (a *API) listDMs(w http.ResponseWriter, r *http.Request) error {
 
 // markCanSend fills CanSend from the caller's permissions.
 func (a *API) markCanSend(r *http.Request, dms []DirectMessage) {
-	can := a.Guard.Perms == nil
-	if !can {
-		if snap, err := a.Guard.Perms.Snapshot(r.Context()); err == nil {
-			can = snap.CanStartDM(auth.UserFrom(r.Context()).Subject())
-		}
+	can := false
+	if snap, err := a.Guard.Perms.Snapshot(r.Context()); err == nil {
+		can = snap.CanStartDM(auth.UserFrom(r.Context()).Subject())
 	}
 	for i := range dms {
 		dms[i].CanSend = can

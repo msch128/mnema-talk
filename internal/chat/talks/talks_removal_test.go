@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // stopTimers ends the countdowns of a test's manager, so none fires into the
@@ -21,7 +22,7 @@ func (m *TalkManager) stopTimers() {
 }
 
 func newBareTalkManager() *TalkManager {
-	return NewTalkManager(&TalkManager{EmptyGrace: time.Hour})
+	return NewTalkManager(&TalkManager{Perms: permtest.NewFixture().Service(), EmptyGrace: time.Hour})
 }
 
 func TestAFailedRemovalCountsTheEmptyTalkDownAgain(t *testing.T) {

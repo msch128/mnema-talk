@@ -35,7 +35,7 @@ func presenceUpdates(t *testing.T, c *Client, userID uuid.UUID) []string {
 }
 
 func TestPresenceFollowsChoiceAndIdle(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	watcher := &Client{hub: h, User: auth.User{ID: uuid.New()}, send: make(chan []byte, 64)}
 	h.register(watcher)
 	defer h.unregister(watcher)
@@ -86,7 +86,7 @@ func TestPresenceFollowsChoiceAndIdle(t *testing.T) {
 }
 
 func TestSetPresenceIgnoresInvalidAndOffline(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	id := uuid.New()
 	h.SetPresence(id, auth.PresenceFocus) // not connected: nothing to apply
 	h.SetPresence(id, "offline")          // never choosable

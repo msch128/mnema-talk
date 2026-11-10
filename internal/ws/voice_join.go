@@ -264,7 +264,7 @@ func (h *Hub) mayExceedLimit(c *Client, ch *core.ChannelInfo) bool {
 		return false
 	}
 	snap, ok := h.permSnapshot(ch.ID)
-	return ok && snap != nil && c.can(snap, ch.ID, perm.DisconnectMembers)
+	return ok && c.can(snap, ch.ID, perm.DisconnectMembers)
 }
 
 func (h *Hub) isVoiceRoomFull(ch *core.ChannelInfo, userID uuid.UUID) bool {
@@ -389,7 +389,8 @@ func (h *Hub) sendRoomState(c *Client, chID uuid.UUID) {
 }
 
 // joinRefusal is the voice_kicked reason of a refused join: the rules the
-// member has not accepted yet, otherwise a missing permission.
+// member has not accepted yet, otherwise a missing permission. snap is nil when
+// the permission state could not be loaded.
 func (c *Client) joinRefusal(snap *perm.Snapshot) string {
 	if snap != nil && snap.RulesPending(c.User.ID) {
 		return "rules_not_accepted"

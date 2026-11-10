@@ -142,11 +142,8 @@ func (z *zipFiles) add(name string, v any) error {
 }
 
 // viewableChannels are the channels the person may still see, by the live
-// permission state. Without a permission service no channel name is revealed.
+// permission state.
 func (h *API) viewableChannels(ctx context.Context, user uuid.UUID) (userdata.Channels, error) {
-	if h.Perms == nil {
-		return userdata.Channels{}, nil
-	}
 	snap, err := h.Perms.Snapshot(ctx)
 	if err != nil {
 		return userdata.Channels{}, err

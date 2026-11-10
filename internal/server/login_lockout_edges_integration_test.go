@@ -9,6 +9,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/auth/authn"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestLoginLockoutEdges(t *testing.T) {
@@ -18,7 +19,7 @@ func TestLoginLockoutEdges(t *testing.T) {
 		t.Fatalf("bad id: %d", res.status)
 	}
 
-	h := authn.NewHandler(&auth.Sessions{DB: a.db}, a.events)
+	h := authn.NewHandler(&auth.Sessions{DB: a.db}, permtest.NewFixture().Service(), a.events)
 	ctx := context.Background()
 
 	// A queued request for an account that no longer exists still applies.

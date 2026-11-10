@@ -150,8 +150,12 @@ func (s *Service) SetGlobalUploadMB(ctx context.Context, actor Subject, mb *int)
 }
 
 // Snapshot returns the current permission state, loading it when it is
-// missing or older than the TTL.
+// missing or older than the TTL. Every permission question goes through it,
+// so a nil Service answers none: the request fails (see Must).
 func (s *Service) Snapshot(ctx context.Context) (*Snapshot, error) {
+	if s == nil {
+		return nil, errNoService
+	}
 	if cur := s.cur.Load(); cur != nil && cur.age(s.now()) < snapshotTTL {
 		return cur, nil
 	}
@@ -246,13 +250,8 @@ func (s *Service) ForChannel(ctx context.Context, ch uuid.UUID) (*Snapshot, erro
 	return snap, nil
 }
 
-// Global is what sub may do server-wide. A nil Service imposes no limits (for
-// code paths and tests that run without the permission model; the router
-// always builds one).
+// Global is what sub may do server-wide.
 func (s *Service) Global(ctx context.Context, sub Subject) (Set, error) {
-	if s == nil {
-		return All, nil
-	}
 	snap, err := s.Snapshot(ctx)
 	if err != nil {
 		return 0, err
@@ -262,9 +261,6 @@ func (s *Service) Global(ctx context.Context, sub Subject) (Set, error) {
 
 // Channel is what sub may do in channel ch.
 func (s *Service) Channel(ctx context.Context, sub Subject, ch uuid.UUID) (Set, error) {
-	if s == nil {
-		return All, nil
-	}
 	snap, err := s.ForChannel(ctx, ch)
 	if err != nil {
 		return 0, err
@@ -279,9 +275,6 @@ var ErrChannelHidden = httpx.ErrNotFound("channel not found")
 // RequireChannel checks that sub holds need in ch. Without ViewChannel the
 // channel looks nonexistent (404); a missing permission otherwise is a 403.
 func (s *Service) RequireChannel(ctx context.Context, sub Subject, ch uuid.UUID, need Set) error {
-	if s == nil {
-		return nil
-	}
 	snap, err := s.ForChannel(ctx, ch)
 	if err != nil {
 		return err
@@ -302,9 +295,6 @@ func CheckChannel(p, need Set) error {
 
 // RequireGlobal checks that sub holds need server-wide.
 func (s *Service) RequireGlobal(ctx context.Context, sub Subject, need Set) error {
-	if s == nil {
-		return nil
-	}
 	snap, err := s.Snapshot(ctx)
 	if err != nil {
 		return err
@@ -325,9 +315,6 @@ func (s *Service) RequireGlobal(ctx context.Context, sub Subject, need Set) erro
 // RequireCall refuses a new member whose speak wait is still running: the
 // call of a conversation is held back as a whole, so they may not start one.
 func (s *Service) RequireCall(ctx context.Context, sub Subject) error {
-	if s == nil {
-		return nil
-	}
 	snap, err := s.Snapshot(ctx)
 	if err != nil {
 		return err
@@ -346,7 +333,23 @@ func RequireOwner(sub Subject) error {
 	return nil
 }
 
-var errNoDatabase = errors.New("permissions: service has no database")
+var (
+	errNoDatabase = errors.New("permissions: service has no database")
+	// errNoService is what a nil Service answers every permission question
+	// with: an internal error, never "allowed".
+	errNoService = errors.New("permissions: no permission service")
+)
+
+// Must returns s, and panics when it is nil. Everything that asks permission
+// questions takes its Service through Must when it is built, so a component
+// wired without one stops the server at startup instead of serving requests
+// nobody checks. owner names that component in the panic.
+func Must(s *Service, owner string) *Service {
+	if s == nil {
+		panic(owner + ": needs a permission service")
+	}
+	return s
+}
 
 // minWaitGap is the least gap between two reloads caused by waits ending, so
 // a burst of sign-ups ends in a few reloads, not one per member.

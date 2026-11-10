@@ -38,9 +38,8 @@ type Handler struct {
 	// Voice empties the voice room of a deleted channel. When nil, Online is
 	// used if it implements VoiceRooms (the WebSocket hub does).
 	Voice core.VoiceRooms
-	// Perms decides who may see and use which channel. nil imposes no
-	// channel limits (tests); the router always sets it, and without it the
-	// admin routes stay Owner-only.
+	// Perms decides who may see and use which channel. It is required:
+	// mounting a Handler without it panics.
 	Perms *perm.Service
 	// Audit records message deletions and edits; nil records nothing.
 	Audit *audit.Log
@@ -197,9 +196,6 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) loadMemberPermissions(ctx context.Context) (map[uuid.UUID][]uuid.UUID, map[uuid.UUID]time.Time, error) {
-	if h.Perms == nil {
-		return nil, nil, nil
-	}
 	roles, err := h.Perms.MemberRoles(ctx)
 	if err != nil {
 		return nil, nil, err

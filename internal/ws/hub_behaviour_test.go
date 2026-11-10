@@ -19,7 +19,7 @@ import (
 )
 
 func TestUnencodableEventsNeverReachRecipients(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	c := testClient(h, auth.User{ID: uuid.New()})
 	ch := voiceCh()
 	h.joinVoice(c, ch)
@@ -56,7 +56,7 @@ func TestTypingEvictsExpiredChannelEntries(t *testing.T) {
 }
 
 func TestHubIgnoresUnknownClientIdleAndInvalidProfiles(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	c := testClient(h, auth.User{ID: uuid.New(), DisplayName: "Original"})
 	drainTypes(t, c)
 	stranger := newClient(h, nil, auth.User{ID: uuid.New()}, 0)
@@ -85,7 +85,7 @@ func TestHubIgnoresUnknownClientIdleAndInvalidProfiles(t *testing.T) {
 }
 
 func TestStatsCountDistinctUsersAndOccupiedRooms(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	u := auth.User{ID: uuid.New()}
 	a := testClient(h, u)
 	b := testClient(h, u)
@@ -101,7 +101,7 @@ func TestStatsCountDistinctUsersAndOccupiedRooms(t *testing.T) {
 }
 
 func TestVoiceSwitchCancelsOldGraceAndPreservesNewRoom(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	h.VoiceGrace = time.Hour
 	t.Cleanup(h.Close)
 	u := auth.User{ID: uuid.New()}
@@ -142,7 +142,7 @@ func TestVoiceSwitchCancelsOldGraceAndPreservesNewRoom(t *testing.T) {
 }
 
 func TestKickAndGraceReplacement(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	h.VoiceGrace = time.Hour
 	t.Cleanup(h.Close)
 	c := testClient(h, auth.User{ID: uuid.New()})
@@ -160,7 +160,7 @@ func TestKickAndGraceReplacement(t *testing.T) {
 }
 
 func TestVoiceMuteOutsideRoomAndRepeatedStateAreIgnored(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	c := testClient(h, auth.User{ID: uuid.New()})
 	drainTypes(t, c)
 	h.setMuteState(c, MuteState{Muted: true})
@@ -240,7 +240,7 @@ func TestHandshakeAuthenticationAndOriginErrors(t *testing.T) {
 		status int
 	}{{"api", httpx.ErrUnauthorized("missing session"), 401}, {"internal", errors.New("fixture database failure"), 500}} {
 		t.Run(tc.name, func(t *testing.T) {
-			h := NewHub(nil, rejectedCoverageAuth{tc.err}, nil, nil)
+			h := NewHub(nil, rejectedCoverageAuth{tc.err}, nil, nil, openPerms())
 			rr := httptest.NewRecorder()
 			h.HandleWebSocket(rr, httptest.NewRequest("GET", "http://example.test/api/ws", nil))
 			if rr.Code != tc.status {
@@ -251,7 +251,7 @@ func TestHandshakeAuthenticationAndOriginErrors(t *testing.T) {
 			}
 		})
 	}
-	h := NewHub(nil, fakeAuth{user: auth.User{ID: uuid.New()}}, nil, nil)
+	h := NewHub(nil, fakeAuth{user: auth.User{ID: uuid.New()}}, nil, nil, openPerms())
 	srv := httptest.NewServer(http.HandlerFunc(h.HandleWebSocket))
 	t.Cleanup(srv.Close)
 	t.Cleanup(h.Close)
@@ -265,7 +265,7 @@ func TestHandshakeAuthenticationAndOriginErrors(t *testing.T) {
 }
 
 func TestPendingRegistrationAndPromotionRequireLiveHandshake(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	c := newClient(h, nil, auth.User{ID: uuid.New()}, 0)
 	fresh := c.User
 	if h.registerVerified(c, &fresh) {
@@ -330,7 +330,7 @@ func TestWriterStopsOnTransportFailureAndShutdown(t *testing.T) {
 
 func TestReadPumpProcessesValidFramesAfterInvalidAndFloodedFrames(t *testing.T) {
 	server, remote := websocketPair(t)
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	c := newClient(h, server, auth.User{ID: uuid.New()}, 0)
 	h.register(c)
 	drainTypes(t, c)
@@ -412,7 +412,7 @@ func TestSubscriptionLimitsRejectAdditionalScreenAndKeepExistingShare(t *testing
 }
 
 func TestEmptyScreenViewersAreAnArray(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	ch := voiceCh()
 	c := testClient(h, auth.User{ID: uuid.New()})
 	h.joinVoice(c, ch)
@@ -423,7 +423,7 @@ func TestEmptyScreenViewersAreAnArray(t *testing.T) {
 }
 
 func TestGraceCanBeClaimedWithoutRemovingPresence(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	h.VoiceGrace = time.Hour
 	t.Cleanup(h.Close)
 	c := testClient(h, auth.User{ID: uuid.New()})
@@ -454,7 +454,7 @@ func TestVoiceJoinWithUnavailableSFUGivesUpTheSeat(t *testing.T) {
 }
 
 func TestServerInfoReportsRelease(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	h.Version = "1.2.3"
 	c := testClient(h, auth.User{ID: uuid.New()})
 	got := sentEvents(t, c, "server_info")
@@ -478,7 +478,7 @@ func (w closeOnHijackWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return conn, rw, err
 }
 func TestShutdownDuringUpgradeClosesUntrackedSocket(t *testing.T) {
-	h := NewHub(nil, fakeAuth{user: auth.User{ID: uuid.New()}}, nil, nil)
+	h := NewHub(nil, fakeAuth{user: auth.User{ID: uuid.New()}}, nil, nil, openPerms())
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { h.HandleWebSocket(closeOnHijackWriter{w, h}, r) }))
 	t.Cleanup(srv.Close)
 	t.Cleanup(h.Close)
@@ -502,7 +502,7 @@ func TestShutdownDuringUpgradeClosesUntrackedSocket(t *testing.T) {
 }
 
 func TestDisconnectUserStopsEverySessionAndPreservesOtherUsers(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	u := auth.User{ID: uuid.New()}
 	first, second := testClient(h, u), testClient(h, u)
 	other := testClient(h, auth.User{ID: uuid.New()})
@@ -568,7 +568,7 @@ func TestSessionRevokedCloseReplacesExpiredRealSocketWriteDeadline(t *testing.T)
 }
 
 func TestReconnectWithinGraceResumesOriginalVoiceStay(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	h.VoiceGrace = time.Hour
 	t.Cleanup(h.Close)
 	u := auth.User{ID: uuid.New()}
@@ -576,7 +576,7 @@ func TestReconnectWithinGraceResumesOriginalVoiceStay(t *testing.T) {
 	ch := voiceCh()
 	h.joinVoice(old, ch)
 	joined := h.voiceSnapshot()[ch.ID][u.ID].JoinedAt
-	started := h.voiceRooms(old, nil)["started"].(map[uuid.UUID]time.Time)[ch.ID]
+	started := h.voiceRooms(old, openSnapshot())["started"].(map[uuid.UUID]time.Time)[ch.ID]
 	h.unregister(old)
 	next := testClient(h, u)
 	drainTypes(t, next)
@@ -584,7 +584,7 @@ func TestReconnectWithinGraceResumesOriginalVoiceStay(t *testing.T) {
 	if got := h.voiceSnapshot()[ch.ID][u.ID].JoinedAt; !got.Equal(joined) {
 		t.Fatal("reconnect restarted participant duration")
 	}
-	if got := h.voiceRooms(next, nil)["started"].(map[uuid.UUID]time.Time)[ch.ID]; !got.Equal(started) {
+	if got := h.voiceRooms(next, openSnapshot())["started"].(map[uuid.UUID]time.Time)[ch.ID]; !got.Equal(started) {
 		t.Fatal("reconnect restarted room duration")
 	}
 	if count(drainTypes(t, next), "voice_state_update") != 0 {

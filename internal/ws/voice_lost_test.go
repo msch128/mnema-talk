@@ -13,7 +13,7 @@ import (
 // A media connection the SFU gave up on must take the member out of the call
 // and tell the client, which then rejoins; a stale peer must not.
 func TestLostMediaPeerKicksTheSeat(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	t.Cleanup(h.Close)
 	c := testClient(h, auth.User{ID: uuid.New()})
 	ch := voiceCh()

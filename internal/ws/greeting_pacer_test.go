@@ -11,7 +11,7 @@ import (
 // A client that keeps draining a large greeting, only slowly, is served to
 // the end: the greeting's wait measures a stall, not the greeting's duration.
 func TestSlowButSteadilyDrainingClientReceivesTheWholeGreeting(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	t.Cleanup(h.Close)
 	c := testClient(h, auth.User{ID: uuid.New()})
 	c.send = make(chan []byte, 8)
@@ -47,7 +47,7 @@ func TestSlowButSteadilyDrainingClientReceivesTheWholeGreeting(t *testing.T) {
 
 // A client that drains nothing is still dropped once the budget passes.
 func TestStuckClientIsDroppedFromTheGreeting(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	t.Cleanup(h.Close)
 	c := testClient(h, auth.User{ID: uuid.New()})
 	c.send = make(chan []byte, 8)

@@ -15,9 +15,6 @@ import (
 // VisibleHierarchy drops the channels the caller may not view, and the
 // categories that are hidden from them and have nothing left in them.
 func VisibleHierarchy(perms *perm.Service, r *http.Request, cats []core.Category, uncat []core.Channel) ([]core.Category, []core.Channel, error) {
-	if perms == nil {
-		return cats, uncat, nil
-	}
 	ctx := r.Context()
 	snap, err := perms.Snapshot(ctx)
 	if err != nil {

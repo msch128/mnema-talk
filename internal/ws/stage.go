@@ -170,7 +170,7 @@ func (h *Hub) inRoom(ch, user uuid.UUID) bool {
 // returns what to announce with their join.
 func (h *Hub) seatStage(user, ch uuid.UUID) (power bool, hand *time.Time) {
 	snap, ok := h.permSnapshot(ch)
-	if !ok || snap == nil || !snap.IsStage(ch) {
+	if !ok || !snap.IsStage(ch) {
 		return false, nil
 	}
 	key := voiceKey{user, ch}
@@ -210,9 +210,6 @@ func (h *Hub) lowerHand(key voiceKey) {
 // stage may have been given or taken). want limits the recomputing to some
 // users (nil: all).
 func (h *Hub) sweepStages(snap *perm.Snapshot, want map[uuid.UUID]bool) {
-	if snap == nil {
-		return
-	}
 	for _, key := range h.stage.seats() {
 		if !snap.IsStage(key.ch) {
 			h.endStageSeat(key)
@@ -258,7 +255,7 @@ func (c *Client) stageContext() (ch uuid.UUID, snap *perm.Snapshot, ok bool) {
 		return uuid.Nil, nil, false
 	}
 	snap, ok = c.hub.permSnapshot(*cur)
-	if !ok || snap == nil || !snap.IsStage(*cur) {
+	if !ok || !snap.IsStage(*cur) {
 		return uuid.Nil, nil, false
 	}
 	return *cur, snap, true

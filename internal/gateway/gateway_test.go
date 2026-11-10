@@ -105,7 +105,7 @@ func TestConnectionNeverBlocksThePublisher(t *testing.T) {
 }
 
 func TestRegisterLimitsAndEviction(t *testing.T) {
-	g := New(Config{})
+	g := New(Config{Perms: permtest.NewFixture().Service()})
 	bot1 := uuid.New()
 	mk := func(live bool, age time.Duration) *session {
 		s := &session{id: newSessionID(), botID: bot1, detachedAt: time.Now().Add(-age)}
@@ -135,7 +135,7 @@ func TestRegisterLimitsAndEviction(t *testing.T) {
 		t.Fatalf("the oldest detached session goes: kept=%v n=%d", kept, n)
 	}
 	// Live connections are capped.
-	g2 := New(Config{})
+	g2 := New(Config{Perms: permtest.NewFixture().Service()})
 	b2 := uuid.New()
 	for i := 0; i < maxConnsPerBot; i++ {
 		if !g2.register(&session{id: newSessionID(), botID: b2, conn: newConnection(nil)}) {
@@ -153,7 +153,7 @@ func TestRegisterLimitsAndEviction(t *testing.T) {
 }
 
 func TestExpireDropsStaleSessions(t *testing.T) {
-	g := New(Config{})
+	g := New(Config{Perms: permtest.NewFixture().Service()})
 	g.SetTimings(Timings{Heartbeat: time.Second, Identify: time.Second, Resume: time.Minute, TokenCheck: time.Hour})
 	b := uuid.New()
 	stale := &session{id: "stale", botID: b, detachedAt: time.Now().Add(-time.Hour)}
@@ -210,7 +210,7 @@ func TestObserveFailsClosed(t *testing.T) {
 }
 
 func TestDeliverInteractionNeedsALiveSession(t *testing.T) {
-	g := New(Config{})
+	g := New(Config{Perms: permtest.NewFixture().Service()})
 	b := uuid.New()
 	if g.DeliverInteraction(b, json.RawMessage(`{}`)) {
 		t.Fatal("no session")
@@ -230,7 +230,7 @@ func TestDeliverInteractionNeedsALiveSession(t *testing.T) {
 }
 
 func TestInteractionSkipsAConnectionThatIsAlreadyClosing(t *testing.T) {
-	g := New(Config{})
+	g := New(Config{Perms: permtest.NewFixture().Service()})
 	b := uuid.New()
 	older := &session{id: "o", botID: b, conn: newConnection(nil), startedAt: time.Now().Add(-time.Hour)}
 	newer := &session{id: "n", botID: b, conn: newConnection(nil), startedAt: time.Now()}
@@ -309,7 +309,7 @@ func TestWriteLoopEndsWhenTheSocketIsGone(t *testing.T) {
 }
 
 func TestCloseReasonsNeverCarryErrorText(t *testing.T) {
-	g := &Gateway{Auth: bot.NewAuthenticator(nil)}
+	g := &Gateway{Auth: bot.NewAuthenticator(nil, permtest.NewFixture().Service())}
 	check := func(name string, c *connection, code int, want string) {
 		t.Helper()
 		if !c.closed() {
@@ -359,7 +359,7 @@ func TestResumeReplaysTheFullBuffer(t *testing.T) {
 
 // Ending a session that was resumed closes the connection it replaced too.
 func TestFailedAdoptClosesTheReplacedConnection(t *testing.T) {
-	g := New(Config{}) // no database: the adoption cannot confirm the token
+	g := New(Config{Perms: permtest.NewFixture().Service()}) // no database: the adoption cannot confirm the token
 	botID := uuid.New()
 	old := newConnection(nil)
 	s := &session{id: "s", botID: botID, conn: old}
@@ -391,7 +391,7 @@ func TestDetachedSince(t *testing.T) {
 }
 
 func TestRevokeEndsMatchingSessions(t *testing.T) {
-	g := New(Config{})
+	g := New(Config{Perms: permtest.NewFixture().Service()})
 	botID, tok1, tok2 := uuid.New(), uuid.New(), uuid.New()
 	a := &session{id: "a", botID: botID, tokenID: tok1, conn: newConnection(nil)}
 	b := &session{id: "b", botID: botID, tokenID: tok2, conn: newConnection(nil)}
@@ -414,7 +414,7 @@ func TestRevokeEndsMatchingSessions(t *testing.T) {
 // A session that is still identifying takes no events and no interactions:
 // READY has to be its first dispatch.
 func TestStartingSessionTakesNothingBeforeReady(t *testing.T) {
-	g := New(Config{})
+	g := New(Config{Perms: permtest.NewFixture().Service()})
 	b := uuid.New()
 	s := &session{id: "s", botID: b, conn: newConnection(nil), starting: true}
 	g.register(s)
@@ -438,7 +438,7 @@ func TestStartingSessionTakesNothingBeforeReady(t *testing.T) {
 // A bot that widened its allowed intents and then identified must not be cut
 // off by a token check whose query ran before the widening.
 func TestSessionIdentifiedAfterTheIntentQueryIsNotClosedByIt(t *testing.T) {
-	g := New(Config{})
+	g := New(Config{Perms: permtest.NewFixture().Service()})
 	botID, tok := uuid.New(), uuid.New()
 	queried := time.Now()
 	old := &session{id: "old", botID: botID, tokenID: tok, intents: 3, startedAt: queried.Add(-time.Minute), conn: newConnection(nil)}

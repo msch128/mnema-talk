@@ -36,8 +36,9 @@ type Commands struct {
 	invokes *httpx.RateLimiter
 }
 
-// NewCommands returns Commands with its state.
+// NewCommands returns Commands with its state. It panics without Perms.
 func NewCommands(c Commands) *Commands {
+	perm.Must(c.Perms, "slash commands")
 	c.store = &interactionStore{m: map[uuid.UUID]*interaction{}, now: time.Now}
 	c.invokes = httpx.NewRateLimiter(invokesPerMinute, time.Minute).Named("bot_invoke")
 	return &c

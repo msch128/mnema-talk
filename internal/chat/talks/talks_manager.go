@@ -68,8 +68,9 @@ type presenceEvent struct {
 	joined        bool
 }
 
-// NewTalkManager readies m for use; Run starts it.
+// NewTalkManager readies m for use; Run starts it. It panics without Perms.
 func NewTalkManager(m *TalkManager) *TalkManager {
+	perm.Must(m.Perms, "talk manager")
 	m.talks = map[uuid.UUID]*liveTalk{}
 	m.wake = make(chan struct{}, 1)
 	if m.EmptyGrace <= 0 {

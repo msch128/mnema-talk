@@ -120,18 +120,17 @@ func (c *components) newCore() {
 		TTL:    time.Duration(cfg.SessionExpiryHours) * time.Hour,
 		Secure: cfg.SecureCookies(),
 	}
-	hub := ws.NewHub(d.DB, c.sessions, d.SFU, cfg.AllowedOrigins)
-	hub.UpgradeLimit = httpx.NewRateLimiter(30, time.Minute).Named("ws_user")
-	c.wsPerIP = httpx.NewRateLimiter(120, time.Minute).Named("ws_ip")
-	hub.Version = d.Version
-	hub.UpgradeSeen = func(upgraded bool) { d.Setup.RecordWebSocket(upgraded, time.Now()) }
-	c.hub = hub
 	c.permSvc = d.Perms
 	if c.permSvc == nil {
 		c.permSvc = perm.NewService(d.DB)
 	}
 	c.permSvc.SetUploadCeiling(cfg.MaxUploadMB)
-	hub.SetPermissions(c.permSvc)
+	hub := ws.NewHub(d.DB, c.sessions, d.SFU, cfg.AllowedOrigins, c.permSvc)
+	hub.UpgradeLimit = httpx.NewRateLimiter(30, time.Minute).Named("ws_user")
+	c.wsPerIP = httpx.NewRateLimiter(120, time.Minute).Named("ws_ip")
+	hub.Version = d.Version
+	hub.UpgradeSeen = func(upgraded bool) { d.Setup.RecordWebSocket(upgraded, time.Now()) }
+	c.hub = hub
 	if d.TURN != nil {
 		d.TURN.SetRelayCheck(c.mayJoinVoice)
 	}
@@ -151,7 +150,7 @@ func (c *components) newCore() {
 	}
 	go messages.RunSlowModePrune(c.ctx, d.DB, time.Hour)
 	c.newChat()
-	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub, Audit: c.auditLog, SelfRoleLimit: httpx.NewRateLimiter(6, time.Minute).Named("self_roles")}
+	c.rolesH = roles.New(roles.Handler{Perms: c.permSvc, Events: c.pub, Audit: c.auditLog, SelfRoleLimit: httpx.NewRateLimiter(6, time.Minute).Named("self_roles")})
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
 	c.onboardH.Names, c.onboardH.Events = d.Names, c.pub
 	c.newImport()
@@ -160,9 +159,9 @@ func (c *components) newCore() {
 		c.chatH.Objects = d.Store
 		c.importH.Importer.Objects = d.Store
 	}
-	c.emojiH = &emoji.Handler{DB: d.DB, Store: d.Store, Events: c.pub, Perms: c.permSvc, Max: cfg.EmojiMax,
-		UploadLimit: httpx.NewRateLimiter(emoji.UploadsPer10Minutes, 10*time.Minute).Named("emoji_upload")}
-	c.mediaH = &media.Handler{
+	c.emojiH = emoji.New(emoji.Handler{DB: d.DB, Store: d.Store, Events: c.pub, Perms: c.permSvc, Max: cfg.EmojiMax,
+		UploadLimit: httpx.NewRateLimiter(emoji.UploadsPer10Minutes, 10*time.Minute).Named("emoji_upload")})
+	c.mediaH = media.New(&media.Handler{
 		DB:             d.DB,
 		Store:          d.Store,
 		Bucket:         cfg.S3Bucket,
@@ -177,7 +176,7 @@ func (c *components) newCore() {
 			MinFreeBytes: int64(cfg.MediaMinFreeMB) << 20,
 			DiskPath:     cfg.MediaDiskPath,
 		},
-	}
+	})
 	media.StartAvatarReencode(c.ctx, d.DB, d.Store, cfg.S3Bucket, &audit.Log{DB: d.DB}, c.pub)
 	c.wirePersonalData()
 }
@@ -214,9 +213,8 @@ func (c *components) newWebhooks() {
 // gateway into the hub and the permission service.
 func (c *components) newBots() {
 	d, hub := c.d, c.hub
-	c.botH = &bot.Handler{DB: d.DB, Perms: c.permSvc, Media: c.mediaH, Events: c.pub}
-	c.botAuthn = bot.NewAuthenticator(d.DB)
-	c.botAuthn.Perms = c.permSvc
+	c.botH = bot.NewHandler(bot.Handler{DB: d.DB, Perms: c.permSvc, Media: c.mediaH, Events: c.pub})
+	c.botAuthn = bot.NewAuthenticator(d.DB, c.permSvc)
 	c.pollSvc = poll.NewService(poll.Service{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Audit: c.auditLog})
 	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc, slashcmd.Services{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Members: c.members, Chat: c.chatH, Audit: c.auditLog})})
 	gw := gateway.New(gateway.Config{Auth: c.botAuthn, Perms: c.permSvc, DB: d.DB, PublicURL: c.cfg.PublicURL})
