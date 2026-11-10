@@ -203,6 +203,8 @@ func (im *Importer) Undo(ctx context.Context, sub perm.Subject, id uuid.UUID, re
 	var res *UndoResult
 	var keys []string
 	var gone []uuid.UUID
+	// Undoing removes the created channels with all their messages.
+	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
 	err := im.Perms.Locked(ctx, sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
 		if !snap.Global(sub).Has(perm.Administrator) {
 			return errNotAdmin

@@ -117,7 +117,7 @@ func runWithContext(ctx context.Context) error {
 	warnBroadTrustedProxies(cfg)
 	warnInsecurePublicURL(cfg)
 
-	pool, err := db.Connect(ctx, cfg.DatabaseURL)
+	pool, err := db.ConnectWith(ctx, cfg.DatabaseURL, db.Options{MaxConns: cfg.DBMaxConns, StatementTimeout: cfg.DBStatementTimeout})
 	if err != nil {
 		return err
 	}

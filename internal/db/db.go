@@ -38,16 +38,28 @@ type Querier interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 }
 
+// Connect opens a pool with the default limits.
 func Connect(ctx context.Context, databaseURL string) (*Pool, error) {
+	return ConnectWith(ctx, databaseURL, DefaultOptions())
+}
+
+// ConnectWith opens a pool with the given limits.
+func ConnectWith(ctx context.Context, databaseURL string, opts Options) (*Pool, error) {
 	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse database config: %w", err)
 	}
 
-	config.MaxConns = 25
-	config.MinConns = 2
+	if opts.MaxConns < 1 || opts.MaxConns > MaxPoolConns {
+		return nil, fmt.Errorf("pool size must be between 1 and %d, got %d", MaxPoolConns, opts.MaxConns)
+	}
+	config.MaxConns = int32(opts.MaxConns)
+	config.MinConns = min(2, config.MaxConns)
 	config.MaxConnLifetime = time.Hour
 	config.MaxConnIdleTime = 15 * time.Minute
+	config.ConnConfig.RuntimeParams["statement_timeout"] = milliseconds(opts.StatementTimeout)
+	config.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] = milliseconds(idleInTransactionTimeout)
+	config.PrepareConn = statementLimit{base: opts.StatementTimeout}.prepare
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
@@ -122,8 +134,12 @@ func applyPendingMigrations(ctx context.Context, conn *pgxpool.Conn, applied map
 
 // MigrateFS applies the *.sql files at the root of fsys like Migrate does.
 // Migrate uses the embedded migrations; tests pass their own.
+//
+// Migrations run without a statement timeout: building an index on a large
+// table takes as long as it takes, and a second instance waits for the
+// advisory lock while the first one migrates.
 func (p *Pool) MigrateFS(ctx context.Context, fsys fs.FS) error {
-	conn, err := p.Acquire(ctx)
+	conn, err := p.Acquire(WithStatementTimeout(ctx, 0))
 	if err != nil {
 		return fmt.Errorf("acquire connection: %w", err)
 	}

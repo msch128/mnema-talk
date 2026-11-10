@@ -174,6 +174,7 @@ func (h *Handler) unstageAttachment(w http.ResponseWriter, r *http.Request) erro
 // upload_usage, not these rows, so removing a file refunds nothing. The same
 // pass prunes usage rows older than the budget window.
 func SweepStaged(ctx context.Context, p *db.Pool, store Store, olderThan time.Duration) (int, error) {
+	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
 	rows, err := p.Query(ctx, `
 		DELETE FROM media WHERE staged AND created_at < NOW() - make_interval(secs => $1)
 		RETURNING s3_key`, olderThan.Seconds())

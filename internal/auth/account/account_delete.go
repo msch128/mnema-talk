@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -54,8 +55,10 @@ func (h *API) deleteAccount(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var gone *erased
-	err := pgx.BeginFunc(r.Context(), h.Sessions.DB, func(tx pgx.Tx) (err error) {
-		gone, err = h.eraseOwnAccount(r.Context(), tx, u.ID)
+	// Erasing touches every row the member ever wrote.
+	ctx := db.WithStatementTimeout(r.Context(), db.BulkStatementTimeout)
+	err := pgx.BeginFunc(ctx, h.Sessions.DB, func(tx pgx.Tx) (err error) {
+		gone, err = h.eraseOwnAccount(ctx, tx, u.ID)
 		return err
 	})
 	if errors.Is(err, pgx.ErrNoRows) {

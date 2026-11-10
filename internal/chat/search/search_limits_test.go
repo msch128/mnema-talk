@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
 func TestInflightCapsPerKeyAndReleases(t *testing.T) {
@@ -37,11 +38,11 @@ func TestMapSearchError(t *testing.T) {
 	if mapSearchError(nil) != nil {
 		t.Fatal("nil stays nil")
 	}
-	if got := mapSearchError(&pgconn.PgError{Code: "57014"}); got != errSearchSlow {
+	if got := mapSearchError(&pgconn.PgError{Code: "57014"}); got != core.ErrSearchSlow {
 		t.Fatalf("timeout mapped to %v", got)
 	}
 	boom := errors.New("boom")
-	if got := mapSearchError(boom); !errors.Is(got, boom) || got == error(errSearchSlow) {
+	if got := mapSearchError(boom); !errors.Is(got, boom) || got == error(core.ErrSearchSlow) {
 		t.Fatalf("other errors must be wrapped: %v", got)
 	}
 }

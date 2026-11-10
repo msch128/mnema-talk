@@ -28157,6 +28157,16 @@
               }
             },
             "description": "NOT_FOUND: the channel, or the before post (deleted since the previous page), does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests, or the search (q) took too long."
           }
         },
         "security": [

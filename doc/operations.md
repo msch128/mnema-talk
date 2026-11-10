@@ -91,6 +91,8 @@ General rules:
 |---|---|---|
 | `DATABASE_URL` | none (required) | PostgreSQL connection URL. Compose builds it from `POSTGRES_*` and the `postgres` service. In production a placeholder password in it is rejected. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `mnema` / none / `mnema_talk` | Compose only: initialise the `postgres` container and build `DATABASE_URL`. Changing them later does not change an existing database. |
+| `DB_MAX_CONNS` | `25` | Connections the server keeps to PostgreSQL at most, 1-1000. Keep it below the database's `max_connections` (100 in the bundled `postgres`), with room for `pg_dump` and `psql`. Raise it only when `mnema_db_acquires_waited_total` keeps growing under normal load. |
+| `DB_STATEMENT_TIMEOUT` | `15s` | Longest one database statement of a request may run, as a duration (`15s`, `2m`), 1s-1h; `0` = no limit. The database cancels a statement that runs longer and the request fails with an internal error, logged with `SQLSTATE 57014`; a message or forum search answers 429 instead (searches are limited to 5 s). See [Database limits](#database-limits). |
 | `POSTGRES_HOST_PORT` | `5432` | Dev only: loopback port published by `docker-compose.dev.yml`. |
 | `TEST_DATABASE_URL` | none | Integration tests only: use this database instead of starting one with Docker. |
 
@@ -653,6 +655,34 @@ cannot work. Your options:
   list it in `WEBRTC_TURN_URLS`; or run the whole instance on the VPS.
 - **Forward UDP for the SFU** (`WEBRTC_UDP_PORT_MIN`-`MAX`, default
   `50000-50050/udp`) to the host. Forwarding an IPv6 port is not needed.
+
+## Database limits
+
+The server sets three limits on its own database connections. They are
+session settings of those connections, not of the database or the role, so
+`pg_dump`, `psql` and the backup and restore scripts are not affected.
+
+- **Pool size** (`DB_MAX_CONNS`, default 25). A request that finds no free
+  connection waits for one; `mnema_db_acquires_waited_total` counts those.
+- **Statement timeout** (`DB_STATEMENT_TIMEOUT`, default `15s`). One slow
+  statement can no longer hold a connection, and the locks it took, for as
+  long as it likes. A cancelled statement is logged with `SQLSTATE 57014`. If
+  that shows up for ordinary requests on a slow disk, raise the value before
+  switching it off with `0`.
+- **Idle in transaction** (fixed, 1 minute). A session that opened a
+  transaction and then runs nothing is ended by the database.
+
+Work that rightly takes longer has its own limit instead of the request one:
+
+| Work | Statement timeout |
+|---|---|
+| Schema migrations at startup (an index build on a large table) | none |
+| Message search and forum post search | 5 s, answered with 429 |
+| Data export, account deletion, deleting a channel, Discord import and its undo | 5 min |
+| Sweeps: auto-delete, unsent attachments, orphaned media, edit history retention | 5 min |
+
+The longer limits never undercut `DB_STATEMENT_TIMEOUT`: with a higher value,
+or with `0`, that one applies to this work as well.
 
 ## SeaweedFS S3 authentication
 
