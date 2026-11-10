@@ -137,6 +137,24 @@ jobs:
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "code changed: $code" >> "$GITHUB_STEP_SUMMARY"
 
+      # A pull request that is too large to read gets no real review. This
+      # prints the changed lines (added plus deleted, without lockfiles and
+      # generated files) and warns above 1,500; it never fails the job.
+      - name: Pull request size
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -euo pipefail
+          git rev-parse --verify --quiet HEAD^2 >/dev/null || exit 0
+          lines="$(git diff --numstat HEAD^1 HEAD -- . \
+            ':(exclude,glob)**/package-lock.json' ':(exclude,glob)**/go.sum' \
+            ':(exclude)api/openapi.json' ':(exclude)web/src/types/rest.ts' \
+            ':(exclude)web/src/third_party' ':(exclude)CHANGELOG.md' \
+            | awk '$1 != "-" { n += $1 + $2 } END { print n + 0 }')"
+          echo "changed lines: $lines (lockfiles and generated files not counted)" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$lines" -gt 1500 ]; then
+            echo "::warning title=Large pull request::$lines changed lines, more than 1,500. Split it unless the change is purely mechanical."
+          fi
+
   # -- Backend: vet, format, unit tests, build; the integration tests with
   # coverage run in parallel shards (backend-integration) and the coverage
   # gates on their merged profiles (backend-coverage). The required check
@@ -247,6 +265,13 @@ jobs:
       # network access.
       - name: Docs links
         run: node scripts/check-doc-links.mjs
+
+      # AGENTS.md is the first file an agent reads: every entry of its
+      # repository tree and every path in backticks must exist.
+      - name: AGENTS.md paths
+        run: |
+          node --test scripts/check-agents-paths.test.mjs
+          node scripts/check-agents-paths.mjs
 
       # Newcomer path stays true (no network): no stale release in a command
       # block, every setup check code in a docs table, doc/ports.md equal to

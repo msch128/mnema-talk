@@ -49,7 +49,7 @@ make coverage          # Go (unit + integration) and web coverage: coverage.out,
                        # (Go: COVERAGE_MIN / COVERAGE_FILE_MIN in the Makefile;
                        # web: web/scripts/check-coverage.ts, all four metrics)
 make lint              # gofmt, go vet, eslint
-make docs-check        # relative links and anchors in the docs, no merge-conflict markers
+make docs-check        # relative links and anchors in the docs, the paths AGENTS.md names, no merge-conflict markers
 make english-check     # no German outside the locale resources and scripts/english-only-allowlist.txt
 make typecheck-web     # complete frontend source and strict compiler checks
 make contracts-check   # generated frontend REST contract drift check
