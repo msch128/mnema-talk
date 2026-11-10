@@ -26,6 +26,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/poll"
 	"github.com/msch128/mnema-talk/internal/push"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/wiki"
 	"github.com/msch128/mnema-talk/internal/ws"
 )
@@ -46,13 +47,13 @@ func (c *components) newChat() {
 		ForwardLimit:     httpx.NewRateLimiter(messages.ForwardsPerMinute, time.Minute).Named("forward"),
 		DMLimit:          httpx.NewRateLimiter(dm.NewDMsPerMinute, time.Minute).Named("dm_start"),
 	}
-	go messages.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour)
-	go poll.RunFold(c.ctx, d.DB, 10*time.Minute)
+	safego.Go("edit_history", safego.Crash, func() { messages.RunEditHistoryRetention(c.ctx, d.DB, cfg.EditHistoryRetentionDays, 6*time.Hour) })
+	safego.Go("poll_fold", safego.Crash, func() { poll.RunFold(c.ctx, d.DB, 10*time.Minute) })
 	autoDelete := &channels.AutoDeleter{DB: d.DB, Events: c.pub, Audit: c.auditLog}
 	if d.Store != nil {
 		autoDelete.Objects = d.Store
 	}
-	go autoDelete.Run(c.ctx, channels.AutoDeleteEvery)
+	safego.Go("auto_delete", safego.Crash, func() { autoDelete.Run(c.ctx, channels.AutoDeleteEvery) })
 }
 
 // newImport builds the Discord structure import.
@@ -79,7 +80,7 @@ func (c *components) newModeration() {
 // Push is off.
 func (c *components) newLater(pusher later.Notifier) {
 	c.later = later.NewService(later.Service{DB: c.d.DB, Perms: c.permSvc, Events: c.pub, Online: c.hub, Push: pusher})
-	go c.later.Run(c.ctx)
+	safego.Go("later", safego.Crash, func() { c.later.Run(c.ctx) })
 }
 
 // newWiki builds the wiki handler; its picture uploads reserve quota through
@@ -131,11 +132,11 @@ func (c *components) newAuth(hub *ws.Hub) {
 	c.authH.Audit = c.auditLog
 	c.authH.Lifetime = c.ctx
 	c.newAuthAPIs()
-	go c.members.RunBanExpiry(c.ctx, time.Minute)
-	go c.authH.RunStatusExpiry(c.ctx, 0)
-	go c.authH.RunSessionSweep(c.ctx, auth.DefaultSessionSweepEvery)
+	safego.Go("ban_expiry", safego.Crash, func() { c.members.RunBanExpiry(c.ctx, time.Minute) })
+	safego.Go("status_expiry", safego.Crash, func() { c.authH.RunStatusExpiry(c.ctx, 0) })
+	safego.Go("session_sweep", safego.Crash, func() { c.authH.RunSessionSweep(c.ctx, auth.DefaultSessionSweepEvery) })
 	// `mnema-talk unlock` runs in another process and queues requests here.
-	go c.authH.RunUnlockWorker(c.ctx, authn.UnlockPollInterval)
+	safego.Go("unlock", safego.Crash, func() { c.authH.RunUnlockWorker(c.ctx, authn.UnlockPollInterval) })
 }
 
 // newAuthAPIs builds the route sets split out of package auth: the member-admin

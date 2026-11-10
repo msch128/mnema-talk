@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 type Stats struct {
@@ -246,7 +247,9 @@ func StartRetentionWorker(ctx context.Context, p *db.Pool, store Store, retentio
 		return
 	}
 	slog.Info("automatic media pruning enabled", "older_than_days", retentionDays)
-	go runPeriodically(ctx, retentionFirstRun, retentionInterval, retentionTask(p, store, retentionDays))
+	safego.Go("media_retention", safego.Crash, func() {
+		runPeriodically(ctx, retentionFirstRun, retentionInterval, retentionTask(p, store, retentionDays))
+	})
 }
 
 // retentionTask keeps pruning policy separate from the worker's schedule. It

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 const (
@@ -99,12 +100,12 @@ func (h *Handler) noticeSnapshot(ctx context.Context, ev *CommunityEvent) *perm.
 func (h *Handler) pushNotice(ctx context.Context, p signupPusher, ev *CommunityEvent, userID uuid.UUID, kind, role string) {
 	h.notices.Add(1)
 	bg := context.WithoutCancel(ctx)
-	go func() {
+	safego.Go("event_signup_notice", safego.Abandon, func() {
 		defer h.notices.Done()
 		bg, cancel := context.WithTimeout(bg, noticePushTimeout)
 		defer cancel()
 		if err := p.SendEventSignupNotice(bg, userID, ev.ID, ev.Title, kind, role, ev.StartTime, ev.ChannelID); err != nil {
 			slog.DebugContext(bg, "send sign-up push failed", "user_id", userID, "err", err)
 		}
-	}()
+	})
 }

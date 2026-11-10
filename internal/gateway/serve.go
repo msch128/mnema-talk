@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // Hello is the d of HELLO.
@@ -84,7 +85,8 @@ func (g *Gateway) serve(w http.ResponseWriter, r *http.Request) {
 		return // the upgrader answered
 	}
 	c := newConnection(ws)
-	go c.writeLoop()
+	// A panic while writing ends this bot's connection, nobody else's.
+	safego.Go("gateway_write", func() { c.closeWith(websocket.CloseInternalServerErr, "") }, c.writeLoop)
 	g.run(r, c)
 	c.closeWith(websocket.CloseNormalClosure, "")
 	<-c.done

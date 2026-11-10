@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/pion/turn/v5"
@@ -105,12 +106,12 @@ func (s *Server) mayJoin(user uuid.UUID) (bool, error) {
 // background so it never blocks the server loop; concurrent asks share one
 // lookup with mayJoin.
 func (s *Server) revalidate(user uuid.UUID) {
-	go func() {
+	safego.Go("turn_revalidate", safego.Crash, func() {
 		if ok, err := s.mayJoin(user); err == nil && !ok {
 			metrics.TURNEvents.With("forbidden").Inc()
 			s.debug("turn: member may no longer join voice, closing", "user", user)
 		}
-	}()
+	})
 }
 
 // allowAllocation rate-limits allocation attempts per source address.

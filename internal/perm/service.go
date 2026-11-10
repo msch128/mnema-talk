@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 const (
@@ -367,14 +368,14 @@ func (s *Service) scheduleWaitEnd(snap *Snapshot, now time.Time) {
 		s.waitTimer = nil
 	}
 	if ids := snap.waitsEndedSince(s.announcedUntil(now, now), now); len(ids) > 0 {
-		go s.Changed(ids) // not under the load's lock: the hub asks for a snapshot
+		safego.Go("perm_changed", safego.Crash, func() { s.Changed(ids) }) // not under the load's lock: the hub asks for a snapshot
 	}
 	end, ok := snap.nextWaitEnd(now)
 	if !ok {
 		return
 	}
 	delay := max(end.Sub(now)+100*time.Millisecond, minWaitGap)
-	s.waitTimer = time.AfterFunc(delay, func() {
+	s.waitTimer = safego.AfterFunc("perm_wait_end", delay, safego.Crash, func() {
 		fired := s.now()
 		if ids := snap.waitsEndedSince(s.announcedUntil(fired, fired), fired); len(ids) > 0 {
 			s.Changed(ids)

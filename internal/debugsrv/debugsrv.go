@@ -14,6 +14,8 @@ import (
 	"net/http/pprof"
 	"strings"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // ErrNotLoopback is returned for an address that would be reachable from the network.
@@ -63,17 +65,17 @@ func Start(ctx context.Context, addr string) (string, error) {
 		return "", fmt.Errorf("PPROF_ADDR %q %w", addr, ErrNotLoopback)
 	}
 	srv := &http.Server{Handler: handler(), ReadHeaderTimeout: 10 * time.Second}
-	go func() {
+	safego.Go("pprof_server", safego.Crash, func() {
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("pprof server stopped", "err", err)
 		}
-	}()
-	go func() {
+	})
+	safego.Go("pprof_server", safego.Crash, func() {
 		<-ctx.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(shutdown)
-	}()
+	})
 	slog.Warn("pprof is enabled (PPROF_ADDR): profiles are served without authentication on a loopback address", "addr", ln.Addr().String())
 	return ln.Addr().String(), nil
 }

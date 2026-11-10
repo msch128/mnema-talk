@@ -7,6 +7,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/chat/talks"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // newTalks wires Create-a-Talk lobbies: the hub opens a temporary Talk when a
@@ -21,11 +22,11 @@ func (c *components) newTalks() {
 	if d.Store != nil {
 		m.Objects = d.Store
 	}
-	go m.Run(c.ctx)
+	safego.Go("talk_manager", safego.Crash, func() { m.Run(c.ctx) })
 	c.hub.Lobby = m
 	audited := c.hub.Presence
 	calls := dm.NewDMCalls(&dm.DMCalls{DB: d.DB, Events: c.pub, Online: c.chatH.Online, Members: c.hub.VoiceMembers})
-	go calls.Run(c.ctx)
+	safego.Go("dm_calls", safego.Crash, func() { calls.Run(c.ctx) })
 	c.hub.Presence = func(user, channel uuid.UUID, joined bool) {
 		if audited != nil {
 			audited(user, channel, joined)

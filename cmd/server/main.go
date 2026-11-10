@@ -26,6 +26,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/portconflict"
 	"github.com/msch128/mnema-talk/internal/s3"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/server"
 	"github.com/msch128/mnema-talk/internal/setupcheck"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -323,7 +324,7 @@ func startUpdateChecker(ctx context.Context, cfg *config.Config) *update.Checker
 		return nil
 	}
 	updates := update.NewChecker(update.DefaultReleaseURL, version.Current())
-	go updates.Run(ctx, 30*time.Second)
+	safego.Go("update_check", safego.Crash, func() { updates.Run(ctx, 30*time.Second) })
 	return updates
 }
 

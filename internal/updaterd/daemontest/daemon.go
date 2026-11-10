@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // Daemon implements the part of the Engine API the updater calls.
@@ -94,7 +96,7 @@ func New(t *testing.T, image string) *Daemon {
 		t.Skipf("no unix sockets here: %v", err)
 	}
 	srv := &http.Server{Handler: d}
-	go func() { _ = srv.Serve(l) }()
+	safego.Go("updater_test_daemon", safego.Crash, func() { _ = srv.Serve(l) })
 	t.Cleanup(func() { _ = srv.Close() })
 	return d
 }

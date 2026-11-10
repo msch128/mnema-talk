@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/safego"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -94,6 +95,8 @@ Other members' personal data is not part of this archive.
 This file was available for download once, for 24 hours.
 `
 
+var errArchivePanicked = errors.New("writing the archive panicked")
+
 // buildExport streams the archive into object storage and marks the export
 // ready. A delete of the account while it runs wins: the file is removed
 // again. Nothing is buffered beyond one page of rows.
@@ -104,11 +107,16 @@ func (h *API) buildExport(ctx context.Context, id, user uuid.UUID) error {
 	pr, pw := io.Pipe()
 	counted := &budgetWriter{w: pw, max: exportMaxBytes}
 	written := make(chan error, 1)
-	go func() {
+	// A panic while writing fails this export: the upload ends with the pipe.
+	abort := func() {
+		_ = pw.CloseWithError(errArchivePanicked)
+		written <- errArchivePanicked
+	}
+	safego.Go("export_archive", abort, func() {
 		err := h.writeArchive(ctx, user, counted)
 		_ = pw.CloseWithError(err)
 		written <- err
-	}()
+	})
 	uploadErr := h.Objects.Upload(ctx, key, pr, "application/zip", -1)
 	_ = pr.CloseWithError(uploadErr) // frees the writer if the upload stopped early
 	err := <-written

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // Orphans are stored objects no media row refers to: left behind when an
@@ -129,7 +130,7 @@ func StartOrphanScan(ctx context.Context, p *db.Pool, store Store) {
 	if store == nil {
 		return
 	}
-	go runPeriodically(ctx, orphanScanFirstRun, retentionInterval, orphanScanTask(p, store))
+	safego.Go("media_orphan_scan", safego.Crash, func() { runPeriodically(ctx, orphanScanFirstRun, retentionInterval, orphanScanTask(p, store)) })
 }
 
 // orphanScanTask reports scan results without coupling the scan to its timer.

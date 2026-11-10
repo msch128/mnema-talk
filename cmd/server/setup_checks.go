@@ -7,6 +7,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/opwarn"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/setupcheck"
 	"github.com/msch128/mnema-talk/internal/turnrelay"
 )
@@ -23,9 +24,9 @@ const clockRecheck = 6 * time.Hour
 // page evaluates the same checks on every request.
 func startSetupChecks(ctx context.Context, cfg *config.Config, rt *setupcheck.Runtime, ping func(context.Context) error, storageReady func() error, relay *turnrelay.Server) {
 	if cfg.ClockCheck {
-		go watchClock(ctx, rt, setupcheck.DefaultNTPServers, clockRecheck)
+		safego.Go("clock_watch", safego.Crash, func() { watchClock(ctx, rt, setupcheck.DefaultNTPServers, clockRecheck) })
 	}
-	go func() {
+	safego.Go("setup_checks", safego.Crash, func() {
 		select {
 		case <-ctx.Done():
 			return
@@ -43,7 +44,7 @@ func startSetupChecks(ctx context.Context, cfg *config.Config, rt *setupcheck.Ru
 			in.TURNRunning, in.TURNProbe = true, relay.Status().Probe
 		}
 		setupcheck.Log(slog.Default(), setupcheck.Run(in))
-	}()
+	})
 }
 
 // watchClock records the clock skew now and then every interval. A failed

@@ -2,9 +2,9 @@ package memberadmin
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/safego"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -69,7 +69,7 @@ func (h *API) KickMember(r *http.Request, id uuid.UUID, reason string) error {
 		for _, ch := range h.Live.VoiceChannels(id) {
 			h.Live.KickFromChannel(id, ch)
 		}
-		time.AfterFunc(kickDisconnectDelay, func() { h.Live.DisconnectUser(id) })
+		safego.AfterFunc("kick_disconnect", kickDisconnectDelay, safego.Crash, func() { h.Live.DisconnectUser(id) })
 	}
 	return nil
 }

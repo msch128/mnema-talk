@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/imageverify"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/update"
 )
 
@@ -258,17 +259,17 @@ func (s *Server) background(f func()) {
 		s.Background(run)
 		return
 	}
-	go run()
+	safego.Go("updater_swap", safego.Crash, run)
 }
 
 // WaitIdle blocks until no swap is running, or until timeout; it reports
 // whether the updater is idle.
 func (s *Server) WaitIdle(timeout time.Duration) bool {
 	idle := make(chan struct{})
-	go func() {
+	safego.Go("updater_wait", safego.Crash, func() {
 		s.swaps.Wait()
 		close(idle)
-	}()
+	})
 	select {
 	case <-idle:
 		return true

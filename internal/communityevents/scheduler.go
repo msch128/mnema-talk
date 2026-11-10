@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/worker"
 )
 
@@ -54,7 +55,7 @@ func NewScheduler(h *Handler) *Scheduler {
 
 // Start runs the scheduler in the background until ctx is cancelled.
 func (s *Scheduler) Start(ctx context.Context) {
-	go s.run(ctx)
+	safego.Go("event_scheduler", safego.Crash, func() { s.run(ctx) })
 }
 
 func (s *Scheduler) run(ctx context.Context) {
@@ -169,10 +170,10 @@ func (s *Scheduler) remind(ctx context.Context, recipients []uuid.UUID, r DueRem
 		return
 	}
 	s.pushes.Add(1)
-	go func() {
+	safego.Go("event_reminder_push", safego.Crash, func() {
 		defer s.pushes.Done()
 		s.pushAll(ctx, pusher, recipients, r)
-	}()
+	})
 }
 
 // pushAll sends the push reminders with a few workers, giving up after
@@ -184,14 +185,14 @@ func (s *Scheduler) pushAll(ctx context.Context, pusher reminderPusher, recipien
 	var wg sync.WaitGroup
 	for range min(reminderPushWorkers, len(recipients)) {
 		wg.Add(1)
-		go func() {
+		safego.Go("event_reminder_push", safego.Crash, func() {
 			defer wg.Done()
 			for uid := range todo {
 				if err := pusher.SendEventReminder(ctx, uid, r.ID, r.Title, r.StartTime, r.ChannelID); err != nil {
 					slog.DebugContext(ctx, "send push event reminder failed", "user_id", uid, "err", err)
 				}
 			}
-		}()
+		})
 	}
 	for _, uid := range recipients {
 		if ctx.Err() != nil {

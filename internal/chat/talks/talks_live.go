@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // applyNext applies the oldest pending event; it reports false when there is
@@ -101,7 +102,7 @@ func (m *TalkManager) armLocked(ch uuid.UUID, t *liveTalk) {
 	if t.timer != nil {
 		t.timer.Stop()
 	}
-	t.timer = time.AfterFunc(m.EmptyGrace, func() { m.RemoveIfEmpty(ch) })
+	t.timer = safego.AfterFunc("talk_empty", m.EmptyGrace, safego.Crash, func() { m.RemoveIfEmpty(ch) })
 }
 
 // RemoveIfEmpty deletes the temporary Talk ch unless someone is in it.

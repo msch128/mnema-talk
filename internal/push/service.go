@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // Snapshots is the permission service as push needs it.
@@ -121,10 +122,10 @@ func (s *Service) Run(ctx context.Context) {
 	var wg sync.WaitGroup
 	for range sendWorkers {
 		wg.Add(1)
-		go func() {
+		safego.Go("push_send", safego.Crash, func() {
 			defer wg.Done()
 			s.sendLoop(ctx)
-		}()
+		})
 	}
 	sweep := time.NewTicker(sweepEvery)
 	defer sweep.Stop()

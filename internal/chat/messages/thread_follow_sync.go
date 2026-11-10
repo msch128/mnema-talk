@@ -10,6 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // followSyncTimeout bounds the lookup behind one thread reply.
@@ -36,7 +37,7 @@ func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub eve
 	perm.Must(perms, "thread follow sync")
 	queue := make(chan core.Message, followSyncQueue)
 	for range followSyncWorkers {
-		go func() {
+		safego.Go("thread_follow_sync", safego.Crash, func() {
 			for {
 				select {
 				case <-ctx.Done():
@@ -45,7 +46,7 @@ func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub eve
 					syncFollowers(ctx, p, perms, pub, msg)
 				}
 			}
-		}()
+		})
 	}
 	return func(_ uuid.UUID, eventType string, payload any) {
 		if eventType != events.MessageCreate {

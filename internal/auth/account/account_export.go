@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/worker"
 )
 
@@ -118,7 +119,8 @@ func (h *API) buildExportInBackground(id, user uuid.UUID) bool {
 		return false
 	}
 	done := h.TrackJob()
-	go func() {
+	// A panic fails this export; its slot is released like after any build.
+	safego.Go("export_build", func() { h.failExport(context.Background(), id) }, func() {
 		defer func() {
 			<-h.exportSlots
 			done()
@@ -129,7 +131,7 @@ func (h *API) buildExportInBackground(id, user uuid.UUID) bool {
 			slog.Warn("data export failed", "err", err)
 			h.failExport(context.Background(), id)
 		}
-	}()
+	})
 	return true
 }
 

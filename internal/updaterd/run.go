@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/imageverify"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // HTTPRecreator calls Watchtower's HTTP API. Watchtower runs with
@@ -144,13 +145,13 @@ func Run(getenv func(string) string, stderr io.Writer) int {
 	defer stop()
 	hs := &http.Server{Addr: cfg.Listen, Handler: srv, ReadHeaderTimeout: 10 * time.Second}
 	stopped := make(chan struct{})
-	go func() {
+	safego.Go("updater_shutdown", safego.Crash, func() {
 		defer close(stopped)
 		<-ctx.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = hs.Shutdown(shutdown)
-	}()
+	})
 	log.Info("updater ready", "listen", cfg.Listen, "repository", cfg.Policy.Repository, "mirror", cfg.Policy.Mirror, "identity", cfg.Policy.IdentityRegexp)
 	if err := hs.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("serve", "err", err)

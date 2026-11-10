@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // DefaultRingDuration is how long a call from a direct message rings before it
@@ -191,7 +192,7 @@ func (m *DMCalls) Begin(conversation, talk, caller, message uuid.UUID, name stri
 		conversation: conversation, talk: talk, caller: caller, message: message, name: name,
 		until: time.Now().Add(m.Ring), here: map[uuid.UUID]struct{}{}, ringing: true,
 	}
-	c.timer = time.AfterFunc(m.Ring, func() { m.expire(c) })
+	c.timer = safego.AfterFunc("dm_call_ring", m.Ring, safego.Crash, func() { m.expire(c) })
 	m.calls[conversation] = c
 	m.mu.Unlock()
 	// Who is in the Talk already is read outside the lock (the hub has its own);

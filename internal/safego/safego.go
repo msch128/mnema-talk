@@ -19,6 +19,7 @@
 package safego
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"runtime/debug"
@@ -61,6 +62,13 @@ func Go(name string, onPanic func(), fn func()) {
 func AfterFunc(name string, d time.Duration, onPanic func(), fn func()) *time.Timer {
 	mustHandle(name, onPanic)
 	return time.AfterFunc(d, func() { Run(name, onPanic, fn) })
+}
+
+// OnDone is context.AfterFunc with fn under Run: fn runs on a goroutine of
+// its own once ctx is done, unless the returned stop is called first.
+func OnDone(name string, ctx context.Context, onPanic func(), fn func()) (stop func() bool) {
+	mustHandle(name, onPanic)
+	return context.AfterFunc(ctx, func() { Run(name, onPanic, fn) })
 }
 
 // Run calls fn on the caller's goroutine, for a callback that somebody else's

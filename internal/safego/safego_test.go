@@ -2,6 +2,7 @@ package safego
 
 import (
 	"bytes"
+	"context"
 	"log/slog"
 	"strings"
 	"sync"
@@ -118,6 +119,30 @@ func TestAfterFuncRecoversAndCanBeStopped(t *testing.T) {
 	case <-fired:
 		t.Fatal("a stopped timer fired")
 	default:
+	}
+}
+
+func TestOnDoneRunsAfterTheContextEndsAndRecovers(t *testing.T) {
+	captureLog(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	OnDone("test_done", ctx, func() { close(done) }, func() { panic("boom") })
+	select {
+	case <-done:
+		t.Fatal("fn ran before the context ended")
+	case <-time.After(10 * time.Millisecond):
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("onPanic never ran")
+	}
+
+	live, stopLive := context.WithCancel(context.Background())
+	defer stopLive()
+	if stop := OnDone("test_done", live, Abandon, func() { t.Error("a stopped callback ran") }); !stop() {
+		t.Fatal("a pending callback could not be stopped")
 	}
 }
 

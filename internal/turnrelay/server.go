@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/logging"
 	"github.com/pion/turn/v5"
 )
@@ -65,10 +66,10 @@ func Start(opts Options) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.stop = cancel
 	s.wg.Add(1)
-	go s.maintain(ctx)
+	safego.Go("turn_maintain", safego.Crash, func() { s.maintain(ctx) })
 	if opts.PublicHost != "" {
 		s.wg.Add(1)
-		go s.probeLoop(ctx)
+		safego.Go("turn_probe", safego.Crash, func() { s.probeLoop(ctx) })
 	}
 	return s, nil
 }
