@@ -162,19 +162,80 @@ func TestANewerChoiceIsNotRevertedByTheAttachRound(t *testing.T) {
 	}
 }
 
+// quietPeer is a peer whose connection nobody else signals: unlike a peer that
+// joined a room, no offer of the server is on its way.
+func quietPeer(t *testing.T) *Peer {
+	t.Helper()
+	pc, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = pc.Close() })
+	return &Peer{ID: uuid.New(), PC: pc}
+}
+
+func candidatesCounted(p *Peer) int {
+	p.candMu.Lock()
+	defer p.candMu.Unlock()
+	return len(p.cands.seen)
+}
+
 // A rejected answer must not use up the candidates it carried.
 func TestARefusedAnswerLeavesItsCandidatesUnused(t *testing.T) {
-	rig := newAttachRig(t)
-	p := rig.viewer
+	p := quietPeer(t)
 	sdp := sdpHead + candidateLine("192.0.2.7") + "\r\n"
 	err := p.SetAnswer(webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: sdp})
 	if err == nil {
 		t.Fatal("an answer without an offer was accepted")
 	}
-	p.candMu.Lock()
-	used := len(p.cands.seen)
-	p.candMu.Unlock()
-	if used != 0 || strings.Contains(err.Error(), "budget") {
+	if used := candidatesCounted(p); used != 0 || strings.Contains(err.Error(), "budget") {
 		t.Fatalf("a refused answer used %d candidates of the budget", used)
+	}
+}
+
+// The server's next offer can be set while an answer is being refused. That
+// changes the signaling state, but the answer still reached nothing: its
+// candidates stay unused.
+func TestAnOfferSetWhileAnAnswerIsRefusedDoesNotCountItsCandidates(t *testing.T) {
+	p := quietPeer(t)
+	if _, err := p.PC.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio); err != nil {
+		t.Fatal(err)
+	}
+	before := remoteStateOf(p.PC)
+	offer, err := p.PC.CreateOffer(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.PC.SetLocalDescription(offer); err != nil {
+		t.Fatal(err)
+	}
+	if !before.unchanged(p.PC) {
+		t.Fatal("an offer of the server was taken for an applied answer")
+	}
+}
+
+// An answer Pion applies and only then refuses has handed its candidates
+// over: they stay counted.
+func TestAnAnswerRefusedAfterItWasAppliedKeepsItsCandidatesCounted(t *testing.T) {
+	p := quietPeer(t)
+	if _, err := p.PC.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo); err != nil {
+		t.Fatal(err)
+	}
+	offer, err := p.PC.CreateOffer(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.PC.SetLocalDescription(offer); err != nil {
+		t.Fatal(err)
+	}
+	sdp := sdpHead + candidateLine("192.0.2.7") + "\r\n"
+	if err := p.SetAnswer(webrtc.SessionDescription{Type: webrtc.SDPTypeAnswer, SDP: sdp}); err == nil {
+		t.Fatal("an answer that does not match the offer was accepted")
+	}
+	if p.PC.CurrentRemoteDescription() == nil {
+		t.Fatal("the fixture must be an answer Pion applies before refusing it")
+	}
+	if used := candidatesCounted(p); used != 1 {
+		t.Fatalf("%d candidates counted, want the one Pion took", used)
 	}
 }
