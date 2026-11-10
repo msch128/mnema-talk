@@ -182,6 +182,7 @@ func (h *Handler) orphans(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} Orphans "Orphaned objects found and deleted."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner may do this, or cross-origin request rejected."
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: an online backup is running; nothing was deleted."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
@@ -189,7 +190,14 @@ func (h *Handler) orphans(w http.ResponseWriter, r *http.Request) error {
 // @Router /api/admin/media/orphans/cleanup [post]
 func (h *Handler) cleanupOrphans(w http.ResponseWriter, r *http.Request) error {
 	admin := auth.UserFrom(r.Context())
-	o, err := FindOrphans(r.Context(), h.DB, h.Store, true)
+	var o *Orphans
+	ran, err := h.DB.TryOutsideBackup(r.Context(), func() (err error) {
+		o, err = FindOrphans(r.Context(), h.DB, h.Store, true)
+		return err
+	})
+	if !ran && err == nil {
+		return httpx.ErrConflict("a backup is running; try again when it has finished")
+	}
 	if o != nil && o.Deleted > 0 {
 		slog.Info("orphaned media removed", "audit", "media_orphans", "admin_id", admin.ID, "admin", admin.Username, "deleted", o.Deleted, "bytes", o.Bytes)
 	}

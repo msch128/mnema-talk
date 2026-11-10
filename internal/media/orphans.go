@@ -133,9 +133,14 @@ func StartOrphanScan(ctx context.Context, p *db.Pool, store Store) {
 }
 
 // orphanScanTask reports scan results without coupling the scan to its timer.
+// It holds off while an online backup runs: the storage is frozen then.
 func orphanScanTask(p *db.Pool, store Store) func(context.Context) {
 	return func(ctx context.Context) {
-		o, err := FindOrphans(ctx, p, store, false)
+		o := &Orphans{}
+		err := p.OutsideBackup(ctx, func() (err error) {
+			o, err = FindOrphans(ctx, p, store, false)
+			return err
+		})
 		if err != nil {
 			slog.Warn("orphaned media scan failed", "err", err)
 			return

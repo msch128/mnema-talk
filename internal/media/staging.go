@@ -205,10 +205,15 @@ func StartStagedSweep(ctx context.Context, p *db.Pool, store Store) {
 	go runPeriodically(ctx, time.Minute, stagedSweepInterval, stagedSweepTask(p, store))
 }
 
-// stagedSweepTask is one sweep, logged, apart from its timer.
+// stagedSweepTask is one sweep, logged, apart from its timer. It holds off
+// while an online backup runs.
 func stagedSweepTask(p *db.Pool, store Store) func(context.Context) {
 	return func(ctx context.Context) {
-		n, err := SweepStaged(ctx, p, store, stagedTimeout)
+		var n int
+		err := p.OutsideBackup(ctx, func() (err error) {
+			n, err = SweepStaged(ctx, p, store, stagedTimeout)
+			return err
+		})
 		if err != nil {
 			slog.Warn("staged attachment sweep failed", "err", err)
 			return

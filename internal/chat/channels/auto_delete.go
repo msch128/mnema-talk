@@ -93,7 +93,8 @@ func (a *AutoDeleter) Run(ctx context.Context, every time.Duration) {
 			return
 		case <-t.C:
 			worker.Tick(worker.JobAutoDelete, func() error {
-				err := a.Sweep(ctx)
+				// An online backup freezes the storage: wait for it to end.
+				err := a.DB.OutsideBackup(ctx, func() error { return a.Sweep(ctx) })
 				if err != nil && ctx.Err() == nil {
 					slog.Error("auto-delete sweep failed", "err", err)
 				}

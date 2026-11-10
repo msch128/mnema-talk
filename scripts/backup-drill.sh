@@ -2,7 +2,8 @@
 # Backup/restore drill against a real compose stack: seeds a message and an
 # upload, runs scripts/backup.sh, changes data afterwards, verifies the backup
 # (restore.sh --verify), restores it (restore.sh --yes) and checks that the
-# seeded message and file are back and the later change is gone.
+# seeded message and file are back and the later change is gone. Then the
+# same for BACKUP_MODE=online under load (scripts/backup-drill-online.sh).
 # Usage: scripts/backup-drill.sh [image]   (default mnema-talk:local; `make backup-drill`)
 #   DRILL_PORT=<port>  host port for the app (default: a free one)
 #   FROM_VERSION=0.9.0  cross-version mode: run and back up on that released
@@ -10,6 +11,9 @@
 #                     it migrate, verify, then check that the released image
 #                     refuses to start on the migrated data (downgrade guard).
 #                     A registry outage fails the drill after bounded retries.
+#   DRILL_BACKUP_SCRIPTS=<dir>  take the first backup with the scripts in that
+#                     directory (those of an older release) and restore it with
+#                     this checkout's restore.sh: old backups must keep restoring.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -19,6 +23,8 @@ source "$ROOT/scripts/drill-common.sh"
 source "$ROOT/scripts/free-port.sh"
 # shellcheck source=scripts/backup-drill-downgrade.sh
 source "$ROOT/scripts/backup-drill-downgrade.sh"
+# shellcheck source=scripts/backup-drill-online.sh
+source "$ROOT/scripts/backup-drill-online.sh"
 IMAGE="${1:-mnema-talk:local}"
 START_IMAGE="$IMAGE"
 if [ -n "${FROM_VERSION:-}" ]; then
@@ -169,8 +175,13 @@ MEDIA_URL="$(api -F "file=@$DEPLOY/payload.bin;type=application/octet-stream" -F
   "$BASE/api/channels/$CHANNEL/upload" | jq -r '.attachments[0].url')"
 [ -n "$MEDIA_URL" ] && [ "$MEDIA_URL" != null ] || { echo "upload returned no attachment" >&2; exit 1; }
 
-echo "==> backup"
-scripts/backup.sh
+echo "==> backup${DRILL_BACKUP_SCRIPTS:+ (made by the scripts in $DRILL_BACKUP_SCRIPTS)}"
+if [ -n "${DRILL_BACKUP_SCRIPTS:-}" ]; then
+  cp -R "$DRILL_BACKUP_SCRIPTS" "$DEPLOY/released-scripts"
+  released-scripts/backup.sh
+else
+  scripts/backup.sh
+fi
 SNAPSHOT="$(find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -name '20*' | head -n 1)"
 [ -f "$SNAPSHOT/COMPLETE" ] || { echo "backup is incomplete" >&2; exit 1; }
 jq -e '.format == 1 and .restore_test.result == "passed"' backup-status/status.json >/dev/null \
@@ -218,5 +229,7 @@ if [ "$START_IMAGE" != "$IMAGE" ]; then
   fi
   [ "$(messages | grep -cx "$BEFORE")" = 1 ] || { echo "data not intact after the refused downgrade" >&2; exit 1; }
 fi
+
+if [ "$START_IMAGE" = "$IMAGE" ]; then drill_online; fi
 
 echo "==> backup drill passed${FROM_VERSION:+ ($FROM_VERSION -> restore into $IMAGE) in ${SECONDS}s}"
