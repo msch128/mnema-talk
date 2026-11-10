@@ -182,10 +182,15 @@ export class MediaGroup extends GroupSync {
       && members?.get(from) === framed.sender.leafIndex && this.mayCommit(from)
   }
 
-  /** A commit for the epoch I left with a self-update, from someone else. */
+  /**
+   * A commit for the epoch I left with a self-update, from someone else. Only
+   * while that update is the last thing that happened: going back behind a
+   * later commit would undo it (a removal, for one).
+   */
   protected isCommitForUpdatedEpoch(framed: PublicMessage['content'], saved: NonNullable<GroupBase['selfUpdate']>, from: string): boolean {
-    return framed.contentType === 'commit' && framed.sender.senderType === 'member'
-      && sameBytes(framed.groupId, this.groupId) && framed.epoch === saved.state.groupContext.epoch && from !== saved.sender
+    const epoch = saved.state.groupContext.epoch
+    return framed.contentType === 'commit' && framed.sender.senderType === 'member' && this.state?.groupContext.epoch === epoch + 1n
+      && sameBytes(framed.groupId, this.groupId) && framed.epoch === epoch && from !== saved.sender
   }
 
   protected async receivePublic(from: string, publicMessage: PublicMessage, members: Map<string, number> | null): Promise<MediaStep> {

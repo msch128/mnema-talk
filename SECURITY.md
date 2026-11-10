@@ -807,7 +807,9 @@ details and the limits.
   or with another renewal), the committer's wins and, between renewals, the
   lower id's; a member that took the loser goes back to the state it kept for
   ten seconds and takes the winner, so the call does not split (anything else
-  that has split is repaired by the existing start-over). A member's leaf
+  that has split is repaired by the existing start-over). It goes back only
+  while that renewal is the last commit it took: once another commit followed
+  (a removal, for one), a late rival renewal changes nothing. A member's leaf
   secrets that an attacker held are therefore useless to it after about one
   period of the member being online and in the group, and a member's keys
   change at most once per period more than before: with 100 members that is
