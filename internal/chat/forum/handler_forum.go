@@ -93,6 +93,7 @@ func (a *API) requireForumChannel(r *http.Request, chID uuid.UUID) (*core.Channe
 // @Failure 401 {object} httpx.ErrorResponse "UNAUTHORIZED"
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN"
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the channel, or the before post (deleted since the previous page), does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests, or the search (q) took too long."
 // @Router /api/channels/{channelID}/posts [get]
 func (a *API) ServeListForumPosts(w http.ResponseWriter, r *http.Request) error {
 	chID, err := httpx.PathUUID(r, "channelID")

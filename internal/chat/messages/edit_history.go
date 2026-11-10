@@ -234,7 +234,7 @@ func (a *API) getEditHistory(w http.ResponseWriter, r *http.Request) error {
 // PruneEditHistory deletes versions replaced more than days ago and returns
 // how many went.
 func PruneEditHistory(ctx context.Context, p *db.Pool, days int) (int64, error) {
-	tag, err := p.Exec(ctx, `DELETE FROM message_edits WHERE replaced_at < NOW() - make_interval(days => $1)`, days)
+	tag, err := p.Exec(db.WithStatementTimeout(ctx, db.BulkStatementTimeout), `DELETE FROM message_edits WHERE replaced_at < NOW() - make_interval(days => $1)`, days)
 	if err != nil {
 		return 0, fmt.Errorf("prune edit history: %w", err)
 	}

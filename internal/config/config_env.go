@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/msch128/mnema-talk/internal/ssrf"
 	"github.com/msch128/mnema-talk/internal/stunprobe"
@@ -61,6 +62,17 @@ func (r *envReader) int(key string, def int) int {
 	v, err := strconv.Atoi(raw)
 	if err != nil {
 		r.fail(fmt.Errorf("%s must be an integer, got %q", key, raw))
+		return 0
+	}
+	return v
+}
+
+// duration reads a Go duration such as "15s" or "2m"; "0" is zero.
+func (r *envReader) duration(key string, def time.Duration) time.Duration {
+	raw := r.get(key, def.String())
+	v, err := time.ParseDuration(raw)
+	if err != nil {
+		r.fail(fmt.Errorf("%s must be a duration such as 15s or 2m, got %q", key, raw))
 		return 0
 	}
 	return v
@@ -150,6 +162,8 @@ func (r *envReader) numericSettings(cfg *Config) (portMin, portMax uint16) {
 	cfg.MediaRetentionDays = r.int("MEDIA_RETENTION_DAYS", 0)
 	cfg.AuditRetentionDays = r.int("AUDIT_RETENTION_DAYS", 0)
 	cfg.EditHistoryRetentionDays = r.int("EDIT_HISTORY_RETENTION_DAYS", 0)
+	cfg.DBMaxConns = r.int("DB_MAX_CONNS", 25)
+	cfg.DBStatementTimeout = r.duration("DB_STATEMENT_TIMEOUT", 15*time.Second)
 	cfg.MaxUploadMB = r.int("MAX_UPLOAD_SIZE_MB", 50)
 	cfg.VoiceUploadLimitMbit = r.int("VOICE_UPLOAD_LIMIT_MBIT", 0)
 	cfg.EmojiMax = r.int("EMOJI_MAX", 200)

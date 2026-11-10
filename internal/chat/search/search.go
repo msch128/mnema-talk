@@ -2,7 +2,6 @@ package search
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -21,8 +19,6 @@ import (
 const (
 	maxSearchQueryLen = 200
 	maxSearchTerms    = 8
-	// searchStatementTimeout bounds one search query inside the database.
-	searchStatementTimeout = "5s"
 	// maxSearchesPerUser is how many searches one user may have running at once.
 	maxSearchesPerUser = 2
 )
@@ -60,11 +56,10 @@ func AcquireSearchSlot(user uuid.UUID) (release func(), ok bool) {
 }
 
 // mapSearchError turns the database's statement_timeout cancellation
-// (SQLSTATE 57014) into errSearchSlow and wraps anything else.
+// (SQLSTATE 57014) into core.ErrSearchSlow and wraps anything else.
 func mapSearchError(err error) error {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "57014" {
-		return errSearchSlow
+	if db.IsStatementTimeout(err) {
+		return core.ErrSearchSlow
 	}
 	if err != nil {
 		return fmt.Errorf("search: %w", err)
@@ -72,11 +67,8 @@ func mapSearchError(err error) error {
 	return nil
 }
 
-// errSearchBusy and errSearchSlow answer 429; searches are expensive.
-var (
-	errSearchBusy = httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimited, "too many searches at once, wait for the running ones to finish")
-	errSearchSlow = httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimited, "the search took too long, narrow it down")
-)
+// errSearchBusy answers 429, like core.ErrSearchSlow; searches are expensive.
+var errSearchBusy = httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimited, "too many searches at once, wait for the running ones to finish")
 
 // SearchQuery filters messages in all channels (text and voice channels' chats). Every term of Text must
 // occur in the message (case-insensitive substring); Has is "", "file",
@@ -119,10 +111,7 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]core.Message, boo
 		return nil, false, err
 	}
 	var msgs []core.Message
-	err = pgx.BeginTxFunc(ctx, p, pgx.TxOptions{AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, "SET LOCAL statement_timeout = '"+searchStatementTimeout+"'"); err != nil {
-			return err
-		}
+	err = core.SearchTx(ctx, p, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, sql, args...)
 		if err != nil {
 			return err

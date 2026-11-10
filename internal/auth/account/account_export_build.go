@@ -98,6 +98,8 @@ This file was available for download once, for 24 hours.
 // ready. A delete of the account while it runs wins: the file is removed
 // again. Nothing is buffered beyond one page of rows.
 func (h *API) buildExport(ctx context.Context, id, user uuid.UUID) error {
+	// A query streams its rows as fast as the upload takes them.
+	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
 	key := fmt.Sprintf("exports/%s/%s.zip", user, id)
 	pr, pw := io.Pipe()
 	counted := &budgetWriter{w: pw, max: exportMaxBytes}

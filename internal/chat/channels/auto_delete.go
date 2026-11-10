@@ -105,6 +105,7 @@ func (a *AutoDeleter) Run(ctx context.Context, every time.Duration) {
 
 // Sweep runs one pass over all channels that have auto-delete on.
 func (a *AutoDeleter) Sweep(ctx context.Context) error {
+	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
 	rows, err := a.DB.Query(ctx, `SELECT id, name, auto_delete_days FROM channels WHERE auto_delete_days > 0 AND type <> 'dm'`)
 	if err != nil {
 		return fmt.Errorf("list auto-delete channels: %w", err)

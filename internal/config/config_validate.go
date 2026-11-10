@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/msch128/mnema-talk/internal/debugsrv"
 )
@@ -102,6 +103,9 @@ func (c *Config) validateBasics(portMin, portMax uint16) error {
 	if c.Port == "0" {
 		return fmt.Errorf("PORT must be a port number (1-65535), got 0")
 	}
+	if err := c.validateDatabaseLimits(); err != nil {
+		return err
+	}
 	return c.validateLimits()
 }
 
@@ -150,6 +154,18 @@ func (c *Config) validateLimits() error {
 		return err
 	}
 	return validateTrustedProxies(c.TrustedProxies)
+}
+
+// validateDatabaseLimits checks the pool size and the statement timeout. A
+// timeout under a second would cancel ordinary statements on a busy host.
+func (c *Config) validateDatabaseLimits() error {
+	if c.DBMaxConns < 1 || c.DBMaxConns > 1000 {
+		return fmt.Errorf("DB_MAX_CONNS must be between 1 and 1000")
+	}
+	if d := c.DBStatementTimeout; d != 0 && (d < time.Second || d > time.Hour) {
+		return fmt.Errorf("DB_STATEMENT_TIMEOUT must be 0 (no limit) or between 1s and 1h")
+	}
+	return nil
 }
 
 // validateLANIPs requires WEBRTC_LAN_IP entries to be IPv4 addresses a

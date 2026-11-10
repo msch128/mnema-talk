@@ -171,6 +171,8 @@ func DeleteChannelsTx(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]string
 // the storage keys of the media attached to those messages.
 func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]string, error) {
 	var keys []string
+	// The cascade removes every message of the channel in one statement.
+	ctx = db.WithStatementTimeout(ctx, db.BulkStatementTimeout)
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// Locking the channel first blocks concurrent posts and uploads into
 		// it (their foreign keys need a share lock on it) until we are done,
