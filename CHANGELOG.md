@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.1](https://github.com/msch128/mnema-talk/compare/v3.0.0...v3.0.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* count the frames of a GIF upload the way the decoder reads them ([#765](https://github.com/msch128/mnema-talk/issues/765)) ([7f36699](https://github.com/msch128/mnema-talk/commit/7f366990e0e35640f69fdb6798eede044673a486))
+
 ## [3.0.0](https://github.com/msch128/mnema-talk/compare/v2.9.21...v3.0.0) (2026-11-07)
 
 
