@@ -176,8 +176,8 @@ func TestHubVoiceSnapshotAndSpeaking(t *testing.T) {
 		h.voice[chID] = make(map[uuid.UUID]auth.User)
 	}
 	h.voice[chID][user.ID] = user
-	c.voiceCh = &chID
 	h.mu.Unlock()
+	c.setVoice(&chID)
 
 	snap := h.voiceSnapshot()
 	if len(snap[chID]) != 1 || snap[chID][user.ID].ID != user.ID {
@@ -228,8 +228,8 @@ func TestHubVoiceGracePeriod(t *testing.T) {
 		h.voice[chID] = make(map[uuid.UUID]auth.User)
 	}
 	h.voice[chID][user.ID] = user
-	c.voiceCh = &chID
 	h.mu.Unlock()
+	c.setVoice(&chID)
 
 	// When client unregisters, it starts grace period instead of immediately leaving
 	h.unregister(c)

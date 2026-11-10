@@ -178,13 +178,21 @@ func TestPanicWhileUnregisteringStillRemovesTheClient(t *testing.T) {
 	waitOnline(t, h, 2)
 	ch := openChannel()
 	var user uuid.UUID
-	h.mu.Lock()
+	var seated []*Client
+	h.mu.RLock()
 	for c := range h.clients {
 		if c.User.Username == "alice" {
 			user = c.User.ID
-			c.setVoice(&ch) // seated, so unregistering starts a grace leave ...
-			h.voice[ch] = map[uuid.UUID]auth.User{user: c.User}
+			seated = append(seated, c)
 		}
+	}
+	h.mu.RUnlock()
+	for _, c := range seated {
+		c.setVoice(&ch) // seated, so unregistering starts a grace leave ...
+	}
+	h.mu.Lock()
+	for _, c := range seated {
+		h.voice[ch] = map[uuid.UUID]auth.User{user: c.User}
 	}
 	h.grace = nil // ... which panics on the missing map
 	h.mu.Unlock()
@@ -204,6 +212,13 @@ func TestPanicWhileUnregisteringStillRemovesTheClient(t *testing.T) {
 	}
 	h.Broadcast(events.MemberJoined, map[string]any{})
 	readUntil(t, bob, events.MemberJoined)
+	// Room events no longer look for her either.
+	h.mu.RLock()
+	left := len(h.rooms[ch])
+	h.mu.RUnlock()
+	if left != 0 {
+		t.Fatalf("%d connections still listed in the room of a client that is gone", left)
+	}
 }
 
 // A member who sits in a Talk when a handler of theirs panics leaves it like

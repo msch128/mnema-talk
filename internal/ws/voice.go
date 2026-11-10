@@ -139,3 +139,31 @@ func (h *Hub) leaveVoiceLocked(c *Client, chID uuid.UUID) {
 	c.setVoice(nil)
 	h.removePresenceUnlessPresent(c.User.ID, chID, c)
 }
+
+// moveRoomLocked keeps h.rooms in step when c's voice room changes from one
+// to another (nil: none). Only registered connections are listed, like the
+// scan of h.clients the index replaces. Callers hold h.mu.
+func (h *Hub) moveRoomLocked(c *Client, from, to *uuid.UUID) {
+	if _, registered := h.clients[c]; !registered {
+		return
+	}
+	if from != nil {
+		h.leaveRoomLocked(c, *from)
+	}
+	if to == nil {
+		return
+	}
+	if h.rooms[*to] == nil {
+		h.rooms[*to] = map[*Client]struct{}{}
+	}
+	h.rooms[*to][c] = struct{}{}
+}
+
+// leaveRoomLocked takes c out of chID's entry in h.rooms. Callers hold h.mu.
+func (h *Hub) leaveRoomLocked(c *Client, chID uuid.UUID) {
+	room := h.rooms[chID]
+	delete(room, c)
+	if len(room) == 0 {
+		delete(h.rooms, chID)
+	}
+}

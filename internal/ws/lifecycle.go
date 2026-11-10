@@ -339,6 +339,10 @@ func (h *Hub) forget(c *Client) {
 		// Close has recorded last seen for everyone already.
 		closing = h.closed
 		delete(h.clients, c)
+		// A clean-up that panicked before it left the room leaves c seated.
+		if cur := c.currentVoice(); cur != nil {
+			h.leaveRoomLocked(c, *cur)
+		}
 		c.shutdown()
 		if !c.idle {
 			if h.active[c.User.ID]--; h.active[c.User.ID] <= 0 {

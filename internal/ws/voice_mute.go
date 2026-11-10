@@ -23,11 +23,8 @@ func (h *Hub) sendToVoiceRoomExcept(skip *Client, chID uuid.UUID, eventType stri
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	for c := range h.clients {
-		if c == skip {
-			continue
-		}
-		if cur := c.currentVoice(); cur != nil && *cur == chID {
+	for c := range h.rooms[chID] {
+		if c != skip {
 			c.deliver(data)
 		}
 	}

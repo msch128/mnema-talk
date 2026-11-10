@@ -71,6 +71,16 @@ type Hub struct {
 	profiles map[uuid.UUID]auth.User
 	// voice maps channel → user → user info for everyone currently in a voice room.
 	voice map[uuid.UUID]map[uuid.UUID]auth.User
+	// rooms lists the registered connections of each voice room, so an event
+	// of one room does not scan every connection. It follows Client.setVoice
+	// and forget; a connection has no room before it is registered.
+	//
+	// Lock order: Client.voiceMu, then mu, then Client.mu. setVoice takes mu
+	// itself, so its callers hold at most a voiceMu, never mu (not even
+	// read-locked: a waiting writer blocks new readers) and never a Client.mu.
+	// Nothing is called while mu is held that takes a voiceMu or a lock of
+	// the SFU.
+	rooms map[uuid.UUID]map[*Client]struct{}
 	// grace holds users whose connection dropped while in a voice room. They
 	// stay listed in it for VoiceGrace so a page reload rejoins without a
 	// leave/join flicker for everyone else (like Discord).
@@ -162,6 +172,7 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 		chosen:   map[uuid.UUID]string{},
 		profiles: map[uuid.UUID]auth.User{},
 		voice:    map[uuid.UUID]map[uuid.UUID]auth.User{},
+		rooms:    map[uuid.UUID]map[*Client]struct{}{},
 		grace:    map[voiceKey]*graceLeave{},
 
 		voiceSince:  map[voiceKey]time.Time{},
