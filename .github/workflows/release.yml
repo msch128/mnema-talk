@@ -1,4 +1,7 @@
 name: Release
+# The commit subject CI tested, so a run that waits for approval says what it
+# would release.
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('Mirror {0} to Docker Hub', inputs.mirror_version) || format('Release after {0}', github.event.workflow_run.display_title) }}
 
 # Continuous delivery for main.
 #
@@ -24,6 +27,10 @@ name: Release
 #    GitHub Release + tag vX.Y.Z. (A merge made with GITHUB_TOKEN triggers
 #    no new workflow run, so the release has to happen in this same job.)
 #    The release commit only changes version.txt and CHANGELOG.md.
+#    The job runs in the `release` environment. That environment has no
+#    protection rule unless the repository owner adds a required reviewer;
+#    with one, the job waits for approval before its first step, so nothing
+#    is opened, merged or tagged until then (see "Release gate" below).
 # 2. The server ships only as a Docker image for linux/amd64 and linux/arm64,
 #    cross-compiled without QEMU and pushed to GHCR as
 #    :X.Y.Z, :X.Y and :latest, with OCI labels plus BuildKit provenance and
@@ -52,6 +59,16 @@ on:
 
 permissions: {}
 
+# Release gate: what a required reviewer on the `release` environment does to
+# this group. A run whose release-please job waits for approval has started,
+# so it is expected to keep the group (GitHub's documentation does not say so
+# for a waiting job; rehearse it once). Later runs then queue behind it as
+# `pending`, and a newer pending run replaces an older one (`queue: single`
+# is the default), so at most one run waits and one is pending: the newest.
+# Approval comes before the tip guard, so approving a run whose commit is no
+# longer main's tip does nothing; the pending run for the tip then starts and
+# asks for approval itself. Cancel a stale waiting run instead of approving
+# it. A run that nobody approves fails by itself after 30 days.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -62,6 +79,10 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
+    # The release gate. Without a protection rule on this environment the job
+    # starts at once, as before. The image job is left out on purpose: it
+    # signs, and the update check pins this workflow's identity.
+    environment: release
     timeout-minutes: 45
     permissions:
       contents: write

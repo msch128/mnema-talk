@@ -223,3 +223,30 @@ branch) was waived when it landed there and is not reported again.
    repository's releases stopped attaching them after v0.7.3. They are unsigned
    Beta packages (see [desktop-app.md](desktop-app.md)). The server ships
    through Docker; releases do not publish standalone server binaries.
+
+### Release gate
+
+The job that opens, merges and tags the release (`release-please` in
+`release.yml`) runs in the GitHub environment `release`. An environment
+without protection rules changes nothing: the job starts at once and step 2
+above happens right away. That is the state until the repository owner adds a
+required reviewer to the environment (Settings, Environments, `release`).
+
+With a required reviewer:
+
+- Every green push to `main` starts a Release run whose first job waits for
+  approval. Nothing is opened, merged or tagged before that, the release PR
+  included, because release-please itself runs inside the gated job. The run
+  is named after the commit CI tested.
+- The workflow's `release` concurrency group lets one run in at a time. While
+  a run waits, later runs queue behind it, and only the newest of them is
+  kept. So there is at most one waiting run and one queued run.
+- Approval comes before the tip guard. Approving a run whose commit is no
+  longer `main`'s tip releases nothing; the queued run for the tip starts
+  next and asks for approval itself. Cancel a stale waiting run instead of
+  approving it, then approve the one for the tip. That run releases every
+  commit since the last tag in one release.
+- A run nobody approves fails by itself after 30 days. Rejecting a run fails
+  it; cancelling leaves no failure.
+- The image, mirror, web bundle and release notes jobs are not gated. They
+  only run after the gated job created a release.
