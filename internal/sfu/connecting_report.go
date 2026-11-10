@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -21,7 +21,7 @@ func (r *Room) watchConnecting(peer *Peer) {
 	if r.offerTimeout <= 0 {
 		return
 	}
-	time.AfterFunc(r.offerTimeout, func() {
+	safego.AfterFunc("sfu_connecting_report", r.offerTimeout, safego.Abandon, func() {
 		r.mu.RLock()
 		current := r.peers[peer.ID] == peer
 		r.mu.RUnlock()

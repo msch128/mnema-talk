@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -219,7 +220,7 @@ func (r *permRetry) add(userIDs []uuid.UUID, run func()) {
 	if r.timer != nil {
 		return // a retry is already scheduled and will take the merged set
 	}
-	r.timer = time.AfterFunc(r.nextWait(), run)
+	r.timer = safego.AfterFunc("ws_perm_retry", r.nextWait(), safego.Crash, run)
 }
 
 // nextWait doubles the wait with every failed attempt up to permRetryMax. The

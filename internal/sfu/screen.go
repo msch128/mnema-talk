@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -71,35 +72,12 @@ func (r *Room) receiveLayer(peer *Peer, remote rtpReader, source Source, trackID
 		publisher: peer, ssrc: ssrc, layer: layer,
 	}
 
-	r.mu.Lock()
-	if r.peers[userID] != peer {
-		r.mu.Unlock()
+	var g *layerGroup
+	safego.Locked(&r.mu, func() { g = r.layerGroupLocked(peer, source, trackID, codec, layer) })
+	if g == nil {
 		drain(remote)
 		return
 	}
-	g := r.groupFor(userID, source)
-	if g == nil && layer > 0 && source == SourceCamera && !r.cameraLayeredLocked(userID) {
-		// A lower layer of a camera joins a group or a declaration; with
-		// neither, that camera is sent as one plain track and has no layers.
-		r.mu.Unlock()
-		drain(remote)
-		return
-	}
-	if g == nil || g.superseded.Load() {
-		id := fmt.Sprintf("%s~%d", trackKey(userID, trackID), layerGroupSeq.Add(1))
-		g = newLayerGroup(id, r.ID, userID, r.notifier, codec)
-		g.source = source
-		g.declared.Store(int32(len(r.layerMetaLocked(source)[userID])))
-		r.groupsLocked(source)[userID] = g
-	} else {
-		// A new capture on a group that outlived the last share: its
-		// wanted layers are announced afresh, whatever they were.
-		g.mu.Lock()
-		g.resetAnnouncedLocked()
-		g.hold = [maxLayers]time.Time{}
-		g.mu.Unlock()
-	}
-	r.mu.Unlock()
 
 	info.group = g
 	if !g.attach(info, codec) {
@@ -108,19 +86,52 @@ func (r *Room) receiveLayer(peer *Peer, remote rtpReader, source Source, trackID
 		return
 	}
 	r.addTrack(key, info)
-	go r.forward(remote, layerWriter{group: g, layer: layer}, key, info)
+	safego.Go("sfu_forward", r.dropOnPanic(peer), func() { r.forward(remote, layerWriter{group: g, layer: layer}, key, info) })
+}
+
+// layerGroupLocked returns the group a layer of peer's source joins, making
+// it for the first layer to arrive. It returns nil for a layer that joins
+// nothing: its peer was replaced, or it is a lower layer of a camera sent
+// plain. r.mu is held.
+func (r *Room) layerGroupLocked(peer *Peer, source Source, trackID string, codec webrtc.RTPCodecCapability, layer int) *layerGroup {
+	userID := peer.ID
+	if r.peers[userID] != peer {
+		return nil
+	}
+	g := r.groupFor(userID, source)
+	if g == nil && layer > 0 && source == SourceCamera && !r.cameraLayeredLocked(userID) {
+		// A lower layer of a camera joins a group or a declaration; with
+		// neither, that camera is sent as one plain track and has no layers.
+		return nil
+	}
+	if g == nil || g.superseded.Load() {
+		id := fmt.Sprintf("%s~%d", trackKey(userID, trackID), layerGroupSeq.Add(1))
+		g = newLayerGroup(id, r.ID, userID, r.notifier, codec)
+		g.source = source
+		g.declared.Store(int32(len(r.layerMetaLocked(source)[userID])))
+		g.onPanic, g.dropViewer = r.dropOnPanic(peer), r.dropUser
+		r.groupsLocked(source)[userID] = g
+		return g
+	}
+	// A new capture on a group that outlived the last share: its
+	// wanted layers are announced afresh, whatever they were.
+	safego.Locked(&g.mu, func() {
+		g.resetAnnouncedLocked()
+		g.hold = [maxLayers]time.Time{}
+	})
+	return g
 }
 
 // drain reads and discards a track nobody forwards, so its buffers stay empty.
 func drain(remote rtpReader) {
-	go func() {
+	safego.Go("sfu_drain", safego.Abandon, func() {
 		buf := make([]byte, 1500)
 		for {
 			if _, _, err := remote.Read(buf); err != nil {
 				return
 			}
 		}
-	}()
+	})
 }
 
 // SetScreenLayers records the layers publisher's screen share consists of, as
@@ -148,7 +159,7 @@ func (r *Room) SetScreenLayers(publisher uuid.UUID, layers []Layer) error {
 		g.setDeclared(len(layers))
 	}
 	// notifyMedia announces the change to the room.
-	go r.SignalPeerConnections()
+	r.goSignal()
 	return nil
 }
 

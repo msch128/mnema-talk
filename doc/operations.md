@@ -1294,6 +1294,7 @@ the `MnemaMemoryHigh` threshold to your deployment. The rules:
 | `MnemaSlowRequests` | The 95th percentile API latency (uploads and media excluded) is above one second for 15 minutes. |
 | `MnemaIceFailures` | More than 20% of voice connections fail ICE over 30 minutes. |
 | `MnemaStorageErrors` | More than 5 object storage errors in 15 minutes. |
+| `MnemaGoroutinePanic` | The server recovered from a panic in the last 15 minutes (`mnema_goroutine_panics_total`). |
 | `MnemaBackupTooOld` | No successful backup for 36 hours (see Backup age). |
 
 **Backup age.** The server does not know about your backups (they run on the
@@ -1359,6 +1360,7 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_job_duration_seconds{job}` | histogram | How long one run of a periodic maintenance job took. `job` is `session_sweep`, `status_expiry`, `ban_expiry`, `unlock`, `export_sweep`, `slow_mode_prune`, `edit_history`, `auto_delete`, `poll_fold`, `later`, `audit_retention`, `community_events`, `push_sweep` or `avatar_reencode`. |
 | `mnema_job_errors_total{job}` | counter | Runs of those jobs that returned an error. Stopping the process is not counted. |
 | `mnema_job_panics_total{job}` | counter | Runs that panicked. The panic is logged and the job keeps its schedule; it is not also counted as an error. |
+| `mnema_goroutine_panics_total{name}` | counter | Panics outside an HTTP request and outside those jobs: on a goroutine, timer or callback of the server. `name` is the fixed name of the place in the code (`ws_read`, `sfu_forward`, ...). It is logged as `goroutine panicked` with a stack. Work that belongs to one connection or one call participant closes only that connection or removes only that participant, and the server carries on; a panic in a process-wide loop ends the process after the log line, and the container restarts it. A place that panics over and over is counted every time but logged only five times a minute. Fatal runtime errors (concurrent map writes, a stack overflow, out of memory) cannot be recovered and still end the process without this count. Any value above 0 is a bug worth reporting. |
 
 ## Orphaned media
 

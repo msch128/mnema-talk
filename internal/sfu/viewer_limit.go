@@ -1,6 +1,8 @@
 package sfu
 
-import "time"
+import (
+	"time"
+)
 
 // uploadView is what the upload governor needs to know of one viewer on
 // automatic: what it costs now, what one more step down saves and what one

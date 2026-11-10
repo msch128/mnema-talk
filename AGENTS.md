@@ -81,6 +81,7 @@ mnema-talk/
 │   ├── opwarn/              # Operator warnings (configuration and deployment hints) for the System tab
 │   ├── push/                # Web Push (VAPID keys, subscriptions, delivery; texts in push/locales)
 │   ├── repo/                # Repository-wide checks (file and function size limits)
+│   ├── safego/              # Go, AfterFunc and Run: every goroutine, timer and callback with a fixed answer to a panic (close one connection or peer, or let the process exit)
 │   ├── media/               # Uploads (MIME sniffing), authenticated media serving, retention
 │   ├── s3/                  # S3 client
 │   ├── events/              # Event types / publishing to the hub

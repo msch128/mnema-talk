@@ -119,7 +119,7 @@ func TestWriteInstrumentsListsEveryFamily(t *testing.T) {
 		"mnema_sfu_nack_requests_total", "mnema_sfu_nack_packets_total", "mnema_sfu_retransmitted_packets_total", "mnema_sfu_retransmit_dropped_total", "mnema_sfu_keyframe_requests_total",
 		"mnema_sfu_layer_switches_total", "mnema_sfu_camera_layer_switches_total", "mnema_sfu_ice_transitions_total", "mnema_sfu_peer_joins_total",
 		"mnema_s3_operations_total", "mnema_sfu_bandwidth_estimate_reports_total", "mnema_sfu_bandwidth_layer_moves_total", "mnema_sfu_upload_limit_bits", "mnema_sfu_upload_egress_bits", "mnema_sfu_upload_capped_viewers", "mnema_sfu_upload_unmet_total",
-		"mnema_job_duration_seconds", "mnema_job_errors_total", "mnema_job_panics_total",
+		"mnema_job_duration_seconds", "mnema_job_errors_total", "mnema_job_panics_total", "mnema_goroutine_panics_total",
 	} {
 		if !strings.Contains(b.String(), "# TYPE "+name+" ") {
 			t.Errorf("missing family %s", name)

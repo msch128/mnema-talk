@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -103,6 +104,6 @@ func (r *Room) SubscribeCameras(viewer uuid.UUID, publishers []uuid.UUID, on boo
 	for _, info := range fresh {
 		info.requestKeyframe()
 	}
-	go r.requestPeerSignal(peer)
+	safego.Go("sfu_signal", r.dropOnPanic(peer), func() { r.requestPeerSignal(peer) })
 	return failed
 }

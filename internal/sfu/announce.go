@@ -9,6 +9,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -69,7 +70,7 @@ func (s *SFU) KeepAnnounceCurrent(ctx context.Context, entries []string, every t
 		return
 	}
 	s.announcers.Add(1)
-	go func() {
+	safego.Go("sfu_announce", safego.Crash, func() {
 		defer s.announcers.Done()
 		t := time.NewTicker(every)
 		defer t.Stop()
@@ -81,7 +82,7 @@ func (s *SFU) KeepAnnounceCurrent(ctx context.Context, entries []string, every t
 			}
 			s.refreshAnnounce(ctx, entries)
 		}
-	}()
+	})
 }
 
 // hasHostName reports whether any entry is a host name rather than an IP.
@@ -120,7 +121,7 @@ func (s *SFU) refreshAnnounce(ctx context.Context, entries []string) {
 // failed detection keeps the current address. extra (the host's LAN
 // addresses) is announced after the detected one.
 func (s *SFU) KeepAnnounceDetected(ctx context.Context, every time.Duration, extra []string, detect func(context.Context) (string, error)) {
-	go func() {
+	safego.Go("sfu_announce", safego.Crash, func() {
 		t := time.NewTicker(every)
 		defer t.Stop()
 		for {
@@ -142,5 +143,5 @@ func (s *SFU) KeepAnnounceDetected(ctx context.Context, every time.Duration, ext
 				slog.Info("webrtc announce: detected public address changed", "ips", ips)
 			}
 		}
-	}()
+	})
 }

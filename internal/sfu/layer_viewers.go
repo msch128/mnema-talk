@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 )
@@ -109,8 +110,33 @@ func (g *layerGroup) write(idx int, p *rtp.Packet) {
 		return
 	}
 	for _, vt := range *list {
-		vt.write(idx, p)
+		g.writeTo(vt, idx, p)
 	}
+}
+
+// writeTo hands the packet to one viewer. Its track, and behind it that
+// viewer's connection (NACK history, pacer, bandwidth estimate), run on the
+// publisher's forwarding goroutine: a panic there is the viewer's, so the
+// viewer goes and the publisher keeps sending to everyone else.
+func (g *layerGroup) writeTo(vt *viewerTrack, idx int, p *rtp.Packet) {
+	defer g.viewerWriteDone(vt)
+	vt.write(idx, p)
+}
+
+// viewerWriteDone is deferred by writeTo. It costs a few nanoseconds per
+// packet and viewer and allocates nothing unless a write panicked.
+func (g *layerGroup) viewerWriteDone(vt *viewerTrack) {
+	rec := recover()
+	if rec == nil {
+		return
+	}
+	safego.Recovered("sfu_viewer_write", rec, func() {
+		// Out of the group first: the next packet must not reach it again.
+		g.removeViewer(vt)
+		if g.dropViewer != nil {
+			g.dropViewer(vt.viewer)
+		}
+	})
 }
 
 // rateEvery is the shortest time between two measurements of the layers'

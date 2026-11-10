@@ -258,6 +258,6 @@ func (r *Room) Subscribe(viewer, publisher uuid.UUID, kind Source, all, on bool)
 	for _, info := range fresh {
 		info.requestKeyframe()
 	}
-	go r.SignalPeerConnections()
+	r.goSignal()
 	return nil
 }

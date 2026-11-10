@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -148,6 +149,11 @@ type layerGroup struct {
 	codec      webrtc.RTPCodecCapability
 	kind       codecKind
 	superseded atomic.Bool
+	// onPanic drops the publisher's peer when the group's timer panics, and
+	// dropViewer the peer of a viewer whose own track panicked. The room sets
+	// both (layerGroupLocked); a group without a room lets the process exit.
+	onPanic    func()
+	dropViewer func(viewer uuid.UUID)
 
 	// live has bit i set while layer i is attached; declared is the number of
 	// layers the sender announced (0 when it did not).
@@ -188,6 +194,7 @@ func newLayerGroup(id string, roomID, publisher uuid.UUID, notifier *mediaNotifi
 		source:  SourceScreen,
 		kind:    codecKindOf(codec.MimeType),
 		viewers: make(map[uuid.UUID]*viewerTrack),
+		onPanic: safego.Crash,
 	}
 }
 

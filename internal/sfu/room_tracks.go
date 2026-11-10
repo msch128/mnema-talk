@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/interceptor"
 	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v4"
@@ -12,7 +13,7 @@ import (
 
 // forwardRTCP reads a subscriber's feedback for one forwarded track. Keyframe
 // requests go to the publisher; NACKs and reports are handled by interceptors.
-func (r *Room) forwardRTCP(sender *webrtc.RTPSender, keyframe func(), report func(loss float64, rtt time.Duration, bandwidth int)) {
+func (r *Room) forwardRTCP(sender *webrtc.RTPSender, keyframe func(), report func(loss float64, rtt time.Duration, bandwidth int)) error {
 	var ssrc uint32
 	if report != nil {
 		if encodings := sender.GetParameters().Encodings; len(encodings) > 0 {
@@ -22,7 +23,7 @@ func (r *Room) forwardRTCP(sender *webrtc.RTPSender, keyframe func(), report fun
 	for {
 		pkts, attrs, err := sender.ReadRTCP()
 		if err != nil {
-			return
+			return err
 		}
 		for _, p := range pkts {
 			handleFeedback(p, attrs, ssrc, keyframe, report)
@@ -151,7 +152,7 @@ func (r *Room) addTrack(key string, info *TrackInfo) {
 	if info.group != nil {
 		info.group.markLive(info)
 	}
-	go r.SignalPeerConnections()
+	r.goSignal()
 }
 
 func (r *Room) removeTrack(key string, info *TrackInfo) {
@@ -166,7 +167,7 @@ func (r *Room) removeTrack(key string, info *TrackInfo) {
 	}
 	delete(r.trackLocals, key)
 	r.mu.Unlock()
-	go r.SignalPeerConnections()
+	r.goSignal()
 }
 
 func (r *Room) removePeerTracksLocked(userID uuid.UUID) {
@@ -273,7 +274,7 @@ func (r *Room) unpublish(userID uuid.UUID, source Source) {
 	}
 	r.mu.Unlock()
 	if changed {
-		go r.SignalPeerConnections()
+		r.goSignal()
 	}
 }
 
@@ -283,7 +284,7 @@ func (r *Room) unpublish(userID uuid.UUID, source Source) {
 func (r *Room) removePeer(peer *Peer) bool {
 	current := r.detachPeer(peer)
 	if current {
-		go r.SignalPeerConnections()
+		r.goSignal()
 	}
 	_ = peer.PC.Close()
 	return current
@@ -350,7 +351,7 @@ func (p *Peer) OnLost(fn func()) {
 	}
 	p.lostMu.Unlock()
 	if lost && fn != nil {
-		go fn()
+		safego.Go("sfu_peer_lost", safego.Crash, fn)
 	}
 }
 
@@ -361,6 +362,6 @@ func (p *Peer) notifyLost() {
 	p.onLost = nil
 	p.lostMu.Unlock()
 	if fn != nil {
-		go fn()
+		safego.Go("sfu_peer_lost", safego.Crash, fn)
 	}
 }

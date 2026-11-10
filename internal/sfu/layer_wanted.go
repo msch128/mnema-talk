@@ -3,6 +3,7 @@ package sfu
 import (
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/rtp"
 )
 
@@ -127,9 +128,7 @@ func (g *layerGroup) retarget() {
 
 // need is the layers some viewer receives or is about to.
 func (g *layerGroup) need() uint8 {
-	g.mu.Lock()
-	vts := g.viewerListLocked()
-	g.mu.Unlock()
+	vts := g.viewerTracks()
 	var mask uint8
 	for _, vt := range vts {
 		if want := g.clampWant(int(vt.wantA.Load())); want >= 0 {
@@ -176,7 +175,7 @@ func (g *layerGroup) computeHoldMaskLocked(now time.Time, need uint8) (uint8, ti
 func (g *layerGroup) scheduleHoldTimerLocked(next time.Time, now time.Time) {
 	g.stopTimerLocked()
 	if !next.IsZero() && !g.superseded.Load() {
-		g.timer = time.AfterFunc(next.Sub(now)+time.Millisecond, g.refreshWanted)
+		g.timer = safego.AfterFunc("sfu_layer_hold", next.Sub(now)+time.Millisecond, g.onPanic, g.refreshWanted)
 	}
 }
 

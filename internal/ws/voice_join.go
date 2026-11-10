@@ -9,6 +9,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -352,7 +353,7 @@ func (h *Hub) attachPeer(c *Client, chID uuid.UUID, evictReason string) bool {
 	if peer != nil {
 		// A media connection that fails after the join leaves the seat
 		// without media: tell the client so it can rejoin.
-		peer.OnLost(func() { h.kickLostPeer(c, peer) })
+		peer.OnLost(func() { safego.Run("ws_peer_lost", c.close, func() { h.kickLostPeer(c, peer) }) })
 	}
 	if h.afterPeer != nil {
 		h.afterPeer() // tests change permissions exactly here

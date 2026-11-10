@@ -1,6 +1,8 @@
 package sfu
 
-import "time"
+import (
+	"time"
+)
 
 func (vt *viewerTrack) needsKeyframe(now time.Time) bool {
 	switch {

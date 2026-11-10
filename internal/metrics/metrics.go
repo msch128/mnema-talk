@@ -263,6 +263,10 @@ var (
 	JobDuration = newHistVec("mnema_job_duration_seconds", "How long one run of a periodic maintenance job took", "job")
 	JobErrors   = newVec("mnema_job_errors_total", "Periodic maintenance runs that returned an error", "job")
 	JobPanics   = newVec("mnema_job_panics_total", "Periodic maintenance runs that panicked", "job")
+
+	// GoroutinePanics counts panics on the server's own goroutines, timers
+	// and callbacks (internal/safego), by the fixed name of the site.
+	GoroutinePanics = newVec("mnema_goroutine_panics_total", "Panics on a goroutine, timer or callback of the server, by site", "name")
 )
 
 // ObserveHTTP records one finished request.
@@ -333,6 +337,7 @@ func WriteInstruments(w io.Writer) {
 	JobDuration.write(w)
 	JobErrors.write(w)
 	JobPanics.write(w)
+	GoroutinePanics.write(w)
 }
 
 func writeCounter(w io.Writer, name, help string, v uint64) {

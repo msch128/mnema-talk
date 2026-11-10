@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 const (
@@ -140,6 +141,15 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	h.noteUpgrade(true)
 	c := newClient(h, conn, *user, tv)
+	// The connection is hijacked: the HTTP server's own recovery can neither
+	// answer nor close it, so a panic in the handshake or the greeting would
+	// leave a registered connection that nobody reads.
+	safego.Run("ws_handshake", c.abandon, func() { h.serve(r, c, user.ID, tv) })
+}
+
+// serve finishes the handshake of an upgraded connection, greets it and
+// starts its two loops.
+func (h *Hub) serve(r *http.Request, c *Client, userID uuid.UUID, tv int) {
 	c.dmAware = r.URL.Query().Get("dm") == "1"
 	h.bindSession(c, r)
 	if !h.admitPending(c) {
@@ -148,13 +158,23 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// The writer runs before the greeting is queued: a large greeting (one
 	// media state per publisher) would overflow the send buffer otherwise.
 	// It ends with the client's done channel when the handshake fails.
-	go c.writePump()
-	if !h.confirmHandshake(r, c, user.ID, tv) {
+	safego.Go("ws_write", c.close, c.writePump)
+	if !h.confirmHandshake(r, c, userID, tv) {
 		h.cancelPending(c)
 		return
 	}
 	metrics.WSConnections.Inc()
-	go c.readPump()
+	safego.Go("ws_read", c.abandon, c.readPump)
+}
+
+// abandon is the onPanic of a connection's handshake and read loop: whatever
+// the panic left undone, the socket is closed and the client leaves the hub.
+// Every step is safe to repeat.
+func (c *Client) abandon() {
+	c.close()
+	c.hub.cancelPending(c)
+	c.hub.forget(c)
+	c.hub.releaseSeat(c)
 }
 
 // registerPending admits a handshake. A browser user keeps at most
@@ -192,10 +212,10 @@ func (h *Hub) browserOverflowLocked(c *Client) []*Client {
 }
 
 func (h *Hub) cancelPending(c *Client) {
-	h.mu.Lock()
-	delete(h.pending, c)
-	c.shutdown()
-	h.mu.Unlock()
+	safego.Locked(&h.mu, func() {
+		delete(h.pending, c)
+		c.shutdown()
+	})
 	c.close()
 }
 
@@ -300,35 +320,47 @@ func (h *Hub) recordLastSeen(ids ...uuid.UUID) {
 }
 
 func (h *Hub) unregister(c *Client) {
+	// Leaving the hub does not depend on the voice clean-up: a panic there
+	// must not keep the client listed as online for good.
+	defer h.forget(c)
 	h.dropVoiceForGrace(c)
-	h.mu.Lock()
-	if _, ok := h.clients[c]; !ok {
-		h.mu.Unlock()
+}
+
+// forget takes c out of the hub and announces a resulting presence change.
+// A client that is not registered (any more) is left alone.
+func (h *Hub) forget(c *Client) {
+	var before, after string
+	var known, offline, closing bool
+	safego.Locked(&h.mu, func() {
+		if _, known = h.clients[c]; !known {
+			return
+		}
+		before = h.statusLocked(c.User.ID)
+		// Close has recorded last seen for everyone already.
+		closing = h.closed
+		delete(h.clients, c)
+		c.shutdown()
+		if !c.idle {
+			if h.active[c.User.ID]--; h.active[c.User.ID] <= 0 {
+				delete(h.active, c.User.ID)
+			}
+		}
+		h.online[c.User.ID]--
+		offline = h.online[c.User.ID] <= 0
+		if offline {
+			delete(h.online, c.User.ID)
+			delete(h.chosen, c.User.ID)
+			delete(h.profiles, c.User.ID)
+			h.voiceGate.forget(c.User.ID)
+			h.stageGate.forget(c.User.ID)
+			h.reactionGate.forget(c.User.ID)
+			h.userBudgets.forget(c.User.ID)
+		}
+		after = h.statusLocked(c.User.ID)
+	})
+	if !known {
 		return
 	}
-	before := h.statusLocked(c.User.ID)
-	// Close has recorded last seen for everyone already.
-	closing := h.closed
-	delete(h.clients, c)
-	c.shutdown()
-	if !c.idle {
-		if h.active[c.User.ID]--; h.active[c.User.ID] <= 0 {
-			delete(h.active, c.User.ID)
-		}
-	}
-	h.online[c.User.ID]--
-	offline := h.online[c.User.ID] <= 0
-	if offline {
-		delete(h.online, c.User.ID)
-		delete(h.chosen, c.User.ID)
-		delete(h.profiles, c.User.ID)
-		h.voiceGate.forget(c.User.ID)
-		h.stageGate.forget(c.User.ID)
-		h.reactionGate.forget(c.User.ID)
-		h.userBudgets.forget(c.User.ID)
-	}
-	after := h.statusLocked(c.User.ID)
-	h.mu.Unlock()
 
 	slog.Info("ws disconnected", "user", c.User.Username)
 	if offline && !closing {

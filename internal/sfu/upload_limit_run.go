@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 func countUnmet() { metrics.SFUUploadUnmet.Inc() }
@@ -48,7 +49,7 @@ func (s *SFU) StartUploadGovernor(ctx context.Context, mbit int) {
 	s.uploadRuns.Add(1)
 	s.uploadWG.Add(1)
 	s.uploadMu.Unlock()
-	go func() {
+	safego.Go("sfu_upload_limit", safego.Crash, func() {
 		defer s.uploadWG.Done()
 		runUploadGovernor(ctx, float64(mbit)*1e6, uploadTick, uploadSource{
 			egressBytes:   metrics.SFUEgressBytes.Load,
@@ -57,7 +58,7 @@ func (s *SFU) StartUploadGovernor(ctx context.Context, mbit int) {
 			views:         s.uploadViews,
 			now:           time.Now,
 		})
-	}()
+	})
 }
 
 // stopUploadGovernor ends the governor and waits for it.
