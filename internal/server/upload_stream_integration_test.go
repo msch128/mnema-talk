@@ -4,6 +4,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/binary"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -39,8 +40,16 @@ func (c *client) uploadParts(path string, parts ...formPart) response {
 	return c.do(http.MethodPost, path, &buf, map[string]string{"Content-Type": mw.FormDataContentType()})
 }
 
+// pngFile is a PNG of len(pngBytes)+extra bytes. The extra bytes are one
+// image data chunk, so they are stored: padding that is no chunk a picture
+// needs is left out with the metadata.
 func pngFile(extra int) formPart {
-	return formPart{name: "file", filename: "a.png", contentType: "image/png", data: append(append([]byte{}, pngBytes...), make([]byte, extra)...)}
+	data := append(append([]byte{}, pngBytes...), make([]byte, extra)...)
+	if pad := data[len(pngBytes):]; extra >= 12 {
+		binary.BigEndian.PutUint32(pad, uint32(extra-12))
+		copy(pad[4:], "IDAT")
+	}
+	return formPart{name: "file", filename: "a.png", contentType: "image/png", data: data}
 }
 
 func field(name, value string) formPart { return formPart{name: name, data: []byte(value)} }

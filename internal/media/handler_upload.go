@@ -149,7 +149,7 @@ func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user 
 // upload handles POST /api/channels/{channelID}/upload.
 //
 // @Summary Post a message with an attachment
-// @Description multipart/form-data. Creates a message carrying the file and broadcasts message_create. Works in text and voice channels. Stricter per-member upload rate limit.
+// @Description multipart/form-data. Creates a message carrying the file and broadcasts message_create. Works in text and voice channels. Stricter per-member upload rate limit. A JPEG, PNG or WebP is stored without its metadata (EXIF with the GPS position, XMP, IPTC, comments, thumbnails; the orientation stays) and without anything that follows the picture, unless the Owner switched that off, so the stored file and its size_bytes can be smaller than what was sent, never larger.
 // @ID uploadFile
 // @Tags Media
 // @Accept mpfd

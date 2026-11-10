@@ -34,6 +34,8 @@ func newSnapshot(now time.Time) *Snapshot {
 
 		rulesAccepted: map[uuid.UUID]int{},
 		joined:        map[uuid.UUID]time.Time{},
+
+		stripImageMetadata: true,
 	}
 }
 
@@ -103,6 +105,7 @@ type settingsRow struct {
 	AgeWrite       int
 	AgeReact       int
 	AgeSpeak       int
+	StripMetadata  bool
 }
 
 type joinedRow struct {
@@ -131,7 +134,7 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	roles := load(r, `SELECT id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb, bot_user_id, self_assignable, description FROM roles`, pgx.RowToStructByPos[roleRow])
 	assigned := load(r, `SELECT user_id, role_id FROM user_roles`, pgx.RowToStructByPos[userRoleRow])
 	owners := load(r, `SELECT id FROM users WHERE role = 'admin'`, pgx.RowTo[uuid.UUID])
-	settings := load(r, `SELECT max_upload_mb, CASE WHEN rules_text <> '' THEN rules_version ELSE 0 END, direct_messages_enabled, min_age_write_minutes, min_age_react_minutes, min_age_speak_minutes FROM instance_settings`, pgx.RowToStructByPos[settingsRow])
+	settings := load(r, `SELECT max_upload_mb, CASE WHEN rules_text <> '' THEN rules_version ELSE 0 END, direct_messages_enabled, min_age_write_minutes, min_age_react_minutes, min_age_speak_minutes, strip_image_metadata FROM instance_settings`, pgx.RowToStructByPos[settingsRow])
 	timeouts := load(r, `SELECT id, timeout_until, timeout_reason FROM users WHERE timeout_until > NOW()`, pgx.RowToStructByPos[timeoutRow])
 	accepted := load(r, `SELECT id, rules_accepted_version FROM users WHERE rules_accepted_version > 0`, pgx.RowToStructByPos[acceptedRow])
 	// Only while a minimum age is set: when each member joined.
@@ -153,6 +156,7 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 		s.globalUploadMB = settings[0].MaxUploadMB
 		s.rulesVersion = settings[0].RulesVersion
 		dmOn = settings[0].DirectMessages
+		s.stripImageMetadata = settings[0].StripMetadata
 		s.newMember = NewMemberRules{
 			Write: time.Duration(settings[0].AgeWrite) * time.Minute, React: time.Duration(settings[0].AgeReact) * time.Minute, Speak: time.Duration(settings[0].AgeSpeak) * time.Minute,
 		}

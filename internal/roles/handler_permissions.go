@@ -137,12 +137,15 @@ const maxReportedPosition = 1 << 20
 type UploadLimitInput struct {
 	// MaxUploadMB is the new global limit; null returns to the server's ceiling.
 	MaxUploadMB *int `json:"max_upload_mb" minimum:"1" extensions:"x-nullable"`
+	// StripImageMetadata switches the removal of metadata from uploaded
+	// pictures on or off; left out, it stays as it is.
+	StripImageMetadata *bool `json:"strip_image_metadata" binding:"optional" extensions:"x-nullable"`
 }
 
 // getUploadLimit handles GET /api/admin/upload-limit.
 //
 // @Summary Read the global upload limit
-// @Description Owner only. The effective global limit and the operator's ceiling (MAX_UPLOAD_SIZE_MB).
+// @Description Owner only. The effective global limit, the operator's ceiling (MAX_UPLOAD_SIZE_MB) and whether uploaded pictures lose their metadata (strip_image_metadata).
 // @ID getUploadLimit
 // @Tags Roles
 // @Produce json
@@ -166,7 +169,7 @@ func (h *Handler) getUploadLimit(w http.ResponseWriter, r *http.Request) error {
 // setUploadLimit handles PUT /api/admin/upload-limit.
 //
 // @Summary Set the global upload limit
-// @Description Owner only. Capped by the operator's ceiling (MAX_UPLOAD_SIZE_MB); null returns to the ceiling. Roles may override it per role. Broadcasts permissions_changed so clients refetch their effective limit.
+// @Description Owner only. Capped by the operator's ceiling (MAX_UPLOAD_SIZE_MB); null returns to the ceiling. Roles may override it per role. strip_image_metadata, when given, switches the removal of metadata (EXIF with the GPS position, XMP, IPTC, comments) from JPEG, PNG and WebP attachments on or off; it applies to uploads from then on. Broadcasts permissions_changed so clients refetch their effective limit.
 // @ID setUploadLimit
 // @Tags Roles
 // @Accept json
@@ -186,7 +189,7 @@ func (h *Handler) setUploadLimit(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &in); err != nil {
 		return err
 	}
-	st, err := h.Perms.SetGlobalUploadMB(r.Context(), auth.UserFrom(r.Context()).Subject(), in.MaxUploadMB)
+	st, err := h.Perms.SetUploadSettings(r.Context(), auth.UserFrom(r.Context()).Subject(), in.MaxUploadMB, in.StripImageMetadata)
 	if err != nil {
 		return err
 	}

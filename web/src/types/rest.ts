@@ -4389,12 +4389,14 @@ export const decodePermRoleInput = decoder("perm.RoleInput", isPermRoleInput)
 export type PermUploadSettings = {
   ceiling_mb: number
   max_upload_mb: number
+  strip_image_metadata?: boolean
 }
 
 export function isPermUploadSettings(value: unknown): value is PermUploadSettings {
   return isRecord(value)
     && (hasOwn(value, "ceiling_mb") && (isInteger(value["ceiling_mb"]) && value["ceiling_mb"] >= 1))
     && (hasOwn(value, "max_upload_mb") && (isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1))
+    && (!hasOwn(value, "strip_image_metadata") || typeof value["strip_image_metadata"] === 'boolean')
 }
 
 export const decodePermUploadSettings = decoder("perm.UploadSettings", isPermUploadSettings)
@@ -4716,11 +4718,13 @@ export const decodeRolesReorderRequest = decoder("roles.ReorderRequest", isRoles
 
 export type RolesUploadLimitInput = {
   max_upload_mb: number | null
+  strip_image_metadata?: boolean | null
 }
 
 export function isRolesUploadLimitInput(value: unknown): value is RolesUploadLimitInput {
   return isRecord(value)
     && (hasOwn(value, "max_upload_mb") && ((isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1) || value["max_upload_mb"] === null))
+    && (!hasOwn(value, "strip_image_metadata") || (typeof value["strip_image_metadata"] === 'boolean' || value["strip_image_metadata"] === null))
 }
 
 export const decodeRolesUploadLimitInput = decoder("roles.UploadLimitInput", isRolesUploadLimitInput)
