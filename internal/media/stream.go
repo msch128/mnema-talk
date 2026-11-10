@@ -213,6 +213,7 @@ func parseTagIDs(raw string) ([]uuid.UUID, error) {
 
 // storePart sniffs the file's type from its first bytes, then streams it to
 // object storage, stopping at the request's upload limit (see WithUploadLimit).
+// A picture is stored without its metadata (see toStore).
 func (h *Handler) storePart(ctx context.Context, part *multipart.Part) (*storedUpload, error) {
 	head, err := h.readUploadHeader(ctx, part)
 	if err != nil {
@@ -227,10 +228,11 @@ func (h *Handler) storePart(ctx context.Context, part *multipart.Part) (*storedU
 	body := &cappedReader{r: io.MultiReader(bytes.NewReader(head), part), max: h.limit(ctx)}
 	id := uuid.New()
 	key := storageKey("uploads", id, mimeType)
-	if err := h.Store.Upload(ctx, key, body, mimeType, -1); err != nil {
+	stored := h.toStore(ctx, mimeType, body)
+	if err := h.Store.Upload(ctx, key, stored, mimeType, -1); err != nil {
 		return nil, h.uploadError(ctx, err, body)
 	}
-	return &storedUpload{id: id, key: key, filename: filename, mime: mimeType, size: body.n}, nil
+	return &storedUpload{id: id, key: key, filename: filename, mime: mimeType, size: stored.n}, nil
 }
 
 func (h *Handler) readUploadHeader(ctx context.Context, part *multipart.Part) ([]byte, error) {

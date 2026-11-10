@@ -7461,6 +7461,10 @@
             "description": "MaxUploadMB is the effective global limit.",
             "minimum": 1,
             "type": "integer"
+          },
+          "strip_image_metadata": {
+            "description": "StripImageMetadata says whether the server removes metadata (EXIF with\nthe GPS position, XMP, IPTC, comments, thumbnails) and anything that\nfollows the picture from uploaded JPEG, PNG and WebP attachments\n(default on). A server that does not send it is older and\nkeeps the metadata.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -8022,6 +8026,13 @@
             "minimum": 1,
             "type": [
               "integer",
+              "null"
+            ]
+          },
+          "strip_image_metadata": {
+            "description": "StripImageMetadata switches the removal of metadata from uploaded\npictures on or off; left out, it stays as it is.",
+            "type": [
+              "boolean",
               "null"
             ]
           }
@@ -19637,7 +19648,7 @@
     },
     "/api/admin/upload-limit": {
       "get": {
-        "description": "Owner only. The effective global limit and the operator's ceiling (MAX_UPLOAD_SIZE_MB).",
+        "description": "Owner only. The effective global limit, the operator's ceiling (MAX_UPLOAD_SIZE_MB) and whether uploaded pictures lose their metadata (strip_image_metadata).",
         "operationId": "getUploadLimit",
         "responses": {
           "200": {
@@ -19710,7 +19721,7 @@
         ]
       },
       "put": {
-        "description": "Owner only. Capped by the operator's ceiling (MAX_UPLOAD_SIZE_MB); null returns to the ceiling. Roles may override it per role. Broadcasts permissions_changed so clients refetch their effective limit.",
+        "description": "Owner only. Capped by the operator's ceiling (MAX_UPLOAD_SIZE_MB); null returns to the ceiling. Roles may override it per role. strip_image_metadata, when given, switches the removal of metadata (EXIF with the GPS position, XMP, IPTC, comments) from JPEG, PNG and WebP attachments on or off; it applies to uploads from then on. Broadcasts permissions_changed so clients refetch their effective limit.",
         "operationId": "setUploadLimit",
         "requestBody": {
           "content": {
@@ -25610,7 +25621,7 @@
     },
     "/api/channels/{channelID}/attachments": {
       "post": {
-        "description": "multipart/form-data with the file in field 'file'. Stores the file as a staged attachment without posting a message; send the returned id in attachment_ids of POST /api/channels/{channelID}/messages (up to 10 per message). Needs the same permissions as an upload. A staged file is visible only to its uploader and is deleted automatically after six hours if no message claims it. A member holds at most 30 unsent files. Same stricter per-member upload rate limit and size limits as the upload endpoint.",
+        "description": "multipart/form-data with the file in field 'file'. Stores the file as a staged attachment without posting a message; send the returned id in attachment_ids of POST /api/channels/{channelID}/messages (up to 10 per message). Needs the same permissions as an upload. A staged file is visible only to its uploader and is deleted automatically after six hours if no message claims it. A member holds at most 30 unsent files. Same stricter per-member upload rate limit and size limits as the upload endpoint, and the same removal of metadata from JPEG, PNG and WebP files.",
         "operationId": "stageAttachment",
         "parameters": [
           {
@@ -29314,7 +29325,7 @@
     },
     "/api/channels/{channelID}/upload": {
       "post": {
-        "description": "multipart/form-data. Creates a message carrying the file and broadcasts message_create. Works in text and voice channels. Stricter per-member upload rate limit.",
+        "description": "multipart/form-data. Creates a message carrying the file and broadcasts message_create. Works in text and voice channels. Stricter per-member upload rate limit. A JPEG, PNG or WebP is stored without its metadata (EXIF with the GPS position, XMP, IPTC, comments, thumbnails; the orientation stays) and without anything that follows the picture, unless the Owner switched that off, so the stored file and its size_bytes can be smaller than what was sent, never larger.",
         "operationId": "uploadFile",
         "parameters": [
           {

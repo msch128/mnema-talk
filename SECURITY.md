@@ -611,9 +611,76 @@ details and the limits.
   XMP, trailing bytes and polyglot payloads cannot survive. Animations stay
   within a pixel and frame budget before any frame is decoded. Avatars stored
   before 1.1 were redrawn by a one-time background job after the update
-  ([upgrade notes](doc/upgrade.md#10x--110)). Chat attachments are the
-  exception: they are stored byte for byte, so a photo sent as a file keeps its
-  metadata.
+  ([upgrade notes](doc/upgrade.md#10x--110)).
+- **Metadata of picture attachments.** A JPEG, PNG or WebP sent as an
+  attachment (by a member, a bot or a webhook) is stored without its metadata;
+  nobody who downloads it gets the GPS position, camera model or comments of
+  the original. The picture is not decoded or re-encoded: the server walks the
+  file's structure and keeps what draws the picture, so the image data, the
+  colour information (ICC profile, gamma) and the frames of an animation are
+  the bytes that were sent. What stays is an allow-list in all three formats:
+  an application segment or chunk the server does not know is removed,
+  whatever it is called.
+  - **JPEG.** Of the application segments only the JFIF header (without the
+    thumbnail it may carry), the ICC profile and Adobe's colour transform
+    stay. Everything else goes: EXIF and XMP, JFXX thumbnails, multi-picture
+    (MPF) and FlashPix data, IPTC and Photoshop blocks, content credentials
+    (C2PA), vendor blocks and comments, before the image data and between
+    the scans of a progressive file. So do bytes that sit between the
+    segments without being part of one, and segments under a marker no
+    decoder draws from (reserved markers, JPEG extensions).
+  - **PNG.** The image chunks (`IHDR`, `PLTE`, `IDAT`, `IEND`), transparency
+    and colour (`tRNS`, `cHRM`, `gAMA`, `iCCP`, `sBIT`, `sRGB`, `cICP`,
+    `mDCV`, `cLLI`, `bKGD`, `hIST`, `pHYs`, `sPLT`) and the animation chunks
+    (`acTL`, `fcTL`, `fdAT`) stay. Every other chunk goes: `eXIf`, `tEXt`,
+    `iTXt` (XMP), `zTXt`, `tIME`, content credentials (`caBX`), the private
+    chunks of editors and any chunk under an unknown name.
+  - **WebP.** The image chunks (`VP8 `, `VP8L`, `ALPH`), the extended header
+    (`VP8X`), the animation (`ANIM`, `ANMF`) and the colour profile (`ICCP`)
+    stay. Every other chunk goes: `EXIF`, `XMP `, content credentials and
+    any chunk under an unknown name. The header's flags and length are
+    corrected to match. Inside an animation frame only the frame's picture
+    stays; any other chunk there is overwritten with zero bytes.
+  - **The file ends with the picture.** What follows the JPEG end marker, the
+    PNG end chunk or the WebP container is not stored: a second picture, the
+    video of a motion photo, the gain map of an HDR photo (it is shown in
+    standard range), an archive or anything else appended to the file.
+  - **The orientation is kept**, as an EXIF record that holds that one tag,
+    so a photo is shown the way it was sent. Only the first EXIF record of a
+    file counts, as for a viewer, also when it is empty or cannot be read.
+  - **Sizes.** The stored file is never larger than the upload. The upload
+    limit applies to the file as sent; the size that is recorded, served and
+    counted against the quotas is the stored one.
+
+  The Owner can switch the removal off (admin System tab, **Upload size**);
+  it is on by default. What it does not do:
+  - Other types pass byte for byte: GIF (comments, XMP), video and audio (an
+    MP4 can carry a position), PDF, SVG, documents and archives keep what
+    they hold.
+  - A WebP of more than 64 KiB is read into a buffer of 5 MiB to be
+    rewritten, whatever its size, so each such upload holds that much memory
+    while it runs. A WebP larger than 5 MiB is not rewritten in memory: a chunk that has to
+    go is overwritten with zero bytes in place and renamed `JUNK`, so the
+    file keeps its length. Where its header announces EXIF, the first EXIF
+    chunk stays and holds the orientation only (an empty record or zero
+    bytes where the chunk is too short for the tag); a header that announces
+    EXIF in a file without such a chunk keeps the flag.
+  - The orientation of a WebP is kept where the file can announce it: with
+    an extended header (`VP8X`) in a file up to 5 MiB, and in a larger file
+    only when that header already announces EXIF. A WebP without the
+    extended header loses it and is shown as its image data lies. The
+    orientation is looked for in the first 64 KiB of the first EXIF record.
+  - What the picture needs comes from the kept parts only. A colour space
+    named in EXIF alone (a camera's Adobe RGB JPEG without an ICC profile)
+    is lost, and the picture is then shown as sRGB.
+  - It removes labelled metadata, nothing else. Unlike a profile picture, an
+    attachment is not redrawn: what is hidden in the image data or a
+    watermark stays. The kept parts are not examined either: a colour
+    profile is stored whole (its description and copyright tags are free
+    text), and so are the seven bytes of Adobe's segment a decoder does not
+    read, and the table and frame segments of a JPEG.
+  - Files stored before this version, or while the removal was switched off,
+    are not touched afterwards.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is

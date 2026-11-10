@@ -24,6 +24,46 @@ uploads. Nothing else changes for bots: the field is optional and the
 permissions (Mention @all and @here, mentionable roles) decide as before. See
 [bots.md](bots.md#rest-api).
 
+## Picture attachments lose their metadata (migration 0101)
+
+A JPEG, PNG or WebP sent as an attachment used to be stored byte for byte, so
+a phone photo kept its EXIF record: GPS position, camera model, time. From
+this version the server stores it without EXIF, XMP, IPTC, comments, text
+chunks, content credentials (C2PA) and embedded thumbnails, and the stored
+file ends where the picture ends. What stays is an allow-list: the image
+data, the colour information and the animation; a segment or chunk the
+server does not know is removed, whatever it is called. The picture is not
+re-encoded: image data, colour profile and animation frames are the bytes
+that were sent, and the orientation is written back so a
+photo is still shown the right way up. Every other file type is stored as
+before. Details and limits are in
+[SECURITY.md](../SECURITY.md#security-model-summary) ("Metadata of picture
+attachments").
+
+- **What members can notice.** Data appended to a picture is no longer
+  stored: a motion photo arrives as its still picture without the video, an
+  HDR photo with a gain map is shown in standard range, and a file hidden
+  behind a picture (an archive, a second picture) is gone. A photo whose
+  colour space is named in EXIF only (Adobe RGB from a camera, without a
+  colour profile) is shown as sRGB, and a WebP without the extended header
+  loses its EXIF orientation. A download is not
+  byte-identical to the JPEG, PNG or WebP that was sent.
+- **On by default, also after an update.** Migration 0101 adds
+  `instance_settings.strip_image_metadata` (default on). A community that
+  shares photos for their metadata (camera settings, position) can switch it
+  off in the admin System tab (**Upload size**, *Remove metadata from
+  pictures*), Owner only, recorded in the audit log.
+- **New uploads only.** Attachments stored before the update keep their
+  metadata; nothing is rewritten in storage.
+- **Sizes.** The size shown for an attachment, counted against
+  `UPLOAD_QUOTA_MB_PER_DAY` and sent as `Content-Length` is the stored one,
+  which is never larger and usually a little smaller than the file that was
+  sent. The upload limit still applies to the file as sent.
+- **API.** `GET` and `PUT /api/admin/upload-limit` gained the optional field
+  `strip_image_metadata`; a client that does not send it changes nothing.
+  A file fetched back from `/api/media/{id}` is no longer guaranteed to be
+  byte-identical to the JPEG, PNG or WebP that was uploaded.
+
 ## Key rotation
 
 Nothing to do. An instance that sets none of the new variables stores and
@@ -445,6 +485,8 @@ of the pre-update backup (see "Rollback" above).
 | 0099 | `users.public_voice_seconds`: the public time in Talks counts only stays in Talks everyone can see. It starts at zero; `voice_seconds` stays as the private total. |
 | 0100 | `message_nonces`: the client nonce that makes a repeated send of a message return the first one (feature `messages.nonce`). Adds a table and two indexes; rows older than a day are pruned. |
 | 0102 | `recovery_codes.key_fingerprint` (nullable): which key a new recovery code is hashed under, so codes under a retired key are not counted as remaining. Existing rows keep `NULL` and stay counted. |
+
+| 0101 | `instance_settings.strip_image_metadata`: the Owner's switch for storing JPEG, PNG and WebP attachments without their metadata, on by default. Adds a column only; stored files are not touched. |
 
 The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 

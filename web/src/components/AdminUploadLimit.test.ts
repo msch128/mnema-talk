@@ -80,6 +80,37 @@ describe('AdminUploadLimit', () => {
     expect(apiMock).toHaveBeenCalledTimes(1)
   })
 
+  it('switches the removal of picture metadata with the same Save', async () => {
+    apiMock.mockResolvedValueOnce({ max_upload_mb: 20, ceiling_mb: 50, strip_image_metadata: true })
+    const w = mount(AdminUploadLimit)
+    await flushPromises()
+    const box = w.find<HTMLInputElement>('[data-testid="strip-metadata"]')
+    expect(box.element.checked).toBe(true)
+    expect(w.text()).toContain('Remove metadata from pictures')
+
+    await box.setValue(false)
+    expect(apiMock).toHaveBeenCalledTimes(1)
+    expect(save(w).disabled).toBe(false)
+    apiMock.mockResolvedValueOnce({ max_upload_mb: 20, ceiling_mb: 50, strip_image_metadata: false })
+    await save(w).click()
+    await flushPromises()
+    expect(apiMock).toHaveBeenLastCalledWith('/api/admin/upload-limit', expect.objectContaining({ method: 'PUT', json: { max_upload_mb: 20, strip_image_metadata: false } }))
+    expect(box.element.checked).toBe(false)
+    expect(save(w).disabled).toBe(true)
+  })
+
+  it('offers no metadata switch on a server that has none', async () => {
+    apiMock.mockResolvedValueOnce({ max_upload_mb: 20, ceiling_mb: 50 })
+    const w = mount(AdminUploadLimit)
+    await flushPromises()
+    expect(w.find('[data-testid="strip-metadata-setting"]').exists()).toBe(false)
+    await w.find<HTMLInputElement>('input[type="number"]').setValue('10')
+    apiMock.mockResolvedValueOnce({ max_upload_mb: 10, ceiling_mb: 50 })
+    await save(w).click()
+    await flushPromises()
+    expect(apiMock).toHaveBeenLastCalledWith('/api/admin/upload-limit', expect.objectContaining({ json: { max_upload_mb: 10 } }))
+  })
+
   it('reports a failed save inline and a failed load as a toast', async () => {
     apiMock.mockResolvedValueOnce({ max_upload_mb: 20, ceiling_mb: 50 })
     const w = mount(AdminUploadLimit)

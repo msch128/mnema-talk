@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -132,16 +134,30 @@ func TestStreamFormMapsTransportAndFramingFailures(t *testing.T) {
 	h := &Handler{Store: NewMemoryStore(), MaxUploadBytes: 1024}
 	_, _, err := h.readUpload(httptest.NewRequest(http.MethodPost, "/upload", strings.NewReader("not multipart")), uuid.New())
 	requireAPIError(t, err, 400)
-	for _, content := range []string{
+	// A picture goes through the metadata filter, which must not take a part
+	// that stops early for a picture that ends early.
+	pictures := map[string]string{"image/jpeg": "phone-orientation-6.jpg", "image/png": "phone-orientation-6.png", "image/webp": "phone-orientation-6.webp"}
+	var cutPictures []string
+	for mimeType, name := range pictures {
+		picture, err := os.ReadFile(filepath.Join("..", "imgstrip", "testdata", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		cutPictures = append(cutPictures, "--boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"a.bin\"\r\nContent-Type: "+mimeType+"\r\n\r\n"+string(picture[:2*len(picture)/3]))
+	}
+	for _, content := range append(cutPictures,
 		"garbage",
 		"--boundary\r\nContent-Disposition: form-data; name=\"content\"\r\n\r\nunfinished",
 		"--boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\nContent-Type: text/plain\r\n\r\nunfinished",
-		"--boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\nContent-Type: text/plain\r\n\r\n" + strings.Repeat("x", 600),
-	} {
+		"--boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\nContent-Type: text/plain\r\n\r\n"+strings.Repeat("x", 600),
+	) {
 		r := httptest.NewRequest(http.MethodPost, "/upload", strings.NewReader(content))
 		r.Header.Set("Content-Type", "multipart/form-data; boundary=boundary")
 		_, _, err := h.readUpload(r, uuid.New())
 		requireAPIError(t, err, 400)
+		if h.Store.(*MemoryStore).Len() != 0 {
+			t.Fatalf("an upload that stopped early left a stored file: %.80q", content)
+		}
 	}
 	// The first file is complete, but the following part has a malformed header.
 	raw := "--boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"a.txt\"\r\nContent-Type: text/plain\r\n\r\nnotes\r\n--boundary\r\nmalformed header\r\n\r\n"

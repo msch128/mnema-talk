@@ -35,7 +35,7 @@ const (
 // stageAttachment handles POST /api/channels/{channelID}/attachments.
 //
 // @Summary Upload an attachment for a message
-// @Description multipart/form-data with the file in field 'file'. Stores the file as a staged attachment without posting a message; send the returned id in attachment_ids of POST /api/channels/{channelID}/messages (up to 10 per message). Needs the same permissions as an upload. A staged file is visible only to its uploader and is deleted automatically after six hours if no message claims it. A member holds at most 30 unsent files. Same stricter per-member upload rate limit and size limits as the upload endpoint.
+// @Description multipart/form-data with the file in field 'file'. Stores the file as a staged attachment without posting a message; send the returned id in attachment_ids of POST /api/channels/{channelID}/messages (up to 10 per message). Needs the same permissions as an upload. A staged file is visible only to its uploader and is deleted automatically after six hours if no message claims it. A member holds at most 30 unsent files. Same stricter per-member upload rate limit and size limits as the upload endpoint, and the same removal of metadata from JPEG, PNG and WebP files.
 // @ID stageAttachment
 // @Tags Media
 // @Accept mpfd

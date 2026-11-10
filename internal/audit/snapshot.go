@@ -38,7 +38,7 @@ var snapshotSQL = map[Resource]string{
 		'banned', banned_at IS NOT NULL, 'banned_until', banned_until,
 		'role_ids', COALESCE((SELECT jsonb_agg(role_id ORDER BY role_id) FROM user_roles WHERE user_id = users.id), '[]'::jsonb)),
 		username FROM users WHERE id = $1`,
-	ResSettings: `SELECT jsonb_build_object('max_upload_mb', max_upload_mb), 'instance settings' FROM instance_settings`,
+	ResSettings: `SELECT jsonb_build_object('max_upload_mb', max_upload_mb, 'strip_image_metadata', strip_image_metadata), 'instance settings' FROM instance_settings`,
 	ResOnboarding: `SELECT jsonb_build_object('community_name', community_name, 'welcome_text', welcome_text,
 		'rules_text', rules_text, 'rules_version', rules_version, 'start_channel_id', start_channel_id,
 		'community_icon', community_icon_version IS NOT NULL),

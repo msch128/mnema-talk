@@ -2453,7 +2453,9 @@
       "reset": "Back to the server maximum",
       "saved": "Upload limit saved.",
       "hint": "Applies to everyone unless a role sets its own. It cannot exceed the server maximum of {ceiling} MB (MAX_UPLOAD_SIZE_MB). Your reverse proxy must allow that body size.",
-      "invalid": "Enter a whole number from 1 to {ceiling}."
+      "invalid": "Enter a whole number from 1 to {ceiling}.",
+      "stripMetadata": "Remove metadata from pictures",
+      "stripMetadataHint": "JPEG, PNG and WebP attachments are stored without their location, camera details, comments and other metadata, and without anything appended to the picture (such as the video of a motion photo). The picture itself is not changed. Applies to new uploads."
     },
     "onboarding": {
       "loadFailed": "Couldn’t load the settings.",

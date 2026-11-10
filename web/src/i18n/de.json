@@ -2453,7 +2453,9 @@
       "reset": "Zurück zum Server-Maximum",
       "saved": "Upload-Limit gespeichert.",
       "hint": "Gilt für alle, sofern eine Rolle kein eigenes Limit setzt. Es kann das Server-Maximum von {ceiling} MB (MAX_UPLOAD_SIZE_MB) nicht übersteigen. Dein Reverse-Proxy muss diese Body-Größe erlauben.",
-      "invalid": "Gib eine ganze Zahl von 1 bis {ceiling} ein."
+      "invalid": "Gib eine ganze Zahl von 1 bis {ceiling} ein.",
+      "stripMetadata": "Metadaten aus Bildern entfernen",
+      "stripMetadataHint": "Anhänge im Format JPEG, PNG und WebP werden ohne Standort, Kameradaten, Kommentare und andere Metadaten gespeichert, und ohne alles, was an das Bild angehängt ist (etwa das Video eines Live-Fotos). Das Bild selbst bleibt unverändert. Gilt für neue Uploads."
     },
     "onboarding": {
       "loadFailed": "Die Einstellungen konnten nicht geladen werden.",
