@@ -5,6 +5,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/rtp"
 )
 
@@ -296,16 +297,21 @@ func (h *nackHistory) clearRing() {
 // remembered or was resent within interval. The copy is the caller's: the
 // history goes on without it.
 func (h *nackHistory) find(seq uint16, now time.Time, interval time.Duration) (rtp.Header, []byte, bool) {
-	h.mu.Lock()
-	s := h.slot(seq)
-	if s == nil || !h.mayResend(s, now, interval) {
-		h.mu.Unlock()
+	var raw []byte
+	var hdrLen int
+	var pad uint8
+	safego.Locked(&h.mu, func() {
+		s := h.slot(seq)
+		if s == nil || !h.mayResend(s, now, interval) {
+			return
+		}
+		s.resentAt = now.UnixNano()
+		raw = append([]byte{}, s.buf.b...)
+		hdrLen, pad = int(s.hdrLen), s.padding
+	})
+	if raw == nil {
 		return rtp.Header{}, nil, false
 	}
-	s.resentAt = now.UnixNano()
-	raw := append([]byte(nil), s.buf.b...)
-	hdrLen, pad := int(s.hdrLen), s.padding
-	h.mu.Unlock()
 	var header rtp.Header
 	if _, err := header.Unmarshal(raw[:hdrLen]); err != nil {
 		return rtp.Header{}, nil, false

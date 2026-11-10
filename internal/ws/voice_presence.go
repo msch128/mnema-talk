@@ -41,24 +41,27 @@ func (h *Hub) removePresenceUnlessPresent(userID, chID uuid.UUID, except *Client
 // removePresence drops userID from chID's room and announces it if they were there.
 func (h *Hub) removePresence(userID, chID uuid.UUID) {
 	key := voiceKey{userID, chID}
-	h.mu.Lock()
-	_, wasIn := h.voice[chID][userID]
-	since, hadSince := h.voiceSince[key]
-	class := h.seatClasses[key]
-	if wasIn {
-		delete(h.voiceSince, key)
-		delete(h.seatClasses, key)
-		delete(h.voiceMute, key)
-		h.stage.forget(key) // under the lock: no grant can land after it
-	}
-	if users, ok := h.voice[chID]; ok {
-		delete(users, userID)
-		if len(users) == 0 {
-			delete(h.voice, chID)
-			delete(h.roomSince, chID)
+	var wasIn, hadSince bool
+	var since time.Time
+	var class seatClass
+	safego.Locked(&h.mu, func() {
+		_, wasIn = h.voice[chID][userID]
+		since, hadSince = h.voiceSince[key]
+		class = h.seatClasses[key]
+		if wasIn {
+			delete(h.voiceSince, key)
+			delete(h.seatClasses, key)
+			delete(h.voiceMute, key)
+			h.stage.forget(key) // under the lock: no grant can land after it
 		}
-	}
-	h.mu.Unlock()
+		if users, ok := h.voice[chID]; ok {
+			delete(users, userID)
+			if len(users) == 0 {
+				delete(h.voice, chID)
+				delete(h.roomSince, chID)
+			}
+		}
+	})
 	if wasIn {
 		slog.Info("voice leave", "user", userID, "channel", chID)
 		if h.Presence != nil {

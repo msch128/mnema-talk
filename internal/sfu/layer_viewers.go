@@ -51,16 +51,20 @@ func (g *layerGroup) addViewer(vt *viewerTrack) bool {
 	vt.mu.Lock()
 	dead := vt.closed
 	vt.mu.Unlock()
-	g.mu.Lock()
-	old := g.viewers[vt.viewer]
-	if dead || (old != nil && old != vt && old.gen > vt.gen) {
-		g.mu.Unlock()
+	var old *viewerTrack
+	refused := false
+	safego.Locked(&g.mu, func() {
+		old = g.viewers[vt.viewer]
+		if refused = dead || (old != nil && old != vt && old.gen > vt.gen); refused {
+			return
+		}
+		g.viewers[vt.viewer] = vt
+		g.publishViewersLocked()
+	})
+	if refused {
 		vt.close()
 		return false
 	}
-	g.viewers[vt.viewer] = vt
-	g.publishViewersLocked()
-	g.mu.Unlock()
 	if old != nil && old != vt {
 		old.close()
 	}
@@ -71,12 +75,12 @@ func (g *layerGroup) addViewer(vt *viewerTrack) bool {
 
 // removeViewer stops delivering to vt.
 func (g *layerGroup) removeViewer(vt *viewerTrack) {
-	g.mu.Lock()
-	if g.viewers[vt.viewer] == vt {
-		delete(g.viewers, vt.viewer)
-		g.publishViewersLocked()
-	}
-	g.mu.Unlock()
+	safego.Locked(&g.mu, func() {
+		if g.viewers[vt.viewer] == vt {
+			delete(g.viewers, vt.viewer)
+			g.publishViewersLocked()
+		}
+	})
 	vt.close()
 	g.refreshWanted()
 }

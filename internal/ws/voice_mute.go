@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // sendToVoiceRoom sends an event to the connections currently in chID's room.
@@ -50,16 +51,15 @@ func (h *Hub) setMuteState(c *Client, st MuteState) {
 		st.Muted = true
 	}
 	key := voiceKey{c.User.ID, *cur}
-	h.mu.Lock()
-	if _, seated := h.voice[key.ch][key.user]; !seated {
-		// A leave or kick got in between: a mark written now would outlive
-		// the stay and be announced with the next one.
-		h.mu.Unlock()
-		return
-	}
-	changed := h.voiceMute[key] != st
-	h.voiceMute[key] = st
-	h.mu.Unlock()
+	changed := false
+	safego.Locked(&h.mu, func() {
+		// Without a seat a leave or kick got in between: a mark written now
+		// would outlive the stay and be announced with the next one.
+		if _, seated := h.voice[key.ch][key.user]; seated {
+			changed = h.voiceMute[key] != st
+			h.voiceMute[key] = st
+		}
+	})
 	if !changed {
 		return
 	}

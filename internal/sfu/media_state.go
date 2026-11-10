@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -172,9 +173,10 @@ func (r *Room) notifyMedia() {
 	r.notifyMu.Lock()
 	defer r.notifyMu.Unlock()
 
-	r.mu.Lock()
-	pending := r.collectMediaNotificationsLocked(mediaFn != nil, viewersFn != nil, layersFn != nil)
-	r.mu.Unlock()
+	var pending pendingMediaNotifications
+	safego.Locked(&r.mu, func() {
+		pending = r.collectMediaNotificationsLocked(mediaFn != nil, viewersFn != nil, layersFn != nil)
+	})
 
 	r.dispatchMediaNotifications(pending, mediaFn, viewersFn, layersFn)
 }

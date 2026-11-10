@@ -125,13 +125,13 @@ func (h *Hub) endSiblingVoices(c *Client) {
 		if o == c {
 			continue
 		}
-		o.voiceMu.Lock()
-		if cur := o.currentVoice(); cur != nil && o.seatStamp() != 0 && o.seatStamp() < mine {
-			h.taken.mark(voiceKey{o.User.ID, *cur}, o.tabID())
-			h.leaveVoiceLocked(o, *cur)
-			o.SendEvent(events.VoiceKicked, map[string]any{"channel_id": *cur, "reason": kickTakenOver})
-		}
-		o.voiceMu.Unlock()
+		safego.Locked(&o.voiceMu, func() {
+			if cur := o.currentVoice(); cur != nil && o.seatStamp() != 0 && o.seatStamp() < mine {
+				h.taken.mark(voiceKey{o.User.ID, *cur}, o.tabID())
+				h.leaveVoiceLocked(o, *cur)
+				o.SendEvent(events.VoiceKicked, map[string]any{"channel_id": *cur, "reason": kickTakenOver})
+			}
+		})
 	}
 }
 

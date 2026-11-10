@@ -3,6 +3,7 @@ package ws
 import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -29,15 +30,19 @@ func (h *Hub) kickLostPeer(c *Client, peer *sfu.Peer) bool {
 // kickClientPeer is kickClientReason limited, when peer is set, to a client
 // whose current media peer it is.
 func (h *Hub) kickClientPeer(c *Client, onlyCh *uuid.UUID, reason string, peer *sfu.Peer) bool {
-	c.voiceMu.Lock()
-	cur := c.currentVoice()
-	if cur == nil || (onlyCh != nil && *cur != *onlyCh) || (peer != nil && c.peer() != peer) {
-		c.voiceMu.Unlock()
+	var ch uuid.UUID
+	kicked := false
+	safego.Locked(&c.voiceMu, func() {
+		cur := c.currentVoice()
+		if cur == nil || (onlyCh != nil && *cur != *onlyCh) || (peer != nil && c.peer() != peer) {
+			return
+		}
+		ch, kicked = *cur, true
+		h.leaveVoiceLocked(c, ch)
+	})
+	if !kicked {
 		return false
 	}
-	ch := *cur
-	h.leaveVoiceLocked(c, ch)
-	c.voiceMu.Unlock()
 	payload := map[string]any{"channel_id": ch}
 	if reason != "" {
 		payload["reason"] = reason

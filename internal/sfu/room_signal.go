@@ -254,9 +254,8 @@ func (r *Room) attachViewer(peer *Peer, trackID string, info *TrackInfo, vt *vie
 	// after the read, possibly before the sync below: the choice is read again
 	// after every sync, so a stale one never stays.
 	for {
-		r.mu.RLock()
-		pref, fit := r.viewerChoiceLocked(peer.ID, info)
-		r.mu.RUnlock()
+		var pref, fit int
+		safego.Locked(r.mu.RLocker(), func() { pref, fit = r.viewerChoiceLocked(peer.ID, info) })
 		peer.step("viewer-choice-read")
 		if !vt.syncChoice(pref, fit) {
 			break
@@ -293,9 +292,8 @@ func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webr
 	var recipientTrack webrtc.TrackLocal = info.Track
 	var vt *viewerTrack
 	if info.group != nil {
-		r.mu.RLock()
-		pref, fit := r.viewerChoiceLocked(peer.ID, info)
-		r.mu.RUnlock()
+		var pref, fit int
+		safego.Locked(r.mu.RLocker(), func() { pref, fit = r.viewerChoiceLocked(peer.ID, info) })
 		streamID := CameraStreamPrefix + info.SenderID.String()
 		if info.Source == SourceScreen {
 			streamID = info.SenderID.String()

@@ -292,3 +292,36 @@ func TestPanicInTheGreetingClosesThatConnection(t *testing.T) {
 	h.Broadcast(events.MemberJoined, map[string]any{})
 	readUntil(t, bob, events.MemberJoined)
 }
+
+// A panic under a client's voice lock (here: while it is taken out of its
+// Talk) releases that lock. Held, it would block the clean-up of the very
+// connection that panicked and every later kick of it.
+func TestPanicWhileLeavingVoiceReleasesTheVoiceLock(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil, openPerms())
+	t.Cleanup(h.Close)
+	c := testClient(h, auth.User{ID: uuid.New(), Username: "alice"})
+	ch := openChannel()
+	c.setVoice(&ch)
+	h.mu.Lock()
+	h.voice[ch] = map[uuid.UUID]auth.User{c.User.ID: c.User}
+	h.mu.Unlock()
+	h.Presence = func(uuid.UUID, uuid.UUID, bool) { panic("presence hook bug") }
+
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Error("the kick did not reach the panicking hook")
+			}
+		}()
+		h.kickClientPeer(c, nil, "", nil)
+	}()
+
+	if !c.voiceMu.TryLock() {
+		t.Fatal("the voice lock stayed held after the panic")
+	}
+	c.voiceMu.Unlock()
+	if !h.mu.TryLock() {
+		t.Fatal("the hub lock stayed held after the panic")
+	}
+	h.mu.Unlock()
+}

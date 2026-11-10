@@ -140,21 +140,26 @@ func (r *Room) SetScreenLayers(publisher uuid.UUID, layers []Layer) error {
 	if !validLayers(layers) {
 		return ErrInvalidLayers
 	}
-	r.mu.Lock()
-	if r.peers[publisher] == nil {
-		r.mu.Unlock()
-		return ErrNotInRoom
+	var g *layerGroup
+	var err error
+	changed := false
+	safego.Locked(&r.mu, func() {
+		if r.peers[publisher] == nil {
+			err = ErrNotInRoom
+			return
+		}
+		if r.layerMeta == nil {
+			r.layerMeta = make(map[uuid.UUID][]Layer)
+		}
+		if changed = !slices.Equal(r.layerMeta[publisher], layers); !changed {
+			return
+		}
+		r.layerMeta[publisher] = slices.Clone(layers)
+		g = r.groups[publisher]
+	})
+	if !changed {
+		return err
 	}
-	if r.layerMeta == nil {
-		r.layerMeta = make(map[uuid.UUID][]Layer)
-	}
-	if slices.Equal(r.layerMeta[publisher], layers) {
-		r.mu.Unlock()
-		return nil
-	}
-	r.layerMeta[publisher] = slices.Clone(layers)
-	g := r.groups[publisher]
-	r.mu.Unlock()
 	if g != nil {
 		g.setDeclared(len(layers))
 	}
@@ -187,20 +192,21 @@ func (r *Room) SetScreenQuality(viewer, publisher uuid.UUID, layer int) error {
 	if layer < -1 || layer >= maxLayers {
 		return ErrInvalidLayers
 	}
-	r.mu.Lock()
-	if r.peers[viewer] == nil {
-		r.mu.Unlock()
-		return ErrNotInRoom
-	}
-	if viewer == publisher {
-		r.mu.Unlock()
-		return ErrInvalidLayers
-	}
-	r.subsLocked(viewer).setScreenQuality(publisher, layer)
-	g := r.groups[publisher]
-	r.mu.Unlock()
+	var g *layerGroup
+	var err error
+	safego.Locked(&r.mu, func() {
+		switch {
+		case r.peers[viewer] == nil:
+			err = ErrNotInRoom
+		case viewer == publisher:
+			err = ErrInvalidLayers
+		default:
+			r.subsLocked(viewer).setScreenQuality(publisher, layer)
+			g = r.groups[publisher]
+		}
+	})
 	if g == nil {
-		return nil
+		return err
 	}
 	if vt := g.viewerFor(viewer); vt != nil {
 		vt.setPref(layer)
@@ -216,20 +222,21 @@ func (r *Room) SetScreenFit(viewer, publisher uuid.UUID, layer int) error {
 	if layer < 0 || layer >= maxLayers {
 		return ErrInvalidLayers
 	}
-	r.mu.Lock()
-	if r.peers[viewer] == nil {
-		r.mu.Unlock()
-		return ErrNotInRoom
-	}
-	if viewer == publisher {
-		r.mu.Unlock()
-		return ErrInvalidLayers
-	}
-	r.subsLocked(viewer).setScreenFit(publisher, layer)
-	g := r.groups[publisher]
-	r.mu.Unlock()
+	var g *layerGroup
+	var err error
+	safego.Locked(&r.mu, func() {
+		switch {
+		case r.peers[viewer] == nil:
+			err = ErrNotInRoom
+		case viewer == publisher:
+			err = ErrInvalidLayers
+		default:
+			r.subsLocked(viewer).setScreenFit(publisher, layer)
+			g = r.groups[publisher]
+		}
+	})
 	if g == nil {
-		return nil
+		return err
 	}
 	if vt := g.viewerFor(viewer); vt != nil {
 		vt.setFit(layer)

@@ -74,8 +74,9 @@ func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDes
 		s.rooms[channelID] = r
 	}
 	// A long-lived room picks up changed announced addresses for new peers.
+	loopback := announcesLoopback(announced)
 	r.mu.Lock()
-	r.allowLoopbackCands = announcesLoopback(announced)
+	r.allowLoopbackCands = loopback
 	r.mu.Unlock()
 	return r, r.attachPeer(userID, conn, sendOffer, sendICE), nil
 }
@@ -87,18 +88,21 @@ func (s *SFU) RemovePeer(channelID uuid.UUID, peer *Peer) {
 	if peer == nil {
 		return
 	}
-	s.roomsMu.Lock()
-	r, ok := s.rooms[channelID]
+	var r *Room
+	ok, current := false, false
+	safego.Locked(&s.roomsMu, func() {
+		if r, ok = s.rooms[channelID]; !ok {
+			return
+		}
+		current = r.detachPeer(peer)
+		if r.empty() {
+			delete(s.rooms, channelID)
+		}
+	})
 	if !ok {
-		s.roomsMu.Unlock()
 		_ = peer.PC.Close()
 		return
 	}
-	current := r.detachPeer(peer)
-	if r.empty() {
-		delete(s.rooms, channelID)
-	}
-	s.roomsMu.Unlock()
 	// Closing transports may wait on network operations. Other rooms and
 	// WebSocket registration must remain available while this peer closes.
 	if current {

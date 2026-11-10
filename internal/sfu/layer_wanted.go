@@ -31,9 +31,8 @@ func (g *layerGroup) requestKeyframe(idx int) {
 	if idx < 0 || idx >= maxLayers {
 		return
 	}
-	g.mu.Lock()
-	info := g.infos[idx]
-	g.mu.Unlock()
+	var info *TrackInfo
+	safego.Locked(&g.mu, func() { info = g.infos[idx] })
 	if info != nil {
 		info.requestKeyframe()
 	}
@@ -118,10 +117,7 @@ func (g *layerGroup) setDeclared(n int) {
 
 // retarget moves every viewer to the layer it should have now.
 func (g *layerGroup) retarget() {
-	g.mu.Lock()
-	vts := g.viewerListLocked()
-	g.mu.Unlock()
-	for _, vt := range vts {
+	for _, vt := range g.viewerTracks() {
 		vt.retarget()
 	}
 }
@@ -184,13 +180,16 @@ func (g *layerGroup) scheduleHoldTimerLocked(next time.Time, now time.Time) {
 func (g *layerGroup) refreshWanted() {
 	need := g.need()
 	now := layerNow()
-	g.mu.Lock()
-	mask, next := g.computeHoldMaskLocked(now, need)
-	changed := !g.started || mask != g.announced
-	g.started = true
-	g.announced = mask
-	g.scheduleHoldTimerLocked(next, now)
-	g.mu.Unlock()
+	var mask uint8
+	changed := false
+	safego.Locked(&g.mu, func() {
+		var next time.Time
+		mask, next = g.computeHoldMaskLocked(now, need)
+		changed = !g.started || mask != g.announced
+		g.started = true
+		g.announced = mask
+		g.scheduleHoldTimerLocked(next, now)
+	})
 	if changed && !g.superseded.Load() {
 		g.notifyWanted(mask)
 	}

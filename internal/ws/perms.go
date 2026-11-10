@@ -143,7 +143,7 @@ func (c *Client) notifyPermissions() {
 	}
 	c.permPending = true
 	c.mu.Unlock()
-	time.AfterFunc(wait, func() {
+	safego.AfterFunc("ws_perm_notify", wait, c.close, func() {
 		c.mu.Lock()
 		c.permPending = false
 		c.permSent = time.Now()
@@ -159,9 +159,8 @@ func (c *Client) notifyPermissions() {
 // what they may. nil userIDs means everybody.
 func (h *Hub) PermissionsChanged(userIDs []uuid.UUID) {
 	want := wantUserIDs(userIDs)
-	h.mu.RLock()
-	clients := filterPermClients(h.clients, want)
-	h.mu.RUnlock()
+	var clients []*Client
+	safego.Locked(h.mu.RLocker(), func() { clients = filterPermClients(h.clients, want) })
 	for _, c := range clients {
 		c.notifyPermissions()
 	}

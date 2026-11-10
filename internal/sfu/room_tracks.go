@@ -84,9 +84,9 @@ func (r *Room) keyframeTargetsLocked(viewerID uuid.UUID) ([]*TrackInfo, []*layer
 // DispatchKeyframe asks every publisher whose video viewerID receives for a
 // keyframe (the browser sends this when a remote video starts).
 func (r *Room) DispatchKeyframe(viewerID uuid.UUID) {
-	r.mu.RLock()
-	tracks, layered := r.keyframeTargetsLocked(viewerID)
-	r.mu.RUnlock()
+	var tracks []*TrackInfo
+	var layered []*layerGroup
+	safego.Locked(r.mu.RLocker(), func() { tracks, layered = r.keyframeTargetsLocked(viewerID) })
 	for _, info := range tracks {
 		info.requestKeyframe()
 	}
@@ -135,20 +135,23 @@ func (r *Room) supersedePreviousCaptureLocked(info *TrackInfo, sourceKey string)
 }
 
 func (r *Room) addTrack(key string, info *TrackInfo) {
-	r.mu.Lock()
-	// The publisher may have been replaced while its track was arriving.
-	if r.isTrackStaleLocked(info) {
-		r.mu.Unlock()
+	stale := false
+	safego.Locked(&r.mu, func() {
+		// The publisher may have been replaced while its track was arriving.
+		if stale = r.isTrackStaleLocked(info); stale {
+			return
+		}
+		if r.latestSources == nil {
+			r.latestSources = make(map[string]*TrackInfo)
+		}
+		sourceKey := trackKey(info.SenderID, string(info.Source))
+		r.supersedePreviousCaptureLocked(info, sourceKey)
+		r.latestSources[sourceKey] = info
+		r.trackLocals[key] = info
+	})
+	if stale {
 		return
 	}
-	if r.latestSources == nil {
-		r.latestSources = make(map[string]*TrackInfo)
-	}
-	sourceKey := trackKey(info.SenderID, string(info.Source))
-	r.supersedePreviousCaptureLocked(info, sourceKey)
-	r.latestSources[sourceKey] = info
-	r.trackLocals[key] = info
-	r.mu.Unlock()
 	if info.group != nil {
 		info.group.markLive(info)
 	}
@@ -160,13 +163,15 @@ func (r *Room) removeTrack(key string, info *TrackInfo) {
 		// The layer is gone for good, whether or not the share was stopped.
 		info.group.detach(info)
 	}
-	r.mu.Lock()
-	if r.trackLocals[key] != info {
-		r.mu.Unlock()
+	removed := false
+	safego.Locked(&r.mu, func() {
+		if removed = r.trackLocals[key] == info; removed {
+			delete(r.trackLocals, key)
+		}
+	})
+	if !removed {
 		return
 	}
-	delete(r.trackLocals, key)
-	r.mu.Unlock()
 	r.goSignal()
 }
 
@@ -264,15 +269,16 @@ func (r *Room) stopScreenShareLocked(userID uuid.UUID) {
 }
 
 func (r *Room) unpublish(userID uuid.UUID, source Source) {
-	r.mu.Lock()
-	changed := r.stopSourceTracksLocked(userID, source)
-	if source == SourceScreen {
-		r.stopScreenShareLocked(userID)
-	}
-	if source == SourceCamera {
-		r.cameraStoppedLocked(userID)
-	}
-	r.mu.Unlock()
+	changed := false
+	safego.Locked(&r.mu, func() {
+		changed = r.stopSourceTracksLocked(userID, source)
+		if source == SourceScreen {
+			r.stopScreenShareLocked(userID)
+		}
+		if source == SourceCamera {
+			r.cameraStoppedLocked(userID)
+		}
+	})
 	if changed {
 		r.goSignal()
 	}
