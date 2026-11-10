@@ -266,6 +266,21 @@ describe('a group of one', () => {
     await bob.close()
   }, 30_000)
 
+  it('says again that it is here on every tick while others are in the room', async () => {
+    const bob = await opened(bobId)
+    expect((await bob.sync([bobId])).epoch).toBe(0)
+    // Alone in the room there is nobody to tell.
+    expect((await bob.maintain()).wires).toEqual([])
+    const first = await bob.sync([bobId, carolId])
+    expect(first.wires).toHaveLength(1)
+    // The announcement may have been lost or have come too early: it is repeated, and the group stays.
+    const again = await bob.maintain()
+    expect(again.epoch).toBe(0)
+    expect(again.wires).toEqual(first.wires)
+    expect((await bob.maintain()).wires).toEqual(first.wires)
+    await bob.close()
+  }, 30_000)
+
   it('steps aside and offers itself when a lower id is in the room', async () => {
     const alice = await opened(aliceId)
     const bob = await opened(bobId)

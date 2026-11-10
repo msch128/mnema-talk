@@ -79,6 +79,7 @@ export abstract class GroupEpoch extends GroupBase {
     this.restarting.clear()
     if (this.offerTimer !== null) clearTimeout(this.offerTimer)
     this.offerTimer = null
+    this.offeredAt = null
     const epochNumber = Number(epoch)
     const before = this.current
     const key: EpochKeys = { key: material.aes, signer: material.signer, verifiers: material.verifiers }
@@ -155,6 +156,8 @@ export abstract class GroupEpoch extends GroupBase {
     }, Math.max(10, this.timing.maintenanceMs))
   }
 
+  protected abstract aloneTick(): Promise<MediaStep>
+
   /**
    * Looks at the clocks: sends this member's heartbeat when it is due and, if
    * this member is the committer, removes members that showed no sign of life
@@ -181,6 +184,7 @@ export abstract class GroupEpoch extends GroupBase {
       for (const id of this.alive.keys()) this.alive.set(id, now)
     }
     const members = treeMembers(state)
+    if (members.size === 1) return this.aloneTick()
     const wires = await this.livenessWires(current, members, now, slept)
     wires.push(...await this.maintenanceCommits(members, now, slept))
     return this.step(wires)
