@@ -18,6 +18,12 @@ export const RIVAL_BASE_MS = 60_000
 export const RIVAL_MAX_MS = 600_000
 // A joiner whose offer got no welcome in this long offers again.
 export const OFFER_WAIT_MS = 4000
+// Several members offer a key package and nobody is lower: it looks as if
+// nobody holds a group. A member that founded alone announces itself with the
+// very same message, though, and answers an offer with a welcome. So the lowest
+// waits this long after its own offer before it founds; a welcome that comes
+// first is taken.
+export const ALL_OFFERED_WAIT_MS = 1500
 // The lowest joiner whose offer got no welcome in this long founds the group:
 // nobody here holds one. A welcome that was still on its way is taken anyway
 // (see the welcome below), so founding early costs nothing.
