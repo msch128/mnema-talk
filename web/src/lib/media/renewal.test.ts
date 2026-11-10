@@ -206,6 +206,23 @@ describe('a member renewing its own leaf', () => {
     await closeAll(groups.values())
   }, 60_000)
 
+  it('keeps what the committer did on top of a renewal when a rival renewal for the old epoch comes late', async () => {
+    const { groups, alice, bob, carol } = await trio()
+    vi.setSystemTime(START + DUE)
+    const fromBob = await bob.maintain()
+    const fromCarol = await carol.maintain()
+    await alice.receive(carolId, fromCarol.wires[0] as Uint8Array)
+    // Bob leaves the Talk, and Alice removes him: a commit on top of Carol's renewal.
+    const removed = await alice.sync([aliceId, carolId])
+    expect(removed.verification?.members).toEqual([aliceId, carolId])
+    // Bob's renewal would have beaten Carol's, but the epoch both were for is two commits back:
+    // going back to it would undo the removal.
+    const late = await alice.receive(bobId, fromBob.wires[0] as Uint8Array)
+    expect(late.epoch).toBe(removed.epoch)
+    expect(late.verification?.members).toEqual([aliceId, carolId])
+    await closeAll(groups.values())
+  }, 60_000)
+
   it('ignores a rival commit for that epoch that does not verify, or that loses', async () => {
     const { groups, alice, bob, carol } = await trio()
     vi.setSystemTime(START + DUE)
