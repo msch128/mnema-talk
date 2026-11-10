@@ -25,6 +25,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/search"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -150,7 +151,7 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 
 func TestChatHandlerValidationAndErrors(t *testing.T) {
 	f := newChatFixture(t)
-	h := &Handler{DB: f.p, Events: &events.Recorder{}}
+	h := &Handler{DB: f.p, Perms: perm.NewService(f.p), Events: &events.Recorder{}}
 	valid := map[string]string{"channelID": f.c.ID.String(), "messageID": f.m.String(), "id": f.c.ID.String(), "number": "1"}
 	type handler func(http.ResponseWriter, *http.Request) error
 	pathHandlers := []struct {
@@ -243,7 +244,7 @@ func TestChatDeleteCategoryHandlerAndVoicePreference(t *testing.T) {
 		t.Fatal(err)
 	}
 	recorder := &events.Recorder{}
-	h := &Handler{DB: f.p, Events: recorder}
+	h := &Handler{DB: f.p, Perms: perm.NewService(f.p), Events: recorder}
 	w := httptest.NewRecorder()
 	if err := h.channels().ServeDeleteCategory(w, chattest.Request(f.u, "", map[string]string{"id": cat.ID.String()}, "")); err != nil {
 		t.Fatal(err)
@@ -302,12 +303,12 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 	if _, err := messages.GetThreadReplies(ctx, f.p, f.m, core.HistoryQuery{Limit: 10, Before: &f.m}); err != nil {
 		t.Fatal(err)
 	}
-	h := &Handler{DB: f.p, Events: &events.Recorder{}}
+	h := &Handler{DB: f.p, Perms: perm.NewService(f.p), Events: &events.Recorder{}}
 	if err := h.messages().ServeCreateMessage(httptest.NewRecorder(), chattest.Request(f.u, `{"content":"hi"}`, map[string]string{"channelID": uuid.NewString()}, "")); err == nil {
 		t.Fatal("message posted in absent channel")
 	}
 	p := chattest.DriftPool(t, f.p, map[string]string{"messages": `SELECT id,number,channel_id,user_id,parent_id,NULL::text content,is_pinned,is_edited,created_at,updated_at,reply_to_id FROM public.messages`})
-	if err := (&Handler{DB: p}).messages().ListMessages(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"channelID": f.c.ID.String()}, "")); err == nil {
+	if err := (&Handler{DB: p, Perms: perm.NewService(f.p)}).messages().ListMessages(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"channelID": f.c.ID.String()}, "")); err == nil {
 		t.Fatal("undecodable history accepted")
 	}
 	if _, _, err := search.Search(ctx, f.p, search.SearchQuery{Text: strings.Repeat("a", 201)}); err == nil {

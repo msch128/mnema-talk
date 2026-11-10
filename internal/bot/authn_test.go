@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestBearerToken(t *testing.T) {
@@ -34,7 +35,7 @@ func TestBearerToken(t *testing.T) {
 }
 
 func TestShouldTouch(t *testing.T) {
-	a := NewAuthenticator(nil)
+	a := NewAuthenticator(nil, permtest.NewFixture().Service())
 	id := uuid.New()
 	now := time.Now()
 

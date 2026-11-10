@@ -25,6 +25,12 @@ type Handler struct {
 	Engine *automod.Engine
 }
 
+// New returns h ready to mount. It panics without Perms.
+func New(h Handler) *Handler {
+	perm.Must(h.Perms, "moderation handler")
+	return &h
+}
+
 // MountAdmin registers the routes below /api/admin.
 func (h *Handler) MountAdmin(r chi.Router) {
 	cfg := r.With(auth.RequirePerm(h.Perms, perm.Administrator))

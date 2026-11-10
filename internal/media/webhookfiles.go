@@ -43,13 +43,10 @@ func (h *Handler) FormError(ctx context.Context, err error) error { return h.for
 // GlobalLimit returns ctx carrying the global upload limit (webhooks have no
 // member, hence no role) and the transport body ceiling for the request.
 func (h *Handler) GlobalLimit(ctx context.Context) (context.Context, int64, error) {
-	limit := h.MaxUploadBytes
-	if h.Perms != nil {
-		v, err := h.Perms.GlobalUploadLimitBytes(ctx)
-		if err != nil {
-			return ctx, 0, err
-		}
-		limit = min(limit, v)
+	v, err := h.Perms.GlobalUploadLimitBytes(ctx)
+	if err != nil {
+		return ctx, 0, err
 	}
+	limit := min(h.MaxUploadBytes, v)
 	return WithUploadLimit(ctx, limit), bodyLimit(limit), nil
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // A failed bind lookup must not decide the issuer: with the creator query
@@ -19,7 +20,7 @@ import (
 func TestBindCandidatesReportsDatabaseErrors(t *testing.T) {
 	e := newEnv(t)
 	f := e.newBot()
-	a := NewAuthenticator(e.p)
+	a := NewAuthenticator(e.p, permtest.NewFixture().Service())
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if got, err := a.bindCandidates(ctx, f.token.ID); err == nil {

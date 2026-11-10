@@ -37,8 +37,7 @@ func newPermWorld(t *testing.T) *permWorld {
 	w.public = &core.ChannelInfo{ID: pub, Type: core.ChannelTypeVoice}
 	w.private = &core.ChannelInfo{ID: priv, Type: core.ChannelTypeText}
 	w.privateVoice = &core.ChannelInfo{ID: privVoice, Type: core.ChannelTypeVoice}
-	w.h = NewHub(nil, nil, nil, nil)
-	w.h.SetPermissions(f.Service())
+	w.h = NewHub(nil, nil, nil, nil, f.Service())
 	t.Cleanup(w.h.Close)
 	ownerUser := auth.User{ID: uuid.New(), Role: auth.RoleAdmin}
 	insiderUser, outsiderUser := auth.User{ID: uuid.New()}, auth.User{ID: uuid.New()}
@@ -71,8 +70,7 @@ func TestBroadcastChannelReachesViewersOnly(t *testing.T) {
 }
 
 func TestEventsFailClosedWhenPermissionsCannotBeLoaded(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
-	h.SetPermissions(permtest.Unloadable()) // no database, no state
+	h := NewHub(nil, nil, nil, nil, permtest.Unloadable()) // no database, no state
 	t.Cleanup(h.Close)
 	a, b := testClient(h, auth.User{ID: uuid.New()}), testClient(h, auth.User{ID: uuid.New()})
 	// A fresh connection learns of no Talk and no media at all.
@@ -229,9 +227,6 @@ func TestMediaPolicyFollowsSpeakAndVideo(t *testing.T) {
 	}
 	if got := denied(perm.DefaultEveryone &^ perm.Video); got.Has(sfu.SourceAudio) || !got.Has(sfu.SourceCamera) || !got.Has(sfu.SourceScreen) || !got.Has(sfu.SourceScreenAudio) {
 		t.Fatalf("no Video: %b", got)
-	}
-	if got := c.mediaDenied(nil, w.public.ID); got != 0 {
-		t.Fatal("no permission model, no limits")
 	}
 	w.f.Everyone(perm.DefaultEveryone)
 

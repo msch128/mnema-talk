@@ -1,23 +1,46 @@
 package chat
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 )
 
-// A handler built without a permission service (unit tests of other
-// features) limits nothing in channel lists, categories and layouts.
-func TestHandlerWithoutPermissionsLimitsNothing(t *testing.T) {
-	h := &Handler{}
+// A handler built without a permission service must not come up: every way
+// of mounting its routes panics, so the server fails to start instead of
+// serving channels nobody checks.
+func TestMountingAHandlerWithoutPermissionsPanics(t *testing.T) {
+	for name, mount := range map[string]func(*Handler){
+		"member routes": func(h *Handler) { h.Mount(chi.NewRouter()) },
+		"admin routes":  func(h *Handler) { h.MountAdmin(chi.NewRouter()) },
+		"bot routes": func(h *Handler) {
+			h.MountBot(chi.NewRouter(), func(next http.Handler) http.Handler { return next })
+		},
+		"direct messages": func(h *Handler) { h.DMs() },
+	} {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Fatal("mounted without a permission service")
+				}
+			}()
+			mount(&Handler{})
+		})
+	}
+}
+
+// The channel list shows nothing when the permission state cannot be asked.
+func TestChannelListFailsWithoutPermissions(t *testing.T) {
 	r := httptest.NewRequest("GET", "/", nil)
 	cats := []core.Category{{ID: uuid.New(), Channels: []core.Channel{{ID: uuid.New()}}}}
 	uncat := []core.Channel{{ID: uuid.New()}}
-	gotCats, gotUncat, err := channels.VisibleHierarchy(h.Perms, r, cats, uncat)
-	if err != nil || len(gotCats) != 1 || len(gotCats[0].Channels) != 1 || len(gotUncat) != 1 {
+	gotCats, gotUncat, err := channels.VisibleHierarchy(nil, r, cats, uncat)
+	if err == nil || gotCats != nil || gotUncat != nil {
 		t.Fatalf("hierarchy: %+v %+v %v", gotCats, gotUncat, err)
 	}
 }

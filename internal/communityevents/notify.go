@@ -85,7 +85,7 @@ func (h *Handler) notifyMembers(ctx context.Context, ev *CommunityEvent, kind, r
 var denied = &perm.Snapshot{}
 
 func (h *Handler) noticeSnapshot(ctx context.Context, ev *CommunityEvent) *perm.Snapshot {
-	if ev.ChannelID == nil || h.Perms == nil {
+	if ev.ChannelID == nil {
 		return nil
 	}
 	snap, err := h.Perms.Snapshot(ctx)

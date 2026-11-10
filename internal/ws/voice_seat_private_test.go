@@ -25,8 +25,7 @@ func TestResumedStayInAPublicTalkStaysPublicWhenPermissionsAreUnavailable(t *tes
 		}
 		return f.Snapshot(), nil
 	})
-	h := NewHub(nil, nil, nil, nil)
-	h.SetPermissions(svc)
+	h := NewHub(nil, nil, nil, nil, svc)
 	t.Cleanup(h.Close)
 	talk := &core.ChannelInfo{ID: f.Channel(uuid.Nil), Type: core.ChannelTypeVoice}
 	c := testClient(h, auth.User{ID: uuid.New()})
@@ -66,8 +65,7 @@ func TestASeatCountsByWhoCanSeeItsTalk(t *testing.T) {
 		}
 		return f.Snapshot(), nil
 	})
-	h := NewHub(nil, nil, nil, nil)
-	h.SetPermissions(svc)
+	h := NewHub(nil, nil, nil, nil, svc)
 	t.Cleanup(h.Close)
 
 	for name, tc := range map[string]struct {
@@ -98,8 +96,7 @@ func TestAStayEndingInAHiddenTalkDoesNotCountPublicly(t *testing.T) {
 		}
 		return f.Snapshot(), nil
 	})
-	h := NewHub(nil, nil, nil, nil)
-	h.SetPermissions(svc)
+	h := NewHub(nil, nil, nil, nil, svc)
 	t.Cleanup(h.Close)
 
 	if got := h.settleSeat(talk, seatPublic); got != seatPublic {

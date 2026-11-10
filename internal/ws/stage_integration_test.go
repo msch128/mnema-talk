@@ -44,8 +44,7 @@ func newDBStage(t *testing.T) *dbStage {
 	if err := p.QueryRow(ctx, `INSERT INTO roles (name, position, permissions) VALUES ('Hosts', 1, $1) RETURNING id`, int64(perm.ManageStage)).Scan(&role); err != nil {
 		t.Fatal(err)
 	}
-	s.h = NewHub(p, nil, nil, nil)
-	s.h.SetPermissions(perm.NewService(p))
+	s.h = NewHub(p, nil, nil, nil, perm.NewService(p))
 	t.Cleanup(s.h.Close)
 	s.mod, s.amy, s.bob = s.member(t, "stage_mod"), s.member(t, "stage_amy"), s.member(t, "stage_bob")
 	if _, err := p.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`, s.mod.User.ID, role); err != nil {

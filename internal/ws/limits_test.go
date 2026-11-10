@@ -16,7 +16,7 @@ import (
 
 func limitsServer(t *testing.T) (*Hub, string, http.Header) {
 	t.Helper()
-	h := NewHub(nil, fakeAuth{user: auth.User{ID: uuid.New(), Username: "alice"}}, nil, nil)
+	h := NewHub(nil, fakeAuth{user: auth.User{ID: uuid.New(), Username: "alice"}}, nil, nil, openPerms())
 	srv := httptest.NewServer(http.HandlerFunc(h.HandleWebSocket))
 	t.Cleanup(srv.Close)
 	t.Cleanup(h.Close)
@@ -85,7 +85,7 @@ func TestWebSocketUpgradesAreRateLimitedPerUser(t *testing.T) {
 }
 
 func TestActiveCounterFollowsIdleAcrossConnections(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	user := auth.User{ID: uuid.New()}
 	a := &Client{hub: h, User: user, send: make(chan []byte, 64)}
 	b := &Client{hub: h, User: user, send: make(chan []byte, 64)}
@@ -140,7 +140,7 @@ func TestRejoinOfTheSameRoomKeepsAHealthyPeer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := NewHub(nil, nil, voiceSFU, nil)
+	h := NewHub(nil, nil, voiceSFU, nil, openPerms())
 	ch := voiceCh()
 	c := testClient(h, auth.User{ID: uuid.New(), Username: "rejoiner"})
 	defer h.unregister(c)
@@ -163,7 +163,7 @@ func TestRejoinOfTheSameRoomKeepsAHealthyPeer(t *testing.T) {
 // Handshakes still in flight count toward the cap, so a flood of upgrades
 // cannot overshoot it before any of them is registered.
 func TestPendingHandshakesCountTowardTheSocketCap(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	user := auth.User{ID: uuid.New()}
 	for range maxBrowserSockets {
 		if ok, evicted := h.registerPending(newClient(h, nil, user, 0)); !ok || len(evicted) != 0 {

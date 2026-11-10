@@ -88,7 +88,7 @@ func (e *env) faultPool(tr *pgfault.Tracer) *db.Pool {
 }
 
 func (e *env) handler(pool *db.Pool) *Handler {
-	m := &media.Handler{DB: pool, Store: e.store, Bucket: "b", MaxUploadBytes: 1 << 20, Events: &events.Recorder{}}
+	m := &media.Handler{DB: pool, Perms: perm.NewService(e.p), Store: e.store, Bucket: "b", MaxUploadBytes: 1 << 20, Events: &events.Recorder{}}
 	return &Handler{DB: pool, Perms: perm.NewService(pool), Media: m,
 		OnRevoke: func(uuid.UUID, *uuid.UUID) {}}
 }

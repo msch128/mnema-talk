@@ -258,17 +258,13 @@ func (a *API) postEditContext(r *http.Request, chID, msgID uuid.UUID, canManage 
 	return ctx, before, nil
 }
 
-// canManageMessages says whether user holds Manage messages in the channel (the
-// Owner does when there is no permission service).
+// canManageMessages says whether user holds Manage messages in the channel.
 func (a *API) canManageMessages(r *http.Request, user *auth.User, chID uuid.UUID) (bool, error) {
 	return CanManageMessages(r.Context(), a.Guard.Perms, user, chID)
 }
 
 // CanManageMessages is canManageMessages for callers outside the chat handler.
 func CanManageMessages(ctx context.Context, perms *perm.Service, user *auth.User, chID uuid.UUID) (bool, error) {
-	if perms == nil {
-		return user.Role == "admin", nil
-	}
 	p, err := perms.Channel(ctx, user.Subject(), chID)
 	if err != nil {
 		return false, err

@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestClearLoginLockoutScopesToOneAccount(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(nil, permtest.NewFixture().Service(), nil)
 	uid := uuid.New()
 	for i := 0; i < 10; i++ {
 		h.loginFailures.RecordFailure("203.0.113.9|max")
@@ -61,7 +62,7 @@ func TestClearLoginLockoutScopesToOneAccount(t *testing.T) {
 }
 
 func TestClearAllLoginLockouts(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(nil, permtest.NewFixture().Service(), nil)
 	for i := 0; i < 10; i++ {
 		h.loginFailures.RecordFailure("198.51.100.1|a")
 		h.loginFailures.RecordFailure("198.51.100.2|b")
@@ -74,7 +75,7 @@ func TestClearAllLoginLockouts(t *testing.T) {
 }
 
 func TestClearLoginLockoutCoversSecondStepLimiters(t *testing.T) {
-	h := NewHandler(nil, nil)
+	h := NewHandler(nil, permtest.NewFixture().Service(), nil)
 	uid, other := uuid.New(), uuid.New()
 	lock := func(id uuid.UUID) {
 		for i := 0; i < 10; i++ {

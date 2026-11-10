@@ -64,12 +64,13 @@ func newFixture(t *testing.T) *fixture {
 	return f
 }
 
-// handler builds a Handler (no permission model) on pool.
+// handler builds a Handler on pool; the permission model reads the healthy database.
 func (f *fixture) handler(p *db.Pool) *Handler {
-	m := &media.Handler{DB: p, Store: f.store, Bucket: "b", MaxUploadBytes: 1 << 20, Events: &events.Recorder{}}
+	perms := perm.NewService(f.p)
+	m := &media.Handler{DB: p, Perms: perms, Store: f.store, Bucket: "b", MaxUploadBytes: 1 << 20, Events: &events.Recorder{}}
 	policy := &ssrf.Policy{}
 	h := New(Handler{
-		DB: p, Events: &events.Recorder{}, Media: m, PublicURL: "http://example.test/", Policy: policy,
+		DB: p, Perms: perms, Events: &events.Recorder{}, Media: m, PublicURL: "http://example.test/", Policy: policy,
 		Outgoing: NewDispatcher(p, ssrf.NewClient(ssrf.NewDialer(policy), time.Second), "test"),
 	})
 	h.SetLimits(10000, 10000)

@@ -20,7 +20,7 @@ func testClient(h *Hub, u auth.User) *Client {
 }
 
 func voiceCh() *core.ChannelInfo {
-	return &core.ChannelInfo{ID: uuid.New(), Type: core.ChannelTypeVoice}
+	return &core.ChannelInfo{ID: openChannel(), Type: core.ChannelTypeVoice}
 }
 
 func inRoom(h *Hub, chID, userID uuid.UUID) bool {
@@ -61,7 +61,7 @@ func TestKickRacingJoinLeavesNoSFUPeer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := NewHub(nil, nil, voiceSFU, nil)
+	h := NewHub(nil, nil, voiceSFU, nil, openPerms())
 	ch := voiceCh()
 	user := auth.User{ID: uuid.New(), Username: "eve"}
 	c := testClient(h, user)
@@ -87,7 +87,7 @@ func TestKickRacingJoinLeavesNoSFUPeer(t *testing.T) {
 // Two tabs of one user in the same room: one leaving must keep the user
 // listed while the other still listens.
 func TestLeaveKeepsPresenceWhileAnotherTabListens(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	ch := voiceCh()
 	user := auth.User{ID: uuid.New(), Username: "two-tabs"}
 	a, b := testClient(h, user), testClient(h, user)
@@ -107,7 +107,7 @@ func TestLeaveKeepsPresenceWhileAnotherTabListens(t *testing.T) {
 // Join time and mute state belong to one room: two tabs in two rooms do
 // not share them.
 func TestVoiceTimeAndMuteArePerRoom(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	ch1, ch2 := voiceCh(), voiceCh()
 	user := auth.User{ID: uuid.New(), Username: "split"}
 	a, b := testClient(h, user), testClient(h, user)
@@ -143,7 +143,7 @@ func TestVoiceTimeAndMuteArePerRoom(t *testing.T) {
 
 // Voice payloads follow profile changes made after the socket connected.
 func TestVoicePayloadsFollowUserUpdates(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	ch := voiceCh()
 	user := auth.User{ID: uuid.New(), Username: "anna", DisplayName: "Anna"}
 	c := testClient(h, user)
@@ -209,7 +209,7 @@ func TestTypingThrottleIsPerChannel(t *testing.T) {
 
 // Speaking indicators go to the room only, only on change, and are capped.
 func TestSpeakingGoesToRoomOnlyOnChange(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	ch := voiceCh()
 	speaker := testClient(h, auth.User{ID: uuid.New(), Username: "s"})
 	listener := testClient(h, auth.User{ID: uuid.New(), Username: "l"})
@@ -258,7 +258,7 @@ func TestDiagnosticsAreRateLimited(t *testing.T) {
 // Deleting a voice channel empties its room: members are kicked and told,
 // lingering presence ends.
 func TestCloseVoiceChannelEvictsEveryone(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	h.VoiceGrace = time.Hour
 	ch, other := voiceCh(), voiceCh()
 	member := testClient(h, auth.User{ID: uuid.New(), Username: "m"})
@@ -298,7 +298,7 @@ func TestCloseVoiceChannelEvictsEveryone(t *testing.T) {
 // A room full by its channel's user_limit turns away a newcomer with voice_kicked (reason room_full);
 // a member already present, e.g. in a second tab, still gets in.
 func TestFullVoiceRoomRefusesNewcomers(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	ch := voiceCh()
 	ch.UserLimit = 2
 	a := testClient(h, auth.User{ID: uuid.New(), Username: "a"})

@@ -65,17 +65,13 @@ func (a *API) ServeDeleteCategory(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	if a.Guard.Perms == nil {
-		err = DeleteCategory(r.Context(), a.DB, id)
-	} else {
-		sub := auth.UserFrom(r.Context()).Subject()
-		err = a.Guard.Perms.Locked(r.Context(), sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
-			if err := CheckWholeCategory(snap, sub, id); err != nil {
-				return err
-			}
-			return DeleteCategoryTx(r.Context(), tx, id)
-		})
-	}
+	sub := auth.UserFrom(r.Context()).Subject()
+	err = a.Guard.Perms.Locked(r.Context(), sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
+		if err := CheckWholeCategory(snap, sub, id); err != nil {
+			return err
+		}
+		return DeleteCategoryTx(r.Context(), tx, id)
+	})
 	if err != nil {
 		return err
 	}
@@ -315,18 +311,13 @@ func (a *API) ServeApplyLayout(w http.ResponseWriter, r *http.Request) error {
 	if len(req.Categories)+len(req.Channels) > 500 {
 		return httpx.ErrInvalidInput("too many entries")
 	}
-	var err error
-	if a.Guard.Perms == nil {
-		err = ApplyLayout(r.Context(), a.DB, req.Categories, req.Channels)
-	} else {
-		sub := auth.UserFrom(r.Context()).Subject()
-		err = a.Guard.Perms.Locked(r.Context(), sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
-			if err := CheckLayout(snap, sub, req); err != nil {
-				return err
-			}
-			return ApplyLayoutTx(r.Context(), tx, req.Categories, req.Channels)
-		})
-	}
+	sub := auth.UserFrom(r.Context()).Subject()
+	err := a.Guard.Perms.Locked(r.Context(), sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
+		if err := CheckLayout(snap, sub, req); err != nil {
+			return err
+		}
+		return ApplyLayoutTx(r.Context(), tx, req.Categories, req.Channels)
+	})
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -29,7 +30,7 @@ func TestIconErrorsAreNeverCached(t *testing.T) {
 	if _, err := p.Exec(context.Background(), `UPDATE instance_settings SET community_icon_version = 'v1', community_icon_updated_at = NOW()`); err != nil {
 		t.Fatal(err)
 	}
-	h := NewHandler(p, nil)
+	h := NewHandler(p, perm.NewService(p))
 	r := chi.NewRouter()
 	h.MountPublic(r)
 

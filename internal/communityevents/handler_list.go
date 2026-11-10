@@ -45,9 +45,6 @@ func (h *Handler) listQuery(r *http.Request) (ListQuery, error) {
 		}
 		*dst = t
 	}
-	if h.Perms == nil {
-		return q, nil
-	}
 	snap, err := h.Perms.Snapshot(r.Context())
 	if err != nil {
 		return q, err

@@ -10,6 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 func TestFollowingAgainMovesAThreadToTheFront(t *testing.T) {
@@ -34,7 +36,7 @@ func TestFollowingAgainMovesAThreadToTheFront(t *testing.T) {
 	if err := SetThreadFollow(ctx, f.p, f.u.ID, f.msg, true); err != nil {
 		t.Fatal(err)
 	}
-	h := &API{DB: f.p}
+	h := &API{DB: f.p, Guard: core.NewGuard(perm.NewService(f.p))}
 	rec := httptest.NewRecorder()
 	if err := h.ListFollowedThreads(rec, chattest.Request(f.u, "", nil, "")); err != nil {
 		t.Fatal(err)

@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func (e *env) do(h http.Handler, method, path, token, body string) *httptest.ResponseRecorder {
@@ -189,8 +190,8 @@ func TestInteractionStoreBounds(t *testing.T) {
 
 func TestAuthenticatorForgetsOldTouches(t *testing.T) {
 	e := newEnv(t)
-	st := e.restSetup(NewCommands(Commands{}))
-	a := NewAuthenticator(e.p)
+	st := e.restSetup(NewCommands(Commands{Perms: perm.NewService(e.p)}))
+	a := NewAuthenticator(e.p, permtest.NewFixture().Service())
 	for i := 0; i < 5000; i++ {
 		a.touched[uuid.New()] = time.Now()
 	}

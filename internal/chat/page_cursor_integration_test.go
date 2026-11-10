@@ -20,6 +20,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/search"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 func requireStatus(t *testing.T, err error, status int) {
@@ -46,7 +47,7 @@ func TestPageCursorOfADeletedRowIsNotFound(t *testing.T) {
 	_, err = forum.ListForumPostsFiltered(ctx, f.p, f.c.ID, forum.PostFilter{Sort: "newest"}, core.HistoryQuery{Limit: 5, Before: &gone})
 	requireStatus(t, err, http.StatusNotFound)
 
-	h := &Handler{DB: f.p, Events: &events.Recorder{}}
+	h := &Handler{DB: f.p, Perms: perm.NewService(f.p), Events: &events.Recorder{}}
 	err = h.reports().ListReports(httptest.NewRecorder(), chattest.Request(f.u, "", nil, "before="+gone.String()))
 	requireStatus(t, err, http.StatusNotFound)
 
@@ -94,7 +95,7 @@ func TestResolveAndDeleteReportStates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := &Handler{DB: f.p, Events: &events.Recorder{}}
+	h := &Handler{DB: f.p, Perms: perm.NewService(f.p), Events: &events.Recorder{}}
 	params := map[string]string{"id": id.String()}
 	resolve := func() (*httptest.ResponseRecorder, error) {
 		w := httptest.NewRecorder()

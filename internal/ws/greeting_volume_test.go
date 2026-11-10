@@ -23,7 +23,7 @@ func TestGreetingWithManyPublishersReachesTheClientIntact(t *testing.T) {
 	h.Sessions = fakeAuth{user: auth.User{ID: uuid.New(), Username: "viewer"}}
 	t.Cleanup(h.Close)
 	for r := 0; r < publishers/perRoom; r++ {
-		ch := uuid.New()
+		ch := openChannel()
 		for i := 0; i < perRoom; i++ {
 			user := uuid.New()
 			if _, _, err := voiceSFU.Join(ch, user, func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {}); err != nil {
@@ -77,7 +77,7 @@ func TestClientThatLeavesDuringABigGreetingIsUnregisteredPromptly(t *testing.T) 
 	h.Sessions = fakeAuth{user: auth.User{ID: uuid.New(), Username: "viewer"}}
 	t.Cleanup(h.Close)
 	for r := 0; r < publishers/perRoom; r++ {
-		ch := uuid.New()
+		ch := openChannel()
 		for i := 0; i < perRoom; i++ {
 			user := uuid.New()
 			if _, _, err := voiceSFU.Join(ch, user, func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {}); err != nil {

@@ -233,7 +233,7 @@ func TestEventSchedulerWithoutOptionalServices(t *testing.T) {
 	soon := a.coverEventAt(admin, time.Now().Add(5*time.Minute), nil)
 	wantStatus(t, "rsvp", alice.put("/api/events/"+soon.ID.String()+"/rsvp", map[string]string{"response": "going"}), http.StatusOK)
 
-	bare := &communityevents.Handler{DB: a.db, Store: a.router.Events.Store}
+	bare := &communityevents.Handler{DB: a.db, Store: a.router.Events.Store, Perms: a.router.Events.Perms}
 	communityevents.NewScheduler(bare).Tick(context.Background(), time.Now())
 	var sent *time.Time
 	if err := a.db.QueryRow(context.Background(), `SELECT reminder_sent_at FROM events WHERE id = $1`, soon.ID).Scan(&sent); err != nil || sent == nil {
@@ -268,7 +268,7 @@ func TestEventRetractionIsANoOpWithoutHistory(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 	ctx := context.Background()
-	bare := &communityevents.Handler{DB: a.db, Store: a.router.Events.Store}
+	bare := &communityevents.Handler{DB: a.db, Store: a.router.Events.Store, Perms: a.router.Events.Perms}
 
 	if err := bare.RetractHidden(ctx, nil, nil); err != nil {
 		t.Fatalf("no events: %v", err)

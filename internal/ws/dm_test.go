@@ -13,8 +13,7 @@ import (
 // to webhooks or to a client from before conversations.
 func TestAConversationsEventsReachItsMembersOnly(t *testing.T) {
 	f := permtest.NewFixture()
-	h := NewHub(nil, nil, nil, nil)
-	h.SetPermissions(f.Service())
+	h := NewHub(nil, nil, nil, nil, f.Service())
 	t.Cleanup(h.Close)
 
 	alice, bob, carol := auth.User{ID: uuid.New()}, auth.User{ID: uuid.New()}, auth.User{ID: uuid.New()}

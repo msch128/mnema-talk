@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestRegisterReturnsContextErrorWhenTheClientLeftDuringHashing(t *testing.T) {
@@ -109,7 +110,7 @@ func TestIdentityChecksThePasswordBeforeTakingTheFactorLock(t *testing.T) {
 			m.Unlock()
 		}
 	}}
-	h = NewHandler(&auth.Sessions{DB: authHookPool(t, p, hook), Secret: secret, TTL: time.Hour}, nil)
+	h = NewHandler(&auth.Sessions{DB: authHookPool(t, p, hook), Secret: secret, TTL: time.Hour}, permtest.NewFixture().Service(), nil)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/", nil)
 	if ok, err := h.ConfirmIdentity(w, r, member, testPassword, ""); !ok || err != nil {

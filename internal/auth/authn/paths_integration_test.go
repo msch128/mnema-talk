@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 func TestAuthHandlersPropagateDatabaseCancellation(t *testing.T) {
@@ -33,7 +34,7 @@ func TestAuthHandlersPropagateDatabaseCancellation(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fault := authHookPool(t, p, &authQueryHook{match: tc.query, cancel: true})
-			h := NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, &events.Recorder{})
+			h := NewHandler(&auth.Sessions{DB: fault, Secret: secret, TTL: time.Hour}, permtest.NewFixture().Service(), &events.Recorder{})
 			if tc.handler == nil {
 				if wait, err := h.ConfirmPassword(context.Background(), member.ID, testPassword); wait != 0 || !errors.Is(err, context.Canceled) {
 					t.Fatalf("confirmation = %v, %v", wait, err)
@@ -54,7 +55,7 @@ func TestAuthHandlersPropagateDatabaseCancellation(t *testing.T) {
 // Failed validation must return an API error and retain the current cookie.
 func TestChangePasswordValidationKeepsTheCookie(t *testing.T) {
 	p, _, member := authFixture(t)
-	h := NewHandler(&auth.Sessions{DB: p}, &events.Recorder{})
+	h := NewHandler(&auth.Sessions{DB: p}, permtest.NewFixture().Service(), &events.Recorder{})
 	w := authRequest(t, h.changePassword, member, `{"current_password":"unused","new_password":"short"}`, member.ID)
 	if w.Code != 400 || len(w.Result().Cookies()) != 0 {
 		t.Fatalf("password validation status=%d cookies=%d", w.Code, len(w.Result().Cookies()))

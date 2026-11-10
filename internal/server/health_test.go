@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/webbundle"
 	"github.com/msch128/mnema-talk/internal/ws"
 )
@@ -109,7 +110,7 @@ func TestRouterCloseStopsBackgroundWork(t *testing.T) {
 	r := &Router{}
 	r.Close() // no cancel set: must not panic
 	ctx, cancel := context.WithCancel(context.Background())
-	r = &Router{cancel: cancel, Hub: ws.NewHub(nil, nil, nil, nil)}
+	r = &Router{cancel: cancel, Hub: ws.NewHub(nil, nil, nil, nil, permtest.NewFixture().Service())}
 	r.Close()
 	if ctx.Err() == nil {
 		t.Fatal("Close did not cancel the router context")

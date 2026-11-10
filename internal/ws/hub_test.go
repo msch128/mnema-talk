@@ -20,7 +20,7 @@ func isUserInSlice(users []uuid.UUID, id uuid.UUID) bool {
 }
 
 func TestHubClientRegistrationAndPresence(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	user := auth.User{
 		ID:          uuid.New(),
 		Username:    "alice",
@@ -65,7 +65,7 @@ func TestHubClientRegistrationAndPresence(t *testing.T) {
 }
 
 func TestHubBroadcastAndSendToUsers(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	u1 := auth.User{ID: uuid.New(), Username: "u1"}
 	u2 := auth.User{ID: uuid.New(), Username: "u2"}
 
@@ -137,7 +137,7 @@ func TestHubTypingThrottling(t *testing.T) {
 		send: make(chan []byte, 16),
 	}
 
-	chID := uuid.New()
+	chID := openChannel()
 	now := time.Now()
 
 	// First typing is allowed
@@ -157,8 +157,8 @@ func TestHubTypingThrottling(t *testing.T) {
 }
 
 func TestHubVoiceSnapshotAndSpeaking(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
-	chID := uuid.New()
+	h := NewHub(nil, nil, nil, nil, openPerms())
+	chID := openChannel()
 	user := auth.User{ID: uuid.New(), Username: "speaker"}
 
 	c := &Client{
@@ -209,9 +209,9 @@ drain:
 }
 
 func TestHubVoiceGracePeriod(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	h.VoiceGrace = 200 * time.Millisecond
-	chID := uuid.New()
+	chID := openChannel()
 	user := auth.User{ID: uuid.New(), Username: "reloader"}
 	// Hears the leave the grace timer broadcasts; the dropped socket is already gone.
 	watcher := testClient(h, auth.User{ID: uuid.New(), Username: "watcher"})
@@ -290,14 +290,14 @@ func TestHubSubscribeValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := NewHub(nil, nil, voiceSFU, nil)
+	h := NewHub(nil, nil, voiceSFU, nil, openPerms())
 	c := &Client{hub: h, User: auth.User{ID: viewer}, send: make(chan []byte, 16)}
 	c.handle("webrtc_subscribe", []byte(valid[0].body))
 }
 
 func TestHubUserUpdateRefreshesVoiceUsers(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
-	chID := uuid.New()
+	h := NewHub(nil, nil, nil, nil, openPerms())
+	chID := openChannel()
 	user := auth.User{ID: uuid.New(), Username: "painter", DisplayName: "Old"}
 	other := auth.User{ID: uuid.New(), Username: "bystander", DisplayName: "Bystander"}
 
@@ -342,7 +342,7 @@ func TestHubUserUpdateRefreshesVoiceUsers(t *testing.T) {
 }
 
 func TestHubPacingDefaultsToTheProductionIntervals(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	if h.pingEvery() != pingInterval || h.revalidatePeriod() != revalidateEvery {
 		t.Fatalf("default pacing = %v / %v", h.pingEvery(), h.revalidatePeriod())
 	}
@@ -353,8 +353,8 @@ func TestHubPacingDefaultsToTheProductionIntervals(t *testing.T) {
 }
 
 func TestStatsIgnoresEmptyVoiceRooms(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
-	occupied, empty := uuid.New(), uuid.New()
+	h := NewHub(nil, nil, nil, nil, openPerms())
+	occupied, empty := openChannel(), openChannel()
 	user := auth.User{ID: uuid.New(), Username: "talker"}
 	h.mu.Lock()
 	h.voice[occupied] = map[uuid.UUID]auth.User{user.ID: user}

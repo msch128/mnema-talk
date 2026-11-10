@@ -26,6 +26,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -48,7 +49,7 @@ func mediaDB(t *testing.T) *mediaFixture {
 	execMedia(t, p, `INSERT INTO users(id,username,display_name,password_hash,role) VALUES($1,$2,$3,'test-only-unused-hash','admin')`, user.ID, user.Username, user.DisplayName)
 	execMedia(t, p, `INSERT INTO channels(id,name,type) VALUES($1,'media-test','text')`, channel)
 	store := &failingMediaStore{MemoryStore: NewMemoryStore()}
-	return &mediaFixture{p: p, user: user, channel: channel, store: store, h: &Handler{DB: p, Store: store, Bucket: "test-media", MaxUploadBytes: 1024, Events: &events.Recorder{}}}
+	return &mediaFixture{p: p, user: user, channel: channel, store: store, h: &Handler{DB: p, Perms: perm.NewService(p), Store: store, Bucket: "test-media", MaxUploadBytes: 1024, Events: &events.Recorder{}}}
 }
 func execMedia(t *testing.T, p *db.Pool, sql string, args ...any) {
 	t.Helper()

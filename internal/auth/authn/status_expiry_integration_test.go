@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // A sweep that cannot read the database reports that, and does not pretend
 // the status lines were cleared.
 func TestStatusExpiryReportsWhenTheClearCannotBeQueried(t *testing.T) {
 	pool, _, _ := authFixture(t)
-	h := NewHandler(&auth.Sessions{DB: pool, Secret: "status-expiry-test-secret-value"}, nil)
+	h := NewHandler(&auth.Sessions{DB: pool, Secret: "status-expiry-test-secret-value"}, permtest.NewFixture().Service(), nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	err := h.ExpireStatuses(ctx)

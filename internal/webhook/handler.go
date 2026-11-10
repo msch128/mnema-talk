@@ -25,7 +25,7 @@ type Handler struct {
 	Events events.Publisher
 	// Media stores attachments and avatars.
 	Media *media.Handler
-	// Perms decides who manages webhooks; nil imposes no limits (tests).
+	// Perms decides who manages webhooks. It is required (see New).
 	Perms *perm.Service
 	// Online resolves @here for the mentions of a message.
 	Online mentions.OnlineSource
@@ -44,8 +44,9 @@ type Handler struct {
 	testLimiter *httpx.RateLimiter
 }
 
-// New returns a Handler with its rate limiters.
+// New returns a Handler with its rate limiters. It panics without Perms.
 func New(h Handler) *Handler {
+	perm.Must(h.Perms, "webhook handler")
 	h.perWebhook = httpx.NewRateLimiter(perWebhookLimit, perWebhookWindow).Named("webhook")
 	h.perChannel = httpx.NewRateLimiter(perChannelLimit, perChannelWindow).Named("webhook_channel")
 	h.failures = httpx.NewRateLimiter(failedAuthLimit, failedAuthWindow).Named("webhook_auth")
@@ -90,9 +91,6 @@ func (h *Handler) url(rec *record, token string) string {
 // requireAdmin checks the caller is the Owner or an Administrator: webhooks
 // are an admin tool, decoupled from the other permissions.
 func (h *Handler) requireAdmin(r *http.Request) error {
-	if h.Perms == nil {
-		return nil
-	}
 	return h.Perms.RequireGlobal(r.Context(), auth.UserFrom(r.Context()).Subject(), perm.Administrator)
 }
 

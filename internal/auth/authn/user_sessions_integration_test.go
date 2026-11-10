@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 type sessionEnv struct {
@@ -31,7 +32,7 @@ func newSessionEnv(t *testing.T) *sessionEnv {
 	t.Helper()
 	p, admin, member := authFixture(t)
 	s := &auth.Sessions{DB: p, Secret: strings.Repeat("k", 32), TTL: 24 * time.Hour}
-	h := NewHandler(s, nil)
+	h := NewHandler(s, permtest.NewFixture().Service(), nil)
 	router := chi.NewRouter()
 	router.Group(func(r chi.Router) {
 		r.Use(s.RequireUser)

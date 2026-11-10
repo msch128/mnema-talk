@@ -71,9 +71,6 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) error {
 // from the permission state, which is also what enforces the rules.
 func (h *Handler) withRulesPending(ctx context.Context, u *auth.User) auth.User {
 	out := *u
-	if h.Perms == nil {
-		return out
-	}
 	// An unreadable permission state must not break sign-in; the enforcement
 	// itself fails closed.
 	if snap, err := h.Perms.Snapshot(ctx); err == nil {

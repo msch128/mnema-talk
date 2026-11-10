@@ -33,7 +33,7 @@ func TestDurationsAreReadAsSeconds(t *testing.T) {
 
 func TestEveryCommandIsAValidDefinition(t *testing.T) {
 	reg := slash.NewRegistry()
-	for _, c := range Commands(Services{}) {
+	for _, c := range Commands(Services{Perms: permtest.NewFixture().Service()}) {
 		if err := reg.Add(c); err != nil {
 			t.Error(err)
 		}
@@ -49,7 +49,7 @@ func TestModerationCommandsAreOfferedByPermission(t *testing.T) {
 	snap := f.Snapshot()
 	offered := func(who uuid.UUID) map[string]bool {
 		out := map[string]bool{}
-		for _, c := range Commands(Services{}) {
+		for _, c := range Commands(Services{Perms: permtest.NewFixture().Service()}) {
 			if c.Available(snap, perm.Subject{ID: who}, uuid.Nil) {
 				out[c.Definition().Name] = true
 			}
@@ -70,7 +70,8 @@ func TestModerationCommandsAreOfferedByPermission(t *testing.T) {
 // Run checks the permission itself, so a command reached without the menu
 // (a crafted request, a future caller) is refused before it touches anything.
 func TestModerationCommandsRefuseACallerWithoutThePermission(t *testing.T) {
-	svc := Services{Members: memberadmin.New(&authn.Handler{})}
+	perms := permtest.NewFixture().Service()
+	svc := Services{Perms: perms, Members: memberadmin.New(&authn.Handler{Perms: perms})}
 	user := &auth.User{ID: uuid.New(), Role: auth.RoleUser}
 	req := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(auth.WithUser(context.Background(), user))
 	call := slash.Call{Request: req, User: user, Options: map[string]any{"member": uuid.New(), "duration": "5m"}}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 type presenceLog struct {
@@ -46,7 +47,7 @@ func sameEvents(a, b []string) bool {
 }
 
 func TestStatusSurvivesAResumeWithinTheWindow(t *testing.T) {
-	g := New(Config{})
+	g := New(Config{Perms: permtest.NewFixture().Service()})
 	var log presenceLog
 	log.attach(g)
 	user := uuid.New()
@@ -100,7 +101,7 @@ func TestStatusSurvivesAResumeWithinTheWindow(t *testing.T) {
 }
 
 func TestLateStatusAfterTheLastSessionLeavesNoEntry(t *testing.T) {
-	g := New(Config{})
+	g := New(Config{Perms: permtest.NewFixture().Service()})
 	var log presenceLog
 	log.attach(g)
 	user := uuid.New()
@@ -123,7 +124,7 @@ func TestLateStatusAfterTheLastSessionLeavesNoEntry(t *testing.T) {
 }
 
 func TestIdentifyWithoutPresenceDropsTheOldSessionsStatus(t *testing.T) {
-	g := New(Config{})
+	g := New(Config{Perms: permtest.NewFixture().Service()})
 	var log presenceLog
 	log.attach(g)
 	user, botID := uuid.New(), uuid.New()

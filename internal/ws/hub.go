@@ -24,9 +24,8 @@ type Hub struct {
 	Sessions Authenticator
 	SFU      *sfu.SFU
 	Origins  []string
-	// Perms decides who may view, join and speak in which channel. nil
-	// imposes no limits and exists for tests that do not exercise
-	// permissions; the router always sets it (see SetPermissions).
+	// Perms decides who may view, join and speak in which channel. NewHub
+	// requires it.
 	Perms *perm.Service
 	// permRetry re-enforces permission changes whose state failed to load.
 	permRetry permRetry
@@ -144,9 +143,13 @@ type Authenticator interface {
 	AuthenticateRequest(r *http.Request) (*auth.User, int, error)
 }
 
-func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []string) *Hub {
+// NewHub returns a hub that asks perms who may view, join and speak in which
+// channel, and re-checks live connections whenever permissions change (it
+// registers itself as the service's notifier). It panics on a nil service.
+func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []string, perms *perm.Service) *Hub {
 	h := &Hub{
 		DB:       p,
+		Perms:    perm.Must(perms, "websocket hub"),
 		Sessions: sessions,
 		SFU:      voiceSFU,
 		Origins:  origins,
@@ -185,14 +188,6 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 		voiceSFU.SetCamerasCappedHandler(h.announceCamerasCapped)
 		voiceSFU.SetCameraLayersWantedHandler(h.announceCameraLayersWanted)
 	}
+	perms.SetNotifier(h)
 	return h
-}
-
-// SetPermissions makes s decide channel access and has the hub re-check live
-// connections whenever permissions change.
-func (h *Hub) SetPermissions(s *perm.Service) {
-	h.Perms = s
-	if s != nil {
-		s.SetNotifier(h)
-	}
 }

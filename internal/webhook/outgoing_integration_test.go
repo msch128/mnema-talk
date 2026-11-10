@@ -99,14 +99,14 @@ func TestOutgoingManagementEdges(t *testing.T) {
 	rec := f.outgoing("https://hooks.example/x")
 	base := "/admin/outgoing-webhooks/" + rec.ID.String()
 
-	// Without the permission model every route is open; with a model that
-	// cannot be loaded they fail closed.
+	// With a permission model that cannot be loaded every route fails closed.
+	perms := f.h.Perms
 	f.h.Perms = permtest.Unloadable()
 	f.owner = &auth.User{ID: uuid.New(), Role: "user"}
 	wantStatus(t, f.serve(f.h, "GET", "/admin/channels/"+f.ch.String()+"/outgoing-webhooks", nil, nil), 500, "list closed")
 	wantStatus(t, f.json(f.h, "POST", "/admin/channels/"+f.ch.String()+"/outgoing-webhooks", `{}`), 500, "create closed")
 	wantStatus(t, f.json(f.h, "PATCH", base, `{}`), 500, "update closed")
-	f.h.Perms = nil
+	f.h.Perms = perms
 
 	// Bad bodies and ids.
 	f.owner = &auth.User{ID: uuid.New(), Role: "admin"}

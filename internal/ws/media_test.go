@@ -30,7 +30,7 @@ func mediaEvents(t *testing.T, c *Client) []map[string]any {
 }
 
 func TestMediaHandshakeStaysInsideTheVoiceRoom(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	room, elsewhere := voiceCh(), voiceCh()
 	aliceUser := auth.User{ID: uuid.New(), Username: "alice"}
 	bobUser := auth.User{ID: uuid.New(), Username: "bob"}

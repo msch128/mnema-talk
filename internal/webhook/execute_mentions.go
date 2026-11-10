@@ -24,9 +24,6 @@ func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMen
 	}
 	// @all and @here need both the sender's request and the webhook's setting.
 	policy.NoEveryone = policy.NoEveryone || !rec.AllowEveryone
-	if h.Perms == nil {
-		return policy, nil
-	}
 	snap, err := h.Perms.ForChannel(ctx, rec.ChannelID)
 	if err != nil {
 		return policy, err

@@ -755,16 +755,14 @@ func TestLeavingAlwaysWorksAndRemovingYourselfIsNoModeratorAction(t *testing.T) 
 	}
 }
 
-func TestWithoutAPermissionServiceOnlyTheOwnerAndTheCreatorManageTheRoster(t *testing.T) {
+func TestWithoutAPermissionServiceNobodyIsLetAtTheRosterAsAModerator(t *testing.T) {
 	f := newRosterFixture(t)
 	f.h.Perms = nil
-	stranger := f.user(t, "stranger", "user")
 	body := `{"roles":[{"name":"Tank"}]}`
-	if _, err := f.call(t, stranger, f.h.setRoles, http.MethodPut, body, nil); err == nil {
-		t.Fatal("the roster fails closed without a permission service")
-	}
-	if _, err := f.call(t, f.owner, f.h.setRoles, http.MethodPut, body, nil); err != nil {
-		t.Fatalf("owner: %v", err)
+	for name, u := range map[string]*auth.User{"a stranger": f.user(t, "stranger", "user"), "the Owner": f.owner} {
+		if _, err := f.call(t, u, f.h.setRoles, http.MethodPut, body, nil); err == nil {
+			t.Fatalf("%s changed the roster without a permission service", name)
+		}
 	}
 }
 

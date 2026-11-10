@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/mailer"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // refusingMail fails every send.
@@ -22,7 +23,7 @@ func (refusingMail) Send(context.Context, mailer.Message) error { return errors.
 
 func TestNewAddressIsKeptAndReportedWhenTheConfirmationMailIsRefused(t *testing.T) {
 	pool, _, member := authFixture(t)
-	h := NewHandler(&auth.Sessions{DB: pool, Secret: "export-test-secret-export-test-secret"}, nil)
+	h := NewHandler(&auth.Sessions{DB: pool, Secret: "export-test-secret-export-test-secret"}, permtest.NewFixture().Service(), nil)
 	h.Mail = refusingMail{}
 	w := authRequest(t, h.setEmail, member, `{"email":"ada@example.org","current_password":"`+testPassword+`"}`, uuid.Nil)
 	if w.Code != http.StatusOK {
@@ -39,7 +40,7 @@ func TestNewAddressIsKeptAndReportedWhenTheConfirmationMailIsRefused(t *testing.
 
 func TestSpentMailBudgetDoesNotTurnASavedAddressIntoAnError(t *testing.T) {
 	pool, _, member := authFixture(t)
-	h := NewHandler(&auth.Sessions{DB: pool, Secret: "export-test-secret-export-test-secret"}, nil)
+	h := NewHandler(&auth.Sessions{DB: pool, Secret: "export-test-secret-export-test-secret"}, permtest.NewFixture().Service(), nil)
 	h.Mail = okMail{}
 	for i := 0; i < auth.TokensPerHour; i++ {
 		if _, err := auth.IssueAccountToken(context.Background(), pool, member.ID, auth.PurposeEmailVerify, "old@example.org", auth.EmailVerifyTTL); err != nil {

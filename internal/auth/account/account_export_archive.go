@@ -15,8 +15,12 @@ import (
 // is built when it is written, so profile and emoji images land just before
 // their JSON and messages.json is not held in memory.
 func (h *API) writeArchive(ctx context.Context, user uuid.UUID, out io.Writer) error {
+	channels, err := h.viewableChannels(ctx, user)
+	if err != nil {
+		return err
+	}
 	z := &zipFiles{}
-	files, err := h.archiveFiles(ctx, user, z)
+	files, err := h.archiveFiles(ctx, user, channels, z)
 	if err != nil {
 		return err
 	}
@@ -45,11 +49,7 @@ func writeReadme(z *zipFiles) error {
 	return err
 }
 
-func (h *API) archiveFiles(ctx context.Context, user uuid.UUID, z *zipFiles) ([]userdata.File, error) {
-	channels, err := h.viewableChannels(ctx, user)
-	if err != nil {
-		return nil, err
-	}
+func (h *API) archiveFiles(ctx context.Context, user uuid.UUID, channels userdata.Channels, z *zipFiles) ([]userdata.File, error) {
 	files := h.ownExportFiles(ctx, user, channels, z)
 	more, err := h.personalData().Files(ctx, h.Sessions.DB, user, channels, exportLimits())
 	if err != nil {
@@ -63,7 +63,8 @@ func (h *API) archiveFiles(ctx context.Context, user uuid.UUID, z *zipFiles) ([]
 // ExportFileNames is the archive's data files in write order, without
 // README.txt and without truncated.json.
 func (h *API) ExportFileNames(ctx context.Context, user uuid.UUID) ([]string, error) {
-	files, err := h.archiveFiles(ctx, user, &zipFiles{})
+	// The names do not depend on what the person may see.
+	files, err := h.archiveFiles(ctx, user, userdata.Channels{}, &zipFiles{})
 	if err != nil {
 		return nil, err
 	}

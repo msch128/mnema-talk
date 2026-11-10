@@ -22,13 +22,9 @@ func (c *Client) subject() perm.Subject {
 
 // permSnapshot returns the permission state for an event about channel ch
 // (uuid.Nil: not about one channel). It must be called without h.mu held: a
-// stale snapshot reloads from the database. A hub without Perms (tests that
-// do not exercise permissions) imposes no limits (nil, true); a load failure
-// fails closed (nil, false): nobody receives the event.
+// stale snapshot reloads from the database. A load failure fails closed
+// (nil, false): nobody receives the event.
 func (h *Hub) permSnapshot(ch uuid.UUID) (*perm.Snapshot, bool) {
-	if h.Perms == nil {
-		return nil, true
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), permTimeout)
 	defer cancel()
 	var (
@@ -47,10 +43,9 @@ func (h *Hub) permSnapshot(ch uuid.UUID) (*perm.Snapshot, bool) {
 	return snap, true
 }
 
-// can reports whether c holds need in channel ch under snap (nil snap: no
-// permission model, everything is allowed).
+// can reports whether c holds need in channel ch under snap.
 func (c *Client) can(snap *perm.Snapshot, ch uuid.UUID, need perm.Set) bool {
-	return snap == nil || snap.Channel(c.subject(), ch).Has(need)
+	return snap.Channel(c.subject(), ch).Has(need)
 }
 
 // BroadcastChannel sends an event to every connection whose user may view the
@@ -64,8 +59,8 @@ func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload an
 	if !ok {
 		return
 	}
-	dm := snap != nil && snap.IsDM(channelID)
-	if snap != nil && snap.IsPrivate(channelID) {
+	dm := snap.IsDM(channelID)
+	if snap.IsPrivate(channelID) {
 		// A conversation's (or its Talk's) events go to its members only:
 		// never to webhooks or bots.
 		h.dmTapped(channelID, eventType, payload)
@@ -83,9 +78,6 @@ func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload an
 
 // mediaDenied is the sources c may not publish in channel ch.
 func (c *Client) mediaDenied(snap *perm.Snapshot, ch uuid.UUID) sfu.SourceSet {
-	if snap == nil {
-		return 0
-	}
 	p := snap.Channel(c.subject(), ch)
 	var denied sfu.SourceSet
 	if !p.Has(perm.Speak) {
@@ -186,9 +178,6 @@ func (h *Hub) enforcePermissions(userIDs []uuid.UUID) {
 		return
 	}
 	h.permRetry.succeeded()
-	if h.Perms == nil {
-		return
-	}
 	want := wantUserIDs(userIDs)
 	h.sweepStages(snap, want)
 	h.enforceVoiceAccess(snap, want)
@@ -372,9 +361,6 @@ func (h *Hub) kickUserFromChannel(userID, chID uuid.UUID, reason string) {
 // visibleTo filters the entries of a channel-keyed collection to the
 // ones c may view.
 func visibleTo[V any](c *Client, snap *perm.Snapshot, in map[uuid.UUID]V) map[uuid.UUID]V {
-	if snap == nil {
-		return in
-	}
 	out := make(map[uuid.UUID]V, len(in))
 	for ch, v := range in {
 		if c.can(snap, ch, perm.ViewChannel) {

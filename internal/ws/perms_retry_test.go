@@ -27,8 +27,7 @@ func TestMemberWhoLostConnectIsRemovedAfterAFailedStateLoad(t *testing.T) {
 		}
 		return f.Snapshot(), nil
 	})
-	h := NewHub(nil, nil, nil, nil)
-	h.SetPermissions(svc)
+	h := NewHub(nil, nil, nil, nil, svc)
 	h.permRetry.base = 10 * time.Millisecond
 	t.Cleanup(h.Close)
 	talk := &core.ChannelInfo{ID: f.Channel(uuid.Nil), Type: core.ChannelTypeVoice}

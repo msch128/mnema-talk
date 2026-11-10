@@ -46,7 +46,7 @@ func TestVoiceGateAllowsABurstThenOnePerSecond(t *testing.T) {
 }
 
 func TestVoiceJoinOverTheAllowanceIsRefusedWithAKick(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	c := &Client{hub: h, User: auth.User{ID: uuid.New()}, send: make(chan []byte, 64)}
 	h.register(c)
 	ch := uuid.New()

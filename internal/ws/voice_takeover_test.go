@@ -12,9 +12,9 @@ func twoSessions(t *testing.T, s bool) (*Hub, *Client, *Client) {
 	t.Helper()
 	var h *Hub
 	if s {
-		h = NewHub(nil, nil, newSeatTestSFU(t), nil)
+		h = NewHub(nil, nil, newSeatTestSFU(t), nil, openPerms())
 	} else {
-		h = NewHub(nil, nil, nil, nil)
+		h = NewHub(nil, nil, nil, nil, openPerms())
 	}
 	user := auth.User{ID: uuid.New(), Username: "takeover"}
 	a := testClient(h, user)

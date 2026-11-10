@@ -10,12 +10,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // Every spelling of one channel UUID shares the bot's send bucket, so rotating
 // the spelling cannot multiply the per-channel limit.
 func TestSendLimitIsPerCanonicalChannel(t *testing.T) {
-	a := NewAuthenticator(nil)
+	a := NewAuthenticator(nil, permtest.NewFixture().Service())
 	a.SetLimits(1_000_000, 3)
 	ch := uuid.New()
 	spellings := []string{
@@ -117,7 +118,7 @@ func (s *interactionStore) countBot(id uuid.UUID) int {
 // A send the channel budget refuses gives its hit on the bot's global budget
 // back, so a bot hammering one full channel keeps its budget for other calls.
 func TestARefusedSendDoesNotUseUpTheGlobalBudget(t *testing.T) {
-	a := NewAuthenticator(nil)
+	a := NewAuthenticator(nil, permtest.NewFixture().Service())
 	a.SetLimits(3, 1)
 	b := &auth.BotInfo{BotID: uuid.New()}
 	ch := uuid.NewString()

@@ -21,6 +21,14 @@ type Handler struct {
 	Limit *httpx.RateLimiter
 }
 
+// New returns h ready to mount. It panics when the handler or its Importer
+// has no Perms.
+func New(h Handler) *Handler {
+	perm.Must(h.Perms, "discord import handler")
+	perm.Must(h.Importer.Perms, "discord importer")
+	return &h
+}
+
 // MountAdmin registers the routes. Only the Owner and members with the
 // Administrator permission pass (RequireUser applies).
 func (h *Handler) MountAdmin(r chi.Router) {

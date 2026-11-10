@@ -24,6 +24,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/search"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 func TestChatSchemaDriftReportsDecodeAndQueryFailures(t *testing.T) {
@@ -398,9 +399,9 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 	})
 	t.Run("thread reply page", func(t *testing.T) {
 		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, "WHERE m.parent_id = $1") }, false)
-		h := &Handler{DB: p, Events: &events.Recorder{}}
+		h := &Handler{DB: p, Perms: perm.NewService(f.p), Events: &events.Recorder{}}
 		r := chattest.Request(f.u, "", map[string]string{"messageID": f.m.String()}, "")
-		r = r.WithContext(copyChatRouteContext(ctx, r))
+		r = r.WithContext(auth.WithUser(copyChatRouteContext(ctx, r), f.u))
 		if err := h.messages().GetThread(httptest.NewRecorder(), r); !errors.Is(err, context.Canceled) {
 			t.Fatalf("thread page cancellation=%v", err)
 		}
@@ -408,7 +409,7 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 	t.Run("load after committed edit", func(t *testing.T) {
 		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return sql == "commit" }, true)
 		recorder := &events.Recorder{}
-		h := &Handler{DB: p, Events: recorder}
+		h := &Handler{DB: p, Perms: perm.NewService(f.p), Events: recorder}
 		r := chattest.Request(f.u, `{"content":"edited before disconnect"}`, map[string]string{"channelID": f.c.ID.String(), "messageID": f.m.String()}, "")
 		r = r.WithContext(auth.WithUser(copyChatRouteContext(ctx, r), f.u))
 		if err := h.messages().ServeEditMessage(httptest.NewRecorder(), r); !errors.Is(err, context.Canceled) {
@@ -432,7 +433,7 @@ func TestChatHandlerInsertFailureDoesNotPublish(t *testing.T) {
 	f := newChatFixture(t)
 	rejectChatWrite(t, f.p, "messages", "INSERT")
 	recorder := &events.Recorder{}
-	h := &Handler{DB: f.p, Events: recorder}
+	h := &Handler{DB: f.p, Perms: perm.NewService(f.p), Events: recorder}
 	err := h.messages().ServeCreateMessage(httptest.NewRecorder(), chattest.Request(f.u, `{"content":"new"}`, map[string]string{"channelID": f.c.ID.String()}, ""))
 	chattest.RequireError(t, err, "test write rejected")
 	if len(recorder.Snapshot()) != 0 {

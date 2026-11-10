@@ -42,11 +42,12 @@ type Handler struct {
 	previewPerSite *httpx.RateLimiter
 }
 
-// NewHandler builds the handler with the invite preview's per-IP budget.
+// NewHandler builds the handler with the invite preview's per-IP budget. It
+// panics on a nil permission service.
 func NewHandler(pool *db.Pool, perms *perm.Service) *Handler {
 	return &Handler{
 		DB:    pool,
-		Perms: perms,
+		Perms: perm.Must(perms, "onboarding handler"),
 		// The icon is a few KB read from storage; this only stops a loop.
 		iconPerIP: httpx.NewRateLimiter(300, time.Minute).Named("community_icon_ip"),
 		// A preview costs one indexed lookup; the budget only has to make

@@ -88,7 +88,7 @@ func (h *Hub) BroadcastPerm(need perm.Set, eventType string, payload any) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for c := range h.clients {
-		if snap == nil || snap.Global(c.subject()).Has(need) {
+		if snap.Global(c.subject()).Has(need) {
 			c.deliver(data)
 		}
 	}

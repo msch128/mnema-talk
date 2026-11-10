@@ -25,13 +25,13 @@ func (f *fakeLobby) Open(_ context.Context, _, lobby uuid.UUID) (*core.ChannelIn
 }
 
 func lobbyRoom() *core.ChannelInfo {
-	return &core.ChannelInfo{ID: uuid.New(), Type: core.ChannelTypeVoice, IsLobby: true}
+	return &core.ChannelInfo{ID: openChannel(), Type: core.ChannelTypeVoice, IsLobby: true}
 }
 
 func TestJoiningALobbyOpensATalkAndNeverSeatsTheMemberInTheLobby(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	t.Cleanup(h.Close)
-	lobby := &fakeLobby{talk: uuid.New()}
+	lobby := &fakeLobby{talk: openChannel()}
 	h.Lobby = lobby
 	c := testClient(h, auth.User{ID: uuid.New(), Username: "ann"})
 	drainTypes(t, c)
@@ -55,7 +55,7 @@ func TestJoiningALobbyOpensATalkAndNeverSeatsTheMemberInTheLobby(t *testing.T) {
 }
 
 func TestALobbyThatOpensNoTalkTellsTheMember(t *testing.T) {
-	h := NewHub(nil, nil, nil, nil)
+	h := NewHub(nil, nil, nil, nil, openPerms())
 	t.Cleanup(h.Close)
 	h.Lobby = &fakeLobby{err: httpx.ErrRateLimited()}
 	c := testClient(h, auth.User{ID: uuid.New(), Username: "ben"})

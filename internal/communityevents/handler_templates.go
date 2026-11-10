@@ -19,9 +19,6 @@ func (h *Handler) requireTemplateAdmin(r *http.Request) error {
 
 func (h *Handler) isTemplateAdmin(r *http.Request) bool {
 	user := auth.UserFrom(r.Context())
-	if h.Perms == nil {
-		return user.Role == "admin"
-	}
 	snap, err := h.Perms.Snapshot(r.Context())
 	return err == nil && snap.Global(user.Subject()).Has(perm.Administrator)
 }

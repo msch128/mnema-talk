@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 const testPassword = "correct-horse-battery"
@@ -30,7 +31,7 @@ var (
 // "cool_guy" with testPassword, without a database.
 func newLoginHandler() *Handler {
 	loginTestGen = 0
-	h := NewHandler(&auth.Sessions{Secret: strings.Repeat("s", 32), TTL: time.Hour}, nil)
+	h := NewHandler(&auth.Sessions{Secret: strings.Repeat("s", 32), TTL: time.Hour}, permtest.NewFixture().Service(), nil)
 	h.generation = func(context.Context, string) (uuid.UUID, int, error) { return loginTestUID, loginTestGen, nil }
 	h.twoFactor = func(context.Context, uuid.UUID) (bool, error) { return false, nil }
 	h.verify = func(_ context.Context, username, password string) (*auth.User, int, error) {

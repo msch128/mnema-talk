@@ -369,14 +369,7 @@ func TestServiceChecks(t *testing.T) {
 	if err := RequireOwner(Subject{Owner: true}); err != nil {
 		t.Fatal(err)
 	}
-	// A nil service imposes no limits.
 	var none *Service
-	if p, err := none.Channel(ctx, sub, ch); err != nil || p != All {
-		t.Fatal("nil service")
-	}
-	if p, err := none.Global(ctx, sub); err != nil || p != All {
-		t.Fatal("nil service global")
-	}
 	none.Invalidate()
 	none.Changed(nil)
 	// A fixture service has nothing to reload.
