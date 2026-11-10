@@ -36,6 +36,7 @@ export const ROWS: readonly SentenceRow[] = [
   ['Your edit was not saved: it breaks the community rule %q (automod). The moderators can see this.', 'automodEdit', ['rule']],
   ['Your message was not sent: it breaks the community rule %q (automod). The moderators can see this.', 'automodSend', ['rule']],
   ['a Talk is running; the speed test would disturb it', 'srvATalkIsRunning'],
+  ['a backup is running; try again when it has finished', 'srvABackupIsRunning'],
   ['a bot can have at most %d active tokens', 'srvABotCanHaveAt'],
   ['a bot can have at most %d commands', 'srvABotCanHaveAt2'],
   ['a bot holds this role: only the Owner can add administrator or admin-area permissions to it', 'srvABotHoldsThisRole'],

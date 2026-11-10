@@ -223,7 +223,8 @@ logs at 3 x 10 MB.
 
 | Script | Variables |
 |---|---|
-| [`scripts/backup.sh`](../scripts/backup.sh) | `BACKUP_DIR` (default `$HOME/mnema-talk-backups`), `KEEP_DAYS` (14), `BACKUP_ALLOW_IN_REPO=1`, `RESTORE_TEST` (1; 0 skips the restore test), `BACKUP_STATUS_DIR` (default `./backup-status`) |
+| [`scripts/backup.sh`](../scripts/backup.sh) | `BACKUP_DIR` (default `$HOME/mnema-talk-backups`), `KEEP_DAYS` (14), `BACKUP_ALLOW_IN_REPO=1`, `RESTORE_TEST` (1; 0 skips the restore test), `BACKUP_STATUS_DIR` (default `./backup-status`), `BACKUP_MODE` (`cold`; `online` keeps the app running), `BACKUP_LOCK_WAIT` (600 s, online mode), `BACKUP_AGE_RECIPIENT` (empty = not encrypted) |
+| [`scripts/restore.sh`](../scripts/restore.sh) | `BACKUP_AGE_IDENTITY` (identity file for an encrypted backup), `SEAWEEDFS_VERIFY_IMAGE` (image for the media check of `--verify`, default: the one the backup names) |
 | [`scripts/health-check.sh`](../scripts/health-check.sh) | `MNEMA_URL` (default `http://127.0.0.1:8080`), `HEALTH_TIMEOUT` (5 s), `ALERT_WEBHOOK_URL` |
 
 ## Reverse proxy and `TRUSTED_PROXY_CIDRS`
@@ -693,6 +694,8 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
   database snapshot and volume copy. Active calls disconnect during this
   maintenance window. Other programs must not write to these stores during
   the backup. `SEAWEED_LIVE=1` is refused because it cannot guarantee this boundary.
+  This cold mode is the default; [`BACKUP_MODE=online`](#online-backup) keeps
+  the app running.
 - Success and failure resume only services that were running before backup.
   Restore resumes them after success; a failure after replacing data leaves
   app and SeaweedFS stopped to avoid serving a partial restore. Resolve the
@@ -706,6 +709,7 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
   damage; they do not authenticate an untrusted backup's SQL or configuration.
 - A backup contains `.env` with all secrets; the script refuses a
   `BACKUP_DIR` inside a git checkout unless `BACKUP_ALLOW_IN_REPO=1`.
+  [`BACKUP_AGE_RECIPIENT`](#encrypted-backups) encrypts it.
 - The scripts serialize maintenance using `.mnema-maintenance.lock` in the
   deployment directory. An uncatchable kill may leave this lock; confirm no
   maintenance process is running before removing it manually.
@@ -759,6 +763,69 @@ the last backup and the restore test. It warns when the backup is older than
 backup, *no backup reported yet*. When Docker created `backup-status` (as root,
 on the first `up` before any backup) and the script runs as another user, the
 script writes the file through a short-lived container instead.
+
+### Online backup
+
+```sh
+BACKUP_MODE=online BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
+```
+
+The app is not stopped: messages, presence and calls continue. Only the file
+storage is frozen (`docker compose pause seaweedfs`) while its volume is
+copied, so uploads and downloads wait for that long (seconds on a small
+instance, as long as the copy takes on a large one) and may time out; text
+chat and calls are not affected. The order makes the copy consistent:
+
+1. The script takes an advisory lock in PostgreSQL. The server's jobs that
+   delete stored files (channel auto-delete, media pruning, the sweep of
+   unsent attachments, the orphan report and the export sweep) wait while it
+   is held, and the script waits up to `BACKUP_LOCK_WAIT` seconds for one that
+   is running. The orphan cleanup (`POST /api/admin/media/orphans/cleanup`)
+   answers `409 CONFLICT` during a backup. Servers up to 3.0.0 do not know
+   the lock: their jobs keep running and can leave orphaned files behind.
+2. It freezes the storage, fixes one database snapshot, copies the storage
+   volume and lets the storage continue.
+3. `pg_dump` writes exactly that snapshot while the app is in use again.
+
+An upload stores its file before its database row is committed and a delete
+removes the row first, so every file the snapshot refers to is in the copy.
+The restore test proves it for each backup: `restore.sh --verify` starts a
+throwaway, network-isolated SeaweedFS on a copy of the media archive and
+reads every file the database refers to (`media-keys.txt`). That needs free
+disk space for the extracted media; `RESTORE_TEST=0` skips it together with
+the database import and is not recommended in online mode. Messages and
+uploads from after the snapshot are not in the backup. A member who deletes a
+message while the storage is frozen gets the row removed at once and the file
+later counted as an orphan (the daily orphan report in the log).
+
+An online backup directory is the same format (`format=mnema-backup-v1`) with
+additions only: the file `media-keys.txt` (one `bucket/key` per line) and the
+manifest lines `mode=online` and `media_keys_sha256=`. Restoring works the
+same way as for a cold backup. A script that was killed hard may leave the
+storage paused: `docker compose unpause seaweedfs`.
+
+### Encrypted backups
+
+Off by default. With one or more [age](https://age-encryption.org) public keys
+in `BACKUP_AGE_RECIPIENT` (separated by spaces; `age` must be installed on the
+host), the finished backup, after its restore test, is packed into one file
+`BACKUP_DIR/<timestamp>.tar.age` and the plain directory is removed. Only the
+matching identity (private key) can read it, so keep that key away from the
+server:
+
+```sh
+age-keygen -o mnema-backup.key          # on another machine; prints the public key
+BACKUP_AGE_RECIPIENT=age1... BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
+
+# Restore: the identity file comes back only for this
+BACKUP_AGE_IDENTITY=/root/mnema-backup.key ./scripts/restore.sh /srv/backups/mnema/20261110-033000-AbCdEf.tar.age --verify
+```
+
+`restore.sh` unpacks the file into a temporary folder next to it (allow the
+disk space), restores from it and removes the plain copy again. Retention
+(`KEEP_DAYS`) removes old `*.tar.age` files after a successful backup without
+opening them; each was validated before it was encrypted. Until the restore
+test has finished, the new backup lies unencrypted in `BACKUP_DIR`.
 
 ## Verifying a release image
 

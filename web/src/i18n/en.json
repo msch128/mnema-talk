@@ -275,6 +275,7 @@
       "srvWikiPagesNestAtMost": "Wiki pages nest at most 5 levels.",
       "srvYouAreInGroupDirect": "You’re already in {a} group direct messages. Leave one first.",
       "srvYouHaveStartedEnoughDirect": "You’ve started enough direct messages for today. Try again tomorrow.",
+      "srvABackupIsRunning": "A backup is running. Try again when it has finished.",
       "srvABotCanHaveAt": "A bot can have at most {a} active tokens.",
       "srvABotCanHaveAt2": "A bot can have at most {a} commands.",
       "srvABotHoldsThisRole": "A bot holds this role. Only the Owner can add Administrator or admin area permissions to it.",

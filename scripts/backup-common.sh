@@ -127,9 +127,71 @@ validate_v1_backup_if_needed() {
   fi
 }
 
+# An online backup lists the objects its database snapshot refers to. The
+# manifest (itself in SHA256SUMS) carries the list's checksum.
+validate_media_keys() {
+  local src=$1 want
+  want=$(sed -n 's/^media_keys_sha256=//p' "$src/manifest" 2>/dev/null) || true
+  if [ -z "$want" ] && [ ! -e "$src/media-keys.txt" ]; then return 0; fi
+  validate_safe_file "$src" media-keys.txt || return 1
+  if [ "$(cd "$src" && backup_hashes media-keys.txt | cut -d' ' -f1)" != "$want" ]; then
+    backup_fail 'backup checksum mismatch: media-keys.txt'
+    return 1
+  fi
+}
+
 backup_validate() {
   local src=$1 legacy=$2 preparing=${3:-}
   validate_required_files "$src" || return 1
   validate_v1_backup_if_needed "$src" "$legacy" "$preparing" || return 1
+  validate_media_keys "$src" || return 1
   validate_compressed_archives "$src" || return 1
+}
+
+# Optional encryption (BACKUP_AGE_RECIPIENT): the finished backup directory
+# becomes one age file, <directory>.tar.age, and the directory is removed.
+backup_recipients_ok() {
+  local recipient
+  command -v age >/dev/null 2>&1 || { backup_fail 'BACKUP_AGE_RECIPIENT is set but the age tool is not installed'; return 1; }
+  for recipient in $1; do
+    [[ "$recipient" =~ ^age1[a-z0-9]+$ ]] || { backup_fail 'BACKUP_AGE_RECIPIENT must hold age public keys (age1...), separated by spaces'; return 1; }
+  done
+}
+
+backup_encrypt() {
+  local dir=$1 out="$1.tar.age" recipient args=()
+  for recipient in $2; do args+=(-r "$recipient"); done
+  if ! tar -cf - -C "$(dirname "$dir")" "$(basename "$dir")" | age "${args[@]}" -o "$out.partial"; then
+    rm -f -- "$out.partial"
+    backup_fail 'encryption failed; the unencrypted backup directory was kept'
+    return 1
+  fi
+  chmod 600 "$out.partial" && mv -f -- "$out.partial" "$out" && rm -rf -- "$dir"
+}
+
+# Unpacks an encrypted backup next to it and sets backup_src to the backup
+# directory inside and backup_plain to the folder backup_discard_plain removes.
+backup_plain='' backup_src=''
+backup_decrypt() {
+  local file=$1 identity=${BACKUP_AGE_IDENTITY:-}
+  command -v age >/dev/null 2>&1 || { backup_fail 'an encrypted backup needs the age tool'; return 1; }
+  [ -f "$identity" ] || { backup_fail 'an encrypted backup needs BACKUP_AGE_IDENTITY=<age identity file>'; return 1; }
+  # Only plain files in directories, no absolute or parent paths.
+  if ! age -d -i "$identity" "$file" | tar -tvf - | awk 'substr($0,1,1)!="-" && substr($0,1,1)!="d" {bad=1} {for (i=6;i<=NF;i++) if ($i ~ /^\// || $i ~ /(^|\/)\.\.(\/|$)/) bad=1} END {exit bad}'; then
+    backup_fail 'cannot decrypt the backup, or it holds unsafe paths'
+    return 1
+  fi
+  backup_plain=$(mktemp -d "$(dirname "$file")/.restore-XXXXXX") || return 1
+  age -d -i "$identity" "$file" | tar -xf - -C "$backup_plain" || return 1
+  set -- "$backup_plain"/*
+  if [ $# != 1 ] || [ ! -d "$1" ] || [ -L "$1" ]; then
+    backup_fail 'the encrypted file does not hold one backup directory'
+    return 1
+  fi
+  # shellcheck disable=SC2034 # Read by restore.sh.
+  backup_src=$1
+}
+backup_discard_plain() {
+  [ -z "$backup_plain" ] || rm -rf -- "$backup_plain"
+  backup_plain=''
 }

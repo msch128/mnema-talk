@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 )
 
@@ -106,6 +107,31 @@ func TestAutoDeleteNeverAppliesToDirectMessages(t *testing.T) {
 	f.sweep(t)
 	if n := f.a.countRows(`SELECT COUNT(*) FROM messages WHERE channel_id = $1`, dm.ID); n != 1 {
 		t.Fatalf("direct messages left: %d", n)
+	}
+}
+
+func TestTheSweeperWaitsForARunningBackup(t *testing.T) {
+	f := newAutoDeleteFixture(t)
+	old := f.a.send(f.alice, f.channel, "old")
+	f.age(t, old, 10)
+	wantStatus(t, "7 days", f.set(f.owner, f.channel, 7), http.StatusOK)
+	// An online backup holds this lock for as long as it runs.
+	backup, err := f.a.db.Acquire(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backup.Release()
+	if _, err := backup.Exec(t.Context(), `SELECT pg_advisory_lock($1)`, db.BackupLockID); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _, _ = backup.Exec(context.Background(), `SELECT pg_advisory_unlock($1)`, db.BackupLockID) }()
+
+	ctx, stop := context.WithTimeout(t.Context(), 300*time.Millisecond)
+	defer stop()
+	d := &channels.AutoDeleter{DB: f.a.db, Events: f.a.events, Objects: f.a.store, Audit: &audit.Log{DB: f.a.db}}
+	d.Run(ctx, 10*time.Millisecond)
+	if !f.exists(old) {
+		t.Fatal("the sweeper deleted a message during a backup")
 	}
 }
 

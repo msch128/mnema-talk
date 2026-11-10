@@ -275,6 +275,7 @@
       "srvWikiPagesNestAtMost": "Wiki-Seiten lassen sich höchstens 5 Ebenen tief verschachteln.",
       "srvYouAreInGroupDirect": "Du bist schon in {a} Gruppen-Direktnachrichten. Verlasse zuerst eine.",
       "srvYouHaveStartedEnoughDirect": "Du hast für heute genug Direktnachrichten gestartet. Versuche es morgen wieder.",
+      "srvABackupIsRunning": "Gerade läuft ein Backup. Versuch es noch einmal, wenn es fertig ist.",
       "srvABotCanHaveAt": "Ein Bot kann höchstens {a} aktive Tokens haben.",
       "srvABotCanHaveAt2": "Ein Bot kann höchstens {a} Befehle haben.",
       "srvABotHoldsThisRole": "Ein Bot hat diese Rolle. Nur der Owner kann ihr Administrator- oder Admin-Bereich-Berechtigungen geben.",

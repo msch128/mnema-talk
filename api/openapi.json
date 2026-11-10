@@ -16458,6 +16458,16 @@
             },
             "description": "FORBIDDEN: only the Owner may do this, or cross-origin request rejected."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: an online backup is running; nothing was deleted."
+          },
           "429": {
             "content": {
               "application/json": {
