@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.0.2](https://github.com/msch128/mnema-talk/compare/v3.0.1...v3.0.2) (2026-11-10)
+
+
+### Bug Fixes
+
+* a refused answer gives its candidates back whatever the server offers meanwhile ([#773](https://github.com/msch128/mnema-talk/issues/773)) ([00289dc](https://github.com/msch128/mnema-talk/commit/00289dc3fd194f0caefb2764104c4eed9de13dc7))
+* authorization fails closed without a permission service ([#768](https://github.com/msch128/mnema-talk/issues/768)) ([00289dc](https://github.com/msch128/mnema-talk/commit/00289dc3fd194f0caefb2764104c4eed9de13dc7))
+* backups can run without stopping the app, and can be encrypted ([#769](https://github.com/msch128/mnema-talk/issues/769)) ([00289dc](https://github.com/msch128/mnema-talk/commit/00289dc3fd194f0caefb2764104c4eed9de13dc7))
+* bound database statements and make the pool size configurable ([#766](https://github.com/msch128/mnema-talk/issues/766)) ([00289dc](https://github.com/msch128/mnema-talk/commit/00289dc3fd194f0caefb2764104c4eed9de13dc7))
+
 ## [3.0.1](https://github.com/msch128/mnema-talk/compare/v3.0.0...v3.0.1) (2026-11-10)
 
 
