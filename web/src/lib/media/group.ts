@@ -155,7 +155,7 @@ export class MediaGroup extends GroupSync {
     if (rival) this.discard()
     if (await this.adopt(joined)) {
       this.dropSelfUpdate()
-      this.offeredFor = null
+      await this.renewOwn()
       if (previous) this.wipeRejected(previous)
     }
   }
