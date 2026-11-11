@@ -8,7 +8,9 @@ import (
 	"image/color"
 	"image/jpeg"
 	"image/png"
+	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/imgproc"
@@ -237,3 +239,13 @@ func shownOrientation(data []byte) int {
 	}
 	return 1
 }
+
+// goRoot is where the Go sources are, as the go command on the path reports
+// it, or "" when there is none.
+var goRoot = sync.OnceValue(func() string {
+	out, err := exec.Command("go", "env", "GOROOT").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+})

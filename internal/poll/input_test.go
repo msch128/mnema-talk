@@ -81,7 +81,7 @@ func TestLookAlikeOptionsAreDuplicates(t *testing.T) {
 	for name, pair := range map[string][2]string{
 		"case":                {"Yes", "YES"},
 		"composed/decomposed": {"Café", "Café"},
-		"invisible joiner":    {"Pizza", "Piz​za"},
+		"invisible joiner":    {"Pizza", "Piz\u200bza"},
 		"fullwidth":           {"Pizza", "Ｐizza"},
 	} {
 		in := valid()

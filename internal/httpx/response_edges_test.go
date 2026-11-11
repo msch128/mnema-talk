@@ -71,8 +71,7 @@ func TestPanicStackKeepsThePanickingFrame(t *testing.T) {
 			recover()
 			stack = panicStack(debugStackForTest(), 300)
 		}()
-		var m map[string]int
-		m["x"] = 1
+		panic("deliberate")
 	}()
 	if !strings.Contains(stack, "TestPanicStackKeepsThePanickingFrame") {
 		t.Fatalf("panicking frame cut off: %q", stack)

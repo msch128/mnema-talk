@@ -52,7 +52,7 @@ func FuzzCleanDomain(f *testing.F) {
 // message looks, and a blocked host stays blocked when text follows it after
 // a space of any kind.
 func FuzzLinkRules(f *testing.F) {
-	for _, s := range []string{"see https://evil.example now", "https://evil.example now", "https://evil.example　x", "WWW.evil.example", "http://évil.example/x", "​https://evil.example", "x\u200bhttps://evil.example", "x\u0301https://evil.example", "xhttps://evil.example", "no link here"} {
+	for _, s := range []string{"see https://evil.example now", "https://evil.example now", "https://evil.example　x", "WWW.evil.example", "http://évil.example/x", "\u200bhttps://evil.example", "x\u200bhttps://evil.example", "x\u0301https://evil.example", "xhttps://evil.example", "no link here"} {
 		f.Add(s)
 	}
 	blockAll := &compiled{Rule: Rule{Config: Settings{Mode: LinksBlockAll}}}

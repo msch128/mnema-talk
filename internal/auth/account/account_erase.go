@@ -73,12 +73,6 @@ func pinnedOf(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]pinRef, error) {
 	})
 }
 
-// eraseAccount runs the erasure for a test that already holds the transaction.
-// It uses the fallback registry. deleteAccount uses the handler's registry.
-func eraseAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error) {
-	return eraseWith(ctx, tx, id, personalFallback)
-}
-
 func (h *API) eraseOwnAccount(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*erased, error) {
 	return eraseWith(ctx, tx, id, h.personalData())
 }

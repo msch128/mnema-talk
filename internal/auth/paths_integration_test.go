@@ -17,7 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -110,19 +109,6 @@ func authHookPool(t *testing.T, source *db.Pool, hook *authQueryHook) *db.Pool {
 		}
 	})
 	return &db.Pool{Pool: p}
-}
-
-func authRequest(t *testing.T, h httpx.HandlerFunc, user *User, body string, id uuid.UUID) *httptest.ResponseRecorder {
-	t.Helper()
-	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
-	r = r.WithContext(WithUser(r.Context(), user))
-	rc := chi.NewRouteContext()
-	rc.URLParams.Add("id", id.String())
-	rc.URLParams.Add("userID", id.String())
-	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rc))
-	w := httptest.NewRecorder()
-	httpx.Handle(h).ServeHTTP(w, r)
-	return w
 }
 
 func TestAuthDatabaseCancellationPropagates(t *testing.T) {

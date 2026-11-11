@@ -229,8 +229,7 @@ func (a *API) ServeUpdateForumPost(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	msg, err := UpdateForumPost(ctx, a.DB, chID, msgID, PostActor{ID: user.ID, CanManage: canManage},
-		PostPatch{Title: req.Title, TagIDs: req.TagIDs, IsLocked: req.IsLocked, IsResolved: req.IsResolved})
+	msg, err := UpdateForumPost(ctx, a.DB, chID, msgID, PostActor{ID: user.ID, CanManage: canManage}, PostPatch(req))
 	if err != nil {
 		return err
 	}

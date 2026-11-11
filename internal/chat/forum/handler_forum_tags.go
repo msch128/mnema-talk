@@ -85,7 +85,7 @@ func (a *API) ServeCreateForumTag(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	tag, err := CreateForumTagSpec(r.Context(), a.DB, chID, TagSpec{Name: req.Name, Emoji: req.Emoji, Color: req.Color, Moderated: req.Moderated})
+	tag, err := CreateForumTagSpec(r.Context(), a.DB, chID, TagSpec(req))
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func (a *API) ServeUpdateForumTag(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	tag, before, err := UpdateForumTag(r.Context(), a.DB, chID, tagID, TagPatch{Name: req.Name, Emoji: req.Emoji, Color: req.Color, Moderated: req.Moderated})
+	tag, before, err := UpdateForumTag(r.Context(), a.DB, chID, tagID, TagPatch(req))
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,6 @@ package media
 
 import (
 	"context"
-	"fmt"
 	"net/http/httptest"
 	"testing"
 
@@ -58,7 +57,7 @@ func TestUploadStartsAForumPost(t *testing.T) {
 	// The follow that a post made from text gives its author comes with it.
 	var follows int
 	if err := f.p.QueryRow(ctx, `SELECT COUNT(*) FROM thread_follows tf JOIN messages m ON m.id = tf.thread_id WHERE m.channel_id = $1 AND tf.user_id = $2`, forumID, f.user.ID).Scan(&follows); err != nil || follows != 1 {
-		t.Fatal(fmt.Sprintf("author follows: %d %v", follows, err))
+		t.Fatalf("author follows: %d %v", follows, err)
 	}
 
 	// A required tag holds for uploads too.

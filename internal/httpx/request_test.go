@@ -373,7 +373,7 @@ func TestSanitizeFilenameTruncationKeepsCharacters(t *testing.T) {
 	const family = "👨‍👩‍👧‍👦"
 	name := "a" + family + ".txt"
 	// Room for "a" and part of the family only: the cut drops the whole sequence.
-	got := SanitizeFilename(name, 1+len("👨")+len("‍")+2)
+	got := SanitizeFilename(name, 1+len("👨")+len("\u200d")+2)
 	if got != "a" {
 		t.Errorf("cut inside a ZWJ sequence = %q, want %q", got, "a")
 	}

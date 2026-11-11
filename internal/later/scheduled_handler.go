@@ -152,7 +152,7 @@ func (s *Service) updateScheduled(w http.ResponseWriter, r *http.Request) error 
 		}
 		req.Content = &c
 	}
-	out, err := s.UpdateScheduled(r.Context(), auth.UserFrom(r.Context()).ID, id, ScheduledPatch{Content: req.Content, SendAt: req.SendAt})
+	out, err := s.UpdateScheduled(r.Context(), auth.UserFrom(r.Context()).ID, id, ScheduledPatch(req))
 	if err != nil {
 		return err
 	}

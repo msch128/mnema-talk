@@ -278,7 +278,7 @@ func TestAJPEGEndsAtItsEndMarker(t *testing.T) {
 	}
 
 	// Progressive files and files with restart markers come with Go.
-	samples, _ := filepath.Glob(filepath.Join(runtime.GOROOT(), "src", "image", "testdata", "video-001*.jpeg"))
+	samples, _ := filepath.Glob(filepath.Join(goRoot(), "src", "image", "testdata", "video-001*.jpeg"))
 	if len(samples) == 0 {
 		t.Skip("the Go sources with their sample pictures are not installed")
 	}
@@ -415,7 +415,7 @@ func TestAJPEGKeepsNoSegmentADecoderDoesNotRead(t *testing.T) {
 	}
 	// Each sample of the Go sources (baseline, progressive, restart markers)
 	// has every segment it came with.
-	samples, _ := filepath.Glob(filepath.Join(runtime.GOROOT(), "src", "image", "testdata", "video-00*.jpeg"))
+	samples, _ := filepath.Glob(filepath.Join(goRoot(), "src", "image", "testdata", "video-00*.jpeg"))
 	for _, sample := range samples {
 		plain, err := os.ReadFile(sample)
 		if err != nil {

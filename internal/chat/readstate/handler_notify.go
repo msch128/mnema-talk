@@ -173,8 +173,7 @@ func (a API) setServerNotify(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	in := ServerNotify{Level: req.Level, MutedUntil: req.MutedUntil, SuppressEveryone: req.SuppressEveryone}
-	if err := SetServerNotify(r.Context(), a.DB, user.ID, in); err != nil {
+	if err := SetServerNotify(r.Context(), a.DB, user.ID, ServerNotify(req)); err != nil {
 		return err
 	}
 	a.publishReadStateRefresh(user.ID)

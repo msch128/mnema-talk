@@ -112,7 +112,7 @@ func (a *API) ServeUpdateForumSettings(w http.ResponseWriter, r *http.Request) e
 			return err
 		}
 	}
-	s, before, err := UpdateForumSettings(r.Context(), a.DB, chID, ForumSettingsPatch{RequireTag: req.RequireTag, Guidelines: req.Guidelines})
+	s, before, err := UpdateForumSettings(r.Context(), a.DB, chID, ForumSettingsPatch(req))
 	if err != nil {
 		return err
 	}

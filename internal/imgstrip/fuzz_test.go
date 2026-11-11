@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -105,7 +104,7 @@ func FuzzJPEG(f *testing.F) {
 		jpegWith(f, jpegSegment(0xF7, textMark), jpegSegment(0xC8, textMark), jpegSegment(0x02, textMark), jpegSegment(0xDD, "\x00\x00")),
 		[]byte("\xff\xd8\xff\xe1\x00\x01"))
 	// Progressive files and files with restart markers come with Go.
-	samples, _ := filepath.Glob(filepath.Join(runtime.GOROOT(), "src", "image", "testdata", "video-001*.jpeg"))
+	samples, _ := filepath.Glob(filepath.Join(goRoot(), "src", "image", "testdata", "video-001*.jpeg"))
 	for _, sample := range samples {
 		if data, err := os.ReadFile(sample); err == nil {
 			f.Add(data)

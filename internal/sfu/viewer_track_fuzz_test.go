@@ -80,7 +80,7 @@ func (s *rewriteSim) step(op byte) {
 		s.retarget(int(op>>2) & 3)
 		return
 	}
-	at := s.now
+	var at time.Time
 	switch ms := op >> 4; ms {
 	case 15:
 		at = s.now.Add(-15 * time.Microsecond)

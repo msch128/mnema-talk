@@ -33,7 +33,7 @@ func TestRunes(t *testing.T) {
 		{"flag pair not split", "a" + flagDE, 2, "a"},
 		{"flag pair kept", "a" + flagDE + "b", 3, "a" + flagDE},
 		{"two flags cut between them", flagDE + flagDE, 2, flagDE},
-		{"joiner pulls its base out with it", "ab‍cd", 3, "a"},
+		{"joiner pulls its base out with it", "ab\u200dcd", 3, "a"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

@@ -79,12 +79,6 @@ func (h *Handler) voiceRooms() core.VoiceRooms {
 	return v
 }
 
-// deleteObjects removes media objects after their rows are gone; see
-// core.DeleteObjects.
-func (h *Handler) deleteObjects(ctx context.Context, keys []string) {
-	core.DeleteObjects(ctx, h.Objects, keys)
-}
-
 // messages builds the messages API from the handler's fields. The edit-history
 // memory is shared, so every API built here counts the same reads.
 func (h *Handler) messages() *messages.API {
