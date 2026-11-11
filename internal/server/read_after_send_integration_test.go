@@ -3,6 +3,7 @@
 package server
 
 import (
+	"net/http"
 	"testing"
 	"time"
 )
@@ -79,5 +80,57 @@ func TestReplyingInAConversationMarksItRead(t *testing.T) {
 	f.alice.dmPost(dm.ID, "three")
 	if got := unread(); got != 1 {
 		t.Fatalf("after news: unread=%d, want 1", got)
+	}
+}
+
+func TestABuiltInTextCommandMarksTheChannelReadLikeATypedMessage(t *testing.T) {
+	f := newBuiltinsFixture(t)
+	for i := 0; i < 2; i++ {
+		postMessage(t, f.owner, f.text, map[string]any{"content": "news"})
+	}
+	if got := f.member.readState(t, f.text); got.UnreadCount != 2 {
+		t.Fatalf("before /shrug: unread=%d, want 2", got.UnreadCount)
+	}
+	wantStatus(t, "/shrug", f.run(f.member, "shrug", map[string]any{"text": "dunno"}), http.StatusOK)
+	if got := f.member.readState(t, f.text); got.UnreadCount != 0 {
+		t.Fatalf("after /shrug: unread=%d, want 0", got.UnreadCount)
+	}
+}
+
+func TestPostingAPollMarksTheChannelRead(t *testing.T) {
+	f := newPollFixture(t)
+	unreadAfter := func(name string, post func()) {
+		t.Helper()
+		for i := 0; i < 2; i++ {
+			postMessage(t, f.owner, f.channel, map[string]any{"content": "news"})
+		}
+		if got := f.alice.readState(t, f.channel); got.UnreadCount != 2 {
+			t.Fatalf("before %s: unread=%d, want 2", name, got.UnreadCount)
+		}
+		post()
+		if got := f.alice.readState(t, f.channel); got.UnreadCount != 0 {
+			t.Fatalf("after %s: unread=%d, want 0", name, got.UnreadCount)
+		}
+	}
+	unreadAfter("the REST route", func() { f.basic(t, f.alice, nil) })
+	unreadAfter("/poll", func() {
+		wantStatus(t, "run /poll", slashPoll(f.alice, f.channel, map[string]any{"question": "Again?", "answers": "Yes | No"}), http.StatusOK)
+	})
+}
+
+// The author of a scheduled message is not reading the channel when the
+// server sends it: what others wrote since their last visit stays unread.
+func TestAScheduledMessageLeavesWhatTheAuthorHasNotReadUnread(t *testing.T) {
+	f := newLaterFixture(t)
+	wantStatus(t, "schedule", f.schedule(f.alice, f.channel, "good morning", inFuture(time.Hour)), http.StatusCreated)
+	for i := 0; i < 2; i++ {
+		postMessage(t, f.owner, f.channel, map[string]any{"content": "news"})
+	}
+	f.sweep(t)
+	if len(f.history(t, f.alice, f.channel)) != 3 {
+		t.Fatal("the scheduled message was not sent")
+	}
+	if got := f.alice.readState(t, f.channel); got.UnreadCount != 2 {
+		t.Fatalf("after the scheduled send: unread=%d, want 2", got.UnreadCount)
 	}
 }

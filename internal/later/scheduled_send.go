@@ -178,6 +178,8 @@ func (s *Service) announceSent(ctx context.Context, d dueScheduled, messageID uu
 		slog.Warn("scheduled: load sent message", "err", err)
 		return
 	}
+	// The author's read marker stays where it is: they are not reading the
+	// channel now, and what others wrote since their last visit stays unread.
 	if s.Events != nil {
 		s.Events.BroadcastChannel(d.channel, events.MessageCreate, msg)
 	}
