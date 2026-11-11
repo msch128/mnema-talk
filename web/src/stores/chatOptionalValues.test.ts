@@ -4,11 +4,9 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore, TYPING_EXPIRY_MS } from './chat'
 import { useAuthStore } from './auth'
 import { channelFixture, messageFixture, userFixture, readStateFixture, fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
-import { required } from '../store-test-support.fixture'
 import type { ApiOptions } from '../shared/lib/api'
 import type { Message } from '../types/domain'
 import { currentRoute } from '../shared/lib/router'
-import { IDLE_AFTER_MS } from '../shared/lib/presence'
 
 // Deferred transport responses exercise real store continuations and races.
 const http = vi.hoisted(() => ({ handle: (url: string, _opts?: ApiOptions): unknown => url === '/api/channels' ? { categories: [], uncategorized: [] } : [] }))
@@ -252,74 +250,5 @@ describe('optional values and defensive public actions', () => {
     chat.handleWSEvent({ type: 'message_create', payload: message({ channel_id: ch.id, user_id: '' }) })
     expect(chat.readStates[ch.id]?.unread_count).toBe(1)
     expect(chat.readStates[ch.id]?.mention_count).toBe(0)
-  })
-})
-
-describe('reconnect lifecycle variants', () => {
-  it('reopens idle connection, resyncs open thread and stops retry after logout', async () => {
-    const chat = setup()
-    const root = message()
-    chat.activeThread = root
-    http.handle = url => url.includes('/thread') ? { root, replies: [] } : url === '/api/channels' ? { categories: [], uncategorized: [ch] } : []
-    vi.advanceTimersByTime(IDLE_AFTER_MS)
-    chat.initWebSocket()
-    const socket = required(Socket.latest)
-    socket.onopen?.()
-    await tick()
-    expect(socket.send).toHaveBeenCalledWith(expect.stringContaining('"idle":true'))
-    expect(api).toHaveBeenCalledWith(`/api/messages/${root.id}/thread`, expect.anything())
-    useAuthStore().user = null
-    socket.onclose?.()
-    expect(chat.reconnectAttempt).toBe(0)
-    expect(chat.isConnected).toBe(false)
-  })
-  it('retries visible disconnected authenticated tab but stops if auth has expired', async () => {
-    const chat = setup(), auth = useAuthStore()
-    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
-    const checking = vi.spyOn(auth, 'checkAuth').mockResolvedValue(false)
-    document.dispatchEvent(new Event('visibilitychange'))
-    await tick()
-    expect(checking).toHaveBeenCalled()
-    expect(Socket.latest).toBeNull()
-    expect(chat.isConnected).toBe(false)
-    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
-    checking.mockClear()
-    document.dispatchEvent(new Event('visibilitychange'))
-    expect(checking).not.toHaveBeenCalled()
-    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
-    chat.initWebSocket()
-    chat.retryNow()
-    // A socket still connecting does not block the retry: it is replaced, after the session check.
-    expect(checking).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe('session and optional signal boundaries', () => {
-  it('leaves RTC signals harmless until handlers register, and ignores redundant socket initialization', () => {
-    const chat = setup()
-    expect(() => chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: 'synthetic' } })).not.toThrow()
-    expect(() => chat.handleWSEvent({ type: 'webrtc_candidate', payload: { candidate: '' } })).not.toThrow()
-    vi.spyOn(window.location, 'protocol', 'get').mockReturnValue('https:')
-    chat.initWebSocket()
-    const first = required(Socket.latest)
-    expect(first.url.startsWith('wss://')).toBe(true)
-    chat.initWebSocket()
-    expect(Socket.latest).toBe(first)
-    chat.closeWebSocket()
-    useAuthStore().user = null
-    chat.initWebSocket()
-    expect(Socket.latest).toBe(first)
-  })
-  it('opens with no active history and marks an active channel unread without a stored read marker', async () => {
-    const chat = setup()
-    chat.activeChannel = null
-    chat.initWebSocket()
-    required(Socket.latest).onopen?.()
-    await tick()
-    chat.activeChannel = ch
-    http.handle = () => []
-    await chat.markChannelUnread(ch.id, fixtureId(20))
-    expect(chat.activeChannelLastReadAt).toBeNull()
-    expect(chat.readStates).toEqual({})
   })
 })

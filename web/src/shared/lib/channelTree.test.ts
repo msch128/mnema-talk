@@ -52,3 +52,11 @@ describe('channel tree', () => {
 it('ignores stored values that are not an array of category IDs', () => {
   expect(loadCollapsed({ getItem: () => '{"invalid":true}' })).toEqual([])
 })
+
+describe('runtime edges of pure chat helpers', () => {
+  it('remains safe when collapse persistence is unavailable', () => {
+    expect(loadCollapsed(null)).toEqual([])
+    saveCollapsed([], null)
+    expect(buildChannelTree(undefined, undefined)).toEqual({ categories: [], uncategorized: [] })
+  })
+})

@@ -1,4 +1,4 @@
-import { requireValue, messageFixture } from '../../test-fixtures.fixture'
+import { requireValue, messageFixture, fixtureId } from '../../test-fixtures.fixture'
 import type { Message } from '../../types/domain'
 import { describe, it, expect } from 'vitest'
 import { replySnippet, previewText, stripMarkdown, markPreviewEdited, markPreviewDeleted, REPLY_PREVIEW_LEN } from './replies'
@@ -83,4 +83,19 @@ it('tolerates an unavailable message list at the compatibility boundary', () => 
   const lists: Message[][] = [[]]
   Reflect.set(lists, 0, null)
   expect(markPreviewDeleted(lists, 'missing')).toBe(0)
+})
+
+describe('runtime edges of pure chat helpers', () => {
+  it('drops NUL characters and preserves short mention-like strings', () => {
+    expect(stripMarkdown('before\u00009999\u0000after')).toBe('before9999after')
+  })
+  it('supports edits that update only attachments without clearing the cached text', () => {
+    const reply = messageFixture({ reply_to_id: fixtureId(5), reply_to: { id: fixtureId(5), content: 'Keep', deleted: false, has_attachments: false } })
+    expect(markPreviewEdited([[reply]], { id: fixtureId(5), attachments: [] })).toBe(1)
+    expect(reply.reply_to?.has_attachments).toBe(false)
+    expect(reply.reply_to?.content).toBe('Keep')
+    const attachment = { id: fixtureId(8), is_deleted: false, mime_type: 'image/png', original_filename: 'synthetic.png', size_bytes: 1, url: '/api/media/synthetic' }
+    markPreviewEdited([[reply]], { id: fixtureId(5), attachments: [attachment] })
+    expect(reply.reply_to?.has_attachments).toBe(true)
+  })
 })
