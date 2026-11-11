@@ -1,4 +1,4 @@
-import type { IncomingMessageCallback, KeyPackage } from 'ts-mls'
+import { decodeMlsMessage, type IncomingMessageCallback, type KeyPackage, type MLSMessage } from 'ts-mls'
 import { HANDSHAKE_MAX_BYTES, type MediaTiming } from './bounds'
 import { CAP_FRAME_V3 } from './capability'
 import { credentialIdentity, sameBytes } from './groupTree'
@@ -113,6 +113,15 @@ export function invalidHandshakeWire(closed: boolean, len: number): boolean {
 export function invalidHandshakeSender(from: string | null, userId: string): boolean {
   if (!from) return true
   return from === userId
+}
+
+/** The MLS message in a handshake wire; null for bytes that are none (the decoder throws on some). */
+export function decodeHandshake(wire: Uint8Array): MLSMessage | null {
+  try {
+    return decodeMlsMessage(wire, 0)?.[0] ?? null
+  } catch {
+    return null
+  }
 }
 
 export function isRivalWelcome(previousState: unknown, members: Map<string, number> | null, from: string, userId: string): boolean {

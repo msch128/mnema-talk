@@ -707,7 +707,9 @@ details and the limits.
   keeps the powers the rules give the role: it can remove a member that looks
   silent to it, delay joins or stop the call, as above. Only authenticated input discards a
   group: a handshake that merely parses, a key package, or a public message from
-  an id outside the group never does. A welcome from a lower id outside my
+  an id outside the group never does (a group of one, which nobody else depends
+  on, is the exception: it steps aside for a lower id the roster lists, on a
+  roster change or on its maintenance tick). A welcome from a lower id outside my
   group replaces it only if it opens with the key package I offered and passes
   the committer rule, at most once per minute per sender (doubling to ten
   minutes); a member who holds a key package I offered can therefore still pull
@@ -742,7 +744,12 @@ details and the limits.
   ten seconds and takes the winner, so the call does not split (anything else
   that has split is repaired by the existing start-over). It goes back only
   while that renewal is the last commit it took: once another commit followed
-  (a removal, for one), a late rival renewal changes nothing. A member's leaf
+  (a removal, for one), a late rival renewal changes nothing for it. That one
+  ordering does split the call: a member that took the rival renewal first
+  cannot follow the commit built on the other one. So the committer, when a
+  rival renewal that would have won reaches it after its own commit, commits
+  once more at once; the members on the other branch see a commit for an epoch
+  they have not reached, start over and are let in again. A member's leaf
   secrets that an attacker held are therefore useless to it after about one
   period of the member being online and in the group, and a member's keys
   change at most once per period more than before: with 100 members that is

@@ -394,4 +394,30 @@ describe('a room that grows, loses a welcome or has a silent lowest member', () 
     await alice.close()
     await bob.close()
   }, 60_000)
+
+  it('waits for a welcome again when its key package reaches a room that did not have it', async () => {
+    const bob = await opened(bobId)
+    const carol = await opened(carolId)
+    const dave = await opened(daveId)
+    vi.useFakeTimers({ ...timers, now: Date.now() })
+    const steps: MediaStep[] = []
+    bob.onStep(step => steps.push(step))
+    // Alice is listed, so Bob offers and waits to be let in. She never answers and leaves.
+    expect((await bob.sync([aliceId, bobId])).epoch).toBeNull()
+    await vi.advanceTimersByTimeAsync(2000)
+    // Carol and Dave arrive and offer. Bob is the lowest now, but one of them may hold a group
+    // and has not seen his package: it goes out now, and the wait for a welcome starts with it.
+    const room = [bobId, carolId, daveId]
+    await bob.receive(carolId, wireAt((await carol.sync(room)).wires, 0), true)
+    await bob.receive(daveId, wireAt((await dave.sync(room)).wires, 0), true)
+    const offered = await bob.sync(room)
+    expect(offered.epoch).toBeNull()
+    expect(offered.wires).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(1400)
+    expect(steps.every(step => step.epoch === null)).toBe(true)
+    // Nobody welcomed him: he founds and lets both in.
+    await vi.advanceTimersByTimeAsync(200)
+    await vi.waitFor(() => expect(steps.at(-1)?.epoch).toBe(1))
+    for (const group of [bob, carol, dave]) await group.close()
+  }, 60_000)
 })
