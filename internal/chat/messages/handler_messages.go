@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -139,10 +140,10 @@ func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 			return claimAttachments(ctx, tx, msgID, user.ID, chID, req.AttachmentIDs)
 		}
 	}
-	id, stored, err := insertMessage(ctx, a.DB, a.Online, NewMessage{
+	id, stored, err := insertMessage(ctx, inserter{db: a.DB, online: a.Online, automod: automod.Of(a.DB)}, NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
 		HasAttachment: len(req.AttachmentIDs) > 0, Nonce: req.Nonce,
-	}, claim)
+	}, rulesFrom(ctx), claim)
 	if IsNonceConflict(err) {
 		// A concurrent send of the same nonce won the race.
 		_, err = a.replayNonce(w, r, user.ID, chID, req.Nonce)

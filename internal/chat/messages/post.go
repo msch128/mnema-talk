@@ -44,15 +44,24 @@ func ValidateTarget(ctx context.Context, p *db.Pool, chID uuid.UUID, parentID, r
 // an attachment). The message_create of the channel's outgoing webhooks is
 // stored in it too, last, so it carries what also added.
 func InsertMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, nm NewMessage, also func(tx pgx.Tx, messageID uuid.UUID) error) (uuid.UUID, error) {
-	id, _, err := insertMessage(ctx, p, online, nm, also)
+	id, _, err := insertMessage(ctx, inserter{db: p, online: online, automod: automod.Of(p)}, nm, rulesFrom(ctx), also)
 	return id, err
+}
+
+// inserter is what storing a message works with.
+type inserter struct {
+	db     *db.Pool
+	online mentions.OnlineSource
+	// automod screens the message first; nil screens nothing.
+	automod *automod.Engine
 }
 
 // insertMessage is InsertMessage. It also returns the stored message when the
 // transaction had to load it for a webhook (nil otherwise), so the caller
 // that publishes it next need not load it a second time.
-func insertMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, nm NewMessage, also func(tx pgx.Tx, messageID uuid.UUID) error) (uuid.UUID, *core.Message, error) {
-	pending, err := checkAutomod(ctx, p, nm)
+func insertMessage(ctx context.Context, in inserter, nm NewMessage, rules sendRules, also func(tx pgx.Tx, messageID uuid.UUID) error) (uuid.UUID, *core.Message, error) {
+	p := in.db
+	pending, err := checkAutomod(ctx, in.automod, nm)
 	if err != nil {
 		return uuid.Nil, nil, err
 	}
@@ -60,7 +69,7 @@ func insertMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource
 	var stored *core.Message
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		var err error
-		if id, err = insertMessageTx(ctx, tx, online, nm); err != nil {
+		if id, err = insertMessageTx(ctx, tx, in.online, nm, rules); err != nil {
 			return err
 		}
 		if also != nil {
@@ -84,7 +93,7 @@ func insertMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource
 // checkAutomod applies the automod rules to a member's new message before it
 // is stored: a rule that blocks refuses it, one that only flags is recorded
 // once the message exists (Pending.Commit). Webhook messages are not checked.
-func checkAutomod(ctx context.Context, p *db.Pool, nm NewMessage) (*automod.Pending, error) {
+func checkAutomod(ctx context.Context, engine *automod.Engine, nm NewMessage) (*automod.Pending, error) {
 	if nm.WebhookID != nil {
 		return nil, nil
 	}
@@ -93,7 +102,7 @@ func checkAutomod(ctx context.Context, p *db.Pool, nm NewMessage) (*automod.Pend
 		parts = append(parts, *nm.Title)
 	}
 	content := strings.Join(append(parts, nm.Content), "\n")
-	return automod.Of(p).Check(ctx, automod.Post{ChannelID: nm.ChannelID, UserID: nm.UserID, Content: content, HasAttachment: nm.HasAttachment})
+	return engine.Check(ctx, automod.Post{ChannelID: nm.ChannelID, UserID: nm.UserID, Content: content, HasAttachment: nm.HasAttachment})
 }
 
 // ScreenText applies the automod rules to member-written text that is not a
@@ -105,8 +114,8 @@ func ScreenText(ctx context.Context, p *db.Pool, channelID, userID, messageID uu
 
 // insertMessageTx stores the message, its mentions and, for a thread reply,
 // the follows it implies.
-func insertMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, nm NewMessage) (uuid.UUID, error) {
-	if err := GatePost(ctx, tx, nm); err != nil {
+func insertMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, nm NewMessage, rules sendRules) (uuid.UUID, error) {
+	if err := gatePost(ctx, tx, nm, rules); err != nil {
 		return uuid.Nil, err
 	}
 	id, err := CreateMessage(ctx, tx, nm)
@@ -116,7 +125,7 @@ func insertMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSourc
 	if err := recordNonce(ctx, tx, nm, id); err != nil {
 		return uuid.Nil, err
 	}
-	if err := mentions.RecordMentions(ctx, tx, online, id, nm.UserID, nm.Content); err != nil {
+	if err := mentions.RecordMentionsUnder(ctx, tx, online, rules.Mentions, id, nm.UserID, nm.Content); err != nil {
 		return uuid.Nil, err
 	}
 	if nm.ParentID != nil {
@@ -125,32 +134,6 @@ func insertMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSourc
 		}
 	}
 	return id, nil
-}
-
-type newMemberWriteWaitKey struct{}
-
-// withNewMemberWriteWait carries how long the author still waits as a new
-// member before they may write (raid protection); zero: not at all.
-func withNewMemberWriteWait(ctx context.Context, wait time.Duration) context.Context {
-	return context.WithValue(ctx, newMemberWriteWaitKey{}, wait)
-}
-
-func newMemberWriteWait(ctx context.Context) time.Duration {
-	v, _ := ctx.Value(newMemberWriteWaitKey{}).(time.Duration)
-	return v
-}
-
-type slowModeExemptKey struct{}
-
-// WithSlowModeExempt marks a request whose author is not held back by slow
-// mode (they may manage messages in the channel).
-func WithSlowModeExempt(ctx context.Context, exempt bool) context.Context {
-	return context.WithValue(ctx, slowModeExemptKey{}, exempt)
-}
-
-func slowModeExempt(ctx context.Context) bool {
-	v, _ := ctx.Value(slowModeExemptKey{}).(bool)
-	return v
 }
 
 // enforceSlowMode refuses a message that comes too soon after the author's

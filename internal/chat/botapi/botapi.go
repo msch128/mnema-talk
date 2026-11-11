@@ -205,18 +205,7 @@ func decodeRawBotMessage(w http.ResponseWriter, r *http.Request) (*rawBotMessage
 // ValidateBotMessage checks the content and embeds a bot sends (a message or
 // a response to a command): the same rules, one message needs one of them.
 func ValidateBotMessage(rawContent string, rawEmbeds []messages.InEmbed) (string, []core.Embed, error) {
-	content, err := core.ValidateContent(rawContent, true)
-	if err != nil {
-		return "", nil, err
-	}
-	embeds, err := messages.SanitizeEmbeds(rawEmbeds)
-	if err != nil {
-		return "", nil, httpx.ErrInvalidInput(err.Error())
-	}
-	if content == "" && len(embeds) == 0 {
-		return "", nil, httpx.ErrInvalidInput("Cannot send an empty message").WithDiscordCode(httpx.DiscordCodeEmptyMessage)
-	}
-	return content, embeds, nil
+	return messages.ValidateBotMessage(rawContent, rawEmbeds)
 }
 
 func validateBotPayload(req *rawBotMessage) (string, []core.Embed, *uuid.UUID, error) {

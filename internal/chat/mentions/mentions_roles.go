@@ -32,7 +32,10 @@ type MentionSet struct {
 // ResolveMentionSet resolves names, @all, @here and role mentions of content
 // under the mention policy of ctx. The author is never mentioned.
 func ResolveMentionSet(ctx context.Context, q db.Querier, content string, authorID uuid.UUID, online []uuid.UUID) (MentionSet, error) {
-	policy := mentionPolicyFrom(ctx)
+	return resolveMentionSet(ctx, q, PolicyFrom(ctx), content, authorID, online)
+}
+
+func resolveMentionSet(ctx context.Context, q db.Querier, policy MentionPolicy, content string, authorID uuid.UUID, online []uuid.UUID) (MentionSet, error) {
 	hits := roleHits(content, policy.Roles)
 	names := capNames(ParseMentions(maskPhraseRoles(content, hits)))
 	roles := hitRoles(hits)

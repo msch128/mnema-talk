@@ -27,27 +27,34 @@ func SendContextFor(perms *perm.Service, ctx context.Context, ch uuid.UUID, need
 	if err != nil {
 		return nil, err
 	}
+	return mentions.WithMentionPolicy(ctx, memberMentionPolicy(snap, ch, p)), nil
+}
+
+// memberMentionPolicy is the mention policy of a member's message: @all and
+// @here only notify when they may mention everyone (p), roles when they may
+// mention them, and nobody is notified about a message in a channel they
+// cannot view.
+func memberMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set) mentions.MentionPolicy {
 	policy := viewersOnly(snap, ch)
 	policy.NoEveryone = !p.Has(perm.MentionEveryone)
 	policy.Roles = MentionableRoles(snap, p.Has(perm.MentionEveryone))
-	return mentions.WithMentionPolicy(ctx, policy), nil
+	return policy
 }
 
 // gatedContext checks need for the author in ch and returns the context
 // carrying what their permissions mean for the gate inside the insert (slow
-// mode, the new member wait), without a mention policy yet.
+// mode, the new member wait), without a mention policy yet. It is the gate of
+// Service.Post for a member, for the entry points that still carry the rules
+// in the context.
 func gatedContext(perms *perm.Service, ctx context.Context, ch uuid.UUID, need perm.Set) (context.Context, *perm.Snapshot, perm.Set, error) {
-	snap, err := perms.ForChannel(ctx, ch)
+	actor := MemberActor(auth.UserFrom(ctx))
+	g, err := decide(ctx, perms, actor, ch, need)
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	sub := auth.UserFrom(ctx).Subject()
-	p := snap.Channel(sub, ch)
-	if err := snap.Deny(sub, p, need); err != nil {
-		return nil, nil, 0, err
-	}
-	ctx = WithSlowModeExempt(ctx, p.Has(perm.ManageMessages))
-	return withNewMemberWriteWait(ctx, snap.NewMemberWaits(sub.ID).Write), snap, p, nil
+	rules := g.gateRules(actor)
+	ctx = WithSlowModeExempt(ctx, rules.SlowModeExempt)
+	return withNewMemberWriteWait(ctx, rules.NewMemberWait), g.snap, g.perms, nil
 }
 
 // viewersOnly is the strictest mention policy: members named in the message
