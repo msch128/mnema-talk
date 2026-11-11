@@ -133,8 +133,8 @@ func Logger(next http.Handler) http.Handler {
 		start := time.Now()
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		next.ServeHTTP(ww, r)
-		if r.URL.Path == "/api/health" {
-			return
+		if r.URL.Path == "/api/health" || r.URL.Path == "/api/health/live" {
+			return // probes arrive every few seconds
 		}
 		slog.Info("http",
 			"request_id", RequestIDFromContext(r.Context()),

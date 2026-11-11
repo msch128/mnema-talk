@@ -381,9 +381,11 @@ func TestLoggerOmitsSensitiveQueryAndSkipsHealthRequests(t *testing.T) {
 		t.Fatalf("unsafe or incomplete request log: %s", output.String())
 	}
 	output.Reset()
-	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/health", nil))
-	if output.Len() != 0 {
-		t.Fatal("health poll generated request log noise")
+	for _, probe := range []string{"/api/health", "/api/health/live"} {
+		h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, probe, nil))
+		if output.Len() != 0 {
+			t.Fatalf("a poll of %s generated request log noise", probe)
+		}
 	}
 }
 
