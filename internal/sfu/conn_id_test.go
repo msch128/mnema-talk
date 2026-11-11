@@ -99,7 +99,9 @@ func TestPeerWithoutAHubConnectionLogsNoConnectionID(t *testing.T) {
 	waitSFUCondition(t, "the peer's state line", func() bool {
 		return len(linesWith(logged, "sfu peer state", "user="+member.String())) > 0
 	})
-	if got := linesWith(logged, "conn_id="); len(got) != 0 {
+	// Only this member's lines: a peer of an earlier test may still be closing
+	// and logs its own connection id into the shared capture.
+	if got := linesWith(logged, "conn_id=", "user="+member.String()); len(got) != 0 {
 		t.Fatalf("lines carry a connection id nobody gave: %v", got)
 	}
 }
