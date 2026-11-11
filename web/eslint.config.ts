@@ -4,6 +4,30 @@ import globals from 'globals'
 import sonarjs from 'eslint-plugin-sonarjs'
 import tseslint from 'typescript-eslint'
 import vueParser from 'vue-eslint-parser'
+import type { Rule } from 'eslint'
+import { fileURLToPath } from 'node:url'
+import { specifierViolation } from './scripts/importZones.ts'
+
+const srcRoot = fileURLToPath(new URL('./src', import.meta.url))
+
+// Import zones of web/src (scripts/importZones.ts holds the tables): a
+// feature imports shared code and itself, not another feature.
+const importZones: Rule.RuleModule = {
+  meta: { type: 'problem', schema: [], messages: { zone: '{{why}}' } },
+  create(context) {
+    const check = (source: Rule.Node | null | undefined) => {
+      if (!source || source.type !== 'Literal' || typeof source.value !== 'string') return
+      const why = specifierViolation(srcRoot, context.filename, source.value)
+      if (why) context.report({ node: source, messageId: 'zone', data: { why } })
+    }
+    return {
+      ImportDeclaration: node => check(node.source as Rule.Node),
+      ImportExpression: node => check(node.source as Rule.Node),
+      ExportNamedDeclaration: node => check(node.source as Rule.Node | null),
+      ExportAllDeclaration: node => check(node.source as Rule.Node)
+    }
+  }
+}
 
 // Desktop window globals and IPC are named only in shared/lib/platform and its adapters.
 const desktopGlobalSyntax = [{
@@ -134,6 +158,11 @@ export default tseslint.config(
       'max-lines-per-function': ['error', { max: 80, skipBlankLines: false, skipComments: false, IIFEs: true }],
       'sonarjs/cognitive-complexity': ['error', 15]
     }
+  },
+  {
+    files: ['**/web/src/**/*.{ts,vue}'],
+    plugins: { mnema: { rules: { 'import-zones': importZones } } },
+    rules: { 'mnema/import-zones': 'error' }
   },
   // Tests, fixtures and e2e specs may be up to 800 lines (same as Go _test.go).
   {

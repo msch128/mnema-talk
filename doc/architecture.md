@@ -844,6 +844,8 @@ and Administrators) gathers version, update state, database, storage, backup and
   (sidebar, user bar, member list, sign-in, routing). `stores/`, `types/`, `i18n/`
   and `directives/` serve all of them. [`lib/media/`](../web/src/lib/media/) is the
   media encryption of Talks and stays where it is.
+  A feature imports `shared` and itself, not another feature; the allowed edges are
+  the tables in [`web/scripts/importZones.ts`](../web/scripts/importZones.ts), checked by ESLint.
 - **Entry**: [`main.ts`](../web/src/main.ts), [`App.vue`](../web/src/App.vue)
   (routing via [`shared/lib/router.ts`](../web/src/shared/lib/router.ts), layout, dialogs).
 - **Addresses**: [`shared/lib/routePaths.ts`](../web/src/shared/lib/routePaths.ts) builds every
