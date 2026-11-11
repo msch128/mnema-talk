@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -43,8 +44,8 @@ func (h *Hub) Broadcast(ev events.Event) {
 		return
 	}
 	h.tapped(uuid.Nil, ev)
-	if ev.EventName() == events.UserUpdate {
-		h.applyUserUpdate(events.PayloadOf(ev))
+	if u, ok := ev.(auth.UserUpdate); ok {
+		h.applyUserUpdate(auth.User(u))
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()

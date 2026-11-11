@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -259,7 +258,7 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast(events.Untyped(events.UserUpdate, updated.Public()))
+	h.Events.Broadcast(auth.UserUpdate(updated.Public()))
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }
@@ -320,7 +319,7 @@ func (h *Handler) deleteAvatar(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast(events.Untyped(events.UserUpdate, updated.Public()))
+	h.Events.Broadcast(auth.UserUpdate(updated.Public()))
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }

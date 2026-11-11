@@ -185,7 +185,7 @@ func TestObserveFailsClosed(t *testing.T) {
 
 	g, s := newGateway(permtest.Unloadable()) // no state to read
 	g.Observe(ch, events.Untyped("message_create", map[string]any{"id": 1}))
-	g.Observe(uuid.Nil, events.Untyped("member_joined", map[string]any{"id": uuid.New()}))
+	g.Observe(uuid.Nil, auth.MemberJoined{ID: uuid.New()})
 	if s.seq != 0 {
 		t.Fatal("delivered without a permission state")
 	}
@@ -198,7 +198,7 @@ func TestObserveFailsClosed(t *testing.T) {
 	g, s = newGateway(f.Service())
 	g.Observe(channel, events.Untyped("message_create", make(chan int))) // cannot be encoded
 	g.Observe(uuid.Nil, events.Untyped("member_joined", make(chan int)))
-	g.Observe(uuid.Nil, events.Untyped("member_joined", map[string]any{"username": "no id"}))
+	g.Observe(uuid.Nil, auth.MemberJoined{Username: "no id"})
 	g.Observe(uuid.Nil, events.Untyped("typing", map[string]any{}))
 	g.Observe(channel, events.Untyped("unknown_event", map[string]any{}))
 	if s.seq != 0 {

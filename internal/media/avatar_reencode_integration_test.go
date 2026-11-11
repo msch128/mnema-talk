@@ -160,7 +160,7 @@ func (f *mediaFixture) wantUserUpdate(t *testing.T) {
 	if len(sent) != 1 || sent[0].Type != events.UserUpdate {
 		t.Fatalf("want one user_update, got %+v", sent)
 	}
-	if u, ok := sent[0].Payload.(auth.User); !ok || u.ID != f.user.ID {
+	if u, ok := sent[0].Payload.(auth.UserUpdate); !ok || u.ID != f.user.ID {
 		t.Fatalf("payload is the owner's public profile: %#v", sent[0].Payload)
 	}
 }

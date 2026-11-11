@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -47,14 +48,14 @@ func broadcastToSessions(targets []*session, name string, msg json.RawMessage) {
 	}
 }
 
-func dispatchGlobalEvent(snap *perm.Snapshot, targets []*session, name string, payload any) {
+func dispatchGlobalEvent(snap *perm.Snapshot, targets []*session, name string, ev events.Event) {
 	if name == EventChannelsUpdate {
 		// The layout or someone's access changed: bots refetch /channels.
 		broadcastToSessions(targets, name, json.RawMessage(`{}`))
 		return
 	}
 	if name == EventGuildMemberAdd {
-		enqueueMemberAdd(snap, targets, name, payload)
+		enqueueMemberAdd(snap, targets, name, ev)
 	}
 }
 
@@ -67,8 +68,7 @@ const permTimeout = 3 * time.Second
 // blocks for longer than permTimeout, the bound on reloading the permission
 // snapshot.
 func (g *Gateway) Observe(channel uuid.UUID, ev events.Event) {
-	eventType, payload := ev.EventName(), events.PayloadOf(ev)
-	name, intent, ok := event(eventType)
+	name, intent, ok := event(ev.EventName())
 	if !ok {
 		return
 	}
@@ -83,15 +83,15 @@ func (g *Gateway) Observe(channel uuid.UUID, ev events.Event) {
 		return // fail closed
 	}
 	if channel != uuid.Nil {
-		enqueueChannelEvent(snap, targets, channel, name, payload)
+		enqueueChannelEvent(snap, targets, channel, name, ev)
 		return
 	}
-	dispatchGlobalEvent(snap, targets, name, payload)
+	dispatchGlobalEvent(snap, targets, name, ev)
 }
 
 // enqueueChannelEvent queues a channel's event for the bots that may view it.
-func enqueueChannelEvent(snap *perm.Snapshot, targets []*session, channel uuid.UUID, name string, payload any) {
-	data, err := json.Marshal(payload)
+func enqueueChannelEvent(snap *perm.Snapshot, targets []*session, channel uuid.UUID, name string, ev events.Event) {
+	data, err := json.Marshal(ev)
 	if err != nil {
 		return
 	}
@@ -104,8 +104,8 @@ func enqueueChannelEvent(snap *perm.Snapshot, targets []*session, channel uuid.U
 
 // enqueueMemberAdd queues a new member only for the bots that share a channel
 // with them.
-func enqueueMemberAdd(snap *perm.Snapshot, targets []*session, name string, payload any) {
-	member, ok := memberOf(payload)
+func enqueueMemberAdd(snap *perm.Snapshot, targets []*session, name string, ev events.Event) {
+	member, ok := memberOf(ev)
 	if !ok {
 		return
 	}
@@ -133,16 +133,12 @@ type BotMember struct {
 	AvatarURL   string    `json:"avatar_url,omitempty"`
 }
 
-func memberOf(payload any) (BotMember, bool) {
-	raw, err := json.Marshal(payload)
-	if err != nil {
+func memberOf(ev events.Event) (BotMember, bool) {
+	u, ok := ev.(auth.MemberJoined)
+	if !ok || u.ID == uuid.Nil {
 		return BotMember{}, false
 	}
-	var m BotMember
-	if json.Unmarshal(raw, &m) != nil || m.ID == uuid.Nil {
-		return BotMember{}, false
-	}
-	return m, true
+	return BotMember{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, AvatarURL: u.AvatarURL}, true
 }
 
 func (g *Gateway) sessionsWith(intent int64) []*session {

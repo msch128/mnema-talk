@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events/payload"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
@@ -119,7 +120,7 @@ func (h *API) endDeletedAccount(ctx context.Context, u *auth.User) {
 		h.OnAccountEnded(u.ID)
 	}
 	if h.Events != nil {
-		h.Events.Broadcast(events.Untyped(events.UserUpdate, map[string]any{"id": u.ID, "disabled": true}))
+		h.Events.Broadcast(payload.UserDisabled{ID: u.ID, Disabled: true})
 	}
 	if h.Audit == nil {
 		return

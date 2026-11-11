@@ -75,25 +75,9 @@ func (h *Hub) voiceChannel(ctx context.Context, chID uuid.UUID) (*core.ChannelIn
 
 // applyUserUpdate keeps the hub's copies of a user's public profile current
 // after a name, status or avatar change (a user_update with a User payload).
-func (h *Hub) applyUserUpdate(payload any) {
-	u, ok := extractUserPayload(payload)
-	if !ok {
-		return
-	}
-	h.updateUserPublicProfile(u.ID, u.Public())
-}
-
-func extractUserPayload(payload any) (auth.User, bool) {
-	switch v := payload.(type) {
-	case auth.User:
-		return v, v.ID != uuid.Nil
-	case *auth.User:
-		if v == nil || v.ID == uuid.Nil {
-			return auth.User{}, false
-		}
-		return *v, true
-	default:
-		return auth.User{}, false
+func (h *Hub) applyUserUpdate(u auth.User) {
+	if u.ID != uuid.Nil {
+		h.updateUserPublicProfile(u.ID, u.Public())
 	}
 }
 

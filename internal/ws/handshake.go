@@ -130,7 +130,7 @@ func (h *Hub) greet(c *Client, before, after string) {
 	// server_info leads: the broadcast below can reach this very connection.
 	c.SendEvent(events.Untyped(events.ServerInfo, h.serverInfo()))
 	h.announcePresence(c.User.ID, before, after)
-	c.SendEvent(events.Untyped(events.PresenceSnapshot, h.presenceSnapshot()))
+	c.SendEvent(h.presenceSnapshot())
 	h.sendBotActivities(c)
 	// Talks the member may not view stay invisible: who sits in them, since
 	// when and what they share.

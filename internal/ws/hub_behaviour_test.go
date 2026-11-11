@@ -65,11 +65,10 @@ func TestHubIgnoresUnknownClientIdleAndInvalidProfiles(t *testing.T) {
 	if stranger.idle || len(c.send) != 0 {
 		t.Fatal("unknown client changed live presence")
 	}
-	h.applyUserUpdate((*auth.User)(nil))
 	h.applyUserUpdate(auth.User{DisplayName: "No identity"})
 	update := c.User
 	update.DisplayName = "Updated"
-	h.applyUserUpdate(&update)
+	h.applyUserUpdate(update)
 	h.mu.RLock()
 	got := h.profileLocked(c)
 	fallback := h.profileLocked(stranger)
