@@ -4,6 +4,7 @@ package webhook
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +15,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/media"
@@ -76,6 +80,67 @@ func (f *fixture) handler(p *db.Pool) *Handler {
 func (f *fixture) faulty(tr *pgfault.Tracer) *Handler {
 	pool := &db.Pool{Pool: pgfault.Pool(f.t, f.p.Pool, tr)}
 	return f.handler(pool)
+}
+
+// failingRecords is the database with one named step of the handlers failing.
+type failingRecords struct {
+	handlerStore
+	// failLoad fails the n-th load of a webhook (1 is the first, 2 the
+	// read-back after a change); 0 fails none.
+	failLoad                            int
+	failThread, failInsert, failMessage bool
+
+	loads int
+	hit   bool
+}
+
+var errRecords = errors.New("webhook store down")
+
+func (s *failingRecords) webhook(ctx context.Context, id uuid.UUID) (*record, error) {
+	if s.loads++; s.loads == s.failLoad {
+		s.hit = true
+		return nil, errRecords
+	}
+	return s.handlerStore.webhook(ctx, id)
+}
+
+func (s *failingRecords) validateThread(ctx context.Context, channel uuid.UUID, thread *uuid.UUID) error {
+	if s.failThread {
+		s.hit = true
+		return errRecords
+	}
+	return s.handlerStore.validateThread(ctx, channel, thread)
+}
+
+func (s *failingRecords) insertMessage(ctx context.Context, nm messages.NewMessage, also func(pgx.Tx, uuid.UUID) error) (uuid.UUID, error) {
+	if s.failInsert {
+		s.hit = true
+		return uuid.Nil, errRecords
+	}
+	return s.handlerStore.insertMessage(ctx, nm, also)
+}
+
+func (s *failingRecords) message(ctx context.Context, id uuid.UUID) (*core.Message, error) {
+	if s.failMessage {
+		s.hit = true
+		return nil, errRecords
+	}
+	return s.handlerStore.message(ctx, id)
+}
+
+// failing is a handler on the healthy database whose store fails the step s
+// names. The test fails when the handler never reached that step.
+func (f *fixture) failing(s failingRecords) *Handler {
+	f.t.Helper()
+	h := f.handler(f.p)
+	s.handlerStore = pgStore{db: f.p}
+	h.recordsOverride = &s
+	f.t.Cleanup(func() {
+		if !s.hit {
+			f.t.Errorf("the failing step of %+v was never reached", s)
+		}
+	})
+	return h
 }
 
 func (f *fixture) serve(h *Handler, method, path string, body io.Reader, hdr map[string]string) *httptest.ResponseRecorder {

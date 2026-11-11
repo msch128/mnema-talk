@@ -140,15 +140,15 @@ func TestResponseReadBackFailures(t *testing.T) {
 	f := newFixture(t)
 	rec, _ := f.newHook("hook")
 	admin := "/admin/webhooks/" + rec.ID.String()
-	h := f.faulty(&pgfault.Tracer{Query: "w.id = $1", Skip: 1})
+	h := f.failing(failingRecords{failLoad: 2})
 	wantStatus(t, f.json(h, "PATCH", admin, `{"name":"n"}`), 500, "rename read-back")
 
 	form, ct := avatarForm()
-	h = f.faulty(&pgfault.Tracer{Query: "w.id = $1", Skip: 1})
+	h = f.failing(failingRecords{failLoad: 2})
 	wantStatus(t, f.serve(h, "POST", admin+"/avatar", bytes.NewReader(form), map[string]string{"Content-Type": ct}), 500, "avatar read-back")
-	h = f.faulty(&pgfault.Tracer{Query: "w.id = $1"})
+	h = f.failing(failingRecords{failLoad: 1})
 	wantStatus(t, f.serve(h, "POST", admin+"/avatar", bytes.NewReader(form), map[string]string{"Content-Type": ct}), 500, "avatar load")
-	h = f.faulty(&pgfault.Tracer{Query: "w.id = $1"})
+	h = f.failing(failingRecords{failLoad: 1})
 	wantStatus(t, f.serve(h, "POST", admin+"/token", nil, nil), 500, "token load")
 }
 

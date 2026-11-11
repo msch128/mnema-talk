@@ -42,6 +42,8 @@ type Handler struct {
 	// testLimiter bounds the test button, which makes this server send a
 	// request on demand.
 	testLimiter *httpx.RateLimiter
+	// recordsOverride replaces the database under the handlers; nil outside tests.
+	recordsOverride handlerStore
 }
 
 // New returns a Handler with its rate limiters. It panics without Perms.
@@ -122,7 +124,7 @@ func (h *Handler) load(r *http.Request) (*record, error) {
 	if err != nil {
 		return nil, err
 	}
-	return get(r.Context(), h.DB, id)
+	return h.records().webhook(r.Context(), id)
 }
 
 // CreateRequest is the body of creating a webhook.
@@ -262,7 +264,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) writeCurrent(w http.ResponseWriter, r *http.Request, id uuid.UUID) error {
-	cur, err := get(r.Context(), h.DB, id)
+	cur, err := h.records().webhook(r.Context(), id)
 	if err != nil {
 		return err
 	}

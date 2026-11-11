@@ -23,14 +23,14 @@ func TestExecuteFailures(t *testing.T) {
 	path := "/webhooks/" + rec.ID.String() + "/" + token
 
 	// The webhook cannot be loaded.
-	h := f.faulty(&pgfault.Tracer{Query: "w.id = $1"})
+	h := f.failing(failingRecords{failLoad: 1})
 	wantStatus(t, f.json(h, "POST", path, `{"content":"x"}`), 500, "load")
 	// The insert fails; so does reading the message back.
-	h = f.faulty(&pgfault.Tracer{Query: "INSERT INTO messages"})
+	h = f.failing(failingRecords{failInsert: true})
 	wantStatus(t, f.json(h, "POST", path, `{"content":"x"}`), 500, "insert")
 	// The message is stored by then: the sender gets 204, not an error that
 	// would make it post a duplicate.
-	h = f.faulty(&pgfault.Tracer{Query: "m.id = $1"})
+	h = f.failing(failingRecords{failMessage: true})
 	wantStatus(t, f.json(h, "POST", path, `{"content":"read back"}`), 204, "read back")
 	var stored int
 	if err := f.p.QueryRow(context.Background(), `SELECT COUNT(*) FROM messages WHERE content = 'read back'`).Scan(&stored); err != nil || stored != 1 {
@@ -47,7 +47,7 @@ func TestExecuteFailures(t *testing.T) {
 	part, _ := mw.CreatePart(hd)
 	_, _ = part.Write(png)
 	_ = mw.Close()
-	h = f.faulty(&pgfault.Tracer{Query: "INSERT INTO messages"})
+	h = f.failing(failingRecords{failInsert: true})
 	wantStatus(t, f.serve(h, "POST", path, bytes.NewReader(buf.Bytes()), map[string]string{"Content-Type": mw.FormDataContentType()}), 500, "insert with file")
 	if f.store.Len() != 0 {
 		t.Fatalf("file left behind: %d", f.store.Len())
@@ -237,6 +237,6 @@ func TestThreadLookupFailureIsNotAnUnknownChannel(t *testing.T) {
 	path := "/webhooks/" + rec.ID.String() + "/" + token + "?thread_id="
 
 	wantStatus(t, f.json(f.h, "POST", path+uuid.NewString(), `{"content":"x"}`), 404, "missing thread")
-	h := f.faulty(&pgfault.Tracer{Query: "SELECT channel_id, user_id, parent_id FROM messages"})
+	h := f.failing(failingRecords{failThread: true})
 	wantStatus(t, f.json(h, "POST", path+uuid.NewString(), `{"content":"x"}`), 500, "thread lookup failure")
 }
