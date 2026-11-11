@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { PropType } from 'vue'
 import { t } from '../i18n'
-import { renderMarkdown } from '../lib/markdown'
+import { markdownHtml } from '../lib/markdownHtml'
 import { extractPreviewUrls } from '../lib/chatLogic'
 import { copyCodeBlock, openConfirmedLink } from '../lib/markdownActions'
 import LinkPreviewCard from './LinkPreviewCard.vue'
@@ -48,7 +48,7 @@ const mentionedRoles = computed(() => props.mentionRoles
   .map(id => permissions.roles.find(r => r.id === id))
   .filter(r => r !== undefined)
   .map(r => ({ name: r.name, me: permissions.myRoleIds.includes(r.id), color: roleColorCss(r.color) })))
-const parsedHtml = computed(() => renderMarkdown(props.content, {
+const parsedHtml = computed(() => markdownHtml(props.content, {
   known: knownNames.value,
   me: authStore.user?.username || '',
   roles: mentionedRoles.value,
@@ -134,7 +134,8 @@ function onKeydown(event: KeyboardEvent) {
 
 <template>
   <div>
-    <!-- The only intentional v-html: renderMarkdown escapes all input before adding markup. -->
+    <!-- The only intentional v-html: renderMarkdown escapes all input before adding markup,
+         and with Trusted Types the value comes from the policy that wraps it (lib/markdownHtml). -->
     <!-- eslint-disable vue/no-v-html -->
     <div
       v-role-colors

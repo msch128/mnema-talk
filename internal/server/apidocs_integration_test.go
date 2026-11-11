@@ -66,7 +66,7 @@ func assertAdminDocsPage(t *testing.T, admin *client) {
 	}
 	switch page.status {
 	case http.StatusOK:
-		if page.header.Get("Content-Security-Policy") != httpx.SPAContentSecurityPolicy {
+		if page.header.Get("Content-Security-Policy") != httpx.APIDocsContentSecurityPolicy {
 			t.Fatalf("docs page CSP mismatch: %q", page.header.Get("Content-Security-Policy"))
 		}
 		if !strings.HasPrefix(page.header.Get("Content-Type"), "text/html") {
@@ -111,8 +111,8 @@ func assertDocsPageHeaders(t *testing.T, rec *httptest.ResponseRecorder, page []
 	if !bytes.Equal(rec.Body.Bytes(), page) {
 		t.Fatal("docs page content mismatch")
 	}
-	if rec.Header().Get("Content-Security-Policy") != httpx.SPAContentSecurityPolicy {
-		t.Errorf("CSP = %q, want %q", rec.Header().Get("Content-Security-Policy"), httpx.SPAContentSecurityPolicy)
+	if rec.Header().Get("Content-Security-Policy") != httpx.APIDocsContentSecurityPolicy {
+		t.Errorf("CSP = %q, want %q", rec.Header().Get("Content-Security-Policy"), httpx.APIDocsContentSecurityPolicy)
 	}
 	if !strings.HasPrefix(rec.Header().Get("Content-Type"), "text/html") {
 		t.Errorf("Content-Type = %q, want text/html prefix", rec.Header().Get("Content-Type"))

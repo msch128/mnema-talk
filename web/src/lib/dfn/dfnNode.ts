@@ -1,6 +1,8 @@
 import type { DeepFilterAssets, FilterOptions, FilterStats } from './dfnTypes'
 import { isPageUnloading } from '../audioHealth'
 import { isDfnReady, isDfnFailed, isDfnStats } from './dfnTypes'
+import { ownScriptUrl } from '../trustedTypes'
+import dfnWorkerUrl from './dfnWorker.ts?worker&url'
 
 export interface FilterNode extends AudioWorkletNode { destroy?: () => void; filterStats?: FilterStats }
 
@@ -128,7 +130,7 @@ export async function createDeepFilterNode(
 ): Promise<FilterNode | null> {
   if (isFilterCanceled(signal, ctx)) return null
 
-  const worker = new Worker(new URL('./dfnWorker.ts', import.meta.url), { type: 'module' })
+  const worker = new Worker(ownScriptUrl(dfnWorkerUrl), { type: 'module' })
   const lifecycle = new FilterLifecycle(worker, signal, onFailure)
 
   try {

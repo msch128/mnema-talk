@@ -9,6 +9,24 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Trusted Types in the web app's policy
+
+The web app's Content-Security-Policy now also sends
+`require-trusted-types-for 'script'` and a `trusted-types` list of the four
+policies the app uses (see [SECURITY.md](../SECURITY.md#security-model-summary)
+under "Trusted Types"). In Chromium, Safari 26+ and Firefox 148+ a script on
+the page can no longer hand a plain string to `innerHTML`, `new Worker` and
+similar sinks; older browsers ignore the directives. Nothing needs to be
+configured, and the app, the installed web app and the desktop clients work as
+before.
+
+It matters only where something else adds scripts to the page: a reverse proxy
+or CDN feature that rewrites the HTML to inject a script (which `script-src
+'self'` already refused), or a proxy that replaces the policy with its own. A
+replaced policy that requires Trusted Types must list `vue`, `mnema-markdown`,
+`mnema-script-url` and `mnema-emoji-picker`. The API reference (`/api/docs`)
+keeps the policy without the two directives.
+
 ## Bot uploads: mentions in the caption need `allowed_mentions`
 
 The caption of a file a bot posts (`POST /api/bot/v1/channels/{id}/upload`)

@@ -1,4 +1,6 @@
 import type { EpochKeys, FrameSource } from './frame'
+import { ownScriptUrl } from '../trustedTypes'
+import mediaFrameWorkerUrl from './mediaFrameWorker.ts?worker&url'
 
 export interface FrameStats { opened: number, newer: number, epoch: number, legacy: number }
 
@@ -104,7 +106,7 @@ function transformOptions(port: MessagePort, direction: 'send' | 'recv', channel
 }
 
 function spawnWorker(onStats: (senders: Record<string, FrameStats>) => void): Worker {
-  const worker = new Worker(new URL('./mediaFrameWorker.ts', import.meta.url), { type: 'module' })
+  const worker = new Worker(ownScriptUrl(mediaFrameWorkerUrl), { type: 'module' })
   worker.onmessage = (event: MessageEvent<unknown>) => {
     const senders = readStats(event.data)
     if (senders) onStats(senders)

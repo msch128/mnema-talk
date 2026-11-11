@@ -203,7 +203,34 @@ func maxBody(limit int64, refuse func(http.ResponseWriter, error)) func(http.Han
 // Nothing else may be framed, and the card sandboxes the iframe. See
 // SECURITY.md, "Link previews and video playback".
 // connect-src 'self' also covers same-origin WebSockets in current browsers.
-const SPAContentSecurityPolicy = "default-src 'self'; " +
+//
+// The Trusted Types directives are a second line behind the escaping of the
+// Markdown renderer: with them a plain string at an HTML or script-URL sink
+// (innerHTML, new Worker, serviceWorker.register, ...) throws instead of being
+// parsed, and only the policies named here can make a value a sink accepts.
+// A browser without Trusted Types ignores both directives.
+const SPAContentSecurityPolicy = basePolicy + "; " + trustedTypesDirectives
+
+// APIDocsContentSecurityPolicy guards the API reference page (/api/docs, only
+// with API_DOCS_ENABLED). It is the app's policy without the Trusted Types
+// directives: the bundled Swagger UI writes sanitized strings to innerHTML
+// (React's dangerouslySetInnerHTML) and has no switch to hand over TrustedHTML.
+const APIDocsContentSecurityPolicy = basePolicy
+
+// The policies, one per sink the app has (web/src/lib/trustedTypes.ts):
+//   - vue: Vue's own, for the static markup its template compiler hoists and
+//     for v-html. It passes text through, so what keeps a second v-html out
+//     stays the lint rule vue/no-v-html.
+//   - mnema-markdown: the Markdown renderer; its output is the one v-html.
+//   - mnema-script-url: the app's own worker scripts, same origin only.
+//   - mnema-emoji-picker: the static templates of emoji-picker-element
+//     (web/scripts/emojiPickerCsp.ts).
+//
+// A name missing here, or a second policy of one name, is refused by the browser.
+const trustedTypesDirectives = "require-trusted-types-for 'script'; " +
+	"trusted-types vue mnema-markdown mnema-script-url mnema-emoji-picker"
+
+const basePolicy = "default-src 'self'; " +
 	"script-src 'self' 'wasm-unsafe-eval'; " +
 	"style-src 'self'; " +
 	"style-src-attr 'none'; " +

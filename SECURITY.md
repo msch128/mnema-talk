@@ -544,11 +544,43 @@ details and the limits.
   is pinned to an exact version and patched while the web app is built
   (`web/scripts/emojiPickerCsp.ts`): its stylesheet becomes a constructable
   stylesheet (`adoptedStyleSheets`) and its `style` bindings are applied through
-  the CSSOM. Each of the two patches must match the package source exactly
+  the CSSOM. Each patch must match the package source exactly
   once, or the build fails. The Playwright fixtures fail every end-to-end spec
   on any `securitypolicyviolation` event or CSP console message, and
   `e2e/tests/csp.spec.ts` visits the emoji picker, Markdown and code blocks,
   every admin panel and the API reference under the real policy.
+- **Trusted Types.** The web app's policy also sends
+  `require-trusted-types-for 'script'` and
+  `trusted-types vue mnema-markdown mnema-script-url mnema-emoji-picker`,
+  enforced, not report-only. In a browser with Trusted Types (Chromium 83+,
+  Safari 26+, Firefox 148+) a plain string at an HTML or script-URL sink
+  (`innerHTML`, `outerHTML`, `insertAdjacentHTML`, `new Worker`,
+  `serviceWorker.register`, a script's `src`, string `eval`) throws instead of
+  being parsed, and only the four named policies can make a value such a sink
+  takes; there is no `default` policy and no `'allow-duplicates'`. This is a
+  second line behind the escaping described under "Message rendering": markup
+  that reached a sink outside those policies, from the app or from a
+  dependency, would be refused by the browser. What each policy does
+  (`web/src/lib/trustedTypes.ts`):
+  - `mnema-markdown` is the Markdown renderer itself: its only rule runs
+    `renderMarkdown`, so a value of this policy is always escaped renderer
+    output. The one `v-html` takes it.
+  - `mnema-script-url` makes the addresses of the app's own worker scripts
+    (the media frame worker, the noise filter worker, `/sw.js`) and refuses
+    another origin.
+  - `mnema-emoji-picker` covers the static templates of `emoji-picker-element`
+    (a third build patch); what the picker shows is bound through the DOM, never
+    as markup.
+  - `vue` is Vue's own policy, for the static markup its template compiler
+    hoists and for `v-html`. It passes text through unchanged, so Trusted Types
+    do not replace the lint rule `vue/no-v-html` (an error everywhere but
+    `MarkdownContent`): that rule is what keeps a second `v-html` out.
+
+  Limits: a browser without Trusted Types ignores both directives and behaves
+  as before. The API reference (`/api/docs`, only with `API_DOCS_ENABLED`) keeps
+  the policy without these two directives, because the bundled Swagger UI
+  writes its sanitized HTML as plain strings. The desktop shells apply their
+  own copy of the policy, which does not carry the directives yet.
 - **Message rendering.** Markdown is parsed into a tree of plain nodes
   (`web/src/lib/markdown/`) and only one module turns that tree into HTML: every
   string is escaped, tags come from a fixed table, and generated elements (mention

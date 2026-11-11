@@ -19,6 +19,13 @@ test('the patch moves the base styles and style attributes off the inline paths'
   assert.equal(patched.match(/setAttribute\(attributeName, newValue\)/g)?.length, 1)
 })
 
+test('the patch leaves no HTML sink that takes a plain string under Trusted Types', () => {
+  const patched = patchEmojiPicker(source)
+  assert.match(patched, /createPolicy\('mnema-emoji-picker', \{ createHTML: \(html\) => html \}\)/)
+  assert.deepEqual(patched.match(/\.(?:inner|outer)HTML\s*=[^=].*/g), ['.innerHTML = mnemaTemplatePolicy ? mnemaTemplatePolicy.createHTML(htmlString) : htmlString;'])
+  assert.doesNotMatch(patched, /insertAdjacentHTML|document\.write|createContextualFragment|\beval\(|new Function/)
+})
+
 test('the patch refuses a package it does not recognise', () => {
   assert.throws(() => patchEmojiPicker('// something else'), /exactly one match/)
   assert.throws(() => patchEmojiPicker(source + source), /exactly one match/)
