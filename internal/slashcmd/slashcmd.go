@@ -16,8 +16,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
 	"github.com/msch128/mnema-talk/internal/chat"
-	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -30,8 +28,8 @@ type Services struct {
 	DB     *db.Pool
 	Perms  *perm.Service
 	Events events.Publisher
-	// Online resolves @here in a posted text; nil means nobody is online.
-	Online mentions.OnlineSource
+	// Posts posts the text commands' messages (chat.Handler.Posts).
+	Posts *messages.Service
 	// Members carries the moderation actions shared with the REST
 	// routes.
 	Members *memberadmin.API
@@ -65,37 +63,17 @@ func Commands(s Services) []slash.Builtin {
 	return list
 }
 
-// post stores and announces a message of the caller in the channel. The
-// caller has to send there (chat.SendContext inside); mentions in the text are
-// resolved like in a message written in the composer.
+// post stores and announces a message of the caller in the channel, like one
+// written in the composer: the caller has to send there and the mentions in
+// the text follow their permissions.
 func (s *Services) post(call slash.Call, content string, parent *uuid.UUID) (slash.Result, error) {
-	ctx, err := messages.SendContext(s.Perms, call.Request, call.Channel, perm.SendMessages)
+	posted, err := s.Posts.Post(call.Request.Context(), messages.MemberActor(call.User), messages.PostCommand{
+		ChannelID: call.Channel, Content: content, ParentID: parent,
+	})
 	if err != nil {
 		return slash.Result{}, err
 	}
-	content, err = core.ValidateContent(content, false)
-	if err != nil {
-		return slash.Result{}, err
-	}
-	if _, err := messages.ChannelForMessages(ctx, s.DB, call.Channel); err != nil {
-		return slash.Result{}, err
-	}
-	if err := core.ValidateParent(ctx, s.DB, call.Channel, parent); err != nil {
-		return slash.Result{}, err
-	}
-	id, err := messages.InsertMessage(ctx, s.DB, s.Online, messages.NewMessage{
-		ChannelID: call.Channel, UserID: call.User.ID, Content: content, ParentID: parent,
-	}, nil)
-	if err != nil {
-		return slash.Result{}, err
-	}
-	msg, err := messages.GetMessage(ctx, s.DB, id)
-	if err != nil {
-		return slash.Result{}, err
-	}
-	s.Events.BroadcastChannel(call.Channel, (*core.MessageCreate)(msg))
-	messages.MarkReadAfterSend(ctx, s.DB, s.Events, msg)
-	return slash.Result{MessageID: &msg.ID}, nil
+	return slash.Result{MessageID: &posted.Message.ID}, nil
 }
 
 // str reads a string option; an option that was not given is "".
