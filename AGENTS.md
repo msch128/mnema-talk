@@ -121,6 +121,7 @@ mnema-talk/
 ├── deploy/monitoring/mnema-alerts.yml # Example Prometheus alert rules; promtool in CI, metric names checked against /api/metrics
 ├── scripts/backup.sh, restore.sh # Backup and restore of database, media and configuration (cold by default, `BACKUP_MODE=online` in backup-online.sh, optional age encryption)
 ├── scripts/web-bundle-check.sh # Signs web/dist with a throwaway key and verifies it (`make web-bundle-check`)
+├── scripts/bench.sh, bench-compare.mjs, bench-baseline.txt # Hub fan-out, permission snapshot and SFU forward benchmarks against the stored baseline (`make bench`); CI gates only the allocations per packet on the SFU forward path (`make bench-allocs`)
 ├── scripts/security-floor.sh # Release step: raises the bundle security floor only on a `Security-Floor: raise` trailer
 ├── .github/workflows/
 │   ├── ci.yml               # CI: gitleaks, Go vet/fmt/tests, govulncheck, frontend, e2e (Chromium, WebKit, Firefox, macOS WebKit calls),

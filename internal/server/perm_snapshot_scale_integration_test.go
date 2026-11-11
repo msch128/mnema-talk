@@ -22,6 +22,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
 // Every permission change drops the whole permission snapshot, and the next
@@ -106,17 +107,28 @@ func tracedPermissions(t *testing.T, source *db.Pool) (*perm.Service, *loadTrace
 // rules yet; everybody else has.
 func (a *app) seedCommunity(s snapshotScale) {
 	a.t.Helper()
-	a.runSQL(`UPDATE instance_settings SET rules_text = 'Be kind.', rules_version = 1`)
-	a.runSQL(`INSERT INTO users (username, display_name, password_hash, created_at, rules_accepted_version)
+	seedCommunity(a.t, a.db, s)
+}
+
+func seedCommunity(tb testing.TB, pool *db.Pool, s snapshotScale) {
+	tb.Helper()
+	runSQL := func(sql string, args ...any) {
+		tb.Helper()
+		if _, err := pool.Exec(context.Background(), sql, args...); err != nil {
+			tb.Fatal(err)
+		}
+	}
+	runSQL(`UPDATE instance_settings SET rules_text = 'Be kind.', rules_version = 1`)
+	runSQL(`INSERT INTO users (username, display_name, password_hash, created_at, rules_accepted_version)
 	        SELECT 'member' || g, 'member' || g, 'x', NOW() - interval '1 day', CASE WHEN g <= $2 THEN 0 ELSE 1 END
 	        FROM generate_series(1, $1) g`, s.members, s.acceptances)
-	a.runSQL(`INSERT INTO roles (name, position, permissions)
+	runSQL(`INSERT INTO roles (name, position, permissions)
 	        SELECT 'scale-role-' || g, g + 1, 0 FROM generate_series(1, $1) g`, s.roles)
-	a.runSQL(`WITH m AS (SELECT id, row_number() OVER (ORDER BY id) AS n FROM users WHERE username LIKE 'member%'),
+	runSQL(`WITH m AS (SELECT id, row_number() OVER (ORDER BY id) AS n FROM users WHERE username LIKE 'member%'),
 	             r AS (SELECT id, row_number() OVER (ORDER BY position) - 1 AS n FROM roles WHERE name LIKE 'scale-role-%')
 	        INSERT INTO user_roles (user_id, role_id)
 	        SELECT m.id, r.id FROM m JOIN r ON r.n = m.n % $1 OR r.n = (m.n + 1) % $1`, s.roles)
-	a.runSQL(`WITH m AS (SELECT id, row_number() OVER (ORDER BY id) AS n FROM users WHERE username LIKE 'member%'),
+	runSQL(`WITH m AS (SELECT id, row_number() OVER (ORDER BY id) AS n FROM users WHERE username LIKE 'member%'),
 	             pairs AS (SELECT x.id AS a, y.id AS b FROM m x JOIN m y ON y.n = x.n + $1 WHERE x.n <= $1),
 	             made AS (INSERT INTO channels (number, name, type, dm_key, dm_created_by) OVERRIDING SYSTEM VALUE
 	                      SELECT nextval('dm_number_seq'), '', 'dm', LEAST(a::text, b::text) || ':' || GREATEST(a::text, b::text), a
@@ -124,7 +136,7 @@ func (a *app) seedCommunity(s snapshotScale) {
 	        INSERT INTO dm_members (channel_id, user_id, added_by)
 	        SELECT made.id, who.id, made.dm_created_by
 	        FROM made JOIN pairs ON pairs.a = made.dm_created_by CROSS JOIN LATERAL (VALUES (pairs.a), (pairs.b)) AS who(id)`, s.conversations)
-	a.runSQL(`ANALYZE`)
+	runSQL(`ANALYZE`)
 }
 
 // membersWhere returns the ids of the seeded members matching cond, in a
@@ -332,4 +344,24 @@ func TestAcceptingTheRulesTakesEffectAtOnceInALargeCommunity(t *testing.T) {
 	if got := percentile(busy.took, 99); got > maxSendP99 {
 		t.Errorf("p99 of sending during the acceptances is %v, limit %v", got, maxSendP99)
 	}
+}
+
+// One load of the permission snapshot, which is what the first request after
+// any permission change waits for, in the community of the test above: the
+// small one, or the documented one with PERM_SNAPSHOT_SCALE=full.
+func BenchmarkPermissionSnapshotLoad(b *testing.B) {
+	scale, _ := snapshotScaleFromEnv()
+	pool := testutil.DB(b)
+	testutil.Reset(b, pool)
+	seedCommunity(b, pool, scale)
+	perms := perm.NewService(pool)
+	b.Run(fmt.Sprintf("members=%d", scale.members), func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			perms.Invalidate()
+			if _, err := perms.Snapshot(context.Background()); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }

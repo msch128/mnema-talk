@@ -246,6 +246,12 @@ jobs:
         name: Unit tests
         run: go test -race -count=1 ./...
 
+      # Timing is not judged on a shared runner: only the allocations per
+      # packet on the SFU forward path are compared with the stored baseline.
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: SFU forward path allocations
+        run: make bench-allocs
+
       # The load-test tools are a module of their own (loadtest/viewer).
       - if: ${{ needs.changes.outputs.code == 'true' }}
         name: Load-test tools
