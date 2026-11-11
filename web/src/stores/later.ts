@@ -4,9 +4,9 @@ import type { LaterReminder, LaterScheduled } from '../types/rest'
 import {
   deleteReminder, deleteScheduled, fetchReminders, fetchScheduled, patchScheduled, postReminder, postScheduled,
   type ScheduleOptions
-} from '../lib/laterApi'
+} from '../chat/lib/laterApi'
 import { isApiError } from '../shared/lib/api'
-import { noticeReminderDue, noticeScheduledFailed } from '../lib/laterNotices'
+import { noticeReminderDue, noticeScheduledFailed } from '../chat/lib/laterNotices'
 
 export type { ScheduleOptions }
 

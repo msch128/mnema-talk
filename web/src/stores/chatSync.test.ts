@@ -18,7 +18,7 @@ vi.mock('../shared/lib/api', async (importOriginal) => ({
   }))
 }))
 
-import { channelDraftKey, clearAllDrafts, hasDraft, setDraft, threadDraftKey } from '../lib/drafts'
+import { channelDraftKey, clearAllDrafts, hasDraft, setDraft, threadDraftKey } from '../chat/lib/drafts'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
 

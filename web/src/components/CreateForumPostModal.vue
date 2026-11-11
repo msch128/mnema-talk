@@ -8,18 +8,18 @@ import { createForumPost, createForumPostWithFile, uploadForumPostFile } from '.
 import type { ForumSettings } from '../lib/forumApi'
 import { MAX_POST_TAGS } from '../lib/forumTags'
 import { encodeShortcodes } from '../shared/lib/customEmoji'
-import { isMedia } from '../lib/composerFiles'
+import { isMedia } from '../chat/lib/composerFiles'
 import { useEmojiStore } from '../stores/emoji'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
-import { useComposerAssist } from '../composables/useComposerAssist'
+import { useComposerAssist } from '../chat/composables/useComposerAssist'
 import { useDiscardGuard } from '../shared/composables/useDiscardGuard'
 import BaseDialog from '../shared/components/BaseDialog.vue'
 import ForumTagPicker from './ForumTagPicker.vue'
 import EmojiButton from '../shared/components/EmojiButton.vue'
 import MarkdownHelp from '../shared/components/MarkdownHelp.vue'
-import MentionSuggestions from './MentionSuggestions.vue'
+import MentionSuggestions from '../chat/components/MentionSuggestions.vue'
 
 const props = defineProps<{
   channelId: string

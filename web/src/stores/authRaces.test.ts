@@ -4,7 +4,7 @@ import { useAuthStore } from './auth'
 import { api, ApiError } from '../shared/lib/api'
 import { locale, setLocale } from '../i18n'
 import { userFixture, fixtureId, requireValue } from '../test-fixtures.fixture'
-import { DRAFT_KEY_PREFIX, hasDraft, setDraft } from '../lib/drafts'
+import { DRAFT_KEY_PREFIX, hasDraft, setDraft } from '../chat/lib/drafts'
 import { decodeUserEnvelope, type User } from '../types/domain'
 
 interface PendingRequest { path: string; resolve: (response: Response) => void; reject: (error: unknown) => void }

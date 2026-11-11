@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { useMenuState } from '../../composables/useNavMenus'
+import { useMenuState } from '../../chat/composables/useNavMenus'
 import type { ContextMenuItem } from '../components/menuTypes'
 
 /**

@@ -866,13 +866,13 @@ and Administrators) gathers version, update state, database, storage, backup and
   [`useSidebarReorder`](../web/src/composables/useSidebarReorder.ts),
   [`useSortableDrag`](../web/src/shared/composables/useSortableDrag.ts) and
   [`useChannelLayout`](../web/src/composables/useChannelLayout.ts) (drag and
-  drop with immediate save and undo), [`useNavMenus`](../web/src/composables/useNavMenus.ts)
-  (context menus), [`useMessageActions`](../web/src/composables/useMessageActions.ts),
-  [`useMessageKeyboard`](../web/src/composables/useMessageKeyboard.ts),
+  drop with immediate save and undo), [`useNavMenus`](../web/src/chat/composables/useNavMenus.ts)
+  (context menus), [`useMessageActions`](../web/src/chat/composables/useMessageActions.ts),
+  [`useMessageKeyboard`](../web/src/chat/composables/useMessageKeyboard.ts),
   [`useResizable`](../web/src/shared/composables/useResizable.ts), [`useDialog`](../web/src/shared/composables/useDialog.ts).
 - **Components**: [`Sidebar.vue`](../web/src/components/Sidebar.vue),
-  [`ChatArea.vue`](../web/src/components/ChatArea.vue),
-  [`ThreadSidebar.vue`](../web/src/components/ThreadSidebar.vue),
+  [`ChatArea.vue`](../web/src/chat/components/ChatArea.vue),
+  [`ThreadSidebar.vue`](../web/src/chat/components/ThreadSidebar.vue),
   [`VoiceStage.vue`](../web/src/talk/components/VoiceStage.vue) (the Talk view),
   [`ParticipantTile.vue`](../web/src/talk/components/ParticipantTile.vue),
   [`VoiceChatPanel.vue`](../web/src/components/VoiceChatPanel.vue),
@@ -902,14 +902,14 @@ and Administrators) gathers version, update state, database, storage, backup and
 - **1.1 features in the UI**: direct messages
   ([`DmCreateDialog.vue`](../web/src/dm/components/DmCreateDialog.vue),
   [`DmInfoDialog.vue`](../web/src/dm/components/DmInfoDialog.vue)), blocking and
-  reports ([`BlockedMessageRow.vue`](../web/src/components/BlockedMessageRow.vue),
+  reports ([`BlockedMessageRow.vue`](../web/src/chat/components/BlockedMessageRow.vue),
   [`ReportDialog.vue`](../web/src/components/ReportDialog.vue)), saved messages and
   reminders in one header panel
-  ([`SavedLaterPanel.vue`](../web/src/components/SavedLaterPanel.vue)), forwarding
-  ([`ForwardDialog.vue`](../web/src/components/ForwardDialog.vue),
-  [`ForwardedQuote.vue`](../web/src/components/ForwardedQuote.vue)), pinned
-  messages with "Pinned by" ([`PinnedMessages.vue`](../web/src/components/PinnedMessages.vue))
-  and the slash bar ([`SlashCommandBar.vue`](../web/src/components/SlashCommandBar.vue)).
+  ([`SavedLaterPanel.vue`](../web/src/chat/components/SavedLaterPanel.vue)), forwarding
+  ([`ForwardDialog.vue`](../web/src/chat/components/ForwardDialog.vue),
+  [`ForwardedQuote.vue`](../web/src/chat/components/ForwardedQuote.vue)), pinned
+  messages with "Pinned by" ([`PinnedMessages.vue`](../web/src/chat/components/PinnedMessages.vue))
+  and the slash bar ([`SlashCommandBar.vue`](../web/src/chat/components/SlashCommandBar.vue)).
   Each shows only when `GET /api/health` lists its feature.
 - **i18n**: [`i18n/de.json`](../web/src/i18n/de.json) and
   [`i18n/en.json`](../web/src/i18n/en.json); tests fail on hard-coded UI text

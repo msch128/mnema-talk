@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { setLocale } from '../../i18n'
 import { resetMediaStatus } from '../lib/mediaStatus'
-import AttachmentImage from '../../components/AttachmentImage.vue'
+import AttachmentImage from '../../chat/components/AttachmentImage.vue'
 import EmojiGlyph from './EmojiGlyph.vue'
 import MediaImage from './MediaImage.vue'
-import MessageAttachments from '../../components/MessageAttachments.vue'
+import MessageAttachments from '../../chat/components/MessageAttachments.vue'
 import UserAvatar from './UserAvatar.vue'
 
 vi.mock('../../stores/emoji', () => ({

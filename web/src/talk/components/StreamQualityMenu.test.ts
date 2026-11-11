@@ -16,7 +16,7 @@ const capture = vi.fn((): MediaTrackSettings => ({ width: 1920 }))
 let getStats: (() => unknown) | undefined
 let getCapture: (() => unknown) | undefined
 vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => ({ startScreenShare: start, getScreenSendStats: statsAvailable ? stats : undefined, getScreenCaptureSettings: capture }) }))
-vi.mock('../../composables/useNavMenus', () => ({ useMenuState: () => ({ state, items: { value: [] }, show }) }))
+vi.mock('../../chat/composables/useNavMenus', () => ({ useMenuState: () => ({ state, items: { value: [] }, show }) }))
 vi.mock('../composables/useStreamQuality', () => ({ useStreamQuality: (options: { getStats: () => unknown; getCaptureSettings: () => unknown }) => {
   getStats = options.getStats; getCapture = options.getCaptureSettings
   return { stopStats: stop, menuItems: items }

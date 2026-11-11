@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import '../customEmoji'
 import { setLocale } from '../../../i18n'
-import { previewText } from '../../../lib/replies'
+import { previewText } from '../../../chat/lib/replies'
 
 interface Fixture { input: string; plain: string }
 

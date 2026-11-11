@@ -7,11 +7,11 @@ import { setLocale } from '../i18n'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import * as forumApi from '../lib/forumApi'
-import { openSearch } from '../lib/globalSearch'
+import { openSearch } from '../chat/lib/globalSearch'
 import type { ForumTag } from '../types/domain'
 import { channelFixture, messageFixture, forumTagFixture } from '../test-fixtures.fixture'
 
-vi.mock('../lib/globalSearch', () => ({ openSearch: vi.fn() }))
+vi.mock('../chat/lib/globalSearch', () => ({ openSearch: vi.fn() }))
 vi.mock('../lib/forumApi', () => ({
   createForumPost: vi.fn(),
   fetchForumPosts: vi.fn(),

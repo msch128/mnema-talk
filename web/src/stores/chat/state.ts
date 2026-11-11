@@ -23,7 +23,7 @@ function channelState() {
     categories: ref<Category[]>([]),
     uncategorized: ref<Channel[]>([]),
     activeChannel: ref<Channel | null>(null),
-    // Windowed history of the active channel (see lib/messageWindow).
+    // Windowed history of the active channel (see chat/lib/messageWindow).
     messages: ref<Message[]>([]),
     hasMoreBefore: ref(false),
     hasMoreAfter: ref(false),

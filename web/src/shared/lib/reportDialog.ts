@@ -1,5 +1,5 @@
 // The "Report message" dialog. A single <ReportDialog> host in App.vue shows
-// whatever is pending, like lib/editHistory.
+// whatever is pending, like chat/lib/editHistory.
 import { shallowRef } from 'vue'
 
 export interface ReportRequest {

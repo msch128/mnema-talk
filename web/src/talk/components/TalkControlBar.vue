@@ -13,7 +13,7 @@ import {
 import { useVoiceStore } from '../../stores/voice'
 import { usePermissionsStore } from '../../stores/permissions'
 import { useWebRTC } from '../composables/useWebRTC'
-import { useMenuState } from '../../composables/useNavMenus'
+import { useMenuState } from '../../chat/composables/useNavMenus'
 import ContextMenu from '../../shared/components/ContextMenu.vue'
 import TriggerMenu from '../../shared/components/TriggerMenu.vue'
 import { useVoiceMenus } from '../composables/useVoiceMenus'

@@ -9,7 +9,7 @@ import BaseDialog from '../shared/components/BaseDialog.vue'
 import { useChatStore } from '../stores/chat'
 import { usePreferenceSave } from '../shared/composables/usePreferenceSave'
 import SavedIndicator from '../shared/components/SavedIndicator.vue'
-import { MUTE_DURATIONS, formatMuteEnd } from '../composables/useMuteMenu'
+import { MUTE_DURATIONS, formatMuteEnd } from '../chat/composables/useMuteMenu'
 import { t } from '../i18n'
 
 const emit = defineEmits<{ close: [] }>()

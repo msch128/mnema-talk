@@ -7,7 +7,7 @@ import { useToastStore } from './toast'
 import { channelFixture, messageFixture, userFixture, fixtureId } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
 import { ApiError, type ApiOptions } from '../shared/lib/api'
-import { DRAFT_SESSION_KEY, beginDraftSession, clearAllDrafts } from '../lib/drafts'
+import { DRAFT_SESSION_KEY, beginDraftSession, clearAllDrafts } from '../chat/lib/drafts'
 import type { Message } from '../types/domain'
 import { t } from '../i18n'
 

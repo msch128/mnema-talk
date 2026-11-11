@@ -9,7 +9,7 @@ import type { ResizePanel } from '../shared/components/presentationTypes'
 import { watch, onMounted, onUnmounted } from 'vue'
 import { Loader2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
-import ChatArea from './ChatArea.vue'
+import ChatArea from '../chat/components/ChatArea.vue'
 import ResizeHandle from '../shared/components/ResizeHandle.vue'
 
 const props = defineProps({

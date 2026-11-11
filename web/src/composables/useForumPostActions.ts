@@ -11,7 +11,7 @@ import { updateForumPost } from '../lib/forumApi'
 import type { UpdateForumPostPayload } from '../lib/forumApi'
 import { caughtErrorMessage } from '../shared/lib/api'
 import { confirm } from '../shared/lib/confirm'
-import { previewText } from '../lib/replies'
+import { previewText } from '../chat/lib/replies'
 import { t } from '../i18n'
 
 export function useForumPostActions() {

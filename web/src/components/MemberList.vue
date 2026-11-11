@@ -5,7 +5,7 @@ import { useChatStore } from '../stores/chat'
 import { roleColorCss } from '../shared/lib/permissions'
 import MemberRow from './MemberRow.vue'
 import ContextMenu from '../shared/components/ContextMenu.vue'
-import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
+import { useMenuState, buildMemberItems } from '../chat/composables/useNavMenus'
 import { useMemberGroups } from '../composables/useMemberGroups'
 
 const chatStore = useChatStore()

@@ -4,7 +4,7 @@
 // `trigger.menu` (see useMenuState).
 import { onBeforeUnmount, getCurrentInstance } from 'vue'
 import type { ContextMenuItem } from '../components/menuTypes'
-import { useMenuState } from '../../composables/useNavMenus'
+import { useMenuState } from '../../chat/composables/useNavMenus'
 import type { MenuTrigger } from '../lib/contextMenuPoint'
 
 export const LONG_PRESS_MS = 500

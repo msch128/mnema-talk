@@ -25,7 +25,7 @@ import { currentRoute, navigate } from '../shared/lib/router'
 import { talkPath, textPath } from '../shared/lib/routePaths'
 import {
   useMenuState, buildChannelItems, buildCategoryItems, buildMemberItems, buildSidebarItems
-} from '../composables/useNavMenus'
+} from '../chat/composables/useNavMenus'
 import { useCompactLayout } from '../shared/composables/useCompactLayout'
 import { useChannelAdminActions } from '../composables/useChannelAdminActions'
 import { useChannelLayout } from '../composables/useChannelLayout'

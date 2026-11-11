@@ -4,11 +4,11 @@ import de from '../../i18n/de.json'
 import presets from './presets.json'
 import { DURATION_CHOICES, MAX_BAN_SECONDS, MAX_TIMEOUT_SECONDS, MIN_BAN_SECONDS, MIN_TIMEOUT_SECONDS, durationLabel } from './moderation'
 import { ACCOUNT_AGES, RAID_RESTRICTIONS, RAID_WINDOWS, RULE_TIMEOUTS } from '../../lib/automod'
-import { POLL_DURATIONS } from '../../lib/polls'
+import { POLL_DURATIONS } from '../../chat/lib/polls'
 import { EXPIRY_CHOICES, expiryTime, isFuture } from '../../lib/statusExpiry'
-import { isAcceptableTime, presetTime } from '../../lib/laterTimes'
-import type { LaterPreset } from '../../lib/laterTimes'
-import { MUTE_DURATIONS } from '../../composables/useMuteMenu'
+import { isAcceptableTime, presetTime } from '../../chat/lib/laterTimes'
+import type { LaterPreset } from '../../chat/lib/laterTimes'
+import { MUTE_DURATIONS } from '../../chat/composables/useMuteMenu'
 
 // The bounds of the server (internal/auth, internal/chat, internal/automod);
 // the Go side pushes the same presets.json through the real validation.

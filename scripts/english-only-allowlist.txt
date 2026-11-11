@@ -30,7 +30,7 @@ path: e2e/tests/** | Playwright specs drive the German UI through its visible la
 path: web/src/components/AccountMenu.test.ts | asserts German UI output
 path: web/src/components/AdminLockoutAndWarnings.test.ts | asserts German UI output
 path: web/src/talk/components/AudioSettingsPanel.test.ts | asserts German UI output
-path: web/src/components/ChatArea.test.ts | asserts German UI output
+path: web/src/chat/components/ChatArea.test.ts | asserts German UI output
 path: web/src/shared/components/ConfirmDialog.test.ts | asserts German UI output
 path: web/src/components/ConnectionBanner.test.ts | asserts German UI output
 path: web/src/components/DesktopSelector.test.ts | asserts German UI output
@@ -39,7 +39,7 @@ path: web/src/components/ProfilePassword.test.ts | asserts German UI output
 path: web/src/components/Sidebar.keyboard.test.ts | asserts German UI output
 path: web/src/components/Sidebar.menus.test.ts | asserts German UI output
 path: web/src/components/Sidebar.test.ts | asserts German UI output
-path: web/src/components/SlashBuiltin.test.ts | asserts German UI output
+path: web/src/chat/components/SlashBuiltin.test.ts | asserts German UI output
 path: web/src/talk/components/StreamQualityMenu.integration.test.ts | asserts German UI output
 path: web/src/components/UpdateBanner.test.ts | asserts German UI output
 path: web/src/components/UserBar.test.ts | asserts German UI output

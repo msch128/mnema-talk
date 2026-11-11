@@ -1,8 +1,8 @@
 // Global plugins every component test needs: $t, v-tooltip and v-max-chars.
 import { config } from '@vue/test-utils'
 import { beforeEach } from 'vitest'
-import { clearAllDrafts } from './lib/drafts'
-import { clearAllTrays } from './composables/attachmentTrayState'
+import { clearAllDrafts } from './chat/lib/drafts'
+import { clearAllTrays } from './chat/composables/attachmentTrayState'
 import { i18nPlugin, setLocale } from './i18n'
 import { maxChars } from './directives/maxChars'
 import { tooltip } from './directives/tooltip'

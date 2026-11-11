@@ -1,0 +1,76 @@
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { MentionSuggestion } from '../lib/mentionQuery'
+// The @mention list above a composer. Mouse picks; the keyboard is handled
+// by the composer (useComposerAssist) so focus stays in the textarea.
+import { Users, Radio, AtSign } from '@lucide/vue'
+import EmojiGlyph from '../../shared/components/EmojiGlyph.vue'
+import UserAvatar from '../../shared/components/UserAvatar.vue'
+import BotBadge from '../../shared/components/BotBadge.vue'
+import { useChatStore } from '../../stores/chat'
+import { roleColorCss } from '../../shared/lib/permissions'
+
+defineProps({
+  items: { type: Array as PropType<MentionSuggestion[]>, required: true },
+  active: { type: Number, default: 0 },
+  id: { type: String, default: 'mention-suggestions' }
+})
+const emit = defineEmits<{ pick: [item: MentionSuggestion]; hover: [index: number] }>()
+const chatStore = useChatStore()
+</script>
+
+<template>
+  <div
+    :id="id"
+    role="listbox"
+    data-testid="mention-suggestions"
+    :aria-label="$t('mention.listLabel')"
+    class="absolute bottom-full left-0 right-0 z-30 mb-1.5 max-h-72 overflow-y-auto rounded-xl bg-mnema-elevated p-2 shadow-popover pop-in"
+  >
+    <div class="px-3 pb-2 pt-1 font-mono text-xs font-semibold uppercase tracking-widest text-mnema-tertiary">{{ items[0]?.emoji || items[0]?.standard ? $t('emoji.suggestTitle') : $t('mention.title') }}</div>
+    <div
+      v-for="(item, i) in items"
+      :id="`${id}-${i}`"
+      :key="`${item.group ? 'g' : item.role ? 'r' : item.emoji ? 'e' : item.standard ? 's' : 'u'}:${item.username}`"
+      role="option"
+      :aria-selected="i === active ? 'true' : 'false'"
+      :data-mention-option="item.username"
+      :class="[
+        'flex h-10 cursor-pointer items-center gap-3 rounded-lg px-3 text-sm transition-colors',
+        i === active ? 'bg-mnema-hover text-mnema-text ring-1 ring-inset ring-mnema-accent/25' : 'text-mnema-body-ink'
+      ]"
+      @mousedown.prevent="emit('pick', item)"
+      @mousemove="emit('hover', i)"
+    >
+      <template v-if="item.group">
+        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-mnema-band text-mnema-mint">
+          <Users v-if="item.username === 'all'" class="h-3.5 w-3.5" />
+          <Radio v-else class="h-3.5 w-3.5" />
+        </span>
+        <span class="font-semibold text-mnema-text">@{{ item.username }}</span>
+        <span class="truncate text-xs text-mnema-tertiary">{{ $t(`mention.${item.username}Hint`) }}</span>
+      </template>
+      <template v-else-if="item.emoji">
+        <EmojiGlyph :value="`<:${item.emoji.name}:${item.emoji.id}>`" class="h-6! w-6!" />
+        <span class="truncate font-semibold text-mnema-text">:{{ item.emoji.name }}:</span>
+      </template>
+      <template v-else-if="item.standard !== undefined">
+        <span class="flex h-6 w-6 items-center justify-center text-xl leading-none" aria-hidden="true">{{ item.standard }}</span>
+        <span class="truncate font-semibold text-mnema-text">:{{ item.username }}:</span>
+      </template>
+      <template v-else-if="item.role">
+        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-mnema-band text-mnema-mint">
+          <AtSign class="h-3.5 w-3.5" />
+        </span>
+        <span class="truncate font-semibold text-mnema-text" :style="item.role.color ? { color: roleColorCss(item.role.color) } : undefined">{{ item.role.name }}</span>
+        <span class="truncate text-xs text-mnema-tertiary">{{ $t('mention.roleHint') }}</span>
+      </template>
+      <template v-else>
+        <UserAvatar :user="item.user" size="xs" show-status :status="chatStore.presenceOf(item.user.id)" ring-class="bg-mnema-elevated" />
+        <span class="truncate font-medium text-mnema-text">{{ item.display_name }}</span>
+        <BotBadge v-if="item.user.is_bot" />
+        <span class="truncate font-mono text-xs text-mnema-tertiary">@{{ item.username }}</span>
+      </template>
+    </div>
+  </div>
+</template>

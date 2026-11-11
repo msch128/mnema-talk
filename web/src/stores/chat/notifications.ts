@@ -1,6 +1,6 @@
 import type { Message } from '../../types/domain'
 import { t } from '../../i18n'
-import { previewText, replySnippet } from '../../lib/replies'
+import { previewText, replySnippet } from '../../chat/lib/replies'
 import { mentionsUser, shouldNotify } from '../../shared/lib/chatLogic'
 import { isQuiet } from '../../shared/lib/presence'
 import { platform } from '../../shared/lib/platform'
