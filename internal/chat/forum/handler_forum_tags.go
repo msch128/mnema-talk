@@ -10,7 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -91,7 +91,7 @@ func (a *API) ServeCreateForumTag(w http.ResponseWriter, r *http.Request) error 
 	}
 	pending.Commit(r.Context(), uuid.Nil)
 	a.auditForumTag(r, "forum.tag_create", chID, tag, nil)
-	a.Events.BroadcastChannel(chID, events.Untyped(events.ForumTagsChanged, map[string]any{"channel_id": chID}))
+	a.Events.BroadcastChannel(chID, wire.ForumTagsChanged{ChannelID: chID})
 	httpx.WriteJSON(w, http.StatusCreated, tag)
 	return nil
 }
@@ -143,7 +143,7 @@ func (a *API) ServeUpdateForumTag(w http.ResponseWriter, r *http.Request) error 
 	}
 	pending.Commit(r.Context(), uuid.Nil)
 	a.auditForumTag(r, "forum.tag_update", chID, tag, before)
-	a.Events.BroadcastChannel(chID, events.Untyped(events.ForumTagsChanged, map[string]any{"channel_id": chID}))
+	a.Events.BroadcastChannel(chID, wire.ForumTagsChanged{ChannelID: chID})
 	httpx.WriteJSON(w, http.StatusOK, tag)
 	return nil
 }
@@ -182,7 +182,7 @@ func (a *API) ServeDeleteForumTag(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	a.auditForumTag(r, "forum.tag_delete", chID, tag, nil)
-	a.Events.BroadcastChannel(chID, events.Untyped(events.ForumTagsChanged, map[string]any{"channel_id": chID}))
+	a.Events.BroadcastChannel(chID, wire.ForumTagsChanged{ChannelID: chID})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
