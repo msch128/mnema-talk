@@ -80,7 +80,7 @@ func (c *components) newModeration() {
 // newLater builds reminders and scheduled messages; pusher is nil when Web
 // Push is off.
 func (c *components) newLater(pusher later.Notifier) {
-	c.later = later.NewService(later.Service{DB: c.d.DB, Perms: c.permSvc, Events: c.pub, Online: c.hub, Push: pusher})
+	c.later = later.NewService(later.Service{DB: c.d.DB, Perms: c.permSvc, Events: c.pub, Posts: c.chatH.Posts(), Push: pusher})
 	safego.Go("later", safego.Crash, func() { c.later.Run(c.ctx) })
 }
 

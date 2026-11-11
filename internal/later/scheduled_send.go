@@ -9,11 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/push"
 )
 
@@ -83,10 +80,13 @@ func (s *Service) sendScheduled(ctx context.Context) error {
 // database) leaves it waiting for a later round, with growing pauses, and turns
 // it into a failed draft after maxSendAttempts tries.
 func (s *Service) sendOne(ctx context.Context, d dueScheduled) {
-	id, err := s.post(ctx, d)
+	err := s.post(ctx, d)
+	var stored *messages.StoredError
 	switch {
 	case err == nil:
-		s.announceSent(ctx, d, id)
+		s.notify(d.user, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "sent"})
+	case errors.As(err, &stored): // sent; the channel sees it on its next load
+		slog.Warn("scheduled: load sent message", "err", stored.Err)
 	case errors.Is(err, errSuperseded):
 	default:
 		var apiErr *httpx.APIError
@@ -124,38 +124,36 @@ func (s *Service) retryLater(d dueScheduled) {
 	}
 }
 
-// post runs the send path. The scheduled row is removed in the transaction
-// that stores the message, so a message is never sent twice nor lost half-way.
-func (s *Service) post(ctx context.Context, d dueScheduled) (uuid.UUID, error) {
+// post runs the send path as the author. The scheduled row is removed in the
+// transaction that stores the message, so a message is never sent twice nor
+// lost half-way.
+func (s *Service) post(ctx context.Context, d dueScheduled) error {
 	user, ok, err := s.activeUser(ctx, d.user)
 	if err != nil {
-		return uuid.Nil, err
+		return err
 	}
 	if !ok {
-		return uuid.Nil, httpx.ErrForbidden("the account cannot send")
+		return httpx.ErrForbidden("the account cannot send")
 	}
-	ctx, err = messages.SendContextFor(s.Perms, auth.WithUser(ctx, user), d.channel, perm.SendMessages)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	if _, err := messages.ChannelForMessages(ctx, s.DB, d.channel); err != nil {
-		return uuid.Nil, err
-	}
-	if err := messages.ValidateTarget(ctx, s.DB, d.channel, d.parent, d.replyTo); err != nil {
-		return uuid.Nil, err
-	}
-	return messages.InsertMessage(ctx, s.DB, s.Online, messages.NewMessage{
-		ChannelID: d.channel, UserID: d.user, Content: d.content, ParentID: d.parent, ReplyToID: d.replyTo,
-	}, func(tx pgx.Tx, _ uuid.UUID) error {
-		tag, err := tx.Exec(ctx, `DELETE FROM scheduled_messages WHERE id = $1 AND state = 'pending' AND updated_at = $2`, d.id, d.updatedAt)
-		if err != nil {
-			return err
-		}
-		if tag.RowsAffected() != 1 {
-			return errSuperseded
-		}
-		return nil
+	_, err = s.Posts.Post(ctx, messages.MemberActor(user), messages.PostCommand{
+		ChannelID: d.channel, Content: d.content, ParentID: d.parent, ReplyToID: d.replyTo,
+		// The text was checked when it was scheduled; it is sent as stored.
+		ContentChecked: true,
+		// The author is not reading the channel now: what others wrote since
+		// their last visit stays unread.
+		KeepReadMarker: true,
+		InTx: func(tx pgx.Tx, _ uuid.UUID) error {
+			tag, err := tx.Exec(ctx, `DELETE FROM scheduled_messages WHERE id = $1 AND state = 'pending' AND updated_at = $2`, d.id, d.updatedAt)
+			if err != nil {
+				return err
+			}
+			if tag.RowsAffected() != 1 {
+				return errSuperseded
+			}
+			return nil
+		},
 	})
+	return err
 }
 
 // reasonFor words a refusal as a code. A 403 covers permissions, timeouts,
@@ -170,20 +168,6 @@ func reasonFor(e *httpx.APIError) string {
 		return ReasonUnavailable
 	}
 	return ReasonRefused
-}
-
-func (s *Service) announceSent(ctx context.Context, d dueScheduled, messageID uuid.UUID) {
-	msg, err := messages.GetMessage(ctx, s.DB, messageID)
-	if err != nil {
-		slog.Warn("scheduled: load sent message", "err", err)
-		return
-	}
-	// The author's read marker stays where it is: they are not reading the
-	// channel now, and what others wrote since their last visit stays unread.
-	if s.Events != nil {
-		s.Events.BroadcastChannel(d.channel, (*core.MessageCreate)(msg))
-	}
-	s.notify(d.user, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "sent"})
 }
 
 // fail keeps a refused message as a draft and tells its author, in the app and
