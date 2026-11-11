@@ -245,22 +245,6 @@ export abstract class GroupSync extends GroupEpoch {
     wipeBytes(old.privatePackage.signaturePrivateKey)
   }
 
-  /**
-   * A key package is good for one join. Once a welcome built on it was taken,
-   * its init key is wiped and a new package takes its place, so a copy of that
-   * welcome that comes again opens nothing, and what this member says next
-   * (alone again, or back after a reload) is a package nobody holds a welcome
-   * for. The group goes on using the old leaf keys until it is left.
-   */
-  protected async renewOwn() {
-    const old = this.own.privatePackage
-    this.own = await generateKeyPackage(this.credential, defaultCapabilities(), defaultLifetime, [], this.cs)
-    this.offeredFor = null
-    wipeBytes(old.initPrivateKey)
-    for (const key of this.leafKeys.splice(0)) wipeBytes(key)
-    this.leafKeys.push(old.hpkePrivateKey, old.signaturePrivateKey)
-  }
-
   protected hello(): Uint8Array | null {
     return encodeWire({ version: 'mls10', wireformat: 'mls_key_package', keyPackage: this.own.publicPackage })
   }

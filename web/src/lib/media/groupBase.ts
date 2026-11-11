@@ -54,8 +54,6 @@ export abstract class GroupBase {
   protected vetted: ReadonlySet<number> = new Set()
   protected readonly rivals = new Backoff(RIVAL_BASE_MS, RIVAL_MAX_MS)
   protected closed = false
-  /** Private keys of the package this group was joined with. The package itself is replaced after the join; these go when the group does. */
-  protected leafKeys: Uint8Array[] = []
   protected readonly swaps = new Backoff(SWAP_BASE_MS, BACKOFF_MAX_MS)
   protected readonly resets = new Backoff(RESET_BASE_MS, BACKOFF_MAX_MS)
   protected notice: (notice: MediaNotice) => void = () => {}
@@ -250,7 +248,6 @@ export abstract class GroupBase {
     this.updates.clear()
     this.dropSelfUpdate()
     this.clearDiscardTimers()
-    for (const key of this.leafKeys.splice(0)) zeroOutUint8Array(key)
     if (state) this.wipeRejected(state)
   }
 
