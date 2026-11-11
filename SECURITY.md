@@ -820,7 +820,19 @@ details and the limits.
   group replaces it only if it opens with the key package I offered and passes
   the committer rule, at most once per minute per sender (doubling to ten
   minutes); a member who holds a key package I offered can therefore still pull
-  me into a group of its own, as noted above. A commit for an epoch I have not
+  me into a group of its own, as noted above. A key package is good for one
+  join: its init key is wiped once a welcome built on it was taken, so a second
+  copy of that welcome opens nothing. The package that takes its place is
+  signed with the key of the member's leaf, the member being the same; a new
+  signature key comes only with a start-over, a reload, or the package a group
+  that shrank to one makes for itself: it replaces its package at once,
+  signature key included, so a welcome built on the package it was founded
+  with, held back until its other members are gone, opens nothing either. That
+  is the one founder case closed. A welcome built on the package a member
+  founded its group with still opens, however old, while that group never had
+  another member, or has grown and not shrunk to one since, as it always did;
+  it takes the server to hold such a welcome back, and the member is out of
+  that epoch again at the next commit. A commit for an epoch I have not
   reached makes me start over only from one of the two lowest live members and
   naming that member's own leaf. A member counts as alive only for a verified
   heartbeat or a verified commit, never for a message that merely parses.

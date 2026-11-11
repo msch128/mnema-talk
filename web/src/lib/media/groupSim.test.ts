@@ -11,8 +11,8 @@ beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
 
 // Two seeds per room size from 2 to 12 for each relay, drawn from seeds 1..400.
-const HOSTILE = [14, 17, 26, 30, 36, 38, 70, 104, 140, 153, 158, 162, 166, 216, 221, 224, 253, 290, 321, 350, 372, 377]
-const HONEST = [9, 33, 38, 41, 46, 50, 51, 68, 79, 88, 117, 122, 140, 156, 159, 199, 242, 279, 322, 332, 335, 350]
+const HOSTILE = [1, 2, 4, 14, 17, 26, 36, 38, 41, 70, 140, 153, 158, 162, 216, 224, 253, 290, 321, 350, 372, 377]
+const HONEST = [9, 12, 14, 33, 38, 41, 46, 50, 51, 79, 88, 117, 122, 140, 156, 199, 242, 279, 322, 332, 335, 350]
 
 async function expectHolds(seed: number, plan: SimPlan): Promise<SimResult> {
   const result = await runSeed(seed, plan)

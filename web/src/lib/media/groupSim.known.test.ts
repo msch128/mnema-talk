@@ -22,9 +22,9 @@ describe('known: seeds that end in a split room', () => {
   // On the honest relay: only delay, and members that join, leave, reload, sleep or reconnect.
   it.fails.each([
     [37, 'two groups of several members'],
-    [357, 'two groups of several members'],
-    [263, 'one side still lists the other'],
-    [73, 'still regrouping when the time is up'],
+    [2, 'two groups of several members'],
+    [81, 'one side still lists the other'],
+    [30, 'still regrouping when the time is up'],
   ])('honest relay, seed %i: %s', async (seed) => {
     const result = await runSeed(seed, { relay: 'honest' })
     expect(result.violations, report(result)).toEqual([])
@@ -33,9 +33,9 @@ describe('known: seeds that end in a split room', () => {
   // On the hostile relay, which also reorders, duplicates and drops per recipient.
   it.fails.each([
     [48, 'two groups of several members'],
-    [31, 'two groups of several members'],
-    [20, 'one side still lists the other'],
-    [16, 'still regrouping when the time is up'],
+    [11, 'two groups of several members'],
+    [213, 'one side still lists the other'],
+    [59, 'still regrouping when the time is up'],
   ])('hostile relay, seed %i: %s', async (seed) => {
     const result = await runSeed(seed, { relay: 'hostile' })
     expect(result.violations, report(result)).toEqual([])
@@ -45,8 +45,8 @@ describe('known: seeds that end in a split room', () => {
 // Every failing seed among 1..400, for whoever repairs the protocol. Skipped:
 // each takes a full run, and the eight above stand for them.
 describe.skip('known: all failing seeds among 1..400', () => {
-  const HOSTILE = [16, 18, 20, 31, 48, 59, 64, 78, 80, 82, 84, 89, 107, 109, 116, 120, 124, 143, 148, 149, 152, 175, 179, 182, 185, 186, 206, 212, 227, 238, 244, 248, 250, 256, 262, 270, 273, 294, 303, 322, 328, 351, 352, 354, 357, 362, 368, 373, 383, 392, 395]
-  const HONEST = [20, 37, 47, 58, 69, 73, 137, 142, 149, 178, 212, 215, 228, 238, 244, 245, 246, 254, 256, 263, 276, 306, 310, 311, 357, 360, 363, 369, 384, 395]
+  const HOSTILE = [11, 30, 48, 59, 61, 62, 69, 73, 80, 83, 89, 104, 107, 122, 125, 126, 142, 148, 156, 166, 175, 178, 185, 195, 203, 213, 221, 227, 238, 244, 245, 254, 277, 278, 300, 301, 303, 310, 315, 322, 323, 335, 352, 354, 362, 365, 371, 373, 378, 380, 383, 399]
+  const HONEST = [2, 5, 25, 30, 37, 64, 68, 81, 95, 98, 109, 119, 142, 148, 159, 162, 195, 210, 226, 228, 245, 246, 254, 258, 276, 282, 300, 303, 306, 315, 354, 360, 364, 373, 377]
 
   it.each(HOSTILE)('hostile relay, seed %i', async (seed) => {
     const result = await runSeed(seed, { relay: 'hostile' })
