@@ -19,8 +19,9 @@ type EventOutbox interface {
 	// Wants reports whether any webhook of the channel receives eventType (a
 	// name from internal/events). It reads a cached list and never blocks.
 	Wants(channel uuid.UUID, eventType string) bool
-	// Record stores the event in tx: the very event the hub publishes for it.
-	Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, ev events.Event) error
+	// Record stores the events in tx, in the order given and with one
+	// statement however many they are: the very events the hub publishes.
+	Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, evs ...events.Event) error
 }
 
 // outboxes maps a pool to its outbox, as automod.Of does for its engine.
@@ -40,6 +41,15 @@ func DetachOutbox(p *db.Pool, o EventOutbox) { outboxes.CompareAndDelete(p, o) }
 // it. build makes the event the hub will publish; it only runs when somebody
 // listens, so a channel without webhooks pays nothing.
 func RecordEvent(ctx context.Context, p *db.Pool, tx pgx.Tx, channel uuid.UUID, eventType string, build func() (events.Event, error)) error {
+	return RecordEvents(ctx, p, tx, channel, eventType, func() ([]events.Event, error) {
+		ev, err := build()
+		return []events.Event{ev}, err
+	})
+}
+
+// RecordEvents is RecordEvent for several events of one type (a bulk delete,
+// a sweep): they are stored together, in the order build returns them.
+func RecordEvents(ctx context.Context, p *db.Pool, tx pgx.Tx, channel uuid.UUID, eventType string, build func() ([]events.Event, error)) error {
 	v, ok := outboxes.Load(p)
 	if !ok {
 		return nil
@@ -48,9 +58,9 @@ func RecordEvent(ctx context.Context, p *db.Pool, tx pgx.Tx, channel uuid.UUID, 
 	if !o.Wants(channel, eventType) {
 		return nil
 	}
-	ev, err := build()
-	if err != nil {
+	evs, err := build()
+	if err != nil || len(evs) == 0 {
 		return err
 	}
-	return o.Record(ctx, tx, channel, ev)
+	return o.Record(ctx, tx, channel, evs...)
 }

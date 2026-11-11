@@ -4,13 +4,18 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
+	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/webhook"
 )
 
@@ -139,4 +144,80 @@ func TestOutgoingDeliversForumUpdatesAndAutoDeletes(t *testing.T) {
 	want, _ := json.Marshal(map[string]any{"id": id, "channel_id": forum, "parent_id": nil})
 	s.delivered("auto-delete", "MESSAGE_DELETE", want)
 	s.rc.none(t)
+}
+
+// batches is an outbox that keeps how the events were handed to it.
+type batches struct{ calls [][]events.Event }
+
+func (*batches) Wants(uuid.UUID, string) bool { return true }
+
+func (b *batches) Record(_ context.Context, _ pgx.Tx, _ uuid.UUID, evs ...events.Event) error {
+	b.calls = append(b.calls, evs)
+	return nil
+}
+
+// deletes takes the one batch recorded since the last look and returns the
+// ids of the deleted messages in it.
+func (b *batches) deletes(t *testing.T, what string) []uuid.UUID {
+	t.Helper()
+	if len(b.calls) != 1 {
+		t.Fatalf("%s: recorded in %d batches, want 1", what, len(b.calls))
+	}
+	var ids []uuid.UUID
+	for _, ev := range b.calls[0] {
+		ids = append(ids, ev.(wire.MessageDelete).ID)
+	}
+	b.calls = nil
+	return ids
+}
+
+// A bulk delete and a sweep hold the row locks of every message they remove.
+// They hand all the deletions to the outbox at once, so the queue is written
+// with one statement and not with one per message.
+func TestOutgoingRecordsTheDeletesOfABatchTogether(t *testing.T) {
+	a := outgoingApp(t)
+	owner := a.seedAdmin()
+	ch := a.createChannel(owner, "alerts", "text")
+	bob := a.register(owner, "bob")
+	out := &batches{}
+	core.AttachOutbox(a.db, out)
+	t.Cleanup(func() { core.DetachOutbox(a.db, out) })
+
+	sent := map[uuid.UUID]bool{}
+	send := func(n int) {
+		for range n {
+			sent[a.send(bob, ch, "soon gone")] = true
+		}
+		out.calls = nil
+	}
+	gone := func(what string, n int) {
+		t.Helper()
+		ids := out.deletes(t, what)
+		for _, id := range ids {
+			if !sent[id] {
+				t.Fatalf("%s: recorded %s, which it did not remove", what, id)
+			}
+			delete(sent, id)
+		}
+		if len(ids) != n || len(sent) != 0 {
+			t.Fatalf("%s: recorded %d deletions, want %d", what, len(ids), n)
+		}
+	}
+
+	send(4)
+	if res := owner.post("/api/channels/"+ch.String()+"/messages/bulk-delete", map[string]any{"user_id": bob.user.ID, "count": 10}); res.status != http.StatusOK {
+		t.Fatalf("bulk delete: %d %s", res.status, res.body)
+	}
+	gone("bulk delete", 4)
+
+	send(3)
+	if res := owner.put("/api/admin/channels/"+ch.String()+"/auto-delete", map[string]any{"days": 7}); res.status != http.StatusOK {
+		t.Fatalf("auto-delete: %d %s", res.status, res.body)
+	}
+	a.runSQL(`UPDATE messages SET created_at = now() - interval '30 days' WHERE channel_id = $1`, ch)
+	sweeper := &channels.AutoDeleter{DB: a.db, Events: a.events, Objects: a.store, Audit: &audit.Log{DB: a.db}}
+	if err := sweeper.Sweep(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	gone("sweep", 3)
 }

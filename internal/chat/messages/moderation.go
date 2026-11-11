@@ -149,12 +149,11 @@ func (a *API) bulkDelete(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		for _, m := range gone {
-			if err := RecordMessageDelete(ctx, a.DB, tx, chID, m.id, m.parentID); err != nil {
-				return err
-			}
+		deleted := make([]wire.MessageDelete, len(gone))
+		for i, m := range gone {
+			deleted[i] = wire.MessageDelete{ID: m.id, ChannelID: chID, ParentID: m.parentID}
 		}
-		return nil
+		return RecordMessageDeletes(ctx, a.DB, tx, chID, deleted)
 	})
 	if err != nil {
 		return err

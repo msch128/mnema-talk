@@ -44,25 +44,49 @@ func (d *Dispatcher) Wants(channel uuid.UUID, eventType string) bool {
 	return ok && channel != uuid.Nil && len(matchingWebhookTargets(*d.routes.Load(), channel, name)) > 0
 }
 
-// Record writes one row per receiving webhook in tx. The webhooks are read
-// from the table under a key-share lock, not from the cached list, so a
-// webhook deleted a moment ago cannot fail the caller's transaction.
-func (d *Dispatcher) Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, ev events.Event) error {
+// recordBatch is the events of one Record call as the columns of its insert.
+type recordBatch struct {
+	ids   []uuid.UUID
+	names []string
+	times []time.Time
+	data  [][]byte
+}
+
+func (b *recordBatch) add(ev events.Event) {
 	name, ok := translate(ev)
 	if !ok {
-		return nil
+		return
 	}
 	raw, err := json.Marshal(ev)
 	if err != nil { // hub payloads are plain data; never fail a message for a webhook
 		slog.Warn("outgoing webhooks: encode event", "event", name, "err", err)
+		return
+	}
+	b.ids, b.names = append(b.ids, uuid.New()), append(b.names, name)
+	b.times, b.data = append(b.times, time.Now().UTC()), append(b.data, raw)
+}
+
+// Record writes one row per event and receiving webhook in tx, with one
+// statement however many events there are (a sweep removes 200 messages at a
+// time while it holds their row locks). The rows are in the order of evs. The
+// webhooks are read from the table under a key-share lock, not from the
+// cached list, so a webhook deleted a moment ago cannot fail the caller's
+// transaction.
+func (d *Dispatcher) Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, evs ...events.Event) error {
+	var b recordBatch
+	for _, ev := range evs {
+		b.add(ev)
+	}
+	if len(b.ids) == 0 {
 		return nil
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO outgoing_queue (webhook_id, channel_id, event_id, event_type, event_time, data)
-		SELECT w.id, $1, $2, $3, $4, $5 FROM outgoing_webhooks w
-		WHERE w.channel_id = $1 AND w.enabled AND $3 = ANY(w.events)
-		ORDER BY w.id FOR KEY SHARE OF w`,
-		channel, uuid.New(), name, time.Now().UTC(), raw); err != nil {
+		SELECT w.id, $1, e.id, e.name, e.at, e.data
+		FROM unnest($2::uuid[], $3::text[], $4::timestamptz[], $5::bytea[]) WITH ORDINALITY AS e(id, name, at, data, ord)
+		JOIN outgoing_webhooks w ON w.channel_id = $1 AND w.enabled AND e.name = ANY(w.events)
+		ORDER BY e.ord, w.id FOR KEY SHARE OF w`,
+		channel, b.ids, b.names, b.times, b.data); err != nil {
 		return fmt.Errorf("record outgoing event: %w", err)
 	}
 	return nil

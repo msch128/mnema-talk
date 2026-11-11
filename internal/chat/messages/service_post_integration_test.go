@@ -315,7 +315,8 @@ type txOutbox struct {
 
 func (o *txOutbox) Wants(uuid.UUID, string) bool { return true }
 
-func (o *txOutbox) Record(ctx context.Context, tx pgx.Tx, _ uuid.UUID, ev events.Event) error {
+func (o *txOutbox) Record(ctx context.Context, tx pgx.Tx, _ uuid.UUID, evs ...events.Event) error {
+	ev := evs[0]
 	id := ev.(*core.MessageCreate).ID
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM messages WHERE id = $1)`, id).Scan(&o.seenInTx); err != nil {
 		return err

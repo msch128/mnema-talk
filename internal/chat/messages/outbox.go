@@ -41,8 +41,19 @@ func recordMessageEvent(ctx context.Context, p *db.Pool, tx pgx.Tx, eventType st
 // RecordMessageDelete stores message_delete for the channel's outgoing
 // webhooks in the transaction that deletes the message.
 func RecordMessageDelete(ctx context.Context, p *db.Pool, tx pgx.Tx, channel, id uuid.UUID, parent *uuid.UUID) error {
-	return core.RecordEvent(ctx, p, tx, channel, events.MessageDelete, func() (events.Event, error) {
-		return wire.MessageDelete{ID: id, ChannelID: channel, ParentID: parent}, nil
+	return RecordMessageDeletes(ctx, p, tx, channel, []wire.MessageDelete{{ID: id, ChannelID: channel, ParentID: parent}})
+}
+
+// RecordMessageDeletes stores message_delete of every message a bulk delete
+// or a sweep removed from one channel, in the order given and with one
+// statement: the transaction holds the messages' row locks meanwhile.
+func RecordMessageDeletes(ctx context.Context, p *db.Pool, tx pgx.Tx, channel uuid.UUID, deleted []wire.MessageDelete) error {
+	return core.RecordEvents(ctx, p, tx, channel, events.MessageDelete, func() ([]events.Event, error) {
+		evs := make([]events.Event, len(deleted))
+		for i, d := range deleted {
+			evs[i] = d
+		}
+		return evs, nil
 	})
 }
 

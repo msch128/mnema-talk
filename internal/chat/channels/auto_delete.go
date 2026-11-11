@@ -195,12 +195,11 @@ func (a *AutoDeleter) sweepBatch(ctx context.Context, c autoDeleteChannel, cutof
 // recordExpired stores message_delete of the removed messages for the
 // channel's outgoing webhooks, in the transaction that removed them.
 func (a *AutoDeleter) recordExpired(ctx context.Context, tx pgx.Tx, channel uuid.UUID, removed []expiredMessage) error {
-	for _, g := range removed {
-		if err := messages.RecordMessageDelete(ctx, a.DB, tx, channel, g.id, g.parent); err != nil {
-			return err
-		}
+	deleted := make([]wire.MessageDelete, len(removed))
+	for i, g := range removed {
+		deleted[i] = wire.MessageDelete{ID: g.id, ChannelID: channel, ParentID: g.parent}
 	}
-	return nil
+	return messages.RecordMessageDeletes(ctx, a.DB, tx, channel, deleted)
 }
 
 type expiredMessage struct {
