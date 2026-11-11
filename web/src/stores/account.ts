@@ -6,7 +6,7 @@ import { decodeAuthAccountInfo, type AuthAccountInfo } from '../types/rest'
 // The signed-in member's own sign-in security (GET /api/users/me/account):
 // e-mail address and two-factor state. It is loaded when the dialog opens and
 // dropped when it closes, so nothing outlives the dialog or the session. The
-// sensitive actions (two-factor, export, deletion) are in lib/accountApi.
+// sensitive actions (two-factor, export, deletion) are in settings/lib/accountApi.
 export const useAccountStore = defineStore('account', () => {
   const info = ref<AuthAccountInfo | null>(null)
   const dialogOpen = ref(false)

@@ -27,7 +27,7 @@ text: Schr(ö|oe)der|Schr(ö|oe)ter | surnames of the author and of a third-part
 
 # Tests that assert the German UI text (the default locale).
 path: e2e/tests/** | Playwright specs drive the German UI through its visible labels
-path: web/src/components/AccountMenu.test.ts | asserts German UI output
+path: web/src/settings/components/AccountMenu.test.ts | asserts German UI output
 path: web/src/admin/components/AdminLockoutAndWarnings.test.ts | asserts German UI output
 path: web/src/talk/components/AudioSettingsPanel.test.ts | asserts German UI output
 path: web/src/chat/components/ChatArea.test.ts | asserts German UI output
@@ -35,7 +35,7 @@ path: web/src/shared/components/ConfirmDialog.test.ts | asserts German UI output
 path: web/src/components/ConnectionBanner.test.ts | asserts German UI output
 path: web/src/components/DesktopSelector.test.ts | asserts German UI output
 path: web/src/admin/components/EditNameDialog.test.ts | asserts German UI output
-path: web/src/components/ProfilePassword.test.ts | asserts German UI output
+path: web/src/settings/components/ProfilePassword.test.ts | asserts German UI output
 path: web/src/components/Sidebar.keyboard.test.ts | asserts German UI output
 path: web/src/components/Sidebar.menus.test.ts | asserts German UI output
 path: web/src/components/Sidebar.test.ts | asserts German UI output
