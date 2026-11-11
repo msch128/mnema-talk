@@ -1,0 +1,89 @@
+//go:build integration
+
+package bot
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+func assertTokenStatesAndExpiry(t *testing.T, ctx context.Context, e *env, f fixtureBot) {
+	t.Helper()
+	if _, err := e.p.Exec(ctx, `INSERT INTO bot_tokens (bot_id, token_hash, hint, expires_at) VALUES ($1, $2, 'oldx', NOW() - INTERVAL '1 hour')`, f.bot.ID, HashToken("expired")); err != nil {
+		t.Fatal(err)
+	}
+	toks, err := Tokens(ctx, e.p, f.bot.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	states := map[string]bool{}
+	for _, tk := range toks {
+		states[tk.State] = true
+	}
+	if !states["expired"] || !states["active"] {
+		t.Fatalf("token states: %v", states)
+	}
+	now := time.Now()
+	if CheckExpiry(now.Add(-time.Second), now) == nil {
+		t.Fatal("CheckExpiry accepted past expiry")
+	}
+	if CheckExpiry(now.Add(MaxTokenLifetime+time.Hour), now) == nil {
+		t.Fatal("CheckExpiry accepted excessive expiry")
+	}
+	if CheckExpiry(now.Add(time.Hour), now) != nil {
+		t.Fatal("CheckExpiry rejected valid 1-hour expiry")
+	}
+}
+
+func assertCancelledContextFailsStatements(t *testing.T, ctx context.Context, e *env, f fixtureBot) {
+	t.Helper()
+	dead, cancel := context.WithCancel(ctx)
+	cancel()
+	if _, err := Create(dead, e.p, "x", 0, e.owner.ID); err == nil {
+		t.Fatal("create")
+	}
+	if _, err := List(dead, e.p); err == nil {
+		t.Fatal("list")
+	}
+	if _, err := Tokens(dead, e.p, f.bot.ID); err == nil {
+		t.Fatal("tokens")
+	}
+	if err := RevokeToken(dead, e.p, f.bot.ID, f.token.ID); err == nil {
+		t.Fatal("revoke")
+	}
+}
+
+func TestBotStoreEdges(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	if _, err := Get(ctx, e.p, uuid.New()); err == nil {
+		t.Fatal("unknown bot")
+	}
+	WithRoles([]Bot{{UserID: uuid.New()}}, map[uuid.UUID][]uuid.UUID{})
+	f := e.newBot()
+	bots, _ := List(ctx, e.p)
+	WithRoles(bots, map[uuid.UUID][]uuid.UUID{f.bot.UserID: {e.role}})
+	if len(bots[0].RoleIDs) != 1 {
+		t.Fatal("roles not filled")
+	}
+	assertTokenStatesAndExpiry(t, ctx, e, f)
+	if err := Update(ctx, e.p, uuid.New(), nil, nil, nil); err == nil {
+		t.Fatal("update of an unknown bot")
+	}
+	if _, err := UpsertCommand(ctx, e.p, uuid.New(), CommandInput{Name: "x", Description: "x"}); err == nil {
+		t.Fatal("command for an unknown bot")
+	}
+	if err := Delete(ctx, e.p, uuid.New()); err == nil {
+		t.Fatal("delete of an unknown bot")
+	}
+	if _, _, err := IssueToken(ctx, e.p, uuid.New(), "x", nil, uuid.Nil); err == nil {
+		t.Fatal("token for an unknown bot")
+	}
+	if err := RevokeToken(ctx, e.p, f.bot.ID, uuid.New()); err == nil {
+		t.Fatal("unknown token")
+	}
+	assertCancelledContextFailsStatements(t, ctx, e, f)
+}
