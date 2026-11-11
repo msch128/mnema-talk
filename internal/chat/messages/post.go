@@ -217,19 +217,23 @@ func PublishMessageNonce(w http.ResponseWriter, r *http.Request, p *db.Pool, pub
 	}
 	msg.Nonce = nonce
 	pub.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
-	markReadAfterSend(r.Context(), p, pub, msg)
+	MarkReadAfterSend(r.Context(), p, pub, msg)
 	httpx.WriteJSON(w, http.StatusCreated, msg)
 	return nil
 }
 
-// markReadAfterSend moves the author's read marker up to their own new
+// MarkReadAfterSend moves the author's read marker up to their own new
 // message: whoever writes has seen everything before it, so nothing earlier
 // may stay unread (no "new since" divider, no badge on another device). Thread
 // replies are left out; they do not count as channel unread. It writes only
 // when someone else's message sits between the marker and this one (see
 // MarkRead), and tells the author's other sessions to re-read. A failure only leaves the
 // marker where it was.
-func markReadAfterSend(ctx context.Context, p *db.Pool, pub events.Publisher, msg *core.Message) {
+//
+// Every way a member posts while looking at the channel calls it (a typed
+// message, an upload, a built-in command, a poll). A scheduled message does
+// not: its author is not reading the channel when the server sends it.
+func MarkReadAfterSend(ctx context.Context, p *db.Pool, pub events.Publisher, msg *core.Message) {
 	if msg.ParentID != nil {
 		return
 	}

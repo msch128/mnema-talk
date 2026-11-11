@@ -75,6 +75,7 @@ func (s *Service) Create(ctx context.Context, user *auth.User, channel uuid.UUID
 		}, nil
 	}
 	s.Events.BroadcastChannel(channel, events.MessageCreate, msg)
+	messages.MarkReadAfterSend(ctx, s.DB, s.Events, msg)
 	return msg, nil
 }
 

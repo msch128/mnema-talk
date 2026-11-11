@@ -325,7 +325,9 @@ the reply and thread target again and inserts the message with
 `messages.InsertMessage`, whose transaction applies slow mode and the direct message
 rules (blocks, closed conversations). The scheduled row is deleted in the same
 transaction, so a message is neither sent twice nor lost half-way, and a row
-edited meanwhile is not sent in its old version. A refusal turns the row into a
+edited meanwhile is not sent in its old version. Unlike a typed message, the
+send leaves the author's read marker alone: they are not looking at the channel
+then. A refusal turns the row into a
 failed draft with a reason code (`slow_mode`, `not_allowed`, `unavailable`,
 `refused`; a 403 never says which rule, because it can concern another member)
 and tells the author with `scheduled_message_update` (`failed`) and a push. The
@@ -761,7 +763,7 @@ single run, so read the figures as orders of magnitude:
 | Same, 50,000 unread | 29 ms (warm) |
 | First-unread lookup in that channel | 0.04 ms, 6 buffers, index scan |
 
-Sending a message reads the channel for its author: `PublishMessage` calls `MarkRead` with the new message (top-level messages only; thread replies are no channel unread), which writes the sender's marker only when someone else posted since the last one, and sends `read_state` to the author's other sessions. The client does the same at once and drops the "new since" divider, so the "Jump to first unread" pill goes.
+Sending a message reads the channel for its author: `messages.MarkReadAfterSend` moves the marker up to the new message (top-level messages only; thread replies are no channel unread), which writes the sender's marker only when someone else posted since the last one, and sends `read_state` to the author's other sessions. That holds for every way a member posts while looking at the channel: a typed message, an upload, a forward, a forum post, a built-in command such as `/shrug` and a poll. A scheduled message is the exception: its author is not reading the channel when the server sends it, so what others wrote since their last visit stays unread. The client does the same at once and drops the "new since" divider, so the "Jump to first unread" pill goes.
 
 No migration was needed: the existing indexes serve every query (the plan is
 printed by the test with `-v`). The remaining cost that grows with unread
