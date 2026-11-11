@@ -214,9 +214,9 @@ func (a *API) announcePin(r *http.Request, msg *core.Message, actor *auth.User, 
 	if a.Events == nil {
 		return
 	}
-	a.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
-	a.Events.BroadcastChannel(chID, events.PinsChanged, PinsChanged{
+	a.Events.BroadcastChannel(chID, events.Untyped(events.MessageUpdate, msg))
+	a.Events.BroadcastChannel(chID, events.Untyped(events.PinsChanged, PinsChanged{
 		ChannelID: chID, MessageID: msg.ID, Pinned: pinned, ActorID: actor.ID, ActorName: actor.DisplayName,
 		PinnedAt: msg.PinnedAt, PinnedBy: msg.PinnedBy,
-	})
+	}))
 }

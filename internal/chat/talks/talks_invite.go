@@ -117,7 +117,7 @@ func (a *API) inviteToTalk(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	a.Events.BroadcastChannel(req.ConversationID, events.MessageCreate, msg)
+	a.Events.BroadcastChannel(req.ConversationID, events.Untyped(events.MessageCreate, msg))
 	if a.Calls != nil {
 		a.Calls.Begin(req.ConversationID, talk, auth.UserFrom(ctx).ID, msg.ID, inviteName(msg))
 	}

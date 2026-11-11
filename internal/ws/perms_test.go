@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -51,19 +52,19 @@ func newPermWorld(t *testing.T) *permWorld {
 
 func TestBroadcastChannelReachesViewersOnly(t *testing.T) {
 	w := newPermWorld(t)
-	w.h.BroadcastChannel(w.private.ID, "message_create", map[string]any{"x": 1})
+	w.h.BroadcastChannel(w.private.ID, events.Untyped("message_create", map[string]any{"x": 1}))
 	if count(drainTypes(t, w.owner), "message_create") != 1 || count(drainTypes(t, w.insider), "message_create") != 1 {
 		t.Fatal("viewers must receive the event")
 	}
 	if got := drainTypes(t, w.outsider); len(got) != 0 {
 		t.Fatalf("the outsider received %v", got)
 	}
-	w.h.BroadcastChannel(w.public.ID, "message_create", nil)
+	w.h.BroadcastChannel(w.public.ID, events.Untyped("message_create", nil))
 	if count(drainTypes(t, w.outsider), "message_create") != 1 {
 		t.Fatal("an open channel reaches everybody")
 	}
 	// An unencodable payload is dropped like everywhere else.
-	w.h.BroadcastChannel(w.public.ID, "bad", make(chan int))
+	w.h.BroadcastChannel(w.public.ID, events.Untyped("bad", make(chan int)))
 	if got := drainTypes(t, w.outsider); len(got) != 0 {
 		t.Fatalf("unencodable payload delivered: %v", got)
 	}
@@ -80,9 +81,12 @@ func TestEventsFailClosedWhenPermissionsCannotBeLoaded(t *testing.T) {
 	drainTypes(t, b)
 	ch := uuid.New()
 	var tapped []string
-	h.Tap = func(_ uuid.UUID, eventType string, _ any) { tapped = append(tapped, eventType) }
-	h.BroadcastChannel(ch, "message_create", nil)
-	a.emitApplicationEvent("typing", nil, true, nil, ch)
+	h.Tap = func(_ uuid.UUID, ev events.Event) {
+		eventType := ev.EventName()
+		tapped = append(tapped, eventType)
+	}
+	h.BroadcastChannel(ch, events.Untyped("message_create", nil))
+	a.emitApplicationEvent(events.Untyped("typing", nil), true, nil, ch)
 	if len(tapped) != 0 {
 		t.Fatalf("outgoing webhooks heard events nobody was sent: %v", tapped)
 	}

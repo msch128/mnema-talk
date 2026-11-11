@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -63,7 +64,8 @@ func TestVoiceTimeIsAnnouncedOnlyToTheTalkItWasSpentIn(t *testing.T) {
 		total int64
 	}
 	var got []seen
-	h.Tap = func(ch uuid.UUID, eventType string, payload any) {
+	h.Tap = func(ch uuid.UUID, ev events.Event) {
+		eventType, payload := ev.EventName(), events.PayloadOf(ev)
 		if eventType != "user_stats" {
 			return
 		}
@@ -191,7 +193,8 @@ func TestPublicVoiceTimeCountsOnlyTalksEveryoneCanSee(t *testing.T) {
 		{"a Talk everyone can see", seatPublic, 12, 7, 1},
 	} {
 		h := NewHub(p, nil, nil, nil, openPerms())
-		h.Tap = func(_ uuid.UUID, eventType string, payload any) {
+		h.Tap = func(_ uuid.UUID, ev events.Event) {
+			eventType, payload := ev.EventName(), events.PayloadOf(ev)
 			if eventType == "user_stats" {
 				announced++
 				if got := payload.(map[string]any)["voice_seconds"].(int64); got != 7 {

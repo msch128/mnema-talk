@@ -78,7 +78,7 @@ func (h *API) disableUser(w http.ResponseWriter, r *http.Request) error {
 	if h.OnAccountEnded != nil {
 		h.OnAccountEnded(id)
 	}
-	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": true})
+	h.Events.Broadcast(events.Untyped(events.UserUpdate, map[string]any{"id": id, "disabled": true}))
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -109,7 +109,7 @@ func (h *API) enableUser(w http.ResponseWriter, r *http.Request) error {
 	if err := h.Moderated(r, id, func(q db.Querier) error { return auth.SetDisabled(r.Context(), q, id, false) }); err != nil {
 		return err
 	}
-	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": false})
+	h.Events.Broadcast(events.Untyped(events.UserUpdate, map[string]any{"id": id, "disabled": false}))
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

@@ -33,7 +33,7 @@ func (h *Hub) statusLocked(userID uuid.UUID) string {
 // announcePresence tells everyone about a changed live status.
 func (h *Hub) announcePresence(userID uuid.UUID, before, after string) {
 	if before != after {
-		h.Broadcast(events.PresenceUpdate, map[string]any{"user_id": userID, "status": after})
+		h.Broadcast(events.Untyped(events.PresenceUpdate, map[string]any{"user_id": userID, "status": after}))
 	}
 }
 
@@ -72,7 +72,7 @@ func (h *Hub) setIdle(c *Client, idle bool) {
 		after = h.statusLocked(c.User.ID)
 	})
 	if before != after {
-		c.emitApplicationEvent(events.PresenceUpdate, map[string]any{"user_id": c.User.ID, "status": after}, false, nil, uuid.Nil)
+		c.emitApplicationEvent(events.Untyped(events.PresenceUpdate, map[string]any{"user_id": c.User.ID, "status": after}), false, nil, uuid.Nil)
 	}
 }
 
@@ -142,7 +142,7 @@ func (h *Hub) SetBotPresence(userID uuid.UUID, online bool) {
 		after, act = h.botVisibleLocked(userID)
 	})
 	if before != after || !sameActivity(beforeAct, act) {
-		h.Broadcast(events.PresenceUpdate, botPresenceEvent(userID, after, act))
+		h.Broadcast(events.Untyped(events.PresenceUpdate, botPresenceEvent(userID, after, act)))
 	}
 }
 
@@ -158,7 +158,7 @@ func (h *Hub) SetBotStatus(userID uuid.UUID, status string, activity *BotActivit
 		after, act = h.botVisibleLocked(userID)
 	})
 	if before != after || !sameActivity(beforeAct, act) {
-		h.Broadcast(events.PresenceUpdate, botPresenceEvent(userID, after, act))
+		h.Broadcast(events.Untyped(events.PresenceUpdate, botPresenceEvent(userID, after, act)))
 	}
 }
 
@@ -181,7 +181,7 @@ func (h *Hub) sendBotActivities(c *Client) {
 		}
 	})
 	for _, ev := range presences {
-		c.SendEvent(events.PresenceUpdate, ev)
+		c.SendEvent(events.Untyped(events.PresenceUpdate, ev))
 	}
 }
 

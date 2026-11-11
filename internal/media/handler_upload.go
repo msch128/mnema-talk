@@ -259,7 +259,7 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast(events.UserUpdate, updated.Public())
+	h.Events.Broadcast(events.Untyped(events.UserUpdate, updated.Public()))
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }
@@ -320,7 +320,7 @@ func (h *Handler) deleteAvatar(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast(events.UserUpdate, updated.Public())
+	h.Events.Broadcast(events.Untyped(events.UserUpdate, updated.Public()))
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }

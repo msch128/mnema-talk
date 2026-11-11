@@ -28,7 +28,7 @@ func (a *API) tellOwnSessions(user uuid.UUID, ids ...*uuid.UUID) {
 		return
 	}
 	for _, id := range ids {
-		a.Events.SendToUsers([]uuid.UUID{user}, events.DMPrefsUpdated, DMPrefsUpdated{DMID: id})
+		a.Events.SendToUsers([]uuid.UUID{user}, events.Untyped(events.DMPrefsUpdated, DMPrefsUpdated{DMID: id}))
 	}
 }
 

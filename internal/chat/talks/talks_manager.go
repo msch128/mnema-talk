@@ -176,5 +176,5 @@ func (m *TalkManager) IsLeader(id, user uuid.UUID) bool {
 // state rebuilt and every client told to reload the channel list.
 func (m *TalkManager) structureChanged() {
 	m.Perms.Changed(nil)
-	m.Events.Broadcast(events.ChannelsChanged, nil)
+	m.Events.Broadcast(events.Untyped(events.ChannelsChanged, nil))
 }

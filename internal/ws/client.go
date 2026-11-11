@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/safego"
@@ -155,8 +156,8 @@ func (c *Client) dropSlow() {
 	}
 }
 
-func (c *Client) SendEvent(eventType string, payload any) {
-	if data := encode(eventType, payload); data != nil {
+func (c *Client) SendEvent(ev events.Event) {
+	if data := encode(ev); data != nil {
 		c.deliver(data)
 	}
 }

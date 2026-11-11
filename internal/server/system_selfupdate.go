@@ -172,7 +172,7 @@ func (h *systemHandler) triggerSelfUpdate(ctx context.Context, upd UpdateStatus,
 	}
 	log.Info("self-update started")
 	if h.events != nil {
-		h.events.Broadcast(events.SystemUpdate, map[string]string{"version": upd.LatestVersion})
+		h.events.Broadcast(events.Untyped(events.SystemUpdate, map[string]string{"version": upd.LatestVersion}))
 	}
 	return nil
 }

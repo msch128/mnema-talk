@@ -74,7 +74,7 @@ func (s *Service) Create(ctx context.Context, user *auth.User, channel uuid.UUID
 			Attachments: []core.MediaAttachment{}, Reactions: []core.ReactionSummary{}, Mentions: []uuid.UUID{}, MentionRoles: []uuid.UUID{},
 		}, nil
 	}
-	s.Events.BroadcastChannel(channel, events.MessageCreate, msg)
+	s.Events.BroadcastChannel(channel, events.Untyped(events.MessageCreate, msg))
 	messages.MarkReadAfterSend(ctx, s.DB, s.Events, msg)
 	return msg, nil
 }
@@ -102,7 +102,7 @@ func (s *Service) announce(ctx context.Context, channel, messageID uuid.UUID) (*
 		// poll ends.
 		return p, nil
 	}
-	s.Events.BroadcastChannel(channel, events.PollUpdate, Update{MessageID: messageID, ChannelID: channel, Poll: *p})
+	s.Events.BroadcastChannel(channel, events.Untyped(events.PollUpdate, Update{MessageID: messageID, ChannelID: channel, Poll: *p}))
 	return p, nil
 }
 

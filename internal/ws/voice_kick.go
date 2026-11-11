@@ -47,7 +47,7 @@ func (h *Hub) kickClientPeer(c *Client, onlyCh *uuid.UUID, reason string, peer *
 	if reason != "" {
 		payload["reason"] = reason
 	}
-	c.SendEvent(events.VoiceKicked, payload)
+	c.SendEvent(events.Untyped(events.VoiceKicked, payload))
 	return true
 }
 

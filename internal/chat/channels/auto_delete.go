@@ -185,7 +185,7 @@ func (a *AutoDeleter) sweepBatch(ctx context.Context, c autoDeleteChannel, cutof
 	}
 	if a.Events != nil {
 		for _, g := range removed {
-			a.Events.BroadcastChannel(c.id, events.MessageDelete, core.MessageDeletePayload(g.id, c.id, g.parent))
+			a.Events.BroadcastChannel(c.id, events.Untyped(events.MessageDelete, core.MessageDeletePayload(g.id, c.id, g.parent)))
 		}
 	}
 	return len(removed), len(keys), nil

@@ -60,7 +60,7 @@ func (h *API) mountModeration(r chi.Router) {
 
 func (h *API) notify(id uuid.UUID, n notice) {
 	if h.Events != nil {
-		h.Events.SendToUsers([]uuid.UUID{id}, events.ModerationNotice, n)
+		h.Events.SendToUsers([]uuid.UUID{id}, events.Untyped(events.ModerationNotice, n))
 	}
 }
 
@@ -142,7 +142,7 @@ func (h *API) TimeoutMember(r *http.Request, id uuid.UUID, req auth.TimeoutReque
 	// Talk they are in ends for them.
 	h.Perms.Changed([]uuid.UUID{id})
 	h.notify(id, notice{Kind: "timeout", Until: &until, Seconds: req.DurationSeconds, Reason: reason})
-	h.Events.Broadcast(events.MemberTimeout, map[string]any{"id": id, "timeout_until": until})
+	h.Events.Broadcast(events.Untyped(events.MemberTimeout, map[string]any{"id": id, "timeout_until": until}))
 	return auth.TimeoutState{UserID: id, TimeoutUntil: until, Reason: reason}, nil
 }
 
@@ -178,7 +178,7 @@ func (h *API) untimeoutUser(w http.ResponseWriter, r *http.Request) error {
 	}
 	h.Perms.Changed([]uuid.UUID{id})
 	h.notify(id, notice{Kind: "timeout_removed"})
-	h.Events.Broadcast(events.MemberTimeout, map[string]any{"id": id, "timeout_until": nil})
+	h.Events.Broadcast(events.Untyped(events.MemberTimeout, map[string]any{"id": id, "timeout_until": nil}))
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

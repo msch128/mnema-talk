@@ -181,9 +181,9 @@ func (s *Service) announceSent(ctx context.Context, d dueScheduled, messageID uu
 	// The author's read marker stays where it is: they are not reading the
 	// channel now, and what others wrote since their last visit stays unread.
 	if s.Events != nil {
-		s.Events.BroadcastChannel(d.channel, events.MessageCreate, msg)
+		s.Events.BroadcastChannel(d.channel, events.Untyped(events.MessageCreate, msg))
 	}
-	s.notify(d.user, events.ScheduledUpdate, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "sent"})
+	s.notify(d.user, events.Untyped(events.ScheduledUpdate, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "sent"}))
 }
 
 // fail keeps a refused message as a draft and tells its author, in the app and
@@ -201,7 +201,7 @@ func (s *Service) fail(ctx context.Context, d dueScheduled, reason string) {
 	if tag.RowsAffected() != 1 {
 		return
 	}
-	s.notify(d.user, events.ScheduledUpdate, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "failed", Reason: reason})
+	s.notify(d.user, events.Untyped(events.ScheduledUpdate, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "failed", Reason: reason}))
 	if s.Push != nil {
 		s.Push.Direct(ctx, push.Direct{User: d.user, Kind: push.DirectScheduledFailed, ID: d.id})
 	}

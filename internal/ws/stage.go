@@ -190,7 +190,7 @@ func (h *Hub) refreshStageSeat(snap *perm.Snapshot, key voiceKey) {
 	if !h.whileSeated(key, func() { changed = h.stage.setShown(key, power) }) || !changed {
 		return
 	}
-	h.sendToVoiceRoom(key.ch, events.StageTalkPower, map[string]any{"channel_id": key.ch, "user_id": key.user, "granted": power})
+	h.sendToVoiceRoom(key.ch, events.Untyped(events.StageTalkPower, map[string]any{"channel_id": key.ch, "user_id": key.user, "granted": power}))
 	for _, c := range h.clientsOf(key.user) {
 		h.applyMediaPolicy(c, snap)
 	}
@@ -200,7 +200,7 @@ func (h *Hub) lowerHand(key voiceKey) {
 	changed := false
 	h.whileSeated(key, func() { _, changed = h.stage.setHand(key, false, time.Time{}) })
 	if changed {
-		h.sendToVoiceRoom(key.ch, events.StageHand, map[string]any{"channel_id": key.ch, "user_id": key.user, "raised": false})
+		h.sendToVoiceRoom(key.ch, events.Untyped(events.StageHand, map[string]any{"channel_id": key.ch, "user_id": key.user, "raised": false}))
 	}
 }
 
@@ -245,10 +245,10 @@ func (h *Hub) endStageSeat(key voiceKey) {
 	granted := h.stage.granted(key)
 	h.stage.forget(key)
 	if hand != nil {
-		h.sendToVoiceRoom(key.ch, events.StageHand, map[string]any{"channel_id": key.ch, "user_id": key.user, "raised": false})
+		h.sendToVoiceRoom(key.ch, events.Untyped(events.StageHand, map[string]any{"channel_id": key.ch, "user_id": key.user, "raised": false}))
 	}
 	if power || granted {
-		h.sendToVoiceRoom(key.ch, events.StageTalkPower, map[string]any{"channel_id": key.ch, "user_id": key.user, "granted": false})
+		h.sendToVoiceRoom(key.ch, events.Untyped(events.StageTalkPower, map[string]any{"channel_id": key.ch, "user_id": key.user, "granted": false}))
 	}
 }
 
@@ -307,7 +307,7 @@ func (c *Client) handleStageHand(payload json.RawMessage) {
 	if in.Raised {
 		msg["at"] = at
 	}
-	h.sendToVoiceRoom(ch, events.StageHand, msg)
+	h.sendToVoiceRoom(ch, events.Untyped(events.StageHand, msg))
 }
 
 // handleStageTalkPower gives or takes a member's talk power (Manage stage).

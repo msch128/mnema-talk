@@ -47,10 +47,10 @@ func startedCall(t *testing.T, ring time.Duration) *callWorldDB {
 }
 
 // announce runs the queued announcements and returns the events of type typ.
-func (c *callWorldDB) announce(typ string) []events.Event {
+func (c *callWorldDB) announce(typ string) []events.Recorded {
 	for c.calls.AnnounceNext(context.Background()) {
 	}
-	var out []events.Event
+	var out []events.Recorded
 	for _, e := range c.rec.Snapshot() {
 		if e.Type == typ {
 			out = append(out, e)

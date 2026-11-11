@@ -62,7 +62,8 @@ func TestPanickingHandlerClosesOnlyItsOwnConnection(t *testing.T) {
 	bob := auth.User{ID: uuid.New(), Username: "bob"}
 	h := NewHub(nil, headerAuth{"alice": alice, "bob": bob}, nil, nil, openPerms())
 	ch := openChannel()
-	h.Tap = func(_ uuid.UUID, eventType string, _ any) {
+	h.Tap = func(_ uuid.UUID, ev events.Event) {
+		eventType := ev.EventName()
 		if eventType == events.Typing {
 			panic("handler bug")
 		}
@@ -103,7 +104,7 @@ func TestPanickingHandlerClosesOnlyItsOwnConnection(t *testing.T) {
 
 	// Bob hears that alice went offline, and an event published afterwards.
 	readUntil(t, bobConn, events.PresenceUpdate)
-	h.Broadcast(events.MemberJoined, map[string]any{})
+	h.Broadcast(events.Untyped(events.MemberJoined, map[string]any{}))
 	readUntil(t, bobConn, events.MemberJoined)
 	if got := h.OnlineCount(); got != 1 {
 		t.Fatalf("%d members online, want only bob", got)
@@ -115,7 +116,10 @@ func hubWithBob(t *testing.T, tap func(eventType string), configure ...func(*Hub
 	t.Helper()
 	users := headerAuth{"alice": {ID: uuid.New(), Username: "alice"}, "bob": {ID: uuid.New(), Username: "bob"}}
 	h = NewHub(nil, users, nil, nil, openPerms())
-	h.Tap = func(_ uuid.UUID, eventType string, _ any) { tap(eventType) }
+	h.Tap = func(_ uuid.UUID, ev events.Event) {
+		eventType := ev.EventName()
+		tap(eventType)
+	}
 	for _, set := range configure {
 		set(h)
 	}
@@ -210,7 +214,7 @@ func TestPanicWhileUnregisteringStillRemovesTheClient(t *testing.T) {
 			t.Fatal("the member stayed listed in the Talk with no connection and no grace leave")
 		}
 	}
-	h.Broadcast(events.MemberJoined, map[string]any{})
+	h.Broadcast(events.Untyped(events.MemberJoined, map[string]any{}))
 	readUntil(t, bob, events.MemberJoined)
 	// Room events no longer look for her either.
 	h.mu.RLock()
@@ -304,7 +308,7 @@ func TestPanicInTheGreetingClosesThatConnection(t *testing.T) {
 	waitClosed(t, alice)
 	waitOnline(t, h, 1)
 	waitCounted(t, "ws_handshake", before+1)
-	h.Broadcast(events.MemberJoined, map[string]any{})
+	h.Broadcast(events.Untyped(events.MemberJoined, map[string]any{}))
 	readUntil(t, bob, events.MemberJoined)
 }
 
@@ -325,7 +329,7 @@ func TestPanicInTheUpgradeHookClosesThatConnection(t *testing.T) {
 	waitClosed(t, alice)
 	waitCounted(t, "ws_handshake", before+1)
 	armed.Store(false)
-	h.Broadcast(events.MemberJoined, map[string]any{})
+	h.Broadcast(events.Untyped(events.MemberJoined, map[string]any{}))
 	readUntil(t, bob, events.MemberJoined)
 }
 

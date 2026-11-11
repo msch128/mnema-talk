@@ -34,8 +34,8 @@ type countingPublisher struct {
 	sent int
 }
 
-func (c *countingPublisher) BroadcastPerm(perm.Set, string, any)  {}
-func (c *countingPublisher) SendToUsers([]uuid.UUID, string, any) { c.sent++ }
+func (c *countingPublisher) BroadcastPerm(perm.Set, events.Event)  {}
+func (c *countingPublisher) SendToUsers([]uuid.UUID, events.Event) { c.sent++ }
 
 func TestTheFollowTapNeedsAPermissionService(t *testing.T) {
 	defer func() {
@@ -50,11 +50,11 @@ func TestTheFollowTapIgnoresWhatIsNoThreadReplyAndFailsClosedWithoutPermissions(
 	pub := &countingPublisher{}
 	tap := messages.NewFollowSync(context.Background(), nil, permtest.Unloadable(), pub)
 	root := uuid.New()
-	tap(uuid.New(), events.MessageUpdate, core.Message{ParentID: &root})
-	tap(uuid.New(), events.MessageCreate, core.Message{})
-	tap(uuid.New(), events.MessageCreate, "not a message")
+	tap(uuid.New(), events.Untyped(events.MessageUpdate, core.Message{ParentID: &root}))
+	tap(uuid.New(), events.Untyped(events.MessageCreate, core.Message{}))
+	tap(uuid.New(), events.Untyped(events.MessageCreate, "not a message"))
 	// A thread reply whose permission state cannot be read tells nobody (and needs no database to know it).
-	tap(uuid.New(), events.MessageCreate, &core.Message{ParentID: &root})
+	tap(uuid.New(), events.Untyped(events.MessageCreate, &core.Message{ParentID: &root}))
 	time.Sleep(50 * time.Millisecond)
 	if pub.sent != 0 {
 		t.Fatalf("%d events sent", pub.sent)

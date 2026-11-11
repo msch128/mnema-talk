@@ -31,10 +31,10 @@ func (h *Hub) enterLobby(c *Client, lobby *core.ChannelInfo) {
 	talk, err := h.Lobby.Open(ctx, c.User.ID, lobby.ID)
 	if err != nil {
 		c.logger().Info("talk lobby refused", "user", c.User.Username, "lobby", lobby.ID, "err", err)
-		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": lobby.ID, "reason": lobbyRefusal(err)})
+		c.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": lobby.ID, "reason": lobbyRefusal(err)}))
 		return
 	}
-	c.SendEvent(events.TalkMoved, map[string]any{"from_channel_id": lobby.ID, "channel_id": talk.ID})
+	c.SendEvent(events.Untyped(events.TalkMoved, map[string]any{"from_channel_id": lobby.ID, "channel_id": talk.ID}))
 }
 
 // lobbyRefusal is the voice_kicked reason of a lobby that opened no Talk.

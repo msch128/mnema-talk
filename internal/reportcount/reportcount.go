@@ -34,5 +34,5 @@ func Announce(ctx context.Context, q db.Querier, pub events.Publisher) {
 		slog.Warn("open report count not announced", "err", err)
 		return
 	}
-	pub.BroadcastPerm(perm.ManageReports, events.ReportsOpen, map[string]int{"open": n})
+	pub.BroadcastPerm(perm.ManageReports, events.Untyped(events.ReportsOpen, map[string]int{"open": n}))
 }

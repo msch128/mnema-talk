@@ -154,7 +154,7 @@ func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement)
 // is refetched, the permission state is untouched.
 func (a *API) ChannelsChanged() {
 	a.Guard.Perms.Invalidate() // new categories and the like must be known
-	a.Events.Broadcast(events.ChannelsChanged, nil)
+	a.Events.Broadcast(events.Untyped(events.ChannelsChanged, nil))
 }
 
 // structureChanged is channelsChanged for changes that can alter who sees what
@@ -162,5 +162,5 @@ func (a *API) ChannelsChanged() {
 // permission state is rebuilt and live connections are re-checked.
 func (a *API) structureChanged() {
 	a.Guard.Perms.Changed(nil)
-	a.Events.Broadcast(events.ChannelsChanged, nil)
+	a.Events.Broadcast(events.Untyped(events.ChannelsChanged, nil))
 }

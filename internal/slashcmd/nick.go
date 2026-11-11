@@ -52,6 +52,6 @@ func (c nickCommand) Run(ctx context.Context, call slash.Call) (slash.Result, er
 	if err != nil {
 		return slash.Result{}, err
 	}
-	c.svc.Events.Broadcast(events.UserUpdate, u.Public())
+	c.svc.Events.Broadcast(events.Untyped(events.UserUpdate, u.Public()))
 	return slash.Result{}, nil
 }

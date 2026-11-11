@@ -168,10 +168,10 @@ func (c *Commands) respond(r *http.Request, in *interaction, m message) (*core.M
 		return nil, err
 	}
 	if m.ephemeral {
-		c.Events.SendToUsers([]uuid.UUID{in.invoker}, events.InteractionResponse, map[string]any{
+		c.Events.SendToUsers([]uuid.UUID{in.invoker}, events.Untyped(events.InteractionResponse, map[string]any{
 			"channel_id": in.channel, "bot_id": in.botID, "bot_name": in.botName, "bot_avatar_url": in.avatar,
 			"content": m.content, "embeds": m.embeds, "created_at": time.Now().UTC(),
-		})
+		}))
 		return nil, nil
 	}
 	// A command response never mentions everyone; members are notified only
@@ -188,6 +188,6 @@ func (c *Commands) respond(r *http.Request, in *interaction, m message) (*core.M
 	if err != nil {
 		return nil, err
 	}
-	c.Events.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
+	c.Events.BroadcastChannel(msg.ChannelID, events.Untyped(events.MessageCreate, msg))
 	return msg, nil
 }

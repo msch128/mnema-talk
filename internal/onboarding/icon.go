@@ -358,5 +358,5 @@ func (h *Handler) broadcastCommunity(ctx context.Context, s Settings) {
 	if h.Names != nil {
 		name = h.Names.Get(ctx)
 	}
-	h.Events.Broadcast(events.CommunityUpdated, map[string]string{"community_name": name, "community_icon": icon})
+	h.Events.Broadcast(events.Untyped(events.CommunityUpdated, map[string]string{"community_name": name, "community_icon": icon}))
 }

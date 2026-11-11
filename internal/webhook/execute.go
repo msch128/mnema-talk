@@ -225,7 +225,7 @@ func (h *Handler) execute(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	h.Events.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
+	h.Events.BroadcastChannel(msg.ChannelID, events.Untyped(events.MessageCreate, msg))
 	if wait, err := strconv.ParseBool(r.URL.Query().Get("wait")); err == nil && wait {
 		httpx.WriteJSON(w, http.StatusOK, msg)
 		return

@@ -313,6 +313,6 @@ func RemoveSaved(ctx context.Context, q db.Querier, user, messageID uuid.UUID) (
 
 func (a *API) sendSaved(user, msgID uuid.UUID, saved bool) {
 	if a.Events != nil {
-		a.Events.SendToUsers([]uuid.UUID{user}, events.SavedUpdated, SavedUpdated{MessageID: msgID, Saved: saved})
+		a.Events.SendToUsers([]uuid.UUID{user}, events.Untyped(events.SavedUpdated, SavedUpdated{MessageID: msgID, Saved: saved}))
 	}
 }

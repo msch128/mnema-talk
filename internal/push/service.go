@@ -93,7 +93,8 @@ func (s *Service) init() {
 }
 
 // Observe is the hub's tap: it queues a new message for delivery. It never blocks.
-func (s *Service) Observe(_ uuid.UUID, eventType string, payload any) {
+func (s *Service) Observe(_ uuid.UUID, ev events.Event) {
+	eventType, payload := ev.EventName(), events.PayloadOf(ev)
 	if eventType != events.MessageCreate {
 		return
 	}

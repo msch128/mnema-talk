@@ -160,9 +160,9 @@ func (s *Scheduler) reminderSnapshot(ctx context.Context) (*perm.Snapshot, error
 func (s *Scheduler) remind(ctx context.Context, recipients []uuid.UUID, r DueReminder) {
 	if s.Handler.Events != nil {
 		for _, uid := range recipients {
-			s.Handler.Events.SendToUsers([]uuid.UUID{uid}, events.EventReminder, EventReminderPayload{
+			s.Handler.Events.SendToUsers([]uuid.UUID{uid}, events.Untyped(events.EventReminder, EventReminderPayload{
 				EventID: r.ID, Title: r.Title, StartTime: r.StartTime, ChannelID: r.ChannelID,
-			})
+			}))
 		}
 	}
 	pusher := s.reminderPusher()

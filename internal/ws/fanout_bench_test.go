@@ -60,7 +60,7 @@ func BenchmarkVoiceRoomEvent(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				h.sendToVoiceRoom(room, events.VoiceSpeaking, payload)
+				h.sendToVoiceRoom(room, events.Untyped(events.VoiceSpeaking, payload))
 				drainEvery(b, i, clients[:members])
 			}
 		})
@@ -79,7 +79,7 @@ func BenchmarkBroadcastChannel(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				h.BroadcastChannel(channel, events.MessageCreate, payload)
+				h.BroadcastChannel(channel, events.Untyped(events.MessageCreate, payload))
 				drainEvery(b, i, clients)
 			}
 		})

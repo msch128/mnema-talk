@@ -91,7 +91,7 @@ func (a *API) ServeCreateForumTag(w http.ResponseWriter, r *http.Request) error 
 	}
 	pending.Commit(r.Context(), uuid.Nil)
 	a.auditForumTag(r, "forum.tag_create", chID, tag, nil)
-	a.Events.BroadcastChannel(chID, events.ForumTagsChanged, map[string]any{"channel_id": chID})
+	a.Events.BroadcastChannel(chID, events.Untyped(events.ForumTagsChanged, map[string]any{"channel_id": chID}))
 	httpx.WriteJSON(w, http.StatusCreated, tag)
 	return nil
 }
@@ -143,7 +143,7 @@ func (a *API) ServeUpdateForumTag(w http.ResponseWriter, r *http.Request) error 
 	}
 	pending.Commit(r.Context(), uuid.Nil)
 	a.auditForumTag(r, "forum.tag_update", chID, tag, before)
-	a.Events.BroadcastChannel(chID, events.ForumTagsChanged, map[string]any{"channel_id": chID})
+	a.Events.BroadcastChannel(chID, events.Untyped(events.ForumTagsChanged, map[string]any{"channel_id": chID}))
 	httpx.WriteJSON(w, http.StatusOK, tag)
 	return nil
 }
@@ -182,7 +182,7 @@ func (a *API) ServeDeleteForumTag(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	a.auditForumTag(r, "forum.tag_delete", chID, tag, nil)
-	a.Events.BroadcastChannel(chID, events.ForumTagsChanged, map[string]any{"channel_id": chID})
+	a.Events.BroadcastChannel(chID, events.Untyped(events.ForumTagsChanged, map[string]any{"channel_id": chID}))
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

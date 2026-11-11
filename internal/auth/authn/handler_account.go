@@ -52,7 +52,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) announceRegistered(ctx context.Context, u *auth.User) {
 	h.AuditUser(ctx, u, "auth.register")
 	if h.Events != nil {
-		h.Events.Broadcast(events.MemberJoined, u.Public())
+		h.Events.Broadcast(events.Untyped(events.MemberJoined, u.Public()))
 	}
 }
 

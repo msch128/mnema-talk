@@ -156,9 +156,9 @@ func (a *API) changeThreadFollow(w http.ResponseWriter, r *http.Request, followi
 		return err
 	}
 	if a.Events != nil {
-		a.Events.SendToUsers([]uuid.UUID{user.ID}, events.ThreadFollowUpdated, map[string]any{
+		a.Events.SendToUsers([]uuid.UUID{user.ID}, events.Untyped(events.ThreadFollowUpdated, map[string]any{
 			"thread_id": id, "channel_id": root.ChannelID, "following": following,
-		})
+		}))
 	}
 	httpx.WriteJSON(w, http.StatusOK, ThreadFollow{ThreadID: id, Following: following})
 	return nil

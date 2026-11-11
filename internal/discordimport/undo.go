@@ -232,8 +232,8 @@ func (im *Importer) Undo(ctx context.Context, sub perm.Subject, id uuid.UUID, re
 		_ = im.Objects.DeleteBatch(ctx, keys) // rows are gone; leftovers are swept as orphans
 	}
 	if im.Events != nil {
-		im.Events.Broadcast(events.ChannelsChanged, nil)
-		im.Events.Broadcast(events.RolesChanged, nil)
+		im.Events.Broadcast(events.Untyped(events.ChannelsChanged, nil))
+		im.Events.Broadcast(events.Untyped(events.RolesChanged, nil))
 	}
 	return res, nil
 }

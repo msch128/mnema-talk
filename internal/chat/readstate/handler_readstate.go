@@ -57,7 +57,7 @@ func (a API) channelParam(r *http.Request) (uuid.UUID, error) {
 // publishReadState tells the user's other sessions (tabs, devices) about it.
 func (a API) publishReadState(userID, channelID uuid.UUID, payload map[string]any) {
 	payload["channel_id"] = channelID
-	a.Events.SendToUsers([]uuid.UUID{userID}, events.ReadState, payload)
+	a.Events.SendToUsers([]uuid.UUID{userID}, events.Untyped(events.ReadState, payload))
 }
 
 // markRead handles POST /api/channels/{channelID}/read.

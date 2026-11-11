@@ -51,8 +51,8 @@ func (c *Client) can(snap *perm.Snapshot, ch uuid.UUID, need perm.Set) bool {
 
 // BroadcastChannel sends an event to every connection whose user may view the
 // channel.
-func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload any) {
-	data := encode(eventType, payload)
+func (h *Hub) BroadcastChannel(channelID uuid.UUID, ev events.Event) {
+	data := encode(ev)
 	if data == nil {
 		return
 	}
@@ -64,9 +64,9 @@ func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload an
 	if snap.IsPrivate(channelID) {
 		// A conversation's (or its Talk's) events go to its members only:
 		// never to webhooks or bots.
-		h.dmTapped(channelID, eventType, payload)
+		h.dmTapped(channelID, ev)
 	} else {
-		h.tapped(channelID, eventType, payload) // only what is really published
+		h.tapped(channelID, ev) // only what is really published
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -134,7 +134,7 @@ func (c *Client) notifyPermissions() {
 	if wait <= 0 {
 		c.permSent = time.Now()
 		c.mu.Unlock()
-		c.SendEvent(events.PermissionsChanged, nil)
+		c.SendEvent(events.Untyped(events.PermissionsChanged, nil))
 		return
 	}
 	if c.permPending {
@@ -148,7 +148,7 @@ func (c *Client) notifyPermissions() {
 		c.permPending = false
 		c.permSent = time.Now()
 		c.mu.Unlock()
-		c.SendEvent(events.PermissionsChanged, nil)
+		c.SendEvent(events.Untyped(events.PermissionsChanged, nil))
 	})
 }
 

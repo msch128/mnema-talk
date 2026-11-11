@@ -164,7 +164,7 @@ func (a *API) StartDMTalk(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	a.Events.BroadcastChannel(dm, events.MessageCreate, msg)
+	a.Events.BroadcastChannel(dm, events.Untyped(events.MessageCreate, msg))
 	if a.Calls != nil {
 		a.Calls.Begin(dm, talk.ID, user.ID, msg.ID, inviteName(msg))
 	}

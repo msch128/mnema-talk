@@ -77,7 +77,7 @@ func (h *Hub) seatPeer(c *Client, chID uuid.UUID, peer *sfu.Peer, evictReason st
 	}
 	if c.currentVoice() != nil { // else that sibling has told c already
 		c.setVoice(nil)
-		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": kickJoinedElsewhere})
+		c.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": kickJoinedElsewhere}))
 	}
 	return false
 }
@@ -105,7 +105,7 @@ func (h *Hub) evictSiblingConnections(c *Client, chID uuid.UUID, mine uint64, re
 			h.taken.mark(voiceKey{o.User.ID, chID}, o.tabID())
 		}
 		o.setVoice(nil)
-		o.SendEvent(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": reason})
+		o.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": reason}))
 	}
 	return holds
 }

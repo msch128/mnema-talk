@@ -139,8 +139,8 @@ func (s *Service) checkTime(at time.Time) error {
 }
 
 // notify tells the member's own sessions that something changed.
-func (s *Service) notify(user uuid.UUID, event string, payload any) {
+func (s *Service) notify(user uuid.UUID, ev events.Event) {
 	if s.Events != nil {
-		s.Events.SendToUsers([]uuid.UUID{user}, event, payload)
+		s.Events.SendToUsers([]uuid.UUID{user}, ev)
 	}
 }

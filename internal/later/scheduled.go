@@ -117,7 +117,7 @@ func (s *Service) AddScheduled(ctx context.Context, n NewScheduled) (Scheduled, 
 	if err != nil {
 		return Scheduled{}, fmt.Errorf("load scheduled message: %w", err)
 	}
-	s.notify(n.User, events.ScheduledUpdate, ScheduledEvent{ID: id, ChannelID: n.Channel, State: "created"})
+	s.notify(n.User, events.Untyped(events.ScheduledUpdate, ScheduledEvent{ID: id, ChannelID: n.Channel, State: "created"}))
 	return e, nil
 }
 
@@ -185,7 +185,7 @@ func (s *Service) UpdateScheduled(ctx context.Context, user, id uuid.UUID, p Sch
 	if err != nil {
 		return Scheduled{}, fmt.Errorf("load scheduled message: %w", err)
 	}
-	s.notify(user, events.ScheduledUpdate, ScheduledEvent{ID: id, ChannelID: channel, State: "updated"})
+	s.notify(user, events.Untyped(events.ScheduledUpdate, ScheduledEvent{ID: id, ChannelID: channel, State: "updated"}))
 	return e, nil
 }
 
@@ -199,6 +199,6 @@ func (s *Service) RemoveScheduled(ctx context.Context, user, id uuid.UUID) error
 	if err != nil {
 		return fmt.Errorf("remove scheduled: %w", err)
 	}
-	s.notify(user, events.ScheduledUpdate, ScheduledEvent{ID: id, ChannelID: channel, State: "deleted"})
+	s.notify(user, events.Untyped(events.ScheduledUpdate, ScheduledEvent{ID: id, ChannelID: channel, State: "deleted"}))
 	return nil
 }

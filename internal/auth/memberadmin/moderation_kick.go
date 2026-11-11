@@ -62,7 +62,7 @@ func (h *API) KickMember(r *http.Request, id uuid.UUID, reason string) error {
 		h.Live.EndingUser(id)
 	}
 	if h.Events != nil {
-		h.Events.SendToUsers([]uuid.UUID{id}, events.Kicked, kickNotice{Reason: reason})
+		h.Events.SendToUsers([]uuid.UUID{id}, events.Untyped(events.Kicked, kickNotice{Reason: reason}))
 	}
 	if h.Live != nil {
 		h.Live.KickFromVoice(id)

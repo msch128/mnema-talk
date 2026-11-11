@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -310,7 +311,7 @@ func TestUnsendableAnnouncementsAreDropped(t *testing.T) {
 	ch := voiceCh()
 	c := testClient(h, auth.User{ID: uuid.New(), Username: "member"})
 	h.joinVoice(c, ch)
-	h.sendToVoiceUser(ch.ID, c.User.ID, "screen_quality", make(chan int))
+	h.sendToVoiceUser(ch.ID, c.User.ID, events.Untyped("screen_quality", make(chan int)))
 	if _, ok := nextEventOf(c, "screen_quality", quietWait); ok {
 		t.Fatal("an event that cannot be encoded was delivered")
 	}

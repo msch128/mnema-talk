@@ -128,9 +128,9 @@ func (h *Hub) notePresenceLocked(c *Client) {
 func (h *Hub) greet(c *Client, before, after string) {
 	c.logger().Info("ws connected", c.connectedAttrs()...)
 	// server_info leads: the broadcast below can reach this very connection.
-	c.SendEvent(events.ServerInfo, h.serverInfo())
+	c.SendEvent(events.Untyped(events.ServerInfo, h.serverInfo()))
 	h.announcePresence(c.User.ID, before, after)
-	c.SendEvent(events.PresenceSnapshot, h.presenceSnapshot())
+	c.SendEvent(events.Untyped(events.PresenceSnapshot, h.presenceSnapshot()))
 	h.sendBotActivities(c)
 	// Talks the member may not view stay invisible: who sits in them, since
 	// when and what they share.
@@ -138,8 +138,8 @@ func (h *Hub) greet(c *Client, before, after string) {
 	if !ok {
 		snap = deniedSnapshot
 	}
-	c.SendEvent(events.VoiceSnapshot, visibleTo(c, snap, h.voiceSnapshot()))
-	c.SendEvent(events.VoiceRooms, h.voiceRooms(c, snap))
+	c.SendEvent(events.Untyped(events.VoiceSnapshot, visibleTo(c, snap, h.voiceSnapshot())))
+	c.SendEvent(events.Untyped(events.VoiceRooms, h.voiceRooms(c, snap)))
 	if h.SFU == nil {
 		return
 	}
@@ -147,7 +147,7 @@ func (h *Hub) greet(c *Client, before, after string) {
 	defer pace.stop()
 	for chID, states := range visibleTo(c, snap, h.SFU.AllMediaStates()) {
 		for uid, st := range states {
-			if !pace.send(events.WebrtcMediaState, mediaStatePayload(chID, uid, st)) {
+			if !pace.send(events.Untyped(events.WebrtcMediaState, mediaStatePayload(chID, uid, st))) {
 				return
 			}
 		}
@@ -196,7 +196,7 @@ func (p *pacer) stop() {
 }
 
 // send queues one event; false means the greeting must stop.
-func (p *pacer) send(eventType string, payload any) bool {
+func (p *pacer) send(ev events.Event) bool {
 	c := p.c
 	for {
 		queued := len(c.send)
@@ -216,7 +216,7 @@ func (p *pacer) send(eventType string, payload any) bool {
 		case <-p.tick.C:
 		}
 	}
-	c.SendEvent(eventType, payload)
+	c.SendEvent(ev)
 	p.queued = len(c.send)
 	return !c.gone.Load()
 }

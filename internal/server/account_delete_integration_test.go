@@ -329,7 +329,7 @@ func TestDeletingAnAccountTellsTheChannelsItsPinsAreGone(t *testing.T) {
 		t.Fatalf("delete: %d %s", res.status, res.body)
 	}
 
-	var told []events.Event
+	var told []events.Recorded
 	for _, e := range a.events.Snapshot()[before:] {
 		if e.Type == events.PinsChanged {
 			told = append(told, e)

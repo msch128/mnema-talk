@@ -93,7 +93,7 @@ func (s *Services) post(call slash.Call, content string, parent *uuid.UUID) (sla
 	if err != nil {
 		return slash.Result{}, err
 	}
-	s.Events.BroadcastChannel(call.Channel, events.MessageCreate, msg)
+	s.Events.BroadcastChannel(call.Channel, events.Untyped(events.MessageCreate, msg))
 	messages.MarkReadAfterSend(ctx, s.DB, s.Events, msg)
 	return slash.Result{MessageID: &msg.ID}, nil
 }

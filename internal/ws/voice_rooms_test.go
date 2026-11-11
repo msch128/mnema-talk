@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 // scannedRooms is what the room index stands for: every registered connection
@@ -131,7 +132,7 @@ func TestRoomEventReachesOnlyTheRoomsRegisteredConnections(t *testing.T) {
 		drainTypes(t, c)
 	}
 
-	h.sendToVoiceRoom(room.ID, "probe", map[string]any{})
+	h.sendToVoiceRoom(room.ID, events.Untyped("probe", map[string]any{}))
 
 	if got := drainTypes(t, inside); count(got, "probe") != 1 {
 		t.Fatalf("member of the room got %v, want the event once", got)

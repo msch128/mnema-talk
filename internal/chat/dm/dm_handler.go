@@ -195,7 +195,7 @@ func (a *API) announceDM(dm DirectMessage) {
 	}
 	// Counts are the starter's to see; the others fetch their own.
 	dm = dm.forOthers()
-	a.Events.SendToUsers(ids, events.DMCreated, dm)
+	a.Events.SendToUsers(ids, events.Untyped(events.DMCreated, dm))
 }
 
 // AddDMMemberRequest is the body of POST /api/dms/{id}/members.
@@ -270,8 +270,8 @@ func (a *API) announceAdded(dm DirectMessage, added uuid.UUID) {
 		}
 	}
 	dm = dm.forOthers()
-	a.Events.SendToUsers([]uuid.UUID{added}, events.DMCreated, dm)
-	a.Events.SendToUsers(others, events.DMMemberAdded, DMMemberChange{DMID: dm.ID, Member: joined})
+	a.Events.SendToUsers([]uuid.UUID{added}, events.Untyped(events.DMCreated, dm))
+	a.Events.SendToUsers(others, events.Untyped(events.DMMemberAdded, DMMemberChange{DMID: dm.ID, Member: joined}))
 }
 
 // ServeLeaveDM handles DELETE /api/dms/{id}/members/@me.
@@ -315,7 +315,7 @@ func (a *API) ServeLeaveDM(w http.ResponseWriter, r *http.Request) error {
 	core.DeleteObjects(r.Context(), a.Objects, keys)
 	if a.Events != nil {
 		left := DMMember{ID: user.ID, Username: user.Username, DisplayName: user.DisplayName}
-		a.Events.SendToUsers(append(remaining, user.ID), events.DMMemberRemoved, DMMemberChange{DMID: id, Member: left})
+		a.Events.SendToUsers(append(remaining, user.ID), events.Untyped(events.DMMemberRemoved, DMMemberChange{DMID: id, Member: left}))
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

@@ -38,7 +38,7 @@ func NewHandler(h Handler) *Handler {
 // membersChanged makes every client reload the member list and the roles.
 func (h *Handler) membersChanged() {
 	if h.Events != nil {
-		h.Events.Broadcast(events.RolesChanged, nil)
+		h.Events.Broadcast(events.Untyped(events.RolesChanged, nil))
 	}
 }
 

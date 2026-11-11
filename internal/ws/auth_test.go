@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 // fakeAuth authenticates every request as user with the cookie's version tv.
@@ -150,8 +151,8 @@ func TestWebSocketAdmissionRejectsRevocationDuringEitherCheck(t *testing.T) {
 			case <-time.After(2 * time.Second):
 				t.Fatal("authentication did not reach barrier")
 			}
-			h.Broadcast("private-before-admission", nil)
-			h.SendToUsers([]uuid.UUID{a.user.ID}, "private-targeted", nil)
+			h.Broadcast(events.Untyped("private-before-admission", nil))
+			h.SendToUsers([]uuid.UUID{a.user.ID}, events.Untyped("private-targeted", nil))
 			h.mu.RLock()
 			if len(h.clients) != 0 || len(h.online) != 0 || len(h.profiles) != 0 {
 				t.Error("pending handshake published live presence or profile")
@@ -181,7 +182,7 @@ func TestWebSocketAdmissionRejectsRevocationDuringEitherCheck(t *testing.T) {
 				t.Fatalf("unexpected upgrade error: %v", d.err)
 			}
 			t.Cleanup(func() { _ = d.conn.Close() })
-			h.Broadcast("private-after-revocation", nil)
+			h.Broadcast(events.Untyped("private-after-revocation", nil))
 			_ = d.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 			if _, message, err := d.conn.ReadMessage(); err == nil {
 				t.Fatalf("revoked handshake received %s", message)

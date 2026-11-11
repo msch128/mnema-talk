@@ -43,9 +43,9 @@ func (a *API) setBotReaction(w http.ResponseWriter, r *http.Request, want bool) 
 		return err
 	}
 	if changed {
-		a.Events.BroadcastChannel(ref.ChannelID, events.MessageReaction, messages.ReactionResult{
+		a.Events.BroadcastChannel(ref.ChannelID, events.Untyped(events.MessageReaction, messages.ReactionResult{
 			MessageID: msgID, ChannelID: ref.ChannelID, Reactions: reactions,
-		})
+		}))
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

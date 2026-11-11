@@ -20,6 +20,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/saved"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/discordimport"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/moderation"
@@ -170,12 +171,12 @@ func (c *components) hiddenMessageCount(ctx context.Context, viewer perm.Subject
 
 // addDMTap is addTap for the events of conversations and their Talks, which
 // reach no webhook or bot.
-func (c *components) addDMTap(f func(ch uuid.UUID, eventType string, payload any)) {
+func (c *components) addDMTap(f func(ch uuid.UUID, ev events.Event)) {
 	prev := c.hub.DMTap
-	c.hub.DMTap = func(ch uuid.UUID, eventType string, payload any) {
+	c.hub.DMTap = func(ch uuid.UUID, ev events.Event) {
 		if prev != nil {
-			prev(ch, eventType, payload)
+			prev(ch, ev)
 		}
-		f(ch, eventType, payload)
+		f(ch, ev)
 	}
 }

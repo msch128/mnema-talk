@@ -236,7 +236,7 @@ func (a *API) ServeUpdateForumPost(w http.ResponseWriter, r *http.Request) error
 	if canManage && msg.UserID != user.ID {
 		a.auditForumPost(ctx, chID, msg, before, req)
 	}
-	a.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
+	a.Events.BroadcastChannel(chID, events.Untyped(events.MessageUpdate, msg))
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
 }

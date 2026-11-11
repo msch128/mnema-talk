@@ -39,9 +39,9 @@ func (c *Client) handleMediaHandshake(payload json.RawMessage) {
 	}
 	metrics.MLSHandshakes.With("relayed").Inc()
 	metrics.MLSHandshakeBytes.Add(uint64(len(raw)))
-	c.hub.sendToVoiceRoomExcept(c, *cur, events.MediaHandshake, map[string]any{
+	c.hub.sendToVoiceRoomExcept(c, *cur, events.Untyped(events.MediaHandshake, map[string]any{
 		"channel_id": *cur,
 		"user_id":    c.User.ID,
 		"wire":       body.Wire,
-	})
+	}))
 }

@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"encoding/json"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -14,38 +13,38 @@ type Event struct {
 	Payload any    `json:"payload"`
 }
 
-func encode(eventType string, payload any) []byte {
-	data, err := json.Marshal(Event{Type: eventType, Payload: payload})
+func encode(ev events.Event) []byte {
+	data, err := events.Marshal(ev)
 	if err != nil {
-		slog.Error("encode ws event", "type", eventType, "err", err)
+		slog.Error("encode ws event", "type", ev.EventName(), "err", err)
 		return nil
 	}
 	return data
 }
 
 // tapped shows a published event to the hub's Tap.
-func (h *Hub) tapped(channel uuid.UUID, eventType string, payload any) {
+func (h *Hub) tapped(channel uuid.UUID, ev events.Event) {
 	if h.Tap != nil {
-		h.Tap(channel, eventType, payload)
+		h.Tap(channel, ev)
 	}
 }
 
 // dmTapped shows an event of a direct message conversation to the hub's DMTap.
-func (h *Hub) dmTapped(channel uuid.UUID, eventType string, payload any) {
+func (h *Hub) dmTapped(channel uuid.UUID, ev events.Event) {
 	if h.DMTap != nil {
-		h.DMTap(channel, eventType, payload)
+		h.DMTap(channel, ev)
 	}
 }
 
 // Broadcast sends an event to every connected client.
-func (h *Hub) Broadcast(eventType string, payload any) {
-	data := encode(eventType, payload)
+func (h *Hub) Broadcast(ev events.Event) {
+	data := encode(ev)
 	if data == nil {
 		return
 	}
-	h.tapped(uuid.Nil, eventType, payload)
-	if eventType == events.UserUpdate {
-		h.applyUserUpdate(payload)
+	h.tapped(uuid.Nil, ev)
+	if ev.EventName() == events.UserUpdate {
+		h.applyUserUpdate(events.PayloadOf(ev))
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -55,8 +54,8 @@ func (h *Hub) Broadcast(eventType string, payload any) {
 }
 
 // SendToUsers sends an event to all sessions of the given users.
-func (h *Hub) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {
-	data := encode(eventType, payload)
+func (h *Hub) SendToUsers(userIDs []uuid.UUID, ev events.Event) {
+	data := encode(ev)
 	if data == nil {
 		return
 	}
@@ -76,8 +75,8 @@ func (h *Hub) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {
 // BroadcastPerm sends an event to every connection whose user holds all of need
 // server-wide right now (the Owner always). A permission state that cannot be
 // loaded fails closed: nobody receives the event.
-func (h *Hub) BroadcastPerm(need perm.Set, eventType string, payload any) {
-	data := encode(eventType, payload)
+func (h *Hub) BroadcastPerm(need perm.Set, ev events.Event) {
+	data := encode(ev)
 	if data == nil {
 		return
 	}

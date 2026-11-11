@@ -191,9 +191,9 @@ func (a *API) tellAuthor(s *auditSnapshot, by *auth.User, reason string) {
 	if s == nil || s.msg.UserID == by.ID || a.Events == nil {
 		return
 	}
-	a.Events.SendToUsers([]uuid.UUID{s.msg.UserID}, events.ModerationNotice, map[string]any{
+	a.Events.SendToUsers([]uuid.UUID{s.msg.UserID}, events.Untyped(events.ModerationNotice, map[string]any{
 		"kind": "message_deleted", "reason": reason, "channel_name": s.channel,
-	})
+	}))
 }
 
 // channelAuditName reads a channel's name and whether it is private: a conversation or

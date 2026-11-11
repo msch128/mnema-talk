@@ -235,10 +235,10 @@ func TestOnlyMessageCreationsArePushed(t *testing.T) {
 	alice := e.member("alice")
 	e.member("bob")
 	msg := message(alice, e.general, "edited")
-	e.svc.Observe(e.general, events.MessageUpdate, msg)
-	e.svc.Observe(e.general, events.MessageDelete, map[string]any{"id": msg.ID})
-	e.svc.Observe(e.general, events.MessageCreate, "not a message")
-	e.svc.Observe(e.general, events.MessageCreate, &msg) // a pointer works like a value
+	e.svc.Observe(e.general, events.Untyped(events.MessageUpdate, msg))
+	e.svc.Observe(e.general, events.Untyped(events.MessageDelete, map[string]any{"id": msg.ID}))
+	e.svc.Observe(e.general, events.Untyped(events.MessageCreate, "not a message"))
+	e.svc.Observe(e.general, events.Untyped(events.MessageCreate, &msg)) // a pointer works like a value
 	e.pushedTo("/device/bob", 1)
 	settle()
 	if n := len(e.requestsTo("/device/bob")); n != 1 {

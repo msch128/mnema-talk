@@ -31,10 +31,10 @@ func (h *Handler) broadcastComment(ev *CommunityEvent, p CommentPayload) {
 		return
 	}
 	if ev.ChannelID != nil {
-		h.Events.BroadcastChannel(*ev.ChannelID, events.EventComment, p)
+		h.Events.BroadcastChannel(*ev.ChannelID, events.Untyped(events.EventComment, p))
 		return
 	}
-	h.Events.Broadcast(events.EventComment, p)
+	h.Events.Broadcast(events.Untyped(events.EventComment, p))
 }
 
 // requireWrite holds a comment or an edit to what a message needs: Send messages

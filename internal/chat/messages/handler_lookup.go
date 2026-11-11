@@ -65,7 +65,7 @@ func (a *API) ToggleReaction(w http.ResponseWriter, r *http.Request) error {
 		return a.Guard.RefusalFor(r, err, perm.AddReactions)
 	}
 	payload := ReactionResult{MessageID: msgID, ChannelID: ref.ChannelID, Reactions: reactions}
-	a.Events.BroadcastChannel(ref.ChannelID, events.MessageReaction, payload)
+	a.Events.BroadcastChannel(ref.ChannelID, events.Untyped(events.MessageReaction, payload))
 	httpx.WriteJSON(w, http.StatusOK, payload)
 	return nil
 }

@@ -108,7 +108,7 @@ func (h *Handler) sendDelete(snap *perm.Snapshot, e talkEvent, userIDs []uuid.UU
 		}
 	}
 	if len(hidden) > 0 {
-		h.Events.SendToUsers(hidden, events.EventDelete, EventDeletePayload{ID: e.id})
+		h.Events.SendToUsers(hidden, events.Untyped(events.EventDelete, EventDeletePayload{ID: e.id}))
 	}
 }
 

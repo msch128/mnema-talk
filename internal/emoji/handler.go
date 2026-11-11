@@ -79,7 +79,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	r.Delete("/emoji/{id}", httpx.Handle(h.delete))
 }
 
-func (h *Handler) changed() { h.Events.Broadcast(events.EmojiChanged, nil) }
+func (h *Handler) changed() { h.Events.Broadcast(events.Untyped(events.EmojiChanged, nil)) }
 
 // listEmoji handles GET /api/emoji.
 //

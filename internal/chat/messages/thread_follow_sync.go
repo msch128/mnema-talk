@@ -33,7 +33,7 @@ const (
 // replies notify them. Only members who really follow and can still view the
 // channel are told. The lookup runs off the publishing path, so a failed one
 // is logged and that reply's update is lost; the next list load shows the follow.
-func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher) func(channel uuid.UUID, eventType string, payload any) {
+func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher) func(channel uuid.UUID, ev events.Event) {
 	perm.Must(perms, "thread follow sync")
 	queue := make(chan core.Message, followSyncQueue)
 	for range followSyncWorkers {
@@ -48,7 +48,8 @@ func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub eve
 			}
 		})
 	}
-	return func(_ uuid.UUID, eventType string, payload any) {
+	return func(_ uuid.UUID, ev events.Event) {
+		eventType, payload := ev.EventName(), events.PayloadOf(ev)
 		if eventType != events.MessageCreate {
 			return
 		}
@@ -105,9 +106,9 @@ func syncFollowers(parent context.Context, p *db.Pool, perms *perm.Service, pub 
 		if !snap.Channel(perm.Subject{ID: user}, msg.ChannelID).Has(perm.ViewChannel) {
 			continue
 		}
-		pub.SendToUsers([]uuid.UUID{user}, events.ThreadFollowUpdated, map[string]any{
+		pub.SendToUsers([]uuid.UUID{user}, events.Untyped(events.ThreadFollowUpdated, map[string]any{
 			"thread_id": thread, "channel_id": msg.ChannelID, "following": true,
-		})
+		}))
 	}
 	if err := rows.Err(); err != nil {
 		slog.Warn("thread follow sync", "err", err)

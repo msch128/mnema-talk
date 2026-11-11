@@ -124,7 +124,7 @@ func (a *API) ServeUpdateForumSettings(w http.ResponseWriter, r *http.Request) e
 			"guidelines_changed": s.Guidelines != before.Guidelines,
 		},
 	})
-	a.Events.BroadcastChannel(chID, events.ForumTagsChanged, map[string]any{"channel_id": chID})
+	a.Events.BroadcastChannel(chID, events.Untyped(events.ForumTagsChanged, map[string]any{"channel_id": chID}))
 	httpx.WriteJSON(w, http.StatusOK, s)
 	return nil
 }
@@ -178,7 +178,7 @@ func (a *API) ServeReorderForumTags(w http.ResponseWriter, r *http.Request) erro
 		Action: "forum.tag_reorder", TargetType: "channel", TargetID: chID.String(), ChannelID: &chID,
 		Details: map[string]any{"channel_id": chID, "tag_ids": req.TagIDs},
 	})
-	a.Events.BroadcastChannel(chID, events.ForumTagsChanged, map[string]any{"channel_id": chID})
+	a.Events.BroadcastChannel(chID, events.Untyped(events.ForumTagsChanged, map[string]any{"channel_id": chID}))
 	httpx.WriteJSON(w, http.StatusOK, tags)
 	return nil
 }

@@ -76,7 +76,7 @@ func (s *Service) AddReminder(ctx context.Context, sub perm.Subject, messageID u
 	if err != nil {
 		return Reminder{}, err
 	}
-	s.notify(sub.ID, events.ReminderUpdate, ReminderEvent{ID: out.ID, State: "created"})
+	s.notify(sub.ID, events.Untyped(events.ReminderUpdate, ReminderEvent{ID: out.ID, State: "created"}))
 	return out, nil
 }
 
@@ -128,7 +128,7 @@ func (s *Service) RemoveReminder(ctx context.Context, user, id uuid.UUID) (bool,
 		return false, fmt.Errorf("remove reminder: %w", err)
 	}
 	if tag.RowsAffected() == 1 {
-		s.notify(user, events.ReminderUpdate, ReminderEvent{ID: id, State: "removed"})
+		s.notify(user, events.Untyped(events.ReminderUpdate, ReminderEvent{ID: id, State: "removed"}))
 	}
 	return tag.RowsAffected() == 1, nil
 }
@@ -174,7 +174,7 @@ func (s *Service) deliverReminders(ctx context.Context) error {
 }
 
 func (s *Service) deliverOne(ctx context.Context, d dueReminder) {
-	s.notify(d.user, events.ReminderUpdate, ReminderEvent{ID: d.id, State: "due"})
+	s.notify(d.user, events.Untyped(events.ReminderUpdate, ReminderEvent{ID: d.id, State: "due"}))
 	if s.Push == nil {
 		return
 	}

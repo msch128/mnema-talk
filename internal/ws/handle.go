@@ -34,7 +34,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 
 	switch eventType {
 	case events.ClientPing:
-		c.SendEvent(events.Pong, map[string]any{"t": p.T})
+		c.SendEvent(events.Untyped(events.Pong, map[string]any{"t": p.T}))
 	case events.ClientPresenceIdle:
 		c.hub.setIdle(c, p.Idle)
 	case events.ClientVoiceJoin:
@@ -144,7 +144,7 @@ func (c *Client) handleVoiceJoin(ctx context.Context, p clientEvent) {
 		// Over the join/leave allowance: refused, and the client ends
 		// the attempt on voice_kicked.
 		metrics.WSDropped.With("voice_churn").Inc()
-		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": channelID})
+		c.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": channelID}))
 		return
 	}
 	ch, ok := h.voiceChannel(ctx, channelID)
@@ -172,7 +172,7 @@ func (c *Client) handleTyping(ctx context.Context, channelID uuid.UUID) {
 	// Only someone who could send a message shows as typing, and only to
 	// those who can see the channel.
 	if c.canTypeInChannel(channelID) {
-		c.emitApplicationEvent(events.Typing, map[string]any{"channel_id": channelID, "user_id": c.User.ID}, true, nil, channelID)
+		c.emitApplicationEvent(events.Untyped(events.Typing, map[string]any{"channel_id": channelID, "user_id": c.User.ID}), true, nil, channelID)
 	}
 }
 
@@ -192,7 +192,7 @@ func (c *Client) handleSpeaking(active bool) {
 	// A muted or deafened member is never shown as speaking.
 	active = active && !c.hub.isMuted(c.User.ID, *cur)
 	if c.speakingChanged(active, time.Now()) {
-		c.emitApplicationEvent(events.VoiceSpeaking, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active}, false, cur, uuid.Nil)
+		c.emitApplicationEvent(events.Untyped(events.VoiceSpeaking, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active}), false, cur, uuid.Nil)
 	}
 }
 

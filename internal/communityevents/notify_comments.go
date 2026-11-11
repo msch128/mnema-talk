@@ -82,9 +82,9 @@ func (h *Handler) notifyComment(ctx context.Context, ev *CommunityEvent, c Event
 		}
 		pushTo = append(pushTo, id)
 		if h.Events != nil && !h.toastHeld(ctx, ev, rcp) {
-			h.Events.SendToUsers([]uuid.UUID{id}, events.EventCommentNotice, CommentNoticePayload{
+			h.Events.SendToUsers([]uuid.UUID{id}, events.Untyped(events.EventCommentNotice, CommentNoticePayload{
 				EventID: ev.ID, Title: ev.Title, AuthorName: name, Excerpt: excerpt, ChannelID: ev.ChannelID,
-			})
+			}))
 		}
 	}
 	if pusher != nil {

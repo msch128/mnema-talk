@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/safego"
 )
 
@@ -270,14 +271,15 @@ func matchingWebhookTargets(routes []route, channel uuid.UUID, name string) []uu
 // transaction already wrote to the queue only wakes the workers; the others
 // are queued here for the webhooks of the channel that subscribed to them. It
 // never blocks.
-func (d *Dispatcher) Observe(channel uuid.UUID, eventType string, payload any) {
+func (d *Dispatcher) Observe(channel uuid.UUID, published events.Event) {
+	eventType := published.EventName()
 	if transactional(eventType) {
 		if d.Wants(channel, eventType) {
 			d.recorded()
 		}
 		return
 	}
-	name, data, ok := translate(eventType, payload)
+	name, data, ok := translate(eventType, events.PayloadOf(published))
 	if !ok || channel == uuid.Nil {
 		return
 	}

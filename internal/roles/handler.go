@@ -89,7 +89,7 @@ func (h *Handler) listRoles(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *Handler) rolesChanged() { h.Events.Broadcast(events.RolesChanged, nil) }
+func (h *Handler) rolesChanged() { h.Events.Broadcast(events.Untyped(events.RolesChanged, nil)) }
 
 // createRole handles POST /api/admin/roles.
 //

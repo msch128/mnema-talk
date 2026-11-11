@@ -183,7 +183,7 @@ type bulkDeleteReport struct {
 func (a *API) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 	chID, req := rep.chID, rep.req
 	for _, m := range rep.gone {
-		a.Events.BroadcastChannel(chID, events.MessageDelete, core.MessageDeletePayload(m.id, chID, m.parentID))
+		a.Events.BroadcastChannel(chID, events.Untyped(events.MessageDelete, core.MessageDeletePayload(m.id, chID, m.parentID)))
 		d := map[string]any{
 			"channel_id": chID, "channel_name": rep.channelName, "author_id": req.UserID, "author_name": rep.targetName,
 			"content": audit.Content(m.content), "attachments": m.attachments, "sent_at": m.createdAt,
@@ -205,9 +205,9 @@ func (a *API) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 		Details: map[string]any{"channel_id": chID, "channel_name": rep.channelName, "requested": req.Count, "deleted": len(rep.gone), "reason": rep.reason},
 	})
 	if len(rep.gone) > 0 && req.UserID != rep.actor.ID {
-		a.Events.SendToUsers([]uuid.UUID{req.UserID}, events.ModerationNotice, map[string]any{
+		a.Events.SendToUsers([]uuid.UUID{req.UserID}, events.Untyped(events.ModerationNotice, map[string]any{
 			"kind": "messages_deleted", "reason": rep.reason, "channel_name": rep.channelName, "count": len(rep.gone),
-		})
+		}))
 	}
 }
 

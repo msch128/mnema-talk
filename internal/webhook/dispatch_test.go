@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
@@ -184,18 +185,18 @@ func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 	d.routes.Store(&routes)
 	join := map[string]any{"action": "join"}
 
-	d.Observe(chA, "voice_state_update", join)
+	d.Observe(chA, events.Untyped("voice_state_update", join))
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 2 || !g[a] || !g[both] {
 		t.Fatalf("join in A reached %v", g)
 	}
-	d.Observe(chB, "voice_state_update", join)
+	d.Observe(chB, events.Untyped("voice_state_update", join))
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 1 || !g[b] {
 		t.Fatalf("join in B reached %v", g)
 	}
-	d.Observe(chA, "typing", nil)
+	d.Observe(chA, events.Untyped("typing", nil))
 	// Events to everybody (no channel) belong to no webhook.
-	d.Observe(uuid.Nil, "voice_state_update", join)
-	d.Observe(uuid.Nil, "member_joined", map[string]any{"id": 1})
+	d.Observe(uuid.Nil, events.Untyped("voice_state_update", join))
+	d.Observe(uuid.Nil, events.Untyped("member_joined", map[string]any{"id": 1}))
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 0 {
 		t.Fatalf("unsubscribed events reached %v", g)
 	}
@@ -211,8 +212,8 @@ func TestObserveOnlyWakesForEventsTheirTransactionWrote(t *testing.T) {
 	d.routes.Store(&routes)
 	msg := core.Message{ID: uuid.New(), ChannelID: ch}
 
-	d.Observe(ch, "message_update", &msg) // nobody subscribed
-	d.Observe(uuid.New(), "message_create", &msg)
+	d.Observe(ch, events.Untyped("message_update", &msg)) // nobody subscribed
+	d.Observe(uuid.New(), events.Untyped("message_create", &msg))
 	if len(d.wake) != 0 {
 		t.Fatal("an event no webhook receives woke a worker")
 	}
@@ -220,7 +221,7 @@ func TestObserveOnlyWakesForEventsTheirTransactionWrote(t *testing.T) {
 		typ     string
 		payload any
 	}{{"message_create", &msg}, {"message_delete", map[string]any{"id": 1}}, {"message_reaction", messages.ReactionResult{}}} {
-		d.Observe(ch, ev.typ, ev.payload)
+		d.Observe(ch, events.Untyped(ev.typ, ev.payload))
 		if len(d.queue) != 0 {
 			t.Fatalf("%s was buffered again", ev.typ)
 		}

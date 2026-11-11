@@ -65,7 +65,7 @@ func (h *Handler) ExpireStatuses(ctx context.Context) error {
 	}
 	rows.Close()
 	for _, u := range cleared {
-		h.Events.Broadcast(events.UserUpdate, u)
+		h.Events.Broadcast(events.Untyped(events.UserUpdate, u))
 	}
 	return failed
 }

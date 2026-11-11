@@ -79,7 +79,7 @@ func (c *Client) handleTalkReaction(ctx context.Context, payload json.RawMessage
 	if !ok || !c.can(snap, *cur, perm.ViewChannel|perm.Connect|perm.AddReactions) || !h.knownEmoji(ctx, emoji) {
 		return
 	}
-	h.sendToVoiceRoom(*cur, events.TalkReaction, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "emoji": emoji})
+	h.sendToVoiceRoom(*cur, events.Untyped(events.TalkReaction, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "emoji": emoji}))
 }
 
 // knownEmoji is true for a standard emoji and for a custom emoji that still

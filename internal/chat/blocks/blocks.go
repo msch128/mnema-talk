@@ -221,7 +221,7 @@ func (a API) changeBlock(w http.ResponseWriter, r *http.Request, block bool) err
 		return err
 	}
 	if changed && a.Events != nil {
-		a.Events.SendToUsers([]uuid.UUID{me}, events.BlockUpdated, BlockUpdated{UserID: target, Blocked: block})
+		a.Events.SendToUsers([]uuid.UUID{me}, events.Untyped(events.BlockUpdated, BlockUpdated{UserID: target, Blocked: block}))
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

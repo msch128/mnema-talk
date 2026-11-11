@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
@@ -183,8 +184,8 @@ func TestObserveFailsClosed(t *testing.T) {
 	}
 
 	g, s := newGateway(permtest.Unloadable()) // no state to read
-	g.Observe(ch, "message_create", map[string]any{"id": 1})
-	g.Observe(uuid.Nil, "member_joined", map[string]any{"id": uuid.New()})
+	g.Observe(ch, events.Untyped("message_create", map[string]any{"id": 1}))
+	g.Observe(uuid.Nil, events.Untyped("member_joined", map[string]any{"id": uuid.New()}))
 	if s.seq != 0 {
 		t.Fatal("delivered without a permission state")
 	}
@@ -195,15 +196,15 @@ func TestObserveFailsClosed(t *testing.T) {
 	f.Assign(user, role)
 	f.RoleOverwrite(true, channel, role, perm.ViewChannel, 0)
 	g, s = newGateway(f.Service())
-	g.Observe(channel, "message_create", make(chan int)) // cannot be encoded
-	g.Observe(uuid.Nil, "member_joined", make(chan int))
-	g.Observe(uuid.Nil, "member_joined", map[string]any{"username": "no id"})
-	g.Observe(uuid.Nil, "typing", map[string]any{})
-	g.Observe(channel, "unknown_event", map[string]any{})
+	g.Observe(channel, events.Untyped("message_create", make(chan int))) // cannot be encoded
+	g.Observe(uuid.Nil, events.Untyped("member_joined", make(chan int)))
+	g.Observe(uuid.Nil, events.Untyped("member_joined", map[string]any{"username": "no id"}))
+	g.Observe(uuid.Nil, events.Untyped("typing", map[string]any{}))
+	g.Observe(channel, events.Untyped("unknown_event", map[string]any{}))
 	if s.seq != 0 {
 		t.Fatalf("delivered %d events", s.seq)
 	}
-	g.Observe(channel, "message_create", map[string]any{"id": 1})
+	g.Observe(channel, events.Untyped("message_create", map[string]any{"id": 1}))
 	if s.seq != 1 {
 		t.Fatal("a viewable channel's event is delivered")
 	}

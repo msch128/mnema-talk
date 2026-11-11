@@ -90,7 +90,7 @@ func (h *Handler) setSelfRole(w http.ResponseWriter, r *http.Request, on bool) e
 			action = "role.self_assign"
 		}
 		h.Audit.RecordOrLog(r.Context(), audit.Entry{Action: action, TargetType: "role", TargetID: role.ID.String(), TargetName: role.Name})
-		h.Events.Broadcast(events.MemberRolesChanged, map[string]any{"id": user.ID, "role_ids": held})
+		h.Events.Broadcast(events.Untyped(events.MemberRolesChanged, map[string]any{"id": user.ID, "role_ids": held}))
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

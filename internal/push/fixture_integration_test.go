@@ -107,7 +107,9 @@ func message(author member, channel uuid.UUID, content string, mentions ...membe
 	return m
 }
 
-func (e *env) publish(msg core.Message) { e.svc.Observe(msg.ChannelID, events.MessageCreate, msg) }
+func (e *env) publish(msg core.Message) {
+	e.svc.Observe(msg.ChannelID, events.Untyped(events.MessageCreate, msg))
+}
 
 // pushedTo waits until count requests reached the device path, and returns them.
 func (e *env) pushedTo(path string, count int) []received {

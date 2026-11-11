@@ -102,9 +102,9 @@ func (h *API) announceUnpins(u *auth.User, unpins []pinRef) {
 		return
 	}
 	for _, p := range unpins {
-		h.Events.BroadcastChannel(p.channelID, events.PinsChanged, map[string]any{
+		h.Events.BroadcastChannel(p.channelID, events.Untyped(events.PinsChanged, map[string]any{
 			"channel_id": p.channelID, "message_id": p.messageID, "pinned": false, "actor_id": u.ID, "actor_name": "",
-		})
+		}))
 	}
 }
 
@@ -119,7 +119,7 @@ func (h *API) endDeletedAccount(ctx context.Context, u *auth.User) {
 		h.OnAccountEnded(u.ID)
 	}
 	if h.Events != nil {
-		h.Events.Broadcast(events.UserUpdate, map[string]any{"id": u.ID, "disabled": true})
+		h.Events.Broadcast(events.Untyped(events.UserUpdate, map[string]any{"id": u.ID, "disabled": true}))
 	}
 	if h.Audit == nil {
 		return

@@ -221,7 +221,9 @@ func (m *DMCalls) Begin(conversation, talk, caller, message uuid.UUID, name stri
 		ConversationID: conversation, TalkID: talk, MessageID: message, CallerID: caller,
 		TalkName: name, RingSeconds: int(m.Ring.Seconds()),
 	}
-	m.push(func(context.Context) { m.Events.BroadcastChannel(conversation, events.DMCallRing, ring) })
+	m.push(func(context.Context) {
+		m.Events.BroadcastChannel(conversation, events.Untyped(events.DMCallRing, ring))
+	})
 }
 
 // supersedeLocked ends the call of a conversation that is being rung for another
@@ -229,7 +231,9 @@ func (m *DMCalls) Begin(conversation, talk, caller, message uuid.UUID, name stri
 func (m *DMCalls) supersedeLocked(c *dmCall) {
 	end := DMCallEnd{ConversationID: c.conversation, TalkID: c.talk, Reason: CallCancelled}
 	m.dropLocked(c)
-	m.push(func(context.Context) { m.Events.BroadcastChannel(end.ConversationID, events.DMCallEnd, end) })
+	m.push(func(context.Context) {
+		m.Events.BroadcastChannel(end.ConversationID, events.Untyped(events.DMCallEnd, end))
+	})
 }
 
 // dropLocked forgets c without announcing anything.
@@ -333,7 +337,7 @@ func (m *DMCalls) finishLocked(c *dmCall, end DMCallEnd, missed ...func(context.
 		if len(missed) > 0 {
 			end.MessageID = missed[0](ctx)
 		}
-		m.Events.BroadcastChannel(end.ConversationID, events.DMCallEnd, end)
+		m.Events.BroadcastChannel(end.ConversationID, events.Untyped(events.DMCallEnd, end))
 	})
 }
 
@@ -354,6 +358,6 @@ func (m *DMCalls) recordMissed(ctx context.Context, c *dmCall) *uuid.UUID {
 		slog.Warn("dm calls: load missed call", "message", id, "err", err)
 		return &id
 	}
-	m.Events.BroadcastChannel(c.conversation, events.MessageCreate, msg)
+	m.Events.BroadcastChannel(c.conversation, events.Untyped(events.MessageCreate, msg))
 	return &id
 }

@@ -27,7 +27,7 @@ type MarkAllReadRequest struct {
 // publishReadStateRefresh tells all of the user's sessions to reload their read
 // states and notification settings.
 func (a API) publishReadStateRefresh(userID uuid.UUID) {
-	a.Events.SendToUsers([]uuid.UUID{userID}, events.ReadState, map[string]any{"refresh": true})
+	a.Events.SendToUsers([]uuid.UUID{userID}, events.Untyped(events.ReadState, map[string]any{"refresh": true}))
 }
 
 // setNotifyLevel handles PUT /api/channels/{channelID}/notifications.

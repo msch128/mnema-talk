@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -89,7 +90,7 @@ drain:
 	}
 
 	// Broadcast
-	h.Broadcast("test_event", map[string]string{"greeting": "hello"})
+	h.Broadcast(events.Untyped("test_event", map[string]string{"greeting": "hello"}))
 
 	select {
 	case msg := <-c1.send:
@@ -112,7 +113,7 @@ drain:
 	}
 
 	// Send to specific user
-	h.SendToUsers([]uuid.UUID{u1.ID}, "direct_event", "secret")
+	h.SendToUsers([]uuid.UUID{u1.ID}, events.Untyped("direct_event", "secret"))
 	select {
 	case msg := <-c1.send:
 		var ev Event
@@ -316,7 +317,7 @@ func TestHubUserUpdateRefreshesVoiceUsers(t *testing.T) {
 	changed.DisplayName = "New"
 	changed.AvatarURL = "/api/media/" + uuid.NewString()
 	changed.StatusText = "painting"
-	h.Broadcast("user_update", changed.Public())
+	h.Broadcast(events.Untyped("user_update", changed.Public()))
 
 	snap := h.voiceSnapshot()
 	got := snap[chID][user.ID]
@@ -335,7 +336,7 @@ func TestHubUserUpdateRefreshesVoiceUsers(t *testing.T) {
 	}
 
 	// An admin's disable notice is not a profile and changes nothing.
-	h.Broadcast("user_update", map[string]any{"id": user.ID, "disabled": true})
+	h.Broadcast(events.Untyped("user_update", map[string]any{"id": user.ID, "disabled": true}))
 	if h.voiceSnapshot()[chID][user.ID].DisplayName != "New" {
 		t.Fatal("disable notice must not reset the profile")
 	}

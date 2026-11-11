@@ -245,13 +245,13 @@ func (c *components) newBots() {
 
 // addTap chains f after the taps already on the hub, so no component replaces
 // another's tap.
-func (c *components) addTap(f func(ch uuid.UUID, eventType string, payload any)) {
+func (c *components) addTap(f func(ch uuid.UUID, ev events.Event)) {
 	prev := c.hub.Tap
-	c.hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
+	c.hub.Tap = func(ch uuid.UUID, ev events.Event) {
 		if prev != nil {
-			prev(ch, eventType, payload)
+			prev(ch, ev)
 		}
-		f(ch, eventType, payload)
+		f(ch, ev)
 	}
 }
 

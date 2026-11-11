@@ -146,10 +146,10 @@ func (e *Engine) announceTimeouts(untils map[uuid.UUID]time.Time, seconds int, r
 	}
 	for id, until := range untils {
 		left := max(seconds, int(math.Ceil(time.Until(until).Seconds())))
-		e.Events.SendToUsers([]uuid.UUID{id}, events.ModerationNotice, map[string]any{
+		e.Events.SendToUsers([]uuid.UUID{id}, events.Untyped(events.ModerationNotice, map[string]any{
 			"kind": "timeout", "until": until, "duration_seconds": left, "reason": reason,
-		})
-		e.Events.Broadcast(events.MemberTimeout, map[string]any{"id": id, "timeout_until": until})
+		}))
+		e.Events.Broadcast(events.Untyped(events.MemberTimeout, map[string]any{"id": id, "timeout_until": until}))
 	}
 }
 

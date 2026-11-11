@@ -93,7 +93,7 @@ func (m *TalkManager) persistLeader(ch uuid.UUID, leader *uuid.UUID) {
 	if err := SetTalkLeader(ctx, m.DB, ch, leader); err != nil {
 		slog.Warn("talks: store leader", "channel", ch, "err", err)
 	}
-	m.Events.BroadcastChannel(ch, events.TalkLeader, map[string]any{"channel_id": ch, "leader_id": leader})
+	m.Events.BroadcastChannel(ch, events.Untyped(events.TalkLeader, map[string]any{"channel_id": ch, "leader_id": leader}))
 }
 
 // armLocked starts (or restarts) the countdown after which an empty Talk is

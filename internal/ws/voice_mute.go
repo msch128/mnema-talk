@@ -9,15 +9,15 @@ import (
 )
 
 // sendToVoiceRoom sends an event to the connections currently in chID's room.
-func (h *Hub) sendToVoiceRoom(chID uuid.UUID, eventType string, payload any) {
-	h.sendToVoiceRoomExcept(nil, chID, eventType, payload)
+func (h *Hub) sendToVoiceRoom(chID uuid.UUID, ev events.Event) {
+	h.sendToVoiceRoomExcept(nil, chID, ev)
 }
 
 // sendToVoiceRoomExcept sends to every connection in chID's room except skip.
 // A nil skip delivers to the whole room. The sender's other connections stay
 // included: a second tab is another member of the same room.
-func (h *Hub) sendToVoiceRoomExcept(skip *Client, chID uuid.UUID, eventType string, payload any) {
-	data := encode(eventType, payload)
+func (h *Hub) sendToVoiceRoomExcept(skip *Client, chID uuid.UUID, ev events.Event) {
+	data := encode(ev)
 	if data == nil {
 		return
 	}
@@ -60,8 +60,8 @@ func (h *Hub) setMuteState(c *Client, st MuteState) {
 	if !changed {
 		return
 	}
-	c.emitApplicationEvent(events.VoiceMuteState, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "muted": st.Muted, "deafened": st.Deafened}, false, nil, *cur)
+	c.emitApplicationEvent(events.Untyped(events.VoiceMuteState, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "muted": st.Muted, "deafened": st.Deafened}), false, nil, *cur)
 	if st.Muted && c.speakingChanged(false, time.Now()) {
-		c.emitApplicationEvent(events.VoiceSpeaking, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": false}, false, cur, uuid.Nil)
+		c.emitApplicationEvent(events.Untyped(events.VoiceSpeaking, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": false}), false, cur, uuid.Nil)
 	}
 }

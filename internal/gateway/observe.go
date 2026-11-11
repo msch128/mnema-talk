@@ -66,7 +66,8 @@ const permTimeout = 3 * time.Second
 // intents ask for it and whose bot may view the channel right now. It never
 // blocks for longer than permTimeout, the bound on reloading the permission
 // snapshot.
-func (g *Gateway) Observe(channel uuid.UUID, eventType string, payload any) {
+func (g *Gateway) Observe(channel uuid.UUID, ev events.Event) {
+	eventType, payload := ev.EventName(), events.PayloadOf(ev)
 	name, intent, ok := event(eventType)
 	if !ok {
 		return

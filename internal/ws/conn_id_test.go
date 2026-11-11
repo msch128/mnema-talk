@@ -151,8 +151,8 @@ func TestTwoSessionsOfOneMemberAreToldApartInTheLog(t *testing.T) {
 	srv := newTabServer(t)
 	h := srv.hub
 	h.VoiceGrace = 20 * time.Millisecond
-	h.Tap = func(_ uuid.UUID, eventType string, _ any) {
-		if eventType == events.Typing {
+	h.Tap = func(_ uuid.UUID, ev events.Event) {
+		if ev.EventName() == events.Typing {
 			panic("handler bug")
 		}
 	}
@@ -260,8 +260,8 @@ func TestConnectionIDIsInNoEvent(t *testing.T) {
 	h := srv.hub
 	var mu sync.Mutex
 	var broadcasts [][]byte
-	h.Tap = func(_ uuid.UUID, eventType string, payload any) {
-		data, _ := json.Marshal(map[string]any{"type": eventType, "payload": payload})
+	h.Tap = func(_ uuid.UUID, ev events.Event) {
+		data, _ := events.Marshal(ev)
 		mu.Lock()
 		broadcasts = append(broadcasts, data)
 		mu.Unlock()

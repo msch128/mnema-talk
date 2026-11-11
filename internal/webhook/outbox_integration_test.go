@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 // bodies is a receiver that keeps what it gets, in the order of arrival.
@@ -147,7 +148,7 @@ func TestAPublishedMessageIsDeliveredOnce(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		d.Observe(f.ch, "message_create", msg) // what the hub's tap does after the commit
+		d.Observe(f.ch, events.Untyped("message_create", msg)) // what the hub's tap does after the commit
 	}
 	waitFor(t, "the deliveries", func() bool { return len(recv.all()) >= 3 && f.pending(hook.ID) == 0 })
 	time.Sleep(5 * d.PollEvery)

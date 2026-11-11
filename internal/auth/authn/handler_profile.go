@@ -209,7 +209,7 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast(events.UserUpdate, u.Public())
+	h.Events.Broadcast(events.Untyped(events.UserUpdate, u.Public()))
 	httpx.WriteJSON(w, http.StatusOK, u)
 	return nil
 }
@@ -294,7 +294,7 @@ func (h *Handler) WriteStatus(w http.ResponseWriter, r *http.Request, userID uui
 		return err
 	}
 	pub := u.Public()
-	h.Events.Broadcast(events.UserUpdate, pub)
+	h.Events.Broadcast(events.Untyped(events.UserUpdate, pub))
 	if userID != auth.UserFrom(r.Context()).ID {
 		u = &pub
 	}
