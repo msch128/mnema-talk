@@ -106,7 +106,9 @@ mnema-talk/
 ├── e2e/                     # Playwright browser tests (`make e2e`)
 ├── loadtest/                # Voice/screen-share load test (`make load-test`), chat and voice capacity test for the server host (`make load-test-host`), see loadtest/README.md
 ├── web/                     # Vue 3 + Pinia + Vite + Tailwind CSS 4 SPA (shared UI classes in web/src/styles); web.go embeds web/dist
-│   └── src/lib/             # Shared client modules: native/ (desktop IPC) and dfn/ (DeepFilterNet3)
+│   └── src/                 # One folder per feature (chat, talk, dm, forum, events, wiki, admin, settings), each with components/, composables/ and lib/;
+│                            # shared/ is what several features use (shared/lib/native: desktop IPC), app/ is the shell that composes them;
+│                            # stores/, types/, i18n/ and directives/ serve all of them; lib/media is the Talk media encryption, talk/lib/dfn is DeepFilterNet3
 ├── scripts/git-hooks/       # pre-commit (gitleaks + gofmt); `make install-hooks`
 ├── scripts/smoke-image.sh   # Image smoke test on the production compose file (`make smoke`)
 ├── scripts/backup-drill.sh  # Backup -> restore drill on a throwaway stack (`make backup-drill`); online leg under load in backup-drill-online.sh
@@ -179,6 +181,6 @@ mnema-talk/
     **English only.** Code, comments, identifiers, log and error messages, test names, fixtures, seed data, scripts, CI files and docs are English. German exists only in the locale resources (`web/src/i18n/de.json`, the mail and push texts under `internal/auth/mailtext/locales/` and `internal/push/locales/`, the default names in `internal/chat/channels/seed_layout.json`) and in tests that assert that German output. `make english-check` enforces it; an exception goes in `scripts/english-only-allowlist.txt` with a reason.
 
 11. **Release checklist for security fixes** (the desktop client refuses bundles below `security_floor`, see `doc/desktop-trusted-client.md`):
-   - A fix for a vulnerability in anything the web bundle ships (markdown, media, auth, message rendering, crypto, `web/src/lib`) is committed as `fix(security): ...` **and** carries a `Security-Floor: raise` trailer as the last paragraph of the PR body/commit message (a real git trailer; the subject alone does nothing). `release.yml` (`scripts/security-floor.sh`) then raises the bundle's `security_floor` to that release's version when it signs. Without the trailer the floor stays where it was; a `security`-scoped subject without it only logs a warning.
+   - A fix for a vulnerability in anything the web bundle ships (markdown, media, auth, message rendering, crypto, the `lib` folders under `web/src`) is committed as `fix(security): ...` **and** carries a `Security-Floor: raise` trailer as the last paragraph of the PR body/commit message (a real git trailer; the subject alone does nothing). `release.yml` (`scripts/security-floor.sh`) then raises the bundle's `security_floor` to that release's version when it signs. Without the trailer the floor stays where it was; a `security`-scoped subject without it only logs a warning.
    - `web/desktop-compat.json` holds the baseline floor (never above the version being released) and `min_server_version`; raise the floor by hand there only for a withdrawn release that is not covered by a marked commit.
    - Bumping `web_client_api` or `min_server_version` locks older servers out of desktop clients that have seen the new bundle (high-water mark): do it only when the web app really needs it.

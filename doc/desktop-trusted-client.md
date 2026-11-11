@@ -566,7 +566,7 @@ host:
 
 ### Web app changes
 
-`web/src/lib/trustedDesktop.ts` reads the identity the host injects before
+`web/src/shared/lib/native/trustedDesktop.ts` reads the identity the host injects before
 any page script (`window.__MNEMA_TRUSTED_APP__`, defined by an
 initialization script, frozen): `version`, `source` (`builtin` or `cache`),
 `web_client_api`, `key_id`, `server_version`. The app uses it to pick
