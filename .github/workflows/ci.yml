@@ -223,6 +223,10 @@ jobs:
           go vet -tags=integration ./...
 
       - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: staticcheck
+        run: make staticcheck
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
         name: Cognitive complexity
         run: make complexity-check
 
