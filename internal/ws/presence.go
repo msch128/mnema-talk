@@ -222,7 +222,7 @@ func (h *Hub) OnlineUserIDs() []uuid.UUID {
 // A bot that set an activity carries it; nobody else has one.
 type PresenceUpdate struct {
 	Activity *BotActivity `json:"activity,omitempty"`
-	Status   string       `json:"status"`
+	Status   string       `json:"status" enums:"online,away,dnd,focus,offline"`
 	UserID   uuid.UUID    `json:"user_id" format:"uuid"`
 }
 

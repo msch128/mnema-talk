@@ -25,7 +25,7 @@ func (VoiceLeave) EventName() string { return events.VoiceStateUpdate }
 // (voice_kicked); reason is left out when a moderator removed the member.
 type VoiceKicked struct {
 	ChannelID uuid.UUID `json:"channel_id" format:"uuid"`
-	Reason    string    `json:"reason,omitempty"`
+	Reason    string    `json:"reason,omitempty" enums:"room_full,missing_permission,rules_not_accepted,talk_rate_limited,talk_unavailable,connection_lost,media_unavailable,joined_elsewhere,voice_taken_over"`
 }
 
 func (VoiceKicked) EventName() string { return events.VoiceKicked }

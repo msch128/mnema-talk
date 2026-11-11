@@ -65,7 +65,7 @@ func (ReadStateMarked) EventName() string { return events.ReadState }
 type ReadStateUnread struct {
 	ChannelID  uuid.UUID `json:"channel_id" format:"uuid"`
 	LastReadAt time.Time `json:"last_read_at" format:"date-time"`
-	Refresh    bool      `json:"refresh"`
+	Refresh    bool      `json:"refresh" enums:"true"`
 }
 
 func (ReadStateUnread) EventName() string { return events.ReadState }
@@ -74,7 +74,7 @@ func (ReadStateUnread) EventName() string { return events.ReadState }
 // again (refresh is always true).
 type ReadStateChannelRefresh struct {
 	ChannelID uuid.UUID `json:"channel_id" format:"uuid"`
-	Refresh   bool      `json:"refresh"`
+	Refresh   bool      `json:"refresh" enums:"true"`
 }
 
 func (ReadStateChannelRefresh) EventName() string { return events.ReadState }
@@ -82,7 +82,7 @@ func (ReadStateChannelRefresh) EventName() string { return events.ReadState }
 // ReadStateRefresh asks the sessions to fetch every read state and
 // notification setting again (refresh is always true).
 type ReadStateRefresh struct {
-	Refresh bool `json:"refresh"`
+	Refresh bool `json:"refresh" enums:"true"`
 }
 
 func (ReadStateRefresh) EventName() string { return events.ReadState }
