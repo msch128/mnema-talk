@@ -229,7 +229,7 @@ func (r *Room) publishRemoteTrack(peer *Peer, remoteTrack *webrtc.TrackRemote, r
 	// The stream ID names the publishing user, so clients can map tracks to people.
 	trackLocal, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, key, role.streamID)
 	if err != nil {
-		slog.Error("sfu create local track", "err", err)
+		peer.logger().Error("sfu create local track", "user", userID, "err", err)
 		return
 	}
 
@@ -267,15 +267,16 @@ func (r *Room) takesCameraLayer(userID uuid.UUID) bool {
 // then switches its running camera from VP8 to H.264 at the next
 // renegotiation (e.g. someone joins), while the forwarded track keeps the
 // codec of the camera's first packets: viewers get H.264 labelled as VP8 and
-// never decode a frame. The client still reorders the screen line itself.
-func pinCodecOrder(transceivers ...*webrtc.RTPTransceiver) {
+// never decode a frame. The client still reorders the screen line itself. log
+// is the logger of the join the connection is built for.
+func pinCodecOrder(log *slog.Logger, transceivers ...*webrtc.RTPTransceiver) {
 	for _, tr := range transceivers {
 		if tr == nil {
 			continue
 		}
 		// Before negotiation these are the registered codecs in their order.
 		if err := tr.SetCodecPreferences(tr.Receiver().GetParameters().Codecs); err != nil {
-			slog.Warn("sfu pin codec order", "err", err)
+			log.Warn("sfu pin codec order", "err", err)
 		}
 	}
 }

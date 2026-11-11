@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/safego"
+	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -100,5 +101,45 @@ func TestPeerWithoutAHubConnectionLogsNoConnectionID(t *testing.T) {
 	})
 	if got := linesWith(logged, "conn_id="); len(got) != 0 {
 		t.Fatalf("lines carry a connection id nobody gave: %v", got)
+	}
+}
+
+// What goes wrong for one peer outside its forwarding loops names the peer's
+// session too: an offer that cannot be built, and the panic of the worker
+// that answers the session's retransmission requests.
+func TestAPeersFailedOfferAndItsNackWorkersPanicNameItsSession(t *testing.T) {
+	safego.RefillLogBudget()
+	logged := captureSFULog(t)
+	s := newTestSFU(t)
+	member := uuid.New()
+	_, peer, err := s.Join(uuid.New(), member, "tab-one", func(webrtc.SessionDescription) {}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i, err := nackResponderFactory{names: &s.conns}.NewInterceptor(peer.connID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := i.(*nackResponder)
+	t.Cleanup(func() { _ = n.Close() })
+	n.afterResend = func() { panic("resend bug") }
+	n.enqueue(&rtcp.TransportLayerNack{})
+	waitSFUCondition(t, "the worker's panic line", func() bool {
+		return len(linesWith(logged, "goroutine panicked", "name=sfu_nack", "conn_id=tab-one")) == 1
+	})
+
+	if err := peer.PC.Close(); err != nil {
+		t.Fatal(err)
+	}
+	// The closed connection's own line, so it does not reach the next test.
+	waitSFUCondition(t, "the peer's state line", func() bool {
+		return len(linesWith(logged, "sfu peer state", "state=closed", "conn_id=tab-one")) == 1
+	})
+	if err := negotiateOffer(peer); err == nil {
+		t.Fatal("an offer was built on a closed connection")
+	}
+	if got := linesWith(logged, "sfu create offer", "conn_id=tab-one", "user="+member.String()); len(got) != 1 {
+		t.Fatalf("the failed offer does not name its session and member:\n%s", logged.String())
 	}
 }

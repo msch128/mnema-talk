@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"sync/atomic"
 	"time"
 
@@ -47,7 +48,7 @@ func (s *SFU) Join(channelID, userID uuid.UUID, connID string, sendOffer func(we
 	// real time (transports, DTLS and ICE agents), and roomsMu serializes
 	// every join, leave and lookup of every room.
 	api, announced := s.apiAndAnnounced()
-	conn, err := newReceiveConn(api, s.iceServers)
+	conn, err := newReceiveConn(api, s.iceServers, joinLogger(userID, connID))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -159,7 +160,7 @@ type receiveConn struct {
 	cameraLowerTrs []*webrtc.RTPTransceiver
 }
 
-func newReceiveConn(api *webrtc.API, iceServers []webrtc.ICEServer) (*receiveConn, error) {
+func newReceiveConn(api *webrtc.API, iceServers []webrtc.ICEServer, log *slog.Logger) (*receiveConn, error) {
 	pc, err := api.NewPeerConnection(webrtc.Configuration{
 		ICEServers: iceServers,
 	})
@@ -212,7 +213,7 @@ func newReceiveConn(api *webrtc.API, iceServers []webrtc.ICEServer) (*receiveCon
 		}
 		cameraLowerTrs = append(cameraLowerTrs, tr)
 	}
-	pinCodecOrder(append(append([]*webrtc.RTPTransceiver{screenTr, cameraTr}, lowerTrs...), cameraLowerTrs...)...)
+	pinCodecOrder(log, append(append([]*webrtc.RTPTransceiver{screenTr, cameraTr}, lowerTrs...), cameraLowerTrs...)...)
 
 	return &receiveConn{pc: pc, cameraTr: cameraTr, screenAudioTr: screenAudioTr, lowerTrs: lowerTrs, cameraLowerTrs: cameraLowerTrs}, nil
 }
@@ -318,7 +319,7 @@ func (g *viewerGuard) writeDone(err *error) {
 	// The caller holds locks of the track it writes to: the peer is looked
 	// up and removed on a goroutine of its own.
 	safego.RecoveredConn(g.names.of(g.connID), "sfu_viewer_write", rec, func() {
-		safego.Go("sfu_peer_drop", safego.Crash, func() { g.drop(g.connID) })
+		safego.GoConn(g.names.of(g.connID), "sfu_peer_drop", safego.Crash, func() { g.drop(g.connID) })
 	})
 }
 

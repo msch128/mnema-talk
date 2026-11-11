@@ -114,7 +114,11 @@ func (h *Hub) startGrace(key voiceKey, except *Client) {
 	}
 	g := &graceLeave{channelID: key.ch}
 	log := except.logger() // not the client: the timer outlives its connection
-	g.timer = safego.AfterFunc("ws_voice_grace", h.VoiceGrace, safego.Crash, func() {
+	var conn safego.Conn   // stays "" when a refused join restores the grace: no connection is leaving
+	if except != nil {
+		conn = except.panics()
+	}
+	g.timer = safego.AfterFuncConn(conn, "ws_voice_grace", h.VoiceGrace, safego.Crash, func() {
 		h.mu.Lock()
 		current := h.grace[key] == g
 		if current {

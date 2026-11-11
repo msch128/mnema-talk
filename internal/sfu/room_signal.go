@@ -1,8 +1,6 @@
 package sfu
 
 import (
-	"log/slog"
-
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
@@ -333,11 +331,11 @@ func negotiateOffer(peer *Peer) error {
 	}
 	offer, err := peer.PC.CreateOffer(nil)
 	if err != nil {
-		slog.Error("sfu create offer", "err", err)
+		peer.logger().Error("sfu create offer", "user", peer.ID, "err", err)
 		return err
 	}
 	if err := peer.PC.SetLocalDescription(offer); err != nil {
-		slog.Error("sfu set local description", "err", err)
+		peer.logger().Error("sfu set local description", "user", peer.ID, "err", err)
 		return err
 	}
 	peer.offerSent = true

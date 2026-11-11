@@ -255,6 +255,15 @@ func (p *Peer) nameConn(id string) {
 	p.log = slog.With(connIDAttr, id)
 }
 
+// joinLogger is the logger of a join that has no peer yet (its connection is
+// still being built): the member, and the hub connection when there is one.
+func joinLogger(userID uuid.UUID, hubConn string) *slog.Logger {
+	if hubConn == "" {
+		return slog.With("user", userID)
+	}
+	return slog.With(connIDAttr, hubConn, "user", userID)
+}
+
 // logger is the peer's logger. A peer without a hub connection (tests, the
 // load generator) logs like the rest of the server.
 func (p *Peer) logger() *slog.Logger {

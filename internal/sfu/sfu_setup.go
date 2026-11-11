@@ -214,7 +214,7 @@ func buildInterceptors(mediaEngine *webrtc.MediaEngine, load *peerLoad, dropConn
 	if err := webrtc.RegisterDefaultInterceptorsWithOptions(mediaEngine, registry, options...); err != nil {
 		return nil, fmt.Errorf("failed to register WebRTC interceptors: %w", err)
 	}
-	registry.Add(nackResponderFactory{load: load})
+	registry.Add(nackResponderFactory{load: load, names: names})
 	// Outermost: a panic of anything listed above stays with its connection.
 	registry.Add(viewerGuardFactory{drop: dropConn, names: names})
 	return registry, nil
