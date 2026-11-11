@@ -8,7 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"net"
+	"sync/atomic"
+
 	"github.com/pion/webrtc/v4"
+	"golang.org/x/net/dns/dnsmessage"
 )
 
 func TestResolveAnnounce(t *testing.T) {
@@ -160,4 +164,122 @@ func gatherSDP(t *testing.T, api *webrtc.API) string {
 		t.Fatal("ICE gathering timed out")
 	}
 	return pc.LocalDescription().SDP
+}
+
+// Serve actual DNS responses on a local UDP socket. Resolver.Dial is the
+// standard library's public transport seam; no external DNS is contacted.
+func localAnnounceDNS(t *testing.T) *atomic.Int32 {
+	t.Helper()
+	conn, err := net.ListenPacket("udp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := &atomic.Int32{}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		buf := make([]byte, 512)
+		for {
+			n, addr, err := conn.ReadFrom(buf)
+			if err != nil {
+				return
+			}
+			var query dnsmessage.Message
+			if query.Unpack(buf[:n]) != nil {
+				continue
+			}
+			response := dnsmessage.Message{
+				Header:    dnsmessage.Header{ID: query.ID, Response: true, Authoritative: true, RecursionAvailable: true},
+				Questions: query.Questions,
+			}
+			current := state.Load()
+			if current < 0 {
+				response.Header.RCode = dnsmessage.RCodeNameError
+			} else {
+				for _, q := range query.Questions {
+					if q.Type == dnsmessage.TypeA {
+						response.Answers = append(response.Answers, dnsmessage.Resource{
+							Header: dnsmessage.ResourceHeader{Name: q.Name, Type: dnsmessage.TypeA, Class: dnsmessage.ClassINET},
+							Body:   &dnsmessage.AResource{A: [4]byte{198, 51, 100, byte(current + 1)}},
+						})
+					}
+				}
+			}
+			raw, err := response.Pack()
+			if err == nil {
+				_, _ = conn.WriteTo(raw, addr)
+			}
+		}
+	}()
+	old := net.DefaultResolver
+	net.DefaultResolver = &net.Resolver{PreferGo: true, Dial: func(ctx context.Context, _, _ string) (net.Conn, error) {
+		return (&net.Dialer{Resolver: old}).DialContext(ctx, "udp4", conn.LocalAddr().String())
+	}}
+	t.Cleanup(func() {
+		net.DefaultResolver = old
+		_ = conn.Close()
+		<-done
+	})
+	return state
+}
+
+func TestAnnounceRefreshTracksDNSAndPreservesAddressOnFailure(t *testing.T) {
+	dns := localAnnounceDNS(t)
+	logs := captureSFULog(t)
+	s, err := NewSFU(0, 0, []string{"198.51.100.1"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	ctx, cancel := context.WithCancel(context.Background())
+	// The loop reads the swapped resolver: it must be gone before the test restores it.
+	t.Cleanup(func() { cancel(); s.announcers.Wait() })
+	s.KeepAnnounceCurrent(ctx, []string{"announce.test"}, 5*time.Millisecond)
+	// Repeated resolutions of an unchanged address must leave the API intact.
+	api := s.currentAPI()
+	time.Sleep(30 * time.Millisecond)
+	if s.currentAPI() != api {
+		t.Fatal("unchanged DNS response rebuilt the WebRTC API")
+	}
+	dns.Store(1)
+	waitSFUCondition(t, "changed DNS announcement", func() bool {
+		return slices.Equal(s.AnnouncedIPs(), []string{"198.51.100.2"})
+	})
+	if s.currentAPI() == api {
+		t.Fatal("changed DNS address did not rebuild the API")
+	}
+	dns.Store(-1)
+	waitSFUCondition(t, "DNS failure warning", func() bool {
+		return strings.Contains(logs.String(), "resolve failed, keeping current addresses")
+	})
+	if !slices.Equal(s.AnnouncedIPs(), []string{"198.51.100.2"}) {
+		t.Fatal("failed DNS resolution discarded the working address")
+	}
+	cancel()
+	// Static announcements do not start a ticker, including when interval is zero.
+	s.KeepAnnounceCurrent(context.Background(), []string{"198.51.100.2"}, 0)
+}
+
+func TestAnnounceRefreshReportsShutdownAndStopsOnCancellation(t *testing.T) {
+	dns := localAnnounceDNS(t)
+	logs := captureSFULog(t)
+	s, err := NewSFU(0, 0, []string{"198.51.100.1"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	dns.Store(1)
+	ctx, cancel := context.WithCancel(context.Background())
+	// The loop reads the swapped resolver: it must be gone before the test restores it.
+	t.Cleanup(func() { cancel(); s.announcers.Wait() })
+	s.KeepAnnounceCurrent(ctx, []string{"announce.test"}, 5*time.Millisecond)
+	waitSFUCondition(t, "closed SFU announcement warning", func() bool {
+		return strings.Contains(logs.String(), "webrtc announce: update failed")
+	})
+	cancel()
+	if !slices.Equal(s.AnnouncedIPs(), []string{"198.51.100.1"}) {
+		t.Fatal("refresh changed a shut down SFU")
+	}
 }

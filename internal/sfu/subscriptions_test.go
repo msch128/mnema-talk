@@ -5,6 +5,10 @@ import (
 	"sync"
 	"testing"
 
+	"context"
+	"errors"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
 )
@@ -262,4 +266,118 @@ func (s *SFU) joinPeerIn(r *Room, userID uuid.UUID, sendOffer func(webrtc.Sessio
 		return nil, err
 	}
 	return r.attachPeer(userID, "", conn, sendOffer, sendICE), nil
+}
+
+func TestConcurrentViewerCloseAndSubscriptionsPreservePublisher(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	s := newTestSFU(t)
+	roomID := uuid.New()
+	publisher := newClient(t)
+	publisher.publishVideo("close-race-screen")
+	publisher.publishVideo("close-race-camera")
+	publisher.join(s, roomID)
+	r := s.Room(roomID)
+	awaitTrack := func(viewer *client) *webrtc.TrackRemote {
+		t.Helper()
+		select {
+		case track := <-viewer.tracks:
+			return track
+		case err := <-viewer.errors:
+			t.Fatalf("live viewer signaling failed: %v", err)
+		case <-ctx.Done():
+			t.Fatal("close/renegotiation regression exceeded its 15 second deadline")
+		}
+		return nil
+	}
+	for range 4 {
+		viewer := newClient(t)
+		viewer.join(s, roomID)
+		if got := awaitTrack(viewer).StreamID(); got != CameraStreamPrefix+publisher.id.String() {
+			t.Fatalf("initial viewer received %q, want publisher camera", got)
+		}
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		wg.Add(2)
+		errs := make(chan error, 2)
+		go func() {
+			defer wg.Done()
+			<-start
+			for i := range 48 {
+				if err := r.Subscribe(viewer.id, publisher.id, SourceScreen, false, i%2 == 0); err != nil && !errors.Is(err, ErrNotInRoom) {
+					errs <- err
+					return
+				}
+				if err := r.Subscribe(viewer.id, publisher.id, SourceCamera, false, i%2 != 0); err != nil && !errors.Is(err, ErrNotInRoom) {
+					errs <- err
+					return
+				}
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			<-start
+			errs <- viewer.peer.PC.Close()
+		}()
+		close(start)
+		done := make(chan struct{})
+		go func() { wg.Wait(); close(done) }()
+		select {
+		case <-done:
+		case <-ctx.Done():
+			t.Fatal("subscription changes or peer close did not terminate")
+		}
+		close(errs)
+		for err := range errs {
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		waitSFUCondition(t, "closed viewer removal", func() bool { return r.GetPeer(viewer.id) == nil })
+		if err := viewer.pc.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if r.GetPeer(publisher.id) != publisher.peer || s.Stats().Peers != 1 {
+			t.Fatal("closing a viewer removed the publisher or leaked a peer")
+		}
+		state := r.MediaStates()[publisher.id]
+		if !state.Camera || !state.Screen || len(r.ScreenViewers()[publisher.id]) != 0 {
+			t.Fatalf("closed viewer corrupted publisher media or audience: %+v", state)
+		}
+	}
+	// A new viewer must receive the still-live publisher's two independent
+	// sources after the closed viewers' offers, answers and removals settle.
+	replacement := newClient(t)
+	replacement.join(s, roomID)
+	if err := r.Subscribe(replacement.id, publisher.id, SourceScreen, false, true); err != nil {
+		t.Fatal(err)
+	}
+	streams := map[string]bool{}
+	for range 2 {
+		streams[awaitTrack(replacement).StreamID()] = true
+	}
+	if !streams[publisher.id.String()] || !streams[CameraStreamPrefix+publisher.id.String()] {
+		t.Fatalf("replacement viewer did not receive screen and camera: %v", streams)
+	}
+}
+
+func TestSubscribeRequiresAPeerOfTheRoom(t *testing.T) {
+	s := newTestSFU(t)
+	roomID := uuid.New()
+	publisher := newClient(t)
+	publisher.join(s, roomID)
+	r := s.Room(roomID)
+	stranger := uuid.New()
+	if err := r.Subscribe(stranger, publisher.id, SourceScreen, false, true); !errors.Is(err, ErrNotInRoom) {
+		t.Fatalf("Subscribe by a stranger = %v", err)
+	}
+	if err := r.SetScreenQuality(stranger, publisher.id, 0); err == nil {
+		t.Fatal("SetScreenQuality by a stranger accepted")
+	}
+	r.mu.RLock()
+	_, kept := r.subs[stranger]
+	r.mu.RUnlock()
+	if kept {
+		t.Fatal("a stranger got a subscription record")
+	}
 }

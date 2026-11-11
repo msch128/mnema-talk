@@ -61,7 +61,7 @@ path: web/src/stores/stores.test.ts | asserts German UI output
 path: web/src/stores/toast.test.ts | asserts German UI output
 path: internal/auth/authn/mail_locale_test.go | asserts the German mail texts
 path: internal/push/payload_test.go | asserts the German push texts
-path: internal/server/account_email_edges_integration_test.go | asserts the German mail subjects
+path: internal/server/account_email_integration_test.go | asserts the German mail subjects
 
 # The guard names the words it looks for.
 path: scripts/check-english-only.mjs | lists the German words and characters it detects

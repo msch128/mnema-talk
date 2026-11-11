@@ -134,3 +134,38 @@ func TestForwardLogsWriteErrorsOnce(t *testing.T) {
 		t.Fatalf("captured %d peer events, want %d: %s", n, peerEvents, buf.String())
 	}
 }
+
+// A publisher can send a truncated RTP datagram before the next good packet.
+// Keep this fixture at the existing byte-reader boundary, so the test checks
+// the actual forwarding parser rather than an artificial TrackRemote state.
+type truncatedThenValidRTP struct {
+	truncated bool
+	valid     fakeRemote
+}
+
+func (r *truncatedThenValidRTP) Read(buf []byte) (int, interceptor.Attributes, error) {
+	if !r.truncated {
+		r.truncated = true
+		return copy(buf, []byte{0x80}), nil, nil
+	}
+	return r.valid.Read(buf)
+}
+
+func TestForwardSkipsTruncatedRTPAndContinuesWithValidPackets(t *testing.T) {
+	user := uuid.New()
+	r := &Room{peers: map[uuid.UUID]*Peer{}, trackLocals: map[string]*TrackInfo{}, notifier: &mediaNotifier{}}
+	key := trackKey(user, "datagram-input")
+	info := &TrackInfo{SenderID: user, Kind: webrtc.RTPCodecTypeAudio, Source: SourceAudio}
+	r.trackLocals[key] = info
+	local := &failingLocal{}
+	r.forward(&truncatedThenValidRTP{valid: fakeRemote{n: 3}}, local, key, info)
+	if local.writes != 3 {
+		t.Fatalf("forwarded %d packets, want the three valid packets after truncation", local.writes)
+	}
+	r.mu.RLock()
+	_, stillPublished := r.trackLocals[key]
+	r.mu.RUnlock()
+	if stillPublished {
+		t.Fatal("EOF after valid packets left the track published")
+	}
+}

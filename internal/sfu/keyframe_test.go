@@ -3,7 +3,10 @@ package sfu
 import (
 	"testing"
 
+	"time"
+
 	"github.com/google/uuid"
+	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -40,5 +43,40 @@ func TestRequestSourceKeyframeTargetsPublisherSource(t *testing.T) {
 				t.Errorf("request %s: sharer=%v source=%s: keyframe requested %v, want %v", source, info.SenderID == sharer, info.Source, got, want)
 			}
 		}
+	}
+}
+
+func TestSubscriberFullIntraRequestReachesPublisher(t *testing.T) {
+	s := newTestSFU(t)
+	roomID := uuid.New()
+	publisher := newClient(t)
+	publisher.publishVideo("feedback-screen")
+	publisher.join(s, roomID)
+	r := s.Room(roomID)
+	viewer := newClient(t)
+	viewer.join(s, roomID)
+	if err := r.Subscribe(viewer.id, publisher.id, SourceScreen, false, true); err != nil {
+		t.Fatal(err)
+	}
+	remote := waitTrack(t, viewer)
+	// Wait out the keyframe throttle after the initial subscription's PLI,
+	// then drain it so the assertion concerns only the subscriber feedback.
+	time.Sleep(keyframeMinInterval + 50*time.Millisecond)
+	for len(publisher.plis) > 0 {
+		<-publisher.plis
+	}
+	if err := viewer.pc.WriteRTCP([]rtcp.Packet{&rtcp.FullIntraRequest{
+		MediaSSRC: uint32(remote.SSRC()),
+		FIR:       []rtcp.FIREntry{{SSRC: uint32(remote.SSRC()), SequenceNumber: 1}},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case ssrc := <-publisher.plis:
+		if ssrc == 0 {
+			t.Fatal("feedback did not target the publisher's SSRC")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("subscriber FIR did not request a publisher keyframe")
 	}
 }
