@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { ChatDirectMessage } from '../types/rest'
+import type { ChatDirectMessage } from '../../types/rest'
 // The member picker: choose one member for a conversation of two, several for
 // a group (up to ten people in all), or, given a group, the member to add.
 // Which members are offered is the community's list; whether a conversation
@@ -8,13 +8,13 @@ import type { ChatDirectMessage } from '../types/rest'
 // in the same words.
 import { computed, ref } from 'vue'
 import { Check, Loader2 } from '@lucide/vue'
-import { useAuthStore } from '../stores/auth'
-import { useBlocksStore } from '../stores/blocks'
-import { useChatStore } from '../stores/chat'
+import { useAuthStore } from '../../stores/auth'
+import { useBlocksStore } from '../../stores/blocks'
+import { useChatStore } from '../../stores/chat'
 import { DM_MAX_MEMBERS, dmErrorText, dmTitle } from '../lib/dm'
-import { t } from '../i18n'
-import BaseDialog from '../shared/components/BaseDialog.vue'
-import UserAvatar from '../shared/components/UserAvatar.vue'
+import { t } from '../../i18n'
+import BaseDialog from '../../shared/components/BaseDialog.vue'
+import UserAvatar from '../../shared/components/UserAvatar.vue'
 
 const props = defineProps({
   // Given: add one member to this group instead of starting a conversation.

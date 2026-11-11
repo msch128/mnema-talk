@@ -11,7 +11,7 @@ import { goToMessage } from './messageWindow'
 import { isTabVisible } from './readState'
 import { notificationLevel } from './notifySettings'
 import { notifyShowsText } from '../../shared/lib/notifyPreview'
-import { callKindOf } from '../../lib/callKind'
+import { callKindOf } from '../../dm/lib/callKind'
 import { announceInviteUnlessRung } from './dmCalls'
 
 /** Whether msg mentions the signed-in user (@username, @all, @here) or replies to them. */

@@ -10,7 +10,7 @@ import { roleColorCss } from '../shared/lib/permissions'
 import { moderationOffer, openTimeout, openBan, liftTimeout } from '../shared/lib/moderationActions'
 import { useBlocksStore } from '../stores/blocks'
 import { usePermissionsStore } from '../stores/permissions'
-import { useDmActions } from '../composables/useDmActions'
+import { useDmActions } from '../dm/composables/useDmActions'
 import MemberRolesDialog from './MemberRolesDialog.vue'
 
 const props = defineProps({

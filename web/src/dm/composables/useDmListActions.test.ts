@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useChatStore } from '../stores/chat'
-import { useToastStore } from '../stores/toast'
-import { t } from '../i18n'
-import type { ChatDirectMessage } from '../types/rest'
+import { useChatStore } from '../../stores/chat'
+import { useToastStore } from '../../stores/toast'
+import { t } from '../../i18n'
+import type { ChatDirectMessage } from '../../types/rest'
 
 const dmFixture = (o: { id: string }) => o as ChatDirectMessage
 import { useDmListActions } from './useDmListActions'

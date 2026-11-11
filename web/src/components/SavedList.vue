@@ -5,7 +5,7 @@ import { Bookmark, Hash, Loader2, MessageCircle, Search, Volume2 } from '@lucide
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useSavedStore } from '../stores/saved'
-import { dmTitle } from '../lib/dm'
+import { dmTitle } from '../dm/lib/dm'
 import { groupSaved, matchesSaved, type SavedContext, type SavedSort } from '../lib/savedGroups'
 import SavedEntry from './SavedEntry.vue'
 import StatePanel from '../shared/components/StatePanel.vue'

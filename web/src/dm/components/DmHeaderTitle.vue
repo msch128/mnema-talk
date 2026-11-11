@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { ChatDirectMessage } from '../types/rest'
+import type { ChatDirectMessage } from '../../types/rest'
 // The left side of the header of a conversation: the face with the presence
 // dot and the name. For a pair a click opens the member's profile; for a
 // group, its members. A group shows how many people are in it and who.
 import { computed } from 'vue'
-import { useAuthStore } from '../stores/auth'
-import { useChatStore } from '../stores/chat'
+import { useAuthStore } from '../../stores/auth'
+import { useChatStore } from '../../stores/chat'
 import { dmPeer, dmTitle } from '../lib/dm'
 import DmAvatar from './DmAvatar.vue'
 

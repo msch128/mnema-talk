@@ -4,13 +4,13 @@
 // arrows move, Escape clears. Starting one opens it at once.
 import { computed, ref } from 'vue'
 import { Search } from '@lucide/vue'
-import { useAuthStore } from '../stores/auth'
-import { useBlocksStore } from '../stores/blocks'
-import { useChatStore } from '../stores/chat'
+import { useAuthStore } from '../../stores/auth'
+import { useBlocksStore } from '../../stores/blocks'
+import { useChatStore } from '../../stores/chat'
 import { useDmActions } from '../composables/useDmActions'
 import { dmPeer, dmTitle } from '../lib/dm'
 import { matchDms } from '../lib/dmList'
-import UserAvatar from '../shared/components/UserAvatar.vue'
+import UserAvatar from '../../shared/components/UserAvatar.vue'
 import DmAvatar from './DmAvatar.vue'
 
 const MAX_MEMBERS = 5

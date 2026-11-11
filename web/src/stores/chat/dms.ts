@@ -1,13 +1,13 @@
 // Direct message conversations: the list, starting, adding, leaving, and the
 // events that change them. A conversation is not a channel, but its messages
 // are read and written under its id with the channel routes, so the open
-// conversation sits in the chat area's channel slot (see lib/dm).
+// conversation sits in the chat area's channel slot (see dm/lib/dm).
 import type { Channel, Message, ReadState } from '../../types/domain'
 import { decodeChatDMSettings, decodeChatDirectMessage, isChatDirectMessage, type ChatDirectMessage, type ChatDMMember } from '../../types/rest'
 import { arrayDecoder } from '../../types/validation'
 import { api } from '../../shared/lib/api'
-import { dmAsChannel, sortDms } from '../../lib/dm'
-import { lastMessageOf } from '../../lib/dmList'
+import { dmAsChannel, sortDms } from '../../dm/lib/dm'
+import { lastMessageOf } from '../../dm/lib/dmList'
 import { emptyWindow } from '../../lib/messageWindow'
 import { navigate } from '../../shared/lib/router'
 import { useBlocksStore } from '../blocks'

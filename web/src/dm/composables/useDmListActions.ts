@@ -1,12 +1,12 @@
 // What a member does to a conversation of their list: favourite it, close it,
 // mute it, and the context-menu entries that offer the same. Failures are
 // said in a toast; the store has already put the list back.
-import type { ChatDirectMessage } from '../types/rest'
-import type { ContextMenuItem } from '../shared/components/menuTypes'
+import type { ChatDirectMessage } from '../../types/rest'
+import type { ContextMenuItem } from '../../shared/components/menuTypes'
 import { ArrowDown, ArrowUp, Bell, BellOff, CheckCheck, Star, StarOff, X } from '@lucide/vue'
-import { useChatStore } from '../stores/chat'
-import { useToastStore } from '../stores/toast'
-import { t } from '../i18n'
+import { useChatStore } from '../../stores/chat'
+import { useToastStore } from '../../stores/toast'
+import { t } from '../../i18n'
 
 export function useDmListActions() {
   const chat = useChatStore()

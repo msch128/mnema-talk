@@ -29,7 +29,7 @@ import { menuPointFromEvent } from '../shared/lib/contextMenuPoint'
 import type { MenuTrigger } from '../shared/lib/contextMenuPoint'
 import { moderationOffer, openTimeout, openBan, liftTimeout } from '../shared/lib/moderationActions'
 import { t } from '../i18n'
-import { memberRelationItems } from './dmMenuItems'
+import { memberRelationItems } from '../dm/composables/dmMenuItems'
 import { notifyMenuItems } from './useMuteMenu'
 
 /** Open/close state plus the items for one ContextMenu instance. */

@@ -1,11 +1,11 @@
 // Direct messages as the interface names and orders them. Pure: the stores
 // keep the conversations, this decides how one reads.
-import type { Channel } from '../types/domain'
-import type { ChatDMMember, ChatDirectMessage } from '../types/rest'
-import { isApiError } from '../shared/lib/api'
-import { t } from '../i18n'
-import { shownName } from '../shared/lib/deletedUser'
-import type { PathDm } from '../shared/lib/routePaths'
+import type { Channel } from '../../types/domain'
+import type { ChatDMMember, ChatDirectMessage } from '../../types/rest'
+import { isApiError } from '../../shared/lib/api'
+import { t } from '../../i18n'
+import { shownName } from '../../shared/lib/deletedUser'
+import type { PathDm } from '../../shared/lib/routePaths'
 
 /** The most members a conversation takes, the caller included (the server's limit). */
 export const DM_MAX_MEMBERS = 10

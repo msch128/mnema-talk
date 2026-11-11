@@ -900,8 +900,8 @@ and Administrators) gathers version, update state, database, storage, backup and
   account and audio settings pages). They use tokens only and no inline style, because the
   Content-Security-Policy forbids it.
 - **1.1 features in the UI**: direct messages
-  ([`DmCreateDialog.vue`](../web/src/components/DmCreateDialog.vue),
-  [`DmInfoDialog.vue`](../web/src/components/DmInfoDialog.vue)), blocking and
+  ([`DmCreateDialog.vue`](../web/src/dm/components/DmCreateDialog.vue),
+  [`DmInfoDialog.vue`](../web/src/dm/components/DmInfoDialog.vue)), blocking and
   reports ([`BlockedMessageRow.vue`](../web/src/components/BlockedMessageRow.vue),
   [`ReportDialog.vue`](../web/src/components/ReportDialog.vue)), saved messages and
   reminders in one header panel

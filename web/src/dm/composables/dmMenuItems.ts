@@ -2,15 +2,15 @@
 // to them, block them, report one of their messages. Built from the stores
 // like the other menu builders (useNavMenus, useMessageMenu); each list is
 // empty on a server that lacks the feature.
-import type { Message } from '../types/domain'
-import type { ContextMenuItem } from '../shared/components/menuTypes'
+import type { Message } from '../../types/domain'
+import type { ContextMenuItem } from '../../shared/components/menuTypes'
 import { Eye, EyeOff, Flag, MessageCircle } from '@lucide/vue'
-import { useAuthStore } from '../stores/auth'
-import { useBlocksStore } from '../stores/blocks'
-import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { openReport } from '../shared/lib/reportDialog'
-import { shownName } from '../shared/lib/deletedUser'
-import { t } from '../i18n'
+import { useAuthStore } from '../../stores/auth'
+import { useBlocksStore } from '../../stores/blocks'
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
+import { openReport } from '../../shared/lib/reportDialog'
+import { shownName } from '../../shared/lib/deletedUser'
+import { t } from '../../i18n'
 import { useDmActions } from './useDmActions'
 
 interface Person {

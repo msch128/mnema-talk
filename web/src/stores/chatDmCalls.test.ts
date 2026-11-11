@@ -19,7 +19,7 @@ vi.mock('../shared/lib/api', async importOriginal => ({
 }))
 
 const join = vi.hoisted(() => vi.fn())
-vi.mock('../composables/useDmCall', () => ({ useDmCall: () => ({ join }) }))
+vi.mock('../dm/composables/useDmCall', () => ({ useDmCall: () => ({ join }) }))
 
 const me = fixtureId(1)
 const ada = fixtureId(2)

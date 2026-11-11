@@ -7,7 +7,7 @@ import { Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
-import { useDmCall } from '../composables/useDmCall'
+import { useDmCall } from '../dm/composables/useDmCall'
 
 const props = defineProps({
   talkId: { type: String, required: true },

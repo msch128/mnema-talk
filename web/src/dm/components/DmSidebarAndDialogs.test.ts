@@ -2,33 +2,33 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import SidebarDmSection from './SidebarDmSection.vue'
+import SidebarDmSection from '../../components/SidebarDmSection.vue'
 import DmCreateDialog from './DmCreateDialog.vue'
 import DmInfoDialog from './DmInfoDialog.vue'
-import { useChatStore } from '../stores/chat'
-import { useAuthStore } from '../stores/auth'
-import { useBlocksStore } from '../stores/blocks'
-import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { usePermissionsStore } from '../stores/permissions'
-import { useToastStore } from '../stores/toast'
-import { i18nPlugin, setLocale, t as tr } from '../i18n'
-import { tooltip } from '../directives/tooltip'
-import { fixtureId, userFixture } from '../test-fixtures.fixture'
-import { dmFixture, dmMemberFixture } from '../dm.fixture'
-import type { ApiOptions } from '../shared/lib/api'
-import { ApiError } from '../shared/lib/api'
+import { useChatStore } from '../../stores/chat'
+import { useAuthStore } from '../../stores/auth'
+import { useBlocksStore } from '../../stores/blocks'
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
+import { usePermissionsStore } from '../../stores/permissions'
+import { useToastStore } from '../../stores/toast'
+import { i18nPlugin, setLocale, t as tr } from '../../i18n'
+import { tooltip } from '../../directives/tooltip'
+import { fixtureId, userFixture } from '../../test-fixtures.fixture'
+import { dmFixture, dmMemberFixture } from '../../dm.fixture'
+import type { ApiOptions } from '../../shared/lib/api'
+import { ApiError } from '../../shared/lib/api'
 import { dmErrorText } from '../lib/dm'
-import type { ChatMember } from '../types/rest'
+import type { ChatMember } from '../../types/rest'
 
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
-vi.mock('../shared/lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../shared/lib/api')>()),
+vi.mock('../../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => {
     try { return Promise.resolve(http.handle(url, options)) } catch (error) { return Promise.reject(error) }
   })
 }))
 const confirmMock = vi.hoisted(() => vi.fn())
-vi.mock('../shared/lib/confirm', () => ({ confirm: confirmMock }))
+vi.mock('../../shared/lib/confirm', () => ({ confirm: confirmMock }))
 
 const me = fixtureId(1)
 const ada = dmMemberFixture(2, { display_name: 'Ada' })
@@ -308,8 +308,8 @@ describe('ForwardDialog targets', () => {
   async function dialog(features: string[]) {
     const chat = setup({ features })
     chat.dms = [pair, { ...group, can_send: false }]
-    const { default: ForwardDialog } = await import('./ForwardDialog.vue')
-    const { openForward, closeForward } = await import('../lib/forwardDialog')
+    const { default: ForwardDialog } = await import('../../components/ForwardDialog.vue')
+    const { openForward, closeForward } = await import('../../lib/forwardDialog')
     closeForward()
     openForward({ messageId: fixtureId(9), excerpt: 'quote me' })
     const w = mount(ForwardDialog, { global, attachTo: document.body })

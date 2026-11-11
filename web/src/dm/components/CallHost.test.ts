@@ -5,31 +5,31 @@ import CallHost from './CallHost.vue'
 import CallMissedNote from './CallMissedNote.vue'
 import CallMark from './CallMark.vue'
 import DmListRow from './DmListRow.vue'
-import MessageEmbeds from './MessageEmbeds.vue'
-import { useAuthStore } from '../stores/auth'
-import { useChatStore } from '../stores/chat'
-import { useDmCallsStore } from '../stores/dmCalls'
-import { usePermissionsStore } from '../stores/permissions'
-import { useVoiceStore } from '../stores/voice'
-import { PERMISSION_BITS } from '../shared/lib/permissions'
-import { setLocale } from '../i18n'
-import { dmFixture, dmMemberFixture } from '../dm.fixture'
-import { channelFixture, fixtureId, userFixture } from '../test-fixtures.fixture'
-import type { ApiOptions } from '../shared/lib/api'
+import MessageEmbeds from '../../components/MessageEmbeds.vue'
+import { useAuthStore } from '../../stores/auth'
+import { useChatStore } from '../../stores/chat'
+import { useDmCallsStore } from '../../stores/dmCalls'
+import { usePermissionsStore } from '../../stores/permissions'
+import { useVoiceStore } from '../../stores/voice'
+import { PERMISSION_BITS } from '../../shared/lib/permissions'
+import { setLocale } from '../../i18n'
+import { dmFixture, dmMemberFixture } from '../../dm.fixture'
+import { channelFixture, fixtureId, userFixture } from '../../test-fixtures.fixture'
+import type { ApiOptions } from '../../shared/lib/api'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../shared/lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../shared/lib/api')>()),
+vi.mock('../../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn()
 }))
 const ringtone = vi.fn()
-vi.mock('../talk/lib/soundEffects', () => ({ playSoundEffect: (...args: unknown[]) => ringtone(...args) }))
+vi.mock('../../talk/lib/soundEffects', () => ({ playSoundEffect: (...args: unknown[]) => ringtone(...args) }))
 const joinVoiceChannel = vi.fn()
 const leaveVoiceChannel = vi.fn()
-vi.mock('../talk/composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel, leaveVoiceChannel }) }))
+vi.mock('../../talk/composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel, leaveVoiceChannel }) }))
 const navigate = vi.fn()
-vi.mock('../shared/lib/router', async importOriginal => ({ ...(await importOriginal<typeof import('../shared/lib/router')>()), navigate: (...a: unknown[]) => navigate(...a) }))
+vi.mock('../../shared/lib/router', async importOriginal => ({ ...(await importOriginal<typeof import('../../shared/lib/router')>()), navigate: (...a: unknown[]) => navigate(...a) }))
 
 const me = fixtureId(1)
 const ada = fixtureId(2)

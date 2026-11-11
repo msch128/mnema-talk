@@ -1,16 +1,16 @@
 // Starting, joining and ending the calls of direct messages. A conversation has
 // no call of its own: "Start a Talk" opens a temporary Talk and the server rings
 // the other members (doc/talks.md), "Join" is the ordinary join of that Talk.
-import { caughtErrorMessage } from '../shared/lib/api'
-import { startConversationTalk } from '../talk/lib/talks'
-import { navigate } from '../shared/lib/router'
-import { t } from '../i18n'
-import { useChatStore } from '../stores/chat'
-import { useDmCallsStore } from '../stores/dmCalls'
-import { usePermissionsStore } from '../stores/permissions'
-import { useToastStore } from '../stores/toast'
-import { useVoiceStore } from '../stores/voice'
-import { useWebRTC } from '../talk/composables/useWebRTC'
+import { caughtErrorMessage } from '../../shared/lib/api'
+import { startConversationTalk } from '../../talk/lib/talks'
+import { navigate } from '../../shared/lib/router'
+import { t } from '../../i18n'
+import { useChatStore } from '../../stores/chat'
+import { useDmCallsStore } from '../../stores/dmCalls'
+import { usePermissionsStore } from '../../stores/permissions'
+import { useToastStore } from '../../stores/toast'
+import { useVoiceStore } from '../../stores/voice'
+import { useWebRTC } from '../../talk/composables/useWebRTC'
 
 export function useDmCall() {
   const chat = useChatStore()

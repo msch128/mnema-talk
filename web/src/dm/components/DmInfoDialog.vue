@@ -1,24 +1,24 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { ChatDirectMessage } from '../types/rest'
+import type { ChatDirectMessage } from '../../types/rest'
 // A conversation's members and what can be done with it: add someone to a
 // group, leave a group, or (for a conversation of two, which cannot be left)
 // block the other member. A member added to a group reads its whole history.
 import { computed, ref } from 'vue'
 import { LogOut, UserPlus } from '@lucide/vue'
-import { useAuthStore } from '../stores/auth'
-import { useBlocksStore } from '../stores/blocks'
-import { useChatStore } from '../stores/chat'
-import { useToastStore } from '../stores/toast'
+import { useAuthStore } from '../../stores/auth'
+import { useBlocksStore } from '../../stores/blocks'
+import { useChatStore } from '../../stores/chat'
+import { useToastStore } from '../../stores/toast'
 import { useDmActions } from '../composables/useDmActions'
-import { confirm } from '../shared/lib/confirm'
+import { confirm } from '../../shared/lib/confirm'
 import { DM_MAX_MEMBERS, dmPeers, dmTitle } from '../lib/dm'
-import { caughtErrorMessage } from '../shared/lib/api'
-import { t } from '../i18n'
-import BaseDialog from '../shared/components/BaseDialog.vue'
-import UserAvatar from '../shared/components/UserAvatar.vue'
+import { caughtErrorMessage } from '../../shared/lib/api'
+import { t } from '../../i18n'
+import BaseDialog from '../../shared/components/BaseDialog.vue'
+import UserAvatar from '../../shared/components/UserAvatar.vue'
 import DmCreateDialog from './DmCreateDialog.vue'
-import { shownName } from '../shared/lib/deletedUser'
+import { shownName } from '../../shared/lib/deletedUser'
 
 const props = defineProps({
   dm: { type: Object as PropType<ChatDirectMessage>, required: true }

@@ -5,11 +5,11 @@ import { nextTick } from 'vue'
 import UserProfileModal from './UserProfileModal.vue'
 import SearchModal from './SearchModal.vue'
 import { buildMemberItems } from '../composables/useNavMenus'
-import { messageSafetyItems, memberRelationItems } from '../composables/dmMenuItems'
-import { useDmActions } from '../composables/useDmActions'
+import { messageSafetyItems, memberRelationItems } from '../dm/composables/dmMenuItems'
+import { useDmActions } from '../dm/composables/useDmActions'
 import { searchOpen, searchScope, searchText } from '../lib/globalSearch'
 import { pendingReport, closeReport } from '../shared/lib/reportDialog'
-import { dmErrorText, dmTitle, sortDms } from '../lib/dm'
+import { dmErrorText, dmTitle, sortDms } from '../dm/lib/dm'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useBlocksStore } from '../stores/blocks'
@@ -239,7 +239,7 @@ describe('search in direct messages', () => {
   })
 })
 
-describe('lib/dm', () => {
+describe('dm/lib/dm', () => {
   it('names a conversation after the others, sorts by activity and words each refusal', () => {
     const pair = dmFixture({ members: [dmMemberFixture(1), ada] })
     expect(dmTitle(pair, me)).toBe('Ada')

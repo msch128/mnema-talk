@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { ChatDirectMessage } from '../types/rest'
+import type { ChatDirectMessage } from '../../types/rest'
 // One conversation in the sidebar: face, name, the start of the latest
 // message, when, and what is new. Hovering (or focusing) a row offers the
 // star and the close button; the same actions are in its context menu, which
 // the "more" button opens on a phone.
 import { computed, ref } from 'vue'
 import { BellOff, MoreHorizontal, Star, X } from '@lucide/vue'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore } from '../../stores/auth'
 import { dmClock, dmPreview } from '../lib/dmList'
 import { dmTitle } from '../lib/dm'
-import { locale, t } from '../i18n'
+import { locale, t } from '../../i18n'
 import DmAvatar from './DmAvatar.vue'
-import Badge from '../shared/components/Badge.vue'
+import Badge from '../../shared/components/Badge.vue'
 import CallMark from './CallMark.vue'
-import type { CallMark as CallMarkKind } from '../stores/dmCalls'
+import type { CallMark as CallMarkKind } from '../../stores/dmCalls'
 
 const props = defineProps({
   dm: { type: Object as PropType<ChatDirectMessage>, required: true },

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { dmClock, dmPreview, lastMessageOf, matchDms, splitDms } from './dmList'
 import { dmTitle } from './dm'
-import { setLocale } from '../i18n'
-import { dmFixture, dmMemberFixture } from '../dm.fixture'
-import { fixtureId, messageFixture } from '../test-fixtures.fixture'
+import { setLocale } from '../../i18n'
+import { dmFixture, dmMemberFixture } from '../../dm.fixture'
+import { fixtureId, messageFixture } from '../../test-fixtures.fixture'
 
 const me = fixtureId(1)
 const ada = dmMemberFixture(2, { display_name: 'Ada' })

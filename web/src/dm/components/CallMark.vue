@@ -4,7 +4,7 @@ import type { PropType } from 'vue'
 // moves), the member calling (it pulses), or a call going on (it stands still).
 import { computed } from 'vue'
 import { Phone, PhoneIncoming, PhoneOutgoing } from '@lucide/vue'
-import type { CallMark } from '../stores/dmCalls'
+import type { CallMark } from '../../stores/dmCalls'
 
 const props = defineProps({
   mark: { type: String as PropType<CallMark>, required: true }

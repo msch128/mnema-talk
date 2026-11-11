@@ -2,10 +2,10 @@
 // conversation is called. The members come from the conversation; a caller this
 // client does not know yet shows as an unnamed member until it does.
 import { computed, type Ref } from 'vue'
-import { useAuthStore } from '../stores/auth'
-import { useChatStore } from '../stores/chat'
+import { useAuthStore } from '../../stores/auth'
+import { useChatStore } from '../../stores/chat'
 import { dmPeers, dmTitle, nameOf } from '../lib/dm'
-import type { CallInfo } from '../stores/dmCalls'
+import type { CallInfo } from '../../stores/dmCalls'
 
 export function useCallParty(call: Ref<CallInfo>) {
   const chat = useChatStore()

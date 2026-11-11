@@ -2,10 +2,10 @@
 // direct message conversation: who may write there, what the empty state and
 // the composer say, and what a refused send reads like.
 import { computed } from 'vue'
-import { useChatStore } from '../stores/chat'
-import { caughtErrorMessage, isApiError } from '../shared/lib/api'
+import { useChatStore } from '../../stores/chat'
+import { caughtErrorMessage, isApiError } from '../../shared/lib/api'
 import { dmErrorText } from '../lib/dm'
-import { t } from '../i18n'
+import { t } from '../../i18n'
 
 export function useDmChat() {
   const chatStore = useChatStore()

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { Timer } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { useDmChat } from '../composables/useDmChat'
+import { useDmChat } from '../dm/composables/useDmChat'
 
 // One calm line under the channel header while auto-delete is on, so the rule
 // is stated in the channel and not only in its settings.

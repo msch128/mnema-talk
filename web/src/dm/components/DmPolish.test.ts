@@ -1,33 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import SidebarDmSection from './SidebarDmSection.vue'
+import SidebarDmSection from '../../components/SidebarDmSection.vue'
 import DmHeaderTitle from './DmHeaderTitle.vue'
 import DmMuteButton from './DmMuteButton.vue'
-import AccountDirectMessages from './AccountDirectMessages.vue'
-import SearchConversationJump from './SearchConversationJump.vue'
+import AccountDirectMessages from '../../components/AccountDirectMessages.vue'
+import SearchConversationJump from '../../components/SearchConversationJump.vue'
 import DmAvatar from './DmAvatar.vue'
 import DmListRow from './DmListRow.vue'
-import { useChatStore } from '../stores/chat'
-import { useAuthStore } from '../stores/auth'
-import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { usePermissionsStore } from '../stores/permissions'
-import { useToastStore } from '../stores/toast'
-import { i18nPlugin, setLocale } from '../i18n'
-import { tooltip } from '../directives/tooltip'
-import { fixtureId, messageFixture, userFixture } from '../test-fixtures.fixture'
-import { dmFixture, dmMemberFixture } from '../dm.fixture'
-import type { ApiOptions } from '../shared/lib/api'
-import type { ChatMember } from '../types/rest'
+import { useChatStore } from '../../stores/chat'
+import { useAuthStore } from '../../stores/auth'
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
+import { usePermissionsStore } from '../../stores/permissions'
+import { useToastStore } from '../../stores/toast'
+import { i18nPlugin, setLocale } from '../../i18n'
+import { tooltip } from '../../directives/tooltip'
+import { fixtureId, messageFixture, userFixture } from '../../test-fixtures.fixture'
+import { dmFixture, dmMemberFixture } from '../../dm.fixture'
+import type { ApiOptions } from '../../shared/lib/api'
+import type { ChatMember } from '../../types/rest'
 
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
-vi.mock('../shared/lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../shared/lib/api')>()),
+vi.mock('../../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => {
     try { return Promise.resolve(http.handle(url, options)) } catch (error) { return Promise.reject(error) }
   })
 }))
-import { api } from '../shared/lib/api'
+import { api } from '../../shared/lib/api'
 
 const me = fixtureId(1)
 const ada = dmMemberFixture(2, { display_name: 'Ada' })
@@ -175,7 +175,7 @@ describe('closing and favouriting', () => {
   it('does not reopen a closed conversation for a blocked member’s message', async () => {
     const chat = setup()
     chat.dms = [{ ...withAda, hidden: true }]
-    const { useBlocksStore } = await import('../stores/blocks')
+    const { useBlocksStore } = await import('../../stores/blocks')
     useBlocksStore().blocked = [{ user_id: ada.id, username: ada.username, display_name: 'Ada', blocked_at: '2026-01-01T00:00:00Z' }]
     chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: fixtureId(9), channel_id: withAda.id, user_id: ada.id }) })
     expect(chat.dmById(withAda.id)?.hidden).toBe(true)

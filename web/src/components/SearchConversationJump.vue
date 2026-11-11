@@ -5,9 +5,9 @@ import { computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { dmTitle } from '../lib/dm'
-import { matchDms } from '../lib/dmList'
-import DmAvatar from './DmAvatar.vue'
+import { dmTitle } from '../dm/lib/dm'
+import { matchDms } from '../dm/lib/dmList'
+import DmAvatar from '../dm/components/DmAvatar.vue'
 
 const MAX = 4
 

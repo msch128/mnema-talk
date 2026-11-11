@@ -7,9 +7,9 @@ import { computed } from 'vue'
 import { MessageSquare, PhoneOff, PhoneOutgoing } from '@lucide/vue'
 import { useCallParty } from '../composables/useCallParty'
 import { useDmCall } from '../composables/useDmCall'
-import { useChatStore } from '../stores/chat'
-import type { OutgoingCall } from '../stores/dmCalls'
-import UserAvatar from '../shared/components/UserAvatar.vue'
+import { useChatStore } from '../../stores/chat'
+import type { OutgoingCall } from '../../stores/dmCalls'
+import UserAvatar from '../../shared/components/UserAvatar.vue'
 
 const props = defineProps({
   call: { type: Object as PropType<OutgoingCall>, required: true }

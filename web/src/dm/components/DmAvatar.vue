@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { ChatDirectMessage } from '../types/rest'
+import type { ChatDirectMessage } from '../../types/rest'
 // The face of a conversation: the other member with their presence dot, or
 // two of a group's members overlapped.
 import { computed } from 'vue'
 import { Users } from '@lucide/vue'
-import { useAuthStore } from '../stores/auth'
-import { useChatStore } from '../stores/chat'
+import { useAuthStore } from '../../stores/auth'
+import { useChatStore } from '../../stores/chat'
 import { dmPeer, dmPeers } from '../lib/dm'
-import UserAvatar from '../shared/components/UserAvatar.vue'
+import UserAvatar from '../../shared/components/UserAvatar.vue'
 
 const props = defineProps({
   dm: { type: Object as PropType<ChatDirectMessage>, required: true },

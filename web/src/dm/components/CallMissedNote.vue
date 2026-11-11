@@ -5,8 +5,8 @@
 import { computed, ref } from 'vue'
 import { PhoneCall, PhoneMissed } from '@lucide/vue'
 import { useDmCall } from '../composables/useDmCall'
-import { useAuthStore } from '../stores/auth'
-import { useChatStore } from '../stores/chat'
+import { useAuthStore } from '../../stores/auth'
+import { useChatStore } from '../../stores/chat'
 
 const props = defineProps({
   /** Who called (the author of the record). */

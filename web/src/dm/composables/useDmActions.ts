@@ -2,14 +2,14 @@
 // member menus. Everything is hidden on a server without direct messages or
 // blocking (GET /api/health features).
 import { computed } from 'vue'
-import { useAuthStore } from '../stores/auth'
-import { useBlocksStore } from '../stores/blocks'
-import { useChatStore } from '../stores/chat'
-import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { usePermissionsStore } from '../stores/permissions'
-import { useToastStore } from '../stores/toast'
+import { useAuthStore } from '../../stores/auth'
+import { useBlocksStore } from '../../stores/blocks'
+import { useChatStore } from '../../stores/chat'
+import { useServerFeaturesStore } from '../../stores/serverFeatures'
+import { usePermissionsStore } from '../../stores/permissions'
+import { useToastStore } from '../../stores/toast'
 import { dmErrorText } from '../lib/dm'
-import { t } from '../i18n'
+import { t } from '../../i18n'
 
 export function useDmActions() {
   const auth = useAuthStore()

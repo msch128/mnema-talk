@@ -8,10 +8,10 @@ import { computed } from 'vue'
 import { MessageSquare, PhoneIncoming, X } from '@lucide/vue'
 import { useCallParty } from '../composables/useCallParty'
 import { useDmCall } from '../composables/useDmCall'
-import { useChatStore } from '../stores/chat'
-import { useDmCallsStore, type IncomingCall } from '../stores/dmCalls'
-import { t } from '../i18n'
-import UserAvatar from '../shared/components/UserAvatar.vue'
+import { useChatStore } from '../../stores/chat'
+import { useDmCallsStore, type IncomingCall } from '../../stores/dmCalls'
+import { t } from '../../i18n'
+import UserAvatar from '../../shared/components/UserAvatar.vue'
 
 const props = defineProps({
   call: { type: Object as PropType<IncomingCall>, required: true }

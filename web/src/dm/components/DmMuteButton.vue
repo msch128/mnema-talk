@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { ChatDirectMessage } from '../types/rest'
+import type { ChatDirectMessage } from '../../types/rest'
 // Mutes or unmutes the open conversation: no sound, no highlight, no push;
 // unread still counts. It is the conversation's own setting, so it also
 // overrides "Mute all direct messages".
 import { computed } from 'vue'
 import { Bell, BellOff } from '@lucide/vue'
-import { useChatStore } from '../stores/chat'
+import { useChatStore } from '../../stores/chat'
 import { useDmListActions } from '../composables/useDmListActions'
 
 const props = defineProps({

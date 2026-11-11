@@ -9,7 +9,7 @@ import { locale } from '../i18n'
 import { dateTime } from '../shared/lib/time'
 import MarkdownContent from '../shared/components/MarkdownContent.vue'
 import TalkInviteCard from './TalkInviteCard.vue'
-import CallMissedNote from './CallMissedNote.vue'
+import CallMissedNote from '../dm/components/CallMissedNote.vue'
 
 defineProps({
   embeds: { type: Array as PropType<ChatEmbed[]>, default: () => [] },

@@ -7,7 +7,7 @@ import { t } from '../../i18n'
 import { shouldNotify } from '../../shared/lib/chatLogic'
 import { isQuiet } from '../../shared/lib/presence'
 import { platform } from '../../shared/lib/platform'
-import { nameOf } from '../../lib/dm'
+import { nameOf } from '../../dm/lib/dm'
 import { pushOnThisDevice } from '../../shared/lib/webPush'
 import { useBlocksStore } from '../blocks'
 import { useDmCallsStore, type CallInfo } from '../dmCalls'
@@ -56,7 +56,7 @@ export function notifyIncomingCall(cx: Cx, call: CallInfo) {
     onClick: action => {
       openCall(cx, call)
       // The toast's Join button (a host with notify_call): the page joins as well.
-      if (action === 'join') void import('../../composables/useDmCall').then(m => m.useDmCall().join(call.talkId))
+      if (action === 'join') void import('../../dm/composables/useDmCall').then(m => m.useDmCall().join(call.talkId))
     }
   })
 }

@@ -5,7 +5,7 @@
 import type { ChatDMSettings } from '../../types/rest'
 import { decodeChatDMSettings } from '../../types/rest'
 import { api } from '../../shared/lib/api'
-import { DM_MAX_FAVOURITES, splitDms } from '../../lib/dmList'
+import { DM_MAX_FAVOURITES, splitDms } from '../../dm/lib/dmList'
 import { assertCommunity, type Cx } from './state'
 import { fetchDmSettings, fetchDms, refreshDm, setDms } from './dms'
 
