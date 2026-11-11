@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 )
 
 // bodies is a receiver that keeps what it gets, in the order of arrival.
@@ -211,6 +212,48 @@ func TestEventsOfAWebhookKeepTheOrderOfTheirCommits(t *testing.T) {
 	}
 	if _, ok, _ := claimJob(ctx, f.p); ok {
 		t.Fatal("more events than changes")
+	}
+}
+
+// Two changes race: the one whose transaction began first is written and
+// committed last (an edit that waited for the other's row lock). The queue
+// hands them out in the order they were written, so a receiver ends on the
+// state the database ends on; the start of a transaction decides nothing.
+func TestAnEventIsClaimedInTheOrderItWasWrittenNotTheOrderItsTransactionBegan(t *testing.T) {
+	f := newFixture(t)
+	f.outgoingFor("https://hooks.example/x", EventMessageDelete)
+	d := f.attached()
+	ctx := context.Background()
+	early, late := wire.MessageDelete{ID: uuid.New(), ChannelID: f.ch}, wire.MessageDelete{ID: uuid.New(), ChannelID: f.ch}
+
+	slow, err := f.p.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = slow.Rollback(ctx) }()
+	var began time.Time
+	if err := slow.QueryRow(ctx, `SELECT NOW()`).Scan(&began); err != nil { // the transaction has begun
+		t.Fatal(err)
+	}
+	time.Sleep(20 * time.Millisecond)
+	if err := pgx.BeginFunc(ctx, f.p, func(tx pgx.Tx) error { return d.Record(ctx, tx, f.ch, early) }); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Record(ctx, slow, f.ch, late); err != nil {
+		t.Fatal(err)
+	}
+	if err := slow.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	for i, want := range []uuid.UUID{early.ID, late.ID} {
+		var got wire.MessageDelete
+		if err := json.Unmarshal(f.claim().event.Data, &got); err != nil {
+			t.Fatal(err)
+		}
+		if got.ID != want {
+			t.Fatalf("claim %d is the event written %s", i, map[bool]string{true: "first", false: "last"}[got.ID == early.ID])
+		}
 	}
 }
 

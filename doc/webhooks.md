@@ -265,8 +265,9 @@ export function verify(secret, header, rawBody, toleranceSeconds = 300) {
   recorded, the event is sent again after the restart, with the same delivery
   id, and retries of one event may arrive after later events of the same
   webhook. Events are taken from the queue in the order their changes were
-  made, up to 4 at a time, so two events made within the same moment can
-  arrive swapped. Do not rely on order or on exactly-once: **deduplicate on the
+  written (two changes of the same message in the order they took effect, not
+  the order their requests began), up to 4 at a time, so two events made
+  within the same moment can arrive swapped. Do not rely on order or on exactly-once: **deduplicate on the
   delivery id** (`id` in the body, the same value as the `X-Mnema-Delivery`
   header; it never changes between attempts) and, if you need ordering, sort by
   `timestamp`. Outgoing webhooks are still a notification channel, not a log;

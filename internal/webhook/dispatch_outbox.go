@@ -72,6 +72,12 @@ func (b *recordBatch) add(ev events.Event) {
 // webhooks are read from the table under a key-share lock, not from the
 // cached list, so a webhook deleted a moment ago cannot fail the caller's
 // transaction.
+//
+// A row is due from the moment it is written (clock_timestamp), not from the
+// start of its transaction (the column's default, NOW()): the callers record
+// last, holding the row lock of the message they changed, so two changes of
+// one message are claimed in the order they took effect, whichever
+// transaction began first.
 func (d *Dispatcher) Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, evs ...events.Event) error {
 	var b recordBatch
 	for _, ev := range evs {
@@ -81,8 +87,8 @@ func (d *Dispatcher) Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, e
 		return nil
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO outgoing_queue (webhook_id, channel_id, event_id, event_type, event_time, data)
-		SELECT w.id, $1, e.id, e.name, e.at, e.data
+		INSERT INTO outgoing_queue (webhook_id, channel_id, event_id, event_type, event_time, data, next_attempt_at)
+		SELECT w.id, $1, e.id, e.name, e.at, e.data, clock_timestamp()
 		FROM unnest($2::uuid[], $3::text[], $4::timestamptz[], $5::bytea[]) WITH ORDINALITY AS e(id, name, at, data, ord)
 		JOIN outgoing_webhooks w ON w.channel_id = $1 AND w.enabled AND e.name = ANY(w.events)
 		ORDER BY e.ord, w.id FOR KEY SHARE OF w`,
