@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.0.5](https://github.com/msch128/mnema-talk/compare/v3.0.4...v3.0.5) (2026-11-11)
+
+
+### Code Refactoring
+
+* **web:** move the admin modules into web/src/admin ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+* **web:** move the app shell into web/src/app ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+* **web:** move the chat modules into web/src/chat ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+* **web:** move the dm modules into web/src/dm ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+* **web:** move the events modules into web/src/events ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+* **web:** move the forum modules into web/src/forum ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+* **web:** move the settings modules into web/src/settings ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+* **web:** move the shared modules into web/src/shared ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+* **web:** move the talk modules into web/src/talk ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+* **web:** move the wiki modules into web/src/wiki ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+* **web:** the WebSocket transport is its own store ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+
+
+### Documentation
+
+* describe the feature folders of web/src ([32213d2](https://github.com/msch128/mnema-talk/commit/32213d2308c05091016242eeb838c76f2a070d8d))
+
 ## [3.0.4](https://github.com/msch128/mnema-talk/compare/v3.0.3...v3.0.4) (2026-11-11)
 
 
