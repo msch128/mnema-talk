@@ -3,7 +3,6 @@ package ws
 import (
 	"context"
 	"errors"
-	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/core"
@@ -31,7 +30,7 @@ func (h *Hub) enterLobby(c *Client, lobby *core.ChannelInfo) {
 	defer cancel()
 	talk, err := h.Lobby.Open(ctx, c.User.ID, lobby.ID)
 	if err != nil {
-		slog.Info("talk lobby refused", "user", c.User.Username, "lobby", lobby.ID, "err", err)
+		c.logger().Info("talk lobby refused", "user", c.User.Username, "lobby", lobby.ID, "err", err)
 		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": lobby.ID, "reason": lobbyRefusal(err)})
 		return
 	}

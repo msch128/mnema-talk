@@ -2,7 +2,6 @@ package sfu
 
 import (
 	"fmt"
-	"log/slog"
 	"slices"
 	"strconv"
 	"sync/atomic"
@@ -81,12 +80,12 @@ func (r *Room) receiveLayer(peer *Peer, remote rtpReader, source Source, trackID
 
 	info.group = g
 	if !g.attach(info, codec) {
-		slog.Warn("sfu layer refused", "user", userID, "source", string(source), "layer", layer, "codec", codec.MimeType, "group", g.codec.MimeType)
+		peer.logger().Warn("sfu layer refused", "user", userID, "source", string(source), "layer", layer, "codec", codec.MimeType, "group", g.codec.MimeType)
 		drain(remote)
 		return
 	}
 	r.addTrack(key, info)
-	safego.Go("sfu_forward", r.dropOnPanic(peer), func() { r.forward(remote, layerWriter{group: g, layer: layer}, key, info) })
+	safego.GoConn(peer.panics(), "sfu_forward", r.dropOnPanic(peer), func() { r.forward(remote, layerWriter{group: g, layer: layer}, key, info) })
 }
 
 // layerGroupLocked returns the group a layer of peer's source joins, making
@@ -109,7 +108,7 @@ func (r *Room) layerGroupLocked(peer *Peer, source Source, trackID string, codec
 		g = newLayerGroup(id, r.ID, userID, r.notifier, codec)
 		g.source = source
 		g.declared.Store(int32(len(r.layerMetaLocked(source)[userID])))
-		g.onPanic, g.dropViewer = r.dropOnPanic(peer), r.dropViewerPeer
+		g.onPanic, g.dropViewer, g.conn = r.dropOnPanic(peer), r.dropViewerPeer, peer.panics()
 		r.groupsLocked(source)[userID] = g
 		return g
 	}

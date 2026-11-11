@@ -29,15 +29,16 @@ func (h *Hub) dropVoiceForGrace(c *Client) {
 }
 
 // removePresenceUnlessPresent ends userID's presence in chID unless another
-// connection than except (a second tab) is in the room.
+// connection than except (a second tab) is in the room. except is the
+// connection that left, when there is one: the leave is logged under its id.
 func (h *Hub) removePresenceUnlessPresent(userID, chID uuid.UUID, except *Client) {
-	h.endPresence(userID, chID, func() bool { return h.seatedLocked(userID, chID, except) })
+	h.endPresence(userID, chID, except.logger(), func() bool { return h.seatedLocked(userID, chID, except) })
 }
 
 // removePresence drops userID from chID's room, whoever of their connections
 // is in it, and announces it if they were there.
 func (h *Hub) removePresence(userID, chID uuid.UUID) {
-	h.endPresence(userID, chID, func() bool { return false })
+	h.endPresence(userID, chID, slog.Default(), func() bool { return false })
 }
 
 // seatedLocked reports whether a connection of userID other than except is
@@ -55,7 +56,7 @@ func (h *Hub) seatedLocked(userID, chID uuid.UUID, except *Client) bool {
 // lock that removes the seat: a join that takes the seat (takeSeat, under the
 // same lock) either comes first and keeps it, or comes after and is a new
 // join. Asked before, it would let that join lose a seat it believes it has.
-func (h *Hub) endPresence(userID, chID uuid.UUID, keep func() bool) {
+func (h *Hub) endPresence(userID, chID uuid.UUID, log *slog.Logger, keep func() bool) {
 	key := voiceKey{userID, chID}
 	var wasIn, hadSince bool
 	var since time.Time
@@ -84,7 +85,7 @@ func (h *Hub) endPresence(userID, chID uuid.UUID, keep func() bool) {
 	if !wasIn {
 		return
 	}
-	slog.Info("voice leave", "user", userID, "channel", chID)
+	log.Info("voice leave", "user", userID, "channel", chID)
 	// The seat is gone already. Deferred, so a panic in a listener (Presence,
 	// Tap) loses neither the stay's voice time nor the others' "leave".
 	if hadSince {
@@ -100,7 +101,8 @@ func (h *Hub) endPresence(userID, chID uuid.UUID, keep func() bool) {
 // startGrace keeps a user listed in a room for VoiceGrace, then removes them
 // unless takeGrace claimed the slot first or a connection of theirs is in the
 // room by then. No grace starts while a connection other than except is in
-// the room: the user never left.
+// the room: the user never left. except is the connection that went away, and
+// the leave the grace ends in is logged under its id.
 func (h *Hub) startGrace(key voiceKey, except *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -111,6 +113,7 @@ func (h *Hub) startGrace(key voiceKey, except *Client) {
 		old.timer.Stop()
 	}
 	g := &graceLeave{channelID: key.ch}
+	log := except.logger() // not the client: the timer outlives its connection
 	g.timer = safego.AfterFunc("ws_voice_grace", h.VoiceGrace, safego.Crash, func() {
 		h.mu.Lock()
 		current := h.grace[key] == g
@@ -119,7 +122,7 @@ func (h *Hub) startGrace(key voiceKey, except *Client) {
 		}
 		h.mu.Unlock()
 		if current {
-			h.removePresenceUnlessPresent(key.user, key.ch, nil)
+			h.endPresence(key.user, key.ch, log, func() bool { return h.seatedLocked(key.user, key.ch, nil) })
 		}
 	})
 	h.grace[key] = g

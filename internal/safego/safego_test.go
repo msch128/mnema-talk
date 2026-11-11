@@ -233,3 +233,32 @@ func TestLogBudgetRefillsAfterItsWindow(t *testing.T) {
 		t.Fatal("a site stayed silent after its window")
 	}
 }
+
+// A site that works for one connection names it on the panic's log line, so
+// the panic of one of a member's two sessions is told apart from the other's.
+// A site of no connection logs as before.
+func TestPanicOfAConnectionsSiteNamesTheConnection(t *testing.T) {
+	logged := captureLog(t)
+	done := make(chan struct{}, 2)
+	finish := func() { done <- struct{}{} }
+
+	RunConn("tab-one", "test_conn", Abandon, func() { panic("first") })
+	GoConn("tab-two", "test_conn", finish, func() { panic("second") })
+	<-done
+	AfterFuncConn("tab-three", "test_conn", time.Millisecond, finish, func() { panic("third") })
+	<-done
+	Run("test_conn", Abandon, func() { panic("nobody's") })
+
+	lines := strings.Split(strings.TrimSpace(logged.String()), "\n")
+	if len(lines) != 4 {
+		t.Fatalf("%d lines logged, want 4: %s", len(lines), logged.String())
+	}
+	for i, want := range []string{"conn_id=tab-one", "conn_id=tab-two", "conn_id=tab-three"} {
+		if !strings.Contains(lines[i], want) || !strings.Contains(lines[i], "name=test_conn") {
+			t.Errorf("line %d lacks %q: %s", i+1, want, lines[i])
+		}
+	}
+	if strings.Contains(lines[3], "conn_id") {
+		t.Errorf("a site of no connection names one: %s", lines[3])
+	}
+}

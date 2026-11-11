@@ -140,10 +140,11 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := newClient(h, conn, *user, tv)
+	c.nameConn(httpx.RequestIDFromContext(r.Context()))
 	// The connection is hijacked: the HTTP server's own recovery can neither
 	// answer nor close it, so a panic in the upgrade hook, the handshake or
 	// the greeting would leave an open connection that nobody reads.
-	safego.Run("ws_handshake", c.abandon, func() { h.serve(r, c, user.ID, tv) })
+	safego.RunConn(c.panics(), "ws_handshake", c.abandon, func() { h.serve(r, c, user.ID, tv) })
 }
 
 // serve finishes the handshake of an upgraded connection, greets it and
@@ -158,13 +159,13 @@ func (h *Hub) serve(r *http.Request, c *Client, userID uuid.UUID, tv int) {
 	// The writer runs before the greeting is queued: a large greeting (one
 	// media state per publisher) would overflow the send buffer otherwise.
 	// It ends with the client's done channel when the handshake fails.
-	safego.Go("ws_write", c.close, c.writePump)
+	safego.GoConn(c.panics(), "ws_write", c.close, c.writePump)
 	if !h.confirmHandshake(r, c, userID, tv) {
 		h.cancelPending(c)
 		return
 	}
 	metrics.WSConnections.Inc()
-	safego.Go("ws_read", c.abandon, c.readPump)
+	safego.GoConn(c.panics(), "ws_read", c.abandon, c.readPump)
 }
 
 // abandon is the onPanic of a connection's handshake and read loop: whatever
@@ -368,7 +369,7 @@ func (h *Hub) forget(c *Client) {
 		return
 	}
 
-	slog.Info("ws disconnected", "user", c.User.Username)
+	c.logger().Info("ws disconnected", "user", c.User.Username)
 	if offline && !closing {
 		h.recordLastSeen(c.User.ID)
 	}

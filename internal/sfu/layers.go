@@ -154,6 +154,8 @@ type layerGroup struct {
 	// both (layerGroupLocked); a group without a room lets the process exit.
 	onPanic    func()
 	dropViewer func(viewer uuid.UUID, gen uint64)
+	// conn is the publisher's hub connection, for the timer's panic line.
+	conn safego.Conn
 
 	// live has bit i set while layer i is attached; declared is the number of
 	// layers the sender announced (0 when it did not).

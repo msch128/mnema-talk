@@ -63,7 +63,7 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 		return nil, err
 	}
 	s := &SFU{load: &peerLoad{}}
-	api, err := buildAPI(portMin, portMax, announceIPs, mux, s.load, s.dropConnection)
+	api, err := buildAPI(portMin, portMax, announceIPs, mux, s.load, s.dropConnection, &s.conns)
 	if err != nil {
 		if mux != nil {
 			_ = mux.Close()
@@ -107,7 +107,7 @@ func (s *SFU) SetAnnouncedIPs(ips []string) error {
 	if s.udpMux != nil && onlyLoopbackAnnouncements(s.announced) != onlyLoopbackAnnouncements(ips) {
 		return fmt.Errorf("changing UDP mux loopback interface mode requires restart")
 	}
-	api, err := buildAPI(s.portMin, s.portMax, ips, s.udpMux, s.load, s.dropConnection)
+	api, err := buildAPI(s.portMin, s.portMax, ips, s.udpMux, s.load, s.dropConnection, &s.conns)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func configureICEPorts(se *webrtc.SettingEngine, portMin, portMax uint16, mux ic
 
 // buildAPI makes the API new connections come from. dropConn removes the peer
 // of a connection whose outgoing chain panicked (see viewerGuard).
-func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, load *peerLoad, dropConn func(connID string)) (*webrtc.API, error) {
+func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, load *peerLoad, dropConn func(connID string), names *connNames) (*webrtc.API, error) {
 	settingEngine, err := buildSettingEngine(portMin, portMax, announceIPs, mux)
 	if err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, loa
 	if err := mediaEngine.RegisterDefaultCodecs(); err != nil {
 		return nil, fmt.Errorf("failed to register default WebRTC codecs: %w", err)
 	}
-	registry, err := buildInterceptors(mediaEngine, load, dropConn)
+	registry, err := buildInterceptors(mediaEngine, load, dropConn, names)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, loa
 
 // buildInterceptors lists what every connection's packets pass, innermost
 // first.
-func buildInterceptors(mediaEngine *webrtc.MediaEngine, load *peerLoad, dropConn func(connID string)) (*interceptor.Registry, error) {
+func buildInterceptors(mediaEngine *webrtc.MediaEngine, load *peerLoad, dropConn func(connID string), names *connNames) (*interceptor.Registry, error) {
 	// NACK (retransmissions both ways), RTCP sender/receiver reports and
 	// transport-wide congestion control feedback to the publishers.
 	registry := &interceptor.Registry{}
@@ -216,6 +216,6 @@ func buildInterceptors(mediaEngine *webrtc.MediaEngine, load *peerLoad, dropConn
 	}
 	registry.Add(nackResponderFactory{load: load})
 	// Outermost: a panic of anything listed above stays with its connection.
-	registry.Add(viewerGuardFactory{drop: dropConn})
+	registry.Add(viewerGuardFactory{drop: dropConn, names: names})
 	return registry, nil
 }

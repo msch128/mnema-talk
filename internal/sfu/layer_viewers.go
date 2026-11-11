@@ -134,7 +134,7 @@ func (g *layerGroup) viewerWriteDone(vt *viewerTrack) {
 	if rec == nil {
 		return
 	}
-	safego.Recovered("sfu_viewer_write", rec, func() {
+	safego.RecoveredConn(vt.peer.panics(), "sfu_viewer_write", rec, func() {
 		// Out of the group first: the next packet must not reach it again.
 		g.removeViewer(vt)
 		if g.dropViewer != nil {

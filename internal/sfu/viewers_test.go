@@ -209,7 +209,7 @@ func TestScreenViewersSnapshot(t *testing.T) {
 // Rooms announce independently and only their own audiences.
 func TestScreenViewersStayInTheirRoom(t *testing.T) {
 	s, room, pub, viewer := joinTwo(t)
-	otherRoom, _, err := s.Join(uuid.New(), uuid.New(), nil, nil)
+	otherRoom, _, err := s.Join(uuid.New(), uuid.New(), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

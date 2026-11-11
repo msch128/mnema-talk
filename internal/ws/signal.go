@@ -2,7 +2,6 @@ package ws
 
 import (
 	"encoding/json"
-	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -47,12 +46,12 @@ func (c *Client) activeVoiceRoom() *sfu.Room {
 func (c *Client) applySubscriptionQuality(room *sfu.Room, req subscribeRequest) {
 	if req.hasFit && req.on && req.kind == sfu.SourceScreen {
 		if err := room.SetScreenFit(c.User.ID, req.publisher, req.fit); err != nil {
-			slog.Debug("sfu screen fit rejected", "user", c.User.ID, "err", err)
+			c.logger().Debug("sfu screen fit rejected", "user", c.User.ID, "err", err)
 		}
 	}
 	if req.hasQuality && req.on && req.kind == sfu.SourceScreen {
 		if err := room.SetScreenQuality(c.User.ID, req.publisher, req.quality); err != nil {
-			slog.Debug("sfu screen quality rejected", "user", c.User.ID, "err", err)
+			c.logger().Debug("sfu screen quality rejected", "user", c.User.ID, "err", err)
 		}
 	}
 }
@@ -79,13 +78,13 @@ func (c *Client) handleSubscribe(payload json.RawMessage) {
 	if req.hasFitPx {
 		// How big the viewer's picture of a camera is: nothing else changes.
 		if err := room.SetCameraFit(c.User.ID, req.publisher, req.fitPx); err != nil {
-			slog.Debug("sfu camera fit rejected", "user", c.User.ID, "err", err)
+			c.logger().Debug("sfu camera fit rejected", "user", c.User.ID, "err", err)
 		}
 		return
 	}
 	c.applySubscriptionQuality(room, req)
 	if err := room.Subscribe(c.User.ID, req.publisher, req.kind, req.all, req.on); err != nil {
-		slog.Debug("sfu subscribe rejected", "user", c.User.ID, "err", err)
+		c.logger().Debug("sfu subscribe rejected", "user", c.User.ID, "err", err)
 	}
 }
 

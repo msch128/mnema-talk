@@ -50,7 +50,7 @@ func TestOnLostAfterTheFactFires(t *testing.T) {
 func joinViewerAndAnswer(t *testing.T, s *SFU, room uuid.UUID) (*Peer, chan webrtc.SessionDescription) {
 	t.Helper()
 	offers := make(chan webrtc.SessionDescription, 8)
-	_, peer, err := s.Join(room, uuid.New(), func(o webrtc.SessionDescription) { offers <- o }, nil)
+	_, peer, err := s.Join(room, uuid.New(), "", func(o webrtc.SessionDescription) { offers <- o }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

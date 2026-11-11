@@ -249,7 +249,7 @@ func TestMediaPolicyFollowsSpeakAndVideo(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = media.Close() })
 	w.h.SFU = media
-	room, livePeer, err := media.Join(w.public.ID, c.User.ID, func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {})
+	room, livePeer, err := media.Join(w.public.ID, c.User.ID, "", func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {})
 	if err != nil {
 		t.Fatal(err)
 	}

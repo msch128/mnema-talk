@@ -143,7 +143,7 @@ func (c *Client) notifyPermissions() {
 	}
 	c.permPending = true
 	c.mu.Unlock()
-	safego.AfterFunc("ws_perm_notify", wait, c.close, func() {
+	safego.AfterFuncConn(c.panics(), "ws_perm_notify", wait, c.close, func() {
 		c.mu.Lock()
 		c.permPending = false
 		c.permSent = time.Now()

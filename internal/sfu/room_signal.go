@@ -75,7 +75,7 @@ func (r *Room) requestPeerSignal(peer *Peer) {
 	if !peer.signalingMu.TryLock() {
 		return
 	}
-	safego.Go("sfu_signal", r.dropOnPanic(peer), func() {
+	safego.GoConn(peer.panics(), "sfu_signal", r.dropOnPanic(peer), func() {
 		defer peer.finishSignalingTask()
 		r.signalPeer(peer)
 	})
@@ -134,12 +134,12 @@ func (r *Room) negotiateOrRetry(peer *Peer) {
 	}
 	peer.offerFailures++
 	if peer.offerFailures >= maxOfferBuildFailures {
-		slog.Error("sfu offer could not be built, giving up", "user", peer.ID, "attempts", peer.offerFailures)
+		peer.logger().Error("sfu offer could not be built, giving up", "user", peer.ID, "attempts", peer.offerFailures)
 		r.goDropLost(peer)
 		return
 	}
 	peer.needOffer = true
-	safego.AfterFunc("sfu_signal", offerRetryDelay, r.dropOnPanic(peer), func() { r.requestPeerSignal(peer) })
+	safego.AfterFuncConn(peer.panics(), "sfu_signal", offerRetryDelay, r.dropOnPanic(peer), func() { r.requestPeerSignal(peer) })
 }
 
 // desiredTracks returns the tracks the peer should receive, keyed by the ID
@@ -303,7 +303,7 @@ func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webr
 		if err != nil {
 			return nil, nil, err
 		}
-		vt.gen = peer.gen
+		vt.gen, vt.peer = peer.gen, peer
 		vt.expectBind()
 		recipientTrack = vt
 	}
@@ -320,7 +320,7 @@ func (p *Peer) noteAddTrackFailure(trackID string, info *TrackInfo, err error) {
 		p.addTrackFailed = make(map[string]bool)
 	}
 	p.addTrackFailed[trackID] = true
-	slog.Warn("sfu add track", "viewer", p.ID, "publisher", info.SenderID, "source", string(info.Source),
+	p.logger().Warn("sfu add track", "viewer", p.ID, "publisher", info.SenderID, "source", string(info.Source),
 		"codec", info.codecMime(), "err", err)
 }
 
@@ -355,7 +355,7 @@ func negotiateOffer(peer *Peer) error {
 // watchOffer arms the watchdog for offer gen: if it is still unanswered
 // after the room's offerTimeout, the same offer goes out again.
 func (p *Peer) watchOffer(gen uint64, attempt int) {
-	safego.AfterFunc("sfu_signal", p.room.offerTimeout, p.room.dropOnPanic(p), func() {
+	safego.AfterFuncConn(p.panics(), "sfu_signal", p.room.offerTimeout, p.room.dropOnPanic(p), func() {
 		p.signalingMu.Lock()
 		// An answer may stabilize the peer while the resend callback is
 		// still running; finishing drains changes queued behind this task.
@@ -383,12 +383,12 @@ func (p *Peer) resendOffer(gen uint64, attempt int) {
 		return
 	}
 	if attempt > maxOfferResends {
-		slog.Error("sfu offer never answered, giving up", "user", p.ID, "resends", maxOfferResends)
+		p.logger().Error("sfu offer never answered, giving up", "user", p.ID, "resends", maxOfferResends)
 		// Left alone the peer would stay a silent member of the call.
 		p.room.goDropLost(p)
 		return
 	}
-	slog.Warn("sfu offer unanswered, sending it again", "user", p.ID, "attempt", attempt)
+	p.logger().Warn("sfu offer unanswered, sending it again", "user", p.ID, "attempt", attempt)
 	if p.SendOffer != nil {
 		p.SendOffer(*pending)
 	}

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"sync/atomic"
 	"time"
 
@@ -38,8 +37,9 @@ func (s *SFU) AllMediaStates() map[uuid.UUID]map[uuid.UUID]MediaState {
 
 // Join connects userID to the channel's room, replacing an existing
 // connection of the same user. Lookup and join happen under one lock, so a
-// concurrent RemovePeer cannot drop the room in between.
-func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) (*Room, *Peer, error) {
+// concurrent RemovePeer cannot drop the room in between. connID is the id of
+// the hub connection that joins (conn_id on the peer's log lines), or "".
+func (s *SFU) Join(channelID, userID uuid.UUID, connID string, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) (*Room, *Peer, error) {
 	if s.closed.Load() {
 		return nil, nil, errSFUClosed
 	}
@@ -74,6 +74,7 @@ func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDes
 			iceSeen:      s.iceSeen,
 			iceServers:   s.iceServers,
 			offerTimeout: s.offerTimeout,
+			conns:        &s.conns,
 		}
 		s.rooms[channelID] = r
 	}
@@ -82,7 +83,7 @@ func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDes
 	r.mu.Lock()
 	r.allowLoopbackCands = loopback
 	r.mu.Unlock()
-	return r, r.attachPeer(userID, conn, sendOffer, sendICE), nil
+	return r, r.attachPeer(userID, connID, conn, sendOffer, sendICE), nil
 }
 
 // RemovePeer disconnects peer if it is still the user's current connection
@@ -254,10 +255,12 @@ func (r *Room) dropViewerPeer(userID uuid.UUID, gen uint64) {
 type viewerGuardFactory struct {
 	// drop removes the peer whose connection has the given ID.
 	drop func(connID string)
+	// names knows the hub connection behind that ID, for the panic's log line.
+	names *connNames
 }
 
 func (f viewerGuardFactory) NewInterceptor(connID string) (interceptor.Interceptor, error) {
-	return &viewerGuard{connID: connID, drop: f.drop}, nil
+	return &viewerGuard{connID: connID, drop: f.drop, names: f.names}, nil
 }
 
 // viewerGuard keeps a panic in one viewer's connection with that viewer. A
@@ -271,9 +274,16 @@ type viewerGuard struct {
 	interceptor.NoOp
 	connID string
 	drop   func(connID string)
+	names  *connNames
 	// dead: a write panicked. Nothing more goes into the chain it left
 	// half-updated, while the peer is on its way out.
 	dead atomic.Bool
+}
+
+// Close ends the connection's entry in names with the connection.
+func (g *viewerGuard) Close() error {
+	g.names.forget(g.connID)
+	return nil
 }
 
 func (g *viewerGuard) BindLocalStream(_ *interceptor.StreamInfo, w interceptor.RTPWriter) interceptor.RTPWriter {
@@ -307,7 +317,7 @@ func (g *viewerGuard) writeDone(err *error) {
 	g.dead.Store(true)
 	// The caller holds locks of the track it writes to: the peer is looked
 	// up and removed on a goroutine of its own.
-	safego.Recovered("sfu_viewer_write", rec, func() {
+	safego.RecoveredConn(g.names.of(g.connID), "sfu_viewer_write", rec, func() {
 		safego.Go("sfu_peer_drop", safego.Crash, func() { g.drop(g.connID) })
 	})
 }
@@ -348,12 +358,12 @@ func (r *Room) goDropLost(peer *Peer) {
 		_ = peer.PC.Close()
 		peer.notifyLost()
 	}
-	safego.Go("sfu_peer_drop", giveUp, func() { r.dropLostPeer(peer) })
+	safego.GoConn(peer.panics(), "sfu_peer_drop", giveUp, func() { r.dropLostPeer(peer) })
 }
 
 // goForwardRTCP reads viewer's feedback for one track it receives.
 func (r *Room) goForwardRTCP(viewer *Peer, sender *webrtc.RTPSender, keyframe func(), report func(loss float64, rtt time.Duration, bandwidth int)) {
-	safego.Go("sfu_rtcp", r.dropOnPanic(viewer), func() {
+	safego.GoConn(viewer.panics(), "sfu_rtcp", r.dropOnPanic(viewer), func() {
 		r.feedbackEnded(viewer, r.forwardRTCP(sender, keyframe, report))
 	})
 }
@@ -363,7 +373,7 @@ func (r *Room) goForwardRTCP(viewer *Peer, sender *webrtc.RTPSender, keyframe fu
 // retransmissions: the viewer is dropped and joins again.
 func (r *Room) feedbackEnded(viewer *Peer, err error) {
 	if errors.Is(err, errNackGaveUp) {
-		slog.Error("sfu nack responder gave up, dropping the peer", "user", viewer.ID)
+		viewer.logger().Error("sfu nack responder gave up, dropping the peer", "user", viewer.ID)
 		r.dropLostPeer(viewer)
 	}
 }

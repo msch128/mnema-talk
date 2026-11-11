@@ -2,7 +2,6 @@ package ws
 
 import (
 	"encoding/json"
-	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -83,7 +82,7 @@ func (c *Client) handleLayers(payload json.RawMessage) {
 		set = room.SetCameraLayers
 	}
 	if err := set(c.User.ID, req.Layers); err != nil {
-		slog.Debug("sfu layers rejected", "user", c.User.ID, "source", req.Source, "err", err)
+		c.logger().Debug("sfu layers rejected", "user", c.User.ID, "source", req.Source, "err", err)
 	}
 }
 

@@ -26,7 +26,7 @@ func TestGreetingWithManyPublishersReachesTheClientIntact(t *testing.T) {
 		ch := openChannel()
 		for i := 0; i < perRoom; i++ {
 			user := uuid.New()
-			if _, _, err := voiceSFU.Join(ch, user, func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {}); err != nil {
+			if _, _, err := voiceSFU.Join(ch, user, "", func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {}); err != nil {
 				t.Fatal(err)
 			}
 			if err := voiceSFU.Room(ch).PublishTestVideo(user, "camera"); err != nil {
@@ -80,7 +80,7 @@ func TestClientThatLeavesDuringABigGreetingIsUnregisteredPromptly(t *testing.T) 
 		ch := openChannel()
 		for i := 0; i < perRoom; i++ {
 			user := uuid.New()
-			if _, _, err := voiceSFU.Join(ch, user, func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {}); err != nil {
+			if _, _, err := voiceSFU.Join(ch, user, "", func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {}); err != nil {
 				t.Fatal(err)
 			}
 			if err := voiceSFU.Room(ch).PublishTestVideo(user, "camera"); err != nil {

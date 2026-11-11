@@ -105,11 +105,11 @@ func TestPanickingForwardLoopRemovesOnlyItsPeer(t *testing.T) {
 	room := uuid.New()
 	broken, healthy := uuid.New(), uuid.New()
 	noOffer := func(webrtc.SessionDescription) {}
-	_, brokenPeer, err := s.Join(room, broken, noOffer, nil)
+	_, brokenPeer, err := s.Join(room, broken, "", noOffer, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, healthyPeer, err := s.Join(room, healthy, noOffer, nil)
+	_, healthyPeer, err := s.Join(room, healthy, "", noOffer, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestPanickingViewerTrackDropsThatViewerNotThePublisher(t *testing.T) {
 	noOffer := func(webrtc.SessionDescription) {}
 	peers := map[uuid.UUID]*Peer{}
 	for _, id := range []uuid.UUID{publisher, broken, fine} {
-		_, peer, err := s.Join(room, id, noOffer, nil)
+		_, peer, err := s.Join(room, id, "", noOffer, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -202,7 +202,7 @@ func TestPanickingViewerTrackDropsThatViewerNotThePublisher(t *testing.T) {
 func TestPanicAfterThePeerLeftTheRoomStillTellsItsOwner(t *testing.T) {
 	s := newTestSFU(t)
 	room := uuid.New()
-	_, peer, err := s.Join(room, uuid.New(), func(webrtc.SessionDescription) {}, nil)
+	_, peer, err := s.Join(room, uuid.New(), "", func(webrtc.SessionDescription) {}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +256,7 @@ func TestNackWorkerGivesUpAfterAFewPanicsAndThePeerIsDropped(t *testing.T) {
 
 	s := newTestSFU(t)
 	room := uuid.New()
-	_, peer, joinErr := s.Join(room, uuid.New(), func(webrtc.SessionDescription) {}, nil)
+	_, peer, joinErr := s.Join(room, uuid.New(), "", func(webrtc.SessionDescription) {}, nil)
 	if joinErr != nil {
 		t.Fatal(joinErr)
 	}

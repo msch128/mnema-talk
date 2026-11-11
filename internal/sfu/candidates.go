@@ -3,7 +3,6 @@ package sfu
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/netip"
 	"strings"
 	"time"
@@ -186,7 +185,7 @@ func (p *Peer) candidateDropped(err error) {
 		suppressed := p.cands.warnSuppressed
 		p.cands.warnWindow, p.cands.warnCount, p.cands.warnSuppressed = now, 0, 0
 		if suppressed > 0 {
-			slog.Warn("sfu more remote candidates dropped", "user", p.ID, "count", suppressed)
+			p.logger().Warn("sfu more remote candidates dropped", "user", p.ID, "count", suppressed)
 		}
 	}
 	if p.cands.warnCount >= candidateWarnBurst {
@@ -194,7 +193,7 @@ func (p *Peer) candidateDropped(err error) {
 		return
 	}
 	p.cands.warnCount++
-	slog.Warn("sfu remote candidate dropped", "user", p.ID, "reason", candidateDropReason(err))
+	p.logger().Warn("sfu remote candidate dropped", "user", p.ID, "reason", candidateDropReason(err))
 }
 
 // candidateDropReason names why Pion refused a candidate without echoing the

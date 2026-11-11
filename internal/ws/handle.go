@@ -206,7 +206,7 @@ func (c *Client) handleAnswer(payload json.RawMessage) {
 		return
 	}
 	if err := peer.SetAnswer(answer); err != nil {
-		slog.Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
+		c.logger().Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
 	}
 }
 
@@ -215,7 +215,7 @@ func (c *Client) handleCandidate(payload json.RawMessage) {
 	if json.Unmarshal(payload, &cand) != nil {
 		return
 	}
-	slog.Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
+	c.logger().Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
 	if peer := c.peer(); peer != nil {
 		// Held until the answer is applied; a rejected candidate is
 		// logged by the SFU with its reason (rate-limited).
@@ -239,7 +239,7 @@ func (c *Client) handleDiag(payload json.RawMessage) {
 	if json.Unmarshal(payload, &d) == nil && d.ICE == "failed" {
 		level = slog.LevelWarn
 	}
-	slog.Log(context.Background(), level, "webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
+	c.logger().Log(context.Background(), level, "webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
 }
 
 // channelKnown reports whether the channel exists. The permission snapshot

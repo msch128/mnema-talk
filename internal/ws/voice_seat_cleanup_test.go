@@ -189,7 +189,7 @@ func TestOfTwoTabsJoiningAtOnceTheOneWithTheLivePeerHoldsTheSeat(t *testing.T) {
 		if _, ok := h.takeSeat(c, ch); !ok {
 			t.Fatal("no seat")
 		}
-		_, peer, err := media.Join(ch.ID, user.ID, func(webrtc.SessionDescription) {}, nil)
+		_, peer, err := media.Join(ch.ID, user.ID, "", func(webrtc.SessionDescription) {}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

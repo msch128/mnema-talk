@@ -3,7 +3,6 @@ package sfu
 import (
 	"errors"
 	"io"
-	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,6 +23,8 @@ type viewerTrack struct {
 	*webrtc.TrackLocalStaticRTP
 	group  *layerGroup
 	viewer uuid.UUID
+	// peer is the viewer's connection, for the log (nil in tests).
+	peer *Peer
 
 	// wantA and curA mirror want and cur for readers without the lock.
 	wantA atomic.Int32
@@ -316,7 +317,7 @@ func (vt *viewerTrack) sendPacketLocked(src *rtp.Packet, now time.Time) {
 	}
 	vt.lastSeq, vt.lastTs, vt.lastAt = out.Header.SequenceNumber, out.Header.Timestamp, now
 	if err := vt.sink(out); err != nil && !errors.Is(err, io.ErrClosedPipe) {
-		slog.Debug("sfu layer write", "viewer", vt.viewer, "err", err)
+		vt.peer.logger().Debug("sfu layer write", "viewer", vt.viewer, "err", err)
 	}
 }
 

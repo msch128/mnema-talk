@@ -1,6 +1,9 @@
 package ws
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,6 +23,9 @@ type Client struct {
 	conn *websocket.Conn
 	send chan []byte
 	User auth.User
+	// connID names this connection in the log and log binds it (see nameConn).
+	connID string
+	log    *slog.Logger
 
 	tokenVersion int
 	// dmAware is set by connections that asked for direct message events
@@ -95,8 +101,10 @@ type Client struct {
 }
 
 func newClient(h *Hub, conn *websocket.Conn, user auth.User, tokenVersion int) *Client {
-	return &Client{hub: h, conn: conn, send: make(chan []byte, sendBuffer), done: make(chan struct{}),
+	c := &Client{hub: h, conn: conn, send: make(chan []byte, sendBuffer), done: make(chan struct{}),
 		User: user, tokenVersion: tokenVersion, connectedAt: time.Now()}
+	c.nameConn("")
+	return c
 }
 
 // close tears the connection down once; readPump then unregisters the client.
@@ -138,7 +146,7 @@ func (c *Client) deliver(data []byte) {
 func (c *Client) dropSlow() {
 	metrics.WSDropped.With("slow_client").Inc()
 	if c.closing.CompareAndSwap(false, true) {
-		safego.Go("ws_close", safego.Abandon, c.close)
+		safego.GoConn(c.panics(), "ws_close", safego.Abandon, c.close)
 	}
 }
 
@@ -320,3 +328,43 @@ func (c *Client) joinRefusal(snap *perm.Snapshot) string {
 	}
 	return "missing_permission"
 }
+
+// connIDAttr names a connection in the log: every line the hub and the SFU
+// write for one WebSocket carries it, which is what tells two sessions of one
+// member apart (doc/operations.md). It stays in the log: no event carries it
+// and no other member learns it.
+const connIDAttr = "conn_id"
+
+// newConnID mints the id of a connection that has no upgrade request to take
+// one from: 8 random bytes, enough to stay unique among the connections of a
+// log's lifetime.
+func newConnID() string {
+	var b [8]byte
+	_, _ = rand.Read(b[:]) // never fails (crypto/rand)
+	return hex.EncodeToString(b[:])
+}
+
+// nameConn gives the connection its id and binds it to the connection's
+// logger once, so no log call builds the attribute again. A WebSocket takes
+// the request id of its upgrade request, which puts its "http" access line
+// and everything the connection logs later under one id.
+func (c *Client) nameConn(id string) {
+	if id == "" {
+		id = newConnID()
+	}
+	c.connID = id
+	c.log = slog.With(connIDAttr, id)
+}
+
+// logger is the connection's logger. A client made without an id (tests)
+// logs like the rest of the server.
+func (c *Client) logger() *slog.Logger {
+	if c == nil || c.log == nil {
+		return slog.Default()
+	}
+	return c.log
+}
+
+// panics is the connection's id for the panic line of its goroutines, timers
+// and callbacks.
+func (c *Client) panics() safego.Conn { return safego.Conn(c.connID) }

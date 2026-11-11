@@ -20,7 +20,7 @@ type attachRig struct {
 func newAttachRig(t *testing.T) *attachRig {
 	t.Helper()
 	s := newTestSFU(t)
-	room, _, err := s.Join(uuid.New(), uuid.New(), nil, nil)
+	room, _, err := s.Join(uuid.New(), uuid.New(), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -121,7 +121,7 @@ func joinTwo(t *testing.T) (*SFU, *Room, uuid.UUID, uuid.UUID) {
 	s := newTestSFU(t)
 	ch := uuid.New()
 	a, b := uuid.New(), uuid.New()
-	room, _, err := s.Join(ch, a, nil, nil)
+	room, _, err := s.Join(ch, a, "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,5 +260,5 @@ func (s *SFU) joinPeerIn(r *Room, userID uuid.UUID, sendOffer func(webrtc.Sessio
 	if err != nil {
 		return nil, err
 	}
-	return r.attachPeer(userID, conn, sendOffer, sendICE), nil
+	return r.attachPeer(userID, "", conn, sendOffer, sendICE), nil
 }

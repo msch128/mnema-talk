@@ -2,7 +2,6 @@ package sfu
 
 import (
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"github.com/msch128/mnema-talk/internal/safego"
@@ -21,7 +20,7 @@ func (r *Room) watchConnecting(peer *Peer) {
 	if r.offerTimeout <= 0 {
 		return
 	}
-	safego.AfterFunc("sfu_connecting_report", r.offerTimeout, safego.Abandon, func() {
+	safego.AfterFuncConn(peer.panics(), "sfu_connecting_report", r.offerTimeout, safego.Abandon, func() {
 		r.mu.RLock()
 		current := r.peers[peer.ID] == peer
 		r.mu.RUnlock()
@@ -32,7 +31,7 @@ func (r *Room) watchConnecting(peer *Peer) {
 		case webrtc.PeerConnectionStateConnected, webrtc.PeerConnectionStateClosed:
 			return
 		}
-		slog.Warn("sfu peer still connecting", peer.connectingReport()...)
+		peer.logger().Warn("sfu peer still connecting", peer.connectingReport()...)
 	})
 }
 

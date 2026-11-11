@@ -171,7 +171,7 @@ func (g *layerGroup) computeHoldMaskLocked(now time.Time, need uint8) (uint8, ti
 func (g *layerGroup) scheduleHoldTimerLocked(next time.Time, now time.Time) {
 	g.stopTimerLocked()
 	if !next.IsZero() && !g.superseded.Load() {
-		g.timer = safego.AfterFunc("sfu_layer_hold", next.Sub(now)+time.Millisecond, g.onPanic, g.refreshWanted)
+		g.timer = safego.AfterFuncConn(g.conn, "sfu_layer_hold", next.Sub(now)+time.Millisecond, g.onPanic, g.refreshWanted)
 	}
 }
 

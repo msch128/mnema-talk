@@ -20,7 +20,7 @@ var peerGen atomic.Uint64
 
 // attachPeer makes conn the user's connection in the room, replacing an
 // earlier one. It only wires callbacks and maps: nothing in it waits.
-func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) *Peer {
+func (r *Room) attachPeer(userID uuid.UUID, connID string, conn *receiveConn, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) *Peer {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	pc := conn.pc
@@ -38,11 +38,13 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 
 		allowLoopbackCands: r.allowLoopbackCands,
 	}
+	peer.nameConn(connID)
+	r.conns.name(peer.connID, connID)
 
 	// Pion calls these on goroutines of its own.
-	drop := r.dropOnPanic(peer)
+	drop, of := r.dropOnPanic(peer), peer.panics()
 	pc.OnICECandidate(func(c *webrtc.ICECandidate) {
-		safego.Run("sfu_callback", drop, func() {
+		safego.RunConn(of, "sfu_callback", drop, func() {
 			if c != nil {
 				peer.emitCandidate(c.ToJSON())
 			}
@@ -50,15 +52,15 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 	})
 
 	pc.OnTrack(func(remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
-		safego.Run("sfu_callback", drop, func() { r.handleRemoteTrack(peer, conn, remoteTrack, receiver) })
+		safego.RunConn(of, "sfu_callback", drop, func() { r.handleRemoteTrack(peer, conn, remoteTrack, receiver) })
 	})
 
 	pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
-		safego.Run("sfu_callback", drop, func() { logICEState(pc, userID, state, r.iceSeen) })
+		safego.RunConn(of, "sfu_callback", drop, func() { logICEState(peer, state, r.iceSeen) })
 	})
 
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
-		safego.Run("sfu_callback", drop, func() { r.peerStateChanged(peer, state) })
+		safego.RunConn(of, "sfu_callback", drop, func() { r.peerStateChanged(peer, state) })
 	})
 
 	r.peers[userID] = peer
@@ -73,7 +75,7 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 
 // peerStateChanged removes a peer whose connection failed or was closed.
 func (r *Room) peerStateChanged(peer *Peer, state webrtc.PeerConnectionState) {
-	slog.Info("sfu peer state", "user", peer.ID, "state", state.String())
+	peer.logger().Info("sfu peer state", "user", peer.ID, "state", state.String())
 	switch state {
 	case webrtc.PeerConnectionStateFailed:
 		r.dropLostPeer(peer)
@@ -93,26 +95,26 @@ func (r *Room) replacePeerLocked(userID uuid.UUID) {
 	r.removePeerTracksLocked(userID)
 	// Closing fires the old connection's state callback; removePeer
 	// ignores it because the user's entry is no longer that peer.
-	safego.Go("sfu_peer_close", func() { _ = existing.PC.Close() }, func() {
+	safego.GoConn(existing.panics(), "sfu_peer_close", func() { _ = existing.PC.Close() }, func() {
 		existing.releaseViewerTracks()
 		_ = existing.PC.Close()
 	})
 }
 
 // logICEState records ICE transitions worth seeing in the log and metrics.
-func logICEState(pc *webrtc.PeerConnection, userID uuid.UUID, state webrtc.ICEConnectionState, seen *iceObserver) {
+func logICEState(peer *Peer, state webrtc.ICEConnectionState, seen *iceObserver) {
 	switch state {
 	case webrtc.ICEConnectionStateConnected:
-		attrs := []any{"user", userID}
-		pair, err := selectedPair(pc)
+		attrs := []any{"user", peer.ID}
+		pair, err := selectedPair(peer.PC)
 		if err == nil && pair != nil {
 			attrs = append(attrs, "local", pair.Local.Address, "remote", pair.Remote.Address, "remote_type", pair.Remote.Typ.String())
 			seen.connected(pair)
 		}
-		slog.Info("sfu ice connected", attrs...)
+		peer.logger().Info("sfu ice connected", attrs...)
 		metrics.SFUICE.With("connected").Inc()
 	case webrtc.ICEConnectionStateFailed, webrtc.ICEConnectionStateDisconnected:
-		slog.Warn("sfu ice "+state.String(), "user", userID)
+		peer.logger().Warn("sfu ice "+state.String(), "user", peer.ID)
 		metrics.SFUICE.With(state.String()).Inc()
 	}
 }
@@ -174,14 +176,14 @@ func (r *Room) handleRemoteTrack(peer *Peer, conn *receiveConn, remoteTrack *web
 	userID := peer.ID
 	role := classifyRemoteTrack(userID, conn, remoteTrack, receiver)
 	source := role.source
-	slog.Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "source", string(source), "layer", role.layer, "codec", remoteTrack.Codec().MimeType)
+	peer.logger().Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "source", string(source), "layer", role.layer, "codec", remoteTrack.Codec().MimeType)
 
 	// The user may not send this (no Speak or Video permission): never
 	// publish it while that lasts. Pion reports a track once, so it is kept
 	// and published when the first packet arrives after the permission came
 	// back.
 	if peer.sourceDenied(source) {
-		safego.Go("sfu_forward", r.dropOnPanic(peer), func() {
+		safego.GoConn(peer.panics(), "sfu_forward", r.dropOnPanic(peer), func() {
 			if awaitSourceAllowed(peer, source, remoteTrack) {
 				r.publishRemoteTrack(peer, remoteTrack, role)
 			}
@@ -241,7 +243,7 @@ func (r *Room) publishRemoteTrack(peer *Peer, remoteTrack *webrtc.TrackRemote, r
 	}
 	r.addTrack(key, info)
 
-	safego.Go("sfu_forward", r.dropOnPanic(peer), func() { r.forward(remoteTrack, trackLocal, key, info) })
+	safego.GoConn(peer.panics(), "sfu_forward", r.dropOnPanic(peer), func() { r.forward(remoteTrack, trackLocal, key, info) })
 }
 
 // takesCameraLayer reports whether a camera video goes into a layer group:
@@ -332,7 +334,7 @@ func (r *Room) writeForwardedPacket(local rtpWriter, rtpPkt *rtp.Packet, key str
 	rtpPkt.Extensions = nil
 	r.resumeStoppedTrack(key, info)
 	if err := local.WriteRTP(rtpPkt); isLoggedWriteError(err, info) {
-		slog.Warn("sfu forward rtp", "publisher", info.SenderID, "source", string(info.Source), "err", err)
+		info.logger().Warn("sfu forward rtp", "publisher", info.SenderID, "source", string(info.Source), "err", err)
 	}
 }
 

@@ -41,7 +41,7 @@ func joinAll(t *testing.T, s *SFU, room uuid.UUID, users ...uuid.UUID) map[uuid.
 	t.Helper()
 	peers := map[uuid.UUID]*Peer{}
 	for _, id := range users {
-		_, peer, err := s.Join(room, id, func(webrtc.SessionDescription) {}, nil)
+		_, peer, err := s.Join(room, id, "", func(webrtc.SessionDescription) {}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -135,7 +135,7 @@ func TestEveryConnectionsChainStartsWithTheViewerGuard(t *testing.T) {
 		t.Fatal(err)
 	}
 	dropped := make(chan string, 1)
-	registry, err := buildInterceptors(mediaEngine, &peerLoad{}, func(id string) { dropped <- id })
+	registry, err := buildInterceptors(mediaEngine, &peerLoad{}, func(id string) { dropped <- id }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

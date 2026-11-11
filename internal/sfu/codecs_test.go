@@ -87,7 +87,7 @@ func TestRenegotiationKeepsTheCameraLineCodecOrder(t *testing.T) {
 	room := uuid.New()
 	c := newClient(t)
 	offers := make(chan webrtc.SessionDescription, 8)
-	_, peer, err := s.Join(room, c.id, func(o webrtc.SessionDescription) { offers <- o }, nil)
+	_, peer, err := s.Join(room, c.id, "", func(o webrtc.SessionDescription) { offers <- o }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestRenegotiationKeepsTheCameraLineCodecOrder(t *testing.T) {
 
 	// Another member's camera makes the SFU offer again.
 	other := uuid.New()
-	if _, _, err := s.Join(room, other, func(webrtc.SessionDescription) {}, nil); err != nil {
+	if _, _, err := s.Join(room, other, "", func(webrtc.SessionDescription) {}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.Room(room).PublishTestVideo(other, SourceCamera); err != nil {

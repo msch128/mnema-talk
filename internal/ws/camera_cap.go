@@ -2,7 +2,6 @@ package ws
 
 import (
 	"encoding/json"
-	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -57,6 +56,6 @@ func (c *Client) handleCameraBatch(ids []uuid.UUID, on bool) {
 		return
 	}
 	if err := room.SubscribeCameras(c.User.ID, ids, on); err != nil {
-		slog.Debug("sfu camera batch rejected", "user", c.User.ID, "err", err)
+		c.logger().Debug("sfu camera batch rejected", "user", c.User.ID, "err", err)
 	}
 }

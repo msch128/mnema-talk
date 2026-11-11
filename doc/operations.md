@@ -1587,6 +1587,41 @@ At startup the app logs `webrtc announce` with the announced IPs and the
 port range, or `webrtc sfu unavailable, voice disabled` when the SFU could
 not start (e.g. the UDP range is in use).
 
+### Following one session through the log
+
+A member can be connected more than once: two tabs, the desktop app next to
+a browser, or a reconnect that overlaps the connection it replaces. Lines
+that only name the member (`user`) cannot tell these apart, so every line
+that belongs to one WebSocket connection also carries `conn_id`:
+
+- the hub's lines: `ws connected`, `ws disconnected`, `voice join`,
+  `voice leave` (also the leave that ends a grace period after the socket
+  dropped), refused joins and `webrtc client diag`;
+- the lines of the media connection that WebSocket made in a Talk
+  (`sfu peer state`, `sfu ice connected`, `sfu track received`, unanswered
+  offers, dropped candidates, ...). A rejoin makes a new media connection, so
+  the old and the new one of the same member are told apart the same way;
+- `goroutine panicked`, when the panic happened in work of one connection.
+
+`conn_id` is the request id of the upgrade request, so it equals the
+`request_id` of that connection's `http` line for `/api/ws` (which also has
+the address) and the `X-Request-Id` your reverse proxy passed on, if it sets
+one. Without one the server makes an id up.
+
+```sh
+# 1. The member's connections and when each one came and went
+docker compose logs app | grep -E '"msg":"ws (dis)?connected"' | grep '"user":"alice"'
+# 2. Everything one of them did, in order
+docker compose logs app | grep '"conn_id":"4f0c2a1e-..."'
+# 3. Where it came from
+docker compose logs app | grep '"request_id":"4f0c2a1e-..."'
+```
+
+The id is only in the server log. No client is told its own or anybody
+else's, it is in no event and it is no metric label. Lines about a member as
+a whole (a kick by a moderator, the write of voice time) and the panic of a
+connection's retransmission worker (`sfu_nack`) carry none.
+
 ## Troubleshooting
 
 ### Account deletion and data exports

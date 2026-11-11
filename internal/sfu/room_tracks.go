@@ -367,7 +367,7 @@ func (p *Peer) OnLost(fn func()) {
 	}
 	p.lostMu.Unlock()
 	if lost && fn != nil {
-		safego.Go("sfu_peer_lost", safego.Crash, fn)
+		safego.GoConn(p.panics(), "sfu_peer_lost", safego.Crash, fn)
 	}
 }
 
@@ -378,6 +378,6 @@ func (p *Peer) notifyLost() {
 	p.onLost = nil
 	p.lostMu.Unlock()
 	if fn != nil {
-		safego.Go("sfu_peer_lost", safego.Crash, fn)
+		safego.GoConn(p.panics(), "sfu_peer_lost", safego.Crash, fn)
 	}
 }

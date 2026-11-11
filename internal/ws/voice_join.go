@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -96,7 +95,7 @@ func (h *Hub) seatVoice(c *Client, ch *core.ChannelInfo, mode joinMode) bool {
 	if h.SFU == nil {
 		c.stampSeat(h.seatClock.Add(1)) // no media peer orders the seats
 	}
-	slog.Info("voice join", "user", c.User.Username, "channel", ch.ID, "rejoin", seat.rejoin)
+	c.logger().Info("voice join", "user", c.User.Username, "channel", ch.ID, "rejoin", seat.rejoin)
 	h.announceVoiceJoin(c, ch.ID, seat)
 	return true
 }
@@ -136,7 +135,7 @@ func (h *Hub) endSiblingVoices(c *Client) {
 func (h *Hub) checkJoinPermission(c *Client, chID uuid.UUID) bool {
 	snap, ok := h.permSnapshot(chID)
 	if !ok || !c.can(snap, chID, perm.ViewChannel|perm.Connect) {
-		slog.Info("voice join refused, missing permission", "user", c.User.Username, "channel", chID)
+		c.logger().Info("voice join refused, missing permission", "user", c.User.Username, "channel", chID)
 		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": c.joinRefusal(snap)})
 		return false
 	}
@@ -231,7 +230,7 @@ func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo) (voiceSeat, bool) {
 		return voiceSeat{}, false
 	}
 	if !bypass && h.isVoiceRoomFull(ch, c.User.ID) {
-		slog.Info("voice join refused, room full", "user", c.User.Username, "channel", ch.ID, "limit", ch.UserLimit)
+		c.logger().Info("voice join refused, room full", "user", c.User.Username, "channel", ch.ID, "limit", ch.UserLimit)
 		// The client ends the call on voice_kicked; reason tells it why.
 		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": ch.ID, "reason": "room_full"})
 		return voiceSeat{}, false
@@ -304,7 +303,7 @@ func (h *Hub) recordVoiceJoinTimeLocked(key voiceKey, rejoin bool, now time.Time
 func (h *Hub) recheckJoin(c *Client, chID uuid.UUID) (*perm.Snapshot, bool) {
 	snap, ok := h.permSnapshot(chID)
 	if !ok || !c.can(snap, chID, perm.ViewChannel|perm.Connect) {
-		slog.Info("voice join revoked, permission changed meanwhile", "user", c.User.Username, "channel", chID)
+		c.logger().Info("voice join revoked, permission changed meanwhile", "user", c.User.Username, "channel", chID)
 		h.leaveVoiceLocked(c, chID)
 		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": c.joinRefusal(snap)})
 		return nil, false
@@ -317,11 +316,11 @@ func (h *Hub) recheckJoin(c *Client, chID uuid.UUID) (*perm.Snapshot, bool) {
 func (h *Hub) attachPeer(c *Client, chID uuid.UUID, evictReason string) bool {
 	sendOffer := func(offer webrtc.SessionDescription) { c.SendEvent(events.WebrtcOffer, offer) }
 	sendICE := func(cand *webrtc.ICECandidateInit) { c.SendEvent(events.WebrtcCandidate, cand) }
-	_, peer, err := h.SFU.Join(chID, c.User.ID, sendOffer, sendICE)
+	_, peer, err := h.SFU.Join(chID, c.User.ID, c.connID, sendOffer, sendICE)
 	if err != nil {
 		// Without a media connection the seat is worth nothing: give it up
 		// instead of announcing a member nobody can hear.
-		slog.Error("sfu join failed", "user", c.User.ID, "channel", chID, "err", err)
+		c.logger().Error("sfu join failed", "user", c.User.ID, "channel", chID, "err", err)
 		h.leaveVoiceLocked(c, chID)
 		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": "media_unavailable"})
 		return false
@@ -334,7 +333,7 @@ func (h *Hub) attachPeer(c *Client, chID uuid.UUID, evictReason string) bool {
 	if peer != nil {
 		// A media connection that fails after the join leaves the seat
 		// without media: tell the client so it can rejoin.
-		peer.OnLost(func() { safego.Run("ws_peer_lost", c.close, func() { h.kickLostPeer(c, peer) }) })
+		peer.OnLost(func() { safego.RunConn(c.panics(), "ws_peer_lost", c.close, func() { h.kickLostPeer(c, peer) }) })
 	}
 	if h.afterPeer != nil {
 		h.afterPeer() // tests change permissions exactly here
