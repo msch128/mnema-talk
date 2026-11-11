@@ -182,6 +182,13 @@ func CheckBotSend(ctx context.Context, ps *perm.Service, p *db.Pool, user *auth.
 	return snap, set, nil
 }
 
+// SendContext carries what the bot's permissions in the channel (p, from
+// CheckBotSend) mean for a message it posts there: like a member, a bot that
+// may manage messages is not held back by slow mode or a locked post.
+func SendContext(ctx context.Context, p perm.Set) context.Context {
+	return messages.WithSlowModeExempt(ctx, p.Has(perm.ManageMessages))
+}
+
 func decodeRawBotMessage(w http.ResponseWriter, r *http.Request) (*rawBotMessage, error) {
 	var req rawBotMessage
 	httpx.SetJSONReadDeadline(w)
@@ -265,7 +272,7 @@ func (a *API) botCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	if err := messages.ValidateTarget(r.Context(), a.DB, chID, req.ParentID, reply); err != nil {
 		return err
 	}
-	ctx := mentions.WithMentionPolicy(r.Context(), botMentionPolicy(snap, chID, p, req.AllowedMentions))
+	ctx := mentions.WithMentionPolicy(SendContext(r.Context(), p), botMentionPolicy(snap, chID, p, req.AllowedMentions))
 	id, err := messages.InsertMessage(ctx, a.DB, a.Online, messages.NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: reply, Embeds: embeds,
 	}, nil)

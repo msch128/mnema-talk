@@ -163,7 +163,7 @@ func validate(d ResponseData) (*message, error) {
 // respond posts the message of a response, or shows it to the invoker only.
 func (c *Commands) respond(r *http.Request, in *interaction, m message) (*core.Message, error) {
 	ctx := r.Context()
-	snap, _, err := botapi.CheckBotSend(ctx, c.Perms, c.DB, auth.UserFrom(ctx), in.channel)
+	snap, p, err := botapi.CheckBotSend(ctx, c.Perms, c.DB, auth.UserFrom(ctx), in.channel)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (c *Commands) respond(r *http.Request, in *interaction, m message) (*core.M
 	}
 	// A command response never mentions everyone; members are notified only
 	// when they can see the channel.
-	ctx = mentions.WithMentionPolicy(ctx, mentions.MentionPolicy{
+	ctx = mentions.WithMentionPolicy(botapi.SendContext(ctx, p), mentions.MentionPolicy{
 		NoEveryone: true,
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, in.channel).Has(perm.ViewChannel) },
 	})
