@@ -34,6 +34,7 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 		SendICE:   sendICE,
 		room:      r,
 		gen:       peerGen.Add(1),
+		connID:    pc.ID(),
 
 		allowLoopbackCands: r.allowLoopbackCands,
 	}

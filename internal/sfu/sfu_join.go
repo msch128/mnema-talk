@@ -313,23 +313,25 @@ func (g *viewerGuard) writeDone(err *error) {
 }
 
 // dropConnection removes the peer whose connection is connID and tells its
-// owner. A connection the member has replaced is gone already.
+// owner. A connection the member has replaced is gone already. Pion names a
+// connection after the nanosecond it was made in, and connections are made
+// side by side: should two share a name, both go and join again, rather
+// than the healthy one alone while the broken one stays unheard.
 func (s *SFU) dropConnection(connID string) {
-	var room *Room
-	var found *Peer
+	var found []*Peer
 	safego.Locked(&s.roomsMu, func() {
 		for _, r := range s.rooms {
 			safego.Locked(r.mu.RLocker(), func() {
 				for _, peer := range r.peers {
-					if peer.PC != nil && peer.PC.ID() == connID {
-						room, found = r, peer
+					if peer.connID == connID {
+						found = append(found, peer)
 					}
 				}
 			})
 		}
 	})
-	if found != nil {
-		room.goDropLost(found)
+	for _, peer := range found {
+		peer.room.goDropLost(peer)
 	}
 }
 

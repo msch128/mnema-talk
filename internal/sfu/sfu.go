@@ -140,7 +140,10 @@ type Peer struct {
 	// gen orders this peer against the earlier and later peers of the same
 	// user (see layerGroup.addViewer); attachStep is a test seam called
 	// between the steps of addSender.
-	gen        uint64
+	gen uint64
+	// connID is the ID Pion gave the connection, which is what the
+	// connection's viewerGuard knows of it.
+	connID     string
 	attachStep func(step string)
 	// lostMu guards onLost and lost (see OnLost).
 	lostMu sync.Mutex

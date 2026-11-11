@@ -30,7 +30,7 @@ func (s sharedTrack) WriteRTP(p *rtp.Packet) error {
 // ending in transport instead of the network.
 func listen(t *testing.T, s *SFU, listener *Peer, transport interceptor.RTPWriterFunc) interceptor.RTPWriter {
 	t.Helper()
-	guard, err := viewerGuardFactory{drop: s.dropConnection}.NewInterceptor(listener.PC.ID())
+	guard, err := viewerGuardFactory{drop: s.dropConnection}.NewInterceptor(listener.connID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,6 +162,34 @@ func TestEveryConnectionsChainStartsWithTheViewerGuard(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("the connection was never dropped")
+	}
+}
+
+// Pion names a connection after the nanosecond it was made in, so two can
+// share a name. When the chain of one of them panics, both are dropped and
+// join again: the one that panicked must not stay behind unheard.
+func TestConnectionsThatShareAnIDAreBothDroppedForAPanic(t *testing.T) {
+	s := newTestSFU(t)
+	first, second, other := uuid.New(), uuid.New(), uuid.New()
+	peers := joinAll(t, s, uuid.New(), first, other)
+	peers[second] = joinAll(t, s, uuid.New(), second)[second]
+	peers[second].connID = peers[first].connID
+	lost := make(chan uuid.UUID, 2)
+	for _, id := range []uuid.UUID{first, second} {
+		peers[id].OnLost(func() { lost <- id })
+	}
+	peers[other].OnLost(func() { t.Error("a connection with another ID was dropped") })
+
+	s.dropConnection(peers[first].connID)
+
+	got := map[uuid.UUID]bool{}
+	for range 2 {
+		select {
+		case id := <-lost:
+			got[id] = true
+		case <-time.After(5 * time.Second):
+			t.Fatalf("dropped %d of the 2 connections that share the ID", len(got))
+		}
 	}
 }
 
