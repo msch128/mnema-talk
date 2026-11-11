@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.7](https://github.com/msch128/mnema-talk/compare/v3.0.6...v3.0.7) (2026-11-11)
+
+
+### Code Refactoring
+
+* **test:** fail the steps of legacy bot token binding at a store interface ([eea1639](https://github.com/msch128/mnema-talk/commit/eea163931eb01a60ff4f5f91525c120f3f254a60))
+* **test:** fail the webhook handlers' load and message steps at a store interface ([eea1639](https://github.com/msch128/mnema-talk/commit/eea163931eb01a60ff4f5f91525c120f3f254a60))
+
 ## [3.0.6](https://github.com/msch128/mnema-talk/compare/v3.0.5...v3.0.6) (2026-11-11)
 
 
