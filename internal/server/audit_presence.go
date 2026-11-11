@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/talks"
@@ -23,7 +24,7 @@ type presenceEvent struct {
 // logged, which beats stalling voice.
 func auditPresence(ctx context.Context, l *audit.Log, q db.Querier) func(user, channel uuid.UUID, joined bool) {
 	queue := make(chan presenceEvent, 1024)
-	go func() {
+	safego.Go("audit_presence", safego.Crash, func() {
 		for {
 			select {
 			case <-ctx.Done():
@@ -32,7 +33,7 @@ func auditPresence(ctx context.Context, l *audit.Log, q db.Querier) func(user, c
 				writePresence(ctx, l, q, ev)
 			}
 		}
-	}()
+	})
 	return func(user, channel uuid.UUID, joined bool) {
 		select {
 		case queue <- presenceEvent{user, channel, joined}:

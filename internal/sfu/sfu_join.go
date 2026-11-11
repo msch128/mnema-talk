@@ -1,9 +1,13 @@
 package sfu
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -70,8 +74,9 @@ func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDes
 		s.rooms[channelID] = r
 	}
 	// A long-lived room picks up changed announced addresses for new peers.
+	loopback := announcesLoopback(announced)
 	r.mu.Lock()
-	r.allowLoopbackCands = announcesLoopback(announced)
+	r.allowLoopbackCands = loopback
 	r.mu.Unlock()
 	return r, r.attachPeer(userID, conn, sendOffer, sendICE), nil
 }
@@ -83,22 +88,25 @@ func (s *SFU) RemovePeer(channelID uuid.UUID, peer *Peer) {
 	if peer == nil {
 		return
 	}
-	s.roomsMu.Lock()
-	r, ok := s.rooms[channelID]
+	var r *Room
+	ok, current := false, false
+	safego.Locked(&s.roomsMu, func() {
+		if r, ok = s.rooms[channelID]; !ok {
+			return
+		}
+		current = r.detachPeer(peer)
+		if r.empty() {
+			delete(s.rooms, channelID)
+		}
+	})
 	if !ok {
-		s.roomsMu.Unlock()
 		_ = peer.PC.Close()
 		return
 	}
-	current := r.detachPeer(peer)
-	if r.empty() {
-		delete(s.rooms, channelID)
-	}
-	s.roomsMu.Unlock()
 	// Closing transports may wait on network operations. Other rooms and
 	// WebSocket registration must remain available while this peer closes.
 	if current {
-		go r.SignalPeerConnections()
+		r.goSignal()
 	}
 	_ = peer.PC.Close()
 }
@@ -202,4 +210,80 @@ func newReceiveConn(api *webrtc.API, iceServers []webrtc.ICEServer) (*receiveCon
 	pinCodecOrder(append(append([]*webrtc.RTPTransceiver{screenTr, cameraTr}, lowerTrs...), cameraLowerTrs...)...)
 
 	return &receiveConn{pc: pc, cameraTr: cameraTr, screenAudioTr: screenAudioTr, lowerTrs: lowerTrs, cameraLowerTrs: cameraLowerTrs}, nil
+}
+
+// What the SFU does when its own code panics (see internal/safego). Work that
+// belongs to one peer removes that peer and tells its owner, like a media
+// connection that failed; the room keeps forwarding for everyone else. Work
+// on a whole room drops every peer of that room, who then join again. Only
+// the process-wide loops (address refresh, upload limit, announcements to the
+// hub) let the process exit.
+
+// dropOnPanic is the onPanic of work that belongs to peer. The owner is told
+// whether or not this call is the one that takes the peer out of the room:
+// the panic may have come from a removal that had detached it already and
+// never got to tell. Telling is once-only, and the hub ignores it for a peer
+// its member has replaced.
+func (r *Room) dropOnPanic(peer *Peer) func() {
+	return func() {
+		r.removePeer(peer)
+		peer.notifyLost()
+	}
+}
+
+// dropUser removes the current peer of userID, if any, on a goroutine of its
+// own: the caller is another peer's forwarding loop.
+func (r *Room) dropUser(userID uuid.UUID) {
+	r.mu.RLock()
+	peer := r.peers[userID]
+	r.mu.RUnlock()
+	if peer != nil {
+		r.goDropLost(peer)
+	}
+}
+
+// goSignal runs a signaling round of the whole room on a goroutine of its own.
+func (r *Room) goSignal() {
+	safego.Go("sfu_signal", r.dropAllPeers, r.SignalPeerConnections)
+}
+
+// goDropLost removes peer on a goroutine of its own. When even that panics
+// the connection is closed and the owner told, so the member does not stay
+// in the call unheard.
+func (r *Room) goDropLost(peer *Peer) {
+	giveUp := func() {
+		_ = peer.PC.Close()
+		peer.notifyLost()
+	}
+	safego.Go("sfu_peer_drop", giveUp, func() { r.dropLostPeer(peer) })
+}
+
+// goForwardRTCP reads viewer's feedback for one track it receives.
+func (r *Room) goForwardRTCP(viewer *Peer, sender *webrtc.RTPSender, keyframe func(), report func(loss float64, rtt time.Duration, bandwidth int)) {
+	safego.Go("sfu_rtcp", r.dropOnPanic(viewer), func() {
+		r.feedbackEnded(viewer, r.forwardRTCP(sender, keyframe, report))
+	})
+}
+
+// feedbackEnded looks at why reading a viewer's feedback stopped. A
+// connection whose NACK responder gave up would go on without
+// retransmissions: the viewer is dropped and joins again.
+func (r *Room) feedbackEnded(viewer *Peer, err error) {
+	if errors.Is(err, errNackGaveUp) {
+		slog.Error("sfu nack responder gave up, dropping the peer", "user", viewer.ID)
+		r.dropLostPeer(viewer)
+	}
+}
+
+// dropAllPeers empties a room whose shared work panicked.
+func (r *Room) dropAllPeers() {
+	r.mu.RLock()
+	peers := make([]*Peer, 0, len(r.peers))
+	for _, peer := range r.peers {
+		peers = append(peers, peer)
+	}
+	r.mu.RUnlock()
+	for _, peer := range peers {
+		r.dropLostPeer(peer)
+	}
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 const (
@@ -156,7 +157,7 @@ func (h *Hub) recordPendingVoiceTime(userID, chID uuid.UUID, secs, public int64)
 	now := time.Now()
 	if wait := voiceTimeFlushEvery - now.Sub(p.lastWrite); wait > 0 {
 		if p.timer == nil {
-			p.timer = time.AfterFunc(wait, func() { h.flushVoiceTime(userID) })
+			p.timer = safego.AfterFunc("ws_voice_time", wait, safego.Crash, func() { h.flushVoiceTime(userID) })
 		}
 		return false
 	}
@@ -211,7 +212,7 @@ func (h *Hub) restorePendingVoiceTime(userID, chID uuid.UUID, secs, public int64
 		p.idle = nil
 	}
 	if p.timer == nil {
-		p.timer = time.AfterFunc(voiceTimeFlushEvery, func() { h.flushVoiceTime(userID) })
+		p.timer = safego.AfterFunc("ws_voice_time", voiceTimeFlushEvery, safego.Crash, func() { h.flushVoiceTime(userID) })
 	}
 }
 
@@ -227,7 +228,7 @@ func (h *Hub) pruneWhenIdle(userID uuid.UUID) {
 	if p.idle != nil {
 		p.idle.Stop()
 	}
-	p.idle = time.AfterFunc(voiceTimeFlushEvery, func() {
+	p.idle = safego.AfterFunc("ws_voice_time", voiceTimeFlushEvery, safego.Crash, func() {
 		h.vtimes.mu.Lock()
 		defer h.vtimes.mu.Unlock()
 		if h.vtimes.m[userID] == p && p.secs == 0 && p.timer == nil {

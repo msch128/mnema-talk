@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // talkEvent is an event held in a Talk.
@@ -23,13 +24,13 @@ func (h *Handler) PermissionsChanged(userIDs []uuid.UUID) {
 		return
 	}
 	prev := h.Perms.Previous()
-	go func() {
+	safego.Go("event_retract", safego.Crash, func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		if err := h.RetractHidden(ctx, prev, userIDs); err != nil {
 			slog.ErrorContext(ctx, "retract hidden events failed", "err", err)
 		}
-	}()
+	})
 }
 
 // RetractHidden sends event_delete, per event, to the members among userIDs

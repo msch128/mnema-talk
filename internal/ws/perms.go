@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -142,7 +143,7 @@ func (c *Client) notifyPermissions() {
 	}
 	c.permPending = true
 	c.mu.Unlock()
-	time.AfterFunc(wait, func() {
+	safego.AfterFunc("ws_perm_notify", wait, c.close, func() {
 		c.mu.Lock()
 		c.permPending = false
 		c.permSent = time.Now()
@@ -158,9 +159,8 @@ func (c *Client) notifyPermissions() {
 // what they may. nil userIDs means everybody.
 func (h *Hub) PermissionsChanged(userIDs []uuid.UUID) {
 	want := wantUserIDs(userIDs)
-	h.mu.RLock()
-	clients := filterPermClients(h.clients, want)
-	h.mu.RUnlock()
+	var clients []*Client
+	safego.Locked(h.mu.RLocker(), func() { clients = filterPermClients(h.clients, want) })
 	for _, c := range clients {
 		c.notifyPermissions()
 	}
@@ -219,7 +219,7 @@ func (r *permRetry) add(userIDs []uuid.UUID, run func()) {
 	if r.timer != nil {
 		return // a retry is already scheduled and will take the merged set
 	}
-	r.timer = time.AfterFunc(r.nextWait(), run)
+	r.timer = safego.AfterFunc("ws_perm_retry", r.nextWait(), safego.Crash, run)
 }
 
 // nextWait doubles the wait with every failed attempt up to permRetryMax. The

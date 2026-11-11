@@ -123,7 +123,7 @@ or do what); message and file confidentiality against non-members (text is
 moderators and other members; media confidentiality against an honest server
 and anyone on the path (E2EE); audit-log integrity; instance secrets
 (`JWT_SECRET`, S3 and database credentials, VAPID key, TOTP encryption key
-derived from `JWT_SECRET`); the signing keys of web bundles, desktop updates
+derived from `DATA_KEY`, or from `JWT_SECRET` without one); the signing keys of web bundles, desktop updates
 and release images.
 
 ### 3.3 Trust boundaries
@@ -146,7 +146,7 @@ and release images.
 | Text messages, attachments, avatars, DMs, polls, forum posts | **Not end-to-end encrypted, by design.** Readable by the server and the Owner's database access. TLS in transit; DMs are hidden from moderators by the permission model, not by cryptography. Decision is final: no text E2EE is planned |
 | Metadata (who speaks when, frame sizes, layers, membership, timing) | Visible to the server |
 | Web Push payloads | Encrypted for the browser (RFC 8291); the server knows the plaintext |
-| Passwords | bcrypt; sessions are signed JWTs with a per-user version and per-token id; TOTP secrets AES-256-GCM encrypted under a key derived from `JWT_SECRET`; recovery codes keyed HMAC |
+| Passwords | bcrypt; sessions are signed JWTs with a per-user version and per-token id; TOTP secrets AES-256-GCM encrypted under a key derived from `DATA_KEY` (from `JWT_SECRET` without one), each blob naming its key; recovery codes keyed HMAC; both secrets rotate with a verify-only previous value |
 
 ### 4.2 Media encryption
 

@@ -22,8 +22,17 @@ var ErrNoSession = httpx.ErrUnauthorized("authentication required")
 type Sessions struct {
 	DB     *db.Pool
 	Secret string
-	TTL    time.Duration
-	Secure bool
+	// PreviousSecret (JWT_SECRET_PREVIOUS) still verifies sessions and
+	// known-device cookies signed before the secret was rotated; nothing is
+	// signed with it.
+	PreviousSecret string
+	// DataKey (DATA_KEY) seals the second factor's data at rest; empty means
+	// the keys are derived from Secret. DataKeyPrevious still reads what was
+	// sealed before DataKey was rotated (see two_factor_keys.go).
+	DataKey         string
+	DataKeyPrevious string
+	TTL             time.Duration
+	Secure          bool
 
 	// touched throttles the activity writes (see touch); its zero value works.
 	touched sync.Map
@@ -57,7 +66,7 @@ func (s *Sessions) Revoke(r *http.Request) error {
 	if err != nil || c.Value == "" {
 		return nil
 	}
-	claims, err := ParseToken(c.Value, s.Secret)
+	claims, err := s.parseToken(c.Value)
 	if err != nil || claims.ID == "" || claims.ExpiresAt == nil {
 		return nil
 	}

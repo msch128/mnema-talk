@@ -1,6 +1,10 @@
 package sfu
 
-import "time"
+import (
+	"time"
+
+	"github.com/msch128/mnema-talk/internal/safego"
+)
 
 func (vt *viewerTrack) needsKeyframe(now time.Time) bool {
 	switch {
@@ -29,10 +33,8 @@ func (vt *viewerTrack) keyframeDueLocked(now time.Time) bool {
 // starved, would otherwise be asked once, before it could answer. The viewer's
 // receiver reports come regardless of the media, so they drive the retry.
 func (vt *viewerTrack) retryKeyframe(now time.Time) {
-	vt.mu.Lock()
-	ask := vt.keyframeDueLocked(now)
-	eff := vt.eff
-	vt.mu.Unlock()
+	ask, eff := false, 0
+	safego.Locked(&vt.mu, func() { ask, eff = vt.keyframeDueLocked(now), vt.eff })
 	if ask {
 		vt.group.requestKeyframe(eff)
 	}
@@ -42,12 +44,12 @@ func (vt *viewerTrack) retryKeyframe(now time.Time) {
 // viewer, repeated requests are a sign that it cannot decode what it gets.
 func (vt *viewerTrack) viewerKeyframe() {
 	now := layerNow()
-	vt.mu.Lock()
 	flood := false
-	if vt.ad != nil {
-		flood = !vt.ad.keyframeRequested(now)
-	}
-	vt.mu.Unlock()
+	safego.Locked(&vt.mu, func() {
+		if vt.ad != nil {
+			flood = !vt.ad.keyframeRequested(now)
+		}
+	})
 	if !flood {
 		vt.requestKeyframe()
 	}

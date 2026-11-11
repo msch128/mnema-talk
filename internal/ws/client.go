@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -135,7 +136,7 @@ func (c *Client) deliver(data []byte) {
 func (c *Client) dropSlow() {
 	metrics.WSDropped.With("slow_client").Inc()
 	if c.closing.CompareAndSwap(false, true) {
-		go c.close()
+		safego.Go("ws_close", safego.Abandon, c.close)
 	}
 }
 
@@ -229,16 +230,22 @@ func (c *Client) currentVoice() *uuid.UUID {
 }
 
 // setVoice records the voice room this connection is in; nil drops the SFU
-// peer too. A room change resets the speaking indicator.
+// peer too. A room change resets the speaking indicator. The hub's room index
+// changes under the same lock, so it never disagrees with the connection.
+// Callers do not hold the hub's lock.
 func (c *Client) setVoice(ch *uuid.UUID) {
-	c.mu.Lock()
-	c.voiceCh = ch
-	c.seat = 0
-	c.speaking = false
-	if ch == nil {
-		c.sfuPeer = nil
-	}
-	c.mu.Unlock()
+	safego.Locked(&c.hub.mu, func() {
+		c.mu.Lock()
+		was := c.voiceCh
+		c.voiceCh = ch
+		c.seat = 0
+		c.speaking = false
+		if ch == nil {
+			c.sfuPeer = nil
+		}
+		c.mu.Unlock()
+		c.hub.moveRoomLocked(c, was, ch)
+	})
 }
 
 func (c *Client) setTab(id string) {

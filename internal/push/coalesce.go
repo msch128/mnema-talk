@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // key is one member's notifications from one channel.
@@ -63,7 +64,7 @@ func (c *coalescer) add(k key, h held, flush func(held)) *held {
 		e.waiting = &h
 		e.gen++
 		gen := e.gen
-		e.timer = time.AfterFunc(e.lastSent.Add(c.window).Sub(now), func() { c.fire(k, gen, flush) })
+		e.timer = safego.AfterFunc("push_coalesce", e.lastSent.Add(c.window).Sub(now), safego.Crash, func() { c.fire(k, gen, flush) })
 		return nil
 	}
 	h.notice.Count = e.waiting.notice.Count + 1

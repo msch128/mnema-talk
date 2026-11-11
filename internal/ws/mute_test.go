@@ -39,8 +39,8 @@ func TestMutedMembersAreNeverShownSpeaking(t *testing.T) {
 	h.register(c)
 	h.mu.Lock()
 	h.voice[chID] = map[uuid.UUID]auth.User{user.ID: user}
-	c.voiceCh = &chID
 	h.mu.Unlock()
+	c.setVoice(&chID)
 	sentEvents(t, c, "")
 
 	c.handle("voice_speaking", []byte(`{"active":true}`))

@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/imgproc"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/worker"
 )
 
@@ -39,7 +40,7 @@ func StartAvatarReencode(ctx context.Context, p *db.Pool, store Store, bucket st
 		return
 	}
 	h := &Handler{DB: p, Store: store, Bucket: bucket, Audit: log, Events: pub}
-	go runPeriodically(ctx, avatarReencodeFirstRun, avatarReencodeInterval, func(ctx context.Context) {
+	task := func(ctx context.Context) {
 		worker.Tick(worker.JobAvatarReencode, func() error {
 			done, failed, err := h.ReencodeAvatars(ctx)
 			switch {
@@ -50,6 +51,9 @@ func StartAvatarReencode(ctx context.Context, p *db.Pool, store Store, bucket st
 			}
 			return worker.IgnoreDone(ctx, err)
 		})
+	}
+	safego.Go("media_avatar_reencode", safego.Crash, func() {
+		runPeriodically(ctx, avatarReencodeFirstRun, avatarReencodeInterval, task)
 	})
 }
 

@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // A camera can go out as layers like a screen share (see layerGroup), but only
@@ -21,39 +22,41 @@ func (r *Room) SetCameraLayers(publisher uuid.UUID, layers []Layer) error {
 	if !validLayers(layers) {
 		return ErrInvalidLayers
 	}
-	r.mu.Lock()
-	if r.peers[publisher] == nil {
-		r.mu.Unlock()
-		return ErrNotInRoom
-	}
-	meta := r.layerMetaLocked(SourceCamera)
-	if slices.Equal(meta[publisher], layers) {
-		r.mu.Unlock()
-		return nil
-	}
-	if r.plainCameraLiveLocked(publisher) {
+	var g *layerGroup
+	var err error
+	plain := false
+	safego.Locked(&r.mu, func() {
+		if r.peers[publisher] == nil {
+			err = ErrNotInRoom
+			return
+		}
+		meta := r.layerMetaLocked(SourceCamera)
+		if slices.Equal(meta[publisher], layers) {
+			return
+		}
 		// Its video began without layers (and may resume on the same line
 		// without a new track): a lower layer joining now would replace it and
 		// leave viewers without its best layer. It stays one plain track
 		// until the connection is made anew.
-		r.mu.Unlock()
+		if plain = r.plainCameraLiveLocked(publisher); plain {
+			return
+		}
+		meta[publisher] = slices.Clone(layers)
+		g = r.cameraGroups[publisher]
+	})
+	if plain {
 		slog.Debug("sfu camera layers ignored: the camera is already sent plain", "user", publisher)
-		return nil
 	}
-	meta[publisher] = slices.Clone(layers)
-	g := r.cameraGroups[publisher]
-	r.mu.Unlock()
 	if g != nil {
 		g.setDeclared(len(layers))
 		// The sizes the viewers' pictures fit are layer indexes of the new ladder.
 		for _, vt := range g.viewerTracks() {
-			r.mu.RLock()
-			fit := r.cameraFitLocked(vt.viewer, publisher)
-			r.mu.RUnlock()
+			var fit int
+			safego.Locked(r.mu.RLocker(), func() { fit = r.cameraFitLocked(vt.viewer, publisher) })
 			vt.setFit(fit)
 		}
 	}
-	return nil
+	return err
 }
 
 // plainCameraLiveLocked reports whether publisher's camera is, or was last,
@@ -82,21 +85,23 @@ func (r *Room) SetCameraFit(viewer, publisher uuid.UUID, pixels int) error {
 	if pixels < 0 || pixels > maxFitPixels {
 		return ErrInvalidLayers
 	}
-	r.mu.Lock()
-	if r.peers[viewer] == nil {
-		r.mu.Unlock()
-		return ErrNotInRoom
-	}
-	if viewer == publisher {
-		r.mu.Unlock()
-		return ErrInvalidLayers
-	}
-	r.subsLocked(viewer).setCameraFit(publisher, pixels)
-	layer := fitLayerFor(r.cameraLayerMeta[publisher], pixels)
-	g := r.cameraGroups[publisher]
-	r.mu.Unlock()
+	var g *layerGroup
+	var err error
+	var layer int
+	safego.Locked(&r.mu, func() {
+		switch {
+		case r.peers[viewer] == nil:
+			err = ErrNotInRoom
+		case viewer == publisher:
+			err = ErrInvalidLayers
+		default:
+			r.subsLocked(viewer).setCameraFit(publisher, pixels)
+			layer = fitLayerFor(r.cameraLayerMeta[publisher], pixels)
+			g = r.cameraGroups[publisher]
+		}
+	})
 	if g == nil {
-		return nil
+		return err
 	}
 	if vt := g.viewerFor(viewer); vt != nil {
 		vt.setFit(layer)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // lazyStore is a media.Store that becomes usable once object storage could be
@@ -30,7 +31,7 @@ var errStorageStarting = errors.New("object storage not initialised yet")
 // or ctx ends.
 func startLazyStore(ctx context.Context, init func(context.Context) (media.Store, error), minWait, maxWait time.Duration) *lazyStore {
 	l := &lazyStore{err: errStorageStarting}
-	go l.retryInit(ctx, init, minWait, maxWait)
+	safego.Go("storage_init", safego.Crash, func() { l.retryInit(ctx, init, minWait, maxWait) })
 	return l
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 const commentExcerptLen = 120
@@ -42,12 +43,12 @@ func excerptOf(content string) string {
 func (h *Handler) notifyCommentAsync(ctx context.Context, ev *CommunityEvent, c EventComment) {
 	h.notices.Add(1)
 	bg := context.WithoutCancel(ctx)
-	go func() {
+	safego.Go("event_comment_notice", safego.Abandon, func() {
 		defer h.notices.Done()
 		bg, cancel := context.WithTimeout(bg, 2*noticePushTimeout)
 		defer cancel()
 		h.notifyComment(bg, ev, c)
-	}()
+	})
 }
 
 // notifyComment tells the creator and the attendees of the event, except the
@@ -132,14 +133,14 @@ func (h *Handler) pushComments(ctx context.Context, p commentPusher, ev *Communi
 	var wg sync.WaitGroup
 	for range min(commentPushWorkers, len(userIDs)) {
 		wg.Add(1)
-		go func() {
+		safego.Go("event_comment_push", safego.Crash, func() {
 			defer wg.Done()
 			for id := range todo {
 				if err := p.SendEventCommentNotice(ctx, id, ev.ID, ev.Title, author, excerpt, ev.StartTime, ev.ChannelID); err != nil {
 					slog.DebugContext(ctx, "send comment push failed", "user_id", id, "err", err)
 				}
 			}
-		}()
+		})
 	}
 	for _, id := range userIDs {
 		if ctx.Err() != nil {

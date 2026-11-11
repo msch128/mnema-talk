@@ -86,7 +86,7 @@ func (s *Sessions) ConfirmEnrolment(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	if confirmed {
 		return nil, errTwoFactorOn
 	}
-	secret, err := s.openSecret(id, sealed)
+	secret, _, err := s.openSecret(id, sealed)
 	if err != nil {
 		return nil, err
 	}
@@ -187,13 +187,19 @@ func (s *Sessions) verifyTOTP(ctx context.Context, q db.Querier, id uuid.UUID, c
 	if err != nil {
 		return false, err
 	}
-	secret, err := s.openSecret(id, sealed)
+	secret, stale, err := s.openSecret(id, sealed)
 	if err != nil {
 		return false, err
 	}
 	step, ok := matchTOTP(secret, code, time.Now())
 	if !ok {
 		return false, nil
+	}
+	if stale {
+		// Read with a previous key: this use moves it to the current one.
+		if _, err := s.reseal(ctx, q, id, sealed, secret); err != nil {
+			return false, err
+		}
 	}
 	// One atomic update spends the step: a second use of the same code, or any
 	// older one, finds last_step already at or above it.
@@ -206,7 +212,7 @@ func (s *Sessions) useRecoveryCode(ctx context.Context, q db.Querier, id uuid.UU
 		return false, nil
 	}
 	tag, err := q.Exec(ctx, `UPDATE recovery_codes SET used_at = NOW()
-		WHERE user_id = $1 AND code_hash = $2 AND used_at IS NULL`, id, s.recoveryHash(id, code))
+		WHERE user_id = $1 AND code_hash = ANY($2) AND used_at IS NULL`, id, s.recoveryHashes(id, code))
 	return err == nil && tag.RowsAffected() == 1, err
 }
 

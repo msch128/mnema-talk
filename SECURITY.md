@@ -349,11 +349,17 @@ details and the limits.
   one step of clock skew either way), enrolled with a QR code drawn in the
   browser (no image service sees the secret) and confirmed with a first code;
   turning it on returns ten single-use recovery codes, once. The secret is
-  stored encrypted (AES-256-GCM, key derived from `JWT_SECRET`, bound to the
-  account); recovery codes are stored as keyed HMACs (59-bit codes, so a
-  database copy alone cannot be searched for them). Rotating `JWT_SECRET`
-  therefore makes stored secrets unreadable: those accounts need a reset
-  (below). Sign-in: a correct password for such an account answers `202` with a
+  stored encrypted (AES-256-GCM, bound to the account, under a key derived
+  from `DATA_KEY`, or from `JWT_SECRET` when no `DATA_KEY` is set); recovery
+  codes are stored as keyed HMACs (59-bit codes, so a database copy alone
+  cannot be searched for them). Both secrets can be replaced without losing
+  sessions or the second factor: the previous value keeps verifying and
+  reading, a sealed secret names its data key and is sealed again under the
+  current one on its next use or by `mnema-talk rotate-keys`, and recovery
+  codes are checked with the previous key until it is removed
+  ([operations.md](doc/operations.md#rotating-keys)). A secret replaced
+  without naming the old value leaves the stored secrets unreadable: those
+  accounts need a reset (below). Sign-in: a correct password for such an account answers `202` with a
   challenge instead of a session (nothing about the account is revealed before
   the password is right). The challenge is 256 random bits (only its hash is
   stored), lives five minutes, is bound to the account and to its token version

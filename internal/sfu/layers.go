@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -148,6 +149,11 @@ type layerGroup struct {
 	codec      webrtc.RTPCodecCapability
 	kind       codecKind
 	superseded atomic.Bool
+	// onPanic drops the publisher's peer when the group's timer panics, and
+	// dropViewer the peer of a viewer whose own track panicked. The room sets
+	// both (layerGroupLocked); a group without a room lets the process exit.
+	onPanic    func()
+	dropViewer func(viewer uuid.UUID)
 
 	// live has bit i set while layer i is attached; declared is the number of
 	// layers the sender announced (0 when it did not).
@@ -188,6 +194,7 @@ func newLayerGroup(id string, roomID, publisher uuid.UUID, notifier *mediaNotifi
 		source:  SourceScreen,
 		kind:    codecKindOf(codec.MimeType),
 		viewers: make(map[uuid.UUID]*viewerTrack),
+		onPanic: safego.Crash,
 	}
 }
 
@@ -203,29 +210,33 @@ func (g *layerGroup) attach(info *TrackInfo, codec webrtc.RTPCodecCapability) bo
 	if info.layer < 0 || info.layer >= maxLayers || !g.compatible(codec) {
 		return false
 	}
-	g.mu.Lock()
-	if old := g.infos[info.layer]; old != nil {
-		old.superseded.Store(true)
-	}
-	g.infos[info.layer] = info
-	g.sawSPS[info.layer].Store(false)
-	g.live.Store(g.live.Load() | 1<<info.layer)
-	g.mu.Unlock()
+	safego.Locked(&g.mu, func() {
+		if old := g.infos[info.layer]; old != nil {
+			old.superseded.Store(true)
+		}
+		g.infos[info.layer] = info
+		g.sawSPS[info.layer].Store(false)
+		g.live.Store(g.live.Load() | 1<<info.layer)
+	})
 	g.retarget()
 	return true
 }
 
 // detach removes info from its layer slot, if it still holds it.
 func (g *layerGroup) detach(info *TrackInfo) {
-	g.mu.Lock()
-	if g.infos[info.layer] != info {
-		g.mu.Unlock()
+	var vts []*viewerTrack
+	held := false
+	safego.Locked(&g.mu, func() {
+		if held = g.infos[info.layer] == info; !held {
+			return
+		}
+		g.infos[info.layer] = nil
+		g.live.Store(g.live.Load() &^ (1 << info.layer))
+		vts = g.viewerListLocked()
+	})
+	if !held {
 		return
 	}
-	g.infos[info.layer] = nil
-	g.live.Store(g.live.Load() &^ (1 << info.layer))
-	vts := g.viewerListLocked()
-	g.mu.Unlock()
 	for _, vt := range vts {
 		vt.layerGone(info.layer)
 	}
@@ -235,25 +246,26 @@ func (g *layerGroup) detach(info *TrackInfo) {
 // markLive sets the live bit of info's layer again when its packets resume
 // after the share was stopped.
 func (g *layerGroup) markLive(info *TrackInfo) {
-	g.mu.Lock()
-	if g.infos[info.layer] == info && g.live.Load()&(1<<info.layer) == 0 {
-		g.live.Store(g.live.Load() | 1<<info.layer)
-		g.mu.Unlock()
+	resumed := false
+	safego.Locked(&g.mu, func() {
+		if resumed = g.infos[info.layer] == info && g.live.Load()&(1<<info.layer) == 0; resumed {
+			g.live.Store(g.live.Load() | 1<<info.layer)
+		}
+	})
+	if resumed {
 		g.retarget()
-		return
 	}
-	g.mu.Unlock()
 }
 
 // shareStopped forgets what the stopped share announced and had live, so a
 // restart is announced to the sender afresh and no silent layer is resolved.
 func (g *layerGroup) shareStopped() {
-	g.mu.Lock()
-	g.resetAnnouncedLocked()
-	g.hold = [maxLayers]time.Time{}
-	g.live.Store(0)
-	g.declared.Store(0)
-	g.mu.Unlock()
+	safego.Locked(&g.mu, func() {
+		g.resetAnnouncedLocked()
+		g.hold = [maxLayers]time.Time{}
+		g.live.Store(0)
+		g.declared.Store(0)
+	})
 	g.retarget()
 }
 
@@ -294,17 +306,17 @@ func (g *layerGroup) flowing(want int, now time.Time) int {
 func (g *layerGroup) supersede() {
 	g.superseded.Store(true)
 	g.mu.Lock()
+	defer g.mu.Unlock()
 	for _, info := range g.infos {
 		if info != nil {
 			info.superseded.Store(true)
 		}
 	}
-	g.mu.Unlock()
 }
 
 // close stops the group's timer.
 func (g *layerGroup) close() {
 	g.mu.Lock()
+	defer g.mu.Unlock()
 	g.stopTimerLocked()
-	g.mu.Unlock()
 }

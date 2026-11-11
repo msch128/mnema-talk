@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/interceptor"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
@@ -37,38 +38,47 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 		allowLoopbackCands: r.allowLoopbackCands,
 	}
 
+	// Pion calls these on goroutines of its own.
+	drop := r.dropOnPanic(peer)
 	pc.OnICECandidate(func(c *webrtc.ICECandidate) {
-		if c != nil {
-			peer.emitCandidate(c.ToJSON())
-		}
+		safego.Run("sfu_callback", drop, func() {
+			if c != nil {
+				peer.emitCandidate(c.ToJSON())
+			}
+		})
 	})
 
 	pc.OnTrack(func(remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
-		r.handleRemoteTrack(peer, conn, remoteTrack, receiver)
+		safego.Run("sfu_callback", drop, func() { r.handleRemoteTrack(peer, conn, remoteTrack, receiver) })
 	})
 
 	pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
-		logICEState(pc, userID, state, r.iceSeen)
+		safego.Run("sfu_callback", drop, func() { logICEState(pc, userID, state, r.iceSeen) })
 	})
 
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
-		slog.Info("sfu peer state", "user", userID, "state", state.String())
-		switch state {
-		case webrtc.PeerConnectionStateFailed:
-			r.dropLostPeer(peer)
-		case webrtc.PeerConnectionStateClosed:
-			r.removePeer(peer)
-		}
+		safego.Run("sfu_callback", drop, func() { r.peerStateChanged(peer, state) })
 	})
 
 	r.peers[userID] = peer
 	r.load.add(1)
 	metrics.SFUPeerJoins.Inc()
 
-	go r.SignalPeerConnections()
+	r.goSignal()
 	r.watchConnecting(peer)
 
 	return peer
+}
+
+// peerStateChanged removes a peer whose connection failed or was closed.
+func (r *Room) peerStateChanged(peer *Peer, state webrtc.PeerConnectionState) {
+	slog.Info("sfu peer state", "user", peer.ID, "state", state.String())
+	switch state {
+	case webrtc.PeerConnectionStateFailed:
+		r.dropLostPeer(peer)
+	case webrtc.PeerConnectionStateClosed:
+		r.removePeer(peer)
+	}
 }
 
 // replacePeerLocked drops the user's earlier connection, if any. r.mu is held.
@@ -82,10 +92,10 @@ func (r *Room) replacePeerLocked(userID uuid.UUID) {
 	r.removePeerTracksLocked(userID)
 	// Closing fires the old connection's state callback; removePeer
 	// ignores it because the user's entry is no longer that peer.
-	go func() {
+	safego.Go("sfu_peer_close", func() { _ = existing.PC.Close() }, func() {
 		existing.releaseViewerTracks()
 		_ = existing.PC.Close()
-	}()
+	})
 }
 
 // logICEState records ICE transitions worth seeing in the log and metrics.
@@ -170,11 +180,11 @@ func (r *Room) handleRemoteTrack(peer *Peer, conn *receiveConn, remoteTrack *web
 	// and published when the first packet arrives after the permission came
 	// back.
 	if peer.sourceDenied(source) {
-		go func() {
+		safego.Go("sfu_forward", r.dropOnPanic(peer), func() {
 			if awaitSourceAllowed(peer, source, remoteTrack) {
 				r.publishRemoteTrack(peer, remoteTrack, role)
 			}
-		}()
+		})
 		return
 	}
 	r.publishRemoteTrack(peer, remoteTrack, role)
@@ -230,7 +240,7 @@ func (r *Room) publishRemoteTrack(peer *Peer, remoteTrack *webrtc.TrackRemote, r
 	}
 	r.addTrack(key, info)
 
-	go r.forward(remoteTrack, trackLocal, key, info)
+	safego.Go("sfu_forward", r.dropOnPanic(peer), func() { r.forward(remoteTrack, trackLocal, key, info) })
 }
 
 // takesCameraLayer reports whether a camera video goes into a layer group:

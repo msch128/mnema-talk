@@ -2,9 +2,9 @@ package sfu
 
 import (
 	"log/slog"
-	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -75,10 +75,10 @@ func (r *Room) requestPeerSignal(peer *Peer) {
 	if !peer.signalingMu.TryLock() {
 		return
 	}
-	go func() {
+	safego.Go("sfu_signal", r.dropOnPanic(peer), func() {
 		defer peer.finishSignalingTask()
 		r.signalPeer(peer)
-	}()
+	})
 }
 
 // finishSignalingTask ends a signaling task and runs the round that changes
@@ -135,11 +135,11 @@ func (r *Room) negotiateOrRetry(peer *Peer) {
 	peer.offerFailures++
 	if peer.offerFailures >= maxOfferBuildFailures {
 		slog.Error("sfu offer could not be built, giving up", "user", peer.ID, "attempts", peer.offerFailures)
-		go r.dropLostPeer(peer)
+		r.goDropLost(peer)
 		return
 	}
 	peer.needOffer = true
-	time.AfterFunc(offerRetryDelay, func() { r.requestPeerSignal(peer) })
+	safego.AfterFunc("sfu_signal", offerRetryDelay, r.dropOnPanic(peer), func() { r.requestPeerSignal(peer) })
 }
 
 // desiredTracks returns the tracks the peer should receive, keyed by the ID
@@ -227,10 +227,10 @@ func (r *Room) addSender(peer *Peer, trackID string, info *TrackInfo) bool {
 			_ = peer.PC.RemoveTrack(sender)
 			return false
 		}
-		go r.forwardRTCP(sender, vt.viewerKeyframe, vt.observeReportWithBandwidth)
+		r.goForwardRTCP(peer, sender, vt.viewerKeyframe, vt.observeReportWithBandwidth)
 		return true
 	}
-	go r.forwardRTCP(sender, info.requestKeyframe, nil)
+	r.goForwardRTCP(peer, sender, info.requestKeyframe, nil)
 	if info.Kind == webrtc.RTPCodecTypeVideo {
 		// A new viewer needs a keyframe to start decoding.
 		info.requestKeyframe()
@@ -254,9 +254,8 @@ func (r *Room) attachViewer(peer *Peer, trackID string, info *TrackInfo, vt *vie
 	// after the read, possibly before the sync below: the choice is read again
 	// after every sync, so a stale one never stays.
 	for {
-		r.mu.RLock()
-		pref, fit := r.viewerChoiceLocked(peer.ID, info)
-		r.mu.RUnlock()
+		var pref, fit int
+		safego.Locked(r.mu.RLocker(), func() { pref, fit = r.viewerChoiceLocked(peer.ID, info) })
 		peer.step("viewer-choice-read")
 		if !vt.syncChoice(pref, fit) {
 			break
@@ -293,9 +292,8 @@ func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webr
 	var recipientTrack webrtc.TrackLocal = info.Track
 	var vt *viewerTrack
 	if info.group != nil {
-		r.mu.RLock()
-		pref, fit := r.viewerChoiceLocked(peer.ID, info)
-		r.mu.RUnlock()
+		var pref, fit int
+		safego.Locked(r.mu.RLocker(), func() { pref, fit = r.viewerChoiceLocked(peer.ID, info) })
 		streamID := CameraStreamPrefix + info.SenderID.String()
 		if info.Source == SourceScreen {
 			streamID = info.SenderID.String()
@@ -357,7 +355,7 @@ func negotiateOffer(peer *Peer) error {
 // watchOffer arms the watchdog for offer gen: if it is still unanswered
 // after the room's offerTimeout, the same offer goes out again.
 func (p *Peer) watchOffer(gen uint64, attempt int) {
-	time.AfterFunc(p.room.offerTimeout, func() {
+	safego.AfterFunc("sfu_signal", p.room.offerTimeout, p.room.dropOnPanic(p), func() {
 		p.signalingMu.Lock()
 		// An answer may stabilize the peer while the resend callback is
 		// still running; finishing drains changes queued behind this task.
@@ -387,7 +385,7 @@ func (p *Peer) resendOffer(gen uint64, attempt int) {
 	if attempt > maxOfferResends {
 		slog.Error("sfu offer never answered, giving up", "user", p.ID, "resends", maxOfferResends)
 		// Left alone the peer would stay a silent member of the call.
-		go p.room.dropLostPeer(p)
+		p.room.goDropLost(p)
 		return
 	}
 	slog.Warn("sfu offer unanswered, sending it again", "user", p.ID, "attempt", attempt)

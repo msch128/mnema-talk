@@ -1,6 +1,10 @@
 package sfu
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/msch128/mnema-talk/internal/safego"
+)
 
 // newest delivers values to a callback in order, one at a time, on a goroutine
 // of its own, and drops a value that a newer one replaced before it was
@@ -26,7 +30,8 @@ func (n *newest[T]) send(v T, fn func(T)) {
 	}
 	n.running = true
 	n.mu.Unlock()
-	go func() {
+	// The callback is the hub's: it does not belong to one peer.
+	safego.Go("sfu_notify", safego.Crash, func() {
 		for {
 			next, ok := n.drainNext()
 			if !ok {
@@ -34,7 +39,7 @@ func (n *newest[T]) send(v T, fn func(T)) {
 			}
 			fn(next)
 		}
-	}()
+	})
 }
 
 func (n *newest[T]) drainNext() (T, bool) {

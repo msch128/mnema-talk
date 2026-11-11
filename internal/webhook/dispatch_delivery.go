@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
@@ -85,7 +86,7 @@ func shouldDropWebhook(rec *outgoingRec, err error) bool {
 func (d *Dispatcher) runAttemptWithGrace(ctx context.Context, wctx context.Context, rec *outgoingRec, j job) (Delivery, time.Duration, bool) {
 	actx, cancel := context.WithCancel(wctx)
 	grace := shutdownGrace
-	stop := context.AfterFunc(ctx, func() { time.AfterFunc(grace, cancel) })
+	stop := safego.OnDone("webhook_grace", ctx, safego.Crash, func() { safego.AfterFunc("webhook_grace", grace, safego.Crash, cancel) })
 	del, retryAfter := d.attempt(actx, rec, j.event, j.attempt)
 	aborted := actx.Err() != nil
 	stop()

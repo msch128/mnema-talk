@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/ice/v4"
 	"github.com/pion/webrtc/v4"
 )
@@ -113,43 +114,48 @@ func (p *Peer) offerDelivered() {
 // the client's answer is applied. A candidate Pion rejects is logged with its
 // reason (rate-limited, without the address) and returned.
 func (p *Peer) AddRemoteCandidate(c webrtc.ICECandidateInit) error {
+	apply, err := p.admitRemoteCandidate(c)
+	if !apply {
+		return err
+	}
+	err = p.PC.AddICECandidate(c)
+	if err != nil {
+		safego.Locked(&p.candMu, func() { p.candidateDropped(err) })
+	}
+	return err
+}
+
+// admitRemoteCandidate vets c and charges it to the budget. apply says that
+// Pion gets it now; otherwise it was refused (err), is known already, or is
+// held until the answer.
+func (p *Peer) admitRemoteCandidate(c webrtc.ICECandidateInit) (apply bool, err error) {
 	p.candMu.Lock()
+	defer p.candMu.Unlock()
 	key, err := vetCandidateKey(c.Candidate, p.allowLoopbackCands)
 	if err != nil {
 		p.candidateDropped(err)
-		p.candMu.Unlock()
-		return err
+		return false, err
 	}
 	if p.candidateKnown(key) {
 		// Already handed to Pion (or queued for it): forwarding it again
 		// would be a second probe target the budget never counted.
-		p.candMu.Unlock()
-		return nil
+		return false, nil
 	}
 	if p.PC.RemoteDescription() == nil {
-		defer p.candMu.Unlock()
 		if len(p.cands.early) >= maxHeldCandidates {
 			p.candidateDropped(errTooManyCandidates)
-			return errTooManyCandidates
+			return false, errTooManyCandidates
 		}
 		if err := p.takeCandidateBudget(key); err != nil {
-			return err
+			return false, err
 		}
 		p.cands.early = append(p.cands.early, c)
-		return nil
+		return false, nil
 	}
 	if err := p.takeCandidateBudget(key); err != nil {
-		p.candMu.Unlock()
-		return err
+		return false, err
 	}
-	p.candMu.Unlock()
-	err = p.PC.AddICECandidate(c)
-	if err != nil {
-		p.candMu.Lock()
-		p.candidateDropped(err)
-		p.candMu.Unlock()
-	}
-	return err
+	return true, nil
 }
 
 // applyEarlyCandidates adds what arrived before the answer was applied.
@@ -165,11 +171,11 @@ func (p *Peer) applyEarlyCandidates() {
 		}
 	}
 	if len(dropped) > 0 {
-		p.candMu.Lock()
-		for _, err := range dropped {
-			p.candidateDropped(err)
-		}
-		p.candMu.Unlock()
+		safego.Locked(&p.candMu, func() {
+			for _, err := range dropped {
+				p.candidateDropped(err)
+			}
+		})
 	}
 }
 

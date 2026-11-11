@@ -17,7 +17,7 @@ func (s *Sessions) AuthenticateRequest(r *http.Request) (*User, int, error) {
 	if err != nil || c.Value == "" {
 		return nil, 0, ErrNoSession
 	}
-	claims, err := ParseToken(c.Value, s.Secret)
+	claims, err := s.parseToken(c.Value)
 	if err != nil {
 		return nil, 0, ErrNoSession
 	}
@@ -45,7 +45,7 @@ func (s *Sessions) SessionClaims(r *http.Request) (string, time.Time) {
 	if err != nil || c.Value == "" {
 		return "", time.Time{}
 	}
-	claims, err := ParseToken(c.Value, s.Secret)
+	claims, err := s.parseToken(c.Value)
 	if err != nil || claims.ExpiresAt == nil {
 		return "", time.Time{}
 	}

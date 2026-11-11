@@ -10,6 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/mailer"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // MailSender delivers account e-mails. The server leaves Handler.Mail nil
@@ -97,7 +98,7 @@ func (h *Handler) background(fn func(ctx context.Context)) {
 		return
 	}
 	h.rec.wg.Add(1)
-	go func() {
+	safego.Go("account_mail", safego.Abandon, func() {
 		defer func() {
 			<-h.rec.slots
 			h.rec.wg.Done()
@@ -105,7 +106,7 @@ func (h *Handler) background(fn func(ctx context.Context)) {
 		ctx, cancel := context.WithTimeout(context.Background(), mailJobTimeout)
 		defer cancel()
 		fn(ctx)
-	}()
+	})
 }
 
 // DrainMail waits for the mail jobs in flight (shutdown and tests).
@@ -116,10 +117,10 @@ func (h *Handler) DrainMail() { h.rec.wg.Wait() }
 // all finished.
 func (h *Handler) Drain(max time.Duration) bool {
 	done := make(chan struct{})
-	go func() {
+	safego.Go("account_drain", safego.Crash, func() {
 		h.rec.wg.Wait()
 		close(done)
-	}()
+	})
 	select {
 	case <-done:
 		return true

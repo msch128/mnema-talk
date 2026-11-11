@@ -73,6 +73,13 @@ groups:
         labels: {severity: warn}
         annotations: {summary: "Object storage calls fail"}
 
+      - alert: MnemaGoroutinePanic
+        # a recovered panic: one connection or call participant was dropped
+        # for it. A panic that ends the process shows up as a restart instead.
+        expr: sum by (name) (increase(mnema_goroutine_panics_total[15m])) > 0
+        labels: {severity: warn}
+        annotations: {summary: "The server recovered from a panic in {{ $labels.name }}: a bug, see the log line 'goroutine panicked'"}
+
       - alert: MnemaBackupTooOld
         # see "Backup age" below: the app cannot know when you last backed up
         expr: time() - mnema_backup_last_success_timestamp_seconds > 36 * 3600

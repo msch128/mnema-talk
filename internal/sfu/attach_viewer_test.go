@@ -28,6 +28,13 @@ func newAttachRig(t *testing.T) *attachRig {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The tests call addSender themselves, which a signaling round does while
+	// it owns the peer's signaling lock. Joining started a round of the room's
+	// own; it must be over, and no other may start, or it would take the share
+	// (which the room does not list) off the viewer again in the middle of a
+	// test.
+	viewer.signalingMu.Lock()
+	t.Cleanup(viewer.signalingMu.Unlock)
 	rig := newLayerRig(t, "video/VP8", 3)
 	return &attachRig{room: room, viewer: viewer, info: rig.infos[0], group: rig.group}
 }

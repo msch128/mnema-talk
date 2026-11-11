@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // Mail is one received message.
@@ -44,15 +45,15 @@ func Start(t testing.TB) *Server {
 	}
 	s := &Server{t: t, ln: ln}
 	t.Cleanup(func() { _ = ln.Close() })
-	go func() {
+	safego.Go("mail_test_server", safego.Crash, func() {
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
 				return
 			}
-			go s.serve(conn)
+			safego.Go("mail_test_server", safego.Crash, func() { s.serve(conn) })
 		}
-	}()
+	})
 	return s
 }
 

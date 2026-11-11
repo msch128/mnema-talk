@@ -56,11 +56,8 @@ func (h *Hub) sendToVoiceUser(chID, userID uuid.UUID, eventType string, payload 
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	for c := range h.clients {
-		if c.User.ID != userID {
-			continue
-		}
-		if cur := c.currentVoice(); cur != nil && *cur == chID {
+	for c := range h.rooms[chID] {
+		if c.User.ID == userID {
 			c.deliver(data)
 		}
 	}

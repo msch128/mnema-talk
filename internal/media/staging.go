@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // Staged attachments: the composer uploads each file while the member is
@@ -202,7 +203,7 @@ func StartStagedSweep(ctx context.Context, p *db.Pool, store Store) {
 	if store == nil {
 		return
 	}
-	go runPeriodically(ctx, time.Minute, stagedSweepInterval, stagedSweepTask(p, store))
+	safego.Go("media_staging_sweep", safego.Crash, func() { runPeriodically(ctx, time.Minute, stagedSweepInterval, stagedSweepTask(p, store)) })
 }
 
 // stagedSweepTask is one sweep, logged, apart from its timer. It holds off

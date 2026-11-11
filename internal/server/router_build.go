@@ -36,6 +36,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/poll"
 	"github.com/msch128/mnema-talk/internal/push"
 	"github.com/msch128/mnema-talk/internal/roles"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/slash"
 	"github.com/msch128/mnema-talk/internal/slashcmd"
 	"github.com/msch128/mnema-talk/internal/ssrf"
@@ -115,10 +116,13 @@ type components struct {
 func (c *components) newCore() {
 	d, cfg := c.d, c.cfg
 	c.sessions = &auth.Sessions{
-		DB:     d.DB,
-		Secret: cfg.JWTSecret,
-		TTL:    time.Duration(cfg.SessionExpiryHours) * time.Hour,
-		Secure: cfg.SecureCookies(),
+		DB:              d.DB,
+		Secret:          cfg.JWTSecret,
+		PreviousSecret:  cfg.JWTSecretPrevious,
+		DataKey:         cfg.DataKey,
+		DataKeyPrevious: cfg.DataKeyPrevious,
+		TTL:             time.Duration(cfg.SessionExpiryHours) * time.Hour,
+		Secure:          cfg.SecureCookies(),
 	}
 	c.permSvc = d.Perms
 	if c.permSvc == nil {
@@ -140,15 +144,15 @@ func (c *components) newCore() {
 	}
 
 	c.auditLog = &audit.Log{DB: d.DB, Actor: auditActor, Viewer: auditViewer(c.permSvc)}
-	go c.auditLog.RunRetention(c.ctx, cfg.AuditRetentionDays, 6*time.Hour)
+	safego.Go("audit_retention", safego.Crash, func() { c.auditLog.RunRetention(c.ctx, cfg.AuditRetentionDays, 6*time.Hour) })
 
 	c.newAuth(hub)
 	if d.Store != nil {
 		c.authH.Objects = d.Store
 		c.authH.ObjectMissing = media.IsMissingObject
-		go c.account.RunExportSweep(c.ctx, 0)
+		safego.Go("export_sweep", safego.Crash, func() { c.account.RunExportSweep(c.ctx, 0) })
 	}
-	go messages.RunSlowModePrune(c.ctx, d.DB, time.Hour)
+	safego.Go("slow_mode_prune", safego.Crash, func() { messages.RunSlowModePrune(c.ctx, d.DB, time.Hour) })
 	c.newChat()
 	c.rolesH = roles.New(roles.Handler{Perms: c.permSvc, Events: c.pub, Audit: c.auditLog, SelfRoleLimit: httpx.NewRateLimiter(6, time.Minute).Named("self_roles")})
 	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
@@ -205,7 +209,7 @@ func (c *components) newWebhooks() {
 	c.outgoing = webhook.NewDispatcher(d.DB, ssrf.NewClient(ssrf.NewDialer(ssrfPolicy), 10*time.Second), d.Version)
 	c.addTap(c.outgoing.Observe)
 	c.hub.Presence = auditPresence(c.ctx, c.auditLog, d.DB)
-	go c.outgoing.Run(c.ctx)
+	safego.Go("webhook_dispatch", safego.Crash, func() { c.outgoing.Run(c.ctx) })
 	c.webhookH = webhook.New(webhook.Handler{DB: d.DB, Events: c.pub, Media: c.mediaH, Perms: c.permSvc, Online: c.hub, PublicURL: c.cfg.PublicURL, Outgoing: c.outgoing, Policy: ssrfPolicy})
 }
 
@@ -230,7 +234,7 @@ func (c *components) newBots() {
 	}
 	c.authH.OnAccountEnded = gw.RevokeUser
 	c.cmds.Deliver = gw
-	go gw.Run(c.ctx)
+	safego.Go("bot_gateway", safego.Crash, func() { gw.Run(c.ctx) })
 	// Both the hub and the gateway learn about permission changes, and the
 	// gateway sees every event the hub publishes (as outgoing webhooks do).
 	c.permSvc.SetNotifier(notifiers{hub, gw, eventsNotifier{c}})
@@ -272,7 +276,7 @@ func (c *components) newPush() error {
 		}
 		c.addTap(svc.Observe)
 		c.addDMTap(svc.Observe) // conversations reach no webhook or bot, only push to their members
-		go svc.Run(c.ctx)
+		safego.Go("push_service", safego.Crash, func() { svc.Run(c.ctx) })
 		h.Keys, h.Service = keys, svc
 		pusher = svc
 	}
@@ -340,7 +344,7 @@ func (c *components) newSystem() error {
 	h.setup = d.Setup
 	c.opsSrc = &opsSource{db: d.DB, hub: c.hub, sfu: d.SFU, storage: d.StorageReady, hasStore: d.Store != nil, version: h.version}
 	h.ops = newOpsSampler(c.opsSrc)
-	go h.ops.run(c.ctx)
+	safego.Go("ops_view", safego.Crash, func() { h.ops.run(c.ctx) })
 	h.self = selfUpdate{confirm: c.authH.ConfirmPassword, now: time.Now}
 	if cfg.SelfUpdateConfigured() {
 		u, err := update.NewUpdater(cfg.UpdaterURL, cfg.UpdaterToken)
@@ -370,7 +374,7 @@ func (c *components) newLinkPreviews() {
 		}
 		deny()
 		// A home connection's public IP changes; keep the list current.
-		go refreshPreviewDeny(c.ctx, denyRefresh, deny)
+		safego.Go("link_preview_deny", safego.Crash, func() { refreshPreviewDeny(c.ctx, denyRefresh, deny) })
 	}
 	c.previewH = &linkpreview.Handler{Fetcher: fetcher}
 }

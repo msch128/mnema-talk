@@ -13,10 +13,9 @@ import (
 )
 
 func (c *Client) readPump() {
-	defer func() {
-		c.hub.unregister(c)
-		c.close()
-	}()
+	// Two steps, so a panic while unregistering still closes the socket.
+	defer c.close()
+	defer c.hub.unregister(c)
 
 	c.conn.SetReadLimit(maxMessageBytes)
 	_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))

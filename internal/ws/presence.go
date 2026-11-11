@@ -4,6 +4,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // StatusOffline is the live status of a user without an open connection.
@@ -41,34 +42,35 @@ func (h *Hub) SetPresence(userID uuid.UUID, presence string) {
 	if !auth.ValidPresence(presence) {
 		return
 	}
-	h.mu.Lock()
-	before := h.statusLocked(userID)
-	if h.online[userID] > 0 {
-		h.chosen[userID] = presence
-	}
-	after := h.statusLocked(userID)
-	h.mu.Unlock()
+	var before, after string
+	safego.Locked(&h.mu, func() {
+		before = h.statusLocked(userID)
+		if h.online[userID] > 0 {
+			h.chosen[userID] = presence
+		}
+		after = h.statusLocked(userID)
+	})
 	h.announcePresence(userID, before, after)
 }
 
 // setIdle records whether c has gone idle and announces a resulting change.
 func (h *Hub) setIdle(c *Client, idle bool) {
-	h.mu.Lock()
-	if _, ok := h.clients[c]; !ok {
-		h.mu.Unlock()
-		return
-	}
-	before := h.statusLocked(c.User.ID)
-	if c.idle != idle {
-		c.idle = idle
-		if idle {
-			h.active[c.User.ID]--
-		} else {
-			h.active[c.User.ID]++
+	var before, after string
+	safego.Locked(&h.mu, func() {
+		if _, ok := h.clients[c]; !ok {
+			return
 		}
-	}
-	after := h.statusLocked(c.User.ID)
-	h.mu.Unlock()
+		before = h.statusLocked(c.User.ID)
+		if c.idle != idle {
+			c.idle = idle
+			if idle {
+				h.active[c.User.ID]--
+			} else {
+				h.active[c.User.ID]++
+			}
+		}
+		after = h.statusLocked(c.User.ID)
+	})
 	if before != after {
 		c.emitApplicationEvent(events.PresenceUpdate, map[string]any{"user_id": c.User.ID, "status": after}, false, nil, uuid.Nil)
 	}
@@ -127,16 +129,18 @@ func botPresenceEvent(id uuid.UUID, status string, activity *BotActivity) map[st
 // not counted by OnlineCount or OnlineUserIDs, so @here and the user count
 // stay about people. The status it set ends with its last connection.
 func (h *Hub) SetBotPresence(userID uuid.UUID, online bool) {
-	h.mu.Lock()
-	before, beforeAct := h.botVisibleLocked(userID)
-	if online {
-		h.botLive[userID] = true
-	} else {
-		delete(h.botLive, userID)
-		delete(h.botState, userID)
-	}
-	after, act := h.botVisibleLocked(userID)
-	h.mu.Unlock()
+	var before, after string
+	var beforeAct, act *BotActivity
+	safego.Locked(&h.mu, func() {
+		before, beforeAct = h.botVisibleLocked(userID)
+		if online {
+			h.botLive[userID] = true
+		} else {
+			delete(h.botLive, userID)
+			delete(h.botState, userID)
+		}
+		after, act = h.botVisibleLocked(userID)
+	})
 	if before != after || !sameActivity(beforeAct, act) {
 		h.Broadcast(events.PresenceUpdate, botPresenceEvent(userID, after, act))
 	}
@@ -146,11 +150,13 @@ func (h *Hub) SetBotPresence(userID uuid.UUID, online bool) {
 // invisible) with an optional activity, and announces what members see. It
 // may arrive before the bot counts as connected; the state is then kept.
 func (h *Hub) SetBotStatus(userID uuid.UUID, status string, activity *BotActivity) {
-	h.mu.Lock()
-	before, beforeAct := h.botVisibleLocked(userID)
-	h.botState[userID] = botState{status: status, activity: activity}
-	after, act := h.botVisibleLocked(userID)
-	h.mu.Unlock()
+	var before, after string
+	var beforeAct, act *BotActivity
+	safego.Locked(&h.mu, func() {
+		before, beforeAct = h.botVisibleLocked(userID)
+		h.botState[userID] = botState{status: status, activity: activity}
+		after, act = h.botVisibleLocked(userID)
+	})
 	if before != after || !sameActivity(beforeAct, act) {
 		h.Broadcast(events.PresenceUpdate, botPresenceEvent(userID, after, act))
 	}
@@ -166,14 +172,14 @@ func sameActivity(a, b *BotActivity) bool {
 // sendBotActivities tells a new connection what the connected bots are doing:
 // the presence snapshot only carries statuses.
 func (h *Hub) sendBotActivities(c *Client) {
-	h.mu.RLock()
-	presences := make([]map[string]any, 0, len(h.botState))
-	for id := range h.botState {
-		if status, act := h.botVisibleLocked(id); act != nil {
-			presences = append(presences, botPresenceEvent(id, status, act))
+	var presences []map[string]any
+	safego.Locked(h.mu.RLocker(), func() {
+		for id := range h.botState {
+			if status, act := h.botVisibleLocked(id); act != nil {
+				presences = append(presences, botPresenceEvent(id, status, act))
+			}
 		}
-	}
-	h.mu.RUnlock()
+	})
 	for _, ev := range presences {
 		c.SendEvent(events.PresenceUpdate, ev)
 	}

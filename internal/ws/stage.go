@@ -215,7 +215,15 @@ func (h *Hub) sweepStages(snap *perm.Snapshot, want map[uuid.UUID]bool) {
 			h.endStageSeat(key)
 		}
 	}
+	for _, key := range h.stageSeats(snap, want) {
+		h.refreshStageSeat(snap, key)
+	}
+}
+
+// stageSeats lists who sits in a Stage, limited to want (nil: everybody).
+func (h *Hub) stageSeats(snap *perm.Snapshot, want map[uuid.UUID]bool) []voiceKey {
 	h.mu.RLock()
+	defer h.mu.RUnlock()
 	var seats []voiceKey
 	for ch, users := range h.voice {
 		if !snap.IsStage(ch) {
@@ -227,10 +235,7 @@ func (h *Hub) sweepStages(snap *perm.Snapshot, want map[uuid.UUID]bool) {
 			}
 		}
 	}
-	h.mu.RUnlock()
-	for _, key := range seats {
-		h.refreshStageSeat(snap, key)
-	}
+	return seats
 }
 
 // endStageSeat clears a seat whose Talk is no Stage and tells the Talk what

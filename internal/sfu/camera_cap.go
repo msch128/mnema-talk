@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -80,29 +81,31 @@ func (r *Room) announceCapped(peer *Peer, capped []uuid.UUID) {
 // of one per camera. Publishers beyond the viewer's limit of remembered
 // choices are ignored with ErrTooManySubscriptions after the rest was applied.
 func (r *Room) SubscribeCameras(viewer uuid.UUID, publishers []uuid.UUID, on bool) error {
-	r.mu.Lock()
-	peer := r.peers[viewer]
+	var peer *Peer
+	var failed error
+	var fresh []*TrackInfo
+	safego.Locked(&r.mu, func() {
+		if peer = r.peers[viewer]; peer == nil {
+			return
+		}
+		subs := r.subsLocked(viewer)
+		for _, publisher := range publishers {
+			if err := subs.SetCamera(publisher, on); err != nil {
+				failed = err
+			}
+		}
+		if on {
+			for _, publisher := range publishers {
+				fresh = append(fresh, r.keyframeTracks(nil, true, viewer, publisher, SourceCamera, false)...)
+			}
+		}
+	})
 	if peer == nil {
-		r.mu.Unlock()
 		return ErrNotInRoom
 	}
-	subs := r.subsLocked(viewer)
-	var failed error
-	for _, publisher := range publishers {
-		if err := subs.SetCamera(publisher, on); err != nil {
-			failed = err
-		}
-	}
-	var fresh []*TrackInfo
-	if on {
-		for _, publisher := range publishers {
-			fresh = append(fresh, r.keyframeTracks(nil, true, viewer, publisher, SourceCamera, false)...)
-		}
-	}
-	r.mu.Unlock()
 	for _, info := range fresh {
 		info.requestKeyframe()
 	}
-	go r.requestPeerSignal(peer)
+	safego.Go("sfu_signal", r.dropOnPanic(peer), func() { r.requestPeerSignal(peer) })
 	return failed
 }

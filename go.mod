@@ -2,7 +2,7 @@ module github.com/msch128/mnema-talk
 
 go 1.27.0
 
-toolchain go1.27.3
+toolchain go1.27.4
 
 require (
 	github.com/SherClockHolmes/webpush-go v1.4.0

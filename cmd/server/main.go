@@ -26,6 +26,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/portconflict"
 	"github.com/msch128/mnema-talk/internal/s3"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/server"
 	"github.com/msch128/mnema-talk/internal/setupcheck"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -56,13 +57,13 @@ func main() {
 var configErrorDelay = 5 * time.Second
 
 // isServerStart reports whether the command line starts the server rather than
-// one of the subcommands (setup, doctor, unlock, reset-2fa).
+// one of the subcommands (setup, doctor, unlock, reset-2fa, rotate-keys).
 func isServerStart(args []string) bool {
 	if len(args) < 2 || strings.HasPrefix(args[1], "-") {
 		return true
 	}
 	switch args[1] {
-	case "setup", "doctor", "unlock", "reset-2fa":
+	case "setup", "doctor", "unlock", "reset-2fa", "rotate-keys":
 		return false
 	}
 	return true
@@ -96,6 +97,9 @@ func run() error {
 	}
 	if len(os.Args) > 1 && os.Args[1] == "reset-2fa" {
 		return reset2faCommand(ctx, os.Args[2:], os.Stdout)
+	}
+	if len(os.Args) > 1 && os.Args[1] == "rotate-keys" {
+		return rotateKeysCommand(ctx, os.Args[2:], os.Stdout)
 	}
 	return runWithContext(ctx)
 }
@@ -323,7 +327,7 @@ func startUpdateChecker(ctx context.Context, cfg *config.Config) *update.Checker
 		return nil
 	}
 	updates := update.NewChecker(update.DefaultReleaseURL, version.Current())
-	go updates.Run(ctx, 30*time.Second)
+	safego.Go("update_check", safego.Crash, func() { updates.Run(ctx, 30*time.Second) })
 	return updates
 }
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -244,20 +245,21 @@ func (r *Room) keyframeTracks(failed error, on bool, viewer, publisher uuid.UUID
 // SourceCamera. all (cameras only) applies to every publisher. Tracks are
 // added or removed by renegotiating with the viewer.
 func (r *Room) Subscribe(viewer, publisher uuid.UUID, kind Source, all, on bool) error {
-	r.mu.Lock()
-	if r.peers[viewer] == nil {
-		r.mu.Unlock()
-		return ErrNotInRoom
-	}
-	err := applySubscription(r.subsLocked(viewer), publisher, kind, all, on)
-	fresh := r.keyframeTracks(err, on, viewer, publisher, kind, all)
-	r.mu.Unlock()
+	var fresh []*TrackInfo
+	err := ErrNotInRoom
+	safego.Locked(&r.mu, func() {
+		if r.peers[viewer] == nil {
+			return
+		}
+		err = applySubscription(r.subsLocked(viewer), publisher, kind, all, on)
+		fresh = r.keyframeTracks(err, on, viewer, publisher, kind, all)
+	})
 	if err != nil {
 		return err
 	}
 	for _, info := range fresh {
 		info.requestKeyframe()
 	}
-	go r.SignalPeerConnections()
+	r.goSignal()
 	return nil
 }

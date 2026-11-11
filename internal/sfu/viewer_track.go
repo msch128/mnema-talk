@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 )
@@ -80,16 +81,16 @@ func (vt *viewerTrack) close() {
 // retarget re-resolves the layer this viewer should receive. A layer change
 // that waits for a keyframe asks the publisher for one.
 func (vt *viewerTrack) retarget() {
-	vt.mu.Lock()
-	if vt.ad != nil {
-		vt.ad.setFloor(vt.group.floor())
-		vt.want = vt.ad.layer
-		vt.wantA.Store(int32(vt.want))
-	}
-	vt.eff = vt.group.resolveFlowing(vt.want, layerNow())
-	ask := vt.keyframeDueLocked(layerNow())
-	eff := vt.eff
-	vt.mu.Unlock()
+	ask, eff := false, 0
+	safego.Locked(&vt.mu, func() {
+		if vt.ad != nil {
+			vt.ad.setFloor(vt.group.floor())
+			vt.want = vt.ad.layer
+			vt.wantA.Store(int32(vt.want))
+		}
+		vt.eff = vt.group.resolveFlowing(vt.want, layerNow())
+		ask, eff = vt.keyframeDueLocked(layerNow()), vt.eff
+	})
 	if ask {
 		vt.group.requestKeyframe(eff)
 	}
@@ -97,24 +98,24 @@ func (vt *viewerTrack) retarget() {
 
 // setPref applies the viewer's choice: -1 automatic, else a layer index.
 func (vt *viewerTrack) setPref(pref int) {
-	vt.mu.Lock()
-	vt.pref = pref
-	switch {
-	case pref >= 0:
-		vt.ad = nil
-	case vt.ad == nil:
-		// Automatic carries on from the layer chosen so far.
-		vt.ad = newAdapter(layerNow(), vt.group.floor())
-		vt.ad.best = vt.fit
-		vt.ad.layer = max(min(vt.want, vt.ad.floor), vt.ad.top())
-		// Back to automatic from a worse layer than the picture can use: climb
-		// at the pace of an enlarged picture, not after a long clean stretch.
-		vt.ad.climbing = vt.ad.layer > vt.ad.top()
-	}
-	vt.want = vt.chosenLayer()
-	vt.wantA.Store(int32(vt.want))
-	vt.lastKeyAsk = time.Time{}
-	vt.mu.Unlock()
+	safego.Locked(&vt.mu, func() {
+		vt.pref = pref
+		switch {
+		case pref >= 0:
+			vt.ad = nil
+		case vt.ad == nil:
+			// Automatic carries on from the layer chosen so far.
+			vt.ad = newAdapter(layerNow(), vt.group.floor())
+			vt.ad.best = vt.fit
+			vt.ad.layer = max(min(vt.want, vt.ad.floor), vt.ad.top())
+			// Back to automatic from a worse layer than the picture can use: climb
+			// at the pace of an enlarged picture, not after a long clean stretch.
+			vt.ad.climbing = vt.ad.layer > vt.ad.top()
+		}
+		vt.want = vt.chosenLayer()
+		vt.wantA.Store(int32(vt.want))
+		vt.lastKeyAsk = time.Time{}
+	})
 	vt.retarget()
 	vt.group.refreshWanted()
 	vt.report(true)
@@ -126,21 +127,21 @@ func (vt *viewerTrack) setPref(pref int) {
 // the picture grows.
 func (vt *viewerTrack) setFit(fit int) {
 	fit = max(fit, 0)
-	vt.mu.Lock()
-	vt.fit = fit
 	changed := false
-	if vt.ad != nil && !vt.closed {
-		vt.ad.setFloor(vt.group.floor())
-		changed = vt.ad.setBest(layerNow(), fit)
-		if vt.group.source == SourceCamera {
-			// A camera has no picker and its picture changes by what the viewer does:
-			// a larger one gets its layer at once.
-			changed = vt.ad.jumpToTop(layerNow()) || changed
+	safego.Locked(&vt.mu, func() {
+		vt.fit = fit
+		if vt.ad != nil && !vt.closed {
+			vt.ad.setFloor(vt.group.floor())
+			changed = vt.ad.setBest(layerNow(), fit)
+			if vt.group.source == SourceCamera {
+				// A camera has no picker and its picture changes by what the viewer does:
+				// a larger one gets its layer at once.
+				changed = vt.ad.jumpToTop(layerNow()) || changed
+			}
+			vt.want = vt.ad.layer
+			vt.wantA.Store(int32(vt.want))
 		}
-		vt.want = vt.ad.layer
-		vt.wantA.Store(int32(vt.want))
-	}
-	vt.mu.Unlock()
+	})
 	if changed {
 		vt.retarget()
 	}
@@ -166,10 +167,19 @@ func (vt *viewerTrack) observeReport(loss float64, rtt time.Duration) {
 func (vt *viewerTrack) observeReportWithBandwidth(loss float64, rtt time.Duration, bandwidth int) {
 	now := layerNow()
 	vt.retryKeyframe(now)
-	vt.mu.Lock()
+	changed := false
+	safego.Locked(&vt.mu, func() { changed = vt.observeLocked(now, loss, rtt, bandwidth) })
+	if changed {
+		vt.retarget()
+		vt.group.refreshWanted()
+	}
+}
+
+// observeLocked feeds one report to the adapter and reports whether the layer
+// the viewer should have changed. vt.mu is held.
+func (vt *viewerTrack) observeLocked(now time.Time, loss float64, rtt time.Duration, bandwidth int) bool {
 	if vt.ad == nil || vt.closed {
-		vt.mu.Unlock()
-		return
+		return false
 	}
 	vt.ad.setBandwidth(vt.bandwidthSampleLocked(now, bandwidth))
 	layer, changed := vt.ad.observe(now, loss, rtt)
@@ -184,11 +194,7 @@ func (vt *viewerTrack) observeReportWithBandwidth(loss float64, rtt time.Duratio
 		vt.want = layer
 		vt.wantA.Store(int32(layer))
 	}
-	vt.mu.Unlock()
-	if changed {
-		vt.retarget()
-		vt.group.refreshWanted()
-	}
+	return changed
 }
 
 // bandwidthSampleLocked pairs the estimate with the bitrates of the layer
@@ -264,9 +270,9 @@ func (vt *viewerTrack) report(force bool) {
 // write offers one packet of layer idx to the viewer.
 func (vt *viewerTrack) write(idx int, src *rtp.Packet) {
 	now := layerNow()
-	vt.mu.Lock()
-	switched, ask, eff := vt.writeLocked(idx, src, now)
-	vt.mu.Unlock()
+	var switched, ask bool
+	var eff int
+	safego.Locked(&vt.mu, func() { switched, ask, eff = vt.writeLocked(idx, src, now) })
 	if ask {
 		vt.group.requestKeyframe(eff)
 	}

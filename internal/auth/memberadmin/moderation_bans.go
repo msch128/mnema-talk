@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/safego"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -45,7 +46,7 @@ func (h *API) postBanCleanup(id uuid.UUID, until *time.Time, reason string) {
 	}
 	if h.Live != nil {
 		h.Live.KickFromVoice(id)
-		time.AfterFunc(banDisconnectDelay, func() { h.Live.DisconnectUser(id) })
+		safego.AfterFunc("ban_disconnect", banDisconnectDelay, safego.Crash, func() { h.Live.DisconnectUser(id) })
 	}
 	h.Events.Broadcast(events.UserUpdate, map[string]any{"id": id, "disabled": true})
 }

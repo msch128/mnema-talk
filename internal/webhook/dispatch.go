@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/safego"
 )
 
 // Delivery limits. Pending deliveries live in Postgres (queue.go); the memory
@@ -163,16 +164,16 @@ func (d *Dispatcher) Reload(ctx context.Context) error {
 
 func (d *Dispatcher) startWorkers(ctx context.Context, rateTicker <-chan time.Time) {
 	d.wg.Add(1)
-	go func() {
+	safego.Go("webhook_persist", safego.Crash, func() {
 		defer d.wg.Done()
 		d.persist(ctx)
-	}()
+	})
 	for range workers {
 		d.wg.Add(1)
-		go func() {
+		safego.Go("webhook_worker", safego.Crash, func() {
 			defer d.wg.Done()
 			d.work(ctx, rateTicker)
-		}()
+		})
 	}
 }
 

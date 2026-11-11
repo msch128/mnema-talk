@@ -2,12 +2,14 @@ package sfu
 
 import (
 	"encoding/binary"
+	"errors"
 	"math/bits"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/interceptor"
 	"github.com/pion/interceptor/pkg/nack"
 	"github.com/pion/rtcp"
@@ -74,6 +76,9 @@ type nackResponder struct {
 	startOnce sync.Once
 	done      chan struct{}
 	closeOnce sync.Once
+	// workerPanics counts the worker's panics; gaveUp is set at the limit.
+	workerPanics atomic.Int32
+	gaveUp       atomic.Bool
 	// afterResend, when set (tests), is called when a NACK has been answered.
 	afterResend func()
 }
@@ -145,6 +150,9 @@ func (n *nackResponder) Close() error {
 
 func (n *nackResponder) BindRTCPReader(r interceptor.RTCPReader) interceptor.RTCPReader {
 	return interceptor.RTCPReaderFunc(func(b []byte, a interceptor.Attributes) (int, interceptor.Attributes, error) {
+		if n.gaveUp.Load() {
+			return 0, nil, errNackGaveUp
+		}
 		size, attr, err := r.Read(b, a)
 		if err != nil || size == 0 {
 			return size, attr, err
@@ -177,13 +185,36 @@ const nackQueue = 16
 func (n *nackResponder) enqueue(req *rtcp.TransportLayerNack) {
 	n.startOnce.Do(func() {
 		n.queue = make(chan *rtcp.TransportLayerNack, nackQueue)
-		go n.work(n.queue)
+		n.startWorker()
 	})
 	select {
 	case n.queue <- req:
 	default:
 		metrics.SFURetransmitDropped.Add(uint64(min(nackSeqs(req), nackMaxSeqs)))
 	}
+}
+
+// nackWorkerPanics is how many panics of its worker a connection survives.
+const nackWorkerPanics = 3
+
+// errNackGaveUp ends the reading of a connection's feedback once its worker
+// panicked nackWorkerPanics times (see Room.feedbackEnded).
+var errNackGaveUp = errors.New("sfu: nack responder gave up")
+
+// startWorker runs the worker. A request it panics on is lost like one that
+// overflowed the queue, and the next ones are answered by a new worker. The
+// client chooses how many NACKs it sends, so that is bounded: after
+// nackWorkerPanics panics no worker is started again, and the connection's
+// feedback readers end with errNackGaveUp, which drops the peer.
+func (n *nackResponder) startWorker() {
+	restart := func() {
+		if n.workerPanics.Add(1) >= nackWorkerPanics {
+			n.gaveUp.Store(true)
+			return
+		}
+		n.startWorker()
+	}
+	safego.Go("sfu_nack", restart, func() { n.work(n.queue) })
 }
 
 // work answers the queued NACKs until the responder is closed.

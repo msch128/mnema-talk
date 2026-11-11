@@ -1,6 +1,10 @@
 package sfu
 
-import "time"
+import (
+	"time"
+
+	"github.com/msch128/mnema-talk/internal/safego"
+)
 
 // uploadView is what the upload governor needs to know of one viewer on
 // automatic: what it costs now, what one more step down saves and what one
@@ -58,15 +62,15 @@ func (vt *viewerTrack) uploadView(now time.Time) (uploadView, bool) {
 // setSqueeze holds the viewer n layers below the best its picture can use
 // (see adapter.setSqueeze).
 func (vt *viewerTrack) setSqueeze(n int) {
-	vt.mu.Lock()
 	changed := false
-	if vt.ad != nil && !vt.closed {
-		vt.ad.setFloor(vt.group.floor())
-		changed = vt.ad.setSqueeze(layerNow(), n)
-		vt.want = vt.ad.layer
-		vt.wantA.Store(int32(vt.want))
-	}
-	vt.mu.Unlock()
+	safego.Locked(&vt.mu, func() {
+		if vt.ad != nil && !vt.closed {
+			vt.ad.setFloor(vt.group.floor())
+			changed = vt.ad.setSqueeze(layerNow(), n)
+			vt.want = vt.ad.layer
+			vt.wantA.Store(int32(vt.want))
+		}
+	})
 	if changed {
 		vt.retarget()
 	}

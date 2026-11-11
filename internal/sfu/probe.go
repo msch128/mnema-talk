@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/sdp/v3"
 	"github.com/pion/webrtc/v4"
 )
@@ -139,27 +140,30 @@ func (s *SFU) watchProbe(pc *webrtc.PeerConnection, owner string) {
 			_ = pc.Close()
 		}
 	}
+	// A panic in any of these ends the probe: closeProbe is its own clean-up.
 	pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
-		switch state {
-		case webrtc.ICEConnectionStateConnected:
-			pair, _ := connectionPair(pc)
-			if pair != nil {
-				slog.Info("sfu probe ice connected", "remote", pair.Remote.Address, "remote_type", pair.Remote.Typ.String())
+		safego.Run("sfu_probe", closeProbe, func() {
+			switch state {
+			case webrtc.ICEConnectionStateConnected:
+				pair, _ := connectionPair(pc)
+				if pair != nil {
+					slog.Info("sfu probe ice connected", "remote", pair.Remote.Address, "remote_type", pair.Remote.Typ.String())
+				}
+				s.iceSeen.connected(pair)
+				safego.AfterFunc("sfu_probe", probeLinger, closeProbe, closeProbe)
+			case webrtc.ICEConnectionStateFailed, webrtc.ICEConnectionStateClosed:
+				closeProbe()
 			}
-			s.iceSeen.connected(pair)
-			time.AfterFunc(probeLinger, closeProbe)
-		case webrtc.ICEConnectionStateFailed, webrtc.ICEConnectionStateClosed:
-			closeProbe()
-		}
+		})
 	})
 	// The browser closes its end once it has read its statistics; the slot
 	// is free again then, not after the linger.
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
 		if state == webrtc.PeerConnectionStateClosed || state == webrtc.PeerConnectionStateFailed {
-			closeProbe()
+			safego.Run("sfu_probe", closeProbe, closeProbe)
 		}
 	})
-	time.AfterFunc(probeLifetime, closeProbe)
+	safego.AfterFunc("sfu_probe", probeLifetime, closeProbe, closeProbe)
 }
 
 // takeProbe reserves a slot for owner, within the global and per-member caps.
