@@ -18,19 +18,13 @@ import (
 // used up by the first.
 func captureLog(t *testing.T) *bytes.Buffer {
 	t.Helper()
-	refillLogBudget()
-	t.Cleanup(refillLogBudget)
+	RefillLogBudget()
+	t.Cleanup(RefillLogBudget)
 	var buf bytes.Buffer
 	prev := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
 	t.Cleanup(func() { slog.SetDefault(prev) })
 	return &buf
-}
-
-func refillLogBudget() {
-	logs.mu.Lock()
-	defer logs.mu.Unlock()
-	clear(logs.sites)
 }
 
 func TestRunRecoversLogsCountsAndCallsOnPanic(t *testing.T) {

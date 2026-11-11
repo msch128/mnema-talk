@@ -188,6 +188,16 @@ func panicStack(stack []byte) string {
 // logs is the log budget of every site.
 var logs = logBudget{sites: map[string]*logSite{}}
 
+// RefillLogBudget gives every site its full log budget back. The budget is
+// the process's and lasts a minute, so a test that reads a panic's log line
+// calls this first: an earlier test, or an earlier run in the same process
+// (go test -count), may have used the site's budget up.
+func RefillLogBudget() {
+	logs.mu.Lock()
+	defer logs.mu.Unlock()
+	clear(logs.sites)
+}
+
 type logBudget struct {
 	mu    sync.Mutex
 	sites map[string]*logSite

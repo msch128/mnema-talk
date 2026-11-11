@@ -126,7 +126,7 @@ func (h *Hub) notePresenceLocked(c *Client) {
 
 // greet tells the member they are connected, outside the hub lock.
 func (h *Hub) greet(c *Client, before, after string) {
-	c.logger().Info("ws connected", "user", c.User.Username)
+	c.logger().Info("ws connected", c.connectedAttrs()...)
 	// server_info leads: the broadcast below can reach this very connection.
 	c.SendEvent(events.ServerInfo, h.serverInfo())
 	h.announcePresence(c.User.ID, before, after)

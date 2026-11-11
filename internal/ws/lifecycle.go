@@ -140,7 +140,7 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := newClient(h, conn, *user, tv)
-	c.nameConn(httpx.RequestIDFromContext(r.Context()))
+	c.nameConnFor(r)
 	// The connection is hijacked: the HTTP server's own recovery can neither
 	// answer nor close it, so a panic in the upgrade hook, the handshake or
 	// the greeting would leave an open connection that nobody reads.

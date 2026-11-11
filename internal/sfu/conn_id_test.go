@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -28,6 +29,9 @@ func linesWith(logged *synchronizedLogCapture, parts ...string) []string {
 // first session's connection id, and the new peer's lines and its recovered
 // panic carry the second's.
 func TestPeersOfTwoSessionsOfOneMemberAreToldApartInTheLog(t *testing.T) {
+	// The panic's line is read below: an earlier test or run may have used
+	// up what the site may log in a minute.
+	safego.RefillLogBudget()
 	logged := captureSFULog(t)
 	s := newTestSFU(t)
 	room, member := uuid.New(), uuid.New()

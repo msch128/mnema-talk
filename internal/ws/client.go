@@ -3,7 +3,9 @@ package ws
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"github.com/msch128/mnema-talk/internal/httpx"
 	"log/slog"
+	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -26,6 +28,9 @@ type Client struct {
 	// connID names this connection in the log and log binds it (see nameConn).
 	connID string
 	log    *slog.Logger
+	// clientRequestID is the X-Request-Id the client or a proxy sent with the
+	// upgrade request, logged once at connect (see nameConnFor).
+	clientRequestID string
 
 	tokenVersion int
 	// dmAware is set by connections that asked for direct message events
@@ -344,10 +349,34 @@ func newConnID() string {
 	return hex.EncodeToString(b[:])
 }
 
+// nameConnFor names the connection of the upgrade request r. The request id
+// the server made up for r becomes the connection's id, which puts its "http"
+// access line and everything the connection logs later under one id. A
+// request id that came with the request (X-Request-Id, which the middleware
+// accepted as it was) never does: whoever sends it could pick the id of
+// another session, or one id for many. Such a connection gets a random id,
+// and the value it sent is logged once, when it connects.
+func (c *Client) nameConnFor(r *http.Request) {
+	id := httpx.RequestIDFromContext(r.Context())
+	if id != "" && id == r.Header.Get("X-Request-Id") {
+		c.clientRequestID, id = id, ""
+	}
+	c.nameConn(id)
+}
+
+// connectedAttrs are the attributes of the "ws connected" line.
+func (c *Client) connectedAttrs() []any {
+	attrs := []any{"user", c.User.Username}
+	if c.clientRequestID != "" {
+		// Bounded and free of anything but letters, digits, ".", "_" and "-":
+		// the middleware accepts nothing else as a request id.
+		attrs = append(attrs, "client_request_id", c.clientRequestID)
+	}
+	return attrs
+}
+
 // nameConn gives the connection its id and binds it to the connection's
-// logger once, so no log call builds the attribute again. A WebSocket takes
-// the request id of its upgrade request, which puts its "http" access line
-// and everything the connection logs later under one id.
+// logger once, so no log call builds the attribute again.
 func (c *Client) nameConn(id string) {
 	if id == "" {
 		id = newConnID()
