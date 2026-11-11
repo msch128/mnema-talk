@@ -1,6 +1,6 @@
 // Shared builders for the wiki tests.
 import { usePermissionsStore } from './stores/permissions'
-import type { WikiPage, WikiPageSummary, WikiRevision } from './lib/wikiApi'
+import type { WikiPage, WikiPageSummary, WikiRevision } from './wiki/lib/wikiApi'
 import type { PermissionsInfo } from './types/domain'
 
 export const VIEW_WIKI = 1 << 29

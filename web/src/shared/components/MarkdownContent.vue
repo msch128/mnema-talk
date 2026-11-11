@@ -11,9 +11,9 @@ import { useAuthStore } from '../../stores/auth'
 import { usePermissionsStore } from '../../stores/permissions'
 import { roleColorCss } from '../lib/permissions'
 import { roleColors as vRoleColors } from '../../directives/roleColor'
-import { wikiImageRule, wikiLinkRule } from '../../lib/wikiLinks'
-import { goWiki } from '../../lib/wikiNav'
-import type { WikiPageSummary } from '../../lib/wikiApi'
+import { wikiImageRule, wikiLinkRule } from '../../wiki/lib/wikiLinks'
+import { goWiki } from '../../wiki/lib/wikiNav'
+import type { WikiPageSummary } from '../../wiki/lib/wikiApi'
 
 const props = defineProps({
   content: {

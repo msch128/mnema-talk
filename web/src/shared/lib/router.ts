@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import { isRecord } from '../../types/validation'
 import { isInvitePath } from './inviteLink'
 import { dmPath, talkPath, textPath, type PathChannel, type PathDm } from './routePaths'
-import { parseWikiLocation, type WikiLocation } from '../../lib/wikiPaths'
+import { parseWikiLocation, type WikiLocation } from '../../wiki/lib/wikiPaths'
 
 export type Route =
   | { view: 'root' }

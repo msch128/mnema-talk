@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ApiError } from '../shared/lib/api'
 import { useWikiStore } from './wiki'
-import { wikiDirty, wikiQuery } from '../lib/wikiNav'
+import { wikiDirty, wikiQuery } from '../wiki/lib/wikiNav'
 import { EDIT_WIKI, grantWiki, MANAGE_WIKI, summary, VIEW_WIKI, wikiPage } from '../wiki.fixture'
 
 const api = vi.hoisted(() => ({ fetchWikiTree: vi.fn(), fetchWikiPage: vi.fn() }))
-vi.mock('../lib/wikiApi', () => api)
+vi.mock('../wiki/lib/wikiApi', () => api)
 
 beforeEach(() => {
   setActivePinia(createPinia())

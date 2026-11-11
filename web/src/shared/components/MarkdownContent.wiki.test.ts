@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import MarkdownContent from './MarkdownContent.vue'
 import { pendingConfirm } from '../lib/confirm'
 import { currentRoute, navigate } from '../lib/router'
-import { wikiDirty } from '../../lib/wikiNav'
+import { wikiDirty } from '../../wiki/lib/wikiNav'
 import { summary } from '../../wiki.fixture'
 import { MAX_DOCUMENT_CHARS, MAX_MARKDOWN_CHARS } from '../lib/markdown'
 

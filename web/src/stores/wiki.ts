@@ -3,9 +3,9 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { isApiError } from '../shared/lib/api'
-import { fetchWikiPage, fetchWikiTree, type WikiPage, type WikiPageSummary } from '../lib/wikiApi'
-import { wikiViews } from '../lib/wikiTree'
-import { forgetWikiSession } from '../lib/wikiState'
+import { fetchWikiPage, fetchWikiTree, type WikiPage, type WikiPageSummary } from '../wiki/lib/wikiApi'
+import { wikiViews } from '../wiki/lib/wikiTree'
+import { forgetWikiSession } from '../wiki/lib/wikiState'
 import { usePermissionsStore } from './permissions'
 
 export type WikiPageState = 'idle' | 'loading' | 'ready' | 'missing' | 'denied' | 'failed'

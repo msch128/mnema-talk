@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { MAX_MARKDOWN_CHARS, registerTextRule, renderMarkdown } from '../markdown'
 import { highlightCode, sanitizeHighlighted } from './highlight'
-import { wikiImageRule, wikiLinkRule } from '../../../lib/wikiLinks'
+import { wikiImageRule, wikiLinkRule } from '../../../wiki/lib/wikiLinks'
 
 const TAGS = new Set(['STRONG', 'EM', 'U', 'DEL', 'SPAN', 'CODE', 'A', 'H1', 'H2', 'H3', 'DIV', 'BLOCKQUOTE', 'UL', 'OL', 'LI', 'PRE', 'BUTTON'])
 const ATTRS: Record<string, readonly string[]> = {
