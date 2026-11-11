@@ -45,7 +45,7 @@ function isNoiseMode(value: string | null): value is NoiseMode {
   return value !== null && VALID_NOISE_MODES.has(value)
 }
 
-// 'ai' (DeepFilterNet3), 'ai-lite' (GTCRN, see lib/noiseSuppressor),
+// 'ai' (DeepFilterNet3), 'ai-lite' (GTCRN, see talk/lib/noiseSuppressor),
 // 'browser' (getUserMedia noiseSuppression) or 'off'. Older clients stored
 // only 'true'/'false'.
 function savedNoiseMode(): NoiseMode {

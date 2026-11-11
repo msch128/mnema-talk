@@ -12,7 +12,7 @@ import { categoryFixture, channelFixture, fixtureId, FIXTURE_TIMESTAMP } from '.
 import type { CommunityEvent, PermissionsInfo } from '../types/domain'
 
 const joinVoiceChannel = vi.fn()
-vi.mock('../composables/useWebRTC', () => ({
+vi.mock('../talk/composables/useWebRTC', () => ({
   useWebRTC: () => ({ joinVoiceChannel })
 }))
 

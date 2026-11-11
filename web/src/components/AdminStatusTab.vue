@@ -12,7 +12,7 @@ import { formatBytes as formatBytesIn } from '../lib/byteUnits'
 import { t, locale } from '../i18n'
 import { useChatStore } from '../stores/chat'
 import { reportWebSocket } from '../lib/wsReport'
-import ConnectionTest from './ConnectionTest.vue'
+import ConnectionTest from '../talk/components/ConnectionTest.vue'
 import AdminCapacityPanel from './AdminCapacityPanel.vue'
 import AdminBackupPanel from './AdminBackupPanel.vue'
 

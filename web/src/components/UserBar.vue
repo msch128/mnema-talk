@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { barIconButton } from './talkButtons'
+import { barIconButton } from '../talk/components/talkButtons'
 import type { User } from '../types/domain'
 import { ref, computed } from 'vue'
 import { Mic, MicOff, Headphones, HeadphoneOff, MoreHorizontal } from '@lucide/vue'
@@ -8,11 +8,11 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { t } from '../i18n'
 import UserAvatar from '../shared/components/UserAvatar.vue'
-import VoiceStatusPanel from './VoiceStatusPanel.vue'
+import VoiceStatusPanel from '../talk/components/VoiceStatusPanel.vue'
 import AccountMenu from './AccountMenu.vue'
 import PresenceMenu from './PresenceMenu.vue'
 import TriggerMenu from '../shared/components/TriggerMenu.vue'
-import { useVoiceMenus } from '../composables/useVoiceMenus'
+import { useVoiceMenus } from '../talk/composables/useVoiceMenus'
 
 const emit = defineEmits<{ 'open-legal': [] }>()
 

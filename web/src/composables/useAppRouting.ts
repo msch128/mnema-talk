@@ -12,7 +12,7 @@ import { settingsTab } from '../shared/lib/settingsDialog'
 import { useAccountStore } from '../stores/account'
 import { postPath, talkPath } from '../shared/lib/routePaths'
 import { watchAdminRequest } from '../shared/lib/adminRequest'
-import { loadVoiceChatOpen, saveVoiceChatOpen } from '../lib/voiceChatPanel'
+import { loadVoiceChatOpen, saveVoiceChatOpen } from '../talk/lib/voiceChatPanel'
 
 /** Writes what the UI shows back to the address whenever any of it changes. */
 function watchStateForRoute(ctx: RoutingContext, sync: () => void) {

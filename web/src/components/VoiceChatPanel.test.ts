@@ -11,7 +11,7 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useResizable, storageKey } from '../shared/composables/useResizable'
-import { VOICE_CHAT_HEIGHT } from '../lib/voiceChatPanel'
+import { VOICE_CHAT_HEIGHT } from '../talk/lib/voiceChatPanel'
 import VoiceChatPanel from './VoiceChatPanel.vue'
 
 let w!: ReturnType<typeof mount<typeof VoiceChatPanel>>

@@ -8,7 +8,7 @@ import { resetMessageSoundGap } from './chat/messageSound'
 import { channelFixture, messageFixture, readStateFixture, userFixture, fixtureId } from '../test-fixtures.fixture'
 
 const sound = vi.hoisted(() => ({ play: vi.fn() }))
-vi.mock('../lib/soundEffects', () => ({ playSoundEffect: sound.play }))
+vi.mock('../talk/lib/soundEffects', () => ({ playSoundEffect: sound.play }))
 vi.mock('../shared/lib/api', async importOriginal => ({ ...(await importOriginal<typeof import('../shared/lib/api')>()), api: vi.fn(async () => []) }))
 vi.mock('../shared/lib/platform', async importOriginal => {
   const real = await importOriginal<typeof import('../shared/lib/platform')>()

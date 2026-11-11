@@ -12,4 +12,4 @@ export type DropIndicator = '' | 'top' | 'bottom' | 'inside'
 export type { ResizePanel } from '../composables/useResizable'
 
 /** A local member may appear before its voice-state announcement arrives. */
-export type { TalkParticipant } from '../../composables/useTalkStage'
+export type { TalkParticipant } from '../../talk/composables/useTalkStage'

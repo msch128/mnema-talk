@@ -18,7 +18,7 @@ import { useCompactLayout } from './shared/composables/useCompactLayout'
 import { openEvents, closeEvents } from './lib/eventsDialog'
 
 const rtc = vi.hoisted(() => ({ resumeVoiceSession: vi.fn(async () => false), resumeRemoteAudio: vi.fn(), leaveVoiceChannel: vi.fn(), rejoinAfterReconnect: vi.fn() }))
-vi.mock('./composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
+vi.mock('./talk/composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
 const channels = [channelFixture({ id: 'ch1' }), channelFixture({ id: 'ch2' }), channelFixture({ id: 'ch3' }), channelFixture({ id: 'v1', type: 'voice' }), channelFixture({ id: 'v2', type: 'voice' })]
 let wrapper: VueWrapper | undefined
 beforeEach(() => {

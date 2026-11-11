@@ -20,7 +20,7 @@ vi.mock('../shared/lib/api', async importOriginal => ({
     return Promise.resolve(url === '/api/admin/reports/open-count' ? { open: http.open } : [])
   })
 }))
-vi.mock('../composables/useWebRTC', () => ({
+vi.mock('../talk/composables/useWebRTC', () => ({
   useWebRTC: () => ({ leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn() })
 }))
 

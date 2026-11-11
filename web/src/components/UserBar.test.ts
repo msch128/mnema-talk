@@ -16,7 +16,7 @@ vi.mock('../shared/lib/api', async (orig) => ({ ...(await orig()), api: vi.fn() 
 
 const leave = vi.fn()
 const share = vi.fn()
-vi.mock('../composables/useWebRTC', () => ({
+vi.mock('../talk/composables/useWebRTC', () => ({
   useWebRTC: () => ({ leaveVoiceChannel: leave, startScreenShare: share, stopScreenShare: vi.fn() })
 }))
 

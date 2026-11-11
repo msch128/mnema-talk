@@ -15,7 +15,7 @@ import { useVoiceStore } from '../stores/voice'
 import LoginModal from './LoginModal.vue'
 import LegalModal from '../shared/components/LegalModal.vue'
 import CreateChannelModal from './CreateChannelModal.vue'
-import ConnectionStatsModal from './ConnectionStatsModal.vue'
+import ConnectionStatsModal from '../talk/components/ConnectionStatsModal.vue'
 import AdminDashboard from './AdminDashboard.vue'
 import UserProfileModal from './UserProfileModal.vue'
 import SettingsDialog from './SettingsDialog.vue'
@@ -23,9 +23,9 @@ import ChatArea from './ChatArea.vue'
 import ThreadSidebar from './ThreadSidebar.vue'
 import MemberList from './MemberList.vue'
 import Sidebar from './Sidebar.vue'
-import VoiceStage from './VoiceStage.vue'
+import VoiceStage from '../talk/components/VoiceStage.vue'
 
-vi.mock('../composables/useWebRTC', () => ({
+vi.mock('../talk/composables/useWebRTC', () => ({
   useWebRTC: () => ({
     joinVoiceChannel: vi.fn(), leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn(),
     refreshAudioDevices: vi.fn(), startMicTest: vi.fn(), applyAudioSettings: vi.fn(), stopMicTest: vi.fn(),

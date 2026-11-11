@@ -1,0 +1,269 @@
+<script setup lang="ts">
+import type { StreamMode, StreamResolution, StreamFrameRate } from '../lib/streamQuality'
+import { ref, computed } from 'vue'
+import { Monitor, Gamepad2, FileText, Sliders, Activity, Sparkles } from '@lucide/vue'
+import BaseDialog from '../../shared/components/BaseDialog.vue'
+import { useVoiceStore } from '../../stores/voice'
+import { useWebRTC } from '../composables/useWebRTC'
+import {
+  STREAM_RESOLUTIONS,
+  STREAM_FRAME_RATES,
+  STREAM_PRESETS,
+  normalizeQuality,
+  streamModeOf,
+  streamBitrate,
+  streamTuning
+} from '../lib/streamQuality'
+import { locale, t } from '../../i18n'
+
+const emit = defineEmits<{ close: [] }>()
+
+const voiceStore = useVoiceStore()
+const { startScreenShare } = useWebRTC()
+
+// The store already loads the persisted preference from localStorage on init;
+// use it directly as the starting state for the modal.
+const initialQuality = normalizeQuality(voiceStore.screenQuality)
+const selectedResolution = ref(initialQuality.resolution)
+const selectedFps = ref(initialQuality.fps)
+const customPicked = ref(voiceStore.screenQuality?.custom === true)
+// Motion or clarity chosen in the stream menu stays unless a preset replaces it.
+const selectedOptimize = ref(initialQuality.optimize)
+
+const currentMode = computed(() => {
+  if (customPicked.value) return 'custom'
+  return streamModeOf({ resolution: selectedResolution.value, fps: selectedFps.value })
+})
+
+function applyPreset(mode: StreamMode) {
+  if (mode === 'gaming') {
+    selectedResolution.value = STREAM_PRESETS.gaming.resolution
+    selectedFps.value = STREAM_PRESETS.gaming.fps
+    selectedOptimize.value = undefined
+    customPicked.value = false
+  } else if (mode === 'screen') {
+    selectedResolution.value = STREAM_PRESETS.screen.resolution
+    selectedFps.value = STREAM_PRESETS.screen.fps
+    selectedOptimize.value = undefined
+    customPicked.value = false
+  } else {
+    customPicked.value = true
+  }
+}
+
+function selectResolution(r: StreamResolution) {
+  selectedResolution.value = r
+  checkIfCustomMatchesPreset()
+}
+
+function selectFps(fps: StreamFrameRate) {
+  selectedFps.value = fps
+  checkIfCustomMatchesPreset()
+}
+
+function checkIfCustomMatchesPreset() {
+  const mode = streamModeOf({ resolution: selectedResolution.value, fps: selectedFps.value })
+  if (mode === 'custom') {
+    customPicked.value = true
+  } else {
+    customPicked.value = false
+  }
+}
+
+const estimatedBitrateDisplay = computed(() => {
+  const bps = streamBitrate({ resolution: selectedResolution.value, fps: selectedFps.value })
+  const mbps = new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(bps / 1_000_000)
+  return `${mbps} Mbit/s`
+})
+
+const isMotionPriority = computed(() => streamTuning({ fps: selectedFps.value, optimize: selectedOptimize.value }).contentHint === 'motion')
+
+async function handleStart() {
+  const q = {
+    resolution: selectedResolution.value,
+    fps: selectedFps.value,
+    custom: currentMode.value === 'custom',
+    ...(selectedOptimize.value ? { optimize: selectedOptimize.value } : {})
+  }
+  // setScreenQuality persists to localStorage automatically
+  voiceStore.setScreenQuality(q)
+  emit('close')
+  if (!voiceStore.isScreenSharing) {
+    await startScreenShare(q)
+  }
+}
+
+</script>
+
+<template>
+  <BaseDialog
+    :title="t('talk.quality.streamModalTitle')"
+    :subtitle="t('talk.quality.streamModalSubtitle')"
+    panel-class="max-w-lg"
+    @close="emit('close')"
+  >
+    <div class="space-y-5 p-5">
+      <!-- 1. Presets -->
+      <div class="stack-2">
+        <span id="stream-preset-label" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
+          {{ t('talk.quality.preset') }}
+        </span>
+        <div class="grid grid-cols-3 gap-2" role="group" aria-labelledby="stream-preset-label">
+          <!-- Gaming Preset -->
+          <button
+            type="button"
+            data-testid="preset-gaming"
+            :aria-pressed="currentMode === 'gaming'"
+            @click="applyPreset('gaming')"
+            :class="[
+              'flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition cursor-pointer',
+              currentMode === 'gaming'
+                ? 'bg-mnema-surface border-mnema-accent text-mnema-text ring-1 ring-mnema-accent/40'
+                : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
+            ]"
+          >
+            <div :class="['w-8 h-8 rounded-md flex items-center justify-center shrink-0', currentMode === 'gaming' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
+              <Gamepad2 class="w-4 h-4" />
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-semibold truncate">{{ t('talk.quality.gaming') }}</div>
+              <div class="text-[11px] text-mnema-tertiary font-mono">{{ `${STREAM_PRESETS.gaming.resolution}p · ${t('talk.quality.fps', { fps: STREAM_PRESETS.gaming.fps })}` }}</div>
+            </div>
+          </button>
+
+          <!-- Screen Preset -->
+          <button
+            type="button"
+            data-testid="preset-screen"
+            :aria-pressed="currentMode === 'screen'"
+            @click="applyPreset('screen')"
+            :class="[
+              'flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition cursor-pointer',
+              currentMode === 'screen'
+                ? 'bg-mnema-surface border-mnema-accent text-mnema-text ring-1 ring-mnema-accent/40'
+                : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
+            ]"
+          >
+            <div :class="['w-8 h-8 rounded-md flex items-center justify-center shrink-0', currentMode === 'screen' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
+              <FileText class="w-4 h-4" />
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-semibold truncate">{{ t('talk.quality.screen') }}</div>
+              <div class="text-[11px] text-mnema-tertiary font-mono">{{ `${t('talk.quality.source')} · ${t('talk.quality.fps', { fps: STREAM_PRESETS.screen.fps })}` }}</div>
+            </div>
+          </button>
+
+          <!-- Custom Preset -->
+          <button
+            type="button"
+            data-testid="preset-custom"
+            :aria-pressed="currentMode === 'custom'"
+            @click="applyPreset('custom')"
+            :class="[
+              'flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition cursor-pointer',
+              currentMode === 'custom'
+                ? 'bg-mnema-surface border-mnema-accent text-mnema-text ring-1 ring-mnema-accent/40'
+                : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
+            ]"
+          >
+            <div :class="['w-8 h-8 rounded-md flex items-center justify-center shrink-0', currentMode === 'custom' ? 'bg-mnema-accent/20 text-mnema-accent' : 'bg-mnema-raised text-mnema-tertiary']">
+              <Sliders class="w-4 h-4" />
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-semibold truncate">{{ t('talk.quality.custom') }}</div>
+              <div class="text-[11px] text-mnema-tertiary font-mono">{{ `${selectedResolution === 'source' ? t('talk.quality.source') : `${selectedResolution}p`} · ${t('talk.quality.fps', { fps: selectedFps })}` }}</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Resolution -->
+      <div class="stack-2">
+        <span id="stream-resolution-label" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
+          {{ t('talk.quality.resolution') }}
+        </span>
+        <div class="grid grid-cols-4 gap-2" role="group" aria-labelledby="stream-resolution-label">
+          <button
+            v-for="r in STREAM_RESOLUTIONS"
+            :key="r"
+            type="button"
+            :data-testid="`resolution-btn-${r}`"
+            :aria-pressed="selectedResolution === r"
+            @click="selectResolution(r)"
+            :class="[
+              'py-2 px-3 rounded-lg border text-center font-medium transition cursor-pointer flex flex-col items-center justify-center gap-0.5',
+              selectedResolution === r
+                ? 'bg-mnema-surface border-mnema-accent text-mnema-text ring-1 ring-mnema-accent/40'
+                : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
+            ]"
+          >
+            <span class="text-sm font-semibold">
+              {{ r === 'source' ? t('talk.quality.source') : `${r}p` }}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Frame Rate (Bildrate) -->
+      <div class="stack-2">
+        <span id="stream-fps-label" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
+          {{ t('talk.quality.frameRate') }}
+        </span>
+        <div class="grid grid-cols-3 gap-2" role="group" aria-labelledby="stream-fps-label">
+          <button
+            v-for="fps in STREAM_FRAME_RATES"
+            :key="fps"
+            type="button"
+            :data-testid="`fps-btn-${fps}`"
+            :aria-pressed="selectedFps === fps"
+            @click="selectFps(fps)"
+            :class="[
+              'py-2 px-3 rounded-lg border text-center font-medium transition cursor-pointer flex items-center justify-center gap-1.5',
+              selectedFps === fps
+                ? 'bg-mnema-surface border-mnema-accent text-mnema-text ring-1 ring-mnema-accent/40'
+                : 'bg-mnema-canvas border-mnema-hairline text-mnema-muted hover:border-mnema-border'
+            ]"
+          >
+            <span class="text-sm font-semibold">{{ t('talk.quality.fps', { fps }) }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Estimated Bitrate & Tuning Hint -->
+      <div class="rounded-lg border border-mnema-hairline bg-mnema-canvas/60 p-3 space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <div class="flex items-center gap-1.5 text-mnema-muted">
+            <Activity class="w-3.5 h-3.5 text-mnema-accent" />
+            <span>{{ t('talk.quality.estimatedBitrate', { bitrate: estimatedBitrateDisplay }) }}</span>
+          </div>
+        </div>
+        <p class="text-xs text-mnema-tertiary flex items-start gap-1.5">
+          <Sparkles class="w-3.5 h-3.5 text-mnema-mint shrink-0 mt-0.5" />
+          <span>{{ isMotionPriority ? t('talk.quality.motionPriority') : t('talk.quality.detailPriority') }}</span>
+        </p>
+        <p class="text-xs text-mnema-tertiary">{{ t('talk.quality.targetNote') }}</p>
+      </div>
+
+      <!-- 5. Actions Footer -->
+      <div class="pt-3 flex items-center justify-end gap-2 border-t border-mnema-hairline">
+        <button
+          type="button"
+          data-testid="stream-modal-cancel"
+          @click="emit('close')"
+          class="btn btn-secondary h-9 cursor-pointer"
+        >
+          {{ t('common.cancel') }}
+        </button>
+        <button
+          type="button"
+          data-testid="stream-modal-submit"
+          @click="handleStart"
+          class="btn btn-primary h-9 flex items-center gap-1.5 cursor-pointer"
+        >
+          <Monitor class="w-4 h-4" />
+          <span>{{ voiceStore.isScreenSharing ? t('talk.quality.applyQuality') : t('talk.quality.startStream') }}</span>
+        </button>
+      </div>
+    </div>
+  </BaseDialog>
+</template>

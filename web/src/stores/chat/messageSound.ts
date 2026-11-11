@@ -1,7 +1,7 @@
 import type { Message } from '../../types/domain'
 import { shouldPlayMessageSound, MESSAGE_SOUND_GAP_MS } from '../../shared/lib/messageSound'
 import { isQuiet } from '../../shared/lib/presence'
-import { playSoundEffect } from '../../lib/soundEffects'
+import { playSoundEffect } from '../../talk/lib/soundEffects'
 import { pushOnThisDevice } from '../../shared/lib/webPush'
 import { useVoiceStore } from '../voice'
 import type { Cx } from './state'

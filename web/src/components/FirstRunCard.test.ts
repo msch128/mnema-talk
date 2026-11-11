@@ -10,7 +10,7 @@ import { useFirstRunStore } from '../stores/firstRun'
 import { useOnboardingStore } from '../stores/onboarding'
 import { useToastStore } from '../stores/toast'
 import { adminTabRequest } from '../shared/lib/adminRequest'
-import { talkSettingsFor } from '../lib/talks'
+import { talkSettingsFor } from '../talk/lib/talks'
 import { setLocale } from '../i18n'
 import { channelFixture, fixtureId, onboardingStateFixture, userFixture } from '../test-fixtures.fixture'
 

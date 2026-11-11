@@ -188,7 +188,7 @@ func maxBody(limit int64, refuse func(http.ResponseWriter, error)) func(http.Han
 
 // SPAContentSecurityPolicy guards the embedded Vue app. No inline scripts and
 // no JS eval; 'wasm-unsafe-eval' only allows compiling WebAssembly, which the
-// bundled AI noise filter (web/src/lib/noiseSuppressor.js) needs.
+// bundled AI noise filter (web/src/talk/lib/noiseSuppressor.js) needs.
 //
 // style-src is 'self' with style-src-attr 'none': no <style> elements and no
 // style="" attributes, only stylesheet files and constructable stylesheets.

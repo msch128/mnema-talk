@@ -39,7 +39,7 @@ vi.mock('../shared/lib/api', async (importOriginal) => ({
 }))
 
 const joinVoiceChannel = vi.fn()
-vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel }) }))
+vi.mock('../talk/composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel }) }))
 
 const confirmMock = vi.fn<(_options: ConfirmRequest) => Promise<boolean>>(() => Promise.resolve(true))
 vi.mock('../shared/lib/confirm', () => ({ confirm: (options: ConfirmRequest) => confirmMock(options) }))

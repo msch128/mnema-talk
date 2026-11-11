@@ -11,7 +11,7 @@ import { useChatStore } from '../stores/chat'
 import { useAppVersionStore, ADMIN_UPDATE_POLL_MS } from '../stores/appVersion'
 import { setLocale } from '../i18n'
 
-vi.mock('../composables/useWebRTC', () => ({
+vi.mock('../talk/composables/useWebRTC', () => ({
   useWebRTC: () => ({ leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn() })
 }))
 

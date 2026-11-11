@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { chordText } from '../../lib/desktopGaming'
+import { chordText } from '../../talk/lib/desktopGaming'
 import { formatShortcut, isMac, keyLabel, SHORTCUT_GROUPS } from './shortcuts'
 import { setLocale } from '../../i18n'
 

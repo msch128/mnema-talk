@@ -5,7 +5,7 @@
 // plays for a silent call (do not disturb, or already in a call), and stops the
 // moment nothing rings any more.
 import { computed, onBeforeUnmount, watch } from 'vue'
-import { playSoundEffect } from '../lib/soundEffects'
+import { playSoundEffect } from '../talk/lib/soundEffects'
 import { useDmCallsStore } from '../stores/dmCalls'
 import { useVoiceStore } from '../stores/voice'
 import IncomingCallCard from './IncomingCallCard.vue'

@@ -16,7 +16,7 @@ import { setLocale, t } from '../i18n'
 import { pendingConfirm } from '../shared/lib/confirm'
 import type { PendingMessage } from '../stores/chat/outboxTypes'
 const h = vi.hoisted(() => ({ stop: vi.fn() }))
-vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => ({ stopScreenShare: h.stop }) }))
+vi.mock('../talk/composables/useWebRTC', () => ({ useWebRTC: () => ({ stopScreenShare: h.stop }) }))
 vi.mock('../shared/lib/api', async original => ({ ...(await original<typeof import('../shared/lib/api')>()), api: vi.fn() }))
 let w: VueWrapper
 let trigger: HTMLButtonElement

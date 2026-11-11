@@ -12,7 +12,7 @@ import type { useAccountStore } from '../stores/account'
 import { pathDms } from '../lib/dm'
 import { channelPath, postPath, postShortId, isUuid, textPath, talkPath } from '../shared/lib/routePaths'
 import { fetchForumPosts } from '../lib/forumApi'
-import { voiceChatOpenFor } from '../lib/voiceChatPanel'
+import { voiceChatOpenFor } from '../talk/lib/voiceChatPanel'
 import { t } from '../i18n'
 
 /** Everything the route applier reads and writes, owned by useAppRouting. */

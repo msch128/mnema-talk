@@ -12,7 +12,7 @@ import { settingsTab } from '../shared/lib/settingsDialog'
 import { useAccountStore } from '../stores/account'
 import { shortcutsOpen } from '../shared/lib/shortcutsDialog'
 
-vi.mock('../composables/useWebRTC', () => ({
+vi.mock('../talk/composables/useWebRTC', () => ({
   useWebRTC: () => ({ leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn() })
 }))
 

@@ -30,7 +30,7 @@ describe('browser application entry', () => {
   it('mounts the local gaming surface with the canonical plugins', async () => {
     Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'gaming-overlay')
     await import('./main')
-    expect(boot.createApp).toHaveBeenCalledWith((await import('./components/DesktopGamingOverlay.vue')).default)
+    expect(boot.createApp).toHaveBeenCalledWith((await import('./talk/components/DesktopGamingOverlay.vue')).default)
     expect(boot.app.use.mock.calls).toEqual([[boot.pinia], [boot.plugin]])
     Reflect.deleteProperty(window, '__MNEMA_GAMING_SURFACE__')
   })
@@ -51,7 +51,7 @@ describe('browser application entry', () => {
     vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('mnema://localhost/'))
     vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'selector' })
     await import('./main')
-    expect(boot.createApp).toHaveBeenCalledWith((await import('./components/DesktopGamingOverlay.vue')).default)
+    expect(boot.createApp).toHaveBeenCalledWith((await import('./talk/components/DesktopGamingOverlay.vue')).default)
   })
   it('mounts the complete App for the verified bundle once an instance is selected', async () => {
     vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('mnema://localhost/'))

@@ -24,10 +24,10 @@ vi.mock('../shared/lib/api', async importOriginal => ({
   onUnauthorized: vi.fn()
 }))
 const ringtone = vi.fn()
-vi.mock('../lib/soundEffects', () => ({ playSoundEffect: (...args: unknown[]) => ringtone(...args) }))
+vi.mock('../talk/lib/soundEffects', () => ({ playSoundEffect: (...args: unknown[]) => ringtone(...args) }))
 const joinVoiceChannel = vi.fn()
 const leaveVoiceChannel = vi.fn()
-vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel, leaveVoiceChannel }) }))
+vi.mock('../talk/composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel, leaveVoiceChannel }) }))
 const navigate = vi.fn()
 vi.mock('../shared/lib/router', async importOriginal => ({ ...(await importOriginal<typeof import('../shared/lib/router')>()), navigate: (...a: unknown[]) => navigate(...a) }))
 

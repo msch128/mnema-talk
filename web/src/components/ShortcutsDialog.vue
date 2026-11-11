@@ -4,7 +4,7 @@
 import { computed } from 'vue'
 import BaseDialog from '../shared/components/BaseDialog.vue'
 import { SHORTCUT_GROUPS, formatShortcut, isMac, keyLabel, type KeyCombo, type Shortcut } from '../shared/lib/shortcuts'
-import { pttKeyLabel } from '../lib/pttKey'
+import { pttKeyLabel } from '../talk/lib/pttKey'
 import { useVoiceStore } from '../stores/voice'
 
 const emit = defineEmits<{ close: [] }>()

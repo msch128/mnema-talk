@@ -19,7 +19,7 @@ import AccountSessions from './AccountSessions.vue'
 import AccountPrivacy from './AccountPrivacy.vue'
 import AccountData from './AccountData.vue'
 import AppSettingsPanel from './AppSettingsPanel.vue'
-import AudioSettingsPanel from './AudioSettingsPanel.vue'
+import AudioSettingsPanel from '../talk/components/AudioSettingsPanel.vue'
 import SelfRolesPanel from './SelfRolesPanel.vue'
 
 const account = useAccountStore()

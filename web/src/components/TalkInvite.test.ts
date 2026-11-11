@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import type { ApiOptions } from '../shared/lib/api'
 import TalkInviteCard from './TalkInviteCard.vue'
-import TalkLeaderMark from './TalkLeaderMark.vue'
+import TalkLeaderMark from '../talk/components/TalkLeaderMark.vue'
 import DmTalkActions from './DmTalkActions.vue'
 import MessageEmbeds from './MessageEmbeds.vue'
 import { useChatStore } from '../stores/chat'
@@ -23,7 +23,7 @@ vi.mock('../shared/lib/api', async importOriginal => ({
   onUnauthorized: vi.fn()
 }))
 const joinVoiceChannel = vi.fn()
-vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel }) }))
+vi.mock('../talk/composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel }) }))
 const navigate = vi.fn()
 vi.mock('../shared/lib/router', async importOriginal => ({ ...(await importOriginal<typeof import('../shared/lib/router')>()), navigate: (...a: unknown[]) => navigate(...a) }))
 

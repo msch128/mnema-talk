@@ -413,7 +413,7 @@ web client puts H.264 first; a browser would then switch a running camera
 from VP8 to H.264 at the next renegotiation while the forwarded track keeps
 the first codec, and viewers could not decode it. The client still reorders
 its own screen line so screen shares prefer H.264 (hardware encoding) and get
-a higher start bitrate ([`tuneScreenOffer`](../web/src/composables/useWebRTC.ts)).
+a higher start bitrate ([`tuneScreenOffer`](../web/src/talk/composables/useWebRTC.ts)).
 
 **Layers of a screen share (0.8).** A sharer can send its screen as up to three
 separate encodings of the same capture ("layers", best first), and each viewer
@@ -452,7 +452,7 @@ The SFU cannot read the media; it never estimates from it.
 *Size of the picture.* The stage tells the server how large it shows the share
 (`fit` on `webrtc_subscribe`: the index of the smallest layer that still has
 the pixels the stage shows, its CSS height times `devicePixelRatio`, see
-`fitLayer` in `web/src/lib/screenLayers.ts` and `useScreenFit`). Auto starts on
+`fitLayer` in `web/src/talk/lib/screenLayers.ts` and `useScreenFit`). Auto starts on
 that layer and never goes above it, so a small tile or a share that is watched
 but not on the stage costs a small stream. When the picture grows (fullscreen,
 a bigger window) a viewer that sat on the old limit climbs on after four quiet
@@ -493,8 +493,8 @@ link with a rate and a queue to try this.
 Cameras and audio are not layered (small pictures, and every layer costs the
 sender an encoder).
 
-The web client ([`lib/screenLayers.ts`](../web/src/lib/screenLayers.ts),
-`syncLayers` in [`useWebRTC.ts`](../web/src/composables/useWebRTC.ts)) sends
+The web client ([`talk/lib/screenLayers.ts`](../web/src/talk/lib/screenLayers.ts),
+`syncLayers` in [`useWebRTC.ts`](../web/src/talk/composables/useWebRTC.ts)) sends
 the share as the streamer chose it on layer 0 and up to two smaller ones
 (1080p, 720p, 480p or 360p, at most 30 fps, at least a quarter smaller than the
 layer above) from the same capture with `scaleResolutionDownBy` on the extra
@@ -543,8 +543,8 @@ which layers anyone needs in the same event as for a screen, marked
 `source: "camera"` (`screen_layers_wanted`), and switches the others off. The
 server announces the capability as `server_info.camera_layers`; a client sends
 camera layers and size reports only where it is there. The web client
-([`lib/cameraLayers.ts`](../web/src/lib/cameraLayers.ts),
-[`useCameraFit.ts`](../web/src/composables/useCameraFit.ts)) plans up to three
+([`talk/lib/cameraLayers.ts`](../web/src/talk/lib/cameraLayers.ts),
+[`useCameraFit.ts`](../web/src/talk/composables/useCameraFit.ts)) plans up to three
 layers of the capture (full size, 360p and 180p thumbnail at 150 kbit/s, none
 smaller than 180p) and sends them with `scaleResolutionDownBy` on the extra
 lines.
@@ -858,11 +858,11 @@ and Administrators) gathers version, update state, database, storage, backup and
   push-to-talk key, per-person volumes, camera and stage choices),
   [`appVersion`](../web/src/stores/appVersion.ts) (reload banner on version
   mismatch), [`toast`](../web/src/stores/toast.ts).
-- **Composables**: [`useWebRTC`](../web/src/composables/useWebRTC.ts) (peer
+- **Composables**: [`useWebRTC`](../web/src/talk/composables/useWebRTC.ts) (peer
   connection, publishing mic/screen/camera, push-to-talk keys, screen offer
-  tuning, stats), [`useTalkStage`](../web/src/composables/useTalkStage.ts) and
-  [`useVideoGrid`](../web/src/composables/useVideoGrid.ts) (stage and grid
-  layout), [`usePictureInPicture`](../web/src/composables/usePictureInPicture.ts),
+  tuning, stats), [`useTalkStage`](../web/src/talk/composables/useTalkStage.ts) and
+  [`useVideoGrid`](../web/src/talk/composables/useVideoGrid.ts) (stage and grid
+  layout), [`usePictureInPicture`](../web/src/talk/composables/usePictureInPicture.ts),
   [`useSidebarReorder`](../web/src/composables/useSidebarReorder.ts),
   [`useSortableDrag`](../web/src/shared/composables/useSortableDrag.ts) and
   [`useChannelLayout`](../web/src/composables/useChannelLayout.ts) (drag and
@@ -873,11 +873,11 @@ and Administrators) gathers version, update state, database, storage, backup and
 - **Components**: [`Sidebar.vue`](../web/src/components/Sidebar.vue),
   [`ChatArea.vue`](../web/src/components/ChatArea.vue),
   [`ThreadSidebar.vue`](../web/src/components/ThreadSidebar.vue),
-  [`VoiceStage.vue`](../web/src/components/VoiceStage.vue) (the Talk view),
-  [`ParticipantTile.vue`](../web/src/components/ParticipantTile.vue),
+  [`VoiceStage.vue`](../web/src/talk/components/VoiceStage.vue) (the Talk view),
+  [`ParticipantTile.vue`](../web/src/talk/components/ParticipantTile.vue),
   [`VoiceChatPanel.vue`](../web/src/components/VoiceChatPanel.vue),
-  [`ScreenViewers.vue`](../web/src/components/ScreenViewers.vue),
-  [`PipHost.vue`](../web/src/components/PipHost.vue),
+  [`ScreenViewers.vue`](../web/src/talk/components/ScreenViewers.vue),
+  [`PipHost.vue`](../web/src/talk/components/PipHost.vue),
   [`MemberList.vue`](../web/src/components/MemberList.vue),
   [`AdminDashboard.vue`](../web/src/components/AdminDashboard.vue) with one
   component per tab (users, layout, invites, media,
@@ -886,8 +886,8 @@ and Administrators) gathers version, update state, database, storage, backup and
 - **Libraries** (`lib/`): pure, unit-tested logic such as
   [`api.ts`](../web/src/shared/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/shared/lib/markdown.ts) (Discord-style Markdown: parser, renderer and the `registerTextRule` extension point in [`markdown/`](../web/src/shared/lib/markdown)),
   [`channelLayout.ts`](../web/src/shared/lib/channelLayout.ts),
-  [`voiceSession.ts`](../web/src/lib/voiceSession.ts) (rejoin within 30 s),
-  [`noiseSuppressor.ts`](../web/src/lib/noiseSuppressor.ts),
+  [`voiceSession.ts`](../web/src/talk/lib/voiceSession.ts) (rejoin within 30 s),
+  [`noiseSuppressor.ts`](../web/src/talk/lib/noiseSuppressor.ts),
   [`thirdParty.ts`](../web/src/shared/lib/thirdParty.ts) (in-app license list).
 - **Styles**: Tailwind CSS 4 (`@import 'tailwindcss'` in
   [`style.css`](../web/src/style.css), the `@tailwindcss/vite` plugin; no

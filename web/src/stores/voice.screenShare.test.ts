@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useVoiceStore } from './voice'
 import { useAuthStore } from './auth'
-import { SCREEN_QUALITY_STORAGE_KEY } from '../lib/streamQuality'
+import { SCREEN_QUALITY_STORAGE_KEY } from '../talk/lib/streamQuality'
 
 beforeEach(() => {
   localStorage.clear()

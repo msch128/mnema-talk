@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TrustedTypeRules } from './trustedTypes'
-import dfnWorkerUrl from '../../lib/dfn/dfnWorker.ts?worker&url'
+import dfnWorkerUrl from '../../talk/lib/dfn/dfnWorker.ts?worker&url'
 import mediaFrameWorkerUrl from '../../lib/media/mediaFrameWorker.ts?worker&url'
 
 /**

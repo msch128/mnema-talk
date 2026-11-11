@@ -5,7 +5,7 @@
 import { computed, ref } from 'vue'
 import { Phone, PhoneCall, UserPlus } from '@lucide/vue'
 import { caughtErrorMessage } from '../shared/lib/api'
-import { inviteConversationToTalk } from '../lib/talks'
+import { inviteConversationToTalk } from '../talk/lib/talks'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useDmCallsStore } from '../stores/dmCalls'
