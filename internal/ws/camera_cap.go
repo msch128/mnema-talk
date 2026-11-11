@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -18,7 +18,7 @@ func (h *Hub) announceCamerasCapped(roomID, viewer uuid.UUID, publishers []uuid.
 	if publishers == nil {
 		publishers = []uuid.UUID{} // [] rather than null on the wire
 	}
-	h.sendToVoiceUser(roomID, viewer, events.Untyped(events.CamerasCapped, map[string]any{"channel_id": roomID, "user_ids": publishers}))
+	h.sendToVoiceUser(roomID, viewer, wire.CamerasCapped{ChannelID: roomID, UserIDs: publishers})
 }
 
 type cameraBatchWire struct {

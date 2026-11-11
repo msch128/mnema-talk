@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/pion/webrtc/v4"
@@ -73,7 +73,7 @@ func (h *Hub) seatVoice(c *Client, ch *core.ChannelInfo, mode joinMode) bool {
 		return true
 	}
 	if mode.resume && !rejoin && h.taken.has(voiceKey{c.User.ID, ch.ID}, c.tabID()) && h.voiceHeldElsewhere(c) {
-		c.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": ch.ID, "reason": kickTakenOver}))
+		c.SendEvent(wire.VoiceKicked{ChannelID: ch.ID, Reason: kickTakenOver})
 		return false
 	}
 	seat, ok := h.takeSeat(c, ch)
@@ -126,7 +126,7 @@ func (h *Hub) endSiblingVoices(c *Client) {
 			if cur := o.currentVoice(); cur != nil && o.seatStamp() != 0 && o.seatStamp() < mine {
 				h.taken.mark(voiceKey{o.User.ID, *cur}, o.tabID())
 				h.leaveVoiceLocked(o, *cur)
-				o.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": *cur, "reason": kickTakenOver}))
+				o.SendEvent(wire.VoiceKicked{ChannelID: *cur, Reason: kickTakenOver})
 			}
 		})
 	}
@@ -136,7 +136,7 @@ func (h *Hub) checkJoinPermission(c *Client, chID uuid.UUID) bool {
 	snap, ok := h.permSnapshot(chID)
 	if !ok || !c.can(snap, chID, perm.ViewChannel|perm.Connect) {
 		c.logger().Info("voice join refused, missing permission", "user", c.User.Username, "channel", chID)
-		c.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": c.joinRefusal(snap)}))
+		c.SendEvent(wire.VoiceKicked{ChannelID: chID, Reason: c.joinRefusal(snap)})
 		return false
 	}
 	return true
@@ -164,12 +164,7 @@ func (h *Hub) announceVoiceJoin(c *Client, chID uuid.UUID, seat voiceSeat) {
 	if h.Presence != nil {
 		h.Presence(c.User.ID, chID, true)
 	}
-	c.emitApplicationEvent(events.Untyped(events.VoiceStateUpdate, map[string]any{
-		"action":     "join",
-		"channel_id": chID,
-		"user":       seat.joined,
-		"started_at": seat.roomStarted,
-	}), false, nil, chID)
+	c.emitApplicationEvent(VoiceJoin{Action: "join", ChannelID: chID, User: seat.joined, StartedAt: seat.roomStarted}, false, nil, chID)
 }
 
 // leaveOtherRooms settles what c's earlier voice presence means for a join of
@@ -232,7 +227,7 @@ func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo) (voiceSeat, bool) {
 	if !bypass && h.isVoiceRoomFull(ch, c.User.ID) {
 		c.logger().Info("voice join refused, room full", "user", c.User.Username, "channel", ch.ID, "limit", ch.UserLimit)
 		// The client ends the call on voice_kicked; reason tells it why.
-		c.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": ch.ID, "reason": "room_full"}))
+		c.SendEvent(wire.VoiceKicked{ChannelID: ch.ID, Reason: "room_full"})
 		return voiceSeat{}, false
 	}
 	now := time.Now()
@@ -305,7 +300,7 @@ func (h *Hub) recheckJoin(c *Client, chID uuid.UUID) (*perm.Snapshot, bool) {
 	if !ok || !c.can(snap, chID, perm.ViewChannel|perm.Connect) {
 		c.logger().Info("voice join revoked, permission changed meanwhile", "user", c.User.Username, "channel", chID)
 		h.leaveVoiceLocked(c, chID)
-		c.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": c.joinRefusal(snap)}))
+		c.SendEvent(wire.VoiceKicked{ChannelID: chID, Reason: c.joinRefusal(snap)})
 		return nil, false
 	}
 	return snap, true
@@ -314,15 +309,15 @@ func (h *Hub) recheckJoin(c *Client, chID uuid.UUID) (*perm.Snapshot, bool) {
 // attachPeer joins c to the SFU room and brings it up to date. It reports
 // false when the permission check after the join revoked the seat.
 func (h *Hub) attachPeer(c *Client, chID uuid.UUID, evictReason string) bool {
-	sendOffer := func(offer webrtc.SessionDescription) { c.SendEvent(events.Untyped(events.WebrtcOffer, offer)) }
-	sendICE := func(cand *webrtc.ICECandidateInit) { c.SendEvent(events.Untyped(events.WebrtcCandidate, cand)) }
+	sendOffer := func(offer webrtc.SessionDescription) { c.SendEvent(WebrtcOffer(offer)) }
+	sendICE := func(cand *webrtc.ICECandidateInit) { c.SendEvent((*WebrtcCandidate)(cand)) }
 	_, peer, err := h.SFU.Join(chID, c.User.ID, c.connID, sendOffer, sendICE)
 	if err != nil {
 		// Without a media connection the seat is worth nothing: give it up
 		// instead of announcing a member nobody can hear.
 		c.logger().Error("sfu join failed", "user", c.User.ID, "channel", chID, "err", err)
 		h.leaveVoiceLocked(c, chID)
-		c.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": "media_unavailable"}))
+		c.SendEvent(wire.VoiceKicked{ChannelID: chID, Reason: "media_unavailable"})
 		return false
 	}
 	// Only now: the join replaced the siblings' peers. After a failed join
@@ -358,13 +353,13 @@ func (h *Hub) sendRoomState(c *Client, chID uuid.UUID) {
 	}
 	for uid, st := range room.MediaStates() {
 		if uid != c.User.ID {
-			c.SendEvent(events.Untyped(events.WebrtcMediaState, mediaStatePayload(chID, uid, st)))
+			c.SendEvent(mediaStatePayload(chID, uid, st))
 		}
 	}
 	for sharer, viewers := range room.ScreenViewers() {
-		c.SendEvent(events.Untyped(events.ScreenViewers, screenViewersPayload(chID, sharer, viewers)))
+		c.SendEvent(screenViewersPayload(chID, sharer, viewers))
 	}
 	for sharer, layers := range room.ScreenLayers() {
-		c.SendEvent(events.Untyped(events.ScreenLayers, screenLayersPayload(chID, sharer, layers)))
+		c.SendEvent(screenLayersPayload(chID, sharer, layers))
 	}
 }

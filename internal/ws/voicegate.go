@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/safego"
 )
 
@@ -194,7 +194,7 @@ func (h *Hub) flushVoiceTime(userID uuid.UUID) {
 	// Only the public total is shown, and it only grew by a stay in a Talk
 	// everyone can see; time in other Talks announces nothing.
 	if public > 0 {
-		h.BroadcastChannel(chID, events.Untyped(events.UserStats, map[string]any{"user_id": userID, "voice_seconds": total}))
+		h.BroadcastChannel(chID, wire.UserStats{UserID: userID, VoiceSeconds: total})
 	}
 }
 

@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -31,10 +31,10 @@ func (h *Hub) enterLobby(c *Client, lobby *core.ChannelInfo) {
 	talk, err := h.Lobby.Open(ctx, c.User.ID, lobby.ID)
 	if err != nil {
 		c.logger().Info("talk lobby refused", "user", c.User.Username, "lobby", lobby.ID, "err", err)
-		c.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": lobby.ID, "reason": lobbyRefusal(err)}))
+		c.SendEvent(wire.VoiceKicked{ChannelID: lobby.ID, Reason: lobbyRefusal(err)})
 		return
 	}
-	c.SendEvent(events.Untyped(events.TalkMoved, map[string]any{"from_channel_id": lobby.ID, "channel_id": talk.ID}))
+	c.SendEvent(wire.TalkMoved{FromChannelID: lobby.ID, ChannelID: talk.ID})
 }
 
 // lobbyRefusal is the voice_kicked reason of a lobby that opened no Talk.

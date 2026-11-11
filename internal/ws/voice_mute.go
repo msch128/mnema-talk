@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/safego"
 )
 
@@ -60,8 +61,8 @@ func (h *Hub) setMuteState(c *Client, st MuteState) {
 	if !changed {
 		return
 	}
-	c.emitApplicationEvent(events.Untyped(events.VoiceMuteState, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "muted": st.Muted, "deafened": st.Deafened}), false, nil, *cur)
+	c.emitApplicationEvent(wire.VoiceMuteState{ChannelID: *cur, UserID: c.User.ID, Muted: st.Muted, Deafened: st.Deafened}, false, nil, *cur)
 	if st.Muted && c.speakingChanged(false, time.Now()) {
-		c.emitApplicationEvent(events.Untyped(events.VoiceSpeaking, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": false}), false, cur, uuid.Nil)
+		c.emitApplicationEvent(wire.VoiceSpeaking{ChannelID: *cur, UserID: c.User.ID, Active: false}, false, cur, uuid.Nil)
 	}
 }

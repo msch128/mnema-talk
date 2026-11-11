@@ -576,7 +576,7 @@ func TestReconnectWithinGraceResumesOriginalVoiceStay(t *testing.T) {
 	ch := voiceCh()
 	h.joinVoice(old, ch)
 	joined := h.voiceSnapshot()[ch.ID][u.ID].JoinedAt
-	started := h.voiceRooms(old, openSnapshot())["started"].(map[uuid.UUID]time.Time)[ch.ID]
+	started := h.voiceRooms(old, openSnapshot()).Started[ch.ID]
 	h.unregister(old)
 	next := testClient(h, u)
 	drainTypes(t, next)
@@ -584,7 +584,7 @@ func TestReconnectWithinGraceResumesOriginalVoiceStay(t *testing.T) {
 	if got := h.voiceSnapshot()[ch.ID][u.ID].JoinedAt; !got.Equal(joined) {
 		t.Fatal("reconnect restarted participant duration")
 	}
-	if got := h.voiceRooms(next, openSnapshot())["started"].(map[uuid.UUID]time.Time)[ch.ID]; !got.Equal(started) {
+	if got := h.voiceRooms(next, openSnapshot()).Started[ch.ID]; !got.Equal(started) {
 		t.Fatal("reconnect restarted room duration")
 	}
 	if count(drainTypes(t, next), "voice_state_update") != 0 {

@@ -2,7 +2,7 @@ package ws
 
 import (
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
@@ -43,11 +43,7 @@ func (h *Hub) kickClientPeer(c *Client, onlyCh *uuid.UUID, reason string, peer *
 	if !kicked {
 		return false
 	}
-	payload := map[string]any{"channel_id": ch}
-	if reason != "" {
-		payload["reason"] = reason
-	}
-	c.SendEvent(events.Untyped(events.VoiceKicked, payload))
+	c.SendEvent(wire.VoiceKicked{ChannelID: ch, Reason: reason})
 	return true
 }
 

@@ -129,11 +129,11 @@ func TestSnapshotsHideTalksFromThoseWhoCannotViewThem(t *testing.T) {
 		t.Fatalf("snapshot for an outsider: %+v", snapshot)
 	}
 	rooms := w.h.voiceRooms(late, mustSnapshot(t, w.h))
-	started := rooms["started"].(map[uuid.UUID]time.Time)
+	started := rooms.Started
 	if _, leaked := started[w.privateVoice.ID]; leaked || len(started) != 1 {
 		t.Fatalf("voice_rooms for an outsider: %v", started)
 	}
-	if rooms := w.h.voiceRooms(w.owner, mustSnapshot(t, w.h)); len(rooms["started"].(map[uuid.UUID]time.Time)) != 2 {
+	if rooms := w.h.voiceRooms(w.owner, mustSnapshot(t, w.h)); len(rooms.Started) != 2 {
 		t.Fatal("the Owner sees every room")
 	}
 }

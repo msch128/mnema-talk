@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -190,7 +190,7 @@ func (h *Hub) refreshStageSeat(snap *perm.Snapshot, key voiceKey) {
 	if !h.whileSeated(key, func() { changed = h.stage.setShown(key, power) }) || !changed {
 		return
 	}
-	h.sendToVoiceRoom(key.ch, events.Untyped(events.StageTalkPower, map[string]any{"channel_id": key.ch, "user_id": key.user, "granted": power}))
+	h.sendToVoiceRoom(key.ch, wire.StageTalkPower{ChannelID: key.ch, UserID: key.user, Granted: power})
 	for _, c := range h.clientsOf(key.user) {
 		h.applyMediaPolicy(c, snap)
 	}
@@ -200,7 +200,7 @@ func (h *Hub) lowerHand(key voiceKey) {
 	changed := false
 	h.whileSeated(key, func() { _, changed = h.stage.setHand(key, false, time.Time{}) })
 	if changed {
-		h.sendToVoiceRoom(key.ch, events.Untyped(events.StageHand, map[string]any{"channel_id": key.ch, "user_id": key.user, "raised": false}))
+		h.sendToVoiceRoom(key.ch, wire.StageHand{ChannelID: key.ch, UserID: key.user})
 	}
 }
 
@@ -245,10 +245,10 @@ func (h *Hub) endStageSeat(key voiceKey) {
 	granted := h.stage.granted(key)
 	h.stage.forget(key)
 	if hand != nil {
-		h.sendToVoiceRoom(key.ch, events.Untyped(events.StageHand, map[string]any{"channel_id": key.ch, "user_id": key.user, "raised": false}))
+		h.sendToVoiceRoom(key.ch, wire.StageHand{ChannelID: key.ch, UserID: key.user})
 	}
 	if power || granted {
-		h.sendToVoiceRoom(key.ch, events.Untyped(events.StageTalkPower, map[string]any{"channel_id": key.ch, "user_id": key.user, "granted": false}))
+		h.sendToVoiceRoom(key.ch, wire.StageTalkPower{ChannelID: key.ch, UserID: key.user, Granted: false})
 	}
 }
 
@@ -303,11 +303,11 @@ func (c *Client) handleStageHand(payload json.RawMessage) {
 	if !h.whileSeated(key, func() { at, changed = h.stage.setHand(key, in.Raised, time.Now()) }) || !changed {
 		return
 	}
-	msg := map[string]any{"channel_id": ch, "user_id": target, "raised": in.Raised}
+	msg := wire.StageHand{ChannelID: ch, UserID: target, Raised: in.Raised}
 	if in.Raised {
-		msg["at"] = at
+		msg.At = &at
 	}
-	h.sendToVoiceRoom(ch, events.Untyped(events.StageHand, msg))
+	h.sendToVoiceRoom(ch, msg)
 }
 
 // handleStageTalkPower gives or takes a member's talk power (Manage stage).

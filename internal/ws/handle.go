@@ -145,7 +145,7 @@ func (c *Client) handleVoiceJoin(ctx context.Context, p clientEvent) {
 		// Over the join/leave allowance: refused, and the client ends
 		// the attempt on voice_kicked.
 		metrics.WSDropped.With("voice_churn").Inc()
-		c.SendEvent(events.Untyped(events.VoiceKicked, map[string]any{"channel_id": channelID}))
+		c.SendEvent(wire.VoiceKicked{ChannelID: channelID})
 		return
 	}
 	ch, ok := h.voiceChannel(ctx, channelID)
@@ -193,7 +193,7 @@ func (c *Client) handleSpeaking(active bool) {
 	// A muted or deafened member is never shown as speaking.
 	active = active && !c.hub.isMuted(c.User.ID, *cur)
 	if c.speakingChanged(active, time.Now()) {
-		c.emitApplicationEvent(events.Untyped(events.VoiceSpeaking, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active}), false, cur, uuid.Nil)
+		c.emitApplicationEvent(wire.VoiceSpeaking{ChannelID: *cur, UserID: c.User.ID, Active: active}, false, cur, uuid.Nil)
 	}
 }
 

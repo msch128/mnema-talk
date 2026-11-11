@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/safego"
 )
 
@@ -92,7 +92,7 @@ func (h *Hub) endPresence(userID, chID uuid.UUID, log *slog.Logger, keep func() 
 		stay, counts := time.Since(since), h.settleSeat(chID, class)
 		defer h.addVoiceTime(userID, chID, stay, counts)
 	}
-	defer h.BroadcastChannel(chID, events.Untyped(events.VoiceStateUpdate, map[string]any{"action": "leave", "channel_id": chID, "user_id": userID}))
+	defer h.BroadcastChannel(chID, wire.VoiceLeave{Action: "leave", ChannelID: chID, UserID: userID})
 	if h.Presence != nil {
 		h.Presence(userID, chID, false)
 	}

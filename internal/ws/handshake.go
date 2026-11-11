@@ -138,8 +138,8 @@ func (h *Hub) greet(c *Client, before, after string) {
 	if !ok {
 		snap = deniedSnapshot
 	}
-	c.SendEvent(events.Untyped(events.VoiceSnapshot, visibleTo(c, snap, h.voiceSnapshot())))
-	c.SendEvent(events.Untyped(events.VoiceRooms, h.voiceRooms(c, snap)))
+	c.SendEvent(VoiceSnapshot(visibleTo(c, snap, h.voiceSnapshot())))
+	c.SendEvent(h.voiceRooms(c, snap))
 	if h.SFU == nil {
 		return
 	}
@@ -147,7 +147,7 @@ func (h *Hub) greet(c *Client, before, after string) {
 	defer pace.stop()
 	for chID, states := range visibleTo(c, snap, h.SFU.AllMediaStates()) {
 		for uid, st := range states {
-			if !pace.send(events.Untyped(events.WebrtcMediaState, mediaStatePayload(chID, uid, st))) {
+			if !pace.send(mediaStatePayload(chID, uid, st)) {
 				return
 			}
 		}
