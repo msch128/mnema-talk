@@ -133,7 +133,7 @@ func runWithContext(ctx context.Context) error {
 	if err := auth.EnsureAdminUser(ctx, pool, cfg.AdminUsername, cfg.AdminInitialPassword, cfg.IsProduction()); err != nil {
 		return err
 	}
-	reportStoredSecrets(ctx, sessionKeys(cfg), pool, slog.Default())
+	reportStoredSecrets(ctx, sessionKeys(cfg), pool, slog.Default(), storedSecretsCheckLimit)
 
 	if _, err := channels.LocalizeSeedLayout(ctx, pool, cfg.InitialLanguage); err != nil {
 		return err

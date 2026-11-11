@@ -46,7 +46,7 @@ func TestTheStartReportsAuthenticatorSecretsNoConfiguredKeyOpens(t *testing.T) {
 
 	report := func(s *auth.Sessions) string {
 		var log bytes.Buffer
-		reportStoredSecrets(ctx, s, pool, slog.New(slog.NewJSONHandler(&log, nil)))
+		reportStoredSecrets(ctx, s, pool, slog.New(slog.NewJSONHandler(&log, nil)), storedSecretsCheckLimit)
 		return log.String()
 	}
 	healthy := report(withKey)

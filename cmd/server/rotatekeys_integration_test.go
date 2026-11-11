@@ -191,6 +191,9 @@ func TestRotateKeysCommandReportsRemovedAbandonedSetups(t *testing.T) {
 	if _, err := (&auth.Sessions{Secret: strings.Repeat("x", 40)}).BeginEnrolment(ctx, pool, id); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := pool.Exec(ctx, `UPDATE user_totp SET created_at = NOW() - INTERVAL '2 hours' WHERE user_id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
 	var out bytes.Buffer
 	if err := rotateKeysCommand(ctx, nil, &out); err != nil || !strings.Contains(out.String(), "1 two-factor setup(s) that were started but never confirmed could not be read and were removed: gave_up.") {
 		t.Fatalf("%v\n%s", err, out.String())

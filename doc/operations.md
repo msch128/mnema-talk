@@ -457,8 +457,10 @@ All secrets move in one transaction. When one of them cannot be read with any
 configured key, or anything else fails, the command changes nothing, exits
 with an error and names the accounts. Then a key is missing: do not remove
 anything yet. A setup that was started and never confirmed is the exception:
-when no configured key reads it, the command removes it and names the
-account. Two-factor sign-in was not on for it, and the member starts again.
+when no configured key reads it and it was started more than an hour ago, the
+command removes it and names the account. Two-factor sign-in was not on for
+it, and the member starts again. A younger one is left alone: it may be a
+setup a member is in the middle of.
 
 **Recovery codes cannot be moved**, because only their hash is stored. A
 recovery code works for as long as the key it was made under is still

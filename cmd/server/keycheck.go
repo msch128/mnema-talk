@@ -4,10 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 )
+
+// storedSecretsCheckLimit bounds the check of the stored authenticator
+// secrets at start. It reads one row per account with two-factor sign-in,
+// which takes about a second for several hundred thousand of them.
+const storedSecretsCheckLimit = 15 * time.Second
 
 // unreadableSecretsFix is what an operator does about authenticator secrets
 // no configured key opens.
@@ -18,12 +24,16 @@ const unreadableSecretsFix = "put the key they were sealed with back (DATA_KEY, 
 // stored authenticator secrets cannot be opened with the configured keys:
 // those members cannot pass the second step of sign-in. The start goes on,
 // everyone else is unaffected. Nothing secret and no account name is logged.
-func reportStoredSecrets(ctx context.Context, s *auth.Sessions, q db.Querier, log *slog.Logger) {
+// The check runs before the server listens and gets no more than limit: a
+// slow database must not hold the start up for a report.
+func reportStoredSecrets(ctx context.Context, s *auth.Sessions, q db.Querier, log *slog.Logger, limit time.Duration) {
 	keys := s.KeySetup()
 	log.Info("authenticator secrets are sealed under "+keys.Sealing, "fingerprint", keys.Fingerprint, "previous_keys", keys.Previous)
+	ctx, cancel := context.WithTimeout(ctx, limit)
+	defer cancel()
 	found, err := s.CheckStoredSecrets(ctx, q)
 	if err != nil {
-		log.Warn("could not check the stored authenticator secrets", "err", err)
+		log.Warn("could not check the stored authenticator secrets, the start goes on; `mnema-talk doctor` runs the same check", "err", err, "limit", limit.String())
 		return
 	}
 	if found.Unreadable > 0 {

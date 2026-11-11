@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -36,7 +37,8 @@ type KeyRotation struct {
 	// Unreadable names the accounts whose secret no configured key opens.
 	Unreadable []string
 	// Abandoned names the accounts whose never-confirmed enrolment no
-	// configured key opens. Such a row protects nothing and was deleted.
+	// configured key opens and that was started more than abandonedAfter
+	// ago. Such a row protects nothing and was deleted.
 	Abandoned []string
 	// RecoveryAccounts is how many accounts hold unused recovery codes. Their
 	// hashes cannot be moved; codes made before a rotation need the previous key.
@@ -62,26 +64,35 @@ func (s *Sessions) ResealSecrets(ctx context.Context, p *db.Pool) (KeyRotation, 
 	return res, err
 }
 
+// abandonedAfter is how long a setup that was started and not confirmed is
+// left alone by a rotation that cannot read it. A member confirms within
+// minutes; a younger row may be a setup in progress under the server's key,
+// when rotate-keys was run with other settings than the server.
+const abandonedAfter = time.Hour
+
 // totpRow is one stored authenticator secret during a rotation.
 type totpRow struct {
 	ID        uuid.UUID
 	Name      string
 	Sealed    []byte
 	Confirmed bool
+	// Old: started more than abandonedAfter ago.
+	Old bool
 	// secret is the opened value of a row that has to move.
 	secret []byte
 }
 
 func (s *Sessions) resealAll(ctx context.Context, tx pgx.Tx) (KeyRotation, error) {
 	var res KeyRotation
-	rows, err := tx.Query(ctx, `SELECT t.user_id, u.username, t.secret_enc, t.confirmed_at IS NOT NULL
-		FROM user_totp t JOIN users u ON u.id = t.user_id ORDER BY u.username FOR UPDATE OF t`)
+	rows, err := tx.Query(ctx, `SELECT t.user_id, u.username, t.secret_enc, t.confirmed_at IS NOT NULL,
+			t.created_at < NOW() - make_interval(secs => $1)
+		FROM user_totp t JOIN users u ON u.id = t.user_id ORDER BY u.username FOR UPDATE OF t`, abandonedAfter.Seconds())
 	if err != nil {
 		return res, err
 	}
 	all, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (totpRow, error) {
 		var t totpRow
-		return t, r.Scan(&t.ID, &t.Name, &t.Sealed, &t.Confirmed)
+		return t, r.Scan(&t.ID, &t.Name, &t.Sealed, &t.Confirmed, &t.Old)
 	})
 	if err != nil {
 		return res, err
@@ -92,8 +103,10 @@ func (s *Sessions) resealAll(ctx context.Context, tx pgx.Tx) (KeyRotation, error
 		switch {
 		case err != nil && r.Confirmed:
 			res.Unreadable = append(res.Unreadable, r.Name)
-		case err != nil:
+		case err != nil && r.Old:
 			abandoned = append(abandoned, r)
+		case err != nil:
+			// A setup in progress: left for the member to finish or restart.
 		case old:
 			r.secret = secret
 			stale = append(stale, r)
@@ -128,8 +141,8 @@ func (s *Sessions) moveStale(ctx context.Context, tx pgx.Tx, stale []totpRow, re
 	return nil
 }
 
-// dropAbandoned deletes enrolments that were started, never confirmed and
-// sealed under a key that is gone. Two-factor sign-in is not on for these
+// dropAbandoned deletes enrolments that were started long ago, never
+// confirmed and sealed under a key that is gone. Two-factor sign-in is not on for these
 // accounts and nobody can finish such a setup, so they must not stop a
 // rotation; the member starts again.
 func dropAbandoned(ctx context.Context, tx pgx.Tx, abandoned []totpRow, res *KeyRotation) error {

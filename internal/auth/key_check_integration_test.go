@@ -23,13 +23,28 @@ func TestAnAbandonedEnrolmentUnderALostKeyDoesNotStopTheRotation(t *testing.T) {
 	if _, err := (&Sessions{DB: p, Secret: strings.Repeat("c", 40)}).BeginEnrolment(ctx, p, member.ID); err != nil {
 		t.Fatal(err)
 	}
-
 	rotated := &Sessions{DB: p, Secret: sessionSecretB, PreviousSecret: sessionSecretA}
+
+	// Started a moment ago, it may be a setup the member is in the middle
+	// of (under the server's key, when the command runs with other
+	// settings): it is left alone and does not stop the rotation either.
 	res, err := rotated.ResealSecrets(ctx, p)
-	if err != nil || res.Moved != 1 || len(res.Unreadable) != 0 || strings.Join(res.Abandoned, ",") != member.Username {
+	var left int
+	if err != nil || res.Moved != 1 || len(res.Unreadable) != 0 || len(res.Abandoned) != 0 {
+		t.Fatalf("rotate with a setup in progress: %+v %v", res, err)
+	}
+	if err := p.QueryRow(ctx, `SELECT COUNT(*) FROM user_totp WHERE user_id = $1`, member.ID).Scan(&left); err != nil || left != 1 {
+		t.Fatalf("the setup in progress was removed: %d %v", left, err)
+	}
+
+	// Two hours later nobody is going to confirm it.
+	if _, err := p.Exec(ctx, `UPDATE user_totp SET created_at = NOW() - INTERVAL '2 hours' WHERE user_id = $1`, member.ID); err != nil {
+		t.Fatal(err)
+	}
+	res, err = rotated.ResealSecrets(ctx, p)
+	if err != nil || res.Current != 1 || len(res.Unreadable) != 0 || strings.Join(res.Abandoned, ",") != member.Username {
 		t.Fatalf("rotate: %+v %v", res, err)
 	}
-	var left int
 	if err := p.QueryRow(ctx, `SELECT COUNT(*) FROM user_totp WHERE user_id = $1`, member.ID).Scan(&left); err != nil || left != 0 {
 		t.Fatalf("the worthless row is gone: %d %v", left, err)
 	}
