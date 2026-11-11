@@ -3,10 +3,12 @@ import {
   defaultCapabilities,
   defaultLifetime,
   generateKeyPackage,
+  generateKeyPackageWithKey,
+  type ClientState,
 } from 'ts-mls'
 import { clock } from './clock'
-import { ALL_OFFERED_WAIT_MS, OFFER_WAIT_MS, FOUND_WAIT_MS, TAKEOVER_MS, type MediaStep } from './groupParams'
-import { clientConfig, wipeBytes, treeMembers, lowest, encodeWire } from './groupTree'
+import { ALL_OFFERED_WAIT_MS, OFFER_WAIT_MS, FOUND_WAIT_MS, TAKEOVER_MS, type MediaStep, type OwnPackage } from './groupParams'
+import { clientConfig, wipeBytes, treeMembers, treeLeafSigner, lowest, encodeWire } from './groupTree'
 import { GroupEpoch } from './groupEpoch'
 
 function roomKey(others: readonly string[]): string {
@@ -14,6 +16,9 @@ function roomKey(others: readonly string[]): string {
 }
 
 export abstract class GroupSync extends GroupEpoch {
+  /** The package made for the group of one I hold, and the epoch it shrank to one in. */
+  private lone: { own: OwnPackage, epoch: bigint } | null = null
+
   sync(roster: readonly string[], resend = false): Promise<MediaStep> {
     this.hint(roster)
     return this.enqueue(() => this.syncNow(roster, resend))
@@ -115,6 +120,7 @@ export abstract class GroupSync extends GroupEpoch {
     if (others.length !== this.room.length || others.some(id => !this.room.includes(id))) this.lastRosterAt = clock.now()
     this.room = others
     for (const id of [...this.relayed.keys()]) if (!others.includes(id)) this.relayed.delete(id)
+    for (const id of [...this.beats.keys()]) if (!this.hinted.has(id)) this.beats.delete(id)
     return others
   }
 
@@ -202,11 +208,12 @@ export abstract class GroupSync extends GroupEpoch {
       await this.leave()
     }
     await this.establishGroup(others, resend, wires)
-    this.announceGroupOfOne(others, wires)
     if (this.canCommit(others)) {
       wires.push(...await this.commitRemoves(others))
       wires.push(...await this.commitAdds(others))
     }
+    await this.freshWhenAlone()
+    this.announceGroupOfOne(others, wires)
     return this.step(wires)
   }
 
@@ -243,6 +250,57 @@ export abstract class GroupSync extends GroupEpoch {
     wipeBytes(old.privatePackage.initPrivateKey)
     wipeBytes(old.privatePackage.hpkePrivateKey)
     wipeBytes(old.privatePackage.signaturePrivateKey)
+  }
+
+  /**
+   * A key package is good for one join. Once a welcome built on it was taken,
+   * its init key is wiped and a new package takes its place, so a copy of that
+   * welcome that comes again opens nothing. The new package is signed with the
+   * key of my leaf in the group I hold: this is the same member, and whoever
+   * holds that leaf sees its own key and no reload. The group goes on using the
+   * old leaf keys until it is left. A package that was never joined with is
+   * replaced the same way (one offered in vain, or the one a group of one made
+   * for itself before it grew again); nothing uses its keys.
+   */
+  protected async renewOwn() {
+    const old = this.own.privatePackage
+    // Callers hold a group, and a group I hold has exactly one leaf of mine.
+    const state = this.state as ClientState
+    const keys = { signKey: state.signaturePrivateKey.slice(), publicKey: treeLeafSigner(state, this.userId) as Uint8Array }
+    this.own = await generateKeyPackageWithKey(this.credential, defaultCapabilities(), defaultLifetime, [], keys, this.cs)
+    this.offeredFor = null
+    wipeBytes(old.initPrivateKey)
+    const unused = state.signaturePrivateKey !== old.signaturePrivateKey
+    for (const key of unused ? [old.hpkePrivateKey, old.signaturePrivateKey] : this.leafKeys.splice(0)) wipeBytes(key)
+    if (!unused) this.leafKeys.push(old.hpkePrivateKey, old.signaturePrivateKey)
+  }
+
+  /**
+   * A group that shrank to one gets a new key package at once, signature key
+   * and all, before it says again that it is here. The one it had is no longer
+   * good: if the group was founded with it, it was offered long ago, and a
+   * welcome built on it that comes only now would lead back among members long
+   * gone; if it replaced a package the group was joined with, it is signed with
+   * the key of a leaf others may still hold, who would see nothing new in it.
+   * The group itself goes on with the leaf keys it has.
+   */
+  private async freshWhenAlone() {
+    const state = this.state
+    if (!state || state.groupContext.epoch === 0n || treeMembers(state).size !== 1) return
+    if (this.lone?.own === this.own && this.lone.epoch === state.groupContext.epoch) return
+    const old = this.own.privatePackage
+    this.own = await generateKeyPackage(this.credential, defaultCapabilities(), defaultLifetime, [], this.cs)
+    this.offeredFor = null
+    wipeBytes(old.initPrivateKey)
+    if (state.signaturePrivateKey === old.signaturePrivateKey) this.leafKeys.push(old.hpkePrivateKey, old.signaturePrivateKey)
+    else for (const key of [old.hpkePrivateKey, old.signaturePrivateKey]) wipeBytes(key)
+    this.lone = { own: this.own, epoch: state.groupContext.epoch }
+  }
+
+  protected override async tickNow(): Promise<MediaStep> {
+    const step = await super.tickNow()
+    await this.freshWhenAlone()
+    return step
   }
 
   protected hello(): Uint8Array | null {

@@ -124,9 +124,15 @@ export function decodeHandshake(wire: Uint8Array): MLSMessage | null {
   }
 }
 
-export function isRivalWelcome(previousState: unknown, members: Map<string, number> | null, from: string, userId: string): boolean {
+/**
+ * A welcome that may replace the group I hold: from an id outside it that is
+ * lower than the member who commits in it (and so lower than me). Groups merge
+ * only downwards, into the one whose committer has the lowest id; an id
+ * between my committer and me cannot pull me out.
+ */
+export function isRivalWelcome(previousState: unknown, members: Map<string, number> | null, from: string, committer: string): boolean {
   if (!previousState || !members) return false
-  if (from >= userId) return false
+  if (from >= committer) return false
   return !members.has(from)
 }
 

@@ -95,6 +95,8 @@ export abstract class GroupEpoch extends GroupBase {
     const { rotateMs, rotateJitterMs } = this.timing
     this.rotateAfter = Math.max(0, rotateMs + (Math.random() * 2 - 1) * rotateJitterMs)
     const members = treeMembers(state)
+    // A package kept from before its sender was in my tree must not add it again once it was removed.
+    for (const id of members.keys()) this.pending.delete(id)
     this.trackLeaves(state, members, now)
     this.forgetDeparted(members)
     this.markNewMembers(members, now)
@@ -129,7 +131,7 @@ export abstract class GroupEpoch extends GroupBase {
   /** Members that left the group take their signs of life with them. */
   private forgetDeparted(members: Map<string, number>) {
     dropAbsent(this.alive, members)
-    dropAbsent(this.beats, members)
+    this.beatsLeft(members)
     dropAbsent(this.capable, members)
     // A member this one has not advertised to yet is told at the next tick.
     dropAbsent(this.capHeard, members)
@@ -391,8 +393,6 @@ export abstract class GroupEpoch extends GroupBase {
       if (!present.has(member)) proposals.push({ proposalType: 'remove', remove: { removed: leaf } })
     }
     proposals.push({ proposalType: 'add', add: { keyPackage } })
-    // The reloaded member's heartbeats start over with its new leaf.
-    this.beats.delete(id)
     return this.commit(proposals)
   }
 }
