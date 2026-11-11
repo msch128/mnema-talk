@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"slices"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -272,7 +271,7 @@ func (a *API) botCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	if err := messages.ValidateTarget(r.Context(), a.DB, chID, req.ParentID, reply); err != nil {
 		return err
 	}
-	ctx := mentions.WithMentionPolicy(SendContext(r.Context(), p), botMentionPolicy(snap, chID, p, req.AllowedMentions))
+	ctx := mentions.WithMentionPolicy(SendContext(r.Context(), p), messages.BotMentionPolicy(snap, chID, p, (*messages.AllowedMentions)(req.AllowedMentions)))
 	id, err := messages.InsertMessage(ctx, a.DB, a.Online, messages.NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: reply, Embeds: embeds,
 	}, nil)
@@ -280,46 +279,6 @@ func (a *API) botCreateMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return messages.PublishMessage(w, r, a.DB, a.Events, id)
-}
-
-func parseAllowedUsers(rawIDs []string) []uuid.UUID {
-	var ids []uuid.UUID
-	for _, raw := range rawIDs {
-		if id, err := uuid.Parse(raw); err == nil {
-			ids = append(ids, id)
-		}
-	}
-	return ids
-}
-
-func applyAllowedMentions(policy *mentions.MentionPolicy, am *BotAllowedMentions) {
-	if am == nil {
-		return
-	}
-	policy.NoEveryone = !slices.Contains(am.Parse, "everyone")
-	if !slices.Contains(am.Parse, "users") {
-		policy.NoUsers = true
-		policy.AllowUsers = parseAllowedUsers(am.Users)
-	}
-}
-
-// botMentionPolicy is the mention policy of a bot's message: what the bot may
-// do in the channel (p), narrowed by its allowed_mentions. The request can
-// only narrow the permissions, never widen them.
-func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllowedMentions) mentions.MentionPolicy {
-	policy := mentions.MentionPolicy{
-		NoEveryone: true,
-		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) },
-	}
-	applyAllowedMentions(&policy, am)
-	policy.NoEveryone = policy.NoEveryone || !p.Has(perm.MentionEveryone)
-	// Roles follow the bot's permissions like a member's and only notify when
-	// the request asked for them. An edit sends no allowed_mentions, so it
-	// never adds role mentions.
-	if am != nil {
-		policy.Roles = mentions.AllowedRoles(messages.MentionableRoles(snap, p.Has(perm.MentionEveryone)), am.Parse, am.Roles)
-	}
-	return policy
 }
 
 // botEditMessage handles PATCH /api/bot/v1/channels/{channelID}/messages/{messageID}.
@@ -347,7 +306,7 @@ func (a *API) botEditMessage(w http.ResponseWriter, r *http.Request) error {
 }
 
 // botEditContext is the mention context of a bot's edit: the policy of its
-// sends (botMentionPolicy), so an edit never reaches more than a send does.
+// sends (messages.BotMentionPolicy), so an edit never reaches more than a send does.
 func (a *API) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
 	user := auth.UserFrom(r.Context())
 	snap, p, err := ChannelPermsOf(r.Context(), a.Guard.Perms, user, ch)
@@ -357,7 +316,7 @@ func (a *API) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (cont
 	if err := snap.Deny(user.Subject(), p, need); err != nil {
 		return nil, err
 	}
-	return mentions.WithMentionPolicy(r.Context(), botMentionPolicy(snap, ch, p, nil)), nil
+	return mentions.WithMentionPolicy(r.Context(), messages.BotMentionPolicy(snap, ch, p, nil)), nil
 }
 
 // botDeleteMessage handles DELETE /api/bot/v1/channels/{channelID}/messages/{messageID}.

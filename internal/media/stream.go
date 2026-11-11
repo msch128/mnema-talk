@@ -25,13 +25,16 @@ const maxFieldBytes = 64 << 10
 
 // uploadFields are an upload form's text fields.
 // title and tag_ids (a comma-separated list) make the message a forum post.
-var uploadFields = map[string]bool{"content": true, "parent_id": true, "reply_to_id": true, "title": true, "tag_ids": true}
+// allowed_mentions (JSON) belongs to the bot API's upload; a member's upload ignores it.
+var uploadFields = map[string]bool{"content": true, "parent_id": true, "reply_to_id": true, "title": true, "tag_ids": true, "allowed_mentions": true}
 
 // uploadTarget is a validated caption and thread/reply target.
 type uploadTarget struct {
 	content   string
 	parentID  *uuid.UUID
 	replyToID *uuid.UUID
+	// allowedMentions is the raw allowed_mentions field of a bot's upload.
+	allowedMentions string
 	// post is set when the upload starts a forum post.
 	post *forum.PreparedPost
 }
@@ -144,7 +147,7 @@ func (h *Handler) validateTarget(ctx context.Context, chID uuid.UUID, fields map
 	if err != nil {
 		return nil, err
 	}
-	t := &uploadTarget{content: content}
+	t := &uploadTarget{content: content, allowedMentions: fields["allowed_mentions"]}
 	for name, dst := range map[string]**uuid.UUID{"parent_id": &t.parentID, "reply_to_id": &t.replyToID} {
 		raw := fields[name]
 		if raw == "" {

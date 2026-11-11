@@ -300,6 +300,7 @@
       "srvActionMustBeBlockOr": "The action must be “block” or “flag”.",
       "srvAddAnEMailAddress": "Add an e-mail address to your account or name a recipient.",
       "srvAfterMustBeEarlierThan": "“after” must be earlier than “before_date”.",
+      "srvAllowedMentionsMustBeA": "allowed_mentions must be a JSON object.",
       "srvAnotherWikiPageHasThatTitle": "Another wiki page already has that title.",
       "srvAnAttachmentIsUnknownAlready": "An attachment is unknown, already sent or has expired. Upload it again.",
       "srvAnInteractionTakesAtMost": "An interaction takes at most {a} responses.",

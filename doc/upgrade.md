@@ -9,6 +9,21 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Bot uploads: mentions in the caption need `allowed_mentions`
+
+The caption of a file a bot posts (`POST /api/bot/v1/channels/{id}/upload`)
+now follows the mention rule the bot API documents for messages. Before, a
+caption with `@all`, `@here` or `@Role` notified whenever the bot's roles
+allowed it. Now it notifies only when the request also asks for it in the new
+optional form field `allowed_mentions`, the JSON object the message route
+takes, for example `{"parse":["everyone","roles"]}`. Members named in the
+caption are notified as before.
+
+A bot that relied on the old behaviour must send `allowed_mentions` with its
+uploads. Nothing else changes for bots: the field is optional and the
+permissions (Mention @all and @here, mentionable roles) decide as before. See
+[bots.md](bots.md#rest-api).
+
 ## Key rotation
 
 Nothing to do. An instance that sets none of the new variables stores and

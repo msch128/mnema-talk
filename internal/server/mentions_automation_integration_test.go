@@ -3,6 +3,9 @@
 package server
 
 import (
+	"bytes"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"testing"
 
@@ -143,5 +146,90 @@ func TestBotRoleMentionsFollowPolicyOnSendAndEdit(t *testing.T) {
 	}), http.StatusOK)
 	if m := send("@Locked", roles); len(m.MentionRoles) != 1 || m.MentionRoles[0] != locked {
 		t.Fatalf("locked role with the permission: %+v", m)
+	}
+}
+
+// upload posts a PNG with a caption through the bot API's upload route;
+// allowedMentions is the form field of that name, left out when empty.
+func (f *botFixture) upload(caption, allowedMentions string) response {
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	_ = mw.WriteField("content", caption)
+	part, _ := mw.CreateFormFile("file", "a.png")
+	_, _ = part.Write(pngBytes)
+	if allowedMentions != "" {
+		_ = mw.WriteField("allowed_mentions", allowedMentions)
+	}
+	_ = mw.Close()
+	req, _ := http.NewRequest(http.MethodPost, f.a.srv.URL+botPath(f.open, "/upload"), &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Header.Set("Authorization", "Bot "+f.token.Secret)
+	raw, err := http.DefaultClient.Do(req)
+	if err != nil {
+		f.client.t.Fatal(err)
+	}
+	defer raw.Body.Close()
+	body, _ := io.ReadAll(raw.Body)
+	return response{status: raw.StatusCode, body: body}
+}
+
+// A bot's upload caption follows the mention rules of a bot's message: @all
+// and a role notify only when allowed_mentions asks for them and the bot may.
+func TestBotUploadCaptionMentionsFollowAllowedMentions(t *testing.T) {
+	f := newBotFixture(t, false)
+	f.a.router.Bots.SetLimits(1000, 1000)
+	setPerms := func(p perm.Set) {
+		t.Helper()
+		wantStatus(t, "bot role", f.owner.patch("/api/admin/roles/"+f.roleID.String(), map[string]any{"permissions": p}), http.StatusOK)
+	}
+	setPerms(perm.SendMessages | perm.AttachFiles | perm.MentionEveryone)
+	crew := mentionableRole(t, f.owner, "Oncall", true)
+	locked := mentionableRole(t, f.owner, "Locked", false)
+	max := f.a.register(f.owner, "max")
+	assignRoles(t, f.owner, max, crew, locked)
+	f.a.register(f.owner, "bystander")
+	send := func(caption, allowedMentions string) core.Message {
+		t.Helper()
+		res := f.upload(caption, allowedMentions)
+		wantStatus(t, "upload", res, http.StatusCreated)
+		var m core.Message
+		res.decode(t, &m)
+		return m
+	}
+	const everything = `{"parse":["users","everyone","roles"]}`
+
+	// Without the field: members by name only.
+	if m := send("@all look, @Oncall too", ""); len(m.Mentions) != 0 || len(m.MentionRoles) != 0 {
+		t.Fatalf("notified without allowed_mentions: mentions=%v roles=%v", m.Mentions, m.MentionRoles)
+	}
+	if m := send("for @max", ""); len(m.Mentions) != 1 || m.Mentions[0] != max.user.ID {
+		t.Fatalf("a member named in the caption: mentions=%v", m.Mentions)
+	}
+
+	// Asked for, and the bot may mention everyone.
+	if m := send("@all look", `{"parse":["everyone"]}`); len(m.Mentions) < 3 || len(m.MentionRoles) != 0 {
+		t.Fatalf("@all with parse everyone: mentions=%v roles=%v", m.Mentions, m.MentionRoles)
+	}
+	if m := send("page @Oncall", `{"parse":["roles"]}`); len(m.Mentions) != 1 || m.Mentions[0] != max.user.ID || len(m.MentionRoles) != 1 || m.MentionRoles[0] != crew {
+		t.Fatalf("role with parse roles: mentions=%v roles=%v", m.Mentions, m.MentionRoles)
+	}
+	if m := send("page @Oncall", `{"roles":["`+crew.String()+`"]}`); len(m.MentionRoles) != 1 {
+		t.Fatalf("role listed by ID: roles=%v", m.MentionRoles)
+	}
+	if m := send("for @max and @all", `{"parse":[]}`); len(m.Mentions) != 0 {
+		t.Fatalf("an empty parse notified: mentions=%v", m.Mentions)
+	}
+
+	// Asked for, but the bot may not mention everyone: only a mentionable role notifies.
+	setPerms(perm.SendMessages | perm.AttachFiles)
+	if m := send("@all look, @Locked too", everything); len(m.Mentions) != 0 || len(m.MentionRoles) != 0 {
+		t.Fatalf("notified without the permission: mentions=%v roles=%v", m.Mentions, m.MentionRoles)
+	}
+	if m := send("page @Oncall", everything); len(m.MentionRoles) != 1 || m.MentionRoles[0] != crew {
+		t.Fatalf("a mentionable role: roles=%v", m.MentionRoles)
+	}
+
+	for _, bad := range []string{`{"parse":`, `[]`, `"everyone"`, `{} {}`} {
+		wantStatus(t, "allowed_mentions "+bad, f.upload("x", bad), http.StatusBadRequest)
 	}
 }
