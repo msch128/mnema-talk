@@ -269,10 +269,12 @@ func (vt *viewerTrack) report(force bool) {
 
 // write offers one packet of layer idx to the viewer.
 func (vt *viewerTrack) write(idx int, src *rtp.Packet) {
-	now := layerNow()
 	var switched, ask bool
 	var eff int
-	safego.Locked(&vt.mu, func() { switched, ask, eff = vt.writeLocked(idx, src, now) })
+	// The clock is read under the lock: the layers are forwarded by goroutines
+	// of their own, and a reading taken before could be older than the one of
+	// a packet another layer sent meanwhile.
+	safego.Locked(&vt.mu, func() { switched, ask, eff = vt.writeLocked(idx, src, layerNow()) })
 	if ask {
 		vt.group.requestKeyframe(eff)
 	}
@@ -345,11 +347,7 @@ func (vt *viewerTrack) switchLocked(idx int, src *rtp.Packet, now time.Time) {
 			metrics.SFULayerSwitches.Inc()
 		}
 		vt.seqOff = vt.lastSeq + 1 - src.SequenceNumber
-		ticks := uint32(now.Sub(vt.lastAt).Seconds() * videoClockRate)
-		if ticks < 1 {
-			ticks = 1
-		}
-		vt.tsOff = vt.lastTs + ticks - src.Timestamp
+		vt.tsOff = vt.lastTs + switchTicks(now.Sub(vt.lastAt)) - src.Timestamp
 		vt.picOff, vt.tl0Off = 0, 0
 		if vt.group.kind == codecVP8 {
 			vt.carryVP8OffsetsLocked(src)

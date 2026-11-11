@@ -320,3 +320,17 @@ func (g *layerGroup) close() {
 	defer g.mu.Unlock()
 	g.stopTimerLocked()
 }
+
+// maxSwitchTicks is the furthest a layer switch moves the timestamp: half its
+// range, beyond which a receiver would read the step as going back.
+const maxSwitchTicks = 1<<31 - 1
+
+// switchTicks is how far the timestamp moves across a layer switch that comes
+// elapsed after the last packet sent: the time that passed on the video clock
+// and never less than one tick, whatever the two clock readings say (elapsed
+// can be negative or absurdly long).
+func switchTicks(elapsed time.Duration) uint32 {
+	ticks := elapsed.Microseconds() / 1_000_000 * videoClockRate
+	ticks += elapsed.Microseconds() % 1_000_000 * videoClockRate / 1_000_000
+	return uint32(min(max(ticks, 1), maxSwitchTicks))
+}
