@@ -44,8 +44,8 @@ func (h *Hub) Broadcast(ev events.Event) {
 		return
 	}
 	h.tapped(uuid.Nil, ev)
-	if u, ok := ev.(auth.UserUpdate); ok {
-		h.applyUserUpdate(auth.User(u))
+	if u, ok := auth.UserUpdateOf(ev); ok {
+		h.applyUserUpdate(u)
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()

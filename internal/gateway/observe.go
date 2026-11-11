@@ -134,7 +134,7 @@ type BotMember struct {
 }
 
 func memberOf(ev events.Event) (BotMember, bool) {
-	u, ok := ev.(auth.MemberJoined)
+	u, ok := auth.MemberJoinedOf(ev)
 	if !ok || u.ID == uuid.Nil {
 		return BotMember{}, false
 	}

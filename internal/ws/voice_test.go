@@ -177,10 +177,17 @@ func TestVoicePayloadsFollowUserUpdates(t *testing.T) {
 		t.Fatalf("join announced %q, want the updated name", join.Payload.User.DisplayName)
 	}
 
-	renamed.DisplayName = "Anna Neuer"
+	renamed.DisplayName = "Anna Neuere"
 	h.Broadcast(auth.UserUpdate(renamed))
-	if got := h.voiceSnapshot()[ch.ID][user.ID].DisplayName; got != "Anna Neuer" {
+	if got := h.voiceSnapshot()[ch.ID][user.ID].DisplayName; got != "Anna Neuere" {
 		t.Fatalf("snapshot shows %q, want the updated name", got)
+	}
+	// Published as a pointer the update reaches the cache as well.
+	renamed.DisplayName = "Anna Neuer"
+	byPointer := auth.UserUpdate(renamed)
+	h.Broadcast(&byPointer)
+	if got := h.voiceSnapshot()[ch.ID][user.ID].DisplayName; got != "Anna Neuer" {
+		t.Fatalf("snapshot shows %q after an update published as a pointer", got)
 	}
 	// An admin enable/disable notice carries no profile and changes nothing.
 	h.Broadcast(wire.UserDisabled{ID: user.ID, Disabled: true})
