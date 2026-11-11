@@ -4,7 +4,9 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -208,6 +210,15 @@ func TestDeletionDropsQueuedOutgoingWebhookEventsWithTheMembersWords(t *testing.
 	queue(`{"user_id":"` + alice.user.ID.String() + `","content":"alice private words"}`)
 	queue(`{"user_id":"` + bob.user.ID.String() + `","content":"bob reply","reply_to":{"user_id":"` + alice.user.ID.String() + `","content":"alice private words"}}`)
 	queue(`{"user_id":"` + bob.user.ID.String() + `","content":"bob own words"}`)
+	// Who reacted is the member's data too: a reaction update lists the ids,
+	// and so does a message that carries its reactions.
+	reactions := func(mark string, users ...uuid.UUID) string {
+		ids, _ := json.Marshal(users)
+		return `{"message_id":"` + uuid.NewString() + `","channel_id":"` + ch.String() + `","mark":"` + mark + `","reactions":[{"emoji":"🎉","count":1,"users":[]},{"emoji":"👍","count":` + strconv.Itoa(len(users)) + `,"users":` + string(ids) + `}]}`
+	}
+	queue(reactions("alice and bob reacted", bob.user.ID, alice.user.ID))
+	queue(reactions("only bob reacted", bob.user.ID))
+	queue(`{"user_id":"` + bob.user.ID.String() + `","content":"bob words alice liked","reactions":[{"emoji":"👍","count":1,"users":["` + alice.user.ID.String() + `"]}]}`)
 
 	if res := a.deleteAccount(alice, memberPassword, ""); res.status != http.StatusNoContent {
 		t.Fatalf("delete: %d %s", res.status, res.body)
@@ -217,6 +228,12 @@ func TestDeletionDropsQueuedOutgoingWebhookEventsWithTheMembersWords(t *testing.
 	}
 	if n := a.countRows(`SELECT COUNT(*) FROM outgoing_queue WHERE convert_from(data, 'UTF8') LIKE '%bob own words%'`); n != 1 {
 		t.Fatalf("other members' queued events must stay, found %d", n)
+	}
+	if n := a.countRows(`SELECT COUNT(*) FROM outgoing_queue WHERE convert_from(data, 'UTF8') LIKE '%' || $1 || '%'`, alice.user.ID.String()); n != 0 {
+		t.Fatalf("%d queued events still say what she reacted to", n)
+	}
+	if n := a.countRows(`SELECT COUNT(*) FROM outgoing_queue WHERE convert_from(data, 'UTF8') LIKE '%only bob reacted%'`); n != 1 {
+		t.Fatalf("a reaction update without her must stay, found %d", n)
 	}
 }
 
