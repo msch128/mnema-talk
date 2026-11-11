@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import { OUTAGE_RECHECK_MS, useServerFeaturesStore } from './serverFeatures'
-import StorageBanner from '../components/StorageBanner.vue'
+import StorageBanner from '../app/components/StorageBanner.vue'
 import { setLocale } from '../i18n'
 
 const about = { version: '3.0.3', web_client_api: 1, community_name: 'Harbour', features: ['dm', 'messages.nonce'] }

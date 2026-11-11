@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import ReportDialog from '../../components/ReportDialog.vue'
+import ReportDialog from '../../app/components/ReportDialog.vue'
 import AdminReportsTab from './AdminReportsTab.vue'
 import AccountDmPolicy from '../../settings/components/AccountDmPolicy.vue'
 import AccountBlockedList from '../../settings/components/AccountBlockedList.vue'

@@ -2,7 +2,7 @@
 // reading the source: a screen is either immediate or a draft, never both.
 import { describe, it, expect } from 'vitest'
 
-const components = import.meta.glob<string>(['../../components/*.vue', '../../*/components/*.vue'], { query: '?raw', import: 'default', eager: true })
+const components = import.meta.glob<string>('../../*/components/*.vue', { query: '?raw', import: 'default', eager: true })
 const files = Object.entries(components).map(([path, source]) => ({ name: path.replace(/^.*\/components\//, ''), source }))
 
 const isDraft = (source: string) => /\buseSettingsDraft\s*[<(]/.test(source)

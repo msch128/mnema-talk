@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import SidebarDmSection from '../../components/SidebarDmSection.vue'
+import SidebarDmSection from '../../app/components/SidebarDmSection.vue'
 import DmHeaderTitle from './DmHeaderTitle.vue'
 import DmMuteButton from './DmMuteButton.vue'
 import AccountDirectMessages from '../../settings/components/AccountDirectMessages.vue'

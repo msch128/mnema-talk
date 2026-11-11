@@ -8,7 +8,7 @@ import {
   removeCategory, addCategory, nextSortOrder, toLayoutPayload, samePayload, sameLayout,
   applyLayoutPayload
 } from './channelLayout'
-import { resolveChannelDrop, resolveCategoryDrop } from '../../lib/channelDrop'
+import { resolveChannelDrop, resolveCategoryDrop } from '../../app/lib/channelDrop'
 
 interface TestChannel extends LayoutChannel { name: string; type: ChannelType }
 interface TestCategory extends LayoutCategory<TestChannel> { name?: string }

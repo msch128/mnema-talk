@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import SidebarServerMenu from '../../components/SidebarServerMenu.vue'
+import SidebarServerMenu from '../../app/components/SidebarServerMenu.vue'
 import { useAuthStore } from '../../stores/auth'
 import { useChatStore } from '../../stores/chat'
 import { usePermissionsStore } from '../../stores/permissions'

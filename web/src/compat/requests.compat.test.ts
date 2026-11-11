@@ -15,7 +15,7 @@ import { useEventsStore } from '../stores/events'
 import { usePermissionsStore } from '../stores/permissions'
 import { useReportsOpenStore } from '../stores/reportsOpen'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { useChannelLayout } from '../composables/useChannelLayout'
+import { useChannelLayout } from '../app/composables/useChannelLayout'
 import { moveChannel } from '../shared/lib/channelLayout'
 import { liftTimeout } from '../shared/lib/moderationActions'
 import { payloadOf, changedFields, fieldsOf } from '../events/lib/eventPayload'
@@ -23,7 +23,7 @@ import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { categoryFixture, channelFixture, fixtureId, userFixture } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
 import AdminVanityLink from '../admin/components/AdminVanityLink.vue'
-import ProfileModerationTab from '../components/ProfileModerationTab.vue'
+import ProfileModerationTab from '../app/components/ProfileModerationTab.vue'
 
 // The current web app against what each older server release promised: every
 // request it sends for these flows must fit that release's contract, and every

@@ -863,26 +863,26 @@ and Administrators) gathers version, update state, database, storage, backup and
   tuning, stats), [`useTalkStage`](../web/src/talk/composables/useTalkStage.ts) and
   [`useVideoGrid`](../web/src/talk/composables/useVideoGrid.ts) (stage and grid
   layout), [`usePictureInPicture`](../web/src/talk/composables/usePictureInPicture.ts),
-  [`useSidebarReorder`](../web/src/composables/useSidebarReorder.ts),
+  [`useSidebarReorder`](../web/src/app/composables/useSidebarReorder.ts),
   [`useSortableDrag`](../web/src/shared/composables/useSortableDrag.ts) and
-  [`useChannelLayout`](../web/src/composables/useChannelLayout.ts) (drag and
+  [`useChannelLayout`](../web/src/app/composables/useChannelLayout.ts) (drag and
   drop with immediate save and undo), [`useNavMenus`](../web/src/chat/composables/useNavMenus.ts)
   (context menus), [`useMessageActions`](../web/src/chat/composables/useMessageActions.ts),
   [`useMessageKeyboard`](../web/src/chat/composables/useMessageKeyboard.ts),
   [`useResizable`](../web/src/shared/composables/useResizable.ts), [`useDialog`](../web/src/shared/composables/useDialog.ts).
-- **Components**: [`Sidebar.vue`](../web/src/components/Sidebar.vue),
+- **Components**: [`Sidebar.vue`](../web/src/app/components/Sidebar.vue),
   [`ChatArea.vue`](../web/src/chat/components/ChatArea.vue),
   [`ThreadSidebar.vue`](../web/src/chat/components/ThreadSidebar.vue),
   [`VoiceStage.vue`](../web/src/talk/components/VoiceStage.vue) (the Talk view),
   [`ParticipantTile.vue`](../web/src/talk/components/ParticipantTile.vue),
-  [`VoiceChatPanel.vue`](../web/src/components/VoiceChatPanel.vue),
+  [`VoiceChatPanel.vue`](../web/src/app/components/VoiceChatPanel.vue),
   [`ScreenViewers.vue`](../web/src/talk/components/ScreenViewers.vue),
   [`PipHost.vue`](../web/src/talk/components/PipHost.vue),
-  [`MemberList.vue`](../web/src/components/MemberList.vue),
+  [`MemberList.vue`](../web/src/app/components/MemberList.vue),
   [`AdminDashboard.vue`](../web/src/admin/components/AdminDashboard.vue) with one
   component per tab (users, layout, invites, media,
   [system](../web/src/admin/components/AdminSystemTab.vue)),
-  [`UpdateBanner.vue`](../web/src/components/UpdateBanner.vue).
+  [`UpdateBanner.vue`](../web/src/app/components/UpdateBanner.vue).
 - **Libraries** (`lib/`): pure, unit-tested logic such as
   [`api.ts`](../web/src/shared/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/shared/lib/markdown.ts) (Discord-style Markdown: parser, renderer and the `registerTextRule` extension point in [`markdown/`](../web/src/shared/lib/markdown)),
   [`channelLayout.ts`](../web/src/shared/lib/channelLayout.ts),
@@ -903,7 +903,7 @@ and Administrators) gathers version, update state, database, storage, backup and
   ([`DmCreateDialog.vue`](../web/src/dm/components/DmCreateDialog.vue),
   [`DmInfoDialog.vue`](../web/src/dm/components/DmInfoDialog.vue)), blocking and
   reports ([`BlockedMessageRow.vue`](../web/src/chat/components/BlockedMessageRow.vue),
-  [`ReportDialog.vue`](../web/src/components/ReportDialog.vue)), saved messages and
+  [`ReportDialog.vue`](../web/src/app/components/ReportDialog.vue)), saved messages and
   reminders in one header panel
   ([`SavedLaterPanel.vue`](../web/src/chat/components/SavedLaterPanel.vue)), forwarding
   ([`ForwardDialog.vue`](../web/src/chat/components/ForwardDialog.vue),

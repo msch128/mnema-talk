@@ -25,7 +25,7 @@ setLocale(browserLocale())
 const root = gamingSurface()
   ? (await import('./talk/components/DesktopGamingOverlay.vue')).default
   : platform.isWebDesktopSelector()
-    ? (await import('./components/DesktopSelector.vue')).default
+    ? (await import('./app/components/DesktopSelector.vue')).default
     : App
 
 createApp(root)

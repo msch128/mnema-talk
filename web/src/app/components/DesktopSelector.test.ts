@@ -1,0 +1,119 @@
+import { mount, flushPromises } from '@vue/test-utils'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+const calls = vi.hoisted(() => ({ open: vi.fn() }))
+vi.mock('@tauri-apps/api/core', async importOriginal => ({ ...await importOriginal<typeof import('@tauri-apps/api/core')>(), invoke: calls.open }))
+import DesktopSelector from './DesktopSelector.vue'
+import { setLocale } from '../../i18n'
+beforeEach(() => { setLocale('de'); vi.clearAllMocks(); calls.open.mockResolvedValue(undefined) })
+afterEach(() => vi.unstubAllGlobals())
+
+it.each([false, true])('opens the normal web instance (failure: %s)', async failure => {
+  vi.stubGlobal('isTauri', true)
+  vi.stubGlobal('location', new URL('http://tauri.localhost/'))
+  vi.stubGlobal('__MNEMA_WEB_DESKTOP__', true)
+  if (failure) calls.open.mockRejectedValue('This instance needs an update for the desktop client.')
+  const wrapper = mount(DesktopSelector); await flushPromises()
+  await wrapper.get('input').setValue('community.example.invalid')
+  await wrapper.get('form').trigger('submit'); await flushPromises()
+  expect(calls.open).toHaveBeenCalledExactlyOnceWith('desktop_open_instance', { address: 'community.example.invalid' })
+  expect(wrapper.find('[role="alert"]').exists()).toBe(failure)
+  if (failure) expect(wrapper.text()).toContain('Dieser Server braucht ein Update für den Desktop-Client.')
+  wrapper.unmount()
+})
+it('shows the verified bundle in the selector of the trusted desktop client', async () => {
+  vi.stubGlobal('isTauri', true)
+  vi.stubGlobal('location', new URL('mnema://localhost/'))
+  vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'cache', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'selector' })
+  const wrapper = mount(DesktopSelector); await flushPromises()
+  expect(wrapper.get('[data-testid="verified-app"]').text()).toBe('Geprüfte App v0.8.0 · geprüftes Update')
+  wrapper.get('input').element.value = 'community.example.invalid'
+  await wrapper.get('form').trigger('submit'); await flushPromises()
+  expect(calls.open).toHaveBeenCalledExactlyOnceWith('desktop_open_instance', { address: 'community.example.invalid' })
+  wrapper.unmount()
+})
+it('shows the generic connection error when the host rejects without an explanation', async () => {
+  calls.open.mockRejectedValue(new Error('synthetic-private-host-error'))
+  const wrapper = mount(DesktopSelector); await flushPromises()
+  wrapper.get('input').element.value = 'community.example.invalid'
+  await wrapper.get('form').trigger('submit'); await flushPromises()
+  expect(wrapper.get('[role="alert"]').text()).toBe('Dieser Server ist nicht erreichbar oder unterstützt diese DEV-Version nicht.')
+  expect(wrapper.text()).not.toContain('synthetic-private-host-error')
+  wrapper.unmount()
+})
+it('reads an autofilled address once and ignores a second submit while opening', async () => {
+  let resolve!: (value: unknown) => void
+  calls.open.mockImplementation(() => new Promise(r => { resolve = r }))
+  const wrapper = mount(DesktopSelector); await flushPromises()
+  wrapper.get('input').element.value = 'autofill.example.invalid'
+  await wrapper.get('form').trigger('submit'); await wrapper.get('form').trigger('submit')
+  expect(calls.open).toHaveBeenCalledExactlyOnceWith('desktop_open_instance', { address: 'autofill.example.invalid' })
+  resolve(undefined); await flushPromises(); wrapper.unmount()
+})
+it.each([false, true])('ignores a desktop open that finishes after the selector is gone (failure: %s)', async failure => {
+  let resolve!: (value: unknown) => void, reject!: (value: unknown) => void
+  calls.open.mockImplementation(() => new Promise((r, j) => { resolve = r; reject = j }))
+  const wrapper = mount(DesktopSelector); await flushPromises()
+  wrapper.get('input').element.value = 'community.example.invalid'
+  await wrapper.get('form').trigger('submit')
+  wrapper.unmount()
+  if (failure) reject('This instance needs an update for the desktop client.'); else resolve(undefined)
+  await flushPromises()
+  expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+})
+async function failedSelector(sent: string) {
+  calls.open.mockRejectedValue(sent)
+  const wrapper = mount(DesktopSelector); await flushPromises()
+  wrapper.get('input').element.value = 'community.example.invalid'
+  await wrapper.get('form').trigger('submit'); await flushPromises()
+  return wrapper
+}
+const sentError = 'Unable to reach the instance using trusted HTTPS. (bad protocol version)'
+
+it('copies the shown error and the host code, and confirms briefly', async () => {
+  vi.useFakeTimers()
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  vi.stubGlobal('navigator', { clipboard: { writeText } })
+  const wrapper = await failedSelector(sentError)
+  const shown = wrapper.get('[data-testid="connect-error"]').text()
+  const copy = wrapper.get('[data-testid="copy-error"]')
+  expect(copy.text()).toBe('Kopieren')
+  await copy.trigger('click'); await flushPromises()
+  expect(writeText).toHaveBeenCalledExactlyOnceWith(`${shown}\n${sentError}`)
+  expect(copy.text()).toBe('Kopiert')
+  await vi.advanceTimersByTimeAsync(2100)
+  expect(copy.text()).toBe('Kopieren')
+  wrapper.unmount(); vi.useRealTimers()
+})
+it('falls back to execCommand when the clipboard is refused', async () => {
+  vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } })
+  const exec = vi.fn().mockReturnValue(true)
+  Object.defineProperty(document, 'execCommand', { value: exec, configurable: true })
+  const wrapper = await failedSelector(sentError)
+  await wrapper.get('[data-testid="copy-error"]').trigger('click'); await flushPromises()
+  expect(exec).toHaveBeenCalledWith('copy')
+  expect(document.querySelector('textarea')).toBeNull()
+  expect(wrapper.get('[data-testid="copy-error"]').text()).toBe('Kopiert')
+  wrapper.unmount()
+})
+it('shows no confirmation when both ways of copying fail', async () => {
+  vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } })
+  Object.defineProperty(document, 'execCommand', { value: vi.fn().mockReturnValue(false), configurable: true })
+  const wrapper = await failedSelector(sentError)
+  await wrapper.get('[data-testid="copy-error"]').trigger('click'); await flushPromises()
+  expect(wrapper.get('[data-testid="copy-error"]').text()).toBe('Kopieren')
+  wrapper.unmount()
+})
+it('puts the cursor in the address field when the page opens', async () => {
+  const wrapper = mount(DesktopSelector, { attachTo: document.body }); await flushPromises()
+  expect(document.activeElement).toBe(wrapper.get('input').element)
+  wrapper.unmount()
+})
+it('asks for an address or an invite link, with both forms as the example', async () => {
+  const wrapper = mount(DesktopSelector); await flushPromises()
+  expect(wrapper.get('label[for="native-server-url"]').text()).toBe('Adresse oder Einladungslink')
+  const placeholder = wrapper.get('input').attributes('placeholder') ?? ''
+  expect(placeholder).toBe('talk.example.org oder https://talk.example.org/invite/abc123xyz')
+  // The desktop host accepts invite codes of 6 to 64 characters: the example must be one it would take.
+  expect(placeholder.match(/\/invite\/([A-Za-z0-9_-]+)/)?.[1]).toMatch(/^[A-Za-z0-9_-]{6,64}$/)
+  wrapper.unmount()
+})
