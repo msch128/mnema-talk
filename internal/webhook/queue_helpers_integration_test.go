@@ -57,12 +57,10 @@ func TestBufferStoreHelpers(t *testing.T) {
 		t.Fatalf("batch of %d, %d left", len(got), len(d.queue))
 	}
 
-	// Every statement of storing can fail.
+	// Storing can fail.
 	jobs := []job{{webhook: hook.ID, event: sampleEvent(), attempt: 1}}
-	for _, q := range []string{"INSERT INTO outgoing_queue", "row_number()", "OFFSET"} {
-		if _, _, err := storeEvents(ctx, dbFaulty{f, q}.pool(), jobs); err == nil {
-			t.Errorf("storing survived a failing %q", q)
-		}
+	if err := storeEvents(ctx, dbFaulty{f, "INSERT INTO outgoing_queue"}.pool(), jobs); err == nil {
+		t.Error("storing survived a failing insert")
 	}
 	// A failing step fails the recording of the attempt.
 	boom := func(context.Context, pgx.Tx) error { return errors.New("boom") }

@@ -100,7 +100,7 @@ func (f *fixture) seed(hook uuid.UUID, n int) []Event {
 		evs[i].Channel = f.ch
 		jobs[i] = job{webhook: hook, event: evs[i], attempt: 1}
 	}
-	if _, _, err := storeEvents(context.Background(), f.p, jobs); err != nil {
+	if err := storeEvents(context.Background(), f.p, jobs); err != nil {
 		f.t.Fatal(err)
 	}
 	return evs
@@ -482,6 +482,7 @@ func TestPendingCapsDropTheOldest(t *testing.T) {
 	// Per webhook.
 	before := metrics.WebhookDropped.With("webhook_cap").Load()
 	evs := f.seed(hook.ID, maxPendingPerWebhook+7)
+	d.applyCaps(ctx)
 	if f.pending(hook.ID) != maxPendingPerWebhook {
 		t.Fatalf("%d pending, cap %d", f.pending(hook.ID), maxPendingPerWebhook)
 	}
@@ -489,12 +490,17 @@ func TestPendingCapsDropTheOldest(t *testing.T) {
 	if err := f.p.QueryRow(ctx, `SELECT event_id FROM outgoing_queue ORDER BY seq LIMIT 1`).Scan(&oldest); err != nil || oldest != evs[7].ID {
 		t.Fatalf("oldest kept %s, want the 8th event: %v", oldest, err)
 	}
-	// The dispatcher counts what the caps dropped.
+	// The dispatcher counts what the caps dropped. The writer of the buffer
+	// only stores and leaves the bound to the caps.
 	d.store(ctx, []job{{webhook: hook.ID, event: sampleEvent(), attempt: 1}})
-	if got := metrics.WebhookDropped.With("webhook_cap").Load() - before; got != 1 {
+	if f.pending(hook.ID) != maxPendingPerWebhook+1 || !d.capsDue.Load() {
+		t.Fatalf("%d pending after a store (caps due: %v): the writer applied the caps itself", f.pending(hook.ID), d.capsDue.Load())
+	}
+	d.applyCaps(ctx)
+	if got := metrics.WebhookDropped.With("webhook_cap").Load() - before; got != 8 {
 		t.Fatalf("webhook_cap counted %d", got)
 	}
-	if d.dropped.Load() != 1 || f.pending(hook.ID) != maxPendingPerWebhook {
+	if d.dropped.Load() != 8 || f.pending(hook.ID) != maxPendingPerWebhook {
 		t.Fatalf("dropped %d, pending %d", d.dropped.Load(), f.pending(hook.ID))
 	}
 
@@ -518,6 +524,9 @@ func TestPendingCapsDropTheOldest(t *testing.T) {
 		}
 		f.seed(h, maxPendingPerWebhook)
 	}
+	before = metrics.WebhookDropped.With("global_cap").Load()
+	d.capsDue.Store(true)
+	d.applyCaps(ctx)
 	if got := f.pending(uuid.Nil); got != maxPendingTotal {
 		t.Fatalf("%d pending, global cap %d", got, maxPendingTotal)
 	}
@@ -525,10 +534,8 @@ func TestPendingCapsDropTheOldest(t *testing.T) {
 	if err := f.p.QueryRow(ctx, `SELECT MIN(seq) FROM outgoing_queue`).Scan(&minSeq); err != nil || minSeq <= 1 {
 		t.Fatalf("oldest rows kept: %d %v", minSeq, err)
 	}
-	before = metrics.WebhookDropped.With("global_cap").Load()
-	d.store(ctx, []job{{webhook: hook.ID, event: sampleEvent(), attempt: 1}})
-	if got := metrics.WebhookDropped.With("global_cap").Load() - before; got == 0 {
-		t.Fatal("global drops not counted")
+	if got := metrics.WebhookDropped.With("global_cap").Load() - before; got != maxPendingPerWebhook {
+		t.Fatalf("global_cap counted %d", got)
 	}
 	// A store that fails is counted and does not panic.
 	before = metrics.WebhookDropped.With("store_error").Load()

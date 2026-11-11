@@ -34,6 +34,11 @@ const (
 	storeBatch = 100
 )
 
+// capsTimeout bounds one look at the caps: they run on the goroutine of the
+// reload, poll and prune ticks, which a hanging database must not stall. A
+// variable for tests.
+var capsTimeout = 5 * time.Second
+
 // shutdownGrace is how long attempts in flight may finish after shutdown began;
 // later ones are abandoned and their rows left for the next start. A variable
 // for tests.
@@ -42,9 +47,10 @@ var shutdownGrace = 5 * time.Second
 // step is part of the transaction that records an attempt.
 type step func(context.Context, pgx.Tx) error
 
-// storeEvents persists new events (first attempt, due now) and then applies
-// the caps. It returns how many rows the per-webhook and global caps removed.
-func storeEvents(ctx context.Context, p *db.Pool, jobs []job) (perWebhook, global int64, err error) {
+// storeEvents persists new events (first attempt, due now). It leaves the
+// bounds to applyCaps, their only owner: two goroutines that both delete the
+// oldest rows in multi-row statements can deadlock.
+func storeEvents(ctx context.Context, p *db.Pool, jobs []job) error {
 	n := len(jobs)
 	webhooks, channels := make([]uuid.UUID, n), make([]uuid.UUID, n)
 	ids, times := make([]uuid.UUID, n), make([]time.Time, n)
@@ -53,34 +59,13 @@ func storeEvents(ctx context.Context, p *db.Pool, jobs []job) (perWebhook, globa
 		webhooks[i], channels[i], ids[i], times[i] = j.webhook, j.event.Channel, j.event.ID, j.event.Time
 		types[i], data[i] = j.event.Type, j.event.Data
 	}
-	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO outgoing_queue (webhook_id, channel_id, event_id, event_type, event_time, data)
-			SELECT * FROM unnest($1::uuid[], $2::uuid[], $3::uuid[], $4::text[], $5::timestamptz[], $6::bytea[])`,
-			webhooks, channels, ids, types, times, data); err != nil {
-			return err
-		}
-		tag, err := tx.Exec(ctx, `
-			DELETE FROM outgoing_queue WHERE seq IN (
-			    SELECT seq FROM (
-			        SELECT seq, row_number() OVER (PARTITION BY webhook_id ORDER BY seq DESC) AS rn
-			        FROM outgoing_queue WHERE webhook_id = ANY($1)) s
-			    WHERE rn > $2)`, webhooks, maxPendingPerWebhook)
-		if err != nil {
-			return err
-		}
-		perWebhook = tag.RowsAffected()
-		tag, err = tx.Exec(ctx, `DELETE FROM outgoing_queue WHERE seq IN (SELECT seq FROM outgoing_queue ORDER BY seq DESC OFFSET $1)`, maxPendingTotal)
-		if err != nil {
-			return err
-		}
-		global = tag.RowsAffected()
-		return nil
-	})
-	if err != nil {
-		return 0, 0, fmt.Errorf("store outgoing events: %w", err)
+	if _, err := p.Exec(ctx, `
+		INSERT INTO outgoing_queue (webhook_id, channel_id, event_id, event_type, event_time, data)
+		SELECT * FROM unnest($1::uuid[], $2::uuid[], $3::uuid[], $4::text[], $5::timestamptz[], $6::bytea[])`,
+		webhooks, channels, ids, types, times, data); err != nil {
+		return fmt.Errorf("store outgoing events: %w", err)
 	}
-	return perWebhook, global, nil
+	return nil
 }
 
 // capQueue applies the bounds to the whole table: per webhook and in total

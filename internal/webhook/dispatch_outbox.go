@@ -98,20 +98,25 @@ func (d *Dispatcher) Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, e
 	return nil
 }
 
-// recorded is the hub's publication of an event its transaction already
-// wrote: wake a worker, and have the caps looked at.
+// recorded says rows were written (by a change's transaction, which the hub's
+// publication reports, or by the writer of the buffer): wake a worker, and
+// have the caps looked at.
 func (d *Dispatcher) recorded() {
 	d.capsDue.Store(true)
 	d.signal()
 }
 
 // applyCaps drops the oldest pending rows past the bounds, when rows were
-// written since the last look. The transactions that write them stay free of
-// it: a message must not wait for the queue's housekeeping.
+// written since the last look. It is the only place that does, and runs on
+// one goroutine. The transactions that write the rows stay free of it: a
+// message must not wait for the queue's housekeeping. A look that fails or
+// times out leaves the caps due for the next tick.
 func (d *Dispatcher) applyCaps(ctx context.Context) {
 	if !d.capsDue.Swap(false) {
 		return
 	}
+	ctx, cancel := context.WithTimeout(ctx, capsTimeout)
+	defer cancel()
 	perWebhook, global, err := capQueue(ctx, d.DB)
 	if err != nil {
 		d.capsDue.Store(true)

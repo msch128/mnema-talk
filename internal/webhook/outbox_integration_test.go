@@ -322,6 +322,36 @@ func TestTheDispatcherBoundsWhatTransactionsWrote(t *testing.T) {
 	}
 }
 
+// The caps run on the goroutine of the reload, poll and prune ticks. A
+// database that does not answer must not hold them: the look gives up after
+// its bound and is due again.
+func TestTheCapsGiveUpOnADatabaseThatHangs(t *testing.T) {
+	f := newFixture(t)
+	d := NewDispatcher(f.p, nil, "test")
+	ctx := context.Background()
+	defer func(prev time.Duration) { capsTimeout = prev }(capsTimeout)
+	capsTimeout = 100 * time.Millisecond
+
+	blocker, err := f.p.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = blocker.Rollback(ctx) }()
+	if _, err := blocker.Exec(ctx, `LOCK TABLE outgoing_queue IN ACCESS EXCLUSIVE MODE`); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() { d.applyCaps(ctx); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the caps still wait for the database")
+	}
+	if !d.capsDue.Load() {
+		t.Fatal("caps not due again after a look that timed out")
+	}
+}
+
 // The event and the message are one transaction: when the event cannot be
 // written the message is not stored either, and the sender sees the failure.
 func TestAMessageWhoseEventCannotBeWrittenIsNotStored(t *testing.T) {
