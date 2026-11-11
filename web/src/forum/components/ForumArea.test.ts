@@ -3,15 +3,15 @@ import { mount, flushPromises } from '@vue/test-utils'
 import type { VueWrapper } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import ForumArea from './ForumArea.vue'
-import { setLocale } from '../i18n'
-import { useChatStore } from '../stores/chat'
-import { usePermissionsStore } from '../stores/permissions'
+import { setLocale } from '../../i18n'
+import { useChatStore } from '../../stores/chat'
+import { usePermissionsStore } from '../../stores/permissions'
 import * as forumApi from '../lib/forumApi'
-import { openSearch } from '../chat/lib/globalSearch'
-import type { ForumTag } from '../types/domain'
-import { channelFixture, messageFixture, forumTagFixture } from '../test-fixtures.fixture'
+import { openSearch } from '../../chat/lib/globalSearch'
+import type { ForumTag } from '../../types/domain'
+import { channelFixture, messageFixture, forumTagFixture } from '../../test-fixtures.fixture'
 
-vi.mock('../chat/lib/globalSearch', () => ({ openSearch: vi.fn() }))
+vi.mock('../../chat/lib/globalSearch', () => ({ openSearch: vi.fn() }))
 vi.mock('../lib/forumApi', () => ({
   createForumPost: vi.fn(),
   fetchForumPosts: vi.fn(),

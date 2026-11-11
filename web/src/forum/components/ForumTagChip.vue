@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Lock } from '@lucide/vue'
-import type { ForumTag } from '../types/domain'
+import type { ForumTag } from '../../types/domain'
 import { tagChipClass } from '../lib/forumTags'
 
 // A forum tag: its emoji, its name, its colour. With `selectable` it is a

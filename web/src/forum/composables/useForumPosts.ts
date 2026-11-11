@@ -2,12 +2,12 @@
 // posts are unread. ForumArea shows it; this owns the requests.
 import { ref, watch, toValue, onMounted, onBeforeUnmount } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
-import type { Message } from '../types/domain'
+import type { Message } from '../../types/domain'
 import { fetchForumPosts, fetchUnreadForumPosts } from '../lib/forumApi'
-import { caughtErrorMessage } from '../shared/lib/api'
-import { useToastStore } from '../stores/toast'
-import { useChatStore } from '../stores/chat'
-import { t } from '../i18n'
+import { caughtErrorMessage } from '../../shared/lib/api'
+import { useToastStore } from '../../stores/toast'
+import { useChatStore } from '../../stores/chat'
+import { t } from '../../i18n'
 
 // The server's default page size; a full page of unpinned posts means there may be older ones.
 const PAGE_SIZE = 50

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ForumTagChip from './ForumTagChip.vue'
-import { setLocale } from '../i18n'
-import { forumTagFixture } from '../test-fixtures.fixture'
+import { setLocale } from '../../i18n'
+import { forumTagFixture } from '../../test-fixtures.fixture'
 import { tagChipClass } from '../lib/forumTags'
 
 beforeEach(() => setLocale('en'))

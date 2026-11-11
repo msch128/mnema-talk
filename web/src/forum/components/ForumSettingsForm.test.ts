@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import ForumSettingsForm from './ForumSettingsForm.vue'
-import { setLocale } from '../i18n'
+import { setLocale } from '../../i18n'
 import * as forumApi from '../lib/forumApi'
-import { useToastStore } from '../stores/toast'
-import { pendingConfirm } from '../shared/lib/confirm'
+import { useToastStore } from '../../stores/toast'
+import { pendingConfirm } from '../../shared/lib/confirm'
 
 vi.mock('../lib/forumApi', () => ({ updateForumSettings: vi.fn() }))
 

@@ -2,14 +2,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import type { VueWrapper } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
-import { usePermissionsStore } from '../stores/permissions'
-import { useToastStore } from '../stores/toast'
-import { pendingConfirm } from '../shared/lib/confirm'
+import { usePermissionsStore } from '../../stores/permissions'
+import { useToastStore } from '../../stores/toast'
+import { pendingConfirm } from '../../shared/lib/confirm'
 import CreateForumPostModal from './CreateForumPostModal.vue'
-import { setLocale } from '../i18n'
+import { setLocale } from '../../i18n'
 import * as forumApi from '../lib/forumApi'
-import type { ForumTag } from '../types/domain'
-import { messageFixture, forumTagFixture, userFixture } from '../test-fixtures.fixture'
+import type { ForumTag } from '../../types/domain'
+import { messageFixture, forumTagFixture, userFixture } from '../../test-fixtures.fixture'
 
 vi.mock('../lib/forumApi', () => ({
   createForumPost: vi.fn(),
@@ -262,7 +262,7 @@ describe('CreateForumPostModal', () => {
   })
 
   it('suggests members while typing an @mention and inserts the picked one', async () => {
-    const { useChatStore } = await import('../stores/chat')
+    const { useChatStore } = await import('../../stores/chat')
     const chatStore = useChatStore()
     chatStore.members = [{ ...userFixture({ id: 'u-ada', username: 'ada', display_name: 'Ada' }), is_online: true } as never]
     const w = mountModal()

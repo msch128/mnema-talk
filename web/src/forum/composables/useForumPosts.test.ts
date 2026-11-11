@@ -4,9 +4,9 @@ import { defineComponent, ref } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { useForumPosts } from './useForumPosts'
 import * as forumApi from '../lib/forumApi'
-import { useChatStore } from '../stores/chat'
-import { useToastStore } from '../stores/toast'
-import { messageFixture } from '../test-fixtures.fixture'
+import { useChatStore } from '../../stores/chat'
+import { useToastStore } from '../../stores/toast'
+import { messageFixture } from '../../test-fixtures.fixture'
 
 vi.mock('../lib/forumApi', () => ({ fetchForumPosts: vi.fn(), fetchUnreadForumPosts: vi.fn() }))
 

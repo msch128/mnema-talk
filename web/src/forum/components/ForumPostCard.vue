@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Lock, MessageSquare, Pin, CircleCheck } from '@lucide/vue'
-import type { Message } from '../types/domain'
-import { relative } from '../shared/lib/time'
-import { locale } from '../i18n'
-import { previewText } from '../chat/lib/replies'
-import { shownName } from '../shared/lib/deletedUser'
-import UserAvatar from '../shared/components/UserAvatar.vue'
+import type { Message } from '../../types/domain'
+import { relative } from '../../shared/lib/time'
+import { locale } from '../../i18n'
+import { previewText } from '../../chat/lib/replies'
+import { shownName } from '../../shared/lib/deletedUser'
+import UserAvatar from '../../shared/components/UserAvatar.vue'
 import ForumTagChip from './ForumTagChip.vue'
 
 const props = defineProps<{

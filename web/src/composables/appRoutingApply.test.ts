@@ -7,7 +7,7 @@ import { settingsTab } from '../shared/lib/settingsDialog'
 const navigate = vi.hoisted(() => vi.fn())
 const fetchForumPosts = vi.hoisted(() => vi.fn())
 vi.mock('../shared/lib/router', async importOriginal => ({ ...(await importOriginal<typeof import('../shared/lib/router')>()), navigate }))
-vi.mock('../lib/forumApi', () => ({ fetchForumPosts }))
+vi.mock('../forum/lib/forumApi', () => ({ fetchForumPosts }))
 
 const POST = '0f3a9c1e-1111-4222-8333-444455556666'
 const OTHER = '77777777-1111-4222-8333-444455556666'

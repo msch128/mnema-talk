@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { ForumTag } from '../types/domain'
+import type { ForumTag } from '../../types/domain'
 import { MAX_POST_TAGS } from '../lib/forumTags'
 import ForumTagChip from './ForumTagChip.vue'
 

@@ -16,7 +16,7 @@ import { stageAttachment } from '../lib/attachmentsApi'
 import { setLocale, t } from '../../i18n'
 import { closeViewer, viewerState } from '../../shared/composables/useMediaViewer'
 
-vi.mock('../../lib/forumApi', () => ({
+vi.mock('../../forum/lib/forumApi', () => ({
   updateForumPost: vi.fn(),
   markForumPostRead: vi.fn(async () => '2026-01-01T00:00:00Z'),
   fetchForumTags: vi.fn(async () => []),

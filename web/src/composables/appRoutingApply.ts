@@ -11,7 +11,7 @@ import { isSettingsTab, settingsTab } from '../shared/lib/settingsDialog'
 import type { useAccountStore } from '../stores/account'
 import { pathDms } from '../dm/lib/dm'
 import { channelPath, postPath, postShortId, isUuid, textPath, talkPath } from '../shared/lib/routePaths'
-import { fetchForumPosts } from '../lib/forumApi'
+import { fetchForumPosts } from '../forum/lib/forumApi'
 import { voiceChatOpenFor } from '../talk/lib/voiceChatPanel'
 import { t } from '../i18n'
 

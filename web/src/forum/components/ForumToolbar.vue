@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Search, X, ArrowUpDown } from '@lucide/vue'
-import type { ForumTag } from '../types/domain'
+import type { ForumTag } from '../../types/domain'
 import type { ForumSort } from '../composables/useForumPosts'
 import ForumTagChip from './ForumTagChip.vue'
 

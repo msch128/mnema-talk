@@ -1,18 +1,18 @@
 // What a member does with the open forum post: rename, retag, mark solved, pin,
 // lock and delete. The server decides who may; this hides what would fail.
 import { computed } from 'vue'
-import type { Message } from '../types/domain'
-import { useChatStore } from '../stores/chat'
-import type { ThreadRoot } from '../stores/chat'
-import { useAuthStore } from '../stores/auth'
-import { usePermissionsStore } from '../stores/permissions'
-import { useToastStore } from '../stores/toast'
+import type { Message } from '../../types/domain'
+import { useChatStore } from '../../stores/chat'
+import type { ThreadRoot } from '../../stores/chat'
+import { useAuthStore } from '../../stores/auth'
+import { usePermissionsStore } from '../../stores/permissions'
+import { useToastStore } from '../../stores/toast'
 import { updateForumPost } from '../lib/forumApi'
 import type { UpdateForumPostPayload } from '../lib/forumApi'
-import { caughtErrorMessage } from '../shared/lib/api'
-import { confirm } from '../shared/lib/confirm'
-import { previewText } from '../chat/lib/replies'
-import { t } from '../i18n'
+import { caughtErrorMessage } from '../../shared/lib/api'
+import { confirm } from '../../shared/lib/confirm'
+import { previewText } from '../../chat/lib/replies'
+import { t } from '../../i18n'
 
 export function useForumPostActions() {
   const chatStore = useChatStore()

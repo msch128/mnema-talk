@@ -4,9 +4,9 @@ import { defineComponent } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { useForumPostRead } from './useForumPostRead'
 import * as forumApi from '../lib/forumApi'
-import { useChatStore } from '../stores/chat'
-import { useAuthStore } from '../stores/auth'
-import { channelFixture, messageFixture, userFixture } from '../test-fixtures.fixture'
+import { useChatStore } from '../../stores/chat'
+import { useAuthStore } from '../../stores/auth'
+import { channelFixture, messageFixture, userFixture } from '../../test-fixtures.fixture'
 
 vi.mock('../lib/forumApi', () => ({ markForumPostRead: vi.fn() }))
 

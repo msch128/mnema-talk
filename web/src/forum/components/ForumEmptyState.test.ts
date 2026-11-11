@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ForumEmptyState from './ForumEmptyState.vue'
-import { setLocale } from '../i18n'
+import { setLocale } from '../../i18n'
 
 beforeEach(() => setLocale('en'))
 

@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { api } from '../shared/lib/api'
+import { api } from '../../shared/lib/api'
 import {
   fetchForumTags, createForumTag, updateForumTag, deleteForumTag,
   fetchForumPosts, createForumPost, updateForumPost,
   reorderForumTags, fetchForumSettings, updateForumSettings, fetchUnreadForumPosts, markForumPostRead,
   createForumPostWithFile, uploadForumPostFile
 } from './forumApi'
-import { fixtureId, messageFixture } from '../test-fixtures.fixture'
+import { fixtureId, messageFixture } from '../../test-fixtures.fixture'
 
-vi.mock('../shared/lib/api', () => ({ api: vi.fn() }))
+vi.mock('../../shared/lib/api', () => ({ api: vi.fn() }))
 
 const apiMock = vi.mocked(api) as unknown as ReturnType<typeof vi.fn>
 const channelId = 'chan/1 x'

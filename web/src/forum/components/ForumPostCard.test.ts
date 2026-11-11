@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import type { VueWrapper } from '@vue/test-utils'
 import ForumPostCard from './ForumPostCard.vue'
-import { setLocale } from '../i18n'
-import { messageFixture, attachmentFixture, forumTagFixture } from '../test-fixtures.fixture'
-import type { Message } from '../types/domain'
+import { setLocale } from '../../i18n'
+import { messageFixture, attachmentFixture, forumTagFixture } from '../../test-fixtures.fixture'
+import type { Message } from '../../types/domain'
 
 let wrapper: VueWrapper
 

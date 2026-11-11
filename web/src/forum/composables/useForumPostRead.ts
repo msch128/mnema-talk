@@ -2,8 +2,8 @@
 // others since the member last read it) is kept so the post can offer a jump to
 // the first of them. New replies that arrive while the post is open are read.
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
-import { useChatStore } from '../stores/chat'
-import { useAuthStore } from '../stores/auth'
+import { useChatStore } from '../../stores/chat'
+import { useAuthStore } from '../../stores/auth'
 import { markForumPostRead } from '../lib/forumApi'
 
 const REMARK_DELAY_MS = 1000

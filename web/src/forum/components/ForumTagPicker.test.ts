@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ForumTagPicker from './ForumTagPicker.vue'
-import { setLocale } from '../i18n'
-import { forumTagFixture } from '../test-fixtures.fixture'
+import { setLocale } from '../../i18n'
+import { forumTagFixture } from '../../test-fixtures.fixture'
 
 const tags = Array.from({ length: 7 }, (_, i) => forumTagFixture({ id: `t${i}`, name: `tag${i}`, position: i + 1, moderated: i === 6 }))
 

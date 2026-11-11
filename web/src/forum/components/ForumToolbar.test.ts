@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ForumToolbar from './ForumToolbar.vue'
-import { setLocale } from '../i18n'
-import { forumTagFixture } from '../test-fixtures.fixture'
+import { setLocale } from '../../i18n'
+import { forumTagFixture } from '../../test-fixtures.fixture'
 
 const tags = [forumTagFixture({ id: 'a', name: 'alpha' }), forumTagFixture({ id: 'b', name: 'beta', position: 2 })]
 

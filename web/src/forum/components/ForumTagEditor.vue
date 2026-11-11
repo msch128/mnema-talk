@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Check } from '@lucide/vue'
-import { charCount } from '../shared/lib/textLength'
-import type { ForumTag } from '../types/domain'
+import { charCount } from '../../shared/lib/textLength'
+import type { ForumTag } from '../../types/domain'
 import { TAG_COLORS, tagSwatchClass } from '../lib/forumTags'
-import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
-import type { FieldErrors } from '../shared/composables/useSettingsDraft'
-import { t } from '../i18n'
+import { normalise, useSettingsDraft } from '../../shared/composables/useSettingsDraft'
+import type { FieldErrors } from '../../shared/composables/useSettingsDraft'
+import { t } from '../../i18n'
 import ForumTagChip from './ForumTagChip.vue'
-import SwitchRow from '../shared/components/SwitchRow.vue'
-import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
+import SwitchRow from '../../shared/components/SwitchRow.vue'
+import UnsavedChangesBar from '../../shared/components/UnsavedChangesBar.vue'
 
 // The form of one tag: name, emoji, colour and whether only moderators apply it.
 // Used for a new tag (no `tag`) and for editing one. It is a draft with its own

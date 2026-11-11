@@ -1,11 +1,11 @@
-import { api } from '../shared/lib/api'
-import type { ForumTag, Message } from '../types/domain'
-import { decodeForumTag, decodeMessage } from '../types/domain'
+import { api } from '../../shared/lib/api'
+import type { ForumTag, Message } from '../../types/domain'
+import { decodeForumTag, decodeMessage } from '../../types/domain'
 import {
   isChatForumTag, isChatMessage, decodeChatForumSettings, decodeChatUnreadForumPosts, decodeChatPostRead
-} from '../types/rest'
-import type { ChatForumSettings } from '../types/rest'
-import { arrayDecoder } from '../types/validation'
+} from '../../types/rest'
+import type { ChatForumSettings } from '../../types/rest'
+import { arrayDecoder } from '../../types/validation'
 
 const decodeForumTags = arrayDecoder('ForumTag[]', isChatForumTag)
 const decodeMessages = arrayDecoder('Message[]', isChatMessage)
