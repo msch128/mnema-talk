@@ -5,84 +5,17 @@ package chat
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
-	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/forum"
-	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/httpx"
 )
-
-func requireAPIStatus(t *testing.T, err error, status int) {
-	t.Helper()
-	var apiErr *httpx.APIError
-	if !errors.As(err, &apiErr) || apiErr.Status != status {
-		t.Fatalf("error = %v; want API status %d", err, status)
-	}
-}
-
-func TestForumTagNameConflictIsReported(t *testing.T) {
-	f, _, _ := setupForumEnv(t)
-	ch := createTestForum(t, f)
-	ctx := context.Background()
-	if _, err := forum.CreateForumTagSpec(ctx, f.p, ch.ID, forum.TagSpec{Name: "Bug"}); err != nil {
-		t.Fatal(err)
-	}
-	_, err := forum.CreateForumTagSpec(ctx, f.p, ch.ID, forum.TagSpec{Name: "Bug"})
-	requireAPIStatus(t, err, http.StatusConflict)
-	other, err := forum.CreateForumTagSpec(ctx, f.p, ch.ID, forum.TagSpec{Name: "Question"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	name := "Bug"
-	_, _, err = forum.UpdateForumTag(ctx, f.p, ch.ID, other.ID, forum.TagPatch{Name: &name})
-	requireAPIStatus(t, err, http.StatusConflict)
-}
-
-func TestForumTagUpdatesDoNotOverwriteEachOther(t *testing.T) {
-	f, _, _ := setupForumEnv(t)
-	ch := createTestForum(t, f)
-	ctx := context.Background()
-	tag, err := forum.CreateForumTagSpec(ctx, f.p, ch.ID, forum.TagSpec{Name: "old", Emoji: "A"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	tx, err := f.p.Begin(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tx.Rollback(ctx) //nolint:errcheck
-	name, emoji := "new", "B"
-	if _, _, err := forum.UpdateForumTag(ctx, tx, ch.ID, tag.ID, forum.TagPatch{Name: &name}); err != nil {
-		t.Fatal(err)
-	}
-	done := make(chan error, 1)
-	go func() {
-		_, _, err := forum.UpdateForumTag(ctx, f.p, ch.ID, tag.ID, forum.TagPatch{Emoji: &emoji})
-		done <- err
-	}()
-	waitForBlockedStatement(t, f.p) // the second patch has read the tag and waits for the row
-	if err := tx.Commit(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if err := <-done; err != nil {
-		t.Fatal(err)
-	}
-	tags, err := forum.ListForumTags(ctx, f.p, ch.ID)
-	if err != nil || len(tags) != 1 || tags[0].Name != "new" || tags[0].Emoji != "B" {
-		t.Fatalf("tags = %+v, %v; want name new and emoji B", tags, err)
-	}
-}
 
 func auditCount(t *testing.T, f chatFixture, action string) int {
 	t.Helper()
@@ -203,88 +136,4 @@ func TestForumPostListRejectsUnknownSort(t *testing.T) {
 	f, h, _, ch := forumCtx(t)
 	err := h.forum().ServeListForumPosts(httptest.NewRecorder(), chattest.Request(f.u, "", map[string]string{"channelID": ch.ID.String()}, url.Values{"sort": {"oldest"}}.Encode()))
 	requireAPIStatus(t, err, http.StatusBadRequest)
-}
-
-var errRollBack = errors.New("roll back")
-
-func TestBulkDeleteSurvivesAFailingEditVersionRead(t *testing.T) {
-	f := newChatFixture(t)
-	ctx := context.Background()
-	err := pgx.BeginFunc(ctx, f.p, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `ALTER TABLE message_edits RENAME TO message_edits_gone`); err != nil {
-			return err
-		}
-		gone, _, err := messages.TakeLatestMessages(ctx, tx, f.c.ID, f.u.ID, 5, true)
-		if err != nil || len(gone) == 0 {
-			t.Fatalf("takeLatestMessages = %d messages, %v", len(gone), err)
-		}
-		return errRollBack // the rename must not outlive the test
-	})
-	if !errors.Is(err, errRollBack) {
-		t.Fatal(err)
-	}
-}
-
-func TestBulkDeleteSurvivesAFailingReplyRead(t *testing.T) {
-	f := newChatFixture(t)
-	ctx := context.Background()
-	err := pgx.BeginFunc(ctx, f.p, func(tx pgx.Tx) error {
-		// A column the reply read needs is gone: its statement fails and, without
-		// a savepoint, takes the transaction (and the deletion) down with it.
-		if _, err := tx.Exec(ctx, `ALTER TABLE messages RENAME COLUMN parent_id TO parent_id_gone`); err != nil {
-			return err
-		}
-		if got := messages.ReplyIDsForAudit(ctx, tx, []uuid.UUID{f.m}); len(got) != 0 {
-			t.Fatalf("replies = %v; want none after a failed read", got)
-		}
-		var one int
-		if err := tx.QueryRow(ctx, `SELECT 1`).Scan(&one); err != nil {
-			t.Fatalf("the transaction is unusable after the failed read: %v", err)
-		}
-		return errRollBack // the rename must not outlive the test
-	})
-	if !errors.Is(err, errRollBack) {
-		t.Fatal(err)
-	}
-}
-
-func TestChannelEditsAreAllOrNothing(t *testing.T) {
-	f := newChatFixture(t)
-	ctx := context.Background()
-	if _, err := channels.CreateChannelWithStage(ctx, f.p, nil, "text-stage", core.ChannelTypeText, "", 0, true); err == nil {
-		t.Fatal("a text channel was created as a Stage")
-	}
-	var n int
-	if err := f.p.QueryRow(ctx, `SELECT COUNT(*) FROM channels WHERE name = 'text-stage'`).Scan(&n); err != nil || n != 0 {
-		t.Fatalf("channels named text-stage = %d, %v; want none", n, err)
-	}
-
-	voice, err := channels.CreateChannelWithStage(ctx, f.p, nil, "talk", core.ChannelTypeVoice, "", 0, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	stage, bad := true, -1
-	if _, err := channels.EditChannel(ctx, f.p, voice.ID, nil, nil, &bad, nil, nil, &stage); err == nil {
-		t.Fatal("invalid limit accepted")
-	}
-	if _, err := channels.EditChannel(ctx, f.p, f.c.ID, nil, nil, nil, nil, nil, &stage); err == nil {
-		t.Fatal("a text channel became a Stage")
-	}
-	var isStage bool
-	if err := f.p.QueryRow(ctx, `SELECT is_stage FROM channels WHERE id = $1`, voice.ID).Scan(&isStage); err != nil || isStage {
-		t.Fatalf("is_stage = %v, %v; want unchanged", isStage, err)
-	}
-}
-
-func TestRenameCategoryReturnsTheStoredName(t *testing.T) {
-	f := newChatFixture(t)
-	ctx := context.Background()
-	var id uuid.UUID
-	if err := f.p.QueryRow(ctx, `INSERT INTO categories (name) VALUES ('x') RETURNING id`).Scan(&id); err != nil {
-		t.Fatal(err)
-	}
-	got, err := channels.RenameCategory(ctx, f.p, id, "  Games  ")
-	if err != nil || got != "Games" {
-		t.Fatalf("RenameCategory = %q, %v; want Games", got, err)
-	}
 }

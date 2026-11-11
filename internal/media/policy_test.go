@@ -3,6 +3,8 @@ package media
 import (
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -86,5 +88,19 @@ func TestImageOnlyErrorDoesNotNameAvatars(t *testing.T) {
 	_, err := SniffImage("application/pdf", "banner.pdf", []byte("%PDF-1.4"))
 	if err == nil || strings.Contains(err.Error(), "avatar") {
 		t.Fatalf("err = %v, want a neutral picture message", err)
+	}
+}
+
+func TestStorageExtensionsAndDisallowedConcreteType(t *testing.T) {
+	for mime, want := range map[string]string{"image/jpeg": ".jpg", "image/svg+xml": ".svg", "audio/mpeg": ".mp3", "audio/wave": ".wav", "text/plain": ".txt", "text/markdown": ".md", "application/x-mnema-unknown": ".bin"} {
+		if got := extensionFor(mime); got != want {
+			t.Fatalf("extension for %s = %s, want %s", mime, got, want)
+		}
+		if key := storageKey("uploads", uuid.New(), mime); !strings.HasPrefix(key, "uploads/") || !strings.HasSuffix(key, want) {
+			t.Fatalf("storage key=%s", key)
+		}
+	}
+	if _, err := reconcileMIME("image/png", pngBytes, map[string]bool{"text/plain": true}, false); err == nil {
+		t.Fatal("concrete sniff bypassed allow-list")
 	}
 }

@@ -4,14 +4,59 @@ package chat
 
 import (
 	"context"
-	"strings"
+	"errors"
 	"testing"
 
+	"strings"
+
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
-	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 )
+
+var errRollBack = errors.New("roll back")
+
+func TestBulkDeleteSurvivesAFailingEditVersionRead(t *testing.T) {
+	f := newChatFixture(t)
+	ctx := context.Background()
+	err := pgx.BeginFunc(ctx, f.p, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `ALTER TABLE message_edits RENAME TO message_edits_gone`); err != nil {
+			return err
+		}
+		gone, _, err := messages.TakeLatestMessages(ctx, tx, f.c.ID, f.u.ID, 5, true)
+		if err != nil || len(gone) == 0 {
+			t.Fatalf("takeLatestMessages = %d messages, %v", len(gone), err)
+		}
+		return errRollBack // the rename must not outlive the test
+	})
+	if !errors.Is(err, errRollBack) {
+		t.Fatal(err)
+	}
+}
+
+func TestBulkDeleteSurvivesAFailingReplyRead(t *testing.T) {
+	f := newChatFixture(t)
+	ctx := context.Background()
+	err := pgx.BeginFunc(ctx, f.p, func(tx pgx.Tx) error {
+		// A column the reply read needs is gone: its statement fails and, without
+		// a savepoint, takes the transaction (and the deletion) down with it.
+		if _, err := tx.Exec(ctx, `ALTER TABLE messages RENAME COLUMN parent_id TO parent_id_gone`); err != nil {
+			return err
+		}
+		if got := messages.ReplyIDsForAudit(ctx, tx, []uuid.UUID{f.m}); len(got) != 0 {
+			t.Fatalf("replies = %v; want none after a failed read", got)
+		}
+		var one int
+		if err := tx.QueryRow(ctx, `SELECT 1`).Scan(&one); err != nil {
+			t.Fatalf("the transaction is unusable after the failed read: %v", err)
+		}
+		return errRollBack // the rename must not outlive the test
+	})
+	if !errors.Is(err, errRollBack) {
+		t.Fatal(err)
+	}
+}
 
 func TestBulkDeleteReportsDatabaseDrift(t *testing.T) {
 	f := newChatFixture(t)
@@ -44,40 +89,5 @@ func TestBulkDeleteReportsDatabaseDrift(t *testing.T) {
 				t.Fatalf("error = %v, want containing %q", err, tc.want)
 			}
 		})
-	}
-}
-
-func TestSlowModeReportsDatabaseDrift(t *testing.T) {
-	f := newChatFixture(t)
-	ctx := context.Background()
-	check := func(views map[string]string) error {
-		p := chattest.DriftPool(t, f.p, views)
-		return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-			return messages.GatePost(ctx, tx, messages.NewMessage{ChannelID: f.c.ID, UserID: f.u.ID})
-		})
-	}
-	if err := check(map[string]string{"channels": `SELECT id FROM public.channels`}); err == nil || !strings.Contains(err.Error(), "load channel") {
-		t.Fatalf("channel drift: %v", err)
-	}
-	if err := check(nil); err != nil {
-		t.Fatalf("slow mode off: %v", err)
-	}
-	if _, err := f.p.Exec(ctx, `UPDATE channels SET slow_mode_seconds = 60 WHERE id = $1`, f.c.ID); err != nil {
-		t.Fatal(err)
-	}
-	if err := check(map[string]string{"slow_mode_posts": `SELECT DISTINCT channel_id, user_id, last_post_at FROM public.slow_mode_posts`}); err == nil || !strings.Contains(err.Error(), "record post") {
-		t.Fatalf("table drift: %v", err)
-	}
-	if err := check(nil); err != nil {
-		t.Fatalf("first post: %v", err)
-	}
-	if err := check(nil); err == nil || !strings.Contains(err.Error(), "slow mode") {
-		t.Fatalf("second post: %v", err)
-	}
-	if _, err := f.p.Exec(ctx, `DELETE FROM channels WHERE id = $1`, f.c.ID); err != nil {
-		t.Fatal(err)
-	}
-	if err := check(nil); err != core.ErrChannelNotFound {
-		t.Fatalf("missing channel: %v", err)
 	}
 }

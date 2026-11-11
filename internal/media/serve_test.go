@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"errors"
+
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
@@ -122,5 +124,51 @@ func TestServeContentFetchesTheObjectOnce(t *testing.T) {
 				t.Fatalf("%d object fetches, want 1", n)
 			}
 		})
+	}
+}
+
+func TestObjectReaderLazyReadAndSeekValidation(t *testing.T) {
+	store := NewMemoryStore()
+	if err := store.Upload(context.Background(), "key", strings.NewReader("012345"), "text/plain", 6); err != nil {
+		t.Fatal(err)
+	}
+	o := &objectReader{ctx: context.Background(), store: store, key: "key", size: 6}
+	defer o.Close()
+	if offset, err := o.Seek(2, io.SeekCurrent); err != nil || offset != 2 {
+		t.Fatalf("relative seek=%d %v", offset, err)
+	}
+	data := make([]byte, 1)
+	if n, err := o.Read(data); err != nil || n != 1 || string(data) != "2" {
+		t.Fatalf("lazy read=%q n=%d err=%v", data, n, err)
+	}
+	if _, err := o.Seek(0, 100); err == nil {
+		t.Fatal("invalid whence accepted")
+	}
+	if _, err := o.Seek(-7, io.SeekEnd); err == nil {
+		t.Fatal("negative seek accepted")
+	}
+	if o.off != 3 {
+		t.Fatal("invalid seek modified the offset")
+	}
+	if _, err := o.Seek(-1, io.SeekEnd); err != nil {
+		t.Fatalf("seek end: %v", err)
+	}
+	if n, err := o.Read(data); n != 1 || err != nil || string(data) != "5" {
+		t.Fatalf("reread=%q n=%d error=%v", data, n, err)
+	}
+	if _, err := o.Read(data); !errors.Is(err, io.EOF) {
+		t.Fatalf("at EOF: %v", err)
+	}
+	missing := &objectReader{ctx: context.Background(), store: store, key: "missing", size: 1}
+	if _, err := missing.Read(data); !errors.Is(err, ErrObjectNotFound) {
+		t.Fatalf("lazy open failure: %v", err)
+	}
+}
+
+func TestRangeStartMalformedAndZeroSuffix(t *testing.T) {
+	for _, header := range []string{"bytes=10", "bytes=-0", "bytes=-abc", "bytes=-1-", "bytes=-5", "bytes=100-"} {
+		if got := rangeStart(header, 5); got != 0 {
+			t.Fatalf("range %q starts at %d", header, got)
+		}
 	}
 }
