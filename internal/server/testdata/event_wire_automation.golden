@@ -3,7 +3,7 @@
 {"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"wh-<hex>","display_name":"ci","content":"build passed","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>","is_bot":true,"is_webhook":true}}
 
 # slash command /shrug
-@ internal/slashcmd.(*Services).post
+@ internal/chat/messages.publishCreated
 {"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"alice","display_name":"alice","content":"well ¯\\\\\\_(ツ)_/¯","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>"}}
 @ internal/chat/messages.MarkReadAfterSend
 {"type":"read_state","payload":{"channel_id":"<id-1>","refresh":true}}
@@ -37,7 +37,7 @@
 {"type":"scheduled_message_update","payload":{"id":"<id-1>","channel_id":"<id-2>","state":"deleted"}}
 
 # scheduled message sent
-@ internal/later.(*Service).announceSent
+@ internal/chat/messages.publishCreated
 {"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"alice","display_name":"Ally","content":"sent by the sweep","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>"}}
 @ internal/later.(*Service).notify
 {"type":"scheduled_message_update","payload":{"id":"<id-1>","channel_id":"<id-2>","state":"sent"}}

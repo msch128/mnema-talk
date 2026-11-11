@@ -210,10 +210,16 @@ func PublishMessage(w http.ResponseWriter, r *http.Request, p *db.Pool, pub even
 	if err != nil {
 		return err
 	}
-	pub.BroadcastChannel(msg.ChannelID, (*core.MessageCreate)(msg))
+	publishCreated(pub, msg)
 	MarkReadAfterSend(r.Context(), p, pub, msg)
 	httpx.WriteJSON(w, http.StatusCreated, msg)
 	return nil
+}
+
+// publishCreated broadcasts message_create for a stored message. Service.Post
+// and PublishMessage both publish here, so the event has one origin.
+func publishCreated(pub events.Publisher, msg *core.Message) {
+	pub.BroadcastChannel(msg.ChannelID, (*core.MessageCreate)(msg))
 }
 
 // MarkReadAfterSend moves the author's read marker up to their own new

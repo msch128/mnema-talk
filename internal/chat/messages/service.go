@@ -192,7 +192,7 @@ func (s *Service) announce(ctx context.Context, msg *core.Message, cmd PostComma
 	if s.Events == nil {
 		return
 	}
-	s.Events.BroadcastChannel(msg.ChannelID, (*core.MessageCreate)(msg))
+	publishCreated(s.Events, msg)
 	if !cmd.KeepReadMarker {
 		MarkReadAfterSend(ctx, s.DB, s.Events, msg)
 	}
