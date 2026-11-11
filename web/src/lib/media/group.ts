@@ -21,7 +21,7 @@ import { isCapability, openCapability, sealCapability } from './capability'
 import { CONFLICT_MS, type MediaStep } from './groupParams'
 import { suite, credentialIdentity, sameBytes, wipeConsumed, treeMembers, treeLeafSigner, onlyRenewsLeaf, keepsEveryLeaf, lowest } from './groupTree'
 import { GroupBase } from './groupBase'
-import { GroupMerge } from './groupMerge'
+import { GroupSync } from './groupSync'
 
 type MlsMessage = MLSMessage
 type ProcessedPublicMessage = Awaited<ReturnType<typeof processPublicMessage>>
@@ -49,7 +49,7 @@ export type { MediaStep } from './groupParams'
  * committer, or the next one if it was the committer who reloaded, swaps the
  * old leaf. A member who leaves is removed by whoever remains.
  */
-export class MediaGroup extends GroupMerge {
+export class MediaGroup extends GroupSync {
   static async open(userId: string, channelId: string, timing: MediaTiming = mediaTiming()): Promise<MediaGroup | null> {
     const id = mediaUserId(userId)
     const groupId = mediaGroupId(channelId)
@@ -130,7 +130,7 @@ export class MediaGroup extends GroupMerge {
 
   protected async receiveWelcome(from: string, welcome: Welcome, members: Map<string, number> | null): Promise<MediaStep> {
     const previous = this.state
-    const rival = isRivalWelcome(previous, members, from, this.committer(this.room) ?? this.userId)
+    const rival = isRivalWelcome(previous, members, from, this.userId)
     const prevCount = previous ? treeMembers(previous).size : 0
     if (shouldIgnoreWelcome(previous !== null, prevCount, rival)) return this.step()
     if (!this.room.includes(from)) return this.step()
@@ -361,14 +361,12 @@ export class MediaGroup extends GroupMerge {
     const verifier = current?.key.verifiers.get(from)
     if (!current || !verifier) return this.step()
     const beat = await openHeartbeat(verifier, this.groupId, from, wire)
-    if (!beat) return this.step()
+    if (!beat || beat.epoch !== current.epoch) return this.step()
     const last = this.beats.get(from)
     // A verifier exists only for a member with exactly one leaf.
     const signer = treeLeafSigner(this.state as ClientState, from) as Uint8Array
     // A reloaded member signs with a new leaf key and starts its clock anew.
     if (last !== undefined && sameBytes(last.signer, signer) && beat.at <= last.at) return this.step()
-    // For another epoch it is no sign of life; from the room's lowest id it may say that the group has split.
-    if (beat.epoch !== current.epoch) return this.beatElsewhere(from, beat.at)
     this.beats.set(from, { at: beat.at, signer: new Uint8Array(signer) })
     this.alive.set(from, clock.now())
     return this.step()
