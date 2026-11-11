@@ -48,35 +48,3 @@ func PruneNonces(ctx context.Context, q db.Querier) (int64, error) {
 	tag, err := q.Exec(ctx, `DELETE FROM message_nonces WHERE created_at < now() - make_interval(secs => $1)`, nonceLifetime.Seconds())
 	return tag.RowsAffected(), err
 }
-
-// replayNonce answers a send whose nonce the author already used with the
-// message it created (200, nothing broadcast again), or 410 when that message
-// is gone. It reports whether it answered. A nonce of the same author in
-// another channel is refused.
-func (a *API) replayNonce(w http.ResponseWriter, r *http.Request, userID, chID uuid.UUID, nonce *uuid.UUID) (bool, error) {
-	if nonce == nil {
-		return false, nil
-	}
-	var id *uuid.UUID
-	var inChannel uuid.UUID
-	err := a.DB.QueryRow(r.Context(), `SELECT message_id, channel_id FROM message_nonces WHERE user_id = $1 AND nonce = $2`, userID, *nonce).Scan(&id, &inChannel)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	if inChannel != chID {
-		return true, httpx.ErrInvalidInput("nonce was already used in another conversation")
-	}
-	if id == nil {
-		return true, errNonceMessageDeleted
-	}
-	msg, err := GetMessage(r.Context(), a.DB, *id)
-	if err != nil {
-		return true, err
-	}
-	msg.Nonce = nonce
-	httpx.WriteJSON(w, http.StatusOK, msg)
-	return true, nil
-}

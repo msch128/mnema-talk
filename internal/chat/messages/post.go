@@ -201,31 +201,19 @@ func RunSlowModePrune(ctx context.Context, q db.Querier, every time.Duration) {
 	}
 }
 
-// PublishMessage loads a stored message, broadcasts message_create and
-// writes it as the 201 response.
+// PublishMessage loads a stored message, broadcasts message_create, moves the
+// author's read marker and writes the message as the 201 response. It serves
+// the entry points that insert on their own (uploads, forwards, forum posts);
+// Service.Post does the same without a response.
 func PublishMessage(w http.ResponseWriter, r *http.Request, p *db.Pool, pub events.Publisher, id uuid.UUID) error {
-	return PublishMessageNonce(w, r, p, pub, id, nil)
-}
-
-// PublishMessageNonce is PublishMessage for a send that carried a client
-// nonce: the event and the reply echo it back so the author's client can
-// replace the pending copy it shows.
-func PublishMessageNonce(w http.ResponseWriter, r *http.Request, p *db.Pool, pub events.Publisher, id uuid.UUID, nonce *uuid.UUID) error {
 	msg, err := GetMessage(r.Context(), p, id)
 	if err != nil {
 		return err
 	}
-	msg.Nonce = nonce
-	publishCreated(w, r, p, pub, msg)
-	return nil
-}
-
-// publishCreated broadcasts message_create for a stored message and writes
-// it as the 201 response.
-func publishCreated(w http.ResponseWriter, r *http.Request, p *db.Pool, pub events.Publisher, msg *core.Message) {
 	pub.BroadcastChannel(msg.ChannelID, (*core.MessageCreate)(msg))
 	MarkReadAfterSend(r.Context(), p, pub, msg)
 	httpx.WriteJSON(w, http.StatusCreated, msg)
+	return nil
 }
 
 // MarkReadAfterSend moves the author's read marker up to their own new

@@ -5,9 +5,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -96,7 +94,6 @@ func (a *API) ListMessages(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages [post]
 func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
-	user := auth.UserFrom(r.Context())
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return err
@@ -105,58 +102,27 @@ func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	need := perm.SendMessages
-	if len(req.AttachmentIDs) > 0 {
-		need |= perm.AttachFiles
-	}
-	// A retry is answered before the Send check: it only ever returns the
-	// caller's own message in this channel, and a member who was timed out
-	// since the first attempt must not see a stored message turn into 403.
-	// Seeing the channel is still required: someone who lost access gets the
-	// normal refusal, not the message.
-	if replayed, err := a.replayIfVisible(w, r, user.ID, chID, req.Nonce); replayed || err != nil {
-		return err
-	}
-	ctx, err := a.ServeSendContext(r, chID, need)
+	posted, err := a.Posts.Post(r.Context(), MemberActor(auth.UserFrom(r.Context())), PostCommand{
+		ChannelID: chID, Content: req.Content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
+		AttachmentIDs: req.AttachmentIDs, Nonce: req.Nonce,
+	})
 	if err != nil {
 		return err
 	}
-	if _, err := ChannelForMessages(ctx, a.DB, chID); err != nil {
-		return err
+	WritePosted(w, posted)
+	return nil
+}
+
+// WritePosted answers a post: 201 with the new message, or 200 with the one a
+// retried nonce had already created.
+func WritePosted(w http.ResponseWriter, posted *Posted) {
+	switch {
+	case posted.Message == nil: // see Posted.Message: nothing to show
+	case posted.Replayed:
+		httpx.WriteJSON(w, http.StatusOK, posted.Message)
+	default:
+		httpx.WriteJSON(w, http.StatusCreated, posted.Message)
 	}
-	if err := validateAttachmentIDs(req.AttachmentIDs); err != nil {
-		return err
-	}
-	content, err := core.ValidateContent(req.Content, len(req.AttachmentIDs) > 0)
-	if err != nil {
-		return err
-	}
-	if err := ValidateTarget(ctx, a.DB, chID, req.ParentID, req.ReplyToID); err != nil {
-		return err
-	}
-	var claim func(pgx.Tx, uuid.UUID) error
-	if len(req.AttachmentIDs) > 0 {
-		claim = func(tx pgx.Tx, msgID uuid.UUID) error {
-			return claimAttachments(ctx, tx, msgID, user.ID, chID, req.AttachmentIDs)
-		}
-	}
-	id, stored, err := insertMessage(ctx, inserter{db: a.DB, online: a.Online, automod: automod.Of(a.DB)}, NewMessage{
-		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
-		HasAttachment: len(req.AttachmentIDs) > 0, Nonce: req.Nonce,
-	}, rulesFrom(ctx), claim)
-	if IsNonceConflict(err) {
-		// A concurrent send of the same nonce won the race.
-		_, err = a.replayNonce(w, r, user.ID, chID, req.Nonce)
-		return err
-	}
-	if err != nil {
-		return err
-	}
-	if stored != nil { // loaded for the channel's webhook: the same message, not read twice
-		publishCreated(w, r, a.DB, a.Events, stored)
-		return nil
-	}
-	return PublishMessageNonce(w, r, a.DB, a.Events, id, req.Nonce)
 }
 
 // MessageInChannel loads messageID and checks it belongs to the channel named in
@@ -316,15 +282,4 @@ type CreateMessageRequest struct {
 // EditMessageRequest is the body of PUT /api/channels/{channelID}/messages/{messageID}.
 type EditMessageRequest struct {
 	Content string `json:"content" minLength:"1" maxLength:"4000"`
-}
-
-// replayIfVisible is replayNonce for a caller who may still see the channel.
-func (a *API) replayIfVisible(w http.ResponseWriter, r *http.Request, userID, chID uuid.UUID, nonce *uuid.UUID) (bool, error) {
-	if nonce == nil {
-		return false, nil
-	}
-	if _, err := a.ServeSendContext(r, chID, perm.ViewChannel); err != nil {
-		return false, err
-	}
-	return a.replayNonce(w, r, userID, chID, nonce)
 }

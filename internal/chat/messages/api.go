@@ -18,6 +18,8 @@ import (
 type API struct {
 	DB     *db.Pool
 	Events events.Publisher
+	// Posts posts messages (POST /channels/{channelID}/messages and the bot API).
+	Posts *Service
 	// Guard decides who may see and use which channel.
 	Guard core.Guard
 	// Objects deletes the media of removed messages; nil skips it.

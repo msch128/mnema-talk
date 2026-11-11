@@ -83,10 +83,17 @@ func (h *Handler) voiceRooms() core.VoiceRooms {
 // memory is shared, so every API built here counts the same reads.
 func (h *Handler) messages() *messages.API {
 	return &messages.API{
-		DB: h.DB, Events: h.Events, Guard: h.guard(), Objects: h.Objects, Online: h.Online, Audit: h.Audit,
+		DB: h.DB, Events: h.Events, Posts: h.Posts(), Guard: h.guard(), Objects: h.Objects, Online: h.Online, Audit: h.Audit,
 		Views: &h.historyViews, EditHistoryLimit: h.EditHistoryLimit, PinLimit: h.PinLimit,
 		FollowLimit: h.FollowLimit, ForwardLimit: h.ForwardLimit,
 	}
+}
+
+// Posts is the service that posts messages: for the routes of this handler and
+// for the services that post on a member's behalf (the built-in commands,
+// scheduled messages).
+func (h *Handler) Posts() *messages.Service {
+	return &messages.Service{DB: h.DB, Perms: h.Perms, Events: h.Events, Online: h.Online}
 }
 
 // channels builds the channels API from the handler's fields.
