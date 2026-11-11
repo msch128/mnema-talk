@@ -55,6 +55,8 @@ type Service struct {
 	Events events.Publisher
 	// Online resolves @here; nil means nobody is online.
 	Online mentions.OnlineSource
+	// Automod screens a message before it is stored; nil screens nothing.
+	Automod *automod.Engine
 }
 
 // PostCommand is one message to post. What differs between the entry points
@@ -167,7 +169,7 @@ func (s *Service) Post(ctx context.Context, actor Actor, cmd PostCommand) (*Post
 }
 
 func (s *Service) inserter() inserter {
-	return inserter{db: s.DB, online: s.Online, automod: automod.Of(s.DB)}
+	return inserter{db: s.DB, online: s.Online, automod: s.Automod}
 }
 
 // inTx is what runs next to the insert: the staged files become the

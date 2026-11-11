@@ -226,8 +226,7 @@ func TestPostAppliesAutomodToMembers(t *testing.T) {
 	w := newPostWorld(t)
 	ctx := context.Background()
 	engine := automod.New(w.p, w.perms, w.rec, &audit.Log{DB: w.p})
-	automod.Attach(w.p, engine)
-	t.Cleanup(func() { automod.Detach(w.p, engine) })
+	w.svc.Automod = engine // handed in, not found through the pool
 	in, err := automod.RuleInput{Kind: automod.KindWords, Name: "words", Enabled: true, Action: automod.ActionBlock, Config: automod.Settings{Words: []string{"badword"}}}.Normalize()
 	if err != nil {
 		t.Fatal(err)

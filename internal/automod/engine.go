@@ -56,6 +56,7 @@ var registry sync.Map // *db.Pool -> *Engine
 // Attach makes e the engine of the message and sign-up paths that work on p.
 // The paths find it through the pool they already hold, so no signature of
 // theirs changes and two servers in one process (tests) never share rules.
+// messages.Service does not look here: it is handed its engine.
 func Attach(p *db.Pool, e *Engine) { registry.Store(p, e) }
 
 // Detach removes e as the engine of p, unless another one took its place.

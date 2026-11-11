@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
 	"github.com/msch128/mnema-talk/internal/chat/botapi"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
@@ -43,6 +44,8 @@ type Handler struct {
 	Perms *perm.Service
 	// Audit records message deletions and edits; nil records nothing.
 	Audit *audit.Log
+	// Automod screens the messages posted through Posts; nil screens nothing.
+	Automod *automod.Engine
 	// EditHistoryLimit caps edit-history reads per member; nil means no cap.
 	EditHistoryLimit *httpx.RateLimiter
 	// PinLimit caps pinning and unpinning per member (each change is broadcast); nil means no cap.
@@ -93,7 +96,7 @@ func (h *Handler) messages() *messages.API {
 // for the services that post on a member's behalf (the built-in commands,
 // scheduled messages).
 func (h *Handler) Posts() *messages.Service {
-	return &messages.Service{DB: h.DB, Perms: h.Perms, Events: h.Events, Online: h.Online}
+	return &messages.Service{DB: h.DB, Perms: h.Perms, Events: h.Events, Online: h.Online, Automod: h.Automod}
 }
 
 // channels builds the channels API from the handler's fields.
