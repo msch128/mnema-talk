@@ -22,7 +22,7 @@ import { payloadOf, changedFields, fieldsOf } from '../events/lib/eventPayload'
 import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { categoryFixture, channelFixture, fixtureId, userFixture } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
-import AdminVanityLink from '../components/AdminVanityLink.vue'
+import AdminVanityLink from '../admin/components/AdminVanityLink.vue'
 import ProfileModerationTab from '../components/ProfileModerationTab.vue'
 
 // The current web app against what each older server release promised: every

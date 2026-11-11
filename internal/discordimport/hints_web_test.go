@@ -12,7 +12,7 @@ import (
 // list does not know would silently show English text, and the reverse leaves
 // dead translations. The two lists must be the same set.
 func TestWebAndServerKnowTheSameHintCodes(t *testing.T) {
-	src, err := os.ReadFile(filepath.Join("..", "..", "web", "src", "lib", "discordImportHints.ts"))
+	src, err := os.ReadFile(filepath.Join("..", "..", "web", "src", "admin", "lib", "discordImportHints.ts"))
 	if err != nil {
 		t.Skipf("web sources not available: %v", err)
 	}

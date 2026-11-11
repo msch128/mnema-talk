@@ -14,7 +14,7 @@ import { t } from '../i18n'
 import { useDismissable } from '../shared/composables/useDismissable'
 import { useCommunityName } from '../shared/composables/useCommunityName'
 import { useCommunityIcon } from '../shared/composables/useCommunityIcon'
-import ReportsBadge from './ReportsBadge.vue'
+import ReportsBadge from '../admin/components/ReportsBadge.vue'
 
 // The server header (48px, aligned with the channel header) and its dropdown:
 // admin console, creating channels and categories, the legal notices.

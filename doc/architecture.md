@@ -879,9 +879,9 @@ and Administrators) gathers version, update state, database, storage, backup and
   [`ScreenViewers.vue`](../web/src/talk/components/ScreenViewers.vue),
   [`PipHost.vue`](../web/src/talk/components/PipHost.vue),
   [`MemberList.vue`](../web/src/components/MemberList.vue),
-  [`AdminDashboard.vue`](../web/src/components/AdminDashboard.vue) with one
+  [`AdminDashboard.vue`](../web/src/admin/components/AdminDashboard.vue) with one
   component per tab (users, layout, invites, media,
-  [system](../web/src/components/AdminSystemTab.vue)),
+  [system](../web/src/admin/components/AdminSystemTab.vue)),
   [`UpdateBanner.vue`](../web/src/components/UpdateBanner.vue).
 - **Libraries** (`lib/`): pure, unit-tested logic such as
   [`api.ts`](../web/src/shared/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/shared/lib/markdown.ts) (Discord-style Markdown: parser, renderer and the `registerTextRule` extension point in [`markdown/`](../web/src/shared/lib/markdown)),

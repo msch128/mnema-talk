@@ -11,7 +11,7 @@ import { moderationOffer, openTimeout, openBan, liftTimeout } from '../shared/li
 import { useBlocksStore } from '../stores/blocks'
 import { usePermissionsStore } from '../stores/permissions'
 import { useDmActions } from '../dm/composables/useDmActions'
-import MemberRolesDialog from './MemberRolesDialog.vue'
+import MemberRolesDialog from '../admin/components/MemberRolesDialog.vue'
 
 const props = defineProps({
   profileUser: { type: Object as PropType<Partial<ProfileUser>>, required: true },

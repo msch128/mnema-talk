@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import ChannelAutoDeleteField from '../../components/ChannelAutoDeleteField.vue'
+import ChannelAutoDeleteField from '../../admin/components/ChannelAutoDeleteField.vue'
 import ChannelAutoDeleteNote from './ChannelAutoDeleteNote.vue'
 import ChatHeader from './ChatHeader.vue'
 import { useChatStore } from '../../stores/chat'

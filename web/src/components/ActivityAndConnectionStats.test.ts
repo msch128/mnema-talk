@@ -7,13 +7,13 @@ import ConnectionStatsModal from '../talk/components/ConnectionStatsModal.vue'
 import BaseDialog from '../shared/components/BaseDialog.vue'
 import { useVoiceStore } from '../stores/voice'
 import { fixtureId, userFixture, voiceUserFixture } from '../test-fixtures.fixture'
-import { button } from './adminTestkit.fixture'
+import { button } from '../admin/components/adminTestkit.fixture'
 import { useAuthStore } from '../stores/auth'
 import { setLocale } from '../i18n'
 
 // The live operations panel has its own tests and endpoint.
-vi.mock('./AdminOpsPanel.vue', () => ({ default: { template: '<div />' } }))
-vi.mock('./AdminUploadLimit.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../admin/components/AdminOpsPanel.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('../admin/components/AdminUploadLimit.vue', () => ({ default: { template: '<div />' } }))
 
 let wrappers: VueWrapper[] = []
 function keep<T extends VueWrapper>(w: T): T {
