@@ -8,7 +8,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -43,9 +42,9 @@ func (a *API) setBotReaction(w http.ResponseWriter, r *http.Request, want bool) 
 		return err
 	}
 	if changed {
-		a.Events.BroadcastChannel(ref.ChannelID, events.Untyped(events.MessageReaction, messages.ReactionResult{
+		a.Events.BroadcastChannel(ref.ChannelID, messages.ReactionResult{
 			MessageID: msgID, ChannelID: ref.ChannelID, Reactions: reactions,
-		}))
+		})
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

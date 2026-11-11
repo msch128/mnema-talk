@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -239,7 +239,7 @@ func (a *API) EditMessageWith(w http.ResponseWriter, r *http.Request, ctxFor fun
 	if err != nil {
 		return err
 	}
-	a.Events.BroadcastChannel(msg.ChannelID, events.Untyped(events.MessageUpdate, msg))
+	a.Events.BroadcastChannel(msg.ChannelID, (*core.MessageUpdate)(msg))
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
 }
@@ -289,7 +289,7 @@ func (a *API) DeleteMessage(w http.ResponseWriter, r *http.Request) error {
 	a.auditDelete(r.Context(), user, msgID, snap, reason)
 	a.tellAuthor(snap, user, reason)
 	core.DeleteObjects(r.Context(), a.Objects, keys)
-	a.Events.BroadcastChannel(ref.ChannelID, events.Untyped(events.MessageDelete, core.MessageDeletePayload(msgID, ref.ChannelID, ref.ParentID)))
+	a.Events.BroadcastChannel(ref.ChannelID, wire.MessageDelete{ID: msgID, ChannelID: ref.ChannelID, ParentID: ref.ParentID})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

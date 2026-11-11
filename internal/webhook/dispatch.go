@@ -279,7 +279,7 @@ func (d *Dispatcher) Observe(channel uuid.UUID, published events.Event) {
 		}
 		return
 	}
-	name, data, ok := translate(eventType, events.PayloadOf(published))
+	name, ok := translate(published)
 	if !ok || channel == uuid.Nil {
 		return
 	}
@@ -287,7 +287,7 @@ func (d *Dispatcher) Observe(channel uuid.UUID, published events.Event) {
 	if len(targets) == 0 {
 		return
 	}
-	raw, err := json.Marshal(data) // hub payloads are plain data: cannot fail
+	raw, err := json.Marshal(published) // hub payloads are plain data: cannot fail
 	if err != nil {
 		return
 	}

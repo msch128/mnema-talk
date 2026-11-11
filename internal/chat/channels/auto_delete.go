@@ -14,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/worker"
 )
@@ -185,7 +186,7 @@ func (a *AutoDeleter) sweepBatch(ctx context.Context, c autoDeleteChannel, cutof
 	}
 	if a.Events != nil {
 		for _, g := range removed {
-			a.Events.BroadcastChannel(c.id, events.Untyped(events.MessageDelete, core.MessageDeletePayload(g.id, c.id, g.parent)))
+			a.Events.BroadcastChannel(c.id, wire.MessageDelete{ID: g.id, ChannelID: c.id, ParentID: g.parent})
 		}
 	}
 	return len(removed), len(keys), nil

@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/poll"
 	"github.com/msch128/mnema-talk/internal/slash"
@@ -119,7 +118,7 @@ func TestPollCommandPostsAPollMessage(t *testing.T) {
 	}
 	var announced bool
 	for _, e := range f.a.events.Snapshot() {
-		if m, ok := e.Payload.(*core.Message); ok && e.Type == events.MessageCreate && m.ID == *out.MessageID && m.Poll != nil {
+		if m, ok := e.Payload.(*core.MessageCreate); ok && m.ID == *out.MessageID && m.Poll != nil {
 			announced = true
 		}
 	}

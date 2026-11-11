@@ -10,7 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -156,9 +156,7 @@ func (a *API) changeThreadFollow(w http.ResponseWriter, r *http.Request, followi
 		return err
 	}
 	if a.Events != nil {
-		a.Events.SendToUsers([]uuid.UUID{user.ID}, events.Untyped(events.ThreadFollowUpdated, map[string]any{
-			"thread_id": id, "channel_id": root.ChannelID, "following": following,
-		}))
+		a.Events.SendToUsers([]uuid.UUID{user.ID}, wire.ThreadFollowUpdated{ThreadID: id, ChannelID: root.ChannelID, Following: following})
 	}
 	httpx.WriteJSON(w, http.StatusOK, ThreadFollow{ThreadID: id, Following: following})
 	return nil

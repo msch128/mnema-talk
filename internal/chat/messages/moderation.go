@@ -14,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -183,7 +184,7 @@ type bulkDeleteReport struct {
 func (a *API) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 	chID, req := rep.chID, rep.req
 	for _, m := range rep.gone {
-		a.Events.BroadcastChannel(chID, events.Untyped(events.MessageDelete, core.MessageDeletePayload(m.id, chID, m.parentID)))
+		a.Events.BroadcastChannel(chID, wire.MessageDelete{ID: m.id, ChannelID: chID, ParentID: m.parentID})
 		d := map[string]any{
 			"channel_id": chID, "channel_name": rep.channelName, "author_id": req.UserID, "author_name": rep.targetName,
 			"content": audit.Content(m.content), "attachments": m.attachments, "sent_at": m.createdAt,

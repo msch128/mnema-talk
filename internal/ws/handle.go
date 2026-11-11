@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -172,7 +173,7 @@ func (c *Client) handleTyping(ctx context.Context, channelID uuid.UUID) {
 	// Only someone who could send a message shows as typing, and only to
 	// those who can see the channel.
 	if c.canTypeInChannel(channelID) {
-		c.emitApplicationEvent(events.Untyped(events.Typing, map[string]any{"channel_id": channelID, "user_id": c.User.ID}), true, nil, channelID)
+		c.emitApplicationEvent(wire.Typing{ChannelID: channelID, UserID: c.User.ID}, true, nil, channelID)
 	}
 }
 

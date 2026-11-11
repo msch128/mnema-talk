@@ -94,22 +94,13 @@ func (s *Service) init() {
 
 // Observe is the hub's tap: it queues a new message for delivery. It never blocks.
 func (s *Service) Observe(_ uuid.UUID, ev events.Event) {
-	eventType, payload := ev.EventName(), events.PayloadOf(ev)
-	if eventType != events.MessageCreate {
-		return
-	}
-	var msg core.Message
-	switch v := payload.(type) {
-	case core.Message:
-		msg = v
-	case *core.Message:
-		msg = *v
-	default:
+	created, ok := ev.(*core.MessageCreate)
+	if !ok || created == nil {
 		return
 	}
 	s.init()
 	select {
-	case s.messages <- msg:
+	case s.messages <- core.Message(*created):
 	default:
 		metrics.PushDeliveries.With("dropped").Inc()
 	}

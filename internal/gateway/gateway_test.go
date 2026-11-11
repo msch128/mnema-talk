@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
@@ -199,7 +200,7 @@ func TestObserveFailsClosed(t *testing.T) {
 	g.Observe(channel, events.Untyped("message_create", make(chan int))) // cannot be encoded
 	g.Observe(uuid.Nil, events.Untyped("member_joined", make(chan int)))
 	g.Observe(uuid.Nil, auth.MemberJoined{Username: "no id"})
-	g.Observe(uuid.Nil, events.Untyped("typing", map[string]any{}))
+	g.Observe(uuid.Nil, wire.Typing{})
 	g.Observe(channel, events.Untyped("unknown_event", map[string]any{}))
 	if s.seq != 0 {
 		t.Fatalf("delivered %d events", s.seq)

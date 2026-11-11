@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/testutil"
@@ -108,7 +107,7 @@ func message(author member, channel uuid.UUID, content string, mentions ...membe
 }
 
 func (e *env) publish(msg core.Message) {
-	e.svc.Observe(msg.ChannelID, events.Untyped(events.MessageCreate, msg))
+	e.svc.Observe(msg.ChannelID, (*core.MessageCreate)(&msg))
 }
 
 // pushedTo waits until count requests reached the device path, and returns them.

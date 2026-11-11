@@ -47,12 +47,12 @@ func (d *Dispatcher) Wants(channel uuid.UUID, eventType string) bool {
 // Record writes one row per receiving webhook in tx. The webhooks are read
 // from the table under a key-share lock, not from the cached list, so a
 // webhook deleted a moment ago cannot fail the caller's transaction.
-func (d *Dispatcher) Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, eventType string, payload any) error {
-	name, data, ok := translate(eventType, payload)
+func (d *Dispatcher) Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, ev events.Event) error {
+	name, ok := translate(ev)
 	if !ok {
 		return nil
 	}
-	raw, err := json.Marshal(data)
+	raw, err := json.Marshal(ev)
 	if err != nil { // hub payloads are plain data; never fail a message for a webhook
 		slog.Warn("outgoing webhooks: encode event", "event", name, "err", err)
 		return nil

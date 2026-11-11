@@ -9,6 +9,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/safego"
 )
@@ -49,32 +50,17 @@ func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub eve
 		})
 	}
 	return func(_ uuid.UUID, ev events.Event) {
-		eventType, payload := ev.EventName(), events.PayloadOf(ev)
-		if eventType != events.MessageCreate {
+		created, ok := ev.(*core.MessageCreate)
+		if !ok || created == nil || created.ParentID == nil {
 			return
 		}
-		msg, ok := MessageOf(payload)
-		if !ok || msg.ParentID == nil {
-			return
-		}
+		msg := core.Message(*created)
 		select {
 		case queue <- msg:
 		default:
 			slog.Warn("thread follow sync: queue full, reply skipped", "thread", *msg.ParentID)
 		}
 	}
-}
-
-func MessageOf(payload any) (core.Message, bool) {
-	switch v := payload.(type) {
-	case core.Message:
-		return v, true
-	case *core.Message:
-		if v != nil {
-			return *v, true
-		}
-	}
-	return core.Message{}, false
 }
 
 func syncFollowers(parent context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher, msg core.Message) {
@@ -106,9 +92,7 @@ func syncFollowers(parent context.Context, p *db.Pool, perms *perm.Service, pub 
 		if !snap.Channel(perm.Subject{ID: user}, msg.ChannelID).Has(perm.ViewChannel) {
 			continue
 		}
-		pub.SendToUsers([]uuid.UUID{user}, events.Untyped(events.ThreadFollowUpdated, map[string]any{
-			"thread_id": thread, "channel_id": msg.ChannelID, "following": true,
-		}))
+		pub.SendToUsers([]uuid.UUID{user}, wire.ThreadFollowUpdated{ThreadID: thread, ChannelID: msg.ChannelID, Following: true})
 	}
 	if err := rows.Err(); err != nil {
 		slog.Warn("thread follow sync", "err", err)

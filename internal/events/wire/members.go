@@ -1,4 +1,4 @@
-package payload
+package wire
 
 import (
 	"github.com/google/uuid"

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 // EventOutbox takes the events of a channel that outgoing webhooks receive,
@@ -18,8 +19,8 @@ type EventOutbox interface {
 	// Wants reports whether any webhook of the channel receives eventType (a
 	// name from internal/events). It reads a cached list and never blocks.
 	Wants(channel uuid.UUID, eventType string) bool
-	// Record stores the event in tx. payload is what the hub publishes for it.
-	Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, eventType string, payload any) error
+	// Record stores the event in tx: the very event the hub publishes for it.
+	Record(ctx context.Context, tx pgx.Tx, channel uuid.UUID, ev events.Event) error
 }
 
 // outboxes maps a pool to its outbox, as automod.Of does for its engine.
@@ -36,9 +37,9 @@ func AttachOutbox(p *db.Pool, o EventOutbox) {
 func DetachOutbox(p *db.Pool, o EventOutbox) { outboxes.CompareAndDelete(p, o) }
 
 // RecordEvent stores the event in tx when a webhook of the channel receives
-// it. payload builds what the hub will publish; it only runs when somebody
+// it. build makes the event the hub will publish; it only runs when somebody
 // listens, so a channel without webhooks pays nothing.
-func RecordEvent(ctx context.Context, p *db.Pool, tx pgx.Tx, channel uuid.UUID, eventType string, payload func() (any, error)) error {
+func RecordEvent(ctx context.Context, p *db.Pool, tx pgx.Tx, channel uuid.UUID, eventType string, build func() (events.Event, error)) error {
 	v, ok := outboxes.Load(p)
 	if !ok {
 		return nil
@@ -47,14 +48,9 @@ func RecordEvent(ctx context.Context, p *db.Pool, tx pgx.Tx, channel uuid.UUID, 
 	if !o.Wants(channel, eventType) {
 		return nil
 	}
-	data, err := payload()
+	ev, err := build()
 	if err != nil {
 		return err
 	}
-	return o.Record(ctx, tx, channel, eventType, data)
-}
-
-// MessageDeletePayload is the payload of message_delete.
-func MessageDeletePayload(id, channel uuid.UUID, parent *uuid.UUID) map[string]any {
-	return map[string]any{"id": id, "channel_id": channel, "parent_id": parent}
+	return o.Record(ctx, tx, channel, ev)
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/auth/authn"
-	"github.com/msch128/mnema-talk/internal/events/payload"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -78,7 +78,7 @@ func (h *API) disableUser(w http.ResponseWriter, r *http.Request) error {
 	if h.OnAccountEnded != nil {
 		h.OnAccountEnded(id)
 	}
-	h.Events.Broadcast(payload.UserDisabled{ID: id, Disabled: true})
+	h.Events.Broadcast(wire.UserDisabled{ID: id, Disabled: true})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -109,7 +109,7 @@ func (h *API) enableUser(w http.ResponseWriter, r *http.Request) error {
 	if err := h.Moderated(r, id, func(q db.Querier) error { return auth.SetDisabled(r.Context(), q, id, false) }); err != nil {
 		return err
 	}
-	h.Events.Broadcast(payload.UserDisabled{ID: id, Disabled: false})
+	h.Events.Broadcast(wire.UserDisabled{ID: id, Disabled: false})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

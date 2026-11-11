@@ -8,6 +8,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 )
 
 // RecordMessageEvent stores message_create or message_update for the channel's
@@ -23,13 +24,16 @@ func RecordMessageEvent(ctx context.Context, p *db.Pool, tx pgx.Tx, eventType st
 // for the payload, or nil when no webhook receives the event.
 func recordMessageEvent(ctx context.Context, p *db.Pool, tx pgx.Tx, eventType string, channel, id uuid.UUID, nonce *uuid.UUID) (*core.Message, error) {
 	var msg *core.Message
-	err := core.RecordEvent(ctx, p, tx, channel, eventType, func() (any, error) {
+	err := core.RecordEvent(ctx, p, tx, channel, eventType, func() (events.Event, error) {
 		var err error
 		if msg, err = GetMessage(ctx, tx, id); err != nil {
 			return nil, err
 		}
 		msg.Nonce = nonce
-		return msg, nil
+		if eventType == events.MessageUpdate {
+			return (*core.MessageUpdate)(msg), nil
+		}
+		return (*core.MessageCreate)(msg), nil
 	})
 	return msg, err
 }
@@ -37,14 +41,14 @@ func recordMessageEvent(ctx context.Context, p *db.Pool, tx pgx.Tx, eventType st
 // RecordMessageDelete stores message_delete for the channel's outgoing
 // webhooks in the transaction that deletes the message.
 func RecordMessageDelete(ctx context.Context, p *db.Pool, tx pgx.Tx, channel, id uuid.UUID, parent *uuid.UUID) error {
-	return core.RecordEvent(ctx, p, tx, channel, events.MessageDelete, func() (any, error) {
-		return core.MessageDeletePayload(id, channel, parent), nil
+	return core.RecordEvent(ctx, p, tx, channel, events.MessageDelete, func() (events.Event, error) {
+		return wire.MessageDelete{ID: id, ChannelID: channel, ParentID: parent}, nil
 	})
 }
 
 // recordReactions stores message_reaction with the reactions as tx leaves them.
 func recordReactions(ctx context.Context, p *db.Pool, tx pgx.Tx, channel, id uuid.UUID) error {
-	return core.RecordEvent(ctx, p, tx, channel, events.MessageReaction, func() (any, error) {
+	return core.RecordEvent(ctx, p, tx, channel, events.MessageReaction, func() (events.Event, error) {
 		reactions, err := ReactionSummary(ctx, tx, id)
 		if err != nil {
 			return nil, err

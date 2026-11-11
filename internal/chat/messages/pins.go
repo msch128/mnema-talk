@@ -49,6 +49,8 @@ type PinsChanged struct {
 	PinnedBy *core.UserRef `json:"pinned_by,omitempty" binding:"optional"`
 }
 
+func (PinsChanged) EventName() string { return events.PinsChanged }
+
 // listPins handles GET /api/channels/{channelID}/pins.
 //
 // @Summary List a channel's pinned messages
@@ -214,9 +216,9 @@ func (a *API) announcePin(r *http.Request, msg *core.Message, actor *auth.User, 
 	if a.Events == nil {
 		return
 	}
-	a.Events.BroadcastChannel(chID, events.Untyped(events.MessageUpdate, msg))
-	a.Events.BroadcastChannel(chID, events.Untyped(events.PinsChanged, PinsChanged{
+	a.Events.BroadcastChannel(chID, (*core.MessageUpdate)(msg))
+	a.Events.BroadcastChannel(chID, PinsChanged{
 		ChannelID: chID, MessageID: msg.ID, Pinned: pinned, ActorID: actor.ID, ActorName: actor.DisplayName,
 		PinnedAt: msg.PinnedAt, PinnedBy: msg.PinnedBy,
-	}))
+	})
 }

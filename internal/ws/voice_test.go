@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/events/payload"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -183,7 +183,7 @@ func TestVoicePayloadsFollowUserUpdates(t *testing.T) {
 		t.Fatalf("snapshot shows %q, want the updated name", got)
 	}
 	// An admin enable/disable notice carries no profile and changes nothing.
-	h.Broadcast(payload.UserDisabled{ID: user.ID, Disabled: true})
+	h.Broadcast(wire.UserDisabled{ID: user.ID, Disabled: true})
 	if got := h.voiceSnapshot()[ch.ID][user.ID].DisplayName; got != "Anna Neuer" {
 		t.Fatalf("snapshot shows %q after a disable notice", got)
 	}

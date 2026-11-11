@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -181,7 +182,7 @@ func (s *Service) announceSent(ctx context.Context, d dueScheduled, messageID uu
 	// The author's read marker stays where it is: they are not reading the
 	// channel now, and what others wrote since their last visit stays unread.
 	if s.Events != nil {
-		s.Events.BroadcastChannel(d.channel, events.Untyped(events.MessageCreate, msg))
+		s.Events.BroadcastChannel(d.channel, (*core.MessageCreate)(msg))
 	}
 	s.notify(d.user, events.Untyped(events.ScheduledUpdate, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "sent"}))
 }

@@ -8,12 +8,11 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events/payload"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -96,16 +95,13 @@ func (h *API) removeObjects(ctx context.Context, keys []string) {
 }
 
 // announceUnpins tells the channels that the erasure unpinned messages, so
-// open pin panels refetch. The payload has the shape of chat.PinsChanged; the
-// actor is the deleted account, without a name.
+// open pin panels refetch. The actor is the deleted account, without a name.
 func (h *API) announceUnpins(u *auth.User, unpins []pinRef) {
 	if h.Events == nil {
 		return
 	}
 	for _, p := range unpins {
-		h.Events.BroadcastChannel(p.channelID, events.Untyped(events.PinsChanged, map[string]any{
-			"channel_id": p.channelID, "message_id": p.messageID, "pinned": false, "actor_id": u.ID, "actor_name": "",
-		}))
+		h.Events.BroadcastChannel(p.channelID, wire.PinRemoved{ChannelID: p.channelID, MessageID: p.messageID, ActorID: u.ID})
 	}
 }
 
@@ -120,7 +116,7 @@ func (h *API) endDeletedAccount(ctx context.Context, u *auth.User) {
 		h.OnAccountEnded(u.ID)
 	}
 	if h.Events != nil {
-		h.Events.Broadcast(payload.UserDisabled{ID: u.ID, Disabled: true})
+		h.Events.Broadcast(wire.UserDisabled{ID: u.ID, Disabled: true})
 	}
 	if h.Audit == nil {
 		return

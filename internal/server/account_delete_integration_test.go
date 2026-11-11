@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 )
 
 type listedMessage struct {
@@ -338,8 +339,8 @@ func TestDeletingAnAccountTellsTheChannelsItsPinsAreGone(t *testing.T) {
 	if len(told) != 1 || told[0].ChannelID != ch {
 		t.Fatalf("exactly the channel of the erased pin hears about it: %+v", told)
 	}
-	payload, ok := told[0].Payload.(map[string]any)
-	if !ok || payload["message_id"] != pinned || payload["pinned"] != false {
+	removed, ok := told[0].Payload.(wire.PinRemoved)
+	if !ok || removed.MessageID != pinned || removed.Pinned {
 		t.Fatalf("the event says which message was unpinned: %+v", told[0].Payload)
 	}
 }

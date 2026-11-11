@@ -358,6 +358,6 @@ func (m *DMCalls) recordMissed(ctx context.Context, c *dmCall) *uuid.UUID {
 		slog.Warn("dm calls: load missed call", "message", id, "err", err)
 		return &id
 	}
-	m.Events.BroadcastChannel(c.conversation, events.Untyped(events.MessageCreate, msg))
+	m.Events.BroadcastChannel(c.conversation, (*core.MessageCreate)(msg))
 	return &id
 }

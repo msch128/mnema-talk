@@ -22,30 +22,22 @@ import (
 // translate maps a hub event to an outgoing one. New messages posted by an
 // incoming webhook do not leave again, so two webhooks cannot feed each other;
 // messages of Bot API bots are delivered like any member's.
-func translate(eventType string, payload any) (name string, data any, ok bool) {
-	switch eventType {
-	case events.MessageCreate, events.MessageUpdate:
-		var m core.Message
-		switch v := payload.(type) {
-		case core.Message:
-			m = v
-		case *core.Message:
-			m = *v
-		default:
-			return "", nil, false
-		}
-		if m.IsWebhook && eventType == events.MessageCreate {
-			return "", nil, false
-		}
-		return map[string]string{events.MessageCreate: EventMessageCreate, events.MessageUpdate: EventMessageUpdate}[eventType], m, true
-	case events.MessageDelete:
-		return EventMessageDelete, payload, true
-	case events.MessageReaction:
-		return EventReactionsUpdate, payload, true
-	case events.VoiceStateUpdate:
-		return EventVoiceStateUpdate, payload, true
+func translate(ev events.Event) (name string, ok bool) {
+	switch m := ev.(type) {
+	case *core.MessageCreate:
+		return EventMessageCreate, m != nil && !m.IsWebhook
+	case *core.MessageUpdate:
+		return EventMessageUpdate, m != nil
 	}
-	return "", nil, false
+	switch ev.EventName() {
+	case events.MessageDelete:
+		return EventMessageDelete, true
+	case events.MessageReaction:
+		return EventReactionsUpdate, true
+	case events.VoiceStateUpdate:
+		return EventVoiceStateUpdate, true
+	}
+	return "", false
 }
 
 // Outcome codes stored in the delivery log: short, never the raw error.

@@ -107,7 +107,7 @@ func TestACallTheCallerHangsUpOnLeavesAMissedCall(t *testing.T) {
 	}
 	var created int
 	for _, e := range c.rec.Snapshot() {
-		if m, ok := e.Payload.(*core.Message); ok && e.Type == events.MessageCreate && m.ID == *end.MessageID && e.ChannelID == c.dm {
+		if m, ok := e.Payload.(*core.MessageCreate); ok && m.ID == *end.MessageID && e.ChannelID == c.dm {
 			created++
 		}
 	}

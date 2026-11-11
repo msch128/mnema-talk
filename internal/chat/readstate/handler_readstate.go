@@ -8,6 +8,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -55,9 +56,8 @@ func (a API) channelParam(r *http.Request) (uuid.UUID, error) {
 }
 
 // publishReadState tells the user's other sessions (tabs, devices) about it.
-func (a API) publishReadState(userID, channelID uuid.UUID, payload map[string]any) {
-	payload["channel_id"] = channelID
-	a.Events.SendToUsers([]uuid.UUID{userID}, events.Untyped(events.ReadState, payload))
+func (a API) publishReadState(userID uuid.UUID, state events.Event) {
+	a.Events.SendToUsers([]uuid.UUID{userID}, state)
 }
 
 // markRead handles POST /api/channels/{channelID}/read.
@@ -94,7 +94,7 @@ func (a API) markRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	a.publishReadState(user.ID, chID, map[string]any{"last_read_at": at, "unread_count": 0, "mention_count": 0})
+	a.publishReadState(user.ID, wire.ReadStateMarked{ChannelID: chID, LastReadAt: at})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -133,7 +133,7 @@ func (a API) markUnread(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	a.publishReadState(user.ID, chID, map[string]any{"last_read_at": at, "refresh": true})
+	a.publishReadState(user.ID, wire.ReadStateUnread{ChannelID: chID, LastReadAt: at, Refresh: true})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

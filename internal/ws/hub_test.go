@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
-	"github.com/msch128/mnema-talk/internal/events/payload"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -337,7 +337,7 @@ func TestHubUserUpdateRefreshesVoiceUsers(t *testing.T) {
 	}
 
 	// An admin's disable notice is not a profile and changes nothing.
-	h.Broadcast(payload.UserDisabled{ID: user.ID, Disabled: true})
+	h.Broadcast(wire.UserDisabled{ID: user.ID, Disabled: true})
 	if h.voiceSnapshot()[chID][user.ID].DisplayName != "New" {
 		t.Fatal("disable notice must not reset the profile")
 	}

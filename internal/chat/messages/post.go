@@ -17,6 +17,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/readstate"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/worker"
 )
@@ -239,7 +240,7 @@ func PublishMessageNonce(w http.ResponseWriter, r *http.Request, p *db.Pool, pub
 // publishCreated broadcasts message_create for a stored message and writes
 // it as the 201 response.
 func publishCreated(w http.ResponseWriter, r *http.Request, p *db.Pool, pub events.Publisher, msg *core.Message) {
-	pub.BroadcastChannel(msg.ChannelID, events.Untyped(events.MessageCreate, msg))
+	pub.BroadcastChannel(msg.ChannelID, (*core.MessageCreate)(msg))
 	MarkReadAfterSend(r.Context(), p, pub, msg)
 	httpx.WriteJSON(w, http.StatusCreated, msg)
 }
@@ -268,7 +269,7 @@ func MarkReadAfterSend(ctx context.Context, p *db.Pool, pub events.Publisher, ms
 		return // nothing of others lay between the marker and the message: no row, nothing to tell
 	}
 	// Other sessions re-read the counts: newer messages of others may already be waiting after this one.
-	pub.SendToUsers([]uuid.UUID{msg.UserID}, events.Untyped(events.ReadState, map[string]any{"channel_id": msg.ChannelID, "refresh": true}))
+	pub.SendToUsers([]uuid.UUID{msg.UserID}, wire.ReadStateChannelRefresh{ChannelID: msg.ChannelID, Refresh: true})
 }
 
 // QueryIDs parses the named optional UUID query parameters into their

@@ -288,7 +288,7 @@ func TestScheduledMessageIsSentAsTheAuthorAtTheTime(t *testing.T) {
 	}
 	sent := false
 	for _, e := range f.a.events.Snapshot() {
-		if m, ok := e.Payload.(*core.Message); ok && e.Type == events.MessageCreate && e.ChannelID == f.channel && m.Content == msgs[0].Content {
+		if m, ok := e.Payload.(*core.MessageCreate); ok && e.ChannelID == f.channel && m.Content == msgs[0].Content {
 			sent = true
 		}
 	}

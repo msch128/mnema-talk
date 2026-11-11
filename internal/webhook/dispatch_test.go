@@ -17,9 +17,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
@@ -43,36 +45,34 @@ func TestTranslate(t *testing.T) {
 	bot := core.Message{ID: uuid.New(), ChannelID: ch, IsBot: true}
 	hook := core.Message{ID: uuid.New(), ChannelID: ch, IsBot: true, IsWebhook: true}
 	cases := []struct {
-		name    string
-		typ     string
-		payload any
-		want    string
+		name string
+		ev   events.Event
+		want string
 	}{
-		{"create value", "message_create", human, EventMessageCreate},
-		{"create pointer", "message_create", &human, EventMessageCreate},
-		{"update value", "message_update", human, EventMessageUpdate},
-		{"update by a bot is delivered", "message_update", &bot, EventMessageUpdate},
-		{"create by a bot account is delivered", "message_create", &bot, EventMessageCreate},
-		{"create by an incoming webhook is not", "message_create", &hook, ""},
-		{"update by an incoming webhook is delivered", "message_update", &hook, EventMessageUpdate},
-		{"create with another payload", "message_create", "text", ""},
-		{"delete", "message_delete", map[string]any{"id": 1}, EventMessageDelete},
-		{"reactions", "message_reaction", messages.ReactionResult{}, EventReactionsUpdate},
-		{"voice", "voice_state_update", map[string]any{"action": "join"}, EventVoiceStateUpdate},
-		{"a new member is not offered", "member_joined", map[string]any{"id": 1}, ""},
-		{"typing", "typing", nil, ""},
-		{"presence", "presence_update", nil, ""},
+		{"create", (*core.MessageCreate)(&human), EventMessageCreate},
+		{"update", (*core.MessageUpdate)(&human), EventMessageUpdate},
+		{"update by a bot is delivered", (*core.MessageUpdate)(&bot), EventMessageUpdate},
+		{"create by a bot account is delivered", (*core.MessageCreate)(&bot), EventMessageCreate},
+		{"create by an incoming webhook is not", (*core.MessageCreate)(&hook), ""},
+		{"update by an incoming webhook is delivered", (*core.MessageUpdate)(&hook), EventMessageUpdate},
+		{"create without a message", (*core.MessageCreate)(nil), ""},
+		{"delete", wire.MessageDelete{ID: uuid.New()}, EventMessageDelete},
+		{"reactions", messages.ReactionResult{}, EventReactionsUpdate},
+		{"voice", events.Untyped("voice_state_update", map[string]any{"action": "join"}), EventVoiceStateUpdate},
+		{"a new member is not offered", auth.MemberJoined{}, ""},
+		{"typing", wire.Typing{}, ""},
+		{"presence", events.Untyped("presence_update", nil), ""},
 	}
 	for _, tc := range cases {
-		name, data, ok := translate(tc.typ, tc.payload)
+		name, ok := translate(tc.ev)
 		if tc.want == "" {
 			if ok {
 				t.Errorf("%s: expected translation to be rejected, got %q", tc.name, name)
 			}
 			continue
 		}
-		if !ok || name != tc.want || data == nil {
-			t.Errorf("%s: got name=%q data=%v ok=%v, want %q", tc.name, name, data, ok, tc.want)
+		if !ok || name != tc.want {
+			t.Errorf("%s: got name=%q ok=%v, want %q", tc.name, name, ok, tc.want)
 		}
 	}
 }
@@ -193,10 +193,10 @@ func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 1 || !g[b] {
 		t.Fatalf("join in B reached %v", g)
 	}
-	d.Observe(chA, events.Untyped("typing", nil))
+	d.Observe(chA, wire.Typing{})
 	// Events to everybody (no channel) belong to no webhook.
 	d.Observe(uuid.Nil, events.Untyped("voice_state_update", join))
-	d.Observe(uuid.Nil, events.Untyped("member_joined", map[string]any{"id": 1}))
+	d.Observe(uuid.Nil, auth.MemberJoined{})
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 0 {
 		t.Fatalf("unsubscribed events reached %v", g)
 	}
@@ -212,23 +212,20 @@ func TestObserveOnlyWakesForEventsTheirTransactionWrote(t *testing.T) {
 	d.routes.Store(&routes)
 	msg := core.Message{ID: uuid.New(), ChannelID: ch}
 
-	d.Observe(ch, events.Untyped("message_update", &msg)) // nobody subscribed
-	d.Observe(uuid.New(), events.Untyped("message_create", &msg))
+	d.Observe(ch, (*core.MessageUpdate)(&msg)) // nobody subscribed
+	d.Observe(uuid.New(), (*core.MessageCreate)(&msg))
 	if len(d.wake) != 0 {
 		t.Fatal("an event no webhook receives woke a worker")
 	}
-	for _, ev := range []struct {
-		typ     string
-		payload any
-	}{{"message_create", &msg}, {"message_delete", map[string]any{"id": 1}}, {"message_reaction", messages.ReactionResult{}}} {
-		d.Observe(ch, events.Untyped(ev.typ, ev.payload))
+	for _, ev := range []events.Event{(*core.MessageCreate)(&msg), wire.MessageDelete{ID: msg.ID}, messages.ReactionResult{}} {
+		d.Observe(ch, ev)
 		if len(d.queue) != 0 {
-			t.Fatalf("%s was buffered again", ev.typ)
+			t.Fatalf("%s was buffered again", ev.EventName())
 		}
 		select {
 		case <-d.wake:
 		default:
-			t.Fatalf("%s did not wake a worker", ev.typ)
+			t.Fatalf("%s did not wake a worker", ev.EventName())
 		}
 	}
 }
@@ -334,15 +331,12 @@ func TestRecordSkipsWhatIsNoOutgoingEvent(t *testing.T) {
 	d := NewDispatcher(nil, nil, "t")
 	ch := uuid.New()
 	hook := core.Message{ID: uuid.New(), ChannelID: ch, IsWebhook: true}
-	for name, ev := range map[string]struct {
-		typ     string
-		payload any
-	}{
-		"not offered":           {"typing", nil},
-		"posted by a webhook":   {"message_create", &hook},
-		"payload not encodable": {"message_delete", make(chan int)},
+	for name, ev := range map[string]events.Event{
+		"not offered":           wire.Typing{},
+		"posted by a webhook":   (*core.MessageCreate)(&hook),
+		"payload not encodable": events.Untyped("message_delete", make(chan int)),
 	} {
-		if err := d.Record(context.Background(), nil, ch, ev.typ, ev.payload); err != nil {
+		if err := d.Record(context.Background(), nil, ch, ev); err != nil {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
