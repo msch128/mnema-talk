@@ -1,0 +1,52 @@
+# incoming webhook
+@ internal/webhook.(*Handler).execute
+{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"wh-<hex>","display_name":"ci","content":"build passed","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>","is_bot":true,"is_webhook":true}}
+
+# slash command /shrug
+@ internal/slashcmd.(*Services).post
+{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"alice","display_name":"alice","content":"well ¯\\\\\\_(ツ)_/¯","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>"}}
+@ internal/chat/messages.MarkReadAfterSend
+{"type":"read_state","payload":{"channel_id":"<id-1>","refresh":true}}
+
+# slash command /nick
+@ internal/slashcmd.nickCommand.Run
+{"type":"user_update","payload":{"id":"<id-1>","username":"alice","display_name":"Ally","bio":"","role":"user","status_text":"","locale":"","created_at":"<time>"}}
+
+# reminder created
+@ internal/later.(*Service).notify
+{"type":"reminder_update","payload":{"id":"<id-1>","state":"created"}}
+
+# reminder removed
+@ internal/later.(*Service).notify
+{"type":"reminder_update","payload":{"id":"<id-1>","state":"removed"}}
+
+# reminder due
+@ internal/later.(*Service).notify
+{"type":"reminder_update","payload":{"id":"<id-1>","state":"due"}}
+
+# scheduled message created
+@ internal/later.(*Service).notify
+{"type":"scheduled_message_update","payload":{"id":"<id-1>","channel_id":"<id-2>","state":"created"}}
+
+# scheduled message changed
+@ internal/later.(*Service).notify
+{"type":"scheduled_message_update","payload":{"id":"<id-1>","channel_id":"<id-2>","state":"updated"}}
+
+# scheduled message deleted
+@ internal/later.(*Service).notify
+{"type":"scheduled_message_update","payload":{"id":"<id-1>","channel_id":"<id-2>","state":"deleted"}}
+
+# scheduled message sent
+@ internal/later.(*Service).announceSent
+{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"alice","display_name":"Ally","content":"sent by the sweep","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>"}}
+@ internal/later.(*Service).notify
+{"type":"scheduled_message_update","payload":{"id":"<id-1>","channel_id":"<id-2>","state":"sent"}}
+
+# scheduled message refused
+@ internal/later.(*Service).notify
+{"type":"scheduled_message_update","payload":{"id":"<id-1>","channel_id":"<id-2>","state":"failed","reason":"not_allowed"}}
+
+# auto-delete sweep
+@ internal/chat/channels.(*AutoDeleter).sweepBatch
+{"type":"message_delete","payload":{"channel_id":"<id-1>","id":"<id-2>","parent_id":null}}
+

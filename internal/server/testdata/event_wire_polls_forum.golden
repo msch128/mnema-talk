@@ -1,0 +1,32 @@
+# poll
+@ internal/poll.(*Service).Create
+{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"alice","display_name":"alice","content":"Pizza or pasta?","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>","poll":{"multiple":false,"anonymous":false,"closes_at":"<time>","closed":false,"options":[{"id":"<id-4>","label":"Pizza","votes":0},{"id":"<id-5>","label":"Pasta","votes":0}],"total_voters":0}}}
+
+# vote
+@ internal/poll.(*Service).announce
+{"type":"poll_update","payload":{"message_id":"<id-1>","channel_id":"<id-2>","poll":{"multiple":false,"anonymous":false,"closes_at":"<time>","closed":false,"options":[{"id":"<id-3>","label":"Pizza","votes":1,"voters":["<id-4>"]},{"id":"<id-5>","label":"Pasta","votes":0}],"total_voters":1}}}
+
+# poll ends
+@ internal/poll.(*Service).announce
+{"type":"poll_update","payload":{"message_id":"<id-1>","channel_id":"<id-2>","poll":{"multiple":false,"anonymous":false,"closes_at":"<time>","closed":true,"options":[{"id":"<id-3>","label":"Pizza","votes":1,"voters":["<id-4>"]},{"id":"<id-5>","label":"Pasta","votes":0}],"total_voters":1}}}
+
+# forum tag created
+@ internal/chat/forum.(*API).ServeCreateForumTag
+{"type":"forum_tags_changed","payload":{"channel_id":"<id-1>"}}
+
+# forum tag renamed
+@ internal/chat/forum.(*API).ServeUpdateForumTag
+{"type":"forum_tags_changed","payload":{"channel_id":"<id-1>"}}
+
+# forum post
+@ internal/chat/messages.publishCreated
+{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"alice","display_name":"alice","content":"body","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>","title":"An idea","tags":[{"id":"<id-4>","channel_id":"<id-2>","name":"defect","position":1,"moderated":false,"created_at":"<time>"}],"last_activity_at":"<time>"}}
+
+# forum post edited
+@ internal/chat/forum.(*API).ServeUpdateForumPost
+{"type":"message_update","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"alice","display_name":"alice","content":"body","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>","title":"A better idea","tags":[{"id":"<id-4>","channel_id":"<id-2>","name":"defect","position":1,"moderated":false,"created_at":"<time>"}],"last_activity_at":"<time>"}}
+
+# forum tag deleted
+@ internal/chat/forum.(*API).ServeDeleteForumTag
+{"type":"forum_tags_changed","payload":{"channel_id":"<id-1>"}}
+

@@ -1,0 +1,56 @@
+# a member joins
+@ internal/auth/authn.(*Handler).announceRegistered
+{"type":"member_joined","payload":{"id":"<id-1>","username":"carol","display_name":"carol","bio":"","role":"user","status_text":"","locale":"","created_at":"<time>"}}
+
+# profile change
+@ internal/auth/authn.(*Handler).updateProfile
+{"type":"user_update","payload":{"id":"<id-1>","username":"alice","display_name":"Alice A","bio":"hello","role":"user","status_text":"","locale":"","created_at":"<time>"}}
+
+# status change
+@ internal/auth/authn.(*Handler).WriteStatus
+{"type":"user_update","payload":{"id":"<id-1>","username":"alice","display_name":"Alice A","bio":"hello","role":"user","status_text":"away for lunch","locale":"","created_at":"<time>"}}
+
+# avatar upload
+@ internal/media.(*Handler).uploadAvatar
+{"type":"user_update","payload":{"id":"<id-1>","username":"alice","display_name":"Alice A","bio":"hello","role":"user","avatar_url":"/api/media/<id-2>","status_text":"away for lunch","locale":"","created_at":"<time>"}}
+
+# timeout
+@ internal/auth/memberadmin.(*API).notify
+{"type":"moderation_notice","payload":{"kind":"timeout","until":"<time>","duration_seconds":600,"reason":"calm down"}}
+@ internal/auth/memberadmin.(*API).TimeoutMember
+{"type":"member_timeout","payload":{"id":"<id-1>","timeout_until":"<time>"}}
+
+# timeout lifted
+@ internal/auth/memberadmin.(*API).notify
+{"type":"moderation_notice","payload":{"kind":"timeout_removed","reason":""}}
+@ internal/auth/memberadmin.(*API).untimeoutUser
+{"type":"member_timeout","payload":{"id":"<id-1>","timeout_until":null}}
+
+# slash command /kick
+@ internal/auth/memberadmin.(*API).KickMember
+{"type":"kicked","payload":{"reason":"see you"}}
+
+# ban
+@ internal/auth/memberadmin.(*API).notify
+{"type":"moderation_notice","payload":{"kind":"ban","reason":"spam"}}
+@ internal/auth/memberadmin.(*API).postBanCleanup
+{"type":"user_update","payload":{"disabled":true,"id":"<id-1>"}}
+
+# ban lifted
+@ internal/auth/memberadmin.(*API).unbanUser
+{"type":"user_update","payload":{"disabled":false,"id":"<id-1>"}}
+
+# account disabled
+@ internal/auth/memberadmin.(*API).disableUser
+{"type":"user_update","payload":{"disabled":true,"id":"<id-1>"}}
+
+# account enabled
+@ internal/auth/memberadmin.(*API).enableUser
+{"type":"user_update","payload":{"disabled":false,"id":"<id-1>"}}
+
+# account deleted
+@ internal/auth/account.(*API).announceUnpins
+{"type":"pins_changed","payload":{"actor_id":"<id-1>","actor_name":"","channel_id":"<id-2>","message_id":"<id-3>","pinned":false}}
+@ internal/auth/account.(*API).endDeletedAccount
+{"type":"user_update","payload":{"disabled":true,"id":"<id-1>"}}
+

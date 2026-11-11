@@ -1,0 +1,94 @@
+# message
+@ internal/chat/messages.publishCreated
+{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"alice","display_name":"alice","content":"hello **world**","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>"}}
+
+# thread reply
+@ internal/chat/messages.publishCreated
+{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","parent_id":"<id-4>","username":"bob","display_name":"bob","content":"a reply","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>"}}
+
+# edit
+@ internal/chat/messages.(*API).EditMessageWith
+{"type":"message_update","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"alice","display_name":"alice","content":"a thread starts here, edited","is_pinned":false,"is_edited":true,"reply_count":1,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>"}}
+
+# reaction
+@ internal/chat/messages.(*API).ToggleReaction
+{"type":"message_reaction","payload":{"message_id":"<id-1>","channel_id":"<id-2>","reactions":[{"emoji":"🔥","count":1,"users":["<id-3>"]}]}}
+
+# pin
+@ internal/chat/messages.(*API).announcePin
+{"type":"message_update","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"alice","display_name":"alice","content":"a thread starts here, edited","is_pinned":true,"is_edited":true,"reply_count":1,"attachments":[],"reactions":[{"emoji":"🔥","count":1,"users":["<id-4>"]}],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>","pinned_at":"<time>","pinned_by":{"id":"<id-5>","username":"cool_guy","display_name":"cool_guy"}}}
+@ internal/chat/messages.(*API).announcePin
+{"type":"pins_changed","payload":{"channel_id":"<id-1>","message_id":"<id-2>","pinned":true,"actor_id":"<id-3>","actor_name":"cool_guy","pinned_at":"<time>","pinned_by":{"id":"<id-3>","username":"cool_guy","display_name":"cool_guy"}}}
+
+# unpin
+@ internal/chat/messages.(*API).announcePin
+{"type":"message_update","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"alice","display_name":"alice","content":"a thread starts here, edited","is_pinned":false,"is_edited":true,"reply_count":1,"attachments":[],"reactions":[{"emoji":"🔥","count":1,"users":["<id-4>"]}],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>"}}
+@ internal/chat/messages.(*API).announcePin
+{"type":"pins_changed","payload":{"channel_id":"<id-1>","message_id":"<id-2>","pinned":false,"actor_id":"<id-3>","actor_name":"cool_guy"}}
+
+# follow a thread
+@ internal/chat/messages.(*API).changeThreadFollow
+{"type":"thread_follow_updated","payload":{"channel_id":"<id-1>","following":true,"thread_id":"<id-2>"}}
+
+# unfollow a thread
+@ internal/chat/messages.(*API).changeThreadFollow
+{"type":"thread_follow_updated","payload":{"channel_id":"<id-1>","following":false,"thread_id":"<id-2>"}}
+
+# forward
+@ internal/chat/messages.publishCreated
+{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"bob","display_name":"bob","content":"","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>","forward":{"forwarded":true}}}
+@ internal/chat/messages.MarkReadAfterSend
+{"type":"read_state","payload":{"channel_id":"<id-1>","refresh":true}}
+
+# save
+@ internal/chat/saved.(*API).sendSaved
+{"type":"saved_updated","payload":{"message_id":"<id-1>","saved":true}}
+
+# unsave
+@ internal/chat/saved.(*API).sendSaved
+{"type":"saved_updated","payload":{"message_id":"<id-1>","saved":false}}
+
+# mark read
+@ internal/chat/readstate.API.publishReadState
+{"type":"read_state","payload":{"channel_id":"<id-1>","last_read_at":"<time>","mention_count":0,"unread_count":0}}
+
+# own message after unread ones of others
+@ internal/chat/messages.publishCreated
+{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"bob","display_name":"bob","content":"I answer","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>"}}
+@ internal/chat/messages.MarkReadAfterSend
+{"type":"read_state","payload":{"channel_id":"<id-1>","refresh":true}}
+
+# mark unread
+@ internal/chat/readstate.API.publishReadState
+{"type":"read_state","payload":{"channel_id":"<id-1>","last_read_at":"<time>","refresh":true}}
+
+# mark everything read
+@ internal/chat/readstate.API.publishReadStateRefresh
+{"type":"read_state","payload":{"refresh":true}}
+
+# channel notification level
+@ internal/chat/readstate.API.publishReadStateRefresh
+{"type":"read_state","payload":{"refresh":true}}
+
+# server notification level
+@ internal/chat/readstate.API.publishReadStateRefresh
+{"type":"read_state","payload":{"refresh":true}}
+
+# author deletes
+@ internal/chat/messages.(*API).DeleteMessage
+{"type":"message_delete","payload":{"channel_id":"<id-1>","id":"<id-2>","parent_id":null}}
+
+# moderator deletes with a reason
+@ internal/chat/messages.(*API).tellAuthor
+{"type":"moderation_notice","payload":{"channel_name":"general","kind":"message_deleted","reason":"be kind"}}
+@ internal/chat/messages.(*API).DeleteMessage
+{"type":"message_delete","payload":{"channel_id":"<id-1>","id":"<id-2>","parent_id":null}}
+
+# bulk delete
+@ internal/chat/messages.(*API).announceBulkDelete
+{"type":"message_delete","payload":{"channel_id":"<id-1>","id":"<id-2>","parent_id":null}}
+@ internal/chat/messages.(*API).announceBulkDelete
+{"type":"message_delete","payload":{"channel_id":"<id-1>","id":"<id-2>","parent_id":null}}
+@ internal/chat/messages.(*API).announceBulkDelete
+{"type":"moderation_notice","payload":{"channel_name":"general","count":2,"kind":"messages_deleted","reason":"spam"}}
+

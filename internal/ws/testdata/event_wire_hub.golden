@@ -1,0 +1,68 @@
+# greeting of a new connection
+{"type":"server_info","payload":{"version":"3.0.2"}}
+{"type":"presence_update","payload":{"status":"online","user_id":"<id-1>"}}
+{"type":"presence_snapshot","payload":{"<id-1>":"online"}}
+{"type":"voice_snapshot","payload":{}}
+{"type":"voice_rooms","payload":{"now":"<time>","started":{}}}
+
+# another member comes online
+{"type":"presence_update","payload":{"status":"online","user_id":"<id-1>"}}
+
+# presence chosen
+{"type":"presence_update","payload":{"status":"dnd","user_id":"<id-1>"}}
+
+# bot presence with an activity
+{"type":"presence_update","payload":{"status":"online","user_id":"<id-1>"}}
+{"type":"presence_update","payload":{"activity":{"type":0,"name":"chess"},"status":"online","user_id":"<id-1>"}}
+
+# ping
+{"type":"pong","payload":{"t":1234}}
+
+# typing
+{"type":"typing","payload":{"channel_id":"<id-1>","user_id":"<id-2>"}}
+
+# joining a Talk
+{"type":"voice_state_update","payload":{"action":"join","channel_id":"<id-1>","started_at":"<time>","user":{"id":"<id-2>","username":"watcher","display_name":"watcher","bio":"","role":"user","status_text":"","locale":"","created_at":"<time>","joined_at":"<time>","muted":false,"deafened":false}}}
+{"type":"voice_state_update","payload":{"action":"join","channel_id":"<id-1>","started_at":"<time>","user":{"id":"<id-2>","username":"other","display_name":"other","bio":"","role":"user","status_text":"","locale":"","created_at":"<time>","joined_at":"<time>","muted":false,"deafened":false}}}
+
+# speaking and mute state
+{"type":"voice_speaking","payload":{"active":true,"channel_id":"<id-1>","user_id":"<id-2>"}}
+{"type":"voice_mute_state","payload":{"channel_id":"<id-1>","deafened":false,"muted":true,"user_id":"<id-2>"}}
+{"type":"voice_speaking","payload":{"active":false,"channel_id":"<id-1>","user_id":"<id-2>"}}
+
+# Talk reaction
+{"type":"talk_reaction","payload":{"channel_id":"<id-1>","emoji":"👏","user_id":"<id-2>"}}
+
+# screen share starts
+{"type":"webrtc_media_state","payload":{"camera":false,"channel_id":"<id-1>","screen":true,"user_id":"<id-2>"}}
+
+# screen viewers
+{"type":"screen_viewers","payload":{"channel_id":"<id-1>","user_id":"<id-2>","viewers":["<id-3>"]}}
+{"type":"screen_viewers","payload":{"channel_id":"<id-1>","user_id":"<id-2>","viewers":[]}}
+
+# screen layers
+{"type":"screen_layers","payload":{"channel_id":"<id-1>","layers":[{"width":1920,"height":1080,"fps":30}],"user_id":"<id-2>"}}
+{"type":"screen_layers","payload":{"channel_id":"<id-1>","layers":[],"user_id":"<id-2>"}}
+
+# screen quality
+{"type":"screen_quality","payload":{"auto":true,"channel_id":"<id-1>","layer":1,"user_id":"<id-2>"}}
+
+# layers wanted
+{"type":"screen_layers_wanted","payload":{"channel_id":"<id-1>","layers":[0,2]}}
+{"type":"screen_layers_wanted","payload":{"channel_id":"<id-1>","layers":[]}}
+{"type":"screen_layers_wanted","payload":{"channel_id":"<id-1>","layers":[1],"source":"camera"}}
+
+# cameras capped
+{"type":"cameras_capped","payload":{"channel_id":"<id-1>","user_ids":["<id-2>"]}}
+{"type":"cameras_capped","payload":{"channel_id":"<id-1>","user_ids":[]}}
+
+# a member is removed from the Talk
+{"type":"voice_state_update","payload":{"action":"leave","channel_id":"<id-1>","user_id":"<id-2>"}}
+
+# own media connection lost
+{"type":"voice_state_update","payload":{"action":"leave","channel_id":"<id-1>","user_id":"<id-2>"}}
+{"type":"voice_kicked","payload":{"channel_id":"<id-1>","reason":"connection_lost"}}
+
+# a member goes offline
+{"type":"presence_update","payload":{"status":"offline","user_id":"<id-1>"}}
+

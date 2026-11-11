@@ -1,0 +1,48 @@
+# category created
+@ internal/chat/channels.(*API).ChannelsChanged
+{"type":"channels_changed","payload":null}
+
+# channel created
+@ internal/chat/channels.(*API).structureChanged
+{"type":"channels_changed","payload":null}
+
+# channel changed
+@ internal/chat/channels.(*API).ChannelsChanged
+{"type":"channels_changed","payload":null}
+
+# channel deleted
+@ internal/chat/channels.(*API).structureChanged
+{"type":"channels_changed","payload":null}
+
+# category deleted
+@ internal/chat/channels.(*API).structureChanged
+{"type":"channels_changed","payload":null}
+
+# role created
+@ internal/roles.(*Handler).rolesChanged
+{"type":"roles_changed","payload":null}
+
+# role changed
+@ internal/roles.(*Handler).rolesChanged
+{"type":"roles_changed","payload":null}
+
+# channel overwrites
+@ internal/roles.(*Handler).replaceOverwrites
+{"type":"channels_changed","payload":null}
+
+# member roles set
+@ internal/roles.(*Handler).rolesChanged
+{"type":"roles_changed","payload":null}
+
+# member takes a role
+@ internal/roles.(*Handler).setSelfRole
+{"type":"member_roles_changed","payload":{"id":"<id-1>","role_ids":["<id-2>"]}}
+
+# member drops a role
+@ internal/roles.(*Handler).setSelfRole
+{"type":"member_roles_changed","payload":{"id":"<id-1>","role_ids":[]}}
+
+# role deleted
+@ internal/roles.(*Handler).rolesChanged
+{"type":"roles_changed","payload":null}
+

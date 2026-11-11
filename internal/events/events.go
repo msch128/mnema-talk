@@ -3,6 +3,9 @@
 package events
 
 import (
+	"encoding/json"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -33,6 +36,33 @@ type Event struct {
 	ChannelID uuid.UUID
 	// Need is set for events limited to holders of a server-wide permission.
 	Need perm.Set
+	// Site is the function that published the event, without the module path.
+	Site string
+}
+
+// Wire is the frame a connection receives for the event: what the hub writes.
+func (e Event) Wire() []byte {
+	data, err := json.Marshal(struct {
+		Type    string `json:"type"`
+		Payload any    `json:"payload"`
+	}{e.Type, e.Payload})
+	if err != nil {
+		panic("events: recorded payload does not marshal: " + err.Error())
+	}
+	return data
+}
+
+// site names the function that called the Recorder method above it.
+func site() string {
+	pc, _, _, ok := runtime.Caller(2)
+	if !ok {
+		return ""
+	}
+	name := runtime.FuncForPC(pc).Name()
+	if i := strings.Index(name, "/internal/"); i >= 0 {
+		name = name[i+1:]
+	}
+	return name
 }
 
 // Recorder is an in-memory Publisher for tests.
@@ -44,25 +74,34 @@ type Recorder struct {
 func (r *Recorder) Broadcast(eventType string, payload any) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.Events = append(r.Events, Event{Type: eventType, Payload: payload})
+	r.Events = append(r.Events, Event{Type: eventType, Payload: payload, Site: site()})
 }
 
 func (r *Recorder) BroadcastChannel(channelID uuid.UUID, eventType string, payload any) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.Events = append(r.Events, Event{Type: eventType, Payload: payload, ChannelID: channelID})
+	r.Events = append(r.Events, Event{Type: eventType, Payload: payload, ChannelID: channelID, Site: site()})
 }
 
 func (r *Recorder) BroadcastPerm(need perm.Set, eventType string, payload any) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.Events = append(r.Events, Event{Type: eventType, Payload: payload, Need: need})
+	r.Events = append(r.Events, Event{Type: eventType, Payload: payload, Need: need, Site: site()})
 }
 
 func (r *Recorder) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.Events = append(r.Events, Event{Type: eventType, Payload: payload, Recipients: append([]uuid.UUID(nil), userIDs...)})
+	r.Events = append(r.Events, Event{Type: eventType, Payload: payload, Recipients: append([]uuid.UUID(nil), userIDs...), Site: site()})
+}
+
+// Take returns the recorded events and forgets them.
+func (r *Recorder) Take() []Event {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	taken := r.Events
+	r.Events = nil
+	return taken
 }
 
 // Snapshot returns a copy of the recorded events.
