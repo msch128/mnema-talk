@@ -4,7 +4,7 @@
 import { computed } from 'vue'
 import { Hash, Volume2, Lock } from '@lucide/vue'
 import type { DiscordimportPlan, DiscordimportPlanChannel, DiscordimportPlanRole } from '../types/rest'
-import { roleColorCss } from '../lib/permissions'
+import { roleColorCss } from '../shared/lib/permissions'
 import { t } from '../i18n'
 import { importHintText } from '../lib/discordImportHints'
 

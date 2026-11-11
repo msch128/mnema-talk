@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { Category, Channel, ChannelHierarchy } from '../types/domain'
-import { moveChannel, moveCategory } from '../lib/channelLayout'
+import { moveChannel, moveCategory } from '../shared/lib/channelLayout'
 
 /**
  * Drag and drop in the layout editor. `reorder` takes the reordered tree; a

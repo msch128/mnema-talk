@@ -13,11 +13,11 @@ import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { systemStatus } from './systemStatus.fixture'
 import { setLocale, t } from '../i18n'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 import type { PendingMessage } from '../stores/chat/outboxTypes'
 const h = vi.hoisted(() => ({ stop: vi.fn() }))
 vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => ({ stopScreenShare: h.stop }) }))
-vi.mock('../lib/api', async original => ({ ...(await original<typeof import('../lib/api')>()), api: vi.fn() }))
+vi.mock('../shared/lib/api', async original => ({ ...(await original<typeof import('../shared/lib/api')>()), api: vi.fn() }))
 let w: VueWrapper
 let trigger: HTMLButtonElement
 beforeEach(() => { setActivePinia(createPinia()); setLocale('en'); h.stop.mockClear(); trigger = document.createElement('button'); document.body.append(trigger); useAuthStore().user = userFixture({ role: 'admin', display_name: 'Ada' }) })

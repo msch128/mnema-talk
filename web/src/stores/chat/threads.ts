@@ -1,6 +1,6 @@
 import type { Message } from '../../types/domain'
 import { decodeThread } from '../../types/domain'
-import { api } from '../../lib/api'
+import { api } from '../../shared/lib/api'
 import type { ThreadRoot } from './types'
 import type { Cx } from './state'
 import { sendMessage, uploadMedia } from './messageActions'

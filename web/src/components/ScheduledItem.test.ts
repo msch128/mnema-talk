@@ -6,7 +6,7 @@ import { useLaterStore } from '../stores/later'
 import { useToastStore } from '../stores/toast'
 import { setLocale, t } from '../i18n'
 import { toLocalInputValue } from '../lib/laterTimes'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 
 const inHours = (h: number) => new Date(Date.now() + h * 3600_000)

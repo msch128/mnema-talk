@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeServerHealth, isServerHealthUnavailable, type ServerHealth, type ServerHealthUnavailable } from '../types/rest'
-import { syncDocumentIcons } from '../lib/communityIcon'
+import { syncDocumentIcons } from '../shared/lib/communityIcon'
 
 /** How often the server is asked again while it reports a dependency as down. */
 export const OUTAGE_RECHECK_MS = 30000

@@ -1,6 +1,6 @@
 import type { VueWrapper } from '@vue/test-utils'
 import { isRecord } from '../types/validation'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import { userFixture, voiceUserFixture } from '../test-fixtures.fixture'
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
@@ -11,7 +11,7 @@ import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
+import { MIN_PASSWORD_LENGTH } from '../shared/lib/passwordPolicy'
 import { setLocale } from '../i18n'
 
 const mockUsers = [
@@ -90,16 +90,16 @@ const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>(
   return Promise.resolve(null)
 })
 
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn(),
   ApiError: class ApiError extends Error {}
 }))
 
-const confirmMock = vi.fn((_options?: import("../lib/confirm").ConfirmRequest) => Promise.resolve(true))
-vi.mock('../lib/confirm', () => ({
-  confirm: (options: import('../lib/confirm').ConfirmRequest) => confirmMock(options)
+const confirmMock = vi.fn((_options?: import("../shared/lib/confirm").ConfirmRequest) => Promise.resolve(true))
+vi.mock('../shared/lib/confirm', () => ({
+  confirm: (options: import('../shared/lib/confirm').ConfirmRequest) => confirmMock(options)
 }))
 
 let wrapper: VueWrapper

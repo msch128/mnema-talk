@@ -4,7 +4,7 @@
 // of the recovery codes. The challenge lives five minutes on the server.
 import { ref } from 'vue'
 import { Loader2, ShieldCheck } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { t } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'

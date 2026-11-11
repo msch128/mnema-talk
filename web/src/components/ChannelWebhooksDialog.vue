@@ -3,9 +3,9 @@
 // who hold Manage webhooks there; the server checks again on every call.
 import type { PropType } from 'vue'
 import { ref } from 'vue'
-import { rovingKeydown } from '../lib/rovingFocus'
-import { provideDraftScope } from '../composables/useSettingsDraft'
-import BaseDialog from './BaseDialog.vue'
+import { rovingKeydown } from '../shared/lib/rovingFocus'
+import { provideDraftScope } from '../shared/composables/useSettingsDraft'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 import IncomingWebhooksPanel from './IncomingWebhooksPanel.vue'
 import OutgoingWebhooksPanel from './OutgoingWebhooksPanel.vue'
 

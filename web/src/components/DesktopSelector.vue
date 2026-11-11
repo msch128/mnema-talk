@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onBeforeUnmount, onMounted } from 'vue'
 import { t } from '../i18n'
-import { platform } from '../lib/platform'
+import { platform } from '../shared/lib/platform'
 import { localizeHostError } from '../lib/hostError'
 import { copyText } from '../lib/copyText'
 

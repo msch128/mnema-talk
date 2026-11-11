@@ -3,14 +3,14 @@ import type { PropType } from 'vue'
 import type { LaterScheduled } from '../types/rest'
 import { computed, ref } from 'vue'
 import { AlertTriangle, Hash, MessageCircle, Pencil, Trash2 } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { caughtErrorMessage } from '../shared/lib/api'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { earliestInputValue, fromLocalInputValue, isAcceptableTime, toLocalInputValue } from '../lib/laterTimes'
-import { dateTime } from '../lib/time'
+import { dateTime } from '../shared/lib/time'
 import { useLaterStore } from '../stores/later'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 // One scheduled message in the "Reminders and scheduled" popover: its text,
 // where and when it goes, and the actions to edit, reschedule or delete it. A

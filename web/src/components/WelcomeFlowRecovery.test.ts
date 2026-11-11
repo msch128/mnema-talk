@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import type { OnboardingState } from '../types/rest'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
@@ -20,8 +20,8 @@ let failPuts: number
 let failAccepts: number
 let slowGets: Promise<void> | null
 
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (path: string, options: ApiOptions = {}) => {
     if (!path.startsWith('/api/onboarding')) return Promise.reject(new Error('not part of this test'))
     if (path === '/api/onboarding/accept') {

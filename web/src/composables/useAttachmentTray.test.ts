@@ -3,13 +3,13 @@ import { createPinia, setActivePinia } from 'pinia'
 import { effectScope, ref, type EffectScope } from 'vue'
 import { requireValue } from '../test-fixtures.fixture'
 import { stageAttachment, unstageAttachment } from '../lib/attachmentsApi'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 import { STAGED_TTL_MS } from '../lib/attachmentTray'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { setLocale } from '../i18n'
 import { useAttachmentTray } from './useAttachmentTray'
-import { viewerState, closeViewer } from './useMediaViewer'
+import { viewerState, closeViewer } from '../shared/composables/useMediaViewer'
 
 vi.mock('../lib/attachmentsApi', () => ({ stageAttachment: vi.fn(), unstageAttachment: vi.fn(async () => undefined) }))
 

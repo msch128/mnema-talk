@@ -1,18 +1,18 @@
 <script setup lang="ts">
-// Host for moderate() from lib/moderation: the timeout and the ban dialog.
+// Host for moderate() from shared/lib/moderation: the timeout and the ban dialog.
 // A timeout takes a duration (ready-made or custom) and a reason; a ban takes
 // the same, "forever" being the default, and says whether to revoke the invite
 // the account registered with.
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import {
   pendingModeration, DURATION_CHOICES, CUSTOM_UNITS, customSeconds, durationLabel,
   MIN_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS, MIN_BAN_SECONDS, MAX_BAN_SECONDS, MAX_REASON_LENGTH
-} from '../lib/moderation'
-import type { CustomUnit } from '../lib/moderation'
+} from '../shared/lib/moderation'
+import type { CustomUnit } from '../shared/lib/moderation'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 
 const request = computed(() => pendingModeration.value)
 const toasts = useToastStore()

@@ -13,13 +13,13 @@ import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { fixtureId, messageFixture, userFixture } from '../test-fixtures.fixture'
 import { dmFixture, dmMemberFixture } from '../dm.fixture'
-import type { ApiOptions } from '../lib/api'
-import { ApiError } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
+import { ApiError } from '../shared/lib/api'
 import { searchScope } from '../lib/globalSearch'
 
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => {
     try { return Promise.resolve(http.handle(url, options)) } catch (error) { return Promise.reject(error) }
   })
@@ -98,7 +98,7 @@ describe('a conversation in the chat area', () => {
     await w.get('textarea').setValue('hello')
     await w.get('textarea').trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    const { api } = await import('../lib/api')
+    const { api } = await import('../shared/lib/api')
     expect(vi.mocked(api).mock.calls.some(([u, o]) => u === `/api/channels/${pair.id}/messages` && o?.method === 'POST')).toBe(true)
   })
 

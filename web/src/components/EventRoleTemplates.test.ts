@@ -6,7 +6,7 @@ import EventRoleTemplates from './EventRoleTemplates.vue'
 import { useToastStore } from '../stores/toast'
 import { setLocale } from '../i18n'
 import * as api from '../lib/eventRolesApi'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 import { blankDraft } from '../lib/eventRoleDrafts'
 import type { RoleDraft } from '../lib/eventRoleDrafts'
 

@@ -1,5 +1,5 @@
 import type { PropType } from 'vue'
-import type { TalkParticipant } from './presentationTypes'
+import type { TalkParticipant } from '../shared/components/presentationTypes'
 
 // What the Talk's strip and grid of participant tiles are given and say.
 export const talkTileProps = {

@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
@@ -8,8 +8,8 @@ import { useToastStore } from '../stores/toast'
 import { t, setLocale } from '../i18n'
 
 const mockApi = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => mockApi(...args)
 }))
 

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { applyRoute, type RoutingContext } from './appRoutingApply'
-import { parseRoute } from '../lib/router'
-import { settingsTab } from '../lib/settingsDialog'
+import { parseRoute } from '../shared/lib/router'
+import { settingsTab } from '../shared/lib/settingsDialog'
 
 const navigate = vi.hoisted(() => vi.fn())
 const fetchForumPosts = vi.hoisted(() => vi.fn())
-vi.mock('../lib/router', async importOriginal => ({ ...(await importOriginal<typeof import('../lib/router')>()), navigate }))
+vi.mock('../shared/lib/router', async importOriginal => ({ ...(await importOriginal<typeof import('../shared/lib/router')>()), navigate }))
 vi.mock('../lib/forumApi', () => ({ fetchForumPosts }))
 
 const POST = '0f3a9c1e-1111-4222-8333-444455556666'

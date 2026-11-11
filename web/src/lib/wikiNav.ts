@@ -2,8 +2,8 @@
 // before anything leaves it, whichever way it leaves: a page in the tree, the
 // close button, Escape.
 import { watch } from 'vue'
-import { confirm } from './confirm'
-import { canGoBackInApp, currentRoute, historyDepth, navigate, setLeaveGuard } from './router'
+import { confirm } from '../shared/lib/confirm'
+import { canGoBackInApp, currentRoute, historyDepth, navigate, setLeaveGuard } from '../shared/lib/router'
 import { t } from '../i18n'
 import { clearAllWikiDrafts } from './wikiDraft'
 import { wikiPath, type WikiLocation } from './wikiPaths'

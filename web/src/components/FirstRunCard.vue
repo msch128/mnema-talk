@@ -4,14 +4,14 @@
 // click away in the server menu.
 import { computed, onMounted, ref, watch } from 'vue'
 import { Check, Circle, X } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { decodeInvite } from '../types/domain'
 import { openTalkSettings } from '../lib/talks'
-import { requestAdminTab } from '../lib/adminRequest'
+import { requestAdminTab } from '../shared/lib/adminRequest'
 import { useChatStore } from '../stores/chat'
 import { useFirstRunStore } from '../stores/firstRun'
 import { useToastStore } from '../stores/toast'
-import { useCommunityName } from '../composables/useCommunityName'
+import { useCommunityName } from '../shared/composables/useCommunityName'
 import { useFirstRunShown } from '../composables/useFirstRunShown'
 import { t } from '../i18n'
 

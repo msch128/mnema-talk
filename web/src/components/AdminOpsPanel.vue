@@ -2,13 +2,13 @@
 // Live operator view of the System tab: the same numbers Prometheus reads
 // (GET /api/admin/system/ops), with a one-hour history as sparklines.
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeOpsStatus } from '../types/domain'
 import type { OpsStatus, OpsSample } from '../types/domain'
 import { t, locale } from '../i18n'
-import { visibleInterval } from '../lib/pageVisibility'
+import { visibleInterval } from '../shared/lib/pageVisibility'
 import { formatBytes } from '../lib/byteUnits'
-import Sparkline from './Sparkline.vue'
+import Sparkline from '../shared/components/Sparkline.vue'
 
 const REFRESH_MS = 10_000
 

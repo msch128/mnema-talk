@@ -1,4 +1,4 @@
-import type { ApiOptions } from './api'
+import type { ApiOptions } from '../shared/lib/api'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
@@ -10,8 +10,8 @@ import { setLocale, t } from '../i18n'
 import { fixtureId, FIXTURE_TIMESTAMP, messageFixture } from '../test-fixtures.fixture'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('./api', async importOriginal => ({
-  ...(await importOriginal<typeof import('./api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
 

@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref } from 'vue'
 import { AlertCircle, Plus, X } from '@lucide/vue'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import {
   POLL_DURATIONS, POLL_MAX_LABEL, POLL_MAX_OPTIONS, POLL_MAX_QUESTION, POLL_MIN_OPTIONS,
   draftProblem, draftRequest, emptyDraft, isPollDuration
 } from '../lib/polls'
 import { t } from '../i18n'
-import { useDiscardGuard } from '../composables/useDiscardGuard'
+import { useDiscardGuard } from '../shared/composables/useDiscardGuard'
 
 // Asks a question with 2 to 10 answers (the composer's poll button, and /poll
 // from the command menu). The server checks everything again.

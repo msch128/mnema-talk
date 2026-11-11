@@ -2,8 +2,8 @@
 // finishing does. The first run shows every step; later only the rules, and
 // only while they are pending. Rules cannot be skipped or closed.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { onRulesRequired } from '../lib/api'
-import { navigate } from '../lib/router'
+import { onRulesRequired } from '../shared/lib/api'
+import { navigate } from '../shared/lib/router'
 import { welcomeSteps, isFirstRun, type WelcomeStep } from '../lib/welcomeSteps'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'

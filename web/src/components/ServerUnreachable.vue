@@ -4,7 +4,7 @@
 // at most once a minute so a screen reader is not read a ticking value.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { locale, t } from '../i18n'
-import { relative } from '../lib/time'
+import { relative } from '../shared/lib/time'
 
 const props = defineProps<{ trying: boolean; lastTriedAt: number | null }>()
 defineEmits<{ retry: [] }>()

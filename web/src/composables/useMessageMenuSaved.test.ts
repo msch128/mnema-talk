@@ -1,7 +1,7 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import { required } from '../store-test-support.fixture'
 import { useMessageActions } from './useMessageActions'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 import { channelFixture, messageFixture } from '../test-fixtures.fixture'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
@@ -14,8 +14,8 @@ import { setLocale } from '../i18n'
 import { pendingForward } from '../lib/forwardDialog'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
 

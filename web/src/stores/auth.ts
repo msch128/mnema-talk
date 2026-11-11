@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeUser, type User } from '../types/domain'
 import { createSessionCore } from './auth/session'
 import { createAccountLocale } from './auth/locale'

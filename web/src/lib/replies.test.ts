@@ -2,8 +2,8 @@ import { requireValue, messageFixture } from '../test-fixtures.fixture'
 import type { Message } from '../types/domain'
 import { describe, it, expect } from 'vitest'
 import { replySnippet, previewText, stripMarkdown, markPreviewEdited, markPreviewDeleted, REPLY_PREVIEW_LEN } from './replies'
-import { renderMarkdown } from './markdown'
-import { extractPreviewUrls } from './chatLogic'
+import { renderMarkdown } from '../shared/lib/markdown'
+import { extractPreviewUrls } from '../shared/lib/chatLogic'
 
 describe('reply previews', () => {
   it('truncates by code points like the server', () => {

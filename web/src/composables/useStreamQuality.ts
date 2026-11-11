@@ -13,7 +13,7 @@ import { t } from '../i18n'
 import type { MediaStat } from '../lib/mediaStats'
 import type { StreamResolution, StreamFrameRate, StreamMode, SendStatsSummary, SendStatsSample } from '../lib/streamQuality'
 
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 
 interface StreamQualityOptions {
   getStats?: () => Promise<Iterable<MediaStat> | null> | Iterable<MediaStat> | null

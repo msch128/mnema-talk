@@ -1,4 +1,4 @@
-import type { ApiOptions as BaseApiOptions } from '../lib/api'
+import type { ApiOptions as BaseApiOptions } from '../shared/lib/api'
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
@@ -9,8 +9,8 @@ import { openEditHistory, closeEditHistory, pendingEditHistory } from '../lib/ed
 
 type ApiOptions = BaseApiOptions & { decode?: (value: unknown) => unknown }
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
 

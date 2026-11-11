@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest'
 import {
   loadVoiceChatOpen, saveVoiceChatOpen, voiceChatOpenFor, unreadBadge, VOICE_CHAT_OPEN_KEY
 } from './voiceChatPanel'
-import { parseRoute, resolveRoute } from './router'
+import { parseRoute, resolveRoute } from '../shared/lib/router'
 
 const memoryStorage = memoryStorageFixture
 

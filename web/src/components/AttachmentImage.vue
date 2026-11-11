@@ -5,8 +5,8 @@ import type { MediaAttachment } from '../types/domain'
 // from storage (the attachment says so, or the file is no longer served), a
 // box of the size the image would have had saying so. A failure that may pass
 // shows a box that tries again.
-import { useMediaImage } from '../composables/useMediaImage'
-import MediaPlaceholder from './MediaPlaceholder.vue'
+import { useMediaImage } from '../shared/composables/useMediaImage'
+import MediaPlaceholder from '../shared/components/MediaPlaceholder.vue'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({

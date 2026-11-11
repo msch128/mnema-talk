@@ -4,8 +4,8 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const app = vi.hoisted(() => ({ current: null as null | { role: string } }))
 const report = vi.hoisted(() => vi.fn())
-vi.mock('../lib/platform', async importOriginal => {
-  const real = await importOriginal<typeof import('../lib/platform')>()
+vi.mock('../shared/lib/platform', async importOriginal => {
+  const real = await importOriginal<typeof import('../shared/lib/platform')>()
   return { ...real, platform: { ...real.platform, trustedApp: () => app.current, reportUnread: report, supportsUnreadReport: () => true } }
 })
 

@@ -1,6 +1,6 @@
 // Operator warning codes from the server, with localized text and the matching operations doc link.
 import { t } from '../i18n'
-import { SOURCE_URL } from './thirdParty'
+import { SOURCE_URL } from '../shared/lib/thirdParty'
 
 const OPERATIONS_DOC = `${SOURCE_URL}/blob/main/doc/operations.md`
 const PROXY_DOC = `${OPERATIONS_DOC}#reverse-proxy-and-trusted_proxy_cidrs`

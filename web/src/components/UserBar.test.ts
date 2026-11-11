@@ -10,9 +10,9 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { setLocale } from '../i18n'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 
-vi.mock('../lib/api', async (orig) => ({ ...(await orig()), api: vi.fn() }))
+vi.mock('../shared/lib/api', async (orig) => ({ ...(await orig()), api: vi.fn() }))
 
 const leave = vi.fn()
 const share = vi.fn()

@@ -5,10 +5,10 @@
 // (right-click them in the sidebar). Every choice is saved at once and says "Saved".
 import { computed, ref, watch } from 'vue'
 import { BellOff, Bell } from '@lucide/vue'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 import { useChatStore } from '../stores/chat'
-import { usePreferenceSave } from '../composables/usePreferenceSave'
-import SavedIndicator from './SavedIndicator.vue'
+import { usePreferenceSave } from '../shared/composables/usePreferenceSave'
+import SavedIndicator from '../shared/components/SavedIndicator.vue'
 import { MUTE_DURATIONS, formatMuteEnd } from '../composables/useMuteMenu'
 import { t } from '../i18n'
 

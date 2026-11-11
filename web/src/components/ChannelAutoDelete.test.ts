@@ -11,7 +11,7 @@ import { tooltip } from '../directives/tooltip'
 import { channelFixture } from '../test-fixtures.fixture'
 
 const confirmMock = vi.fn<() => Promise<boolean>>(async () => true)
-vi.mock('../lib/confirm', () => ({ confirm: () => confirmMock() }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: () => confirmMock() }))
 
 let requests: { url: string; method: string; body: unknown }[]
 
@@ -60,7 +60,7 @@ describe('ChannelAutoDeleteField', () => {
 
 describe('confirmAutoDelete', () => {
   it('asks before switching deletion on and not before switching it off', async () => {
-    const { confirmAutoDelete } = await import('../lib/autoDelete')
+    const { confirmAutoDelete } = await import('../shared/lib/autoDelete')
     expect(await confirmAutoDelete('general', 0)).toBe(true)
     expect(confirmMock).not.toHaveBeenCalled()
     confirmMock.mockResolvedValueOnce(false)

@@ -4,15 +4,15 @@
 // enforces the same rules.
 import type { PropType } from 'vue'
 import { computed } from 'vue'
-import { api } from '../lib/api'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { api } from '../shared/lib/api'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
-import { PERMISSION_BITS, roleColorCss } from '../lib/permissions'
+import { PERMISSION_BITS, roleColorCss } from '../shared/lib/permissions'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 const props = defineProps({
   user: { type: Object as PropType<{ id: string; username: string; display_name: string; role: string }>, required: true }

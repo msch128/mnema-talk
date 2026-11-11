@@ -13,8 +13,8 @@ import { channelFixture, onboardingStateFixture, userFixture } from '../test-fix
 
 const openSearch = vi.fn()
 vi.mock('../lib/globalSearch', async () => ({ openSearch: (q?: string) => openSearch(q), searchOpen: (await import('vue')).ref(false) }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string) => {
     if (url === '/api/health') return Promise.resolve({ features: useServerFeaturesStore().list })
     if (url.startsWith('/api/me/saved')) return Promise.resolve({ items: [], has_more: false })

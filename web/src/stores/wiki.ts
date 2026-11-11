@@ -2,7 +2,7 @@
 // decides everything (doc/wiki.md); this only keeps what was read.
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { isApiError } from '../lib/api'
+import { isApiError } from '../shared/lib/api'
 import { fetchWikiPage, fetchWikiTree, type WikiPage, type WikiPageSummary } from '../lib/wikiApi'
 import { wikiViews } from '../lib/wikiTree'
 import { forgetWikiSession } from '../lib/wikiState'

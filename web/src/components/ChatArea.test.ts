@@ -254,10 +254,10 @@ describe('ChatArea message actions', () => {
 // stay real, with network-facing methods controlled per scenario.
 import MessageRow from './MessageRow.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
-import { closeViewer, openViewer } from '../composables/useMediaViewer'
-import ContextMenu from './ContextMenu.vue'
+import { closeViewer, openViewer } from '../shared/composables/useMediaViewer'
+import ContextMenu from '../shared/components/ContextMenu.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
-import EmojiButton from './EmojiButton.vue'
+import EmojiButton from '../shared/components/EmojiButton.vue'
 import { useToastStore } from '../stores/toast'
 import { readStateFixture } from '../test-fixtures.fixture'
 import { t } from '../i18n'

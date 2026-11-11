@@ -38,7 +38,7 @@ func TestCleanVanitySlugMatrix(t *testing.T) {
 // reads like one of them.
 func TestReservedSlugsCoverTheRoutesOfTheApp(t *testing.T) {
 	root := filepath.Join("..", "..", "web")
-	router, err := os.ReadFile(filepath.Join(root, "src", "lib", "router.ts"))
+	router, err := os.ReadFile(filepath.Join(root, "src", "shared", "lib", "router.ts"))
 	if err != nil {
 		t.Fatal(err)
 	}

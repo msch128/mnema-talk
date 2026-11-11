@@ -1,6 +1,6 @@
 import { required } from '../store-test-support.fixture'
 import { useMessageActions } from './useMessageActions'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 import { channelFixture, messageFixture } from '../test-fixtures.fixture'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'

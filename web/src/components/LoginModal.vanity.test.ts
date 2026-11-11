@@ -5,8 +5,8 @@ import LoginModal from './LoginModal.vue'
 import { setLocale, t } from '../i18n'
 
 const apiMock = vi.fn<(path: string) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (path: string) => apiMock(path),
   onUnauthorized: vi.fn(() => () => true)
 }))
@@ -32,7 +32,7 @@ beforeEach(async () => {
 
 describe('LoginModal vanity sign-up', () => {
   it('keeps the invite hidden when the name is taken', async () => {
-    const { ApiError } = await vi.importActual<typeof import('../lib/api')>('../lib/api')
+    const { ApiError } = await vi.importActual<typeof import('../shared/lib/api')>('../shared/lib/api')
     const w = await signUp(new ApiError(409, 'CONFLICT', 'username is already taken'))
     expect(w.find('#login-invite').exists()).toBe(false)
     expect(w.find('[role="alert"]').text()).toContain('taken')
@@ -42,7 +42,7 @@ describe('LoginModal vanity sign-up', () => {
   })
 
   it('asks for a code when the server refuses the invite itself', async () => {
-    const { ApiError } = await vi.importActual<typeof import('../lib/api')>('../lib/api')
+    const { ApiError } = await vi.importActual<typeof import('../shared/lib/api')>('../shared/lib/api')
     const w = await signUp(new ApiError(400, 'INVALID_INPUT', t('errors.detail.invalidInvite')))
     expect(w.find('#login-invite').exists()).toBe(true)
   })

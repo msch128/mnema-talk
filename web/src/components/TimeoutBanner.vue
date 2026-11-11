@@ -7,8 +7,8 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { Clock } from '@lucide/vue'
 import { usePermissionsStore } from '../stores/permissions'
-import { formatRemaining } from '../lib/moderation'
-import { visibleInterval } from '../lib/pageVisibility'
+import { formatRemaining } from '../shared/lib/moderation'
+import { visibleInterval } from '../shared/lib/pageVisibility'
 import RaidLockdownBanner from './RaidLockdownBanner.vue'
 
 const permissions = usePermissionsStore()

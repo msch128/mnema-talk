@@ -11,8 +11,8 @@ import { usePermissionsStore } from '../stores/permissions'
 import { setLocale, i18nPlugin } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { stageAttachment, unstageAttachment } from '../lib/attachmentsApi'
-import { pendingConfirm } from '../lib/confirm'
-import { viewerState, closeViewer } from '../composables/useMediaViewer'
+import { pendingConfirm } from '../shared/lib/confirm'
+import { viewerState, closeViewer } from '../shared/composables/useMediaViewer'
 
 vi.mock('../lib/attachmentsApi', () => ({ stageAttachment: vi.fn(), unstageAttachment: vi.fn(async () => undefined) }))
 

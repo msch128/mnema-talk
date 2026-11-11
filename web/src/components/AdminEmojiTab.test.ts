@@ -1,22 +1,22 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import AdminEmojiTab from './AdminEmojiTab.vue'
-import EmojiGlyph from './EmojiGlyph.vue'
+import EmojiGlyph from '../shared/components/EmojiGlyph.vue'
 import { setLocale } from '../i18n'
 import { useToastStore } from '../stores/toast'
 import { useEmojiStore } from '../stores/emoji'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn()
 }))
 const confirmMock = vi.fn()
-vi.mock('../lib/confirm', () => ({ confirm: (...args: unknown[]) => confirmMock(...args) }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: (...args: unknown[]) => confirmMock(...args) }))
 
 const ID = '00000000-0000-4000-8000-000000000501'
 const entry = { id: ID, name: 'blob', animated: false, url: '/api/emoji/x/image?v=1', created_at: '2026-01-01T00:00:00Z' }
@@ -146,7 +146,7 @@ describe('EmojiGlyph', () => {
 
 describe('AdminEmojiTab on a phone and on errors', () => {
   it('offers rename and delete as a labelled menu on a phone', async () => {
-    const { useCompactLayout } = await import('../composables/useCompactLayout')
+    const { useCompactLayout } = await import('../shared/composables/useCompactLayout')
     useCompactLayout().isCompact.value = true
     const w = mount(AdminEmojiTab, { attachTo: document.body })
     await flushPromises()

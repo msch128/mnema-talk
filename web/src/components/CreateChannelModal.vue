@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { Channel, ChannelType } from '../types/domain'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { computed, ref, watch } from 'vue'
 import { Hash, Volume2, MessagesSquare, FolderPlus, Plus, AlertCircle } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
-import { nextSortOrder } from '../lib/channelLayout'
-import { useDiscardGuard } from '../composables/useDiscardGuard'
-import BaseDialog from './BaseDialog.vue'
+import { nextSortOrder } from '../shared/lib/channelLayout'
+import { useDiscardGuard } from '../shared/composables/useDiscardGuard'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 
 const props = defineProps({
   initialType: {

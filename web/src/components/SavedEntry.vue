@@ -6,12 +6,12 @@ import { nextTick, ref } from 'vue'
 import { ArrowUpRight, BookmarkX, Check, EyeOff, Hash, Lock, MessageCircle, Pencil, Volume2 } from '@lucide/vue'
 import { useSavedStore } from '../stores/saved'
 import { useToastStore } from '../stores/toast'
-import { caughtErrorMessage } from '../lib/api'
-import { dateTime } from '../lib/time'
+import { caughtErrorMessage } from '../shared/lib/api'
+import { dateTime } from '../shared/lib/time'
 import { previewText } from '../lib/replies'
-import { shownName } from '../lib/deletedUser'
+import { shownName } from '../shared/lib/deletedUser'
 import { locale, t } from '../i18n'
-import UserAvatar from './UserAvatar.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 
 // One saved message: who wrote it, where, when and what it says, a private
 // note of the member's own, and the ways to open or remove it. A message the

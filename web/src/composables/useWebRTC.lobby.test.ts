@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { installHarness, grantMic, setup } from './useWebRTC.harness.fixture'
-import * as router from '../lib/router'
+import * as router from '../shared/lib/router'
 import { channelFixture } from '../test-fixtures.fixture'
 
 vi.mock('../lib/noiseSuppressor', async () => (await import('./useWebRTC.noiseSuppressor.fixture')).noiseSuppressorModule)

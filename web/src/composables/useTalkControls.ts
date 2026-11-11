@@ -1,9 +1,9 @@
 import { computed, ref } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
 import { toValue } from 'vue'
-import { useAutoHide } from './useAutoHide'
-import { useCompactLayout } from './useCompactLayout'
-import { readItem, writeItem } from '../lib/voicePlayback'
+import { useAutoHide } from '../shared/composables/useAutoHide'
+import { useCompactLayout } from '../shared/composables/useCompactLayout'
+import { readItem, writeItem } from '../shared/lib/voicePlayback'
 
 const HINT_KEY = 'mnema_talk_controls_hint'
 /** How many times the "move the mouse" hint is shown before the member knows. */

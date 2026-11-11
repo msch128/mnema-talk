@@ -1,22 +1,22 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import type { DiscordimportPlan, DiscordimportRecord } from '../types/rest'
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import AdminImportTab from './AdminImportTab.vue'
-import { ApiError } from '../lib/api'
+import { ApiError } from '../shared/lib/api'
 import { setLocale } from '../i18n'
 import { useToastStore } from '../stores/toast'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn()
 }))
 const confirmMock = vi.fn()
-vi.mock('../lib/confirm', () => ({ confirm: (...args: unknown[]) => confirmMock(...args) }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: (...args: unknown[]) => confirmMock(...args) }))
 
 const IMPORT_ID = '00000000-0000-4000-8000-000000000701'
 

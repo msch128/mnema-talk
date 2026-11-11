@@ -5,7 +5,7 @@ import { Copy, TriangleAlert } from '@lucide/vue'
 import { curlExample } from '../lib/bots'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 
 defineProps({
   secret: { type: String, required: true },

@@ -2,8 +2,8 @@
 // of sight above the viewport, or not loaded at all (the unread run is longer
 // than the page that was fetched).
 import { ref, computed, watch, nextTick, onScopeDispose, type Ref } from 'vue'
-import { api } from '../lib/api'
-import { firstUnreadId } from '../lib/chatLogic'
+import { api } from '../shared/lib/api'
+import { firstUnreadId } from '../shared/lib/chatLogic'
 import { decodeChatFirstUnreadResponse } from '../types/rest'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'

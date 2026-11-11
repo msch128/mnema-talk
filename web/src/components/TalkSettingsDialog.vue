@@ -5,22 +5,22 @@
 // Every field is part of one draft: nothing is stored until Save (doc/settings-ux.md).
 import type { PropType } from 'vue'
 import { computed, onMounted, ref } from 'vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { updateTalk, isTempTalk } from '../lib/talks'
 import type { TalkChange } from '../lib/talks'
 import { currentPreset, presetEveryone, presetOnlyRoles, rolesLetIn } from '../lib/talkPresets'
 import type { AccessPreset } from '../lib/talkPresets'
 import { decodeOverwritesBody } from '../types/domain'
 import type { Channel, Overwrite } from '../types/domain'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { usePermissionsStore } from '../stores/permissions'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 import TalkAccessPresets from './TalkAccessPresets.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 interface TalkForm {
   name: string

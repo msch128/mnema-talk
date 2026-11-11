@@ -8,8 +8,8 @@ import TalkReactionFloat from './TalkReactionFloat.vue'
 import CreateChannelModal from './CreateChannelModal.vue'
 import { buildChannelItems } from '../composables/useNavMenus'
 import { createReactionLimiter, splitStage } from '../lib/stage'
-import { api } from '../lib/api'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { api } from '../shared/lib/api'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
@@ -18,7 +18,7 @@ import { useVoiceStore } from '../stores/voice'
 import { setLocale } from '../i18n'
 import { channelFixture, userFixture, voiceUserFixture } from '../test-fixtures.fixture'
 
-vi.mock('../lib/api', async original => ({ ...(await original<typeof import('../lib/api')>()), api: vi.fn() }))
+vi.mock('../shared/lib/api', async original => ({ ...(await original<typeof import('../shared/lib/api')>()), api: vi.fn() }))
 vi.mock('../composables/useWebRTC', () => ({
   useWebRTC: () => ({ leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn(), applyAudioSettings: vi.fn(), toggleCamera: vi.fn() })
 }))

@@ -2,12 +2,12 @@
 // Host for openEditHistory() from lib/editHistory: the earlier versions of an
 // edited message, for members with Manage messages (GET .../edits).
 import { ref, computed, watch } from 'vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { pendingEditHistory, closeEditHistory } from '../lib/editHistory'
 import { decodeChatMessageEditHistory, type ChatMessageEditHistory } from '../types/rest'
 import { t, locale } from '../i18n'
-import { shortcodesForEditing } from '../lib/customEmoji'
-import BaseDialog from './BaseDialog.vue'
+import { shortcodesForEditing } from '../shared/lib/customEmoji'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 
 const request = computed(() => pendingEditHistory.value)
 const edits = ref<ChatMessageEditHistory['edits']>([])

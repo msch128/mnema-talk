@@ -13,8 +13,8 @@ import { useBlocksStore } from '../stores/blocks'
 import { useChatStore } from '../stores/chat'
 import { DM_MAX_MEMBERS, dmErrorText, dmTitle } from '../lib/dm'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
-import UserAvatar from './UserAvatar.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 
 const props = defineProps({
   // Given: add one member to this group instead of starting a conversation.

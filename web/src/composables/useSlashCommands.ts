@@ -4,7 +4,7 @@
 // server decides (GET /api/channels/{id}/commands), the composer only offers.
 import { ref, computed, reactive } from 'vue'
 import type { Ref } from 'vue'
-import { api, isApiError, caughtErrorMessage } from '../lib/api'
+import { api, isApiError, caughtErrorMessage } from '../shared/lib/api'
 import { arrayDecoder } from '../types/validation'
 import { isBotChannelCommand, decodeBotInvoked, decodeSlashResult } from '../types/rest'
 import type { BotChannelCommand } from '../types/rest'

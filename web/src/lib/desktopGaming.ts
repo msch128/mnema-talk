@@ -3,8 +3,8 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC, setGamingPttLease } from '../composables/useWebRTC'
-import { platform } from './platform'
-import { formatShortcut } from './shortcuts'
+import { platform } from '../shared/lib/platform'
+import { formatShortcut } from '../shared/lib/shortcuts'
 
 export interface GamingChord { key: number; alt: boolean; control: boolean; shift: boolean }
 export interface GamingSettings { enabled: boolean; sidepeek_opacity: number; overlay: GamingChord; mute: GamingChord; deafen: GamingChord; ptt: GamingChord; games: string[] }

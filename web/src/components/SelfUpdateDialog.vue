@@ -4,8 +4,8 @@
 // server checks again before it asks the updater sidecar.
 import { ref } from 'vue'
 import { AlertTriangle } from '@lucide/vue'
-import BaseDialog from './BaseDialog.vue'
-import { api, isApiError, caughtErrorMessage } from '../lib/api'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import { api, isApiError, caughtErrorMessage } from '../shared/lib/api'
 import { decodeServerSelfUpdateStarted, type ServerSelfUpdateStarted } from '../types/rest'
 import { t } from '../i18n'
 

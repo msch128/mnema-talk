@@ -1,10 +1,10 @@
-// Regenerates src/lib/emojiShortcodes.json (":smile:" -> glyph) from the
+// Regenerates src/shared/lib/emojiShortcodes.json (":smile:" -> glyph) from the
 // emoji-picker-element-data GitHub shortcode set. Run after bumping that package:
 //   node scripts/genEmojiShortcodes.ts
 import { readFileSync, writeFileSync } from 'node:fs'
 
 const source = new URL('../node_modules/emoji-picker-element-data/en/github/data.json', import.meta.url)
-const target = new URL('../src/lib/emojiShortcodes.json', import.meta.url)
+const target = new URL('../src/shared/lib/emojiShortcodes.json', import.meta.url)
 
 const table: Record<string, string> = {}
 const items = JSON.parse(readFileSync(source, 'utf8')) as Array<{ emoji: string; shortcodes?: string[] }>

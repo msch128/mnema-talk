@@ -1,5 +1,5 @@
 import { shallowRef } from 'vue'
-import { clampChars } from './textLength'
+import { clampChars } from '../shared/lib/textLength'
 
 // Unsent composer text per channel and thread, kept in this browser only
 // (localStorage, one record per account) so it survives switching and

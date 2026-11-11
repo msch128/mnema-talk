@@ -4,13 +4,13 @@
 // creating and deleting are actions and run when used.
 import { ref, computed, watch, onMounted } from 'vue'
 import { Shield, Plus, GripVertical, ChevronUp, ChevronDown, AtSign, Lock } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
-import { confirm } from '../lib/confirm'
+import { api, caughtErrorMessage } from '../shared/lib/api'
+import { confirm } from '../shared/lib/confirm'
 import { decodeRole } from '../types/domain'
 import type { Role } from '../types/domain'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
-import { roleColorCss } from '../lib/permissions'
+import { roleColorCss } from '../shared/lib/permissions'
 import { t } from '../i18n'
 import RoleEditor from './RoleEditor.vue'
 

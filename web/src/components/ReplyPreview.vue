@@ -3,10 +3,10 @@ import type { PropType } from 'vue'
 import type { ReplyPreview } from '../types/domain'
 import { computed } from 'vue'
 import { Reply, Image as ImageIcon } from '@lucide/vue'
-import UserAvatar from './UserAvatar.vue'
-import BotBadge from './BotBadge.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
+import BotBadge from '../shared/components/BotBadge.vue'
 import { previewText } from '../lib/replies'
-import { shownName } from '../lib/deletedUser'
+import { shownName } from '../shared/lib/deletedUser'
 import { t } from '../i18n'
 
 // The "replied to" line above a message: curved connector into the

@@ -6,7 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
 import MessageAttachments from './MessageAttachments.vue'
-import { closeViewer, viewerState } from '../composables/useMediaViewer'
+import { closeViewer, viewerState } from '../shared/composables/useMediaViewer'
 import { messageFixture } from '../test-fixtures.fixture'
 
 const image = { is_deleted: false, id: "00000000-0000-4000-8000-0000000003f6", url: "/m/00000000-0000-4000-8000-0000000003f6", mime_type: 'image/png', original_filename: 'shot.png', size_bytes: 1048576 }

@@ -3,16 +3,16 @@
 // and a way to lift each one.
 import { ref, onMounted } from 'vue'
 import { Gavel, Undo2 } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import type { AuthBan } from '../types/rest'
 import { isAuthBan } from '../types/rest'
 import { arrayDecoder } from '../types/validation'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
-import EmptyState from './EmptyState.vue'
-import { useReloadOnActivate } from '../composables/useReloadOnActivate'
-import StatePanel from './StatePanel.vue'
+import EmptyState from '../shared/components/EmptyState.vue'
+import { useReloadOnActivate } from '../shared/composables/useReloadOnActivate'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 const toasts = useToastStore()
 const bans = ref<AuthBan[]>([])

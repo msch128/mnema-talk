@@ -3,7 +3,7 @@
 // message and add an optional comment (POST /api/messages/{id}/forward).
 import { computed, ref, watch } from 'vue'
 import { Hash, MessageCircle, Volume2 } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { closeForward, pendingForward } from '../lib/forwardDialog'
 import { decodeChatMessage } from '../types/rest'
 import { useChatStore } from '../stores/chat'
@@ -13,7 +13,7 @@ import { dmTitle } from '../lib/dm'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 
 const COMMENT_MAX = 4000
 const request = computed(() => pendingForward.value)

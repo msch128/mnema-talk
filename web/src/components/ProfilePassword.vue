@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Edit3, KeyRound, Loader2 } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
-import FormField from './FormField.vue'
-import PasswordInput from './PasswordInput.vue'
+import { MIN_PASSWORD_LENGTH } from '../shared/lib/passwordPolicy'
+import FormField from '../shared/components/FormField.vue'
+import PasswordInput from '../shared/components/PasswordInput.vue'
 
 // Changing one's own password (own profile only).
 const authStore = useAuthStore()

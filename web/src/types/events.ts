@@ -1,9 +1,9 @@
 // WebSocket is not represented in OpenAPI. These payloads follow
 // internal/ws/{handle,voice,presence,signal,lifecycle}.go and chat publications.
-import type { ModerationNotice } from '../lib/moderation'
+import type { ModerationNotice } from '../shared/lib/moderation'
 import type { Message, Poll, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
 import type { ChatUserRef, CommunityeventsCommunityEvent, CommunityeventsEventComment } from './rest'
-import { withMessageDefaults } from '../lib/compat/olderServers'
+import { withMessageDefaults } from '../shared/lib/compat/olderServers'
 import { isAuthUser, isChatMessage, isChatPoll, isChatReactionSummary, isChatNotifyLevel, isCommunityeventsCommunityEvent } from './rest'
 import type { StageHand, StageTalkPower, TalkReaction } from './stageEvents'
 import { STAGE_EVENT_CHECKS } from './stageEvents'

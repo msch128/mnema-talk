@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { AvatarUser } from './presentationTypes'
+import type { AvatarUser } from '../shared/components/presentationTypes'
 // "Eye N" on a screen share: how many in the Talk watch it. Hovering or a
 // click shows who (avatars and names); the sharer sees it on their own share.
 import { ref, computed, onUnmounted, useId } from 'vue'
@@ -8,9 +8,9 @@ import { Eye } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import { useDismissable } from '../composables/useDismissable'
+import { useDismissable } from '../shared/composables/useDismissable'
 import { t } from '../i18n'
-import UserAvatar from './UserAvatar.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 
 const props = defineProps({
   // The sharer: whose screen share this is.

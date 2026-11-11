@@ -2,7 +2,7 @@
 // overwrites (the same list the permissions dialog edits) and its member limit;
 // there is no separate permission model behind them.
 import type { Overwrite } from '../types/domain'
-import { PERMISSION_BITS } from './permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 
 /** What "may join" means for a Talk: seeing it and connecting to it. */
 const JOIN = PERMISSION_BITS.view_channel | PERMISSION_BITS.connect

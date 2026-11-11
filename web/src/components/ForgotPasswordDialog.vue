@@ -3,9 +3,9 @@
 // whether or not the address belongs to an account, and so does this dialog.
 import { ref } from 'vue'
 import { Loader2, Mail } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 
 const emit = defineEmits<{ close: [] }>()
 

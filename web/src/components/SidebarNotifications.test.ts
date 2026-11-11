@@ -12,7 +12,7 @@ import SidebarCategoryHeader from './SidebarCategoryHeader.vue'
 import SidebarChannelRow from './SidebarChannelRow.vue'
 import SidebarServerMenu from './SidebarServerMenu.vue'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { notifyDialogOpen } from '../lib/notifyDialog'
+import { notifyDialogOpen } from '../shared/lib/notifyDialog'
 
 beforeEach(() => setActivePinia(createPinia()))
 

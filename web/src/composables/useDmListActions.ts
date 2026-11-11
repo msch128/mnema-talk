@@ -2,7 +2,7 @@
 // mute it, and the context-menu entries that offer the same. Failures are
 // said in a toast; the store has already put the list back.
 import type { ChatDirectMessage } from '../types/rest'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 import { ArrowDown, ArrowUp, Bell, BellOff, CheckCheck, Star, StarOff, X } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'

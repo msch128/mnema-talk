@@ -4,7 +4,7 @@
 import { ref } from 'vue'
 import type { Message } from '../types/domain'
 import { decodeChatMentionsPage } from '../types/rest'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 
 const PAGE = 20
 

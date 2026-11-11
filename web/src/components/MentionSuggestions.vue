@@ -4,11 +4,11 @@ import type { MentionSuggestion } from '../lib/mentionQuery'
 // The @mention list above a composer. Mouse picks; the keyboard is handled
 // by the composer (useComposerAssist) so focus stays in the textarea.
 import { Users, Radio, AtSign } from '@lucide/vue'
-import EmojiGlyph from './EmojiGlyph.vue'
-import UserAvatar from './UserAvatar.vue'
-import BotBadge from './BotBadge.vue'
+import EmojiGlyph from '../shared/components/EmojiGlyph.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
+import BotBadge from '../shared/components/BotBadge.vue'
 import { useChatStore } from '../stores/chat'
-import { roleColorCss } from '../lib/permissions'
+import { roleColorCss } from '../shared/lib/permissions'
 
 defineProps({
   items: { type: Array as PropType<MentionSuggestion[]>, required: true },

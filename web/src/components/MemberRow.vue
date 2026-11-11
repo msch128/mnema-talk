@@ -9,11 +9,11 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
 import { t, locale } from '../i18n'
-import { activityText } from '../lib/presence'
-import { now, useServerClock } from '../lib/clock'
-import UserAvatar from './UserAvatar.vue'
+import { activityText } from '../shared/lib/presence'
+import { now, useServerClock } from '../shared/lib/clock'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 import ActivityStats from './ActivityStats.vue'
-import BotBadge from './BotBadge.vue'
+import BotBadge from '../shared/components/BotBadge.vue'
 
 const props = defineProps({
   member: { type: Object as PropType<Member>, required: true },

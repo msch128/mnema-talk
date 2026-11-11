@@ -3,11 +3,11 @@
 // and the channel header's bell.
 import { BellOff, Bell } from '@lucide/vue'
 import type { NotifyLevel } from '../types/domain'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
-import { clockTimeOptions } from '../lib/time'
+import { clockTimeOptions } from '../shared/lib/time'
 
 // A channel outside any category inherits from the server default directly.
 export type NotifyTarget = { kind: 'channel' | 'category'; id: string; inCategory?: boolean }

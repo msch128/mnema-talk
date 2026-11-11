@@ -3,16 +3,16 @@ import type { PropType } from 'vue'
 // Change the expiry and the use limit of an existing invite. Only what was
 // changed is sent: null removes the expiry or the limit, a field left alone
 // is kept. One draft, one Save (doc/settings-ux.md).
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import type { Invite, UpdateInviteRequest } from '../types/domain'
 import { decodeAuthInvite } from '../types/rest'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
-import type { FieldErrors } from '../composables/useSettingsDraft'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
+import type { FieldErrors } from '../shared/composables/useSettingsDraft'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import presets from '../lib/presets.json'
-import BaseDialog from './BaseDialog.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import presets from '../shared/lib/presets.json'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 const props = defineProps({
   invite: { type: Object as PropType<Invite>, required: true }

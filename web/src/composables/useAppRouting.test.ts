@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { statePath, syncSettings } from './useAppRouting'
-import { currentRoute, parseRoute } from '../lib/router'
-import { settingsTab } from '../lib/settingsDialog'
+import { currentRoute, parseRoute } from '../shared/lib/router'
+import { settingsTab } from '../shared/lib/settingsDialog'
 import type { RoutingContext } from './appRoutingApply'
 
 const POST = '0f3a9c1e-1111-4222-8333-444455556666'

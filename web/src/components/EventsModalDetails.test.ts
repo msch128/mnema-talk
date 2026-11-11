@@ -20,8 +20,8 @@ vi.mock('../lib/eventCommentsApi', () => ({
   fetchComments: vi.fn().mockResolvedValue({ comments: [], has_more: false, muted: false }),
   postComment: vi.fn(), editComment: vi.fn(), deleteComment: vi.fn(), setCommentsMuted: vi.fn()
 }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn(() => Promise.resolve([]))
 }))
 

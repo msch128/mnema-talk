@@ -3,13 +3,13 @@
 // (doc/settings-ux.md). For an existing webhook the on/off switch is a field of
 // the draft too; test, new secret and delete stay actions on the row.
 import type { PropType } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeCreatedOutgoingWebhook, decodeOutgoingWebhook, CHANNEL_WEBHOOK_EVENTS } from '../types/webhooks'
 import type { OutgoingWebhook } from '../types/webhooks'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 const props = defineProps({
   channelId: { type: String, required: true },

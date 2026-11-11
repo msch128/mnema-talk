@@ -1,14 +1,14 @@
 import type { VueWrapper, DOMWrapper } from '@vue/test-utils'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import type { Channel, ChannelType, Category } from '../types/domain'
-import type { ConfirmRequest } from '../lib/confirm'
+import type { ConfirmRequest } from '../shared/lib/confirm'
 import { userFixture, channelFixture, categoryFixture, requireValue, parseLayoutRequestBody } from '../test-fixtures.fixture'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { nextTick } from 'vue'
 import { setLocale } from '../i18n'
-import { COLLAPSED_KEY } from '../lib/channelTree'
+import { COLLAPSED_KEY } from '../shared/lib/channelTree'
 
 // GET /api/channels answers from `server`; PUT /api/admin/layout and the
 // duplicate endpoint wait until the test answers them.
@@ -25,8 +25,8 @@ function isWaitingEndpoint(url: string, method?: string): boolean {
   return url === '/api/admin/categories' && method === 'POST'
 }
 
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, opts: ApiOptions = {}) => {
     h.calls.push({ url, method: opts.method || 'GET', json: opts.json })
     if (url === '/api/channels') return Promise.resolve(JSON.parse(JSON.stringify(h.server)))
@@ -41,14 +41,14 @@ const joinVoiceChannel = vi.fn()
 vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel }) }))
 
 const confirmMock = vi.fn<(_options: ConfirmRequest) => Promise<boolean>>(() => Promise.resolve(true))
-vi.mock('../lib/confirm', () => ({ confirm: (options: ConfirmRequest) => confirmMock(options) }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: (options: ConfirmRequest) => confirmMock(options) }))
 
 import Sidebar from './Sidebar.vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
-import { applyLayoutPayload } from '../lib/channelLayout'
+import { applyLayoutPayload } from '../shared/lib/channelLayout'
 
 const ch = (id: string, category_id: string | null, sort_order: number, type: ChannelType = 'text') => channelFixture({ id, name: id, type, category_id, sort_order })
 

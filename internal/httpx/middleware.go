@@ -217,7 +217,7 @@ const SPAContentSecurityPolicy = basePolicy + "; " + trustedTypesDirectives
 // (React's dangerouslySetInnerHTML) and has no switch to hand over TrustedHTML.
 const APIDocsContentSecurityPolicy = basePolicy
 
-// The policies, one per sink the app has (web/src/lib/trustedTypes.ts):
+// The policies, one per sink the app has (web/src/shared/lib/trustedTypes.ts):
 //   - vue: Vue's own, for the static markup its template compiler hoists and
 //     for v-html. It passes text through, so what keeps a second v-html or a
 //     bound innerHTML out stays the lint rules (web/eslint.config.ts).

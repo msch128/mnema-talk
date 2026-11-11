@@ -1,5 +1,5 @@
 // The comments under community events.
-import { api } from './api'
+import { api } from '../shared/lib/api'
 import {
   decodeCommunityeventsCommentList,
   decodeCommunityeventsCommentMute,

@@ -4,15 +4,15 @@
 // password and, when two-factor sign-in is on, a current code.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Download, Loader2, Trash2 } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { confirmDiscardUnsent } from '../lib/unsentGuard'
 import { deleteAccount as eraseAccount, exportStatus, requestExport as askForExport } from '../lib/accountApi'
 import type { AuthExportStatus } from '../types/rest'
 import { locale, t } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
-import FormField from './FormField.vue'
-import IdentityFields from './IdentityFields.vue'
+import FormField from '../shared/components/FormField.vue'
+import IdentityFields from '../shared/components/IdentityFields.vue'
 import { useToastStore } from '../stores/toast'
 
 const account = useAccountStore()

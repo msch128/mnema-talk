@@ -6,15 +6,15 @@
 // page holds. One draft, one Save (doc/settings-ux.md).
 import { ref, computed, onMounted } from 'vue'
 import { KeyRound } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { decodeOnboardingSettings, type OnboardingSettings } from '../types/rest'
 import { useToastStore } from '../stores/toast'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { t } from '../i18n'
-import { useSettingsDraft } from '../composables/useSettingsDraft'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import { useSettingsDraft } from '../shared/composables/useSettingsDraft'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 import AdminRaidTab from './AdminRaidTab.vue'
-import StatePanel from './StatePanel.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 const MIN_DAYS = 1
 const MAX_DAYS = 365

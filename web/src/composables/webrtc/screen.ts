@@ -1,7 +1,7 @@
 import { toRaw } from 'vue'
 import { useToastStore } from '../../stores/toast'
 import { trackConstraints, streamTuning } from '../../lib/streamQuality'
-import { confirm } from '../../lib/confirm'
+import { confirm } from '../../shared/lib/confirm'
 import { t } from '../../i18n'
 import type { MediaStat } from '../../lib/mediaStats'
 import type { StreamQuality } from '../../lib/streamQuality'

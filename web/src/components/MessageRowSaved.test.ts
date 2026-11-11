@@ -10,8 +10,8 @@ import { setLocale, t } from '../i18n'
 import { messageFixture, userFixture } from '../test-fixtures.fixture'
 
 // The list a saved_updated event reloads.
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: () => Promise.resolve({ items: [], has_more: false })
 }))
 

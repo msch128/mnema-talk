@@ -2,13 +2,13 @@
 // device receives push, the member's other devices, the test button and the
 // preview choice.
 import { computed, onMounted, ref } from 'vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import {
   enablePush, loadConfig, loadDevices, pushAvailability, refreshPushState, removeDevice, sendTestPush, setPreview, thisDevice,
-} from '../lib/webPush'
+} from '../shared/lib/webPush'
 import type { PushConfig, PushSubscription } from '../types/rest'
 import { useToastStore } from '../stores/toast'
-import { applyPushConfig } from '../lib/notifyPreview'
+import { applyPushConfig } from '../shared/lib/notifyPreview'
 import { t } from '../i18n'
 
 // The permission is a browser property Vue cannot observe: read again after each load.

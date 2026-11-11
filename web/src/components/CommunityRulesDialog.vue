@@ -3,8 +3,8 @@
 // to accept, reachable from the server menu at any time afterwards.
 import { useOnboardingStore } from '../stores/onboarding'
 import { rulesOpen } from '../lib/communityRules'
-import BaseDialog from './BaseDialog.vue'
-import MarkdownContent from './MarkdownContent.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import MarkdownContent from '../shared/components/MarkdownContent.vue'
 
 const onboarding = useOnboardingStore()
 const close = () => { rulesOpen.value = false }

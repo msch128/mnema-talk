@@ -5,8 +5,8 @@ import { categoryFixture, channelFixture, fixtureId, readStateFixture } from '..
 
 const pending = vi.hoisted(() => [] as { url: string; resolve: (value: unknown) => void }[])
 
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string) => new Promise(resolve => { pending.push({ url, resolve }) }))
 }))
 

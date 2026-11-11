@@ -2,15 +2,15 @@
 // "Roles": the roles an admin opened to everyone. Choosing one is a personal
 // preference, so it applies at once and says "Saved" (doc/settings-ux.md).
 import { computed, onMounted, ref } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { arrayDecoder } from '../types/validation'
 import { isPermRole } from '../types/rest'
 import type { Role } from '../types/domain'
-import { roleColorCss } from '../lib/permissions'
+import { roleColorCss } from '../shared/lib/permissions'
 import { usePermissionsStore } from '../stores/permissions'
-import { usePreferenceSave } from '../composables/usePreferenceSave'
-import SavedIndicator from './SavedIndicator.vue'
-import SwitchRow from './SwitchRow.vue'
+import { usePreferenceSave } from '../shared/composables/usePreferenceSave'
+import SavedIndicator from '../shared/components/SavedIndicator.vue'
+import SwitchRow from '../shared/components/SwitchRow.vue'
 
 const decodeRoles = arrayDecoder('roles', isPermRole)
 

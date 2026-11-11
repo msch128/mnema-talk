@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAuthStore } from './auth'
-import { api, ApiError } from '../lib/api'
+import { api, ApiError } from '../shared/lib/api'
 import { locale, setLocale } from '../i18n'
 import { userFixture, fixtureId, requireValue } from '../test-fixtures.fixture'
 import { DRAFT_KEY_PREFIX, hasDraft, setDraft } from '../lib/drafts'

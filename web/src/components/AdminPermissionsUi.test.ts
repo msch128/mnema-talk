@@ -1,21 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import AdminDashboard from './AdminDashboard.vue'
 import AdminUsersTab from './AdminUsersTab.vue'
 import MemberRolesDialog from './MemberRolesDialog.vue'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { fixtureId, userFixture, voiceUserFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
 import type { AdminUser, Role } from '../types/domain'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn()
 }))

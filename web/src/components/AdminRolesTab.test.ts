@@ -1,24 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import AdminRolesTab from './AdminRolesTab.vue'
 import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
 import type { Role } from '../types/domain'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn()
 }))
 const confirmMock = vi.fn()
-vi.mock('../lib/confirm', () => ({ confirm: (...args: unknown[]) => confirmMock(...args) }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: (...args: unknown[]) => confirmMock(...args) }))
 
 const role = (n: number, overrides: Partial<Role> = {}): Role => ({
   id: fixtureId(20 + n), name: `Role ${n}`, color: 0, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null, ...overrides

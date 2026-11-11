@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import type { DiscordimportPlan, DiscordimportPlanRole } from '../types/rest'
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -8,12 +8,12 @@ import AdminImportTab from './AdminImportTab.vue'
 import { setLocale } from '../i18n'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn()
 }))
-vi.mock('../lib/confirm', () => ({ confirm: vi.fn() }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: vi.fn() }))
 
 const ADMIN_ID = '00000000-0000-4000-8000-000000000a01'
 const MODS_ID = '00000000-0000-4000-8000-000000000a02'

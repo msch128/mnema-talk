@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import VoiceTimer from './VoiceTimer.vue'
-import { now } from '../lib/clock'
+import { now } from '../shared/lib/clock'
 describe('VoiceTimer', () => {
   it('hides without timestamp and updates elapsed server time', async () => {
     const previous = now.value; const wrapper = mount(VoiceTimer)

@@ -1,4 +1,4 @@
-import { api } from './api'
+import { api } from '../shared/lib/api'
 import {
   decodeAuthExportStatus, decodeAuthMemberSessionList, decodeAuthRecoveryCodes, decodeAuthRevokedSessions, decodeAuthTwoFactorSetup,
   type AuthExportStatus, type AuthMemberSession, type AuthTwoFactorSetup

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import type { AdminUser } from '../types/domain'
 import AdminUsersTab from './AdminUsersTab.vue'
 import AdminSystemTab from './AdminSystemTab.vue'
@@ -14,8 +14,8 @@ import { setLocale } from '../i18n'
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 vi.mock('./AdminOpsPanel.vue', () => ({ default: { template: '<div />' } }))
 vi.mock('./AdminUploadLimit.vue', () => ({ default: { template: '<div />' } }))
-vi.mock('../lib/api', async (original) => ({
-  ...(await original<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (original) => ({
+  ...(await original<typeof import('../shared/lib/api')>()),
   api: (path: string, options?: ApiOptions) => apiMock(path, options),
 }))
 

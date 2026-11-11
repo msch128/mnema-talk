@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { TalkParticipant } from './presentationTypes'
+import type { TalkParticipant } from '../shared/components/presentationTypes'
 // The raised hands of a Stage, the one waiting longest first. Only shown to
 // members who hold Manage stage: accept gives talk power in one click,
 // dismiss lowers the hand.
 import { Check, Hand, X } from '@lucide/vue'
-import UserAvatar from './UserAvatar.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 import { focusRing } from './talkButtons'
 
 defineProps({

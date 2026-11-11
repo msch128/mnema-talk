@@ -3,10 +3,10 @@
 // and the channel overwrites. Reloads when `version` changes (roles saved).
 import { ref, watch, onMounted } from 'vue'
 import { Eye, TriangleAlert } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { decodeBotAccess } from '../types/rest'
 import type { BotAccess } from '../types/rest'
-import { PERMISSION_BITS, PERMISSION_KEYS } from '../lib/permissions'
+import { PERMISSION_BITS, PERMISSION_KEYS } from '../shared/lib/permissions'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 

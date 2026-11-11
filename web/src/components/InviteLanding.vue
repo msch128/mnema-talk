@@ -7,8 +7,8 @@
 // sign-up form, one that does not greets the visitor on the sign-in page; an unknown one is
 // just the login dialog.
 import { ref, onMounted } from 'vue'
-import { api } from '../lib/api'
-import { inviteCodeFromPath, joinSlugFromPath, vanityInviteCode, type InviteContext } from '../lib/inviteLink'
+import { api } from '../shared/lib/api'
+import { inviteCodeFromPath, joinSlugFromPath, vanityInviteCode, type InviteContext } from '../shared/lib/inviteLink'
 import { decodeOnboardingInvitePreview, decodeOnboardingJoinPreview } from '../types/rest'
 import LoginModal from './LoginModal.vue'
 

@@ -1,4 +1,4 @@
-import { caughtErrorMessage, isApiError } from '../../lib/api'
+import { caughtErrorMessage, isApiError } from '../../shared/lib/api'
 import { isRecord } from '../../types/validation'
 import { t } from '../../i18n'
 import type { Message } from '../../types/domain'

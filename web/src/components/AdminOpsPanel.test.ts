@@ -1,10 +1,10 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import AdminOpsPanel from './AdminOpsPanel.vue'
-import Sparkline from './Sparkline.vue'
+import Sparkline from '../shared/components/Sparkline.vue'
 import { setLocale } from '../i18n'
 import { opsStatus, opsSample } from './opsStatus.fixture'
 
@@ -12,8 +12,8 @@ import { opsStatus, opsSample } from './opsStatus.fixture'
 enableAutoUnmount(afterEach)
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn(),
   ApiError: class ApiError extends Error {}

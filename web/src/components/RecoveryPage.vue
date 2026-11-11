@@ -5,8 +5,8 @@
 import type { PropType } from 'vue'
 import { computed, onMounted, ref } from 'vue'
 import { CheckCircle2, KeyRound, Loader2, XCircle } from '@lucide/vue'
-import { api, caughtErrorMessage, isApiError } from '../lib/api'
-import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
+import { api, caughtErrorMessage, isApiError } from '../shared/lib/api'
+import { MIN_PASSWORD_LENGTH } from '../shared/lib/passwordPolicy'
 import { scrubRecoveryUrl, type RecoveryLink } from '../lib/recoveryLink'
 import { t } from '../i18n'
 

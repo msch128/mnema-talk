@@ -3,13 +3,13 @@
 // with a reason (the author is told), or delete the latest messages of a
 // member in the channel.
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { pendingMessageModeration, MAX_BULK_DELETE, DEFAULT_BULK_DELETE } from '../lib/messageModeration'
-import { MAX_REASON_LENGTH } from '../lib/moderation'
+import { MAX_REASON_LENGTH } from '../shared/lib/moderation'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 
 const pending = computed(() => pendingMessageModeration.value)
 const request = computed(() => pending.value?.request ?? null)

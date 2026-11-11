@@ -11,8 +11,8 @@ import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { useStatusEditor } from '../composables/useStatusEditor'
 
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn(() => Promise.resolve(null)),
   onUnauthorized: vi.fn(),
   ApiError: class ApiError extends Error {}

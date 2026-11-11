@@ -3,7 +3,7 @@
 import { onBeforeUnmount, onMounted, watch } from 'vue'
 import { Lightbulb, X } from '@lucide/vue'
 import { useOnboardingTips } from '../composables/useOnboardingTips'
-import { formatShortcut } from '../lib/shortcuts'
+import { formatShortcut } from '../shared/lib/shortcuts'
 import { searchOpen } from '../lib/globalSearch'
 import { useVoiceStore } from '../stores/voice'
 import type { TipId } from '../lib/onboardingTips'

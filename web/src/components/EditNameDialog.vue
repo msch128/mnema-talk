@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import { charCount } from '../lib/textLength'
+import { charCount } from '../shared/lib/textLength'
 import type { PropType } from 'vue'
 import type { Channel, Category } from '../types/domain'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 // Edit a channel (name, topic, slow mode, auto-delete) or a category (name) from
 // the sidebar menu. The edit is one draft with one Save (doc/settings-ux.md).
 // Without an entity it creates a new category instead (appended at the end).
 import { ref, computed } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
-import { nextSortOrder } from '../lib/channelLayout'
-import { confirmAutoDelete } from '../lib/autoDelete'
-import { saveKeys } from '../composables/draftGuard'
-import { confirmDiscard, normalise, useSettingsDraft } from '../composables/useSettingsDraft'
-import { useLeaveGuard } from '../composables/draftGuard'
+import { nextSortOrder } from '../shared/lib/channelLayout'
+import { confirmAutoDelete } from '../shared/lib/autoDelete'
+import { saveKeys } from '../shared/composables/draftGuard'
+import { confirmDiscard, normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
+import { useLeaveGuard } from '../shared/composables/draftGuard'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 import SlowModePicker from './SlowModePicker.vue'
 import ChannelAutoDeleteField from './ChannelAutoDeleteField.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 interface ChannelForm { name: string; topic: string; slow: number; autoDelete: number }
 

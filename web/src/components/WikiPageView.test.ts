@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import WikiPageView from './WikiPageView.vue'
-import { ApiError } from '../lib/api'
-import { pendingConfirm } from '../lib/confirm'
-import { currentRoute, navigate } from '../lib/router'
+import { ApiError } from '../shared/lib/api'
+import { pendingConfirm } from '../shared/lib/confirm'
+import { currentRoute, navigate } from '../shared/lib/router'
 import { useToastStore } from '../stores/toast'
 import { useWikiStore } from '../stores/wiki'
 import { EDIT_WIKI, grantWiki, MANAGE_WIKI, summary, VIEW_WIKI, wikiPage } from '../wiki.fixture'
@@ -12,7 +12,7 @@ import { EDIT_WIKI, grantWiki, MANAGE_WIKI, summary, VIEW_WIKI, wikiPage } from 
 const api = vi.hoisted(() => ({ deleteWikiPage: vi.fn(), undeleteWikiPage: vi.fn(), lockWikiPage: vi.fn(), changeWikiPage: vi.fn(), fetchWikiTree: vi.fn() }))
 vi.mock('../lib/wikiApi', () => api)
 const copy = vi.hoisted(() => vi.fn())
-vi.mock('../lib/clipboard', () => ({ copyToClipboard: copy }))
+vi.mock('../shared/lib/clipboard', () => ({ copyToClipboard: copy }))
 
 enableAutoUnmount(afterEach)
 

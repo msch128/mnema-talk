@@ -5,13 +5,13 @@ import type { EventComment } from '../lib/eventCommentsApi'
 import { useEventComments } from '../composables/useEventComments'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
-import { confirm } from '../lib/confirm'
-import { charCount } from '../lib/textLength'
+import { confirm } from '../shared/lib/confirm'
+import { charCount } from '../shared/lib/textLength'
 import { eventAvatar } from '../lib/eventAvatar'
-import { relative } from '../lib/time'
+import { relative } from '../shared/lib/time'
 import { locale, t } from '../i18n'
-import MarkdownContent from './MarkdownContent.vue'
-import UserAvatar from './UserAvatar.vue'
+import MarkdownContent from '../shared/components/MarkdownContent.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 
 // The discussion under an event: comments oldest first (older pages on
 // request), a composer, edit and delete where the member may, and a bell that

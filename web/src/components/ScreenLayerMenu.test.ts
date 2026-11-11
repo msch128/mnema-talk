@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ScreenLayerMenu from './ScreenLayerMenu.vue'
-import ContextMenu from './ContextMenu.vue'
+import ContextMenu from '../shared/components/ContextMenu.vue'
 import { useVoiceStore } from '../stores/voice'
 import { t } from '../i18n'
 

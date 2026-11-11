@@ -4,12 +4,12 @@
 // into view). Every move goes through `commit` from useChannelLayout, so it
 // shows at once, is saved right away and can be undone from a toast.
 //
-// The rules where something lands live in lib/channelLayout; this file only
+// The rules where something lands live in shared/lib/channelLayout; this file only
 // turns pointer positions into the "hits" those rules take.
 import { ref, computed, watch, nextTick, useId, getCurrentScope, onScopeDispose } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import type { Category, Channel } from '../types/domain'
-import type { ChannelTree } from '../lib/channelTree'
+import type { ChannelTree } from '../shared/lib/channelTree'
 import type { DropHit, DropTarget } from '../lib/channelDrop'
 import type { useChannelLayout } from './useChannelLayout'
 
@@ -18,9 +18,9 @@ type SidebarItem = { kind: 'channel'; id: string; name: string; type: Channel['t
 interface SidebarTarget extends DropTarget { overHeader?: boolean }
 type SidebarTree = ChannelTree<Channel, Category>
 interface ReorderOptions { layout: ComputedRef<SidebarTree>; commit: ReturnType<typeof useChannelLayout>['commit']; collapsed: Ref<Set<string>>; expandCategory(id: string): void; enabled(): boolean; onLongPress?: (kind: ItemKind, entity: Channel | Category, event: PointerEvent) => void }
-import { locateChannel, locateCategory, moveChannel, moveCategory, stepChannel, stepCategory } from '../lib/channelLayout'
+import { locateChannel, locateCategory, moveChannel, moveCategory, stepChannel, stepCategory } from '../shared/lib/channelLayout'
 import { resolveChannelDrop, resolveCategoryDrop } from '../lib/channelDrop'
-import { useSortableDrag } from './useSortableDrag'
+import { useSortableDrag } from '../shared/composables/useSortableDrag'
 import { t } from '../i18n'
 
 // data-drop-section value of the headless uncategorized group.

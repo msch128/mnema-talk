@@ -7,7 +7,7 @@ import { useVoiceStore } from '../stores/voice'
 import { layerDetail, layerName } from '../lib/screenLayers'
 import type { ScreenLayer } from '../types/events'
 import { t } from '../i18n'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 
 interface LayerMenuOptions {
   layers: ScreenLayer[]

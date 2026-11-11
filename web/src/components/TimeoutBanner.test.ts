@@ -5,7 +5,7 @@ import TimeoutBanner from './TimeoutBanner.vue'
 import { setLocale } from '../i18n'
 import { usePermissionsStore } from '../stores/permissions'
 
-vi.mock('../lib/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../lib/api')>()), api: vi.fn() }))
+vi.mock('../shared/lib/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../shared/lib/api')>()), api: vi.fn() }))
 
 function info(until?: string, reason?: string) {
   return { owner: false, permissions: 0, role_ids: [], top_position: 0, max_upload_mb: 50, catalog: [], channels: [], ...(until ? { timeout_until: until } : {}), ...(reason ? { timeout_reason: reason } : {}) }

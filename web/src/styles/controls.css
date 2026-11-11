@@ -82,7 +82,7 @@
     cursor: not-allowed;
   }
 
-  /* Slider: --fill (set by lib/rangeFill) paints the part up to the thumb. */
+  /* Slider: --fill (set by shared/lib/rangeFill) paints the part up to the thumb. */
   input[type='range'] {
     appearance: none;
     width: 100%;

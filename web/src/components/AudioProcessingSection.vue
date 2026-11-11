@@ -2,7 +2,7 @@
 import { Sparkles } from '@lucide/vue'
 import type { NoiseMode } from '../stores/voice'
 import { useVoiceStore, NOISE_MODES } from '../stores/voice'
-import { rovingKeydown } from '../lib/rovingFocus'
+import { rovingKeydown } from '../shared/lib/rovingFocus'
 import { useActiveAudioSettings } from '../composables/useActiveAudioSettings'
 
 // The noise filter and echo cancellation. The rarely used processing options

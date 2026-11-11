@@ -6,8 +6,8 @@ import type { ChatEmbed } from '../types/rest'
 // as links the reader chooses to open.
 import { ExternalLink } from '@lucide/vue'
 import { locale } from '../i18n'
-import { dateTime } from '../lib/time'
-import MarkdownContent from './MarkdownContent.vue'
+import { dateTime } from '../shared/lib/time'
+import MarkdownContent from '../shared/components/MarkdownContent.vue'
 import TalkInviteCard from './TalkInviteCard.vue'
 import CallMissedNote from './CallMissedNote.vue'
 

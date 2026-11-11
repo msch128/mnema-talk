@@ -15,20 +15,20 @@ import { i18nPlugin, setLocale, t as tr } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
 import { dmFixture, dmMemberFixture } from '../dm.fixture'
-import type { ApiOptions } from '../lib/api'
-import { ApiError } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
+import { ApiError } from '../shared/lib/api'
 import { dmErrorText } from '../lib/dm'
 import type { ChatMember } from '../types/rest'
 
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => {
     try { return Promise.resolve(http.handle(url, options)) } catch (error) { return Promise.reject(error) }
   })
 }))
 const confirmMock = vi.hoisted(() => vi.fn())
-vi.mock('../lib/confirm', () => ({ confirm: confirmMock }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: confirmMock }))
 
 const me = fixtureId(1)
 const ada = dmMemberFixture(2, { display_name: 'Ada' })

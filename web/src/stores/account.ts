@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeAuthAccountInfo, type AuthAccountInfo } from '../types/rest'
 
 // The signed-in member's own sign-in security (GET /api/users/me/account):

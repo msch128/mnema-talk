@@ -2,9 +2,9 @@
 import type { Member } from '../types/domain'
 import { Crown, X } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
-import { roleColorCss } from '../lib/permissions'
+import { roleColorCss } from '../shared/lib/permissions'
 import MemberRow from './MemberRow.vue'
-import ContextMenu from './ContextMenu.vue'
+import ContextMenu from '../shared/components/ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
 import { useMemberGroups } from '../composables/useMemberGroups'
 

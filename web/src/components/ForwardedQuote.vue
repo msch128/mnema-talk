@@ -7,7 +7,7 @@ import { useChatStore } from '../stores/chat'
 import { useForwardQuotesStore } from '../stores/forwardQuotes'
 import { previewText } from '../lib/replies'
 import { locale } from '../i18n'
-import UserAvatar from './UserAvatar.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 
 // The original under a forwarded message. The message carries a reference
 // only; the quote is what the server returns for this reader, so someone who

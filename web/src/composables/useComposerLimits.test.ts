@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import { mount } from '@vue/test-utils'
 import { useComposerLimits } from './useComposerLimits'
-import { ApiError } from '../lib/api'
+import { ApiError } from '../shared/lib/api'
 import { MAX_MESSAGE_LENGTH } from '../lib/composerLimits'
 import { setLocale } from '../i18n'
 

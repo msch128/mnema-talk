@@ -10,8 +10,8 @@ import { useChatStore } from '../stores/chat'
 import { useOnboardingStore } from '../stores/onboarding'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
-import MarkdownContent from './MarkdownContent.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import MarkdownContent from '../shared/components/MarkdownContent.vue'
 import WelcomeProfileStep from './WelcomeProfileStep.vue'
 
 const { step, stepNumber, total, open, canClose, accepting, acceptFailed, next, close, accept } = useWelcomeFlow()

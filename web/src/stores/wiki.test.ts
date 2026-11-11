@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { ApiError } from '../lib/api'
+import { ApiError } from '../shared/lib/api'
 import { useWikiStore } from './wiki'
 import { wikiDirty, wikiQuery } from '../lib/wikiNav'
 import { EDIT_WIKI, grantWiki, MANAGE_WIKI, summary, VIEW_WIKI, wikiPage } from '../wiki.fixture'

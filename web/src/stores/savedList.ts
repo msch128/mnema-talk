@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { api, ApiError } from '../lib/api'
+import { api, ApiError } from '../shared/lib/api'
 import { decodeChatSavedPage, type ChatSavedMessage } from '../types/rest'
 
 const PAGE = 50

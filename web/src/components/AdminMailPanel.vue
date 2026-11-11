@@ -4,7 +4,7 @@
 import type { PropType } from 'vue'
 import { ref } from 'vue'
 import { Loader2, Send } from '@lucide/vue'
-import { api, caughtErrorMessage, isApiError } from '../lib/api'
+import { api, caughtErrorMessage, isApiError } from '../shared/lib/api'
 import type { ServerMailStatus } from '../types/rest'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'

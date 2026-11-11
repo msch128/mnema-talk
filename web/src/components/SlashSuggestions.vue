@@ -7,7 +7,7 @@ import type { BotChannelCommand } from '../types/rest'
 // on every row. A fade at the bottom says there is more to scroll to.
 import { nextTick, onMounted, ref, watch } from 'vue'
 import { Slash } from '@lucide/vue'
-import UserAvatar from './UserAvatar.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 import { commandDescription } from '../lib/slashCommands'
 
 const props = defineProps({

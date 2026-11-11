@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { TalkParticipant } from './presentationTypes'
+import type { TalkParticipant } from '../shared/components/presentationTypes'
 import { computed } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'

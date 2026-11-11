@@ -4,7 +4,7 @@
 // shows the copy the reporter's report kept. Needs Manage reports.
 import { onMounted, ref, watch } from 'vue'
 import { ChevronRight, Flag, Loader2, MessageCircle, ShieldCheck } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { decodeChatReportsPage, type ChatReport } from '../types/rest'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
@@ -12,9 +12,9 @@ import { storedRuleLabel } from '../lib/automod'
 import { relativeTime } from '../lib/bots'
 import { useChatStore } from '../stores/chat'
 import AdminReportDetail from './AdminReportDetail.vue'
-import EmptyState from './EmptyState.vue'
-import StatePanel from './StatePanel.vue'
-import UserAvatar from './UserAvatar.vue'
+import EmptyState from '../shared/components/EmptyState.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 
 const PAGE = 25
 type StatusFilter = 'open' | 'resolved' | 'dismissed' | 'all'

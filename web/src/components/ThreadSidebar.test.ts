@@ -14,7 +14,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { usePermissionsStore } from '../stores/permissions'
 import { stageAttachment } from '../lib/attachmentsApi'
 import { setLocale, t } from '../i18n'
-import { closeViewer, viewerState } from '../composables/useMediaViewer'
+import { closeViewer, viewerState } from '../shared/composables/useMediaViewer'
 
 vi.mock('../lib/forumApi', () => ({
   updateForumPost: vi.fn(),
@@ -317,11 +317,11 @@ describe('ThreadSidebar replies', () => {
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import MessageEditor from './MessageEditor.vue'
 import ReactionBar from './ReactionBar.vue'
-import ReactionPalette from './ReactionPalette.vue'
-import UserAvatar from './UserAvatar.vue'
+import ReactionPalette from '../shared/components/ReactionPalette.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
-import EmojiButton from './EmojiButton.vue'
-import { pendingConfirm } from '../lib/confirm'
+import EmojiButton from '../shared/components/EmojiButton.vue'
+import { pendingConfirm } from '../shared/lib/confirm'
 
 const replyComposer = () => requireValue(w.findAll<HTMLTextAreaElement>('textarea').at(-1))
 const threadFrame = async () => { await new Promise(resolve => requestAnimationFrame(resolve)); await flushPromises() }

@@ -3,7 +3,7 @@
 // (over UDP and over TCP). It needs no microphone: each probe is one data
 // channel to a throwaway connection on the server (POST /api/webrtc/probe),
 // which is no Talk, shows no presence and closes itself.
-import { ApiError } from './api'
+import { ApiError } from '../shared/lib/api'
 import { LAN_SPEED_MBPS, isLocalAddress, type CandidateCounts, type ConnectionReport, type PathResult, type SpeedResult } from './connectionVerdict'
 
 export interface ConnectionTestDeps {

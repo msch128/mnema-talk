@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import TalkInviteCard from './TalkInviteCard.vue'
 import TalkLeaderMark from './TalkLeaderMark.vue'
 import DmTalkActions from './DmTalkActions.vue'
@@ -11,21 +11,21 @@ import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { useDmCallsStore } from '../stores/dmCalls'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { channelFixture, fixtureId, messageFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
-import { ApiError } from '../lib/api'
+import { ApiError } from '../shared/lib/api'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn()
 }))
 const joinVoiceChannel = vi.fn()
 vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel }) }))
 const navigate = vi.fn()
-vi.mock('../lib/router', async importOriginal => ({ ...(await importOriginal<typeof import('../lib/router')>()), navigate: (...a: unknown[]) => navigate(...a) }))
+vi.mock('../shared/lib/router', async importOriginal => ({ ...(await importOriginal<typeof import('../shared/lib/router')>()), navigate: (...a: unknown[]) => navigate(...a) }))
 
 const talk = channelFixture({ id: fixtureId(40), type: 'voice', name: 'Talk 1' })
 

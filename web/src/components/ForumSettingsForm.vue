@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { charCount } from '../lib/textLength'
+import { charCount } from '../shared/lib/textLength'
 import { updateForumSettings } from '../lib/forumApi'
 import type { ForumSettings } from '../lib/forumApi'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import SwitchRow from './SwitchRow.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import SwitchRow from '../shared/components/SwitchRow.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 // The forum's rules: whether a post needs a tag, and the guidelines shown above
 // the new-post form. One draft with its own bar; fresh settings from outside

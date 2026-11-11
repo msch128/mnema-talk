@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { installState, promptInstall } from '../lib/pwa'
+import { installState, promptInstall } from '../shared/lib/pwa'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 

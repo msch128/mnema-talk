@@ -1,5 +1,5 @@
 // Helpers for reply previews (message.reply_to).
-import { markdownToPlain } from './markdown'
+import { markdownToPlain } from '../shared/lib/markdown'
 import type { Message, ReplyPreview } from '../types/domain'
 
 export const REPLY_PREVIEW_LEN = 200

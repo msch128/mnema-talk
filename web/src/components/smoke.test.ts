@@ -13,7 +13,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 
 import LoginModal from './LoginModal.vue'
-import LegalModal from './LegalModal.vue'
+import LegalModal from '../shared/components/LegalModal.vue'
 import CreateChannelModal from './CreateChannelModal.vue'
 import ConnectionStatsModal from './ConnectionStatsModal.vue'
 import AdminDashboard from './AdminDashboard.vue'

@@ -1,6 +1,6 @@
 import { playSoundEffect } from '../../lib/soundEffects'
 import type { useVoiceStore } from '../../stores/voice'
-import { isTypingEvent } from '../../lib/typingTarget'
+import { isTypingEvent } from '../../shared/lib/typingTarget'
 
 type VoiceStore = ReturnType<typeof useVoiceStore>
 

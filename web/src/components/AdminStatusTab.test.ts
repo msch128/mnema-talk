@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import AdminStatusTab from './AdminStatusTab.vue'
 import { useToastStore } from '../stores/toast'
 import { setLocale } from '../i18n'
 import type { OperatorStatus } from '../types/domain'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (original) => ({
-  ...(await original<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (original) => ({
+  ...(await original<typeof import('../shared/lib/api')>()),
   api: (path: string, options?: ApiOptions) => apiMock(path, options),
 }))
 

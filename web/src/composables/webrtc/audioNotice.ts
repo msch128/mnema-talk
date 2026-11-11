@@ -1,5 +1,5 @@
 import { t } from '../../i18n'
-import { openSettings, type SettingsField } from '../../lib/settingsDialog'
+import { openSettings, type SettingsField } from '../../shared/lib/settingsDialog'
 import { useToastStore, type ToastAction, type ToastOptions } from '../../stores/toast'
 
 const shown = new Set<string>()

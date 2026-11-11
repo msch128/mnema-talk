@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renderMarkdown } from './markdown'
+import { renderMarkdown } from '../shared/lib/markdown'
 import type { WikiPageSummary } from './wikiApi'
 import { wikiImageRule, wikiLinkRule } from './wikiLinks'
 

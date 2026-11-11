@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { defineComponent, h, ref } from 'vue'
 import AudioInputSection from './AudioInputSection.vue'
-import { useDialog } from '../composables/useDialog'
+import { useDialog } from '../shared/composables/useDialog'
 import { useVoiceStore } from '../stores/voice'
 import { setLocale } from '../i18n'
 

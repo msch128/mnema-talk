@@ -5,7 +5,7 @@ import { usePttHint } from './usePttHint'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import { settingsTab } from '../lib/settingsDialog'
+import { settingsTab } from '../shared/lib/settingsDialog'
 
 function start() {
   const scope = effectScope()

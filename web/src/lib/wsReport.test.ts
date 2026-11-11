@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ApiOptions } from './api'
+import type { ApiOptions } from '../shared/lib/api'
 import { reportWebSocket } from './wsReport'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('./api', () => ({ api: (path: string, options?: ApiOptions) => apiMock(path, options) }))
+vi.mock('../shared/lib/api', () => ({ api: (path: string, options?: ApiOptions) => apiMock(path, options) }))
 
 beforeEach(() => { vi.useFakeTimers(); apiMock.mockReset(); apiMock.mockResolvedValue(null) })
 afterEach(() => vi.useRealTimers())

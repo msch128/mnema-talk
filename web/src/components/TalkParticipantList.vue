@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { TalkParticipant } from './presentationTypes'
+import type { TalkParticipant } from '../shared/components/presentationTypes'
 // Who is in a Talk and since when: the list of the "N participants" popover in
 // the Talk header and of the overview that a member's profile opens. Arrow
 // keys move between the rows; a row selects its member.
 import { Camera, MonitorUp } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
-import UserAvatar from './UserAvatar.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
-import MuteMarks from './MuteMarks.vue'
+import MuteMarks from '../shared/components/MuteMarks.vue'
 import TalkLeaderMark from './TalkLeaderMark.vue'
 
 defineProps({

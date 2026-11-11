@@ -2,17 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import AdminDashboard from './AdminDashboard.vue'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 import { userFixture } from '../test-fixtures.fixture'
 import { useAuthStore } from '../stores/auth'
 import { setLocale } from '../i18n'
-import { useCompactLayout } from '../composables/useCompactLayout'
+import { useCompactLayout } from '../shared/composables/useCompactLayout'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (original) => ({
-  ...(await original<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (original) => ({
+  ...(await original<typeof import('../shared/lib/api')>()),
   api: (path: string, options?: ApiOptions) => apiMock(path, options),
 }))
 // The live operations panel has its own tests and endpoint.

@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
@@ -6,13 +6,13 @@ import { createPinia, setActivePinia } from 'pinia'
 import SettingsDialog from './SettingsDialog.vue'
 import { setLocale } from '../i18n'
 import { useAccountStore } from '../stores/account'
-import { settingsTab } from '../lib/settingsDialog'
+import { settingsTab } from '../shared/lib/settingsDialog'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
 
@@ -235,7 +235,7 @@ describe('SettingsDialog sections', () => {
 describe('SettingsDialog jump targets', () => {
   it('puts the cursor on the field a notice asked for, in the section it asked for', async () => {
     apiMock.mockImplementation(async () => ({ sessions: [] }))
-    const { openSettings, settingsField } = await import('../lib/settingsDialog')
+    const { openSettings, settingsField } = await import('../shared/lib/settingsDialog')
     openSettings('audio', { field: 'input-device' })
     const w = mount(SettingsDialog, { attachTo: document.body, global: { directives: { tooltip: {} } } })
     await flushPromises()
@@ -249,7 +249,7 @@ describe('SettingsDialog jump targets', () => {
 
   it('forgets the requested field when the person picks a section themselves', async () => {
     apiMock.mockImplementation(async () => ({ sessions: [] }))
-    const { openSettings, settingsField } = await import('../lib/settingsDialog')
+    const { openSettings, settingsField } = await import('../shared/lib/settingsDialog')
     const w = await open(none)
     openSettings('signin', { field: 'noise' })
     await w.get('[data-testid="settings-tab-sessions"]').trigger('click')

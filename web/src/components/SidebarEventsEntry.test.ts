@@ -8,8 +8,8 @@ import { setLocale } from '../i18n'
 import { closeEvents, eventsRequest } from '../lib/eventsDialog'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn(() => Promise.resolve([]))
 }))
 

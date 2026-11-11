@@ -2,10 +2,10 @@
 import type { PropType } from 'vue'
 import type { Category, Channel } from '../types/domain'
 import { computed } from 'vue'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 // The rename dialogs of the layout editor: a category's name, or a channel's
 // name and topic. One draft with one Save; `submit` stores the trimmed fields

@@ -5,11 +5,11 @@
 // themselves. Nothing is impersonated and nothing here changes anything.
 import { computed, onMounted, ref } from 'vue'
 import { Check, Hash, Minus, Volume2 } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
-import { CHANNEL_PERMISSION_KEYS } from '../lib/permissions'
+import { api, caughtErrorMessage } from '../shared/lib/api'
+import { CHANNEL_PERMISSION_KEYS } from '../shared/lib/permissions'
 import { decodeChatViewAsRole, type ChatViewAsChannel, type ChatViewAsRole } from '../types/rest'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 
 const props = defineProps<{ roleId: string, roleName: string }>()
 const emit = defineEmits<{ close: [] }>()

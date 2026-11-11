@@ -6,18 +6,18 @@
 import type { PropType } from 'vue'
 import { computed, ref } from 'vue'
 import { Trash2, Lock, Eye } from '@lucide/vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeRole } from '../types/domain'
 import type { Role } from '../types/domain'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { uploadPatch } from '../lib/roleSave'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
-import { PERMISSION_BITS, ROLE_COLOR_PRESETS, blockedForSelfAssign, parseRoleColor, roleColorCss } from '../lib/permissions'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
+import { PERMISSION_BITS, ROLE_COLOR_PRESETS, blockedForSelfAssign, parseRoleColor, roleColorCss } from '../shared/lib/permissions'
 import { t } from '../i18n'
 import RolePermissionPicker from './RolePermissionPicker.vue'
 import RoleViewAsDialog from './RoleViewAsDialog.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 const props = defineProps({
   role: { type: Object as PropType<Role>, required: true }

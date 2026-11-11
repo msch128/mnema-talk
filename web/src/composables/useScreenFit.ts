@@ -7,7 +7,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { fitLayer } from '../lib/screenLayers'
-import { useElementSize } from './useElementSize'
+import { useElementSize } from '../shared/composables/useElementSize'
 
 /** A size change must hold this long before it is sent, so resizing a window is one message. */
 export const FIT_SETTLE_MS = 400

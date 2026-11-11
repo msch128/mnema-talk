@@ -1,7 +1,7 @@
 import type { DeepFilterAssets, FilterOptions, FilterStats } from './dfnTypes'
 import { isPageUnloading } from '../audioHealth'
 import { isDfnReady, isDfnFailed, isDfnStats } from './dfnTypes'
-import { ownScriptUrl } from '../trustedTypes'
+import { ownScriptUrl } from '../../shared/lib/trustedTypes'
 import dfnWorkerUrl from './dfnWorker.ts?worker&url'
 
 export interface FilterNode extends AudioWorkletNode { destroy?: () => void; filterStats?: FilterStats }

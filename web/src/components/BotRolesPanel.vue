@@ -6,7 +6,7 @@ import { computed, onMounted } from 'vue'
 import { Shield, TriangleAlert, Lock } from '@lucide/vue'
 import type { BotBot } from '../types/rest'
 import { isPowerfulRole } from '../lib/bots'
-import { roleColorCss } from '../lib/permissions'
+import { roleColorCss } from '../shared/lib/permissions'
 import { usePermissionsStore } from '../stores/permissions'
 
 const props = defineProps({

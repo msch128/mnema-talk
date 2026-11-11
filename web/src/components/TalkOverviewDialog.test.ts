@@ -12,8 +12,8 @@ import { categoryFixture, channelFixture, userFixture, voiceUserFixture } from '
 const joinVoiceChannel = vi.fn()
 vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => ({ joinVoiceChannel }) }))
 const confirm = vi.fn()
-vi.mock('../lib/confirm', () => ({ confirm: (o: unknown) => confirm(o) }))
-vi.mock('../lib/router', () => ({ navigate: vi.fn() }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: (o: unknown) => confirm(o) }))
+vi.mock('../shared/lib/router', () => ({ navigate: vi.fn() }))
 
 let wrapper: VueWrapper
 const talk = channelFixture({ type: 'voice', name: 'Lounge' })

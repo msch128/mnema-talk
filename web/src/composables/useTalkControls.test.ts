@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, ref, type EffectScope } from 'vue'
 import { required } from '../store-test-support.fixture'
-import { AUTO_HIDE_DELAY } from './useAutoHide'
-import { useCompactLayout } from './useCompactLayout'
+import { AUTO_HIDE_DELAY } from '../shared/composables/useAutoHide'
+import { useCompactLayout } from '../shared/composables/useCompactLayout'
 import { MOVE_HINT_SESSIONS, useTalkControls } from './useTalkControls'
 
 let scope: EffectScope | undefined

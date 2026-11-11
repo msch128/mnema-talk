@@ -3,7 +3,7 @@
 // (reply authors, root authors and mentioned members follow on their own) and
 // tells open sessions through thread_follow_updated; an older server has no
 // such list and the notification rules stay as they were.
-import { api, isApiError } from '../../lib/api'
+import { api, isApiError } from '../../shared/lib/api'
 import { decodeChatFollowedThreads, decodeChatThreadFollow } from '../../types/rest'
 import { useToastStore } from '../toast'
 import { t } from '../../i18n'

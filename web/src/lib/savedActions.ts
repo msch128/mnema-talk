@@ -3,7 +3,7 @@
 import type { Message } from '../types/domain'
 import { useSavedStore } from '../stores/saved'
 import { useToastStore } from '../stores/toast'
-import { caughtErrorMessage } from './api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { openSavedPanel } from './savedPanel'
 import { t } from '../i18n'
 

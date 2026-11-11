@@ -10,8 +10,8 @@ import { useToastStore } from '../stores/toast'
 import { useOnboardingStore } from '../stores/onboarding'
 import { setLocale } from '../i18n'
 
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (_path: string, options?: { json?: unknown }) => {
     if (options?.json) puts.push(options.json)
     return Promise.resolve(record({ dismissed_tips: puts.flatMap(p => (p as { dismissed_tips: string[] }).dismissed_tips) }))

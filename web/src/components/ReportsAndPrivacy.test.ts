@@ -7,7 +7,7 @@ import AccountDmPolicy from './AccountDmPolicy.vue'
 import AccountBlockedList from './AccountBlockedList.vue'
 import AdminAccessSettings from './AdminAccessSettings.vue'
 import AdminDashboard from './AdminDashboard.vue'
-import { closeReport, openReport } from '../lib/reportDialog'
+import { closeReport, openReport } from '../shared/lib/reportDialog'
 import { useAuthStore } from '../stores/auth'
 import { useBlocksStore } from '../stores/blocks'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
@@ -16,19 +16,19 @@ import { useToastStore } from '../stores/toast'
 import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
-import type { ApiOptions } from '../lib/api'
-import { ApiError } from '../lib/api'
-import { PERMISSION_BITS } from '../lib/permissions'
+import type { ApiOptions } from '../shared/lib/api'
+import { ApiError } from '../shared/lib/api'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => {
     try { return Promise.resolve(http.handle(url, options)) } catch (error) { return Promise.reject(error) }
   })
 }))
 const confirmMock = vi.hoisted(() => vi.fn())
-vi.mock('../lib/confirm', () => ({ confirm: confirmMock }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: confirmMock }))
 
 const global = { plugins: [i18nPlugin], directives: { tooltip } }
 const party = (n: number, username: string) => ({ id: fixtureId(n), username })

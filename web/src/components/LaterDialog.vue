@@ -4,16 +4,16 @@
 // The time is worked out here in the member's own time zone and sent as an
 // absolute time.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { closeLater, pendingLater } from '../lib/laterDialog'
 import {
   earliestInputValue, fromLocalInputValue, isAcceptableTime, presetTime, type LaterPreset
 } from '../lib/laterTimes'
-import { clockTimeOptions } from '../lib/time'
+import { clockTimeOptions } from '../shared/lib/time'
 import { useLaterStore } from '../stores/later'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 
 const request = computed(() => pendingLater.value)
 const later = useLaterStore()

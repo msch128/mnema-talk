@@ -1,7 +1,7 @@
 // [[Page title]] and [[Page title|shown text]] in a wiki page: a link to
 // another page, found by title or address when the page is shown, so it follows
 // a rename. A name that matches no page stays as text with a dotted underline.
-import type { TextRule } from './markdown'
+import type { TextRule } from '../shared/lib/markdown'
 import type { WikiPageSummary } from './wikiApi'
 import { resolveWikiLink } from './wikiTree'
 

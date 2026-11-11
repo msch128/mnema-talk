@@ -5,7 +5,7 @@
 // useAppBadge reports them whenever the read states change.
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useChatStore } from '../stores/chat'
-import { platform } from '../lib/platform'
+import { platform } from '../shared/lib/platform'
 
 export const MARK_ALL_READ_EVENT = 'mnema-desktop:mark-all-read'
 

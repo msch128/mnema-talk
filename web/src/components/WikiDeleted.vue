@@ -2,10 +2,10 @@
 // The deleted pages (Manage the wiki): open one to read it, or restore it.
 import { ref } from 'vue'
 import { Undo2 } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { undeleteWikiPage } from '../lib/wikiApi'
 import { goWiki } from '../lib/wikiNav'
-import { relative } from '../lib/time'
+import { relative } from '../shared/lib/time'
 import { locale, t } from '../i18n'
 import { useToastStore } from '../stores/toast'
 import { useWikiStore } from '../stores/wiki'

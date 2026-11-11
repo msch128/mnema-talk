@@ -3,9 +3,9 @@ import { computed } from 'vue'
 import { Trash2 } from '@lucide/vue'
 import { usePushSettings } from '../composables/usePushSettings'
 import { locale } from '../i18n'
-import { usePreferenceSave } from '../composables/usePreferenceSave'
-import SavedIndicator from './SavedIndicator.vue'
-import SwitchRow from './SwitchRow.vue'
+import { usePreferenceSave } from '../shared/composables/usePreferenceSave'
+import SavedIndicator from '../shared/components/SavedIndicator.vue'
+import SwitchRow from '../shared/components/SwitchRow.vue'
 
 // Push notifications: turn them on for this device, send a test, choose
 // whether they carry the message text, and see or remove the devices.

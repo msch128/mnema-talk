@@ -8,8 +8,8 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { i18nPlugin } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: () => Promise.resolve({ messages: [], has_more: false })
 }))
 

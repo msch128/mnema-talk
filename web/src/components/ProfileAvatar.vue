@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
-import type { LivePresence } from './presentationTypes'
+import type { LivePresence } from '../shared/components/presentationTypes'
 import { ref } from 'vue'
 import { AtSign, Camera, Loader2, MessageCircle, Trash2 } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
-import PresenceDot from './PresenceDot.vue'
-import MediaImage from './MediaImage.vue'
-import { initialOf } from '../lib/initial'
+import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../shared/lib/pickImage'
+import PresenceDot from '../shared/components/PresenceDot.vue'
+import MediaImage from '../shared/components/MediaImage.vue'
+import { initialOf } from '../shared/lib/initial'
 
 // The top of a profile: the large avatar (changeable on one's own profile),
 // the live status dot and the buttons next to it.

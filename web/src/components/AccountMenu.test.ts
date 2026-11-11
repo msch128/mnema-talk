@@ -8,9 +8,9 @@ import { nextTick } from 'vue'
 import UserBar from './UserBar.vue'
 import { useAuthStore } from '../stores/auth'
 import { setLocale, locale } from '../i18n'
-import { settingsTab } from '../lib/settingsDialog'
+import { settingsTab } from '../shared/lib/settingsDialog'
 import { useAccountStore } from '../stores/account'
-import { shortcutsOpen } from '../lib/shortcutsDialog'
+import { shortcutsOpen } from '../shared/lib/shortcutsDialog'
 
 vi.mock('../composables/useWebRTC', () => ({
   useWebRTC: () => ({ leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn() })

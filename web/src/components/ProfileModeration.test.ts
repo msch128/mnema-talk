@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
@@ -11,19 +11,19 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
 import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
 
 const http = vi.hoisted(() => ({ calls: [] as Array<{ url: string; options?: ApiOptions }>, handle: (_url: string, _o?: ApiOptions): unknown => ({}) }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => {
     http.calls.push({ url, ...(options ? { options } : {}) })
     try { return Promise.resolve(http.handle(url, options)) } catch (error) { return Promise.reject(error) }
   })
 }))
 const confirmMock = vi.hoisted(() => vi.fn())
-vi.mock('../lib/confirm', () => ({ confirm: confirmMock }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: confirmMock }))
 
 const global = { plugins: [i18nPlugin], directives: { tooltip } }
 const subject = userFixture({ id: fixtureId(9), username: 'max', display_name: 'Max', role: 'user' })

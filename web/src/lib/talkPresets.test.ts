@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { currentPreset, presetEveryone, presetOnlyRoles, rolesLetIn } from './talkPresets'
-import { PERMISSION_BITS } from './permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import type { Overwrite } from '../types/domain'
 
 const JOIN = PERMISSION_BITS.view_channel | PERMISSION_BITS.connect

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { Locale } from '../types/domain'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 // The ⋯ menu of the user bar: profile, settings, notifications, sound, language, admin, legal, sign out.
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { User, Settings, SlidersHorizontal, Languages, Keyboard, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff, Bell } from '@lucide/vue'
@@ -9,16 +9,16 @@ import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
-import { platform } from '../lib/platform'
-import { openSettings } from '../lib/settingsDialog'
-import { openShortcuts } from '../lib/shortcutsDialog'
+import { platform } from '../shared/lib/platform'
+import { openSettings } from '../shared/lib/settingsDialog'
+import { openShortcuts } from '../shared/lib/shortcutsDialog'
 import { confirmDiscardUnsent } from '../lib/unsentGuard'
-import { notifyDialogOpen } from '../lib/notifyDialog'
+import { notifyDialogOpen } from '../shared/lib/notifyDialog'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useWebRTC } from '../composables/useWebRTC'
 import { locale, SUPPORTED, t } from '../i18n'
-import { useCompactLayout } from '../composables/useCompactLayout'
-import UserAvatar from './UserAvatar.vue'
+import { useCompactLayout } from '../shared/composables/useCompactLayout'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 
 const props = defineProps({ trigger: { type: Object as PropType<HTMLElement | null>, default: null } })
 const emit = defineEmits<{ close: []; 'open-legal': [] }>()

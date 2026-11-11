@@ -1,11 +1,11 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import SearchModal from './SearchModal.vue'
-import { ApiError } from '../lib/api'
+import { ApiError } from '../shared/lib/api'
 import { searchText } from '../lib/globalSearch'
 import { filtersUnsupported, markFiltersSupported } from '../lib/searchSupport'
 import { suggestFor } from '../lib/searchSuggest'
@@ -13,8 +13,8 @@ import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 
 const mockApi = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => mockApi(...args)
 }))
 

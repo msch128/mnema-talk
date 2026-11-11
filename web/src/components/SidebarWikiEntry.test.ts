@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { enableAutoUnmount, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import SidebarWikiEntry from './SidebarWikiEntry.vue'
-import { currentRoute, navigate } from '../lib/router'
+import { currentRoute, navigate } from '../shared/lib/router'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { grantWiki, VIEW_WIKI } from '../wiki.fixture'
 

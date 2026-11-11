@@ -9,11 +9,11 @@ import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from './useWebRTC'
 import { useActiveAudioSettings } from './useActiveAudioSettings'
 import { useStreamQuality } from './useStreamQuality'
-import { useContextMenuTrigger } from './useContextMenuTrigger'
+import { useContextMenuTrigger } from '../shared/composables/useContextMenuTrigger'
 import { canChooseOutputDevice } from '../lib/audioOutput'
 import { effectiveThreshold } from '../lib/levelMeter'
 import { t } from '../i18n'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 
 interface DeviceChoice { deviceId: string; label: string }
 const VALUE_MAX = 24

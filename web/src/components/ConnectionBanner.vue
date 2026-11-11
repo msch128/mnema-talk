@@ -5,7 +5,7 @@ import { ref, computed, watch, onBeforeUnmount, onMounted } from 'vue'
 import { WifiOff, RefreshCw, Check } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
-import { visibleInterval } from '../lib/pageVisibility'
+import { visibleInterval } from '../shared/lib/pageVisibility'
 
 const chatStore = useChatStore()
 const toasts = useToastStore()

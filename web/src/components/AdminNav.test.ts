@@ -6,7 +6,7 @@ import { i18nPlugin, setLocale } from '../i18n'
 import { useReportsOpenStore } from '../stores/reportsOpen'
 import { usePermissionsStore } from '../stores/permissions'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 
 beforeEach(() => {
   setActivePinia(createPinia())

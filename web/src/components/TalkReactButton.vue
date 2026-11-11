@@ -4,10 +4,10 @@
 // everyone in the Talk for a moment and is kept nowhere.
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { Smile } from '@lucide/vue'
-import ReactionPalette from './ReactionPalette.vue'
+import ReactionPalette from '../shared/components/ReactionPalette.vue'
 import { useStage } from '../composables/useStage'
 import { useVoiceStore } from '../stores/voice'
-import { useDismissable } from '../composables/useDismissable'
+import { useDismissable } from '../shared/composables/useDismissable'
 
 defineProps({
   buttonClass: { type: String, default: '' }

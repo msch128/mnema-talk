@@ -1,6 +1,6 @@
 import { isRecord } from '../types/validation'
 import { required } from '../store-test-support.fixture'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 interface PendingRequest { url: string; method: string; resolve(value: unknown): void; reject(reason?: unknown): void }
 import { categoryFixture, channelFixture, messageFixture, userFixture } from '../test-fixtures.fixture'
 // Stale responses and partial updates in the chat store: a late load must
@@ -11,8 +11,8 @@ import { setActivePinia, createPinia } from 'pinia'
 
 // Every api() call waits until the test answers it.
 const pending = vi.hoisted(() => [] as PendingRequest[])
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, opts?: ApiOptions) => new Promise<unknown>((resolve, reject) => {
     pending.push({ url, method: opts?.method || 'GET', resolve, reject })
   }))

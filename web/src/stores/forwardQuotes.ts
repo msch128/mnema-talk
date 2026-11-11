@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeChatForwardQuote, type ChatForwardQuote } from '../types/rest'
 
 // What the reader may see of the original of each forwarded message on screen

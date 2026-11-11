@@ -4,9 +4,9 @@
 // change applies at once and says "Saved" (a personal preference, doc/settings-ux.md).
 import { onMounted, onUnmounted, watch } from 'vue'
 import { useWebRTC } from '../composables/useWebRTC'
-import { usePreferenceSave } from '../composables/usePreferenceSave'
+import { usePreferenceSave } from '../shared/composables/usePreferenceSave'
 import { useVoiceStore } from '../stores/voice'
-import SavedIndicator from './SavedIndicator.vue'
+import SavedIndicator from '../shared/components/SavedIndicator.vue'
 import AudioMicCheck from './AudioMicCheck.vue'
 import AudioInputSection from './AudioInputSection.vue'
 import AudioOutputSection from './AudioOutputSection.vue'

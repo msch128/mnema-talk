@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
@@ -10,16 +10,16 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { buildMemberItems } from '../composables/useNavMenus'
-import { PERMISSION_BITS } from '../lib/permissions'
-import { activityOf, activityText } from '../lib/presence'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
+import { activityOf, activityText } from '../shared/lib/presence'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
 import type { Member, Role } from '../types/domain'
 import type { BotBot } from '../types/rest'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn()
 }))

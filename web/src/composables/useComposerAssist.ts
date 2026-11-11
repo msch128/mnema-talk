@@ -7,11 +7,11 @@ import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { findMentionQuery, suggestMentions, applyMention } from '../lib/mentionQuery'
-import { findEmojiQuery, suggestEmoji, suggestStandardEmoji, applyEmoji, applyStandardEmoji } from '../lib/emojiQuery'
+import { findEmojiQuery, suggestEmoji, suggestStandardEmoji, applyEmoji, applyStandardEmoji } from '../shared/lib/emojiQuery'
 import { isImeKey } from './useComposerKeys'
-import { useEmojiShortcodes } from '../lib/emojiShortcodes'
+import { useEmojiShortcodes } from '../shared/lib/emojiShortcodes'
 import { useEmojiStore } from '../stores/emoji'
-import type { CustomEmoji } from '../lib/customEmoji'
+import type { CustomEmoji } from '../shared/lib/customEmoji'
 
 /** Inserts text at the caret (e.g. an emoji) and keeps focus. A block starts on a line of its own. */
 async function insertAtCaret(el: HTMLTextAreaElement | null, model: Ref<string>, text: string, { block = false }: { block?: boolean } = {}) {

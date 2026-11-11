@@ -1,7 +1,7 @@
 // Drop rules for the sidebar: where a dragged channel or category lands, given
 // what the pointer is over. The layout functions themselves are in channelLayout.
-import type { LayoutChannel, LayoutCategory, ChannelTree } from './channelTree'
-import { containers, channelsIn, locateChannel, locateCategory, gapToIndex } from './channelLayout'
+import type { LayoutChannel, LayoutCategory, ChannelTree } from '../shared/lib/channelTree'
+import { containers, channelsIn, locateChannel, locateCategory, gapToIndex } from '../shared/lib/channelLayout'
 
 export type DropHit =
   | { zone: 'channel' | 'header' | 'empty'; id: string; ratio?: number }

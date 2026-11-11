@@ -1,7 +1,7 @@
 // Past events of the events dialog: the pages fetched with when=past (newest
 // first), kept current by live updates.
 import { ref, type Ref } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { t } from '../i18n'
 import { arrayDecoder } from '../types/validation'
 import { isCommunityeventsCommunityEvent, type CommunityeventsCommunityEvent as CommunityEvent } from '../types/rest'

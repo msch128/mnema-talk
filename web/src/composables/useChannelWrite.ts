@@ -2,7 +2,7 @@ import { computed } from 'vue'
 import type { Ref } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
-import { waitSentence } from '../lib/newMember'
+import { waitSentence } from '../shared/lib/newMember'
 import { t } from '../i18n'
 
 /**

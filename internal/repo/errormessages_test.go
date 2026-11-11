@@ -12,7 +12,7 @@ import (
 var updateErrorMessages = flag.Bool("update", false, "rewrite testdata/error_messages.golden.json")
 
 // TestErrorMessageCatalogue pins the sentences the server sends in error
-// bodies. web/src/lib/errorDetails.ts must translate each of them (its test
+// bodies. web/src/shared/lib/errorDetails.ts must translate each of them (its test
 // reads this file), so a new or reworded sentence fails there until the
 // German text exists. Regenerate with: go test ./internal/repo -run ErrorMessageCatalogue -update
 func TestErrorMessageCatalogue(t *testing.T) {
@@ -38,7 +38,7 @@ func TestErrorMessageCatalogue(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(want) != string(data) {
-		t.Fatal("server error messages changed: run go test ./internal/repo -run ErrorMessageCatalogue -update, then translate the new ones in web/src/lib/errorDetails.ts")
+		t.Fatal("server error messages changed: run go test ./internal/repo -run ErrorMessageCatalogue -update, then translate the new ones in web/src/shared/lib/errorDetails.ts")
 	}
 }
 

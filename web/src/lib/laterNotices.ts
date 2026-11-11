@@ -5,9 +5,9 @@ import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { isTabVisible } from '../stores/chat/readState'
-import { platform } from './platform'
-import { pushOnThisDevice } from './webPush'
-import { isQuiet } from './presence'
+import { platform } from '../shared/lib/platform'
+import { pushOnThisDevice } from '../shared/lib/webPush'
+import { isQuiet } from '../shared/lib/presence'
 import { previewText } from './replies'
 
 const DUE_TOAST_MS = 12000

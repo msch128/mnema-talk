@@ -2,8 +2,8 @@ import { required } from '../store-test-support.fixture'
 import { channelFixture, categoryFixture } from '../test-fixtures.fixture'
 import type { EffectScope } from 'vue'
 import type { Category, Channel, LayoutRequest } from '../types/domain'
-import type { ChannelTree } from '../lib/channelTree'
-import type { ApiOptions } from '../lib/api'
+import type { ChannelTree } from '../shared/lib/channelTree'
+import type { ApiOptions } from '../shared/lib/api'
 type Tree = ChannelTree<Channel, Category>
 interface Put { json: LayoutRequest; resolve(value: unknown): void; reject(reason: unknown): void }
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
@@ -13,8 +13,8 @@ import { setLocale } from '../i18n'
 
 // PUTs wait until the test answers them; GET /api/channels returns `server`.
 const h = vi.hoisted(() => ({ puts: [] as Put[], server: null as Tree | null }))
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, opts: ApiOptions = {}) => {
     if (url === '/api/channels') return Promise.resolve(JSON.parse(JSON.stringify(h.server)))
     if (url === '/api/admin/layout') {
@@ -24,11 +24,11 @@ vi.mock('../lib/api', async (importOriginal) => ({
   })
 }))
 
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { useChannelLayout, UNDO_MS } from './useChannelLayout'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
-import { moveChannel, moveCategory, applyLayoutPayload } from '../lib/channelLayout'
+import { moveChannel, moveCategory, applyLayoutPayload } from '../shared/lib/channelLayout'
 
 const ch = (id: string, category_id: string | null, sort_order: number) => channelFixture({ id, name: id, type: 'text', category_id, sort_order })
 

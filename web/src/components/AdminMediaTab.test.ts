@@ -1,5 +1,5 @@
 import type { VueWrapper } from '@vue/test-utils'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
@@ -9,14 +9,14 @@ import { setLocale } from '../i18n'
 import { useToastStore } from '../stores/toast'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn(),
   ApiError: class ApiError extends Error {}
 }))
 const confirmMock = vi.fn()
-vi.mock('../lib/confirm', () => ({ confirm: (...args: [path: string, options?: ApiOptions]) => confirmMock(...args) }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: (...args: [path: string, options?: ApiOptions]) => confirmMock(...args) }))
 
 const stats = { total_files: 3, total_size_bytes: 3 * 1024 * 1024, deleted_files: 1 }
 const items = () => [

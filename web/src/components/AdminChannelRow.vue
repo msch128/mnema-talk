@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { Channel } from '../types/domain'
-import { useCompactLayout } from '../composables/useCompactLayout'
-import type { ContextMenuItem } from './menuTypes'
-import RowActionsMenu from './RowActionsMenu.vue'
+import { useCompactLayout } from '../shared/composables/useCompactLayout'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
+import RowActionsMenu from '../shared/components/RowActionsMenu.vue'
 import { t } from '../i18n'
 import { Trash2, Edit2, ArrowUp, ArrowDown, Hash, Volume2, MessagesSquare, GripVertical } from '@lucide/vue'
 

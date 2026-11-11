@@ -4,7 +4,7 @@
 import { FilePlus2 } from '@lucide/vue'
 import { useWikiStore } from '../stores/wiki'
 import { goWiki } from '../lib/wikiNav'
-import { relative } from '../lib/time'
+import { relative } from '../shared/lib/time'
 import { locale } from '../i18n'
 
 const wiki = useWikiStore()

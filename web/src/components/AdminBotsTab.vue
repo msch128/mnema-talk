@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // Admin dashboard: bots. A list on the left, the selected bot's settings on
 // the right. The server checks every rule; this only offers what fits.
-import { useReloadOnActivate } from '../composables/useReloadOnActivate'
+import { useReloadOnActivate } from '../shared/composables/useReloadOnActivate'
 import { ref, computed, onMounted } from 'vue'
 import { Bot, Plus } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { arrayDecoder } from '../types/validation'
 import { decodeBotBot, isBotBot } from '../types/rest'
 import type { BotBot } from '../types/rest'
@@ -13,8 +13,8 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 import BotDetailPanel from './BotDetailPanel.vue'
-import EmptyState from './EmptyState.vue'
-import StatePanel from './StatePanel.vue'
+import EmptyState from '../shared/components/EmptyState.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 const permissions = usePermissionsStore()
 const toasts = useToastStore()

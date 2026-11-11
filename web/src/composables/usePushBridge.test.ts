@@ -11,7 +11,7 @@ const lib = vi.hoisted(() => ({
   refresh: vi.fn(async () => true),
 }))
 
-vi.mock('../lib/webPush', () => ({
+vi.mock('../shared/lib/webPush', () => ({
   listenForOpenRequests: (open: typeof lib.listener, openEvent: typeof lib.eventListener) => { lib.listener = open; lib.eventListener = openEvent; return lib.stop },
   refreshPushState: lib.refresh,
 }))
@@ -19,7 +19,7 @@ vi.mock('../lib/webPush', () => ({
 import { usePushBridge } from './usePushBridge'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
-import { currentRoute } from '../lib/router'
+import { currentRoute } from '../shared/lib/router'
 import { closeEvents, eventsRequest } from '../lib/eventsDialog'
 
 const Host = defineComponent({ setup() { usePushBridge(); return () => null } })

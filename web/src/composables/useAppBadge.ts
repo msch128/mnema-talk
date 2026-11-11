@@ -4,7 +4,7 @@
 // its rail, so there the pair goes to `reportUnread` instead of the plain badge.
 import { computed, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
-import { platform } from '../lib/platform'
+import { platform } from '../shared/lib/platform'
 import { aggregateActivity } from '../lib/channelActivity'
 import { useDesktopMarkRead } from './useDesktopMarkRead'
 

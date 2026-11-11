@@ -6,7 +6,7 @@ import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { i18nPlugin, setLocale, t } from '../i18n'
 import { userFixture } from '../test-fixtures.fixture'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 
 function step() {
   return mount(WelcomeProfileStep, { global: { plugins: [i18nPlugin] } })

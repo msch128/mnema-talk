@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
@@ -8,8 +8,8 @@ import { setLocale } from '../i18n'
 import { useToastStore } from '../stores/toast'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
 
@@ -44,7 +44,7 @@ describe('AdminMailPanel', () => {
   })
 
   it('shows the failing stage the server names, and the rate limit in plain words', async () => {
-    const { ApiError } = await vi.importActual<typeof import('../lib/api')>('../lib/api')
+    const { ApiError } = await vi.importActual<typeof import('../shared/lib/api')>('../shared/lib/api')
     const w = mount(AdminMailPanel, { props: { mail: on } })
     apiMock.mockRejectedValueOnce(new ApiError(503, 'UNAVAILABLE', 'mail delivery failed (auth)'))
     await w.get('form').trigger('submit')
@@ -56,7 +56,7 @@ describe('AdminMailPanel', () => {
     expect(useToastStore().toasts.at(-1)?.text).toBe('Too many test mails. Try again in a few minutes.')
   })
   it('asks for a recipient when the Owner has no address of their own', async () => {
-    const { ApiError } = await vi.importActual<typeof import('../lib/api')>('../lib/api')
+    const { ApiError } = await vi.importActual<typeof import('../shared/lib/api')>('../shared/lib/api')
     const w = mount(AdminMailPanel, { props: { mail: on } })
     apiMock.mockRejectedValueOnce(new ApiError(400, 'INVALID_INPUT', 'add an e-mail address to your account or name a recipient'))
     await w.get('form').trigger('submit')

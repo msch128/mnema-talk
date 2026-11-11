@@ -5,14 +5,14 @@ import type { ReactionSummary } from '../types/domain'
 // with its palette.
 import { computed } from 'vue'
 import { SmilePlus } from '@lucide/vue'
-import { parseEmojiToken, plainEmojiText } from '../lib/customEmoji'
+import { parseEmojiToken, plainEmojiText } from '../shared/lib/customEmoji'
 import { useEmojiStore } from '../stores/emoji'
 import { useAuthStore } from '../stores/auth'
-import EmojiGlyph from './EmojiGlyph.vue'
-import ReactionPalette from './ReactionPalette.vue'
+import EmojiGlyph from '../shared/components/EmojiGlyph.vue'
+import ReactionPalette from '../shared/components/ReactionPalette.vue'
 import { PICKER_ANCHOR } from '../composables/useMessageActions'
 import { usePermissionsStore } from '../stores/permissions'
-import { waitSentence } from '../lib/newMember'
+import { waitSentence } from '../shared/lib/newMember'
 
 defineProps({
   reactions: { type: Array as PropType<ReactionSummary[]>, default: () => [] },

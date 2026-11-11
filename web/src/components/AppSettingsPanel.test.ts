@@ -4,13 +4,13 @@ import { createPinia, setActivePinia } from 'pinia'
 import { setLocale } from '../i18n'
 
 const pwa = vi.hoisted(() => ({ state: 'unavailable', prompt: vi.fn(async () => true) }))
-vi.mock('../lib/pwa', () => ({ installState: () => pwa.state, promptInstall: pwa.prompt }))
+vi.mock('../shared/lib/pwa', () => ({ installState: () => pwa.state, promptInstall: pwa.prompt }))
 
 import AppSettingsPanel from './AppSettingsPanel.vue'
 import { useToastStore } from '../stores/toast'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useAccountStore } from '../stores/account'
-import { notifyDialogOpen } from '../lib/notifyDialog'
+import { notifyDialogOpen } from '../shared/lib/notifyDialog'
 
 let w: VueWrapper
 beforeEach(() => {

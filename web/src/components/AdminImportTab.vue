@@ -4,14 +4,14 @@
 // import can be undone later.
 import { ref, onMounted } from 'vue'
 import { Download, Undo2 } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
-import { confirm } from '../lib/confirm'
+import { caughtErrorMessage } from '../shared/lib/api'
+import { confirm } from '../shared/lib/confirm'
 import { previewImport, listImports, importDetail, undoImport } from '../lib/discordImport'
 import type { RoleMap } from '../lib/discordImport'
 import type { DiscordimportPlan, DiscordimportPlanRole, DiscordimportRecord, DiscordimportCounts } from '../types/rest'
 import DiscordImportPreview from './DiscordImportPreview.vue'
 import DiscordImportConfirm from './DiscordImportConfirm.vue'
-import EmptyState from './EmptyState.vue'
+import EmptyState from '../shared/components/EmptyState.vue'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 

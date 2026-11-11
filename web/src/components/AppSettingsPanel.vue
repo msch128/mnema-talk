@@ -2,7 +2,7 @@
 // "Notifications & install": install Mnema Talk on this device and get notified while it is closed.
 // What notifies is chosen elsewhere (per channel and for the whole server); a link leads there.
 import { Bell } from '@lucide/vue'
-import { notifyDialogOpen } from '../lib/notifyDialog'
+import { notifyDialogOpen } from '../shared/lib/notifyDialog'
 import { useAccountStore } from '../stores/account'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import AppInstallSection from './AppInstallSection.vue'

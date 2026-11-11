@@ -2,8 +2,8 @@
 // meanwhile: the newer page is read, the editor shows the difference, and the
 // writer saves on top of it or drops their text for it. Nothing is overwritten.
 import { ref, type Ref } from 'vue'
-import { caughtErrorMessage } from '../lib/api'
-import { confirm } from '../lib/confirm'
+import { caughtErrorMessage } from '../shared/lib/api'
+import { confirm } from '../shared/lib/confirm'
 import { fetchWikiPage, type WikiPage } from '../lib/wikiApi'
 import { isStaleRevision } from '../lib/wikiErrors'
 import { t } from '../i18n'

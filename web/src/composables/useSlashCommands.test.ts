@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ref } from 'vue'
 import { flushPromises } from '@vue/test-utils'
@@ -8,8 +8,8 @@ import { useToastStore } from '../stores/toast'
 import { setLocale } from '../i18n'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
 
@@ -179,7 +179,7 @@ describe('useSlashCommands', () => {
     await typeSlash(s, '/ping')
     s.pick(s.suggestions.value[0])
     s.values['text'] = 'x'
-    const { ApiError } = await import('../lib/api')
+    const { ApiError } = await import('../shared/lib/api')
     apiMock.mockRejectedValueOnce(new ApiError(409, 'CONFLICT', 'the bot is not connected'))
     expect(await s.run()).toBe(false)
     expect(toasts()).toEqual(['helper is not connected right now.'])

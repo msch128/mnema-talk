@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { customSeconds, durationLabel } from '../lib/moderation'
-import type { CustomUnit } from '../lib/moderation'
+import { customSeconds, durationLabel } from '../shared/lib/moderation'
+import type { CustomUnit } from '../shared/lib/moderation'
 import { t } from '../i18n'
-import presets from '../lib/presets.json'
+import presets from '../shared/lib/presets.json'
 
 // Slow mode of a channel: ready-made presets plus a free value in seconds,
 // minutes or hours, at most 24 hours (the server validates the same bound).

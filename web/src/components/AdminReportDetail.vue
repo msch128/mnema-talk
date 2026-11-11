@@ -5,14 +5,14 @@
 // reporter is not told.
 import { computed, onMounted, ref } from 'vue'
 import { ArrowLeft, ChevronRight, Loader2, Paperclip } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { decodeChatReportDetail, type ChatReportDetail } from '../types/rest'
-import { confirm } from '../lib/confirm'
-import { REPORT_NOTE_MAX } from '../lib/reportDialog'
+import { confirm } from '../shared/lib/confirm'
+import { REPORT_NOTE_MAX } from '../shared/lib/reportDialog'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
 import { storedRuleLabel } from '../lib/automod'
-import { moderationOffer, openBan, openTimeout } from '../lib/moderationActions'
+import { moderationOffer, openBan, openTimeout } from '../shared/lib/moderationActions'
 import { useChatStore } from '../stores/chat'
 
 const props = defineProps({

@@ -2,8 +2,8 @@ import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { MAX_MESSAGE_LENGTH, lengthState, slowModeRemaining } from '../lib/composerLimits'
-import { formatRemaining } from '../lib/moderation'
-import { isApiError } from '../lib/api'
+import { formatRemaining } from '../shared/lib/moderation'
+import { isApiError } from '../shared/lib/api'
 import { t } from '../i18n'
 
 export interface SlowRule { seconds: number; exempt: boolean }

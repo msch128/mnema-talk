@@ -6,13 +6,13 @@ import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { setLocale, i18nPlugin } from '../i18n'
 import type { Message, Poll } from '../types/domain'
 import { fixtureId, messageFixture, userFixture } from '../test-fixtures.fixture'
 
 const confirmMock = vi.fn<() => Promise<boolean>>(async () => true)
-vi.mock('../lib/confirm', () => ({ confirm: () => confirmMock() }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: () => confirmMock() }))
 
 const ME = fixtureId(1)
 const OTHER = fixtureId(5)

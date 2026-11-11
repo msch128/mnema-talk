@@ -4,7 +4,7 @@ import type { PropType } from 'vue'
 // moment. With reduced motion it stays where it appears as a still badge until
 // the store drops it (no float). Purely decorative: the sound of a Talk is the
 // Talk, so nothing here is announced.
-import EmojiGlyph from './EmojiGlyph.vue'
+import EmojiGlyph from '../shared/components/EmojiGlyph.vue'
 
 defineProps({
   reactions: { type: Array as PropType<{ id: number; emoji: string }[]>, default: () => [] },

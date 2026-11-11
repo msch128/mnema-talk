@@ -3,9 +3,9 @@
 // on the server, so there is nothing to edit or delete here.
 import { ref, computed, onMounted, watch } from 'vue'
 import { ScrollText, ChevronRight, ChevronDown } from '@lucide/vue'
-import EmptyState from './EmptyState.vue'
-import { useReloadOnActivate } from '../composables/useReloadOnActivate'
-import { api, caughtErrorMessage } from '../lib/api'
+import EmptyState from '../shared/components/EmptyState.vue'
+import { useReloadOnActivate } from '../shared/composables/useReloadOnActivate'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import type { AuditItem, AuditPage } from '../types/rest'
 import { isAuditPage } from '../types/rest'
 import { decoder } from '../types/validation'
@@ -13,8 +13,8 @@ import { useToastStore } from '../stores/toast'
 import { useChatStore } from '../stores/chat'
 import { t, locale } from '../i18n'
 import { summarizeAudit } from '../lib/auditSummary'
-import BotBadge from './BotBadge.vue'
-import StatePanel from './StatePanel.vue'
+import BotBadge from '../shared/components/BotBadge.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 const decodePage = decoder<AuditPage>('audit.Page', isAuditPage)
 const toasts = useToastStore()

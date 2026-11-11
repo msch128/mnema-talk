@@ -3,14 +3,14 @@
 // sending then only lists their ids. One tray per composer slot (a channel, a
 // thread), so the files stay with the conversation while another one is open.
 import { computed } from 'vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { stageAttachment, unstageAttachment } from '../lib/attachmentsApi'
 import { kindOf, MAX_ATTACHMENTS, PARALLEL_UPLOADS, planAdd, STAGED_TTL_MS, type TrayItem } from '../lib/attachmentTray'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import { openViewer } from './useMediaViewer'
+import { openViewer } from '../shared/composables/useMediaViewer'
 import { aborts, clearSlot, itemsOf, release } from './attachmentTrayState'
 
 export interface TrayTarget {

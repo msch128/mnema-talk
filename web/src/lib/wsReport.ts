@@ -1,6 +1,6 @@
 // When an admin opens Status, the page tells the server whether its own live connection (/api/ws)
 // came through the reverse proxy as an upgraded WebSocket; the server shows that as the WebSocket item.
-import { api } from './api'
+import { api } from '../shared/lib/api'
 
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 

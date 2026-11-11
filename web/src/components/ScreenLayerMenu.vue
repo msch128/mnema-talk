@@ -4,8 +4,8 @@
 // more than one layer.
 import { watch } from 'vue'
 import { Layers } from '@lucide/vue'
-import ContextMenu from './ContextMenu.vue'
-import { useButtonMenu } from '../composables/useButtonMenu'
+import ContextMenu from '../shared/components/ContextMenu.vue'
+import { useButtonMenu } from '../shared/composables/useButtonMenu'
 import { useScreenLayerMenu } from '../composables/useScreenLayerMenu'
 import { t } from '../i18n'
 

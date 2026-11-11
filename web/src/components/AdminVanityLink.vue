@@ -4,15 +4,15 @@
 // The switch turns it into a permanent public invite, which is a decision of its own.
 import { ref, computed, onMounted } from 'vue'
 import { Check, Copy } from '@lucide/vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeOnboardingVanitySettings } from '../types/rest'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
-import { joinLink } from '../lib/inviteLink'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
+import { joinLink } from '../shared/lib/inviteLink'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
-import StatePanel from './StatePanel.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 const MIN_SLUG = 3
 const MAX_SLUG = 32

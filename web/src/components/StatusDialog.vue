@@ -3,20 +3,20 @@
 // emoji, the text (the server's limit), how long it stays and Save / Clear.
 import { computed, ref, toRef } from 'vue'
 import { Smile } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { EXPIRY_CHOICES, expiryTime, isFuture } from '../lib/statusExpiry'
 import type { ExpiryChoice } from '../lib/statusExpiry'
-import { dateTime } from '../lib/time'
+import { dateTime } from '../shared/lib/time'
 import { locale, t } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
-import BaseDialog from './BaseDialog.vue'
-import EmojiPicker from './EmojiPicker.vue'
-import FormField from './FormField.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import EmojiPicker from '../shared/components/EmojiPicker.vue'
+import FormField from '../shared/components/FormField.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 const emit = defineEmits<{ close: [] }>()
 

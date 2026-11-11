@@ -3,15 +3,15 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
-import { pushOnThisDevice } from '../lib/webPush'
+import { pushOnThisDevice } from '../shared/lib/webPush'
 import { resetMessageSoundGap } from './chat/messageSound'
 import { channelFixture, messageFixture, readStateFixture, userFixture, fixtureId } from '../test-fixtures.fixture'
 
 const sound = vi.hoisted(() => ({ play: vi.fn() }))
 vi.mock('../lib/soundEffects', () => ({ playSoundEffect: sound.play }))
-vi.mock('../lib/api', async importOriginal => ({ ...(await importOriginal<typeof import('../lib/api')>()), api: vi.fn(async () => []) }))
-vi.mock('../lib/platform', async importOriginal => {
-  const real = await importOriginal<typeof import('../lib/platform')>()
+vi.mock('../shared/lib/api', async importOriginal => ({ ...(await importOriginal<typeof import('../shared/lib/api')>()), api: vi.fn(async () => []) }))
+vi.mock('../shared/lib/platform', async importOriginal => {
+  const real = await importOriginal<typeof import('../shared/lib/platform')>()
   return { ...real, platform: { ...real.platform, notificationPermission: () => 'denied', notify: vi.fn() } }
 })
 

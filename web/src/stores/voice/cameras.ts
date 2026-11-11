@@ -1,9 +1,9 @@
-import { writeJson } from '../../lib/voicePlayback'
+import { writeJson } from '../../shared/lib/voicePlayback'
 import { watch, computed } from 'vue'
 import type { SubscribeRequest } from '../../types/events'
 import { HIDDEN_CAMERAS_KEY, ALL_CAMERAS_OFF_KEY, HIDE_NO_VIDEO_KEY, myUserId } from './state'
 import type { VoiceState } from './state'
-import { videoUnseen } from '../../lib/pageVisibility'
+import { videoUnseen } from '../../shared/lib/pageVisibility'
 import { resendCameraFit, replayCameraFit } from './cameraFit'
 
 // A camera on the stage: mine, or one I receive and have not hidden.

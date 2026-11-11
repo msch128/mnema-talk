@@ -1,6 +1,6 @@
 // Moderator dialogs for messages: delete one with a reason, or delete the
 // latest messages of a member in a channel. A single <MessageModerationDialog>
-// host in App.vue renders whatever is pending, like lib/moderation.
+// host in App.vue renders whatever is pending, like shared/lib/moderation.
 import { shallowRef } from 'vue'
 
 export const MAX_BULK_DELETE = 100

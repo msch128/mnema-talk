@@ -7,8 +7,8 @@ import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { channelFixture } from '../test-fixtures.fixture'
 
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string) => {
     if (url === '/api/health') return Promise.resolve({ features: [] })
     return Promise.resolve([])

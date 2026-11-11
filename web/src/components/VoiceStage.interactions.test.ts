@@ -13,7 +13,7 @@ import { useVoiceStore } from '../stores/voice'
 import VoiceStage from './VoiceStage.vue'
 import ParticipantTile from './ParticipantTile.vue'
 import StreamQualityMenu from './StreamQualityMenu.vue'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 
 const rtc = vi.hoisted(() => ({
   joinVoiceChannel: vi.fn(),

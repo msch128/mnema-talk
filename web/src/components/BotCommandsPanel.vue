@@ -5,11 +5,11 @@
 // channels where the bot can view and send.
 import { ref, onMounted } from 'vue'
 import { SquareSlash, Trash2 } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { arrayDecoder } from '../types/validation'
 import { decodeBotCommand, isBotCommand } from '../types/rest'
 import type { BotCommand } from '../types/rest'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 

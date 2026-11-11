@@ -1,5 +1,5 @@
 import type { VueWrapper } from '@vue/test-utils'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import { userFixture, channelFixture, categoryFixture, voiceUserFixture, requireValue } from '../test-fixtures.fixture'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
@@ -7,17 +7,17 @@ import { useStatusEditor } from '../composables/useStatusEditor'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick, defineComponent, h } from 'vue'
 import UserProfileModal from './UserProfileModal.vue'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { t, setLocale } from '../i18n'
 import { useAccountStore } from '../stores/account'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 
 const mockApi = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => mockApi(...args)
 }))
 

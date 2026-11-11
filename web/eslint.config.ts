@@ -5,13 +5,13 @@ import sonarjs from 'eslint-plugin-sonarjs'
 import tseslint from 'typescript-eslint'
 import vueParser from 'vue-eslint-parser'
 
-// Desktop window globals and IPC are named only in lib/platform and its adapters.
+// Desktop window globals and IPC are named only in shared/lib/platform and its adapters.
 const desktopGlobalSyntax = [{
   selector: "Literal[value=/^__(TAURI|TAURI_INTERNALS|MNEMA_TRUSTED_APP|MNEMA_WEB_DESKTOP|MNEMA_GAMING_BRIDGE|MNEMA_GAMING_SURFACE)(__)?$/]",
-  message: 'Desktop window globals are read only in lib/platform and its adapter modules.'
+  message: 'Desktop window globals are read only in shared/lib/platform and its adapter modules.'
 }, {
   selector: "MemberExpression[property.name='isTauri']",
-  message: 'Ask lib/platform whether this is the desktop client.'
+  message: 'Ask shared/lib/platform whether this is the desktop client.'
 }]
 
 // HTML written as a string. Vue's Trusted Types policy passes text through, so
@@ -76,27 +76,27 @@ export default tseslint.config(
     languageOptions: { parser: vueParser, parserOptions: { parser: tseslint.parser } }
   },
   // The desktop client's window globals and IPC are reached
-  // only through lib/platform.ts (doc/desktop-trusted-client.md). Everything
+  // only through shared/lib/platform.ts (doc/desktop-trusted-client.md). Everything
   // else stays platform-agnostic.
   {
     files: ['**/*.ts', '**/*.vue'],
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [
-          { group: ['@tauri-apps/*'], message: 'Reach the desktop host through lib/platform.' },
-          { group: ['**/trustedDesktop', '**/trustedSocket', '**/desktopRuntime'], message: 'Use lib/platform instead of the desktop adapter internals.' }
+          { group: ['@tauri-apps/*'], message: 'Reach the desktop host through shared/lib/platform.' },
+          { group: ['**/trustedDesktop', '**/trustedSocket', '**/desktopRuntime'], message: 'Use shared/lib/platform instead of the desktop adapter internals.' }
         ]
       }],
       'no-restricted-globals': ['error',
-        { name: '__TAURI__', message: 'Use lib/platform.' },
-        { name: '__TAURI_INTERNALS__', message: 'Use lib/platform.' },
-        { name: '__MNEMA_TRUSTED_APP__', message: 'Use lib/platform.' }
+        { name: '__TAURI__', message: 'Use shared/lib/platform.' },
+        { name: '__TAURI_INTERNALS__', message: 'Use shared/lib/platform.' },
+        { name: '__MNEMA_TRUSTED_APP__', message: 'Use shared/lib/platform.' }
       ],
       'no-restricted-properties': ['error',
-        { object: 'window', property: 'isTauri', message: 'Use lib/platform.' },
-        { object: 'window', property: '__TAURI__', message: 'Use lib/platform.' },
-        { object: 'window', property: '__TAURI_INTERNALS__', message: 'Use lib/platform.' },
-        { object: 'window', property: '__MNEMA_TRUSTED_APP__', message: 'Use lib/platform.' }
+        { object: 'window', property: 'isTauri', message: 'Use shared/lib/platform.' },
+        { object: 'window', property: '__TAURI__', message: 'Use shared/lib/platform.' },
+        { object: 'window', property: '__TAURI_INTERNALS__', message: 'Use shared/lib/platform.' },
+        { object: 'window', property: '__MNEMA_TRUSTED_APP__', message: 'Use shared/lib/platform.' }
       ],
       'no-restricted-syntax': ['error', ...desktopGlobalSyntax, ...htmlSinkSyntax],
       'vue/no-restricted-syntax': ['error', ...htmlSinkTemplateSyntax]
@@ -114,11 +114,11 @@ export default tseslint.config(
   // The desktop adapters name the window globals; the HTML rule still holds there.
   {
     files: [
-      '**/src/lib/platform.ts',
-      '**/src/lib/desktopRuntime.ts',
-      '**/src/lib/osNotify.ts',
-      '**/src/lib/native/trustedDesktop.ts',
-      '**/src/lib/native/trustedSocket.ts'
+      '**/src/shared/lib/platform.ts',
+      '**/src/shared/lib/desktopRuntime.ts',
+      '**/src/shared/lib/osNotify.ts',
+      '**/src/shared/lib/native/trustedDesktop.ts',
+      '**/src/shared/lib/native/trustedSocket.ts'
     ],
     rules: { 'no-restricted-imports': 'off', 'no-restricted-globals': 'off', 'no-restricted-properties': 'off', 'no-restricted-syntax': ['error', ...htmlSinkSyntax] }
   },

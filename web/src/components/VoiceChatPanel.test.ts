@@ -10,7 +10,7 @@ import { setLocale } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
-import { useResizable, storageKey } from '../composables/useResizable'
+import { useResizable, storageKey } from '../shared/composables/useResizable'
 import { VOICE_CHAT_HEIGHT } from '../lib/voiceChatPanel'
 import VoiceChatPanel from './VoiceChatPanel.vue'
 

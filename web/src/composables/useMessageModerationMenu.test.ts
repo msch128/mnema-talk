@@ -1,6 +1,6 @@
 import { required } from '../store-test-support.fixture'
 import { useMessageActions } from './useMessageActions'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 import { channelFixture, messageFixture, userFixture } from '../test-fixtures.fixture'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
@@ -11,7 +11,7 @@ import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { pendingMessageModeration } from '../lib/messageModeration'
 import { pendingEditHistory, closeEditHistory } from '../lib/editHistory'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { setLocale } from '../i18n'
 
 const author = userFixture({ id: 'u2', username: 'talker', display_name: 'Talker', role: 'user' })

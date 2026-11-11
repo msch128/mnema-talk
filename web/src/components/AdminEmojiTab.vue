@@ -2,17 +2,17 @@
 // Admin dashboard: the instance's custom emoji (upload, rename, delete).
 import { ref, computed, onMounted } from 'vue'
 import { Smile, Trash2, Pencil, Check, X } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
-import { confirm } from '../lib/confirm'
-import { emojiImage } from '../lib/customEmoji'
+import { caughtErrorMessage } from '../shared/lib/api'
+import { confirm } from '../shared/lib/confirm'
+import { emojiImage } from '../shared/lib/customEmoji'
 import { useEmojiStore, prefersReducedMotion } from '../stores/emoji'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import { useCompactLayout } from '../composables/useCompactLayout'
-import type { ContextMenuItem } from './menuTypes'
-import RowActionsMenu from './RowActionsMenu.vue'
-import EmptyState from './EmptyState.vue'
-import StatePanel from './StatePanel.vue'
+import { useCompactLayout } from '../shared/composables/useCompactLayout'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
+import RowActionsMenu from '../shared/components/RowActionsMenu.vue'
+import EmptyState from '../shared/components/EmptyState.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 const store = useEmojiStore()
 const toasts = useToastStore()

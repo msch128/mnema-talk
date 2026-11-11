@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
@@ -9,7 +9,7 @@ import { useChatStore } from '../stores/chat'
 import { useFirstRunStore } from '../stores/firstRun'
 import { useOnboardingStore } from '../stores/onboarding'
 import { useToastStore } from '../stores/toast'
-import { adminTabRequest } from '../lib/adminRequest'
+import { adminTabRequest } from '../shared/lib/adminRequest'
 import { talkSettingsFor } from '../lib/talks'
 import { setLocale } from '../i18n'
 import { channelFixture, fixtureId, onboardingStateFixture, userFixture } from '../test-fixtures.fixture'
@@ -17,8 +17,8 @@ import { channelFixture, fixtureId, onboardingStateFixture, userFixture } from '
 enableAutoUnmount(afterEach)
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
 

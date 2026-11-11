@@ -5,7 +5,7 @@ import { useEventsStore } from '../stores/events'
 import { blankDraft } from '../lib/eventRoleDrafts'
 import { eventWithRoles } from '../eventRoles.fixture'
 import { setLocale } from '../i18n'
-import { ApiError } from '../lib/api'
+import { ApiError } from '../shared/lib/api'
 import { roleFixture } from '../eventRoles.fixture'
 
 beforeEach(() => {

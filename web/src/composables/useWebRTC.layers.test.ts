@@ -218,7 +218,7 @@ describe('screen share with audio', () => {
 
 describe('one screen share per person', () => {
   async function answer(result: boolean) {
-    const { pendingConfirm } = await import('../lib/confirm')
+    const { pendingConfirm } = await import('../shared/lib/confirm')
     await vi.waitFor(() => expect(pendingConfirm.value).not.toBeNull())
     present(pendingConfirm.value).resolve(result)
   }

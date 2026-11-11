@@ -8,7 +8,7 @@ import { useAuthStore } from '../stores/auth'
 import StageHandQueue from './StageHandQueue.vue'
 import TalkTile from './TalkTile.vue'
 import TalkReactionFloat from './TalkReactionFloat.vue'
-import UserAvatar from './UserAvatar.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 import { useVoiceStore } from '../stores/voice'
 import { focusRing } from './talkButtons'
 

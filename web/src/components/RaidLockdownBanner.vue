@@ -8,8 +8,8 @@ import { ShieldAlert } from '@lucide/vue'
 import { usePermissionsStore } from '../stores/permissions'
 import { useRaidStore } from '../stores/raid'
 import { useToastStore } from '../stores/toast'
-import { caughtErrorMessage } from '../lib/api'
-import { visibleInterval } from '../lib/pageVisibility'
+import { caughtErrorMessage } from '../shared/lib/api'
+import { visibleInterval } from '../shared/lib/pageVisibility'
 import { locale, t } from '../i18n'
 
 const permissions = usePermissionsStore()

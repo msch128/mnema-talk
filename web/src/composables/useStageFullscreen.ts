@@ -1,9 +1,9 @@
 import type { Ref } from 'vue'
 import type { VoiceStore } from '../stores/voice'
-import type { TalkParticipant } from '../components/presentationTypes'
+import type { TalkParticipant } from '../shared/components/presentationTypes'
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useVoiceStore } from '../stores/voice'
-import { isTypingEvent } from '../lib/typingTarget'
+import { isTypingEvent } from '../shared/lib/typingTarget'
 
 // A double-click on a camera puts it on the stage in full screen. Its first
 // click already put it on the stage (or took it off) without waiting, and

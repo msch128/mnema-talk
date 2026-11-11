@@ -7,7 +7,7 @@ import ThreadSidebar from './ThreadSidebar.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useOnboardingStore } from '../stores/onboarding'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 import { channelFixture, messageFixture, onboardingStateFixture, userFixture } from '../test-fixtures.fixture'
 import type { Message } from '../types/domain'
 

@@ -6,7 +6,7 @@ import { CheckCircle2, CircleHelp, Loader2, Network, TriangleAlert, XCircle } fr
 import { runConnectionTest } from '../lib/connectionTest'
 import { browserTestDeps } from '../lib/connectionTestApi'
 import { OVERHEAD_PERCENT, SCREEN_MBPS, screenViewersFor, verdictOf, type ConnectionReport, type PathOutcome } from '../lib/connectionVerdict'
-import { SOURCE_URL } from '../lib/thirdParty'
+import { SOURCE_URL } from '../shared/lib/thirdParty'
 import { locale, t } from '../i18n'
 
 type Step = 'candidates' | 'direct' | 'relayUdp' | 'relayTcp' | 'speed'

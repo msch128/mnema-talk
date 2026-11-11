@@ -3,10 +3,10 @@
 // them by name or explanation. Groups without a match disappear.
 import { computed, ref } from 'vue'
 import { Search } from '@lucide/vue'
-import { PERMISSION_GROUPS } from '../lib/permissions'
-import type { PermissionKey } from '../lib/permissions'
+import { PERMISSION_GROUPS } from '../shared/lib/permissions'
+import type { PermissionKey } from '../shared/lib/permissions'
 import { t } from '../i18n'
-import PermissionToggles from './PermissionToggles.vue'
+import PermissionToggles from '../shared/components/PermissionToggles.vue'
 
 defineProps({
   // Bits the editor may not hand out (permissions they do not hold themselves).

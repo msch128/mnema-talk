@@ -4,7 +4,7 @@
 // so it follows them to every device; other sessions hear dm_prefs_updated.
 import type { ChatDMSettings } from '../../types/rest'
 import { decodeChatDMSettings } from '../../types/rest'
-import { api } from '../../lib/api'
+import { api } from '../../shared/lib/api'
 import { DM_MAX_FAVOURITES, splitDms } from '../../lib/dmList'
 import { assertCommunity, type Cx } from './state'
 import { fetchDmSettings, fetchDms, refreshDm, setDms } from './dms'

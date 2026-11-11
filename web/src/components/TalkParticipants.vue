@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { TalkParticipant } from './presentationTypes'
+import type { TalkParticipant } from '../shared/components/presentationTypes'
 // "N participants" in the Talk header; opens who is in the Talk and since when.
 import { ref, nextTick } from 'vue'
 import { Users } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import TalkParticipantList from './TalkParticipantList.vue'
-import { useDismissable } from '../composables/useDismissable'
+import { useDismissable } from '../shared/composables/useDismissable'
 
 defineProps({
   users: { type: Array as PropType<TalkParticipant[]>, required: true },

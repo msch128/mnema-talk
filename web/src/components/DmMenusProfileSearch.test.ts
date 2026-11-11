@@ -8,7 +8,7 @@ import { buildMemberItems } from '../composables/useNavMenus'
 import { messageSafetyItems, memberRelationItems } from '../composables/dmMenuItems'
 import { useDmActions } from '../composables/useDmActions'
 import { searchOpen, searchScope, searchText } from '../lib/globalSearch'
-import { pendingReport, closeReport } from '../lib/reportDialog'
+import { pendingReport, closeReport } from '../shared/lib/reportDialog'
 import { dmErrorText, dmTitle, sortDms } from '../lib/dm'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
@@ -20,13 +20,13 @@ import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { fixtureId, messageFixture, userFixture } from '../test-fixtures.fixture'
 import { dmFixture, dmMemberFixture } from '../dm.fixture'
-import type { ApiOptions } from '../lib/api'
-import { ApiError } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
+import { ApiError } from '../shared/lib/api'
 import type { ChatMember } from '../types/rest'
 
 const http = vi.hoisted(() => ({ handle: (_url: string, _opts?: ApiOptions): unknown => [] }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => {
     try { return Promise.resolve(http.handle(url, options)) } catch (error) { return Promise.reject(error) }
   })

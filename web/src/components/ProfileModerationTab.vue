@@ -5,15 +5,15 @@
 // themselves never sees any of it.
 import { computed, onMounted, ref } from 'vue'
 import { Loader2, Lock } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { decodeModerationHistory, decodeModerationNote, type ModerationHistory, type ModerationHistoryEvent, type ModerationNote } from '../types/rest'
-import { durationLabel } from '../lib/moderation'
-import { confirm } from '../lib/confirm'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { durationLabel } from '../shared/lib/moderation'
+import { confirm } from '../shared/lib/confirm'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { useToastStore } from '../stores/toast'
 import { locale, t } from '../i18n'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
-import StatePanel from './StatePanel.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 const NOTE_MAX = 1000
 

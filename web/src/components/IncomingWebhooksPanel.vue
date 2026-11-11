@@ -4,16 +4,16 @@
 // creating or regenerating, with a copy button.
 import { ref, computed, onMounted } from 'vue'
 import { Copy, KeyRound, Trash2, SlidersHorizontal } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { arrayDecoder } from '../types/validation'
 import { isWebhook, decodeCreatedWebhook } from '../types/webhooks'
 import type { Webhook } from '../types/webhooks'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import StatePanel from './StatePanel.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 import IncomingWebhookEditor from './IncomingWebhookEditor.vue'
-import { initialOf } from '../lib/initial'
+import { initialOf } from '../shared/lib/initial'
 
 const props = defineProps({
   channelId: { type: String, required: true }

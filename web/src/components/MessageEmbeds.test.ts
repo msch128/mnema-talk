@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { enableAutoUnmount, mount } from '@vue/test-utils'
 import MessageEmbeds from './MessageEmbeds.vue'
-import BotBadge from './BotBadge.vue'
+import BotBadge from '../shared/components/BotBadge.vue'
 import MessageRow from './MessageRow.vue'
 import { messageFixture } from '../test-fixtures.fixture'
 import type { ChatEmbed } from '../types/rest'
 import { setLocale, t } from '../i18n'
-import { dateTime } from '../lib/time'
+import { dateTime } from '../shared/lib/time'
 
 enableAutoUnmount(afterEach)
 beforeEach(() => setActivePinia(createPinia()))

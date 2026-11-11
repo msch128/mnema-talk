@@ -3,7 +3,7 @@
 import { useEventsStore } from '../stores/events'
 import { inputsOf, draftsOf } from '../lib/eventRoleDrafts'
 import type { RoleDraft, RoleRemoval } from '../lib/eventRoleDrafts'
-import { isApiError } from '../lib/api'
+import { isApiError } from '../shared/lib/api'
 import type { CommunityEvent } from '../types/domain'
 import { t } from '../i18n'
 

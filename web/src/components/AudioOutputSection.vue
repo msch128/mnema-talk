@@ -2,7 +2,7 @@
 import { useVoiceStore } from '../stores/voice'
 import { canChooseOutputDevice } from '../lib/audioOutput'
 import { playSoundEffect } from '../lib/soundEffects'
-import { MESSAGE_SOUND_MODES, normalizeMessageSoundMode } from '../lib/messageSound'
+import { MESSAGE_SOUND_MODES, normalizeMessageSoundMode } from '../shared/lib/messageSound'
 import { Play } from '@lucide/vue'
 
 // Output: where you hear the others, how loud, and the sound effects.

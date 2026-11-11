@@ -5,18 +5,18 @@ import { nextTick } from 'vue'
 import { categoryFixture, channelFixture, fixtureId, readStateFixture, userFixture, voiceUserFixture } from '../test-fixtures.fixture'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
-import type { AvatarSize, LivePresence, ResizePanel } from './presentationTypes'
+import type { AvatarSize, LivePresence, ResizePanel } from '../shared/components/presentationTypes'
 import SidebarCategoryHeader from './SidebarCategoryHeader.vue'
 import SidebarChannelRow from './SidebarChannelRow.vue'
 import SidebarDragGhost from './SidebarDragGhost.vue'
-import ResizeHandle from './ResizeHandle.vue'
+import ResizeHandle from '../shared/components/ResizeHandle.vue'
 import MemberList from './MemberList.vue'
 import MemberRow from './MemberRow.vue'
-import PresenceDot from './PresenceDot.vue'
-import UserAvatar from './UserAvatar.vue'
-import MuteMarks from './MuteMarks.vue'
-import ContextMenu from './ContextMenu.vue'
-vi.mock('../lib/api', async original => ({ ...(await original<typeof import('../lib/api')>()), api: vi.fn() }))
+import PresenceDot from '../shared/components/PresenceDot.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
+import MuteMarks from '../shared/components/MuteMarks.vue'
+import ContextMenu from '../shared/components/ContextMenu.vue'
+vi.mock('../shared/lib/api', async original => ({ ...(await original<typeof import('../shared/lib/api')>()), api: vi.fn() }))
 const wrappers: VueWrapper[] = []
 function keep<T extends VueWrapper>(w: T): T { wrappers.push(w); return w }
 beforeEach(() => setActivePinia(createPinia()))

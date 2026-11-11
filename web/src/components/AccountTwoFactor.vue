@@ -5,17 +5,17 @@
 // on, a current code.
 import { computed, nextTick, ref, watch } from 'vue'
 import { Loader2, ShieldCheck, ShieldOff } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { disableTwoFactor, enableTwoFactor, newRecoveryCodes, setupTwoFactor } from '../lib/accountApi'
 import type { AuthTwoFactorSetup } from '../types/rest'
 import { t } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
-import QrCode from './QrCode.vue'
+import QrCode from '../shared/components/QrCode.vue'
 import RecoveryCodesPanel from './RecoveryCodesPanel.vue'
-import FormField from './FormField.vue'
-import PasswordInput from './PasswordInput.vue'
+import FormField from '../shared/components/FormField.vue'
+import PasswordInput from '../shared/components/PasswordInput.vue'
 
 const account = useAccountStore()
 const authStore = useAuthStore()

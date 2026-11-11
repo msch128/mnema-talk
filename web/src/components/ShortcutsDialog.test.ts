@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ShortcutsDialog from './ShortcutsDialog.vue'
 import { i18nPlugin, setLocale, t } from '../i18n'
-import { SHORTCUT_GROUPS } from '../lib/shortcuts'
+import { SHORTCUT_GROUPS } from '../shared/lib/shortcuts'
 import { useVoiceStore } from '../stores/voice'
 
 const mountDialog = () => mount(ShortcutsDialog, { attachTo: document.body, global: { plugins: [i18nPlugin] } })

@@ -3,7 +3,7 @@
 import { computed, onScopeDispose, ref, watch, watchEffect } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { aggregateActivity, titlePrefix } from '../lib/channelActivity'
-import { useCommunityName } from './useCommunityName'
+import { useCommunityName } from '../shared/composables/useCommunityName'
 
 export function useTitleBadge() {
   const chatStore = useChatStore()

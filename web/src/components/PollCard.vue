@@ -5,9 +5,9 @@ import { ChartNoAxesColumn, Check, EyeOff } from '@lucide/vue'
 import type { Message } from '../types/domain'
 import { usePoll } from '../composables/usePoll'
 import { useChatStore } from '../stores/chat'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import { leaders, percent } from '../lib/polls'
-import { shownName } from '../lib/deletedUser'
+import { shownName } from '../shared/lib/deletedUser'
 import { t } from '../i18n'
 
 // The options of a poll message under its question (the message text): a

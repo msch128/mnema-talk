@@ -1,8 +1,8 @@
 // The history of a wiki page: its revisions, newest first, one chosen revision
 // with the change it made, and restoring it as a new revision.
 import { computed, ref, watch } from 'vue'
-import { caughtErrorMessage } from '../lib/api'
-import { confirm } from '../lib/confirm'
+import { caughtErrorMessage } from '../shared/lib/api'
+import { confirm } from '../shared/lib/confirm'
 import { fetchWikiRevision, fetchWikiRevisions, restoreWikiRevision, type WikiPage, type WikiRevision } from '../lib/wikiApi'
 import { isStaleRevision } from '../lib/wikiErrors'
 import { goWiki } from '../lib/wikiNav'

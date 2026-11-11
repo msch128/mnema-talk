@@ -2,15 +2,15 @@
 // Admin dashboard: storage summary, manual prune and the media list.
 import { ref, onMounted } from 'vue'
 import { RefreshCw, Trash2, Image, HardDrive } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import type { MediaDashboardItem } from '../types/domain'
 import { decodeMediaStats, decodeMediaPruneResult, isMediaDashboardItem } from '../types/rest'
 import { arrayDecoder } from '../types/validation'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
-import EmptyState from './EmptyState.vue'
-import StatePanel from './StatePanel.vue'
+import EmptyState from '../shared/components/EmptyState.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 import { formatBytes as formatBytesIn } from '../lib/byteUnits'
 
 const EMPTY_STATS = { total_files: 0, total_size_bytes: 0, deleted_files: 0 }

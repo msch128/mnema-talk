@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ApiError } from './api'
+import { ApiError } from '../shared/lib/api'
 import { isStaleRevision } from './wikiErrors'
 
 describe('a save the page changed under', () => {

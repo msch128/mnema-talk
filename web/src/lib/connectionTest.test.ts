@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError } from './api'
+import { ApiError } from '../shared/lib/api'
 import { gatherCandidates, onlyUrls, ProbeRefused, SpeedRefused, refusalOf, runConnectionTest, selectedPair, tryPath, type ConnectionTestDeps } from './connectionTest'
 
 // A stand-in for RTCPeerConnection that gathers a scripted list of candidates, connects (or not) after the

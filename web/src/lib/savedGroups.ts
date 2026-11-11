@@ -1,7 +1,7 @@
 // How the saved list reads: filtered by a search, then either newest saved
 // first or grouped by where the message was written. Pure.
 import type { ChatSavedMessage } from '../types/rest'
-import { shownName } from './deletedUser'
+import { shownName } from '../shared/lib/deletedUser'
 import { previewText } from './replies'
 
 export type SavedSort = 'recent' | 'channel'

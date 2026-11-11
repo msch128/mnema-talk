@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ContextMenuItem } from './menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 // The Talk's floating call controls (mute, deafen, camera, screen, … leave).
 // VoiceStage places it over the stage area and fades it out when idle
 // (useAutoHide); `visible` is that state. It reports `pinned` while it must
@@ -14,13 +14,13 @@ import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
 import { useWebRTC } from '../composables/useWebRTC'
 import { useMenuState } from '../composables/useNavMenus'
-import ContextMenu from './ContextMenu.vue'
-import TriggerMenu from './TriggerMenu.vue'
+import ContextMenu from '../shared/components/ContextMenu.vue'
+import TriggerMenu from '../shared/components/TriggerMenu.vue'
 import { useVoiceMenus } from '../composables/useVoiceMenus'
 import TalkReactButton from './TalkReactButton.vue'
 import { useStage } from '../composables/useStage'
 import { blockedButton } from './talkButtons'
-import { waitSentence } from '../lib/newMember'
+import { waitSentence } from '../shared/lib/newMember'
 import { t } from '../i18n'
 
 const props = defineProps({

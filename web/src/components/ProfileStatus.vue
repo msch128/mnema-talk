@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { charCount } from '../lib/textLength'
+import { charCount } from '../shared/lib/textLength'
 import type { PropType } from 'vue'
 import type { User as ProfileUser } from '../types/domain'
 import { computed, ref } from 'vue'
 import { Edit3, Eraser } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 import { locale, t } from '../i18n'
-import { dateTime } from '../lib/time'
+import { dateTime } from '../shared/lib/time'
 
 // The status line of a profile. One's own is written in the status dialog; an
 // admin may change or clear anyone else's here.

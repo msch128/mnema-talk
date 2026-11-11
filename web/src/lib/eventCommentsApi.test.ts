@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { api } from './api'
+import { api } from '../shared/lib/api'
 import { fetchComments, postComment, editComment, deleteComment, setCommentsMuted } from './eventCommentsApi'
 
-vi.mock('./api', () => ({ api: vi.fn() }))
+vi.mock('../shared/lib/api', () => ({ api: vi.fn() }))
 const apiMock = vi.mocked(api) as unknown as ReturnType<typeof vi.fn>
 
 type Opts = { method?: string; json?: unknown; decode?: (v: unknown) => unknown }

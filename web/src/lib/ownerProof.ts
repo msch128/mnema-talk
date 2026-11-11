@@ -1,5 +1,5 @@
 import { onMounted, ref } from 'vue'
-import { api } from './api'
+import { api } from '../shared/lib/api'
 import { decodeAuthAccountInfo } from '../types/rest'
 
 /** The confirmation the server asks of the Owner before taking over another account. */

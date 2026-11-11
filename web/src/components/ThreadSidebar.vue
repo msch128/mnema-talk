@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Message } from '../types/domain'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { X, MessageSquare, Loader2, Bell, BellOff, Lock } from '@lucide/vue'
 import type { ThreadRoot } from '../stores/chat'

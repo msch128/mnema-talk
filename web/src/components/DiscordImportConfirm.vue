@@ -2,9 +2,9 @@
 // The three escalating confirmations before a Discord import runs. Each step
 // says in plain words what happens; only the last one writes anything.
 import { ref, computed } from 'vue'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 import { applyImport, CONFIRM_WORD } from '../lib/discordImport'
-import { isApiError, caughtErrorMessage } from '../lib/api'
+import { isApiError, caughtErrorMessage } from '../shared/lib/api'
 import type { RoleMap } from '../lib/discordImport'
 import type { DiscordimportPlan, DiscordimportRecord } from '../types/rest'
 import { t } from '../i18n'

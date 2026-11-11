@@ -39,11 +39,11 @@ their own inline editor with its own bar.
 
 Built from two shared parts, never a one-off variant:
 
-- `web/src/composables/useSettingsDraft.ts`: the draft, dirty detection, reset, the
+- `web/src/shared/composables/useSettingsDraft.ts`: the draft, dirty detection, reset, the
   save lifecycle, the discard guard and Ctrl/Cmd+S.
-- `web/src/components/UnsavedChangesBar.vue`: the footer with "You have unsaved
+- `web/src/shared/components/UnsavedChangesBar.vue`: the footer with "You have unsaved
   changes", Reset, Save and the inline error.
-- `web/src/composables/useStagedImage.ts`: an image field of the draft (`File`,
+- `web/src/shared/composables/useStagedImage.ts`: an image field of the draft (`File`,
   `'remove'` or `null` for unchanged), its preview and its normaliser.
 
 Rules:
@@ -88,7 +88,7 @@ A one-off form that does something (change password, change e-mail, create a
 channel) names its button after the action ("Change password", "Create"), not
 "Save", and closing it with typed input asks first.
 
-`web/src/composables/settingsPatterns.test.ts` checks the parts that can be checked
+`web/src/shared/composables/settingsPatterns.test.ts` checks the parts that can be checked
 mechanically: a draft component never uses the immediate helpers, an image picker on
 a draft screen goes through `useStagedImage`, and a component with an unsaved bar
 tracks it with a draft or a leave guard.

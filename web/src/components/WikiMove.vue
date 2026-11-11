@@ -2,7 +2,7 @@
 // Rename or move a page (Manage the wiki): its address, its parent and its
 // place among its siblings. The old address keeps working as a redirect.
 import { computed } from 'vue'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { changeWikiPage, type WikiPage } from '../lib/wikiApi'
 import { goWiki } from '../lib/wikiNav'
 import { buildTree, height, subtreeSlugs, type WikiNode } from '../lib/wikiTree'
@@ -10,7 +10,7 @@ import { t } from '../i18n'
 import { WIKI_FIELD as FIELD } from '../lib/wikiUi'
 import { useWikiStore } from '../stores/wiki'
 import { useToastStore } from '../stores/toast'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 const MAX_DEPTH = 5
 

@@ -4,7 +4,7 @@
 // read states; the stored settings only feed the menus.
 import type { NotifyLevel, ReadState } from '../../types/domain'
 import { decodeNotificationSettings } from '../../types/domain'
-import { api } from '../../lib/api'
+import { api } from '../../shared/lib/api'
 import { assertCommunity, type Cx } from './state'
 import { fetchReadState, noteReadStateCleared } from './readState'
 

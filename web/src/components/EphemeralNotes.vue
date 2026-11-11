@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { EyeOff, X } from '@lucide/vue'
-import UserAvatar from './UserAvatar.vue'
-import MarkdownContent from './MarkdownContent.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
+import MarkdownContent from '../shared/components/MarkdownContent.vue'
 import { useChatStore } from '../stores/chat'
 
 // Replies of bots to slash commands that only this member sees ("ephemeral").

@@ -2,7 +2,7 @@
 // caret, rank matching members, and splice the chosen name in.
 
 import type { Role, User } from '../types/domain'
-import type { CustomEmoji } from './customEmoji'
+import type { CustomEmoji } from '../shared/lib/customEmoji'
 
 type Mentionable = User & { is_bot?: boolean }
 export type MentionSuggestion =

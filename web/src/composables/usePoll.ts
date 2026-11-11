@@ -8,10 +8,10 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { isEnded, nextSelection, remaining, votedFor } from '../lib/polls'
 import { t } from '../i18n'
-import { visibleInterval } from '../lib/pageVisibility'
+import { visibleInterval } from '../shared/lib/pageVisibility'
 
 const TICK_MS = 15_000
 // setTimeout cannot wait longer than a signed 32-bit number of milliseconds.

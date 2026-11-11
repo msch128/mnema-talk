@@ -1,8 +1,8 @@
 import { useToastStore } from '../../stores/toast'
 import { usePermissionsStore } from '../../stores/permissions'
 import { t } from '../../i18n'
-import { talkPath } from '../../lib/routePaths'
-import { navigate } from '../../lib/router'
+import { talkPath } from '../../shared/lib/routePaths'
+import { navigate } from '../../shared/lib/router'
 import type { ServerEventPayloads } from '../../types/events'
 import type { Cx } from './state'
 

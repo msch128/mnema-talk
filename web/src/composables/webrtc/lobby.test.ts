@@ -9,7 +9,7 @@ import { fixtureId } from '../../test-fixtures.fixture'
 const navigate = vi.fn()
 const loadPermissions = vi.fn(async () => {})
 vi.mock('../../stores/permissions', () => ({ usePermissionsStore: () => ({ load: loadPermissions }) }))
-vi.mock('../../lib/router', () => ({ navigate: (...args: unknown[]) => navigate(...args) }))
+vi.mock('../../shared/lib/router', () => ({ navigate: (...args: unknown[]) => navigate(...args) }))
 
 const LOBBY = fixtureId(10)
 const TALK = fixtureId(11)

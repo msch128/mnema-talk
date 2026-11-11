@@ -1,5 +1,5 @@
 // The browser side of "Test my connection": where its ICE servers come from and how the offer reaches the server.
-import { api } from './api'
+import { api } from '../shared/lib/api'
 import { SpeedRefused, type ConnectionTestDeps } from './connectionTest'
 import { iceServers, loadIceServers } from '../composables/webrtc/iceServers'
 import { decodeServerConnectionProbeAnswer } from '../types/rest'

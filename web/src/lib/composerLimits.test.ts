@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { COUNTER_FROM, MAX_MESSAGE_LENGTH, lengthState, slowModeRemaining } from './composerLimits'
-import { ApiError, waitSeconds } from './api'
+import { ApiError, waitSeconds } from '../shared/lib/api'
 
 describe('the message length counter', () => {
   it('stays away from short messages', () => {

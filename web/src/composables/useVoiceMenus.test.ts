@@ -6,7 +6,7 @@ import { useVoiceMenus } from './useVoiceMenus'
 import { useVoiceStore } from '../stores/voice'
 import { requireValue } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 
 const rtc = {
   refreshAudioDevices: vi.fn(),

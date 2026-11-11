@@ -5,7 +5,7 @@
 import { computed } from 'vue'
 import { ShieldCheck, TriangleAlert } from '@lucide/vue'
 import type { ServerBackupStatus } from '../types/rest'
-import { SOURCE_URL } from '../lib/thirdParty'
+import { SOURCE_URL } from '../shared/lib/thirdParty'
 import { formatBytes } from '../lib/byteUnits'
 import { t, locale } from '../i18n'
 

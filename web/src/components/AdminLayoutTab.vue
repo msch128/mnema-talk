@@ -4,13 +4,13 @@
 // one go with the shared unsaved-changes bar. Renames and deletes are actions.
 import { computed, ref, onMounted } from 'vue'
 import { FolderTree } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import type { Channel, Category, ChannelHierarchy } from '../types/domain'
 import { decodeChannelHierarchy, decodeChannel, decodeCategory } from '../types/domain'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import {
   moveChannel, moveCategory, locateChannel, removeChannel, removeCategory, addCategory, nextSortOrder, toLayoutPayload
-} from '../lib/channelLayout'
+} from '../shared/lib/channelLayout'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
@@ -19,14 +19,14 @@ import AdminCategoryHeader from './AdminCategoryHeader.vue'
 import AdminLayoutToolbar from './AdminLayoutToolbar.vue'
 import AdminEditDialogs from './AdminEditDialogs.vue'
 import CreateChannelModal from './CreateChannelModal.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
-import { onSaveShortcut, useLeaveGuard } from '../composables/draftGuard'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
+import { onSaveShortcut, useLeaveGuard } from '../shared/composables/draftGuard'
 import { useLayoutDrag } from '../composables/useLayoutDrag'
 
 const chatStore = useChatStore()
 const toasts = useToastStore()
 
-// { uncategorized, categories[].channels } as in lib/channelLayout.
+// { uncategorized, categories[].channels } as in shared/lib/channelLayout.
 const layout = ref<ChannelHierarchy>({ uncategorized: [], categories: [] })
 // The order as last saved or loaded; the draft is dirty only while it differs from it.
 const orderOf = (l: ChannelHierarchy) => JSON.stringify(toLayoutPayload(l))
@@ -77,7 +77,7 @@ async function syncAfterEdit(patch: () => void) {
   else await loadChannelsData(patch)
 }
 
-// ---- Ordering (shared rules in lib/channelLayout) ----
+// ---- Ordering (shared rules in shared/lib/channelLayout) ----
 
 // Takes a reordered tree; an unchanged one (same object) is no change.
 function reorder(next: ChannelHierarchy) {

@@ -1,6 +1,6 @@
 import { useAuthStore } from '../auth'
-import { syncServerClock } from '../../lib/clock'
-import { pageHidden } from '../../lib/pageVisibility'
+import { syncServerClock } from '../../shared/lib/clock'
+import { pageHidden } from '../../shared/lib/pageVisibility'
 import { playSoundEffect } from '../../lib/soundEffects'
 import type { UserUpdate } from '../../types/domain'
 import type { VoiceRooms, VoiceSnapshot, VoiceStateUpdate, MuteState, SpeakingState } from '../../types/events'

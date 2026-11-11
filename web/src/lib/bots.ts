@@ -1,7 +1,7 @@
 // Helpers for the admin Bots tab: intents, risky roles, relative time and the
 // curl example. The server stays the authority on every rule.
-import { ADMIN_AREA_KEYS, PERMISSION_BITS } from './permissions'
-import { initialOf } from './initial'
+import { ADMIN_AREA_KEYS, PERMISSION_BITS } from '../shared/lib/permissions'
+import { initialOf } from '../shared/lib/initial'
 
 /** Gateway intents a bot may be allowed to ask for (Discord bit numbers). */
 export const BOT_INTENTS = [

@@ -1,8 +1,8 @@
 import type { Channel, Category } from '../types/domain'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import { t } from '../i18n'
 
 /** Deleting and duplicating channels and categories from the sidebar, with their confirmations and toasts. */

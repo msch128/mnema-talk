@@ -16,7 +16,7 @@ const lib = vi.hoisted(() => ({
   loadFails: false,
 }))
 
-vi.mock('../lib/webPush', () => ({
+vi.mock('../shared/lib/webPush', () => ({
   pushAvailability: () => lib.availability,
   loadConfig: vi.fn(async () => { if (lib.loadFails) throw new Error('offline'); return lib.config }),
   loadDevices: vi.fn(async () => lib.devices),

@@ -1,5 +1,5 @@
 // Build-time version of the web app (vite define __APP_VERSION__, see
-// src/lib/appVersion.js). It must match the version linked into the Go
+// src/shared/lib/appVersion.js). It must match the version linked into the Go
 // binary, so both read the same source: MNEMA_VERSION (Makefile, Dockerfile,
 // release workflow), else ../version.txt.
 import { readFileSync } from 'node:fs'

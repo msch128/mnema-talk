@@ -1,5 +1,5 @@
 import type { DirectiveBinding, ObjectDirective } from 'vue'
-import { charCount, clampChars } from '../lib/textLength'
+import { charCount, clampChars } from '../shared/lib/textLength'
 
 type Field = HTMLInputElement | HTMLTextAreaElement
 type MaxCharsElement = Field & {

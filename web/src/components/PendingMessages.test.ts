@@ -9,7 +9,7 @@ import type { PendingMessage } from '../stores/chat/outboxTypes'
 import { userFixture } from '../test-fixtures.fixture'
 
 // A saved edit lets the queue go on at once: the request it starts never answers here.
-vi.mock('../lib/api', async importOriginal => ({ ...(await importOriginal<typeof import('../lib/api')>()), api: vi.fn(() => new Promise(() => {})) }))
+vi.mock('../shared/lib/api', async importOriginal => ({ ...(await importOriginal<typeof import('../shared/lib/api')>()), api: vi.fn(() => new Promise(() => {})) }))
 
 beforeEach(() => {
   setActivePinia(createPinia())

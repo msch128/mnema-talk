@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { AvatarUser } from './presentationTypes'
+import type { AvatarUser } from '../shared/components/presentationTypes'
 // One participant of the Talk, like a Discord voice tile: their camera when it
 // is on, else their avatar centered in the tile and scaled to its size. The
 // name sits centered at the bottom, LIVE in the top-right corner, the time in
@@ -10,10 +10,10 @@ import type { AvatarUser } from './presentationTypes'
 import { ref, computed, watch, nextTick } from 'vue'
 import { MicOff, Eye, EyeOff, Monitor, X } from '@lucide/vue'
 import VoiceTimer from './VoiceTimer.vue'
-import MediaImage from './MediaImage.vue'
-import MuteMarks from './MuteMarks.vue'
+import MediaImage from '../shared/components/MediaImage.vue'
+import MuteMarks from '../shared/components/MuteMarks.vue'
 import TalkReactionFloat from './TalkReactionFloat.vue'
-import { initialOf } from '../lib/initial'
+import { initialOf } from '../shared/lib/initial'
 import { useCameraFit } from '../composables/useCameraFit'
 
 const props = defineProps({

@@ -3,12 +3,12 @@
 // nobody. It only decides who can start one; conversations that exist go on,
 // and the member can still start their own.
 import { onMounted, ref } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeChatPrivacy, type ChatPrivacy } from '../types/rest'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import RadioCard from './RadioCard.vue'
-import StatePanel from './StatePanel.vue'
+import RadioCard from '../shared/components/RadioCard.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 const toasts = useToastStore()
 const emit = defineEmits<{ saved: [] }>()

@@ -1,6 +1,6 @@
 import { required } from '../store-test-support.fixture'
 import { useMessageActions } from './useMessageActions'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 import { channelFixture, messageFixture } from '../test-fixtures.fixture'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ref } from 'vue'
@@ -9,7 +9,7 @@ import { useMessageMenu } from './useMessageMenu'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { setLocale } from '../i18n'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 
 const msg = messageFixture({ id: 'm1', content: 'hello world', user_id: 'me' })
 

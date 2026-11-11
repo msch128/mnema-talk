@@ -1,5 +1,5 @@
 import { nextTick } from 'vue'
-import { useCompactLayout } from '../composables/useCompactLayout'
+import { useCompactLayout } from '../shared/composables/useCompactLayout'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
@@ -12,8 +12,8 @@ import { setLocale } from '../i18n'
 import { member } from './adminTestkit.fixture'
 import type { AdminUser } from '../types/domain'
 
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn(() => Promise.resolve(undefined))
 }))
 

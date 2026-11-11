@@ -5,7 +5,7 @@ import { useVoiceStore } from '../stores/voice'
 import { rateJitter } from '../lib/rtcStats'
 import { flowRows, micStatus } from '../lib/rtcFlowRows'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 
 const emit = defineEmits<{ close: [] }>()
 const voiceStore = useVoiceStore()

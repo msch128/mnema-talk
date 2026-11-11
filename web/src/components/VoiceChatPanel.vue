@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { ResizePanel } from './presentationTypes'
+import type { ResizePanel } from '../shared/components/presentationTypes'
 // A voice channel's own text chat, under its Talk's stage (like Discord's
 // chat next to a voice channel). The whole chat is the regular one
 // (ChatArea in its panel variant): messages, attachments, reactions, edits,
@@ -10,7 +10,7 @@ import { watch, onMounted, onUnmounted } from 'vue'
 import { Loader2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import ChatArea from './ChatArea.vue'
-import ResizeHandle from './ResizeHandle.vue'
+import ResizeHandle from '../shared/components/ResizeHandle.vue'
 
 const props = defineProps({
   channelId: { type: String, required: true },

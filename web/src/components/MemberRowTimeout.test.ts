@@ -3,7 +3,7 @@ import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import MemberRow from './MemberRow.vue'
 import { usePermissionsStore } from '../stores/permissions'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { setLocale } from '../i18n'
 import { userFixture } from '../test-fixtures.fixture'
 

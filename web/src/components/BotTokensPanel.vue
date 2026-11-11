@@ -3,11 +3,11 @@
 // regenerate / revoke. The secret itself is only ever shown by the dialog.
 import { ref, onMounted } from 'vue'
 import { KeyRound, RefreshCw, Ban } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { arrayDecoder } from '../types/validation'
 import { decodeBotNewTokenResponse, isBotToken } from '../types/rest'
 import type { BotToken } from '../types/rest'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import { endOfDayIso } from '../lib/bots'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'

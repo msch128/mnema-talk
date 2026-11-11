@@ -4,7 +4,7 @@
 // "Invite to my Talk" posts the same card for the Talk the member is in.
 import { computed, ref } from 'vue'
 import { Phone, PhoneCall, UserPlus } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { inviteConversationToTalk } from '../lib/talks'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'

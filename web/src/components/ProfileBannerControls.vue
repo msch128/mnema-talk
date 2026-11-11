@@ -2,12 +2,12 @@
 import type { User as ProfileUser } from '../types/domain'
 import { ref } from 'vue'
 import { ImagePlus, Trash2 } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
+import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../shared/lib/pickImage'
 
 // "Change banner" and "Remove banner" on one's own profile, as quiet pills on
 // the banner itself. The server crops the picture to 3:1 and strips its metadata.

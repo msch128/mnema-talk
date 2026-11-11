@@ -2,7 +2,7 @@ import type { Message } from '../../types/domain'
 import type { ServerEventPayloads } from '../../types/events'
 import { isChatMessage } from '../../types/rest'
 import { arrayDecoder } from '../../types/validation'
-import { api } from '../../lib/api'
+import { api } from '../../shared/lib/api'
 import { MAX_PIN_NOTICES } from './types'
 import type { Cx } from './state'
 

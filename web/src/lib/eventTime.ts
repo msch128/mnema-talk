@@ -1,6 +1,6 @@
 // How an event's start is written: the weekday and the date with the time,
 // and a short relative hint next to it ("today", "tomorrow", "in 3 days").
-import { clockTimeOptions, startOfDay } from './time'
+import { clockTimeOptions, startOfDay } from '../shared/lib/time'
 
 const DAY_MS = 86_400_000
 

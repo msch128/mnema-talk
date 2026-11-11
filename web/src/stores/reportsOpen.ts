@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeChatOpenCountResponse, decodeChatReportsPage } from '../types/rest'
 import { usePermissionsStore } from './permissions'
 import { useServerFeaturesStore } from './serverFeatures'

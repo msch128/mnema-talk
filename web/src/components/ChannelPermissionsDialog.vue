@@ -6,20 +6,20 @@
 // editor holds themselves; this only offers what fits.
 import type { PropType } from 'vue'
 import { ref, computed, onMounted } from 'vue'
-import { useSettingsDraft } from '../composables/useSettingsDraft'
+import { useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { Trash2, Lock } from '@lucide/vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeOverwritesBody } from '../types/domain'
 import type { Overwrite } from '../types/domain'
 import { usePermissionsStore } from '../stores/permissions'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
-import { CHANNEL_PERMISSION_KEYS, PERMISSION_BITS } from '../lib/permissions'
+import { CHANNEL_PERMISSION_KEYS, PERMISSION_BITS } from '../shared/lib/permissions'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
-import StatePanel from './StatePanel.vue'
-import PermissionToggles from './PermissionToggles.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
+import PermissionToggles from '../shared/components/PermissionToggles.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 const props = defineProps({
   kind: { type: String as PropType<'channel' | 'category'>, required: true },

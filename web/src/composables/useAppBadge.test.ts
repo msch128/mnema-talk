@@ -5,8 +5,8 @@ import { createPinia, setActivePinia } from 'pinia'
 const badge = vi.hoisted(() => vi.fn())
 const report = vi.hoisted(() => vi.fn())
 const host = vi.hoisted(() => ({ reports: false }))
-vi.mock('../lib/platform', async importOriginal => {
-  const real = await importOriginal<typeof import('../lib/platform')>()
+vi.mock('../shared/lib/platform', async importOriginal => {
+  const real = await importOriginal<typeof import('../shared/lib/platform')>()
   return { ...real, platform: { ...real.platform, setBadge: badge, reportUnread: report, supportsUnreadReport: () => host.reports } }
 })
 

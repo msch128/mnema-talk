@@ -4,8 +4,8 @@
 // notifications. One session can be signed out, or all the others at once.
 import { computed, onMounted, ref } from 'vue'
 import { Bell, LogOut, Monitor } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
-import { confirm } from '../lib/confirm'
+import { caughtErrorMessage } from '../shared/lib/api'
+import { confirm } from '../shared/lib/confirm'
 import { confirmDiscardUnsent } from '../lib/unsentGuard'
 import { listSessions, revokeOtherSessions, revokeSession } from '../lib/accountApi'
 import { relativeTime } from '../lib/bots'

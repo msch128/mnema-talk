@@ -7,11 +7,11 @@ import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { t } from '../i18n'
-import UserAvatar from './UserAvatar.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 import VoiceStatusPanel from './VoiceStatusPanel.vue'
 import AccountMenu from './AccountMenu.vue'
 import PresenceMenu from './PresenceMenu.vue'
-import TriggerMenu from './TriggerMenu.vue'
+import TriggerMenu from '../shared/components/TriggerMenu.vue'
 import { useVoiceMenus } from '../composables/useVoiceMenus'
 
 const emit = defineEmits<{ 'open-legal': [] }>()

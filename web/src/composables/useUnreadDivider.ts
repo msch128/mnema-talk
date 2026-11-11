@@ -2,9 +2,9 @@
 import { ref, computed, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import { firstUnreadId } from '../lib/chatLogic'
+import { firstUnreadId } from '../shared/lib/chatLogic'
 import { t, locale } from '../i18n'
-import { clockTimeOptions } from '../lib/time'
+import { clockTimeOptions } from '../shared/lib/time'
 
 export function useUnreadDivider() {
   const chatStore = useChatStore()

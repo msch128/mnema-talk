@@ -5,15 +5,15 @@ import AutomodRuleDialog from './AutomodRuleDialog.vue'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { i18nPlugin, setLocale } from '../i18n'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 import { tooltip } from '../directives/tooltip'
 import { fixtureId } from '../test-fixtures.fixture'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import type { AutomodRule } from '../types/rest'
 
 const http = vi.hoisted(() => ({ calls: [] as Array<{ url: string; options?: ApiOptions }>, fail: false }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => {
     http.calls.push({ url, ...(options ? { options } : {}) })
     if (http.fail) return Promise.reject(new Error('boom'))

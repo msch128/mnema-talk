@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { clockTimeOptions } from '../lib/time'
+import { clockTimeOptions } from '../shared/lib/time'
 import type { Message } from '../types/domain'
 import type { ChatSearchRoot } from '../types/rest'
 import { computed } from 'vue'
@@ -7,8 +7,8 @@ import { Hash, Volume2, Paperclip, ArrowRight, CornerDownRight, Pin, ChartNoAxes
 import { locale } from '../i18n'
 import { splitHighlight } from '../lib/searchHighlight'
 import { previewText } from '../lib/replies'
-import UserAvatar from './UserAvatar.vue'
-import { shownName } from '../lib/deletedUser'
+import UserAvatar from '../shared/components/UserAvatar.vue'
+import { shownName } from '../shared/lib/deletedUser'
 
 // One hit. The text is shown as plain text (no Markdown markers, spoilers hidden, emoji as :name:);
 // matches are highlighted by splitting it into nodes, never as HTML.

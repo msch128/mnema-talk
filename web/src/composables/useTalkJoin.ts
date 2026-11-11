@@ -2,7 +2,7 @@ import { computed } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useWebRTC } from './useWebRTC'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import { t } from '../i18n'
 
 /**

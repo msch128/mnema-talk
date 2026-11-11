@@ -2,7 +2,7 @@
 // the thread panel: arrows move between rows, r replies, e edits (own
 // messages), the menu key / Shift+F10 open the message menu, Escape backs out.
 
-import { isTypingEvent } from '../lib/typingTarget'
+import { isTypingEvent } from '../shared/lib/typingTarget'
 
 
 /**

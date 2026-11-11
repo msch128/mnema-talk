@@ -6,7 +6,7 @@ import { useStreamQuality } from './useStreamQuality'
 import { useVoiceStore } from '../stores/voice'
 import { setLocale } from '../i18n'
 import { requireValue } from '../test-fixtures.fixture'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 import type { MediaStat } from '../lib/mediaStats'
 
 const report = (bytesSent = 0): MediaStat[] => [

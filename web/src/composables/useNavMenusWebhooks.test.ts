@@ -3,11 +3,11 @@ import { createPinia, setActivePinia } from 'pinia'
 import { buildChannelItems } from './useNavMenus'
 import { usePermissionsStore } from '../stores/permissions'
 import { useAuthStore } from '../stores/auth'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { channelFixture, userFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
 
-vi.mock('../lib/api', async original => ({ ...(await original<typeof import('../lib/api')>()), api: vi.fn() }))
+vi.mock('../shared/lib/api', async original => ({ ...(await original<typeof import('../shared/lib/api')>()), api: vi.fn() }))
 
 const channel = channelFixture({ id: 'c1', type: 'text', name: 'general' })
 const ids = (items: ReturnType<typeof buildChannelItems>) => items.map(i => i.id)

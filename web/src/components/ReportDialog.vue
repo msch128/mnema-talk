@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { charCount } from '../lib/textLength'
-// Host for openReport() from lib/reportDialog: tell the moderators about a
+import { charCount } from '../shared/lib/textLength'
+// Host for openReport() from shared/lib/reportDialog: tell the moderators about a
 // message. The report keeps a copy of the message and the ones around it, so
 // it still stands if the message is deleted; the author is not told.
 import { ref, watch } from 'vue'
 import { Loader2 } from '@lucide/vue'
-import { api, isApiError } from '../lib/api'
-import { closeReport, pendingReport, REPORT_CATEGORIES, REPORT_NOTE_MAX, type ReportCategory } from '../lib/reportDialog'
+import { api, isApiError } from '../shared/lib/api'
+import { closeReport, pendingReport, REPORT_CATEGORIES, REPORT_NOTE_MAX, type ReportCategory } from '../shared/lib/reportDialog'
 import { decodeChatReportFiled } from '../types/rest'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 
 const toasts = useToastStore()
 const category = ref<ReportCategory>('spam')

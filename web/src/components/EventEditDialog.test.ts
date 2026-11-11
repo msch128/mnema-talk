@@ -11,7 +11,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { setLocale } from '../i18n'
 import { categoryFixture, channelFixture, fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import type { CommunityEvent } from '../types/domain'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 
 function makeEvent(overrides: Partial<CommunityEvent> = {}): CommunityEvent {
   return {

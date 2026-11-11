@@ -3,17 +3,17 @@
 // and what the member may do with it (edit, history, lock, move, delete).
 import { computed, ref, watch } from 'vue'
 import { Clock, History, Link2, Lock, LockOpen, Pencil, Trash2, Undo2 } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
-import { confirm } from '../lib/confirm'
+import { caughtErrorMessage } from '../shared/lib/api'
+import { confirm } from '../shared/lib/confirm'
 import { deleteWikiPage, lockWikiPage, undeleteWikiPage, type WikiPage } from '../lib/wikiApi'
-import { copyToClipboard } from '../lib/clipboard'
+import { copyToClipboard } from '../shared/lib/clipboard'
 import { goWiki } from '../lib/wikiNav'
 import { breadcrumbs } from '../lib/wikiTree'
-import { relative } from '../lib/time'
+import { relative } from '../shared/lib/time'
 import { locale, t } from '../i18n'
 import { useToastStore } from '../stores/toast'
 import { useWikiStore } from '../stores/wiki'
-import MarkdownContent from './MarkdownContent.vue'
+import MarkdownContent from '../shared/components/MarkdownContent.vue'
 import WikiMove from './WikiMove.vue'
 
 const props = defineProps<{ page: WikiPage }>()

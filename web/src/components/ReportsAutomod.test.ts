@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
@@ -9,8 +9,8 @@ import { tooltip } from '../directives/tooltip'
 import { fixtureId } from '../test-fixtures.fixture'
 
 const http = vi.hoisted(() => ({ handle: (_url: string, _o?: ApiOptions): unknown => ({}) }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)))
 }))
 

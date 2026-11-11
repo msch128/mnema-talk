@@ -9,7 +9,7 @@ import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useAuthStore } from '../stores/auth'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 import { setLocale } from '../i18n'
 import { categoryFixture, channelFixture, fixtureId, FIXTURE_TIMESTAMP, userFixture } from '../test-fixtures.fixture'
 import type { CommunityEvent, PermissionsInfo, RSVPItem } from '../types/domain'
@@ -18,8 +18,8 @@ vi.mock('../lib/eventCommentsApi', () => ({
   fetchComments: vi.fn().mockResolvedValue({ comments: [], has_more: false, muted: false }),
   postComment: vi.fn(), editComment: vi.fn(), deleteComment: vi.fn(), setCommentsMuted: vi.fn()
 }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn(() => Promise.resolve([]))
 }))
 

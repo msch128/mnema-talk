@@ -3,7 +3,7 @@ import { TestStream, present } from '../media-test.fixture'
 import { nextTick } from 'vue'
 import { t } from '../i18n'
 import { useToastStore } from '../stores/toast'
-import { settingsField, settingsTab } from '../lib/settingsDialog'
+import { settingsField, settingsTab } from '../shared/lib/settingsDialog'
 import { installHarness, FakeAudioContext, FakePC, attachedStream, audioElements, fakeStream, fakeTrack, grantMic, joined, negotiate, remoteStreamFor, setup, streamOf } from './useWebRTC.harness.fixture'
 import { suppressor } from './useWebRTC.noiseSuppressor.fixture'
 

@@ -1,7 +1,7 @@
 // Keys of a message composer, shared by the channel chat and the thread panel.
 import { onMounted, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
-import { isTypingEvent } from '../lib/typingTarget'
+import { isTypingEvent } from '../shared/lib/typingTarget'
 
 interface ComposerKeys {
   /** Handlers that may consume the key first (suggestion lists); each returns true when it did. */

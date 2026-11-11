@@ -5,7 +5,7 @@ import ForumSettingsForm from './ForumSettingsForm.vue'
 import { setLocale } from '../i18n'
 import * as forumApi from '../lib/forumApi'
 import { useToastStore } from '../stores/toast'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 
 vi.mock('../lib/forumApi', () => ({ updateForumSettings: vi.fn() }))
 

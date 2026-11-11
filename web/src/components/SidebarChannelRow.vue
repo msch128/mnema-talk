@@ -12,11 +12,11 @@ import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { channelDraftKey, hasDraft } from '../lib/drafts'
 import { talkSeats } from '../lib/talks'
-import UserAvatar from './UserAvatar.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
-import MuteMarks from './MuteMarks.vue'
+import MuteMarks from '../shared/components/MuteMarks.vue'
 import TalkLeaderMark from './TalkLeaderMark.vue'
-import Badge from './Badge.vue'
+import Badge from '../shared/components/Badge.vue'
 
 const props = defineProps({
   channel: { type: Object as PropType<Channel>, required: true },

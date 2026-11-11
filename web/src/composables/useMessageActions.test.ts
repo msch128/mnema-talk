@@ -8,7 +8,7 @@ import { useMessageActions, formatTime } from './useMessageActions'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 import { setLocale } from '../i18n'
 
 let scope: EffectScope | undefined

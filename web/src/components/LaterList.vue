@@ -6,13 +6,13 @@ import { useChatStore } from '../stores/chat'
 import { useLaterStore } from '../stores/later'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { presetTime } from '../lib/laterTimes'
 import { previewText } from '../lib/replies'
-import { dateTime } from '../lib/time'
+import { dateTime } from '../shared/lib/time'
 import { locale, t } from '../i18n'
 import ScheduledItem from './ScheduledItem.vue'
-import StatePanel from './StatePanel.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 // The member's reminders and scheduled messages. A reminder that fell due
 // waits here, marked as due, until it is marked done or snoozed. The server

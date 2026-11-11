@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useChannelWrite } from './useChannelWrite'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 import { channelFixture, fixtureId } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
 

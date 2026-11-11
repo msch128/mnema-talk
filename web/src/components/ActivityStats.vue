@@ -6,7 +6,7 @@ import type { User } from '../types/domain'
 import { computed } from 'vue'
 import { Headphones, MessageSquare } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
-import { now, secondsSince, totalParts, useServerClock } from '../lib/clock'
+import { now, secondsSince, totalParts, useServerClock } from '../shared/lib/clock'
 import { t, locale } from '../i18n'
 
 const props = defineProps({

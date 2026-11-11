@@ -5,17 +5,17 @@
 // (doc/settings-ux.md). The server enforces all of it (doc/moderation.md).
 import { computed, onMounted, ref } from 'vue'
 import { ShieldAlert } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { useRaidStore } from '../stores/raid'
 import { useToastStore } from '../stores/toast'
-import { useSettingsDraft } from '../composables/useSettingsDraft'
-import { useReloadOnActivate } from '../composables/useReloadOnActivate'
-import { durationLabel } from '../lib/moderation'
+import { useSettingsDraft } from '../shared/composables/useSettingsDraft'
+import { useReloadOnActivate } from '../shared/composables/useReloadOnActivate'
+import { durationLabel } from '../shared/lib/moderation'
 import { withCurrent } from '../lib/automod'
-import presets from '../lib/presets.json'
+import presets from '../shared/lib/presets.json'
 import { locale, t } from '../i18n'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
-import StatePanel from './StatePanel.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 const MAX_LIMIT = 1000
 const MAX_WINDOW = 1440

@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { reactive } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import StreamQualityMenu from './StreamQualityMenu.vue'
-import type { ContextMenuItem } from './menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 import type { MediaStat } from '../lib/mediaStats'
 const state = reactive({ open: false, x: 0, y: 0, anchor: null })
 const stop = vi.fn()

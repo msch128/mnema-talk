@@ -1,5 +1,5 @@
 import type { VueWrapper } from '@vue/test-utils'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import type { Invite } from '../types/domain'
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
@@ -8,11 +8,11 @@ import { setActivePinia, createPinia } from 'pinia'
 import EditInviteDialog from './EditInviteDialog.vue'
 import { setLocale } from '../i18n'
 import { useToastStore } from '../stores/toast'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args)
 }))
 

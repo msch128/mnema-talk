@@ -9,11 +9,11 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { i18nPlugin, setLocale } from '../i18n'
 import { tooltip } from '../directives/tooltip'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
-import { PERMISSION_BITS } from '../lib/permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 
 const http = vi.hoisted(() => ({ urls: [] as string[], open: 0, listed: 0, more: false }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string) => {
     http.urls.push(url)
     if (url.startsWith('/api/admin/reports?')) return Promise.resolve({ has_more: http.more, reports: Array.from({ length: http.listed }, (_, i) => ({ id: i })) })

@@ -1,4 +1,4 @@
-import { confirm } from '../../lib/confirm'
+import { confirm } from '../../shared/lib/confirm'
 import { t } from '../../i18n'
 import { useToastStore } from '../../stores/toast'
 import { myUserId } from '../../stores/voice/state'

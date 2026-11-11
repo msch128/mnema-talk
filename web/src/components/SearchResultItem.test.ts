@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import '../lib/customEmoji'
+import '../shared/lib/customEmoji'
 import SearchResultItem from './SearchResultItem.vue'
 import { messageFixture } from '../test-fixtures.fixture'
 

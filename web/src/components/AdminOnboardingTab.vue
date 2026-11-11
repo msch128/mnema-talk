@@ -1,26 +1,26 @@
 <script setup lang="ts">
-import { charCount } from '../lib/textLength'
+import { charCount } from '../shared/lib/textLength'
 // Owner and Administrators: the community's name, the welcome text, the rules
 // and the channel new members land in. Rules are Markdown; once they exist,
 // members must accept them before they may post, react, upload or join a Talk
 // (the Owner and bots are exempt). "Require re-acceptance" raises the version.
 // One draft, one Save, the icon included: a picked icon is only a preview until Save.
 import { ref, computed, onMounted } from 'vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { decodeOnboardingSettings, type OnboardingSettings } from '../types/rest'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { useOnboardingStore } from '../stores/onboarding'
 import { ImagePlus, ScrollText, Trash2 } from '@lucide/vue'
-import type { ImageChange } from '../composables/useStagedImage'
-import { normaliseImage, useStagedImage } from '../composables/useStagedImage'
+import type { ImageChange } from '../shared/composables/useStagedImage'
+import { normaliseImage, useStagedImage } from '../shared/composables/useStagedImage'
 import { t } from '../i18n'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { IMAGE_UPLOAD_MAX_MB } from '../lib/pickImage'
-import { communityIconUrl } from '../lib/communityIcon'
-import MarkdownContent from './MarkdownContent.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import { IMAGE_UPLOAD_MAX_MB } from '../shared/lib/pickImage'
+import { communityIconUrl } from '../shared/lib/communityIcon'
+import MarkdownContent from '../shared/components/MarkdownContent.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 // Until a name is set, the address stands in for it (also in the sidebar header).
 const host = window.location.hostname

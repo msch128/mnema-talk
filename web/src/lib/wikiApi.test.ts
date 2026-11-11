@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { api } from './api'
+import { api } from '../shared/lib/api'
 import {
   changeWikiPage, createWikiPage, deleteWikiPage, fetchWikiPage, fetchWikiRevision, fetchWikiRevisions, fetchWikiTree,
   lockWikiPage, restoreWikiRevision, searchWiki, undeleteWikiPage, uploadWikiImage
 } from './wikiApi'
 
-vi.mock('./api', () => ({ api: vi.fn() }))
+vi.mock('../shared/lib/api', () => ({ api: vi.fn() }))
 
 const call = vi.mocked(api)
 const lastCall = () => call.mock.calls.at(-1) as [string, { method?: string; json?: unknown }]

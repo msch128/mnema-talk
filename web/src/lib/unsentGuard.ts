@@ -1,4 +1,4 @@
-import { confirm } from './confirm'
+import { confirm } from '../shared/lib/confirm'
 import { t } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'

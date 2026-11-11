@@ -2,7 +2,7 @@
 import type { StreamMode, StreamResolution, StreamFrameRate } from '../lib/streamQuality'
 import { ref, computed } from 'vue'
 import { Monitor, Gamepad2, FileText, Sliders, Activity, Sparkles } from '@lucide/vue'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
 import {

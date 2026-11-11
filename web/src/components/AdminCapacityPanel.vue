@@ -4,9 +4,9 @@
 // estimate is labelled as one and links the benchmark it comes from.
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Gauge } from '@lucide/vue'
-import { api } from '../lib/api'
-import { formatFileSize } from '../lib/fileSize'
-import { SOURCE_URL } from '../lib/thirdParty'
+import { api } from '../shared/lib/api'
+import { formatFileSize } from '../shared/lib/fileSize'
+import { SOURCE_URL } from '../shared/lib/thirdParty'
 import { decodeServerCapacityStatus, type ServerCapacityScenario, type ServerCapacityStatus } from '../types/rest'
 import { locale, t } from '../i18n'
 

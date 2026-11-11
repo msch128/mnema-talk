@@ -10,7 +10,7 @@ import { userFixture, categoryFixture, channelFixture, voiceUserFixture } from '
 import VoiceStage from './VoiceStage.vue'
 
 const layout = vi.hoisted(() => ({ compact: { value: true } }))
-vi.mock('../composables/useCompactLayout', async () => {
+vi.mock('../shared/composables/useCompactLayout', async () => {
   const { ref: vueRef } = await import('vue')
   layout.compact = vueRef(true)
   return { useCompactLayout: () => ({ isCompact: layout.compact, navOpen: vueRef(false), openNav: () => {}, closeNav: () => {} }) }

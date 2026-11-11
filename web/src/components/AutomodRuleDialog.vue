@@ -4,21 +4,21 @@
 import type { PropType } from 'vue'
 import type { AutomodRule } from '../types/rest'
 import { computed } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeAutomodRule } from '../types/rest'
 import {
   ACCOUNT_AGES, RAID_RESTRICTIONS, RAID_WINDOWS, RULE_TIMEOUTS, MAX_RULE_NAME,
   emptyForm, formFromRule, formProblem, inputFromForm, withCurrent
 } from '../lib/automod'
 import type { AutomodKind, RuleForm } from '../lib/automod'
-import { confirmDiscard, normalise, useSettingsDraft } from '../composables/useSettingsDraft'
-import { durationLabel } from '../lib/moderation'
+import { confirmDiscard, normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
+import { durationLabel } from '../shared/lib/moderation'
 import { useChatStore } from '../stores/chat'
 import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 const props = defineProps({
   rule: { type: Object as PropType<AutomodRule | null>, default: null },

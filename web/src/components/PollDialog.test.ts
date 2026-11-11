@@ -5,7 +5,7 @@ import PollDialog from './PollDialog.vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { setLocale, i18nPlugin } from '../i18n'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 import { channelFixture, fixtureId, messageFixture } from '../test-fixtures.fixture'
 
 const CH = fixtureId(2)

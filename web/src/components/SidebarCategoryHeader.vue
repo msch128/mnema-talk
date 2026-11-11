@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { DropIndicator } from './presentationTypes'
+import type { DropIndicator } from '../shared/components/presentationTypes'
 // Header of a sidebar category: collapse toggle, and for admins "+" / delete.
 // Admins can drag the header to move the whole category, or move it with
 // Alt+ArrowUp / Alt+ArrowDown on the toggle.

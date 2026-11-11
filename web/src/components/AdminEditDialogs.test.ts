@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import AdminEditDialogs from './AdminEditDialogs.vue'
 import { i18nPlugin, setLocale } from '../i18n'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 import { categoryFixture, channelFixture } from '../test-fixtures.fixture'
 
 beforeEach(() => {

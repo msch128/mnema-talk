@@ -6,7 +6,7 @@ import { computed } from 'vue'
 import { Sparkles, X } from '@lucide/vue'
 import { useAppVersionStore } from '../stores/appVersion'
 import { useVoiceStore } from '../stores/voice'
-import { platform } from '../lib/platform'
+import { platform } from '../shared/lib/platform'
 
 const versionStore = useAppVersionStore()
 const voiceStore = useVoiceStore()

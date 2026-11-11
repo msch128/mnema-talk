@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeChatSavedMessage } from '../types/rest'
 import { createSavedList } from './savedList'
 

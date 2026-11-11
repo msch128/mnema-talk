@@ -839,10 +839,10 @@ and Administrators) gathers version, update state, database, storage, backup and
 ## Frontend structure (`web/src`)
 
 - **Entry**: [`main.ts`](../web/src/main.ts), [`App.vue`](../web/src/App.vue)
-  (routing via [`lib/router.ts`](../web/src/lib/router.ts), layout, dialogs).
-- **Addresses**: [`lib/routePaths.ts`](../web/src/lib/routePaths.ts) builds every
+  (routing via [`shared/lib/router.ts`](../web/src/shared/lib/router.ts), layout, dialogs).
+- **Addresses**: [`shared/lib/routePaths.ts`](../web/src/shared/lib/routePaths.ts) builds every
   address (`/c/:slug`, `/v/:slug`, `/c/:forum/p/:title-:shortId`, `/dm/:username`,
-  `/dm/g/:shortId`) and `lib/router.ts` parses and resolves them client-side against the
+  `/dm/g/:shortId`) and `shared/lib/router.ts` parses and resolves them client-side against the
   channels and conversations the member already sees: the current slug, then
   `previous_slugs`, then a legacy id; the last two are rewritten (replace) to the
   canonical address. The server has no slug-resolving endpoint. Slugs are assigned by
@@ -864,12 +864,12 @@ and Administrators) gathers version, update state, database, storage, backup and
   [`useVideoGrid`](../web/src/composables/useVideoGrid.ts) (stage and grid
   layout), [`usePictureInPicture`](../web/src/composables/usePictureInPicture.ts),
   [`useSidebarReorder`](../web/src/composables/useSidebarReorder.ts),
-  [`useSortableDrag`](../web/src/composables/useSortableDrag.ts) and
+  [`useSortableDrag`](../web/src/shared/composables/useSortableDrag.ts) and
   [`useChannelLayout`](../web/src/composables/useChannelLayout.ts) (drag and
   drop with immediate save and undo), [`useNavMenus`](../web/src/composables/useNavMenus.ts)
   (context menus), [`useMessageActions`](../web/src/composables/useMessageActions.ts),
   [`useMessageKeyboard`](../web/src/composables/useMessageKeyboard.ts),
-  [`useResizable`](../web/src/composables/useResizable.ts), [`useDialog`](../web/src/composables/useDialog.ts).
+  [`useResizable`](../web/src/shared/composables/useResizable.ts), [`useDialog`](../web/src/shared/composables/useDialog.ts).
 - **Components**: [`Sidebar.vue`](../web/src/components/Sidebar.vue),
   [`ChatArea.vue`](../web/src/components/ChatArea.vue),
   [`ThreadSidebar.vue`](../web/src/components/ThreadSidebar.vue),
@@ -884,11 +884,11 @@ and Administrators) gathers version, update state, database, storage, backup and
   [system](../web/src/components/AdminSystemTab.vue)),
   [`UpdateBanner.vue`](../web/src/components/UpdateBanner.vue).
 - **Libraries** (`lib/`): pure, unit-tested logic such as
-  [`api.ts`](../web/src/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/lib/markdown.ts) (Discord-style Markdown: parser, renderer and the `registerTextRule` extension point in [`markdown/`](../web/src/lib/markdown)),
-  [`channelLayout.ts`](../web/src/lib/channelLayout.ts),
+  [`api.ts`](../web/src/shared/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/shared/lib/markdown.ts) (Discord-style Markdown: parser, renderer and the `registerTextRule` extension point in [`markdown/`](../web/src/shared/lib/markdown)),
+  [`channelLayout.ts`](../web/src/shared/lib/channelLayout.ts),
   [`voiceSession.ts`](../web/src/lib/voiceSession.ts) (rejoin within 30 s),
   [`noiseSuppressor.ts`](../web/src/lib/noiseSuppressor.ts),
-  [`thirdParty.ts`](../web/src/lib/thirdParty.ts) (in-app license list).
+  [`thirdParty.ts`](../web/src/shared/lib/thirdParty.ts) (in-app license list).
 - **Styles**: Tailwind CSS 4 (`@import 'tailwindcss'` in
   [`style.css`](../web/src/style.css), the `@tailwindcss/vite` plugin; no
   `tailwind.config`). The Mnema design tokens are in its `@theme` block. The

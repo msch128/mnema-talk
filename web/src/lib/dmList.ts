@@ -2,9 +2,9 @@
 // keeps the conversations, this decides what is shown and how a row is worded.
 import type { Message } from '../types/domain'
 import type { ChatDMLastMessage, ChatDirectMessage } from '../types/rest'
-import { markdownToPlain } from './markdown'
+import { markdownToPlain } from '../shared/lib/markdown'
 import { dmPeers, nameOf } from './dm'
-import { clockTimeOptions, startOfDay } from './time'
+import { clockTimeOptions, startOfDay } from '../shared/lib/time'
 import { callKindOf } from './callKind'
 
 /** Most conversations the server lets a member favourite. */

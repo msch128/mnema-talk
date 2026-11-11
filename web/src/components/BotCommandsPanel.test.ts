@@ -1,20 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import BotCommandsPanel from './BotCommandsPanel.vue'
 import { useToastStore } from '../stores/toast'
 import { fixtureId } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn()
 }))
 const confirmMock = vi.fn<() => Promise<boolean>>()
-vi.mock('../lib/confirm', () => ({ confirm: () => confirmMock() }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: () => confirmMock() }))
 
 const botId = fixtureId(5)
 const base = `/api/admin/bots/${botId}/commands`

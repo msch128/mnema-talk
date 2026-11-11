@@ -9,7 +9,7 @@ import { setLocale } from '../i18n'
 import { channelFixture, fixtureId } from '../test-fixtures.fixture'
 
 const compact = vi.hoisted(() => ({ value: false }))
-vi.mock('../composables/useCompactLayout', async () => {
+vi.mock('../shared/composables/useCompactLayout', async () => {
   const { ref: makeRef } = await import('vue')
   const isCompact = makeRef(false)
   return { useCompactLayout: () => { isCompact.value = compact.value; return { isCompact, navOpen: makeRef(false), openNav: () => undefined, closeNav: () => undefined } } }

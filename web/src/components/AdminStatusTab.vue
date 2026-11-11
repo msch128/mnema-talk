@@ -2,7 +2,7 @@
 // Operator status tab: server version, updates, database, storage, backups, activity and warnings (GET /api/admin/status).
 import { ref, computed, onMounted } from 'vue'
 import { RefreshCw, CheckCircle2, XCircle, TriangleAlert, CircleHelp, Database, HardDrive, ShieldCheck, Activity, Server } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import type { OperatorStatus } from '../types/domain'
 import { decodeOperatorStatus } from '../types/domain'
 import { useToastStore } from '../stores/toast'

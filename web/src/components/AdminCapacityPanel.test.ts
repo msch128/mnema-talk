@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import AdminCapacityPanel from './AdminCapacityPanel.vue'
 import { setLocale } from '../i18n'
 import type { ServerCapacityScenario, ServerCapacityStatus } from '../types/rest'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async original => ({
-  ...(await original<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async original => ({
+  ...(await original<typeof import('../shared/lib/api')>()),
   api: (path: string, options?: ApiOptions) => apiMock(path, options),
 }))
 

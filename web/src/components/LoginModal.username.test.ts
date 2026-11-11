@@ -4,8 +4,8 @@ import { setActivePinia, createPinia } from 'pinia'
 import LoginModal from './LoginModal.vue'
 import { setLocale } from '../i18n'
 
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn(() => Promise.resolve({ password_reset: false })),
   onUnauthorized: vi.fn(() => () => true)
 }))

@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { onScopeDispose } from 'vue'
-import { onUnauthorized } from '../../lib/api'
+import { onUnauthorized } from '../../shared/lib/api'
 import { clearAllDrafts } from '../../lib/drafts'
 import type { User } from '../../types/domain'
 

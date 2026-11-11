@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { pendingConfirm } from './confirm'
-import { currentRoute, navigate, parseRoute } from './router'
+import { pendingConfirm } from '../shared/lib/confirm'
+import { currentRoute, navigate, parseRoute } from '../shared/lib/router'
 import { closeWiki, goWiki, mayLeaveWiki, openWiki, wikiDirty } from './wikiNav'
 
 beforeEach(() => {

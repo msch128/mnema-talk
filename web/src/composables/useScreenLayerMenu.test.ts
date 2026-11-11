@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
 import { useScreenLayerMenu } from './useScreenLayerMenu'
 import { useVoiceStore } from '../stores/voice'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 import { t } from '../i18n'
 
 const layers = [{ width: 3840, height: 2160, fps: 60 }, { width: 1920, height: 1080, fps: 30 }, { width: 1280, height: 720, fps: 30 }]

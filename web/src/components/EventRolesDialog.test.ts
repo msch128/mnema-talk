@@ -8,7 +8,7 @@ import { setLocale } from '../i18n'
 import * as api from '../lib/eventRolesApi'
 import { eventWithRoles, roleFixture } from '../eventRoles.fixture'
 import { useToastStore } from '../stores/toast'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 
 vi.mock('../lib/eventRolesApi', () => ({ fetchRoleTemplates: vi.fn(() => Promise.resolve([])) }))
 

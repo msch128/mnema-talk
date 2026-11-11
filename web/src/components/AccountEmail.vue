@@ -4,12 +4,12 @@
 // two-factor sign-in is on, a current code.
 import { computed, ref } from 'vue'
 import { BadgeCheck, Loader2, Mail, MailQuestion } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { t } from '../i18n'
 import { useAccountStore } from '../stores/account'
 import { useToastStore } from '../stores/toast'
-import FormField from './FormField.vue'
-import PasswordInput from './PasswordInput.vue'
+import FormField from '../shared/components/FormField.vue'
+import PasswordInput from '../shared/components/PasswordInput.vue'
 
 const account = useAccountStore()
 const toasts = useToastStore()

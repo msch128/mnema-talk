@@ -2,7 +2,7 @@
 // their Markdown goes into the text at the cursor. The server redraws every
 // picture (no metadata, at most 1600 pixels) and decides who may upload.
 import { nextTick, ref, type Ref } from 'vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { uploadWikiImage } from '../lib/wikiApi'
 import { t } from '../i18n'
 import { useToastStore } from '../stores/toast'

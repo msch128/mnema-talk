@@ -4,11 +4,11 @@
 import { ref } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
-import { usePreferenceSave } from '../composables/usePreferenceSave'
+import { usePreferenceSave } from '../shared/composables/usePreferenceSave'
 import { t } from '../i18n'
-import SavedIndicator from './SavedIndicator.vue'
+import SavedIndicator from '../shared/components/SavedIndicator.vue'
 import AccountDmPolicy from './AccountDmPolicy.vue'
-import SwitchRow from './SwitchRow.vue'
+import SwitchRow from '../shared/components/SwitchRow.vue'
 
 const chat = useChatStore()
 const features = useServerFeaturesStore()

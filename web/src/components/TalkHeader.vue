@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { TalkParticipant } from './presentationTypes'
+import type { TalkParticipant } from '../shared/components/presentationTypes'
 import type { Channel } from '../types/domain'
 import { computed } from 'vue'
 import { MessageSquare, SlidersHorizontal, UserRoundX, Users, Volume2 } from '@lucide/vue'
@@ -13,7 +13,7 @@ import { canConfigureTalk, openTalkSettings } from '../lib/talks'
 import TalkParticipants from './TalkParticipants.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import { headerButton, focusRing } from './talkButtons'
-import NavDrawerButton from './NavDrawerButton.vue'
+import NavDrawerButton from '../shared/components/NavDrawerButton.vue'
 
 // The Talk's header: its name, who is there and for how long, and the
 // buttons for the Talk's chat, "only participants with video" and the member list.

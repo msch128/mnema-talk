@@ -1,22 +1,22 @@
 import { categoryFixture, channelFixture, readStateFixture, userFixture, voiceUserFixture } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
-import type { ContextMenuItem, MenuItemId } from '../components/menuTypes'
+import type { ContextMenuItem, MenuItemId } from '../shared/components/menuTypes'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { nextTick } from 'vue'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 import { useToastStore } from '../stores/toast'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { setActivePinia, createPinia } from 'pinia'
 import { setLocale } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
-import { PERMISSION_BITS } from '../lib/permissions'
-import { pendingModeration } from '../lib/moderation'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
+import { pendingModeration } from '../shared/lib/moderation'
 import { buildChannelItems, buildCategoryItems, buildMemberItems, buildSidebarItems, channelLink, mentionMember, useMenuState, notifyLevelOf } from './useNavMenus'
 
-vi.mock('../lib/api', async original => ({ ...(await original<typeof import('../lib/api')>()), api: vi.fn() }))
+vi.mock('../shared/lib/api', async original => ({ ...(await original<typeof import('../shared/lib/api')>()), api: vi.fn() }))
 
 function menuItem(items: ContextMenuItem[], id: MenuItemId) { return required(items.find(item => item.id === id)) }
 function checkedItem(items: ContextMenuItem[], id: MenuItemId) {

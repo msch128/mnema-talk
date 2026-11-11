@@ -3,7 +3,7 @@
 // taken away, a timeout, the page locked meanwhile): the text stays visible and
 // can be copied; it is not thrown away with the editor.
 import { ref } from 'vue'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import { clearWikiDraft, loadWikiDraft, wikiDraftKey } from '../lib/wikiDraft'
 import { wikiDirty } from '../lib/wikiNav'
 import { t } from '../i18n'

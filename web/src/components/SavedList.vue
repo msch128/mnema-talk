@@ -8,7 +8,7 @@ import { useSavedStore } from '../stores/saved'
 import { dmTitle } from '../lib/dm'
 import { groupSaved, matchesSaved, type SavedContext, type SavedSort } from '../lib/savedGroups'
 import SavedEntry from './SavedEntry.vue'
-import StatePanel from './StatePanel.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 // The member's saved messages: newest saved first or grouped by channel, with
 // a search over what is loaded. Opening the list reloads it; an entry can be

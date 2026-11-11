@@ -2,7 +2,7 @@
 // Admin dashboard: version, health and load of the server (GET /api/admin/system).
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { RefreshCw, CheckCircle2, XCircle, TriangleAlert, Server } from '@lucide/vue'
-import { api, caughtErrorMessage, isApiError } from '../lib/api'
+import { api, caughtErrorMessage, isApiError } from '../shared/lib/api'
 import type { SystemStatus } from '../types/domain'
 import { decodeServerSystemStatus, decodeServerUpdateStatus, decodeServerHealth, type ServerSelfUpdateStarted } from '../types/rest'
 import { useToastStore } from '../stores/toast'

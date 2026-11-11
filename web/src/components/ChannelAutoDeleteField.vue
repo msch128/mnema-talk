@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { AUTO_DELETE_DAYS } from '../lib/autoDelete'
+import { AUTO_DELETE_DAYS } from '../shared/lib/autoDelete'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 
 // Opt-in auto-delete of a channel, in the channel settings. A field of the
 // channel's draft: the dialog stores it with Save, after asking (turning it on
-// destroys data, see confirmAutoDelete in lib/autoDelete).
+// destroys data, see confirmAutoDelete in shared/lib/autoDelete).
 const days = defineModel<number>({ required: true })
 const features = useServerFeaturesStore()
 </script>

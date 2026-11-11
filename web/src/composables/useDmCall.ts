@@ -1,9 +1,9 @@
 // Starting, joining and ending the calls of direct messages. A conversation has
 // no call of its own: "Start a Talk" opens a temporary Talk and the server rings
 // the other members (doc/talks.md), "Join" is the ordinary join of that Talk.
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { startConversationTalk } from '../lib/talks'
-import { navigate } from '../lib/router'
+import { navigate } from '../shared/lib/router'
 import { t } from '../i18n'
 import { useChatStore } from '../stores/chat'
 import { useDmCallsStore } from '../stores/dmCalls'

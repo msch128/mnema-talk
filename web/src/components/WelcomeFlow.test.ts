@@ -1,4 +1,4 @@
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import type { OnboardingState } from '../types/rest'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
@@ -16,8 +16,8 @@ let calls: Call[]
 let server: OnboardingState
 let rejectAccept: boolean
 
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (path: string, options: ApiOptions = {}) => {
     calls.push({ path, method: options.method ?? 'GET', json: options.json })
     if (path === '/api/onboarding/accept') {

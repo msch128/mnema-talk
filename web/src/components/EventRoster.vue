@@ -7,9 +7,9 @@ import { useEventsStore } from '../stores/events'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { eventAvatar } from '../lib/eventAvatar'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { t } from '../i18n'
-import UserAvatar from './UserAvatar.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 
 // The roles of an event and who holds or awaits each: a card per role with its
 // fill, a button to join, switch or leave, and the members. The creator and

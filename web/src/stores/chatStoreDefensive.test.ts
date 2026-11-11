@@ -5,19 +5,19 @@ import { useChatStore, TYPING_EXPIRY_MS } from './chat'
 import { useAuthStore } from './auth'
 import { channelFixture, messageFixture, userFixture, readStateFixture, fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import type { Message } from '../types/domain'
-import { currentRoute } from '../lib/router'
-import { IDLE_AFTER_MS } from '../lib/presence'
+import { currentRoute } from '../shared/lib/router'
+import { IDLE_AFTER_MS } from '../shared/lib/presence'
 
 // Deferred transport responses exercise real store continuations and races.
 const http = vi.hoisted(() => ({ handle: (url: string, _opts?: ApiOptions): unknown => url === '/api/channels' ? { categories: [], uncategorized: [] } : [] }))
-vi.mock('../lib/api', async importOriginal => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async importOriginal => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: vi.fn((url: string, options?: ApiOptions) => Promise.resolve(http.handle(url, options)))
 }))
-import { api } from '../lib/api'
-import { notifyShowsText } from '../lib/notifyPreview'
+import { api } from '../shared/lib/api'
+import { notifyShowsText } from '../shared/lib/notifyPreview'
 
 // These tests look at the notification text, which is shown when the member's setting allows it.
 notifyShowsText.value = true

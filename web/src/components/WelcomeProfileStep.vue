@@ -3,14 +3,14 @@
 // store calls as the profile dialog. Every field is optional.
 import { ref } from 'vue'
 import { Camera, Loader2 } from '@lucide/vue'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import { confirmDiscard } from '../composables/useSettingsDraft'
-import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../lib/pickImage'
-import FormField from './FormField.vue'
-import UserAvatar from './UserAvatar.vue'
+import { confirmDiscard } from '../shared/composables/useSettingsDraft'
+import { IMAGE_UPLOAD_MAX_MB, pickImage } from '../shared/lib/pickImage'
+import FormField from '../shared/components/FormField.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 
 const emit = defineEmits<{ done: []; skip: [] }>()
 const auth = useAuthStore()

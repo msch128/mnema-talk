@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { botInitial, curlExample, endOfDayIso, hasIntent, isPowerfulRole, relativeTime, toggleIntent } from './bots'
-import { PERMISSION_BITS } from './permissions'
+import { PERMISSION_BITS } from '../shared/lib/permissions'
 
 describe('bots helpers', () => {
   it('toggles intents', () => {

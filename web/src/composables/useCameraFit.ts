@@ -6,7 +6,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { pictureHeightPx } from '../lib/cameraLayers'
-import { useElementSize } from './useElementSize'
+import { useElementSize } from '../shared/composables/useElementSize'
 
 let places = 0
 

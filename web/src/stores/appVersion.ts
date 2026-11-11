@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { api } from '../lib/api'
-import { visibleInterval } from '../lib/pageVisibility'
+import { api } from '../shared/lib/api'
+import { visibleInterval } from '../shared/lib/pageVisibility'
 import { decodeUpdateStatus, type UpdateStatus } from '../types/domain'
 
-import { CLIENT_VERSION, isNewServerVersion, normalizeVersion } from '../lib/appVersion'
+import { CLIENT_VERSION, isNewServerVersion, normalizeVersion } from '../shared/lib/appVersion'
 
 // What the server says about its version (server_info on every WebSocket
 // connection). When it differs from the version this page was built as, the

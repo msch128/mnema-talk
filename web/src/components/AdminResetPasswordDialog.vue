@@ -2,14 +2,14 @@
 import type { PropType } from 'vue'
 import type { AdminUser } from '../types/domain'
 import { ref, computed } from 'vue'
-import { api, caughtErrorMessage } from '../lib/api'
-import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
+import { api, caughtErrorMessage } from '../shared/lib/api'
+import { MIN_PASSWORD_LENGTH } from '../shared/lib/passwordPolicy'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
 import { ownerProof, useOwnerNeedsCode } from '../lib/ownerProof'
-import BaseDialog from './BaseDialog.vue'
-import PasswordInput from './PasswordInput.vue'
-import IdentityFields from './IdentityFields.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import PasswordInput from '../shared/components/PasswordInput.vue'
+import IdentityFields from '../shared/components/IdentityFields.vue'
 
 // The Owner sets a new password for an account.
 const props = defineProps({

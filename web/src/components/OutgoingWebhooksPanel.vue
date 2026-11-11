@@ -3,16 +3,16 @@
 // whole server, for the Owner). The signing secret is shown once.
 import { ref, computed, onMounted } from 'vue'
 import { Copy, KeyRound, Pencil, Trash2, Send, ListChecks } from '@lucide/vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { arrayDecoder } from '../types/validation'
 import { isOutgoingWebhook, isWebhookDelivery, decodeCreatedOutgoingWebhook, decodeWebhookDelivery } from '../types/webhooks'
 import type { OutgoingWebhook, WebhookDelivery } from '../types/webhooks'
-import { confirm } from '../lib/confirm'
+import { confirm } from '../shared/lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { useChatStore } from '../stores/chat'
 import { t, locale } from '../i18n'
 import OutgoingWebhookForm from './OutgoingWebhookForm.vue'
-import StatePanel from './StatePanel.vue'
+import StatePanel from '../shared/components/StatePanel.vue'
 
 const props = defineProps({
   channelId: { type: String, required: true }

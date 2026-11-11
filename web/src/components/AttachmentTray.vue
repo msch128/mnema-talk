@@ -4,7 +4,7 @@ import type { TrayItem } from '../lib/attachmentTray'
 import { computed } from 'vue'
 import { Eye, FileText, RotateCw, X } from '@lucide/vue'
 import { MAX_ATTACHMENTS } from '../lib/attachmentTray'
-import { formatFileSize } from '../lib/fileSize'
+import { formatFileSize } from '../shared/lib/fileSize'
 import { locale, t } from '../i18n'
 
 // The files waiting to go out with the message, above the composer. Each card

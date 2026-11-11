@@ -12,7 +12,7 @@ import { dmClock, dmPreview } from '../lib/dmList'
 import { dmTitle } from '../lib/dm'
 import { locale, t } from '../i18n'
 import DmAvatar from './DmAvatar.vue'
-import Badge from './Badge.vue'
+import Badge from '../shared/components/Badge.vue'
 import CallMark from './CallMark.vue'
 import type { CallMark as CallMarkKind } from '../stores/dmCalls'
 

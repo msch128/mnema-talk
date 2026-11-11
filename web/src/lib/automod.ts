@@ -2,7 +2,7 @@
 // editor, and the conversion between a rule and the lines of its form.
 import type { AutomodRule, AutomodRuleInput, AutomodSettings } from '../types/rest'
 import { locale, t } from '../i18n'
-import presets from './presets.json'
+import presets from '../shared/lib/presets.json'
 
 export type AutomodKind = AutomodRule['kind']
 

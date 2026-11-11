@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import BaseDialog from './BaseDialog.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
 import ScopeChoice from './ScopeChoice.vue'
 import type { Scope } from '../lib/eventRecurrence'
 

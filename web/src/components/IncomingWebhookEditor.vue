@@ -4,18 +4,18 @@
 // actions on the row and run at once.
 import { useId } from 'vue'
 import type { PropType } from 'vue'
-import { api } from '../lib/api'
+import { api } from '../shared/lib/api'
 import { decodeWebhook } from '../types/webhooks'
 import type { Webhook } from '../types/webhooks'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { useToastStore } from '../stores/toast'
 import { useChatStore } from '../stores/chat'
-import type { ImageChange } from '../composables/useStagedImage'
-import { normaliseImage, useStagedImage } from '../composables/useStagedImage'
+import type { ImageChange } from '../shared/composables/useStagedImage'
+import { normaliseImage, useStagedImage } from '../shared/composables/useStagedImage'
 import { ImagePlus } from '@lucide/vue'
-import { initialOf } from '../lib/initial'
+import { initialOf } from '../shared/lib/initial'
 import { t } from '../i18n'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 // Each setting is a switch on the webhook; the label says what it allows.
 const SETTINGS = ['allow_everyone', 'allow_user_mentions', 'allow_attachments', 'allow_embeds', 'allow_identity_override'] as const

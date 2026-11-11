@@ -2,7 +2,7 @@
 // message and where it opens (pointer, ⋯ button or keyboard).
 import { ref } from 'vue'
 import type { Message } from '../types/domain'
-import type { ContextMenuItem } from '../components/menuTypes'
+import type { ContextMenuItem } from '../shared/components/menuTypes'
 import type { useMessageActions } from './useMessageActions'
 import {
   MessageSquare, Pencil, Trash2, SmilePlus, Reply,
@@ -19,14 +19,14 @@ import { toggleSavedMessage } from '../lib/savedActions'
 import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { moderateMessages } from '../lib/messageModeration'
 import { previewText } from '../lib/replies'
-import { shortcodesForEditing } from '../lib/customEmoji'
+import { shortcodesForEditing } from '../shared/lib/customEmoji'
 import { t } from '../i18n'
-import { caughtErrorMessage } from '../lib/api'
-import { copyToClipboard } from '../lib/clipboard'
+import { caughtErrorMessage } from '../shared/lib/api'
+import { copyToClipboard } from '../shared/lib/clipboard'
 import { messageSafetyItems } from './dmMenuItems'
-import { boxOf, type AnchorBox } from '../lib/floatingPosition'
+import { boxOf, type AnchorBox } from '../shared/lib/floatingPosition'
 import { buildAuthorModerationItems } from './useNavMenus'
-import { clampChars } from '../lib/textLength'
+import { clampChars } from '../shared/lib/textLength'
 
 export { toggleSavedMessage }
 

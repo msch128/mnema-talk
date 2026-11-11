@@ -3,7 +3,7 @@
 import { onBeforeUnmount, onMounted, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
-import { listenForOpenRequests, refreshPushState } from '../lib/webPush'
+import { listenForOpenRequests, refreshPushState } from '../shared/lib/webPush'
 import { openEvents } from '../lib/eventsDialog'
 import type { Message } from '../types/domain'
 

@@ -1,4 +1,4 @@
-import { api } from './api'
+import { api } from '../shared/lib/api'
 import type { ForumTag, Message } from '../types/domain'
 import { decodeForumTag, decodeMessage } from '../types/domain'
 import {

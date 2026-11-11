@@ -1,5 +1,5 @@
 // The REST calls of reminders and scheduled messages (see stores/later).
-import { api, isApiError } from './api'
+import { api, isApiError } from '../shared/lib/api'
 import {
   decodeLaterReminder, decodeLaterReminderList, decodeLaterScheduled, decodeLaterScheduledList
 } from '../types/rest'

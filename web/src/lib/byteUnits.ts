@@ -1,7 +1,7 @@
 // A byte count for the admin screens (storage, memory, database size): 1024 based,
 // B to TB, the number in the reader's locale. Raw unit symbols on purpose: these
 // are operator figures, and the symbols are the same in every language. Chat
-// attachments use lib/fileSize, whose unit labels come from the messages.
+// attachments use shared/lib/fileSize, whose unit labels come from the messages.
 const UNITS = ['B', 'KB', 'MB', 'GB', 'TB'] as const
 
 export function formatBytes(bytes: number, locale: string, maxFractionDigits = 1): string {

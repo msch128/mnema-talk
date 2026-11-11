@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { ChosenPresence } from '../types/domain'
-import { caughtErrorMessage } from '../lib/api'
+import { caughtErrorMessage } from '../shared/lib/api'
 // Opened from the avatar in the user bar: choose online, away, do not
 // disturb or focus. Offline is deliberately not offered.
 import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
@@ -9,10 +9,10 @@ import { MessageSquareText } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
-import { CHOOSABLE } from '../lib/presence'
+import { CHOOSABLE } from '../shared/lib/presence'
 import { t } from '../i18n'
 import { useStatusEditor } from '../composables/useStatusEditor'
-import PresenceDot from './PresenceDot.vue'
+import PresenceDot from '../shared/components/PresenceDot.vue'
 
 const props = defineProps({ trigger: { type: Object as PropType<HTMLElement | null>, default: null } })
 const emit = defineEmits<{ close: [] }>()

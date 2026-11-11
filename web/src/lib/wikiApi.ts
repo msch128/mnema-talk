@@ -1,6 +1,6 @@
 // The calls of the wiki (doc/wiki.md). Page addresses are encoded here, so a
 // caller passes the slug as it is.
-import { api } from './api'
+import { api } from '../shared/lib/api'
 import {
   decodeWikiImage, decodeWikiPage, decodeWikiRevision, decodeWikiTreeResponse, isWikiRevision, isWikiSearchHit,
   type WikiImage, type WikiPage, type WikiPageChange, type WikiPageInput, type WikiPageSummary, type WikiRevision, type WikiRestoreInput, type WikiSearchHit

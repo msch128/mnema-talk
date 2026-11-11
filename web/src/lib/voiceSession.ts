@@ -3,7 +3,7 @@
 // that heartbeat is younger than RESUME_WINDOW_MS. Leaving on purpose clears it.
 // The server keeps the user listed for the same window (ws.DefaultVoiceGrace).
 
-import { visibleInterval } from './pageVisibility'
+import { visibleInterval } from '../shared/lib/pageVisibility'
 
 export const STORAGE_KEY = 'mnema.voice.session'
 export const RESUME_WINDOW_MS = 30_000

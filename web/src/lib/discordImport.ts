@@ -1,6 +1,6 @@
 // The Discord server import (doc/import.md): previewing a template, applying
 // the confirmed plan, and listing, inspecting and undoing earlier imports.
-import { api } from './api'
+import { api } from '../shared/lib/api'
 import { arrayDecoder } from '../types/validation'
 import {
   decodeDiscordimportDetail, decodeDiscordimportPlan, decodeDiscordimportRecord, decodeDiscordimportUndoResult,

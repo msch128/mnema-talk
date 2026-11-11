@@ -9,7 +9,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useToastStore } from '../stores/toast'
 import { i18nPlugin, setLocale } from '../i18n'
 import { userFixture } from '../test-fixtures.fixture'
-import { pendingConfirm } from '../lib/confirm'
+import { pendingConfirm } from '../shared/lib/confirm'
 
 let wrapper: VueWrapper
 let setStatusText: ReturnType<typeof vi.fn>

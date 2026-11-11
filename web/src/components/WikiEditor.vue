@@ -13,7 +13,7 @@ import { WIKI_FIELD as FIELD } from '../lib/wikiUi'
 import { goWiki } from '../lib/wikiNav'
 import { useWikiStore } from '../stores/wiki'
 import type { WikiPage } from '../lib/wikiApi'
-import MarkdownContent from './MarkdownContent.vue'
+import MarkdownContent from '../shared/components/MarkdownContent.vue'
 import WikiDiff from './WikiDiff.vue'
 
 const props = defineProps<{ page: WikiPage | null; parentId?: string | null }>()

@@ -10,7 +10,7 @@ import { useServerFeaturesStore } from '../stores/serverFeatures'
 import { useVoiceStore } from '../stores/voice'
 import { createReactionLimiter } from '../lib/stage'
 import { isStageTalk } from '../lib/talks'
-import { customReaction } from '../lib/reactionEmoji'
+import { customReaction } from '../shared/lib/reactionEmoji'
 
 const allowReaction = createReactionLimiter()
 

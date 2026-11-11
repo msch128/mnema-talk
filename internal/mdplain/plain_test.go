@@ -15,7 +15,7 @@ type fixture struct {
 
 func collapse(s string) string { return strings.Join(strings.Fields(s), " ") }
 
-// The same fixtures are checked by the web client (web/src/lib/markdown/plainFixtures.test.ts),
+// The same fixtures are checked by the web client (web/src/shared/lib/markdown/plainFixtures.test.ts),
 // so a push, a notification and a reply preview read a message the same way.
 func TestPlainAgreesWithTheSharedFixtures(t *testing.T) {
 	raw, err := os.ReadFile("testdata/plain.json")

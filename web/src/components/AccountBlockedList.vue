@@ -3,7 +3,7 @@
 // private: the blocked member is never told, and nothing they can read depends
 // on it.
 import { useBlocksStore } from '../stores/blocks'
-import UserAvatar from './UserAvatar.vue'
+import UserAvatar from '../shared/components/UserAvatar.vue'
 
 const blocks = useBlocksStore()
 </script>

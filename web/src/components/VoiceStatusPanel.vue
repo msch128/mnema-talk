@@ -7,7 +7,7 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useWebRTC } from '../composables/useWebRTC'
 import { pingTone, PING_CLASS } from '../lib/ping'
-import TriggerMenu from './TriggerMenu.vue'
+import TriggerMenu from '../shared/components/TriggerMenu.vue'
 import { useVoiceMenus } from '../composables/useVoiceMenus'
 
 const voiceStore = useVoiceStore()

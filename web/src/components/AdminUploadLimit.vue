@@ -3,13 +3,13 @@
 // their metadata. MAX_UPLOAD_SIZE_MB stays the operator's ceiling; this can
 // only lower it. Roles may override it.
 import { computed, ref, onMounted } from 'vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { decodePermUploadSettings } from '../types/rest'
 import type { PermUploadSettings } from '../types/rest'
-import { normalise, useSettingsDraft } from '../composables/useSettingsDraft'
+import { normalise, useSettingsDraft } from '../shared/composables/useSettingsDraft'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import UnsavedChangesBar from './UnsavedChangesBar.vue'
+import UnsavedChangesBar from '../shared/components/UnsavedChangesBar.vue'
 
 const toasts = useToastStore()
 const settings = ref<PermUploadSettings | null>(null)

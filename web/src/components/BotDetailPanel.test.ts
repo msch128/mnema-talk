@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import type { ApiOptions } from '../lib/api'
+import type { ApiOptions } from '../shared/lib/api'
 import BotDetailPanel from './BotDetailPanel.vue'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
@@ -10,13 +10,13 @@ import { setLocale } from '../i18n'
 import type { BotBot } from '../types/rest'
 
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
-vi.mock('../lib/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../lib/api')>()),
+vi.mock('../shared/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../shared/lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
   onUnauthorized: vi.fn()
 }))
 const confirmMock = vi.fn<() => Promise<boolean>>()
-vi.mock('../lib/confirm', () => ({ confirm: () => confirmMock() }))
+vi.mock('../shared/lib/confirm', () => ({ confirm: () => confirmMock() }))
 
 const bot = (extra: Partial<BotBot> = {}): BotBot => ({ id: fixtureId(5), user_id: fixtureId(6), name: 'Echo', allowed_intents: 512, disabled: false, role_ids: [], created_at: '2026-01-02T03:04:05Z', ...extra })
 const base = `/api/admin/bots/${fixtureId(5)}`

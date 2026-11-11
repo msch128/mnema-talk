@@ -5,9 +5,9 @@
 import { watch } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
-import { openSettings } from '../lib/settingsDialog'
+import { openSettings } from '../shared/lib/settingsDialog'
 import { pttKeyLabel } from '../lib/pttKey'
-import { readItem, writeItem } from '../lib/voicePlayback'
+import { readItem, writeItem } from '../shared/lib/voicePlayback'
 import { t } from '../i18n'
 
 const SEEN_KEY = 'mnema_ptt_hint_seen'

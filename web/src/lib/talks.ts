@@ -1,7 +1,7 @@
 // Create-a-Talk: who may configure a Talk, and the calls the interface makes
 // (doc/talks.md). The server decides everything again; this only offers what fits.
 import { shallowRef } from 'vue'
-import { api } from './api'
+import { api } from '../shared/lib/api'
 import { decodeChatMessage, decodeChatStartTalkResponse } from '../types/rest'
 import { decodeChannel } from '../types/domain'
 import { t } from '../i18n'

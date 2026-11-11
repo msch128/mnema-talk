@@ -2,12 +2,12 @@
 import type { PropType } from 'vue'
 import type { AdminUser } from '../types/domain'
 import { ref } from 'vue'
-import { api, caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../shared/lib/api'
 import { ownerProof, useOwnerNeedsCode } from '../lib/ownerProof'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
-import IdentityFields from './IdentityFields.vue'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import IdentityFields from '../shared/components/IdentityFields.vue'
 
 // The Owner turns off a member's two-factor sign-in, after confirming their own identity.
 const props = defineProps({

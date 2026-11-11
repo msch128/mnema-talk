@@ -1,9 +1,9 @@
 <script setup lang="ts">
 // The keyboard shortcuts of the app, read only, grouped by where they work.
-// The list is lib/shortcuts; the push-to-talk key is the member's own.
+// The list is shared/lib/shortcuts; the push-to-talk key is the member's own.
 import { computed } from 'vue'
-import BaseDialog from './BaseDialog.vue'
-import { SHORTCUT_GROUPS, formatShortcut, isMac, keyLabel, type KeyCombo, type Shortcut } from '../lib/shortcuts'
+import BaseDialog from '../shared/components/BaseDialog.vue'
+import { SHORTCUT_GROUPS, formatShortcut, isMac, keyLabel, type KeyCombo, type Shortcut } from '../shared/lib/shortcuts'
 import { pttKeyLabel } from '../lib/pttKey'
 import { useVoiceStore } from '../stores/voice'
 
