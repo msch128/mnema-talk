@@ -3,6 +3,7 @@ import {
   escapeRegExp, mentionsUser, shouldNotify, extractPreviewUrls,
   createKeyedThrottle, firstUnreadId, typingLine
 } from './chatLogic'
+import { messageFixture } from '../../test-fixtures.fixture'
 
 afterEach(() => vi.useRealTimers())
 
@@ -156,5 +157,16 @@ describe('typingLine', () => {
     expect(typingLine([{ display_name: 'Anna', username: 'anna' }, { username: 'ben', display_name: '' }]))
       .toEqual({ key: 'chat.twoTyping', params: { a: 'Anna', b: 'ben' } })
     expect(typingLine([{ username: 'a', display_name: '' }, { username: 'b', display_name: '' }, { username: 'c', display_name: '' }])?.key).toBe('chat.severalTyping')
+  })
+})
+
+describe('runtime edges of pure chat helpers', () => {
+  it('formats unknown durations and falls back for missing history', () => {
+    expect(extractPreviewUrls(null)).toEqual([])
+    expect(firstUnreadId(undefined, 'bad', 'me')).toBeNull()
+    expect(firstUnreadId([messageFixture()], 'bad', 'me')).toBeNull()
+    expect(typingLine(undefined)).toBeNull()
+    const throttle = createKeyedThrottle(vi.fn(), 100)
+    throttle.cancel('never-scheduled')
   })
 })

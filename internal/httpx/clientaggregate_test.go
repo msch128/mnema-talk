@@ -20,3 +20,15 @@ func TestClientAggregateKey(t *testing.T) {
 		}
 	}
 }
+
+func TestIPPrefixKey(t *testing.T) {
+	if got := ipPrefixKey("2001:db8:1:2:3:4:5:6", 48); got != "2001:db8:1::/48" {
+		t.Fatal(got)
+	}
+	if got := ipPrefixKey("[::ffff:1.2.3.4]", 64); got != "1.2.3.4" {
+		t.Fatal(got)
+	}
+	if got := ipPrefixKey("nope", 64); got != "nope" {
+		t.Fatal(got)
+	}
+}

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"net/http"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat/chattest"
@@ -96,4 +98,23 @@ func TestReplyValidationDoesNotHideDatabaseErrors(t *testing.T) {
 	missing := uuid.New()
 	chattest.RequireError(t, core.ValidateParent(context.Background(), f.p, f.c.ID, &missing), "parent message not found")
 	chattest.RequireError(t, messages.ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing), "message to reply to not found")
+}
+
+func TestParentLookupReportsDatabaseFailuresAsServerErrors(t *testing.T) {
+	f := newChatFixture(t)
+	missing := uuid.New()
+	if err := core.ValidateParent(context.Background(), f.p, f.c.ID, &missing); apiStatus(err) != http.StatusBadRequest {
+		t.Fatalf("missing parent: %v", err)
+	}
+	if err := messages.ValidateReplyTarget(context.Background(), f.p, f.c.ID, nil, &missing); apiStatus(err) != http.StatusBadRequest {
+		t.Fatalf("missing reply target: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := core.ValidateParent(ctx, f.p, f.c.ID, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
+		t.Fatalf("parent lookup failure: %v", err)
+	}
+	if err := messages.ValidateReplyTarget(ctx, f.p, f.c.ID, nil, &f.m); err == nil || apiStatus(err) == http.StatusBadRequest {
+		t.Fatalf("reply target lookup failure: %v", err)
+	}
 }

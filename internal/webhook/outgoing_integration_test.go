@@ -152,3 +152,32 @@ func (d dbFaulty) pool() *db.Pool { return d.poolWith(&pgfault.Tracer{Query: d.q
 func (d dbFaulty) poolWith(tr *pgfault.Tracer) *db.Pool {
 	return &db.Pool{Pool: pgfault.Pool(d.f.t, d.f.p.Pool, tr)}
 }
+
+func TestLateFailureDoesNotSwitchOffAnAdminDisabledWebhook(t *testing.T) {
+	f := newFixture(t)
+	hook := f.outgoing("https://hooks.example/x")
+	ctx := context.Background()
+	fail := Delivery{EventID: uuid.New(), EventType: EventMessageCreate, Attempt: 1}
+	if _, err := f.p.Exec(ctx, `UPDATE outgoing_webhooks SET consecutive_failures = $2, enabled = FALSE WHERE id = $1`, hook.ID, disableAfter-1); err != nil {
+		t.Fatal(err)
+	}
+	off, err := recordDelivery(ctx, f.p, hook.ID, fail, true, true)
+	if err != nil || off {
+		t.Fatalf("admin-disabled webhook: switchedOff=%v err=%v", off, err)
+	}
+	var auto bool
+	if err := f.p.QueryRow(ctx, `SELECT auto_disabled FROM outgoing_webhooks WHERE id = $1`, hook.ID).Scan(&auto); err != nil || auto {
+		t.Fatalf("auto_disabled=%v err=%v", auto, err)
+	}
+
+	// An enabled one at the threshold switches off exactly once.
+	if _, err := f.p.Exec(ctx, `UPDATE outgoing_webhooks SET enabled = TRUE WHERE id = $1`, hook.ID); err != nil {
+		t.Fatal(err)
+	}
+	if off, err = recordDelivery(ctx, f.p, hook.ID, fail, true, true); err != nil || !off {
+		t.Fatalf("first failure at the threshold: switchedOff=%v err=%v", off, err)
+	}
+	if off, err = recordDelivery(ctx, f.p, hook.ID, fail, true, true); err != nil || off {
+		t.Fatalf("late failure of an auto-disabled webhook: switchedOff=%v err=%v", off, err)
+	}
+}

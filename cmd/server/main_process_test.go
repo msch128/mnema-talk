@@ -2,10 +2,13 @@ package main
 
 import (
 	"errors"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/msch128/mnema-talk/internal/config"
 )
 
 // TestCommandFatalConfiguration checks the executable's exit contract; the
@@ -38,5 +41,27 @@ func TestCommandFatalConfiguration(t *testing.T) {
 	}
 	if strings.Contains(string(output), `"level"`) {
 		t.Fatalf("a JSON log line instead of plain text: %s", output)
+	}
+}
+
+func TestLogLevel(t *testing.T) {
+	for _, tc := range []struct {
+		level, env string
+		want       slog.Level
+	}{
+		{"debug", "production", slog.LevelDebug}, {"info", "development", slog.LevelInfo},
+		{"warn", "development", slog.LevelWarn}, {"error", "development", slog.LevelError},
+		{"", "production", slog.LevelInfo}, {"", "development", slog.LevelDebug},
+	} {
+		if got := logLevel(&config.Config{LogLevel: tc.level, AppEnv: tc.env}); got != tc.want {
+			t.Fatalf("%+v = %v", tc, got)
+		}
+	}
+}
+
+func TestRunRejectsInvalidConfiguration(t *testing.T) {
+	t.Setenv("DATABASE_URL", "")
+	if err := run(); err == nil {
+		t.Fatal("invalid config accepted")
 	}
 }

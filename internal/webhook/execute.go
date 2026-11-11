@@ -168,7 +168,7 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (*record,
 	if err != nil {
 		return fail(http.StatusNotFound, codeUnknownWebhook, "Unknown Webhook")
 	}
-	rec, err := get(r.Context(), h.DB, id)
+	rec, err := h.records().webhook(r.Context(), id)
 	if errors.Is(err, errNotFound) {
 		return fail(http.StatusNotFound, codeUnknownWebhook, "Unknown Webhook")
 	}
@@ -267,7 +267,7 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*co
 		return nil, err
 	}
 	ctx = mentions.WithMentionPolicy(ctx, policy)
-	id, err := messages.InsertMessage(ctx, h.DB, h.Online, *nm, func(tx pgx.Tx, msgID uuid.UUID) error {
+	id, err := h.records().insertMessage(ctx, *nm, func(tx pgx.Tx, msgID uuid.UUID) error {
 		for _, f := range req.files {
 			if err := h.Media.RecordFile(ctx, tx, f, rec.botUserID, rec.ChannelID, msgID); err != nil {
 				return err
@@ -281,7 +281,7 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*co
 	}
 	// The message is committed: a failed read-back (a cancelled request, a
 	// database hiccup) must not turn the post into an error the sender retries.
-	msg, err := messages.GetMessage(context.WithoutCancel(ctx), h.DB, id)
+	msg, err := h.records().message(context.WithoutCancel(ctx), id)
 	if err != nil {
 		slog.Error("webhook message stored but not read back", "message_id", id, "err", err)
 		return nil, nil
@@ -371,7 +371,7 @@ func (h *Handler) threadParent(ctx context.Context, r *http.Request, rec *record
 	if err != nil {
 		return nil, unknownThread{}
 	}
-	if err := core.ValidateParent(ctx, h.DB, rec.ChannelID, &id); err != nil {
+	if err := h.records().validateThread(ctx, rec.ChannelID, &id); err != nil {
 		// Only a rejected parent means the thread is gone; a database or
 		// context failure must surface as a retryable 5xx.
 		if ae, ok := httpx.AsAPIError(err); ok && ae.Status == http.StatusBadRequest {

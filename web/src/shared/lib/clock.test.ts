@@ -98,3 +98,11 @@ describe('server clock synchronization', () => {
     } finally { vi.unstubAllGlobals(); interval.mockRestore() }
   })
 })
+
+describe('runtime edges of pure chat helpers', () => {
+  it('formats unknown durations and falls back for missing history', () => {
+    expect(formatClock(undefined)).toBe('0:00')
+    expect(totalParts(null)).toEqual({ key: 'activity.none', params: {} })
+    expect(secondsSince(undefined)).toBe(0)
+  })
+})

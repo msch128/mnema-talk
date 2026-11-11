@@ -212,3 +212,17 @@ describe('mergeLatest', () => {
     expect(merged.messages.map(x => x.id)).toEqual(['x', 'y'])
   })
 })
+
+describe('runtime edges of pure chat helpers', () => {
+  it('treats missing pages conservatively and ignores invalid live messages', () => {
+    const win = emptyWindow<{ id: string }>()
+    expect(dedupe(null)).toEqual([])
+    expect(dedupe([null, undefined, { id: 'a' }])).toEqual([{ id: 'a' }])
+    expect(fromLatest(null)).toEqual(win)
+    expect(fromAround(null, 'missing')).toEqual(win)
+    expect(fromAround([{ id: 'a' }], 'missing')).toEqual({ messages: [{ id: 'a' }], hasMoreBefore: true, hasMoreAfter: true })
+    expect(prependOlder(win, null)).toEqual(win)
+    expect(appendNewer(win, null)).toEqual(win)
+    expect(appendLive(win, null)).toEqual({ window: win, status: 'duplicate' })
+  })
+})

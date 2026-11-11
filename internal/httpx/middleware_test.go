@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"runtime/debug"
+
 	"github.com/msch128/mnema-talk/internal/opwarn"
 )
 
@@ -413,3 +415,22 @@ func TestMaxBodyLimitsUnknownLengthAndAllowsEmptyRequests(t *testing.T) {
 		t.Fatal("request with no body was rejected")
 	}
 }
+
+func TestPanicStackKeepsThePanickingFrame(t *testing.T) {
+	var stack string
+	func() {
+		defer func() {
+			recover()
+			stack = panicStack(debugStackForTest(), 300)
+		}()
+		panic("deliberate")
+	}()
+	if !strings.Contains(stack, "TestPanicStackKeepsThePanickingFrame") {
+		t.Fatalf("panicking frame cut off: %q", stack)
+	}
+	if len(stack) > 300 {
+		t.Fatalf("stack not bounded: %d", len(stack))
+	}
+}
+
+func debugStackForTest() []byte { return debug.Stack() }

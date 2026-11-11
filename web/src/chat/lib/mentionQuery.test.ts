@@ -1,4 +1,4 @@
-import { userFixture } from '../../test-fixtures.fixture'
+import { userFixture, fixtureId } from '../../test-fixtures.fixture'
 import { describe, it, expect } from 'vitest'
 import { findMentionQuery, suggestMentions, applyMention } from './mentionQuery'
 
@@ -68,5 +68,23 @@ describe('role suggestions', () => {
     const many = ['Aa', 'Ab', 'Ac', 'Ad', 'Ae'].map(role)
     expect(suggestMentions('a', [], { roles: many }).filter(i => i.role)).toHaveLength(3)
     expect(applyMention('hi @Dev', 3, 7, 'Dev Team')).toEqual({ text: 'hi @Dev Team ', caret: 13 })
+  })
+})
+
+describe('runtime edges of pure chat helpers', () => {
+  it('limits mention length, ignores unknown caret and ranks internal matches after word prefixes', () => {
+    expect(findMentionQuery(null, 1)).toBeNull()
+    expect(findMentionQuery('@abc', null)).toBeNull()
+    expect(findMentionQuery(`@${'a'.repeat(33)}`, 34)).toBeNull()
+    expect(findMentionQuery('@@abc', 5)).toBeNull()
+    expect(findMentionQuery(' @abc', 5)).toEqual({ start: 1, query: 'abc' })
+    expect(suggestMentions('', undefined).map(item => item.username)).toEqual(['here', 'all'])
+    const one = userFixture({ id: fixtureId(1), username: 'first', display_name: 'A Word' })
+    const two = userFixture({ id: fixtureId(2), username: 'middleword', display_name: '' })
+    const three = { ...userFixture({ id: fixtureId(3), username: 'noword', display_name: 'No match' }), disabled: true }
+    expect(suggestMentions('word', [two, three, one]).map(item => item.username)).toEqual(['first', 'middleword'])
+    expect(suggestMentions('missing', [one, two])).toEqual([])
+    expect(suggestMentions('', [two, userFixture({ id: fixtureId(4), username: 'alpha', display_name: '' })], { limit: 1 }).map(item => item.username)).toEqual(['alpha', 'here', 'all'])
+    expect(applyMention('@abc.', 0, 2, 'first')).toEqual({ text: '@first ', caret: 7 })
   })
 })

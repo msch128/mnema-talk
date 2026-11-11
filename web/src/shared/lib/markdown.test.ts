@@ -134,3 +134,11 @@ describe('role mentions', () => {
     expect(d.querySelector('[data-mention="max"]')).not.toBeNull()
   })
 })
+
+describe('runtime edges of pure chat helpers', () => {
+  it('drops NUL characters and preserves short mention-like strings', () => {
+    expect(renderMarkdown(null)).toBe('')
+    expect(renderMarkdown('before\u00009999\u0000after')).toBe('before9999after')
+    expect(renderMarkdown('@a..')).toBe('@a..')
+  })
+})

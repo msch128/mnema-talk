@@ -57,6 +57,8 @@ type Authenticator struct {
 	minters map[uuid.UUID]minterVerdict
 	// bindTried remembers when binding a legacy token was last attempted.
 	bindTried map[uuid.UUID]time.Time
+	// legacyStore replaces the database under bindLegacy; nil outside tests.
+	legacyStore legacyTokenStore
 }
 
 // NewAuthenticator returns an Authenticator with its rate limiters. It panics

@@ -14,6 +14,8 @@ import (
 	"strings"
 	"testing"
 
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
@@ -25,6 +27,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/search"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
@@ -362,5 +365,51 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 	}
 	if messages.Deref(nil) != "" {
 		t.Fatal("nil text not empty")
+	}
+}
+
+func newMember(t *testing.T, f chatFixture, name string) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	if err := f.p.QueryRow(context.Background(), `INSERT INTO users (username, display_name, password_hash) VALUES ($1, $1, 'x') RETURNING id`, name).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// waitForBlockedStatement returns once some statement waits for a lock, which
+// tells a test that the goroutine it started has reached the row it is meant
+// to wait for; a sleep would only hope so.
+func waitForBlockedStatement(t *testing.T, p *db.Pool) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		var waiting int
+		if err := p.QueryRow(context.Background(), `SELECT COUNT(*) FROM pg_locks WHERE NOT granted`).Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting > 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("no statement is waiting for a lock")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+func apiStatus(err error) int {
+	var api *httpx.APIError
+	if errors.As(err, &api) {
+		return api.Status
+	}
+	return 0
+}
+
+func requireAPIStatus(t *testing.T, err error, status int) {
+	t.Helper()
+	var apiErr *httpx.APIError
+	if !errors.As(err, &apiErr) || apiErr.Status != status {
+		t.Fatalf("error = %v; want API status %d", err, status)
 	}
 }

@@ -1,5 +1,6 @@
 import type { Presence } from '../../types/domain'
 import { describe, it, expect } from 'vitest'
+import { fixtureId } from '../../test-fixtures.fixture'
 import { isQuiet, snapshotToMap, applyPresenceUpdate, normalizeStatus, CHOOSABLE } from './presence'
 
 describe('presence', () => {
@@ -27,5 +28,16 @@ describe('presence', () => {
     expect(start).toEqual({ a: 'online' })
     expect(applyPresenceUpdate(next, { user_id: 'a', status: 'offline' })).toEqual({})
     expect(normalizeStatus('nonsense')).toBe('offline')
+  })
+})
+
+describe('runtime edges of pure chat helpers', () => {
+  it('handles malformed legacy presence snapshots and absent updates without modifying the map', () => {
+    expect(snapshotToMap(null)).toEqual({})
+    expect(snapshotToMap([fixtureId(1), null, 4])).toEqual({ [fixtureId(1)]: 'online' })
+    const current = { [fixtureId(1)]: 'online' as const }
+    expect(applyPresenceUpdate(current, null)).toBe(current)
+    expect(applyPresenceUpdate(current, undefined)).toBe(current)
+    expect(applyPresenceUpdate(current, { user_id: '' })).toBe(current)
   })
 })

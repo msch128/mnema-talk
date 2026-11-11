@@ -6,7 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"strings"
+
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
@@ -61,5 +64,37 @@ func TestRateLimitHitsAreCountedByLimiterName(t *testing.T) {
 	WriteRateLimited(httptest.NewRecorder(), time.Second)
 	if metrics.RateLimitHits.With("other").Load() != before+1 {
 		t.Fatal("direct WriteRateLimited not counted")
+	}
+}
+
+func TestMetricsCountsRealWebSocketUpgradeAsInformational(t *testing.T) {
+	r := chi.NewRouter()
+	r.Use(Metrics)
+	up := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
+	r.Get("/ws-metrics-test", func(w http.ResponseWriter, req *http.Request) {
+		c, err := up.Upgrade(w, req, nil)
+		if err != nil {
+			return
+		}
+		_ = c.Close()
+	})
+	srv := httptest.NewServer(r)
+	defer srv.Close()
+
+	c, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/ws-metrics-test", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = c.Close()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for metrics.HTTPRequests.With("/ws-metrics-test", "1xx").Load() == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if metrics.HTTPRequests.With("/ws-metrics-test", "1xx").Load() != 1 {
+		t.Fatal("hijacked upgrade not counted as 1xx")
+	}
+	if metrics.HTTPRequests.With("/ws-metrics-test", "2xx").Load() != 0 {
+		t.Fatal("hijacked upgrade counted as 2xx")
 	}
 }

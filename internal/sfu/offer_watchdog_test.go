@@ -199,3 +199,27 @@ func TestWatchdogResendDrainsTrackChangeAfterConcurrentAnswer(t *testing.T) {
 	}
 	waitSignalingIdle(t, peer)
 }
+
+func TestOfferWatchdogStopsAfterResendLimit(t *testing.T) {
+	logs := captureSFULog(t)
+	peer, offers := joinWithOffers(t, 15*time.Millisecond)
+	first := nextOffer(t, offers, "initial offer")
+	for range maxOfferResends {
+		resend := nextOffer(t, offers, "bounded resend")
+		if originLine(resend.SDP) != originLine(first.SDP) {
+			t.Fatal("watchdog replaced rather than resent the outstanding offer")
+		}
+	}
+	waitSFUCondition(t, "watchdog exhaustion", func() bool {
+		return strings.Contains(logs.String(), "sfu offer never answered, giving up")
+	})
+	select {
+	case <-offers:
+		t.Fatal("watchdog exceeded the resend limit")
+	case <-time.After(60 * time.Millisecond):
+	}
+	// Giving up must not leave a silent member behind: the peer is dropped.
+	waitSFUCondition(t, "peer dropped after giving up", func() bool {
+		return peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed && peer.room.GetPeer(peer.ID) == nil
+	})
+}

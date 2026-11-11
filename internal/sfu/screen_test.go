@@ -307,3 +307,53 @@ func TestLeavingReleasesLayeredViewerTracks(t *testing.T) {
 		t.Fatal("the group outlived its publisher")
 	}
 }
+
+func TestMultipleSharesAnnounceSortedAudiencesAndGlobalSnapshot(t *testing.T) {
+	s := newTestSFU(t)
+	r, first, err := s.Join(uuid.New(), uuid.MustParse("00000000-0000-0000-0000-000000000002"), "", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, second, err := s.Join(r.ID, uuid.MustParse("00000000-0000-0000-0000-000000000001"), "", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := s.Join(uuid.New(), uuid.New(), "", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	log := recordViewers(s, r)
+	// Pause delivery while both shares become watched. The ensuing snapshot
+	// must announce a deterministic order even though tracks are held in maps.
+	r.notifyMu.Lock()
+	func() {
+		defer r.notifyMu.Unlock()
+		for _, publisher := range []*Peer{first, second} {
+			if err := r.PublishTestVideo(publisher.ID, SourceScreen); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := r.Subscribe(first.ID, second.ID, SourceScreen, false, true); err != nil {
+			t.Fatal(err)
+		}
+		if err := r.Subscribe(second.ID, first.ID, SourceScreen, false, true); err != nil {
+			t.Fatal(err)
+		}
+	}()
+	events := log.flush()
+	if len(events) != 2 || events[0].sharer != second.ID || events[1].sharer != first.ID {
+		t.Fatalf("audiences not ordered by sharer ID: %+v", events)
+	}
+	states := s.AllMediaStates()
+	if len(states) != 1 || len(states[r.ID]) != 2 || !states[r.ID][first.ID].Screen || !states[r.ID][second.ID].Screen {
+		t.Fatalf("global active media snapshot = %+v", states)
+	}
+	// Mutating a snapshot must not corrupt the room's subsequent snapshot.
+	delete(states[r.ID], first.ID)
+	if !s.AllMediaStates()[r.ID][first.ID].Screen {
+		t.Fatal("global snapshot aliases room state")
+	}
+	s.CloseRoom(uuid.New()) // Unknown channels are an idempotent no-op.
+	if s.Room(r.ID) != r {
+		t.Fatal("closing an unknown channel removed an active room")
+	}
+}
