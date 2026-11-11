@@ -36,6 +36,7 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   fi
   echo "==> attempt $attempt of $ATTEMPTS (limit ${ATTEMPT_SECONDS}s)"
   sudo dpkg --configure -a || true
+  ../scripts/ci-dns-fallback.sh azure.archive.ubuntu.com archive.ubuntu.com
   if sudo timeout -k 10 "$ATTEMPT_SECONDS" apt-get install -y --fix-missing --no-install-recommends pulseaudio pulseaudio-utils; then
     installed=1
     sudo chmod -R a+rX "$ARCHIVES"

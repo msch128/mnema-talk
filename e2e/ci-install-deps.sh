@@ -26,6 +26,9 @@ APT
 npm ci --no-audit --no-fund
 
 for attempt in $(seq 1 "$ATTEMPTS"); do
+  # The runner's resolver has failed for the archive names for over an hour
+  # before; fall back to public resolvers when it does not answer.
+  ../scripts/ci-dns-fallback.sh azure.archive.ubuntu.com archive.ubuntu.com
   if [ "$attempt" -gt 1 ] && [ -f /etc/apt/apt-mirrors.txt ]; then
     echo "==> attempt $attempt: switching to archive.ubuntu.com"
     echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
