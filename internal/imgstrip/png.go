@@ -58,7 +58,9 @@ func (f *filter) pngChunk() error {
 }
 
 // pngExif drops an eXIf chunk and, for the first one that turns the picture,
-// writes one with the orientation only.
+// has one with the orientation only written in its place. That happens once
+// the source chunk was read to its end, checksum included (pngOrientation):
+// a file that ends inside the chunk gets nothing the upload did not have.
 func (f *filter) pngExif(size int) error {
 	f.mode = drop
 	n := min(size, captureLimit)
@@ -68,10 +70,17 @@ func (f *filter) pngExif(size int) error {
 		return err
 	}
 	if o := f.firstOrientation(data); turns(o) {
-		chunk := append([]byte("eXIf"), orientationRecord(o, size)...)
-		f.out = binary.BigEndian.AppendUint32(f.out, uint32(len(chunk)-4))
-		f.emit(chunk...)
-		f.out = binary.BigEndian.AppendUint32(f.out, crc32.ChecksumIEEE(chunk))
+		f.exif, f.next = orientationRecord(o, size), f.pngOrientation
 	}
 	return err
+}
+
+// pngOrientation writes the eXIf chunk that pngExif prepared.
+func (f *filter) pngOrientation() error {
+	chunk := append([]byte("eXIf"), f.exif...)
+	f.out = binary.BigEndian.AppendUint32(f.out, uint32(len(f.exif)))
+	f.emit(chunk...)
+	f.out = binary.BigEndian.AppendUint32(f.out, crc32.ChecksumIEEE(chunk))
+	f.step = f.pngChunk
+	return nil
 }

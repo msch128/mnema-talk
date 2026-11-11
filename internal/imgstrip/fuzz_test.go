@@ -118,7 +118,9 @@ func FuzzJPEG(f *testing.F) {
 
 func FuzzPNG(f *testing.F) {
 	addSeeds(f, plainPNG(f), phonePNG(f, 6), pngWith(f, pngChunk("eXIf", string(smallTIFF(6)))),
-		pngWith(f, pngChunk("caBX", textMark), pngChunk("TEXt", textMark), pngChunk("exIf", string(gpsTIFF(6))), pngChunk("sRGB", "\x00")), []byte(pngSignature+"\xff\xff\xff\xffeXIf"))
+		pngWith(f, pngChunk("caBX", textMark), pngChunk("TEXt", textMark), pngChunk("exIf", string(gpsTIFF(6))), pngChunk("sRGB", "\x00")), []byte(pngSignature+"\xff\xff\xff\xffeXIf"),
+		// An eXIf chunk the file ends in, without its checksum.
+		[]byte(pngSignature+"\x00\x00\x00\x16eXIf"+string(smallTIFF(6))))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		checkPNGChunks(t, checkFilter(t, "image/png", "png", pngSignature, data, wholeFile))
 	})

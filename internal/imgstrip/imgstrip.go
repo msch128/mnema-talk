@@ -123,6 +123,8 @@ type filter struct {
 
 	// oriented: the first EXIF record was seen; later ones never count.
 	oriented bool
+	// PNG: exif is the orientation record to write once its source chunk ends.
+	exif []byte
 	// JPEG: bytes is src read byte by byte; sawFF says the last byte was a
 	// 0xFF whose meaning the next one decides.
 	bytes *bufio.Reader

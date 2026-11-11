@@ -520,6 +520,13 @@ func TestTheStoredFileIsNeverLargerThanTheUpload(t *testing.T) {
 			if len(out) > len(in) || shownOrientation(out) != 6 {
 				t.Errorf("%s (buffer %d): %d bytes in, %d out, orientation %d", mimeType, buffer, len(in), len(out), shownOrientation(out))
 			}
+			// Nor is a file that ends inside the record or right behind it:
+			// what the upload did not finish, the filter does not write.
+			for cut := range len(in) {
+				if out := strip(t, mimeType, in[:cut], buffer); len(out) > cut {
+					t.Fatalf("%s (buffer %d) cut at %d grew to %d bytes: %x", mimeType, buffer, cut, len(out), in[:cut])
+				}
+			}
 		}
 	}
 }
