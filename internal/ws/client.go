@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
@@ -234,18 +235,21 @@ func (c *Client) currentVoice() *uuid.UUID {
 // changes under the same lock, so it never disagrees with the connection.
 // Callers do not hold the hub's lock.
 func (c *Client) setVoice(ch *uuid.UUID) {
-	safego.Locked(&c.hub.mu, func() {
-		c.mu.Lock()
-		was := c.voiceCh
-		c.voiceCh = ch
-		c.seat = 0
-		c.speaking = false
-		if ch == nil {
-			c.sfuPeer = nil
-		}
-		c.mu.Unlock()
-		c.hub.moveRoomLocked(c, was, ch)
-	})
+	safego.Locked(&c.hub.mu, func() { c.setVoiceLocked(ch) })
+}
+
+// setVoiceLocked is setVoice for a caller that holds the hub's lock.
+func (c *Client) setVoiceLocked(ch *uuid.UUID) {
+	c.mu.Lock()
+	was := c.voiceCh
+	c.voiceCh = ch
+	c.seat = 0
+	c.speaking = false
+	if ch == nil {
+		c.sfuPeer = nil
+	}
+	c.mu.Unlock()
+	c.hub.moveRoomLocked(c, was, ch)
 }
 
 func (c *Client) setTab(id string) {
@@ -304,4 +308,14 @@ func (c *Client) evict() {
 	}
 	c.shutdown()
 	c.close()
+}
+
+// joinRefusal is the voice_kicked reason of a refused join: the rules the
+// member has not accepted yet, otherwise a missing permission. snap is nil when
+// the permission state could not be loaded.
+func (c *Client) joinRefusal(snap *perm.Snapshot) string {
+	if snap != nil && snap.RulesPending(c.User.ID) {
+		return "rules_not_accepted"
+	}
+	return "missing_permission"
 }

@@ -139,17 +139,17 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("websocket upgrade failed", "err", err)
 		return
 	}
-	h.noteUpgrade(true)
 	c := newClient(h, conn, *user, tv)
 	// The connection is hijacked: the HTTP server's own recovery can neither
-	// answer nor close it, so a panic in the handshake or the greeting would
-	// leave a registered connection that nobody reads.
+	// answer nor close it, so a panic in the upgrade hook, the handshake or
+	// the greeting would leave an open connection that nobody reads.
 	safego.Run("ws_handshake", c.abandon, func() { h.serve(r, c, user.ID, tv) })
 }
 
 // serve finishes the handshake of an upgraded connection, greets it and
 // starts its two loops.
 func (h *Hub) serve(r *http.Request, c *Client, userID uuid.UUID, tv int) {
+	h.noteUpgrade(true)
 	c.dmAware = r.URL.Query().Get("dm") == "1"
 	h.bindSession(c, r)
 	if !h.admitPending(c) {
@@ -339,11 +339,8 @@ func (h *Hub) forget(c *Client) {
 		// Close has recorded last seen for everyone already.
 		closing = h.closed
 		delete(h.clients, c)
-		// A clean-up that panicked before it left the room leaves c seated.
-		if cur := c.currentVoice(); cur != nil {
-			h.leaveRoomLocked(c, *cur)
-		}
-		c.shutdown()
+		// The counters go with the entry: a second forget finds no client and
+		// would never correct them, leaving the member online for good.
 		if !c.idle {
 			if h.active[c.User.ID]--; h.active[c.User.ID] <= 0 {
 				delete(h.active, c.User.ID)
@@ -351,6 +348,11 @@ func (h *Hub) forget(c *Client) {
 		}
 		h.online[c.User.ID]--
 		offline = h.online[c.User.ID] <= 0
+		// A clean-up that panicked before it left the room leaves c seated.
+		if cur := c.currentVoice(); cur != nil {
+			h.leaveRoomLocked(c, *cur)
+		}
+		c.shutdown()
 		if offline {
 			delete(h.online, c.User.ID)
 			delete(h.chosen, c.User.ID)

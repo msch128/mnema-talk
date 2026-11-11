@@ -308,6 +308,27 @@ func TestPanicInTheGreetingClosesThatConnection(t *testing.T) {
 	readUntil(t, bob, events.MemberJoined)
 }
 
+// The upgrade hook runs after the connection was hijacked too: a panic there
+// closes the connection instead of leaving it open with nobody reading it.
+func TestPanicInTheUpgradeHookClosesThatConnection(t *testing.T) {
+	var armed atomic.Bool
+	h, srv, bob := hubWithBob(t, func(string) {}, func(h *Hub) {
+		h.UpgradeSeen = func(upgraded bool) {
+			if upgraded && armed.Load() {
+				panic("upgrade hook bug")
+			}
+		}
+	})
+	before := metrics.GoroutinePanics.With("ws_handshake").Load()
+	armed.Store(true)
+	alice := dialAs(t, srv, "alice")
+	waitClosed(t, alice)
+	waitCounted(t, "ws_handshake", before+1)
+	armed.Store(false)
+	h.Broadcast(events.MemberJoined, map[string]any{})
+	readUntil(t, bob, events.MemberJoined)
+}
+
 // A panic under a client's voice lock (here: while it is taken out of its
 // Talk) releases that lock. Held, it would block the clean-up of the very
 // connection that panicked and every later kick of it.

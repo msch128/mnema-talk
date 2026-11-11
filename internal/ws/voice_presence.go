@@ -62,15 +62,19 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 			}
 		}
 	})
-	if wasIn {
-		slog.Info("voice leave", "user", userID, "channel", chID)
-		if h.Presence != nil {
-			h.Presence(userID, chID, false)
-		}
-		h.BroadcastChannel(chID, events.VoiceStateUpdate, map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
-		if hadSince {
-			h.addVoiceTime(userID, chID, time.Since(since), h.settleSeat(chID, class))
-		}
+	if !wasIn {
+		return
+	}
+	slog.Info("voice leave", "user", userID, "channel", chID)
+	// The seat is gone already. Deferred, so a panic in a listener (Presence,
+	// Tap) loses neither the stay's voice time nor the others' "leave".
+	if hadSince {
+		stay, counts := time.Since(since), h.settleSeat(chID, class)
+		defer h.addVoiceTime(userID, chID, stay, counts)
+	}
+	defer h.BroadcastChannel(chID, events.VoiceStateUpdate, map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
+	if h.Presence != nil {
+		h.Presence(userID, chID, false)
 	}
 }
 
@@ -144,6 +148,11 @@ func (h *Hub) releaseSeat(c *Client) {
 			c.setVoice(nil)
 		}
 	}()
+	// A closed hub has settled every stay and told Presence nothing more:
+	// its listeners (the audit log) are closing with the server.
+	if h.isClosed() {
+		return
+	}
 	for _, ch := range h.seatsWithoutGrace(c.User.ID) {
 		h.removePresenceUnlessPresent(c.User.ID, ch, c)
 	}

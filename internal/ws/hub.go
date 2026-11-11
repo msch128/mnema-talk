@@ -31,7 +31,9 @@ type Hub struct {
 	permRetry permRetry
 	// Tap, when set, sees every event the hub publishes (channel is uuid.Nil
 	// for events to everybody), before delivery. Outgoing webhooks listen
-	// here. It must not block.
+	// here. It must not block and must not call back into the hub: it runs
+	// next to the hub's lock, and a call that takes that lock again can
+	// wait forever behind a writer.
 	Tap func(channel uuid.UUID, eventType string, payload any)
 	// DMTap is Tap for the events of direct message conversations. Those
 	// never reach Tap (outgoing webhooks, the bot gateway): only Web Push

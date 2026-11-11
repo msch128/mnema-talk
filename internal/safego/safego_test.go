@@ -12,14 +12,25 @@ import (
 	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
-// captureLog collects what the package logs while the test runs.
+// captureLog collects what the package logs while the test runs. Every site
+// starts with a full log budget: the budget is the package's and lasts a
+// minute, so a second run in the same process (go test -count) would find it
+// used up by the first.
 func captureLog(t *testing.T) *bytes.Buffer {
 	t.Helper()
+	refillLogBudget()
+	t.Cleanup(refillLogBudget)
 	var buf bytes.Buffer
 	prev := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
 	t.Cleanup(func() { slog.SetDefault(prev) })
 	return &buf
+}
+
+func refillLogBudget() {
+	logs.mu.Lock()
+	defer logs.mu.Unlock()
+	clear(logs.sites)
 }
 
 func TestRunRecoversLogsCountsAndCallsOnPanic(t *testing.T) {
