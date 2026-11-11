@@ -16,9 +16,9 @@ import { useServerFeaturesStore } from './serverFeatures'
 import { usePastEvents } from './eventsPast'
 import { useToastStore } from './toast'
 import { t } from '../i18n'
-import { openEvents } from '../lib/eventsDialog'
+import { openEvents } from '../events/lib/eventsDialog'
 import { eventRosterActions } from './eventsRoster'
-import type { RoleInput } from '../lib/eventRolesApi'
+import type { RoleInput } from '../events/lib/eventRolesApi'
 
 /** Whole minutes until an event starts, at least one (the server reminds a quarter of an hour ahead). */
 export function minutesUntil(startTime: string, now = Date.now()): number {

@@ -20,7 +20,7 @@ import { usePushBridge } from './usePushBridge'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { currentRoute } from '../shared/lib/router'
-import { closeEvents, eventsRequest } from '../lib/eventsDialog'
+import { closeEvents, eventsRequest } from '../events/lib/eventsDialog'
 
 const Host = defineComponent({ setup() { usePushBridge(); return () => null } })
 

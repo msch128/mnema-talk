@@ -2,16 +2,16 @@ import type { ApiOptions } from '../shared/lib/api'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises } from '@vue/test-utils'
-import * as rolesApi from '../lib/eventRolesApi'
+import * as rolesApi from '../events/lib/eventRolesApi'
 import { minutesUntil, useEventsStore } from './events'
-import { eventsRequest } from '../lib/eventsDialog'
+import { eventsRequest } from '../events/lib/eventsDialog'
 import { useServerFeaturesStore } from './serverFeatures'
 import { useToastStore } from './toast'
 import { t } from '../i18n'
 import { fixtureId, FIXTURE_TIMESTAMP } from '../test-fixtures.fixture'
 import type { CommunityEvent, RSVPItem } from '../types/domain'
 
-vi.mock('../lib/eventRolesApi', () => ({
+vi.mock('../events/lib/eventRolesApi', () => ({
   fetchEvent: vi.fn(), setEventRoles: vi.fn(), deleteEventRole: vi.fn(), signUpForRole: vi.fn(), leaveRole: vi.fn(), removeSignup: vi.fn()
 }))
 

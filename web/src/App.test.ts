@@ -15,7 +15,7 @@ import { requestAdminTab, adminTabRequest } from './shared/lib/adminRequest'
 import { channelFixture, categoryFixture, messageFixture, userFixture, requireValue } from './test-fixtures.fixture'
 import App from './App.vue'
 import { useCompactLayout } from './shared/composables/useCompactLayout'
-import { openEvents, closeEvents } from './lib/eventsDialog'
+import { openEvents, closeEvents } from './events/lib/eventsDialog'
 
 const rtc = vi.hoisted(() => ({ resumeVoiceSession: vi.fn(async () => false), resumeRemoteAudio: vi.fn(), leaveVoiceChannel: vi.fn(), rejoinAfterReconnect: vi.fn() }))
 vi.mock('./talk/composables/useWebRTC', () => ({ useWebRTC: () => rtc }))

@@ -6,7 +6,7 @@ import { setLocale } from '../i18n'
 import { fixtureId } from '../test-fixtures.fixture'
 
 const openEvents = vi.fn()
-vi.mock('../lib/eventsDialog', () => ({ openEvents: (id: string) => openEvents(id) }))
+vi.mock('../events/lib/eventsDialog', () => ({ openEvents: (id: string) => openEvents(id) }))
 
 beforeEach(() => {
   setActivePinia(createPinia())
