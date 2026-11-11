@@ -175,18 +175,3 @@ func (h *Hub) DisconnectUser(userID uuid.UUID) {
 		c.close()
 	}
 }
-
-// userInVoice reports whether another connection than except of userID is in chID's voice room.
-func (h *Hub) userInVoice(userID, chID uuid.UUID, except *Client) bool {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	for other := range h.clients {
-		if other == except || other.User.ID != userID {
-			continue
-		}
-		if cur := other.currentVoice(); cur != nil && *cur == chID {
-			return true
-		}
-	}
-	return false
-}

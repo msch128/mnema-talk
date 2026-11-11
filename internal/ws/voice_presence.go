@@ -25,26 +25,45 @@ func (h *Hub) dropVoiceForGrace(c *Client) {
 	c.setVoice(nil)
 	// A reconnect may already be back in the room before the old socket
 	// unregisters; then the user never left and no grace timer runs.
-	if !h.userInVoice(c.User.ID, *ch, c) {
-		h.startGrace(voiceKey{c.User.ID, *ch})
-	}
+	h.startGrace(voiceKey{c.User.ID, *ch}, c)
 }
 
 // removePresenceUnlessPresent ends userID's presence in chID unless another
-// connection than except (a second tab) is still in the room.
+// connection than except (a second tab) is in the room.
 func (h *Hub) removePresenceUnlessPresent(userID, chID uuid.UUID, except *Client) {
-	if !h.userInVoice(userID, chID, except) {
-		h.removePresence(userID, chID)
-	}
+	h.endPresence(userID, chID, func() bool { return h.seatedLocked(userID, chID, except) })
 }
 
-// removePresence drops userID from chID's room and announces it if they were there.
+// removePresence drops userID from chID's room, whoever of their connections
+// is in it, and announces it if they were there.
 func (h *Hub) removePresence(userID, chID uuid.UUID) {
+	h.endPresence(userID, chID, func() bool { return false })
+}
+
+// seatedLocked reports whether a connection of userID other than except is
+// in chID's room. Callers hold h.mu.
+func (h *Hub) seatedLocked(userID, chID uuid.UUID, except *Client) bool {
+	for c := range h.rooms[chID] {
+		if c != except && c.User.ID == userID {
+			return true
+		}
+	}
+	return false
+}
+
+// endPresence is the removal behind removePresence. keep is asked under the
+// lock that removes the seat: a join that takes the seat (takeSeat, under the
+// same lock) either comes first and keeps it, or comes after and is a new
+// join. Asked before, it would let that join lose a seat it believes it has.
+func (h *Hub) endPresence(userID, chID uuid.UUID, keep func() bool) {
 	key := voiceKey{userID, chID}
 	var wasIn, hadSince bool
 	var since time.Time
 	var class seatClass
 	safego.Locked(&h.mu, func() {
+		if keep() {
+			return
+		}
 		_, wasIn = h.voice[chID][userID]
 		since, hadSince = h.voiceSince[key]
 		class = h.seatClasses[key]
@@ -79,11 +98,13 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 }
 
 // startGrace keeps a user listed in a room for VoiceGrace, then removes them
-// unless takeGrace claimed the slot first.
-func (h *Hub) startGrace(key voiceKey) {
+// unless takeGrace claimed the slot first or a connection of theirs is in the
+// room by then. No grace starts while a connection other than except is in
+// the room: the user never left.
+func (h *Hub) startGrace(key voiceKey, except *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.closed {
+	if h.closed || h.seatedLocked(key.user, key.ch, except) {
 		return
 	}
 	if old := h.grace[key]; old != nil {
@@ -98,7 +119,7 @@ func (h *Hub) startGrace(key voiceKey) {
 		}
 		h.mu.Unlock()
 		if current {
-			h.removePresence(key.user, key.ch)
+			h.removePresenceUnlessPresent(key.user, key.ch, nil)
 		}
 	})
 	h.grace[key] = g

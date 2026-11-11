@@ -128,7 +128,7 @@ func TestRefusedResumeOfALingeringPresenceRestartsTheGrace(t *testing.T) {
 	h.initVoiceRoomLocked(ch.ID, time.Now())
 	h.voice[ch.ID][uid] = auth.User{ID: uid}
 	h.mu.Unlock()
-	h.startGrace(voiceKey{uid, ch.ID})
+	h.startGrace(voiceKey{uid, ch.ID}, nil)
 	if len(h.takeUserGraces(uid)) != 1 {
 		t.Fatal("no grace to take")
 	}

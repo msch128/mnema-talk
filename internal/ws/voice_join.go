@@ -93,8 +93,8 @@ func (h *Hub) seatVoice(c *Client, ch *core.ChannelInfo, mode joinMode) bool {
 	if !h.finalizeVoiceSeat(c, ch.ID, mode.evictReason) {
 		return false
 	}
-	if c.seatStamp() == 0 {
-		c.stampSeat(h.seatClock.Add(1)) // no SFU: the seat is live now
+	if h.SFU == nil {
+		c.stampSeat(h.seatClock.Add(1)) // no media peer orders the seats
 	}
 	slog.Info("voice join", "user", c.User.Username, "channel", ch.ID, "rejoin", seat.rejoin)
 	h.announceVoiceJoin(c, ch.ID, seat)
@@ -204,8 +204,8 @@ func (h *Hub) leaveOtherRooms(c *Client, chID uuid.UUID) (rejoin, done bool) {
 // was refused after the grace timer was already cancelled: with no connection
 // in the room and no timer left, nothing would ever end that presence.
 func (h *Hub) restoreGraceIfAbandoned(c *Client, chID uuid.UUID) {
-	if h.inRoom(chID, c.User.ID) && !h.userInVoice(c.User.ID, chID, nil) {
-		h.startGrace(voiceKey{c.User.ID, chID})
+	if h.inRoom(chID, c.User.ID) {
+		h.startGrace(voiceKey{c.User.ID, chID}, nil)
 	}
 }
 
@@ -239,6 +239,10 @@ func (h *Hub) takeSeat(c *Client, ch *core.ChannelInfo) (voiceSeat, bool) {
 	now := time.Now()
 	h.initVoiceRoomLocked(ch.ID, now)
 	_, rejoin := h.voice[ch.ID][c.User.ID]
+	if g := h.grace[key]; g != nil { // started while this join was on its way
+		g.timer.Stop()
+		delete(h.grace, key)
+	}
 	h.recordVoiceJoinTimeLocked(key, rejoin, now)
 	// A resuming stay keeps how it was classified at its start: a failed
 	// permission lookup now (which counts as private) must not hide the
@@ -308,31 +312,6 @@ func (h *Hub) recheckJoin(c *Client, chID uuid.UUID) (*perm.Snapshot, bool) {
 	return snap, true
 }
 
-// evictSiblingConnections takes the media of chID's room away from the other
-// connections of c's user (a second tab or device): the SFU keeps one peer per
-// user and room, so the join replaces theirs. They are told instead of
-// being left on a dead connection. Presence stays; c now holds the seat.
-// Their voiceMu is not taken: two tabs joining at once would wait on each
-// other, and detaching only touches the connection's own state. A sibling
-// that was seated after c (or is still joining, without a seat) stays: of two
-// joins at once the later one wins, whichever evicts first.
-func (h *Hub) evictSiblingConnections(c *Client, chID uuid.UUID, reason string) {
-	mine := c.seatStamp()
-	for _, o := range h.clientsOf(c.User.ID) {
-		if o == c {
-			continue
-		}
-		cur, stamp := o.currentVoice(), o.seatStamp()
-		if cur != nil && *cur == chID && stamp != 0 && stamp < mine {
-			if reason == kickTakenOver {
-				h.taken.mark(voiceKey{o.User.ID, chID}, o.tabID())
-			}
-			o.setVoice(nil)
-			o.SendEvent(events.VoiceKicked, map[string]any{"channel_id": chID, "reason": reason})
-		}
-	}
-}
-
 // attachPeer joins c to the SFU room and brings it up to date. It reports
 // false when the permission check after the join revoked the seat.
 func (h *Hub) attachPeer(c *Client, chID uuid.UUID, evictReason string) bool {
@@ -349,9 +328,9 @@ func (h *Hub) attachPeer(c *Client, chID uuid.UUID, evictReason string) bool {
 	}
 	// Only now: the join replaced the siblings' peers. After a failed join
 	// they still own theirs, and the other tabs keep their media.
-	c.setPeer(peer)
-	c.stampSeat(h.seatClock.Add(1))
-	h.evictSiblingConnections(c, chID, evictReason)
+	if !h.seatPeer(c, chID, peer, evictReason) {
+		return false
+	}
 	if peer != nil {
 		// A media connection that fails after the join leaves the seat
 		// without media: tell the client so it can rejoin.

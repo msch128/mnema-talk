@@ -100,7 +100,7 @@ func TestHubCloseDoesNotWaitOnVoiceCleanupOrRestartGrace(t *testing.T) {
 	c := newClient(h, nil, auth.User{ID: uuid.New(), Username: "alice"}, 0)
 	h.register(c)
 	key := voiceKey{c.User.ID, uuid.New()}
-	h.startGrace(key)
+	h.startGrace(key, nil)
 	c.voiceMu.Lock()
 	defer c.voiceMu.Unlock()
 	done := make(chan struct{})
@@ -110,7 +110,7 @@ func TestHubCloseDoesNotWaitOnVoiceCleanupOrRestartGrace(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("hub shutdown waited on voice cleanup")
 	}
-	h.startGrace(key)
+	h.startGrace(key, nil)
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if len(h.grace) != 0 {

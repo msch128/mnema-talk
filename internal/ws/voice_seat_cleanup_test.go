@@ -6,6 +6,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/pion/webrtc/v4"
 )
 
 // A member's second connection that is in the middle of joining a Talk keeps
@@ -168,5 +170,54 @@ func TestPanickingPresenceListenerStillTellsTheOthersOfTheLeave(t *testing.T) {
 	updates := sentEvents(t, bob, events.VoiceStateUpdate)
 	if len(updates) != 1 || updates[0]["action"] != "leave" || updates[0]["user_id"] != alice.User.ID.String() {
 		t.Fatalf("voice state updates after the leave = %+v", updates)
+	}
+}
+
+// Two tabs join at once and the tab whose media peer the SFU made first is
+// the last to finish. Its peer was replaced by the other tab's, so it gives
+// way: the seat stays with the tab whose peer carries the media.
+func TestOfTwoTabsJoiningAtOnceTheOneWithTheLivePeerHoldsTheSeat(t *testing.T) {
+	media := newSeatTestSFU(t)
+	h := NewHub(nil, nil, media, nil, openPerms())
+	ch := voiceCh()
+	user := auth.User{ID: uuid.New(), Username: "twotabs"}
+	replaced := testClient(h, user)
+	live := testClient(h, user)
+	defer h.unregister(replaced)
+	defer h.unregister(live)
+	join := func(c *Client) *sfu.Peer {
+		if _, ok := h.takeSeat(c, ch); !ok {
+			t.Fatal("no seat")
+		}
+		_, peer, err := media.Join(ch.ID, user.ID, func(webrtc.SessionDescription) {}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return peer
+	}
+	replacedPeer := join(replaced)
+	livePeer := join(live) // replaces the first peer in the SFU
+
+	if !h.seatPeer(live, ch.ID, livePeer, kickJoinedElsewhere) {
+		t.Fatal("the tab with the live peer gave way")
+	}
+	if h.seatPeer(replaced, ch.ID, replacedPeer, kickJoinedElsewhere) {
+		t.Fatal("the tab whose peer was replaced took the seat")
+	}
+
+	if cur := live.currentVoice(); cur == nil || *cur != ch.ID || live.peer() != livePeer {
+		t.Fatal("the tab with the live peer lost the seat")
+	}
+	if kicked := sentEvents(t, live, events.VoiceKicked); len(kicked) != 0 {
+		t.Fatalf("the tab with the live peer was evicted: %+v", kicked)
+	}
+	if replaced.currentVoice() != nil {
+		t.Fatal("the tab whose peer was replaced still believes it has media")
+	}
+	if kicked := sentEvents(t, replaced, events.VoiceKicked); len(kicked) != 1 || kicked[0]["reason"] != kickJoinedElsewhere {
+		t.Fatalf("voice_kicked to the tab whose peer was replaced = %+v", kicked)
+	}
+	if !inRoom(h, ch.ID, user.ID) {
+		t.Fatal("the member left the Talk")
 	}
 }

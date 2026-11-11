@@ -66,8 +66,9 @@ type Client struct {
 
 	mu      sync.Mutex
 	voiceCh *uuid.UUID
-	// seat orders the seated voice connections of one user: the hub's clock
-	// at the moment the SFU join succeeded, 0 while not seated yet.
+	// seat orders the seated voice connections of one user: the number of
+	// the connection's media peer (sfu.Peer.Order; the hub's own clock when
+	// it runs without an SFU), 0 while not seated yet.
 	seat uint64
 	// tab is the id the page sends with its voice joins; it stays the same
 	// across its WebSocket reconnects, which tell a takeover's victim

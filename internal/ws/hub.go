@@ -127,8 +127,8 @@ type Hub struct {
 	// writes of voice time.
 	voiceGate voiceGate
 	vtimes    voiceTimes
-	// seatClock numbers live voice seats (Client.seat), so of two connections
-	// of one user the later one is known.
+	// seatClock numbers live voice seats (Client.seat) of a hub without an
+	// SFU, so of two connections of one user the later one is known.
 	seatClock atomic.Uint64
 	// taken marks stays a takeover ended (see resumeVoice).
 	taken takeoverMarks

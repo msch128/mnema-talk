@@ -150,7 +150,7 @@ func TestKickAndGraceReplacement(t *testing.T) {
 	h.joinVoice(c, ch)
 	h.unregister(c)
 	key := voiceKey{c.User.ID, ch.ID}
-	h.startGrace(key)
+	h.startGrace(key, nil)
 	if !h.KickFromVoice(c.User.ID) || inRoom(h, ch.ID, c.User.ID) {
 		t.Fatal("kick did not remove disconnected participant")
 	}

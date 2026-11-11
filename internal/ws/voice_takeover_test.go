@@ -191,8 +191,8 @@ func TestResumeWithAStayTheServerHeldIsAnOrdinaryRejoin(t *testing.T) {
 	h, a, b := twoSessions(t, true)
 	ch := voiceCh()
 	h.joinVoice(a, ch)
-	h.joinVoice(b, voiceCh())                // another session sits in a different Talk
-	h.startGrace(voiceKey{a.User.ID, ch.ID}) // its socket dropped and the stay lingers
+	h.joinVoice(b, voiceCh())                     // another session sits in a different Talk
+	h.startGrace(voiceKey{a.User.ID, ch.ID}, nil) // its socket dropped and the stay lingers
 	a.setVoice(nil)
 
 	h.resumeVoice(a, ch)
