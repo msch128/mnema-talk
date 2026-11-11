@@ -16,11 +16,12 @@ tool="honnef.co/go/tools/cmd/staticcheck@${version}"
 
 # run <module dir> [flags]: the findings as "<repo path>:<line>:<col>: <text> (<ID>)".
 # Exit status 1 means "there are findings", which is what we compare ourselves.
+# "go: downloading" lines of a cold module cache are not findings.
 run() {
 	local dir="$1" prefix=""
 	shift
 	[ "$dir" = . ] || prefix="$dir/"
-	(cd "$dir" && go run "$tool" "$@" ./... 2>&1 || true) | sed -e '/^exit status 1$/d' -e "/^[^[:space:]]/s|^|$prefix|"
+	(cd "$dir" && go run "$tool" "$@" ./... 2>&1 || true) | sed -e '/^exit status 1$/d' -e '/^go: downloading /d' -e "/^[^[:space:]]/s|^|$prefix|"
 }
 
 raw="$(

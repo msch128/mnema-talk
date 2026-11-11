@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Compares a `go test -bench` run with the stored baseline and prints one row
 // per benchmark of the run. Timing is shown and never judged: it depends on
-// the machine and on what else runs there. With --gate-allocs <regex> the
+// the machine and on what else runs there. With --gate-allocs <prefix> the
 // script exits 1 when a benchmark matching the regex allocates more per
 // operation than its baseline, or is missing from the run or the baseline.
-// Usage: node scripts/bench-compare.mjs <baseline.txt> <run.txt> [--gate-allocs <regex>]
+// Usage: node scripts/bench-compare.mjs <baseline.txt> <run.txt> [--gate-allocs <name prefix>]
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
@@ -62,10 +62,13 @@ export function table(rows) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2)
   const gateAt = args.indexOf('--gate-allocs')
-  const gate = gateAt === -1 ? null : new RegExp(args.splice(gateAt, 2)[1])
+  // The gate is a plain name prefix, not a pattern: nothing from the command line
+  // is compiled into a regular expression.
+  const prefix = gateAt === -1 ? null : args.splice(gateAt, 2)[1]
+  const gate = prefix === null ? null : { test: (name) => name.startsWith(prefix) }
   const [baselineFile, runFile] = args
   if (!baselineFile || !runFile) {
-    console.error('usage: bench-compare.mjs <baseline.txt> <run.txt> [--gate-allocs <regex>]')
+    console.error('usage: bench-compare.mjs <baseline.txt> <run.txt> [--gate-allocs <name prefix>]')
     process.exit(2)
   }
   const baselineText = readFileSync(baselineFile, 'utf8')

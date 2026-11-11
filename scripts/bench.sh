@@ -14,7 +14,7 @@ cd "$(dirname "$0")/.."
 
 mode="${1:?compare, record or allocs}"
 baseline="scripts/bench-baseline.txt"
-gate='^BenchmarkForward'
+gate='BenchmarkForward'
 out="$(mktemp)"
 trap 'rm -f "$out"' EXIT
 

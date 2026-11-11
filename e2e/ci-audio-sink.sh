@@ -14,6 +14,8 @@
 # fails with "400 Bad Request" (run 42090807808). Downloads go to the same
 # ~/apt-archives as ci-install-deps.sh, which the workflow caches.
 set -euo pipefail
+# Before any cd: the path of this script may be relative.
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 ATTEMPTS="${ATTEMPTS:-3}"
 ATTEMPT_SECONDS="${ATTEMPT_SECONDS:-60}"
@@ -36,7 +38,7 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   fi
   echo "==> attempt $attempt of $ATTEMPTS (limit ${ATTEMPT_SECONDS}s)"
   sudo dpkg --configure -a || true
-  "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/ci-dns-fallback.sh" azure.archive.ubuntu.com archive.ubuntu.com
+  "$REPO_ROOT/scripts/ci-dns-fallback.sh" azure.archive.ubuntu.com archive.ubuntu.com || true
   if sudo timeout -k 10 "$ATTEMPT_SECONDS" apt-get install -y --fix-missing --no-install-recommends pulseaudio pulseaudio-utils; then
     installed=1
     sudo chmod -R a+rX "$ARCHIVES"
