@@ -17,6 +17,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/config"
@@ -208,6 +209,7 @@ func (c *components) newWebhooks() {
 	ssrfPolicy := &ssrf.Policy{Allow: c.cfg.WebhookAllowPrivateTargets}
 	c.outgoing = webhook.NewDispatcher(d.DB, ssrf.NewClient(ssrf.NewDialer(ssrfPolicy), 10*time.Second), d.Version)
 	c.addTap(c.outgoing.Observe)
+	core.AttachOutbox(d.DB, c.outgoing)
 	c.hub.Presence = auditPresence(c.ctx, c.auditLog, d.DB)
 	safego.Go("webhook_dispatch", safego.Crash, func() { c.outgoing.Run(c.ctx) })
 	c.webhookH = webhook.New(webhook.Handler{DB: d.DB, Events: c.pub, Media: c.mediaH, Perms: c.permSvc, Online: c.hub, PublicURL: c.cfg.PublicURL, Outgoing: c.outgoing, Policy: ssrfPolicy})

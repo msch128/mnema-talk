@@ -269,7 +269,7 @@ func saveRoleMentions(ctx context.Context, q db.Querier, messageID uuid.UUID, ro
 }
 
 // LoadMentionRoles fills msgs[].MentionRoles.
-func LoadMentionRoles(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func LoadMentionRoles(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `SELECT message_id, role_id FROM message_role_mentions WHERE message_id = ANY($1)`, ids)
 	if err != nil {
 		return fmt.Errorf("load role mentions: %w", err)

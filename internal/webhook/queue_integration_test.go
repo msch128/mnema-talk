@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
@@ -133,8 +132,10 @@ func waitFor(t *testing.T, what string, cond func() bool) {
 	}
 }
 
-func message(ch uuid.UUID) *core.Message {
-	return &core.Message{ID: uuid.New(), ChannelID: ch, Content: "hi"}
+// voiceJoin is the payload of a member joining the Talk of ch: an event
+// without a transaction, which Observe buffers.
+func voiceJoin(ch uuid.UUID) map[string]any {
+	return map[string]any{"action": "join", "channel_id": ch}
 }
 
 func TestProcessDeliversAndSettles(t *testing.T) {
@@ -268,7 +269,7 @@ func TestProcessFailuresLeaveTheRow(t *testing.T) {
 func TestRestartKeepsPendingEventsAndDeliversOnce(t *testing.T) {
 	f := newFixture(t)
 	recv := newReceiver(t)
-	hook := f.outgoing(recv.URL)
+	hook := f.outgoingFor(recv.URL, EventVoiceStateUpdate)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -277,7 +278,7 @@ func TestRestartKeepsPendingEventsAndDeliversOnce(t *testing.T) {
 	if err := d1.Reload(ctx); err != nil {
 		t.Fatal(err)
 	}
-	d1.Observe(f.ch, "message_create", message(f.ch))
+	d1.Observe(f.ch, "voice_state_update", voiceJoin(f.ch))
 	pctx, stop := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() { d1.persist(pctx); close(done) }()
@@ -313,7 +314,7 @@ func TestRetrySurvivesRestartAndSignsTheAttemptTime(t *testing.T) {
 	f := newFixture(t)
 	recv := newReceiver(t)
 	recv.status.Store(http.StatusServiceUnavailable)
-	hook := f.outgoing(recv.URL)
+	hook := f.outgoingFor(recv.URL, EventVoiceStateUpdate)
 	ctx := context.Background()
 
 	d1 := NewDispatcher(f.p, loopbackClient(), "test")
@@ -325,7 +326,7 @@ func TestRetrySurvivesRestartAndSignsTheAttemptTime(t *testing.T) {
 	if err := d1.Reload(ctx); err != nil {
 		t.Fatal(err)
 	}
-	d1.Observe(f.ch, "message_create", message(f.ch))
+	d1.Observe(f.ch, "voice_state_update", voiceJoin(f.ch))
 	d1.Run(dead)
 	if f.pending(hook.ID) != 1 {
 		t.Fatalf("buffered event lost at shutdown: %d pending", f.pending(hook.ID))

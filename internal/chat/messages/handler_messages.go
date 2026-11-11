@@ -139,7 +139,7 @@ func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 			return claimAttachments(ctx, tx, msgID, user.ID, chID, req.AttachmentIDs)
 		}
 	}
-	id, err := InsertMessage(ctx, a.DB, a.Online, NewMessage{
+	id, stored, err := insertMessage(ctx, a.DB, a.Online, NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
 		HasAttachment: len(req.AttachmentIDs) > 0, Nonce: req.Nonce,
 	}, claim)
@@ -150,6 +150,10 @@ func (a *API) ServeCreateMessage(w http.ResponseWriter, r *http.Request) error {
 	}
 	if err != nil {
 		return err
+	}
+	if stored != nil { // loaded for the channel's webhook: the same message, not read twice
+		publishCreated(w, r, a.DB, a.Events, stored)
+		return nil
 	}
 	return PublishMessageNonce(w, r, a.DB, a.Events, id, req.Nonce)
 }
@@ -285,7 +289,7 @@ func (a *API) DeleteMessage(w http.ResponseWriter, r *http.Request) error {
 	a.auditDelete(r.Context(), user, msgID, snap, reason)
 	a.tellAuthor(snap, user, reason)
 	core.DeleteObjects(r.Context(), a.Objects, keys)
-	a.Events.BroadcastChannel(ref.ChannelID, events.MessageDelete, map[string]any{"id": msgID, "channel_id": ref.ChannelID, "parent_id": ref.ParentID})
+	a.Events.BroadcastChannel(ref.ChannelID, events.MessageDelete, core.MessageDeletePayload(msgID, ref.ChannelID, ref.ParentID))
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

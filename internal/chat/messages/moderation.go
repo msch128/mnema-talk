@@ -146,7 +146,15 @@ func (a *API) bulkDelete(w http.ResponseWriter, r *http.Request) error {
 		}
 		_ = tx.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, chID).Scan(&channelName)
 		gone, keys, err = TakeLatestMessages(ctx, tx, chID, req.UserID, req.Count, snap.IsOwner(actor.Subject()))
-		return err
+		if err != nil {
+			return err
+		}
+		for _, m := range gone {
+			if err := RecordMessageDelete(ctx, a.DB, tx, chID, m.id, m.parentID); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return err
@@ -175,7 +183,7 @@ type bulkDeleteReport struct {
 func (a *API) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 	chID, req := rep.chID, rep.req
 	for _, m := range rep.gone {
-		a.Events.BroadcastChannel(chID, events.MessageDelete, map[string]any{"id": m.id, "channel_id": chID, "parent_id": m.parentID})
+		a.Events.BroadcastChannel(chID, events.MessageDelete, core.MessageDeletePayload(m.id, chID, m.parentID))
 		d := map[string]any{
 			"channel_id": chID, "channel_name": rep.channelName, "author_id": req.UserID, "author_name": rep.targetName,
 			"content": audit.Content(m.content), "attachments": m.attachments, "sent_at": m.createdAt,

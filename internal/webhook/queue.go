@@ -83,6 +83,26 @@ func storeEvents(ctx context.Context, p *db.Pool, jobs []job) (perWebhook, globa
 	return perWebhook, global, nil
 }
 
+// capQueue applies the bounds to the whole table: per webhook and in total
+// the oldest rows go. It returns how many each bound removed.
+func capQueue(ctx context.Context, p *db.Pool) (perWebhook, global int64, err error) {
+	tag, err := p.Exec(ctx, `
+		DELETE FROM outgoing_queue WHERE seq IN (
+		    SELECT seq FROM (
+		        SELECT seq, row_number() OVER (PARTITION BY webhook_id ORDER BY seq DESC) AS rn
+		        FROM outgoing_queue) s
+		    WHERE rn > $1)`, maxPendingPerWebhook)
+	if err != nil {
+		return 0, 0, fmt.Errorf("cap outgoing queue per webhook: %w", err)
+	}
+	perWebhook = tag.RowsAffected()
+	tag, err = p.Exec(ctx, `DELETE FROM outgoing_queue WHERE seq IN (SELECT seq FROM outgoing_queue ORDER BY seq DESC OFFSET $1)`, maxPendingTotal)
+	if err != nil {
+		return perWebhook, 0, fmt.Errorf("cap outgoing queue: %w", err)
+	}
+	return perWebhook, tag.RowsAffected(), nil
+}
+
 // claimJob takes the oldest due row under a lease; ok is false when none is
 // due. FOR UPDATE SKIP LOCKED lets several processes claim at once without
 // ever getting the same row.

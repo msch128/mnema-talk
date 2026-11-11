@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -139,7 +140,10 @@ func UpdateForumPost(ctx context.Context, p *db.Pool, channelID, messageID uuid.
 		if err := checkPostUpdatePerms(actor, authorID, locked, patch); err != nil {
 			return err
 		}
-		return applyPostUpdate(ctx, tx, channelID, messageID, actor, cleanTitle, patch)
+		if err := applyPostUpdate(ctx, tx, channelID, messageID, actor, cleanTitle, patch); err != nil {
+			return err
+		}
+		return messages.RecordMessageEvent(ctx, p, tx, events.MessageUpdate, channelID, messageID, nil)
 	})
 	if err != nil {
 		return nil, err

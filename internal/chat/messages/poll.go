@@ -19,7 +19,7 @@ func LoadPoll(ctx context.Context, q db.Querier, messageID uuid.UUID) (*core.Pol
 }
 
 // loadPolls fills msgs[].Poll for the messages that have one.
-func loadPolls(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadPolls(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	polls, err := loadPollsFor(ctx, p, ids)
 	if err != nil {
 		return err

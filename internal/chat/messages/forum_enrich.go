@@ -12,14 +12,14 @@ import (
 
 // loadForumPostDetails enriches messages with forum post titles, lock states,
 // tags, and last activity timestamps.
-func loadForumPostDetails(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadForumPostDetails(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	if err := loadPostTitlesAndLocks(ctx, p, msgs, idx, ids); err != nil {
 		return err
 	}
 	return loadPostTags(ctx, p, msgs, idx, ids)
 }
 
-func loadPostTitlesAndLocks(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadPostTitlesAndLocks(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT m.id, m.title, m.is_locked, m.is_resolved,
 		       (SELECT MAX(r.created_at) FROM messages r WHERE r.parent_id = m.id) AS last_reply_at
@@ -56,7 +56,7 @@ func loadPostTitlesAndLocks(ctx context.Context, p *db.Pool, msgs []core.Message
 	return rows.Err()
 }
 
-func loadPostTags(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadPostTags(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT pt.message_id, ft.id, ft.channel_id, ft.name, ft.emoji, ft.color, ft.position, ft.moderated, ft.created_at
 		FROM forum_post_tags pt

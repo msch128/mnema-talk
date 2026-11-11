@@ -26,7 +26,13 @@ func loopbackClient() *http.Client {
 
 func (f *fixture) outgoing(url string) *outgoingRec {
 	f.t.Helper()
-	rec, _, err := createOutgoing(context.Background(), f.p, f.ch, f.owner.ID, "hook", url, []string{EventMessageCreate})
+	return f.outgoingFor(url, EventMessageCreate)
+}
+
+// outgoingFor creates a webhook of the fixture's channel for the events.
+func (f *fixture) outgoingFor(url string, events ...string) *outgoingRec {
+	f.t.Helper()
+	rec, _, err := createOutgoing(context.Background(), f.p, f.ch, f.owner.ID, "hook", url, events)
 	if err != nil {
 		f.t.Fatal(err)
 	}

@@ -40,28 +40,44 @@ func ValidateTarget(ctx context.Context, p *db.Pool, chID uuid.UUID, parentID, r
 
 // InsertMessage stores a validated message and its mentions in one
 // transaction. also, when set, runs in the same transaction (e.g. to record
-// an attachment).
+// an attachment). The message_create of the channel's outgoing webhooks is
+// stored in it too, last, so it carries what also added.
 func InsertMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, nm NewMessage, also func(tx pgx.Tx, messageID uuid.UUID) error) (uuid.UUID, error) {
+	id, _, err := insertMessage(ctx, p, online, nm, also)
+	return id, err
+}
+
+// insertMessage is InsertMessage. It also returns the stored message when the
+// transaction had to load it for a webhook (nil otherwise), so the caller
+// that publishes it next need not load it a second time.
+func insertMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, nm NewMessage, also func(tx pgx.Tx, messageID uuid.UUID) error) (uuid.UUID, *core.Message, error) {
 	pending, err := checkAutomod(ctx, p, nm)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, nil, err
 	}
 	var id uuid.UUID
+	var stored *core.Message
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		var err error
 		if id, err = insertMessageTx(ctx, tx, online, nm); err != nil {
 			return err
 		}
 		if also != nil {
-			return also(tx, id)
+			if err := also(tx, id); err != nil {
+				return err
+			}
 		}
-		return nil
+		if nm.WebhookID != nil { // a webhook's message never leaves through a webhook
+			return nil
+		}
+		stored, err = recordMessageEvent(ctx, p, tx, events.MessageCreate, nm.ChannelID, id, nm.Nonce)
+		return err
 	})
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, nil, err
 	}
 	pending.Commit(ctx, id)
-	return id, nil
+	return id, stored, nil
 }
 
 // checkAutomod applies the automod rules to a member's new message before it
@@ -216,10 +232,16 @@ func PublishMessageNonce(w http.ResponseWriter, r *http.Request, p *db.Pool, pub
 		return err
 	}
 	msg.Nonce = nonce
+	publishCreated(w, r, p, pub, msg)
+	return nil
+}
+
+// publishCreated broadcasts message_create for a stored message and writes
+// it as the 201 response.
+func publishCreated(w http.ResponseWriter, r *http.Request, p *db.Pool, pub events.Publisher, msg *core.Message) {
 	pub.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
 	MarkReadAfterSend(r.Context(), p, pub, msg)
 	httpx.WriteJSON(w, http.StatusCreated, msg)
-	return nil
 }
 
 // MarkReadAfterSend moves the author's read marker up to their own new

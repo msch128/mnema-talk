@@ -70,7 +70,7 @@ func ScanMessages(rows pgx.Rows) ([]core.Message, error) {
 }
 
 // Enrich loads attachments, reactions, mentions and polls for msgs.
-func Enrich(ctx context.Context, p *db.Pool, msgs []core.Message) error {
+func Enrich(ctx context.Context, p db.Querier, msgs []core.Message) error {
 	if len(msgs) == 0 {
 		return nil
 	}
@@ -80,7 +80,7 @@ func Enrich(ctx context.Context, p *db.Pool, msgs []core.Message) error {
 		idx[m.ID] = i
 		ids[i] = m.ID
 	}
-	for _, load := range []func(context.Context, *db.Pool, []core.Message, map[uuid.UUID]int, []uuid.UUID) error{
+	for _, load := range []func(context.Context, db.Querier, []core.Message, map[uuid.UUID]int, []uuid.UUID) error{
 		loadAttachments, loadReactions, loadMentions, mentions.LoadMentionRoles, loadPolls, loadForumPostDetails,
 	} {
 		if err := load(ctx, p, msgs, idx, ids); err != nil {
@@ -92,7 +92,7 @@ func Enrich(ctx context.Context, p *db.Pool, msgs []core.Message) error {
 
 // loadAttachments fills msgs[].Attachments; idx maps a message ID to its
 // position in msgs.
-func loadAttachments(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadAttachments(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT id, message_id, original_filename, mime_type, size_bytes, is_deleted
 		FROM media WHERE message_id = ANY($1) ORDER BY position, created_at`, ids)
@@ -112,7 +112,7 @@ func loadAttachments(ctx context.Context, p *db.Pool, msgs []core.Message, idx m
 	return rows.Err()
 }
 
-func loadReactions(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadReactions(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT message_id, emoji, COUNT(*), array_agg(user_id ORDER BY created_at)
 		FROM message_reactions WHERE message_id = ANY($1)
@@ -132,7 +132,7 @@ func loadReactions(ctx context.Context, p *db.Pool, msgs []core.Message, idx map
 	return rows.Err()
 }
 
-func loadMentions(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func loadMentions(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `SELECT message_id, user_id FROM message_mentions WHERE message_id = ANY($1)`, ids)
 	if err != nil {
 		return fmt.Errorf("load mentions: %w", err)
@@ -148,7 +148,7 @@ func loadMentions(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[
 	return rows.Err()
 }
 
-func QueryMessages(ctx context.Context, p *db.Pool, sql string, args ...any) ([]core.Message, error) {
+func QueryMessages(ctx context.Context, p db.Querier, sql string, args ...any) ([]core.Message, error) {
 	rows, err := p.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query messages: %w", err)
@@ -296,7 +296,7 @@ func GetMessageByNumber(ctx context.Context, p *db.Pool, number int64) (*core.Me
 }
 
 // GetMessage returns one fully populated message.
-func GetMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*core.Message, error) {
+func GetMessage(ctx context.Context, p db.Querier, messageID uuid.UUID) (*core.Message, error) {
 	msgs, err := QueryMessages(ctx, p, MessageSelect+` WHERE m.id = $1`, messageID)
 	if err != nil {
 		return nil, err

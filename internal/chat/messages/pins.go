@@ -143,7 +143,10 @@ func (a *API) setPinned(w http.ResponseWriter, r *http.Request, pinned bool) err
 	err = a.asModerator(r, chID, func(tx pgx.Tx, _ *perm.Snapshot) error {
 		var err error
 		changed, err = writePin(r, tx, pinTarget{channel: chID, message: msgID, by: actor.ID}, pinned)
-		return err
+		if err != nil || !changed {
+			return err
+		}
+		return RecordMessageEvent(r.Context(), a.DB, tx, events.MessageUpdate, chID, msgID, nil)
 	})
 	if err != nil {
 		return err

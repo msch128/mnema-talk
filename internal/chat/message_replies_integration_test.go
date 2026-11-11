@@ -73,7 +73,7 @@ func TestEditDoesNotBlockThreadReplies(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	if err := messages.EditMessageTx(ctx, tx, nil, f.m, f.u.ID, "edited"); err != nil {
+	if _, err := messages.EditMessageTx(ctx, tx, nil, f.m, f.u.ID, "edited"); err != nil {
 		t.Fatal(err)
 	}
 	short, cancel := context.WithTimeout(ctx, 3*time.Second)
