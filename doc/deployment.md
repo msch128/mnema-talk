@@ -217,6 +217,37 @@ constant in `internal/db` overflows `int`). Builders cross-compile the Go
 binary on the build machine, so a multi-arch build needs no QEMU:
 `docker buildx build --platform linux/amd64,linux/arm64 .`
 
+## Health probes for other orchestrators
+
+The shipped Compose file needs nothing from this section: its health check
+calls `GET /api/health`, "healthy" means "ready for members", and plain
+Compose never restarts a container for being unhealthy.
+
+An orchestrator that **acts** on a probe needs two different questions
+answered:
+
+| Probe | Endpoint | Meaning |
+| --- | --- | --- |
+| Liveness (restart when it fails) | `GET /api/health/live` | `200` whenever the process serves requests; it asks neither the database nor object storage. |
+| Readiness, startup, monitoring | `GET /api/health` | `200` when the database answers and object storage is reachable, else `503` with what is down in `unavailable`. |
+
+Do not use `/api/health` as a liveness probe. It answers `503` while object
+storage is down, although chat and Talks still work then; a restart would not
+bring storage back and would end every running Talk. For Kubernetes:
+
+```yaml
+livenessProbe:
+  httpGet: { path: /api/health/live, port: 8080 }
+  periodSeconds: 30
+readinessProbe:
+  httpGet: { path: /api/health, port: 8080 }
+  periodSeconds: 10
+```
+
+The same holds for Docker Swarm and for an autoheal container: point whatever
+restarts on failure at `/api/health/live`. Both endpoints are public and are
+described in [operations.md](operations.md#health-and-metrics).
+
 ## Pull-based deployment
 
 Deployment to a LAN/self-hosted server stays **manual and pull-based**: GitHub's

@@ -24,6 +24,9 @@ func TestNilNamesReportsTheProduct(t *testing.T) {
 	if got := n.Get(context.Background()); got != Product {
 		t.Fatalf("got %q", got)
 	}
+	if name, icon := n.Cached(); name != Product || icon != "" {
+		t.Fatalf("cached: %q, %q", name, icon)
+	}
 	n.Forget()
 }
 

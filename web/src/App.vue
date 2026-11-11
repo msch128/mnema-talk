@@ -44,6 +44,7 @@ import ConfirmDialog from './components/ConfirmDialog.vue'
 import MediaViewer from './components/MediaViewer.vue'
 import WelcomeFlow from './components/WelcomeFlow.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
+import StorageBanner from './components/StorageBanner.vue'
 import SkipLinks from './components/SkipLinks.vue'
 import TimeoutBanner from './components/TimeoutBanner.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
@@ -265,6 +266,7 @@ onMounted(async () => {
       <!-- Center: connection banner, then the Talk or a text channel -->
       <div class="flex-1 min-w-0 h-full flex flex-col">
         <ConnectionBanner />
+        <StorageBanner />
         <TimeoutBanner />
         <UpdateBanner />
         <template v-if="voiceStore.activeView === 'voice'">

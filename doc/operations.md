@@ -1142,6 +1142,26 @@ committed statement and public key.
   server sends no list. The compose
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)
   (cron, Unraid notification, optional webhook) use it.
+
+  The `503` says what the server is as well: beside the usual `error` it
+  carries `version`, `web_client_api`, `community_name`, `community_icon` and
+  `features` like the `200`, `status` is `unavailable`, and `unavailable`
+  lists what is down (`database`, `storage`, or both). With only `storage` in
+  the list, uploads, attachments, avatars and other pictures fail while chat
+  and Talks keep working: the web app starts as usual and shows a notice
+  until storage is back (it asks again every 30 seconds). An older server
+  answers a `503` with the `error` alone.
+- **`GET /api/health/live`** (public): `200` with `{"status":"ok"}` whenever
+  the process serves requests. It asks neither the database nor object
+  storage, so it stays `200` while `/api/health` answers `503`. It is the
+  liveness probe for an orchestrator that restarts a container on a failed
+  probe (Kubernetes, Swarm, an autoheal container): restarting the app does
+  not bring a dependency back, and it would end every running Talk. Use
+  `/api/health` for readiness and for monitoring. The compose healthcheck
+  stays on `/api/health`: plain Compose only labels the container, and
+  `docker compose up --wait`, the setup assistant and the scripts rely on
+  "healthy" meaning "ready". See
+  [deployment.md](deployment.md#health-probes-for-other-orchestrators).
 - **`GET /api/metrics`** (Prometheus text format), only when `METRICS_TOKEN`
   is set. Every metric is listed under [Monitoring and
   alerts](#monitoring-and-alerts) below, with scrape config and alert rules.

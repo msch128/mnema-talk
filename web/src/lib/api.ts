@@ -94,6 +94,8 @@ export interface ApiOptions {
   /** GETs only: join an identical request that is already in flight instead of sending another. For reads whose answer does not depend on when they were asked. */
   dedupe?: boolean
   onUploadProgress?: (loaded: number, total: number) => void
+  /** Statuses outside 2xx whose body is an answer too and is decoded like one (GET /api/health describes the server in its 503). */
+  acceptStatus?: readonly number[]
   /** Told the HTTP status of a successful answer (a create endpoint says 200 for a replay and 201 for a new record). */
   onStatus?: (status: number) => void
   /** A queued session request may become stale before its HTTP response: return false to keep a 401 from ending the current session. */
@@ -217,7 +219,8 @@ export function createApiClient(transport: ApiTransport): ApiClient {
     const response = await send(path, operation, options.dedupe === true)
     if (response.status === 204) return decode ? decode(null) : null
     const body = response.body
-    if (response.status < 200 || response.status >= 300) {
+    const answered = (response.status >= 200 && response.status < 300) || options.acceptStatus?.includes(response.status) === true
+    if (!answered) {
       const error = serverFailure(response.status, body, path, operation.method)
       handleUnauthorizedNotification(path, response.status, error, shouldNotifyUnauthorized, unauthorizedHandlers, requestUnauthorizedHandlers)
       if (error.code === 'RULES_NOT_ACCEPTED') for (const { handler } of [...rulesHandlers]) handler()

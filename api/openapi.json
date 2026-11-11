@@ -8498,6 +8498,60 @@
         ],
         "type": "object"
       },
+      "server.HealthUnavailable": {
+        "properties": {
+          "community_icon": {
+            "description": "CommunityIcon is the version of the community icon the Owner set, left\nout while there is none. GET /api/community/icon serves it (public); the\nversion changes with every upload, so a client refetches when it differs\nfrom the one it has.",
+            "type": "string"
+          },
+          "community_name": {
+            "description": "CommunityName is what this server calls itself: the name the Owner set\nin the welcome settings, else the host it is served from. It is public\non purpose, so a client can label a server before anyone signs in.",
+            "type": "string"
+          },
+          "error": {
+            "$ref": "#/components/schemas/httpx.APIError"
+          },
+          "features": {
+            "description": "Features lists the optional features this server has, so a web app of a\nnewer release can hide what an older server lacks (for example \"blocks\").\nA server of 1.0.x sends no list. See doc/api-stability.md.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "unavailable"
+            ],
+            "type": "string"
+          },
+          "unavailable": {
+            "description": "Unavailable names every dependency that is down. With only \"storage\" in\nit, uploads, attachments and pictures fail while chat and Talks work.",
+            "items": {
+              "enum": [
+                "database",
+                "storage"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "version": {
+            "type": "string"
+          },
+          "web_client_api": {
+            "description": "WebClientAPI identifies the HTTPS web-client desktop integration contract.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "error",
+          "status",
+          "unavailable",
+          "version",
+          "web_client_api"
+        ],
+        "type": "object"
+      },
       "server.ICEConfig": {
         "properties": {
           "ice_servers": {
@@ -8600,6 +8654,20 @@
           "stun_servers",
           "turn_servers",
           "update_check"
+        ],
+        "type": "object"
+      },
+      "server.Liveness": {
+        "properties": {
+          "status": {
+            "enum": [
+              "ok"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
         ],
         "type": "object"
       },
@@ -32646,7 +32714,7 @@
     },
     "/api/health": {
       "get": {
-        "description": "Pings the database and checks object storage; the result is cached for 2 s.",
+        "description": "Pings the database and checks object storage; the result is cached for 2 s.\nA 503 carries the usual error and, beside it, everything the 200 says about the server, plus the dependencies that are down in `unavailable`.\nWith only `storage` in that list, uploads, attachments and pictures fail while chat and Talks keep working. An older server answers a 503 with the error alone.",
         "operationId": "getHealth",
         "responses": {
           "200": {
@@ -32663,7 +32731,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                  "$ref": "#/components/schemas/server.HealthUnavailable"
                 }
               }
             },
@@ -32672,6 +32740,29 @@
         },
         "security": [],
         "summary": "Health check",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/health/live": {
+      "get": {
+        "description": "Answers 200 whenever the process serves requests. It asks neither the database nor object storage, so it stays 200 while GET /api/health answers 503.\nFor orchestrators that restart a container on a failed probe; whether the server is ready for members is what GET /api/health says.",
+        "operationId": "getHealthLive",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.Liveness"
+                }
+              }
+            },
+            "description": "The process serves requests."
+          }
+        },
+        "security": [],
+        "summary": "Liveness check",
         "tags": [
           "System"
         ]

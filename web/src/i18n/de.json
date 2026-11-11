@@ -695,7 +695,8 @@
     "nextTry": "nächster Versuch in {seconds} s · Versuch {attempt}",
     "retryNow": "Jetzt versuchen",
     "reconnectingShort": "Verbinde …",
-    "restored": "Wieder verbunden"
+    "restored": "Wieder verbunden",
+    "storageDown": "Der Dateispeicher ist nicht erreichbar – Uploads und Bilder funktionieren gerade nicht. Chat und Talks laufen weiter."
   },
   "update": {
     "reloadBanner": "Eine neue Version ist verfügbar – hier klicken zum Neuladen",

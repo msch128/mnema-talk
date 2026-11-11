@@ -81,6 +81,7 @@ func apiRoutes(t *testing.T, a *app) []apiRoute {
 // and is covered by the bot tests.
 var publicRoutes = map[string]bool{
 	"GET /api/health":                       true,
+	"GET /api/health/live":                  true,
 	"GET /api/legal":                        true,
 	"GET /api/community/icon":               true,
 	"GET /api/auth/options":                 true,

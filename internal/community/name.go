@@ -70,6 +70,17 @@ func (n *Names) Icon(ctx context.Context) string {
 	return n.icon
 }
 
+// Cached returns the name and the icon version as last read, without asking
+// the database: for callers that already know it does not answer.
+func (n *Names) Cached() (name, icon string) {
+	if n == nil {
+		return Product, ""
+	}
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return n.shown(), n.icon
+}
+
 // refresh reloads the settings when the cached ones are older than ttl; the
 // caller holds the lock.
 func (n *Names) refresh(ctx context.Context) {

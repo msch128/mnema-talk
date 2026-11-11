@@ -45,6 +45,13 @@ describe('api', () => {
     expect(seen).toEqual([200, 201])
   })
 
+  it('hands back the body of a status the caller accepts as an answer, and fails on the others', async () => {
+    mockFetch(503, { error: { code: 'UNAVAILABLE', message: 'file storage unavailable' }, status: 'unavailable' })
+    expect(await api('/api/x', { acceptStatus: [503] })).toMatchObject({ status: 'unavailable' })
+    mockFetch(502, { error: { code: 'UNAVAILABLE', message: 'bad gateway' } })
+    expect((await apiFailure(api('/api/x', { acceptStatus: [503] }))).status).toBe(502)
+  })
+
   it('returns null for 204', async () => {
     mockFetch(204, null)
     expect(await api('/api/x', { method: 'DELETE' })).toBeNull()

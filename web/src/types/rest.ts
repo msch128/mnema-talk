@@ -4970,6 +4970,31 @@ export function isServerHealth(value: unknown): value is ServerHealth {
 
 export const decodeServerHealth = decoder("server.Health", isServerHealth)
 
+export type ServerHealthUnavailable = {
+  community_icon?: string
+  community_name?: string
+  error: HttpxAPIError
+  features?: Array<string>
+  status: "unavailable"
+  unavailable: Array<"database" | "storage">
+  version: string
+  web_client_api: number
+}
+
+export function isServerHealthUnavailable(value: unknown): value is ServerHealthUnavailable {
+  return isRecord(value)
+    && (!hasOwn(value, "community_icon") || isString(value["community_icon"]))
+    && (!hasOwn(value, "community_name") || isString(value["community_name"]))
+    && (hasOwn(value, "error") && isHttpxAPIError(value["error"]))
+    && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
+    && (hasOwn(value, "status") && (value["status"] === "unavailable"))
+    && (hasOwn(value, "unavailable") && isArrayOf(value["unavailable"], item => (item === "database" || item === "storage")))
+    && (hasOwn(value, "version") && isString(value["version"]))
+    && (hasOwn(value, "web_client_api") && isInteger(value["web_client_api"]))
+}
+
+export const decodeServerHealthUnavailable = decoder("server.HealthUnavailable", isServerHealthUnavailable)
+
 export type ServerICEConfig = {
   ice_servers: Array<ServerIceServer>
 }
@@ -5030,6 +5055,17 @@ export function isServerLegal(value: unknown): value is ServerLegal {
 }
 
 export const decodeServerLegal = decoder("server.Legal", isServerLegal)
+
+export type ServerLiveness = {
+  status: "ok"
+}
+
+export function isServerLiveness(value: unknown): value is ServerLiveness {
+  return isRecord(value)
+    && (hasOwn(value, "status") && (value["status"] === "ok"))
+}
+
+export const decodeServerLiveness = decoder("server.Liveness", isServerLiveness)
 
 export type ServerMailStatus = {
   configured: boolean

@@ -237,7 +237,7 @@ authentication gate is listed per route. Which permission a route needs
 description and in [roles and permissions](../roles-and-permissions.md); the
 permission checks live in the handlers and middleware, never in the client.
 
-Public (unauthenticated) surface at a glance: `GET /api/health`,
+Public (unauthenticated) surface at a glance: `GET /api/health`, `GET /api/health/live`,
 `GET /api/legal`, `GET /api/invites/{code}`, sign-in and registration routes,
 password-reset request and confirmation, and `POST /api/webhooks/{id}/{token}`
 (secret in the URL, no cookie). The bot gateway and `/api/bot/v1` authenticate
@@ -250,7 +250,7 @@ permission check on the channel.
 
 ### REST routes
 
-319 operations on 252 paths, grouped by API tag.
+320 operations on 253 paths, grouped by API tag.
 
 
 #### Admin (54)
@@ -599,12 +599,13 @@ permission check on the channel.
 | GET | `/api/roles` | Session | List roles |
 | GET | `/api/roles/self-assignable` | Session | List the roles members can choose |
 
-#### System (5)
+#### System (6)
 
 | Method | Path | Authentication | Summary |
 |---|---|---|---|
 | GET | `/api/docs` | None (public) | API reference |
 | GET | `/api/health` | None (public) | Health check |
+| GET | `/api/health/live` | None (public) | Liveness check |
 | GET | `/api/legal` | None (public) | Operator details and privacy-policy facts |
 | GET | `/api/metrics` | Bearer METRICS_TOKEN | Prometheus metrics |
 | GET | `/api/openapi.json` | Session | This API description |

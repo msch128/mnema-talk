@@ -51,6 +51,7 @@ func (c *components) mountAPI(api chi.Router) {
 	})
 
 	api.Get("/health", HealthHandler(c.d))
+	api.Get("/health/live", live)
 	if cfg.MetricsToken != "" {
 		api.Get("/metrics", requireBearer(cfg.MetricsToken, metricsHandler(c.opsSrc)))
 	}

@@ -24,6 +24,12 @@ in any release.
 | **Metric names** | [operations.md](operations.md#what-each-metric-means) (`GET /api/metrics`) | Metric names, types and label names. |
 | **Backup layout** | [operations.md](operations.md#backups-and-restore) | What the backup and restore scripts write and read. |
 
+`GET /api/health` answers `200` or `503`; the `503` carries the same fields as
+the `200` beside its `error`, with `status` `unavailable` and the dependencies
+that are down in `unavailable` (an older server sends the `error` alone, so a
+client reads the fields only when they are there). `GET /api/health/live` is
+the liveness probe and never depends on the database or object storage.
+
 `GET /api/health` also lists the optional features a server has in `features`.
 In 1.1 they were `blocks`, `dm`, `reports`, `saved`, `forward`,
 `search.filters.v2`, `threads.follow`, `slash.builtins`, `profile.banner` and `profile.avatar_remove`; 1.2 adds `search.filters.v3`, `talks.lobby`,

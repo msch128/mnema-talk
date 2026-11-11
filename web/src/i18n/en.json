@@ -695,7 +695,8 @@
     "nextTry": "next try in {seconds} s · attempt {attempt}",
     "retryNow": "Retry now",
     "reconnectingShort": "Connecting…",
-    "restored": "Reconnected"
+    "restored": "Reconnected",
+    "storageDown": "File storage is unavailable – uploads and pictures do not work right now. Chat and Talks keep working."
   },
   "update": {
     "reloadBanner": "A new version is available – click here to reload",
