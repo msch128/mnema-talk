@@ -259,6 +259,51 @@ describe('a member renewing its own leaf', () => {
     await closeAll(groups.values())
   }, 60_000)
 
+  it('still takes the lowest id\'s renewal after it refused a higher one, when three members renewed in the same epoch', async () => {
+    const { groups, alice, bob, carol } = await trio()
+    // Dave joins, and everyone's leaf comes due at the same moment.
+    const daveId = fixtureId(4)
+    const four = [...roster, daveId]
+    const dave = await open(daveId)
+    for (const group of groups.values()) await group.sync(four)
+    const offer = (await dave.sync(four)).wires[0] as Uint8Array
+    for (const group of [bob, carol]) await group.receive(daveId, offer)
+    const added = await alice.receive(daveId, offer)
+    for (const group of [bob, carol]) await group.receive(aliceId, added.wires[1] as Uint8Array)
+    await dave.receive(aliceId, added.wires[0] as Uint8Array)
+    vi.setSystemTime(START + 60_000)
+    const renewals = new Map<string, Uint8Array>()
+    for (const [id, group] of [[bobId, bob], [carolId, carol], [daveId, dave]] as const) {
+      const wire = (await group.maintain()).wires.find(w => mls.decodeMlsMessage(w, 0)?.[0].wireformat === 'mls_public_message')
+      if (!wire) throw new Error('expected a renewal')
+      renewals.set(id, wire)
+    }
+    // Carol holds her own, refuses Dave's (a higher id) and then gets Bob's, which wins.
+    const own = (await carol.sync(four)).verification?.code
+    expect((await carol.receive(daveId, renewals.get(daveId) as Uint8Array)).verification?.code).toBe(own)
+    const switched = await carol.receive(bobId, renewals.get(bobId) as Uint8Array)
+    expect(switched.verification?.code).toBe((await bob.sync(four)).verification?.code)
+    await closeAll([...groups.values(), dave])
+  }, 60_000)
+
+  it('goes back a second time when the committer\'s commit comes after the lower id\'s renewal it had gone back for', async () => {
+    const { groups, alice, bob, carol } = await trio()
+    vi.setSystemTime(START + DUE)
+    const fromBob = await bob.maintain()
+    const fromCarol = await carol.maintain()
+    const rotation = await alice.maintain()
+    expect([fromBob.epoch, fromCarol.epoch]).toEqual([rotation.epoch, rotation.epoch])
+    // Carol holds her own renewal, goes back for Bob's, and then Alice's commit for that epoch arrives.
+    await carol.receive(bobId, fromBob.wires[0] as Uint8Array)
+    await carol.receive(aliceId, rotation.wires[0] as Uint8Array)
+    await bob.receive(carolId, fromCarol.wires[0] as Uint8Array)
+    await bob.receive(aliceId, rotation.wires[0] as Uint8Array)
+    const agreed = await codes(groups.values())
+    expect(agreed.size).toBe(1)
+    expect([...agreed][0]).toBe(`${rotation.epoch}:${rotation.verification?.code}`)
+    await closeAll(groups.values())
+  }, 60_000)
+
   it('ignores a rival commit for that epoch that does not verify, or that loses', async () => {
     const { groups, alice, bob, carol } = await trio()
     vi.setSystemTime(START + DUE)

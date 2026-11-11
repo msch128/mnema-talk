@@ -12,6 +12,7 @@ const aliceId = fixtureId(1)
 const bobId = fixtureId(2)
 const carolId = fixtureId(3)
 const daveId = fixtureId(4)
+const eveId = fixtureId(5)
 const channelId = fixtureId(9)
 
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
@@ -237,6 +238,83 @@ describe('a welcome to a member that already holds a group', () => {
     const forged = await welcomeFrom(carolId, channel, wireAt(freshOffer.wires, 0))
     expect((await fresh.receive(aliceId, forged)).key).toBeNull()
     for (const group of [alice, bob, carol, fresh]) await group.close()
+  }, 30_000)
+})
+
+describe('a key package after the join it was offered for', () => {
+  /** Bob founds, lets Carol in and then Alice; returns the welcome Alice joined with. */
+  async function welcomedByBob() {
+    const alice = await opened(aliceId)
+    const bob = await opened(bobId)
+    const carol = await opened(carolId)
+    const roster = [aliceId, bobId, carolId]
+    await bob.sync([bobId])
+    await bob.sync([bobId, carolId])
+    const first = await bob.receive(carolId, wireAt((await carol.sync([bobId, carolId])).wires, 0))
+    await carol.receive(bobId, wireAt(first.wires, 0))
+    await bob.sync(roster)
+    const offer = wireAt((await alice.sync(roster)).wires, 0)
+    const welcome = wireAt((await bob.receive(aliceId, offer)).wires, 0)
+    const joined = await alice.receive(bobId, welcome)
+    expect(joined.verification?.members).toEqual(roster)
+    return { alice, bob, carol, offer, welcome, joined }
+  }
+
+  it('opens no second copy of that welcome, so a member cannot be put back into a group it has left behind', async () => {
+    const { alice, bob, carol, welcome, joined } = await welcomedByBob()
+    // Bob and Carol leave; Alice removes them and is alone, one epoch on.
+    const alone = await alice.sync([aliceId])
+    expect(alone.epoch).toBe((joined.epoch ?? 0) + 1)
+    expect(alone.verification?.members).toEqual([aliceId])
+    // Bob is listed again, and the welcome Alice once took arrives under his id a second time.
+    await alice.sync([aliceId, bobId])
+    const replayed = await alice.receive(bobId, welcome)
+    expect(replayed.epoch).toBe(alone.epoch)
+    expect(replayed.verification?.code).toBe(alone.verification?.code)
+    expect(replayed.verification?.members).toEqual([aliceId])
+    for (const group of [alice, bob, carol]) await group.close()
+  }, 30_000)
+
+  it('opens no welcome built on the package a member founded with once its group grew and shrank to one again', async () => {
+    // Carol and Dave hold a group, Bob founded alone, and all three are in the Talk.
+    const bob = await opened(bobId)
+    const carol = await opened(carolId)
+    const dave = await opened(daveId)
+    await carol.sync([carolId])
+    await carol.sync([carolId, daveId])
+    const first = await carol.receive(daveId, wireAt((await dave.sync([carolId, daveId])).wires, 0))
+    await dave.receive(carolId, wireAt(first.wires, 0))
+    await bob.sync([bobId])
+    const room = [bobId, carolId, daveId]
+    for (const group of [carol, dave]) await group.sync(room)
+    // Carol answers Bob's announcement with a welcome that does not reach him.
+    const late = wireAt((await carol.receive(bobId, wireAt((await bob.sync(room)).wires, 0))).wires, 0)
+    // Eve joins Bob's group and leaves again, and Dave leaves the Talk: Bob is alone.
+    const eve = await opened(eveId)
+    const withEve = [bobId, carolId, eveId]
+    await bob.sync(withEve)
+    const letIn = await bob.receive(eveId, wireAt((await eve.sync(withEve)).wires, 0))
+    expect((await eve.receive(bobId, wireAt(letIn.wires, 0))).verification?.members).toEqual([bobId, eveId])
+    const alone = await bob.sync([bobId, carolId])
+    expect(alone.verification?.members).toEqual([bobId])
+    // The old welcome arrives at last. It leads into an epoch whose key Dave held.
+    const after = await bob.receive(carolId, late)
+    expect(after.verification?.code).toBe(alone.verification?.code)
+    expect(after.verification?.members).toEqual([bobId])
+    for (const group of [bob, carol, dave, eve]) await group.close()
+  }, 30_000)
+
+  it('is replaced: alone again, the member announces a package nobody holds a welcome for', async () => {
+    const { alice, bob, carol, offer } = await welcomedByBob()
+    await alice.sync([aliceId])
+    const announced = await alice.sync([aliceId, carolId])
+    expect(announced.wires).toHaveLength(1)
+    const again = mls.decodeMlsMessage(wireAt(announced.wires, 0), 0)?.[0]
+    const before = mls.decodeMlsMessage(offer, 0)?.[0]
+    if (again?.wireformat !== 'mls_key_package' || before?.wireformat !== 'mls_key_package') throw new Error('expected key packages')
+    expect([...again.keyPackage.initKey]).not.toEqual([...before.keyPackage.initKey])
+    expect([...again.keyPackage.leafNode.signaturePublicKey]).not.toEqual([...before.keyPackage.leafNode.signaturePublicKey])
+    for (const group of [alice, bob, carol]) await group.close()
   }, 30_000)
 })
 

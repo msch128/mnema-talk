@@ -54,6 +54,8 @@ export abstract class GroupBase {
   protected vetted: ReadonlySet<number> = new Set()
   protected readonly rivals = new Backoff(RIVAL_BASE_MS, RIVAL_MAX_MS)
   protected closed = false
+  /** Private keys of the package this group was joined with. The package itself is replaced after the join; these go when the group does. */
+  protected leafKeys: Uint8Array[] = []
   protected readonly swaps = new Backoff(SWAP_BASE_MS, BACKOFF_MAX_MS)
   protected readonly resets = new Backoff(RESET_BASE_MS, BACKOFF_MAX_MS)
   protected notice: (notice: MediaNotice) => void = () => {}
@@ -67,8 +69,14 @@ export abstract class GroupBase {
   protected tail: Promise<void> = Promise.resolve()
   /** When each member of the group last showed a sign of life (any handshake, or a heartbeat). */
   protected readonly alive = new Map<string, number>()
-  /** Newest heartbeat time accepted from each member (and the leaf key that signed it), so an older copy counts for nothing. */
-  protected readonly beats = new Map<string, { at: number, signer: Uint8Array }>()
+  /**
+   * The newest time any heartbeat of each listed id carried, whatever epoch it
+   * was for, and the leaf key that signed it: an older one or a copy counts for
+   * nothing. It outlives the group (a start-over must not make old heartbeats
+   * new again) and goes when the id leaves the room. `here` says that one for
+   * my own epoch was taken from that leaf since I hold this group.
+   */
+  protected readonly beats = new Map<string, { at: number, signer: Uint8Array, here: boolean }>()
   /** Members that advertised frame version 3, with the leaf key that signed it: a different leaf (a reload) counts for nothing. */
   protected readonly capable = new Map<string, Uint8Array>()
   /** This member's own capability is due: a member it has not told is in the group. */
@@ -240,7 +248,7 @@ export abstract class GroupBase {
     this.restarting.clear()
     this.announcedFor = null
     this.alive.clear()
-    this.beats.clear()
+    this.beatsLeft()
     this.capable.clear()
     this.capHeard.clear()
     this.capDue = true
@@ -248,7 +256,13 @@ export abstract class GroupBase {
     this.updates.clear()
     this.dropSelfUpdate()
     this.clearDiscardTimers()
+    for (const key of this.leafKeys.splice(0)) zeroOutUint8Array(key)
     if (state) this.wipeRejected(state)
+  }
+
+  /** Heartbeats of members that are not in my group (any more) say nothing about it; their times stay. */
+  protected beatsLeft(members?: ReadonlyMap<string, number>) {
+    for (const [id, beat] of this.beats) if (!members?.has(id)) beat.here = false
   }
 
   private clearDiscardTimers() {

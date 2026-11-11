@@ -816,13 +816,83 @@ details and the limits.
   group: a handshake that merely parses, a key package, or a public message from
   an id outside the group never does (a group of one, which nobody else depends
   on, is the exception: it steps aside for a lower id the roster lists, on a
-  roster change or on its maintenance tick). A welcome from a lower id outside my
-  group replaces it only if it opens with the key package I offered and passes
-  the committer rule, at most once per minute per sender (doubling to ten
-  minutes); a member who holds a key package I offered can therefore still pull
-  me into a group of its own, as noted above. A commit for an epoch I have not
-  reached makes me start over only from one of the two lowest live members and
-  naming that member's own leaf. A member counts as alive only for a verified
+  roster change or on its maintenance tick). A welcome from an id outside my
+  group that is lower than the member who commits in my group replaces it only
+  if it opens with the key package I hold and passes the committer rule, at
+  most once per minute per sender (doubling to ten minutes); one that does not
+  open changes nothing and does not count. A key package is good for one
+  join: its init key is wiped once a welcome built on it was taken, so a second
+  copy of that welcome opens nothing. The package that takes its place is
+  signed with the key of the member's leaf, the member being the same; a new
+  signature key comes only with a reload, with a package made by a member that
+  holds no group (after a start-over or a removal, or when it offers again), or
+  with the package a group that shrank to one makes for itself: it replaces its package at once,
+  signature key included, so a welcome built on the package it was founded
+  with, held back until its other members are gone, opens nothing either. That
+  is the one founder case closed. A welcome built on the package a member
+  founded its group with still opens, however old, while that group never had
+  another member, or has grown and not shrunk to one since, as it always did;
+  it takes the server to hold such a welcome back, and the member is out of
+  that epoch again at the next commit. Two groups in one Talk become one in the group of the room's lowest
+  id. A member whose group lacks that id sends it a key package on its
+  maintenance tick, but only once that id has shown that it holds a group.
+  That is a commit or a welcome under its id, which nobody outside that group
+  can check, or a heartbeat that verifies under the key of the leaf that id had
+  in a tree of mine and is newer than every heartbeat of that key I verified
+  (so a copy or an older one is no sign, and nobody without that leaf's key can
+  make one). I hold such a key only if I verified a heartbeat of that id while
+  we shared a group, and only for as long as the id stays in the Talk. A
+  member that never shared a group with it, or took no heartbeat of it while
+  they shared one (less than a heartbeat period, say), holds none: it cannot
+  read that id's heartbeats and waits for its next commit, at most one rotation
+  period, and the merge follows that commit. If the id reloaded after it left
+  my tree, the key of its old leaf stays: the new tab's heartbeats stay unread,
+  and heartbeats its previous tab signed that I never saw still count, which
+  only the server can supply, at the rate of the wait below. An id whose
+  heartbeat verified this way also counts as heard from, as after any handshake
+  of its. A sign older than ten minutes is none.
+  The offer discards nothing and costs the member's group nothing, whether it
+  is answered or not: the package is signed with the key of the member's own
+  leaf, and the members of its group, the one who commits there included, take
+  a package under a leaf's own key for a duplicate (only a package under a new
+  signature key is a member coming back, whose leaf is swapped). A second offer
+  follows only after a wait (one minute, doubling to ten) and only once that id
+  has shown its group again, so an id that is merely listed is never asked, and
+  one that fell silent is asked once; leaving the Talk and coming back does not
+  shorten the wait. The lowest id the roster lists, and nobody else,
+  answers a package under the key of a leaf it holds by swapping that leaf, so a
+  member whose welcome was lost gets another. (Members offer to the lowest id
+  they have heard from. Where the roster lists a still lower id that never said
+  a word, nobody swaps, and the leaf that is left over goes with the absence
+  limit.) A member that moved to the other group keeps its signature key, so
+  until its old leaf is removed its heartbeats still verify in the group it
+  left, and are a sign of life there when the two epoch numbers happen to be
+  equal; they make nobody start over. A listed member whose id is below
+  the one who commits in my group, and who holds the key package I offered
+  last, can therefore still pull me into a group of its own, as noted above;
+  because I offer on a tick, it need not have been in the Talk when I joined.
+  A commit
+  for an epoch I have not reached makes me start over only from one of the two
+  lowest live members and naming that member's own leaf. So do two heartbeats
+  of the room's lowest id for an epoch that is not mine, under all of these
+  conditions: each verifies under the leaf key my tree holds for that id; each
+  is newer, by its signed time, than every heartbeat of that key I ever
+  verified, for whatever epoch and also before I last started over (I keep
+  that time for as long as the id stays in the Talk); I took a heartbeat for my
+  own epoch from that key since I joined the group I hold; the second comes at
+  least 8 seconds after the first by its signed time and by my own clock, and
+  no more than three heartbeat periods after it; my group did not change in
+  between. That id then lives in another state of the group, and its state is
+  the one everyone ends up in. I start over at most as often as for any other
+  reason (once per 10 seconds, doubling to a minute). "For my own epoch" means
+  the epoch number: a heartbeat names the group, the id, the epoch number and
+  the time, not the state of the tree. The server cannot forge
+  such a heartbeat. A copy, an older one, two in the wrong order, and any that
+  were signed before the commit that let me in or before the last one I
+  verified count for nothing, also after I started over. What the server can do is hold back
+  genuine heartbeats, or the commit that leads to their epoch, so that two I
+  have not seen reach me while I am in another epoch: I start over, once per
+  two such heartbeats, which it can make me do anyway. A member counts as alive only for a verified
   heartbeat or a verified commit, never for a message that merely parses.
   **Key lifetime.** A key never outlives 30 minutes (plus or minus a random
   two-minute jitter per epoch, so Talks do not rotate in step): once the
@@ -848,7 +918,8 @@ details and the limits.
   commits for the same epoch still meet (a renewal with the committer's commit
   or with another renewal), the committer's wins and, between renewals, the
   lower id's; a member that took the loser goes back to the state it kept for
-  ten seconds and takes the winner, so the call does not split (anything else
+  ten seconds and takes the winner (and once more if a still better one
+  follows within that time), so the call does not split (anything else
   that has split is repaired by the existing start-over). It goes back only
   while that renewal is the last commit it took: once another commit followed
   (a removal, for one), a late rival renewal changes nothing for it. That one
@@ -888,7 +959,8 @@ details and the limits.
   member signs a 78-byte heartbeat (group, id, epoch, increasing time) with its
   MLS leaf key about every 5 minutes over the existing handshake channel, and
   any other handshake it sends counts too. An older copy of a heartbeat, one
-  for another epoch or one signed by another leaf counts for nothing. The
+  for another epoch or one signed by another leaf is no sign of life (one for
+  another epoch from the room's lowest id can show a split, see above). The
   committer whose browser itself slept starts everyone's clock over instead of
   removing people for silence it could not hear, and a returning member is
   re-admitted by the existing offer path (rate-limited with backoff), so it
