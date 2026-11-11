@@ -9,9 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/testutil/pgfault"
+	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
 // legacyToken makes a token the way a pre-1.0 server did: no recorded issuer.
@@ -198,23 +197,45 @@ func TestIssuedTokensAreNeverMarkedOrRebound(t *testing.T) {
 	}
 }
 
-// legacyFixture is a bot token without a recorded issuer, and an
-// Authenticator whose database and permission pools can be made to fail.
-func legacyFixture(t *testing.T, dbFault, permFault *pgfault.Tracer) (*env, fixtureBot, *Authenticator) {
+// legacyFixture is a bot token without a recorded issuer and an
+// Authenticator on the healthy database.
+func legacyFixture(t *testing.T) (*env, fixtureBot, *Authenticator) {
 	t.Helper()
 	e := newEnv(t)
 	f := e.newBot()
 	if _, err := e.p.Exec(context.Background(), `UPDATE bot_tokens SET created_by = NULL WHERE id = $1`, f.token.ID); err != nil {
 		t.Fatal(err)
 	}
-	a := NewAuthenticator(e.p, perm.NewService(e.p))
-	if dbFault != nil {
-		a.DB = &db.Pool{Pool: pgfault.Pool(t, e.p.Pool, dbFault)}
+	return e, f, NewAuthenticator(e.p, perm.NewService(e.p))
+}
+
+var errLegacyStore = errors.New("legacy token store down")
+
+// failingLegacyTokens is the database with one step of binding failing.
+type failingLegacyTokens struct {
+	legacyTokenStore
+	failCreator, failOwner, failBind bool
+}
+
+func (s failingLegacyTokens) botCreator(ctx context.Context, tokenID uuid.UUID) (*uuid.UUID, error) {
+	if s.failCreator {
+		return nil, errLegacyStore
 	}
-	if permFault != nil {
-		a.Perms = perm.NewService(&db.Pool{Pool: pgfault.Pool(t, e.p.Pool, permFault)})
+	return s.legacyTokenStore.botCreator(ctx, tokenID)
+}
+
+func (s failingLegacyTokens) owner(ctx context.Context) (uuid.UUID, error) {
+	if s.failOwner {
+		return uuid.Nil, errLegacyStore
 	}
-	return e, f, a
+	return s.legacyTokenStore.owner(ctx)
+}
+
+func (s failingLegacyTokens) bind(ctx context.Context, tokenID, who uuid.UUID) (bool, error) {
+	if s.failBind {
+		return false, errLegacyStore
+	}
+	return s.legacyTokenStore.bind(ctx, tokenID, who)
 }
 
 func tokenIsBound(t *testing.T, e *env, f fixtureBot) bool {
@@ -230,24 +251,28 @@ func tokenIsBound(t *testing.T, e *env, f fixtureBot) bool {
 // it stays unbound, and the next attempt waits out the retry interval.
 func TestBindLegacyLeavesTheTokenUnboundOnDatabaseTrouble(t *testing.T) {
 	cases := []struct {
-		name  string
-		db    *pgfault.Tracer
-		perms *pgfault.Tracer
+		name    string
+		breakIt func(e *env, a *Authenticator)
 	}{
-		{"issuer lookup", &pgfault.Tracer{Query: "SELECT b.created_by FROM bot_tokens"}, nil},
-		{"qualification check", nil, &pgfault.Tracer{}},
-		{"binding", &pgfault.Tracer{Query: "UPDATE bot_tokens SET created_by"}, nil},
+		{"issuer lookup", func(e *env, a *Authenticator) {
+			a.legacyStore = failingLegacyTokens{legacyTokenStore: pgLegacyTokens{e.p}, failCreator: true}
+		}},
+		{"qualification check", func(_ *env, a *Authenticator) { a.Perms = permtest.Unloadable() }},
+		{"binding", func(e *env, a *Authenticator) {
+			a.legacyStore = failingLegacyTokens{legacyTokenStore: pgLegacyTokens{e.p}, failBind: true}
+		}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			e, f, a := legacyFixture(t, c.db, c.perms)
+			e, f, a := legacyFixture(t)
+			c.breakIt(e, a)
 			a.bindLegacy(context.Background(), f.token.ID, f.bot.UserID)
 			if tokenIsBound(t, e, f) {
 				t.Fatal("the token was bound despite the database failure")
 			}
 			// Within the retry interval the attempt is not repeated, so
 			// the healthy path below cannot bind it either.
-			a.DB, a.Perms = e.p, perm.NewService(e.p)
+			a.legacyStore, a.Perms = nil, perm.NewService(e.p)
 			a.bindLegacy(context.Background(), f.token.ID, f.bot.UserID)
 			if tokenIsBound(t, e, f) {
 				t.Fatal("the token was retried before the retry interval")
@@ -262,7 +287,8 @@ func TestBindLegacyLeavesTheTokenUnboundOnDatabaseTrouble(t *testing.T) {
 }
 
 func TestBindCandidatesReportsAFailedOwnerLookup(t *testing.T) {
-	_, f, a := legacyFixture(t, &pgfault.Tracer{Query: "FROM users WHERE role = 'admin'"}, nil)
+	e, f, a := legacyFixture(t)
+	a.legacyStore = failingLegacyTokens{legacyTokenStore: pgLegacyTokens{e.p}, failOwner: true}
 	if got, err := a.bindCandidates(context.Background(), f.token.ID); err == nil {
 		t.Fatalf("candidates = %v, want the database error", got)
 	}
