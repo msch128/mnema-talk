@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -27,7 +26,7 @@ func newStageWorld(t *testing.T) *stageWorld {
 	w.f.Stage(w.public.ID, true)
 	w.f.Owner(w.owner.User.ID)
 	role := w.f.Role(2, perm.ManageStage)
-	user := auth.User{ID: uuid.New()}
+	user := wireMember("manager")
 	w.f.Assign(user.ID, role)
 	w.manager = testClient(w.h, user)
 	drainTypes(t, w.manager)

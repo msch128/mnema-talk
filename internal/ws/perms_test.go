@@ -42,7 +42,9 @@ func newPermWorld(t *testing.T) *permWorld {
 	w.h = NewHub(nil, nil, nil, nil, f.Service())
 	t.Cleanup(w.h.Close)
 	ownerUser := auth.User{ID: uuid.New(), Role: auth.RoleAdmin}
-	insiderUser, outsiderUser := auth.User{ID: uuid.New()}, auth.User{ID: uuid.New()}
+	// The members have a profile as every stored account has: the frames that
+	// carry them are pinned and must be ones the web client accepts.
+	insiderUser, outsiderUser := wireMember("insider"), wireMember("outsider")
 	f.Assign(insiderUser.ID, w.staff)
 	w.owner, w.insider, w.outsider = testClient(w.h, ownerUser), testClient(w.h, insiderUser), testClient(w.h, outsiderUser)
 	for _, c := range []*Client{w.owner, w.insider, w.outsider} {

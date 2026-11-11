@@ -15,8 +15,21 @@ type NotCompared = 'presence_snapshot' | 'webrtc_offer'
 
 type Checked = Exclude<keyof ServerEventShapes & keyof ServerEventPayloads, NotCompared>
 
-/** The events whose server shape is not assignable to the declared payload. */
-type Mismatched = { [K in Checked]: ServerEventShapes[K] extends ServerEventPayloads[K] ? never : K }[Checked]
+/** The field names of an object shape; nothing for null, arrays and plain values. */
+type Fields<T> = T extends readonly unknown[] ? never : T extends object ? keyof T : never
+
+/** S when no single member of the declared payload D takes it without a field left over. */
+type Unfit<S, D> = S extends unknown ? ([FitsOne<S, D>] extends [never] ? S : never) : never
+type FitsOne<S, D> = D extends unknown ? (S extends D ? ([Exclude<Fields<S>, Fields<D>>] extends [never] ? true : never) : never) : never
+
+/**
+ * The events with a server shape that fits no member of the declared payload.
+ * Plain assignability is not enough: {channel_id, refresh} is assignable to
+ * {refresh}, yet the runtime check of that member refuses the extra field. So
+ * each server shape must fit one declared member that also names all of its
+ * fields.
+ */
+type Mismatched = { [K in Checked]: [Unfit<ServerEventShapes[K], ServerEventPayloads[K]>] extends [never] ? never : K }[Checked]
 
 type None<T extends never> = T
 

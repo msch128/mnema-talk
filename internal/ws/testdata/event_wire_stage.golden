@@ -1,7 +1,7 @@
 # hand raised
-{"type":"voice_state_update","payload":{"action":"join","channel_id":"<id-1>","started_at":"<time>","user":{"id":"<id-2>","username":"","display_name":"","bio":"","role":"","status_text":"","locale":"","created_at":"<time>","joined_at":"<time>","muted":false,"deafened":false,"talk_power":true}}}
-{"type":"voice_state_update","payload":{"action":"join","channel_id":"<id-1>","started_at":"<time>","user":{"id":"<id-2>","username":"","display_name":"","bio":"","role":"","status_text":"","locale":"","created_at":"<time>","joined_at":"<time>","muted":false,"deafened":false}}}
-{"type":"voice_state_update","payload":{"action":"join","channel_id":"<id-1>","started_at":"<time>","user":{"id":"<id-2>","username":"","display_name":"","bio":"","role":"","status_text":"","locale":"","created_at":"<time>","joined_at":"<time>","muted":false,"deafened":false}}}
+{"type":"voice_state_update","payload":{"action":"join","channel_id":"<id-1>","started_at":"<time>","user":{"id":"<id-2>","username":"manager","display_name":"manager","bio":"","role":"user","status_text":"","locale":"","created_at":"<time>","joined_at":"<time>","muted":false,"deafened":false,"talk_power":true}}}
+{"type":"voice_state_update","payload":{"action":"join","channel_id":"<id-1>","started_at":"<time>","user":{"id":"<id-2>","username":"insider","display_name":"insider","bio":"","role":"user","status_text":"","locale":"","created_at":"<time>","joined_at":"<time>","muted":false,"deafened":false}}}
+{"type":"voice_state_update","payload":{"action":"join","channel_id":"<id-1>","started_at":"<time>","user":{"id":"<id-2>","username":"outsider","display_name":"outsider","bio":"","role":"user","status_text":"","locale":"","created_at":"<time>","joined_at":"<time>","muted":false,"deafened":false}}}
 {"type":"stage_hand","payload":{"at":"<time>","channel_id":"<id-1>","raised":true,"user_id":"<id-2>"}}
 
 # talk power granted
