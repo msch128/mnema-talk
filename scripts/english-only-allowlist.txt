@@ -84,6 +84,6 @@ path: doc/wiki.md | the example of a speaking address derived from a German titl
 
 # Unicode fixtures: character folding and decoding behave the same for any script.
 path: internal/httpx/names.go | the display name homoglyph and letter folds map non-ASCII letters (ß, ø, ł, ...) to ASCII
-path: internal/httpx/response_edges_test.go | asserts the letter fold of the display name check (Straße)
+path: internal/httpx/names_test.go | asserts the letter fold of the display name check (Straße)
 path: internal/linkpreview/linkpreview_html_test.go | asserts that undeclared UTF-8 pages decode as UTF-8 (umlaut and CJK fixture text)
 path: internal/push/event_notices_integration_test.go | asserts the German push texts

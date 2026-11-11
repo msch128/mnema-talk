@@ -13,7 +13,13 @@ import (
 	"sync"
 	"testing"
 
+	"errors"
+	"sync/atomic"
+	"time"
+
+	"github.com/aws/smithy-go"
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/media"
 )
 
 // fakeS3 is a minimal path-style S3 endpoint: buckets, objects, ranged GETs
@@ -277,5 +283,68 @@ func TestClientReportsStorageErrors(t *testing.T) {
 	}
 	if _, err := New(ctx, &config.Config{S3Endpoint: srv.URL, S3Region: "us-east-1", S3Bucket: "media", S3AccessKey: "a", S3SecretKey: "b", S3ForcePathStyle: true}); err == nil {
 		t.Fatal("New with denied bucket access succeeded")
+	}
+}
+
+func TestNewReportsInvalidAWSConfiguration(t *testing.T) {
+	t.Setenv("AWS_RETRY_MODE", "invalid-test-mode")
+	_, err := New(context.Background(), &config.Config{S3Region: "us-east-1"})
+	if err == nil || !strings.Contains(err.Error(), "load s3 config") {
+		t.Fatalf("malformed configuration: %v", err)
+	}
+}
+
+func TestIsNotFoundByServiceCode(t *testing.T) {
+	for _, code := range []string{"NotFound", "NoSuchBucket", "AccessDenied"} {
+		err := fmt.Errorf("wrapped: %w", &smithy.GenericAPIError{Code: code})
+		if got := isNotFound(err); got != (code != "AccessDenied") {
+			t.Fatalf("code %s: missing=%v", code, got)
+		}
+	}
+}
+
+func TestListObjectsPaginatesAndPropagatesErrors(t *testing.T) {
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead {
+			return
+		}
+		if r.URL.Query().Get("prefix") != "uploads/" || r.URL.Query().Get("list-type") != "2" {
+			t.Errorf("list query: %s", r.URL.RawQuery)
+		}
+		requests.Add(1)
+		w.Header().Set("Content-Type", "application/xml")
+		if r.URL.Query().Get("continuation-token") == "page2" {
+			fmt.Fprint(w, `<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>uploads/b</Key><Size>8</Size><LastModified>2020-01-02T03:04:05Z</LastModified></Contents></ListBucketResult>`)
+			return
+		}
+		fmt.Fprint(w, `<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>page2</NextContinuationToken><Contents><Key>uploads/a</Key><Size>7</Size><LastModified>2020-01-02T03:04:05Z</LastModified></Contents></ListBucketResult>`)
+	}))
+	defer srv.Close()
+	c := newTestClient(t, srv.URL)
+	var objects []media.ObjectInfo
+	if err := c.List(context.Background(), "uploads/", func(o media.ObjectInfo) error { objects = append(objects, o); return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if requests.Load() != 2 {
+		t.Fatalf("pages count = %d, want 2", requests.Load())
+	}
+	if len(objects) != 2 {
+		t.Fatalf("objects count = %d, want 2", len(objects))
+	}
+	if objects[0].Key != "uploads/a" || objects[1].Size != 8 {
+		t.Fatalf("unexpected object keys or sizes: %+v", objects)
+	}
+	if !objects[0].LastModified.Equal(time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)) {
+		t.Fatalf("unexpected last modified: %v", objects[0].LastModified)
+	}
+	sentinel := errors.New("stop listing")
+	if err := c.List(context.Background(), "uploads/", func(media.ObjectInfo) error { return sentinel }); !errors.Is(err, sentinel) {
+		t.Fatalf("callback error: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := c.List(ctx, "uploads/", func(media.ObjectInfo) error { t.Fatal("callback after canceled list"); return nil }); !errors.Is(err, context.Canceled) || !strings.Contains(err.Error(), "list objects uploads/") {
+		t.Fatalf("canceled list: %v", err)
 	}
 }

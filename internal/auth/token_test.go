@@ -127,3 +127,13 @@ func TestProductionPasswordCost(t *testing.T) {
 		t.Fatalf("timing-equaliser hash cost %d (%v), want %d", c, err, expectedPasswordCost)
 	}
 }
+
+func TestTokenWithoutUserIDIsRejected(t *testing.T) {
+	token, err := IssueToken(uuid.Nil, 0, secret, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ParseToken(token, secret); err == nil || err.Error() != "token has no user id" {
+		t.Fatalf("missing identity = %v", err)
+	}
+}

@@ -8,6 +8,12 @@ import (
 	"strconv"
 	"testing"
 
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync/atomic"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	s3svc "github.com/aws/aws-sdk-go-v2/service/s3"
 )
@@ -139,3 +145,77 @@ func TestUploadStreamAbortsOnFailure(t *testing.T) {
 type errReader struct{ err error }
 
 func (r errReader) Read([]byte) (int, error) { return 0, r.err }
+
+func handleStreamUploadFailure(w http.ResponseWriter, r *http.Request, stage string, aborted *atomic.Bool) {
+	if r.Method == http.MethodHead {
+		return
+	}
+	q := r.URL.Query()
+	switch {
+	case r.Method == http.MethodDelete:
+		aborted.Store(true)
+		if stage == "abort" {
+			writeS3Error(w, http.StatusForbidden, "AccessDenied")
+		} else {
+			w.WriteHeader(http.StatusNoContent)
+		}
+	case r.Method == http.MethodPost && q.Has("uploads"):
+		if stage == "start" {
+			writeS3Error(w, http.StatusForbidden, "AccessDenied")
+			return
+		}
+		fmt.Fprint(w, `<InitiateMultipartUploadResult><UploadId>upload-test</UploadId></InitiateMultipartUploadResult>`)
+	case r.Method == http.MethodPost && q.Has("uploadId"):
+		writeS3Error(w, http.StatusForbidden, "AccessDenied")
+	case r.Method == http.MethodPut && q.Has("partNumber"):
+		if stage == "abort" {
+			writeS3Error(w, http.StatusForbidden, "AccessDenied")
+			return
+		}
+		if _, err := io.Copy(io.Discard, r.Body); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("ETag", `"part-test"`)
+	case r.Method == http.MethodPut:
+		writeS3Error(w, http.StatusForbidden, "AccessDenied")
+	default:
+		http.Error(w, "unexpected request", http.StatusBadRequest)
+	}
+}
+
+func TestStreamedUploadStorageFailures(t *testing.T) {
+	for _, stage := range []string{"put", "start", "complete", "abort"} {
+		t.Run(stage, func(t *testing.T) {
+			var aborted atomic.Bool
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handleStreamUploadFailure(w, r, stage, &aborted)
+			}))
+			defer srv.Close()
+			c := newTestClient(t, srv.URL)
+			n := partSize + 1
+			if stage == "put" {
+				n = 10
+			}
+			err := c.Upload(context.Background(), "stream.bin", bytes.NewReader(payload(n)), "application/octet-stream", -1)
+			want := map[string]string{"put": "put object", "start": "start multipart upload", "complete": "complete multipart upload", "abort": "upload part"}[stage]
+			if err == nil || !strings.Contains(err.Error(), want) {
+				t.Fatalf("failure at %s: %v", stage, err)
+			}
+			if aborted.Load() != (stage == "complete" || stage == "abort") {
+				t.Fatalf("aborted=%v at %s", aborted.Load(), stage)
+			}
+		})
+	}
+}
+
+func TestStreamedUploadInitialReadFailure(t *testing.T) {
+	sentinel := errors.New("client disconnected")
+	f := &fakeObjects{}
+	if err := uploadStream(context.Background(), f, "media", "file", errReader{sentinel}, "text/plain"); !errors.Is(err, sentinel) {
+		t.Fatalf("body failure: %v", err)
+	}
+	if f.put != nil || f.parts != nil || f.aborted {
+		t.Fatal("initial body failure must not start storing an object")
+	}
+}

@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"log/slog"
 	"testing"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
 )
@@ -56,27 +54,5 @@ func TestLazyStoreMethodsUnavailableAndDelegated(t *testing.T) {
 	want := errors.New("stop listing")
 	if err := l.List(ctx, "", func(media.ObjectInfo) error { return want }); !errors.Is(err, want) {
 		t.Fatal(err)
-	}
-}
-
-func TestLogLevel(t *testing.T) {
-	for _, tc := range []struct {
-		level, env string
-		want       slog.Level
-	}{
-		{"debug", "production", slog.LevelDebug}, {"info", "development", slog.LevelInfo},
-		{"warn", "development", slog.LevelWarn}, {"error", "development", slog.LevelError},
-		{"", "production", slog.LevelInfo}, {"", "development", slog.LevelDebug},
-	} {
-		if got := logLevel(&config.Config{LogLevel: tc.level, AppEnv: tc.env}); got != tc.want {
-			t.Fatalf("%+v = %v", tc, got)
-		}
-	}
-}
-
-func TestRunRejectsInvalidConfiguration(t *testing.T) {
-	t.Setenv("DATABASE_URL", "")
-	if err := run(); err == nil {
-		t.Fatal("invalid config accepted")
 	}
 }

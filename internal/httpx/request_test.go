@@ -394,3 +394,34 @@ func TestSanitizeFilenameDropsOnlyInvalidBytes(t *testing.T) {
 		t.Errorf("only bad bytes left %q, want empty", got)
 	}
 }
+
+func TestDecodeJSONRejectsStrayClosingBracket(t *testing.T) {
+	for _, body := range []string{`{"a":1}}`, `{"a":1}]`, `{"a":1} {"a":2}`, `{"a":1} x`} {
+		r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+		var dst struct {
+			A int `json:"a"`
+		}
+		if err := DecodeJSON(r, &dst); err == nil {
+			t.Fatalf("%q accepted", body)
+		}
+	}
+	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{\"a\":1}\n "))
+	var dst struct {
+		A int `json:"a"`
+	}
+	if err := DecodeJSON(r, &dst); err != nil {
+		t.Fatalf("trailing whitespace refused: %v", err)
+	}
+}
+
+func TestCleanNameStripsBlankGlyphsAndRejectsControls(t *testing.T) {
+	if _, err := CleanName("name", "ㅤ⠀ᅟ", 32, true); err == nil {
+		t.Fatal("blank-glyph-only name accepted")
+	}
+	if got, err := CleanName("name", "Adㅤmin", 32, true); err != nil || got != "Admin" {
+		t.Fatalf("got %q %v", got, err)
+	}
+	if _, err := CleanName("name", "Admin\nSystem notice", 32, true); err == nil {
+		t.Fatal("line break accepted")
+	}
+}
