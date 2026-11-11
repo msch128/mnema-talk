@@ -66,7 +66,7 @@ func TestVoiceTimeIsAnnouncedOnlyToTheTalkItWasSpentIn(t *testing.T) {
 	}
 	var got []seen
 	h.Tap = func(ch uuid.UUID, ev events.Event) {
-		eventType, payload := ev.EventName(), events.PayloadOf(ev)
+		eventType, payload := ev.EventName(), ev
 		if eventType != "user_stats" {
 			return
 		}
@@ -195,7 +195,7 @@ func TestPublicVoiceTimeCountsOnlyTalksEveryoneCanSee(t *testing.T) {
 	} {
 		h := NewHub(p, nil, nil, nil, openPerms())
 		h.Tap = func(_ uuid.UUID, ev events.Event) {
-			eventType, payload := ev.EventName(), events.PayloadOf(ev)
+			eventType, payload := ev.EventName(), ev
 			if eventType == "user_stats" {
 				announced++
 				if got := payload.(wire.UserStats).VoiceSeconds; got != 7 {

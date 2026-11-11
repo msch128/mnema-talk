@@ -14,7 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -511,8 +511,8 @@ func TestGatewayNeverLeaksAcrossScope(t *testing.T) {
 	g.identify("", allBotIn)
 
 	// Typing and presence style events are not offered at all.
-	f.a.router.Hub.Broadcast(events.Untyped("presence_update", map[string]any{"user_id": uuid.New()}))
-	f.a.router.Hub.BroadcastChannel(f.open, events.Untyped("typing", map[string]any{"user_id": uuid.New()}))
+	f.a.router.Hub.Broadcast(eventstest.Named("presence_update", map[string]any{"user_id": uuid.New()}))
+	f.a.router.Hub.BroadcastChannel(f.open, eventstest.Named("typing", map[string]any{"user_id": uuid.New()}))
 	g.nothing()
 }
 

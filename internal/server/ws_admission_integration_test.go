@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/ws"
 )
 
@@ -86,7 +86,7 @@ func testRevocationAdmissionScenario(t *testing.T, action string, pauseAt int32)
 	if oldStatus := member.get("/api/auth/me").status; oldStatus != http.StatusUnauthorized {
 		t.Fatalf("old HTTP session status = %d, want 401", oldStatus)
 	}
-	a.router.Hub.Broadcast(events.Untyped("admission_private_before_release", nil))
+	a.router.Hub.Broadcast(eventstest.Named("admission_private_before_release", nil))
 	release()
 	var d dialResult
 	select {
@@ -97,7 +97,7 @@ func testRevocationAdmissionScenario(t *testing.T, action string, pauseAt int32)
 	if d.err != nil {
 		return // Rejection before upgrade is equally safe.
 	}
-	a.router.Hub.Broadcast(events.Untyped("admission_private_after_release", nil))
+	a.router.Hub.Broadcast(eventstest.Named("admission_private_after_release", nil))
 	// Any frame, including the initial snapshot, exposes a handshake
 	// that was admitted after its original cookie was revoked.
 	select {

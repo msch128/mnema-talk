@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 const (
@@ -128,6 +129,8 @@ type EventDeletePayload struct {
 	ID uuid.UUID `json:"id" format:"uuid"`
 }
 
+func (EventDeletePayload) EventName() string { return events.EventDelete }
+
 // EventReminderPayload is sent over WebSocket when an event is starting in 15 minutes.
 type EventReminderPayload struct {
 	EventID   uuid.UUID  `json:"event_id"`
@@ -135,3 +138,12 @@ type EventReminderPayload struct {
 	StartTime time.Time  `json:"start_time"`
 	ChannelID *uuid.UUID `json:"channel_id,omitempty"`
 }
+
+func (EventReminderPayload) EventName() string { return events.EventReminder }
+
+// EventUpdate announces a community event after it was created, edited,
+// cancelled or completed, or after its RSVPs changed (event_update). Publish
+// an event as (*EventUpdate)(ev).
+type EventUpdate CommunityEvent
+
+func (*EventUpdate) EventName() string { return events.EventUpdate }

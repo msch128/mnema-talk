@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/safego"
 )
@@ -72,9 +71,9 @@ func (h *Handler) notifyMembers(ctx context.Context, ev *CommunityEvent, kind, r
 			role = roleName
 		}
 		if h.Events != nil {
-			h.Events.SendToUsers([]uuid.UUID{it.UserID}, events.Untyped(events.EventSignupNotice, SignupNoticePayload{
+			h.Events.SendToUsers([]uuid.UUID{it.UserID}, SignupNoticePayload{
 				EventID: ev.ID, Title: ev.Title, Kind: kindOf, RoleName: role, StartTime: ev.StartTime, ChannelID: ev.ChannelID,
-			}))
+			})
 		}
 		if pusher != nil {
 			h.pushNotice(ctx, pusher, ev, it.UserID, kindOf, role)

@@ -407,7 +407,7 @@ func TestAMemberWhoMovesUpIsToldAndTheBroadcastKeepsTheRosterPrivate(t *testing.
 		t.Fatalf("pushes: %v", got)
 	}
 	for _, e := range f.rec.Snapshot() {
-		if ev, ok := e.Payload.(*CommunityEvent); ok && (ev.MySignup != nil || ev.Signups != nil) {
+		if ev, ok := e.Payload.(*EventUpdate); ok && (ev.MySignup != nil || ev.Signups != nil) {
 			t.Fatalf("a broadcast carries personal data: %+v", ev)
 		}
 	}

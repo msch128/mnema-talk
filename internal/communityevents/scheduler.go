@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/worker"
@@ -160,9 +159,9 @@ func (s *Scheduler) reminderSnapshot(ctx context.Context) (*perm.Snapshot, error
 func (s *Scheduler) remind(ctx context.Context, recipients []uuid.UUID, r DueReminder) {
 	if s.Handler.Events != nil {
 		for _, uid := range recipients {
-			s.Handler.Events.SendToUsers([]uuid.UUID{uid}, events.Untyped(events.EventReminder, EventReminderPayload{
+			s.Handler.Events.SendToUsers([]uuid.UUID{uid}, EventReminderPayload{
 				EventID: r.ID, Title: r.Title, StartTime: r.StartTime, ChannelID: r.ChannelID,
-			}))
+			})
 		}
 	}
 	pusher := s.reminderPusher()

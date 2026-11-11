@@ -1,6 +1,9 @@
 package ws
 
-import "github.com/msch128/mnema-talk/internal/sfu"
+import (
+	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/sfu"
+)
 
 // ServerInfo is the payload of the server_info event every connection gets
 // first. Browsers compare Version with the version their page was built as
@@ -15,6 +18,8 @@ type ServerInfo struct {
 	// camera layers): a browser declares and sends camera layers only then.
 	CameraLayers int `json:"camera_layers,omitempty"`
 }
+
+func (ServerInfo) EventName() string { return events.ServerInfo }
 
 // serverInfo reports "dev" for a hub without a version (tests, go run).
 func (h *Hub) serverInfo() ServerInfo {

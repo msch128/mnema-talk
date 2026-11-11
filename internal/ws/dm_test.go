@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
@@ -40,8 +41,8 @@ func TestAConversationsEventsReachItsMembersOnly(t *testing.T) {
 		dmTapped = append(dmTapped, eventType)
 	}
 
-	h.BroadcastChannel(dm, events.Untyped("message_create", map[string]any{"x": 1}))
-	aliceNew.emitApplicationEvent(events.Untyped("typing", nil), true, nil, dm)
+	h.BroadcastChannel(dm, eventstest.Named("message_create", map[string]any{"x": 1}))
+	aliceNew.emitApplicationEvent(eventstest.Named("typing", nil), true, nil, dm)
 
 	if count(drainTypes(t, bobNew), "message_create") != 1 || count(drainTypes(t, aliceNew), "message_create") != 1 {
 		t.Fatal("members' current clients receive the message")

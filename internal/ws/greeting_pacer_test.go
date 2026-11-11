@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 )
 
 // A client that keeps draining a large greeting, only slowly, is served to
@@ -34,7 +34,7 @@ func TestSlowButSteadilyDrainingClientReceivesTheWholeGreeting(t *testing.T) {
 	defer p.stop()
 	start := time.Now()
 	for i := 0; i < 60; i++ {
-		if !p.send(events.Untyped("ping", map[string]int{"n": i})) {
+		if !p.send(eventstest.Named("ping", map[string]int{"n": i})) {
 			t.Fatalf("greeting stopped at event %d after %v", i, time.Since(start))
 		}
 	}
@@ -55,7 +55,7 @@ func TestStuckClientIsDroppedFromTheGreeting(t *testing.T) {
 	p := newPacerWait(c, 100*time.Millisecond)
 	defer p.stop()
 	for i := 0; i < 20; i++ {
-		if !p.send(events.Untyped("ping", i)) {
+		if !p.send(eventstest.Named("ping", i)) {
 			if !c.closing.Load() {
 				t.Fatal("stopped without dropping the client")
 			}

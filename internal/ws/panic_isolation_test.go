@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
@@ -104,7 +105,7 @@ func TestPanickingHandlerClosesOnlyItsOwnConnection(t *testing.T) {
 
 	// Bob hears that alice went offline, and an event published afterwards.
 	readUntil(t, bobConn, events.PresenceUpdate)
-	h.Broadcast(events.Untyped(events.MemberJoined, map[string]any{}))
+	h.Broadcast(eventstest.Named(events.MemberJoined, map[string]any{}))
 	readUntil(t, bobConn, events.MemberJoined)
 	if got := h.OnlineCount(); got != 1 {
 		t.Fatalf("%d members online, want only bob", got)
@@ -214,7 +215,7 @@ func TestPanicWhileUnregisteringStillRemovesTheClient(t *testing.T) {
 			t.Fatal("the member stayed listed in the Talk with no connection and no grace leave")
 		}
 	}
-	h.Broadcast(events.Untyped(events.MemberJoined, map[string]any{}))
+	h.Broadcast(eventstest.Named(events.MemberJoined, map[string]any{}))
 	readUntil(t, bob, events.MemberJoined)
 	// Room events no longer look for her either.
 	h.mu.RLock()
@@ -308,7 +309,7 @@ func TestPanicInTheGreetingClosesThatConnection(t *testing.T) {
 	waitClosed(t, alice)
 	waitOnline(t, h, 1)
 	waitCounted(t, "ws_handshake", before+1)
-	h.Broadcast(events.Untyped(events.MemberJoined, map[string]any{}))
+	h.Broadcast(eventstest.Named(events.MemberJoined, map[string]any{}))
 	readUntil(t, bob, events.MemberJoined)
 }
 
@@ -329,7 +330,7 @@ func TestPanicInTheUpgradeHookClosesThatConnection(t *testing.T) {
 	waitClosed(t, alice)
 	waitCounted(t, "ws_handshake", before+1)
 	armed.Store(false)
-	h.Broadcast(events.Untyped(events.MemberJoined, map[string]any{}))
+	h.Broadcast(eventstest.Named(events.MemberJoined, map[string]any{}))
 	readUntil(t, bob, events.MemberJoined)
 }
 

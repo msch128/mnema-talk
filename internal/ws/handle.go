@@ -35,7 +35,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 
 	switch eventType {
 	case events.ClientPing:
-		c.SendEvent(events.Untyped(events.Pong, map[string]any{"t": p.T}))
+		c.SendEvent(wire.Pong{T: p.T})
 	case events.ClientPresenceIdle:
 		c.hub.setIdle(c, p.Idle)
 	case events.ClientVoiceJoin:

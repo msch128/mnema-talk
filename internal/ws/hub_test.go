@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
@@ -91,7 +91,7 @@ drain:
 	}
 
 	// Broadcast
-	h.Broadcast(events.Untyped("test_event", map[string]string{"greeting": "hello"}))
+	h.Broadcast(eventstest.Named("test_event", map[string]string{"greeting": "hello"}))
 
 	select {
 	case msg := <-c1.send:
@@ -114,7 +114,7 @@ drain:
 	}
 
 	// Send to specific user
-	h.SendToUsers([]uuid.UUID{u1.ID}, events.Untyped("direct_event", "secret"))
+	h.SendToUsers([]uuid.UUID{u1.ID}, eventstest.Named("direct_event", "secret"))
 	select {
 	case msg := <-c1.send:
 		var ev Event

@@ -32,31 +32,6 @@ type frame struct {
 	Payload any    `json:"payload"`
 }
 
-// Untyped is an event whose payload has no type of its own yet.
-//
-// Deprecated: a stopgap while the events are converted family by family.
-func Untyped(name string, payload any) Event { return untyped{name: name, payload: payload} }
-
-type untyped struct {
-	name    string
-	payload any
-}
-
-func (u untyped) EventName() string { return u.name }
-
-func (u untyped) MarshalJSON() ([]byte, error) { return json.Marshal(u.payload) }
-
-// PayloadOf returns what ev marshals: ev itself, or the wrapped value of an
-// Untyped event.
-//
-// Deprecated: goes with Untyped.
-func PayloadOf(ev Event) any {
-	if u, ok := ev.(untyped); ok {
-		return u.payload
-	}
-	return ev
-}
-
 type Publisher interface {
 	// Broadcast sends an event to every connected client.
 	Broadcast(ev Event)
@@ -116,25 +91,25 @@ type Recorder struct {
 func (r *Recorder) Broadcast(ev Event) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.Events = append(r.Events, Recorded{Type: ev.EventName(), Payload: PayloadOf(ev), Site: site()})
+	r.Events = append(r.Events, Recorded{Type: ev.EventName(), Payload: ev, Site: site()})
 }
 
 func (r *Recorder) BroadcastChannel(channelID uuid.UUID, ev Event) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.Events = append(r.Events, Recorded{Type: ev.EventName(), Payload: PayloadOf(ev), ChannelID: channelID, Site: site()})
+	r.Events = append(r.Events, Recorded{Type: ev.EventName(), Payload: ev, ChannelID: channelID, Site: site()})
 }
 
 func (r *Recorder) BroadcastPerm(need perm.Set, ev Event) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.Events = append(r.Events, Recorded{Type: ev.EventName(), Payload: PayloadOf(ev), Need: need, Site: site()})
+	r.Events = append(r.Events, Recorded{Type: ev.EventName(), Payload: ev, Need: need, Site: site()})
 }
 
 func (r *Recorder) SendToUsers(userIDs []uuid.UUID, ev Event) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.Events = append(r.Events, Recorded{Type: ev.EventName(), Payload: PayloadOf(ev), Recipients: append([]uuid.UUID(nil), userIDs...), Site: site()})
+	r.Events = append(r.Events, Recorded{Type: ev.EventName(), Payload: ev, Recipients: append([]uuid.UUID(nil), userIDs...), Site: site()})
 }
 
 // Take returns the recorded events and forgets them.

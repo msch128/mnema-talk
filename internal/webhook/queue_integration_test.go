@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
@@ -279,7 +279,7 @@ func TestRestartKeepsPendingEventsAndDeliversOnce(t *testing.T) {
 	if err := d1.Reload(ctx); err != nil {
 		t.Fatal(err)
 	}
-	d1.Observe(f.ch, events.Untyped("voice_state_update", voiceJoin(f.ch)))
+	d1.Observe(f.ch, eventstest.Named("voice_state_update", voiceJoin(f.ch)))
 	pctx, stop := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() { d1.persist(pctx); close(done) }()
@@ -327,7 +327,7 @@ func TestRetrySurvivesRestartAndSignsTheAttemptTime(t *testing.T) {
 	if err := d1.Reload(ctx); err != nil {
 		t.Fatal(err)
 	}
-	d1.Observe(f.ch, events.Untyped("voice_state_update", voiceJoin(f.ch)))
+	d1.Observe(f.ch, eventstest.Named("voice_state_update", voiceJoin(f.ch)))
 	d1.Run(dead)
 	if f.pending(hook.ID) != 1 {
 		t.Fatalf("buffered event lost at shutdown: %d pending", f.pending(hook.ID))

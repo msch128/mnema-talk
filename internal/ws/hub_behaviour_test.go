@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
@@ -26,11 +26,11 @@ func TestUnencodableEventsNeverReachRecipients(t *testing.T) {
 	h.joinVoice(c, ch)
 	drainTypes(t, c)
 	bad := make(chan int)
-	h.Broadcast(events.Untyped("user_update", bad))
-	h.BroadcastChannel(uuid.New(), events.Untyped("bad", bad))
-	h.SendToUsers([]uuid.UUID{c.User.ID}, events.Untyped("bad", bad))
-	h.sendToVoiceRoom(ch.ID, events.Untyped("bad", bad))
-	c.SendEvent(events.Untyped("bad", bad))
+	h.Broadcast(eventstest.Named("user_update", bad))
+	h.BroadcastChannel(uuid.New(), eventstest.Named("bad", bad))
+	h.SendToUsers([]uuid.UUID{c.User.ID}, eventstest.Named("bad", bad))
+	h.sendToVoiceRoom(ch.ID, eventstest.Named("bad", bad))
+	c.SendEvent(eventstest.Named("bad", bad))
 	if len(c.send) != 0 {
 		t.Fatal("unencodable event was delivered")
 	}
@@ -514,7 +514,7 @@ func TestDisconnectUserStopsEverySessionAndPreservesOtherUsers(t *testing.T) {
 			t.Fatal("target session remains active")
 		}
 		before := len(c.send)
-		c.SendEvent(events.Untyped("after-revocation", nil))
+		c.SendEvent(eventstest.Named("after-revocation", nil))
 		if len(c.send) != before {
 			t.Fatal("revoked session accepted private event")
 		}

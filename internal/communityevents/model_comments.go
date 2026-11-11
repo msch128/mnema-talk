@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 const (
@@ -71,6 +72,8 @@ type CommentPayload struct {
 	Comment   *EventComment `json:"comment,omitempty" binding:"optional"`
 }
 
+func (CommentPayload) EventName() string { return events.EventComment }
+
 // CommentNoticePayload is sent to the members who are told about a new comment (the event's creator and attendees).
 type CommentNoticePayload struct {
 	EventID    uuid.UUID  `json:"event_id" format:"uuid"`
@@ -79,6 +82,8 @@ type CommentNoticePayload struct {
 	Excerpt    string     `json:"excerpt"`
 	ChannelID  *uuid.UUID `json:"channel_id,omitempty" format:"uuid" binding:"optional"`
 }
+
+func (CommentNoticePayload) EventName() string { return events.EventCommentNotice }
 
 // commentCandidates and commentNotices are the limits above, variables so a test can lower them.
 var (

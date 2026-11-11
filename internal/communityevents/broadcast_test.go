@@ -18,7 +18,7 @@ func TestBroadcastNeverCarriesTheCallersOwnAnswer(t *testing.T) {
 	if len(sent) != 1 {
 		t.Fatalf("broadcasts: %d", len(sent))
 	}
-	if got := sent[0].Payload.(*CommunityEvent); got.MyRSVP != nil || got.ID != ev.ID {
+	if got := sent[0].Payload.(*EventUpdate); got.MyRSVP != nil || got.ID != ev.ID {
 		t.Fatalf("payload: %+v", got)
 	}
 	if ev.MyRSVP == nil {

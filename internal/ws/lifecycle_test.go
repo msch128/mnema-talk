@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 )
 
 // Events reach a client from goroutines other than its read loop (SFU
@@ -28,13 +28,13 @@ func TestSendAfterUnregisterDoesNotPanic(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				for k := 0; k < 100; k++ {
-					c.SendEvent(events.Untyped("webrtc_candidate", map[string]any{"k": k}))
+					c.SendEvent(eventstest.Named("webrtc_candidate", map[string]any{"k": k}))
 				}
 			}()
 		}
 		h.unregister(c)
 		wg.Wait()
-		c.SendEvent(events.Untyped("voice_kicked", nil)) // after unregister: dropped, no panic
+		c.SendEvent(eventstest.Named("voice_kicked", nil)) // after unregister: dropped, no panic
 		select {
 		case <-c.done:
 		default:

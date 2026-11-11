@@ -202,7 +202,7 @@ type InteractionResponse struct {
 	ChannelID    uuid.UUID    `json:"channel_id" format:"uuid"`
 	Content      string       `json:"content"`
 	CreatedAt    time.Time    `json:"created_at" format:"date-time"`
-	Embeds       []core.Embed `json:"embeds"`
+	Embeds       []core.Embed `json:"embeds" extensions:"x-nullable"`
 }
 
 func (InteractionResponse) EventName() string { return events.InteractionResponse }

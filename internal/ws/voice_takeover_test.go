@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 )
 
 func twoSessions(t *testing.T, s bool) (*Hub, *Client, *Client) {
@@ -51,7 +51,7 @@ func TestTakeoverInTheSameTalkMovesTheVoice(t *testing.T) {
 	if a.closed.Load() {
 		t.Fatal("the old session's connection was closed")
 	}
-	a.SendEvent(events.Untyped("message_create", map[string]any{"id": "m"}))
+	a.SendEvent(eventstest.Named("message_create", map[string]any{"id": "m"}))
 	if got := sentEvents(t, a, "message_create"); len(got) != 1 {
 		t.Fatalf("old session no longer receives text events: %+v", got)
 	}

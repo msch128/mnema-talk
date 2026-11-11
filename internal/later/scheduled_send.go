@@ -12,7 +12,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/push"
@@ -184,7 +183,7 @@ func (s *Service) announceSent(ctx context.Context, d dueScheduled, messageID uu
 	if s.Events != nil {
 		s.Events.BroadcastChannel(d.channel, (*core.MessageCreate)(msg))
 	}
-	s.notify(d.user, events.Untyped(events.ScheduledUpdate, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "sent"}))
+	s.notify(d.user, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "sent"})
 }
 
 // fail keeps a refused message as a draft and tells its author, in the app and
@@ -202,7 +201,7 @@ func (s *Service) fail(ctx context.Context, d dueScheduled, reason string) {
 	if tag.RowsAffected() != 1 {
 		return
 	}
-	s.notify(d.user, events.Untyped(events.ScheduledUpdate, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "failed", Reason: reason}))
+	s.notify(d.user, ScheduledEvent{ID: d.id, ChannelID: d.channel, State: "failed", Reason: reason})
 	if s.Push != nil {
 		s.Push.Direct(ctx, push.Direct{User: d.user, Kind: push.DirectScheduledFailed, ID: d.id})
 	}

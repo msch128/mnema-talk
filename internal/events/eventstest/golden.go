@@ -9,12 +9,15 @@
 package eventstest
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 var (
@@ -125,3 +128,17 @@ func firstDifference(got, want string) string {
 	}
 	return ""
 }
+
+// Named is an event with any name and payload, for a test that needs a frame
+// the server itself never publishes (an unknown name, a payload that cannot be
+// encoded) or that only cares that something was published.
+func Named(name string, payload any) events.Event { return named{name: name, payload: payload} }
+
+type named struct {
+	name    string
+	payload any
+}
+
+func (n named) EventName() string { return n.name }
+
+func (n named) MarshalJSON() ([]byte, error) { return json.Marshal(n.payload) }

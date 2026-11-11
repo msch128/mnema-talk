@@ -21,6 +21,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
@@ -58,10 +59,10 @@ func TestTranslate(t *testing.T) {
 		{"create without a message", (*core.MessageCreate)(nil), ""},
 		{"delete", wire.MessageDelete{ID: uuid.New()}, EventMessageDelete},
 		{"reactions", messages.ReactionResult{}, EventReactionsUpdate},
-		{"voice", events.Untyped("voice_state_update", map[string]any{"action": "join"}), EventVoiceStateUpdate},
+		{"voice", eventstest.Named("voice_state_update", map[string]any{"action": "join"}), EventVoiceStateUpdate},
 		{"a new member is not offered", auth.MemberJoined{}, ""},
 		{"typing", wire.Typing{}, ""},
-		{"presence", events.Untyped("presence_update", nil), ""},
+		{"presence", eventstest.Named("presence_update", nil), ""},
 	}
 	for _, tc := range cases {
 		name, ok := translate(tc.ev)
@@ -185,17 +186,17 @@ func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 	d.routes.Store(&routes)
 	join := map[string]any{"action": "join"}
 
-	d.Observe(chA, events.Untyped("voice_state_update", join))
+	d.Observe(chA, eventstest.Named("voice_state_update", join))
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 2 || !g[a] || !g[both] {
 		t.Fatalf("join in A reached %v", g)
 	}
-	d.Observe(chB, events.Untyped("voice_state_update", join))
+	d.Observe(chB, eventstest.Named("voice_state_update", join))
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 1 || !g[b] {
 		t.Fatalf("join in B reached %v", g)
 	}
 	d.Observe(chA, wire.Typing{})
 	// Events to everybody (no channel) belong to no webhook.
-	d.Observe(uuid.Nil, events.Untyped("voice_state_update", join))
+	d.Observe(uuid.Nil, eventstest.Named("voice_state_update", join))
 	d.Observe(uuid.Nil, auth.MemberJoined{})
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 0 {
 		t.Fatalf("unsubscribed events reached %v", g)
@@ -334,7 +335,7 @@ func TestRecordSkipsWhatIsNoOutgoingEvent(t *testing.T) {
 	for name, ev := range map[string]events.Event{
 		"not offered":           wire.Typing{},
 		"posted by a webhook":   (*core.MessageCreate)(&hook),
-		"payload not encodable": events.Untyped("message_delete", make(chan int)),
+		"payload not encodable": eventstest.Named("message_delete", make(chan int)),
 	} {
 		if err := d.Record(context.Background(), nil, ch, ev); err != nil {
 			t.Errorf("%s: %v", name, err)

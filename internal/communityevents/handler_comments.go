@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -31,10 +30,10 @@ func (h *Handler) broadcastComment(ev *CommunityEvent, p CommentPayload) {
 		return
 	}
 	if ev.ChannelID != nil {
-		h.Events.BroadcastChannel(*ev.ChannelID, events.Untyped(events.EventComment, p))
+		h.Events.BroadcastChannel(*ev.ChannelID, p)
 		return
 	}
-	h.Events.Broadcast(events.Untyped(events.EventComment, p))
+	h.Events.Broadcast(p)
 }
 
 // requireWrite holds a comment or an edit to what a message needs: Send messages
