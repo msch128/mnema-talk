@@ -8525,12 +8525,8 @@
             "type": "string"
           },
           "unavailable": {
-            "description": "Unavailable names every dependency that is down. With only \"storage\" in\nit, uploads, attachments and pictures fail while chat and Talks work.",
+            "description": "Unavailable names every dependency that is down. Known values are\n\"database\" and \"storage\"; a later server may name more, so a client\nignores the names it does not know. With only \"storage\" in it, uploads,\nattachments and pictures fail while chat and Talks work.",
             "items": {
-              "enum": [
-                "database",
-                "storage"
-              ],
               "type": "string"
             },
             "type": "array"

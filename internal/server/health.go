@@ -32,9 +32,11 @@ type Health struct {
 type HealthUnavailable struct {
 	Error  *httpx.APIError `json:"error"`
 	Status string          `json:"status" enums:"unavailable"`
-	// Unavailable names every dependency that is down. With only "storage" in
-	// it, uploads, attachments and pictures fail while chat and Talks work.
-	Unavailable []string `json:"unavailable" enums:"database,storage"`
+	// Unavailable names every dependency that is down. Known values are
+	// "database" and "storage"; a later server may name more, so a client
+	// ignores the names it does not know. With only "storage" in it, uploads,
+	// attachments and pictures fail while chat and Talks work.
+	Unavailable []string `json:"unavailable"`
 	ServerInfo
 }
 

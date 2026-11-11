@@ -91,6 +91,17 @@ describe('starting while object storage is down', () => {
     expect(features.storageDown).toBe(false)
   })
 
+  it('reads the answer of a later server that names a dependency this app does not know', async () => {
+    serverAnswers([503, down('storage', 'search')])
+    const features = useServerFeaturesStore()
+    await features.load()
+    expect(features.loaded).toBe(true)
+    expect(features.dm).toBe(true)
+    expect(features.communityName).toBe('Harbour')
+    expect(features.unavailable).toEqual(['storage', 'search'])
+    expect(features.storageDown).toBe(true)
+  })
+
   it('confirms nothing from the bare error an older server sends', async () => {
     serverAnswers([503, { error: { code: 'UNAVAILABLE', message: 'file storage unavailable' } }])
     const features = useServerFeaturesStore()

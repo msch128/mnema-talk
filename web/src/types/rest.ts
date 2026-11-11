@@ -4976,7 +4976,7 @@ export type ServerHealthUnavailable = {
   error: HttpxAPIError
   features?: Array<string>
   status: "unavailable"
-  unavailable: Array<"database" | "storage">
+  unavailable: Array<string>
   version: string
   web_client_api: number
 }
@@ -4988,7 +4988,7 @@ export function isServerHealthUnavailable(value: unknown): value is ServerHealth
     && (hasOwn(value, "error") && isHttpxAPIError(value["error"]))
     && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
     && (hasOwn(value, "status") && (value["status"] === "unavailable"))
-    && (hasOwn(value, "unavailable") && isArrayOf(value["unavailable"], item => (item === "database" || item === "storage")))
+    && (hasOwn(value, "unavailable") && isArrayOf(value["unavailable"], item => isString(item)))
     && (hasOwn(value, "version") && isString(value["version"]))
     && (hasOwn(value, "web_client_api") && isInteger(value["web_client_api"]))
 }

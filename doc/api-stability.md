@@ -27,7 +27,9 @@ in any release.
 `GET /api/health` answers `200` or `503`; the `503` carries the same fields as
 the `200` beside its `error`, with `status` `unavailable` and the dependencies
 that are down in `unavailable` (an older server sends the `error` alone, so a
-client reads the fields only when they are there). `GET /api/health/live` is
+client reads the fields only when they are there). The names in `unavailable`
+are `database` and `storage` today; the list may grow in a later release, so a
+client ignores a name it does not know. `GET /api/health/live` is
 the liveness probe and never depends on the database or object storage.
 
 `GET /api/health` also lists the optional features a server has in `features`.
