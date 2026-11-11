@@ -57,6 +57,27 @@ test('the policy requires Trusted Types: a plain string at an HTML sink is refus
   if (browserName === 'chromium') expect(outcome).toBe('refused')
 })
 
+test('every policy name is taken on the sign-in screen, before the emoji picker has loaded', async ({ page, browserName }) => {
+  await page.goto('/')
+  await expect(page.getByRole('dialog').getByTestId('login-heading')).toBeVisible()
+  provokeCspViolation(/trusted-types|TrustedTypePolicy/i)
+  const taken = await page.evaluate(() => {
+    const factory = (window as { trustedTypes?: { createPolicy(name: string, rules: object): unknown } }).trustedTypes
+    if (!factory) return null
+    const free: string[] = []
+    for (const name of ['vue', 'mnema-markdown', 'mnema-script-url', 'mnema-emoji-picker', 'default', 'mnema-probe']) {
+      try {
+        factory.createPolicy(name, { createHTML: (html: string) => html, createScriptURL: (url: string) => url })
+        free.push(name)
+      } catch { /* refused: taken, or not named by the policy */ }
+    }
+    return free
+  })
+  // An engine without Trusted Types has no policies at all.
+  if (browserName === 'chromium') expect(taken).not.toBeNull()
+  if (taken) expect(taken).toEqual([])
+})
+
 test('emoji picker, Markdown, admin panels and API reference run under the policy', async ({ page }) => {
   await signIn(page)
   const made = await apiFetch(page, 'POST', '/api/admin/channels', { name: CHANNEL, type: 'text' })

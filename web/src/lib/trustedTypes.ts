@@ -38,23 +38,49 @@ export function createTrustedTypePolicy<Args extends unknown[] = []>(name: strin
   }
 }
 
+// Where the build puts the worker scripts (vite.config.ts, build.assetsDir).
+// The dev server has no build and serves them from their source path.
+const OWN_SCRIPT_PREFIXES = import.meta.env.DEV ? [__ASSETS_PREFIX__, '/src/'] : [__ASSETS_PREFIX__]
+const SERVICE_WORKER = '/sw.js'
+
 // Scheme and host, not `origin`: under the desktop client's custom scheme every
-// origin reads "null", which a data: address would match.
-function sameOriginScript(input: string): string {
+// origin reads "null", which a data: address would match. The path is checked
+// after the URL parser resolved it, so `/assets/../api/x` counts as `/api/x`.
+function ownScript(input: string): string {
   const url = new URL(input, window.location.href)
   if (url.protocol !== window.location.protocol || url.host !== window.location.host) {
     throw new TypeError(`Refused to load a script from another origin: ${url.protocol}//${url.host}`)
   }
+  if (url.pathname !== SERVICE_WORKER && !OWN_SCRIPT_PREFIXES.some(prefix => url.pathname.startsWith(prefix))) {
+    throw new TypeError(`Refused to load a script that is not one of the app's own: ${url.pathname}`)
+  }
   return url.href
 }
 
-const scriptUrls = createTrustedTypePolicy('mnema-script-url', { createScriptURL: sameOriginScript })
+const scriptUrls = createTrustedTypePolicy('mnema-script-url', { createScriptURL: ownScript })
+
+// Created here, when the app starts, and not in the picker's lazily loaded
+// chunk: `trusted-types` refuses a second policy of a name, so a name that is
+// still free could be taken by any script on the page, with rules of its own.
+const pickerTemplates = createTrustedTypePolicy('mnema-emoji-picker', { createHTML: html => html })
 
 /**
  * The address of one of the app's own worker scripts, for `new Worker` and
- * `serviceWorker.register`. Another origin is refused. The DOM types do not
- * know Trusted Types yet, so the value is typed as the string it stands for.
+ * `serviceWorker.register`: `/sw.js` or a file the build wrote under its
+ * asset prefix. Another origin and every other path (the API, uploads) are
+ * refused. The DOM types do not know Trusted Types yet, so the value is typed
+ * as the string it stands for.
  */
 export function ownScriptUrl(url: string): string {
   return scriptUrls ? scriptUrls.createScriptURL(url) as string : url
+}
+
+/**
+ * One of emoji-picker-element's own static templates, for the innerHTML of
+ * its template engine. Called only by the patched picker
+ * (web/scripts/emojiPickerCsp.ts); it passes text through, so nothing else may
+ * use it.
+ */
+export function emojiPickerTemplate(html: string): string {
+  return pickerTemplates ? pickerTemplates.createHTML(html) as string : html
 }

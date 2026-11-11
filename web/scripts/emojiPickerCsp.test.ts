@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { PINNED_VERSION, patchEmojiPicker } from './emojiPickerCsp.ts'
+import { PINNED_VERSION, TEMPLATE_MODULE, TEMPLATE_POLICY, patchEmojiPicker } from './emojiPickerCsp.ts'
 
 const dir = new URL('../node_modules/emoji-picker-element/', import.meta.url)
 const source = readFileSync(new URL('picker.js', dir), 'utf8')
@@ -21,9 +21,16 @@ test('the patch moves the base styles and style attributes off the inline paths'
 
 test('the patch leaves no HTML sink that takes a plain string under Trusted Types', () => {
   const patched = patchEmojiPicker(source)
-  assert.match(patched, /createPolicy\('mnema-emoji-picker', \{ createHTML: \(html\) => html \}\)/)
-  assert.deepEqual(patched.match(/\.(?:inner|outer)HTML\s*=[^=].*/g), ['.innerHTML = mnemaTemplatePolicy ? mnemaTemplatePolicy.createHTML(htmlString) : htmlString;'])
+  assert.match(patched, /^import \{ emojiPickerTemplate as mnemaTemplateHtml \} from '@\/lib\/trustedTypes';$/m)
+  assert.deepEqual(patched.match(/\.(?:inner|outer)HTML\s*=[^=].*/g), ['.innerHTML = mnemaTemplateHtml(htmlString);'])
   assert.doesNotMatch(patched, /insertAdjacentHTML|document\.write|createContextualFragment|\beval\(|new Function/)
+})
+
+test('the picker creates no policy of its own: the app claims the name when it starts', () => {
+  assert.doesNotMatch(patchEmojiPicker(source), /createPolicy|globalThis\.trustedTypes/)
+  const app = readFileSync(new URL(`../src/${TEMPLATE_MODULE.slice('@/'.length)}.ts`, import.meta.url), 'utf8')
+  assert.match(app, new RegExp(`^const \\w+ = createTrustedTypePolicy\\('${TEMPLATE_POLICY}', `, 'm'))
+  assert.match(app, /^export function emojiPickerTemplate\(/m)
 })
 
 test('the patch refuses a package it does not recognise', () => {

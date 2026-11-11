@@ -249,7 +249,10 @@ func startMembers(api *webrtc.API, c viewerConfig) []*member {
 		m.cameras = c.cameras.plan(m.id, i-c.from, c.cameraIDs())
 		members = append(members, m)
 		go func() {
-			err := run(api, c, c.tokens[i], m) // returns only with an error
+			err := run(api, c, c.tokens[i], m)
+			if err == nil {
+				return
+			}
 			select {
 			case <-m.stop: // closing at the end
 			default:

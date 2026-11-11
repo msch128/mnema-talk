@@ -61,10 +61,16 @@ function shipLicenses(): Plugin {
   }
 }
 
+// Where the build writes the hashed scripts, styles and workers. The app's
+// Trusted Types policy for worker scripts accepts only this prefix and /sw.js
+// (src/lib/trustedTypes.ts).
+const ASSETS_DIR = 'assets'
+
 export default defineConfig(({ mode }) => ({
   plugins: [emojiPickerCsp(), vue(), tailwindcss(), precompress(), shipLicenses(), serviceWorker()],
   define: {
     __APP_VERSION__: JSON.stringify(appVersion()),
+    __ASSETS_PREFIX__: JSON.stringify(`/${ASSETS_DIR}/`),
     // Test-only timing hook for the media key lifetimes (lib/media/bounds.ts):
     // on in unit tests and in `MNEMA_E2E=1` builds, never in a release build.
     __MNEMA_E2E_HOOKS__: JSON.stringify(mode === 'test' || process.env.MNEMA_E2E === '1')
@@ -89,6 +95,7 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: 'dist',
+    assetsDir: ASSETS_DIR,
     emptyOutDir: true,
     // Source maps would publish the original sources from the server.
     sourcemap: false,

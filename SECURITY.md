@@ -557,7 +557,9 @@ details and the limits.
   (`innerHTML`, `outerHTML`, `insertAdjacentHTML`, `new Worker`,
   `serviceWorker.register`, a script's `src`, string `eval`) throws instead of
   being parsed, and only the four named policies can make a value such a sink
-  takes; there is no `default` policy and no `'allow-duplicates'`. This is a
+  takes; there is no `default` policy and no `'allow-duplicates'`. All four are
+  created while the app starts, so none of the names is free for another script
+  to take with rules of its own. This is a
   second line behind the escaping described under "Message rendering": markup
   that reached a sink outside those policies, from the app or from a
   dependency, would be refused by the browser. What each policy does
@@ -566,15 +568,21 @@ details and the limits.
     `renderMarkdown`, so a value of this policy is always escaped renderer
     output. The one `v-html` takes it.
   - `mnema-script-url` makes the addresses of the app's own worker scripts
-    (the media frame worker, the noise filter worker, `/sw.js`) and refuses
-    another origin.
+    (the media frame worker, the noise filter worker, `/sw.js`): it accepts
+    only `/sw.js` and files under the build's asset prefix (`/assets/`) on the
+    app's own origin, and refuses another origin, `data:`, `blob:` and every
+    other path, the API and uploads included.
   - `mnema-emoji-picker` covers the static templates of `emoji-picker-element`
     (a third build patch); what the picker shows is bound through the DOM, never
-    as markup.
+    as markup. The app creates it at start-up and the patched picker, which is
+    loaded on first use, takes its templates through that instance.
   - `vue` is Vue's own policy, for the static markup its template compiler
     hoists and for `v-html`. It passes text through unchanged, so Trusted Types
-    do not replace the lint rule `vue/no-v-html` (an error everywhere but
-    `MarkdownContent`): that rule is what keeps a second `v-html` out.
+    do not replace the lint rules: `vue/no-v-html` (an error everywhere but
+    `MarkdownContent`) keeps a second `v-html` out, and a restricted-syntax rule
+    (`web/eslint.config.ts`) refuses the other ways to write an HTML string, a
+    bound `innerHTML` or `outerHTML` prop, `h()` with one, and an assignment to
+    either.
 
   Limits: a browser without Trusted Types ignores both directives and behaves
   as before. The API reference (`/api/docs`, only with `API_DOCS_ENABLED`) keeps

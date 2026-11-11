@@ -17,11 +17,12 @@
 //      (element.style.cssText), which CSP does not restrict, instead of
 //      setAttribute. Custom properties, var() and url() work the same way.
 //   3. The template engine's innerHTML takes a TrustedHTML of the policy
-//      `mnema-emoji-picker`. What it parses is only the static text of the
-//      picker's own html`` templates: every expression (emoji, names, search
-//      text) is bound afterwards through the DOM, never as markup. Browsers
-//      without Trusted Types, or a page whose policy does not allow the name,
-//      keep the plain string.
+//      `mnema-emoji-picker`, which the app creates at start-up
+//      (src/lib/trustedTypes.ts); the patched picker imports that module. What
+//      it parses is only the static text of the picker's own html`` templates:
+//      every expression (emoji, names, search text) is bound afterwards
+//      through the DOM, never as markup. Browsers without Trusted Types, or a
+//      page whose policy does not allow the name, keep the plain string.
 //   4. The fallback for browsers without replaceChildren (Safari 13) empties
 //      a node with textContent instead of innerHTML, so the bundle has no
 //      other HTML sink.
@@ -37,6 +38,13 @@ export const PINNED_VERSION = '1.29.1'
 
 /** The Trusted Types policy of the patched picker; httpx.SPAContentSecurityPolicy names it. */
 export const TEMPLATE_POLICY = 'mnema-emoji-picker'
+
+/**
+ * The app module that creates that policy when the app starts and hands the
+ * picker its templates through it. The picker's own chunk is loaded on first
+ * use, and a policy created only then would leave the name free until then.
+ */
+export const TEMPLATE_MODULE = '@/lib/trustedTypes'
 
 const STYLE_ELEMENT = `    const style = document.createElement('style');
     style.textContent = baseStyles + EXTRA_STYLES;
@@ -68,17 +76,12 @@ const TEMPLATE_PARSE = `function parseTemplate (htmlString) {
   return template
 }`
 
-const TEMPLATE_PARSE_TRUSTED = `// Trusted Types policy for the picker's own static templates (Mnema CSP patch).
-let mnemaTemplatePolicy;
-try {
-  mnemaTemplatePolicy = globalThis.trustedTypes && globalThis.trustedTypes.createPolicy('${TEMPLATE_POLICY}', { createHTML: (html) => html });
-} catch (err) {
-  console.warn('Trusted Types policy ${TEMPLATE_POLICY} not created:', err);
-}
+const TEMPLATE_PARSE_TRUSTED = `// The app's Trusted Types policy for the picker's own static templates (Mnema CSP patch).
+import { emojiPickerTemplate as mnemaTemplateHtml } from '${TEMPLATE_MODULE}';
 
 function parseTemplate (htmlString) {
   const template = document.createElement('template');
-  template.innerHTML = mnemaTemplatePolicy ? mnemaTemplatePolicy.createHTML(htmlString) : htmlString;
+  template.innerHTML = mnemaTemplateHtml(htmlString);
   return template
 }`
 

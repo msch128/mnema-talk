@@ -219,12 +219,13 @@ const APIDocsContentSecurityPolicy = basePolicy
 
 // The policies, one per sink the app has (web/src/lib/trustedTypes.ts):
 //   - vue: Vue's own, for the static markup its template compiler hoists and
-//     for v-html. It passes text through, so what keeps a second v-html out
-//     stays the lint rule vue/no-v-html.
+//     for v-html. It passes text through, so what keeps a second v-html or a
+//     bound innerHTML out stays the lint rules (web/eslint.config.ts).
 //   - mnema-markdown: the Markdown renderer; its output is the one v-html.
-//   - mnema-script-url: the app's own worker scripts, same origin only.
+//   - mnema-script-url: the app's own worker scripts, same origin and only
+//     /sw.js or a file under the build's asset prefix.
 //   - mnema-emoji-picker: the static templates of emoji-picker-element
-//     (web/scripts/emojiPickerCsp.ts).
+//     (web/scripts/emojiPickerCsp.ts), created at start-up like the others.
 //
 // A name missing here, or a second policy of one name, is refused by the browser.
 const trustedTypesDirectives = "require-trusted-types-for 'script'; " +
