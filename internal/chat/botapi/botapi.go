@@ -208,18 +208,6 @@ func ValidateBotMessage(rawContent string, rawEmbeds []messages.InEmbed) (string
 	return messages.ValidateBotMessage(rawContent, rawEmbeds)
 }
 
-func validateBotPayload(req *rawBotMessage) (string, []core.Embed, *uuid.UUID, error) {
-	content, embeds, err := ValidateBotMessage(req.Content, req.Embeds)
-	if err != nil {
-		return "", nil, nil, err
-	}
-	var reply *uuid.UUID
-	if req.MessageReference != nil {
-		reply = &req.MessageReference.MessageID
-	}
-	return content, embeds, reply, nil
-}
-
 // botCreateMessage handles POST /api/bot/v1/channels/{channelID}/messages.
 //
 // @Summary Post a message
@@ -240,34 +228,32 @@ func validateBotPayload(req *rawBotMessage) (string, []core.Embed, *uuid.UUID, e
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages [post]
 func (a *API) botCreateMessage(w http.ResponseWriter, r *http.Request) error {
-	user := auth.UserFrom(r.Context())
+	actor := messages.BotActor(auth.UserFrom(r.Context()))
 	chID, err := httpx.PathUUID(r, "channelID")
-	if err != nil {
-		return err
-	}
-	snap, p, err := CheckBotSend(r.Context(), a.Guard.Perms, a.DB, user, chID)
 	if err != nil {
 		return err
 	}
 	req, err := decodeRawBotMessage(w, r)
 	if err != nil {
+		// A bot that may not post here is told so, not what is wrong with its body.
+		if refusal := a.Messages.Posts.Refusal(r.Context(), actor, chID); refusal != nil {
+			return refusal
+		}
 		return err
 	}
-	content, embeds, reply, err := validateBotPayload(req)
+	cmd := messages.PostCommand{
+		ChannelID: chID, Content: req.Content, Embeds: req.Embeds, ParentID: req.ParentID,
+		AllowedMentions: (*messages.AllowedMentions)(req.AllowedMentions),
+	}
+	if req.MessageReference != nil {
+		cmd.ReplyToID = &req.MessageReference.MessageID
+	}
+	posted, err := a.Messages.Posts.Post(r.Context(), actor, cmd)
 	if err != nil {
 		return err
 	}
-	if err := messages.ValidateTarget(r.Context(), a.DB, chID, req.ParentID, reply); err != nil {
-		return err
-	}
-	ctx := mentions.WithMentionPolicy(SendContext(r.Context(), p), messages.BotMentionPolicy(snap, chID, p, (*messages.AllowedMentions)(req.AllowedMentions)))
-	id, err := messages.InsertMessage(ctx, a.DB, a.Online, messages.NewMessage{
-		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: reply, Embeds: embeds,
-	}, nil)
-	if err != nil {
-		return err
-	}
-	return messages.PublishMessage(w, r, a.DB, a.Events, id)
+	messages.WritePosted(w, posted)
+	return nil
 }
 
 // botEditMessage handles PATCH /api/bot/v1/channels/{channelID}/messages/{messageID}.

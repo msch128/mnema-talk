@@ -139,7 +139,7 @@ func (h *Handler) talks() *talks.API {
 // MountBot registers the bot API routes (the bot authentication middleware must
 // already apply); see botapi.API.MountBot.
 func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
-	(&botapi.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Online: h.Online, Messages: h.messages(), Channels: h.channels()}).MountBot(r, send)
+	(&botapi.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Messages: h.messages(), Channels: h.channels()}).MountBot(r, send)
 }
 
 // Mount registers the member-facing routes (RequireUser must already apply).
