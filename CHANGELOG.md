@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.0.3](https://github.com/msch128/mnema-talk/compare/v3.0.2...v3.0.3) (2026-11-11)
+
+
+### Bug Fixes
+
+* a panic in a connection or call participant no longer ends the server ([860cce5](https://github.com/msch128/mnema-talk/commit/860cce5355d3759873c6e6a4b2b44f6d025fe34a))
+* **deps:** build with go1.27.4 to close GO-2026-6859 in net/http ([860cce5](https://github.com/msch128/mnema-talk/commit/860cce5355d3759873c6e6a4b2b44f6d025fe34a))
+* every goroutine and timer of the server starts through internal/safego ([860cce5](https://github.com/msch128/mnema-talk/commit/860cce5355d3759873c6e6a4b2b44f6d025fe34a))
+* locks of the hub and the SFU are released when the code under them panics ([860cce5](https://github.com/msch128/mnema-talk/commit/860cce5355d3759873c6e6a4b2b44f6d025fe34a))
+* rotate the session secret and the data key without losing sessions or two-factor sign-in ([860cce5](https://github.com/msch128/mnema-talk/commit/860cce5355d3759873c6e6a4b2b44f6d025fe34a))
+
+
+### Performance Improvements
+
+* an event of one Talk no longer scans every connection ([860cce5](https://github.com/msch128/mnema-talk/commit/860cce5355d3759873c6e6a4b2b44f6d025fe34a))
+
 ## [3.0.2](https://github.com/msch128/mnema-talk/compare/v3.0.1...v3.0.2) (2026-11-10)
 
 
