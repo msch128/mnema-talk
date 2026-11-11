@@ -73,8 +73,10 @@ function resyncState(cx: Cx) {
   permissions.loadRoles()
   void useReportsOpenStore().load()
   void useEmojiStore().load()
-  // Not yet read (the server was restarting at start): sends need the list to carry their nonce.
-  void useServerFeaturesStore().load()
+  // Not yet read (the server was restarting at start): sends need the list to carry their nonce. A socket that reopens may talk to a
+  // restarted server: what it says about itself (its features, storage that is down) is read again.
+  const features = useServerFeaturesStore()
+  void (cs.reconnectCount.value > 0 ? features.refresh() : features.load())
   fetchChannels(cx)
   fetchMembers(cx)
   fetchReadState(cx)

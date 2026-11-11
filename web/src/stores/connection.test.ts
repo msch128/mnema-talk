@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
+import { useServerFeaturesStore } from './serverFeatures'
 import { setLocale } from '../i18n'
 
 // Minimal WebSocket stand-in the tests open and close by hand.
@@ -100,6 +101,31 @@ describe('websocket reconnect', () => {
     expect(calls).toContain('/api/members')
     expect(calls.some(u => u.startsWith(`/api/channels/${CHANNEL_ID}/messages`))).toBe(true)
     expect(chat.reconnectCount).toBe(1)
+  })
+
+  it('asks the server about itself again after a reconnect: it may have restarted without its storage', async () => {
+    const { chat } = setup()
+    const about = { version: '3.0.3', web_client_api: 1, features: ['dm'] }
+    let storage = true
+    const others = vi.mocked(globalThis.fetch).getMockImplementation()
+    vi.mocked(globalThis.fetch).mockImplementation((url, init) => {
+      if (url !== '/api/health') return required(others)(url, init)
+      if (storage) return jsonResponse({ status: 'ok', ...about })
+      return jsonResponse({ error: { code: 'UNAVAILABLE', message: 'file storage unavailable' }, status: 'unavailable', unavailable: ['storage'], ...about }, 503)
+    })
+    const features = useServerFeaturesStore()
+    chat.initWebSocket()
+    required(FakeSocket.instances[0]).open()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(features.loaded).toBe(true)
+    expect(features.storageDown).toBe(false)
+
+    storage = false
+    required(FakeSocket.instances[0]).drop()
+    await vi.advanceTimersByTimeAsync(1000)
+    required(FakeSocket.instances[1]).open()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(features.storageDown).toBe(true)
   })
 
   it('stays disconnected after the server evicted it for a newer tab, until shown again', async () => {

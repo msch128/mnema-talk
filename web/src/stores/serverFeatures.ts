@@ -6,10 +6,18 @@ import { syncDocumentIcons } from '../lib/communityIcon'
 
 /** How often the server is asked again while it reports a dependency as down. */
 export const OUTAGE_RECHECK_MS = 30000
+/** How long one answer may take. A request that never settles would otherwise be the last one ever made. */
+export const HEALTH_TIMEOUT_MS = 10000
 
 // The server describes itself in a 503 as well (a dependency is down). An older server sends only the error then, which is no answer.
 function decodeHealth(value: unknown): ServerHealth | ServerHealthUnavailable {
   return isServerHealthUnavailable(value) ? value : decodeServerHealth(value)
+}
+
+function askHealth(): Promise<ServerHealth | ServerHealthUnavailable> {
+  const limit = new AbortController()
+  const timer = setTimeout(() => limit.abort(), HEALTH_TIMEOUT_MS)
+  return api('/api/health', { acceptStatus: [503], decode: decodeHealth, signal: limit.signal }).finally(() => clearTimeout(timer))
 }
 
 /** One flag per optional feature the web app asks about. */
@@ -42,6 +50,53 @@ function featureFlags(has: (name: string) => boolean) {
   }
 }
 
+type Health = ServerHealth | ServerHealthUnavailable
+
+/**
+ * Asks the server about itself and hands each answer to `adopt`. `load` asks once and later calls share the answer; while `inOutage`
+ * says a dependency is down the server is asked again every OUTAGE_RECHECK_MS, so the notice goes when the outage does.
+ */
+function healthAsker(adopt: (health: Health) => void, inOutage: () => boolean) {
+  let pending: Promise<void> | null = null
+  // Whether the request behind `pending` is still on its way.
+  let asking = false
+  let recheck: ReturnType<typeof setTimeout> | undefined
+
+  function watchOutage() {
+    clearTimeout(recheck)
+    if (!inOutage()) return
+    recheck = setTimeout(() => {
+      pending = null
+      void load()
+    }, OUTAGE_RECHECK_MS)
+  }
+
+  function load(): Promise<void> {
+    if (pending) return pending
+    asking = true
+    pending = askHealth().then(adopt, () => {
+      // The next call asks again; nothing is shown that was not confirmed.
+      pending = null
+    }).then(() => {
+      asking = false
+      watchOutage()
+    })
+    return pending
+  }
+
+  /**
+   * Asks again although an answer is known. The server reports storage as down from its start until storage is first reached, so a
+   * server that answered healthy says otherwise only after a restart, and a restart drops the WebSocket: the chat store calls this
+   * when its socket reopens. No timer runs while the server is healthy.
+   */
+  function refresh(): Promise<void> {
+    if (!asking) pending = null
+    return load()
+  }
+
+  return { load, refresh }
+}
+
 // The optional features of the server this app talks to (GET /api/health
 // `features`). A 1.0.x server sends no list: every newer feature is then
 // absent and its UI stays hidden. Names never change meaning
@@ -59,8 +114,6 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   // Without object storage uploads, attachments and pictures fail; chat and Talks do not need it.
   const storageDown = computed(() => unavailable.value.includes('storage'))
   const names = computed(() => new Set(list.value))
-  let pending: Promise<void> | null = null
-  let recheck: ReturnType<typeof setTimeout> | undefined
 
   function has(name: string): boolean {
     return names.value.has(name)
@@ -72,33 +125,14 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
     syncDocumentIcons(version)
   }
 
-  /** While a dependency is down the server is asked again, so the notice goes when the outage does. */
-  function watchOutage() {
-    clearTimeout(recheck)
-    if (unavailable.value.length === 0) return
-    recheck = setTimeout(() => {
-      pending = null
-      void load()
-    }, OUTAGE_RECHECK_MS)
-  }
-
-  /** Asks the server once; later calls share the answer. */
-  function load(): Promise<void> {
-    pending ??= api('/api/health', { acceptStatus: [503], decode: decodeHealth }).then(
-      health => {
-        list.value = health.features ?? []
-        communityName.value = health.community_name?.trim() ?? ''
-        setCommunityIcon(health.community_icon ?? '')
-        unavailable.value = health.status === 'unavailable' ? health.unavailable : []
-        loaded.value = true
-      },
-      () => {
-        // The next call asks again; nothing is shown that was not confirmed.
-        pending = null
-      }
-    ).then(watchOutage)
-    return pending
-  }
+  /** `load` asks the server once and later calls share the answer; `refresh` asks again (see healthAsker). */
+  const { load, refresh } = healthAsker(health => {
+    list.value = health.features ?? []
+    communityName.value = health.community_name?.trim() ?? ''
+    setCommunityIcon(health.community_icon ?? '')
+    unavailable.value = health.status === 'unavailable' ? health.unavailable : []
+    loaded.value = true
+  }, () => unavailable.value.length > 0)
 
   /**
    * Waits for the feature list when it has not been read yet (the first read may have failed, as during a server restart), but only for
@@ -113,7 +147,7 @@ export const useServerFeaturesStore = defineStore('serverFeatures', () => {
   }
 
   return {
-    list, loaded, unavailable, storageDown, ensureLoaded, communityName, communityIcon, setCommunityIcon, has, load,
+    list, loaded, unavailable, storageDown, ensureLoaded, communityName, communityIcon, setCommunityIcon, has, load, refresh,
     ...featureFlags(has)
   }
 })
