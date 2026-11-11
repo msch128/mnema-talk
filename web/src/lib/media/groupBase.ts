@@ -32,7 +32,7 @@ export abstract class GroupBase {
   protected current: { epoch: number, key: EpochKeys, verification: MediaVerification, soft: boolean } | null = null
   protected room: readonly string[] = []
   protected offeredFor: string | null = null
-  /** When this client first offered a key package since it last held a group. */
+  /** When this client last sent a key package the room did not have yet (a new one, or the room changed). */
   protected offeredAt: number | null = null
   /** This client created its group, and told this room about it. */
   /** Members whose fresh package says they reloaded: the next committer swaps them in. */

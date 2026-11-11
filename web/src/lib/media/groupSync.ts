@@ -9,6 +9,10 @@ import { ALL_OFFERED_WAIT_MS, OFFER_WAIT_MS, FOUND_WAIT_MS, TAKEOVER_MS, type Me
 import { clientConfig, wipeBytes, treeMembers, lowest, encodeWire } from './groupTree'
 import { GroupEpoch } from './groupEpoch'
 
+function roomKey(others: readonly string[]): string {
+  return others.slice().sort().join(',')
+}
+
 export abstract class GroupSync extends GroupEpoch {
   sync(roster: readonly string[], resend = false): Promise<MediaStep> {
     this.hint(roster)
@@ -75,7 +79,6 @@ export abstract class GroupSync extends GroupEpoch {
     return kept
   }
 
-
   protected defer(action: () => Promise<MediaStep | null>) {
     if (this.deferTimer !== null) return
     this.deferTimer = setTimeout(() => {
@@ -118,7 +121,7 @@ export abstract class GroupSync extends GroupEpoch {
   /** Founds a group when nobody here holds one, or offers a package (again) and waits to be let in. */
   private async establishGroup(others: string[], resend: boolean, wires: Uint8Array[]) {
     if (this.state) return
-    const wait = this.foundingWait(others)
+    const wait = this.foundingWait(others, resend)
     if (wait === 0) {
       const created = await this.createOwn()
       if (created) wires.push(...created)
@@ -138,13 +141,18 @@ export abstract class GroupSync extends GroupEpoch {
    * one steps aside for a lower id). Among several who all offer, one may hold
    * a group it founded alone and has just let another newcomer into: it
    * announced itself with the same message as an offer and answers mine with
-   * a welcome, so that gets ALL_OFFERED_WAIT_MS from my own offer.
+   * a welcome, so that gets ALL_OFFERED_WAIT_MS from my offer to this room: an
+   * offer that goes out only now (a new package, or the room changed) starts
+   * the wait, since the member that would answer it may not have seen an
+   * earlier one.
    */
-  private foundingWait(others: string[]): number | null {
+  private foundingWait(others: string[], resend: boolean): number | null {
     if (others.length === 0) return 0
     if (!this.allOffered(others)) return null
     if (others.length === 1) return 0
-    return Math.max(0, (this.offeredAt ?? clock.now()) + ALL_OFFERED_WAIT_MS - clock.now())
+    const now = clock.now()
+    const sentAt = resend || this.offeredFor !== roomKey(others) ? now : this.offeredAt ?? now
+    return Math.max(0, sentAt + ALL_OFFERED_WAIT_MS - now)
   }
 
   /**
@@ -243,12 +251,12 @@ export abstract class GroupSync extends GroupEpoch {
 
   /** The key package for the room, unless this room already has it. */
   protected offer(others: readonly string[]): Uint8Array[] {
-    const key = others.slice().sort().join(',')
+    const key = roomKey(others)
     if (this.offeredFor === key) return []
     const wire = this.hello()
     if (!wire) return []
     this.offeredFor = key
-    this.offeredAt ??= clock.now()
+    this.offeredAt = clock.now()
     this.watchOffer()
     return [wire]
   }

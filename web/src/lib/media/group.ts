@@ -1,5 +1,4 @@
 import {
-  decodeMlsMessage,
   defaultCapabilities,
   defaultLifetime,
   emptyPskIndex,
@@ -31,6 +30,7 @@ import {
   isKnownSigner,
   invalidHandshakeWire,
   invalidHandshakeSender,
+  decodeHandshake,
   isRivalWelcome,
   shouldIgnoreWelcome,
   commitWinsConflict,
@@ -38,15 +38,6 @@ import {
 } from './groupVet'
 export { frameVerifiers, onlyRenewsLeaf, keepsEveryLeaf } from './groupTree'
 export type { MediaStep } from './groupParams'
-
-/** The MLS message in a handshake wire; null for bytes that are none (the decoder throws on some). */
-function decodeHandshake(wire: Uint8Array): MlsMessage | null {
-  try {
-    return decodeMlsMessage(wire, 0)?.[0] ?? null
-  } catch {
-    return null
-  }
-}
 
 /**
  * One browser's membership in one voice channel.
@@ -163,6 +154,7 @@ export class MediaGroup extends GroupSync {
     }
     if (rival) this.discard()
     if (await this.adopt(joined)) {
+      this.dropSelfUpdate()
       this.offeredFor = null
       if (previous) this.wipeRejected(previous)
     }
@@ -182,15 +174,10 @@ export class MediaGroup extends GroupSync {
       && members?.get(from) === framed.sender.leafIndex && this.mayCommit(from)
   }
 
-  /**
-   * A commit for the epoch I left with a self-update, from someone else. Only
-   * while that update is the last thing that happened: going back behind a
-   * later commit would undo it (a removal, for one).
-   */
+  /** A commit for the epoch I left with a self-update, from someone else. */
   protected isCommitForUpdatedEpoch(framed: PublicMessage['content'], saved: NonNullable<GroupBase['selfUpdate']>, from: string): boolean {
-    const epoch = saved.state.groupContext.epoch
-    return framed.contentType === 'commit' && framed.sender.senderType === 'member' && this.state?.groupContext.epoch === epoch + 1n
-      && sameBytes(framed.groupId, this.groupId) && framed.epoch === epoch && from !== saved.sender
+    return framed.contentType === 'commit' && framed.sender.senderType === 'member'
+      && sameBytes(framed.groupId, this.groupId) && framed.epoch === saved.state.groupContext.epoch && from !== saved.sender
   }
 
   protected async receivePublic(from: string, publicMessage: PublicMessage, members: Map<string, number> | null): Promise<MediaStep> {
@@ -230,7 +217,8 @@ export class MediaGroup extends GroupSync {
         // The epoch was refused (for instance a leaf identity held twice): this group is out of step.
         return this.recoverNow()
       }
-      // The epoch I left is superseded: its secrets must not outlive the switch.
+      // The epoch I left is superseded, and so is the one before a renewal: their secrets must not outlive the switch.
+      this.dropSelfUpdate()
       this.wipeLeft(previous)
     } catch {
       return this.step()
@@ -282,15 +270,25 @@ export class MediaGroup extends GroupSync {
       const isCommitter = this.committer(this.listed()) === from
       const renews = processed.actionTaken === 'reject' || onlyRenewsLeaf(saved.state, processed.newState, treeMembers(saved.state).get(from) as number, this.vetted)
       const wins = commitWinsConflict({ rejected: processed.actionTaken === 'reject', renews, empty, isCommitter }, from, saved.sender)
-      if (!wins) {
-        wipeConsumed(processed.consumed)
-        if (processed.newState !== saved.state) this.wipeRejected(processed.newState)
-        return this.step()
-      }
-      return this.switchConflictState(saved, processed, from)
+      // Going back is right only while that update is the last commit taken: behind a later one it would undo it (a removal, for one).
+      const followed = this.state?.groupContext.epoch !== saved.state.groupContext.epoch + 1n
+      if (wins && !followed) return this.switchConflictState(saved, processed, from)
+      wipeConsumed(processed.consumed)
+      if (processed.newState !== saved.state) this.wipeRejected(processed.newState)
+      return wins ? this.overtaken() : this.step()
     } catch {
       return this.step()
     }
+  }
+
+  /**
+   * The winner arrived after I committed on top of the loser. Whoever took the
+   * winner cannot follow my commit, so I commit once more: they see a commit for
+   * an epoch they have not reached and start over.
+   */
+  protected async overtaken(): Promise<MediaStep> {
+    this.dropSelfUpdate()
+    return this.step(this.canCommit(this.room) ? await this.commit([]) : [])
   }
 
   protected async switchConflictState(saved: NonNullable<GroupBase['selfUpdate']>, processed: ProcessedPublicMessage, from: string): Promise<MediaStep> {
