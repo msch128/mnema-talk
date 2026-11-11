@@ -9,8 +9,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
+
+// applyNextRequest plays the server: it waits for the command's request to
+// appear and then deletes it, as the running server does when it applies one.
+// Deleting after a fixed delay raced with a command that had not queued yet.
+func applyNextRequest(ctx context.Context, pool *db.Pool) {
+	go func() {
+		for deadline := time.Now().Add(4 * time.Second); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
+			tag, err := pool.Exec(ctx, `DELETE FROM login_unlock_requests`)
+			if err == nil && tag.RowsAffected() > 0 {
+				return
+			}
+		}
+	}()
+}
 
 func TestUnlockCommandQueuesAndReports(t *testing.T) {
 	pool := testutil.DB(t)
@@ -38,18 +53,12 @@ func TestUnlockCommandQueuesAndReports(t *testing.T) {
 		t.Fatal(err)
 	}
 	unlockWait = 5 * time.Second
-	go func() {
-		time.Sleep(400 * time.Millisecond)
-		_, _ = pool.Exec(ctx, `DELETE FROM login_unlock_requests`)
-	}()
+	applyNextRequest(ctx, pool)
 	out.Reset()
 	if err := unlockCommand(ctx, []string{"--all"}, &out); err != nil || !strings.Contains(out.String(), "all accounts") {
 		t.Fatalf("all: %v %q", err, out.String())
 	}
-	go func() {
-		time.Sleep(400 * time.Millisecond)
-		_, _ = pool.Exec(ctx, `DELETE FROM login_unlock_requests`)
-	}()
+	applyNextRequest(ctx, pool)
 	out.Reset()
 	if err := unlockCommand(ctx, []string{"cool_guy"}, &out); err != nil || !strings.Contains(out.String(), "cleared for cool_guy") {
 		t.Fatalf("one: %v %q", err, out.String())
