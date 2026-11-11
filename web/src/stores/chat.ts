@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
+import { useSocketStore } from './socket'
 import type { ClientEventPayloads } from '../types/events'
 import { createChatState, type ChatState, type Cx } from './chat/state'
 import { createCategory, createChannel, deleteCategory, deleteChannel, duplicateChannel, fetchChannels, isVoiceChannel, linkTo, selectChannel, setChannelAutoDelete, updateCategory, updateChannel } from './chat/channels'
@@ -164,7 +165,8 @@ function exposedActions(cx: Cx) {
 export const useChatStore = defineStore('chat', () => {
   const authStore = useAuthStore()
   const voiceStore = useVoiceStore()
-  const cx: Cx = { cs: createChatState(channelId => markChannelRead(cx, channelId)), authStore, voiceStore }
+  // The transport is its own store; this one hosts it and keeps showing its state.
+  const cx: Cx = { cs: createChatState(channelId => markChannelRead(cx, channelId), useSocketStore().transport()), authStore, voiceStore }
   const cs = cx.cs
 
   installVisibilityRetry(cx)

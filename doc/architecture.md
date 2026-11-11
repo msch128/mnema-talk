@@ -860,8 +860,11 @@ and Administrators) gathers version, update state, database, storage, backup and
   rename and not kept in the history).
 - **Stores (Pinia)**:
   [`auth`](../web/src/stores/auth.ts) (current user; the session itself is an
-  HttpOnly cookie), [`chat`](../web/src/stores/chat.ts) (channels, messages,
-  WebSocket events, unread state, presence),
+  HttpOnly cookie), [`socket`](../web/src/stores/socket.ts) (the WebSocket
+  transport: connect, heartbeat, reconnect backoff; it knows no event),
+  [`chat`](../web/src/stores/chat.ts) (channels, messages, WebSocket events,
+  unread state, presence; it hosts the transport and still exposes its
+  connection state and `sendWSEvent`, so callers did not change),
   [`voice`](../web/src/stores/voice.ts) (call state, devices, input mode and
   push-to-talk key, per-person volumes, camera and stage choices),
   [`appVersion`](../web/src/stores/appVersion.ts) (reload banner on version

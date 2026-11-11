@@ -52,7 +52,7 @@ export function resetCommunityState(cx: Cx) {
   cs.latestChannelsFetch = Promise.resolve()
   ++cs.membersFetchSeq
   ++cs.memberRevision
-  ++cs.reconnectCheckSeq
+  ++cs.socket.reconnectCheckSeq
   closeWebSocket(cx)
   resetOutbox(cx)
   closeThread(cx)
@@ -102,7 +102,7 @@ export function resetCommunityState(cx: Cx) {
   cs.isIdle = false
   cs.lastActivityAt = 0
   cs.lastVoiceActivityAt = 0
-  cs.reconnectDelay = 1000
+  cs.socket.reconnectDelay = 1000
   cs.reconnectCount.value = 0
   cs.nextRetryAt.value = 0
   cs.webrtcOfferHandler = null
