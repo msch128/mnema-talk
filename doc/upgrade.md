@@ -14,8 +14,8 @@ schema a newer one migrated. Take a backup before every update.
 Nothing to do. An instance that sets none of the new variables stores and
 reads exactly what it did before: session cookies are signed with
 `JWT_SECRET`, and the authenticator secrets and recovery codes of two-factor
-sign-in stay under the keys derived from it, in the same format. No migration
-runs and no stored value is rewritten.
+sign-in stay under the keys derived from it, in the same format. No stored
+value is rewritten.
 
 New and optional: `JWT_SECRET_PREVIOUS` lets you replace the session secret
 without signing anyone out, `DATA_KEY` moves the second factor's data to a
@@ -28,6 +28,18 @@ the old value is named in `JWT_SECRET_PREVIOUS`. The steps are in
 Once `DATA_KEY` is set and secrets have been moved to it, an older release
 cannot read them: after a rollback to one, the affected accounts need
 `reset-2fa`. Without `DATA_KEY` a rollback is unaffected.
+
+`DATA_KEY` stays once it is set: from then on authenticator secrets are
+sealed under it, and emptying it later leaves them unreadable (the server
+logs `AUTHENTICATOR SECRETS CANNOT BE READ` at start and `mnema-talk doctor`
+shows it). Keep the value with your backups. To go back to the keys derived
+from `JWT_SECRET`, follow
+[Stop using a data key](operations.md#stop-using-a-data-key).
+
+Migration 0102 adds a nullable column to `recovery_codes` that records which
+key a new recovery code is under, so codes under a retired key are no longer
+counted as remaining. Existing codes are untouched, and an older release
+ignores the column.
 
 ## Public message and talk totals (migrations 0098 and 0099)
 
@@ -417,6 +429,7 @@ of the pre-update backup (see "Rollback" above).
 | 0098 | `messages.counted`: messages in the chat of a conversation's call are left out of the public message total. Existing rows are marked and the totals on `users.message_count` are recomputed. |
 | 0099 | `users.public_voice_seconds`: the public time in Talks counts only stays in Talks everyone can see. It starts at zero; `voice_seconds` stays as the private total. |
 | 0100 | `message_nonces`: the client nonce that makes a repeated send of a message return the first one (feature `messages.nonce`). Adds a table and two indexes; rows older than a day are pruned. |
+| 0102 | `recovery_codes.key_fingerprint` (nullable): which key a new recovery code is hashed under, so codes under a retired key are not counted as remaining. Existing rows keep `NULL` and stay counted. |
 
 The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/setupcheck"
 )
@@ -33,6 +34,7 @@ func healthyProbes() doctorProbes {
 		Skew:    func(context.Context) (time.Duration, error) { return 0, nil },
 		UDPHeld: func(uint16) bool { return true },
 		TCPHeld: func(uint16) bool { return true },
+		Secrets: func(context.Context) (auth.StoredSecrets, error) { return auth.StoredSecrets{}, nil },
 	}
 }
 
@@ -207,5 +209,43 @@ func TestPortNumberRejectsWhatDoesNotFitAPort(t *testing.T) {
 		if got := portNumber(in); got != want {
 			t.Errorf("portNumber(%q) = %d, want %d", in, got, want)
 		}
+	}
+}
+
+func TestDoctorIsRedWhenAuthenticatorSecretsCannotBeRead(t *testing.T) {
+	p := healthyProbes()
+	p.Secrets = func(context.Context) (auth.StoredSecrets, error) {
+		return auth.StoredSecrets{Unreadable: 3, UnknownDataKey: 2}, nil
+	}
+	cfg := productionTestConfig(t)
+	var out bytes.Buffer
+	if err := runDoctor(context.Background(), cfg, p, &out); !errors.Is(err, errDoctorRed) {
+		t.Fatalf("members who cannot sign in are a red finding; err = %v\n%s", err, out.String())
+	}
+	for _, want := range []string{"[FAIL] 3 account(s) with two-factor sign-in", "2 of them name a data key that is not configured", "fix: put the key they were sealed with back", "mnema-talk rotate-keys"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("report lacks %q:\n%s", want, out.String())
+		}
+	}
+	if strings.Contains(out.String(), cfg.JWTSecret) {
+		t.Fatal("the report prints a secret")
+	}
+}
+
+func TestDoctorPrintsTheFingerprintOfTheSealingKey(t *testing.T) {
+	cfg := productionTestConfig(t)
+	var out bytes.Buffer
+	if err := runDoctor(context.Background(), cfg, healthyProbes(), &out); err != nil {
+		t.Fatalf("readable secrets are no finding: %v\n%s", err, out.String())
+	}
+	want := "sealed under the key derived from JWT_SECRET (fingerprint " + sessionKeys(cfg).KeySetup().Fingerprint
+	if !strings.Contains(out.String(), want) || strings.Contains(out.String(), "[FAIL]") {
+		t.Errorf("report lacks %q:\n%s", want, out.String())
+	}
+	// A database that does not answer is the database check's finding only.
+	p := healthyProbes()
+	p.Secrets = func(context.Context) (auth.StoredSecrets, error) { return auth.StoredSecrets{}, errors.New("down") }
+	if err := runDoctor(context.Background(), cfg, p, &bytes.Buffer{}); err != nil {
+		t.Fatalf("a failed count is not a finding of its own: %v", err)
 	}
 }

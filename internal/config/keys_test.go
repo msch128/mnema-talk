@@ -41,7 +41,7 @@ func TestKeyRotationSettingsAreOptional(t *testing.T) {
 
 func TestKeyRotationSettingsMustBeDistinctKeys(t *testing.T) {
 	jwt, old := strings.Repeat("j", 40), strings.Repeat("o", 40)
-	key, oldKey := strings.Repeat("d", 40), strings.Repeat("p", 40)
+	key := strings.Repeat("d", 40)
 	refused := []struct {
 		name string
 		env  map[string]string
@@ -49,7 +49,6 @@ func TestKeyRotationSettingsMustBeDistinctKeys(t *testing.T) {
 	}{
 		{"the previous session secret repeats the current", map[string]string{"JWT_SECRET_PREVIOUS": jwt}, "JWT_SECRET_PREVIOUS is the same as JWT_SECRET"},
 		{"the previous data key repeats the current", map[string]string{"DATA_KEY": key, "DATA_KEY_PREVIOUS": key}, "DATA_KEY_PREVIOUS is the same as DATA_KEY"},
-		{"a previous data key without a data key", map[string]string{"DATA_KEY_PREVIOUS": oldKey}, "DATA_KEY_PREVIOUS is set without DATA_KEY"},
 		{"the data key is the session secret", map[string]string{"DATA_KEY": jwt}, "DATA_KEY must not be a session secret (it equals JWT_SECRET)"},
 		{"the data key is the previous session secret", map[string]string{"DATA_KEY": old, "JWT_SECRET_PREVIOUS": old}, "DATA_KEY must not be a session secret (it equals JWT_SECRET_PREVIOUS)"},
 		{"the previous data key is the session secret", map[string]string{"DATA_KEY": key, "DATA_KEY_PREVIOUS": jwt}, "DATA_KEY_PREVIOUS must not be a session secret (it equals JWT_SECRET)"},
@@ -75,6 +74,7 @@ func TestKeyRotationSettingsAreAsStrongAsTheSessionSecretInProduction(t *testing
 			{"JWT_SECRET_PREVIOUS", map[string]string{"JWT_SECRET_PREVIOUS": value}},
 			{"DATA_KEY", map[string]string{"DATA_KEY": value}},
 			{"DATA_KEY_PREVIOUS", map[string]string{"DATA_KEY": key, "DATA_KEY_PREVIOUS": value}},
+			{"DATA_KEY_PREVIOUS", map[string]string{"DATA_KEY_PREVIOUS": value}},
 		} {
 			_, err := FromEnv(productionKeyEnv(tc.env))
 			if err == nil || !strings.Contains(err.Error(), tc.variable+" must be a random string of at least 32 characters in production") {
@@ -85,5 +85,44 @@ func TestKeyRotationSettingsAreAsStrongAsTheSessionSecretInProduction(t *testing
 				t.Errorf("development, %s=%q: %v", tc.variable, value, err)
 			}
 		}
+	}
+}
+
+// The way back from a data key: the old value is named as the previous one
+// and DATA_KEY is left empty, so rotate-keys moves everything back under the
+// session secret.
+func TestAPreviousDataKeyIsAcceptedWithoutADataKey(t *testing.T) {
+	oldKey := strings.Repeat("p", 40)
+	for name, env := range map[string]func(map[string]string) func(string) (string, bool){"development": keyEnv, "production": productionKeyEnv} {
+		cfg, err := FromEnv(env(map[string]string{"DATA_KEY_PREVIOUS": oldKey}))
+		if err != nil || cfg.DataKey != "" || cfg.DataKeyPrevious != oldKey {
+			t.Fatalf("%s: %v", name, err)
+		}
+	}
+	if _, err := FromEnv(keyEnv(map[string]string{"DATA_KEY_PREVIOUS": strings.Repeat("j", 40)})); err == nil ||
+		!strings.Contains(err.Error(), "DATA_KEY_PREVIOUS must not be a session secret (it equals JWT_SECRET)") {
+		t.Fatalf("a previous data key that is the session secret: %v", err)
+	}
+}
+
+// The setup wizard judges an .env with RequiredProblems before the stack is
+// started: it reports what the start would refuse, all of it at once.
+func TestTheSetupPreCheckKnowsTheRotationKeys(t *testing.T) {
+	jwt := strings.Repeat("j", 40)
+	problems := RequiredProblems(productionKeyEnv(map[string]string{
+		"JWT_SECRET_PREVIOUS": jwt, "DATA_KEY": "short", "DATA_KEY_PREVIOUS": "change-me",
+	}))
+	got := map[string]bool{}
+	for _, p := range problems {
+		got[p.Var] = true
+		if !strings.HasPrefix(p.Text, p.Var+" ") || strings.Contains(p.Text, jwt) {
+			t.Errorf("a problem starts with its variable and never prints a value: %q", p.Text)
+		}
+	}
+	if len(problems) != 3 || !got["JWT_SECRET_PREVIOUS"] || !got["DATA_KEY"] || !got["DATA_KEY_PREVIOUS"] {
+		t.Fatalf("problems = %+v", problems)
+	}
+	if ps := RequiredProblems(productionKeyEnv(map[string]string{"DATA_KEY": strings.Repeat("d", 40)})); len(ps) != 0 {
+		t.Fatalf("a good data key: %+v", ps)
 	}
 }

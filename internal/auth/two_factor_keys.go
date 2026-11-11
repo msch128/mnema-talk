@@ -58,6 +58,8 @@ func (s *Sessions) sealingKey() dataKey {
 // readKeys are the keys stored data may still be under, the sealing key
 // first: the previous data key and the session secrets stay readable so a
 // rotation, and the move from the session secret to a DATA_KEY, lose nothing.
+// DATA_KEY_PREVIOUS without DATA_KEY is the way back: what a data key sealed
+// stays readable while new data goes under the session secret again.
 func (s *Sessions) readKeys() []dataKey {
 	keys := []dataKey{s.sealingKey()}
 	add := func(k dataKey) {
@@ -68,7 +70,7 @@ func (s *Sessions) readKeys() []dataKey {
 		}
 		keys = append(keys, k)
 	}
-	if s.DataKey != "" && s.DataKeyPrevious != "" {
+	if s.DataKeyPrevious != "" {
 		add(dataKey{root: s.DataKeyPrevious, id: dataKeyID(s.DataKeyPrevious)})
 	}
 	add(dataKey{root: s.Secret})

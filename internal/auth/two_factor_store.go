@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -36,11 +37,15 @@ type TwoFactorState struct {
 	RecoveryCodesRemaining int
 }
 
-// TwoFactorState reads whether and how the account signs in with a second factor.
+// TwoFactorState reads whether and how the account signs in with a second
+// factor. Recovery codes under a key that is no longer configured cannot
+// verify and are not counted; codes from before the key was recorded (no
+// fingerprint) are, because nothing tells which key they are under.
 func (s *Sessions) TwoFactorState(ctx context.Context, q db.Querier, id uuid.UUID) (TwoFactorState, error) {
 	var st TwoFactorState
 	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM user_totp WHERE user_id = $1 AND confirmed_at IS NOT NULL),
-		(SELECT COUNT(*) FROM recovery_codes WHERE user_id = $1 AND used_at IS NULL)`, id).
+		(SELECT COUNT(*) FROM recovery_codes WHERE user_id = $1 AND used_at IS NULL
+			AND (key_fingerprint IS NULL OR key_fingerprint = ANY($2)))`, id, s.readableFingerprints()).
 		Scan(&st.Enabled, &st.RecoveryCodesRemaining)
 	if !st.Enabled {
 		st.RecoveryCodesRemaining = 0
@@ -112,7 +117,8 @@ func (s *Sessions) ReplaceRecoveryCodes(ctx context.Context, q db.Querier, id uu
 		if err != nil {
 			return nil, err
 		}
-		tag, err := q.Exec(ctx, `INSERT INTO recovery_codes (user_id, code_hash) VALUES ($1, $2) ON CONFLICT DO NOTHING`, id, s.recoveryHash(id, code))
+		tag, err := q.Exec(ctx, `INSERT INTO recovery_codes (user_id, code_hash, key_fingerprint) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+			id, s.recoveryHash(id, code), int64(s.sealingKey().fingerprint()))
 		if err != nil {
 			return nil, err
 		}
@@ -195,16 +201,21 @@ func (s *Sessions) verifyTOTP(ctx context.Context, q db.Querier, id uuid.UUID, c
 	if !ok {
 		return false, nil
 	}
-	if stale {
-		// Read with a previous key: this use moves it to the current one.
-		if _, err := s.reseal(ctx, q, id, sealed, secret); err != nil {
-			return false, err
-		}
-	}
 	// One atomic update spends the step: a second use of the same code, or any
 	// older one, finds last_step already at or above it.
 	tag, err := q.Exec(ctx, `UPDATE user_totp SET last_step = $2 WHERE user_id = $1 AND last_step < $2`, id, step)
-	return err == nil && tag.RowsAffected() == 1, err
+	if err != nil || tag.RowsAffected() != 1 {
+		return false, err
+	}
+	if stale {
+		// Read with a previous key: this use moves it to the current one. The
+		// code was right, so a failed move must not fail the sign-in; the next
+		// use or `mnema-talk rotate-keys` tries again.
+		if _, err := s.reseal(ctx, q, id, sealed, secret); err != nil {
+			slog.Warn("could not seal an authenticator secret under the current key", "err", err)
+		}
+	}
+	return true, nil
 }
 
 func (s *Sessions) useRecoveryCode(ctx context.Context, q db.Querier, id uuid.UUID, code string) (bool, error) {

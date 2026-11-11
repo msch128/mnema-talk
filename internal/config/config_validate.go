@@ -33,9 +33,6 @@ func (c *Config) validate(portMin, portMax uint16) error {
 	if err := c.validateUpdater(); err != nil {
 		return err
 	}
-	if err := c.validateKeyRotation(); err != nil {
-		return err
-	}
 	if c.IsProduction() {
 		if err := c.refuseBroadTrustedProxies(); err != nil {
 			return err

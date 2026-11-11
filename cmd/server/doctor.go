@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/opwarn"
@@ -42,6 +43,9 @@ type doctorProbes struct {
 	// this container, which is how the running server shows itself.
 	UDPHeld func(port uint16) bool
 	TCPHeld func(port uint16) bool
+	// Secrets counts the stored authenticator secrets the configured keys
+	// cannot open.
+	Secrets func(ctx context.Context) (auth.StoredSecrets, error)
 }
 
 func doctorCommand(ctx context.Context, args []string, out io.Writer) error {
@@ -72,6 +76,16 @@ func systemDoctorProbes(cfg *config.Config) doctorProbes {
 			}
 			defer pool.Close()
 			return pool.Ping(ctx)
+		},
+		Secrets: func(ctx context.Context) (auth.StoredSecrets, error) {
+			ctx, cancel := context.WithTimeout(ctx, doctorProbeTimeout)
+			defer cancel()
+			pool, err := db.Connect(ctx, cfg.DatabaseURL)
+			if err != nil {
+				return auth.StoredSecrets{}, err
+			}
+			defer pool.Close()
+			return sessionKeys(cfg).CheckStoredSecrets(ctx, pool)
 		},
 		Storage: func(ctx context.Context) error {
 			ctx, cancel := context.WithTimeout(ctx, doctorProbeTimeout)
@@ -118,6 +132,15 @@ func runDoctor(ctx context.Context, cfg *config.Config, p doctorProbes, out io.W
 	worst := setupcheck.Report(out, checks)
 	for _, n := range notes {
 		fmt.Fprintln(out, n)
+	}
+	keys := sessionKeys(cfg).KeySetup()
+	fmt.Fprintf(out, "Authenticator secrets are sealed under %s (fingerprint %s; the server logs the same at start, `mnema-talk rotate-keys` prints it).\n", keys.Sealing, keys.Fingerprint)
+	// An unreachable database is a red check of its own above.
+	if found, err := p.Secrets(ctx); err == nil {
+		if note := storedSecretsNote(found); note != "" {
+			fmt.Fprintln(out, note)
+			worst = setupcheck.Fail
+		}
 	}
 	if worst == setupcheck.Fail {
 		return errDoctorRed
