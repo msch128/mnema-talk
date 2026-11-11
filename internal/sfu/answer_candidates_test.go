@@ -113,7 +113,7 @@ func TestSetAnswerKeepsRefusedCandidatesOutOfTheICEAgent(t *testing.T) {
 	s := newTestSFU(t)
 	c := newClient(t)
 	offers := make(chan webrtc.SessionDescription, 4)
-	_, peer, err := s.Join(uuid.New(), c.id, func(o webrtc.SessionDescription) { offers <- o }, nil)
+	_, peer, err := s.Join(uuid.New(), c.id, "", func(o webrtc.SessionDescription) { offers <- o }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestAnswerFailingAfterPionAppliedItKeepsItsCandidatesCounted(t *testing.T) 
 	s := newTestSFU(t)
 	c := newClient(t)
 	offers := make(chan webrtc.SessionDescription, 4)
-	_, peer, err := s.Join(uuid.New(), c.id, func(o webrtc.SessionDescription) { offers <- o }, nil)
+	_, peer, err := s.Join(uuid.New(), c.id, "", func(o webrtc.SessionDescription) { offers <- o }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

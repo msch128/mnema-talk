@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -27,7 +27,7 @@ type MarkAllReadRequest struct {
 // publishReadStateRefresh tells all of the user's sessions to reload their read
 // states and notification settings.
 func (a API) publishReadStateRefresh(userID uuid.UUID) {
-	a.Events.SendToUsers([]uuid.UUID{userID}, events.ReadState, map[string]any{"refresh": true})
+	a.Events.SendToUsers([]uuid.UUID{userID}, wire.ReadStateRefresh{Refresh: true})
 }
 
 // setNotifyLevel handles PUT /api/channels/{channelID}/notifications.
@@ -173,8 +173,7 @@ func (a API) setServerNotify(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	user := auth.UserFrom(r.Context())
-	in := ServerNotify{Level: req.Level, MutedUntil: req.MutedUntil, SuppressEveryone: req.SuppressEveryone}
-	if err := SetServerNotify(r.Context(), a.DB, user.ID, in); err != nil {
+	if err := SetServerNotify(r.Context(), a.DB, user.ID, ServerNotify(req)); err != nil {
 		return err
 	}
 	a.publishReadStateRefresh(user.ID)

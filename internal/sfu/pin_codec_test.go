@@ -1,6 +1,7 @@
 package sfu
 
 import (
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestPinCodecOrderKeepsTheFirstOffersOrderAcrossAnAnswer(t *testing.T) {
 		t.Fatal(err)
 	}
 	// An absent camera or screen line is skipped, the present one still pinned.
-	pinCodecOrder(nil, tr)
+	pinCodecOrder(slog.Default(), nil, tr)
 
 	first, err := server.CreateOffer(nil)
 	if err != nil {

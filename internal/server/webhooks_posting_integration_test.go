@@ -97,7 +97,7 @@ func TestWebhookMultipartWithFiles(t *testing.T) {
 	}
 
 	// A bad payload after a good file discards the file.
-	body, ct = multipartBody(t, nil, map[string][]byte{"c.png": png1x1})
+	body, _ = multipartBody(t, nil, map[string][]byte{"c.png": png1x1})
 	body.Reset()
 	mw = multipart.NewWriter(body)
 	hd = textproto.MIMEHeader{}

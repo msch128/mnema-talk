@@ -14,9 +14,9 @@
 // after each wire. Where the outside view cannot be sure (a member's exact
 // sign-of-life times), it gives the benefit of the doubt, so every report is
 // a real breach and some breaches may go unseen.
-import { decodeMlsMessage, encodeMlsMessage, type MLSMessage, type PublicMessage } from 'ts-mls'
+import { decodeMlsMessage, encodeMlsMessage, type ClientState, type MLSMessage, type PublicMessage } from 'ts-mls'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
-import { credentialIdentity, sameBytes } from './groupTree'
+import { credentialIdentity, sameBytes, treeLeafSigner } from './groupTree'
 import { isCapability } from './capability'
 import { isHeartbeat, openHeartbeat } from './heartbeat'
 import { mediaGroupId } from './bounds'
@@ -77,6 +77,15 @@ function effectsOf(message: PublicMessage, before: MediaVerification, after: Med
   }
   const removed = before.members.filter(id => !after.members.includes(id))
   return { adds, removed, empty: content.commit.proposals.length === 0 }
+}
+
+/**
+ * The committer took nothing: a renewal for an epoch it had already committed
+ * on top of came late, and it answered with a commit of its own, which moves
+ * its group one epoch on with the same members.
+ */
+function answeredLate(message: PublicMessage, before: MediaVerification, after: MediaVerification): boolean {
+  return message.content.epoch < BigInt(before.epoch - 1) && after.epoch === before.epoch + 1 && after.members.join(',') === before.members.join(',')
 }
 
 /** Whether `candidate` is the AES key `holder` uses: sealed with one, opened with the other, by the real frame code. */
@@ -143,16 +152,24 @@ export class GroupChecks implements SimHooks {
     const message = decode(wire)
     if (!message) return
     seen.heard.add(from)
-    if (message.wireformat === 'mls_key_package') return this.keyPackage(seen, from, wire, before)
+    if (message.wireformat === 'mls_key_package') return this.keyPackage(member, seen, from, wire, message.keyPackage.leafNode.signaturePublicKey, before)
     // Only a wire that gave the member other keys was taken.
     if (!after || epochKey(before) === epochKey(after)) return
     if (message.wireformat === 'mls_welcome') this.welcome(member, seen, from, before, after)
     else if (message.wireformat === 'mls_public_message') this.commit(member, seen, from, message.publicMessage, before, after)
   }
 
-  private keyPackage(seen: Seen, from: string, wire: Uint8Array, before: MediaVerification | null) {
+  /**
+   * A member of the group that sends a package with another signature key than
+   * its leaf has is coming back (a reload). The package it is in the group with,
+   * sent again, says nothing: a group of one repeats it on every tick.
+   */
+  private keyPackage(member: SimMember, seen: Seen, from: string, wire: Uint8Array, signer: Uint8Array, before: MediaVerification | null) {
     seen.relayed.set(from, [...(seen.relayed.get(from) ?? []), new Uint8Array(wire)])
-    if (before?.members.includes(from)) seen.restarting.add(from)
+    if (!before?.members.includes(from)) return
+    const state = (member.group as unknown as { state: ClientState | null } | null)?.state
+    const leaf = state ? treeLeafSigner(state, from) : null
+    if (!leaf || !sameBytes(leaf, signer)) seen.restarting.add(from)
   }
 
   /** A heartbeat is a sign of life when the sender's leaf of this epoch signed it and it is newer than the last. */
@@ -180,9 +197,11 @@ export class GroupChecks implements SimHooks {
 
   private commit(member: SimMember, seen: Seen, from: string, message: PublicMessage, before: MediaVerification | null, after: MediaVerification) {
     if (!before) return this.fail(member, `[4] took a commit from ${name(from)} without holding a group`)
+    if (answeredLate(message, before, after)) return
     const effects = effectsOf(message, before, after)
     if (!effects) return this.fail(member, `[4] took a commit from ${name(from)} that does more than add or remove`)
     if (!before.members.includes(from)) this.fail(member, `[4] took a commit from ${name(from)}, who is not in its group`)
+    this.checkStep(member, from, message, before, after, effects)
     this.checkSender(member, seen, from, before, effects)
     this.checkAdds(member, seen, from, effects)
     this.checkRemoves(member, seen, effects)
@@ -194,6 +213,25 @@ export class GroupChecks implements SimHooks {
         seen.alive.set(add.id, now)
         seen.beats.delete(add.id)
       }
+    }
+  }
+
+  /**
+   * A commit moves the group one epoch on, and whoever is new in it is someone
+   * the commit adds. The one exception is the commit that wins against a
+   * renewal this member took for the same epoch: it leads from the epoch
+   * before to the one the member is in, and a renewal changed no member.
+   */
+  private checkStep(member: SimMember, from: string, message: PublicMessage, before: MediaVerification, after: MediaVerification, effects: Effects) {
+    const rollback = message.content.epoch === BigInt(before.epoch - 1)
+    const fits = rollback ? after.epoch === before.epoch : message.content.epoch === BigInt(before.epoch) && after.epoch === before.epoch + 1
+    if (!fits) this.fail(member, `[4] took a commit from ${name(from)} for epoch ${message.content.epoch} that led from epoch ${before.epoch} to ${after.epoch}`)
+    const added = new Set(effects.adds.map(add => add.id))
+    for (const id of after.members) {
+      if (!before.members.includes(id) && !added.has(id)) this.fail(member, `[4] took a commit from ${name(from)} after which ${name(id)} is in the group, whom it does not add`)
+    }
+    for (const id of added) {
+      if (id && !after.members.includes(id)) this.fail(member, `[4] took a commit from ${name(from)} that adds ${name(id)}, who is not in the group after it`)
     }
   }
 

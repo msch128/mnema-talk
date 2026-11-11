@@ -112,27 +112,10 @@ func (s *Service) GlobalUploadLimitBytes(ctx context.Context) (int64, error) {
 	return int64(snap.GlobalUploadMB(s.UploadCeilingMB())) << 20, nil
 }
 
-// UploadSettings is the global upload limit as the Owner sees it.
-type UploadSettings struct {
-	// MaxUploadMB is the effective global limit.
-	MaxUploadMB int `json:"max_upload_mb" minimum:"1"`
-	// CeilingMB is the operator's hard ceiling (MAX_UPLOAD_SIZE_MB).
-	CeilingMB int `json:"ceiling_mb" minimum:"1"`
-}
-
-// UploadSettings returns the effective global limit and the ceiling.
-func (s *Service) UploadSettings(ctx context.Context) (UploadSettings, error) {
-	snap, err := s.Snapshot(ctx)
-	if err != nil {
-		return UploadSettings{}, err
-	}
-	c := s.UploadCeilingMB()
-	return UploadSettings{MaxUploadMB: snap.GlobalUploadMB(c), CeilingMB: c}, nil
-}
-
-// SetGlobalUploadMB stores the global upload limit (nil = back to the
-// ceiling). Owner only; everybody's effective limit may change.
-func (s *Service) SetGlobalUploadMB(ctx context.Context, actor Subject, mb *int) (UploadSettings, error) {
+// SetUploadSettings stores the global upload limit (nil = back to the
+// ceiling) and, when strip is given, whether uploaded pictures lose their
+// metadata. Owner only; everybody's effective limit may change.
+func (s *Service) SetUploadSettings(ctx context.Context, actor Subject, mb *int, strip *bool) (UploadSettings, error) {
 	if err := RequireOwner(actor); err != nil {
 		return UploadSettings{}, err
 	}
@@ -140,7 +123,7 @@ func (s *Service) SetGlobalUploadMB(ctx context.Context, actor Subject, mb *int)
 		return UploadSettings{}, httpx.ErrInvalidInput(fmt.Sprintf("max_upload_mb must be between 1 and %d", s.UploadCeilingMB()))
 	}
 	err := s.Locked(ctx, actor, func(tx pgx.Tx, _ *Snapshot) error {
-		_, err := tx.Exec(ctx, `UPDATE instance_settings SET max_upload_mb = $1, updated_at = NOW()`, mb)
+		_, err := tx.Exec(ctx, `UPDATE instance_settings SET max_upload_mb = $1, strip_image_metadata = COALESCE($2, strip_image_metadata), updated_at = NOW()`, mb, strip)
 		return err
 	})
 	if err != nil {

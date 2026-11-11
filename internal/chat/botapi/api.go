@@ -3,7 +3,6 @@ package botapi
 import (
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -18,9 +17,8 @@ type API struct {
 	Events events.Publisher
 	// Guard decides what the bot may see and do.
 	Guard core.Guard
-	// Online resolves @here in bot messages; nil means nobody is online.
-	Online mentions.OnlineSource
-	// Messages and Channels are the APIs of the same handler.
+	// Messages and Channels are the APIs of the same handler. A bot's message
+	// is posted by Messages.Posts.
 	Messages *messages.API
 	Channels *channels.API
 }

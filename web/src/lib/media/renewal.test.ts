@@ -206,6 +206,59 @@ describe('a member renewing its own leaf', () => {
     await closeAll(groups.values())
   }, 60_000)
 
+  it('keeps what the committer did on top of a renewal when a rival renewal for the old epoch comes late', async () => {
+    const { groups, alice, bob, carol } = await trio()
+    vi.setSystemTime(START + DUE)
+    const fromBob = await bob.maintain()
+    const fromCarol = await carol.maintain()
+    await alice.receive(carolId, fromCarol.wires[0] as Uint8Array)
+    // Bob leaves the Talk, and Alice removes him: a commit on top of Carol's renewal.
+    const removed = await alice.sync([aliceId, carolId])
+    expect(removed.verification?.members).toEqual([aliceId, carolId])
+    // Bob's renewal would have beaten Carol's, but the epoch both were for is two commits back:
+    // going back to it would undo the removal.
+    const late = await alice.receive(bobId, fromBob.wires[0] as Uint8Array)
+    // She does not go back; she moves one epoch on, with a commit of her own (see the next test).
+    expect(late.epoch).toBe((removed.epoch ?? 0) + 1)
+    expect(late.verification?.members).toEqual([aliceId, carolId])
+    await closeAll(groups.values())
+  }, 60_000)
+
+  it('commits once more when the rival renewal comes late, so members that took it start over and are let in again', async () => {
+    const { groups, alice, bob, carol } = await trio()
+    vi.setSystemTime(START + DUE)
+    const fromBob = await bob.maintain()
+    const fromCarol = await carol.maintain()
+    const left = [aliceId, carolId]
+    // The server's order: Carol's renewal, Bob's renewal, Alice's removal of Bob, which she built on Carol's.
+    await alice.receive(carolId, fromCarol.wires[0] as Uint8Array)
+    const removed = await alice.sync(left)
+    expect(kinds(removed)).toEqual(['mls_public_message'])
+    // Carol goes back to Bob's renewal, the lower id's, and cannot follow the removal from there.
+    await carol.receive(bobId, fromBob.wires[0] as Uint8Array)
+    carol.hint(left)
+    const stuck = await carol.receive(aliceId, removed.wires[0] as Uint8Array)
+    expect(stuck.verification?.members).toEqual(roster)
+    // Bob's renewal reaches Alice last. She stays where she is and commits again.
+    const answer = await alice.receive(bobId, fromBob.wires[0] as Uint8Array)
+    expect(kinds(answer)).toEqual(['mls_public_message'])
+    expect(answer.epoch).toBe((removed.epoch ?? 0) + 1)
+    expect(answer.verification?.members).toEqual(left)
+    // Carol sees a commit for an epoch she has not reached, starts over and is let in again. Bob stays out.
+    const over = await carol.receive(aliceId, answer.wires[0] as Uint8Array)
+    expect(over.key).toBeNull()
+    expect(kinds(over)).toEqual(['mls_key_package'])
+    await carol.sync(left)
+    const back = await alice.receive(carolId, over.wires[0] as Uint8Array)
+    expect(kinds(back)).toEqual(['mls_welcome', 'mls_public_message'])
+    const joined = await carol.receive(aliceId, back.wires[0] as Uint8Array)
+    expect(joined.verification?.members).toEqual(left)
+    expect(joined.verification?.code).toBe(back.verification?.code)
+    // A second copy of the late renewal is answered by nothing.
+    expect(kinds(await alice.receive(bobId, fromBob.wires[0] as Uint8Array))).toEqual([])
+    await closeAll(groups.values())
+  }, 60_000)
+
   it('ignores a rival commit for that epoch that does not verify, or that loses', async () => {
     const { groups, alice, bob, carol } = await trio()
     vi.setSystemTime(START + DUE)

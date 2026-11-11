@@ -148,6 +148,34 @@ export interface Script {
   agreeWithinMs?: number
 }
 
+/**
+ * Members 2 and 3 are 2.4 s apart, longer than the turn-taking that keeps
+ * leaf renewals from meeting: both renew for the same epoch, and member 1
+ * hears the higher id's renewal first.
+ */
+export const RENEWAL_RACE: Script = {
+  latency: { 1: 0, 2: 1200, 3: 1200 },
+  steps: [[0, 'join', 1], [3000, 'join', 2], [3100, 'join', 3]],
+  quietAt: 12_000,
+}
+
+/** The senders of renewals (commits that hold nothing) per epoch, as the trace shows them delivered. */
+export function renewalsByEpoch(result: SimResult): Map<string, Set<string>> {
+  const seen = new Map<string, Set<string>>()
+  for (const line of result.trace) {
+    const match = /deliver (m\d+)#\d+->\S+ commit@(\d+)\[\]/.exec(line)
+    if (!match) continue
+    const [, sender, epoch] = match as unknown as [string, string, string]
+    seen.set(epoch, (seen.get(epoch) ?? new Set()).add(sender))
+  }
+  return seen
+}
+
+/** Whether a member that held keys lost its group at some point. */
+export function someoneStartedOver(result: SimResult): boolean {
+  return result.trace.some(line => line.endsWith(' keys none'))
+}
+
 /** A scripted run on the honest relay: fixed latencies, nothing dropped, duplicated or reordered. */
 export async function runScript(script: Script): Promise<SimResult> {
   const checks = new GroupChecks()

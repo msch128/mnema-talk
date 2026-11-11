@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/emojitext"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -25,7 +26,11 @@ func EditMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, 
 		return err
 	}
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		return EditMessageTx(ctx, tx, online, messageID, userID, content)
+		channel, err := EditMessageTx(ctx, tx, online, messageID, userID, content)
+		if err != nil {
+			return err
+		}
+		return RecordMessageEvent(ctx, p, tx, events.MessageUpdate, channel, messageID, nil)
 	})
 	if err == nil {
 		pending.Commit(ctx, messageID)
@@ -34,39 +39,40 @@ func EditMessage(ctx context.Context, p *db.Pool, online mentions.OnlineSource, 
 }
 
 // EditMessageTx checks that userID may edit the message, keeps the replaced
-// version and stores the new text with its mentions.
-func EditMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) error {
-	var author uuid.UUID
+// version and stores the new text with its mentions. It returns the message's
+// channel.
+func EditMessageTx(ctx context.Context, tx pgx.Tx, online mentions.OnlineSource, messageID, userID uuid.UUID, content string) (uuid.UUID, error) {
+	var author, channel uuid.UUID
 	var hasMedia, isPoll, forwarded bool
 	err := tx.QueryRow(ctx, `
-		SELECT user_id, EXISTS (SELECT 1 FROM media WHERE message_id = messages.id),
+		SELECT user_id, channel_id, EXISTS (SELECT 1 FROM media WHERE message_id = messages.id),
 		       EXISTS (SELECT 1 FROM polls WHERE message_id = messages.id), forwarded
-		FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&author, &hasMedia, &isPoll, &forwarded)
+		FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&author, &channel, &hasMedia, &isPoll, &forwarded)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return core.ErrMessageNotFound
+		return uuid.Nil, core.ErrMessageNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("load message: %w", err)
+		return uuid.Nil, fmt.Errorf("load message: %w", err)
 	}
 	if author != userID {
-		return httpx.ErrForbidden("only the author can edit this message")
+		return uuid.Nil, httpx.ErrForbidden("only the author can edit this message")
 	}
 	if isPoll {
-		return httpx.ErrInvalidInput("a poll cannot be edited; delete it and ask again")
+		return uuid.Nil, httpx.ErrInvalidInput("a poll cannot be edited; delete it and ask again")
 	}
 	if content == "" && !hasMedia && !forwarded {
 		_, err := core.ValidateContent(content, false)
-		return err
+		return uuid.Nil, err
 	}
 	if err := recordReplacedVersion(ctx, tx, messageID); err != nil {
-		return err
+		return uuid.Nil, err
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE messages SET content = $1, is_edited = TRUE, updated_at = NOW()
 		WHERE id = $2`, content, messageID); err != nil {
-		return fmt.Errorf("update message: %w", err)
+		return uuid.Nil, fmt.Errorf("update message: %w", err)
 	}
-	return mentions.RecordMentions(ctx, tx, online, messageID, userID, content)
+	return channel, mentions.RecordMentions(ctx, tx, online, messageID, userID, content)
 }
 
 // checkEditAutomod applies the automod rules to the new text of an edit. Only
@@ -97,11 +103,11 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 		// Locking the message first blocks a concurrent thread reply or
 		// upload (their foreign keys need a share lock on it) until we are
 		// done, so every attachment the cascade removes is in keys.
-		author, ownerContent, err := lockMessageForDelete(ctx, tx, messageID)
+		m, err := lockMessageForDelete(ctx, tx, messageID)
 		if err != nil {
 			return err
 		}
-		if err := checkDeleteAuthorized(user, author, ownerContent, canManage); err != nil {
+		if err := checkDeleteAuthorized(user, m.author, m.ownerContent, canManage); err != nil {
 			return err
 		}
 		if err := CollectKeys(ctx, tx, &keys, `
@@ -112,7 +118,7 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 		if _, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = $1`, messageID); err != nil {
 			return fmt.Errorf("delete message: %w", err)
 		}
-		return nil
+		return RecordMessageDelete(ctx, p, tx, m.channel, messageID, m.parent)
 	})
 	if err != nil {
 		return nil, err
@@ -120,24 +126,30 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 	return keys, nil
 }
 
-func lockMessageForDelete(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (uuid.UUID, bool, error) {
-	var author uuid.UUID
-	var ownerContent bool
+// lockedMessage is what deleting a message needs to know about it.
+type lockedMessage struct {
+	author, channel uuid.UUID
+	parent          *uuid.UUID
+	ownerContent    bool
+}
+
+func lockMessageForDelete(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (lockedMessage, error) {
+	var m lockedMessage
 	// The Owner's words (the message or a reply of theirs in its thread)
 	// are only the Owner's to remove.
 	err := tx.QueryRow(ctx, `
-		SELECT m.user_id,
+		SELECT m.user_id, m.channel_id, m.parent_id,
 		       EXISTS (SELECT 1 FROM users a WHERE a.id = m.user_id AND a.role = 'admin')
 		    OR EXISTS (SELECT 1 FROM messages r JOIN users ru ON ru.id = r.user_id
 		               WHERE r.parent_id = m.id AND ru.role = 'admin')
-		FROM messages m WHERE m.id = $1 FOR UPDATE OF m`, messageID).Scan(&author, &ownerContent)
+		FROM messages m WHERE m.id = $1 FOR UPDATE OF m`, messageID).Scan(&m.author, &m.channel, &m.parent, &m.ownerContent)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return uuid.Nil, false, core.ErrMessageNotFound
+		return m, core.ErrMessageNotFound
 	}
 	if err != nil {
-		return uuid.Nil, false, fmt.Errorf("lock message: %w", err)
+		return m, fmt.Errorf("lock message: %w", err)
 	}
-	return author, ownerContent, nil
+	return m, nil
 }
 
 func checkDeleteAuthorized(user *auth.User, author uuid.UUID, ownerContent, canManage bool) error {
@@ -198,7 +210,8 @@ func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 		// The row lock serializes toggles on one message, so concurrent
 		// adds cannot overshoot the limits. NO KEY UPDATE still lets replies,
 		// uploads and quotes (FOR KEY SHARE through their foreign keys) in.
-		if err := lockMessage(ctx, tx, messageID); err != nil {
+		channel, err := lockMessage(ctx, tx, messageID)
+		if err != nil {
 			return err
 		}
 		present, err := reactionPresent(ctx, tx, messageID, userID, emoji)
@@ -207,18 +220,14 @@ func changeReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 		}
 		changed = true
 		if present {
-			return removeReaction(ctx, tx, messageID, userID, emoji)
+			err = removeReaction(ctx, tx, messageID, userID, emoji)
+		} else {
+			err = addReactionAs(ctx, tx, messageID, userID, emoji, canAdd)
 		}
-		if !canAdd {
-			return httpx.ErrForbidden("missing permission: add reactions")
-		}
-		if _, err := core.ValidateEmoji(emoji); err != nil {
+		if err != nil {
 			return err
 		}
-		if err := checkDMReactionAllowed(ctx, tx, messageID, userID); err != nil {
-			return err
-		}
-		return addReaction(ctx, tx, messageID, userID, emoji)
+		return recordReactions(ctx, p, tx, channel, messageID)
 	})
 	if err != nil {
 		return nil, false, err
@@ -244,17 +253,33 @@ func removeReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID,
 	return nil
 }
 
-// lockMessage takes the message's row lock (errMessageNotFound when it is gone).
-func lockMessage(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) error {
-	var one int
-	err := tx.QueryRow(ctx, `SELECT 1 FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&one)
+// lockMessage takes the message's row lock (errMessageNotFound when it is
+// gone) and returns its channel.
+func lockMessage(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (uuid.UUID, error) {
+	var channel uuid.UUID
+	err := tx.QueryRow(ctx, `SELECT channel_id FROM messages WHERE id = $1 FOR NO KEY UPDATE`, messageID).Scan(&channel)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return core.ErrMessageNotFound
+		return uuid.Nil, core.ErrMessageNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("lock message: %w", err)
+		return uuid.Nil, fmt.Errorf("lock message: %w", err)
 	}
-	return nil
+	return channel, nil
+}
+
+// addReactionAs adds the reaction when userID may: the permission, the emoji
+// and the rules of a conversation are checked first.
+func addReactionAs(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string, canAdd bool) error {
+	if !canAdd {
+		return httpx.ErrForbidden("missing permission: add reactions")
+	}
+	if _, err := core.ValidateEmoji(emoji); err != nil {
+		return err
+	}
+	if err := checkDMReactionAllowed(ctx, tx, messageID, userID); err != nil {
+		return err
+	}
+	return addReaction(ctx, tx, messageID, userID, emoji)
 }
 
 func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) error {
@@ -280,7 +305,7 @@ func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, em
 }
 
 // ReactionSummary loads one message's reactions, in the order they were first given.
-func ReactionSummary(ctx context.Context, p *db.Pool, messageID uuid.UUID) ([]core.ReactionSummary, error) {
+func ReactionSummary(ctx context.Context, p db.Querier, messageID uuid.UUID) ([]core.ReactionSummary, error) {
 	msgs := []core.Message{{Reactions: []core.ReactionSummary{}}}
 	if err := loadReactions(ctx, p, msgs, map[uuid.UUID]int{messageID: 0}, []uuid.UUID{messageID}); err != nil {
 		return nil, err

@@ -1,10 +1,11 @@
 import type { Page } from '@playwright/test'
-import { test, expect } from './fixtures'
+import { test, expect, provokeCspViolation } from './fixtures'
 import { apiFetch, responseString } from './helpers'
 
 // The shared fixtures fail every spec on a Content-Security-Policy violation.
-// This spec makes sure the places that used to need `style-src 'unsafe-inline'`
-// are actually visited under the real policy and still look right: the emoji
+// This spec makes sure the places that used to need `style-src 'unsafe-inline'`,
+// and the ones that write HTML or start workers under Trusted Types, are
+// actually visited under the real policy and still look right: the emoji
 // picker (a third-party web component with a shadow root), Markdown with code
 // blocks, the admin panels and the API reference.
 
@@ -32,6 +33,49 @@ test('the policy has no inline style sources', async ({ page }) => {
   expect(csp).toContain("style-src 'self';")
   expect(csp).toContain("style-src-attr 'none'")
   expect(csp).not.toContain('unsafe-inline')
+})
+
+test('the policy requires Trusted Types: a plain string at an HTML sink is refused', async ({ page, browserName }) => {
+  const response = await page.goto('/')
+  const csp = response?.headers()['content-security-policy'] ?? ''
+  expect(csp).toContain("require-trusted-types-for 'script'")
+  expect(csp).toContain('trusted-types vue mnema-markdown mnema-script-url mnema-emoji-picker')
+  expect(response?.headers()['content-security-policy-report-only']).toBeUndefined()
+
+  provokeCspViolation(/require-trusted-types-for .*mnema-probe|TrustedHTML/)
+  const outcome = await page.evaluate(() => {
+    if (!('trustedTypes' in window)) return 'no Trusted Types'
+    try {
+      document.createElement('div').innerHTML = '<i>mnema-probe</i>'
+      return 'accepted'
+    } catch {
+      return 'refused'
+    }
+  })
+  // An engine without Trusted Types ignores the directives and behaves as before.
+  expect(outcome).not.toBe('accepted')
+  if (browserName === 'chromium') expect(outcome).toBe('refused')
+})
+
+test('every policy name is taken on the sign-in screen, before the emoji picker has loaded', async ({ page, browserName }) => {
+  await page.goto('/')
+  await expect(page.getByRole('dialog').getByTestId('login-heading')).toBeVisible()
+  provokeCspViolation(/trusted-types|TrustedTypePolicy/i)
+  const taken = await page.evaluate(() => {
+    const factory = (window as { trustedTypes?: { createPolicy(name: string, rules: object): unknown } }).trustedTypes
+    if (!factory) return null
+    const free: string[] = []
+    for (const name of ['vue', 'mnema-markdown', 'mnema-script-url', 'mnema-emoji-picker', 'default', 'mnema-probe']) {
+      try {
+        factory.createPolicy(name, { createHTML: (html: string) => html, createScriptURL: (url: string) => url })
+        free.push(name)
+      } catch { /* refused: taken, or not named by the policy */ }
+    }
+    return free
+  })
+  // An engine without Trusted Types has no policies at all.
+  if (browserName === 'chromium') expect(taken).not.toBeNull()
+  if (taken) expect(taken).toEqual([])
 })
 
 test('emoji picker, Markdown, admin panels and API reference run under the policy', async ({ page }) => {

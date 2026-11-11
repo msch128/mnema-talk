@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
@@ -66,7 +67,7 @@ func TestVoiceJoinFrameWithTakeoverMovesVoiceBetweenSessions(t *testing.T) {
 	if a.closed.Load() {
 		t.Fatal("the old session was disconnected")
 	}
-	a.SendEvent("message_create", map[string]any{"id": "m"})
+	a.SendEvent(eventstest.Named("message_create", map[string]any{"id": "m"}))
 	if len(sentEvents(t, a, "message_create")) != 1 {
 		t.Fatal("the old session lost its text events")
 	}

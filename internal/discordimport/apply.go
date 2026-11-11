@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -197,8 +198,8 @@ func (im *Importer) Apply(ctx context.Context, sub perm.Subject, actorName strin
 	}
 	im.Perms.Changed(nil)
 	if im.Events != nil {
-		im.Events.Broadcast(events.ChannelsChanged, nil)
-		im.Events.Broadcast(events.RolesChanged, nil)
+		im.Events.Broadcast(wire.ChannelsChanged{})
+		im.Events.Broadcast(wire.RolesChanged{})
 	}
 	return rec, nil
 }

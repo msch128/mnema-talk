@@ -78,7 +78,8 @@ func TestTargetTranslation(t *testing.T) {
 func TestRateLimiter(t *testing.T) {
 	l := newRateLimiter(60, 2, 2)
 	now := time.Unix(0, 0)
-	if !l.allow("a", now) || !l.allow("a", now) || l.allow("a", now) {
+	first, second, third := l.allow("a", now), l.allow("a", now), l.allow("a", now)
+	if !first || !second || third {
 		t.Fatal("burst of 2 not enforced")
 	}
 	if !l.allow("a", now.Add(time.Second)) {

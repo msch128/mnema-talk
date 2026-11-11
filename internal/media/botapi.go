@@ -1,9 +1,14 @@
 package media
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -27,6 +32,7 @@ func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
 // @Param content formData string false "Optional caption." maxlength(4000)
 // @Param parent_id formData string false "Thread root message ID (reply in a thread)." Format(uuid)
 // @Param reply_to_id formData string false "Quoted message ID." Format(uuid)
+// @Param allowed_mentions formData string false "The allowed_mentions object of the message route (parse, users, roles), JSON-encoded. Without it the caption notifies the members it names, never @all, @here or a role."
 // @Success 201 {object} core.Message "Created message."
 // @Failure 400 {object} httpx.DiscordError "Invalid form body (50035)."
 // @Failure 401 {object} httpx.DiscordError "Missing or invalid token (0)."
@@ -42,5 +48,31 @@ func (h *Handler) botUpload(w http.ResponseWriter, r *http.Request) error {
 	if h.Store == nil {
 		return httpx.ErrUnavailable("file storage is not configured")
 	}
-	return h.upload(w, r)
+	return h.uploadAs(w, r, func(r *http.Request, ch uuid.UUID) (context.Context, captionContext, error) {
+		ctx, withMentions, err := messages.BotUploadContext(h.Perms, r, ch)
+		if err != nil {
+			return nil, nil, err
+		}
+		return ctx, func(raw string) (context.Context, error) {
+			am, err := parseAllowedMentions(raw)
+			if err != nil {
+				return nil, err
+			}
+			return withMentions(am), nil
+		}, nil
+	})
+}
+
+// parseAllowedMentions reads the allowed_mentions form field: the JSON object
+// the message route takes in its body. Absent means the default.
+func parseAllowedMentions(raw string) (*messages.AllowedMentions, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	var am *messages.AllowedMentions
+	dec := json.NewDecoder(strings.NewReader(raw))
+	if err := dec.Decode(&am); err != nil || dec.More() {
+		return nil, httpx.ErrInvalidInput("allowed_mentions must be a JSON object")
+	}
+	return am, nil
 }

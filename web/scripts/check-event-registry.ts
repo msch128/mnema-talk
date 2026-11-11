@@ -1,6 +1,8 @@
 // The server's WebSocket event registry (internal/events/types.go, pinned by
 // internal/events/testdata/events.golden.json) and web/src/types/events.ts must
-// name the same events. Event names are public API (doc/api-stability.md).
+// name the same events, and every server event must have a shape generated
+// from its Go type (api/events.json, web/src/types/eventShapes.ts). Event names
+// and payloads are public API (doc/api-stability.md).
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
@@ -27,12 +29,23 @@ export function differences(direction: string, goEvents: string[], tsEvents: str
   ]
 }
 
+/** Server events without a generated shape, and shapes of events the registry does not know. */
+export function shapeDifferences(goEvents: string[], shaped: string[]): string[] {
+  const go = new Set(goEvents)
+  const have = new Set(shaped)
+  return [
+    ...goEvents.filter(name => !have.has(name)).map(name => `server event ${name} has no shape in eventShapes.ts (no Go event type is registered for it)`),
+    ...shaped.filter(name => !go.has(name)).map(name => `eventShapes.ts has a shape for ${name}, which is not in the Go registry`)
+  ]
+}
+
 function main(): void {
   const golden = JSON.parse(read('../../internal/events/testdata/events.golden.json')) as Golden
   const source = read('../src/types/events.ts')
   const server = Object.values(golden.server)
   const problems = [
     ...differences('server', server, interfaceKeys(source, 'ServerEventPayloads')),
+    ...shapeDifferences(server, interfaceKeys(read('../src/types/eventShapes.ts'), 'ServerEventShapes')),
     ...differences('client', Object.values(golden.client), interfaceKeys(source, 'ClientEventPayloads'))
   ]
   if (problems.length > 0) {

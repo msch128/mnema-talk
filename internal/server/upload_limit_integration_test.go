@@ -197,3 +197,37 @@ func TestDeletingTheMessageDoesNotRefundTheDailyUploadBudget(t *testing.T) {
 		t.Fatalf("second 600 KB after deleting the message: %d %s; deleted messages still count", res.status, res.body)
 	}
 }
+
+// The Owner's switch for removing picture metadata sits next to the limit: on
+// by default, changed only when it is sent, and nobody else's to change.
+func TestStripImageMetadataSetting(t *testing.T) {
+	a := newApp(t, false)
+	owner := a.seedAdmin()
+	member := a.register(owner, "alice")
+	shows := func(res response, want string) bool {
+		return res.status == http.StatusOK && strings.Contains(string(res.body), `"strip_image_metadata":`+want)
+	}
+
+	if res := owner.get("/api/admin/upload-limit"); !shows(res, "true") {
+		t.Fatalf("default: %d %s", res.status, res.body)
+	}
+	if res := owner.put("/api/admin/upload-limit", map[string]any{"max_upload_mb": nil, "strip_image_metadata": false}); !shows(res, "false") {
+		t.Fatalf("switch off: %d %s", res.status, res.body)
+	}
+	// A client that only knows the limit leaves the switch where it is.
+	if res := owner.put("/api/admin/upload-limit", map[string]any{"max_upload_mb": 1}); !shows(res, "false") {
+		t.Fatalf("limit only: %d %s", res.status, res.body)
+	}
+	if res := owner.get("/api/admin/upload-limit"); !shows(res, "false") {
+		t.Fatalf("read back: %d %s", res.status, res.body)
+	}
+	if res := member.put("/api/admin/upload-limit", map[string]any{"max_upload_mb": nil, "strip_image_metadata": true}); res.status != http.StatusForbidden {
+		t.Fatalf("member: %d %s", res.status, res.body)
+	}
+	if res := owner.put("/api/admin/upload-limit", map[string]any{"max_upload_mb": nil, "strip_image_metadata": true}); !shows(res, "true") {
+		t.Fatalf("switch on: %d %s", res.status, res.body)
+	}
+	if res := owner.get("/api/admin/audit-log"); res.status != http.StatusOK || !strings.Contains(string(res.body), `strip_image_metadata`) {
+		t.Fatalf("the change is not in the audit log: %d %s", res.status, res.body)
+	}
+}

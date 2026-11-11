@@ -72,7 +72,7 @@ describe('media transform guard', () => {
     expect(guard.armReceiver(receiver, 'channel', 'bob')).toBe(true)
     expect(created.workers).toHaveLength(1)
     expect(created.workers[0]?.options).toEqual({ type: 'module' })
-    expect(String(created.workers[0]?.url)).toContain('mediaFrameWorker.ts')
+    expect(created.workers[0]?.url).toContain('mediaFrameWorker')
     expect(sender.transform).toBe(created.transforms[0])
     expect(created.transforms[0]?.transfer).toEqual([created.channels[0]?.port2])
     expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 4, key, seq: 1 })

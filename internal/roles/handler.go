@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -89,7 +90,7 @@ func (h *Handler) listRoles(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *Handler) rolesChanged() { h.Events.Broadcast(events.RolesChanged, nil) }
+func (h *Handler) rolesChanged() { h.Events.Broadcast(wire.RolesChanged{}) }
 
 // createRole handles POST /api/admin/roles.
 //

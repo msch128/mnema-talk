@@ -1,7 +1,6 @@
 package sfu
 
 import (
-	"log/slog"
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/metrics"
@@ -92,7 +91,7 @@ func (b *ingressBucket) admit(n int, now time.Time) ingressVerdict {
 // ingressAbuse closes the connection of a publisher that kept exceeding its
 // limits for many seconds.
 func ingressAbuse(info *TrackInfo) {
-	slog.Warn("sfu publisher exceeds the ingress limit, closing its connection", "user", info.SenderID, "source", string(info.Source))
+	info.logger().Warn("sfu publisher exceeds the ingress limit, closing its connection", "user", info.SenderID, "source", string(info.Source))
 	metrics.SFUIngressDropped.With("closed").Inc()
 	if info.publisher != nil && info.publisher.PC != nil {
 		_ = info.publisher.PC.Close()

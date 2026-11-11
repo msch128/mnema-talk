@@ -22,7 +22,7 @@ func cmd(name string, available bool) fake {
 }
 
 func TestIDsAreStablePerNameAndDifferBetweenNames(t *testing.T) {
-	if ID("poll") != ID("poll") {
+	if first, second := ID("poll"), ID("poll"); first != second {
 		t.Fatal("the ID of a command changes between calls")
 	}
 	if ID("poll") == ID("me") {

@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -235,10 +235,10 @@ func TestOnlyMessageCreationsArePushed(t *testing.T) {
 	alice := e.member("alice")
 	e.member("bob")
 	msg := message(alice, e.general, "edited")
-	e.svc.Observe(e.general, events.MessageUpdate, msg)
-	e.svc.Observe(e.general, events.MessageDelete, map[string]any{"id": msg.ID})
-	e.svc.Observe(e.general, events.MessageCreate, "not a message")
-	e.svc.Observe(e.general, events.MessageCreate, &msg) // a pointer works like a value
+	e.svc.Observe(e.general, (*core.MessageUpdate)(&msg))
+	e.svc.Observe(e.general, wire.MessageDelete{ID: msg.ID})
+	e.svc.Observe(e.general, (*core.MessageCreate)(nil))
+	e.svc.Observe(e.general, (*core.MessageCreate)(&msg))
 	e.pushedTo("/device/bob", 1)
 	settle()
 	if n := len(e.requestsTo("/device/bob")); n != 1 {

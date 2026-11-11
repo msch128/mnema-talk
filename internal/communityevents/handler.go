@@ -99,9 +99,9 @@ func (h *Handler) broadcast(ev *CommunityEvent) {
 	shared.Signups = nil
 	ev = &shared
 	if ev.ChannelID != nil {
-		h.Events.BroadcastChannel(*ev.ChannelID, events.EventUpdate, ev)
+		h.Events.BroadcastChannel(*ev.ChannelID, (*EventUpdate)(ev))
 	} else {
-		h.Events.Broadcast(events.EventUpdate, ev)
+		h.Events.Broadcast((*EventUpdate)(ev))
 	}
 }
 

@@ -14,14 +14,14 @@ func TestPeerLoadFollowsJoinsRejoinsAndLeaves(t *testing.T) {
 	noop := func(webrtc.SessionDescription) {}
 	noICE := func(*webrtc.ICECandidateInit) {}
 
-	_, first, err := s.Join(room, alice, noop, noICE)
+	_, first, err := s.Join(room, alice, "", noop, noICE)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := s.Join(room, bob, noop, noICE); err != nil {
+	if _, _, err := s.Join(room, bob, "", noop, noICE); err != nil {
 		t.Fatal(err)
 	}
-	_, again, err := s.Join(room, alice, noop, noICE)
+	_, again, err := s.Join(room, alice, "", noop, noICE)
 	if err != nil {
 		t.Fatal(err)
 	}

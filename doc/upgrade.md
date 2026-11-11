@@ -9,13 +9,86 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Trusted Types in the web app's policy
+
+The web app's Content-Security-Policy now also sends
+`require-trusted-types-for 'script'` and a `trusted-types` list of the four
+policies the app uses (see [SECURITY.md](../SECURITY.md#security-model-summary)
+under "Trusted Types"). In Chromium, Safari 26+ and Firefox 148+ a script on
+the page can no longer hand a plain string to `innerHTML`, `new Worker` and
+similar sinks; older browsers ignore the directives. Nothing needs to be
+configured, and the app, the installed web app and the desktop clients work as
+before.
+
+It matters only where something else adds scripts to the page: a reverse proxy
+or CDN feature that rewrites the HTML to inject a script (which `script-src
+'self'` already refused), or a proxy that replaces the policy with its own. A
+replaced policy that requires Trusted Types must list `vue`, `mnema-markdown`,
+`mnema-script-url` and `mnema-emoji-picker`. The API reference (`/api/docs`)
+keeps the policy without the two directives.
+
+## Bot uploads: mentions in the caption need `allowed_mentions`
+
+The caption of a file a bot posts (`POST /api/bot/v1/channels/{id}/upload`)
+now follows the mention rule the bot API documents for messages. Before, a
+caption with `@all`, `@here` or `@Role` notified whenever the bot's roles
+allowed it. Now it notifies only when the request also asks for it in the new
+optional form field `allowed_mentions`, the JSON object the message route
+takes, for example `{"parse":["everyone","roles"]}`. Members named in the
+caption are notified as before.
+
+A bot that relied on the old behaviour must send `allowed_mentions` with its
+uploads. Nothing else changes for bots: the field is optional and the
+permissions (Mention @all and @here, mentionable roles) decide as before. See
+[bots.md](bots.md#rest-api).
+
+## Picture attachments lose their metadata (migration 0101)
+
+A JPEG, PNG or WebP sent as an attachment used to be stored byte for byte, so
+a phone photo kept its EXIF record: GPS position, camera model, time. From
+this version the server stores it without EXIF, XMP, IPTC, comments, text
+chunks, content credentials (C2PA) and embedded thumbnails, and the stored
+file ends where the picture ends. What stays is an allow-list: the image
+data, the colour information and the animation; a segment or chunk the
+server does not know is removed, whatever it is called. The picture is not
+re-encoded: image data, colour profile and animation frames are the bytes
+that were sent, and the orientation is written back so a
+photo is still shown the right way up. Every other file type is stored as
+before. Details and limits are in
+[SECURITY.md](../SECURITY.md#security-model-summary) ("Metadata of picture
+attachments").
+
+- **What members can notice.** Data appended to a picture is no longer
+  stored: a motion photo arrives as its still picture without the video, an
+  HDR photo with a gain map is shown in standard range, and a file hidden
+  behind a picture (an archive, a second picture) is gone. A photo whose
+  colour space is named in EXIF only (Adobe RGB from a camera, without a
+  colour profile) is shown as sRGB, and a WebP without the extended header
+  loses its EXIF orientation. A download is not
+  byte-identical to the JPEG, PNG or WebP that was sent.
+- **On by default, also after an update.** Migration 0101 adds
+  `instance_settings.strip_image_metadata` (default on). A community that
+  shares photos for their metadata (camera settings, position) can switch it
+  off in the admin System tab (**Upload size**, *Remove metadata from
+  pictures*), Owner only, recorded in the audit log.
+- **New uploads only.** Attachments stored before the update keep their
+  metadata; nothing is rewritten in storage.
+- **Sizes.** The size shown for an attachment, counted against
+  `UPLOAD_QUOTA_MB_PER_DAY` and sent as `Content-Length` is the stored one,
+  which is never larger and usually a little smaller than the file that was
+  sent. The upload limit still applies to the file as sent.
+- **API.** `GET` and `PUT /api/admin/upload-limit` gained the optional field
+  `strip_image_metadata`; a client that does not send it changes nothing.
+  A file fetched back from `/api/media/{id}` is no longer guaranteed to be
+  byte-identical to the JPEG, PNG or WebP that was uploaded.
+
 ## Key rotation
 
 Nothing to do. An instance that sets none of the new variables stores and
 reads exactly what it did before: session cookies are signed with
 `JWT_SECRET`, and the authenticator secrets and recovery codes of two-factor
-sign-in stay under the keys derived from it, in the same format. No migration
-runs and no stored value is rewritten.
+sign-in stay under the keys derived from it, in the same format. No stored
+value is rewritten.
 
 New and optional: `JWT_SECRET_PREVIOUS` lets you replace the session secret
 without signing anyone out, `DATA_KEY` moves the second factor's data to a
@@ -28,6 +101,18 @@ the old value is named in `JWT_SECRET_PREVIOUS`. The steps are in
 Once `DATA_KEY` is set and secrets have been moved to it, an older release
 cannot read them: after a rollback to one, the affected accounts need
 `reset-2fa`. Without `DATA_KEY` a rollback is unaffected.
+
+`DATA_KEY` stays once it is set: from then on authenticator secrets are
+sealed under it, and emptying it later leaves them unreadable (the server
+logs `AUTHENTICATOR SECRETS CANNOT BE READ` at start and `mnema-talk doctor`
+shows it). Keep the value with your backups. To go back to the keys derived
+from `JWT_SECRET`, follow
+[Stop using a data key](operations.md#stop-using-a-data-key).
+
+Migration 0102 adds a nullable column to `recovery_codes` that records which
+key a new recovery code is under, so codes under a retired key are no longer
+counted as remaining. Existing codes are untouched, and an older release
+ignores the column.
 
 ## Public message and talk totals (migrations 0098 and 0099)
 
@@ -417,6 +502,9 @@ of the pre-update backup (see "Rollback" above).
 | 0098 | `messages.counted`: messages in the chat of a conversation's call are left out of the public message total. Existing rows are marked and the totals on `users.message_count` are recomputed. |
 | 0099 | `users.public_voice_seconds`: the public time in Talks counts only stays in Talks everyone can see. It starts at zero; `voice_seconds` stays as the private total. |
 | 0100 | `message_nonces`: the client nonce that makes a repeated send of a message return the first one (feature `messages.nonce`). Adds a table and two indexes; rows older than a day are pruned. |
+| 0102 | `recovery_codes.key_fingerprint` (nullable): which key a new recovery code is hashed under, so codes under a retired key are not counted as remaining. Existing rows keep `NULL` and stay counted. |
+
+| 0101 | `instance_settings.strip_image_metadata`: the Owner's switch for storing JPEG, PNG and WebP attachments without their metadata, on by default. Adds a column only; stored files are not touched. |
 
 The numbers 0046, 0053, 0055 and 0060 are unused: they were skipped while the releases 1.0, 1.1 and 1.2 were planned (0046 in 1.0, 0053 and 0055 in 1.1, 0060 in 1.2) and no change took them. Migrations are applied in order and nothing depends on the missing numbers, so no file is lost.
 

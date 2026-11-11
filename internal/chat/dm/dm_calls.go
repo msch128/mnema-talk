@@ -48,6 +48,8 @@ type DMCallRing struct {
 	RingSeconds int `json:"ring_seconds"`
 }
 
+func (DMCallRing) EventName() string { return events.DMCallRing }
+
 // DMCallEnd is the payload of the dm_call_end event: the call stopped ringing
 // (Active tells whether it goes on) or is over.
 type DMCallEnd struct {
@@ -61,6 +63,8 @@ type DMCallEnd struct {
 	// MessageID is the "missed call" message the unanswered call left behind.
 	MessageID *uuid.UUID `json:"message_id,omitempty" binding:"optional" format:"uuid"`
 }
+
+func (DMCallEnd) EventName() string { return events.DMCallEnd }
 
 // DMCall is the call of a conversation as GET /api/dms shows it.
 type DMCall struct {
@@ -221,7 +225,9 @@ func (m *DMCalls) Begin(conversation, talk, caller, message uuid.UUID, name stri
 		ConversationID: conversation, TalkID: talk, MessageID: message, CallerID: caller,
 		TalkName: name, RingSeconds: int(m.Ring.Seconds()),
 	}
-	m.push(func(context.Context) { m.Events.BroadcastChannel(conversation, events.DMCallRing, ring) })
+	m.push(func(context.Context) {
+		m.Events.BroadcastChannel(conversation, ring)
+	})
 }
 
 // supersedeLocked ends the call of a conversation that is being rung for another
@@ -229,7 +235,9 @@ func (m *DMCalls) Begin(conversation, talk, caller, message uuid.UUID, name stri
 func (m *DMCalls) supersedeLocked(c *dmCall) {
 	end := DMCallEnd{ConversationID: c.conversation, TalkID: c.talk, Reason: CallCancelled}
 	m.dropLocked(c)
-	m.push(func(context.Context) { m.Events.BroadcastChannel(end.ConversationID, events.DMCallEnd, end) })
+	m.push(func(context.Context) {
+		m.Events.BroadcastChannel(end.ConversationID, end)
+	})
 }
 
 // dropLocked forgets c without announcing anything.
@@ -333,7 +341,7 @@ func (m *DMCalls) finishLocked(c *dmCall, end DMCallEnd, missed ...func(context.
 		if len(missed) > 0 {
 			end.MessageID = missed[0](ctx)
 		}
-		m.Events.BroadcastChannel(end.ConversationID, events.DMCallEnd, end)
+		m.Events.BroadcastChannel(end.ConversationID, end)
 	})
 }
 
@@ -354,6 +362,6 @@ func (m *DMCalls) recordMissed(ctx context.Context, c *dmCall) *uuid.UUID {
 		slog.Warn("dm calls: load missed call", "message", id, "err", err)
 		return &id
 	}
-	m.Events.BroadcastChannel(c.conversation, events.MessageCreate, msg)
+	m.Events.BroadcastChannel(c.conversation, (*core.MessageCreate)(msg))
 	return &id
 }

@@ -88,13 +88,13 @@ func TestUploadCeilingDefault(t *testing.T) {
 	if _, err := s.UploadSettings(t.Context()); err == nil {
 		t.Fatal("settings without a readable state must fail")
 	}
-	if _, err := s.SetGlobalUploadMB(t.Context(), Subject{Owner: true}, ip(5)); err == nil {
+	if _, err := s.SetUploadSettings(t.Context(), Subject{Owner: true}, ip(5), nil); err == nil {
 		t.Fatal("storing without a database must fail")
 	}
-	if _, err := s.SetGlobalUploadMB(t.Context(), Subject{}, nil); err == nil {
+	if _, err := s.SetUploadSettings(t.Context(), Subject{}, nil, nil); err == nil {
 		t.Fatal("non-owner must be refused")
 	}
-	if _, err := s.SetGlobalUploadMB(t.Context(), Subject{Owner: true}, ip(500)); err == nil {
+	if _, err := s.SetUploadSettings(t.Context(), Subject{Owner: true}, ip(500), nil); err == nil {
 		t.Fatal("above the ceiling must be refused")
 	}
 }

@@ -265,7 +265,7 @@ func TestChatDeleteCategoryHandlerAndVoicePreference(t *testing.T) {
 	}
 	objects := &chatObjectFailure{}
 	h.Objects = objects
-	h.deleteObjects(context.Background(), []string{"test/key"})
+	core.DeleteObjects(context.Background(), h.Objects, []string{"test/key"})
 	if objects.calls != 1 {
 		t.Fatalf("object deletion calls=%d", objects.calls)
 	}

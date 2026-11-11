@@ -1,0 +1,2368 @@
+{
+  "comment": "Generated from the Go event types by internal/events/registry; do not edit. Regenerate: UPDATE_EVENT_SCHEMA=1 go test ./internal/events/registry",
+  "events": {
+    "block_updated": [
+      {
+        "go": "blocks.BlockUpdated",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "blocked",
+              "type": {
+                "kind": "boolean"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "cameras_capped": [
+      {
+        "go": "wire.CamerasCapped",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "user_ids",
+              "type": {
+                "kind": "array",
+                "items": {
+                  "kind": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "channels_changed": [
+      {
+        "go": "wire.ChannelsChanged",
+        "type": {
+          "kind": "null"
+        }
+      }
+    ],
+    "community_updated": [
+      {
+        "go": "wire.CommunityUpdated",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "community_icon",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "community_name",
+              "type": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "dm_call_end": [
+      {
+        "go": "dm.DMCallEnd",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "conversation_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "talk_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "reason",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "answered",
+                  "cancelled",
+                  "timeout",
+                  "ended"
+                ]
+              }
+            },
+            {
+              "name": "active",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "user_id",
+              "optional": true,
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "message_id",
+              "optional": true,
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "dm_call_ring": [
+      {
+        "go": "dm.DMCallRing",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "conversation_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "talk_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "message_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "caller_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "talk_name",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "ring_seconds",
+              "type": {
+                "kind": "integer"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "dm_created": [
+      {
+        "go": "dm.DMCreated",
+        "type": {
+          "kind": "ref",
+          "ref": "chat.DirectMessage"
+        }
+      }
+    ],
+    "dm_member_added": [
+      {
+        "go": "dm.DMMemberAdded",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "dm_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "member",
+              "type": {
+                "kind": "ref",
+                "ref": "chat.DMMember"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "dm_member_removed": [
+      {
+        "go": "dm.DMMemberRemoved",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "dm_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "member",
+              "type": {
+                "kind": "ref",
+                "ref": "chat.DMMember"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "dm_prefs_updated": [
+      {
+        "go": "dm.DMPrefsUpdated",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "dm_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid",
+                "nullable": true
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "emoji_changed": [
+      {
+        "go": "wire.EmojiChanged",
+        "type": {
+          "kind": "null"
+        }
+      }
+    ],
+    "event_comment": [
+      {
+        "go": "communityevents.CommentPayload",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "action",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "created",
+                  "updated",
+                  "deleted"
+                ]
+              }
+            },
+            {
+              "name": "event_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "comment_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "comment",
+              "optional": true,
+              "type": {
+                "kind": "ref",
+                "ref": "communityevents.EventComment"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "event_comment_notice": [
+      {
+        "go": "communityevents.CommentNoticePayload",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "event_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "title",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "author_name",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "excerpt",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "channel_id",
+              "optional": true,
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "event_delete": [
+      {
+        "go": "communityevents.EventDeletePayload",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "event_reminder": [
+      {
+        "go": "communityevents.EventReminderPayload",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "event_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "title",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "start_time",
+              "type": {
+                "kind": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "name": "channel_id",
+              "optional": true,
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "event_signup_notice": [
+      {
+        "go": "communityevents.SignupNoticePayload",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "event_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "title",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "kind",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "promoted",
+                  "removed",
+                  "waitlisted"
+                ]
+              }
+            },
+            {
+              "name": "role_name",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "start_time",
+              "type": {
+                "kind": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "name": "channel_id",
+              "optional": true,
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "event_update": [
+      {
+        "go": "communityevents.EventUpdate",
+        "type": {
+          "kind": "ref",
+          "ref": "communityevents.CommunityEvent"
+        }
+      }
+    ],
+    "forum_tags_changed": [
+      {
+        "go": "wire.ForumTagsChanged",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "interaction_response": [
+      {
+        "go": "bot.InteractionResponse",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "bot_avatar_url",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "bot_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "bot_name",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "content",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "created_at",
+              "type": {
+                "kind": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "name": "embeds",
+              "type": {
+                "kind": "array",
+                "nullable": true,
+                "items": {
+                  "kind": "ref",
+                  "ref": "chat.Embed"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "kicked": [
+      {
+        "go": "wire.Kicked",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "reason",
+              "type": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "media_handshake": [
+      {
+        "go": "wire.MediaHandshake",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "wire",
+              "type": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "member_joined": [
+      {
+        "go": "auth.MemberJoined",
+        "type": {
+          "kind": "ref",
+          "ref": "auth.User"
+        }
+      }
+    ],
+    "member_roles_changed": [
+      {
+        "go": "wire.MemberRolesChanged",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "role_ids",
+              "type": {
+                "kind": "array",
+                "items": {
+                  "kind": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "member_timeout": [
+      {
+        "go": "wire.MemberTimeout",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "timeout_until",
+              "type": {
+                "kind": "string",
+                "format": "date-time",
+                "nullable": true
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "message_create": [
+      {
+        "go": "core.MessageCreate",
+        "type": {
+          "kind": "ref",
+          "ref": "chat.Message"
+        }
+      }
+    ],
+    "message_delete": [
+      {
+        "go": "wire.MessageDelete",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "parent_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid",
+                "nullable": true
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "message_reaction": [
+      {
+        "go": "messages.ReactionResult",
+        "type": {
+          "kind": "ref",
+          "ref": "chat.ReactionResult"
+        }
+      }
+    ],
+    "message_update": [
+      {
+        "go": "core.MessageUpdate",
+        "type": {
+          "kind": "ref",
+          "ref": "chat.Message"
+        }
+      }
+    ],
+    "moderation_notice": [
+      {
+        "go": "wire.AutomodTimeoutNotice",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "duration_seconds",
+              "type": {
+                "kind": "integer"
+              }
+            },
+            {
+              "name": "kind",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "timeout"
+                ]
+              }
+            },
+            {
+              "name": "reason",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "until",
+              "type": {
+                "kind": "string",
+                "format": "date-time"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "go": "wire.MessageDeletedNotice",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_name",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "kind",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "message_deleted"
+                ]
+              }
+            },
+            {
+              "name": "reason",
+              "type": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "go": "wire.MessagesDeletedNotice",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_name",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "count",
+              "type": {
+                "kind": "integer"
+              }
+            },
+            {
+              "name": "kind",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "messages_deleted"
+                ]
+              }
+            },
+            {
+              "name": "reason",
+              "type": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "go": "wire.ModerationNotice",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "kind",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "timeout",
+                  "timeout_removed",
+                  "ban"
+                ]
+              }
+            },
+            {
+              "name": "until",
+              "optional": true,
+              "type": {
+                "kind": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "name": "duration_seconds",
+              "optional": true,
+              "type": {
+                "kind": "integer"
+              }
+            },
+            {
+              "name": "reason",
+              "type": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "permissions_changed": [
+      {
+        "go": "wire.PermissionsChanged",
+        "type": {
+          "kind": "null"
+        }
+      }
+    ],
+    "pins_changed": [
+      {
+        "go": "messages.PinsChanged",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "message_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "pinned",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "actor_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "actor_name",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "pinned_at",
+              "optional": true,
+              "type": {
+                "kind": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "name": "pinned_by",
+              "optional": true,
+              "type": {
+                "kind": "ref",
+                "ref": "chat.UserRef"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "go": "wire.PinRemoved",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "actor_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "actor_name",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "message_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "pinned",
+              "type": {
+                "kind": "boolean"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "poll_update": [
+      {
+        "go": "poll.Update",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "message_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "poll",
+              "type": {
+                "kind": "ref",
+                "ref": "chat.Poll"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "pong": [
+      {
+        "go": "wire.Pong",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "t",
+              "type": {
+                "kind": "number"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "presence_snapshot": [
+      {
+        "go": "ws.PresenceSnapshot",
+        "type": {
+          "kind": "map",
+          "items": {
+            "kind": "string"
+          }
+        }
+      }
+    ],
+    "presence_update": [
+      {
+        "go": "ws.PresenceUpdate",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "activity",
+              "optional": true,
+              "type": {
+                "kind": "object",
+                "fields": [
+                  {
+                    "name": "type",
+                    "type": {
+                      "kind": "integer"
+                    }
+                  },
+                  {
+                    "name": "name",
+                    "type": {
+                      "kind": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "name": "status",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "online",
+                  "away",
+                  "dnd",
+                  "focus",
+                  "offline"
+                ]
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "read_state": [
+      {
+        "go": "wire.ReadStateChannelRefresh",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "refresh",
+              "type": {
+                "kind": "boolean",
+                "enum": [
+                  "true"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "go": "wire.ReadStateMarked",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "last_read_at",
+              "type": {
+                "kind": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "name": "mention_count",
+              "type": {
+                "kind": "integer"
+              }
+            },
+            {
+              "name": "unread_count",
+              "type": {
+                "kind": "integer"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "go": "wire.ReadStateRefresh",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "refresh",
+              "type": {
+                "kind": "boolean",
+                "enum": [
+                  "true"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "go": "wire.ReadStateUnread",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "last_read_at",
+              "type": {
+                "kind": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "name": "refresh",
+              "type": {
+                "kind": "boolean",
+                "enum": [
+                  "true"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "reminder_update": [
+      {
+        "go": "later.ReminderEvent",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "state",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "created",
+                  "due",
+                  "removed"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "reports_open": [
+      {
+        "go": "wire.ReportsOpen",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "open",
+              "type": {
+                "kind": "integer"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "roles_changed": [
+      {
+        "go": "wire.RolesChanged",
+        "type": {
+          "kind": "null"
+        }
+      }
+    ],
+    "saved_updated": [
+      {
+        "go": "saved.SavedUpdated",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "message_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "saved",
+              "type": {
+                "kind": "boolean"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "scheduled_message_update": [
+      {
+        "go": "later.ScheduledEvent",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "state",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "created",
+                  "updated",
+                  "sent",
+                  "failed",
+                  "deleted"
+                ]
+              }
+            },
+            {
+              "name": "reason",
+              "optional": true,
+              "type": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "screen_layers": [
+      {
+        "go": "ws.ScreenLayers",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "layers",
+              "type": {
+                "kind": "array",
+                "items": {
+                  "kind": "object",
+                  "fields": [
+                    {
+                      "name": "width",
+                      "type": {
+                        "kind": "integer"
+                      }
+                    },
+                    {
+                      "name": "height",
+                      "type": {
+                        "kind": "integer"
+                      }
+                    },
+                    {
+                      "name": "fps",
+                      "type": {
+                        "kind": "integer"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "screen_layers_wanted": [
+      {
+        "go": "wire.ScreenLayersWanted",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "layers",
+              "type": {
+                "kind": "array",
+                "items": {
+                  "kind": "integer"
+                }
+              }
+            },
+            {
+              "name": "source",
+              "optional": true,
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "camera"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "screen_quality": [
+      {
+        "go": "wire.ScreenQuality",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "auto",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "layer",
+              "type": {
+                "kind": "integer"
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "screen_viewers": [
+      {
+        "go": "wire.ScreenViewers",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "viewers",
+              "type": {
+                "kind": "array",
+                "items": {
+                  "kind": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "server_info": [
+      {
+        "go": "ws.ServerInfo",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "version",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "screen_layers",
+              "optional": true,
+              "type": {
+                "kind": "integer"
+              }
+            },
+            {
+              "name": "camera_layers",
+              "optional": true,
+              "type": {
+                "kind": "integer"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "stage_hand": [
+      {
+        "go": "wire.StageHand",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "at",
+              "optional": true,
+              "type": {
+                "kind": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "raised",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "stage_talk_power": [
+      {
+        "go": "wire.StageTalkPower",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "granted",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "system_update": [
+      {
+        "go": "wire.SystemUpdate",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "version",
+              "type": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "talk_leader": [
+      {
+        "go": "wire.TalkLeader",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "leader_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid",
+                "nullable": true
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "talk_moved": [
+      {
+        "go": "wire.TalkMoved",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "from_channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "talk_reaction": [
+      {
+        "go": "wire.TalkReaction",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "emoji",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "thread_follow_updated": [
+      {
+        "go": "wire.ThreadFollowUpdated",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "following",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "thread_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "typing": [
+      {
+        "go": "wire.Typing",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "user_stats": [
+      {
+        "go": "wire.UserStats",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "voice_seconds",
+              "type": {
+                "kind": "integer"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "user_update": [
+      {
+        "go": "auth.UserUpdate",
+        "type": {
+          "kind": "ref",
+          "ref": "auth.User"
+        }
+      },
+      {
+        "go": "wire.UserDisabled",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "disabled",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "voice_kicked": [
+      {
+        "go": "wire.VoiceKicked",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "reason",
+              "optional": true,
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "room_full",
+                  "missing_permission",
+                  "rules_not_accepted",
+                  "talk_rate_limited",
+                  "talk_unavailable",
+                  "connection_lost",
+                  "media_unavailable",
+                  "joined_elsewhere",
+                  "voice_taken_over"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "voice_mute_state": [
+      {
+        "go": "wire.VoiceMuteState",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "deafened",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "muted",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "voice_rooms": [
+      {
+        "go": "ws.VoiceRooms",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "now",
+              "type": {
+                "kind": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "name": "started",
+              "type": {
+                "kind": "map",
+                "items": {
+                  "kind": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "voice_snapshot": [
+      {
+        "go": "ws.VoiceSnapshot",
+        "type": {
+          "kind": "map",
+          "items": {
+            "kind": "map",
+            "items": {
+              "kind": "object",
+              "fields": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "string",
+                    "format": "uuid"
+                  }
+                },
+                {
+                  "name": "username",
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "display_name",
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "bio",
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "role",
+                  "type": {
+                    "kind": "string",
+                    "enum": [
+                      "admin",
+                      "user"
+                    ]
+                  }
+                },
+                {
+                  "name": "avatar_url",
+                  "optional": true,
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "banner_url",
+                  "optional": true,
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "status_text",
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "status_expires_at",
+                  "optional": true,
+                  "type": {
+                    "kind": "string",
+                    "format": "date-time"
+                  }
+                },
+                {
+                  "name": "presence",
+                  "optional": true,
+                  "type": {
+                    "kind": "string",
+                    "enum": [
+                      "online",
+                      "away",
+                      "dnd",
+                      "focus"
+                    ]
+                  }
+                },
+                {
+                  "name": "voice_seconds",
+                  "optional": true,
+                  "type": {
+                    "kind": "integer"
+                  }
+                },
+                {
+                  "name": "message_count",
+                  "optional": true,
+                  "type": {
+                    "kind": "integer"
+                  }
+                },
+                {
+                  "name": "rules_pending",
+                  "optional": true,
+                  "type": {
+                    "kind": "boolean"
+                  }
+                },
+                {
+                  "name": "locale",
+                  "type": {
+                    "kind": "string"
+                  }
+                },
+                {
+                  "name": "created_at",
+                  "type": {
+                    "kind": "string",
+                    "format": "date-time"
+                  }
+                },
+                {
+                  "name": "joined_at",
+                  "type": {
+                    "kind": "string",
+                    "format": "date-time"
+                  }
+                },
+                {
+                  "name": "muted",
+                  "type": {
+                    "kind": "boolean"
+                  }
+                },
+                {
+                  "name": "deafened",
+                  "type": {
+                    "kind": "boolean"
+                  }
+                },
+                {
+                  "name": "talk_power",
+                  "optional": true,
+                  "type": {
+                    "kind": "boolean"
+                  }
+                },
+                {
+                  "name": "hand_raised_at",
+                  "optional": true,
+                  "type": {
+                    "kind": "string",
+                    "format": "date-time"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "voice_speaking": [
+      {
+        "go": "wire.VoiceSpeaking",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "active",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "voice_state_update": [
+      {
+        "go": "wire.VoiceLeave",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "action",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "leave"
+                ]
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "go": "ws.VoiceJoin",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "action",
+              "type": {
+                "kind": "string",
+                "enum": [
+                  "join"
+                ]
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "started_at",
+              "type": {
+                "kind": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "name": "user",
+              "type": {
+                "kind": "object",
+                "fields": [
+                  {
+                    "name": "id",
+                    "type": {
+                      "kind": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  {
+                    "name": "username",
+                    "type": {
+                      "kind": "string"
+                    }
+                  },
+                  {
+                    "name": "display_name",
+                    "type": {
+                      "kind": "string"
+                    }
+                  },
+                  {
+                    "name": "bio",
+                    "type": {
+                      "kind": "string"
+                    }
+                  },
+                  {
+                    "name": "role",
+                    "type": {
+                      "kind": "string",
+                      "enum": [
+                        "admin",
+                        "user"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "avatar_url",
+                    "optional": true,
+                    "type": {
+                      "kind": "string"
+                    }
+                  },
+                  {
+                    "name": "banner_url",
+                    "optional": true,
+                    "type": {
+                      "kind": "string"
+                    }
+                  },
+                  {
+                    "name": "status_text",
+                    "type": {
+                      "kind": "string"
+                    }
+                  },
+                  {
+                    "name": "status_expires_at",
+                    "optional": true,
+                    "type": {
+                      "kind": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  {
+                    "name": "presence",
+                    "optional": true,
+                    "type": {
+                      "kind": "string",
+                      "enum": [
+                        "online",
+                        "away",
+                        "dnd",
+                        "focus"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "voice_seconds",
+                    "optional": true,
+                    "type": {
+                      "kind": "integer"
+                    }
+                  },
+                  {
+                    "name": "message_count",
+                    "optional": true,
+                    "type": {
+                      "kind": "integer"
+                    }
+                  },
+                  {
+                    "name": "rules_pending",
+                    "optional": true,
+                    "type": {
+                      "kind": "boolean"
+                    }
+                  },
+                  {
+                    "name": "locale",
+                    "type": {
+                      "kind": "string"
+                    }
+                  },
+                  {
+                    "name": "created_at",
+                    "type": {
+                      "kind": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  {
+                    "name": "joined_at",
+                    "type": {
+                      "kind": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  {
+                    "name": "muted",
+                    "type": {
+                      "kind": "boolean"
+                    }
+                  },
+                  {
+                    "name": "deafened",
+                    "type": {
+                      "kind": "boolean"
+                    }
+                  },
+                  {
+                    "name": "talk_power",
+                    "optional": true,
+                    "type": {
+                      "kind": "boolean"
+                    }
+                  },
+                  {
+                    "name": "hand_raised_at",
+                    "optional": true,
+                    "type": {
+                      "kind": "string",
+                      "format": "date-time"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "webrtc_candidate": [
+      {
+        "go": "ws.WebrtcCandidate",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "candidate",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "sdpMid",
+              "type": {
+                "kind": "string",
+                "nullable": true
+              }
+            },
+            {
+              "name": "sdpMLineIndex",
+              "type": {
+                "kind": "integer",
+                "nullable": true
+              }
+            },
+            {
+              "name": "usernameFragment",
+              "type": {
+                "kind": "string",
+                "nullable": true
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "webrtc_media_state": [
+      {
+        "go": "wire.MediaState",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "camera",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "channel_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "screen",
+              "type": {
+                "kind": "boolean"
+              }
+            },
+            {
+              "name": "user_id",
+              "type": {
+                "kind": "string",
+                "format": "uuid"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "webrtc_offer": [
+      {
+        "go": "ws.WebrtcOffer",
+        "type": {
+          "kind": "object",
+          "fields": [
+            {
+              "name": "type",
+              "type": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "sdp",
+              "type": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

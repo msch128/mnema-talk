@@ -31,12 +31,12 @@ func TestResumedStayInAPublicTalkStaysPublicWhenPermissionsAreUnavailable(t *tes
 	c := testClient(h, auth.User{ID: uuid.New()})
 	key := voiceKey{c.User.ID, talk.ID}
 
-	if _, ok := h.takeSeat(c, talk, false); !ok {
+	if _, ok := h.takeSeat(c, talk); !ok {
 		t.Fatal("no seat")
 	}
 	svc.Invalidate()
 	failing.Store(true)
-	if _, ok := h.takeSeat(c, talk, true); !ok {
+	if _, ok := h.takeSeat(c, talk); !ok {
 		t.Fatal("no seat on resume")
 	}
 	h.mu.RLock()

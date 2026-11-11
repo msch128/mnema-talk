@@ -591,7 +591,7 @@ func TestAMonthlySeriesEditedAtItsClampedOccurrenceKeepsTheDayWhenOnlyTheTimeMov
 func (f *rosterFixture) updatedIDs(skip int) map[uuid.UUID]bool {
 	out := map[uuid.UUID]bool{}
 	for _, e := range f.rec.Snapshot()[skip:] {
-		if ev, ok := e.Payload.(*CommunityEvent); ok {
+		if ev, ok := e.Payload.(*EventUpdate); ok {
 			out[ev.ID] = true
 		}
 	}

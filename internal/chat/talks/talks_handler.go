@@ -12,7 +12,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -164,7 +163,7 @@ func (a *API) StartDMTalk(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	a.Events.BroadcastChannel(dm, events.MessageCreate, msg)
+	a.Events.BroadcastChannel(dm, (*core.MessageCreate)(msg))
 	if a.Calls != nil {
 		a.Calls.Begin(dm, talk.ID, user.ID, msg.ID, inviteName(msg))
 	}

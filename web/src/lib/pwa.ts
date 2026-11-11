@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { platform } from './platform'
+import { ownScriptUrl } from './trustedTypes'
 
 /**
  * The installable web app: the service worker that keeps the app shell
@@ -18,7 +19,7 @@ export function serviceWorkerAllowed(): boolean {
 export function registerServiceWorker(): void {
   if (!import.meta.env.PROD || !serviceWorkerAllowed()) return
   const register = () => {
-    navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).catch(error => {
+    navigator.serviceWorker.register(ownScriptUrl('/sw.js'), { scope: '/', updateViaCache: 'none' }).catch(error => {
       console.warn('Service worker not registered:', error)
     })
   }

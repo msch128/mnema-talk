@@ -2,10 +2,10 @@ package ws
 
 import (
 	"encoding/json"
-	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -13,22 +13,20 @@ import (
 // screen share consists of (empty once it ends), so viewers can label their
 // quality choices.
 func (h *Hub) announceScreenLayers(roomID, sharer uuid.UUID, layers []sfu.Layer) {
-	h.sendToVoiceRoom(roomID, events.ScreenLayers, screenLayersPayload(roomID, sharer, layers))
+	h.sendToVoiceRoom(roomID, screenLayersPayload(roomID, sharer, layers))
 }
 
-func screenLayersPayload(roomID, sharer uuid.UUID, layers []sfu.Layer) map[string]any {
+func screenLayersPayload(roomID, sharer uuid.UUID, layers []sfu.Layer) ScreenLayers {
 	if layers == nil {
 		layers = []sfu.Layer{} // [] rather than null on the wire
 	}
-	return map[string]any{"channel_id": roomID, "user_id": sharer, "layers": layers}
+	return ScreenLayers{ChannelID: roomID, UserID: sharer, Layers: layers}
 }
 
 // announceScreenQuality tells a viewer which layer of sharer's screen share it
 // receives (layer -1 while none yet) and whether the server chooses it.
 func (h *Hub) announceScreenQuality(roomID, viewer, sharer uuid.UUID, st sfu.QualityState) {
-	h.sendToVoiceUser(roomID, viewer, events.ScreenQuality, map[string]any{
-		"channel_id": roomID, "user_id": sharer, "layer": st.Layer, "auto": st.Auto,
-	})
+	h.sendToVoiceUser(roomID, viewer, wire.ScreenQuality{ChannelID: roomID, UserID: sharer, Layer: st.Layer, Auto: st.Auto})
 }
 
 // announceLayersWanted tells a sharer which of its layers some viewer needs.
@@ -36,7 +34,7 @@ func (h *Hub) announceLayersWanted(roomID, sharer uuid.UUID, layers []int) {
 	if layers == nil {
 		layers = []int{}
 	}
-	h.sendToVoiceUser(roomID, sharer, events.ScreenLayersWanted, map[string]any{"channel_id": roomID, "layers": layers})
+	h.sendToVoiceUser(roomID, sharer, wire.ScreenLayersWanted{ChannelID: roomID, Layers: layers})
 }
 
 // announceCameraLayersWanted is announceLayersWanted for the layers of the
@@ -45,12 +43,12 @@ func (h *Hub) announceCameraLayersWanted(roomID, sharer uuid.UUID, layers []int)
 	if layers == nil {
 		layers = []int{}
 	}
-	h.sendToVoiceUser(roomID, sharer, events.ScreenLayersWanted, map[string]any{"channel_id": roomID, "layers": layers, "source": sfu.SourceCamera})
+	h.sendToVoiceUser(roomID, sharer, wire.ScreenLayersWanted{ChannelID: roomID, Layers: layers, Source: string(sfu.SourceCamera)})
 }
 
 // sendToVoiceUser sends to the connections of userID that are in chID's room.
-func (h *Hub) sendToVoiceUser(chID, userID uuid.UUID, eventType string, payload any) {
-	data := encode(eventType, payload)
+func (h *Hub) sendToVoiceUser(chID, userID uuid.UUID, ev events.Event) {
+	data := encode(ev)
 	if data == nil {
 		return
 	}
@@ -83,7 +81,7 @@ func (c *Client) handleLayers(payload json.RawMessage) {
 		set = room.SetCameraLayers
 	}
 	if err := set(c.User.ID, req.Layers); err != nil {
-		slog.Debug("sfu layers rejected", "user", c.User.ID, "source", req.Source, "err", err)
+		c.logger().Debug("sfu layers rejected", "user", c.User.ID, "source", req.Source, "err", err)
 	}
 }
 

@@ -52,15 +52,12 @@ func (d *Dispatcher) flush() {
 func (d *Dispatcher) store(ctx context.Context, batch []job) {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), storeTimeout)
 	defer cancel()
-	perWebhook, global, err := storeEvents(ctx, d.DB, batch)
-	if err != nil {
+	if err := storeEvents(ctx, d.DB, batch); err != nil {
 		slog.Warn("outgoing webhooks: store events", "err", err, "events", len(batch))
 		d.count("store_error", int64(len(batch)))
 		return
 	}
-	d.count("webhook_cap", perWebhook)
-	d.count("global_cap", global)
-	d.signal()
+	d.recorded()
 }
 
 // count adds n dropped events to the metric and the dropped total.

@@ -7,7 +7,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/pion/webrtc/v4"
 )
 
 // voiceKey is one user's stay in one voice room. Two tabs of a user can sit
@@ -54,14 +57,14 @@ func (h *Hub) voiceSnapshot() map[uuid.UUID]map[uuid.UUID]VoiceUser {
 
 // voiceRooms says since when each voice room is occupied, plus the server's
 // clock so clients can count up without trusting their own.
-func (h *Hub) voiceRooms(c *Client, snap *perm.Snapshot) map[string]any {
+func (h *Hub) voiceRooms(c *Client, snap *perm.Snapshot) VoiceRooms {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	started := make(map[uuid.UUID]time.Time, len(h.roomSince))
 	for id, t := range h.roomSince {
 		started[id] = t
 	}
-	return map[string]any{"started": visibleTo(c, snap, started), "now": time.Now()}
+	return VoiceRooms{Started: visibleTo(c, snap, started), Now: time.Now()}
 }
 
 // voiceChannel returns chID if it exists and is a voice channel.
@@ -75,25 +78,9 @@ func (h *Hub) voiceChannel(ctx context.Context, chID uuid.UUID) (*core.ChannelIn
 
 // applyUserUpdate keeps the hub's copies of a user's public profile current
 // after a name, status or avatar change (a user_update with a User payload).
-func (h *Hub) applyUserUpdate(payload any) {
-	u, ok := extractUserPayload(payload)
-	if !ok {
-		return
-	}
-	h.updateUserPublicProfile(u.ID, u.Public())
-}
-
-func extractUserPayload(payload any) (auth.User, bool) {
-	switch v := payload.(type) {
-	case auth.User:
-		return v, v.ID != uuid.Nil
-	case *auth.User:
-		if v == nil || v.ID == uuid.Nil {
-			return auth.User{}, false
-		}
-		return *v, true
-	default:
-		return auth.User{}, false
+func (h *Hub) applyUserUpdate(u auth.User) {
+	if u.ID != uuid.Nil {
+		h.updateUserPublicProfile(u.ID, u.Public())
 	}
 }
 
@@ -167,3 +154,54 @@ func (h *Hub) leaveRoomLocked(c *Client, chID uuid.UUID) {
 		delete(h.rooms, chID)
 	}
 }
+
+// The Talk events that carry a profile, the layers of a share or WebRTC
+// signalling; the plain ones are in internal/events/wire. Fields that were map
+// keys once stay in alphabetical order: the JSON must not change.
+
+// VoiceJoin is the voice_state_update of a member joining a Talk; action is
+// always "join". Leaving is wire.VoiceLeave.
+type VoiceJoin struct {
+	Action    string    `json:"action" enums:"join"`
+	ChannelID uuid.UUID `json:"channel_id" format:"uuid"`
+	StartedAt time.Time `json:"started_at" format:"date-time"`
+	User      VoiceUser `json:"user"`
+}
+
+func (VoiceJoin) EventName() string { return events.VoiceStateUpdate }
+
+// VoiceSnapshot is who sits in which Talk, by channel and user ID
+// (voice_snapshot): part of the greeting of a new connection.
+type VoiceSnapshot map[uuid.UUID]map[uuid.UUID]VoiceUser
+
+func (VoiceSnapshot) EventName() string { return events.VoiceSnapshot }
+
+// VoiceRooms says since when each Talk is occupied, and the server's clock
+// (voice_rooms).
+type VoiceRooms struct {
+	Now     time.Time               `json:"now" format:"date-time"`
+	Started map[uuid.UUID]time.Time `json:"started" format:"date-time"`
+}
+
+func (VoiceRooms) EventName() string { return events.VoiceRooms }
+
+// ScreenLayers lists the layers of a screen share (screen_layers); layers is
+// [] once the share ended, never null.
+type ScreenLayers struct {
+	ChannelID uuid.UUID   `json:"channel_id" format:"uuid"`
+	Layers    []sfu.Layer `json:"layers"`
+	UserID    uuid.UUID   `json:"user_id" format:"uuid"`
+}
+
+func (ScreenLayers) EventName() string { return events.ScreenLayers }
+
+// WebrtcOffer is the server's session description for a connection's media
+// peer (webrtc_offer); WebrtcCandidate one of its ICE candidates
+// (webrtc_candidate).
+type (
+	WebrtcOffer     webrtc.SessionDescription
+	WebrtcCandidate webrtc.ICECandidateInit
+)
+
+func (WebrtcOffer) EventName() string      { return events.WebrtcOffer }
+func (*WebrtcCandidate) EventName() string { return events.WebrtcCandidate }

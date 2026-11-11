@@ -4389,12 +4389,14 @@ export const decodePermRoleInput = decoder("perm.RoleInput", isPermRoleInput)
 export type PermUploadSettings = {
   ceiling_mb: number
   max_upload_mb: number
+  strip_image_metadata?: boolean
 }
 
 export function isPermUploadSettings(value: unknown): value is PermUploadSettings {
   return isRecord(value)
     && (hasOwn(value, "ceiling_mb") && (isInteger(value["ceiling_mb"]) && value["ceiling_mb"] >= 1))
     && (hasOwn(value, "max_upload_mb") && (isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1))
+    && (!hasOwn(value, "strip_image_metadata") || typeof value["strip_image_metadata"] === 'boolean')
 }
 
 export const decodePermUploadSettings = decoder("perm.UploadSettings", isPermUploadSettings)
@@ -4716,11 +4718,13 @@ export const decodeRolesReorderRequest = decoder("roles.ReorderRequest", isRoles
 
 export type RolesUploadLimitInput = {
   max_upload_mb: number | null
+  strip_image_metadata?: boolean | null
 }
 
 export function isRolesUploadLimitInput(value: unknown): value is RolesUploadLimitInput {
   return isRecord(value)
     && (hasOwn(value, "max_upload_mb") && ((isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1) || value["max_upload_mb"] === null))
+    && (!hasOwn(value, "strip_image_metadata") || (typeof value["strip_image_metadata"] === 'boolean' || value["strip_image_metadata"] === null))
 }
 
 export const decodeRolesUploadLimitInput = decoder("roles.UploadLimitInput", isRolesUploadLimitInput)
@@ -4966,6 +4970,31 @@ export function isServerHealth(value: unknown): value is ServerHealth {
 
 export const decodeServerHealth = decoder("server.Health", isServerHealth)
 
+export type ServerHealthUnavailable = {
+  community_icon?: string
+  community_name?: string
+  error: HttpxAPIError
+  features?: Array<string>
+  status: "unavailable"
+  unavailable: Array<string>
+  version: string
+  web_client_api: number
+}
+
+export function isServerHealthUnavailable(value: unknown): value is ServerHealthUnavailable {
+  return isRecord(value)
+    && (!hasOwn(value, "community_icon") || isString(value["community_icon"]))
+    && (!hasOwn(value, "community_name") || isString(value["community_name"]))
+    && (hasOwn(value, "error") && isHttpxAPIError(value["error"]))
+    && (!hasOwn(value, "features") || isArrayOf(value["features"], item => isString(item)))
+    && (hasOwn(value, "status") && (value["status"] === "unavailable"))
+    && (hasOwn(value, "unavailable") && isArrayOf(value["unavailable"], item => isString(item)))
+    && (hasOwn(value, "version") && isString(value["version"]))
+    && (hasOwn(value, "web_client_api") && isInteger(value["web_client_api"]))
+}
+
+export const decodeServerHealthUnavailable = decoder("server.HealthUnavailable", isServerHealthUnavailable)
+
 export type ServerICEConfig = {
   ice_servers: Array<ServerIceServer>
 }
@@ -5026,6 +5055,17 @@ export function isServerLegal(value: unknown): value is ServerLegal {
 }
 
 export const decodeServerLegal = decoder("server.Legal", isServerLegal)
+
+export type ServerLiveness = {
+  status: "ok"
+}
+
+export function isServerLiveness(value: unknown): value is ServerLiveness {
+  return isRecord(value)
+    && (hasOwn(value, "status") && (value["status"] === "ok"))
+}
+
+export const decodeServerLiveness = decoder("server.Liveness", isServerLiveness)
 
 export type ServerMailStatus = {
   configured: boolean

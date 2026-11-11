@@ -223,6 +223,10 @@ jobs:
           go vet -tags=integration ./...
 
       - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: staticcheck
+        run: make staticcheck
+
+      - if: ${{ needs.changes.outputs.code == 'true' }}
         name: Cognitive complexity
         run: make complexity-check
 
@@ -241,6 +245,12 @@ jobs:
       - if: ${{ needs.changes.outputs.code == 'true' }}
         name: Unit tests
         run: go test -race -count=1 ./...
+
+      # Timing is not judged on a shared runner: only the allocations per
+      # packet on the SFU forward path are compared with the stored baseline.
+      - if: ${{ needs.changes.outputs.code == 'true' }}
+        name: SFU forward path allocations
+        run: make bench-allocs
 
       # The load-test tools are a module of their own (loadtest/viewer).
       - if: ${{ needs.changes.outputs.code == 'true' }}
@@ -663,6 +673,7 @@ jobs:
       - if: ${{ needs.changes.outputs.code == 'true' }}
         name: Backup/restore drill (compose stack)
         run: |
+          scripts/ci-dns-fallback.sh azure.archive.ubuntu.com archive.ubuntu.com || true
           sudo apt-get install -y --no-install-recommends age >/dev/null
           age --version
           scripts/backup-drill.sh mnema-talk:ci

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -20,7 +21,33 @@ const WebClientAPI = 1
 
 // Health is the response of GET /api/health.
 type Health struct {
-	Status  string `json:"status" enums:"ok"`
+	Status string `json:"status" enums:"ok"`
+	ServerInfo
+}
+
+// HealthUnavailable is the 503 answer of GET /api/health: the error every
+// other route answers with, and beside it what the server says about itself
+// in a 200. A client that only needs to know what it talks to (the feature
+// list, the desktop contract) reads it from either answer.
+type HealthUnavailable struct {
+	Error  *httpx.APIError `json:"error"`
+	Status string          `json:"status" enums:"unavailable"`
+	// Unavailable names every dependency that is down. Known values are
+	// "database" and "storage"; a later server may name more, so a client
+	// ignores the names it does not know. With only "storage" in it, uploads,
+	// attachments and pictures fail while chat and Talks work.
+	Unavailable []string `json:"unavailable"`
+	ServerInfo
+}
+
+// Liveness is the response of GET /api/health/live.
+type Liveness struct {
+	Status string `json:"status" enums:"ok"`
+}
+
+// ServerInfo is what a server says about itself, in the 200 and the 503
+// answer of GET /api/health alike.
+type ServerInfo struct {
 	Version string `json:"version"`
 	// WebClientAPI identifies the HTTPS web-client desktop integration contract.
 	WebClientAPI int `json:"web_client_api"`
@@ -88,8 +115,14 @@ var Features = []string{
 // stream of database pings.
 const healthCacheTTL = 2 * time.Second
 
-// healthCheck pings the database (and checks object storage) at most once
-// per ttl; concurrent callers wait for the one check in flight.
+// The dependencies GET /api/health names in a 503.
+const (
+	depDatabase = "database"
+	depStorage  = "storage"
+)
+
+// healthCheck pings the database and checks object storage at most once per
+// ttl; concurrent callers wait for the one check in flight.
 type healthCheck struct {
 	ping    func(context.Context) error
 	storage func() error
@@ -97,7 +130,7 @@ type healthCheck struct {
 
 	mu      sync.Mutex
 	checked time.Time
-	err     *httpx.APIError
+	down    []string
 }
 
 func newHealthCheck(p *db.Pool, storage func() error, ttl time.Duration) *healthCheck {
@@ -108,26 +141,34 @@ func newHealthCheck(p *db.Pool, storage func() error, ttl time.Duration) *health
 	return &healthCheck{ping: ping, storage: storage, ttl: ttl}
 }
 
-// check returns nil when healthy, otherwise the error to answer with.
-func (h *healthCheck) check(ctx context.Context) *httpx.APIError {
+// check returns the dependencies that are down, none when healthy.
+func (h *healthCheck) check(ctx context.Context) []string {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if !h.checked.IsZero() && time.Since(h.checked) < h.ttl {
-		return h.err
+		return h.down
 	}
 	// Not tied to one caller: its result is shared with the others.
 	pctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
 	defer cancel()
-	h.err = nil
+	h.down = nil
 	if err := h.ping(pctx); err != nil {
-		h.err = httpx.ErrUnavailable("database unavailable")
-	} else if h.storage != nil {
-		if err := h.storage(); err != nil {
-			h.err = httpx.ErrUnavailable("file storage unavailable")
-		}
+		h.down = append(h.down, depDatabase)
+	}
+	if h.storage != nil && h.storage() != nil {
+		h.down = append(h.down, depStorage)
 	}
 	h.checked = time.Now()
-	return h.err
+	return h.down
+}
+
+// unavailableError is the error a 503 carries: the database when it is down
+// (nothing works then), else file storage.
+func unavailableError(down []string) *httpx.APIError {
+	if slices.Contains(down, depDatabase) {
+		return httpx.ErrUnavailable("database unavailable")
+	}
+	return httpx.ErrUnavailable("file storage unavailable")
 }
 
 // health handles GET /api/health. The result is cached for healthCacheTTL,
@@ -135,23 +176,47 @@ func (h *healthCheck) check(ctx context.Context) *httpx.APIError {
 //
 // @Summary Health check
 // @Description Pings the database and checks object storage; the result is cached for 2 s.
+// @Description A 503 carries the usual error and, beside it, everything the 200 says about the server, plus the dependencies that are down in `unavailable`.
+// @Description With only `storage` in that list, uploads, attachments and pictures fail while chat and Talks keep working. An older server answers a 503 with the error alone.
 // @ID getHealth
 // @Tags System
 // @Produce json
 // @Success 200 {object} Health "Healthy."
-// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Failure 503 {object} HealthUnavailable "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/health [get]
 func health(hc *healthCheck, version string, names *community.Names) http.HandlerFunc {
 	if version == "" {
 		version = "dev"
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := hc.check(r.Context()); err != nil {
-			httpx.WriteError(w, err)
+		info := ServerInfo{Version: version, WebClientAPI: WebClientAPI, Features: Features}
+		down := hc.check(r.Context())
+		if slices.Contains(down, depDatabase) {
+			// No read that would wait for the database: the last known name does.
+			info.CommunityName, info.CommunityIcon = names.Cached()
+		} else {
+			info.CommunityName, info.CommunityIcon = names.Get(r.Context()), names.Icon(r.Context())
+		}
+		if len(down) > 0 {
+			httpx.WriteJSON(w, http.StatusServiceUnavailable, HealthUnavailable{Error: unavailableError(down), Status: "unavailable", Unavailable: down, ServerInfo: info})
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version, WebClientAPI: WebClientAPI, CommunityName: names.Get(r.Context()), CommunityIcon: names.Icon(r.Context()), Features: Features})
+		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", ServerInfo: info})
 	}
+}
+
+// live handles GET /api/health/live.
+//
+// @Summary Liveness check
+// @Description Answers 200 whenever the process serves requests. It asks neither the database nor object storage, so it stays 200 while GET /api/health answers 503.
+// @Description For orchestrators that restart a container on a failed probe; whether the server is ready for members is what GET /api/health says.
+// @ID getHealthLive
+// @Tags System
+// @Produce json
+// @Success 200 {object} Liveness "The process serves requests."
+// @Router /api/health/live [get]
+func live(w http.ResponseWriter, _ *http.Request) {
+	httpx.WriteJSON(w, http.StatusOK, Liveness{Status: "ok"})
 }
 
 // HealthHandler returns the health handler for the given dependencies.

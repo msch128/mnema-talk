@@ -58,7 +58,7 @@ func RequiredProblems(lookup func(string) (string, bool)) []Problem {
 	if production {
 		ps = append(ps, productionProblems(r)...)
 	}
-	return ps
+	return append(ps, rotationKeyProblems(r, production)...)
 }
 
 func validPublicURL(raw string) bool {

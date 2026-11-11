@@ -5,9 +5,9 @@
 // Nothing in the product changes: the replacement lives in vi.mock.
 import { webcrypto } from 'node:crypto'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { runSeed } from './groupSimRun.fixture'
+import { RENEWAL_RACE, renewalsByEpoch, runScript, runSeed, someoneStartedOver } from './groupSimRun.fixture'
 
-const tieBreak = vi.hoisted(() => ({ mode: 'lowest' as 'lowest' | 'highest' | 'none' }))
+const tieBreak = vi.hoisted(() => ({ mode: 'lowest' as 'lowest' | 'highest' | 'none', renewals: true }))
 
 vi.mock('./groupTree', async (original) => {
   const real = await original<typeof import('./groupTree')>()
@@ -23,10 +23,23 @@ vi.mock('./groupTree', async (original) => {
   return { ...real, lowest: broken }
 })
 
+// Between two renewals for one epoch the lower id's wins. Without that rule each member keeps the one it saw first.
+vi.mock('./groupVet', async (original) => {
+  const real = await original<typeof import('./groupVet')>()
+  const wins: typeof real.commitWinsConflict = (proposal, from, savedSender) => {
+    if (tieBreak.renewals) return real.commitWinsConflict(proposal, from, savedSender)
+    return !proposal.rejected && proposal.renews && (!proposal.empty || proposal.isCommitter)
+  }
+  return { ...real, commitWinsConflict: wins }
+})
+
 const previous = globalThis.crypto
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
-afterEach(() => { tieBreak.mode = 'lowest' })
+afterEach(() => {
+  tieBreak.mode = 'lowest'
+  tieBreak.renewals = true
+})
 
 async function breaches(mode: typeof tieBreak.mode): Promise<string[]> {
   tieBreak.mode = mode
@@ -49,4 +62,13 @@ describe('the simulator against a broken committer tie-break', () => {
     const found = await breaches('none')
     expect(found.some(line => line.includes('[4]'))).toBe(true)
   }, 120_000)
+})
+
+describe('the simulator against a broken renewal tie-break', () => {
+  it('sees a member lose its group when two renewals meet and no id decides', async () => {
+    tieBreak.renewals = false
+    const result = await runScript(RENEWAL_RACE)
+    expect([...renewalsByEpoch(result).values()].some(senders => senders.size === 2)).toBe(true)
+    expect(someoneStartedOver(result) || result.violations.length > 0).toBe(true)
+  }, 60_000)
 })

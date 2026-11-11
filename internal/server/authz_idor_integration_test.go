@@ -392,13 +392,11 @@ func TestEverySurfaceThatWritesHonoursTheHoldsOnAMember(t *testing.T) {
 
 	// A member created before any hold exists has written content of their own.
 	type fixture struct {
-		who       *client
-		mine      uuid.UUID
-		post      uuid.UUID
-		dm        uuid.UUID
-		peer      *client
-		hold      func()
-		holdLabel string
+		who  *client
+		mine uuid.UUID
+		post uuid.UUID
+		dm   uuid.UUID
+		peer *client
 	}
 	setup := func(name string) *fixture {
 		who, peer := a.quickMember(owner, name), a.quickMember(owner, name+"peer")

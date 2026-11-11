@@ -65,6 +65,9 @@ func (s *Snapshot) DMsOf(userID uuid.UUID) []uuid.UUID {
 	return out
 }
 
+// StripImageMetadata reports whether uploaded pictures lose their metadata.
+func (s *Snapshot) StripImageMetadata() bool { return s.stripImageMetadata }
+
 // DirectMessagesEnabled reports the Owner's community switch.
 func (s *Snapshot) DirectMessagesEnabled() bool { return s.dmEnabled }
 

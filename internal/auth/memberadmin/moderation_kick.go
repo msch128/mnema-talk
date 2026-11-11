@@ -4,11 +4,11 @@ import (
 	"net/http"
 
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/safego"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -16,11 +16,6 @@ import (
 // kickDisconnectDelay is how long a kicked member's socket stays open, so the
 // kicked event reaches them before the connection closes.
 const kickDisconnectDelay = banDisconnectDelay
-
-// kickNotice is the payload of the kicked event.
-type kickNotice struct {
-	Reason string `json:"reason"`
-}
 
 // RequirePermission is RequirePerm for code that is not a route (a slash
 // command): the caller must hold every permission of need server-wide, the
@@ -62,7 +57,7 @@ func (h *API) KickMember(r *http.Request, id uuid.UUID, reason string) error {
 		h.Live.EndingUser(id)
 	}
 	if h.Events != nil {
-		h.Events.SendToUsers([]uuid.UUID{id}, events.Kicked, kickNotice{Reason: reason})
+		h.Events.SendToUsers([]uuid.UUID{id}, wire.Kicked{Reason: reason})
 	}
 	if h.Live != nil {
 		h.Live.KickFromVoice(id)

@@ -544,11 +544,51 @@ details and the limits.
   is pinned to an exact version and patched while the web app is built
   (`web/scripts/emojiPickerCsp.ts`): its stylesheet becomes a constructable
   stylesheet (`adoptedStyleSheets`) and its `style` bindings are applied through
-  the CSSOM. Each of the two patches must match the package source exactly
+  the CSSOM. Each patch must match the package source exactly
   once, or the build fails. The Playwright fixtures fail every end-to-end spec
   on any `securitypolicyviolation` event or CSP console message, and
   `e2e/tests/csp.spec.ts` visits the emoji picker, Markdown and code blocks,
   every admin panel and the API reference under the real policy.
+- **Trusted Types.** The web app's policy also sends
+  `require-trusted-types-for 'script'` and
+  `trusted-types vue mnema-markdown mnema-script-url mnema-emoji-picker`,
+  enforced, not report-only. In a browser with Trusted Types (Chromium 83+,
+  Safari 26+, Firefox 148+) a plain string at an HTML or script-URL sink
+  (`innerHTML`, `outerHTML`, `insertAdjacentHTML`, `new Worker`,
+  `serviceWorker.register`, a script's `src`, string `eval`) throws instead of
+  being parsed, and only the four named policies can make a value such a sink
+  takes; there is no `default` policy and no `'allow-duplicates'`. All four are
+  created while the app starts, so none of the names is free for another script
+  to take with rules of its own. This is a
+  second line behind the escaping described under "Message rendering": markup
+  that reached a sink outside those policies, from the app or from a
+  dependency, would be refused by the browser. What each policy does
+  (`web/src/lib/trustedTypes.ts`):
+  - `mnema-markdown` is the Markdown renderer itself: its only rule runs
+    `renderMarkdown`, so a value of this policy is always escaped renderer
+    output. The one `v-html` takes it.
+  - `mnema-script-url` makes the addresses of the app's own worker scripts
+    (the media frame worker, the noise filter worker, `/sw.js`): it accepts
+    only `/sw.js` and files under the build's asset prefix (`/assets/`) on the
+    app's own origin, and refuses another origin, `data:`, `blob:` and every
+    other path, the API and uploads included.
+  - `mnema-emoji-picker` covers the static templates of `emoji-picker-element`
+    (a third build patch); what the picker shows is bound through the DOM, never
+    as markup. The app creates it at start-up and the patched picker, which is
+    loaded on first use, takes its templates through that instance.
+  - `vue` is Vue's own policy, for the static markup its template compiler
+    hoists and for `v-html`. It passes text through unchanged, so Trusted Types
+    do not replace the lint rules: `vue/no-v-html` (an error everywhere but
+    `MarkdownContent`) keeps a second `v-html` out, and a restricted-syntax rule
+    (`web/eslint.config.ts`) refuses the other ways to write an HTML string, a
+    bound `innerHTML` or `outerHTML` prop, `h()` with one, and an assignment to
+    either.
+
+  Limits: a browser without Trusted Types ignores both directives and behaves
+  as before. The API reference (`/api/docs`, only with `API_DOCS_ENABLED`) keeps
+  the policy without these two directives, because the bundled Swagger UI
+  writes its sanitized HTML as plain strings. The desktop shells apply their
+  own copy of the policy, which does not carry the directives yet.
 - **Message rendering.** Markdown is parsed into a tree of plain nodes
   (`web/src/lib/markdown/`) and only one module turns that tree into HTML: every
   string is escaped, tags come from a fixed table, and generated elements (mention
@@ -611,9 +651,76 @@ details and the limits.
   XMP, trailing bytes and polyglot payloads cannot survive. Animations stay
   within a pixel and frame budget before any frame is decoded. Avatars stored
   before 1.1 were redrawn by a one-time background job after the update
-  ([upgrade notes](doc/upgrade.md#10x--110)). Chat attachments are the
-  exception: they are stored byte for byte, so a photo sent as a file keeps its
-  metadata.
+  ([upgrade notes](doc/upgrade.md#10x--110)).
+- **Metadata of picture attachments.** A JPEG, PNG or WebP sent as an
+  attachment (by a member, a bot or a webhook) is stored without its metadata;
+  nobody who downloads it gets the GPS position, camera model or comments of
+  the original. The picture is not decoded or re-encoded: the server walks the
+  file's structure and keeps what draws the picture, so the image data, the
+  colour information (ICC profile, gamma) and the frames of an animation are
+  the bytes that were sent. What stays is an allow-list in all three formats:
+  an application segment or chunk the server does not know is removed,
+  whatever it is called.
+  - **JPEG.** Of the application segments only the JFIF header (without the
+    thumbnail it may carry), the ICC profile and Adobe's colour transform
+    stay. Everything else goes: EXIF and XMP, JFXX thumbnails, multi-picture
+    (MPF) and FlashPix data, IPTC and Photoshop blocks, content credentials
+    (C2PA), vendor blocks and comments, before the image data and between
+    the scans of a progressive file. So do bytes that sit between the
+    segments without being part of one, and segments under a marker no
+    decoder draws from (reserved markers, JPEG extensions).
+  - **PNG.** The image chunks (`IHDR`, `PLTE`, `IDAT`, `IEND`), transparency
+    and colour (`tRNS`, `cHRM`, `gAMA`, `iCCP`, `sBIT`, `sRGB`, `cICP`,
+    `mDCV`, `cLLI`, `bKGD`, `hIST`, `pHYs`, `sPLT`) and the animation chunks
+    (`acTL`, `fcTL`, `fdAT`) stay. Every other chunk goes: `eXIf`, `tEXt`,
+    `iTXt` (XMP), `zTXt`, `tIME`, content credentials (`caBX`), the private
+    chunks of editors and any chunk under an unknown name.
+  - **WebP.** The image chunks (`VP8 `, `VP8L`, `ALPH`), the extended header
+    (`VP8X`), the animation (`ANIM`, `ANMF`) and the colour profile (`ICCP`)
+    stay. Every other chunk goes: `EXIF`, `XMP `, content credentials and
+    any chunk under an unknown name. The header's flags and length are
+    corrected to match. Inside an animation frame only the frame's picture
+    stays; any other chunk there is overwritten with zero bytes.
+  - **The file ends with the picture.** What follows the JPEG end marker, the
+    PNG end chunk or the WebP container is not stored: a second picture, the
+    video of a motion photo, the gain map of an HDR photo (it is shown in
+    standard range), an archive or anything else appended to the file.
+  - **The orientation is kept**, as an EXIF record that holds that one tag,
+    so a photo is shown the way it was sent. Only the first EXIF record of a
+    file counts, as for a viewer, also when it is empty or cannot be read.
+  - **Sizes.** The stored file is never larger than the upload. The upload
+    limit applies to the file as sent; the size that is recorded, served and
+    counted against the quotas is the stored one.
+
+  The Owner can switch the removal off (admin System tab, **Upload size**);
+  it is on by default. What it does not do:
+  - Other types pass byte for byte: GIF (comments, XMP), video and audio (an
+    MP4 can carry a position), PDF, SVG, documents and archives keep what
+    they hold.
+  - A WebP of more than 64 KiB is read into a buffer of 5 MiB to be
+    rewritten, whatever its size, so each such upload holds that much memory
+    while it runs. A WebP larger than 5 MiB is not rewritten in memory: a chunk that has to
+    go is overwritten with zero bytes in place and renamed `JUNK`, so the
+    file keeps its length. Where its header announces EXIF, the first EXIF
+    chunk stays and holds the orientation only (an empty record or zero
+    bytes where the chunk is too short for the tag); a header that announces
+    EXIF in a file without such a chunk keeps the flag.
+  - The orientation of a WebP is kept where the file can announce it: with
+    an extended header (`VP8X`) in a file up to 5 MiB, and in a larger file
+    only when that header already announces EXIF. A WebP without the
+    extended header loses it and is shown as its image data lies. The
+    orientation is looked for in the first 64 KiB of the first EXIF record.
+  - What the picture needs comes from the kept parts only. A colour space
+    named in EXIF alone (a camera's Adobe RGB JPEG without an ICC profile)
+    is lost, and the picture is then shown as sRGB.
+  - It removes labelled metadata, nothing else. Unlike a profile picture, an
+    attachment is not redrawn: what is hidden in the image data or a
+    watermark stays. The kept parts are not examined either: a colour
+    profile is stored whole (its description and copyright tags are free
+    text), and so are the seven bytes of Adobe's segment a decoder does not
+    read, and the table and frame segments of a JPEG.
+  - Files stored before this version, or while the removal was switched off,
+    are not touched afterwards.
 - **Uploads.** File types are detected by content sniffing, not by the
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is
@@ -707,7 +814,9 @@ details and the limits.
   keeps the powers the rules give the role: it can remove a member that looks
   silent to it, delay joins or stop the call, as above. Only authenticated input discards a
   group: a handshake that merely parses, a key package, or a public message from
-  an id outside the group never does. A welcome from a lower id outside my
+  an id outside the group never does (a group of one, which nobody else depends
+  on, is the exception: it steps aside for a lower id the roster lists, on a
+  roster change or on its maintenance tick). A welcome from a lower id outside my
   group replaces it only if it opens with the key package I offered and passes
   the committer rule, at most once per minute per sender (doubling to ten
   minutes); a member who holds a key package I offered can therefore still pull
@@ -740,7 +849,14 @@ details and the limits.
   or with another renewal), the committer's wins and, between renewals, the
   lower id's; a member that took the loser goes back to the state it kept for
   ten seconds and takes the winner, so the call does not split (anything else
-  that has split is repaired by the existing start-over). A member's leaf
+  that has split is repaired by the existing start-over). It goes back only
+  while that renewal is the last commit it took: once another commit followed
+  (a removal, for one), a late rival renewal changes nothing for it. That one
+  ordering does split the call: a member that took the rival renewal first
+  cannot follow the commit built on the other one. So the committer, when a
+  rival renewal that would have won reaches it after its own commit, commits
+  once more at once; the members on the other branch see a commit for an epoch
+  they have not reached, start over and are let in again. A member's leaf
   secrets that an attacker held are therefore useless to it after about one
   period of the member being online and in the group, and a member's keys
   change at most once per period more than before: with 100 members that is

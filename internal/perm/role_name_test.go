@@ -3,7 +3,7 @@ package perm
 import "testing"
 
 func TestReservedRoleNamesCannotBeDisguisedWithInvisibleCharacters(t *testing.T) {
-	for _, name := range []string{"everyone", "@Everyone", "every‍one", "@he​re", "ＥＶＥＲＹＯＮＥ"} {
+	for _, name := range []string{"everyone", "@Everyone", "every\u200done", "@he\u200bre", "ＥＶＥＲＹＯＮＥ"} {
 		if _, err := cleanRoleName(name); err == nil {
 			t.Errorf("%q accepted", name)
 		}

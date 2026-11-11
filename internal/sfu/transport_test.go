@@ -206,7 +206,7 @@ func TestUDPMuxRoutesConcurrentConnections(t *testing.T) {
 func TestUDPMuxCloseReleasesPortAndRejectsJoin(t *testing.T) {
 	port := unusedLoopbackUDPPort(t)
 	s := newLoopbackMuxSFU(t, port)
-	_, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil)
+	_, peer, err := s.Join(uuid.New(), uuid.New(), "", func(webrtc.SessionDescription) {}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +219,7 @@ func TestUDPMuxCloseReleasesPortAndRejectsJoin(t *testing.T) {
 	if err := s.Close(); err != nil {
 		t.Fatal("repeated close:", err)
 	}
-	if _, _, err := s.Join(uuid.New(), uuid.New(), nil, nil); !errors.Is(err, errSFUClosed) {
+	if _, _, err := s.Join(uuid.New(), uuid.New(), "", nil, nil); !errors.Is(err, errSFUClosed) {
 		t.Fatalf("join after close: %v", err)
 	}
 	if err := s.SetAnnouncedIPs([]string{"127.0.0.1"}); !errors.Is(err, errSFUClosed) {

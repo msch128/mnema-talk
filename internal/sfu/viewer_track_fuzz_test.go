@@ -70,14 +70,27 @@ func (s *rewriteSim) picMask() uint16 {
 }
 
 // step runs one byte of the script. The low two bits pick a layer to send a
-// packet of, or (3) a change of what the viewer should receive.
+// packet of, or (3) a change of what the viewer should receive. The high four
+// bits are the milliseconds that pass before the packet, or (14, 15) make its
+// clock reading older than the clock: every layer is forwarded by a goroutine
+// of its own, which may have read the clock before another layer's packet
+// went out.
 func (s *rewriteSim) step(op byte) {
 	if op&3 == 3 {
 		s.retarget(int(op>>2) & 3)
 		return
 	}
-	s.now = s.now.Add(time.Duration(op>>4) * time.Millisecond)
-	s.send(int(op&3), op&0x04 != 0, op&0x08 != 0)
+	var at time.Time
+	switch ms := op >> 4; ms {
+	case 15:
+		at = s.now.Add(-15 * time.Microsecond)
+	case 14:
+		at = s.now.Add(-2 * time.Millisecond)
+	default:
+		s.now = s.now.Add(time.Duration(ms) * time.Millisecond)
+		at = s.now
+	}
+	s.send(int(op&3), op&0x04 != 0, op&0x08 != 0, at)
 }
 
 // retarget points the viewer at another layer, or (3) takes the layer it is
@@ -93,8 +106,9 @@ func (s *rewriteSim) retarget(to int) {
 }
 
 // send offers the next packet of a layer: the start of a keyframe, the start
-// of a delta frame or the continuation of the frame before.
-func (s *rewriteSim) send(layer int, key, frame bool) {
+// of a delta frame or the continuation of the frame before. at is the clock
+// reading the packet is forwarded with.
+func (s *rewriteSim) send(layer int, key, frame bool, at time.Time) {
 	l := &s.layers[layer]
 	start := key || frame || !l.sent
 	if start {
@@ -111,7 +125,7 @@ func (s *rewriteSim) send(layer int, key, frame bool) {
 	target, before := s.vt.eff, s.vt.cur
 	s.arrived = nil
 	s.vt.mu.Lock()
-	switched, _, _ := s.vt.writeLocked(layer, src, s.now)
+	switched, _, _ := s.vt.writeLocked(layer, src, at)
 	s.vt.mu.Unlock()
 
 	if !bytes.Equal(payload, sent) {
@@ -125,12 +139,12 @@ func (s *rewriteSim) send(layer int, key, frame bool) {
 		s.t.Fatalf("layer %d with the viewer on %d wanting %d: delivered=%v", layer, before, target, s.arrived != nil)
 	}
 	if s.arrived != nil {
-		s.check(src, switched)
+		s.check(src, switched, at)
 	}
 }
 
 // check compares the packet that just arrived with the one before it.
-func (s *rewriteSim) check(src *rtp.Packet, switched bool) {
+func (s *rewriteSim) check(src *rtp.Packet, switched bool, at time.Time) {
 	t, got := s.t, s.arrived
 	if len(got.Payload) != len(src.Payload) {
 		t.Fatalf("payload of %d bytes delivered as %d", len(src.Payload), len(got.Payload))
@@ -140,7 +154,7 @@ func (s *rewriteSim) check(src *rtp.Packet, switched bool) {
 	if !ok || d.start != sd.start || d.key != sd.key || !bytes.Equal(got.Payload[sd.tl0Pos+1:], src.Payload[sd.tl0Pos+1:]) {
 		t.Fatalf("delivered % x for % x", got.Payload, src.Payload)
 	}
-	now := &delivered{out: got.Header, src: src.Header, pic: d.pic, srcPic: sd.pic, tl0: d.tl0, srcTl0: sd.tl0, at: s.now}
+	now := &delivered{out: got.Header, src: src.Header, pic: d.pic, srcPic: sd.pic, tl0: d.tl0, srcTl0: sd.tl0, at: at}
 	prev := s.last
 	s.last = now
 	switch {
@@ -154,8 +168,10 @@ func (s *rewriteSim) check(src *rtp.Packet, switched bool) {
 		if now.out.SequenceNumber != prev.out.SequenceNumber+1 {
 			t.Fatalf("sequence number %d after %d across a switch", now.out.SequenceNumber, prev.out.SequenceNumber)
 		}
-		ticks := now.out.Timestamp - prev.out.Timestamp
-		elapsed := uint32(now.at.Sub(prev.at).Milliseconds()) * videoClockRate / 1000
+		// The timestamp always moves forward, by the time that passed when the
+		// clock readings say that any did.
+		ticks := int64(int32(now.out.Timestamp - prev.out.Timestamp))
+		elapsed := max(now.at.Sub(prev.at).Microseconds(), 0) * videoClockRate / 1_000_000
 		if ticks < 1 || ticks+1 < elapsed || ticks > elapsed+1 {
 			t.Fatalf("timestamp moved %d ticks across a switch, %d elapsed", ticks, elapsed)
 		}
@@ -186,6 +202,9 @@ func FuzzViewerLayerRewrite(f *testing.F) {
 	f.Add(script, uint16(0xfffe), uint32(0xfffff000), uint16(0x7ffe), uint8(0xfe), true)
 	f.Add(script, uint16(0xaaa9), uint32(0xaaaaa000), uint16(0x7e), uint8(0xa9), false)
 	f.Add([]byte{0x05, 0x06, 0x04, 0x07, 0x05, 0x0b, 0x06, 0x03, 0x04}, uint16(0x5554), uint32(0x55554000), uint16(0x5554), uint8(0x54), true)
+	// Switches whose keyframe carries a clock reading older than the last
+	// packet sent, by a tick and by several frames.
+	f.Add([]byte{0x04, 0x07, 0xf5, 0x01, 0x03, 0xe4, 0x10}, uint16(99), uint32(1_450_000), uint16(9), uint8(5), true)
 	f.Fuzz(func(t *testing.T, script []byte, seq uint16, ts uint32, pic uint16, tl0 uint8, wide bool) {
 		sim := newRewriteSim(t, seq, ts, pic, tl0, wide)
 		for _, op := range script {

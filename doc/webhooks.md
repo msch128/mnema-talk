@@ -248,17 +248,26 @@ export function verify(secret, header, rawBody, toleranceSeconds = 300) {
   (`PATCH ... {"enabled": true}`) starts over.
 - **Pending deliveries are kept in PostgreSQL** (table `outgoing_queue`), so
   events waiting for a first attempt or for a retry **survive a restart or an
-  update** of the server and are sent afterwards. Only the instant between an
-  event happening and being written (milliseconds) is held in memory. Bounds:
-  at most 500 pending deliveries per webhook and 5000 in total (the oldest are
-  dropped first, counted in `mnema_webhook_events_dropped_total`), and a
-  delivery not settled within 2 hours (past the last retry) is given up. A
-  per-channel share of the in-memory buffer keeps one noisy channel from
-  starving the others.
-- **At least once, best-effort order.** If the server stops after a request
-  went out but before it was recorded, the event is sent again after the
-  restart, and retries of one event may arrive after later events of the same
-  webhook. Do not rely on order or on exactly-once: **deduplicate on the
+  update** of the server and are sent afterwards. `MESSAGE_CREATE`,
+  `MESSAGE_UPDATE`, `MESSAGE_DELETE` and `MESSAGE_REACTIONS_UPDATE` are
+  written there **in the same database transaction as the change itself**: a
+  message that was stored has its event stored, also when the server dies in
+  the instant after, and a change that failed leaves no event. Only
+  `VOICE_STATE_UPDATE` has no database change behind it; it is held in memory
+  for the milliseconds until it is written, and a hard stop (not a normal
+  shutdown) can lose it. Bounds: at most 500 pending deliveries per webhook
+  and 5000 in total (the oldest are dropped first, within about a second,
+  counted in `mnema_webhook_events_dropped_total`), and a delivery not settled
+  within 2 hours (past the last retry) is given up. A per-channel share of the
+  in-memory buffer keeps one noisy Talk from starving the others.
+- **At least once, best-effort order.** In normal operation every event is
+  sent once. If the server stops after a request went out but before it was
+  recorded, the event is sent again after the restart, with the same delivery
+  id, and retries of one event may arrive after later events of the same
+  webhook. Events are taken from the queue in the order their changes were
+  written (two changes of the same message in the order they took effect, not
+  the order their requests began), up to 4 at a time, so two events made
+  within the same moment can arrive swapped. Do not rely on order or on exactly-once: **deduplicate on the
   delivery id** (`id` in the body, the same value as the `X-Mnema-Delivery`
   header; it never changes between attempts) and, if you need ordering, sort by
   `timestamp`. Outgoing webhooks are still a notification channel, not a log;

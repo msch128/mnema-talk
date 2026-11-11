@@ -25,6 +25,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/emojitext"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/imgproc"
 	"github.com/msch128/mnema-talk/internal/media"
@@ -79,7 +80,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	r.Delete("/emoji/{id}", httpx.Handle(h.delete))
 }
 
-func (h *Handler) changed() { h.Events.Broadcast(events.EmojiChanged, nil) }
+func (h *Handler) changed() { h.Events.Broadcast(wire.EmojiChanged{}) }
 
 // listEmoji handles GET /api/emoji.
 //

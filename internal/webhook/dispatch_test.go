@@ -17,8 +17,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
+	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
@@ -42,36 +46,34 @@ func TestTranslate(t *testing.T) {
 	bot := core.Message{ID: uuid.New(), ChannelID: ch, IsBot: true}
 	hook := core.Message{ID: uuid.New(), ChannelID: ch, IsBot: true, IsWebhook: true}
 	cases := []struct {
-		name    string
-		typ     string
-		payload any
-		want    string
+		name string
+		ev   events.Event
+		want string
 	}{
-		{"create value", "message_create", human, EventMessageCreate},
-		{"create pointer", "message_create", &human, EventMessageCreate},
-		{"update value", "message_update", human, EventMessageUpdate},
-		{"update by a bot is delivered", "message_update", &bot, EventMessageUpdate},
-		{"create by a bot account is delivered", "message_create", &bot, EventMessageCreate},
-		{"create by an incoming webhook is not", "message_create", &hook, ""},
-		{"update by an incoming webhook is delivered", "message_update", &hook, EventMessageUpdate},
-		{"create with another payload", "message_create", "text", ""},
-		{"delete", "message_delete", map[string]any{"id": 1}, EventMessageDelete},
-		{"reactions", "message_reaction", messages.ReactionResult{}, EventReactionsUpdate},
-		{"voice", "voice_state_update", map[string]any{"action": "join"}, EventVoiceStateUpdate},
-		{"a new member is not offered", "member_joined", map[string]any{"id": 1}, ""},
-		{"typing", "typing", nil, ""},
-		{"presence", "presence_update", nil, ""},
+		{"create", (*core.MessageCreate)(&human), EventMessageCreate},
+		{"update", (*core.MessageUpdate)(&human), EventMessageUpdate},
+		{"update by a bot is delivered", (*core.MessageUpdate)(&bot), EventMessageUpdate},
+		{"create by a bot account is delivered", (*core.MessageCreate)(&bot), EventMessageCreate},
+		{"create by an incoming webhook is not", (*core.MessageCreate)(&hook), ""},
+		{"update by an incoming webhook is delivered", (*core.MessageUpdate)(&hook), EventMessageUpdate},
+		{"create without a message", (*core.MessageCreate)(nil), ""},
+		{"delete", wire.MessageDelete{ID: uuid.New()}, EventMessageDelete},
+		{"reactions", messages.ReactionResult{}, EventReactionsUpdate},
+		{"voice", eventstest.Named("voice_state_update", map[string]any{"action": "join"}), EventVoiceStateUpdate},
+		{"a new member is not offered", auth.MemberJoined{}, ""},
+		{"typing", wire.Typing{}, ""},
+		{"presence", eventstest.Named("presence_update", nil), ""},
 	}
 	for _, tc := range cases {
-		name, data, ok := translate(tc.typ, tc.payload)
+		name, ok := translate(tc.ev)
 		if tc.want == "" {
 			if ok {
 				t.Errorf("%s: expected translation to be rejected, got %q", tc.name, name)
 			}
 			continue
 		}
-		if !ok || name != tc.want || data == nil {
-			t.Errorf("%s: got name=%q data=%v ok=%v, want %q", tc.name, name, data, ok, tc.want)
+		if !ok || name != tc.want {
+			t.Errorf("%s: got name=%q ok=%v, want %q", tc.name, name, ok, tc.want)
 		}
 	}
 }
@@ -176,29 +178,56 @@ func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 	chA, chB := uuid.New(), uuid.New()
 	a, b, both, off := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	routes := []route{
-		{id: a, channel: chA, events: []string{EventMessageCreate}},
-		{id: b, channel: chB, events: []string{EventMessageCreate, EventMessageDelete}},
-		{id: both, channel: chA, events: []string{EventMessageCreate, EventMessageDelete}},
+		{id: a, channel: chA, events: []string{EventVoiceStateUpdate}},
+		{id: b, channel: chB, events: []string{EventVoiceStateUpdate, EventMessageDelete}},
+		{id: both, channel: chA, events: []string{EventVoiceStateUpdate, EventMessageDelete}},
 		{id: off, channel: chA, events: []string{EventMessageUpdate}},
 	}
 	d.routes.Store(&routes)
-	msg := core.Message{ID: uuid.New(), ChannelID: chA}
+	join := map[string]any{"action": "join"}
 
-	d.Observe(chA, "message_create", &msg)
+	d.Observe(chA, eventstest.Named("voice_state_update", join))
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 2 || !g[a] || !g[both] {
-		t.Fatalf("message in A reached %v", g)
+		t.Fatalf("join in A reached %v", g)
 	}
-	d.Observe(chB, "message_delete", map[string]any{"id": 1})
+	d.Observe(chB, eventstest.Named("voice_state_update", join))
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 1 || !g[b] {
-		t.Fatalf("delete in B reached %v", g)
+		t.Fatalf("join in B reached %v", g)
 	}
-	d.Observe(chA, "typing", nil)
-	d.Observe(chA, "message_reaction", messages.ReactionResult{})
+	d.Observe(chA, wire.Typing{})
 	// Events to everybody (no channel) belong to no webhook.
-	d.Observe(uuid.Nil, "message_create", &msg)
-	d.Observe(uuid.Nil, "member_joined", map[string]any{"id": 1})
+	d.Observe(uuid.Nil, eventstest.Named("voice_state_update", join))
+	d.Observe(uuid.Nil, auth.MemberJoined{})
 	if g := drainDispatchedQueue(t, d.queue); len(g) != 0 {
 		t.Fatalf("unsubscribed events reached %v", g)
+	}
+}
+
+// A message or reaction event was written to the queue by its transaction:
+// its publication is not queued a second time, it only wakes a worker, and
+// only when a webhook of the channel receives it.
+func TestObserveOnlyWakesForEventsTheirTransactionWrote(t *testing.T) {
+	d := NewDispatcher(nil, nil, "t")
+	ch := uuid.New()
+	routes := []route{{id: uuid.New(), channel: ch, events: []string{EventMessageCreate, EventMessageDelete, EventReactionsUpdate}}}
+	d.routes.Store(&routes)
+	msg := core.Message{ID: uuid.New(), ChannelID: ch}
+
+	d.Observe(ch, (*core.MessageUpdate)(&msg)) // nobody subscribed
+	d.Observe(uuid.New(), (*core.MessageCreate)(&msg))
+	if len(d.wake) != 0 {
+		t.Fatal("an event no webhook receives woke a worker")
+	}
+	for _, ev := range []events.Event{(*core.MessageCreate)(&msg), wire.MessageDelete{ID: msg.ID}, messages.ReactionResult{}} {
+		d.Observe(ch, ev)
+		if len(d.queue) != 0 {
+			t.Fatalf("%s was buffered again", ev.EventName())
+		}
+		select {
+		case <-d.wake:
+		default:
+			t.Fatalf("%s did not wake a worker", ev.EventName())
+		}
 	}
 }
 
@@ -294,5 +323,22 @@ func TestDecodeLenientRejectsAnyTrailingData(t *testing.T) {
 	var p struct{ Content string }
 	if err := decodeLenient(strings.NewReader("{\"content\":\"a\"}\n "), &p); err != nil || p.Content != "a" {
 		t.Errorf("trailing whitespace: %v", err)
+	}
+}
+
+// What is no outgoing event, or cannot be encoded, is skipped without
+// touching the caller's transaction: a webhook never fails a message.
+func TestRecordSkipsWhatIsNoOutgoingEvent(t *testing.T) {
+	d := NewDispatcher(nil, nil, "t")
+	ch := uuid.New()
+	hook := core.Message{ID: uuid.New(), ChannelID: ch, IsWebhook: true}
+	for name, ev := range map[string]events.Event{
+		"not offered":           wire.Typing{},
+		"posted by a webhook":   (*core.MessageCreate)(&hook),
+		"payload not encodable": eventstest.Named("message_delete", make(chan int)),
+	} {
+		if err := d.Record(context.Background(), nil, ch, ev); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
 	}
 }

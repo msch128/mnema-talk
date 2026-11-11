@@ -65,7 +65,7 @@ func (a *API) ToggleReaction(w http.ResponseWriter, r *http.Request) error {
 		return a.Guard.RefusalFor(r, err, perm.AddReactions)
 	}
 	payload := ReactionResult{MessageID: msgID, ChannelID: ref.ChannelID, Reactions: reactions}
-	a.Events.BroadcastChannel(ref.ChannelID, events.MessageReaction, payload)
+	a.Events.BroadcastChannel(ref.ChannelID, payload)
 	httpx.WriteJSON(w, http.StatusOK, payload)
 	return nil
 }
@@ -182,6 +182,8 @@ type ReactionResult struct {
 	ChannelID uuid.UUID              `json:"channel_id" format:"uuid"`
 	Reactions []core.ReactionSummary `json:"reactions"`
 }
+
+func (ReactionResult) EventName() string { return events.MessageReaction }
 
 // Thread is a root message with a page of its replies.
 type Thread struct {

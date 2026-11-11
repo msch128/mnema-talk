@@ -43,6 +43,7 @@ const examples: Record<ServerEventType, unknown[]> = {
     { channel_id: id, last_read_at: null, unread_count: 1, mention_count: 0 },
     { channel_id: id, last_read_at: FIXTURE_TIMESTAMP, unread_count: 0, mention_count: 0 },
     { channel_id: id, last_read_at: FIXTURE_TIMESTAMP, refresh: true },
+    { channel_id: id, refresh: true },
     { channel_id: id, notify_level: 'all' },
     { channel_id: id, notify_level: 'mentions' },
     { channel_id: id, notify_level: 'mute' },

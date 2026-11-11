@@ -2,21 +2,22 @@ package ws
 
 import (
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 // browserBroadcast sends a plain event through the established Broadcast or
 // voice-room helpers. Scoped events (a view channel, excluding the sender)
 // need emitApplicationEvent's own delivery and report false here.
-func browserBroadcast(c *Client, eventType string, payload any, excludeSelf bool, voice *uuid.UUID, view uuid.UUID) bool {
+func browserBroadcast(c *Client, ev events.Event, excludeSelf bool, voice *uuid.UUID, view uuid.UUID) bool {
 	if view != uuid.Nil || excludeSelf {
 		return false
 	}
 	if voice != nil {
-		c.hub.sendToVoiceRoom(*voice, eventType, payload)
+		c.hub.sendToVoiceRoom(*voice, ev)
 		return true
 	}
-	c.hub.Broadcast(eventType, payload)
+	c.hub.Broadcast(ev)
 	return true
 }
 
@@ -35,12 +36,12 @@ func attachView(scope *eventScope, h *Hub, view uuid.UUID) bool {
 // emitApplicationEvent publishes an event from this connection to its
 // audience. view, when set, limits the event to the connections whose user may
 // view that channel.
-func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf bool, voice *uuid.UUID, view uuid.UUID) {
+func (c *Client) emitApplicationEvent(ev events.Event, excludeSelf bool, voice *uuid.UUID, view uuid.UUID) {
 	h := c.hub
-	if browserBroadcast(c, eventType, payload, excludeSelf, voice, view) {
+	if browserBroadcast(c, ev, excludeSelf, voice, view) {
 		return
 	}
-	data := encode(eventType, payload)
+	data := encode(ev)
 	if data == nil {
 		return
 	}
@@ -53,17 +54,17 @@ func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	publishScoped(h, data, scope, view, eventType, payload)
+	publishScoped(h, data, scope, view, ev)
 }
 
-func publishScoped(h *Hub, data []byte, scope eventScope, view uuid.UUID, eventType string, payload any) {
+func publishScoped(h *Hub, data []byte, scope eventScope, view uuid.UUID, ev events.Event) {
 	// Outgoing webhooks only hear what is really published: after the
 	// publication is authorized and live, never before.
 	if view != uuid.Nil {
 		if scope.snap.IsPrivate(view) {
-			h.dmTapped(view, eventType, payload)
+			h.dmTapped(view, ev)
 		} else {
-			h.tapped(view, eventType, payload)
+			h.tapped(view, ev)
 		}
 	}
 	for recipient := range h.clients {

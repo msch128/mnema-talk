@@ -5,6 +5,8 @@ package sfu
 
 import (
 	"context"
+	"github.com/msch128/mnema-talk/internal/safego"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -140,7 +142,14 @@ type Peer struct {
 	// gen orders this peer against the earlier and later peers of the same
 	// user (see layerGroup.addViewer); attachStep is a test seam called
 	// between the steps of addSender.
-	gen        uint64
+	gen uint64
+	// connID is the ID Pion gave the connection, which is what the
+	// connection's viewerGuard knows of it.
+	connID string
+	// hubConn is the id of the hub connection that made the peer, and log
+	// carries it as conn_id (see nameConn).
+	hubConn    string
+	log        *slog.Logger
 	attachStep func(step string)
 	// lostMu guards onLost and lost (see OnLost).
 	lostMu sync.Mutex
@@ -152,6 +161,8 @@ type Room struct {
 	allowLoopbackCands bool
 	load               *peerLoad
 	ID                 uuid.UUID
+	// conns is the SFU's record of hub connections (nil in a bare room).
+	conns *connNames
 	// peers maps user → their current connection; a rejoin replaces it.
 	peers map[uuid.UUID]*Peer
 	// trackLocals is keyed by the local track ID, which is scoped to the
@@ -212,6 +223,8 @@ type SFU struct {
 	// offerTimeout is defaultOfferTimeout; tests shorten it.
 	offerTimeout time.Duration
 	rooms        map[uuid.UUID]*Room
+	// conns names the hub connection of each of Pion's connections.
+	conns connNames
 	// The upload governor (StartUploadGovernor): its stop function, the
 	// goroutine to wait for and how many times one was started.
 	uploadMu   sync.Mutex
@@ -225,4 +238,75 @@ type SFU struct {
 	probeMu  sync.Mutex
 	probes   int
 	probesBy map[string]int
+}
+
+// connIDAttr names, on a peer's log lines, the hub connection that made the
+// peer (Join's connID; the hub logs the same attribute). A member's second
+// session and the peer a rejoin replaced are told apart by it.
+const connIDAttr = "conn_id"
+
+// nameConn records the hub connection behind the peer and binds it to the
+// peer's logger once, so no log call builds the attribute again.
+func (p *Peer) nameConn(id string) {
+	if id == "" {
+		return
+	}
+	p.hubConn = id
+	p.log = slog.With(connIDAttr, id)
+}
+
+// joinLogger is the logger of a join that has no peer yet (its connection is
+// still being built): the member, and the hub connection when there is one.
+func joinLogger(userID uuid.UUID, hubConn string) *slog.Logger {
+	if hubConn == "" {
+		return slog.With("user", userID)
+	}
+	return slog.With(connIDAttr, hubConn, "user", userID)
+}
+
+// logger is the peer's logger. A peer without a hub connection (tests, the
+// load generator) logs like the rest of the server.
+func (p *Peer) logger() *slog.Logger {
+	if p == nil || p.log == nil {
+		return slog.Default()
+	}
+	return p.log
+}
+
+// panics is the hub connection's id for the panic line of the peer's
+// goroutines, timers and callbacks.
+func (p *Peer) panics() safego.Conn {
+	if p == nil {
+		return ""
+	}
+	return safego.Conn(p.hubConn)
+}
+
+// logger is the logger of the peer that publishes the track.
+func (t *TrackInfo) logger() *slog.Logger { return t.publisher.logger() }
+
+// connNames knows the hub connection of each of Pion's connections, for the
+// one site that has only Pion's ID when it panics (viewerGuard). An entry
+// lives from the peer's attach until its connection's interceptors close.
+type connNames struct{ byPionID sync.Map }
+
+func (n *connNames) name(pionID, hubConn string) {
+	if n != nil && hubConn != "" {
+		n.byPionID.Store(pionID, hubConn)
+	}
+}
+
+func (n *connNames) of(pionID string) safego.Conn {
+	if n == nil {
+		return ""
+	}
+	id, _ := n.byPionID.Load(pionID)
+	s, _ := id.(string)
+	return safego.Conn(s)
+}
+
+func (n *connNames) forget(pionID string) {
+	if n != nil {
+		n.byPionID.Delete(pionID)
+	}
 }

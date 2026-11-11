@@ -15,7 +15,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/mentions"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -225,7 +224,7 @@ func (h *Handler) execute(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	h.Events.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
+	h.Events.BroadcastChannel(msg.ChannelID, (*core.MessageCreate)(msg))
 	if wait, err := strconv.ParseBool(r.URL.Query().Get("wait")); err == nil && wait {
 		httpx.WriteJSON(w, http.StatusOK, msg)
 		return

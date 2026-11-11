@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/chat/dm"
 	chatdm "github.com/msch128/mnema-talk/internal/chat/dm"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -21,7 +20,7 @@ import (
 type callWorldDB struct {
 	*talksWorld
 	h     *Handler
-	calls *dm.DMCalls
+	calls *chatdm.DMCalls
 	dm    uuid.UUID
 	talk  uuid.UUID
 }
@@ -30,10 +29,10 @@ type callWorldDB struct {
 func startedCall(t *testing.T, ring time.Duration) *callWorldDB {
 	t.Helper()
 	w := newTalksWorld(t)
-	calls := chatdm.NewDMCalls(&dm.DMCalls{DB: w.p, Events: w.rec, Ring: ring})
+	calls := chatdm.NewDMCalls(&chatdm.DMCalls{DB: w.p, Events: w.rec, Ring: ring})
 	t.Cleanup(calls.Stop)
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr, Calls: calls}
-	dm, _, err := chatdm.CreateDM(context.Background(), w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(context.Background(), w.p, chatdm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,10 +47,10 @@ func startedCall(t *testing.T, ring time.Duration) *callWorldDB {
 }
 
 // announce runs the queued announcements and returns the events of type typ.
-func (c *callWorldDB) announce(typ string) []events.Event {
+func (c *callWorldDB) announce(typ string) []events.Recorded {
 	for c.calls.AnnounceNext(context.Background()) {
 	}
-	var out []events.Event
+	var out []events.Recorded
 	for _, e := range c.rec.Snapshot() {
 		if e.Type == typ {
 			out = append(out, e)
@@ -77,7 +76,7 @@ func TestStartingATalkFromAConversationRingsIt(t *testing.T) {
 	if len(rings) != 1 || rings[0].ChannelID != c.dm {
 		t.Fatalf("rings = %+v", rings)
 	}
-	ring := rings[0].Payload.(dm.DMCallRing)
+	ring := rings[0].Payload.(chatdm.DMCallRing)
 	if ring.TalkID == uuid.Nil || ring.CallerID != c.alice.ID || ring.TalkName != "Talk 1" || ring.MessageID == uuid.Nil {
 		t.Fatalf("ring = %+v", ring)
 	}
@@ -99,8 +98,8 @@ func TestACallTheCallerHangsUpOnLeavesAMissedCall(t *testing.T) {
 	if len(ends) != 1 {
 		t.Fatalf("ends = %+v", ends)
 	}
-	end := ends[0].Payload.(dm.DMCallEnd)
-	if end.Reason != dm.CallCancelled || end.Active || end.MessageID == nil {
+	end := ends[0].Payload.(chatdm.DMCallEnd)
+	if end.Reason != chatdm.CallCancelled || end.Active || end.MessageID == nil {
 		t.Fatalf("end = %+v", end)
 	}
 	if n := c.missedMessages(t); n != 1 {
@@ -108,7 +107,7 @@ func TestACallTheCallerHangsUpOnLeavesAMissedCall(t *testing.T) {
 	}
 	var created int
 	for _, e := range c.rec.Snapshot() {
-		if m, ok := e.Payload.(*core.Message); ok && e.Type == events.MessageCreate && m.ID == *end.MessageID && e.ChannelID == c.dm {
+		if m, ok := e.Payload.(*core.MessageCreate); ok && m.ID == *end.MessageID && e.ChannelID == c.dm {
 			created++
 		}
 	}
@@ -133,8 +132,8 @@ func TestACallNobodyAnswersLeavesAMissedCallButStaysOpenForLateJoiners(t *testin
 	if len(ends) != 1 {
 		t.Fatalf("ends = %+v", ends)
 	}
-	end := ends[0].Payload.(dm.DMCallEnd)
-	if end.Reason != dm.CallTimeout || !end.Active || end.MessageID == nil {
+	end := ends[0].Payload.(chatdm.DMCallEnd)
+	if end.Reason != chatdm.CallTimeout || !end.Active || end.MessageID == nil {
 		t.Fatalf("end = %+v", end)
 	}
 	if call := c.calls.Active(c.dm); call == nil || call.Ringing {
@@ -162,7 +161,7 @@ func TestAnAnsweredCallLeavesNoMissedCall(t *testing.T) {
 	c.calls.OnPresence(c.alice.ID, c.talk, true)
 	c.calls.OnPresence(c.bob.ID, c.talk, true)
 	ends := c.announce(events.DMCallEnd)
-	if len(ends) != 1 || ends[0].Payload.(dm.DMCallEnd).Reason != dm.CallAnswered || ends[0].Payload.(dm.DMCallEnd).MessageID != nil {
+	if len(ends) != 1 || ends[0].Payload.(chatdm.DMCallEnd).Reason != chatdm.CallAnswered || ends[0].Payload.(chatdm.DMCallEnd).MessageID != nil {
 		t.Fatalf("ends = %+v", ends)
 	}
 	c.calls.OnPresence(c.alice.ID, c.talk, false)
@@ -170,7 +169,7 @@ func TestAnAnsweredCallLeavesNoMissedCall(t *testing.T) {
 	if n := c.missedMessages(t); n != 0 {
 		t.Fatalf("missed call messages = %d", n)
 	}
-	if ends := c.announce(events.DMCallEnd); len(ends) != 2 || ends[1].Payload.(dm.DMCallEnd).Reason != dm.CallEnded {
+	if ends := c.announce(events.DMCallEnd); len(ends) != 2 || ends[1].Payload.(chatdm.DMCallEnd).Reason != chatdm.CallEnded {
 		t.Fatalf("ends = %+v", ends)
 	}
 }
@@ -190,7 +189,7 @@ func TestACallNeedsNoLobbyAndItsTalkBelongsToTheConversation(t *testing.T) {
 		t.Fatal(err)
 	}
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr}
-	dm, _, err := chatdm.CreateDM(ctx, w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, chatdm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +243,7 @@ func TestACallNeedsNoLobbyAndItsTalkBelongsToTheConversation(t *testing.T) {
 func TestTheTalkOfAConversationGoesWithIt(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
-	dm, _, err := chatdm.CreateDM(ctx, w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, chatdm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,10 +284,10 @@ func TestACallerWhoMayNotConnectGetsNoTalkAndNoRing(t *testing.T) {
 func startedCallWorld(t *testing.T) *callWorldDB {
 	t.Helper()
 	w := newTalksWorld(t)
-	calls := chatdm.NewDMCalls(&dm.DMCalls{DB: w.p, Events: w.rec, Ring: time.Hour})
+	calls := chatdm.NewDMCalls(&chatdm.DMCalls{DB: w.p, Events: w.rec, Ring: time.Hour})
 	t.Cleanup(calls.Stop)
 	h := &Handler{DB: w.p, Events: w.rec, Perms: perm.NewService(w.p), Talks: w.mgr, Calls: calls}
-	dm, _, err := chatdm.CreateDM(context.Background(), w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
+	dm, _, err := chatdm.CreateDM(context.Background(), w.p, chatdm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +298,7 @@ func TestTheFilesOfAConversationsTalkGoWhenTheConversationDoes(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	carol := newTalksUser(t, w.p, "carol_t")
-	dm, _, err := chatdm.CreateDM(ctx, w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, chatdm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -336,7 +335,7 @@ func TestTheLastMemberLeavingAGroupClosesTheRoomOfItsTalk(t *testing.T) {
 	w := newTalksWorld(t)
 	ctx := context.Background()
 	carol := newTalksUser(t, w.p, "carol_t")
-	dm, _, err := chatdm.CreateDM(ctx, w.p, dm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
+	dm, _, err := chatdm.CreateDM(ctx, w.p, chatdm.NewDM{Creator: w.alice.ID, Others: []uuid.UUID{w.bob.ID, carol.ID}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -379,7 +378,7 @@ func TestLeavingASharedTalkOnlyTheCallerWasInCancelsTheRingAndLeavesAMissedCall(
 	if len(ends) != 1 {
 		t.Fatalf("ends = %+v", ends)
 	}
-	if end := ends[0].Payload.(dm.DMCallEnd); end.Reason != dm.CallCancelled || end.Active || end.MessageID == nil {
+	if end := ends[0].Payload.(chatdm.DMCallEnd); end.Reason != chatdm.CallCancelled || end.Active || end.MessageID == nil {
 		t.Fatalf("end = %+v", end)
 	}
 	if n := c.missedMessages(t); n != 1 {

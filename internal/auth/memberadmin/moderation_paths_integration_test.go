@@ -12,6 +12,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/auth/authn"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -103,7 +104,7 @@ func TestBanLiftBroadcastsTheRealDisabledState(t *testing.T) {
 		evs := rec.Snapshot()
 		for i := len(evs) - 1; i >= 0; i-- {
 			if ev := evs[i]; ev.Type == want {
-				return ev.Payload.(map[string]any)["disabled"]
+				return ev.Payload.(wire.UserDisabled).Disabled
 			}
 		}
 		t.Fatalf("no %s event", want)

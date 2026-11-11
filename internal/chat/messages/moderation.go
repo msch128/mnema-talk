@@ -13,7 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -146,7 +146,14 @@ func (a *API) bulkDelete(w http.ResponseWriter, r *http.Request) error {
 		}
 		_ = tx.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, chID).Scan(&channelName)
 		gone, keys, err = TakeLatestMessages(ctx, tx, chID, req.UserID, req.Count, snap.IsOwner(actor.Subject()))
-		return err
+		if err != nil {
+			return err
+		}
+		deleted := make([]wire.MessageDelete, len(gone))
+		for i, m := range gone {
+			deleted[i] = wire.MessageDelete{ID: m.id, ChannelID: chID, ParentID: m.parentID}
+		}
+		return RecordMessageDeletes(ctx, a.DB, tx, chID, deleted)
 	})
 	if err != nil {
 		return err
@@ -175,7 +182,7 @@ type bulkDeleteReport struct {
 func (a *API) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 	chID, req := rep.chID, rep.req
 	for _, m := range rep.gone {
-		a.Events.BroadcastChannel(chID, events.MessageDelete, map[string]any{"id": m.id, "channel_id": chID, "parent_id": m.parentID})
+		a.Events.BroadcastChannel(chID, wire.MessageDelete{ID: m.id, ChannelID: chID, ParentID: m.parentID})
 		d := map[string]any{
 			"channel_id": chID, "channel_name": rep.channelName, "author_id": req.UserID, "author_name": rep.targetName,
 			"content": audit.Content(m.content), "attachments": m.attachments, "sent_at": m.createdAt,
@@ -197,8 +204,8 @@ func (a *API) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
 		Details: map[string]any{"channel_id": chID, "channel_name": rep.channelName, "requested": req.Count, "deleted": len(rep.gone), "reason": rep.reason},
 	})
 	if len(rep.gone) > 0 && req.UserID != rep.actor.ID {
-		a.Events.SendToUsers([]uuid.UUID{req.UserID}, events.ModerationNotice, map[string]any{
-			"kind": "messages_deleted", "reason": rep.reason, "channel_name": rep.channelName, "count": len(rep.gone),
+		a.Events.SendToUsers([]uuid.UUID{req.UserID}, wire.MessagesDeletedNotice{
+			Kind: "messages_deleted", Reason: rep.reason, ChannelName: rep.channelName, Count: len(rep.gone),
 		})
 	}
 }

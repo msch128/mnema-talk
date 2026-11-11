@@ -24,7 +24,7 @@ func TestBlockedOfferDoesNotHoldRoomOrOtherPeers(t *testing.T) {
 	release := make(chan struct{})
 	t.Cleanup(func() { close(release) })
 	var offers atomic.Int32
-	r, peer, err := s.Join(channel, uuid.New(), func(webrtc.SessionDescription) {
+	r, peer, err := s.Join(channel, uuid.New(), "", func(webrtc.SessionDescription) {
 		offers.Add(1)
 		entered <- struct{}{}
 		<-release
@@ -50,7 +50,7 @@ func TestBlockedOfferDoesNotHoldRoomOrOtherPeers(t *testing.T) {
 	otherOffer := make(chan struct{}, 1)
 	joined := make(chan error, 1)
 	go func() {
-		_, _, err := s.Join(channel, uuid.New(), func(webrtc.SessionDescription) { otherOffer <- struct{}{} }, nil)
+		_, _, err := s.Join(channel, uuid.New(), "", func(webrtc.SessionDescription) { otherOffer <- struct{}{} }, nil)
 		joined <- err
 	}()
 	select {
@@ -92,7 +92,7 @@ func TestChangeWhileOfferCallbackAndAnswerOverlap(t *testing.T) {
 	var releaseOnce sync.Once
 	t.Cleanup(func() { releaseOnce.Do(func() { close(release) }) })
 	var count atomic.Int32
-	r, peer, err := s.Join(uuid.New(), uuid.New(), func(offer webrtc.SessionDescription) {
+	r, peer, err := s.Join(uuid.New(), uuid.New(), "", func(offer webrtc.SessionDescription) {
 		offers <- offer
 		if count.Add(1) == 1 {
 			<-release
@@ -152,7 +152,7 @@ func TestPeerRetryDoesNotWakeUnrelatedPeer(t *testing.T) {
 	var releaseOnce sync.Once
 	t.Cleanup(func() { releaseOnce.Do(func() { close(release) }) })
 	offers := make(chan webrtc.SessionDescription, 1)
-	r, peer, err := s.Join(uuid.New(), uuid.New(), func(offer webrtc.SessionDescription) {
+	r, peer, err := s.Join(uuid.New(), uuid.New(), "", func(offer webrtc.SessionDescription) {
 		offers <- offer
 		<-release
 	}, nil)
@@ -166,7 +166,7 @@ func TestPeerRetryDoesNotWakeUnrelatedPeer(t *testing.T) {
 		t.Fatal("initial offer missing")
 	}
 	otherOffers := make(chan struct{}, 1)
-	_, other, err := s.Join(r.ID, uuid.New(), func(webrtc.SessionDescription) { otherOffers <- struct{}{} }, nil)
+	_, other, err := s.Join(r.ID, uuid.New(), "", func(webrtc.SessionDescription) { otherOffers <- struct{}{} }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

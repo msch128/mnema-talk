@@ -106,6 +106,6 @@ func (r *Room) SubscribeCameras(viewer uuid.UUID, publishers []uuid.UUID, on boo
 	for _, info := range fresh {
 		info.requestKeyframe()
 	}
-	safego.Go("sfu_signal", r.dropOnPanic(peer), func() { r.requestPeerSignal(peer) })
+	safego.GoConn(peer.panics(), "sfu_signal", r.dropOnPanic(peer), func() { r.requestPeerSignal(peer) })
 	return failed
 }

@@ -1,6 +1,7 @@
 package sfu
 
 import (
+	"log/slog"
 	"sync"
 	"testing"
 
@@ -121,7 +122,7 @@ func joinTwo(t *testing.T) (*SFU, *Room, uuid.UUID, uuid.UUID) {
 	s := newTestSFU(t)
 	ch := uuid.New()
 	a, b := uuid.New(), uuid.New()
-	room, _, err := s.Join(ch, a, nil, nil)
+	room, _, err := s.Join(ch, a, "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,9 +257,9 @@ func TestRoomMediaStateNotifications(t *testing.T) {
 // joinPeerIn adds a further peer to an existing room through the same
 // connection builder the production join uses, without the SFU-level checks.
 func (s *SFU) joinPeerIn(r *Room, userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) (*Peer, error) {
-	conn, err := newReceiveConn(s.currentAPI(), s.iceServers)
+	conn, err := newReceiveConn(s.currentAPI(), s.iceServers, slog.Default())
 	if err != nil {
 		return nil, err
 	}
-	return r.attachPeer(userID, conn, sendOffer, sendICE), nil
+	return r.attachPeer(userID, "", conn, sendOffer, sendICE), nil
 }

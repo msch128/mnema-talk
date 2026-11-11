@@ -153,7 +153,9 @@ type layerGroup struct {
 	// dropViewer the peer of a viewer whose own track panicked. The room sets
 	// both (layerGroupLocked); a group without a room lets the process exit.
 	onPanic    func()
-	dropViewer func(viewer uuid.UUID)
+	dropViewer func(viewer uuid.UUID, gen uint64)
+	// conn is the publisher's hub connection, for the timer's panic line.
+	conn safego.Conn
 
 	// live has bit i set while layer i is attached; declared is the number of
 	// layers the sender announced (0 when it did not).
@@ -319,4 +321,18 @@ func (g *layerGroup) close() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.stopTimerLocked()
+}
+
+// maxSwitchTicks is the furthest a layer switch moves the timestamp: half its
+// range, beyond which a receiver would read the step as going back.
+const maxSwitchTicks = 1<<31 - 1
+
+// switchTicks is how far the timestamp moves across a layer switch that comes
+// elapsed after the last packet sent: the time that passed on the video clock
+// and never less than one tick, whatever the two clock readings say (elapsed
+// can be negative or absurdly long).
+func switchTicks(elapsed time.Duration) uint32 {
+	ticks := elapsed.Microseconds() / 1_000_000 * videoClockRate
+	ticks += elapsed.Microseconds() % 1_000_000 * videoClockRate / 1_000_000
+	return uint32(min(max(ticks, 1), maxSwitchTicks))
 }

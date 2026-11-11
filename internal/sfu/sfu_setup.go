@@ -62,8 +62,8 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 	if err != nil {
 		return nil, err
 	}
-	load := &peerLoad{}
-	api, err := buildAPI(portMin, portMax, announceIPs, mux, load)
+	s := &SFU{load: &peerLoad{}}
+	api, err := buildAPI(portMin, portMax, announceIPs, mux, s.load, s.dropConnection, &s.conns)
 	if err != nil {
 		if mux != nil {
 			_ = mux.Close()
@@ -76,19 +76,16 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 		iceServers = []webrtc.ICEServer{{URLs: stunURLs}}
 	}
 
-	return &SFU{
-		api:          api,
-		load:         load,
-		announced:    append([]string(nil), announceIPs...),
-		portMin:      portMin,
-		portMax:      portMax,
-		udpMux:       mux,
-		iceServers:   iceServers,
-		offerTimeout: defaultOfferTimeout,
-		rooms:        make(map[uuid.UUID]*Room),
-		notifier:     &mediaNotifier{},
-		iceSeen:      &iceObserver{},
-	}, nil
+	s.api = api
+	s.announced = append([]string(nil), announceIPs...)
+	s.portMin, s.portMax = portMin, portMax
+	s.udpMux = mux
+	s.iceServers = iceServers
+	s.offerTimeout = defaultOfferTimeout
+	s.rooms = make(map[uuid.UUID]*Room)
+	s.notifier = &mediaNotifier{}
+	s.iceSeen = &iceObserver{}
+	return s, nil
 }
 
 // AnnouncedIPs returns the addresses currently offered to browsers.
@@ -110,7 +107,7 @@ func (s *SFU) SetAnnouncedIPs(ips []string) error {
 	if s.udpMux != nil && onlyLoopbackAnnouncements(s.announced) != onlyLoopbackAnnouncements(ips) {
 		return fmt.Errorf("changing UDP mux loopback interface mode requires restart")
 	}
-	api, err := buildAPI(s.portMin, s.portMax, ips, s.udpMux, s.load)
+	api, err := buildAPI(s.portMin, s.portMax, ips, s.udpMux, s.load, s.dropConnection, &s.conns)
 	if err != nil {
 		return err
 	}
@@ -174,7 +171,9 @@ func configureICEPorts(se *webrtc.SettingEngine, portMin, portMax uint16, mux ic
 	return nil
 }
 
-func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, load *peerLoad) (*webrtc.API, error) {
+// buildAPI makes the API new connections come from. dropConn removes the peer
+// of a connection whose outgoing chain panicked (see viewerGuard).
+func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, load *peerLoad, dropConn func(connID string), names *connNames) (*webrtc.API, error) {
 	settingEngine, err := buildSettingEngine(portMin, portMax, announceIPs, mux)
 	if err != nil {
 		return nil, err
@@ -184,7 +183,20 @@ func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, loa
 	if err := mediaEngine.RegisterDefaultCodecs(); err != nil {
 		return nil, fmt.Errorf("failed to register default WebRTC codecs: %w", err)
 	}
+	registry, err := buildInterceptors(mediaEngine, load, dropConn, names)
+	if err != nil {
+		return nil, err
+	}
+	return webrtc.NewAPI(
+		webrtc.WithSettingEngine(settingEngine),
+		webrtc.WithMediaEngine(mediaEngine),
+		webrtc.WithInterceptorRegistry(registry),
+	), nil
+}
 
+// buildInterceptors lists what every connection's packets pass, innermost
+// first.
+func buildInterceptors(mediaEngine *webrtc.MediaEngine, load *peerLoad, dropConn func(connID string), names *connNames) (*interceptor.Registry, error) {
 	// NACK (retransmissions both ways), RTCP sender/receiver reports and
 	// transport-wide congestion control feedback to the publishers.
 	registry := &interceptor.Registry{}
@@ -202,11 +214,8 @@ func buildAPI(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, loa
 	if err := webrtc.RegisterDefaultInterceptorsWithOptions(mediaEngine, registry, options...); err != nil {
 		return nil, fmt.Errorf("failed to register WebRTC interceptors: %w", err)
 	}
-	registry.Add(nackResponderFactory{load: load})
-
-	return webrtc.NewAPI(
-		webrtc.WithSettingEngine(settingEngine),
-		webrtc.WithMediaEngine(mediaEngine),
-		webrtc.WithInterceptorRegistry(registry),
-	), nil
+	registry.Add(nackResponderFactory{load: load, names: names})
+	// Outermost: a panic of anything listed above stays with its connection.
+	registry.Add(viewerGuardFactory{drop: dropConn, names: names})
+	return registry, nil
 }

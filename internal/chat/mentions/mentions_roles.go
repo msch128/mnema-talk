@@ -32,7 +32,10 @@ type MentionSet struct {
 // ResolveMentionSet resolves names, @all, @here and role mentions of content
 // under the mention policy of ctx. The author is never mentioned.
 func ResolveMentionSet(ctx context.Context, q db.Querier, content string, authorID uuid.UUID, online []uuid.UUID) (MentionSet, error) {
-	policy := mentionPolicyFrom(ctx)
+	return resolveMentionSet(ctx, q, PolicyFrom(ctx), content, authorID, online)
+}
+
+func resolveMentionSet(ctx context.Context, q db.Querier, policy MentionPolicy, content string, authorID uuid.UUID, online []uuid.UUID) (MentionSet, error) {
 	hits := roleHits(content, policy.Roles)
 	names := capNames(ParseMentions(maskPhraseRoles(content, hits)))
 	roles := hitRoles(hits)
@@ -269,7 +272,7 @@ func saveRoleMentions(ctx context.Context, q db.Querier, messageID uuid.UUID, ro
 }
 
 // LoadMentionRoles fills msgs[].MentionRoles.
-func LoadMentionRoles(ctx context.Context, p *db.Pool, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+func LoadMentionRoles(ctx context.Context, p db.Querier, msgs []core.Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `SELECT message_id, role_id FROM message_role_mentions WHERE message_id = ANY($1)`, ids)
 	if err != nil {
 		return fmt.Errorf("load role mentions: %w", err)

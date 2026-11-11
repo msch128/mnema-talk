@@ -44,7 +44,7 @@ func TestDeniedSourcesAreNeverPublished(t *testing.T) {
 	pub.publishAudio("mic")
 	pub.publishVideo("screen")
 	pub.joinWith(func(offer func(webrtc.SessionDescription)) (*Peer, error) {
-		_, p, err := s.Join(room, pub.id, offer, nil)
+		_, p, err := s.Join(room, pub.id, "", offer, nil)
 		if p != nil {
 			// Before the first offer is answered, like the hub does on joining.
 			p.SetDeniedSources(SourceSet(0).With(SourceAudio))
@@ -75,7 +75,7 @@ func TestDeniedCameraIsHeldBackWhileTheScreenIsPublished(t *testing.T) {
 	pub.publishVideo("screen")
 	pub.publishVideo("camera")
 	pub.joinWith(func(offer func(webrtc.SessionDescription)) (*Peer, error) {
-		_, p, err := s.Join(room, pub.id, offer, nil)
+		_, p, err := s.Join(room, pub.id, "", offer, nil)
 		if p != nil {
 			p.SetDeniedSources(SourceSet(0).With(SourceCamera))
 		}
@@ -135,7 +135,7 @@ func TestTrackArrivingWhileDeniedIsPublishedOnceAllowed(t *testing.T) {
 	pub := newClient(t)
 	pub.publishAudio("mic")
 	pub.joinWith(func(offer func(webrtc.SessionDescription)) (*Peer, error) {
-		_, p, err := s.Join(room, pub.id, offer, nil)
+		_, p, err := s.Join(room, pub.id, "", offer, nil)
 		if p != nil {
 			p.SetDeniedSources(SourceSet(0).With(SourceAudio))
 		}

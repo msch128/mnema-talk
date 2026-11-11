@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -63,11 +65,12 @@ func TestVoiceTimeIsAnnouncedOnlyToTheTalkItWasSpentIn(t *testing.T) {
 		total int64
 	}
 	var got []seen
-	h.Tap = func(ch uuid.UUID, eventType string, payload any) {
+	h.Tap = func(ch uuid.UUID, ev events.Event) {
+		eventType, payload := ev.EventName(), ev
 		if eventType != "user_stats" {
 			return
 		}
-		got = append(got, seen{ch, payload.(map[string]any)["voice_seconds"].(int64)})
+		got = append(got, seen{ch, payload.(wire.UserStats).VoiceSeconds})
 	}
 	hidden, visible := uuid.New(), uuid.New()
 	h.addVoiceTime(u.ID, hidden, 3*time.Second, seatPublic)  // written at once
@@ -191,10 +194,11 @@ func TestPublicVoiceTimeCountsOnlyTalksEveryoneCanSee(t *testing.T) {
 		{"a Talk everyone can see", seatPublic, 12, 7, 1},
 	} {
 		h := NewHub(p, nil, nil, nil, openPerms())
-		h.Tap = func(_ uuid.UUID, eventType string, payload any) {
+		h.Tap = func(_ uuid.UUID, ev events.Event) {
+			eventType, payload := ev.EventName(), ev
 			if eventType == "user_stats" {
 				announced++
-				if got := payload.(map[string]any)["voice_seconds"].(int64); got != 7 {
+				if got := payload.(wire.UserStats).VoiceSeconds; got != 7 {
 					t.Errorf("%s: announced total %d, want the public total 7", tc.name, got)
 				}
 			}

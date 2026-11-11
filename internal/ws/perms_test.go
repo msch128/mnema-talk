@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -40,7 +42,9 @@ func newPermWorld(t *testing.T) *permWorld {
 	w.h = NewHub(nil, nil, nil, nil, f.Service())
 	t.Cleanup(w.h.Close)
 	ownerUser := auth.User{ID: uuid.New(), Role: auth.RoleAdmin}
-	insiderUser, outsiderUser := auth.User{ID: uuid.New()}, auth.User{ID: uuid.New()}
+	// The members have a profile as every stored account has: the frames that
+	// carry them are pinned and must be ones the web client accepts.
+	insiderUser, outsiderUser := wireMember("insider"), wireMember("outsider")
 	f.Assign(insiderUser.ID, w.staff)
 	w.owner, w.insider, w.outsider = testClient(w.h, ownerUser), testClient(w.h, insiderUser), testClient(w.h, outsiderUser)
 	for _, c := range []*Client{w.owner, w.insider, w.outsider} {
@@ -51,19 +55,19 @@ func newPermWorld(t *testing.T) *permWorld {
 
 func TestBroadcastChannelReachesViewersOnly(t *testing.T) {
 	w := newPermWorld(t)
-	w.h.BroadcastChannel(w.private.ID, "message_create", map[string]any{"x": 1})
+	w.h.BroadcastChannel(w.private.ID, eventstest.Named("message_create", map[string]any{"x": 1}))
 	if count(drainTypes(t, w.owner), "message_create") != 1 || count(drainTypes(t, w.insider), "message_create") != 1 {
 		t.Fatal("viewers must receive the event")
 	}
 	if got := drainTypes(t, w.outsider); len(got) != 0 {
 		t.Fatalf("the outsider received %v", got)
 	}
-	w.h.BroadcastChannel(w.public.ID, "message_create", nil)
+	w.h.BroadcastChannel(w.public.ID, eventstest.Named("message_create", nil))
 	if count(drainTypes(t, w.outsider), "message_create") != 1 {
 		t.Fatal("an open channel reaches everybody")
 	}
 	// An unencodable payload is dropped like everywhere else.
-	w.h.BroadcastChannel(w.public.ID, "bad", make(chan int))
+	w.h.BroadcastChannel(w.public.ID, eventstest.Named("bad", make(chan int)))
 	if got := drainTypes(t, w.outsider); len(got) != 0 {
 		t.Fatalf("unencodable payload delivered: %v", got)
 	}
@@ -80,9 +84,12 @@ func TestEventsFailClosedWhenPermissionsCannotBeLoaded(t *testing.T) {
 	drainTypes(t, b)
 	ch := uuid.New()
 	var tapped []string
-	h.Tap = func(_ uuid.UUID, eventType string, _ any) { tapped = append(tapped, eventType) }
-	h.BroadcastChannel(ch, "message_create", nil)
-	a.emitApplicationEvent("typing", nil, true, nil, ch)
+	h.Tap = func(_ uuid.UUID, ev events.Event) {
+		eventType := ev.EventName()
+		tapped = append(tapped, eventType)
+	}
+	h.BroadcastChannel(ch, eventstest.Named("message_create", nil))
+	a.emitApplicationEvent(eventstest.Named("typing", nil), true, nil, ch)
 	if len(tapped) != 0 {
 		t.Fatalf("outgoing webhooks heard events nobody was sent: %v", tapped)
 	}
@@ -125,11 +132,11 @@ func TestSnapshotsHideTalksFromThoseWhoCannotViewThem(t *testing.T) {
 		t.Fatalf("snapshot for an outsider: %+v", snapshot)
 	}
 	rooms := w.h.voiceRooms(late, mustSnapshot(t, w.h))
-	started := rooms["started"].(map[uuid.UUID]time.Time)
+	started := rooms.Started
 	if _, leaked := started[w.privateVoice.ID]; leaked || len(started) != 1 {
 		t.Fatalf("voice_rooms for an outsider: %v", started)
 	}
-	if rooms := w.h.voiceRooms(w.owner, mustSnapshot(t, w.h)); len(rooms["started"].(map[uuid.UUID]time.Time)) != 2 {
+	if rooms := w.h.voiceRooms(w.owner, mustSnapshot(t, w.h)); len(rooms.Started) != 2 {
 		t.Fatal("the Owner sees every room")
 	}
 }
@@ -249,7 +256,7 @@ func TestMediaPolicyFollowsSpeakAndVideo(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = media.Close() })
 	w.h.SFU = media
-	room, livePeer, err := media.Join(w.public.ID, c.User.ID, func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {})
+	room, livePeer, err := media.Join(w.public.ID, c.User.ID, "", func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {})
 	if err != nil {
 		t.Fatal(err)
 	}

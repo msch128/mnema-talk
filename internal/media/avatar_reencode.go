@@ -164,7 +164,7 @@ func (h *Handler) announceUser(ctx context.Context, id uuid.UUID) {
 		slog.Warn("could not announce the avatar change", "user_id", id, "err", err)
 		return
 	}
-	h.Events.Broadcast(events.UserUpdate, u.Public())
+	h.Events.Broadcast(auth.UserUpdate(u.Public()))
 }
 
 // swapAvatar writes the redrawn picture, points the account at it and only

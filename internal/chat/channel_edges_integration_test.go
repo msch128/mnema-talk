@@ -312,7 +312,7 @@ func TestGetMemberReadsOneVisibleMember(t *testing.T) {
 func TestStoredReactionWithFormattingCharacterCanBeTakenBack(t *testing.T) {
 	f := newChatFixture(t)
 	ctx := context.Background()
-	const old = "👍‎"
+	const old = "👍\u200e"
 	if _, err := f.p.Exec(ctx, `INSERT INTO message_reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)`, f.m, f.u.ID, old); err != nil {
 		t.Fatal(err)
 	}

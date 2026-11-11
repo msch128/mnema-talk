@@ -23,12 +23,14 @@ type DMPrefsUpdated struct {
 	DMID *uuid.UUID `json:"dm_id" format:"uuid" extensions:"x-nullable"`
 }
 
+func (DMPrefsUpdated) EventName() string { return events.DMPrefsUpdated }
+
 func (a *API) tellOwnSessions(user uuid.UUID, ids ...*uuid.UUID) {
 	if a.Events == nil {
 		return
 	}
 	for _, id := range ids {
-		a.Events.SendToUsers([]uuid.UUID{user}, events.DMPrefsUpdated, DMPrefsUpdated{DMID: id})
+		a.Events.SendToUsers([]uuid.UUID{user}, DMPrefsUpdated{DMID: id})
 	}
 }
 
@@ -170,3 +172,16 @@ func (a *API) putDMSettings(w http.ResponseWriter, r *http.Request) error {
 	httpx.WriteJSON(w, http.StatusOK, req)
 	return nil
 }
+
+// DMCreated tells a member's sessions about a conversation they are in now
+// (dm_created); DMMemberAdded and DMMemberRemoved tell the members of a group
+// who joined or left it (dm_member_added, dm_member_removed).
+type (
+	DMCreated       DirectMessage
+	DMMemberAdded   DMMemberChange
+	DMMemberRemoved DMMemberChange
+)
+
+func (DMCreated) EventName() string       { return events.DMCreated }
+func (DMMemberAdded) EventName() string   { return events.DMMemberAdded }
+func (DMMemberRemoved) EventName() string { return events.DMMemberRemoved }

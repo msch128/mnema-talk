@@ -95,7 +95,7 @@ func TestForwardDropsPacketsOverTheIngressLimit(t *testing.T) {
 
 func TestIngressAbuseClosesThePublisherConnection(t *testing.T) {
 	s := newTestSFU(t)
-	_, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil)
+	_, peer, err := s.Join(uuid.New(), uuid.New(), "", func(webrtc.SessionDescription) {}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestForwardClosesAGrosslyAbusivePublisher(t *testing.T) {
 	ingressAbuseWindows = 0 // the first drop already counts
 	t.Cleanup(func() { ingressAbuseWindows = prev })
 	s := newTestSFU(t)
-	_, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil)
+	_, peer, err := s.Join(uuid.New(), uuid.New(), "", func(webrtc.SessionDescription) {}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestPeerHealthy(t *testing.T) {
 func TestJoinFailsWhenConnectionCannotBeBuilt(t *testing.T) {
 	s := newTestSFU(t)
 	s.iceServers = []webrtc.ICEServer{{URLs: []string{"turn:turn.invalid"}}} // a relay needs credentials
-	if _, _, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil); err == nil {
+	if _, _, err := s.Join(uuid.New(), uuid.New(), "", func(webrtc.SessionDescription) {}, nil); err == nil {
 		t.Fatal("join with an unusable ICE server succeeded")
 	}
 	r := &Room{peers: map[uuid.UUID]*Peer{}}
@@ -145,7 +145,7 @@ func TestJoinFailsWhenConnectionCannotBeBuilt(t *testing.T) {
 func TestJoinFailsWhenTheSFUClosesWhileBuilding(t *testing.T) {
 	s := newTestSFU(t)
 	s.afterBuild = func() { s.closed.Store(true) }
-	if _, _, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil); !errors.Is(err, errSFUClosed) {
+	if _, _, err := s.Join(uuid.New(), uuid.New(), "", func(webrtc.SessionDescription) {}, nil); !errors.Is(err, errSFUClosed) {
 		t.Fatalf("err = %v, want closed", err)
 	}
 	s.closed.Store(false)

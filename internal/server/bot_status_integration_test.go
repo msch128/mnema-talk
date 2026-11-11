@@ -70,7 +70,7 @@ func TestBotSetsItsStatusAndActivity(t *testing.T) {
 	}
 	// Discord's idle shows as away; the activity is sanitized (control and
 	// bidi characters out, spaces collapsed, length limited).
-	set("idle", map[string]any{"name": "  chess\n‮  with\tfriends ", "type": 0})
+	set("idle", map[string]any{"name": "  chess\n\u202e  with\tfriends ", "type": 0})
 	if p := wantPresence(t, watcher, f.bot.UserID, "away"); p.Activity == nil || p.Activity.Name != "chess with friends" || p.Activity.Type != 0 {
 		t.Fatalf("activity: %+v", p.Activity)
 	}
@@ -198,9 +198,9 @@ func TestTimedOutBotCannotSpeak(t *testing.T) {
 	wantStatus(t, "speaks", f.client.say(f.open, "before"), http.StatusCreated)
 	res := max.post("/api/channels/"+f.open.String()+"/interactions", map[string]any{"command_id": cmd.ID, "options": map[string]any{"text": "x"}})
 	wantStatus(t, "run before", res, http.StatusAccepted)
-	_, d := g.expect("MESSAGE_CREATE") // the "hello" above
-	_, d = g.expect("MESSAGE_CREATE")  // the bot's own "before"
-	_, d = g.expect("INTERACTION_CREATE")
+	g.expect("MESSAGE_CREATE") // the "hello" above
+	g.expect("MESSAGE_CREATE") // the bot's own "before"
+	_, d := g.expect("INTERACTION_CREATE")
 	var inv struct {
 		ID    uuid.UUID `json:"id"`
 		Token string    `json:"token"`

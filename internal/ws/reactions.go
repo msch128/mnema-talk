@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/emojitext"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -79,7 +79,7 @@ func (c *Client) handleTalkReaction(ctx context.Context, payload json.RawMessage
 	if !ok || !c.can(snap, *cur, perm.ViewChannel|perm.Connect|perm.AddReactions) || !h.knownEmoji(ctx, emoji) {
 		return
 	}
-	h.sendToVoiceRoom(*cur, events.TalkReaction, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "emoji": emoji})
+	h.sendToVoiceRoom(*cur, wire.TalkReaction{ChannelID: *cur, UserID: c.User.ID, Emoji: emoji})
 }
 
 // knownEmoji is true for a standard emoji and for a custom emoji that still

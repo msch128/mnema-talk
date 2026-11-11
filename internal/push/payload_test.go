@@ -125,11 +125,11 @@ func TestAGroupOfMessagesIsOnePush(t *testing.T) {
 
 func TestPushTextIsCleanedAndBounded(t *testing.T) {
 	n := notice()
-	n.Sender = "Eve‮\n\tEvil"
+	n.Sender = "Eve\u202e\n\tEvil"
 	n.ChannelName = strings.Repeat("k", 200)
 	n.Content = "line one\r\nline\x00 two   " + strings.Repeat("ä", 300)
 	p := build(n, "en", true)
-	if strings.ContainsAny(p.Title+p.Body, "\n\r\t\x00‮") {
+	if strings.ContainsAny(p.Title+p.Body, "\n\r\t\x00\u202e") {
 		t.Fatalf("control characters survive: %q %q", p.Title, p.Body)
 	}
 	if utf8.RuneCountInString(p.Body) > maxPreviewRunes || !strings.HasSuffix(p.Body, "…") || !strings.HasPrefix(p.Body, "line one line two ä") {

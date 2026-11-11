@@ -10,7 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/core"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -112,7 +112,7 @@ func (a *API) ServeUpdateForumSettings(w http.ResponseWriter, r *http.Request) e
 			return err
 		}
 	}
-	s, before, err := UpdateForumSettings(r.Context(), a.DB, chID, ForumSettingsPatch{RequireTag: req.RequireTag, Guidelines: req.Guidelines})
+	s, before, err := UpdateForumSettings(r.Context(), a.DB, chID, ForumSettingsPatch(req))
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (a *API) ServeUpdateForumSettings(w http.ResponseWriter, r *http.Request) e
 			"guidelines_changed": s.Guidelines != before.Guidelines,
 		},
 	})
-	a.Events.BroadcastChannel(chID, events.ForumTagsChanged, map[string]any{"channel_id": chID})
+	a.Events.BroadcastChannel(chID, wire.ForumTagsChanged{ChannelID: chID})
 	httpx.WriteJSON(w, http.StatusOK, s)
 	return nil
 }
@@ -178,7 +178,7 @@ func (a *API) ServeReorderForumTags(w http.ResponseWriter, r *http.Request) erro
 		Action: "forum.tag_reorder", TargetType: "channel", TargetID: chID.String(), ChannelID: &chID,
 		Details: map[string]any{"channel_id": chID, "tag_ids": req.TagIDs},
 	})
-	a.Events.BroadcastChannel(chID, events.ForumTagsChanged, map[string]any{"channel_id": chID})
+	a.Events.BroadcastChannel(chID, wire.ForumTagsChanged{ChannelID: chID})
 	httpx.WriteJSON(w, http.StatusOK, tags)
 	return nil
 }

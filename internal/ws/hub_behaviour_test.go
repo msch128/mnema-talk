@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
@@ -25,11 +26,11 @@ func TestUnencodableEventsNeverReachRecipients(t *testing.T) {
 	h.joinVoice(c, ch)
 	drainTypes(t, c)
 	bad := make(chan int)
-	h.Broadcast("user_update", bad)
-	h.BroadcastChannel(uuid.New(), "bad", bad)
-	h.SendToUsers([]uuid.UUID{c.User.ID}, "bad", bad)
-	h.sendToVoiceRoom(ch.ID, "bad", bad)
-	c.SendEvent("bad", bad)
+	h.Broadcast(eventstest.Named("user_update", bad))
+	h.BroadcastChannel(uuid.New(), eventstest.Named("bad", bad))
+	h.SendToUsers([]uuid.UUID{c.User.ID}, eventstest.Named("bad", bad))
+	h.sendToVoiceRoom(ch.ID, eventstest.Named("bad", bad))
+	c.SendEvent(eventstest.Named("bad", bad))
 	if len(c.send) != 0 {
 		t.Fatal("unencodable event was delivered")
 	}
@@ -64,11 +65,10 @@ func TestHubIgnoresUnknownClientIdleAndInvalidProfiles(t *testing.T) {
 	if stranger.idle || len(c.send) != 0 {
 		t.Fatal("unknown client changed live presence")
 	}
-	h.applyUserUpdate((*auth.User)(nil))
 	h.applyUserUpdate(auth.User{DisplayName: "No identity"})
 	update := c.User
 	update.DisplayName = "Updated"
-	h.applyUserUpdate(&update)
+	h.applyUserUpdate(update)
 	h.mu.RLock()
 	got := h.profileLocked(c)
 	fallback := h.profileLocked(stranger)
@@ -150,7 +150,7 @@ func TestKickAndGraceReplacement(t *testing.T) {
 	h.joinVoice(c, ch)
 	h.unregister(c)
 	key := voiceKey{c.User.ID, ch.ID}
-	h.startGrace(key)
+	h.startGrace(key, nil)
 	if !h.KickFromVoice(c.User.ID) || inRoom(h, ch.ID, c.User.ID) {
 		t.Fatal("kick did not remove disconnected participant")
 	}
@@ -514,7 +514,7 @@ func TestDisconnectUserStopsEverySessionAndPreservesOtherUsers(t *testing.T) {
 			t.Fatal("target session remains active")
 		}
 		before := len(c.send)
-		c.SendEvent("after-revocation", nil)
+		c.SendEvent(eventstest.Named("after-revocation", nil))
 		if len(c.send) != before {
 			t.Fatal("revoked session accepted private event")
 		}
@@ -576,7 +576,7 @@ func TestReconnectWithinGraceResumesOriginalVoiceStay(t *testing.T) {
 	ch := voiceCh()
 	h.joinVoice(old, ch)
 	joined := h.voiceSnapshot()[ch.ID][u.ID].JoinedAt
-	started := h.voiceRooms(old, openSnapshot())["started"].(map[uuid.UUID]time.Time)[ch.ID]
+	started := h.voiceRooms(old, openSnapshot()).Started[ch.ID]
 	h.unregister(old)
 	next := testClient(h, u)
 	drainTypes(t, next)
@@ -584,7 +584,7 @@ func TestReconnectWithinGraceResumesOriginalVoiceStay(t *testing.T) {
 	if got := h.voiceSnapshot()[ch.ID][u.ID].JoinedAt; !got.Equal(joined) {
 		t.Fatal("reconnect restarted participant duration")
 	}
-	if got := h.voiceRooms(next, openSnapshot())["started"].(map[uuid.UUID]time.Time)[ch.ID]; !got.Equal(started) {
+	if got := h.voiceRooms(next, openSnapshot()).Started[ch.ID]; !got.Equal(started) {
 		t.Fatal("reconnect restarted room duration")
 	}
 	if count(drainTypes(t, next), "voice_state_update") != 0 {

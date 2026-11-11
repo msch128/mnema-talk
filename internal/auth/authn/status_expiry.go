@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/worker"
 )
 
@@ -65,7 +64,7 @@ func (h *Handler) ExpireStatuses(ctx context.Context) error {
 	}
 	rows.Close()
 	for _, u := range cleared {
-		h.Events.Broadcast(events.UserUpdate, u)
+		h.Events.Broadcast(auth.UserUpdate(u))
 	}
 	return failed
 }

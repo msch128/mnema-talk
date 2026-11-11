@@ -24,7 +24,7 @@ func newCallWorld() *callWorld {
 }
 
 // heard announces everything queued and returns the events it published.
-func (w *callWorld) heard() []events.Event {
+func (w *callWorld) heard() []events.Recorded {
 	for w.calls.AnnounceNext(context.Background()) {
 	}
 	out := w.rec.Snapshot()

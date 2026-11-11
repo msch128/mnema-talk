@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -34,7 +35,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 
 	switch eventType {
 	case events.ClientPing:
-		c.SendEvent(events.Pong, map[string]any{"t": p.T})
+		c.SendEvent(wire.Pong{T: p.T})
 	case events.ClientPresenceIdle:
 		c.hub.setIdle(c, p.Idle)
 	case events.ClientVoiceJoin:
@@ -144,7 +145,7 @@ func (c *Client) handleVoiceJoin(ctx context.Context, p clientEvent) {
 		// Over the join/leave allowance: refused, and the client ends
 		// the attempt on voice_kicked.
 		metrics.WSDropped.With("voice_churn").Inc()
-		c.SendEvent(events.VoiceKicked, map[string]any{"channel_id": channelID})
+		c.SendEvent(wire.VoiceKicked{ChannelID: channelID})
 		return
 	}
 	ch, ok := h.voiceChannel(ctx, channelID)
@@ -172,7 +173,7 @@ func (c *Client) handleTyping(ctx context.Context, channelID uuid.UUID) {
 	// Only someone who could send a message shows as typing, and only to
 	// those who can see the channel.
 	if c.canTypeInChannel(channelID) {
-		c.emitApplicationEvent(events.Typing, map[string]any{"channel_id": channelID, "user_id": c.User.ID}, true, nil, channelID)
+		c.emitApplicationEvent(wire.Typing{ChannelID: channelID, UserID: c.User.ID}, true, nil, channelID)
 	}
 }
 
@@ -192,7 +193,7 @@ func (c *Client) handleSpeaking(active bool) {
 	// A muted or deafened member is never shown as speaking.
 	active = active && !c.hub.isMuted(c.User.ID, *cur)
 	if c.speakingChanged(active, time.Now()) {
-		c.emitApplicationEvent(events.VoiceSpeaking, map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active}, false, cur, uuid.Nil)
+		c.emitApplicationEvent(wire.VoiceSpeaking{ChannelID: *cur, UserID: c.User.ID, Active: active}, false, cur, uuid.Nil)
 	}
 }
 
@@ -206,7 +207,7 @@ func (c *Client) handleAnswer(payload json.RawMessage) {
 		return
 	}
 	if err := peer.SetAnswer(answer); err != nil {
-		slog.Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
+		c.logger().Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
 	}
 }
 
@@ -215,7 +216,7 @@ func (c *Client) handleCandidate(payload json.RawMessage) {
 	if json.Unmarshal(payload, &cand) != nil {
 		return
 	}
-	slog.Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
+	c.logger().Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
 	if peer := c.peer(); peer != nil {
 		// Held until the answer is applied; a rejected candidate is
 		// logged by the SFU with its reason (rate-limited).
@@ -239,7 +240,7 @@ func (c *Client) handleDiag(payload json.RawMessage) {
 	if json.Unmarshal(payload, &d) == nil && d.ICE == "failed" {
 		level = slog.LevelWarn
 	}
-	slog.Log(context.Background(), level, "webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
+	c.logger().Log(context.Background(), level, "webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
 }
 
 // channelKnown reports whether the channel exists. The permission snapshot

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 )
 
 // benchSendBuffer is each benchmark client's queue; the queues are emptied
@@ -60,7 +61,7 @@ func BenchmarkVoiceRoomEvent(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				h.sendToVoiceRoom(room, events.VoiceSpeaking, payload)
+				h.sendToVoiceRoom(room, eventstest.Named(events.VoiceSpeaking, payload))
 				drainEvery(b, i, clients[:members])
 			}
 		})
@@ -79,7 +80,7 @@ func BenchmarkBroadcastChannel(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				h.BroadcastChannel(channel, events.MessageCreate, payload)
+				h.BroadcastChannel(channel, eventstest.Named(events.MessageCreate, payload))
 				drainEvery(b, i, clients)
 			}
 		})

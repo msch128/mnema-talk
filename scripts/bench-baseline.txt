@@ -1,0 +1,25 @@
+# machine: Darwin arm64, Apple M5, 10 CPUs
+# go: go1.27.4, GOMAXPROCS=4
+# recorded: 2026-11-11, 1-minute load before the run: 6.23
+goos: darwin
+goarch: arm64
+pkg: github.com/msch128/mnema-talk/internal/ws
+cpu: Apple M5
+BenchmarkVoiceRoomEvent/room=20/clients=20-4         	 1315632	       766.6 ns/op	     360 B/op	       8 allocs/op
+BenchmarkVoiceRoomEvent/room=20/clients=1000-4       	 1276357	      1155 ns/op	     360 B/op	       8 allocs/op
+BenchmarkVoiceRoomEvent/room=20/clients=5000-4       	 1372418	       865.6 ns/op	     360 B/op	       8 allocs/op
+BenchmarkBroadcastChannel/clients=1000-4             	   19635	     55414 ns/op	     632 B/op	      12 allocs/op
+BenchmarkBroadcastChannel/clients=5000-4             	    2752	    408453 ns/op	     634 B/op	      12 allocs/op
+goos: darwin
+goarch: arm64
+pkg: github.com/msch128/mnema-talk/internal/server
+cpu: Apple M5
+BenchmarkPermissionSnapshotLoad/members=10000-4         	      93	  12475146 ns/op	18320570 B/op	  318040 allocs/op
+goos: darwin
+goarch: arm64
+pkg: github.com/msch128/mnema-talk/internal/sfu
+cpu: Apple M5
+BenchmarkForwardPlainTrack/viewers=1-4         	44453226	        30.41 ns/op	        30.41 ns/viewer	       0 B/op	       0 allocs/op
+BenchmarkForwardPlainTrack/viewers=20-4        	 7652694	       161.8 ns/op	         8.088 ns/viewer	       0 B/op	       0 allocs/op
+BenchmarkForwardLayeredTrack/viewers=1-4       	13562584	        96.73 ns/op	        96.73 ns/viewer	       0 B/op	       0 allocs/op
+BenchmarkForwardLayeredTrack/viewers=20-4      	  966744	      1219 ns/op	        60.95 ns/viewer	       0 B/op	       0 allocs/op

@@ -49,6 +49,8 @@ type PinsChanged struct {
 	PinnedBy *core.UserRef `json:"pinned_by,omitempty" binding:"optional"`
 }
 
+func (PinsChanged) EventName() string { return events.PinsChanged }
+
 // listPins handles GET /api/channels/{channelID}/pins.
 //
 // @Summary List a channel's pinned messages
@@ -143,7 +145,10 @@ func (a *API) setPinned(w http.ResponseWriter, r *http.Request, pinned bool) err
 	err = a.asModerator(r, chID, func(tx pgx.Tx, _ *perm.Snapshot) error {
 		var err error
 		changed, err = writePin(r, tx, pinTarget{channel: chID, message: msgID, by: actor.ID}, pinned)
-		return err
+		if err != nil || !changed {
+			return err
+		}
+		return RecordMessageEvent(r.Context(), a.DB, tx, events.MessageUpdate, chID, msgID, nil)
 	})
 	if err != nil {
 		return err
@@ -211,8 +216,8 @@ func (a *API) announcePin(r *http.Request, msg *core.Message, actor *auth.User, 
 	if a.Events == nil {
 		return
 	}
-	a.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
-	a.Events.BroadcastChannel(chID, events.PinsChanged, PinsChanged{
+	a.Events.BroadcastChannel(chID, (*core.MessageUpdate)(msg))
+	a.Events.BroadcastChannel(chID, PinsChanged{
 		ChannelID: chID, MessageID: msg.ID, Pinned: pinned, ActorID: actor.ID, ActorName: actor.DisplayName,
 		PinnedAt: msg.PinnedAt, PinnedBy: msg.PinnedBy,
 	})

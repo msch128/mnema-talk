@@ -28,7 +28,7 @@ func TestParsePresence(t *testing.T) {
 	if p := ok(`{"status":"offline"}`); p.Status != StatusInvisible {
 		t.Fatalf("offline is invisible: %+v", p)
 	}
-	p := ok(`{"since":null,"afk":false,"status":"dnd","activities":[{"name":"  a‮b \n c\u0000 ","type":0},{"name":"second","type":0}]}`)
+	p := ok(`{"since":null,"afk":false,"status":"dnd","activities":[{"name":"  a` + "\u202e" + `b \n c\u0000 ","type":0},{"name":"second","type":0}]}`)
 	if p.Status != StatusDND || p.Activity == nil || p.Activity.Name != "ab c" || p.Activity.Type != ActivityPlaying {
 		t.Fatalf("sanitized: %+v", p)
 	}
@@ -39,7 +39,7 @@ func TestParsePresence(t *testing.T) {
 		t.Fatalf("not limited: %d", len([]rune(p.Activity.Name)))
 	}
 	// An activity with nothing left after cleaning is none.
-	if p := ok(`{"status":"online","activities":[{"name":"‮\n","type":0}]}`); p.Activity != nil {
+	if p := ok(`{"status":"online","activities":[{"name":"` + "\u202e" + `\n","type":0}]}`); p.Activity != nil {
 		t.Fatalf("empty activity kept: %+v", p)
 	}
 

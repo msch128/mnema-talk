@@ -4,10 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/ws/mediaframe"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
@@ -39,9 +39,5 @@ func (c *Client) handleMediaHandshake(payload json.RawMessage) {
 	}
 	metrics.MLSHandshakes.With("relayed").Inc()
 	metrics.MLSHandshakeBytes.Add(uint64(len(raw)))
-	c.hub.sendToVoiceRoomExcept(c, *cur, events.MediaHandshake, map[string]any{
-		"channel_id": *cur,
-		"user_id":    c.User.ID,
-		"wire":       body.Wire,
-	})
+	c.hub.sendToVoiceRoomExcept(c, *cur, wire.MediaHandshake{ChannelID: *cur, UserID: c.User.ID, Wire: body.Wire})
 }

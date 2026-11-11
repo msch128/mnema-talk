@@ -17,6 +17,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/config"
@@ -208,6 +209,7 @@ func (c *components) newWebhooks() {
 	ssrfPolicy := &ssrf.Policy{Allow: c.cfg.WebhookAllowPrivateTargets}
 	c.outgoing = webhook.NewDispatcher(d.DB, ssrf.NewClient(ssrf.NewDialer(ssrfPolicy), 10*time.Second), d.Version)
 	c.addTap(c.outgoing.Observe)
+	core.AttachOutbox(d.DB, c.outgoing)
 	c.hub.Presence = auditPresence(c.ctx, c.auditLog, d.DB)
 	safego.Go("webhook_dispatch", safego.Crash, func() { c.outgoing.Run(c.ctx) })
 	c.webhookH = webhook.New(webhook.Handler{DB: d.DB, Events: c.pub, Media: c.mediaH, Perms: c.permSvc, Online: c.hub, PublicURL: c.cfg.PublicURL, Outgoing: c.outgoing, Policy: ssrfPolicy})
@@ -220,7 +222,7 @@ func (c *components) newBots() {
 	c.botH = bot.NewHandler(bot.Handler{DB: d.DB, Perms: c.permSvc, Media: c.mediaH, Events: c.pub})
 	c.botAuthn = bot.NewAuthenticator(d.DB, c.permSvc)
 	c.pollSvc = poll.NewService(poll.Service{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Audit: c.auditLog})
-	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc, slashcmd.Services{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Members: c.members, Chat: c.chatH, Audit: c.auditLog})})
+	c.cmds = bot.NewCommands(bot.Commands{DB: d.DB, Perms: c.permSvc, Events: c.pub, Online: hub, Builtins: builtinCommands(c.pollSvc, slashcmd.Services{DB: d.DB, Perms: c.permSvc, Events: c.pub, Posts: c.chatH.Posts(), Members: c.members, Chat: c.chatH, Audit: c.auditLog})})
 	gw := gateway.New(gateway.Config{Auth: c.botAuthn, Perms: c.permSvc, DB: d.DB, PublicURL: c.cfg.PublicURL})
 	c.gw = gw
 	c.botH.OnRevoke = gw.Revoke
@@ -243,13 +245,13 @@ func (c *components) newBots() {
 
 // addTap chains f after the taps already on the hub, so no component replaces
 // another's tap.
-func (c *components) addTap(f func(ch uuid.UUID, eventType string, payload any)) {
+func (c *components) addTap(f func(ch uuid.UUID, ev events.Event)) {
 	prev := c.hub.Tap
-	c.hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
+	c.hub.Tap = func(ch uuid.UUID, ev events.Event) {
 		if prev != nil {
-			prev(ch, eventType, payload)
+			prev(ch, ev)
 		}
-		f(ch, eventType, payload)
+		f(ch, ev)
 	}
 }
 

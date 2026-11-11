@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -31,12 +32,14 @@ type Hub struct {
 	permRetry permRetry
 	// Tap, when set, sees every event the hub publishes (channel is uuid.Nil
 	// for events to everybody), before delivery. Outgoing webhooks listen
-	// here. It must not block.
-	Tap func(channel uuid.UUID, eventType string, payload any)
+	// here. It must not block and must not call back into the hub: it runs
+	// next to the hub's lock, and a call that takes that lock again can
+	// wait forever behind a writer.
+	Tap func(channel uuid.UUID, ev events.Event)
 	// DMTap is Tap for the events of direct message conversations. Those
 	// never reach Tap (outgoing webhooks, the bot gateway): only Web Push
 	// listens here, which delivers to members alone. It must not block.
-	DMTap func(channel uuid.UUID, eventType string, payload any)
+	DMTap func(channel uuid.UUID, ev events.Event)
 	// Presence, when set, hears every join and leave of a Talk (a quick
 	// rejoin is neither). The audit log listens here. It must not block.
 	Presence func(userID, channelID uuid.UUID, joined bool)
@@ -125,8 +128,8 @@ type Hub struct {
 	// writes of voice time.
 	voiceGate voiceGate
 	vtimes    voiceTimes
-	// seatClock numbers live voice seats (Client.seat), so of two connections
-	// of one user the later one is known.
+	// seatClock numbers live voice seats (Client.seat) of a hub without an
+	// SFU, so of two connections of one user the later one is known.
 	seatClock atomic.Uint64
 	// taken marks stays a takeover ended (see resumeVoice).
 	taken takeoverMarks

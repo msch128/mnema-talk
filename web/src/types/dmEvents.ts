@@ -1,6 +1,6 @@
 // Direct message events (internal/chat/dm/*.go) and the calls that ring a
 // conversation (internal/chat/dm/dm_calls.go). Runtime checks by event name.
-import type { ChatDMCall } from './rest'
+import type { ChatDMCall, ChatDMLastMessage } from './rest'
 import { isChatNotifyLevel } from './rest'
 import { isIdentifier, isInteger, isRecord, isString, isTimestamp, isArrayOf, onlyFields, hasOwn } from './validation'
 
@@ -12,6 +12,8 @@ export interface DirectMessageRef {
   group: boolean
   members: DirectMessageMember[]
   created_at: string
+  /** The newest message, for the preview in the list; absent in an empty conversation. */
+  last_message?: ChatDMLastMessage
   last_message_at: string | null
   unread_count: number
   mention_count: number

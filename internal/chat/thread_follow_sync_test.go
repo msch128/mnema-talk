@@ -13,29 +13,13 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
 )
 
-func TestMessageOfReadsValuesAndPointersOnly(t *testing.T) {
-	m := core.Message{ID: uuid.New()}
-	if got, ok := messages.MessageOf(m); !ok || got.ID != m.ID {
-		t.Errorf("value: %v %v", got.ID, ok)
-	}
-	if got, ok := messages.MessageOf(&m); !ok || got.ID != m.ID {
-		t.Errorf("pointer: %v %v", got.ID, ok)
-	}
-	if _, ok := messages.MessageOf((*core.Message)(nil)); ok {
-		t.Error("a nil pointer is no message")
-	}
-	if _, ok := messages.MessageOf("text"); ok {
-		t.Error("another payload is no message")
-	}
-}
-
 type countingPublisher struct {
 	events.Publisher
 	sent int
 }
 
-func (c *countingPublisher) BroadcastPerm(perm.Set, string, any)  {}
-func (c *countingPublisher) SendToUsers([]uuid.UUID, string, any) { c.sent++ }
+func (c *countingPublisher) BroadcastPerm(perm.Set, events.Event)  {}
+func (c *countingPublisher) SendToUsers([]uuid.UUID, events.Event) { c.sent++ }
 
 func TestTheFollowTapNeedsAPermissionService(t *testing.T) {
 	defer func() {
@@ -50,11 +34,11 @@ func TestTheFollowTapIgnoresWhatIsNoThreadReplyAndFailsClosedWithoutPermissions(
 	pub := &countingPublisher{}
 	tap := messages.NewFollowSync(context.Background(), nil, permtest.Unloadable(), pub)
 	root := uuid.New()
-	tap(uuid.New(), events.MessageUpdate, core.Message{ParentID: &root})
-	tap(uuid.New(), events.MessageCreate, core.Message{})
-	tap(uuid.New(), events.MessageCreate, "not a message")
+	tap(uuid.New(), (*core.MessageUpdate)(&core.Message{ParentID: &root}))
+	tap(uuid.New(), (*core.MessageCreate)(&core.Message{}))
+	tap(uuid.New(), (*core.MessageCreate)(nil))
 	// A thread reply whose permission state cannot be read tells nobody (and needs no database to know it).
-	tap(uuid.New(), events.MessageCreate, &core.Message{ParentID: &root})
+	tap(uuid.New(), (*core.MessageCreate)(&core.Message{ParentID: &root}))
 	time.Sleep(50 * time.Millisecond)
 	if pub.sent != 0 {
 		t.Fatalf("%d events sent", pub.sent)

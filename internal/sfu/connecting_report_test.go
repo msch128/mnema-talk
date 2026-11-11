@@ -15,7 +15,7 @@ func TestStuckConnectingPeerIsReported(t *testing.T) {
 	s := newTestSFU(t)
 	s.offerTimeout = 200 * time.Millisecond
 	logs := captureSFULog(t)
-	_, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {})
+	_, peer, err := s.Join(uuid.New(), uuid.New(), "", func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestClosedPeerIsNotReportedAsConnecting(t *testing.T) {
 	s := newTestSFU(t)
 	s.offerTimeout = 200 * time.Millisecond
 	logs := captureSFULog(t)
-	room, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {})
+	room, peer, err := s.Join(uuid.New(), uuid.New(), "", func(webrtc.SessionDescription) {}, func(*webrtc.ICECandidateInit) {})
 	if err != nil {
 		t.Fatal(err)
 	}

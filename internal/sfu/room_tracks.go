@@ -331,6 +331,16 @@ func selectedPair(pc *webrtc.PeerConnection) (*webrtc.ICECandidatePair, error) {
 	return nil, nil
 }
 
+// Order numbers the peer among all peers in the order the SFU attached them:
+// of two peers of one user in a room, the one with the higher number replaced
+// the other. A nil peer has none (0).
+func (p *Peer) Order() uint64 {
+	if p == nil {
+		return 0
+	}
+	return p.gen
+}
+
 // Healthy reports whether the peer still has a live connection, one that has
 // not failed, closed or lost its transport. A rejoin of the same room over a
 // healthy peer changes nothing.
@@ -357,7 +367,7 @@ func (p *Peer) OnLost(fn func()) {
 	}
 	p.lostMu.Unlock()
 	if lost && fn != nil {
-		safego.Go("sfu_peer_lost", safego.Crash, fn)
+		safego.GoConn(p.panics(), "sfu_peer_lost", safego.Crash, fn)
 	}
 }
 
@@ -368,6 +378,6 @@ func (p *Peer) notifyLost() {
 	p.onLost = nil
 	p.lostMu.Unlock()
 	if fn != nil {
-		safego.Go("sfu_peer_lost", safego.Crash, fn)
+		safego.GoConn(p.panics(), "sfu_peer_lost", safego.Crash, fn)
 	}
 }

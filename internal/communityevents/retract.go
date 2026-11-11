@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/safego"
 )
@@ -108,7 +107,7 @@ func (h *Handler) sendDelete(snap *perm.Snapshot, e talkEvent, userIDs []uuid.UU
 		}
 	}
 	if len(hidden) > 0 {
-		h.Events.SendToUsers(hidden, events.EventDelete, EventDeletePayload{ID: e.id})
+		h.Events.SendToUsers(hidden, EventDeletePayload{ID: e.id})
 	}
 }
 

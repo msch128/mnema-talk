@@ -51,6 +51,8 @@ type BlockUpdated struct {
 	Blocked bool      `json:"blocked"`
 }
 
+func (BlockUpdated) EventName() string { return events.BlockUpdated }
+
 // ListBlocks returns the members blocker has blocked, newest first.
 func ListBlocks(ctx context.Context, q db.Querier, blocker uuid.UUID) ([]BlockedMember, error) {
 	rows, err := q.Query(ctx, `
@@ -221,7 +223,7 @@ func (a API) changeBlock(w http.ResponseWriter, r *http.Request, block bool) err
 		return err
 	}
 	if changed && a.Events != nil {
-		a.Events.SendToUsers([]uuid.UUID{me}, events.BlockUpdated, BlockUpdated{UserID: target, Blocked: block})
+		a.Events.SendToUsers([]uuid.UUID{me}, BlockUpdated{UserID: target, Blocked: block})
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

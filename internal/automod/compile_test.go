@@ -29,7 +29,7 @@ func TestBlockedWordsMatchWholeWordsWithoutRegardToCase(t *testing.T) {
 		"cheating is bad":          true, // wildcard: cheat + letters
 		"cheat":                    true,
 		"a cheater":                true,
-		"sp​am":                    true, // invisible characters do not help
+		"sp\u200bam":               true, // invisible characters do not help
 		"nothing to see":           false,
 		"":                         false,
 		"cheat-code":               true,
@@ -228,11 +228,11 @@ func TestUnicodeSpacesDoNotEndALinkLate(t *testing.T) {
 func TestInvisibleAndCompatibilityFormsDoNotHideWords(t *testing.T) {
 	r := wordsRule(t, "badword")
 	for _, content := range []string{
-		"bad͏word", // combining grapheme joiner
-		"bad⁢word", // invisible times
-		"bad‎word", // left-to-right mark
-		"ｂａｄｗｏｒｄ",  // fullwidth letters
-		"bad́word", // stray combining accent
+		"bad͏word",      // combining grapheme joiner
+		"bad\u2062word", // invisible times
+		"bad\u200eword", // left-to-right mark
+		"ｂａｄｗｏｒｄ",       // fullwidth letters
+		"bad́word",      // stray combining accent
 	} {
 		if !r.matchesWords(content) {
 			t.Errorf("%q was not matched", content)
@@ -285,7 +285,7 @@ func TestMentionsOverTheNameLimitDoNotCount(t *testing.T) {
 }
 
 func TestALinkGluedToInvisibleCharactersIsStillALink(t *testing.T) {
-	for _, msg := range []string{"x​https://evil.example", "x́https://evil.example", "x­https://evil.example", "x⁠https://evil.example", "x\ufeffhttps://evil.example", "xhttps://evil.example"} {
+	for _, msg := range []string{"x\u200bhttps://evil.example", "x́https://evil.example", "x\u00adhttps://evil.example", "x\u2060https://evil.example", "x\ufeffhttps://evil.example", "xhttps://evil.example"} {
 		got := links(msg)
 		if len(got) != 1 || !got[0].ok || got[0].host != "evil.example" {
 			t.Errorf("links(%q) = %v, want the host evil.example", msg, got)

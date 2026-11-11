@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -137,7 +137,7 @@ func (h *Handler) replaceOverwrites(w http.ResponseWriter, r *http.Request, kind
 	if err := h.Perms.SetOverwrites(r.Context(), auth.UserFrom(r.Context()).Subject(), kind, id, body.Overwrites); err != nil {
 		return err
 	}
-	h.Events.Broadcast(events.ChannelsChanged, nil)
+	h.Events.Broadcast(wire.ChannelsChanged{})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

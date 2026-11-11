@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/chat/mentions"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -56,8 +56,8 @@ type Service struct {
 	DB     *db.Pool
 	Perms  *perm.Service
 	Events events.Publisher
-	// Online resolves @here in a scheduled message; nil means nobody is online.
-	Online mentions.OnlineSource
+	// Posts sends the scheduled messages that fell due (chat.Handler.Posts).
+	Posts *messages.Service
 	// Push is nil when Web Push is off.
 	Push Notifier
 	// Now is the clock; nil means time.Now.
@@ -139,8 +139,8 @@ func (s *Service) checkTime(at time.Time) error {
 }
 
 // notify tells the member's own sessions that something changed.
-func (s *Service) notify(user uuid.UUID, event string, payload any) {
+func (s *Service) notify(user uuid.UUID, ev events.Event) {
 	if s.Events != nil {
-		s.Events.SendToUsers([]uuid.UUID{user}, event, payload)
+		s.Events.SendToUsers([]uuid.UUID{user}, ev)
 	}
 }

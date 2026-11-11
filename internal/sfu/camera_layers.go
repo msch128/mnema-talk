@@ -1,7 +1,6 @@
 package sfu
 
 import (
-	"log/slog"
 	"slices"
 
 	"github.com/google/uuid"
@@ -25,8 +24,9 @@ func (r *Room) SetCameraLayers(publisher uuid.UUID, layers []Layer) error {
 	var g *layerGroup
 	var err error
 	plain := false
+	var peer *Peer
 	safego.Locked(&r.mu, func() {
-		if r.peers[publisher] == nil {
+		if peer = r.peers[publisher]; peer == nil {
 			err = ErrNotInRoom
 			return
 		}
@@ -45,7 +45,7 @@ func (r *Room) SetCameraLayers(publisher uuid.UUID, layers []Layer) error {
 		g = r.cameraGroups[publisher]
 	})
 	if plain {
-		slog.Debug("sfu camera layers ignored: the camera is already sent plain", "user", publisher)
+		peer.logger().Debug("sfu camera layers ignored: the camera is already sent plain", "user", publisher)
 	}
 	if g != nil {
 		g.setDeclared(len(layers))

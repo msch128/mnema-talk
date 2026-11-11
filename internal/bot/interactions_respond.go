@@ -163,20 +163,20 @@ func validate(d ResponseData) (*message, error) {
 // respond posts the message of a response, or shows it to the invoker only.
 func (c *Commands) respond(r *http.Request, in *interaction, m message) (*core.Message, error) {
 	ctx := r.Context()
-	snap, _, err := botapi.CheckBotSend(ctx, c.Perms, c.DB, auth.UserFrom(ctx), in.channel)
+	snap, p, err := botapi.CheckBotSend(ctx, c.Perms, c.DB, auth.UserFrom(ctx), in.channel)
 	if err != nil {
 		return nil, err
 	}
 	if m.ephemeral {
-		c.Events.SendToUsers([]uuid.UUID{in.invoker}, events.InteractionResponse, map[string]any{
-			"channel_id": in.channel, "bot_id": in.botID, "bot_name": in.botName, "bot_avatar_url": in.avatar,
-			"content": m.content, "embeds": m.embeds, "created_at": time.Now().UTC(),
+		c.Events.SendToUsers([]uuid.UUID{in.invoker}, InteractionResponse{
+			ChannelID: in.channel, BotID: in.botID, BotName: in.botName, BotAvatarURL: in.avatar,
+			Content: m.content, Embeds: m.embeds, CreatedAt: time.Now().UTC(),
 		})
 		return nil, nil
 	}
 	// A command response never mentions everyone; members are notified only
 	// when they can see the channel.
-	ctx = mentions.WithMentionPolicy(ctx, mentions.MentionPolicy{
+	ctx = mentions.WithMentionPolicy(botapi.SendContext(ctx, p), mentions.MentionPolicy{
 		NoEveryone: true,
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, in.channel).Has(perm.ViewChannel) },
 	})
@@ -188,6 +188,21 @@ func (c *Commands) respond(r *http.Request, in *interaction, m message) (*core.M
 	if err != nil {
 		return nil, err
 	}
-	c.Events.BroadcastChannel(msg.ChannelID, events.MessageCreate, msg)
+	c.Events.BroadcastChannel(msg.ChannelID, (*core.MessageCreate)(msg))
 	return msg, nil
 }
+
+// InteractionResponse is a bot's reply to a slash command that only the member
+// who ran it sees (interaction_response); it is never stored. The fields are in
+// the alphabetical order of their JSON keys, which must not change.
+type InteractionResponse struct {
+	BotAvatarURL string       `json:"bot_avatar_url"`
+	BotID        uuid.UUID    `json:"bot_id" format:"uuid"`
+	BotName      string       `json:"bot_name"`
+	ChannelID    uuid.UUID    `json:"channel_id" format:"uuid"`
+	Content      string       `json:"content"`
+	CreatedAt    time.Time    `json:"created_at" format:"date-time"`
+	Embeds       []core.Embed `json:"embeds" extensions:"x-nullable"`
+}
+
+func (InteractionResponse) EventName() string { return events.InteractionResponse }

@@ -53,7 +53,7 @@ func TestReceiveScreenLayerRefusals(t *testing.T) {
 	s := newTestSFU(t)
 	room := uuid.New()
 	user := uuid.New()
-	_, peer, err := s.Join(room, user, func(webrtc.SessionDescription) {}, nil)
+	_, peer, err := s.Join(room, user, "", func(webrtc.SessionDescription) {}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestReceiveScreenLayerRefusals(t *testing.T) {
 	}
 
 	// A track of a peer that has since been replaced is ignored.
-	_, fresh, err := s.Join(room, user, func(webrtc.SessionDescription) {}, nil)
+	_, fresh, err := s.Join(room, user, "", func(webrtc.SessionDescription) {}, nil)
 	if err != nil || fresh == peer {
 		t.Fatal(err)
 	}

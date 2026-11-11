@@ -20,7 +20,7 @@ class FakeWorker {
   terminate = vi.fn()
   onmessage = (_event: { data: unknown }) => {}
   onerror = () => {}
-  constructor(public url: URL, public options: WorkerOptions) { FakeWorker.instances.push(this) }
+  constructor(public url: string, public options: WorkerOptions) { FakeWorker.instances.push(this) }
 }
 class FakeNode {
   static throws = false
@@ -94,7 +94,7 @@ describe('DFN node lifecycle', () => {
   it('transfers only communication ports, accepts validated stats, and destroys once', async () => {
     const controller = new AbortController()
     const { node, worker: active, channel, ctx } = await initialized({ signal: controller.signal })
-    expect(active.url.pathname).toContain('dfnWorker.ts')
+    expect(active.url).toContain('dfnWorker')
     expect(active.options).toEqual({ type: 'module' })
     expect(active.postMessage).toHaveBeenNthCalledWith(1, { type: 'init', wasmModule: assets[0], modelBytes: assets[1], suppressionLevel: 100 })
     expect(active.postMessage).toHaveBeenNthCalledWith(2, { type: 'connect', port: channel.port2 }, [channel.port2])

@@ -52,16 +52,31 @@ func Crash() { panic(crashRequest{}) }
 // panic is counted and logged, and the work is given up.
 func Abandon() {}
 
+// Conn is the id of the connection a site works for (conn_id in the log, see
+// doc/operations.md). GoConn, AfterFuncConn, RunConn and RecoveredConn are Go,
+// AfterFunc, Run and Recovered with that id on the panic's log line, so the
+// panic of one of a member's sessions is told apart from the other's. The
+// empty Conn is a site that belongs to no connection.
+type Conn string
+
 // Go runs fn on a new goroutine under Run.
-func Go(name string, onPanic func(), fn func()) {
+func Go(name string, onPanic func(), fn func()) { GoConn("", name, onPanic, fn) }
+
+// GoConn is Go for a site of connection conn.
+func GoConn(conn Conn, name string, onPanic func(), fn func()) {
 	mustHandle(name, onPanic)
-	go Run(name, onPanic, fn)
+	go RunConn(conn, name, onPanic, fn)
 }
 
 // AfterFunc is time.AfterFunc with fn under Run.
 func AfterFunc(name string, d time.Duration, onPanic func(), fn func()) *time.Timer {
+	return AfterFuncConn("", name, d, onPanic, fn)
+}
+
+// AfterFuncConn is AfterFunc for a site of connection conn.
+func AfterFuncConn(conn Conn, name string, d time.Duration, onPanic func(), fn func()) *time.Timer {
 	mustHandle(name, onPanic)
-	return time.AfterFunc(d, func() { Run(name, onPanic, fn) })
+	return time.AfterFunc(d, func() { RunConn(conn, name, onPanic, fn) })
 }
 
 // OnDone is context.AfterFunc with fn under Run: fn runs on a goroutine of
@@ -76,11 +91,14 @@ func OnDone(name string, ctx context.Context, onPanic func(), fn func()) (stop f
 // hijacked). When fn panics the panic is counted and logged under name, then
 // onPanic runs; with Crash it continues instead. name is a short constant:
 // it becomes a metric label.
-func Run(name string, onPanic func(), fn func()) {
+func Run(name string, onPanic func(), fn func()) { RunConn("", name, onPanic, fn) }
+
+// RunConn is Run for a site of connection conn.
+func RunConn(conn Conn, name string, onPanic func(), fn func()) {
 	mustHandle(name, onPanic)
 	defer func() {
 		if rec := recover(); rec != nil {
-			Recovered(name, rec, onPanic)
+			RecoveredConn(conn, name, rec, onPanic)
 		}
 	}()
 	fn()
@@ -90,10 +108,17 @@ func Run(name string, onPanic func(), fn func()) {
 // closures (a call per RTP packet): the caller defers a function that calls
 // recover itself and hands a non-nil value here, still inside that deferred
 // call, so the stack is the panic's.
-func Recovered(name string, rec any, onPanic func()) {
+func Recovered(name string, rec any, onPanic func()) { RecoveredConn("", name, rec, onPanic) }
+
+// RecoveredConn is Recovered for a site of connection conn.
+func RecoveredConn(conn Conn, name string, rec any, onPanic func()) {
 	metrics.GoroutinePanics.With(name).Inc()
 	if logs.allow(name, time.Now()) {
-		slog.Error("goroutine panicked", "name", name, "err", boundedValue(rec), "stack", panicStack(debug.Stack()))
+		attrs := []any{"name", name, "err", boundedValue(rec), "stack", panicStack(debug.Stack())}
+		if conn != "" {
+			attrs = append(attrs, "conn_id", string(conn))
+		}
+		slog.Error("goroutine panicked", attrs...)
 	}
 	handle(rec, onPanic)
 }
@@ -162,6 +187,16 @@ func panicStack(stack []byte) string {
 
 // logs is the log budget of every site.
 var logs = logBudget{sites: map[string]*logSite{}}
+
+// RefillLogBudget gives every site its full log budget back. The budget is
+// the process's and lasts a minute, so a test that reads a panic's log line
+// calls this first: an earlier test, or an earlier run in the same process
+// (go test -count), may have used the site's budget up.
+func RefillLogBudget() {
+	logs.mu.Lock()
+	defer logs.mu.Unlock()
+	clear(logs.sites)
+}
 
 type logBudget struct {
 	mu    sync.Mutex

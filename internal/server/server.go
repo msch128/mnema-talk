@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth/authn"
 	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/bot"
+	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/community"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/config"
@@ -140,9 +141,13 @@ func NewRouter(d Deps) (*Router, error) {
 		Later:           c.later,
 		Events:          c.eventsH,
 		EventsScheduler: c.eventsScheduler,
-		cancel:          func() { automod.Detach(d.DB, c.engine); cancel() },
-		outgoing:        c.outgoing,
-		accounts:        c.authH,
+		cancel: func() {
+			automod.Detach(d.DB, c.engine)
+			core.DetachOutbox(d.DB, c.outgoing)
+			cancel()
+		},
+		outgoing: c.outgoing,
+		accounts: c.authH,
 	}, nil
 }
 

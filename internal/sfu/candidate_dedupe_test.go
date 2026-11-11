@@ -85,7 +85,7 @@ func TestDistinctCandidatesAreStillCapped(t *testing.T) {
 // Trickled and answer candidates share one set.
 func TestTrickleAndAnswerShareTheSet(t *testing.T) {
 	s := newTestSFU(t)
-	_, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil)
+	_, peer, err := s.Join(uuid.New(), uuid.New(), "", func(webrtc.SessionDescription) {}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

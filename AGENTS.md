@@ -74,6 +74,7 @@ mnema-talk/
 │   ├── emoji/               # Custom emoji: storage, serving, admin API
 │   ├── emojitext/           # How a custom emoji is written in message text
 │   ├── imgproc/             # Shared image redrawing: GIF frames, PNG/GIF encoding, the profile banner (crop 3:1, strip metadata)
+│   ├── imgstrip/            # Removes metadata (EXIF, XMP, IPTC, text chunks) from JPEG, PNG and WebP attachments without re-encoding; keeps orientation, colour and animation
 │   ├── linkpreview/         # Link cards (title, description, image) fetched through the SSRF guard
 │   ├── mailer/              # Optional SMTP delivery of the account e-mails (texts live in internal/auth/mailtext)
 │   ├── mdplain/             # Markdown to plain text for push and previews
@@ -84,7 +85,7 @@ mnema-talk/
 │   ├── safego/              # Go, AfterFunc and Run: every goroutine, timer and callback with a fixed answer to a panic (close one connection or peer, or let the process exit)
 │   ├── media/               # Uploads (MIME sniffing), authenticated media serving, retention
 │   ├── s3/                  # S3 client
-│   ├── events/              # Event types / publishing to the hub
+│   ├── events/              # Realtime events: the names, the Event interface and the Publisher; wire/ holds the plain event types, registry/ lists every event type and derives api/events.json, eventstest/ pins the JSON in golden files
 │   ├── ws/                  # Real-time WebSocket hub (events, presence); mediaframe/ checks the media-key handshake framing
 │   ├── bot/                 # Bot accounts, tokens, bot API authentication, slash commands (doc/bots.md)
 │   ├── slash/               # Built-in slash commands: the registry and the Builtin interface (doc/bots.md)
@@ -99,7 +100,7 @@ mnema-talk/
 │   ├── tools/openapifix/    # Post-processes the generated OpenAPI document (`make openapi`)
 │   ├── server/              # Router wiring + integration tests
 │   └── testutil/            # Postgres fixture for integration tests (dockertest / TEST_DATABASE_URL)
-├── api/                     # Generated OpenAPI document (`make openapi`)
+├── api/                     # Generated OpenAPI document (`make openapi`) and events.json, the shapes of the realtime events (derived from the Go event types)
 ├── doc/                     # Architecture, operations, upgrade, glossary, roles, webhooks, desktop docs; doc/images has the README screenshots
 ├── desktop-trust/           # Public trust anchor and signed trust statement for the desktop client
 ├── e2e/                     # Playwright browser tests (`make e2e`)
@@ -120,6 +121,7 @@ mnema-talk/
 ├── deploy/monitoring/mnema-alerts.yml # Example Prometheus alert rules; promtool in CI, metric names checked against /api/metrics
 ├── scripts/backup.sh, restore.sh # Backup and restore of database, media and configuration (cold by default, `BACKUP_MODE=online` in backup-online.sh, optional age encryption)
 ├── scripts/web-bundle-check.sh # Signs web/dist with a throwaway key and verifies it (`make web-bundle-check`)
+├── scripts/bench.sh, bench-compare.mjs, bench-baseline.txt # Hub fan-out, permission snapshot and SFU forward benchmarks against the stored baseline (`make bench`); CI gates only the allocations per packet on the SFU forward path (`make bench-allocs`)
 ├── scripts/security-floor.sh # Release step: raises the bundle security floor only on a `Security-Floor: raise` trailer
 ├── .github/workflows/
 │   ├── ci.yml               # CI: gitleaks, Go vet/fmt/tests, govulncheck, frontend, e2e (Chromium, WebKit, Firefox, macOS WebKit calls),
@@ -155,6 +157,8 @@ mnema-talk/
 
    **Size and complexity limits (Go)**: production `.go` files max 400 lines, `_test.go` files max 800, functions max 80 lines and cognitive complexity 15 (gocognit). Generated files (`Code generated ... DO NOT EDIT`) are exempt. File and function length are enforced by `internal/repo/limits_test.go`, complexity by `make complexity-check` (part of `make lint` and CI). Both keep a shrinking allowlist of old offenders: never add entries or raise a limit, refactor instead.
 
+   **staticcheck (Go)**: `make staticcheck` (part of `make lint` and CI) runs staticcheck with its default checks over both Go modules, the main one with and without the `integration` tag. `scripts/staticcheck-allowlist.txt` is the only place that excuses a finding (a `//lint:ignore` directive needs an entry there, a `staticcheck.conf` fails the check) and it only shrinks: fix the code instead.
+
    **Package size and layers (Go)**: a package has at most 30 production `.go` files (`TestPackagesStayWithinFileCount` in `internal/repo/limits_test.go`; its allowlist only shrinks). When a package outgrows that, split it by domain, not by file type: one sub-package per sub-domain with its own small `API` struct (see `internal/chat/blocks`), shared types in a low `core` package, and consumer-defined interfaces instead of importing a sibling. `internal/chat` and `internal/auth` are layered (`internal/repo/boundaries_test.go` holds the allowed-import table: a lower layer never imports a higher one and siblings never import each other). A new sub-package must be added to that table in the same PR.
 
    **Size and complexity limits (TypeScript)**: the same numbers. Production `.ts`/`.vue` files in `web/src` max 400 lines, `*.test.ts`, `*.fixture.ts` and e2e specs max 800, functions max 80 lines (raw span, blanks and comments count, like the Go check) and cognitive complexity 15 (`eslint-plugin-sonarjs`). All enforced by ESLint (`web/eslint.config.ts`, part of `npm run lint` and CI; Vue SFC script blocks included; generated `web/src/types/rest.ts` and `web/src/third_party/` are exempt). There is no allowlist: never add an exemption or raise a limit, refactor instead.
@@ -167,7 +171,7 @@ mnema-talk/
    New or removed shipped dependencies (Go modules in the binary, web `dependencies`, vendored code in `web/src/third_party/`) go into `THIRD_PARTY_NOTICES.md` and the in-app list `web/src/lib/thirdParty.ts`.
 8. **Never rewrite `main`**: no force push, no history rewrite, no moving or deleting release tags (a ruleset blocks it). release-please finds the last release by its tag commit in `main`'s history; once that commit is gone it re-releases old versions. Rebase your own unpushed commits onto `origin/main` instead.
 9. **Pull requests, CI and merging**: `main` is protected by a ruleset. Changes land only through a pull request (no approvals required) with the checks `secret-scan`, `backend`, `frontend`, `govulncheck`, `docker`, `upgrade-drill (<version>)`, `e2e` and CodeQL `analyze (go)`, `analyze (javascript-typescript)`, `analyze (actions)` green; squash merge only. Agents may merge their own PRs once green. Release PRs are opened with `GITHUB_TOKEN` and start no workflows, so `release.yml` mirrors the conclusion of every check that main's ruleset requires (read from the ruleset; `scripts/release-checks.py`) from the tested commit as commit statuses on the release commit, and refuses to merge when one did not succeed (after checking that it only touches `version.txt`, `CHANGELOG.md` and the manifest and sits directly on the tested commit) and then merges it.
-10. **Structured commits**: release-please derives versions and the changelog from them (`feat:` minor, `fix:` patch, `!`/`BREAKING CHANGE:` major; from 1.0.0 on there is no pre-major shift). The public API in `doc/api-stability.md` (REST per `api/openapi.json`, WebSocket events in `internal/events`, bot and webhook payloads, the desktop bridge, env vars, metric names) changes incompatibly only in a major release: deprecate in a minor first. `make openapi-diff` (CI `backend` job) fails a breaking OpenAPI change unless a commit carries a `BREAKING CHANGE:` footer. Event names are constants in `internal/events/types.go`, never string literals; adding one means updating `internal/events/testdata/events.golden.json` and `web/src/types/events.ts`. Use descriptive conventional commits:
+10. **Structured commits**: release-please derives versions and the changelog from them (`feat:` minor, `fix:` patch, `!`/`BREAKING CHANGE:` major; from 1.0.0 on there is no pre-major shift). The public API in `doc/api-stability.md` (REST per `api/openapi.json`, WebSocket events in `internal/events`, bot and webhook payloads, the desktop bridge, env vars, metric names) changes incompatibly only in a major release: deprecate in a minor first. `make openapi-diff` (CI `backend` job) fails a breaking OpenAPI change unless a commit carries a `BREAKING CHANGE:` footer. Event names are constants in `internal/events/types.go`, never string literals; adding one means updating `internal/events/testdata/events.golden.json` and `web/src/types/events.ts`. An event is published as a named type (`events.Event`), never as a `map[string]any`: a type with plain fields goes into `internal/events/wire`, one that carries a domain type into the package that owns that type, and every type into `internal/events/registry`. After changing one, regenerate `api/events.json` (`UPDATE_EVENT_SCHEMA=1 go test ./internal/events/registry`) and `web/src/types/eventShapes.ts` (`node web/scripts/generate-contracts.ts`); the JSON of the events is pinned byte for byte by the `event_wire_*` golden tests (`internal/events/eventstest`). Use descriptive conventional commits:
    - `feat: add webrtc sfu audio track routing`
    - `fix: resolve websocket presence disconnect leak`
    - `docs: update deployment and caddy proxy guide`

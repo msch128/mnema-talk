@@ -49,7 +49,7 @@ func TestOffersKeepPayloadTypesConsistentAcrossBundle(t *testing.T) {
 	s := newTestSFU(t)
 	room := uuid.New()
 	offers := make(chan webrtc.SessionDescription, 16)
-	_, peer, err := s.Join(room, uuid.New(), func(o webrtc.SessionDescription) { offers <- o }, nil)
+	_, peer, err := s.Join(room, uuid.New(), "", func(o webrtc.SessionDescription) { offers <- o }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestOffersKeepPayloadTypesConsistentAcrossBundle(t *testing.T) {
 	round("initial offer")
 	for i := 0; i < 5; i++ {
 		other := uuid.New()
-		if _, _, err := s.Join(room, other, func(webrtc.SessionDescription) {}, nil); err != nil {
+		if _, _, err := s.Join(room, other, "", func(webrtc.SessionDescription) {}, nil); err != nil {
 			t.Fatal(err)
 		}
 		for _, src := range []Source{SourceCamera, SourceScreen} {

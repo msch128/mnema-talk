@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
@@ -159,7 +160,7 @@ func TestWSWriterPeriodicLifecycle(t *testing.T) {
 			})
 			remote.SetReadDeadline(time.Now().Add(h.RevalidateInterval + 10*time.Second))
 			if mode == "valid" {
-				timer := time.AfterFunc(h.RevalidateInterval+time.Second, func() { c.SendEvent("after-revalidation", nil) })
+				timer := time.AfterFunc(h.RevalidateInterval+time.Second, func() { c.SendEvent(eventstest.Named("after-revalidation", nil)) })
 				defer timer.Stop()
 				_, body, err := remote.ReadMessage()
 				if err != nil {

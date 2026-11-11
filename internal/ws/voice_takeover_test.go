@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 )
 
 func twoSessions(t *testing.T, s bool) (*Hub, *Client, *Client) {
@@ -50,7 +51,7 @@ func TestTakeoverInTheSameTalkMovesTheVoice(t *testing.T) {
 	if a.closed.Load() {
 		t.Fatal("the old session's connection was closed")
 	}
-	a.SendEvent("message_create", map[string]any{"id": "m"})
+	a.SendEvent(eventstest.Named("message_create", map[string]any{"id": "m"}))
 	if got := sentEvents(t, a, "message_create"); len(got) != 1 {
 		t.Fatalf("old session no longer receives text events: %+v", got)
 	}
@@ -191,8 +192,8 @@ func TestResumeWithAStayTheServerHeldIsAnOrdinaryRejoin(t *testing.T) {
 	h, a, b := twoSessions(t, true)
 	ch := voiceCh()
 	h.joinVoice(a, ch)
-	h.joinVoice(b, voiceCh())                // another session sits in a different Talk
-	h.startGrace(voiceKey{a.User.ID, ch.ID}) // its socket dropped and the stay lingers
+	h.joinVoice(b, voiceCh())                     // another session sits in a different Talk
+	h.startGrace(voiceKey{a.User.ID, ch.ID}, nil) // its socket dropped and the stay lingers
 	a.setVoice(nil)
 
 	h.resumeVoice(a, ch)

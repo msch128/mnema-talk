@@ -300,6 +300,7 @@
       "srvActionMustBeBlockOr": "The action must be “block” or “flag”.",
       "srvAddAnEMailAddress": "Add an e-mail address to your account or name a recipient.",
       "srvAfterMustBeEarlierThan": "“after” must be earlier than “before_date”.",
+      "srvAllowedMentionsMustBeA": "allowed_mentions must be a JSON object.",
       "srvAnotherWikiPageHasThatTitle": "Another wiki page already has that title.",
       "srvAnAttachmentIsUnknownAlready": "An attachment is unknown, already sent or has expired. Upload it again.",
       "srvAnInteractionTakesAtMost": "An interaction takes at most {a} responses.",
@@ -694,7 +695,8 @@
     "nextTry": "next try in {seconds} s · attempt {attempt}",
     "retryNow": "Retry now",
     "reconnectingShort": "Connecting…",
-    "restored": "Reconnected"
+    "restored": "Reconnected",
+    "storageDown": "File storage is unavailable – uploads and pictures do not work right now. Chat and Talks keep working."
   },
   "update": {
     "reloadBanner": "A new version is available – click here to reload",
@@ -2452,7 +2454,9 @@
       "reset": "Back to the server maximum",
       "saved": "Upload limit saved.",
       "hint": "Applies to everyone unless a role sets its own. It cannot exceed the server maximum of {ceiling} MB (MAX_UPLOAD_SIZE_MB). Your reverse proxy must allow that body size.",
-      "invalid": "Enter a whole number from 1 to {ceiling}."
+      "invalid": "Enter a whole number from 1 to {ceiling}.",
+      "stripMetadata": "Remove metadata from pictures",
+      "stripMetadataHint": "JPEG, PNG and WebP attachments are stored without their location, camera details, comments and other metadata, and without anything appended to the picture (such as the video of a motion photo). The picture itself is not changed. Applies to new uploads."
     },
     "onboarding": {
       "loadFailed": "Couldn’t load the settings.",

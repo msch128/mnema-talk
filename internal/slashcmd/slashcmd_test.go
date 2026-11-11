@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/auth/authn"
 	"github.com/msch128/mnema-talk/internal/auth/memberadmin"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/perm/permtest"
@@ -118,7 +119,7 @@ func TestAHelperWithoutPermissionStateGrantsNothing(t *testing.T) {
 func TestPostingIsRefusedWhenTheCallerMayNotSendThere(t *testing.T) {
 	user := &auth.User{ID: uuid.New(), Role: auth.RoleUser}
 	f := permtest.NewFixture().Everyone(perm.ViewChannel)
-	svc := &Services{Perms: f.Service()}
+	svc := &Services{Posts: &messages.Service{Perms: f.Service()}}
 	req := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(auth.WithUser(context.Background(), user))
 	if _, err := svc.post(slash.Call{Request: req, Channel: uuid.New(), User: user}, "hello", nil); err == nil {
 		t.Fatal("posted without Send messages")

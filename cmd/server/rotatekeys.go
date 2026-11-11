@@ -45,6 +45,11 @@ func sessionKeys(cfg *config.Config) *auth.Sessions {
 }
 
 func rotateKeys(ctx context.Context, s *auth.Sessions, pool *db.Pool, out io.Writer) error {
+	keys := s.KeySetup()
+	fmt.Fprintf(out, "This run seals under %s, fingerprint %s. The server logs the fingerprint of its key at start (\"authenticator secrets are sealed under\"): when the two differ, the server runs with other settings. Then run `docker compose up -d` and this command again.\n", keys.Sealing, keys.Fingerprint)
+	if len(keys.Previous) > 0 {
+		fmt.Fprintf(out, "Previous keys configured for this run: %s.\n", strings.Join(keys.Previous, ", "))
+	}
 	res, err := s.ResealSecrets(ctx, pool)
 	if errors.Is(err, auth.ErrUnreadableSecrets) {
 		return fmt.Errorf("nothing was changed: %d authenticator secret(s) cannot be read with any configured key: %s. Put the key they were sealed with back into DATA_KEY_PREVIOUS (or JWT_SECRET_PREVIOUS) and run this again, or reset these accounts with `mnema-talk reset-2fa <username>`. Do not remove a previous key yet",
@@ -53,12 +58,16 @@ func rotateKeys(ctx context.Context, s *auth.Sessions, pool *db.Pool, out io.Wri
 	if err != nil {
 		return fmt.Errorf("nothing was changed: %w", err)
 	}
-	current := "the key derived from JWT_SECRET"
-	if s.DataKey != "" {
-		current = "DATA_KEY"
+	fmt.Fprintf(out, "Authenticator secrets: %d moved to %s, %d were under it already.\n", res.Moved, keys.Sealing, res.Current)
+	if len(keys.Previous) > 0 || res.Moved > 0 {
+		fmt.Fprintln(out, "No authenticator secret is under a previous key any more.")
+	} else {
+		fmt.Fprintln(out, "WARNING: no previous key is configured, so this run could not move anything from a replaced key. If you are replacing a key, its old value belongs in JWT_SECRET_PREVIOUS or DATA_KEY_PREVIOUS, and the server must be restarted with it (`docker compose up -d`) before this command. Do not remove or overwrite the old value until a run lists it above.")
 	}
-	fmt.Fprintf(out, "Authenticator secrets: %d moved to %s, %d were under it already.\n", res.Moved, current, res.Current)
-	fmt.Fprintln(out, "No authenticator secret is under a previous key any more.")
+	if len(res.Abandoned) > 0 {
+		fmt.Fprintf(out, "%d two-factor setup(s) that were started but never confirmed could not be read and were removed: %s. Two-factor sign-in was not on for these accounts; they start the setup again if they want it.\n",
+			len(res.Abandoned), strings.Join(res.Abandoned, ", "))
+	}
 	if res.RecoveryAccounts > 0 {
 		fmt.Fprintf(out, "%d account(s) hold unused recovery codes. Codes made before the rotation are checked with the previous key and stop working when you remove it; the authenticator keeps working, and new codes are made in Settings > Account & security.\n", res.RecoveryAccounts)
 	}

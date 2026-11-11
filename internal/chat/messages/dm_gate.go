@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -21,7 +22,14 @@ var errDMWait = httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimi
 // the request, inside the transaction that stores it: slow mode in a channel,
 // the direct message rules in a conversation. It runs for every way a message
 // is created (members, uploads, polls, commands), so none can go around it.
+//
+// The author's exemption from slow mode and their wait as a new member are
+// read from ctx (see rulesFrom).
 func GatePost(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
+	return gatePost(ctx, tx, nm, rulesFrom(ctx))
+}
+
+func gatePost(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules) error {
 	var kind string
 	var seconds int
 	err := tx.QueryRow(ctx, `SELECT type, slow_mode_seconds FROM channels WHERE id = $1`, nm.ChannelID).Scan(&kind, &seconds)
@@ -32,22 +40,22 @@ func GatePost(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 		return fmt.Errorf("load channel: %w", err)
 	}
 	if kind == core.ChannelKindDM {
-		return gateDM(ctx, tx, nm)
+		return gateDM(ctx, tx, nm, rules)
 	}
 	if nm.ParentID != nil {
-		if err := gateReply(ctx, tx, *nm.ParentID); err != nil {
+		if err := gateReply(ctx, tx, *nm.ParentID, rules); err != nil {
 			return err
 		}
 	} else if kind == "forum" && (nm.Title == nil || *nm.Title == "") {
 		return core.ErrPostTitleRequired
 	}
-	if nm.WebhookID == nil && !slowModeExempt(ctx) {
+	if nm.WebhookID == nil && !rules.SlowModeExempt {
 		return enforceSlowMode(ctx, tx, nm.ChannelID, nm.UserID, seconds)
 	}
 	return nil
 }
 
-func gateReply(ctx context.Context, tx pgx.Tx, parentID uuid.UUID) error {
+func gateReply(ctx context.Context, tx pgx.Tx, parentID uuid.UUID, rules sendRules) error {
 	var isLocked bool
 	err := tx.QueryRow(ctx, `SELECT is_locked FROM messages WHERE id = $1`, parentID).Scan(&isLocked)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -56,7 +64,7 @@ func gateReply(ctx context.Context, tx pgx.Tx, parentID uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("check thread lock: %w", err)
 	}
-	if isLocked && !slowModeExempt(ctx) {
+	if isLocked && !rules.SlowModeExempt {
 		return httpx.ErrForbidden("this post is locked")
 	}
 	return nil
@@ -87,7 +95,7 @@ func loadDMState(ctx context.Context, tx pgx.Tx, id uuid.UUID) (dmState, error) 
 // gateDM decides whether nm may be written in a conversation. Everything that
 // concerns another member (a block, a closed or disabled account) answers
 // errDMSend, which says nothing about why.
-func gateDM(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
+func gateDM(ctx context.Context, tx pgx.Tx, nm NewMessage, rules sendRules) error {
 	if nm.WebhookID != nil {
 		return core.ErrDMSend // webhooks and bots never write in a conversation
 	}
@@ -110,7 +118,7 @@ func gateDM(ctx context.Context, tx pgx.Tx, nm NewMessage) error {
 	if err := checkDMReachable(ctx, tx, nm.UserID, others, st.group); err != nil {
 		return err
 	}
-	if err := gateNewMemberFirstWrite(ctx, nm, st); err != nil {
+	if err := gateNewMemberFirstWrite(nm, st, rules.NewMemberWait); err != nil {
 		return err
 	}
 	if err := countDMMessage(ctx, tx, nm, st); err != nil {
@@ -189,8 +197,7 @@ func countDMMessage(ctx context.Context, tx pgx.Tx, nm NewMessage, st dmState) e
 // gateNewMemberFirstWrite keeps a member who is still new from opening a
 // conversation: while their write wait runs they may answer someone who wrote
 // first, but not write first (raid protection, doc/moderation.md).
-func gateNewMemberFirstWrite(ctx context.Context, nm NewMessage, st dmState) error {
-	wait := newMemberWriteWait(ctx)
+func gateNewMemberFirstWrite(nm NewMessage, st dmState, wait time.Duration) error {
 	if wait <= 0 || nm.Record {
 		return nil
 	}

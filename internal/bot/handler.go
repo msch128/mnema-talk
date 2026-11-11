@@ -9,6 +9,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -38,7 +39,7 @@ func NewHandler(h Handler) *Handler {
 // membersChanged makes every client reload the member list and the roles.
 func (h *Handler) membersChanged() {
 	if h.Events != nil {
-		h.Events.Broadcast(events.RolesChanged, nil)
+		h.Events.Broadcast(wire.RolesChanged{})
 	}
 }
 

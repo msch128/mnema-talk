@@ -33,7 +33,7 @@ func (h *Hub) statusLocked(userID uuid.UUID) string {
 // announcePresence tells everyone about a changed live status.
 func (h *Hub) announcePresence(userID uuid.UUID, before, after string) {
 	if before != after {
-		h.Broadcast(events.PresenceUpdate, map[string]any{"user_id": userID, "status": after})
+		h.Broadcast(PresenceUpdate{UserID: userID, Status: after})
 	}
 }
 
@@ -72,7 +72,7 @@ func (h *Hub) setIdle(c *Client, idle bool) {
 		after = h.statusLocked(c.User.ID)
 	})
 	if before != after {
-		c.emitApplicationEvent(events.PresenceUpdate, map[string]any{"user_id": c.User.ID, "status": after}, false, nil, uuid.Nil)
+		c.emitApplicationEvent(PresenceUpdate{UserID: c.User.ID, Status: after}, false, nil, uuid.Nil)
 	}
 }
 
@@ -116,12 +116,8 @@ func (h *Hub) botVisibleStatusLocked(id uuid.UUID) string {
 	return auth.PresenceOnline
 }
 
-func botPresenceEvent(id uuid.UUID, status string, activity *BotActivity) map[string]any {
-	ev := map[string]any{"user_id": id, "status": status}
-	if activity != nil {
-		ev["activity"] = activity
-	}
-	return ev
+func botPresenceEvent(id uuid.UUID, status string, activity *BotActivity) PresenceUpdate {
+	return PresenceUpdate{UserID: id, Status: status, Activity: activity}
 }
 
 // SetBotPresence records whether a bot has a live gateway connection and
@@ -142,7 +138,7 @@ func (h *Hub) SetBotPresence(userID uuid.UUID, online bool) {
 		after, act = h.botVisibleLocked(userID)
 	})
 	if before != after || !sameActivity(beforeAct, act) {
-		h.Broadcast(events.PresenceUpdate, botPresenceEvent(userID, after, act))
+		h.Broadcast(botPresenceEvent(userID, after, act))
 	}
 }
 
@@ -158,7 +154,7 @@ func (h *Hub) SetBotStatus(userID uuid.UUID, status string, activity *BotActivit
 		after, act = h.botVisibleLocked(userID)
 	})
 	if before != after || !sameActivity(beforeAct, act) {
-		h.Broadcast(events.PresenceUpdate, botPresenceEvent(userID, after, act))
+		h.Broadcast(botPresenceEvent(userID, after, act))
 	}
 }
 
@@ -172,7 +168,7 @@ func sameActivity(a, b *BotActivity) bool {
 // sendBotActivities tells a new connection what the connected bots are doing:
 // the presence snapshot only carries statuses.
 func (h *Hub) sendBotActivities(c *Client) {
-	var presences []map[string]any
+	var presences []PresenceUpdate
 	safego.Locked(h.mu.RLocker(), func() {
 		for id := range h.botState {
 			if status, act := h.botVisibleLocked(id); act != nil {
@@ -181,7 +177,7 @@ func (h *Hub) sendBotActivities(c *Client) {
 		}
 	})
 	for _, ev := range presences {
-		c.SendEvent(events.PresenceUpdate, ev)
+		c.SendEvent(ev)
 	}
 }
 
@@ -193,10 +189,10 @@ func (h *Hub) OnlineCount() int {
 }
 
 // presenceSnapshot maps every connected user to their live status.
-func (h *Hub) presenceSnapshot() map[uuid.UUID]string {
+func (h *Hub) presenceSnapshot() PresenceSnapshot {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	out := make(map[uuid.UUID]string, len(h.online)+len(h.botLive))
+	out := make(PresenceSnapshot, len(h.online)+len(h.botLive))
 	for id := range h.online {
 		out[id] = h.statusLocked(id)
 	}
@@ -218,3 +214,22 @@ func (h *Hub) OnlineUserIDs() []uuid.UUID {
 	}
 	return ids
 }
+
+// The fields of the events below are in the alphabetical order of their JSON
+// keys: these events were maps once, and their JSON must not change.
+
+// PresenceUpdate says what a member's live status is now (presence_update).
+// A bot that set an activity carries it; nobody else has one.
+type PresenceUpdate struct {
+	Activity *BotActivity `json:"activity,omitempty"`
+	Status   string       `json:"status" enums:"online,away,dnd,focus,offline"`
+	UserID   uuid.UUID    `json:"user_id" format:"uuid"`
+}
+
+func (PresenceUpdate) EventName() string { return events.PresenceUpdate }
+
+// PresenceSnapshot is the live status of everyone who is online, by user ID
+// (presence_snapshot): part of the greeting of a new connection.
+type PresenceSnapshot map[uuid.UUID]string
+
+func (PresenceSnapshot) EventName() string { return events.PresenceSnapshot }

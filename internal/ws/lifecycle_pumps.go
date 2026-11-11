@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -145,7 +144,7 @@ func (c *Client) sessionStillValid() bool {
 		c.revalidateFails = 0
 		return true
 	}
-	slog.Warn("revalidate session failed", "user", c.User.ID, "err", err)
+	c.logger().Warn("revalidate session failed", "user", c.User.ID, "err", err)
 	c.revalidateFails++
 	if c.revalidateFails >= maxRevalidateFailures {
 		c.writeSessionRevokedClose()

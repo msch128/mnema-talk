@@ -22,7 +22,7 @@ func joinWithOffers(t *testing.T, timeout time.Duration) (*Peer, chan webrtc.Ses
 	s.offerTimeout = timeout
 	t.Cleanup(func() { _ = s.Close() })
 	offers := make(chan webrtc.SessionDescription, 8)
-	_, peer, err := s.Join(uuid.New(), uuid.New(), func(o webrtc.SessionDescription) { offers <- o }, nil)
+	_, peer, err := s.Join(uuid.New(), uuid.New(), "", func(o webrtc.SessionDescription) { offers <- o }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestWatchdogResendDrainsTrackChangeAfterConcurrentAnswer(t *testing.T) {
 	var releaseOnce sync.Once
 	t.Cleanup(func() { releaseOnce.Do(func() { close(release) }) })
 	var count atomic.Int32
-	r, peer, err := s.Join(uuid.New(), uuid.New(), func(offer webrtc.SessionDescription) {
+	r, peer, err := s.Join(uuid.New(), uuid.New(), "", func(offer webrtc.SessionDescription) {
 		if count.Add(1) == 2 {
 			close(resendStarted)
 			<-release

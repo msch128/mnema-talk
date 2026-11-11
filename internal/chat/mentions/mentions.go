@@ -42,7 +42,8 @@ func WithMentionPolicy(ctx context.Context, p MentionPolicy) context.Context {
 	return context.WithValue(ctx, mentionPolicyKey{}, p)
 }
 
-func mentionPolicyFrom(ctx context.Context) MentionPolicy {
+// PolicyFrom is the policy WithMentionPolicy attached, or the zero value.
+func PolicyFrom(ctx context.Context) MentionPolicy {
 	p, _ := ctx.Value(mentionPolicyKey{}).(MentionPolicy)
 	return p
 }
@@ -162,13 +163,20 @@ func queryMentioned(ctx context.Context, q db.Querier, t mentionTargets, online 
 	return found, nil
 }
 
-// RecordMentions resolves and stores the mentions of a new or edited message.
+// RecordMentions resolves and stores the mentions of a new or edited message
+// under the mention policy of ctx.
 func RecordMentions(ctx context.Context, q db.Querier, src OnlineSource, messageID, authorID uuid.UUID, content string) error {
+	return RecordMentionsUnder(ctx, q, src, PolicyFrom(ctx), messageID, authorID, content)
+}
+
+// RecordMentionsUnder is RecordMentions with the policy given by the caller
+// instead of read from ctx.
+func RecordMentionsUnder(ctx context.Context, q db.Querier, src OnlineSource, policy MentionPolicy, messageID, authorID uuid.UUID, content string) error {
 	var online []uuid.UUID
 	if src != nil {
 		online = src.OnlineUserIDs()
 	}
-	set, err := ResolveMentionSet(ctx, q, content, authorID, online)
+	set, err := resolveMentionSet(ctx, q, policy, content, authorID, online)
 	if err != nil {
 		return err
 	}

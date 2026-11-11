@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -209,7 +208,7 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast(events.UserUpdate, u.Public())
+	h.Events.Broadcast(auth.UserUpdate(u.Public()))
 	httpx.WriteJSON(w, http.StatusOK, u)
 	return nil
 }
@@ -294,7 +293,7 @@ func (h *Handler) WriteStatus(w http.ResponseWriter, r *http.Request, userID uui
 		return err
 	}
 	pub := u.Public()
-	h.Events.Broadcast(events.UserUpdate, pub)
+	h.Events.Broadcast(auth.UserUpdate(pub))
 	if userID != auth.UserFrom(r.Context()).ID {
 		u = &pub
 	}

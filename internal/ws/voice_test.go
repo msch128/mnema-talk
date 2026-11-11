@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -151,7 +152,7 @@ func TestVoicePayloadsFollowUserUpdates(t *testing.T) {
 
 	renamed := user
 	renamed.DisplayName = "Anna Neu"
-	h.Broadcast("user_update", renamed.Public())
+	h.Broadcast(auth.UserUpdate(renamed.Public()))
 	drainTypes(t, watcher)
 
 	h.joinVoice(c, ch)
@@ -176,13 +177,20 @@ func TestVoicePayloadsFollowUserUpdates(t *testing.T) {
 		t.Fatalf("join announced %q, want the updated name", join.Payload.User.DisplayName)
 	}
 
-	renamed.DisplayName = "Anna Neuer"
-	h.Broadcast("user_update", &renamed)
-	if got := h.voiceSnapshot()[ch.ID][user.ID].DisplayName; got != "Anna Neuer" {
+	renamed.DisplayName = "Anna Neuere"
+	h.Broadcast(auth.UserUpdate(renamed))
+	if got := h.voiceSnapshot()[ch.ID][user.ID].DisplayName; got != "Anna Neuere" {
 		t.Fatalf("snapshot shows %q, want the updated name", got)
 	}
+	// Published as a pointer the update reaches the cache as well.
+	renamed.DisplayName = "Anna Neuer"
+	byPointer := auth.UserUpdate(renamed)
+	h.Broadcast(&byPointer)
+	if got := h.voiceSnapshot()[ch.ID][user.ID].DisplayName; got != "Anna Neuer" {
+		t.Fatalf("snapshot shows %q after an update published as a pointer", got)
+	}
 	// An admin enable/disable notice carries no profile and changes nothing.
-	h.Broadcast("user_update", map[string]any{"id": user.ID, "disabled": true})
+	h.Broadcast(wire.UserDisabled{ID: user.ID, Disabled: true})
 	if got := h.voiceSnapshot()[ch.ID][user.ID].DisplayName; got != "Anna Neuer" {
 		t.Fatalf("snapshot shows %q after a disable notice", got)
 	}

@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 )
 
 func publicNames(t *testing.T, a *app) (health, options string) {
@@ -47,7 +47,7 @@ func TestCommunityNameIsPublicFollowsTheSettingAndFallsBackToTheHost(t *testing.
 	}
 	var told bool
 	for _, e := range a.events.Snapshot() {
-		if p, ok := e.Payload.(map[string]string); ok && e.Type == events.CommunityUpdated && p["community_name"] == "Lantern Fox" && e.Recipients == nil {
+		if p, ok := e.Payload.(wire.CommunityUpdated); ok && p.CommunityName == "Lantern Fox" && e.Recipients == nil {
 			told = true
 		}
 	}

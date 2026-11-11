@@ -9,6 +9,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/safego"
 )
@@ -33,7 +34,7 @@ const (
 // replies notify them. Only members who really follow and can still view the
 // channel are told. The lookup runs off the publishing path, so a failed one
 // is logged and that reply's update is lost; the next list load shows the follow.
-func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher) func(channel uuid.UUID, eventType string, payload any) {
+func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher) func(channel uuid.UUID, ev events.Event) {
 	perm.Must(perms, "thread follow sync")
 	queue := make(chan core.Message, followSyncQueue)
 	for range followSyncWorkers {
@@ -48,32 +49,18 @@ func NewFollowSync(ctx context.Context, p *db.Pool, perms *perm.Service, pub eve
 			}
 		})
 	}
-	return func(_ uuid.UUID, eventType string, payload any) {
-		if eventType != events.MessageCreate {
+	return func(_ uuid.UUID, ev events.Event) {
+		created, ok := ev.(*core.MessageCreate)
+		if !ok || created == nil || created.ParentID == nil {
 			return
 		}
-		msg, ok := MessageOf(payload)
-		if !ok || msg.ParentID == nil {
-			return
-		}
+		msg := core.Message(*created)
 		select {
 		case queue <- msg:
 		default:
 			slog.Warn("thread follow sync: queue full, reply skipped", "thread", *msg.ParentID)
 		}
 	}
-}
-
-func MessageOf(payload any) (core.Message, bool) {
-	switch v := payload.(type) {
-	case core.Message:
-		return v, true
-	case *core.Message:
-		if v != nil {
-			return *v, true
-		}
-	}
-	return core.Message{}, false
 }
 
 func syncFollowers(parent context.Context, p *db.Pool, perms *perm.Service, pub events.Publisher, msg core.Message) {
@@ -105,9 +92,7 @@ func syncFollowers(parent context.Context, p *db.Pool, perms *perm.Service, pub 
 		if !snap.Channel(perm.Subject{ID: user}, msg.ChannelID).Has(perm.ViewChannel) {
 			continue
 		}
-		pub.SendToUsers([]uuid.UUID{user}, events.ThreadFollowUpdated, map[string]any{
-			"thread_id": thread, "channel_id": msg.ChannelID, "following": true,
-		})
+		pub.SendToUsers([]uuid.UUID{user}, wire.ThreadFollowUpdated{ThreadID: thread, ChannelID: msg.ChannelID, Following: true})
 	}
 	if err := rows.Err(); err != nil {
 		slog.Warn("thread follow sync", "err", err)

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/events"
 )
 
 const (
@@ -93,3 +94,5 @@ type SignupNoticePayload struct {
 	StartTime time.Time  `json:"start_time" format:"date-time"`
 	ChannelID *uuid.UUID `json:"channel_id,omitempty" format:"uuid" binding:"optional"`
 }
+
+func (SignupNoticePayload) EventName() string { return events.EventSignupNotice }

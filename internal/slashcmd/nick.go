@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/slash"
@@ -52,6 +51,6 @@ func (c nickCommand) Run(ctx context.Context, call slash.Call) (slash.Result, er
 	if err != nil {
 		return slash.Result{}, err
 	}
-	c.svc.Events.Broadcast(events.UserUpdate, u.Public())
+	c.svc.Events.Broadcast(auth.UserUpdate(u.Public()))
 	return slash.Result{}, nil
 }

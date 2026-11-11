@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -149,7 +148,7 @@ func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user 
 // upload handles POST /api/channels/{channelID}/upload.
 //
 // @Summary Post a message with an attachment
-// @Description multipart/form-data. Creates a message carrying the file and broadcasts message_create. Works in text and voice channels. Stricter per-member upload rate limit.
+// @Description multipart/form-data. Creates a message carrying the file and broadcasts message_create. Works in text and voice channels. Stricter per-member upload rate limit. A JPEG, PNG or WebP is stored without its metadata (EXIF with the GPS position, XMP, IPTC, comments, thumbnails; the orientation stays) and without anything that follows the picture, unless the Owner switched that off, so the stored file and its size_bytes can be smaller than what was sent, never larger.
 // @ID uploadFile
 // @Tags Media
 // @Accept mpfd
@@ -175,12 +174,26 @@ func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user 
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/channels/{channelID}/upload [post]
 func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
+	return h.uploadAs(w, r, func(r *http.Request, ch uuid.UUID) (context.Context, captionContext, error) {
+		ctx, err := messages.UploadContext(h.Perms, r, ch)
+		return ctx, nil, err
+	})
+}
+
+// captionContext gives the context an upload's message is stored with, from
+// the form's allowed_mentions field (empty when absent).
+type captionContext func(allowedMentions string) (context.Context, error)
+
+// uploadAs is the upload of a member or a bot. gate checks that the caller
+// may post a file in the channel; the captionContext it may return decides,
+// once the form is read, whom the caption notifies.
+func (h *Handler) uploadAs(w http.ResponseWriter, r *http.Request, gate func(*http.Request, uuid.UUID) (context.Context, captionContext, error)) error {
 	user := auth.UserFrom(r.Context())
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return err
 	}
-	ctx, err := messages.UploadContext(h.Perms, r, chID)
+	ctx, caption, err := gate(r, chID)
 	if err != nil {
 		return err
 	}
@@ -201,6 +214,12 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	in, target, err := h.readUpload(req, chID)
 	if err != nil {
 		return err
+	}
+	if caption != nil {
+		if ctx, err = caption(target.allowedMentions); err != nil {
+			h.discard(req.Context(), in.key)
+			return err
+		}
 	}
 	msgID, err := h.insertUploadMessage(ctx, chID, user, in, target)
 	if err != nil {
@@ -239,7 +258,7 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast(events.UserUpdate, updated.Public())
+	h.Events.Broadcast(auth.UserUpdate(updated.Public()))
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }
@@ -300,7 +319,7 @@ func (h *Handler) deleteAvatar(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast(events.UserUpdate, updated.Public())
+	h.Events.Broadcast(auth.UserUpdate(updated.Public()))
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }

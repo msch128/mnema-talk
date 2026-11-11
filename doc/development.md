@@ -48,7 +48,12 @@ make coverage          # Go (unit + integration) and web coverage: coverage.out,
                        # gates for Go and web: at least 90 % in total and 80 % in every file
                        # (Go: COVERAGE_MIN / COVERAGE_FILE_MIN in the Makefile;
                        # web: web/scripts/check-coverage.ts, all four metrics)
-make lint              # gofmt, go vet, eslint
+make lint              # gofmt, go vet, staticcheck, cognitive complexity, eslint
+make bench             # hub fan-out, permission snapshot load and SFU forward benchmarks against
+                       # scripts/bench-baseline.txt (Docker or TEST_DATABASE_URL); prints the comparison,
+                       # only more allocations per packet on the SFU forward path fail
+                       # (make bench-allocs is that part alone, CI runs it; make bench-baseline
+                       # records a new baseline on an idle machine)
 make docs-check        # relative links and anchors in the docs, the paths AGENTS.md names, no merge-conflict markers
 make english-check     # no German outside the locale resources and scripts/english-only-allowlist.txt
 make typecheck-web     # complete frontend source and strict compiler checks

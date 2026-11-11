@@ -14,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/worker"
 )
@@ -170,7 +171,10 @@ func (a *AutoDeleter) sweepBatch(ctx context.Context, c autoDeleteChannel, cutof
 		if err != nil || len(removed) == 0 {
 			return err
 		}
-		return deleteExpired(ctx, tx, removed, &keys)
+		if err := deleteExpired(ctx, tx, removed, &keys); err != nil {
+			return err
+		}
+		return a.recordExpired(ctx, tx, c.id, removed)
 	})
 	if err != nil {
 		return 0, 0, err
@@ -182,10 +186,20 @@ func (a *AutoDeleter) sweepBatch(ctx context.Context, c autoDeleteChannel, cutof
 	}
 	if a.Events != nil {
 		for _, g := range removed {
-			a.Events.BroadcastChannel(c.id, events.MessageDelete, map[string]any{"id": g.id, "channel_id": c.id, "parent_id": g.parent})
+			a.Events.BroadcastChannel(c.id, wire.MessageDelete{ID: g.id, ChannelID: c.id, ParentID: g.parent})
 		}
 	}
 	return len(removed), len(keys), nil
+}
+
+// recordExpired stores message_delete of the removed messages for the
+// channel's outgoing webhooks, in the transaction that removed them.
+func (a *AutoDeleter) recordExpired(ctx context.Context, tx pgx.Tx, channel uuid.UUID, removed []expiredMessage) error {
+	deleted := make([]wire.MessageDelete, len(removed))
+	for i, g := range removed {
+		deleted[i] = wire.MessageDelete{ID: g.id, ChannelID: channel, ParentID: g.parent}
+	}
+	return messages.RecordMessageDeletes(ctx, a.DB, tx, channel, deleted)
 }
 
 type expiredMessage struct {

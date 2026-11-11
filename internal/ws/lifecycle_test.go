@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events/eventstest"
 )
 
 // Events reach a client from goroutines other than its read loop (SFU
@@ -27,13 +28,13 @@ func TestSendAfterUnregisterDoesNotPanic(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				for k := 0; k < 100; k++ {
-					c.SendEvent("webrtc_candidate", map[string]any{"k": k})
+					c.SendEvent(eventstest.Named("webrtc_candidate", map[string]any{"k": k}))
 				}
 			}()
 		}
 		h.unregister(c)
 		wg.Wait()
-		c.SendEvent("voice_kicked", nil) // after unregister: dropped, no panic
+		c.SendEvent(eventstest.Named("voice_kicked", nil)) // after unregister: dropped, no panic
 		select {
 		case <-c.done:
 		default:
@@ -100,7 +101,7 @@ func TestHubCloseDoesNotWaitOnVoiceCleanupOrRestartGrace(t *testing.T) {
 	c := newClient(h, nil, auth.User{ID: uuid.New(), Username: "alice"}, 0)
 	h.register(c)
 	key := voiceKey{c.User.ID, uuid.New()}
-	h.startGrace(key)
+	h.startGrace(key, nil)
 	c.voiceMu.Lock()
 	defer c.voiceMu.Unlock()
 	done := make(chan struct{})
@@ -110,7 +111,7 @@ func TestHubCloseDoesNotWaitOnVoiceCleanupOrRestartGrace(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("hub shutdown waited on voice cleanup")
 	}
-	h.startGrace(key)
+	h.startGrace(key, nil)
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if len(h.grace) != 0 {

@@ -7461,6 +7461,10 @@
             "description": "MaxUploadMB is the effective global limit.",
             "minimum": 1,
             "type": "integer"
+          },
+          "strip_image_metadata": {
+            "description": "StripImageMetadata says whether the server removes metadata (EXIF with\nthe GPS position, XMP, IPTC, comments, thumbnails) and anything that\nfollows the picture from uploaded JPEG, PNG and WebP attachments\n(default on). A server that does not send it is older and\nkeeps the metadata.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -8024,6 +8028,13 @@
               "integer",
               "null"
             ]
+          },
+          "strip_image_metadata": {
+            "description": "StripImageMetadata switches the removal of metadata from uploaded\npictures on or off; left out, it stays as it is.",
+            "type": [
+              "boolean",
+              "null"
+            ]
           }
         },
         "required": [
@@ -8487,6 +8498,56 @@
         ],
         "type": "object"
       },
+      "server.HealthUnavailable": {
+        "properties": {
+          "community_icon": {
+            "description": "CommunityIcon is the version of the community icon the Owner set, left\nout while there is none. GET /api/community/icon serves it (public); the\nversion changes with every upload, so a client refetches when it differs\nfrom the one it has.",
+            "type": "string"
+          },
+          "community_name": {
+            "description": "CommunityName is what this server calls itself: the name the Owner set\nin the welcome settings, else the host it is served from. It is public\non purpose, so a client can label a server before anyone signs in.",
+            "type": "string"
+          },
+          "error": {
+            "$ref": "#/components/schemas/httpx.APIError"
+          },
+          "features": {
+            "description": "Features lists the optional features this server has, so a web app of a\nnewer release can hide what an older server lacks (for example \"blocks\").\nA server of 1.0.x sends no list. See doc/api-stability.md.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "unavailable"
+            ],
+            "type": "string"
+          },
+          "unavailable": {
+            "description": "Unavailable names every dependency that is down. Known values are\n\"database\" and \"storage\"; a later server may name more, so a client\nignores the names it does not know. With only \"storage\" in it, uploads,\nattachments and pictures fail while chat and Talks work.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "version": {
+            "type": "string"
+          },
+          "web_client_api": {
+            "description": "WebClientAPI identifies the HTTPS web-client desktop integration contract.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "error",
+          "status",
+          "unavailable",
+          "version",
+          "web_client_api"
+        ],
+        "type": "object"
+      },
       "server.ICEConfig": {
         "properties": {
           "ice_servers": {
@@ -8589,6 +8650,20 @@
           "stun_servers",
           "turn_servers",
           "update_check"
+        ],
+        "type": "object"
+      },
+      "server.Liveness": {
+        "properties": {
+          "status": {
+            "enum": [
+              "ok"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
         ],
         "type": "object"
       },
@@ -19637,7 +19712,7 @@
     },
     "/api/admin/upload-limit": {
       "get": {
-        "description": "Owner only. The effective global limit and the operator's ceiling (MAX_UPLOAD_SIZE_MB).",
+        "description": "Owner only. The effective global limit, the operator's ceiling (MAX_UPLOAD_SIZE_MB) and whether uploaded pictures lose their metadata (strip_image_metadata).",
         "operationId": "getUploadLimit",
         "responses": {
           "200": {
@@ -19710,7 +19785,7 @@
         ]
       },
       "put": {
-        "description": "Owner only. Capped by the operator's ceiling (MAX_UPLOAD_SIZE_MB); null returns to the ceiling. Roles may override it per role. Broadcasts permissions_changed so clients refetch their effective limit.",
+        "description": "Owner only. Capped by the operator's ceiling (MAX_UPLOAD_SIZE_MB); null returns to the ceiling. Roles may override it per role. strip_image_metadata, when given, switches the removal of metadata (EXIF with the GPS position, XMP, IPTC, comments) from JPEG, PNG and WebP attachments on or off; it applies to uploads from then on. Broadcasts permissions_changed so clients refetch their effective limit.",
         "operationId": "setUploadLimit",
         "requestBody": {
           "content": {
@@ -24496,6 +24571,10 @@
             "multipart/form-data": {
               "schema": {
                 "properties": {
+                  "allowed_mentions": {
+                    "description": "The allowed_mentions object of the message route (parse, users, roles), JSON-encoded. Without it the caption notifies the members it names, never @all, @here or a role.",
+                    "type": "string"
+                  },
                   "content": {
                     "description": "Optional caption.",
                     "maxLength": 4000,
@@ -25606,7 +25685,7 @@
     },
     "/api/channels/{channelID}/attachments": {
       "post": {
-        "description": "multipart/form-data with the file in field 'file'. Stores the file as a staged attachment without posting a message; send the returned id in attachment_ids of POST /api/channels/{channelID}/messages (up to 10 per message). Needs the same permissions as an upload. A staged file is visible only to its uploader and is deleted automatically after six hours if no message claims it. A member holds at most 30 unsent files. Same stricter per-member upload rate limit and size limits as the upload endpoint.",
+        "description": "multipart/form-data with the file in field 'file'. Stores the file as a staged attachment without posting a message; send the returned id in attachment_ids of POST /api/channels/{channelID}/messages (up to 10 per message). Needs the same permissions as an upload. A staged file is visible only to its uploader and is deleted automatically after six hours if no message claims it. A member holds at most 30 unsent files. Same stricter per-member upload rate limit and size limits as the upload endpoint, and the same removal of metadata from JPEG, PNG and WebP files.",
         "operationId": "stageAttachment",
         "parameters": [
           {
@@ -29310,7 +29389,7 @@
     },
     "/api/channels/{channelID}/upload": {
       "post": {
-        "description": "multipart/form-data. Creates a message carrying the file and broadcasts message_create. Works in text and voice channels. Stricter per-member upload rate limit.",
+        "description": "multipart/form-data. Creates a message carrying the file and broadcasts message_create. Works in text and voice channels. Stricter per-member upload rate limit. A JPEG, PNG or WebP is stored without its metadata (EXIF with the GPS position, XMP, IPTC, comments, thumbnails; the orientation stays) and without anything that follows the picture, unless the Owner switched that off, so the stored file and its size_bytes can be smaller than what was sent, never larger.",
         "operationId": "uploadFile",
         "parameters": [
           {
@@ -32631,7 +32710,7 @@
     },
     "/api/health": {
       "get": {
-        "description": "Pings the database and checks object storage; the result is cached for 2 s.",
+        "description": "Pings the database and checks object storage; the result is cached for 2 s.\nA 503 carries the usual error and, beside it, everything the 200 says about the server, plus the dependencies that are down in `unavailable`.\nWith only `storage` in that list, uploads, attachments and pictures fail while chat and Talks keep working. An older server answers a 503 with the error alone.",
         "operationId": "getHealth",
         "responses": {
           "200": {
@@ -32648,7 +32727,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                  "$ref": "#/components/schemas/server.HealthUnavailable"
                 }
               }
             },
@@ -32657,6 +32736,29 @@
         },
         "security": [],
         "summary": "Health check",
+        "tags": [
+          "System"
+        ]
+      }
+    },
+    "/api/health/live": {
+      "get": {
+        "description": "Answers 200 whenever the process serves requests. It asks neither the database nor object storage, so it stays 200 while GET /api/health answers 503.\nFor orchestrators that restart a container on a failed probe; whether the server is ready for members is what GET /api/health says.",
+        "operationId": "getHealthLive",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.Liveness"
+                }
+              }
+            },
+            "description": "The process serves requests."
+          }
+        },
+        "security": [],
+        "summary": "Liveness check",
         "tags": [
           "System"
         ]

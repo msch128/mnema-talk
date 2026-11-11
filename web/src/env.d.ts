@@ -4,6 +4,8 @@ import type { t, locale } from './i18n/index.ts'
 
 declare global {
   const __APP_VERSION__: string
+  /** The build's asset prefix, "/assets/" (vite.config.ts). */
+  const __ASSETS_PREFIX__: string
   const __MNEMA_E2E_HOOKS__: boolean
   // Optional browser extensions used by capability checks / requested hints.
   // These declarations do not promise that an engine supports an extension.

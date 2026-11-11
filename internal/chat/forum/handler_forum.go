@@ -11,7 +11,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/chat/messages"
-	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -229,15 +228,14 @@ func (a *API) ServeUpdateForumPost(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	msg, err := UpdateForumPost(ctx, a.DB, chID, msgID, PostActor{ID: user.ID, CanManage: canManage},
-		PostPatch{Title: req.Title, TagIDs: req.TagIDs, IsLocked: req.IsLocked, IsResolved: req.IsResolved})
+	msg, err := UpdateForumPost(ctx, a.DB, chID, msgID, PostActor{ID: user.ID, CanManage: canManage}, PostPatch(req))
 	if err != nil {
 		return err
 	}
 	if canManage && msg.UserID != user.ID {
 		a.auditForumPost(ctx, chID, msg, before, req)
 	}
-	a.Events.BroadcastChannel(chID, events.MessageUpdate, msg)
+	a.Events.BroadcastChannel(chID, (*core.MessageUpdate)(msg))
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
 }

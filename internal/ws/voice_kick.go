@@ -2,7 +2,7 @@ package ws
 
 import (
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
@@ -43,11 +43,7 @@ func (h *Hub) kickClientPeer(c *Client, onlyCh *uuid.UUID, reason string, peer *
 	if !kicked {
 		return false
 	}
-	payload := map[string]any{"channel_id": ch}
-	if reason != "" {
-		payload["reason"] = reason
-	}
-	c.SendEvent(events.VoiceKicked, payload)
+	c.SendEvent(wire.VoiceKicked{ChannelID: ch, Reason: reason})
 	return true
 }
 
@@ -174,19 +170,4 @@ func (h *Hub) DisconnectUser(userID uuid.UUID) {
 	for _, c := range clients {
 		c.close()
 	}
-}
-
-// userInVoice reports whether another connection than except of userID is in chID's voice room.
-func (h *Hub) userInVoice(userID, chID uuid.UUID, except *Client) bool {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	for other := range h.clients {
-		if other == except || other.User.ID != userID {
-			continue
-		}
-		if cur := other.currentVoice(); cur != nil && *cur == chID {
-			return true
-		}
-	}
-	return false
 }

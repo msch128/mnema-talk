@@ -60,6 +60,8 @@ type SavedUpdated struct {
 	Saved     bool      `json:"saved"`
 }
 
+func (SavedUpdated) EventName() string { return events.SavedUpdated }
+
 // SaveRequest is the optional body of PUT /api/me/saved/{messageID}.
 type SaveRequest struct {
 	// Note replaces the note; left out (or null), a saved message keeps its
@@ -313,6 +315,6 @@ func RemoveSaved(ctx context.Context, q db.Querier, user, messageID uuid.UUID) (
 
 func (a *API) sendSaved(user, msgID uuid.UUID, saved bool) {
 	if a.Events != nil {
-		a.Events.SendToUsers([]uuid.UUID{user}, events.SavedUpdated, SavedUpdated{MessageID: msgID, Saved: saved})
+		a.Events.SendToUsers([]uuid.UUID{user}, SavedUpdated{MessageID: msgID, Saved: saved})
 	}
 }

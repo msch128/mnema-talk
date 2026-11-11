@@ -1,6 +1,11 @@
 package ws
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"github.com/msch128/mnema-talk/internal/httpx"
+	"log/slog"
+	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -8,7 +13,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
@@ -19,6 +26,12 @@ type Client struct {
 	conn *websocket.Conn
 	send chan []byte
 	User auth.User
+	// connID names this connection in the log and log binds it (see nameConn).
+	connID string
+	log    *slog.Logger
+	// clientRequestID is the X-Request-Id the client or a proxy sent with the
+	// upgrade request, logged once at connect (see nameConnFor).
+	clientRequestID string
 
 	tokenVersion int
 	// dmAware is set by connections that asked for direct message events
@@ -65,8 +78,9 @@ type Client struct {
 
 	mu      sync.Mutex
 	voiceCh *uuid.UUID
-	// seat orders the seated voice connections of one user: the hub's clock
-	// at the moment the SFU join succeeded, 0 while not seated yet.
+	// seat orders the seated voice connections of one user: the number of
+	// the connection's media peer (sfu.Peer.Order; the hub's own clock when
+	// it runs without an SFU), 0 while not seated yet.
 	seat uint64
 	// tab is the id the page sends with its voice joins; it stays the same
 	// across its WebSocket reconnects, which tell a takeover's victim
@@ -93,8 +107,10 @@ type Client struct {
 }
 
 func newClient(h *Hub, conn *websocket.Conn, user auth.User, tokenVersion int) *Client {
-	return &Client{hub: h, conn: conn, send: make(chan []byte, sendBuffer), done: make(chan struct{}),
+	c := &Client{hub: h, conn: conn, send: make(chan []byte, sendBuffer), done: make(chan struct{}),
 		User: user, tokenVersion: tokenVersion, connectedAt: time.Now()}
+	c.nameConn("")
+	return c
 }
 
 // close tears the connection down once; readPump then unregisters the client.
@@ -136,12 +152,12 @@ func (c *Client) deliver(data []byte) {
 func (c *Client) dropSlow() {
 	metrics.WSDropped.With("slow_client").Inc()
 	if c.closing.CompareAndSwap(false, true) {
-		safego.Go("ws_close", safego.Abandon, c.close)
+		safego.GoConn(c.panics(), "ws_close", safego.Abandon, c.close)
 	}
 }
 
-func (c *Client) SendEvent(eventType string, payload any) {
-	if data := encode(eventType, payload); data != nil {
+func (c *Client) SendEvent(ev events.Event) {
+	if data := encode(ev); data != nil {
 		c.deliver(data)
 	}
 }
@@ -234,18 +250,21 @@ func (c *Client) currentVoice() *uuid.UUID {
 // changes under the same lock, so it never disagrees with the connection.
 // Callers do not hold the hub's lock.
 func (c *Client) setVoice(ch *uuid.UUID) {
-	safego.Locked(&c.hub.mu, func() {
-		c.mu.Lock()
-		was := c.voiceCh
-		c.voiceCh = ch
-		c.seat = 0
-		c.speaking = false
-		if ch == nil {
-			c.sfuPeer = nil
-		}
-		c.mu.Unlock()
-		c.hub.moveRoomLocked(c, was, ch)
-	})
+	safego.Locked(&c.hub.mu, func() { c.setVoiceLocked(ch) })
+}
+
+// setVoiceLocked is setVoice for a caller that holds the hub's lock.
+func (c *Client) setVoiceLocked(ch *uuid.UUID) {
+	c.mu.Lock()
+	was := c.voiceCh
+	c.voiceCh = ch
+	c.seat = 0
+	c.speaking = false
+	if ch == nil {
+		c.sfuPeer = nil
+	}
+	c.mu.Unlock()
+	c.hub.moveRoomLocked(c, was, ch)
 }
 
 func (c *Client) setTab(id string) {
@@ -305,3 +324,77 @@ func (c *Client) evict() {
 	c.shutdown()
 	c.close()
 }
+
+// joinRefusal is the voice_kicked reason of a refused join: the rules the
+// member has not accepted yet, otherwise a missing permission. snap is nil when
+// the permission state could not be loaded.
+func (c *Client) joinRefusal(snap *perm.Snapshot) string {
+	if snap != nil && snap.RulesPending(c.User.ID) {
+		return "rules_not_accepted"
+	}
+	return "missing_permission"
+}
+
+// connIDAttr names a connection in the log: every line the hub and the SFU
+// write for one WebSocket carries it, which is what tells two sessions of one
+// member apart (doc/operations.md). It stays in the log: no event carries it
+// and no other member learns it.
+const connIDAttr = "conn_id"
+
+// newConnID mints the id of a connection that has no upgrade request to take
+// one from: 8 random bytes, enough to stay unique among the connections of a
+// log's lifetime.
+func newConnID() string {
+	var b [8]byte
+	_, _ = rand.Read(b[:]) // never fails (crypto/rand)
+	return hex.EncodeToString(b[:])
+}
+
+// nameConnFor names the connection of the upgrade request r. The request id
+// the server made up for r becomes the connection's id, which puts its "http"
+// access line and everything the connection logs later under one id. A
+// request id that came with the request (X-Request-Id, which the middleware
+// accepted as it was) never does: whoever sends it could pick the id of
+// another session, or one id for many. Such a connection gets a random id,
+// and the value it sent is logged once, when it connects.
+func (c *Client) nameConnFor(r *http.Request) {
+	id := httpx.RequestIDFromContext(r.Context())
+	if id != "" && id == r.Header.Get("X-Request-Id") {
+		c.clientRequestID, id = id, ""
+	}
+	c.nameConn(id)
+}
+
+// connectedAttrs are the attributes of the "ws connected" line.
+func (c *Client) connectedAttrs() []any {
+	attrs := []any{"user", c.User.Username}
+	if c.clientRequestID != "" {
+		// Bounded and free of anything but letters, digits, ".", "_" and "-":
+		// the middleware accepts nothing else as a request id.
+		attrs = append(attrs, "client_request_id", c.clientRequestID)
+	}
+	return attrs
+}
+
+// nameConn gives the connection its id and binds it to the connection's
+// logger once, so no log call builds the attribute again.
+func (c *Client) nameConn(id string) {
+	if id == "" {
+		id = newConnID()
+	}
+	c.connID = id
+	c.log = slog.With(connIDAttr, id)
+}
+
+// logger is the connection's logger. A client made without an id (tests)
+// logs like the rest of the server.
+func (c *Client) logger() *slog.Logger {
+	if c == nil || c.log == nil {
+		return slog.Default()
+	}
+	return c.log
+}
+
+// panics is the connection's id for the panic line of its goroutines, timers
+// and callbacks.
+func (c *Client) panics() safego.Conn { return safego.Conn(c.connID) }

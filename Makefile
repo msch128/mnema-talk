@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-loadtest load-test-host fuzz-smoke test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-go-profile coverage-web lint complexity-check fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check onboarding-check english-check
+.PHONY: help dev web build run test test-loadtest load-test-host fuzz-smoke test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-go-profile coverage-web lint complexity-check staticcheck bench bench-baseline bench-allocs fmt vuln openapi openapi-check openapi-diff check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill fresh-install docs-check onboarding-check english-check
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -14,6 +14,8 @@ GO_INTEGRATION_PKG_FLAGS := $(if $(filter undefined,$(origin TEST_DATABASE_URL))
 # Keep in sync with .github/workflows/ci.yml.
 GOVULNCHECK_VERSION ?= v1.9.0
 GOCOGNIT_VERSION ?= v1.3.0
+# staticcheck 2026.2.2.
+STATICCHECK_VERSION ?= v0.8.2
 # Pinned oasdiff for make openapi-diff (CI runs the same target).
 OASDIFF_VERSION ?= v1.34.1
 
@@ -100,6 +102,7 @@ test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Pytho
 	python3 scripts/tests/test_openapi_diff.py
 	python3 scripts/tests/test_security_floor.py
 	python3 scripts/tests/test_release_checks.py
+	node --test scripts/bench-compare.test.mjs
 
 # Minimum total Go coverage (%, decimals allowed, compared on the exact
 # statement counts) and the floor for every single Go file; the frontend
@@ -129,16 +132,29 @@ coverage-web: $(WEB_DEPS) ## Frontend tests with coverage -> web/coverage/ (lcov
 fmt: ## Format Go code in place
 	gofmt -w cmd internal api web/web.go
 
-lint: $(WEB_DEPS) ## gofmt check, go vet, cognitive complexity, eslint
+lint: $(WEB_DEPS) ## gofmt check, go vet, staticcheck, cognitive complexity, eslint
 	@out="$$(gofmt -l cmd internal api web/web.go)"; \
 	if [ -n "$$out" ]; then echo "gofmt needed on:"; echo "$$out"; exit 1; fi
 	go vet $(GO_PKGS)
 	go vet -tags=integration $(GO_PKGS)
+	$(MAKE) --no-print-directory staticcheck
 	$(MAKE) --no-print-directory complexity-check
 	cd web && npm run lint
 
 complexity-check: ## Fail on Go functions above cognitive complexity 15 (scripts/complexity-allowlist.txt only shrinks); file and function length are checked by internal/repo
 	scripts/complexity-check.sh $(GOCOGNIT_VERSION)
+
+staticcheck: ## Fail on staticcheck findings in both Go modules (scripts/staticcheck-allowlist.txt only shrinks)
+	scripts/staticcheck.sh $(STATICCHECK_VERSION)
+
+bench: ## Hub fan-out, permission snapshot load and SFU forward benchmarks against scripts/bench-baseline.txt (Docker, or TEST_DATABASE_URL); timing is printed, only more allocations on the SFU forward path fail
+	scripts/bench.sh compare
+
+bench-baseline: ## Run the benchmarks and rewrite scripts/bench-baseline.txt (on an idle machine)
+	scripts/bench.sh record
+
+bench-allocs: ## Fail when the SFU forward path allocates more per packet than scripts/bench-baseline.txt (the part of make bench CI runs)
+	scripts/bench.sh allocs
 
 vuln: ## govulncheck (Go vulnerability scan)
 	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) $(GO_PKGS)

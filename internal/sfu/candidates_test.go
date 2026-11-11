@@ -70,7 +70,7 @@ func TestJoinSendsOfferBeforeCandidates(t *testing.T) {
 	var mu sync.Mutex
 	var order []string
 	candidates := make(chan struct{}, 64)
-	_, peer, err := s.Join(uuid.New(), uuid.New(),
+	_, peer, err := s.Join(uuid.New(), uuid.New(), "",
 		func(webrtc.SessionDescription) {
 			time.Sleep(300 * time.Millisecond) // gathering is well under way
 			mu.Lock()
@@ -108,7 +108,7 @@ func TestEarlyClientCandidatesAreAppliedWithTheAnswer(t *testing.T) {
 	s := newTestSFU(t)
 	c := newClient(t)
 	offers := make(chan webrtc.SessionDescription, 4)
-	_, peer, err := s.Join(uuid.New(), c.id, func(o webrtc.SessionDescription) { offers <- o }, nil)
+	_, peer, err := s.Join(uuid.New(), c.id, "", func(o webrtc.SessionDescription) { offers <- o }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestEarlyClientCandidatesAreAppliedWithTheAnswer(t *testing.T) {
 func TestEarlyClientCandidatesAreBounded(t *testing.T) {
 	logs := captureSFULog(t)
 	s := newTestSFU(t)
-	_, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil)
+	_, peer, err := s.Join(uuid.New(), uuid.New(), "", func(webrtc.SessionDescription) {}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +200,7 @@ func TestRejectedRemoteCandidatesAreLoggedRateLimited(t *testing.T) {
 	s := newTestSFU(t)
 	c := newClient(t)
 	offers := make(chan webrtc.SessionDescription, 4)
-	_, peer, err := s.Join(uuid.New(), c.id, func(o webrtc.SessionDescription) { offers <- o }, nil)
+	_, peer, err := s.Join(uuid.New(), c.id, "", func(o webrtc.SessionDescription) { offers <- o }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +249,7 @@ func TestRejectedRemoteCandidatesAreLoggedRateLimited(t *testing.T) {
 func TestEarlyCandidateRejectedWhenApplied(t *testing.T) {
 	logs := captureSFULog(t)
 	s := newTestSFU(t)
-	_, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil)
+	_, peer, err := s.Join(uuid.New(), uuid.New(), "", func(webrtc.SessionDescription) {}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -333,7 +333,7 @@ func TestRemoteCandidateBudgetHoldsAfterTheAnswer(t *testing.T) {
 	s := newTestSFU(t)
 	c := newClient(t)
 	offers := make(chan webrtc.SessionDescription, 4)
-	_, peer, err := s.Join(uuid.New(), c.id, func(o webrtc.SessionDescription) { offers <- o }, nil)
+	_, peer, err := s.Join(uuid.New(), c.id, "", func(o webrtc.SessionDescription) { offers <- o }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -380,7 +380,7 @@ func TestLiveCandidateRefusedByPion(t *testing.T) {
 	s := newTestSFU(t)
 	c := newClient(t)
 	offers := make(chan webrtc.SessionDescription, 4)
-	_, peer, err := s.Join(uuid.New(), c.id, func(o webrtc.SessionDescription) { offers <- o }, nil)
+	_, peer, err := s.Join(uuid.New(), c.id, "", func(o webrtc.SessionDescription) { offers <- o }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

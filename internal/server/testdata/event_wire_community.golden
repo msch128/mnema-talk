@@ -1,0 +1,72 @@
+# custom emoji added
+@ internal/emoji.(*Handler).changed
+{"type":"emoji_changed","payload":null}
+
+# community renamed
+@ internal/onboarding.(*Handler).broadcastCommunity
+{"type":"community_updated","payload":{"community_icon":"","community_name":"Harbour"}}
+
+# member blocked
+@ internal/chat/blocks.API.changeBlock
+{"type":"block_updated","payload":{"user_id":"<id-1>","blocked":true}}
+
+# member unblocked
+@ internal/chat/blocks.API.changeBlock
+{"type":"block_updated","payload":{"user_id":"<id-1>","blocked":false}}
+
+# message reported
+@ internal/reportcount.Announce
+{"type":"reports_open","payload":{"open":1}}
+
+# conversation started
+@ internal/chat/dm.(*API).announceDM
+{"type":"dm_created","payload":{"id":"<id-1>","group":false,"members":[{"id":"<id-2>","username":"first","display_name":"first"},{"id":"<id-3>","username":"second","display_name":"second"}],"created_at":"<time>","last_message_at":null,"unread_count":0,"mention_count":0,"last_read_at":null,"notify_level":"inherit","can_send":false,"hidden":false,"favourite_position":null}}
+
+# conversation hidden
+@ internal/chat/dm.(*API).tellOwnSessions
+{"type":"dm_prefs_updated","payload":{"dm_id":"<id-1>"}}
+
+# conversation settings
+@ internal/chat/dm.(*API).tellOwnSessions
+{"type":"dm_prefs_updated","payload":{"dm_id":null}}
+
+# Talk started in a conversation
+@ internal/chat/talks.(*TalkManager).structureChanged
+{"type":"channels_changed","payload":null}
+@ internal/chat/dm.(*DMCalls).Begin.func2
+{"type":"dm_call_ring","payload":{"conversation_id":"<id-1>","talk_id":"<id-2>","message_id":"<id-3>","caller_id":"<id-4>","talk_name":"Talk 1","ring_seconds":45}}
+@ internal/chat/talks.(*API).StartDMTalk
+{"type":"message_create","payload":{"id":"<id-1>","number":<n>,"channel_id":"<id-2>","user_id":"<id-3>","username":"first","display_name":"first","content":"","is_pinned":false,"is_edited":false,"reply_count":0,"attachments":[],"reactions":[],"mentions":[],"mention_roles":[],"created_at":"<time>","updated_at":"<time>","embeds":[{"title":"Talk 1","talk_id":"<id-4>"}]}}
+
+# event created
+@ internal/communityevents.(*Handler).broadcast
+{"type":"event_update","payload":{"id":"<id-1>","title":"Game night","description":"bring snacks","start_time":"<time>","location":"Hall","status":"scheduled","created_by":"<id-2>","created_at":"<time>","updated_at":"<time>","rsvp_counts":{"going":0,"interested":0,"not_going":0},"roles":[]}}
+
+# event changed
+@ internal/communityevents.(*Handler).broadcast
+{"type":"event_update","payload":{"id":"<id-1>","title":"Board game night","description":"bring snacks","start_time":"<time>","location":"Hall","status":"scheduled","created_by":"<id-2>","created_at":"<time>","updated_at":"<time>","rsvp_counts":{"going":0,"interested":0,"not_going":0},"roles":[]}}
+
+# event RSVP
+@ internal/communityevents.(*Handler).broadcast
+{"type":"event_update","payload":{"id":"<id-1>","title":"Board game night","description":"bring snacks","start_time":"<time>","location":"Hall","status":"scheduled","created_by":"<id-2>","created_at":"<time>","updated_at":"<time>","rsvp_counts":{"going":1,"interested":0,"not_going":0},"going_members":[{"id":"<id-3>","username":"first","display_name":"first"}],"roles":[]}}
+
+# event comment
+@ internal/communityevents.(*Handler).broadcastComment
+{"type":"event_comment","payload":{"action":"created","event_id":"<id-1>","comment_id":"<id-2>","comment":{"id":"<id-2>","event_id":"<id-1>","user":{"id":"<id-3>","username":"second","display_name":"second"},"content":"I bring snacks","created_at":"<time>"}}}
+@ internal/communityevents.(*Handler).notifyComment
+{"type":"event_comment_notice","payload":{"event_id":"<id-1>","title":"Board game night","author_name":"second","excerpt":"I bring snacks"}}
+@ internal/communityevents.(*Handler).notifyComment
+{"type":"event_comment_notice","payload":{"event_id":"<id-1>","title":"Board game night","author_name":"second","excerpt":"I bring snacks"}}
+
+# event comment edited
+@ internal/communityevents.(*Handler).broadcastComment
+{"type":"event_comment","payload":{"action":"updated","event_id":"<id-1>","comment_id":"<id-2>","comment":{"id":"<id-2>","event_id":"<id-1>","user":{"id":"<id-3>","username":"second","display_name":"second"},"content":"I bring drinks","created_at":"<time>","edited_at":"<time>"}}}
+
+# event comment deleted
+@ internal/communityevents.(*Handler).broadcastComment
+{"type":"event_comment","payload":{"action":"deleted","event_id":"<id-1>","comment_id":"<id-2>"}}
+
+# event cancelled
+@ internal/communityevents.(*Handler).broadcast
+{"type":"event_update","payload":{"id":"<id-1>","title":"Board game night","description":"bring snacks","start_time":"<time>","location":"Hall","status":"cancelled","created_by":"<id-2>","created_at":"<time>","updated_at":"<time>","rsvp_counts":{"going":1,"interested":0,"not_going":0},"going_members":[{"id":"<id-3>","username":"first","display_name":"first"}],"roles":[]}}
+

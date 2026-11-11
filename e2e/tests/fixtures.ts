@@ -64,8 +64,8 @@ function countApiRequests(context: BrowserContext): void {
   })
 }
 
-// The page's Content-Security-Policy (style-src 'self', style-src-attr 'none')
-// is part of what ships, so no spec may trigger a violation. Every context
+// The page's Content-Security-Policy (style-src 'self', style-src-attr 'none',
+// Trusted Types) is part of what ships, so no spec may trigger a violation. Every context
 // reports securitypolicyviolation events from all of its frames (and shadow
 // trees, whose events reach the document) through a binding, and the browser's
 // own "Refused to ..." console messages are collected too. An auto fixture
@@ -84,6 +84,12 @@ const CSP_LISTENER = `(() => {
 const CSP_CONSOLE = /Content[- ]Security[- ]Policy|Refused to (apply|load|execute|create|connect|frame|evaluate)|violates the following/i
 
 let cspViolations: string[] = []
+let provokedViolations: RegExp[] = []
+
+/** For a spec that breaks the policy on purpose, to see it refused: violations matching the pattern do not fail that test. */
+export function provokeCspViolation(pattern: RegExp): void {
+  provokedViolations.push(pattern)
+}
 // Playwright's WebKit injects an inline stylesheet of its own when it takes
 // the failure screenshot, which the policy rightly refuses and reports with no
 // source file. That one signature is ignored in WebKit; a <style> element of
@@ -247,8 +253,9 @@ export const test = base.extend<{ apiHeadroom: void; cspViolations: void }, { br
   // eslint-disable-next-line no-empty-pattern
   cspViolations: [async ({}, use) => {
     cspViolations = []
+    provokedViolations = []
     await use()
-    const seen = [...new Set(cspViolations)]
+    const seen = [...new Set(cspViolations)].filter(text => !provokedViolations.some(pattern => pattern.test(text)))
     cspViolations = []
     expect(seen, 'Content-Security-Policy violations').toEqual([])
   }, { auto: true }],

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/safego"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -51,8 +52,8 @@ func (c *Client) can(snap *perm.Snapshot, ch uuid.UUID, need perm.Set) bool {
 
 // BroadcastChannel sends an event to every connection whose user may view the
 // channel.
-func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload any) {
-	data := encode(eventType, payload)
+func (h *Hub) BroadcastChannel(channelID uuid.UUID, ev events.Event) {
+	data := encode(ev)
 	if data == nil {
 		return
 	}
@@ -64,9 +65,9 @@ func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload an
 	if snap.IsPrivate(channelID) {
 		// A conversation's (or its Talk's) events go to its members only:
 		// never to webhooks or bots.
-		h.dmTapped(channelID, eventType, payload)
+		h.dmTapped(channelID, ev)
 	} else {
-		h.tapped(channelID, eventType, payload) // only what is really published
+		h.tapped(channelID, ev) // only what is really published
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -134,7 +135,7 @@ func (c *Client) notifyPermissions() {
 	if wait <= 0 {
 		c.permSent = time.Now()
 		c.mu.Unlock()
-		c.SendEvent(events.PermissionsChanged, nil)
+		c.SendEvent(wire.PermissionsChanged{})
 		return
 	}
 	if c.permPending {
@@ -143,12 +144,12 @@ func (c *Client) notifyPermissions() {
 	}
 	c.permPending = true
 	c.mu.Unlock()
-	safego.AfterFunc("ws_perm_notify", wait, c.close, func() {
+	safego.AfterFuncConn(c.panics(), "ws_perm_notify", wait, c.close, func() {
 		c.mu.Lock()
 		c.permPending = false
 		c.permSent = time.Now()
 		c.mu.Unlock()
-		c.SendEvent(events.PermissionsChanged, nil)
+		c.SendEvent(wire.PermissionsChanged{})
 	})
 }
 

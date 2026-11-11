@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"slices"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -182,6 +181,13 @@ func CheckBotSend(ctx context.Context, ps *perm.Service, p *db.Pool, user *auth.
 	return snap, set, nil
 }
 
+// SendContext carries what the bot's permissions in the channel (p, from
+// CheckBotSend) mean for a message it posts there: like a member, a bot that
+// may manage messages is not held back by slow mode or a locked post.
+func SendContext(ctx context.Context, p perm.Set) context.Context {
+	return messages.WithSlowModeExempt(ctx, p.Has(perm.ManageMessages))
+}
+
 func decodeRawBotMessage(w http.ResponseWriter, r *http.Request) (*rawBotMessage, error) {
 	var req rawBotMessage
 	httpx.SetJSONReadDeadline(w)
@@ -199,30 +205,7 @@ func decodeRawBotMessage(w http.ResponseWriter, r *http.Request) (*rawBotMessage
 // ValidateBotMessage checks the content and embeds a bot sends (a message or
 // a response to a command): the same rules, one message needs one of them.
 func ValidateBotMessage(rawContent string, rawEmbeds []messages.InEmbed) (string, []core.Embed, error) {
-	content, err := core.ValidateContent(rawContent, true)
-	if err != nil {
-		return "", nil, err
-	}
-	embeds, err := messages.SanitizeEmbeds(rawEmbeds)
-	if err != nil {
-		return "", nil, httpx.ErrInvalidInput(err.Error())
-	}
-	if content == "" && len(embeds) == 0 {
-		return "", nil, httpx.ErrInvalidInput("Cannot send an empty message").WithDiscordCode(httpx.DiscordCodeEmptyMessage)
-	}
-	return content, embeds, nil
-}
-
-func validateBotPayload(req *rawBotMessage) (string, []core.Embed, *uuid.UUID, error) {
-	content, embeds, err := ValidateBotMessage(req.Content, req.Embeds)
-	if err != nil {
-		return "", nil, nil, err
-	}
-	var reply *uuid.UUID
-	if req.MessageReference != nil {
-		reply = &req.MessageReference.MessageID
-	}
-	return content, embeds, reply, nil
+	return messages.ValidateBotMessage(rawContent, rawEmbeds)
 }
 
 // botCreateMessage handles POST /api/bot/v1/channels/{channelID}/messages.
@@ -245,74 +228,32 @@ func validateBotPayload(req *rawBotMessage) (string, []core.Embed, *uuid.UUID, e
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages [post]
 func (a *API) botCreateMessage(w http.ResponseWriter, r *http.Request) error {
-	user := auth.UserFrom(r.Context())
+	actor := messages.BotActor(auth.UserFrom(r.Context()))
 	chID, err := httpx.PathUUID(r, "channelID")
-	if err != nil {
-		return err
-	}
-	snap, p, err := CheckBotSend(r.Context(), a.Guard.Perms, a.DB, user, chID)
 	if err != nil {
 		return err
 	}
 	req, err := decodeRawBotMessage(w, r)
 	if err != nil {
-		return err
-	}
-	content, embeds, reply, err := validateBotPayload(req)
-	if err != nil {
-		return err
-	}
-	if err := messages.ValidateTarget(r.Context(), a.DB, chID, req.ParentID, reply); err != nil {
-		return err
-	}
-	ctx := mentions.WithMentionPolicy(r.Context(), botMentionPolicy(snap, chID, p, req.AllowedMentions))
-	id, err := messages.InsertMessage(ctx, a.DB, a.Online, messages.NewMessage{
-		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: reply, Embeds: embeds,
-	}, nil)
-	if err != nil {
-		return err
-	}
-	return messages.PublishMessage(w, r, a.DB, a.Events, id)
-}
-
-func parseAllowedUsers(rawIDs []string) []uuid.UUID {
-	var ids []uuid.UUID
-	for _, raw := range rawIDs {
-		if id, err := uuid.Parse(raw); err == nil {
-			ids = append(ids, id)
+		// A bot that may not post here is told so, not what is wrong with its body.
+		if refusal := a.Messages.Posts.Refusal(r.Context(), actor, chID); refusal != nil {
+			return refusal
 		}
+		return err
 	}
-	return ids
-}
-
-func applyAllowedMentions(policy *mentions.MentionPolicy, am *BotAllowedMentions) {
-	if am == nil {
-		return
+	cmd := messages.PostCommand{
+		ChannelID: chID, Content: req.Content, Embeds: req.Embeds, ParentID: req.ParentID,
+		AllowedMentions: (*messages.AllowedMentions)(req.AllowedMentions),
 	}
-	policy.NoEveryone = !slices.Contains(am.Parse, "everyone")
-	if !slices.Contains(am.Parse, "users") {
-		policy.NoUsers = true
-		policy.AllowUsers = parseAllowedUsers(am.Users)
+	if req.MessageReference != nil {
+		cmd.ReplyToID = &req.MessageReference.MessageID
 	}
-}
-
-// botMentionPolicy is the mention policy of a bot's message: what the bot may
-// do in the channel (p), narrowed by its allowed_mentions. The request can
-// only narrow the permissions, never widen them.
-func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllowedMentions) mentions.MentionPolicy {
-	policy := mentions.MentionPolicy{
-		NoEveryone: true,
-		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) },
+	posted, err := a.Messages.Posts.Post(r.Context(), actor, cmd)
+	if err != nil {
+		return err
 	}
-	applyAllowedMentions(&policy, am)
-	policy.NoEveryone = policy.NoEveryone || !p.Has(perm.MentionEveryone)
-	// Roles follow the bot's permissions like a member's and only notify when
-	// the request asked for them. An edit sends no allowed_mentions, so it
-	// never adds role mentions.
-	if am != nil {
-		policy.Roles = mentions.AllowedRoles(messages.MentionableRoles(snap, p.Has(perm.MentionEveryone)), am.Parse, am.Roles)
-	}
-	return policy
+	messages.WritePosted(w, posted)
+	return nil
 }
 
 // botEditMessage handles PATCH /api/bot/v1/channels/{channelID}/messages/{messageID}.
@@ -340,7 +281,7 @@ func (a *API) botEditMessage(w http.ResponseWriter, r *http.Request) error {
 }
 
 // botEditContext is the mention context of a bot's edit: the policy of its
-// sends (botMentionPolicy), so an edit never reaches more than a send does.
+// sends (messages.BotMentionPolicy), so an edit never reaches more than a send does.
 func (a *API) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
 	user := auth.UserFrom(r.Context())
 	snap, p, err := ChannelPermsOf(r.Context(), a.Guard.Perms, user, ch)
@@ -350,7 +291,7 @@ func (a *API) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (cont
 	if err := snap.Deny(user.Subject(), p, need); err != nil {
 		return nil, err
 	}
-	return mentions.WithMentionPolicy(r.Context(), botMentionPolicy(snap, ch, p, nil)), nil
+	return mentions.WithMentionPolicy(r.Context(), messages.BotMentionPolicy(snap, ch, p, nil)), nil
 }
 
 // botDeleteMessage handles DELETE /api/bot/v1/channels/{channelID}/messages/{messageID}.

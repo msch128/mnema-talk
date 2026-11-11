@@ -23,12 +23,15 @@ import (
 type nackResponderFactory struct {
 	load *peerLoad
 	now  func() time.Time
+	// names knows the hub connection behind a connection's ID, for the log
+	// line of a worker's panic.
+	names *connNames
 	// limits is the retransmission budget of each connection; the zero value
 	// means defaultResendLimits.
 	limits resendLimits
 }
 
-func (f nackResponderFactory) NewInterceptor(string) (interceptor.Interceptor, error) {
+func (f nackResponderFactory) NewInterceptor(connID string) (interceptor.Interceptor, error) {
 	now := f.now
 	if now == nil {
 		now = time.Now
@@ -38,7 +41,7 @@ func (f nackResponderFactory) NewInterceptor(string) (interceptor.Interceptor, e
 		limits = defaultResendLimits
 	}
 	return &nackResponder{
-		load: f.load, now: now, streams: map[uint32]*nackStream{}, done: make(chan struct{}),
+		load: f.load, now: now, connID: connID, names: f.names, streams: map[uint32]*nackStream{}, done: make(chan struct{}),
 		budgetFor: newResendBudget(limits),
 	}, nil
 }
@@ -63,6 +66,10 @@ type nackResponder struct {
 	interceptor.NoOp
 	load *peerLoad
 	now  func() time.Time
+	// connID is the ID Pion gave the connection; names resolves it to the hub
+	// connection when a worker starts, never per packet.
+	connID string
+	names  *connNames
 
 	mu      sync.Mutex
 	streams map[uint32]*nackStream
@@ -214,7 +221,7 @@ func (n *nackResponder) startWorker() {
 		}
 		n.startWorker()
 	}
-	safego.Go("sfu_nack", restart, func() { n.work(n.queue) })
+	safego.GoConn(n.names.of(n.connID), "sfu_nack", restart, func() { n.work(n.queue) })
 }
 
 // work answers the queued NACKs until the responder is closed.

@@ -96,7 +96,7 @@ func newClientConfig(t *testing.T, adjust func(*webrtc.SettingEngine), cfg webrt
 func (c *client) join(s *SFU, room uuid.UUID) {
 	c.t.Helper()
 	c.joinWith(func(offer func(webrtc.SessionDescription)) (*Peer, error) {
-		_, p, err := s.Join(room, c.id, offer, nil)
+		_, p, err := s.Join(room, c.id, "", offer, nil)
 		return p, err
 	})
 }
@@ -300,11 +300,11 @@ func TestRejoinKeepsTheNewPeer(t *testing.T) {
 	noop := func(webrtc.SessionDescription) {}
 	noICE := func(*webrtc.ICECandidateInit) {}
 
-	_, old, err := s.Join(room, user, noop, noICE)
+	_, old, err := s.Join(room, user, "", noop, noICE)
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, fresh, err := s.Join(room, user, noop, noICE)
+	r, fresh, err := s.Join(room, user, "", noop, noICE)
 	if err != nil {
 		t.Fatal(err)
 	}

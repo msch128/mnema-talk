@@ -66,6 +66,8 @@ type ScheduledEvent struct {
 	Reason    string    `json:"reason,omitempty" binding:"optional"`
 }
 
+func (ScheduledEvent) EventName() string { return events.ScheduledUpdate }
+
 const scheduledColumns = `s.id, s.channel_id, c.name, c.type = 'dm', s.parent_id, s.reply_to_id, s.content, s.send_at, s.state, s.failure_reason, s.created_at, s.updated_at`
 
 func scanScheduled(row pgx.Row) (Scheduled, error) {
@@ -117,7 +119,7 @@ func (s *Service) AddScheduled(ctx context.Context, n NewScheduled) (Scheduled, 
 	if err != nil {
 		return Scheduled{}, fmt.Errorf("load scheduled message: %w", err)
 	}
-	s.notify(n.User, events.ScheduledUpdate, ScheduledEvent{ID: id, ChannelID: n.Channel, State: "created"})
+	s.notify(n.User, ScheduledEvent{ID: id, ChannelID: n.Channel, State: "created"})
 	return e, nil
 }
 
@@ -185,7 +187,7 @@ func (s *Service) UpdateScheduled(ctx context.Context, user, id uuid.UUID, p Sch
 	if err != nil {
 		return Scheduled{}, fmt.Errorf("load scheduled message: %w", err)
 	}
-	s.notify(user, events.ScheduledUpdate, ScheduledEvent{ID: id, ChannelID: channel, State: "updated"})
+	s.notify(user, ScheduledEvent{ID: id, ChannelID: channel, State: "updated"})
 	return e, nil
 }
 
@@ -199,6 +201,6 @@ func (s *Service) RemoveScheduled(ctx context.Context, user, id uuid.UUID) error
 	if err != nil {
 		return fmt.Errorf("remove scheduled: %w", err)
 	}
-	s.notify(user, events.ScheduledUpdate, ScheduledEvent{ID: id, ChannelID: channel, State: "deleted"})
+	s.notify(user, ScheduledEvent{ID: id, ChannelID: channel, State: "deleted"})
 	return nil
 }

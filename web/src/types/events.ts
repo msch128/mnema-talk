@@ -34,7 +34,7 @@ export type VoiceStateUpdate =
 export type ReadStateUpdate =
   | Pick<ReadState, 'channel_id' | 'last_read_at' | 'unread_count' | 'mention_count'>
   | { channel_id: string; last_read_at: string; refresh: true }
-  | { refresh: true }
+  | { channel_id: string; refresh: true } | { refresh: true }
   | Pick<ReadState, 'channel_id' | 'notify_level'>
 
 /** A bot's reply to a slash command that only the member who ran it sees (never stored). */
@@ -257,7 +257,7 @@ const NON_OBJECT_CHECKS = new Map<string, (payload: unknown) => boolean>([
 ])
 
 function isRefreshReadState(payload: Record<string, unknown>): boolean {
-  if (payload['refresh'] !== true || !isTimestamp(payload['last_read_at'])) return false
+  if (payload['refresh'] !== true || (hasOwn(payload, 'last_read_at') && !isTimestamp(payload['last_read_at']))) return false
   return onlyFields(payload, ['channel_id', 'last_read_at', 'refresh'])
 }
 

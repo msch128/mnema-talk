@@ -1,0 +1,3 @@
+# staticcheck findings that still need a fix ("file check-ID  # reason", the file relative to the repository root).
+# Shrinking list: never add entries, delete them when the finding is fixed.
+internal/sfu/announce_test.go SA1019  # the deprecated SetNAT1To1IPs is the reference the rewrite rules are compared with

@@ -3,7 +3,6 @@ package sfu
 import (
 	"errors"
 	"io"
-	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,6 +23,8 @@ type viewerTrack struct {
 	*webrtc.TrackLocalStaticRTP
 	group  *layerGroup
 	viewer uuid.UUID
+	// peer is the viewer's connection, for the log (nil in tests).
+	peer *Peer
 
 	// wantA and curA mirror want and cur for readers without the lock.
 	wantA atomic.Int32
@@ -269,10 +270,12 @@ func (vt *viewerTrack) report(force bool) {
 
 // write offers one packet of layer idx to the viewer.
 func (vt *viewerTrack) write(idx int, src *rtp.Packet) {
-	now := layerNow()
 	var switched, ask bool
 	var eff int
-	safego.Locked(&vt.mu, func() { switched, ask, eff = vt.writeLocked(idx, src, now) })
+	// The clock is read under the lock: the layers are forwarded by goroutines
+	// of their own, and a reading taken before could be older than the one of
+	// a packet another layer sent meanwhile.
+	safego.Locked(&vt.mu, func() { switched, ask, eff = vt.writeLocked(idx, src, layerNow()) })
 	if ask {
 		vt.group.requestKeyframe(eff)
 	}
@@ -314,7 +317,7 @@ func (vt *viewerTrack) sendPacketLocked(src *rtp.Packet, now time.Time) {
 	}
 	vt.lastSeq, vt.lastTs, vt.lastAt = out.Header.SequenceNumber, out.Header.Timestamp, now
 	if err := vt.sink(out); err != nil && !errors.Is(err, io.ErrClosedPipe) {
-		slog.Debug("sfu layer write", "viewer", vt.viewer, "err", err)
+		vt.peer.logger().Debug("sfu layer write", "viewer", vt.viewer, "err", err)
 	}
 }
 
@@ -345,11 +348,7 @@ func (vt *viewerTrack) switchLocked(idx int, src *rtp.Packet, now time.Time) {
 			metrics.SFULayerSwitches.Inc()
 		}
 		vt.seqOff = vt.lastSeq + 1 - src.SequenceNumber
-		ticks := uint32(now.Sub(vt.lastAt).Seconds() * videoClockRate)
-		if ticks < 1 {
-			ticks = 1
-		}
-		vt.tsOff = vt.lastTs + ticks - src.Timestamp
+		vt.tsOff = vt.lastTs + switchTicks(now.Sub(vt.lastAt)) - src.Timestamp
 		vt.picOff, vt.tl0Off = 0, 0
 		if vt.group.kind == codecVP8 {
 			vt.carryVP8OffsetsLocked(src)

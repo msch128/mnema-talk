@@ -212,8 +212,9 @@ func apiDocs(sessions *auth.Sessions, page []byte) http.HandlerFunc {
 			return
 		}
 		// A page under /api: it loads the app's scripts and styles, so it gets
-		// the app's policy instead of the API's default-src 'none'.
-		w.Header().Set("Content-Security-Policy", httpx.SPAContentSecurityPolicy)
+		// the app's policy instead of the API's default-src 'none' (without
+		// Trusted Types, which Swagger UI cannot run under).
+		w.Header().Set("Content-Security-Policy", httpx.APIDocsContentSecurityPolicy)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-cache")
 		if _, err := w.Write(page); err != nil {

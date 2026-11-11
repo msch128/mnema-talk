@@ -17,11 +17,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/safego"
 )
 
-// Delivery limits. Pending deliveries live in Postgres (queue.go); the memory
-// queue below is only the buffer between the event hub and the database.
+// Delivery limits. Pending deliveries live in Postgres (queue.go). The events
+// of a database change are written there by the change's own transaction
+// (dispatch_outbox.go); the memory queue below is only the buffer for the
+// events that have none (who joins or leaves a Talk).
 const (
 	queueSize = 1000
 	// perChannelQueue is how much of the queue one channel may hold, so a
@@ -95,11 +98,14 @@ type route struct {
 	events  []string
 }
 
-// Dispatcher delivers events to outgoing webhooks. Observe buffers events in
-// memory (fast, never blocking); a writer moves them into the outgoing_queue
-// table, which is the source of truth; workers claim due rows from there
-// (FOR UPDATE SKIP LOCKED), attempt them and settle or reschedule them. A
-// restart therefore loses at most the few events still in the buffer.
+// Dispatcher delivers events to outgoing webhooks. The outgoing_queue table is
+// the source of truth: message and reaction events are written to it by the
+// transaction that causes them (Record), so none is lost between the commit
+// and the delivery. Events without a transaction (voice state) are buffered
+// by Observe in memory (fast, never blocking) and moved into the table by a
+// writer; a hard stop loses the few of those still in the buffer. Workers
+// claim due rows (FOR UPDATE SKIP LOCKED), attempt them and settle or
+// reschedule them.
 type Dispatcher struct {
 	DB      *db.Pool
 	Client  *http.Client
@@ -119,6 +125,9 @@ type Dispatcher struct {
 	qmu     sync.Mutex
 	queued  map[uuid.UUID]int
 	dropped atomic.Int64
+	// capsDue says rows were written by a transaction since the caps were
+	// last applied. True at the start: a crash may have left some.
+	capsDue atomic.Bool
 	wg      sync.WaitGroup
 	// wake tells an idle worker to look for due rows.
 	wake    chan struct{}
@@ -131,6 +140,7 @@ func NewDispatcher(p *db.Pool, client *http.Client, version string) *Dispatcher 
 	d := &Dispatcher{DB: p, Client: client, Version: version, queue: make(chan job, queueSize), queued: map[uuid.UUID]int{}, ReloadEvery: reloadEvery, PollEvery: pollEvery, PruneEvery: pruneEvery, wake: make(chan struct{}, 1), done: make(chan struct{})}
 	empty := []route{}
 	d.routes.Store(&empty)
+	d.capsDue.Store(true)
 	return d
 }
 
@@ -198,6 +208,7 @@ func (d *Dispatcher) runTickers(ctx context.Context) {
 		case <-reload.C:
 			d.reloadWithLog(ctx)
 		case <-poll.C:
+			d.applyCaps(ctx)
 			d.signal()
 		case <-pruneT.C:
 			d.prune(ctx)
@@ -256,11 +267,19 @@ func matchingWebhookTargets(routes []route, channel uuid.UUID, name string) []uu
 }
 
 // Observe is the hook for the event hub: it receives every event the hub
-// publishes (channel is uuid.Nil for events to everybody) and queues the
-// events of a channel for the webhooks of that channel that subscribed to
-// them. It never blocks.
-func (d *Dispatcher) Observe(channel uuid.UUID, eventType string, payload any) {
-	name, data, ok := translate(eventType, payload)
+// publishes (channel is uuid.Nil for events to everybody). An event its
+// transaction already wrote to the queue only wakes the workers; the others
+// are queued here for the webhooks of the channel that subscribed to them. It
+// never blocks.
+func (d *Dispatcher) Observe(channel uuid.UUID, published events.Event) {
+	eventType := published.EventName()
+	if transactional(eventType) {
+		if d.Wants(channel, eventType) {
+			d.recorded()
+		}
+		return
+	}
+	name, ok := translate(published)
 	if !ok || channel == uuid.Nil {
 		return
 	}
@@ -268,7 +287,7 @@ func (d *Dispatcher) Observe(channel uuid.UUID, eventType string, payload any) {
 	if len(targets) == 0 {
 		return
 	}
-	raw, err := json.Marshal(data) // hub payloads are plain data: cannot fail
+	raw, err := json.Marshal(published) // hub payloads are plain data: cannot fail
 	if err != nil {
 		return
 	}

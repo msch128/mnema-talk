@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
@@ -165,8 +165,8 @@ func TestCommunityIconIsSetServedPubliclyReplacedAndRemoved(t *testing.T) {
 	// Open clients are told each time, with the new version ("" once removed).
 	var told []string
 	for _, e := range a.events.Snapshot() {
-		if p, ok := e.Payload.(map[string]string); ok && e.Type == events.CommunityUpdated {
-			told = append(told, p["community_icon"])
+		if p, ok := e.Payload.(wire.CommunityUpdated); ok {
+			told = append(told, p.CommunityIcon)
 		}
 	}
 	if want := []string{set.Icon, next.Icon, ""}; strings.Join(told, ",") != strings.Join(want, ",") {

@@ -20,6 +20,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/saved"
 	"github.com/msch128/mnema-talk/internal/communityevents"
 	"github.com/msch128/mnema-talk/internal/discordimport"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/later"
 	"github.com/msch128/mnema-talk/internal/moderation"
@@ -36,8 +37,12 @@ import (
 // per-channel auto-delete.
 func (c *components) newChat() {
 	d, cfg, hub := c.d, c.cfg, c.hub
+	// The engine is handed to the message service here. The paths that still
+	// find it through the pool get it in newModeration, once the build can no
+	// longer fail.
+	c.engine = automod.New(d.DB, c.permSvc, c.pub, c.auditLog)
 	c.chatH = &chat.Handler{
-		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog,
+		DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog, Automod: c.engine,
 		EditHistoryLimit: httpx.NewRateLimiter(messages.EditHistoryRate, time.Minute).Named("edit_history"),
 		PinLimit:         httpx.NewRateLimiter(messages.PinChangesPerMinute, time.Minute).Named("pin"),
 		FollowLimit:      httpx.NewRateLimiter(messages.ThreadFollowChangesPerMinute, time.Minute).Named("thread_follow"),
@@ -68,10 +73,10 @@ func (c *components) newImport() {
 	})
 }
 
-// newModeration builds the automod engine, makes the message and sign-up paths
-// use it and creates the handler of the moderators' routes.
+// newModeration makes the sign-up path and the message paths outside the
+// message service use the automod engine and creates the handler of the
+// moderators' routes.
 func (c *components) newModeration() {
-	c.engine = automod.New(c.d.DB, c.permSvc, c.pub, c.auditLog)
 	automod.Attach(c.d.DB, c.engine)
 	c.modH = moderation.New(moderation.Handler{DB: c.d.DB, Perms: c.permSvc, Engine: c.engine})
 }
@@ -79,7 +84,7 @@ func (c *components) newModeration() {
 // newLater builds reminders and scheduled messages; pusher is nil when Web
 // Push is off.
 func (c *components) newLater(pusher later.Notifier) {
-	c.later = later.NewService(later.Service{DB: c.d.DB, Perms: c.permSvc, Events: c.pub, Online: c.hub, Push: pusher})
+	c.later = later.NewService(later.Service{DB: c.d.DB, Perms: c.permSvc, Events: c.pub, Posts: c.chatH.Posts(), Push: pusher})
 	safego.Go("later", safego.Crash, func() { c.later.Run(c.ctx) })
 }
 
@@ -170,12 +175,12 @@ func (c *components) hiddenMessageCount(ctx context.Context, viewer perm.Subject
 
 // addDMTap is addTap for the events of conversations and their Talks, which
 // reach no webhook or bot.
-func (c *components) addDMTap(f func(ch uuid.UUID, eventType string, payload any)) {
+func (c *components) addDMTap(f func(ch uuid.UUID, ev events.Event)) {
 	prev := c.hub.DMTap
-	c.hub.DMTap = func(ch uuid.UUID, eventType string, payload any) {
+	c.hub.DMTap = func(ch uuid.UUID, ev events.Event) {
 		if prev != nil {
-			prev(ch, eventType, payload)
+			prev(ch, ev)
 		}
-		f(ch, eventType, payload)
+		f(ch, ev)
 	}
 }

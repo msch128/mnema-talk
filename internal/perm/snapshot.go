@@ -95,6 +95,9 @@ type Snapshot struct {
 	categoryOv map[uuid.UUID]*scope
 	// globalUploadMB is the Owner's global upload limit; nil = the ceiling.
 	globalUploadMB *int
+	// stripImageMetadata is the Owner's switch for removing metadata from
+	// uploaded pictures (default on).
+	stripImageMetadata bool
 	// timeouts are the running timeouts; an entry whose time has passed no
 	// longer counts, so expiry needs no reload.
 	timeouts map[uuid.UUID]Timeout

@@ -10,6 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat/core"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -176,5 +177,5 @@ func (m *TalkManager) IsLeader(id, user uuid.UUID) bool {
 // state rebuilt and every client told to reload the channel list.
 func (m *TalkManager) structureChanged() {
 	m.Perms.Changed(nil)
-	m.Events.Broadcast(events.ChannelsChanged, nil)
+	m.Events.Broadcast(wire.ChannelsChanged{})
 }

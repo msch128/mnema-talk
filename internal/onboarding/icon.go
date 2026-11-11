@@ -15,7 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/imgproc"
 	"github.com/msch128/mnema-talk/internal/media"
@@ -358,5 +358,5 @@ func (h *Handler) broadcastCommunity(ctx context.Context, s Settings) {
 	if h.Names != nil {
 		name = h.Names.Get(ctx)
 	}
-	h.Events.Broadcast(events.CommunityUpdated, map[string]string{"community_name": name, "community_icon": icon})
+	h.Events.Broadcast(wire.CommunityUpdated{CommunityName: name, CommunityIcon: icon})
 }

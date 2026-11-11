@@ -81,8 +81,8 @@ General rules:
 |---|---|---|
 | `JWT_SECRET` | none | Signs session cookies. In production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). In development an empty value means a random per-process secret (sessions reset on restart). Changing it logs everyone out unless the old value goes into `JWT_SECRET_PREVIOUS`: see [Rotating keys](#rotating-keys). |
 | `JWT_SECRET_PREVIOUS` | empty | The session secret you are replacing. Sessions and known-device cookies signed with it stay valid; nothing new is signed with it. Must differ from `JWT_SECRET`; in production/staging the same length and placeholder rule. |
-| `DATA_KEY` | empty | Seals the authenticator secrets of two-factor sign-in and keys the recovery codes. Empty = they stay under keys derived from `JWT_SECRET`, as in every earlier release. When set: never a session secret (current or previous), and in production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). |
-| `DATA_KEY_PREVIOUS` | empty | The `DATA_KEY` you are replacing: what it sealed stays readable until `mnema-talk rotate-keys` has moved it. Needs `DATA_KEY`, must differ from it, and follows the same rules. |
+| `DATA_KEY` | empty | Seals the authenticator secrets of two-factor sign-in and keys the recovery codes. Empty = they stay under keys derived from `JWT_SECRET`, as in every earlier release. When set: never a session secret (current or previous), and in production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). **Once set it stays**: emptying it makes what it sealed unreadable. Keep it with your backups; the only way back is [Stop using a data key](#stop-using-a-data-key). |
+| `DATA_KEY_PREVIOUS` | empty | The `DATA_KEY` you are replacing: what it sealed stays readable until `mnema-talk rotate-keys` has moved it. Must differ from `DATA_KEY` and follows the same rules. Without a `DATA_KEY` it is the way back to the keys derived from `JWT_SECRET`. |
 | `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. An upper bound: a session that is not used for the inactivity limit (see "Sessions and inactivity sign-out") ends earlier. |
 | `INITIAL_LANGUAGE` | `en` | `de` or `en`: the language of the default categories and channels ("Text channels", "Voice hangouts", #general, #media, Lounge, Gaming 4K) on a brand-new installation. Used only when the database is still untouched (one account, no messages, the seeded names); an existing installation is never renamed. Any other value is rejected at startup. |
 | `ADMIN_USERNAME` | `admin` | The Owner account (all-powerful, cannot be restricted by anyone; see [roles-and-permissions.md](roles-and-permissions.md)), created on first start when none exists. |
@@ -412,33 +412,75 @@ Every stored authenticator secret names the data key it is under (the ones
 under the session secret carry no name, which is the format of earlier
 releases). A secret under a previous key is sealed again under the current
 one the next time its owner signs in with a code; `mnema-talk rotate-keys`
-does it for everyone at once. The command reads the same settings as the
-server, can run while the server does and may be repeated:
+does it for everyone at once. The command may be repeated and can run while
+the server does:
 
 ```
 docker exec mnema-talk /usr/local/bin/mnema-talk rotate-keys
 ```
 
 ```
+This run seals under DATA_KEY, fingerprint 5f0c2a91. The server logs the fingerprint of its key at start ...
+Previous keys configured for this run: DATA_KEY_PREVIOUS.
 Authenticator secrets: 3 moved to DATA_KEY, 0 were under it already.
 No authenticator secret is under a previous key any more.
 2 account(s) hold unused recovery codes. Codes made before the rotation are checked with the previous key and stop working when you remove it; ...
 ```
 
+**The command must run with the settings the server runs with.** The
+`docker exec` line reads the environment of the running container, which is
+the `.env` of the last `docker compose up -d`, not the file as you have just
+edited it. So every runbook below restarts first and rotates second. Two
+things in the output tell you that the order was wrong:
+
+- The first line names the key new data is sealed under and a fingerprint of
+  it (eight hex digits, not secret). The server logs the same fingerprint when
+  it starts (`authenticator secrets are sealed under ...`), and
+  `mnema-talk doctor` prints it. When the two differ, the command and the
+  server use different settings: run `docker compose up -d` and then the
+  command again.
+- `Previous keys configured for this run` lists the previous values the run
+  could read. When none is configured the command says
+  `WARNING: no previous key is configured, so this run could not move anything from a replaced key`.
+  In the middle of a rotation that means the restart is missing: do not remove
+  or overwrite the old value.
+
+At every start the server tries each stored authenticator secret with the
+configured keys. When some cannot be opened it logs an error,
+`AUTHENTICATOR SECRETS CANNOT BE READ`, with the number of accounts (no
+names) and how many of them name a data key that is not configured;
+`mnema-talk doctor` shows the same as a red line. Those members cannot pass
+the second step of sign-in until the key is configured again, as the current
+or a previous value, or their second factor is reset.
+
 All secrets move in one transaction. When one of them cannot be read with any
 configured key, or anything else fails, the command changes nothing, exits
 with an error and names the accounts. Then a key is missing: do not remove
-anything yet.
+anything yet. A setup that was started and never confirmed is the exception:
+when no configured key reads it and it was started more than an hour ago, the
+command removes it and names the account. Two-factor sign-in was not on for
+it, and the member starts again. A younger one is left alone: it may be a
+setup a member is in the middle of.
 
 **Recovery codes cannot be moved**, because only their hash is stored. A
 recovery code works for as long as the key it was made under is still
 configured, as the current or the previous value. When you retire a key,
 recovery codes made under it stop working; the authenticator keeps working,
-and the member makes new codes in the account settings.
+and the member makes new codes in the account settings. The number of
+remaining codes in the account settings leaves out codes under a retired key;
+codes made before the release that records their key are still counted,
+because nothing tells which key they are under.
 
 Copy `.env` before you start, and keep a retired key for as long as you keep
 backups from its time: a restored database is sealed with the keys of the day
 it was taken (`scripts/backup.sh` stores `.env` with it).
+
+**`DATA_KEY` stays once it is set.** From the first sign-in with a code after
+you set it, secrets are sealed under it, and only it opens them. A server
+whose `DATA_KEY` was emptied starts, logs the error above and refuses the
+second step for those members. Nothing is lost while you still have the
+value: put it back, or follow [Stop using a data key](#stop-using-a-data-key).
+Keep the value where you keep your backups.
 
 ### Start using a data key
 
@@ -470,12 +512,48 @@ before this step keep working until that session secret is retired.
 3. Tell members with two-factor sign-in to make new recovery codes, then
    remove `DATA_KEY_PREVIOUS` and run `docker compose up -d` again.
 
+### Stop using a data key
+
+The way back to the keys derived from `JWT_SECRET`. Emptying `DATA_KEY`
+alone is not enough: the secrets sealed under it would be unreadable.
+
+1. Move the current value of `DATA_KEY` to `DATA_KEY_PREVIOUS` and leave
+   `DATA_KEY` empty.
+2. `docker compose up -d`, then run `mnema-talk rotate-keys`. The output
+   names `DATA_KEY_PREVIOUS` as a previous key and moves the secrets to the
+   key derived from `JWT_SECRET`.
+3. Tell members with two-factor sign-in to make new recovery codes, then
+   remove `DATA_KEY_PREVIOUS` and run `docker compose up -d` again.
+
 ### A secret has leaked
 
-Do the same steps, but do not wait: replace the secret, run
-`mnema-talk rotate-keys`, and remove the previous value right away. For the
-session secret this signs everyone out, which is the point. Recovery codes
-made under the leaked key are gone with it.
+The same steps as above, without the waiting:
+
+1. Move the leaked value to its previous variable (`JWT_SECRET_PREVIOUS` or
+   `DATA_KEY_PREVIOUS`) and put a new one (`openssl rand -hex 32`) into
+   `JWT_SECRET` or `DATA_KEY`.
+2. `docker compose up -d`. Without this restart the next step runs with the
+   old settings, moves nothing and step 4 leaves every authenticator secret
+   unreadable.
+3. Run `mnema-talk rotate-keys`. Go on only when the output lists the previous
+   variable under `Previous keys configured for this run` and ends without an
+   error.
+4. Remove the previous value from `.env` right away and run
+   `docker compose up -d` again. Check the start log: it must not contain
+   `AUTHENTICATOR SECRETS CANNOT BE READ`.
+
+For the session secret step 4 signs everyone out, which is the point. While
+`JWT_SECRET_PREVIOUS` is set, whoever holds the old secret can still mint
+valid sessions for any account, which is why the previous value is removed
+right away and not after the sessions have expired. Recovery codes made
+under the leaked key are gone with it.
+
+Sealing the secrets again does not undo what was already readable. Without a
+`DATA_KEY`, a leaked `JWT_SECRET` together with a copy of the database from
+before the rotation (a backup, a dump) decrypts the authenticator secrets in
+that copy. If such a copy may be in the same hands, those members must set up
+two-factor sign-in again: reset them in Admin > Members or with
+`mnema-talk reset-2fa <username>`.
 
 ## Web Push and the installable app
 
@@ -1064,6 +1142,26 @@ committed statement and public key.
   server sends no list. The compose
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)
   (cron, Unraid notification, optional webhook) use it.
+
+  The `503` says what the server is as well: beside the usual `error` it
+  carries `version`, `web_client_api`, `community_name`, `community_icon` and
+  `features` like the `200`, `status` is `unavailable`, and `unavailable`
+  lists what is down (`database`, `storage`, or both). With only `storage` in
+  the list, uploads, attachments, avatars and other pictures fail while chat
+  and Talks keep working: the web app starts as usual and shows a notice
+  until storage is back (it asks again every 30 seconds). An older server
+  answers a `503` with the `error` alone.
+- **`GET /api/health/live`** (public): `200` with `{"status":"ok"}` whenever
+  the process serves requests. It asks neither the database nor object
+  storage, so it stays `200` while `/api/health` answers `503`. It is the
+  liveness probe for an orchestrator that restarts a container on a failed
+  probe (Kubernetes, Swarm, an autoheal container): restarting the app does
+  not bring a dependency back, and it would end every running Talk. Use
+  `/api/health` for readiness and for monitoring. The compose healthcheck
+  stays on `/api/health`: plain Compose only labels the container, and
+  `docker compose up --wait`, the setup assistant and the scripts rely on
+  "healthy" meaning "ready". See
+  [deployment.md](deployment.md#health-probes-for-other-orchestrators).
 - **`GET /api/metrics`** (Prometheus text format), only when `METRICS_TOKEN`
   is set. Every metric is listed under [Monitoring and
   alerts](#monitoring-and-alerts) below, with scrape config and alert rules.
@@ -1442,12 +1540,12 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_db_connections_total\|acquired\|idle\|max` | gauge | Database pool. `mnema_db_acquires_total`, `..._waited_total`, `..._canceled_total`, `mnema_db_acquire_seconds_total` count acquisitions, those that had to wait, those abandoned and the time spent. |
 | `mnema_storage_up` | gauge | 1 when object storage answers (the same check as `/api/health`), else 0. |
 | `mnema_s3_operations_total{op,result}` | counter | Object storage calls (`upload`, `get`, `delete`, `list`) by `ok`/`error`. |
-| `mnema_webhook_events_dropped_total{reason}` | counter | Outgoing webhook events dropped or expired unsent: `webhook_cap` and `global_cap` (queue limits), `buffer_full`, `channel_share`, `store_error` and `expired` (older than the retry window). A rising count means a receiver is down or too slow. |
+| `mnema_webhook_events_dropped_total{reason}` | counter | Outgoing webhook events dropped or expired unsent: `webhook_cap` and `global_cap` (queue limits), `buffer_full`, `channel_share` and `store_error` (only `VOICE_STATE_UPDATE` passes the in-memory buffer; message and reaction events are written with their change) and `expired` (older than the retry window). A rising count means a receiver is down or too slow. |
 | `mnema_push_deliveries_total{outcome}` | counter | Web Push deliveries: `ok`, `gone` (the browser ended the subscription; it is removed), `retry` (temporary refusal, retried once), `rejected`, `error` (no answer: blocked address, DNS, connection, TLS, timeout) and `dropped` (a full queue). A rising `rejected` share right after a restore means the VAPID key changed. |
 | `mnema_job_duration_seconds{job}` | histogram | How long one run of a periodic maintenance job took. `job` is `session_sweep`, `status_expiry`, `ban_expiry`, `unlock`, `export_sweep`, `slow_mode_prune`, `edit_history`, `auto_delete`, `poll_fold`, `later`, `audit_retention`, `community_events`, `push_sweep` or `avatar_reencode`. |
 | `mnema_job_errors_total{job}` | counter | Runs of those jobs that returned an error. Stopping the process is not counted. |
 | `mnema_job_panics_total{job}` | counter | Runs that panicked. The panic is logged and the job keeps its schedule; it is not also counted as an error. |
-| `mnema_goroutine_panics_total{name}` | counter | Panics outside an HTTP request and outside those jobs: on a goroutine, timer or callback of the server. `name` is the fixed name of the place in the code (`ws_read`, `sfu_forward`, ...). It is logged as `goroutine panicked` with a stack. Work that belongs to one connection or one call participant closes only that connection or removes only that participant, and the server carries on; a panic in a process-wide loop ends the process after the log line, and the container restarts it. A place that panics over and over is counted every time but logged only five times a minute. Fatal runtime errors (concurrent map writes, a stack overflow, out of memory) cannot be recovered and still end the process without this count. Any value above 0 is a bug worth reporting. |
+| `mnema_goroutine_panics_total{name}` | counter | Panics outside an HTTP request and outside those jobs: on a goroutine, timer or callback of the server. `name` is the fixed name of the place in the code (`ws_read`, `sfu_forward`, ...). It is logged as `goroutine panicked` with a stack. Work that belongs to one connection or one call participant closes only that connection or removes only that participant, and the server carries on; a panic in a process-wide loop ends the process after the log line, and the container restarts it. A place that panics over and over is counted every time but logged only five times a minute. Fatal runtime errors (concurrent map writes, a stack overflow, out of memory) cannot be recovered and still end the process without this count. Timers that belong to one member are process-wide too and end the process when they panic: the end of a Talk seat after its grace time (`ws_voice_grace`), the delayed write of voice time (`ws_voice_time`) and the enforcement of a permission change (`perm_changed`). The same holds for a panic in the clean-up that runs after a recovered panic. Any value above 0 is a bug worth reporting. |
 
 ## Orphaned media
 
@@ -1488,6 +1586,48 @@ They are not part of the public `/api/health`.
 At startup the app logs `webrtc announce` with the announced IPs and the
 port range, or `webrtc sfu unavailable, voice disabled` when the SFU could
 not start (e.g. the UDP range is in use).
+
+### Following one session through the log
+
+A member can be connected more than once: two tabs, the desktop app next to
+a browser, or a reconnect that overlaps the connection it replaces. Lines
+that only name the member (`user`) cannot tell these apart, so every line
+that belongs to one WebSocket connection also carries `conn_id`:
+
+- the hub's lines: `ws connected`, `ws disconnected`, `voice join`,
+  `voice leave` (also the leave that ends a grace period after the socket
+  dropped), refused joins and `webrtc client diag`;
+- the lines of the media connection that WebSocket made in a Talk
+  (`sfu peer state`, `sfu ice connected`, `sfu track received`, unanswered
+  offers, dropped candidates, ...). A rejoin makes a new media connection, so
+  the old and the new one of the same member are told apart the same way;
+- `goroutine panicked`, when the panic happened in work of one connection.
+
+`conn_id` is the request id the server gave the upgrade request, so it
+equals the `request_id` of that connection's `http` line for `/api/ws`
+(which also has the address).
+
+When the upgrade request came with an `X-Request-Id` of its own (your reverse
+proxy sets one, or the client did), the server does not use it for
+`conn_id`: whoever sends it could pick the id of another session. The
+connection then gets a random `conn_id`, and its `ws connected` line carries
+what was sent as `client_request_id` (at most 128 letters, digits, `.`, `_`
+and `-`; anything else is replaced as for every request). That value is the
+`request_id` of the `http` line, which links the two.
+
+```sh
+# 1. The member's connections and when each one came and went
+docker compose logs app | grep -E '"msg":"ws (dis)?connected"' | grep '"user":"alice"'
+# 2. Everything one of them did, in order
+docker compose logs app | grep '"conn_id":"4f0c2a1e-..."'
+# 3. Where it came from (with a proxy's X-Request-Id: the client_request_id of step 1)
+docker compose logs app | grep '"request_id":"4f0c2a1e-..."'
+```
+
+The id is only in the server log. No client is told its own or anybody
+else's, it is in no event and it is no metric label. Lines about a member as
+a whole (a kick by a moderator, the write of voice time) and the panic of a
+connection's retransmission worker (`sfu_nack`) carry none.
 
 ## Troubleshooting
 
@@ -1534,8 +1674,10 @@ docker exec mnema-talk /usr/local/bin/mnema-talk reset-2fa OWNER_NAME
 Other members' second factor is reset by
 the Owner in Admin > Members. Replacing `JWT_SECRET` (or `DATA_KEY`) without
 naming the old value in `JWT_SECRET_PREVIOUS` (`DATA_KEY_PREVIOUS`) makes the
-stored authenticator secrets unreadable: put the old value back as the
-previous one, or reset each affected account so it can enrol again. See
+stored authenticator secrets unreadable, and so does emptying a `DATA_KEY`
+that was in use. The server logs this at start and `mnema-talk doctor` shows
+it: put the old value back as the previous one (or `DATA_KEY` back), or reset
+each affected account so it can enrol again. See
 [Rotating keys](#rotating-keys).
 
 ### The Owner cannot sign in: "too many requests"

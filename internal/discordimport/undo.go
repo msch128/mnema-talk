@@ -10,7 +10,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
@@ -232,8 +232,8 @@ func (im *Importer) Undo(ctx context.Context, sub perm.Subject, id uuid.UUID, re
 		_ = im.Objects.DeleteBatch(ctx, keys) // rows are gone; leftovers are swept as orphans
 	}
 	if im.Events != nil {
-		im.Events.Broadcast(events.ChannelsChanged, nil)
-		im.Events.Broadcast(events.RolesChanged, nil)
+		im.Events.Broadcast(wire.ChannelsChanged{})
+		im.Events.Broadcast(wire.RolesChanged{})
 	}
 	return res, nil
 }

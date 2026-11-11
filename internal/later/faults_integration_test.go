@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
 	"github.com/msch128/mnema-talk/internal/chat/core"
+	"github.com/msch128/mnema-talk/internal/chat/messages"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -43,7 +44,8 @@ func newFixture(t *testing.T) fixture {
 }
 
 func (f fixture) service(p *db.Pool) *Service {
-	return NewService(Service{DB: p, Perms: perm.NewService(p), Events: f.events})
+	perms := perm.NewService(p)
+	return NewService(Service{DB: p, Perms: perms, Events: f.events, Posts: &messages.Service{DB: p, Perms: perms, Events: f.events}})
 }
 
 // closedPool is a pool whose every statement fails, as a database that went away does.

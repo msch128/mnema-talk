@@ -141,7 +141,7 @@ func TestInvalidTransportRangeRejected(t *testing.T) {
 	if _, err := NewSFU(50001, 50000, nil, nil); err == nil || !strings.Contains(err.Error(), "UDP port range") {
 		t.Fatalf("inverted range error = %v", err)
 	}
-	if _, err := buildAPI(0, 0, []string{"127.0.0.1"}, nil, nil); err != nil {
+	if _, err := buildAPI(0, 0, []string{"127.0.0.1"}, nil, nil, nil, nil); err != nil {
 		t.Fatalf("default API builder: %v", err)
 	}
 }
@@ -190,7 +190,7 @@ func TestJoinFailureDropsEmptyRoom(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = s.Close() })
 	roomID := uuid.New()
-	if _, _, err := s.Join(roomID, uuid.New(), nil, nil); err == nil {
+	if _, _, err := s.Join(roomID, uuid.New(), "", nil, nil); err == nil {
 		t.Fatal("TURN configuration without credentials accepted")
 	}
 	if s.Room(roomID) != nil {
@@ -201,7 +201,7 @@ func TestJoinFailureDropsEmptyRoom(t *testing.T) {
 func TestRemovePeerWithoutRoomStillClosesTransport(t *testing.T) {
 	s := newTestSFU(t)
 	roomID := uuid.New()
-	_, peer, err := s.Join(roomID, uuid.New(), nil, nil)
+	_, peer, err := s.Join(roomID, uuid.New(), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +250,7 @@ func TestOfferWatchdogStopsAfterResendLimit(t *testing.T) {
 
 func TestPublishTestVideoRejectsUnsupportedSourceAndMissingPeer(t *testing.T) {
 	s := newTestSFU(t)
-	r, peer, err := s.Join(uuid.New(), uuid.New(), nil, nil)
+	r, peer, err := s.Join(uuid.New(), uuid.New(), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,15 +318,15 @@ func TestSubscriberFullIntraRequestReachesPublisher(t *testing.T) {
 
 func TestMultipleSharesAnnounceSortedAudiencesAndGlobalSnapshot(t *testing.T) {
 	s := newTestSFU(t)
-	r, first, err := s.Join(uuid.New(), uuid.MustParse("00000000-0000-0000-0000-000000000002"), nil, nil)
+	r, first, err := s.Join(uuid.New(), uuid.MustParse("00000000-0000-0000-0000-000000000002"), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, second, err := s.Join(r.ID, uuid.MustParse("00000000-0000-0000-0000-000000000001"), nil, nil)
+	_, second, err := s.Join(r.ID, uuid.MustParse("00000000-0000-0000-0000-000000000001"), "", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := s.Join(uuid.New(), uuid.New(), nil, nil); err != nil {
+	if _, _, err := s.Join(uuid.New(), uuid.New(), "", nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	log := recordViewers(s, r)

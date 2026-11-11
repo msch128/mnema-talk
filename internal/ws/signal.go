@@ -2,34 +2,33 @@ package ws
 
 import (
 	"encoding/json"
-	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/events/wire"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
 // announceMediaState tells all clients that userID started or stopped
 // a screen share or camera so they can show the LIVE indicator and offer to watch.
 func (h *Hub) announceMediaState(roomID, userID uuid.UUID, st sfu.MediaState) {
-	h.BroadcastChannel(roomID, events.WebrtcMediaState, mediaStatePayload(roomID, userID, st))
+	h.BroadcastChannel(roomID, mediaStatePayload(roomID, userID, st))
 }
 
-func mediaStatePayload(roomID, userID uuid.UUID, st sfu.MediaState) map[string]any {
-	return map[string]any{"channel_id": roomID, "user_id": userID, "screen": st.Screen, "camera": st.Camera}
+func mediaStatePayload(roomID, userID uuid.UUID, st sfu.MediaState) wire.MediaState {
+	return wire.MediaState{ChannelID: roomID, UserID: userID, Screen: st.Screen, Camera: st.Camera}
 }
 
 // announceScreenViewers tells the members of a voice room who watches
 // sharer's screen share. Like in Discord, only the room sees it.
 func (h *Hub) announceScreenViewers(roomID, sharer uuid.UUID, viewers []uuid.UUID) {
-	h.sendToVoiceRoom(roomID, events.ScreenViewers, screenViewersPayload(roomID, sharer, viewers))
+	h.sendToVoiceRoom(roomID, screenViewersPayload(roomID, sharer, viewers))
 }
 
-func screenViewersPayload(roomID, sharer uuid.UUID, viewers []uuid.UUID) map[string]any {
+func screenViewersPayload(roomID, sharer uuid.UUID, viewers []uuid.UUID) wire.ScreenViewers {
 	if viewers == nil {
 		viewers = []uuid.UUID{} // [] rather than null on the wire
 	}
-	return map[string]any{"channel_id": roomID, "user_id": sharer, "viewers": viewers}
+	return wire.ScreenViewers{ChannelID: roomID, UserID: sharer, Viewers: viewers}
 }
 
 func (c *Client) activeVoiceRoom() *sfu.Room {
@@ -47,12 +46,12 @@ func (c *Client) activeVoiceRoom() *sfu.Room {
 func (c *Client) applySubscriptionQuality(room *sfu.Room, req subscribeRequest) {
 	if req.hasFit && req.on && req.kind == sfu.SourceScreen {
 		if err := room.SetScreenFit(c.User.ID, req.publisher, req.fit); err != nil {
-			slog.Debug("sfu screen fit rejected", "user", c.User.ID, "err", err)
+			c.logger().Debug("sfu screen fit rejected", "user", c.User.ID, "err", err)
 		}
 	}
 	if req.hasQuality && req.on && req.kind == sfu.SourceScreen {
 		if err := room.SetScreenQuality(c.User.ID, req.publisher, req.quality); err != nil {
-			slog.Debug("sfu screen quality rejected", "user", c.User.ID, "err", err)
+			c.logger().Debug("sfu screen quality rejected", "user", c.User.ID, "err", err)
 		}
 	}
 }
@@ -79,13 +78,13 @@ func (c *Client) handleSubscribe(payload json.RawMessage) {
 	if req.hasFitPx {
 		// How big the viewer's picture of a camera is: nothing else changes.
 		if err := room.SetCameraFit(c.User.ID, req.publisher, req.fitPx); err != nil {
-			slog.Debug("sfu camera fit rejected", "user", c.User.ID, "err", err)
+			c.logger().Debug("sfu camera fit rejected", "user", c.User.ID, "err", err)
 		}
 		return
 	}
 	c.applySubscriptionQuality(room, req)
 	if err := room.Subscribe(c.User.ID, req.publisher, req.kind, req.all, req.on); err != nil {
-		slog.Debug("sfu subscribe rejected", "user", c.User.ID, "err", err)
+		c.logger().Debug("sfu subscribe rejected", "user", c.User.ID, "err", err)
 	}
 }
 

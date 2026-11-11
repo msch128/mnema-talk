@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
+	"github.com/msch128/mnema-talk/internal/automod"
 	"github.com/msch128/mnema-talk/internal/chat/blocks"
 	"github.com/msch128/mnema-talk/internal/chat/botapi"
 	"github.com/msch128/mnema-talk/internal/chat/channels"
@@ -43,6 +44,8 @@ type Handler struct {
 	Perms *perm.Service
 	// Audit records message deletions and edits; nil records nothing.
 	Audit *audit.Log
+	// Automod screens the messages posted through Posts; nil screens nothing.
+	Automod *automod.Engine
 	// EditHistoryLimit caps edit-history reads per member; nil means no cap.
 	EditHistoryLimit *httpx.RateLimiter
 	// PinLimit caps pinning and unpinning per member (each change is broadcast); nil means no cap.
@@ -79,20 +82,21 @@ func (h *Handler) voiceRooms() core.VoiceRooms {
 	return v
 }
 
-// deleteObjects removes media objects after their rows are gone; see
-// core.DeleteObjects.
-func (h *Handler) deleteObjects(ctx context.Context, keys []string) {
-	core.DeleteObjects(ctx, h.Objects, keys)
-}
-
 // messages builds the messages API from the handler's fields. The edit-history
 // memory is shared, so every API built here counts the same reads.
 func (h *Handler) messages() *messages.API {
 	return &messages.API{
-		DB: h.DB, Events: h.Events, Guard: h.guard(), Objects: h.Objects, Online: h.Online, Audit: h.Audit,
+		DB: h.DB, Events: h.Events, Posts: h.Posts(), Guard: h.guard(), Objects: h.Objects, Online: h.Online, Audit: h.Audit,
 		Views: &h.historyViews, EditHistoryLimit: h.EditHistoryLimit, PinLimit: h.PinLimit,
 		FollowLimit: h.FollowLimit, ForwardLimit: h.ForwardLimit,
 	}
+}
+
+// Posts is the service that posts messages: for the routes of this handler and
+// for the services that post on a member's behalf (the built-in commands,
+// scheduled messages).
+func (h *Handler) Posts() *messages.Service {
+	return &messages.Service{DB: h.DB, Perms: h.Perms, Events: h.Events, Online: h.Online, Automod: h.Automod}
 }
 
 // channels builds the channels API from the handler's fields.
@@ -138,7 +142,7 @@ func (h *Handler) talks() *talks.API {
 // MountBot registers the bot API routes (the bot authentication middleware must
 // already apply); see botapi.API.MountBot.
 func (h *Handler) MountBot(r chi.Router, send func(http.Handler) http.Handler) {
-	(&botapi.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Online: h.Online, Messages: h.messages(), Channels: h.channels()}).MountBot(r, send)
+	(&botapi.API{DB: h.DB, Events: h.Events, Guard: h.guard(), Messages: h.messages(), Channels: h.channels()}).MountBot(r, send)
 }
 
 // Mount registers the member-facing routes (RequireUser must already apply).

@@ -348,7 +348,7 @@ func TestASecondDeletionRacingTheFirstAnswersNoContent(t *testing.T) {
 		before: func() {
 			// The parallel request wins and commits first.
 			err := pgx.BeginFunc(context.Background(), pool, func(tx pgx.Tx) error {
-				_, err := eraseAccount(context.Background(), tx, member.ID)
+				_, err := eraseWith(context.Background(), tx, member.ID, personalFallback)
 				return err
 			})
 			if err != nil {
