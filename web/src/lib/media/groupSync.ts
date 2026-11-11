@@ -4,10 +4,11 @@ import {
   defaultLifetime,
   generateKeyPackage,
   generateKeyPackageWithKey,
+  type ClientState,
 } from 'ts-mls'
 import { clock } from './clock'
 import { ALL_OFFERED_WAIT_MS, OFFER_WAIT_MS, FOUND_WAIT_MS, TAKEOVER_MS, type MediaStep, type OwnPackage } from './groupParams'
-import { clientConfig, wipeBytes, treeMembers, lowest, encodeWire } from './groupTree'
+import { clientConfig, wipeBytes, treeMembers, treeLeafSigner, lowest, encodeWire } from './groupTree'
 import { GroupEpoch } from './groupEpoch'
 
 function roomKey(others: readonly string[]): string {
@@ -119,6 +120,7 @@ export abstract class GroupSync extends GroupEpoch {
     if (others.length !== this.room.length || others.some(id => !this.room.includes(id))) this.lastRosterAt = clock.now()
     this.room = others
     for (const id of [...this.relayed.keys()]) if (!others.includes(id)) this.relayed.delete(id)
+    for (const id of [...this.beats.keys()]) if (!this.hinted.has(id)) this.beats.delete(id)
     return others
   }
 
@@ -254,20 +256,23 @@ export abstract class GroupSync extends GroupEpoch {
    * A key package is good for one join. Once a welcome built on it was taken,
    * its init key is wiped and a new package takes its place, so a copy of that
    * welcome that comes again opens nothing. The new package is signed with the
-   * key of the old one: this is the same member, and whoever holds its leaf
-   * sees that leaf's own key and no reload (only a start-over or a reload makes
-   * a new signature key). The group goes on using the old leaf keys until it is
-   * left.
+   * key of my leaf in the group I hold: this is the same member, and whoever
+   * holds that leaf sees its own key and no reload. The group goes on using the
+   * old leaf keys until it is left. A package that was never joined with is
+   * replaced the same way (one offered in vain, or the one a group of one made
+   * for itself before it grew again); nothing uses its keys.
    */
   protected async renewOwn() {
-    const old = this.own
-    const signKey = old.privatePackage.signaturePrivateKey
-    const keys = { signKey: signKey.slice(), publicKey: old.publicPackage.leafNode.signaturePublicKey }
+    const old = this.own.privatePackage
+    // Callers hold a group, and a group I hold has exactly one leaf of mine.
+    const state = this.state as ClientState
+    const keys = { signKey: state.signaturePrivateKey.slice(), publicKey: treeLeafSigner(state, this.userId) as Uint8Array }
     this.own = await generateKeyPackageWithKey(this.credential, defaultCapabilities(), defaultLifetime, [], keys, this.cs)
     this.offeredFor = null
-    wipeBytes(old.privatePackage.initPrivateKey)
-    for (const key of this.leafKeys.splice(0)) wipeBytes(key)
-    this.leafKeys.push(old.privatePackage.hpkePrivateKey, signKey)
+    wipeBytes(old.initPrivateKey)
+    const unused = state.signaturePrivateKey !== old.signaturePrivateKey
+    for (const key of unused ? [old.hpkePrivateKey, old.signaturePrivateKey] : this.leafKeys.splice(0)) wipeBytes(key)
+    if (!unused) this.leafKeys.push(old.hpkePrivateKey, old.signaturePrivateKey)
   }
 
   /**

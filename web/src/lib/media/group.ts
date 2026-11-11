@@ -16,12 +16,12 @@ import {
 import { mediaGroupId, mediaUserId, type MediaTiming } from './bounds'
 import { clock } from './clock'
 import { mediaTiming } from './lifetime'
-import { isHeartbeat, openHeartbeat } from './heartbeat'
+import { isHeartbeat } from './heartbeat'
 import { isCapability, openCapability, sealCapability } from './capability'
 import { CONFLICT_MS, type MediaStep } from './groupParams'
 import { suite, credentialIdentity, sameBytes, wipeConsumed, treeMembers, treeLeafSigner, onlyRenewsLeaf, keepsEveryLeaf, lowest } from './groupTree'
 import { GroupBase } from './groupBase'
-import { GroupSync } from './groupSync'
+import { GroupMerge } from './groupMerge'
 
 type MlsMessage = MLSMessage
 type ProcessedPublicMessage = Awaited<ReturnType<typeof processPublicMessage>>
@@ -49,7 +49,7 @@ export type { MediaStep } from './groupParams'
  * committer, or the next one if it was the committer who reloaded, swaps the
  * old leaf. A member who leaves is removed by whoever remains.
  */
-export class MediaGroup extends GroupSync {
+export class MediaGroup extends GroupMerge {
   static async open(userId: string, channelId: string, timing: MediaTiming = mediaTiming()): Promise<MediaGroup | null> {
     const id = mediaUserId(userId)
     const groupId = mediaGroupId(channelId)
@@ -82,6 +82,7 @@ export class MediaGroup extends GroupSync {
     this.heard.add(sender)
     this.lastHandshakeAt = clock.now()
     const members = this.state ? treeMembers(this.state) : null
+    this.noteGroupSign(sender, message, members)
     return this.dispatchMlsMessage(sender, wire, message, members, batch)
   }
 
@@ -116,12 +117,17 @@ export class MediaGroup extends GroupSync {
 
   protected async receiveReturningMember(from: string, wire: Uint8Array, keyPackage: KeyPackage, same: boolean): Promise<MediaStep> {
     const wires: Uint8Array[] = []
-    // The same package again is a duplicate. Another one is the member
-    // coming back (a reload): swap the old leaf for the new one in a single
-    // commit. If it was the committer, the next one does it. Only a member
-    // the roster says is still here, and not again and again.
-    if (same || !this.room.includes(from) || this.seen(from, wire)) return this.step()
-    if (from === this.committer(this.room)) this.restarting.add(from)
+    // The same package again is a duplicate. Another one under a new signature
+    // key is the member coming back (a reload): swap the old leaf for the new
+    // one in a single commit. If it was the committer, the next one does it.
+    // Only a member the roster says is still here, and not again and again.
+    if (!this.room.includes(from) || this.seen(from, wire)) return this.step()
+    // Another one under the key of its leaf is no reload. The member lives in
+    // another group and asks the roster's lowest id to let it in (see
+    // groupMerge.ts): that id alone answers, where an old leaf of the member is
+    // left over. To everyone else, its own committer included, it says nothing.
+    if (same && this.listed().some(id => id < this.userId)) return this.step()
+    if (!same && from === this.committer(this.room)) this.restarting.add(from)
     if (!this.canCommit(this.room) || !this.swaps.allow(from)) return this.step()
     this.remember(from, wire)
     wires.push(...await this.replaceMember(from, keyPackage))
@@ -130,16 +136,14 @@ export class MediaGroup extends GroupSync {
 
   protected async receiveWelcome(from: string, welcome: Welcome, members: Map<string, number> | null): Promise<MediaStep> {
     const previous = this.state
-    const rival = isRivalWelcome(previous, members, from, this.userId)
+    const rival = isRivalWelcome(previous, members, from, this.committer(this.room) ?? this.userId)
     const prevCount = previous ? treeMembers(previous).size : 0
     if (shouldIgnoreWelcome(previous !== null, prevCount, rival)) return this.step()
-    if (!this.room.includes(from)) return this.step()
-    if (rival && !this.rivals.allow(from)) return this.step()
-    try {
-      await this.joinFromWelcome(from, welcome, previous, rival)
-    } catch {
-      return this.step()
-    }
+    // My group is dropped for such a welcome only now and then per sender. One that
+    // does not open (each goes to the whole room, built on one member's package)
+    // drops nothing, so it does not count: see joinFromWelcome.
+    if (!this.room.includes(from) || (rival && this.rivals.waitMs(from) > 0)) return this.step()
+    await this.joinFromWelcome(from, welcome, previous, rival).catch(() => undefined)
     return this.step()
   }
 
@@ -152,7 +156,10 @@ export class MediaGroup extends GroupSync {
       this.wipeRejected(joined)
       return
     }
-    if (rival) this.discard()
+    if (rival) {
+      this.rivals.allow(from)
+      this.discard()
+    }
     if (await this.adopt(joined)) {
       this.dropSelfUpdate()
       await this.renewOwn()
@@ -353,23 +360,6 @@ export class MediaGroup extends GroupSync {
       this.vetted = removedAt
       return 'accept'
     }
-  }
-
-  /** A heartbeat counts when this epoch's member signed it, and it is newer than the last. */
-  protected async beatNow(from: string, wire: Uint8Array): Promise<MediaStep> {
-    const current = this.current
-    const verifier = current?.key.verifiers.get(from)
-    if (!current || !verifier) return this.step()
-    const beat = await openHeartbeat(verifier, this.groupId, from, wire)
-    if (!beat || beat.epoch !== current.epoch) return this.step()
-    const last = this.beats.get(from)
-    // A verifier exists only for a member with exactly one leaf.
-    const signer = treeLeafSigner(this.state as ClientState, from) as Uint8Array
-    // A reloaded member signs with a new leaf key and starts its clock anew.
-    if (last !== undefined && sameBytes(last.signer, signer) && beat.at <= last.at) return this.step()
-    this.beats.set(from, { at: beat.at, signer: new Uint8Array(signer) })
-    this.alive.set(from, clock.now())
-    return this.step()
   }
 
   /**
