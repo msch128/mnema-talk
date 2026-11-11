@@ -1,5 +1,61 @@
 # Changelog
 
+## [3.0.4](https://github.com/msch128/mnema-talk/compare/v3.0.3...v3.0.4) (2026-11-11)
+
+
+### Bug Fixes
+
+* a late rival renewal no longer undoes a commit that followed ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* a message's outgoing webhook event is stored in the transaction that stores the message ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* a panic in one listener's connection no longer drops the member who speaks ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* a panicking connection no longer takes the Talk seat of the member's other connection ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* a PNG cut off inside its EXIF chunk is not stored larger than it was sent ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* a request id the client chose never names its connection in the log ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* a second tab takes the read marker moved by a message sent elsewhere ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* a storage outage no longer hides the server's feature list, and a liveness probe answers while a dependency is down ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* a sweep or bulk delete queues its webhook events with one insert ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* a tab that joins a Talk while another tab of the member leaves keeps its seat ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* a viewer whose connection panicked is dropped even when another connection shares its ID ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* account erasure drops queued webhook events that list the member's reactions ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* apply the bot mention rules to the caption of a bot upload ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* every Trusted Types policy name is taken at start-up and worker script addresses are limited to the build's own files ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* exempt a bot with Manage messages from slow mode on every posting route ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* heal a group of one beside a group and close the founding race ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* hub and SFU log lines name the connection, so two sessions of one member can be told apart ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* members that took a rival renewal start over at once when the committer had built on the other ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* move the read marker when a member posts with a built-in command or a poll ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* rotate-keys keeps a two-factor setup in progress, and a slow database no longer holds the start for the key check ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* say what a key rotation ran with, report unreadable authenticator secrets and allow the way back from a data key ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* **sfu:** a layer switch always moves the viewer's timestamp forward ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* store picture attachments without their metadata ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the hub and the bot gateway read a profile event published as a pointer ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the liveness probe writes no access-log line ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the remaining per-connection log and panic lines carry conn_id ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the web app reads a health answer that names an unknown dependency ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the web app requires Trusted Types, so a plain string at an HTML or script sink is refused ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the webhook queue's caps have one owner and a timeout ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* webhook events are claimed in the order they were written ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+
+
+### Code Refactoring
+
+* a message service posts for an actor, with the rules of the send as values ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* channel events have their own types ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* clear the staticcheck findings in both Go modules ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* message events have their own types ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* message_create has one publishing function ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* moderation and admin events have their own types ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* scheduled messages are sent through the message service ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the bot API posts through the message service ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the built-in slash commands post through the message service ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the event publisher takes a named event ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the message route posts through the message service ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the message service is handed its automod engine ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the remaining events have their own types, no untyped payload is left ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* the web event shapes are generated from the Go event types ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* user and presence events have their own types ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+* voice and Talk events have their own types ([cd402e0](https://github.com/msch128/mnema-talk/commit/cd402e0bf4c599ad1128956c4c8cab0583e06b35))
+
 ## [3.0.3](https://github.com/msch128/mnema-talk/compare/v3.0.2...v3.0.3) (2026-11-11)
 
 
